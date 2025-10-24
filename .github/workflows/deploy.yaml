@@ -142,7 +142,7 @@ jobs:
       - name: Update Helm Chart values.yaml
         run: |
           # 将新的镜像 tag 写入 Chart 的 values.yaml 文件
-          yq e '.backend.image.tag = "${{ github.sha }}"' -i helm/charts/values.yaml
+          yq e '.backend.image.tag = "${{ github.sha }}"' -i helm/values.yaml
 
       # 5. (可选但推荐) 更新 Chart 版本并打包
       - name: Bump Chart Version and Package
