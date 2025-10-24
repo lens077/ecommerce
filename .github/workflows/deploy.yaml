@@ -156,7 +156,7 @@ jobs:
       # 4. (继续) 更新 Helm Chart values.yaml
       - name: Update Helm Chart values.yaml
         run: |
-          yq e '.backend.image.tag = "${{ github.sha }}"' -i backend/helm/values.yaml
+          yq e '.backend.image.tag = "${{ github.sha }}"' -i helm/values.yaml
           # 🚨 确保你所有的本地修改 (包括 yq 和 helm package) 都完成了
 
       # 4.5 解决竞态条件：拉取远程最新更改并 Rebase
