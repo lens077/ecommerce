@@ -5,6 +5,7 @@ on:
     branches:
       - pre
       - main
+      - master
     tags:
       - 'v*.*.*'
 env:
