@@ -132,7 +132,8 @@ jobs:
             --build-arg CGOENABLED=$CGO_ENABLED \
             --build-arg VERSION=$VERSION \
             --build-arg GOOS=$GOOS \
-            --build-arg GOARCH=$GOARCH
+            --build-arg GOARCH=$GOARCH \
+            --build-arg SERVICE=server 
 
           docker tag actions/${{ matrix.service_config.service }} ${{ env.REGISTRY }}/${REGISTER_NAMESPACE}/${{ matrix.service_config.service }}:$VERSION
           docker push ${{ env.REGISTRY }}/${REGISTER_NAMESPACE}/${{ matrix.service_config.service }}:$VERSION

@@ -76,6 +76,7 @@ docker-deployx:
 	  --build-arg CGOENABLED=$(CGOENABLED) \
 	  --build-arg GOIMAGE=$(GOIMAGE) \
 	  --build-arg VERSION=$(VERSION) \
+	  --build-arg SERVICE=server \
 	  --platform $(ARM64),$(AMD64) \
 	  --push \
 	  --cache-from type=registry,ref=$(REGISTER)/$(REPOSITORY):cache \
