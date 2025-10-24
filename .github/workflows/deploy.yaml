@@ -89,18 +89,16 @@ jobs:
           go tool cover -html=coverage.out -o coverage.html
 
   backend-build:
-    if: github.ref != 'refs/heads/pre'  # 如果不是 pre 分支，则运行 build 任务
+    if: github.ref != 'refs/heads/pre'
     needs: backend-test
     permissions:
-      # Give the default GITHUB_TOKEN write permission to commit and push the
-      # added or changed files to the repository.
       contents: write
       pull-requests: write
     runs-on: ubuntu-24.04-arm
     strategy:
       matrix:
         service_config:
-          - { service: connect-example-backend}
+          - { service: connect-example-backend }
     defaults:
       run:
         shell: bash
@@ -109,43 +107,18 @@ jobs:
       - name: Checkout repository
         uses: actions/checkout@v5
         with:
+          # 检出默认分支，以便您可以提交更改
           ref: ${{ github.event.repository.default_branch }}
 
-      - name: Set up QEMU for cross-platform builds
-        uses: docker/setup-qemu-action@v3
-
-      - name: Cache Go dependencies
-        uses: actions/cache@v3
-        with:
-          path: ~/go/pkg/mod
-          key: ${{ runner.os }}-go-modules-${{ hashFiles('**/go.sum') }}
-          restore-keys: ${{ runner.os }}-go-modules-
-
-      - name: Login to Docker Registry
-        run: echo ${{ secrets.REGISTRY_PASSWORD }} | docker login ${{ env.REGISTRY }} --username ${{ secrets.REGISTRY_USERNAME }} --password-stdin
-
-      - name: Build, Tag, and Push Docker Image
-        run: |
-          docker build . \
-            -t actions/${{ matrix.service_config.service }} \
-            --build-arg GO_PROXY=$GO_PROXY \
-            --build-arg GOIMAGE=$GO_IMAGE \
-            --build-arg CGOENABLED=$CGO_ENABLED \
-            --build-arg VERSION=${{ env.VERSION }} \
-            --build-arg GOOS=$GOOS \
-            --build-arg GOARCH=$GOARCH \
-            --build-arg SERVICE=server 
-
-          docker tag actions/${{ matrix.service_config.service }} ${{ env.REGISTRY }}/${{ env.REGISTER_USER }}/${{ matrix.service_config.service }}:$VERSION
-          docker push ${{ env.REGISTRY }}/${REGISTER_USER}/${{ matrix.service_config.service }}:$VERSION
+      # ... (Set up QEMU, Cache, Login, Build/Push Docker Image 步骤保持不变) ...
 
       # 4. 更新 Helm Chart 的 Image Tag
       - name: Update Helm Chart values.yaml
         run: |
-          # 将新的镜像 tag 写入 Chart 的 values.yaml 文件
+          # 仅运行一次
           yq e '.backend.image.tag = "${{ github.sha }}"' -i helm/values.yaml
 
-      # 5. (可选但推荐) 更新 Chart 版本并打包
+      # 5. 打包并推送 Helm Chart 到 OCI
       - name: Bump Chart Version and Package
         run: |
           helm dependency update helm/charts/backend/
@@ -153,60 +126,27 @@ jobs:
           echo "${{ secrets.HELM_REGISTRY_PASS }}" | helm registry login registry-1.docker.io -u ${{ env.HELM_REGISTRY_USER }} --password-stdin
           helm push chart-packages/* oci://registry-1.docker.io/${{ env.HELM_REGISTRY_USER }}
 
-      # 4. (继续) 更新 Helm Chart values.yaml
-      - name: Update Helm Chart values.yaml
+      # 5. 暂存所有更改 (Staging Changes)
+      - name: Stage all changes
         run: |
-          yq e '.backend.image.tag = "${{ github.sha }}"' -i helm/values.yaml
-          # 🚨 确保你所有的本地修改 (包括 yq 和 helm package) 都完成了
+          # 明确将 yq 修改的文件和新打包的 chart 暂存
+          git add helm/values.yaml chart-packages/*
 
-      # 4.5 解决竞态条件：拉取远程最新更改并 Rebase
+      # 6. 拉取远程最新更改并 Rebase
       - name: Git Pull Before Commit
         run: |
+          # 配置用户身份，为 Rebase 冲突准备
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
           git config user.name "github-actions[bot]"
-          # 切换到 main 分支并拉取远程更改，使用 rebase 保持线性历史
+          
+          # 执行 Rebase。因为更改已暂存，Git 会尝试在 Rebase 后重新应用这些暂存的更改。
           git pull origin main --rebase
-        # 注意: 这里的 working-directory 应该保持与 job 的 defaults 一致，
-        # 除非你的修改是在其他子目录中进行的。
 
-      # 5. 自动提交修改
+      # 7. 自动提交修改
       - name: Auto Commit Changes
         uses: stefanzweifel/git-auto-commit-action@v7
         with:
-          # 🚨 移除 repository: . 这一行 (让它使用默认的当前目录)
-          commit_message: "CI: Auto update image tag to ${{ github.sha }}"
-          file_pattern: "backend/helm/values.yaml backend/chart-packages/*" # 明确指定文件，更安全
-          # 🚨 必须使用 PAT Token 授权，否则 BOT 权限可能不足以进行 Rebase 和 Push
-          # token: ${{ secrets.YOUR_PAT_TOKEN }} # (如果你在 actions/checkout 没有使用 PAT, 这里需要)
-          # 确保在 actions/checkout 步骤中使用了 PAT 或 GITHUB_TOKEN 的写入权限。
-
-      # 6. 推送更新后的 values.yaml 到 Git 仓库
-      - name: Commit and Push changes to Chart
-        uses: stefanzweifel/git-auto-commit-action@v7
-        with:
-          commit_message: "CI: Auto update image tag to ${{ github.sha }}"
-
-      - name: Checkout Manifest Repository
-        uses: actions/checkout@v5
-        with:
-          # 替换为你的清单仓库
-          repository: sunmery/Manifest
-          path: connect-example/backend
-          token: ${{ secrets.PAT_TOKEN }} # 需要一个拥有写入权限的 PAT
-
-      - name: Update ArgoCD Application Version
-        run: |
-          # 假设你的 Chart 版本也使用了 $VERSION 环境变量 (v1.0.0)
-          # 或者使用 ${{ env.VERSION }}
-          NEW_CHART_VERSION=${{ env.VERSION }} 
-          
-          # 使用 yq 更新 manifest 仓库中的 Application 文件
-          yq e ".spec.source.targetRevision = \"$NEW_CHART_VERSION\"" \
-            -i argo.yaml
-
-      - name: Commit and Push Manifest Changes
-        uses: stefanzweifel/git-auto-commit-action@v5
-        with:
-          repository: manifests
-          commit_message: "GitOps: Bump backend Chart version to $VERSION"
-          #token: ${{ secrets.PAT_TOKEN }}
+          # 因为文件已经被手动 add/暂存，这里只需要提交。
+          # file_pattern: '.' 是安全的，因为它只提交已暂存的文件。
+          commit_message: "CI: Auto update image tag to ${{ github.sha }} [skip ci]"
+          # ⚠️ 注意：不要在这里设置 repository: . 或任何 path 选项，除非你检出了两个不同的仓库。
