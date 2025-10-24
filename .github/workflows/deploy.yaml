@@ -18,8 +18,8 @@ env:
   NAMESPACE: connect-example
   # 版本号, git tag的标签名
   # https://docs.github.com/zh/actions/writing-workflows/choosing-what-your-workflow-does/accessing-contextual-information-about-workflow-runs#github-context
-  #VERSION: ${{ github.ref_name }}
-  VERSION: v1.0.0
+  VERSION: ${{ github.ref_name }}
+#  VERSION: v1.0.5
   # 目标的操作系统
   GOOS: linux
   # 目标的架构
@@ -130,7 +130,7 @@ jobs:
             --build-arg GO_PROXY=$GO_PROXY \
             --build-arg GOIMAGE=$GO_IMAGE \
             --build-arg CGOENABLED=$CGO_ENABLED \
-            --build-arg VERSION=$VERSION \
+            --build-arg VERSION=${{ env.VERSION }} \
             --build-arg GOOS=$GOOS \
             --build-arg GOARCH=$GOARCH \
             --build-arg SERVICE=server 
@@ -157,44 +157,28 @@ jobs:
         uses: stefanzweifel/git-auto-commit-action@v7
         with:
           commit_message: "CI: Auto update image tag to ${{ github.sha }}"
-#      - name: Install ArgoCD CLI
-#        run: |
-#          curl -LO https://github.com/argoproj/argo-cd/releases/download/v2.13.4/argocd-linux-amd64
-#          chmod +x argocd-linux-amd64
-#          mv argocd-linux-amd64 /usr/local/bin/argocd
-#
-#      - name: Connect to ArgoCD Server
-#        run: |
-#          argocd login ${{ secrets.ARGOCD_SERVER_ADDR }} \
-#            --username ${{ secrets.ARGOCD_SERVER_USER }} \
-#            --password ${{ secrets.ARGOCD_SERVER_PASS }} \
-#            --insecure
-#          argocd version
-#
-#      - name: Connect to Kubernetes Cluster
-#        run: |
-#          mkdir -pv ~/.kube/
-#          echo "${{secrets.KUBE_CONF}}" > ~/.kube/config
-#          chmod 600 ~/.kube/config
-#
-#      - name: Set Kubernetes Context
-#        run: |
-#          if kubectl get ns $NAMESPACE; then
-#            echo "Namespace $NAMESPACE already exists, skipping creation."
-#          else
-#            kubectl create ns $NAMESPACE
-#          fi
-#          kubectl config set-context --current --namespace $NAMESPACE
-#
-#      - name: Deploy to Kubernetes
-#        run: |
-#          kubectl apply -f ${{ matrix.service_config.service }}/application.yaml
-#
-#          argocd app set argocd/${REGISTER_NAMESPACE}-${{ matrix.service_config.service }} \
-#            --kustomize-image example=${{ secrets.REGISTRY }}/${REGISTER_NAMESPACE}/${{ matrix.service_config.service }}:$VERSION
-#
-#          argocd app sync ${REGISTER_NAMESPACE}-${{ matrix.service_config.service }}
-#
-#      - name: Monitor Deployment
-#        run: |
-#          kubectl rollout status deploy/${{ matrix.service_config.service }} || kubectl rollout undo deploy/${{ matrix.service_config.service }}
+
+      - name: Checkout Manifest Repository
+        uses: actions/checkout@v5
+        with:
+          # 替换为你的清单仓库
+          repository: sunmery/Manifest
+          path: connect-example/backend
+          token: ${{ secrets.PAT_TOKEN }} # 需要一个拥有写入权限的 PAT
+
+      - name: Update ArgoCD Application Version
+        run: |
+          # 假设你的 Chart 版本也使用了 $VERSION 环境变量 (v1.0.0)
+          # 或者使用 ${{ env.VERSION }}
+          NEW_CHART_VERSION=${{ env.VERSION }} 
+          
+          # 使用 yq 更新 manifest 仓库中的 Application 文件
+          yq e ".spec.source.targetRevision = \"$NEW_CHART_VERSION\"" \
+            -i argo.yaml
+
+      - name: Commit and Push Manifest Changes
+        uses: stefanzweifel/git-auto-commit-action@v5
+        with:
+          repository: manifests
+          commit_message: "GitOps: Bump backend Chart version to $VERSION"
+          #token: ${{ secrets.PAT_TOKEN }}
