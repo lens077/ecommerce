@@ -149,8 +149,7 @@ jobs:
         run: |
           helm dependency update helm/charts/backend/
           helm package helm/charts/backend/ -d chart-packages/
-          helm registry login ${{ env.HELM_REGISTRY }} -u ${{ env.HELM_REGISTRY_USER }}
-          echo ${{ secrets.HELM_REGISTRY_PASS }} | helm registry login registry-1.docker.io -u ${{ env.HELM_REGISTRY_USER }} --password-stdin
+          echo "${{ secrets.HELM_REGISTRY_PASS }}" | helm registry login registry-1.docker.io -u ${{ env.HELM_REGISTRY_USER }} --password-stdin
           helm push chart-packages/* oci://registry-1.docker.io/${{ env.HELM_REGISTRY_USER }}
 
       # 6. 推送更新后的 values.yaml 到 Git 仓库
