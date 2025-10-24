@@ -1,0 +1,17 @@
+# charts/frontend/values.yaml
+replicaCount: 1
+
+image:
+  repository: "ccr.ccs.tencentyun.com/sumery/connect-react-example"
+  tag: "dev"
+  pullPolicy: IfNotPresent
+
+service:
+  type: LoadBalancer
+  port: 3000
+  targetPort: 3000
+
+autoscaling:
+  enabled: false
+
+# helm install connect-example .

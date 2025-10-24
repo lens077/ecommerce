@@ -1,0 +1,24 @@
+{{- if .Values.enabled }}
+apiVersion: gateway.networking.k8s.io/v1beta1
+kind: HTTPRoute
+metadata:
+  name: connect-go-example-route
+spec:
+  # 确保k8s有预先创建的gateway， 并且name和sectionName需要一一对应上
+  parentRefs:
+    - name: cilium-gateway
+      sectionName: web-gw
+  hostnames:
+    - "my.app.com"
+    - "192.168.3.105"
+  rules:
+    - matches:
+        # 需要匹配的路径
+        - path:
+            type: PathPrefix
+            value: /
+      backendRefs:
+        # 引用你的后端服务和端口
+        - name: {{ include "go.fullname" . }}
+          port: {{ .Values.service.port }}
+{{- end }}

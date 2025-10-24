@@ -1,0 +1,25 @@
+{
+  "$schema": "https://wails.io/schemas/config.v2.json",
+  "name": "Desktop-connect-login-example",
+  "outputfilename": "Desktop-connect-login-example",
+  "frontend:install": "pnpm install",
+  "frontend:build": "pnpm build",
+  "frontend:dev:watcher": "pnpm dev",
+  "frontend:dev:serverUrl": "auto",
+  "author": {
+    "name": "Sunery",
+    "email": "rcc@vip.qq.com"
+  },
+  "info": {
+    "companyName": "Sunery",
+    "productName": "Desktop-connect-login-example",
+    "productVersion": "1.0.0",
+    "copyright": "Copyright © 2025 Sunery",
+    "protocols": [
+      {
+        "scheme": "desktop-connect-login-example",
+        "role": "Editor"
+      }
+    ]
+  }
+}

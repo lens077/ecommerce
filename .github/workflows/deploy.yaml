@@ -1,0 +1,199 @@
+name: Test Microservices
+
+on:
+  push:
+    branches:
+      - pre
+      - main
+    tags:
+      - 'v*.*.*'
+env:
+  #  容器注册表
+  REGISTRY: ccr.ccs.tencentyun.com
+  HELM_REGISTRY: registry-1.docker.io
+  HELM_REGISTRY_USER: lookeke
+  # 仓库
+  REGISTER_NAMESPACE: connect-example
+  NAMESPACE: connect-example
+  # 版本号, git tag的标签名
+  # https://docs.github.com/zh/actions/writing-workflows/choosing-what-your-workflow-does/accessing-contextual-information-about-workflow-runs#github-context
+  #VERSION: ${{ github.ref_name }}
+  VERSION: v1.0.0
+  # 目标的操作系统
+  GOOS: linux
+  # 目标的架构
+  GOARCH: arm64
+  # golang的镜像
+  GO_IMAGE: golang:1.25.1-alpine3.22
+  # 代理
+  GO_PROXY: https://proxy.golang.org
+  # golang环境变量
+  CGO_ENABLED: 0
+
+jobs:
+  backend-test:
+    runs-on: ubuntu-24.04
+    #    strategy:
+    #      matrix:
+    #        #        service: [address, cart, checkout, credit_card, order, payment, product, user]  # 并行执行多个服务
+    #        service: [backend]  # 并行执行多个服务
+    defaults:
+      run:
+        shell: bash
+        #working-directory: ${{ matrix.service }}
+        working-directory: backend
+    #    services:
+    #      postgres:
+    #        image: postgres:17-alpine
+    #        env:
+    #          POSTGRES_USER: postgres
+    #          POSTGRES_PASSWORD: postgres
+    #          POSTGRES_DB: postgres
+    #        options: >-
+    #          --health-cmd pg_isready
+    #          --health-interval 10s
+    #          --health-timeout 5s
+    #          --health-retries 5
+    #        ports:
+    #          - '5432:5432'
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v5
+
+      - name: Set up Go
+        uses: actions/setup-go@v5
+        with:
+          go-version: '1.25.1'
+          check-latest: true
+          cache-dependency-path: '**/go.sum'
+
+      #      - name: Install migrate
+      #        run: |
+      #          curl -L https://github.com/golang-migrate/migrate/releases/download/v4.18.1/migrate.linux-amd64.tar.gz | tar xvz
+      #          sudo mv migrate /usr/bin/
+      #          which migrate
+      #
+      #      - name: Run database migration
+      #        run: |
+      #          export DB_SOURCE="postgresql://postgres:postgres@localhost:5432/postgres?sslmode=disable"
+      #          if [ -d ${{ matrix.service }} ]; then
+      #            echo "Running migrations..."
+      #            make migrate-up
+      #          else
+      #            echo "Skipping migrations."
+      #          fi
+
+      - name: Run Go tests
+        run: |
+          go test -short -coverprofile=coverage.out ./...
+          go tool cover -html=coverage.out -o coverage.html
+
+  backend-build:
+    if: github.ref != 'refs/heads/pre'  # 如果不是 pre 分支，则运行 build 任务
+    needs: backend-test
+    permissions:
+      # Give the default GITHUB_TOKEN write permission to commit and push the
+      # added or changed files to the repository.
+      contents: write
+    runs-on: ubuntu-24.04
+    strategy:
+      matrix:
+        service_config:
+          - { service: connect-example-backend}
+    defaults:
+      run:
+        shell: bash
+        working-directory: backend
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v5
+
+      - name: Set up QEMU for cross-platform builds
+        uses: docker/setup-qemu-action@v3
+
+      - name: Cache Go dependencies
+        uses: actions/cache@v3
+        with:
+          path: ~/go/pkg/mod
+          key: ${{ runner.os }}-go-modules-${{ hashFiles('**/go.sum') }}
+          restore-keys: ${{ runner.os }}-go-modules-
+
+      - name: Login to Docker Registry
+        run: echo ${{ secrets.REGISTRY_PASSWORD }} | docker login ${{ env.REGISTRY }} --username ${{ secrets.REGISTRY_USERNAME }} --password-stdin
+
+      - name: Build, Tag, and Push Docker Image
+        run: |
+          docker build . \
+            -t actions/${{ matrix.service_config.service }} \
+            --build-arg GO_PROXY=$GO_PROXY \
+            --build-arg GOIMAGE=$GO_IMAGE \
+            --build-arg CGOENABLED=$CGO_ENABLED \
+            --build-arg VERSION=$VERSION \
+            --build-arg GOOS=$GOOS \
+            --build-arg GOARCH=$GOARCH
+
+          docker tag actions/${{ matrix.service_config.service }} ${{ env.REGISTRY }}/${REGISTER_NAMESPACE}/${{ matrix.service_config.service }}:$VERSION
+          docker push ${{ env.REGISTRY }}/${REGISTER_NAMESPACE}/${{ matrix.service_config.service }}:$VERSION
+
+      # 4. 更新 Helm Chart 的 Image Tag
+      - name: Update Helm Chart values.yaml
+        run: |
+          # 将新的镜像 tag 写入 Chart 的 values.yaml 文件
+          yq e '.backend.image.tag = "${{ github.sha }}"' -i helm/charts/values.yaml
+
+      # 5. (可选但推荐) 更新 Chart 版本并打包
+      - name: Bump Chart Version and Package
+        run: |
+          helm dependency update helm/charts/backend/
+          helm package helm/charts/backend/ -d chart-packages/
+          helm registry login ${{ env.HELM_REGISTRY }} -u ${{ env.HELM_REGISTRY_USER }}
+          echo ${{ secrets.HELM_REGISTRY_PASS }} | helm registry login registry-1.docker.io -u ${{ env.HELM_REGISTRY_USER }} --password-stdin
+          helm push chart-packages/* oci://registry-1.docker.io/${{ env.HELM_REGISTRY_USER }}
+
+      # 6. 推送更新后的 values.yaml 到 Git 仓库
+      - name: Commit and Push changes to Chart
+        uses: stefanzweifel/git-auto-commit-action@v7
+        with:
+          commit_message: "CI: Auto update image tag to ${{ github.sha }}"
+#      - name: Install ArgoCD CLI
+#        run: |
+#          curl -LO https://github.com/argoproj/argo-cd/releases/download/v2.13.4/argocd-linux-amd64
+#          chmod +x argocd-linux-amd64
+#          mv argocd-linux-amd64 /usr/local/bin/argocd
+#
+#      - name: Connect to ArgoCD Server
+#        run: |
+#          argocd login ${{ secrets.ARGOCD_SERVER_ADDR }} \
+#            --username ${{ secrets.ARGOCD_SERVER_USER }} \
+#            --password ${{ secrets.ARGOCD_SERVER_PASS }} \
+#            --insecure
+#          argocd version
+#
+#      - name: Connect to Kubernetes Cluster
+#        run: |
+#          mkdir -pv ~/.kube/
+#          echo "${{secrets.KUBE_CONF}}" > ~/.kube/config
+#          chmod 600 ~/.kube/config
+#
+#      - name: Set Kubernetes Context
+#        run: |
+#          if kubectl get ns $NAMESPACE; then
+#            echo "Namespace $NAMESPACE already exists, skipping creation."
+#          else
+#            kubectl create ns $NAMESPACE
+#          fi
+#          kubectl config set-context --current --namespace $NAMESPACE
+#
+#      - name: Deploy to Kubernetes
+#        run: |
+#          kubectl apply -f ${{ matrix.service_config.service }}/application.yaml
+#
+#          argocd app set argocd/${REGISTER_NAMESPACE}-${{ matrix.service_config.service }} \
+#            --kustomize-image example=${{ secrets.REGISTRY }}/${REGISTER_NAMESPACE}/${{ matrix.service_config.service }}:$VERSION
+#
+#          argocd app sync ${REGISTER_NAMESPACE}-${{ matrix.service_config.service }}
+#
+#      - name: Monitor Deployment
+#        run: |
+#          kubectl rollout status deploy/${{ matrix.service_config.service }} || kubectl rollout undo deploy/${{ matrix.service_config.service }}

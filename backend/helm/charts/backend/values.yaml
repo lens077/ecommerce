@@ -1,0 +1,22 @@
+# charts/backend/values.yaml
+replicaCount: 1
+
+image:
+  repository: "ccr.ccs.tencentyun.com/sumery/server"
+  tag: "dev"
+  pullPolicy: IfNotPresent
+
+service:
+  type: NodePort
+  port: 4000
+  targetPort: 31400
+
+environment:
+  HTTP_ADDR: "0.0.0.0:4000"
+  RUN_MODE: "prod"
+  OTLP_HTTP_ENDPOINT: "center-collector.observability:4318"
+  # 禁用Consul服务发现，避免依赖注入错误
+  DISABLE_CONSUL: "true"
+
+autoscaling:
+  enabled: false
