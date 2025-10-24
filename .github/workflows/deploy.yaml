@@ -2,8 +2,8 @@ name: Test Microservices
 
 on:
   push:
-    branches:
-      - main
+#    branches:
+#      - main
     tags:
       - 'v*.*.*'
 env:
@@ -95,6 +95,7 @@ jobs:
       # Give the default GITHUB_TOKEN write permission to commit and push the
       # added or changed files to the repository.
       contents: write
+      pull-requests: write
     runs-on: ubuntu-24.04-arm
     strategy:
       matrix:
@@ -151,6 +152,33 @@ jobs:
           helm package helm/charts/backend/ -d chart-packages/
           echo "${{ secrets.HELM_REGISTRY_PASS }}" | helm registry login registry-1.docker.io -u ${{ env.HELM_REGISTRY_USER }} --password-stdin
           helm push chart-packages/* oci://registry-1.docker.io/${{ env.HELM_REGISTRY_USER }}
+
+      # 4. (继续) 更新 Helm Chart values.yaml
+      - name: Update Helm Chart values.yaml
+        run: |
+          yq e '.backend.image.tag = "${{ github.sha }}"' -i backend/helm/values.yaml
+          # 🚨 确保你所有的本地修改 (包括 yq 和 helm package) 都完成了
+
+      # 4.5 解决竞态条件：拉取远程最新更改并 Rebase
+      - name: Git Pull Before Commit
+        run: |
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git config user.name "github-actions[bot]"
+          # 切换到 main 分支并拉取远程更改，使用 rebase 保持线性历史
+          git pull origin main --rebase
+        # 注意: 这里的 working-directory 应该保持与 job 的 defaults 一致，
+        # 除非你的修改是在其他子目录中进行的。
+
+      # 5. 自动提交修改
+      - name: Auto Commit Changes
+        uses: stefanzweifel/git-auto-commit-action@v7
+        with:
+          # 🚨 移除 repository: . 这一行 (让它使用默认的当前目录)
+          commit_message: "CI: Auto update image tag to ${{ github.sha }}"
+          file_pattern: "backend/helm/values.yaml backend/chart-packages/*" # 明确指定文件，更安全
+          # 🚨 必须使用 PAT Token 授权，否则 BOT 权限可能不足以进行 Rebase 和 Push
+          # token: ${{ secrets.YOUR_PAT_TOKEN }} # (如果你在 actions/checkout 没有使用 PAT, 这里需要)
+          # 确保在 actions/checkout 步骤中使用了 PAT 或 GITHUB_TOKEN 的写入权限。
 
       # 6. 推送更新后的 values.yaml 到 Git 仓库
       - name: Commit and Push changes to Chart
