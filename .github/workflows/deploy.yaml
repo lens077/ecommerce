@@ -126,25 +126,35 @@ jobs:
           echo "${{ secrets.HELM_REGISTRY_PASS }}" | helm registry login registry-1.docker.io -u ${{ env.HELM_REGISTRY_USER }} --password-stdin
           helm push chart-packages/* oci://registry-1.docker.io/${{ env.HELM_REGISTRY_USER }}
 
-      - name: Git Pull Before Commit
+      # 6. 暂存更改, 拉取代码, 还原更改
+      - name: Stash Changes, Pull, and Pop
         run: |
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
           git config user.name "github-actions[bot]"
           
-          # 这将成功拉取 'main' 分支并变基
-          # 你在 yq 和 helm package 中所做的本地修改将被保留
+          # 1. 将所有更改 (被修改的文件和新文件) 添加到索引
+          #    这是 'git stash' 保存它们所必需的
+          git add helm/values.yaml chart-packages/
+          
+          # 2. 暂存 (Stash) 更改。这会使工作目录和索引都变干净。
+          git stash
+          
+          # 3. 拉取并变基 (Pull & Rebase)。因为仓库是干净的，所以这一步会成功。
           git pull origin main --rebase
+          
+          # 4. 还原 (Pop) 刚才暂存的更改。
+          #    这些更改现在位于刚刚 rebase 过的最新代码之上了。
+          git stash pop
 
-        # 7. 自动提交修改
-        # (现在轮到 auto-commit-action 来 add 和 commit)
+      # 7. 自动提交修改
+      # (这个 Action 会找到 'stash pop' 还原回来的更改并提交它们)
       - name: Auto Commit Changes
         uses: stefanzweifel/git-auto-commit-action@v7
         with:
           commit_message: "CI: Auto update image tag to ${{ github.sha }} [skip ci]"
 
-          # Action 会自动帮你 'git add' 这些文件
+          # 确保 file_pattern 仍然存在，Action 知道要提交什么
           file_pattern: "helm/values.yaml chart-packages/*"
 
-          # 使用你提供的文档中存在的选项
           commit_user_name: "github-actions[bot]"
           commit_user_email: "41898282+github-actions[bot]@users.noreply.github.com"
