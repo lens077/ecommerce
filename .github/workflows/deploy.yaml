@@ -14,7 +14,7 @@ env:
   HELM_REGISTRY: registry-1.docker.io
   HELM_REGISTRY_USER: lookeke
   # 用户或组织的注册表名
-  REGISTER_USER: sunmery
+  REGISTER_USER: sumery
   NAMESPACE: connect-example
   # 版本号, git tag的标签名
   # https://docs.github.com/zh/actions/writing-workflows/choosing-what-your-workflow-does/accessing-contextual-information-about-workflow-runs#github-context
@@ -135,7 +135,7 @@ jobs:
             --build-arg GOARCH=$GOARCH \
             --build-arg SERVICE=server 
 
-          docker tag actions/${{ matrix.service_config.service }} ${{ env.REGISTRY }}/${REGISTER_USER}/${{ matrix.service_config.service }}:$VERSION
+          docker tag actions/${{ matrix.service_config.service }} ${{ env.REGISTRY }}/${{ env.REGISTER_USER }}/${{ matrix.service_config.service }}:$VERSION
           docker push ${{ env.REGISTRY }}/${REGISTER_USER}/${{ matrix.service_config.service }}:$VERSION
 
       # 4. 更新 Helm Chart 的 Image Tag
