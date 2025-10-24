@@ -110,7 +110,34 @@ jobs:
           # 检出默认分支，以便您可以提交更改
           ref: ${{ github.event.repository.default_branch }}
 
-      # ... (Set up QEMU, Cache, Login, Build/Push Docker Image 步骤保持不变) ...
+      - name: Set up QEMU for cross-platform builds
+        uses: docker/setup-qemu-action@v3
+
+      - name: Cache Go dependencies
+        uses: actions/cache@v3
+        with:
+          path: ~/go/pkg/mod
+          key: ${{ runner.os }}-go-modules-${{ hashFiles('**/go.sum') }}
+          restore-keys: ${{ runner.os }}-go-modules-
+
+      - name: Login to Docker Registry
+        run: echo ${{ secrets.REGISTRY_PASSWORD }} | docker login ${{ env.REGISTRY }} --username ${{ secrets.REGISTRY_USERNAME }} --password-stdin
+
+      - name: Build, Tag, and Push Docker Image
+        run: |
+          docker build . \
+            -t actions/${{ matrix.service_config.service }} \
+            --build-arg GO_PROXY=$GO_PROXY \
+            --build-arg GOIMAGE=$GO_IMAGE \
+            --build-arg CGOENABLED=$CGO_ENABLED \
+            --build-arg VERSION=${{ env.VERSION }} \
+            --build-arg GOOS=$GOOS \
+            --build-arg GOARCH=$GOARCH \
+            --build-arg SERVICE=server 
+
+          docker tag actions/${{ matrix.service_config.service }} ${{ env.REGISTRY }}/${{ env.REGISTER_USER }}/${{ matrix.service_config.service }}:$VERSION
+          docker push ${{ env.REGISTRY }}/${REGISTER_USER}/${{ matrix.service_config.service }}:$VERSION
+
 
       # 4. 更新 Helm Chart 的 Image Tag
       - name: Update Helm Chart values.yaml
