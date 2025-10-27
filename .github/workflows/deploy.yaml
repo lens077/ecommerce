@@ -7,18 +7,17 @@ on:
     tags:
       - 'v*.*.*'
 env:
-  #  容器注册表
-#  REGISTRY: ccr.ccs.tencentyun.com
-  REGISTRY: harbor.apikv.com:5443
-  HELM_REGISTRY: registry-1.docker.io
-  HELM_REGISTRY_USER: lookeke
+  HELM_REGISTRY: harbor.apikv.com:5443
+  HELM_REGISTRY_USER: 'robot$github_bot'
+
   # 用户或组织的注册表名
+  REGISTRY: harbor.apikv.com:5443
   REGISTER_USER: sumery
+
   NAMESPACE: connect-example
   # 版本号, git tag的标签名
   # https://docs.github.com/zh/actions/writing-workflows/choosing-what-your-workflow-does/accessing-contextual-information-about-workflow-runs#github-context
   VERSION: ${{ github.ref_name }}
-#  VERSION: v1.0.5
   # 目标的操作系统
   GOOS: linux
   # 目标的架构
