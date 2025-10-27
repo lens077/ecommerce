@@ -9,7 +9,7 @@ on:
 env:
   #  容器注册表
 #  REGISTRY: ccr.ccs.tencentyun.com
-  REGISTRY: https://harbor.apikv.com:5443
+  REGISTRY: harbor.apikv.com:5443
   HELM_REGISTRY: registry-1.docker.io
   HELM_REGISTRY_USER: lookeke
   # 用户或组织的注册表名
