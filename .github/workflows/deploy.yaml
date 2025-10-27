@@ -124,20 +124,19 @@ jobs:
         run: echo ${{ secrets.REGISTRY_PASSWORD }} | docker login ${{ env.REGISTRY }} --username ${{ secrets.REGISTRY_USERNAME }} --password-stdin
 
       - name: Build, Tag, and Push Docker Image
-        run: |
-          docker build . \
-            -t actions/${{ matrix.service_config.service }} \
-            --build-arg GO_PROXY=$GO_PROXY \
-            --build-arg GOIMAGE=$GO_IMAGE \
-            --build-arg CGOENABLED=$CGO_ENABLED \
-            --build-arg VERSION=${{ env.VERSION }} \
-            --build-arg GOOS=$GOOS \
-            --build-arg GOARCH=$GOARCH \
-            --build-arg SERVICE=server 
-
-          docker tag actions/${{ matrix.service_config.service }} ${{ env.REGISTRY }}/${{ env.REGISTER_USER }}/${{ matrix.service_config.service }}:$VERSION
-          docker push ${{ env.REGISTRY }}/${REGISTER_USER}/${{ matrix.service_config.service }}:$VERSION
-
+        uses: ./.github/actions/build-and-push
+        with:
+          # 从您的环境变量和 secrets 中传递值
+          service-name: ${{ matrix.service_config.service }}
+          working-directory: backend
+          registry-address: ${{ env.REGISTRY }}
+          registry-user: ${{ secrets.HARBOR_ROBOT_USER }} # 假设您已设置 HARBOR_ROBOT_USER secret
+          registry-token: ${{ secrets.HARBOR_ROBOT_TOKEN }} # 假设您已设置 HARBOR_ROBOT_TOKEN secret
+          goos: ${{ env.GOOS }}
+          goarch: ${{ env.GOARCH }}
+          version: ${{ env.VERSION }}
+          go-proxy: ${{ env.GO_PROXY }}
+          go-image: ${{ env.GO_IMAGE }}
 
       # 4. 更新 Helm Chart 的 Image Tag
       - name: Update Helm Chart values.yaml

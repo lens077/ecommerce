@@ -1,0 +1,21 @@
+# 构建 Docker 镜像
+- name: Build Docker Image
+  shell: bash
+  run: |
+    docker build . \
+      --build-arg GO_PROXY=${{ inputs.go-proxy }} \
+      --build-arg GOIMAGE=${{ inputs.go-image }} \
+      --build-arg CGOENABLED=0 \
+      --build-arg VERSION=${{ inputs.version }} \
+      --build-arg GOOS=${{ inputs.goos }} \
+      --build-arg GOARCH=${{ inputs.goarch }} \
+      --build-arg SERVICE=server \
+      -t ${{ inputs.registry-address }}/${{ inputs.registry-user }}/${{ inputs.service-name }}:${{ inputs.version }}
+  working-directory: ${{ inputs.working-directory }}
+
+# 步骤 3: 推送 Docker 镜像
+- name: Push Docker Image
+  shell: bash
+  run: |
+    docker push ${{ inputs.registry-address }}/${{ inputs.registry-user }}/${{ inputs.service-name }}:${{ inputs.version }}
+  working-directory: ${{ inputs.working-directory }}
