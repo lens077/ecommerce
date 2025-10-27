@@ -8,7 +8,8 @@ on:
       - 'v*.*.*'
 env:
   #  容器注册表
-  REGISTRY: ccr.ccs.tencentyun.com
+#  REGISTRY: ccr.ccs.tencentyun.com
+  REGISTRY: https://harbor.apikv.com:5443
   HELM_REGISTRY: registry-1.docker.io
   HELM_REGISTRY_USER: lookeke
   # 用户或组织的注册表名
@@ -180,8 +181,8 @@ jobs:
         with:
           commit_message: "CI: Auto update image tag to ${{ github.sha }} [skip ci]"
 
-          # 确保 file_pattern 仍然存在，Action 知道要提交什么
+          # 要提交的文件列表
           file_pattern: "helm/values.yaml chart-packages/*"
 
           commit_user_name: "github-actions[bot]"
-          commit_user_email: "41898282+github-actions[bot]@users.noreply.github.com"
+          commit_user_email: "github-actions[bot]@users.noreply.github.com"
