@@ -123,10 +123,9 @@ jobs:
       - name: Login to Docker Registry
         run: echo ${{ secrets.REGISTRY_PASSWORD }} | docker login ${{ env.REGISTRY }} --username ${{ secrets.REGISTRY_USERNAME }} --password-stdin
 
-      - name: Build, Tag, and Push Docker Image
+      - name: Build and Push OCI Image
         uses: ./.github/actions/build-and-push
         with:
-          # 从您的环境变量和 secrets 中传递值
           service-name: ${{ matrix.service_config.service }}
           working-directory: backend
           registry-address: ${{ env.REGISTRY }}

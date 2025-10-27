@@ -1,3 +1,9 @@
+- name: Checkout repository
+  uses: actions/checkout@v5
+  with:
+    # 检出默认分支，以便您可以提交更改
+    ref: ${{ github.event.repository.default_branch }}
+
 # 构建 Docker 镜像
 - name: Build Docker Image
   shell: bash
@@ -13,7 +19,7 @@
       -t ${{ inputs.registry-address }}/${{ inputs.registry-user }}/${{ inputs.service-name }}:${{ inputs.version }}
   working-directory: ${{ inputs.working-directory }}
 
-# 步骤 3: 推送 Docker 镜像
+# 推送 Docker 镜像
 - name: Push Docker Image
   shell: bash
   run: |
