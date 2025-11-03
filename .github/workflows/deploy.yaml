@@ -8,7 +8,8 @@ on:
       - 'v*.*.*'
 env:
   HELM_REGISTRY: harbor.apikv.com:5443
-  HELM_REGISTRY_USER: 'rebot@github'
+  HELM_REGISTRY_USER: rebot@github
+  HELM_REPO: sumery
 
   # 用户或组织的注册表名
   REGISTRY: harbor.apikv.com:5443
@@ -151,7 +152,7 @@ jobs:
           helm dependency update helm/charts/backend/
           helm package helm/charts/backend/ -d chart-packages/
           echo "${{ secrets.HELM_REGISTRY_PASS }}" | helm registry login ${{ env.HELM_REGISTRY }} -u ${{ env.HELM_REGISTRY_USER }} --password-stdin
-          helm push chart-packages/* oci://${{ env.HELM_REGISTRY }}/${{ env.HELM_REGISTRY_USER }}
+          helm push chart-packages/* oci://${{ env.HELM_REGISTRY }}/${{ env.HELM_REPO }}
 
       # 暂存更改, 拉取代码, 还原更改
       - name: Stash Changes, Pull, and Pop
