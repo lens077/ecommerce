@@ -8,7 +8,7 @@ on:
       - 'v*.*.*'
 env:
   HELM_REGISTRY: harbor.apikv.com:5443
-  HELM_REGISTRY_USER: 'robot$github_bot'
+  HELM_REGISTRY_USER: rebot@github
 
   # 用户或组织的注册表名
   REGISTRY: harbor.apikv.com:5443
@@ -106,9 +106,9 @@ jobs:
     steps:
       - name: Checkout repository
         uses: actions/checkout@v5
-        with:
-          # 检出默认分支，以便您可以提交更改
-          ref: ${{ github.event.repository.default_branch }}
+#        with:
+#          # 检出默认分支，以便您可以提交更改
+#          ref: ${{ github.event.repository.default_branch }}
 
       - name: Set up QEMU for cross-platform builds
         uses: docker/setup-qemu-action@v3
@@ -123,27 +123,28 @@ jobs:
       - name: Login to Docker Registry
         run: echo ${{ secrets.REGISTRY_PASSWORD }} | docker login ${{ env.REGISTRY }} --username ${{ secrets.REGISTRY_USERNAME }} --password-stdin
 
-      - name: Build and Push OCI Image
-        uses: ./.github/actions/build-and-push
-        with:
-          service-name: ${{ matrix.service_config.service }}
-          working-directory: backend
-          registry-address: ${{ env.REGISTRY }}
-          registry-user: ${{ secrets.HARBOR_ROBOT_USER }} # 假设您已设置 HARBOR_ROBOT_USER secret
-          registry-token: ${{ secrets.HARBOR_ROBOT_TOKEN }} # 假设您已设置 HARBOR_ROBOT_TOKEN secret
-          goos: ${{ env.GOOS }}
-          goarch: ${{ env.GOARCH }}
-          version: ${{ env.VERSION }}
-          go-proxy: ${{ env.GO_PROXY }}
-          go-image: ${{ env.GO_IMAGE }}
+      - name: Build, Tag and Push OCI Image
+        run: |
+          docker build . \
+            -t actions/${{ matrix.service_config.service }} \
+            --build-arg GO_PROXY=$GO_PROXY \
+            --build-arg GOIMAGE=$GO_IMAGE \
+            --build-arg CGOENABLED=$CGO_ENABLED \
+            --build-arg VERSION=${{ env.VERSION }} \
+            --build-arg GOOS=$GOOS \
+            --build-arg GOARCH=$GOARCH \
+            --build-arg SERVICE=server
 
-      # 4. 更新 Helm Chart 的 Image Tag
+          docker tag actions/${{ matrix.service_config.service }} ${{ env.REGISTRY }}/${{ env.REGISTER_USER }}/${{ matrix.service_config.service }}:$VERSION
+          docker push ${{ env.REGISTRY }}/${REGISTER_USER}/${{ matrix.service_config.service }}:$VERSION
+
+      # 更新 Helm Chart 的 Image Tag
       - name: Update Helm Chart values.yaml
         run: |
           # 仅运行一次
           yq e '.backend.image.tag = "${{ github.sha }}"' -i helm/values.yaml
 
-      # 5. 打包并推送 Helm Chart 到 OCI
+      # 打包并推送 Helm Chart 到 OCI
       - name: Bump Chart Version and Package
         run: |
           helm dependency update helm/charts/backend/
@@ -151,7 +152,7 @@ jobs:
           echo "${{ secrets.HELM_REGISTRY_PASS }}" | helm registry login registry-1.docker.io -u ${{ env.HELM_REGISTRY_USER }} --password-stdin
           helm push chart-packages/* oci://registry-1.docker.io/${{ env.HELM_REGISTRY_USER }}
 
-      # 6. 暂存更改, 拉取代码, 还原更改
+      # 暂存更改, 拉取代码, 还原更改
       - name: Stash Changes, Pull, and Pop
         run: |
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
@@ -171,8 +172,7 @@ jobs:
           #    这些更改现在位于刚刚 rebase 过的最新代码之上了。
           git stash pop
 
-      # 7. 自动提交修改
-      # (这个 Action 会找到 'stash pop' 还原回来的更改并提交它们)
+      # 自动提交修改
       - name: Auto Commit Changes
         uses: stefanzweifel/git-auto-commit-action@v7
         with:
