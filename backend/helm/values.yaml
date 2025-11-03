@@ -1,21 +1,11 @@
-# 根 Chart 的 values.yaml
-
-# 全局默认值，也可以传递给子 Chart
-global:
-  imagePullPolicy: IfNotPresent
-  # 你可以在这里放一些所有子chart都需要的值
-
-# 这个 replicaCount 只对根Chart有效，不会自动传递给子Chart
 replicaCount: 1
 
-# go子chart配置 - 与Chart.yaml中定义的子chart名称一致
 backend:
-  # 将子 Chart 的所有值嵌套在与子 Chart 名字相同的键下
   enabled: true
-  replicaCount: 1 # 这个值会覆盖子 Chart自身的默认值
+  replicaCount: 1
   image:
-    repository: "ccr.ccs.tencentyun.com/sumery/server"
-    tag: "1.0.2"
+    repository: "harbor.apikv.com:5443/sumery/connect-example-backend"
+    tag: "v1.1.4"
 #    pullPolicy: IfNotPresent
     pullPolicy: Always
   service:
@@ -29,7 +19,6 @@ backend:
   autoscaling:
     enabled: false # 添加autoscaling配置，确保可以通过父values控制
 
-# react子chart配置 - 与Chart.yaml中定义的子chart名称一致
 frontend:
   enabled: false
   replicaCount: 1 # 添加replicaCount配置，确保可以通过父values控制
