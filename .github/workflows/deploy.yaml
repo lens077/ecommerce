@@ -127,18 +127,29 @@ jobs:
 
       - name: Build, Tag and Push OCI Image
         run: |
-          docker build . \
+          docker buildx build . \
+            --progress=plain \
             -t actions/${{ matrix.service_config.service }} \
-            --build-arg GO_PROXY=$GO_PROXY \
-            --build-arg GOIMAGE=$GO_IMAGE \
             --build-arg CGOENABLED=$CGO_ENABLED \
-            --build-arg VERSION=${{ env.VERSION }} \
-            --build-arg GOOS=$GOOS \
-            --build-arg GOARCH=$GOARCH \
-            --build-arg SERVICE=server
-
-          docker tag actions/${{ matrix.service_config.service }} ${{ env.REGISTRY }}/${{ env.REGISTER_USER }}/${{ matrix.service_config.service }}:$VERSION
-          docker push ${{ env.REGISTRY }}/${REGISTER_USER}/${{ matrix.service_config.service }}:$VERSION
+            --build-arg GOIMAGE=$GO_IMAGE \
+            --build-arg VERSION=$VERSION \
+            --build-arg SERVICE=server \
+            --platform arm64,amd64 \
+            --push \
+            --cache-from type=registry,ref=$(REGISTER)/$(REPOSITORY):cache \
+            --cache-to type=registry,ref=$(REGISTER)/$(REPOSITORY):cache,mode=max
+#          docker build . \
+#            -t actions/${{ matrix.service_config.service }} \
+#            --build-arg GO_PROXY=$GO_PROXY \
+#            --build-arg GOIMAGE=$GO_IMAGE \
+#            --build-arg CGOENABLED=$CGO_ENABLED \
+#            --build-arg VERSION=${{ env.VERSION }} \
+#            --build-arg GOOS=$GOOS \
+#            --build-arg GOARCH=$GOARCH \
+#            --build-arg SERVICE=server
+#
+#          docker tag actions/${{ matrix.service_config.service }} ${{ env.REGISTRY }}/${{ env.REGISTER_USER }}/${{ matrix.service_config.service }}:$VERSION
+#          docker push ${{ env.REGISTRY }}/${REGISTER_USER}/${{ matrix.service_config.service }}:$VERSION
 
       - name: Update Backend Chart Version and Image Tag
         run: |
@@ -234,7 +245,7 @@ jobs:
             git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
             git config user.name "github-actions[bot]"
             
-            git add connect-example/backend/argo.yaml # 🚨 修正：文件路径以 working-directory 为起点
+            git add connect-example/backend/argo.yaml
             
             # 仅在有实际更改时提交
             git diff --cached --exit-code || git commit -m "CI: Auto update connect-example-backend chart version to ${{ env.VERSION }} [skip ci]"
