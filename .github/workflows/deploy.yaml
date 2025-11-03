@@ -130,31 +130,31 @@ jobs:
 
       - name: Build, Tag and Push OCI Image
         run: |
-          REPO=${{ env.REGISTRY }}/${{ env.REGISTER_USER }}/${{ matrix.service_config.service }}
-          
-          docker buildx build . \
-            --progress=plain \
-            -t $REPO:${{ env.VERSION }} \
-            --build-arg CGOENABLED=$CGO_ENABLED \
-            --build-arg GOIMAGE=$GO_IMAGE \
-            --build-arg VERSION=$VERSION \
-            --build-arg SERVICE=server \
-            --platform arm64,amd64 \
-            --push \
-            --cache-from type=registry,ref=$REPO:cache \
-            --cache-to type=registry,ref=$REPO:cache,mode=max
-#          docker build . \
-#            -t actions/${{ matrix.service_config.service }} \
-#            --build-arg GO_PROXY=$GO_PROXY \
-#            --build-arg GOIMAGE=$GO_IMAGE \
-#            --build-arg CGOENABLED=$CGO_ENABLED \
-#            --build-arg VERSION=${{ env.VERSION }} \
-#            --build-arg GOOS=$GOOS \
-#            --build-arg GOARCH=$GOARCH \
-#            --build-arg SERVICE=server
+#          REPO=${{ env.REGISTRY }}/${{ env.REGISTER_USER }}/${{ matrix.service_config.service }}
 #
-#          docker tag actions/${{ matrix.service_config.service }} ${{ env.REGISTRY }}/${{ env.REGISTER_USER }}/${{ matrix.service_config.service }}:$VERSION
-#          docker push ${{ env.REGISTRY }}/${REGISTER_USER}/${{ matrix.service_config.service }}:$VERSION
+#          docker buildx build . \
+#            --progress=plain \
+#            -t $REPO:${{ env.VERSION }} \
+#            --build-arg CGOENABLED=$CGO_ENABLED \
+#            --build-arg GOIMAGE=$GO_IMAGE \
+#            --build-arg VERSION=$VERSION \
+#            --build-arg SERVICE=server \
+#            --platform arm64,amd64 \
+#            --push \
+#            --cache-from type=registry,ref=$REPO:cache \
+#            --cache-to type=registry,ref=$REPO:cache,mode=max
+          docker build . \
+            -t actions/${{ matrix.service_config.service }} \
+            --build-arg GO_PROXY=$GO_PROXY \
+            --build-arg GOIMAGE=$GO_IMAGE \
+            --build-arg CGOENABLED=$CGO_ENABLED \
+            --build-arg VERSION=${{ env.VERSION }} \
+            --build-arg GOOS=$GOOS \
+            --build-arg GOARCH=$GOARCH \
+            --build-arg SERVICE=server
+
+          docker tag actions/${{ matrix.service_config.service }} ${{ env.REGISTRY }}/${{ env.REGISTER_USER }}/${{ matrix.service_config.service }}:$VERSION
+          docker push ${{ env.REGISTRY }}/${REGISTER_USER}/${{ matrix.service_config.service }}:$VERSION
 
       - name: Update Backend Chart Version and Image Tag
         run: |
@@ -227,8 +227,6 @@ jobs:
         working-directory: connect-example
         # 确保 yq 已经在 runner 环境中
         run: |
-          ls
-          pwd
           # 您的 Chart 版本与 Git Tag 保持一致
           export NEW_CHART_VERSION="${{ env.VERSION }}"
           MANIFEST_FILE="connect-example/backend/argo.yaml"
@@ -247,11 +245,11 @@ jobs:
       - name: Commit and Push Manifest Changes
         working-directory: connect-example
         run: |
-            git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
-            git config user.name "github-actions[bot]"
-            
-            git add connect-example/backend/argo.yaml
-            
-            # 仅在有实际更改时提交
-            git diff --cached --exit-code || git commit -m "CI: Auto update connect-example-backend chart version to ${{ env.VERSION }} [skip ci]"
-            git push
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git config user.name "github-actions[bot]"
+          
+          git add connect-example/backend/argo.yaml
+          
+          # 仅在有实际更改时提交
+          git diff --cached --exit-code || git commit -m "CI: Auto update connect-example-backend chart version to ${{ env.VERSION }} [skip ci]"
+          git push
