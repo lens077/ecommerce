@@ -1,4 +1,5 @@
-# charts/frontend/values.yaml
+enabled: false
+
 replicaCount: 1
 
 image:

@@ -15,7 +15,7 @@ backend:
   replicaCount: 1 # 这个值会覆盖子 Chart自身的默认值
   image:
     repository: "ccr.ccs.tencentyun.com/sumery/server"
-    tag: "pre"
+    tag: "1.0.2"
 #    pullPolicy: IfNotPresent
     pullPolicy: Always
   service:
