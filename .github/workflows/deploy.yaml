@@ -126,9 +126,7 @@ jobs:
 
       - name: Build, Tag and Push OCI Image
         run: |
-          pwd
-          ls
-          docker build backend \
+          docker build . \
             -t actions/${{ matrix.service_config.service }} \
             --build-arg GO_PROXY=$GO_PROXY \
             --build-arg GOIMAGE=$GO_IMAGE \
