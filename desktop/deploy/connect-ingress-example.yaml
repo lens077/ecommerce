@@ -1,0 +1,28 @@
+# ingress-classic.yaml
+apiVersion: networking.k8s.io/v1
+kind: Ingress
+metadata:
+  name: backend-ingress
+  namespace: default
+  annotations:
+    # 入口的负载均衡器模式。允许每次入口覆盖,默认值 dedicated 专用， 可选值：shared 共享
+    ingress.cilium.io/loadbalancer-mode: shared
+    # 专用入口的服务类型: LoadBalancer和 NodePort。
+    ingress.cilium.io/service-type: LoadBalancer
+    # dedicated 专用, 入口的端口
+    # ingress.cilium.io/host-listener-port: 80
+    # 是否为此入口启用强制 HTTPS 重定向。
+    ingress.cilium.io/force-https: disabled
+spec:
+  ingressClassName: cilium
+  rules:
+    - host: my-app.com #请替换为您的实际域名
+      http:
+        paths:
+          - path: /
+            pathType: Prefix
+            backend:
+              service:
+                name: my-app-backend # 您的服务名称
+                port:
+                  number: 4001 # 您的服务端口

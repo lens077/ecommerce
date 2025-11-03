@@ -1,0 +1,69 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<project version="4">
+  <component name="AutoImportSettings">
+    <option name="autoReloadType" value="SELECTIVE" />
+  </component>
+  <component name="ChangeListManager">
+    <list default="true" id="d17294b6-995e-4b3c-9383-e1079b59f53a" name="更改" comment="">
+      <change beforePath="$PROJECT_DIR$/../../../desktop/frontend/wailsjs/runtime/package.json" beforeDir="false" afterPath="$PROJECT_DIR$/../../../desktop/frontend/wailsjs/runtime/package.json" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/../../../desktop/frontend/wailsjs/runtime/runtime.d.ts" beforeDir="false" afterPath="$PROJECT_DIR$/../../../desktop/frontend/wailsjs/runtime/runtime.d.ts" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/../../../desktop/frontend/wailsjs/runtime/runtime.js" beforeDir="false" afterPath="$PROJECT_DIR$/../../../desktop/frontend/wailsjs/runtime/runtime.js" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/../../../frontend/.idea/vcs.xml" beforeDir="false" afterPath="$PROJECT_DIR$/../../../frontend/.idea/vcs.xml" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/../../../frontend/package.json" beforeDir="false" afterPath="$PROJECT_DIR$/../../../frontend/package.json" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/../../../frontend/pnpm-lock.yaml" beforeDir="false" afterPath="$PROJECT_DIR$/../../../frontend/pnpm-lock.yaml" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/../../../frontend/src/routes/index.css" beforeDir="false" afterPath="$PROJECT_DIR$/../../../frontend/src/routes/index.css" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/../../../frontend/src/routes/index.tsx" beforeDir="false" afterPath="$PROJECT_DIR$/../../../frontend/src/routes/index.tsx" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/.idea/dataSources.local.xml" beforeDir="false" afterPath="$PROJECT_DIR$/.idea/dataSources.local.xml" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/.idea/workspace.xml" beforeDir="false" afterPath="$PROJECT_DIR$/.idea/workspace.xml" afterDir="false" />
+    </list>
+    <option name="SHOW_DIALOG" value="false" />
+    <option name="HIGHLIGHT_CONFLICTS" value="true" />
+    <option name="HIGHLIGHT_NON_ACTIVE_CHANGELIST" value="false" />
+    <option name="LAST_RESOLUTION" value="IGNORE" />
+  </component>
+  <component name="Git.Settings">
+    <option name="RECENT_GIT_ROOT_PATH" value="$PROJECT_DIR$/../../.." />
+  </component>
+  <component name="ProjectColorInfo">{
+  &quot;customColor&quot;: &quot;&quot;,
+  &quot;associatedIndex&quot;: 0
+}</component>
+  <component name="ProjectId" id="33pZnY11Xour4cMbiEqDMfJ5QAK" />
+  <component name="ProjectLevelVcsManager">
+    <ConfirmationsSetting value="1" id="Add" />
+  </component>
+  <component name="ProjectViewState">
+    <option name="hideEmptyMiddlePackages" value="true" />
+    <option name="showLibraryContents" value="true" />
+  </component>
+  <component name="PropertiesComponent">{
+  &quot;keyToString&quot;: {
+    &quot;ModuleVcsDetector.initialDetectionPerformed&quot;: &quot;true&quot;,
+    &quot;RunOnceActivity.ShowReadmeOnStart&quot;: &quot;true&quot;,
+    &quot;RunOnceActivity.git.unshallow&quot;: &quot;true&quot;,
+    &quot;git-widget-placeholder&quot;: &quot;main&quot;,
+    &quot;last_opened_file_path&quot;: &quot;/Users/sun&quot;
+  },
+  &quot;keyToStringList&quot;: {
+    &quot;DatabaseDriversLRU&quot;: [
+      &quot;redis&quot;,
+      &quot;postgresql&quot;
+    ]
+  }
+}</component>
+  <component name="RecentsManager">
+    <key name="MoveFile.RECENT_KEYS">
+      <recent name="$USER_HOME$/Databases" />
+    </key>
+  </component>
+  <component name="TaskManager">
+    <task active="true" id="Default" summary="默认任务">
+      <changelist id="d17294b6-995e-4b3c-9383-e1079b59f53a" name="更改" comment="" />
+      <created>1760016144031</created>
+      <option name="number" value="Default" />
+      <option name="presentableId" value="Default" />
+      <updated>1760016144031</updated>
+    </task>
+    <servers />
+  </component>
+</project>
