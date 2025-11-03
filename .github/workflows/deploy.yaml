@@ -185,25 +185,23 @@ jobs:
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
           git config user.name "github-actions[bot]"
           
-          # 1. 将所有更改 (被修改的文件和新文件) 添加到索引
-          #    这是 'git stash' 保存它们所必需的
+          # 将所有更改 (被修改的文件和新文件) 添加到索引, 这是 'git stash' 保存它们所必需的
           git add helm/values.yaml chart-packages/
           
-          # 2. 暂存 (Stash) 更改。这会使工作目录和索引都变干净。
+          # 暂存 (Stash) 更改。这会使工作目录和索引都变干净。
           git stash
           
-          # 3. 拉取并变基 (Pull & Rebase)。因为仓库是干净的，所以这一步会成功。
+          # 拉取并变基 (Pull & Rebase)。因为仓库是干净的，所以这一步会成功。
           git pull origin main --rebase
           
-          # 4. 还原 (Pop) 刚才暂存的更改。
-          #    这些更改现在位于刚刚 rebase 过的最新代码之上了。
+          # 还原 (Pop) 刚才暂存的更改。这些更改现在位于刚刚 rebase 过的最新代码之上了。
           git stash pop
 
       # 自动提交修改
       - name: Auto Commit Changes
         uses: stefanzweifel/git-auto-commit-action@v7
         with:
-          commit_message: "CI: Auto update image tag to ${{ github.sha }} [skip ci]"
+          commit_message: "CI: Auto update image tag to ${{ env.VERSION }} [skip ci]"
 
           # 要提交的文件列表
           file_pattern: "helm/values.yaml chart-packages/*"
