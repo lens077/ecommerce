@@ -186,7 +186,7 @@ jobs:
           git config user.name "github-actions[bot]"
           
           # 将所有更改 (被修改的文件和新文件) 添加到索引, 这是 'git stash' 保存它们所必需的
-          git add helm/values.yaml chart-packages/
+          git add .
           
           # 暂存 (Stash) 更改。这会使工作目录和索引都变干净。
           git stash
@@ -200,12 +200,13 @@ jobs:
       # 自动提交修改
       - name: Auto Commit Changes
         uses: stefanzweifel/git-auto-commit-action@v7
-
         with:
+          # 可选。存储库的本地文件路径, 默认为存储库的根目录,即"."
+          repository: backend
           commit_message: "CI: Auto update image tag to ${{ env.VERSION }} [skip ci]"
 
           # 要提交的文件列表
-          file_pattern: "backend/helm/values.yaml backend/chart-packages/*"
+          file_pattern: "helm/values.yaml chart-packages/*"
 
           commit_user_name: "github-actions[bot]"
           commit_user_email: "github-actions[bot]@users.noreply.github.com"
