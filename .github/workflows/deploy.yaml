@@ -210,9 +210,11 @@ jobs:
       - name: Update ArgoCD targetRevision
         # 确保 yq 已经在 runner 环境中
         run: |
+          ls
+          pwd
           # 您的 Chart 版本与 Git Tag 保持一致
           NEW_CHART_VERSION="${{ env.VERSION }}"
-          MANIFEST_FILE="connect-example/backend/argo.yaml"
+          MANIFEST_FILE="backend/argo.yaml"
 
           echo "Updating $MANIFEST_FILE with targetRevision: $NEW_CHART_VERSION"
 
