@@ -136,8 +136,8 @@ jobs:
             --build-arg SERVICE=server \
             --platform arm64,amd64 \
             --push \
-            --cache-from type=registry,ref=$(REGISTER)/$(REPOSITORY):cache \
-            --cache-to type=registry,ref=$(REGISTER)/$(REPOSITORY):cache,mode=max
+            --cache-from type=registry,ref=${{env.REGISTRY}}/${{env.REGISTER_USER}}:cache \
+            --cache-to type=registry,ref=${{env.REGISTRY}}/${{env.REGISTER_USER}}:cache,mode=max
 #          docker build . \
 #            -t actions/${{ matrix.service_config.service }} \
 #            --build-arg GO_PROXY=$GO_PROXY \
