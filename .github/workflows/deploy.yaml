@@ -201,12 +201,10 @@ jobs:
       - name: Auto Commit Changes
         uses: stefanzweifel/git-auto-commit-action@v7
         with:
-          # 可选。存储库的本地文件路径, 默认为存储库的根目录,即"."
-          repository: backend
           commit_message: "CI: Auto update image tag to ${{ env.VERSION }} [skip ci]"
 
           # 要提交的文件列表
-          file_pattern: "helm/values.yaml chart-packages/*"
+          file_pattern: "backend/helm/values.yaml backend/chart-packages/*"
 
           commit_user_name: "github-actions[bot]"
           commit_user_email: "github-actions[bot]@users.noreply.github.com"
