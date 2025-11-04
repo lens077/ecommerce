@@ -21,8 +21,6 @@ env:
   VERSION: ${{ github.ref_name }}
 
   # Dockerfile 相关参数
-  GOOS: linux
-  GOARCH: arm64
   GO_IMAGE: golang:1.25.1-alpine3.22
   GO_PROXY: https://proxy.golang.org
   CGO_ENABLED: 0
@@ -140,8 +138,6 @@ jobs:
             GOIMAGE=${{ env.GO_IMAGE }}
             CGOENABLED=${{ env.CGO_ENABLED }}
             VERSION=${{ env.VERSION }}
-            GOOS=${{ env.GOOS }}
-            GOARCH=${{ env.GOARCH }}
             SERVICE=server
           tags: |
             ${{ env.DOCKERHUB_USERNAME }}/${{ env.IMAGE_NAME }}:${{ env.VERSION }}
