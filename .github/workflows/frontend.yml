@@ -1,0 +1,212 @@
+name: Connect-example Frontend GitOps Deployment
+
+on:
+  push:
+    tags:
+      - 'v*.*.*'
+
+# 共享环境变量
+env:
+  # 私有注册表URL
+  REGISTRY: harbor.apikv.com:5443
+  # 仓库名称
+  REGISTER_USER: sumery
+
+  # Docker Hub 用户名
+  DOCKERHUB_USERNAME: lookeke
+
+  # 镜像名称
+  IMAGE_NAME: connect-example-frontend
+  # 版本，由标签推送决定
+  VERSION: ${{ github.ref_name }}
+
+  # Node.js 相关参数
+  NODE_VERSION: 20
+  FRONTEND_DIR: frontend
+
+  # Helm 仓库URL
+  HELM_REGISTRY: harbor.apikv.com:5443
+  # Helm 仓库的用户名
+  HELM_REGISTRY_USER: rebot@github
+  # Helm 仓库的名称
+  HELM_REPO: sumery
+
+  # 部署应用的kubernetes 命名空间
+  NAMESPACE: connect-example
+
+jobs:
+  build-and-test:
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        shell: bash
+        working-directory: ${{ env.FRONTEND_DIR }}
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v5
+
+      - name: Set up Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+          cache: 'pnpm' # 使用 pnpm 作为缓存管理器
+
+      - name: Install dependencies (pnpm)
+        run: npm install -g pnpm && pnpm install
+
+      - name: Run Playwright Tests
+        # 使用您提供的 Playwright 模板逻辑
+        run: |
+          pnpm exec playwright install --with-deps
+          pnpm exec playwright test
+
+      - name: Upload Playwright Report
+        uses: actions/upload-artifact@v4
+        if: ${{ !cancelled() }}
+        with:
+          name: playwright-report-${{ env.VERSION }}
+          path: ${{ env.FRONTEND_DIR }}/playwright-report/
+          retention-days: 30
+
+      - name: Build Frontend (e.g., Vite/Next/React Build)
+        run: pnpm build
+
+      - name: Set up QEMU
+        uses: docker/setup-qemu-action@v3
+
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v3
+
+      - name: Login to Docker Hub
+        uses: docker/login-action@v3
+        with:
+          username: ${{ env.DOCKERHUB_USERNAME }}
+          password: ${{ secrets.DOCKERHUB_TOKEN }}
+
+      - name: Login to Private Registry
+        run: echo ${{ secrets.REGISTRY_PASSWORD }} | docker login ${{ env.REGISTRY }} --username ${{ secrets.REGISTRY_USERNAME }} --password-stdin
+
+      - name: Login to GitHub Container Registry
+        uses: docker/login-action@v3
+        with:
+          registry: ghcr.io
+          username: ${{ github.repository }}
+          password: ${{ secrets.MANIFEST_REPO_PAT }}
+
+      - name: Build and push Frontend Image
+        uses: docker/build-push-action@v6
+        with:
+          context: . # 上下文是整个仓库，Dockerfile 路径是相对路径
+          file: ${{ env.FRONTEND_DIR }}/Dockerfile # 假设 Dockerfile 位于前端目录
+          platforms: linux/amd64,linux/arm64
+          push: true
+          cache-from: type=gha,scope=frontend-build
+          cache-to: type=gha,scope=frontend-build,mode=max
+          build-args: |
+            VERSION=${{ env.VERSION }}
+          tags: |
+            ${{ env.DOCKERHUB_USERNAME }}/${{ env.IMAGE_NAME }}:${{ env.VERSION }}
+            ${{ env.DOCKERHUB_USERNAME }}/${{ env.IMAGE_NAME }}:latest
+            ghcr.io/${{ github.repository }}/${{ env.IMAGE_NAME }}:${{ env.VERSION }}
+            ghcr.io/${{ github.repository }}/${{ env.IMAGE_NAME }}:latest
+
+  deploy:
+    needs: build-and-test
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write # 允许对源仓库进行提交
+      pull-requests: write
+    defaults:
+      run:
+        shell: bash
+    steps:
+      - name: Checkout Current Repository (for Helm Chart)
+        uses: actions/checkout@v5
+        # 标签触发会导致 Detached HEAD，但我们需要 Chart 文件，所以在此状态下操作
+        with:
+          ref: ${{ github.ref_name }} # 检出标签本身
+          submodules: 'false'
+
+      # ----------------------------------------------------------------------
+      # 1. 更新 Chart 版本和镜像标签 (文件路径和键名改为 frontend)
+      # ----------------------------------------------------------------------
+      - name: Update Frontend Chart Version and Image Tag
+        run: |
+          yq e '.version = "${{ env.VERSION }}"' -i helm/charts/frontend/Chart.yaml
+          yq e '.image.tag = "${{ env.VERSION }}"' -i helm/charts/frontend/values.yaml
+          yq e '.frontend.image.tag = "${{ env.VERSION }}"' -i helm/values.yaml
+
+      # 2. 打包和发布 Helm Chart
+      - name: Bump Chart Version and Package
+        run: |
+          helm dependency update helm/charts/frontend/
+          helm package helm/charts/frontend/ -d chart-packages/
+
+      - name: Publish Chart Package
+        run: |
+          echo "${{ secrets.HELM_REGISTRY_PASS }}" | helm registry login ${{ env.HELM_REGISTRY }} -u ${{ env.HELM_REGISTRY_USER }} --password-stdin
+          # 推送到 私有注册表
+          helm push chart-packages/*-${{ env.VERSION }}.tgz oci://${{ env.HELM_REGISTRY }}/${{ env.HELM_REPO }}
+          
+          echo "${{ secrets.MANIFEST_REPO_PAT }}" | helm registry login ghcr.io -u ${{ github.actor }} --password-stdin
+          # 推送到 GitHub Container Registry(ghcr.io)
+          helm push chart-packages/*-${{ env.VERSION }}.tgz oci://ghcr.io/${{ github.repository }}
+
+      # ----------------------------------------------------------------------
+      # 3. 提交 Chart 文件更改到源仓库 (使用强制推送修复 Detached HEAD)
+      # ----------------------------------------------------------------------
+      - name: Auto Commit Chart Changes
+        uses: stefanzweifel/git-auto-commit-action@v5
+        with:
+          # 临时分支名：解决 Detached HEAD 无法推送的问题
+          branch: temp-chart-update-${{ env.VERSION }}
+          create_branch: true # 允许 Action 创建这个临时分支
+
+          # 关键：使用 --force 强制推送临时分支到远程 main
+          push_options: "--force origin temp-chart-update-${{ env.VERSION }}:main"
+
+          commit_message: "CI: Auto update chart version to ${{ env.VERSION }} [skip ci]"
+          file_pattern: "helm/charts/frontend/Chart.yaml helm/charts/frontend/values.yaml helm/values.yaml"
+          commit_user_name: "github-actions[bot]"
+          commit_user_email: "github-actions[bot]@users.noreply.github.com"
+
+      # ----------------------------------------------------------------------
+      # 4. GitOps Manifest 仓库更新
+      # ----------------------------------------------------------------------
+      - name: Checkout Manifest Repository
+        uses: actions/checkout@v5
+        with:
+          repository: sunmery/Manifest
+          path: connect-example-manifest # 路径改为更明确的名字
+          token: ${{ secrets.MANIFEST_REPO_PAT }}
+          ref: ${{ github.event.repository.default_branch }}
+
+      # 更新 ArgoCD Application配置文件 (文件路径和键名改为 frontend)
+      - name: Update ArgoCD Configs File
+        working-directory: connect-example-manifest
+        run: |
+          export NEW_CHART_VERSION="${{ env.VERSION }}"
+          MANIFEST_FILE="connect-example/frontend/argo.yaml" # Manifest 文件路径
+
+          echo "Updating $MANIFEST_FILE with targetRevision: $NEW_CHART_VERSION"
+
+          # 更新 spec.source.targetRevision 字段 (OCI Chart 版本)
+          yq e '.spec.source.targetRevision = env(NEW_CHART_VERSION)' -i $MANIFEST_FILE
+          # 更新 Chart 内部的镜像标签 (Helm Parameter, 注意键名)
+          yq e '.spec.source.helm.parameters.[] | select(.name == "frontend.image.tag").value = env(NEW_CHART_VERSION)' -i $MANIFEST_FILE
+          
+          cat $MANIFEST_FILE
+
+      # 提交并将更改推送到 Manifest 仓库
+      - name: Commit and Push Manifest Changes
+        working-directory: connect-example-manifest
+        run: |
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+          git config user.name "github-actions[bot]"
+          
+          git add connect-example/frontend/argo.yaml
+          
+          # 仅在有实际更改时提交
+          git diff --cached --exit-code || git commit -m "CI: Auto update connect-example-frontend chart version to ${{ env.VERSION }} [skip ci]"
+          git push
