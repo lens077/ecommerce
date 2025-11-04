@@ -205,7 +205,7 @@ jobs:
         with:
           push_options: "origin HEAD:main"
           commit_message: "CI: Auto update chart version to ${{ env.VERSION }} [skip ci]"
-          file_pattern: "helm/charts/backend/Chart.yaml helm/charts/backend/values.yaml helm/values.yaml"
+          file_pattern: "."
           commit_user_name: "github-actions[bot]"
           commit_user_email: "github-actions[bot]@users.noreply.github.com"
 
