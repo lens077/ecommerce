@@ -1,11 +1,10 @@
 replicaCount: 1
-
 backend:
   enabled: true
   replicaCount: 1
   image:
     repository: "harbor.apikv.com:5443/sumery/connect-example-backend"
-    tag: "v1.1.4"
+    tag: "v1.2.53"
     pullPolicy: Always
   service:
     type: LoadBalancer
@@ -17,7 +16,6 @@ backend:
     OTLP_HTTP_ENDPOINT: "center-collector.observability:4318"
   autoscaling:
     enabled: false # 添加autoscaling配置，确保可以通过父values控制
-
 frontend:
   enabled: false
   replicaCount: 1 # 添加replicaCount配置，确保可以通过父values控制
