@@ -194,7 +194,7 @@ jobs:
           helm dependency update helm/charts/backend/
           helm package helm/charts/backend/ -d chart-packages/
 
-      - name: Pulish Chart Package
+      - name: Publish Chart Package
         run: |
           echo "${{ secrets.HELM_REGISTRY_PASS }}" | helm registry login ${{ env.HELM_REGISTRY }} -u ${{ env.HELM_REGISTRY_USER }} --password-stdin
           # 推送到 私有注册表
@@ -202,7 +202,7 @@ jobs:
           
           echo "${{ secrets.MANIFEST_REPO_PAT }}" | helm registry login ghcr.io -u ${{ github.actor }} --password-stdin
           # 推送到 GitHub Container Registry(ghcr.io)
-          helm push chart-packages/*-${{ env.VERSION }}.tgz oci://ghcr.io/${{ github.repository }}/${{ env.HELM_REPO }}
+          helm push chart-packages/*-${{ env.VERSION }}.tgz oci://ghcr.io/${{ github.repository }}/${{ env.IMAGE_NAME }}
 
       # 提交 Chart 文件更改到源仓库
       - name: Auto Commit Chart Changes
