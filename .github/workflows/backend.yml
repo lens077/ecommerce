@@ -16,7 +16,7 @@ env:
   REGISTER_USER: sumery
 
   # Docker Hub 用户名（用于推送镜像到Docker Hub）
-  DOCKER_USER: lookeke
+  DOCKERHUB_USERNAME: lookeke
 
   # 镜像名称
   IMAGE_NAME: connect-example-backend
