@@ -118,18 +118,22 @@ jobs:
           username: ${{ env.DOCKERHUB_USERNAME }}
           password: ${{ secrets.DOCKERHUB_TOKEN }}
 
+      - name: test
+        run: |
+          echo: 1 ${{ github.actor }}
+          echo: 2 ${{ github.actor }}
+
       - name: Login to GitHub Container Registry
         uses: docker/login-action@v3
         with:
           registry: ghcr.io
-          username: ${{ github.actor }} # 发起工作流程的个人或应用程序的名称
+          username: sunmery # 发起工作流程的个人或应用程序的名称
           password: ${{ secrets.MANIFEST_REPO_PAT }}
 
       - name: Login to Private Registry
         run: echo ${{ secrets.REGISTRY_PASSWORD }} | docker login ${{ env.REGISTRY }} --username ${{ secrets.REGISTRY_USERNAME }} --password-stdin
 
 #      - name: Build, Tag and Push OCI Image
-#        # 移除缓存步骤，简化；如果需要保留，请重新添加
 #        run: |
 #          docker build . -t actions/${{ env.IMAGE_NAME }} \
 #            --build-arg GO_PROXY=$GO_PROXY \
