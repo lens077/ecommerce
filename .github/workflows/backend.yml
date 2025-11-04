@@ -1,4 +1,4 @@
-name: Connect-example GitOps Deployment
+name: Connect-example Backend GitOps Deployment
 
 on:
   push:
