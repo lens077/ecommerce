@@ -212,7 +212,7 @@ jobs:
           commit_message: "CI: Auto update image tag to ${{ env.VERSION }} [skip ci]"
 
           # 要提交的文件列表
-          file_pattern: "backend/helm/values.yaml backend/chart-packages/*"
+          file_pattern: "."
 
           commit_user_name: "github-actions[bot]"
           commit_user_email: "github-actions[bot]@users.noreply.github.com"
