@@ -122,8 +122,8 @@ jobs:
         uses: docker/login-action@v3
         with:
           registry: ghcr.io
-          username: ${{ github.actor }} # 发起工作流程的个人或应用程序的名称
-#          username: sunmery # 发起工作流程的个人或应用程序的名称
+          #username: ${{ github.actor }} # 发起工作流程的个人或应用程序的名称，例如 author
+          username: ${{ github.repository }} # 发起工作流程的个人或应用程序的名称和本仓库路径，例如 author/repo
           password: ${{ secrets.MANIFEST_REPO_PAT }}
 
 #      - name: Build, Tag and Push OCI Image
