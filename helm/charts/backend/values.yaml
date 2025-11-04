@@ -1,23 +1,18 @@
 enabled: true
-
 replicaCount: 1
-
 image:
   repository: "harbor.apikv.com:5443/sumery/connect-example-backend"
-  tag: "v1.1.4"
+  tag: "v1.2.53"
   pullPolicy: IfNotPresent
-
 service:
   type: LoadBalancer
   port: 4000
   targetPort: 31400
-
 environment:
   HTTP_ADDR: "0.0.0.0:4000"
   RUN_MODE: "prod"
   OTLP_HTTP_ENDPOINT: "center-collector.observability:4318"
   # 禁用Consul服务发现，避免依赖注入错误
   DISABLE_CONSUL: "true"
-
 autoscaling:
   enabled: false
