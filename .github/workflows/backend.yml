@@ -126,19 +126,6 @@ jobs:
           username: ${{ github.repository }} # 发起工作流程的个人或应用程序的名称和本仓库路径，例如 author/repo
           password: ${{ secrets.MANIFEST_REPO_PAT }}
 
-#      - name: Build, Tag and Push OCI Image
-#        run: |
-#          docker build . -t actions/${{ env.IMAGE_NAME }} \
-#            --build-arg GO_PROXY=$GO_PROXY \
-#            --build-arg GOIMAGE=$GO_IMAGE \
-#            --build-arg CGOENABLED=$CGO_ENABLED \
-#            --build-arg VERSION=${{ env.VERSION }} \
-#            --build-arg GOOS=$GOOS \
-#            --build-arg GOARCH=$GOARCH \
-#            --build-arg SERVICE=server
-#
-#          docker tag actions/${{ env.IMAGE_NAME }} ${{ env.REGISTRY }}/${{ env.REGISTER_USER }}/${{ env.IMAGE_NAME }}:$VERSION
-#          docker push ${{ env.REGISTRY }}/${REGISTER_USER}/${{ env.IMAGE_NAME }}:$VERSION
       - name: Build and push
         uses: docker/build-push-action@v6
         with:
