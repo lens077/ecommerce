@@ -197,7 +197,7 @@ jobs:
           helm dependency update helm/charts/backend/
           helm package helm/charts/backend/ -d chart-packages/
           echo "${{ secrets.HELM_REGISTRY_PASS }}" | helm registry login ${{ env.HELM_REGISTRY }} -u ${{ env.HELM_REGISTRY_USER }} --password-stdin
-          helm push chart-packages/backend-${{ env.VERSION }}.tgz oci://${{ env.HELM_REGISTRY }}/${{ env.HELM_REPO }}
+          helm push chart-packages/*-${{ env.VERSION }}.tgz oci://${{ env.HELM_REGISTRY }}/${{ env.HELM_REPO }}
 
       # 提交 Chart 文件更改到源仓库 (可选，但推荐)
       # 移除 Stash/Pull/Pop，直接使用 git-auto-commit-action
