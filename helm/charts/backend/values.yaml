@@ -8,7 +8,7 @@ image:
   pullPolicy: IfNotPresent
 
 service:
-  type: NodePort
+  type: LoadBalancer
   port: 4000
   targetPort: 31400
 
