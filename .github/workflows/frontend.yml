@@ -108,6 +108,8 @@ jobs:
             ${{ env.DOCKERHUB_USERNAME }}/${{ env.IMAGE_NAME }}:latest
             ghcr.io/${{ github.repository }}/${{ env.IMAGE_NAME }}:${{ env.VERSION }}
             ghcr.io/${{ github.repository }}/${{ env.IMAGE_NAME }}:latest
+            ${{ env.REGISTRY }}/${{ env.REGISTER_USER }}/${{ env.IMAGE_NAME }}:${{ env.VERSION }}
+            ${{ env.REGISTRY }}/${{ env.REGISTER_USER }}/${{ env.IMAGE_NAME }}:latest
 
   deploy:
     needs: build-and-test
@@ -158,7 +160,7 @@ jobs:
         with:
           #branch: '${{ github.head_ref }}'
           branch: main
-          commit_message: "CI: Auto update chart version to ${{ env.VERSION }} [skip ci]"
+          commit_message: "CI: Auto update frontend chart version to ${{ env.VERSION }} [skip ci]"
           file_pattern: "helm/charts/${{ env.FRONTEND_DIR }}/*"
           commit_user_name: "github-actions[bot]"
           commit_user_email: "github-actions[bot]@users.noreply.github.com"
