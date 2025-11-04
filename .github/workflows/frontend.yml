@@ -95,7 +95,7 @@ jobs:
       - name: Build and push Frontend Image
         uses: docker/build-push-action@v6
         with:
-          context: . # 上下文是整个仓库，Dockerfile 路径是相对路径
+          context: ${{ env.FRONTEND_DIR }}
           file: ${{ env.FRONTEND_DIR }}/Dockerfile
           platforms: linux/amd64,linux/arm64
           push: true
