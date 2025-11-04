@@ -203,7 +203,7 @@ jobs:
       - name: Auto Commit Chart Changes
         uses: stefanzweifel/git-auto-commit-action@v5 # 使用 v5 或更高版本
         with:
-          branch: main
+          push_options: "origin HEAD:main"
           commit_message: "CI: Auto update chart version to ${{ env.VERSION }} [skip ci]"
           file_pattern: "helm/charts/backend/Chart.yaml helm/charts/backend/values.yaml helm/values.yaml"
           commit_user_name: "github-actions[bot]"
