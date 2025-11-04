@@ -157,11 +157,11 @@ jobs:
             GOARCH=${{ env.GOARCH }}
             SERVICE=server
           tags: |
-            # 推送到 Docker Hub
+          # 推送到 Docker Hub
             ${{ env.DOCKERHUB_USERNAME }}/${{ env.IMAGE_NAME }}:${{ env.VERSION }}
             ${{ env.DOCKERHUB_USERNAME }}/${{ env.IMAGE_NAME }}:latest
             
-            # 推送到 GitHub Container Registry(ghcr.io)
+          # 推送到 GitHub Container Registry(ghcr.io)
             ghcr.io/${{ github.repository }}/${{ env.IMAGE_NAME }}:${{ env.VERSION }}
             ghcr.io/${{ github.repository }}/${{ env.IMAGE_NAME }}:latest
   deploy:
@@ -211,7 +211,6 @@ jobs:
       - name: Auto Commit Chart Changes
         uses: stefanzweifel/git-auto-commit-action@v5 # 使用 v5 或更高版本
         with:
-#          push_options: "-f origin HEAD:main"
           branch: main
           commit_message: "CI: Auto update chart version to ${{ env.VERSION }} [skip ci]"
           file_pattern: "."
