@@ -158,18 +158,26 @@ jobs:
 #            --cache-to type=registry,ref=$REPO:cache,mode=max
 
       - name: Update Backend Chart Version and Image Tag
+        working-directory: backend
         run: |
-            # 将子 Chart (helm/charts/backend/Chart.yaml) 的版本更新为 Git Tag
-            # 这是 ArgoCD 追踪新 OCI Chart 的关键
-            yq e '.version = "${{ env.VERSION }}"' -i helm/charts/backend/Chart.yaml
+          ls
+          pwd
+          echo "1: ${{ github.ref_name }}"
+          # 将子 Chart (helm/charts/backend/Chart.yaml) 的版本更新为 Git Tag
+          # 这是 ArgoCD 追踪新 OCI Chart 的关键
+          yq e '.version = "${{ env.VERSION }}"' -i helm/charts/backend/Chart.yaml
   
-            # 将子 Chart (helm/charts/backend/values.yaml) 中的镜像标签更新为 Git Tag
-            # 因为您要打包这个 Chart，它应该携带正确的标签
-            yq e '.image.tag = "${{ github.ref_name }}"' -i helm/charts/backend/values.yaml
-           
-            # 如果父 Chart 的 values.yaml 也在使用，也需要更新
-            # 如果您的 ArgoCD 部署是针对子 Chart OCI包，则不需要这一步
-            # yq e '.backend.image.tag = "${{ github.ref_name }}"' -i helm/values.yaml
+          # 将子 Chart (helm/charts/backend/values.yaml) 中的镜像标签更新为 Git Tag
+          # 因为您要打包这个 Chart，它应该携带正确的标签
+          yq e '.image.tag = "${{ github.ref_name }}"' -i helm/charts/backend/values.yaml
+          
+          # 如果父 Chart 的 values.yaml 也在使用，也需要更新
+          # 如果您的 ArgoCD 部署是针对子 Chart OCI包，则不需要这一步
+          # yq e '.backend.image.tag = "${{ github.ref_name }}"' -i helm/values.yaml
+          
+          cat helm/charts/backend/Chart.yaml
+          cat helm/charts/backend/values.yaml
+          cat helm/values.yaml
 
       # 打包并推送 Helm Chart 到 OCI
       - name: Bump Chart Version and Package
@@ -182,7 +190,7 @@ jobs:
       # 暂存更改, 拉取代码, 还原更改
       - name: Stash Changes, Pull, and Pop
         run: |
-          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
           git config user.name "github-actions[bot]"
           
           # 将所有更改 (被修改的文件和新文件) 添加到索引, 这是 'git stash' 保存它们所必需的
@@ -244,7 +252,7 @@ jobs:
       - name: Commit and Push Manifest Changes
         working-directory: connect-example
         run: |
-          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
           git config user.name "github-actions[bot]"
           
           git add connect-example/backend/argo.yaml
