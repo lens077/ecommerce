@@ -1,6 +1,9 @@
 name: Deployment
 
 on:
+  push:
+    tags:
+      - 'v*.*.*'
   workflow_run:
     workflows: [Build]
     types: [completed]
@@ -24,6 +27,8 @@ jobs:
       - run: echo 'The triggering workflow failed'
   on-success:
     runs-on: ubuntu-24.04
+    # https://docs.github.com/zh/actions/reference/workflows-and-actions/expressions#startswith
+    # 如果上一个workflow的运行完成后的结果是success，并且分支tag是v开头的字符串，那么返回tre，该job运行
     #if: ${{ github.event.workflow_run.conclusion == 'success' && startsWith(github.event.workflow_run.head_branch, 'v') }}
     permissions:
       contents: write
