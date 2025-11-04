@@ -3,7 +3,8 @@ name: Connect-example GitOps Deployment
 on:
   push:
     branches:
-      - ${{ github.event.repository.default_branch }}
+      - main
+      - master
     tags:
       - 'v*.*.*'
 
