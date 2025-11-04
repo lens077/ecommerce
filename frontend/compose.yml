@@ -1,0 +1,8 @@
+services:
+  connect-react-example:
+    image: ccr.ccs.tencentyun.com/sumery/connect-react-example:dev  # 这里需要替换成你的镜像名
+    platform: linux/amd64
+    ports:
+      - "3000:3000"
+    restart: unless-stopped
+    container_name: connect-react-example

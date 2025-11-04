@@ -1,0 +1,66 @@
+{
+  "name": "frontend",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "dev": "vite --port 3000",
+    "build": "vite build && tsc",
+    "serve": "vite preview",
+    "test": "vitest run",
+    "test:ui": "vitest --browser --browser.ui",
+    "format": "biome format",
+    "lint": "biome lint",
+    "check": "biome check",
+    "prepare": "husky install && git config --local core.editor cat",
+    "version": "conventional-changelog -p ember && git add CHANGELOG.md && git add package.json",
+    "version:first": "conventional-changelog -p ember -r 0"
+  },
+  "config": {
+    "commitizen": {
+      "path": "node_modules/cz-git"
+    }
+  },
+  "dependencies": {
+    "@bufbuild/protobuf": "^2.9.0",
+    "@connectrpc/connect": "^2.1.0",
+    "@connectrpc/connect-web": "^2.1.0",
+    "@t3-oss/env-core": "^0.13.8",
+    "@tanstack/react-devtools": "^0.7.4",
+    "@tanstack/react-router": "^1.132.47",
+    "@tanstack/react-router-devtools": "^1.132.51",
+    "@tanstack/router-plugin": "^1.132.51",
+    "conventional-changelog": "^7.1.1",
+    "crypto-js": "^4.2.0",
+    "lucide-react": "^0.545.0",
+    "react": "^19.2.0",
+    "react-dom": "^19.2.0",
+    "zod": "^4.1.12"
+  },
+  "devDependencies": {
+    "@biomejs/biome": "2.2.4",
+    "@bufbuild/buf": "^1.58.0",
+    "@bufbuild/protoc-gen-es": "^2.9.0",
+    "@testing-library/dom": "^10.4.1",
+    "@testing-library/jest-dom": "^6.9.1",
+    "@testing-library/react": "^16.3.0",
+    "@testing-library/user-event": "^14.6.1",
+    "@types/crypto-js": "^4.2.2",
+    "@types/node": "^22.18.9",
+    "@types/react": "^19.2.2",
+    "@types/react-dom": "^19.2.1",
+    "@vitejs/plugin-react": "^5.0.4",
+    "@vitest/browser": "4.0.0-beta.17",
+    "@vitest/browser-playwright": "4.0.0-beta.17",
+    "conventional-changelog-ember": "^5.0.0",
+    "cz-git": "^1.12.0",
+    "husky": "^9.1.7",
+    "jsdom": "^27.0.0",
+    "lint-staged": "^16.2.3",
+    "typescript": "^5.9.3",
+    "vite": "npm:rolldown-vite@latest",
+    "vitest": "4.0.0-beta.17",
+    "vitest-browser-react": "^1.0.1",
+    "web-vitals": "^5.1.0"
+  },
+  "version": "0.0.5"
+}
