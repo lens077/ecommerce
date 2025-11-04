@@ -2,11 +2,10 @@ name: CD GitOps Deployment
 
 on:
   workflow_run:
-    # 引用 ci_build.yml 中定义的 name
-    workflows: ["CI Backend Build"]
-    types: [completed]
-    # 仅在 CI Workflow 成功时继续
-    if: success() && startsWith(github.event.workflow_run.head_branch, 'v')
+    workflows:
+      - CI Backend Build
+    types:
+      - completed
 
 # 共享环境变量
 env:
@@ -20,9 +19,14 @@ env:
   # 但是为了安全，我们将所有使用 secrets 的步骤都放在同一个 job 中
 
 jobs:
-  deploy:
-    runs-on: ubuntu-24.04 # 使用更便宜的 amd64 runner 即可，因为不需要编译
-    # permissions 必须放在这里
+  on-failure:
+    runs-on: ubuntu-latest
+    if: ${{ github.event.workflow_run.conclusion == 'failure' }}
+    steps:
+      - run: echo 'The triggering workflow failed'
+  on-success:
+    runs-on: ubuntu-24.04
+    if: ${{ github.event.workflow_run.conclusion == 'success' }}
     permissions:
       contents: write
       pull-requests: write
