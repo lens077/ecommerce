@@ -41,7 +41,7 @@ env:
   NAMESPACE: connect-example
 
 jobs:
-  backend-test:
+  test:
     runs-on: ubuntu-24.04-arm
     defaults:
       run:
@@ -95,6 +95,7 @@ jobs:
           go test -short -coverprofile=coverage.out ./...
           go tool cover -html=coverage.out -o coverage.html
   build:
+    needs: test
     runs-on: ubuntu-24.04-arm
     #if: ${{ github.event.workflow_run.conclusion == 'success' }}
     defaults:
@@ -162,6 +163,7 @@ jobs:
             ghcr.io/${{ github.actor }}/${{ env.IMAGE_NAME }}:${{ env.VERSION }}
             ghcr.io/${{ github.actor }}/${{ env.IMAGE_NAME }}:latest
   deploy:
+    needs: build
     runs-on: ubuntu-24.04
     # https://docs.github.com/zh/actions/reference/workflows-and-actions/expressions#startswith
     # 如果上一个workflow的运行完成后的结果是success，并且分支tag是v开头的字符串，那么返回tre，该job运行
