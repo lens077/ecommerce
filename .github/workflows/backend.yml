@@ -102,7 +102,7 @@ jobs:
       - name: Checkout repository
         uses: actions/checkout@v5
 
-      #只有需要构建跨平台才使用
+      # 只有需要构建跨平台才使用
       - name: Set up QEMU
         uses: docker/setup-qemu-action@v3
 
@@ -157,11 +157,8 @@ jobs:
             GOARCH=${{ env.GOARCH }}
             SERVICE=server
           tags: |
-          # 推送到 Docker Hub
             ${{ env.DOCKERHUB_USERNAME }}/${{ env.IMAGE_NAME }}:${{ env.VERSION }}
             ${{ env.DOCKERHUB_USERNAME }}/${{ env.IMAGE_NAME }}:latest
-            
-          # 推送到 GitHub Container Registry(ghcr.io)
             ghcr.io/${{ github.repository }}/${{ env.IMAGE_NAME }}:${{ env.VERSION }}
             ghcr.io/${{ github.repository }}/${{ env.IMAGE_NAME }}:latest
   deploy:
@@ -233,7 +230,6 @@ jobs:
           export NEW_CHART_VERSION="${{ env.VERSION }}"
           MANIFEST_FILE="connect-example/backend/argo.yaml"
 
-          # 确保 yq 存在于这个 job
           which yq || sudo apt-get install -y yq
           
           echo "Updating $MANIFEST_FILE with targetRevision: $NEW_CHART_VERSION"
