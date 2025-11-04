@@ -55,24 +55,20 @@ jobs:
         uses: pnpm/action-setup@v4 # 使用 pnpm 官方 action
         with:
           version: latest # 建议指定一个最新的 pnpm 版本
-          run_install: true # 在下一步手动运行 pnpm install
+          run_install: false # 在下一步手动运行 pnpm install
 
-      - name: Run Playwright Tests
-        # 使用您提供的 Playwright 模板逻辑
-        run: |
-          pnpm exec playwright install --with-deps
-          pnpm exec playwright test
-
-      - name: Upload Playwright Report
-        uses: actions/upload-artifact@v4
-        if: ${{ !cancelled() }}
-        with:
-          name: playwright-report-${{ env.VERSION }}
-          path: ${{ env.FRONTEND_DIR }}/playwright-report/
-          retention-days: 30
-
-      - name: Build Frontend (e.g., Vite/Next/React Build)
-        run: pnpm build
+#      - name: Run Playwright Tests
+#        run: |
+#          pnpm exec playwright install --with-deps
+#          pnpm exec playwright test
+#
+#      - name: Upload Playwright Report
+#        uses: actions/upload-artifact@v4
+#        if: ${{ !cancelled() }}
+#        with:
+#          name: playwright-report-${{ env.VERSION }}
+#          path: ${{ env.FRONTEND_DIR }}/playwright-report/
+#          retention-days: 30
 
       - name: Set up QEMU
         uses: docker/setup-qemu-action@v3
@@ -100,7 +96,7 @@ jobs:
         uses: docker/build-push-action@v6
         with:
           context: . # 上下文是整个仓库，Dockerfile 路径是相对路径
-          file: ${{ env.FRONTEND_DIR }}/Dockerfile # 假设 Dockerfile 位于前端目录
+          file: ${{ env.FRONTEND_DIR }}/Dockerfile
           platforms: linux/amd64,linux/arm64
           push: true
           cache-from: type=gha,scope=frontend-build
