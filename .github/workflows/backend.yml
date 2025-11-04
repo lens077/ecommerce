@@ -2,9 +2,6 @@ name: Connect-example GitOps Deployment
 
 on:
   push:
-    branches:
-      - main
-      - master
     tags:
       - 'v*.*.*'
 
@@ -203,7 +200,8 @@ jobs:
       - name: Auto Commit Chart Changes
         uses: stefanzweifel/git-auto-commit-action@v5 # 使用 v5 或更高版本
         with:
-          push_options: "origin HEAD:main"
+#          push_options: "-f origin HEAD:main"
+          branch: main
           commit_message: "CI: Auto update chart version to ${{ env.VERSION }} [skip ci]"
           file_pattern: "."
           commit_user_name: "github-actions[bot]"
