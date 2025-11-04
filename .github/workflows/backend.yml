@@ -199,11 +199,11 @@ jobs:
           echo "${{ secrets.HELM_REGISTRY_PASS }}" | helm registry login ${{ env.HELM_REGISTRY }} -u ${{ env.HELM_REGISTRY_USER }} --password-stdin
           helm push chart-packages/*-${{ env.VERSION }}.tgz oci://${{ env.HELM_REGISTRY }}/${{ env.HELM_REPO }}
 
-      # 提交 Chart 文件更改到源仓库 (可选，但推荐)
-      # 移除 Stash/Pull/Pop，直接使用 git-auto-commit-action
+      # 提交 Chart 文件更改到源仓库
       - name: Auto Commit Chart Changes
         uses: stefanzweifel/git-auto-commit-action@v5 # 使用 v5 或更高版本
         with:
+          branch: main
           commit_message: "CI: Auto update chart version to ${{ env.VERSION }} [skip ci]"
           file_pattern: "helm/charts/backend/Chart.yaml helm/charts/backend/values.yaml helm/values.yaml"
           commit_user_name: "github-actions[bot]"
@@ -216,7 +216,6 @@ jobs:
           repository: sunmery/Manifest
           path: connect-example
           token: ${{ secrets.MANIFEST_REPO_PAT }}
-          # 确保检出默认分支
           ref: ${{ github.event.repository.default_branch }}
 
       # 更新 ArgoCD Application配置文件
