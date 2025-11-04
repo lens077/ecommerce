@@ -133,7 +133,6 @@ jobs:
         run: |
           yq e '.version = "${{ env.VERSION }}"' -i helm/charts/frontend/Chart.yaml
           yq e '.image.tag = "${{ env.VERSION }}"' -i helm/charts/frontend/values.yaml
-          yq e '.frontend.image.tag = "${{ env.VERSION }}"' -i helm/values.yaml
 
       # 2. 打包和发布 Helm Chart
       - name: Bump Chart Version and Package
@@ -160,7 +159,7 @@ jobs:
           #branch: '${{ github.head_ref }}'
           branch: main
           commit_message: "CI: Auto update chart version to ${{ env.VERSION }} [skip ci]"
-          file_pattern: "."
+          file_pattern: "helm/charts/${{ env.FRONTEND_DIR }}/*"
           commit_user_name: "github-actions[bot]"
           commit_user_email: "github-actions[bot]@users.noreply.github.com"
 
