@@ -50,10 +50,12 @@ jobs:
         uses: actions/setup-node@v6
         with:
           node-version: ">=${{ env.NODE_VERSION }}"
-          cache: 'pnpm' # 使用 pnpm 作为缓存管理器
 
-      - name: Install dependencies (pnpm)
-        run: npm install -g pnpm && pnpm install
+      - name: Setup pnpm
+        uses: pnpm/action-setup@v4 # 使用 pnpm 官方 action
+        with:
+          version: latest # 建议指定一个最新的 pnpm 版本
+          run_install: true # 在下一步手动运行 pnpm install
 
       - name: Run Playwright Tests
         # 使用您提供的 Playwright 模板逻辑
