@@ -169,7 +169,6 @@ jobs:
         run: |
           yq e '.version = "${{ env.VERSION }}"' -i helm/charts/backend/Chart.yaml
           yq e '.image.tag = "${{ env.VERSION }}"' -i helm/charts/backend/values.yaml
-          yq e '.backend.image.tag = "${{ env.VERSION }}"' -i helm/values.yaml
 
       # 打包Helm Chart
       - name: Bump Chart Version
@@ -193,7 +192,7 @@ jobs:
         with:
           branch: main
           commit_message: "CI: Auto update chart version to ${{ env.VERSION }} [skip ci]"
-          file_pattern: "."
+          file_pattern: "helm/charts/backend/*"
           commit_user_name: "github-actions[bot]"
           commit_user_email: "github-actions[bot]@users.noreply.github.com"
 
