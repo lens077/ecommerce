@@ -157,15 +157,10 @@ jobs:
       - name: Auto Commit Chart Changes
         uses: stefanzweifel/git-auto-commit-action@v5
         with:
-          # 临时分支名：解决 Detached HEAD 无法推送的问题
-          branch: temp-chart-update-${{ env.VERSION }}
-          create_branch: true # 允许 Action 创建这个临时分支
-
-          # 关键：使用 --force 强制推送临时分支到远程 main
-          push_options: "--force origin temp-chart-update-${{ env.VERSION }}:main"
-
+          #branch: '${{ github.head_ref }}'
+          branch: main
           commit_message: "CI: Auto update chart version to ${{ env.VERSION }} [skip ci]"
-          file_pattern: "helm/charts/frontend/Chart.yaml helm/charts/frontend/values.yaml helm/values.yaml"
+          file_pattern: "."
           commit_user_name: "github-actions[bot]"
           commit_user_email: "github-actions[bot]@users.noreply.github.com"
 
