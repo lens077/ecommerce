@@ -1,0 +1,5 @@
+dev:
+  connect-react-example:
+    command: pnpm dev
+    sync:
+      - frontend:/usr/src/app

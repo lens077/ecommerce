@@ -1,0 +1,77 @@
+syntax = "proto3";
+
+package conf.v1;
+
+option go_package = "connect-go-example/gen/conf/v1;confv1";
+
+message Bootstrap {
+  Server server = 1;
+  Data data = 2;
+  Auth auth = 3;
+  Trace trace = 4;
+  Discovery discovery = 5;
+}
+
+message Server {
+  message HTTP {
+    string addr = 1;
+    int64 timeout = 2;
+  }
+  HTTP http = 1;
+}
+
+message Data {
+  message Database {
+    string host = 1;
+    int32 port = 2;
+    string user = 3;
+    string password = 4;
+    string db_name = 5;
+    string ssl_mode = 6;
+    string timezone = 7;
+    DatabasePool pool = 8;
+  }
+
+  message DatabasePool {
+    int32 max_conns = 1;
+    int32 min_conns = 2;
+    int64 max_conn_lifetime = 3;
+    int64 max_conn_idle_time = 4;
+  }
+
+  message Redis {
+    string host = 1;
+    int32 port = 2;
+    string username = 3;
+    string password = 4;
+    int32 db = 5;
+    int64 dial_timeout = 6;
+    int64 read_timeout = 7;
+    int64 write_timeout = 8;
+    int32 pool_size = 9;
+    int32 min_idle_conns = 10;
+  }
+
+  Database database = 1;
+  Redis redis = 2;
+}
+
+message Auth {
+  string jwt_secret = 1;
+  int64 jwt_expire_hours = 2;
+  int64 challenge_timeout_seconds = 3;
+}
+
+message Trace {
+  string endpoint = 1;
+  bool insecure = 2;
+}
+
+message Discovery {
+  message Consul {
+    string addr = 1;
+    string scheme = 2;
+    bool health_check = 3;
+  }
+  Consul consul = 1;
+}

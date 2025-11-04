@@ -1,0 +1,12 @@
+apiVersion: v1
+kind: PersistentVolumeClaim
+metadata:
+  name: connect-example-pvc
+spec:
+  accessModes:
+    - ReadWriteMany
+  resources:
+    requests:
+      # 从 StorageClass 中申请 10GiB 存储容量
+      storage: 1Gi
+  storageClassName: juicefs-sc

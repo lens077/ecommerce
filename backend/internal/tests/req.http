@@ -1,0 +1,26 @@
+# curl -v -X POST http://my.app.com/check.v1.CheckService/Ready
+#  --header 'Content-Type: application/json'
+#  --data-raw '{}'
+POST http://my.app.com/check.v1.CheckService/Ready
+Content-Type: application/json
+
+{}
+
+###
+# curl -v -X POST 'http://localhost:4000/greet.v1.GreetService/SubmitAuth'
+#  --header 'Content-Type: application/json'
+#  --data-raw '{
+#    "username": "admin",
+#    "password": "password",
+#    "authRequestId": "123"
+#  }'
+POST http://localhost:4000/greet.v1.GreetService/SubmitAuth
+Content-Type: application/json
+
+{
+    "username": "admin",
+    "password": "password",
+    "authRequestId": "123"
+  }
+
+###

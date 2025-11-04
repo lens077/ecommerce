@@ -1,0 +1,29 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: connect-example-go
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: connect-example-go
+  template:
+    metadata:
+      labels:
+        app: connect-example-go
+    spec:
+      containers:
+        - image: ccr.ccs.tencentyun.com/sumery/server:test5
+          name: connect-example-go
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: connect-example-go
+spec:
+  type: LoadBalancer
+  ports:
+    - name: 'http'
+      port: 4001
+  selector:
+    app: connect-example-go

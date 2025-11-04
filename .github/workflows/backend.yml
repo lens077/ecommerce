@@ -1,0 +1,256 @@
+name: Connect-example GitOps Deployment
+
+on:
+  push:
+    branches:
+      - main
+      - master
+    tags:
+      - 'v*.*.*'
+
+# 共享环境变量
+env:
+  # 私有注册表URL
+  REGISTRY: harbor.apikv.com:5443
+  # 仓库名称
+  REGISTER_USER: sumery
+
+  # Docker Hub 用户名（用于推送镜像到Docker Hub）
+  DOCKERHUB_USERNAME: lookeke
+
+  # 镜像名称
+  IMAGE_NAME: connect-example-backend
+  # 版本， 由你推送到tags决定， 例如v1.0.0
+  VERSION: ${{ github.ref_name }}
+
+  # Dockerfile 相关参数
+  GOOS: linux
+  GOARCH: arm64
+  GO_IMAGE: golang:1.25.1-alpine3.22
+  GO_PROXY: https://proxy.golang.org
+  CGO_ENABLED: 0
+
+  # Helm 仓库URL
+  HELM_REGISTRY: harbor.apikv.com:5443
+  # Helm 仓库的用户名
+  HELM_REGISTRY_USER: rebot@github
+  # Helm 仓库的名称
+  HELM_REPO: sumery
+
+  # 部署应用的kubernetes 命名空间
+  NAMESPACE: connect-example
+
+jobs:
+#  test:
+#    runs-on: ubuntu-24.04-arm
+#    defaults:
+#      run:
+#        shell: bash
+#        #working-directory: ${{ matrix.service }}
+#        working-directory: backend
+#    #    services:
+#    #      postgres:
+#    #        image: postgres:17-alpine
+#    #        env:
+#    #          POSTGRES_USER: postgres
+#    #          POSTGRES_PASSWORD: postgres
+#    #          POSTGRES_DB: postgres
+#    #        options: >-
+#    #          --health-cmd pg_isready
+#    #          --health-interval 10s
+#    #          --health-timeout 5s
+#    #          --health-retries 5
+#    #        ports:
+#    #          - '5432:5432'
+#
+#    steps:
+#      - name: Checkout repository
+#        uses: actions/checkout@v5
+#
+#      - name: Set up Go
+#        uses: actions/setup-go@v5
+#        with:
+#          go-version: '1.25.1'
+#          check-latest: true
+#          cache-dependency-path: '**/go.sum'
+#
+#      #      - name: Install migrate
+#      #        run: |
+#      #          curl -L https://github.com/golang-migrate/migrate/releases/download/v4.18.1/migrate.linux-amd64.tar.gz | tar xvz
+#      #          sudo mv migrate /usr/bin/
+#      #          which migrate
+#      #
+#      #      - name: Run database migration
+#      #        run: |
+#      #          export DB_SOURCE="postgresql://postgres:postgres@localhost:5432/postgres?sslmode=disable"
+#      #          if [ -d ${{ matrix.service }} ]; then
+#      #            echo "Running migrations..."
+#      #            make migrate-up
+#      #          else
+#      #            echo "Skipping migrations."
+#      #          fi
+#
+#      - name: Run Go tests
+#        run: |
+#          go test -short -coverprofile=coverage.out ./...
+#          go tool cover -html=coverage.out -o coverage.html
+  build:
+#    needs: test
+    runs-on: ubuntu-24.04-arm
+    defaults:
+      run:
+        shell: bash
+        working-directory: backend
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v5
+
+      #只有需要构建跨平台才使用
+      - name: Set up QEMU
+        uses: docker/setup-qemu-action@v3
+
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v3
+
+      - name: Login to Docker Hub
+        uses: docker/login-action@v3
+        with:
+          username: ${{ env.DOCKERHUB_USERNAME }}
+          password: ${{ secrets.DOCKERHUB_TOKEN }}
+
+      - name: Login to Private Registry
+        run: echo ${{ secrets.REGISTRY_PASSWORD }} | docker login ${{ env.REGISTRY }} --username ${{ secrets.REGISTRY_USERNAME }} --password-stdin
+
+      - name: Login to GitHub Container Registry
+        uses: docker/login-action@v3
+        with:
+          registry: ghcr.io
+          username: ${{ github.actor }} # 发起工作流程的个人或应用程序的名称
+#          username: sunmery # 发起工作流程的个人或应用程序的名称
+          password: ${{ secrets.MANIFEST_REPO_PAT }}
+
+#      - name: Build, Tag and Push OCI Image
+#        run: |
+#          docker build . -t actions/${{ env.IMAGE_NAME }} \
+#            --build-arg GO_PROXY=$GO_PROXY \
+#            --build-arg GOIMAGE=$GO_IMAGE \
+#            --build-arg CGOENABLED=$CGO_ENABLED \
+#            --build-arg VERSION=${{ env.VERSION }} \
+#            --build-arg GOOS=$GOOS \
+#            --build-arg GOARCH=$GOARCH \
+#            --build-arg SERVICE=server
+#
+#          docker tag actions/${{ env.IMAGE_NAME }} ${{ env.REGISTRY }}/${{ env.REGISTER_USER }}/${{ env.IMAGE_NAME }}:$VERSION
+#          docker push ${{ env.REGISTRY }}/${REGISTER_USER}/${{ env.IMAGE_NAME }}:$VERSION
+      - name: Build and push
+        uses: docker/build-push-action@v6
+        with:
+          platforms: linux/amd64,linux/arm64
+          push: true
+          cache-from: type=gha,scope=go-backend-build
+          cache-to: type=gha,scope=go-backend-build,mode=max
+          build-args: |
+            GO_PROXY=${{ env.GO_PROXY }}
+            GOIMAGE=${{ env.GO_IMAGE }}
+            CGOENABLED=${{ env.CGO_ENABLED }}
+            VERSION=${{ env.VERSION }}
+            GOOS=${{ env.GOOS }}
+            GOARCH=${{ env.GOARCH }}
+            SERVICE=server
+          tags: |
+            ${{ env.DOCKERHUB_USERNAME }}/${{ env.IMAGE_NAME }}:${{ env.VERSION }}
+            ${{ env.DOCKERHUB_USERNAME }}/${{ env.IMAGE_NAME }}:latest
+            ghcr.io/${{ github.actor }}/${{ env.IMAGE_NAME }}:${{ env.VERSION }}
+            ghcr.io/${{ github.actor }}/${{ env.IMAGE_NAME }}:latest
+  deploy:
+    needs: build
+    runs-on: ubuntu-24.04
+    # https://docs.github.com/zh/actions/reference/workflows-and-actions/expressions#startswith
+    # 如果上一个workflow的运行完成后的结果是success，并且分支tag是v开头的字符串，那么返回tre，该job运行
+    #if: ${{ github.event.workflow_run.conclusion == 'success' }}
+    permissions:
+      contents: write
+      pull-requests: write
+    defaults:
+      run:
+        shell: bash
+    steps:
+      - name: test
+        run: |
+          echo: 1 ${{ github.event.workflow_run.conclusion == 'success' }}
+          echo: 2 ${{startsWith(github.event.workflow_run.head_branch, 'v')}}
+          echo: 3 ${{ github.event.workflow_run.head_branch }}
+      - name: Checkout Current Repository (for Helm Chart)
+        uses: actions/checkout@v5
+        # 需要检出触发事件的分支/标签，以获取正确的 Chart 文件
+        with:
+          ref: ${{ github.event.workflow_run.head_branch }}
+          submodules: 'false'
+
+      # 更新 Chart 版本和镜像标签
+      - name: Update Backend Chart Version and Image Tag
+        run: |
+          yq e '.version = "${{ env.VERSION }}"' -i helm/charts/backend/Chart.yaml
+          yq e '.image.tag = "${{ env.VERSION }}"' -i helm/charts/backend/values.yaml
+          yq e '.backend.image.tag = "${{ env.VERSION }}"' -i helm/values.yaml
+
+      # 打包并推送 Helm Chart 到 OCI
+      - name: Bump Chart Version and Package
+        run: |
+          helm dependency update helm/charts/backend/
+          helm package helm/charts/backend/ -d chart-packages/
+          echo "${{ secrets.HELM_REGISTRY_PASS }}" | helm registry login ${{ env.HELM_REGISTRY }} -u ${{ env.HELM_REGISTRY_USER }} --password-stdin
+          helm push chart-packages/backend-${{ env.VERSION }}.tgz oci://${{ env.HELM_REGISTRY }}/${{ env.HELM_REPO }}
+
+      # 提交 Chart 文件更改到源仓库 (可选，但推荐)
+      # 移除 Stash/Pull/Pop，直接使用 git-auto-commit-action
+      - name: Auto Commit Chart Changes
+        uses: stefanzweifel/git-auto-commit-action@v5 # 使用 v5 或更高版本
+        with:
+          commit_message: "CI: Auto update chart version to ${{ env.VERSION }} [skip ci]"
+          file_pattern: "helm/charts/backend/Chart.yaml helm/charts/backend/values.yaml helm/values.yaml"
+          commit_user_name: "github-actions[bot]"
+          commit_user_email: "github-actions[bot]@users.noreply.github.com"
+
+      # 检出 Manifest 配置仓库
+      - name: Checkout Manifest Repository
+        uses: actions/checkout@v5
+        with:
+          repository: sunmery/Manifest
+          path: connect-example
+          token: ${{ secrets.MANIFEST_REPO_PAT }}
+          # 确保检出默认分支
+          ref: ${{ github.event.repository.default_branch }}
+
+      # 更新 ArgoCD Application配置文件
+      - name: Update ArgoCD Configs File
+        working-directory: connect-example
+        run: |
+          export NEW_CHART_VERSION="${{ env.VERSION }}"
+          MANIFEST_FILE="connect-example/backend/argo.yaml"
+
+          # 确保 yq 存在于这个 job
+          which yq || sudo apt-get install -y yq
+          
+          echo "Updating $MANIFEST_FILE with targetRevision: $NEW_CHART_VERSION"
+
+          # 更新 spec.source.targetRevision 字段 (OCI Chart 版本)
+          yq e '.spec.source.targetRevision = env(NEW_CHART_VERSION)' -i $MANIFEST_FILE
+          # 更新 Chart 内部的镜像标签 (Helm Parameter)
+          yq e '.spec.source.helm.parameters.[] | select(.name == "backend.image.tag").value = env(NEW_CHART_VERSION)' -i $MANIFEST_FILE
+          
+          cat $MANIFEST_FILE
+
+      # 提交并将更改推送到 Manifest 仓库
+      - name: Commit and Push Manifest Changes
+        working-directory: connect-example
+        run: |
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+          git config user.name "github-actions[bot]"
+          
+          git add connect-example/backend/argo.yaml
+          
+          # 仅在有实际更改时提交
+          git diff --cached --exit-code || git commit -m "CI: Auto update connect-example-backend chart version to ${{ env.VERSION }} [skip ci]"
+          git push
+

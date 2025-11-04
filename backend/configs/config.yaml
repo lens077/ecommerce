@@ -1,0 +1,47 @@
+server:
+  http:
+    addr: "0.0.0.0:4000"
+    timeout: 10
+
+data:
+  database:
+    host: "192.168.3.104"
+#    host: "postgres.app.com"
+    port: 5432
+    user: "postgres"
+    password: "msdnmm"
+    db_name: "connect_example"
+    ssl_mode: "disable"
+    timezone: "Asia/Shanghai"
+    pool:
+      max_conns: 20
+      min_conns: 5
+      max_conn_lifetime: 3600
+      max_conn_idle_time: 300
+  redis:
+#    host: "dragonfly.app.com"
+    host: "192.168.3.112"
+    port: 6379
+    username: "default"
+    password: "msdnmm"
+    db: 0
+    dial_timeout: 5
+    read_timeout: 3
+    write_timeout: 3
+    pool_size: 10
+    min_idle_conns: 5
+
+auth:
+  jwt_secret: "your-secret-key-here"
+  jwt_expire_hours: 24
+  challenge_timeout_seconds: 120
+
+trace:
+  endpoint: "192.168.3.108:4318"
+  insecure: true
+
+discovery:
+  consul:
+    addr: 14.103.239.125:8500
+    scheme: http
+    health_check: true

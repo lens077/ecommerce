@@ -1,0 +1,9 @@
+dependencies:
+- name: react
+  repository: file://./charts/react
+  version: 0.1.0
+- name: go
+  repository: file://./charts/go
+  version: 0.1.0
+digest: sha256:26991990fe1ffbbc563305bd31453a9e910ec23ac415ad589da2ee0b2e797c6d
+generated: "2025-10-24T12:49:34.186129+08:00"

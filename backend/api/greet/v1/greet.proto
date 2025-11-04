@@ -1,0 +1,44 @@
+syntax = "proto3";
+
+package greet.v1;
+
+option go_package = "connect-go-example/api/greet/v1;greetv1";
+
+message RegisterRequest {
+  string username = 1;
+  string password_hash = 2;
+  string email = 3;
+  string salt = 4;
+}
+
+message RegisterResponse {
+  string user_id = 1;
+}
+
+message AuthChallengeRequest {
+  string username = 1;
+}
+
+message AuthChallengeResponse {
+  string challenge = 1;
+  string salt = 2;
+}
+
+message SubmitAuthRequest {
+  string username = 1;
+  string hashed_credential = 2; // 客户端使用密码 + salt 哈希后的凭证
+  string auth_request_id = 3; // 链路追踪
+  string challenge_response = 4; // 客户端对挑战的响应
+}
+
+message SubmitAuthResponse {
+  string code = 1;
+  string state = 2;
+  string auth_token = 3; // jwt令牌
+}
+
+service GreetService {
+  rpc Register(RegisterRequest) returns (RegisterResponse){}
+  rpc GetAuthChallenge (AuthChallengeRequest) returns (AuthChallengeResponse) {}
+  rpc SubmitAuth (SubmitAuthRequest) returns (SubmitAuthResponse) {}
+}

@@ -1,0 +1,18 @@
+syntax = "proto3";
+
+package check.v1;
+
+option go_package = "connect-go-example/api/check/v1;checkv1";
+
+service CheckService {
+  rpc Ready(ReadyCheckReq) returns(ReadyCheckReply){}
+}
+
+message ReadyCheckReq {
+
+}
+
+message ReadyCheckReply {
+  string status = 1;
+  map<string, string> details = 2;
+}

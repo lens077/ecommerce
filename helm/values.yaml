@@ -1,0 +1,33 @@
+replicaCount: 1
+
+backend:
+  enabled: true
+  replicaCount: 1
+  image:
+    repository: "harbor.apikv.com:5443/sumery/connect-example-backend"
+    tag: "v1.1.4"
+    pullPolicy: Always
+  service:
+    type: LoadBalancer
+    port: 4000
+    targetPort: 4000
+  environment:
+    HTTP_ADDR: "0.0.0.0:4001"
+    RUN_MODE: "prod"
+    OTLP_HTTP_ENDPOINT: "center-collector.observability:4318"
+  autoscaling:
+    enabled: false # 添加autoscaling配置，确保可以通过父values控制
+
+frontend:
+  enabled: false
+  replicaCount: 1 # 添加replicaCount配置，确保可以通过父values控制
+  image:
+    repository: "ccr.ccs.tencentyun.com/sumery/connect-react-example"
+    tag: "dev"
+    pullPolicy: IfNotPresent # 明确指定pullPolicy，确保可以通过父values控制
+  service:
+    type: LoadBalancer
+    port: 3000
+    targetPort: 3000
+  autoscaling:
+    enabled: false # 添加autoscaling配置，确保可以通过父values控制
