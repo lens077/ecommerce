@@ -80,12 +80,12 @@ jobs:
           platforms: linux/amd64,linux/arm64
           push: true
           build-args:
-            GO_PROXY=${{ GO_PROXY }}
-            GOIMAGE=${{ GO_IMAGE }}
-            CGOENABLED=${{ CGO_ENABLED }}
+            GO_PROXY=${{ env.GO_PROXY }}
+            GOIMAGE=${{ env.GO_IMAGE }}
+            CGOENABLED=${{ env.CGO_ENABLED }}
             VERSION=${{ env.VERSION }}
-            GOOS=${{ GOOS }}
-            GOARCH=${{ GOARCH }}
+            GOOS=${{ env.GOOS }}
+            GOARCH=${{ env.GOARCH }}
             SERVICE=server
           tags: |
             ${{ env.DOCKER_USER }}/${{ env.IMAGE_NAME }}:${{ env.VERSION }}
