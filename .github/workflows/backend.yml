@@ -157,10 +157,13 @@ jobs:
             GOARCH=${{ env.GOARCH }}
             SERVICE=server
           tags: |
+            # 推送到 Docker Hub
             ${{ env.DOCKERHUB_USERNAME }}/${{ env.IMAGE_NAME }}:${{ env.VERSION }}
             ${{ env.DOCKERHUB_USERNAME }}/${{ env.IMAGE_NAME }}:latest
-            ghcr.io/${{ github.actor }}/${{ env.IMAGE_NAME }}:${{ env.VERSION }}
-            ghcr.io/${{ github.actor }}/${{ env.IMAGE_NAME }}:latest
+            
+            # 推送到 GitHub Container Registry(ghcr.io)
+            ghcr.io/${{ github.repository }}/${{ env.IMAGE_NAME }}:${{ env.VERSION }}
+            ghcr.io/${{ github.repository }}/${{ env.IMAGE_NAME }}:latest
   deploy:
     needs: build
     runs-on: ubuntu-24.04
@@ -188,13 +191,21 @@ jobs:
           yq e '.image.tag = "${{ env.VERSION }}"' -i helm/charts/backend/values.yaml
           yq e '.backend.image.tag = "${{ env.VERSION }}"' -i helm/values.yaml
 
-      # 打包并推送 Helm Chart 到 OCI
-      - name: Bump Chart Version and Package
+      # 打包Helm Chart
+      - name: Bump Chart Version
         run: |
           helm dependency update helm/charts/backend/
           helm package helm/charts/backend/ -d chart-packages/
+
+      - name: Pulish Chart Package
+        run: |
           echo "${{ secrets.HELM_REGISTRY_PASS }}" | helm registry login ${{ env.HELM_REGISTRY }} -u ${{ env.HELM_REGISTRY_USER }} --password-stdin
+          # 推送到 私有注册表
           helm push chart-packages/*-${{ env.VERSION }}.tgz oci://${{ env.HELM_REGISTRY }}/${{ env.HELM_REPO }}
+          
+          echo "${{ secrets.MANIFEST_REPO_PAT }}" | helm registry login ghcr.io -u ${{ github.actor }} --password-stdin
+          # 推送到 GitHub Container Registry(ghcr.io)
+          helm push chart-packages/*-${{ env.VERSION }}.tgz oci://ghcr.io/${{ github.repository }}/${{ env.HELM_REPO }}
 
       # 提交 Chart 文件更改到源仓库
       - name: Auto Commit Chart Changes
