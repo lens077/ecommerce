@@ -4,7 +4,7 @@ backend:
   replicaCount: 1
   image:
     repository: "harbor.apikv.com:5443/sumery/connect-example-backend"
-    tag: "v1.2.53"
+    tag: "v1.3.05"
     pullPolicy: Always
   service:
     type: LoadBalancer
