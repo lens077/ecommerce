@@ -177,11 +177,6 @@ jobs:
       run:
         shell: bash
     steps:
-      - name: test
-        run: |
-          echo: 1 ${{ github.event.workflow_run.conclusion == 'success' }}
-          echo: 2 ${{startsWith(github.event.workflow_run.head_branch, 'v')}}
-          echo: 3 ${{ github.event.workflow_run.head_branch }}
       - name: Checkout Current Repository (for Helm Chart)
         uses: actions/checkout@v5
         # 需要检出触发事件的分支/标签，以获取正确的 Chart 文件
