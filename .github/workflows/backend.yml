@@ -185,6 +185,7 @@ jobs:
         # 需要检出触发事件的分支/标签，以获取正确的 Chart 文件
         with:
           ref: ${{ github.event.workflow_run.head_branch }}
+          submodules: 'false'
 
       # 更新 Chart 版本和镜像标签
       - name: Update Backend Chart Version and Image Tag
