@@ -1,11 +1,9 @@
-name: CD GitOps Deployment
+name: Deployment
 
 on:
   workflow_run:
-    workflows:
-      - CI Backend Build
-    types:
-      - completed
+    workflows: [Build]
+    types: [completed]
 
 # 共享环境变量
 env:

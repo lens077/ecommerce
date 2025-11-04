@@ -1,11 +1,9 @@
-name: CI Backend Build
+name: Build
 
 on:
   workflow_run:
-    workflows:
-      - CI Backend Test
-    types:
-      - completed
+    workflows: [Test]
+    types: [completed]
 
 # 共享环境变量
 env:
@@ -36,6 +34,14 @@ jobs:
     steps:
       - name: Checkout repository
         uses: actions/checkout@v5
+
+      - name: Set up Go
+        uses: actions/setup-go@v5
+        with:
+          go-version: '1.25.1'
+          check-latest: true
+          cache-dependency-path: '**/go.sum'
+
         # 注意：这里保持默认检出，不需要特殊 ref main
 
 #      只有需要构建跨平台才使用
@@ -79,6 +85,8 @@ jobs:
         with:
           platforms: linux/amd64,linux/arm64
           push: true
+          cache-from: type=gha,scope=go-backend-build
+          cache-to: type=gha,scope=go-backend-build,mode=max
           build-args:
             GO_PROXY=${{ env.GO_PROXY }}
             GOIMAGE=${{ env.GO_IMAGE }}
