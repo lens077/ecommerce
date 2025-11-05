@@ -128,15 +128,15 @@ jobs:
           ref: ${{ github.ref_name }} # 检出标签本身
           submodules: 'false'
 
-      # ----------------------------------------------------------------------
-      # 1. 更新 Chart 版本和镜像标签 (文件路径和键名改为 frontend)
-      # ----------------------------------------------------------------------
+      
+      # 更新 Chart 版本和镜像标签 (文件路径和键名改为 frontend)
+      
       - name: Update Frontend Chart Version and Image Tag
         run: |
           yq e '.version = "${{ env.VERSION }}"' -i helm/charts/frontend/Chart.yaml
           yq e '.image.tag = "${{ env.VERSION }}"' -i helm/charts/frontend/values.yaml
 
-      # 2. 打包和发布 Helm Chart
+      # 打包和发布 Helm Chart
       - name: Bump Chart Version and Package
         run: |
           helm dependency update helm/charts/frontend/
@@ -152,9 +152,8 @@ jobs:
           # 推送到 GitHub Container Registry(ghcr.io)
           helm push chart-packages/*-${{ env.VERSION }}.tgz oci://ghcr.io/${{ github.repository }}
 
-      # ----------------------------------------------------------------------
-      # 3. 提交 Chart 文件更改到源仓库 (使用强制推送修复 Detached HEAD)
-      # ----------------------------------------------------------------------
+      
+      # 提交 Chart 文件更改到源仓库 (使用强制推送修复 Detached HEAD)
       - name: Auto Commit Chart Changes
         uses: stefanzweifel/git-auto-commit-action@v5
         with:
@@ -164,15 +163,12 @@ jobs:
           file_pattern: "helm/charts/${{ env.FRONTEND_DIR }}/*"
           commit_user_name: "github-actions[bot]"
           commit_user_email: "github-actions[bot]@users.noreply.github.com"
-
-      # ----------------------------------------------------------------------
-      # 4. GitOps Manifest 仓库更新
-      # ----------------------------------------------------------------------
+          
+      # 检出 Manifest 配置仓库
       - name: Checkout Manifest Repository
         uses: actions/checkout@v5
         with:
           repository: sunmery/Manifest
-          path: connect-example-manifest # 路径改为更明确的名字
           token: ${{ secrets.MANIFEST_REPO_PAT }}
           ref: ${{ github.event.repository.default_branch }}
 
@@ -181,26 +177,27 @@ jobs:
         working-directory: connect-example
         run: |
           export NEW_CHART_VERSION="${{ env.VERSION }}"
-          MANIFEST_FILE="frontend/argo.yaml" # Manifest 文件路径
+          MANIFEST_FILE="connect-example/frontend/argo.yaml"
 
+          which yq || sudo apt-get install -y yq
+          
           echo "Updating $MANIFEST_FILE with targetRevision: $NEW_CHART_VERSION"
 
           # 更新 spec.source.targetRevision 字段 (OCI Chart 版本)
           yq e '.spec.source.targetRevision = env(NEW_CHART_VERSION)' -i $MANIFEST_FILE
-          # 更新 Chart 内部的镜像标签 (Helm Parameter, 注意键名)
+          # 更新 Chart 内部的镜像标签 (Helm Parameter)
           yq e '.spec.source.helm.parameters.[] | select(.name == "frontend.image.tag").value = env(NEW_CHART_VERSION)' -i $MANIFEST_FILE
           
           cat $MANIFEST_FILE
 
       # 提交并将更改推送到 Manifest 仓库
       - name: Commit and Push Manifest Changes
-        working-directory: connect-example-manifest
+        working-directory: connect-example
         run: |
           git config user.email "github-actions[bot]@users.noreply.github.com"
           git config user.name "github-actions[bot]"
-          ls
-          pwd
-          git add frontend/argo.yaml
+          
+          git add connect-example/frontend/argo.yaml
           
           # 仅在有实际更改时提交
           git diff --cached --exit-code || git commit -m "CI: Auto update connect-example-frontend chart version to ${{ env.VERSION }} [skip ci]"
