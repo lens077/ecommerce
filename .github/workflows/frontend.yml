@@ -176,12 +176,12 @@ jobs:
           token: ${{ secrets.MANIFEST_REPO_PAT }}
           ref: ${{ github.event.repository.default_branch }}
 
-      # 更新 ArgoCD Application配置文件 (文件路径和键名改为 frontend)
+      # 更新 ArgoCD Application配置文件
       - name: Update ArgoCD Configs File
-        working-directory: connect-example-manifest
+        working-directory: connect-example
         run: |
           export NEW_CHART_VERSION="${{ env.VERSION }}"
-          MANIFEST_FILE="connect-example/frontend/argo.yaml" # Manifest 文件路径
+          MANIFEST_FILE="frontend/argo.yaml" # Manifest 文件路径
 
           echo "Updating $MANIFEST_FILE with targetRevision: $NEW_CHART_VERSION"
 
@@ -198,8 +198,9 @@ jobs:
         run: |
           git config user.email "github-actions[bot]@users.noreply.github.com"
           git config user.name "github-actions[bot]"
-          
-          git add connect-example/frontend/argo.yaml
+          ls
+          pwd
+          git add frontend/argo.yaml
           
           # 仅在有实际更改时提交
           git diff --cached --exit-code || git commit -m "CI: Auto update connect-example-frontend chart version to ${{ env.VERSION }} [skip ci]"

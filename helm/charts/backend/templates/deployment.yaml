@@ -2,9 +2,9 @@
 apiVersion: apps/v1
 kind: Deployment
 metadata:
-  name: {{ .Release.Name }}-go
+  name: {{ .Release.Name }}
 spec:
-  replicas: {{ .Values.replicaCount }} # 直接引用 .Values.replicaCount
+  replicas: {{ .Values.replicaCount }}
   selector:
     matchLabels:
       app.kubernetes.io/name: {{ include "go.fullname" . }}
@@ -17,8 +17,8 @@ spec:
     spec:
       containers:
         - name: go
-          image: "{{ .Values.image.repository }}:{{ .Values.image.tag }}" # 引用 .Values.image
-          imagePullPolicy: {{ .Values.image.pullPolicy | default "IfNotPresent" }} # 引用 .Values.image.pullPolicy
+          image: "{{ .Values.image.repository }}:{{ .Values.image.tag }}"
+          imagePullPolicy: {{ .Values.image.pullPolicy | default "IfNotPresent" }}
           ports:
             - name: http
               containerPort: {{ .Values.service.targetPort }}

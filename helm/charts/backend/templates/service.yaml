@@ -2,7 +2,7 @@
 apiVersion: v1
 kind: Service
 metadata:
-  name: {{ include "go.fullname" . }}
+  name: {{ include "go.fullname" . | trim }}
   labels:
     {{ include "go.labels" . | nindent 4 }}
 spec:
@@ -10,7 +10,6 @@ spec:
   ports:
     - port: {{ .Values.service.port }}
       targetPort: {{ .Values.service.targetPort }}
-      nodePort: {{ .Values.service.nodePort }}
       protocol: TCP
   selector:
     {{ include "go.selectorLabels" . | nindent 4 }}
