@@ -1,19 +1,14 @@
 enabled: true
-
 replicaCount: 1
-
 image:
   repository: "ccr.ccs.tencentyun.com/sumery/connect-react-example"
-  tag: "dev"
+  tag: "1.4.1"
   pullPolicy: IfNotPresent
-
 service:
   type: LoadBalancer
   port: 3000
   targetPort: 80
   nodePort: 31800
-
 autoscaling:
   enabled: false
-
 # helm install connect-example .
