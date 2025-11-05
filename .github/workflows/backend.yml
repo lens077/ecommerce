@@ -207,8 +207,9 @@ jobs:
 
       # 更新 ArgoCD Application配置文件
       - name: Update ArgoCD Configs File
-        working-directory: connect-example
         run: |
+          ls -A
+          pwd
           export NEW_CHART_VERSION="${{ env.VERSION }}"
           MANIFEST_FILE="connect-example/backend/argo.yaml"
 
@@ -225,7 +226,6 @@ jobs:
 
       # 提交并将更改推送到 Manifest 仓库
       - name: Commit and Push Manifest Changes
-        working-directory: connect-example
         run: |
           git config user.email "github-actions[bot]@users.noreply.github.com"
           git config user.name "github-actions[bot]"

@@ -169,6 +169,7 @@ jobs:
         uses: actions/checkout@v5
         with:
           repository: sunmery/Manifest
+          path: connect-example
           token: ${{ secrets.MANIFEST_REPO_PAT }}
           ref: ${{ github.event.repository.default_branch }}
 
@@ -176,6 +177,8 @@ jobs:
       - name: Update ArgoCD Configs File
         working-directory: connect-example
         run: |
+          ls -A
+          pwd
           export NEW_CHART_VERSION="${{ env.VERSION }}"
           MANIFEST_FILE="connect-example/frontend/argo.yaml"
 
@@ -200,5 +203,5 @@ jobs:
           git add connect-example/frontend/argo.yaml
           
           # 仅在有实际更改时提交
-          git diff --cached --exit-code || git commit -m "CI: Auto update connect-example-frontend chart version to ${{ env.VERSION }} [skip ci]"
+          git diff --cached --exit-code || git commit -m "CI: Auto update frontend chart version to ${{ env.VERSION }} [skip ci]"
           git push
