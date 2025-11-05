@@ -3,7 +3,7 @@ name: Connect-example Frontend GitOps Deployment
 on:
   push:
     tags:
-      - 'v*.*.*'
+      - '[0-9]+.[0-9]+.[0-9]+'
 
 # 共享环境变量
 env:

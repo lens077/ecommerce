@@ -1,4 +1,4 @@
-enabled: false
+enabled: true
 
 replicaCount: 1
 
@@ -11,6 +11,7 @@ service:
   type: LoadBalancer
   port: 3000
   targetPort: 80
+  nodePort: 31800
 
 autoscaling:
   enabled: false

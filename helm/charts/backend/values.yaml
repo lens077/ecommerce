@@ -7,7 +7,8 @@ image:
 service:
   type: LoadBalancer
   port: 4000
-  targetPort: 31400
+  targetPort: 4000
+  nodePort: 31400
 environment:
   HTTP_ADDR: "0.0.0.0:4000"
   RUN_MODE: "prod"

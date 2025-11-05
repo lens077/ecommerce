@@ -3,7 +3,7 @@ name: Connect-example Backend GitOps Deployment
 on:
   push:
     tags:
-      - 'v*.*.*'
+      - '[0-9]+.[0-9]+.[0-9]+'
 
 # 共享环境变量
 env:
@@ -17,7 +17,7 @@ env:
 
   # 镜像名称
   IMAGE_NAME: connect-example-backend
-  # 版本， 由你推送到tags决定， 例如v1.0.0
+  # 版本， 由你推送到tags决定， 例如1.0.0
   VERSION: ${{ github.ref_name }}
 
   # Dockerfile 相关参数
@@ -36,61 +36,60 @@ env:
   NAMESPACE: connect-example
 
 jobs:
-#  test:
-#    runs-on: ubuntu-24.04-arm
-#    defaults:
-#      run:
-#        shell: bash
-#        #working-directory: ${{ matrix.service }}
-#        working-directory: backend
-#    #    services:
-#    #      postgres:
-#    #        image: postgres:17-alpine
-#    #        env:
-#    #          POSTGRES_USER: postgres
-#    #          POSTGRES_PASSWORD: postgres
-#    #          POSTGRES_DB: postgres
-#    #        options: >-
-#    #          --health-cmd pg_isready
-#    #          --health-interval 10s
-#    #          --health-timeout 5s
-#    #          --health-retries 5
-#    #        ports:
-#    #          - '5432:5432'
-#
-#    steps:
-#      - name: Checkout repository
-#        uses: actions/checkout@v5
-#
-#      - name: Set up Go
-#        uses: actions/setup-go@v5
-#        with:
-#          go-version: '1.25.1'
-#          check-latest: true
-#          cache-dependency-path: '**/go.sum'
-#
-#      #      - name: Install migrate
-#      #        run: |
-#      #          curl -L https://github.com/golang-migrate/migrate/releases/download/v4.18.1/migrate.linux-amd64.tar.gz | tar xvz
-#      #          sudo mv migrate /usr/bin/
-#      #          which migrate
-#      #
-#      #      - name: Run database migration
-#      #        run: |
-#      #          export DB_SOURCE="postgresql://postgres:postgres@localhost:5432/postgres?sslmode=disable"
-#      #          if [ -d ${{ matrix.service }} ]; then
-#      #            echo "Running migrations..."
-#      #            make migrate-up
-#      #          else
-#      #            echo "Skipping migrations."
-#      #          fi
-#
-#      - name: Run Go tests
-#        run: |
-#          go test -short -coverprofile=coverage.out ./...
-#          go tool cover -html=coverage.out -o coverage.html
+  test:
+    runs-on: ubuntu-24.04-arm
+    defaults:
+      run:
+        shell: bash
+        working-directory: backend
+    #    services:
+    #      postgres:
+    #        image: postgres:17-alpine
+    #        env:
+    #          POSTGRES_USER: postgres
+    #          POSTGRES_PASSWORD: postgres
+    #          POSTGRES_DB: postgres
+    #        options: >-
+    #          --health-cmd pg_isready
+    #          --health-interval 10s
+    #          --health-timeout 5s
+    #          --health-retries 5
+    #        ports:
+    #          - '5432:5432'
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v5
+
+      - name: Set up Go
+        uses: actions/setup-go@v5
+        with:
+          go-version: '1.25.1'
+          check-latest: true
+          cache-dependency-path: '**/go.sum'
+
+      #      - name: Install migrate
+      #        run: |
+      #          curl -L https://github.com/golang-migrate/migrate/releases/download/v4.18.1/migrate.linux-amd64.tar.gz | tar xvz
+      #          sudo mv migrate /usr/bin/
+      #          which migrate
+      #
+      #      - name: Run database migration
+      #        run: |
+      #          export DB_SOURCE="postgresql://postgres:postgres@localhost:5432/postgres?sslmode=disable"
+      #          if [ -d ${{ matrix.service }} ]; then
+      #            echo "Running migrations..."
+      #            make migrate-up
+      #          else
+      #            echo "Skipping migrations."
+      #          fi
+
+      - name: Run Go tests
+        run: |
+          go test -short -coverprofile=coverage.out ./...
+          go tool cover -html=coverage.out -o coverage.html
   build:
-#    needs: test
+    needs: test
     runs-on: ubuntu-24.04-arm
     defaults:
       run:
