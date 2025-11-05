@@ -210,11 +210,11 @@ jobs:
       - name: Update ArgoCD Configs File
         working-directory: connect-example
         run: |
+          ls
+          pwd
           export NEW_CHART_VERSION="${{ env.VERSION }}"
-          MANIFEST_FILE="connect-example/backend/argo.yaml"
+          MANIFEST_FILE="backend/argo.yaml"
 
-          which yq || sudo apt-get install -y yq
-          
           echo "Updating $MANIFEST_FILE with targetRevision: $NEW_CHART_VERSION"
 
           # 更新 spec.source.targetRevision 字段 (OCI Chart 版本)
@@ -230,10 +230,11 @@ jobs:
         run: |
           git config user.email "github-actions[bot]@users.noreply.github.com"
           git config user.name "github-actions[bot]"
-          
-          git add connect-example/backend/argo.yaml
+          ls
+          pwd
+          git add backend/argo.yaml
           
           # 仅在有实际更改时提交
-          git diff --cached --exit-code || git commit -m "CI: Auto update connect-example-backend chart version to ${{ env.VERSION }} [skip ci]"
+          git diff --cached --exit-code || git commit -m "CI: Auto update backend chart version to ${{ env.VERSION }} [skip ci]"
           git push
 
