@@ -35,7 +35,7 @@ env:
   NAMESPACE: connect-example
 
 jobs:
-  build-and-test:
+  frontend-test:
     runs-on: ubuntu-latest
     defaults:
       run:
@@ -111,8 +111,8 @@ jobs:
             ${{ env.REGISTRY }}/${{ env.REGISTER_USER }}/${{ env.IMAGE_NAME }}:${{ env.VERSION }}
             ${{ env.REGISTRY }}/${{ env.REGISTER_USER }}/${{ env.IMAGE_NAME }}:latest
 
-  deploy:
-    needs: build-and-test
+  frontend-deploy:
+    needs: frontend-test
     runs-on: ubuntu-latest
     permissions:
       contents: write # 允许对源仓库进行提交
@@ -197,9 +197,7 @@ jobs:
           git config user.email "github-actions[bot]@users.noreply.github.com"
           git config user.name "github-actions[bot]"
           
-          cat connect-example/frontend/argo.yaml
-          
-          git add connect-example/frontend/argo.yaml
+          git add frontend/argo.yaml
           
           # 仅在有实际更改时提交
           git diff --cached --exit-code || git commit -m "CI: Auto update frontend chart version to ${{ env.VERSION }} [skip ci]"

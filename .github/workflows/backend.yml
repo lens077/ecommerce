@@ -36,7 +36,7 @@ env:
   NAMESPACE: connect-example
 
 jobs:
-  test:
+  backend-test:
     runs-on: ubuntu-24.04-arm
     defaults:
       run:
@@ -88,8 +88,8 @@ jobs:
         run: |
           go test -short -coverprofile=coverage.out ./...
           go tool cover -html=coverage.out -o coverage.html
-  build:
-    needs: test
+  backend-build:
+    needs: backend-test
     runs-on: ubuntu-24.04-arm
     defaults:
       run:
@@ -145,8 +145,8 @@ jobs:
             ghcr.io/${{ github.repository }}/${{ env.IMAGE_NAME }}:latest
             ${{ env.REGISTRY }}/${{ env.REGISTER_USER }}/${{ env.IMAGE_NAME }}:${{ env.VERSION }}
             ${{ env.REGISTRY }}/${{ env.REGISTER_USER }}/${{ env.IMAGE_NAME }}:latest
-  deploy:
-    needs: build
+  backend-deploy:
+    needs: backend-build
     runs-on: ubuntu-24.04
     # https://docs.github.com/zh/actions/reference/workflows-and-actions/expressions#startswith
     # 如果上一个workflow的运行完成后的结果是success，并且分支tag是v开头的字符串，那么返回tre，该job运行
