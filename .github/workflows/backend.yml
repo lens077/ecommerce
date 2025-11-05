@@ -222,7 +222,7 @@ jobs:
           # 更新 Chart 内部的镜像标签 (Helm Parameter)
           yq e '.spec.source.helm.parameters.[] | select(.name == "backend.image.tag").value = env(NEW_CHART_VERSION)' -i $MANIFEST_FILE
           
-          cat $MANIFEST_FILE
+          cat connect-example/frontend/argo.yaml
 
       # 提交并将更改推送到 Manifest 仓库
       - name: Commit and Push Manifest Changes
@@ -230,8 +230,10 @@ jobs:
           git config user.email "github-actions[bot]@users.noreply.github.com"
           git config user.name "github-actions[bot]"
           
+          cat connect-example/frontend/argo.yaml
+          
           git add connect-example/backend/argo.yaml
           
           # 仅在有实际更改时提交
-          git diff --cached --exit-code || git commit -m "CI: Auto update connect-example-backend chart version to ${{ env.VERSION }} [skip ci]"
+          git diff --cached --exit-code || git commit -m "CI: Auto update backend chart version to ${{ env.VERSION }} [skip ci]"
           git push
