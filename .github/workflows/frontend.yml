@@ -187,10 +187,8 @@ jobs:
 
           # 更新 spec.source.targetRevision 字段 (OCI Chart 版本)
           yq e '.spec.source.targetRevision = env(NEW_CHART_VERSION)' -i $MANIFEST_FILE
-          # 更新 Chart 内部的镜像标签 (Helm Parameter)
-          yq e '.spec.source.helm.parameters.[] | select(.name == "frontend.image.tag").value = env(NEW_CHART_VERSION)' -i $MANIFEST_FILE
-          
-          cat connect-example/frontend/argo.yaml
+
+          cat $MANIFEST_FILE
 
       # 提交并将更改推送到 Manifest 仓库
       - name: Commit and Push Manifest Changes
