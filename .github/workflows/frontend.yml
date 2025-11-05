@@ -125,7 +125,7 @@ jobs:
         uses: actions/checkout@v5
         # 标签触发会导致 Detached HEAD，但我们需要 Chart 文件，所以在此状态下操作
         with:
-          ref: ${{ github.ref_name }} # 检出标签本身
+          ref: ${{ github.ref_name }}
           submodules: 'false'
 
       
@@ -153,12 +153,13 @@ jobs:
           helm push chart-packages/*-${{ env.VERSION }}.tgz oci://ghcr.io/${{ github.repository }}
 
       
-      # 提交 Chart 文件更改到源仓库 (使用强制推送修复 Detached HEAD)
+      # 提交 Chart 文件更改到源仓库
       - name: Auto Commit Chart Changes
         uses: stefanzweifel/git-auto-commit-action@v5
         with:
           #branch: '${{ github.head_ref }}'
           branch: main
+          skip_dirty_check: true
           commit_message: "CI: Auto update frontend chart version to ${{ env.VERSION }} [skip ci]"
           file_pattern: "helm/charts/${{ env.FRONTEND_DIR }}/*"
           commit_user_name: "github-actions[bot]"

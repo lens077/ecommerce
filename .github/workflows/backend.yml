@@ -160,9 +160,7 @@ jobs:
     steps:
       - name: Checkout Current Repository (for Helm Chart)
         uses: actions/checkout@v5
-        # 需要检出触发事件的分支/标签，以获取正确的 Chart 文件
         with:
-          ref: ${{ github.event.workflow_run.head_branch }}
           submodules: 'false'
 
       # 更新 Chart 版本和镜像标签
@@ -189,9 +187,10 @@ jobs:
 
       # 提交 Chart 文件更改到源仓库
       - name: Auto Commit Chart Changes
-        uses: stefanzweifel/git-auto-commit-action@v5 # 使用 v5 或更高版本
+        uses: stefanzweifel/git-auto-commit-action@v5
         with:
           branch: main
+          skip_dirty_check: true
           commit_message: "CI: Auto update backend chart version to ${{ env.VERSION }} [skip ci]"
           file_pattern: "helm/charts/backend/*"
           commit_user_name: "github-actions[bot]"
