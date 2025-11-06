@@ -99,8 +99,8 @@ jobs:
           file: ${{ env.FRONTEND_DIR }}/Dockerfile
           platforms: linux/amd64,linux/arm64
           push: true
-          cache-from: type=gha,scope=frontend-build
-          cache-to: type=gha,scope=frontend-build,mode=max
+          cache-from: type=gha,scope=${{ env.FRONTEND_DIR }}-build
+          cache-to: type=gha,scope=${{ env.FRONTEND_DIR }}-build,mode=max
           build-args: |
             VERSION=${{ env.VERSION }}
           tags: |
@@ -123,24 +123,22 @@ jobs:
     steps:
       - name: Checkout Current Repository (for Helm Chart)
         uses: actions/checkout@v5
-        # 标签触发会导致 Detached HEAD，但我们需要 Chart 文件，所以在此状态下操作
         with:
           ref: ${{ github.ref_name }}
           submodules: 'false'
 
       
-      # 更新 Chart 版本和镜像标签 (文件路径和键名改为 frontend)
-      
+      # 更新 Chart 版本和镜像标签
       - name: Update Frontend Chart Version and Image Tag
         run: |
-          yq e '.version = "${{ env.VERSION }}"' -i helm/charts/frontend/Chart.yaml
-          yq e '.image.tag = "${{ env.VERSION }}"' -i helm/charts/frontend/values.yaml
+          yq e '.version = "${{ env.VERSION }}"' -i helm/charts/${{ env.FRONTEND_DIR }}/Chart.yaml
+          yq e '.image.tag = "${{ env.VERSION }}"' -i helm/charts/${{ env.FRONTEND_DIR }}/values.yaml
 
       # 打包和发布 Helm Chart
       - name: Bump Chart Version and Package
         run: |
-          helm dependency update helm/charts/frontend/
-          helm package helm/charts/frontend/ -d chart-packages/
+          helm dependency update helm/charts/${{ env.FRONTEND_DIR }}/
+          helm package helm/charts/${{ env.FRONTEND_DIR }}/ -d chart-packages/
 
       - name: Publish Chart Package
         run: |
@@ -160,7 +158,7 @@ jobs:
           #branch: '${{ github.head_ref }}'
           branch: main
           skip_dirty_check: true
-          commit_message: "CI: Auto update frontend chart version to ${{ env.VERSION }} [skip ci]"
+          commit_message: "CI: Auto update ${{ env.FRONTEND_DIR }} chart version to ${{ env.VERSION }} [skip ci]"
           file_pattern: "helm/charts/${{ env.FRONTEND_DIR }}/*"
           commit_user_name: "github-actions[bot]"
           commit_user_email: "github-actions[bot]@users.noreply.github.com"
@@ -176,10 +174,8 @@ jobs:
       # 更新 ArgoCD Application配置文件
       - name: Update ArgoCD Configs File
         run: |
-          ls -A
-          pwd
           export NEW_CHART_VERSION="${{ env.VERSION }}"
-          MANIFEST_FILE="connect-example/frontend/argo.yaml"
+          MANIFEST_FILE="connect-example/${{ env.FRONTEND_DIR }}/argo.yaml"
 
           which yq || sudo apt-get install -y yq
           
@@ -197,8 +193,8 @@ jobs:
           git config user.email "github-actions[bot]@users.noreply.github.com"
           git config user.name "github-actions[bot]"
           
-          git add frontend/argo.yaml
+          git add ${{ env.FRONTEND_DIR }}/argo.yaml
           
           # 仅在有实际更改时提交
-          git diff --cached --exit-code || git commit -m "CI: Auto update frontend chart version to ${{ env.VERSION }} [skip ci]"
+          git diff --cached --exit-code || git commit -m "CI: Auto update ${{ env.FRONTEND_DIR }} chart version to ${{ env.VERSION }} [skip ci]"
           git push
