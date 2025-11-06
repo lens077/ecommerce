@@ -20,7 +20,7 @@ data:
       max_conn_idle_time: 300
   redis:
 #    host: "dragonfly.app.com"
-    host: "192.168.3.112"
+    host: "192.168.3.114"
     port: 6379
     username: "default"
     password: "msdnmm"
