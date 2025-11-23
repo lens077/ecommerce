@@ -1,22 +1,14 @@
-# Connect example
+# 小镇做题家的电商项目
 
-# Introduce
-## Backend
-1. 前沿技术栈
-2. 参照了go-kratos的架构设计，参考了它对DDD的理解并应用本项目中，
-3. 使用uber-fx带来更好的生命周期管理，
-4. api统一通过protobuf来编写
-
-## Frontend
-1. 前沿技术栈
-2. 完善的基础设施
-3. 通过buf生成的pb直接与后端交互
-
-## CI/CD
-采用GitOps， 将应用测试，构建，部署集中到Github Actions中，实现自动化
-
-## 可观测性
-在应用部署之后可通过Web UI来查看应用的指标/日志/链路，来进行追踪，监控，优化
+# 技术设计
+1. 语言： Golang + React TypeScript
+2. API：使用google protobuf定义API来规范前后端的交互，@bufbuild/buf负责生成
+3. 通信：前后端使用connectrpc/connect(兼容gRPC)来进行RPC协议通信
+4. 数据库：编写SQL，使用工具生成go代码来调用
+5. 后端：后端架构参考go-kratos的template来划分，biz层是定义结构体，data层负责与数据库/MQ/Search等中间件交互，service层负责转换proto，server则是应用本身的服务(uber/fx)和第三方服务，例如注册发现(consul)
+6. 前端：采用Vite+React TypeScript和husky+cz-git+biome来规范化，playwright+vitest用于测试
+7. CI/CD：通过GitHub Actions将前后端项目构建/打包推送到容器注册表并更新清单仓库的版本号，由Argo CD监听清单仓库的变更并更新部署
+8. 可观测性：由fluent-bit采集日志（Info，Warn，Error），应用通过OpenTelemetry sdk发送应用指标，由Jaeger展示链路（微服务调用情况），来使用Grafana进行追踪，监控，优化
 
 # Backend stack
 - golang
@@ -25,6 +17,7 @@
 - Protobuf
 - sqlc
 - fx
+- casdoor
 
 # Frontend stack
 - React
@@ -35,15 +28,30 @@
 # Protocols
 - RPC
 
-# Databases
+# Infrastructure
+## Scheduling
+- Docker
+- Kubernetes
+
+## Streaming
+- kafka
+
+## Observability
+- loki
+- opentelemetry
+- victoria-metrics
+- jaeger
+- grafana
+
+## Databases
 - Postgres
 - Redis
 
 # 先决条件
 1. 前端：Node.js >= 22
-2. 后端：Golang >= go1.25.2
-3. 数据库：Postgres
-4. 缓存：Redis
+2. 后端：Golang >= go1.13
+3. 数据库：Postgres >= 12
+4. 缓存：Redis >= 6
 5. 注册/发现：Consul
 
 如果想体验完整项目，你还需安装:
