@@ -35,7 +35,7 @@ func NewHTTPServer(
 	monitoringMiddleware func(http.Handler) http.Handler,
 	connectInterceptor connect.UnaryInterceptorFunc,
 ) *http.Server {
-	// 1. 创建 OTel Connect 拦截器实例
+	// 创建 OTel Connect 拦截器实例
 	otelInterceptor, err := otelconnect.NewInterceptor(
 		otelconnect.WithoutServerPeerAttributes(),
 	)
@@ -43,10 +43,10 @@ func NewHTTPServer(
 		logger.Fatal("failed to create otel interceptor", zap.Error(err))
 	}
 
-	// 2. 将 OTel 拦截器和监控拦截器加入到 Connect 拦截器列表中
+	// 将 OTel 拦截器和监控拦截器加入到 Connect 拦截器列表中
 	interceptors := connect.WithInterceptors(otelInterceptor, connectInterceptor)
 
-	// 3. 将拦截器传递给 Service Handler
+	// 将拦截器传递给 Service Handler
 	greetv1connectPath, greetv1connectHandler := greetv1connect.NewGreetServiceHandler(
 		greetv1Service,
 		interceptors,
