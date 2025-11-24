@@ -42,6 +42,6 @@ trace:
 
 discovery:
   consul:
-    addr: 14.103.239.125:8500
+    addr: apikv.com:8500
     scheme: http
     health_check: true

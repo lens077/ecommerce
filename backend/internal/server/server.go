@@ -84,6 +84,7 @@ func NewHTTPServer(
 	// 注册生命周期钩子
 	lc.Append(fx.Hook{
 		OnStart: func(ctx context.Context) error {
+			InitCasdoor(logger)
 			logger.Info("HTTP server starting", zap.String("addr", cfg.Server.Http.Addr))
 			return nil
 		},
