@@ -228,7 +228,7 @@ func (suite *ServerTestSuite) TestInitMetrics() {
 	otel.SetMeterProvider(meterProvider)
 
 	// 调用初始化函数
-	err := initMetrics()
+	err := InitMetrics()
 
 	assert.NoError(suite.T(), err)
 

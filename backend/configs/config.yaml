@@ -42,6 +42,6 @@ trace:
 
 discovery:
   consul:
-    addr: casdoor.apikv.com:8500
+    addr: apikv.com:8500
     scheme: http
     health_check: true

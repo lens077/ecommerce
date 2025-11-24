@@ -11,7 +11,7 @@
     "format": "biome format",
     "lint": "biome lint",
     "check": "biome check",
-    "prepare": "cd .. && husky frontend/.husky || true",
+    "prepare": "cd .. && husky frontend/.husky || true&&cd ../.. && husky backend/.husky || true",
     "version": "conventional-changelog -p ember && git add CHANGELOG.md && git add package.json",
     "version:first": "conventional-changelog -p ember -r 0"
   },
