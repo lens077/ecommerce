@@ -7,12 +7,11 @@
 package confv1
 
 import (
+	protoreflect "google.golang.org/protobuf/reflect/protoreflect"
+	protoimpl "google.golang.org/protobuf/runtime/protoimpl"
 	reflect "reflect"
 	sync "sync"
 	unsafe "unsafe"
-
-	protoreflect "google.golang.org/protobuf/reflect/protoreflect"
-	protoimpl "google.golang.org/protobuf/runtime/protoimpl"
 )
 
 const (
@@ -195,12 +194,15 @@ func (x *Data) GetRedis() *Data_Redis {
 }
 
 type Auth struct {
-	state                   protoimpl.MessageState `protogen:"open.v1"`
-	JwtSecret               string                 `protobuf:"bytes,1,opt,name=jwt_secret,json=jwtSecret,proto3" json:"jwt_secret,omitempty"`
-	JwtExpireHours          int64                  `protobuf:"varint,2,opt,name=jwt_expire_hours,json=jwtExpireHours,proto3" json:"jwt_expire_hours,omitempty"`
-	ChallengeTimeoutSeconds int64                  `protobuf:"varint,3,opt,name=challenge_timeout_seconds,json=challengeTimeoutSeconds,proto3" json:"challenge_timeout_seconds,omitempty"`
-	unknownFields           protoimpl.UnknownFields
-	sizeCache               protoimpl.SizeCache
+	state            protoimpl.MessageState `protogen:"open.v1"`
+	Endpoint         string                 `protobuf:"bytes,1,opt,name=endpoint,proto3" json:"endpoint,omitempty"`
+	ClientId         string                 `protobuf:"bytes,2,opt,name=client_id,json=clientId,proto3" json:"client_id,omitempty"`
+	ClientSecret     string                 `protobuf:"bytes,3,opt,name=client_secret,json=clientSecret,proto3" json:"client_secret,omitempty"`
+	OrganizationName string                 `protobuf:"bytes,4,opt,name=organization_name,json=organizationName,proto3" json:"organization_name,omitempty"`
+	ApplicationName  string                 `protobuf:"bytes,5,opt,name=application_name,json=applicationName,proto3" json:"application_name,omitempty"`
+	Certificate      string                 `protobuf:"bytes,6,opt,name=certificate,proto3" json:"certificate,omitempty"`
+	unknownFields    protoimpl.UnknownFields
+	sizeCache        protoimpl.SizeCache
 }
 
 func (x *Auth) Reset() {
@@ -233,25 +235,46 @@ func (*Auth) Descriptor() ([]byte, []int) {
 	return file_internal_conf_v1_conf_proto_rawDescGZIP(), []int{3}
 }
 
-func (x *Auth) GetJwtSecret() string {
+func (x *Auth) GetEndpoint() string {
 	if x != nil {
-		return x.JwtSecret
+		return x.Endpoint
 	}
 	return ""
 }
 
-func (x *Auth) GetJwtExpireHours() int64 {
+func (x *Auth) GetClientId() string {
 	if x != nil {
-		return x.JwtExpireHours
+		return x.ClientId
 	}
-	return 0
+	return ""
 }
 
-func (x *Auth) GetChallengeTimeoutSeconds() int64 {
+func (x *Auth) GetClientSecret() string {
 	if x != nil {
-		return x.ChallengeTimeoutSeconds
+		return x.ClientSecret
 	}
-	return 0
+	return ""
+}
+
+func (x *Auth) GetOrganizationName() string {
+	if x != nil {
+		return x.OrganizationName
+	}
+	return ""
+}
+
+func (x *Auth) GetApplicationName() string {
+	if x != nil {
+		return x.ApplicationName
+	}
+	return ""
+}
+
+func (x *Auth) GetCertificate() string {
+	if x != nil {
+		return x.Certificate
+	}
+	return ""
 }
 
 type Trace struct {
@@ -790,12 +813,14 @@ const file_internal_conf_v1_conf_proto_rawDesc = "" +
 	"\rwrite_timeout\x18\b \x01(\x03R\fwriteTimeout\x12\x1b\n" +
 	"\tpool_size\x18\t \x01(\x05R\bpoolSize\x12$\n" +
 	"\x0emin_idle_conns\x18\n" +
-	" \x01(\x05R\fminIdleConns\"\x8b\x01\n" +
-	"\x04Auth\x12\x1d\n" +
-	"\n" +
-	"jwt_secret\x18\x01 \x01(\tR\tjwtSecret\x12(\n" +
-	"\x10jwt_expire_hours\x18\x02 \x01(\x03R\x0ejwtExpireHours\x12:\n" +
-	"\x19challenge_timeout_seconds\x18\x03 \x01(\x03R\x17challengeTimeoutSeconds\"?\n" +
+	" \x01(\x05R\fminIdleConns\"\xde\x01\n" +
+	"\x04Auth\x12\x1a\n" +
+	"\bendpoint\x18\x01 \x01(\tR\bendpoint\x12\x1b\n" +
+	"\tclient_id\x18\x02 \x01(\tR\bclientId\x12#\n" +
+	"\rclient_secret\x18\x03 \x01(\tR\fclientSecret\x12+\n" +
+	"\x11organization_name\x18\x04 \x01(\tR\x10organizationName\x12)\n" +
+	"\x10application_name\x18\x05 \x01(\tR\x0fapplicationName\x12 \n" +
+	"\vcertificate\x18\x06 \x01(\tR\vcertificate\"?\n" +
 	"\x05Trace\x12\x1a\n" +
 	"\bendpoint\x18\x01 \x01(\tR\bendpoint\x12\x1a\n" +
 	"\binsecure\x18\x02 \x01(\bR\binsecure\"\x97\x01\n" +
@@ -819,23 +844,20 @@ func file_internal_conf_v1_conf_proto_rawDescGZIP() []byte {
 	return file_internal_conf_v1_conf_proto_rawDescData
 }
 
-var (
-	file_internal_conf_v1_conf_proto_msgTypes = make([]protoimpl.MessageInfo, 11)
-	file_internal_conf_v1_conf_proto_goTypes  = []any{
-		(*Bootstrap)(nil),         // 0: conf.v1.Bootstrap
-		(*Server)(nil),            // 1: conf.v1.Server
-		(*Data)(nil),              // 2: conf.v1.Data
-		(*Auth)(nil),              // 3: conf.v1.Auth
-		(*Trace)(nil),             // 4: conf.v1.Trace
-		(*Discovery)(nil),         // 5: conf.v1.Discovery
-		(*Server_HTTP)(nil),       // 6: conf.v1.Server.HTTP
-		(*Data_Database)(nil),     // 7: conf.v1.Data.Database
-		(*Data_DatabasePool)(nil), // 8: conf.v1.Data.DatabasePool
-		(*Data_Redis)(nil),        // 9: conf.v1.Data.Redis
-		(*Discovery_Consul)(nil),  // 10: conf.v1.Discovery.Consul
-	}
-)
-
+var file_internal_conf_v1_conf_proto_msgTypes = make([]protoimpl.MessageInfo, 11)
+var file_internal_conf_v1_conf_proto_goTypes = []any{
+	(*Bootstrap)(nil),         // 0: conf.v1.Bootstrap
+	(*Server)(nil),            // 1: conf.v1.Server
+	(*Data)(nil),              // 2: conf.v1.Data
+	(*Auth)(nil),              // 3: conf.v1.Auth
+	(*Trace)(nil),             // 4: conf.v1.Trace
+	(*Discovery)(nil),         // 5: conf.v1.Discovery
+	(*Server_HTTP)(nil),       // 6: conf.v1.Server.HTTP
+	(*Data_Database)(nil),     // 7: conf.v1.Data.Database
+	(*Data_DatabasePool)(nil), // 8: conf.v1.Data.DatabasePool
+	(*Data_Redis)(nil),        // 9: conf.v1.Data.Redis
+	(*Discovery_Consul)(nil),  // 10: conf.v1.Discovery.Consul
+}
 var file_internal_conf_v1_conf_proto_depIdxs = []int32{
 	1,  // 0: conf.v1.Bootstrap.server:type_name -> conf.v1.Server
 	2,  // 1: conf.v1.Bootstrap.data:type_name -> conf.v1.Data

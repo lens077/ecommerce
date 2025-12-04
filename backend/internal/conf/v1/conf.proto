@@ -57,9 +57,12 @@ message Data {
 }
 
 message Auth {
-  string jwt_secret = 1;
-  int64 jwt_expire_hours = 2;
-  int64 challenge_timeout_seconds = 3;
+  string endpoint = 1;
+  string client_id = 2;
+  string client_secret = 3;
+  string organization_name = 4;
+  string application_name = 5;
+  string certificate = 6;
 }
 
 message Trace {

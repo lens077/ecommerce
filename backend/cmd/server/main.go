@@ -1,6 +1,7 @@
 package main
 
 import (
+	"connect-go-example/internal/biz"
 	"context"
 	"errors"
 	"flag"
@@ -8,7 +9,6 @@ import (
 	"net/http"
 	"os"
 
-	"connect-go-example/internal/biz"
 	confv1 "connect-go-example/internal/conf/v1"
 	"connect-go-example/internal/data"
 	"connect-go-example/internal/pkg/config"
@@ -23,8 +23,6 @@ import (
 )
 
 var serviceName = "connect-example-go"
-
-type ServiceName string
 
 func main() {
 	flag.Parse()
@@ -50,16 +48,16 @@ func main() {
 // NewApp 创建并配置 FX 应用
 func NewApp() *fx.App {
 	return fx.New(
-		// 提供基础模块
-		config.Module,
-		logger.Module,
-		registry.Module,
+		// 基础模块
+		config.Module,   // 配置
+		logger.Module,   // 日志
+		registry.Module, // 服务注册/发现
 
 		// 注入业务模块（按依赖顺序）
 		data.Module,
 		biz.Module,
 		service.Module,
-		server.MiddlewareModule, // 中间件模块需要在服务器模块之前
+		server.MiddlewareModule, // 中间件需要在服务模块之前
 		server.Module,
 
 		// 传递全局变量
@@ -83,8 +81,8 @@ func NewApp() *fx.App {
 					logger.Fatal("Failed to setup OTel SDK", zap.Error(err))
 				}
 
-				// 使用生命周期钩子
 				lc.Append(fx.Hook{
+					// 启动服务时的操作
 					OnStart: func(ctx context.Context) error {
 						logger.Info("Starting HTTP server", zap.String("addr", srv.Addr))
 						go func() {
@@ -94,13 +92,14 @@ func NewApp() *fx.App {
 						}()
 						return nil
 					},
+					// 停止服务前的操作
 					OnStop: func(ctx context.Context) error {
 						logger.Info("Stopping HTTP server...")
 						// 优雅关闭服务器
 						if err := srv.Shutdown(ctx); err != nil {
 							logger.Error("Failed to shutdown server gracefully", zap.Error(err))
 						}
-						// 关闭 Otel（如果已启用）
+						// 关闭 Otel
 						if otelShutdown != nil {
 							if err := otelShutdown(ctx); err != nil {
 								logger.Error("Failed to shutdown OTel", zap.Error(err))

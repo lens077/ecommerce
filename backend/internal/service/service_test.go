@@ -1,226 +1,71 @@
 package service
 
 import (
+	"connect-go-example/internal/biz"
+	conf "connect-go-example/internal/conf/v1"
 	"context"
 	"errors"
 	"testing"
 
-	v1 "connect-go-example/api/check/v1"
+	checkv1 "connect-go-example/api/check/v1"
 	"connect-go-example/api/check/v1/checkv1connect"
-	v1greet "connect-go-example/api/greet/v1"
-	"connect-go-example/api/greet/v1/greetv1connect"
-	"connect-go-example/internal/biz/model"
+	userv1 "connect-go-example/api/user/v1"
+	"connect-go-example/api/user/v1/userv1connect"
 
 	"connectrpc.com/connect"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/mock"
 	"github.com/stretchr/testify/suite"
+	"go.uber.org/zap"
 )
 
-// MockUserUseCase 是 UserUseCase 的模拟实现
-type MockUserUseCase struct {
+// MockCheckRepo 是 biz.CheckRepo 的模拟实现
+type MockCheckRepo struct {
 	mock.Mock
 }
 
-func (m *MockUserUseCase) Register(ctx context.Context, username, passwordHash, email, salt string) (string, error) {
-	args := m.Called(ctx, username, passwordHash, email, salt)
-	return args.String(0), args.Error(1)
-}
-
-func (m *MockUserUseCase) GetAuthChallenge(ctx context.Context, username string) (*model.AuthChallenge, error) {
-	args := m.Called(ctx, username)
-	if args.Get(0) == nil {
-		return nil, args.Error(1)
-	}
-	return args.Get(0).(*model.AuthChallenge), args.Error(1)
-}
-
-func (m *MockUserUseCase) SubmitAuth(ctx context.Context, username, hashedCredential, authRequestID, challengeResponse string) (*model.AuthResult, error) {
-	args := m.Called(ctx, username, hashedCredential, authRequestID, challengeResponse)
-	if args.Get(0) == nil {
-		return nil, args.Error(1)
-	}
-	return args.Get(0).(*model.AuthResult), args.Error(1)
-}
-
-// MockCheckUseCase 是 CheckUseCase 的模拟实现
-type MockCheckUseCase struct {
-	mock.Mock
-}
-
-func (m *MockCheckUseCase) Ready(ctx context.Context, req model.HealthCheckReq) (model.HealthCheckReply, error) {
+// Ready 实现 biz.CheckRepo 接口的 Ready 方法
+func (m *MockCheckRepo) Ready(ctx context.Context, req biz.HealthCheckReq) (biz.HealthCheckReply, error) {
 	args := m.Called(ctx, req)
-	return args.Get(0).(model.HealthCheckReply), args.Error(1)
+	return args.Get(0).(biz.HealthCheckReply), args.Error(1)
 }
 
-// GreetServiceTestSuite 是 GreetService 的测试套件
-type GreetServiceTestSuite struct {
-	suite.Suite
-	userUseCase  *MockUserUseCase
-	greetService greetv1connect.GreetServiceHandler
+// MockUserRepo 是 biz.UserRepo 的模拟实现
+type MockUserRepo struct {
+	mock.Mock
 }
 
-func (suite *GreetServiceTestSuite) SetupTest() {
-	suite.userUseCase = new(MockUserUseCase)
-	suite.greetService = NewGreetService(suite.userUseCase)
-}
-
-func (suite *GreetServiceTestSuite) TestRegister_Success() {
-	ctx := context.Background()
-	req := &connect.Request[v1greet.RegisterRequest]{
-		Msg: &v1greet.RegisterRequest{
-			Username:     "testuser",
-			PasswordHash: "hashedpassword",
-			Email:        "test@example.com",
-			Salt:         "salt123",
-		},
-	}
-
-	expectedUserID := "123"
-	suite.userUseCase.On("Register", ctx, "testuser", "hashedpassword", "test@example.com", "salt123").Return(expectedUserID, nil)
-
-	resp, err := suite.greetService.Register(ctx, req)
-
-	assert.NoError(suite.T(), err)
-	assert.NotNil(suite.T(), resp)
-	assert.Equal(suite.T(), expectedUserID, resp.Msg.UserId)
-}
-
-func (suite *GreetServiceTestSuite) TestRegister_Error() {
-	ctx := context.Background()
-	req := &connect.Request[v1greet.RegisterRequest]{
-		Msg: &v1greet.RegisterRequest{
-			Username:     "testuser",
-			PasswordHash: "hashedpassword",
-			Email:        "test@example.com",
-			Salt:         "salt123",
-		},
-	}
-
-	expectedError := errors.New("user already exists")
-	suite.userUseCase.On("Register", ctx, "testuser", "hashedpassword", "test@example.com", "salt123").Return("", expectedError)
-
-	resp, err := suite.greetService.Register(ctx, req)
-
-	assert.Error(suite.T(), err)
-	assert.Nil(suite.T(), resp)
-	assert.Equal(suite.T(), expectedError, err)
-}
-
-func (suite *GreetServiceTestSuite) TestGetAuthChallenge_Success() {
-	ctx := context.Background()
-	req := &connect.Request[v1greet.AuthChallengeRequest]{
-		Msg: &v1greet.AuthChallengeRequest{
-			Username: "testuser",
-		},
-	}
-
-	expectedChallenge := &model.AuthChallenge{
-		Username:  "testuser",
-		Challenge: "challenge123",
-		Salt:      "salt456",
-	}
-	suite.userUseCase.On("GetAuthChallenge", ctx, "testuser").Return(expectedChallenge, nil)
-
-	resp, err := suite.greetService.GetAuthChallenge(ctx, req)
-
-	assert.NoError(suite.T(), err)
-	assert.NotNil(suite.T(), resp)
-	assert.Equal(suite.T(), "challenge123", resp.Msg.Challenge)
-	assert.Equal(suite.T(), "salt456", resp.Msg.Salt)
-}
-
-func (suite *GreetServiceTestSuite) TestGetAuthChallenge_Unauthenticated() {
-	ctx := context.Background()
-	req := &connect.Request[v1greet.AuthChallengeRequest]{
-		Msg: &v1greet.AuthChallengeRequest{
-			Username: "testuser",
-		},
-	}
-
-	expectedError := errors.New("authentication failed")
-	suite.userUseCase.On("GetAuthChallenge", ctx, "testuser").Return(nil, expectedError)
-
-	resp, err := suite.greetService.GetAuthChallenge(ctx, req)
-
-	assert.Error(suite.T(), err)
-	assert.Nil(suite.T(), resp)
-	assert.IsType(suite.T(), &connect.Error{}, err)
-	connectErr := err.(*connect.Error)
-	assert.Equal(suite.T(), connect.CodeUnauthenticated, connectErr.Code())
-}
-
-func (suite *GreetServiceTestSuite) TestSubmitAuth_Success() {
-	ctx := context.Background()
-	req := &connect.Request[v1greet.SubmitAuthRequest]{
-		Msg: &v1greet.SubmitAuthRequest{
-			Username:          "testuser",
-			HashedCredential:  "hashedcred",
-			AuthRequestId:     "req123",
-			ChallengeResponse: "response456",
-		},
-	}
-
-	expectedResult := &model.AuthResult{
-		Code:      "success",
-		State:     "authenticated",
-		AuthToken: "jwt.token.here",
-	}
-	suite.userUseCase.On("SubmitAuth", ctx, "testuser", "hashedcred", "req123", "response456").Return(expectedResult, nil)
-
-	resp, err := suite.greetService.SubmitAuth(ctx, req)
-
-	assert.NoError(suite.T(), err)
-	assert.NotNil(suite.T(), resp)
-	assert.Equal(suite.T(), "success", resp.Msg.Code)
-	assert.Equal(suite.T(), "authenticated", resp.Msg.State)
-	assert.Equal(suite.T(), "jwt.token.here", resp.Msg.AuthToken)
-}
-
-func (suite *GreetServiceTestSuite) TestSubmitAuth_Unauthenticated() {
-	ctx := context.Background()
-	req := &connect.Request[v1greet.SubmitAuthRequest]{
-		Msg: &v1greet.SubmitAuthRequest{
-			Username:          "testuser",
-			HashedCredential:  "hashedcred",
-			AuthRequestId:     "req123",
-			ChallengeResponse: "response456",
-		},
-	}
-
-	expectedError := errors.New("invalid credentials")
-	suite.userUseCase.On("SubmitAuth", ctx, "testuser", "hashedcred", "req123", "response456").Return(nil, expectedError)
-
-	resp, err := suite.greetService.SubmitAuth(ctx, req)
-
-	assert.Error(suite.T(), err)
-	assert.Nil(suite.T(), resp)
-	assert.IsType(suite.T(), &connect.Error{}, err)
-	connectErr := err.(*connect.Error)
-	assert.Equal(suite.T(), connect.CodeUnauthenticated, connectErr.Code())
+// SignIn 实现 biz.UserRepo 接口的 SignIn 方法
+func (m *MockUserRepo) SignIn(ctx context.Context, req biz.SignInRequest) (biz.SignInResponse, error) {
+	args := m.Called(ctx, req)
+	return args.Get(0).(biz.SignInResponse), args.Error(1)
 }
 
 // CheckServiceTestSuite 是 CheckService 的测试套件
 type CheckServiceTestSuite struct {
 	suite.Suite
-	checkUseCase *MockCheckUseCase
+	checkRepo   *MockCheckRepo
+	checkUseCase *biz.CheckUseCase
 	checkService checkv1connect.CheckServiceHandler
 }
 
+// SetupTest 设置 CheckService 测试环境
 func (suite *CheckServiceTestSuite) SetupTest() {
-	suite.checkUseCase = new(MockCheckUseCase)
+	suite.checkRepo = new(MockCheckRepo)
+	suite.checkUseCase = biz.NewCheckUseCase(suite.checkRepo)
 	suite.checkService = NewCheckService(suite.checkUseCase)
 }
 
+// TestReady_Success 测试 CheckService.Ready 成功情况
 func (suite *CheckServiceTestSuite) TestReady_Success() {
 	ctx := context.Background()
-	req := &connect.Request[v1.ReadyCheckReq]{}
+	req := &connect.Request[checkv1.ReadyCheckReq]{}
 
-	expectedReply := model.HealthCheckReply{
+	expectedReply := biz.HealthCheckReply{
 		Status:  "Ready",
 		Details: nil,
 	}
-	suite.checkUseCase.On("Ready", ctx, model.HealthCheckReq{}).Return(expectedReply, nil)
+	suite.checkRepo.On("Ready", ctx, biz.HealthCheckReq{}).Return(expectedReply, nil)
 
 	resp, err := suite.checkService.Ready(ctx, req)
 
@@ -230,12 +75,13 @@ func (suite *CheckServiceTestSuite) TestReady_Success() {
 	assert.Nil(suite.T(), resp.Msg.Details)
 }
 
+// TestReady_Error 测试 CheckService.Ready 失败情况
 func (suite *CheckServiceTestSuite) TestReady_Error() {
 	ctx := context.Background()
-	req := &connect.Request[v1.ReadyCheckReq]{}
+	req := &connect.Request[checkv1.ReadyCheckReq]{}
 
 	expectedError := errors.New("service unavailable")
-	suite.checkUseCase.On("Ready", ctx, model.HealthCheckReq{}).Return(model.HealthCheckReply{}, expectedError)
+	suite.checkRepo.On("Ready", ctx, biz.HealthCheckReq{}).Return(biz.HealthCheckReply{}, expectedError)
 
 	resp, err := suite.checkService.Ready(ctx, req)
 
@@ -244,32 +90,97 @@ func (suite *CheckServiceTestSuite) TestReady_Error() {
 	assert.Equal(suite.T(), expectedError, err)
 }
 
-// 运行测试套件
-func TestGreetServiceTestSuite(t *testing.T) {
-	suite.Run(t, new(GreetServiceTestSuite))
+// UserServiceTestSuite 是 UserService 的测试套件
+type UserServiceTestSuite struct {
+	suite.Suite
+	userRepo   *MockUserRepo
+	userUseCase *biz.UserUseCase
+	userService userv1connect.UserServiceHandler
 }
 
+// SetupTest 设置 UserService 测试环境
+func (suite *UserServiceTestSuite) SetupTest() {
+	suite.userRepo = new(MockUserRepo)
+	logger, _ := zap.NewDevelopment()
+	cfg := &conf.Bootstrap{
+		Auth: &conf.Auth{
+			Endpoint:         "http://localhost:9000",
+			ClientId:         "test-client-id",
+			ClientSecret:     "test-client-secret",
+			OrganizationName: "test-org",
+			ApplicationName:  "test-app",
+			Certificate:      "test-cert",
+		},
+	}
+	suite.userUseCase = biz.NewUserUseCase(suite.userRepo, cfg, logger)
+	suite.userService = NewUserService(suite.userUseCase)
+}
+
+// TestSignIn_Success 测试 UserService.SignIn 成功情况
+func (suite *UserServiceTestSuite) TestSignIn_Success() {
+	ctx := context.Background()
+	connectReq := &connect.Request[userv1.SignInRequest]{
+		Msg: &userv1.SignInRequest{
+			Code:  "test-code",
+			State: "test-state",
+		},
+	}
+
+	expectedBizResp := biz.SignInResponse{
+		State: "test-state",
+		Data:  "test-data",
+	}
+	suite.userRepo.On("SignIn", ctx, biz.SignInRequest{
+		Code:  "test-code",
+		State: "test-state",
+	}).Return(expectedBizResp, nil)
+
+	resp, err := suite.userService.SignIn(ctx, connectReq)
+
+	assert.NoError(suite.T(), err)
+	assert.NotNil(suite.T(), resp)
+	assert.Equal(suite.T(), "test-state", resp.Msg.State)
+	assert.Equal(suite.T(), "test-data", resp.Msg.Data)
+}
+
+// TestSignIn_Error 测试 UserService.SignIn 失败情况
+func (suite *UserServiceTestSuite) TestSignIn_Error() {
+	ctx := context.Background()
+	connectReq := &connect.Request[userv1.SignInRequest]{
+		Msg: &userv1.SignInRequest{
+			Code:  "test-code",
+			State: "test-state",
+		},
+	}
+
+	expectedError := errors.New("sign in failed")
+	suite.userRepo.On("SignIn", ctx, biz.SignInRequest{
+		Code:  "test-code",
+		State: "test-state",
+	}).Return(biz.SignInResponse{}, expectedError)
+
+	resp, err := suite.userService.SignIn(ctx, connectReq)
+
+	assert.Error(suite.T(), err)
+	assert.Nil(suite.T(), resp)
+	assert.Equal(suite.T(), expectedError, err)
+}
+
+// 运行测试套件
 func TestCheckServiceTestSuite(t *testing.T) {
 	suite.Run(t, new(CheckServiceTestSuite))
 }
 
-// 单元测试函数
-func TestNewGreetService(t *testing.T) {
-	mockUserUseCase := new(MockUserUseCase)
-
-	service := NewGreetService(mockUserUseCase)
-
-	assert.NotNil(t, service)
-	assert.IsType(t, &GreetService{}, service)
-
-	// 验证接口实现
-	var _ greetv1connect.GreetServiceHandler = service
+func TestUserServiceTestSuite(t *testing.T) {
+	suite.Run(t, new(UserServiceTestSuite))
 }
 
+// TestNewCheckService 测试 NewCheckService 函数
 func TestNewCheckService(t *testing.T) {
-	mockCheckUseCase := new(MockCheckUseCase)
+	mockCheckRepo := new(MockCheckRepo)
+	checkUseCase := biz.NewCheckUseCase(mockCheckRepo)
 
-	service := NewCheckService(mockCheckUseCase)
+	service := NewCheckService(checkUseCase)
 
 	assert.NotNil(t, service)
 	assert.IsType(t, &CheckService{}, service)
@@ -278,21 +189,60 @@ func TestNewCheckService(t *testing.T) {
 	var _ checkv1connect.CheckServiceHandler = service
 }
 
-// 测试接口实现验证
-func TestGreetServiceInterface(t *testing.T) {
-	mockUserUseCase := new(MockUserUseCase)
-	service := NewGreetService(mockUserUseCase)
+// TestNewUserService 测试 NewUserService 函数
+func TestNewUserService(t *testing.T) {
+	mockUserRepo := new(MockUserRepo)
+	logger, _ := zap.NewDevelopment()
+	cfg := &conf.Bootstrap{
+		Auth: &conf.Auth{
+			Endpoint:         "http://localhost:9000",
+			ClientId:         "test-client-id",
+			ClientSecret:     "test-client-secret",
+			OrganizationName: "test-org",
+			ApplicationName:  "test-app",
+			Certificate:      "test-cert",
+		},
+	}
+	userUseCase := biz.NewUserUseCase(mockUserRepo, cfg, logger)
 
-	// 这个测试会编译失败如果 GreetService 没有正确实现接口
-	var handler greetv1connect.GreetServiceHandler = service
-	assert.NotNil(t, handler)
+	service := NewUserService(userUseCase)
+
+	assert.NotNil(t, service)
+	assert.IsType(t, &UserService{}, service)
+
+	// 验证接口实现
+	var _ userv1connect.UserServiceHandler = service
 }
 
+// TestCheckServiceInterface 验证 CheckService 实现了正确的接口
 func TestCheckServiceInterface(t *testing.T) {
-	mockCheckUseCase := new(MockCheckUseCase)
-	service := NewCheckService(mockCheckUseCase)
+	mockCheckRepo := new(MockCheckRepo)
+	checkUseCase := biz.NewCheckUseCase(mockCheckRepo)
+	service := NewCheckService(checkUseCase)
 
 	// 这个测试会编译失败如果 CheckService 没有正确实现接口
 	var handler checkv1connect.CheckServiceHandler = service
+	assert.NotNil(t, handler)
+}
+
+// TestUserServiceInterface 验证 UserService 实现了正确的接口
+func TestUserServiceInterface(t *testing.T) {
+	mockUserRepo := new(MockUserRepo)
+	logger, _ := zap.NewDevelopment()
+	cfg := &conf.Bootstrap{
+		Auth: &conf.Auth{
+			Endpoint:         "http://localhost:9000",
+			ClientId:         "test-client-id",
+			ClientSecret:     "test-client-secret",
+			OrganizationName: "test-org",
+			ApplicationName:  "test-app",
+			Certificate:      "test-cert",
+		},
+	}
+	userUseCase := biz.NewUserUseCase(mockUserRepo, cfg, logger)
+	service := NewUserService(userUseCase)
+
+	// 这个测试会编译失败如果 UserService 没有正确实现接口
+	var handler userv1connect.UserServiceHandler = service
 	assert.NotNil(t, handler)
 }

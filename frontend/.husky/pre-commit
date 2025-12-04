@@ -1,6 +1,11 @@
-cd frontend && pnpm test
+cd frontend
+if git diff --cached --name-only | grep -q "^frontend/"; then
+  echo "Running backend pre-commit hook (Go)..."
+  pnpm test
+  cd ..
+fi
 
-cd .. && cd backend
+cd backend
 if git diff --cached --name-only | grep -q "^backend/"; then
   echo "Running backend pre-commit hook (Go)..."
   go test -short -coverprofile=coverage.out ./...
