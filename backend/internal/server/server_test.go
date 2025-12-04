@@ -9,8 +9,8 @@ import (
 
 	v1check "connect-go-example/api/check/v1"
 	"connect-go-example/api/check/v1/checkv1connect"
-	v1greet "connect-go-example/api/greet/v1"
-	"connect-go-example/api/greet/v1/greetv1connect"
+	v1user "connect-go-example/api/user/v1"
+	"connect-go-example/api/user/v1/userv1connect"
 	conf "connect-go-example/internal/conf/v1"
 
 	"connectrpc.com/connect"
@@ -27,37 +27,21 @@ import (
 
 // 为测试添加缺失的接口实现
 var (
-	_ greetv1connect.GreetServiceHandler = (*MockGreetService)(nil)
+	_ userv1connect.UserServiceHandler   = (*MockUserService)(nil)
 	_ checkv1connect.CheckServiceHandler = (*MockCheckService)(nil)
 )
 
-// MockGreetService 是 GreetService 的模拟实现
-type MockGreetService struct {
+// MockUserService 是 UserService 的模拟实现
+type MockUserService struct {
 	mock.Mock
 }
 
-func (m *MockGreetService) Register(ctx context.Context, req *connect.Request[v1greet.RegisterRequest]) (*connect.Response[v1greet.RegisterResponse], error) {
+func (m *MockUserService) SignIn(ctx context.Context, req *connect.Request[v1user.SignInRequest]) (*connect.Response[v1user.SignInResponse], error) {
 	args := m.Called(ctx, req)
 	if args.Get(0) == nil {
 		return nil, args.Error(1)
 	}
-	return args.Get(0).(*connect.Response[v1greet.RegisterResponse]), args.Error(1)
-}
-
-func (m *MockGreetService) GetAuthChallenge(ctx context.Context, req *connect.Request[v1greet.AuthChallengeRequest]) (*connect.Response[v1greet.AuthChallengeResponse], error) {
-	args := m.Called(ctx, req)
-	if args.Get(0) == nil {
-		return nil, args.Error(1)
-	}
-	return args.Get(0).(*connect.Response[v1greet.AuthChallengeResponse]), args.Error(1)
-}
-
-func (m *MockGreetService) SubmitAuth(ctx context.Context, req *connect.Request[v1greet.SubmitAuthRequest]) (*connect.Response[v1greet.SubmitAuthResponse], error) {
-	args := m.Called(ctx, req)
-	if args.Get(0) == nil {
-		return nil, args.Error(1)
-	}
-	return args.Get(0).(*connect.Response[v1greet.SubmitAuthResponse]), args.Error(1)
+	return args.Get(0).(*connect.Response[v1user.SignInResponse]), args.Error(1)
 }
 
 // MockCheckService 是 CheckService 的模拟实现
@@ -85,14 +69,14 @@ func (tl *testLifecycle) Append(hook fx.Hook) {
 // ServerTestSuite 是 Server 的测试套件
 type ServerTestSuite struct {
 	suite.Suite
-	greetService *MockGreetService
+	userService  *MockUserService
 	checkService *MockCheckService
 	logger       *zap.Logger
 	server       *http.Server
 }
 
 func (suite *ServerTestSuite) SetupTest() {
-	suite.greetService = new(MockGreetService)
+	suite.userService = new(MockUserService)
 	suite.checkService = new(MockCheckService)
 	suite.logger, _ = zap.NewDevelopment()
 
@@ -123,7 +107,7 @@ func (suite *ServerTestSuite) SetupTest() {
 	suite.server = NewHTTPServer(
 		lc,
 		cfg,
-		suite.greetService,
+		suite.userService,
 		suite.checkService,
 		suite.logger,
 		monitoringMiddleware,
@@ -267,7 +251,7 @@ func TestNewHTTPServer(t *testing.T) {
 		},
 	}
 
-	greetService := new(MockGreetService)
+	userService := new(MockUserService)
 	checkService := new(MockCheckService)
 
 	monitoringMiddleware := MonitoringMiddleware(logger)
@@ -279,7 +263,7 @@ func TestNewHTTPServer(t *testing.T) {
 	server := NewHTTPServer(
 		lc,
 		cfg,
-		greetService,
+		userService,
 		checkService,
 		logger,
 		monitoringMiddleware,

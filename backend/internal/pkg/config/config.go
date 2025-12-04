@@ -140,8 +140,23 @@ func ValidateConfig(conf *confv1.Bootstrap) error {
 	}
 
 	// 验证数据库配置
-	if conf.Data == nil || conf.Data.Database == nil {
+	if conf.Data == nil {
 		return fmt.Errorf("database configuration is required")
+	}
+
+	// 验证安全配置
+	if conf.Auth == nil {
+		return fmt.Errorf("auth configuration is required")
+	}
+
+	// 验证链路追踪配置
+	if conf.Trace == nil {
+		return fmt.Errorf("trace configuration is required")
+	}
+
+	// 验证注册/发现配置
+	if conf.Discovery == nil {
+		return fmt.Errorf("discovery configuration is required")
 	}
 
 	return nil

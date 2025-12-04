@@ -7,12 +7,11 @@
 package checkv1
 
 import (
+	protoreflect "google.golang.org/protobuf/reflect/protoreflect"
+	protoimpl "google.golang.org/protobuf/runtime/protoimpl"
 	reflect "reflect"
 	sync "sync"
 	unsafe "unsafe"
-
-	protoreflect "google.golang.org/protobuf/reflect/protoreflect"
-	protoimpl "google.golang.org/protobuf/runtime/protoimpl"
 )
 
 const (
@@ -139,15 +138,12 @@ func file_api_check_v1_check_proto_rawDescGZIP() []byte {
 	return file_api_check_v1_check_proto_rawDescData
 }
 
-var (
-	file_api_check_v1_check_proto_msgTypes = make([]protoimpl.MessageInfo, 3)
-	file_api_check_v1_check_proto_goTypes  = []any{
-		(*ReadyCheckReq)(nil),   // 0: check.v1.ReadyCheckReq
-		(*ReadyCheckReply)(nil), // 1: check.v1.ReadyCheckReply
-		nil,                     // 2: check.v1.ReadyCheckReply.DetailsEntry
-	}
-)
-
+var file_api_check_v1_check_proto_msgTypes = make([]protoimpl.MessageInfo, 3)
+var file_api_check_v1_check_proto_goTypes = []any{
+	(*ReadyCheckReq)(nil),   // 0: check.v1.ReadyCheckReq
+	(*ReadyCheckReply)(nil), // 1: check.v1.ReadyCheckReply
+	nil,                     // 2: check.v1.ReadyCheckReply.DetailsEntry
+}
 var file_api_check_v1_check_proto_depIdxs = []int32{
 	2, // 0: check.v1.ReadyCheckReply.details:type_name -> check.v1.ReadyCheckReply.DetailsEntry
 	0, // 1: check.v1.CheckService.Ready:input_type -> check.v1.ReadyCheckReq

@@ -1,13 +1,13 @@
 package server
 
 import (
+	"connect-go-example/api/user/v1/userv1connect"
 	"context"
 	"net/http"
 	"time"
 
 	"connect-go-example/api/check/v1/checkv1connect"
 
-	"connect-go-example/api/greet/v1/greetv1connect"
 	conf "connect-go-example/internal/conf/v1"
 
 	"connectrpc.com/connect"
@@ -29,7 +29,7 @@ var Module = fx.Module("server",
 func NewHTTPServer(
 	lc fx.Lifecycle,
 	cfg *conf.Bootstrap,
-	greetv1Service greetv1connect.GreetServiceHandler,
+	userv1Service userv1connect.UserServiceHandler,
 	checkv1Service checkv1connect.CheckServiceHandler,
 	logger *zap.Logger,
 	monitoringMiddleware func(http.Handler) http.Handler,
@@ -47,8 +47,8 @@ func NewHTTPServer(
 	interceptors := connect.WithInterceptors(otelInterceptor, connectInterceptor)
 
 	// 将拦截器传递给 Service Handler
-	greetv1connectPath, greetv1connectHandler := greetv1connect.NewGreetServiceHandler(
-		greetv1Service,
+	userv1connectPath, userv1connectHandler := userv1connect.NewUserServiceHandler(
+		userv1Service,
 		interceptors,
 	)
 	checkv1connectPath, checkv1connectHandler := checkv1connect.NewCheckServiceHandler(
@@ -57,34 +57,28 @@ func NewHTTPServer(
 	)
 
 	mux := http.NewServeMux()
-	mux.Handle(greetv1connectPath, greetv1connectHandler)
+	mux.Handle(userv1connectPath, userv1connectHandler)
 	mux.Handle(checkv1connectPath, checkv1connectHandler)
 
-	// CORS 配置
-	corsHandler := cors.New(cors.Options{
-		AllowedOrigins:   []string{"*"},
-		AllowedMethods:   connectcors.AllowedMethods(),
-		AllowedHeaders:   connectcors.AllowedHeaders(),
-		ExposedHeaders:   connectcors.ExposedHeaders(),
-		MaxAge:           7200,
-		AllowCredentials: false,
-	})
-
 	// 创建处理器链：监控中间件 -> CORS -> HTTP/2
-	handlerChain := monitoringMiddleware(corsHandler.Handler(mux))
+	handlerChain := monitoringMiddleware(withCORS(mux))
 
+	p := new(http.Protocols)
+	p.SetHTTP1(true)
+	// Use h2c so we can serve HTTP/2 without TLS.
+	p.SetUnencryptedHTTP2(true)
 	server := &http.Server{
 		Addr:         cfg.Server.Http.Addr,
 		Handler:      h2c.NewHandler(handlerChain, &http2.Server{}),
 		ReadTimeout:  10 * time.Second,
 		WriteTimeout: 10 * time.Second,
 		IdleTimeout:  30 * time.Second,
+		Protocols:    p,
 	}
 
 	// 注册生命周期钩子
 	lc.Append(fx.Hook{
 		OnStart: func(ctx context.Context) error {
-			InitCasdoor(logger)
 			logger.Info("HTTP server starting", zap.String("addr", cfg.Server.Http.Addr))
 			return nil
 		},
@@ -95,4 +89,16 @@ func NewHTTPServer(
 	})
 
 	return server
+}
+
+// withCORS adds CORS support to a Connect HTTP handler.
+func withCORS(h http.Handler) http.Handler {
+	middleware := cors.New(cors.Options{
+		AllowedOrigins:   []string{"http://localhost:3000"},
+		AllowedMethods:   connectcors.AllowedMethods(),
+		AllowedHeaders:   connectcors.AllowedHeaders(),
+		ExposedHeaders:   connectcors.ExposedHeaders(),
+		AllowCredentials: true,
+	})
+	return middleware.Handler(h)
 }

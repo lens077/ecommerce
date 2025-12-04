@@ -7,6 +7,7 @@ import (
 
 	conf "connect-go-example/internal/conf/v1"
 
+	"github.com/casdoor/casdoor-go-sdk/casdoorsdk"
 	"github.com/exaring/otelpgx"
 	"github.com/jackc/pgx/v5/pgxpool"
 	"github.com/redis/go-redis/v9"
@@ -20,6 +21,7 @@ var Module = fx.Module("data",
 		NewData,
 		NewDB,
 		NewCache,
+		NewAuth,
 		NewUserRepo,
 		NewCheckRepo,
 	),
@@ -27,15 +29,17 @@ var Module = fx.Module("data",
 
 // Data 包含所有数据源的客户端
 type Data struct {
-	db  *pgxpool.Pool
-	rdb *redis.Client
+	db   *pgxpool.Pool
+	rdb  *redis.Client
+	auth *casdoorsdk.Client
 }
 
 // NewData 是 Data 的构造函数
-func NewData(db *pgxpool.Pool, rdb *redis.Client) *Data {
+func NewData(db *pgxpool.Pool, rdb *redis.Client, auth *casdoorsdk.Client) *Data {
 	return &Data{
-		db:  db,
-		rdb: rdb,
+		db:   db,
+		rdb:  rdb,
+		auth: auth,
 	}
 }
 
@@ -76,7 +80,9 @@ func NewDB(lc fx.Lifecycle, cfg *conf.Bootstrap, logger *zap.Logger) (*pgxpool.P
 	if err := pool.Ping(context.Background()); err != nil {
 		return nil, fmt.Errorf("database ping failed: %v", err)
 	}
-	fmt.Printf("dbCfg:%+v", dbCfg)
+
+	logger.Info(fmt.Sprintf("Database connected successfully to %s", dbCfg.Host))
+
 	// 注册关闭钩子
 	lc.Append(fx.Hook{
 		OnStop: func(ctx context.Context) error {
@@ -129,6 +135,21 @@ func NewCache(lc fx.Lifecycle, cfg *conf.Bootstrap, logger *zap.Logger) (*redis.
 	})
 
 	return rdb, nil
+}
+
+func NewAuth(lc fx.Lifecycle, conf *conf.Bootstrap, logger *zap.Logger) *casdoorsdk.Client {
+	client := casdoorsdk.NewClient(
+		conf.Auth.Endpoint,         // endpoint
+		conf.Auth.ClientId,         // clientId
+		conf.Auth.ClientSecret,     // clientSecret
+		conf.Auth.Certificate,      // certificate (x509 format)
+		conf.Auth.OrganizationName, // organizationName
+		conf.Auth.ApplicationName,  // applicationName
+	)
+
+	logger.Info(fmt.Sprintf("Casdoor connected successfully to %s", conf.Auth.Endpoint))
+
+	return client
 }
 
 // HealthCheck 健康检查

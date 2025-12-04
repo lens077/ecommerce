@@ -1,0 +1,19 @@
+syntax = "proto3";
+
+package user.v1;
+
+option go_package = "connect-go-example/api/user/v1;userv1";
+
+message SignInRequest {
+  string code = 1;
+  string state = 2;
+}
+
+message SignInResponse {
+  string state = 1;
+  string data = 2;
+}
+
+service UserService {
+  rpc SignIn(SignInRequest) returns(SignInResponse){}
+}

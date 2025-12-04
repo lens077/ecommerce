@@ -21,6 +21,11 @@ run:
 sqlc:
 	sqlc generate
 
+.PHONY: api
+api:
+	buf generate --template buf.gen.yaml
+	buf generate --template buf.gen.ts.yaml
+
 .PHONY: generate
 generate:
 	buf generate --template buf.gen.yaml

@@ -1,78 +1,44 @@
 package service
 
 import (
+	"connect-go-example/internal/biz"
 	"context"
 
-	v1 "connect-go-example/api/greet/v1"
-	"connect-go-example/api/greet/v1/greetv1connect"
-	"connect-go-example/internal/biz/model"
+	v1 "connect-go-example/api/user/v1"
+	"connect-go-example/api/user/v1/userv1connect"
 
 	"connectrpc.com/connect"
 )
 
-// GreetService 实现 Connect 服务
-type GreetService struct {
-	userUseCase model.UserUseCase
+// UserService 实现 Connect 服务
+type UserService struct {
+	uc *biz.UserUseCase
 }
 
 // 显式接口检查
-var _ greetv1connect.GreetServiceHandler = (*GreetService)(nil)
+var _ userv1connect.UserServiceHandler = (*UserService)(nil)
 
-func NewGreetService(userUseCase model.UserUseCase) greetv1connect.GreetServiceHandler {
-	return &GreetService{
-		userUseCase: userUseCase,
+func NewUserService(uc *biz.UserUseCase) userv1connect.UserServiceHandler {
+	return &UserService{
+		uc: uc,
 	}
 }
 
-func (s *GreetService) Register(ctx context.Context, req *connect.Request[v1.RegisterRequest]) (*connect.Response[v1.RegisterResponse], error) {
-	userID, err := s.userUseCase.Register(
+func (s *UserService) SignIn(ctx context.Context, c *connect.Request[v1.SignInRequest]) (*connect.Response[v1.SignInResponse], error) {
+	res, err := s.uc.SignIn(
 		ctx,
-		req.Msg.Username,
-		req.Msg.PasswordHash,
-		req.Msg.Email,
-		req.Msg.Salt,
+		biz.SignInRequest{
+			Code:  c.Msg.Code,
+			State: c.Msg.State,
+		},
 	)
 	if err != nil {
 		return nil, err
 	}
 
-	response := &v1.RegisterResponse{
-		UserId: userID,
-	}
-
-	return connect.NewResponse(response), nil
-}
-
-func (s *GreetService) GetAuthChallenge(ctx context.Context, req *connect.Request[v1.AuthChallengeRequest]) (*connect.Response[v1.AuthChallengeResponse], error) {
-	challenge, err := s.userUseCase.GetAuthChallenge(ctx, req.Msg.Username)
-	if err != nil {
-		return nil, connect.NewError(connect.CodeUnauthenticated, err)
-	}
-
-	response := &v1.AuthChallengeResponse{
-		Challenge: challenge.Challenge,
-		Salt:      challenge.Salt,
-	}
-
-	return connect.NewResponse(response), nil
-}
-
-func (s *GreetService) SubmitAuth(ctx context.Context, req *connect.Request[v1.SubmitAuthRequest]) (*connect.Response[v1.SubmitAuthResponse], error) {
-	result, err := s.userUseCase.SubmitAuth(
-		ctx,
-		req.Msg.Username,
-		req.Msg.HashedCredential,
-		req.Msg.AuthRequestId,
-		req.Msg.ChallengeResponse,
-	)
-	if err != nil {
-		return nil, connect.NewError(connect.CodeUnauthenticated, err)
-	}
-
-	response := &v1.SubmitAuthResponse{
-		Code:      result.Code,
-		State:     result.State,
-		AuthToken: result.AuthToken,
+	response := &v1.SignInResponse{
+		State: res.State,
+		Data:  res.Data,
 	}
 
 	return connect.NewResponse(response), nil

@@ -2,27 +2,35 @@ package biz
 
 import (
 	"context"
+)
 
-	"connect-go-example/internal/biz/model"
-	"connect-go-example/internal/data"
+type CheckRepo interface {
+	Ready(ctx context.Context, req HealthCheckReq) (HealthCheckReply, error)
+}
+type (
+	HealthCheckReq   struct{}
+	HealthCheckReply struct {
+		Status  string
+		Details map[string]string
+	}
 )
 
 type CheckUseCase struct {
-	repo data.CheckRepo
+	repo CheckRepo
 }
 
-func NewCheckUseCase(repo data.CheckRepo) (model.CheckUseCase, error) {
+func NewCheckUseCase(repo CheckRepo) *CheckUseCase {
 	return &CheckUseCase{
 		repo: repo,
-	}, nil
+	}
 }
 
-func (c CheckUseCase) Ready(ctx context.Context, req model.HealthCheckReq) (model.HealthCheckReply, error) {
+func (c CheckUseCase) Ready(ctx context.Context, req HealthCheckReq) (*HealthCheckReply, error) {
 	reply, err := c.repo.Ready(ctx, req)
 	if err != nil {
-		return model.HealthCheckReply{}, err
+		return nil, err
 	}
-	return model.HealthCheckReply{
+	return &HealthCheckReply{
 		Status:  reply.Status,
 		Details: reply.Details,
 	}, nil

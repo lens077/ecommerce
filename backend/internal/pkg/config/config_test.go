@@ -4,7 +4,7 @@ import (
 	"os"
 	"testing"
 
-	"connect-go-example/internal/conf/v1"
+	confv1 "connect-go-example/internal/conf/v1"
 
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/suite"
@@ -103,6 +103,25 @@ func (suite *ConfigTestSuite) TestValidateConfig_Valid() {
 		},
 		Data: &confv1.Data{
 			Database: &confv1.Data_Database{},
+		},
+		Auth: &confv1.Auth{
+			Endpoint:         "http://localhost:9000",
+			ClientId:         "test-client-id",
+			ClientSecret:     "test-client-secret",
+			OrganizationName: "test-org",
+			ApplicationName:  "test-app",
+			Certificate:      "test-cert",
+		},
+		Trace: &confv1.Trace{
+			Endpoint: "http://localhost:4317",
+			Insecure: true,
+		},
+		Discovery: &confv1.Discovery{
+			Consul: &confv1.Discovery_Consul{
+				Addr:        "http://localhost:8500",
+				Scheme:      "http",
+				HealthCheck: true,
+			},
 		},
 	}
 

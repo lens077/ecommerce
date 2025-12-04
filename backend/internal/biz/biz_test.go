@@ -4,13 +4,9 @@ import (
 	"context"
 	"errors"
 	"testing"
-	"time"
 
-	"connect-go-example/internal/biz/model"
 	conf "connect-go-example/internal/conf/v1"
 
-	"connectrpc.com/connect"
-	"github.com/golang-jwt/jwt/v5"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/mock"
 	"github.com/stretchr/testify/suite"
@@ -22,27 +18,10 @@ type MockUserRepo struct {
 	mock.Mock
 }
 
-func (m *MockUserRepo) GetUserByName(ctx context.Context, username string) (*model.User, error) {
-	args := m.Called(ctx, username)
-	if args.Get(0) == nil {
-		return nil, args.Error(1)
-	}
-	return args.Get(0).(*model.User), args.Error(1)
-}
-
-func (m *MockUserRepo) CreateUser(ctx context.Context, user *model.User) (int64, error) {
-	args := m.Called(ctx, user)
-	return args.Get(0).(int64), args.Error(1)
-}
-
-func (m *MockUserRepo) StoreAuthChallenge(ctx context.Context, username, challenge string, timeout time.Duration) error {
-	args := m.Called(ctx, username, challenge, timeout)
-	return args.Error(0)
-}
-
-func (m *MockUserRepo) GetAuthChallenge(ctx context.Context, username string) (string, error) {
-	args := m.Called(ctx, username)
-	return args.String(0), args.Error(1)
+// SignIn 实现 UserRepo 接口的 SignIn 方法
+func (m *MockUserRepo) SignIn(ctx context.Context, req SignInRequest) (SignInResponse, error) {
+	args := m.Called(ctx, req)
+	return args.Get(0).(SignInResponse), args.Error(1)
 }
 
 // MockCheckRepo 是 CheckRepo 的模拟实现
@@ -50,9 +29,9 @@ type MockCheckRepo struct {
 	mock.Mock
 }
 
-func (m *MockCheckRepo) Ready(ctx context.Context, req model.HealthCheckReq) (model.HealthCheckReply, error) {
+func (m *MockCheckRepo) Ready(ctx context.Context, req HealthCheckReq) (HealthCheckReply, error) {
 	args := m.Called(ctx, req)
-	return args.Get(0).(model.HealthCheckReply), args.Error(1)
+	return args.Get(0).(HealthCheckReply), args.Error(1)
 }
 
 // UserUseCaseTestSuite 是 UserUseCase 的测试套件
@@ -63,148 +42,62 @@ type UserUseCaseTestSuite struct {
 	logger   *zap.Logger
 }
 
+// SetupTest 设置 UserUseCase 测试环境
 func (suite *UserUseCaseTestSuite) SetupTest() {
 	suite.userRepo = new(MockUserRepo)
-	suite.logger, _ = zap.NewDevelopment()
-
+	logger, _ := zap.NewDevelopment()
 	cfg := &conf.Bootstrap{
 		Auth: &conf.Auth{
-			JwtSecret:               "test-secret-key-12345678901234567890",
-			ChallengeTimeoutSeconds: 120,
-			JwtExpireHours:          24,
+			Endpoint:         "http://localhost:9000",
+			ClientId:         "test-client-id",
+			ClientSecret:     "test-client-secret",
+			OrganizationName: "test-org",
+			ApplicationName:  "test-app",
+			Certificate:      "test-cert",
 		},
 	}
-
-	useCaseInterface, err := NewUserUseCase(suite.userRepo, cfg, suite.logger)
-	assert.NoError(suite.T(), err)
-	suite.useCase = useCaseInterface.(*UserUseCase)
+	suite.logger = logger
+	suite.useCase = NewUserUseCase(suite.userRepo, cfg, logger)
 }
 
-func (suite *UserUseCaseTestSuite) TestNewUserUseCase() {
-	// 测试正常创建
-	useCase, err := NewUserUseCase(suite.userRepo, &conf.Bootstrap{
-		Auth: &conf.Auth{
-			JwtSecret: "test-secret",
-		},
-	}, suite.logger)
-
-	assert.NoError(suite.T(), err)
-	assert.NotNil(suite.T(), useCase)
-
-	// 测试自动生成密钥
-	useCase2, err := NewUserUseCase(suite.userRepo, &conf.Bootstrap{
-		Auth: &conf.Auth{},
-	}, suite.logger)
-
-	assert.NoError(suite.T(), err)
-	assert.NotNil(suite.T(), useCase2)
-}
-
-func (suite *UserUseCaseTestSuite) TestRegister_UserAlreadyExists() {
+// TestSignIn_Success 测试 UserUseCase.SignIn 成功情况
+func (suite *UserUseCaseTestSuite) TestSignIn_Success() {
 	ctx := context.Background()
+	req := SignInRequest{
+		Code:  "test-code",
+		State: "test-state",
+	}
+	expectedResp := SignInResponse{
+		State: "test-state",
+		Data:  "test-data",
+	}
 
-	// 模拟用户已存在
-	suite.userRepo.On("GetUserByName", ctx, "existinguser").Return(&model.User{Username: "existinguser"}, nil)
+	suite.userRepo.On("SignIn", ctx, req).Return(expectedResp, nil)
 
-	userID, err := suite.useCase.Register(ctx, "existinguser", "hash", "email@test.com", "salt")
+	resp, err := suite.useCase.SignIn(ctx, req)
 
-	assert.Equal(suite.T(), "", userID)
+	assert.NoError(suite.T(), err)
+	assert.NotNil(suite.T(), resp)
+	assert.Equal(suite.T(), expectedResp.State, resp.State)
+	assert.Equal(suite.T(), expectedResp.Data, resp.Data)
+}
+
+// TestSignIn_Error 测试 UserUseCase.SignIn 失败情况
+func (suite *UserUseCaseTestSuite) TestSignIn_Error() {
+	ctx := context.Background()
+	req := SignInRequest{
+		Code:  "test-code",
+		State: "test-state",
+	}
+	expectedErr := errors.New("sign in error")
+
+	suite.userRepo.On("SignIn", ctx, req).Return(SignInResponse{}, expectedErr)
+
+	resp, err := suite.useCase.SignIn(ctx, req)
+
 	assert.Error(suite.T(), err)
-	assert.IsType(suite.T(), &connect.Error{}, err)
-	connectErr := err.(*connect.Error)
-	assert.Equal(suite.T(), connect.CodeAlreadyExists, connectErr.Code())
-}
-
-func (suite *UserUseCaseTestSuite) TestRegister_Success() {
-	ctx := context.Background()
-
-	// 模拟用户不存在
-	suite.userRepo.On("GetUserByName", ctx, "newuser").Return(nil, errors.New("not found"))
-	suite.userRepo.On("CreateUser", ctx, mock.AnythingOfType("*model.User")).Return(int64(123), nil)
-
-	userID, err := suite.useCase.Register(ctx, "newuser", "passwordhash", "email@test.com", "salt")
-
-	assert.NoError(suite.T(), err)
-	assert.Equal(suite.T(), "123", userID)
-	suite.userRepo.AssertCalled(suite.T(), "CreateUser", ctx, mock.MatchedBy(func(user *model.User) bool {
-		return user.Username == "newuser" && user.PasswordHash == "passwordhash"
-	}))
-}
-
-func (suite *UserUseCaseTestSuite) TestGetAuthChallenge_UserNotFound() {
-	ctx := context.Background()
-
-	// 模拟用户不存在
-	suite.userRepo.On("GetUserByName", ctx, "nonexistent").Return(nil, errors.New("not found"))
-
-	challenge, err := suite.useCase.GetAuthChallenge(ctx, "nonexistent")
-
-	assert.Nil(suite.T(), challenge)
-	assert.Error(suite.T(), err)
-	assert.Equal(suite.T(), "authentication failed", err.Error())
-}
-
-func (suite *UserUseCaseTestSuite) TestGetAuthChallenge_Success() {
-	ctx := context.Background()
-
-	// 模拟用户存在
-	suite.userRepo.On("GetUserByName", ctx, "testuser").Return(&model.User{
-		Username: "testuser",
-		Salt:     "testsalt",
-	}, nil)
-	suite.userRepo.On("StoreAuthChallenge", ctx, "testuser", mock.AnythingOfType("string"), mock.AnythingOfType("time.Duration")).Return(nil)
-
-	challenge, err := suite.useCase.GetAuthChallenge(ctx, "testuser")
-
-	assert.NoError(suite.T(), err)
-	assert.NotNil(suite.T(), challenge)
-	assert.Equal(suite.T(), "testuser", challenge.Username)
-	assert.Equal(suite.T(), "testsalt", challenge.Salt)
-	assert.NotEmpty(suite.T(), challenge.Challenge)
-	suite.userRepo.AssertCalled(suite.T(), "StoreAuthChallenge", ctx, "testuser", challenge.Challenge, mock.AnythingOfType("time.Duration"))
-}
-
-func (suite *UserUseCaseTestSuite) TestSubmitAuth_InvalidChallenge() {
-	ctx := context.Background()
-
-	// 模拟挑战不存在
-	suite.userRepo.On("GetAuthChallenge", ctx, "testuser").Return("", errors.New("not found"))
-
-	result, err := suite.useCase.SubmitAuth(ctx, "testuser", "hash", "req123", "response")
-
-	assert.Nil(suite.T(), result)
-	assert.Error(suite.T(), err)
-	assert.Equal(suite.T(), "invalid or expired challenge", err.Error())
-}
-
-func (suite *UserUseCaseTestSuite) TestGenerateJWT() {
-	token, err := suite.useCase.generateJWT(123, "testuser")
-
-	assert.NoError(suite.T(), err)
-	assert.NotEmpty(suite.T(), token)
-
-	// 验证 JWT 令牌
-	parsedToken, err := jwt.Parse(token, func(token *jwt.Token) (interface{}, error) {
-		return []byte("test-secret-key-12345678901234567890"), nil
-	})
-
-	assert.NoError(suite.T(), err)
-	assert.True(suite.T(), parsedToken.Valid)
-
-	claims := parsedToken.Claims.(jwt.MapClaims)
-	assert.Equal(suite.T(), float64(123), claims["sub"])
-	assert.Equal(suite.T(), "testuser", claims["usr"])
-}
-
-func (suite *UserUseCaseTestSuite) TestConstantTimeCompare() {
-	// 测试相等字符串
-	assert.True(suite.T(), constantTimeCompare("test", "test"))
-
-	// 测试不等长字符串
-	assert.False(suite.T(), constantTimeCompare("short", "longer"))
-
-	// 测试不等字符串
-	assert.False(suite.T(), constantTimeCompare("test1", "test2"))
+	assert.Nil(suite.T(), resp)
+	assert.Equal(suite.T(), expectedErr, err)
 }
 
 // CheckUseCaseTestSuite 是 CheckUseCase 的测试套件
@@ -223,30 +116,32 @@ func (suite *CheckUseCaseTestSuite) SetupTest() {
 
 func (suite *CheckUseCaseTestSuite) TestReady_Success() {
 	ctx := context.Background()
-	expectedReply := model.HealthCheckReply{
+	expectedReply := HealthCheckReply{
 		Status:  "Ready",
 		Details: nil,
 	}
 
-	suite.checkRepo.On("Ready", ctx, model.HealthCheckReq{}).Return(expectedReply, nil)
+	suite.checkRepo.On("Ready", ctx, HealthCheckReq{}).Return(expectedReply, nil)
 
-	reply, err := suite.useCase.Ready(ctx, model.HealthCheckReq{})
+	reply, err := suite.useCase.Ready(ctx, HealthCheckReq{})
 
 	assert.NoError(suite.T(), err)
-	assert.Equal(suite.T(), expectedReply, reply)
+	assert.NotNil(suite.T(), reply)
+	assert.Equal(suite.T(), expectedReply.Status, reply.Status)
+	assert.Equal(suite.T(), expectedReply.Details, reply.Details)
 }
 
 func (suite *CheckUseCaseTestSuite) TestReady_Error() {
 	ctx := context.Background()
 	expectedError := errors.New("database error")
 
-	suite.checkRepo.On("Ready", ctx, model.HealthCheckReq{}).Return(model.HealthCheckReply{}, expectedError)
+	suite.checkRepo.On("Ready", ctx, HealthCheckReq{}).Return(HealthCheckReply{}, expectedError)
 
-	reply, err := suite.useCase.Ready(ctx, model.HealthCheckReq{})
+	reply, err := suite.useCase.Ready(ctx, HealthCheckReq{})
 
 	assert.Error(suite.T(), err)
 	assert.Equal(suite.T(), expectedError, err)
-	assert.Equal(suite.T(), model.HealthCheckReply{}, reply)
+	assert.Nil(suite.T(), reply)
 }
 
 // 运行测试套件
@@ -262,9 +157,31 @@ func TestCheckUseCaseTestSuite(t *testing.T) {
 func TestNewCheckUseCase(t *testing.T) {
 	mockRepo := new(MockCheckRepo)
 
-	useCase, err := NewCheckUseCase(mockRepo)
+	useCase := NewCheckUseCase(mockRepo)
 
-	assert.NoError(t, err)
 	assert.NotNil(t, useCase)
 	assert.IsType(t, &CheckUseCase{}, useCase)
+}
+
+// TestNewUserUseCase 测试 NewUserUseCase 函数
+func TestNewUserUseCase(t *testing.T) {
+	mockRepo := new(MockUserRepo)
+	logger, _ := zap.NewDevelopment()
+	cfg := &conf.Bootstrap{
+		Auth: &conf.Auth{
+			Endpoint:         "http://localhost:9000",
+			ClientId:         "test-client-id",
+			ClientSecret:     "test-client-secret",
+			OrganizationName: "test-org",
+			ApplicationName:  "test-app",
+			Certificate:      "test-cert",
+		},
+	}
+
+	useCase := NewUserUseCase(mockRepo, cfg, logger)
+
+	assert.NotNil(t, useCase)
+	assert.IsType(t, &UserUseCase{}, useCase)
+	assert.Equal(t, mockRepo, useCase.repo)
+	assert.Equal(t, cfg.Auth, useCase.cfg)
 }
