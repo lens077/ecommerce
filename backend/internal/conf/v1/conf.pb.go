@@ -28,6 +28,7 @@ type Bootstrap struct {
 	Auth          *Auth                  `protobuf:"bytes,3,opt,name=auth,proto3" json:"auth,omitempty"`
 	Trace         *Trace                 `protobuf:"bytes,4,opt,name=trace,proto3" json:"trace,omitempty"`
 	Discovery     *Discovery             `protobuf:"bytes,5,opt,name=discovery,proto3" json:"discovery,omitempty"`
+	Search        *Search                `protobuf:"bytes,6,opt,name=search,proto3" json:"search,omitempty"`
 	unknownFields protoimpl.UnknownFields
 	sizeCache     protoimpl.SizeCache
 }
@@ -93,6 +94,13 @@ func (x *Bootstrap) GetTrace() *Trace {
 func (x *Bootstrap) GetDiscovery() *Discovery {
 	if x != nil {
 		return x.Discovery
+	}
+	return nil
+}
+
+func (x *Bootstrap) GetSearch() *Search {
+	if x != nil {
+		return x.Search
 	}
 	return nil
 }
@@ -373,6 +381,50 @@ func (x *Discovery) GetConsul() *Discovery_Consul {
 	return nil
 }
 
+type Search struct {
+	state         protoimpl.MessageState `protogen:"open.v1"`
+	ElasticSearch *Search_ElasticSearch  `protobuf:"bytes,1,opt,name=elastic_search,json=elasticSearch,proto3" json:"elastic_search,omitempty"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *Search) Reset() {
+	*x = Search{}
+	mi := &file_internal_conf_v1_conf_proto_msgTypes[6]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *Search) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*Search) ProtoMessage() {}
+
+func (x *Search) ProtoReflect() protoreflect.Message {
+	mi := &file_internal_conf_v1_conf_proto_msgTypes[6]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use Search.ProtoReflect.Descriptor instead.
+func (*Search) Descriptor() ([]byte, []int) {
+	return file_internal_conf_v1_conf_proto_rawDescGZIP(), []int{6}
+}
+
+func (x *Search) GetElasticSearch() *Search_ElasticSearch {
+	if x != nil {
+		return x.ElasticSearch
+	}
+	return nil
+}
+
 type Server_HTTP struct {
 	state         protoimpl.MessageState `protogen:"open.v1"`
 	Addr          string                 `protobuf:"bytes,1,opt,name=addr,proto3" json:"addr,omitempty"`
@@ -383,7 +435,7 @@ type Server_HTTP struct {
 
 func (x *Server_HTTP) Reset() {
 	*x = Server_HTTP{}
-	mi := &file_internal_conf_v1_conf_proto_msgTypes[6]
+	mi := &file_internal_conf_v1_conf_proto_msgTypes[7]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -395,7 +447,7 @@ func (x *Server_HTTP) String() string {
 func (*Server_HTTP) ProtoMessage() {}
 
 func (x *Server_HTTP) ProtoReflect() protoreflect.Message {
-	mi := &file_internal_conf_v1_conf_proto_msgTypes[6]
+	mi := &file_internal_conf_v1_conf_proto_msgTypes[7]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -441,7 +493,7 @@ type Data_Database struct {
 
 func (x *Data_Database) Reset() {
 	*x = Data_Database{}
-	mi := &file_internal_conf_v1_conf_proto_msgTypes[7]
+	mi := &file_internal_conf_v1_conf_proto_msgTypes[8]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -453,7 +505,7 @@ func (x *Data_Database) String() string {
 func (*Data_Database) ProtoMessage() {}
 
 func (x *Data_Database) ProtoReflect() protoreflect.Message {
-	mi := &file_internal_conf_v1_conf_proto_msgTypes[7]
+	mi := &file_internal_conf_v1_conf_proto_msgTypes[8]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -537,7 +589,7 @@ type Data_DatabasePool struct {
 
 func (x *Data_DatabasePool) Reset() {
 	*x = Data_DatabasePool{}
-	mi := &file_internal_conf_v1_conf_proto_msgTypes[8]
+	mi := &file_internal_conf_v1_conf_proto_msgTypes[9]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -549,7 +601,7 @@ func (x *Data_DatabasePool) String() string {
 func (*Data_DatabasePool) ProtoMessage() {}
 
 func (x *Data_DatabasePool) ProtoReflect() protoreflect.Message {
-	mi := &file_internal_conf_v1_conf_proto_msgTypes[8]
+	mi := &file_internal_conf_v1_conf_proto_msgTypes[9]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -611,7 +663,7 @@ type Data_Redis struct {
 
 func (x *Data_Redis) Reset() {
 	*x = Data_Redis{}
-	mi := &file_internal_conf_v1_conf_proto_msgTypes[9]
+	mi := &file_internal_conf_v1_conf_proto_msgTypes[10]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -623,7 +675,7 @@ func (x *Data_Redis) String() string {
 func (*Data_Redis) ProtoMessage() {}
 
 func (x *Data_Redis) ProtoReflect() protoreflect.Message {
-	mi := &file_internal_conf_v1_conf_proto_msgTypes[9]
+	mi := &file_internal_conf_v1_conf_proto_msgTypes[10]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -720,7 +772,7 @@ type Discovery_Consul struct {
 
 func (x *Discovery_Consul) Reset() {
 	*x = Discovery_Consul{}
-	mi := &file_internal_conf_v1_conf_proto_msgTypes[10]
+	mi := &file_internal_conf_v1_conf_proto_msgTypes[11]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -732,7 +784,7 @@ func (x *Discovery_Consul) String() string {
 func (*Discovery_Consul) ProtoMessage() {}
 
 func (x *Discovery_Consul) ProtoReflect() protoreflect.Message {
-	mi := &file_internal_conf_v1_conf_proto_msgTypes[10]
+	mi := &file_internal_conf_v1_conf_proto_msgTypes[11]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -769,17 +821,78 @@ func (x *Discovery_Consul) GetHealthCheck() bool {
 	return false
 }
 
+type Search_ElasticSearch struct {
+	state         protoimpl.MessageState `protogen:"open.v1"`
+	Addresses     []string               `protobuf:"bytes,1,rep,name=addresses,proto3" json:"addresses,omitempty"`
+	Username      string                 `protobuf:"bytes,2,opt,name=username,proto3" json:"username,omitempty"`
+	Password      string                 `protobuf:"bytes,3,opt,name=password,proto3" json:"password,omitempty"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *Search_ElasticSearch) Reset() {
+	*x = Search_ElasticSearch{}
+	mi := &file_internal_conf_v1_conf_proto_msgTypes[12]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *Search_ElasticSearch) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*Search_ElasticSearch) ProtoMessage() {}
+
+func (x *Search_ElasticSearch) ProtoReflect() protoreflect.Message {
+	mi := &file_internal_conf_v1_conf_proto_msgTypes[12]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use Search_ElasticSearch.ProtoReflect.Descriptor instead.
+func (*Search_ElasticSearch) Descriptor() ([]byte, []int) {
+	return file_internal_conf_v1_conf_proto_rawDescGZIP(), []int{6, 0}
+}
+
+func (x *Search_ElasticSearch) GetAddresses() []string {
+	if x != nil {
+		return x.Addresses
+	}
+	return nil
+}
+
+func (x *Search_ElasticSearch) GetUsername() string {
+	if x != nil {
+		return x.Username
+	}
+	return ""
+}
+
+func (x *Search_ElasticSearch) GetPassword() string {
+	if x != nil {
+		return x.Password
+	}
+	return ""
+}
+
 var File_internal_conf_v1_conf_proto protoreflect.FileDescriptor
 
 const file_internal_conf_v1_conf_proto_rawDesc = "" +
 	"\n" +
-	"\x1binternal/conf/v1/conf.proto\x12\aconf.v1\"\xd2\x01\n" +
+	"\x1binternal/conf/v1/conf.proto\x12\aconf.v1\"\xfb\x01\n" +
 	"\tBootstrap\x12'\n" +
 	"\x06server\x18\x01 \x01(\v2\x0f.conf.v1.ServerR\x06server\x12!\n" +
 	"\x04data\x18\x02 \x01(\v2\r.conf.v1.DataR\x04data\x12!\n" +
 	"\x04auth\x18\x03 \x01(\v2\r.conf.v1.AuthR\x04auth\x12$\n" +
 	"\x05trace\x18\x04 \x01(\v2\x0e.conf.v1.TraceR\x05trace\x120\n" +
-	"\tdiscovery\x18\x05 \x01(\v2\x12.conf.v1.DiscoveryR\tdiscovery\"h\n" +
+	"\tdiscovery\x18\x05 \x01(\v2\x12.conf.v1.DiscoveryR\tdiscovery\x12'\n" +
+	"\x06search\x18\x06 \x01(\v2\x0f.conf.v1.SearchR\x06search\"h\n" +
 	"\x06Server\x12(\n" +
 	"\x04http\x18\x01 \x01(\v2\x14.conf.v1.Server.HTTPR\x04http\x1a4\n" +
 	"\x04HTTP\x12\x12\n" +
@@ -829,7 +942,13 @@ const file_internal_conf_v1_conf_proto_rawDesc = "" +
 	"\x06Consul\x12\x12\n" +
 	"\x04addr\x18\x01 \x01(\tR\x04addr\x12\x16\n" +
 	"\x06scheme\x18\x02 \x01(\tR\x06scheme\x12!\n" +
-	"\fhealth_check\x18\x03 \x01(\bR\vhealthCheckB|\n" +
+	"\fhealth_check\x18\x03 \x01(\bR\vhealthCheck\"\xb5\x01\n" +
+	"\x06Search\x12D\n" +
+	"\x0eelastic_search\x18\x01 \x01(\v2\x1d.conf.v1.Search.ElasticSearchR\relasticSearch\x1ae\n" +
+	"\rElasticSearch\x12\x1c\n" +
+	"\taddresses\x18\x01 \x03(\tR\taddresses\x12\x1a\n" +
+	"\busername\x18\x02 \x01(\tR\busername\x12\x1a\n" +
+	"\bpassword\x18\x03 \x01(\tR\bpasswordB|\n" +
 	"\vcom.conf.v1B\tConfProtoP\x01Z%connect-go-example/gen/conf/v1;confv1\xa2\x02\x03CXX\xaa\x02\aConf.V1\xca\x02\aConf\\V1\xe2\x02\x13Conf\\V1\\GPBMetadata\xea\x02\bConf::V1b\x06proto3"
 
 var (
@@ -844,19 +963,21 @@ func file_internal_conf_v1_conf_proto_rawDescGZIP() []byte {
 	return file_internal_conf_v1_conf_proto_rawDescData
 }
 
-var file_internal_conf_v1_conf_proto_msgTypes = make([]protoimpl.MessageInfo, 11)
+var file_internal_conf_v1_conf_proto_msgTypes = make([]protoimpl.MessageInfo, 13)
 var file_internal_conf_v1_conf_proto_goTypes = []any{
-	(*Bootstrap)(nil),         // 0: conf.v1.Bootstrap
-	(*Server)(nil),            // 1: conf.v1.Server
-	(*Data)(nil),              // 2: conf.v1.Data
-	(*Auth)(nil),              // 3: conf.v1.Auth
-	(*Trace)(nil),             // 4: conf.v1.Trace
-	(*Discovery)(nil),         // 5: conf.v1.Discovery
-	(*Server_HTTP)(nil),       // 6: conf.v1.Server.HTTP
-	(*Data_Database)(nil),     // 7: conf.v1.Data.Database
-	(*Data_DatabasePool)(nil), // 8: conf.v1.Data.DatabasePool
-	(*Data_Redis)(nil),        // 9: conf.v1.Data.Redis
-	(*Discovery_Consul)(nil),  // 10: conf.v1.Discovery.Consul
+	(*Bootstrap)(nil),            // 0: conf.v1.Bootstrap
+	(*Server)(nil),               // 1: conf.v1.Server
+	(*Data)(nil),                 // 2: conf.v1.Data
+	(*Auth)(nil),                 // 3: conf.v1.Auth
+	(*Trace)(nil),                // 4: conf.v1.Trace
+	(*Discovery)(nil),            // 5: conf.v1.Discovery
+	(*Search)(nil),               // 6: conf.v1.Search
+	(*Server_HTTP)(nil),          // 7: conf.v1.Server.HTTP
+	(*Data_Database)(nil),        // 8: conf.v1.Data.Database
+	(*Data_DatabasePool)(nil),    // 9: conf.v1.Data.DatabasePool
+	(*Data_Redis)(nil),           // 10: conf.v1.Data.Redis
+	(*Discovery_Consul)(nil),     // 11: conf.v1.Discovery.Consul
+	(*Search_ElasticSearch)(nil), // 12: conf.v1.Search.ElasticSearch
 }
 var file_internal_conf_v1_conf_proto_depIdxs = []int32{
 	1,  // 0: conf.v1.Bootstrap.server:type_name -> conf.v1.Server
@@ -864,16 +985,18 @@ var file_internal_conf_v1_conf_proto_depIdxs = []int32{
 	3,  // 2: conf.v1.Bootstrap.auth:type_name -> conf.v1.Auth
 	4,  // 3: conf.v1.Bootstrap.trace:type_name -> conf.v1.Trace
 	5,  // 4: conf.v1.Bootstrap.discovery:type_name -> conf.v1.Discovery
-	6,  // 5: conf.v1.Server.http:type_name -> conf.v1.Server.HTTP
-	7,  // 6: conf.v1.Data.database:type_name -> conf.v1.Data.Database
-	9,  // 7: conf.v1.Data.redis:type_name -> conf.v1.Data.Redis
-	10, // 8: conf.v1.Discovery.consul:type_name -> conf.v1.Discovery.Consul
-	8,  // 9: conf.v1.Data.Database.pool:type_name -> conf.v1.Data.DatabasePool
-	10, // [10:10] is the sub-list for method output_type
-	10, // [10:10] is the sub-list for method input_type
-	10, // [10:10] is the sub-list for extension type_name
-	10, // [10:10] is the sub-list for extension extendee
-	0,  // [0:10] is the sub-list for field type_name
+	6,  // 5: conf.v1.Bootstrap.search:type_name -> conf.v1.Search
+	7,  // 6: conf.v1.Server.http:type_name -> conf.v1.Server.HTTP
+	8,  // 7: conf.v1.Data.database:type_name -> conf.v1.Data.Database
+	10, // 8: conf.v1.Data.redis:type_name -> conf.v1.Data.Redis
+	11, // 9: conf.v1.Discovery.consul:type_name -> conf.v1.Discovery.Consul
+	12, // 10: conf.v1.Search.elastic_search:type_name -> conf.v1.Search.ElasticSearch
+	9,  // 11: conf.v1.Data.Database.pool:type_name -> conf.v1.Data.DatabasePool
+	12, // [12:12] is the sub-list for method output_type
+	12, // [12:12] is the sub-list for method input_type
+	12, // [12:12] is the sub-list for extension type_name
+	12, // [12:12] is the sub-list for extension extendee
+	0,  // [0:12] is the sub-list for field type_name
 }
 
 func init() { file_internal_conf_v1_conf_proto_init() }
@@ -887,7 +1010,7 @@ func file_internal_conf_v1_conf_proto_init() {
 			GoPackagePath: reflect.TypeOf(x{}).PkgPath(),
 			RawDescriptor: unsafe.Slice(unsafe.StringData(file_internal_conf_v1_conf_proto_rawDesc), len(file_internal_conf_v1_conf_proto_rawDesc)),
 			NumEnums:      0,
-			NumMessages:   11,
+			NumMessages:   13,
 			NumExtensions: 0,
 			NumServices:   0,
 		},

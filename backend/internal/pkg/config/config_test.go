@@ -118,9 +118,9 @@ func (suite *ConfigTestSuite) TestValidateConfig_Valid() {
 		},
 		Discovery: &confv1.Discovery{
 			Consul: &confv1.Discovery_Consul{
-				Addr:        "http://localhost:8500",
-				Scheme:      "http",
-				HealthCheck: true,
+				Addr:         "http://localhost:8500",
+				Scheme:       "http",
+				HealthCheck:  true,
 			},
 		},
 	}

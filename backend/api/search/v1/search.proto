@@ -1,0 +1,77 @@
+syntax = "proto3";
+
+// 独立搜索功能
+
+package search.v1;
+option go_package = "connect-go-example/api/search/v1;searchv1";
+
+import "google/protobuf/timestamp.proto";
+
+service SearchService {
+  rpc Search(SearchRequest) returns (SearchResponse){}
+}
+
+message SearchRequest {
+  string index = 1;
+  string name = 2;
+}
+
+message SearchResponse {
+  repeated Product products = 1;
+}
+
+// 定义 ProductImage 消息 (对应 Go 结构体中的 ProductImage)
+message ProductImage {
+  // url 字段，对应 Go 结构体中的 url 字段
+  string url = 1;
+  // type 字段，例如 "cover" (封面) 或 "detail" (详情页)
+  string type = 2;
+  // sort_order 字段，用于排序
+  int32 sort_order = 3;
+  // alt_text 字段，用于图片替代文本
+  string alt_text = 4;
+}
+
+// 定义 ProductAttribute 消息 (对应 Go 结构体中的 ProductAttribute)
+message ProductAttribute {
+  // key 字段，属性名 (例如 "颜色", "尺寸")
+  string key = 1;
+  // value 字段，属性值 (例如 "红色", "L")
+  string value = 2;
+}
+
+
+// 定义 Product 消息 (对应 Go 结构体中的 Product)
+message Product {
+  // 基础信息
+  string id = 1;
+  string name = 2;
+  // repeated 对应 Go 中的切片 ([]string)
+  //  repeated string name_suggest = 3;
+  string name_suggest = 3;
+  string description = 4;
+
+  // 价格和状态
+  double price = 5;
+  string status = 6;
+
+  // 分类和商家信息
+  string merchant_id = 7;
+  int32 category_id = 8; // Go 的 int 对应 Protobuf 的 int32
+  string category_name = 9;
+
+  // 图片和属性 (嵌套消息)
+  // repeated 对应 Go 中的结构体切片 ([]ProductImage)
+  repeated ProductImage images = 10;
+  string cover_image = 11;
+  // repeated 对应 Go 中的结构体切片 ([]ProductAttribute)
+  map<string,string> attributes = 12;
+
+  // 统计信息
+  int32 sales_count = 13;
+  double rating_score = 14;
+
+  // 时间戳 (使用标准 Protobuf 类型)
+  google.protobuf.Timestamp created_at = 15;
+  google.protobuf.Timestamp updated_at = 16;
+}

@@ -29,15 +29,15 @@ func NewUserRepo(data *Data, logger *zap.Logger) biz.UserRepo {
 	}
 }
 
-func (u userRepo) SignIn(ctx context.Context, req biz.SignInRequest) (biz.SignInResponse, error) {
+func (u userRepo) SignIn(ctx context.Context, req biz.SignInRequest) (*biz.SignInResponse, error) {
 	if u.auth == nil {
-		return biz.SignInResponse{}, errors.New("auth client is nil")
+		return nil, errors.New("auth client is nil")
 	}
 	token, err := u.auth.GetOAuthToken(req.Code, req.State)
 	if err != nil {
-		return biz.SignInResponse{}, err
+		return nil, err
 	}
-	return biz.SignInResponse{
+	return &biz.SignInResponse{
 		State: "ok",
 		Data:  token.AccessToken,
 	}, err

@@ -20,7 +20,7 @@ type DataTestSuite struct {
 // TestNewData 测试 NewData 函数
 func (suite *DataTestSuite) TestNewData() {
 	// 使用 nil 指针测试 NewData 函数，因为我们只是测试构造函数
-	data := NewData(nil, nil, nil)
+	data := NewData(nil, nil, nil, nil)
 	assert.NotNil(suite.T(), data)
 	assert.IsType(suite.T(), &Data{}, data)
 }
@@ -57,13 +57,13 @@ type UserRepoTestSuite struct {
 func (suite *UserRepoTestSuite) SetupTest() {
 	suite.logger, _ = zap.NewDevelopment()
 	// 使用 nil 指针测试 UserRepo，因为我们只是测试构造函数
-	data := NewData(nil, nil, nil)
+	data := NewData(nil, nil, nil, nil)
 	suite.userRepo = NewUserRepo(data, suite.logger)
 }
 
 // TestNewUserRepo 测试 NewUserRepo 函数
 func (suite *UserRepoTestSuite) TestNewUserRepo() {
-	data := NewData(nil, nil, nil)
+	data := NewData(nil, nil, nil, nil)
 	userRepo := NewUserRepo(data, suite.logger)
 	assert.NotNil(suite.T(), userRepo)
 	// 不需要测试具体类型，因为 userRepo 是未导出的
@@ -81,7 +81,7 @@ func (suite *UserRepoTestSuite) TestSignIn_NilAuth() {
 
 	// 当 auth 为 nil 时，应该返回错误
 	assert.Error(suite.T(), err)
-	assert.Equal(suite.T(), "", resp.Data)
+	assert.Nil(suite.T(), resp)
 }
 
 // 运行测试套件
@@ -99,13 +99,13 @@ func TestUserRepoTestSuite(t *testing.T) {
 
 // 单元测试函数
 func TestNewData(t *testing.T) {
-	data := NewData(nil, nil, nil)
+	data := NewData(nil, nil, nil, nil)
 	assert.NotNil(t, data)
 	assert.IsType(t, &Data{}, data)
 }
 
 func TestNewUserRepo(t *testing.T) {
-	data := NewData(nil, nil, nil)
+	data := NewData(nil, nil, nil, nil)
 	logger, _ := zap.NewDevelopment()
 	userRepo := NewUserRepo(data, logger)
 	assert.NotNil(t, userRepo)
