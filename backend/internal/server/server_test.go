@@ -9,6 +9,8 @@ import (
 
 	v1check "connect-go-example/api/check/v1"
 	"connect-go-example/api/check/v1/checkv1connect"
+	v1search "connect-go-example/api/search/v1"
+	searchv1connect "connect-go-example/api/search/v1/searchv1connect"
 	v1user "connect-go-example/api/user/v1"
 	"connect-go-example/api/user/v1/userv1connect"
 	conf "connect-go-example/internal/conf/v1"
@@ -27,8 +29,9 @@ import (
 
 // 为测试添加缺失的接口实现
 var (
-	_ userv1connect.UserServiceHandler   = (*MockUserService)(nil)
-	_ checkv1connect.CheckServiceHandler = (*MockCheckService)(nil)
+	_ userv1connect.UserServiceHandler     = (*MockUserService)(nil)
+	_ checkv1connect.CheckServiceHandler   = (*MockCheckService)(nil)
+	_ searchv1connect.SearchServiceHandler = (*MockSearchService)(nil)
 )
 
 // MockUserService 是 UserService 的模拟实现
@@ -57,6 +60,19 @@ func (m *MockCheckService) Ready(ctx context.Context, req *connect.Request[v1che
 	return args.Get(0).(*connect.Response[v1check.ReadyCheckReply]), args.Error(1)
 }
 
+// MockSearchService 是 SearchService 的模拟实现
+type MockSearchService struct {
+	mock.Mock
+}
+
+func (m *MockSearchService) Search(ctx context.Context, req *connect.Request[v1search.SearchRequest]) (*connect.Response[v1search.SearchResponse], error) {
+	args := m.Called(ctx, req)
+	if args.Get(0) == nil {
+		return nil, args.Error(1)
+	}
+	return args.Get(0).(*connect.Response[v1search.SearchResponse]), args.Error(1)
+}
+
 // testLifecycle 是用于测试的简单生命周期实现
 type testLifecycle struct {
 	hooks []fx.Hook
@@ -69,15 +85,17 @@ func (tl *testLifecycle) Append(hook fx.Hook) {
 // ServerTestSuite 是 Server 的测试套件
 type ServerTestSuite struct {
 	suite.Suite
-	userService  *MockUserService
-	checkService *MockCheckService
-	logger       *zap.Logger
-	server       *http.Server
+	userService   *MockUserService
+	checkService  *MockCheckService
+	searchService *MockSearchService
+	logger        *zap.Logger
+	server        *http.Server
 }
 
 func (suite *ServerTestSuite) SetupTest() {
 	suite.userService = new(MockUserService)
 	suite.checkService = new(MockCheckService)
+	suite.searchService = new(MockSearchService)
 	suite.logger, _ = zap.NewDevelopment()
 
 	// 设置 OpenTelemetry 提供者
@@ -109,6 +127,7 @@ func (suite *ServerTestSuite) SetupTest() {
 		cfg,
 		suite.userService,
 		suite.checkService,
+		suite.searchService,
 		suite.logger,
 		monitoringMiddleware,
 		connectInterceptor,
@@ -253,6 +272,7 @@ func TestNewHTTPServer(t *testing.T) {
 
 	userService := new(MockUserService)
 	checkService := new(MockCheckService)
+	searchService := new(MockSearchService)
 
 	monitoringMiddleware := MonitoringMiddleware(logger)
 	connectInterceptor := ConnectMonitoringInterceptor(logger)
@@ -265,6 +285,7 @@ func TestNewHTTPServer(t *testing.T) {
 		cfg,
 		userService,
 		checkService,
+		searchService,
 		logger,
 		monitoringMiddleware,
 		connectInterceptor,

@@ -36,15 +36,15 @@ type MockUserRepo struct {
 }
 
 // SignIn 实现 biz.UserRepo 接口的 SignIn 方法
-func (m *MockUserRepo) SignIn(ctx context.Context, req biz.SignInRequest) (biz.SignInResponse, error) {
+func (m *MockUserRepo) SignIn(ctx context.Context, req biz.SignInRequest) (*biz.SignInResponse, error) {
 	args := m.Called(ctx, req)
-	return args.Get(0).(biz.SignInResponse), args.Error(1)
+	return args.Get(0).(*biz.SignInResponse), args.Error(1)
 }
 
 // CheckServiceTestSuite 是 CheckService 的测试套件
 type CheckServiceTestSuite struct {
 	suite.Suite
-	checkRepo   *MockCheckRepo
+	checkRepo    *MockCheckRepo
 	checkUseCase *biz.CheckUseCase
 	checkService checkv1connect.CheckServiceHandler
 }
@@ -93,7 +93,7 @@ func (suite *CheckServiceTestSuite) TestReady_Error() {
 // UserServiceTestSuite 是 UserService 的测试套件
 type UserServiceTestSuite struct {
 	suite.Suite
-	userRepo   *MockUserRepo
+	userRepo    *MockUserRepo
 	userUseCase *biz.UserUseCase
 	userService userv1connect.UserServiceHandler
 }
@@ -126,7 +126,7 @@ func (suite *UserServiceTestSuite) TestSignIn_Success() {
 		},
 	}
 
-	expectedBizResp := biz.SignInResponse{
+	expectedBizResp := &biz.SignInResponse{
 		State: "test-state",
 		Data:  "test-data",
 	}
@@ -157,7 +157,7 @@ func (suite *UserServiceTestSuite) TestSignIn_Error() {
 	suite.userRepo.On("SignIn", ctx, biz.SignInRequest{
 		Code:  "test-code",
 		State: "test-state",
-	}).Return(biz.SignInResponse{}, expectedError)
+	}).Return((*biz.SignInResponse)(nil), expectedError)
 
 	resp, err := suite.userService.SignIn(ctx, connectReq)
 

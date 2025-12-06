@@ -30,7 +30,7 @@ type SignInResponse struct {
 
 // UserRepo 用户接口
 type UserRepo interface {
-	SignIn(ctx context.Context, req SignInRequest) (SignInResponse, error)
+	SignIn(ctx context.Context, req SignInRequest) (*SignInResponse, error)
 }
 
 type UserUseCase struct {
@@ -46,13 +46,5 @@ func NewUserUseCase(repo UserRepo, cfg *conf.Bootstrap, logger *zap.Logger) *Use
 }
 
 func (uc *UserUseCase) SignIn(ctx context.Context, req SignInRequest) (*SignInResponse, error) {
-	res, err := uc.repo.SignIn(ctx, req)
-	if err != nil {
-		return nil, err
-	}
-
-	return &SignInResponse{
-		State: res.State,
-		Data:  res.Data,
-	}, err
+	return uc.repo.SignIn(ctx, req)
 }

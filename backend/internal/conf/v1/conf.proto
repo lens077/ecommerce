@@ -10,6 +10,7 @@ message Bootstrap {
   Auth auth = 3;
   Trace trace = 4;
   Discovery discovery = 5;
+  Search search = 6;
 }
 
 message Server {
@@ -77,4 +78,13 @@ message Discovery {
     bool health_check = 3;
   }
   Consul consul = 1;
+}
+
+message Search {
+    message ElasticSearch {
+      repeated string addresses = 1;
+      string username = 2;
+      string password = 3;
+    }
+    ElasticSearch elastic_search = 1;
 }

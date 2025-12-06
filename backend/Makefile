@@ -17,6 +17,11 @@ AMD64=linux/amd64
 run:
 	go run cmd/server/main.go
 
+
+.PHONY: test
+test:
+	go test -short -coverprofile=coverage.out ./...
+
 .PHONY: sqlc
 sqlc:
 	sqlc generate
@@ -30,6 +35,10 @@ api:
 generate:
 	buf generate --template buf.gen.yaml
 	buf generate --template buf.gen.ts.yaml
+
+.PHONY: conf
+conf:
+	buf generate --template buf.gen.yaml
 
 .PHONY: docker-build
 # 使用 docker 构建镜像

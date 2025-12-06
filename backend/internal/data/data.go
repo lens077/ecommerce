@@ -3,11 +3,14 @@ package data
 import (
 	"context"
 	"fmt"
+	"os"
 	"time"
 
 	conf "connect-go-example/internal/conf/v1"
 
 	"github.com/casdoor/casdoor-go-sdk/casdoorsdk"
+	"github.com/elastic/elastic-transport-go/v8/elastictransport"
+	"github.com/elastic/go-elasticsearch/v9"
 	"github.com/exaring/otelpgx"
 	"github.com/jackc/pgx/v5/pgxpool"
 	"github.com/redis/go-redis/v9"
@@ -22,8 +25,10 @@ var Module = fx.Module("data",
 		NewDB,
 		NewCache,
 		NewAuth,
+		NewElasticSearch,
 		NewUserRepo,
 		NewCheckRepo,
+		NewSearchRepo,
 	),
 )
 
@@ -32,14 +37,16 @@ type Data struct {
 	db   *pgxpool.Pool
 	rdb  *redis.Client
 	auth *casdoorsdk.Client
+	es   *elasticsearch.TypedClient
 }
 
 // NewData 是 Data 的构造函数
-func NewData(db *pgxpool.Pool, rdb *redis.Client, auth *casdoorsdk.Client) *Data {
+func NewData(db *pgxpool.Pool, rdb *redis.Client, auth *casdoorsdk.Client, es *elasticsearch.TypedClient) *Data {
 	return &Data{
 		db:   db,
 		rdb:  rdb,
 		auth: auth,
+		es:   es,
 	}
 }
 
@@ -150,6 +157,28 @@ func NewAuth(lc fx.Lifecycle, conf *conf.Bootstrap, logger *zap.Logger) *casdoor
 	logger.Info(fmt.Sprintf("Casdoor connected successfully to %s", conf.Auth.Endpoint))
 
 	return client
+}
+
+// NewElasticSearch https://www.elastic.co/docs/reference/elasticsearch/clients/go/examples
+func NewElasticSearch(lc fx.Lifecycle, conf *conf.Bootstrap, logger *zap.Logger) *elasticsearch.TypedClient {
+	cfg := elasticsearch.Config{
+		Addresses: conf.Search.ElasticSearch.Addresses,
+		// Username:  "Username",
+		// Password:  "Password",
+		// CloudID:   "",
+		// APIKey:    "",
+		Logger: &elastictransport.ColorLogger{Output: os.Stdout},
+	}
+
+	es, err := elasticsearch.NewTypedClient(cfg)
+	if err != nil {
+		panic(err)
+	}
+	logger.Info(elasticsearch.Version)
+	// logger.Info(es.Info())
+	// logger.Info(es.Transport.(*elastictransport.Client).URLs())
+	logger.Info("elastic search server running")
+	return es
 }
 
 // HealthCheck 健康检查

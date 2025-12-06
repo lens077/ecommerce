@@ -7,8 +7,8 @@ require (
 	connectrpc.com/cors v0.1.0
 	connectrpc.com/otelconnect v0.8.0
 	github.com/casdoor/casdoor-go-sdk v1.31.0
+	github.com/elastic/go-elasticsearch/v9 v9.2.0
 	github.com/exaring/otelpgx v0.9.3
-	github.com/golang-jwt/jwt/v5 v5.3.0
 	github.com/google/uuid v1.6.0
 	github.com/hashicorp/consul/api v1.32.4
 	github.com/jackc/pgx/v5 v5.7.6
@@ -39,6 +39,7 @@ require (
 	github.com/cespare/xxhash/v2 v2.3.0 // indirect
 	github.com/davecgh/go-spew v1.1.2-0.20180830191138-d8f796af33cc // indirect
 	github.com/dgryski/go-rendezvous v0.0.0-20200823014737-9f7001d12a5f // indirect
+	github.com/elastic/elastic-transport-go/v8 v8.7.0 // indirect
 	github.com/fatih/color v1.16.0 // indirect
 	github.com/fsnotify/fsnotify v1.9.0 // indirect
 	github.com/go-logr/logr v1.4.3 // indirect

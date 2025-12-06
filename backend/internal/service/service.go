@@ -7,4 +7,5 @@ import (
 var Module = fx.Module("service",
 	fx.Provide(NewUserService),
 	fx.Provide(NewCheckService),
+	fx.Provide(NewSearchService),
 )

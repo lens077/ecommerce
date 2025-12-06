@@ -19,9 +19,9 @@ type MockUserRepo struct {
 }
 
 // SignIn 实现 UserRepo 接口的 SignIn 方法
-func (m *MockUserRepo) SignIn(ctx context.Context, req SignInRequest) (SignInResponse, error) {
+func (m *MockUserRepo) SignIn(ctx context.Context, req SignInRequest) (*SignInResponse, error) {
 	args := m.Called(ctx, req)
-	return args.Get(0).(SignInResponse), args.Error(1)
+	return args.Get(0).(*SignInResponse), args.Error(1)
 }
 
 // MockCheckRepo 是 CheckRepo 的模拟实现
@@ -67,7 +67,7 @@ func (suite *UserUseCaseTestSuite) TestSignIn_Success() {
 		Code:  "test-code",
 		State: "test-state",
 	}
-	expectedResp := SignInResponse{
+	expectedResp := &SignInResponse{
 		State: "test-state",
 		Data:  "test-data",
 	}
@@ -91,7 +91,7 @@ func (suite *UserUseCaseTestSuite) TestSignIn_Error() {
 	}
 	expectedErr := errors.New("sign in error")
 
-	suite.userRepo.On("SignIn", ctx, req).Return(SignInResponse{}, expectedErr)
+	suite.userRepo.On("SignIn", ctx, req).Return((*SignInResponse)(nil), expectedErr)
 
 	resp, err := suite.useCase.SignIn(ctx, req)
 

@@ -1,6 +1,7 @@
 package server
 
 import (
+	"connect-go-example/api/search/v1/searchv1connect"
 	"connect-go-example/api/user/v1/userv1connect"
 	"context"
 	"net/http"
@@ -31,6 +32,7 @@ func NewHTTPServer(
 	cfg *conf.Bootstrap,
 	userv1Service userv1connect.UserServiceHandler,
 	checkv1Service checkv1connect.CheckServiceHandler,
+	searchv1Service searchv1connect.SearchServiceHandler,
 	logger *zap.Logger,
 	monitoringMiddleware func(http.Handler) http.Handler,
 	connectInterceptor connect.UnaryInterceptorFunc,
@@ -55,10 +57,15 @@ func NewHTTPServer(
 		checkv1Service,
 		interceptors,
 	)
+	searchv1connectPath, searchv1connectHandler := searchv1connect.NewSearchServiceHandler(
+		searchv1Service,
+		interceptors,
+	)
 
 	mux := http.NewServeMux()
 	mux.Handle(userv1connectPath, userv1connectHandler)
 	mux.Handle(checkv1connectPath, checkv1connectHandler)
+	mux.Handle(searchv1connectPath, searchv1connectHandler)
 
 	// 创建处理器链：监控中间件 -> CORS -> HTTP/2
 	handlerChain := monitoringMiddleware(withCORS(mux))
