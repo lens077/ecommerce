@@ -8,10 +8,10 @@ const transport = createConnectTransport({
 	// interceptors: [authInterceptor],
 })
 
-const userClient = createClient(UserService, transport)
+const client = createClient(UserService, transport)
 
 export const signIn = (code: string, state: string) => {
-	return userClient.signIn({
+	return client.signIn({
 		code: code,
 		state: state,
 	})
