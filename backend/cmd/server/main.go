@@ -23,6 +23,7 @@ import (
 )
 
 var serviceName = "connect-example-go"
+var serviceVersion = "1.0.0"
 
 func main() {
 	flag.Parse()

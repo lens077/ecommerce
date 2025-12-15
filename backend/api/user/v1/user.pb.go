@@ -137,8 +137,8 @@ const file_api_user_v1_user_proto_rawDesc = "" +
 	"\x05state\x18\x01 \x01(\tR\x05state\x12\x12\n" +
 	"\x04data\x18\x02 \x01(\tR\x04data2J\n" +
 	"\vUserService\x12;\n" +
-	"\x06SignIn\x12\x16.user.v1.SignInRequest\x1a\x17.user.v1.SignInResponse\"\x00B|\n" +
-	"\vcom.user.v1B\tUserProtoP\x01Z%connect-go-example/api/user/v1;userv1\xa2\x02\x03UXX\xaa\x02\aUser.V1\xca\x02\aUser\\V1\xe2\x02\x13User\\V1\\GPBMetadata\xea\x02\bUser::V1b\x06proto3"
+	"\x06SignIn\x12\x16.user.v1.SignInRequest\x1a\x17.user.v1.SignInResponse\"\x00B\x8e\x01\n" +
+	"\vcom.user.v1B\tUserProtoP\x01Z7github.com/sunmery/ecommerce/backend/api/user/v1;userv1\xa2\x02\x03UXX\xaa\x02\aUser.V1\xca\x02\aUser\\V1\xe2\x02\x13User\\V1\\GPBMetadata\xea\x02\bUser::V1b\x06proto3"
 
 var (
 	file_api_user_v1_user_proto_rawDescOnce sync.Once

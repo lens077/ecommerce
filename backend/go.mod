@@ -1,4 +1,4 @@
-module connect-go-example
+module github.com/sunmery/ecommerce/backend
 
 go 1.25.0
 

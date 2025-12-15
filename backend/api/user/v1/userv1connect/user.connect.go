@@ -5,10 +5,10 @@
 package userv1connect
 
 import (
-	v1 "connect-go-example/api/user/v1"
 	connect "connectrpc.com/connect"
 	context "context"
 	errors "errors"
+	v1 "github.com/sunmery/ecommerce/backend/api/user/v1"
 	http "net/http"
 	strings "strings"
 )
