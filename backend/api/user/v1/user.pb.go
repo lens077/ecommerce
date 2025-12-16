@@ -7,6 +7,7 @@
 package userv1
 
 import (
+	v1 "github.com/sunmery/ecommerce/backend/api/casdoor/v1"
 	protoreflect "google.golang.org/protobuf/reflect/protoreflect"
 	protoimpl "google.golang.org/protobuf/runtime/protoimpl"
 	reflect "reflect"
@@ -125,19 +126,103 @@ func (x *SignInResponse) GetData() string {
 	return ""
 }
 
+type UserProfileRequest struct {
+	state         protoimpl.MessageState `protogen:"open.v1"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *UserProfileRequest) Reset() {
+	*x = UserProfileRequest{}
+	mi := &file_api_user_v1_user_proto_msgTypes[2]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *UserProfileRequest) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*UserProfileRequest) ProtoMessage() {}
+
+func (x *UserProfileRequest) ProtoReflect() protoreflect.Message {
+	mi := &file_api_user_v1_user_proto_msgTypes[2]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use UserProfileRequest.ProtoReflect.Descriptor instead.
+func (*UserProfileRequest) Descriptor() ([]byte, []int) {
+	return file_api_user_v1_user_proto_rawDescGZIP(), []int{2}
+}
+
+type UserProfileResponse struct {
+	state         protoimpl.MessageState `protogen:"open.v1"`
+	User          *v1.User               `protobuf:"bytes,1,opt,name=user,proto3" json:"user,omitempty"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *UserProfileResponse) Reset() {
+	*x = UserProfileResponse{}
+	mi := &file_api_user_v1_user_proto_msgTypes[3]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *UserProfileResponse) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*UserProfileResponse) ProtoMessage() {}
+
+func (x *UserProfileResponse) ProtoReflect() protoreflect.Message {
+	mi := &file_api_user_v1_user_proto_msgTypes[3]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use UserProfileResponse.ProtoReflect.Descriptor instead.
+func (*UserProfileResponse) Descriptor() ([]byte, []int) {
+	return file_api_user_v1_user_proto_rawDescGZIP(), []int{3}
+}
+
+func (x *UserProfileResponse) GetUser() *v1.User {
+	if x != nil {
+		return x.User
+	}
+	return nil
+}
+
 var File_api_user_v1_user_proto protoreflect.FileDescriptor
 
 const file_api_user_v1_user_proto_rawDesc = "" +
 	"\n" +
-	"\x16api/user/v1/user.proto\x12\auser.v1\"9\n" +
+	"\x16api/user/v1/user.proto\x12\auser.v1\x1a\x19api/casdoor/v1/user.proto\"9\n" +
 	"\rSignInRequest\x12\x12\n" +
 	"\x04code\x18\x01 \x01(\tR\x04code\x12\x14\n" +
 	"\x05state\x18\x02 \x01(\tR\x05state\":\n" +
 	"\x0eSignInResponse\x12\x14\n" +
 	"\x05state\x18\x01 \x01(\tR\x05state\x12\x12\n" +
-	"\x04data\x18\x02 \x01(\tR\x04data2J\n" +
+	"\x04data\x18\x02 \x01(\tR\x04data\"\x14\n" +
+	"\x12UserProfileRequest\";\n" +
+	"\x13UserProfileResponse\x12$\n" +
+	"\x04user\x18\x01 \x01(\v2\x10.casdoor.v1.UserR\x04user2\x96\x01\n" +
 	"\vUserService\x12;\n" +
-	"\x06SignIn\x12\x16.user.v1.SignInRequest\x1a\x17.user.v1.SignInResponse\"\x00B\x8e\x01\n" +
+	"\x06SignIn\x12\x16.user.v1.SignInRequest\x1a\x17.user.v1.SignInResponse\"\x00\x12J\n" +
+	"\vUserProfile\x12\x1b.user.v1.UserProfileRequest\x1a\x1c.user.v1.UserProfileResponse\"\x00B\x8e\x01\n" +
 	"\vcom.user.v1B\tUserProtoP\x01Z7github.com/sunmery/ecommerce/backend/api/user/v1;userv1\xa2\x02\x03UXX\xaa\x02\aUser.V1\xca\x02\aUser\\V1\xe2\x02\x13User\\V1\\GPBMetadata\xea\x02\bUser::V1b\x06proto3"
 
 var (
@@ -152,19 +237,25 @@ func file_api_user_v1_user_proto_rawDescGZIP() []byte {
 	return file_api_user_v1_user_proto_rawDescData
 }
 
-var file_api_user_v1_user_proto_msgTypes = make([]protoimpl.MessageInfo, 2)
+var file_api_user_v1_user_proto_msgTypes = make([]protoimpl.MessageInfo, 4)
 var file_api_user_v1_user_proto_goTypes = []any{
-	(*SignInRequest)(nil),  // 0: user.v1.SignInRequest
-	(*SignInResponse)(nil), // 1: user.v1.SignInResponse
+	(*SignInRequest)(nil),       // 0: user.v1.SignInRequest
+	(*SignInResponse)(nil),      // 1: user.v1.SignInResponse
+	(*UserProfileRequest)(nil),  // 2: user.v1.UserProfileRequest
+	(*UserProfileResponse)(nil), // 3: user.v1.UserProfileResponse
+	(*v1.User)(nil),             // 4: casdoor.v1.User
 }
 var file_api_user_v1_user_proto_depIdxs = []int32{
-	0, // 0: user.v1.UserService.SignIn:input_type -> user.v1.SignInRequest
-	1, // 1: user.v1.UserService.SignIn:output_type -> user.v1.SignInResponse
-	1, // [1:2] is the sub-list for method output_type
-	0, // [0:1] is the sub-list for method input_type
-	0, // [0:0] is the sub-list for extension type_name
-	0, // [0:0] is the sub-list for extension extendee
-	0, // [0:0] is the sub-list for field type_name
+	4, // 0: user.v1.UserProfileResponse.user:type_name -> casdoor.v1.User
+	0, // 1: user.v1.UserService.SignIn:input_type -> user.v1.SignInRequest
+	2, // 2: user.v1.UserService.UserProfile:input_type -> user.v1.UserProfileRequest
+	1, // 3: user.v1.UserService.SignIn:output_type -> user.v1.SignInResponse
+	3, // 4: user.v1.UserService.UserProfile:output_type -> user.v1.UserProfileResponse
+	3, // [3:5] is the sub-list for method output_type
+	1, // [1:3] is the sub-list for method input_type
+	1, // [1:1] is the sub-list for extension type_name
+	1, // [1:1] is the sub-list for extension extendee
+	0, // [0:1] is the sub-list for field type_name
 }
 
 func init() { file_api_user_v1_user_proto_init() }
@@ -178,7 +269,7 @@ func file_api_user_v1_user_proto_init() {
 			GoPackagePath: reflect.TypeOf(x{}).PkgPath(),
 			RawDescriptor: unsafe.Slice(unsafe.StringData(file_api_user_v1_user_proto_rawDesc), len(file_api_user_v1_user_proto_rawDesc)),
 			NumEnums:      0,
-			NumMessages:   2,
+			NumMessages:   4,
 			NumExtensions: 0,
 			NumServices:   1,
 		},

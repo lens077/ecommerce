@@ -1,6 +1,6 @@
 import { createClient } from '@connectrpc/connect'
 import { createConnectTransport } from '@connectrpc/connect-web'
-import { UserService } from '@/gen/api/user/user_pb.ts'
+import { UserService } from '@/gen/api/user/v1/user_pb.ts'
 
 const transport = createConnectTransport({
 	baseUrl: import.meta.env.VITE_BASE_URL,
@@ -15,4 +15,8 @@ export const signIn = (code: string, state: string) => {
 		code: code,
 		state: state,
 	})
+}
+
+export const getUserProfile = () => {
+	return client.userProfile({})
 }

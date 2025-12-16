@@ -35,11 +35,14 @@ const (
 const (
 	// UserServiceSignInProcedure is the fully-qualified name of the UserService's SignIn RPC.
 	UserServiceSignInProcedure = "/user.v1.UserService/SignIn"
+	// UserServiceUserProfileProcedure is the fully-qualified name of the UserService's UserProfile RPC.
+	UserServiceUserProfileProcedure = "/user.v1.UserService/UserProfile"
 )
 
 // UserServiceClient is a client for the user.v1.UserService service.
 type UserServiceClient interface {
 	SignIn(context.Context, *connect.Request[v1.SignInRequest]) (*connect.Response[v1.SignInResponse], error)
+	UserProfile(context.Context, *connect.Request[v1.UserProfileRequest]) (*connect.Response[v1.UserProfileResponse], error)
 }
 
 // NewUserServiceClient constructs a client for the user.v1.UserService service. By default, it uses
@@ -59,12 +62,19 @@ func NewUserServiceClient(httpClient connect.HTTPClient, baseURL string, opts ..
 			connect.WithSchema(userServiceMethods.ByName("SignIn")),
 			connect.WithClientOptions(opts...),
 		),
+		userProfile: connect.NewClient[v1.UserProfileRequest, v1.UserProfileResponse](
+			httpClient,
+			baseURL+UserServiceUserProfileProcedure,
+			connect.WithSchema(userServiceMethods.ByName("UserProfile")),
+			connect.WithClientOptions(opts...),
+		),
 	}
 }
 
 // userServiceClient implements UserServiceClient.
 type userServiceClient struct {
-	signIn *connect.Client[v1.SignInRequest, v1.SignInResponse]
+	signIn      *connect.Client[v1.SignInRequest, v1.SignInResponse]
+	userProfile *connect.Client[v1.UserProfileRequest, v1.UserProfileResponse]
 }
 
 // SignIn calls user.v1.UserService.SignIn.
@@ -72,9 +82,15 @@ func (c *userServiceClient) SignIn(ctx context.Context, req *connect.Request[v1.
 	return c.signIn.CallUnary(ctx, req)
 }
 
+// UserProfile calls user.v1.UserService.UserProfile.
+func (c *userServiceClient) UserProfile(ctx context.Context, req *connect.Request[v1.UserProfileRequest]) (*connect.Response[v1.UserProfileResponse], error) {
+	return c.userProfile.CallUnary(ctx, req)
+}
+
 // UserServiceHandler is an implementation of the user.v1.UserService service.
 type UserServiceHandler interface {
 	SignIn(context.Context, *connect.Request[v1.SignInRequest]) (*connect.Response[v1.SignInResponse], error)
+	UserProfile(context.Context, *connect.Request[v1.UserProfileRequest]) (*connect.Response[v1.UserProfileResponse], error)
 }
 
 // NewUserServiceHandler builds an HTTP handler from the service implementation. It returns the path
@@ -90,10 +106,18 @@ func NewUserServiceHandler(svc UserServiceHandler, opts ...connect.HandlerOption
 		connect.WithSchema(userServiceMethods.ByName("SignIn")),
 		connect.WithHandlerOptions(opts...),
 	)
+	userServiceUserProfileHandler := connect.NewUnaryHandler(
+		UserServiceUserProfileProcedure,
+		svc.UserProfile,
+		connect.WithSchema(userServiceMethods.ByName("UserProfile")),
+		connect.WithHandlerOptions(opts...),
+	)
 	return "/user.v1.UserService/", http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		switch r.URL.Path {
 		case UserServiceSignInProcedure:
 			userServiceSignInHandler.ServeHTTP(w, r)
+		case UserServiceUserProfileProcedure:
+			userServiceUserProfileHandler.ServeHTTP(w, r)
 		default:
 			http.NotFound(w, r)
 		}
@@ -105,4 +129,8 @@ type UnimplementedUserServiceHandler struct{}
 
 func (UnimplementedUserServiceHandler) SignIn(context.Context, *connect.Request[v1.SignInRequest]) (*connect.Response[v1.SignInResponse], error) {
 	return nil, connect.NewError(connect.CodeUnimplemented, errors.New("user.v1.UserService.SignIn is not implemented"))
+}
+
+func (UnimplementedUserServiceHandler) UserProfile(context.Context, *connect.Request[v1.UserProfileRequest]) (*connect.Response[v1.UserProfileResponse], error) {
+	return nil, connect.NewError(connect.CodeUnimplemented, errors.New("user.v1.UserService.UserProfile is not implemented"))
 }

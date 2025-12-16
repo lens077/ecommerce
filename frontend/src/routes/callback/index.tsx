@@ -7,8 +7,9 @@ import { z } from 'zod'
 import { signIn } from '@/api/users.ts'
 import type { Status } from '@/constants/status.ts'
 import { addNotification } from '@/store/notifications'
-import { setAccount } from "@/store/users.ts";
+import { setAccount } from '@/store/users.ts'
 import { setToken } from '@/utils/casdoor'
+import { decodeJwtPayload, isTokenExpired } from '@/utils/jwt.ts'
 
 const CallbackSearchSchema = z.object({
 	code: z.string().min(1, '缺少 code 参数'),
@@ -39,6 +40,23 @@ function RouteComponent() {
 				if (response.state === 'ok' && response.data) {
 					setToken(response.data)
 					setStatus('success')
+					if (isTokenExpired(response.data)) {
+						console.warn('Token已过期，请重新登录或尝试刷新。')
+						setAccount({})
+						return
+					}
+					const payload = decodeJwtPayload(response.data)
+					console.log('payload', payload)
+					if (payload) {
+						setAccount({
+							id: payload.id,
+							displayName: payload.displayName,
+							name: payload.name,
+							email: payload.email,
+							avatar: payload.avatar,
+						})
+					}
+
 					// 添加登录成功通知
 					addNotification({
 						message: '登录成功',
