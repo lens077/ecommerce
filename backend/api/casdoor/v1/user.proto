@@ -1,0 +1,238 @@
+syntax = "proto3";
+import "google/protobuf/struct.proto";
+
+package casdoor.v1;
+
+option go_package = "github.com/sunmery/ecommerce/backend/api/casdoor/v1;casdoorv1";
+
+// ManagedAccount 托管账户
+// 用于 SSO 或凭证管理
+message ManagedAccount {
+  string application = 1;
+  string username = 2;
+  string password = 3; // 敏感字段，通常不应该在 API 响应中出现
+  string signin_url = 4;
+}
+
+// Role 角色
+// Casdoor 的角色定义，包含了权限和用户组的嵌套引用
+message Role {
+  // 基础信息
+  string owner = 1;
+  string name = 2;
+  string created_time = 3;
+  string display_name = 4;
+  string description = 5;
+
+  // 关系 (使用 repeated string 来表示 Go 中的 []string)
+  repeated string users = 6;
+  repeated string groups = 7;
+  repeated string roles = 8; // 角色的嵌套定义
+  repeated string domains = 9;
+
+  bool is_enabled = 10;
+}
+
+// Permission 权限
+// Casdoor 的权限定义，详细描述了资源和操作
+message Permission {
+  // 基础信息
+  string owner = 1;
+  string name = 2;
+  string created_time = 3;
+  string display_name = 4;
+  string description = 5;
+
+  // 关系
+  repeated string users = 6;
+  repeated string groups = 7;
+  repeated string roles = 8;
+  repeated string domains = 9;
+
+  // 权限模型 (RBAC)
+  string model = 10;
+  string adapter = 11;
+  string resource_type = 12;
+  repeated string resources = 13;
+  repeated string actions = 14;
+  string effect = 15;
+  bool is_enabled = 16;
+
+  // 审批流程 (如果启用)
+  string submitter = 17;
+  string approver = 18;
+  string approve_time = 19;
+  string state = 20;
+}
+
+// 此结构体作为与 Casdoor SDK 交互的完整数据模型
+message User {
+  // 基础信息 (主键和时间戳)
+  string owner = 1;
+  string name = 2;
+  string created_time = 3; // 推荐改为 google.protobuf.Timestamp
+  string updated_time = 4; // 推荐改为 google.protobuf.Timestamp
+
+  // 核心身份信息
+  string id = 5;
+  string external_id = 6;
+  string type = 7;
+  string password = 8;
+  string password_salt = 9;
+  string password_type = 10;
+
+  // 个人资料
+  string display_name = 11;
+  string first_name = 12;
+  string last_name = 13;
+  string avatar = 14;
+  string avatar_type = 15;
+  string permanent_avatar = 16;
+  string email = 17;
+  bool email_verified = 18;
+  string phone = 19;
+  string country_code = 20;
+  string region = 21;
+  string location = 22;
+  // Go 结构体中是 []string，Proto 中是 repeated string
+  repeated string address = 23;
+  string affiliation = 24;
+  string title = 25;
+  string id_card_type = 26;
+  string id_card = 27;
+  string homepage = 28;
+  string bio = 29;
+  string tag = 30;
+  string language = 31;
+  string gender = 32;
+  string birthday = 33;
+  string education = 34;
+  int32 score = 35;
+  int32 karma = 36;
+  int32 ranking = 37;
+
+  // 状态和权限
+  bool is_default_avatar = 38;
+  bool is_online = 39;
+  bool is_admin = 40;
+  bool is_forbidden = 41;
+  bool is_deleted = 42;
+  string signup_application = 43;
+  string hash = 44;
+  string pre_hash = 45;
+  string access_key = 46;
+  string access_secret = 47;
+
+  // 登录记录
+  string created_ip = 48;
+  string last_signin_time = 49;
+  string last_signin_ip = 50;
+
+  // OAuth/SSO 链接 (非常多的字段)
+  string github = 51;
+  string google = 52;
+  string qq = 53;
+  string we_chat = 54;
+  string facebook = 55;
+  string ding_talk = 56;
+  string weibo = 57;
+  string gitee = 58;
+  string linked_in = 59;
+  string wecom = 60;
+  string lark = 61;
+  string gitlab = 62;
+  string adfs = 63;
+  string baidu = 64;
+  string alipay = 65;
+  string casdoor = 66;
+  string infoflow = 67;
+  string apple = 68;
+  string azure_ad = 69;
+  string slack = 70;
+  string steam = 71;
+  string bilibili = 72;
+  string okta = 73;
+  string douyin = 74;
+  string line = 75;
+  string amazon = 76;
+  string auth0 = 77;
+  string battle_net = 78;
+  string bitbucket = 79;
+  string box = 80;
+  string cloud_foundry = 81;
+  string daily_motion = 82;
+  string deezer = 83;
+  string digital_ocean = 84;
+  string discord = 85;
+  string dropbox = 86;
+  string eve_online = 87;
+  string fitbit = 88;
+  string gitea = 89;
+  string heroku = 90;
+  string influx_cloud = 91;
+  string instagram = 92;
+  string intercom = 93;
+  string kakao = 94;
+  string lastfm = 95;
+  string mailru = 96;
+  string meetup = 97;
+  string microsoft_online = 98;
+  string naver = 99;
+  string nextcloud = 100;
+  string one_drive = 101;
+  string oura = 102;
+  string patreon = 103;
+  string paypal = 104;
+  string sales_force = 105;
+  string shopify = 106;
+  string soundcloud = 107;
+  string spotify = 108;
+  string strava = 109;
+  string stripe = 110;
+  string tik_tok = 111;
+  string tumblr = 112;
+  string twitch = 113;
+  string twitter = 114;
+  string typetalk = 115;
+  string uber = 116;
+  string vk = 117;
+  string wepay = 118;
+  string xero = 119;
+  string yahoo = 120;
+  string yammer = 121;
+  string yandex = 122;
+  string zoom = 123;
+  string meta_mask = 124;
+  string web3_onboard = 125;
+  string custom = 126;
+
+  // MFA 和恢复
+  string preferred_mfa_type = 127;
+  repeated string recovery_codes = 128;
+  string totp_secret = 129;
+  bool mfa_phone_enabled = 130;
+  bool mfa_email_enabled = 131;
+
+  // 邀请
+  string invitation = 132;
+  string invitation_code = 133;
+
+  // LDAP 和属性
+  string ldap = 134;
+  // 映射 Go 的 map[string]string
+  map<string, string> properties = 135;
+
+  // 关系和时间戳
+  repeated Role roles = 136;
+  repeated Permission permissions = 137;
+  repeated string groups = 138;
+  string last_change_password_time = 139;
+
+  // 错误登录记录
+  string last_signin_wrong_time = 140;
+  int32 signin_wrong_times = 141;
+
+  // 托管账户和密码状态
+  repeated ManagedAccount managed_accounts = 142;
+  bool need_update_password = 143;
+}

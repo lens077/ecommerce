@@ -102,43 +102,46 @@ export default function PrimarySearchAppBar() {
 	}
 
 	const handleMenuClose = async (path?: string) => {
-			setAnchorEl(null)
-			handleMobileMenuClose()
+		setAnchorEl(null)
+		handleMobileMenuClose()
 
-			if (path === '/logout') {
-				// 执行登出操作
-				clearToken()
-				// 清空用户store
-				userStore.account = {
-					accessToken: "",
-					affiliation: "",
-					email: "",
-					isAdmin: false,
-					language: "",
-					organization: "",
-					phone: "",
-					score: 0,
-					tag: "",
-					type: "",
-					username: "",
-					name: "",
-					avatar: ""
-				}
-				// 显示登出成功通知
-				addNotification({
-					message: '登出成功',
-					severity: 'success'
-				})
-				// 跳转到首页
-				await navigate({
-					to: '/',
-				})
-			} else if (path) {
-				await navigate({
-					to: path,
-				})
+		if (path === '/logout') {
+			// 执行登出操作
+			clearToken()
+			// 清空用户store
+			userStore.account = {
+				createdTime: '',
+				displayName: '',
+				id: '',
+				accessToken: '',
+				affiliation: '',
+				email: '',
+				isAdmin: false,
+				language: '',
+				organization: '',
+				phone: '',
+				score: 0,
+				tag: '',
+				type: '',
+				username: '',
+				name: '',
+				avatar: '',
 			}
+			// 显示登出成功通知
+			addNotification({
+				message: '登出成功',
+				severity: 'success',
+			})
+			// 跳转到首页
+			await navigate({
+				to: '/',
+			})
+		} else if (path) {
+			await navigate({
+				to: path,
+			})
 		}
+	}
 
 	const handleMobileMenuOpen = (event: MouseEvent<HTMLElement>) => {
 		setMobileMoreAnchorEl(event.currentTarget)
@@ -162,13 +165,13 @@ export default function PrimarySearchAppBar() {
 			onClose={() => handleMenuClose()}
 		>
 			<MenuItem disabled>
-					<Typography
-						variant='body2'
-						color='text.secondary'
-					>
-						Signed in as {userStore.account.name || userStore.account.email}
-					</Typography>
-				</MenuItem>
+				<Typography
+					variant='body2'
+					color='text.secondary'
+				>
+					Signed in as {userStore.account.name || userStore.account.email}
+				</Typography>
+			</MenuItem>
 			<MenuItem onClick={() => handleMenuClose('/profile')}>
 				My account
 			</MenuItem>
@@ -282,91 +285,97 @@ export default function PrimarySearchAppBar() {
 						/>
 					</Search>
 					<Box sx={{ flexGrow: 1 }} />
-			<Box sx={{ display: { xs: 'none', md: 'flex' }, alignItems: 'center', gap: 2 }}>
-				<IconButton
-					size='large'
-					aria-label='show 4 new mails'
-					color='inherit'
-				>
-					<Badge
-						badgeContent={4}
-						color='error'
+					<Box
+						sx={{
+							display: { xs: 'none', md: 'flex' },
+							alignItems: 'center',
+							gap: 2,
+						}}
 					>
-						<MailIcon />
-					</Badge>
-				</IconButton>
-				<IconButton
-					size='large'
-					aria-label='show 17 new notifications'
-					color='inherit'
-				>
-					<Badge
-						badgeContent={17}
-						color='error'
-					>
-						<NotificationsIcon />
-					</Badge>
-				</IconButton>
-				{isLoggedIn() ? (
-					<IconButton
-						size='large'
-						edge='end'
-						aria-label='account of current user'
-						aria-controls={menuId}
-						aria-haspopup='true'
-						onClick={handleProfileMenuOpen}
-						color='inherit'
-					>
-						{userStore.account.avatar ? (
-							<Avatar
-								src={userStore.account.avatar}
-								alt={userStore.account.name}
-							/>
+						<IconButton
+							size='large'
+							aria-label='show 4 new mails'
+							color='inherit'
+						>
+							<Badge
+								badgeContent={4}
+								color='error'
+							>
+								<MailIcon />
+							</Badge>
+						</IconButton>
+						<IconButton
+							size='large'
+							aria-label='show 17 new notifications'
+							color='inherit'
+						>
+							<Badge
+								badgeContent={17}
+								color='error'
+							>
+								<NotificationsIcon />
+							</Badge>
+						</IconButton>
+						{isLoggedIn() ? (
+							<IconButton
+								size='large'
+								edge='end'
+								aria-label='account of current user'
+								aria-controls={menuId}
+								aria-haspopup='true'
+								onClick={handleProfileMenuOpen}
+								color='inherit'
+							>
+								{userStore.account.avatar ? (
+									<Avatar
+										src={userStore.account.avatar}
+										alt={userStore.account.name}
+									/>
+								) : (
+									<AccountCircle />
+								)}
+							</IconButton>
 						) : (
-							<AccountCircle />
+							<Button
+								variant='contained'
+								onClick={() => {
+									window.location.href = getSigninUrl()
+								}}
+								sx={{ ml: 2 }}
+							>
+								Login
+							</Button>
 						)}
-					</IconButton>
-				) : (
-					<Button
-						variant='contained'
-						onClick={() => {
-							window.location.href = getSigninUrl()
-						}}
-						sx={{ ml: 2 }}
-					>
-						Login
-					</Button>
-				)}
-			</Box>
-			<Box sx={{ display: { xs: 'flex', md: 'none' } }}>
-				{isLoggedIn() ? (
-					<IconButton
-						size='large'
-						aria-label='show more'
-						aria-controls={mobileMenuId}
-						aria-haspopup='true'
-						onClick={handleMobileMenuOpen}
-						color='inherit'
-					>
-						<MoreIcon />
-					</IconButton>
-				) : (
-					<Button
-						size='small'
-						onClick={() => {
-							window.location.href = getSigninUrl()
-						}}
-					>
-						Login
-					</Button>
-				)}
-			</Box>
+					</Box>
+					<Box sx={{ display: { xs: 'flex', md: 'none' } }}>
+						{isLoggedIn() ? (
+							<IconButton
+								size='large'
+								aria-label='show more'
+								aria-controls={mobileMenuId}
+								aria-haspopup='true'
+								onClick={handleMobileMenuOpen}
+								color='inherit'
+							>
+								<MoreIcon />
+							</IconButton>
+						) : (
+							<Button
+								size='small'
+								onClick={() => {
+									window.location.href = getSigninUrl()
+								}}
+							>
+								Login
+							</Button>
+						)}
+					</Box>
 				</Toolbar>
 			</AppBar>
 			{renderMobileMenu}
-		{renderMenu}
-		{/* 产品列表渲染 */}
-		<div style={{ marginTop: '20px' }}>
+			{renderMenu}
+			{/* 产品列表渲染 */}
+			<div style={{ marginTop: '20px' }}>
 				<h3>搜索结果 ({products.length} 个产品):</h3>
 
 				{products.length === 0 ? (

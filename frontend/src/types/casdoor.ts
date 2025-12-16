@@ -1,4 +1,7 @@
 export interface Account {
+	id: string
+	displayName: string
+	createdTime: string
 	organization: string;
 	username: string;
 	type: string;
