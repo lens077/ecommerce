@@ -1,0 +1,12 @@
+h1,
+h2,
+h3,
+h4,
+h5,
+h6,
+p,
+span,
+a,
+li {
+	letter-spacing: clamp(-0.05em, calc((1em - 1rem) / -10), 0em);
+}
