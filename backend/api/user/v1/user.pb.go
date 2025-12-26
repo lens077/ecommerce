@@ -210,7 +210,7 @@ var File_api_user_v1_user_proto protoreflect.FileDescriptor
 
 const file_api_user_v1_user_proto_rawDesc = "" +
 	"\n" +
-	"\x16api/user/v1/user.proto\x12\auser.v1\x1a\x19api/casdoor/v1/user.proto\"9\n" +
+	"\x16api/user/v1/user.proto\x12\x02v1\x1a\x19api/casdoor/v1/user.proto\"9\n" +
 	"\rSignInRequest\x12\x12\n" +
 	"\x04code\x18\x01 \x01(\tR\x04code\x12\x14\n" +
 	"\x05state\x18\x02 \x01(\tR\x05state\":\n" +
@@ -219,11 +219,11 @@ const file_api_user_v1_user_proto_rawDesc = "" +
 	"\x04data\x18\x02 \x01(\tR\x04data\"\x14\n" +
 	"\x12UserProfileRequest\";\n" +
 	"\x13UserProfileResponse\x12$\n" +
-	"\x04user\x18\x01 \x01(\v2\x10.casdoor.v1.UserR\x04user2\x96\x01\n" +
-	"\vUserService\x12;\n" +
-	"\x06SignIn\x12\x16.user.v1.SignInRequest\x1a\x17.user.v1.SignInResponse\"\x00\x12J\n" +
-	"\vUserProfile\x12\x1b.user.v1.UserProfileRequest\x1a\x1c.user.v1.UserProfileResponse\"\x00B\x8e\x01\n" +
-	"\vcom.user.v1B\tUserProtoP\x01Z7github.com/sunmery/ecommerce/backend/api/user/v1;userv1\xa2\x02\x03UXX\xaa\x02\aUser.V1\xca\x02\aUser\\V1\xe2\x02\x13User\\V1\\GPBMetadata\xea\x02\bUser::V1b\x06proto3"
+	"\x04user\x18\x01 \x01(\v2\x10.casdoor.v1.UserR\x04user2\x82\x01\n" +
+	"\vUserService\x121\n" +
+	"\x06SignIn\x12\x11.v1.SignInRequest\x1a\x12.v1.SignInResponse\"\x00\x12@\n" +
+	"\vUserProfile\x12\x16.v1.UserProfileRequest\x1a\x17.v1.UserProfileResponse\"\x00Bt\n" +
+	"\x06com.v1B\tUserProtoP\x01Z7github.com/sunmery/ecommerce/backend/api/user/v1;userv1\xa2\x02\x03VXX\xaa\x02\x02V1\xca\x02\x02V1\xe2\x02\x0eV1\\GPBMetadata\xea\x02\x02V1b\x06proto3"
 
 var (
 	file_api_user_v1_user_proto_rawDescOnce sync.Once
@@ -239,18 +239,18 @@ func file_api_user_v1_user_proto_rawDescGZIP() []byte {
 
 var file_api_user_v1_user_proto_msgTypes = make([]protoimpl.MessageInfo, 4)
 var file_api_user_v1_user_proto_goTypes = []any{
-	(*SignInRequest)(nil),       // 0: user.v1.SignInRequest
-	(*SignInResponse)(nil),      // 1: user.v1.SignInResponse
-	(*UserProfileRequest)(nil),  // 2: user.v1.UserProfileRequest
-	(*UserProfileResponse)(nil), // 3: user.v1.UserProfileResponse
+	(*SignInRequest)(nil),       // 0: v1.SignInRequest
+	(*SignInResponse)(nil),      // 1: v1.SignInResponse
+	(*UserProfileRequest)(nil),  // 2: v1.UserProfileRequest
+	(*UserProfileResponse)(nil), // 3: v1.UserProfileResponse
 	(*v1.User)(nil),             // 4: casdoor.v1.User
 }
 var file_api_user_v1_user_proto_depIdxs = []int32{
-	4, // 0: user.v1.UserProfileResponse.user:type_name -> casdoor.v1.User
-	0, // 1: user.v1.UserService.SignIn:input_type -> user.v1.SignInRequest
-	2, // 2: user.v1.UserService.UserProfile:input_type -> user.v1.UserProfileRequest
-	1, // 3: user.v1.UserService.SignIn:output_type -> user.v1.SignInResponse
-	3, // 4: user.v1.UserService.UserProfile:output_type -> user.v1.UserProfileResponse
+	4, // 0: v1.UserProfileResponse.user:type_name -> casdoor.v1.User
+	0, // 1: v1.UserService.SignIn:input_type -> v1.SignInRequest
+	2, // 2: v1.UserService.UserProfile:input_type -> v1.UserProfileRequest
+	1, // 3: v1.UserService.SignIn:output_type -> v1.SignInResponse
+	3, // 4: v1.UserService.UserProfile:output_type -> v1.UserProfileResponse
 	3, // [3:5] is the sub-list for method output_type
 	1, // [1:3] is the sub-list for method input_type
 	1, // [1:1] is the sub-list for extension type_name
