@@ -16,6 +16,7 @@ import MenuItem from '@mui/material/MenuItem'
 import { alpha, styled } from '@mui/material/styles'
 import Toolbar from '@mui/material/Toolbar'
 import Typography from '@mui/material/Typography'
+import { useQuery } from '@tanstack/react-query'
 import { useNavigate } from '@tanstack/react-router'
 import { type MouseEvent, useState } from 'react'
 import { search } from '@/api/search.ts'
@@ -65,30 +66,20 @@ const StyledInputBase = styled(InputBase)(({ theme }) => ({
 	},
 }))
 
+type SearchArg = {
+	index: string
+	name: string
+}
+
 export default function PrimarySearchAppBar() {
-	const [products, setProducts] = useState<Product[]>([])
+	const [searchArg, setSearchArg] = useState<SearchArg>({
+		index: 'products',
+		name: '',
+	})
 	const [anchorEl, setAnchorEl] = useState<null | HTMLElement>(null)
 	const [mobileMoreAnchorEl, setMobileMoreAnchorEl] =
 		useState<null | HTMLElement>(null)
 	const navigate = useNavigate()
-
-	const searchKey = async (index: string, name: string) => {
-		try {
-			console.log(index, name)
-			const response = await search(index, name)
-			console.log('API Response:', response)
-
-			if (response.products && Array.isArray(response.products)) {
-				setProducts(response.products)
-			} else {
-				console.warn('响应中没有 products 数组:', response)
-				setProducts([])
-			}
-		} catch (error) {
-			console.error('获取产品失败:', error)
-			setProducts([])
-		}
-	}
 
 	const isMenuOpen = Boolean(anchorEl)
 	const isMobileMenuOpen = Boolean(mobileMoreAnchorEl)
@@ -99,6 +90,23 @@ export default function PrimarySearchAppBar() {
 
 	const handleMobileMenuClose = () => {
 		setMobileMoreAnchorEl(null)
+	}
+
+	const handleSerarchSubmit = (name: string) => {
+		setSearchArg({ index: searchArg.index, name })
+	}
+
+	const { data, error } = useQuery({
+		queryKey: ['search', searchArg.index, searchArg.name],
+		queryFn: async () => {
+			const res = await search(searchArg.index, searchArg.name)
+			if (res.products) {
+				return res
+			}
+		},
+	})
+	if (error) {
+		return <p>暂无商品</p>
 	}
 
 	const handleMenuClose = async (path?: string) => {
@@ -277,7 +285,7 @@ export default function PrimarySearchAppBar() {
 							onKeyUp={(e) => {
 								const keyword = e.currentTarget.value.trim()
 								if (e.key === 'Enter' && keyword.trim().length > 0) {
-									searchKey('products', keyword)
+									handleSerarchSubmit(searchArg.name)
 								}
 							}}
 							placeholder='Search…'
@@ -376,13 +384,13 @@ export default function PrimarySearchAppBar() {
 			{renderMenu}
 			{/* 产品列表渲染 */}
 			<div style={{ marginTop: '20px' }}>
-				<h3>搜索结果 ({products.length} 个产品):</h3>
+				<h3>搜索结果 ({data?.products.length} 个产品):</h3>
 
-				{products.length === 0 ? (
+				{data?.products.length === 0 ? (
 					<p>没有找到产品</p>
 				) : (
 					<ol>
-						{products.map((item: Product) => (
+						{data?.products.map((item: Product) => (
 							<li
 								key={item.id}
 								style={{

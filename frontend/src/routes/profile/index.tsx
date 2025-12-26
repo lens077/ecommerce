@@ -1,5 +1,5 @@
-import { createFileRoute, useNavigate } from '@tanstack/react-router'
-import { useEffect } from 'react'
+import { useQuery } from '@tanstack/react-query'
+import { createFileRoute, redirect } from '@tanstack/react-router'
 import { useSnapshot } from 'valtio'
 import { getUserProfile } from '@/api/users.ts'
 import { addNotification } from '@/store/notifications.ts'
@@ -8,12 +8,8 @@ import { isTokenExpired } from '@/utils/jwt.ts'
 
 export const Route = createFileRoute('/profile/')({
 	component: RouteComponent,
-})
-
-function RouteComponent() {
-	const userProfile = useSnapshot(userStore)
-	const navigate = useNavigate()
-	useEffect(() => {
+	// 校验token是否过期，过期则重定向到首页
+	beforeLoad: ({ location }) => {
 		const token = localStorage.getItem('token')
 		if (isTokenExpired(typeof token === 'string' ? token : '')) {
 			console.warn('Token已过期，请重新登录或尝试刷新。')
@@ -24,45 +20,48 @@ function RouteComponent() {
 			})
 
 			setAccount({})
-			localStorage.removeItem("token")
+			localStorage.removeItem('token')
 
-			const timerId = setTimeout(() => {
-				// 跳转到首页
-				navigate({
-					to: '/',
-				})
-			}, 3 * 1000)
-			return () => {
-				clearTimeout(timerId)
-			}
+			throw redirect({
+				to: '/',
+				search: { redirect: location.href },
+			})
 		}
+	},
+})
 
-		const userProfile = getUserProfile()
-		userProfile
-			.then((data) => {
-				if (data.user !== undefined) {
-					setAccount(data.user)
-				}
-			})
-			.catch((err) => {
-				console.error(err)
-			})
-	}, [navigate])
+function RouteComponent() {
+	const userProfileSnap = useSnapshot(userStore)
+	const { data, isLoading, error } = useQuery({
+		queryKey: ['getUserProfile'],
+		queryFn: async () => {
+			const res = await getUserProfile()
+			if (res.user) {
+				setAccount(res.user)
+			}
+			return res
+		},
+	})
+	if (isLoading) return <div>加载中...</div>
+	if (error) return <div>加载失败，请重试</div>
+
+	const userProfile = data?.user || userProfileSnap.account
+
 	return (
 		<div>
 			<ol>
 				{
 					<li>
-						id：{userProfile.account.id}
-						用户名：{userProfile.account.name}
-						昵称：{userProfile.account.displayName}
+						id：{userProfile.id}
+						用户名：{userProfile.name}
+						昵称：{userProfile.displayName}
 						<img
-							src={userProfile.account.avatar}
+							src={userProfile.avatar}
 							alt=''
 						/>
-						邮箱：{userProfile.account.email}
-						账号创建日期：{userProfile.account.createdTime}
-						tag：{userProfile.account.tag}
+						邮箱：{userProfile.email}
+						账号创建日期：{userProfile.createdTime}
+						tag：{userProfile.tag}
 					</li>
 				}
 			</ol>
