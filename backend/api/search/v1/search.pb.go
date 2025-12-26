@@ -428,12 +428,12 @@ var File_api_search_v1_search_proto protoreflect.FileDescriptor
 
 const file_api_search_v1_search_proto_rawDesc = "" +
 	"\n" +
-	"\x1aapi/search/v1/search.proto\x12\tsearch.v1\x1a\x1fgoogle/protobuf/timestamp.proto\"9\n" +
+	"\x1aapi/search/v1/search.proto\x12\x02v1\x1a\x1fgoogle/protobuf/timestamp.proto\"9\n" +
 	"\rSearchRequest\x12\x14\n" +
 	"\x05index\x18\x01 \x01(\tR\x05index\x12\x12\n" +
-	"\x04name\x18\x02 \x01(\tR\x04name\"@\n" +
-	"\x0eSearchResponse\x12.\n" +
-	"\bproducts\x18\x01 \x03(\v2\x12.search.v1.ProductR\bproducts\"n\n" +
+	"\x04name\x18\x02 \x01(\tR\x04name\"9\n" +
+	"\x0eSearchResponse\x12'\n" +
+	"\bproducts\x18\x01 \x03(\v2\v.v1.ProductR\bproducts\"n\n" +
 	"\fProductImage\x12\x10\n" +
 	"\x03url\x18\x01 \x01(\tR\x03url\x12\x12\n" +
 	"\x04type\x18\x02 \x01(\tR\x04type\x12\x1d\n" +
@@ -442,7 +442,7 @@ const file_api_search_v1_search_proto_rawDesc = "" +
 	"\balt_text\x18\x04 \x01(\tR\aaltText\":\n" +
 	"\x10ProductAttribute\x12\x10\n" +
 	"\x03key\x18\x01 \x01(\tR\x03key\x12\x14\n" +
-	"\x05value\x18\x02 \x01(\tR\x05value\"\x96\x05\n" +
+	"\x05value\x18\x02 \x01(\tR\x05value\"\x88\x05\n" +
 	"\aProduct\x12\x0e\n" +
 	"\x02id\x18\x01 \x01(\tR\x02id\x12\x12\n" +
 	"\x04name\x18\x02 \x01(\tR\x04name\x12!\n" +
@@ -454,13 +454,13 @@ const file_api_search_v1_search_proto_rawDesc = "" +
 	"merchantId\x12\x1f\n" +
 	"\vcategory_id\x18\b \x01(\x05R\n" +
 	"categoryId\x12#\n" +
-	"\rcategory_name\x18\t \x01(\tR\fcategoryName\x12/\n" +
+	"\rcategory_name\x18\t \x01(\tR\fcategoryName\x12(\n" +
 	"\x06images\x18\n" +
-	" \x03(\v2\x17.search.v1.ProductImageR\x06images\x12\x1f\n" +
+	" \x03(\v2\x10.v1.ProductImageR\x06images\x12\x1f\n" +
 	"\vcover_image\x18\v \x01(\tR\n" +
-	"coverImage\x12B\n" +
+	"coverImage\x12;\n" +
 	"\n" +
-	"attributes\x18\f \x03(\v2\".search.v1.Product.AttributesEntryR\n" +
+	"attributes\x18\f \x03(\v2\x1b.v1.Product.AttributesEntryR\n" +
 	"attributes\x12\x1f\n" +
 	"\vsales_count\x18\r \x01(\x05R\n" +
 	"salesCount\x12!\n" +
@@ -471,11 +471,10 @@ const file_api_search_v1_search_proto_rawDesc = "" +
 	"updated_at\x18\x10 \x01(\v2\x1a.google.protobuf.TimestampR\tupdatedAt\x1a=\n" +
 	"\x0fAttributesEntry\x12\x10\n" +
 	"\x03key\x18\x01 \x01(\tR\x03key\x12\x14\n" +
-	"\x05value\x18\x02 \x01(\tR\x05value:\x028\x012P\n" +
-	"\rSearchService\x12?\n" +
-	"\x06Search\x12\x18.search.v1.SearchRequest\x1a\x19.search.v1.SearchResponse\"\x00B\x9e\x01\n" +
-	"\rcom.search.v1B\vSearchProtoP\x01Z;github.com/sunmery/ecommerce/backend/api/search/v1;searchv1\xa2\x02\x03SXX\xaa\x02\tSearch.V1\xca\x02\tSearch\\V1\xe2\x02\x15Search\\V1\\GPBMetadata\xea\x02\n" +
-	"Search::V1b\x06proto3"
+	"\x05value\x18\x02 \x01(\tR\x05value:\x028\x012B\n" +
+	"\rSearchService\x121\n" +
+	"\x06Search\x12\x11.v1.SearchRequest\x1a\x12.v1.SearchResponse\"\x00Bz\n" +
+	"\x06com.v1B\vSearchProtoP\x01Z;github.com/sunmery/ecommerce/backend/api/search/v1;searchv1\xa2\x02\x03VXX\xaa\x02\x02V1\xca\x02\x02V1\xe2\x02\x0eV1\\GPBMetadata\xea\x02\x02V1b\x06proto3"
 
 var (
 	file_api_search_v1_search_proto_rawDescOnce sync.Once
@@ -491,22 +490,22 @@ func file_api_search_v1_search_proto_rawDescGZIP() []byte {
 
 var file_api_search_v1_search_proto_msgTypes = make([]protoimpl.MessageInfo, 6)
 var file_api_search_v1_search_proto_goTypes = []any{
-	(*SearchRequest)(nil),         // 0: search.v1.SearchRequest
-	(*SearchResponse)(nil),        // 1: search.v1.SearchResponse
-	(*ProductImage)(nil),          // 2: search.v1.ProductImage
-	(*ProductAttribute)(nil),      // 3: search.v1.ProductAttribute
-	(*Product)(nil),               // 4: search.v1.Product
-	nil,                           // 5: search.v1.Product.AttributesEntry
+	(*SearchRequest)(nil),         // 0: v1.SearchRequest
+	(*SearchResponse)(nil),        // 1: v1.SearchResponse
+	(*ProductImage)(nil),          // 2: v1.ProductImage
+	(*ProductAttribute)(nil),      // 3: v1.ProductAttribute
+	(*Product)(nil),               // 4: v1.Product
+	nil,                           // 5: v1.Product.AttributesEntry
 	(*timestamppb.Timestamp)(nil), // 6: google.protobuf.Timestamp
 }
 var file_api_search_v1_search_proto_depIdxs = []int32{
-	4, // 0: search.v1.SearchResponse.products:type_name -> search.v1.Product
-	2, // 1: search.v1.Product.images:type_name -> search.v1.ProductImage
-	5, // 2: search.v1.Product.attributes:type_name -> search.v1.Product.AttributesEntry
-	6, // 3: search.v1.Product.created_at:type_name -> google.protobuf.Timestamp
-	6, // 4: search.v1.Product.updated_at:type_name -> google.protobuf.Timestamp
-	0, // 5: search.v1.SearchService.Search:input_type -> search.v1.SearchRequest
-	1, // 6: search.v1.SearchService.Search:output_type -> search.v1.SearchResponse
+	4, // 0: v1.SearchResponse.products:type_name -> v1.Product
+	2, // 1: v1.Product.images:type_name -> v1.ProductImage
+	5, // 2: v1.Product.attributes:type_name -> v1.Product.AttributesEntry
+	6, // 3: v1.Product.created_at:type_name -> google.protobuf.Timestamp
+	6, // 4: v1.Product.updated_at:type_name -> google.protobuf.Timestamp
+	0, // 5: v1.SearchService.Search:input_type -> v1.SearchRequest
+	1, // 6: v1.SearchService.Search:output_type -> v1.SearchResponse
 	6, // [6:7] is the sub-list for method output_type
 	5, // [5:6] is the sub-list for method input_type
 	5, // [5:5] is the sub-list for extension type_name

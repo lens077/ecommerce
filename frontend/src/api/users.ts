@@ -1,11 +1,11 @@
 import { createClient } from '@connectrpc/connect'
 import { createConnectTransport } from '@connectrpc/connect-web'
+import { allInterceptors } from "@/api/interceptors";
 import { UserService } from '@/gen/api/user/v1/user_pb.ts'
 
 const transport = createConnectTransport({
-	baseUrl: import.meta.env.VITE_BASE_URL,
-	// 可以在这里添加 Interceptors 来自动处理后续请求的 Authorization header
-	// interceptors: [authInterceptor],
+	baseUrl: `${import.meta.env.VITE_BASE_URL}/user`,
+	interceptors: allInterceptors,
 })
 
 const client = createClient(UserService, transport)
