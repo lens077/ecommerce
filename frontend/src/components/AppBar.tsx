@@ -92,8 +92,9 @@ export default function PrimarySearchAppBar() {
 		setMobileMoreAnchorEl(null)
 	}
 
-	const handleSerarchSubmit = (name: string) => {
-		setSearchArg({ index: searchArg.index, name })
+	const handleSearchSubmit = (name: string) => {
+		console.log('1', name)
+		setSearchArg({ index: searchArg.index, name: name })
 	}
 
 	const { data, error } = useQuery({
@@ -285,7 +286,7 @@ export default function PrimarySearchAppBar() {
 							onKeyUp={(e) => {
 								const keyword = e.currentTarget.value.trim()
 								if (e.key === 'Enter' && keyword.trim().length > 0) {
-									handleSerarchSubmit(searchArg.name)
+									handleSearchSubmit(keyword)
 								}
 							}}
 							placeholder='Search…'
