@@ -473,8 +473,8 @@ const file_api_search_v1_search_proto_rawDesc = "" +
 	"\x03key\x18\x01 \x01(\tR\x03key\x12\x14\n" +
 	"\x05value\x18\x02 \x01(\tR\x05value:\x028\x012P\n" +
 	"\rSearchService\x12?\n" +
-	"\x06Search\x12\x18.search.v1.SearchRequest\x1a\x19.search.v1.SearchResponse\"\x00B\x8c\x01\n" +
-	"\rcom.search.v1B\vSearchProtoP\x01Z)connect-go-example/api/search/v1;searchv1\xa2\x02\x03SXX\xaa\x02\tSearch.V1\xca\x02\tSearch\\V1\xe2\x02\x15Search\\V1\\GPBMetadata\xea\x02\n" +
+	"\x06Search\x12\x18.search.v1.SearchRequest\x1a\x19.search.v1.SearchResponse\"\x00B\x9e\x01\n" +
+	"\rcom.search.v1B\vSearchProtoP\x01Z;github.com/sunmery/ecommerce/backend/api/search/v1;searchv1\xa2\x02\x03SXX\xaa\x02\tSearch.V1\xca\x02\tSearch\\V1\xe2\x02\x15Search\\V1\\GPBMetadata\xea\x02\n" +
 	"Search::V1b\x06proto3"
 
 var (
