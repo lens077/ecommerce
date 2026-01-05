@@ -1,18 +1,13 @@
 services:
 
-  connect-example-go:
-#    image: ccr.ccs.tencentyun.com/kratos/gateway:v2.0.0
-    image: harbor.apikv.com:5443/sumery/connect-example-backend:v1.2.19
-#    platform: linux/amd64
-    build:
-      context: .
-      target: final
+  user:
+    image: harbor.apikv.com:5443/sumery/ecommerce/user:v1.0.0
     environment:
       HTTP_ADDR: 0.0.0.0:4000
       RUN_MODE: prod
     ports:
       - "0.0.0.0:4000:4000"
-    container_name: connect-example-go
+    container_name: user
     restart: on-failure:3
 #    environment:
 #      - DISCOVERY_DSN=consul://apikv.com:8500
