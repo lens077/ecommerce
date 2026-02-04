@@ -1,26 +1,13 @@
 # 默认值
 VERSION ?= dev
-GOIMAGE ?= golang:1.25.1-alpine3.22
-GOOS ?= linux
-GOARCH ?= amd64
-CGOENABLED ?= 0
 
 # 动态变量
 SERVICE = $(shell basename $$PWD)
 DOCKER_IMAGE=connect/$(SERVICE):$(VERSION)
-REPOSITORY = sumery/connect-react-example
-REGISTER = ccr.ccs.tencentyun.com
+REPOSITORY = ecommerce/frontend
+REGISTER = harbor.apikv.com:5443
 ARM64=linux/arm64
 AMD64=linux/amd64
-
-# 使用方式: make docker-push SERVICE=微服务名
-.PHONY: docker-push
-docker-push:
-	@echo "使用方式: make docker-push SERVICE=微服务名"
-	@echo "OS: $(GOOS) | ARCH: $(GOARCH)"
-	@echo "Docker image: $(REPOSITORY):$(VERSION)"
-	docker tag ecommerce/$(SERVICE):$(VERSION) $(REGISTER)/$(REPOSITORY):$(VERSION)
-	docker push $(REGISTER)/$(REPOSITORY):$(VERSION)
 
 .PHONY: docker-deploy
 docker-deploy:

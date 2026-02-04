@@ -12,7 +12,7 @@ import type { Message } from "@bufbuild/protobuf";
  * Describes the file api/user/v1/user.proto.
  */
 export const file_api_user_v1_user: GenFile = /*@__PURE__*/
-  fileDesc("ChZhcGkvdXNlci92MS91c2VyLnByb3RvEgJ2MSIsCg1TaWduSW5SZXF1ZXN0EgwKBGNvZGUYASABKAkSDQoFc3RhdGUYAiABKAkiLQoOU2lnbkluUmVzcG9uc2USDQoFc3RhdGUYASABKAkSDAoEZGF0YRgCIAEoCSIUChJVc2VyUHJvZmlsZVJlcXVlc3QiNQoTVXNlclByb2ZpbGVSZXNwb25zZRIeCgR1c2VyGAEgASgLMhAuY2FzZG9vci52MS5Vc2VyMoIBCgtVc2VyU2VydmljZRIxCgZTaWduSW4SES52MS5TaWduSW5SZXF1ZXN0GhIudjEuU2lnbkluUmVzcG9uc2UiABJACgtVc2VyUHJvZmlsZRIWLnYxLlVzZXJQcm9maWxlUmVxdWVzdBoXLnYxLlVzZXJQcm9maWxlUmVzcG9uc2UiAEJ0CgZjb20udjFCCVVzZXJQcm90b1ABWjdnaXRodWIuY29tL3N1bm1lcnkvZWNvbW1lcmNlL2JhY2tlbmQvYXBpL3VzZXIvdjE7dXNlcnYxogIDVlhYqgICVjHKAgJWMeICDlYxXEdQQk1ldGFkYXRh6gICVjFiBnByb3RvMw", [file_api_casdoor_v1_user]);
+    fileDesc("ChZhcGkvdXNlci92MS91c2VyLnByb3RvEgJ2MSIsCg1TaWduSW5SZXF1ZXN0EgwKBGNvZGUYASABKAkSDQoFc3RhdGUYAiABKAkiLQoOU2lnbkluUmVzcG9uc2USDQoFc3RhdGUYASABKAkSDAoEZGF0YRgCIAEoCSIUChJVc2VyUHJvZmlsZVJlcXVlc3QiNQoTVXNlclByb2ZpbGVSZXNwb25zZRIeCgR1c2VyGAEgASgLMhAuY2FzZG9vci52MS5Vc2VyMoIBCgtVc2VyU2VydmljZRIxCgZTaWduSW4SES52MS5TaWduSW5SZXF1ZXN0GhIudjEuU2lnbkluUmVzcG9uc2UiABJACgtVc2VyUHJvZmlsZRIWLnYxLlVzZXJQcm9maWxlUmVxdWVzdBoXLnYxLlVzZXJQcm9maWxlUmVzcG9uc2UiAEJ0CgZjb20udjFCCVVzZXJQcm90b1ABWjdnaXRodWIuY29tL3N1bm1lcnkvZWNvbW1lcmNlL2JhY2tlbmQvYXBpL3VzZXIvdjE7dXNlcnYxogIDVlhYqgICVjHKAgJWMeICDlYxXEdQQk1ldGFkYXRh6gICVjFiBnByb3RvMw", [file_api_casdoor_v1_user]);
 
 /**
  * @generated from message v1.SignInRequest
@@ -34,7 +34,7 @@ export type SignInRequest = Message<"v1.SignInRequest"> & {
  * Use `create(SignInRequestSchema)` to create a new message.
  */
 export const SignInRequestSchema: GenMessage<SignInRequest> = /*@__PURE__*/
-  messageDesc(file_api_user_v1_user, 0);
+    messageDesc(file_api_user_v1_user, 0);
 
 /**
  * @generated from message v1.SignInResponse
@@ -56,7 +56,7 @@ export type SignInResponse = Message<"v1.SignInResponse"> & {
  * Use `create(SignInResponseSchema)` to create a new message.
  */
 export const SignInResponseSchema: GenMessage<SignInResponse> = /*@__PURE__*/
-  messageDesc(file_api_user_v1_user, 1);
+    messageDesc(file_api_user_v1_user, 1);
 
 /**
  * @generated from message v1.UserProfileRequest
@@ -69,7 +69,7 @@ export type UserProfileRequest = Message<"v1.UserProfileRequest"> & {
  * Use `create(UserProfileRequestSchema)` to create a new message.
  */
 export const UserProfileRequestSchema: GenMessage<UserProfileRequest> = /*@__PURE__*/
-  messageDesc(file_api_user_v1_user, 2);
+    messageDesc(file_api_user_v1_user, 2);
 
 /**
  * @generated from message v1.UserProfileResponse
@@ -86,7 +86,7 @@ export type UserProfileResponse = Message<"v1.UserProfileResponse"> & {
  * Use `create(UserProfileResponseSchema)` to create a new message.
  */
 export const UserProfileResponseSchema: GenMessage<UserProfileResponse> = /*@__PURE__*/
-  messageDesc(file_api_user_v1_user, 3);
+    messageDesc(file_api_user_v1_user, 3);
 
 /**
  * @generated from service v1.UserService
@@ -109,5 +109,5 @@ export const UserService: GenService<{
     output: typeof UserProfileResponseSchema;
   },
 }> = /*@__PURE__*/
-  serviceDesc(file_api_user_v1_user, 0);
+    serviceDesc(file_api_user_v1_user, 0);
 

@@ -4,6 +4,7 @@ import { SearchService } from '@/gen/api/search/v1/search_pb'
 
 const transport = createConnectTransport({
 	baseUrl: `${import.meta.env.VITE_BASE_URL}/search`,
+	// baseUrl: `/api/search`,
 })
 
 const client = createClient(SearchService, transport)

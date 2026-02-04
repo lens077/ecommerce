@@ -1,0 +1,29 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: ecommerce-frontend-deploy
+  labels:
+    app: ecommerce-frontend
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: ecommerce-frontend
+  template:
+    metadata:
+      name: ecommerce-frontend
+      labels:
+        app: ecommerce-frontend
+    spec:
+      containers:
+        - name: ecommerce-frontend
+          image: harbor.apikv.com:5443/ecommerce/frontend:dev
+          imagePullPolicy: Always
+          ports:
+            - containerPort: 30080
+              protocol: TCP
+          envFrom:
+            - configMapRef:
+                name: ecommerce-frontend-config
+      restartPolicy: Always
+      

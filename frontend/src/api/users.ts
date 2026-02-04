@@ -5,6 +5,7 @@ import { UserService } from '@/gen/api/user/v1/user_pb.ts'
 
 const transport = createConnectTransport({
 	baseUrl: `${import.meta.env.VITE_BASE_URL}/user`,
+	// baseUrl: '/api/user',
 	interceptors: allInterceptors,
 })
 

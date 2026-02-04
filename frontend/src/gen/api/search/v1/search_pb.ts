@@ -14,7 +14,7 @@ import type { Message } from "@bufbuild/protobuf";
  * Describes the file api/search/v1/search.proto.
  */
 export const file_api_search_v1_search: GenFile = /*@__PURE__*/
-  fileDesc("ChphcGkvc2VhcmNoL3YxL3NlYXJjaC5wcm90bxICdjEiLAoNU2VhcmNoUmVxdWVzdBINCgVpbmRleBgBIAEoCRIMCgRuYW1lGAIgASgJIi8KDlNlYXJjaFJlc3BvbnNlEh0KCHByb2R1Y3RzGAEgAygLMgsudjEuUHJvZHVjdCJPCgxQcm9kdWN0SW1hZ2USCwoDdXJsGAEgASgJEgwKBHR5cGUYAiABKAkSEgoKc29ydF9vcmRlchgDIAEoBRIQCghhbHRfdGV4dBgEIAEoCSIuChBQcm9kdWN0QXR0cmlidXRlEgsKA2tleRgBIAEoCRINCgV2YWx1ZRgCIAEoCSLUAwoHUHJvZHVjdBIKCgJpZBgBIAEoCRIMCgRuYW1lGAIgASgJEhQKDG5hbWVfc3VnZ2VzdBgDIAEoCRITCgtkZXNjcmlwdGlvbhgEIAEoCRINCgVwcmljZRgFIAEoARIOCgZzdGF0dXMYBiABKAkSEwoLbWVyY2hhbnRfaWQYByABKAkSEwoLY2F0ZWdvcnlfaWQYCCABKAUSFQoNY2F0ZWdvcnlfbmFtZRgJIAEoCRIgCgZpbWFnZXMYCiADKAsyEC52MS5Qcm9kdWN0SW1hZ2USEwoLY292ZXJfaW1hZ2UYCyABKAkSLwoKYXR0cmlidXRlcxgMIAMoCzIbLnYxLlByb2R1Y3QuQXR0cmlidXRlc0VudHJ5EhMKC3NhbGVzX2NvdW50GA0gASgFEhQKDHJhdGluZ19zY29yZRgOIAEoARIuCgpjcmVhdGVkX2F0GA8gASgLMhouZ29vZ2xlLnByb3RvYnVmLlRpbWVzdGFtcBIuCgp1cGRhdGVkX2F0GBAgASgLMhouZ29vZ2xlLnByb3RvYnVmLlRpbWVzdGFtcBoxCg9BdHRyaWJ1dGVzRW50cnkSCwoDa2V5GAEgASgJEg0KBXZhbHVlGAIgASgJOgI4ATJCCg1TZWFyY2hTZXJ2aWNlEjEKBlNlYXJjaBIRLnYxLlNlYXJjaFJlcXVlc3QaEi52MS5TZWFyY2hSZXNwb25zZSIAQnoKBmNvbS52MUILU2VhcmNoUHJvdG9QAVo7Z2l0aHViLmNvbS9zdW5tZXJ5L2Vjb21tZXJjZS9iYWNrZW5kL2FwaS9zZWFyY2gvdjE7c2VhcmNodjGiAgNWWFiqAgJWMcoCAlYx4gIOVjFcR1BCTWV0YWRhdGHqAgJWMWIGcHJvdG8z", [file_google_protobuf_timestamp]);
+    fileDesc("ChphcGkvc2VhcmNoL3YxL3NlYXJjaC5wcm90bxICdjEiLAoNU2VhcmNoUmVxdWVzdBINCgVpbmRleBgBIAEoCRIMCgRuYW1lGAIgASgJIi8KDlNlYXJjaFJlc3BvbnNlEh0KCHByb2R1Y3RzGAEgAygLMgsudjEuUHJvZHVjdCJPCgxQcm9kdWN0SW1hZ2USCwoDdXJsGAEgASgJEgwKBHR5cGUYAiABKAkSEgoKc29ydF9vcmRlchgDIAEoBRIQCghhbHRfdGV4dBgEIAEoCSIuChBQcm9kdWN0QXR0cmlidXRlEgsKA2tleRgBIAEoCRINCgV2YWx1ZRgCIAEoCSLUAwoHUHJvZHVjdBIKCgJpZBgBIAEoCRIMCgRuYW1lGAIgASgJEhQKDG5hbWVfc3VnZ2VzdBgDIAEoCRITCgtkZXNjcmlwdGlvbhgEIAEoCRINCgVwcmljZRgFIAEoARIOCgZzdGF0dXMYBiABKAkSEwoLbWVyY2hhbnRfaWQYByABKAkSEwoLY2F0ZWdvcnlfaWQYCCABKAUSFQoNY2F0ZWdvcnlfbmFtZRgJIAEoCRIgCgZpbWFnZXMYCiADKAsyEC52MS5Qcm9kdWN0SW1hZ2USEwoLY292ZXJfaW1hZ2UYCyABKAkSLwoKYXR0cmlidXRlcxgMIAMoCzIbLnYxLlByb2R1Y3QuQXR0cmlidXRlc0VudHJ5EhMKC3NhbGVzX2NvdW50GA0gASgFEhQKDHJhdGluZ19zY29yZRgOIAEoARIuCgpjcmVhdGVkX2F0GA8gASgLMhouZ29vZ2xlLnByb3RvYnVmLlRpbWVzdGFtcBIuCgp1cGRhdGVkX2F0GBAgASgLMhouZ29vZ2xlLnByb3RvYnVmLlRpbWVzdGFtcBoxCg9BdHRyaWJ1dGVzRW50cnkSCwoDa2V5GAEgASgJEg0KBXZhbHVlGAIgASgJOgI4ATJCCg1TZWFyY2hTZXJ2aWNlEjEKBlNlYXJjaBIRLnYxLlNlYXJjaFJlcXVlc3QaEi52MS5TZWFyY2hSZXNwb25zZSIAQnoKBmNvbS52MUILU2VhcmNoUHJvdG9QAVo7Z2l0aHViLmNvbS9zdW5tZXJ5L2Vjb21tZXJjZS9iYWNrZW5kL2FwaS9zZWFyY2gvdjE7c2VhcmNodjGiAgNWWFiqAgJWMcoCAlYx4gIOVjFcR1BCTWV0YWRhdGHqAgJWMWIGcHJvdG8z", [file_google_protobuf_timestamp]);
 
 /**
  * @generated from message v1.SearchRequest
@@ -36,7 +36,7 @@ export type SearchRequest = Message<"v1.SearchRequest"> & {
  * Use `create(SearchRequestSchema)` to create a new message.
  */
 export const SearchRequestSchema: GenMessage<SearchRequest> = /*@__PURE__*/
-  messageDesc(file_api_search_v1_search, 0);
+    messageDesc(file_api_search_v1_search, 0);
 
 /**
  * @generated from message v1.SearchResponse
@@ -53,7 +53,7 @@ export type SearchResponse = Message<"v1.SearchResponse"> & {
  * Use `create(SearchResponseSchema)` to create a new message.
  */
 export const SearchResponseSchema: GenMessage<SearchResponse> = /*@__PURE__*/
-  messageDesc(file_api_search_v1_search, 1);
+    messageDesc(file_api_search_v1_search, 1);
 
 /**
  * 定义 ProductImage 消息 (对应 Go 结构体中的 ProductImage)
@@ -95,7 +95,7 @@ export type ProductImage = Message<"v1.ProductImage"> & {
  * Use `create(ProductImageSchema)` to create a new message.
  */
 export const ProductImageSchema: GenMessage<ProductImage> = /*@__PURE__*/
-  messageDesc(file_api_search_v1_search, 2);
+    messageDesc(file_api_search_v1_search, 2);
 
 /**
  * 定义 ProductAttribute 消息 (对应 Go 结构体中的 ProductAttribute)
@@ -123,7 +123,7 @@ export type ProductAttribute = Message<"v1.ProductAttribute"> & {
  * Use `create(ProductAttributeSchema)` to create a new message.
  */
 export const ProductAttributeSchema: GenMessage<ProductAttribute> = /*@__PURE__*/
-  messageDesc(file_api_search_v1_search, 3);
+    messageDesc(file_api_search_v1_search, 3);
 
 /**
  * 定义 Product 消息 (对应 Go 结构体中的 Product)
@@ -237,7 +237,7 @@ export type Product = Message<"v1.Product"> & {
  * Use `create(ProductSchema)` to create a new message.
  */
 export const ProductSchema: GenMessage<Product> = /*@__PURE__*/
-  messageDesc(file_api_search_v1_search, 4);
+    messageDesc(file_api_search_v1_search, 4);
 
 /**
  * @generated from service v1.SearchService
@@ -252,5 +252,5 @@ export const SearchService: GenService<{
     output: typeof SearchResponseSchema;
   },
 }> = /*@__PURE__*/
-  serviceDesc(file_api_search_v1_search, 0);
+    serviceDesc(file_api_search_v1_search, 0);
 
