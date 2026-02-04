@@ -1,7 +1,7 @@
 services:
 
   user:
-    image: harbor.apikv.com:5443/sumery/ecommerce/user:v1.0.0
+    image: harbor.apikv.com:5443/sumery/ecommerce/user:dev
     environment:
       HTTP_ADDR: 0.0.0.0:4000
       RUN_MODE: prod

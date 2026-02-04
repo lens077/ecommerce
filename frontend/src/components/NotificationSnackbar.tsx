@@ -1,6 +1,6 @@
-import { useEffect, useState } from 'react';
-import { useSnapshot } from 'valtio';
 import { Alert, Snackbar } from '@mui/material';
+import { type SyntheticEvent, useEffect, useState } from 'react';
+import { useSnapshot } from 'valtio';
 import { notificationStore, removeNotification } from '@/store/notifications';
 
 export default function NotificationSnackbar() {
@@ -16,20 +16,25 @@ export default function NotificationSnackbar() {
     }
   }, [notifications, currentNotification]);
   
-  const handleClose = (event?: React.SyntheticEvent | Event, reason?: string) => {
+  const handleClose = (_event?: SyntheticEvent | Event, reason?: string) => {
     if (reason === 'clickaway') {
       return;
     }
     
     setOpen(false);
   };
-  
-  const handleExited = () => {
-    if (currentNotification) {
-      removeNotification(currentNotification.id);
-      setCurrentNotification(null);
+
+  useEffect(() => {
+    if (!open && currentNotification) {
+      // 使用 setTimeout 确保 Snackbar 完全隐藏后再移除通知
+      const timer = setTimeout(() => {
+        removeNotification(currentNotification.id);
+        setCurrentNotification(null);
+      }, 300);
+      
+      return () => clearTimeout(timer);
     }
-  };
+  }, [open, currentNotification]);
   
   if (!currentNotification) {
     return null;
@@ -40,7 +45,6 @@ export default function NotificationSnackbar() {
       open={open}
       autoHideDuration={currentNotification.duration || 5000}
       onClose={handleClose}
-      onExited={handleExited}
       anchorOrigin={{ vertical: 'top', horizontal: 'center' }}
     >
       <Alert

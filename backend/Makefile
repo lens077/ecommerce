@@ -13,6 +13,14 @@ REGISTER = ccr.ccs.tencentyun.com
 ARM64=linux/arm64
 AMD64=linux/amd64
 
+.PHONY: k8s-dev
+k8s-dev:
+	kubectl apply -f deploy/dev
+
+.PHONY: k8s-prod
+k8s-prod:
+	kubectl apply -f deploy/prod
+
 .PHONY: run
 run:
 	go run cmd/server/main.go
