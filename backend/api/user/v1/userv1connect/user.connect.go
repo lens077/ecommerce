@@ -22,7 +22,7 @@ const _ = connect.IsAtLeastVersion1_13_0
 
 const (
 	// UserServiceName is the fully-qualified name of the UserService service.
-	UserServiceName = "v1.UserService"
+	UserServiceName = "user.v1.UserService"
 )
 
 // These constants are the fully-qualified names of the RPCs defined in this package. They're
@@ -34,19 +34,19 @@ const (
 // period.
 const (
 	// UserServiceSignInProcedure is the fully-qualified name of the UserService's SignIn RPC.
-	UserServiceSignInProcedure = "/v1.UserService/SignIn"
+	UserServiceSignInProcedure = "/user.v1.UserService/SignIn"
 	// UserServiceUserProfileProcedure is the fully-qualified name of the UserService's UserProfile RPC.
-	UserServiceUserProfileProcedure = "/v1.UserService/UserProfile"
+	UserServiceUserProfileProcedure = "/user.v1.UserService/UserProfile"
 )
 
-// UserServiceClient is a client for the v1.UserService service.
+// UserServiceClient is a client for the user.v1.UserService service.
 type UserServiceClient interface {
 	SignIn(context.Context, *connect.Request[v1.SignInRequest]) (*connect.Response[v1.SignInResponse], error)
 	UserProfile(context.Context, *connect.Request[v1.UserProfileRequest]) (*connect.Response[v1.UserProfileResponse], error)
 }
 
-// NewUserServiceClient constructs a client for the v1.UserService service. By default, it uses the
-// Connect protocol with the binary Protobuf Codec, asks for gzipped responses, and sends
+// NewUserServiceClient constructs a client for the user.v1.UserService service. By default, it uses
+// the Connect protocol with the binary Protobuf Codec, asks for gzipped responses, and sends
 // uncompressed requests. To use the gRPC or gRPC-Web protocols, supply the connect.WithGRPC() or
 // connect.WithGRPCWeb() options.
 //
@@ -77,17 +77,17 @@ type userServiceClient struct {
 	userProfile *connect.Client[v1.UserProfileRequest, v1.UserProfileResponse]
 }
 
-// SignIn calls v1.UserService.SignIn.
+// SignIn calls user.v1.UserService.SignIn.
 func (c *userServiceClient) SignIn(ctx context.Context, req *connect.Request[v1.SignInRequest]) (*connect.Response[v1.SignInResponse], error) {
 	return c.signIn.CallUnary(ctx, req)
 }
 
-// UserProfile calls v1.UserService.UserProfile.
+// UserProfile calls user.v1.UserService.UserProfile.
 func (c *userServiceClient) UserProfile(ctx context.Context, req *connect.Request[v1.UserProfileRequest]) (*connect.Response[v1.UserProfileResponse], error) {
 	return c.userProfile.CallUnary(ctx, req)
 }
 
-// UserServiceHandler is an implementation of the v1.UserService service.
+// UserServiceHandler is an implementation of the user.v1.UserService service.
 type UserServiceHandler interface {
 	SignIn(context.Context, *connect.Request[v1.SignInRequest]) (*connect.Response[v1.SignInResponse], error)
 	UserProfile(context.Context, *connect.Request[v1.UserProfileRequest]) (*connect.Response[v1.UserProfileResponse], error)
@@ -112,7 +112,7 @@ func NewUserServiceHandler(svc UserServiceHandler, opts ...connect.HandlerOption
 		connect.WithSchema(userServiceMethods.ByName("UserProfile")),
 		connect.WithHandlerOptions(opts...),
 	)
-	return "/v1.UserService/", http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+	return "/user.v1.UserService/", http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		switch r.URL.Path {
 		case UserServiceSignInProcedure:
 			userServiceSignInHandler.ServeHTTP(w, r)
@@ -128,9 +128,9 @@ func NewUserServiceHandler(svc UserServiceHandler, opts ...connect.HandlerOption
 type UnimplementedUserServiceHandler struct{}
 
 func (UnimplementedUserServiceHandler) SignIn(context.Context, *connect.Request[v1.SignInRequest]) (*connect.Response[v1.SignInResponse], error) {
-	return nil, connect.NewError(connect.CodeUnimplemented, errors.New("v1.UserService.SignIn is not implemented"))
+	return nil, connect.NewError(connect.CodeUnimplemented, errors.New("user.v1.UserService.SignIn is not implemented"))
 }
 
 func (UnimplementedUserServiceHandler) UserProfile(context.Context, *connect.Request[v1.UserProfileRequest]) (*connect.Response[v1.UserProfileResponse], error) {
-	return nil, connect.NewError(connect.CodeUnimplemented, errors.New("v1.UserService.UserProfile is not implemented"))
+	return nil, connect.NewError(connect.CodeUnimplemented, errors.New("user.v1.UserService.UserProfile is not implemented"))
 }

@@ -1,3 +1,6 @@
 .DS_Store
 .idea
 .vscode
+
+backend/infrastructure/consul/consul-local-kv.json
+backend/infrastructure/consul/consul-kv.json

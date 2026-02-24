@@ -24,7 +24,7 @@ const _ = connect.IsAtLeastVersion1_13_0
 
 const (
 	// SearchServiceName is the fully-qualified name of the SearchService service.
-	SearchServiceName = "v1.SearchService"
+	SearchServiceName = "search.v1.SearchService"
 )
 
 // These constants are the fully-qualified names of the RPCs defined in this package. They're
@@ -36,18 +36,18 @@ const (
 // period.
 const (
 	// SearchServiceSearchProcedure is the fully-qualified name of the SearchService's Search RPC.
-	SearchServiceSearchProcedure = "/v1.SearchService/Search"
+	SearchServiceSearchProcedure = "/search.v1.SearchService/Search"
 )
 
-// SearchServiceClient is a client for the v1.SearchService service.
+// SearchServiceClient is a client for the search.v1.SearchService service.
 type SearchServiceClient interface {
 	Search(context.Context, *connect.Request[v1.SearchRequest]) (*connect.Response[v1.SearchResponse], error)
 }
 
-// NewSearchServiceClient constructs a client for the v1.SearchService service. By default, it uses
-// the Connect protocol with the binary Protobuf Codec, asks for gzipped responses, and sends
-// uncompressed requests. To use the gRPC or gRPC-Web protocols, supply the connect.WithGRPC() or
-// connect.WithGRPCWeb() options.
+// NewSearchServiceClient constructs a client for the search.v1.SearchService service. By default,
+// it uses the Connect protocol with the binary Protobuf Codec, asks for gzipped responses, and
+// sends uncompressed requests. To use the gRPC or gRPC-Web protocols, supply the connect.WithGRPC()
+// or connect.WithGRPCWeb() options.
 //
 // The URL supplied here should be the base URL for the Connect or gRPC server (for example,
 // http://api.acme.com or https://acme.com/grpc).
@@ -69,12 +69,12 @@ type searchServiceClient struct {
 	search *connect.Client[v1.SearchRequest, v1.SearchResponse]
 }
 
-// Search calls v1.SearchService.Search.
+// Search calls search.v1.SearchService.Search.
 func (c *searchServiceClient) Search(ctx context.Context, req *connect.Request[v1.SearchRequest]) (*connect.Response[v1.SearchResponse], error) {
 	return c.search.CallUnary(ctx, req)
 }
 
-// SearchServiceHandler is an implementation of the v1.SearchService service.
+// SearchServiceHandler is an implementation of the search.v1.SearchService service.
 type SearchServiceHandler interface {
 	Search(context.Context, *connect.Request[v1.SearchRequest]) (*connect.Response[v1.SearchResponse], error)
 }
@@ -92,7 +92,7 @@ func NewSearchServiceHandler(svc SearchServiceHandler, opts ...connect.HandlerOp
 		connect.WithSchema(searchServiceMethods.ByName("Search")),
 		connect.WithHandlerOptions(opts...),
 	)
-	return "/v1.SearchService/", http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+	return "/search.v1.SearchService/", http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		switch r.URL.Path {
 		case SearchServiceSearchProcedure:
 			searchServiceSearchHandler.ServeHTTP(w, r)
@@ -106,5 +106,5 @@ func NewSearchServiceHandler(svc SearchServiceHandler, opts ...connect.HandlerOp
 type UnimplementedSearchServiceHandler struct{}
 
 func (UnimplementedSearchServiceHandler) Search(context.Context, *connect.Request[v1.SearchRequest]) (*connect.Response[v1.SearchResponse], error) {
-	return nil, connect.NewError(connect.CodeUnimplemented, errors.New("v1.SearchService.Search is not implemented"))
+	return nil, connect.NewError(connect.CodeUnimplemented, errors.New("search.v1.SearchService.Search is not implemented"))
 }

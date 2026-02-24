@@ -1,7 +1,7 @@
 import { expect, test, afterEach } from 'vitest'
 import { render, screen, cleanup } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
-import HelloWorld from '@/components/HelloWorld'
+import HelloWorld from "@/examples/test/HelloWorld.tsx";
 
 // 在每个测试后清理 DOM
 afterEach(() => {
