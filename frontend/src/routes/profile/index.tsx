@@ -1,7 +1,7 @@
 import { useQuery } from '@tanstack/react-query'
 import { createFileRoute, redirect } from '@tanstack/react-router'
 import { useSnapshot } from 'valtio'
-import { getUserProfile } from '@/api/users.ts'
+import { userApi } from '@/api/users.ts'
 import { addNotification } from '@/store/notifications.ts'
 import { setAccount, userStore } from '@/store/users.ts'
 import { isTokenExpired } from '@/utils/jwt.ts'
@@ -34,13 +34,14 @@ function RouteComponent() {
 	const userProfileSnap = useSnapshot(userStore)
 	const { data, isLoading, error } = useQuery({
 		queryKey: ['getUserProfile'],
-		queryFn: async () => {
-			const res = await getUserProfile()
+		queryFn: async ({signal}) => {
+			const res = await userApi.getUserProfile(signal)
 			if (res.user) {
 				setAccount(res.user)
 			}
 			return res
 		},
+
 	})
 	if (isLoading) return <div>加载中...</div>
 	if (error) return <div>加载失败，请重试</div>

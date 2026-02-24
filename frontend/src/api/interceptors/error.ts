@@ -5,19 +5,29 @@ export const errorInterceptor: Interceptor = (next) => async (req) => {
     try {
         return await next(req);
     } catch (err) {
-        if (err instanceof ConnectError) {
-            // 处理网关返回的 401
-            if (err.code === Code.Unauthenticated) {
-                localStorage.removeItem("token");
-                addNotification({ message: "登录过期，请重新登录", severity: "error" });
-                // 也可以选择 window.location.href = "/"
-            }
+        const connectErr = ConnectError.from(err);
 
-            // 处理网关返回的 403 (RBAC 无权限)
-            if (err.code === Code.PermissionDenied) {
-                addNotification({ message: "你没有权限执行此操作", severity: "warning" });
-            }
+        // 统一错误处理逻辑
+        switch (connectErr.code) {
+            case Code.Unauthenticated:
+                // 例如：跳转到 Casdoor 登录或刷新 Token
+                console.error('用户未登录')
+                addNotification({message: "未登录/登录过期", severity: "error"});
+                break;
+            case Code.PermissionDenied:
+                console.error('用户没有权限')
+                addNotification({message: "权限不足", severity: "error"});
+                break;
+            case Code.Unavailable:
+                console.error('未知错误')
+                addNotification({message: "服务不可用，正在尝试自动重试...", severity: "error"});
+                break;
+            default:
+                console.error(`API 错误: ${connectErr.rawMessage}`);
+                addNotification({message: "请求错误", severity: "error"});
         }
-        throw err; // 继续抛出，让 React Query 能捕获到
+
+        // 继续抛出错误，让 React Query 捕获
+        throw connectErr;
     }
 };

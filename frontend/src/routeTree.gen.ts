@@ -11,7 +11,10 @@
 import { Route as rootRouteImport } from './routes/__root'
 import { Route as IndexRouteImport } from './routes/index'
 import { Route as ProfileIndexRouteImport } from './routes/profile/index'
+import { Route as CategoriesIndexRouteImport } from './routes/categories/index'
+import { Route as CartIndexRouteImport } from './routes/cart/index'
 import { Route as CallbackIndexRouteImport } from './routes/callback/index'
+import { Route as ProductProductIdRouteImport } from './routes/product/$productId'
 
 const IndexRoute = IndexRouteImport.update({
   id: '/',
@@ -23,39 +26,85 @@ const ProfileIndexRoute = ProfileIndexRouteImport.update({
   path: '/profile/',
   getParentRoute: () => rootRouteImport,
 } as any)
+const CategoriesIndexRoute = CategoriesIndexRouteImport.update({
+  id: '/categories/',
+  path: '/categories/',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const CartIndexRoute = CartIndexRouteImport.update({
+  id: '/cart/',
+  path: '/cart/',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const CallbackIndexRoute = CallbackIndexRouteImport.update({
   id: '/callback/',
   path: '/callback/',
   getParentRoute: () => rootRouteImport,
 } as any)
+const ProductProductIdRoute = ProductProductIdRouteImport.update({
+  id: '/product/$productId',
+  path: '/product/$productId',
+  getParentRoute: () => rootRouteImport,
+} as any)
 
 export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
-  '/callback': typeof CallbackIndexRoute
-  '/profile': typeof ProfileIndexRoute
+  '/product/$productId': typeof ProductProductIdRoute
+  '/callback/': typeof CallbackIndexRoute
+  '/cart/': typeof CartIndexRoute
+  '/categories/': typeof CategoriesIndexRoute
+  '/profile/': typeof ProfileIndexRoute
 }
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
+  '/product/$productId': typeof ProductProductIdRoute
   '/callback': typeof CallbackIndexRoute
+  '/cart': typeof CartIndexRoute
+  '/categories': typeof CategoriesIndexRoute
   '/profile': typeof ProfileIndexRoute
 }
 export interface FileRoutesById {
   __root__: typeof rootRouteImport
   '/': typeof IndexRoute
+  '/product/$productId': typeof ProductProductIdRoute
   '/callback/': typeof CallbackIndexRoute
+  '/cart/': typeof CartIndexRoute
+  '/categories/': typeof CategoriesIndexRoute
   '/profile/': typeof ProfileIndexRoute
 }
 export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
-  fullPaths: '/' | '/callback' | '/profile'
+  fullPaths:
+    | '/'
+    | '/product/$productId'
+    | '/callback/'
+    | '/cart/'
+    | '/categories/'
+    | '/profile/'
   fileRoutesByTo: FileRoutesByTo
-  to: '/' | '/callback' | '/profile'
-  id: '__root__' | '/' | '/callback/' | '/profile/'
+  to:
+    | '/'
+    | '/product/$productId'
+    | '/callback'
+    | '/cart'
+    | '/categories'
+    | '/profile'
+  id:
+    | '__root__'
+    | '/'
+    | '/product/$productId'
+    | '/callback/'
+    | '/cart/'
+    | '/categories/'
+    | '/profile/'
   fileRoutesById: FileRoutesById
 }
 export interface RootRouteChildren {
   IndexRoute: typeof IndexRoute
+  ProductProductIdRoute: typeof ProductProductIdRoute
   CallbackIndexRoute: typeof CallbackIndexRoute
+  CartIndexRoute: typeof CartIndexRoute
+  CategoriesIndexRoute: typeof CategoriesIndexRoute
   ProfileIndexRoute: typeof ProfileIndexRoute
 }
 
@@ -71,15 +120,36 @@ declare module '@tanstack/react-router' {
     '/profile/': {
       id: '/profile/'
       path: '/profile'
-      fullPath: '/profile'
+      fullPath: '/profile/'
       preLoaderRoute: typeof ProfileIndexRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/categories/': {
+      id: '/categories/'
+      path: '/categories'
+      fullPath: '/categories/'
+      preLoaderRoute: typeof CategoriesIndexRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/cart/': {
+      id: '/cart/'
+      path: '/cart'
+      fullPath: '/cart/'
+      preLoaderRoute: typeof CartIndexRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/callback/': {
       id: '/callback/'
       path: '/callback'
-      fullPath: '/callback'
+      fullPath: '/callback/'
       preLoaderRoute: typeof CallbackIndexRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/product/$productId': {
+      id: '/product/$productId'
+      path: '/product/$productId'
+      fullPath: '/product/$productId'
+      preLoaderRoute: typeof ProductProductIdRouteImport
       parentRoute: typeof rootRouteImport
     }
   }
@@ -87,7 +157,10 @@ declare module '@tanstack/react-router' {
 
 const rootRouteChildren: RootRouteChildren = {
   IndexRoute: IndexRoute,
+  ProductProductIdRoute: ProductProductIdRoute,
   CallbackIndexRoute: CallbackIndexRoute,
+  CartIndexRoute: CartIndexRoute,
+  CategoriesIndexRoute: CategoriesIndexRoute,
   ProfileIndexRoute: ProfileIndexRoute,
 }
 export const routeTree = rootRouteImport

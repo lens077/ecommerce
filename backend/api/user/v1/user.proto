@@ -2,9 +2,14 @@ syntax = "proto3";
 
 import "api/casdoor/v1/user.proto";
 
-package v1;
+package user.v1;
 
 option go_package = "github.com/sunmery/ecommerce/backend/api/user/v1;userv1";
+
+service UserService {
+  rpc SignIn(SignInRequest) returns(SignInResponse){}
+  rpc UserProfile(UserProfileRequest) returns(UserProfileResponse){}
+}
 
 message SignInRequest {
   string code = 1;
@@ -22,9 +27,4 @@ message UserProfileRequest{
 
 message UserProfileResponse {
   casdoor.v1.User user = 1;
-}
-
-service UserService {
-  rpc SignIn(SignInRequest) returns(SignInResponse){}
-  rpc UserProfile(UserProfileRequest) returns(UserProfileResponse){}
 }

@@ -8,5 +8,5 @@ p,
 span,
 a,
 li {
-	letter-spacing: clamp(-0.05em, calc((1em - 1rem) / -10), 0em);
+    letter-spacing: clamp(-0.05em, calc((1em - 1rem) / -10), 0em);
 }

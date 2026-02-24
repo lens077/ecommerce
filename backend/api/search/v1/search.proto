@@ -2,7 +2,7 @@ syntax = "proto3";
 
 // 独立搜索功能
 
-package v1;
+package search.v1;
 option go_package = "github.com/sunmery/ecommerce/backend/api/search/v1;searchv1";
 
 import "google/protobuf/timestamp.proto";

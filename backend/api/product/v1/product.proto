@@ -1,0 +1,64 @@
+syntax = "proto3";
+
+package product.v1;
+
+option go_package = "github.com/sunmery/ecommerce/backend/api/product/v1;productv1";
+
+import "google/protobuf/struct.proto";
+import "google/protobuf/timestamp.proto";
+import "third_party/validate/validate.proto";
+
+service ProductService {
+  rpc GetProductDetail(GetProductDetailRequest) returns(GetProductDetailResponse){}
+}
+
+message GetProductDetailRequest {
+  string spu_code = 1;
+}
+
+message GetProductDetailResponse {
+  ProductSpuDetail product_detail = 1;
+}
+
+message ProductSpuDetail {
+  int64 spu_id = 1;
+  string name = 2;
+  string spu_code = 3;
+  // 使用 google.protobuf.Struct 来匹配 map[string]any
+  google.protobuf.Struct common_specs = 4;
+  repeated ProductSku skus = 5;
+}
+
+message ProductSku {
+  int64 sku_id = 1;
+  string sku_code = 2;
+  double price = 3;
+  int32 stock = 4;
+  // 使用 google.protobuf.Struct 处理动态 SKU 属性
+  google.protobuf.Struct attrs = 5;
+  string img = 6;
+}
+
+//
+//enum SPUStatus {
+//  STATUS_DRAFT = 0;
+//  STATUS_ONLINE = 1;
+//  STATUS_OFFLINE = 2;
+//  STATUS_DELETED = 3;
+//}
+//message Product {
+//  uint64 id = 1;
+//  string spu_code = 2 [(buf.validate.field).string.max_len = 64];
+//  string name = 3 [(buf.validate.field).string.max_len = 255];
+//  string description = 4;
+//  uint64 category_id = 5;
+//  uint64 brand_id = 6;
+//  SPUStatus spu_status = 7 [(buf.validate.field).string = {
+//    in: ["draft", "online", "offline", "deleted"]
+//  }];
+//  string main_media_url = 8 [(buf.validate.field).string.max_len = 500];
+//  repeated string images_gallery = 9;
+//  google.protobuf.Struct specs = 10;
+//  google.protobuf.Timestamp created_at = 11;
+//  google.protobuf.Timestamp updated_at = 12;
+//}
