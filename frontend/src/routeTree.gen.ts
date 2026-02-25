@@ -14,7 +14,7 @@ import { Route as ProfileIndexRouteImport } from './routes/profile/index'
 import { Route as CategoriesIndexRouteImport } from './routes/categories/index'
 import { Route as CartIndexRouteImport } from './routes/cart/index'
 import { Route as CallbackIndexRouteImport } from './routes/callback/index'
-import { Route as ProductProductIdRouteImport } from './routes/product/$productId'
+import { Route as ProductSpuCodeRouteImport } from './routes/product/$spuCode'
 
 const IndexRoute = IndexRouteImport.update({
   id: '/',
@@ -41,15 +41,15 @@ const CallbackIndexRoute = CallbackIndexRouteImport.update({
   path: '/callback/',
   getParentRoute: () => rootRouteImport,
 } as any)
-const ProductProductIdRoute = ProductProductIdRouteImport.update({
-  id: '/product/$productId',
-  path: '/product/$productId',
+const ProductSpuCodeRoute = ProductSpuCodeRouteImport.update({
+  id: '/product/$spuCode',
+  path: '/product/$spuCode',
   getParentRoute: () => rootRouteImport,
 } as any)
 
 export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
-  '/product/$productId': typeof ProductProductIdRoute
+  '/product/$spuCode': typeof ProductSpuCodeRoute
   '/callback/': typeof CallbackIndexRoute
   '/cart/': typeof CartIndexRoute
   '/categories/': typeof CategoriesIndexRoute
@@ -57,7 +57,7 @@ export interface FileRoutesByFullPath {
 }
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
-  '/product/$productId': typeof ProductProductIdRoute
+  '/product/$spuCode': typeof ProductSpuCodeRoute
   '/callback': typeof CallbackIndexRoute
   '/cart': typeof CartIndexRoute
   '/categories': typeof CategoriesIndexRoute
@@ -66,7 +66,7 @@ export interface FileRoutesByTo {
 export interface FileRoutesById {
   __root__: typeof rootRouteImport
   '/': typeof IndexRoute
-  '/product/$productId': typeof ProductProductIdRoute
+  '/product/$spuCode': typeof ProductSpuCodeRoute
   '/callback/': typeof CallbackIndexRoute
   '/cart/': typeof CartIndexRoute
   '/categories/': typeof CategoriesIndexRoute
@@ -76,7 +76,7 @@ export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
   fullPaths:
     | '/'
-    | '/product/$productId'
+    | '/product/$spuCode'
     | '/callback/'
     | '/cart/'
     | '/categories/'
@@ -84,7 +84,7 @@ export interface FileRouteTypes {
   fileRoutesByTo: FileRoutesByTo
   to:
     | '/'
-    | '/product/$productId'
+    | '/product/$spuCode'
     | '/callback'
     | '/cart'
     | '/categories'
@@ -92,7 +92,7 @@ export interface FileRouteTypes {
   id:
     | '__root__'
     | '/'
-    | '/product/$productId'
+    | '/product/$spuCode'
     | '/callback/'
     | '/cart/'
     | '/categories/'
@@ -101,7 +101,7 @@ export interface FileRouteTypes {
 }
 export interface RootRouteChildren {
   IndexRoute: typeof IndexRoute
-  ProductProductIdRoute: typeof ProductProductIdRoute
+  ProductSpuCodeRoute: typeof ProductSpuCodeRoute
   CallbackIndexRoute: typeof CallbackIndexRoute
   CartIndexRoute: typeof CartIndexRoute
   CategoriesIndexRoute: typeof CategoriesIndexRoute
@@ -145,11 +145,11 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof CallbackIndexRouteImport
       parentRoute: typeof rootRouteImport
     }
-    '/product/$productId': {
-      id: '/product/$productId'
-      path: '/product/$productId'
-      fullPath: '/product/$productId'
-      preLoaderRoute: typeof ProductProductIdRouteImport
+    '/product/$spuCode': {
+      id: '/product/$spuCode'
+      path: '/product/$spuCode'
+      fullPath: '/product/$spuCode'
+      preLoaderRoute: typeof ProductSpuCodeRouteImport
       parentRoute: typeof rootRouteImport
     }
   }
@@ -157,7 +157,7 @@ declare module '@tanstack/react-router' {
 
 const rootRouteChildren: RootRouteChildren = {
   IndexRoute: IndexRoute,
-  ProductProductIdRoute: ProductProductIdRoute,
+  ProductSpuCodeRoute: ProductSpuCodeRoute,
   CallbackIndexRoute: CallbackIndexRoute,
   CartIndexRoute: CartIndexRoute,
   CategoriesIndexRoute: CategoriesIndexRoute,

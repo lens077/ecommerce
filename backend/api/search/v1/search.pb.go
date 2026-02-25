@@ -11,7 +11,7 @@ package searchv1
 import (
 	protoreflect "google.golang.org/protobuf/reflect/protoreflect"
 	protoimpl "google.golang.org/protobuf/runtime/protoimpl"
-	timestamppb "google.golang.org/protobuf/types/known/timestamppb"
+	_ "google.golang.org/protobuf/types/known/timestamppb"
 	reflect "reflect"
 	sync "sync"
 	unsafe "unsafe"
@@ -120,171 +120,23 @@ func (x *SearchResponse) GetProducts() []*Product {
 	return nil
 }
 
-// 定义 ProductImage 消息 (对应 Go 结构体中的 ProductImage)
-type ProductImage struct {
-	state protoimpl.MessageState `protogen:"open.v1"`
-	// url 字段，对应 Go 结构体中的 url 字段
-	Url string `protobuf:"bytes,1,opt,name=url,proto3" json:"url,omitempty"`
-	// type 字段，例如 "cover" (封面) 或 "detail" (详情页)
-	Type string `protobuf:"bytes,2,opt,name=type,proto3" json:"type,omitempty"`
-	// sort_order 字段，用于排序
-	SortOrder int32 `protobuf:"varint,3,opt,name=sort_order,json=sortOrder,proto3" json:"sort_order,omitempty"`
-	// alt_text 字段，用于图片替代文本
-	AltText       string `protobuf:"bytes,4,opt,name=alt_text,json=altText,proto3" json:"alt_text,omitempty"`
-	unknownFields protoimpl.UnknownFields
-	sizeCache     protoimpl.SizeCache
-}
-
-func (x *ProductImage) Reset() {
-	*x = ProductImage{}
-	mi := &file_api_search_v1_search_proto_msgTypes[2]
-	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
-	ms.StoreMessageInfo(mi)
-}
-
-func (x *ProductImage) String() string {
-	return protoimpl.X.MessageStringOf(x)
-}
-
-func (*ProductImage) ProtoMessage() {}
-
-func (x *ProductImage) ProtoReflect() protoreflect.Message {
-	mi := &file_api_search_v1_search_proto_msgTypes[2]
-	if x != nil {
-		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
-		if ms.LoadMessageInfo() == nil {
-			ms.StoreMessageInfo(mi)
-		}
-		return ms
-	}
-	return mi.MessageOf(x)
-}
-
-// Deprecated: Use ProductImage.ProtoReflect.Descriptor instead.
-func (*ProductImage) Descriptor() ([]byte, []int) {
-	return file_api_search_v1_search_proto_rawDescGZIP(), []int{2}
-}
-
-func (x *ProductImage) GetUrl() string {
-	if x != nil {
-		return x.Url
-	}
-	return ""
-}
-
-func (x *ProductImage) GetType() string {
-	if x != nil {
-		return x.Type
-	}
-	return ""
-}
-
-func (x *ProductImage) GetSortOrder() int32 {
-	if x != nil {
-		return x.SortOrder
-	}
-	return 0
-}
-
-func (x *ProductImage) GetAltText() string {
-	if x != nil {
-		return x.AltText
-	}
-	return ""
-}
-
-// 定义 ProductAttribute 消息 (对应 Go 结构体中的 ProductAttribute)
-type ProductAttribute struct {
-	state protoimpl.MessageState `protogen:"open.v1"`
-	// key 字段，属性名 (例如 "颜色", "尺寸")
-	Key string `protobuf:"bytes,1,opt,name=key,proto3" json:"key,omitempty"`
-	// value 字段，属性值 (例如 "红色", "L")
-	Value         string `protobuf:"bytes,2,opt,name=value,proto3" json:"value,omitempty"`
-	unknownFields protoimpl.UnknownFields
-	sizeCache     protoimpl.SizeCache
-}
-
-func (x *ProductAttribute) Reset() {
-	*x = ProductAttribute{}
-	mi := &file_api_search_v1_search_proto_msgTypes[3]
-	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
-	ms.StoreMessageInfo(mi)
-}
-
-func (x *ProductAttribute) String() string {
-	return protoimpl.X.MessageStringOf(x)
-}
-
-func (*ProductAttribute) ProtoMessage() {}
-
-func (x *ProductAttribute) ProtoReflect() protoreflect.Message {
-	mi := &file_api_search_v1_search_proto_msgTypes[3]
-	if x != nil {
-		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
-		if ms.LoadMessageInfo() == nil {
-			ms.StoreMessageInfo(mi)
-		}
-		return ms
-	}
-	return mi.MessageOf(x)
-}
-
-// Deprecated: Use ProductAttribute.ProtoReflect.Descriptor instead.
-func (*ProductAttribute) Descriptor() ([]byte, []int) {
-	return file_api_search_v1_search_proto_rawDescGZIP(), []int{3}
-}
-
-func (x *ProductAttribute) GetKey() string {
-	if x != nil {
-		return x.Key
-	}
-	return ""
-}
-
-func (x *ProductAttribute) GetValue() string {
-	if x != nil {
-		return x.Value
-	}
-	return ""
-}
-
 // 定义 Product 消息 (对应 Go 结构体中的 Product)
 type Product struct {
-	state protoimpl.MessageState `protogen:"open.v1"`
-	// 基础信息
-	Id   string `protobuf:"bytes,1,opt,name=id,proto3" json:"id,omitempty"`
-	Name string `protobuf:"bytes,2,opt,name=name,proto3" json:"name,omitempty"`
-	// repeated 对应 Go 中的切片 ([]string)
-	//
-	//	repeated string name_suggest = 3;
-	NameSuggest string `protobuf:"bytes,3,opt,name=name_suggest,json=nameSuggest,proto3" json:"name_suggest,omitempty"`
-	Description string `protobuf:"bytes,4,opt,name=description,proto3" json:"description,omitempty"`
-	// 价格和状态
-	Price  float64 `protobuf:"fixed64,5,opt,name=price,proto3" json:"price,omitempty"`
-	Status string  `protobuf:"bytes,6,opt,name=status,proto3" json:"status,omitempty"`
-	// 分类和商家信息
-	MerchantId   string `protobuf:"bytes,7,opt,name=merchant_id,json=merchantId,proto3" json:"merchant_id,omitempty"`
-	CategoryId   int32  `protobuf:"varint,8,opt,name=category_id,json=categoryId,proto3" json:"category_id,omitempty"` // Go 的 int 对应 Protobuf 的 int32
-	CategoryName string `protobuf:"bytes,9,opt,name=category_name,json=categoryName,proto3" json:"category_name,omitempty"`
-	// 图片和属性 (嵌套消息)
-	// repeated 对应 Go 中的结构体切片 ([]ProductImage)
-	Images     []*ProductImage `protobuf:"bytes,10,rep,name=images,proto3" json:"images,omitempty"`
-	CoverImage string          `protobuf:"bytes,11,opt,name=cover_image,json=coverImage,proto3" json:"cover_image,omitempty"`
-	// repeated 对应 Go 中的结构体切片 ([]ProductAttribute)
-	Attributes map[string]string `protobuf:"bytes,12,rep,name=attributes,proto3" json:"attributes,omitempty" protobuf_key:"bytes,1,opt,name=key" protobuf_val:"bytes,2,opt,name=value"`
-	// 统计信息
-	SalesCount  int32   `protobuf:"varint,13,opt,name=sales_count,json=salesCount,proto3" json:"sales_count,omitempty"`
-	RatingScore float64 `protobuf:"fixed64,14,opt,name=rating_score,json=ratingScore,proto3" json:"rating_score,omitempty"`
-	// 时间戳 (使用标准 Protobuf 类型)
-	CreatedAt     *timestamppb.Timestamp `protobuf:"bytes,15,opt,name=created_at,json=createdAt,proto3" json:"created_at,omitempty"`
-	UpdatedAt     *timestamppb.Timestamp `protobuf:"bytes,16,opt,name=updated_at,json=updatedAt,proto3" json:"updated_at,omitempty"`
+	state         protoimpl.MessageState `protogen:"open.v1"`
+	Id            uint32                 `protobuf:"varint,1,opt,name=id,proto3" json:"id,omitempty"`
+	SpuCode       string                 `protobuf:"bytes,2,opt,name=spu_code,json=spuCode,proto3" json:"spu_code,omitempty"`
+	Price         float64                `protobuf:"fixed64,3,opt,name=price,proto3" json:"price,omitempty"`
+	Status        string                 `protobuf:"bytes,4,opt,name=status,proto3" json:"status,omitempty"`
+	MainMediaUrl  string                 `protobuf:"bytes,5,opt,name=main_media_url,json=mainMediaUrl,proto3" json:"main_media_url,omitempty"`
+	Quantity      uint32                 `protobuf:"varint,6,opt,name=quantity,proto3" json:"quantity,omitempty"`
+	Name          string                 `protobuf:"bytes,7,opt,name=name,proto3" json:"name,omitempty"`
 	unknownFields protoimpl.UnknownFields
 	sizeCache     protoimpl.SizeCache
 }
 
 func (x *Product) Reset() {
 	*x = Product{}
-	mi := &file_api_search_v1_search_proto_msgTypes[4]
+	mi := &file_api_search_v1_search_proto_msgTypes[2]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -296,7 +148,7 @@ func (x *Product) String() string {
 func (*Product) ProtoMessage() {}
 
 func (x *Product) ProtoReflect() protoreflect.Message {
-	mi := &file_api_search_v1_search_proto_msgTypes[4]
+	mi := &file_api_search_v1_search_proto_msgTypes[2]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -309,33 +161,19 @@ func (x *Product) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use Product.ProtoReflect.Descriptor instead.
 func (*Product) Descriptor() ([]byte, []int) {
-	return file_api_search_v1_search_proto_rawDescGZIP(), []int{4}
+	return file_api_search_v1_search_proto_rawDescGZIP(), []int{2}
 }
 
-func (x *Product) GetId() string {
+func (x *Product) GetId() uint32 {
 	if x != nil {
 		return x.Id
 	}
-	return ""
+	return 0
 }
 
-func (x *Product) GetName() string {
+func (x *Product) GetSpuCode() string {
 	if x != nil {
-		return x.Name
-	}
-	return ""
-}
-
-func (x *Product) GetNameSuggest() string {
-	if x != nil {
-		return x.NameSuggest
-	}
-	return ""
-}
-
-func (x *Product) GetDescription() string {
-	if x != nil {
-		return x.Description
+		return x.SpuCode
 	}
 	return ""
 }
@@ -354,74 +192,25 @@ func (x *Product) GetStatus() string {
 	return ""
 }
 
-func (x *Product) GetMerchantId() string {
+func (x *Product) GetMainMediaUrl() string {
 	if x != nil {
-		return x.MerchantId
+		return x.MainMediaUrl
 	}
 	return ""
 }
 
-func (x *Product) GetCategoryId() int32 {
+func (x *Product) GetQuantity() uint32 {
 	if x != nil {
-		return x.CategoryId
+		return x.Quantity
 	}
 	return 0
 }
 
-func (x *Product) GetCategoryName() string {
+func (x *Product) GetName() string {
 	if x != nil {
-		return x.CategoryName
+		return x.Name
 	}
 	return ""
-}
-
-func (x *Product) GetImages() []*ProductImage {
-	if x != nil {
-		return x.Images
-	}
-	return nil
-}
-
-func (x *Product) GetCoverImage() string {
-	if x != nil {
-		return x.CoverImage
-	}
-	return ""
-}
-
-func (x *Product) GetAttributes() map[string]string {
-	if x != nil {
-		return x.Attributes
-	}
-	return nil
-}
-
-func (x *Product) GetSalesCount() int32 {
-	if x != nil {
-		return x.SalesCount
-	}
-	return 0
-}
-
-func (x *Product) GetRatingScore() float64 {
-	if x != nil {
-		return x.RatingScore
-	}
-	return 0
-}
-
-func (x *Product) GetCreatedAt() *timestamppb.Timestamp {
-	if x != nil {
-		return x.CreatedAt
-	}
-	return nil
-}
-
-func (x *Product) GetUpdatedAt() *timestamppb.Timestamp {
-	if x != nil {
-		return x.UpdatedAt
-	}
-	return nil
 }
 
 var File_api_search_v1_search_proto protoreflect.FileDescriptor
@@ -433,45 +222,15 @@ const file_api_search_v1_search_proto_rawDesc = "" +
 	"\x05index\x18\x01 \x01(\tR\x05index\x12\x12\n" +
 	"\x04name\x18\x02 \x01(\tR\x04name\"@\n" +
 	"\x0eSearchResponse\x12.\n" +
-	"\bproducts\x18\x01 \x03(\v2\x12.search.v1.ProductR\bproducts\"n\n" +
-	"\fProductImage\x12\x10\n" +
-	"\x03url\x18\x01 \x01(\tR\x03url\x12\x12\n" +
-	"\x04type\x18\x02 \x01(\tR\x04type\x12\x1d\n" +
-	"\n" +
-	"sort_order\x18\x03 \x01(\x05R\tsortOrder\x12\x19\n" +
-	"\balt_text\x18\x04 \x01(\tR\aaltText\":\n" +
-	"\x10ProductAttribute\x12\x10\n" +
-	"\x03key\x18\x01 \x01(\tR\x03key\x12\x14\n" +
-	"\x05value\x18\x02 \x01(\tR\x05value\"\x96\x05\n" +
+	"\bproducts\x18\x01 \x03(\v2\x12.search.v1.ProductR\bproducts\"\xb8\x01\n" +
 	"\aProduct\x12\x0e\n" +
-	"\x02id\x18\x01 \x01(\tR\x02id\x12\x12\n" +
-	"\x04name\x18\x02 \x01(\tR\x04name\x12!\n" +
-	"\fname_suggest\x18\x03 \x01(\tR\vnameSuggest\x12 \n" +
-	"\vdescription\x18\x04 \x01(\tR\vdescription\x12\x14\n" +
-	"\x05price\x18\x05 \x01(\x01R\x05price\x12\x16\n" +
-	"\x06status\x18\x06 \x01(\tR\x06status\x12\x1f\n" +
-	"\vmerchant_id\x18\a \x01(\tR\n" +
-	"merchantId\x12\x1f\n" +
-	"\vcategory_id\x18\b \x01(\x05R\n" +
-	"categoryId\x12#\n" +
-	"\rcategory_name\x18\t \x01(\tR\fcategoryName\x12/\n" +
-	"\x06images\x18\n" +
-	" \x03(\v2\x17.search.v1.ProductImageR\x06images\x12\x1f\n" +
-	"\vcover_image\x18\v \x01(\tR\n" +
-	"coverImage\x12B\n" +
-	"\n" +
-	"attributes\x18\f \x03(\v2\".search.v1.Product.AttributesEntryR\n" +
-	"attributes\x12\x1f\n" +
-	"\vsales_count\x18\r \x01(\x05R\n" +
-	"salesCount\x12!\n" +
-	"\frating_score\x18\x0e \x01(\x01R\vratingScore\x129\n" +
-	"\n" +
-	"created_at\x18\x0f \x01(\v2\x1a.google.protobuf.TimestampR\tcreatedAt\x129\n" +
-	"\n" +
-	"updated_at\x18\x10 \x01(\v2\x1a.google.protobuf.TimestampR\tupdatedAt\x1a=\n" +
-	"\x0fAttributesEntry\x12\x10\n" +
-	"\x03key\x18\x01 \x01(\tR\x03key\x12\x14\n" +
-	"\x05value\x18\x02 \x01(\tR\x05value:\x028\x012P\n" +
+	"\x02id\x18\x01 \x01(\rR\x02id\x12\x19\n" +
+	"\bspu_code\x18\x02 \x01(\tR\aspuCode\x12\x14\n" +
+	"\x05price\x18\x03 \x01(\x01R\x05price\x12\x16\n" +
+	"\x06status\x18\x04 \x01(\tR\x06status\x12$\n" +
+	"\x0emain_media_url\x18\x05 \x01(\tR\fmainMediaUrl\x12\x1a\n" +
+	"\bquantity\x18\x06 \x01(\rR\bquantity\x12\x12\n" +
+	"\x04name\x18\a \x01(\tR\x04name2P\n" +
 	"\rSearchService\x12?\n" +
 	"\x06Search\x12\x18.search.v1.SearchRequest\x1a\x19.search.v1.SearchResponse\"\x00B\x9e\x01\n" +
 	"\rcom.search.v1B\vSearchProtoP\x01Z;github.com/sunmery/ecommerce/backend/api/search/v1;searchv1\xa2\x02\x03SXX\xaa\x02\tSearch.V1\xca\x02\tSearch\\V1\xe2\x02\x15Search\\V1\\GPBMetadata\xea\x02\n" +
@@ -489,29 +248,21 @@ func file_api_search_v1_search_proto_rawDescGZIP() []byte {
 	return file_api_search_v1_search_proto_rawDescData
 }
 
-var file_api_search_v1_search_proto_msgTypes = make([]protoimpl.MessageInfo, 6)
+var file_api_search_v1_search_proto_msgTypes = make([]protoimpl.MessageInfo, 3)
 var file_api_search_v1_search_proto_goTypes = []any{
-	(*SearchRequest)(nil),         // 0: search.v1.SearchRequest
-	(*SearchResponse)(nil),        // 1: search.v1.SearchResponse
-	(*ProductImage)(nil),          // 2: search.v1.ProductImage
-	(*ProductAttribute)(nil),      // 3: search.v1.ProductAttribute
-	(*Product)(nil),               // 4: search.v1.Product
-	nil,                           // 5: search.v1.Product.AttributesEntry
-	(*timestamppb.Timestamp)(nil), // 6: google.protobuf.Timestamp
+	(*SearchRequest)(nil),  // 0: search.v1.SearchRequest
+	(*SearchResponse)(nil), // 1: search.v1.SearchResponse
+	(*Product)(nil),        // 2: search.v1.Product
 }
 var file_api_search_v1_search_proto_depIdxs = []int32{
-	4, // 0: search.v1.SearchResponse.products:type_name -> search.v1.Product
-	2, // 1: search.v1.Product.images:type_name -> search.v1.ProductImage
-	5, // 2: search.v1.Product.attributes:type_name -> search.v1.Product.AttributesEntry
-	6, // 3: search.v1.Product.created_at:type_name -> google.protobuf.Timestamp
-	6, // 4: search.v1.Product.updated_at:type_name -> google.protobuf.Timestamp
-	0, // 5: search.v1.SearchService.Search:input_type -> search.v1.SearchRequest
-	1, // 6: search.v1.SearchService.Search:output_type -> search.v1.SearchResponse
-	6, // [6:7] is the sub-list for method output_type
-	5, // [5:6] is the sub-list for method input_type
-	5, // [5:5] is the sub-list for extension type_name
-	5, // [5:5] is the sub-list for extension extendee
-	0, // [0:5] is the sub-list for field type_name
+	2, // 0: search.v1.SearchResponse.products:type_name -> search.v1.Product
+	0, // 1: search.v1.SearchService.Search:input_type -> search.v1.SearchRequest
+	1, // 2: search.v1.SearchService.Search:output_type -> search.v1.SearchResponse
+	2, // [2:3] is the sub-list for method output_type
+	1, // [1:2] is the sub-list for method input_type
+	1, // [1:1] is the sub-list for extension type_name
+	1, // [1:1] is the sub-list for extension extendee
+	0, // [0:1] is the sub-list for field type_name
 }
 
 func init() { file_api_search_v1_search_proto_init() }
@@ -525,7 +276,7 @@ func file_api_search_v1_search_proto_init() {
 			GoPackagePath: reflect.TypeOf(x{}).PkgPath(),
 			RawDescriptor: unsafe.Slice(unsafe.StringData(file_api_search_v1_search_proto_rawDesc), len(file_api_search_v1_search_proto_rawDesc)),
 			NumEnums:      0,
-			NumMessages:   6,
+			NumMessages:   3,
 			NumExtensions: 0,
 			NumServices:   1,
 		},

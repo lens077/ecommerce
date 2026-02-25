@@ -154,7 +154,7 @@ export default function PrimarySearchAppBar() {
         setIsSearching(true);
 
         // 调用搜索API
-        searchApi.search('products', searchInput.trim(), abortController.signal)
+        searchApi.search('spus', searchInput.trim(), abortController.signal)
             .then(response => {
                 setSearchResults(response.products || []);
                 setShowSearchResults(true);
@@ -172,7 +172,7 @@ export default function PrimarySearchAppBar() {
     const handleSearchResultClick = (product: Product) => {
         console.log('点击搜索结果:', product);
         // 导航到商品详情页
-        router.navigate({ to: '/product/$productId', params: { productId: product.id } });
+        router.navigate({ to: '/product/$spuCode', params: { spuCode: product.spuCode } });
         // 清空搜索状态
         setSearchInput('');
         setSearchResults([]);
@@ -357,7 +357,7 @@ export default function PrimarySearchAppBar() {
                                 >
                                     <Box sx={{ display: 'flex', flexDirection: 'column', alignItems: 'center' }}>
                                         <Avatar
-                                            src={product.images?.find(img => img.type === 'cover')?.url || product.coverImage}
+                                            src={product.mainMediaUrl}
                                             alt={product.name}
                                             sx={{ width: 80, height: 80, mb: 2 }}
                                         />
@@ -367,9 +367,10 @@ export default function PrimarySearchAppBar() {
                                         <Typography variant="body1" color="primary" fontWeight="bold">
                                             ¥{product.price}
                                         </Typography>
-                                        <Typography variant="body2" color="text.secondary" sx={{ mt: 1 }}>
-                                            {product.categoryName}
+                                        <Typography variant="body1" color="primary" fontWeight="bold">
+                                            已售{product.quantity}
                                         </Typography>
+
                                     </Box>
                                 </Box>
                             ))}
