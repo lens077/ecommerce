@@ -6,7 +6,6 @@
 
 import type { GenFile, GenMessage, GenService } from "@bufbuild/protobuf/codegenv2";
 import { fileDesc, messageDesc, serviceDesc } from "@bufbuild/protobuf/codegenv2";
-import type { Timestamp } from "@bufbuild/protobuf/wkt";
 import { file_google_protobuf_timestamp } from "@bufbuild/protobuf/wkt";
 import type { Message } from "@bufbuild/protobuf";
 
@@ -14,7 +13,7 @@ import type { Message } from "@bufbuild/protobuf";
  * Describes the file api/search/v1/search.proto.
  */
 export const file_api_search_v1_search: GenFile = /*@__PURE__*/
-  fileDesc("ChphcGkvc2VhcmNoL3YxL3NlYXJjaC5wcm90bxIJc2VhcmNoLnYxIiwKDVNlYXJjaFJlcXVlc3QSDQoFaW5kZXgYASABKAkSDAoEbmFtZRgCIAEoCSI2Cg5TZWFyY2hSZXNwb25zZRIkCghwcm9kdWN0cxgBIAMoCzISLnNlYXJjaC52MS5Qcm9kdWN0Ik8KDFByb2R1Y3RJbWFnZRILCgN1cmwYASABKAkSDAoEdHlwZRgCIAEoCRISCgpzb3J0X29yZGVyGAMgASgFEhAKCGFsdF90ZXh0GAQgASgJIi4KEFByb2R1Y3RBdHRyaWJ1dGUSCwoDa2V5GAEgASgJEg0KBXZhbHVlGAIgASgJIuIDCgdQcm9kdWN0EgoKAmlkGAEgASgJEgwKBG5hbWUYAiABKAkSFAoMbmFtZV9zdWdnZXN0GAMgASgJEhMKC2Rlc2NyaXB0aW9uGAQgASgJEg0KBXByaWNlGAUgASgBEg4KBnN0YXR1cxgGIAEoCRITCgttZXJjaGFudF9pZBgHIAEoCRITCgtjYXRlZ29yeV9pZBgIIAEoBRIVCg1jYXRlZ29yeV9uYW1lGAkgASgJEicKBmltYWdlcxgKIAMoCzIXLnNlYXJjaC52MS5Qcm9kdWN0SW1hZ2USEwoLY292ZXJfaW1hZ2UYCyABKAkSNgoKYXR0cmlidXRlcxgMIAMoCzIiLnNlYXJjaC52MS5Qcm9kdWN0LkF0dHJpYnV0ZXNFbnRyeRITCgtzYWxlc19jb3VudBgNIAEoBRIUCgxyYXRpbmdfc2NvcmUYDiABKAESLgoKY3JlYXRlZF9hdBgPIAEoCzIaLmdvb2dsZS5wcm90b2J1Zi5UaW1lc3RhbXASLgoKdXBkYXRlZF9hdBgQIAEoCzIaLmdvb2dsZS5wcm90b2J1Zi5UaW1lc3RhbXAaMQoPQXR0cmlidXRlc0VudHJ5EgsKA2tleRgBIAEoCRINCgV2YWx1ZRgCIAEoCToCOAEyUAoNU2VhcmNoU2VydmljZRI/CgZTZWFyY2gSGC5zZWFyY2gudjEuU2VhcmNoUmVxdWVzdBoZLnNlYXJjaC52MS5TZWFyY2hSZXNwb25zZSIAQp4BCg1jb20uc2VhcmNoLnYxQgtTZWFyY2hQcm90b1ABWjtnaXRodWIuY29tL3N1bm1lcnkvZWNvbW1lcmNlL2JhY2tlbmQvYXBpL3NlYXJjaC92MTtzZWFyY2h2MaICA1NYWKoCCVNlYXJjaC5WMcoCCVNlYXJjaFxWMeICFVNlYXJjaFxWMVxHUEJNZXRhZGF0YeoCClNlYXJjaDo6VjFiBnByb3RvMw", [file_google_protobuf_timestamp]);
+  fileDesc("ChphcGkvc2VhcmNoL3YxL3NlYXJjaC5wcm90bxIJc2VhcmNoLnYxIiwKDVNlYXJjaFJlcXVlc3QSDQoFaW5kZXgYASABKAkSDAoEbmFtZRgCIAEoCSI2Cg5TZWFyY2hSZXNwb25zZRIkCghwcm9kdWN0cxgBIAMoCzISLnNlYXJjaC52MS5Qcm9kdWN0In4KB1Byb2R1Y3QSCgoCaWQYASABKA0SEAoIc3B1X2NvZGUYAiABKAkSDQoFcHJpY2UYAyABKAESDgoGc3RhdHVzGAQgASgJEhYKDm1haW5fbWVkaWFfdXJsGAUgASgJEhAKCHF1YW50aXR5GAYgASgNEgwKBG5hbWUYByABKAkyUAoNU2VhcmNoU2VydmljZRI/CgZTZWFyY2gSGC5zZWFyY2gudjEuU2VhcmNoUmVxdWVzdBoZLnNlYXJjaC52MS5TZWFyY2hSZXNwb25zZSIAQp4BCg1jb20uc2VhcmNoLnYxQgtTZWFyY2hQcm90b1ABWjtnaXRodWIuY29tL3N1bm1lcnkvZWNvbW1lcmNlL2JhY2tlbmQvYXBpL3NlYXJjaC92MTtzZWFyY2h2MaICA1NYWKoCCVNlYXJjaC5WMcoCCVNlYXJjaFxWMeICFVNlYXJjaFxWMVxHUEJNZXRhZGF0YeoCClNlYXJjaDo6VjFiBnByb3RvMw", [file_google_protobuf_timestamp]);
 
 /**
  * @generated from message search.v1.SearchRequest
@@ -56,180 +55,45 @@ export const SearchResponseSchema: GenMessage<SearchResponse> = /*@__PURE__*/
   messageDesc(file_api_search_v1_search, 1);
 
 /**
- * 定义 ProductImage 消息 (对应 Go 结构体中的 ProductImage)
- *
- * @generated from message search.v1.ProductImage
- */
-export type ProductImage = Message<"search.v1.ProductImage"> & {
-  /**
-   * url 字段，对应 Go 结构体中的 url 字段
-   *
-   * @generated from field: string url = 1;
-   */
-  url: string;
-
-  /**
-   * type 字段，例如 "cover" (封面) 或 "detail" (详情页)
-   *
-   * @generated from field: string type = 2;
-   */
-  type: string;
-
-  /**
-   * sort_order 字段，用于排序
-   *
-   * @generated from field: int32 sort_order = 3;
-   */
-  sortOrder: number;
-
-  /**
-   * alt_text 字段，用于图片替代文本
-   *
-   * @generated from field: string alt_text = 4;
-   */
-  altText: string;
-};
-
-/**
- * Describes the message search.v1.ProductImage.
- * Use `create(ProductImageSchema)` to create a new message.
- */
-export const ProductImageSchema: GenMessage<ProductImage> = /*@__PURE__*/
-  messageDesc(file_api_search_v1_search, 2);
-
-/**
- * 定义 ProductAttribute 消息 (对应 Go 结构体中的 ProductAttribute)
- *
- * @generated from message search.v1.ProductAttribute
- */
-export type ProductAttribute = Message<"search.v1.ProductAttribute"> & {
-  /**
-   * key 字段，属性名 (例如 "颜色", "尺寸")
-   *
-   * @generated from field: string key = 1;
-   */
-  key: string;
-
-  /**
-   * value 字段，属性值 (例如 "红色", "L")
-   *
-   * @generated from field: string value = 2;
-   */
-  value: string;
-};
-
-/**
- * Describes the message search.v1.ProductAttribute.
- * Use `create(ProductAttributeSchema)` to create a new message.
- */
-export const ProductAttributeSchema: GenMessage<ProductAttribute> = /*@__PURE__*/
-  messageDesc(file_api_search_v1_search, 3);
-
-/**
  * 定义 Product 消息 (对应 Go 结构体中的 Product)
  *
  * @generated from message search.v1.Product
  */
 export type Product = Message<"search.v1.Product"> & {
   /**
-   * 基础信息
-   *
-   * @generated from field: string id = 1;
+   * @generated from field: uint32 id = 1;
    */
-  id: string;
+  id: number;
 
   /**
-   * @generated from field: string name = 2;
+   * @generated from field: string spu_code = 2;
    */
-  name: string;
+  spuCode: string;
 
   /**
-   * repeated 对应 Go 中的切片 ([]string)
-   *  repeated string name_suggest = 3;
-   *
-   * @generated from field: string name_suggest = 3;
-   */
-  nameSuggest: string;
-
-  /**
-   * @generated from field: string description = 4;
-   */
-  description: string;
-
-  /**
-   * 价格和状态
-   *
-   * @generated from field: double price = 5;
+   * @generated from field: double price = 3;
    */
   price: number;
 
   /**
-   * @generated from field: string status = 6;
+   * @generated from field: string status = 4;
    */
   status: string;
 
   /**
-   * 分类和商家信息
-   *
-   * @generated from field: string merchant_id = 7;
+   * @generated from field: string main_media_url = 5;
    */
-  merchantId: string;
+  mainMediaUrl: string;
 
   /**
-   * Go 的 int 对应 Protobuf 的 int32
-   *
-   * @generated from field: int32 category_id = 8;
+   * @generated from field: uint32 quantity = 6;
    */
-  categoryId: number;
+  quantity: number;
 
   /**
-   * @generated from field: string category_name = 9;
+   * @generated from field: string name = 7;
    */
-  categoryName: string;
-
-  /**
-   * 图片和属性 (嵌套消息)
-   * repeated 对应 Go 中的结构体切片 ([]ProductImage)
-   *
-   * @generated from field: repeated search.v1.ProductImage images = 10;
-   */
-  images: ProductImage[];
-
-  /**
-   * @generated from field: string cover_image = 11;
-   */
-  coverImage: string;
-
-  /**
-   * repeated 对应 Go 中的结构体切片 ([]ProductAttribute)
-   *
-   * @generated from field: map<string, string> attributes = 12;
-   */
-  attributes: { [key: string]: string };
-
-  /**
-   * 统计信息
-   *
-   * @generated from field: int32 sales_count = 13;
-   */
-  salesCount: number;
-
-  /**
-   * @generated from field: double rating_score = 14;
-   */
-  ratingScore: number;
-
-  /**
-   * 时间戳 (使用标准 Protobuf 类型)
-   *
-   * @generated from field: google.protobuf.Timestamp created_at = 15;
-   */
-  createdAt?: Timestamp;
-
-  /**
-   * @generated from field: google.protobuf.Timestamp updated_at = 16;
-   */
-  updatedAt?: Timestamp;
+  name: string;
 };
 
 /**
@@ -237,7 +101,7 @@ export type Product = Message<"search.v1.Product"> & {
  * Use `create(ProductSchema)` to create a new message.
  */
 export const ProductSchema: GenMessage<Product> = /*@__PURE__*/
-  messageDesc(file_api_search_v1_search, 4);
+  messageDesc(file_api_search_v1_search, 2);
 
 /**
  * @generated from service search.v1.SearchService

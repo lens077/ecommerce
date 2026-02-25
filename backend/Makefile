@@ -25,7 +25,6 @@ k8s-prod:
 run:
 	go run cmd/server/main.go
 
-
 .PHONY: test
 test:
 	go test -short -coverprofile=coverage.out ./...
