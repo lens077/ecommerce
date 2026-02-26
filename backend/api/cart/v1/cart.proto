@@ -1,0 +1,43 @@
+syntax = "proto3";
+
+import "google/protobuf/timestamp.proto";
+
+package cart.v1;
+
+option go_package = "github.com/sunmery/ecommerce/backend/api/cart/v1;cartv1";
+
+service CartService {
+  rpc AddProductToCart(AddProductToCartRequest) returns (AddProductToCartResponse){}
+  rpc RemoveProductToCart(RemoveProductToCartRequest) returns (RemoveProductToCartResponse){}
+}
+
+message AddProductToCartRequest {
+  uint64 spu_id = 1;
+  uint64 sku_id = 2;
+  string merchant_id = 3;
+  uint32 quantity = 4;
+  google.protobuf.Timestamp created_at = 5;
+  bool selected = 6;
+}
+
+message AddProductToCartResponse {
+  uint64 spu_id = 1;
+  uint64 sku_id = 2;
+  string merchant_id = 3;
+  uint32 quantity = 4;
+  google.protobuf.Timestamp created_at = 5;
+  bool selected = 6;
+}
+
+message RemoveProductToCartRequest {
+  uint64 spu_id = 1;
+  uint64 sku_id = 2;
+  string merchant_id = 3;
+  uint32 quantity = 4;
+  google.protobuf.Timestamp updated_at = 5;
+}
+
+message RemoveProductToCartResponse {
+  string status = 1;
+  string message = 2;
+}
