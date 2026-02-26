@@ -1,7 +1,7 @@
 import { createFileRoute } from '@tanstack/react-router'
 
 import {
-    Box, Container, Typography, Grid, Card, CardMedia,
+    Box, Container, Typography, Card, CardMedia,
     List, ListItem, ListItemText, Divider, Button, Paper, Chip, Skeleton
 } from '@mui/material'
 import { styled } from '@mui/material/styles'
@@ -45,7 +45,9 @@ const ProductPage = () => {
         const values = new Set<string>()
         product.skus?.forEach(sku => {
             if (sku.attrs?.[key]) {
-                values.add(sku.attrs[key])
+                // 确保值是字符串类型
+                const value = String(sku.attrs[key])
+                values.add(value)
             }
         })
         acc[key] = Array.from(values)
@@ -56,9 +58,10 @@ const ProductPage = () => {
     const findMatchingSku = () => {
         return product.skus?.find(sku => {
             if (!sku.attrs) return false
-            return Object.entries(selectedAttrs).every(([key, value]) =>
-                sku.attrs && sku.attrs[key] === value
-            )
+            return Object.entries(selectedAttrs).every(([key, value]) => {
+                const skuValue = sku.attrs?.[key]
+                return skuValue !== undefined && String(skuValue) === value
+            })
         })
     }
 
@@ -84,89 +87,91 @@ const ProductPage = () => {
                     {product.name}
                 </Typography>
 
-                <Grid container spacing={5}>
-                    {/* 左侧：图片展示区 */}
-                    <Grid item xs={12} md={6}>
-                        <ImageCard elevation={0}>
-                            <CardMedia
-                                component="img"
-                                image={currentImage}
-                                alt={product.name}
-                                sx={{height: 500, objectFit: 'contain', bgcolor: '#fff'}}
-                            />
-                        </ImageCard>
-                    </Grid>
+                <Box sx={{display: 'flex', flexDirection: 'column', gap: 5}}>
+                    <Box sx={{display: 'flex', flexDirection: {xs: 'column', md: 'row'}, gap: 5}}>
+                        {/* 左侧：图片展示区 */}
+                        <Box sx={{flex: '1 1 50%', minWidth: 0}}>
+                            <ImageCard elevation={0}>
+                                <CardMedia
+                                    component="img"
+                                    image={currentImage}
+                                    alt={product.name}
+                                    sx={{height: 500, objectFit: 'contain', bgcolor: '#fff'}}
+                                />
+                            </ImageCard>
+                        </Box>
 
-                    {/* 右侧：购买决策区 */}
-                    <Grid item xs={12} md={6}>
-                        <Paper elevation={0} sx={{p: 4, borderRadius: '16px'}}>
-                            <Typography variant="h3" color="primary" sx={{fontWeight: 700, mb: 1}}>
-                                ¥{currentPrice.toLocaleString()}
-                            </Typography>
+                        {/* 右侧：购买决策区 */}
+                        <Box sx={{flex: '1 1 50%', minWidth: 0}}>
+                            <Paper elevation={0} sx={{p: 4, borderRadius: '16px'}}>
+                                <Typography variant="h3" color="primary" sx={{fontWeight: 700, mb: 1}}>
+                                    ¥{currentPrice.toLocaleString()}
+                                </Typography>
 
-                            <Box sx={{display: 'flex', gap: 1, mb: 3}}>
-                                <Chip size="small" label={`库存 ${selectedSku?.stock || 0}`}
-                                      sx={{bgcolor: '#4caf50', color: '#fff'}}/>
-                            </Box>
-
-                            {/* 属性选择区 */}
-                            <Divider sx={{mb: 3}}/>
-                            <Typography variant="h6" sx={{mb: 2, fontWeight: 600}}>选择配置</Typography>
-
-                            {Object.entries(attributes).map(([key, values]) => (
-                                <Box key={key} sx={{mb: 3}}>
-                                    <Typography variant="body2" color="text.secondary" sx={{mb: 1}}>
-                                        {key}
-                                    </Typography>
-                                    <Box sx={{display: 'flex', gap: 1, flexWrap: 'wrap'}}>
-                                        {values.map(value => (
-                                            <Chip
-                                                key={value}
-                                                label={value}
-                                                onClick={() => handleAttributeSelect(key, value)}
-                                                sx={{
-                                                    cursor: 'pointer',
-                                                    border: `1px solid ${selectedAttrs[key] === value ? '#1976d2' : '#ddd'}`,
-                                                    backgroundColor: selectedAttrs[key] === value ? '#e3f2fd' : 'white',
-                                                    '&:hover': {
-                                                        borderColor: '#1976d2',
-                                                        backgroundColor: '#f1f8fe'
-                                                    }
-                                                }}
-                                            />
-                                        ))}
-                                    </Box>
+                                <Box sx={{display: 'flex', gap: 1, mb: 3}}>
+                                    <Chip size="small" label={`库存 ${selectedSku?.stock || 0}`}
+                                          sx={{bgcolor: '#4caf50', color: '#fff'}}/>
                                 </Box>
-                            ))}
 
-                            <Divider sx={{my: 3}}/>
+                                {/* 属性选择区 */}
+                                <Divider sx={{mb: 3}}/>
+                                <Typography variant="h6" sx={{mb: 2, fontWeight: 600}}>选择配置</Typography>
 
-                            <Typography variant="h6" sx={{mb: 1, fontWeight: 600}}>核心配置</Typography>
-                            <List disablePadding>
-                                {product.commonSpecs && Object.entries(product.commonSpecs).map(([key, val]) => (
-                                    <ListItem key={key} sx={{px: 0, py: 0.5}}>
-                                        <ListItemText
-                                            primary={<Typography variant="body2"
-                                                                 color="text.secondary">{key}</Typography>}
-                                            secondary={<Typography variant="body1" fontWeight={500}>{val}</Typography>}
-                                        />
-                                    </ListItem>
+                                {Object.entries(attributes).map(([key, values]) => (
+                                    <Box key={key} sx={{mb: 3}}>
+                                        <Typography variant="body2" color="text.secondary" sx={{mb: 1}}>
+                                            {key}
+                                        </Typography>
+                                        <Box sx={{display: 'flex', gap: 1, flexWrap: 'wrap'}}>
+                                            {values.map(value => (
+                                                <Chip
+                                                    key={value}
+                                                    label={value}
+                                                    onClick={() => handleAttributeSelect(key, value)}
+                                                    sx={{
+                                                        cursor: 'pointer',
+                                                        border: `1px solid ${selectedAttrs[key] === value ? '#1976d2' : '#ddd'}`,
+                                                        backgroundColor: selectedAttrs[key] === value ? '#e3f2fd' : 'white',
+                                                        '&:hover': {
+                                                            borderColor: '#1976d2',
+                                                            backgroundColor: '#f1f8fe'
+                                                        }
+                                                    }}
+                                                />
+                                            ))}
+                                        </Box>
+                                    </Box>
                                 ))}
-                            </List>
 
-                            <Box sx={{mt: 4, display: 'flex', gap: 2}}>
-                                <Button variant="contained" size="large" fullWidth
-                                        sx={{borderRadius: '8px', py: 1.5, fontWeight: 'bold'}}>
-                                    加入购物车
-                                </Button>
-                                <Button variant="outlined" size="large" fullWidth
-                                        sx={{borderRadius: '8px', fontWeight: 'bold'}}>
-                                    立即购买
-                                </Button>
-                            </Box>
-                        </Paper>
-                    </Grid>
-                </Grid>
+                                <Divider sx={{my: 3}}/>
+
+                                <Typography variant="h6" sx={{mb: 1, fontWeight: 600}}>核心配置</Typography>
+                                <List disablePadding>
+                                    {product.commonSpecs && Object.entries(product.commonSpecs).map(([key, val]) => (
+                                        <ListItem key={key} sx={{px: 0, py: 0.5}}>
+                                            <ListItemText
+                                                primary={<Typography variant="body2"
+                                                                     color="text.secondary">{key}</Typography>}
+                                                secondary={<Typography variant="body1" fontWeight={500}>{String(val)}</Typography>}
+                                            />
+                                        </ListItem>
+                                    ))}
+                                </List>
+
+                                <Box sx={{mt: 4, display: 'flex', gap: 2}}>
+                                    <Button variant="contained" size="large" fullWidth
+                                            sx={{borderRadius: '8px', py: 1.5, fontWeight: 'bold'}}>
+                                        加入购物车
+                                    </Button>
+                                    <Button variant="outlined" size="large" fullWidth
+                                            sx={{borderRadius: '8px', fontWeight: 'bold'}}>
+                                        立即购买
+                                    </Button>
+                                </Box>
+                            </Paper>
+                        </Box>
+                    </Box>
+                </Box>
             </Container>
         </Box>
     )
@@ -176,14 +181,14 @@ const ProductPage = () => {
 const ProductSkeleton = () => (
     <Container maxWidth="lg" sx={{py: 6}}>
         <Skeleton variant="text" width="40%" height={60} sx={{mb: 2}}/>
-        <Grid container spacing={4}>
-            <Grid item xs={12} md={6}>
+        <Box sx={{display: 'flex', flexDirection: {xs: 'column', md: 'row'}, gap: 4}}>
+            <Box sx={{flex: '1 1 50%', minWidth: 0}}>
                 <Skeleton variant="rectangular" height={500} sx={{borderRadius: '12px'}}/>
-            </Grid>
-            <Grid item xs={12} md={6}>
+            </Box>
+            <Box sx={{flex: '1 1 50%', minWidth: 0}}>
                 <Skeleton variant="rectangular" height={400} sx={{borderRadius: '12px'}}/>
-            </Grid>
-        </Grid>
+            </Box>
+        </Box>
     </Container>
 )
 

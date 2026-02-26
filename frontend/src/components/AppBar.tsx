@@ -11,15 +11,21 @@ import MenuItem from '@mui/material/MenuItem';
 import Menu from '@mui/material/Menu';
 import Paper from '@mui/material/Paper';
 import Avatar from '@mui/material/Avatar';
+import Button from '@mui/material/Button';
 import MenuIcon from '@mui/icons-material/Menu';
 import SearchIcon from '@mui/icons-material/Search';
 import AccountCircle from '@mui/icons-material/AccountCircle';
 import MailIcon from '@mui/icons-material/Mail';
 import NotificationsIcon from '@mui/icons-material/Notifications';
 import MoreIcon from '@mui/icons-material/MoreVert';
+import ShoppingCartIcon from '@mui/icons-material/ShoppingCart';
 import { searchApi } from '@/api/search';
 import type { Product } from '@/gen/api/search/v1/search_pb';
-import { useRouter } from '@tanstack/react-router';
+import { useNavigate } from '@tanstack/react-router';
+import { getSigninUrl, isLoggedIn } from '@/conf/casdoor';
+import { addNotification } from '@/store/notifications';
+import { userStore } from '@/store/users';
+import { clearToken } from '@/utils/casdoor';
 
 const Search = styled('div')(({ theme }) => ({
     position: 'relative',
@@ -94,7 +100,7 @@ const StyledInputBase = styled(InputBase)(({ theme }) => ({
 }));
 
 export default function PrimarySearchAppBar() {
-    const router = useRouter();
+    const navigate = useNavigate();
     const [anchorEl, setAnchorEl] = React.useState<null | HTMLElement>(null);
     const [mobileMoreAnchorEl, setMobileMoreAnchorEl]
         = React.useState<null | HTMLElement>(null);
@@ -117,9 +123,46 @@ export default function PrimarySearchAppBar() {
         setMobileMoreAnchorEl(null);
     };
 
-    const handleMenuClose = () => {
+    const handleMenuClose = async (path?: string) => {
         setAnchorEl(null);
         handleMobileMenuClose();
+
+        if (path === '/logout') {
+            // 执行登出操作
+            clearToken();
+            // 清空用户store
+            userStore.account = {
+                createdTime: '',
+                displayName: '',
+                id: '',
+                accessToken: '',
+                affiliation: '',
+                email: '',
+                isAdmin: false,
+                language: '',
+                organization: '',
+                phone: '',
+                score: 0,
+                tag: '',
+                type: '',
+                username: '',
+                name: '',
+                avatar: '',
+            };
+            // 显示登出成功通知
+            addNotification({
+                message: '登出成功',
+                severity: 'success',
+            });
+            // 跳转到首页
+            await navigate({
+                to: '/',
+            });
+        } else if (path) {
+            await navigate({
+                to: path,
+            });
+        }
     };
 
     const handleMobileMenuOpen = (event: React.MouseEvent<HTMLElement>) => {
@@ -154,7 +197,7 @@ export default function PrimarySearchAppBar() {
         setIsSearching(true);
 
         // 调用搜索API
-        searchApi.search('spus', searchInput.trim(), abortController.signal)
+        searchApi.search('products', searchInput.trim(), abortController.signal)
             .then(response => {
                 setSearchResults(response.products || []);
                 setShowSearchResults(true);
@@ -172,7 +215,7 @@ export default function PrimarySearchAppBar() {
     const handleSearchResultClick = (product: Product) => {
         console.log('点击搜索结果:', product);
         // 导航到商品详情页
-        router.navigate({ to: '/product/$spuCode', params: { spuCode: product.spuCode } });
+        navigate({ to: '/product/$spuCode', params: { spuCode: product.spuCode } });
         // 清空搜索状态
         setSearchInput('');
         setSearchResults([]);
@@ -194,10 +237,20 @@ export default function PrimarySearchAppBar() {
                 horizontal: 'right',
             }}
             open={isMenuOpen}
-            onClose={handleMenuClose}
+            onClose={() => handleMenuClose()}
         >
-            <MenuItem onClick={handleMenuClose}>Profile</MenuItem>
-            <MenuItem onClick={handleMenuClose}>My account</MenuItem>
+            <MenuItem disabled>
+                <Typography
+                    variant='body2'
+                    color='text.secondary'
+                >
+                    Signed in as {userStore.account.name || userStore.account.email}
+                </Typography>
+            </MenuItem>
+            <MenuItem onClick={() => handleMenuClose('/profile')}>
+                My account
+            </MenuItem>
+            <MenuItem onClick={() => handleMenuClose('/logout')}>Logout</MenuItem>
         </Menu>
     );
 
@@ -238,6 +291,19 @@ export default function PrimarySearchAppBar() {
                 </IconButton>
                 <p>Notifications</p>
             </MenuItem>
+            <MenuItem>
+                <IconButton
+                    size="large"
+                    aria-label="shopping cart"
+                    color="inherit"
+                    onClick={() => navigate({ to: '/cart' })}
+                >
+                    <Badge badgeContent={3} color="error">
+                        <ShoppingCartIcon />
+                    </Badge>
+                </IconButton>
+                <p>Cart</p>
+            </MenuItem>
             <MenuItem onClick={handleProfileMenuOpen}>
                 <IconButton
                     size="large"
@@ -246,7 +312,14 @@ export default function PrimarySearchAppBar() {
                     aria-haspopup="true"
                     color="inherit"
                 >
-                    <AccountCircle />
+                    {userStore.account.avatar ? (
+                        <Avatar
+                            src={userStore.account.avatar}
+                            alt={userStore.account.name}
+                        />
+                    ) : (
+                        <AccountCircle />
+                    )}
                 </IconButton>
                 <p>Profile</p>
             </MenuItem>
@@ -272,7 +345,7 @@ export default function PrimarySearchAppBar() {
                         component="div"
                         sx={{ display: { xs: 'none', sm: 'block' } }}
                     >
-                        MUI
+                        {import.meta.env.VITE_APP_TITLE || 'MUI'}
                     </Typography>
                     <SearchContainer>
                         <Search>
@@ -288,7 +361,13 @@ export default function PrimarySearchAppBar() {
                         </Search>
                     </SearchContainer>
                     <Box sx={{ flexGrow: 1 }} />
-                    <Box sx={{ display: { xs: 'none', md: 'flex' } }}>
+                    <Box
+                        sx={{
+                            display: { xs: 'none', md: 'flex' },
+                            alignItems: 'center',
+                            gap: 2,
+                        }}
+                    >
                         <IconButton size="large" aria-label="show 4 new mails" color="inherit">
                             <Badge badgeContent={4} color="error">
                                 <MailIcon />
@@ -305,27 +384,67 @@ export default function PrimarySearchAppBar() {
                         </IconButton>
                         <IconButton
                             size="large"
-                            edge="end"
-                            aria-label="account of current user"
-                            aria-controls={menuId}
-                            aria-haspopup="true"
-                            onClick={handleProfileMenuOpen}
+                            aria-label="shopping cart"
                             color="inherit"
+                            onClick={() => navigate({ to: '/cart' })}
                         >
-                            <AccountCircle />
+                            <Badge badgeContent={3} color="error">
+                                <ShoppingCartIcon />
+                            </Badge>
                         </IconButton>
+                        {isLoggedIn() ? (
+                            <IconButton
+                                size="large"
+                                edge="end"
+                                aria-label="account of current user"
+                                aria-controls={menuId}
+                                aria-haspopup="true"
+                                onClick={handleProfileMenuOpen}
+                                color="inherit"
+                            >
+                                {userStore.account.avatar ? (
+                                    <Avatar
+                                        src={userStore.account.avatar}
+                                        alt={userStore.account.name}
+                                    />
+                                ) : (
+                                    <AccountCircle />
+                                )}
+                            </IconButton>
+                        ) : (
+                            <Button
+                                variant="contained"
+                                onClick={() => {
+                                    window.location.href = getSigninUrl()
+                                }}
+                                sx={{ ml: 2 }}
+                            >
+                                Login
+                            </Button>
+                        )}
                     </Box>
                     <Box sx={{ display: { xs: 'flex', md: 'none' } }}>
-                        <IconButton
-                            size="large"
-                            aria-label="show more"
-                            aria-controls={mobileMenuId}
-                            aria-haspopup="true"
-                            onClick={handleMobileMenuOpen}
-                            color="inherit"
-                        >
-                            <MoreIcon />
-                        </IconButton>
+                        {isLoggedIn() ? (
+                            <IconButton
+                                size="large"
+                                aria-label="show more"
+                                aria-controls={mobileMenuId}
+                                aria-haspopup="true"
+                                onClick={handleMobileMenuOpen}
+                                color="inherit"
+                            >
+                                <MoreIcon />
+                            </IconButton>
+                        ) : (
+                            <Button
+                                size="small"
+                                onClick={() => {
+                                    window.location.href = getSigninUrl()
+                                }}
+                            >
+                                Login
+                            </Button>
+                        )}
                     </Box>
                 </Toolbar>
             </StyledAppBar>
