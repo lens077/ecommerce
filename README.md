@@ -1102,22 +1102,22 @@ curl -v -X POST http://localhost:8080/user.v1.UserService/UserProfile \
 ```
 
 - CI:
-  ![img_3.png](img_3.png)
+  ![img_3.png](images/img_3.png)
 
 - CD:
-  ![img_2.png](img_2.png)
+  ![img_2.png](images/img_2.png)
 
 - Register/discover:
-  ![img.png](img.png)
+  ![img.png](images/img.png)
 
 - Trace:
-  ![img_1.png](img_1.png)
+  ![img_1.png](images/img_1.png)
 
 - Log:
-  ![img_4.png](img_4.png)
+  ![img_4.png](images/img_4.png)
 
 - Metrics
-  ![img_5.png](img_5.png)
+  ![img_5.png](images/img_5.png)
 
 ## Frontend
 
@@ -1131,3 +1131,11 @@ pnpm dev
 ```bash
 curl -v http://localhost:3000
 ```
+
+## 前端设计
+### 地址页
+“智能推荐/默认”：当用户进入“新增地址”页面时，通过 IP 定位自动选中“省、市、区”，用户只需要手动输入“详细地址（门牌号）”。
+
+# 数据来源
+1. IP: https://developer.aliyun.com/article/1638991
+2. 中国省，市，区, 街道四级SQL数据: https://github.com/gaohuazi/china_regions

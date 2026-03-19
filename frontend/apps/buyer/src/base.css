@@ -1,0 +1,365 @@
+/* Global
+================================================== */
+
+/*
+1. Use the more intuitive and predictable border box sizing by default (refs. https://github.com/jensimmons/cssremedy/issues/4 and https://wiki.csswg.org/ideas/mistakes).
+2. Don't repeat background images by default (ref. https://github.com/w3c/csswg-drafts/issues/4526).
+3. Don't repeat mask images by default.
+*/
+
+*,
+*::before,
+*::after {
+  box-sizing: border-box; /* 1 */
+  background-repeat: no-repeat; /* 2 */
+  mask-repeat: no-repeat; /* 3 */
+}
+
+/*
+Revert adding 'background-repeat: no-repeat' to some form elements because it disables their default native appearance in WebKit (bug: https://bugs.webkit.org/show_bug.cgi?id=117128#c2).
+*/
+
+:where(button, input, meter, progress, select) {
+  background-repeat: revert;
+}
+
+/*
+1. A prerequisite for the 'body' to be able to fill the viewport height (requires 'body { min-block-size: 100%; }', see 'body' rule below). Ref. https://codepen.io/germanfrelo/pen/jOGNpbj
+2. Use a sans serif font by default.
+3. The default 'normal' line-height is tightly spaced, but takes font metrics into account, which is important for many fonts. Looser spacing may improve readability in latin type, but may cause problems in some scripts -- from cursive/fantasy fonts to Javanese, Persian, and CJK languages.
+4. Break words when there is not enough space to prevent text overflow.
+5. Use a shorter, more readable tab size (default is 8).
+6. Prevent WebKit-based browsers on iOS from automatically increasing the default font size in landscape orientation (demo: https://codepen.io/germanfrelo/pen/JoPJVxd).
+*/
+
+html {
+  block-size: 100%; /* 1 */
+  font-family: sans-serif; /* 2 */
+  line-height: 1.5; /* 3 */
+  overflow-wrap: break-word; /* 4 */
+  tab-size: 4; /* 5 */
+  -webkit-text-size-adjust: none; /* 6 */
+}
+
+/*
+1. Smooth scrolling, but only when focused in the page to prevent unnaturally scrolling when tabbing though the results of a search.
+2. When users prefer reduced motion, revert the smooth scrolling.
+*/
+
+/* 1 */
+html:focus-within {
+  scroll-behavior: smooth;
+}
+
+/* 2 */
+@media (prefers-reduced-motion: reduce) {
+  html:focus-within {
+    scroll-behavior: auto;
+  }
+}
+
+/*
+When scrolling to target elements, a reasonable spacing is added above them to ensure they remain visible, especially with sticky headers or similar.
+*/
+
+:target {
+  scroll-margin-block-start: 5em;
+}
+
+/* Page
+================================================== */
+
+/*
+1. Makes 'body' at least as tall as the viewport height (requires 'html { block-size: 100%; }', see 'html' rule above). Ref. https://codepen.io/germanfrelo/pen/jOGNpbj
+2. Remove the default 8px margin from 'body', which is usually not wanted, in favor of better control in authored CSS.
+*/
+
+body {
+  min-block-size: 100%; /* 1 */
+  margin: 0; /* 2 */
+}
+
+/* Headings
+================================================== */
+
+/*
+The default 'normal' line-height is tightly spaced, but takes font metrics into account, which is important for many fonts. Looser spacing may improve readability in latin type, but may cause problems in some scripts -- from cursive/fantasy fonts to Javanese, Persian, and CJK languages.
+*/
+
+h1,
+h2,
+h3,
+h4,
+h5,
+h6 {
+  line-height: 1.25;
+}
+
+/* Grouping content
+================================================== */
+
+/*
+1. Fix the inheritance and scaling of the font size in all browsers. Refs.:
+- https://www.brunildo.org/test/monospace_fsize.html
+- https://bugzilla.mozilla.org/show_bug.cgi?id=175415
+- https://www.456bereastreet.com/archive/200408/sizing_monospaced_fonts/
+- https://webkit.org/blog/67/strange-medium/
+- https://www.456bereastreet.com/archive/200609/font_size_inconsistencies_with_fontfamily_monospace/
+- https://neugierig.org/software/chromium/notes/2009/04/monospace-fonts.html
+- https://neugierig.org/software/chromium/notes/2009/09/monospace-fonts-workaround.html
+- https://meyerweb.com/eric/thoughts/2010/02/12/fixed-monospace-sizing/
+- https://github.com/necolas/normalize.css/commit/5daad010a2f19c12b89f317ba9d2c8e4573210d7
+- https://github.com/necolas/normalize.css/issues/519#issuecomment-197131966
+2. Fix the odd 'em' font sizing in all browsers.
+3. Prevent content from overflowing while preserving its formatting. (ref. https://github.com/jensimmons/cssremedy/issues/81)
+*/
+
+pre {
+  font-family: monospace; /* 1 */
+  font-size: 1em; /* 2 */
+  overflow: auto; /* 3 */
+}
+
+/*
+Sets a consistent and modern default look for 'hr':
+1. Reverts the default 'gray' color in Firefox and WebKit to allow the text foreground color to be used as the border color.
+2. Removes all default '1px inset' borders to instead use a single border with a 'solid' style and a border width of '2px' to have the same height as before.
+*/
+
+hr {
+  color: inherit; /* 1 */
+  border: none; /* 2 */
+  border-block-start: 2px solid; /* 2 */
+}
+
+/*
+The default 'normal' line-height is tightly spaced, but takes font metrics into account, which is important for many fonts. Looser spacing may improve readability in latin type, but may cause problems in some scripts -- from cursive/fantasy fonts to Javanese, Persian, and CJK languages.
+*/
+
+figcaption {
+  line-height: 1.375;
+}
+
+/*
+Replace the default 40px indentation of some elements with a value relative to the font.
+*/
+
+:where(blockquote, figure) {
+  margin-inline: 2.5em;
+}
+
+:where(ul, ol, menu) {
+  padding-inline-start: 2.5em;
+}
+
+:where(dd) {
+  margin-inline-start: 2.5em;
+}
+
+/* Text-level semantics
+================================================== */
+
+/*
+1. Fix the inheritance and scaling of the font size in all browsers.
+2. Fix the odd 'em' font sizing in all browsers.
+*/
+
+code,
+kbd,
+samp {
+  font-family: monospace; /* 1 */
+  font-size: 1em; /* 2 */
+}
+
+/* Embedded content
+================================================== */
+
+/*
+1. Block display by default is usually what we want/the most common use case (default is 'inline').
+2. Responsive by default to prevent them from growing beyond the container.
+3. Set vertical alignment to middle to avoid extra space below caused by line-height in case display is changed to an inline value.
+*/
+
+audio,
+canvas,
+embed,
+iframe,
+img,
+object,
+svg,
+video {
+  display: block; /* 1 */
+  max-inline-size: 100%; /* 2 */
+  vertical-align: middle; /* 3 */
+}
+
+/*
+Maintain intrinsic aspect ratios when 'max-inline-size' is applied ('embed', 'iframe' and 'object' have no intrinsic ratio, so their 'block-size' needs to be set explicitly).
+*/
+
+canvas,
+img,
+svg,
+video {
+  block-size: auto;
+}
+
+/*
+There is no good reason 'audio' defaults to 300px width, and audio files are unlikely to come with a 'width' attribute.
+*/
+
+audio {
+  inline-size: 100%;
+}
+
+/*
+Make SVGs inherit color if they don't have a 'fill' attribute.
+*/
+
+svg:not([fill]) {
+  fill: currentcolor;
+}
+
+/* Tabular data
+================================================== */
+
+/*
+1. Ensure numbers line up (ref: https://github.com/jensimmons/cssremedy/issues/39).
+2. Prevent double borders (ref: https://github.com/jensimmons/cssremedy/issues/39).
+3. Fix the default table 'border-color: gray' on Chrome (bug: https://issues.chromium.org/issues/40615503).
+*/
+
+table {
+  font-variant-numeric: tabular-nums; /* 1 */
+  border-collapse: collapse; /* 2 */
+  border-color: currentcolor; /* 3 */
+}
+
+/*
+Make 'th' alignment consistent with 'td' alignment (ref. https://github.com/jensimmons/cssremedy/issues/39).
+*/
+
+th {
+  text-align: inherit;
+}
+
+/*
+Add padding and border to table cells for a better readability (ref. https://github.com/jensimmons/cssremedy/issues/39).
+*/
+
+:where(th, td) {
+  padding-block: 0.25em;
+  padding-inline: 0.5rem;
+  border: 1px solid;
+}
+
+/*
+The default 'normal' line-height is tightly spaced, but takes font metrics into account, which is important for many fonts. Looser spacing may improve readability in latin type, but may cause problems in some scripts -- from cursive/fantasy fonts to Javanese, Persian, and CJK languages.
+*/
+
+caption {
+  line-height: 1.375;
+}
+
+/* Forms
+================================================== */
+
+/*
+Remove the default 2px inline margin.
+*/
+
+fieldset {
+  margin-inline: 0;
+}
+
+/*
+The default 'normal' line-height is tightly spaced, but takes font metrics into account, which is important for many fonts. Looser spacing may improve readability in latin type, but may cause problems in some scripts -- from cursive/fantasy fonts to Javanese, Persian, and CJK languages.
+*/
+
+label,
+legend {
+  line-height: 1.375;
+}
+
+/*
+1. Responsive by default by restricting sizing to the page width.
+2. Remove the margin from form controls in all browsers.
+3. Add typography inheritance.
+*/
+
+button,
+input,
+select,
+textarea {
+  max-inline-size: 100%; /* 1 */
+  margin: 0; /* 2 */
+  font: inherit; /* 3 */
+  letter-spacing: inherit; /* 3 */
+  word-spacing: inherit; /* 3 */
+}
+
+/*
+Normalize the placeholder color with a new default value that is consistent and accessible across browsers, and adapted to browsers native dark color schemes.
+Ref. https://codepen.io/germanfrelo/pen/EaYwZdb
+*/
+
+::placeholder {
+  color: #757575;
+}
+
+@supports (color: light-dark(black, white)) {
+  ::placeholder {
+    color: light-dark(hsl(0deg 0% 46%), hsl(0deg 0% 65%));
+  }
+}
+
+/*
+Change font properties to 'inherit' in WebKit.
+*/
+
+::file-selector-button {
+  font: inherit;
+}
+
+/* Hidden elements
+================================================== */
+
+/*
+Ensure some elements with the 'hidden' attribute remain hidden, even if a different display value is set (e.g., from the preceding 'display: block' on media element).
+Refs.:
+- https://html.spec.whatwg.org/multipage/rendering.html#hidden-elements
+- https://github.com/jensimmons/cssremedy/pull/72
+- https://github.com/jensimmons/cssremedy/issues/71#issuecomment-771180150
+- https://github.com/tailwindlabs/tailwindcss/commit/b570e2b
+*/
+
+[hidden]:not([hidden="until-found" i]):not(embed) {
+  display: none;
+}
+
+/*
+Utility class to hide elements visually.
+Ref. https://www.scottohara.me/blog/2017/04/14/inclusively-hidden.html
+*/
+.visually-hidden:not(:focus):not(:active) {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  padding: 0;
+  margin: -1px;
+  overflow: hidden;
+  white-space: nowrap;
+  border: 0;
+  clip-path: inset(50%);
+}
+
+/* Cursor
+================================================== */
+
+/*
+Use the same cursor as buttons (default is 'text'), which feels more interactive, and aligns with its common implicit ARIA role of 'button'.
+*/
+
+:where(details > summary:first-of-type) {
+  cursor: default;
+}

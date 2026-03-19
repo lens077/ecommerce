@@ -1,0 +1,15 @@
+syntax = "proto3";
+option go_package = "location/v1;v1";
+import "google/api/annotations.proto";
+
+service LocationService {
+  rpc GetLocation(GetLocationRequest) returns(GetLocationReply) {}
+}
+
+message GetLocationRequest{
+
+}
+
+message GetLocationReply{
+
+}
