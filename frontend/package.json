@@ -1,87 +1,18 @@
 {
   "name": "ecommerce-frontend",
+  "version": "0.0.0",
   "private": true,
   "type": "module",
   "scripts": {
-    "dev": "vite --port 3000 --mode dev",
-    "dev:prod": "vite --port 3000 --mode prod",
-    "build": "vite build && tsc",
-    "serve": "vite preview",
-    "test": "vitest run",
-    "test:ui": "vitest --browser --browser.ui",
-    "format": "biome format",
-    "lint": "biome lint",
-    "check": "biome check",
-    "prepare": "cd .. && husky frontend/.husky || true",
-    "version": "conventional-changelog -p ember && git add CHANGELOG.md && git add package.json",
-    "version:first": "conventional-changelog -p ember -r 0"
-  },
-  "config": {
-    "commitizen": {
-      "path": "node_modules/cz-git"
-    }
-  },
-  "dependencies": {
-    "@bufbuild/protobuf": "^2.11.0",
-    "@connectrpc/connect": "^2.1.1",
-    "@connectrpc/connect-web": "^2.1.1",
-    "@emotion/react": "^11.14.0",
-    "@emotion/styled": "^11.14.1",
-    "@fontsource/roboto": "^5.2.10",
-    "@mui/icons-material": "^7.3.8",
-    "@mui/material": "^7.3.8",
-    "@mui/utils": "^7.3.8",
-    "@t3-oss/env-core": "^0.13.10",
-    "@tanstack/react-devtools": "^0.7.11",
-    "@tanstack/react-query": "^5.90.21",
-    "@tanstack/react-query-devtools": "^5.91.3",
-    "@tanstack/react-router": "^1.162.1",
-    "@tanstack/react-router-devtools": "^1.162.1",
-    "casdoor-js-sdk": "^0.16.0",
-    "casdoor-react-sdk": "^1.2.0",
-    "conventional-changelog": "^7.1.1",
-    "lucide-react": "^0.545.0",
-    "react": "^19.2.4",
-    "react-dom": "^19.2.4",
-    "valtio": "^2.3.0",
-    "zod": "^4.3.6"
+    "ready": "vp fmt && vp lint && vp run test -r && vp run build -r",
+    "dev": "vp run website#dev",
+    "prepare": "vp config"
   },
   "devDependencies": {
-    "@biomejs/biome": "2.2.4",
-    "@bufbuild/buf": "^1.65.0",
-    "@bufbuild/protoc-gen-es": "^2.11.0",
-    "@tanstack/router-plugin": "^1.162.1",
-    "@testing-library/dom": "^10.4.1",
-    "@testing-library/jest-dom": "^6.9.1",
-    "@testing-library/react": "^16.3.2",
-    "@testing-library/user-event": "^14.6.1",
-    "@types/crypto-js": "^4.2.2",
-    "@types/node": "^22.19.11",
-    "@types/react": "^19.2.14",
-    "@types/react-dom": "^19.2.3",
-    "@vitejs/plugin-react-swc": "^4.2.3",
-    "@vitest/browser": "4.0.0-beta.17",
-    "@vitest/browser-playwright": "4.0.0-beta.17",
-    "conventional-changelog-ember": "^5.0.0",
-    "cz-git": "^1.12.0",
-    "husky": "^9.1.7",
-    "jsdom": "^28.1.0",
-    "lint-staged": "^16.2.7",
-    "typescript": "^5.9.3",
-    "vite": "8.0.0-beta.0",
-    "vitest": "4.0.0-beta.17",
-    "vitest-browser-react": "^1.0.1",
-    "web-vitals": "^5.1.0"
+    "vite-plus": "catalog:"
   },
-  "pnpm": {
-    "overrides": {
-      "vite": "8.0.0-beta.0"
-    },
-    "onlyBuiltDependencies": [
-      "@bufbuild/buf",
-      "@swc/core",
-      "esbuild"
-    ]
+  "engines": {
+    "node": ">=22.12.0"
   },
-  "version": "0.0.5"
+  "packageManager": "pnpm@10.32.1"
 }
