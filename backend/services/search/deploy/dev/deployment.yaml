@@ -1,0 +1,29 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: ecommerce-search-deploy
+  labels:
+    app: ecommerce-search
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: ecommerce-search
+  template:
+    metadata:
+      name: ecommerce-search
+      labels:
+        app: ecommerce-search
+    spec:
+      containers:
+        - name: ecommerce-search
+          image: harbor.apikv.com:5443/ecommerce/search:dev
+          imagePullPolicy: Always
+          ports:
+            - containerPort: 30002
+              protocol: TCP
+          envFrom:
+            - configMapRef:
+                name: ecommerce-search-config
+      restartPolicy: Always
+      

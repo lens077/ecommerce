@@ -1,0 +1,7 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: ecommerce-user-config
+data:
+  CONFIG_CENTER: "http://consul-server.consul.svc.cluster.local:8500"
+  CONFIG_PATH: "ecommerce/user/prod.yml"

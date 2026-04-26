@@ -1060,7 +1060,7 @@ data:
 启动后端微服务
 
 ```bash
-cd application/<service>
+cd services/<service>
 
 go run cmd/server/main.go \
 -config-center=http://<consul-addr> \
