@@ -1,0 +1,13 @@
+### 网关
+POST http://localhost:8080/search/search.v1.SearchService/Search
+Content-Type: application/json
+
+{"index": "spus", "name": "iphone"}
+
+### 直连后端
+POST http://localhost:30002/search.v1.SearchService/Search
+Content-Type: application/json
+
+{"index": "spus", "name": "iphone"}
+
+###

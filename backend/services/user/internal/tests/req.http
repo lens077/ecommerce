@@ -1,0 +1,32 @@
+# curl -v -X POST http://my.app.com/check.v1.CheckService/Ready
+#  --header 'Content-Type: application/json'
+#  --data-raw '{}'
+POST http://localhost:30001/user.v1.UserService/SignIn
+Content-Type: application/json
+
+{}
+
+### Gateway GetUserProfile
+# curl -v -X POST http://localhost:8080/user.v1.UserService/UserProfile \
+# --header 'Content-Type: application/json' \ \
+# --header 'Authorization: Bearer ***REMOVED-JWT***' \
+# --data-raw '{}'
+
+POST http://localhost:8080/user/v1.UserService/UserProfile
+Content-Type: application/json
+Authorization: Bearer ***REMOVED-JWT***
+
+{}
+
+### GetUserProfile
+# curl -v -X POST http://localhost:30001/v1.UserService/UserProfile
+#--header 'Content-Type: application/json'
+#--header 'x-md-global-name: test'
+#--data-raw '{}'
+POST http://localhost:30001/v1.UserService/UserProfile
+x-md-global-name: test
+Content-Type: application/json
+
+{}
+
+###
