@@ -6,7 +6,7 @@ import (
 	"os"
 	"time"
 
-	conf "github.com/sunmery/ecommerce/backend/application/search/internal/conf/v1"
+	conf "github.com/lens077/ecommerce/backend/services/search/internal/conf/v1"
 
 	"github.com/elastic/elastic-transport-go/v8/elastictransport"
 	"github.com/elastic/go-elasticsearch/v9"
@@ -117,15 +117,26 @@ func NewCache(lc fx.Lifecycle, cfg *conf.Bootstrap, logger *zap.Logger) (*redis.
 	defer cancel()
 
 	if err := rdb.Ping(ctx).Err(); err != nil {
-		// 关闭连接以避免资源泄漏
-		err := rdb.Close()
-		if err != nil {
-			return nil, err
-		}
-		return nil, fmt.Errorf("redis ping failed: %v", err)
-	}
+		// 记录带上下文的错误日志
+		logger.Error("Redis ping failed",
+			zap.String("addr", redisCfg.Host),
+			zap.Error(err),
+		)
 
-	logger.Info(fmt.Sprintf("Redis connected successfully to %s", redisCfg.Host))
+		// 关闭连接
+		if errClose := rdb.Close(); errClose != nil {
+			logger.Error("Failed to close redis connection after ping failure",
+				zap.String("addr", redisCfg.Host),
+				zap.Error(errClose),
+			)
+		}
+
+		// 返回错误给调用方（让 Fx 知道初始化失败）
+		return nil, fmt.Errorf("redis ping failed: %w", err)
+	}
+	logger.Info("Redis connected successfully",
+		zap.String("addr", redisCfg.Host),
+	)
 
 	// 注册关闭钩子
 	lc.Append(fx.Hook{

@@ -5,7 +5,7 @@ import (
 	"errors"
 
 	"github.com/casdoor/casdoor-go-sdk/casdoorsdk"
-	conf "github.com/sunmery/ecommerce/backend/application/user/internal/conf/v1"
+	conf "github.com/lens077/ecommerce/backend/services/user/internal/conf/v1"
 
 	"go.uber.org/zap"
 )

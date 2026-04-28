@@ -3,7 +3,7 @@ import "google/protobuf/struct.proto";
 
 package casdoor.v1;
 
-option go_package = "github.com/sunmery/ecommerce/backend/api/casdoor/v1;casdoorv1";
+option go_package = "github.com/lens077/ecommerce/backend/api/casdoor/v1;casdoorv1";
 
 // ManagedAccount 托管账户
 // 用于 SSO 或凭证管理

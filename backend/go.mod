@@ -1,4 +1,4 @@
-module github.com/sunmery/ecommerce/backend
+module github.com/lens077/ecommerce/backend
 
 go 1.25.8
 

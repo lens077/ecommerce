@@ -1,7 +1,7 @@
 E-commerce 隐私政策（开源演示版）
 生效日期：2026 年 03 月 03 日
 维护主体：https://github.com/sunmery
-项目仓库：https://github.com/sunmery/connect-example
+项目仓库：https://github.com/lens077/connect-example
 
 特别提示
 本平台是一个非商用的开源技术演示项目，旨在展示 B2B2C 电商架构、地址微服务、Casdoor 身份认证以及高德地图 LBS 服务的集成方案。

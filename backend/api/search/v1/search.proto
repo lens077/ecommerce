@@ -3,7 +3,7 @@ syntax = "proto3";
 // 独立搜索功能
 
 package search.v1;
-option go_package = "github.com/sunmery/ecommerce/backend/api/search/v1;searchv1";
+option go_package = "github.com/lens077/ecommerce/backend/api/search/v1;searchv1";
 
 import "google/protobuf/timestamp.proto";
 

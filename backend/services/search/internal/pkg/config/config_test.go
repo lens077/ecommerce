@@ -4,7 +4,7 @@ import (
 	"os"
 	"testing"
 
-	confv1 "github.com/sunmery/ecommerce/backend/application/search/internal/conf/v1"
+	confv1 "github.com/lens077/ecommerce/backend/services/search/internal/conf/v1"
 
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/suite"
@@ -118,9 +118,9 @@ func (suite *ConfigTestSuite) TestValidateConfig_Valid() {
 		},
 		Discovery: &confv1.Discovery{
 			Consul: &confv1.Discovery_Consul{
-				Addr:         "http://localhost:8500",
-				Scheme:       "http",
-				HealthCheck:  true,
+				Addr:        "http://localhost:8500",
+				Scheme:      "http",
+				HealthCheck: true,
 			},
 		},
 	}

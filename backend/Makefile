@@ -8,7 +8,7 @@ CGOENABLED ?= 0
 # 动态变量
 SERVICE = $(shell basename $$PWD)
 DOCKER_IMAGE=connect/$(SERVICE):$(VERSION)
-REPOSITORY = sumery/$(SERVICE)
+REPOSITORY = lens077/$(SERVICE)
 REGISTER = ccr.ccs.tencentyun.com
 ARM64=linux/arm64
 AMD64=linux/amd64

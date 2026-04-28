@@ -1,14 +1,15 @@
 package registry
 
 import (
-	confv1 "github.com/sunmery/ecommerce/backend/application/search/internal/conf/v1"
-	"github.com/sunmery/ecommerce/backend/application/search/internal/pkg/meta"
 	"context"
 	"fmt"
 	"net"
 	"os"
 	"strconv"
 	"time"
+
+	confv1 "github.com/lens077/ecommerce/backend/services/search/internal/conf/v1"
+	"github.com/lens077/ecommerce/backend/services/search/internal/pkg/meta"
 
 	"github.com/hashicorp/consul/api"
 	"go.uber.org/fx"

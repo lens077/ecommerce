@@ -5,9 +5,9 @@ import (
 	"net/http"
 	"time"
 
-	"github.com/sunmery/ecommerce/backend/api/search/v1/searchv1connect"
+	"github.com/lens077/ecommerce/backend/api/search/v1/searchv1connect"
 
-	conf "github.com/sunmery/ecommerce/backend/application/search/internal/conf/v1"
+	conf "github.com/lens077/ecommerce/backend/services/search/internal/conf/v1"
 
 	"connectrpc.com/connect"
 	connectcors "connectrpc.com/cors"

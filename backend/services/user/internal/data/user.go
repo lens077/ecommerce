@@ -7,7 +7,7 @@ import (
 
 	"github.com/casdoor/casdoor-go-sdk/casdoorsdk"
 	"github.com/redis/go-redis/v9"
-	"github.com/sunmery/ecommerce/backend/application/user/internal/biz"
+	"github.com/lens077/ecommerce/backend/services/user/internal/biz"
 	"go.uber.org/zap"
 )
 

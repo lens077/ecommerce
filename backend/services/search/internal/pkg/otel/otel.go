@@ -1,13 +1,14 @@
 package otel
 
 import (
-	"github.com/sunmery/ecommerce/backend/application/search/internal/pkg/meta"
 	"context"
 	"errors"
 	"runtime"
 	"time"
 
-	confv1 "github.com/sunmery/ecommerce/backend/application/search/internal/conf/v1"
+	"github.com/lens077/ecommerce/backend/services/search/internal/pkg/meta"
+
+	confv1 "github.com/lens077/ecommerce/backend/services/search/internal/conf/v1"
 
 	"go.opentelemetry.io/otel"
 	"go.opentelemetry.io/otel/attribute"

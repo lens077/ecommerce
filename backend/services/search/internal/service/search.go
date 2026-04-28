@@ -4,9 +4,9 @@ import (
 	"context"
 
 	"connectrpc.com/connect"
-	v1 "github.com/sunmery/ecommerce/backend/api/search/v1"
-	"github.com/sunmery/ecommerce/backend/api/search/v1/searchv1connect"
-	"github.com/sunmery/ecommerce/backend/application/search/internal/biz"
+	v1 "github.com/lens077/ecommerce/backend/api/search/v1"
+	"github.com/lens077/ecommerce/backend/api/search/v1/searchv1connect"
+	"github.com/lens077/ecommerce/backend/services/search/internal/biz"
 )
 
 type SearchService struct {

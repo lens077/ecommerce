@@ -9,7 +9,6 @@ type AppInfo struct {
 	ID          string
 	Name        string
 	Host        string
-	Version     string
 	Environment string
 }
 

@@ -233,7 +233,7 @@ const file_api_search_v1_search_proto_rawDesc = "" +
 	"\x04name\x18\a \x01(\tR\x04name2P\n" +
 	"\rSearchService\x12?\n" +
 	"\x06Search\x12\x18.search.v1.SearchRequest\x1a\x19.search.v1.SearchResponse\"\x00B\x9e\x01\n" +
-	"\rcom.search.v1B\vSearchProtoP\x01Z;github.com/sunmery/ecommerce/backend/api/search/v1;searchv1\xa2\x02\x03SXX\xaa\x02\tSearch.V1\xca\x02\tSearch\\V1\xe2\x02\x15Search\\V1\\GPBMetadata\xea\x02\n" +
+	"\rcom.search.v1B\vSearchProtoP\x01Z;github.com/lens077/ecommerce/backend/api/search/v1;searchv1\xa2\x02\x03SXX\xaa\x02\tSearch.V1\xca\x02\tSearch\\V1\xe2\x02\x15Search\\V1\\GPBMetadata\xea\x02\n" +
 	"Search::V1b\x06proto3"
 
 var (

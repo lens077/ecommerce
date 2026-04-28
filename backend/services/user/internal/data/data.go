@@ -2,10 +2,12 @@ package data
 
 import (
 	"context"
+	"crypto/tls"
+	"crypto/x509"
 	"fmt"
 	"time"
 
-	conf "github.com/sunmery/ecommerce/backend/application/user/internal/conf/v1"
+	conf "github.com/lens077/ecommerce/backend/services/user/internal/conf/v1"
 
 	"github.com/casdoor/casdoor-go-sdk/casdoorsdk"
 	"github.com/exaring/otelpgx"
@@ -96,9 +98,11 @@ func NewDB(lc fx.Lifecycle, cfg *conf.Bootstrap, logger *zap.Logger) (*pgxpool.P
 
 // NewCache 创建 Redis 客户端
 func NewCache(lc fx.Lifecycle, cfg *conf.Bootstrap, logger *zap.Logger) (*redis.Client, error) {
-	redisCfg := cfg.Data.Redis // 从 Config 中获取 Redis 配置
+	logger = logger.Named("cache")
+	redisCfg := cfg.Data.Cache
 
-	rdb := redis.NewClient(&redis.Options{
+	// 基础配置
+	opts := &redis.Options{
 		Addr:         fmt.Sprintf("%s:%d", redisCfg.Host, redisCfg.Port),
 		Username:     redisCfg.Username,
 		Password:     redisCfg.Password,
@@ -108,22 +112,59 @@ func NewCache(lc fx.Lifecycle, cfg *conf.Bootstrap, logger *zap.Logger) (*redis.
 		WriteTimeout: time.Duration(redisCfg.WriteTimeout) * time.Second,
 		PoolSize:     int(redisCfg.PoolSize),
 		MinIdleConns: int(redisCfg.MinIdleConns),
-	})
+	}
+
+	// TLS 适配
+	if redisCfg.Tls != nil && redisCfg.Tls.Enable {
+		tlsConfig := &tls.Config{
+			InsecureSkipVerify: redisCfg.Tls.InsecureSkipVerify,
+		}
+
+		// 处理 CA 证书字符串
+		if redisCfg.Tls.CaFile != "" {
+			caCertPool := x509.NewCertPool()
+			// 注意：这里直接使用字符串解析，不需要 os.ReadFile
+			if ok := caCertPool.AppendCertsFromPEM([]byte(redisCfg.Tls.CaFile)); !ok {
+				return nil, fmt.Errorf("failed to parse redis CA certificate: invalid PEM format")
+			}
+			tlsConfig.RootCAs = caCertPool
+
+			// 如果你的证书中限制了访问域名（SANs），需要匹配 Addr 中的 Host
+			// 你的证书里包含：dragonfly.sumery.com
+			// tlsConfig.ServerName = "dragonfly.sumery.com"
+		}
+
+		opts.TLSConfig = tlsConfig
+		logger.Info("TLS connection initialized with CA string")
+	}
+
+	rdb := redis.NewClient(opts)
 
 	// 测试连接
 	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
 	defer cancel()
 
 	if err := rdb.Ping(ctx).Err(); err != nil {
-		// 关闭连接以避免资源泄漏
-		err := rdb.Close()
-		if err != nil {
-			return nil, err
-		}
-		return nil, fmt.Errorf("redis ping failed: %v", err)
-	}
+		// 记录带上下文的错误日志
+		logger.Error("Redis ping failed",
+			zap.String("addr", redisCfg.Host),
+			zap.Error(err),
+		)
 
-	logger.Info(fmt.Sprintf("Redis connected successfully to %s", redisCfg.Host))
+		// 关闭连接
+		if errClose := rdb.Close(); errClose != nil {
+			logger.Error("Failed to close redis connection after ping failure",
+				zap.String("addr", redisCfg.Host),
+				zap.Error(errClose),
+			)
+		}
+
+		// 返回错误给调用方（让 Fx 知道初始化失败）
+		return nil, fmt.Errorf("redis ping failed: %w", err)
+	}
+	logger.Info("Redis connected successfully",
+		zap.String("addr", redisCfg.Host),
+	)
 
 	// 注册关闭钩子
 	lc.Append(fx.Hook{
