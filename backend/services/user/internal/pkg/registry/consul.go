@@ -50,10 +50,10 @@ func WithLogger(logger *zap.Logger) Option {
 }
 
 // WithTLS Consul TLS配置
-func WithTLS(insecureSkipVerify bool, caFile string) Option {
+func WithTLS(insecureSkipVerify bool, caPem string) Option {
 	return func(o *options) {
 		o.tlsConf = &api.TLSConfig{
-			CAPem:              []byte(caFile),
+			CAPem:              []byte(caPem),
 			InsecureSkipVerify: insecureSkipVerify,
 		}
 	}
@@ -79,7 +79,7 @@ var Module = fx.Module("registry",
 				WithLogger(logger),
 			}
 			if consulCfg.Tls.Enable && consulCfg.Tls != nil {
-				opts = append(opts, WithTLS(consulCfg.Tls.InsecureSkipVerify, consulCfg.Tls.CaFile))
+				opts = append(opts, WithTLS(consulCfg.Tls.InsecureSkipVerify, consulCfg.Tls.CaPem))
 			}
 
 			reg, err := NewConsulRegistry(consulCfg.Addr, appInfo.ID, appInfo.Name, opts...)
@@ -133,8 +133,6 @@ func NewConsulRegistry(addr, ID, Name string, opts ...Option) (*ConsulRegistry, 
 		config.Scheme = "https"
 		config.TLSConfig = *o.tlsConf
 	}
-
-	fmt.Printf("c config: %+v\n", config)
 
 	client, err := api.NewClient(&config)
 	if err != nil {

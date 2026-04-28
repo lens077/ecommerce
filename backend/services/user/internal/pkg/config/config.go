@@ -12,14 +12,11 @@ import (
 	"github.com/mitchellh/mapstructure"
 	"github.com/spf13/viper"
 	"go.uber.org/fx"
-	"go.uber.org/zap"
 )
 
 var (
 	confMu sync.RWMutex
 	conf   = &confv1.Bootstrap{}
-	// 使用全局 logger，建议通过 Fx 注入，此处保持原样
-	logger, _ = zap.NewDevelopment()
 
 	Module = fx.Module("config",
 		fx.Provide(
@@ -38,7 +35,7 @@ var (
 				if err != nil {
 					return nil, err
 				}
-				logger.Info("Configuration initialized from Consul")
+
 				return bootstrap, nil
 			},
 		),
@@ -67,14 +64,12 @@ func decodeConfig(data map[string]interface{}, target interface{}) error {
 func updateConfig(newConfig map[string]interface{}) {
 	newBootstrap := &confv1.Bootstrap{}
 	if err := decodeConfig(newConfig, newBootstrap); err != nil {
-		logger.Error("Failed to decode watched config", zap.Error(err))
 		return
 	}
 
 	confMu.Lock()
 	conf = newBootstrap
 	confMu.Unlock()
-	logger.Info("Global configuration hot-reloaded")
 }
 
 // Init 初始化配置加载
@@ -157,7 +152,7 @@ func ValidateConfig(conf *confv1.Bootstrap) error {
 	}
 
 	// 验证链路追踪配置
-	if conf.Trace == nil {
+	if conf.Observability == nil {
 		return fmt.Errorf("trace configuration is required")
 	}
 

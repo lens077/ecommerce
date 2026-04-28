@@ -8,7 +8,7 @@ message Bootstrap {
   Server server = 1;
   Data data = 2;
   Auth auth = 3;
-  Trace trace = 4;
+  Observability observability = 4;
   Discovery discovery = 5;
   Search search = 6;
   Log log = 7;
@@ -37,12 +37,18 @@ message Data {
     string ssl_mode = 6;
     string timezone = 7;
     DatabasePool pool = 8;
+    Tls tls = 9;
 
     message DatabasePool {
       int32 max_conns = 1;
       int32 min_conns = 2;
       int64 max_conn_lifetime = 3;
       int64 max_conn_idle_time = 4;
+    }
+    message Tls {
+      bool enable = 1;
+      string ssl_mode = 2;
+      string ca_pem = 3;
     }
   }
 
@@ -61,7 +67,7 @@ message Data {
 
     message Tls {
       bool enable = 1;
-      string ca_file = 2;
+      string ca_pem = 2;
       bool insecure_skip_verify = 3;
     }
   }
@@ -79,9 +85,28 @@ message Auth {
   string certificate = 6;
 }
 
-message Trace {
-  string endpoint = 1;
-  bool insecure = 2;
+message Observability {
+  Trace trace = 1;
+  Metric metric = 2;
+  Logging log = 3;
+
+  message Trace {
+    string endpoint = 1;
+    Tls tls = 2;
+  }
+  message Metric {
+    string endpoint = 1;
+    Tls tls = 2;
+  }
+  message Logging {
+    string endpoint = 1;
+    Tls tls = 2;
+  }
+  message Tls {
+    bool enable = 1;
+    string ca_pem = 2;
+    bool insecure_skip_verify = 3;
+  }
 }
 
 message Discovery {
@@ -101,10 +126,10 @@ message Discovery {
 }
 
 message Search {
-    message ElasticSearch {
-      repeated string addresses = 1;
-      string username = 2;
-      string password = 3;
-    }
-    ElasticSearch elastic_search = 1;
+  message ElasticSearch {
+    repeated string addresses = 1;
+    string username = 2;
+    string password = 3;
+  }
+  ElasticSearch elastic_search = 1;
 }

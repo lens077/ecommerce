@@ -1,8 +1,13 @@
 package log
 
 import (
+	"os"
+
 	"github.com/lens077/ecommerce/backend/constants"
 	confv1 "github.com/lens077/ecommerce/backend/services/user/internal/conf/v1"
+	"github.com/lens077/ecommerce/backend/services/user/internal/pkg/meta"
+	"go.opentelemetry.io/contrib/bridges/otelzap"
+	"go.opentelemetry.io/otel/log/global"
 	"go.uber.org/zap/zapcore"
 
 	"go.uber.org/fx"
@@ -13,8 +18,8 @@ import (
 var Module = fx.Module("log",
 	fx.Provide(
 		// 提供日志创建函数
-		func(conf *confv1.Bootstrap) *zap.Logger {
-			return NewLogger(conf.Log.Level, conf.Log.Format)
+		func(conf *confv1.Bootstrap, info meta.AppInfo) *zap.Logger {
+			return NewLogger(conf.Log.Level, conf.Log.Format, info)
 		},
 	),
 )
@@ -22,31 +27,38 @@ var Module = fx.Module("log",
 // NewLogger 创建一个新的 Zap Logger.
 // levelStr 可选的参数: debug / info / warn / error / dpanic / panic / fatal.
 // format 可选的参数: 参考constants/env.go的Log注释部分.
-func NewLogger(levelStr string, format string) *zap.Logger {
-	var config zap.Config
-
-	// 解析字符串级别 (Zap 的级别顺序是：Debug < Info < Warn < Error < DPanic < Panic < Fatal)
+func NewLogger(levelStr string, format string, info meta.AppInfo) *zap.Logger {
 	var level zapcore.Level
 	if err := level.UnmarshalText([]byte(levelStr)); err != nil {
-		level = zapcore.InfoLevel // 如果解析失败，回退到 info
-	}
-	config.Level = zap.NewAtomicLevelAt(level)
-
-	switch format {
-	case constants.FormatConsole:
-		// 本地运行模式：输出到终端，带颜色，适合人类阅读, 适合开发阶段
-		config = zap.NewDevelopmentConfig()
-		config.EncoderConfig.EncodeLevel = zapcore.CapitalColorLevelEncoder
-	case constants.FormatJson:
-		// 容器/K8s模式：输出严格的 JSON 格式, 适合生产阶段
-		config = zap.NewProductionConfig()
-		// 统一时间戳格式，方便 Fluent Bit / OTEL 解析
-		config.EncoderConfig.EncodeTime = zapcore.ISO8601TimeEncoder
+		level = zapcore.InfoLevel
 	}
 
-	logger, err := config.Build()
-	if err != nil {
-		panic(err)
+	// 定义基础的 Encoder (编码器)
+	var encoder zapcore.Encoder
+	encoderConfig := zap.NewProductionEncoderConfig()
+	encoderConfig.EncodeTime = zapcore.ISO8601TimeEncoder
+
+	if format == constants.FormatConsole {
+		encoderConfig = zap.NewDevelopmentEncoderConfig()
+		encoderConfig.EncodeLevel = zapcore.CapitalColorLevelEncoder
+		encoder = zapcore.NewConsoleEncoder(encoderConfig)
+	} else {
+		encoder = zapcore.NewJSONEncoder(encoderConfig)
 	}
-	return logger
+
+	// 创建标准输出 Core (Stdout)
+	stdCore := zapcore.NewCore(encoder, zapcore.AddSync(os.Stdout), level)
+
+	// 创建 OTel Core (发送到 OTLP)
+	// 这里使用 global.GetLoggerProvider()
+	otelCore := otelzap.NewCore(
+		info.Name, // 你的 Instrumentation Name
+		otelzap.WithLoggerProvider(global.GetLoggerProvider()),
+	)
+
+	// 4. 使用 Tee 组合两个 Core
+	// 这样 logger.Info 就会同时发往：1. 控制台/JSON文件 2. OTel Collector
+	core := zapcore.NewTee(stdCore, otelCore)
+
+	return zap.New(core, zap.AddCaller())
 }
