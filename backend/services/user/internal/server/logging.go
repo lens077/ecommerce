@@ -5,6 +5,7 @@ import (
 	"time"
 
 	"connectrpc.com/connect"
+	"go.opentelemetry.io/otel/trace"
 	"go.uber.org/zap"
 )
 
@@ -20,6 +21,9 @@ func (l *LoggingInterceptor) WrapUnary(next connect.UnaryFunc) connect.UnaryFunc
 	return func(ctx context.Context, req connect.AnyRequest) (connect.AnyResponse, error) {
 		startTime := time.Now()
 
+		// 从 context 获取当前的 Span 信息
+		span := trace.SpanFromContext(ctx)
+
 		resp, err := next(ctx, req)
 
 		duration := time.Since(startTime)
@@ -30,6 +34,7 @@ func (l *LoggingInterceptor) WrapUnary(next connect.UnaryFunc) connect.UnaryFunc
 			zap.String("rpc.service", procedure),
 			zap.String("rpc.code", code.String()),
 			zap.Duration("duration", duration),
+			zap.String("trace_id", span.SpanContext().TraceID().String()), // 提取 TraceID 存入日志字段
 		}
 
 		if err != nil {
@@ -46,9 +51,8 @@ func (l *LoggingInterceptor) WrapUnary(next connect.UnaryFunc) connect.UnaryFunc
 				l.logger.Error("RPC system error", fields...)
 			}
 		} else {
-			l.logger.Info("RPC success", fields...)
+			l.logger.Info("RPC finish", fields...)
 		}
-
 		return resp, err
 	}
 }

@@ -94,8 +94,8 @@ func NewApp(serviceName, deploymentEnvironment string) *fx.App {
 		registry.Module, // 服务注册/发现
 
 		// 可观测性
-		fx.Provide(func(conf *confv1.Bootstrap) *confv1.Trace {
-			return conf.Trace
+		fx.Provide(func(conf *confv1.Bootstrap) *confv1.Observability {
+			return conf.Observability
 		}),
 		otel.Module,
 

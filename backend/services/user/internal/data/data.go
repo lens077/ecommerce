@@ -63,6 +63,25 @@ func NewDB(lc fx.Lifecycle, cfg *conf.Bootstrap, logger *zap.Logger) (*pgxpool.P
 		return nil, fmt.Errorf("parse database config failed: %v", err)
 	}
 
+	if dbCfg.SslMode == "verify-full" || dbCfg.SslMode == "verify-ca" {
+		if dbCfg.Tls.CaPem != "" {
+			caCertPool := x509.NewCertPool()
+			if ok := caCertPool.AppendCertsFromPEM([]byte(dbCfg.Tls.CaPem)); !ok {
+				return nil, fmt.Errorf("failed to parse CA PEM")
+			}
+
+			// TODO 如果 ParseConfig 已经根据 sslmode 初始化了 TLSConfig
+			if poolCfg.ConnConfig.TLSConfig == nil {
+				poolCfg.ConnConfig.TLSConfig = &tls.Config{}
+			}
+
+			poolCfg.ConnConfig.TLSConfig.RootCAs = caCertPool
+			// 关键点：如果你的证书域名是 server.dc1.consul，而连接地址是 IP
+			// 那么需要显式指定 ServerName 否则 verify-full 会报错
+			poolCfg.ConnConfig.TLSConfig.ServerName = dbCfg.Host
+		}
+	}
+
 	// 链路追踪配置
 	poolCfg.ConnConfig.Tracer = otelpgx.NewTracer()
 
@@ -121,10 +140,10 @@ func NewCache(lc fx.Lifecycle, cfg *conf.Bootstrap, logger *zap.Logger) (*redis.
 		}
 
 		// 处理 CA 证书字符串
-		if redisCfg.Tls.CaFile != "" {
+		if redisCfg.Tls.CaPem != "" {
 			caCertPool := x509.NewCertPool()
 			// 注意：这里直接使用字符串解析，不需要 os.ReadFile
-			if ok := caCertPool.AppendCertsFromPEM([]byte(redisCfg.Tls.CaFile)); !ok {
+			if ok := caCertPool.AppendCertsFromPEM([]byte(redisCfg.Tls.CaPem)); !ok {
 				return nil, fmt.Errorf("failed to parse redis CA certificate: invalid PEM format")
 			}
 			tlsConfig.RootCAs = caCertPool
