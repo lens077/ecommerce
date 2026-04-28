@@ -43,15 +43,13 @@ func (l *LoggingInterceptor) WrapUnary(next connect.UnaryFunc) connect.UnaryFunc
 			// 错误分级逻辑
 			switch code {
 			case connect.CodeNotFound, connect.CodeCanceled, connect.CodeInvalidArgument, connect.CodeAlreadyExists, connect.CodeUnauthenticated:
-				l.logger.Warn("RPC business error", fields...)
+				l.logger.Warn(err.Error(), fields...)
 			case connect.CodeDeadlineExceeded:
-				l.logger.Warn("RPC deadline exceeded", fields...)
+				l.logger.Warn(err.Error(), fields...)
 			default:
 				// 系统级错误 (Unknown, Internal, DataLoss, etc.)
-				l.logger.Error("RPC system error", fields...)
+				l.logger.Error(err.Error(), fields...)
 			}
-		} else {
-			l.logger.Info("RPC finish", fields...)
 		}
 		return resp, err
 	}
