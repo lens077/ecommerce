@@ -9,17 +9,17 @@ import (
 	"net/http"
 	"os"
 
-	"github.com/sunmery/ecommerce/backend/application/search/internal/biz"
-	"github.com/sunmery/ecommerce/backend/application/search/internal/pkg/meta"
-	"github.com/sunmery/ecommerce/backend/application/search/internal/pkg/otel"
+	"github.com/lens077/ecommerce/backend/services/search/internal/biz"
+	"github.com/lens077/ecommerce/backend/services/search/internal/pkg/meta"
+	"github.com/lens077/ecommerce/backend/services/search/internal/pkg/otel"
 
-	confv1 "github.com/sunmery/ecommerce/backend/application/search/internal/conf/v1"
-	"github.com/sunmery/ecommerce/backend/application/search/internal/data"
-	"github.com/sunmery/ecommerce/backend/application/search/internal/pkg/config"
-	logger "github.com/sunmery/ecommerce/backend/application/search/internal/pkg/log"
-	"github.com/sunmery/ecommerce/backend/application/search/internal/pkg/registry"
-	"github.com/sunmery/ecommerce/backend/application/search/internal/server"
-	"github.com/sunmery/ecommerce/backend/application/search/internal/service"
+	confv1 "github.com/lens077/ecommerce/backend/services/search/internal/conf/v1"
+	"github.com/lens077/ecommerce/backend/services/search/internal/data"
+	"github.com/lens077/ecommerce/backend/services/search/internal/pkg/config"
+	logger "github.com/lens077/ecommerce/backend/services/search/internal/pkg/log"
+	"github.com/lens077/ecommerce/backend/services/search/internal/pkg/registry"
+	"github.com/lens077/ecommerce/backend/services/search/internal/server"
+	"github.com/lens077/ecommerce/backend/services/search/internal/service"
 
 	"github.com/google/uuid"
 	"go.uber.org/fx"
@@ -79,8 +79,16 @@ func NewApp(serviceName, serviceVersion, deploymentEnvironment string) *fx.App {
 
 	return fx.New(
 		// 基础模块
-		config.Module,   // 配置
-		logger.Module,   // 日志
+		config.Module, // 配置
+		logger.Module, // 日志
+		// 注入 FX 事件日志适配器
+		fx.WithLogger(func(log *zap.Logger) fxevent.Logger {
+			zlog := &fxevent.ZapLogger{Logger: log}
+			// 按需调整日志级别（可选）
+			zlog.UseLogLevel(zapcore.InfoLevel)    // 普通事件用 Info 级别
+			zlog.UseErrorLevel(zapcore.ErrorLevel) // 错误事件用 Error 级别
+			return zlog
+		}),
 		registry.Module, // 服务注册/发现
 
 		// 可观测性

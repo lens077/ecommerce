@@ -4,7 +4,7 @@ import (
 	"fmt"
 	"os"
 
-	confv1 "github.com/sunmery/ecommerce/backend/application/search/internal/conf/v1"
+	confv1 "github.com/lens077/ecommerce/backend/services/search/internal/conf/v1"
 
 	"github.com/mitchellh/mapstructure"
 	"github.com/spf13/viper"

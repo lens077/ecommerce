@@ -4,13 +4,16 @@ import (
 	"context"
 	"fmt"
 	"net"
+	"net/url"
 	"os"
 	"strconv"
+	"strings"
 	"time"
 
-	"github.com/sunmery/ecommerce/backend/application/user/internal/pkg/meta"
+	"github.com/lens077/ecommerce/backend/constants"
+	"github.com/lens077/ecommerce/backend/services/user/internal/pkg/meta"
 
-	confv1 "github.com/sunmery/ecommerce/backend/application/user/internal/conf/v1"
+	confv1 "github.com/lens077/ecommerce/backend/services/user/internal/conf/v1"
 
 	"github.com/hashicorp/consul/api"
 	"go.uber.org/fx"
@@ -25,13 +28,35 @@ const (
 )
 
 type ConsulRegistry struct {
-	client  *api.Client
+	Addr   string
+	ID     string
+	Name   string
+	client *api.Client
+	logger *zap.Logger
+}
+
+type Option func(*options)
+type options struct {
 	logger  *zap.Logger
-	ID      string
-	Name    string
-	Version string
-	Host    string
-	Port    int
+	tlsConf *api.TLSConfig
+	scheme  string
+}
+
+// WithLogger 注入日志器
+func WithLogger(logger *zap.Logger) Option {
+	return func(o *options) {
+		o.logger = logger
+	}
+}
+
+// WithTLS Consul TLS配置
+func WithTLS(insecureSkipVerify bool, caFile string) Option {
+	return func(o *options) {
+		o.tlsConf = &api.TLSConfig{
+			CAFile:             caFile,
+			InsecureSkipVerify: insecureSkipVerify,
+		}
+	}
 }
 
 // Module 提供 Fx 模块
@@ -39,8 +64,8 @@ var Module = fx.Module("registry",
 	fx.Provide(
 		// 提供 Consul 注册中心（支持优雅降级）
 		func(lc fx.Lifecycle, logger *zap.Logger, conf *confv1.Bootstrap, appInfo meta.AppInfo) (*ConsulRegistry, error) {
-			if os.Getenv("DISABLE_CONSUL") == "true" {
-				logger.Info("Consul disabled by environment variable DISABLE_CONSUL=true")
+			if os.Getenv(constants.EnvConsulEnabled) == "false" {
+				logger.Info("Consul disenable by environment variable EnvConsulEnabled=false")
 				return nil, nil
 			}
 
@@ -48,24 +73,16 @@ var Module = fx.Module("registry",
 				logger.Info("Consul not configured, service discovery disabled")
 				return nil, nil
 			}
+			consulCfg := conf.Discovery.Consul
 
-			consulAddr := conf.Discovery.Consul.Addr
-			serviceScheme := conf.Discovery.Consul.Scheme
-
-			// 解析端口
-			_, portStr, err := net.SplitHostPort(conf.Server.Http.Addr)
-			if err != nil {
-				return nil, fmt.Errorf("failed to parse service address: %w", err)
+			opts := []Option{
+				WithLogger(logger),
 			}
-			Port, err := strconv.Atoi(portStr)
-			if err != nil {
-				return nil, fmt.Errorf("failed to parse service port: %w", err)
+			if consulCfg.Tls.Enable && consulCfg.Tls != nil {
+				opts = append(opts, WithTLS(consulCfg.Tls.InsecureSkipVerify, consulCfg.Tls.CaFile))
 			}
 
-			// 获取 Pod 或机器的 IP 地址
-			logger.Info("Initializing Consul registry", zap.String("addr", consulAddr), zap.String("Host", appInfo.Host))
-
-			reg, err := NewConsulRegistry(consulAddr, appInfo.ID, appInfo.Name, appInfo.Version, Port, serviceScheme, appInfo.Host, logger)
+			reg, err := NewConsulRegistry(consulCfg.Addr, appInfo.ID, appInfo.Name, opts...)
 			if err != nil {
 				logger.Warn("Failed to initialize Consul registry, service discovery disabled", zap.Error(err))
 				return nil, nil
@@ -99,33 +116,54 @@ var Module = fx.Module("registry",
 	),
 )
 
-func NewConsulRegistry(addr, ID, Name, Version string, Port int, serviceScheme string, Host string, logger *zap.Logger, ) (*ConsulRegistry, error) {
-	config := &api.Config{
-		Address: addr,
-		Scheme:  serviceScheme,
+func NewConsulRegistry(addr, ID, Name string, opts ...Option) (*ConsulRegistry, error) {
+	o := &options{
+		scheme: "http",
 	}
-	client, err := api.NewClient(config)
+	for _, opt := range opts {
+		opt(o)
+	}
+
+	config := api.Config{
+		Address: addr,
+		Scheme:  o.scheme,
+	}
+
+	if o.tlsConf != nil {
+		config.Scheme = "https"
+		config.TLSConfig = *o.tlsConf
+	}
+
+	client, err := api.NewClient(&config)
 	if err != nil {
 		return nil, err
 	}
 
 	return &ConsulRegistry{
-		client: client,
-		logger: logger,
 		ID:     ID,
-		Name:   fmt.Sprintf("%s-%s", Name, Version),
-		Port:   Port,
-		Host:   Host,
+		Name:   Name,
+		Addr:   addr,
+		client: client,
+		logger: o.logger,
 	}, nil
 }
 
 // Register 使用 TTL 健康检查注册服务
 func (r *ConsulRegistry) Register() error {
+	host, port, err := net.SplitHostPort(r.Addr)
+	if err != nil {
+		fmt.Printf("拆分失败: %v\n", err)
+		return err
+	}
+	portNum, err := strconv.Atoi(port)
+	if err != nil {
+		return err
+	}
 	reg := &api.AgentServiceRegistration{
 		ID:      r.ID,
 		Name:    r.Name,
-		Address: r.Host,
-		Port:    r.Port,
+		Address: host,
+		Port:    portNum,
 		Tags:    []string{r.Name, "fx", "ttl"}, // 增加 'ttl' tag
 		Check: &api.AgentServiceCheck{
 			// 1. 使用 TTL 替换 HTTP/TCP 检查
@@ -174,4 +212,37 @@ func (r *ConsulRegistry) TtlCheckPinger(ctx context.Context) {
 func (r *ConsulRegistry) Deregister() error {
 	r.logger.Info("Deregistering service from Consul", zap.String("id", r.ID))
 	return r.client.Agent().ServiceDeregister(r.ID)
+}
+
+func ParseToTCPAddr(rawURL string) (*net.TCPAddr, error) {
+	// 1. 解析 URL 结构
+	u, err := url.Parse(rawURL)
+	if err != nil {
+		return nil, fmt.Errorf("parse url failed: %w", err)
+	}
+
+	host := u.Host
+	if host == "" {
+		return nil, fmt.Errorf("empty host in url")
+	}
+
+	// 2. 处理端口问题
+	// SplitHostPort 如果发现字符串里没有端口会报错，所以需要判断
+	finalAddr := host
+	if !strings.Contains(host, ":") {
+		// 根据 Scheme 补齐默认端口
+		port := "80"
+		if u.Scheme == "https" {
+			port = "443"
+		}
+		finalAddr = net.JoinHostPort(host, port)
+	}
+
+	// 3. 解析为 TCPAddr (包含 DNS 查询)
+	tcpAddr, err := net.ResolveTCPAddr("tcp", finalAddr)
+	if err != nil {
+		return nil, fmt.Errorf("resolve tcp addr failed: %w", err)
+	}
+
+	return tcpAddr, nil
 }

@@ -4,12 +4,12 @@ import (
 	"context"
 	"errors"
 
-	casdoorv1 "github.com/sunmery/ecommerce/backend/api/casdoor/v1"
-	"github.com/sunmery/ecommerce/backend/application/user/internal/biz"
-	"github.com/sunmery/ecommerce/backend/constants"
+	casdoorv1 "github.com/lens077/ecommerce/backend/api/casdoor/v1"
+	"github.com/lens077/ecommerce/backend/constants"
+	"github.com/lens077/ecommerce/backend/services/user/internal/biz"
 
-	v1 "github.com/sunmery/ecommerce/backend/api/user/v1"
-	"github.com/sunmery/ecommerce/backend/api/user/v1/userv1connect"
+	v1 "github.com/lens077/ecommerce/backend/api/user/v1"
+	"github.com/lens077/ecommerce/backend/api/user/v1/userv1connect"
 
 	"connectrpc.com/connect"
 )

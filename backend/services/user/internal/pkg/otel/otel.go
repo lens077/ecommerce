@@ -1,13 +1,14 @@
 package otel
 
 import (
-	"github.com/sunmery/ecommerce/backend/application/user/internal/pkg/meta"
 	"context"
 	"errors"
 	"runtime"
 	"time"
 
-	confv1 "github.com/sunmery/ecommerce/backend/application/user/internal/conf/v1"
+	"github.com/lens077/ecommerce/backend/services/user/internal/pkg/meta"
+
+	confv1 "github.com/lens077/ecommerce/backend/services/user/internal/conf/v1"
 
 	"go.opentelemetry.io/otel"
 	"go.opentelemetry.io/otel/attribute"
@@ -20,7 +21,7 @@ import (
 	"go.opentelemetry.io/otel/sdk/metric"
 	"go.opentelemetry.io/otel/sdk/resource"
 	"go.opentelemetry.io/otel/sdk/trace"
-	semconv "go.opentelemetry.io/otel/semconv/v1.37.0"
+	semconv "go.opentelemetry.io/otel/semconv/v1.40.0"
 	"go.uber.org/fx"
 	"go.uber.org/zap"
 )
@@ -120,7 +121,6 @@ func newResource(info meta.AppInfo) (*resource.Resource, error) {
 		resource.NewWithAttributes(
 			semconv.SchemaURL,                                    // URL
 			semconv.ServiceName(info.Name),                       // 应用名称
-			semconv.ServiceVersion(info.Version),                 // 应用版本
 			semconv.TelemetrySDKVersion(otel.Version()),          // otel 的版本
 			semconv.DeploymentEnvironmentName(info.Environment),  // 部署环境
 			semconv.TelemetrySDKLanguageGo,                       // 使用 otel 的语言

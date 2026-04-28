@@ -212,7 +212,7 @@ func (x *Server) GetHttp() *Server_HTTP {
 type Data struct {
 	state         protoimpl.MessageState `protogen:"open.v1"`
 	Database      *Data_Database         `protobuf:"bytes,1,opt,name=database,proto3" json:"database,omitempty"`
-	Redis         *Data_Redis            `protobuf:"bytes,2,opt,name=redis,proto3" json:"redis,omitempty"`
+	Cache         *Data_Cache            `protobuf:"bytes,2,opt,name=cache,proto3" json:"cache,omitempty"`
 	unknownFields protoimpl.UnknownFields
 	sizeCache     protoimpl.SizeCache
 }
@@ -254,9 +254,9 @@ func (x *Data) GetDatabase() *Data_Database {
 	return nil
 }
 
-func (x *Data) GetRedis() *Data_Redis {
+func (x *Data) GetCache() *Data_Cache {
 	if x != nil {
-		return x.Redis
+		return x.Cache
 	}
 	return nil
 }
@@ -538,15 +538,15 @@ func (x *Server_HTTP) GetTimeout() int64 {
 }
 
 type Data_Database struct {
-	state         protoimpl.MessageState `protogen:"open.v1"`
-	Host          string                 `protobuf:"bytes,1,opt,name=host,proto3" json:"host,omitempty"`
-	Port          int32                  `protobuf:"varint,2,opt,name=port,proto3" json:"port,omitempty"`
-	User          string                 `protobuf:"bytes,3,opt,name=user,proto3" json:"user,omitempty"`
-	Password      string                 `protobuf:"bytes,4,opt,name=password,proto3" json:"password,omitempty"`
-	DbName        string                 `protobuf:"bytes,5,opt,name=db_name,json=dbName,proto3" json:"db_name,omitempty"`
-	SslMode       string                 `protobuf:"bytes,6,opt,name=ssl_mode,json=sslMode,proto3" json:"ssl_mode,omitempty"`
-	Timezone      string                 `protobuf:"bytes,7,opt,name=timezone,proto3" json:"timezone,omitempty"`
-	Pool          *Data_DatabasePool     `protobuf:"bytes,8,opt,name=pool,proto3" json:"pool,omitempty"`
+	state         protoimpl.MessageState      `protogen:"open.v1"`
+	Host          string                      `protobuf:"bytes,1,opt,name=host,proto3" json:"host,omitempty"`
+	Port          int32                       `protobuf:"varint,2,opt,name=port,proto3" json:"port,omitempty"`
+	User          string                      `protobuf:"bytes,3,opt,name=user,proto3" json:"user,omitempty"`
+	Password      string                      `protobuf:"bytes,4,opt,name=password,proto3" json:"password,omitempty"`
+	DbName        string                      `protobuf:"bytes,5,opt,name=db_name,json=dbName,proto3" json:"db_name,omitempty"`
+	SslMode       string                      `protobuf:"bytes,6,opt,name=ssl_mode,json=sslMode,proto3" json:"ssl_mode,omitempty"`
+	Timezone      string                      `protobuf:"bytes,7,opt,name=timezone,proto3" json:"timezone,omitempty"`
+	Pool          *Data_Database_DatabasePool `protobuf:"bytes,8,opt,name=pool,proto3" json:"pool,omitempty"`
 	unknownFields protoimpl.UnknownFields
 	sizeCache     protoimpl.SizeCache
 }
@@ -630,82 +630,14 @@ func (x *Data_Database) GetTimezone() string {
 	return ""
 }
 
-func (x *Data_Database) GetPool() *Data_DatabasePool {
+func (x *Data_Database) GetPool() *Data_Database_DatabasePool {
 	if x != nil {
 		return x.Pool
 	}
 	return nil
 }
 
-type Data_DatabasePool struct {
-	state           protoimpl.MessageState `protogen:"open.v1"`
-	MaxConns        int32                  `protobuf:"varint,1,opt,name=max_conns,json=maxConns,proto3" json:"max_conns,omitempty"`
-	MinConns        int32                  `protobuf:"varint,2,opt,name=min_conns,json=minConns,proto3" json:"min_conns,omitempty"`
-	MaxConnLifetime int64                  `protobuf:"varint,3,opt,name=max_conn_lifetime,json=maxConnLifetime,proto3" json:"max_conn_lifetime,omitempty"`
-	MaxConnIdleTime int64                  `protobuf:"varint,4,opt,name=max_conn_idle_time,json=maxConnIdleTime,proto3" json:"max_conn_idle_time,omitempty"`
-	unknownFields   protoimpl.UnknownFields
-	sizeCache       protoimpl.SizeCache
-}
-
-func (x *Data_DatabasePool) Reset() {
-	*x = Data_DatabasePool{}
-	mi := &file_services_user_internal_conf_v1_conf_proto_msgTypes[10]
-	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
-	ms.StoreMessageInfo(mi)
-}
-
-func (x *Data_DatabasePool) String() string {
-	return protoimpl.X.MessageStringOf(x)
-}
-
-func (*Data_DatabasePool) ProtoMessage() {}
-
-func (x *Data_DatabasePool) ProtoReflect() protoreflect.Message {
-	mi := &file_services_user_internal_conf_v1_conf_proto_msgTypes[10]
-	if x != nil {
-		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
-		if ms.LoadMessageInfo() == nil {
-			ms.StoreMessageInfo(mi)
-		}
-		return ms
-	}
-	return mi.MessageOf(x)
-}
-
-// Deprecated: Use Data_DatabasePool.ProtoReflect.Descriptor instead.
-func (*Data_DatabasePool) Descriptor() ([]byte, []int) {
-	return file_services_user_internal_conf_v1_conf_proto_rawDescGZIP(), []int{3, 1}
-}
-
-func (x *Data_DatabasePool) GetMaxConns() int32 {
-	if x != nil {
-		return x.MaxConns
-	}
-	return 0
-}
-
-func (x *Data_DatabasePool) GetMinConns() int32 {
-	if x != nil {
-		return x.MinConns
-	}
-	return 0
-}
-
-func (x *Data_DatabasePool) GetMaxConnLifetime() int64 {
-	if x != nil {
-		return x.MaxConnLifetime
-	}
-	return 0
-}
-
-func (x *Data_DatabasePool) GetMaxConnIdleTime() int64 {
-	if x != nil {
-		return x.MaxConnIdleTime
-	}
-	return 0
-}
-
-type Data_Redis struct {
+type Data_Cache struct {
 	state         protoimpl.MessageState `protogen:"open.v1"`
 	Host          string                 `protobuf:"bytes,1,opt,name=host,proto3" json:"host,omitempty"`
 	Port          int32                  `protobuf:"varint,2,opt,name=port,proto3" json:"port,omitempty"`
@@ -717,24 +649,142 @@ type Data_Redis struct {
 	WriteTimeout  int64                  `protobuf:"varint,8,opt,name=write_timeout,json=writeTimeout,proto3" json:"write_timeout,omitempty"`
 	PoolSize      int32                  `protobuf:"varint,9,opt,name=pool_size,json=poolSize,proto3" json:"pool_size,omitempty"`
 	MinIdleConns  int32                  `protobuf:"varint,10,opt,name=min_idle_conns,json=minIdleConns,proto3" json:"min_idle_conns,omitempty"`
+	Tls           *Data_Cache_Tls        `protobuf:"bytes,11,opt,name=tls,proto3" json:"tls,omitempty"`
 	unknownFields protoimpl.UnknownFields
 	sizeCache     protoimpl.SizeCache
 }
 
-func (x *Data_Redis) Reset() {
-	*x = Data_Redis{}
+func (x *Data_Cache) Reset() {
+	*x = Data_Cache{}
+	mi := &file_services_user_internal_conf_v1_conf_proto_msgTypes[10]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *Data_Cache) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*Data_Cache) ProtoMessage() {}
+
+func (x *Data_Cache) ProtoReflect() protoreflect.Message {
+	mi := &file_services_user_internal_conf_v1_conf_proto_msgTypes[10]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use Data_Cache.ProtoReflect.Descriptor instead.
+func (*Data_Cache) Descriptor() ([]byte, []int) {
+	return file_services_user_internal_conf_v1_conf_proto_rawDescGZIP(), []int{3, 1}
+}
+
+func (x *Data_Cache) GetHost() string {
+	if x != nil {
+		return x.Host
+	}
+	return ""
+}
+
+func (x *Data_Cache) GetPort() int32 {
+	if x != nil {
+		return x.Port
+	}
+	return 0
+}
+
+func (x *Data_Cache) GetUsername() string {
+	if x != nil {
+		return x.Username
+	}
+	return ""
+}
+
+func (x *Data_Cache) GetPassword() string {
+	if x != nil {
+		return x.Password
+	}
+	return ""
+}
+
+func (x *Data_Cache) GetDb() int32 {
+	if x != nil {
+		return x.Db
+	}
+	return 0
+}
+
+func (x *Data_Cache) GetDialTimeout() int64 {
+	if x != nil {
+		return x.DialTimeout
+	}
+	return 0
+}
+
+func (x *Data_Cache) GetReadTimeout() int64 {
+	if x != nil {
+		return x.ReadTimeout
+	}
+	return 0
+}
+
+func (x *Data_Cache) GetWriteTimeout() int64 {
+	if x != nil {
+		return x.WriteTimeout
+	}
+	return 0
+}
+
+func (x *Data_Cache) GetPoolSize() int32 {
+	if x != nil {
+		return x.PoolSize
+	}
+	return 0
+}
+
+func (x *Data_Cache) GetMinIdleConns() int32 {
+	if x != nil {
+		return x.MinIdleConns
+	}
+	return 0
+}
+
+func (x *Data_Cache) GetTls() *Data_Cache_Tls {
+	if x != nil {
+		return x.Tls
+	}
+	return nil
+}
+
+type Data_Database_DatabasePool struct {
+	state           protoimpl.MessageState `protogen:"open.v1"`
+	MaxConns        int32                  `protobuf:"varint,1,opt,name=max_conns,json=maxConns,proto3" json:"max_conns,omitempty"`
+	MinConns        int32                  `protobuf:"varint,2,opt,name=min_conns,json=minConns,proto3" json:"min_conns,omitempty"`
+	MaxConnLifetime int64                  `protobuf:"varint,3,opt,name=max_conn_lifetime,json=maxConnLifetime,proto3" json:"max_conn_lifetime,omitempty"`
+	MaxConnIdleTime int64                  `protobuf:"varint,4,opt,name=max_conn_idle_time,json=maxConnIdleTime,proto3" json:"max_conn_idle_time,omitempty"`
+	unknownFields   protoimpl.UnknownFields
+	sizeCache       protoimpl.SizeCache
+}
+
+func (x *Data_Database_DatabasePool) Reset() {
+	*x = Data_Database_DatabasePool{}
 	mi := &file_services_user_internal_conf_v1_conf_proto_msgTypes[11]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
 
-func (x *Data_Redis) String() string {
+func (x *Data_Database_DatabasePool) String() string {
 	return protoimpl.X.MessageStringOf(x)
 }
 
-func (*Data_Redis) ProtoMessage() {}
+func (*Data_Database_DatabasePool) ProtoMessage() {}
 
-func (x *Data_Redis) ProtoReflect() protoreflect.Message {
+func (x *Data_Database_DatabasePool) ProtoReflect() protoreflect.Message {
 	mi := &file_services_user_internal_conf_v1_conf_proto_msgTypes[11]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
@@ -746,79 +796,97 @@ func (x *Data_Redis) ProtoReflect() protoreflect.Message {
 	return mi.MessageOf(x)
 }
 
-// Deprecated: Use Data_Redis.ProtoReflect.Descriptor instead.
-func (*Data_Redis) Descriptor() ([]byte, []int) {
-	return file_services_user_internal_conf_v1_conf_proto_rawDescGZIP(), []int{3, 2}
+// Deprecated: Use Data_Database_DatabasePool.ProtoReflect.Descriptor instead.
+func (*Data_Database_DatabasePool) Descriptor() ([]byte, []int) {
+	return file_services_user_internal_conf_v1_conf_proto_rawDescGZIP(), []int{3, 0, 0}
 }
 
-func (x *Data_Redis) GetHost() string {
+func (x *Data_Database_DatabasePool) GetMaxConns() int32 {
 	if x != nil {
-		return x.Host
+		return x.MaxConns
+	}
+	return 0
+}
+
+func (x *Data_Database_DatabasePool) GetMinConns() int32 {
+	if x != nil {
+		return x.MinConns
+	}
+	return 0
+}
+
+func (x *Data_Database_DatabasePool) GetMaxConnLifetime() int64 {
+	if x != nil {
+		return x.MaxConnLifetime
+	}
+	return 0
+}
+
+func (x *Data_Database_DatabasePool) GetMaxConnIdleTime() int64 {
+	if x != nil {
+		return x.MaxConnIdleTime
+	}
+	return 0
+}
+
+type Data_Cache_Tls struct {
+	state              protoimpl.MessageState `protogen:"open.v1"`
+	Enable             bool                   `protobuf:"varint,1,opt,name=enable,proto3" json:"enable,omitempty"`
+	CaFile             string                 `protobuf:"bytes,2,opt,name=ca_file,json=caFile,proto3" json:"ca_file,omitempty"`
+	InsecureSkipVerify bool                   `protobuf:"varint,3,opt,name=insecure_skip_verify,json=insecureSkipVerify,proto3" json:"insecure_skip_verify,omitempty"`
+	unknownFields      protoimpl.UnknownFields
+	sizeCache          protoimpl.SizeCache
+}
+
+func (x *Data_Cache_Tls) Reset() {
+	*x = Data_Cache_Tls{}
+	mi := &file_services_user_internal_conf_v1_conf_proto_msgTypes[12]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *Data_Cache_Tls) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*Data_Cache_Tls) ProtoMessage() {}
+
+func (x *Data_Cache_Tls) ProtoReflect() protoreflect.Message {
+	mi := &file_services_user_internal_conf_v1_conf_proto_msgTypes[12]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use Data_Cache_Tls.ProtoReflect.Descriptor instead.
+func (*Data_Cache_Tls) Descriptor() ([]byte, []int) {
+	return file_services_user_internal_conf_v1_conf_proto_rawDescGZIP(), []int{3, 1, 0}
+}
+
+func (x *Data_Cache_Tls) GetEnable() bool {
+	if x != nil {
+		return x.Enable
+	}
+	return false
+}
+
+func (x *Data_Cache_Tls) GetCaFile() string {
+	if x != nil {
+		return x.CaFile
 	}
 	return ""
 }
 
-func (x *Data_Redis) GetPort() int32 {
+func (x *Data_Cache_Tls) GetInsecureSkipVerify() bool {
 	if x != nil {
-		return x.Port
+		return x.InsecureSkipVerify
 	}
-	return 0
-}
-
-func (x *Data_Redis) GetUsername() string {
-	if x != nil {
-		return x.Username
-	}
-	return ""
-}
-
-func (x *Data_Redis) GetPassword() string {
-	if x != nil {
-		return x.Password
-	}
-	return ""
-}
-
-func (x *Data_Redis) GetDb() int32 {
-	if x != nil {
-		return x.Db
-	}
-	return 0
-}
-
-func (x *Data_Redis) GetDialTimeout() int64 {
-	if x != nil {
-		return x.DialTimeout
-	}
-	return 0
-}
-
-func (x *Data_Redis) GetReadTimeout() int64 {
-	if x != nil {
-		return x.ReadTimeout
-	}
-	return 0
-}
-
-func (x *Data_Redis) GetWriteTimeout() int64 {
-	if x != nil {
-		return x.WriteTimeout
-	}
-	return 0
-}
-
-func (x *Data_Redis) GetPoolSize() int32 {
-	if x != nil {
-		return x.PoolSize
-	}
-	return 0
-}
-
-func (x *Data_Redis) GetMinIdleConns() int32 {
-	if x != nil {
-		return x.MinIdleConns
-	}
-	return 0
+	return false
 }
 
 type Discovery_Consul struct {
@@ -826,13 +894,14 @@ type Discovery_Consul struct {
 	Addr          string                 `protobuf:"bytes,1,opt,name=addr,proto3" json:"addr,omitempty"`
 	Scheme        string                 `protobuf:"bytes,2,opt,name=scheme,proto3" json:"scheme,omitempty"`
 	HealthCheck   bool                   `protobuf:"varint,3,opt,name=health_check,json=healthCheck,proto3" json:"health_check,omitempty"`
+	Tls           *Discovery_Consul_Tls  `protobuf:"bytes,4,opt,name=tls,proto3" json:"tls,omitempty"`
 	unknownFields protoimpl.UnknownFields
 	sizeCache     protoimpl.SizeCache
 }
 
 func (x *Discovery_Consul) Reset() {
 	*x = Discovery_Consul{}
-	mi := &file_services_user_internal_conf_v1_conf_proto_msgTypes[12]
+	mi := &file_services_user_internal_conf_v1_conf_proto_msgTypes[13]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -844,7 +913,7 @@ func (x *Discovery_Consul) String() string {
 func (*Discovery_Consul) ProtoMessage() {}
 
 func (x *Discovery_Consul) ProtoReflect() protoreflect.Message {
-	mi := &file_services_user_internal_conf_v1_conf_proto_msgTypes[12]
+	mi := &file_services_user_internal_conf_v1_conf_proto_msgTypes[13]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -881,6 +950,73 @@ func (x *Discovery_Consul) GetHealthCheck() bool {
 	return false
 }
 
+func (x *Discovery_Consul) GetTls() *Discovery_Consul_Tls {
+	if x != nil {
+		return x.Tls
+	}
+	return nil
+}
+
+type Discovery_Consul_Tls struct {
+	state              protoimpl.MessageState `protogen:"open.v1"`
+	Enable             bool                   `protobuf:"varint,1,opt,name=enable,proto3" json:"enable,omitempty"`
+	InsecureSkipVerify bool                   `protobuf:"varint,2,opt,name=insecure_skip_verify,json=insecureSkipVerify,proto3" json:"insecure_skip_verify,omitempty"`
+	CaFile             string                 `protobuf:"bytes,3,opt,name=ca_file,json=caFile,proto3" json:"ca_file,omitempty"`
+	unknownFields      protoimpl.UnknownFields
+	sizeCache          protoimpl.SizeCache
+}
+
+func (x *Discovery_Consul_Tls) Reset() {
+	*x = Discovery_Consul_Tls{}
+	mi := &file_services_user_internal_conf_v1_conf_proto_msgTypes[14]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *Discovery_Consul_Tls) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*Discovery_Consul_Tls) ProtoMessage() {}
+
+func (x *Discovery_Consul_Tls) ProtoReflect() protoreflect.Message {
+	mi := &file_services_user_internal_conf_v1_conf_proto_msgTypes[14]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use Discovery_Consul_Tls.ProtoReflect.Descriptor instead.
+func (*Discovery_Consul_Tls) Descriptor() ([]byte, []int) {
+	return file_services_user_internal_conf_v1_conf_proto_rawDescGZIP(), []int{6, 0, 0}
+}
+
+func (x *Discovery_Consul_Tls) GetEnable() bool {
+	if x != nil {
+		return x.Enable
+	}
+	return false
+}
+
+func (x *Discovery_Consul_Tls) GetInsecureSkipVerify() bool {
+	if x != nil {
+		return x.InsecureSkipVerify
+	}
+	return false
+}
+
+func (x *Discovery_Consul_Tls) GetCaFile() string {
+	if x != nil {
+		return x.CaFile
+	}
+	return ""
+}
+
 type Search_ElasticSearch struct {
 	state         protoimpl.MessageState `protogen:"open.v1"`
 	Addresses     []string               `protobuf:"bytes,1,rep,name=addresses,proto3" json:"addresses,omitempty"`
@@ -892,7 +1028,7 @@ type Search_ElasticSearch struct {
 
 func (x *Search_ElasticSearch) Reset() {
 	*x = Search_ElasticSearch{}
-	mi := &file_services_user_internal_conf_v1_conf_proto_msgTypes[13]
+	mi := &file_services_user_internal_conf_v1_conf_proto_msgTypes[15]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -904,7 +1040,7 @@ func (x *Search_ElasticSearch) String() string {
 func (*Search_ElasticSearch) ProtoMessage() {}
 
 func (x *Search_ElasticSearch) ProtoReflect() protoreflect.Message {
-	mi := &file_services_user_internal_conf_v1_conf_proto_msgTypes[13]
+	mi := &file_services_user_internal_conf_v1_conf_proto_msgTypes[15]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -961,10 +1097,10 @@ const file_services_user_internal_conf_v1_conf_proto_rawDesc = "" +
 	"\x04http\x18\x01 \x01(\v2\x14.conf.v1.Server.HTTPR\x04http\x1a4\n" +
 	"\x04HTTP\x12\x12\n" +
 	"\x04addr\x18\x01 \x01(\tR\x04addr\x12\x18\n" +
-	"\atimeout\x18\x02 \x01(\x03R\atimeout\"\x96\x06\n" +
+	"\atimeout\x18\x02 \x01(\x03R\atimeout\"\xb4\a\n" +
 	"\x04Data\x122\n" +
 	"\bdatabase\x18\x01 \x01(\v2\x16.conf.v1.Data.DatabaseR\bdatabase\x12)\n" +
-	"\x05redis\x18\x02 \x01(\v2\x13.conf.v1.Data.RedisR\x05redis\x1a\xe2\x01\n" +
+	"\x05cache\x18\x02 \x01(\v2\x13.conf.v1.Data.CacheR\x05cache\x1a\x8f\x03\n" +
 	"\bDatabase\x12\x12\n" +
 	"\x04host\x18\x01 \x01(\tR\x04host\x12\x12\n" +
 	"\x04port\x18\x02 \x01(\x05R\x04port\x12\x12\n" +
@@ -972,14 +1108,14 @@ const file_services_user_internal_conf_v1_conf_proto_rawDesc = "" +
 	"\bpassword\x18\x04 \x01(\tR\bpassword\x12\x17\n" +
 	"\adb_name\x18\x05 \x01(\tR\x06dbName\x12\x19\n" +
 	"\bssl_mode\x18\x06 \x01(\tR\asslMode\x12\x1a\n" +
-	"\btimezone\x18\a \x01(\tR\btimezone\x12.\n" +
-	"\x04pool\x18\b \x01(\v2\x1a.conf.v1.Data.DatabasePoolR\x04pool\x1a\xa1\x01\n" +
+	"\btimezone\x18\a \x01(\tR\btimezone\x127\n" +
+	"\x04pool\x18\b \x01(\v2#.conf.v1.Data.Database.DatabasePoolR\x04pool\x1a\xa1\x01\n" +
 	"\fDatabasePool\x12\x1b\n" +
 	"\tmax_conns\x18\x01 \x01(\x05R\bmaxConns\x12\x1b\n" +
 	"\tmin_conns\x18\x02 \x01(\x05R\bminConns\x12*\n" +
 	"\x11max_conn_lifetime\x18\x03 \x01(\x03R\x0fmaxConnLifetime\x12+\n" +
-	"\x12max_conn_idle_time\x18\x04 \x01(\x03R\x0fmaxConnIdleTime\x1a\xa5\x02\n" +
-	"\x05Redis\x12\x12\n" +
+	"\x12max_conn_idle_time\x18\x04 \x01(\x03R\x0fmaxConnIdleTime\x1a\xba\x03\n" +
+	"\x05Cache\x12\x12\n" +
 	"\x04host\x18\x01 \x01(\tR\x04host\x12\x12\n" +
 	"\x04port\x18\x02 \x01(\x05R\x04port\x12\x1a\n" +
 	"\busername\x18\x03 \x01(\tR\busername\x12\x1a\n" +
@@ -990,7 +1126,12 @@ const file_services_user_internal_conf_v1_conf_proto_rawDesc = "" +
 	"\rwrite_timeout\x18\b \x01(\x03R\fwriteTimeout\x12\x1b\n" +
 	"\tpool_size\x18\t \x01(\x05R\bpoolSize\x12$\n" +
 	"\x0emin_idle_conns\x18\n" +
-	" \x01(\x05R\fminIdleConns\"\xde\x01\n" +
+	" \x01(\x05R\fminIdleConns\x12)\n" +
+	"\x03tls\x18\v \x01(\v2\x17.conf.v1.Data.Cache.TlsR\x03tls\x1ah\n" +
+	"\x03Tls\x12\x16\n" +
+	"\x06enable\x18\x01 \x01(\bR\x06enable\x12\x17\n" +
+	"\aca_file\x18\x02 \x01(\tR\x06caFile\x120\n" +
+	"\x14insecure_skip_verify\x18\x03 \x01(\bR\x12insecureSkipVerify\"\xde\x01\n" +
 	"\x04Auth\x12\x1a\n" +
 	"\bendpoint\x18\x01 \x01(\tR\bendpoint\x12\x1b\n" +
 	"\tclient_id\x18\x02 \x01(\tR\bclientId\x12#\n" +
@@ -1000,20 +1141,25 @@ const file_services_user_internal_conf_v1_conf_proto_rawDesc = "" +
 	"\vcertificate\x18\x06 \x01(\tR\vcertificate\"?\n" +
 	"\x05Trace\x12\x1a\n" +
 	"\bendpoint\x18\x01 \x01(\tR\bendpoint\x12\x1a\n" +
-	"\binsecure\x18\x02 \x01(\bR\binsecure\"\x97\x01\n" +
+	"\binsecure\x18\x02 \x01(\bR\binsecure\"\xb3\x02\n" +
 	"\tDiscovery\x121\n" +
-	"\x06consul\x18\x01 \x01(\v2\x19.conf.v1.Discovery.ConsulR\x06consul\x1aW\n" +
+	"\x06consul\x18\x01 \x01(\v2\x19.conf.v1.Discovery.ConsulR\x06consul\x1a\xf2\x01\n" +
 	"\x06Consul\x12\x12\n" +
 	"\x04addr\x18\x01 \x01(\tR\x04addr\x12\x16\n" +
 	"\x06scheme\x18\x02 \x01(\tR\x06scheme\x12!\n" +
-	"\fhealth_check\x18\x03 \x01(\bR\vhealthCheck\"\xb5\x01\n" +
+	"\fhealth_check\x18\x03 \x01(\bR\vhealthCheck\x12/\n" +
+	"\x03tls\x18\x04 \x01(\v2\x1d.conf.v1.Discovery.Consul.TlsR\x03tls\x1ah\n" +
+	"\x03Tls\x12\x16\n" +
+	"\x06enable\x18\x01 \x01(\bR\x06enable\x120\n" +
+	"\x14insecure_skip_verify\x18\x02 \x01(\bR\x12insecureSkipVerify\x12\x17\n" +
+	"\aca_file\x18\x03 \x01(\tR\x06caFile\"\xb5\x01\n" +
 	"\x06Search\x12D\n" +
 	"\x0eelastic_search\x18\x01 \x01(\v2\x1d.conf.v1.Search.ElasticSearchR\relasticSearch\x1ae\n" +
 	"\rElasticSearch\x12\x1c\n" +
 	"\taddresses\x18\x01 \x03(\tR\taddresses\x12\x1a\n" +
 	"\busername\x18\x02 \x01(\tR\busername\x12\x1a\n" +
-	"\bpassword\x18\x03 \x01(\tR\bpasswordB\xa4\x01\n" +
-	"\vcom.conf.v1B\tConfProtoP\x01ZMgithub.com/sunmery/ecommerce/backend/application/user/internal/conf/v1;confv1\xa2\x02\x03CXX\xaa\x02\aConf.V1\xca\x02\aConf\\V1\xe2\x02\x13Conf\\V1\\GPBMetadata\xea\x02\bConf::V1b\x06proto3"
+	"\bpassword\x18\x03 \x01(\tR\bpasswordB\xa1\x01\n" +
+	"\vcom.conf.v1B\tConfProtoP\x01ZJgithub.com/lens077/ecommerce/backend/services/user/internal/conf/v1;confv1\xa2\x02\x03CXX\xaa\x02\aConf.V1\xca\x02\aConf\\V1\xe2\x02\x13Conf\\V1\\GPBMetadata\xea\x02\bConf::V1b\x06proto3"
 
 var (
 	file_services_user_internal_conf_v1_conf_proto_rawDescOnce sync.Once
@@ -1027,22 +1173,24 @@ func file_services_user_internal_conf_v1_conf_proto_rawDescGZIP() []byte {
 	return file_services_user_internal_conf_v1_conf_proto_rawDescData
 }
 
-var file_services_user_internal_conf_v1_conf_proto_msgTypes = make([]protoimpl.MessageInfo, 14)
+var file_services_user_internal_conf_v1_conf_proto_msgTypes = make([]protoimpl.MessageInfo, 16)
 var file_services_user_internal_conf_v1_conf_proto_goTypes = []any{
-	(*Bootstrap)(nil),            // 0: conf.v1.Bootstrap
-	(*Log)(nil),                  // 1: conf.v1.Log
-	(*Server)(nil),               // 2: conf.v1.Server
-	(*Data)(nil),                 // 3: conf.v1.Data
-	(*Auth)(nil),                 // 4: conf.v1.Auth
-	(*Trace)(nil),                // 5: conf.v1.Trace
-	(*Discovery)(nil),            // 6: conf.v1.Discovery
-	(*Search)(nil),               // 7: conf.v1.Search
-	(*Server_HTTP)(nil),          // 8: conf.v1.Server.HTTP
-	(*Data_Database)(nil),        // 9: conf.v1.Data.Database
-	(*Data_DatabasePool)(nil),    // 10: conf.v1.Data.DatabasePool
-	(*Data_Redis)(nil),           // 11: conf.v1.Data.Redis
-	(*Discovery_Consul)(nil),     // 12: conf.v1.Discovery.Consul
-	(*Search_ElasticSearch)(nil), // 13: conf.v1.Search.ElasticSearch
+	(*Bootstrap)(nil),                  // 0: conf.v1.Bootstrap
+	(*Log)(nil),                        // 1: conf.v1.Log
+	(*Server)(nil),                     // 2: conf.v1.Server
+	(*Data)(nil),                       // 3: conf.v1.Data
+	(*Auth)(nil),                       // 4: conf.v1.Auth
+	(*Trace)(nil),                      // 5: conf.v1.Trace
+	(*Discovery)(nil),                  // 6: conf.v1.Discovery
+	(*Search)(nil),                     // 7: conf.v1.Search
+	(*Server_HTTP)(nil),                // 8: conf.v1.Server.HTTP
+	(*Data_Database)(nil),              // 9: conf.v1.Data.Database
+	(*Data_Cache)(nil),                 // 10: conf.v1.Data.Cache
+	(*Data_Database_DatabasePool)(nil), // 11: conf.v1.Data.Database.DatabasePool
+	(*Data_Cache_Tls)(nil),             // 12: conf.v1.Data.Cache.Tls
+	(*Discovery_Consul)(nil),           // 13: conf.v1.Discovery.Consul
+	(*Discovery_Consul_Tls)(nil),       // 14: conf.v1.Discovery.Consul.Tls
+	(*Search_ElasticSearch)(nil),       // 15: conf.v1.Search.ElasticSearch
 }
 var file_services_user_internal_conf_v1_conf_proto_depIdxs = []int32{
 	2,  // 0: conf.v1.Bootstrap.server:type_name -> conf.v1.Server
@@ -1054,15 +1202,17 @@ var file_services_user_internal_conf_v1_conf_proto_depIdxs = []int32{
 	1,  // 6: conf.v1.Bootstrap.log:type_name -> conf.v1.Log
 	8,  // 7: conf.v1.Server.http:type_name -> conf.v1.Server.HTTP
 	9,  // 8: conf.v1.Data.database:type_name -> conf.v1.Data.Database
-	11, // 9: conf.v1.Data.redis:type_name -> conf.v1.Data.Redis
-	12, // 10: conf.v1.Discovery.consul:type_name -> conf.v1.Discovery.Consul
-	13, // 11: conf.v1.Search.elastic_search:type_name -> conf.v1.Search.ElasticSearch
-	10, // 12: conf.v1.Data.Database.pool:type_name -> conf.v1.Data.DatabasePool
-	13, // [13:13] is the sub-list for method output_type
-	13, // [13:13] is the sub-list for method input_type
-	13, // [13:13] is the sub-list for extension type_name
-	13, // [13:13] is the sub-list for extension extendee
-	0,  // [0:13] is the sub-list for field type_name
+	10, // 9: conf.v1.Data.cache:type_name -> conf.v1.Data.Cache
+	13, // 10: conf.v1.Discovery.consul:type_name -> conf.v1.Discovery.Consul
+	15, // 11: conf.v1.Search.elastic_search:type_name -> conf.v1.Search.ElasticSearch
+	11, // 12: conf.v1.Data.Database.pool:type_name -> conf.v1.Data.Database.DatabasePool
+	12, // 13: conf.v1.Data.Cache.tls:type_name -> conf.v1.Data.Cache.Tls
+	14, // 14: conf.v1.Discovery.Consul.tls:type_name -> conf.v1.Discovery.Consul.Tls
+	15, // [15:15] is the sub-list for method output_type
+	15, // [15:15] is the sub-list for method input_type
+	15, // [15:15] is the sub-list for extension type_name
+	15, // [15:15] is the sub-list for extension extendee
+	0,  // [0:15] is the sub-list for field type_name
 }
 
 func init() { file_services_user_internal_conf_v1_conf_proto_init() }
@@ -1076,7 +1226,7 @@ func file_services_user_internal_conf_v1_conf_proto_init() {
 			GoPackagePath: reflect.TypeOf(x{}).PkgPath(),
 			RawDescriptor: unsafe.Slice(unsafe.StringData(file_services_user_internal_conf_v1_conf_proto_rawDesc), len(file_services_user_internal_conf_v1_conf_proto_rawDesc)),
 			NumEnums:      0,
-			NumMessages:   14,
+			NumMessages:   16,
 			NumExtensions: 0,
 			NumServices:   0,
 		},

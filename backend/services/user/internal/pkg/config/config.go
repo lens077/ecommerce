@@ -1,188 +1,138 @@
 package config
 
 import (
+	"context"
 	"fmt"
-	"os"
+	"sync"
 
-	"github.com/caarlos0/env/v11"
 	"github.com/hashicorp/consul/api"
+	"github.com/lens077/ecommerce/backend/constants"
+	confv1 "github.com/lens077/ecommerce/backend/services/user/internal/conf/v1"
+	"github.com/lens077/ecommerce/backend/services/user/internal/pkg/env"
 	"github.com/mitchellh/mapstructure"
 	"github.com/spf13/viper"
-	confv1 "github.com/sunmery/ecommerce/backend/application/user/internal/conf/v1"
 	"go.uber.org/fx"
 	"go.uber.org/zap"
 )
 
 var (
-	conf      = &confv1.Bootstrap{}
-	logger, _ = zap.NewDevelopment() // 创建一个开发模式的普通 Logger
-	// Module 提供 Fx 模块
+	confMu sync.RWMutex
+	conf   = &confv1.Bootstrap{}
+	// 使用全局 logger，建议通过 Fx 注入，此处保持原样
+	logger, _ = zap.NewDevelopment()
+
 	Module = fx.Module("config",
 		fx.Provide(
-			// 提供配置加载函数
-			func() (*confv1.Bootstrap, error) {
-				// 初始化配置，获取consul客户端
-				conf, err := Init()
-				if conf != nil {
-					logger.Info("Configuration loaded successfully from consul")
-					return conf, nil
-				}
+			func(lc fx.Lifecycle) (*confv1.Bootstrap, error) {
+				// 创建一个可以取消的上下文，用于优雅关闭 Watch 协程
+				ctx, cancel := context.WithCancel(context.Background())
 
-				return nil, err
+				lc.Append(fx.Hook{
+					OnStop: func(ctx context.Context) error {
+						cancel()
+						return nil
+					},
+				})
+
+				bootstrap, err := Init(ctx)
+				if err != nil {
+					return nil, err
+				}
+				logger.Info("Configuration initialized from Consul")
+				return bootstrap, nil
 			},
 		),
 	)
 )
 
-type ConsulConfig struct {
-	// 配置中心地址
-	Addr string `env:"CONSUL_CENTER_ADDR,required" envDefault:"localhost:8500"`
-	// 微服务对应的配置文件路径
-	Path string `env:"CONSUL_PATH,required"`
-	// Consul token
-	Token string `env:"CONSUL_CENTER_TOKEN"`
-	// URL协议类型， 可选http/https, 默认http
-	Scheme string `env:"CONSUL_CENTER_SCHEME,required" envDefault:"http"`
-
-	// TLS
-	// 是否跳过验证证书，仅适用于开发测试
-	InsecureSkipVerify bool   `env:"CONSUL_INSECURE_SKIP_VERIFY"`
-	CaFile             string `env:"CONSUL_CA_FILE"`
-	CertFile           string `env:"CONSUL_CERT_FILE"`
-	KeyFile            string `env:"CONSUL_KEY_FILE"`
-}
-
-// updateConfig 更新全局配置
-func updateConfig(newConfig map[string]interface{}) {
-	// 使用viper解析配置
+// decodeConfig 将 Map 解析为结构体（内部提取，保持逻辑一致性）
+func decodeConfig(data map[string]interface{}, target interface{}) error {
 	v := viper.New()
-	for k, value := range newConfig {
-		v.Set(k, value)
+	v.SetConfigType("yaml") // 假设 Consul 中存的是 YAML
+	for k, val := range data {
+		v.Set(k, val)
 	}
 
-	// 解码到Bootstrap结构体
-	newBootstrap := &confv1.Bootstrap{}
-	m := v.AllSettings()
 	decoder, err := mapstructure.NewDecoder(&mapstructure.DecoderConfig{
-		Metadata: nil,
-		TagName:  "json", // 明确告诉 mapstructure 使用 json tag（Protobuf 结构体自带）
-		Result:   newBootstrap,
+		TagName: "json", // Protobuf 生成的结构体使用 json tag
+		Result:  target,
 	})
 	if err != nil {
-		logger.Error("Failed to create decoder when updating config", zap.Error(err))
-		return
+		return err
 	}
-
-	if err := decoder.Decode(m); err != nil {
-		logger.Error("Unable to decode new config into struct", zap.Error(err))
-		return
-	}
-
-	// 更新全局配置
-	conf = newBootstrap
+	return decoder.Decode(v.AllSettings())
 }
 
-// Init 初始化配置加载，只从consul配置中心获取，并启动配置监听
-func Init() (*confv1.Bootstrap, error) {
-	var cfg ConsulConfig
-	if err := env.Parse(&cfg); err != nil {
-		return nil, fmt.Errorf("parse config failed: %w", err)
+// updateConfig 线程安全地更新全局配置
+func updateConfig(newConfig map[string]interface{}) {
+	newBootstrap := &confv1.Bootstrap{}
+	if err := decodeConfig(newConfig, newBootstrap); err != nil {
+		logger.Error("Failed to decode watched config", zap.Error(err))
+		return
 	}
-	consulCfg := api.DefaultConfig()
-	consulCfg.Address = cfg.Addr
-	consulCfg.Token = cfg.Token
-	consulCfg.Scheme = cfg.Scheme
 
-	if cfg.Scheme == "https" {
-		switch {
-		case cfg.InsecureSkipVerify:
+	confMu.Lock()
+	conf = newBootstrap
+	confMu.Unlock()
+	logger.Info("Global configuration hot-reloaded")
+}
+
+// Init 初始化配置加载
+func Init(ctx context.Context) (*confv1.Bootstrap, error) {
+	// 1. 使用常量手动获取环境变量，彻底摆脱第三方库
+	addr := env.GetEnvString(constants.EnvConsulAddr, "127.0.0.1:8500")
+	path := env.GetEnvString(constants.EnvConsulPath, "")
+	if path == "" {
+		return nil, fmt.Errorf("required env %s is missing", constants.EnvConsulPath)
+	}
+
+	consulCfg := api.DefaultConfig()
+	consulCfg.Address = addr
+	consulCfg.Token = env.GetEnvString(constants.EnvConsulToken, "")
+	consulCfg.Scheme = env.GetEnvString(constants.EnvConsulScheme, "http")
+
+	if consulCfg.Scheme == "https" {
+		if env.GetEnvBool(constants.EnvConsulInsecureSkipVerify, false) {
 			consulCfg.TLSConfig.InsecureSkipVerify = true
-		default:
+		} else {
 			consulCfg.TLSConfig = api.TLSConfig{
-				CAFile:   cfg.CaFile,
-				CertFile: cfg.CertFile,
-				KeyFile:  cfg.KeyFile,
+				CAFile:   env.GetEnvString(constants.EnvConsulCaFile, ""),
+				CertFile: env.GetEnvString(constants.EnvConsulCertFile, ""),
+				KeyFile:  env.GetEnvString(constants.EnvConsulKeyFile, ""),
 			}
 		}
 	}
-	// 初始化consul客户端
+
 	consulClient, err := api.NewClient(consulCfg)
 	if err != nil {
-		return nil, fmt.Errorf("failed: to initialize consul client: %v\n", err)
+		return nil, fmt.Errorf("initialize consul client failed: %v", err)
 	}
 
-	// 从consul获取配置
-	consulConfig, err := GetConfigFromConsul(consulClient, cfg.Path)
+	// 2. 首次同步拉取配置
+	rawConfig, err := GetConfigFromConsul(consulClient, path)
 	if err != nil {
-		return nil, fmt.Errorf("failed: get consul config err: %w", err)
-	}
-
-	// 使用viper解析配置
-	v := viper.New()
-	for k, value := range consulConfig {
-		v.Set(k, value)
+		return nil, err
 	}
 
 	localConf := &confv1.Bootstrap{}
-
-	// 获取 Viper 的所有配置为一个 map
-	m := v.AllSettings()
-	decoder, err := mapstructure.NewDecoder(&mapstructure.DecoderConfig{
-		Metadata: nil,
-		// 允许将 snake_case 键与 CamelCase 字段匹配
-		TagName: "json", // 明确告诉 mapstructure 使用 json tag（Protobuf 结构体自带）
-		Result:  localConf,
-	})
-	if err != nil {
-
-		return nil, fmt.Errorf("failed: Failed to create decoder: %v\n", err)
+	if err := decodeConfig(rawConfig, localConf); err != nil {
+		return nil, err
 	}
 
-	if err := decoder.Decode(m); err != nil {
+	// 初始化全局变量
+	conf = localConf
 
-		return nil, fmt.Errorf("failed: Unable to decode config map into struct: %v\n", err)
-	}
-
-	// 启动配置监听
-	WatchConsulConfig(consulClient, cfg.Path, func(newConfig map[string]interface{}) {
-		// 更新全局配置
-		updateConfig(newConfig)
-	})
+	// 3. 启动后台监听 (集成重试与 Context)
+	WatchConsulConfig(ctx, consulClient, path, updateConfig)
 
 	return localConf, nil
 }
 
-// GetConfig 返回已加载的配置
+// GetConfig 线程安全地获取当前配置
 func GetConfig() *confv1.Bootstrap {
+	confMu.RLock()
+	defer confMu.RUnlock()
 	return conf
-}
-
-// isRunningInContainer 检查是否在容器中运行
-func isRunningInContainer() bool {
-	// 检查常见的容器环境指示器
-	// 1. 检查/.dockerenv文件是否存在
-	if _, err := os.Stat("/.dockerenv"); err == nil {
-		return true
-	}
-
-	// 2. 检查/proc/1/cgroup文件内容
-	if cgroup, err := os.ReadFile("/proc/1/cgroup"); err == nil {
-		if contains(string(cgroup), "docker") || contains(string(cgroup), "kubepods") {
-			return true
-		}
-	}
-
-	// 3. 检查容器相关的环境变量
-	if os.Getenv("KUBERNETES_SERVICE_HOST") != "" || os.Getenv("CONTAINER") != "" {
-		return true
-	}
-
-	return false
-}
-
-// contains 检查字符串是否包含子字符串
-func contains(s, substr string) bool {
-	return len(s) >= len(substr) && (s == substr || len(s) > 0 && (s[0:len(substr)] == substr || contains(s[1:], substr)))
 }
 
 // ValidateConfig 验证配置的完整性

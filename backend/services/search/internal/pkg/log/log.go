@@ -1,7 +1,7 @@
 package log
 
 import (
-	confv1 "github.com/sunmery/ecommerce/backend/application/search/internal/conf/v1"
+	confv1 "github.com/lens077/ecommerce/backend/services/search/internal/conf/v1"
 
 	"go.uber.org/fx"
 	"go.uber.org/zap"

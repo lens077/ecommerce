@@ -7,7 +7,7 @@
 package userv1
 
 import (
-	v1 "github.com/sunmery/ecommerce/backend/api/casdoor/v1"
+	v1 "github.com/lens077/ecommerce/backend/api/casdoor/v1"
 	protoreflect "google.golang.org/protobuf/reflect/protoreflect"
 	protoimpl "google.golang.org/protobuf/runtime/protoimpl"
 	reflect "reflect"
@@ -223,7 +223,7 @@ const file_api_user_v1_user_proto_rawDesc = "" +
 	"\vUserService\x12;\n" +
 	"\x06SignIn\x12\x16.user.v1.SignInRequest\x1a\x17.user.v1.SignInResponse\"\x00\x12J\n" +
 	"\vUserProfile\x12\x1b.user.v1.UserProfileRequest\x1a\x1c.user.v1.UserProfileResponse\"\x00B\x8e\x01\n" +
-	"\vcom.user.v1B\tUserProtoP\x01Z7github.com/sunmery/ecommerce/backend/api/user/v1;userv1\xa2\x02\x03UXX\xaa\x02\aUser.V1\xca\x02\aUser\\V1\xe2\x02\x13User\\V1\\GPBMetadata\xea\x02\bUser::V1b\x06proto3"
+	"\vcom.user.v1B\tUserProtoP\x01Z7github.com/lens077/ecommerce/backend/api/user/v1;userv1\xa2\x02\x03UXX\xaa\x02\aUser.V1\xca\x02\aUser\\V1\xe2\x02\x13User\\V1\\GPBMetadata\xea\x02\bUser::V1b\x06proto3"
 
 var (
 	file_api_user_v1_user_proto_rawDescOnce sync.Once

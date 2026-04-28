@@ -18,7 +18,7 @@ type MetricsInterceptor struct {
 
 // NewMetricsInterceptor 初始化并返回拦截器
 func NewMetricsInterceptor() *MetricsInterceptor {
-	meter := otel.GetMeterProvider().Meter("github.com/sunmery/ecommerce/backend/server")
+	meter := otel.GetMeterProvider().Meter("github.com/lens077/ecommerce/backend/server")
 
 	reqCounter, err := meter.Int64Counter(
 		"rpc.server.requests_total",

@@ -9,17 +9,19 @@ import (
 	"net/http"
 	"os"
 
-	"github.com/sunmery/ecommerce/backend/application/user/internal/biz"
-	"github.com/sunmery/ecommerce/backend/application/user/internal/pkg/meta"
-	"github.com/sunmery/ecommerce/backend/application/user/internal/pkg/otel"
+	"github.com/lens077/ecommerce/backend/services/user/internal/biz"
+	"github.com/lens077/ecommerce/backend/services/user/internal/pkg/meta"
+	"github.com/lens077/ecommerce/backend/services/user/internal/pkg/otel"
+	"go.uber.org/fx/fxevent"
+	"go.uber.org/zap/zapcore"
 
-	confv1 "github.com/sunmery/ecommerce/backend/application/user/internal/conf/v1"
-	"github.com/sunmery/ecommerce/backend/application/user/internal/data"
-	"github.com/sunmery/ecommerce/backend/application/user/internal/pkg/config"
-	logger "github.com/sunmery/ecommerce/backend/application/user/internal/pkg/log"
-	"github.com/sunmery/ecommerce/backend/application/user/internal/pkg/registry"
-	"github.com/sunmery/ecommerce/backend/application/user/internal/server"
-	"github.com/sunmery/ecommerce/backend/application/user/internal/service"
+	confv1 "github.com/lens077/ecommerce/backend/services/user/internal/conf/v1"
+	"github.com/lens077/ecommerce/backend/services/user/internal/data"
+	"github.com/lens077/ecommerce/backend/services/user/internal/pkg/config"
+	logger "github.com/lens077/ecommerce/backend/services/user/internal/pkg/log"
+	"github.com/lens077/ecommerce/backend/services/user/internal/pkg/registry"
+	"github.com/lens077/ecommerce/backend/services/user/internal/server"
+	"github.com/lens077/ecommerce/backend/services/user/internal/service"
 
 	"github.com/google/uuid"
 	"go.uber.org/fx"
@@ -32,7 +34,6 @@ var (
 	configCenter = flag.String("config-center", getEnv("CONFIG_CENTER", ""), "配置中心地址")
 	configPath   = flag.String("config-path", getEnv("CONFIG_PATH", ""), "配置路径")
 
-	serviceVersion        = flag.String("version", "v1", "服务版本号")
 	deploymentEnvironment = flag.String("environment", "dev", "部署环境")
 	configCenterToken     = flag.String("config-center-token", "", "配置中心令牌")
 )
@@ -43,7 +44,6 @@ func main() {
 
 	fxApp := NewApp(
 		*serviceName,
-		*serviceVersion,
 		*deploymentEnvironment,
 	)
 
@@ -66,7 +66,7 @@ func main() {
 }
 
 // NewApp 创建并配置 FX 应用
-func NewApp(serviceName, serviceVersion, deploymentEnvironment string) *fx.App {
+func NewApp(serviceName, deploymentEnvironment string) *fx.App {
 	host, err := meta.GetOutboundIP()
 	if err != nil {
 		fmt.Printf("Warn: not get host:%v", err)
@@ -75,14 +75,22 @@ func NewApp(serviceName, serviceVersion, deploymentEnvironment string) *fx.App {
 		ID:          uuid.New().String(),
 		Name:        serviceName,
 		Host:        host,
-		Version:     serviceVersion,
 		Environment: deploymentEnvironment,
 	}
 
 	return fx.New(
 		// 基础模块
-		logger.Module,   // 日志
-		config.Module,   // 配置
+		logger.Module, // 日志
+		config.Module, // 配置
+		// 注入 FX 事件日志适配器
+		fx.WithLogger(func(log *zap.Logger) fxevent.Logger {
+			zlog := &fxevent.ZapLogger{Logger: log}
+			// 按需调整日志级别（可选）
+			zlog.UseLogLevel(zapcore.InfoLevel)    // 普通事件用 Info 级别
+			zlog.UseErrorLevel(zapcore.ErrorLevel) // 错误事件用 Error 级别
+			return zlog
+		}),
+
 		registry.Module, // 服务注册/发现
 
 		// 可观测性
@@ -118,7 +126,6 @@ func NewApp(serviceName, serviceVersion, deploymentEnvironment string) *fx.App {
 					OnStart: func(ctx context.Context) error {
 						logger.Info("Starting HTTP server",
 							zap.String("addr", srv.Addr),
-							zap.String("version", serviceVersion),
 							zap.String("environment", deploymentEnvironment),
 						)
 						go func() {

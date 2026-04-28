@@ -355,7 +355,7 @@ const file_api_cart_v1_cart_proto_rawDesc = "" +
 	"\vCartService\x12Y\n" +
 	"\x10AddProductToCart\x12 .cart.v1.AddProductToCartRequest\x1a!.cart.v1.AddProductToCartResponse\"\x00\x12b\n" +
 	"\x13RemoveProductToCart\x12#.cart.v1.RemoveProductToCartRequest\x1a$.cart.v1.RemoveProductToCartResponse\"\x00B\x8e\x01\n" +
-	"\vcom.cart.v1B\tCartProtoP\x01Z7github.com/sunmery/ecommerce/backend/api/cart/v1;cartv1\xa2\x02\x03CXX\xaa\x02\aCart.V1\xca\x02\aCart\\V1\xe2\x02\x13Cart\\V1\\GPBMetadata\xea\x02\bCart::V1b\x06proto3"
+	"\vcom.cart.v1B\tCartProtoP\x01Z7github.com/lens077/ecommerce/backend/api/cart/v1;cartv1\xa2\x02\x03CXX\xaa\x02\aCart.V1\xca\x02\aCart\\V1\xe2\x02\x13Cart\\V1\\GPBMetadata\xea\x02\bCart::V1b\x06proto3"
 
 var (
 	file_api_cart_v1_cart_proto_rawDescOnce sync.Once

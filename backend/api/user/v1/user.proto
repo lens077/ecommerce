@@ -4,7 +4,7 @@ import "api/casdoor/v1/user.proto";
 
 package user.v1;
 
-option go_package = "github.com/sunmery/ecommerce/backend/api/user/v1;userv1";
+option go_package = "github.com/lens077/ecommerce/backend/api/user/v1;userv1";
 
 service UserService {
   rpc SignIn(SignInRequest) returns(SignInResponse){}

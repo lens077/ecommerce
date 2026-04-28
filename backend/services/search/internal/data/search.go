@@ -7,9 +7,9 @@ import (
 	"github.com/elastic/go-elasticsearch/v9"
 	"github.com/elastic/go-elasticsearch/v9/typedapi/core/search"
 	"github.com/elastic/go-elasticsearch/v9/typedapi/types"
-	"github.com/sunmery/ecommerce/backend/application/search/internal/biz"
+	"github.com/lens077/ecommerce/backend/services/search/internal/biz"
 
-	// "github.com/sunmery/ecommerce/backend/application/search/internal/data/models"
+	// "github.com/lens077/ecommerce/backend/services/search/internal/data/models"
 	"context"
 
 	"github.com/redis/go-redis/v9"

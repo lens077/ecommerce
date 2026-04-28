@@ -53,7 +53,7 @@ func GetConfigFromConsul(client *api.Client, path string) (map[string]interface{
 	kv := client.KV()
 	pair, _, err := kv.Get(path, nil)
 	if err != nil {
-		return nil, fmt.Errorf("get config from consul failed: %w", err)
+		return nil, err
 	}
 
 	if pair == nil {
@@ -63,12 +63,12 @@ func GetConfigFromConsul(client *api.Client, path string) (map[string]interface{
 	// 使用viper解析配置
 	v := viper.New()
 	v.SetConfigType("yaml")
-	
+
 	// 将consul返回的配置数据作为viper的配置源
 	if err := v.ReadConfig(bytes.NewBuffer(pair.Value)); err != nil {
 		return nil, fmt.Errorf("read config from consul failed: %w", err)
 	}
-	
+
 	// 获取所有配置
 	return v.AllSettings(), nil
 }
@@ -78,7 +78,7 @@ func WatchConsulConfig(client *api.Client, path string, onChange func(map[string
 	go func() {
 		kv := client.KV()
 		lastIndex := uint64(0)
-		
+
 		for {
 			// 使用Watch方法监听配置变化
 			pair, meta, err := kv.Get(path, &api.QueryOptions{
@@ -91,10 +91,10 @@ func WatchConsulConfig(client *api.Client, path string, onChange func(map[string
 				time.Sleep(time.Second)
 				continue
 			}
-			
+
 			// 更新lastIndex，用于下一次Watch
 			lastIndex = meta.LastIndex
-			
+
 			if pair != nil {
 				// 解析配置
 				v := viper.New()
@@ -103,7 +103,7 @@ func WatchConsulConfig(client *api.Client, path string, onChange func(map[string
 					fmt.Printf("Error parsing consul config: %v\n", err)
 					continue
 				}
-				
+
 				// 调用回调函数
 				onChange(v.AllSettings())
 			}

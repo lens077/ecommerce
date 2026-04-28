@@ -5,7 +5,7 @@ import (
 	"testing"
 
 	"github.com/caarlos0/env/v11"
-	confv1 "github.com/sunmery/ecommerce/backend/application/user/internal/conf/v1"
+	confv1 "github.com/lens077/ecommerce/backend/services/user/internal/conf/v1"
 
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/suite"

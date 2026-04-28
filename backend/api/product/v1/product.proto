@@ -2,7 +2,7 @@ syntax = "proto3";
 
 package product.v1;
 
-option go_package = "github.com/sunmery/ecommerce/backend/api/product/v1;productv1";
+option go_package = "github.com/lens077/ecommerce/backend/api/product/v1;productv1";
 
 import "google/protobuf/struct.proto";
 import "google/protobuf/timestamp.proto";
