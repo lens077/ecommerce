@@ -53,7 +53,7 @@ func WithLogger(logger *zap.Logger) Option {
 func WithTLS(insecureSkipVerify bool, caFile string) Option {
 	return func(o *options) {
 		o.tlsConf = &api.TLSConfig{
-			CAFile:             caFile,
+			CAPem:              []byte(caFile),
 			InsecureSkipVerify: insecureSkipVerify,
 		}
 	}
@@ -133,6 +133,8 @@ func NewConsulRegistry(addr, ID, Name string, opts ...Option) (*ConsulRegistry, 
 		config.Scheme = "https"
 		config.TLSConfig = *o.tlsConf
 	}
+
+	fmt.Printf("c config: %+v\n", config)
 
 	client, err := api.NewClient(&config)
 	if err != nil {
