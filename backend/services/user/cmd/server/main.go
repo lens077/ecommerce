@@ -29,22 +29,19 @@ import (
 )
 
 var (
-	// 优先读取环境变量，如果没有则使用默认值
-	serviceName  = flag.String("name", getEnv("SERVICE_NAME", "user-identity"), "服务名称")
-	configCenter = flag.String("config-center", getEnv("CONFIG_CENTER", ""), "配置中心地址")
-	configPath   = flag.String("config-path", getEnv("CONFIG_PATH", ""), "配置路径")
+	serviceName = flag.String("name", getEnv("SERVICE_NAME", "user-identity"), "服务名称, e.g.,user-identity")
 
-	deploymentEnvironment = flag.String("environment", "dev", "部署环境")
-	configCenterToken     = flag.String("config-center-token", "", "配置中心令牌")
+	deploymentEnvironment = flag.String("environment", "dev", "部署环境,e.g.,environment/production ")
+	serviceVersion        = flag.String("serviceVersion", "v1", "应用版本,e.g.,v1")
 )
 
 func main() {
 	flag.Parse()
-	setConsulEnv()
 
 	fxApp := NewApp(
 		*serviceName,
 		*deploymentEnvironment,
+		*serviceVersion,
 	)
 
 	ctx := context.Background()
@@ -66,7 +63,7 @@ func main() {
 }
 
 // NewApp 创建并配置 FX 应用
-func NewApp(serviceName, deploymentEnvironment string) *fx.App {
+func NewApp(serviceName, deploymentEnvironment, serviceVersion string) *fx.App {
 	host, err := meta.GetOutboundIP()
 	if err != nil {
 		fmt.Printf("Warn: not get host:%v", err)
@@ -74,6 +71,7 @@ func NewApp(serviceName, deploymentEnvironment string) *fx.App {
 	appInfo := meta.AppInfo{
 		ID:          uuid.New().String(),
 		Name:        serviceName,
+		Version:     serviceVersion,
 		Host:        host,
 		Environment: deploymentEnvironment,
 	}
@@ -154,19 +152,6 @@ func NewApp(serviceName, deploymentEnvironment string) *fx.App {
 			},
 		),
 	)
-}
-
-func setConsulEnv() {
-	// 设置consul 相关的环境变量
-	if *configCenter != "" {
-		os.Setenv("CONFIG_CENTER", *configCenter)
-	}
-	if *configPath != "" {
-		os.Setenv("CONFIG_PATH", *configPath)
-	}
-	if *configCenterToken != "" {
-		os.Setenv("CONFIG_CENTER_TOKEN", *configCenterToken)
-	}
 }
 
 func getEnv(key, fallback string) string {

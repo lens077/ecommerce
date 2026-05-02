@@ -1,5 +1,6 @@
 syntax = "proto3";
 
+import "third_party/validate/validate.proto";
 import "api/casdoor/v1/user.proto";
 
 package user.v1;
@@ -12,8 +13,12 @@ service UserService {
 }
 
 message SignInRequest {
-  string code = 1;
-  string state = 2;
+  string code = 1 [
+    (buf.validate.field).required = true
+  ];
+  string state = 2 [
+    (buf.validate.field).required = true
+  ];
 }
 
 message SignInResponse {

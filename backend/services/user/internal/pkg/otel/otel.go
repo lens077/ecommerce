@@ -5,6 +5,7 @@ import (
 	"crypto/tls"
 	"crypto/x509"
 	"errors"
+	"fmt"
 	"runtime"
 	"time"
 
@@ -188,12 +189,12 @@ func SetupOTelSDK(ctx context.Context, info meta.AppInfo, cfg *confv1.Observabil
 func newResource(info meta.AppInfo) (*resource.Resource, error) {
 	return resource.Merge(resource.Default(),
 		resource.NewWithAttributes(
-			semconv.SchemaURL,                                    // URL
-			semconv.ServiceName(info.Name),                       // 应用名称
-			semconv.TelemetrySDKVersion(otel.Version()),          // otel 的版本
-			semconv.DeploymentEnvironmentName(info.Environment),  // 部署环境
-			semconv.TelemetrySDKLanguageGo,                       // 使用 otel 的语言
-			attribute.String("GolangVersion", runtime.Version()), // Golang 版本
+			semconv.SchemaURL,                                                  // URL
+			semconv.ServiceName(fmt.Sprintf("%s-%s", info.Name, info.Version)), // 应用名称
+			semconv.TelemetrySDKVersion(otel.Version()),                        // otel 的版本
+			semconv.DeploymentEnvironmentName(info.Environment),                // 部署环境
+			semconv.TelemetrySDKLanguageGo,                                     // 使用 otel 的语言
+			attribute.String("GolangVersion", runtime.Version()),               // Golang 版本
 		))
 }
 

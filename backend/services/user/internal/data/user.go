@@ -6,8 +6,8 @@ import (
 	"fmt"
 
 	"github.com/casdoor/casdoor-go-sdk/casdoorsdk"
-	"github.com/redis/go-redis/v9"
 	"github.com/lens077/ecommerce/backend/services/user/internal/biz"
+	"github.com/redis/go-redis/v9"
 	"go.uber.org/zap"
 )
 
@@ -37,7 +37,6 @@ func (u userRepo) SignIn(_ context.Context, req biz.SignInRequest) (*biz.SignInR
 	if err != nil {
 		return nil, fmt.Errorf("casdoor get oauth token err:%w", err)
 	}
-	u.l.Debug(token.AccessToken)
 	u.l.Debug(token.AccessToken)
 	return &biz.SignInResponse{
 		State: "ok",

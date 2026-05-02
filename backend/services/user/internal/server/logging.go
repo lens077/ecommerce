@@ -2,6 +2,7 @@ package server
 
 import (
 	"context"
+	"fmt"
 	"time"
 
 	"connectrpc.com/connect"
@@ -19,37 +20,24 @@ func NewLoggingInterceptor(logger *zap.Logger) *LoggingInterceptor {
 
 func (l *LoggingInterceptor) WrapUnary(next connect.UnaryFunc) connect.UnaryFunc {
 	return func(ctx context.Context, req connect.AnyRequest) (connect.AnyResponse, error) {
-		startTime := time.Now()
-
-		// 从 context 获取当前的 Span 信息
+		start := time.Now()
 		span := trace.SpanFromContext(ctx)
-
 		resp, err := next(ctx, req)
+		duration := time.Since(start)
 
-		duration := time.Since(startTime)
-		code := connect.CodeOf(err)
-		procedure := req.Spec().Procedure
-
+		// 只记录一条统一的调用完成日志
 		fields := []zap.Field{
-			zap.String("rpc.service", procedure),
-			zap.String("rpc.code", code.String()),
+			zap.String("rpc.procedure", req.Spec().Procedure),
+			zap.String("rpc.code", connect.CodeOf(err).String()),
 			zap.Duration("duration", duration),
-			zap.String("trace_id", span.SpanContext().TraceID().String()), // 提取 TraceID 存入日志字段
+			zap.String("trace_id", span.SpanContext().TraceID().String()),
 		}
 
 		if err != nil {
-			fields = append(fields, zap.Error(err))
-
-			// 错误分级逻辑
-			switch code {
-			case connect.CodeNotFound, connect.CodeCanceled, connect.CodeInvalidArgument, connect.CodeAlreadyExists, connect.CodeUnauthenticated:
-				l.logger.Warn(err.Error(), fields...)
-			case connect.CodeDeadlineExceeded:
-				l.logger.Warn(err.Error(), fields...)
-			default:
-				// 系统级错误 (Unknown, Internal, DataLoss, etc.)
-				l.logger.Error(err.Error(), fields...)
-			}
+			l.logger.Warn(fmt.Sprintf("rpc call finished with error: %v", err),
+				append(fields, zap.Error(err))...)
+		} else {
+			l.logger.Info("rpc call finished", fields...)
 		}
 		return resp, err
 	}
