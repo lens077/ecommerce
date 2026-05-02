@@ -5,6 +5,7 @@ import (
 	"net/http"
 	"time"
 
+	"connectrpc.com/validate"
 	"github.com/lens077/ecommerce/backend/api/user/v1/userv1connect"
 	conf "github.com/lens077/ecommerce/backend/services/user/internal/conf/v1"
 
@@ -34,11 +35,20 @@ func NewHTTPServer(
 
 	mux := http.NewServeMux()
 
+	// validate 拦截器
+	validateInterceptor := validate.NewInterceptor()
+
+	// 将 validate 拦截器本身也作为一个 connect.HandlerOption
+	combinedOptions := append(
+		connectOptions,
+		connect.WithInterceptors(validateInterceptor),
+	)
+
 	// 注册 Connect 业务处理器
 	// 直接展开 (Variadic) 传入所有的拦截器（Tracing, Metrics, Logging）
 	userv1connectPath, userv1connectHandler := userv1connect.NewUserServiceHandler(
 		userv1Service,
-		connectOptions...,
+		combinedOptions...,
 	)
 	mux.Handle(userv1connectPath, userv1connectHandler)
 

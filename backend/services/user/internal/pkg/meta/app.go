@@ -10,6 +10,7 @@ type AppInfo struct {
 	Name        string
 	Host        string
 	Environment string
+	Version     string
 }
 
 // GetOutboundIP returns the non-loopback local IP of the machine.

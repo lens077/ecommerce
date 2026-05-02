@@ -4,6 +4,7 @@
 
 import type { GenFile, GenMessage, GenService } from "@bufbuild/protobuf/codegenv2";
 import { fileDesc, messageDesc, serviceDesc } from "@bufbuild/protobuf/codegenv2";
+import { file_third_party_validate_validate } from "../../../third_party/validate/validate_pb";
 import type { User } from "../../casdoor/v1/user_pb";
 import { file_api_casdoor_v1_user } from "../../casdoor/v1/user_pb";
 import type { Message } from "@bufbuild/protobuf";
@@ -12,7 +13,7 @@ import type { Message } from "@bufbuild/protobuf";
  * Describes the file api/user/v1/user.proto.
  */
 export const file_api_user_v1_user: GenFile = /*@__PURE__*/
-  fileDesc("ChZhcGkvdXNlci92MS91c2VyLnByb3RvEgd1c2VyLnYxIiwKDVNpZ25JblJlcXVlc3QSDAoEY29kZRgBIAEoCRINCgVzdGF0ZRgCIAEoCSItCg5TaWduSW5SZXNwb25zZRINCgVzdGF0ZRgBIAEoCRIMCgRkYXRhGAIgASgJIhQKElVzZXJQcm9maWxlUmVxdWVzdCI1ChNVc2VyUHJvZmlsZVJlc3BvbnNlEh4KBHVzZXIYASABKAsyEC5jYXNkb29yLnYxLlVzZXIylgEKC1VzZXJTZXJ2aWNlEjsKBlNpZ25JbhIWLnVzZXIudjEuU2lnbkluUmVxdWVzdBoXLnVzZXIudjEuU2lnbkluUmVzcG9uc2UiABJKCgtVc2VyUHJvZmlsZRIbLnVzZXIudjEuVXNlclByb2ZpbGVSZXF1ZXN0GhwudXNlci52MS5Vc2VyUHJvZmlsZVJlc3BvbnNlIgBCjgEKC2NvbS51c2VyLnYxQglVc2VyUHJvdG9QAVo3Z2l0aHViLmNvbS9sZW5zMDc3L2Vjb21tZXJjZS9iYWNrZW5kL2FwaS91c2VyL3YxO3VzZXJ2MaICA1VYWKoCB1VzZXIuVjHKAgdVc2VyXFYx4gITVXNlclxWMVxHUEJNZXRhZGF0YeoCCFVzZXI6OlYxYgZwcm90bzM", [file_api_casdoor_v1_user]);
+  fileDesc("ChZhcGkvdXNlci92MS91c2VyLnByb3RvEgd1c2VyLnYxIjwKDVNpZ25JblJlcXVlc3QSFAoEY29kZRgBIAEoCUIGukgDyAEBEhUKBXN0YXRlGAIgASgJQga6SAPIAQEiLQoOU2lnbkluUmVzcG9uc2USDQoFc3RhdGUYASABKAkSDAoEZGF0YRgCIAEoCSIUChJVc2VyUHJvZmlsZVJlcXVlc3QiNQoTVXNlclByb2ZpbGVSZXNwb25zZRIeCgR1c2VyGAEgASgLMhAuY2FzZG9vci52MS5Vc2VyMpYBCgtVc2VyU2VydmljZRI7CgZTaWduSW4SFi51c2VyLnYxLlNpZ25JblJlcXVlc3QaFy51c2VyLnYxLlNpZ25JblJlc3BvbnNlIgASSgoLVXNlclByb2ZpbGUSGy51c2VyLnYxLlVzZXJQcm9maWxlUmVxdWVzdBocLnVzZXIudjEuVXNlclByb2ZpbGVSZXNwb25zZSIAQo4BCgtjb20udXNlci52MUIJVXNlclByb3RvUAFaN2dpdGh1Yi5jb20vbGVuczA3Ny9lY29tbWVyY2UvYmFja2VuZC9hcGkvdXNlci92MTt1c2VydjGiAgNVWFiqAgdVc2VyLlYxygIHVXNlclxWMeICE1VzZXJcVjFcR1BCTWV0YWRhdGHqAghVc2VyOjpWMWIGcHJvdG8z", [file_third_party_validate_validate, file_api_casdoor_v1_user]);
 
 /**
  * @generated from message user.v1.SignInRequest

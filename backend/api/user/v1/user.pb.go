@@ -7,6 +7,7 @@
 package userv1
 
 import (
+	_ "buf.build/gen/go/bufbuild/protovalidate/protocolbuffers/go/buf/validate"
 	v1 "github.com/lens077/ecommerce/backend/api/casdoor/v1"
 	protoreflect "google.golang.org/protobuf/reflect/protoreflect"
 	protoimpl "google.golang.org/protobuf/runtime/protoimpl"
@@ -210,10 +211,10 @@ var File_api_user_v1_user_proto protoreflect.FileDescriptor
 
 const file_api_user_v1_user_proto_rawDesc = "" +
 	"\n" +
-	"\x16api/user/v1/user.proto\x12\auser.v1\x1a\x19api/casdoor/v1/user.proto\"9\n" +
-	"\rSignInRequest\x12\x12\n" +
-	"\x04code\x18\x01 \x01(\tR\x04code\x12\x14\n" +
-	"\x05state\x18\x02 \x01(\tR\x05state\":\n" +
+	"\x16api/user/v1/user.proto\x12\auser.v1\x1a#third_party/validate/validate.proto\x1a\x19api/casdoor/v1/user.proto\"I\n" +
+	"\rSignInRequest\x12\x1a\n" +
+	"\x04code\x18\x01 \x01(\tB\x06\xbaH\x03\xc8\x01\x01R\x04code\x12\x1c\n" +
+	"\x05state\x18\x02 \x01(\tB\x06\xbaH\x03\xc8\x01\x01R\x05state\":\n" +
 	"\x0eSignInResponse\x12\x14\n" +
 	"\x05state\x18\x01 \x01(\tR\x05state\x12\x12\n" +
 	"\x04data\x18\x02 \x01(\tR\x04data\"\x14\n" +

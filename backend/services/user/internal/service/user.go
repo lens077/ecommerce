@@ -37,7 +37,7 @@ func (s *UserService) SignIn(ctx context.Context, c *connect.Request[v1.SignInRe
 		},
 	)
 	if err != nil {
-		return nil, connect.NewError(connect.CodeInternal, err)
+		return nil, err
 	}
 
 	response := &v1.SignInResponse{

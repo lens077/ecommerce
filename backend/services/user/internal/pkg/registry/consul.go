@@ -22,10 +22,10 @@ import (
 
 //	TtlDuration 定义了 Consul Agent 期望的心跳时间间隔。
 // 建议：TTL 持续时间（如 15s）应比心跳间隔（如 5s）长，以提供冗余。
-const (
-	TtlDuration     = "30s"
-	TtlPingInterval = 10 * time.Second
-)
+// const (
+// 	TtlDuration     = "30s"
+// 	TtlPingInterval = 10 * time.Second
+// )
 
 type ConsulRegistry struct {
 	Addr   string
@@ -91,13 +91,13 @@ var Module = fx.Module("registry",
 			// 使用生命周期钩子自动注册、启动心跳和注销
 			lc.Append(fx.Hook{
 				OnStart: func(ctx context.Context) error {
-					if err := reg.Register(); err != nil {
+					if err := reg.Register(conf, appInfo); err != nil {
 						logger.Warn("Failed to register with Consul, service discovery disabled", zap.Error(err))
 						return nil // 允许应用继续运行
 					}
 
 					// 启动 TTL 心跳 Pinger
-					go reg.TtlCheckPinger(context.Background())
+					go reg.TtlCheckPinger(context.Background(), conf)
 					return nil
 				},
 				OnStop: func(ctx context.Context) error {
@@ -149,7 +149,7 @@ func NewConsulRegistry(addr, ID, Name string, opts ...Option) (*ConsulRegistry, 
 }
 
 // Register 使用 TTL 健康检查注册服务
-func (r *ConsulRegistry) Register() error {
+func (r *ConsulRegistry) Register(conf *confv1.Bootstrap, info meta.AppInfo) error {
 	host, port, err := net.SplitHostPort(r.Addr)
 	if err != nil {
 		fmt.Printf("拆分失败: %v\n", err)
@@ -164,10 +164,15 @@ func (r *ConsulRegistry) Register() error {
 		Name:    r.Name,
 		Address: host,
 		Port:    portNum,
-		Tags:    []string{r.Name, "fx", "ttl"}, // 增加 'ttl' tag
+		Tags: []string{
+			r.Name,
+			info.Version,
+			"fx",
+			"ttl",
+		},
 		Check: &api.AgentServiceCheck{
 			// 1. 使用 TTL 替换 HTTP/TCP 检查
-			TTL: TtlDuration,
+			TTL: conf.Discovery.Consul.Ttl.Duration,
 			// 2. 配置在检查失败后自动注销
 			DeregisterCriticalServiceAfter: "1m",
 		},
@@ -178,12 +183,13 @@ func (r *ConsulRegistry) Register() error {
 		return err
 	}
 
-	r.logger.Info("Service registered with Consul using TTL check", zap.String("id", r.ID), zap.String("ttl", TtlDuration))
+	r.logger.Info("Service registered with Consul using TTL check", zap.String("id", r.ID), zap.String("ttl", conf.Discovery.Consul.Ttl.Duration))
 	return nil
 }
 
 // TtlCheckPinger 负责定期向 Consul Agent 发送心跳信号
-func (r *ConsulRegistry) TtlCheckPinger(ctx context.Context) {
+func (r *ConsulRegistry) TtlCheckPinger(ctx context.Context, conf *confv1.Bootstrap) {
+	TtlPingInterval := time.Duration(conf.Discovery.Consul.Ttl.PingInterval)
 	ticker := time.NewTicker(TtlPingInterval)
 	defer ticker.Stop()
 

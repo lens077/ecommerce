@@ -57,7 +57,9 @@ func NewLogger(levelStr string, format string, info meta.AppInfo) *zap.Logger {
 	)
 
 	// 4. 使用 Tee 组合两个 Core
-	// 这样 logger.Info 就会同时发往：1. 控制台/JSON文件 2. OTel Collector
+	// 这样 logger.Info 就会同时发往：
+	// 1. 控制台/JSON文件
+	// 2. OTel Collector
 	core := zapcore.NewTee(stdCore, otelCore)
 
 	return zap.New(core, zap.AddCaller())

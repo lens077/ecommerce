@@ -115,11 +115,16 @@ message Discovery {
     string scheme = 2;
     bool health_check = 3;
     Tls tls = 4;
+    Ttl ttl = 5;
 
     message Tls {
       bool enable = 1;
       bool insecure_skip_verify = 2;
       string ca_pem = 3;
+    }
+    message Ttl {
+      string duration = 1;
+      uint64 ping_interval = 2;
     }
   }
   Consul consul = 1;
