@@ -3,17 +3,19 @@ backend:
   enabled: true
   replicaCount: 1
   image:
-    repository: "harbor.apikv.com:5443/sumery/connect-example-backend"
-    tag: "v1.3.07"
+    repository: ccr.ccs.tencentyun.com/sumery/user
+    tag: dev
     pullPolicy: Always
   service:
     type: LoadBalancer
     port: 4000
     targetPort: 4000
   environment:
-    HTTP_ADDR: "0.0.0.0:4001"
-    RUN_MODE: "prod"
-    OTLP_HTTP_ENDPOINT: "center-collector.observability:4318"
+    CONSUL_ENABLED: true
+    CONSUL_ADDR: consul.sumery.com
+    CONSUL_PATH: ecommerce/user/dev.yml
+    CONSUL_SCHEME: https
+    CONSUL_INSECURE_SKIP_VERIFY: true
   autoscaling:
     enabled: false # 添加autoscaling配置，确保可以通过父values控制
 frontend:

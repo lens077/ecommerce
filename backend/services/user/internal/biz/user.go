@@ -5,12 +5,13 @@ import (
 	"errors"
 
 	"github.com/casdoor/casdoor-go-sdk/casdoorsdk"
+
 	conf "github.com/lens077/ecommerce/backend/services/user/internal/conf/v1"
 
 	"go.uber.org/zap"
 )
 
-var ErrUserAlreadyExists = errors.New("user Already Exists")
+var ErrUserAlreadyExists = errors.New("user already exists")
 var ErrUserNotFound = errors.New("user not found")
 
 // UserInfo 业务层用户模型
@@ -46,12 +47,14 @@ type UserRepo interface {
 type UserUseCase struct {
 	repo UserRepo
 	cfg  *conf.Auth
+	l    *zap.Logger
 }
 
 func NewUserUseCase(repo UserRepo, cfg *conf.Bootstrap, logger *zap.Logger) *UserUseCase {
 	return &UserUseCase{
 		repo: repo,
 		cfg:  cfg.Auth,
+		l:    logger.Named("UserUseCase"),
 	}
 }
 

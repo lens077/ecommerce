@@ -25,7 +25,7 @@ func NewUserRepo(data *Data, logger *zap.Logger) biz.UserRepo {
 		// queries: models.New(data.db),
 		rdb:  data.rdb,
 		auth: data.auth,
-		l:    logger,
+		l:    logger.Named("userRepo"),
 	}
 }
 

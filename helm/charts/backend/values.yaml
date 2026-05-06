@@ -1,18 +1,18 @@
 enabled: true
 replicaCount: 1
 image:
-  repository: "harbor.apikv.com:5443/sumery/connect-example-backend"
-  tag: "1.4.1"
+  repository: ccr.ccs.tencentyun.com/sumery/user
+  tag: dev
   pullPolicy: IfNotPresent
 service:
   type: LoadBalancer
-  port: 4000
-  targetPort: 4000
+  port: 30001
+  targetPort: 30001
 environment:
-  HTTP_ADDR: "0.0.0.0:4000"
-  RUN_MODE: "prod"
-  OTLP_HTTP_ENDPOINT: "center-collector.observability:4318"
-  # 禁用Consul服务发现，避免依赖注入错误
-  DISABLE_CONSUL: "true"
+  CONSUL_ENABLED: true
+  CONSUL_ADDR: consul.sumery.com
+  CONSUL_PATH: ecommerce/user/dev.yml
+  CONSUL_SCHEME: https
+  CONSUL_INSECURE_SKIP_VERIFY: true
 autoscaling:
   enabled: false

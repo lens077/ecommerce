@@ -29,10 +29,10 @@ import (
 )
 
 var (
-	serviceName = flag.String("name", getEnv("SERVICE_NAME", "user-identity"), "服务名称, e.g.,user-identity")
+	serviceName = flag.String("serviceName", getEnv("serviceName", "user-identity"), "应用名称, e.g.,user-identity")
 
-	deploymentEnvironment = flag.String("environment", "dev", "部署环境,e.g.,environment/production ")
-	serviceVersion        = flag.String("serviceVersion", "v1", "应用版本,e.g.,v1")
+	deploymentMode = flag.String("mode", "dev", "标记应用部署的环境,e.g.,dev/prod/pre/uat")
+	serviceVersion = flag.String("serviceVersion", "v1", "应用版本,e.g.,v1")
 )
 
 func main() {
@@ -40,7 +40,7 @@ func main() {
 
 	fxApp := NewApp(
 		*serviceName,
-		*deploymentEnvironment,
+		*deploymentMode,
 		*serviceVersion,
 	)
 
@@ -63,7 +63,7 @@ func main() {
 }
 
 // NewApp 创建并配置 FX 应用
-func NewApp(serviceName, deploymentEnvironment, serviceVersion string) *fx.App {
+func NewApp(serviceName, deploymentMode, serviceVersion string) *fx.App {
 	host, err := meta.GetOutboundIP()
 	if err != nil {
 		fmt.Printf("Warn: not get host:%v", err)
@@ -73,7 +73,7 @@ func NewApp(serviceName, deploymentEnvironment, serviceVersion string) *fx.App {
 		Name:        serviceName,
 		Version:     serviceVersion,
 		Host:        host,
-		Environment: deploymentEnvironment,
+		Environment: deploymentMode,
 	}
 
 	return fx.New(
@@ -109,11 +109,6 @@ func NewApp(serviceName, deploymentEnvironment, serviceVersion string) *fx.App {
 
 		// 配置验证和初始化
 		fx.Invoke(
-			// 验证配置完整性
-			func(conf *confv1.Bootstrap) error {
-				return config.ValidateConfig(conf)
-			},
-
 			// 注册应用到注册中心
 			func(_ *registry.ConsulRegistry) {},
 
@@ -124,7 +119,7 @@ func NewApp(serviceName, deploymentEnvironment, serviceVersion string) *fx.App {
 					OnStart: func(ctx context.Context) error {
 						logger.Info("Starting HTTP server",
 							zap.String("addr", srv.Addr),
-							zap.String("environment", deploymentEnvironment),
+							zap.String("environment", deploymentMode),
 						)
 						go func() {
 							if err := srv.ListenAndServe(); err != nil && !errors.Is(err, http.ErrServerClosed) {

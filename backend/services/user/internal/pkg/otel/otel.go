@@ -213,6 +213,9 @@ func newTracerProvider(res *resource.Resource, endpoint string, tlsOpt otlptrace
 	}
 	if tlsOpt != nil {
 		opts = append(opts, tlsOpt)
+	} else {
+		// 如果没有 TLS 配置，必须显式指定 Insecure
+		opts = append(opts, otlptracehttp.WithInsecure())
 	}
 
 	traceExporter, err := otlptracehttp.New(
@@ -239,6 +242,9 @@ func newMeterProvider(res *resource.Resource, endpoint string, tlsOpt otlpmetric
 	}
 	if tlsOpt != nil {
 		opts = append(opts, tlsOpt)
+	} else {
+		// 如果没有 TLS 配置，必须显式指定 Insecure
+		opts = append(opts, otlpmetrichttp.WithInsecure())
 	}
 
 	metricExporter, err := otlpmetrichttp.New(
@@ -264,6 +270,9 @@ func newLoggerProvider(res *resource.Resource, endpoint string, tlsOpt otlploght
 	}
 	if tlsOpt != nil {
 		opts = append(opts, tlsOpt)
+	} else {
+		// 如果没有 TLS 配置，必须显式指定 Insecure
+		opts = append(opts, otlploghttp.WithInsecure())
 	}
 
 	logExporter, err := otlploghttp.New(

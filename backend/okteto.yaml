@@ -6,7 +6,7 @@ dev:
       labels:
         custom.label/dev: "true"
 #    image: okteto/golang:1
-    image: ccr.ccs.tencentyun.com/sumery/golang:1.25.1
+    image: ccr.ccs.tencentyun.com/sumery/golang:1.25.8
     command: bash
     workdir: /build
     forward:

@@ -2,11 +2,12 @@
 // versions:
 // 	protoc-gen-go v1.36.11
 // 	protoc        (unknown)
-// source: internal/conf/v1/conf.proto
+// source: services/user/internal/conf/v1/conf.proto
 
 package confv1
 
 import (
+	_ "buf.build/gen/go/bufbuild/protovalidate/protocolbuffers/go/buf/validate"
 	protoreflect "google.golang.org/protobuf/reflect/protoreflect"
 	protoimpl "google.golang.org/protobuf/runtime/protoimpl"
 	reflect "reflect"
@@ -36,7 +37,7 @@ type Bootstrap struct {
 
 func (x *Bootstrap) Reset() {
 	*x = Bootstrap{}
-	mi := &file_internal_conf_v1_conf_proto_msgTypes[0]
+	mi := &file_services_user_internal_conf_v1_conf_proto_msgTypes[0]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -48,7 +49,7 @@ func (x *Bootstrap) String() string {
 func (*Bootstrap) ProtoMessage() {}
 
 func (x *Bootstrap) ProtoReflect() protoreflect.Message {
-	mi := &file_internal_conf_v1_conf_proto_msgTypes[0]
+	mi := &file_services_user_internal_conf_v1_conf_proto_msgTypes[0]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -61,7 +62,7 @@ func (x *Bootstrap) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use Bootstrap.ProtoReflect.Descriptor instead.
 func (*Bootstrap) Descriptor() ([]byte, []int) {
-	return file_internal_conf_v1_conf_proto_rawDescGZIP(), []int{0}
+	return file_services_user_internal_conf_v1_conf_proto_rawDescGZIP(), []int{0}
 }
 
 func (x *Bootstrap) GetServer() *Server {
@@ -123,7 +124,7 @@ type Log struct {
 
 func (x *Log) Reset() {
 	*x = Log{}
-	mi := &file_internal_conf_v1_conf_proto_msgTypes[1]
+	mi := &file_services_user_internal_conf_v1_conf_proto_msgTypes[1]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -135,7 +136,7 @@ func (x *Log) String() string {
 func (*Log) ProtoMessage() {}
 
 func (x *Log) ProtoReflect() protoreflect.Message {
-	mi := &file_internal_conf_v1_conf_proto_msgTypes[1]
+	mi := &file_services_user_internal_conf_v1_conf_proto_msgTypes[1]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -148,7 +149,7 @@ func (x *Log) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use Log.ProtoReflect.Descriptor instead.
 func (*Log) Descriptor() ([]byte, []int) {
-	return file_internal_conf_v1_conf_proto_rawDescGZIP(), []int{1}
+	return file_services_user_internal_conf_v1_conf_proto_rawDescGZIP(), []int{1}
 }
 
 func (x *Log) GetLevel() string {
@@ -167,14 +168,16 @@ func (x *Log) GetFormat() string {
 
 type Server struct {
 	state         protoimpl.MessageState `protogen:"open.v1"`
-	Http          *Server_HTTP           `protobuf:"bytes,1,opt,name=http,proto3" json:"http,omitempty"`
+	Addr          string                 `protobuf:"bytes,1,opt,name=addr,proto3" json:"addr,omitempty"`
+	Timeout       int64                  `protobuf:"varint,2,opt,name=timeout,proto3" json:"timeout,omitempty"`
+	Cors          *Server_Cors           `protobuf:"bytes,3,opt,name=cors,proto3" json:"cors,omitempty"`
 	unknownFields protoimpl.UnknownFields
 	sizeCache     protoimpl.SizeCache
 }
 
 func (x *Server) Reset() {
 	*x = Server{}
-	mi := &file_internal_conf_v1_conf_proto_msgTypes[2]
+	mi := &file_services_user_internal_conf_v1_conf_proto_msgTypes[2]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -186,7 +189,7 @@ func (x *Server) String() string {
 func (*Server) ProtoMessage() {}
 
 func (x *Server) ProtoReflect() protoreflect.Message {
-	mi := &file_internal_conf_v1_conf_proto_msgTypes[2]
+	mi := &file_services_user_internal_conf_v1_conf_proto_msgTypes[2]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -199,12 +202,26 @@ func (x *Server) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use Server.ProtoReflect.Descriptor instead.
 func (*Server) Descriptor() ([]byte, []int) {
-	return file_internal_conf_v1_conf_proto_rawDescGZIP(), []int{2}
+	return file_services_user_internal_conf_v1_conf_proto_rawDescGZIP(), []int{2}
 }
 
-func (x *Server) GetHttp() *Server_HTTP {
+func (x *Server) GetAddr() string {
 	if x != nil {
-		return x.Http
+		return x.Addr
+	}
+	return ""
+}
+
+func (x *Server) GetTimeout() int64 {
+	if x != nil {
+		return x.Timeout
+	}
+	return 0
+}
+
+func (x *Server) GetCors() *Server_Cors {
+	if x != nil {
+		return x.Cors
 	}
 	return nil
 }
@@ -219,7 +236,7 @@ type Data struct {
 
 func (x *Data) Reset() {
 	*x = Data{}
-	mi := &file_internal_conf_v1_conf_proto_msgTypes[3]
+	mi := &file_services_user_internal_conf_v1_conf_proto_msgTypes[3]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -231,7 +248,7 @@ func (x *Data) String() string {
 func (*Data) ProtoMessage() {}
 
 func (x *Data) ProtoReflect() protoreflect.Message {
-	mi := &file_internal_conf_v1_conf_proto_msgTypes[3]
+	mi := &file_services_user_internal_conf_v1_conf_proto_msgTypes[3]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -244,7 +261,7 @@ func (x *Data) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use Data.ProtoReflect.Descriptor instead.
 func (*Data) Descriptor() ([]byte, []int) {
-	return file_internal_conf_v1_conf_proto_rawDescGZIP(), []int{3}
+	return file_services_user_internal_conf_v1_conf_proto_rawDescGZIP(), []int{3}
 }
 
 func (x *Data) GetDatabase() *Data_Database {
@@ -262,20 +279,15 @@ func (x *Data) GetCache() *Data_Cache {
 }
 
 type Auth struct {
-	state            protoimpl.MessageState `protogen:"open.v1"`
-	Endpoint         string                 `protobuf:"bytes,1,opt,name=endpoint,proto3" json:"endpoint,omitempty"`
-	ClientId         string                 `protobuf:"bytes,2,opt,name=client_id,json=clientId,proto3" json:"client_id,omitempty"`
-	ClientSecret     string                 `protobuf:"bytes,3,opt,name=client_secret,json=clientSecret,proto3" json:"client_secret,omitempty"`
-	OrganizationName string                 `protobuf:"bytes,4,opt,name=organization_name,json=organizationName,proto3" json:"organization_name,omitempty"`
-	ApplicationName  string                 `protobuf:"bytes,5,opt,name=application_name,json=applicationName,proto3" json:"application_name,omitempty"`
-	Certificate      string                 `protobuf:"bytes,6,opt,name=certificate,proto3" json:"certificate,omitempty"`
-	unknownFields    protoimpl.UnknownFields
-	sizeCache        protoimpl.SizeCache
+	state         protoimpl.MessageState `protogen:"open.v1"`
+	Casdoor       *Auth_Casdoor          `protobuf:"bytes,1,opt,name=casdoor,proto3" json:"casdoor,omitempty"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
 }
 
 func (x *Auth) Reset() {
 	*x = Auth{}
-	mi := &file_internal_conf_v1_conf_proto_msgTypes[4]
+	mi := &file_services_user_internal_conf_v1_conf_proto_msgTypes[4]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -287,7 +299,7 @@ func (x *Auth) String() string {
 func (*Auth) ProtoMessage() {}
 
 func (x *Auth) ProtoReflect() protoreflect.Message {
-	mi := &file_internal_conf_v1_conf_proto_msgTypes[4]
+	mi := &file_services_user_internal_conf_v1_conf_proto_msgTypes[4]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -300,49 +312,14 @@ func (x *Auth) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use Auth.ProtoReflect.Descriptor instead.
 func (*Auth) Descriptor() ([]byte, []int) {
-	return file_internal_conf_v1_conf_proto_rawDescGZIP(), []int{4}
+	return file_services_user_internal_conf_v1_conf_proto_rawDescGZIP(), []int{4}
 }
 
-func (x *Auth) GetEndpoint() string {
+func (x *Auth) GetCasdoor() *Auth_Casdoor {
 	if x != nil {
-		return x.Endpoint
+		return x.Casdoor
 	}
-	return ""
-}
-
-func (x *Auth) GetClientId() string {
-	if x != nil {
-		return x.ClientId
-	}
-	return ""
-}
-
-func (x *Auth) GetClientSecret() string {
-	if x != nil {
-		return x.ClientSecret
-	}
-	return ""
-}
-
-func (x *Auth) GetOrganizationName() string {
-	if x != nil {
-		return x.OrganizationName
-	}
-	return ""
-}
-
-func (x *Auth) GetApplicationName() string {
-	if x != nil {
-		return x.ApplicationName
-	}
-	return ""
-}
-
-func (x *Auth) GetCertificate() string {
-	if x != nil {
-		return x.Certificate
-	}
-	return ""
+	return nil
 }
 
 type Observability struct {
@@ -356,7 +333,7 @@ type Observability struct {
 
 func (x *Observability) Reset() {
 	*x = Observability{}
-	mi := &file_internal_conf_v1_conf_proto_msgTypes[5]
+	mi := &file_services_user_internal_conf_v1_conf_proto_msgTypes[5]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -368,7 +345,7 @@ func (x *Observability) String() string {
 func (*Observability) ProtoMessage() {}
 
 func (x *Observability) ProtoReflect() protoreflect.Message {
-	mi := &file_internal_conf_v1_conf_proto_msgTypes[5]
+	mi := &file_services_user_internal_conf_v1_conf_proto_msgTypes[5]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -381,7 +358,7 @@ func (x *Observability) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use Observability.ProtoReflect.Descriptor instead.
 func (*Observability) Descriptor() ([]byte, []int) {
-	return file_internal_conf_v1_conf_proto_rawDescGZIP(), []int{5}
+	return file_services_user_internal_conf_v1_conf_proto_rawDescGZIP(), []int{5}
 }
 
 func (x *Observability) GetTrace() *Observability_Trace {
@@ -414,7 +391,7 @@ type Discovery struct {
 
 func (x *Discovery) Reset() {
 	*x = Discovery{}
-	mi := &file_internal_conf_v1_conf_proto_msgTypes[6]
+	mi := &file_services_user_internal_conf_v1_conf_proto_msgTypes[6]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -426,7 +403,7 @@ func (x *Discovery) String() string {
 func (*Discovery) ProtoMessage() {}
 
 func (x *Discovery) ProtoReflect() protoreflect.Message {
-	mi := &file_internal_conf_v1_conf_proto_msgTypes[6]
+	mi := &file_services_user_internal_conf_v1_conf_proto_msgTypes[6]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -439,7 +416,7 @@ func (x *Discovery) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use Discovery.ProtoReflect.Descriptor instead.
 func (*Discovery) Descriptor() ([]byte, []int) {
-	return file_internal_conf_v1_conf_proto_rawDescGZIP(), []int{6}
+	return file_services_user_internal_conf_v1_conf_proto_rawDescGZIP(), []int{6}
 }
 
 func (x *Discovery) GetConsul() *Discovery_Consul {
@@ -458,7 +435,7 @@ type Search struct {
 
 func (x *Search) Reset() {
 	*x = Search{}
-	mi := &file_internal_conf_v1_conf_proto_msgTypes[7]
+	mi := &file_services_user_internal_conf_v1_conf_proto_msgTypes[7]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -470,7 +447,7 @@ func (x *Search) String() string {
 func (*Search) ProtoMessage() {}
 
 func (x *Search) ProtoReflect() protoreflect.Message {
-	mi := &file_internal_conf_v1_conf_proto_msgTypes[7]
+	mi := &file_services_user_internal_conf_v1_conf_proto_msgTypes[7]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -483,7 +460,7 @@ func (x *Search) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use Search.ProtoReflect.Descriptor instead.
 func (*Search) Descriptor() ([]byte, []int) {
-	return file_internal_conf_v1_conf_proto_rawDescGZIP(), []int{7}
+	return file_services_user_internal_conf_v1_conf_proto_rawDescGZIP(), []int{7}
 }
 
 func (x *Search) GetElasticSearch() *Search_ElasticSearch {
@@ -493,29 +470,28 @@ func (x *Search) GetElasticSearch() *Search_ElasticSearch {
 	return nil
 }
 
-type Server_HTTP struct {
-	state         protoimpl.MessageState `protogen:"open.v1"`
-	Addr          string                 `protobuf:"bytes,1,opt,name=addr,proto3" json:"addr,omitempty"`
-	Timeout       int64                  `protobuf:"varint,2,opt,name=timeout,proto3" json:"timeout,omitempty"`
-	unknownFields protoimpl.UnknownFields
-	sizeCache     protoimpl.SizeCache
+type Server_Cors struct {
+	state          protoimpl.MessageState `protogen:"open.v1"`
+	AllowedOrigins []string               `protobuf:"bytes,1,rep,name=allowed_origins,json=allowedOrigins,proto3" json:"allowed_origins,omitempty"`
+	unknownFields  protoimpl.UnknownFields
+	sizeCache      protoimpl.SizeCache
 }
 
-func (x *Server_HTTP) Reset() {
-	*x = Server_HTTP{}
-	mi := &file_internal_conf_v1_conf_proto_msgTypes[8]
+func (x *Server_Cors) Reset() {
+	*x = Server_Cors{}
+	mi := &file_services_user_internal_conf_v1_conf_proto_msgTypes[8]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
 
-func (x *Server_HTTP) String() string {
+func (x *Server_Cors) String() string {
 	return protoimpl.X.MessageStringOf(x)
 }
 
-func (*Server_HTTP) ProtoMessage() {}
+func (*Server_Cors) ProtoMessage() {}
 
-func (x *Server_HTTP) ProtoReflect() protoreflect.Message {
-	mi := &file_internal_conf_v1_conf_proto_msgTypes[8]
+func (x *Server_Cors) ProtoReflect() protoreflect.Message {
+	mi := &file_services_user_internal_conf_v1_conf_proto_msgTypes[8]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -526,43 +502,28 @@ func (x *Server_HTTP) ProtoReflect() protoreflect.Message {
 	return mi.MessageOf(x)
 }
 
-// Deprecated: Use Server_HTTP.ProtoReflect.Descriptor instead.
-func (*Server_HTTP) Descriptor() ([]byte, []int) {
-	return file_internal_conf_v1_conf_proto_rawDescGZIP(), []int{2, 0}
+// Deprecated: Use Server_Cors.ProtoReflect.Descriptor instead.
+func (*Server_Cors) Descriptor() ([]byte, []int) {
+	return file_services_user_internal_conf_v1_conf_proto_rawDescGZIP(), []int{2, 0}
 }
 
-func (x *Server_HTTP) GetAddr() string {
+func (x *Server_Cors) GetAllowedOrigins() []string {
 	if x != nil {
-		return x.Addr
+		return x.AllowedOrigins
 	}
-	return ""
-}
-
-func (x *Server_HTTP) GetTimeout() int64 {
-	if x != nil {
-		return x.Timeout
-	}
-	return 0
+	return nil
 }
 
 type Data_Database struct {
-	state         protoimpl.MessageState      `protogen:"open.v1"`
-	Host          string                      `protobuf:"bytes,1,opt,name=host,proto3" json:"host,omitempty"`
-	Port          int32                       `protobuf:"varint,2,opt,name=port,proto3" json:"port,omitempty"`
-	User          string                      `protobuf:"bytes,3,opt,name=user,proto3" json:"user,omitempty"`
-	Password      string                      `protobuf:"bytes,4,opt,name=password,proto3" json:"password,omitempty"`
-	DbName        string                      `protobuf:"bytes,5,opt,name=db_name,json=dbName,proto3" json:"db_name,omitempty"`
-	SslMode       string                      `protobuf:"bytes,6,opt,name=ssl_mode,json=sslMode,proto3" json:"ssl_mode,omitempty"`
-	Timezone      string                      `protobuf:"bytes,7,opt,name=timezone,proto3" json:"timezone,omitempty"`
-	Pool          *Data_Database_DatabasePool `protobuf:"bytes,8,opt,name=pool,proto3" json:"pool,omitempty"`
-	Tls           *Data_Database_Tls          `protobuf:"bytes,9,opt,name=tls,proto3" json:"tls,omitempty"`
+	state         protoimpl.MessageState  `protogen:"open.v1"`
+	Postgres      *Data_Database_Postgres `protobuf:"bytes,1,opt,name=postgres,proto3" json:"postgres,omitempty"`
 	unknownFields protoimpl.UnknownFields
 	sizeCache     protoimpl.SizeCache
 }
 
 func (x *Data_Database) Reset() {
 	*x = Data_Database{}
-	mi := &file_internal_conf_v1_conf_proto_msgTypes[9]
+	mi := &file_services_user_internal_conf_v1_conf_proto_msgTypes[9]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -574,7 +535,7 @@ func (x *Data_Database) String() string {
 func (*Data_Database) ProtoMessage() {}
 
 func (x *Data_Database) ProtoReflect() protoreflect.Message {
-	mi := &file_internal_conf_v1_conf_proto_msgTypes[9]
+	mi := &file_services_user_internal_conf_v1_conf_proto_msgTypes[9]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -587,92 +548,26 @@ func (x *Data_Database) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use Data_Database.ProtoReflect.Descriptor instead.
 func (*Data_Database) Descriptor() ([]byte, []int) {
-	return file_internal_conf_v1_conf_proto_rawDescGZIP(), []int{3, 0}
+	return file_services_user_internal_conf_v1_conf_proto_rawDescGZIP(), []int{3, 0}
 }
 
-func (x *Data_Database) GetHost() string {
+func (x *Data_Database) GetPostgres() *Data_Database_Postgres {
 	if x != nil {
-		return x.Host
-	}
-	return ""
-}
-
-func (x *Data_Database) GetPort() int32 {
-	if x != nil {
-		return x.Port
-	}
-	return 0
-}
-
-func (x *Data_Database) GetUser() string {
-	if x != nil {
-		return x.User
-	}
-	return ""
-}
-
-func (x *Data_Database) GetPassword() string {
-	if x != nil {
-		return x.Password
-	}
-	return ""
-}
-
-func (x *Data_Database) GetDbName() string {
-	if x != nil {
-		return x.DbName
-	}
-	return ""
-}
-
-func (x *Data_Database) GetSslMode() string {
-	if x != nil {
-		return x.SslMode
-	}
-	return ""
-}
-
-func (x *Data_Database) GetTimezone() string {
-	if x != nil {
-		return x.Timezone
-	}
-	return ""
-}
-
-func (x *Data_Database) GetPool() *Data_Database_DatabasePool {
-	if x != nil {
-		return x.Pool
-	}
-	return nil
-}
-
-func (x *Data_Database) GetTls() *Data_Database_Tls {
-	if x != nil {
-		return x.Tls
+		return x.Postgres
 	}
 	return nil
 }
 
 type Data_Cache struct {
 	state         protoimpl.MessageState `protogen:"open.v1"`
-	Host          string                 `protobuf:"bytes,1,opt,name=host,proto3" json:"host,omitempty"`
-	Port          int32                  `protobuf:"varint,2,opt,name=port,proto3" json:"port,omitempty"`
-	Username      string                 `protobuf:"bytes,3,opt,name=username,proto3" json:"username,omitempty"`
-	Password      string                 `protobuf:"bytes,4,opt,name=password,proto3" json:"password,omitempty"`
-	Db            int32                  `protobuf:"varint,5,opt,name=db,proto3" json:"db,omitempty"`
-	DialTimeout   int64                  `protobuf:"varint,6,opt,name=dial_timeout,json=dialTimeout,proto3" json:"dial_timeout,omitempty"`
-	ReadTimeout   int64                  `protobuf:"varint,7,opt,name=read_timeout,json=readTimeout,proto3" json:"read_timeout,omitempty"`
-	WriteTimeout  int64                  `protobuf:"varint,8,opt,name=write_timeout,json=writeTimeout,proto3" json:"write_timeout,omitempty"`
-	PoolSize      int32                  `protobuf:"varint,9,opt,name=pool_size,json=poolSize,proto3" json:"pool_size,omitempty"`
-	MinIdleConns  int32                  `protobuf:"varint,10,opt,name=min_idle_conns,json=minIdleConns,proto3" json:"min_idle_conns,omitempty"`
-	Tls           *Data_Cache_Tls        `protobuf:"bytes,11,opt,name=tls,proto3" json:"tls,omitempty"`
+	Redis         *Data_Cache_Redis      `protobuf:"bytes,1,opt,name=redis,proto3" json:"redis,omitempty"`
 	unknownFields protoimpl.UnknownFields
 	sizeCache     protoimpl.SizeCache
 }
 
 func (x *Data_Cache) Reset() {
 	*x = Data_Cache{}
-	mi := &file_internal_conf_v1_conf_proto_msgTypes[10]
+	mi := &file_services_user_internal_conf_v1_conf_proto_msgTypes[10]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -684,7 +579,7 @@ func (x *Data_Cache) String() string {
 func (*Data_Cache) ProtoMessage() {}
 
 func (x *Data_Cache) ProtoReflect() protoreflect.Message {
-	mi := &file_internal_conf_v1_conf_proto_msgTypes[10]
+	mi := &file_services_user_internal_conf_v1_conf_proto_msgTypes[10]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -697,87 +592,125 @@ func (x *Data_Cache) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use Data_Cache.ProtoReflect.Descriptor instead.
 func (*Data_Cache) Descriptor() ([]byte, []int) {
-	return file_internal_conf_v1_conf_proto_rawDescGZIP(), []int{3, 1}
+	return file_services_user_internal_conf_v1_conf_proto_rawDescGZIP(), []int{3, 1}
 }
 
-func (x *Data_Cache) GetHost() string {
+func (x *Data_Cache) GetRedis() *Data_Cache_Redis {
+	if x != nil {
+		return x.Redis
+	}
+	return nil
+}
+
+type Data_Database_Postgres struct {
+	state         protoimpl.MessageState               `protogen:"open.v1"`
+	Host          string                               `protobuf:"bytes,1,opt,name=host,proto3" json:"host,omitempty"`
+	Port          int32                                `protobuf:"varint,2,opt,name=port,proto3" json:"port,omitempty"`
+	User          string                               `protobuf:"bytes,3,opt,name=user,proto3" json:"user,omitempty"`
+	Password      string                               `protobuf:"bytes,4,opt,name=password,proto3" json:"password,omitempty"`
+	DbName        string                               `protobuf:"bytes,5,opt,name=db_name,json=dbName,proto3" json:"db_name,omitempty"`
+	SslMode       string                               `protobuf:"bytes,6,opt,name=ssl_mode,json=sslMode,proto3" json:"ssl_mode,omitempty"`
+	Timezone      string                               `protobuf:"bytes,7,opt,name=timezone,proto3" json:"timezone,omitempty"`
+	Pool          *Data_Database_Postgres_DatabasePool `protobuf:"bytes,8,opt,name=pool,proto3" json:"pool,omitempty"`
+	Tls           *Data_Database_Postgres_Tls          `protobuf:"bytes,9,opt,name=tls,proto3" json:"tls,omitempty"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *Data_Database_Postgres) Reset() {
+	*x = Data_Database_Postgres{}
+	mi := &file_services_user_internal_conf_v1_conf_proto_msgTypes[11]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *Data_Database_Postgres) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*Data_Database_Postgres) ProtoMessage() {}
+
+func (x *Data_Database_Postgres) ProtoReflect() protoreflect.Message {
+	mi := &file_services_user_internal_conf_v1_conf_proto_msgTypes[11]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use Data_Database_Postgres.ProtoReflect.Descriptor instead.
+func (*Data_Database_Postgres) Descriptor() ([]byte, []int) {
+	return file_services_user_internal_conf_v1_conf_proto_rawDescGZIP(), []int{3, 0, 0}
+}
+
+func (x *Data_Database_Postgres) GetHost() string {
 	if x != nil {
 		return x.Host
 	}
 	return ""
 }
 
-func (x *Data_Cache) GetPort() int32 {
+func (x *Data_Database_Postgres) GetPort() int32 {
 	if x != nil {
 		return x.Port
 	}
 	return 0
 }
 
-func (x *Data_Cache) GetUsername() string {
+func (x *Data_Database_Postgres) GetUser() string {
 	if x != nil {
-		return x.Username
+		return x.User
 	}
 	return ""
 }
 
-func (x *Data_Cache) GetPassword() string {
+func (x *Data_Database_Postgres) GetPassword() string {
 	if x != nil {
 		return x.Password
 	}
 	return ""
 }
 
-func (x *Data_Cache) GetDb() int32 {
+func (x *Data_Database_Postgres) GetDbName() string {
 	if x != nil {
-		return x.Db
+		return x.DbName
 	}
-	return 0
+	return ""
 }
 
-func (x *Data_Cache) GetDialTimeout() int64 {
+func (x *Data_Database_Postgres) GetSslMode() string {
 	if x != nil {
-		return x.DialTimeout
+		return x.SslMode
 	}
-	return 0
+	return ""
 }
 
-func (x *Data_Cache) GetReadTimeout() int64 {
+func (x *Data_Database_Postgres) GetTimezone() string {
 	if x != nil {
-		return x.ReadTimeout
+		return x.Timezone
 	}
-	return 0
+	return ""
 }
 
-func (x *Data_Cache) GetWriteTimeout() int64 {
+func (x *Data_Database_Postgres) GetPool() *Data_Database_Postgres_DatabasePool {
 	if x != nil {
-		return x.WriteTimeout
+		return x.Pool
 	}
-	return 0
+	return nil
 }
 
-func (x *Data_Cache) GetPoolSize() int32 {
-	if x != nil {
-		return x.PoolSize
-	}
-	return 0
-}
-
-func (x *Data_Cache) GetMinIdleConns() int32 {
-	if x != nil {
-		return x.MinIdleConns
-	}
-	return 0
-}
-
-func (x *Data_Cache) GetTls() *Data_Cache_Tls {
+func (x *Data_Database_Postgres) GetTls() *Data_Database_Postgres_Tls {
 	if x != nil {
 		return x.Tls
 	}
 	return nil
 }
 
-type Data_Database_DatabasePool struct {
+type Data_Database_Postgres_DatabasePool struct {
 	state           protoimpl.MessageState `protogen:"open.v1"`
 	MaxConns        int32                  `protobuf:"varint,1,opt,name=max_conns,json=maxConns,proto3" json:"max_conns,omitempty"`
 	MinConns        int32                  `protobuf:"varint,2,opt,name=min_conns,json=minConns,proto3" json:"min_conns,omitempty"`
@@ -787,21 +720,21 @@ type Data_Database_DatabasePool struct {
 	sizeCache       protoimpl.SizeCache
 }
 
-func (x *Data_Database_DatabasePool) Reset() {
-	*x = Data_Database_DatabasePool{}
-	mi := &file_internal_conf_v1_conf_proto_msgTypes[11]
+func (x *Data_Database_Postgres_DatabasePool) Reset() {
+	*x = Data_Database_Postgres_DatabasePool{}
+	mi := &file_services_user_internal_conf_v1_conf_proto_msgTypes[12]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
 
-func (x *Data_Database_DatabasePool) String() string {
+func (x *Data_Database_Postgres_DatabasePool) String() string {
 	return protoimpl.X.MessageStringOf(x)
 }
 
-func (*Data_Database_DatabasePool) ProtoMessage() {}
+func (*Data_Database_Postgres_DatabasePool) ProtoMessage() {}
 
-func (x *Data_Database_DatabasePool) ProtoReflect() protoreflect.Message {
-	mi := &file_internal_conf_v1_conf_proto_msgTypes[11]
+func (x *Data_Database_Postgres_DatabasePool) ProtoReflect() protoreflect.Message {
+	mi := &file_services_user_internal_conf_v1_conf_proto_msgTypes[12]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -812,40 +745,40 @@ func (x *Data_Database_DatabasePool) ProtoReflect() protoreflect.Message {
 	return mi.MessageOf(x)
 }
 
-// Deprecated: Use Data_Database_DatabasePool.ProtoReflect.Descriptor instead.
-func (*Data_Database_DatabasePool) Descriptor() ([]byte, []int) {
-	return file_internal_conf_v1_conf_proto_rawDescGZIP(), []int{3, 0, 0}
+// Deprecated: Use Data_Database_Postgres_DatabasePool.ProtoReflect.Descriptor instead.
+func (*Data_Database_Postgres_DatabasePool) Descriptor() ([]byte, []int) {
+	return file_services_user_internal_conf_v1_conf_proto_rawDescGZIP(), []int{3, 0, 0, 0}
 }
 
-func (x *Data_Database_DatabasePool) GetMaxConns() int32 {
+func (x *Data_Database_Postgres_DatabasePool) GetMaxConns() int32 {
 	if x != nil {
 		return x.MaxConns
 	}
 	return 0
 }
 
-func (x *Data_Database_DatabasePool) GetMinConns() int32 {
+func (x *Data_Database_Postgres_DatabasePool) GetMinConns() int32 {
 	if x != nil {
 		return x.MinConns
 	}
 	return 0
 }
 
-func (x *Data_Database_DatabasePool) GetMaxConnLifetime() int64 {
+func (x *Data_Database_Postgres_DatabasePool) GetMaxConnLifetime() int64 {
 	if x != nil {
 		return x.MaxConnLifetime
 	}
 	return 0
 }
 
-func (x *Data_Database_DatabasePool) GetMaxConnIdleTime() int64 {
+func (x *Data_Database_Postgres_DatabasePool) GetMaxConnIdleTime() int64 {
 	if x != nil {
 		return x.MaxConnIdleTime
 	}
 	return 0
 }
 
-type Data_Database_Tls struct {
+type Data_Database_Postgres_Tls struct {
 	state         protoimpl.MessageState `protogen:"open.v1"`
 	Enable        bool                   `protobuf:"varint,1,opt,name=enable,proto3" json:"enable,omitempty"`
 	SslMode       string                 `protobuf:"bytes,2,opt,name=ssl_mode,json=sslMode,proto3" json:"ssl_mode,omitempty"`
@@ -854,21 +787,21 @@ type Data_Database_Tls struct {
 	sizeCache     protoimpl.SizeCache
 }
 
-func (x *Data_Database_Tls) Reset() {
-	*x = Data_Database_Tls{}
-	mi := &file_internal_conf_v1_conf_proto_msgTypes[12]
+func (x *Data_Database_Postgres_Tls) Reset() {
+	*x = Data_Database_Postgres_Tls{}
+	mi := &file_services_user_internal_conf_v1_conf_proto_msgTypes[13]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
 
-func (x *Data_Database_Tls) String() string {
+func (x *Data_Database_Postgres_Tls) String() string {
 	return protoimpl.X.MessageStringOf(x)
 }
 
-func (*Data_Database_Tls) ProtoMessage() {}
+func (*Data_Database_Postgres_Tls) ProtoMessage() {}
 
-func (x *Data_Database_Tls) ProtoReflect() protoreflect.Message {
-	mi := &file_internal_conf_v1_conf_proto_msgTypes[12]
+func (x *Data_Database_Postgres_Tls) ProtoReflect() protoreflect.Message {
+	mi := &file_services_user_internal_conf_v1_conf_proto_msgTypes[13]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -879,33 +812,157 @@ func (x *Data_Database_Tls) ProtoReflect() protoreflect.Message {
 	return mi.MessageOf(x)
 }
 
-// Deprecated: Use Data_Database_Tls.ProtoReflect.Descriptor instead.
-func (*Data_Database_Tls) Descriptor() ([]byte, []int) {
-	return file_internal_conf_v1_conf_proto_rawDescGZIP(), []int{3, 0, 1}
+// Deprecated: Use Data_Database_Postgres_Tls.ProtoReflect.Descriptor instead.
+func (*Data_Database_Postgres_Tls) Descriptor() ([]byte, []int) {
+	return file_services_user_internal_conf_v1_conf_proto_rawDescGZIP(), []int{3, 0, 0, 1}
 }
 
-func (x *Data_Database_Tls) GetEnable() bool {
+func (x *Data_Database_Postgres_Tls) GetEnable() bool {
 	if x != nil {
 		return x.Enable
 	}
 	return false
 }
 
-func (x *Data_Database_Tls) GetSslMode() string {
+func (x *Data_Database_Postgres_Tls) GetSslMode() string {
 	if x != nil {
 		return x.SslMode
 	}
 	return ""
 }
 
-func (x *Data_Database_Tls) GetCaPem() string {
+func (x *Data_Database_Postgres_Tls) GetCaPem() string {
 	if x != nil {
 		return x.CaPem
 	}
 	return ""
 }
 
-type Data_Cache_Tls struct {
+type Data_Cache_Redis struct {
+	state         protoimpl.MessageState `protogen:"open.v1"`
+	Host          string                 `protobuf:"bytes,1,opt,name=host,proto3" json:"host,omitempty"`
+	Port          int32                  `protobuf:"varint,2,opt,name=port,proto3" json:"port,omitempty"`
+	Username      string                 `protobuf:"bytes,3,opt,name=username,proto3" json:"username,omitempty"`
+	Password      string                 `protobuf:"bytes,4,opt,name=password,proto3" json:"password,omitempty"`
+	Db            int32                  `protobuf:"varint,5,opt,name=db,proto3" json:"db,omitempty"`
+	DialTimeout   int64                  `protobuf:"varint,6,opt,name=dial_timeout,json=dialTimeout,proto3" json:"dial_timeout,omitempty"`
+	ReadTimeout   int64                  `protobuf:"varint,7,opt,name=read_timeout,json=readTimeout,proto3" json:"read_timeout,omitempty"`
+	WriteTimeout  int64                  `protobuf:"varint,8,opt,name=write_timeout,json=writeTimeout,proto3" json:"write_timeout,omitempty"`
+	PoolSize      int32                  `protobuf:"varint,9,opt,name=pool_size,json=poolSize,proto3" json:"pool_size,omitempty"`
+	MinIdleConns  int32                  `protobuf:"varint,10,opt,name=min_idle_conns,json=minIdleConns,proto3" json:"min_idle_conns,omitempty"`
+	Tls           *Data_Cache_Redis_Tls  `protobuf:"bytes,11,opt,name=tls,proto3" json:"tls,omitempty"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *Data_Cache_Redis) Reset() {
+	*x = Data_Cache_Redis{}
+	mi := &file_services_user_internal_conf_v1_conf_proto_msgTypes[14]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *Data_Cache_Redis) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*Data_Cache_Redis) ProtoMessage() {}
+
+func (x *Data_Cache_Redis) ProtoReflect() protoreflect.Message {
+	mi := &file_services_user_internal_conf_v1_conf_proto_msgTypes[14]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use Data_Cache_Redis.ProtoReflect.Descriptor instead.
+func (*Data_Cache_Redis) Descriptor() ([]byte, []int) {
+	return file_services_user_internal_conf_v1_conf_proto_rawDescGZIP(), []int{3, 1, 0}
+}
+
+func (x *Data_Cache_Redis) GetHost() string {
+	if x != nil {
+		return x.Host
+	}
+	return ""
+}
+
+func (x *Data_Cache_Redis) GetPort() int32 {
+	if x != nil {
+		return x.Port
+	}
+	return 0
+}
+
+func (x *Data_Cache_Redis) GetUsername() string {
+	if x != nil {
+		return x.Username
+	}
+	return ""
+}
+
+func (x *Data_Cache_Redis) GetPassword() string {
+	if x != nil {
+		return x.Password
+	}
+	return ""
+}
+
+func (x *Data_Cache_Redis) GetDb() int32 {
+	if x != nil {
+		return x.Db
+	}
+	return 0
+}
+
+func (x *Data_Cache_Redis) GetDialTimeout() int64 {
+	if x != nil {
+		return x.DialTimeout
+	}
+	return 0
+}
+
+func (x *Data_Cache_Redis) GetReadTimeout() int64 {
+	if x != nil {
+		return x.ReadTimeout
+	}
+	return 0
+}
+
+func (x *Data_Cache_Redis) GetWriteTimeout() int64 {
+	if x != nil {
+		return x.WriteTimeout
+	}
+	return 0
+}
+
+func (x *Data_Cache_Redis) GetPoolSize() int32 {
+	if x != nil {
+		return x.PoolSize
+	}
+	return 0
+}
+
+func (x *Data_Cache_Redis) GetMinIdleConns() int32 {
+	if x != nil {
+		return x.MinIdleConns
+	}
+	return 0
+}
+
+func (x *Data_Cache_Redis) GetTls() *Data_Cache_Redis_Tls {
+	if x != nil {
+		return x.Tls
+	}
+	return nil
+}
+
+type Data_Cache_Redis_Tls struct {
 	state              protoimpl.MessageState `protogen:"open.v1"`
 	Enable             bool                   `protobuf:"varint,1,opt,name=enable,proto3" json:"enable,omitempty"`
 	CaPem              string                 `protobuf:"bytes,2,opt,name=ca_pem,json=caPem,proto3" json:"ca_pem,omitempty"`
@@ -914,21 +971,21 @@ type Data_Cache_Tls struct {
 	sizeCache          protoimpl.SizeCache
 }
 
-func (x *Data_Cache_Tls) Reset() {
-	*x = Data_Cache_Tls{}
-	mi := &file_internal_conf_v1_conf_proto_msgTypes[13]
+func (x *Data_Cache_Redis_Tls) Reset() {
+	*x = Data_Cache_Redis_Tls{}
+	mi := &file_services_user_internal_conf_v1_conf_proto_msgTypes[15]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
 
-func (x *Data_Cache_Tls) String() string {
+func (x *Data_Cache_Redis_Tls) String() string {
 	return protoimpl.X.MessageStringOf(x)
 }
 
-func (*Data_Cache_Tls) ProtoMessage() {}
+func (*Data_Cache_Redis_Tls) ProtoMessage() {}
 
-func (x *Data_Cache_Tls) ProtoReflect() protoreflect.Message {
-	mi := &file_internal_conf_v1_conf_proto_msgTypes[13]
+func (x *Data_Cache_Redis_Tls) ProtoReflect() protoreflect.Message {
+	mi := &file_services_user_internal_conf_v1_conf_proto_msgTypes[15]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -939,30 +996,114 @@ func (x *Data_Cache_Tls) ProtoReflect() protoreflect.Message {
 	return mi.MessageOf(x)
 }
 
-// Deprecated: Use Data_Cache_Tls.ProtoReflect.Descriptor instead.
-func (*Data_Cache_Tls) Descriptor() ([]byte, []int) {
-	return file_internal_conf_v1_conf_proto_rawDescGZIP(), []int{3, 1, 0}
+// Deprecated: Use Data_Cache_Redis_Tls.ProtoReflect.Descriptor instead.
+func (*Data_Cache_Redis_Tls) Descriptor() ([]byte, []int) {
+	return file_services_user_internal_conf_v1_conf_proto_rawDescGZIP(), []int{3, 1, 0, 0}
 }
 
-func (x *Data_Cache_Tls) GetEnable() bool {
+func (x *Data_Cache_Redis_Tls) GetEnable() bool {
 	if x != nil {
 		return x.Enable
 	}
 	return false
 }
 
-func (x *Data_Cache_Tls) GetCaPem() string {
+func (x *Data_Cache_Redis_Tls) GetCaPem() string {
 	if x != nil {
 		return x.CaPem
 	}
 	return ""
 }
 
-func (x *Data_Cache_Tls) GetInsecureSkipVerify() bool {
+func (x *Data_Cache_Redis_Tls) GetInsecureSkipVerify() bool {
 	if x != nil {
 		return x.InsecureSkipVerify
 	}
 	return false
+}
+
+type Auth_Casdoor struct {
+	state            protoimpl.MessageState `protogen:"open.v1"`
+	Endpoint         string                 `protobuf:"bytes,1,opt,name=endpoint,proto3" json:"endpoint,omitempty"`
+	ClientId         string                 `protobuf:"bytes,2,opt,name=client_id,json=clientId,proto3" json:"client_id,omitempty"`
+	ClientSecret     string                 `protobuf:"bytes,3,opt,name=client_secret,json=clientSecret,proto3" json:"client_secret,omitempty"`
+	OrganizationName string                 `protobuf:"bytes,4,opt,name=organization_name,json=organizationName,proto3" json:"organization_name,omitempty"`
+	ApplicationName  string                 `protobuf:"bytes,5,opt,name=application_name,json=applicationName,proto3" json:"application_name,omitempty"`
+	Certificate      string                 `protobuf:"bytes,6,opt,name=certificate,proto3" json:"certificate,omitempty"`
+	unknownFields    protoimpl.UnknownFields
+	sizeCache        protoimpl.SizeCache
+}
+
+func (x *Auth_Casdoor) Reset() {
+	*x = Auth_Casdoor{}
+	mi := &file_services_user_internal_conf_v1_conf_proto_msgTypes[16]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *Auth_Casdoor) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*Auth_Casdoor) ProtoMessage() {}
+
+func (x *Auth_Casdoor) ProtoReflect() protoreflect.Message {
+	mi := &file_services_user_internal_conf_v1_conf_proto_msgTypes[16]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use Auth_Casdoor.ProtoReflect.Descriptor instead.
+func (*Auth_Casdoor) Descriptor() ([]byte, []int) {
+	return file_services_user_internal_conf_v1_conf_proto_rawDescGZIP(), []int{4, 0}
+}
+
+func (x *Auth_Casdoor) GetEndpoint() string {
+	if x != nil {
+		return x.Endpoint
+	}
+	return ""
+}
+
+func (x *Auth_Casdoor) GetClientId() string {
+	if x != nil {
+		return x.ClientId
+	}
+	return ""
+}
+
+func (x *Auth_Casdoor) GetClientSecret() string {
+	if x != nil {
+		return x.ClientSecret
+	}
+	return ""
+}
+
+func (x *Auth_Casdoor) GetOrganizationName() string {
+	if x != nil {
+		return x.OrganizationName
+	}
+	return ""
+}
+
+func (x *Auth_Casdoor) GetApplicationName() string {
+	if x != nil {
+		return x.ApplicationName
+	}
+	return ""
+}
+
+func (x *Auth_Casdoor) GetCertificate() string {
+	if x != nil {
+		return x.Certificate
+	}
+	return ""
 }
 
 type Observability_Trace struct {
@@ -975,7 +1116,7 @@ type Observability_Trace struct {
 
 func (x *Observability_Trace) Reset() {
 	*x = Observability_Trace{}
-	mi := &file_internal_conf_v1_conf_proto_msgTypes[14]
+	mi := &file_services_user_internal_conf_v1_conf_proto_msgTypes[17]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -987,7 +1128,7 @@ func (x *Observability_Trace) String() string {
 func (*Observability_Trace) ProtoMessage() {}
 
 func (x *Observability_Trace) ProtoReflect() protoreflect.Message {
-	mi := &file_internal_conf_v1_conf_proto_msgTypes[14]
+	mi := &file_services_user_internal_conf_v1_conf_proto_msgTypes[17]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -1000,7 +1141,7 @@ func (x *Observability_Trace) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use Observability_Trace.ProtoReflect.Descriptor instead.
 func (*Observability_Trace) Descriptor() ([]byte, []int) {
-	return file_internal_conf_v1_conf_proto_rawDescGZIP(), []int{5, 0}
+	return file_services_user_internal_conf_v1_conf_proto_rawDescGZIP(), []int{5, 0}
 }
 
 func (x *Observability_Trace) GetEndpoint() string {
@@ -1027,7 +1168,7 @@ type Observability_Metric struct {
 
 func (x *Observability_Metric) Reset() {
 	*x = Observability_Metric{}
-	mi := &file_internal_conf_v1_conf_proto_msgTypes[15]
+	mi := &file_services_user_internal_conf_v1_conf_proto_msgTypes[18]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -1039,7 +1180,7 @@ func (x *Observability_Metric) String() string {
 func (*Observability_Metric) ProtoMessage() {}
 
 func (x *Observability_Metric) ProtoReflect() protoreflect.Message {
-	mi := &file_internal_conf_v1_conf_proto_msgTypes[15]
+	mi := &file_services_user_internal_conf_v1_conf_proto_msgTypes[18]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -1052,7 +1193,7 @@ func (x *Observability_Metric) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use Observability_Metric.ProtoReflect.Descriptor instead.
 func (*Observability_Metric) Descriptor() ([]byte, []int) {
-	return file_internal_conf_v1_conf_proto_rawDescGZIP(), []int{5, 1}
+	return file_services_user_internal_conf_v1_conf_proto_rawDescGZIP(), []int{5, 1}
 }
 
 func (x *Observability_Metric) GetEndpoint() string {
@@ -1079,7 +1220,7 @@ type Observability_Logging struct {
 
 func (x *Observability_Logging) Reset() {
 	*x = Observability_Logging{}
-	mi := &file_internal_conf_v1_conf_proto_msgTypes[16]
+	mi := &file_services_user_internal_conf_v1_conf_proto_msgTypes[19]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -1091,7 +1232,7 @@ func (x *Observability_Logging) String() string {
 func (*Observability_Logging) ProtoMessage() {}
 
 func (x *Observability_Logging) ProtoReflect() protoreflect.Message {
-	mi := &file_internal_conf_v1_conf_proto_msgTypes[16]
+	mi := &file_services_user_internal_conf_v1_conf_proto_msgTypes[19]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -1104,7 +1245,7 @@ func (x *Observability_Logging) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use Observability_Logging.ProtoReflect.Descriptor instead.
 func (*Observability_Logging) Descriptor() ([]byte, []int) {
-	return file_internal_conf_v1_conf_proto_rawDescGZIP(), []int{5, 2}
+	return file_services_user_internal_conf_v1_conf_proto_rawDescGZIP(), []int{5, 2}
 }
 
 func (x *Observability_Logging) GetEndpoint() string {
@@ -1132,7 +1273,7 @@ type Observability_Tls struct {
 
 func (x *Observability_Tls) Reset() {
 	*x = Observability_Tls{}
-	mi := &file_internal_conf_v1_conf_proto_msgTypes[17]
+	mi := &file_services_user_internal_conf_v1_conf_proto_msgTypes[20]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -1144,7 +1285,7 @@ func (x *Observability_Tls) String() string {
 func (*Observability_Tls) ProtoMessage() {}
 
 func (x *Observability_Tls) ProtoReflect() protoreflect.Message {
-	mi := &file_internal_conf_v1_conf_proto_msgTypes[17]
+	mi := &file_services_user_internal_conf_v1_conf_proto_msgTypes[20]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -1157,7 +1298,7 @@ func (x *Observability_Tls) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use Observability_Tls.ProtoReflect.Descriptor instead.
 func (*Observability_Tls) Descriptor() ([]byte, []int) {
-	return file_internal_conf_v1_conf_proto_rawDescGZIP(), []int{5, 3}
+	return file_services_user_internal_conf_v1_conf_proto_rawDescGZIP(), []int{5, 3}
 }
 
 func (x *Observability_Tls) GetEnable() bool {
@@ -1194,7 +1335,7 @@ type Discovery_Consul struct {
 
 func (x *Discovery_Consul) Reset() {
 	*x = Discovery_Consul{}
-	mi := &file_internal_conf_v1_conf_proto_msgTypes[18]
+	mi := &file_services_user_internal_conf_v1_conf_proto_msgTypes[21]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -1206,7 +1347,7 @@ func (x *Discovery_Consul) String() string {
 func (*Discovery_Consul) ProtoMessage() {}
 
 func (x *Discovery_Consul) ProtoReflect() protoreflect.Message {
-	mi := &file_internal_conf_v1_conf_proto_msgTypes[18]
+	mi := &file_services_user_internal_conf_v1_conf_proto_msgTypes[21]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -1219,7 +1360,7 @@ func (x *Discovery_Consul) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use Discovery_Consul.ProtoReflect.Descriptor instead.
 func (*Discovery_Consul) Descriptor() ([]byte, []int) {
-	return file_internal_conf_v1_conf_proto_rawDescGZIP(), []int{6, 0}
+	return file_services_user_internal_conf_v1_conf_proto_rawDescGZIP(), []int{6, 0}
 }
 
 func (x *Discovery_Consul) GetAddr() string {
@@ -1268,7 +1409,7 @@ type Discovery_Consul_Tls struct {
 
 func (x *Discovery_Consul_Tls) Reset() {
 	*x = Discovery_Consul_Tls{}
-	mi := &file_internal_conf_v1_conf_proto_msgTypes[19]
+	mi := &file_services_user_internal_conf_v1_conf_proto_msgTypes[22]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -1280,7 +1421,7 @@ func (x *Discovery_Consul_Tls) String() string {
 func (*Discovery_Consul_Tls) ProtoMessage() {}
 
 func (x *Discovery_Consul_Tls) ProtoReflect() protoreflect.Message {
-	mi := &file_internal_conf_v1_conf_proto_msgTypes[19]
+	mi := &file_services_user_internal_conf_v1_conf_proto_msgTypes[22]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -1293,7 +1434,7 @@ func (x *Discovery_Consul_Tls) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use Discovery_Consul_Tls.ProtoReflect.Descriptor instead.
 func (*Discovery_Consul_Tls) Descriptor() ([]byte, []int) {
-	return file_internal_conf_v1_conf_proto_rawDescGZIP(), []int{6, 0, 0}
+	return file_services_user_internal_conf_v1_conf_proto_rawDescGZIP(), []int{6, 0, 0}
 }
 
 func (x *Discovery_Consul_Tls) GetEnable() bool {
@@ -1327,7 +1468,7 @@ type Discovery_Consul_Ttl struct {
 
 func (x *Discovery_Consul_Ttl) Reset() {
 	*x = Discovery_Consul_Ttl{}
-	mi := &file_internal_conf_v1_conf_proto_msgTypes[20]
+	mi := &file_services_user_internal_conf_v1_conf_proto_msgTypes[23]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -1339,7 +1480,7 @@ func (x *Discovery_Consul_Ttl) String() string {
 func (*Discovery_Consul_Ttl) ProtoMessage() {}
 
 func (x *Discovery_Consul_Ttl) ProtoReflect() protoreflect.Message {
-	mi := &file_internal_conf_v1_conf_proto_msgTypes[20]
+	mi := &file_services_user_internal_conf_v1_conf_proto_msgTypes[23]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -1352,7 +1493,7 @@ func (x *Discovery_Consul_Ttl) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use Discovery_Consul_Ttl.ProtoReflect.Descriptor instead.
 func (*Discovery_Consul_Ttl) Descriptor() ([]byte, []int) {
-	return file_internal_conf_v1_conf_proto_rawDescGZIP(), []int{6, 0, 1}
+	return file_services_user_internal_conf_v1_conf_proto_rawDescGZIP(), []int{6, 0, 1}
 }
 
 func (x *Discovery_Consul_Ttl) GetDuration() string {
@@ -1380,7 +1521,7 @@ type Search_ElasticSearch struct {
 
 func (x *Search_ElasticSearch) Reset() {
 	*x = Search_ElasticSearch{}
-	mi := &file_internal_conf_v1_conf_proto_msgTypes[21]
+	mi := &file_services_user_internal_conf_v1_conf_proto_msgTypes[24]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -1392,7 +1533,7 @@ func (x *Search_ElasticSearch) String() string {
 func (*Search_ElasticSearch) ProtoMessage() {}
 
 func (x *Search_ElasticSearch) ProtoReflect() protoreflect.Message {
-	mi := &file_internal_conf_v1_conf_proto_msgTypes[21]
+	mi := &file_services_user_internal_conf_v1_conf_proto_msgTypes[24]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -1405,7 +1546,7 @@ func (x *Search_ElasticSearch) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use Search_ElasticSearch.ProtoReflect.Descriptor instead.
 func (*Search_ElasticSearch) Descriptor() ([]byte, []int) {
-	return file_internal_conf_v1_conf_proto_rawDescGZIP(), []int{7, 0}
+	return file_services_user_internal_conf_v1_conf_proto_rawDescGZIP(), []int{7, 0}
 }
 
 func (x *Search_ElasticSearch) GetAddresses() []string {
@@ -1429,40 +1570,43 @@ func (x *Search_ElasticSearch) GetPassword() string {
 	return ""
 }
 
-var File_internal_conf_v1_conf_proto protoreflect.FileDescriptor
+var File_services_user_internal_conf_v1_conf_proto protoreflect.FileDescriptor
 
-const file_internal_conf_v1_conf_proto_rawDesc = "" +
+const file_services_user_internal_conf_v1_conf_proto_rawDesc = "" +
 	"\n" +
-	"\x1binternal/conf/v1/conf.proto\x12\aconf.v1\"\xb3\x02\n" +
-	"\tBootstrap\x12'\n" +
-	"\x06server\x18\x01 \x01(\v2\x0f.conf.v1.ServerR\x06server\x12!\n" +
-	"\x04data\x18\x02 \x01(\v2\r.conf.v1.DataR\x04data\x12!\n" +
-	"\x04auth\x18\x03 \x01(\v2\r.conf.v1.AuthR\x04auth\x12<\n" +
-	"\robservability\x18\x04 \x01(\v2\x16.conf.v1.ObservabilityR\robservability\x120\n" +
-	"\tdiscovery\x18\x05 \x01(\v2\x12.conf.v1.DiscoveryR\tdiscovery\x12'\n" +
-	"\x06search\x18\x06 \x01(\v2\x0f.conf.v1.SearchR\x06search\x12\x1e\n" +
-	"\x03log\x18\a \x01(\v2\f.conf.v1.LogR\x03log\"3\n" +
+	")services/user/internal/conf/v1/conf.proto\x12\aconf.v1\x1a#third_party/validate/validate.proto\"\xeb\x02\n" +
+	"\tBootstrap\x12/\n" +
+	"\x06server\x18\x01 \x01(\v2\x0f.conf.v1.ServerB\x06\xbaH\x03\xc8\x01\x01R\x06server\x12)\n" +
+	"\x04data\x18\x02 \x01(\v2\r.conf.v1.DataB\x06\xbaH\x03\xc8\x01\x01R\x04data\x12)\n" +
+	"\x04auth\x18\x03 \x01(\v2\r.conf.v1.AuthB\x06\xbaH\x03\xc8\x01\x01R\x04auth\x12D\n" +
+	"\robservability\x18\x04 \x01(\v2\x16.conf.v1.ObservabilityB\x06\xbaH\x03\xc8\x01\x00R\robservability\x128\n" +
+	"\tdiscovery\x18\x05 \x01(\v2\x12.conf.v1.DiscoveryB\x06\xbaH\x03\xc8\x01\x00R\tdiscovery\x12/\n" +
+	"\x06search\x18\x06 \x01(\v2\x0f.conf.v1.SearchB\x06\xbaH\x03\xc8\x01\x00R\x06search\x12&\n" +
+	"\x03log\x18\a \x01(\v2\f.conf.v1.LogB\x06\xbaH\x03\xc8\x01\x01R\x03log\"3\n" +
 	"\x03Log\x12\x14\n" +
 	"\x05level\x18\x01 \x01(\tR\x05level\x12\x16\n" +
-	"\x06format\x18\x02 \x01(\tR\x06format\"h\n" +
-	"\x06Server\x12(\n" +
-	"\x04http\x18\x01 \x01(\v2\x14.conf.v1.Server.HTTPR\x04http\x1a4\n" +
-	"\x04HTTP\x12\x12\n" +
+	"\x06format\x18\x02 \x01(\tR\x06format\"\x91\x01\n" +
+	"\x06Server\x12\x12\n" +
 	"\x04addr\x18\x01 \x01(\tR\x04addr\x12\x18\n" +
-	"\atimeout\x18\x02 \x01(\x03R\atimeout\"\xb1\b\n" +
+	"\atimeout\x18\x02 \x01(\x03R\atimeout\x12(\n" +
+	"\x04cors\x18\x03 \x01(\v2\x14.conf.v1.Server.CorsR\x04cors\x1a/\n" +
+	"\x04Cors\x12'\n" +
+	"\x0fallowed_origins\x18\x01 \x03(\tR\x0eallowedOrigins\"\xce\t\n" +
 	"\x04Data\x122\n" +
 	"\bdatabase\x18\x01 \x01(\v2\x16.conf.v1.Data.DatabaseR\bdatabase\x12)\n" +
-	"\x05cache\x18\x02 \x01(\v2\x13.conf.v1.Data.CacheR\x05cache\x1a\x8e\x04\n" +
-	"\bDatabase\x12\x12\n" +
+	"\x05cache\x18\x02 \x01(\v2\x13.conf.v1.Data.CacheR\x05cache\x1a\xea\x04\n" +
+	"\bDatabase\x12;\n" +
+	"\bpostgres\x18\x01 \x01(\v2\x1f.conf.v1.Data.Database.PostgresR\bpostgres\x1a\xa0\x04\n" +
+	"\bPostgres\x12\x12\n" +
 	"\x04host\x18\x01 \x01(\tR\x04host\x12\x12\n" +
 	"\x04port\x18\x02 \x01(\x05R\x04port\x12\x12\n" +
 	"\x04user\x18\x03 \x01(\tR\x04user\x12\x1a\n" +
 	"\bpassword\x18\x04 \x01(\tR\bpassword\x12\x17\n" +
 	"\adb_name\x18\x05 \x01(\tR\x06dbName\x12\x19\n" +
 	"\bssl_mode\x18\x06 \x01(\tR\asslMode\x12\x1a\n" +
-	"\btimezone\x18\a \x01(\tR\btimezone\x127\n" +
-	"\x04pool\x18\b \x01(\v2#.conf.v1.Data.Database.DatabasePoolR\x04pool\x12,\n" +
-	"\x03tls\x18\t \x01(\v2\x1a.conf.v1.Data.Database.TlsR\x03tls\x1a\xa1\x01\n" +
+	"\btimezone\x18\a \x01(\tR\btimezone\x12@\n" +
+	"\x04pool\x18\b \x01(\v2,.conf.v1.Data.Database.Postgres.DatabasePoolR\x04pool\x125\n" +
+	"\x03tls\x18\t \x01(\v2#.conf.v1.Data.Database.Postgres.TlsR\x03tls\x1a\xa1\x01\n" +
 	"\fDatabasePool\x12\x1b\n" +
 	"\tmax_conns\x18\x01 \x01(\x05R\bmaxConns\x12\x1b\n" +
 	"\tmin_conns\x18\x02 \x01(\x05R\bminConns\x12*\n" +
@@ -1471,8 +1615,10 @@ const file_internal_conf_v1_conf_proto_rawDesc = "" +
 	"\x03Tls\x12\x16\n" +
 	"\x06enable\x18\x01 \x01(\bR\x06enable\x12\x19\n" +
 	"\bssl_mode\x18\x02 \x01(\tR\asslMode\x12\x15\n" +
-	"\x06ca_pem\x18\x03 \x01(\tR\x05caPem\x1a\xb8\x03\n" +
-	"\x05Cache\x12\x12\n" +
+	"\x06ca_pem\x18\x03 \x01(\tR\x05caPem\x1a\xf9\x03\n" +
+	"\x05Cache\x12/\n" +
+	"\x05redis\x18\x01 \x01(\v2\x19.conf.v1.Data.Cache.RedisR\x05redis\x1a\xbe\x03\n" +
+	"\x05Redis\x12\x12\n" +
 	"\x04host\x18\x01 \x01(\tR\x04host\x12\x12\n" +
 	"\x04port\x18\x02 \x01(\x05R\x04port\x12\x1a\n" +
 	"\busername\x18\x03 \x01(\tR\busername\x12\x1a\n" +
@@ -1483,13 +1629,15 @@ const file_internal_conf_v1_conf_proto_rawDesc = "" +
 	"\rwrite_timeout\x18\b \x01(\x03R\fwriteTimeout\x12\x1b\n" +
 	"\tpool_size\x18\t \x01(\x05R\bpoolSize\x12$\n" +
 	"\x0emin_idle_conns\x18\n" +
-	" \x01(\x05R\fminIdleConns\x12)\n" +
-	"\x03tls\x18\v \x01(\v2\x17.conf.v1.Data.Cache.TlsR\x03tls\x1af\n" +
+	" \x01(\x05R\fminIdleConns\x12/\n" +
+	"\x03tls\x18\v \x01(\v2\x1d.conf.v1.Data.Cache.Redis.TlsR\x03tls\x1af\n" +
 	"\x03Tls\x12\x16\n" +
 	"\x06enable\x18\x01 \x01(\bR\x06enable\x12\x15\n" +
 	"\x06ca_pem\x18\x02 \x01(\tR\x05caPem\x120\n" +
-	"\x14insecure_skip_verify\x18\x03 \x01(\bR\x12insecureSkipVerify\"\xde\x01\n" +
-	"\x04Auth\x12\x1a\n" +
+	"\x14insecure_skip_verify\x18\x03 \x01(\bR\x12insecureSkipVerify\"\x9b\x02\n" +
+	"\x04Auth\x12/\n" +
+	"\acasdoor\x18\x01 \x01(\v2\x15.conf.v1.Auth.CasdoorR\acasdoor\x1a\xe1\x01\n" +
+	"\aCasdoor\x12\x1a\n" +
 	"\bendpoint\x18\x01 \x01(\tR\bendpoint\x12\x1b\n" +
 	"\tclient_id\x18\x02 \x01(\tR\bclientId\x12#\n" +
 	"\rclient_secret\x18\x03 \x01(\tR\fclientSecret\x12+\n" +
@@ -1537,43 +1685,46 @@ const file_internal_conf_v1_conf_proto_rawDesc = "" +
 	"\vcom.conf.v1B\tConfProtoP\x01ZJgithub.com/lens077/ecommerce/backend/services/user/internal/conf/v1;confv1\xa2\x02\x03CXX\xaa\x02\aConf.V1\xca\x02\aConf\\V1\xe2\x02\x13Conf\\V1\\GPBMetadata\xea\x02\bConf::V1b\x06proto3"
 
 var (
-	file_internal_conf_v1_conf_proto_rawDescOnce sync.Once
-	file_internal_conf_v1_conf_proto_rawDescData []byte
+	file_services_user_internal_conf_v1_conf_proto_rawDescOnce sync.Once
+	file_services_user_internal_conf_v1_conf_proto_rawDescData []byte
 )
 
-func file_internal_conf_v1_conf_proto_rawDescGZIP() []byte {
-	file_internal_conf_v1_conf_proto_rawDescOnce.Do(func() {
-		file_internal_conf_v1_conf_proto_rawDescData = protoimpl.X.CompressGZIP(unsafe.Slice(unsafe.StringData(file_internal_conf_v1_conf_proto_rawDesc), len(file_internal_conf_v1_conf_proto_rawDesc)))
+func file_services_user_internal_conf_v1_conf_proto_rawDescGZIP() []byte {
+	file_services_user_internal_conf_v1_conf_proto_rawDescOnce.Do(func() {
+		file_services_user_internal_conf_v1_conf_proto_rawDescData = protoimpl.X.CompressGZIP(unsafe.Slice(unsafe.StringData(file_services_user_internal_conf_v1_conf_proto_rawDesc), len(file_services_user_internal_conf_v1_conf_proto_rawDesc)))
 	})
-	return file_internal_conf_v1_conf_proto_rawDescData
+	return file_services_user_internal_conf_v1_conf_proto_rawDescData
 }
 
-var file_internal_conf_v1_conf_proto_msgTypes = make([]protoimpl.MessageInfo, 22)
-var file_internal_conf_v1_conf_proto_goTypes = []any{
-	(*Bootstrap)(nil),                  // 0: conf.v1.Bootstrap
-	(*Log)(nil),                        // 1: conf.v1.Log
-	(*Server)(nil),                     // 2: conf.v1.Server
-	(*Data)(nil),                       // 3: conf.v1.Data
-	(*Auth)(nil),                       // 4: conf.v1.Auth
-	(*Observability)(nil),              // 5: conf.v1.Observability
-	(*Discovery)(nil),                  // 6: conf.v1.Discovery
-	(*Search)(nil),                     // 7: conf.v1.Search
-	(*Server_HTTP)(nil),                // 8: conf.v1.Server.HTTP
-	(*Data_Database)(nil),              // 9: conf.v1.Data.Database
-	(*Data_Cache)(nil),                 // 10: conf.v1.Data.Cache
-	(*Data_Database_DatabasePool)(nil), // 11: conf.v1.Data.Database.DatabasePool
-	(*Data_Database_Tls)(nil),          // 12: conf.v1.Data.Database.Tls
-	(*Data_Cache_Tls)(nil),             // 13: conf.v1.Data.Cache.Tls
-	(*Observability_Trace)(nil),        // 14: conf.v1.Observability.Trace
-	(*Observability_Metric)(nil),       // 15: conf.v1.Observability.Metric
-	(*Observability_Logging)(nil),      // 16: conf.v1.Observability.Logging
-	(*Observability_Tls)(nil),          // 17: conf.v1.Observability.Tls
-	(*Discovery_Consul)(nil),           // 18: conf.v1.Discovery.Consul
-	(*Discovery_Consul_Tls)(nil),       // 19: conf.v1.Discovery.Consul.Tls
-	(*Discovery_Consul_Ttl)(nil),       // 20: conf.v1.Discovery.Consul.Ttl
-	(*Search_ElasticSearch)(nil),       // 21: conf.v1.Search.ElasticSearch
+var file_services_user_internal_conf_v1_conf_proto_msgTypes = make([]protoimpl.MessageInfo, 25)
+var file_services_user_internal_conf_v1_conf_proto_goTypes = []any{
+	(*Bootstrap)(nil),              // 0: conf.v1.Bootstrap
+	(*Log)(nil),                    // 1: conf.v1.Log
+	(*Server)(nil),                 // 2: conf.v1.Server
+	(*Data)(nil),                   // 3: conf.v1.Data
+	(*Auth)(nil),                   // 4: conf.v1.Auth
+	(*Observability)(nil),          // 5: conf.v1.Observability
+	(*Discovery)(nil),              // 6: conf.v1.Discovery
+	(*Search)(nil),                 // 7: conf.v1.Search
+	(*Server_Cors)(nil),            // 8: conf.v1.Server.Cors
+	(*Data_Database)(nil),          // 9: conf.v1.Data.Database
+	(*Data_Cache)(nil),             // 10: conf.v1.Data.Cache
+	(*Data_Database_Postgres)(nil), // 11: conf.v1.Data.Database.Postgres
+	(*Data_Database_Postgres_DatabasePool)(nil), // 12: conf.v1.Data.Database.Postgres.DatabasePool
+	(*Data_Database_Postgres_Tls)(nil),          // 13: conf.v1.Data.Database.Postgres.Tls
+	(*Data_Cache_Redis)(nil),                    // 14: conf.v1.Data.Cache.Redis
+	(*Data_Cache_Redis_Tls)(nil),                // 15: conf.v1.Data.Cache.Redis.Tls
+	(*Auth_Casdoor)(nil),                        // 16: conf.v1.Auth.Casdoor
+	(*Observability_Trace)(nil),                 // 17: conf.v1.Observability.Trace
+	(*Observability_Metric)(nil),                // 18: conf.v1.Observability.Metric
+	(*Observability_Logging)(nil),               // 19: conf.v1.Observability.Logging
+	(*Observability_Tls)(nil),                   // 20: conf.v1.Observability.Tls
+	(*Discovery_Consul)(nil),                    // 21: conf.v1.Discovery.Consul
+	(*Discovery_Consul_Tls)(nil),                // 22: conf.v1.Discovery.Consul.Tls
+	(*Discovery_Consul_Ttl)(nil),                // 23: conf.v1.Discovery.Consul.Ttl
+	(*Search_ElasticSearch)(nil),                // 24: conf.v1.Search.ElasticSearch
 }
-var file_internal_conf_v1_conf_proto_depIdxs = []int32{
+var file_services_user_internal_conf_v1_conf_proto_depIdxs = []int32{
 	2,  // 0: conf.v1.Bootstrap.server:type_name -> conf.v1.Server
 	3,  // 1: conf.v1.Bootstrap.data:type_name -> conf.v1.Data
 	4,  // 2: conf.v1.Bootstrap.auth:type_name -> conf.v1.Auth
@@ -1581,49 +1732,52 @@ var file_internal_conf_v1_conf_proto_depIdxs = []int32{
 	6,  // 4: conf.v1.Bootstrap.discovery:type_name -> conf.v1.Discovery
 	7,  // 5: conf.v1.Bootstrap.search:type_name -> conf.v1.Search
 	1,  // 6: conf.v1.Bootstrap.log:type_name -> conf.v1.Log
-	8,  // 7: conf.v1.Server.http:type_name -> conf.v1.Server.HTTP
+	8,  // 7: conf.v1.Server.cors:type_name -> conf.v1.Server.Cors
 	9,  // 8: conf.v1.Data.database:type_name -> conf.v1.Data.Database
 	10, // 9: conf.v1.Data.cache:type_name -> conf.v1.Data.Cache
-	14, // 10: conf.v1.Observability.trace:type_name -> conf.v1.Observability.Trace
-	15, // 11: conf.v1.Observability.metric:type_name -> conf.v1.Observability.Metric
-	16, // 12: conf.v1.Observability.log:type_name -> conf.v1.Observability.Logging
-	18, // 13: conf.v1.Discovery.consul:type_name -> conf.v1.Discovery.Consul
-	21, // 14: conf.v1.Search.elastic_search:type_name -> conf.v1.Search.ElasticSearch
-	11, // 15: conf.v1.Data.Database.pool:type_name -> conf.v1.Data.Database.DatabasePool
-	12, // 16: conf.v1.Data.Database.tls:type_name -> conf.v1.Data.Database.Tls
-	13, // 17: conf.v1.Data.Cache.tls:type_name -> conf.v1.Data.Cache.Tls
-	17, // 18: conf.v1.Observability.Trace.tls:type_name -> conf.v1.Observability.Tls
-	17, // 19: conf.v1.Observability.Metric.tls:type_name -> conf.v1.Observability.Tls
-	17, // 20: conf.v1.Observability.Logging.tls:type_name -> conf.v1.Observability.Tls
-	19, // 21: conf.v1.Discovery.Consul.tls:type_name -> conf.v1.Discovery.Consul.Tls
-	20, // 22: conf.v1.Discovery.Consul.ttl:type_name -> conf.v1.Discovery.Consul.Ttl
-	23, // [23:23] is the sub-list for method output_type
-	23, // [23:23] is the sub-list for method input_type
-	23, // [23:23] is the sub-list for extension type_name
-	23, // [23:23] is the sub-list for extension extendee
-	0,  // [0:23] is the sub-list for field type_name
+	16, // 10: conf.v1.Auth.casdoor:type_name -> conf.v1.Auth.Casdoor
+	17, // 11: conf.v1.Observability.trace:type_name -> conf.v1.Observability.Trace
+	18, // 12: conf.v1.Observability.metric:type_name -> conf.v1.Observability.Metric
+	19, // 13: conf.v1.Observability.log:type_name -> conf.v1.Observability.Logging
+	21, // 14: conf.v1.Discovery.consul:type_name -> conf.v1.Discovery.Consul
+	24, // 15: conf.v1.Search.elastic_search:type_name -> conf.v1.Search.ElasticSearch
+	11, // 16: conf.v1.Data.Database.postgres:type_name -> conf.v1.Data.Database.Postgres
+	14, // 17: conf.v1.Data.Cache.redis:type_name -> conf.v1.Data.Cache.Redis
+	12, // 18: conf.v1.Data.Database.Postgres.pool:type_name -> conf.v1.Data.Database.Postgres.DatabasePool
+	13, // 19: conf.v1.Data.Database.Postgres.tls:type_name -> conf.v1.Data.Database.Postgres.Tls
+	15, // 20: conf.v1.Data.Cache.Redis.tls:type_name -> conf.v1.Data.Cache.Redis.Tls
+	20, // 21: conf.v1.Observability.Trace.tls:type_name -> conf.v1.Observability.Tls
+	20, // 22: conf.v1.Observability.Metric.tls:type_name -> conf.v1.Observability.Tls
+	20, // 23: conf.v1.Observability.Logging.tls:type_name -> conf.v1.Observability.Tls
+	22, // 24: conf.v1.Discovery.Consul.tls:type_name -> conf.v1.Discovery.Consul.Tls
+	23, // 25: conf.v1.Discovery.Consul.ttl:type_name -> conf.v1.Discovery.Consul.Ttl
+	26, // [26:26] is the sub-list for method output_type
+	26, // [26:26] is the sub-list for method input_type
+	26, // [26:26] is the sub-list for extension type_name
+	26, // [26:26] is the sub-list for extension extendee
+	0,  // [0:26] is the sub-list for field type_name
 }
 
-func init() { file_internal_conf_v1_conf_proto_init() }
-func file_internal_conf_v1_conf_proto_init() {
-	if File_internal_conf_v1_conf_proto != nil {
+func init() { file_services_user_internal_conf_v1_conf_proto_init() }
+func file_services_user_internal_conf_v1_conf_proto_init() {
+	if File_services_user_internal_conf_v1_conf_proto != nil {
 		return
 	}
 	type x struct{}
 	out := protoimpl.TypeBuilder{
 		File: protoimpl.DescBuilder{
 			GoPackagePath: reflect.TypeOf(x{}).PkgPath(),
-			RawDescriptor: unsafe.Slice(unsafe.StringData(file_internal_conf_v1_conf_proto_rawDesc), len(file_internal_conf_v1_conf_proto_rawDesc)),
+			RawDescriptor: unsafe.Slice(unsafe.StringData(file_services_user_internal_conf_v1_conf_proto_rawDesc), len(file_services_user_internal_conf_v1_conf_proto_rawDesc)),
 			NumEnums:      0,
-			NumMessages:   22,
+			NumMessages:   25,
 			NumExtensions: 0,
 			NumServices:   0,
 		},
-		GoTypes:           file_internal_conf_v1_conf_proto_goTypes,
-		DependencyIndexes: file_internal_conf_v1_conf_proto_depIdxs,
-		MessageInfos:      file_internal_conf_v1_conf_proto_msgTypes,
+		GoTypes:           file_services_user_internal_conf_v1_conf_proto_goTypes,
+		DependencyIndexes: file_services_user_internal_conf_v1_conf_proto_depIdxs,
+		MessageInfos:      file_services_user_internal_conf_v1_conf_proto_msgTypes,
 	}.Build()
-	File_internal_conf_v1_conf_proto = out.File
-	file_internal_conf_v1_conf_proto_goTypes = nil
-	file_internal_conf_v1_conf_proto_depIdxs = nil
+	File_services_user_internal_conf_v1_conf_proto = out.File
+	file_services_user_internal_conf_v1_conf_proto_goTypes = nil
+	file_services_user_internal_conf_v1_conf_proto_depIdxs = nil
 }
