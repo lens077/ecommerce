@@ -24,17 +24,21 @@ spec:
               containerPort: {{ .Values.service.targetPort }}
               protocol: TCP
           env:
-            - name: HTTP_ADDR
-              value: {{ .Values.environment.HTTP_ADDR }}
-            - name: RUN_MODE
-              value: {{ .Values.environment.RUN_MODE }}
-            - name: OTLP_HTTP_ENDPOINT
-              value: {{ .Values.environment.OTLP_HTTP_ENDPOINT }}
-          volumeMounts:
-            - name: data-volume
-              mountPath: /data
-      volumes:
-        - name: data-volume
-          persistentVolumeClaim:
-            claimName: connect-example-pvc
+            - name: CONSUL_ENABLED
+              value: {{ .Values.environment.CONSUL_ENABLED }}
+            - name: CONSUL_ADDR
+              value: {{ .Values.environment.CONSUL_ADDR }}
+            - name: CONSUL_PATH
+              value: {{ .Values.environment.CONSUL_PATH }}
+            - name: CONSUL_SCHEME
+              value: {{ .Values.environment.CONSUL_SCHEME }}
+            - name: CONSUL_INSECURE_SKIP_VERIFY
+              value: {{ .Values.environment.CONSUL_INSECURE_SKIP_VERIFY }}
+#          volumeMounts:
+#            - name: data-volume
+#              mountPath: /data
+#      volumes:
+#        - name: data-volume
+#          persistentVolumeClaim:
+#            claimName: connect-example-pvc
 {{- end }}

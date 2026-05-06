@@ -7,6 +7,7 @@ import (
 	"fmt"
 	"time"
 
+	"github.com/lens077/ecommerce/backend/constants"
 	conf "github.com/lens077/ecommerce/backend/services/user/internal/conf/v1"
 
 	"github.com/casdoor/casdoor-go-sdk/casdoorsdk"
@@ -21,9 +22,9 @@ import (
 var Module = fx.Module("data",
 	fx.Provide(
 		NewData,
-		NewDB,
-		NewCache,
-		NewAuth,
+		NewPostgresPool,
+		NewRedisClient,
+		NewCasdoorAuthClient,
 		NewUserRepo,
 	),
 )
@@ -44,9 +45,9 @@ func NewData(db *pgxpool.Pool, rdb *redis.Client, auth *casdoorsdk.Client) *Data
 	}
 }
 
-// NewDB 创建数据库连接池
-func NewDB(lc fx.Lifecycle, cfg *conf.Bootstrap, logger *zap.Logger) (*pgxpool.Pool, error) {
-	dbCfg := cfg.Data.Database // 从 Config 中获取 Data 配置
+// NewPostgresPool 创建pg数据库连接池
+func NewPostgresPool(lc fx.Lifecycle, cfg *conf.Bootstrap, logger *zap.Logger) (*pgxpool.Pool, error) {
+	dbCfg := cfg.Data.Database.Postgres // 从 Config 中获取 Data 配置
 
 	connString := fmt.Sprintf("postgresql://%s:%s@%s:%d/%s?sslmode=%s&timezone=%s",
 		dbCfg.User,
@@ -63,14 +64,15 @@ func NewDB(lc fx.Lifecycle, cfg *conf.Bootstrap, logger *zap.Logger) (*pgxpool.P
 		return nil, fmt.Errorf("parse database config failed: %v", err)
 	}
 
-	if dbCfg.SslMode == "verify-full" || dbCfg.SslMode == "verify-ca" {
+	switch dbCfg.SslMode {
+	case constants.SslModeVerifyCa, constants.SslModeVerifyFull:
 		if dbCfg.Tls.CaPem != "" {
 			caCertPool := x509.NewCertPool()
 			if ok := caCertPool.AppendCertsFromPEM([]byte(dbCfg.Tls.CaPem)); !ok {
 				return nil, fmt.Errorf("failed to parse CA PEM")
 			}
 
-			// TODO 如果 ParseConfig 已经根据 sslmode 初始化了 TLSConfig
+			// TODO tls config
 			if poolCfg.ConnConfig.TLSConfig == nil {
 				poolCfg.ConnConfig.TLSConfig = &tls.Config{}
 			}
@@ -101,12 +103,12 @@ func NewDB(lc fx.Lifecycle, cfg *conf.Bootstrap, logger *zap.Logger) (*pgxpool.P
 		return nil, fmt.Errorf("database ping failed: %v", err)
 	}
 
-	logger.Info(fmt.Sprintf("Database connected successfully to %s", dbCfg.Host))
+	logger.Info(fmt.Sprintf("database connected successfully to %s", dbCfg.Host))
 
 	// 注册关闭钩子
 	lc.Append(fx.Hook{
 		OnStop: func(ctx context.Context) error {
-			logger.Info("Closing database connection...")
+			logger.Info("closing database connection...")
 			pool.Close()
 			return nil
 		},
@@ -115,10 +117,9 @@ func NewDB(lc fx.Lifecycle, cfg *conf.Bootstrap, logger *zap.Logger) (*pgxpool.P
 	return pool, nil
 }
 
-// NewCache 创建 Redis 客户端
-func NewCache(lc fx.Lifecycle, cfg *conf.Bootstrap, logger *zap.Logger) (*redis.Client, error) {
-	logger = logger.Named("cache")
-	redisCfg := cfg.Data.Cache
+// NewRedisClient 创建 Redis 客户端
+func NewRedisClient(lc fx.Lifecycle, cfg *conf.Bootstrap, logger *zap.Logger) (*redis.Client, error) {
+	redisCfg := cfg.Data.Cache.Redis
 
 	// 基础配置
 	opts := &redis.Options{
@@ -154,25 +155,25 @@ func NewCache(lc fx.Lifecycle, cfg *conf.Bootstrap, logger *zap.Logger) (*redis.
 		}
 
 		opts.TLSConfig = tlsConfig
-		logger.Info("TLS connection initialized with CA string")
+		logger.Info("tls connection initialized with CA string")
 	}
 
 	rdb := redis.NewClient(opts)
 
 	// 测试连接
-	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
+	ctx, cancel := context.WithTimeout(context.Background(), time.Duration(redisCfg.DialTimeout)*time.Second)
 	defer cancel()
 
 	if err := rdb.Ping(ctx).Err(); err != nil {
 		// 记录带上下文的错误日志
-		logger.Error("Redis ping failed",
+		logger.Error("redis ping failed",
 			zap.String("addr", redisCfg.Host),
 			zap.Error(err),
 		)
 
 		// 关闭连接
 		if errClose := rdb.Close(); errClose != nil {
-			logger.Error("Failed to close redis connection after ping failure",
+			logger.Error("failed to close redis connection after ping failure",
 				zap.String("addr", redisCfg.Host),
 				zap.Error(errClose),
 			)
@@ -181,14 +182,14 @@ func NewCache(lc fx.Lifecycle, cfg *conf.Bootstrap, logger *zap.Logger) (*redis.
 		// 返回错误给调用方（让 Fx 知道初始化失败）
 		return nil, fmt.Errorf("redis ping failed: %w", err)
 	}
-	logger.Info("Redis connected successfully",
+	logger.Info("redis connected successfully",
 		zap.String("addr", redisCfg.Host),
 	)
 
 	// 注册关闭钩子
 	lc.Append(fx.Hook{
 		OnStop: func(ctx context.Context) error {
-			logger.Info("Closing Redis connection...")
+			logger.Info("closing redis connection...")
 			return rdb.Close()
 		},
 	})
@@ -196,30 +197,38 @@ func NewCache(lc fx.Lifecycle, cfg *conf.Bootstrap, logger *zap.Logger) (*redis.
 	return rdb, nil
 }
 
-func NewAuth(conf *conf.Bootstrap, logger *zap.Logger) *casdoorsdk.Client {
+func NewCasdoorAuthClient(conf *conf.Bootstrap, logger *zap.Logger) *casdoorsdk.Client {
+	casdoorCfg := conf.Auth.Casdoor
 	client := casdoorsdk.NewClient(
-		conf.Auth.Endpoint,         // endpoint
-		conf.Auth.ClientId,         // clientId
-		conf.Auth.ClientSecret,     // clientSecret
-		conf.Auth.Certificate,      // certificate (x509 format)
-		conf.Auth.OrganizationName, // organizationName
-		conf.Auth.ApplicationName,  // applicationName
+		casdoorCfg.Endpoint,         // endpoint
+		casdoorCfg.ClientId,         // clientId
+		casdoorCfg.ClientSecret,     // clientSecret
+		casdoorCfg.Certificate,      // certificate (x509 format)
+		casdoorCfg.OrganizationName, // organizationName
+		casdoorCfg.ApplicationName,  // applicationName
 	)
 
-	logger.Info(fmt.Sprintf("Casdoor connected successfully to %s", conf.Auth.Endpoint))
+	logger.Info(fmt.Sprintf("casdoor connected successfully to %s", casdoorCfg.Endpoint))
 
 	return client
 }
 
-// HealthCheck 健康检查
-func (d *Data) HealthCheck(ctx context.Context) error {
+// CheckDatabase 检查数据库连通性
+func (d *Data) CheckDatabase(ctx context.Context) error {
+	ctx, cancel := context.WithTimeout(ctx, 2*time.Second)
+	defer cancel()
 	if err := d.db.Ping(ctx); err != nil {
-		return fmt.Errorf("database health check failed: %v", err)
+		return fmt.Errorf("database ping failed: %w", err)
 	}
+	return nil
+}
 
+// CheckCache 检查缓存连通性
+func (d *Data) CheckCache(ctx context.Context) error {
+	ctx, cancel := context.WithTimeout(ctx, 2*time.Second)
+	defer cancel()
 	if err := d.rdb.Ping(ctx).Err(); err != nil {
-		return fmt.Errorf("redis health check failed: %v", err)
+		return fmt.Errorf("cache ping failed: %w", err)
 	}
-
 	return nil
 }
