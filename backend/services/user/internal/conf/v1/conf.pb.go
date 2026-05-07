@@ -327,6 +327,7 @@ type Observability struct {
 	Trace         *Observability_Trace   `protobuf:"bytes,1,opt,name=trace,proto3" json:"trace,omitempty"`
 	Metric        *Observability_Metric  `protobuf:"bytes,2,opt,name=metric,proto3" json:"metric,omitempty"`
 	Log           *Observability_Logging `protobuf:"bytes,3,opt,name=log,proto3" json:"log,omitempty"`
+	Enable        bool                   `protobuf:"varint,4,opt,name=enable,proto3" json:"enable,omitempty"`
 	unknownFields protoimpl.UnknownFields
 	sizeCache     protoimpl.SizeCache
 }
@@ -380,6 +381,13 @@ func (x *Observability) GetLog() *Observability_Logging {
 		return x.Log
 	}
 	return nil
+}
+
+func (x *Observability) GetEnable() bool {
+	if x != nil {
+		return x.Enable
+	}
+	return false
 }
 
 type Discovery struct {
@@ -1643,11 +1651,12 @@ const file_services_user_internal_conf_v1_conf_proto_rawDesc = "" +
 	"\rclient_secret\x18\x03 \x01(\tR\fclientSecret\x12+\n" +
 	"\x11organization_name\x18\x04 \x01(\tR\x10organizationName\x12)\n" +
 	"\x10application_name\x18\x05 \x01(\tR\x0fapplicationName\x12 \n" +
-	"\vcertificate\x18\x06 \x01(\tR\vcertificate\"\x90\x04\n" +
+	"\vcertificate\x18\x06 \x01(\tR\vcertificate\"\xa8\x04\n" +
 	"\rObservability\x122\n" +
 	"\x05trace\x18\x01 \x01(\v2\x1c.conf.v1.Observability.TraceR\x05trace\x125\n" +
 	"\x06metric\x18\x02 \x01(\v2\x1d.conf.v1.Observability.MetricR\x06metric\x120\n" +
-	"\x03log\x18\x03 \x01(\v2\x1e.conf.v1.Observability.LoggingR\x03log\x1aQ\n" +
+	"\x03log\x18\x03 \x01(\v2\x1e.conf.v1.Observability.LoggingR\x03log\x12\x16\n" +
+	"\x06enable\x18\x04 \x01(\bR\x06enable\x1aQ\n" +
 	"\x05Trace\x12\x1a\n" +
 	"\bendpoint\x18\x01 \x01(\tR\bendpoint\x12,\n" +
 	"\x03tls\x18\x02 \x01(\v2\x1a.conf.v1.Observability.TlsR\x03tls\x1aR\n" +

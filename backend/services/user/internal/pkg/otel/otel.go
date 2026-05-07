@@ -110,6 +110,11 @@ func WithLogTLS(insecureSkipVerify bool, caPem []byte) LogOption {
 
 // SetupOTelSDK bootstraps the OpenTelemetry pipeline.
 func SetupOTelSDK(ctx context.Context, info meta.AppInfo, cfg *confv1.Observability, logger *zap.Logger) (func(context.Context) error, error) {
+	if cfg == nil || !cfg.Enable {
+		logger.Info("Observability is disabled, skipping OpenTelemetry setup")
+		return func(ctx context.Context) error { return nil }, nil
+	}
+
 	var shutdownFuncs []func(context.Context) error
 	var err error
 
