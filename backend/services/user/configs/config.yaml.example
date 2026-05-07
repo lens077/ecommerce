@@ -41,6 +41,7 @@ data:
       min_idle_conns: 5
 
 observability:
+  enable: false
   trace:
     endpoint: localhost:4317
     tls:

@@ -14,7 +14,7 @@ import (
 // OtelTestSuite 是 Otel 的测试套件
 type OtelTestSuite struct {
 	suite.Suite
-	testLogger *zap.Logger
+	testLogger  *zap.Logger
 	testAppInfo meta.AppInfo
 }
 
@@ -91,6 +91,7 @@ func (suite *OtelTestSuite) TestSetupOTelSDK_PanicRecovery() {
 	assert.NotPanics(suite.T(), func() {
 		ctx := context.Background()
 		minConfig := &confv1.Observability{
+			Enable: true,
 			Trace: &confv1.Observability_Trace{
 				Endpoint: "localhost:4318",
 				Tls: &confv1.Observability_Tls{
@@ -112,6 +113,29 @@ func (suite *OtelTestSuite) TestSetupOTelSDK_PanicRecovery() {
 		}
 		_, _ = SetupOTelSDK(ctx, suite.testAppInfo, minConfig, suite.testLogger)
 	})
+}
+
+func (suite *OtelTestSuite) TestSetupOTelSDK_Disabled() {
+	// 测试当 Observability 被禁用时是否正常返回
+	ctx := context.Background()
+
+	// 测试 nil 配置
+	shutdown, err := SetupOTelSDK(ctx, suite.testAppInfo, nil, suite.testLogger)
+	assert.NoError(suite.T(), err)
+	assert.NotNil(suite.T(), shutdown)
+	// 调用 shutdown 应该不报错
+	err = shutdown(ctx)
+	assert.NoError(suite.T(), err)
+
+	// 测试 enable 为 false
+	disabledConfig := &confv1.Observability{
+		Enable: false,
+	}
+	shutdown2, err := SetupOTelSDK(ctx, suite.testAppInfo, disabledConfig, suite.testLogger)
+	assert.NoError(suite.T(), err)
+	assert.NotNil(suite.T(), shutdown2)
+	err = shutdown2(ctx)
+	assert.NoError(suite.T(), err)
 }
 
 // 运行测试套件

@@ -90,8 +90,11 @@ func NewApp(serviceName, deploymentMode, serviceVersion string) *fx.App {
 
 		registry.Module, // 服务注册/发现
 
-		// 可观测性
+		// 可观测性 - 根据配置决定是否启用
 		fx.Provide(func(conf *confv1.Bootstrap) *confv1.Observability {
+			if conf.Observability == nil {
+				return &confv1.Observability{Enable: false}
+			}
 			return conf.Observability
 		}),
 		otel.Module,
