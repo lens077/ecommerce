@@ -36,8 +36,18 @@ func (s *UserService) SignIn(ctx context.Context, c *connect.Request[v1.SignInRe
 			State: c.Msg.State,
 		},
 	)
-	if err != nil {
-		return nil, err
+	if err != nil { // 根据业务错误类型映射状态码
+		switch {
+		case errors.Is(err, biz.ErrUserAlreadyExists):
+			return nil, connect.NewError(connect.CodeAlreadyExists, err)
+		case errors.Is(err, biz.ErrAuthFailed):
+			return nil, connect.NewError(connect.CodeInternal, err)
+		case errors.Is(err, biz.ErrUserNotFound):
+			return nil, connect.NewError(connect.CodeNotFound, err)
+		default:
+			// 可以在这里包装一个具体的 Unknown 描述，或者直接返回
+			return nil, connect.NewError(connect.CodeUnknown, err)
+		}
 	}
 
 	response := &v1.SignInResponse{

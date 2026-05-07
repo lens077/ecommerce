@@ -6,6 +6,11 @@ import (
 )
 
 // 使用常量名称作为映射
+const (
+	EnvServiceName    = "SERVICE_NAME"
+	EnvServiceVersion = "SERVICE_VERSION"
+	EnvDeploymentMode = "DEPLOYMENT_MODE"
+)
 
 // Consul
 const (

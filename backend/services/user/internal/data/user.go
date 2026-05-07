@@ -17,7 +17,7 @@ type userRepo struct {
 	// queries *models.Queries
 	rdb  *redis.Client
 	auth *casdoorsdk.Client
-	l    *zap.Logger
+	l    *zap.SugaredLogger
 }
 
 func NewUserRepo(data *Data, logger *zap.Logger) biz.UserRepo {
@@ -25,7 +25,7 @@ func NewUserRepo(data *Data, logger *zap.Logger) biz.UserRepo {
 		// queries: models.New(data.db),
 		rdb:  data.rdb,
 		auth: data.auth,
-		l:    logger.Named("userRepo"),
+		l:    logger.Sugar(),
 	}
 }
 
@@ -35,7 +35,7 @@ func (u userRepo) SignIn(_ context.Context, req biz.SignInRequest) (*biz.SignInR
 	}
 	token, err := u.auth.GetOAuthToken(req.Code, req.State)
 	if err != nil {
-		return nil, fmt.Errorf("casdoor get oauth token err:%w", err)
+		return nil, fmt.Errorf("%w: casdoor get oauth token err: %w", biz.ErrAuthFailed, err)
 	}
 	u.l.Debug(token.AccessToken)
 	return &biz.SignInResponse{
