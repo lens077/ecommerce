@@ -4,12 +4,12 @@ import (
 	"context"
 	"errors"
 	"flag"
-	"fmt"
-	"log"
 	"net/http"
 	"os"
 
+	"github.com/lens077/ecommerce/backend/constants"
 	"github.com/lens077/ecommerce/backend/services/user/internal/biz"
+	"github.com/lens077/ecommerce/backend/services/user/internal/pkg/env"
 	"github.com/lens077/ecommerce/backend/services/user/internal/pkg/meta"
 	"github.com/lens077/ecommerce/backend/services/user/internal/pkg/otel"
 	"go.uber.org/fx/fxevent"
@@ -29,10 +29,9 @@ import (
 )
 
 var (
-	serviceName = flag.String("serviceName", getEnv("serviceName", "user-identity"), "应用名称, e.g.,user-identity")
-
-	deploymentMode = flag.String("mode", "dev", "标记应用部署的环境,e.g.,dev/prod/pre/uat")
-	serviceVersion = flag.String("serviceVersion", "v1", "应用版本,e.g.,v1")
+	serviceName    = flag.String("serviceName", env.GetEnvString(constants.EnvServiceName, "org-service"), "应用名称, e.g.,org-service")
+	serviceVersion = flag.String("serviceVersion", env.GetEnvString(constants.EnvServiceVersion, "v1"), "应用版本,e.g.,v1")
+	deploymentMode = flag.String("deploymentMode", env.GetEnvString(constants.EnvDeploymentMode, "dev"), "标记应用部署的环境,e.g.,dev/prod/pre/uat")
 )
 
 func main() {
@@ -48,7 +47,7 @@ func main() {
 
 	// 启动应用
 	if err := fxApp.Start(ctx); err != nil {
-		log.Printf("Failed to start app: %v\n", err)
+		zap.Error(err)
 		os.Exit(1)
 	}
 
@@ -57,7 +56,7 @@ func main() {
 
 	// 优雅关闭
 	if err := fxApp.Stop(ctx); err != nil {
-		log.Printf("Failed to stop app gracefully: %v\n", err)
+		zap.Error(err)
 		os.Exit(1)
 	}
 }
@@ -66,7 +65,7 @@ func main() {
 func NewApp(serviceName, deploymentMode, serviceVersion string) *fx.App {
 	host, err := meta.GetOutboundIP()
 	if err != nil {
-		fmt.Printf("Warn: not get host:%v", err)
+		zap.Error(err)
 	}
 	appInfo := meta.AppInfo{
 		ID:          uuid.New().String(),
@@ -117,28 +116,28 @@ func NewApp(serviceName, deploymentMode, serviceVersion string) *fx.App {
 				lc.Append(fx.Hook{
 					// 启动服务时的操作
 					OnStart: func(ctx context.Context) error {
-						logger.Info("Starting HTTP server",
+						logger.Info("starting server",
 							zap.String("addr", srv.Addr),
 							zap.String("environment", deploymentMode),
 						)
 						go func() {
 							if err := srv.ListenAndServe(); err != nil && !errors.Is(err, http.ErrServerClosed) {
-								logger.Fatal("Failed to start HTTP server", zap.Error(err))
+								logger.Fatal("failed to start server", zap.Error(err))
 							}
 						}()
 						return nil
 					},
 					// 停止服务前的操作
 					OnStop: func(ctx context.Context) error {
-						logger.Info("Stopping HTTP server...")
+						logger.Info("stopping server...")
 						// 优雅关闭服务器
 						if err := srv.Shutdown(ctx); err != nil {
-							logger.Error("Failed to shutdown server gracefully", zap.Error(err))
+							logger.Error("failed to shutdown server gracefully", zap.Error(err))
 						}
 						// 关闭 Otel
 						if otelShutdown != nil {
 							if err := otelShutdown(ctx); err != nil {
-								logger.Error("Failed to shutdown OTel", zap.Error(err))
+								logger.Error("failed to shutdown otel observability", zap.Error(err))
 							}
 						}
 						return nil
@@ -147,11 +146,4 @@ func NewApp(serviceName, deploymentMode, serviceVersion string) *fx.App {
 			},
 		),
 	)
-}
-
-func getEnv(key, fallback string) string {
-	if value, ok := os.LookupEnv(key); ok {
-		return value
-	}
-	return fallback
 }

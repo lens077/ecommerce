@@ -9,8 +9,7 @@ import (
 
 var MiddlewareModule = fx.Module("server.middleware",
 	fx.Provide(
-		// 提供单独地拦截器实例
-		NewMetricsInterceptor,
+		// 提供拦截器实例
 		NewLoggingInterceptor,
 
 		// 组装成一个拦截器切片，或者直接返回 Connect Option
@@ -20,7 +19,6 @@ var MiddlewareModule = fx.Module("server.middleware",
 
 func NewConnectOptions(
 	logger *zap.Logger,
-	metrics *MetricsInterceptor,
 	logging *LoggingInterceptor,
 ) []connect.HandlerOption {
 
@@ -32,7 +30,6 @@ func NewConnectOptions(
 	return []connect.HandlerOption{
 		connect.WithInterceptors(
 			otelInterceptor,
-			metrics,
 			logging,
 		),
 	}

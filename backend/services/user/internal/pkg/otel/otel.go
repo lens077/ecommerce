@@ -235,6 +235,8 @@ func newTracerProvider(res *resource.Resource, endpoint string, tlsOpt otlptrace
 	return tracerProvider, nil
 }
 
+// Push 模式
+// 主动将指标推向 OTLP Collector
 func newMeterProvider(res *resource.Resource, endpoint string, tlsOpt otlpmetrichttp.Option) (*metric.MeterProvider, error) {
 	ctx := context.Background()
 	opts := []otlpmetrichttp.Option{

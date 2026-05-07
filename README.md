@@ -30,6 +30,78 @@ B2B2C 平台型电商系统完整架构设计方案
 - 前端通过 @connectrpc/connect-web 封装 React Hook，实现请求取消、自动重试、错误统一处理，适配电商复杂交互场景。
 - 后端通过 Connect-go 拦截器实现统一的认证鉴权、日志记录、限流熔断、链路追踪，无需在业务代码中重复实现通用逻辑。
 
+## 错误处理
+1. 由biz领域模型层定义错误
+```go
+var (
+	ErrUserAlreadyExists = errors.New("[user] user already exists")
+	ErrUserNotFound      = errors.New("[user] user not found")
+	ErrAuthFailed        = errors.New("[user] authentication failed")
+)
+```
+2. 基础设施层根据错误类型, 如果是第三方库错误或不可能恢复的错误, 使用`%w`, 对于业务错误, 使用`%v`包装错误
+```go
+func (u userRepo) SignIn(_ context.Context, req biz.SignInRequest) (*biz.SignInResponse, error) {
+	if u.auth == nil {
+		return nil, fmt.Errorf("auth client is nil:%w", errors.New("config error"))
+	}
+	token, err := u.auth.GetOAuthToken(req.Code, req.State)
+	if err != nil {
+		return nil, fmt.Errorf("%w: casdoor get oauth token err: %w", biz.ErrAuthFailed, err)
+	}
+	u.l.Debug(token.AccessToken)
+	return &biz.SignInResponse{
+		State: "ok",
+		Data:  token.AccessToken,
+	}, nil
+}
+```
+3. 在service接口层, 根据错误类型进行判断, 返回对应的RPC错误码
+```go
+func (s *UserService) SignIn(ctx context.Context, c *connect.Request[v1.SignInRequest]) (*connect.Response[v1.SignInResponse], error) {
+	res, err := s.uc.SignIn(
+		ctx,
+		biz.SignInRequest{
+			Code:  c.Msg.Code,
+			State: c.Msg.State,
+		},
+	)
+	if err != nil { // 根据业务错误类型映射状态码
+		switch {
+		case errors.Is(err, biz.ErrUserAlreadyExists):
+			return nil, connect.NewError(connect.CodeAlreadyExists, err)
+		case errors.Is(err, biz.ErrAuthFailed):
+			return nil, connect.NewError(connect.CodeInvalidArgument, err)
+		case errors.Is(err, biz.ErrUserNotFound):
+			return nil, connect.NewError(connect.CodeNotFound, err)
+		default:
+			// 可以在这里包装一个具体的 Unknown 描述，或者直接返回
+			return nil, connect.NewError(connect.CodeUnknown, err)
+		}
+	}
+
+	response := &v1.SignInResponse{
+		State: res.State,
+		Data:  res.Data,
+	}
+
+	return connect.NewResponse(response), nil
+}
+```
+那么在终端查询中就很明显:
+例如:
+```
+2026-05-07T07:58:52.175+0800	ERROR	LoggingInterceptor	server/logging.go:37	rpc system error	{"rpc.procedure": "/user.v1.UserService/SignIn", "rpc.code": "internal", "trace_id": "aed4697527ce036e401912ad325bd3b2", "error": "internal: [user] authentication failed: casdoor get oauth token err: oauth2: \"invalid_grant\" \"authorization code: [1231] is invalid\""}
+```
+
+1. `2026-05-07T07:58:52.175+0800`: 发送错误的时间
+2. `ERROR`: 日志等级
+3. `rpc system error`: 需要关注的错误优先级
+4. `trace_id`: 链路ID
+5. `rpc.procedure`: 请求的路由
+5. `rpc.code`: RPC错误码
+6. `error`: 错误的具体内容
+
 ## 微服务架构核心设计
 
 基于 DDD 领域驱动设计原则，结合 B2B2C 业务模型，完成微服务边界划分、通信规范定义，先完成电商核心微服务后继续扩展更多功能，层层递进。

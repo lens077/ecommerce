@@ -11,8 +11,11 @@ import (
 	"go.uber.org/zap"
 )
 
-var ErrUserAlreadyExists = errors.New("user already exists")
-var ErrUserNotFound = errors.New("user not found")
+var (
+	ErrUserAlreadyExists = errors.New("[user] user already exists")
+	ErrUserNotFound      = errors.New("[user] user not found")
+	ErrAuthFailed        = errors.New("[user] authentication failed")
+)
 
 // UserInfo 业务层用户模型
 type UserInfo struct {
