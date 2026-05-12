@@ -1,57 +1,59 @@
 apiVersion: apps/v1
 kind: Deployment
 metadata:
-  name: ecommerce-user-deploy
   labels:
     app: ecommerce-user
+  name: ecommerce-user-deploy
+  namespace: default
 spec:
+  progressDeadlineSeconds: 600
   replicas: 1
+  revisionHistoryLimit: 10
   selector:
     matchLabels:
       app: ecommerce-user
+  strategy:
+    rollingUpdate:
+      maxSurge: 25%
+      maxUnavailable: 25%
+    type: RollingUpdate
   template:
     metadata:
-      name: ecommerce-user
       labels:
         app: ecommerce-user
+      name: ecommerce-user
     spec:
       containers:
-        - name: ecommerce-user
-          image: ccr.ccs.tencentyun.com/sumery/user:dev
-          imagePullPolicy: Always
-          env:
-            - name: SERVICE_NAME
-              value: user-identity-v1
-            - name: CONSUL_ENABLED
-              value: "true"
-            - name: CONSUL_ADDR
-              value: "consul-server.consul.svc:8501"
-            - name: CONSUL_PATH
-              value: "ecommerce/user/pre.yaml"
-            - name: CONSUL_SCHEME
-              value: "https"
-            - name: CONSUL_INSECURE_SKIP_VERIFY
-              value: "true"
-          ports:
-            - containerPort: 30001
-              protocol: TCP
-          resources:
-            requests:
-              cpu: 100m
-              memory: 128Mi
-            limits:
-              cpu: "1"
-              memory: 512Mi
-#          envFrom:
-#            - configMapRef:
-#                name: ecommerce-user-config
-#          livenessProbe:
-#            httpGet:
-#              path: /healthz
-#              port: 30001
-#          readinessProbe:
-#            httpGet:
-#              path: /healthz
-#              port: 30001
+      - env:
+        - name: SERVICE_NAME
+          value: user-identity-v1
+        - name: CONSUL_ENABLED
+          value: "true"
+        - name: CONSUL_ADDR
+          value: consul-server.consul.svc:8501
+        - name: CONSUL_PATH
+          value: ecommerce/user/pre.yaml
+        - name: CONSUL_SCHEME
+          value: https
+        - name: CONSUL_INSECURE_SKIP_VERIFY
+          value: "true"
+        image: ccr.ccs.tencentyun.com/sumery/user:dev
+        imagePullPolicy: Always
+        name: ecommerce-user
+        ports:
+        - containerPort: 30001
+          protocol: TCP
+        resources:
+          limits:
+            cpu: "1"
+            memory: 512Mi
+          requests:
+            cpu: 100m
+            memory: 128Mi
+        terminationMessagePath: /dev/termination-log
+        terminationMessagePolicy: File
+      dnsPolicy: ClusterFirst
       restartPolicy: Always
-      
+      schedulerName: default-scheduler
+      securityContext: {}
+      terminationGracePeriodSeconds: 30

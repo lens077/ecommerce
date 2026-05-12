@@ -134,10 +134,17 @@ search:
       enable: true
       insecure_skip_verify: true
       ca_pem: ""
+    tls:
+      enable: true
+      insecure_skip_verify: true
+      ca_pem: ""
 
 log:
   level: debug
   format: console
+  es_log:
+    enable_request_log: true
+    enable_response_log: true
 
 auth:
   casdoor:
