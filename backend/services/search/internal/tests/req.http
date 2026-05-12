@@ -1,4 +1,8 @@
 ### healthz
+POST http://localhost:30002/healthz
+Content-Type: application/json
+
+### healthz
 POST http://192.168.3.125:30002/healthz
 Content-Type: application/json
 

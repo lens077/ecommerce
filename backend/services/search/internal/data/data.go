@@ -6,17 +6,15 @@ import (
 	"crypto/x509"
 	"fmt"
 	"net/http"
-	"os"
 	"time"
 
-	"github.com/elastic/elastic-transport-go/v8/elastictransport"
-	"github.com/elastic/go-elasticsearch/v9"
-	"github.com/lens077/ecommerce/backend/constants"
-	conf "github.com/lens077/ecommerce/backend/services/search/internal/conf/v1"
-
 	"github.com/casdoor/casdoor-go-sdk/casdoorsdk"
+	"github.com/elastic/go-elasticsearch/v9"
 	"github.com/exaring/otelpgx"
 	"github.com/jackc/pgx/v5/pgxpool"
+	"github.com/lens077/ecommerce/backend/constants"
+	conf "github.com/lens077/ecommerce/backend/services/search/internal/conf/v1"
+	"github.com/lens077/ecommerce/backend/services/search/internal/pkg/log"
 	"github.com/redis/go-redis/v9"
 	"go.uber.org/fx"
 	"go.uber.org/zap"
@@ -40,15 +38,17 @@ type Data struct {
 	rdb  *redis.Client
 	auth *casdoorsdk.Client
 	es   *elasticsearch.TypedClient
+	log  *zap.Logger
 }
 
 // NewData 是 Data 的构造函数
-func NewData(db *pgxpool.Pool, rdb *redis.Client, auth *casdoorsdk.Client, es *elasticsearch.TypedClient) *Data {
+func NewData(db *pgxpool.Pool, rdb *redis.Client, auth *casdoorsdk.Client, es *elasticsearch.TypedClient, logger *zap.Logger) *Data {
 	return &Data{
 		db:   db,
 		rdb:  rdb,
 		auth: auth,
 		es:   es,
+		log:  logger,
 	}
 }
 
@@ -242,7 +242,7 @@ func NewElasticSearchClient(lc fx.Lifecycle, conf *conf.Bootstrap, logger *zap.L
 		Addresses: cfg.Addresses,
 		Username:  cfg.Username,
 		Password:  cfg.Password,
-		Logger:    &elastictransport.ColorLogger{Output: os.Stdout},
+		Logger:    &log.ZapESLogger{Logger: logger, Conf: conf.Log},
 		Transport: transport,
 	}
 
@@ -252,7 +252,7 @@ func NewElasticSearchClient(lc fx.Lifecycle, conf *conf.Bootstrap, logger *zap.L
 		return nil, err
 	}
 
-	logger.Info("Elasticsearch client initialized", zap.Strings("addresses", cfg.Addresses))
+	logger.Info("elasticsearch client initialized", zap.Strings("addresses", cfg.Addresses))
 
 	return es, nil
 }
@@ -285,14 +285,9 @@ func (d *Data) CheckElasticSearch(ctx context.Context) error {
 	// 调用 Ping 方法
 	ctx, cancel := context.WithTimeout(ctx, 5*time.Second)
 	defer cancel()
-	res, err := d.es.Ping().Do(ctx)
+	_, err := d.es.Ping().Do(ctx)
 	if err != nil {
-		return fmt.Errorf("elastic search ping failed: %w", err)
-	}
-
-	// 如果没有 err 且响应为 true，说明服务在线
-	if res {
-		fmt.Println("elastic search is alive!")
+		return fmt.Errorf("elasticsearch ping failed: %w", err)
 	}
 	return nil
 }
