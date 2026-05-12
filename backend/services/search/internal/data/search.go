@@ -36,8 +36,9 @@ func NewSearchRepo(data *Data, logger *zap.Logger, es *elasticsearch.TypedClient
 
 func (u searchRepo) Search(ctx context.Context, req biz.SearchRequest) (*biz.SearchResponse, error) {
 	// 调整搜索字段以匹配新的数据表结构
-	searchFidles := []string{
+	searchFields := []string{
 		"name",              // 对应spus.name
+		"spu_code",          // 对应spus.spu_code
 		"description",       // 对应spus.description
 		"specs.*",           // 对应spus.specs
 		"skus.attributes.*", // 对应skus.attributes
@@ -47,7 +48,7 @@ func (u searchRepo) Search(ctx context.Context, req biz.SearchRequest) (*biz.Sea
 		Query: &types.Query{
 			MultiMatch: &types.MultiMatchQuery{
 				Query:  req.Name,
-				Fields: searchFidles,
+				Fields: searchFields,
 			},
 		},
 	}).Do(ctx)

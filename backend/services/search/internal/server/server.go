@@ -2,20 +2,19 @@ package server
 
 import (
 	"context"
+	"encoding/json"
 	"net/http"
 	"time"
 
-	"github.com/lens077/ecommerce/backend/api/search/v1/searchv1connect"
-
-	conf "github.com/lens077/ecommerce/backend/services/search/internal/conf/v1"
-
 	"connectrpc.com/connect"
 	connectcors "connectrpc.com/cors"
+	"connectrpc.com/validate"
+	"github.com/lens077/ecommerce/backend/api/search/v1/searchv1connect"
+	conf "github.com/lens077/ecommerce/backend/services/search/internal/conf/v1"
+	"github.com/lens077/ecommerce/backend/services/search/internal/data"
 	"github.com/rs/cors"
 	"go.uber.org/fx"
 	"go.uber.org/zap"
-	"golang.org/x/net/http2"
-	"golang.org/x/net/http2/h2c"
 )
 
 var Module = fx.Module("server",
@@ -24,47 +23,59 @@ var Module = fx.Module("server",
 	),
 )
 
+// NewHTTPServer 构造函数已重构
 func NewHTTPServer(
 	lc fx.Lifecycle,
 	cfg *conf.Bootstrap,
 	searchv1Service searchv1connect.SearchServiceHandler,
-
 	logger *zap.Logger,
 	connectOptions []connect.HandlerOption,
+	deps *data.Data, // 基础设施依赖
 ) *http.Server {
-	// 将拦截器传递给 Service Handler
-	userv1connectPath, userv1connectHandler := searchv1connect.NewSearchServiceHandler(
-		searchv1Service,
-		connectOptions...,
-	)
 
 	mux := http.NewServeMux()
-	mux.Handle(userv1connectPath, userv1connectHandler)
 
-	// 创建处理器链：监控中间件 -> CORS -> HTTP/2
-	handlerChain := withCORS(mux)
+	// 将 validate 拦截器添加到选项中
+	combinedOptions := append(connectOptions, connect.WithInterceptors(validate.NewInterceptor()))
 
-	p := new(http.Protocols)
-	p.SetHTTP1(true)
-	// Use h2c so we can serve HTTP/2 without TLS.
-	p.SetUnencryptedHTTP2(true)
+	// 注册 Connect 业务处理器
+	searchv1connectPath, searchv1connectHandler := searchv1connect.NewSearchServiceHandler(
+		searchv1Service,
+		combinedOptions...,
+	)
+	mux.Handle(searchv1connectPath, searchv1connectHandler)
+
+	// 应用本身的健康检查
+	mux.HandleFunc("/healthz", func(w http.ResponseWriter, r *http.Request) {
+		status := healthStatus(r.Context(), deps)
+		w.Header().Set("Content-Type", "application/json")
+		if !status.Healthy {
+			w.WriteHeader(http.StatusServiceUnavailable)
+		}
+		json.NewEncoder(w).Encode(status)
+	})
+
+	// 构建处理器链
+	handlerChain := withCORS(mux, cfg.Server.Cors.AllowedOrigins)
+
 	server := &http.Server{
-		Addr:         cfg.Server.Http.Addr,
-		Handler:      h2c.NewHandler(handlerChain, &http2.Server{}),
+		Addr:         cfg.Server.Addr,
+		Handler:      handlerChain,
 		ReadTimeout:  10 * time.Second,
 		WriteTimeout: 10 * time.Second,
 		IdleTimeout:  30 * time.Second,
-		Protocols:    p,
 	}
 
-	// 注册生命周期钩子
+	// 注册 Fx 生命周期
 	lc.Append(fx.Hook{
 		OnStart: func(ctx context.Context) error {
-			logger.Info("HTTP server starting", zap.String("addr", cfg.Server.Http.Addr))
+			logger.Info("http server starting",
+				zap.String("addr", cfg.Server.Addr),
+			)
 			return nil
 		},
 		OnStop: func(ctx context.Context) error {
-			logger.Info("HTTP server shutting down...")
+			logger.Info("http server shutting down...")
 			return server.Shutdown(ctx)
 		},
 	})
@@ -72,10 +83,10 @@ func NewHTTPServer(
 	return server
 }
 
-// withCORS adds CORS support to a Connect HTTP handler.
-func withCORS(h http.Handler) http.Handler {
+// withCORS 为处理器添加跨域支持
+func withCORS(h http.Handler, allowedOrigins []string) http.Handler {
 	middleware := cors.New(cors.Options{
-		AllowedOrigins:   []string{"http://localhost:3000"},
+		AllowedOrigins:   allowedOrigins,
 		AllowedMethods:   connectcors.AllowedMethods(),
 		AllowedHeaders:   connectcors.AllowedHeaders(),
 		ExposedHeaders:   connectcors.ExposedHeaders(),

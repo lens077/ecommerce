@@ -104,7 +104,7 @@ func (s *UserService) SignIn(ctx context.Context, c *connect.Request[v1.SignInRe
 
 ## 微服务架构核心设计
 
-基于 DDD 领域驱动设计原则，结合 B2B2C 业务模型，完成微服务边界划分、通信规范定义，先完成电商核心微服务后继续扩展更多功能，层层递进。
+基于 DDD 领域驱动设计原则，结合 B2B2C 业务模型，完成微服务边界划分、通信规范定义。
 
 ### 2.1 核心微服务
 
@@ -117,7 +117,7 @@ func (s *UserService) SignIn(ctx context.Context, c *connect.Request[v1.SignInRe
 | 库存服务（Inventory Service） | 	库存全生命周期管理、库存操作原子化、库存预警   | 	Go + PostgreSQL            | + Redis + Kafka	分布式库存状态机管控；库存预占、扣减、释放、调整；库存流水记录；库存不足预警事件推送                       |
 | 搜索服务（Search Service）    | 	商品全文检索、多维度筛选、排序推荐        | 	Go + Elasticsearch + Redis | 	基于 CQRS 架构实现读写分离；商品数据实时同步至 ES；全文检索、聚合筛选、智能排序；搜索词推荐、热门搜索管理                       |
 
-### 扩展微服务
+### 支撑微服务
 
 1. 商家服务（Merchant Service）
     - 职责：商家入驻管理、店铺运营、履约处理、财务结算

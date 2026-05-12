@@ -1467,11 +1467,11 @@ func (x *Discovery_Consul_Tls) GetCaPem() string {
 }
 
 type Discovery_Consul_Ttl struct {
-	state         protoimpl.MessageState `protogen:"open.v1"`
-	Duration      string                 `protobuf:"bytes,1,opt,name=duration,proto3" json:"duration,omitempty"`
-	PingInterval  uint64                 `protobuf:"varint,2,opt,name=ping_interval,json=pingInterval,proto3" json:"ping_interval,omitempty"`
-	unknownFields protoimpl.UnknownFields
-	sizeCache     protoimpl.SizeCache
+	state               protoimpl.MessageState `protogen:"open.v1"`
+	Duration            string                 `protobuf:"bytes,1,opt,name=duration,proto3" json:"duration,omitempty"`
+	PingIntervalSeconds uint64                 `protobuf:"varint,2,opt,name=ping_interval_seconds,json=pingIntervalSeconds,proto3" json:"ping_interval_seconds,omitempty"`
+	unknownFields       protoimpl.UnknownFields
+	sizeCache           protoimpl.SizeCache
 }
 
 func (x *Discovery_Consul_Ttl) Reset() {
@@ -1511,9 +1511,9 @@ func (x *Discovery_Consul_Ttl) GetDuration() string {
 	return ""
 }
 
-func (x *Discovery_Consul_Ttl) GetPingInterval() uint64 {
+func (x *Discovery_Consul_Ttl) GetPingIntervalSeconds() uint64 {
 	if x != nil {
-		return x.PingInterval
+		return x.PingIntervalSeconds
 	}
 	return 0
 }
@@ -1669,9 +1669,9 @@ const file_services_user_internal_conf_v1_conf_proto_rawDesc = "" +
 	"\x03Tls\x12\x16\n" +
 	"\x06enable\x18\x01 \x01(\bR\x06enable\x12\x15\n" +
 	"\x06ca_pem\x18\x02 \x01(\tR\x05caPem\x120\n" +
-	"\x14insecure_skip_verify\x18\x03 \x01(\bR\x12insecureSkipVerify\"\xaa\x03\n" +
+	"\x14insecure_skip_verify\x18\x03 \x01(\bR\x12insecureSkipVerify\"\xb9\x03\n" +
 	"\tDiscovery\x121\n" +
-	"\x06consul\x18\x01 \x01(\v2\x19.conf.v1.Discovery.ConsulR\x06consul\x1a\xe9\x02\n" +
+	"\x06consul\x18\x01 \x01(\v2\x19.conf.v1.Discovery.ConsulR\x06consul\x1a\xf8\x02\n" +
 	"\x06Consul\x12\x12\n" +
 	"\x04addr\x18\x01 \x01(\tR\x04addr\x12\x16\n" +
 	"\x06scheme\x18\x02 \x01(\tR\x06scheme\x12!\n" +
@@ -1681,10 +1681,10 @@ const file_services_user_internal_conf_v1_conf_proto_rawDesc = "" +
 	"\x03Tls\x12\x16\n" +
 	"\x06enable\x18\x01 \x01(\bR\x06enable\x120\n" +
 	"\x14insecure_skip_verify\x18\x02 \x01(\bR\x12insecureSkipVerify\x12\x15\n" +
-	"\x06ca_pem\x18\x03 \x01(\tR\x05caPem\x1aF\n" +
+	"\x06ca_pem\x18\x03 \x01(\tR\x05caPem\x1aU\n" +
 	"\x03Ttl\x12\x1a\n" +
-	"\bduration\x18\x01 \x01(\tR\bduration\x12#\n" +
-	"\rping_interval\x18\x02 \x01(\x04R\fpingInterval\"\xb5\x01\n" +
+	"\bduration\x18\x01 \x01(\tR\bduration\x122\n" +
+	"\x15ping_interval_seconds\x18\x02 \x01(\x04R\x13pingIntervalSeconds\"\xb5\x01\n" +
 	"\x06Search\x12D\n" +
 	"\x0eelastic_search\x18\x01 \x01(\v2\x1d.conf.v1.Search.ElasticSearchR\relasticSearch\x1ae\n" +
 	"\rElasticSearch\x12\x1c\n" +

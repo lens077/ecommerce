@@ -3,7 +3,6 @@ kind: Service
 metadata:
   name: ecommerce-search-service
 spec:
-  externalTrafficPolicy: Local
   selector:
     app: ecommerce-search
   ports:
@@ -11,4 +10,3 @@ spec:
       port: 30002
       targetPort: 30002
   type: LoadBalancer
-

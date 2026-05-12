@@ -1,0 +1,61 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: ecommerce-search-deploy
+  labels:
+    app: ecommerce-search
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: ecommerce-search
+  template:
+    metadata:
+      name: ecommerce-search
+      labels:
+        app: ecommerce-search
+    spec:
+      containers:
+        - name: ecommerce-search
+          image: ccr.ccs.tencentyun.com/sumery/search:dev
+          imagePullPolicy: Always
+          env:
+            - name: SERVICE_NAME
+              value: search-product-v1
+            - name: CONSUL_ENABLED
+              value: "true"
+            - name: CONSUL_ADDR
+              value: "192.168.3.109:8501"
+            - name: CONSUL_PATH
+              value: "ecommerce/search/pre.yml"
+            - name: CONSUL_SCHEME
+              value: "https"
+            - name: CONSUL_INSECURE_SKIP_VERIFY
+              value: "true"
+          ports:
+            - containerPort: 30002
+              protocol: TCP
+          resources:
+            requests:
+              cpu: 100m
+              memory: 128Mi
+            limits:
+              cpu: "1"
+              memory: 512Mi
+#          envFrom:
+#            - configMapRef:
+#                name: ecommerce-search-config
+#          livenessProbe:
+#            httpGet:
+#              path: /healthz
+#              port: 30002
+#            initialDelaySeconds: 20
+#            periodSeconds: 10
+#            failureThreshold: 3
+#          readinessProbe:
+#            httpGet:
+#              path: /healthz
+#              port: 30002
+
+      restartPolicy: Always
+      

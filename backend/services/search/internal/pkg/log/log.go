@@ -1,7 +1,14 @@
 package log
 
 import (
+	"os"
+
+	"github.com/lens077/ecommerce/backend/constants"
 	confv1 "github.com/lens077/ecommerce/backend/services/search/internal/conf/v1"
+	"github.com/lens077/ecommerce/backend/services/search/internal/pkg/meta"
+	"go.opentelemetry.io/contrib/bridges/otelzap"
+	"go.opentelemetry.io/otel/log/global"
+	"go.uber.org/zap/zapcore"
 
 	"go.uber.org/fx"
 	"go.uber.org/zap"
@@ -11,22 +18,49 @@ import (
 var Module = fx.Module("log",
 	fx.Provide(
 		// 提供日志创建函数
-		func(conf *confv1.Bootstrap) (*zap.Logger, error) {
-			runMode := "prod"
-			if conf.Server != nil && conf.Server.Http != nil {
-				// 可以根据配置中的其他字段来决定运行模式
-				// 例如：如果配置了开发环境特定的设置，则使用 "dev"
-				runMode = "prod"
-			}
-			return NewLogger(runMode)
+		func(conf *confv1.Bootstrap, info meta.AppInfo) *zap.Logger {
+			return NewLogger(conf.Log.Level, conf.Log.Format, info)
 		},
 	),
 )
 
-// NewLogger 创建一个新的 Zap Logger
-func NewLogger(runMode string) (*zap.Logger, error) {
-	if runMode == "dev" {
-		return zap.NewDevelopment()
+// NewLogger 创建一个新的 Zap Logger.
+// levelStr 可选的参数: debug / info / warn / error / dpanic / panic / fatal.
+// format 可选的参数: 参考constants/env.go的Log注释部分.
+func NewLogger(levelStr string, format string, info meta.AppInfo) *zap.Logger {
+	var level zapcore.Level
+	if err := level.UnmarshalText([]byte(levelStr)); err != nil {
+		level = zapcore.InfoLevel
 	}
-	return zap.NewProduction()
+
+	// 定义基础的 Encoder (编码器)
+	var encoder zapcore.Encoder
+	encoderConfig := zap.NewProductionEncoderConfig()
+	encoderConfig.EncodeTime = zapcore.ISO8601TimeEncoder
+
+	if format == constants.FormatConsole {
+		encoderConfig = zap.NewDevelopmentEncoderConfig()
+		encoderConfig.EncodeLevel = zapcore.CapitalColorLevelEncoder
+		encoder = zapcore.NewConsoleEncoder(encoderConfig)
+	} else {
+		encoder = zapcore.NewJSONEncoder(encoderConfig)
+	}
+
+	// 创建标准输出 Core (Stdout)
+	stdCore := zapcore.NewCore(encoder, zapcore.AddSync(os.Stdout), level)
+
+	// 创建 OTel Core (发送到 OTLP)
+	// 这里使用 global.GetLoggerProvider()
+	otelCore := otelzap.NewCore(
+		info.Name, // 你的 Instrumentation Name
+		otelzap.WithLoggerProvider(global.GetLoggerProvider()),
+	)
+
+	// 4. 使用 Tee 组合两个 Core
+	// 这样 logger.Info 就会同时发往：
+	// 1. 控制台/JSON文件
+	// 2. OTel Collector
+	core := zapcore.NewTee(stdCore, otelCore)
+
+	return zap.New(core, zap.AddCaller())
 }

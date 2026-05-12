@@ -3,6 +3,8 @@ package log
 import (
 	"testing"
 
+	"github.com/lens077/ecommerce/backend/constants"
+	"github.com/lens077/ecommerce/backend/services/search/internal/pkg/meta"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/suite"
 	"go.uber.org/zap"
@@ -12,86 +14,102 @@ import (
 // LogTestSuite 是 Log 的测试套件
 type LogTestSuite struct {
 	suite.Suite
+	testAppInfo meta.AppInfo
 }
 
-func (suite *LogTestSuite) TestNewLogger_Development() {
-	// 测试开发环境日志创建
-	logger, err := NewLogger("dev")
+func (suite *LogTestSuite) SetupTest() {
+	// 设置测试用的应用信息
+	suite.testAppInfo = meta.AppInfo{
+		ID:          "test-service-id",
+		Name:        "test-service",
+		Host:        "localhost",
+		Environment: "dev",
+	}
+}
 
-	assert.NoError(suite.T(), err)
+func (suite *LogTestSuite) TestNewLogger_DebugLevel() {
+	// 测试 debug 日志级别
+	logger := NewLogger("debug", constants.FormatJson, suite.testAppInfo)
 	assert.NotNil(suite.T(), logger)
 
 	// 验证日志级别
 	assert.True(suite.T(), logger.Core().Enabled(zapcore.DebugLevel))
 }
 
-func (suite *LogTestSuite) TestNewLogger_Production() {
-	// 测试生产环境日志创建
-	logger, err := NewLogger("prod")
-
-	assert.NoError(suite.T(), err)
+func (suite *LogTestSuite) TestNewLogger_InfoLevel() {
+	// 测试 info 日志级别
+	logger := NewLogger("info", constants.FormatJson, suite.testAppInfo)
 	assert.NotNil(suite.T(), logger)
 
-	// 验证日志级别
 	assert.True(suite.T(), logger.Core().Enabled(zapcore.InfoLevel))
 	assert.False(suite.T(), logger.Core().Enabled(zapcore.DebugLevel))
 }
 
-func (suite *LogTestSuite) TestNewLogger_Default() {
-	// 测试默认环境日志创建
-	logger, err := NewLogger("")
-
-	assert.NoError(suite.T(), err)
+func (suite *LogTestSuite) TestNewLogger_WarnLevel() {
+	// 测试 warn 日志级别
+	logger := NewLogger("warn", constants.FormatJson, suite.testAppInfo)
 	assert.NotNil(suite.T(), logger)
 
-	// 默认应该是生产环境（因为空字符串不等于"dev"）
+	assert.True(suite.T(), logger.Core().Enabled(zapcore.WarnLevel))
+	assert.False(suite.T(), logger.Core().Enabled(zapcore.InfoLevel))
+}
+
+func (suite *LogTestSuite) TestNewLogger_ErrorLevel() {
+	// 测试 error 日志级别
+	logger := NewLogger("error", constants.FormatJson, suite.testAppInfo)
+	assert.NotNil(suite.T(), logger)
+
+	assert.True(suite.T(), logger.Core().Enabled(zapcore.ErrorLevel))
+	assert.False(suite.T(), logger.Core().Enabled(zapcore.WarnLevel))
+}
+
+func (suite *LogTestSuite) TestNewLogger_InvalidLevel() {
+	// 测试无效日志级别
+	logger := NewLogger("invalid-level", constants.FormatJson, suite.testAppInfo)
+	assert.NotNil(suite.T(), logger)
+
+	// 无效级别应该默认使用 info 级别
 	assert.True(suite.T(), logger.Core().Enabled(zapcore.InfoLevel))
-	assert.False(suite.T(), logger.Core().Enabled(zapcore.DebugLevel))
 }
 
-func (suite *LogTestSuite) TestNewLogger_InvalidEnvironment() {
-	// 测试无效环境日志创建
-	logger, err := NewLogger("invalid")
-
-	assert.NoError(suite.T(), err)
+func (suite *LogTestSuite) TestNewLogger_EmptyLevel() {
+	// 测试空日志级别
+	logger := NewLogger("", constants.FormatJson, suite.testAppInfo)
 	assert.NotNil(suite.T(), logger)
 
-	// 无效环境应该使用生产环境配置（因为不等于"dev"）
 	assert.True(suite.T(), logger.Core().Enabled(zapcore.InfoLevel))
-	assert.False(suite.T(), logger.Core().Enabled(zapcore.DebugLevel))
 }
 
-func (suite *LogTestSuite) TestNewLogger_WithOptions() {
-	// 测试带选项的日志创建
-	logger, err := NewLogger("dev")
-
-	assert.NoError(suite.T(), err)
+func (suite *LogTestSuite) TestNewLogger_ConsoleFormat() {
+	// 测试 console 日志格式
+	logger := NewLogger("info", constants.FormatConsole, suite.testAppInfo)
 	assert.NotNil(suite.T(), logger)
-
-	// 验证选项是否生效
-	assert.NotNil(suite.T(), logger.Check(zap.InfoLevel, "test message"))
 }
 
-func (suite *LogTestSuite) TestGetLogger() {
-	// 测试获取全局日志实例
-	// GetLogger 函数不存在，跳过此测试
-	suite.T().Skip("GetLogger 函数不存在，跳过此测试")
+func (suite *LogTestSuite) TestNewLogger_JsonFormat() {
+	// 测试 json 日志格式
+	logger := NewLogger("info", constants.FormatJson, suite.testAppInfo)
+	assert.NotNil(suite.T(), logger)
+}
+
+func (suite *LogTestSuite) TestNewLogger_InvalidFormat() {
+	// 测试无效日志格式
+	logger := NewLogger("info", "invalid-format", suite.testAppInfo)
+	assert.NotNil(suite.T(), logger)
+	// 无效格式应该默认使用 json 格式
 }
 
 func (suite *LogTestSuite) TestModuleCreation() {
 	// 测试模块创建
 	module := Module
-
 	assert.NotNil(suite.T(), module)
-
-	// 验证模块名称
 	assert.Contains(suite.T(), module.String(), "log")
 }
 
 func (suite *LogTestSuite) TestLoggerInterface() {
 	// 测试日志接口实现
-	logger, err := NewLogger("dev")
-	assert.NoError(suite.T(), err)
+	logger := NewLogger("info", constants.FormatJson, suite.testAppInfo)
+	assert.NotNil(suite.T(), logger)
 
 	// 测试各种日志级别
 	assert.NotPanics(suite.T(), func() {
@@ -104,8 +122,8 @@ func (suite *LogTestSuite) TestLoggerInterface() {
 
 func (suite *LogTestSuite) TestLoggerWithFields() {
 	// 测试带字段的日志
-	logger, err := NewLogger("dev")
-	assert.NoError(suite.T(), err)
+	logger := NewLogger("info", constants.FormatJson, suite.testAppInfo)
+	assert.NotNil(suite.T(), logger)
 
 	assert.NotPanics(suite.T(), func() {
 		logger.With(
@@ -117,8 +135,8 @@ func (suite *LogTestSuite) TestLoggerWithFields() {
 
 func (suite *LogTestSuite) TestLoggerSugar() {
 	// 测试 Sugar 日志
-	logger, err := NewLogger("dev")
-	assert.NoError(suite.T(), err)
+	logger := NewLogger("info", constants.FormatJson, suite.testAppInfo)
+	assert.NotNil(suite.T(), logger)
 	sugar := logger.Sugar()
 
 	assert.NotPanics(suite.T(), func() {
@@ -138,12 +156,10 @@ func TestLogTestSuite(t *testing.T) {
 func TestNewLogger_PanicRecovery(t *testing.T) {
 	// 测试日志创建时的 panic 恢复
 	assert.NotPanics(t, func() {
-		_, _ = NewLogger("development")
+		testAppInfo := meta.AppInfo{
+			ID:   "test-id",
+			Name: "test-name",
+		}
+		_ = NewLogger("info", constants.FormatJson, testAppInfo)
 	})
-}
-
-func TestGetLogger_ConcurrentAccess(t *testing.T) {
-	// 测试并发访问全局日志实例
-	// GetLogger 函数不存在，跳过此测试
-	t.Skip("GetLogger 函数不存在，跳过此测试")
 }
