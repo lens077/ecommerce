@@ -5,11 +5,11 @@ services:
     networks:
       - ecommerce
     ports:
-      - "0.0.0.0:30001:30001"
+      - "0.0.0.0:30002:30002"
     environment:
       - RUN_MODE=prod
       - CONFIG_CENTER=http://apikv.com:8500
-      - CONFIG_PATH=ecommerce/search/prod.yml
+      - CONFIG_PATH=ecommerce/search/dev.yml
     container_name: ecommerce-search
     restart: on-failure:3
 

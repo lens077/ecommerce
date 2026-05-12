@@ -1,0 +1,19 @@
+syntax = "proto3";
+
+import "third_party/validate/validate.proto";
+
+package order.v1;
+
+option go_package = "github.com/lens077/ecommerce/backend/api/order/v1;orderv1";
+
+service orderService {
+  rpc CreateOrder(CreateOrderRequest) returns(CreateOrderResponse){}
+}
+
+message CreateOrderRequest {
+
+}
+
+message CreateOrderResponse {
+
+}

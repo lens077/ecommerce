@@ -4,14 +4,16 @@ import (
 	"context"
 	"errors"
 	"flag"
-	"fmt"
-	"log"
 	"net/http"
 	"os"
 
+	"github.com/lens077/ecommerce/backend/constants"
 	"github.com/lens077/ecommerce/backend/services/search/internal/biz"
+	"github.com/lens077/ecommerce/backend/services/search/internal/pkg/env"
 	"github.com/lens077/ecommerce/backend/services/search/internal/pkg/meta"
 	"github.com/lens077/ecommerce/backend/services/search/internal/pkg/otel"
+	"go.uber.org/fx/fxevent"
+	"go.uber.org/zap/zapcore"
 
 	confv1 "github.com/lens077/ecommerce/backend/services/search/internal/conf/v1"
 	"github.com/lens077/ecommerce/backend/services/search/internal/data"
@@ -27,29 +29,25 @@ import (
 )
 
 var (
-	serviceName           = flag.String("name", "search-product", "服务名称")
-	serviceVersion        = flag.String("version", "v1", "服务版本号")
-	deploymentEnvironment = flag.String("environment", "dev", "部署环境")
-	configCenter          = flag.String("config-center", "", "配置中心地址 eg. localhost:8500")
-	configPath            = flag.String("config-path", "", "配置路径 eg. organization/product/prod.yml")
-	configCenterToken     = flag.String("config-center-token", "", "配置中心令牌")
+	serviceName    = flag.String("serviceName", env.GetEnvString(constants.EnvServiceName, "org-service"), "应用名称, e.g.,org-service")
+	serviceVersion = flag.String("serviceVersion", env.GetEnvString(constants.EnvServiceVersion, "v1"), "应用版本,e.g.,v1")
+	deploymentMode = flag.String("deploymentMode", env.GetEnvString(constants.EnvDeploymentMode, "dev"), "标记应用部署的环境,e.g.,dev/prod/pre/uat")
 )
 
 func main() {
 	flag.Parse()
-	setConsulEnv()
 
 	fxApp := NewApp(
 		*serviceName,
+		*deploymentMode,
 		*serviceVersion,
-		*deploymentEnvironment,
 	)
 
 	ctx := context.Background()
 
 	// 启动应用
 	if err := fxApp.Start(ctx); err != nil {
-		log.Printf("Failed to start app: %v\n", err)
+		zap.Error(err)
 		os.Exit(1)
 	}
 
@@ -58,29 +56,29 @@ func main() {
 
 	// 优雅关闭
 	if err := fxApp.Stop(ctx); err != nil {
-		log.Printf("Failed to stop app gracefully: %v\n", err)
+		zap.Error(err)
 		os.Exit(1)
 	}
 }
 
 // NewApp 创建并配置 FX 应用
-func NewApp(serviceName, serviceVersion, deploymentEnvironment string) *fx.App {
+func NewApp(serviceName, deploymentMode, serviceVersion string) *fx.App {
 	host, err := meta.GetOutboundIP()
 	if err != nil {
-		fmt.Printf("Warn: not get host:%v", err)
+		zap.Error(err)
 	}
 	appInfo := meta.AppInfo{
 		ID:          uuid.New().String(),
 		Name:        serviceName,
-		Host:        host,
 		Version:     serviceVersion,
-		Environment: deploymentEnvironment,
+		Host:        host,
+		Environment: deploymentMode,
 	}
 
 	return fx.New(
 		// 基础模块
-		config.Module, // 配置
 		logger.Module, // 日志
+		config.Module, // 配置
 		// 注入 FX 事件日志适配器
 		fx.WithLogger(func(log *zap.Logger) fxevent.Logger {
 			zlog := &fxevent.ZapLogger{Logger: log}
@@ -89,11 +87,15 @@ func NewApp(serviceName, serviceVersion, deploymentEnvironment string) *fx.App {
 			zlog.UseErrorLevel(zapcore.ErrorLevel) // 错误事件用 Error 级别
 			return zlog
 		}),
+
 		registry.Module, // 服务注册/发现
 
-		// 可观测性
-		fx.Provide(func(conf *confv1.Bootstrap) *confv1.Trace {
-			return conf.Trace
+		// 可观测性 - 根据配置决定是否启用
+		fx.Provide(func(conf *confv1.Bootstrap) *confv1.Observability {
+			if conf.Observability == nil {
+				return &confv1.Observability{Enable: false}
+			}
+			return conf.Observability
 		}),
 		otel.Module,
 
@@ -109,43 +111,59 @@ func NewApp(serviceName, serviceVersion, deploymentEnvironment string) *fx.App {
 
 		// 配置验证和初始化
 		fx.Invoke(
-			// 验证配置完整性
-			func(conf *confv1.Bootstrap) error {
-				return config.ValidateConfig(conf)
-			},
-
 			// 注册应用到注册中心
 			func(_ *registry.ConsulRegistry) {},
 
 			// 初始化并启动核心应用逻辑
-			func(lc fx.Lifecycle, conf *confv1.Bootstrap, logger *zap.Logger, srv *http.Server, otelShutdown func(context.Context) error) {
+			func(lc fx.Lifecycle, conf *confv1.Bootstrap, d *data.Data, logger *zap.Logger, srv *http.Server, otelShutdown func(context.Context) error) {
 				lc.Append(fx.Hook{
 					// 启动服务时的操作
 					OnStart: func(ctx context.Context) error {
-						logger.Info("Starting HTTP server",
+						logger.Info("performing startup health checks...")
+
+						// 检查数据库
+						if err := d.CheckDatabase(ctx); err != nil {
+							return err
+						}
+						// 检查缓存
+						if err := d.CheckCache(ctx); err != nil {
+							return err
+						}
+						// 检查 Elasticsearch
+						if err := d.CheckElasticSearch(ctx); err != nil {
+							return err
+						}
+
+						logger.Info("starting server",
 							zap.String("addr", srv.Addr),
-							zap.String("version", serviceVersion),
-							zap.String("environment", deploymentEnvironment),
+							zap.String("environment", deploymentMode),
 						)
 						go func() {
 							if err := srv.ListenAndServe(); err != nil && !errors.Is(err, http.ErrServerClosed) {
-								logger.Fatal("Failed to start HTTP server", zap.Error(err))
+								logger.Fatal("failed to start server", zap.Error(err))
 							}
 						}()
 						return nil
 					},
 					// 停止服务前的操作
 					OnStop: func(ctx context.Context) error {
-						logger.Info("Stopping HTTP server...")
-						// 优雅关闭服务器
+						logger.Info("stopping server...")
+						// 关闭服务器
 						if err := srv.Shutdown(ctx); err != nil {
-							logger.Error("Failed to shutdown server gracefully", zap.Error(err))
+							logger.Error("failed to shutdown server gracefully", zap.Error(err))
 						}
-						// 关闭 Otel
+
+						// 关闭transport 维护的空闲 TCP 连接
+						if t, ok := http.DefaultTransport.(*http.Transport); ok {
+							t.CloseIdleConnections()
+						}
+
+						// 关闭otel
+						// 1. trace: 强制将内存中还没发出的 Span（链路数据）通过 HTTP 刷给 Collector
+						// 2. metric: 它会触发最后一次指标收集，并确保数据推送到后端
+						// 3. logging: 确保内存中的日志数据全部持久化
 						if otelShutdown != nil {
-							if err := otelShutdown(ctx); err != nil {
-								logger.Error("Failed to shutdown OTel", zap.Error(err))
-							}
+							return otelShutdown(ctx) // 执行聚合后的停止逻辑
 						}
 						return nil
 					},
@@ -153,17 +171,4 @@ func NewApp(serviceName, serviceVersion, deploymentEnvironment string) *fx.App {
 			},
 		),
 	)
-}
-
-func setConsulEnv() {
-	// 设置consul 相关的环境变量
-	if *configCenter != "" {
-		os.Setenv("CONFIG_CENTER", *configCenter)
-	}
-	if *configPath != "" {
-		os.Setenv("CONFIG_PATH", *configPath)
-	}
-	if *configCenterToken != "" {
-		os.Setenv("CONFIG_CENTER_TOKEN", *configCenterToken)
-	}
 }

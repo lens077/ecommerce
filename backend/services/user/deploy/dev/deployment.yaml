@@ -20,6 +20,8 @@ spec:
           image: ccr.ccs.tencentyun.com/sumery/user:dev
           imagePullPolicy: Always
           env:
+            - name: SERVICE_NAME
+              value: user-identity-v1
             - name: CONSUL_ENABLED
               value: "true"
             - name: CONSUL_ADDR
@@ -43,13 +45,13 @@ spec:
 #          envFrom:
 #            - configMapRef:
 #                name: ecommerce-user-config
-          livenessProbe:
-            httpGet:
-              path: /healthz
-              port: 30001
-          readinessProbe:
-            httpGet:
-              path: /healthz
-              port: 30001
+#          livenessProbe:
+#            httpGet:
+#              path: /healthz
+#              port: 30001
+#          readinessProbe:
+#            httpGet:
+#              path: /healthz
+#              port: 30001
       restartPolicy: Always
       

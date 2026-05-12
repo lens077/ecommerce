@@ -5,6 +5,7 @@ import (
 	"time"
 
 	"connectrpc.com/connect"
+	"go.opentelemetry.io/otel/trace"
 	"go.uber.org/zap"
 )
 
@@ -13,40 +14,47 @@ type LoggingInterceptor struct {
 }
 
 func NewLoggingInterceptor(logger *zap.Logger) *LoggingInterceptor {
-	return &LoggingInterceptor{logger: logger}
+	return &LoggingInterceptor{logger: logger.Named("LoggingInterceptor")}
 }
 
 func (l *LoggingInterceptor) WrapUnary(next connect.UnaryFunc) connect.UnaryFunc {
 	return func(ctx context.Context, req connect.AnyRequest) (connect.AnyResponse, error) {
-		startTime := time.Now()
-
+		start := time.Now()
 		resp, err := next(ctx, req)
+		duration := time.Since(start)
 
-		duration := time.Since(startTime)
-		code := connect.CodeOf(err)
-		procedure := req.Spec().Procedure
-
-		fields := []zap.Field{
-			zap.String("rpc.service", procedure),
-			zap.String("rpc.code", code.String()),
-			zap.Duration("duration", duration),
-		}
-
+		// 从 otelconnect 已经注入好的 ctx 中获取 SpanContext
+		span := trace.SpanFromContext(ctx)
+		traceID := span.SpanContext().TraceID().String()
+		spanID := span.SpanContext().SpanID().String()
 		if err != nil {
-			fields = append(fields, zap.Error(err))
+			// 只记录一条统一的调用完成日志
+			fields := []zap.Field{
+				zap.String("rpc.code", connect.CodeOf(err).String()),
+				zap.String("span_id", spanID),
+				zap.String("trace_id", traceID),
+				zap.Int64("duration_ms", duration.Milliseconds()),
+			}
 
-			// 错误分级逻辑
-			switch code {
-			case connect.CodeNotFound, connect.CodeCanceled, connect.CodeInvalidArgument, connect.CodeAlreadyExists, connect.CodeUnauthenticated:
-				l.logger.Warn("RPC business error", fields...)
-			case connect.CodeDeadlineExceeded:
-				l.logger.Warn("RPC deadline exceeded", fields...)
+			switch connect.CodeOf(err) {
+			// 需要立即关注的系统错误
+			case connect.CodeInternal, connect.CodeUnknown, connect.CodeDataLoss:
+				l.logger.Error("rpc system error", append(fields, zap.Error(err))...)
+
+			// 可能代表性能瓶颈或不稳定的环境
+			case connect.CodeDeadlineExceeded, connect.CodeUnavailable, connect.CodeAborted:
+				l.logger.Warn("rpc infrastructure warning", append(fields, zap.Error(err))...)
+
+			// 通常是噪音，不需要在生产环境报警
+			case connect.CodeCanceled:
+				l.logger.Debug("rpc request canceled by client", append(fields, zap.Error(err))...)
+
+			// 正常的业务阻断（非法参数、权限不足等）
 			default:
-				// 系统级错误 (Unknown, Internal, DataLoss, etc.)
-				l.logger.Error("RPC system error", fields...)
+				l.logger.Info("rpc business exception", fields...)
 			}
 		} else {
-			l.logger.Info("RPC success", fields...)
+			l.logger.Info("rpc completed", zap.String("rpc.procedure", req.Spec().Procedure))
 		}
 
 		return resp, err

@@ -4,6 +4,7 @@ import (
 	"context"
 	"fmt"
 	"net"
+	"net/http"
 	"os"
 	"strconv"
 	"time"
@@ -118,6 +119,13 @@ func NewConsulRegistry(addr, ID, Name string, opts ...Option) (*ConsulRegistry, 
 	config := api.Config{
 		Address: addr,
 		Scheme:  o.scheme,
+		Transport: &http.Transport{
+			DialContext: (&net.Dialer{
+				Timeout: 5 * time.Second, // 建立连接超时
+			}).DialContext,
+			TLSHandshakeTimeout: 5 * time.Second, // TLS 握手超时
+		},
+		WaitTime: 10 * time.Second,
 	}
 
 	if o.tlsConf != nil {
@@ -141,14 +149,25 @@ func NewConsulRegistry(addr, ID, Name string, opts ...Option) (*ConsulRegistry, 
 
 // Register 使用 TTL 健康检查注册服务
 func (r *ConsulRegistry) Register(conf *confv1.Bootstrap, info meta.AppInfo) error {
-	host, port, err := net.SplitHostPort(r.Addr)
+	r.logger.Debug("registering service to Consul", zap.String("id", r.ID))
+	// 使用服务本身的地址和端口，而不是 Consul 的地址
+	host := info.Host
+	// 从服务配置中获取端口
+	_, portStr, err := net.SplitHostPort(conf.Server.Addr)
 	if err != nil {
 		return err
 	}
-	portNum, err := strconv.Atoi(port)
+	portNum, err := strconv.Atoi(portStr)
 	if err != nil {
 		return err
 	}
+
+	r.logger.Debug("registering service to Consul",
+		zap.String("id", r.ID),
+		zap.String("host", host),
+		zap.String("name", r.Name),
+		zap.Int("port", portNum),
+	)
 	reg := &api.AgentServiceRegistration{
 		ID:      r.ID,
 		Name:    r.Name,
@@ -179,7 +198,8 @@ func (r *ConsulRegistry) Register(conf *confv1.Bootstrap, info meta.AppInfo) err
 
 // TtlCheckPinger 负责定期向 Consul Agent 发送心跳信号
 func (r *ConsulRegistry) TtlCheckPinger(ctx context.Context, conf *confv1.Bootstrap) {
-	TtlPingInterval := time.Duration(conf.Discovery.Consul.Ttl.PingInterval)
+	// ping_interval_seconds 配置的单位是秒，需要转换为 time.Duration
+	TtlPingInterval := time.Duration(conf.Discovery.Consul.Ttl.PingIntervalSeconds) * time.Second
 	ticker := time.NewTicker(TtlPingInterval)
 	defer ticker.Stop()
 

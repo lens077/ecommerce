@@ -2,13 +2,15 @@ package otel
 
 import (
 	"context"
+	"crypto/tls"
+	"crypto/x509"
 	"errors"
+	"fmt"
 	"runtime"
 	"time"
 
-	"github.com/lens077/ecommerce/backend/services/search/internal/pkg/meta"
-
 	confv1 "github.com/lens077/ecommerce/backend/services/search/internal/conf/v1"
+	"github.com/lens077/ecommerce/backend/services/search/internal/pkg/meta"
 
 	"go.opentelemetry.io/otel"
 	"go.opentelemetry.io/otel/attribute"
@@ -21,45 +23,59 @@ import (
 	"go.opentelemetry.io/otel/sdk/metric"
 	"go.opentelemetry.io/otel/sdk/resource"
 	"go.opentelemetry.io/otel/sdk/trace"
-	semconv "go.opentelemetry.io/otel/semconv/v1.37.0"
+	semconv "go.opentelemetry.io/otel/semconv/v1.40.0"
 	"go.uber.org/fx"
 	"go.uber.org/zap"
 )
 
 var (
-	// OTLP 端点变量
-	endpoint string
 	// Module 提供 Fx 模块
 	Module = fx.Module("otel",
 		fx.Provide(
 			// 提供 OpenTelemetry 设置函数
-			func(info meta.AppInfo, cfg *confv1.Trace, logger *zap.Logger) (func(context.Context) error, error) {
+			func(info meta.AppInfo, cfg *confv1.Observability, logger *zap.Logger) (func(context.Context) error, error) {
 				return SetupOTelSDK(context.Background(), info, cfg, logger)
 			},
 		),
 	)
 )
 
-// SetEndpoint 从配置中设置端点
-func SetEndpoint(cfg *confv1.Trace, logger *zap.Logger) {
-	if cfg != nil && cfg.Endpoint != "" {
-		endpoint = cfg.Endpoint
-		logger.Info("otlpEndpoint" + endpoint)
-	} else {
-		endpoint = ""
-		logger.Info("OpenTelemetry disabled - no endpoint configured")
-	}
+type TraceOption func(opts *traceOptions)
+type traceOptions struct {
+	logger   *zap.Logger
+	endpoint string
+	tls      otlptracehttp.Option
+}
+type MetricOption func(opts *metricOptions)
+type metricOptions struct {
+	logger   *zap.Logger
+	endpoint string
+	tls      otlpmetrichttp.Option
+}
+
+type LogOption func(opts *logOptions)
+type logOptions struct {
+	logger   *zap.Logger
+	endpoint string
+	tls      otlploghttp.Option
 }
 
 // SetupOTelSDK bootstraps the OpenTelemetry pipeline.
-func SetupOTelSDK(ctx context.Context, info meta.AppInfo, cfg *confv1.Trace, logger *zap.Logger) (func(context.Context) error, error) {
+func SetupOTelSDK(ctx context.Context, info meta.AppInfo, cfg *confv1.Observability, logger *zap.Logger) (func(context.Context) error, error) {
+	if cfg == nil || !cfg.Enable {
+		logger.Info("Observability is disabled, skipping OpenTelemetry setup")
+		return func(ctx context.Context) error { return nil }, nil
+	}
+
+	// 存储所有子组件停止方法的切片
 	var shutdownFuncs []func(context.Context) error
 	var err error
 
+	// 返回给外部的关闭otel
 	shutdown := func(ctx context.Context) error {
 		var err error
 		for _, fn := range shutdownFuncs {
-			err = errors.Join(err, fn(ctx))
+			err = errors.Join(err, fn(ctx)) // 合并所有组件的错误
 		}
 		shutdownFuncs = nil
 		return err
@@ -67,16 +83,6 @@ func SetupOTelSDK(ctx context.Context, info meta.AppInfo, cfg *confv1.Trace, log
 
 	handleErr := func(inErr error) {
 		err = errors.Join(inErr, shutdown(ctx))
-	}
-
-	// 从配置中设置端点
-	SetEndpoint(cfg, logger)
-
-	// 如果没有配置端点，禁用 OpenTelemetry
-	if endpoint == "" {
-		logger.Info("OpenTelemetry disabled - no endpoint configured")
-		// 返回空地关闭函数
-		return func(ctx context.Context) error { return nil }, nil
 	}
 
 	prop := newPropagator()
@@ -88,7 +94,32 @@ func SetupOTelSDK(ctx context.Context, info meta.AppInfo, cfg *confv1.Trace, log
 		return shutdown, err
 	}
 
-	tracerProvider, err := newTracerProvider(res)
+	var traceTlsOpt otlptracehttp.Option
+	var metricTlsOpt otlpmetrichttp.Option
+	var logTlsOpt otlploghttp.Option
+	if cfg.Trace.Tls.Enable {
+		tOpts := &traceOptions{logger: logger}
+		// 假设从配置文件读取 CA 内容或跳过验证
+		WithTraceTLS(cfg.Trace.Tls.InsecureSkipVerify, []byte(cfg.Trace.Tls.CaPem))(tOpts)
+		traceTlsOpt = tOpts.tls
+	}
+
+	if cfg.Metric.Tls.Enable {
+		tOpts := &metricOptions{logger: logger}
+		// 假设从配置文件读取 CA 内容或跳过验证
+		WithMetricTLS(cfg.Metric.Tls.InsecureSkipVerify, []byte(cfg.Metric.Tls.CaPem))(tOpts)
+		metricTlsOpt = tOpts.tls
+	}
+
+	if cfg.Log.Tls.Enable {
+		tOpts := &logOptions{logger: logger}
+		// 假设从配置文件读取 CA 内容或跳过验证
+		WithLogTLS(cfg.Log.Tls.InsecureSkipVerify, []byte(cfg.Log.Tls.CaPem))(tOpts)
+		logTlsOpt = tOpts.tls
+	}
+
+	// 注入Trace
+	tracerProvider, err := newTracerProvider(res, cfg.Trace.Endpoint, traceTlsOpt)
 	if err != nil {
 		handleErr(err)
 		return shutdown, err
@@ -96,15 +127,15 @@ func SetupOTelSDK(ctx context.Context, info meta.AppInfo, cfg *confv1.Trace, log
 	shutdownFuncs = append(shutdownFuncs, tracerProvider.Shutdown)
 	otel.SetTracerProvider(tracerProvider)
 
-	meterProvider, err := newMeterProvider(res)
+	metricProvider, err := newMeterProvider(res, cfg.Metric.Endpoint, metricTlsOpt)
 	if err != nil {
 		handleErr(err)
 		return shutdown, err
 	}
-	shutdownFuncs = append(shutdownFuncs, meterProvider.Shutdown)
-	otel.SetMeterProvider(meterProvider)
+	shutdownFuncs = append(shutdownFuncs, metricProvider.Shutdown)
+	otel.SetMeterProvider(metricProvider)
 
-	loggerProvider, err := newLoggerProvider(res)
+	loggerProvider, err := newLoggerProvider(res, cfg.Log.Endpoint, logTlsOpt)
 	if err != nil {
 		handleErr(err)
 		return shutdown, err
@@ -112,20 +143,66 @@ func SetupOTelSDK(ctx context.Context, info meta.AppInfo, cfg *confv1.Trace, log
 	shutdownFuncs = append(shutdownFuncs, loggerProvider.Shutdown)
 	global.SetLoggerProvider(loggerProvider)
 
-	logger.Info("OpenTelemetry enabled - sending data to %s\n" + endpoint)
 	return shutdown, err
+}
+
+func WithTraceTLS(insecureSkipVerify bool, caPem []byte) TraceOption {
+	return func(o *traceOptions) {
+		tlsConf := &tls.Config{InsecureSkipVerify: insecureSkipVerify}
+
+		if !insecureSkipVerify && len(caPem) > 0 {
+			caCertPool := x509.NewCertPool()
+			if ok := caCertPool.AppendCertsFromPEM(caPem); ok {
+				tlsConf.RootCAs = caCertPool
+			} else {
+				o.logger.Error("failed to append ca cert")
+			}
+		}
+		o.tls = otlptracehttp.WithTLSClientConfig(tlsConf)
+	}
+}
+
+func WithMetricTLS(insecureSkipVerify bool, caPem []byte) MetricOption {
+	return func(o *metricOptions) {
+		tlsConf := &tls.Config{InsecureSkipVerify: insecureSkipVerify}
+
+		if !insecureSkipVerify && len(caPem) > 0 {
+			caCertPool := x509.NewCertPool()
+			if ok := caCertPool.AppendCertsFromPEM(caPem); !ok {
+				tlsConf.RootCAs = caCertPool
+			} else {
+				o.logger.Error("failed to append ca cert")
+			}
+		}
+		o.tls = otlpmetrichttp.WithTLSClientConfig(tlsConf)
+	}
+}
+
+func WithLogTLS(insecureSkipVerify bool, caPem []byte) LogOption {
+	return func(o *logOptions) {
+		tlsConf := &tls.Config{InsecureSkipVerify: insecureSkipVerify}
+
+		if !insecureSkipVerify && len(caPem) > 0 {
+			caCertPool := x509.NewCertPool()
+			if ok := caCertPool.AppendCertsFromPEM(caPem); !ok {
+				tlsConf.RootCAs = caCertPool
+			} else {
+				o.logger.Error("failed to append ca cert")
+			}
+		}
+		o.tls = otlploghttp.WithTLSClientConfig(tlsConf)
+	}
 }
 
 func newResource(info meta.AppInfo) (*resource.Resource, error) {
 	return resource.Merge(resource.Default(),
 		resource.NewWithAttributes(
-			semconv.SchemaURL,                                    // URL
-			semconv.ServiceName(info.Name),                       // 应用名称
-			semconv.ServiceVersion(info.Version),                 // 应用版本
-			semconv.TelemetrySDKVersion(otel.Version()),          // otel 的版本
-			semconv.DeploymentEnvironmentName(info.Environment),  // 部署环境
-			semconv.TelemetrySDKLanguageGo,                       // 使用 otel 的语言
-			attribute.String("GolangVersion", runtime.Version()), // Golang 版本
+			semconv.SchemaURL,                                                  // URL
+			semconv.ServiceName(fmt.Sprintf("%s-%s", info.Name, info.Version)), // 应用名称
+			semconv.TelemetrySDKVersion(otel.Version()),                        // otel 的版本
+			semconv.DeploymentEnvironmentName(info.Environment),                // 部署环境
+			semconv.TelemetrySDKLanguageGo,                                     // 使用 otel 的语言
+			attribute.String("GolangVersion", runtime.Version()),               // Golang 版本
 		))
 }
 
@@ -136,13 +213,22 @@ func newPropagator() propagation.TextMapPropagator {
 	)
 }
 
-func newTracerProvider(res *resource.Resource) (*trace.TracerProvider, error) {
+func newTracerProvider(res *resource.Resource, endpoint string, tlsOpt otlptracehttp.Option) (*trace.TracerProvider, error) {
 	ctx := context.Background()
+
+	opts := []otlptracehttp.Option{
+		otlptracehttp.WithEndpoint(endpoint),
+	}
+	if tlsOpt != nil {
+		opts = append(opts, tlsOpt)
+	} else {
+		// 如果没有 TLS 配置，必须显式指定 Insecure
+		opts = append(opts, otlptracehttp.WithInsecure())
+	}
 
 	traceExporter, err := otlptracehttp.New(
 		ctx,
-		otlptracehttp.WithEndpoint(endpoint),
-		otlptracehttp.WithInsecure(), // 如果没有 TLS，使用此选项
+		opts...,
 	)
 	if err != nil {
 		return nil, err
@@ -157,11 +243,23 @@ func newTracerProvider(res *resource.Resource) (*trace.TracerProvider, error) {
 	return tracerProvider, nil
 }
 
-func newMeterProvider(res *resource.Resource) (*metric.MeterProvider, error) {
-	metricExporter, err := otlpmetrichttp.New(
-		context.Background(),
+// Push 模式
+// 主动将指标推向 OTLP Collector
+func newMeterProvider(res *resource.Resource, endpoint string, tlsOpt otlpmetrichttp.Option) (*metric.MeterProvider, error) {
+	ctx := context.Background()
+	opts := []otlpmetrichttp.Option{
 		otlpmetrichttp.WithEndpoint(endpoint),
-		otlpmetrichttp.WithInsecure(),
+	}
+	if tlsOpt != nil {
+		opts = append(opts, tlsOpt)
+	} else {
+		// 如果没有 TLS 配置，必须显式指定 Insecure
+		opts = append(opts, otlpmetrichttp.WithInsecure())
+	}
+
+	metricExporter, err := otlpmetrichttp.New(
+		ctx,
+		opts...,
 	)
 	if err != nil {
 		return nil, err
@@ -175,11 +273,21 @@ func newMeterProvider(res *resource.Resource) (*metric.MeterProvider, error) {
 	return meterProvider, nil
 }
 
-func newLoggerProvider(res *resource.Resource) (*log.LoggerProvider, error) {
-	logExporter, err := otlploghttp.New(
-		context.Background(),
+func newLoggerProvider(res *resource.Resource, endpoint string, tlsOpt otlploghttp.Option) (*log.LoggerProvider, error) {
+	ctx := context.Background()
+	opts := []otlploghttp.Option{
 		otlploghttp.WithEndpoint(endpoint),
-		otlploghttp.WithInsecure(),
+	}
+	if tlsOpt != nil {
+		opts = append(opts, tlsOpt)
+	} else {
+		// 如果没有 TLS 配置，必须显式指定 Insecure
+		opts = append(opts, otlploghttp.WithInsecure())
+	}
+
+	logExporter, err := otlploghttp.New(
+		ctx,
+		opts...,
 	)
 	if err != nil {
 		return nil, err

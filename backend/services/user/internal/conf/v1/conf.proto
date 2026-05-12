@@ -151,7 +151,7 @@ message Discovery {
     }
     message Ttl {
       string duration = 1;
-      uint64 ping_interval = 2;
+      uint64 ping_interval_seconds = 2;
     }
   }
   Consul consul = 1;
