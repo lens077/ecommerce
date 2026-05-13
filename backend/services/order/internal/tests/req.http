@@ -1,17 +1,25 @@
 ### local
-POST http://localhost:30001/healthz
+POST http://localhost:30004/order.v1.orderService/CompleteOrder
+Content-Type: application/json
+
+{
+  "orderNo": "ORDER202602240001"
+}
+
+### local
+POST http://localhost:30004/healthz
 Content-Type: application/json
 
 ### pre
 #  --header 'Content-Type: application/json'
 #  --data-raw '{}'
-POST http://192.168.3.124:30001/healthz
+POST http://192.168.3.124:30004/healthz
 Content-Type: application/json
 
 ### curl -v -X POST http://my.app.com/check.v1.CheckService/Ready
 #  --header 'Content-Type: application/json'
 #  --data-raw '{}'
-POST http://localhost:30001/user.v1.UserService/SignIn
+POST http://localhost:30004/user.v1.UserService/SignIn
 Content-Type: application/json
 
 {
@@ -32,11 +40,11 @@ Authorization: Bearer eyJhbGciOiJSUzI1NiIsImtpZCI6ImVjb21tZXJjZSIsInR5cCI6IkpXVC
 {}
 
 ### GetUserProfile
-# curl -v -X POST http://localhost:30001/v1.UserService/UserProfile
+# curl -v -X POST http://localhost:30004/v1.UserService/UserProfile
 #--header 'Content-Type: application/json'
 #--header 'x-md-global-name: test'
 #--data-raw '{}'
-POST http://localhost:30001/v1.UserService/UserProfile
+POST http://localhost:30004/v1.UserService/UserProfile
 x-md-global-name: test
 Content-Type: application/json
 

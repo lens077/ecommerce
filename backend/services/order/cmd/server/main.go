@@ -9,6 +9,8 @@ import (
 
 	"github.com/lens077/ecommerce/backend/services/order/constants"
 	"github.com/lens077/ecommerce/backend/services/order/internal/biz"
+	"github.com/lens077/ecommerce/backend/services/order/internal/biz/domain/events"
+	"github.com/lens077/ecommerce/backend/services/order/internal/eventbus"
 	"github.com/lens077/ecommerce/backend/services/order/internal/pkg/env"
 	"github.com/lens077/ecommerce/backend/services/order/internal/pkg/meta"
 	"github.com/lens077/ecommerce/backend/services/order/internal/pkg/otel"
@@ -107,6 +109,17 @@ func NewApp(serviceName, deploymentMode, serviceVersion string) *fx.App {
 
 		// 传递全局变量
 		fx.Supply(appInfo),
+
+		// 提供事件处理器映射
+		fx.Provide(events.OrderCompletedHandlers),
+
+		// 基于处理器映射创建 EventBus
+		fx.Provide(eventbus.NewEventBus),
+
+		// 配置 EventBus 的异步模式
+		fx.Invoke(func(eb *eventbus.EventBus) {
+			eb.Store().Async = true // 开启异步处理，Publish 立即返回
+		}),
 
 		// 配置验证和初始化
 		fx.Invoke(

@@ -4,7 +4,7 @@ sql:
     queries: "internal/data/queries"
     engine: "postgresql"
     database:
-      uri: postgresql://postgres:msdnmm@postgres.app.com:5432/connect_example?sslmode=disable&timezone=Asia/Shanghai
+      uri: postgresql://postgres:msdnmm@192.168.3.106:5432/ecommerce?sslmode=verify-ca&sslrootcert=./pg_ca_pem.crt&timezone=Asia/Shanghai
     gen:
       go:
         package: "models"

@@ -11,7 +11,7 @@ import type { Message } from "@bufbuild/protobuf";
  * Describes the file api/order/v1/order.proto.
  */
 export const file_api_order_v1_order: GenFile = /*@__PURE__*/
-  fileDesc("ChhhcGkvb3JkZXIvdjEvb3JkZXIucHJvdG8SCG9yZGVyLnYxIhQKEkNyZWF0ZU9yZGVyUmVxdWVzdCIVChNDcmVhdGVPcmRlclJlc3BvbnNlMlwKDG9yZGVyU2VydmljZRJMCgtDcmVhdGVPcmRlchIcLm9yZGVyLnYxLkNyZWF0ZU9yZGVyUmVxdWVzdBodLm9yZGVyLnYxLkNyZWF0ZU9yZGVyUmVzcG9uc2UiAEKWAQoMY29tLm9yZGVyLnYxQgpPcmRlclByb3RvUAFaOWdpdGh1Yi5jb20vbGVuczA3Ny9lY29tbWVyY2UvYmFja2VuZC9hcGkvb3JkZXIvdjE7b3JkZXJ2MaICA09YWKoCCE9yZGVyLlYxygIIT3JkZXJcVjHiAhRPcmRlclxWMVxHUEJNZXRhZGF0YeoCCU9yZGVyOjpWMWIGcHJvdG8z", [file_third_party_validate_validate]);
+  fileDesc("ChhhcGkvb3JkZXIvdjEvb3JkZXIucHJvdG8SCG9yZGVyLnYxIhQKEkNyZWF0ZU9yZGVyUmVxdWVzdCIVChNDcmVhdGVPcmRlclJlc3BvbnNlIicKFENvbXBsZXRlT3JkZXJSZXF1ZXN0Eg8KB29yZGVyTm8YASABKAkiNwoVQ29tcGxldGVPcmRlclJlc3BvbnNlEh4KBW9yZGVyGAEgASgLMg8ub3JkZXIudjEuT3JkZXIiBwoFT3JkZXIysAEKDG9yZGVyU2VydmljZRJMCgtDcmVhdGVPcmRlchIcLm9yZGVyLnYxLkNyZWF0ZU9yZGVyUmVxdWVzdBodLm9yZGVyLnYxLkNyZWF0ZU9yZGVyUmVzcG9uc2UiABJSCg1Db21wbGV0ZU9yZGVyEh4ub3JkZXIudjEuQ29tcGxldGVPcmRlclJlcXVlc3QaHy5vcmRlci52MS5Db21wbGV0ZU9yZGVyUmVzcG9uc2UiAEKWAQoMY29tLm9yZGVyLnYxQgpPcmRlclByb3RvUAFaOWdpdGh1Yi5jb20vbGVuczA3Ny9lY29tbWVyY2UvYmFja2VuZC9hcGkvb3JkZXIvdjE7b3JkZXJ2MaICA09YWKoCCE9yZGVyLlYxygIIT3JkZXJcVjHiAhRPcmRlclxWMVxHUEJNZXRhZGF0YeoCCU9yZGVyOjpWMWIGcHJvdG8z", [file_third_party_validate_validate]);
 
 /**
  * @generated from message order.v1.CreateOrderRequest
@@ -40,6 +40,53 @@ export const CreateOrderResponseSchema: GenMessage<CreateOrderResponse> = /*@__P
   messageDesc(file_api_order_v1_order, 1);
 
 /**
+ * @generated from message order.v1.CompleteOrderRequest
+ */
+export type CompleteOrderRequest = Message<"order.v1.CompleteOrderRequest"> & {
+  /**
+   * @generated from field: string orderNo = 1;
+   */
+  orderNo: string;
+};
+
+/**
+ * Describes the message order.v1.CompleteOrderRequest.
+ * Use `create(CompleteOrderRequestSchema)` to create a new message.
+ */
+export const CompleteOrderRequestSchema: GenMessage<CompleteOrderRequest> = /*@__PURE__*/
+  messageDesc(file_api_order_v1_order, 2);
+
+/**
+ * @generated from message order.v1.CompleteOrderResponse
+ */
+export type CompleteOrderResponse = Message<"order.v1.CompleteOrderResponse"> & {
+  /**
+   * @generated from field: order.v1.Order order = 1;
+   */
+  order?: Order;
+};
+
+/**
+ * Describes the message order.v1.CompleteOrderResponse.
+ * Use `create(CompleteOrderResponseSchema)` to create a new message.
+ */
+export const CompleteOrderResponseSchema: GenMessage<CompleteOrderResponse> = /*@__PURE__*/
+  messageDesc(file_api_order_v1_order, 3);
+
+/**
+ * @generated from message order.v1.Order
+ */
+export type Order = Message<"order.v1.Order"> & {
+};
+
+/**
+ * Describes the message order.v1.Order.
+ * Use `create(OrderSchema)` to create a new message.
+ */
+export const OrderSchema: GenMessage<Order> = /*@__PURE__*/
+  messageDesc(file_api_order_v1_order, 4);
+
+/**
  * @generated from service order.v1.orderService
  */
 export const orderService: GenService<{
@@ -50,6 +97,14 @@ export const orderService: GenService<{
     methodKind: "unary";
     input: typeof CreateOrderRequestSchema;
     output: typeof CreateOrderResponseSchema;
+  },
+  /**
+   * @generated from rpc order.v1.orderService.CompleteOrder
+   */
+  completeOrder: {
+    methodKind: "unary";
+    input: typeof CompleteOrderRequestSchema;
+    output: typeof CompleteOrderResponseSchema;
   },
 }> = /*@__PURE__*/
   serviceDesc(file_api_order_v1_order, 0);

@@ -28,7 +28,8 @@ var Module = fx.Module("data",
 		NewRedisClient,
 		NewCasdoorAuthClient,
 		NewElasticSearchClient,
-		NewUserRepo,
+		NewCommandOrderRepo,
+		NewQueryOrderRepo,
 	),
 )
 

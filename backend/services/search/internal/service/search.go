@@ -26,7 +26,7 @@ func (s *SearchService) Search(ctx context.Context, c *connect.Request[v1.Search
 		Name:  c.Msg.Name,
 	})
 	if err != nil {
-		return nil, connect.NewError(connect.CodeInternal, err)
+		return nil, err
 	}
 
 	// 2. 转换结果集

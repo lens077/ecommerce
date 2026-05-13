@@ -36,11 +36,15 @@ const (
 	// OrderServiceCreateOrderProcedure is the fully-qualified name of the orderService's CreateOrder
 	// RPC.
 	OrderServiceCreateOrderProcedure = "/order.v1.orderService/CreateOrder"
+	// OrderServiceCompleteOrderProcedure is the fully-qualified name of the orderService's
+	// CompleteOrder RPC.
+	OrderServiceCompleteOrderProcedure = "/order.v1.orderService/CompleteOrder"
 )
 
 // OrderServiceClient is a client for the order.v1.orderService service.
 type OrderServiceClient interface {
 	CreateOrder(context.Context, *connect.Request[v1.CreateOrderRequest]) (*connect.Response[v1.CreateOrderResponse], error)
+	CompleteOrder(context.Context, *connect.Request[v1.CompleteOrderRequest]) (*connect.Response[v1.CompleteOrderResponse], error)
 }
 
 // NewOrderServiceClient constructs a client for the order.v1.orderService service. By default, it
@@ -60,12 +64,19 @@ func NewOrderServiceClient(httpClient connect.HTTPClient, baseURL string, opts .
 			connect.WithSchema(orderServiceMethods.ByName("CreateOrder")),
 			connect.WithClientOptions(opts...),
 		),
+		completeOrder: connect.NewClient[v1.CompleteOrderRequest, v1.CompleteOrderResponse](
+			httpClient,
+			baseURL+OrderServiceCompleteOrderProcedure,
+			connect.WithSchema(orderServiceMethods.ByName("CompleteOrder")),
+			connect.WithClientOptions(opts...),
+		),
 	}
 }
 
 // orderServiceClient implements OrderServiceClient.
 type orderServiceClient struct {
-	createOrder *connect.Client[v1.CreateOrderRequest, v1.CreateOrderResponse]
+	createOrder   *connect.Client[v1.CreateOrderRequest, v1.CreateOrderResponse]
+	completeOrder *connect.Client[v1.CompleteOrderRequest, v1.CompleteOrderResponse]
 }
 
 // CreateOrder calls order.v1.orderService.CreateOrder.
@@ -73,9 +84,15 @@ func (c *orderServiceClient) CreateOrder(ctx context.Context, req *connect.Reque
 	return c.createOrder.CallUnary(ctx, req)
 }
 
+// CompleteOrder calls order.v1.orderService.CompleteOrder.
+func (c *orderServiceClient) CompleteOrder(ctx context.Context, req *connect.Request[v1.CompleteOrderRequest]) (*connect.Response[v1.CompleteOrderResponse], error) {
+	return c.completeOrder.CallUnary(ctx, req)
+}
+
 // OrderServiceHandler is an implementation of the order.v1.orderService service.
 type OrderServiceHandler interface {
 	CreateOrder(context.Context, *connect.Request[v1.CreateOrderRequest]) (*connect.Response[v1.CreateOrderResponse], error)
+	CompleteOrder(context.Context, *connect.Request[v1.CompleteOrderRequest]) (*connect.Response[v1.CompleteOrderResponse], error)
 }
 
 // NewOrderServiceHandler builds an HTTP handler from the service implementation. It returns the
@@ -91,10 +108,18 @@ func NewOrderServiceHandler(svc OrderServiceHandler, opts ...connect.HandlerOpti
 		connect.WithSchema(orderServiceMethods.ByName("CreateOrder")),
 		connect.WithHandlerOptions(opts...),
 	)
+	orderServiceCompleteOrderHandler := connect.NewUnaryHandler(
+		OrderServiceCompleteOrderProcedure,
+		svc.CompleteOrder,
+		connect.WithSchema(orderServiceMethods.ByName("CompleteOrder")),
+		connect.WithHandlerOptions(opts...),
+	)
 	return "/order.v1.orderService/", http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		switch r.URL.Path {
 		case OrderServiceCreateOrderProcedure:
 			orderServiceCreateOrderHandler.ServeHTTP(w, r)
+		case OrderServiceCompleteOrderProcedure:
+			orderServiceCompleteOrderHandler.ServeHTTP(w, r)
 		default:
 			http.NotFound(w, r)
 		}
@@ -106,4 +131,8 @@ type UnimplementedOrderServiceHandler struct{}
 
 func (UnimplementedOrderServiceHandler) CreateOrder(context.Context, *connect.Request[v1.CreateOrderRequest]) (*connect.Response[v1.CreateOrderResponse], error) {
 	return nil, connect.NewError(connect.CodeUnimplemented, errors.New("order.v1.orderService.CreateOrder is not implemented"))
+}
+
+func (UnimplementedOrderServiceHandler) CompleteOrder(context.Context, *connect.Request[v1.CompleteOrderRequest]) (*connect.Response[v1.CompleteOrderResponse], error) {
+	return nil, connect.NewError(connect.CodeUnimplemented, errors.New("order.v1.orderService.CompleteOrder is not implemented"))
 }
