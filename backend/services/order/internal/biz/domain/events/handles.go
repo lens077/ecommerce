@@ -13,11 +13,9 @@ func OrderCompletedHandlers() GoEventBus.Dispatcher {
 		"OrderCompleted": func(ctx context.Context, ev GoEventBus.Event) (GoEventBus.Result, error) {
 			payload := ev.Data.(OrderCompletedPayload)
 			// 执行副作用：发送通知、增加积分等
-			log.Printf("[Event] Order %s completed for user %s, amount=%.2f",
+			log.Printf("[Event] Order %d completed for user %s, amount=%v",
 				payload.OrderId,
 				payload.UserId,
-				payload.SpuId,
-				payload.Quantity,
 				payload.TotalAmount,
 			)
 			return GoEventBus.Result{Message: "ok"}, nil

@@ -8,6 +8,7 @@ option go_package = "github.com/lens077/ecommerce/backend/api/order/v1;orderv1";
 
 service orderService {
   rpc CreateOrder(CreateOrderRequest) returns(CreateOrderResponse){}
+  rpc CompleteOrder(CompleteOrderRequest) returns(CompleteOrderResponse){}
 }
 
 message CreateOrderRequest {
@@ -15,5 +16,17 @@ message CreateOrderRequest {
 }
 
 message CreateOrderResponse {
+
+}
+
+message CompleteOrderRequest {
+  string orderNo = 1;
+}
+
+message CompleteOrderResponse {
+    Order order = 1;
+}
+
+message Order {
 
 }

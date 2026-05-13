@@ -12,7 +12,7 @@ REPOSITORY = sumery/$(SERVICE)
 REGISTER = docker.io
 ARM64=linux/arm64
 AMD64=linux/amd64
-CONSUL_ADDR=consul.example.com
+CONSUL_ADDR=consul.sumery.com
 
 .PHONY: k8s-dev
 k8s-dev:
@@ -26,7 +26,7 @@ k8s-prod:
 dev:
 	CONSUL_ENABLED=false \
 	CONSUL_ADDR=$(CONSUL_ADDR) \
-    CONSUL_PATH=ecommerce/user/dev.yml \
+    CONSUL_PATH=ecommerce/order/dev.yml \
     CONSUL_SCHEME=https \
     CONSUL_INSECURE_SKIP_VERIFY=true \
 	go run cmd/server/main.go
@@ -35,7 +35,7 @@ dev:
 prod:
 	CONSUL_ENABLED=true \
 	CONSUL_ADDR=$(CONSUL_ADDR) \
-    CONSUL_PATH=ecommerce/user/prod.yml \
+    CONSUL_PATH=ecommerce/order/prod.yml \
     CONSUL_SCHEME=https \
     CONSUL_INSECURE_SKIP_VERIFY=true \
 	go run cmd/server/main.go
@@ -44,7 +44,7 @@ prod:
 pre:
 	CONSUL_ENABLED=true \
 	CONSUL_ADDR=$(CONSUL_ADDR) \
-    CONSUL_PATH=ecommerce/user/pre.yaml \
+    CONSUL_PATH=ecommerce/order/pre.yaml \
     CONSUL_SCHEME=https \
     CONSUL_INSECURE_SKIP_VERIFY=true \
 	go run cmd/server/main.go
@@ -72,7 +72,7 @@ generate:
 .PHONY: conf
 conf:
 	# 切换到backend目录运行buf命令，确保proto文件路径在context directory内
-	cd ../../ && buf generate --template buf.gen.yaml --path services/user/internal/conf
+	cd ../../ && buf generate --template buf.gen.yaml --path services/order/internal/conf
 
 .PHONY: docker-build
 # 使用 docker 构建镜像

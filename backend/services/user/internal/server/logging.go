@@ -27,15 +27,16 @@ func (l *LoggingInterceptor) WrapUnary(next connect.UnaryFunc) connect.UnaryFunc
 		span := trace.SpanFromContext(ctx)
 		traceID := span.SpanContext().TraceID().String()
 		spanID := span.SpanContext().SpanID().String()
-		if err != nil {
-			// 只记录一条统一的调用完成日志
-			fields := []zap.Field{
-				zap.String("rpc.code", connect.CodeOf(err).String()),
-				zap.String("span_id", spanID),
-				zap.String("trace_id", traceID),
-				zap.Int64("duration_ms", duration.Milliseconds()),
-			}
 
+		// 只记录一条统一的调用完成日志
+		fields := []zap.Field{
+			zap.String("rpc.code", connect.CodeOf(err).String()),
+			zap.String("span_id", spanID),
+			zap.String("trace_id", traceID),
+			zap.Int64("duration_ms", duration.Milliseconds()),
+		}
+
+		if err != nil {
 			switch connect.CodeOf(err) {
 			// 需要立即关注的系统错误
 			case connect.CodeInternal, connect.CodeUnknown, connect.CodeDataLoss:
@@ -54,7 +55,7 @@ func (l *LoggingInterceptor) WrapUnary(next connect.UnaryFunc) connect.UnaryFunc
 				l.logger.Info("rpc business exception", fields...)
 			}
 		} else {
-			l.logger.Info("rpc completed", zap.String("rpc.procedure", req.Spec().Procedure))
+			l.logger.Info("rpc completed", fields...)
 		}
 
 		return resp, err
