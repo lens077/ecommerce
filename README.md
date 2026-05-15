@@ -456,7 +456,7 @@ func (s *UserService) SignIn(ctx context.Context, c *connect.Request[v1.SignInRe
     COMMENT ON TABLE products.spu IS '商品SPU表';
     ```
 
-商品 SKU 表（基于您提供的初始表结构优化）
+商品 SKU 表
 
     ```sql
     CREATE TYPE products.skus_status_enum AS ENUM ('active','inactive','deleted');
