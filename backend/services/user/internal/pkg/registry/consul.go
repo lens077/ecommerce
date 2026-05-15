@@ -199,7 +199,12 @@ func (r *ConsulRegistry) Register(conf *confv1.Bootstrap, info meta.AppInfo) err
 // TtlCheckPinger 负责定期向 Consul Agent 发送心跳信号
 func (r *ConsulRegistry) TtlCheckPinger(ctx context.Context, conf *confv1.Bootstrap) {
 	// ping_interval_seconds 配置的单位是秒，需要转换为 time.Duration
-	TtlPingInterval := time.Duration(conf.Discovery.Consul.Ttl.PingIntervalSeconds) * time.Second
+	pingIntervalSeconds := conf.Discovery.Consul.Ttl.PingIntervalSeconds
+	if pingIntervalSeconds <= 0 {
+		pingIntervalSeconds = 10
+		r.logger.Warn("ping_interval_seconds is not set or invalid, using default value", zap.Uint64("default", pingIntervalSeconds))
+	}
+	TtlPingInterval := time.Duration(pingIntervalSeconds) * time.Second
 	ticker := time.NewTicker(TtlPingInterval)
 	defer ticker.Stop()
 
