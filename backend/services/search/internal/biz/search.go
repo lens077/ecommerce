@@ -2,6 +2,11 @@ package biz
 
 import (
 	"context"
+	"errors"
+)
+
+var (
+	ErrNotFound = errors.New("[Search] product not found")
 )
 
 type Product struct {

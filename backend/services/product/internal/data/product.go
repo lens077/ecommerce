@@ -1,47 +1,39 @@
 package data
 
 import (
+	"context"
 	"encoding/json"
 
 	"github.com/lens077/ecommerce/backend/services/product/internal/biz"
-	"github.com/lens077/ecommerce/backend/services/product/internal/data/models"
 	"go.opentelemetry.io/otel/attribute"
 	"go.opentelemetry.io/otel/trace"
-
-	// "github.com/lens077/ecommerce/backend/services/product/internal/data/models"
-	"context"
-
-	"github.com/casdoor/casdoor-go-sdk/casdoorsdk"
-	"github.com/redis/go-redis/v9"
 	"go.uber.org/zap"
 )
 
 var _ biz.ProductRepo = (*productRepo)(nil)
 
 type productRepo struct {
-	queries *models.Queries
-	rdb     *redis.Client
-	auth    *casdoorsdk.Client
-	l       *zap.Logger
+	data *Data
+	log  *zap.Logger
 }
 
 func NewProductRepo(data *Data, logger *zap.Logger) biz.ProductRepo {
 	return &productRepo{
-		queries: models.New(data.db),
-		rdb:     data.rdb,
-		l:       logger,
+		data: data,
+		log:  logger,
 	}
 }
 
 func (p *productRepo) GetProductDetail(ctx context.Context, req biz.GetProductDetailRequest) (*biz.GetProductDetailResponse, error) {
-	productDetail, err := p.queries.GetProductDetail(ctx, &req.SpuCode)
+	db := p.data.DB(ctx)
+	productDetail, err := db.GetProductDetail(ctx, &req.SpuCode)
 	if err != nil {
-		return nil, err
+		return nil, p.data.dbErrHandler.MustHandleError(err, biz.ErrProductNotFound)
 	}
 
 	var skus []biz.ProductSku
 	if err := json.Unmarshal(productDetail.Skus, &skus); err != nil {
-		p.l.Warn("failed to unmarshal product skus",
+		p.log.Warn("failed to unmarshal product skus",
 			zap.Int64("spu_id", productDetail.SpuID),
 			zap.String("spu_code", productDetail.SpuCode),
 			zap.Error(err),
@@ -51,7 +43,7 @@ func (p *productRepo) GetProductDetail(ctx context.Context, req biz.GetProductDe
 
 	var specsMap map[string]any
 	if err := json.Unmarshal(productDetail.CommonSpecs, &specsMap); err != nil {
-		p.l.Warn("failed to unmarshal product specs",
+		p.log.Warn("failed to unmarshal product specs",
 			zap.Int64("spu_id", productDetail.SpuID),
 			zap.String("spu_code", productDetail.SpuCode),
 			zap.Error(err),

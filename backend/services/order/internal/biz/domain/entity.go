@@ -6,7 +6,7 @@ import (
 	"time"
 
 	"github.com/google/uuid"
-	"github.com/lens077/ecommerce/backend/services/order/constants"
+	"github.com/lens077/ecommerce/backend/constants"
 	"github.com/lens077/ecommerce/backend/services/order/internal/biz/domain/events"
 	"github.com/shopspring/decimal"
 )

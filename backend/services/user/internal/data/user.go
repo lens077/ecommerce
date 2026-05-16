@@ -14,7 +14,7 @@ import (
 var _ biz.UserRepo = (*userRepo)(nil)
 
 type userRepo struct {
-	// queries *models.Queries
+	// data *Data
 	rdb  *redis.Client
 	auth *casdoorsdk.Client
 	l    *zap.SugaredLogger

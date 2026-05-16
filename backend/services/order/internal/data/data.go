@@ -11,9 +11,14 @@ import (
 	"github.com/casdoor/casdoor-go-sdk/casdoorsdk"
 	"github.com/elastic/go-elasticsearch/v9"
 	"github.com/exaring/otelpgx"
+	"github.com/jackc/pgx/v5"
+	"github.com/jackc/pgx/v5/pgconn"
 	"github.com/jackc/pgx/v5/pgxpool"
 	"github.com/lens077/ecommerce/backend/constants"
+	"github.com/lens077/ecommerce/backend/services/order/internal/biz/domain"
 	conf "github.com/lens077/ecommerce/backend/services/order/internal/conf/v1"
+	"github.com/lens077/ecommerce/backend/services/order/internal/data/models"
+	"github.com/lens077/ecommerce/backend/services/order/internal/pkg/dbutil"
 	"github.com/lens077/ecommerce/backend/services/order/internal/pkg/log"
 	"github.com/redis/go-redis/v9"
 	"go.uber.org/fx"
@@ -33,24 +38,92 @@ var Module = fx.Module("data",
 	),
 )
 
+type contextTxKey struct{}
+
 // Data 包含所有数据源的客户端
 type Data struct {
-	db   *pgxpool.Pool
-	rdb  *redis.Client
-	auth *casdoorsdk.Client
-	es   *elasticsearch.TypedClient
-	log  *zap.Logger
+	db           *models.Queries
+	pgx          *pgxpool.Pool
+	rdb          *redis.Client
+	auth         *casdoorsdk.Client
+	es           *elasticsearch.TypedClient
+	dbErrHandler *dbutil.Handler
+	log          *zap.Logger
 }
 
 // NewData 是 Data 的构造函数
 func NewData(db *pgxpool.Pool, rdb *redis.Client, auth *casdoorsdk.Client, es *elasticsearch.TypedClient, logger *zap.Logger) *Data {
 	return &Data{
-		db:   db,
+		db:   models.New(db),
+		pgx:  db,
 		rdb:  rdb,
 		auth: auth,
 		es:   es,
 		log:  logger,
+		dbErrHandler: dbutil.NewHandler(
+			dbutil.WithErrorMapping("23505", domain.ErrOrderAlreadyExists),
+			dbutil.WithErrorMapping("23503", domain.ErrOrderNotFound),
+			dbutil.WithLogging(true),
+			dbutil.WithLogger(func(err error, pgErr *pgconn.PgError) {
+				if pgErr != nil {
+					logger.Warn("database error",
+						zap.String("code", pgErr.Code),
+						zap.String("message", pgErr.Message),
+						zap.String("detail", pgErr.Detail),
+					)
+				}
+			}),
+		),
 	}
+}
+
+// DB 从上下文中获取事务或返回默认DB
+func (d *Data) DB(ctx context.Context) *models.Queries {
+	if tx, ok := ctx.Value(contextTxKey{}).(pgx.Tx); ok {
+		return models.New(tx)
+	}
+	return d.db
+}
+
+// WithTx 将事务存入上下文
+func (d *Data) WithTx(ctx context.Context, tx pgx.Tx) context.Context {
+	return context.WithValue(ctx, contextTxKey{}, tx)
+}
+
+// ExecTx 支持嵌套事务检测
+func (d *Data) ExecTx(ctx context.Context, fn func(context.Context) error) error {
+	if _, ok := ctx.Value(contextTxKey{}).(pgx.Tx); ok {
+		d.log.Debug("reuse existing transaction")
+		return fn(ctx)
+	}
+
+	d.log.Info("begin transaction")
+	tx, err := d.pgx.BeginTx(ctx, pgx.TxOptions{})
+	if err != nil {
+		return fmt.Errorf("begin tx failed: %w", err)
+	}
+
+	txCtx := d.WithTx(ctx, tx)
+
+	defer func() {
+		if p := recover(); p != nil {
+			_ = tx.Rollback(ctx)
+			panic(p)
+		}
+	}()
+
+	if err := fn(txCtx); err != nil {
+		if rbErr := tx.Rollback(ctx); rbErr != nil {
+			return fmt.Errorf("%w (rollback err: %v)", err, rbErr)
+		}
+		return err
+	}
+
+	if err := tx.Commit(ctx); err != nil {
+		return fmt.Errorf("commit failed: %w", err)
+	}
+	d.log.Info("transaction committed")
+	return nil
 }
 
 // NewPostgresPool 创建pg数据库连接池
@@ -262,7 +335,7 @@ func NewElasticSearchClient(lc fx.Lifecycle, conf *conf.Bootstrap, logger *zap.L
 func (d *Data) CheckDatabase(ctx context.Context) error {
 	ctx, cancel := context.WithTimeout(ctx, 2*time.Second)
 	defer cancel()
-	if err := d.db.Ping(ctx); err != nil {
+	if err := d.pgx.Ping(ctx); err != nil {
 		return fmt.Errorf("database ping failed: %w", err)
 	}
 	return nil
