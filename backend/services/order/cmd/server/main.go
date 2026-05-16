@@ -12,6 +12,7 @@ import (
 	"github.com/lens077/ecommerce/backend/services/order/internal/biz/domain/events"
 	"github.com/lens077/ecommerce/backend/services/order/internal/eventbus"
 	"github.com/lens077/ecommerce/backend/services/order/internal/pkg/env"
+	"github.com/lens077/ecommerce/backend/services/order/internal/pkg/kafka"
 	"github.com/lens077/ecommerce/backend/services/order/internal/pkg/meta"
 	"github.com/lens077/ecommerce/backend/services/order/internal/pkg/otel"
 	"go.uber.org/fx/fxevent"
@@ -90,6 +91,7 @@ func NewApp(serviceName, deploymentMode, serviceVersion string) *fx.App {
 		}),
 
 		registry.Module, // 服务注册/发现
+		kafka.Module,   // Kafka 消息队列
 
 		// 可观测性 - 根据配置决定是否启用
 		fx.Provide(func(conf *confv1.Bootstrap) *confv1.Observability {

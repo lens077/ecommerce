@@ -1,16 +1,16 @@
 import SDK from "casdoor-js-sdk";
 export const CASDOOR_CONF = {
   // 第三方或自有的Casdoor服务端的URL
-  serverUrl: "https://apikv.com:8081",
+  serverUrl: "http://apikv.com:8000",
   // 注册登录的接口, 默认为/api/signin
   // signinPath:'/api/signin',
   signinPath: "/user.v1.UserService/SignIn",
   // 客户端ID, 在第三方或自有的Casdoor服务端生成
-  clientId: "0291ab21f56ffa65f984",
+  clientId: "42c7d8cf13f021cb2af2",
   // 组织名, 在第三方或自有的Casdoor服务端生成
-  organizationName: "ecommerce",
+  organizationName: "org-ecommerce",
   // 应用名, 在第三方或自有的Casdoor服务端生成
-  appName: "auth",
+  appName: "app-mall-web",
   // 重新向到哪个路由, 需要在casdoor的 应用中配置
   redirectPath: "/callback",
 };

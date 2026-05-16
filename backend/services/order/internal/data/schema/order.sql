@@ -50,9 +50,9 @@ CREATE TABLE IF NOT EXISTS orders.order_main
     order_no            VARCHAR(64)                 NOT NULL UNIQUE,                    -- 订单号，全局唯一，如：OM202604270001
     group_no            VARCHAR(64)                 NOT NULL,                           -- 关联的订单组号（业务关联，非外键约束）
 
-    merchant_id         UUID                      NOT NULL,                           -- 商家ID（数据隔离核心字段）
+    merchant_id         UUID                        NOT NULL,                           -- 商家ID（数据隔离核心字段）
     merchant_name       VARCHAR(255)                NOT NULL,                           -- 商家名称快照（避免商家改名后历史数据变化）
-    user_id             UUID                 NOT NULL,                           -- 下单用户ID
+    user_id             UUID                        NOT NULL,                           -- 下单用户ID
 
     order_status        orders.order_status_enum    NOT NULL DEFAULT 'pending_payment', -- 订单状态
     shipping_status     orders.shipping_status_enum NOT NULL DEFAULT 'unshipped',       -- 物流状态

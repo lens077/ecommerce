@@ -12,6 +12,7 @@ import (
 	"github.com/mitchellh/mapstructure"
 	"github.com/spf13/viper"
 	"go.uber.org/fx"
+	"google.golang.org/protobuf/types/known/durationpb"
 )
 
 var (
@@ -42,7 +43,6 @@ var (
 	)
 )
 
-// decodeConfig 将 Map 解析为结构体
 func decodeConfig(data map[string]any, target any) error {
 	v := viper.New()
 	v.SetConfigType(constants.ConsulFileFormat)
@@ -50,9 +50,33 @@ func decodeConfig(data map[string]any, target any) error {
 		v.Set(k, val)
 	}
 
+	// 解析 Protobuf Duration 的 StringToDurationHook
+	stringToProtoDurationHook := func(f reflect.Type, t reflect.Type, data any) (any, error) {
+		if f.Kind() != reflect.String {
+			return data, nil
+		}
+		// 判断目标类型是不是 *durationpb.Duration
+		if t != reflect.TypeOf(&durationpb.Duration{}) {
+			return data, nil
+		}
+
+		// 解析 "10s", "30s" 这种时间单位的字符串
+		d, err := time.ParseDuration(data.(string))
+		if err != nil {
+			return nil, err
+		}
+		// 映射回 Protobuf 的强类型对象
+		return durationpb.New(d), nil
+	}
+
 	decoder, err := mapstructure.NewDecoder(&mapstructure.DecoderConfig{
 		TagName: "json", // Protobuf 生成的结构体使用 json tag
-		Result:  target,
+		// 利用 mapstructure.ComposeDecodeHookFunc 组合自定义 Hook
+		DecodeHook: mapstructure.ComposeDecodeHookFunc(
+			stringToProtoDurationHook,
+			// 可以在这里保留其他默认 Hook，比如 mapstructure.StringToTimeDurationHookFunc()
+		),
+		Result: target,
 	})
 	if err != nil {
 		return err

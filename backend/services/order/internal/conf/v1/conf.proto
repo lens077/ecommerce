@@ -28,6 +28,9 @@ message Bootstrap {
   Log log = 7[
     (buf.validate.field).required = true
   ];
+  Kafka kafka = 8[
+    (buf.validate.field).required = false
+  ];
 }
 
 message Log {
@@ -175,4 +178,12 @@ message Search {
     }
   }
   ElasticSearch elastic_search = 1;
+}
+
+message Kafka {
+  repeated string brokers = 1;
+  string topic = 2;
+  int32 batch_size = 3;
+  int64 batch_timeout_ms = 4;
+  bool async = 5;
 }

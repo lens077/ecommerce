@@ -97,3 +97,11 @@ auth:
     organization_name: "organization_name"
     application_name: "application_name"
     certificate: ""
+
+kafka:
+  brokers:
+    - "192.168.3.120:9092"
+  topic: "order-events"
+  batch_size: 1
+  batch_timeout_ms: 10
+  async: true
