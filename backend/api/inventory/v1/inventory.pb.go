@@ -87,7 +87,7 @@ type ReserveItem struct {
 	state         protoimpl.MessageState `protogen:"open.v1"`
 	SkuId         int64                  `protobuf:"varint,1,opt,name=sku_id,json=skuId,proto3" json:"sku_id,omitempty"` // 商品SKU ID
 	Quantity      int32                  `protobuf:"varint,2,opt,name=quantity,proto3" json:"quantity,omitempty"`
-	WarehouseId   string                 `protobuf:"bytes,3,opt,name=warehouseId,proto3" json:"warehouseId,omitempty"`
+	WarehouseId   string                 `protobuf:"bytes,3,opt,name=warehouse_id,json=warehouseId,proto3" json:"warehouse_id,omitempty"`
 	unknownFields protoimpl.UnknownFields
 	sizeCache     protoimpl.SizeCache
 }
@@ -316,12 +316,12 @@ const file_api_inventory_v1_inventory_proto_rawDesc = "" +
 	"\border_no\x18\x01 \x01(\tR\aorderNo\x12)\n" +
 	"\vmerchant_id\x18\x02 \x01(\tB\b\xbaH\x05r\x03\xb0\x01\x01R\n" +
 	"merchantId\x12/\n" +
-	"\x05items\x18\x03 \x03(\v2\x19.inventory.v1.ReserveItemR\x05items\"y\n" +
+	"\x05items\x18\x03 \x03(\v2\x19.inventory.v1.ReserveItemR\x05items\"z\n" +
 	"\vReserveItem\x12\x15\n" +
 	"\x06sku_id\x18\x01 \x01(\x03R\x05skuId\x12&\n" +
 	"\bquantity\x18\x02 \x01(\x05B\n" +
-	"\xbaH\a\x1a\x05\x18\xe7\a \x00R\bquantity\x12+\n" +
-	"\vwarehouseId\x18\x03 \x01(\tB\t\xbaH\x06r\x04\x10\x06\x18\x06R\vwarehouseId\";\n" +
+	"\xbaH\a\x1a\x05\x18\xe7\a \x00R\bquantity\x12,\n" +
+	"\fwarehouse_id\x18\x03 \x01(\tB\t\xbaH\x06r\x04\x10\x06\x18\x06R\vwarehouseId\";\n" +
 	"\x0fReserveResponse\x12\x16\n" +
 	"\x06status\x18\x01 \x01(\bR\x06status\x12\x10\n" +
 	"\x03msg\x18\x02 \x01(\tR\x03msg\"\x8e\x01\n" +

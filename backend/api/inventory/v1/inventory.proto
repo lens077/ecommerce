@@ -26,7 +26,7 @@ message ReserveItem {
     gt: 0,
     lte: 999
   }];
-  string warehouseId = 3 [(buf.validate.field).string = {  // 仓库ID, 例如: df0001
+  string warehouse_id = 3 [(buf.validate.field).string = {  // 仓库ID, 例如: df0001
     min_len: 6,
     max_len: 6
   }];

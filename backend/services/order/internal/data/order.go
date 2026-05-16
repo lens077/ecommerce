@@ -7,7 +7,7 @@ import (
 
 	"github.com/casdoor/casdoor-go-sdk/casdoorsdk"
 	"github.com/jackc/pgx/v5/pgconn"
-	"github.com/lens077/ecommerce/backend/services/order/constants"
+	"github.com/lens077/ecommerce/backend/constants"
 	"github.com/lens077/ecommerce/backend/services/order/internal/biz/domain"
 	"github.com/lens077/ecommerce/backend/services/order/internal/data/models"
 	"github.com/lens077/ecommerce/backend/services/order/internal/pkg/money"
