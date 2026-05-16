@@ -1,0 +1,61 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: ecommerce-cart-deploy
+  labels:
+    app: ecommerce-cart
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: ecommerce-cart
+  template:
+    metadata:
+      name: ecommerce-cart
+      labels:
+        app: ecommerce-cart
+    spec:
+      containers:
+        - name: ecommerce-cart
+          image: ccr.ccs.tencentyun.com/sumery/cart:dev
+          imagePullPolicy: Always
+          env:
+            - name: SERVICE_NAME
+              value: cart-service-v1
+            - name: CONSUL_ENABLED
+              value: "true"
+            - name: CONSUL_ADDR
+              value: "192.168.3.109:8501"
+            - name: CONSUL_PATH
+              value: "ecommerce/cart/pre.yml"
+            - name: CONSUL_SCHEME
+              value: "https"
+            - name: CONSUL_INSECURE_SKIP_VERIFY
+              value: "true"
+          ports:
+            - containerPort: 30006
+              protocol: TCP
+          resources:
+            requests:
+              cpu: 100m
+              memory: 128Mi
+            limits:
+              cpu: "1"
+              memory: 512Mi
+#          envFrom:
+#            - configMapRef:
+#                name: ecommerce-cart-config
+#          livenessProbe:
+#            httpGet:
+#              path: /healthz
+#              port: 30002
+#            initialDelaySeconds: 20
+#            periodSeconds: 10
+#            failureThreshold: 3
+#          readinessProbe:
+#            httpGet:
+#              path: /healthz
+#              port: 30002
+
+      restartPolicy: Always
+      

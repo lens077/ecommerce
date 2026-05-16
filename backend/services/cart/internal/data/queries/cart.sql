@@ -1,0 +1,35 @@
+-- name: AddProductToCart :one
+INSERT INTO cart.cart_item(user_id,
+                           merchant_id,
+                           spu_id,
+                           sku_id,
+                           quantity,
+                           selected,
+                           spu_name,
+                           sku_name,
+                           price,
+                           sku_attributes,
+                           sku_thumbnail_url,
+                           status)
+VALUES (@user_id,
+        @merchant_id,
+        @spu_id,
+        @sku_id,
+        @quantity,
+        @selected,
+        @spu_name,
+        @sku_name,
+        @price,
+        @sku_attributes,
+        @sku_thumbnail_url,
+        @status)
+ON CONFLICT (user_id, merchant_id, sku_id)
+    DO UPDATE SET
+                  -- 如果商品已存在，数量进行累加 (旧数量 + 新传入的数量)
+                  quantity   = cart_item.quantity + EXCLUDED.quantity,
+                  -- 用户重新加这个商品时，默认帮他重新勾选上
+                  selected   = EXCLUDED.selected,
+                  -- 状态重新校准为正常
+                  status     = EXCLUDED.status,
+                  updated_at = now()
+RETURNING id, quantity; -- 把最新的 id 和叠加后的最终数量一起返回回去

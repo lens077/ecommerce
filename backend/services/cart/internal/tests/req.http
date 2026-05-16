@@ -1,0 +1,46 @@
+### healthz
+POST http://{{host}}:{{port}}/healthz
+Content-Type: application/json
+
+### k8s
+POST http://{{k8s_gateway_host}}:{{k8s_gateway_port}}/cart.v1.CartService/AddProductToCart
+Content-Type: application/json
+Authorization: Bearer eyJhbGciOiJSUzI1NiIsImtpZCI6ImNlcnRfanF3dDNrIiwidHlwIjoiSldUIn0.eyJhZGRyZXNzIjpbXSwiYXVkIjpbIjQyYzdkOGNmMTNmMDIxY2IyYWYyIl0sImF2YXRhciI6Imh0dHBzOi8vY2RuLmNhc2Jpbi5vcmcvaW1nL2Nhc2Jpbi5zdmciLCJhenAiOiI0MmM3ZDhjZjEzZjAyMWNiMmFmMiIsImRpc3BsYXlOYW1lIjoiYnV5ZXJfMDEiLCJlbWFpbCI6InpyaTF4NkBleGFtcGxlLmNvbSIsImV4cCI6MTc3OTUzNjMyNSwiZmlyc3ROYW1lIjoiYnV5ZXJfMDEiLCJpYXQiOjE3Nzg5MzE1MjUsImlkIjoiZDQ0M2RiMDgtNjJhZC00ZWQ1LTg3OTItYWJjNWNhYzM3ZTU2IiwiaXNzIjoiaHR0cDovLzExNC4xMzIuMjMzLjEyOTo4MDAwIiwianRpIjoiYWRtaW4vNWUwN2M4OTktYWFjYS00ODNiLWJmYmMtMDEzMDAyNmY5NTJhIiwibGFuZ3VhZ2UiOiIiLCJsYXN0TmFtZSI6IiIsIm5hbWUiOiJidXllcl8wMSIsIm5iZiI6MTc3ODkzMTUyNSwibm9uY2UiOiIiLCJvd25lciI6Im9yZy1lY29tbWVyY2UiLCJwaG9uZSI6IjQyMzQ1OTY4NTcyIiwic2NvcGUiOiJwcm9maWxlIiwic3ViIjoiZDQ0M2RiMDgtNjJhZC00ZWQ1LTg3OTItYWJjNWNhYzM3ZTU2IiwidG9rZW5UeXBlIjoiYWNjZXNzLXRva2VuIn0.UWj2lacF8WwSNKh8fWGKIGfwQPqPTtG8_mg0bhRhuysOUM_C2Dtya7LKMEhh3FkyJDSa8eJ_NBnQSxytGP3Qprhel7HVbEVmdLE9g-gif1o7iUzJNSZ212NOFtlbfCbYUuPUZ57juew2kXoZP0KMcFKVjEHqdQ4btcIKll3z7wXTho0k1i3x1IPmCGJD8rRiTDN0JkXzmEiOIrACpgPyipO76t28ww4UyLWPMWjhyLiAnOepqTwigkP1rRk27Cd1juZjo0s-rmIk-mhPhSToQumtkJwCoCG-xGo7yYYti5VGa4BR0-JomBAHGP-FtyvnKJNHP6btObZeVTLBR6_Xzv-oguIx1YOpJhkNYDPGNwhOPvQkBcyZmGAs2IhMlNzm5mn65sdz9ks5KjinlwrPHuRgKPlEDQWv--p9nuSNaNJoWcm1UvAWOPGxSlmXrwpJeSJZ8-s2U9KcxGRSwn0lpeymsr3jRkx67-2O-rVeupdvPOfyBDp3PNBfY8zqG3s0K3OdbRg-14jI9Z09L8jLoBKyHqxeZrfHodLdLVuAPyhqcfWBjZlzAjRtxrbNRj_k3PDFJEsFfIgf1I2HWe1pjV5hdB0fHHi912s__IJG3zJwmQ7qq2KJvnJWGUUqQUir96f0XRa-L2IcJcgqCjo46FaQ9b2fnHmzDX07WnVKE4k
+
+{
+  "spuId": 5,
+  "skuId": 9,
+  "merchantId": "8966c1f2-fcc2-44bc-84f5-9de615ff235f",
+  "quantity": 1,
+  "selected": true,
+  "spuName": "iphone-15-pro",
+  "skuName": "iphone-15-pro-black-256g",
+  "price": 22.20,
+  "skuAttributes": {
+    "a": "a",
+    "b": 1
+  },
+  "skuThumbnailUrl": "https://cdn.example.com/iphone15pro/main.jpg",
+  "status": "active"
+}
+
+### 直连后端
+POST http://{{host}}:{{port}}/cart.v1.CartService/AddProductToCart
+Content-Type: application/json
+
+{
+  "spuId": 5,
+  "skuId": 9,
+  "merchantId": "8966c1f2-fcc2-44bc-84f5-9de615ff235f",
+  "quantity": 1,
+  "selected": true,
+  "spuName": "iphone-15-pro",
+  "skuName": "iphone-15-pro-black-256g",
+  "price": 22.20,
+  "skuAttributes": {
+    "a": "a",
+    "b": 1
+  },
+  "skuThumbnailUrl": "https://cdn.example.com/iphone15pro/main.jpg",
+  "status": "active"
+}
