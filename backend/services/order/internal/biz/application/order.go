@@ -4,10 +4,13 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"time"
 
 	"connectrpc.com/connect"
 	"github.com/lens077/ecommerce/backend/services/order/internal/biz/domain"
 	"github.com/lens077/ecommerce/backend/services/order/internal/eventbus"
+	"github.com/lens077/ecommerce/backend/services/order/internal/pkg/kafka"
+	"github.com/google/uuid"
 	"go.uber.org/zap"
 )
 
@@ -15,6 +18,7 @@ type OrderCommandUseCase struct {
 	repo     domain.OrderCommandRepo
 	log      *zap.Logger
 	eventBus *eventbus.EventBus
+	producer *kafka.Producer
 }
 type OrderQueryUseCase struct {
 	repo     domain.OrderQueryRepo
@@ -26,11 +30,12 @@ func (uc *OrderQueryUseCase) GetOrderByNo(ctx context.Context, orderNo string) (
 	return uc.repo.GetOrderByNo(ctx, orderNo)
 }
 
-func NewOrderCommandUseCase(repo domain.OrderCommandRepo, logger *zap.Logger, eventBus *eventbus.EventBus) *OrderCommandUseCase {
+func NewOrderCommandUseCase(repo domain.OrderCommandRepo, logger *zap.Logger, eventBus *eventbus.EventBus, producer *kafka.Producer) *OrderCommandUseCase {
 	return &OrderCommandUseCase{
 		repo:     repo,
 		log:      logger.Named("OrderUseCase"),
 		eventBus: eventBus,
+		producer: producer,
 	}
 }
 
@@ -58,7 +63,52 @@ func (uc *OrderCommandUseCase) CreateOrder(ctx context.Context, req *domain.Crea
 	// 11. 返回响应
 
 	// 具体实现会在 service 层完成，这里只定义接口契约
-	return nil, nil
+
+	// TODO: 实际的订单创建逻辑应该在这里实现
+	// 以下是模拟数据，用于演示 Kafka 事件发布
+	orderID := int64(12345)
+	userID := uuid.New()
+	orderNo := fmt.Sprintf("OM%d", time.Now().Unix())
+	totalAmount := 299.99
+
+	// 创建 SKU 列表
+	skuItems := []kafka.SKUCartItem{
+		{SkuID: 1001, SpuID: 101, Quantity: 2, Price: 99.99},
+		{SkuID: 1002, SpuID: 102, Quantity: 1, Price: 99.99},
+	}
+
+	// 发布 Kafka 事件
+	if uc.producer != nil {
+		event := kafka.OrderCreatedEvent{
+			EventID:     fmt.Sprintf("evt_%d", time.Now().UnixNano()),
+			OrderID:     orderID,
+			OrderNo:     orderNo,
+			UserID:      userID,
+			SKUItems:    skuItems,
+			TotalAmount: totalAmount,
+			CreatedAt:   time.Now(),
+		}
+
+		// 使用订单号作为消息 key，便于分区和查询
+		if err := uc.producer.Publish(ctx, orderNo, event); err != nil {
+			uc.log.Error("failed to publish OrderCreatedEvent", zap.Error(err))
+			// 注意：这里不返回错误，因为事件发布失败不应该影响订单创建
+			// 但是在生产环境中，你可能需要实现重试机制或告警
+		} else {
+			uc.log.Info("OrderCreatedEvent published successfully",
+				zap.String("order_no", orderNo),
+				zap.Int64("order_id", orderID),
+			)
+		}
+	} else {
+		uc.log.Warn("Kafka producer not available, skipping event publishing")
+	}
+
+	return &domain.CreateOrderResponse{
+		GroupNo:   fmt.Sprintf("OG%d", time.Now().Unix()),
+		OrderNos:  []string{orderNo},
+		PayAmount: totalAmount,
+	}, nil
 }
 
 // PayOrder 支付成功回调

@@ -1,6 +1,6 @@
 # 默认值
 VERSION ?= dev
-GOIMAGE ?= golang:1.25.8-alpine3.22
+GOIMAGE ?= golang:1.26.1-alpine3.22
 GOOS ?= linux
 GOARCH ?= arm64
 CGOENABLED ?= 0
@@ -85,7 +85,7 @@ docker-build:
       -t ecommerce/$(SERVICE):dev \
       --build-arg SERVICE=$(SERVICE) \
       --build-arg CGOENABLED=0 \
-      --build-arg GOIMAGE=golang:1.25.8-alpine3.22 \
+      --build-arg GOIMAGE=golang:1.26.1-alpine3.22 \
       --build-arg GOOS=linux \
       --build-arg GOARCH=amd64 \
       --build-arg VERSION=dev \

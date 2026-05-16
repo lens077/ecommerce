@@ -1,6 +1,8 @@
 syntax = "proto3";
 
 import "google/protobuf/timestamp.proto";
+import "google/protobuf/struct.proto";
+import "third_party/validate/validate.proto";
 
 package cart.v1;
 
@@ -16,17 +18,21 @@ message AddProductToCartRequest {
   uint64 sku_id = 2;
   string merchant_id = 3;
   uint32 quantity = 4;
-  google.protobuf.Timestamp created_at = 5;
-  bool selected = 6;
+  bool selected = 5; // 同步勾选状态, 多端同步
+  // 商品快照, 避免商家修改商品
+  string spu_name = 6;
+  string sku_name = 7;
+  double price = 8;
+  google.protobuf.Struct sku_attributes = 9;
+  string sku_thumbnail_url = 10; // 商品图片
+  string status = 11 [(buf.validate.field).string = {
+    in: ["active", "expired", "deleted"]
+  }];
 }
 
 message AddProductToCartResponse {
-  uint64 spu_id = 1;
-  uint64 sku_id = 2;
-  string merchant_id = 3;
-  uint32 quantity = 4;
-  google.protobuf.Timestamp created_at = 5;
-  bool selected = 6;
+  uint32 cart_total_quantity = 1; // 购物车当前商品总件数，方便前端直接刷新右上角小红点
+  uint64 cart_item_id = 2;        // 该商品在购物车中的唯一记录 ID，方便前端后续进行修改或删除
 }
 
 message RemoveProductToCartRequest {
@@ -38,6 +44,6 @@ message RemoveProductToCartRequest {
 }
 
 message RemoveProductToCartResponse {
-  string status = 1;
-  string message = 2;
+  uint32 cart_total_quantity = 1; // 删除后，购物车剩下的商品总件数（用于刷新右上角小红点）
+  bool is_cart_empty = 2;         // 购物车是否已经彻底空了（用于前端直接切换到“空购物车”占位图）
 }

@@ -169,7 +169,7 @@ func (r *ConsulRegistry) Register() error {
 			// 1. 使用 TTL 替换 HTTP/TCP 检查
 			TTL: TtlDuration,
 			// 2. 配置在检查失败后自动注销
-			DeregisterCriticalServiceAfter: "1m",
+			DeregisterCriticalServiceAfter: "10s",
 		},
 	}
 
@@ -184,13 +184,8 @@ func (r *ConsulRegistry) Register() error {
 
 // TtlCheckPinger 负责定期向 Consul Agent 发送心跳信号
 func (r *ConsulRegistry) TtlCheckPinger(ctx context.Context, conf *confv1.Bootstrap) {
-	// ping_interval_seconds 配置的单位是秒，需要转换为 time.Duration
-	pingIntervalSeconds := conf.Discovery.Consul.Ttl.PingIntervalSeconds
-	if pingIntervalSeconds <= 0 {
-		pingIntervalSeconds = 10
-		r.logger.Warn("ping_interval_seconds is not set or invalid, using default value", zap.Uint64("default", pingIntervalSeconds))
-	}
-	TtlPingInterval := time.Duration(pingIntervalSeconds) * time.Second
+	TtlPingInterval := conf.Discovery.Consul.Check.Ttl.PingInterval.AsDuration()
+	ticker := time.NewTicker(TtlPingInterval)
 	ticker := time.NewTicker(TtlPingInterval)
 	defer ticker.Stop()
 

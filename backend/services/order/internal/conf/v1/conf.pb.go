@@ -31,6 +31,7 @@ type Bootstrap struct {
 	Discovery     *Discovery             `protobuf:"bytes,5,opt,name=discovery,proto3" json:"discovery,omitempty"`
 	Search        *Search                `protobuf:"bytes,6,opt,name=search,proto3" json:"search,omitempty"`
 	Log           *Log                   `protobuf:"bytes,7,opt,name=log,proto3" json:"log,omitempty"`
+	Kafka         *Kafka                 `protobuf:"bytes,8,opt,name=kafka,proto3" json:"kafka,omitempty"`
 	unknownFields protoimpl.UnknownFields
 	sizeCache     protoimpl.SizeCache
 }
@@ -110,6 +111,13 @@ func (x *Bootstrap) GetSearch() *Search {
 func (x *Bootstrap) GetLog() *Log {
 	if x != nil {
 		return x.Log
+	}
+	return nil
+}
+
+func (x *Bootstrap) GetKafka() *Kafka {
+	if x != nil {
+		return x.Kafka
 	}
 	return nil
 }
@@ -486,6 +494,82 @@ func (x *Search) GetElasticSearch() *Search_ElasticSearch {
 	return nil
 }
 
+type Kafka struct {
+	state          protoimpl.MessageState `protogen:"open.v1"`
+	Brokers        []string               `protobuf:"bytes,1,rep,name=brokers,proto3" json:"brokers,omitempty"`
+	Topic          string                 `protobuf:"bytes,2,opt,name=topic,proto3" json:"topic,omitempty"`
+	BatchSize      int32                  `protobuf:"varint,3,opt,name=batch_size,json=batchSize,proto3" json:"batch_size,omitempty"`
+	BatchTimeoutMs int64                  `protobuf:"varint,4,opt,name=batch_timeout_ms,json=batchTimeoutMs,proto3" json:"batch_timeout_ms,omitempty"`
+	Async          bool                   `protobuf:"varint,5,opt,name=async,proto3" json:"async,omitempty"`
+	unknownFields  protoimpl.UnknownFields
+	sizeCache      protoimpl.SizeCache
+}
+
+func (x *Kafka) Reset() {
+	*x = Kafka{}
+	mi := &file_services_order_internal_conf_v1_conf_proto_msgTypes[8]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *Kafka) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*Kafka) ProtoMessage() {}
+
+func (x *Kafka) ProtoReflect() protoreflect.Message {
+	mi := &file_services_order_internal_conf_v1_conf_proto_msgTypes[8]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use Kafka.ProtoReflect.Descriptor instead.
+func (*Kafka) Descriptor() ([]byte, []int) {
+	return file_services_order_internal_conf_v1_conf_proto_rawDescGZIP(), []int{8}
+}
+
+func (x *Kafka) GetBrokers() []string {
+	if x != nil {
+		return x.Brokers
+	}
+	return nil
+}
+
+func (x *Kafka) GetTopic() string {
+	if x != nil {
+		return x.Topic
+	}
+	return ""
+}
+
+func (x *Kafka) GetBatchSize() int32 {
+	if x != nil {
+		return x.BatchSize
+	}
+	return 0
+}
+
+func (x *Kafka) GetBatchTimeoutMs() int64 {
+	if x != nil {
+		return x.BatchTimeoutMs
+	}
+	return 0
+}
+
+func (x *Kafka) GetAsync() bool {
+	if x != nil {
+		return x.Async
+	}
+	return false
+}
+
 type Log_ESLog struct {
 	state             protoimpl.MessageState `protogen:"open.v1"`
 	EnableRequestLog  bool                   `protobuf:"varint,1,opt,name=enable_request_log,json=enableRequestLog,proto3" json:"enable_request_log,omitempty"`
@@ -496,7 +580,7 @@ type Log_ESLog struct {
 
 func (x *Log_ESLog) Reset() {
 	*x = Log_ESLog{}
-	mi := &file_services_order_internal_conf_v1_conf_proto_msgTypes[8]
+	mi := &file_services_order_internal_conf_v1_conf_proto_msgTypes[9]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -508,7 +592,7 @@ func (x *Log_ESLog) String() string {
 func (*Log_ESLog) ProtoMessage() {}
 
 func (x *Log_ESLog) ProtoReflect() protoreflect.Message {
-	mi := &file_services_order_internal_conf_v1_conf_proto_msgTypes[8]
+	mi := &file_services_order_internal_conf_v1_conf_proto_msgTypes[9]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -547,7 +631,7 @@ type Server_Cors struct {
 
 func (x *Server_Cors) Reset() {
 	*x = Server_Cors{}
-	mi := &file_services_order_internal_conf_v1_conf_proto_msgTypes[9]
+	mi := &file_services_order_internal_conf_v1_conf_proto_msgTypes[10]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -559,7 +643,7 @@ func (x *Server_Cors) String() string {
 func (*Server_Cors) ProtoMessage() {}
 
 func (x *Server_Cors) ProtoReflect() protoreflect.Message {
-	mi := &file_services_order_internal_conf_v1_conf_proto_msgTypes[9]
+	mi := &file_services_order_internal_conf_v1_conf_proto_msgTypes[10]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -591,7 +675,7 @@ type Data_Database struct {
 
 func (x *Data_Database) Reset() {
 	*x = Data_Database{}
-	mi := &file_services_order_internal_conf_v1_conf_proto_msgTypes[10]
+	mi := &file_services_order_internal_conf_v1_conf_proto_msgTypes[11]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -603,7 +687,7 @@ func (x *Data_Database) String() string {
 func (*Data_Database) ProtoMessage() {}
 
 func (x *Data_Database) ProtoReflect() protoreflect.Message {
-	mi := &file_services_order_internal_conf_v1_conf_proto_msgTypes[10]
+	mi := &file_services_order_internal_conf_v1_conf_proto_msgTypes[11]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -635,7 +719,7 @@ type Data_Cache struct {
 
 func (x *Data_Cache) Reset() {
 	*x = Data_Cache{}
-	mi := &file_services_order_internal_conf_v1_conf_proto_msgTypes[11]
+	mi := &file_services_order_internal_conf_v1_conf_proto_msgTypes[12]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -647,7 +731,7 @@ func (x *Data_Cache) String() string {
 func (*Data_Cache) ProtoMessage() {}
 
 func (x *Data_Cache) ProtoReflect() protoreflect.Message {
-	mi := &file_services_order_internal_conf_v1_conf_proto_msgTypes[11]
+	mi := &file_services_order_internal_conf_v1_conf_proto_msgTypes[12]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -687,7 +771,7 @@ type Data_Database_Postgres struct {
 
 func (x *Data_Database_Postgres) Reset() {
 	*x = Data_Database_Postgres{}
-	mi := &file_services_order_internal_conf_v1_conf_proto_msgTypes[12]
+	mi := &file_services_order_internal_conf_v1_conf_proto_msgTypes[13]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -699,7 +783,7 @@ func (x *Data_Database_Postgres) String() string {
 func (*Data_Database_Postgres) ProtoMessage() {}
 
 func (x *Data_Database_Postgres) ProtoReflect() protoreflect.Message {
-	mi := &file_services_order_internal_conf_v1_conf_proto_msgTypes[12]
+	mi := &file_services_order_internal_conf_v1_conf_proto_msgTypes[13]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -790,7 +874,7 @@ type Data_Database_Postgres_DatabasePool struct {
 
 func (x *Data_Database_Postgres_DatabasePool) Reset() {
 	*x = Data_Database_Postgres_DatabasePool{}
-	mi := &file_services_order_internal_conf_v1_conf_proto_msgTypes[13]
+	mi := &file_services_order_internal_conf_v1_conf_proto_msgTypes[14]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -802,7 +886,7 @@ func (x *Data_Database_Postgres_DatabasePool) String() string {
 func (*Data_Database_Postgres_DatabasePool) ProtoMessage() {}
 
 func (x *Data_Database_Postgres_DatabasePool) ProtoReflect() protoreflect.Message {
-	mi := &file_services_order_internal_conf_v1_conf_proto_msgTypes[13]
+	mi := &file_services_order_internal_conf_v1_conf_proto_msgTypes[14]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -857,7 +941,7 @@ type Data_Database_Postgres_Tls struct {
 
 func (x *Data_Database_Postgres_Tls) Reset() {
 	*x = Data_Database_Postgres_Tls{}
-	mi := &file_services_order_internal_conf_v1_conf_proto_msgTypes[14]
+	mi := &file_services_order_internal_conf_v1_conf_proto_msgTypes[15]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -869,7 +953,7 @@ func (x *Data_Database_Postgres_Tls) String() string {
 func (*Data_Database_Postgres_Tls) ProtoMessage() {}
 
 func (x *Data_Database_Postgres_Tls) ProtoReflect() protoreflect.Message {
-	mi := &file_services_order_internal_conf_v1_conf_proto_msgTypes[14]
+	mi := &file_services_order_internal_conf_v1_conf_proto_msgTypes[15]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -925,7 +1009,7 @@ type Data_Cache_Redis struct {
 
 func (x *Data_Cache_Redis) Reset() {
 	*x = Data_Cache_Redis{}
-	mi := &file_services_order_internal_conf_v1_conf_proto_msgTypes[15]
+	mi := &file_services_order_internal_conf_v1_conf_proto_msgTypes[16]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -937,7 +1021,7 @@ func (x *Data_Cache_Redis) String() string {
 func (*Data_Cache_Redis) ProtoMessage() {}
 
 func (x *Data_Cache_Redis) ProtoReflect() protoreflect.Message {
-	mi := &file_services_order_internal_conf_v1_conf_proto_msgTypes[15]
+	mi := &file_services_order_internal_conf_v1_conf_proto_msgTypes[16]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -1041,7 +1125,7 @@ type Data_Cache_Redis_Tls struct {
 
 func (x *Data_Cache_Redis_Tls) Reset() {
 	*x = Data_Cache_Redis_Tls{}
-	mi := &file_services_order_internal_conf_v1_conf_proto_msgTypes[16]
+	mi := &file_services_order_internal_conf_v1_conf_proto_msgTypes[17]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -1053,7 +1137,7 @@ func (x *Data_Cache_Redis_Tls) String() string {
 func (*Data_Cache_Redis_Tls) ProtoMessage() {}
 
 func (x *Data_Cache_Redis_Tls) ProtoReflect() protoreflect.Message {
-	mi := &file_services_order_internal_conf_v1_conf_proto_msgTypes[16]
+	mi := &file_services_order_internal_conf_v1_conf_proto_msgTypes[17]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -1104,7 +1188,7 @@ type Auth_Casdoor struct {
 
 func (x *Auth_Casdoor) Reset() {
 	*x = Auth_Casdoor{}
-	mi := &file_services_order_internal_conf_v1_conf_proto_msgTypes[17]
+	mi := &file_services_order_internal_conf_v1_conf_proto_msgTypes[18]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -1116,7 +1200,7 @@ func (x *Auth_Casdoor) String() string {
 func (*Auth_Casdoor) ProtoMessage() {}
 
 func (x *Auth_Casdoor) ProtoReflect() protoreflect.Message {
-	mi := &file_services_order_internal_conf_v1_conf_proto_msgTypes[17]
+	mi := &file_services_order_internal_conf_v1_conf_proto_msgTypes[18]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -1184,7 +1268,7 @@ type Observability_Trace struct {
 
 func (x *Observability_Trace) Reset() {
 	*x = Observability_Trace{}
-	mi := &file_services_order_internal_conf_v1_conf_proto_msgTypes[18]
+	mi := &file_services_order_internal_conf_v1_conf_proto_msgTypes[19]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -1196,7 +1280,7 @@ func (x *Observability_Trace) String() string {
 func (*Observability_Trace) ProtoMessage() {}
 
 func (x *Observability_Trace) ProtoReflect() protoreflect.Message {
-	mi := &file_services_order_internal_conf_v1_conf_proto_msgTypes[18]
+	mi := &file_services_order_internal_conf_v1_conf_proto_msgTypes[19]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -1236,7 +1320,7 @@ type Observability_Metric struct {
 
 func (x *Observability_Metric) Reset() {
 	*x = Observability_Metric{}
-	mi := &file_services_order_internal_conf_v1_conf_proto_msgTypes[19]
+	mi := &file_services_order_internal_conf_v1_conf_proto_msgTypes[20]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -1248,7 +1332,7 @@ func (x *Observability_Metric) String() string {
 func (*Observability_Metric) ProtoMessage() {}
 
 func (x *Observability_Metric) ProtoReflect() protoreflect.Message {
-	mi := &file_services_order_internal_conf_v1_conf_proto_msgTypes[19]
+	mi := &file_services_order_internal_conf_v1_conf_proto_msgTypes[20]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -1288,7 +1372,7 @@ type Observability_Logging struct {
 
 func (x *Observability_Logging) Reset() {
 	*x = Observability_Logging{}
-	mi := &file_services_order_internal_conf_v1_conf_proto_msgTypes[20]
+	mi := &file_services_order_internal_conf_v1_conf_proto_msgTypes[21]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -1300,7 +1384,7 @@ func (x *Observability_Logging) String() string {
 func (*Observability_Logging) ProtoMessage() {}
 
 func (x *Observability_Logging) ProtoReflect() protoreflect.Message {
-	mi := &file_services_order_internal_conf_v1_conf_proto_msgTypes[20]
+	mi := &file_services_order_internal_conf_v1_conf_proto_msgTypes[21]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -1341,7 +1425,7 @@ type Observability_Tls struct {
 
 func (x *Observability_Tls) Reset() {
 	*x = Observability_Tls{}
-	mi := &file_services_order_internal_conf_v1_conf_proto_msgTypes[21]
+	mi := &file_services_order_internal_conf_v1_conf_proto_msgTypes[22]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -1353,7 +1437,7 @@ func (x *Observability_Tls) String() string {
 func (*Observability_Tls) ProtoMessage() {}
 
 func (x *Observability_Tls) ProtoReflect() protoreflect.Message {
-	mi := &file_services_order_internal_conf_v1_conf_proto_msgTypes[21]
+	mi := &file_services_order_internal_conf_v1_conf_proto_msgTypes[22]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -1403,7 +1487,7 @@ type Discovery_Consul struct {
 
 func (x *Discovery_Consul) Reset() {
 	*x = Discovery_Consul{}
-	mi := &file_services_order_internal_conf_v1_conf_proto_msgTypes[22]
+	mi := &file_services_order_internal_conf_v1_conf_proto_msgTypes[23]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -1415,7 +1499,7 @@ func (x *Discovery_Consul) String() string {
 func (*Discovery_Consul) ProtoMessage() {}
 
 func (x *Discovery_Consul) ProtoReflect() protoreflect.Message {
-	mi := &file_services_order_internal_conf_v1_conf_proto_msgTypes[22]
+	mi := &file_services_order_internal_conf_v1_conf_proto_msgTypes[23]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -1477,7 +1561,7 @@ type Discovery_Consul_Tls struct {
 
 func (x *Discovery_Consul_Tls) Reset() {
 	*x = Discovery_Consul_Tls{}
-	mi := &file_services_order_internal_conf_v1_conf_proto_msgTypes[23]
+	mi := &file_services_order_internal_conf_v1_conf_proto_msgTypes[24]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -1489,7 +1573,7 @@ func (x *Discovery_Consul_Tls) String() string {
 func (*Discovery_Consul_Tls) ProtoMessage() {}
 
 func (x *Discovery_Consul_Tls) ProtoReflect() protoreflect.Message {
-	mi := &file_services_order_internal_conf_v1_conf_proto_msgTypes[23]
+	mi := &file_services_order_internal_conf_v1_conf_proto_msgTypes[24]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -1536,7 +1620,7 @@ type Discovery_Consul_Ttl struct {
 
 func (x *Discovery_Consul_Ttl) Reset() {
 	*x = Discovery_Consul_Ttl{}
-	mi := &file_services_order_internal_conf_v1_conf_proto_msgTypes[24]
+	mi := &file_services_order_internal_conf_v1_conf_proto_msgTypes[25]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -1548,7 +1632,7 @@ func (x *Discovery_Consul_Ttl) String() string {
 func (*Discovery_Consul_Ttl) ProtoMessage() {}
 
 func (x *Discovery_Consul_Ttl) ProtoReflect() protoreflect.Message {
-	mi := &file_services_order_internal_conf_v1_conf_proto_msgTypes[24]
+	mi := &file_services_order_internal_conf_v1_conf_proto_msgTypes[25]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -1590,7 +1674,7 @@ type Search_ElasticSearch struct {
 
 func (x *Search_ElasticSearch) Reset() {
 	*x = Search_ElasticSearch{}
-	mi := &file_services_order_internal_conf_v1_conf_proto_msgTypes[25]
+	mi := &file_services_order_internal_conf_v1_conf_proto_msgTypes[26]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -1602,7 +1686,7 @@ func (x *Search_ElasticSearch) String() string {
 func (*Search_ElasticSearch) ProtoMessage() {}
 
 func (x *Search_ElasticSearch) ProtoReflect() protoreflect.Message {
-	mi := &file_services_order_internal_conf_v1_conf_proto_msgTypes[25]
+	mi := &file_services_order_internal_conf_v1_conf_proto_msgTypes[26]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -1657,7 +1741,7 @@ type Search_ElasticSearch_Tls struct {
 
 func (x *Search_ElasticSearch_Tls) Reset() {
 	*x = Search_ElasticSearch_Tls{}
-	mi := &file_services_order_internal_conf_v1_conf_proto_msgTypes[26]
+	mi := &file_services_order_internal_conf_v1_conf_proto_msgTypes[27]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -1669,7 +1753,7 @@ func (x *Search_ElasticSearch_Tls) String() string {
 func (*Search_ElasticSearch_Tls) ProtoMessage() {}
 
 func (x *Search_ElasticSearch_Tls) ProtoReflect() protoreflect.Message {
-	mi := &file_services_order_internal_conf_v1_conf_proto_msgTypes[26]
+	mi := &file_services_order_internal_conf_v1_conf_proto_msgTypes[27]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -1710,7 +1794,7 @@ var File_services_order_internal_conf_v1_conf_proto protoreflect.FileDescriptor
 
 const file_services_order_internal_conf_v1_conf_proto_rawDesc = "" +
 	"\n" +
-	"*services/order/internal/conf/v1/conf.proto\x12\aconf.v1\x1a#third_party/validate/validate.proto\"\xeb\x02\n" +
+	"*services/order/internal/conf/v1/conf.proto\x12\aconf.v1\x1a#third_party/validate/validate.proto\"\x99\x03\n" +
 	"\tBootstrap\x12/\n" +
 	"\x06server\x18\x01 \x01(\v2\x0f.conf.v1.ServerB\x06\xbaH\x03\xc8\x01\x01R\x06server\x12)\n" +
 	"\x04data\x18\x02 \x01(\v2\r.conf.v1.DataB\x06\xbaH\x03\xc8\x01\x01R\x04data\x12)\n" +
@@ -1718,7 +1802,8 @@ const file_services_order_internal_conf_v1_conf_proto_rawDesc = "" +
 	"\robservability\x18\x04 \x01(\v2\x16.conf.v1.ObservabilityB\x06\xbaH\x03\xc8\x01\x00R\robservability\x128\n" +
 	"\tdiscovery\x18\x05 \x01(\v2\x12.conf.v1.DiscoveryB\x06\xbaH\x03\xc8\x01\x00R\tdiscovery\x12/\n" +
 	"\x06search\x18\x06 \x01(\v2\x0f.conf.v1.SearchB\x06\xbaH\x03\xc8\x01\x00R\x06search\x12&\n" +
-	"\x03log\x18\a \x01(\v2\f.conf.v1.LogB\x06\xbaH\x03\xc8\x01\x01R\x03log\"\xc5\x01\n" +
+	"\x03log\x18\a \x01(\v2\f.conf.v1.LogB\x06\xbaH\x03\xc8\x01\x01R\x03log\x12,\n" +
+	"\x05kafka\x18\b \x01(\v2\x0e.conf.v1.KafkaB\x06\xbaH\x03\xc8\x01\x00R\x05kafka\"\xc5\x01\n" +
 	"\x03Log\x12\x14\n" +
 	"\x05level\x18\x01 \x01(\tR\x05level\x12\x16\n" +
 	"\x06format\x18\x02 \x01(\tR\x06format\x12)\n" +
@@ -1827,7 +1912,14 @@ const file_services_order_internal_conf_v1_conf_proto_rawDesc = "" +
 	"\x03Tls\x12\x16\n" +
 	"\x06enable\x18\x01 \x01(\bR\x06enable\x120\n" +
 	"\x14insecure_skip_verify\x18\x02 \x01(\bR\x12insecureSkipVerify\x12\x15\n" +
-	"\x06ca_pem\x18\x03 \x01(\tR\x05caPemB\xa2\x01\n" +
+	"\x06ca_pem\x18\x03 \x01(\tR\x05caPem\"\x96\x01\n" +
+	"\x05Kafka\x12\x18\n" +
+	"\abrokers\x18\x01 \x03(\tR\abrokers\x12\x14\n" +
+	"\x05topic\x18\x02 \x01(\tR\x05topic\x12\x1d\n" +
+	"\n" +
+	"batch_size\x18\x03 \x01(\x05R\tbatchSize\x12(\n" +
+	"\x10batch_timeout_ms\x18\x04 \x01(\x03R\x0ebatchTimeoutMs\x12\x14\n" +
+	"\x05async\x18\x05 \x01(\bR\x05asyncB\xa2\x01\n" +
 	"\vcom.conf.v1B\tConfProtoP\x01ZKgithub.com/lens077/ecommerce/backend/services/order/internal/conf/v1;confv1\xa2\x02\x03CXX\xaa\x02\aConf.V1\xca\x02\aConf\\V1\xe2\x02\x13Conf\\V1\\GPBMetadata\xea\x02\bConf::V1b\x06proto3"
 
 var (
@@ -1842,7 +1934,7 @@ func file_services_order_internal_conf_v1_conf_proto_rawDescGZIP() []byte {
 	return file_services_order_internal_conf_v1_conf_proto_rawDescData
 }
 
-var file_services_order_internal_conf_v1_conf_proto_msgTypes = make([]protoimpl.MessageInfo, 27)
+var file_services_order_internal_conf_v1_conf_proto_msgTypes = make([]protoimpl.MessageInfo, 28)
 var file_services_order_internal_conf_v1_conf_proto_goTypes = []any{
 	(*Bootstrap)(nil),              // 0: conf.v1.Bootstrap
 	(*Log)(nil),                    // 1: conf.v1.Log
@@ -1852,25 +1944,26 @@ var file_services_order_internal_conf_v1_conf_proto_goTypes = []any{
 	(*Observability)(nil),          // 5: conf.v1.Observability
 	(*Discovery)(nil),              // 6: conf.v1.Discovery
 	(*Search)(nil),                 // 7: conf.v1.Search
-	(*Log_ESLog)(nil),              // 8: conf.v1.Log.ESLog
-	(*Server_Cors)(nil),            // 9: conf.v1.Server.Cors
-	(*Data_Database)(nil),          // 10: conf.v1.Data.Database
-	(*Data_Cache)(nil),             // 11: conf.v1.Data.Cache
-	(*Data_Database_Postgres)(nil), // 12: conf.v1.Data.Database.Postgres
-	(*Data_Database_Postgres_DatabasePool)(nil), // 13: conf.v1.Data.Database.Postgres.DatabasePool
-	(*Data_Database_Postgres_Tls)(nil),          // 14: conf.v1.Data.Database.Postgres.Tls
-	(*Data_Cache_Redis)(nil),                    // 15: conf.v1.Data.Cache.Redis
-	(*Data_Cache_Redis_Tls)(nil),                // 16: conf.v1.Data.Cache.Redis.Tls
-	(*Auth_Casdoor)(nil),                        // 17: conf.v1.Auth.Casdoor
-	(*Observability_Trace)(nil),                 // 18: conf.v1.Observability.Trace
-	(*Observability_Metric)(nil),                // 19: conf.v1.Observability.Metric
-	(*Observability_Logging)(nil),               // 20: conf.v1.Observability.Logging
-	(*Observability_Tls)(nil),                   // 21: conf.v1.Observability.Tls
-	(*Discovery_Consul)(nil),                    // 22: conf.v1.Discovery.Consul
-	(*Discovery_Consul_Tls)(nil),                // 23: conf.v1.Discovery.Consul.Tls
-	(*Discovery_Consul_Ttl)(nil),                // 24: conf.v1.Discovery.Consul.Ttl
-	(*Search_ElasticSearch)(nil),                // 25: conf.v1.Search.ElasticSearch
-	(*Search_ElasticSearch_Tls)(nil),            // 26: conf.v1.Search.ElasticSearch.Tls
+	(*Kafka)(nil),                  // 8: conf.v1.Kafka
+	(*Log_ESLog)(nil),              // 9: conf.v1.Log.ESLog
+	(*Server_Cors)(nil),            // 10: conf.v1.Server.Cors
+	(*Data_Database)(nil),          // 11: conf.v1.Data.Database
+	(*Data_Cache)(nil),             // 12: conf.v1.Data.Cache
+	(*Data_Database_Postgres)(nil), // 13: conf.v1.Data.Database.Postgres
+	(*Data_Database_Postgres_DatabasePool)(nil), // 14: conf.v1.Data.Database.Postgres.DatabasePool
+	(*Data_Database_Postgres_Tls)(nil),          // 15: conf.v1.Data.Database.Postgres.Tls
+	(*Data_Cache_Redis)(nil),                    // 16: conf.v1.Data.Cache.Redis
+	(*Data_Cache_Redis_Tls)(nil),                // 17: conf.v1.Data.Cache.Redis.Tls
+	(*Auth_Casdoor)(nil),                        // 18: conf.v1.Auth.Casdoor
+	(*Observability_Trace)(nil),                 // 19: conf.v1.Observability.Trace
+	(*Observability_Metric)(nil),                // 20: conf.v1.Observability.Metric
+	(*Observability_Logging)(nil),               // 21: conf.v1.Observability.Logging
+	(*Observability_Tls)(nil),                   // 22: conf.v1.Observability.Tls
+	(*Discovery_Consul)(nil),                    // 23: conf.v1.Discovery.Consul
+	(*Discovery_Consul_Tls)(nil),                // 24: conf.v1.Discovery.Consul.Tls
+	(*Discovery_Consul_Ttl)(nil),                // 25: conf.v1.Discovery.Consul.Ttl
+	(*Search_ElasticSearch)(nil),                // 26: conf.v1.Search.ElasticSearch
+	(*Search_ElasticSearch_Tls)(nil),            // 27: conf.v1.Search.ElasticSearch.Tls
 }
 var file_services_order_internal_conf_v1_conf_proto_depIdxs = []int32{
 	2,  // 0: conf.v1.Bootstrap.server:type_name -> conf.v1.Server
@@ -1880,32 +1973,33 @@ var file_services_order_internal_conf_v1_conf_proto_depIdxs = []int32{
 	6,  // 4: conf.v1.Bootstrap.discovery:type_name -> conf.v1.Discovery
 	7,  // 5: conf.v1.Bootstrap.search:type_name -> conf.v1.Search
 	1,  // 6: conf.v1.Bootstrap.log:type_name -> conf.v1.Log
-	8,  // 7: conf.v1.Log.es_log:type_name -> conf.v1.Log.ESLog
-	9,  // 8: conf.v1.Server.cors:type_name -> conf.v1.Server.Cors
-	10, // 9: conf.v1.Data.database:type_name -> conf.v1.Data.Database
-	11, // 10: conf.v1.Data.cache:type_name -> conf.v1.Data.Cache
-	17, // 11: conf.v1.Auth.casdoor:type_name -> conf.v1.Auth.Casdoor
-	18, // 12: conf.v1.Observability.trace:type_name -> conf.v1.Observability.Trace
-	19, // 13: conf.v1.Observability.metric:type_name -> conf.v1.Observability.Metric
-	20, // 14: conf.v1.Observability.log:type_name -> conf.v1.Observability.Logging
-	22, // 15: conf.v1.Discovery.consul:type_name -> conf.v1.Discovery.Consul
-	25, // 16: conf.v1.Search.elastic_search:type_name -> conf.v1.Search.ElasticSearch
-	12, // 17: conf.v1.Data.Database.postgres:type_name -> conf.v1.Data.Database.Postgres
-	15, // 18: conf.v1.Data.Cache.redis:type_name -> conf.v1.Data.Cache.Redis
-	13, // 19: conf.v1.Data.Database.Postgres.pool:type_name -> conf.v1.Data.Database.Postgres.DatabasePool
-	14, // 20: conf.v1.Data.Database.Postgres.tls:type_name -> conf.v1.Data.Database.Postgres.Tls
-	16, // 21: conf.v1.Data.Cache.Redis.tls:type_name -> conf.v1.Data.Cache.Redis.Tls
-	21, // 22: conf.v1.Observability.Trace.tls:type_name -> conf.v1.Observability.Tls
-	21, // 23: conf.v1.Observability.Metric.tls:type_name -> conf.v1.Observability.Tls
-	21, // 24: conf.v1.Observability.Logging.tls:type_name -> conf.v1.Observability.Tls
-	23, // 25: conf.v1.Discovery.Consul.tls:type_name -> conf.v1.Discovery.Consul.Tls
-	24, // 26: conf.v1.Discovery.Consul.ttl:type_name -> conf.v1.Discovery.Consul.Ttl
-	26, // 27: conf.v1.Search.ElasticSearch.tls:type_name -> conf.v1.Search.ElasticSearch.Tls
-	28, // [28:28] is the sub-list for method output_type
-	28, // [28:28] is the sub-list for method input_type
-	28, // [28:28] is the sub-list for extension type_name
-	28, // [28:28] is the sub-list for extension extendee
-	0,  // [0:28] is the sub-list for field type_name
+	8,  // 7: conf.v1.Bootstrap.kafka:type_name -> conf.v1.Kafka
+	9,  // 8: conf.v1.Log.es_log:type_name -> conf.v1.Log.ESLog
+	10, // 9: conf.v1.Server.cors:type_name -> conf.v1.Server.Cors
+	11, // 10: conf.v1.Data.database:type_name -> conf.v1.Data.Database
+	12, // 11: conf.v1.Data.cache:type_name -> conf.v1.Data.Cache
+	18, // 12: conf.v1.Auth.casdoor:type_name -> conf.v1.Auth.Casdoor
+	19, // 13: conf.v1.Observability.trace:type_name -> conf.v1.Observability.Trace
+	20, // 14: conf.v1.Observability.metric:type_name -> conf.v1.Observability.Metric
+	21, // 15: conf.v1.Observability.log:type_name -> conf.v1.Observability.Logging
+	23, // 16: conf.v1.Discovery.consul:type_name -> conf.v1.Discovery.Consul
+	26, // 17: conf.v1.Search.elastic_search:type_name -> conf.v1.Search.ElasticSearch
+	13, // 18: conf.v1.Data.Database.postgres:type_name -> conf.v1.Data.Database.Postgres
+	16, // 19: conf.v1.Data.Cache.redis:type_name -> conf.v1.Data.Cache.Redis
+	14, // 20: conf.v1.Data.Database.Postgres.pool:type_name -> conf.v1.Data.Database.Postgres.DatabasePool
+	15, // 21: conf.v1.Data.Database.Postgres.tls:type_name -> conf.v1.Data.Database.Postgres.Tls
+	17, // 22: conf.v1.Data.Cache.Redis.tls:type_name -> conf.v1.Data.Cache.Redis.Tls
+	22, // 23: conf.v1.Observability.Trace.tls:type_name -> conf.v1.Observability.Tls
+	22, // 24: conf.v1.Observability.Metric.tls:type_name -> conf.v1.Observability.Tls
+	22, // 25: conf.v1.Observability.Logging.tls:type_name -> conf.v1.Observability.Tls
+	24, // 26: conf.v1.Discovery.Consul.tls:type_name -> conf.v1.Discovery.Consul.Tls
+	25, // 27: conf.v1.Discovery.Consul.ttl:type_name -> conf.v1.Discovery.Consul.Ttl
+	27, // 28: conf.v1.Search.ElasticSearch.tls:type_name -> conf.v1.Search.ElasticSearch.Tls
+	29, // [29:29] is the sub-list for method output_type
+	29, // [29:29] is the sub-list for method input_type
+	29, // [29:29] is the sub-list for extension type_name
+	29, // [29:29] is the sub-list for extension extendee
+	0,  // [0:29] is the sub-list for field type_name
 }
 
 func init() { file_services_order_internal_conf_v1_conf_proto_init() }
@@ -1919,7 +2013,7 @@ func file_services_order_internal_conf_v1_conf_proto_init() {
 			GoPackagePath: reflect.TypeOf(x{}).PkgPath(),
 			RawDescriptor: unsafe.Slice(unsafe.StringData(file_services_order_internal_conf_v1_conf_proto_rawDesc), len(file_services_order_internal_conf_v1_conf_proto_rawDesc)),
 			NumEnums:      0,
-			NumMessages:   27,
+			NumMessages:   28,
 			NumExtensions: 0,
 			NumServices:   0,
 		},

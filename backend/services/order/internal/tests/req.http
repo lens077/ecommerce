@@ -1,4 +1,13 @@
 ### local
+POST http://localhost:30004/order.v1.orderService/CreateOrder
+Content-Type: application/json
+
+{
+  "orderNo": "ORDER202602240001"
+}
+
+
+### local CompleteOrder
 POST http://localhost:30004/order.v1.orderService/CompleteOrder
 Content-Type: application/json
 

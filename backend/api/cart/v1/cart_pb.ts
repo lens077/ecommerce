@@ -5,14 +5,15 @@
 import type { GenFile, GenMessage, GenService } from "@bufbuild/protobuf/codegenv2";
 import { fileDesc, messageDesc, serviceDesc } from "@bufbuild/protobuf/codegenv2";
 import type { Timestamp } from "@bufbuild/protobuf/wkt";
-import { file_google_protobuf_timestamp } from "@bufbuild/protobuf/wkt";
-import type { Message } from "@bufbuild/protobuf";
+import { file_google_protobuf_struct, file_google_protobuf_timestamp } from "@bufbuild/protobuf/wkt";
+import { file_third_party_validate_validate } from "../../../third_party/validate/validate_pb";
+import type { JsonObject, Message } from "@bufbuild/protobuf";
 
 /**
  * Describes the file api/cart/v1/cart.proto.
  */
 export const file_api_cart_v1_cart: GenFile = /*@__PURE__*/
-  fileDesc("ChZhcGkvY2FydC92MS9jYXJ0LnByb3RvEgdjYXJ0LnYxIqIBChdBZGRQcm9kdWN0VG9DYXJ0UmVxdWVzdBIOCgZzcHVfaWQYASABKAQSDgoGc2t1X2lkGAIgASgEEhMKC21lcmNoYW50X2lkGAMgASgJEhAKCHF1YW50aXR5GAQgASgNEi4KCmNyZWF0ZWRfYXQYBSABKAsyGi5nb29nbGUucHJvdG9idWYuVGltZXN0YW1wEhAKCHNlbGVjdGVkGAYgASgIIqMBChhBZGRQcm9kdWN0VG9DYXJ0UmVzcG9uc2USDgoGc3B1X2lkGAEgASgEEg4KBnNrdV9pZBgCIAEoBBITCgttZXJjaGFudF9pZBgDIAEoCRIQCghxdWFudGl0eRgEIAEoDRIuCgpjcmVhdGVkX2F0GAUgASgLMhouZ29vZ2xlLnByb3RvYnVmLlRpbWVzdGFtcBIQCghzZWxlY3RlZBgGIAEoCCKTAQoaUmVtb3ZlUHJvZHVjdFRvQ2FydFJlcXVlc3QSDgoGc3B1X2lkGAEgASgEEg4KBnNrdV9pZBgCIAEoBBITCgttZXJjaGFudF9pZBgDIAEoCRIQCghxdWFudGl0eRgEIAEoDRIuCgp1cGRhdGVkX2F0GAUgASgLMhouZ29vZ2xlLnByb3RvYnVmLlRpbWVzdGFtcCI+ChtSZW1vdmVQcm9kdWN0VG9DYXJ0UmVzcG9uc2USDgoGc3RhdHVzGAEgASgJEg8KB21lc3NhZ2UYAiABKAkyzAEKC0NhcnRTZXJ2aWNlElkKEEFkZFByb2R1Y3RUb0NhcnQSIC5jYXJ0LnYxLkFkZFByb2R1Y3RUb0NhcnRSZXF1ZXN0GiEuY2FydC52MS5BZGRQcm9kdWN0VG9DYXJ0UmVzcG9uc2UiABJiChNSZW1vdmVQcm9kdWN0VG9DYXJ0EiMuY2FydC52MS5SZW1vdmVQcm9kdWN0VG9DYXJ0UmVxdWVzdBokLmNhcnQudjEuUmVtb3ZlUHJvZHVjdFRvQ2FydFJlc3BvbnNlIgBCjgEKC2NvbS5jYXJ0LnYxQglDYXJ0UHJvdG9QAVo3Z2l0aHViLmNvbS9sZW5zMDc3L2Vjb21tZXJjZS9iYWNrZW5kL2FwaS9jYXJ0L3YxO2NhcnR2MaICA0NYWKoCB0NhcnQuVjHKAgdDYXJ0XFYx4gITQ2FydFxWMVxHUEJNZXRhZGF0YeoCCENhcnQ6OlYxYgZwcm90bzM", [file_google_protobuf_timestamp]);
+  fileDesc("ChZhcGkvY2FydC92MS9jYXJ0LnByb3RvEgdjYXJ0LnYxIqICChdBZGRQcm9kdWN0VG9DYXJ0UmVxdWVzdBIOCgZzcHVfaWQYASABKAQSDgoGc2t1X2lkGAIgASgEEhMKC21lcmNoYW50X2lkGAMgASgJEhAKCHF1YW50aXR5GAQgASgNEhAKCHNlbGVjdGVkGAUgASgIEhAKCHNwdV9uYW1lGAYgASgJEhAKCHNrdV9uYW1lGAcgASgJEg0KBXByaWNlGAggASgBEi8KDnNrdV9hdHRyaWJ1dGVzGAkgASgLMhcuZ29vZ2xlLnByb3RvYnVmLlN0cnVjdBIZChFza3VfdGh1bWJuYWlsX3VybBgKIAEoCRIvCgZzdGF0dXMYCyABKAlCH7pIHHIaUgZhY3RpdmVSB2V4cGlyZWRSB2RlbGV0ZWQiTQoYQWRkUHJvZHVjdFRvQ2FydFJlc3BvbnNlEhsKE2NhcnRfdG90YWxfcXVhbnRpdHkYASABKA0SFAoMY2FydF9pdGVtX2lkGAIgASgEIpMBChpSZW1vdmVQcm9kdWN0VG9DYXJ0UmVxdWVzdBIOCgZzcHVfaWQYASABKAQSDgoGc2t1X2lkGAIgASgEEhMKC21lcmNoYW50X2lkGAMgASgJEhAKCHF1YW50aXR5GAQgASgNEi4KCnVwZGF0ZWRfYXQYBSABKAsyGi5nb29nbGUucHJvdG9idWYuVGltZXN0YW1wIlEKG1JlbW92ZVByb2R1Y3RUb0NhcnRSZXNwb25zZRIbChNjYXJ0X3RvdGFsX3F1YW50aXR5GAEgASgNEhUKDWlzX2NhcnRfZW1wdHkYAiABKAgyzAEKC0NhcnRTZXJ2aWNlElkKEEFkZFByb2R1Y3RUb0NhcnQSIC5jYXJ0LnYxLkFkZFByb2R1Y3RUb0NhcnRSZXF1ZXN0GiEuY2FydC52MS5BZGRQcm9kdWN0VG9DYXJ0UmVzcG9uc2UiABJiChNSZW1vdmVQcm9kdWN0VG9DYXJ0EiMuY2FydC52MS5SZW1vdmVQcm9kdWN0VG9DYXJ0UmVxdWVzdBokLmNhcnQudjEuUmVtb3ZlUHJvZHVjdFRvQ2FydFJlc3BvbnNlIgBCjgEKC2NvbS5jYXJ0LnYxQglDYXJ0UHJvdG9QAVo3Z2l0aHViLmNvbS9sZW5zMDc3L2Vjb21tZXJjZS9iYWNrZW5kL2FwaS9jYXJ0L3YxO2NhcnR2MaICA0NYWKoCB0NhcnQuVjHKAgdDYXJ0XFYx4gITQ2FydFxWMVxHUEJNZXRhZGF0YeoCCENhcnQ6OlYxYgZwcm90bzM", [file_google_protobuf_timestamp, file_google_protobuf_struct, file_third_party_validate_validate]);
 
 /**
  * @generated from message cart.v1.AddProductToCartRequest
@@ -39,14 +40,45 @@ export type AddProductToCartRequest = Message<"cart.v1.AddProductToCartRequest">
   quantity: number;
 
   /**
-   * @generated from field: google.protobuf.Timestamp created_at = 5;
-   */
-  createdAt?: Timestamp;
-
-  /**
-   * @generated from field: bool selected = 6;
+   * 同步勾选状态, 多端同步
+   *
+   * @generated from field: bool selected = 5;
    */
   selected: boolean;
+
+  /**
+   * 商品快照, 避免商家修改商品
+   *
+   * @generated from field: string spu_name = 6;
+   */
+  spuName: string;
+
+  /**
+   * @generated from field: string sku_name = 7;
+   */
+  skuName: string;
+
+  /**
+   * @generated from field: double price = 8;
+   */
+  price: number;
+
+  /**
+   * @generated from field: google.protobuf.Struct sku_attributes = 9;
+   */
+  skuAttributes?: JsonObject;
+
+  /**
+   * 商品图片
+   *
+   * @generated from field: string sku_thumbnail_url = 10;
+   */
+  skuThumbnailUrl: string;
+
+  /**
+   * @generated from field: string status = 11;
+   */
+  status: string;
 };
 
 /**
@@ -61,34 +93,18 @@ export const AddProductToCartRequestSchema: GenMessage<AddProductToCartRequest> 
  */
 export type AddProductToCartResponse = Message<"cart.v1.AddProductToCartResponse"> & {
   /**
-   * @generated from field: uint64 spu_id = 1;
+   * 购物车当前商品总件数，方便前端直接刷新右上角小红点
+   *
+   * @generated from field: uint32 cart_total_quantity = 1;
    */
-  spuId: bigint;
+  cartTotalQuantity: number;
 
   /**
-   * @generated from field: uint64 sku_id = 2;
+   * 该商品在购物车中的唯一记录 ID，方便前端后续进行修改或删除
+   *
+   * @generated from field: uint64 cart_item_id = 2;
    */
-  skuId: bigint;
-
-  /**
-   * @generated from field: string merchant_id = 3;
-   */
-  merchantId: string;
-
-  /**
-   * @generated from field: uint32 quantity = 4;
-   */
-  quantity: number;
-
-  /**
-   * @generated from field: google.protobuf.Timestamp created_at = 5;
-   */
-  createdAt?: Timestamp;
-
-  /**
-   * @generated from field: bool selected = 6;
-   */
-  selected: boolean;
+  cartItemId: bigint;
 };
 
 /**
@@ -140,14 +156,18 @@ export const RemoveProductToCartRequestSchema: GenMessage<RemoveProductToCartReq
  */
 export type RemoveProductToCartResponse = Message<"cart.v1.RemoveProductToCartResponse"> & {
   /**
-   * @generated from field: string status = 1;
+   * 删除后，购物车剩下的商品总件数（用于刷新右上角小红点）
+   *
+   * @generated from field: uint32 cart_total_quantity = 1;
    */
-  status: string;
+  cartTotalQuantity: number;
 
   /**
-   * @generated from field: string message = 2;
+   * 购物车是否已经彻底空了（用于前端直接切换到“空购物车”占位图）
+   *
+   * @generated from field: bool is_cart_empty = 2;
    */
-  message: string;
+  isCartEmpty: boolean;
 };
 
 /**
