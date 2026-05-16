@@ -1,0 +1,17 @@
+# curl -v -X POST http://my.app.com/check.v1.CheckService/Ready
+#  --header 'Content-Type: application/json'
+#  --data-raw '{}'
+POST http://localhost:30005/inventory.v1.InventoryService/Reserve
+Content-Type: application/json
+
+{
+  "orderNo": "ORDER202602240001",
+  "merchantId": "8966c1f2-fcc2-44bc-84f5-9de615ff235f",
+  "items": [
+    {
+      "skuId": 10,
+      "warehouseId": "df0001",
+      "quantity": 5
+    }
+  ]
+}
