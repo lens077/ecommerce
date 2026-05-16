@@ -1,0 +1,49 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: example-deploy
+  labels:
+    app: example
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: example
+  template:
+    metadata:
+      name: example
+      labels:
+        app: example
+    spec:
+      containers:
+        - name: example
+          image: example:latest
+          imagePullPolicy: Always
+          env:
+            - name: SERVICE_NAME
+              value: org-service-v1
+            - name: CONSUL_ENABLED
+              value: "true"
+          ports:
+            - containerPort: 30001
+              protocol: TCP
+          resources:
+            requests:
+              cpu: 100m
+              memory: 128Mi
+            limits:
+              cpu: "1"
+              memory: 512Mi
+#          envFrom:
+#            - configMapRef:
+#                name: example-config
+          livenessProbe:
+            httpGet:
+              path: /healthz
+              port: 30001
+          readinessProbe:
+            httpGet:
+              path: /healthz
+              port: 30001
+      restartPolicy: Always
+      
