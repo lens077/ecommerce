@@ -19,10 +19,10 @@ import (
 var _ biz.SearchRepo = (*searchRepo)(nil)
 
 type searchRepo struct {
-	// queries *models.Queries
-	es  *elasticsearch.TypedClient
-	rdb *redis.Client
-	l   *zap.Logger
+	data *Data
+	es   *elasticsearch.TypedClient
+	rdb  *redis.Client
+	l    *zap.Logger
 }
 
 func NewSearchRepo(data *Data, logger *zap.Logger, es *elasticsearch.TypedClient) biz.SearchRepo {
@@ -53,7 +53,7 @@ func (u searchRepo) Search(ctx context.Context, req biz.SearchRequest) (*biz.Sea
 		},
 	}).Do(ctx)
 	if err != nil {
-		return nil, err
+		return nil, u.data.dbErrHandler.MustHandleError(err, biz.ErrNotFound)
 	}
 
 	bizProducts := make([]biz.Product, 0)

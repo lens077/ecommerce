@@ -8,6 +8,8 @@ import (
 	"net/http"
 	"time"
 
+	"github.com/lens077/ecommerce/backend/services/user/internal/pkg/dbutil"
+
 	"github.com/casdoor/casdoor-go-sdk/casdoorsdk"
 	"github.com/elastic/go-elasticsearch/v9"
 	"github.com/exaring/otelpgx"
@@ -33,12 +35,18 @@ var Module = fx.Module("data",
 )
 
 // Data 包含所有数据源的客户端
+type contextTxKey struct{}
+
+// Data 包含所有数据源的客户端
 type Data struct {
-	db   *pgxpool.Pool
-	rdb  *redis.Client
-	auth *casdoorsdk.Client
-	es   *elasticsearch.TypedClient
-	log  *zap.Logger
+	// db           *models.Queries
+	pgx          *pgxpool.Pool
+	dbErrHandler *dbutil.Handler
+	db           *pgxpool.Pool
+	rdb          *redis.Client
+	auth         *casdoorsdk.Client
+	es           *elasticsearch.TypedClient
+	log          *zap.Logger
 }
 
 // NewData 是 Data 的构造函数

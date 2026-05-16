@@ -2,16 +2,11 @@ package data
 
 import (
 	"context"
-	"errors"
 	"fmt"
 
-	"github.com/casdoor/casdoor-go-sdk/casdoorsdk"
-	"github.com/jackc/pgx/v5/pgconn"
 	"github.com/lens077/ecommerce/backend/constants"
 	"github.com/lens077/ecommerce/backend/services/order/internal/biz/domain"
-	"github.com/lens077/ecommerce/backend/services/order/internal/data/models"
 	"github.com/lens077/ecommerce/backend/services/order/internal/pkg/money"
-	"github.com/redis/go-redis/v9"
 	"go.uber.org/zap"
 )
 
@@ -19,25 +14,16 @@ var _ domain.OrderCommandRepo = (*orderCommandRepo)(nil)
 var _ domain.OrderQueryRepo = (*orderQueryRepo)(nil)
 
 type orderCommandRepo struct {
-	queries *models.Queries
-	rdb     *redis.Client
-	auth    *casdoorsdk.Client
-	log     *zap.SugaredLogger
+	data *Data
+	log  *zap.SugaredLogger
 }
 
 func (o orderCommandRepo) GetOrderByNo(ctx context.Context, orderNo string) (*domain.OrderRoot, error) {
 	o.log.Debugw("get order by no", "orderNo", orderNo)
-	order, err := o.queries.GetOrderByNo(ctx, orderNo)
+	db := o.data.DB(ctx)
+	order, err := db.GetOrderByNo(ctx, orderNo)
 	if err != nil {
-		if pgErr, ok := errors.AsType[*pgconn.PgError](err); ok {
-			switch pgErr.Code {
-			// case "42P01":
-			// 	return nil, domain.ErrOrderNotFound
-			default:
-				return nil, fmt.Errorf("databases error: %w", err)
-			}
-		}
-		return nil, err
+		return nil, o.data.dbErrHandler.MustHandleError(err, domain.ErrOrderNotFound)
 	}
 
 	totalAmount, err := money.NumericToFloat(order.TotalAmount)
@@ -110,10 +96,8 @@ func (o orderCommandRepo) SaveOrderLog(ctx context.Context, log *domain.OrderLog
 }
 
 type orderQueryRepo struct {
-	queries *models.Queries
-	rdb     *redis.Client
-	auth    *casdoorsdk.Client
-	log     *zap.SugaredLogger
+	data *Data
+	log  *zap.SugaredLogger
 }
 
 func (o orderQueryRepo) GetOrderGroupByNo(ctx context.Context, groupNo string) (*domain.OrderGroupRoot, error) {
@@ -123,17 +107,10 @@ func (o orderQueryRepo) GetOrderGroupByNo(ctx context.Context, groupNo string) (
 
 func (o orderQueryRepo) GetOrderByNo(ctx context.Context, orderNo string) (*domain.OrderDTO, error) {
 	o.log.Debugw("get order by no", "orderNo", orderNo)
-	order, err := o.queries.GetOrderByNo(ctx, orderNo)
+	db := o.data.DB(ctx)
+	order, err := db.GetOrderByNo(ctx, orderNo)
 	if err != nil {
-		if pgErr, ok := errors.AsType[*pgconn.PgError](err); ok {
-			switch pgErr.Code {
-			// case "42P01":
-			// 	return nil, domain.ErrOrderNotFound
-			default:
-				return nil, fmt.Errorf("databases error: %w", err)
-			}
-		}
-		return nil, err
+		return nil, o.data.dbErrHandler.MustHandleError(err, domain.ErrOrderNotFound)
 	}
 
 	totalAmount, err := money.NumericToFloat(order.TotalAmount)
@@ -197,16 +174,14 @@ func (o orderQueryRepo) GetOrdersByMerchantID(ctx context.Context, merchantID in
 
 func NewCommandOrderRepo(data *Data, logger *zap.Logger) domain.OrderCommandRepo {
 	return &orderCommandRepo{
-		queries: models.New(data.db),
-		rdb:     data.rdb,
-		log:     logger.Sugar(),
+		data: data,
+		log:  logger.Sugar(),
 	}
 }
 
 func NewQueryOrderRepo(data *Data, logger *zap.Logger) domain.OrderQueryRepo {
 	return &orderQueryRepo{
-		queries: models.New(data.db),
-		rdb:     data.rdb,
-		log:     logger.Sugar(),
+		data: data,
+		log:  logger.Sugar(),
 	}
 }
