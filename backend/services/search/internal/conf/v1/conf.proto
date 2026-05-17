@@ -3,6 +3,7 @@ syntax = "proto3";
 package conf.v1;
 
 import "third_party/validate/validate.proto";
+import "google/protobuf/duration.proto";
 
 option go_package = "github.com/lens077/ecommerce/backend/services/search/internal/conf/v1;confv1";
 
@@ -147,16 +148,20 @@ message Discovery {
     string scheme = 2;
     bool health_check = 3;
     Tls tls = 4;
-    Ttl ttl = 5;
+    Check check = 5;
 
     message Tls {
       bool enable = 1;
       bool insecure_skip_verify = 2;
       string ca_pem = 3;
     }
-    message Ttl {
-      string duration = 1;
-      uint64 ping_interval_seconds = 2;
+    message Check {
+      TTL ttl = 1;
+      string deregister_critical_service_after = 2; // 配置在检查失败后自动注销的时间,单位秒
+      message TTL {
+        string duration = 1;
+        google.protobuf.Duration ping_interval = 2;
+      }
     }
   }
   Consul consul = 1;

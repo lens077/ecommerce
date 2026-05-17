@@ -3,6 +3,7 @@ package config
 import (
 	"context"
 	"fmt"
+	"reflect"
 	"sync"
 
 	"github.com/hashicorp/consul/api"

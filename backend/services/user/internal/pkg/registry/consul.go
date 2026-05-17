@@ -181,9 +181,9 @@ func (r *ConsulRegistry) Register(conf *confv1.Bootstrap, info meta.AppInfo) err
 		},
 		Check: &api.AgentServiceCheck{
 			// 使用 TTL 替换 HTTP/TCP 检查
-			TTL: conf.Discovery.Consul.Ttl.Duration,
+			TTL: conf.Discovery.Consul.Check.Ttl.Duration,
 			// 配置在检查失败后自动注销
-			DeregisterCriticalServiceAfter: "10s",
+			DeregisterCriticalServiceAfter: conf.Discovery.Consul.Check.DeregisterCriticalServiceAfter,
 		},
 	}
 
@@ -199,7 +199,6 @@ func (r *ConsulRegistry) Register(conf *confv1.Bootstrap, info meta.AppInfo) err
 // TtlCheckPinger 负责定期向 Consul Agent 发送心跳信号
 func (r *ConsulRegistry) TtlCheckPinger(ctx context.Context, conf *confv1.Bootstrap) {
 	TtlPingInterval := conf.Discovery.Consul.Check.Ttl.PingInterval.AsDuration()
-	ticker := time.NewTicker(TtlPingInterval)
 	ticker := time.NewTicker(TtlPingInterval)
 	defer ticker.Stop()
 

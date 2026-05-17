@@ -6,6 +6,7 @@ import (
 	"flag"
 	"net/http"
 	"os"
+	"time"
 
 	"github.com/lens077/ecommerce/backend/services/order/constants"
 	"github.com/lens077/ecommerce/backend/services/order/internal/biz"
@@ -46,10 +47,8 @@ func main() {
 		*serviceVersion,
 	)
 
-	ctx := context.Background()
-
 	// 启动应用
-	if err := fxApp.Start(ctx); err != nil {
+	if err := fxApp.Start(context.Background()); err != nil {
 		zap.Error(err)
 		os.Exit(1)
 	}
@@ -58,7 +57,11 @@ func main() {
 	<-fxApp.Done()
 
 	// 优雅关闭
-	if err := fxApp.Stop(ctx); err != nil {
+	// 定制一个超时的 Context
+	// 确保所有微服务的 OnStop 钩子（包括 Consul 注销、HTTP 关闭、OTel 刷盘）必须在定义的值内收尾
+	stopCtx, cancel := context.WithTimeout(context.Background(), 7*time.Second)
+	defer cancel()
+	if err := fxApp.Stop(stopCtx); err != nil {
 		zap.Error(err)
 		os.Exit(1)
 	}
@@ -91,10 +94,11 @@ func NewApp(serviceName, deploymentMode, serviceVersion string) *fx.App {
 		}),
 
 		registry.Module, // 服务注册/发现
-		kafka.Module,   // Kafka 消息队列
+		kafka.Module,    // Kafka 消息队列
 
 		// 可观测性 - 根据配置决定是否启用
-		fx.Provide(func(conf *confv1.Bootstrap) *confv1.Observability {
+		fx.Provide(func() *confv1.Observability {
+			conf := config.GetConfig()
 			if conf.Observability == nil {
 				return &confv1.Observability{Enable: false}
 			}
@@ -125,13 +129,18 @@ func NewApp(serviceName, deploymentMode, serviceVersion string) *fx.App {
 
 		// 配置验证和初始化
 		fx.Invoke(
-			// 注册应用到注册中心
-			func(_ *registry.ConsulRegistry) {},
+			// 启动之前初始化 Consul 注册中心
+			func(reg *registry.ConsulRegistry, logger *zap.Logger) {
+				if reg != nil {
+					logger.Info("consul service discovery component lifecycle successfully initialized")
+				}
+			},
 
 			// 初始化并启动核心应用逻辑
-			func(lc fx.Lifecycle, conf *confv1.Bootstrap, logger *zap.Logger, srv *http.Server, otelShutdown func(context.Context) error) {
+			func(lc fx.Lifecycle, logger *zap.Logger, srv *http.Server, otelShutdown func(context.Context) error) {
 				lc.Append(fx.Hook{
 					// 启动服务时的操作
+					// 这里仅需要启动全局的服务, 例如HTTP, 对于模块, 在实现它们的地方添加OnStart即可
 					OnStart: func(ctx context.Context) error {
 						logger.Info("starting server",
 							zap.String("addr", srv.Addr),
@@ -145,6 +154,7 @@ func NewApp(serviceName, deploymentMode, serviceVersion string) *fx.App {
 						return nil
 					},
 					// 停止服务前的操作
+					// 这里仅需要停止全局的服务, 例如HTTP, 对于模块, 在实现它们的地方添加OnStop即可
 					OnStop: func(ctx context.Context) error {
 						logger.Info("stopping server...")
 						// 优雅关闭服务器

@@ -10,6 +10,7 @@ import (
 	_ "buf.build/gen/go/bufbuild/protovalidate/protocolbuffers/go/buf/validate"
 	protoreflect "google.golang.org/protobuf/reflect/protoreflect"
 	protoimpl "google.golang.org/protobuf/runtime/protoimpl"
+	durationpb "google.golang.org/protobuf/types/known/durationpb"
 	reflect "reflect"
 	sync "sync"
 	unsafe "unsafe"
@@ -1391,12 +1392,12 @@ func (x *Observability_Tls) GetInsecureSkipVerify() bool {
 }
 
 type Discovery_Consul struct {
-	state         protoimpl.MessageState `protogen:"open.v1"`
-	Addr          string                 `protobuf:"bytes,1,opt,name=addr,proto3" json:"addr,omitempty"`
-	Scheme        string                 `protobuf:"bytes,2,opt,name=scheme,proto3" json:"scheme,omitempty"`
-	HealthCheck   bool                   `protobuf:"varint,3,opt,name=health_check,json=healthCheck,proto3" json:"health_check,omitempty"`
-	Tls           *Discovery_Consul_Tls  `protobuf:"bytes,4,opt,name=tls,proto3" json:"tls,omitempty"`
-	Ttl           *Discovery_Consul_Ttl  `protobuf:"bytes,5,opt,name=ttl,proto3" json:"ttl,omitempty"`
+	state         protoimpl.MessageState  `protogen:"open.v1"`
+	Addr          string                  `protobuf:"bytes,1,opt,name=addr,proto3" json:"addr,omitempty"`
+	Scheme        string                  `protobuf:"bytes,2,opt,name=scheme,proto3" json:"scheme,omitempty"`
+	HealthCheck   bool                    `protobuf:"varint,3,opt,name=health_check,json=healthCheck,proto3" json:"health_check,omitempty"`
+	Tls           *Discovery_Consul_Tls   `protobuf:"bytes,4,opt,name=tls,proto3" json:"tls,omitempty"`
+	Check         *Discovery_Consul_Check `protobuf:"bytes,5,opt,name=check,proto3" json:"check,omitempty"`
 	unknownFields protoimpl.UnknownFields
 	sizeCache     protoimpl.SizeCache
 }
@@ -1459,9 +1460,9 @@ func (x *Discovery_Consul) GetTls() *Discovery_Consul_Tls {
 	return nil
 }
 
-func (x *Discovery_Consul) GetTtl() *Discovery_Consul_Ttl {
+func (x *Discovery_Consul) GetCheck() *Discovery_Consul_Check {
 	if x != nil {
-		return x.Ttl
+		return x.Check
 	}
 	return nil
 }
@@ -1526,28 +1527,28 @@ func (x *Discovery_Consul_Tls) GetCaPem() string {
 	return ""
 }
 
-type Discovery_Consul_Ttl struct {
-	state               protoimpl.MessageState `protogen:"open.v1"`
-	Duration            string                 `protobuf:"bytes,1,opt,name=duration,proto3" json:"duration,omitempty"`
-	PingIntervalSeconds uint64                 `protobuf:"varint,2,opt,name=ping_interval_seconds,json=pingIntervalSeconds,proto3" json:"ping_interval_seconds,omitempty"`
-	unknownFields       protoimpl.UnknownFields
-	sizeCache           protoimpl.SizeCache
+type Discovery_Consul_Check struct {
+	state                          protoimpl.MessageState      `protogen:"open.v1"`
+	Ttl                            *Discovery_Consul_Check_TTL `protobuf:"bytes,1,opt,name=ttl,proto3" json:"ttl,omitempty"`
+	DeregisterCriticalServiceAfter string                      `protobuf:"bytes,2,opt,name=deregister_critical_service_after,json=deregisterCriticalServiceAfter,proto3" json:"deregister_critical_service_after,omitempty"` // 配置在检查失败后自动注销的时间,单位秒
+	unknownFields                  protoimpl.UnknownFields
+	sizeCache                      protoimpl.SizeCache
 }
 
-func (x *Discovery_Consul_Ttl) Reset() {
-	*x = Discovery_Consul_Ttl{}
+func (x *Discovery_Consul_Check) Reset() {
+	*x = Discovery_Consul_Check{}
 	mi := &file_services_inventory_internal_conf_v1_conf_proto_msgTypes[24]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
 
-func (x *Discovery_Consul_Ttl) String() string {
+func (x *Discovery_Consul_Check) String() string {
 	return protoimpl.X.MessageStringOf(x)
 }
 
-func (*Discovery_Consul_Ttl) ProtoMessage() {}
+func (*Discovery_Consul_Check) ProtoMessage() {}
 
-func (x *Discovery_Consul_Ttl) ProtoReflect() protoreflect.Message {
+func (x *Discovery_Consul_Check) ProtoReflect() protoreflect.Message {
 	mi := &file_services_inventory_internal_conf_v1_conf_proto_msgTypes[24]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
@@ -1559,23 +1560,75 @@ func (x *Discovery_Consul_Ttl) ProtoReflect() protoreflect.Message {
 	return mi.MessageOf(x)
 }
 
-// Deprecated: Use Discovery_Consul_Ttl.ProtoReflect.Descriptor instead.
-func (*Discovery_Consul_Ttl) Descriptor() ([]byte, []int) {
+// Deprecated: Use Discovery_Consul_Check.ProtoReflect.Descriptor instead.
+func (*Discovery_Consul_Check) Descriptor() ([]byte, []int) {
 	return file_services_inventory_internal_conf_v1_conf_proto_rawDescGZIP(), []int{6, 0, 1}
 }
 
-func (x *Discovery_Consul_Ttl) GetDuration() string {
+func (x *Discovery_Consul_Check) GetTtl() *Discovery_Consul_Check_TTL {
+	if x != nil {
+		return x.Ttl
+	}
+	return nil
+}
+
+func (x *Discovery_Consul_Check) GetDeregisterCriticalServiceAfter() string {
+	if x != nil {
+		return x.DeregisterCriticalServiceAfter
+	}
+	return ""
+}
+
+type Discovery_Consul_Check_TTL struct {
+	state         protoimpl.MessageState `protogen:"open.v1"`
+	Duration      string                 `protobuf:"bytes,1,opt,name=duration,proto3" json:"duration,omitempty"`
+	PingInterval  *durationpb.Duration   `protobuf:"bytes,2,opt,name=ping_interval,json=pingInterval,proto3" json:"ping_interval,omitempty"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *Discovery_Consul_Check_TTL) Reset() {
+	*x = Discovery_Consul_Check_TTL{}
+	mi := &file_services_inventory_internal_conf_v1_conf_proto_msgTypes[25]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *Discovery_Consul_Check_TTL) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*Discovery_Consul_Check_TTL) ProtoMessage() {}
+
+func (x *Discovery_Consul_Check_TTL) ProtoReflect() protoreflect.Message {
+	mi := &file_services_inventory_internal_conf_v1_conf_proto_msgTypes[25]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use Discovery_Consul_Check_TTL.ProtoReflect.Descriptor instead.
+func (*Discovery_Consul_Check_TTL) Descriptor() ([]byte, []int) {
+	return file_services_inventory_internal_conf_v1_conf_proto_rawDescGZIP(), []int{6, 0, 1, 0}
+}
+
+func (x *Discovery_Consul_Check_TTL) GetDuration() string {
 	if x != nil {
 		return x.Duration
 	}
 	return ""
 }
 
-func (x *Discovery_Consul_Ttl) GetPingIntervalSeconds() uint64 {
+func (x *Discovery_Consul_Check_TTL) GetPingInterval() *durationpb.Duration {
 	if x != nil {
-		return x.PingIntervalSeconds
+		return x.PingInterval
 	}
-	return 0
+	return nil
 }
 
 type Search_ElasticSearch struct {
@@ -1590,7 +1643,7 @@ type Search_ElasticSearch struct {
 
 func (x *Search_ElasticSearch) Reset() {
 	*x = Search_ElasticSearch{}
-	mi := &file_services_inventory_internal_conf_v1_conf_proto_msgTypes[25]
+	mi := &file_services_inventory_internal_conf_v1_conf_proto_msgTypes[26]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -1602,7 +1655,7 @@ func (x *Search_ElasticSearch) String() string {
 func (*Search_ElasticSearch) ProtoMessage() {}
 
 func (x *Search_ElasticSearch) ProtoReflect() protoreflect.Message {
-	mi := &file_services_inventory_internal_conf_v1_conf_proto_msgTypes[25]
+	mi := &file_services_inventory_internal_conf_v1_conf_proto_msgTypes[26]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -1657,7 +1710,7 @@ type Search_ElasticSearch_Tls struct {
 
 func (x *Search_ElasticSearch_Tls) Reset() {
 	*x = Search_ElasticSearch_Tls{}
-	mi := &file_services_inventory_internal_conf_v1_conf_proto_msgTypes[26]
+	mi := &file_services_inventory_internal_conf_v1_conf_proto_msgTypes[27]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -1669,7 +1722,7 @@ func (x *Search_ElasticSearch_Tls) String() string {
 func (*Search_ElasticSearch_Tls) ProtoMessage() {}
 
 func (x *Search_ElasticSearch_Tls) ProtoReflect() protoreflect.Message {
-	mi := &file_services_inventory_internal_conf_v1_conf_proto_msgTypes[26]
+	mi := &file_services_inventory_internal_conf_v1_conf_proto_msgTypes[27]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -1710,7 +1763,7 @@ var File_services_inventory_internal_conf_v1_conf_proto protoreflect.FileDescrip
 
 const file_services_inventory_internal_conf_v1_conf_proto_rawDesc = "" +
 	"\n" +
-	".services/inventory/internal/conf/v1/conf.proto\x12\aconf.v1\x1a#third_party/validate/validate.proto\"\xeb\x02\n" +
+	".services/inventory/internal/conf/v1/conf.proto\x12\aconf.v1\x1a#third_party/validate/validate.proto\x1a\x1egoogle/protobuf/duration.proto\"\xeb\x02\n" +
 	"\tBootstrap\x12/\n" +
 	"\x06server\x18\x01 \x01(\v2\x0f.conf.v1.ServerB\x06\xbaH\x03\xc8\x01\x01R\x06server\x12)\n" +
 	"\x04data\x18\x02 \x01(\v2\r.conf.v1.DataB\x06\xbaH\x03\xc8\x01\x01R\x04data\x12)\n" +
@@ -1801,22 +1854,25 @@ const file_services_inventory_internal_conf_v1_conf_proto_rawDesc = "" +
 	"\x03Tls\x12\x16\n" +
 	"\x06enable\x18\x01 \x01(\bR\x06enable\x12\x15\n" +
 	"\x06ca_pem\x18\x02 \x01(\tR\x05caPem\x120\n" +
-	"\x14insecure_skip_verify\x18\x03 \x01(\bR\x12insecureSkipVerify\"\xb9\x03\n" +
+	"\x14insecure_skip_verify\x18\x03 \x01(\bR\x12insecureSkipVerify\"\xd7\x04\n" +
 	"\tDiscovery\x121\n" +
-	"\x06consul\x18\x01 \x01(\v2\x19.conf.v1.Discovery.ConsulR\x06consul\x1a\xf8\x02\n" +
+	"\x06consul\x18\x01 \x01(\v2\x19.conf.v1.Discovery.ConsulR\x06consul\x1a\x96\x04\n" +
 	"\x06Consul\x12\x12\n" +
 	"\x04addr\x18\x01 \x01(\tR\x04addr\x12\x16\n" +
 	"\x06scheme\x18\x02 \x01(\tR\x06scheme\x12!\n" +
 	"\fhealth_check\x18\x03 \x01(\bR\vhealthCheck\x12/\n" +
-	"\x03tls\x18\x04 \x01(\v2\x1d.conf.v1.Discovery.Consul.TlsR\x03tls\x12/\n" +
-	"\x03ttl\x18\x05 \x01(\v2\x1d.conf.v1.Discovery.Consul.TtlR\x03ttl\x1af\n" +
+	"\x03tls\x18\x04 \x01(\v2\x1d.conf.v1.Discovery.Consul.TlsR\x03tls\x125\n" +
+	"\x05check\x18\x05 \x01(\v2\x1f.conf.v1.Discovery.Consul.CheckR\x05check\x1af\n" +
 	"\x03Tls\x12\x16\n" +
 	"\x06enable\x18\x01 \x01(\bR\x06enable\x120\n" +
 	"\x14insecure_skip_verify\x18\x02 \x01(\bR\x12insecureSkipVerify\x12\x15\n" +
-	"\x06ca_pem\x18\x03 \x01(\tR\x05caPem\x1aU\n" +
-	"\x03Ttl\x12\x1a\n" +
-	"\bduration\x18\x01 \x01(\tR\bduration\x122\n" +
-	"\x15ping_interval_seconds\x18\x02 \x01(\x04R\x13pingIntervalSeconds\"\xd3\x02\n" +
+	"\x06ca_pem\x18\x03 \x01(\tR\x05caPem\x1a\xec\x01\n" +
+	"\x05Check\x125\n" +
+	"\x03ttl\x18\x01 \x01(\v2#.conf.v1.Discovery.Consul.Check.TTLR\x03ttl\x12I\n" +
+	"!deregister_critical_service_after\x18\x02 \x01(\tR\x1ederegisterCriticalServiceAfter\x1aa\n" +
+	"\x03TTL\x12\x1a\n" +
+	"\bduration\x18\x01 \x01(\tR\bduration\x12>\n" +
+	"\rping_interval\x18\x02 \x01(\v2\x19.google.protobuf.DurationR\fpingInterval\"\xd3\x02\n" +
 	"\x06Search\x12D\n" +
 	"\x0eelastic_search\x18\x01 \x01(\v2\x1d.conf.v1.Search.ElasticSearchR\relasticSearch\x1a\x82\x02\n" +
 	"\rElasticSearch\x12\x1c\n" +
@@ -1842,7 +1898,7 @@ func file_services_inventory_internal_conf_v1_conf_proto_rawDescGZIP() []byte {
 	return file_services_inventory_internal_conf_v1_conf_proto_rawDescData
 }
 
-var file_services_inventory_internal_conf_v1_conf_proto_msgTypes = make([]protoimpl.MessageInfo, 27)
+var file_services_inventory_internal_conf_v1_conf_proto_msgTypes = make([]protoimpl.MessageInfo, 28)
 var file_services_inventory_internal_conf_v1_conf_proto_goTypes = []any{
 	(*Bootstrap)(nil),              // 0: conf.v1.Bootstrap
 	(*Log)(nil),                    // 1: conf.v1.Log
@@ -1868,9 +1924,11 @@ var file_services_inventory_internal_conf_v1_conf_proto_goTypes = []any{
 	(*Observability_Tls)(nil),                   // 21: conf.v1.Observability.Tls
 	(*Discovery_Consul)(nil),                    // 22: conf.v1.Discovery.Consul
 	(*Discovery_Consul_Tls)(nil),                // 23: conf.v1.Discovery.Consul.Tls
-	(*Discovery_Consul_Ttl)(nil),                // 24: conf.v1.Discovery.Consul.Ttl
-	(*Search_ElasticSearch)(nil),                // 25: conf.v1.Search.ElasticSearch
-	(*Search_ElasticSearch_Tls)(nil),            // 26: conf.v1.Search.ElasticSearch.Tls
+	(*Discovery_Consul_Check)(nil),              // 24: conf.v1.Discovery.Consul.Check
+	(*Discovery_Consul_Check_TTL)(nil),          // 25: conf.v1.Discovery.Consul.Check.TTL
+	(*Search_ElasticSearch)(nil),                // 26: conf.v1.Search.ElasticSearch
+	(*Search_ElasticSearch_Tls)(nil),            // 27: conf.v1.Search.ElasticSearch.Tls
+	(*durationpb.Duration)(nil),                 // 28: google.protobuf.Duration
 }
 var file_services_inventory_internal_conf_v1_conf_proto_depIdxs = []int32{
 	2,  // 0: conf.v1.Bootstrap.server:type_name -> conf.v1.Server
@@ -1889,7 +1947,7 @@ var file_services_inventory_internal_conf_v1_conf_proto_depIdxs = []int32{
 	19, // 13: conf.v1.Observability.metric:type_name -> conf.v1.Observability.Metric
 	20, // 14: conf.v1.Observability.log:type_name -> conf.v1.Observability.Logging
 	22, // 15: conf.v1.Discovery.consul:type_name -> conf.v1.Discovery.Consul
-	25, // 16: conf.v1.Search.elastic_search:type_name -> conf.v1.Search.ElasticSearch
+	26, // 16: conf.v1.Search.elastic_search:type_name -> conf.v1.Search.ElasticSearch
 	12, // 17: conf.v1.Data.Database.postgres:type_name -> conf.v1.Data.Database.Postgres
 	15, // 18: conf.v1.Data.Cache.redis:type_name -> conf.v1.Data.Cache.Redis
 	13, // 19: conf.v1.Data.Database.Postgres.pool:type_name -> conf.v1.Data.Database.Postgres.DatabasePool
@@ -1899,13 +1957,15 @@ var file_services_inventory_internal_conf_v1_conf_proto_depIdxs = []int32{
 	21, // 23: conf.v1.Observability.Metric.tls:type_name -> conf.v1.Observability.Tls
 	21, // 24: conf.v1.Observability.Logging.tls:type_name -> conf.v1.Observability.Tls
 	23, // 25: conf.v1.Discovery.Consul.tls:type_name -> conf.v1.Discovery.Consul.Tls
-	24, // 26: conf.v1.Discovery.Consul.ttl:type_name -> conf.v1.Discovery.Consul.Ttl
-	26, // 27: conf.v1.Search.ElasticSearch.tls:type_name -> conf.v1.Search.ElasticSearch.Tls
-	28, // [28:28] is the sub-list for method output_type
-	28, // [28:28] is the sub-list for method input_type
-	28, // [28:28] is the sub-list for extension type_name
-	28, // [28:28] is the sub-list for extension extendee
-	0,  // [0:28] is the sub-list for field type_name
+	24, // 26: conf.v1.Discovery.Consul.check:type_name -> conf.v1.Discovery.Consul.Check
+	25, // 27: conf.v1.Discovery.Consul.Check.ttl:type_name -> conf.v1.Discovery.Consul.Check.TTL
+	28, // 28: conf.v1.Discovery.Consul.Check.TTL.ping_interval:type_name -> google.protobuf.Duration
+	27, // 29: conf.v1.Search.ElasticSearch.tls:type_name -> conf.v1.Search.ElasticSearch.Tls
+	30, // [30:30] is the sub-list for method output_type
+	30, // [30:30] is the sub-list for method input_type
+	30, // [30:30] is the sub-list for extension type_name
+	30, // [30:30] is the sub-list for extension extendee
+	0,  // [0:30] is the sub-list for field type_name
 }
 
 func init() { file_services_inventory_internal_conf_v1_conf_proto_init() }
@@ -1919,7 +1979,7 @@ func file_services_inventory_internal_conf_v1_conf_proto_init() {
 			GoPackagePath: reflect.TypeOf(x{}).PkgPath(),
 			RawDescriptor: unsafe.Slice(unsafe.StringData(file_services_inventory_internal_conf_v1_conf_proto_rawDesc), len(file_services_inventory_internal_conf_v1_conf_proto_rawDesc)),
 			NumEnums:      0,
-			NumMessages:   27,
+			NumMessages:   28,
 			NumExtensions: 0,
 			NumServices:   0,
 		},

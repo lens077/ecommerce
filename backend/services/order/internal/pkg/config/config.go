@@ -3,7 +3,9 @@ package config
 import (
 	"context"
 	"fmt"
+	"reflect"
 	"sync"
+	"time"
 
 	"github.com/hashicorp/consul/api"
 	"github.com/lens077/ecommerce/backend/services/order/constants"
@@ -12,6 +14,7 @@ import (
 	"github.com/mitchellh/mapstructure"
 	"github.com/spf13/viper"
 	"go.uber.org/fx"
+	"go.uber.org/zap"
 	"google.golang.org/protobuf/types/known/durationpb"
 )
 
@@ -21,7 +24,7 @@ var (
 
 	Module = fx.Module("config",
 		fx.Provide(
-			func(lc fx.Lifecycle) (*confv1.Bootstrap, error) {
+			func(lc fx.Lifecycle, log *zap.Logger) (*confv1.Bootstrap, error) {
 				// 创建一个可以取消的上下文，用于优雅关闭 Watch 协程
 				ctx, cancel := context.WithCancel(context.Background())
 
@@ -32,7 +35,7 @@ var (
 					},
 				})
 
-				bootstrap, err := Init(ctx)
+				bootstrap, err := Init(ctx, log)
 				if err != nil {
 					return nil, err
 				}
@@ -74,7 +77,6 @@ func decodeConfig(data map[string]any, target any) error {
 		// 利用 mapstructure.ComposeDecodeHookFunc 组合自定义 Hook
 		DecodeHook: mapstructure.ComposeDecodeHookFunc(
 			stringToProtoDurationHook,
-			// 可以在这里保留其他默认 Hook，比如 mapstructure.StringToTimeDurationHookFunc()
 		),
 		Result: target,
 	})
@@ -97,9 +99,11 @@ func updateConfig(newConfig map[string]any) {
 }
 
 // Init 初始化配置加载
-func Init(ctx context.Context) (*confv1.Bootstrap, error) {
+func Init(ctx context.Context, log *zap.Logger) (*confv1.Bootstrap, error) {
 	addr := env.GetEnvString(constants.EnvConsulAddr, constants.ConsulAddr)
 	path := env.GetEnvString(constants.EnvConsulPath, constants.ConsulPath)
+	log.Debug("start initialize config", zap.String("addr", addr), zap.String("path", path))
+
 	if path == "" {
 		return nil, fmt.Errorf("required env %s is missing", constants.EnvConsulPath)
 	}
@@ -109,7 +113,7 @@ func Init(ctx context.Context) (*confv1.Bootstrap, error) {
 	consulCfg.Token = env.GetEnvString(constants.EnvConsulToken, constants.ConsulToken)
 	consulCfg.Scheme = env.GetEnvString(constants.EnvConsulScheme, constants.ConsulScheme)
 
-	if consulCfg.Scheme == "https" {
+	if consulCfg.Scheme == constants.ConsulTlsScheme {
 		if env.GetEnvBool(constants.EnvConsulInsecureSkipVerify, constants.ConsulInsecureSkipVerify) {
 			consulCfg.TLSConfig.InsecureSkipVerify = true
 		} else {
@@ -121,16 +125,20 @@ func Init(ctx context.Context) (*confv1.Bootstrap, error) {
 		}
 	}
 
+	log.Debug("consulCfg:", zap.Any("consulCfg", consulCfg))
+
 	consulClient, err := api.NewClient(consulCfg)
 	if err != nil {
 		return nil, fmt.Errorf("initialize consul client failed: %v", err)
 	}
+	log.Debug("initialize consul client  successes")
 
-	// 2. 首次同步拉取配置
+	// 首次同步拉取配置
 	rawConfig, err := GetConfigFromConsul(consulClient, path)
 	if err != nil {
 		return nil, err
 	}
+	log.Debug("get config from consul")
 
 	localConf := &confv1.Bootstrap{}
 	if err := decodeConfig(rawConfig, localConf); err != nil {
@@ -140,8 +148,10 @@ func Init(ctx context.Context) (*confv1.Bootstrap, error) {
 	// 初始化全局变量
 	conf = localConf
 
-	// 启动后台监听 (集成重试与 Context)
-	WatchConsulConfig(ctx, consulClient, path, updateConfig)
+	// 启动后台监听
+	if err := WatchConsulConfig(ctx, consulCfg, path, updateConfig); err != nil {
+		return nil, fmt.Errorf("failed to start consul watch: %w", err)
+	}
 
 	return localConf, nil
 }

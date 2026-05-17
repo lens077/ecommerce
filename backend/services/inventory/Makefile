@@ -24,7 +24,7 @@ k8s-prod:
 
 .PHONY: dev
 dev:
-	CONSUL_ENABLED=false \
+	CONSUL_ENABLED=true \
 	CONSUL_ADDR=$(CONSUL_ADDR) \
 	CONSUL_PATH=ecommerce/inventory/dev.yml \
 	CONSUL_SCHEME=https \

@@ -44,10 +44,8 @@ func main() {
 		*serviceVersion,
 	)
 
-	ctx := context.Background()
-
 	// 启动应用
-	if err := fxApp.Start(ctx); err != nil {
+	if err := fxApp.Start(context.Background()); err != nil {
 		zap.Error(err)
 		os.Exit(1)
 	}
@@ -57,10 +55,9 @@ func main() {
 
 	// 优雅关闭
 	// 定制一个超时的 Context
-	// 确保所有微服务的 OnStop 钩子（包括 Consul 注销、HTTP 关闭、OTel 刷盘）必须在 定义的值内收尾
-	stopCtx, cancel := context.WithTimeout(context.Background(), 4*time.Second)
+	// 确保所有微服务的 OnStop 钩子（包括 Consul 注销、HTTP 关闭、OTel 刷盘）必须在定义的值内收尾
+	stopCtx, cancel := context.WithTimeout(context.Background(), 7*time.Second)
 	defer cancel()
-
 	if err := fxApp.Stop(stopCtx); err != nil {
 		zap.Error(err)
 		os.Exit(1)

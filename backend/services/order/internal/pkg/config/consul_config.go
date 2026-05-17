@@ -5,9 +5,9 @@ import (
 	"context"
 	"fmt"
 	"sync"
-	"time"
 
 	"github.com/hashicorp/consul/api"
+	"github.com/hashicorp/consul/api/watch" // 【新导入】Consul 官方提供的 Watch 包
 	"github.com/spf13/viper"
 	"go.uber.org/zap"
 )
@@ -43,60 +43,60 @@ func GetConfigFromConsul(client *api.Client, path string) (map[string]interface{
 	return parseYAMLToMap(pair.Value)
 }
 
-// WatchConsulConfig 监听配置变化
-// 增加了 context 支持，以便在应用关闭时能优雅退出协程
-func WatchConsulConfig(ctx context.Context, client *api.Client, path string, onChange func(map[string]interface{})) {
+// WatchConsulConfig 使用 Consul Agent 提供的 Watches 订阅机制监听配置变化
+func WatchConsulConfig(ctx context.Context, consulCfg *api.Config, path string, onChange func(map[string]interface{})) error {
+	// 1. 构造构建 Watch Plan 的参数，指定类型为 "key"
+	params := map[string]interface{}{
+		"type": "key",
+		"key":  path,
+	}
+
+	plan, err := watch.Parse(params)
+	if err != nil {
+		return fmt.Errorf("failed to parse watch plan: %w", err)
+	}
+
+	// 2. 注册数据变更时的回调函数（Handler）
+	// 当监听的 Key 发生变更，或者首次建立连接时，该函数会被触发
+	plan.Handler = func(idx uint64, raw interface{}) {
+		if raw == nil {
+			zap.L().Warn("config deleted in consul", zap.String("path", path))
+			return
+		}
+
+		// 断言为 *api.KVPair 类型
+		pair, ok := raw.(*api.KVPair)
+		if !ok || pair == nil {
+			zap.L().Error("watch returned unexpected data type", zap.String("path", path))
+			return
+		}
+
+		// 解析新配置
+		zap.L().Info("watch updated in consul", zap.String("path", path))
+		newSettings, err := parseYAMLToMap(pair.Value)
+		if err != nil {
+			zap.L().Error("failed to parse watched config", zap.Error(err))
+			return
+		}
+
+		// 触发外部业务逻辑（更新全局配置变量）
+		onChange(newSettings)
+	}
+
+	// 3. 在独立协程中运行 Watch Plan (内部自动处理长轮询与指数退避重试)
 	go func() {
-		kv := client.KV()
-		var lastIndex uint64
-
-		// 指数退避重试策略，防止 Consul 宕机时日志刷屏
-		backoff := time.Second
-
-		for {
-			select {
-			case <-ctx.Done():
-				return
-			default:
-				pair, meta, err := kv.Get(path, &api.QueryOptions{
-					WaitIndex: lastIndex,
-					WaitTime:  10 * time.Minute, // 使用较长的等待时间，减少无效轮询
-				})
-
-				if err != nil {
-					zap.L().Error("Consul watch error, retrying...", zap.String("path", path), zap.Error(err))
-					time.Sleep(backoff)
-					// 最大等待间隔 30s
-					if backoff < 30*time.Second {
-						backoff *= 2
-					}
-					continue
-				}
-
-				// 重置重试间隔
-				backoff = time.Second
-
-				// 只有当 Index 发生变化时才处理逻辑
-				if meta.LastIndex <= lastIndex {
-					continue
-				}
-				lastIndex = meta.LastIndex
-
-				if pair == nil {
-					zap.L().Warn("Config deleted in consul", zap.String("path", path))
-					continue
-				}
-
-				// 解析新配置
-				newSettings, err := parseYAMLToMap(pair.Value)
-				if err != nil {
-					zap.L().Error("Failed to parse watched config", zap.Error(err))
-					continue
-				}
-
-				// 触发外部业务逻辑
-				onChange(newSettings)
-			}
+		zap.L().Info("starting Consul config watch plan", zap.String("path", path))
+		if err := plan.RunWithConfig(consulCfg.Address, consulCfg); err != nil {
+			zap.L().Error("Consul watch plan exited with error", zap.Error(err))
 		}
 	}()
+
+	// 4. 监听 Context 状态，实现优雅退出
+	go func() {
+		<-ctx.Done()
+		plan.Stop() // 优雅停止订阅服务
+		zap.L().Info("consul watch plan stopped gracefully", zap.String("path", path))
+	}()
+
+	return nil
 }
