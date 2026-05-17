@@ -186,7 +186,6 @@ func (r *ConsulRegistry) Register() error {
 func (r *ConsulRegistry) TtlCheckPinger(ctx context.Context, conf *confv1.Bootstrap) {
 	TtlPingInterval := conf.Discovery.Consul.Check.Ttl.PingInterval.AsDuration()
 	ticker := time.NewTicker(TtlPingInterval)
-	ticker := time.NewTicker(TtlPingInterval)
 	defer ticker.Stop()
 
 	// Consul Agent 要求 CheckID 必须是 "service:<ID>" 的格式

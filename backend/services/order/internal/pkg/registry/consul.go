@@ -10,6 +10,7 @@ import (
 	"time"
 
 	"github.com/lens077/ecommerce/backend/services/order/constants"
+	"github.com/lens077/ecommerce/backend/services/order/internal/pkg/config"
 	"github.com/lens077/ecommerce/backend/services/order/internal/pkg/meta"
 
 	confv1 "github.com/lens077/ecommerce/backend/services/order/internal/conf/v1"
@@ -55,7 +56,8 @@ func WithTLS(insecureSkipVerify bool, caPem string) Option {
 var Module = fx.Module("registry",
 	fx.Provide(
 		// 提供 Consul 注册中心（支持优雅降级）
-		func(lc fx.Lifecycle, logger *zap.Logger, conf *confv1.Bootstrap, appInfo meta.AppInfo) (*ConsulRegistry, error) {
+		func(lc fx.Lifecycle, logger *zap.Logger, appInfo meta.AppInfo) (*ConsulRegistry, error) {
+			conf := config.GetConfig()
 			if os.Getenv(constants.EnvConsulEnabled) == "false" {
 				logger.Info("Consul disenable by environment variable EnvConsulEnabled=false")
 				return nil, nil
@@ -83,7 +85,7 @@ var Module = fx.Module("registry",
 			// 使用生命周期钩子自动注册、启动心跳和注销
 			lc.Append(fx.Hook{
 				OnStart: func(ctx context.Context) error {
-					if err := reg.Register(conf, appInfo); err != nil {
+					if err := reg.Register(appInfo); err != nil {
 						logger.Warn("failed to register with Consul, service discovery disabled", zap.Error(err))
 						return nil // 允许应用继续运行
 					}
@@ -116,7 +118,7 @@ func NewConsulRegistry(addr, ID, Name string, opts ...Option) (*ConsulRegistry, 
 		opt(o)
 	}
 
-	config := api.Config{
+	consulConfig := api.Config{
 		Address: addr,
 		Scheme:  o.scheme,
 		Transport: &http.Transport{
@@ -129,11 +131,11 @@ func NewConsulRegistry(addr, ID, Name string, opts ...Option) (*ConsulRegistry, 
 	}
 
 	if o.tlsConf != nil {
-		config.Scheme = constants.ConsulTlsScheme
-		config.TLSConfig = *o.tlsConf
+		consulConfig.Scheme = constants.ConsulTlsScheme
+		consulConfig.TLSConfig = *o.tlsConf
 	}
 
-	client, err := api.NewClient(&config)
+	client, err := api.NewClient(&consulConfig)
 	if err != nil {
 		return nil, err
 	}
@@ -148,7 +150,8 @@ func NewConsulRegistry(addr, ID, Name string, opts ...Option) (*ConsulRegistry, 
 }
 
 // Register 使用 TTL 健康检查注册服务
-func (r *ConsulRegistry) Register(conf *confv1.Bootstrap, info meta.AppInfo) error {
+func (r *ConsulRegistry) Register(info meta.AppInfo) error {
+	conf := config.GetConfig()
 	r.logger.Debug("registering service to Consul", zap.String("id", r.ID))
 	// 使用服务本身的地址和端口，而不是 Consul 的地址
 	host := info.Host
@@ -174,9 +177,9 @@ func (r *ConsulRegistry) Register(conf *confv1.Bootstrap, info meta.AppInfo) err
 		},
 		Check: &api.AgentServiceCheck{
 			// 使用 TTL 替换 HTTP/TCP 检查
-			TTL: conf.Discovery.Consul.Ttl.Duration,
+			TTL: conf.Discovery.Consul.Check.Ttl.Duration,
 			// 配置在检查失败后自动注销
-			DeregisterCriticalServiceAfter: "10s",
+			DeregisterCriticalServiceAfter: conf.Discovery.Consul.Check.DeregisterCriticalServiceAfter,
 		},
 	}
 	r.logger.Debug("service registration completed", zap.String("id", r.ID))
@@ -193,7 +196,6 @@ func (r *ConsulRegistry) Register(conf *confv1.Bootstrap, info meta.AppInfo) err
 // TtlCheckPinger 负责定期向 Consul Agent 发送心跳信号
 func (r *ConsulRegistry) TtlCheckPinger(ctx context.Context, conf *confv1.Bootstrap) {
 	TtlPingInterval := conf.Discovery.Consul.Check.Ttl.PingInterval.AsDuration()
-	ticker := time.NewTicker(TtlPingInterval)
 	ticker := time.NewTicker(TtlPingInterval)
 	defer ticker.Stop()
 

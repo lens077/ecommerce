@@ -6,6 +6,7 @@ import (
 	"flag"
 	"net/http"
 	"os"
+	"time"
 
 	"github.com/lens077/ecommerce/backend/constants"
 	"github.com/lens077/ecommerce/backend/services/inventory/internal/biz"
@@ -43,10 +44,8 @@ func main() {
 		*serviceVersion,
 	)
 
-	ctx := context.Background()
-
 	// 启动应用
-	if err := fxApp.Start(ctx); err != nil {
+	if err := fxApp.Start(context.Background()); err != nil {
 		zap.Error(err)
 		os.Exit(1)
 	}
@@ -55,7 +54,11 @@ func main() {
 	<-fxApp.Done()
 
 	// 优雅关闭
-	if err := fxApp.Stop(ctx); err != nil {
+	// 定制一个超时的 Context
+	// 确保所有微服务的 OnStop 钩子（包括 Consul 注销、HTTP 关闭、OTel 刷盘）必须在定义的值内收尾
+	stopCtx, cancel := context.WithTimeout(context.Background(), 7*time.Second)
+	defer cancel()
+	if err := fxApp.Stop(stopCtx); err != nil {
 		zap.Error(err)
 		os.Exit(1)
 	}
@@ -110,8 +113,12 @@ func NewApp(serviceName, deploymentMode, serviceVersion string) *fx.App {
 
 		// 配置验证和初始化
 		fx.Invoke(
-			// 注册应用到注册中心
-			func(_ *registry.ConsulRegistry) {},
+			// 启动之前初始化 Consul 注册中心
+			func(reg *registry.ConsulRegistry, logger *zap.Logger) {
+				if reg != nil {
+					logger.Info("consul service discovery component lifecycle successfully initialized")
+				}
+			},
 
 			// 初始化并启动核心应用逻辑
 			func(lc fx.Lifecycle, conf *confv1.Bootstrap, logger *zap.Logger, srv *http.Server, otelShutdown func(context.Context) error) {
