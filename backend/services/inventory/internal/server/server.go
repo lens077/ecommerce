@@ -4,7 +4,6 @@ import (
 	"context"
 	"encoding/json"
 	"net/http"
-	"time"
 
 	"connectrpc.com/connect"
 	connectcors "connectrpc.com/cors"
@@ -75,9 +74,9 @@ func NewHTTPServer(
 	server := &http.Server{
 		Addr:         cfg.Server.Addr,
 		Handler:      h2c.NewHandler(handlerChain, &http2.Server{}),
-		ReadTimeout:  10 * time.Second,
-		WriteTimeout: 10 * time.Second,
-		IdleTimeout:  30 * time.Second,
+		ReadTimeout:  cfg.Server.Http.ReadTimeout.AsDuration(),
+		WriteTimeout: cfg.Server.Http.WriteTimeout.AsDuration(),
+		IdleTimeout:  cfg.Server.Http.IdleTimeout.AsDuration(),
 		Protocols:    p,
 	}
 

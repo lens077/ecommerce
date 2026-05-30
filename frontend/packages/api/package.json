@@ -15,5 +15,8 @@
       "types": "./src/index.ts",
       "import": "./src/index.ts"
     }
+  },
+  "dependencies": {
+    "@ecommerce/utils": "workspace:*"
   }
 }

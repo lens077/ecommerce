@@ -8,26 +8,21 @@ import (
 	"os"
 	"time"
 
+	"github.com/google/uuid"
 	"github.com/lens077/ecommerce/backend/services/order/constants"
 	"github.com/lens077/ecommerce/backend/services/order/internal/biz"
 	"github.com/lens077/ecommerce/backend/services/order/internal/biz/domain/events"
-	"github.com/lens077/ecommerce/backend/services/order/internal/eventbus"
-	"github.com/lens077/ecommerce/backend/services/order/internal/pkg/env"
-	"github.com/lens077/ecommerce/backend/services/order/internal/pkg/kafka"
-	"github.com/lens077/ecommerce/backend/services/order/internal/pkg/meta"
-	"github.com/lens077/ecommerce/backend/services/order/internal/pkg/otel"
-	"go.uber.org/fx/fxevent"
-	"go.uber.org/zap/zapcore"
-
 	confv1 "github.com/lens077/ecommerce/backend/services/order/internal/conf/v1"
 	"github.com/lens077/ecommerce/backend/services/order/internal/data"
+	"github.com/lens077/ecommerce/backend/services/order/internal/eventbus"
 	"github.com/lens077/ecommerce/backend/services/order/internal/pkg/config"
+	"github.com/lens077/ecommerce/backend/services/order/internal/pkg/env"
 	logger "github.com/lens077/ecommerce/backend/services/order/internal/pkg/log"
+	"github.com/lens077/ecommerce/backend/services/order/internal/pkg/meta"
+	"github.com/lens077/ecommerce/backend/services/order/internal/pkg/otel"
 	"github.com/lens077/ecommerce/backend/services/order/internal/pkg/registry"
 	"github.com/lens077/ecommerce/backend/services/order/internal/server"
 	"github.com/lens077/ecommerce/backend/services/order/internal/service"
-
-	"github.com/google/uuid"
 	"go.uber.org/fx"
 	"go.uber.org/zap"
 )
@@ -82,19 +77,12 @@ func NewApp(serviceName, deploymentMode, serviceVersion string) *fx.App {
 	}
 
 	return fx.New(
-		logger.Module, // 日志
-		config.Module, // 配置
-		// 注入 FX 事件日志适配器
-		fx.WithLogger(func(log *zap.Logger) fxevent.Logger {
-			zlog := &fxevent.ZapLogger{Logger: log}
-			// 按需调整日志级别（可选）
-			zlog.UseLogLevel(zapcore.InfoLevel)    // 普通事件用 Info 级别
-			zlog.UseErrorLevel(zapcore.ErrorLevel) // 错误事件用 Error 级别
-			return zlog
-		}),
+		logger.Module, // 业务日志
+
+		config.Module,     // 配置
+		logger.FxLogger(), // Fx框架本身的日志控制器
 
 		registry.Module, // 服务注册/发现
-		kafka.Module,    // Kafka 消息队列
 
 		// 可观测性 - 根据配置决定是否启用
 		fx.Provide(func() *confv1.Observability {

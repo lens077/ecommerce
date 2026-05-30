@@ -1,7 +1,6 @@
 package data
 
 import (
-	"github.com/elastic/go-elasticsearch/v9"
 	"github.com/lens077/ecommerce/backend/services/cart/internal/biz"
 	"github.com/lens077/ecommerce/backend/services/cart/internal/data/models"
 	"github.com/lens077/ecommerce/backend/services/cart/internal/pkg/money"
@@ -17,7 +16,6 @@ var _ biz.CartRepo = (*cartRepo)(nil)
 
 type cartRepo struct {
 	queries *models.Queries
-	es      *elasticsearch.TypedClient
 	rdb     *redis.Client
 	log     *zap.Logger
 }
@@ -51,10 +49,9 @@ func (c cartRepo) AddProductToCart(ctx context.Context, req biz.AddProductToCart
 	}, nil
 }
 
-func NewCartRepo(data *Data, logger *zap.Logger, es *elasticsearch.TypedClient) biz.CartRepo {
+func NewCartRepo(data *Data, logger *zap.Logger) biz.CartRepo {
 	return &cartRepo{
 		queries: models.New(data.db),
-		es:      es,
 		rdb:     data.rdb,
 		log:     logger,
 	}

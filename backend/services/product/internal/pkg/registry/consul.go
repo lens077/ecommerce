@@ -192,7 +192,10 @@ func (r *ConsulRegistry) Register(conf *confv1.Bootstrap, info meta.AppInfo) err
 
 // TtlCheckPinger 负责定期向 Consul Agent 发送心跳信号
 func (r *ConsulRegistry) TtlCheckPinger(ctx context.Context, conf *confv1.Bootstrap) {
-	TtlPingInterval := conf.Discovery.Consul.Check.Ttl.PingInterval.AsDuration()
+	TtlPingInterval := 10 * time.Second // 默认值
+	if conf.Discovery != nil && conf.Discovery.Consul != nil && conf.Discovery.Consul.Check != nil && conf.Discovery.Consul.Check.Ttl != nil && conf.Discovery.Consul.Check.Ttl.PingInterval != nil {
+		TtlPingInterval = conf.Discovery.Consul.Check.Ttl.PingInterval.AsDuration()
+	}
 	ticker := time.NewTicker(TtlPingInterval)
 	defer ticker.Stop()
 

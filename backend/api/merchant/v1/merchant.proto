@@ -1,0 +1,108 @@
+syntax = "proto3";
+
+import "google/protobuf/timestamp.proto";
+import "third_party/validate/validate.proto";
+
+package merchant.v1;
+
+option go_package = "github.com/lens077/ecommerce/backend/api/merchant/v1;merchantv1";
+
+service MerchantService {
+  // 商家提交入驻申请
+  rpc SubmitApplication(SubmitApplicationRequest) returns (SubmitApplicationResponse){};
+
+  // 通过入驻申请（管理员操作）, 发送领域事件(创建商家账户、店铺、库存初始化等）
+  rpc ApproveApplication(ApproveApplicationRequest) returns (ApproveApplicationResponse){};
+
+  // 驳回入驻申请（管理员操作）, 发送领域事件(申请被驳回)
+  rpc RejectApplication(RejectApplicationRequest) returns (RejectApplicationResponse){};
+
+  // 查询入驻申请状态
+  rpc GetApplication(GetApplicationRequest) returns (GetApplicationResponse){};
+
+  // 激活商家
+  rpc ActivateMerchant(ActivateMerchantRequest) returns (ActivateMerchantResponse){};
+}
+
+// 商家入驻申请状态
+enum ApplicationStatus {
+  APPLICATION_STATUS_UNSPECIFIED = 0;  // 未指定（默认值，无效）
+  APPLICATION_STATUS_PENDING_REVIEW = 1;   // 待审核
+  APPLICATION_STATUS_APPROVED = 2;         // 已通过
+  APPLICATION_STATUS_REJECTED = 3;         // 已驳回
+  APPLICATION_STATUS_ACTIVATED = 4;        // 已激活（商家完成首次设置并激活店铺）
+}
+
+message SubmitApplicationRequest {
+  // 公司名称
+  string company_name = 1 [(buf.validate.field).string.min_len = 1];
+  // 统一社会信用代码
+  string credit_code = 2 [(buf.validate.field).string.min_len = 1];
+  // 法人姓名
+  string legal_person = 3 [(buf.validate.field).string.min_len = 1];
+  // 法人身份证号
+  string legal_person_id = 4 [(buf.validate.field).string.min_len = 1];
+  // 联系电话
+  string contact_phone = 5 [(buf.validate.field).string.min_len = 1];
+  // 营业执照图片URL
+  string business_license_url = 6;
+  // 法人身份证正面图片URL
+  string legal_person_id_front_url = 7;
+  // 法人身份证反面图片URL
+  string legal_person_id_back_url = 8;
+  // 申请经营类目ID列表
+  repeated int64 category_ids = 9;
+  // 备注
+  string remark = 10;
+}
+
+message SubmitApplicationResponse {
+  // 申请ID
+  string application_id = 1;
+  // 当前状态 (pending_review)
+  string status = 2;
+}
+
+message ApproveApplicationRequest {
+  // 申请ID
+  string application_id = 1 [(buf.validate.field).string.min_len = 1];
+  // 审核备注，可选
+  string audit_comment = 2;
+}
+
+message ApproveApplicationResponse {}
+
+message RejectApplicationRequest {
+  // 申请ID
+  string application_id = 1 [(buf.validate.field).string.min_len = 1];
+  // 驳回原因，必填
+  string reason = 2 [(buf.validate.field).string.min_len = 1];
+}
+
+message RejectApplicationResponse {}
+
+// 查询申请状态请求
+message GetApplicationRequest {
+  string application_id = 1;
+}
+
+message GetApplicationResponse {
+  string application_id = 1;
+  ApplicationStatus status = 2;
+  string company_name = 3;
+  string credit_code = 4;
+  string legal_person = 5;
+  string contact_phone = 6;
+  string reject_reason = 7;              // 仅当 status = REJECTED 时有值
+  google.protobuf.Timestamp submitted_at = 8;
+  google.protobuf.Timestamp reviewed_at = 9;
+}
+
+// 激活商家请求
+message ActivateMerchantRequest {
+  string merchant_id = 1 [(buf.validate.field).string.min_len = 1];
+  string shop_name = 2;
+  string shop_logo_url = 3;
+}
+
+message ActivateMerchantResponse {}
