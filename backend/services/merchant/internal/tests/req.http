@@ -1,0 +1,44 @@
+### healthz
+POST http://{{host}}:{{port}}/healthz
+Content-Type: application/json
+
+### k8s svc healthz
+POST http://{{k8s_host}}:{{port}}/healthz
+Content-Type: application/json
+
+### 网关
+POST http://{{k8s_gateway_host}}:{{k8s_gateway_port}}/search/search.v1.SearchService/Search
+Content-Type: application/json
+
+{"index": "ecommerce_products_spus", "name": "iphone"}
+
+### k8s网关
+POST http://{{k8s_gateway_host}}:{{k8s_gateway_port}}/search/search.v1.SearchService/Search
+Content-Type: application/json
+
+{"index": "ecommerce_products_spus", "name": "iphone"}
+
+### SubmitApplication
+POST http://{{host}}:{{port}}/merchant.v1.MerchantService/SubmitApplication
+Content-Type: application/json
+
+{
+  "company_name": "示例科技有限公司",
+  "credit_code": "91110108MA01XXXXXX",
+  "legal_person": "张三",
+  "legal_person_id": "11010119900307663X",
+  "contact_phone": "13812345678",
+  "business_license_url": "https://example.com/images/license.jpg",
+  "legal_person_id_front_url": "https://example.com/images/id_front.jpg",
+  "legal_person_id_back_url": "https://example.com/images/id_back.jpg",
+  "category_ids": [1001, 1002, 1003],
+  "remark": "加急处理"
+}
+
+### GetApplication
+POST http://{{host}}:{{port}}/merchant.v1.MerchantService/GetApplication
+Content-Type: application/json
+
+{
+  "applicationId": "019e7819-634d-791f-b823-c2374003d3a3"
+}

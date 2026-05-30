@@ -1,5 +1,5 @@
 server:
-  addr: "0.0.0.0:30000"
+  addr: "0.0.0.0:30001"
   timeout: 10
   cors:
     allowed_origins:
@@ -15,7 +15,7 @@ data:
       db_name: postgres
       tls:
         enable: true
-        ssl_mode: "verify-full"
+        ssl_mode: "verify-ca"
         ca_pem: ""
       timezone: "Asia/Shanghai"
       pool:
@@ -39,6 +39,17 @@ data:
       write_timeout: 3
       pool_size: 10
       min_idle_conns: 5
+log:
+  framework:
+    format: console
+    log_level: debug
+    error_level: error
+  application:
+    format: console
+    level: debug
+  elastic_search:
+    enable_request: true
+    enable_response: true
 
 observability:
   enable: false
@@ -82,13 +93,6 @@ search:
     username: elastic
     password: password
 
-log:
-  level: debug
-  format: console
-  es_log:
-    enable_request_log: true
-    enable_response_log: true
-
 auth:
   casdoor:
     endpoint: "http://localhost:8000"
@@ -97,3 +101,11 @@ auth:
     organization_name: "organization_name"
     application_name: "application_name"
     certificate: ""
+
+kafka:
+  brokers:
+    - "192.168.3.120:9092"
+  topic: "order-events"
+  batch_size: 1
+  batch_timeout_ms: 10
+  async: true

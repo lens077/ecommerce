@@ -34,7 +34,7 @@ catalog:
   react: latest
   react-dom: latest
   typescript: ^5
-  valtio: latest
+  valtio: ^2.3.2
   vite: npm:@voidzero-dev/vite-plus-core@latest
   vite-plus: ^0.1.16
   vitest: npm:@voidzero-dev/vite-plus-test@latest

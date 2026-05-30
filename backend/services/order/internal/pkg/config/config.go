@@ -14,7 +14,6 @@ import (
 	"github.com/mitchellh/mapstructure"
 	"github.com/spf13/viper"
 	"go.uber.org/fx"
-	"go.uber.org/zap"
 	"google.golang.org/protobuf/types/known/durationpb"
 )
 
@@ -24,8 +23,7 @@ var (
 
 	Module = fx.Module("config",
 		fx.Provide(
-			func(lc fx.Lifecycle, log *zap.Logger) (*confv1.Bootstrap, error) {
-				// 创建一个可以取消的上下文，用于优雅关闭 Watch 协程
+			func(lc fx.Lifecycle) (*confv1.Bootstrap, error) {
 				ctx, cancel := context.WithCancel(context.Background())
 
 				lc.Append(fx.Hook{
@@ -35,7 +33,7 @@ var (
 					},
 				})
 
-				bootstrap, err := Init(ctx, log)
+				bootstrap, err := Init(ctx)
 				if err != nil {
 					return nil, err
 				}
@@ -53,28 +51,23 @@ func decodeConfig(data map[string]any, target any) error {
 		v.Set(k, val)
 	}
 
-	// 解析 Protobuf Duration 的 StringToDurationHook
 	stringToProtoDurationHook := func(f reflect.Type, t reflect.Type, data any) (any, error) {
 		if f.Kind() != reflect.String {
 			return data, nil
 		}
-		// 判断目标类型是不是 *durationpb.Duration
 		if t != reflect.TypeOf(&durationpb.Duration{}) {
 			return data, nil
 		}
 
-		// 解析 "10s", "30s" 这种时间单位的字符串
 		d, err := time.ParseDuration(data.(string))
 		if err != nil {
 			return nil, err
 		}
-		// 映射回 Protobuf 的强类型对象
 		return durationpb.New(d), nil
 	}
 
 	decoder, err := mapstructure.NewDecoder(&mapstructure.DecoderConfig{
-		TagName: "json", // Protobuf 生成的结构体使用 json tag
-		// 利用 mapstructure.ComposeDecodeHookFunc 组合自定义 Hook
+		TagName: "json",
 		DecodeHook: mapstructure.ComposeDecodeHookFunc(
 			stringToProtoDurationHook,
 		),
@@ -86,23 +79,9 @@ func decodeConfig(data map[string]any, target any) error {
 	return decoder.Decode(v.AllSettings())
 }
 
-// updateConfig 线程安全地更新全局配置
-func updateConfig(newConfig map[string]any) {
-	newBootstrap := &confv1.Bootstrap{}
-	if err := decodeConfig(newConfig, newBootstrap); err != nil {
-		return
-	}
-
-	confMu.Lock()
-	conf = newBootstrap
-	confMu.Unlock()
-}
-
-// Init 初始化配置加载
-func Init(ctx context.Context, log *zap.Logger) (*confv1.Bootstrap, error) {
+func Init(ctx context.Context) (*confv1.Bootstrap, error) {
 	addr := env.GetEnvString(constants.EnvConsulAddr, constants.ConsulAddr)
 	path := env.GetEnvString(constants.EnvConsulPath, constants.ConsulPath)
-	log.Debug("start initialize config", zap.String("addr", addr), zap.String("path", path))
 
 	if path == "" {
 		return nil, fmt.Errorf("required env %s is missing", constants.EnvConsulPath)
@@ -125,38 +104,25 @@ func Init(ctx context.Context, log *zap.Logger) (*confv1.Bootstrap, error) {
 		}
 	}
 
-	log.Debug("consulCfg:", zap.Any("consulCfg", consulCfg))
-
 	consulClient, err := api.NewClient(consulCfg)
 	if err != nil {
 		return nil, fmt.Errorf("initialize consul client failed: %v", err)
 	}
-	log.Debug("initialize consul client  successes")
 
-	// 首次同步拉取配置
 	rawConfig, err := GetConfigFromConsul(consulClient, path)
 	if err != nil {
 		return nil, err
 	}
-	log.Debug("get config from consul")
 
 	localConf := &confv1.Bootstrap{}
 	if err := decodeConfig(rawConfig, localConf); err != nil {
 		return nil, err
 	}
 
-	// 初始化全局变量
 	conf = localConf
-
-	// 启动后台监听
-	if err := WatchConsulConfig(ctx, consulCfg, path, updateConfig); err != nil {
-		return nil, fmt.Errorf("failed to start consul watch: %w", err)
-	}
-
 	return localConf, nil
 }
 
-// GetConfig 线程安全地获取当前配置
 func GetConfig() *confv1.Bootstrap {
 	confMu.RLock()
 	defer confMu.RUnlock()

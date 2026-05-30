@@ -10,16 +10,13 @@ import (
 
 	"github.com/lens077/ecommerce/backend/services/cart/constants"
 	"github.com/lens077/ecommerce/backend/services/cart/internal/biz"
-	"github.com/lens077/ecommerce/backend/services/cart/internal/pkg/env"
-	"github.com/lens077/ecommerce/backend/services/cart/internal/pkg/meta"
-	"github.com/lens077/ecommerce/backend/services/cart/internal/pkg/otel"
-	"go.uber.org/fx/fxevent"
-	"go.uber.org/zap/zapcore"
-
 	confv1 "github.com/lens077/ecommerce/backend/services/cart/internal/conf/v1"
 	"github.com/lens077/ecommerce/backend/services/cart/internal/data"
 	"github.com/lens077/ecommerce/backend/services/cart/internal/pkg/config"
+	"github.com/lens077/ecommerce/backend/services/cart/internal/pkg/env"
 	logger "github.com/lens077/ecommerce/backend/services/cart/internal/pkg/log"
+	"github.com/lens077/ecommerce/backend/services/cart/internal/pkg/meta"
+	"github.com/lens077/ecommerce/backend/services/cart/internal/pkg/otel"
 	"github.com/lens077/ecommerce/backend/services/cart/internal/pkg/registry"
 	"github.com/lens077/ecommerce/backend/services/cart/internal/server"
 	"github.com/lens077/ecommerce/backend/services/cart/internal/service"
@@ -80,16 +77,9 @@ func NewApp(serviceName, deploymentMode, serviceVersion string) *fx.App {
 
 	return fx.New(
 		// 基础模块
-		logger.Module, // 日志
-		config.Module, // 配置
-		// 注入 FX 事件日志适配器
-		fx.WithLogger(func(log *zap.Logger) fxevent.Logger {
-			zlog := &fxevent.ZapLogger{Logger: log}
-			// 按需调整日志级别（可选）
-			zlog.UseLogLevel(zapcore.InfoLevel)    // 普通事件用 Info 级别
-			zlog.UseErrorLevel(zapcore.ErrorLevel) // 错误事件用 Error 级别
-			return zlog
-		}),
+		logger.Module,     // 日志
+		config.Module,     // 配置
+		logger.FxLogger(), // Fx框架本身的日志控制器
 
 		registry.Module, // 服务注册/发现
 
@@ -134,10 +124,6 @@ func NewApp(serviceName, deploymentMode, serviceVersion string) *fx.App {
 						}
 						// 检查缓存
 						if err := d.CheckCache(ctx); err != nil {
-							return err
-						}
-						// 检查 Elasticsearch
-						if err := d.CheckElasticSearch(ctx); err != nil {
 							return err
 						}
 

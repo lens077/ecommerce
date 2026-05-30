@@ -15,3 +15,7 @@ Content-Type: application/json
     }
   ]
 }
+
+###
+POST http://localhost:30005/healthz
+Content-Type: application/json

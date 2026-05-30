@@ -21,6 +21,7 @@ import (
 )
 
 //	TtlDuration 定义了 Consul Agent 期望的心跳时间间隔。
+//
 // 建议：TTL 持续时间（如 15s）应比心跳间隔（如 5s）长，以提供冗余。
 const (
 	TtlDuration     = "30s"
@@ -184,7 +185,10 @@ func (r *ConsulRegistry) Register() error {
 
 // TtlCheckPinger 负责定期向 Consul Agent 发送心跳信号
 func (r *ConsulRegistry) TtlCheckPinger(ctx context.Context, conf *confv1.Bootstrap) {
-	TtlPingInterval := conf.Discovery.Consul.Check.Ttl.PingInterval.AsDuration()
+	TtlPingInterval := 10 * time.Second // 默认值
+	if conf.Discovery != nil && conf.Discovery.Consul != nil && conf.Discovery.Consul.Check != nil && conf.Discovery.Consul.Check.Ttl != nil && conf.Discovery.Consul.Check.Ttl.PingInterval != nil {
+		TtlPingInterval = conf.Discovery.Consul.Check.Ttl.PingInterval.AsDuration()
+	}
 	ticker := time.NewTicker(TtlPingInterval)
 	defer ticker.Stop()
 
