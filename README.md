@@ -5,6 +5,11 @@
 B2B2C 平台型电商系统完整架构设计方案
 旨在打造高可用、易扩展、符合工程规范的中大型电商分布式架构:
 
+## 开发
+### 推送
+- 推送到 gateway 单独仓库 ： `git subtree push --prefix=gateway gateway main`
+- 同步到主仓库 ： `git push main main`
+
 ## 技术栈集成架构设计
 
 ### 核心技术栈兼容性与落地设计

@@ -21,8 +21,23 @@ type merchantRepo struct {
 }
 
 func (m *merchantRepo) ApproveApplication(ctx context.Context, req *biz.ApproveApplicationRequest) (*biz.ApproveApplicationResponse, error) {
-	// TODO implement me
-	panic("implement me")
+	err := m.queries.ApproveApplication(ctx, models.ApproveApplicationParams{
+		Status:       string(constants.ApplicationStatusApproved),
+		AuditComment: &req.AuditComment,
+		ReviewedAt: pgtype.Timestamptz{
+			Time:  time.Now(),
+			Valid: true,
+		},
+		UpdatedAt: pgtype.Timestamptz{
+			Time:  time.Now(),
+			Valid: true,
+		},
+	})
+	if err != nil {
+		return nil, err
+	}
+
+	return &biz.ApproveApplicationResponse{}, nil
 }
 
 func (m *merchantRepo) RejectApplication(ctx context.Context, req *biz.RejectApplicationRequest) (*biz.RejectApplicationResponse, error) {
@@ -76,7 +91,8 @@ func (m *merchantRepo) SubmitApplication(ctx context.Context, req *biz.SubmitApp
 		LegalPersonIDBackUrl:  &req.LegalPersonIdBackUrl,
 		CategoryIds:           req.CategoryIds,
 		ReviewedAt: pgtype.Timestamptz{
-			Time: time.Now(),
+			Time:  time.Now(),
+			Valid: true,
 		},
 		Remark: &req.Remark,
 	})
