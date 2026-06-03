@@ -9,6 +9,14 @@ import (
 )
 
 type Querier interface {
+	//ApproveApplication
+	//
+	//  UPDATE merchants.merchant_application
+	//  SET status        = $1,
+	//      audit_comment = $2,
+	//      reviewed_at   = $3,
+	//      updated_at    = $4
+	ApproveApplication(ctx context.Context, arg ApproveApplicationParams) error
 	//GetApplication
 	//
 	//  SELECT id, application_id, company_name, credit_code, legal_person, legal_person_id, contact_phone, business_license_url, legal_person_id_front_url, legal_person_id_back_url, category_ids, status, reject_reason, audit_comment, submitted_at, reviewed_at, remark, created_at, updated_at

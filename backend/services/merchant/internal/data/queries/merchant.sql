@@ -19,3 +19,10 @@ VALUES (@application_id,
 SELECT *
 FROM merchants.merchant_application
 WHERE application_id = @application_id;
+
+-- name: ApproveApplication :exec
+UPDATE merchants.merchant_application
+SET status        = @status,
+    audit_comment = @audit_comment,
+    reviewed_at   = @reviewed_at,
+    updated_at    = @updated_at;

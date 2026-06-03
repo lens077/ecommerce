@@ -32,6 +32,8 @@ type (
 )
 type (
 	ApproveApplicationRequest struct {
+		AuditComment  string
+		ApplicationId string
 	}
 	ApproveApplicationResponse struct {
 	}

@@ -40,8 +40,18 @@ func (s *MerchantService) SubmitApplication(ctx context.Context, c *connect.Requ
 }
 
 func (s *MerchantService) ApproveApplication(ctx context.Context, c *connect.Request[v1.ApproveApplicationRequest]) (*connect.Response[v1.ApproveApplicationResponse], error) {
-	// TODO implement me
-	panic("implement me")
+	req := c.Msg
+	_, err := s.uc.ApproveApplication(ctx, &biz.ApproveApplicationRequest{
+		AuditComment:  req.AuditComment,
+		ApplicationId: req.ApplicationId,
+	})
+	if err != nil {
+		return nil, err
+	}
+
+	response := &v1.ApproveApplicationResponse{}
+
+	return connect.NewResponse(response), nil
 }
 
 func (s *MerchantService) RejectApplication(ctx context.Context, c *connect.Request[v1.RejectApplicationRequest]) (*connect.Response[v1.RejectApplicationResponse], error) {

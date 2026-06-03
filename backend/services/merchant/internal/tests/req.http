@@ -7,7 +7,7 @@ POST http://{{k8s_host}}:{{port}}/healthz
 Content-Type: application/json
 
 ### 网关
-POST http://{{k8s_gateway_host}}:{{k8s_gateway_port}}/search/search.v1.SearchService/Search
+POST http://{{gateway_host}}:{{gateway_port}}/search/search.v1.SearchService/Search
 Content-Type: application/json
 
 {"index": "ecommerce_products_spus", "name": "iphone"}
@@ -41,4 +41,24 @@ Content-Type: application/json
 
 {
   "applicationId": "019e7819-634d-791f-b823-c2374003d3a3"
+}
+
+### ApproveApplication
+POST http://{{host}}:{{port}}/merchant.v1.MerchantService/ApproveApplication
+Content-Type: application/json
+Authorization: Bearer ***REMOVED-JWT***
+
+{
+  "applicationId": "019e7819-634d-791f-b823-c2374003d3a3",
+  "auditComment": "Approve"
+}
+
+### Gateway ApproveApplication
+POST http://{{gateway_host}}:{{gateway_port}}/merchant/merchant.v1.MerchantService/ApproveApplication
+Content-Type: application/json
+Authorization: Bearer ***REMOVED-JWT***
+
+{
+  "applicationId": "019e7819-634d-791f-b823-c2374003d3a3",
+  "auditComment": "Approve"
 }
