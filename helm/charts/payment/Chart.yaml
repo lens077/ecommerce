@@ -1,0 +1,9 @@
+apiVersion: v2
+appVersion: "1.16.0"
+version: 0.1.0
+name: payment
+
+dependencies:
+  - name: library
+    version: 0.1.0
+    repository: "file://../../library"

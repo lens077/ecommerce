@@ -9,9 +9,10 @@ service:
   port: 30001
   targetPort: 30001
 environment:
+  SERVICE_NAME: search-product-v1
   CONSUL_ENABLED: true
-  CONSUL_ADDR: consul.sumery.com
-  CONSUL_PATH: ecommerce/user/dev.yml
+  CONSUL_ADDR: 192.168.3.112:8500
+  CONSUL_PATH: ecommerce/search/dev.yml
   CONSUL_SCHEME: https
   CONSUL_INSECURE_SKIP_VERIFY: true
 autoscaling:
