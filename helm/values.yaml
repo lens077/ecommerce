@@ -1,6 +1,5 @@
 global:
   registry: "ccr.ccs.tencentyun.com"
-  namespace: "ecommerce"
 
 search:
   enabled: true
@@ -52,7 +51,7 @@ search:
       memory: "256Mi"
 
 address:
-  enabled: true
+  enabled: false
   replicaCount: 1
   image:
     repository: "sumery/address"
@@ -63,8 +62,8 @@ address:
     ports:
       http:
         enabled: true
-        port: 30003
-        targetPort: 30003
+        port: 30009
+        targetPort: 30009
       grpc:
         enabled: false
         port: 30004
@@ -101,7 +100,7 @@ address:
       memory: "256Mi"
 
 cart:
-  enabled: true
+  enabled: false
   replicaCount: 1
   image:
     repository: "sumery/cart"
@@ -150,7 +149,7 @@ cart:
       memory: "256Mi"
 
 inventory:
-  enabled: true
+  enabled: false
   replicaCount: 1
   image:
     repository: "sumery/inventory"
@@ -199,7 +198,7 @@ inventory:
       memory: "256Mi"
 
 merchant:
-  enabled: true
+  enabled: false
   replicaCount: 1
   image:
     repository: "sumery/merchant"
@@ -248,7 +247,7 @@ merchant:
       memory: "256Mi"
 
 order:
-  enabled: true
+  enabled: false
   replicaCount: 1
   image:
     repository: "sumery/order"
@@ -267,7 +266,7 @@ order:
         targetPort: 30012
   env:
     - name: SERVICE_NAME
-      value: "order-v1"
+      value: "order-service-v1"
     - name: CONSUL_ENABLED
       value: "true"
     - name: CONSUL_ADDR
@@ -297,7 +296,7 @@ order:
       memory: "256Mi"
 
 payment:
-  enabled: true
+  enabled: false
   replicaCount: 1
   image:
     repository: "sumery/payment"
@@ -308,15 +307,15 @@ payment:
     ports:
       http:
         enabled: true
-        port: 30013
-        targetPort: 30013
+        port: 30008
+        targetPort: 30008
       grpc:
         enabled: false
         port: 30014
         targetPort: 30014
   env:
     - name: SERVICE_NAME
-      value: "payment-v1"
+      value: "payment-service-v1"
     - name: CONSUL_ENABLED
       value: "true"
     - name: CONSUL_ADDR

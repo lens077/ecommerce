@@ -1,6 +1,9 @@
 server:
-  addr: "0.0.0.0:30001"
-  timeout: 10
+  addr: "0.0.0.0:30002"
+  http:
+    read_timeout: "5s"
+    write_timeout: "5s"
+    idle_timeout: "30s"
   cors:
     allowed_origins:
       - http://localhost:3000
@@ -8,33 +11,25 @@ server:
 data:
   database:
     postgres:
-      host: postgres-postgresql.postgres.svc
+      host: postgres-postgresql.postgres.svc:5432
       port: 5432
       user: "postgres"
       password: "msdnmm"
-      db_name: "postgres"
+      db_name: "ecommerce"
       tls:
         enable: true
-        ssl_mode: "verify-full"
+        ssl_mode: "verify-ca"
         ca_pem: |-
           -----BEGIN CERTIFICATE-----
-          MIIDGzCCAgOgAwIBAgIQNe2bhLliexvL4/8S/r8aDDANBgkqhkiG9w0BAQsFADAY
-          MRYwFAYDVQQDEw1wb3N0Z3Jlc3FsLWNhMB4XDTI2MDQyODE1MDg1M1oXDTI3MDQy
-          ODE1MDg1M1owGDEWMBQGA1UEAxMNcG9zdGdyZXNxbC1jYTCCASIwDQYJKoZIhvcN
-          AQEBBQADggEPADCCAQoCggEBALCwEfRhVLEVDRbfL3zcRIJdwgo0FvyYu3y7H0N6
-          41jezBahW7JcYbetmkzEjiCFEJKXAWBgEfmKuoqp9ZrEEMqT77D7bbv0QxlhB0aD
-          37aODmbB1wwKLnUkirbIc4UTb/ixnNXHZ8js6n7F670AuBtEcCC/w08ClfZq6kw2
-          poqRctuGyOCbZ4Jo14AJzuEs+aQrnICmIuW1V4AvzUeCrMpWFwDQd7M6ujS+4sq2
-          Gu/DKpQra938x1ueqMFLq2pGCnR5+v8+/h14LPSTY68dqZk7yL8Kc1j9cWjfShFY
-          nfBB0PuYl42CdoY1aZ80kl3AnXa22uHeA71zRhMp5qlbFL8CAwEAAaNhMF8wDgYD
-          VR0PAQH/BAQDAgKkMB0GA1UdJQQWMBQGCCsGAQUFBwMBBggrBgEFBQcDAjAPBgNV
-          HRMBAf8EBTADAQH/MB0GA1UdDgQWBBSod8zyZgXuH84q2AEcL7ID/psQ/TANBgkq
-          hkiG9w0BAQsFAAOCAQEATEnqkxTVYlf/Od1m+gsTV44SjpP/Vqb1Gq+VaTAHmTk1
-          WS4mFZMH3T70hSC7nHowtn+hmclm8J8jIfh80MeADVkOTGwvGnZECxlj6hTy7N4w
-          9BZcws4QJio+L3H15PAGSSJIOkyOmhes2cdCCXGUmojXZJAYm0Q2DDryNkJGaENF
-          fzx83Xpnxa8Ui6jLyPk3mR2ojeu14w5iaC6mSCy+n9DEkfbuu1zvymE/+ldU6jrH
-          x6ERRx+vNAiELnjGVb8vF+LfMyFEXvrR7U/Um2lhrYbqZr2uAUWZ+xnRcrNGRzLc
-          7gz2cFAMAGicJlXeUKuk0k4C3uWERXiVFEqblH/YzQ==
+          MIIBjDCCATKgAwIBAgIUaNdxpMNf4iCrAKXdrVj8Hsq4XzkwCgYIKoZIzj0EAwIw
+          JDEiMCAGA1UEAxMZcG9zdGdyZXMtaW50ZXJuYWwtcm9vdC1jYTAeFw0yNjA2MDcx
+          OTUzNDNaFw0yNjA5MDUxOTUzNDNaMCQxIjAgBgNVBAMTGXBvc3RncmVzLWludGVy
+          bmFsLXJvb3QtY2EwWTATBgcqhkjOPQIBBggqhkjOPQMBBwNCAAQYN9O2GKdpGy7s
+          jxOKGiF/TjhKrtbjIsVcJh7GfoDhcM+lHjk0D3z/kKixLKYK0aXYgKkp+T+wkOs4
+          x1I04L1Yo0IwQDAOBgNVHQ8BAf8EBAMCAqQwDwYDVR0TAQH/BAUwAwEB/zAdBgNV
+          HQ4EFgQUjEN67yoT1WT7e4/y+3oMkJF0QZ8wCgYIKoZIzj0EAwIDSAAwRQIgPmtf
+          VtpWRpxxkq6nEghEl70FJsQIinpL7Gu8wzTbhc4CIQCSPFuOq+O9KTXcZdGfrFib
+          /wWaI3E4hpJ3a+wLaGJY0Q==
           -----END CERTIFICATE-----
       timezone: "Asia/Shanghai"
       pool:
@@ -44,8 +39,8 @@ data:
         max_conn_idle_time: 300
   cache:
     redis:
-      host: "dragonfly.dragonfly.svc"
-      port: 6379
+      host: dragonfly.dragonfly.svc
+      port: 443
       tls:
         enable: true
         insecure_skip_verify: true
@@ -78,38 +73,50 @@ data:
       pool_size: 10
       min_idle_conns: 5
 
+log:
+  framework:
+    format: console
+    log_level: debug
+    error_level: error
+  application:
+    format: console
+    level: debug
+  elastic_search:
+    enable_request: true
+    enable_response: true
+
 observability:
   enable: true
   trace:
-    endpoint: otel-collector.observability.svc:4318
+    endpoint: otlp-http.app.com:443
     tls:
-      enable: false
+      enable: true
       insecure_skip_verify: true
       ca_pem: ""
   metric:
-    endpoint: otel-collector.observability.svc:4318
+    endpoint: otlp-http.app.com:443
     tls:
-      enable: false
+      enable: true
       insecure_skip_verify: true
       ca_pem: ""
   log:
-    endpoint: otel-collector.observability.svc:4318
+    endpoint: otlp-http.app.com:443
     tls:
-      enable: false
+      enable: true
       insecure_skip_verify: true
       ca_pem: ""
 
 discovery:
   consul:
     #addr: apikv.com:8500
-    addr: consul-server.consul.svc:8501
+    addr: consul.app.com:443
     health_check: true
     scheme: https
     ttl:
       # Consul Agent 期望的心跳时间间隔
       duration: "30s"
-      # 单位: 秒
-      ping_interval_seconds: 10
+      # 单位: 毫秒
+      ping_interval: 1000000000
     tls:
       enable: true
       insecure_skip_verify: true
@@ -128,26 +135,13 @@ discovery:
 search:
   elastic_search:
     addresses:
-      - https://es.sumery.com
+      - https://es.app.com
     username: elastic
     password: XwjLbwoaCLvuJ7PwaAWtBkNO
     tls:
       enable: true
       insecure_skip_verify: true
       ca_pem: ""
-
-log:
-  framework:
-    format: console
-    log_level: debug
-    error_level: error
-  application:
-    format: console
-    level: debug
-  elastic_search:
-    enable_request: true
-    enable_response: true
-
 
 auth:
   casdoor:
