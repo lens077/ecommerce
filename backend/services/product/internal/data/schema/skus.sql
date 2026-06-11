@@ -15,7 +15,7 @@ CREATE TABLE IF NOT EXISTS skus
     id             BIGSERIAL PRIMARY KEY,
     sku_code       VARCHAR(64)      NOT NULL UNIQUE,                 -- SKU编码，如 iphone15-pro-black-256
     spu_id         BIGINT           NOT NULL,                        -- SPU的id,方便集合查询
-    merchant_id    BIGINT           NOT NULL,                        -- 商家ID
+    merchant_id    UUID           NOT NULL,                        -- 商家ID
     price          DECIMAL(10, 2)   NOT NULL,                        -- 销售价格
     cost_price     DECIMAL(10, 2)   NOT NULL,                        -- 成本价，由采购/商家填写，用于后续的分析
     stock_quantity INTEGER          NOT NULL DEFAULT 0,              -- 库存数量

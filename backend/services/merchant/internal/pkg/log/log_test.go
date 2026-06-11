@@ -3,7 +3,7 @@ package log
 import (
 	"testing"
 
-	"github.com/lens077/ecommerce/backend/services/merchant/internal/constants"
+	"github.com/lens077/ecommerce/backend/services/merchant/constants"
 	"github.com/lens077/ecommerce/backend/services/merchant/internal/pkg/meta"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/suite"

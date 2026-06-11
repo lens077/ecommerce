@@ -1,3 +1,4 @@
+CREATE SCHEMA IF NOT EXISTS products;
 SET search_path TO products;
 
 --  销量明细表
@@ -5,7 +6,7 @@ CREATE TABLE IF NOT EXISTS products.sale_detail
 (
     id           BIGINT PRIMARY KEY,
     order_no     VARCHAR(64)    NOT NULL, -- 订单号
-    merchant_id  BIGINT         NOT NULL, -- 商家ID
+    merchant_id  UUID           NOT NULL, -- 商家ID
     spu_id       BIGINT         NOT NULL,
     sku_id       BIGINT         NOT NULL,
     category_id  BIGINT         NOT NULL,

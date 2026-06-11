@@ -8,7 +8,7 @@ import (
 	"time"
 
 	"github.com/hashicorp/consul/api"
-	"github.com/lens077/ecommerce/backend/services/order/constants"
+	"github.com/lens077/ecommerce/backend/constants"
 	confv1 "github.com/lens077/ecommerce/backend/services/order/internal/conf/v1"
 	"github.com/lens077/ecommerce/backend/services/order/internal/pkg/env"
 	"github.com/mitchellh/mapstructure"

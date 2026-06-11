@@ -15,7 +15,7 @@ CREATE TABLE IF NOT EXISTS spus
     name           VARCHAR(255)              NOT NULL,        -- 商品名称
     description    TEXT                      NOT NULL,        -- 商品描述
     category_id    BIGINT                    NOT NULL,        -- 商品分类ID
-    merchant_id    BIGINT                    NOT NULL,        -- 商家ID
+    merchant_id    UUID                    NOT NULL,        -- 商家ID
     brand_id       BIGINT                    NOT NULL,        -- 品牌ID
     status         spus_status_enum          NOT NULL,        -- 状态
     main_media_url VARCHAR(500)              NOT NULL,        -- 主图/视频URL
