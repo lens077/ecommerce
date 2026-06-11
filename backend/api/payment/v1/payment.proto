@@ -1,0 +1,139 @@
+syntax = "proto3"; // 指定使用 proto3 语法
+
+package payment.v1; // 定义包名，用于命名空间隔离
+
+// 导入外部依赖
+import "google/api/annotations.proto";
+
+// Go 语言生成代码的选项
+option go_package = "backend/api/payment/v1;paymentv1";
+
+// 定义支付服务接口
+service PaymentService {
+  // 创建支付订单
+  rpc CreatePayment (CreatePaymentRequest) returns (CreatePaymentResponse) {
+    option (google.api.http) = {
+      post: "/v1/payments"
+      body: "*"
+    };
+  }
+
+  // 查询支付状态
+  rpc GetPaymentStatus (GetPaymentStatusRequest) returns (GetPaymentStatusResponse) {
+    option (google.api.http) = {
+      get: "/v1/payments/{payment_id}/status"
+    };
+  }
+
+  // 处理支付回调通知
+  //  rpc HandlePaymentNotify (HandlePaymentNotifyRequest) returns (HandlePaymentNotifyResponse) {
+  rpc HandlePaymentNotify (UrlValues) returns (HandlePaymentNotifyResponse) {
+    option (google.api.http) = {
+      post: "/v1/payments/notify"
+      body: "*"
+    };
+  }
+
+  // 支付成功后的回调处理
+  rpc HandlePaymentCallback (HandlePaymentCallbackRequest) returns (HandlePaymentCallbackResponse) {
+    option (google.api.http) = {
+      get: "/v1/payments/callback"
+    };
+  }
+}
+
+// 创建支付订单请求
+message CreatePaymentRequest {
+  int64 order_id = 1;
+  string consumer_id = 2;
+  string amount = 3;
+  string currency = 4;
+  string subject = 5;
+  string return_url = 6;
+  int64 freeze_id = 8;
+  int64 consumer_version = 9;
+  repeated int64 merchant_versions = 10;
+}
+
+// 创建支付订单响应
+message CreatePaymentResponse {
+  int64 payment_id = 1;
+  string pay_url = 2;
+}
+
+// 查询支付状态请求
+message GetPaymentStatusRequest {
+  int64 payment_id = 1;
+}
+
+// 支付状态
+enum PaymentStatus {
+  PAYMENT_STATUS_UNKNOWN = 0;
+  PAYMENT_STATUS_PENDING = 1;
+  PAYMENT_STATUS_PROCESSING = 2;
+  PAYMENT_STATUS_SUCCESS = 3;
+  PAYMENT_STATUS_FAILED = 4;
+  PAYMENT_STATUS_CLOSED = 5;
+}
+
+// 查询支付状态响应
+message GetPaymentStatusResponse {
+  int64 payment_id = 1;
+  int64 order_id = 2;
+  PaymentStatus status = 3;
+  string trade_no = 4; // 支付宝交易号
+}
+
+// 支付通知请求
+//message HandlePaymentNotifyRequest {
+//  string charset = 6; // 字符集
+//  string app_id = 1;
+//  string auth_app_id = 12; // 授权应用ID
+//  string trade_no = 2;
+//  string method = 7; // 支付方式
+//  string sign = 8; // 签名
+//  string sign_type = 9; // 签名类型 RSA2
+//  string out_trade_no = 3;
+//  string total_amount = 4;
+//  string seller_id = 14; // 卖家ID
+//  map<string, string> params = 11; // 存储所有回调参数
+//}
+
+message KeyValue {
+  string key = 1;
+  repeated string values = 2;
+}
+message UrlValues {
+  repeated KeyValue pairs = 1;
+}
+
+// 支付通知响应
+message HandlePaymentNotifyResponse {
+  bool success = 1;
+  string message = 2;
+}
+
+// 支付回调请求
+message HandlePaymentCallbackRequest {
+  string out_trade_no = 1;
+  string trade_no = 2;
+  string total_amount = 3;
+  string subject = 4;
+  string trade_status = 5;
+  string charset = 6; // 字符集
+  string method = 7; // 支付方式
+  string sign = 8; // 签名
+  string sign_type = 9; // 签名类型 RSA2
+  string app_id = 10; // 应用ID
+  string auth_app_id = 12; // 授权应用ID
+  string version = 13; // 版本号
+  string seller_id = 14; // 卖家ID
+  string timestamp = 16; // 时间戳
+  map<string, string> params = 11; // 存储所有回调参数
+}
+
+// 支付回调响应
+message HandlePaymentCallbackResponse {
+  bool success = 1;
+  string message = 2;
+}

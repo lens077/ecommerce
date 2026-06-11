@@ -1,0 +1,16 @@
+{{- $params := dict
+  "enabled" .Values.enabled
+  "serviceName" .Chart.Name
+  "replicaCount" .Values.replicaCount
+  "registry" .Values.global.registry
+  "repository" .Values.image.repository
+  "image" (dict
+    "tag" .Values.image.tag
+    "pullPolicy" .Values.image.pullPolicy
+  )
+  "service" .Values.service
+  "resources" .Values.resources
+  "env" .Values.env
+  "dbCaCert" .Values.dbCaCert
+-}}
+{{- include "library.deployment" $params -}}

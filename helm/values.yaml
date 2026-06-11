@@ -1,33 +1,346 @@
-replicaCount: 1
-backend:
+global:
+  registry: "ccr.ccs.tencentyun.com"
+  namespace: "ecommerce"
+
+search:
   enabled: true
   replicaCount: 1
   image:
-    repository: ccr.ccs.tencentyun.com/sumery/user
+    repository: "sumery/search"
     tag: dev
     pullPolicy: Always
   service:
-    type: LoadBalancer
-    port: 4000
-    targetPort: 4000
-  environment:
-    CONSUL_ENABLED: true
-    CONSUL_ADDR: consul.sumery.com
-    CONSUL_PATH: ecommerce/user/dev.yml
-    CONSUL_SCHEME: https
-    CONSUL_INSECURE_SKIP_VERIFY: true
-  autoscaling:
-    enabled: false # 添加autoscaling配置，确保可以通过父values控制
-frontend:
-  enabled: false
-  replicaCount: 1 # 添加replicaCount配置，确保可以通过父values控制
+    type: ClusterIP
+    ports:
+      http:
+        enabled: true
+        port: 30002
+        targetPort: 30002
+      grpc:
+        enabled: false
+        port: 30000
+        targetPort: 30000
+  env:
+    - name: SERVICE_NAME
+      value: "search-product-v1"
+    - name: CONSUL_ENABLED
+      value: "true"
+    - name: CONSUL_ADDR
+      value: "192.168.3.112:8500"
+    - name: CONSUL_PATH
+      value: "ecommerce/search/pre.yml"
+    - name: CONSUL_SCHEME
+      value: "https"
+    - name: CONSUL_INSECURE_SKIP_VERIFY
+      value: "true"
+  secret:
+    enabled: true
+    name: "ecommerce-db-secret"
+    data:
+      DB_SOURCE: "postgresql://postgres:***REMOVED-PASSWORD***@192.168.3.109:5432/ecommerce?sslmode=require&sslrootcert=/etc/ssl/certs/pg_ca.crt&timezone=Asia/Shanghai"
+  dbCaCert:
+    enabled: true
+    secretName: "pg-ca-cert"
+    mountPath: "/etc/ssl/certs"
+    fileName: "pg_ca.crt"
+  resources:
+    requests:
+      cpu: "100m"
+      memory: "128Mi"
+    limits:
+      cpu: "1"
+      memory: "256Mi"
+
+address:
+  enabled: true
+  replicaCount: 1
   image:
-    repository: "ccr.ccs.tencentyun.com/sumery/connect-react-example"
-    tag: "dev"
-    pullPolicy: IfNotPresent # 明确指定pullPolicy，确保可以通过父values控制
+    repository: "sumery/address"
+    tag: dev
+    pullPolicy: Always
   service:
-    type: LoadBalancer
-    port: 3000
-    targetPort: 3000
-  autoscaling:
-    enabled: false # 添加autoscaling配置，确保可以通过父values控制
+    type: ClusterIP
+    ports:
+      http:
+        enabled: true
+        port: 30003
+        targetPort: 30003
+      grpc:
+        enabled: false
+        port: 30004
+        targetPort: 30004
+  env:
+    - name: SERVICE_NAME
+      value: "address-service-v1"
+    - name: CONSUL_ENABLED
+      value: "true"
+    - name: CONSUL_ADDR
+      value: "192.168.3.112:8500"
+    - name: CONSUL_PATH
+      value: "ecommerce/address/pre.yml"
+    - name: CONSUL_SCHEME
+      value: "https"
+    - name: CONSUL_INSECURE_SKIP_VERIFY
+      value: "true"
+  secret:
+    enabled: true
+    name: "ecommerce-db-secret"
+    data:
+      DB_SOURCE: "postgresql://postgres:***REMOVED-PASSWORD***@192.168.3.109:5432/ecommerce?sslmode=require&sslrootcert=/etc/ssl/certs/pg_ca.crt&timezone=Asia/Shanghai"
+  dbCaCert:
+    enabled: true
+    secretName: "pg-ca-cert"
+    mountPath: "/etc/ssl/certs"
+    fileName: "pg_ca.crt"
+  resources:
+    requests:
+      cpu: "100m"
+      memory: "128Mi"
+    limits:
+      cpu: "1"
+      memory: "256Mi"
+
+cart:
+  enabled: true
+  replicaCount: 1
+  image:
+    repository: "sumery/cart"
+    tag: dev
+    pullPolicy: Always
+  service:
+    type: ClusterIP
+    ports:
+      http:
+        enabled: true
+        port: 30005
+        targetPort: 30005
+      grpc:
+        enabled: false
+        port: 30006
+        targetPort: 30006
+  env:
+    - name: SERVICE_NAME
+      value: "cart-service-v1"
+    - name: CONSUL_ENABLED
+      value: "true"
+    - name: CONSUL_ADDR
+      value: "192.168.3.112:8500"
+    - name: CONSUL_PATH
+      value: "ecommerce/cart/pre.yml"
+    - name: CONSUL_SCHEME
+      value: "https"
+    - name: CONSUL_INSECURE_SKIP_VERIFY
+      value: "true"
+  secret:
+    enabled: true
+    name: "ecommerce-db-secret"
+    data:
+      DB_SOURCE: "postgresql://postgres:***REMOVED-PASSWORD***@192.168.3.109:5432/ecommerce?sslmode=require&sslrootcert=/etc/ssl/certs/pg_ca.crt&timezone=Asia/Shanghai"
+  dbCaCert:
+    enabled: true
+    secretName: "pg-ca-cert"
+    mountPath: "/etc/ssl/certs"
+    fileName: "pg_ca.crt"
+  resources:
+    requests:
+      cpu: "100m"
+      memory: "128Mi"
+    limits:
+      cpu: "1"
+      memory: "256Mi"
+
+inventory:
+  enabled: true
+  replicaCount: 1
+  image:
+    repository: "sumery/inventory"
+    tag: dev
+    pullPolicy: Always
+  service:
+    type: ClusterIP
+    ports:
+      http:
+        enabled: true
+        port: 30005
+        targetPort: 30005
+      grpc:
+        enabled: false
+        port: 30008
+        targetPort: 30008
+  env:
+    - name: SERVICE_NAME
+      value: "inventory-service-v1"
+    - name: CONSUL_ENABLED
+      value: "true"
+    - name: CONSUL_ADDR
+      value: "192.168.3.112:8500"
+    - name: CONSUL_PATH
+      value: "ecommerce/inventory/pre.yml"
+    - name: CONSUL_SCHEME
+      value: "https"
+    - name: CONSUL_INSECURE_SKIP_VERIFY
+      value: "true"
+  secret:
+    enabled: true
+    name: "ecommerce-db-secret"
+    data:
+      DB_SOURCE: "postgresql://postgres:***REMOVED-PASSWORD***@192.168.3.109:5432/ecommerce?sslmode=require&sslrootcert=/etc/ssl/certs/pg_ca.crt&timezone=Asia/Shanghai"
+  dbCaCert:
+    enabled: true
+    secretName: "pg-ca-cert"
+    mountPath: "/etc/ssl/certs"
+    fileName: "pg_ca.crt"
+  resources:
+    requests:
+      cpu: "100m"
+      memory: "128Mi"
+    limits:
+      cpu: "1"
+      memory: "256Mi"
+
+merchant:
+  enabled: true
+  replicaCount: 1
+  image:
+    repository: "sumery/merchant"
+    tag: dev
+    pullPolicy: Always
+  service:
+    type: ClusterIP
+    ports:
+      http:
+        enabled: true
+        port: 30007
+        targetPort: 30007
+      grpc:
+        enabled: false
+        port: 30010
+        targetPort: 30010
+  env:
+    - name: SERVICE_NAME
+      value: "merchant-service-v1"
+    - name: CONSUL_ENABLED
+      value: "true"
+    - name: CONSUL_ADDR
+      value: "192.168.3.112:8500"
+    - name: CONSUL_PATH
+      value: "ecommerce/merchant/pre.yml"
+    - name: CONSUL_SCHEME
+      value: "https"
+    - name: CONSUL_INSECURE_SKIP_VERIFY
+      value: "true"
+  secret:
+    enabled: true
+    name: "ecommerce-db-secret"
+    data:
+      DB_SOURCE: "postgresql://postgres:***REMOVED-PASSWORD***@192.168.3.109:5432/ecommerce?sslmode=require&sslrootcert=/etc/ssl/certs/pg_ca.crt&timezone=Asia/Shanghai"
+  dbCaCert:
+    enabled: true
+    secretName: "pg-ca-cert"
+    mountPath: "/etc/ssl/certs"
+    fileName: "pg_ca.crt"
+  resources:
+    requests:
+      cpu: "100m"
+      memory: "128Mi"
+    limits:
+      cpu: "1"
+      memory: "256Mi"
+
+order:
+  enabled: true
+  replicaCount: 1
+  image:
+    repository: "sumery/order"
+    tag: dev
+    pullPolicy: Always
+  service:
+    type: ClusterIP
+    ports:
+      http:
+        enabled: true
+        port: 30004
+        targetPort: 30004
+      grpc:
+        enabled: false
+        port: 30012
+        targetPort: 30012
+  env:
+    - name: SERVICE_NAME
+      value: "order-v1"
+    - name: CONSUL_ENABLED
+      value: "true"
+    - name: CONSUL_ADDR
+      value: "192.168.3.112:8500"
+    - name: CONSUL_PATH
+      value: "ecommerce/order/pre.yml"
+    - name: CONSUL_SCHEME
+      value: "https"
+    - name: CONSUL_INSECURE_SKIP_VERIFY
+      value: "true"
+  secret:
+    enabled: true
+    name: "ecommerce-db-secret"
+    data:
+      DB_SOURCE: "postgresql://postgres:***REMOVED-PASSWORD***@192.168.3.109:5432/ecommerce?sslmode=require&sslrootcert=/etc/ssl/certs/pg_ca.crt&timezone=Asia/Shanghai"
+  dbCaCert:
+    enabled: true
+    secretName: "pg-ca-cert"
+    mountPath: "/etc/ssl/certs"
+    fileName: "pg_ca.crt"
+  resources:
+    requests:
+      cpu: "100m"
+      memory: "128Mi"
+    limits:
+      cpu: "1"
+      memory: "256Mi"
+
+payment:
+  enabled: true
+  replicaCount: 1
+  image:
+    repository: "sumery/payment"
+    tag: dev
+    pullPolicy: Always
+  service:
+    type: ClusterIP
+    ports:
+      http:
+        enabled: true
+        port: 30013
+        targetPort: 30013
+      grpc:
+        enabled: false
+        port: 30014
+        targetPort: 30014
+  env:
+    - name: SERVICE_NAME
+      value: "payment-v1"
+    - name: CONSUL_ENABLED
+      value: "true"
+    - name: CONSUL_ADDR
+      value: "192.168.3.112:8500"
+    - name: CONSUL_PATH
+      value: "ecommerce/payment/pre.yml"
+    - name: CONSUL_SCHEME
+      value: "https"
+    - name: CONSUL_INSECURE_SKIP_VERIFY
+      value: "true"
+  secret:
+    enabled: true
+    name: "ecommerce-db-secret"
+    data:
+      DB_SOURCE: "postgresql://postgres:***REMOVED-PASSWORD***@192.168.3.109:5432/ecommerce?sslmode=require&sslrootcert=/etc/ssl/certs/pg_ca.crt&timezone=Asia/Shanghai"
+  dbCaCert:
+    enabled: true
+    secretName: "pg-ca-cert"
+    mountPath: "/etc/ssl/certs"
+    fileName: "pg_ca.crt"
+  resources:
+    requests:
+      cpu: "100m"
+      memory: "128Mi"
+    limits:
+      cpu: "1"
+      memory: "256Mi"

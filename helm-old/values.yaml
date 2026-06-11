@@ -1,0 +1,33 @@
+replicaCount: 1
+backend:
+  enabled: true
+  replicaCount: 1
+  image:
+    repository: ccr.ccs.tencentyun.com/sumery/user
+    tag: dev
+    pullPolicy: Always
+  service:
+    type: LoadBalancer
+    port: 4000
+    targetPort: 4000
+  environment:
+    CONSUL_ENABLED: true
+    CONSUL_ADDR: consul.sumery.com
+    CONSUL_PATH: ecommerce/user/dev.yml
+    CONSUL_SCHEME: https
+    CONSUL_INSECURE_SKIP_VERIFY: true
+  autoscaling:
+    enabled: false # 添加autoscaling配置，确保可以通过父values控制
+frontend:
+  enabled: false
+  replicaCount: 1 # 添加replicaCount配置，确保可以通过父values控制
+  image:
+    repository: "ccr.ccs.tencentyun.com/sumery/connect-react-example"
+    tag: "dev"
+    pullPolicy: IfNotPresent # 明确指定pullPolicy，确保可以通过父values控制
+  service:
+    type: LoadBalancer
+    port: 3000
+    targetPort: 3000
+  autoscaling:
+    enabled: false # 添加autoscaling配置，确保可以通过父values控制
