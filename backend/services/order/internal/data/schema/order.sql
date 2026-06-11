@@ -107,7 +107,7 @@ CREATE TABLE IF NOT EXISTS orders.order_item
     order_id          BIGINT         NOT NULL,              -- 关联的订单主表ID（业务关联）
     order_no          VARCHAR(64)    NOT NULL,              -- 冗余的订单号，方便查询
 
-    merchant_id       BIGINT         NOT NULL,              -- 商家ID（数据隔离）
+    merchant_id       UUID         NOT NULL,              -- 商家ID（数据隔离）
 
     spu_id            BIGINT         NOT NULL,              -- SPU ID
     sku_id            BIGINT         NOT NULL,              -- SKU ID（业务关联，如关联商品服务）
@@ -130,12 +130,13 @@ CREATE INDEX IF NOT EXISTS idx_order_item_merchant_id ON orders.order_item (merc
 CREATE INDEX IF NOT EXISTS idx_order_item_sku_id ON orders.order_item (sku_id);
 
 -- 订单状态变更日志表
+-- DROP TABLE orders.order_log;
 CREATE TABLE IF NOT EXISTS orders.order_log
 (
     id            BIGSERIAL PRIMARY KEY,                          -- 自增主键
     order_id      BIGINT                   NOT NULL,              -- 关联的订单主表ID（业务关联）
     order_no      VARCHAR(64)              NOT NULL,              -- 冗余订单号
-    merchant_id   BIGINT                   NOT NULL,              -- 商家ID
+    merchant_id   UUID                   NOT NULL,              -- 商家ID
 
     old_status    orders.order_status_enum,                       -- 变更前状态（首次创建时可为NULL）
     new_status    orders.order_status_enum NOT NULL,              -- 变更后状态

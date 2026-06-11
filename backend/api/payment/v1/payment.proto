@@ -1,45 +1,26 @@
 syntax = "proto3"; // 指定使用 proto3 语法
 
+import "third_party/validate/validate.proto";
+
 package payment.v1; // 定义包名，用于命名空间隔离
 
-// 导入外部依赖
-import "google/api/annotations.proto";
-
 // Go 语言生成代码的选项
-option go_package = "backend/api/payment/v1;paymentv1";
+option go_package = "github.com/lens077/ecommerce/backend/api/payment/v1;paymentv1";
 
 // 定义支付服务接口
 service PaymentService {
   // 创建支付订单
-  rpc CreatePayment (CreatePaymentRequest) returns (CreatePaymentResponse) {
-    option (google.api.http) = {
-      post: "/v1/payments"
-      body: "*"
-    };
-  }
+  rpc CreatePayment (CreatePaymentRequest) returns (CreatePaymentResponse) {}
 
   // 查询支付状态
-  rpc GetPaymentStatus (GetPaymentStatusRequest) returns (GetPaymentStatusResponse) {
-    option (google.api.http) = {
-      get: "/v1/payments/{payment_id}/status"
-    };
-  }
+  rpc GetPaymentStatus (GetPaymentStatusRequest) returns (GetPaymentStatusResponse) {}
 
   // 处理支付回调通知
   //  rpc HandlePaymentNotify (HandlePaymentNotifyRequest) returns (HandlePaymentNotifyResponse) {
-  rpc HandlePaymentNotify (UrlValues) returns (HandlePaymentNotifyResponse) {
-    option (google.api.http) = {
-      post: "/v1/payments/notify"
-      body: "*"
-    };
-  }
+  rpc HandlePaymentNotify (UrlValues) returns (HandlePaymentNotifyResponse) {}
 
   // 支付成功后的回调处理
-  rpc HandlePaymentCallback (HandlePaymentCallbackRequest) returns (HandlePaymentCallbackResponse) {
-    option (google.api.http) = {
-      get: "/v1/payments/callback"
-    };
-  }
+  rpc HandlePaymentCallback (HandlePaymentCallbackRequest) returns (HandlePaymentCallbackResponse) {}
 }
 
 // 创建支付订单请求

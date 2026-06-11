@@ -8,6 +8,7 @@ import (
 	"connectrpc.com/connect"
 	v1 "github.com/lens077/ecommerce/backend/api/order/v1"
 	"github.com/lens077/ecommerce/backend/api/order/v1/orderv1connect"
+	"github.com/lens077/ecommerce/backend/constants"
 	"github.com/lens077/ecommerce/backend/services/order/internal/biz/application"
 	"github.com/lens077/ecommerce/backend/services/order/internal/biz/domain"
 )
@@ -29,9 +30,15 @@ func NewOrderService(cmd *application.OrderCommandUseCase, qry *application.Orde
 }
 
 func (s *OrderService) CreateOrder(ctx context.Context, c *connect.Request[v1.CreateOrderRequest]) (*connect.Response[v1.CreateOrderResponse], error) {
+	req := c.Msg
+	userId := c.Header().Get(constants.UserNameMetadataKey)
 	_, err := s.cmd.CreateOrder(
 		ctx,
-		&domain.CreateOrderRequest{},
+		&domain.CreateOrderRequest{
+			CartItemIDs: req.,
+			AddressID:   0,
+			Remark:      "",
+		},
 	)
 	if err != nil { // 根据业务错误类型映射状态码
 		switch {

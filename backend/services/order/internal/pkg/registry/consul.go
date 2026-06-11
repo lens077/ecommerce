@@ -9,7 +9,7 @@ import (
 	"strconv"
 	"time"
 
-	"github.com/lens077/ecommerce/backend/services/order/constants"
+	"github.com/lens077/ecommerce/backend/constants"
 	"github.com/lens077/ecommerce/backend/services/order/internal/pkg/config"
 	"github.com/lens077/ecommerce/backend/services/order/internal/pkg/meta"
 

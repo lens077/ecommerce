@@ -1,0 +1,345 @@
+server:
+  addr: "0.0.0.0:30008"
+  http:
+    read_timeout: "5s"
+    write_timeout: "5s"
+    idle_timeout: "30s"
+  cors:
+    allowed_origins:
+      - http://localhost:3000
+
+data:
+  database:
+    postgres:
+      host: "192.168.3.106"
+      port: 5432
+      user: "postgres"
+      password: "msdnmm"
+      db_name: "ecommerce"
+      tls:
+        enable: true
+        ssl_mode: "verify-ca"
+        ca_pem: |-
+          -----BEGIN CERTIFICATE-----
+          MIIDGzCCAgOgAwIBAgIQNe2bhLliexvL4/8S/r8aDDANBgkqhkiG9w0BAQsFADAY
+          MRYwFAYDVQQDEw1wb3N0Z3Jlc3FsLWNhMB4XDTI2MDQyODE1MDg1M1oXDTI3MDQy
+          ODE1MDg1M1owGDEWMBQGA1UEAxMNcG9zdGdyZXNxbC1jYTCCASIwDQYJKoZIhvcN
+          AQEBBQADggEPADCCAQoCggEBALCwEfRhVLEVDRbfL3zcRIJdwgo0FvyYu3y7H0N6
+          41jezBahW7JcYbetmkzEjiCFEJKXAWBgEfmKuoqp9ZrEEMqT77D7bbv0QxlhB0aD
+          37aODmbB1wwKLnUkirbIc4UTb/ixnNXHZ8js6n7F670AuBtEcCC/w08ClfZq6kw2
+          poqRctuGyOCbZ4Jo14AJzuEs+aQrnICmIuW1V4AvzUeCrMpWFwDQd7M6ujS+4sq2
+          Gu/DKpQra938x1ueqMFLq2pGCnR5+v8+/h14LPSTY68dqZk7yL8Kc1j9cWjfShFY
+          nfBB0PuYl42CdoY1aZ80kl3AnXa22uHeA71zRhMp5qlbFL8CAwEAAaNhMF8wDgYD
+          VR0PAQH/BAQDAgKkMB0GA1UdJQQWMBQGCCsGAQUFBwMBBggrBgEFBQcDAjAPBgNV
+          HRMBAf8EBTADAQH/MB0GA1UdDgQWBBSod8zyZgXuH84q2AEcL7ID/psQ/TANBgkq
+          hkiG9w0BAQsFAAOCAQEATEnqkxTVYlf/Od1m+gsTV44SjpP/Vqb1Gq+VaTAHmTk1
+          WS4mFZMH3T70hSC7nHowtn+hmclm8J8jIfh80MeADVkOTGwvGnZECxlj6hTy7N4w
+          9BZcws4QJio+L3H15PAGSSJIOkyOmhes2cdCCXGUmojXZJAYm0Q2DDryNkJGaENF
+          fzx83Xpnxa8Ui6jLyPk3mR2ojeu14w5iaC6mSCy+n9DEkfbuu1zvymE/+ldU6jrH
+          x6ERRx+vNAiELnjGVb8vF+LfMyFEXvrR7U/Um2lhrYbqZr2uAUWZ+xnRcrNGRzLc
+          7gz2cFAMAGicJlXeUKuk0k4C3uWERXiVFEqblH/YzQ==
+          -----END CERTIFICATE-----
+      timezone: "Asia/Shanghai"
+      pool:
+        ping_timeout: "4s"
+        max_conns: 20
+        min_conns: 5
+        max_conn_lifetime: "3600s"
+        max_conn_idle_time: "300s"
+  cache:
+    redis:
+      host: "dragonfly.sumery.com"
+      port: 443
+      tls:
+        enable: true
+        insecure_skip_verify: true
+        ca_pem: |-
+          -----BEGIN CERTIFICATE-----
+          MIIC0jCCAbqgAwIBAgIUa966R9F/qTvfQXrtGBAxe0VQnSQwDQYJKoZIhvcNAQEL
+          BQAwADAeFw0yNjA0MTUxMzQ5MTFaFw0yNjA3MTQxMzQ5MTFaMAAwggEiMA0GCSqG
+          SIb3DQEBAQUAA4IBDwAwggEKAoIBAQC4NpCrgGr5BNjIiOyyMl/g1CLC6miyzoCq
+          MKTdX+JKEX2A1FVa5BA7qQNYh3FIyEF3DUfwaiW1BIeVCTQ/6PGqb2idGS5mvYlq
+          WY5XkFWkOTfcjTY5Ip2SYbQMCA1ub+lD7fuGuBVa4Sxev9PBNoJdv3v7WPcBuIyY
+          zklT0XlknI91tTmp9Z1gQyaMyFYtL4/WzuonVfFofCtzrzcsZWXsSyyz8ql47r/J
+          guHk8/RJ+s8gry24L9GoIFz+qQ/yACvekiBuevhEMLc1c/a4tyzZx1j1qWOZU73X
+          rDqW3BShYiSmKMmA7Y4nHVxCOFOb+Gd9CiJEHbYR08wFnFk4lkWVAgMBAAGjRDBC
+          MA4GA1UdDwEB/wQEAwIFoDAMBgNVHRMBAf8EAjAAMCIGA1UdEQEB/wQYMBaCFGRy
+          YWdvbmZseS5zdW1lcnkuY29tMA0GCSqGSIb3DQEBCwUAA4IBAQABcWCs8+UxjH2B
+          3czmaEVyZ6HpUx0krWjbqdCmAFWiy2Qp4Uj0OKs0l+6KEDhLvmOp6uEr7EbbBTIS
+          zI6Q+8F2O6nyR59nazigZW4Et5g4bTcnbipEXdPDY33YQUa7hFPfaFvEL1TmvEd6
+          Ui3UjwNeN2tWJSw1Lhgzj3hNc1uSLnmZvg9P7QaI3XyVVOIqCDlz3GHUMsFgHyP9
+          I+Mt64QKOwZq/854UZ5jKa5Ou+w7XxUDtVLefm5+y7B1FLDmfAbkJfZCNdoB5ztQ
+          arZVQJvJCSIQ55xmuEVwgGWPqsUEDkQPCPIUGDRoe506Jsp2T0jR66P3dkCoTPUP
+          PyVDXfLI
+          -----END CERTIFICATE-----
+      username: "default"
+      password: "msdnmm"
+      db: 0
+      dial_timeout: "5s"
+      read_timeout: "3s"
+      write_timeout: "3s"
+      pool_size: 10
+      min_idle_conns: 5
+
+pay:
+  alipay:
+    app_id: "9021000143690470"
+    private_key: "MIIEogIBAAKCAQEAt8ah2GT2Cug6XP1gyWWU0T7zNU6XOaQaBEVtXfxYrhIP8qaCl4UhFCjN69nzxLCCo1bkr3QX8juwOu9SzqKa5yTnn1fhSJn9SBA4kDAbujL7ak1NygKWyKyOWucqjLpC/k1bl5z63Kz6YoquOVbISnCRagC8t5SxvLcOcB4uovFOdA8DlXcEz5XG2EXItAulKaMmdxirDyCbvTjIrp2eZ/uuoQbtAA3kLveFb5Zbu4zW3vU9h2Q4yJQk2A0WiVpBryQVzsv2NxP46YGSsDGIf/nf/p2p5fE7vocF/mA8ZdfPQLxQ7SU7Rn9dmSwnW7x4XIMnUn6giAxr6qX6qC3U4QIDAQABAoIBAAkvuK9kfJgW+7PiRpBKr6G2D9o+T3jmJxbHkav9DUHGTV3HzQdd9EVZtNFxV6ohWKZplYzftMK7ERghFnaV0kBzq9BfSDek2vBbPziV7wzjt4Wcz6KldnwZhBQvMgVO2kJ0A3wUsMWPMAT1AbiECgcOkXZHCyfyGuBgFiyslZA3ggJmS2/B7vs8OiwnqRMU44LzWwWs2QPQeaoT7YqPSrxgO0dFhvfzUn6OJBKmfhG64rW0cIhgqmKHoELX08pxTdacX3CpsdnmbhYFHMMbqIFi2LHOgDY/tHEl5N1foeMOKTUqzXfPl0UiDGxkYA8y/sLBleZFaOr4yWaGr54eRzECgYEA6UZ0GvDLotv9H3qO7cVfEOaynnPWP/MP0hSzX0rg7qI7qr1Y4zmDT7ZIrQdVe1jFje9urV6tCrvdJV35Gk+5Kyg87HXqGVkgQRwP+py3ZwO61zk0B/IXkQqV8ddMhk6KpvOe2dStDsTIROCqcFzXJd/lyclbR5XB1UZNWY2lv0cCgYEAya281gp2V9uW+xtOC8rjE84f44RdFvmQ1BYcanIM6uAWUDJi2EXkuTVt78njrCsQtLp0QkOA42gkfoCioHZ+/sce89DSqaLaZn9cvyGCmb7gKTphCQtMzBT4bFs9B3aiKFqOGW5YXOZDAlZLmpWhpw7flI9xjg36OixPZaa67pcCgYAKlfXi2xaCl3UPHqKpy5Ea1T05z4vjbwZCxEm3g1Bdw+LtRpZoCU4aKe12XKTWahrc7Aabu3YizI+miHMrbH68pKDPIjKzX8YE7l8TQlVYSWULKz9fNO8418AiL2D7n0jPdrK4s9v+lZN4/LD/VFc3Esf8tjR8NSGMqhoMfE8PNQKBgE++7R5NgMH4yFh+UXwEO4oHRUC3g/+jqwrRu2aztjvhY7FOWxtdd7VsVQ4t7GKVnMN5vqK9AmfpNBT5VFTSxiCEJ88M0V/WTzmcPtYsr/GPMh/bP6dN2o4P9LMT2Kvs0u3V8L5JjZMeUXzJFpgHdqYSEYIyvhoHmNwLzVFKfjv9AoGAYqDAVmivWGFeXUC32zcrXQ7041sriE340GIQOaT6kUKgx7Bl2i1f66lr0lv9/YYxi9pKWRKYuZ4pAX1g7zbw9jYBShKvrnPuajDMuGy/QVrxsszp+sZZiOy7GBds88vIyofugKGB0jTSu+64MhdSO1O6VIHQz1psG8QmK7OGhp0="
+    notify_url: "http://114.132.233.129:8001/v1/payments/notify"
+    return_url: "http://114.132.233.129:8001/v1/payments/callback"
+    alipay_public_key: |-
+      -----BEGIN CERTIFICATE-----
+      MIIDszCCApugAwIBAgIQICUCEAaUlNBMmbW8VFuSHzANBgkqhkiG9w0BAQsFADCBkTELMAkGA1UE
+      BhMCQ04xGzAZBgNVBAoMEkFudCBGaW5hbmNpYWwgdGVzdDElMCMGA1UECwwcQ2VydGlmaWNhdGlv
+      biBBdXRob3JpdHkgdGVzdDE+MDwGA1UEAww1QW50IEZpbmFuY2lhbCBDZXJ0aWZpY2F0aW9uIEF1
+      dGhvcml0eSBDbGFzcyAyIFIxIHRlc3QwHhcNMjUwMjEwMDAzMjAyWhcNMjYwMjEwMDAzMjAyWjCB
+      hDELMAkGA1UEBhMCQ04xHzAdBgNVBAoMFndtcGhxeTAzOTVAc2FuZGJveC5jb20xDzANBgNVBAsM
+      BkFsaXBheTFDMEEGA1UEAww65pSv5LuY5a6dKOS4reWbvSnnvZHnu5zmioDmnK/mnInpmZDlhazl
+      j7gtMjA4ODcyMTA1NzczMTI5MDCCASIwDQYJKoZIhvcNAQEBBQADggEPADCCAQoCggEBAKqNbjSK
+      UNg0OnnOZMSq5b99ESe6jBKXIj4DEJDTGCOADFYJjMfht5P4VSb5MojMWaJJ6NO7oCxLmyPe6atD
+      UnJk1us5S2x6jtcB14W1ddcC747VgOM2vJXK8bqSKu7+m4IOAr1Xp0Y6QNGrVfVAG35BKd/Hd4dE
+      1nNWFM70Eopn6P0YmNGB+vVlzst7lJwbEkM8jpUgz/bdALwgqO4gFEUd4twq0mZxPQWRfvBOkF6X
+      Ts1zaX7b3ea+XU0bp+LQbmS8HRnTb+VMssLGt6j2k6VC7cQHchDV8rserG3GnB5LuMq6fHuZCfbH
+      yc9sKUri0K1SeQCm/tgYa3wBqhqMyoMCAwEAAaMSMBAwDgYDVR0PAQH/BAQDAgTwMA0GCSqGSIb3
+      DQEBCwUAA4IBAQBQh3DcxV5evoS6ev/GGJHp7ni36aTHGsOhBHoufV0EyE98ZSWcLlhhG/8aprtJ
+      0Wdagr+dEMYgQPX4ixROT857SI7rj3+I3LDwwNAxnmE8Bw6gX16BFy/B2diOj5V1fVsjwAmUxwYm
+      ueQYBw35ayMKgShMi74S5JBA9xFmrX17CfU22sFCP/7QZ/1yj59M49MqCqUSL5G9gV5KRnh5fbWP
+      5TioBv/Yz3dNjyn8h6xj8f/lTuRlZy4plCZFXHeHCKax+BND5f62RCzjUM3nsTMuObZufZwCR15U
+      VXJn39Pf+gTtqubQoaxCHy4KbRgWOhbpo4iV4/h6mdwjtj1sT+ex
+      -----END CERTIFICATE-----
+      -----BEGIN CERTIFICATE-----
+      MIIDszCCApugAwIBAgIQIBkIGbgVxq210KxLJ+YA/TANBgkqhkiG9w0BAQsFADCBhDELMAkGA1UE
+      BhMCQ04xFjAUBgNVBAoMDUFudCBGaW5hbmNpYWwxJTAjBgNVBAsMHENlcnRpZmljYXRpb24gQXV0
+      aG9yaXR5IHRlc3QxNjA0BgNVBAMMLUFudCBGaW5hbmNpYWwgQ2VydGlmaWNhdGlvbiBBdXRob3Jp
+      dHkgUjEgdGVzdDAeFw0xOTA4MTkxMTE2MDBaFw0yNDA4MDExMTE2MDBaMIGRMQswCQYDVQQGEwJD
+      TjEbMBkGA1UECgwSQW50IEZpbmFuY2lhbCB0ZXN0MSUwIwYDVQQLDBxDZXJ0aWZpY2F0aW9uIEF1
+      dGhvcml0eSB0ZXN0MT4wPAYDVQQDDDVBbnQgRmluYW5jaWFsIENlcnRpZmljYXRpb24gQXV0aG9y
+      aXR5IENsYXNzIDIgUjEgdGVzdDCCASIwDQYJKoZIhvcNAQEBBQADggEPADCCAQoCggEBAMh4FKYO
+      ZyRQHD6eFbPKZeSAnrfjfU7xmS9Yoozuu+iuqZlb6Z0SPLUqqTZAFZejOcmr07ln/pwZxluqplxC
+      5+B48End4nclDMlT5HPrDr3W0frs6Xsa2ZNcyil/iKNB5MbGll8LRAxntsKvZZj6vUTMb705gYgm
+      VUMILwi/ZxKTQqBtkT/kQQ5y6nOZsj7XI5rYdz6qqOROrpvS/d7iypdHOMIM9Iz9DlL1mrCykbBi
+      t25y+gTeXmuisHUwqaRpwtCGK4BayCqxRGbNipe6W73EK9lBrrzNtTr9NaysesT/v+l25JHCL9tG
+      wpNr1oWFzk4IHVOg0ORiQ6SUgxZUTYcCAwEAAaMSMBAwDgYDVR0PAQH/BAQDAgTwMA0GCSqGSIb3
+      DQEBCwUAA4IBAQBWThEoIaQoBX2YeRY/I8gu6TYnFXtyuCljANnXnM38ft+ikhE5mMNgKmJYLHvT
+      yWWWgwHoSAWEuml7EGbE/2AK2h3k0MdfiWLzdmpPCRG/RJHk6UB1pMHPilI+c0MVu16OPpKbg5Vf
+      LTv7dsAB40AzKsvyYw88/Ezi1osTXo6QQwda7uefvudirtb8FcQM9R66cJxl3kt1FXbpYwheIm/p
+      j1mq64swCoIYu4NrsUYtn6CV542DTQMI5QdXkn+PzUUly8F6kDp+KpMNd0avfWNL5+O++z+F5Szy
+      1CPta1D7EQ/eYmMP+mOQ35oifWIoFCpN6qQVBS/Hob1J/UUyg7BW
+      -----END CERTIFICATE-----
+    app_public_cert: |-
+      -----BEGIN CERTIFICATE-----
+      MIIDmTCCAoGgAwIBAgIQICYGBIc5m2YGzuCtxgGJ9jANBgkqhkiG9w0BAQsFADCBkTELMAkGA1UE
+      BhMCQ04xGzAZBgNVBAoMEkFudCBGaW5hbmNpYWwgdGVzdDElMCMGA1UECwwcQ2VydGlmaWNhdGlv
+      biBBdXRob3JpdHkgdGVzdDE+MDwGA1UEAww1QW50IEZpbmFuY2lhbCBDZXJ0aWZpY2F0aW9uIEF1
+      dGhvcml0eSBDbGFzcyAyIFIxIHRlc3QwHhcNMjYwNjAzMTYzNjEzWhcNMjcwNjA4MTYzNjEzWjBr
+      MQswCQYDVQQGEwJDTjEfMB0GA1UECgwWd21waHF5MDM5NUBzYW5kYm94LmNvbTEPMA0GA1UECwwG
+      QWxpcGF5MSowKAYDVQQDDCEyMDg4NzIxMDU3NzMxMjkwLTkwMjEwMDAxNDM2OTA0NzAwggEiMA0G
+      CSqGSIb3DQEBAQUAA4IBDwAwggEKAoIBAQC3xqHYZPYK6Dpc/WDJZZTRPvM1Tpc5pBoERW1d/Fiu
+      Eg/ypoKXhSEUKM3r2fPEsIKjVuSvdBfyO7A671LOoprnJOefV+FImf1IEDiQMBu6MvtqTU3KApbI
+      rI5a5yqMukL+TVuXnPrcrPpiiq45VshKcJFqALy3lLG8tw5wHi6i8U50DwOVdwTPlcbYRci0C6Up
+      oyZ3GKsPIJu9OMiunZ5n+66hBu0ADeQu94Vvllu7jNbe9T2HZDjIlCTYDRaJWkGvJBXOy/Y3E/jp
+      gZKwMYh/+d/+nanl8Tu+hwX+YDxl189AvFDtJTtGf12ZLCdbvHhcgydSfqCIDGvqpfqoLdThAgMB
+      AAGjEjAQMA4GA1UdDwEB/wQEAwIE8DANBgkqhkiG9w0BAQsFAAOCAQEAtp3J0S01zPzRffpK+fNv
+      /6eHjoX4ZCsaYpTq8qXPblY+gWRbnzmYG65EijpRYaxGbBSPSm0T30SDK8umBryjbdhyR8EAAxUL
+      cRtT7JTEBHdv+SeCg8T2UVEJqmBsRXC2Gbba9ObJa9xY+V7Xp9sU7hfvU9xlZSzDgMYm7lrhYdtf
+      6q6+h5wuGNhroeryfnO4rNE0JlxmizKAfposM4y5zBUSjblFCsyUYti+n6l8xy6CBz53v3UfZzw8
+      Rvuac8Yiz81qYLe9waPQlQMH1cUCn5DgCiWGPpCin3GmuIi9Ygx7DX/UjF+SxrLrnd2DPCQp0wRR
+      D9zokG+FNdQIjVaTXQ==
+      -----END CERTIFICATE-----
+    alipay_root_cert: |-
+      -----BEGIN CERTIFICATE-----
+      MIIBszCCAVegAwIBAgIIaeL+wBcKxnswDAYIKoEcz1UBg3UFADAuMQswCQYDVQQG
+      EwJDTjEOMAwGA1UECgwFTlJDQUMxDzANBgNVBAMMBlJPT1RDQTAeFw0xMjA3MTQw
+      MzExNTlaFw00MjA3MDcwMzExNTlaMC4xCzAJBgNVBAYTAkNOMQ4wDAYDVQQKDAVO
+      UkNBQzEPMA0GA1UEAwwGUk9PVENBMFkwEwYHKoZIzj0CAQYIKoEcz1UBgi0DQgAE
+      MPCca6pmgcchsTf2UnBeL9rtp4nw+itk1Kzrmbnqo05lUwkwlWK+4OIrtFdAqnRT
+      V7Q9v1htkv42TsIutzd126NdMFswHwYDVR0jBBgwFoAUTDKxl9kzG8SmBcHG5Yti
+      W/CXdlgwDAYDVR0TBAUwAwEB/zALBgNVHQ8EBAMCAQYwHQYDVR0OBBYEFEwysZfZ
+      MxvEpgXBxuWLYlvwl3ZYMAwGCCqBHM9VAYN1BQADSAAwRQIgG1bSLeOXp3oB8H7b
+      53W+CKOPl2PknmWEq/lMhtn25HkCIQDaHDgWxWFtnCrBjH16/W3Ezn7/U/Vjo5xI
+      pDoiVhsLwg==
+      -----END CERTIFICATE-----
+      -----BEGIN CERTIFICATE-----
+      MIIF0zCCA7ugAwIBAgIIH8+hjWpIDREwDQYJKoZIhvcNAQELBQAwejELMAkGA1UE
+      BhMCQ04xFjAUBgNVBAoMDUFudCBGaW5hbmNpYWwxIDAeBgNVBAsMF0NlcnRpZmlj
+      YXRpb24gQXV0aG9yaXR5MTEwLwYDVQQDDChBbnQgRmluYW5jaWFsIENlcnRpZmlj
+      YXRpb24gQXV0aG9yaXR5IFIxMB4XDTE4MDMyMTEzNDg0MFoXDTM4MDIyODEzNDg0
+      MFowejELMAkGA1UEBhMCQ04xFjAUBgNVBAoMDUFudCBGaW5hbmNpYWwxIDAeBgNV
+      BAsMF0NlcnRpZmljYXRpb24gQXV0aG9yaXR5MTEwLwYDVQQDDChBbnQgRmluYW5j
+      aWFsIENlcnRpZmljYXRpb24gQXV0aG9yaXR5IFIxMIICIjANBgkqhkiG9w0BAQEF
+      AAOCAg8AMIICCgKCAgEAtytTRcBNuur5h8xuxnlKJetT65cHGemGi8oD+beHFPTk
+      rUTlFt9Xn7fAVGo6QSsPb9uGLpUFGEdGmbsQ2q9cV4P89qkH04VzIPwT7AywJdt2
+      xAvMs+MgHFJzOYfL1QkdOOVO7NwKxH8IvlQgFabWomWk2Ei9WfUyxFjVO1LVh0Bp
+      dRBeWLMkdudx0tl3+21t1apnReFNQ5nfX29xeSxIhesaMHDZFViO/DXDNW2BcTs6
+      vSWKyJ4YIIIzStumD8K1xMsoaZBMDxg4itjWFaKRgNuPiIn4kjDY3kC66Sl/6yTl
+      YUz8AybbEsICZzssdZh7jcNb1VRfk79lgAprm/Ktl+mgrU1gaMGP1OE25JCbqli1
+      Pbw/BpPynyP9+XulE+2mxFwTYhKAwpDIDKuYsFUXuo8t261pCovI1CXFzAQM2w7H
+      DtA2nOXSW6q0jGDJ5+WauH+K8ZSvA6x4sFo4u0KNCx0ROTBpLif6GTngqo3sj+98
+      SZiMNLFMQoQkjkdN5Q5g9N6CFZPVZ6QpO0JcIc7S1le/g9z5iBKnifrKxy0TQjtG
+      PsDwc8ubPnRm/F82RReCoyNyx63indpgFfhN7+KxUIQ9cOwwTvemmor0A+ZQamRe
+      9LMuiEfEaWUDK+6O0Gl8lO571uI5onYdN1VIgOmwFbe+D8TcuzVjIZ/zvHrAGUcC
+      AwEAAaNdMFswCwYDVR0PBAQDAgEGMAwGA1UdEwQFMAMBAf8wHQYDVR0OBBYEFF90
+      tATATwda6uWx2yKjh0GynOEBMB8GA1UdIwQYMBaAFF90tATATwda6uWx2yKjh0Gy
+      nOEBMA0GCSqGSIb3DQEBCwUAA4ICAQCVYaOtqOLIpsrEikE5lb+UARNSFJg6tpkf
+      tJ2U8QF/DejemEHx5IClQu6ajxjtu0Aie4/3UnIXop8nH/Q57l+Wyt9T7N2WPiNq
+      JSlYKYbJpPF8LXbuKYG3BTFTdOVFIeRe2NUyYh/xs6bXGr4WKTXb3qBmzR02FSy3
+      IODQw5Q6zpXj8prYqFHYsOvGCEc1CwJaSaYwRhTkFedJUxiyhyB5GQwoFfExCVHW
+      05ZFCAVYFldCJvUzfzrWubN6wX0DD2dwultgmldOn/W/n8at52mpPNvIdbZb2F41
+      T0YZeoWnCJrYXjq/32oc1cmifIHqySnyMnavi75DxPCdZsCOpSAT4j4lAQRGsfgI
+      kkLPGQieMfNNkMCKh7qjwdXAVtdqhf0RVtFILH3OyEodlk1HYXqX5iE5wlaKzDop
+      PKwf2Q3BErq1xChYGGVS+dEvyXc/2nIBlt7uLWKp4XFjqekKbaGaLJdjYP5b2s7N
+      1dM0MXQ/f8XoXKBkJNzEiM3hfsU6DOREgMc1DIsFKxfuMwX3EkVQM1If8ghb6x5Y
+      jXayv+NLbidOSzk4vl5QwngO/JYFMkoc6i9LNwEaEtR9PhnrdubxmrtM+RjfBm02
+      77q3dSWFESFQ4QxYWew4pHE0DpWbWy/iMIKQ6UZ5RLvB8GEcgt8ON7BBJeMc+Dyi
+      kT9qhqn+lw==
+      -----END CERTIFICATE-----
+      -----BEGIN CERTIFICATE-----
+      MIICiDCCAgygAwIBAgIIQX76UsB/30owDAYIKoZIzj0EAwMFADB6MQswCQYDVQQG
+      EwJDTjEWMBQGA1UECgwNQW50IEZpbmFuY2lhbDEgMB4GA1UECwwXQ2VydGlmaWNh
+      dGlvbiBBdXRob3JpdHkxMTAvBgNVBAMMKEFudCBGaW5hbmNpYWwgQ2VydGlmaWNh
+      dGlvbiBBdXRob3JpdHkgRTEwHhcNMTkwNDI4MTYyMDQ0WhcNNDkwNDIwMTYyMDQ0
+      WjB6MQswCQYDVQQGEwJDTjEWMBQGA1UECgwNQW50IEZpbmFuY2lhbDEgMB4GA1UE
+      CwwXQ2VydGlmaWNhdGlvbiBBdXRob3JpdHkxMTAvBgNVBAMMKEFudCBGaW5hbmNp
+      YWwgQ2VydGlmaWNhdGlvbiBBdXRob3JpdHkgRTEwdjAQBgcqhkjOPQIBBgUrgQQA
+      IgNiAASCCRa94QI0vR5Up9Yr9HEupz6hSoyjySYqo7v837KnmjveUIUNiuC9pWAU
+      WP3jwLX3HkzeiNdeg22a0IZPoSUCpasufiLAnfXh6NInLiWBrjLJXDSGaY7vaokt
+      rpZvAdmjXTBbMAsGA1UdDwQEAwIBBjAMBgNVHRMEBTADAQH/MB0GA1UdDgQWBBRZ
+      4ZTgDpksHL2qcpkFkxD2zVd16TAfBgNVHSMEGDAWgBRZ4ZTgDpksHL2qcpkFkxD2
+      zVd16TAMBggqhkjOPQQDAwUAA2gAMGUCMQD4IoqT2hTUn0jt7oXLdMJ8q4vLp6sg
+      wHfPiOr9gxreb+e6Oidwd2LDnC4OUqCWiF8CMAzwKs4SnDJYcMLf2vpkbuVE4dTH
+      Rglz+HGcTLWsFs4KxLsq7MuU+vJTBUeDJeDjdA==
+      -----END CERTIFICATE-----
+      -----BEGIN CERTIFICATE-----
+      MIIDxTCCAq2gAwIBAgIUEMdk6dVgOEIS2cCP0Q43P90Ps5YwDQYJKoZIhvcNAQEF
+      BQAwajELMAkGA1UEBhMCQ04xEzARBgNVBAoMCmlUcnVzQ2hpbmExHDAaBgNVBAsM
+      E0NoaW5hIFRydXN0IE5ldHdvcmsxKDAmBgNVBAMMH2lUcnVzQ2hpbmEgQ2xhc3Mg
+      MiBSb290IENBIC0gRzMwHhcNMTMwNDE4MDkzNjU2WhcNMzMwNDE4MDkzNjU2WjBq
+      MQswCQYDVQQGEwJDTjETMBEGA1UECgwKaVRydXNDaGluYTEcMBoGA1UECwwTQ2hp
+      bmEgVHJ1c3QgTmV0d29yazEoMCYGA1UEAwwfaVRydXNDaGluYSBDbGFzcyAyIFJv
+      b3QgQ0EgLSBHMzCCASIwDQYJKoZIhvcNAQEBBQADggEPADCCAQoCggEBAOPPShpV
+      nJbMqqCw6Bz1kehnoPst9pkr0V9idOwU2oyS47/HjJXk9Rd5a9xfwkPO88trUpz5
+      4GmmwspDXjVFu9L0eFaRuH3KMha1Ak01citbF7cQLJlS7XI+tpkTGHEY5pt3EsQg
+      wykfZl/A1jrnSkspMS997r2Gim54cwz+mTMgDRhZsKK/lbOeBPpWtcFizjXYCqhw
+      WktvQfZBYi6o4sHCshnOswi4yV1p+LuFcQ2ciYdWvULh1eZhLxHbGXyznYHi0dGN
+      z+I9H8aXxqAQfHVhbdHNzi77hCxFjOy+hHrGsyzjrd2swVQ2iUWP8BfEQqGLqM1g
+      KgWKYfcTGdbPB1MCAwEAAaNjMGEwHQYDVR0OBBYEFG/oAMxTVe7y0+408CTAK8hA
+      uTyRMB8GA1UdIwQYMBaAFG/oAMxTVe7y0+408CTAK8hAuTyRMA8GA1UdEwEB/wQF
+      MAMBAf8wDgYDVR0PAQH/BAQDAgEGMA0GCSqGSIb3DQEBBQUAA4IBAQBLnUTfW7hp
+      emMbuUGCk7RBswzOT83bDM6824EkUnf+X0iKS95SUNGeeSWK2o/3ALJo5hi7GZr3
+      U8eLaWAcYizfO99UXMRBPw5PRR+gXGEronGUugLpxsjuynoLQu8GQAeysSXKbN1I
+      UugDo9u8igJORYA+5ms0s5sCUySqbQ2R5z/GoceyI9LdxIVa1RjVX8pYOj8JFwtn
+      DJN3ftSFvNMYwRuILKuqUYSHc2GPYiHVflDh5nDymCMOQFcFG3WsEuB+EYQPFgIU
+      1DHmdZcz7Llx8UOZXX2JupWCYzK1XhJb+r4hK5ncf/w8qGtYlmyJpxk3hr1TfUJX
+      Yf4Zr0fJsGuv
+      -----END CERTIFICATE-----
+    secret: "voxB2EI5cFIx2KrI7p9Tmw=="
+
+observability:
+  enable: true
+  trace:
+    endpoint: otlp-http.sumery.com:443
+    tls:
+      enable: true
+      insecure_skip_verify: true
+      ca_pem: ""
+  metric:
+    endpoint: otlp-http.sumery.com:443
+    tls:
+      enable: true
+      insecure_skip_verify: true
+      ca_pem: ""
+  log:
+    endpoint: otlp-http.sumery.com:443
+    tls:
+      enable: true
+      insecure_skip_verify: true
+      ca_pem: ""
+
+discovery:
+  consul:
+    #addr: apikv.com:8500
+    addr: consul.sumery.com:443
+    health_check: true
+    scheme: https
+    check:
+      # 服务进入异常状态后，多久将其彻底注销
+      deregister_critical_service_after: "6s"
+      ttl:
+        # 心跳时间间隔, 每过这个设定的值才重新检查一次后端服务是否健康
+        duration: "30s"
+        # 心跳频率, 根据设置值去告诉Consul后端服务是健康状态
+        ping_interval: "25s"
+    tls:
+      enable: true
+      insecure_skip_verify: true
+      ca_pem: |-
+        -----BEGIN CERTIFICATE-----
+        MIIBiDCCAS6gAwIBAgIUaRnx06lN9Otrp04ahTRKHn1RiqswCgYIKoZIzj0EAwIw
+        IjEgMB4GA1UEAxMXY29uc3VsLWludGVybmFsLXJvb3QtY2EwHhcNMjYwNDI4MDU0
+        NjU0WhcNMjYwNzI3MDU0NjU0WjAiMSAwHgYDVQQDExdjb25zdWwtaW50ZXJuYWwt
+        cm9vdC1jYTBZMBMGByqGSM49AgEGCCqGSM49AwEHA0IABJbtHpvGdmrfoz7jEN0n
+        E1mzKH6EZspngoAwGxOun/SySzuCYHtDlD6WApmR2PBGECjB8pqnrhBjldxoxy1S
+        rQujQjBAMA4GA1UdDwEB/wQEAwICpDAPBgNVHRMBAf8EBTADAQH/MB0GA1UdDgQW
+        BBTOJjbIw4D104OieckQuEw+HvZFezAKBggqhkjOPQQDAgNIADBFAiB8etd9EvnD
+        zp2IGw4o7dSTJ4Qvqv8+s1Z66pQ7aViucgIhAIKlHJla4awYBsz6CTmPY4M7VpYs
+        JTIJfRSsqGdq0gEj
+        -----END CERTIFICATE-----
+search:
+  elastic_search:
+    addresses:
+      - https://es.sumery.com
+    username: elastic
+    password: XwjLbwoaCLvuJ7PwaAWtBkNO
+    tls:
+      enable: true
+      insecure_skip_verify: true
+      ca_pem: ""
+log:
+  framework:
+    format: console
+    log_level: debug
+    error_level: error
+  application:
+    format: console
+    level: debug
+  elastic_search:
+    enable_request: true
+    enable_response: true
+
+
+auth:
+  casdoor:
+    endpoint: "http://apikv.com:8000"
+    client_id: "a36e6718e392099b7915"
+    client_secret: "baabe64040a6f181e3a6b23d884cb885d9c8089f"
+    organization_name: "lens"
+    application_name: "ecommerce"
+    certificate: |-
+      -----BEGIN CERTIFICATE-----
+      MIIE2TCCAsGgAwIBAgIDAeJAMA0GCSqGSIb3DQEBCwUAMCYxDjAMBgNVBAoTBWFk
+      bWluMRQwEgYDVQQDDAtjZXJ0XzZubjJnMzAeFw0yNjA1MjgwNjU2NTFaFw00NjA1
+      MjgwNjU2NTFaMCYxDjAMBgNVBAoTBWFkbWluMRQwEgYDVQQDDAtjZXJ0XzZubjJn
+      MzCCAiIwDQYJKoZIhvcNAQEBBQADggIPADCCAgoCggIBAMKdHbFjgtsJvpxs7aqZ
+      jwbiT99ikBvCZCQqyWq0PV5DZBqFF2JC1QmImjMhcRL1r4befWA2leeML2Cz+voE
+      z32CTPaOdgUY+7r3SxwGD+s5il/d9bgH7tcN5jCoP6D9V9b16tWq9kfJkH5k1h7d
+      C3b/CY2GU2vpbGWLW94IzNqkgmB5yVelR2XHHgE6lXTkTLChKCqJ5O2l6vsJ81gg
+      Z2uSx7TZ4o6C0TIDJd5QGDd0pnKX7oE8p04FAfbKAp83OjmQxhW58nUUjXq+puIA
+      eoU/IhnCx2fljbU7SB0VLwsBqNzrpjMtQUf8KfZwe74RGCNt7lKdXsxZ4yR7qzrF
+      g+BRs5gIGhWzDEd58btLZfGGVeu9nTN4j3maUue/1WajhluoBvgSV2/sAE52h5uD
+      Y/PhhAZuLWmZ+AX9/Kx06HDEdhvLgm+cxdvZ+WCqliOgCskY6VLQ3iWdkENY04Nc
+      Xg44cXeHtbAN50RYxokIcH8Kq+14q2rYXPKXCy7HtphxPnZHSvxIPL/SNe5SKyLc
+      EAcT0FRjnzhV/kk+jC/WGdVT1T2qECg1wtRoYjG9tHHC6zJfBrXJ8m/9JPqAZ5jJ
+      UO7j3TiRS4MemSkD9CG27u4Lsa+JafjiHBRWhHuD4Hj2CyCC6KW7MyPr9o7EV5+G
+      FypVNYCYa/5i6bZh+CMRIyjzAgMBAAGjEDAOMAwGA1UdEwEB/wQCMAAwDQYJKoZI
+      hvcNAQELBQADggIBAEPHZPchnqdKJhrELRGr3HhJbL5p1xw/fx0yxrqOLXKXioh+
+      8VvppjrqWAqyJe53gYrRUQt27dcBPykq08CwrpXR6bxQRWUSzg0Hq+2S6PEfb+zX
+      KDcU+wezKp3RzbzIRRx4Lhozjwrm14fZaPNXvV8vlMMyLh/Zt5uJ+6C10jm/CuI6
+      2jM20JrOZI6uUFgtqDvrEgvVYDyZImULWveEcJ3HeBkEmfQpRg4+QYq4zJx18oNa
+      aZkIUtLWYu8R39JD1+yshOh58DrdMIgJDIRLkIaUzq5iJRfMzHfO9MGMmo6HM5rF
+      92PXRCQsWEUBydJTtoqGoRwyu6S/MMCNoClcY9wsAwafiwO0WV5cMjOyXSgRqWMb
+      dLiE8NnN5dkLYDp0aiFt8bT6AglsAZ4R691bwBLN7krtboDEnMsUs+bBoHjVOvyR
+      Umez7wEY1uiZxj9nNXn7XDQUXYtnI6fpd37ndm2H8lkQkOlAZPUMo6eCVYkOzTB4
+      tiejDAaMGDOBRI+yGcb025uxdk2kj6oWkPbMZJKmfOespAMIVEvar1fraANJIA5r
+      GIVgLEbvR6D8vAJ/8CYXgy+sG6nq3pLy/16yfUkN0OAzUP6cUwfOOaNKxJkoUHQi
+      Qf/3oSvvaLldzKZNH2gaOxrVm9JGciQ9xy5HmTKxRiYKchDjcANqO5s6Qh+Z
+      -----END CERTIFICATE-----
