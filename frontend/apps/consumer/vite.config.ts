@@ -1,6 +1,5 @@
 /// <reference types="vite-plus" />
 import { defineConfig } from "vite-plus";
-import viteReact from "@vitejs/plugin-react";
 import { playwright } from "vite-plus/test/browser-playwright"; // 浏览器测试 provider
 import { tanstackRouter } from "@tanstack/router-plugin/vite";
 import { resolve } from "node:path";
@@ -27,18 +26,28 @@ export default defineConfig(({ mode }) => {
 
   // 根据环境合并测试配置
   const testConfig = isProduction
-    ? baseTestConfig // 生产环境无需浏览器测试
-    : { ...baseTestConfig, ...browserTestConfig };
+      ? baseTestConfig // 生产环境无需浏览器测试
+      : { ...baseTestConfig, ...browserTestConfig };
 
   return {
-    lint: { options: { typeAware: true, typeCheck: true } },
+    staged: {
+      "*": "vp check --fix",
+    },
+    fmt: {},
+    lint: {
+      jsPlugins: [{ name: "vite-plus", specifier: "vite-plus/oxlint-plugin" }],
+      rules: { "vite-plus/prefer-vite-plus-imports": "error" },
+      options: { typeAware: true, typeCheck: true },
+    },
     plugins: [
       tanstackRouter({
         target: "react",
         autoCodeSplitting: true,
       }),
-      viteReact(),
     ],
+    run: {
+      cache: true,
+    },
     test: testConfig,
     resolve: {
       alias: {

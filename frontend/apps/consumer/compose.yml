@@ -1,11 +1,7 @@
 services:
   frontend:
-    image: harbor.apikv.com:5443/ecommerce/frontend:latest
+    image: ccr.ccs.tencentyun.com/sumery/frontend:dev
     container_name: ecommerce-frontend
-    build:
-      context: .
-      dockerfile: ./Dockerfile
-      target: final
     ports:
       - "80:80"
       - "443:443"

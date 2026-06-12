@@ -178,7 +178,7 @@ const ProductPage = () => {
                             </Typography>
                           }
                           secondary={
-                            <Typography variant="body1" fontWeight={500}>
+                            <Typography variant="body1" sx={{ fontWeight: 500 }}>
                               {String(val)}
                             </Typography>
                           }

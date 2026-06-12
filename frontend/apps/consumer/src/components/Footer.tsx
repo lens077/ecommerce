@@ -12,7 +12,7 @@ const Footer: React.FC = () => {
     >
       <Container maxWidth="lg">
         <Grid container spacing={4}>
-          <Grid item xs={12} md={4}>
+          <Box sx={{ flex: "0 0 auto", width: { xs: "100%", md: "calc(33.333% - 12px)" } }}>
             <Typography variant="h6" sx={{ mb: 2, fontWeight: "bold" }}>
               关于我们
             </Typography>
@@ -48,8 +48,8 @@ const Footer: React.FC = () => {
                 加入我们
               </Link>
             </Box>
-          </Grid>
-          <Grid item xs={12} md={4}>
+          </Box>
+          <Box sx={{ flex: "0 0 auto", width: { xs: "100%", md: "calc(33.333% - 12px)" } }}>
             <Typography variant="h6" sx={{ mb: 2, fontWeight: "bold" }}>
               帮助中心
             </Typography>
@@ -85,8 +85,8 @@ const Footer: React.FC = () => {
                 售后服务
               </Link>
             </Box>
-          </Grid>
-          <Grid item xs={12} md={4}>
+          </Box>
+          <Box sx={{ flex: "0 0 auto", width: { xs: "100%", md: "calc(33.333% - 12px)" } }}>
             <Typography variant="h6" sx={{ mb: 2, fontWeight: "bold" }}>
               隐私与条款
             </Typography>
@@ -122,7 +122,7 @@ const Footer: React.FC = () => {
                 Cookie政策
               </Link>
             </Box>
-          </Grid>
+          </Box>
         </Grid>
         <Box sx={{ mt: 4, textAlign: "center" }}>
           <Typography variant="body2" color="text.secondary">
