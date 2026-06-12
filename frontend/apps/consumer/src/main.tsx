@@ -22,7 +22,7 @@ const router = createRouter({
             setIsAuthenticated: () => {},
             login: () => {},
             logout: () => {},
-        } as any, // 👈 暂时使用 as any 占位，或者直接不加 user,
+        } as any, // 暂时使用 as any 占位，或者直接不加 user,
     },
     defaultPreload: "intent",
     scrollRestoration: true,
@@ -58,12 +58,12 @@ const queryClient = new QueryClient({
 });
 
 function InnerApp() {
-    // 2. ✨ 分别获取原子状态（会触发重绘）与 动作方法（持久稳定引用）
+    // 获取原子状态（会触发重绘）与 动作方法（持久稳定引用）
     const state = useAuthState();
     const actions = useAuthActions();
 
-    // 3. ✨ 将状态与方法聚合还原为一个完整的 auth 对象，下发给路由树的 context
-    // 这样你的 beforeLoad 里依然可以通过 context.auth.isAuthenticated 和 context.auth.login() 正常工作
+    // 将状态与方法聚合还原为一个完整的 auth 对象，下发给路由树的 context
+    // 这样 beforeLoad 里依然可以通过 context.auth.isAuthenticated 和 context.auth.login() 正常工作
     const auth = {
         ...state,
         ...actions,

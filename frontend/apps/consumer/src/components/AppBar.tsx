@@ -473,13 +473,13 @@ export default function PrimarySearchAppBar() {
                                             alt={product.name}
                                             sx={{width: 80, height: 80, mb: 2}}
                                         />
-                                        <Typography variant="subtitle1" gutterBottom textAlign="center">
+                                        <Typography variant="subtitle1" gutterBottom sx={{ textAlign: "center" }}>
                                             {product.name}
                                         </Typography>
-                                        <Typography variant="body1" color="primary" fontWeight="bold">
+                                        <Typography variant="body1" color="primary" sx={{ fontWeight: "bold" }}>
                                             ¥{product.price}
                                         </Typography>
-                                        <Typography variant="body1" color="primary" fontWeight="bold">
+                                        <Typography variant="body1" color="primary" sx={{ fontWeight: "bold" }}>
                                             已售{product.quantity}
                                         </Typography>
                                     </Box>

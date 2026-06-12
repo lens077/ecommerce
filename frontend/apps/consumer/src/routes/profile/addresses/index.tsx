@@ -57,7 +57,7 @@ export const Route = createFileRoute("/profile/addresses/")({
 });
 
 function RouteComponent() {
-  const { data: userProfile, isLoading: profileLoading, error: profileError } = useGetUserProfile();
+  const { data: userProfile } = useGetUserProfile();
   const {
     addresses,
     isLoading,
@@ -65,7 +65,6 @@ function RouteComponent() {
     createAddress,
     updateAddress,
     deleteAddress,
-    refetch,
   } = useAddresses();
   const [openDialog, setOpenDialog] = useState(false);
   const [openLocationPermissionDialog, setOpenLocationPermissionDialog] = useState(false);
