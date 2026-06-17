@@ -41,3 +41,9 @@ secret:
   name: "ecommerce-db-secret"
   data:
     DB_SOURCE: "" # Base64 值通过父 Chart 或命令行注入
+
+dbCaCert:
+  enabled: false
+  secretName: ""
+  mountPath: ""
+  fileName: ""
