@@ -1,5 +1,5 @@
 global:
-  registry: ""
+  registry: "ccr.ccs.tencentyun.com"
 
 replicaCount: 1
 enabled: true
