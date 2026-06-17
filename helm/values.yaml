@@ -1,11 +1,8 @@
-global:
-  registry: "ccr.ccs.tencentyun.com"
-
 search:
   enabled: true
   replicaCount: 1
   image:
-    repository: "sumery/search"
+    repository: "ccr.ccs.tencentyun.com/sumery/search"
     tag: dev
     pullPolicy: Always
   service:
@@ -29,7 +26,7 @@ search:
     - name: CONSUL_PATH
       value: "ecommerce/search/pre.yml"
     - name: CONSUL_SCHEME
-      value: "https"
+      value: "http"
     - name: CONSUL_INSECURE_SKIP_VERIFY
       value: "true"
   secret:
@@ -78,7 +75,7 @@ address:
     - name: CONSUL_PATH
       value: "ecommerce/address/pre.yml"
     - name: CONSUL_SCHEME
-      value: "https"
+      value: "http"
     - name: CONSUL_INSECURE_SKIP_VERIFY
       value: "true"
   secret:
@@ -103,7 +100,7 @@ cart:
   enabled: false
   replicaCount: 1
   image:
-    repository: "sumery/cart"
+    repository: "ccr.ccs.tencentyun.com/sumery/cart"
     tag: dev
     pullPolicy: Always
   service:
@@ -127,7 +124,7 @@ cart:
     - name: CONSUL_PATH
       value: "ecommerce/cart/pre.yml"
     - name: CONSUL_SCHEME
-      value: "https"
+      value: "http"
     - name: CONSUL_INSECURE_SKIP_VERIFY
       value: "true"
   secret:
@@ -176,7 +173,7 @@ inventory:
     - name: CONSUL_PATH
       value: "ecommerce/inventory/pre.yml"
     - name: CONSUL_SCHEME
-      value: "https"
+      value: "http"
     - name: CONSUL_INSECURE_SKIP_VERIFY
       value: "true"
   secret:
@@ -201,7 +198,7 @@ merchant:
   enabled: false
   replicaCount: 1
   image:
-    repository: "sumery/merchant"
+    repository: "ccr.ccs.tencentyun.com/sumery/merchant"
     tag: dev
     pullPolicy: Always
   service:
@@ -225,7 +222,7 @@ merchant:
     - name: CONSUL_PATH
       value: "ecommerce/merchant/pre.yml"
     - name: CONSUL_SCHEME
-      value: "https"
+      value: "http"
     - name: CONSUL_INSECURE_SKIP_VERIFY
       value: "true"
   secret:
@@ -274,7 +271,7 @@ order:
     - name: CONSUL_PATH
       value: "ecommerce/order/pre.yml"
     - name: CONSUL_SCHEME
-      value: "https"
+      value: "http"
     - name: CONSUL_INSECURE_SKIP_VERIFY
       value: "true"
   secret:
@@ -323,7 +320,7 @@ payment:
     - name: CONSUL_PATH
       value: "ecommerce/payment/pre.yml"
     - name: CONSUL_SCHEME
-      value: "https"
+      value: "http"
     - name: CONSUL_INSECURE_SKIP_VERIFY
       value: "true"
   secret:

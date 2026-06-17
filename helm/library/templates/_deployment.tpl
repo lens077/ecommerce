@@ -18,7 +18,7 @@ spec:
     spec:
       containers:
         - name: {{ .serviceName }}
-          image: "{{ .registry }}/{{ .repository }}:{{ .image.tag }}"
+          image: "{{ .repository }}:{{ .image.tag }}"
           imagePullPolicy: {{ .image.pullPolicy }}
           {{- with .env }}
           env:
@@ -45,7 +45,7 @@ spec:
             {{- end }}
           resources:
             {{- toYaml .resources | nindent 12 }}
-          {{- if .dbCaCert.enabled }}
+          {{- if and .dbCaCert .dbCaCert.enabled }}
           volumeMounts:
             - name: db-ca-cert
               mountPath: {{ .dbCaCert.mountPath }}

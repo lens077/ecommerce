@@ -2,7 +2,7 @@ replicaCount: 1
 enabled: true
 
 image:
-  repository: "sumery/merchant"
+  repository: "ccr.ccs.tencentyun.com/sumery/merchant"
   tag: latest
   pullPolicy: Always
 
@@ -18,12 +18,7 @@ service:
       port: 30010
       targetPort: 30010
 
-env:
-  - name: DB_SOURCE
-    valueFrom:
-      secretKeyRef:
-        name: ecommerce-db-secret
-        key: DB_SOURCE
+env: []
 
 resources:
   limits:
@@ -32,9 +27,3 @@ resources:
   requests:
     cpu: 50m
     memory: 128Mi
-
-secret:
-  enabled: true
-  name: "ecommerce-db-secret"
-  data:
-    DB_SOURCE: ""

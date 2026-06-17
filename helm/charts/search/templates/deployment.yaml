@@ -2,7 +2,6 @@
   "enabled" .Values.enabled
   "serviceName" .Chart.Name
   "replicaCount" .Values.replicaCount
-  "registry" .Values.global.registry
   "repository" .Values.image.repository
   "image" (dict
     "tag" .Values.image.tag

@@ -1,3 +1,4 @@
+{{- if .Values.enabled }}
 {{- $params := dict
     "serviceName" .Chart.Name
     "serviceType" .Values.service.type
@@ -7,3 +8,4 @@
     )
 -}}
 {{- include "library.service" $params | nindent 0 }}
+{{- end }}

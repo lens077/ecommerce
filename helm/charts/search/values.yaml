@@ -1,11 +1,8 @@
-global:
-  registry: "ccr.ccs.tencentyun.com"
-
 replicaCount: 1
 enabled: true
 
 image:
-  repository: "sumery/auth"
+  repository: "ccr.ccs.tencentyun.com/sumery/search"
   tag: latest
   pullPolicy: Always
 
@@ -21,12 +18,7 @@ service:
       port: 30002
       targetPort: 30002
 
-env:
-  - name: DB_SOURCE
-    valueFrom:
-      secretKeyRef:
-        name: ecommerce-db-secret
-        key: DB_SOURCE
+env: []
 
 resources:
   limits:
@@ -35,15 +27,3 @@ resources:
   requests:
     cpu: 50m
     memory: 128Mi
-
-secret:
-  enabled: true
-  name: "ecommerce-db-secret"
-  data:
-    DB_SOURCE: "" # Base64 值通过父 Chart 或命令行注入
-
-dbCaCert:
-  enabled: false
-  secretName: ""
-  mountPath: ""
-  fileName: ""
