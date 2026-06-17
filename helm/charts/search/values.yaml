@@ -1,3 +1,6 @@
+global:
+  registry: ""
+
 replicaCount: 1
 enabled: true
 
