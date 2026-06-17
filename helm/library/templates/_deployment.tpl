@@ -45,6 +45,7 @@ spec:
             {{- end }}
           resources:
             {{- toYaml .resources | nindent 12 }}
+          {{- if .dbCaCert.enabled }}
           volumeMounts:
             - name: db-ca-cert
               mountPath: {{ .dbCaCert.mountPath }}
@@ -53,5 +54,6 @@ spec:
         - name: db-ca-cert
           secret:
             secretName: {{ .dbCaCert.secretName }}
+          {{- end }}
 {{- end }}
 {{- end -}}
