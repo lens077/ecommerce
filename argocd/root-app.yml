@@ -4,14 +4,18 @@ metadata:
   name: root-app
   namespace: argocd
 spec:
+  # 指定项目名称
+  project: ecommerce
   source:
-    repoURL: git@gitlab.com:sumery/ecommerce.git
-    path: argocd-apps
+#    repoURL: git@gitlab.com:sumery/ecommerce.git
+    repoURL: https://gitlab.com/sumery/ecommerce.git
+    # 存放子应用 YAML 的目录, . 表示根目录
+    path: .
     targetRevision: main
   destination:
     server: https://kubernetes.default.svc
     namespace: argocd
   syncPolicy:
     automated:
-      prune: true
+#      prune: true
       selfHeal: true
