@@ -17,15 +17,15 @@ docker-deploy:
 	@echo "SERVICE=$(SERVICE)"
 	make docker-push SERVICE=$(SERVICE)
 
-.PHONY: docker-deployx
+.PHONY: consumer-deployx
 # 使用 docker 构建多平台架构镜像
-docker-deployx:
+consumer-deployx:
 	@echo "构建的微服务: $(SERVICE)"
 	@echo "平台1: $(ARM64)"
 	@echo "平台2: $(AMD64)"
 	@echo "镜像名: $(REPOSITORY):$(VERSION)"
 	docker buildx build . \
-	  -f ./Dockerfile \
+	  -f apps/consumer/Dockerfile \
 	  --progress=plain \
 	  -t $(REGISTER)/$(REPOSITORY):$(VERSION) \
 	  --build-arg SERVICE=$(SERVICE) \

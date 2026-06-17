@@ -8,3 +8,11 @@ helm template my-release . --debug --values values.yaml
 # 更新子chart
 helm dependency update
 helm dependency build
+
+# 登录
+helm registry login harbor.apikv.com:5443
+
+# 打包
+helm package .
+# 推送
+helm push *-*.tgz oci://harbor.apikv.com:5443/sumery
