@@ -1,46 +1,48 @@
 packages:
   - apps/*
   - packages/*
+allowBuilds:
+  '@bufbuild/buf': true
 catalog:
-  "@bufbuild/buf": latest
-  "@bufbuild/protobuf": latest
-  "@bufbuild/protoc-gen-es": latest
+  "@bufbuild/buf": ^1.70.0
+  "@bufbuild/protobuf": ^2.12.0
+  "@bufbuild/protoc-gen-es": ^2.12.0
   "@connectrpc/connect": ^2.1.1
   "@connectrpc/connect-web": ^2.1.1
-  "@emotion/react": latest
-  "@emotion/styled": latest
-  "@fontsource/roboto": latest
-  "@mui/icons-material": latest
-  "@mui/material": ^7.3.9
-  "@mui/utils": latest
-  "@t3-oss/env-core": ^0.13.10
-  "@tanstack/react-devtools": latest
-  "@tanstack/react-query": latest
-  "@tanstack/react-query-devtools": latest
-  "@tanstack/react-router": latest
-  "@tanstack/react-router-devtools": latest
-  "@tanstack/router-plugin": latest
+  "@emotion/react": ^11.14.0
+  "@emotion/styled": ^11.14.1
+  "@fontsource/roboto": ^5.2.10
+  "@mui/icons-material": ^9.1.1
+  "@mui/material": ^9.1.1
+  "@mui/utils": ^9.1.1
+  "@t3-oss/env-core": ^0.13.11
+  "@tanstack/react-devtools": ^0.10.5
+  "@tanstack/react-query": ^5.101.0
+  "@tanstack/react-query-devtools": ^5.101.0
+  "@tanstack/react-router": ^1.170.15
+  "@tanstack/react-router-devtools": ^1.167.0
+  "@tanstack/router-plugin": ^1.168.18
   '@testing-library/react': ^16.3.2
   '@testing-library/user-event': ^14.6.1
-  "@types/node": ^24
-  "@types/react": latest
-  "@types/react-dom": latest
-  "@vitejs/plugin-react": ^6.0.1
+  "@types/node": ^24.13.2
+  "@types/react": ^19.2.17
+  "@types/react-dom": ^19.2.3
+  "@vitejs/plugin-react": ^6.0.2
   casdoor-js-sdk: ^0.18.0
-  casdoor-react-sdk: latest
+  casdoor-react-sdk: ^1.2.0
   conventional-changelog: latest
   jsdom: ^29.0.0
-  lucide-react: latest
-  react: latest
-  react-dom: latest
-  typescript: ^5
+  lucide-react: ^1.17.0
+  react: ^19.2.7
+  react-dom: ^19.2.7
+  typescript: ^5.9.3
   valtio: ^2.3.2
   vite: npm:@voidzero-dev/vite-plus-core@latest
-  vite-plus: ^0.1.16
+  vite-plus: ^0.1.24
   vitest: npm:@voidzero-dev/vite-plus-test@latest
-  "vitest-browser-react": latest
-  web-vitals: latest
-  zod: ^4.3.6
+  "vitest-browser-react": ^2.2.0
+  web-vitals: ^5.3.0
+  zod: ^4.4.3
 
 catalogMode: prefer
 
