@@ -3,8 +3,17 @@ POST http://localhost:30001/healthz
 Content-Type: application/json
 
 ### pre
-POST http://192.168.3.124:30001/healthz
+POST http://192.168.3.118:30001/healthz
 Content-Type: application/json
+
+### k8s SignIn
+POST http://192.168.3.118:30001/user.v1.UserService/SignIn
+Content-Type: application/json
+
+{
+  "code": "1231",
+  "state": "12313"
+}
 
 ###
 POST http://localhost:30001/user.v1.UserService/SignIn
