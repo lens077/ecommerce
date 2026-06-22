@@ -1,0 +1,47 @@
+replicaCount: 1
+enabled: true
+image:
+  repository: "ccr.ccs.tencentyun.com/sumery/search"
+  tag: pre
+  pullPolicy: Always
+service:
+  type: LoadBalancer
+  ports:
+    http:
+      enabled: true
+      port: 30002
+      targetPort: 30002
+    grpc:
+      enabled: false
+      port: 30000
+      targetPort: 30000
+env:
+  - name: SERVICE_NAME
+    value: "search-product-v1"
+  - name: CONSUL_ENABLED
+    value: "true"
+  - name: CONSUL_ADDR
+    value: consul-expose-servers.consul.svc:8500
+  - name: CONSUL_PATH
+    value: "ecommerce/search/pre.yml"
+  - name: CONSUL_SCHEME
+    value: "http"
+  - name: CONSUL_INSECURE_SKIP_VERIFY
+    value: "true"
+secret:
+  enabled: true
+  name: "search-db-secret"
+  data:
+    DB_SOURCE: "postgresql://postgres:password@host:5432/db?sslmode=require"
+dbCaCert:
+  enabled: true
+  secretName: "pg-ca-cert"
+  mountPath: "/etc/ssl/certs"
+  fileName: "pg_ca.crt"
+resources:
+  requests:
+    cpu: "100m"
+    memory: "128Mi"
+  limits:
+    cpu: "1"
+    memory: "256Mi"
