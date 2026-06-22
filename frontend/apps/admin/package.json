@@ -1,0 +1,33 @@
+{
+  "name": "@ecommerce/admin",
+  "version": "0.0.1",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "dev": "vp dev --port 3003 --mode dev",
+    "build": "vite build",
+    "preview": "vite preview"
+  },
+  "dependencies": {
+    "@emotion/react": "catalog:",
+    "@emotion/styled": "catalog:",
+    "@mui/material": "catalog:",
+    "@tanstack/react-router": "catalog:",
+    "@ecommerce/ui": "workspace:*",
+    "@ecommerce/configs": "workspace:*",
+    "@ecommerce/constants": "workspace:*",
+    "@ecommerce/utils": "workspace:*",
+    "react": "catalog:",
+    "react-dom": "catalog:",
+    "lucide-react": "catalog:"
+  },
+  "devDependencies": {
+    "@types/react": "catalog:",
+    "@types/react-dom": "catalog:",
+    "@vitejs/plugin-react": "catalog:",
+    "typescript": "catalog:",
+    "vite": "npm:@voidzero-dev/vite-plus-core@^0.1.24",
+    "vite-plus": "catalog:",
+    "@tanstack/router-plugin": "catalog:"
+  }
+}
