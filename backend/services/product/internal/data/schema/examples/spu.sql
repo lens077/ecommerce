@@ -3,7 +3,7 @@ VALUES
 -- 案例 1: 手机
 (
     'iphone-15-pro',
-    1001,
+    'ca8ceec3-3345-48ce-b2db-40afe710eb61',
     'Apple iPhone 15 Pro',
     '钛金属设计，A17 Pro 芯片，超强摄影系统。',
     1001, 10, 'online',
@@ -14,7 +14,7 @@ VALUES
 -- 案例 2: 美妆
 (
     'estee-lauder-anr',
-    1001,
+    'ca8ceec3-3345-48ce-b2db-40afe710eb61',
     '雅诗兰黛小棕瓶精华',
     '第七代黄金夜修护，深层修护，淡化细纹。',
     2005, 55, 'online',
@@ -27,7 +27,7 @@ VALUES
 -- 案例 3: 数码配件 (SPU ID 假设为 3)
 (
     'apple-20w-adapter',
-    1001,
+    'ca8ceec3-3345-48ce-b2db-40afe710eb61',
     'Apple 20W USB-C 电源适配器',
     '快速充电，兼容任何支持 USB‑C 的设备。',
     1002, 10, 'online',
@@ -35,10 +35,10 @@ VALUES
     '["https://cdn.example.com/adapter/gallery1.jpg"]',
     '{"接口": "USB-C", "功率": "20W"}'
 ),
--- 案例 4: 生活家电 (SPU ID 假设为 4, 换一个商家 3003)
+-- 案例 4: 生活家电 (SPU ID 假设为 4, 换一个商家 'ca8ceec3-3345-48ce-b2db-40afe710eb62')
 (
     'delonghi-nespresso',
-    3003,
+    'ca8ceec3-3345-48ce-b2db-40afe710eb62',
     '德龙 Nespresso 胶囊咖啡机',
     '一键开启意式浓缩，小巧机身，19巴高压。',
     3001, 88, 'online',
