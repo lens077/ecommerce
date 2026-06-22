@@ -1,41 +1,60 @@
-apiVersion: argoproj.io/v1alpha1
-kind: AppProject
+# 定义 Argo CD 中 "ecommerce" 项目的安全边界和权限策略。
+# 该项目将管理所有电商微服务应用（如 address、cart、order 等），
+# 无论它们是直接通过 Application 资源创建，还是由 ApplicationSet
+# 动态生成。本资源配置了允许的 Git 仓库、目标集群/命名空间以及
+# 可创建的 Kubernetes 资源类型，确保只有在授权范围内的应用才能
+# 被同步到集群。
+apiVersion: argoproj.io/v1alpha1          # Argo CD AppProject 的 API 版本
+kind: AppProject                          # 资源类型：项目
 metadata:
-  name: ecommerce                     # 项目名称，与 Application 中 spec.project 匹配
-  namespace: argocd                   # AppProject 资源必须部署在 argocd 命名空间
+  name: ecommerce                         # 项目名称，需与 Application 中 spec.project 匹配
+  namespace: argocd                       # 必须部署在 argocd 命名空间
   # 可选：添加 labels/annotations 便于管理
   # labels:
   #   team: ecommerce
 spec:
-  # 允许该项目使用的 Git 仓库源（支持通配符 *）
+  
+  # 1. 允许该项目使用的 Git 仓库源（支持通配符 *）
+  #    可列出多个仓库，确保只从可信源拉取清单。
+  
   sourceRepos:
-    - 'https://gitlab.com/sumery/ecommerce.git'   # HTTPS 方式
-    - 'git@gitlab.com:sumery/ecommerce.git'       # SSH 方式
-  # 如果希望允许所有仓库（不推荐生产环境），可使用：
+    - 'https://gitlab.com/sumery/ecommerce.git'   # HTTPS 方式（读写可通过 Personal Access Token）
+    - 'git@gitlab.com:sumery/ecommerce.git'       # SSH 方式（需配置 SSH 私钥）
+  # 如果希望允许任何仓库（极不推荐），可使用：
   # - '*'
 
-  # 允许部署的目标集群和命名空间
+  
+  # 2. 允许部署的目标集群和命名空间
+  #    每个 destination 指定一个集群和一个命名空间，可添加多条。
+  
   destinations:
-    - namespace: ecommerce               # 允许部署到的命名空间
-      server: https://kubernetes.default.svc    # 目标集群 API Server
-  # 如需允许其他命名空间，可以添加多个：
+    - namespace: ecommerce                      # 允许部署到的命名空间
+      server: https://kubernetes.default.svc    # 目标集群 API Server（此处为本地集群）
+  # 如需允许其他命名空间（如 staging），可以添加：
   # - namespace: staging
   #   server: https://kubernetes.default.svc
   # 如需允许所有命名空间（不推荐），可使用 namespace: '*'
 
-  # 允许部署的集群资源类型（Cluster-scoped resources）
-  # 此处允许所有，通常需要根据安全策略收紧
+  
+  # 3. 允许部署的集群作用域资源（Cluster-scoped resources）
+  #    如 ClusterRole、PersistentVolume 等。若应用不需要，应缩紧。
+  
   clusterResourceWhitelist:
     - group: '*'
       kind: '*'
 
-  # 允许部署的命名空间资源类型（Namespaced resources）
-  # 此处允许所有，也可按需限制
+  
+  # 4. 允许部署的命名空间作用域资源（Namespaced resources）
+  #    如 Deployment、Service、ConfigMap 等。建议按需限制。
+  
   namespaceResourceWhitelist:
     - group: '*'
       kind: '*'
 
-  # 可选：定义角色（RBAC）限制谁可以操作该项目
+  
+  # 5. 可选：RBAC 角色定义（限制用户/组对该项目内资源的操作）
+  #    此处未启用，可根据需要添加。
+  
   # roles:
   # - name: admin
   #   description: 管理员权限
@@ -44,7 +63,7 @@ spec:
   #   groups:
   #   - my-admin-group
 
-  # 可选：设置同步窗口，限制自动同步的时间段
+  # 6. 可选：同步窗口（限制自动同步的时间段，如维护窗口）
   # syncWindows:
   # - kind: allow
   #   schedule: '10 4 * * *'
@@ -53,5 +72,6 @@ spec:
   #   - '*-prod'
   #   manualSync: true
 
-  # 可选：描述信息
-  description: "E-commerce 微服务项目，管理所有业务相关应用"
+  
+  # 7. 项目描述（便于团队识别）
+  description: "ecommerce 微服务项目"
