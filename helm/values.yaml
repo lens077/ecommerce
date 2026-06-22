@@ -3,10 +3,10 @@ search:
   replicaCount: 1
   image:
     repository: "ccr.ccs.tencentyun.com/sumery/search"
-    tag: dev
+    tag: pre
     pullPolicy: Always
   service:
-    type: ClusterIP
+    type: LoadBalancer
     ports:
       http:
         enabled: true
@@ -22,9 +22,58 @@ search:
     - name: CONSUL_ENABLED
       value: "true"
     - name: CONSUL_ADDR
-      value: "192.168.3.112:8500"
+      value: consul-expose-servers.consul.svc:8500
     - name: CONSUL_PATH
       value: "ecommerce/search/pre.yml"
+    - name: CONSUL_SCHEME
+      value: "http"
+    - name: CONSUL_INSECURE_SKIP_VERIFY
+      value: "true"
+  secret:
+    enabled: true
+    name: "ecommerce-db-secret"
+    data:
+      DB_SOURCE: "postgresql://postgres:***REMOVED-PASSWORD***@192.168.3.109:5432/ecommerce?sslmode=require&sslrootcert=/etc/ssl/certs/pg_ca.crt&timezone=Asia/Shanghai"
+  dbCaCert:
+    enabled: true
+    secretName: "pg-ca-cert"
+    mountPath: "/etc/ssl/certs"
+    fileName: "pg_ca.crt"
+  resources:
+    requests:
+      cpu: "100m"
+      memory: "128Mi"
+    limits:
+      cpu: "1"
+      memory: "256Mi"
+
+user:
+  enabled: true
+  replicaCount: 1
+  image:
+    repository: "ccr.ccs.tencentyun.com/sumery/user"
+    tag: pre
+    pullPolicy: Always
+  service:
+    type: LoadBalancer
+    ports:
+      http:
+        enabled: true
+        port: 30001
+        targetPort: 30001
+      grpc:
+        enabled: false
+        port: 30001
+        targetPort: 30001
+  env:
+    - name: SERVICE_NAME
+      value: "user-identity-v1"
+    - name: CONSUL_ENABLED
+      value: "true"
+    - name: CONSUL_ADDR
+      value: consul-expose-servers.consul.svc:8500
+    - name: CONSUL_PATH
+      value: "ecommerce/user/pre.yml"
     - name: CONSUL_SCHEME
       value: "http"
     - name: CONSUL_INSECURE_SKIP_VERIFY
@@ -55,7 +104,7 @@ address:
     tag: dev
     pullPolicy: Always
   service:
-    type: ClusterIP
+    type: LoadBalancer
     ports:
       http:
         enabled: true
@@ -71,7 +120,7 @@ address:
     - name: CONSUL_ENABLED
       value: "true"
     - name: CONSUL_ADDR
-      value: "192.168.3.112:8500"
+      value: consul-expose-servers.consul.svc:8500
     - name: CONSUL_PATH
       value: "ecommerce/address/pre.yml"
     - name: CONSUL_SCHEME
@@ -104,7 +153,7 @@ cart:
     tag: dev
     pullPolicy: Always
   service:
-    type: ClusterIP
+    type: LoadBalancer
     ports:
       http:
         enabled: true
@@ -120,7 +169,7 @@ cart:
     - name: CONSUL_ENABLED
       value: "true"
     - name: CONSUL_ADDR
-      value: "192.168.3.112:8500"
+      value: consul-expose-servers.consul.svc:8500
     - name: CONSUL_PATH
       value: "ecommerce/cart/pre.yml"
     - name: CONSUL_SCHEME
@@ -153,7 +202,7 @@ inventory:
     tag: dev
     pullPolicy: Always
   service:
-    type: ClusterIP
+    type: LoadBalancer
     ports:
       http:
         enabled: true
@@ -169,7 +218,7 @@ inventory:
     - name: CONSUL_ENABLED
       value: "true"
     - name: CONSUL_ADDR
-      value: "192.168.3.112:8500"
+      value: consul-expose-servers.consul.svc:8500
     - name: CONSUL_PATH
       value: "ecommerce/inventory/pre.yml"
     - name: CONSUL_SCHEME
@@ -202,7 +251,7 @@ merchant:
     tag: dev
     pullPolicy: Always
   service:
-    type: ClusterIP
+    type: LoadBalancer
     ports:
       http:
         enabled: true
@@ -218,7 +267,7 @@ merchant:
     - name: CONSUL_ENABLED
       value: "true"
     - name: CONSUL_ADDR
-      value: "192.168.3.112:8500"
+      value: consul-expose-servers.consul.svc:8500
     - name: CONSUL_PATH
       value: "ecommerce/merchant/pre.yml"
     - name: CONSUL_SCHEME
@@ -251,7 +300,7 @@ order:
     tag: dev
     pullPolicy: Always
   service:
-    type: ClusterIP
+    type: LoadBalancer
     ports:
       http:
         enabled: true
@@ -267,7 +316,7 @@ order:
     - name: CONSUL_ENABLED
       value: "true"
     - name: CONSUL_ADDR
-      value: "192.168.3.112:8500"
+      value: consul-expose-servers.consul.svc:8500
     - name: CONSUL_PATH
       value: "ecommerce/order/pre.yml"
     - name: CONSUL_SCHEME
@@ -300,7 +349,7 @@ payment:
     tag: dev
     pullPolicy: Always
   service:
-    type: ClusterIP
+    type: LoadBalancer
     ports:
       http:
         enabled: true
@@ -316,7 +365,7 @@ payment:
     - name: CONSUL_ENABLED
       value: "true"
     - name: CONSUL_ADDR
-      value: "192.168.3.112:8500"
+      value: consul-expose-servers.consul.svc:8500
     - name: CONSUL_PATH
       value: "ecommerce/payment/pre.yml"
     - name: CONSUL_SCHEME

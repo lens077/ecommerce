@@ -2,7 +2,7 @@ replicaCount: 1
 enabled: true
 
 image:
-  repository: "ccr.ccs.tencentyun.com/sumery/search"
+  repository: "ccr.ccs.tencentyun.com/sumery/user"
   tag: latest
   pullPolicy: Always
 
@@ -15,8 +15,8 @@ service:
       targetPort: 30001
     grpc:
       enabled: false
-      port: 30002
-      targetPort: 30002
+      port: 30001
+      targetPort: 30001
 
 env: []
 

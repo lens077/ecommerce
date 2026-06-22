@@ -5,7 +5,7 @@ metadata:
   name: {{ .serviceName }}-service
 spec:
   selector:
-    app: {{ .serviceName }}
+    app.kubernetes.io/name: {{ .serviceName }}
   type: {{ .serviceType }}
   ports:
     {{- range $name, $portCfg := .ports }}
