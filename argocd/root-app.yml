@@ -10,12 +10,12 @@ spec:
 #    repoURL: git@gitlab.com:sumery/ecommerce.git
     repoURL: https://gitlab.com/sumery/ecommerce.git
     # 存放子应用 YAML 的目录, . 表示根目录
-    path: .
+    path: argocd
     targetRevision: main
   destination:
     server: https://kubernetes.default.svc
     namespace: argocd
   syncPolicy:
     automated:
-#      prune: true
+      prune: true
       selfHeal: true
