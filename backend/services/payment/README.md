@@ -71,7 +71,7 @@ SERVICE_NAME=org-service-v1 \
 CONSUL_ENABLED=true \
 CONSUL_ADDR=consul.example.com \
 CONSUL_PATH=ecommerce/user/dev.yml \
-CONSUL_SCHEME=https \
+CONSUL_SCHEME=http \
 CONSUL_INSECURE_SKIP_VERIFY=true \
 go run cmd/server/main.go
 ```
