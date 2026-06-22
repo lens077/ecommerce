@@ -24,6 +24,9 @@ const (
 
 type CreateOrderRequest struct {
 	state         protoimpl.MessageState `protogen:"open.v1"`
+	CartItemIds   []int64                `protobuf:"varint,1,rep,packed,name=CartItemIds,proto3" json:"CartItemIds,omitempty"` // 用户在购物车中已选商品的唯一标识，订单服务只需知道用户勾选了哪些购物车项
+	AddressId     string                 `protobuf:"bytes,2,opt,name=addressId,proto3" json:"addressId,omitempty"`             // 下单时获取快照。用户可能在提交订单后修改收货地址，但历史订单必须保留当时的地址信息
+	Remark        string                 `protobuf:"bytes,3,opt,name=remark,proto3" json:"remark,omitempty"`
 	unknownFields protoimpl.UnknownFields
 	sizeCache     protoimpl.SizeCache
 }
@@ -56,6 +59,27 @@ func (x *CreateOrderRequest) ProtoReflect() protoreflect.Message {
 // Deprecated: Use CreateOrderRequest.ProtoReflect.Descriptor instead.
 func (*CreateOrderRequest) Descriptor() ([]byte, []int) {
 	return file_api_order_v1_order_proto_rawDescGZIP(), []int{0}
+}
+
+func (x *CreateOrderRequest) GetCartItemIds() []int64 {
+	if x != nil {
+		return x.CartItemIds
+	}
+	return nil
+}
+
+func (x *CreateOrderRequest) GetAddressId() string {
+	if x != nil {
+		return x.AddressId
+	}
+	return ""
+}
+
+func (x *CreateOrderRequest) GetRemark() string {
+	if x != nil {
+		return x.Remark
+	}
+	return ""
 }
 
 type CreateOrderResponse struct {
@@ -222,8 +246,11 @@ var File_api_order_v1_order_proto protoreflect.FileDescriptor
 
 const file_api_order_v1_order_proto_rawDesc = "" +
 	"\n" +
-	"\x18api/order/v1/order.proto\x12\border.v1\x1a#third_party/validate/validate.proto\"\x14\n" +
-	"\x12CreateOrderRequest\"\x15\n" +
+	"\x18api/order/v1/order.proto\x12\border.v1\x1a#third_party/validate/validate.proto\"l\n" +
+	"\x12CreateOrderRequest\x12 \n" +
+	"\vCartItemIds\x18\x01 \x03(\x03R\vCartItemIds\x12\x1c\n" +
+	"\taddressId\x18\x02 \x01(\tR\taddressId\x12\x16\n" +
+	"\x06remark\x18\x03 \x01(\tR\x06remark\"\x15\n" +
 	"\x13CreateOrderResponse\"0\n" +
 	"\x14CompleteOrderRequest\x12\x18\n" +
 	"\aorderNo\x18\x01 \x01(\tR\aorderNo\">\n" +

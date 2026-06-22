@@ -1,0 +1,231 @@
+server:
+  addr: "0.0.0.0:30002"
+  http:
+    read_timeout: "5s"
+    write_timeout: "5s"
+    idle_timeout: "30s"
+  cors:
+    allowed_origins:
+      - http://localhost:3000
+
+data:
+  database:
+    postgres:
+      host: postgres-postgresql.postgres.svc
+      port: 5432
+      user: "postgres"
+      password: "msdnmm"
+      db_name: "ecommerce"
+      tls:
+        enable: true
+        ssl_mode: "verify-ca"
+        ca_pem: |-
+          -----BEGIN CERTIFICATE-----
+          MIIBjDCCATKgAwIBAgIUaNdxpMNf4iCrAKXdrVj8Hsq4XzkwCgYIKoZIzj0EAwIw
+          JDEiMCAGA1UEAxMZcG9zdGdyZXMtaW50ZXJuYWwtcm9vdC1jYTAeFw0yNjA2MDcx
+          OTUzNDNaFw0yNjA5MDUxOTUzNDNaMCQxIjAgBgNVBAMTGXBvc3RncmVzLWludGVy
+          bmFsLXJvb3QtY2EwWTATBgcqhkjOPQIBBggqhkjOPQMBBwNCAAQYN9O2GKdpGy7s
+          jxOKGiF/TjhKrtbjIsVcJh7GfoDhcM+lHjk0D3z/kKixLKYK0aXYgKkp+T+wkOs4
+          x1I04L1Yo0IwQDAOBgNVHQ8BAf8EBAMCAqQwDwYDVR0TAQH/BAUwAwEB/zAdBgNV
+          HQ4EFgQUjEN67yoT1WT7e4/y+3oMkJF0QZ8wCgYIKoZIzj0EAwIDSAAwRQIgPmtf
+          VtpWRpxxkq6nEghEl70FJsQIinpL7Gu8wzTbhc4CIQCSPFuOq+O9KTXcZdGfrFib
+          /wWaI3E4hpJ3a+wLaGJY0Q==
+          -----END CERTIFICATE-----
+      timezone: "Asia/Shanghai"
+      pool:
+        ping_timeout: "4s"
+        max_conns: 20
+        min_conns: 5
+        max_conn_lifetime: "3600s"
+        max_conn_idle_time: "300s"
+  cache:
+    redis:
+      host: "dragonfly.dragonfly.svc"
+      port: 6379
+      tls:
+        enable: true
+        insecure_skip_verify: true
+        ca_pem: |-
+          -----BEGIN CERTIFICATE-----
+          MIIDCDCCAfCgAwIBAgIURrO2XvkIlNEyGXiVQRW8+zDaFwEwDQYJKoZIhvcNAQEL
+          BQAwHDEaMBgGA1UEAxMRbXktZ2xvYmFsLXJvb3QtY2EwHhcNMjYwNjA3MjE1MDQw
+          WhcNMjYwOTA1MjE1MDQwWjAcMRowGAYDVQQDExFteS1nbG9iYWwtcm9vdC1jYTCC
+          ASIwDQYJKoZIhvcNAQEBBQADggEPADCCAQoCggEBAL8Bq8Ia9TqKFniw60wc0EBh
+          w59kj4rrHD9r0UfhLYcSchm+XblAhA4lmU9UhLv11yUrk/G7yakr/MN2lFiJ+VSq
+          y7MZqiglaE6aPJN4I0w+45j/UPRhFYN8pjOADTgUc/Z8a1ZOwXYqAGEhzQpvVzfD
+          O5CXJi+lfky/56xvVq6XpHjhO5kGo9zxPjS6+Bt5tJcpfUiXn2b8Ik/oqPkalVv5
+          YowDboditHkg0Y8mqVV4LKajVVoxJlvraAj8Jb9ZM3stYbvDuasyokFVIK1/ZpV/
+          LITckmg71vlMBkDjhC4ymBZq7ZxZZwakC4W8nQ8K/OwYEVjOrcrjbv1MgukRngUC
+          AwEAAaNCMEAwDgYDVR0PAQH/BAQDAgKkMA8GA1UdEwEB/wQFMAMBAf8wHQYDVR0O
+          BBYEFGpUpjkrAgkGxgikpv8LJn+9nr6wMA0GCSqGSIb3DQEBCwUAA4IBAQCvv78n
+          fWOfZebY7DmFecKx7Vy6Ozm3G6t8qLDCv/pzAA1WuNLFKYqL4H4V8b9t30Y4QXtG
+          QyqSpkUyR2L6Ji7iwbaJXVEzefe5VPULQ7qoBiL6iVZpE0bebGTpvicEZ2ldebjL
+          vpJmDQiWPuR1Yeuy1k1NiIbx4GiUO0D3Ujiy+kvGc0m947PdW19rNeGzoOfM5EhT
+          l3EgHYgFKtqM/+zBlYdTkIcpEdLujcyX+d1vixDC5aGENhYX7hTVb8vrdt455GJI
+          B/PgzPl6Es0EEG9gkP41KyZG3JFh5ME4ODoPqXfEDk6/yQtjYjOEzkUXVBGbMGkI
+          SUIGYmnQkqH+XprW
+          -----END CERTIFICATE-----
+      username: "default"
+      password: "msdnmm"
+      db: 0
+      dial_timeout: "5s"
+      read_timeout: "3s"
+      write_timeout: "3s"
+      pool_size: 10
+      min_idle_conns: 5
+
+log:
+  framework:
+    format: console
+    log_level: debug
+    error_level: error
+  application:
+    format: console
+    level: debug
+  elasticsearch:
+    enable_request: true
+    enable_response: true
+
+observability:
+  enable: true
+  trace:
+    # 不需要指定http前缀
+    endpoint: otel-collector.observability:4318
+    tls:
+      enable: false
+      insecure_skip_verify: false
+      ca_pem: |-
+        -----BEGIN CERTIFICATE-----
+        MIIDCDCCAfCgAwIBAgIURrO2XvkIlNEyGXiVQRW8+zDaFwEwDQYJKoZIhvcNAQEL
+        BQAwHDEaMBgGA1UEAxMRbXktZ2xvYmFsLXJvb3QtY2EwHhcNMjYwNjA3MjE1MDQw
+        WhcNMjYwOTA1MjE1MDQwWjAcMRowGAYDVQQDExFteS1nbG9iYWwtcm9vdC1jYTCC
+        ASIwDQYJKoZIhvcNAQEBBQADggEPADCCAQoCggEBAL8Bq8Ia9TqKFniw60wc0EBh
+        w59kj4rrHD9r0UfhLYcSchm+XblAhA4lmU9UhLv11yUrk/G7yakr/MN2lFiJ+VSq
+        y7MZqiglaE6aPJN4I0w+45j/UPRhFYN8pjOADTgUc/Z8a1ZOwXYqAGEhzQpvVzfD
+        O5CXJi+lfky/56xvVq6XpHjhO5kGo9zxPjS6+Bt5tJcpfUiXn2b8Ik/oqPkalVv5
+        YowDboditHkg0Y8mqVV4LKajVVoxJlvraAj8Jb9ZM3stYbvDuasyokFVIK1/ZpV/
+        LITckmg71vlMBkDjhC4ymBZq7ZxZZwakC4W8nQ8K/OwYEVjOrcrjbv1MgukRngUC
+        AwEAAaNCMEAwDgYDVR0PAQH/BAQDAgKkMA8GA1UdEwEB/wQFMAMBAf8wHQYDVR0O
+        BBYEFGpUpjkrAgkGxgikpv8LJn+9nr6wMA0GCSqGSIb3DQEBCwUAA4IBAQCvv78n
+        fWOfZebY7DmFecKx7Vy6Ozm3G6t8qLDCv/pzAA1WuNLFKYqL4H4V8b9t30Y4QXtG
+        QyqSpkUyR2L6Ji7iwbaJXVEzefe5VPULQ7qoBiL6iVZpE0bebGTpvicEZ2ldebjL
+        vpJmDQiWPuR1Yeuy1k1NiIbx4GiUO0D3Ujiy+kvGc0m947PdW19rNeGzoOfM5EhT
+        l3EgHYgFKtqM/+zBlYdTkIcpEdLujcyX+d1vixDC5aGENhYX7hTVb8vrdt455GJI
+        B/PgzPl6Es0EEG9gkP41KyZG3JFh5ME4ODoPqXfEDk6/yQtjYjOEzkUXVBGbMGkI
+        SUIGYmnQkqH+XprW
+        -----END CERTIFICATE-----
+  metric:
+    endpoint: otel-collector.observability:4318
+    tls:
+      enable: false
+      insecure_skip_verify: true
+      ca_pem: |-
+        -----BEGIN CERTIFICATE-----
+        MIIDCDCCAfCgAwIBAgIURrO2XvkIlNEyGXiVQRW8+zDaFwEwDQYJKoZIhvcNAQEL
+        BQAwHDEaMBgGA1UEAxMRbXktZ2xvYmFsLXJvb3QtY2EwHhcNMjYwNjA3MjE1MDQw
+        WhcNMjYwOTA1MjE1MDQwWjAcMRowGAYDVQQDExFteS1nbG9iYWwtcm9vdC1jYTCC
+        ASIwDQYJKoZIhvcNAQEBBQADggEPADCCAQoCggEBAL8Bq8Ia9TqKFniw60wc0EBh
+        w59kj4rrHD9r0UfhLYcSchm+XblAhA4lmU9UhLv11yUrk/G7yakr/MN2lFiJ+VSq
+        y7MZqiglaE6aPJN4I0w+45j/UPRhFYN8pjOADTgUc/Z8a1ZOwXYqAGEhzQpvVzfD
+        O5CXJi+lfky/56xvVq6XpHjhO5kGo9zxPjS6+Bt5tJcpfUiXn2b8Ik/oqPkalVv5
+        YowDboditHkg0Y8mqVV4LKajVVoxJlvraAj8Jb9ZM3stYbvDuasyokFVIK1/ZpV/
+        LITckmg71vlMBkDjhC4ymBZq7ZxZZwakC4W8nQ8K/OwYEVjOrcrjbv1MgukRngUC
+        AwEAAaNCMEAwDgYDVR0PAQH/BAQDAgKkMA8GA1UdEwEB/wQFMAMBAf8wHQYDVR0O
+        BBYEFGpUpjkrAgkGxgikpv8LJn+9nr6wMA0GCSqGSIb3DQEBCwUAA4IBAQCvv78n
+        fWOfZebY7DmFecKx7Vy6Ozm3G6t8qLDCv/pzAA1WuNLFKYqL4H4V8b9t30Y4QXtG
+        QyqSpkUyR2L6Ji7iwbaJXVEzefe5VPULQ7qoBiL6iVZpE0bebGTpvicEZ2ldebjL
+        vpJmDQiWPuR1Yeuy1k1NiIbx4GiUO0D3Ujiy+kvGc0m947PdW19rNeGzoOfM5EhT
+        l3EgHYgFKtqM/+zBlYdTkIcpEdLujcyX+d1vixDC5aGENhYX7hTVb8vrdt455GJI
+        B/PgzPl6Es0EEG9gkP41KyZG3JFh5ME4ODoPqXfEDk6/yQtjYjOEzkUXVBGbMGkI
+        SUIGYmnQkqH+XprW
+        -----END CERTIFICATE-----
+  log:
+    endpoint: otel-collector.observability:4318
+    tls:
+      enable: false
+      insecure_skip_verify: false
+      ca_pem: |-
+        -----BEGIN CERTIFICATE-----
+        MIIDCDCCAfCgAwIBAgIURrO2XvkIlNEyGXiVQRW8+zDaFwEwDQYJKoZIhvcNAQEL
+        BQAwHDEaMBgGA1UEAxMRbXktZ2xvYmFsLXJvb3QtY2EwHhcNMjYwNjA3MjE1MDQw
+        WhcNMjYwOTA1MjE1MDQwWjAcMRowGAYDVQQDExFteS1nbG9iYWwtcm9vdC1jYTCC
+        ASIwDQYJKoZIhvcNAQEBBQADggEPADCCAQoCggEBAL8Bq8Ia9TqKFniw60wc0EBh
+        w59kj4rrHD9r0UfhLYcSchm+XblAhA4lmU9UhLv11yUrk/G7yakr/MN2lFiJ+VSq
+        y7MZqiglaE6aPJN4I0w+45j/UPRhFYN8pjOADTgUc/Z8a1ZOwXYqAGEhzQpvVzfD
+        O5CXJi+lfky/56xvVq6XpHjhO5kGo9zxPjS6+Bt5tJcpfUiXn2b8Ik/oqPkalVv5
+        YowDboditHkg0Y8mqVV4LKajVVoxJlvraAj8Jb9ZM3stYbvDuasyokFVIK1/ZpV/
+        LITckmg71vlMBkDjhC4ymBZq7ZxZZwakC4W8nQ8K/OwYEVjOrcrjbv1MgukRngUC
+        AwEAAaNCMEAwDgYDVR0PAQH/BAQDAgKkMA8GA1UdEwEB/wQFMAMBAf8wHQYDVR0O
+        BBYEFGpUpjkrAgkGxgikpv8LJn+9nr6wMA0GCSqGSIb3DQEBCwUAA4IBAQCvv78n
+        fWOfZebY7DmFecKx7Vy6Ozm3G6t8qLDCv/pzAA1WuNLFKYqL4H4V8b9t30Y4QXtG
+        QyqSpkUyR2L6Ji7iwbaJXVEzefe5VPULQ7qoBiL6iVZpE0bebGTpvicEZ2ldebjL
+        vpJmDQiWPuR1Yeuy1k1NiIbx4GiUO0D3Ujiy+kvGc0m947PdW19rNeGzoOfM5EhT
+        l3EgHYgFKtqM/+zBlYdTkIcpEdLujcyX+d1vixDC5aGENhYX7hTVb8vrdt455GJI
+        B/PgzPl6Es0EEG9gkP41KyZG3JFh5ME4ODoPqXfEDk6/yQtjYjOEzkUXVBGbMGkI
+        SUIGYmnQkqH+XprW
+        -----END CERTIFICATE-----
+
+discovery:
+  consul:
+    addr: consul-expose-servers.consul.svc:8500
+    health_check: true
+    scheme: http
+    check:
+      # 服务进入异常状态后，多久将其彻底注销
+      deregister_critical_service_after: "6s"
+      ttl:
+        # 心跳时间间隔, 每过这个设定的值才重新检查一次后端服务是否健康
+        duration: "30s"
+        # 心跳频率, 根据设置值去告诉Consul后端服务是健康状态
+        ping_interval: "25s"
+    tls:
+      enable: false
+      insecure_skip_verify: true
+      ca_pem: ""
+search:
+  elastic_search:
+    addresses:
+      - http://elasticsearch-es-http.elastic-stack.svc:9200
+    username: elastic
+    password: oGubUGYjGH29xlOuCYuCOSvw
+    tls:
+      enable: false
+      insecure_skip_verify: true
+      ca_pem: ""
+
+auth:
+  casdoor:
+    endpoint: "http://apikv.com:8000"
+    client_id: "a36e6718e392099b7915"
+    client_secret: "baabe64040a6f181e3a6b23d884cb885d9c8089f"
+    organization_name: "lens"
+    application_name: "ecommerce"
+    certificate: |-
+      -----BEGIN CERTIFICATE-----
+      MIIE2TCCAsGgAwIBAgIDAeJAMA0GCSqGSIb3DQEBCwUAMCYxDjAMBgNVBAoTBWFk
+      bWluMRQwEgYDVQQDDAtjZXJ0XzZubjJnMzAeFw0yNjA1MjgwNjU2NTFaFw00NjA1
+      MjgwNjU2NTFaMCYxDjAMBgNVBAoTBWFkbWluMRQwEgYDVQQDDAtjZXJ0XzZubjJn
+      MzCCAiIwDQYJKoZIhvcNAQEBBQADggIPADCCAgoCggIBAMKdHbFjgtsJvpxs7aqZ
+      jwbiT99ikBvCZCQqyWq0PV5DZBqFF2JC1QmImjMhcRL1r4befWA2leeML2Cz+voE
+      z32CTPaOdgUY+7r3SxwGD+s5il/d9bgH7tcN5jCoP6D9V9b16tWq9kfJkH5k1h7d
+      C3b/CY2GU2vpbGWLW94IzNqkgmB5yVelR2XHHgE6lXTkTLChKCqJ5O2l6vsJ81gg
+      Z2uSx7TZ4o6C0TIDJd5QGDd0pnKX7oE8p04FAfbKAp83OjmQxhW58nUUjXq+puIA
+      eoU/IhnCx2fljbU7SB0VLwsBqNzrpjMtQUf8KfZwe74RGCNt7lKdXsxZ4yR7qzrF
+      g+BRs5gIGhWzDEd58btLZfGGVeu9nTN4j3maUue/1WajhluoBvgSV2/sAE52h5uD
+      Y/PhhAZuLWmZ+AX9/Kx06HDEdhvLgm+cxdvZ+WCqliOgCskY6VLQ3iWdkENY04Nc
+      Xg44cXeHtbAN50RYxokIcH8Kq+14q2rYXPKXCy7HtphxPnZHSvxIPL/SNe5SKyLc
+      EAcT0FRjnzhV/kk+jC/WGdVT1T2qECg1wtRoYjG9tHHC6zJfBrXJ8m/9JPqAZ5jJ
+      UO7j3TiRS4MemSkD9CG27u4Lsa+JafjiHBRWhHuD4Hj2CyCC6KW7MyPr9o7EV5+G
+      FypVNYCYa/5i6bZh+CMRIyjzAgMBAAGjEDAOMAwGA1UdEwEB/wQCMAAwDQYJKoZI
+      hvcNAQELBQADggIBAEPHZPchnqdKJhrELRGr3HhJbL5p1xw/fx0yxrqOLXKXioh+
+      8VvppjrqWAqyJe53gYrRUQt27dcBPykq08CwrpXR6bxQRWUSzg0Hq+2S6PEfb+zX
+      KDcU+wezKp3RzbzIRRx4Lhozjwrm14fZaPNXvV8vlMMyLh/Zt5uJ+6C10jm/CuI6
+      2jM20JrOZI6uUFgtqDvrEgvVYDyZImULWveEcJ3HeBkEmfQpRg4+QYq4zJx18oNa
+      aZkIUtLWYu8R39JD1+yshOh58DrdMIgJDIRLkIaUzq5iJRfMzHfO9MGMmo6HM5rF
+      92PXRCQsWEUBydJTtoqGoRwyu6S/MMCNoClcY9wsAwafiwO0WV5cMjOyXSgRqWMb
+      dLiE8NnN5dkLYDp0aiFt8bT6AglsAZ4R691bwBLN7krtboDEnMsUs+bBoHjVOvyR
+      Umez7wEY1uiZxj9nNXn7XDQUXYtnI6fpd37ndm2H8lkQkOlAZPUMo6eCVYkOzTB4
+      tiejDAaMGDOBRI+yGcb025uxdk2kj6oWkPbMZJKmfOespAMIVEvar1fraANJIA5r
+      GIVgLEbvR6D8vAJ/8CYXgy+sG6nq3pLy/16yfUkN0OAzUP6cUwfOOaNKxJkoUHQi
+      Qf/3oSvvaLldzKZNH2gaOxrVm9JGciQ9xy5HmTKxRiYKchDjcANqO5s6Qh+Z
+      -----END CERTIFICATE-----
