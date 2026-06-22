@@ -1,0 +1,35 @@
+apiVersion: argoproj.io/v1alpha1
+kind: ApplicationSet
+metadata:
+  name: my-platform
+  namespace: argocd
+spec:
+  # 启用 Go 模板
+  goTemplate: true
+  # 可选，便于调试
+  goTemplateOptions: [ "missingkey=error" ]
+  generators:
+    - list:
+        elements:
+          - cluster: https://kubernetes.default.svc   # 集群地址
+            namespace: ecommerce                      # 目标命名空间
+            # 此处可扩展其他环境参数
+  template:
+    metadata:
+      name: my-platform
+    spec:
+      project: ecommerce
+      source:
+        repoURL: git@gitlab.com:sumery/ecommerce.git
+        targetRevision: main
+        path: helm                                    # 父 Chart 目录
+        helm:
+          valueFiles:
+            - values.yaml
+      destination:
+        server: '{{.cluster}}'                        # 使用生成器参数
+        namespace: '{{.namespace}}'
+      syncPolicy:
+        automated:
+          prune: true
+          selfHeal: true

@@ -1,0 +1,29 @@
+replicaCount: 1
+enabled: true
+
+image:
+  repository: "ccr.ccs.tencentyun.com/sumery/search"
+  tag: latest
+  pullPolicy: Always
+
+service:
+  type: ClusterIP
+  ports:
+    http:
+      enabled: true
+      port: 30001
+      targetPort: 30001
+    grpc:
+      enabled: false
+      port: 30002
+      targetPort: 30002
+
+env: []
+
+resources:
+  limits:
+    cpu: 100m
+    memory: 256Mi
+  requests:
+    cpu: 50m
+    memory: 128Mi
