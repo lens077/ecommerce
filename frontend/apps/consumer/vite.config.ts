@@ -45,9 +45,9 @@ export default defineConfig(({ mode }) => {
         autoCodeSplitting: true,
       }),
     ],
-    run: {
-      cache: true,
-    },
+//     run: {
+//       cache: true,
+//     },
     test: testConfig,
     resolve: {
       alias: {

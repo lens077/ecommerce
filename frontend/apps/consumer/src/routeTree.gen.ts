@@ -9,14 +9,25 @@
 // Additionally, you should also exclude this file from your linter and/or formatter to prevent it from being checked or modified.
 
 import { Route as rootRouteImport } from './routes/__root'
+import { Route as R404RouteImport } from './routes/404'
 import { Route as IndexRouteImport } from './routes/index'
 import { Route as ProfileIndexRouteImport } from './routes/profile/index'
+import { Route as OrdersIndexRouteImport } from './routes/orders/index'
+import { Route as CouponsIndexRouteImport } from './routes/coupons/index'
+import { Route as CheckoutIndexRouteImport } from './routes/checkout/index'
 import { Route as CategoriesIndexRouteImport } from './routes/categories/index'
 import { Route as CartIndexRouteImport } from './routes/cart/index'
 import { Route as CallbackIndexRouteImport } from './routes/callback/index'
 import { Route as ProductSpuCodeRouteImport } from './routes/product/$spuCode'
+import { Route as PaymentResultRouteImport } from './routes/payment/result'
+import { Route as OrdersOrderIdRouteImport } from './routes/orders/$orderId'
 import { Route as ProfileAddressesIndexRouteImport } from './routes/profile/addresses/index'
 
+const R404Route = R404RouteImport.update({
+  id: '/404',
+  path: '/404',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const IndexRoute = IndexRouteImport.update({
   id: '/',
   path: '/',
@@ -25,6 +36,21 @@ const IndexRoute = IndexRouteImport.update({
 const ProfileIndexRoute = ProfileIndexRouteImport.update({
   id: '/profile/',
   path: '/profile/',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const OrdersIndexRoute = OrdersIndexRouteImport.update({
+  id: '/orders/',
+  path: '/orders/',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const CouponsIndexRoute = CouponsIndexRouteImport.update({
+  id: '/coupons/',
+  path: '/coupons/',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const CheckoutIndexRoute = CheckoutIndexRouteImport.update({
+  id: '/checkout/',
+  path: '/checkout/',
   getParentRoute: () => rootRouteImport,
 } as any)
 const CategoriesIndexRoute = CategoriesIndexRouteImport.update({
@@ -47,6 +73,16 @@ const ProductSpuCodeRoute = ProductSpuCodeRouteImport.update({
   path: '/product/$spuCode',
   getParentRoute: () => rootRouteImport,
 } as any)
+const PaymentResultRoute = PaymentResultRouteImport.update({
+  id: '/payment/result',
+  path: '/payment/result',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const OrdersOrderIdRoute = OrdersOrderIdRouteImport.update({
+  id: '/orders/$orderId',
+  path: '/orders/$orderId',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const ProfileAddressesIndexRoute = ProfileAddressesIndexRouteImport.update({
   id: '/profile/addresses/',
   path: '/profile/addresses/',
@@ -55,29 +91,47 @@ const ProfileAddressesIndexRoute = ProfileAddressesIndexRouteImport.update({
 
 export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
+  '/404': typeof R404Route
+  '/orders/$orderId': typeof OrdersOrderIdRoute
+  '/payment/result': typeof PaymentResultRoute
   '/product/$spuCode': typeof ProductSpuCodeRoute
   '/callback/': typeof CallbackIndexRoute
   '/cart/': typeof CartIndexRoute
   '/categories/': typeof CategoriesIndexRoute
+  '/checkout/': typeof CheckoutIndexRoute
+  '/coupons/': typeof CouponsIndexRoute
+  '/orders/': typeof OrdersIndexRoute
   '/profile/': typeof ProfileIndexRoute
   '/profile/addresses/': typeof ProfileAddressesIndexRoute
 }
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
+  '/404': typeof R404Route
+  '/orders/$orderId': typeof OrdersOrderIdRoute
+  '/payment/result': typeof PaymentResultRoute
   '/product/$spuCode': typeof ProductSpuCodeRoute
   '/callback': typeof CallbackIndexRoute
   '/cart': typeof CartIndexRoute
   '/categories': typeof CategoriesIndexRoute
+  '/checkout': typeof CheckoutIndexRoute
+  '/coupons': typeof CouponsIndexRoute
+  '/orders': typeof OrdersIndexRoute
   '/profile': typeof ProfileIndexRoute
   '/profile/addresses': typeof ProfileAddressesIndexRoute
 }
 export interface FileRoutesById {
   __root__: typeof rootRouteImport
   '/': typeof IndexRoute
+  '/404': typeof R404Route
+  '/orders/$orderId': typeof OrdersOrderIdRoute
+  '/payment/result': typeof PaymentResultRoute
   '/product/$spuCode': typeof ProductSpuCodeRoute
   '/callback/': typeof CallbackIndexRoute
   '/cart/': typeof CartIndexRoute
   '/categories/': typeof CategoriesIndexRoute
+  '/checkout/': typeof CheckoutIndexRoute
+  '/coupons/': typeof CouponsIndexRoute
+  '/orders/': typeof OrdersIndexRoute
   '/profile/': typeof ProfileIndexRoute
   '/profile/addresses/': typeof ProfileAddressesIndexRoute
 }
@@ -85,44 +139,75 @@ export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
   fullPaths:
     | '/'
+    | '/404'
+    | '/orders/$orderId'
+    | '/payment/result'
     | '/product/$spuCode'
     | '/callback/'
     | '/cart/'
     | '/categories/'
+    | '/checkout/'
+    | '/coupons/'
+    | '/orders/'
     | '/profile/'
     | '/profile/addresses/'
   fileRoutesByTo: FileRoutesByTo
   to:
     | '/'
+    | '/404'
+    | '/orders/$orderId'
+    | '/payment/result'
     | '/product/$spuCode'
     | '/callback'
     | '/cart'
     | '/categories'
+    | '/checkout'
+    | '/coupons'
+    | '/orders'
     | '/profile'
     | '/profile/addresses'
   id:
     | '__root__'
     | '/'
+    | '/404'
+    | '/orders/$orderId'
+    | '/payment/result'
     | '/product/$spuCode'
     | '/callback/'
     | '/cart/'
     | '/categories/'
+    | '/checkout/'
+    | '/coupons/'
+    | '/orders/'
     | '/profile/'
     | '/profile/addresses/'
   fileRoutesById: FileRoutesById
 }
 export interface RootRouteChildren {
   IndexRoute: typeof IndexRoute
+  R404Route: typeof R404Route
+  OrdersOrderIdRoute: typeof OrdersOrderIdRoute
+  PaymentResultRoute: typeof PaymentResultRoute
   ProductSpuCodeRoute: typeof ProductSpuCodeRoute
   CallbackIndexRoute: typeof CallbackIndexRoute
   CartIndexRoute: typeof CartIndexRoute
   CategoriesIndexRoute: typeof CategoriesIndexRoute
+  CheckoutIndexRoute: typeof CheckoutIndexRoute
+  CouponsIndexRoute: typeof CouponsIndexRoute
+  OrdersIndexRoute: typeof OrdersIndexRoute
   ProfileIndexRoute: typeof ProfileIndexRoute
   ProfileAddressesIndexRoute: typeof ProfileAddressesIndexRoute
 }
 
 declare module '@tanstack/react-router' {
   interface FileRoutesByPath {
+    '/404': {
+      id: '/404'
+      path: '/404'
+      fullPath: '/404'
+      preLoaderRoute: typeof R404RouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/': {
       id: '/'
       path: '/'
@@ -135,6 +220,27 @@ declare module '@tanstack/react-router' {
       path: '/profile'
       fullPath: '/profile/'
       preLoaderRoute: typeof ProfileIndexRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/orders/': {
+      id: '/orders/'
+      path: '/orders'
+      fullPath: '/orders/'
+      preLoaderRoute: typeof OrdersIndexRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/coupons/': {
+      id: '/coupons/'
+      path: '/coupons'
+      fullPath: '/coupons/'
+      preLoaderRoute: typeof CouponsIndexRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/checkout/': {
+      id: '/checkout/'
+      path: '/checkout'
+      fullPath: '/checkout/'
+      preLoaderRoute: typeof CheckoutIndexRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/categories/': {
@@ -165,6 +271,20 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof ProductSpuCodeRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/payment/result': {
+      id: '/payment/result'
+      path: '/payment/result'
+      fullPath: '/payment/result'
+      preLoaderRoute: typeof PaymentResultRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/orders/$orderId': {
+      id: '/orders/$orderId'
+      path: '/orders/$orderId'
+      fullPath: '/orders/$orderId'
+      preLoaderRoute: typeof OrdersOrderIdRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/profile/addresses/': {
       id: '/profile/addresses/'
       path: '/profile/addresses'
@@ -177,10 +297,16 @@ declare module '@tanstack/react-router' {
 
 const rootRouteChildren: RootRouteChildren = {
   IndexRoute: IndexRoute,
+  R404Route: R404Route,
+  OrdersOrderIdRoute: OrdersOrderIdRoute,
+  PaymentResultRoute: PaymentResultRoute,
   ProductSpuCodeRoute: ProductSpuCodeRoute,
   CallbackIndexRoute: CallbackIndexRoute,
   CartIndexRoute: CartIndexRoute,
   CategoriesIndexRoute: CategoriesIndexRoute,
+  CheckoutIndexRoute: CheckoutIndexRoute,
+  CouponsIndexRoute: CouponsIndexRoute,
+  OrdersIndexRoute: OrdersIndexRoute,
   ProfileIndexRoute: ProfileIndexRoute,
   ProfileAddressesIndexRoute: ProfileAddressesIndexRoute,
 }

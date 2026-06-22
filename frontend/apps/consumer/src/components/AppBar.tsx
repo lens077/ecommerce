@@ -1,15 +1,14 @@
 import AccountCircle from "@mui/icons-material/AccountCircle";
-import MailIcon from "@mui/icons-material/Mail";
-import MenuIcon from "@mui/icons-material/Menu";
-import MoreIcon from "@mui/icons-material/MoreVert";
-import NotificationsIcon from "@mui/icons-material/Notifications";
+import MoreVertIcon from "@mui/icons-material/MoreVert";
 import SearchIcon from "@mui/icons-material/Search";
 import ShoppingCartIcon from "@mui/icons-material/ShoppingCart";
+import StorefrontIcon from "@mui/icons-material/Storefront";
 import AppBar from "@mui/material/AppBar";
 import Avatar from "@mui/material/Avatar";
 import Badge from "@mui/material/Badge";
 import Box from "@mui/material/Box";
 import Button from "@mui/material/Button";
+import CircularProgress from "@mui/material/CircularProgress";
 import IconButton from "@mui/material/IconButton";
 import InputBase from "@mui/material/InputBase";
 import Menu from "@mui/material/Menu";
@@ -24,6 +23,7 @@ import { searchApi } from "@/api/search";
 import { getSigninUrl, isLoggedIn } from "@ecommerce/configs";
 import { SEARCH_INDEX } from "@ecommerce/constants";
 import type { Product } from "@/gen/api";
+import { useCartBadge } from "@/hooks/useCart";
 import { userStore } from "@/store/users";
 import { addNotification, clearToken } from "@ecommerce/utils";
 
@@ -101,6 +101,7 @@ const StyledInputBase = styled(InputBase)(({theme}) => ({
 
 export default function PrimarySearchAppBar() {
     const navigate = useNavigate();
+    const cartCount = useCartBadge();
     const [anchorEl, setAnchorEl] = React.useState<null | HTMLElement>(null);
     const [mobileMoreAnchorEl, setMobileMoreAnchorEl] = React.useState<null | HTMLElement>(null);
     const [searchInput, setSearchInput] = React.useState("");
@@ -266,34 +267,17 @@ export default function PrimarySearchAppBar() {
             open={isMobileMenuOpen}
             onClose={handleMobileMenuClose}
         >
-            <MenuItem>
-                <IconButton size="large" aria-label="show 4 new mails" color="inherit">
-                    <Badge badgeContent={4} color="error">
-                        <MailIcon/>
-                    </Badge>
-                </IconButton>
-                <p>Messages</p>
-            </MenuItem>
-            <MenuItem>
-                <IconButton size="large" aria-label="show 17 new notifications" color="inherit">
-                    <Badge badgeContent={17} color="error">
-                        <NotificationsIcon/>
-                    </Badge>
-                </IconButton>
-                <p>Notifications</p>
-            </MenuItem>
-            <MenuItem>
+            <MenuItem onClick={() => navigate({to: "/cart"})}>
                 <IconButton
                     size="large"
                     aria-label="shopping cart"
                     color="inherit"
-                    onClick={() => navigate({to: "/cart"})}
                 >
-                    <Badge badgeContent={3} color="error">
+                    <Badge badgeContent={cartCount} color="error">
                         <ShoppingCartIcon/>
                     </Badge>
                 </IconButton>
-                <p>Cart</p>
+                <p>购物车</p>
             </MenuItem>
             <MenuItem onClick={handleProfileMenuOpen}>
                 <IconButton
@@ -309,7 +293,7 @@ export default function PrimarySearchAppBar() {
                         <AccountCircle/>
                     )}
                 </IconButton>
-                <p>Profile</p>
+                <p>个人中心</p>
             </MenuItem>
         </Menu>
     );
@@ -318,39 +302,97 @@ export default function PrimarySearchAppBar() {
         <Box sx={{flexGrow: 1}}>
             <StyledAppBar position="static">
                 <Toolbar sx={{
-                    color: 'black'
+                    color: 'text.primary'
                 }}>
-                    <IconButton
-                        size="large"
-                        edge="start"
-                        color="inherit"
-                        aria-label="open drawer"
-                        sx={{mr: 2}}
+                    {/* 品牌 Logo */}
+                    <Box
+                        onClick={() => navigate({ to: "/" })}
+                        sx={{
+                            display: "flex",
+                            alignItems: "center",
+                            gap: 1,
+                            cursor: "pointer",
+                            mr: 2,
+                            "&:hover": {
+                                opacity: 0.8,
+                            },
+                            transition: "opacity 0.2s ease",
+                        }}
                     >
-                        <MenuIcon/>
-                    </IconButton>
-                    <Typography
-                        variant="h6"
-                        noWrap
-                        component="div"
-                        sx={{display: {xs: "none", sm: "block"}}}
-                    >
-                        {import.meta.env.VITE_APP_TITLE}
-                    </Typography>
+                        <Box
+                            sx={{
+                                width: 36,
+                                height: 36,
+                                borderRadius: "10px",
+                                background: "linear-gradient(135deg, #667eea 0%, #764ba2 100%)",
+                                display: "flex",
+                                alignItems: "center",
+                                justifyContent: "center",
+                                boxShadow: "0 4px 12px rgba(102, 126, 234, 0.4)",
+                            }}
+                        >
+                            <StorefrontIcon sx={{ color: "white", fontSize: 22 }} />
+                        </Box>
+                        <Typography
+                            variant="h6"
+                            noWrap
+                            component="div"
+                            sx={{
+                                display: { xs: "none", sm: "block" },
+                                fontWeight: 700,
+                                background: "linear-gradient(135deg, #667eea 0%, #764ba2 100%)",
+                                WebkitBackgroundClip: "text",
+                                WebkitTextFillColor: "transparent",
+                            }}
+                        >
+                            {import.meta.env.VITE_APP_TITLE}
+                        </Typography>
+                    </Box>
                     <SearchContainer>
                         <Search
                             sx={{
-                                border: '1px solid black',
+                                backgroundColor: "rgba(0, 0, 0, 0.04)",
+                                borderRadius: "12px",
+                                border: "1px solid transparent",
+                                transition: "all 0.3s ease",
+                                "&:hover": {
+                                    backgroundColor: "rgba(0, 0, 0, 0.06)",
+                                    border: "1px solid rgba(102, 126, 234, 0.3)",
+                                },
+                                "&:focus-within": {
+                                    backgroundColor: "rgba(102, 126, 234, 0.08)",
+                                    border: "1px solid #667eea",
+                                    boxShadow: "0 0 0 3px rgba(102, 126, 234, 0.15)",
+                                },
                             }}
                         >
                             <StyledInputBase
-                                placeholder="Search…"
+                                placeholder="搜索商品..."
                                 inputProps={{"aria-label": "search"}}
                                 value={searchInput}
                                 onChange={handleSearchInputChange}
+                                sx={{
+                                    "& input": {
+                                        "&::placeholder": {
+                                            color: "text.secondary",
+                                            opacity: 0.7,
+                                        },
+                                    },
+                                }}
                             />
-                            <SearchIconWrapper onClick={handleSearch}>
-                                <SearchIcon/>
+                            <SearchIconWrapper
+                                onClick={handleSearch}
+                                sx={{
+                                    "&:hover": {
+                                        color: "#667eea",
+                                    },
+                                }}
+                            >
+                                {isSearching ? (
+                                    <CircularProgress size={20} color="inherit" />
+                                ) : (
+                                    <SearchIcon />
+                                )}
                             </SearchIconWrapper>
                         </Search>
                     </SearchContainer>
@@ -359,26 +401,21 @@ export default function PrimarySearchAppBar() {
                         sx={{
                             display: {xs: "none", md: "flex"},
                             alignItems: "center",
-                            gap: 2,
+                            gap: 1,
                         }}
                     >
-                        <IconButton size="large" aria-label="show 4 new mails" color="inherit">
-                            <Badge badgeContent={4} color="error">
-                                <MailIcon/>
-                            </Badge>
-                        </IconButton>
-                        <IconButton size="large" aria-label="show 17 new notifications" color="inherit">
-                            <Badge badgeContent={17} color="error">
-                                <NotificationsIcon/>
-                            </Badge>
-                        </IconButton>
                         <IconButton
                             size="large"
                             aria-label="shopping cart"
                             color="inherit"
                             onClick={() => navigate({to: "/cart"})}
+                            sx={{
+                                "&:hover": {
+                                    backgroundColor: "rgba(102, 126, 234, 0.1)",
+                                },
+                            }}
                         >
-                            <Badge badgeContent={3} color="error">
+                            <Badge badgeContent={cartCount} color="error">
                                 <ShoppingCartIcon/>
                             </Badge>
                         </IconButton>
@@ -391,6 +428,12 @@ export default function PrimarySearchAppBar() {
                                 aria-haspopup="true"
                                 onClick={handleProfileMenuOpen}
                                 color="inherit"
+                                sx={{
+                                    ml: 1,
+                                    "&:hover": {
+                                        backgroundColor: "rgba(102, 126, 234, 0.1)",
+                                    },
+                                }}
                             >
                                 {userStore.account.avatar ? (
                                     <Avatar src={userStore.account.avatar} alt={userStore.account.name}/>
@@ -404,9 +447,17 @@ export default function PrimarySearchAppBar() {
                                 onClick={() => {
                                     window.location.href = getSigninUrl();
                                 }}
-                                sx={{ml: 2}}
+                                sx={{
+                                    ml: 2,
+                                    borderRadius: "8px",
+                                    background: "linear-gradient(135deg, #667eea 0%, #764ba2 100%)",
+                                    boxShadow: "0 4px 12px rgba(102, 126, 234, 0.3)",
+                                    "&:hover": {
+                                        background: "linear-gradient(135deg, #5a6fd6 0%, #6a4190 100%)",
+                                    },
+                                }}
                             >
-                                Login
+                                登录
                             </Button>
                         )}
                     </Box>
@@ -420,7 +471,7 @@ export default function PrimarySearchAppBar() {
                                 onClick={handleMobileMenuOpen}
                                 color="inherit"
                             >
-                                <MoreIcon/>
+                                <MoreVertIcon/>
                             </IconButton>
                         ) : (
                             <Button
@@ -428,22 +479,37 @@ export default function PrimarySearchAppBar() {
                                 onClick={() => {
                                     window.location.href = getSigninUrl();
                                 }}
+                                sx={{
+                                    borderRadius: "8px",
+                                    background: "linear-gradient(135deg, #667eea 0%, #764ba2 100%)",
+                                    color: "white",
+                                }}
                             >
-                                Login
+                                登录
                             </Button>
                         )}
                     </Box>
                 </Toolbar>
             </StyledAppBar>
             {showSearchResults && (
-                <SearchResults>
-                    <Typography variant="h6" gutterBottom>
-                        搜索结果
-                    </Typography>
-                    {isSearching ? (
-                        <Typography variant="body1" sx={{textAlign: "center", py: 4}}>
-                            搜索中...
+                <SearchResults
+                    sx={{
+                        maxHeight: "70vh",
+                        overflowY: "auto",
+                    }}
+                >
+                    <Box sx={{ display: "flex", alignItems: "center", gap: 1, mb: 2 }}>
+                        <Typography variant="h6" sx={{ fontWeight: 600 }}>
+                            搜索结果
                         </Typography>
+                        <Typography variant="body2" color="text.secondary">
+                            ({searchResults.length} 个商品)
+                        </Typography>
+                    </Box>
+                    {isSearching ? (
+                        <Box sx={{ display: "flex", justifyContent: "center", py: 4 }}>
+                            <CircularProgress size={32} />
+                        </Box>
                     ) : searchResults.length > 0 ? (
                         <Box
                             sx={{
@@ -456,12 +522,14 @@ export default function PrimarySearchAppBar() {
                                 <Box
                                     key={product.id}
                                     sx={{
-                                        border: "1px solid rgba(0, 0, 0, 0.1)",
-                                        borderRadius: 1,
+                                        border: "1px solid rgba(0, 0, 0, 0.08)",
+                                        borderRadius: "12px",
                                         padding: 2,
+                                        transition: "all 0.2s ease",
                                         "&:hover": {
-                                            boxShadow: 2,
-                                            backgroundColor: "rgba(0, 0, 0, 0.02)",
+                                            borderColor: "#667eea",
+                                            boxShadow: "0 4px 20px rgba(102, 126, 234, 0.15)",
+                                            transform: "translateY(-2px)",
                                         },
                                         cursor: "pointer",
                                     }}
@@ -471,16 +539,40 @@ export default function PrimarySearchAppBar() {
                                         <Avatar
                                             src={product.mainMediaUrl}
                                             alt={product.name}
-                                            sx={{width: 80, height: 80, mb: 2}}
+                                            sx={{
+                                                width: 80,
+                                                height: 80,
+                                                mb: 2,
+                                                borderRadius: "8px",
+                                            }}
                                         />
-                                        <Typography variant="subtitle1" gutterBottom sx={{ textAlign: "center" }}>
+                                        <Typography
+                                            variant="subtitle1"
+                                            sx={{
+                                                textAlign: "center",
+                                                fontWeight: 500,
+                                                mb: 1,
+                                                overflow: "hidden",
+                                                textOverflow: "ellipsis",
+                                                whiteSpace: "nowrap",
+                                                width: "100%",
+                                            }}
+                                        >
                                             {product.name}
                                         </Typography>
-                                        <Typography variant="body1" color="primary" sx={{ fontWeight: "bold" }}>
+                                        <Typography
+                                            variant="h6"
+                                            sx={{
+                                                fontWeight: 700,
+                                                background: "linear-gradient(135deg, #667eea 0%, #764ba2 100%)",
+                                                WebkitBackgroundClip: "text",
+                                                WebkitTextFillColor: "transparent",
+                                            }}
+                                        >
                                             ¥{product.price}
                                         </Typography>
-                                        <Typography variant="body1" color="primary" sx={{ fontWeight: "bold" }}>
-                                            已售{product.quantity}
+                                        <Typography variant="caption" color="text.secondary">
+                                            已售 {product.quantity}
                                         </Typography>
                                     </Box>
                                 </Box>

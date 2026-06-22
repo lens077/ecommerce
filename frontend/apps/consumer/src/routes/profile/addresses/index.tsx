@@ -1,9 +1,10 @@
-import { Add, Close, Delete, Edit } from "@mui/icons-material";
+import { Add, Close, Delete, Edit, LocationOn } from "@mui/icons-material";
 import {
   Alert,
   Backdrop,
   Box,
   Button,
+  Checkbox,
   CircularProgress,
   Container,
   Dialog,
@@ -188,129 +189,196 @@ function RouteComponent() {
   };
 
   return (
-    // <ErrorHandler error={profileError} loading={profileLoading}>
-      <Container maxWidth="md" sx={{ py: 4 }}>
+    <Box
+      sx={{
+        minHeight: "100vh",
+        background: "linear-gradient(180deg, #f8f9ff 0%, #ffffff 100%)",
+        py: 4,
+      }}
+    >
+      <Container maxWidth="md">
+        {/* 页面标题 */}
+        <Box sx={{ mb: 4 }}>
+          <Typography variant="body2" color="text.secondary" sx={{ mb: 1 }}>
+            个人中心 &gt; 地址管理
+          </Typography>
+          <Typography variant="h4" component="h1" sx={{ fontWeight: 700, color: "text.primary" }}>
+            地址管理
+          </Typography>
+        </Box>
+
         <Paper
           elevation={0}
           sx={{
-            backdropFilter: "blur(10px)",
-            backgroundColor: "rgba(255, 255, 255, 0.8)",
-            borderRadius: "16px",
-            padding: "24px",
-            mb: 4,
+            borderRadius: "20px",
+            border: "1px solid rgba(102, 126, 234, 0.1)",
+            boxShadow: "0 4px 24px rgba(102, 126, 234, 0.06)",
+            overflow: "hidden",
           }}
         >
+          {/* 头部区域 */}
           <Box
             sx={{
               display: "flex",
               justifyContent: "space-between",
               alignItems: "center",
-              mb: 4,
+              p: 3,
+              borderBottom: "1px solid rgba(102, 126, 234, 0.08)",
+              background: "linear-gradient(135deg, rgba(102, 126, 234, 0.03) 0%, rgba(118, 75, 162, 0.03) 100%)",
             }}
           >
-            <Typography variant="h4" component="h1" sx={{ fontWeight: "bold" }}>
-              地址管理
+            <Typography variant="h6" sx={{ fontWeight: 600, color: "text.primary" }}>
+              我的收货地址
             </Typography>
             <Button
               variant="contained"
-              color="primary"
               startIcon={<Add />}
               onClick={() => handleOpenDialog()}
               sx={{
-                borderRadius: "8px",
+                borderRadius: "10px",
                 textTransform: "none",
-                fontWeight: "medium",
+                fontWeight: 600,
+                background: "linear-gradient(135deg, #667eea 0%, #764ba2 100%)",
+                boxShadow: "0 4px 12px rgba(102, 126, 234, 0.3)",
+                "&:hover": {
+                  background: "linear-gradient(135deg, #5a6fd6 0%, #6a4190 100%)",
+                },
               }}
             >
               添加新地址
             </Button>
           </Box>
 
-          <Divider sx={{ mb: 4 }} />
+          {/* 内容区域 */}
+          <Box sx={{ p: 3 }}>
+            {addressError && (
+              <Alert severity="error" sx={{ mb: 3, borderRadius: "12px" }}>
+                加载地址失败，请重试
+              </Alert>
+            )}
 
-          {addressError && (
-            <Alert severity="error" sx={{ mb: 4 }}>
-              加载地址失败，请重试
-            </Alert>
-          )}
-
-          <List sx={{ width: "100%" }}>
-            {addresses?.map((address) => (
-              <ListItem
-                key={address.id}
-                sx={{
-                  mb: 2,
-                  borderRadius: "8px",
-                  backgroundColor: "rgba(255, 255, 255, 0.6)",
-                }}
-              >
-                <ListItemText
-                  primary={
-                    <Box>
-                      <Typography variant="subtitle1" sx={{ fontWeight: "medium" }}>
-                        {address.name} {address.phone}
-                      </Typography>
-                      <Typography variant="body2" color="text.secondary">
-                        {address.province}
-                        {address.city}
-                        {address.district}
-                        {address.address}
-                      </Typography>
-                      {address.isDefault && (
-                        <Box sx={{ mt: 1, display: "inline-block" }}>
-                          <Typography
-                            variant="caption"
+            <List sx={{ width: "100%" }}>
+              {addresses?.map((address) => (
+                <ListItem
+                  key={address.id}
+                  sx={{
+                    mb: 2,
+                    borderRadius: "16px",
+                    border: "1px solid rgba(102, 126, 234, 0.1)",
+                    backgroundColor: "white",
+                    transition: "all 0.2s ease",
+                    "&:hover": {
+                      borderColor: "rgba(102, 126, 234, 0.3)",
+                      boxShadow: "0 4px 16px rgba(102, 126, 234, 0.1)",
+                    },
+                  }}
+                >
+                  <ListItemText
+                    primary={
+                      <Box sx={{ display: "flex", alignItems: "center", gap: 2, mb: 1 }}>
+                        <Typography variant="subtitle1" sx={{ fontWeight: 600 }}>
+                          {address.name}
+                        </Typography>
+                        <Typography variant="subtitle1" sx={{ fontWeight: 600, color: "text.primary" }}>
+                          {address.phone}
+                        </Typography>
+                        {address.isDefault && (
+                          <Box
                             sx={{
-                              backgroundColor: "primary.main",
+                              background: "linear-gradient(135deg, #667eea 0%, #764ba2 100%)",
                               color: "white",
-                              px: 1,
-                              py: 0.25,
-                              borderRadius: "4px",
+                              px: 1.5,
+                              py: 0.5,
+                              borderRadius: "6px",
+                              fontSize: "0.75rem",
+                              fontWeight: 600,
                             }}
                           >
                             默认
-                          </Typography>
-                        </Box>
-                      )}
+                          </Box>
+                        )}
+                      </Box>
+                    }
+                    secondary={
+                      <Box sx={{ display: "flex", alignItems: "flex-start", gap: 1 }}>
+                        <LocationOn sx={{ fontSize: 16, color: "text.secondary", mt: 0.3 }} />
+                        <Typography variant="body2" color="text.secondary">
+                          {address.province} {address.city} {address.district} {address.address}
+                        </Typography>
+                      </Box>
+                    }
+                  />
+                  <ListItemSecondaryAction>
+                    <Box sx={{ display: "flex", gap: 0.5 }}>
+                      <IconButton
+                        edge="end"
+                        aria-label="edit"
+                        onClick={() => handleOpenDialog(address)}
+                        size="small"
+                        sx={{
+                          color: "#667eea",
+                          "&:hover": {
+                            backgroundColor: "rgba(102, 126, 234, 0.1)",
+                          },
+                        }}
+                      >
+                        <Edit fontSize="small" />
+                      </IconButton>
+                      <IconButton
+                        edge="end"
+                        aria-label="delete"
+                        onClick={() => handleDeleteAddress(address.id)}
+                        size="small"
+                        sx={{
+                          color: "#f44336",
+                          "&:hover": {
+                            backgroundColor: "rgba(244, 67, 54, 0.1)",
+                          },
+                        }}
+                      >
+                        <Delete fontSize="small" />
+                      </IconButton>
                     </Box>
-                  }
-                />
-                <ListItemSecondaryAction>
-                  <IconButton
-                    edge="end"
-                    aria-label="edit"
-                    onClick={() => handleOpenDialog(address)}
-                  >
-                    <Edit />
-                  </IconButton>
-                  <IconButton
-                    edge="end"
-                    aria-label="delete"
-                    onClick={() => handleDeleteAddress(address.id)}
-                  >
-                    <Delete />
-                  </IconButton>
-                </ListItemSecondaryAction>
-              </ListItem>
-            ))}
-          </List>
+                  </ListItemSecondaryAction>
+                </ListItem>
+              ))}
+            </List>
 
-          {isLoading ? (
-            <Box sx={{ textAlign: "center", py: 4 }}>
-              <CircularProgress size={24} />
-              <Typography variant="body2" color="text.secondary" sx={{ mt: 2 }}>
-                加载中...
-              </Typography>
-            </Box>
-          ) : (
-            addresses?.length === 0 && (
+            {isLoading ? (
               <Box sx={{ textAlign: "center", py: 4 }}>
-                <Typography variant="body1" color="text.secondary">
-                  暂无地址，请添加新地址
+                <CircularProgress size={24} />
+                <Typography variant="body2" color="text.secondary" sx={{ mt: 2 }}>
+                  加载中...
                 </Typography>
               </Box>
-            )
-          )}
+            ) : (
+              addresses?.length === 0 && (
+                <Box sx={{ textAlign: "center", py: 6 }}>
+                  <Box
+                    sx={{
+                      width: 80,
+                      height: 80,
+                      borderRadius: "50%",
+                      background: "linear-gradient(135deg, rgba(102, 126, 234, 0.1) 0%, rgba(118, 75, 162, 0.1) 100%)",
+                      display: "flex",
+                      alignItems: "center",
+                      justifyContent: "center",
+                      mx: "auto",
+                      mb: 2,
+                    }}
+                  >
+                    <LocationOn sx={{ fontSize: 40, color: "#667eea" }} />
+                  </Box>
+                  <Typography variant="body1" color="text.secondary" sx={{ mb: 2 }}>
+                    暂无收货地址
+                  </Typography>
+                  <Typography variant="body2" color="text.secondary">
+                    点击上方按钮添加您的第一个收货地址
+                  </Typography>
+                </Box>
+              )
+            )}
+          </Box>
         </Paper>
 
         <Dialog open={openDialog} onClose={handleCloseDialog} maxWidth="sm" fullWidth>
@@ -337,14 +405,14 @@ function RouteComponent() {
                 label="收件人"
                 fullWidth
                 value={formData.name}
-                onChange={(e) => setFormData({ ...formData, name: e.target.value })}
+                onChange={(e) => setFormData((prev) => ({ ...prev, name: e.target.value }))}
                 sx={{ mb: 2 }}
               />
               <TextField
                 label="手机号码"
                 fullWidth
                 value={formData.phone}
-                onChange={(e) => setFormData({ ...formData, phone: e.target.value })}
+                onChange={(e) => setFormData((prev) => ({ ...prev, phone: e.target.value }))}
                 sx={{ mb: 2 }}
               />
             </Box>
@@ -355,7 +423,7 @@ function RouteComponent() {
                   labelId="province-label"
                   value={formData.province}
                   label="省份"
-                  onChange={(e) => setFormData({ ...formData, province: e.target.value })}
+                  onChange={(e) => setFormData((prev) => ({ ...prev, province: e.target.value }))}
                 >
                   <MenuItem value="广东省">广东省</MenuItem>
                   <MenuItem value="北京市">北京市</MenuItem>
@@ -383,7 +451,7 @@ function RouteComponent() {
                   labelId="district-label"
                   value={formData.district}
                   label="区/县"
-                  onChange={(e) => setFormData({ ...formData, district: e.target.value })}
+                  onChange={(e) => setFormData((prev) => ({ ...prev, district: e.target.value }))}
                 >
                   <MenuItem value="南山区">南山区</MenuItem>
                   <MenuItem value="朝阳区">朝阳区</MenuItem>
@@ -398,18 +466,21 @@ function RouteComponent() {
               multiline
               rows={3}
               value={formData.address}
-              onChange={(e) => setFormData({ ...formData, address: e.target.value })}
+              onChange={(e) => setFormData((prev) => ({ ...prev, address: e.target.value }))}
               sx={{ mb: 2 }}
             />
             <Box sx={{ display: "flex", alignItems: "center", mb: 2 }}>
-              <input
-                type="checkbox"
-                id="default"
+              <Checkbox
                 checked={formData.isDefault}
-                onChange={(e) => setFormData({ ...formData, isDefault: e.target.checked })}
-                style={{ marginRight: "8px" }}
+                onChange={(e) => setFormData((prev) => ({ ...prev, isDefault: e.target.checked }))}
+                sx={{
+                  color: "#667eea",
+                  "&.Mui-checked": {
+                    color: "#667eea",
+                  },
+                }}
               />
-              <label htmlFor="default">设为默认地址</label>
+              <Typography variant="body2">设为默认地址</Typography>
             </Box>
           </DialogContent>
           <DialogActions>
@@ -481,6 +552,6 @@ function RouteComponent() {
           <CircularProgress color="inherit" />
         </Backdrop>
       </Container>
-    // </ErrorHandler>
+    </Box>
   );
 }
