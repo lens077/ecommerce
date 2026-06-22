@@ -1,16 +1,18 @@
 {
   "name": "@ecommerce/ui",
-  "version": "1.0.0",
-  "description": "通用公共组件",
+  "version": "0.0.1",
   "private": true,
-  "devDependencies": {
-    "@connectrpc/connect": "catalog:",
-    "@mui/material": "catalog:"
-  },
+  "type": "module",
+  "main": "./src/index.ts",
+  "types": "./src/index.ts",
   "exports": {
-    ".": {
-      "types": "./src/index.ts",
-      "import": "./src/index.ts"
-    }
+    ".": "./src/index.ts",
+    "./*": "./src/*"
+  },
+  "dependencies": {
+    "@emotion/react": "catalog:",
+    "@emotion/styled": "catalog:",
+    "@mui/material": "catalog:",
+    "react": "catalog:"
   }
 }
