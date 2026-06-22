@@ -1,5 +1,5 @@
 server:
-  addr: "0.0.0.0:30002"
+  addr: "0.0.0.0:30004"
   http:
     read_timeout: "5s"
     write_timeout: "5s"

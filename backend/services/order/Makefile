@@ -9,7 +9,7 @@ CGOENABLED ?= 0
 SERVICE = $(shell basename $$PWD)
 DOCKER_IMAGE=connect/$(SERVICE):$(VERSION)
 REPOSITORY = sumery/$(SERVICE)
-REGISTER = docker.io
+REGISTER = ccr.ccs.tencentyun.com
 ARM64=linux/arm64
 AMD64=linux/amd64
 CONSUL_ADDR=consul.app.com
@@ -28,7 +28,7 @@ dev:
 	CONSUL_ENABLED=true \
 	CONSUL_ADDR=$(CONSUL_ADDR) \
     CONSUL_PATH=ecommerce/order/dev.yml \
-    CONSUL_SCHEME=https \
+    CONSUL_SCHEME=http \
     CONSUL_INSECURE_SKIP_VERIFY=true \
 	go run cmd/server/main.go
 
@@ -38,7 +38,7 @@ pre:
 	CONSUL_ENABLED=true \
 	CONSUL_ADDR=$(CONSUL_ADDR) \
     CONSUL_PATH=ecommerce/order/pre.yaml \
-    CONSUL_SCHEME=https \
+    CONSUL_SCHEME=http \
     CONSUL_INSECURE_SKIP_VERIFY=true \
 	go run cmd/server/main.go
 
