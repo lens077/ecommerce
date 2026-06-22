@@ -1,6 +1,9 @@
 server:
   addr: "0.0.0.0:30007"
-  timeout: 10
+  http:
+    read_timeout: "5s"
+    write_timeout: "5s"
+    idle_timeout: "30s"
   cors:
     allowed_origins:
       - http://localhost:3000
@@ -131,10 +134,6 @@ search:
       - https://es.sumery.com
     username: elastic
     password: ***REMOVED-PASSWORD***
-    tls:
-      enable: true
-      insecure_skip_verify: true
-      ca_pem: ""
     tls:
       enable: true
       insecure_skip_verify: true
