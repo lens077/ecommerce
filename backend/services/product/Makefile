@@ -12,7 +12,7 @@ REPOSITORY = sumery/$(SERVICE)
 REGISTER = ccr.ccs.tencentyun.com
 ARM64=linux/arm64
 AMD64=linux/amd64
-CONSUL_ADDR=consul.sumery.com
+CONSUL_ADDR=consul.app.com
 
 .PHONY: k8s-dev
 k8s-dev:

@@ -33,12 +33,12 @@ VALUES
 ),
 -- 关联 咖啡机 (SPU ID = 4)
 (
-    4, 3003, 'delonghi-nespresso-red', 888.00, 450.00, 30,
+    4, 'ca8ceec3-3345-48ce-b2db-40afe710eb62', 'delonghi-nespresso-red', 888.00, 450.00, 30,
     '{"颜色": "宝石红"}',
     '8004399332942', 'https://cdn.example.com/coffee/red_thumb.jpg', 'active'
 ),
 (
-    4, 3003, 'delonghi-nespresso-white', 888.00, 450.00, 15,
+    4, 'ca8ceec3-3345-48ce-b2db-40afe710eb62', 'delonghi-nespresso-white', 888.00, 450.00, 15,
     '{"颜色": "珍珠白"}',
     '8004399332943', 'https://cdn.example.com/coffee/white_thumb.jpg', 'active'
 );
