@@ -1,13 +1,14 @@
 package config
 
 import (
+	"context"
 	"fmt"
 	"reflect"
 	"sync"
 	"time"
 
 	"github.com/hashicorp/consul/api"
-	"github.com/lens077/ecommerce/backend/services/cart/constants"
+	"github.com/lens077/ecommerce/backend/constants"
 	confv1 "github.com/lens077/ecommerce/backend/services/cart/internal/conf/v1"
 	"github.com/lens077/ecommerce/backend/services/cart/internal/pkg/env"
 	"github.com/mitchellh/mapstructure"
@@ -23,7 +24,16 @@ var (
 	Module = fx.Module("config",
 		fx.Provide(
 			func(lc fx.Lifecycle) (*confv1.Bootstrap, error) {
-				bootstrap, err := Init()
+				ctx, cancel := context.WithCancel(context.Background())
+
+				lc.Append(fx.Hook{
+					OnStop: func(ctx context.Context) error {
+						cancel()
+						return nil
+					},
+				})
+
+				bootstrap, err := Init(ctx)
 				if err != nil {
 					return nil, err
 				}
@@ -69,7 +79,7 @@ func decodeConfig(data map[string]any, target any) error {
 	return decoder.Decode(v.AllSettings())
 }
 
-func Init() (*confv1.Bootstrap, error) {
+func Init(ctx context.Context) (*confv1.Bootstrap, error) {
 	addr := env.GetEnvString(constants.EnvConsulAddr, constants.ConsulAddr)
 	path := env.GetEnvString(constants.EnvConsulPath, constants.ConsulPath)
 	if path == "" {
