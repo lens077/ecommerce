@@ -100,8 +100,8 @@ address:
   enabled: false
   replicaCount: 1
   image:
-    repository: "sumery/address"
-    tag: dev
+    repository: "ccr.ccs.tencentyun.com/sumery/address"
+    tag: pre
     pullPolicy: Always
   service:
     type: LoadBalancer
@@ -146,11 +146,11 @@ address:
       memory: "256Mi"
 
 cart:
-  enabled: false
+  enabled: true
   replicaCount: 1
   image:
     repository: "ccr.ccs.tencentyun.com/sumery/cart"
-    tag: dev
+    tag: pre
     pullPolicy: Always
   service:
     type: LoadBalancer
@@ -195,11 +195,11 @@ cart:
       memory: "256Mi"
 
 inventory:
-  enabled: false
+  enabled: true
   replicaCount: 1
   image:
-    repository: "sumery/inventory"
-    tag: dev
+    repository: "ccr.ccs.tencentyun.com/sumery/inventory"
+    tag: pre
     pullPolicy: Always
   service:
     type: LoadBalancer
@@ -244,11 +244,11 @@ inventory:
       memory: "256Mi"
 
 merchant:
-  enabled: false
+  enabled: true
   replicaCount: 1
   image:
     repository: "ccr.ccs.tencentyun.com/sumery/merchant"
-    tag: dev
+    tag: pre
     pullPolicy: Always
   service:
     type: LoadBalancer
@@ -293,11 +293,11 @@ merchant:
       memory: "256Mi"
 
 order:
-  enabled: false
+  enabled: true
   replicaCount: 1
   image:
-    repository: "sumery/order"
-    tag: dev
+    repository: "ccr.ccs.tencentyun.com/sumery/order"
+    tag: pre
     pullPolicy: Always
   service:
     type: LoadBalancer
@@ -345,8 +345,8 @@ payment:
   enabled: false
   replicaCount: 1
   image:
-    repository: "sumery/payment"
-    tag: dev
+    repository: "ccr.ccs.tencentyun.com/sumery/payment"
+    tag: pre
     pullPolicy: Always
   service:
     type: LoadBalancer
