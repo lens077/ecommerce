@@ -31,7 +31,7 @@ search:
       value: "true"
   secret:
     enabled: true
-    name: "ecommerce-db-secret"
+    name: "search-db-secret"
     data:
       DB_SOURCE: "postgresql://postgres:msdnmm@192.168.3.109:5432/ecommerce?sslmode=require&sslrootcert=/etc/ssl/certs/pg_ca.crt&timezone=Asia/Shanghai"
   dbCaCert:
@@ -80,7 +80,7 @@ user:
       value: "true"
   secret:
     enabled: true
-    name: "ecommerce-db-secret"
+    name: "user-db-secret"
     data:
       DB_SOURCE: "postgresql://postgres:msdnmm@192.168.3.109:5432/ecommerce?sslmode=require&sslrootcert=/etc/ssl/certs/pg_ca.crt&timezone=Asia/Shanghai"
   dbCaCert:
@@ -129,7 +129,7 @@ address:
       value: "true"
   secret:
     enabled: true
-    name: "ecommerce-db-secret"
+    name: "address-db-secret"
     data:
       DB_SOURCE: "postgresql://postgres:msdnmm@192.168.3.109:5432/ecommerce?sslmode=require&sslrootcert=/etc/ssl/certs/pg_ca.crt&timezone=Asia/Shanghai"
   dbCaCert:
@@ -178,7 +178,7 @@ cart:
       value: "true"
   secret:
     enabled: true
-    name: "ecommerce-db-secret"
+    name: "cart-db-secret"
     data:
       DB_SOURCE: "postgresql://postgres:msdnmm@192.168.3.109:5432/ecommerce?sslmode=require&sslrootcert=/etc/ssl/certs/pg_ca.crt&timezone=Asia/Shanghai"
   dbCaCert:
@@ -227,7 +227,7 @@ inventory:
       value: "true"
   secret:
     enabled: true
-    name: "ecommerce-db-secret"
+    name: "inventory-db-secret"
     data:
       DB_SOURCE: "postgresql://postgres:msdnmm@192.168.3.109:5432/ecommerce?sslmode=require&sslrootcert=/etc/ssl/certs/pg_ca.crt&timezone=Asia/Shanghai"
   dbCaCert:
@@ -276,7 +276,7 @@ merchant:
       value: "true"
   secret:
     enabled: true
-    name: "ecommerce-db-secret"
+    name: "merchant-db-secret"
     data:
       DB_SOURCE: "postgresql://postgres:msdnmm@192.168.3.109:5432/ecommerce?sslmode=require&sslrootcert=/etc/ssl/certs/pg_ca.crt&timezone=Asia/Shanghai"
   dbCaCert:
@@ -325,7 +325,7 @@ order:
       value: "true"
   secret:
     enabled: true
-    name: "ecommerce-db-secret"
+    name: "order-db-secret"
     data:
       DB_SOURCE: "postgresql://postgres:msdnmm@192.168.3.109:5432/ecommerce?sslmode=require&sslrootcert=/etc/ssl/certs/pg_ca.crt&timezone=Asia/Shanghai"
   dbCaCert:
@@ -374,7 +374,7 @@ payment:
       value: "true"
   secret:
     enabled: true
-    name: "ecommerce-db-secret"
+    name: "payment-db-secret"
     data:
       DB_SOURCE: "postgresql://postgres:msdnmm@192.168.3.109:5432/ecommerce?sslmode=require&sslrootcert=/etc/ssl/certs/pg_ca.crt&timezone=Asia/Shanghai"
   dbCaCert:
