@@ -11,7 +11,7 @@ server:
 data:
   database:
     postgres:
-      host: postgres-postgresql.postgres.svc:5432
+      host: postgres-postgresql.postgres.svc
       port: 5432
       user: "postgres"
       password: "***REMOVED-PASSWORD***"
@@ -33,14 +33,15 @@ data:
           -----END CERTIFICATE-----
       timezone: "Asia/Shanghai"
       pool:
+        ping_timeout: "4s"
         max_conns: 20
         min_conns: 5
-        max_conn_lifetime: 3600
-        max_conn_idle_time: 300
+        max_conn_lifetime: "3600s"
+        max_conn_idle_time: "300s"
   cache:
     redis:
-      host: dragonfly.dragonfly.svc
-      port: 443
+      host: "dragonfly.dragonfly.svc"
+      port: 6379
       tls:
         enable: true
         insecure_skip_verify: true
@@ -67,9 +68,9 @@ data:
       username: "default"
       password: "***REMOVED-PASSWORD***"
       db: 0
-      dial_timeout: 5
-      read_timeout: 3
-      write_timeout: 3
+      dial_timeout: "5s"
+      read_timeout: "3s"
+      write_timeout: "3s"
       pool_size: 10
       min_idle_conns: 5
 
@@ -81,65 +82,114 @@ log:
   application:
     format: console
     level: debug
-  elastic_search:
+  elasticsearch:
     enable_request: true
     enable_response: true
 
 observability:
   enable: true
   trace:
-    endpoint: otlp-http.app.com:443
+    # 不需要指定http前缀
+    endpoint: otel-collector.observability:4318
     tls:
-      enable: true
-      insecure_skip_verify: true
-      ca_pem: ""
+      enable: false
+      insecure_skip_verify: false
+      ca_pem: |-
+        -----BEGIN CERTIFICATE-----
+        MIIDCDCCAfCgAwIBAgIURrO2XvkIlNEyGXiVQRW8+zDaFwEwDQYJKoZIhvcNAQEL
+        BQAwHDEaMBgGA1UEAxMRbXktZ2xvYmFsLXJvb3QtY2EwHhcNMjYwNjA3MjE1MDQw
+        WhcNMjYwOTA1MjE1MDQwWjAcMRowGAYDVQQDExFteS1nbG9iYWwtcm9vdC1jYTCC
+        ASIwDQYJKoZIhvcNAQEBBQADggEPADCCAQoCggEBAL8Bq8Ia9TqKFniw60wc0EBh
+        w59kj4rrHD9r0UfhLYcSchm+XblAhA4lmU9UhLv11yUrk/G7yakr/MN2lFiJ+VSq
+        y7MZqiglaE6aPJN4I0w+45j/UPRhFYN8pjOADTgUc/Z8a1ZOwXYqAGEhzQpvVzfD
+        O5CXJi+lfky/56xvVq6XpHjhO5kGo9zxPjS6+Bt5tJcpfUiXn2b8Ik/oqPkalVv5
+        YowDboditHkg0Y8mqVV4LKajVVoxJlvraAj8Jb9ZM3stYbvDuasyokFVIK1/ZpV/
+        LITckmg71vlMBkDjhC4ymBZq7ZxZZwakC4W8nQ8K/OwYEVjOrcrjbv1MgukRngUC
+        AwEAAaNCMEAwDgYDVR0PAQH/BAQDAgKkMA8GA1UdEwEB/wQFMAMBAf8wHQYDVR0O
+        BBYEFGpUpjkrAgkGxgikpv8LJn+9nr6wMA0GCSqGSIb3DQEBCwUAA4IBAQCvv78n
+        fWOfZebY7DmFecKx7Vy6Ozm3G6t8qLDCv/pzAA1WuNLFKYqL4H4V8b9t30Y4QXtG
+        QyqSpkUyR2L6Ji7iwbaJXVEzefe5VPULQ7qoBiL6iVZpE0bebGTpvicEZ2ldebjL
+        vpJmDQiWPuR1Yeuy1k1NiIbx4GiUO0D3Ujiy+kvGc0m947PdW19rNeGzoOfM5EhT
+        l3EgHYgFKtqM/+zBlYdTkIcpEdLujcyX+d1vixDC5aGENhYX7hTVb8vrdt455GJI
+        B/PgzPl6Es0EEG9gkP41KyZG3JFh5ME4ODoPqXfEDk6/yQtjYjOEzkUXVBGbMGkI
+        SUIGYmnQkqH+XprW
+        -----END CERTIFICATE-----
   metric:
-    endpoint: otlp-http.app.com:443
+    endpoint: otel-collector.observability:4318
     tls:
-      enable: true
-      insecure_skip_verify: true
-      ca_pem: ""
-  log:
-    endpoint: otlp-http.app.com:443
-    tls:
-      enable: true
-      insecure_skip_verify: true
-      ca_pem: ""
-
-discovery:
-  consul:
-    #addr: apikv.com:8500
-    addr: consul.app.com:443
-    health_check: true
-    scheme: https
-    ttl:
-      # Consul Agent 期望的心跳时间间隔
-      duration: "30s"
-      # 单位: 毫秒
-      ping_interval: 1000000000
-    tls:
-      enable: true
+      enable: false
       insecure_skip_verify: true
       ca_pem: |-
         -----BEGIN CERTIFICATE-----
-        MIIBiDCCAS6gAwIBAgIUaRnx06lN9Otrp04ahTRKHn1RiqswCgYIKoZIzj0EAwIw
-        IjEgMB4GA1UEAxMXY29uc3VsLWludGVybmFsLXJvb3QtY2EwHhcNMjYwNDI4MDU0
-        NjU0WhcNMjYwNzI3MDU0NjU0WjAiMSAwHgYDVQQDExdjb25zdWwtaW50ZXJuYWwt
-        cm9vdC1jYTBZMBMGByqGSM49AgEGCCqGSM49AwEHA0IABJbtHpvGdmrfoz7jEN0n
-        E1mzKH6EZspngoAwGxOun/SySzuCYHtDlD6WApmR2PBGECjB8pqnrhBjldxoxy1S
-        rQujQjBAMA4GA1UdDwEB/wQEAwICpDAPBgNVHRMBAf8EBTADAQH/MB0GA1UdDgQW
-        BBTOJjbIw4D104OieckQuEw+HvZFezAKBggqhkjOPQQDAgNIADBFAiB8etd9EvnD
-        zp2IGw4o7dSTJ4Qvqv8+s1Z66pQ7aViucgIhAIKlHJla4awYBsz6CTmPY4M7VpYs
-        JTIJfRSsqGdq0gEj
+        MIIDCDCCAfCgAwIBAgIURrO2XvkIlNEyGXiVQRW8+zDaFwEwDQYJKoZIhvcNAQEL
+        BQAwHDEaMBgGA1UEAxMRbXktZ2xvYmFsLXJvb3QtY2EwHhcNMjYwNjA3MjE1MDQw
+        WhcNMjYwOTA1MjE1MDQwWjAcMRowGAYDVQQDExFteS1nbG9iYWwtcm9vdC1jYTCC
+        ASIwDQYJKoZIhvcNAQEBBQADggEPADCCAQoCggEBAL8Bq8Ia9TqKFniw60wc0EBh
+        w59kj4rrHD9r0UfhLYcSchm+XblAhA4lmU9UhLv11yUrk/G7yakr/MN2lFiJ+VSq
+        y7MZqiglaE6aPJN4I0w+45j/UPRhFYN8pjOADTgUc/Z8a1ZOwXYqAGEhzQpvVzfD
+        O5CXJi+lfky/56xvVq6XpHjhO5kGo9zxPjS6+Bt5tJcpfUiXn2b8Ik/oqPkalVv5
+        YowDboditHkg0Y8mqVV4LKajVVoxJlvraAj8Jb9ZM3stYbvDuasyokFVIK1/ZpV/
+        LITckmg71vlMBkDjhC4ymBZq7ZxZZwakC4W8nQ8K/OwYEVjOrcrjbv1MgukRngUC
+        AwEAAaNCMEAwDgYDVR0PAQH/BAQDAgKkMA8GA1UdEwEB/wQFMAMBAf8wHQYDVR0O
+        BBYEFGpUpjkrAgkGxgikpv8LJn+9nr6wMA0GCSqGSIb3DQEBCwUAA4IBAQCvv78n
+        fWOfZebY7DmFecKx7Vy6Ozm3G6t8qLDCv/pzAA1WuNLFKYqL4H4V8b9t30Y4QXtG
+        QyqSpkUyR2L6Ji7iwbaJXVEzefe5VPULQ7qoBiL6iVZpE0bebGTpvicEZ2ldebjL
+        vpJmDQiWPuR1Yeuy1k1NiIbx4GiUO0D3Ujiy+kvGc0m947PdW19rNeGzoOfM5EhT
+        l3EgHYgFKtqM/+zBlYdTkIcpEdLujcyX+d1vixDC5aGENhYX7hTVb8vrdt455GJI
+        B/PgzPl6Es0EEG9gkP41KyZG3JFh5ME4ODoPqXfEDk6/yQtjYjOEzkUXVBGbMGkI
+        SUIGYmnQkqH+XprW
         -----END CERTIFICATE-----
+  log:
+    endpoint: otel-collector.observability:4318
+    tls:
+      enable: false
+      insecure_skip_verify: false
+      ca_pem: |-
+        -----BEGIN CERTIFICATE-----
+        MIIDCDCCAfCgAwIBAgIURrO2XvkIlNEyGXiVQRW8+zDaFwEwDQYJKoZIhvcNAQEL
+        BQAwHDEaMBgGA1UEAxMRbXktZ2xvYmFsLXJvb3QtY2EwHhcNMjYwNjA3MjE1MDQw
+        WhcNMjYwOTA1MjE1MDQwWjAcMRowGAYDVQQDExFteS1nbG9iYWwtcm9vdC1jYTCC
+        ASIwDQYJKoZIhvcNAQEBBQADggEPADCCAQoCggEBAL8Bq8Ia9TqKFniw60wc0EBh
+        w59kj4rrHD9r0UfhLYcSchm+XblAhA4lmU9UhLv11yUrk/G7yakr/MN2lFiJ+VSq
+        y7MZqiglaE6aPJN4I0w+45j/UPRhFYN8pjOADTgUc/Z8a1ZOwXYqAGEhzQpvVzfD
+        O5CXJi+lfky/56xvVq6XpHjhO5kGo9zxPjS6+Bt5tJcpfUiXn2b8Ik/oqPkalVv5
+        YowDboditHkg0Y8mqVV4LKajVVoxJlvraAj8Jb9ZM3stYbvDuasyokFVIK1/ZpV/
+        LITckmg71vlMBkDjhC4ymBZq7ZxZZwakC4W8nQ8K/OwYEVjOrcrjbv1MgukRngUC
+        AwEAAaNCMEAwDgYDVR0PAQH/BAQDAgKkMA8GA1UdEwEB/wQFMAMBAf8wHQYDVR0O
+        BBYEFGpUpjkrAgkGxgikpv8LJn+9nr6wMA0GCSqGSIb3DQEBCwUAA4IBAQCvv78n
+        fWOfZebY7DmFecKx7Vy6Ozm3G6t8qLDCv/pzAA1WuNLFKYqL4H4V8b9t30Y4QXtG
+        QyqSpkUyR2L6Ji7iwbaJXVEzefe5VPULQ7qoBiL6iVZpE0bebGTpvicEZ2ldebjL
+        vpJmDQiWPuR1Yeuy1k1NiIbx4GiUO0D3Ujiy+kvGc0m947PdW19rNeGzoOfM5EhT
+        l3EgHYgFKtqM/+zBlYdTkIcpEdLujcyX+d1vixDC5aGENhYX7hTVb8vrdt455GJI
+        B/PgzPl6Es0EEG9gkP41KyZG3JFh5ME4ODoPqXfEDk6/yQtjYjOEzkUXVBGbMGkI
+        SUIGYmnQkqH+XprW
+        -----END CERTIFICATE-----
+
+discovery:
+  consul:
+    addr: consul-expose-servers.consul.svc:8500
+    health_check: true
+    scheme: http
+    check:
+      # 服务进入异常状态后，多久将其彻底注销
+      deregister_critical_service_after: "6s"
+      ttl:
+        # 心跳时间间隔, 每过这个设定的值才重新检查一次后端服务是否健康
+        duration: "30s"
+        # 心跳频率, 根据设置值去告诉Consul后端服务是健康状态
+        ping_interval: "25s"
+    tls:
+      enable: false
+      insecure_skip_verify: true
+      ca_pem: ""
 search:
   elastic_search:
     addresses:
-      - https://es.app.com
+      - http://elasticsearch-es-http.elastic-stack.svc:9200
     username: elastic
     password: ***REMOVED-PASSWORD***
     tls:
-      enable: true
+      enable: false
       insecure_skip_verify: true
       ca_pem: ""
 

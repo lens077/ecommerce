@@ -161,6 +161,12 @@ func (r *ConsulRegistry) Register(conf *confv1.Bootstrap, info meta.AppInfo) err
 	if err != nil {
 		return err
 	}
+
+	// 确保 Check 和 Ttl 配置存在
+	if conf.Discovery == nil || conf.Discovery.Consul == nil || conf.Discovery.Consul.Check == nil || conf.Discovery.Consul.Check.Ttl == nil {
+		return fmt.Errorf("consul check configuration is missing")
+	}
+
 	reg := &api.AgentServiceRegistration{
 		ID:      r.ID,
 		Name:    r.Name,

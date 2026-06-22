@@ -51,11 +51,12 @@ type Data struct {
 // NewData 是 Data 的构造函数
 func NewData(db *pgxpool.Pool, rdb *redis.Client, auth *casdoorsdk.Client, es *elasticsearch.TypedClient, logger *zap.Logger) *Data {
 	return &Data{
-		db:   db,
-		rdb:  rdb,
-		auth: auth,
-		es:   es,
-		log:  logger,
+		db:           db,
+		rdb:          rdb,
+		auth:         auth,
+		es:           es,
+		log:          logger,
+		dbErrHandler: dbutil.NewHandler(),
 	}
 }
 
