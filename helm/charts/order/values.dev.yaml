@@ -1,0 +1,32 @@
+replicaCount: 1
+enabled: true
+image:
+  repository: "ccr.ccs.tencentyun.com/sumery/order"
+  tag: pre
+  pullPolicy: Always
+service:
+  type: LoadBalancer
+  ports:
+    http:
+      enabled: true
+      port: 30004
+      targetPort: 30004
+env:
+  - name: SERVICE_NAME
+    value: "order-service-v1"
+secret:
+  enabled: true
+  name: "order-db-secret"
+  data:
+    DB_SOURCE: "postgresql://postgres:password@host:5432/db?sslmode=require"
+dbCaCert:
+  enabled: true
+  secretName: "pg-ca-cert"
+  mountPath: "/etc/ssl/certs"
+resources:
+  requests:
+    cpu: "100m"
+    memory: "128Mi"
+  limits:
+    cpu: "1"
+    memory: "256Mi"
