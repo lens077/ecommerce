@@ -1,0 +1,57 @@
+apiVersion: argoproj.io/v1alpha1
+kind: AppProject
+metadata:
+  name: ecommerce                     # 项目名称，与 Application 中 spec.project 匹配
+  namespace: argocd                   # AppProject 资源必须部署在 argocd 命名空间
+  # 可选：添加 labels/annotations 便于管理
+  # labels:
+  #   team: ecommerce
+spec:
+  # 允许该项目使用的 Git 仓库源（支持通配符 *）
+  sourceRepos:
+    - 'https://gitlab.com/sumery/ecommerce.git'   # HTTPS 方式
+    - 'git@gitlab.com:sumery/ecommerce.git'       # SSH 方式
+  # 如果希望允许所有仓库（不推荐生产环境），可使用：
+  # - '*'
+
+  # 允许部署的目标集群和命名空间
+  destinations:
+    - namespace: ecommerce               # 允许部署到的命名空间
+      server: https://kubernetes.default.svc    # 目标集群 API Server
+  # 如需允许其他命名空间，可以添加多个：
+  # - namespace: staging
+  #   server: https://kubernetes.default.svc
+  # 如需允许所有命名空间（不推荐），可使用 namespace: '*'
+
+  # 允许部署的集群资源类型（Cluster-scoped resources）
+  # 此处允许所有，通常需要根据安全策略收紧
+  clusterResourceWhitelist:
+    - group: '*'
+      kind: '*'
+
+  # 允许部署的命名空间资源类型（Namespaced resources）
+  # 此处允许所有，也可按需限制
+  namespaceResourceWhitelist:
+    - group: '*'
+      kind: '*'
+
+  # 可选：定义角色（RBAC）限制谁可以操作该项目
+  # roles:
+  # - name: admin
+  #   description: 管理员权限
+  #   policies:
+  #   - p, proj:ecommerce:admin, applications, *, ecommerce/*, allow
+  #   groups:
+  #   - my-admin-group
+
+  # 可选：设置同步窗口，限制自动同步的时间段
+  # syncWindows:
+  # - kind: allow
+  #   schedule: '10 4 * * *'
+  #   duration: 1h
+  #   applications:
+  #   - '*-prod'
+  #   manualSync: true
+
+  # 可选：描述信息
+  description: "E-commerce 微服务项目，管理所有业务相关应用"
