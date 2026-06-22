@@ -41,7 +41,7 @@ spec:
 
       # 应用来源配置（Git 仓库及路径）
       source:
-        repoURL: git@gitlab.com:sumery/ecommerce.git   # 使用 SSH 协议访问仓库
+        repoURL: https://gitlab.com/sumery/ecommerce.git
         targetRevision: main                           # 跟踪 main 分支
         path: helm                                     # 指向父 Chart 目录（包含 Chart.yaml）
         helm:
