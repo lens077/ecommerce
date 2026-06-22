@@ -1,35 +1,61 @@
+# 作用：通过 ApplicationSet 的 list 生成器，为 ecommerce 项目部署一个
+# 包含所有微服务的 Helm 父 Chart（Umbrella Chart）。
+# 此配置使用 list 生成器，目前仅定义了一个环境（集群和命名空间），
+# 但可以轻松扩展多个环境（如 dev、staging、prod），通过添加更多
+# 元素实现多环境管理。生成的 Application 将引用仓库根目录下的
+# 父 Chart 目录（helm/），并通过 Helm 的 valueFiles 加载
+# 统一的 values.yaml 文件。
+
 apiVersion: argoproj.io/v1alpha1
 kind: ApplicationSet
 metadata:
-  name: my-platform
-  namespace: argocd
+  name: ecommerce-appset                       # ApplicationSet 名称
+  namespace: argocd                       # 部署在 argocd 命名空间
 spec:
-  # 启用 Go 模板
+  # 模板引擎配置
+  # 启用 Go 模板语法，使模板支持更丰富的函数和点操作，确保变量正确渲染
   goTemplate: true
-  # 可选，便于调试
+  # Go 模板选项：missingkey=error 表示模板中引用的 key 不存在时直接报错，
+  # 有助于快速发现模板编写错误
   goTemplateOptions: [ "missingkey=error" ]
+
+  # 生成器配置
   generators:
-    - list:
-        elements:
-          - cluster: https://kubernetes.default.svc   # 集群地址
+    - list: # list 生成器：根据固定的元素列表生成 Application
+        elements: # 元素列表，每个元素包含一组键值对，供模板使用
+          - cluster: https://kubernetes.default.svc   # 目标集群 API Server 地址
             namespace: ecommerce                      # 目标命名空间
-            # 此处可扩展其他环境参数
+            # 可在此处扩展其他环境参数，例如：
+            # - cluster: https://staging.k8s.local
+            #   namespace: staging
+            # 添加更多元素即可为不同环境生成对应的 Application
+
+  # Application 模板
   template:
     metadata:
-      name: my-platform
+      # Application 名称，此处固定为 "my-platform"（单应用场景）
+      name: ecommerce
     spec:
+      # 所属项目，需与已创建的 AppProject 名称匹配
       project: ecommerce
+
+      # 应用来源配置（Git 仓库及路径）
       source:
-        repoURL: git@gitlab.com:sumery/ecommerce.git
-        targetRevision: main
-        path: helm                                    # 父 Chart 目录
+        repoURL: git@gitlab.com:sumery/ecommerce.git   # 使用 SSH 协议访问仓库
+        targetRevision: main                           # 跟踪 main 分支
+        path: helm                                     # 指向父 Chart 目录（包含 Chart.yaml）
         helm:
-          valueFiles:
-            - values.yaml
+          valueFiles: # 指定 values 文件列表
+            - values.yaml                              # 从仓库根目录下的 helm/values.yaml 读取
+
+      # 部署目标集群和命名空间（使用生成器参数动态填充）
       destination:
-        server: '{{.cluster}}'                        # 使用生成器参数
-        namespace: '{{.namespace}}'
+        server: '{{.cluster}}'                         # 从 list 元素中获取 cluster
+        namespace: '{{.namespace}}'                    # 从 list 元素中获取 namespace
+
+      # 同步策略
       syncPolicy:
-        automated:
-          prune: true
-          selfHeal: true
+        automated: # 自动同步
+          prune: true                                 # 自动删除不再需要的资源
+          selfHeal: true                              # 自动修复集群状态漂移
+        # 注意：此处未设置 syncOptions，如果需要可添加，例如 CreateNamespace=true
