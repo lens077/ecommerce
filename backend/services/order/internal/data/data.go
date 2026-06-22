@@ -144,17 +144,49 @@ func NewPostgresPool(lc fx.Lifecycle, cfg *conf.Bootstrap, logger *zap.Logger) (
 
 	// SSL 证书校验逻辑
 	switch dbCfg.Tls.SslMode {
-	case constants.SslModeVerifyCa, constants.SslModeVerifyFull:
+	case constants.SslModeVerifyCa:
 		if dbCfg.Tls.CaPem != "" {
 			caCertPool := x509.NewCertPool()
 			if ok := caCertPool.AppendCertsFromPEM([]byte(dbCfg.Tls.CaPem)); !ok {
 				return nil, fmt.Errorf("failed to parse CA PEM")
 			}
 
-			if pgConf.ConnConfig.TLSConfig != nil {
-				pgConf.ConnConfig.TLSConfig = &tls.Config{
-					RootCAs: caCertPool,
-				}
+			logger.Info("setting up ssl mode: verify-ca config")
+			pgConf.ConnConfig.TLSConfig = &tls.Config{
+				RootCAs:            caCertPool,
+				InsecureSkipVerify: true,
+				VerifyPeerCertificate: func(rawCerts [][]byte, verifiedChains [][]*x509.Certificate) error {
+					opts := x509.VerifyOptions{
+						Roots:         caCertPool,
+						CurrentTime:   time.Now(),
+						Intermediates: x509.NewCertPool(),
+					}
+					cert, err := x509.ParseCertificate(rawCerts[0])
+					if err != nil {
+						return err
+					}
+					for _, rawCert := range rawCerts[1:] {
+						if c, err := x509.ParseCertificate(rawCert); err == nil {
+							opts.Intermediates.AddCert(c)
+						}
+					}
+					_, err = cert.Verify(opts)
+					return err
+				},
+			}
+		}
+	case constants.SslModeVerifyFull:
+		if dbCfg.Tls.CaPem != "" {
+			caCertPool := x509.NewCertPool()
+			if ok := caCertPool.AppendCertsFromPEM([]byte(dbCfg.Tls.CaPem)); !ok {
+				return nil, fmt.Errorf("failed to parse CA PEM")
+			}
+
+			logger.Info("setting up TLS config")
+			pgConf.ConnConfig.TLSConfig = &tls.Config{
+				RootCAs:            caCertPool,
+				InsecureSkipVerify: false,
+				ServerName:         dbCfg.Host,
 			}
 		}
 	}

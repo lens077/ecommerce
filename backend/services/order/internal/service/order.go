@@ -8,7 +8,6 @@ import (
 	"connectrpc.com/connect"
 	v1 "github.com/lens077/ecommerce/backend/api/order/v1"
 	"github.com/lens077/ecommerce/backend/api/order/v1/orderv1connect"
-	"github.com/lens077/ecommerce/backend/constants"
 	"github.com/lens077/ecommerce/backend/services/order/internal/biz/application"
 	"github.com/lens077/ecommerce/backend/services/order/internal/biz/domain"
 )
@@ -30,12 +29,12 @@ func NewOrderService(cmd *application.OrderCommandUseCase, qry *application.Orde
 }
 
 func (s *OrderService) CreateOrder(ctx context.Context, c *connect.Request[v1.CreateOrderRequest]) (*connect.Response[v1.CreateOrderResponse], error) {
-	req := c.Msg
-	userId := c.Header().Get(constants.UserNameMetadataKey)
+	// req := c.Msg
+	// userId := c.Header().Get(constants.UserNameMetadataKey)
 	_, err := s.cmd.CreateOrder(
 		ctx,
 		&domain.CreateOrderRequest{
-			CartItemIDs: req.,
+			CartItemIDs: nil,
 			AddressID:   0,
 			Remark:      "",
 		},
