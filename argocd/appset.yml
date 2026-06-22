@@ -19,7 +19,7 @@ spec:
           - path: "helm/charts/*"         # 通配符 * 匹配一级子目录（如 address, cart 等）
             # 注意：此处未设置 exclude，表示包含所有匹配的子目录
           # 第二个目录项：排除模式，单独指定要排除的目录
-          - path: "helm/charts/library"   # 要排除的完整路径（与前面的包含模式重叠）
+          - path: "helm/library"   # 要排除的完整路径（与前面的包含模式重叠）
             exclude: true                 # 将该目录从生成列表中排除（true 表示排除）
 
   template: # Application 模板，用于生成每个子 Application 的最终配置
@@ -31,14 +31,14 @@ spec:
       project: ecommerce                  # 该 Application 所属的 Argo CD 项目（需提前创建）
       source: # 源配置，指向 Git 仓库中的应用部署清单
         repoURL: https://gitlab.com/sumery/ecommerce.git   # 同仓库，也可指定不同仓库
-        targetRevision: HEAD              # 部署使用的 revision（可覆盖生成器中的值）
+        targetRevision: main              # 部署使用的 revision（可覆盖生成器中的值）
         # 路径：使用生成的完整目录路径（相对于仓库根目录）
         # 示例：若生成器扫描到 helm/charts/address，则此处为 helm/charts/address
         path: '{{.path}}'                 # .path 是完整路径，包含所有父级目录
-        helm: # Helm 应用特定配置（当路径下存在 Chart.yaml 时使用）
-          parameters: # 注入 Helm 参数（覆盖 values 中的值）
-            - name: image.tag             # 参数名称（对应 values 中的 image.tag）
-              value: "0.1.0"              # 固定值，此处所有 Application 共享相同 tag
+#        helm: # Helm 应用特定配置（当路径下存在 Chart.yaml 时使用）
+#          parameters: # 注入 Helm 参数（覆盖 values 中的值）
+#            - name: image.tag             # 参数名称（对应 values 中的 image.tag）
+#              value: "0.1.0"              # 固定值，此处所有 Application 共享相同 tag
               # 注：如需按目录动态设置，可使用模板值如 '{{.path.basename}}' 等
       destination: # 部署目标集群和命名空间
         server: https://kubernetes.default.svc   # 集群 API Server 地址（此处为本地集群）
