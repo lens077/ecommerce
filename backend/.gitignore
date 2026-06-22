@@ -1,2 +1,3 @@
 .DS_Store
 chart-packages
+services/*/configs/*.yml

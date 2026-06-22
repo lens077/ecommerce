@@ -11,12 +11,30 @@ import type { Message } from "@bufbuild/protobuf";
  * Describes the file api/order/v1/order.proto.
  */
 export const file_api_order_v1_order: GenFile = /*@__PURE__*/
-  fileDesc("ChhhcGkvb3JkZXIvdjEvb3JkZXIucHJvdG8SCG9yZGVyLnYxIhQKEkNyZWF0ZU9yZGVyUmVxdWVzdCIVChNDcmVhdGVPcmRlclJlc3BvbnNlIicKFENvbXBsZXRlT3JkZXJSZXF1ZXN0Eg8KB29yZGVyTm8YASABKAkiNwoVQ29tcGxldGVPcmRlclJlc3BvbnNlEh4KBW9yZGVyGAEgASgLMg8ub3JkZXIudjEuT3JkZXIiBwoFT3JkZXIysAEKDG9yZGVyU2VydmljZRJMCgtDcmVhdGVPcmRlchIcLm9yZGVyLnYxLkNyZWF0ZU9yZGVyUmVxdWVzdBodLm9yZGVyLnYxLkNyZWF0ZU9yZGVyUmVzcG9uc2UiABJSCg1Db21wbGV0ZU9yZGVyEh4ub3JkZXIudjEuQ29tcGxldGVPcmRlclJlcXVlc3QaHy5vcmRlci52MS5Db21wbGV0ZU9yZGVyUmVzcG9uc2UiAEKWAQoMY29tLm9yZGVyLnYxQgpPcmRlclByb3RvUAFaOWdpdGh1Yi5jb20vbGVuczA3Ny9lY29tbWVyY2UvYmFja2VuZC9hcGkvb3JkZXIvdjE7b3JkZXJ2MaICA09YWKoCCE9yZGVyLlYxygIIT3JkZXJcVjHiAhRPcmRlclxWMVxHUEJNZXRhZGF0YeoCCU9yZGVyOjpWMWIGcHJvdG8z", [file_third_party_validate_validate]);
+  fileDesc("ChhhcGkvb3JkZXIvdjEvb3JkZXIucHJvdG8SCG9yZGVyLnYxIkwKEkNyZWF0ZU9yZGVyUmVxdWVzdBITCgtDYXJ0SXRlbUlkcxgBIAMoAxIRCglhZGRyZXNzSWQYAiABKAkSDgoGcmVtYXJrGAMgASgJIhUKE0NyZWF0ZU9yZGVyUmVzcG9uc2UiJwoUQ29tcGxldGVPcmRlclJlcXVlc3QSDwoHb3JkZXJObxgBIAEoCSI3ChVDb21wbGV0ZU9yZGVyUmVzcG9uc2USHgoFb3JkZXIYASABKAsyDy5vcmRlci52MS5PcmRlciIHCgVPcmRlcjKwAQoMb3JkZXJTZXJ2aWNlEkwKC0NyZWF0ZU9yZGVyEhwub3JkZXIudjEuQ3JlYXRlT3JkZXJSZXF1ZXN0Gh0ub3JkZXIudjEuQ3JlYXRlT3JkZXJSZXNwb25zZSIAElIKDUNvbXBsZXRlT3JkZXISHi5vcmRlci52MS5Db21wbGV0ZU9yZGVyUmVxdWVzdBofLm9yZGVyLnYxLkNvbXBsZXRlT3JkZXJSZXNwb25zZSIAQpYBCgxjb20ub3JkZXIudjFCCk9yZGVyUHJvdG9QAVo5Z2l0aHViLmNvbS9sZW5zMDc3L2Vjb21tZXJjZS9iYWNrZW5kL2FwaS9vcmRlci92MTtvcmRlcnYxogIDT1hYqgIIT3JkZXIuVjHKAghPcmRlclxWMeICFE9yZGVyXFYxXEdQQk1ldGFkYXRh6gIJT3JkZXI6OlYxYgZwcm90bzM", [file_third_party_validate_validate]);
 
 /**
  * @generated from message order.v1.CreateOrderRequest
  */
 export type CreateOrderRequest = Message<"order.v1.CreateOrderRequest"> & {
+  /**
+   * 用户在购物车中已选商品的唯一标识，订单服务只需知道用户勾选了哪些购物车项
+   *
+   * @generated from field: repeated int64 CartItemIds = 1;
+   */
+  CartItemIds: bigint[];
+
+  /**
+   * 下单时获取快照。用户可能在提交订单后修改收货地址，但历史订单必须保留当时的地址信息
+   *
+   * @generated from field: string addressId = 2;
+   */
+  addressId: string;
+
+  /**
+   * @generated from field: string remark = 3;
+   */
+  remark: string;
 };
 
 /**
