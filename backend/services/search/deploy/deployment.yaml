@@ -17,7 +17,7 @@ spec:
     spec:
       containers:
         - name: ecommerce-search
-          image: ccr.ccs.tencentyun.com/sumery/search:dev
+          image: ccr.ccs.tencentyun.com/sumery/search:pre
           imagePullPolicy: Always
           env:
             # 关闭应用内的 Log 导出器，只保留 Trace 和 Metric。
@@ -29,11 +29,11 @@ spec:
             - name: CONSUL_ENABLED
               value: "true"
             - name: CONSUL_ADDR
-              value: "192.168.3.109:8501"
+              value: "192.168.3.112:8500"
             - name: CONSUL_PATH
               value: "ecommerce/search/pre.yml"
             - name: CONSUL_SCHEME
-              value: "https"
+              value: "http"
             - name: CONSUL_INSECURE_SKIP_VERIFY
               value: "true"
           ports:

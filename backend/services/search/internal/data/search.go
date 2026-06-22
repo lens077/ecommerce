@@ -4,7 +4,6 @@ import (
 	"encoding/json"
 	"fmt"
 
-	"github.com/elastic/go-elasticsearch/v9"
 	"github.com/elastic/go-elasticsearch/v9/typedapi/core/search"
 	"github.com/elastic/go-elasticsearch/v9/typedapi/types"
 	"github.com/lens077/ecommerce/backend/services/search/internal/biz"
@@ -12,7 +11,6 @@ import (
 	// "github.com/lens077/ecommerce/backend/services/search/internal/data/models"
 	"context"
 
-	"github.com/redis/go-redis/v9"
 	"go.uber.org/zap"
 )
 
@@ -20,17 +18,13 @@ var _ biz.SearchRepo = (*searchRepo)(nil)
 
 type searchRepo struct {
 	data *Data
-	es   *elasticsearch.TypedClient
-	rdb  *redis.Client
-	l    *zap.Logger
+	log  *zap.Logger
 }
 
-func NewSearchRepo(data *Data, logger *zap.Logger, es *elasticsearch.TypedClient) biz.SearchRepo {
+func NewSearchRepo(data *Data, logger *zap.Logger) biz.SearchRepo {
 	return &searchRepo{
-		// queries: models.New(data.db),
-		es:  es,
-		rdb: data.rdb,
-		l:   logger,
+		data: data,
+		log:  logger,
 	}
 }
 
@@ -44,7 +38,7 @@ func (u searchRepo) Search(ctx context.Context, req biz.SearchRequest) (*biz.Sea
 		"skus.attributes.*", // 对应skus.attributes
 	}
 
-	res, err := u.es.Search().Index(req.Index).Request(&search.Request{
+	res, err := u.data.es.Search().Index(req.Index).Request(&search.Request{
 		Query: &types.Query{
 			MultiMatch: &types.MultiMatchQuery{
 				Query:  req.Name,
@@ -53,6 +47,7 @@ func (u searchRepo) Search(ctx context.Context, req biz.SearchRequest) (*biz.Sea
 		},
 	}).Do(ctx)
 	if err != nil {
+		u.log.Error("failed to search es", zap.Error(err))
 		return nil, u.data.dbErrHandler.MustHandleError(err, biz.ErrNotFound)
 	}
 
@@ -60,7 +55,7 @@ func (u searchRepo) Search(ctx context.Context, req biz.SearchRequest) (*biz.Sea
 	for _, hit := range res.Hits.Hits {
 		var productMap map[string]any
 		if err := json.Unmarshal(hit.Source_, &productMap); err != nil {
-			u.l.Error("解析文档失败:%v" + err.Error())
+			u.log.Error("解析文档失败:%v" + err.Error())
 			continue
 		}
 
@@ -111,10 +106,10 @@ func (u searchRepo) Search(ctx context.Context, req biz.SearchRequest) (*biz.Sea
 		}
 
 		bizProducts = append(bizProducts, bizProduct)
-		u.l.Info(fmt.Sprintf("文档ID: %v, 评分: %f", hit.Id_, *hit.Score_))
-		u.l.Info(fmt.Sprintf("商品: %+v,", bizProduct))
+		u.log.Info(fmt.Sprintf("文档ID: %v, 评分: %f", hit.Id_, *hit.Score_))
+		u.log.Info(fmt.Sprintf("商品: %+v,", bizProduct))
 	}
-	u.l.Info(fmt.Sprintf("成功解析 %d 个商品", len(bizProducts)))
+	u.log.Info(fmt.Sprintf("成功解析 %d 个商品", len(bizProducts)))
 
 	return &biz.SearchResponse{
 		Products: bizProducts,
