@@ -12,18 +12,15 @@ REPOSITORY = lens077/$(SERVICE)
 REGISTER = ccr.ccs.tencentyun.com
 ARM64=linux/arm64
 AMD64=linux/amd64
+CONSUL_ADDR=consul.app.com
 
-.PHONY: k8s-dev
-k8s-dev:
-	kubectl apply -f deploy/dev
+.PHONY: consul-kv-export
+consul-kv-export:
+	consul kv export -http-addr=$(CONSUL_ADDR) ecommerce/ > infrastructure/consul/consul-kv.json
 
-.PHONY: k8s-prod
-k8s-prod:
-	kubectl apply -f deploy/prod
-
-.PHONY: run
-run:
-	go run cmd/server/main.go
+.PHONY: consul-kv-import
+consul-kv-import:
+	cat infrastructure/consul/consul-kv.json | consul kv import -http-addr=$(CONSUL_ADDR) -
 
 .PHONY: test
 test:
@@ -102,7 +99,3 @@ docker-deployx:
 	  --push \
 	  --cache-from type=registry,ref=$(REGISTER)/$(REPOSITORY):cache \
 	  --cache-to type=registry,ref=$(REGISTER)/$(REPOSITORY):cache,mode=max
-
-.PHONY: docker-run
-docker-run:
-	docker compose up -d

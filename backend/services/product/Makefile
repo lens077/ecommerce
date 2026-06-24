@@ -24,7 +24,7 @@ k8s-prod:
 
 .PHONY: dev
 dev:
-	SERVICE_NAME=product-core-v1 \
+	SERVICE_NAME=product-product-v1 \
 	CONSUL_ENABLED=true \
 	CONSUL_ADDR=$(CONSUL_ADDR) \
     CONSUL_PATH=ecommerce/product/dev.yml \
@@ -32,21 +32,6 @@ dev:
     CONSUL_INSECURE_SKIP_VERIFY=true \
 	go run cmd/server/main.go
 .PHONY: prod
-prod:
-	CONSUL_ENABLED=true \
-	CONSUL_ADDR=$(CONSUL_ADDR) \
-    CONSUL_PATH=ecommerce/product/prod.yml \
-    CONSUL_SCHEME=http \
-    CONSUL_INSECURE_SKIP_VERIFY=true \
-	go run cmd/server/main.go
-.PHONY: pre
-pre:
-	CONSUL_ENABLED=true \
-	CONSUL_ADDR=$(CONSUL_ADDR) \
-    CONSUL_PATH=ecommerce/product/pre.yaml \
-    CONSUL_SCHEME=http \
-    CONSUL_INSECURE_SKIP_VERIFY=true \
-	go run cmd/server/main.go
 
 .PHONY: test
 test:
