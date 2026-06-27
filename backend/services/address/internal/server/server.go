@@ -8,7 +8,7 @@ import (
 	"connectrpc.com/connect"
 	connectcors "connectrpc.com/cors"
 	"connectrpc.com/validate"
-	"github.com/lens077/ecommerce/backend/services/address/api/address/v1/addressv1connect"
+	"github.com/lens077/ecommerce/backend/api/address/v1/addressv1connect"
 	conf "github.com/lens077/ecommerce/backend/services/address/internal/conf/v1"
 	"github.com/lens077/ecommerce/backend/services/address/internal/data"
 	"github.com/rs/cors"
