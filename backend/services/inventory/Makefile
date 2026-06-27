@@ -24,27 +24,10 @@ k8s-prod:
 
 .PHONY: dev
 dev:
+	SERVICE_NAME="inventory-service" \
 	CONSUL_ENABLED=true \
 	CONSUL_ADDR=$(CONSUL_ADDR) \
 	CONSUL_PATH=ecommerce/inventory/dev.yml \
-	CONSUL_SCHEME=http \
-	CONSUL_INSECURE_SKIP_VERIFY=true \
-	go run cmd/server/main.go
-
-.PHONY: prod
-prod:
-	CONSUL_ENABLED=true \
-	CONSUL_ADDR=$(CONSUL_ADDR) \
-	CONSUL_PATH=ecommerce/inventory/prod.yml \
-	CONSUL_SCHEME=http \
-	CONSUL_INSECURE_SKIP_VERIFY=true \
-	go run cmd/server/main.go
-
-.PHONY: pre
-pre:
-	CONSUL_ENABLED=true \
-	CONSUL_ADDR=$(CONSUL_ADDR) \
-	CONSUL_PATH=ecommerce/inventory/pre.yaml \
 	CONSUL_SCHEME=http \
 	CONSUL_INSECURE_SKIP_VERIFY=true \
 	go run cmd/server/main.go

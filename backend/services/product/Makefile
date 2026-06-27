@@ -24,14 +24,13 @@ k8s-prod:
 
 .PHONY: dev
 dev:
-	SERVICE_NAME=product-product-v1 \
+	SERVICE_NAME="product-service" \
 	CONSUL_ENABLED=true \
 	CONSUL_ADDR=$(CONSUL_ADDR) \
     CONSUL_PATH=ecommerce/product/dev.yml \
     CONSUL_SCHEME=http \
     CONSUL_INSECURE_SKIP_VERIFY=true \
 	go run cmd/server/main.go
-.PHONY: prod
 
 .PHONY: test
 test:
