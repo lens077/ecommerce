@@ -12,6 +12,12 @@ Content-Type: application/json
 
 {"index": "ecommerce_products_spus", "name": "iphone"}
 
+### 网关
+POST http://localhost:8080/search/search.v1.SearchService/Search
+Content-Type: application/json
+
+{"index": "ecommerce_products_spus1", "name": "iphone"}
+
 ### k8s网关
 POST http://192.168.3.114:8080/search/search.v1.SearchService/Search
 Content-Type: application/json

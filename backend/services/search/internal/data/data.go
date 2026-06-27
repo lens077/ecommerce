@@ -18,6 +18,7 @@ import (
 	conf "github.com/lens077/ecommerce/backend/services/search/internal/conf/v1"
 	"github.com/lens077/ecommerce/backend/services/search/internal/pkg/log"
 	"github.com/redis/go-redis/v9"
+	"go.opentelemetry.io/contrib/instrumentation/net/http/otelhttp"
 	"go.uber.org/fx"
 	"go.uber.org/zap"
 )
@@ -273,20 +274,26 @@ func NewCasdoorAuthClient(conf *conf.Bootstrap, logger *zap.Logger) *casdoorsdk.
 // NewElasticSearchClient https://www.elastic.co/docs/reference/elasticsearch/clients/go/examples
 func NewElasticSearchClient(conf *conf.Bootstrap, logger *zap.Logger) (*elasticsearch.TypedClient, error) {
 	cfg := conf.Search.ElasticSearch
-	transport := http.DefaultTransport.(*http.Transport).Clone()
+	
+	// 创建带有 OTel 追踪的 HTTP Transport
+	baseTransport := http.DefaultTransport.(*http.Transport).Clone()
+	
 	// Elasticsearch 通常是高频内部调用，默认的 MaxIdleConnsPerHost（默认为 2）可能太小了
 	// 如果并发请求很多，这会导致连接频繁创建和销毁，造成大量 TIME_WAIT
-	// transport.MaxIdleConnsPerHost = 20
+	// baseTransport.MaxIdleConnsPerHost = 20
 
 	if cfg.Tls.Enable {
-		transport.TLSClientConfig = &tls.Config{InsecureSkipVerify: cfg.Tls.InsecureSkipVerify}
+		baseTransport.TLSClientConfig = &tls.Config{InsecureSkipVerify: cfg.Tls.InsecureSkipVerify}
 		if cfg.Tls.CaPem != "" {
 			pool := x509.NewCertPool()
 			if pool.AppendCertsFromPEM([]byte(cfg.Tls.CaPem)) {
-				transport.TLSClientConfig.RootCAs = pool
+				baseTransport.TLSClientConfig.RootCAs = pool
 			}
 		}
 	}
+
+	// 使用 OTel HTTP 包装 transport
+	transport := otelhttp.NewTransport(baseTransport)
 
 	logger.Debug("Conf", zap.Any("cfg", conf.Log))
 	esCfg := elasticsearch.Config{
