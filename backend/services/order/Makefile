@@ -24,7 +24,7 @@ k8s-prod:
 
 .PHONY: dev
 dev:
-	SERVICE_NAME="order-service-v1" \
+	SERVICE_NAME="order-service" \
 	CONSUL_ENABLED=true \
 	CONSUL_ADDR=$(CONSUL_ADDR) \
     CONSUL_PATH=ecommerce/order/dev.yml \
@@ -34,7 +34,7 @@ dev:
 
 .PHONY: pre
 pre:
-	SERVICE_NAME="order-service-v1" \
+	SERVICE_NAME="order-service" \
 	CONSUL_ENABLED=true \
 	CONSUL_ADDR=$(CONSUL_ADDR) \
     CONSUL_PATH=ecommerce/order/pre.yaml \
