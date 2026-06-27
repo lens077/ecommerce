@@ -165,7 +165,7 @@ func (r *ConsulRegistry) Register() error {
 		Name:    r.Name,
 		Address: host,
 		Port:    portNum,
-		Tags:    []string{r.Name, "fx", "ttl"}, // 增加 'ttl' tag
+		Tags:    []string{constants.ConsulTagFx, constants.ConsulTagTtl},
 		Check: &api.AgentServiceCheck{
 			// 1. 使用 TTL 替换 HTTP/TCP 检查
 			TTL: TtlDuration,

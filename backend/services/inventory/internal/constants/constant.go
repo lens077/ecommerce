@@ -13,3 +13,9 @@ const (
 	FormatConsole = "console"
 	FormatJson    = "json"
 )
+
+// Consul service tags
+const (
+	ConsulTagFx  = "fx"
+	ConsulTagTtl = "ttl"
+)

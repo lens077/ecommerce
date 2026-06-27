@@ -174,10 +174,9 @@ func (r *ConsulRegistry) Register(conf *confv1.Bootstrap, info meta.AppInfo) err
 		Address: host,
 		Port:    portNum,
 		Tags: []string{
-			r.Name,
 			info.Version,
-			"fx",
-			"ttl",
+			constants.ConsulTagFx,
+			constants.ConsulTagTtl,
 		},
 		Check: &api.AgentServiceCheck{
 			// 使用 TTL 替换 HTTP/TCP 检查

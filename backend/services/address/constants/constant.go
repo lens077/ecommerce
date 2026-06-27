@@ -38,3 +38,9 @@ const (
 	ConsulInsecureSkipVerify = false
 	ConsulToken              = ""
 )
+
+// Consul service tags
+const (
+	ConsulTagFx  = "fx"
+	ConsulTagTtl = "ttl"
+)
