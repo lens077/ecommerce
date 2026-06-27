@@ -1,0 +1,131 @@
+syntax = "proto3";
+
+package address.v1;
+
+option go_package = "github.com/lens077/ecommerce/backend/api/address/v1;addressv1";
+
+import "third_party/validate/validate.proto";
+import "google/protobuf/timestamp.proto";
+import "google/protobuf/wrappers.proto";
+
+// 地址服务
+service AddressService {
+  // 创建收货地址
+  rpc CreateAddress(CreateAddressRequest) returns (CreateAddressResponse);
+
+  // 更新收货地址
+  rpc UpdateAddress(UpdateAddressRequest) returns (UpdateAddressResponse);
+
+  // 删除收货地址（软删除）
+  rpc DeleteAddress(DeleteAddressRequest) returns (DeleteAddressResponse);
+
+  // 获取单个地址详情
+  rpc GetAddress(GetAddressRequest) returns (GetAddressResponse);
+
+  // 获取用户的所有地址列表
+  rpc ListAddresses(ListAddressesRequest) returns (ListAddressesResponse);
+
+  // 设置默认地址
+  rpc SetDefaultAddress(SetDefaultAddressRequest) returns (SetDefaultAddressResponse);
+}
+
+// 地址详情（值对象，不可变）
+message AddressDetail {
+  // 省/直辖市/自治区
+  string province = 1 [(buf.validate.field).string.min_len = 1];
+  // 城市
+  string city = 2 [(buf.validate.field).string.min_len = 1];
+  // 区/县
+  string district = 3 [(buf.validate.field).string.min_len = 1];
+  // 详细地址（街道、门牌号等）
+  string detail = 4 [(buf.validate.field).string.min_len = 1];
+  // 邮政编码（可选）
+  string postal_code = 5;
+  // 完整地址文本，方便前端展示
+  string full_text = 6;
+}
+
+// 创建地址请求
+message CreateAddressRequest {
+  // 收件人姓名
+  string recipient_name = 1 [(buf.validate.field).string.min_len = 1];
+  // 收件人电话
+  string recipient_phone = 2 [(buf.validate.field).string.min_len = 1];
+  // 用户ID（从JWT中提取，此处仅作占位）
+  string user_id = 3 [(buf.validate.field).string.min_len = 1];
+  // 地址详情
+  AddressDetail detail = 4 [(buf.validate.field).required = true];
+  // 是否设为默认地址
+  bool is_default = 5;
+}
+
+message CreateAddressResponse {
+  // 新创建的地址ID
+  string address_id = 1;
+}
+
+// 更新地址请求
+message UpdateAddressRequest {
+  // 地址ID
+  string address_id = 1 [(buf.validate.field).string.min_len = 1];
+  // 收件人姓名（可选，不更新则留空）
+  google.protobuf.StringValue recipient_name = 2;
+  // 收件人电话（可选）
+  google.protobuf.StringValue recipient_phone = 3;
+  // 地址详情（可选，不更新则留空）
+  AddressDetail detail = 4;
+}
+
+message UpdateAddressResponse {}
+
+// 删除地址请求（软删除）
+message DeleteAddressRequest {
+  // 地址ID
+  string address_id = 1 [(buf.validate.field).string.min_len = 1];
+}
+
+message DeleteAddressResponse {}
+
+// 获取地址请求
+message GetAddressRequest {
+  // 地址ID
+  string address_id = 1 [(buf.validate.field).string.min_len = 1];
+}
+
+message GetAddressResponse {
+  // 地址ID
+  string address_id = 1;
+  // 收件人姓名
+  string recipient_name = 2;
+  // 收件人电话
+  string recipient_phone = 3;
+  // 用户ID
+  string user_id = 4;
+  // 地址详情
+  AddressDetail detail = 5;
+  // 是否为默认地址
+  bool is_default = 6;
+  // 创建时间
+  google.protobuf.Timestamp created_at = 7;
+  // 更新时间
+  google.protobuf.Timestamp updated_at = 8;
+}
+
+// 获取用户所有地址请求
+message ListAddressesRequest {
+  // 用户ID
+  string user_id = 1 [(buf.validate.field).string.min_len = 1];
+}
+
+message ListAddressesResponse {
+  // 地址列表
+  repeated GetAddressResponse addresses = 1;
+}
+
+// 设置默认地址请求
+message SetDefaultAddressRequest {
+  // 地址ID
+  string address_id = 1 [(buf.validate.field).string.min_len = 1];
+}
+
+message SetDefaultAddressResponse {}
