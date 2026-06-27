@@ -12,6 +12,7 @@ import (
 	conf "github.com/lens077/ecommerce/backend/services/search/internal/conf/v1"
 	"github.com/lens077/ecommerce/backend/services/search/internal/data"
 	"github.com/rs/cors"
+	"go.opentelemetry.io/contrib/instrumentation/net/http/otelhttp"
 	"go.uber.org/fx"
 	"go.uber.org/zap"
 	"golang.org/x/net/http2"
@@ -56,12 +57,10 @@ func NewHTTPServer(
 		json.NewEncoder(w).Encode(status)
 	})
 
-	// 构建处理器链
 	handlerChain := withCORS(mux, cfg.Server.Cors.AllowedOrigins)
+	handlerChain = otelhttp.NewHandler(handlerChain, "search-server")
 
-	// 配置 HTTP/2 (H2C - 明文 HTTP/2)
 	h2s := &http2.Server{}
-	// 使用 h2c 包装处理器，支持同时处理 HTTP/1.1 和 HTTP/2
 	handlerChain = h2c.NewHandler(handlerChain, h2s)
 
 	server := &http.Server{
