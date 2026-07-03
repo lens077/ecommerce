@@ -7,6 +7,7 @@ package models
 
 import (
 	"context"
+	"time"
 
 	"github.com/google/uuid"
 	"github.com/jackc/pgx/v5/pgtype"
@@ -123,4 +124,226 @@ func (q *Queries) AddProductToCart(ctx context.Context, arg AddProductToCartPara
 	var i AddProductToCartRow
 	err := row.Scan(&i.ID, &i.Quantity)
 	return i, err
+}
+
+const GetCartItems = `-- name: GetCartItems :many
+SELECT id,
+       merchant_id,
+       spu_id,
+       sku_id,
+       quantity,
+       selected,
+       spu_name,
+       sku_name,
+       price,
+       sku_attributes,
+       sku_thumbnail_url,
+       status,
+       created_at,
+       updated_at
+FROM cart.cart_item
+WHERE user_id = $1
+  AND status = $2
+ORDER BY updated_at DESC
+`
+
+type GetCartItemsParams struct {
+	UserID uuid.UUID
+	Status CartCartType
+}
+
+type GetCartItemsRow struct {
+	ID              int64
+	MerchantID      uuid.UUID
+	SpuID           int64
+	SkuID           int64
+	Quantity        int32
+	Selected        bool
+	SpuName         string
+	SkuName         string
+	Price           pgtype.Numeric
+	SkuAttributes   []byte
+	SkuThumbnailUrl string
+	Status          interface{}
+	CreatedAt       time.Time
+	UpdatedAt       time.Time
+}
+
+// 获取用户购物车所有商品
+//
+//	SELECT id,
+//	       merchant_id,
+//	       spu_id,
+//	       sku_id,
+//	       quantity,
+//	       selected,
+//	       spu_name,
+//	       sku_name,
+//	       price,
+//	       sku_attributes,
+//	       sku_thumbnail_url,
+//	       status,
+//	       created_at,
+//	       updated_at
+//	FROM cart.cart_item
+//	WHERE user_id = $1
+//	  AND status = $2
+//	ORDER BY updated_at DESC
+func (q *Queries) GetCartItems(ctx context.Context, arg GetCartItemsParams) ([]GetCartItemsRow, error) {
+	rows, err := q.db.Query(ctx, GetCartItems, arg.UserID, arg.Status)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	var items []GetCartItemsRow
+	for rows.Next() {
+		var i GetCartItemsRow
+		if err := rows.Scan(
+			&i.ID,
+			&i.MerchantID,
+			&i.SpuID,
+			&i.SkuID,
+			&i.Quantity,
+			&i.Selected,
+			&i.SpuName,
+			&i.SkuName,
+			&i.Price,
+			&i.SkuAttributes,
+			&i.SkuThumbnailUrl,
+			&i.Status,
+			&i.CreatedAt,
+			&i.UpdatedAt,
+		); err != nil {
+			return nil, err
+		}
+		items = append(items, i)
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	return items, nil
+}
+
+const RemoveCartItem = `-- name: RemoveCartItem :one
+
+WITH deleted AS (
+    DELETE FROM cart.cart_item
+        WHERE merchant_id = $3
+            AND user_id = $1
+            AND spu_id = $4
+            AND sku_id = $5
+            AND status = $2
+        RETURNING id)
+SELECT COALESCE(COUNT(quantity), 0)::INT AS cart_total_quantity,
+       CASE
+           WHEN COUNT(*) = 0 THEN
+               TRUE
+           ELSE
+               FALSE
+           END                           AS is_cart_empty
+FROM cart.cart_item
+WHERE user_id = $1
+  AND status = $2
+`
+
+type RemoveCartItemParams struct {
+	UserID     pgtype.UUID
+	Status     *CartCartType
+	MerchantID pgtype.UUID
+	SpuID      *int64
+	SkuID      *int64
+}
+
+type RemoveCartItemRow struct {
+	CartTotalQuantity int32
+	IsCartEmpty       bool
+}
+
+// 把最新的 id 和叠加后的最终数量一起返回回去
+//
+//	WITH deleted AS (
+//	    DELETE FROM cart.cart_item
+//	        WHERE merchant_id = $3
+//	            AND user_id = $1
+//	            AND spu_id = $4
+//	            AND sku_id = $5
+//	            AND status = $2
+//	        RETURNING id)
+//	SELECT COALESCE(COUNT(quantity), 0)::INT AS cart_total_quantity,
+//	       CASE
+//	           WHEN COUNT(*) = 0 THEN
+//	               TRUE
+//	           ELSE
+//	               FALSE
+//	           END                           AS is_cart_empty
+//	FROM cart.cart_item
+//	WHERE user_id = $1
+//	  AND status = $2
+func (q *Queries) RemoveCartItem(ctx context.Context, arg RemoveCartItemParams) (RemoveCartItemRow, error) {
+	row := q.db.QueryRow(ctx, RemoveCartItem,
+		arg.UserID,
+		arg.Status,
+		arg.MerchantID,
+		arg.SpuID,
+		arg.SkuID,
+	)
+	var i RemoveCartItemRow
+	err := row.Scan(&i.CartTotalQuantity, &i.IsCartEmpty)
+	return i, err
+}
+
+const UpdateCartItemQuantity = `-- name: UpdateCartItemQuantity :one
+WITH do_uodate AS (
+    UPDATE cart.cart_item
+        SET quantity = $3,
+            updated_at = now()
+        WHERE merchant_id = $4
+            AND user_id = $1
+            AND spu_id = $5
+            AND sku_id = $6
+            AND status = $2
+            AND $3 > 0)
+SELECT COUNT(*) AS cart_total_quantity
+FROM cart.cart_item
+WHERE user_id = $1
+  AND status = $2
+`
+
+type UpdateCartItemQuantityParams struct {
+	UserID     pgtype.UUID
+	Status     *CartCartType
+	Quantity   *int32
+	MerchantID pgtype.UUID
+	SpuID      *int64
+	SkuID      *int64
+}
+
+// 更新商品数量, 并返回购物车商品总数量
+//
+//	WITH do_uodate AS (
+//	    UPDATE cart.cart_item
+//	        SET quantity = $3,
+//	            updated_at = now()
+//	        WHERE merchant_id = $4
+//	            AND user_id = $1
+//	            AND spu_id = $5
+//	            AND sku_id = $6
+//	            AND status = $2
+//	            AND $3 > 0)
+//	SELECT COUNT(*) AS cart_total_quantity
+//	FROM cart.cart_item
+//	WHERE user_id = $1
+//	  AND status = $2
+func (q *Queries) UpdateCartItemQuantity(ctx context.Context, arg UpdateCartItemQuantityParams) (int64, error) {
+	row := q.db.QueryRow(ctx, UpdateCartItemQuantity,
+		arg.UserID,
+		arg.Status,
+		arg.Quantity,
+		arg.MerchantID,
+		arg.SpuID,
+		arg.SkuID,
+	)
+	var cart_total_quantity int64
+	err := row.Scan(&cart_total_quantity)
+	return cart_total_quantity, err
 }

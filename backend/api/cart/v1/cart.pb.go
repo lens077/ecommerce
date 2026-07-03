@@ -11,7 +11,7 @@ import (
 	protoreflect "google.golang.org/protobuf/reflect/protoreflect"
 	protoimpl "google.golang.org/protobuf/runtime/protoimpl"
 	structpb "google.golang.org/protobuf/types/known/structpb"
-	timestamppb "google.golang.org/protobuf/types/known/timestamppb"
+	_ "google.golang.org/protobuf/types/known/timestamppb"
 	reflect "reflect"
 	sync "sync"
 	unsafe "unsafe"
@@ -201,31 +201,29 @@ func (x *AddProductToCartResponse) GetCartItemId() uint64 {
 	return 0
 }
 
-type RemoveProductToCartRequest struct {
+type RemoveCartItemRequest struct {
 	state         protoimpl.MessageState `protogen:"open.v1"`
 	SpuId         uint64                 `protobuf:"varint,1,opt,name=spu_id,json=spuId,proto3" json:"spu_id,omitempty"`
 	SkuId         uint64                 `protobuf:"varint,2,opt,name=sku_id,json=skuId,proto3" json:"sku_id,omitempty"`
 	MerchantId    string                 `protobuf:"bytes,3,opt,name=merchant_id,json=merchantId,proto3" json:"merchant_id,omitempty"`
-	Quantity      uint32                 `protobuf:"varint,4,opt,name=quantity,proto3" json:"quantity,omitempty"`
-	UpdatedAt     *timestamppb.Timestamp `protobuf:"bytes,5,opt,name=updated_at,json=updatedAt,proto3" json:"updated_at,omitempty"`
 	unknownFields protoimpl.UnknownFields
 	sizeCache     protoimpl.SizeCache
 }
 
-func (x *RemoveProductToCartRequest) Reset() {
-	*x = RemoveProductToCartRequest{}
+func (x *RemoveCartItemRequest) Reset() {
+	*x = RemoveCartItemRequest{}
 	mi := &file_api_cart_v1_cart_proto_msgTypes[2]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
 
-func (x *RemoveProductToCartRequest) String() string {
+func (x *RemoveCartItemRequest) String() string {
 	return protoimpl.X.MessageStringOf(x)
 }
 
-func (*RemoveProductToCartRequest) ProtoMessage() {}
+func (*RemoveCartItemRequest) ProtoMessage() {}
 
-func (x *RemoveProductToCartRequest) ProtoReflect() protoreflect.Message {
+func (x *RemoveCartItemRequest) ProtoReflect() protoreflect.Message {
 	mi := &file_api_cart_v1_cart_proto_msgTypes[2]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
@@ -237,47 +235,33 @@ func (x *RemoveProductToCartRequest) ProtoReflect() protoreflect.Message {
 	return mi.MessageOf(x)
 }
 
-// Deprecated: Use RemoveProductToCartRequest.ProtoReflect.Descriptor instead.
-func (*RemoveProductToCartRequest) Descriptor() ([]byte, []int) {
+// Deprecated: Use RemoveCartItemRequest.ProtoReflect.Descriptor instead.
+func (*RemoveCartItemRequest) Descriptor() ([]byte, []int) {
 	return file_api_cart_v1_cart_proto_rawDescGZIP(), []int{2}
 }
 
-func (x *RemoveProductToCartRequest) GetSpuId() uint64 {
+func (x *RemoveCartItemRequest) GetSpuId() uint64 {
 	if x != nil {
 		return x.SpuId
 	}
 	return 0
 }
 
-func (x *RemoveProductToCartRequest) GetSkuId() uint64 {
+func (x *RemoveCartItemRequest) GetSkuId() uint64 {
 	if x != nil {
 		return x.SkuId
 	}
 	return 0
 }
 
-func (x *RemoveProductToCartRequest) GetMerchantId() string {
+func (x *RemoveCartItemRequest) GetMerchantId() string {
 	if x != nil {
 		return x.MerchantId
 	}
 	return ""
 }
 
-func (x *RemoveProductToCartRequest) GetQuantity() uint32 {
-	if x != nil {
-		return x.Quantity
-	}
-	return 0
-}
-
-func (x *RemoveProductToCartRequest) GetUpdatedAt() *timestamppb.Timestamp {
-	if x != nil {
-		return x.UpdatedAt
-	}
-	return nil
-}
-
-type RemoveProductToCartResponse struct {
+type RemoveCartItemResponse struct {
 	state             protoimpl.MessageState `protogen:"open.v1"`
 	CartTotalQuantity uint32                 `protobuf:"varint,1,opt,name=cart_total_quantity,json=cartTotalQuantity,proto3" json:"cart_total_quantity,omitempty"` // 删除后，购物车剩下的商品总件数（用于刷新右上角小红点）
 	IsCartEmpty       bool                   `protobuf:"varint,2,opt,name=is_cart_empty,json=isCartEmpty,proto3" json:"is_cart_empty,omitempty"`                   // 购物车是否已经彻底空了（用于前端直接切换到“空购物车”占位图）
@@ -285,20 +269,20 @@ type RemoveProductToCartResponse struct {
 	sizeCache         protoimpl.SizeCache
 }
 
-func (x *RemoveProductToCartResponse) Reset() {
-	*x = RemoveProductToCartResponse{}
+func (x *RemoveCartItemResponse) Reset() {
+	*x = RemoveCartItemResponse{}
 	mi := &file_api_cart_v1_cart_proto_msgTypes[3]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
 
-func (x *RemoveProductToCartResponse) String() string {
+func (x *RemoveCartItemResponse) String() string {
 	return protoimpl.X.MessageStringOf(x)
 }
 
-func (*RemoveProductToCartResponse) ProtoMessage() {}
+func (*RemoveCartItemResponse) ProtoMessage() {}
 
-func (x *RemoveProductToCartResponse) ProtoReflect() protoreflect.Message {
+func (x *RemoveCartItemResponse) ProtoReflect() protoreflect.Message {
 	mi := &file_api_cart_v1_cart_proto_msgTypes[3]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
@@ -310,19 +294,359 @@ func (x *RemoveProductToCartResponse) ProtoReflect() protoreflect.Message {
 	return mi.MessageOf(x)
 }
 
-// Deprecated: Use RemoveProductToCartResponse.ProtoReflect.Descriptor instead.
-func (*RemoveProductToCartResponse) Descriptor() ([]byte, []int) {
+// Deprecated: Use RemoveCartItemResponse.ProtoReflect.Descriptor instead.
+func (*RemoveCartItemResponse) Descriptor() ([]byte, []int) {
 	return file_api_cart_v1_cart_proto_rawDescGZIP(), []int{3}
 }
 
-func (x *RemoveProductToCartResponse) GetCartTotalQuantity() uint32 {
+func (x *RemoveCartItemResponse) GetCartTotalQuantity() uint32 {
 	if x != nil {
 		return x.CartTotalQuantity
 	}
 	return 0
 }
 
-func (x *RemoveProductToCartResponse) GetIsCartEmpty() bool {
+func (x *RemoveCartItemResponse) GetIsCartEmpty() bool {
+	if x != nil {
+		return x.IsCartEmpty
+	}
+	return false
+}
+
+type UpdateCartItemQuantityRequest struct {
+	state         protoimpl.MessageState `protogen:"open.v1"`
+	SpuId         uint64                 `protobuf:"varint,1,opt,name=spu_id,json=spuId,proto3" json:"spu_id,omitempty"`
+	SkuId         uint64                 `protobuf:"varint,2,opt,name=sku_id,json=skuId,proto3" json:"sku_id,omitempty"`
+	MerchantId    string                 `protobuf:"bytes,3,opt,name=merchant_id,json=merchantId,proto3" json:"merchant_id,omitempty"`
+	Quantity      uint32                 `protobuf:"varint,4,opt,name=quantity,proto3" json:"quantity,omitempty"` // 目标数量，如果为0则删除该商品项
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *UpdateCartItemQuantityRequest) Reset() {
+	*x = UpdateCartItemQuantityRequest{}
+	mi := &file_api_cart_v1_cart_proto_msgTypes[4]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *UpdateCartItemQuantityRequest) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*UpdateCartItemQuantityRequest) ProtoMessage() {}
+
+func (x *UpdateCartItemQuantityRequest) ProtoReflect() protoreflect.Message {
+	mi := &file_api_cart_v1_cart_proto_msgTypes[4]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use UpdateCartItemQuantityRequest.ProtoReflect.Descriptor instead.
+func (*UpdateCartItemQuantityRequest) Descriptor() ([]byte, []int) {
+	return file_api_cart_v1_cart_proto_rawDescGZIP(), []int{4}
+}
+
+func (x *UpdateCartItemQuantityRequest) GetSpuId() uint64 {
+	if x != nil {
+		return x.SpuId
+	}
+	return 0
+}
+
+func (x *UpdateCartItemQuantityRequest) GetSkuId() uint64 {
+	if x != nil {
+		return x.SkuId
+	}
+	return 0
+}
+
+func (x *UpdateCartItemQuantityRequest) GetMerchantId() string {
+	if x != nil {
+		return x.MerchantId
+	}
+	return ""
+}
+
+func (x *UpdateCartItemQuantityRequest) GetQuantity() uint32 {
+	if x != nil {
+		return x.Quantity
+	}
+	return 0
+}
+
+type UpdateCartItemQuantityResponse struct {
+	state             protoimpl.MessageState `protogen:"open.v1"`
+	CartTotalQuantity uint32                 `protobuf:"varint,1,opt,name=cart_total_quantity,json=cartTotalQuantity,proto3" json:"cart_total_quantity,omitempty"` // 更新后，购物车剩下的商品总件数（用于刷新右上角小红点）
+	unknownFields     protoimpl.UnknownFields
+	sizeCache         protoimpl.SizeCache
+}
+
+func (x *UpdateCartItemQuantityResponse) Reset() {
+	*x = UpdateCartItemQuantityResponse{}
+	mi := &file_api_cart_v1_cart_proto_msgTypes[5]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *UpdateCartItemQuantityResponse) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*UpdateCartItemQuantityResponse) ProtoMessage() {}
+
+func (x *UpdateCartItemQuantityResponse) ProtoReflect() protoreflect.Message {
+	mi := &file_api_cart_v1_cart_proto_msgTypes[5]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use UpdateCartItemQuantityResponse.ProtoReflect.Descriptor instead.
+func (*UpdateCartItemQuantityResponse) Descriptor() ([]byte, []int) {
+	return file_api_cart_v1_cart_proto_rawDescGZIP(), []int{5}
+}
+
+func (x *UpdateCartItemQuantityResponse) GetCartTotalQuantity() uint32 {
+	if x != nil {
+		return x.CartTotalQuantity
+	}
+	return 0
+}
+
+type GetCartRequest struct {
+	state         protoimpl.MessageState `protogen:"open.v1"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *GetCartRequest) Reset() {
+	*x = GetCartRequest{}
+	mi := &file_api_cart_v1_cart_proto_msgTypes[6]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *GetCartRequest) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*GetCartRequest) ProtoMessage() {}
+
+func (x *GetCartRequest) ProtoReflect() protoreflect.Message {
+	mi := &file_api_cart_v1_cart_proto_msgTypes[6]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use GetCartRequest.ProtoReflect.Descriptor instead.
+func (*GetCartRequest) Descriptor() ([]byte, []int) {
+	return file_api_cart_v1_cart_proto_rawDescGZIP(), []int{6}
+}
+
+type CartItem struct {
+	state           protoimpl.MessageState `protogen:"open.v1"`
+	CartItemId      uint64                 `protobuf:"varint,1,opt,name=cart_item_id,json=cartItemId,proto3" json:"cart_item_id,omitempty"` // 购物车商品记录ID
+	SpuId           uint64                 `protobuf:"varint,2,opt,name=spu_id,json=spuId,proto3" json:"spu_id,omitempty"`
+	SkuId           uint64                 `protobuf:"varint,3,opt,name=sku_id,json=skuId,proto3" json:"sku_id,omitempty"`
+	MerchantId      string                 `protobuf:"bytes,4,opt,name=merchant_id,json=merchantId,proto3" json:"merchant_id,omitempty"`
+	Quantity        uint32                 `protobuf:"varint,5,opt,name=quantity,proto3" json:"quantity,omitempty"`
+	Selected        bool                   `protobuf:"varint,6,opt,name=selected,proto3" json:"selected,omitempty"`
+	SpuName         string                 `protobuf:"bytes,7,opt,name=spu_name,json=spuName,proto3" json:"spu_name,omitempty"`
+	SkuName         string                 `protobuf:"bytes,8,opt,name=sku_name,json=skuName,proto3" json:"sku_name,omitempty"`
+	Price           float64                `protobuf:"fixed64,9,opt,name=price,proto3" json:"price,omitempty"`
+	SkuAttributes   *structpb.Struct       `protobuf:"bytes,10,opt,name=sku_attributes,json=skuAttributes,proto3" json:"sku_attributes,omitempty"`
+	SkuThumbnailUrl string                 `protobuf:"bytes,11,opt,name=sku_thumbnail_url,json=skuThumbnailUrl,proto3" json:"sku_thumbnail_url,omitempty"`
+	Status          string                 `protobuf:"bytes,12,opt,name=status,proto3" json:"status,omitempty"`
+	unknownFields   protoimpl.UnknownFields
+	sizeCache       protoimpl.SizeCache
+}
+
+func (x *CartItem) Reset() {
+	*x = CartItem{}
+	mi := &file_api_cart_v1_cart_proto_msgTypes[7]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *CartItem) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*CartItem) ProtoMessage() {}
+
+func (x *CartItem) ProtoReflect() protoreflect.Message {
+	mi := &file_api_cart_v1_cart_proto_msgTypes[7]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use CartItem.ProtoReflect.Descriptor instead.
+func (*CartItem) Descriptor() ([]byte, []int) {
+	return file_api_cart_v1_cart_proto_rawDescGZIP(), []int{7}
+}
+
+func (x *CartItem) GetCartItemId() uint64 {
+	if x != nil {
+		return x.CartItemId
+	}
+	return 0
+}
+
+func (x *CartItem) GetSpuId() uint64 {
+	if x != nil {
+		return x.SpuId
+	}
+	return 0
+}
+
+func (x *CartItem) GetSkuId() uint64 {
+	if x != nil {
+		return x.SkuId
+	}
+	return 0
+}
+
+func (x *CartItem) GetMerchantId() string {
+	if x != nil {
+		return x.MerchantId
+	}
+	return ""
+}
+
+func (x *CartItem) GetQuantity() uint32 {
+	if x != nil {
+		return x.Quantity
+	}
+	return 0
+}
+
+func (x *CartItem) GetSelected() bool {
+	if x != nil {
+		return x.Selected
+	}
+	return false
+}
+
+func (x *CartItem) GetSpuName() string {
+	if x != nil {
+		return x.SpuName
+	}
+	return ""
+}
+
+func (x *CartItem) GetSkuName() string {
+	if x != nil {
+		return x.SkuName
+	}
+	return ""
+}
+
+func (x *CartItem) GetPrice() float64 {
+	if x != nil {
+		return x.Price
+	}
+	return 0
+}
+
+func (x *CartItem) GetSkuAttributes() *structpb.Struct {
+	if x != nil {
+		return x.SkuAttributes
+	}
+	return nil
+}
+
+func (x *CartItem) GetSkuThumbnailUrl() string {
+	if x != nil {
+		return x.SkuThumbnailUrl
+	}
+	return ""
+}
+
+func (x *CartItem) GetStatus() string {
+	if x != nil {
+		return x.Status
+	}
+	return ""
+}
+
+type GetCartResponse struct {
+	state             protoimpl.MessageState `protogen:"open.v1"`
+	Items             []*CartItem            `protobuf:"bytes,1,rep,name=items,proto3" json:"items,omitempty"`                                                     // 购物车商品列表
+	CartTotalQuantity uint32                 `protobuf:"varint,2,opt,name=cart_total_quantity,json=cartTotalQuantity,proto3" json:"cart_total_quantity,omitempty"` // 购物车总数量
+	IsCartEmpty       bool                   `protobuf:"varint,3,opt,name=is_cart_empty,json=isCartEmpty,proto3" json:"is_cart_empty,omitempty"`                   // 购物车是否为空
+	unknownFields     protoimpl.UnknownFields
+	sizeCache         protoimpl.SizeCache
+}
+
+func (x *GetCartResponse) Reset() {
+	*x = GetCartResponse{}
+	mi := &file_api_cart_v1_cart_proto_msgTypes[8]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *GetCartResponse) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*GetCartResponse) ProtoMessage() {}
+
+func (x *GetCartResponse) ProtoReflect() protoreflect.Message {
+	mi := &file_api_cart_v1_cart_proto_msgTypes[8]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use GetCartResponse.ProtoReflect.Descriptor instead.
+func (*GetCartResponse) Descriptor() ([]byte, []int) {
+	return file_api_cart_v1_cart_proto_rawDescGZIP(), []int{8}
+}
+
+func (x *GetCartResponse) GetItems() []*CartItem {
+	if x != nil {
+		return x.Items
+	}
+	return nil
+}
+
+func (x *GetCartResponse) GetCartTotalQuantity() uint32 {
+	if x != nil {
+		return x.CartTotalQuantity
+	}
+	return 0
+}
+
+func (x *GetCartResponse) GetIsCartEmpty() bool {
 	if x != nil {
 		return x.IsCartEmpty
 	}
@@ -333,11 +657,11 @@ var File_api_cart_v1_cart_proto protoreflect.FileDescriptor
 
 const file_api_cart_v1_cart_proto_rawDesc = "" +
 	"\n" +
-	"\x16api/cart/v1/cart.proto\x12\acart.v1\x1a\x1fgoogle/protobuf/timestamp.proto\x1a\x1cgoogle/protobuf/struct.proto\x1a#third_party/validate/validate.proto\"\x91\x03\n" +
+	"\x16api/cart/v1/cart.proto\x12\acart.v1\x1a\x1fgoogle/protobuf/timestamp.proto\x1a\x1cgoogle/protobuf/struct.proto\x1a#third_party/validate/validate.proto\"\x9b\x03\n" +
 	"\x17AddProductToCartRequest\x12\x15\n" +
 	"\x06spu_id\x18\x01 \x01(\x04R\x05spuId\x12\x15\n" +
-	"\x06sku_id\x18\x02 \x01(\x04R\x05skuId\x12\x1f\n" +
-	"\vmerchant_id\x18\x03 \x01(\tR\n" +
+	"\x06sku_id\x18\x02 \x01(\x04R\x05skuId\x12)\n" +
+	"\vmerchant_id\x18\x03 \x01(\tB\b\xbaH\x05r\x03\xb0\x01\x01R\n" +
 	"merchantId\x12\x1a\n" +
 	"\bquantity\x18\x04 \x01(\rR\bquantity\x12\x1a\n" +
 	"\bselected\x18\x05 \x01(\bR\bselected\x12\x19\n" +
@@ -351,21 +675,49 @@ const file_api_cart_v1_cart_proto_rawDesc = "" +
 	"\x18AddProductToCartResponse\x12.\n" +
 	"\x13cart_total_quantity\x18\x01 \x01(\rR\x11cartTotalQuantity\x12 \n" +
 	"\fcart_item_id\x18\x02 \x01(\x04R\n" +
-	"cartItemId\"\xc2\x01\n" +
-	"\x1aRemoveProductToCartRequest\x12\x15\n" +
+	"cartItemId\"p\n" +
+	"\x15RemoveCartItemRequest\x12\x15\n" +
 	"\x06spu_id\x18\x01 \x01(\x04R\x05spuId\x12\x15\n" +
-	"\x06sku_id\x18\x02 \x01(\x04R\x05skuId\x12\x1f\n" +
-	"\vmerchant_id\x18\x03 \x01(\tR\n" +
-	"merchantId\x12\x1a\n" +
-	"\bquantity\x18\x04 \x01(\rR\bquantity\x129\n" +
-	"\n" +
-	"updated_at\x18\x05 \x01(\v2\x1a.google.protobuf.TimestampR\tupdatedAt\"q\n" +
-	"\x1bRemoveProductToCartResponse\x12.\n" +
+	"\x06sku_id\x18\x02 \x01(\x04R\x05skuId\x12)\n" +
+	"\vmerchant_id\x18\x03 \x01(\tB\b\xbaH\x05r\x03\xb0\x01\x01R\n" +
+	"merchantId\"l\n" +
+	"\x16RemoveCartItemResponse\x12.\n" +
 	"\x13cart_total_quantity\x18\x01 \x01(\rR\x11cartTotalQuantity\x12\"\n" +
-	"\ris_cart_empty\x18\x02 \x01(\bR\visCartEmpty2\xcc\x01\n" +
+	"\ris_cart_empty\x18\x02 \x01(\bR\visCartEmpty\"\x94\x01\n" +
+	"\x1dUpdateCartItemQuantityRequest\x12\x15\n" +
+	"\x06spu_id\x18\x01 \x01(\x04R\x05spuId\x12\x15\n" +
+	"\x06sku_id\x18\x02 \x01(\x04R\x05skuId\x12)\n" +
+	"\vmerchant_id\x18\x03 \x01(\tB\b\xbaH\x05r\x03\xb0\x01\x01R\n" +
+	"merchantId\x12\x1a\n" +
+	"\bquantity\x18\x04 \x01(\rR\bquantity\"P\n" +
+	"\x1eUpdateCartItemQuantityResponse\x12.\n" +
+	"\x13cart_total_quantity\x18\x01 \x01(\rR\x11cartTotalQuantity\"\x10\n" +
+	"\x0eGetCartRequest\"\x83\x03\n" +
+	"\bCartItem\x12 \n" +
+	"\fcart_item_id\x18\x01 \x01(\x04R\n" +
+	"cartItemId\x12\x15\n" +
+	"\x06spu_id\x18\x02 \x01(\x04R\x05spuId\x12\x15\n" +
+	"\x06sku_id\x18\x03 \x01(\x04R\x05skuId\x12\x1f\n" +
+	"\vmerchant_id\x18\x04 \x01(\tR\n" +
+	"merchantId\x12\x1a\n" +
+	"\bquantity\x18\x05 \x01(\rR\bquantity\x12\x1a\n" +
+	"\bselected\x18\x06 \x01(\bR\bselected\x12\x19\n" +
+	"\bspu_name\x18\a \x01(\tR\aspuName\x12\x19\n" +
+	"\bsku_name\x18\b \x01(\tR\askuName\x12\x14\n" +
+	"\x05price\x18\t \x01(\x01R\x05price\x12>\n" +
+	"\x0esku_attributes\x18\n" +
+	" \x01(\v2\x17.google.protobuf.StructR\rskuAttributes\x12*\n" +
+	"\x11sku_thumbnail_url\x18\v \x01(\tR\x0fskuThumbnailUrl\x12\x16\n" +
+	"\x06status\x18\f \x01(\tR\x06status\"\x8e\x01\n" +
+	"\x0fGetCartResponse\x12'\n" +
+	"\x05items\x18\x01 \x03(\v2\x11.cart.v1.CartItemR\x05items\x12.\n" +
+	"\x13cart_total_quantity\x18\x02 \x01(\rR\x11cartTotalQuantity\x12\"\n" +
+	"\ris_cart_empty\x18\x03 \x01(\bR\visCartEmpty2\xea\x02\n" +
 	"\vCartService\x12Y\n" +
-	"\x10AddProductToCart\x12 .cart.v1.AddProductToCartRequest\x1a!.cart.v1.AddProductToCartResponse\"\x00\x12b\n" +
-	"\x13RemoveProductToCart\x12#.cart.v1.RemoveProductToCartRequest\x1a$.cart.v1.RemoveProductToCartResponse\"\x00B\x8e\x01\n" +
+	"\x10AddProductToCart\x12 .cart.v1.AddProductToCartRequest\x1a!.cart.v1.AddProductToCartResponse\"\x00\x12S\n" +
+	"\x0eRemoveCartItem\x12\x1e.cart.v1.RemoveCartItemRequest\x1a\x1f.cart.v1.RemoveCartItemResponse\"\x00\x12k\n" +
+	"\x16UpdateCartItemQuantity\x12&.cart.v1.UpdateCartItemQuantityRequest\x1a'.cart.v1.UpdateCartItemQuantityResponse\"\x00\x12>\n" +
+	"\aGetCart\x12\x17.cart.v1.GetCartRequest\x1a\x18.cart.v1.GetCartResponse\"\x00B\x8e\x01\n" +
 	"\vcom.cart.v1B\tCartProtoP\x01Z7github.com/lens077/ecommerce/backend/api/cart/v1;cartv1\xa2\x02\x03CXX\xaa\x02\aCart.V1\xca\x02\aCart\\V1\xe2\x02\x13Cart\\V1\\GPBMetadata\xea\x02\bCart::V1b\x06proto3"
 
 var (
@@ -380,27 +732,36 @@ func file_api_cart_v1_cart_proto_rawDescGZIP() []byte {
 	return file_api_cart_v1_cart_proto_rawDescData
 }
 
-var file_api_cart_v1_cart_proto_msgTypes = make([]protoimpl.MessageInfo, 4)
+var file_api_cart_v1_cart_proto_msgTypes = make([]protoimpl.MessageInfo, 9)
 var file_api_cart_v1_cart_proto_goTypes = []any{
-	(*AddProductToCartRequest)(nil),     // 0: cart.v1.AddProductToCartRequest
-	(*AddProductToCartResponse)(nil),    // 1: cart.v1.AddProductToCartResponse
-	(*RemoveProductToCartRequest)(nil),  // 2: cart.v1.RemoveProductToCartRequest
-	(*RemoveProductToCartResponse)(nil), // 3: cart.v1.RemoveProductToCartResponse
-	(*structpb.Struct)(nil),             // 4: google.protobuf.Struct
-	(*timestamppb.Timestamp)(nil),       // 5: google.protobuf.Timestamp
+	(*AddProductToCartRequest)(nil),        // 0: cart.v1.AddProductToCartRequest
+	(*AddProductToCartResponse)(nil),       // 1: cart.v1.AddProductToCartResponse
+	(*RemoveCartItemRequest)(nil),          // 2: cart.v1.RemoveCartItemRequest
+	(*RemoveCartItemResponse)(nil),         // 3: cart.v1.RemoveCartItemResponse
+	(*UpdateCartItemQuantityRequest)(nil),  // 4: cart.v1.UpdateCartItemQuantityRequest
+	(*UpdateCartItemQuantityResponse)(nil), // 5: cart.v1.UpdateCartItemQuantityResponse
+	(*GetCartRequest)(nil),                 // 6: cart.v1.GetCartRequest
+	(*CartItem)(nil),                       // 7: cart.v1.CartItem
+	(*GetCartResponse)(nil),                // 8: cart.v1.GetCartResponse
+	(*structpb.Struct)(nil),                // 9: google.protobuf.Struct
 }
 var file_api_cart_v1_cart_proto_depIdxs = []int32{
-	4, // 0: cart.v1.AddProductToCartRequest.sku_attributes:type_name -> google.protobuf.Struct
-	5, // 1: cart.v1.RemoveProductToCartRequest.updated_at:type_name -> google.protobuf.Timestamp
-	0, // 2: cart.v1.CartService.AddProductToCart:input_type -> cart.v1.AddProductToCartRequest
-	2, // 3: cart.v1.CartService.RemoveProductToCart:input_type -> cart.v1.RemoveProductToCartRequest
-	1, // 4: cart.v1.CartService.AddProductToCart:output_type -> cart.v1.AddProductToCartResponse
-	3, // 5: cart.v1.CartService.RemoveProductToCart:output_type -> cart.v1.RemoveProductToCartResponse
-	4, // [4:6] is the sub-list for method output_type
-	2, // [2:4] is the sub-list for method input_type
-	2, // [2:2] is the sub-list for extension type_name
-	2, // [2:2] is the sub-list for extension extendee
-	0, // [0:2] is the sub-list for field type_name
+	9, // 0: cart.v1.AddProductToCartRequest.sku_attributes:type_name -> google.protobuf.Struct
+	9, // 1: cart.v1.CartItem.sku_attributes:type_name -> google.protobuf.Struct
+	7, // 2: cart.v1.GetCartResponse.items:type_name -> cart.v1.CartItem
+	0, // 3: cart.v1.CartService.AddProductToCart:input_type -> cart.v1.AddProductToCartRequest
+	2, // 4: cart.v1.CartService.RemoveCartItem:input_type -> cart.v1.RemoveCartItemRequest
+	4, // 5: cart.v1.CartService.UpdateCartItemQuantity:input_type -> cart.v1.UpdateCartItemQuantityRequest
+	6, // 6: cart.v1.CartService.GetCart:input_type -> cart.v1.GetCartRequest
+	1, // 7: cart.v1.CartService.AddProductToCart:output_type -> cart.v1.AddProductToCartResponse
+	3, // 8: cart.v1.CartService.RemoveCartItem:output_type -> cart.v1.RemoveCartItemResponse
+	5, // 9: cart.v1.CartService.UpdateCartItemQuantity:output_type -> cart.v1.UpdateCartItemQuantityResponse
+	8, // 10: cart.v1.CartService.GetCart:output_type -> cart.v1.GetCartResponse
+	7, // [7:11] is the sub-list for method output_type
+	3, // [3:7] is the sub-list for method input_type
+	3, // [3:3] is the sub-list for extension type_name
+	3, // [3:3] is the sub-list for extension extendee
+	0, // [0:3] is the sub-list for field type_name
 }
 
 func init() { file_api_cart_v1_cart_proto_init() }
@@ -414,7 +775,7 @@ func file_api_cart_v1_cart_proto_init() {
 			GoPackagePath: reflect.TypeOf(x{}).PkgPath(),
 			RawDescriptor: unsafe.Slice(unsafe.StringData(file_api_cart_v1_cart_proto_rawDesc), len(file_api_cart_v1_cart_proto_rawDesc)),
 			NumEnums:      0,
-			NumMessages:   4,
+			NumMessages:   9,
 			NumExtensions: 0,
 			NumServices:   1,
 		},

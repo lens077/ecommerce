@@ -10,13 +10,15 @@ option go_package = "github.com/lens077/ecommerce/backend/api/cart/v1;cartv1";
 
 service CartService {
   rpc AddProductToCart(AddProductToCartRequest) returns (AddProductToCartResponse){}
-  rpc RemoveProductToCart(RemoveProductToCartRequest) returns (RemoveProductToCartResponse){}
+  rpc RemoveCartItem(RemoveCartItemRequest) returns (RemoveCartItemResponse){}
+  rpc UpdateCartItemQuantity(UpdateCartItemQuantityRequest) returns (UpdateCartItemQuantityResponse){}
+  rpc GetCart(GetCartRequest) returns (GetCartResponse){}
 }
 
 message AddProductToCartRequest {
   uint64 spu_id = 1;
   uint64 sku_id = 2;
-  string merchant_id = 3;
+  string merchant_id = 3[(buf.validate.field).string.uuid = true];
   uint32 quantity = 4;
   bool selected = 5; // 同步勾选状态, 多端同步
   // 商品快照, 避免商家修改商品
@@ -35,15 +37,48 @@ message AddProductToCartResponse {
   uint64 cart_item_id = 2;        // 该商品在购物车中的唯一记录 ID，方便前端后续进行修改或删除
 }
 
-message RemoveProductToCartRequest {
+message RemoveCartItemRequest {
   uint64 spu_id = 1;
   uint64 sku_id = 2;
-  string merchant_id = 3;
-  uint32 quantity = 4;
-  google.protobuf.Timestamp updated_at = 5;
+  string merchant_id = 3[(buf.validate.field).string.uuid = true];
 }
 
-message RemoveProductToCartResponse {
+message RemoveCartItemResponse {
   uint32 cart_total_quantity = 1; // 删除后，购物车剩下的商品总件数（用于刷新右上角小红点）
   bool is_cart_empty = 2;         // 购物车是否已经彻底空了（用于前端直接切换到“空购物车”占位图）
+}
+
+message UpdateCartItemQuantityRequest {
+  uint64 spu_id = 1;
+  uint64 sku_id = 2;
+  string merchant_id = 3[(buf.validate.field).string.uuid = true];
+  uint32 quantity = 4; // 目标数量，如果为0则删除该商品项
+}
+
+message UpdateCartItemQuantityResponse {
+  uint32 cart_total_quantity = 1; // 更新后，购物车剩下的商品总件数（用于刷新右上角小红点）
+}
+
+message GetCartRequest {
+}
+
+message CartItem {
+  uint64 cart_item_id = 1;        // 购物车商品记录ID
+  uint64 spu_id = 2;
+  uint64 sku_id = 3;
+  string merchant_id = 4;
+  uint32 quantity = 5;
+  bool selected = 6;
+  string spu_name = 7;
+  string sku_name = 8;
+  double price = 9;
+  google.protobuf.Struct sku_attributes = 10;
+  string sku_thumbnail_url = 11;
+  string status = 12;
+}
+
+message GetCartResponse {
+  repeated CartItem items = 1;                     // 购物车商品列表
+  uint32 cart_total_quantity = 2;                  // 购物车总数量
+  bool is_cart_empty = 3;                          // 购物车是否为空
 }

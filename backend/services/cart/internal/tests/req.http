@@ -3,9 +3,9 @@ POST http://{{host}}:{{port}}/healthz
 Content-Type: application/json
 
 ### k8s
-POST http://{{k8s_gateway_host}}:{{k8s_gateway_port}}/cart.v1.CartService/AddProductToCart
+POST http://{{gateway_host}}:{{gateway_port}}/cart.v1.CartService/AddProductToCart
 Content-Type: application/json
-Authorization: Bearer ***REMOVED-JWT***
+Authorization: Bearer {{token}}
 
 {
   "spuId": 5,
@@ -24,3 +24,40 @@ Authorization: Bearer ***REMOVED-JWT***
   "status": "active"
 }
 
+### gateway RemoveCartItem
+POST http://{{gateway_host}}:{{gateway_port}}/cart.v1.CartService/RemoveCartItem
+Content-Type: application/json
+Authorization: Bearer {{token}}
+
+{
+  "spuId": 5,
+  "skuId": 9,
+  "merchantId": "eb70eac3-3b65-4a0a-a0e1-0d28fca13b82"
+}
+
+### RemoveCartItem
+POST http://{{gateway_host}}:{{gateway_port}}/cart.v1.CartService/RemoveCartItem
+Content-Type: application/json
+Authorization: Bearer {{token}}
+
+{
+  "spuId": 5,
+  "skuId": 9,
+  "merchantId": "eb70eac3-3b65-4a0a-a0e1-0d28fca13b82"
+}
+
+### GetCart
+POST http://{{gateway_host}}:{{gateway_port}}/cart.v1.CartService/GetCart
+Authorization: Bearer {{token}}
+Content-Type: application/json
+
+{}
+
+### GetCart
+POST http://{{host}}:{{port}}/cart.v1.CartService/GetCart
+#Authorization: Bearer {{token}}
+Content-Type: application/json
+
+{}
+
+###
