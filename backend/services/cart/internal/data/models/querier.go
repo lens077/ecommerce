@@ -46,6 +46,66 @@ type Querier interface {
 	//                    updated_at = now()
 	//  RETURNING id, quantity
 	AddProductToCart(ctx context.Context, arg AddProductToCartParams) (AddProductToCartRow, error)
+	// 获取用户购物车所有商品
+	//
+	//  SELECT id,
+	//         merchant_id,
+	//         spu_id,
+	//         sku_id,
+	//         quantity,
+	//         selected,
+	//         spu_name,
+	//         sku_name,
+	//         price,
+	//         sku_attributes,
+	//         sku_thumbnail_url,
+	//         status,
+	//         created_at,
+	//         updated_at
+	//  FROM cart.cart_item
+	//  WHERE user_id = $1
+	//    AND status = $2
+	//  ORDER BY updated_at DESC
+	GetCartItems(ctx context.Context, arg GetCartItemsParams) ([]GetCartItemsRow, error)
+	// 把最新的 id 和叠加后的最终数量一起返回回去
+	//
+	//
+	//  WITH deleted AS (
+	//      DELETE FROM cart.cart_item
+	//          WHERE merchant_id = $3
+	//              AND user_id = $1
+	//              AND spu_id = $4
+	//              AND sku_id = $5
+	//              AND status = $2
+	//          RETURNING id)
+	//  SELECT COALESCE(COUNT(quantity), 0)::INT AS cart_total_quantity,
+	//         CASE
+	//             WHEN COUNT(*) = 0 THEN
+	//                 TRUE
+	//             ELSE
+	//                 FALSE
+	//             END                           AS is_cart_empty
+	//  FROM cart.cart_item
+	//  WHERE user_id = $1
+	//    AND status = $2
+	RemoveCartItem(ctx context.Context, arg RemoveCartItemParams) (RemoveCartItemRow, error)
+	// 更新商品数量, 并返回购物车商品总数量
+	//
+	//  WITH do_uodate AS (
+	//      UPDATE cart.cart_item
+	//          SET quantity = $3,
+	//              updated_at = now()
+	//          WHERE merchant_id = $4
+	//              AND user_id = $1
+	//              AND spu_id = $5
+	//              AND sku_id = $6
+	//              AND status = $2
+	//              AND $3 > 0)
+	//  SELECT COUNT(*) AS cart_total_quantity
+	//  FROM cart.cart_item
+	//  WHERE user_id = $1
+	//    AND status = $2
+	UpdateCartItemQuantity(ctx context.Context, arg UpdateCartItemQuantityParams) (int64, error)
 }
 
 var _ Querier = (*Queries)(nil)

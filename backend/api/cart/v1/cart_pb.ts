@@ -4,7 +4,6 @@
 
 import type { GenFile, GenMessage, GenService } from "@bufbuild/protobuf/codegenv2";
 import { fileDesc, messageDesc, serviceDesc } from "@bufbuild/protobuf/codegenv2";
-import type { Timestamp } from "@bufbuild/protobuf/wkt";
 import { file_google_protobuf_struct, file_google_protobuf_timestamp } from "@bufbuild/protobuf/wkt";
 import { file_third_party_validate_validate } from "../../../third_party/validate/validate_pb";
 import type { JsonObject, Message } from "@bufbuild/protobuf";
@@ -13,7 +12,7 @@ import type { JsonObject, Message } from "@bufbuild/protobuf";
  * Describes the file api/cart/v1/cart.proto.
  */
 export const file_api_cart_v1_cart: GenFile = /*@__PURE__*/
-  fileDesc("ChZhcGkvY2FydC92MS9jYXJ0LnByb3RvEgdjYXJ0LnYxIqICChdBZGRQcm9kdWN0VG9DYXJ0UmVxdWVzdBIOCgZzcHVfaWQYASABKAQSDgoGc2t1X2lkGAIgASgEEhMKC21lcmNoYW50X2lkGAMgASgJEhAKCHF1YW50aXR5GAQgASgNEhAKCHNlbGVjdGVkGAUgASgIEhAKCHNwdV9uYW1lGAYgASgJEhAKCHNrdV9uYW1lGAcgASgJEg0KBXByaWNlGAggASgBEi8KDnNrdV9hdHRyaWJ1dGVzGAkgASgLMhcuZ29vZ2xlLnByb3RvYnVmLlN0cnVjdBIZChFza3VfdGh1bWJuYWlsX3VybBgKIAEoCRIvCgZzdGF0dXMYCyABKAlCH7pIHHIaUgZhY3RpdmVSB2V4cGlyZWRSB2RlbGV0ZWQiTQoYQWRkUHJvZHVjdFRvQ2FydFJlc3BvbnNlEhsKE2NhcnRfdG90YWxfcXVhbnRpdHkYASABKA0SFAoMY2FydF9pdGVtX2lkGAIgASgEIpMBChpSZW1vdmVQcm9kdWN0VG9DYXJ0UmVxdWVzdBIOCgZzcHVfaWQYASABKAQSDgoGc2t1X2lkGAIgASgEEhMKC21lcmNoYW50X2lkGAMgASgJEhAKCHF1YW50aXR5GAQgASgNEi4KCnVwZGF0ZWRfYXQYBSABKAsyGi5nb29nbGUucHJvdG9idWYuVGltZXN0YW1wIlEKG1JlbW92ZVByb2R1Y3RUb0NhcnRSZXNwb25zZRIbChNjYXJ0X3RvdGFsX3F1YW50aXR5GAEgASgNEhUKDWlzX2NhcnRfZW1wdHkYAiABKAgyzAEKC0NhcnRTZXJ2aWNlElkKEEFkZFByb2R1Y3RUb0NhcnQSIC5jYXJ0LnYxLkFkZFByb2R1Y3RUb0NhcnRSZXF1ZXN0GiEuY2FydC52MS5BZGRQcm9kdWN0VG9DYXJ0UmVzcG9uc2UiABJiChNSZW1vdmVQcm9kdWN0VG9DYXJ0EiMuY2FydC52MS5SZW1vdmVQcm9kdWN0VG9DYXJ0UmVxdWVzdBokLmNhcnQudjEuUmVtb3ZlUHJvZHVjdFRvQ2FydFJlc3BvbnNlIgBCjgEKC2NvbS5jYXJ0LnYxQglDYXJ0UHJvdG9QAVo3Z2l0aHViLmNvbS9sZW5zMDc3L2Vjb21tZXJjZS9iYWNrZW5kL2FwaS9jYXJ0L3YxO2NhcnR2MaICA0NYWKoCB0NhcnQuVjHKAgdDYXJ0XFYx4gITQ2FydFxWMVxHUEJNZXRhZGF0YeoCCENhcnQ6OlYxYgZwcm90bzM", [file_google_protobuf_timestamp, file_google_protobuf_struct, file_third_party_validate_validate]);
+  fileDesc("ChZhcGkvY2FydC92MS9jYXJ0LnByb3RvEgdjYXJ0LnYxIqwCChdBZGRQcm9kdWN0VG9DYXJ0UmVxdWVzdBIOCgZzcHVfaWQYASABKAQSDgoGc2t1X2lkGAIgASgEEh0KC21lcmNoYW50X2lkGAMgASgJQgi6SAVyA7ABARIQCghxdWFudGl0eRgEIAEoDRIQCghzZWxlY3RlZBgFIAEoCBIQCghzcHVfbmFtZRgGIAEoCRIQCghza3VfbmFtZRgHIAEoCRINCgVwcmljZRgIIAEoARIvCg5za3VfYXR0cmlidXRlcxgJIAEoCzIXLmdvb2dsZS5wcm90b2J1Zi5TdHJ1Y3QSGQoRc2t1X3RodW1ibmFpbF91cmwYCiABKAkSLwoGc3RhdHVzGAsgASgJQh+6SBxyGlIGYWN0aXZlUgdleHBpcmVkUgdkZWxldGVkIk0KGEFkZFByb2R1Y3RUb0NhcnRSZXNwb25zZRIbChNjYXJ0X3RvdGFsX3F1YW50aXR5GAEgASgNEhQKDGNhcnRfaXRlbV9pZBgCIAEoBCJWChVSZW1vdmVDYXJ0SXRlbVJlcXVlc3QSDgoGc3B1X2lkGAEgASgEEg4KBnNrdV9pZBgCIAEoBBIdCgttZXJjaGFudF9pZBgDIAEoCUIIukgFcgOwAQEiTAoWUmVtb3ZlQ2FydEl0ZW1SZXNwb25zZRIbChNjYXJ0X3RvdGFsX3F1YW50aXR5GAEgASgNEhUKDWlzX2NhcnRfZW1wdHkYAiABKAgicAodVXBkYXRlQ2FydEl0ZW1RdWFudGl0eVJlcXVlc3QSDgoGc3B1X2lkGAEgASgEEg4KBnNrdV9pZBgCIAEoBBIdCgttZXJjaGFudF9pZBgDIAEoCUIIukgFcgOwAQESEAoIcXVhbnRpdHkYBCABKA0iPQoeVXBkYXRlQ2FydEl0ZW1RdWFudGl0eVJlc3BvbnNlEhsKE2NhcnRfdG90YWxfcXVhbnRpdHkYASABKA0iEAoOR2V0Q2FydFJlcXVlc3QiiAIKCENhcnRJdGVtEhQKDGNhcnRfaXRlbV9pZBgBIAEoBBIOCgZzcHVfaWQYAiABKAQSDgoGc2t1X2lkGAMgASgEEhMKC21lcmNoYW50X2lkGAQgASgJEhAKCHF1YW50aXR5GAUgASgNEhAKCHNlbGVjdGVkGAYgASgIEhAKCHNwdV9uYW1lGAcgASgJEhAKCHNrdV9uYW1lGAggASgJEg0KBXByaWNlGAkgASgBEi8KDnNrdV9hdHRyaWJ1dGVzGAogASgLMhcuZ29vZ2xlLnByb3RvYnVmLlN0cnVjdBIZChFza3VfdGh1bWJuYWlsX3VybBgLIAEoCRIOCgZzdGF0dXMYDCABKAkiZwoPR2V0Q2FydFJlc3BvbnNlEiAKBWl0ZW1zGAEgAygLMhEuY2FydC52MS5DYXJ0SXRlbRIbChNjYXJ0X3RvdGFsX3F1YW50aXR5GAIgASgNEhUKDWlzX2NhcnRfZW1wdHkYAyABKAgy6gIKC0NhcnRTZXJ2aWNlElkKEEFkZFByb2R1Y3RUb0NhcnQSIC5jYXJ0LnYxLkFkZFByb2R1Y3RUb0NhcnRSZXF1ZXN0GiEuY2FydC52MS5BZGRQcm9kdWN0VG9DYXJ0UmVzcG9uc2UiABJTCg5SZW1vdmVDYXJ0SXRlbRIeLmNhcnQudjEuUmVtb3ZlQ2FydEl0ZW1SZXF1ZXN0Gh8uY2FydC52MS5SZW1vdmVDYXJ0SXRlbVJlc3BvbnNlIgASawoWVXBkYXRlQ2FydEl0ZW1RdWFudGl0eRImLmNhcnQudjEuVXBkYXRlQ2FydEl0ZW1RdWFudGl0eVJlcXVlc3QaJy5jYXJ0LnYxLlVwZGF0ZUNhcnRJdGVtUXVhbnRpdHlSZXNwb25zZSIAEj4KB0dldENhcnQSFy5jYXJ0LnYxLkdldENhcnRSZXF1ZXN0GhguY2FydC52MS5HZXRDYXJ0UmVzcG9uc2UiAEKOAQoLY29tLmNhcnQudjFCCUNhcnRQcm90b1ABWjdnaXRodWIuY29tL2xlbnMwNzcvZWNvbW1lcmNlL2JhY2tlbmQvYXBpL2NhcnQvdjE7Y2FydHYxogIDQ1hYqgIHQ2FydC5WMcoCB0NhcnRcVjHiAhNDYXJ0XFYxXEdQQk1ldGFkYXRh6gIIQ2FydDo6VjFiBnByb3RvMw", [file_google_protobuf_timestamp, file_google_protobuf_struct, file_third_party_validate_validate]);
 
 /**
  * @generated from message cart.v1.AddProductToCartRequest
@@ -115,9 +114,9 @@ export const AddProductToCartResponseSchema: GenMessage<AddProductToCartResponse
   messageDesc(file_api_cart_v1_cart, 1);
 
 /**
- * @generated from message cart.v1.RemoveProductToCartRequest
+ * @generated from message cart.v1.RemoveCartItemRequest
  */
-export type RemoveProductToCartRequest = Message<"cart.v1.RemoveProductToCartRequest"> & {
+export type RemoveCartItemRequest = Message<"cart.v1.RemoveCartItemRequest"> & {
   /**
    * @generated from field: uint64 spu_id = 1;
    */
@@ -132,29 +131,19 @@ export type RemoveProductToCartRequest = Message<"cart.v1.RemoveProductToCartReq
    * @generated from field: string merchant_id = 3;
    */
   merchantId: string;
-
-  /**
-   * @generated from field: uint32 quantity = 4;
-   */
-  quantity: number;
-
-  /**
-   * @generated from field: google.protobuf.Timestamp updated_at = 5;
-   */
-  updatedAt?: Timestamp;
 };
 
 /**
- * Describes the message cart.v1.RemoveProductToCartRequest.
- * Use `create(RemoveProductToCartRequestSchema)` to create a new message.
+ * Describes the message cart.v1.RemoveCartItemRequest.
+ * Use `create(RemoveCartItemRequestSchema)` to create a new message.
  */
-export const RemoveProductToCartRequestSchema: GenMessage<RemoveProductToCartRequest> = /*@__PURE__*/
+export const RemoveCartItemRequestSchema: GenMessage<RemoveCartItemRequest> = /*@__PURE__*/
   messageDesc(file_api_cart_v1_cart, 2);
 
 /**
- * @generated from message cart.v1.RemoveProductToCartResponse
+ * @generated from message cart.v1.RemoveCartItemResponse
  */
-export type RemoveProductToCartResponse = Message<"cart.v1.RemoveProductToCartResponse"> & {
+export type RemoveCartItemResponse = Message<"cart.v1.RemoveCartItemResponse"> & {
   /**
    * 删除后，购物车剩下的商品总件数（用于刷新右上角小红点）
    *
@@ -171,11 +160,184 @@ export type RemoveProductToCartResponse = Message<"cart.v1.RemoveProductToCartRe
 };
 
 /**
- * Describes the message cart.v1.RemoveProductToCartResponse.
- * Use `create(RemoveProductToCartResponseSchema)` to create a new message.
+ * Describes the message cart.v1.RemoveCartItemResponse.
+ * Use `create(RemoveCartItemResponseSchema)` to create a new message.
  */
-export const RemoveProductToCartResponseSchema: GenMessage<RemoveProductToCartResponse> = /*@__PURE__*/
+export const RemoveCartItemResponseSchema: GenMessage<RemoveCartItemResponse> = /*@__PURE__*/
   messageDesc(file_api_cart_v1_cart, 3);
+
+/**
+ * @generated from message cart.v1.UpdateCartItemQuantityRequest
+ */
+export type UpdateCartItemQuantityRequest = Message<"cart.v1.UpdateCartItemQuantityRequest"> & {
+  /**
+   * @generated from field: uint64 spu_id = 1;
+   */
+  spuId: bigint;
+
+  /**
+   * @generated from field: uint64 sku_id = 2;
+   */
+  skuId: bigint;
+
+  /**
+   * @generated from field: string merchant_id = 3;
+   */
+  merchantId: string;
+
+  /**
+   * 目标数量，如果为0则删除该商品项
+   *
+   * @generated from field: uint32 quantity = 4;
+   */
+  quantity: number;
+};
+
+/**
+ * Describes the message cart.v1.UpdateCartItemQuantityRequest.
+ * Use `create(UpdateCartItemQuantityRequestSchema)` to create a new message.
+ */
+export const UpdateCartItemQuantityRequestSchema: GenMessage<UpdateCartItemQuantityRequest> = /*@__PURE__*/
+  messageDesc(file_api_cart_v1_cart, 4);
+
+/**
+ * @generated from message cart.v1.UpdateCartItemQuantityResponse
+ */
+export type UpdateCartItemQuantityResponse = Message<"cart.v1.UpdateCartItemQuantityResponse"> & {
+  /**
+   * 更新后，购物车剩下的商品总件数（用于刷新右上角小红点）
+   *
+   * @generated from field: uint32 cart_total_quantity = 1;
+   */
+  cartTotalQuantity: number;
+};
+
+/**
+ * Describes the message cart.v1.UpdateCartItemQuantityResponse.
+ * Use `create(UpdateCartItemQuantityResponseSchema)` to create a new message.
+ */
+export const UpdateCartItemQuantityResponseSchema: GenMessage<UpdateCartItemQuantityResponse> = /*@__PURE__*/
+  messageDesc(file_api_cart_v1_cart, 5);
+
+/**
+ * @generated from message cart.v1.GetCartRequest
+ */
+export type GetCartRequest = Message<"cart.v1.GetCartRequest"> & {
+};
+
+/**
+ * Describes the message cart.v1.GetCartRequest.
+ * Use `create(GetCartRequestSchema)` to create a new message.
+ */
+export const GetCartRequestSchema: GenMessage<GetCartRequest> = /*@__PURE__*/
+  messageDesc(file_api_cart_v1_cart, 6);
+
+/**
+ * @generated from message cart.v1.CartItem
+ */
+export type CartItem = Message<"cart.v1.CartItem"> & {
+  /**
+   * 购物车商品记录ID
+   *
+   * @generated from field: uint64 cart_item_id = 1;
+   */
+  cartItemId: bigint;
+
+  /**
+   * @generated from field: uint64 spu_id = 2;
+   */
+  spuId: bigint;
+
+  /**
+   * @generated from field: uint64 sku_id = 3;
+   */
+  skuId: bigint;
+
+  /**
+   * @generated from field: string merchant_id = 4;
+   */
+  merchantId: string;
+
+  /**
+   * @generated from field: uint32 quantity = 5;
+   */
+  quantity: number;
+
+  /**
+   * @generated from field: bool selected = 6;
+   */
+  selected: boolean;
+
+  /**
+   * @generated from field: string spu_name = 7;
+   */
+  spuName: string;
+
+  /**
+   * @generated from field: string sku_name = 8;
+   */
+  skuName: string;
+
+  /**
+   * @generated from field: double price = 9;
+   */
+  price: number;
+
+  /**
+   * @generated from field: google.protobuf.Struct sku_attributes = 10;
+   */
+  skuAttributes?: JsonObject;
+
+  /**
+   * @generated from field: string sku_thumbnail_url = 11;
+   */
+  skuThumbnailUrl: string;
+
+  /**
+   * @generated from field: string status = 12;
+   */
+  status: string;
+};
+
+/**
+ * Describes the message cart.v1.CartItem.
+ * Use `create(CartItemSchema)` to create a new message.
+ */
+export const CartItemSchema: GenMessage<CartItem> = /*@__PURE__*/
+  messageDesc(file_api_cart_v1_cart, 7);
+
+/**
+ * @generated from message cart.v1.GetCartResponse
+ */
+export type GetCartResponse = Message<"cart.v1.GetCartResponse"> & {
+  /**
+   * 购物车商品列表
+   *
+   * @generated from field: repeated cart.v1.CartItem items = 1;
+   */
+  items: CartItem[];
+
+  /**
+   * 购物车总数量
+   *
+   * @generated from field: uint32 cart_total_quantity = 2;
+   */
+  cartTotalQuantity: number;
+
+  /**
+   * 购物车是否为空
+   *
+   * @generated from field: bool is_cart_empty = 3;
+   */
+  isCartEmpty: boolean;
+};
+
+/**
+ * Describes the message cart.v1.GetCartResponse.
+ * Use `create(GetCartResponseSchema)` to create a new message.
+ */
+export const GetCartResponseSchema: GenMessage<GetCartResponse> = /*@__PURE__*/
+  messageDesc(file_api_cart_v1_cart, 8);
 
 /**
  * @generated from service cart.v1.CartService
@@ -190,12 +352,28 @@ export const CartService: GenService<{
     output: typeof AddProductToCartResponseSchema;
   },
   /**
-   * @generated from rpc cart.v1.CartService.RemoveProductToCart
+   * @generated from rpc cart.v1.CartService.RemoveCartItem
    */
-  removeProductToCart: {
+  removeCartItem: {
     methodKind: "unary";
-    input: typeof RemoveProductToCartRequestSchema;
-    output: typeof RemoveProductToCartResponseSchema;
+    input: typeof RemoveCartItemRequestSchema;
+    output: typeof RemoveCartItemResponseSchema;
+  },
+  /**
+   * @generated from rpc cart.v1.CartService.UpdateCartItemQuantity
+   */
+  updateCartItemQuantity: {
+    methodKind: "unary";
+    input: typeof UpdateCartItemQuantityRequestSchema;
+    output: typeof UpdateCartItemQuantityResponseSchema;
+  },
+  /**
+   * @generated from rpc cart.v1.CartService.GetCart
+   */
+  getCart: {
+    methodKind: "unary";
+    input: typeof GetCartRequestSchema;
+    output: typeof GetCartResponseSchema;
   },
 }> = /*@__PURE__*/
   serviceDesc(file_api_cart_v1_cart, 0);
