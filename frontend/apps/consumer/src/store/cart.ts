@@ -1,11 +1,9 @@
 /**
  * 购物车状态管理
- * 
+ *
  * 使用简单的发布-订阅模式实现全局状态同步
  * 数据持久化到 localStorage
  */
-
-import { tokens } from "@/styles/tokens";
 
 // ============================================================================
 // Types
@@ -20,6 +18,7 @@ export interface CartItem {
   spuName: string;
   skuName: string;
   price: number;
+  costPrice: number;
   quantity: number;
   selected: boolean;
   skuThumbnailUrl: string;
@@ -192,6 +191,18 @@ class CartStore {
   selectAll(selected: boolean): void {
     this.state.items.forEach((item) => {
       item.selected = selected;
+    });
+    emitUpdate();
+  }
+
+  /**
+   * 按商家全选/取消全选
+   */
+  selectByMerchant(merchantId: string, selected: boolean): void {
+    this.state.items.forEach((item) => {
+      if (item.merchantId === merchantId) {
+        item.selected = selected;
+      }
     });
     emitUpdate();
   }

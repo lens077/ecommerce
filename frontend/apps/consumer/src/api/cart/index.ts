@@ -20,6 +20,7 @@ export interface AddToCartRequest {
   spuName: string;
   skuName: string;
   price: number;
+  costPrice: number;
   skuThumbnailUrl: string;
 }
 

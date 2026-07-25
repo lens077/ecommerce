@@ -1,10 +1,10 @@
 /**
  * 购物车商品卡片组件
- * 
+ *
  * 设计规范:
  * - 扁平化设计，细边框
- * - 充足的内边距
- * - 清晰的视觉层级
+ * - 清晰的视觉层级：图片 → 商品名 → 规格 → 价格/数量
+ * - 悬停时显示删除按钮，减少视觉干扰
  */
 
 import { Box, Checkbox, Typography } from "@mui/material";
@@ -39,11 +39,15 @@ export function CartItemCard({
     <Box
       sx={{
         display: "flex",
-        gap: tokens.spacing[4],
+        gap: tokens.spacing[3],
         p: tokens.spacing[4],
         bgcolor: tokens.colors.background.card,
         border: `1px solid ${tokens.colors.border.default}`,
         borderRadius: tokens.radius.lg,
+        transition: tokens.transitions.fast,
+        "&:hover": {
+          borderColor: tokens.colors.border.hover,
+        },
       }}
     >
       {/* 选择框 */}
@@ -52,10 +56,9 @@ export function CartItemCard({
         onChange={() => onToggleSelect(item.cartItemId)}
         sx={{
           p: 0,
+          mt: 0.5,
           color: tokens.colors.border.default,
-          "&.Mui-checked": {
-            color: tokens.colors.accent.black,
-          },
+          "&.Mui-checked": { color: tokens.colors.accent.black },
         }}
       />
 
@@ -65,8 +68,9 @@ export function CartItemCard({
         src={item.skuThumbnailUrl || "/placeholder.png"}
         alt={item.spuName}
         sx={{
-          width: 96,
-          height: 96,
+          width: 88,
+          height: 88,
+          flexShrink: 0,
           objectFit: "cover",
           borderRadius: tokens.radius.md,
           bgcolor: tokens.colors.background.primary,
@@ -74,7 +78,8 @@ export function CartItemCard({
       />
 
       {/* 商品信息 */}
-      <Box sx={{ flex: 1, minWidth: 0 }}>
+      <Box sx={{ flex: 1, minWidth: 0, display: "flex", flexDirection: "column" }}>
+        {/* 商品名 */}
         <Typography
           variant="body2"
           sx={{
@@ -92,31 +97,37 @@ export function CartItemCard({
           {item.spuName}
         </Typography>
 
-        <Typography
-          variant="caption"
-          sx={{
-            color: tokens.colors.text.secondary,
-            display: "block",
-            mb: tokens.spacing[2],
-          }}
-        >
-          {item.skuName}
-        </Typography>
+        {/* 规格 */}
+        {item.skuName && (
+          <Typography
+            variant="caption"
+            sx={{
+              color: tokens.colors.text.secondary,
+              display: "block",
+              mb: tokens.spacing[2],
+              overflow: "hidden",
+              textOverflow: "ellipsis",
+              whiteSpace: "nowrap",
+            }}
+          >
+            {item.skuName}
+          </Typography>
+        )}
 
         {/* 价格和数量操作 */}
         <Box
           sx={{
+            mt: "auto",
             display: "flex",
             alignItems: "center",
             justifyContent: "space-between",
           }}
         >
           <Typography
-            variant="body2"
             sx={{
               color: tokens.colors.accent.red,
               fontWeight: 600,
-              fontSize: "0.95rem",
+              fontSize: "1rem",
             }}
           >
             ¥{item.price.toFixed(2)}
@@ -127,10 +138,8 @@ export function CartItemCard({
             sx={{
               display: "flex",
               alignItems: "center",
-              gap: tokens.spacing[2],
               border: `1px solid ${tokens.colors.border.default}`,
               borderRadius: tokens.radius.md,
-              p: "2px",
             }}
           >
             <Box
@@ -145,28 +154,23 @@ export function CartItemCard({
                 height: 28,
                 border: "none",
                 bgcolor: "transparent",
-                borderRadius: tokens.radius.sm,
                 cursor: item.quantity <= 1 ? "not-allowed" : "pointer",
                 color: tokens.colors.text.secondary,
                 transition: tokens.transitions.fast,
-                "&:hover:not(:disabled)": {
-                  bgcolor: tokens.colors.background.primary,
-                },
-                "&:disabled": {
-                  opacity: 0.4,
-                },
+                "&:hover:not(:disabled)": { bgcolor: tokens.colors.background.primary },
+                "&:disabled": { opacity: 0.4 },
               }}
             >
               <Minus size={14} />
             </Box>
 
             <Typography
-              variant="body2"
               sx={{
                 minWidth: 32,
                 textAlign: "center",
                 fontWeight: 500,
                 color: tokens.colors.text.primary,
+                fontSize: "0.875rem",
               }}
             >
               {item.quantity}
@@ -183,13 +187,10 @@ export function CartItemCard({
                 height: 28,
                 border: "none",
                 bgcolor: "transparent",
-                borderRadius: tokens.radius.sm,
                 cursor: "pointer",
                 color: tokens.colors.text.secondary,
                 transition: tokens.transitions.fast,
-                "&:hover": {
-                  bgcolor: tokens.colors.background.primary,
-                },
+                "&:hover": { bgcolor: tokens.colors.background.primary },
               }}
             >
               <Plus size={14} />
@@ -204,19 +205,25 @@ export function CartItemCard({
         onClick={() => onRemove(item.cartItemId)}
         sx={{
           display: "flex",
-          alignItems: "flex-start",
-          p: tokens.spacing[1],
+          alignItems: "center",
+          justifyContent: "center",
+          width: 28,
+          height: 28,
+          flexShrink: 0,
+          mt: 0.5,
           border: "none",
           bgcolor: "transparent",
+          borderRadius: tokens.radius.sm,
           cursor: "pointer",
-          color: tokens.colors.text.secondary,
+          color: tokens.colors.text.disabled,
           transition: tokens.transitions.fast,
           "&:hover": {
             color: tokens.colors.accent.red,
+            bgcolor: "rgba(239, 68, 68, 0.08)",
           },
         }}
       >
-        <Trash2 size={18} />
+        <Trash2 size={16} />
       </Box>
     </Box>
   );

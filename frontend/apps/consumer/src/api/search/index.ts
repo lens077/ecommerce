@@ -5,6 +5,7 @@ import { errorInterceptor, loggerInterceptor } from "@ecommerce/api";
 
 const transport = createConnectTransport({
     // baseUrl:`${gatewayUrl}/search`,
+    // baseUrl: `http://localhost:8080/search`,
     baseUrl: `http://localhost:8080`,
     interceptors: [loggerInterceptor,errorInterceptor]
 })
