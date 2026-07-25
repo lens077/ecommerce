@@ -57,8 +57,6 @@ func (uc *OrderCommandUseCase) CreateOrder(ctx context.Context, req *domain.Crea
 	// 10. 清空购物车
 	// 11. 返回响应
 
-	// 具体实现会在 service 层完成，这里只定义接口契约
-
 	return &domain.CreateOrderResponse{}, nil
 }
 

@@ -41,6 +41,17 @@ type OrderGroupRoot struct {
 	CreatedAt      time.Time // 创建时间
 	UpdatedAt      time.Time // 更新时间
 }
+type OrderGroupDTO struct {
+	Id             int64     // 订单组自增主键ID
+	GroupNo        string    // 订单组号，业务唯一标识，如：OG202605090001
+	UserId         string    // 下单用户ID，来自Casdoor统一身份认证
+	TotalAmount    float64   // 订单组商品总金额（所有子订单商品金额合计，不含运费/优惠）
+	FreightAmount  float64   // 订单组总运费（所有子订单运费合计）
+	DiscountAmount float64   // 订单组总优惠金额（所有子订单优惠合计）
+	PayAmount      float64   // 订单组实付总金额（用户实际需要支付的金额）
+	CreatedAt      time.Time // 创建时间
+	UpdatedAt      time.Time // 更新时间
+}
 
 // OrderRoot 订单主聚合根 (对应数据库 order_main 表)
 // 一个 OrderGroupRoot 包含多个 OrderRoot，每个 OrderRoot 对应一个商家
@@ -200,15 +211,15 @@ type OrderCommandRepo interface {
 // OrderQueryRepo 查询仓储：不经过领域模型，直接返回前端需要的数据
 type OrderQueryRepo interface {
 	// GetOrderGroupByNo 根据订单组号查询
-	GetOrderGroupByNo(ctx context.Context, groupNo string) (*OrderGroupRoot, error)
+	GetOrderGroupByNo(ctx context.Context, groupNo string) (*OrderGroupDTO, error)
 	// GetOrderByNo 根据订单号查询
 	GetOrderByNo(ctx context.Context, orderNo string) (*OrderDTO, error)
 	// GetOrdersByGroupNo 根据订单组号查询所有子订单
-	GetOrdersByGroupNo(ctx context.Context, groupNo string) ([]*OrderRoot, error)
+	GetOrdersByGroupNo(ctx context.Context, groupNo string) ([]*OrderDTO, error)
 	// GetOrdersByUserID 查询用户的订单列表
-	GetOrdersByUserID(ctx context.Context, userID string, page, pageSize int) ([]*OrderRoot, int64, error)
+	GetOrdersByUserID(ctx context.Context, userID string, page, pageSize int) ([]*OrderDTO, int64, error)
 	// GetOrdersByMerchantID 查询商家的订单列表 (数据隔离)
-	GetOrdersByMerchantID(ctx context.Context, merchantID int64, page, pageSize int) ([]*OrderRoot, int64, error)
+	GetOrdersByMerchantID(ctx context.Context, merchantID int64, page, pageSize int) ([]*OrderDTO, int64, error)
 }
 
 func (o *OrderRoot) Complete() error {
