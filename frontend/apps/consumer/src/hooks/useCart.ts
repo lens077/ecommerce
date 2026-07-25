@@ -123,6 +123,13 @@ export function useCart() {
   }, []);
 
   /**
+   * 按商家全选/取消全选
+   */
+  const selectByMerchant = useCallback((merchantId: string, selected: boolean): void => {
+    cartStore.selectByMerchant(merchantId, selected);
+  }, []);
+
+  /**
    * 清空购物车
    */
   const clear = useCallback((): void => {
@@ -149,6 +156,7 @@ export function useCart() {
     updateQuantity,
     toggleSelect,
     selectAll,
+    selectByMerchant,
     clear,
     getSelectedItems,
   };
@@ -167,6 +175,7 @@ export function useAddToCart(initialQuantity: number = 1) {
   const [quantity, setQuantity] = useState(initialQuantity);
   const [isLoading, setIsLoading] = useState(false);
   const [isSuccess, setIsSuccess] = useState(false);
+  const [error, setError] = useState<string | null>(null);
 
   const addToCart = useCallback(
     async (request: Omit<AddToCartRequest, "quantity">): Promise<void> => {
@@ -200,6 +209,10 @@ export function useAddToCart(initialQuantity: number = 1) {
     [quantity]
   );
 
+  const clearError = useCallback(() => {
+    setError(null);
+  }, []);
+
   const increment = useCallback(() => {
     setQuantity((q) => q + 1);
   }, []);
@@ -212,9 +225,11 @@ export function useAddToCart(initialQuantity: number = 1) {
     quantity,
     isLoading,
     isSuccess,
+    error,
     increment,
     decrement,
     setQuantity,
     addToCart,
+    clearError,
   };
 }

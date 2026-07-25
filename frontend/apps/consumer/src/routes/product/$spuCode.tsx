@@ -6,9 +6,6 @@ import {
   Typography,
   Card,
   CardMedia,
-  List,
-  ListItem,
-  ListItemText,
   Divider,
   Button,
   Paper,
@@ -22,9 +19,15 @@ import FlashOnIcon from "@mui/icons-material/FlashOn";
 import { styled } from "@mui/material/styles";
 import { useProductDetail } from "@/hooks/useProduct";
 import type { ProductSpuDetail } from "@/gen/api/product/v1/product_pb.ts";
-import { useState, useCallback } from "react";
+import { useState, useCallback, useMemo } from "react";
 import { useAddToCart } from "@/hooks/useCart";
 import { tokens } from "@/styles/tokens";
+import type { Money } from "@/gen/third_party/google/type/money_pb.ts";
+
+const formatMoney = (money?: Money): number => {
+  if (!money) return 0;
+  return Number(money.units) + money.nanos / 1_000_000_000;
+};
 
 // 样式组件定义在外面，避免每次渲染重新创建
 const ImageCard = styled(Card)(() => ({
@@ -36,105 +39,153 @@ const ImageCard = styled(Card)(() => ({
 const ProductPage = () => {
   const { spuCode } = Route.useParams();
 
+  console.log("spuCode", spuCode);
   const { data, isLoading, isError, error } = useProductDetail(spuCode);
   const product: ProductSpuDetail | undefined = data?.productDetail;
 
   const [selectedAttrs, setSelectedAttrs] = useState<Record<string, string>>({});
   const [showSuccess, setShowSuccess] = useState(false);
 
-  // 使用加入购物车 Hook
   const {
     quantity,
     isLoading: isAddingToCart,
     isSuccess,
+    error: cartError,
     increment,
     decrement,
-    setQuantity,
     addToCart,
+    clearError,
   } = useAddToCart(1);
 
-  // 监听添加成功
-  if (isSuccess && !showSuccess) {
-    setShowSuccess(true);
-  }
+  const { attributes, availableValues, selectedSku, currentPrice, currentImage } = useMemo(() => {
+    if (!product || !product.skus) {
+      return {
+        attributes: {} as Record<string, string[]>,
+        availableValues: {} as Record<string, Set<string>>,
+        selectedSku: undefined,
+        currentPrice: 0,
+        currentImage: "",
+      };
+    }
 
-  // 处理加入购物车
+    // 提取所有唯一的属性键
+    const attributeKeys = new Set<string>();
+    product.skus.forEach((sku) => {
+      if (sku.attributes) {
+        Object.keys(sku.attributes).forEach((key) => attributeKeys.add(key));
+      }
+    });
+
+    // 为每个属性键提取唯一的值
+    const attrs = Array.from(attributeKeys).reduce(
+      (acc, key) => {
+        const values = new Set<string>();
+        product.skus?.forEach((sku) => {
+          if (sku.attributes?.[key]) {
+            const value = String(sku.attributes[key]);
+            values.add(value);
+          }
+        });
+        acc[key] = Array.from(values);
+        return acc;
+      },
+      {} as Record<string, string[]>,
+    );
+
+    // 计算每个属性值的可用性：基于已选的其他属性过滤SKU
+    // 对于某个属性 key 的某个 value，检查是否存在一个 SKU 同时满足：
+    // 1. 该 SKU 的 attributes[key] === value
+    // 2. 该 SKU 匹配所有其他已选属性（排除当前 key）
+    const availValues: Record<string, Set<string>> = {};
+    Array.from(attributeKeys).forEach((key) => {
+      const available = new Set<string>();
+      product.skus.forEach((sku) => {
+        if (!sku.attributes || sku.attributes[key] === undefined) return;
+        const val = String(sku.attributes[key]);
+        // 检查该 SKU 是否匹配所有其他已选属性
+        const matchesOtherSelections = Object.entries(selectedAttrs).every(
+          ([otherKey, otherValue]) => {
+            if (otherKey === key) return true; // 排除当前 key
+            const skuValue = sku.attributes?.[otherKey];
+            return skuValue === undefined || String(skuValue) === otherValue;
+          },
+        );
+        if (matchesOtherSelections) {
+          available.add(val);
+        }
+      });
+      availValues[key] = available;
+    });
+
+    // 根据选中的属性找到匹配的SKU（只有所有属性都已选才匹配）
+    const allAttrsSelected =
+      Object.keys(selectedAttrs).length > 0 &&
+      Array.from(attributeKeys).every((k) => selectedAttrs[k] !== undefined);
+
+    const foundSku = allAttrsSelected
+      ? product.skus?.find((sku) => {
+          if (!sku.attributes) return false;
+          return Object.entries(selectedAttrs).every(([key, value]) => {
+            const skuValue = sku.attributes?.[key];
+            return skuValue !== undefined && String(skuValue) === value;
+          });
+        })
+      : undefined;
+
+    // 只有找到匹配的 SKU 时才显示价格，否则显示 0（避免回退到第一个 SKU 的价格）
+    const price = foundSku ? formatMoney(foundSku.price) : 0;
+    const image = foundSku?.thumbnailUrl || product.skus[0]?.thumbnailUrl || "";
+
+    return {
+      attributes: attrs,
+      availableValues: availValues,
+      selectedSku: foundSku,
+      currentPrice: price,
+      currentImage: image,
+    };
+  }, [product, selectedAttrs]);
+
   const handleAddToCart = useCallback(async () => {
     if (!product || !selectedSku) return;
 
     try {
       await addToCart({
-        spuId: product.id,
-        skuId: selectedSku.id,
-        merchantId: product.merchantId || "default",
-        merchantName: product.merchantName || "官方自营",
-        spuName: product.name,
-        skuName: Object.values(selectedAttrs).join(" / "),
-        price: selectedSku.price,
-        skuThumbnailUrl: selectedSku.img || product.skus[0]?.img || "",
+        spuId: String(product.spuId),
+        skuId: String(selectedSku.skuId),
+        merchantId: selectedSku.merchantId,
+        merchantName: "",
+        spuName: product.spuName,
+        skuName: selectedSku.skuName || Object.values(selectedAttrs).join(" / "),
+        price: formatMoney(selectedSku.price),
+        costPrice: formatMoney(selectedSku.costPrice),
+        skuThumbnailUrl: selectedSku.thumbnailUrl || product.skus?.[0]?.thumbnailUrl || "",
+        selected: true,
       });
     } catch (err) {
       console.error("添加购物车失败:", err);
     }
-  }, [product, selectedSku, selectedAttrs, addToCart]);
+  }, [product, selectedAttrs, addToCart, selectedSku]);
 
-  // 3. 骨架屏占位图 (提升用户体验)
+  if (isSuccess && !showSuccess) {
+    setShowSuccess(true);
+  }
+
   if (isLoading) return <ProductSkeleton />;
 
-  // 4. 错误处理
   if (isError) return <Typography color="error">加载失败: {error.message}</Typography>;
 
   if (!product || !product.skus) return null;
 
-  // 提取所有唯一的属性键
-  const attributeKeys = new Set<string>();
-  product.skus.forEach((sku) => {
-    if (sku.attrs) {
-      Object.keys(sku.attrs).forEach((key) => attributeKeys.add(key));
-    }
-  });
-
-  // 为每个属性键提取唯一的值
-  const attributes = Array.from(attributeKeys).reduce(
-    (acc, key) => {
-      const values = new Set<string>();
-      product.skus?.forEach((sku) => {
-        if (sku.attrs?.[key]) {
-          // 确保值是字符串类型
-          const value = String(sku.attrs[key]);
-          values.add(value);
-        }
-      });
-      acc[key] = Array.from(values);
-      return acc;
-    },
-    {} as Record<string, string[]>,
-  );
-
-  // 根据选中的属性找到匹配的SKU
-  const findMatchingSku = () => {
-    return product.skus?.find((sku) => {
-      if (!sku.attrs) return false;
-      return Object.entries(selectedAttrs).every(([key, value]) => {
-        const skuValue = sku.attrs?.[key];
-        return skuValue !== undefined && String(skuValue) === value;
-      });
-    });
-  };
-
-  // 获取当前选中的SKU
-  const selectedSku = findMatchingSku();
-  // 获取当前价格
-  const currentPrice = selectedSku?.price || product.skus[0]?.price || 0;
-  // 获取当前图片
-  const currentImage = selectedSku?.img || product.skus[0]?.img || "";
-
-  // 处理属性选择
+  // 处理属性选择：再次选中时取消勾选
   const handleAttributeSelect = (key: string, value: string) => {
-    setSelectedAttrs((prev) => ({
-      ...prev,
-      [key]: value,
-    }));
+    setSelectedAttrs((prev) => {
+      if (prev[key] === value) {
+        const next = { ...prev };
+        delete next[key];
+        return next;
+      }
+      return { ...prev, [key]: value };
+    });
   };
 
   return (
@@ -154,7 +205,7 @@ const ProductPage = () => {
         </Box>
 
         <Typography variant="h4" component="h1" gutterBottom sx={{ fontWeight: 700, color: tokens.colors.text.primary }}>
-          {product.name}
+          {product.spuName}
         </Typography>
 
         <Box sx={{ display: "flex", flexDirection: "column", gap: 5 }}>
@@ -172,7 +223,7 @@ const ProductPage = () => {
                 <CardMedia
                   component="img"
                   image={currentImage}
-                  alt={product.name}
+                  alt={product.spuName}
                   sx={{
                     height: 500,
                     objectFit: "contain",
@@ -198,24 +249,36 @@ const ProductPage = () => {
               >
                 {/* 价格区域 */}
                 <Box sx={{ mb: 3 }}>
-                  <Typography
-                    variant="h3"
-                    sx={{
-                      fontWeight: 700,
-                      color: tokens.colors.accent.red,
-                    }}
-                  >
-                    ¥{currentPrice.toLocaleString()}
-                  </Typography>
+                  {currentPrice > 0 ? (
+                    <Typography
+                      variant="h3"
+                      sx={{
+                        fontWeight: 700,
+                        color: tokens.colors.accent.red,
+                      }}
+                    >
+                      ¥{currentPrice.toLocaleString()}
+                    </Typography>
+                  ) : (
+                    <Typography
+                      variant="h5"
+                      sx={{
+                        fontWeight: 500,
+                        color: tokens.colors.text.secondary,
+                      }}
+                    >
+                      请选择规格
+                    </Typography>
+                  )}
                 </Box>
 
                 <Box sx={{ display: "flex", gap: 1.5, mb: 3 }}>
                   <Chip
                     size="small"
-                    label={`库存 ${selectedSku?.stock || 0}`}
+                    label={`库存 ${Number(selectedSku?.stockLocked) || 0}`}
                     sx={{
-                      bgcolor: selectedSku?.stock ? tokens.colors.background.primary : "rgba(239, 68, 68, 0.1)",
-                      color: selectedSku?.stock ? tokens.colors.text.secondary : tokens.colors.accent.red,
+                      bgcolor: selectedSku?.stockLocked ? tokens.colors.background.primary : "rgba(239, 68, 68, 0.1)",
+                      color: selectedSku?.stockLocked ? tokens.colors.text.secondary : tokens.colors.accent.red,
                       fontWeight: 500,
                       borderRadius: tokens.radius.md,
                     }}
@@ -234,26 +297,38 @@ const ProductPage = () => {
                       {key}
                     </Typography>
                     <Box sx={{ display: "flex", gap: 1.5, flexWrap: "wrap" }}>
-                      {values.map((value) => (
-                        <Chip
-                          key={value}
-                          label={value}
-                          onClick={() => handleAttributeSelect(key, value)}
-                          sx={{
-                            cursor: "pointer",
-                            border: `1px solid ${selectedAttrs[key] === value ? tokens.colors.accent.black : tokens.colors.border.default}`,
-                            backgroundColor: selectedAttrs[key] === value ? tokens.colors.text.primary : tokens.colors.background.card,
-                            color: selectedAttrs[key] === value ? tokens.colors.text.inverse : tokens.colors.text.primary,
-                            borderRadius: tokens.radius.md,
-                            py: 2,
-                            fontWeight: 500,
-                            transition: tokens.transitions.fast,
-                            "&:hover": {
-                              borderColor: tokens.colors.accent.black,
-                            },
-                          }}
-                        />
-                      ))}
+                      {values.map((value) => {
+                        const isAvailable = availableValues[key]?.has(value) ?? true;
+                        const isSelected = selectedAttrs[key] === value;
+                        return (
+                          <Chip
+                            key={value}
+                            label={value}
+                            disabled={!isAvailable}
+                            onClick={() => isAvailable && handleAttributeSelect(key, value)}
+                            sx={{
+                              cursor: isAvailable ? "pointer" : "not-allowed",
+                              border: `1px solid ${isSelected ? tokens.colors.accent.black : tokens.colors.border.default}`,
+                              backgroundColor: isSelected ? tokens.colors.text.primary : tokens.colors.background.card,
+                              color: isSelected ? tokens.colors.text.inverse : tokens.colors.text.primary,
+                              borderRadius: tokens.radius.md,
+                              py: 2,
+                              fontWeight: 500,
+                              transition: tokens.transitions.fast,
+                              "&:hover": {
+                                borderColor: isAvailable ? tokens.colors.accent.black : tokens.colors.border.default,
+                              },
+                              "&.Mui-disabled": {
+                                opacity: 0.35,
+                                backgroundColor: tokens.colors.background.card,
+                                color: tokens.colors.text.secondary,
+                                borderColor: tokens.colors.border.default,
+                                cursor: "not-allowed",
+                              },
+                            }}
+                          />
+                        );
+                      })}
                     </Box>
                   </Box>
                 ))}
@@ -332,7 +407,7 @@ const ProductPage = () => {
                     fullWidth
                     startIcon={<ShoppingCartIcon />}
                     onClick={handleAddToCart}
-                    disabled={isAddingToCart}
+                    disabled={isAddingToCart || !selectedSku}
                     sx={{
                       borderRadius: tokens.radius.lg,
                       py: 1.5,
@@ -351,13 +426,14 @@ const ProductPage = () => {
                       },
                     }}
                   >
-                    {isAddingToCart ? "添加中..." : "加入购物车"}
+                    {isAddingToCart ? "添加中..." : selectedSku ? "加入购物车" : "请选择规格"}
                   </Button>
                   <Button
                     variant="contained"
                     size="large"
                     fullWidth
                     startIcon={<FlashOnIcon />}
+                    disabled={!selectedSku}
                     sx={{
                       borderRadius: tokens.radius.lg,
                       py: 1.5,
@@ -368,6 +444,10 @@ const ProductPage = () => {
                       "&:hover": {
                         bgcolor: tokens.colors.accent.darkGray,
                         boxShadow: "none",
+                      },
+                      "&:disabled": {
+                        bgcolor: tokens.colors.border.default,
+                        color: tokens.colors.text.disabled,
                       },
                     }}
                   >
@@ -397,6 +477,26 @@ const ProductPage = () => {
           }}
         >
           已成功加入购物车
+        </Alert>
+      </Snackbar>
+
+      {/* 错误提示 */}
+      <Snackbar
+        open={!!cartError}
+        autoHideDuration={3000}
+        onClose={clearError}
+        anchorOrigin={{ vertical: "bottom", horizontal: "center" }}
+      >
+        <Alert
+          severity="error"
+          onClose={clearError}
+          sx={{
+            bgcolor: tokens.colors.accent.red,
+            color: tokens.colors.text.inverse,
+            borderRadius: tokens.radius.lg,
+          }}
+        >
+          {cartError}
         </Alert>
       </Snackbar>
     </Box>

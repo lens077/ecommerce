@@ -1,11 +1,12 @@
 /**
  * 购物车结算栏组件
- * 
- * 固定在页面底部，包含全选和结算按钮
+ *
+ * 两种模式：
+ * - sidebar: 桌面端右侧 sticky 侧边栏，含明细
+ * - bottomBar: 移动端底部固定栏，紧凑布局
  */
 
-import { Box, Button, Checkbox, Typography } from "@mui/material";
-import { ShoppingCart } from "lucide-react";
+import { Box, Button, Checkbox, Divider, Typography } from "@mui/material";
 import type { CartSummary } from "@/store/cart";
 import { tokens } from "@/styles/tokens";
 
@@ -14,6 +15,7 @@ interface CartSummaryCardProps {
   allSelected: boolean;
   onSelectAll: (selected: boolean) => void;
   onCheckout: () => void;
+  variant?: "sidebar" | "bottomBar";
 }
 
 export function CartSummaryCard({
@@ -21,9 +23,123 @@ export function CartSummaryCard({
   allSelected,
   onSelectAll,
   onCheckout,
+  variant = "bottomBar",
 }: CartSummaryCardProps) {
   const hasSelectedItems = summary.selectedQuantity > 0;
 
+  // ==================== 侧边栏模式（桌面端） ====================
+  if (variant === "sidebar") {
+    return (
+      <Box
+        sx={{
+          position: "sticky",
+          top: 88, // 顶部导航栏高度 + 间距
+          bgcolor: tokens.colors.background.card,
+          border: `1px solid ${tokens.colors.border.default}`,
+          borderRadius: tokens.radius.xl,
+          p: tokens.spacing[5],
+        }}
+      >
+        {/* 全选 */}
+        <Box
+          onClick={() => onSelectAll(!allSelected)}
+          sx={{
+            cursor: "pointer",
+            display: "flex",
+            alignItems: "center",
+            gap: tokens.spacing[2],
+            mb: tokens.spacing[4],
+          }}
+        >
+          <Checkbox
+            checked={allSelected}
+            indeterminate={summary.selectedQuantity > 0 && !allSelected}
+            sx={{
+              p: 0,
+              color: tokens.colors.border.default,
+              "&.Mui-checked, &.MuiCheckbox-indeterminate": {
+                color: tokens.colors.accent.black,
+              },
+            }}
+          />
+          <Typography variant="body2" sx={{ color: tokens.colors.text.primary }}>
+            全选
+          </Typography>
+        </Box>
+
+        <Divider sx={{ borderColor: tokens.colors.border.default, mb: tokens.spacing[4] }} />
+
+        {/* 明细 */}
+        <Box sx={{ mb: tokens.spacing[4] }}>
+          <Typography
+            variant="body2"
+            sx={{ fontWeight: 600, color: tokens.colors.text.primary, mb: tokens.spacing[3] }}
+          >
+            费用明细
+          </Typography>
+
+          <SummaryRow
+            label={`商品件数`}
+            value={`${summary.totalQuantity} 件`}
+          />
+          <SummaryRow
+            label={`已选商品`}
+            value={`${summary.selectedQuantity} 件`}
+          />
+          <SummaryRow
+            label={`商品总额`}
+            value={`¥${summary.totalPrice.toFixed(2)}`}
+          />
+        </Box>
+
+        <Divider sx={{ borderColor: tokens.colors.border.default, mb: tokens.spacing[4] }} />
+
+        {/* 合计 */}
+        <Box
+          sx={{
+            display: "flex",
+            alignItems: "baseline",
+            justifyContent: "space-between",
+            mb: tokens.spacing[4],
+          }}
+        >
+          <Typography variant="body1" sx={{ color: tokens.colors.text.primary, fontWeight: 500 }}>
+            合计
+          </Typography>
+          <Typography
+            variant="h5"
+            sx={{ color: tokens.colors.accent.red, fontWeight: 700 }}
+          >
+            ¥{summary.selectedPrice.toFixed(2)}
+          </Typography>
+        </Box>
+
+        {/* 结算按钮 */}
+        <Button
+          variant="contained"
+          fullWidth
+          disabled={!hasSelectedItems}
+          onClick={onCheckout}
+          sx={{
+            height: 48,
+            bgcolor: tokens.colors.accent.black,
+            color: tokens.colors.text.inverse,
+            borderRadius: tokens.radius.lg,
+            textTransform: "none",
+            fontWeight: 600,
+            fontSize: "1rem",
+            boxShadow: "none",
+            "&:hover": { bgcolor: tokens.colors.accent.darkGray, boxShadow: "none" },
+            "&:disabled": { bgcolor: tokens.colors.border.default, color: tokens.colors.text.disabled },
+          }}
+        >
+          结算（{summary.selectedQuantity}）
+        </Button>
+      </Box>
+    );
+  }
+
+  // ==================== 底部栏模式（移动端） ====================
   return (
     <Box
       sx={{
@@ -39,7 +155,7 @@ export function CartSummaryCard({
     >
       <Box
         sx={{
-          maxWidth: 600,
+          maxWidth: 1200,
           mx: "auto",
           display: "flex",
           alignItems: "center",
@@ -49,12 +165,8 @@ export function CartSummaryCard({
       >
         {/* 全选 */}
         <Box
-          sx={{
-            display: "flex",
-            alignItems: "center",
-            gap: tokens.spacing[2],
-          }}
           onClick={() => onSelectAll(!allSelected)}
+          sx={{ display: "flex", alignItems: "center", gap: tokens.spacing[2], cursor: "pointer" }}
         >
           <Checkbox
             checked={allSelected}
@@ -67,10 +179,7 @@ export function CartSummaryCard({
               },
             }}
           />
-          <Typography
-            variant="body2"
-            sx={{ color: tokens.colors.text.primary }}
-          >
+          <Typography variant="body2" sx={{ color: tokens.colors.text.primary }}>
             全选
           </Typography>
         </Box>
@@ -87,11 +196,7 @@ export function CartSummaryCard({
           <Typography
             component="span"
             variant="body1"
-            sx={{
-              color: tokens.colors.accent.red,
-              fontWeight: 600,
-              ml: tokens.spacing[1],
-            }}
+            sx={{ color: tokens.colors.accent.red, fontWeight: 600, ml: tokens.spacing[1] }}
           >
             ¥{summary.selectedPrice.toFixed(2)}
           </Typography>
@@ -112,20 +217,34 @@ export function CartSummaryCard({
             fontWeight: 500,
             fontSize: "0.9rem",
             boxShadow: "none",
-            "&:hover": {
-              bgcolor: tokens.colors.accent.darkGray,
-              boxShadow: "none",
-            },
-            "&:disabled": {
-              bgcolor: tokens.colors.border.default,
-              color: tokens.colors.text.disabled,
-            },
+            "&:hover": { bgcolor: tokens.colors.accent.darkGray, boxShadow: "none" },
+            "&:disabled": { bgcolor: tokens.colors.border.default, color: tokens.colors.text.disabled },
           }}
-          startIcon={<ShoppingCart size={18} />}
         >
-          结算({summary.selectedQuantity})
+          结算（{summary.selectedQuantity}）
         </Button>
       </Box>
+    </Box>
+  );
+}
+
+/** 明细行 */
+function SummaryRow({ label, value }: { label: string; value: string }) {
+  return (
+    <Box
+      sx={{
+        display: "flex",
+        justifyContent: "space-between",
+        alignItems: "center",
+        py: tokens.spacing[1],
+      }}
+    >
+      <Typography variant="body2" sx={{ color: tokens.colors.text.secondary }}>
+        {label}
+      </Typography>
+      <Typography variant="body2" sx={{ color: tokens.colors.text.primary, fontWeight: 500 }}>
+        {value}
+      </Typography>
     </Box>
   );
 }
