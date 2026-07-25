@@ -47,6 +47,14 @@ export const AuthProvider: React.FC<{ children: React.ReactNode; router: any }> 
     // 📡 集中式拦截：监听来自 packages/api 的 Axios/Connect-Web 401 信号
     useEffect(() => {
         const unsubscribe = onAuthError((err) => {
+            // 如果当前在 callback 页面，跳过自动重定向
+            // callback 页面的 signIn 调用如果返回 Unauthenticated，会先触发 emitAuthError，
+            // 如果不跳过，login() 会在 callback 的 catch 块处理之前就重定向到 Casdoor，导致登录死循环
+            if (router.state.location.pathname.startsWith("/callback")) {
+                console.warn("[Auth] 在 callback 页面捕获到认证错误，跳过自动重定向:", err);
+                return;
+            }
+
             console.warn("[Auth] 核心拦截器捕获到未登录或Token失效信号，执行自动清空并重定向...", err);
             localStorage.removeItem("token");
             setIsAuthenticated(false);
@@ -56,8 +64,8 @@ export const AuthProvider: React.FC<{ children: React.ReactNode; router: any }> 
         return () => {
             unsubscribe();
         };
-        // 这里的依赖项换成 router 的具体 href 字符串，避免整个 router 引用变化引起频繁重绑
-    }, [router.state.location.href, login]);
+        // login 引用稳定（router 不变则不变），无需在路由变化时重新订阅
+    }, [login]);
 
     // 缓存 Action 对象，确保引用绝对稳定，防止下游组件无意义重绘
     const actions = React.useMemo(() => ({ setIsAuthenticated, login, logout }), [login, logout]);
