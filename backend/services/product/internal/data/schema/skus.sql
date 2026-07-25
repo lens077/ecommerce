@@ -10,7 +10,7 @@ SET search_path TO products;
 CREATE TYPE skus_status_enum AS ENUM ('active','inactive','deleted');
 
 -- 销售实物
-CREATE TABLE IF NOT EXISTS skus
+CREATE TABLE IF NOT EXISTS products.skus
 (
     id             BIGSERIAL PRIMARY KEY,
     sku_code       VARCHAR(64)      NOT NULL UNIQUE,                 -- SKU编码，如 iphone15-pro-black-256
@@ -27,4 +27,4 @@ CREATE TABLE IF NOT EXISTS skus
     created_at     timestamptz               DEFAULT now() NOT NULL, -- Unix时间戳，避免时区问题
     updated_at     timestamptz               DEFAULT now() NOT NULL
 );
-COMMENT ON TABLE skus IS '销售实物表';
+COMMENT ON TABLE products.skus IS '销售实物表';
