@@ -14,99 +14,96 @@ import (
 )
 
 const AddProductToCart = `-- name: AddProductToCart :one
-INSERT INTO cart.cart_item(user_id,
-                           merchant_id,
-                           spu_id,
-                           sku_id,
-                           quantity,
-                           selected,
-                           spu_name,
-                           sku_name,
-                           price,
-                           sku_attributes,
-                           sku_thumbnail_url,
-                           status)
-VALUES ($1,
-        $2,
-        $3,
-        $4,
-        $5,
-        $6,
-        $7,
-        $8,
-        $9,
-        $10,
-        $11,
-        $12)
-ON CONFLICT (user_id, merchant_id, sku_id)
-    DO UPDATE SET
-                  -- 如果商品已存在，数量进行累加 (旧数量 + 新传入的数量)
-                  quantity   = cart_item.quantity + EXCLUDED.quantity,
-                  -- 用户重新加这个商品时，默认帮他重新勾选上
-                  selected   = EXCLUDED.selected,
-                  -- 状态重新校准为正常
-                  status     = EXCLUDED.status,
-                  updated_at = now()
-RETURNING id, quantity
+WITH insert AS (
+    INSERT INTO cart.cart_item (user_id,
+                                merchant_id,
+                                spu_id,
+                                sku_id,
+                                quantity,
+                                selected,
+                                spu_name,
+                                sku_name,
+                                price,
+                                sku_attributes,
+                                sku_thumbnail_url,
+                                status)
+        VALUES ($1,
+                $2,
+                $3,
+                $4,
+                $5,
+                $6,
+                $7,
+                $8,
+                $9,
+                $10,
+                $11,
+                $12)
+        ON CONFLICT (user_id, merchant_id, sku_id)
+            DO UPDATE SET
+                -- 用户重新加这个商品时，默认帮他重新勾选上
+                selected = EXCLUDED.selected,
+                -- 状态重新校准为正常
+                status = EXCLUDED.status,
+                updated_at = now())
+SELECT COUNT(*) AS cart_item_quantity
+FROM cart.cart_item
+WHERE user_id = $1
 `
 
 type AddProductToCartParams struct {
-	UserID          uuid.UUID
-	MerchantID      uuid.UUID
-	SpuID           int64
-	SkuID           int64
-	Quantity        int32
-	Selected        bool
-	SpuName         string
-	SkuName         string
+	UserID          pgtype.UUID
+	MerchantID      pgtype.UUID
+	SpuID           *int64
+	SkuID           *int64
+	Quantity        *int32
+	Selected        *bool
+	SpuName         *string
+	SkuName         *string
 	Price           pgtype.Numeric
 	SkuAttributes   []byte
-	SkuThumbnailUrl string
-	Status          CartCartType
-}
-
-type AddProductToCartRow struct {
-	ID       int64
-	Quantity int32
+	SkuThumbnailUrl *string
+	Status          *CartCartType
 }
 
 // AddProductToCart
 //
-//	INSERT INTO cart.cart_item(user_id,
-//	                           merchant_id,
-//	                           spu_id,
-//	                           sku_id,
-//	                           quantity,
-//	                           selected,
-//	                           spu_name,
-//	                           sku_name,
-//	                           price,
-//	                           sku_attributes,
-//	                           sku_thumbnail_url,
-//	                           status)
-//	VALUES ($1,
-//	        $2,
-//	        $3,
-//	        $4,
-//	        $5,
-//	        $6,
-//	        $7,
-//	        $8,
-//	        $9,
-//	        $10,
-//	        $11,
-//	        $12)
-//	ON CONFLICT (user_id, merchant_id, sku_id)
-//	    DO UPDATE SET
-//	                  -- 如果商品已存在，数量进行累加 (旧数量 + 新传入的数量)
-//	                  quantity   = cart_item.quantity + EXCLUDED.quantity,
-//	                  -- 用户重新加这个商品时，默认帮他重新勾选上
-//	                  selected   = EXCLUDED.selected,
-//	                  -- 状态重新校准为正常
-//	                  status     = EXCLUDED.status,
-//	                  updated_at = now()
-//	RETURNING id, quantity
-func (q *Queries) AddProductToCart(ctx context.Context, arg AddProductToCartParams) (AddProductToCartRow, error) {
+//	WITH insert AS (
+//	    INSERT INTO cart.cart_item (user_id,
+//	                                merchant_id,
+//	                                spu_id,
+//	                                sku_id,
+//	                                quantity,
+//	                                selected,
+//	                                spu_name,
+//	                                sku_name,
+//	                                price,
+//	                                sku_attributes,
+//	                                sku_thumbnail_url,
+//	                                status)
+//	        VALUES ($1,
+//	                $2,
+//	                $3,
+//	                $4,
+//	                $5,
+//	                $6,
+//	                $7,
+//	                $8,
+//	                $9,
+//	                $10,
+//	                $11,
+//	                $12)
+//	        ON CONFLICT (user_id, merchant_id, sku_id)
+//	            DO UPDATE SET
+//	                -- 用户重新加这个商品时，默认帮他重新勾选上
+//	                selected = EXCLUDED.selected,
+//	                -- 状态重新校准为正常
+//	                status = EXCLUDED.status,
+//	                updated_at = now())
+//	SELECT COUNT(*) AS cart_item_quantity
+//	FROM cart.cart_item
+//	WHERE user_id = $1
+func (q *Queries) AddProductToCart(ctx context.Context, arg AddProductToCartParams) (int64, error) {
 	row := q.db.QueryRow(ctx, AddProductToCart,
 		arg.UserID,
 		arg.MerchantID,
@@ -121,9 +118,9 @@ func (q *Queries) AddProductToCart(ctx context.Context, arg AddProductToCartPara
 		arg.SkuThumbnailUrl,
 		arg.Status,
 	)
-	var i AddProductToCartRow
-	err := row.Scan(&i.ID, &i.Quantity)
-	return i, err
+	var cart_item_quantity int64
+	err := row.Scan(&cart_item_quantity)
+	return cart_item_quantity, err
 }
 
 const GetCartItems = `-- name: GetCartItems :many
@@ -225,70 +222,70 @@ func (q *Queries) GetCartItems(ctx context.Context, arg GetCartItemsParams) ([]G
 }
 
 const RemoveCartItem = `-- name: RemoveCartItem :one
-
 WITH deleted AS (
-    DELETE FROM cart.cart_item
-        WHERE merchant_id = $3
-            AND user_id = $1
-            AND spu_id = $4
-            AND sku_id = $5
-            AND status = $2
-        RETURNING id)
-SELECT COALESCE(COUNT(quantity), 0)::INT AS cart_total_quantity,
-       CASE
-           WHEN COUNT(*) = 0 THEN
-               TRUE
-           ELSE
-               FALSE
-           END                           AS is_cart_empty
-FROM cart.cart_item
-WHERE user_id = $1
-  AND status = $2
+    DELETE
+        FROM cart.cart_item
+            WHERE user_id = $1
+                AND (merchant_id, spu_id, sku_id, status) IN
+                    (SELECT unnest($2::uuid[]),
+                            unnest($3::bigint[]),
+                            unnest($4::bigint[]),
+                            unnest($5::cart.cart_type[]))
+            RETURNING id),
+     remaining AS (SELECT COUNT(*) AS cnt
+                   FROM cart.cart_item
+                   WHERE user_id = $1
+                     AND status = $6)
+SELECT (SELECT cnt FROM remaining)     AS cart_item_quantity,
+       (SELECT cnt FROM remaining) = 0 AS is_cart_empty,
+       (SELECT COUNT(*) FROM deleted)  AS deleted_count
 `
 
 type RemoveCartItemParams struct {
-	UserID     pgtype.UUID
-	Status     *CartCartType
-	MerchantID pgtype.UUID
-	SpuID      *int64
-	SkuID      *int64
+	UserID      pgtype.UUID
+	MerchantIds []uuid.UUID
+	SpuIds      []int64
+	SkuIds      []int64
+	Statuses    []CartCartType
+	Status      *CartCartType
 }
 
 type RemoveCartItemRow struct {
-	CartTotalQuantity int32
-	IsCartEmpty       bool
+	CartItemQuantity int64
+	IsCartEmpty      bool
+	DeletedCount     int64
 }
 
-// 把最新的 id 和叠加后的最终数量一起返回回去
+// 删除购物车项, 返回删除后的购物车总商品项和是否为空购物车和删除的购物车商品数量
 //
 //	WITH deleted AS (
-//	    DELETE FROM cart.cart_item
-//	        WHERE merchant_id = $3
-//	            AND user_id = $1
-//	            AND spu_id = $4
-//	            AND sku_id = $5
-//	            AND status = $2
-//	        RETURNING id)
-//	SELECT COALESCE(COUNT(quantity), 0)::INT AS cart_total_quantity,
-//	       CASE
-//	           WHEN COUNT(*) = 0 THEN
-//	               TRUE
-//	           ELSE
-//	               FALSE
-//	           END                           AS is_cart_empty
-//	FROM cart.cart_item
-//	WHERE user_id = $1
-//	  AND status = $2
+//	    DELETE
+//	        FROM cart.cart_item
+//	            WHERE user_id = $1
+//	                AND (merchant_id, spu_id, sku_id, status) IN
+//	                    (SELECT unnest($2::uuid[]),
+//	                            unnest($3::bigint[]),
+//	                            unnest($4::bigint[]),
+//	                            unnest($5::cart.cart_type[]))
+//	            RETURNING id),
+//	     remaining AS (SELECT COUNT(*) AS cnt
+//	                   FROM cart.cart_item
+//	                   WHERE user_id = $1
+//	                     AND status = $6)
+//	SELECT (SELECT cnt FROM remaining)     AS cart_item_quantity,
+//	       (SELECT cnt FROM remaining) = 0 AS is_cart_empty,
+//	       (SELECT COUNT(*) FROM deleted)  AS deleted_count
 func (q *Queries) RemoveCartItem(ctx context.Context, arg RemoveCartItemParams) (RemoveCartItemRow, error) {
 	row := q.db.QueryRow(ctx, RemoveCartItem,
 		arg.UserID,
+		arg.MerchantIds,
+		arg.SpuIds,
+		arg.SkuIds,
+		arg.Statuses,
 		arg.Status,
-		arg.MerchantID,
-		arg.SpuID,
-		arg.SkuID,
 	)
 	var i RemoveCartItemRow
-	err := row.Scan(&i.CartTotalQuantity, &i.IsCartEmpty)
+	err := row.Scan(&i.CartItemQuantity, &i.IsCartEmpty, &i.DeletedCount)
 	return i, err
 }
 
