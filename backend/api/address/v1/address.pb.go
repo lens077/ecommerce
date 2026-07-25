@@ -589,9 +589,7 @@ func (x *GetAddressResponse) GetUpdatedAt() *timestamppb.Timestamp {
 
 // 获取用户所有地址请求
 type ListAddressesRequest struct {
-	state protoimpl.MessageState `protogen:"open.v1"`
-	// 用户ID
-	UserId        string `protobuf:"bytes,1,opt,name=user_id,json=userId,proto3" json:"user_id,omitempty"`
+	state         protoimpl.MessageState `protogen:"open.v1"`
 	unknownFields protoimpl.UnknownFields
 	sizeCache     protoimpl.SizeCache
 }
@@ -624,13 +622,6 @@ func (x *ListAddressesRequest) ProtoReflect() protoreflect.Message {
 // Deprecated: Use ListAddressesRequest.ProtoReflect.Descriptor instead.
 func (*ListAddressesRequest) Descriptor() ([]byte, []int) {
 	return file_api_address_v1_address_proto_rawDescGZIP(), []int{9}
-}
-
-func (x *ListAddressesRequest) GetUserId() string {
-	if x != nil {
-		return x.UserId
-	}
-	return ""
 }
 
 type ListAddressesResponse struct {
@@ -810,9 +801,8 @@ const file_api_address_v1_address_proto_rawDesc = "" +
 	"\n" +
 	"created_at\x18\a \x01(\v2\x1a.google.protobuf.TimestampR\tcreatedAt\x129\n" +
 	"\n" +
-	"updated_at\x18\b \x01(\v2\x1a.google.protobuf.TimestampR\tupdatedAt\"8\n" +
-	"\x14ListAddressesRequest\x12 \n" +
-	"\auser_id\x18\x01 \x01(\tB\a\xbaH\x04r\x02\x10\x01R\x06userId\"U\n" +
+	"updated_at\x18\b \x01(\v2\x1a.google.protobuf.TimestampR\tupdatedAt\"\x16\n" +
+	"\x14ListAddressesRequest\"U\n" +
 	"\x15ListAddressesResponse\x12<\n" +
 	"\taddresses\x18\x01 \x03(\v2\x1e.address.v1.GetAddressResponseR\taddresses\"B\n" +
 	"\x18SetDefaultAddressRequest\x12&\n" +
