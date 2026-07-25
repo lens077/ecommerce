@@ -9,7 +9,7 @@ SELECT
             'sku_code', k.sku_code,
             'price', k.price,
             'stock', k.stock_quantity,
-            'attrs', k.attributes,  -- 销售属性 (颜色/内存)
+            'attributes', k.attributes,  -- 销售属性 (颜色/内存)
             'img', k.thumbnail_url
         )
     ) AS skus
