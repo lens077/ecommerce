@@ -2,6 +2,7 @@ import { TanStackDevtools } from "@tanstack/react-devtools";
 import { createRootRouteWithContext, Outlet } from "@tanstack/react-router";
 import { TanStackRouterDevtoolsPanel } from "@tanstack/react-router-devtools";
 import { Box } from "@mui/material";
+import AppBar from "@/components/AppBar";
 import PrivacyConsent from "@/components/PrivacyConsent";
 import Footer from "@/components/Footer";
 
@@ -24,7 +25,10 @@ export const Route = createRootRouteWithContext<MyRouterContext>()({
 
         return (
             <Box sx={{display: "flex", flexDirection: "column", minHeight: "100vh"}}>
-                <Outlet/>
+                <AppBar/>
+                <Box component="main" sx={{flex: 1}}>
+                    <Outlet/>
+                </Box>
                 <Footer/>
                 <PrivacyConsent onConsent={handleConsent}/>
                 <TanStackDevtools

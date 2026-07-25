@@ -300,7 +300,7 @@ export default function PrimarySearchAppBar() {
 
     return (
         <Box sx={{flexGrow: 1}}>
-            <StyledAppBar position="static">
+            <StyledAppBar position="sticky">
                 <Toolbar sx={{
                     color: 'text.primary'
                 }}>
@@ -371,6 +371,12 @@ export default function PrimarySearchAppBar() {
                                 inputProps={{"aria-label": "search"}}
                                 value={searchInput}
                                 onChange={handleSearchInputChange}
+                                onKeyDown={(e)=>{
+                                    if (e.key === 'Enter') {
+                                        e.preventDefault();             // 阻止任何默认行为（如换行或表单提交）
+                                        handleSearch();                 // 直接复用点击搜索的逻辑
+                                    }
+                                }}
                                 sx={{
                                     "& input": {
                                         "&::placeholder": {
@@ -382,6 +388,7 @@ export default function PrimarySearchAppBar() {
                             />
                             <SearchIconWrapper
                                 onClick={handleSearch}
+
                                 sx={{
                                     "&:hover": {
                                         color: "#667eea",
