@@ -33,6 +33,8 @@ const (
 // reflection-formatted method names, remove the leading slash and convert the remaining slash to a
 // period.
 const (
+	// CartServiceGetCartProcedure is the fully-qualified name of the CartService's GetCart RPC.
+	CartServiceGetCartProcedure = "/cart.v1.CartService/GetCart"
 	// CartServiceAddProductToCartProcedure is the fully-qualified name of the CartService's
 	// AddProductToCart RPC.
 	CartServiceAddProductToCartProcedure = "/cart.v1.CartService/AddProductToCart"
@@ -42,16 +44,14 @@ const (
 	// CartServiceUpdateCartItemQuantityProcedure is the fully-qualified name of the CartService's
 	// UpdateCartItemQuantity RPC.
 	CartServiceUpdateCartItemQuantityProcedure = "/cart.v1.CartService/UpdateCartItemQuantity"
-	// CartServiceGetCartProcedure is the fully-qualified name of the CartService's GetCart RPC.
-	CartServiceGetCartProcedure = "/cart.v1.CartService/GetCart"
 )
 
 // CartServiceClient is a client for the cart.v1.CartService service.
 type CartServiceClient interface {
+	GetCart(context.Context, *connect.Request[v1.GetCartRequest]) (*connect.Response[v1.GetCartResponse], error)
 	AddProductToCart(context.Context, *connect.Request[v1.AddProductToCartRequest]) (*connect.Response[v1.AddProductToCartResponse], error)
 	RemoveCartItem(context.Context, *connect.Request[v1.RemoveCartItemRequest]) (*connect.Response[v1.RemoveCartItemResponse], error)
 	UpdateCartItemQuantity(context.Context, *connect.Request[v1.UpdateCartItemQuantityRequest]) (*connect.Response[v1.UpdateCartItemQuantityResponse], error)
-	GetCart(context.Context, *connect.Request[v1.GetCartRequest]) (*connect.Response[v1.GetCartResponse], error)
 }
 
 // NewCartServiceClient constructs a client for the cart.v1.CartService service. By default, it uses
@@ -65,6 +65,12 @@ func NewCartServiceClient(httpClient connect.HTTPClient, baseURL string, opts ..
 	baseURL = strings.TrimRight(baseURL, "/")
 	cartServiceMethods := v1.File_api_cart_v1_cart_proto.Services().ByName("CartService").Methods()
 	return &cartServiceClient{
+		getCart: connect.NewClient[v1.GetCartRequest, v1.GetCartResponse](
+			httpClient,
+			baseURL+CartServiceGetCartProcedure,
+			connect.WithSchema(cartServiceMethods.ByName("GetCart")),
+			connect.WithClientOptions(opts...),
+		),
 		addProductToCart: connect.NewClient[v1.AddProductToCartRequest, v1.AddProductToCartResponse](
 			httpClient,
 			baseURL+CartServiceAddProductToCartProcedure,
@@ -83,21 +89,20 @@ func NewCartServiceClient(httpClient connect.HTTPClient, baseURL string, opts ..
 			connect.WithSchema(cartServiceMethods.ByName("UpdateCartItemQuantity")),
 			connect.WithClientOptions(opts...),
 		),
-		getCart: connect.NewClient[v1.GetCartRequest, v1.GetCartResponse](
-			httpClient,
-			baseURL+CartServiceGetCartProcedure,
-			connect.WithSchema(cartServiceMethods.ByName("GetCart")),
-			connect.WithClientOptions(opts...),
-		),
 	}
 }
 
 // cartServiceClient implements CartServiceClient.
 type cartServiceClient struct {
+	getCart                *connect.Client[v1.GetCartRequest, v1.GetCartResponse]
 	addProductToCart       *connect.Client[v1.AddProductToCartRequest, v1.AddProductToCartResponse]
 	removeCartItem         *connect.Client[v1.RemoveCartItemRequest, v1.RemoveCartItemResponse]
 	updateCartItemQuantity *connect.Client[v1.UpdateCartItemQuantityRequest, v1.UpdateCartItemQuantityResponse]
-	getCart                *connect.Client[v1.GetCartRequest, v1.GetCartResponse]
+}
+
+// GetCart calls cart.v1.CartService.GetCart.
+func (c *cartServiceClient) GetCart(ctx context.Context, req *connect.Request[v1.GetCartRequest]) (*connect.Response[v1.GetCartResponse], error) {
+	return c.getCart.CallUnary(ctx, req)
 }
 
 // AddProductToCart calls cart.v1.CartService.AddProductToCart.
@@ -115,17 +120,12 @@ func (c *cartServiceClient) UpdateCartItemQuantity(ctx context.Context, req *con
 	return c.updateCartItemQuantity.CallUnary(ctx, req)
 }
 
-// GetCart calls cart.v1.CartService.GetCart.
-func (c *cartServiceClient) GetCart(ctx context.Context, req *connect.Request[v1.GetCartRequest]) (*connect.Response[v1.GetCartResponse], error) {
-	return c.getCart.CallUnary(ctx, req)
-}
-
 // CartServiceHandler is an implementation of the cart.v1.CartService service.
 type CartServiceHandler interface {
+	GetCart(context.Context, *connect.Request[v1.GetCartRequest]) (*connect.Response[v1.GetCartResponse], error)
 	AddProductToCart(context.Context, *connect.Request[v1.AddProductToCartRequest]) (*connect.Response[v1.AddProductToCartResponse], error)
 	RemoveCartItem(context.Context, *connect.Request[v1.RemoveCartItemRequest]) (*connect.Response[v1.RemoveCartItemResponse], error)
 	UpdateCartItemQuantity(context.Context, *connect.Request[v1.UpdateCartItemQuantityRequest]) (*connect.Response[v1.UpdateCartItemQuantityResponse], error)
-	GetCart(context.Context, *connect.Request[v1.GetCartRequest]) (*connect.Response[v1.GetCartResponse], error)
 }
 
 // NewCartServiceHandler builds an HTTP handler from the service implementation. It returns the path
@@ -135,6 +135,12 @@ type CartServiceHandler interface {
 // and JSON codecs. They also support gzip compression.
 func NewCartServiceHandler(svc CartServiceHandler, opts ...connect.HandlerOption) (string, http.Handler) {
 	cartServiceMethods := v1.File_api_cart_v1_cart_proto.Services().ByName("CartService").Methods()
+	cartServiceGetCartHandler := connect.NewUnaryHandler(
+		CartServiceGetCartProcedure,
+		svc.GetCart,
+		connect.WithSchema(cartServiceMethods.ByName("GetCart")),
+		connect.WithHandlerOptions(opts...),
+	)
 	cartServiceAddProductToCartHandler := connect.NewUnaryHandler(
 		CartServiceAddProductToCartProcedure,
 		svc.AddProductToCart,
@@ -153,22 +159,16 @@ func NewCartServiceHandler(svc CartServiceHandler, opts ...connect.HandlerOption
 		connect.WithSchema(cartServiceMethods.ByName("UpdateCartItemQuantity")),
 		connect.WithHandlerOptions(opts...),
 	)
-	cartServiceGetCartHandler := connect.NewUnaryHandler(
-		CartServiceGetCartProcedure,
-		svc.GetCart,
-		connect.WithSchema(cartServiceMethods.ByName("GetCart")),
-		connect.WithHandlerOptions(opts...),
-	)
 	return "/cart.v1.CartService/", http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		switch r.URL.Path {
+		case CartServiceGetCartProcedure:
+			cartServiceGetCartHandler.ServeHTTP(w, r)
 		case CartServiceAddProductToCartProcedure:
 			cartServiceAddProductToCartHandler.ServeHTTP(w, r)
 		case CartServiceRemoveCartItemProcedure:
 			cartServiceRemoveCartItemHandler.ServeHTTP(w, r)
 		case CartServiceUpdateCartItemQuantityProcedure:
 			cartServiceUpdateCartItemQuantityHandler.ServeHTTP(w, r)
-		case CartServiceGetCartProcedure:
-			cartServiceGetCartHandler.ServeHTTP(w, r)
 		default:
 			http.NotFound(w, r)
 		}
@@ -177,6 +177,10 @@ func NewCartServiceHandler(svc CartServiceHandler, opts ...connect.HandlerOption
 
 // UnimplementedCartServiceHandler returns CodeUnimplemented from all methods.
 type UnimplementedCartServiceHandler struct{}
+
+func (UnimplementedCartServiceHandler) GetCart(context.Context, *connect.Request[v1.GetCartRequest]) (*connect.Response[v1.GetCartResponse], error) {
+	return nil, connect.NewError(connect.CodeUnimplemented, errors.New("cart.v1.CartService.GetCart is not implemented"))
+}
 
 func (UnimplementedCartServiceHandler) AddProductToCart(context.Context, *connect.Request[v1.AddProductToCartRequest]) (*connect.Response[v1.AddProductToCartResponse], error) {
 	return nil, connect.NewError(connect.CodeUnimplemented, errors.New("cart.v1.CartService.AddProductToCart is not implemented"))
@@ -188,8 +192,4 @@ func (UnimplementedCartServiceHandler) RemoveCartItem(context.Context, *connect.
 
 func (UnimplementedCartServiceHandler) UpdateCartItemQuantity(context.Context, *connect.Request[v1.UpdateCartItemQuantityRequest]) (*connect.Response[v1.UpdateCartItemQuantityResponse], error) {
 	return nil, connect.NewError(connect.CodeUnimplemented, errors.New("cart.v1.CartService.UpdateCartItemQuantity is not implemented"))
-}
-
-func (UnimplementedCartServiceHandler) GetCart(context.Context, *connect.Request[v1.GetCartRequest]) (*connect.Response[v1.GetCartResponse], error) {
-	return nil, connect.NewError(connect.CodeUnimplemented, errors.New("cart.v1.CartService.GetCart is not implemented"))
 }

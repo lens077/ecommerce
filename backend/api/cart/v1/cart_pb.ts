@@ -2,9 +2,9 @@
 // @generated from file api/cart/v1/cart.proto (package cart.v1, syntax proto3)
 /* eslint-disable */
 
-import type { GenFile, GenMessage, GenService } from "@bufbuild/protobuf/codegenv2";
-import { fileDesc, messageDesc, serviceDesc } from "@bufbuild/protobuf/codegenv2";
-import { file_google_protobuf_struct, file_google_protobuf_timestamp } from "@bufbuild/protobuf/wkt";
+import type { GenEnum, GenFile, GenMessage, GenService } from "@bufbuild/protobuf/codegenv2";
+import { enumDesc, fileDesc, messageDesc, serviceDesc } from "@bufbuild/protobuf/codegenv2";
+import { file_google_protobuf_struct, file_google_protobuf_timestamp, file_google_protobuf_wrappers } from "@bufbuild/protobuf/wkt";
 import { file_third_party_validate_validate } from "../../../third_party/validate/validate_pb";
 import type { JsonObject, Message } from "@bufbuild/protobuf";
 
@@ -12,7 +12,7 @@ import type { JsonObject, Message } from "@bufbuild/protobuf";
  * Describes the file api/cart/v1/cart.proto.
  */
 export const file_api_cart_v1_cart: GenFile = /*@__PURE__*/
-  fileDesc("ChZhcGkvY2FydC92MS9jYXJ0LnByb3RvEgdjYXJ0LnYxIqwCChdBZGRQcm9kdWN0VG9DYXJ0UmVxdWVzdBIOCgZzcHVfaWQYASABKAQSDgoGc2t1X2lkGAIgASgEEh0KC21lcmNoYW50X2lkGAMgASgJQgi6SAVyA7ABARIQCghxdWFudGl0eRgEIAEoDRIQCghzZWxlY3RlZBgFIAEoCBIQCghzcHVfbmFtZRgGIAEoCRIQCghza3VfbmFtZRgHIAEoCRINCgVwcmljZRgIIAEoARIvCg5za3VfYXR0cmlidXRlcxgJIAEoCzIXLmdvb2dsZS5wcm90b2J1Zi5TdHJ1Y3QSGQoRc2t1X3RodW1ibmFpbF91cmwYCiABKAkSLwoGc3RhdHVzGAsgASgJQh+6SBxyGlIGYWN0aXZlUgdleHBpcmVkUgdkZWxldGVkIk0KGEFkZFByb2R1Y3RUb0NhcnRSZXNwb25zZRIbChNjYXJ0X3RvdGFsX3F1YW50aXR5GAEgASgNEhQKDGNhcnRfaXRlbV9pZBgCIAEoBCJWChVSZW1vdmVDYXJ0SXRlbVJlcXVlc3QSDgoGc3B1X2lkGAEgASgEEg4KBnNrdV9pZBgCIAEoBBIdCgttZXJjaGFudF9pZBgDIAEoCUIIukgFcgOwAQEiTAoWUmVtb3ZlQ2FydEl0ZW1SZXNwb25zZRIbChNjYXJ0X3RvdGFsX3F1YW50aXR5GAEgASgNEhUKDWlzX2NhcnRfZW1wdHkYAiABKAgicAodVXBkYXRlQ2FydEl0ZW1RdWFudGl0eVJlcXVlc3QSDgoGc3B1X2lkGAEgASgEEg4KBnNrdV9pZBgCIAEoBBIdCgttZXJjaGFudF9pZBgDIAEoCUIIukgFcgOwAQESEAoIcXVhbnRpdHkYBCABKA0iPQoeVXBkYXRlQ2FydEl0ZW1RdWFudGl0eVJlc3BvbnNlEhsKE2NhcnRfdG90YWxfcXVhbnRpdHkYASABKA0iEAoOR2V0Q2FydFJlcXVlc3QiiAIKCENhcnRJdGVtEhQKDGNhcnRfaXRlbV9pZBgBIAEoBBIOCgZzcHVfaWQYAiABKAQSDgoGc2t1X2lkGAMgASgEEhMKC21lcmNoYW50X2lkGAQgASgJEhAKCHF1YW50aXR5GAUgASgNEhAKCHNlbGVjdGVkGAYgASgIEhAKCHNwdV9uYW1lGAcgASgJEhAKCHNrdV9uYW1lGAggASgJEg0KBXByaWNlGAkgASgBEi8KDnNrdV9hdHRyaWJ1dGVzGAogASgLMhcuZ29vZ2xlLnByb3RvYnVmLlN0cnVjdBIZChFza3VfdGh1bWJuYWlsX3VybBgLIAEoCRIOCgZzdGF0dXMYDCABKAkiZwoPR2V0Q2FydFJlc3BvbnNlEiAKBWl0ZW1zGAEgAygLMhEuY2FydC52MS5DYXJ0SXRlbRIbChNjYXJ0X3RvdGFsX3F1YW50aXR5GAIgASgNEhUKDWlzX2NhcnRfZW1wdHkYAyABKAgy6gIKC0NhcnRTZXJ2aWNlElkKEEFkZFByb2R1Y3RUb0NhcnQSIC5jYXJ0LnYxLkFkZFByb2R1Y3RUb0NhcnRSZXF1ZXN0GiEuY2FydC52MS5BZGRQcm9kdWN0VG9DYXJ0UmVzcG9uc2UiABJTCg5SZW1vdmVDYXJ0SXRlbRIeLmNhcnQudjEuUmVtb3ZlQ2FydEl0ZW1SZXF1ZXN0Gh8uY2FydC52MS5SZW1vdmVDYXJ0SXRlbVJlc3BvbnNlIgASawoWVXBkYXRlQ2FydEl0ZW1RdWFudGl0eRImLmNhcnQudjEuVXBkYXRlQ2FydEl0ZW1RdWFudGl0eVJlcXVlc3QaJy5jYXJ0LnYxLlVwZGF0ZUNhcnRJdGVtUXVhbnRpdHlSZXNwb25zZSIAEj4KB0dldENhcnQSFy5jYXJ0LnYxLkdldENhcnRSZXF1ZXN0GhguY2FydC52MS5HZXRDYXJ0UmVzcG9uc2UiAEKOAQoLY29tLmNhcnQudjFCCUNhcnRQcm90b1ABWjdnaXRodWIuY29tL2xlbnMwNzcvZWNvbW1lcmNlL2JhY2tlbmQvYXBpL2NhcnQvdjE7Y2FydHYxogIDQ1hYqgIHQ2FydC5WMcoCB0NhcnRcVjHiAhNDYXJ0XFYxXEdQQk1ldGFkYXRh6gIIQ2FydDo6VjFiBnByb3RvMw", [file_google_protobuf_timestamp, file_google_protobuf_struct, file_third_party_validate_validate]);
+  fileDesc("ChZhcGkvY2FydC92MS9jYXJ0LnByb3RvEgdjYXJ0LnYxIqoCChdBZGRQcm9kdWN0VG9DYXJ0UmVxdWVzdBIOCgZzcHVfaWQYASABKAQSDgoGc2t1X2lkGAIgASgEEh0KC21lcmNoYW50X2lkGAMgASgJQgi6SAVyA7ABARIQCghxdWFudGl0eRgEIAEoDRIQCghzZWxlY3RlZBgFIAEoCBIQCghzcHVfbmFtZRgGIAEoCRIQCghza3VfbmFtZRgHIAEoCRINCgVwcmljZRgIIAEoARIvCg5za3VfYXR0cmlidXRlcxgJIAEoCzIXLmdvb2dsZS5wcm90b2J1Zi5TdHJ1Y3QSGQoRc2t1X3RodW1ibmFpbF91cmwYCiABKAkSLQoGc3RhdHVzGAsgASgOMhMuY2FydC52MS5DYXJ0U3RhdHVzQgi6SAWCAQIQASI2ChhBZGRQcm9kdWN0VG9DYXJ0UmVzcG9uc2USGgoSY2FydF9pdGVtX3F1YW50aXR5GAEgASgNIpIBChVSZW1vdmVDYXJ0SXRlbVJlcXVlc3QSDwoHc3B1X2lkcxgBIAMoAxIPCgdza3VfaWRzGAIgAygDEiMKDG1lcmNoYW50X2lkcxgDIAMoCUINukgKkgEHIgVyA7ABARIyCgZzdGF0dXMYBCADKA4yEy5jYXJ0LnYxLkNhcnRTdGF0dXNCDbpICpIBByIFggECEAEiSwoWUmVtb3ZlQ2FydEl0ZW1SZXNwb25zZRIaChJjYXJ0X2l0ZW1fcXVhbnRpdHkYASABKA0SFQoNaXNfY2FydF9lbXB0eRgCIAEoCCJwCh1VcGRhdGVDYXJ0SXRlbVF1YW50aXR5UmVxdWVzdBIOCgZzcHVfaWQYASABKAQSDgoGc2t1X2lkGAIgASgEEh0KC21lcmNoYW50X2lkGAMgASgJQgi6SAVyA7ABARIQCghxdWFudGl0eRgEIAEoDSI8Ch5VcGRhdGVDYXJ0SXRlbVF1YW50aXR5UmVzcG9uc2USGgoSY2FydF9pdGVtX3F1YW50aXR5GAEgASgNIhAKDkdldENhcnRSZXF1ZXN0IqcCCghDYXJ0SXRlbRIUCgxjYXJ0X2l0ZW1faWQYASABKAQSDgoGc3B1X2lkGAIgASgEEg4KBnNrdV9pZBgDIAEoBBITCgttZXJjaGFudF9pZBgEIAEoCRIQCghxdWFudGl0eRgFIAEoDRIQCghzZWxlY3RlZBgGIAEoCBIQCghzcHVfbmFtZRgHIAEoCRIQCghza3VfbmFtZRgIIAEoCRINCgVwcmljZRgJIAEoARIvCg5za3VfYXR0cmlidXRlcxgKIAEoCzIXLmdvb2dsZS5wcm90b2J1Zi5TdHJ1Y3QSGQoRc2t1X3RodW1ibmFpbF91cmwYCyABKAkSLQoGc3RhdHVzGAwgASgOMhMuY2FydC52MS5DYXJ0U3RhdHVzQgi6SAWCAQIQASKCAQoPR2V0Q2FydFJlc3BvbnNlEiAKBWl0ZW1zGAEgAygLMhEuY2FydC52MS5DYXJ0SXRlbRIaChJjYXJ0X2l0ZW1fcXVhbnRpdHkYAiABKA0SMQoNaXNfY2FydF9lbXB0eRgDIAEoCzIaLmdvb2dsZS5wcm90b2J1Zi5Cb29sVmFsdWUqbwoKQ2FydFN0YXR1cxIXChNDQVJUX1NUQVRVU19VTktOT1dOEAASFgoSQ0FSVF9TVEFUVVNfQUNUSVZFEAESFwoTQ0FSVF9TVEFUVVNfRVhQSVJFRBACEhcKE0NBUlRfU1RBVFVTX0RFTEVURUQQAzLqAgoLQ2FydFNlcnZpY2USPgoHR2V0Q2FydBIXLmNhcnQudjEuR2V0Q2FydFJlcXVlc3QaGC5jYXJ0LnYxLkdldENhcnRSZXNwb25zZSIAElkKEEFkZFByb2R1Y3RUb0NhcnQSIC5jYXJ0LnYxLkFkZFByb2R1Y3RUb0NhcnRSZXF1ZXN0GiEuY2FydC52MS5BZGRQcm9kdWN0VG9DYXJ0UmVzcG9uc2UiABJTCg5SZW1vdmVDYXJ0SXRlbRIeLmNhcnQudjEuUmVtb3ZlQ2FydEl0ZW1SZXF1ZXN0Gh8uY2FydC52MS5SZW1vdmVDYXJ0SXRlbVJlc3BvbnNlIgASawoWVXBkYXRlQ2FydEl0ZW1RdWFudGl0eRImLmNhcnQudjEuVXBkYXRlQ2FydEl0ZW1RdWFudGl0eVJlcXVlc3QaJy5jYXJ0LnYxLlVwZGF0ZUNhcnRJdGVtUXVhbnRpdHlSZXNwb25zZSIAQo4BCgtjb20uY2FydC52MUIJQ2FydFByb3RvUAFaN2dpdGh1Yi5jb20vbGVuczA3Ny9lY29tbWVyY2UvYmFja2VuZC9hcGkvY2FydC92MTtjYXJ0djGiAgNDWFiqAgdDYXJ0LlYxygIHQ2FydFxWMeICE0NhcnRcVjFcR1BCTWV0YWRhdGHqAghDYXJ0OjpWMWIGcHJvdG8z", [file_google_protobuf_timestamp, file_google_protobuf_struct, file_google_protobuf_wrappers, file_third_party_validate_validate]);
 
 /**
  * @generated from message cart.v1.AddProductToCartRequest
@@ -75,9 +75,9 @@ export type AddProductToCartRequest = Message<"cart.v1.AddProductToCartRequest">
   skuThumbnailUrl: string;
 
   /**
-   * @generated from field: string status = 11;
+   * @generated from field: cart.v1.CartStatus status = 11;
    */
-  status: string;
+  status: CartStatus;
 };
 
 /**
@@ -92,18 +92,11 @@ export const AddProductToCartRequestSchema: GenMessage<AddProductToCartRequest> 
  */
 export type AddProductToCartResponse = Message<"cart.v1.AddProductToCartResponse"> & {
   /**
-   * 购物车当前商品总件数，方便前端直接刷新右上角小红点
+   * 购物车商品总数量
    *
-   * @generated from field: uint32 cart_total_quantity = 1;
+   * @generated from field: uint32 cart_item_quantity = 1;
    */
-  cartTotalQuantity: number;
-
-  /**
-   * 该商品在购物车中的唯一记录 ID，方便前端后续进行修改或删除
-   *
-   * @generated from field: uint64 cart_item_id = 2;
-   */
-  cartItemId: bigint;
+  cartItemQuantity: number;
 };
 
 /**
@@ -118,19 +111,24 @@ export const AddProductToCartResponseSchema: GenMessage<AddProductToCartResponse
  */
 export type RemoveCartItemRequest = Message<"cart.v1.RemoveCartItemRequest"> & {
   /**
-   * @generated from field: uint64 spu_id = 1;
+   * @generated from field: repeated int64 spu_ids = 1;
    */
-  spuId: bigint;
+  spuIds: bigint[];
 
   /**
-   * @generated from field: uint64 sku_id = 2;
+   * @generated from field: repeated int64 sku_ids = 2;
    */
-  skuId: bigint;
+  skuIds: bigint[];
 
   /**
-   * @generated from field: string merchant_id = 3;
+   * @generated from field: repeated string merchant_ids = 3;
    */
-  merchantId: string;
+  merchantIds: string[];
+
+  /**
+   * @generated from field: repeated cart.v1.CartStatus status = 4;
+   */
+  status: CartStatus[];
 };
 
 /**
@@ -145,11 +143,11 @@ export const RemoveCartItemRequestSchema: GenMessage<RemoveCartItemRequest> = /*
  */
 export type RemoveCartItemResponse = Message<"cart.v1.RemoveCartItemResponse"> & {
   /**
-   * 删除后，购物车剩下的商品总件数（用于刷新右上角小红点）
+   * 删除后，购物车商品总数量（用于刷新右上角小红点）
    *
-   * @generated from field: uint32 cart_total_quantity = 1;
+   * @generated from field: uint32 cart_item_quantity = 1;
    */
-  cartTotalQuantity: number;
+  cartItemQuantity: number;
 
   /**
    * 购物车是否已经彻底空了（用于前端直接切换到“空购物车”占位图）
@@ -205,11 +203,11 @@ export const UpdateCartItemQuantityRequestSchema: GenMessage<UpdateCartItemQuant
  */
 export type UpdateCartItemQuantityResponse = Message<"cart.v1.UpdateCartItemQuantityResponse"> & {
   /**
-   * 更新后，购物车剩下的商品总件数（用于刷新右上角小红点）
+   * 更新后，购物车商品总数量（用于刷新右上角小红点）
    *
-   * @generated from field: uint32 cart_total_quantity = 1;
+   * @generated from field: uint32 cart_item_quantity = 1;
    */
-  cartTotalQuantity: number;
+  cartItemQuantity: number;
 };
 
 /**
@@ -294,9 +292,9 @@ export type CartItem = Message<"cart.v1.CartItem"> & {
   skuThumbnailUrl: string;
 
   /**
-   * @generated from field: string status = 12;
+   * @generated from field: cart.v1.CartStatus status = 12;
    */
-  status: string;
+  status: CartStatus;
 };
 
 /**
@@ -318,18 +316,18 @@ export type GetCartResponse = Message<"cart.v1.GetCartResponse"> & {
   items: CartItem[];
 
   /**
-   * 购物车总数量
+   * 购物车商品总数量
    *
-   * @generated from field: uint32 cart_total_quantity = 2;
+   * @generated from field: uint32 cart_item_quantity = 2;
    */
-  cartTotalQuantity: number;
+  cartItemQuantity: number;
 
   /**
    * 购物车是否为空
    *
-   * @generated from field: bool is_cart_empty = 3;
+   * @generated from field: google.protobuf.BoolValue is_cart_empty = 3;
    */
-  isCartEmpty: boolean;
+  isCartEmpty?: boolean;
 };
 
 /**
@@ -340,9 +338,48 @@ export const GetCartResponseSchema: GenMessage<GetCartResponse> = /*@__PURE__*/
   messageDesc(file_api_cart_v1_cart, 8);
 
 /**
+ * @generated from enum cart.v1.CartStatus
+ */
+export enum CartStatus {
+  /**
+   * @generated from enum value: CART_STATUS_UNKNOWN = 0;
+   */
+  UNKNOWN = 0,
+
+  /**
+   * @generated from enum value: CART_STATUS_ACTIVE = 1;
+   */
+  ACTIVE = 1,
+
+  /**
+   * @generated from enum value: CART_STATUS_EXPIRED = 2;
+   */
+  EXPIRED = 2,
+
+  /**
+   * @generated from enum value: CART_STATUS_DELETED = 3;
+   */
+  DELETED = 3,
+}
+
+/**
+ * Describes the enum cart.v1.CartStatus.
+ */
+export const CartStatusSchema: GenEnum<CartStatus> = /*@__PURE__*/
+  enumDesc(file_api_cart_v1_cart, 0);
+
+/**
  * @generated from service cart.v1.CartService
  */
 export const CartService: GenService<{
+  /**
+   * @generated from rpc cart.v1.CartService.GetCart
+   */
+  getCart: {
+    methodKind: "unary";
+    input: typeof GetCartRequestSchema;
+    output: typeof GetCartResponseSchema;
+  },
   /**
    * @generated from rpc cart.v1.CartService.AddProductToCart
    */
@@ -366,14 +403,6 @@ export const CartService: GenService<{
     methodKind: "unary";
     input: typeof UpdateCartItemQuantityRequestSchema;
     output: typeof UpdateCartItemQuantityResponseSchema;
-  },
-  /**
-   * @generated from rpc cart.v1.CartService.GetCart
-   */
-  getCart: {
-    methodKind: "unary";
-    input: typeof GetCartRequestSchema;
-    output: typeof GetCartResponseSchema;
   },
 }> = /*@__PURE__*/
   serviceDesc(file_api_cart_v1_cart, 0);

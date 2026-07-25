@@ -28,21 +28,22 @@ type (
 	}
 
 	AddProductToCartResponse struct {
-		CartTotalQuantity int32
-		CartItemId        int64
+		CartItemQuantity int32
 	}
 )
 type (
+	RemoveCartItem struct {
+	}
 	RemoveCartItemRequest struct {
-		ConsumerId uuid.UUID
-		MerchantId uuid.UUID
-		SpuId      uint64
-		SkuId      uint64
-		Status     constants.CartStatusEnum
+		ConsumerId  uuid.UUID
+		MerchantIds []uuid.UUID
+		SpuIds      []int64
+		SkuIds      []int64
+		Statuses    []constants.CartStatusEnum
 	}
 	RemoveCartItemResponse struct {
-		CartTotalQuantity uint32
-		IsCartEmpty       bool
+		CartItemQuantity uint32
+		IsCartEmpty      bool
 	}
 )
 
@@ -56,7 +57,7 @@ type (
 		Status     constants.CartStatusEnum
 	}
 	UpdateCartItemQuantityResponse struct {
-		CartTotalQuantity uint32
+		CartItemQuantity uint32
 	}
 )
 
@@ -81,9 +82,9 @@ type (
 		Status     constants.CartStatusEnum
 	}
 	GetCartResponse struct {
-		Items             []*CartItem
-		CartTotalQuantity uint32
-		IsCartEmpty       bool
+		Items            []*CartItem
+		CartItemQuantity uint32
+		IsCartEmpty      bool
 	}
 )
 
