@@ -3,7 +3,9 @@ package service
 import (
 	"context"
 
+	"github.com/lens077/ecommerce/backend/constants"
 	"github.com/lens077/ecommerce/backend/services/product/internal/biz"
+	"github.com/lens077/ecommerce/backend/services/product/internal/pkg/decimal"
 	"google.golang.org/protobuf/types/known/structpb"
 
 	v1 "github.com/lens077/ecommerce/backend/api/product/v1"
@@ -58,23 +60,46 @@ func ToProtoDetail(bizDetail biz.ProductSpuDetail) (*v1.ProductSpuDetail, error)
 
 	skus := make([]*v1.ProductSku, len(bizDetail.Skus))
 	for i, s := range bizDetail.Skus {
+		price := decimal.DecimalToCNYMoney(s.Price)
+		costPrice := decimal.DecimalToCNYMoney(s.CostPrice)
+		status := ToProtoSpuStatus(s.Status)
 		// 转换 SKU Attrs
-		attrs, _ := structpb.NewStruct(s.Attrs)
+		attributes, _ := structpb.NewStruct(s.Attributes)
 		skus[i] = &v1.ProductSku{
-			SkuId:   s.SkuID,
-			SkuCode: s.SkuCode,
-			Price:   s.Price,
-			Stock:   int32(s.Stock),
-			Attrs:   attrs,
-			Img:     s.Img,
+			SkuId:        s.SkuID,
+			SkuCode:      s.SkuCode,
+			MerchantId:   s.MerchantId.String(),
+			Price:        price,
+			CostPrice:    costPrice,
+			StockLocked:  s.StockLocked,
+			Attributes:   attributes,
+			SpecTemplate: s.SpecTemplate,
+			SkuName:      s.SkuName,
+			ThumbnailUrl: s.ThumbnailUrl,
+			Status:       status,
 		}
 	}
 
 	return &v1.ProductSpuDetail{
 		SpuId:       bizDetail.SpuID,
-		Name:        bizDetail.Name,
+		SpuName:     bizDetail.SpuName,
 		SpuCode:     bizDetail.SpuCode,
 		CommonSpecs: commonSpecs,
 		Skus:        skus,
 	}, nil
+}
+
+func ToProtoSpuStatus(s constants.ProductSpuStatus) v1.SPUStatus {
+	switch s {
+	case constants.ProductSpuStatusDraft:
+		return v1.SPUStatus_STATUS_DRAFT
+	case constants.ProductSpuStatusOnline:
+		return v1.SPUStatus_STATUS_ONLINE
+	case constants.ProductSpuStatusOffline:
+		return v1.SPUStatus_STATUS_OFFLINE
+	case constants.ProductSpuStatusDeleted:
+		return v1.SPUStatus_STATUS_DELETED
+	default:
+		return v1.SPUStatus_STATUS_UNKNOWN
+	}
 }

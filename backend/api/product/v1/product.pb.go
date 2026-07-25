@@ -8,6 +8,7 @@ package productv1
 
 import (
 	_ "buf.build/gen/go/bufbuild/protovalidate/protocolbuffers/go/buf/validate"
+	money "google.golang.org/genproto/googleapis/type/money"
 	protoreflect "google.golang.org/protobuf/reflect/protoreflect"
 	protoimpl "google.golang.org/protobuf/runtime/protoimpl"
 	structpb "google.golang.org/protobuf/types/known/structpb"
@@ -23,6 +24,61 @@ const (
 	// Verify that runtime/protoimpl is sufficiently up-to-date.
 	_ = protoimpl.EnforceVersion(protoimpl.MaxVersion - 20)
 )
+
+type SPUStatus int32
+
+const (
+	SPUStatus_STATUS_UNKNOWN SPUStatus = 0
+	SPUStatus_STATUS_DRAFT   SPUStatus = 1
+	SPUStatus_STATUS_ONLINE  SPUStatus = 2
+	SPUStatus_STATUS_OFFLINE SPUStatus = 3
+	SPUStatus_STATUS_DELETED SPUStatus = 4
+)
+
+// Enum value maps for SPUStatus.
+var (
+	SPUStatus_name = map[int32]string{
+		0: "STATUS_UNKNOWN",
+		1: "STATUS_DRAFT",
+		2: "STATUS_ONLINE",
+		3: "STATUS_OFFLINE",
+		4: "STATUS_DELETED",
+	}
+	SPUStatus_value = map[string]int32{
+		"STATUS_UNKNOWN": 0,
+		"STATUS_DRAFT":   1,
+		"STATUS_ONLINE":  2,
+		"STATUS_OFFLINE": 3,
+		"STATUS_DELETED": 4,
+	}
+)
+
+func (x SPUStatus) Enum() *SPUStatus {
+	p := new(SPUStatus)
+	*p = x
+	return p
+}
+
+func (x SPUStatus) String() string {
+	return protoimpl.X.EnumStringOf(x.Descriptor(), protoreflect.EnumNumber(x))
+}
+
+func (SPUStatus) Descriptor() protoreflect.EnumDescriptor {
+	return file_api_product_v1_product_proto_enumTypes[0].Descriptor()
+}
+
+func (SPUStatus) Type() protoreflect.EnumType {
+	return &file_api_product_v1_product_proto_enumTypes[0]
+}
+
+func (x SPUStatus) Number() protoreflect.EnumNumber {
+	return protoreflect.EnumNumber(x)
+}
+
+// Deprecated: Use SPUStatus.Descriptor instead.
+func (SPUStatus) EnumDescriptor() ([]byte, []int) {
+	return file_api_product_v1_product_proto_rawDescGZIP(), []int{0}
+}
 
 type GetProductDetailRequest struct {
 	state         protoimpl.MessageState `protogen:"open.v1"`
@@ -115,7 +171,7 @@ func (x *GetProductDetailResponse) GetProductDetail() *ProductSpuDetail {
 type ProductSpuDetail struct {
 	state   protoimpl.MessageState `protogen:"open.v1"`
 	SpuId   int64                  `protobuf:"varint,1,opt,name=spu_id,json=spuId,proto3" json:"spu_id,omitempty"`
-	Name    string                 `protobuf:"bytes,2,opt,name=name,proto3" json:"name,omitempty"`
+	SpuName string                 `protobuf:"bytes,2,opt,name=spu_name,json=spuName,proto3" json:"spu_name,omitempty"`
 	SpuCode string                 `protobuf:"bytes,3,opt,name=spu_code,json=spuCode,proto3" json:"spu_code,omitempty"`
 	// 使用 google.protobuf.Struct 来匹配 map[string]any
 	CommonSpecs   *structpb.Struct `protobuf:"bytes,4,opt,name=common_specs,json=commonSpecs,proto3" json:"common_specs,omitempty"`
@@ -161,9 +217,9 @@ func (x *ProductSpuDetail) GetSpuId() int64 {
 	return 0
 }
 
-func (x *ProductSpuDetail) GetName() string {
+func (x *ProductSpuDetail) GetSpuName() string {
 	if x != nil {
-		return x.Name
+		return x.SpuName
 	}
 	return ""
 }
@@ -190,14 +246,18 @@ func (x *ProductSpuDetail) GetSkus() []*ProductSku {
 }
 
 type ProductSku struct {
-	state   protoimpl.MessageState `protogen:"open.v1"`
-	SkuId   int64                  `protobuf:"varint,1,opt,name=sku_id,json=skuId,proto3" json:"sku_id,omitempty"`
-	SkuCode string                 `protobuf:"bytes,2,opt,name=sku_code,json=skuCode,proto3" json:"sku_code,omitempty"`
-	Price   float64                `protobuf:"fixed64,3,opt,name=price,proto3" json:"price,omitempty"`
-	Stock   int32                  `protobuf:"varint,4,opt,name=stock,proto3" json:"stock,omitempty"`
-	// 使用 google.protobuf.Struct 处理动态 SKU 属性
-	Attrs         *structpb.Struct `protobuf:"bytes,5,opt,name=attrs,proto3" json:"attrs,omitempty"`
-	Img           string           `protobuf:"bytes,6,opt,name=img,proto3" json:"img,omitempty"`
+	state         protoimpl.MessageState `protogen:"open.v1"`
+	SkuId         int64                  `protobuf:"varint,1,opt,name=sku_id,json=skuId,proto3" json:"sku_id,omitempty"`
+	SkuCode       string                 `protobuf:"bytes,2,opt,name=sku_code,json=skuCode,proto3" json:"sku_code,omitempty"`
+	MerchantId    string                 `protobuf:"bytes,3,opt,name=merchant_id,json=merchantId,proto3" json:"merchant_id,omitempty"`
+	Price         *money.Money           `protobuf:"bytes,4,opt,name=price,proto3" json:"price,omitempty"`
+	CostPrice     *money.Money           `protobuf:"bytes,5,opt,name=cost_price,json=costPrice,proto3" json:"cost_price,omitempty"`
+	StockLocked   int64                  `protobuf:"varint,6,opt,name=stock_locked,json=stockLocked,proto3" json:"stock_locked,omitempty"`
+	Attributes    *structpb.Struct       `protobuf:"bytes,7,opt,name=attributes,proto3" json:"attributes,omitempty"`
+	SpecTemplate  []string               `protobuf:"bytes,8,rep,name=spec_template,json=specTemplate,proto3" json:"spec_template,omitempty"`
+	SkuName       string                 `protobuf:"bytes,9,opt,name=sku_name,json=skuName,proto3" json:"sku_name,omitempty"`
+	ThumbnailUrl  string                 `protobuf:"bytes,10,opt,name=thumbnail_url,json=thumbnailUrl,proto3" json:"thumbnail_url,omitempty"`
+	Status        SPUStatus              `protobuf:"varint,11,opt,name=status,proto3,enum=product.v1.SPUStatus" json:"status,omitempty"`
 	unknownFields protoimpl.UnknownFields
 	sizeCache     protoimpl.SizeCache
 }
@@ -246,32 +306,67 @@ func (x *ProductSku) GetSkuCode() string {
 	return ""
 }
 
-func (x *ProductSku) GetPrice() float64 {
+func (x *ProductSku) GetMerchantId() string {
+	if x != nil {
+		return x.MerchantId
+	}
+	return ""
+}
+
+func (x *ProductSku) GetPrice() *money.Money {
 	if x != nil {
 		return x.Price
-	}
-	return 0
-}
-
-func (x *ProductSku) GetStock() int32 {
-	if x != nil {
-		return x.Stock
-	}
-	return 0
-}
-
-func (x *ProductSku) GetAttrs() *structpb.Struct {
-	if x != nil {
-		return x.Attrs
 	}
 	return nil
 }
 
-func (x *ProductSku) GetImg() string {
+func (x *ProductSku) GetCostPrice() *money.Money {
 	if x != nil {
-		return x.Img
+		return x.CostPrice
+	}
+	return nil
+}
+
+func (x *ProductSku) GetStockLocked() int64 {
+	if x != nil {
+		return x.StockLocked
+	}
+	return 0
+}
+
+func (x *ProductSku) GetAttributes() *structpb.Struct {
+	if x != nil {
+		return x.Attributes
+	}
+	return nil
+}
+
+func (x *ProductSku) GetSpecTemplate() []string {
+	if x != nil {
+		return x.SpecTemplate
+	}
+	return nil
+}
+
+func (x *ProductSku) GetSkuName() string {
+	if x != nil {
+		return x.SkuName
 	}
 	return ""
+}
+
+func (x *ProductSku) GetThumbnailUrl() string {
+	if x != nil {
+		return x.ThumbnailUrl
+	}
+	return ""
+}
+
+func (x *ProductSku) GetStatus() SPUStatus {
+	if x != nil {
+		return x.Status
+	}
+	return SPUStatus_STATUS_UNKNOWN
 }
 
 var File_api_product_v1_product_proto protoreflect.FileDescriptor
@@ -279,25 +374,41 @@ var File_api_product_v1_product_proto protoreflect.FileDescriptor
 const file_api_product_v1_product_proto_rawDesc = "" +
 	"\n" +
 	"\x1capi/product/v1/product.proto\x12\n" +
-	"product.v1\x1a\x1cgoogle/protobuf/struct.proto\x1a\x1fgoogle/protobuf/timestamp.proto\x1a#third_party/validate/validate.proto\"4\n" +
+	"product.v1\x1a\x1cgoogle/protobuf/struct.proto\x1a\x1fgoogle/protobuf/timestamp.proto\x1a#third_party/google/type/money.proto\x1a#third_party/validate/validate.proto\"4\n" +
 	"\x17GetProductDetailRequest\x12\x19\n" +
 	"\bspu_code\x18\x01 \x01(\tR\aspuCode\"_\n" +
 	"\x18GetProductDetailResponse\x12C\n" +
-	"\x0eproduct_detail\x18\x01 \x01(\v2\x1c.product.v1.ProductSpuDetailR\rproductDetail\"\xc0\x01\n" +
+	"\x0eproduct_detail\x18\x01 \x01(\v2\x1c.product.v1.ProductSpuDetailR\rproductDetail\"\xc7\x01\n" +
 	"\x10ProductSpuDetail\x12\x15\n" +
-	"\x06spu_id\x18\x01 \x01(\x03R\x05spuId\x12\x12\n" +
-	"\x04name\x18\x02 \x01(\tR\x04name\x12\x19\n" +
+	"\x06spu_id\x18\x01 \x01(\x03R\x05spuId\x12\x19\n" +
+	"\bspu_name\x18\x02 \x01(\tR\aspuName\x12\x19\n" +
 	"\bspu_code\x18\x03 \x01(\tR\aspuCode\x12:\n" +
 	"\fcommon_specs\x18\x04 \x01(\v2\x17.google.protobuf.StructR\vcommonSpecs\x12*\n" +
-	"\x04skus\x18\x05 \x03(\v2\x16.product.v1.ProductSkuR\x04skus\"\xab\x01\n" +
+	"\x04skus\x18\x05 \x03(\v2\x16.product.v1.ProductSkuR\x04skus\"\xb6\x03\n" +
 	"\n" +
 	"ProductSku\x12\x15\n" +
 	"\x06sku_id\x18\x01 \x01(\x03R\x05skuId\x12\x19\n" +
-	"\bsku_code\x18\x02 \x01(\tR\askuCode\x12\x14\n" +
-	"\x05price\x18\x03 \x01(\x01R\x05price\x12\x14\n" +
-	"\x05stock\x18\x04 \x01(\x05R\x05stock\x12-\n" +
-	"\x05attrs\x18\x05 \x01(\v2\x17.google.protobuf.StructR\x05attrs\x12\x10\n" +
-	"\x03img\x18\x06 \x01(\tR\x03img2q\n" +
+	"\bsku_code\x18\x02 \x01(\tR\askuCode\x12)\n" +
+	"\vmerchant_id\x18\x03 \x01(\tB\b\xbaH\x05r\x03\xb0\x01\x01R\n" +
+	"merchantId\x12(\n" +
+	"\x05price\x18\x04 \x01(\v2\x12.google.type.MoneyR\x05price\x121\n" +
+	"\n" +
+	"cost_price\x18\x05 \x01(\v2\x12.google.type.MoneyR\tcostPrice\x12!\n" +
+	"\fstock_locked\x18\x06 \x01(\x03R\vstockLocked\x127\n" +
+	"\n" +
+	"attributes\x18\a \x01(\v2\x17.google.protobuf.StructR\n" +
+	"attributes\x12#\n" +
+	"\rspec_template\x18\b \x03(\tR\fspecTemplate\x12\x19\n" +
+	"\bsku_name\x18\t \x01(\tR\askuName\x12#\n" +
+	"\rthumbnail_url\x18\n" +
+	" \x01(\tR\fthumbnailUrl\x12-\n" +
+	"\x06status\x18\v \x01(\x0e2\x15.product.v1.SPUStatusR\x06status*l\n" +
+	"\tSPUStatus\x12\x12\n" +
+	"\x0eSTATUS_UNKNOWN\x10\x00\x12\x10\n" +
+	"\fSTATUS_DRAFT\x10\x01\x12\x11\n" +
+	"\rSTATUS_ONLINE\x10\x02\x12\x12\n" +
+	"\x0eSTATUS_OFFLINE\x10\x03\x12\x12\n" +
+	"\x0eSTATUS_DELETED\x10\x042q\n" +
 	"\x0eProductService\x12_\n" +
 	"\x10GetProductDetail\x12#.product.v1.GetProductDetailRequest\x1a$.product.v1.GetProductDetailResponse\"\x00B\xa6\x01\n" +
 	"\x0ecom.product.v1B\fProductProtoP\x01Z=github.com/lens077/ecommerce/backend/api/product/v1;productv1\xa2\x02\x03PXX\xaa\x02\n" +
@@ -316,26 +427,32 @@ func file_api_product_v1_product_proto_rawDescGZIP() []byte {
 	return file_api_product_v1_product_proto_rawDescData
 }
 
+var file_api_product_v1_product_proto_enumTypes = make([]protoimpl.EnumInfo, 1)
 var file_api_product_v1_product_proto_msgTypes = make([]protoimpl.MessageInfo, 4)
 var file_api_product_v1_product_proto_goTypes = []any{
-	(*GetProductDetailRequest)(nil),  // 0: product.v1.GetProductDetailRequest
-	(*GetProductDetailResponse)(nil), // 1: product.v1.GetProductDetailResponse
-	(*ProductSpuDetail)(nil),         // 2: product.v1.ProductSpuDetail
-	(*ProductSku)(nil),               // 3: product.v1.ProductSku
-	(*structpb.Struct)(nil),          // 4: google.protobuf.Struct
+	(SPUStatus)(0),                   // 0: product.v1.SPUStatus
+	(*GetProductDetailRequest)(nil),  // 1: product.v1.GetProductDetailRequest
+	(*GetProductDetailResponse)(nil), // 2: product.v1.GetProductDetailResponse
+	(*ProductSpuDetail)(nil),         // 3: product.v1.ProductSpuDetail
+	(*ProductSku)(nil),               // 4: product.v1.ProductSku
+	(*structpb.Struct)(nil),          // 5: google.protobuf.Struct
+	(*money.Money)(nil),              // 6: google.type.Money
 }
 var file_api_product_v1_product_proto_depIdxs = []int32{
-	2, // 0: product.v1.GetProductDetailResponse.product_detail:type_name -> product.v1.ProductSpuDetail
-	4, // 1: product.v1.ProductSpuDetail.common_specs:type_name -> google.protobuf.Struct
-	3, // 2: product.v1.ProductSpuDetail.skus:type_name -> product.v1.ProductSku
-	4, // 3: product.v1.ProductSku.attrs:type_name -> google.protobuf.Struct
-	0, // 4: product.v1.ProductService.GetProductDetail:input_type -> product.v1.GetProductDetailRequest
-	1, // 5: product.v1.ProductService.GetProductDetail:output_type -> product.v1.GetProductDetailResponse
-	5, // [5:6] is the sub-list for method output_type
-	4, // [4:5] is the sub-list for method input_type
-	4, // [4:4] is the sub-list for extension type_name
-	4, // [4:4] is the sub-list for extension extendee
-	0, // [0:4] is the sub-list for field type_name
+	3, // 0: product.v1.GetProductDetailResponse.product_detail:type_name -> product.v1.ProductSpuDetail
+	5, // 1: product.v1.ProductSpuDetail.common_specs:type_name -> google.protobuf.Struct
+	4, // 2: product.v1.ProductSpuDetail.skus:type_name -> product.v1.ProductSku
+	6, // 3: product.v1.ProductSku.price:type_name -> google.type.Money
+	6, // 4: product.v1.ProductSku.cost_price:type_name -> google.type.Money
+	5, // 5: product.v1.ProductSku.attributes:type_name -> google.protobuf.Struct
+	0, // 6: product.v1.ProductSku.status:type_name -> product.v1.SPUStatus
+	1, // 7: product.v1.ProductService.GetProductDetail:input_type -> product.v1.GetProductDetailRequest
+	2, // 8: product.v1.ProductService.GetProductDetail:output_type -> product.v1.GetProductDetailResponse
+	8, // [8:9] is the sub-list for method output_type
+	7, // [7:8] is the sub-list for method input_type
+	7, // [7:7] is the sub-list for extension type_name
+	7, // [7:7] is the sub-list for extension extendee
+	0, // [0:7] is the sub-list for field type_name
 }
 
 func init() { file_api_product_v1_product_proto_init() }
@@ -348,13 +465,14 @@ func file_api_product_v1_product_proto_init() {
 		File: protoimpl.DescBuilder{
 			GoPackagePath: reflect.TypeOf(x{}).PkgPath(),
 			RawDescriptor: unsafe.Slice(unsafe.StringData(file_api_product_v1_product_proto_rawDesc), len(file_api_product_v1_product_proto_rawDesc)),
-			NumEnums:      0,
+			NumEnums:      1,
 			NumMessages:   4,
 			NumExtensions: 0,
 			NumServices:   1,
 		},
 		GoTypes:           file_api_product_v1_product_proto_goTypes,
 		DependencyIndexes: file_api_product_v1_product_proto_depIdxs,
+		EnumInfos:         file_api_product_v1_product_proto_enumTypes,
 		MessageInfos:      file_api_product_v1_product_proto_msgTypes,
 	}.Build()
 	File_api_product_v1_product_proto = out.File

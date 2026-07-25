@@ -2,9 +2,11 @@
 // @generated from file api/product/v1/product.proto (package product.v1, syntax proto3)
 /* eslint-disable */
 
-import type { GenFile, GenMessage, GenService } from "@bufbuild/protobuf/codegenv2";
-import { fileDesc, messageDesc, serviceDesc } from "@bufbuild/protobuf/codegenv2";
+import type { GenEnum, GenFile, GenMessage, GenService } from "@bufbuild/protobuf/codegenv2";
+import { enumDesc, fileDesc, messageDesc, serviceDesc } from "@bufbuild/protobuf/codegenv2";
 import { file_google_protobuf_struct, file_google_protobuf_timestamp } from "@bufbuild/protobuf/wkt";
+import type { Money } from "../../../third_party/google/type/money_pb";
+import { file_third_party_google_type_money } from "../../../third_party/google/type/money_pb";
 import { file_third_party_validate_validate } from "../../../third_party/validate/validate_pb";
 import type { JsonObject, Message } from "@bufbuild/protobuf";
 
@@ -12,7 +14,7 @@ import type { JsonObject, Message } from "@bufbuild/protobuf";
  * Describes the file api/product/v1/product.proto.
  */
 export const file_api_product_v1_product: GenFile = /*@__PURE__*/
-  fileDesc("ChxhcGkvcHJvZHVjdC92MS9wcm9kdWN0LnByb3RvEgpwcm9kdWN0LnYxIisKF0dldFByb2R1Y3REZXRhaWxSZXF1ZXN0EhAKCHNwdV9jb2RlGAEgASgJIlAKGEdldFByb2R1Y3REZXRhaWxSZXNwb25zZRI0Cg5wcm9kdWN0X2RldGFpbBgBIAEoCzIcLnByb2R1Y3QudjEuUHJvZHVjdFNwdURldGFpbCKXAQoQUHJvZHVjdFNwdURldGFpbBIOCgZzcHVfaWQYASABKAMSDAoEbmFtZRgCIAEoCRIQCghzcHVfY29kZRgDIAEoCRItCgxjb21tb25fc3BlY3MYBCABKAsyFy5nb29nbGUucHJvdG9idWYuU3RydWN0EiQKBHNrdXMYBSADKAsyFi5wcm9kdWN0LnYxLlByb2R1Y3RTa3UigQEKClByb2R1Y3RTa3USDgoGc2t1X2lkGAEgASgDEhAKCHNrdV9jb2RlGAIgASgJEg0KBXByaWNlGAMgASgBEg0KBXN0b2NrGAQgASgFEiYKBWF0dHJzGAUgASgLMhcuZ29vZ2xlLnByb3RvYnVmLlN0cnVjdBILCgNpbWcYBiABKAkycQoOUHJvZHVjdFNlcnZpY2USXwoQR2V0UHJvZHVjdERldGFpbBIjLnByb2R1Y3QudjEuR2V0UHJvZHVjdERldGFpbFJlcXVlc3QaJC5wcm9kdWN0LnYxLkdldFByb2R1Y3REZXRhaWxSZXNwb25zZSIAQqYBCg5jb20ucHJvZHVjdC52MUIMUHJvZHVjdFByb3RvUAFaPWdpdGh1Yi5jb20vbGVuczA3Ny9lY29tbWVyY2UvYmFja2VuZC9hcGkvcHJvZHVjdC92MTtwcm9kdWN0djGiAgNQWFiqAgpQcm9kdWN0LlYxygIKUHJvZHVjdFxWMeICFlByb2R1Y3RcVjFcR1BCTWV0YWRhdGHqAgtQcm9kdWN0OjpWMWIGcHJvdG8z", [file_google_protobuf_struct, file_google_protobuf_timestamp, file_third_party_validate_validate]);
+  fileDesc("ChxhcGkvcHJvZHVjdC92MS9wcm9kdWN0LnByb3RvEgpwcm9kdWN0LnYxIisKF0dldFByb2R1Y3REZXRhaWxSZXF1ZXN0EhAKCHNwdV9jb2RlGAEgASgJIlAKGEdldFByb2R1Y3REZXRhaWxSZXNwb25zZRI0Cg5wcm9kdWN0X2RldGFpbBgBIAEoCzIcLnByb2R1Y3QudjEuUHJvZHVjdFNwdURldGFpbCKbAQoQUHJvZHVjdFNwdURldGFpbBIOCgZzcHVfaWQYASABKAMSEAoIc3B1X25hbWUYAiABKAkSEAoIc3B1X2NvZGUYAyABKAkSLQoMY29tbW9uX3NwZWNzGAQgASgLMhcuZ29vZ2xlLnByb3RvYnVmLlN0cnVjdBIkCgRza3VzGAUgAygLMhYucHJvZHVjdC52MS5Qcm9kdWN0U2t1IsICCgpQcm9kdWN0U2t1Eg4KBnNrdV9pZBgBIAEoAxIQCghza3VfY29kZRgCIAEoCRIdCgttZXJjaGFudF9pZBgDIAEoCUIIukgFcgOwAQESIQoFcHJpY2UYBCABKAsyEi5nb29nbGUudHlwZS5Nb25leRImCgpjb3N0X3ByaWNlGAUgASgLMhIuZ29vZ2xlLnR5cGUuTW9uZXkSFAoMc3RvY2tfbG9ja2VkGAYgASgDEisKCmF0dHJpYnV0ZXMYByABKAsyFy5nb29nbGUucHJvdG9idWYuU3RydWN0EhUKDXNwZWNfdGVtcGxhdGUYCCADKAkSEAoIc2t1X25hbWUYCSABKAkSFQoNdGh1bWJuYWlsX3VybBgKIAEoCRIlCgZzdGF0dXMYCyABKA4yFS5wcm9kdWN0LnYxLlNQVVN0YXR1cypsCglTUFVTdGF0dXMSEgoOU1RBVFVTX1VOS05PV04QABIQCgxTVEFUVVNfRFJBRlQQARIRCg1TVEFUVVNfT05MSU5FEAISEgoOU1RBVFVTX09GRkxJTkUQAxISCg5TVEFUVVNfREVMRVRFRBAEMnEKDlByb2R1Y3RTZXJ2aWNlEl8KEEdldFByb2R1Y3REZXRhaWwSIy5wcm9kdWN0LnYxLkdldFByb2R1Y3REZXRhaWxSZXF1ZXN0GiQucHJvZHVjdC52MS5HZXRQcm9kdWN0RGV0YWlsUmVzcG9uc2UiAEKmAQoOY29tLnByb2R1Y3QudjFCDFByb2R1Y3RQcm90b1ABWj1naXRodWIuY29tL2xlbnMwNzcvZWNvbW1lcmNlL2JhY2tlbmQvYXBpL3Byb2R1Y3QvdjE7cHJvZHVjdHYxogIDUFhYqgIKUHJvZHVjdC5WMcoCClByb2R1Y3RcVjHiAhZQcm9kdWN0XFYxXEdQQk1ldGFkYXRh6gILUHJvZHVjdDo6VjFiBnByb3RvMw", [file_google_protobuf_struct, file_google_protobuf_timestamp, file_third_party_google_type_money, file_third_party_validate_validate]);
 
 /**
  * @generated from message product.v1.GetProductDetailRequest
@@ -58,9 +60,9 @@ export type ProductSpuDetail = Message<"product.v1.ProductSpuDetail"> & {
   spuId: bigint;
 
   /**
-   * @generated from field: string name = 2;
+   * @generated from field: string spu_name = 2;
    */
-  name: string;
+  spuName: string;
 
   /**
    * @generated from field: string spu_code = 3;
@@ -102,26 +104,49 @@ export type ProductSku = Message<"product.v1.ProductSku"> & {
   skuCode: string;
 
   /**
-   * @generated from field: double price = 3;
+   * @generated from field: string merchant_id = 3;
    */
-  price: number;
+  merchantId: string;
 
   /**
-   * @generated from field: int32 stock = 4;
+   * @generated from field: google.type.Money price = 4;
    */
-  stock: number;
+  price?: Money;
 
   /**
-   * 使用 google.protobuf.Struct 处理动态 SKU 属性
-   *
-   * @generated from field: google.protobuf.Struct attrs = 5;
+   * @generated from field: google.type.Money cost_price = 5;
    */
-  attrs?: JsonObject;
+  costPrice?: Money;
 
   /**
-   * @generated from field: string img = 6;
+   * @generated from field: int64 stock_locked = 6;
    */
-  img: string;
+  stockLocked: bigint;
+
+  /**
+   * @generated from field: google.protobuf.Struct attributes = 7;
+   */
+  attributes?: JsonObject;
+
+  /**
+   * @generated from field: repeated string spec_template = 8;
+   */
+  specTemplate: string[];
+
+  /**
+   * @generated from field: string sku_name = 9;
+   */
+  skuName: string;
+
+  /**
+   * @generated from field: string thumbnail_url = 10;
+   */
+  thumbnailUrl: string;
+
+  /**
+   * @generated from field: product.v1.SPUStatus status = 11;
+   */
+  status: SPUStatus;
 };
 
 /**
@@ -130,6 +155,42 @@ export type ProductSku = Message<"product.v1.ProductSku"> & {
  */
 export const ProductSkuSchema: GenMessage<ProductSku> = /*@__PURE__*/
   messageDesc(file_api_product_v1_product, 3);
+
+/**
+ * @generated from enum product.v1.SPUStatus
+ */
+export enum SPUStatus {
+  /**
+   * @generated from enum value: STATUS_UNKNOWN = 0;
+   */
+  STATUS_UNKNOWN = 0,
+
+  /**
+   * @generated from enum value: STATUS_DRAFT = 1;
+   */
+  STATUS_DRAFT = 1,
+
+  /**
+   * @generated from enum value: STATUS_ONLINE = 2;
+   */
+  STATUS_ONLINE = 2,
+
+  /**
+   * @generated from enum value: STATUS_OFFLINE = 3;
+   */
+  STATUS_OFFLINE = 3,
+
+  /**
+   * @generated from enum value: STATUS_DELETED = 4;
+   */
+  STATUS_DELETED = 4,
+}
+
+/**
+ * Describes the enum product.v1.SPUStatus.
+ */
+export const SPUStatusSchema: GenEnum<SPUStatus> = /*@__PURE__*/
+  enumDesc(file_api_product_v1_product, 0);
 
 /**
  * @generated from service product.v1.ProductService

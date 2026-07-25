@@ -6,6 +6,7 @@ option go_package = "github.com/lens077/ecommerce/backend/api/product/v1;product
 
 import "google/protobuf/struct.proto";
 import "google/protobuf/timestamp.proto";
+import "third_party/google/type/money.proto";
 import "third_party/validate/validate.proto";
 
 service ProductService {
@@ -22,7 +23,7 @@ message GetProductDetailResponse {
 
 message ProductSpuDetail {
   int64 spu_id = 1;
-  string name = 2;
+  string spu_name = 2;
   string spu_code = 3;
   // 使用 google.protobuf.Struct 来匹配 map[string]any
   google.protobuf.Struct common_specs = 4;
@@ -32,20 +33,24 @@ message ProductSpuDetail {
 message ProductSku {
   int64 sku_id = 1;
   string sku_code = 2;
-  double price = 3;
-  int32 stock = 4;
-  // 使用 google.protobuf.Struct 处理动态 SKU 属性
-  google.protobuf.Struct attrs = 5;
-  string img = 6;
+  string merchant_id = 3 [(buf.validate.field).string.uuid = true];
+  google.type.Money price = 4;
+  google.type.Money cost_price = 5;
+  int64 stock_locked = 6;
+  google.protobuf.Struct attributes = 7;
+  repeated string spec_template = 8;
+  string sku_name = 9;
+  string thumbnail_url = 10;
+  SPUStatus status = 11;
 }
 
-//
-//enum SPUStatus {
-//  STATUS_DRAFT = 0;
-//  STATUS_ONLINE = 1;
-//  STATUS_OFFLINE = 2;
-//  STATUS_DELETED = 3;
-//}
+enum SPUStatus {
+  STATUS_UNKNOWN = 0;
+  STATUS_DRAFT = 1;
+  STATUS_ONLINE = 2;
+  STATUS_OFFLINE = 3;
+  STATUS_DELETED = 4;
+}
 //message Product {
 //  uint64 id = 1;
 //  string spu_code = 2 [(buf.validate.field).string.max_len = 64];

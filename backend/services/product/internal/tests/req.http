@@ -1,5 +1,5 @@
 ### 网关
-POST http://localhost:8080/product/product.v1.ProductService/GetProductDetail
+POST http://localhost:8080/product.v1.ProductService/GetProductDetail
 Content-Type: application/json
 
 {"spuCode": "iphone-15-pro"}
