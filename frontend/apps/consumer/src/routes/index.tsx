@@ -1,11 +1,8 @@
-import { createFileRoute } from "@tanstack/react-router";
-import AppBar from "@/components/AppBar";
+import { createFileRoute, redirect } from "@tanstack/react-router";
 import "./index.css";
 
 export const Route = createFileRoute("/")({
-  component: App,
+  beforeLoad: () => {
+    throw redirect({ to: "/categories" });
+  },
 });
-
-function App() {
-  return <AppBar />;
-}

@@ -3,6 +3,7 @@ import { CircularProgress } from "@mui/material";
 import Alert from "@mui/material/Alert";
 import { createFileRoute, useNavigate } from "@tanstack/react-router";
 import { useEffect, useRef, useState } from "react";
+import { flushSync } from "react-dom";
 import { z } from "zod";
 import { userApi } from "@/api";
 import type { Status } from "@ecommerce/constants";
@@ -38,65 +39,65 @@ function RouteComponent() {
             try {
                 const response = await userApi.signIn(code, state);
 
-                if (response.state === "ok" && response.data) {
-                    setToken(response.data);
-
-                    // ✨ 核心修复：在这里立刻拨动全局状态，同步通知路由守卫此用户已登录成功
-                    setIsAuthenticated(true);
-
-                    setStatus("success");
-                    if (isTokenExpired(response.data)) {
-                        console.warn("Token已过期，请重新登录或尝试刷新。");
-                        setAccount({});
-                        return;
-                    }
-                    const payload = decodeJwtPayload(response.data);
-                    console.log("payload", payload);
-                    if (payload) {
-                        setAccount({
-                            id: payload.id,
-                            displayName: payload.displayName,
-                            name: payload.name,
-                            email: payload.email,
-                            avatar: payload.avatar,
-                        });
-                    }
-
-                    // 添加登录成功通知
-                    addNotification({
-                        message: "登录成功",
-                        severity: "success",
-                    });
-                    // 重定向到首页
-                    await navigate({to: "/"});
+                if (response.state !== "ok" || !response.data) {
+                    throw new Error("登录响应异常");
                 }
-                // 检查是否有之前存过的锚点 URL
+
+                setToken(response.data);
+
+                // ✨ 关键修复：使用 flushSync 强制同步刷新 React 状态，
+                // 确保 setIsAuthenticated 在 navigate 之前传播到 Router context，
+                // 否则受保护路由的 beforeLoad 仍会读到 isAuthenticated=false 从而重新跳转登录
+                flushSync(() => {
+                    setIsAuthenticated(true);
+                });
+
+                setStatus("success");
+
+                if (isTokenExpired(response.data)) {
+                    console.warn("Token已过期，请重新登录或尝试刷新。");
+                    setAccount({});
+                    return;
+                }
+
+                const payload = decodeJwtPayload(response.data);
+                if (payload) {
+                    setAccount({
+                        id: payload.id,
+                        displayName: payload.displayName,
+                        name: payload.name,
+                        email: payload.email,
+                        avatar: payload.avatar,
+                    });
+                }
+
+                addNotification({
+                    message: "登录成功",
+                    severity: "success",
+                });
+
+                // 检查是否有之前存过的锚点 URL（必须在登录成功分支内）
                 const originTarget = localStorage.getItem("redirect_after_login");
-                localStorage.removeItem("redirect_after_login"); // 阅后即焚，防止污染下一次登录
+                localStorage.removeItem("redirect_after_login"); // 阅后即焚
 
                 if (originTarget && originTarget.startsWith(window.location.origin)) {
-                    // 如果是本站内的合法路径，直接提取出路由部分跳过去
                     const targetPath = originTarget.replace(window.location.origin, "");
                     await navigate({ to: targetPath });
                 } else {
-                    // 否则降级回首页
                     await navigate({ to: "/" });
                 }
             } catch (err) {
                 setStatus("error");
                 console.error("RPC 调用错误:", err);
-                // 添加登录失败通知
                 addNotification({
                     message: "登录失败，请重试",
                     severity: "error",
                 });
-                // 重定向到首页
                 await navigate({to: "/"});
             }
         };
 
         handleLogin();
-        // 将 setIsAuthenticated 补充进依赖项中，保持 Hooks 的规范性
     }, [code, state, navigate, setIsAuthenticated]);
 
     const render = () => {
@@ -104,7 +105,7 @@ function RouteComponent() {
             case "success":
                 return (
                     <Alert icon={<CheckIcon fontSize="inherit"/>} severity="success">
-                        登录成功，正在跳转到首页...
+                        登录成功，正在跳转...
                     </Alert>
                 );
             case "error":
