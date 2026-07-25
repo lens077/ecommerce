@@ -16,6 +16,7 @@ import (
 	"github.com/jackc/pgx/v5/pgxpool"
 	"github.com/lens077/ecommerce/backend/services/address/constants"
 	conf "github.com/lens077/ecommerce/backend/services/address/internal/conf/v1"
+	"github.com/lens077/ecommerce/backend/services/address/internal/data/models"
 	"github.com/lens077/ecommerce/backend/services/address/internal/pkg/dbutil"
 	"github.com/lens077/ecommerce/backend/services/address/internal/pkg/log"
 	"github.com/redis/go-redis/v9"
@@ -40,6 +41,7 @@ type contextTxKey struct{}
 // Data 包含所有数据源的客户端
 type Data struct {
 	db           *pgxpool.Pool
+	queries      *models.Queries
 	rdb          *redis.Client
 	auth         *casdoorsdk.Client
 	es           *elasticsearch.TypedClient
@@ -50,11 +52,12 @@ type Data struct {
 // NewData 是 Data 的构造函数
 func NewData(db *pgxpool.Pool, rdb *redis.Client, auth *casdoorsdk.Client, es *elasticsearch.TypedClient, logger *zap.Logger) *Data {
 	return &Data{
-		db:   db,
-		rdb:  rdb,
-		auth: auth,
-		es:   es,
-		log:  logger,
+		db:      db,
+		queries: models.New(db),
+		rdb:     rdb,
+		auth:    auth,
+		es:      es,
+		log:     logger,
 		dbErrHandler: dbutil.NewHandler(
 			// dbutil.WithErrorMapping("23505", biz.ErrAlreadyExists),
 			// dbutil.WithErrorMapping("23503", biz.ErrNotFound),

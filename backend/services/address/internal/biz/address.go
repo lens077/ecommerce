@@ -3,6 +3,8 @@ package biz
 import (
 	"context"
 	"time"
+
+	"github.com/google/uuid"
 )
 
 type AddressDetail struct {
@@ -15,23 +17,23 @@ type AddressDetail struct {
 }
 
 type Address struct {
-	AddressID      string        `json:"address_id"`
-	RecipientName  string        `json:"recipient_name"`
-	RecipientPhone string        `json:"recipient_phone"`
-	UserID         string        `json:"user_id"`
+	AddressID      string         `json:"address_id"`
+	RecipientName  string         `json:"recipient_name"`
+	RecipientPhone string         `json:"recipient_phone"`
+	UserID         string         `json:"user_id"`
 	Detail         *AddressDetail `json:"detail"`
-	IsDefault      bool          `json:"is_default"`
-	CreatedAt      time.Time     `json:"created_at"`
-	UpdatedAt      time.Time     `json:"updated_at"`
-	DeletedAt      *time.Time    `json:"deleted_at"`
+	IsDefault      bool           `json:"is_default"`
+	CreatedAt      time.Time      `json:"created_at"`
+	UpdatedAt      time.Time      `json:"updated_at"`
+	DeletedAt      *time.Time     `json:"deleted_at"`
 }
 
 type CreateAddressRequest struct {
-	RecipientName  string        `json:"recipient_name"`
-	RecipientPhone string        `json:"recipient_phone"`
-	UserID         string        `json:"user_id"`
+	RecipientName  string         `json:"recipient_name"`
+	RecipientPhone string         `json:"recipient_phone"`
+	UserID         string         `json:"user_id"`
 	Detail         *AddressDetail `json:"detail"`
-	IsDefault      bool          `json:"is_default"`
+	IsDefault      bool           `json:"is_default"`
 }
 
 type CreateAddressResponse struct {
@@ -39,9 +41,9 @@ type CreateAddressResponse struct {
 }
 
 type UpdateAddressRequest struct {
-	AddressID      string        `json:"address_id"`
-	RecipientName  *string       `json:"recipient_name"`
-	RecipientPhone *string       `json:"recipient_phone"`
+	AddressID      string         `json:"address_id"`
+	RecipientName  *string        `json:"recipient_name"`
+	RecipientPhone *string        `json:"recipient_phone"`
 	Detail         *AddressDetail `json:"detail"`
 }
 
@@ -58,22 +60,22 @@ type GetAddressRequest struct {
 }
 
 type GetAddressResponse struct {
-	AddressID      string        `json:"address_id"`
-	RecipientName  string        `json:"recipient_name"`
-	RecipientPhone string        `json:"recipient_phone"`
-	UserID         string        `json:"user_id"`
-	Detail         *AddressDetail `json:"detail"`
-	IsDefault      bool          `json:"is_default"`
-	CreatedAt      time.Time     `json:"created_at"`
-	UpdatedAt      time.Time     `json:"updated_at"`
+	AddressID      string
+	RecipientName  string
+	RecipientPhone string
+	UserID         string
+	Detail         *AddressDetail
+	IsDefault      bool
+	CreatedAt      time.Time
+	UpdatedAt      time.Time
 }
 
 type ListAddressesRequest struct {
-	UserID string `json:"user_id"`
+	UserID uuid.UUID
 }
 
 type ListAddressesResponse struct {
-	Addresses []*GetAddressResponse `json:"addresses"`
+	Addresses []*GetAddressResponse
 }
 
 type SetDefaultAddressRequest struct {
