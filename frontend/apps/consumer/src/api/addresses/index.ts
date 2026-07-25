@@ -1,59 +1,62 @@
-// 地址API服务
-import type { Address } from "./types"
-// 模拟API调用
-const mockDelay = (ms: number) => new Promise((resolve) => setTimeout(resolve, ms));
+// 地址API服务 — 调用后端 AddressService（Connect-Go）
+import { createClient } from "@connectrpc/connect";
+import { createConnectTransport } from "@connectrpc/connect-web";
+import { AddressService } from "@/gen/api";
+import { errorInterceptor, loggerInterceptor, authInterceptor } from "@ecommerce/api";
+import { userStore } from "@/store/users";
+import type { Address, AddressFormData, UpdateAddressParams } from "./types";
 
-// 获取地址列表
-export const getAddresses = async (): Promise<Address[]> => {
-    await mockDelay(500);
-    // 模拟数据
-    return [
-        {
-            id: "1",
-            name: "张三",
-            phone: "13800138000",
-            province: "广东省",
-            city: "深圳市",
-            district: "南山区",
-            address: "科技园南区8栋",
-            isDefault: true,
-        },
-        {
-            id: "2",
-            name: "李四",
-            phone: "13900139000",
-            province: "北京市",
-            city: "北京市",
-            district: "朝阳区",
-            address: "望京SOHO T1",
-            isDefault: false,
-        },
-    ];
+const transport = createConnectTransport({
+  baseUrl: "http://localhost:8080",
+  interceptors: [authInterceptor, loggerInterceptor, errorInterceptor],
+});
+
+const client = createClient(AddressService, transport);
+
+/** 构造 AddressDetail */
+function buildDetail(data: AddressFormData) {
+  return {
+    province: data.province,
+    city: data.city,
+    district: data.district,
+    detail: data.detail,
+  };
+}
+
+/** 获取地址列表 */
+export const getAddresses = async (signal?: AbortSignal): Promise<Address[]> => {
+  const response = await client.listAddresses({}, { signal });
+  return response.addresses;
 };
 
-// 创建新地址
-export const createAddress = async (address: Omit<Address, "id">): Promise<Address> => {
-    await mockDelay(500);
-    return {
-        ...address,
-        id: Date.now().toString(),
-    };
+/** 创建新地址 */
+export const createAddress = async (data: AddressFormData): Promise<string> => {
+  const response = await client.createAddress({
+    recipientName: data.recipientName,
+    recipientPhone: data.recipientPhone,
+    userId: userStore.account.id,
+    detail: buildDetail(data),
+    isDefault: data.isDefault,
+  });
+  return response.addressId;
 };
 
-// 更新地址
-export const updateAddress = async (address: Address): Promise<Address> => {
-    await mockDelay(500);
-    return address;
+/** 更新地址 */
+export const updateAddress = async (params: UpdateAddressParams): Promise<void> => {
+  await client.updateAddress({
+    addressId: params.addressId,
+    recipientName: params.recipientName,
+    recipientPhone: params.recipientPhone,
+    detail: buildDetail(params),
+  });
 };
 
-// 删除地址
-export const deleteAddress = async (_id: string): Promise<boolean> => {
-    await mockDelay(500);
-    return true;
+/** 删除地址 */
+export const deleteAddress = async (addressId: string): Promise<void> => {
+  await client.deleteAddress({ addressId });
 };
 
-// 设置默认地址
-export const setDefaultAddress = async (_id: string): Promise<boolean> => {
-    await mockDelay(500);
-    return true;
+/** 设置默认地址 */
+export const setDefaultAddress = async (addressId: string): Promise<void> => {
+  await client.setDefaultAddress({ addressId });
 };
