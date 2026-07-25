@@ -11,7 +11,6 @@ import {
   DialogActions,
   DialogContent,
   DialogTitle,
-  Divider,
   FormControl,
   IconButton,
   InputLabel,
@@ -27,7 +26,7 @@ import {
 } from "@mui/material";
 import { createFileRoute, redirect } from "@tanstack/react-router";
 import { useEffect, useState } from "react";
-import type { Address } from "@/api/addresses/types";
+import type { Address, AddressFormData } from "@/api/addresses/types";
 import { getLocationInfo, requestLocationPermission } from "@/api/location";
 import { useAddresses } from "@/hooks/useAddresses";
 import { useGetUserProfile } from "@/hooks/useProfile";
@@ -72,13 +71,13 @@ function RouteComponent() {
   const [currentAddress, setCurrentAddress] = useState<Address | null>(null);
   const [formError, setFormError] = useState<string | null>(null);
   const [isGettingLocation, setIsGettingLocation] = useState(false);
-  const [formData, setFormData] = useState({
-    name: "",
-    phone: "",
+  const [formData, setFormData] = useState<AddressFormData>({
+    recipientName: "",
+    recipientPhone: "",
     province: "",
     city: "",
     district: "",
-    address: "",
+    detail: "",
     isDefault: false,
   });
 
@@ -95,12 +94,12 @@ function RouteComponent() {
       // 编辑现有地址，直接打开编辑对话框
       setCurrentAddress(address);
       setFormData({
-        name: address.name,
-        phone: address.phone,
-        province: address.province,
-        city: address.city,
-        district: address.district,
-        address: address.address,
+        recipientName: address.recipientName,
+        recipientPhone: address.recipientPhone,
+        province: address.detail?.province ?? "",
+        city: address.detail?.city ?? "",
+        district: address.detail?.district ?? "",
+        detail: address.detail?.detail ?? "",
         isDefault: address.isDefault,
       });
       setOpenDialog(true);
@@ -108,12 +107,12 @@ function RouteComponent() {
       // 添加新地址，先弹出位置权限请求
       setCurrentAddress(null);
       setFormData({
-        name: "",
-        phone: "",
+        recipientName: "",
+        recipientPhone: "",
         province: "",
         city: "",
         district: "",
-        address: "",
+        detail: "",
         isDefault: false,
       });
       setOpenLocationPermissionDialog(true);
@@ -136,7 +135,7 @@ function RouteComponent() {
             province: locationInfo.province,
             city: locationInfo.city,
             district: locationInfo.district,
-            address: locationInfo.address,
+            detail: locationInfo.address,
           }));
         }
       }
@@ -159,20 +158,20 @@ function RouteComponent() {
     setFormError(null);
   };
 
-  const handleDeleteAddress = (id: string) => {
-    deleteAddress(id);
+  const handleDeleteAddress = (addressId: string) => {
+    deleteAddress(addressId);
   };
 
   const handleSaveAddress = () => {
     setFormError(null);
     // 简单验证
     if (
-      !formData.name ||
-      !formData.phone ||
+      !formData.recipientName ||
+      !formData.recipientPhone ||
       !formData.province ||
       !formData.city ||
       !formData.district ||
-      !formData.address
+      !formData.detail
     ) {
       setFormError("请填写所有必填字段");
       return;
@@ -180,7 +179,7 @@ function RouteComponent() {
 
     if (currentAddress) {
       // 更新现有地址
-      updateAddress({ ...formData, id: currentAddress.id });
+      updateAddress({ ...formData, addressId: currentAddress.addressId });
     } else {
       // 创建新地址
       createAddress(formData);
@@ -260,7 +259,7 @@ function RouteComponent() {
             <List sx={{ width: "100%" }}>
               {addresses?.map((address) => (
                 <ListItem
-                  key={address.id}
+                  key={address.addressId}
                   sx={{
                     mb: 2,
                     borderRadius: "16px",
@@ -277,10 +276,10 @@ function RouteComponent() {
                     primary={
                       <Box sx={{ display: "flex", alignItems: "center", gap: 2, mb: 1 }}>
                         <Typography variant="subtitle1" sx={{ fontWeight: 600 }}>
-                          {address.name}
+                          {address.recipientName}
                         </Typography>
                         <Typography variant="subtitle1" sx={{ fontWeight: 600, color: "text.primary" }}>
-                          {address.phone}
+                          {address.recipientPhone}
                         </Typography>
                         {address.isDefault && (
                           <Box
@@ -303,7 +302,7 @@ function RouteComponent() {
                       <Box sx={{ display: "flex", alignItems: "flex-start", gap: 1 }}>
                         <LocationOn sx={{ fontSize: 16, color: "text.secondary", mt: 0.3 }} />
                         <Typography variant="body2" color="text.secondary">
-                          {address.province} {address.city} {address.district} {address.address}
+                          {address.detail?.province} {address.detail?.city} {address.detail?.district} {address.detail?.detail}
                         </Typography>
                       </Box>
                     }
@@ -327,7 +326,7 @@ function RouteComponent() {
                       <IconButton
                         edge="end"
                         aria-label="delete"
-                        onClick={() => handleDeleteAddress(address.id)}
+                        onClick={() => handleDeleteAddress(address.addressId)}
                         size="small"
                         sx={{
                           color: "#f44336",
@@ -404,15 +403,15 @@ function RouteComponent() {
               <TextField
                 label="收件人"
                 fullWidth
-                value={formData.name}
-                onChange={(e) => setFormData((prev) => ({ ...prev, name: e.target.value }))}
+                value={formData.recipientName}
+                onChange={(e) => setFormData((prev) => ({ ...prev, recipientName: e.target.value }))}
                 sx={{ mb: 2 }}
               />
               <TextField
                 label="手机号码"
                 fullWidth
-                value={formData.phone}
-                onChange={(e) => setFormData((prev) => ({ ...prev, phone: e.target.value }))}
+                value={formData.recipientPhone}
+                onChange={(e) => setFormData((prev) => ({ ...prev, recipientPhone: e.target.value }))}
                 sx={{ mb: 2 }}
               />
             </Box>
@@ -465,8 +464,8 @@ function RouteComponent() {
               fullWidth
               multiline
               rows={3}
-              value={formData.address}
-              onChange={(e) => setFormData((prev) => ({ ...prev, address: e.target.value }))}
+              value={formData.detail}
+              onChange={(e) => setFormData((prev) => ({ ...prev, detail: e.target.value }))}
               sx={{ mb: 2 }}
             />
             <Box sx={{ display: "flex", alignItems: "center", mb: 2 }}>
