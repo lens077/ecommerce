@@ -5,8 +5,10 @@ import (
 	"fmt"
 
 	"connectrpc.com/connect"
+	"github.com/google/uuid"
 	v1 "github.com/lens077/ecommerce/backend/api/address/v1"
 	"github.com/lens077/ecommerce/backend/api/address/v1/addressv1connect"
+	"github.com/lens077/ecommerce/backend/constants"
 	"github.com/lens077/ecommerce/backend/services/address/internal/biz"
 	"google.golang.org/protobuf/types/known/timestamppb"
 )
@@ -122,8 +124,14 @@ func (s *AddressService) GetAddress(ctx context.Context, c *connect.Request[v1.G
 }
 
 func (s *AddressService) ListAddresses(ctx context.Context, c *connect.Request[v1.ListAddressesRequest]) (*connect.Response[v1.ListAddressesResponse], error) {
+	userIdStr := c.Header().Get(constants.UserIdMetadataKey)
+	consumerId, err := uuid.Parse(userIdStr)
+	if err != nil {
+		return nil, err
+	}
+
 	result, err := s.uc.ListAddresses(ctx, biz.ListAddressesRequest{
-		UserID: c.Msg.UserId,
+		UserID: consumerId,
 	})
 	if err != nil {
 		return nil, err
