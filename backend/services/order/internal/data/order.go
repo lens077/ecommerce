@@ -100,7 +100,7 @@ type orderQueryRepo struct {
 	log  *zap.SugaredLogger
 }
 
-func (o orderQueryRepo) GetOrderGroupByNo(ctx context.Context, groupNo string) (*domain.OrderGroupRoot, error) {
+func (o orderQueryRepo) GetOrderGroupByNo(ctx context.Context, groupNo string) (*domain.OrderGroupDTO, error) {
 	// TODO implement me
 	panic("implement me")
 }
@@ -157,17 +157,17 @@ func (o orderQueryRepo) GetOrderByNo(ctx context.Context, orderNo string) (*doma
 	}, nil
 }
 
-func (o orderQueryRepo) GetOrdersByGroupNo(ctx context.Context, groupNo string) ([]*domain.OrderRoot, error) {
+func (o orderQueryRepo) GetOrdersByGroupNo(ctx context.Context, groupNo string) ([]*domain.OrderDTO, error) {
 	// TODO implement me
 	panic("implement me")
 }
 
-func (o orderQueryRepo) GetOrdersByUserID(ctx context.Context, userID string, page, pageSize int) ([]*domain.OrderRoot, int64, error) {
+func (o orderQueryRepo) GetOrdersByUserID(ctx context.Context, userID string, page, pageSize int) ([]*domain.OrderDTO, int64, error) {
 	// TODO implement me
 	panic("implement me")
 }
 
-func (o orderQueryRepo) GetOrdersByMerchantID(ctx context.Context, merchantID int64, page, pageSize int) ([]*domain.OrderRoot, int64, error) {
+func (o orderQueryRepo) GetOrdersByMerchantID(ctx context.Context, merchantID int64, page, pageSize int) ([]*domain.OrderDTO, int64, error) {
 	// TODO implement me
 	panic("implement me")
 }
