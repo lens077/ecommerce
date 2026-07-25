@@ -2,6 +2,7 @@ syntax = "proto3";
 
 import "google/protobuf/timestamp.proto";
 import "google/protobuf/struct.proto";
+import "google/protobuf/wrappers.proto";
 import "third_party/validate/validate.proto";
 
 package cart.v1;
@@ -9,10 +10,17 @@ package cart.v1;
 option go_package = "github.com/lens077/ecommerce/backend/api/cart/v1;cartv1";
 
 service CartService {
+  rpc GetCart(GetCartRequest) returns (GetCartResponse){}
   rpc AddProductToCart(AddProductToCartRequest) returns (AddProductToCartResponse){}
   rpc RemoveCartItem(RemoveCartItemRequest) returns (RemoveCartItemResponse){}
   rpc UpdateCartItemQuantity(UpdateCartItemQuantityRequest) returns (UpdateCartItemQuantityResponse){}
-  rpc GetCart(GetCartRequest) returns (GetCartResponse){}
+}
+
+enum CartStatus {
+  CART_STATUS_UNKNOWN = 0;
+  CART_STATUS_ACTIVE = 1;
+  CART_STATUS_EXPIRED = 2;
+  CART_STATUS_DELETED = 3;
 }
 
 message AddProductToCartRequest {
@@ -27,24 +35,26 @@ message AddProductToCartRequest {
   double price = 8;
   google.protobuf.Struct sku_attributes = 9;
   string sku_thumbnail_url = 10; // 商品图片
-  string status = 11 [(buf.validate.field).string = {
-    in: ["active", "expired", "deleted"]
-  }];
+  CartStatus status = 11 [(buf.validate.field).enum.defined_only = true];
 }
 
 message AddProductToCartResponse {
-  uint32 cart_total_quantity = 1; // 购物车当前商品总件数，方便前端直接刷新右上角小红点
-  uint64 cart_item_id = 2;        // 该商品在购物车中的唯一记录 ID，方便前端后续进行修改或删除
+  uint32 cart_item_quantity = 1; // 购物车商品总数量
 }
 
 message RemoveCartItemRequest {
-  uint64 spu_id = 1;
-  uint64 sku_id = 2;
-  string merchant_id = 3[(buf.validate.field).string.uuid = true];
+  repeated int64 spu_ids = 1;
+  repeated int64 sku_ids = 2;
+  repeated string merchant_ids = 3[(buf.validate.field).repeated.items = {
+    string: {
+      uuid: true
+    }
+  }];
+  repeated CartStatus status = 4 [(buf.validate.field).repeated.items.enum.defined_only = true];
 }
 
 message RemoveCartItemResponse {
-  uint32 cart_total_quantity = 1; // 删除后，购物车剩下的商品总件数（用于刷新右上角小红点）
+  uint32 cart_item_quantity = 1; // 删除后，购物车商品总数量（用于刷新右上角小红点）
   bool is_cart_empty = 2;         // 购物车是否已经彻底空了（用于前端直接切换到“空购物车”占位图）
 }
 
@@ -56,7 +66,7 @@ message UpdateCartItemQuantityRequest {
 }
 
 message UpdateCartItemQuantityResponse {
-  uint32 cart_total_quantity = 1; // 更新后，购物车剩下的商品总件数（用于刷新右上角小红点）
+  uint32 cart_item_quantity = 1; // 更新后，购物车商品总数量（用于刷新右上角小红点）
 }
 
 message GetCartRequest {
@@ -74,11 +84,11 @@ message CartItem {
   double price = 9;
   google.protobuf.Struct sku_attributes = 10;
   string sku_thumbnail_url = 11;
-  string status = 12;
+  CartStatus status = 12[(buf.validate.field).enum.defined_only = true];
 }
 
 message GetCartResponse {
   repeated CartItem items = 1;                     // 购物车商品列表
-  uint32 cart_total_quantity = 2;                  // 购物车总数量
-  bool is_cart_empty = 3;                          // 购物车是否为空
+  uint32 cart_item_quantity = 2;                  // 购物车商品总数量
+  google.protobuf.BoolValue is_cart_empty = 3;      // 购物车是否为空
 }

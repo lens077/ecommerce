@@ -3,7 +3,6 @@ package service
 import (
 	"context"
 	"encoding/json"
-	"fmt"
 
 	"connectrpc.com/connect"
 	"github.com/google/uuid"
@@ -11,11 +10,14 @@ import (
 	"github.com/lens077/ecommerce/backend/api/cart/v1/cartv1connect"
 	"github.com/lens077/ecommerce/backend/constants"
 	"github.com/lens077/ecommerce/backend/services/cart/internal/biz"
-	structpb "google.golang.org/protobuf/types/known/structpb"
+	"go.uber.org/zap"
+	"google.golang.org/protobuf/types/known/structpb"
+	"google.golang.org/protobuf/types/known/wrapperspb"
 )
 
 type CartService struct {
-	uc *biz.CartUseCase
+	uc  *biz.CartUseCase
+	log *zap.Logger
 }
 
 func (cs *CartService) AddProductToCart(ctx context.Context, c *connect.Request[v1.AddProductToCartRequest]) (*connect.Response[v1.AddProductToCartResponse], error) {
@@ -50,8 +52,7 @@ func (cs *CartService) AddProductToCart(ctx context.Context, c *connect.Request[
 	}
 
 	response := connect.NewResponse(&v1.AddProductToCartResponse{
-		CartTotalQuantity: uint32(cart.CartTotalQuantity),
-		CartItemId:        uint64(cart.CartItemId),
+		CartItemQuantity: uint32(cart.CartItemQuantity),
 	})
 	return response, nil
 }
@@ -63,24 +64,38 @@ func (cs *CartService) RemoveCartItem(ctx context.Context, c *connect.Request[v1
 	if err != nil {
 		return nil, err
 	}
-	merchantId, err := uuid.Parse(req.MerchantId)
-	if err != nil {
-		return nil, err
+
+	merchantIds := make([]uuid.UUID, 0, len(req.MerchantIds))
+	for _, id := range req.MerchantIds {
+		ids, err := uuid.Parse(id)
+		if err != nil {
+			return nil, err
+		}
+		merchantIds = append(merchantIds, ids)
 	}
-	fmt.Printf("req: %+v\n", req)
+
+	statuses := make([]constants.CartStatusEnum, 0, len(req.Status))
+	for _, statusStr := range req.Status {
+		cs.log.Sugar().Debug("statusStr: %+v\n", statusStr)
+		status := CartStatusFromProto(statusStr)
+
+		statuses = append(statuses, status)
+	}
+	cs.log.Sugar().Debug("status: %+v\n", statuses)
+
 	cart, err := cs.uc.RemoveCartItem(ctx, biz.RemoveCartItemRequest{
-		ConsumerId: consumerId,
-		MerchantId: merchantId,
-		SpuId:      req.SpuId,
-		SkuId:      req.SkuId,
-		Status:     constants.CartStatusActive,
+		ConsumerId:  consumerId,
+		MerchantIds: merchantIds,
+		SpuIds:      req.SpuIds,
+		SkuIds:      req.SkuIds,
+		Statuses:    statuses,
 	})
 	if err != nil {
 		return nil, err
 	}
 	response := connect.NewResponse(&v1.RemoveCartItemResponse{
-		CartTotalQuantity: cart.CartTotalQuantity,
-		IsCartEmpty:       cart.IsCartEmpty,
+		CartItemQuantity: cart.CartItemQuantity,
+		IsCartEmpty:      cart.IsCartEmpty,
 	})
 
 	return response, nil
@@ -109,15 +124,15 @@ func (cs *CartService) UpdateCartItemQuantity(ctx context.Context, c *connect.Re
 		return nil, err
 	}
 	response := connect.NewResponse(&v1.UpdateCartItemQuantityResponse{
-		CartTotalQuantity: cart.CartTotalQuantity,
+		CartItemQuantity: cart.CartItemQuantity,
 	})
 
 	return response, nil
 }
 
 func (cs *CartService) GetCart(ctx context.Context, c *connect.Request[v1.GetCartRequest]) (*connect.Response[v1.GetCartResponse], error) {
-	// userIdStr := c.Header().Get(constants.UserIdMetadataKey)
-	userIdStr := "88735c43-9899-44b6-9aec-74f37a8996b4"
+	userIdStr := c.Header().Get(constants.UserIdMetadataKey)
+	// userIdStr := "88735c43-9899-44b6-9aec-74f37a8996b4"
 	consumerId, err := uuid.Parse(userIdStr)
 	if err != nil {
 		return nil, err
@@ -150,14 +165,14 @@ func (cs *CartService) GetCart(ctx context.Context, c *connect.Request[v1.GetCar
 			Price:           item.Price,
 			SkuAttributes:   skuAttributes,
 			SkuThumbnailUrl: item.SkuThumbnailUrl,
-			Status:          string(item.Status),
+			// Status:          item.Status,
 		})
 	}
 
 	response := connect.NewResponse(&v1.GetCartResponse{
-		Items:             items,
-		CartTotalQuantity: cart.CartTotalQuantity,
-		IsCartEmpty:       cart.IsCartEmpty,
+		Items:            items,
+		CartItemQuantity: cart.CartItemQuantity,
+		IsCartEmpty:      wrapperspb.Bool(cart.IsCartEmpty),
 	})
 
 	return response, nil
@@ -165,6 +180,20 @@ func (cs *CartService) GetCart(ctx context.Context, c *connect.Request[v1.GetCar
 
 var _ cartv1connect.CartServiceHandler = (*CartService)(nil)
 
-func NewCartService(uc *biz.CartUseCase) cartv1connect.CartServiceHandler {
-	return &CartService{uc: uc}
+func NewCartService(uc *biz.CartUseCase, log *zap.Logger) cartv1connect.CartServiceHandler {
+	return &CartService{uc: uc, log: log}
+}
+
+// CartStatusFromProto 将 protobuf 枚举转为字符串枚举
+func CartStatusFromProto(status v1.CartStatus) constants.CartStatusEnum {
+	switch status {
+	case v1.CartStatus_CART_STATUS_ACTIVE:
+		return constants.CartStatusActive
+	case v1.CartStatus_CART_STATUS_EXPIRED:
+		return constants.CartStatusExpired
+	case v1.CartStatus_CART_STATUS_DELETED:
+		return constants.CartStatusDeleted
+	default:
+		return constants.CartStatusEnum("") // 未知时返回空字符串，可根据需要调整
+	}
 }
