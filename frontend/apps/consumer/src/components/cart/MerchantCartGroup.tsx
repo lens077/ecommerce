@@ -1,9 +1,3 @@
-/**
- * 商家购物车分组组件
- *
- * 按商家分组的购物车项，支持商家级全选
- */
-
 import { Box, Checkbox, Typography } from "@mui/material";
 import { Store } from "lucide-react";
 import { CartItemCard } from "./CartItemCard";
@@ -27,7 +21,6 @@ export function MerchantCartGroup({
 }: MerchantCartGroupProps) {
   const activeItems = group.items.filter((item) => item.status === "active");
 
-  // 没有有效商品则不渲染
   if (activeItems.length === 0) return null;
 
   const allSelected = activeItems.every((item) => item.selected);
@@ -35,17 +28,14 @@ export function MerchantCartGroup({
     !allSelected && activeItems.some((item) => item.selected);
 
   return (
-    <Box sx={{ mb: tokens.spacing[6] }}>
-      {/* 商家标题栏：带全选 */}
+    <Box sx={{ mb: tokens.spacing[4] }}>
       <Box
         sx={{
           display: "flex",
           alignItems: "center",
           gap: tokens.spacing[2],
           mb: tokens.spacing[3],
-          p: tokens.spacing[2],
-          bgcolor: tokens.colors.background.primary,
-          borderRadius: tokens.radius.md,
+          px: tokens.spacing[4],
         }}
       >
         <Checkbox
@@ -70,7 +60,6 @@ export function MerchantCartGroup({
         </Typography>
       </Box>
 
-      {/* 商品列表 */}
       <Box sx={{ display: "flex", flexDirection: "column", gap: tokens.spacing[3] }}>
         {activeItems.map((item) => (
           <CartItemCard
