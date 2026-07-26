@@ -31,15 +31,15 @@ export function CartSummaryCard({
   if (variant === "sidebar") {
     return (
       <Box
-        sx={{
-          position: "sticky",
-          top: 88, // 顶部导航栏高度 + 间距
-          bgcolor: tokens.colors.background.card,
-          border: `1px solid ${tokens.colors.border.default}`,
-          borderRadius: tokens.radius.xl,
-          p: tokens.spacing[5],
-        }}
-      >
+      sx={{
+        position: "sticky",
+        top: 64,
+        bgcolor: tokens.colors.background.card,
+        border: `1px solid ${tokens.colors.border.default}`,
+        borderRadius: tokens.radius.lg,
+        p: tokens.spacing[4],
+      }}
+    >
         {/* 全选 */}
         <Box
           onClick={() => onSelectAll(!allSelected)}
@@ -154,15 +154,15 @@ export function CartSummaryCard({
       }}
     >
       <Box
-        sx={{
-          maxWidth: 1200,
-          mx: "auto",
-          display: "flex",
-          alignItems: "center",
-          justifyContent: "space-between",
-          gap: tokens.spacing[4],
-        }}
-      >
+          sx={{
+            maxWidth: 960,
+            mx: "auto",
+            display: "flex",
+            alignItems: "center",
+            justifyContent: "space-between",
+            gap: tokens.spacing[4],
+          }}
+        >
         {/* 全选 */}
         <Box
           onClick={() => onSelectAll(!allSelected)}
