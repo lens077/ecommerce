@@ -7,6 +7,7 @@
  */
 
 import { useCallback, useEffect, useState } from "react";
+import { useQuery } from "@tanstack/react-query";
 import { cartApi, type AddToCartRequest } from "@/api/cart";
 import {
   cartStore,
@@ -16,30 +17,29 @@ import {
   type MerchantGroup,
 } from "@/store/cart";
 
-// ============================================================================
+
 // useCartBadge
-// ============================================================================
+
 
 /**
  * 用于获取购物车数量的 Hook（轻量级，用于 AppBar 等）
+ * 从后端 GetCartSummary 接口获取购物车数量
  * 
  * @returns 购物车总数量
  */
 export function useCartBadge(): number {
-  const [count, setCount] = useState(() => cartStore.totalQuantity);
+  const { data } = useQuery({
+    queryKey: ["cartSummary"],
+    queryFn: () => cartApi.getCartSummary(),
+    staleTime: 10000,
+  });
 
-  useEffect(() => {
-    return subscribe(() => {
-      setCount(cartStore.totalQuantity);
-    });
-  }, []);
-
-  return count;
+  return data ?? 0;
 }
 
-// ============================================================================
+
 // useCart
-// ============================================================================
+
 
 /**
  * 完整的购物车 Hook
@@ -54,6 +54,7 @@ export function useCart() {
   );
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [isInitializing, setIsInitializing] = useState(true);
 
   // 订阅状态变化
   useEffect(() => {
@@ -62,6 +63,49 @@ export function useCart() {
       setSummary(cartStore.getSummary());
       setMerchantGroups(cartStore.getMerchantGroups());
     });
+  }, []);
+
+  // 初始化时从后端加载购物车数据
+  useEffect(() => {
+    let isMounted = true;
+
+    const loadCartFromBackend = async () => {
+      try {
+        const backendItems = await cartApi.getCartItems();
+        
+        if (isMounted) {
+          cartStore.clear();
+          backendItems.forEach((item) => {
+            cartStore.addItem({
+              spuId: item.spuId,
+              skuId: item.skuId,
+              merchantId: item.merchantId,
+              merchantName: item.merchantName,
+              spuName: item.spuName,
+              skuName: item.skuName,
+              price: item.price,
+              costPrice: item.costPrice,
+              quantity: item.quantity,
+              selected: item.selected,
+              skuThumbnailUrl: item.skuThumbnailUrl,
+              status: item.status,
+            });
+          });
+        }
+      } catch (err) {
+        console.warn("[useCart] Failed to load cart from backend:", err);
+      } finally {
+        if (isMounted) {
+          setIsInitializing(false);
+        }
+      }
+    };
+
+    loadCartFromBackend();
+
+    return () => {
+      isMounted = false;
+    };
   }, []);
 
   /**
@@ -149,6 +193,7 @@ export function useCart() {
     summary,
     merchantGroups,
     isLoading,
+    isInitializing,
     error,
     // 操作
     addItem,
@@ -162,9 +207,9 @@ export function useCart() {
   };
 }
 
-// ============================================================================
+
 // useAddToCart
-// ============================================================================
+
 
 /**
  * 专门用于商品详情页添加购物车的 Hook

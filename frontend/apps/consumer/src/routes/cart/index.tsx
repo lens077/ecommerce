@@ -1,14 +1,6 @@
 import { createFileRoute, useNavigate } from "@tanstack/react-router";
 
-/**
- * 购物车页面
- *
- * 响应式布局：
- * - 桌面端：双栏（左商品列表 + 右结算摘要 sticky）
- * - 移动端：单列 + 底部固定结算栏
- */
-
-import { Box, Typography } from "@mui/material";
+import { Box, Typography, CircularProgress } from "@mui/material";
 import { ArrowLeft } from "lucide-react";
 import { useCart } from "@/hooks/useCart";
 import { EmptyCart } from "@/components/cart/EmptyCart";
@@ -26,9 +18,10 @@ function CartPage() {
     removeItem,
     selectAll,
     selectByMerchant,
+    isInitializing,
   } = useCart();
 
-  const isEmpty = merchantGroups.length === 0;
+  const isEmpty = merchantGroups.length === 0 && !isInitializing;
   const allSelected =
     summary.totalQuantity > 0 && summary.selectedQuantity === summary.totalQuantity;
 
@@ -40,14 +33,31 @@ function CartPage() {
     navigate({ to: "/" });
   };
 
-  if (isEmpty) {
+  if (isInitializing) {
     return (
       <Box sx={{ minHeight: "100vh", bgcolor: tokens.colors.background.primary }}>
-        {/* 顶部导航 */}
         <CartHeader totalQuantity={0} onNavigateHome={handleNavigateHome} />
         <Box
           sx={{
-            maxWidth: 1200,
+            display: "flex",
+            justifyContent: "center",
+            alignItems: "center",
+            height: "60vh",
+          }}
+        >
+          <CircularProgress sx={{ color: tokens.colors.accent.black }} />
+        </Box>
+      </Box>
+    );
+  }
+
+  if (isEmpty) {
+    return (
+      <Box sx={{ minHeight: "100vh", bgcolor: tokens.colors.background.primary }}>
+        <CartHeader totalQuantity={0} onNavigateHome={handleNavigateHome} />
+        <Box
+          sx={{
+            maxWidth: 800,
             mx: "auto",
             px: tokens.spacing[4],
             py: tokens.spacing[6],
@@ -61,26 +71,23 @@ function CartPage() {
 
   return (
     <Box sx={{ minHeight: "100vh", bgcolor: tokens.colors.background.primary }}>
-      {/* 顶部导航 */}
       <CartHeader totalQuantity={summary.totalQuantity} onNavigateHome={handleNavigateHome} />
 
-      {/* 主体内容：响应式双栏 */}
       <Box
         sx={{
-          maxWidth: 1200,
+          maxWidth: 1000,
           mx: "auto",
           px: tokens.spacing[4],
-          py: tokens.spacing[6],
+          py: tokens.spacing[4],
           display: "flex",
-          flexDirection: { xs: "column", md: "row" },
-          gap: tokens.spacing[6],
-          pb: { xs: 20, md: tokens.spacing[6] }, // 移动端为底部结算栏留空间
+          flexDirection: { xs: "column", lg: "row" },
+          gap: tokens.spacing[5],
+          pb: { xs: 20, lg: tokens.spacing[4] },
         }}
       >
-        {/* 左栏：商品列表 */}
-        <Box sx={{ flex: { xs: 1, md: 2 }, minWidth: 0 }}>
+        <Box sx={{ flex: 2, minWidth: 0 }}>
           <Typography
-            variant="h6"
+            variant="h5"
             sx={{ fontWeight: 600, color: tokens.colors.text.primary, mb: tokens.spacing[4] }}
           >
             购物车商品
@@ -98,13 +105,12 @@ function CartPage() {
           ))}
         </Box>
 
-        {/* 右栏：结算摘要（桌面端 sticky，移动端隐藏用底部栏替代） */}
         <Box
           sx={{
-            flex: { xs: 1, md: 1 },
+            flex: 1,
             minWidth: 0,
-            maxWidth: { md: 360 },
-            display: { xs: "none", md: "block" },
+            maxWidth: 320,
+            display: { xs: "none", lg: "block" },
           }}
         >
           <CartSummaryCard
@@ -117,8 +123,7 @@ function CartPage() {
         </Box>
       </Box>
 
-      {/* 移动端底部结算栏 */}
-      <Box sx={{ display: { xs: "block", md: "none" } }}>
+      <Box sx={{ display: { xs: "block", lg: "none" } }}>
         <CartSummaryCard
           summary={summary}
           allSelected={allSelected}
@@ -131,7 +136,6 @@ function CartPage() {
   );
 }
 
-/** 顶部导航栏 */
 function CartHeader({
   totalQuantity,
   onNavigateHome,
@@ -151,12 +155,13 @@ function CartHeader({
     >
       <Box
         sx={{
-          maxWidth: 1200,
+          maxWidth: 1000,
           mx: "auto",
           display: "flex",
           alignItems: "center",
           gap: tokens.spacing[2],
-          p: tokens.spacing[4],
+          px: tokens.spacing[4],
+          py: tokens.spacing[3],
         }}
       >
         <Box

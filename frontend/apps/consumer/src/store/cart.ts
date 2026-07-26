@@ -5,9 +5,9 @@
  * 数据持久化到 localStorage
  */
 
-// ============================================================================
+
 // Types
-// ============================================================================
+
 
 export interface CartItem {
   cartItemId: string;
@@ -45,9 +45,9 @@ export interface CartSummary {
   selectedPrice: number;
 }
 
-// ============================================================================
+
 // Storage
-// ============================================================================
+
 
 const STORAGE_KEY = "ecommerce_cart";
 
@@ -75,9 +75,9 @@ function saveToStorage(state: CartState): void {
   }
 }
 
-// ============================================================================
+
 // Event System
-// ============================================================================
+
 
 const UPDATE_EVENT = "cart-updated";
 
@@ -91,9 +91,9 @@ export function subscribe(callback: () => void): () => void {
   return () => window.removeEventListener(UPDATE_EVENT, handler);
 }
 
-// ============================================================================
+
 // Cart Store
-// ============================================================================
+
 
 class CartStore {
   private state: CartState;
