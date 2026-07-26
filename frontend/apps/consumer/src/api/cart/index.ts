@@ -1,14 +1,50 @@
-/**
- * 购物车 API 客户端
- * 
- * TODO: 后端 CartService 实现后替换为真实的 RPC 调用
- */
-
+import { createClient } from "@connectrpc/connect";
+import { createConnectTransport } from "@connectrpc/connect-web";
+import { CartService, type CartItem as RpcCartItem, CartStatus } from "@/gen/api";
+import { errorInterceptor, loggerInterceptor, authInterceptor } from "@ecommerce/api";
 import type { CartItem } from "@/store/cart";
+import { env } from "@/env";
 
-// ============================================================================
-// Types
-// ============================================================================
+const transport = createConnectTransport({
+  baseUrl: env.VITE_GATEWAY_URL ?? "http://localhost:8080",
+  interceptors: [authInterceptor, loggerInterceptor, errorInterceptor],
+});
+
+const client = createClient(CartService, transport);
+
+function mapRpcCartItemToCartItem(rpcItem: RpcCartItem): CartItem {
+  const now = new Date();
+  return {
+    cartItemId: rpcItem.cartItemId.toString(),
+    spuId: rpcItem.spuId.toString(),
+    skuId: rpcItem.skuId.toString(),
+    merchantId: rpcItem.merchantId,
+    merchantName: undefined,
+    spuName: rpcItem.spuName,
+    skuName: rpcItem.skuName,
+    price: rpcItem.price,
+    costPrice: rpcItem.price,
+    quantity: rpcItem.quantity,
+    selected: rpcItem.selected,
+    skuThumbnailUrl: rpcItem.skuThumbnailUrl,
+    status: mapCartStatus(rpcItem.status),
+    createdAt: now,
+    updatedAt: now,
+  };
+}
+
+function mapCartStatus(status: CartStatus): "active" | "expired" | "deleted" {
+  switch (status) {
+    case CartStatus.ACTIVE:
+      return "active";
+    case CartStatus.EXPIRED:
+      return "expired";
+    case CartStatus.DELETED:
+      return "deleted";
+    default:
+      return "active";
+  }
+}
 
 export interface AddToCartRequest {
   spuId: string;
@@ -41,79 +77,61 @@ export interface RemoveFromCartResponse {
   isCartEmpty: boolean;
 }
 
-// ============================================================================
-// API Client
-// ============================================================================
-
-class CartApiClient {
-  private baseUrl: string;
-
-  constructor() {
-    this.baseUrl = import.meta.env.VITE_API_URL || "http://localhost:8080";
-  }
-
-  /**
-   * 添加商品到购物车
-   * 
-   * TODO: 替换为真实的 CartService RPC 调用
-   */
+export class CartApiClient {
   async addToCart(request: AddToCartRequest): Promise<AddToCartResponse> {
-    try {
-      // 模拟 API 调用
-      console.log("[CartAPI] Adding to cart:", request);
+    const response = await client.addProductToCart({
+      spuId: BigInt(request.spuId),
+      skuId: BigInt(request.skuId),
+      merchantId: request.merchantId,
+      quantity: request.quantity,
+      selected: request.selected,
+      spuName: request.spuName,
+      skuName: request.skuName,
+      price: request.price,
+      skuThumbnailUrl: request.skuThumbnailUrl,
+      status: CartStatus.ACTIVE,
+    });
 
-      // 实际项目中应调用:
-      // const client = createClient(CartService, transport);
-      // return await client.addProductToCart({ ... });
-
-      // 模拟返回
-      return {
-        cartItemId: `${Date.now()}-${Math.random().toString(36).slice(2, 9)}`,
-        cartTotalQuantity: request.quantity,
-      };
-    } catch (error) {
-      console.error("[CartAPI] Failed to add to cart:", error);
-      throw new Error("添加购物车失败，请重试");
-    }
+    return {
+      cartItemId: `${Date.now()}`,
+      cartTotalQuantity: response.cartItemQuantity,
+    };
   }
 
-  /**
-   * 从购物车移除商品
-   * 
-   * TODO: 替换为真实的 CartService RPC 调用
-   */
   async removeFromCart(request: RemoveFromCartRequest): Promise<RemoveFromCartResponse> {
-    try {
-      // 模拟 API 调用
-      console.log("[CartAPI] Removing from cart:", request);
+    const response = await client.removeCartItem({
+      spuIds: [BigInt(request.spuId)],
+      skuIds: [BigInt(request.skuId)],
+      merchantIds: [request.merchantId],
+      status: [CartStatus.DELETED],
+    });
 
-      return {
-        cartTotalQuantity: 0,
-        isCartEmpty: true,
-      };
-    } catch (error) {
-      console.error("[CartAPI] Failed to remove from cart:", error);
-      throw new Error("移除失败，请重试");
-    }
+    return {
+      cartTotalQuantity: response.cartItemQuantity,
+      isCartEmpty: response.isCartEmpty,
+    };
   }
 
-  /**
-   * 获取购物车列表
-   * 
-   * TODO: 替换为真实的 CartService RPC 调用
-   */
   async getCartItems(): Promise<CartItem[]> {
-    try {
-      // 模拟 API 调用
-      console.log("[CartAPI] Fetching cart items");
+    const response = await client.getCart({});
+    return response.items.map(mapRpcCartItemToCartItem);
+  }
 
-      return [];
-    } catch (error) {
-      console.error("[CartAPI] Failed to fetch cart items:", error);
-      throw new Error("获取购物车失败，请重试");
-    }
+  async getCartSummary(): Promise<number> {
+    const response = await client.getCartSummary({});
+    return response.totalCount;
+  }
+
+  async updateCartItemQuantity(spuId: string, skuId: string, merchantId: string, quantity: number): Promise<number> {
+    const response = await client.updateCartItemQuantity({
+      spuId: BigInt(spuId),
+      skuId: BigInt(skuId),
+      merchantId,
+      quantity,
+    });
+
+    return response.cartItemQuantity;
   }
 }
 
-// 单例导出
 export const cartApi = new CartApiClient();
