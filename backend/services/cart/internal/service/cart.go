@@ -132,7 +132,7 @@ func (cs *CartService) UpdateCartItemQuantity(ctx context.Context, c *connect.Re
 
 func (cs *CartService) GetCart(ctx context.Context, c *connect.Request[v1.GetCartRequest]) (*connect.Response[v1.GetCartResponse], error) {
 	userIdStr := c.Header().Get(constants.UserIdMetadataKey)
-	// userIdStr := "88735c43-9899-44b6-9aec-74f37a8996b4"
+
 	consumerId, err := uuid.Parse(userIdStr)
 	if err != nil {
 		return nil, err
@@ -173,6 +173,27 @@ func (cs *CartService) GetCart(ctx context.Context, c *connect.Request[v1.GetCar
 		Items:            items,
 		CartItemQuantity: cart.CartItemQuantity,
 		IsCartEmpty:      wrapperspb.Bool(cart.IsCartEmpty),
+	})
+
+	return response, nil
+}
+
+func (cs *CartService) GetCartSummary(ctx context.Context, c *connect.Request[v1.GetCartSummaryRequest]) (*connect.Response[v1.GetCartSummaryResponse], error) {
+	userIdStr := c.Header().Get(constants.UserIdMetadataKey)
+	consumerId, err := uuid.Parse(userIdStr)
+	if err != nil {
+		return nil, err
+	}
+	cart, err := cs.uc.GetCartSummary(ctx, biz.GetCartSummaryRequest{
+		ConsumerId: consumerId,
+		Status:     constants.CartStatusActive,
+	})
+	if err != nil {
+		return nil, err
+	}
+
+	response := connect.NewResponse(&v1.GetCartSummaryResponse{
+		TotalCount: cart.TotalCount,
 	})
 
 	return response, nil

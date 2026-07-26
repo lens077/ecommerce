@@ -221,6 +221,31 @@ func (q *Queries) GetCartItems(ctx context.Context, arg GetCartItemsParams) ([]G
 	return items, nil
 }
 
+const GetCartSummary = `-- name: GetCartSummary :one
+SELECT COUNT(*) AS total_count
+FROM cart.cart_item
+WHERE user_id = $1
+  AND status = $2
+`
+
+type GetCartSummaryParams struct {
+	UserID uuid.UUID
+	Status CartCartType
+}
+
+// GetCartSummary
+//
+//	SELECT COUNT(*) AS total_count
+//	FROM cart.cart_item
+//	WHERE user_id = $1
+//	  AND status = $2
+func (q *Queries) GetCartSummary(ctx context.Context, arg GetCartSummaryParams) (int64, error) {
+	row := q.db.QueryRow(ctx, GetCartSummary, arg.UserID, arg.Status)
+	var total_count int64
+	err := row.Scan(&total_count)
+	return total_count, err
+}
+
 const RemoveCartItem = `-- name: RemoveCartItem :one
 WITH deleted AS (
     DELETE

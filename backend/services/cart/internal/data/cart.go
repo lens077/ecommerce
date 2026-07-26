@@ -40,7 +40,7 @@ func (c cartRepo) RemoveCartItem(ctx context.Context, req biz.RemoveCartItemRequ
 		SpuIds:      req.SpuIds,
 		SkuIds:      req.SkuIds,
 		Statuses:    statuses, // 要删除的商品它们的状态
-		Status:      &status,   // 查询该用户的购物车的商品状态
+		Status:      &status,  // 查询该用户的购物车的商品状态
 	})
 	if err != nil {
 		return nil, err
@@ -114,6 +114,21 @@ func (c cartRepo) GetCart(ctx context.Context, req biz.GetCartRequest) (*biz.Get
 		Items:            items,
 		CartItemQuantity: uint32(totalCartItemQuantity),
 		IsCartEmpty:      len(items) == 0,
+	}, nil
+}
+
+func (c cartRepo) GetCartSummary(ctx context.Context, req biz.GetCartSummaryRequest) (*biz.GetCartSummaryResponse, error) {
+	status := models.CartCartType(req.Status)
+	totalCount, err := c.queries.GetCartSummary(ctx, models.GetCartSummaryParams{
+		UserID: req.ConsumerId,
+		Status: status,
+	})
+	if err != nil {
+		return nil, err
+	}
+
+	return &biz.GetCartSummaryResponse{
+		TotalCount: uint32(totalCount),
 	}, nil
 }
 

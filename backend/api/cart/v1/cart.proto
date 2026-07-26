@@ -11,6 +11,8 @@ option go_package = "github.com/lens077/ecommerce/backend/api/cart/v1;cartv1";
 
 service CartService {
   rpc GetCart(GetCartRequest) returns (GetCartResponse){}
+  // 首页获取购物车数量
+  rpc GetCartSummary(GetCartSummaryRequest) returns (GetCartSummaryResponse){}
   rpc AddProductToCart(AddProductToCartRequest) returns (AddProductToCartResponse){}
   rpc RemoveCartItem(RemoveCartItemRequest) returns (RemoveCartItemResponse){}
   rpc UpdateCartItemQuantity(UpdateCartItemQuantityRequest) returns (UpdateCartItemQuantityResponse){}
@@ -91,4 +93,12 @@ message GetCartResponse {
   repeated CartItem items = 1;                     // 购物车商品列表
   uint32 cart_item_quantity = 2;                  // 购物车商品总数量
   google.protobuf.BoolValue is_cart_empty = 3;      // 购物车是否为空
+}
+
+message GetCartSummaryRequest {
+
+}
+
+message GetCartSummaryResponse {
+  uint32 total_count = 1;
 }
