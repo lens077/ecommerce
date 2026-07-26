@@ -5,9 +5,10 @@ import { AddressService } from "@/gen/api";
 import { errorInterceptor, loggerInterceptor, authInterceptor } from "@ecommerce/api";
 import { userStore } from "@/store/users";
 import type { Address, AddressFormData, UpdateAddressParams } from "./types";
+import { env } from "@/env";
 
 const transport = createConnectTransport({
-  baseUrl: "http://localhost:8080",
+  baseUrl: env.VITE_GATEWAY_URL ?? "http://localhost:8080",
   interceptors: [authInterceptor, loggerInterceptor, errorInterceptor],
 });
 
