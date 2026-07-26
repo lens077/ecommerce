@@ -94,3 +94,9 @@ FROM cart.cart_item
 WHERE user_id = @user_id
   AND status = @status
 ORDER BY updated_at DESC;
+
+-- name: GetCartSummary :one
+SELECT COUNT(*) AS total_count
+FROM cart.cart_item
+WHERE user_id = @user_id
+  AND status = @status;
