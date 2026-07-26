@@ -24,7 +24,7 @@ import {
   TextField,
   Typography,
 } from "@mui/material";
-import { createFileRoute, redirect } from "@tanstack/react-router";
+import { createFileRoute } from "@tanstack/react-router";
 import { useEffect, useState } from "react";
 import type { Address, AddressFormData } from "@/api/addresses/types";
 import { getLocationInfo, requestLocationPermission } from "@/api/location";
@@ -35,23 +35,22 @@ import { addNotification, isTokenExpired } from "@ecommerce/utils";
 
 export const Route = createFileRoute("/profile/addresses/")({
   component: RouteComponent,
-  beforeLoad: ({ location }) => {
+  beforeLoad: ({ context }) => {
     const token = localStorage.getItem("token");
-    if (isTokenExpired(typeof token === "string" ? token : "")) {
-      console.warn("Token已过期，请重新登录或尝试刷新。");
+    if (!token || isTokenExpired(token)) {
+      console.warn("Token已过期或未登录，请重新登录。");
 
       addNotification({
-        message: "Token已过期，请重新登录或尝试刷新。即将回到首页",
+        message: "请先登录以管理收货地址",
         severity: "warning",
       });
 
       setAccount({});
       localStorage.removeItem("token");
 
-      throw redirect({
-        to: "/",
-        search: { redirect: location.href },
-      });
+      if (context?.auth?.login) {
+        context.auth.login();
+      }
     }
   },
 });
