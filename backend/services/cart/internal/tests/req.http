@@ -75,3 +75,10 @@ Authorization: Bearer {{token}}
 Content-Type: application/json
 
 {}
+
+### GetCartSummary
+POST http://{{gateway_host}}:{{gateway_port}}/cart.v1.CartService/GetCartSummary
+Authorization: Bearer {{token}}
+Content-Type: application/json
+
+{}
