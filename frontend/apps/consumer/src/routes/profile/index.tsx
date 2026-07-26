@@ -23,16 +23,15 @@ import {
   Badge as BadgeIcon,
   Tag,
 } from "@mui/icons-material";
-import { addNotification } from "@ecommerce/utils";
+import { addNotification, isTokenExpired } from "@ecommerce/utils";
 import { tokens } from "@/styles/tokens";
 
 export const Route = createFileRoute("/profile/")({
   component: RouteComponent,
-  // 校验token是否过期，过期则重定向到首页
+  // 校验token是否存在且未过期
   beforeLoad: ({ context }) => {
-    // 同时检查 React 状态和 localStorage token，防止状态传播时序问题
     const token = localStorage.getItem("token");
-    if (!context.auth.isAuthenticated && !token) {
+    if (!token || isTokenExpired(token)) {
       console.warn("Token已过期或未登录，请重新登录。");
 
       addNotification({
