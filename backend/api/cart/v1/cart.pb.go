@@ -520,6 +520,7 @@ type CartItem struct {
 	SpuId           uint64                 `protobuf:"varint,2,opt,name=spu_id,json=spuId,proto3" json:"spu_id,omitempty"`
 	SkuId           uint64                 `protobuf:"varint,3,opt,name=sku_id,json=skuId,proto3" json:"sku_id,omitempty"`
 	MerchantId      string                 `protobuf:"bytes,4,opt,name=merchant_id,json=merchantId,proto3" json:"merchant_id,omitempty"`
+	ShopName        string                 `protobuf:"bytes,13,opt,name=shop_name,json=shopName,proto3" json:"shop_name,omitempty"`
 	Quantity        uint32                 `protobuf:"varint,5,opt,name=quantity,proto3" json:"quantity,omitempty"`
 	Selected        bool                   `protobuf:"varint,6,opt,name=selected,proto3" json:"selected,omitempty"`
 	SpuName         string                 `protobuf:"bytes,7,opt,name=spu_name,json=spuName,proto3" json:"spu_name,omitempty"`
@@ -586,6 +587,13 @@ func (x *CartItem) GetSkuId() uint64 {
 func (x *CartItem) GetMerchantId() string {
 	if x != nil {
 		return x.MerchantId
+	}
+	return ""
+}
+
+func (x *CartItem) GetShopName() string {
+	if x != nil {
+		return x.ShopName
 	}
 	return ""
 }
@@ -825,14 +833,15 @@ const file_api_cart_v1_cart_proto_rawDesc = "" +
 	"\bquantity\x18\x04 \x01(\rR\bquantity\"N\n" +
 	"\x1eUpdateCartItemQuantityResponse\x12,\n" +
 	"\x12cart_item_quantity\x18\x01 \x01(\rR\x10cartItemQuantity\"\x10\n" +
-	"\x0eGetCartRequest\"\xa2\x03\n" +
+	"\x0eGetCartRequest\"\xbf\x03\n" +
 	"\bCartItem\x12 \n" +
 	"\fcart_item_id\x18\x01 \x01(\x04R\n" +
 	"cartItemId\x12\x15\n" +
 	"\x06spu_id\x18\x02 \x01(\x04R\x05spuId\x12\x15\n" +
 	"\x06sku_id\x18\x03 \x01(\x04R\x05skuId\x12\x1f\n" +
 	"\vmerchant_id\x18\x04 \x01(\tR\n" +
-	"merchantId\x12\x1a\n" +
+	"merchantId\x12\x1b\n" +
+	"\tshop_name\x18\r \x01(\tR\bshopName\x12\x1a\n" +
 	"\bquantity\x18\x05 \x01(\rR\bquantity\x12\x1a\n" +
 	"\bselected\x18\x06 \x01(\bR\bselected\x12\x19\n" +
 	"\bspu_name\x18\a \x01(\tR\aspuName\x12\x19\n" +

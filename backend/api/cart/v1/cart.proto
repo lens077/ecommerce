@@ -79,6 +79,7 @@ message CartItem {
   uint64 spu_id = 2;
   uint64 sku_id = 3;
   string merchant_id = 4;
+  string shop_name = 13;
   uint32 quantity = 5;
   bool selected = 6;
   string spu_name = 7;

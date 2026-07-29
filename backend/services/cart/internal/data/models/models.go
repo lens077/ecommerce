@@ -79,6 +79,7 @@ type CartCartItem struct {
 	ID              int64
 	UserID          uuid.UUID
 	MerchantID      uuid.UUID
+	ShopName        string
 	SpuID           int64
 	SkuID           int64
 	Quantity        int32
@@ -88,7 +89,7 @@ type CartCartItem struct {
 	Price           pgtype.Numeric
 	SkuAttributes   []byte
 	SkuThumbnailUrl string
-	Status          interface{}
+	Status          CartCartType
 	CreatedAt       time.Time
 	UpdatedAt       time.Time
 }

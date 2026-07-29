@@ -158,6 +158,7 @@ func (cs *CartService) GetCart(ctx context.Context, c *connect.Request[v1.GetCar
 			SpuId:           item.SpuId,
 			SkuId:           item.SkuId,
 			MerchantId:      item.MerchantId.String(),
+			ShopName:        item.ShopName,
 			Quantity:        item.Quantity,
 			Selected:        item.Selected,
 			SpuName:         item.SpuName,
