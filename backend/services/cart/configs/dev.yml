@@ -76,11 +76,11 @@ data:
 
 store:
   minio:
-    default_domain: "https://img.apikv.com"
+    default_domain: "http://8.138.194.254:9000"
     buckets:
-      ecommerce: "https://img.apikv.com/ecommerce"
-      avatar: "https://img.apikv.com/avatar"
-      marketing: "https://img.apikv.com"
+      ecommerce: "http://8.138.194.254:9000/ecommerce"
+      avatar: "http://8.138.194.254:9000/avatar"
+      marketing: "http://8.138.194.254:9000"
 
 observability:
   enable: true
