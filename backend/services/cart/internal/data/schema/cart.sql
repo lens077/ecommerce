@@ -8,12 +8,14 @@ CREATE TYPE cart.cart_type AS ENUM (
     );
 
 -- 购物车主表
+-- DROP TABLE cart.cart_item;
 CREATE TABLE IF NOT EXISTS cart.cart_item
 (
     id                BIGSERIAL PRIMARY KEY,                    -- 自增主键
-    user_id           UUID           NOT NULL, -- 用户ID
-    merchant_id UUID NOT NULL, -- 商家ID（数据隔离）
-    spu_id BIGINT NOT NULL,                                     -- SPU ID
+    user_id           UUID           NOT NULL,                  -- 用户ID
+    merchant_id       UUID           NOT NULL,                  -- 商家ID（数据隔离）
+    shop_name         VARCHAR(255)   NOT NULL,                  -- 商家的店铺名称
+    spu_id            BIGINT         NOT NULL,                  -- SPU ID
     sku_id            BIGINT         NOT NULL,                  -- SKU ID
     quantity          INT            NOT NULL DEFAULT 1,        -- 数量
     selected          BOOLEAN        NOT NULL DEFAULT TRUE,     -- 是否选中（下单时勾选）
@@ -25,7 +27,7 @@ CREATE TABLE IF NOT EXISTS cart.cart_item
     sku_attributes    JSONB          NOT NULL DEFAULT '{}',     -- SKU销售属性快照
     sku_thumbnail_url VARCHAR(500)   NOT NULL,                  -- SKU缩略图快照
 
-    status            cart_type      NOT NULL DEFAULT 'active', -- active, expired, deleted
+    status            cart.cart_type      NOT NULL DEFAULT 'active', -- active, expired, deleted
     created_at        TIMESTAMPTZ    NOT NULL DEFAULT now(),
     updated_at        TIMESTAMPTZ    NOT NULL DEFAULT now(),
 

@@ -4,12 +4,13 @@ import (
 	"github.com/jackc/pgx/v5/pgtype"
 	"github.com/lens077/ecommerce/backend/constants"
 	"github.com/lens077/ecommerce/backend/services/cart/internal/biz"
+	conf "github.com/lens077/ecommerce/backend/services/cart/internal/conf/v1"
 	"github.com/lens077/ecommerce/backend/services/cart/internal/data/models"
+	"github.com/lens077/ecommerce/backend/services/cart/internal/pkg"
 	"github.com/lens077/ecommerce/backend/services/cart/internal/pkg/dbutil"
 	"github.com/lens077/ecommerce/backend/services/cart/internal/pkg/money"
 	"github.com/redis/go-redis/v9"
 
-	// "github.com/lens077/ecommerce/backend/services/cart/internal/data/models"
 	"context"
 
 	"go.uber.org/zap"
@@ -21,6 +22,7 @@ type cartRepo struct {
 	queries *models.Queries
 	rdb     *redis.Client
 	log     *zap.Logger
+	config  *conf.Bootstrap
 }
 
 func (c cartRepo) RemoveCartItem(ctx context.Context, req biz.RemoveCartItemRequest) (*biz.RemoveCartItemResponse, error) {
@@ -89,13 +91,13 @@ func (c cartRepo) GetCart(ctx context.Context, req biz.GetCartRequest) (*biz.Get
 
 	for _, row := range rows {
 		price, _ := money.NumericToFloat(row.Price)
-		statusEnum, statusEnumErr := dbutil.ToCartStatusEnum(row.Status)
-		if statusEnumErr != nil {
-			return nil, statusEnumErr
-		}
+
+		skuThumbnailUrl := pkg.FormatObjectURL(string(constants.BucketEcommerce), row.SkuThumbnailUrl, c.config.Store)
+		statusEnum := dbutil.ToCartStatusEnum(row.Status)
 		items = append(items, &biz.CartItem{
 			ID:              row.ID,
 			MerchantId:      row.MerchantID,
+			ShopName:        row.ShopName,
 			SpuId:           uint64(row.SpuID),
 			SkuId:           uint64(row.SkuID),
 			Quantity:        uint32(row.Quantity),
@@ -104,7 +106,7 @@ func (c cartRepo) GetCart(ctx context.Context, req biz.GetCartRequest) (*biz.Get
 			SkuName:         row.SkuName,
 			Price:           price,
 			SkuAttributes:   row.SkuAttributes,
-			SkuThumbnailUrl: row.SkuThumbnailUrl,
+			SkuThumbnailUrl: skuThumbnailUrl,
 			Status:          statusEnum,
 		})
 
@@ -146,6 +148,7 @@ func (c cartRepo) AddProductToCart(ctx context.Context, req biz.AddProductToCart
 			Bytes: req.MerchantId,
 			Valid: true,
 		},
+
 		SpuID:           new(int64(req.SpuID)),
 		SkuID:           new(int64(req.SkuID)),
 		Quantity:        new(int32(req.Quantity)),
@@ -166,10 +169,11 @@ func (c cartRepo) AddProductToCart(ctx context.Context, req biz.AddProductToCart
 	}, nil
 }
 
-func NewCartRepo(data *Data, logger *zap.Logger) biz.CartRepo {
+func NewCartRepo(data *Data, logger *zap.Logger, config *conf.Bootstrap) biz.CartRepo {
 	return &cartRepo{
 		queries: models.New(data.db),
 		rdb:     data.rdb,
 		log:     logger,
+		config:  config,
 	}
 }

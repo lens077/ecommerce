@@ -74,6 +74,14 @@ data:
       pool_size: 10
       min_idle_conns: 5
 
+store:
+  minio:
+    default_domain: "https://img.apikv.com"
+    buckets:
+      ecommerce: "https://img.apikv.com/ecommerce"
+      avatar: "https://img.apikv.com/avatar"
+      marketing: "https://img.apikv.com"
+
 observability:
   enable: true
   trace:

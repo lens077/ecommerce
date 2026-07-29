@@ -78,6 +78,7 @@ WHERE user_id = @user_id
 -- name: GetCartItems :many
 SELECT id,
        merchant_id,
+       shop_name,
        spu_id,
        sku_id,
        quantity,

@@ -64,6 +64,7 @@ type (
 type CartItem struct {
 	ID              int64
 	MerchantId      uuid.UUID
+	ShopName        string
 	SpuId           uint64
 	SkuId           uint64
 	Quantity        uint32
