@@ -83,17 +83,38 @@
 
 ---
 
-## 二、近期待办（按优先级）
+## 二、订单分布式一致性方案（已定）
+
+下单跨服务事务采用 **混合模式**，不引入 Seata（Java 生态，Go 栈不适配）：
+
+1. **可靠投递底座（必选）**：本地事务 + **Outbox 表 + Kafka**。写订单与写 outbox 同一事务，独立 relay 投递，杜绝"落库成功但事件丢失"的双写问题。
+2. **A 段·建单↔库存预占（强一致 + 快反馈）**：建单事务内 **同步 RPC 调 `inventory.Reserve`**（即 TCC 的 Try），预占成功才建单成功，用户即时得到"库存不足"反馈；`inventory` 现有 `Reserve`/`ReleaseReserve` 天然是 Try/Cancel，支付成功后的确认扣减为 Confirm。
+3. **B 段·建单后→支付→履约/营销（最终一致）**：走 **编舞式 Saga（Choreography）**。经 Outbox 发 `OrderCreated`；支付回调发 `OrderPaid`（库存 Confirm、订单转已支付）；取消/超时发 `OrderCancelled`（库存 `ReleaseReserve` 补偿）。
+
+编舞 Saga 的四项治理（必须随事件驱动一起落，否则流程失控）：
+
+- [ ] **幂等消费**：consumer 以 `order_no`/事件 ID 去重（消息至少投递一次语义）
+- [ ] **显式补偿事件**：`StockReserveFailed → 订单自动取消` 等补偿作为一等公民设计，不散落
+- [ ] **状态即真相**：`order_status` 作为"这单走到哪"的唯一可见状态，弥补编舞流程不可见
+- [ ] **超时兜底 job**：扫 `pay_deadline` / 卡在中间态的订单做补偿或告警（编舞无中心，必须有 backstop）
+- [ ] **全链路 trace_id**：事件贯穿 `trace_id`，靠 Jaeger/OTel 追踪定位
+
+---
+
+## 三、近期待办（按优先级）
 
 先打通「消费者核心交易闭环」，再向商家/管理端与非核心能力扩展。
 
-- [ ] **订单服务**：补 `GetOrder` / `ListOrders` / `CancelOrder` RPC 与订单状态机
+- [ ] **订单服务**：补 `GetOrder` / `ListOrders` / `CancelOrder` RPC 与订单状态机（带守卫的状态迁移 + `order_log`）
+- [ ] **一致性底座**：落 Outbox 表 + Kafka relay，替换现有进程内 `GoEventBus`（跨服务事件当前到不了其他服务）
+- [ ] **建单全链路**：cart 补"按 CartItemIds 取选中项"RPC → 取商品/地址快照 → 拆单 → 事务落库 group/order/item → 同步 `Reserve` → 清空购物车
 - [ ] **consumer 结算页**：接下单 API，串联 购物车→结算→下单→支付
 - [ ] **consumer 订单页**：订单列表/详情接真实查询 API，替换 mock
-- [ ] **支付闭环**：`payment/result` 接支付状态查询 + 回调后订单状态同步
-- [ ] **库存联动**：下单触发 `Reserve`，支付成功确认扣减，取消/超时 `ReleaseReserve`
+- [ ] **支付闭环**：`payment/result` 接支付状态查询 + 回调后订单状态同步（订单订阅 `OrderPaid`）
+- [ ] **库存联动**：下单同步 `Reserve`（TCC-Try），支付成功确认扣减，取消/超时 `ReleaseReserve`
 - [ ] **商品服务**：补商品列表/分页 RPC，接首页与分类页
-- [ ] **领域事件**：引入 Kafka，落地 `OrderCreated/OrderPaid/OrderCancelled` 事件驱动
+- [ ] **领域事件**：引入 Kafka，落地 `OrderCreated/OrderPaid/OrderCancelled` 事件驱动（编舞 Saga）
+- [ ] **订单缺陷修复**：金额改 `decimal`（现为 `float64`）、修 `AddressPostalCode` 空指针、统一 `merchant_id` 类型（UUID）、`Complete()` 应要求已发货
 - [ ] **merchant 端**：新增 `api/` 客户端，接商家入驻/商品/订单
 - [ ] **admin 端**：新增 `api/` 客户端，接商家审核/用户/类目管理
 - [ ] **RBAC**：补齐三角色细粒度权限校验与网关策略
@@ -103,7 +124,7 @@
 
 ---
 
-## 三、实施路线
+## 四、实施路线
 
 ### 分阶段迭代实施策略
 
