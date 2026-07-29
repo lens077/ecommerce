@@ -24,7 +24,7 @@ import {
   Tag,
 } from "@mui/icons-material";
 import { addNotification, isTokenExpired } from "@ecommerce/utils";
-import { tokens } from "@/styles/tokens";
+import { sp, tokens } from "@/styles/tokens";
 
 export const Route = createFileRoute("/profile/")({
   component: RouteComponent,
@@ -81,19 +81,19 @@ function RouteComponent() {
   }
 
   return (
-    <Box sx={{ minHeight: "100vh", bgcolor: tokens.colors.background.primary, py: tokens.spacing[6] }}>
+    <Box sx={{ minHeight: "100vh", bgcolor: tokens.colors.background.primary, py: sp[6] }}>
       <Container maxWidth="md">
         {/* 用户信息卡片 */}
         <Paper
           elevation={0}
           sx={{
-            p: tokens.spacing[6],
-            mb: tokens.spacing[4],
+            p: sp[6],
+            mb: sp[4],
             borderRadius: tokens.radius.xl,
             border: `1px solid ${tokens.colors.border.default}`,
             display: "flex",
             alignItems: "center",
-            gap: tokens.spacing[4],
+            gap: sp[4],
           }}
         >
           <Avatar
@@ -120,13 +120,13 @@ function RouteComponent() {
         <Paper
           elevation={0}
           sx={{
-            mb: tokens.spacing[4],
+            mb: sp[4],
             borderRadius: tokens.radius.xl,
             border: `1px solid ${tokens.colors.border.default}`,
             overflow: "hidden",
           }}
         >
-          <Box sx={{ p: tokens.spacing[4], borderBottom: `1px solid ${tokens.colors.border.default}` }}>
+          <Box sx={{ p: sp[4], borderBottom: `1px solid ${tokens.colors.border.default}` }}>
             <Typography variant="subtitle1" sx={{ fontWeight: 600, color: tokens.colors.text.primary }}>
               账号信息
             </Typography>
@@ -150,7 +150,7 @@ function RouteComponent() {
             overflow: "hidden",
           }}
         >
-          <Box sx={{ p: tokens.spacing[4], borderBottom: `1px solid ${tokens.colors.border.default}` }}>
+          <Box sx={{ p: sp[4], borderBottom: `1px solid ${tokens.colors.border.default}` }}>
             <Typography variant="subtitle1" sx={{ fontWeight: 600, color: tokens.colors.text.primary }}>
               常用功能
             </Typography>
@@ -163,7 +163,7 @@ function RouteComponent() {
                   key={item.path}
                   onClick={() => navigate({ to: item.path })}
                   sx={{
-                    py: tokens.spacing[3],
+                    py: sp[3],
                     "&:hover": { bgcolor: tokens.colors.background.primary },
                   }}
                 >
@@ -201,9 +201,9 @@ function InfoRow({ icon, label, value }: { icon: React.ReactNode; label: string;
         sx={{
           display: "flex",
           alignItems: "center",
-          gap: tokens.spacing[2],
-          px: tokens.spacing[4],
-          py: tokens.spacing[2],
+          gap: sp[2],
+          px: sp[4],
+          py: sp[2],
         }}
       >
         <Box sx={{ color: tokens.colors.text.secondary, display: "flex", alignItems: "center" }}>{icon}</Box>
@@ -214,7 +214,7 @@ function InfoRow({ icon, label, value }: { icon: React.ReactNode; label: string;
           {value}
         </Typography>
       </Box>
-      <Divider sx={{ borderColor: tokens.colors.border.default, mx: tokens.spacing[4] }} />
+      <Divider sx={{ borderColor: tokens.colors.border.default, mx: sp[4] }} />
     </>
   );
 }

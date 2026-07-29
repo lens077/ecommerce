@@ -21,7 +21,7 @@ import { useProductDetail } from "@/hooks/useProduct";
 import type { ProductSpuDetail } from "@/gen/api/product/v1/product_pb.ts";
 import { useState, useCallback, useMemo } from "react";
 import { useAddToCart } from "@/hooks/useCart";
-import { tokens } from "@/styles/tokens";
+import { sp, tokens } from "@/styles/tokens";
 import type { Money } from "@/gen/third_party/google/type/money_pb.ts";
 
 const formatMoney = (money?: Money): number => {
@@ -342,8 +342,8 @@ const ProductPage = () => {
                                 <Box sx={{
                                     display: "flex",
                                     alignItems: "center",
-                                    gap: tokens.spacing[4],
-                                    mb: tokens.spacing[4]
+                                    gap: sp[4],
+                                    mb: sp[4]
                                 }}>
                                     <Typography variant="body2" color="text.secondary" sx={{fontWeight: 500}}>
                                         数量
