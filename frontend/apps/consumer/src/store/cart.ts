@@ -1,20 +1,10 @@
-/**
- * 购物车状态管理
- *
- * 使用简单的发布-订阅模式实现全局状态同步
- * 数据持久化到 localStorage
- */
-
-
-// Types
-
 
 export interface CartItem {
   cartItemId: string;
   spuId: string;
   skuId: string;
   merchantId: string;
-  merchantName?: string;
+  shopName?: string;
   spuName: string;
   skuName: string;
   price: number;
@@ -22,7 +12,6 @@ export interface CartItem {
   quantity: number;
   selected: boolean;
   skuThumbnailUrl: string;
-  status: "active" | "expired" | "deleted";
   createdAt: Date;
   updatedAt: Date;
 }
@@ -34,7 +23,6 @@ export interface CartState {
 
 export interface MerchantGroup {
   merchantId: string;
-  merchantName: string;
   items: CartItem[];
 }
 
@@ -233,7 +221,6 @@ class CartStore {
       if (!groups.has(item.merchantId)) {
         groups.set(item.merchantId, {
           merchantId: item.merchantId,
-          merchantName: item.merchantName || `商家 ${item.merchantId.slice(0, 6)}`,
           items: [],
         });
       }
