@@ -20,7 +20,7 @@ export function EmptyCart({ onNavigateHome }: EmptyCartProps) {
         flexDirection: "column",
         alignItems: "center",
         justifyContent: "center",
-        py: tokens.spacing[16],
+        py: tokens.spacing[6],
         px: tokens.spacing[6],
         textAlign: "center",
       }}
@@ -38,7 +38,7 @@ export function EmptyCart({ onNavigateHome }: EmptyCartProps) {
         }}
       >
         <ShoppingCart
-          size={36}
+          size={50}
           color={tokens.colors.text.disabled}
           strokeWidth={1.5}
         />
@@ -49,7 +49,7 @@ export function EmptyCart({ onNavigateHome }: EmptyCartProps) {
         sx={{
           color: tokens.colors.text.primary,
           fontWeight: 600,
-          mb: tokens.spacing[2],
+          mb: tokens.spacing[1],
         }}
       >
         购物车是空的
@@ -59,7 +59,7 @@ export function EmptyCart({ onNavigateHome }: EmptyCartProps) {
         variant="body2"
         sx={{
           color: tokens.colors.text.secondary,
-          mb: tokens.spacing[6],
+          mb: tokens.spacing[3],
         }}
       >
         快去挑选心仪的商品吧
@@ -81,6 +81,7 @@ export function EmptyCart({ onNavigateHome }: EmptyCartProps) {
             bgcolor: tokens.colors.accent.darkGray,
             boxShadow: "none",
           },
+            whiteSpace: "nowrap"
         }}
       >
         去逛逛
