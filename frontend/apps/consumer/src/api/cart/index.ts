@@ -19,7 +19,7 @@ function mapRpcCartItemToCartItem(rpcItem: RpcCartItem): CartItem {
     spuId: rpcItem.spuId.toString(),
     skuId: rpcItem.skuId.toString(),
     merchantId: rpcItem.merchantId,
-    merchantName: undefined,
+    shopName: rpcItem.shopName,
     spuName: rpcItem.spuName,
     skuName: rpcItem.skuName,
     price: rpcItem.price,
@@ -27,30 +27,15 @@ function mapRpcCartItemToCartItem(rpcItem: RpcCartItem): CartItem {
     quantity: rpcItem.quantity,
     selected: rpcItem.selected,
     skuThumbnailUrl: rpcItem.skuThumbnailUrl,
-    status: mapCartStatus(rpcItem.status),
     createdAt: now,
     updatedAt: now,
   };
-}
-
-function mapCartStatus(status: CartStatus): "active" | "expired" | "deleted" {
-  switch (status) {
-    case CartStatus.ACTIVE:
-      return "active";
-    case CartStatus.EXPIRED:
-      return "expired";
-    case CartStatus.DELETED:
-      return "deleted";
-    default:
-      return "active";
-  }
 }
 
 export interface AddToCartRequest {
   spuId: string;
   skuId: string;
   merchantId: string;
-  merchantName?: string;
   quantity: number;
   selected: boolean;
   spuName: string;

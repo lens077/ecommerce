@@ -1,76 +1,66 @@
-import { Box, Checkbox, Typography } from "@mui/material";
-import { Store } from "lucide-react";
+import { Box, Checkbox } from "@mui/material";
+
 import { CartItemCard } from "./CartItemCard";
 import type { MerchantGroup } from "@/store/cart";
 import { tokens } from "@/styles/tokens";
 
 interface MerchantCartGroupProps {
-  group: MerchantGroup;
-  onToggleSelect: (cartItemId: string) => void;
-  onUpdateQuantity: (cartItemId: string, quantity: number) => void;
-  onRemove: (cartItemId: string) => void;
-  onSelectByMerchant: (merchantId: string, selected: boolean) => void;
+    group: MerchantGroup;
+    onToggleSelect: (cartItemId: string) => void;
+    onUpdateQuantity: (cartItemId: string, quantity: number) => void;
+    onRemove: (cartItemId: string) => void;
+    onSelectByMerchant: (merchantId: string, selected: boolean) => void;
 }
 
+// 外部的勾选框
 export function MerchantCartGroup({
-  group,
-  onToggleSelect,
-  onUpdateQuantity,
-  onRemove,
-  onSelectByMerchant,
-}: MerchantCartGroupProps) {
-  const activeItems = group.items.filter((item) => item.status === "active");
+                                      group,
+                                      onToggleSelect,
+                                      onUpdateQuantity,
+                                      onRemove,
+                                      onSelectByMerchant,
+                                  }: MerchantCartGroupProps) {
+    const allSelected = group.items.every((item) => item.selected);
+    const indeterminate =
+        !allSelected && group.items.some((item) => item.selected);
 
-  if (activeItems.length === 0) return null;
+    return (
+        <Box sx={{mb: tokens.spacing[4]}}>
+            <Box
+                sx={{
+                    display: "flex",
+                    alignItems: "center",
+                    // gap: tokens.spacing[2],
+                    // mb: tokens.spacing[3],
+                    // px: tokens.spacing[1],
+                }}
+            >
+                <Checkbox
+                    checked={allSelected}
+                    indeterminate={indeterminate}
+                    onChange={() => onSelectByMerchant(group.merchantId, !allSelected)}
+                    size="small"
+                    sx={{
+                        p: 0,
+                        color: tokens.colors.border.default,
+                        "&.Mui-checked, &.MuiCheckbox-indeterminate": {
+                            color: tokens.colors.accent.black,
+                        },
+                    }}
+                />
+            </Box>
 
-  const allSelected = activeItems.every((item) => item.selected);
-  const indeterminate =
-    !allSelected && activeItems.some((item) => item.selected);
-
-  return (
-    <Box sx={{ mb: tokens.spacing[4] }}>
-      <Box
-        sx={{
-          display: "flex",
-          alignItems: "center",
-          gap: tokens.spacing[2],
-          mb: tokens.spacing[3],
-          px: tokens.spacing[4],
-        }}
-      >
-        <Checkbox
-          checked={allSelected}
-          indeterminate={indeterminate}
-          onChange={() => onSelectByMerchant(group.merchantId, !allSelected)}
-          size="small"
-          sx={{
-            p: 0,
-            color: tokens.colors.border.default,
-            "&.Mui-checked, &.MuiCheckbox-indeterminate": {
-              color: tokens.colors.accent.black,
-            },
-          }}
-        />
-        <Store size={16} color={tokens.colors.text.secondary} />
-        <Typography
-          variant="body2"
-          sx={{ color: tokens.colors.text.secondary, fontWeight: 500 }}
-        >
-          {group.merchantName}
-        </Typography>
-      </Box>
-
-      <Box sx={{ display: "flex", flexDirection: "column", gap: tokens.spacing[3] }}>
-        {activeItems.map((item) => (
-          <CartItemCard
-            key={item.cartItemId}
-            item={item}
-            onToggleSelect={onToggleSelect}
-            onUpdateQuantity={onUpdateQuantity}
-            onRemove={onRemove}
-          />
-        ))}
-      </Box>
-    </Box>
-  );
+            <Box sx={{display: "flex", flexDirection: "column", gap: tokens.spacing[3]}}>
+                {group.items.map((item) => (
+                    <CartItemCard
+                        key={item.cartItemId}
+                        item={item}
+                        onToggleSelect={onToggleSelect}
+                        onUpdateQuantity={onUpdateQuantity}
+                        onRemove={onRemove}
+                    />
+                ))}
+            </Box>
+        </Box>
+    );
 }

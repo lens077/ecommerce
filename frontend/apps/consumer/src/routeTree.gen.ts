@@ -13,7 +13,6 @@ import { Route as R404RouteImport } from './routes/404'
 import { Route as IndexRouteImport } from './routes/index'
 import { Route as ProfileIndexRouteImport } from './routes/profile/index'
 import { Route as OrdersIndexRouteImport } from './routes/orders/index'
-import { Route as CouponsIndexRouteImport } from './routes/coupons/index'
 import { Route as CheckoutIndexRouteImport } from './routes/checkout/index'
 import { Route as CategoriesIndexRouteImport } from './routes/categories/index'
 import { Route as CartIndexRouteImport } from './routes/cart/index'
@@ -41,11 +40,6 @@ const ProfileIndexRoute = ProfileIndexRouteImport.update({
 const OrdersIndexRoute = OrdersIndexRouteImport.update({
   id: '/orders/',
   path: '/orders/',
-  getParentRoute: () => rootRouteImport,
-} as any)
-const CouponsIndexRoute = CouponsIndexRouteImport.update({
-  id: '/coupons/',
-  path: '/coupons/',
   getParentRoute: () => rootRouteImport,
 } as any)
 const CheckoutIndexRoute = CheckoutIndexRouteImport.update({
@@ -99,7 +93,6 @@ export interface FileRoutesByFullPath {
   '/cart/': typeof CartIndexRoute
   '/categories/': typeof CategoriesIndexRoute
   '/checkout/': typeof CheckoutIndexRoute
-  '/coupons/': typeof CouponsIndexRoute
   '/orders/': typeof OrdersIndexRoute
   '/profile/': typeof ProfileIndexRoute
   '/profile/addresses/': typeof ProfileAddressesIndexRoute
@@ -114,7 +107,6 @@ export interface FileRoutesByTo {
   '/cart': typeof CartIndexRoute
   '/categories': typeof CategoriesIndexRoute
   '/checkout': typeof CheckoutIndexRoute
-  '/coupons': typeof CouponsIndexRoute
   '/orders': typeof OrdersIndexRoute
   '/profile': typeof ProfileIndexRoute
   '/profile/addresses': typeof ProfileAddressesIndexRoute
@@ -130,7 +122,6 @@ export interface FileRoutesById {
   '/cart/': typeof CartIndexRoute
   '/categories/': typeof CategoriesIndexRoute
   '/checkout/': typeof CheckoutIndexRoute
-  '/coupons/': typeof CouponsIndexRoute
   '/orders/': typeof OrdersIndexRoute
   '/profile/': typeof ProfileIndexRoute
   '/profile/addresses/': typeof ProfileAddressesIndexRoute
@@ -147,7 +138,6 @@ export interface FileRouteTypes {
     | '/cart/'
     | '/categories/'
     | '/checkout/'
-    | '/coupons/'
     | '/orders/'
     | '/profile/'
     | '/profile/addresses/'
@@ -162,7 +152,6 @@ export interface FileRouteTypes {
     | '/cart'
     | '/categories'
     | '/checkout'
-    | '/coupons'
     | '/orders'
     | '/profile'
     | '/profile/addresses'
@@ -177,7 +166,6 @@ export interface FileRouteTypes {
     | '/cart/'
     | '/categories/'
     | '/checkout/'
-    | '/coupons/'
     | '/orders/'
     | '/profile/'
     | '/profile/addresses/'
@@ -193,7 +181,6 @@ export interface RootRouteChildren {
   CartIndexRoute: typeof CartIndexRoute
   CategoriesIndexRoute: typeof CategoriesIndexRoute
   CheckoutIndexRoute: typeof CheckoutIndexRoute
-  CouponsIndexRoute: typeof CouponsIndexRoute
   OrdersIndexRoute: typeof OrdersIndexRoute
   ProfileIndexRoute: typeof ProfileIndexRoute
   ProfileAddressesIndexRoute: typeof ProfileAddressesIndexRoute
@@ -227,13 +214,6 @@ declare module '@tanstack/react-router' {
       path: '/orders'
       fullPath: '/orders/'
       preLoaderRoute: typeof OrdersIndexRouteImport
-      parentRoute: typeof rootRouteImport
-    }
-    '/coupons/': {
-      id: '/coupons/'
-      path: '/coupons'
-      fullPath: '/coupons/'
-      preLoaderRoute: typeof CouponsIndexRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/checkout/': {
@@ -305,7 +285,6 @@ const rootRouteChildren: RootRouteChildren = {
   CartIndexRoute: CartIndexRoute,
   CategoriesIndexRoute: CategoriesIndexRoute,
   CheckoutIndexRoute: CheckoutIndexRoute,
-  CouponsIndexRoute: CouponsIndexRoute,
   OrdersIndexRoute: OrdersIndexRoute,
   ProfileIndexRoute: ProfileIndexRoute,
   ProfileAddressesIndexRoute: ProfileAddressesIndexRoute,
