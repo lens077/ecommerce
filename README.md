@@ -1,14 +1,11 @@
 # 小镇做题家的电商项目
+本项目的组成使用(或部分使用)了本人其他的仓库:
+1. 网关: https://github.com/lens077/ecommerce-gateway
+2. 云原生基础设施部署: https://github.com/lens077/cloud-native-deploy
+3. 微服务开发脚手架: https://github.com/lens077/go-connect-template-cli
+4. 微服务项目模板: https://github.com/lens077/go-connect-template
 
 # 架构设计
-
-B2B2C 平台型电商系统完整架构设计方案
-旨在打造高可用、易扩展、符合工程规范的中大型电商分布式架构:
-
-## 开发
-### 推送
-- 推送到 gateway 单独仓库 ： `git subtree push --prefix=gateway gateway main`
-- 同步到主仓库 ： `git push main main`
 
 ## 技术栈集成架构设计
 
@@ -16,16 +13,11 @@ B2B2C 平台型电商系统完整架构设计方案
 
 技术栈:
 
-- Connect-go 通信体系：作为核心 RPC 框架，兼容 gRPC、gRPC-Web 与 Connect 原生协议，通过 Buf 实现 Protobuf 代码的标准化生成，与前端
-  Connect-web 无缝对接，无需额外协议转换层，同时支持流式传输，适配订单状态同步、库存实时更新等电商核心场景。
-- Casdoor 身份体系集成：基于 OAuth 2.0/OIDC 标准协议，通过 Go SDK 完成全链路认证流程封装，在 Connect-go 中通过拦截器实现
-  JWT 令牌统一校验、用户身份解析，全平台用户、角色、权限统一由 Casdoor 管理，无需额外维护用户体系。
-- Fx 依赖注入框架：通过fx.Provide注册各微服务的构造函数、依赖组件（数据库连接、Redis 客户端、支付 SDK
-  等），通过fx.Invoke完成服务初始化、拦截器注册、生命周期管理，每个微服务封装独立 Fx 模块，实现模块化组装与解耦。
-- sqlc 数据库层封装：针对 PostgreSQL 做专属配置，通过sqlc.yaml定义 Schema 与查询规则，生成类型安全的 Go 数据库操作代码，在
-  Repository 层实现读写自动路由，完美适配 PostgreSQL 一主多从架构。
-- 全链路技术协同：前端 React+TypeScript 通过 Connect-web 实现类型安全的 API 调用，后端微服务通过 Kafka
-  实现领域事件通信，Kubernetes+Cilium 实现网络层管控，VictoriaMetrics+Grafana 实现可观测性，形成完整的技术闭环。
+- Connect-go 通信体系：作为核心 RPC 框架，兼容 gRPC、gRPC-Web 与 Connect 原生协议，通过 Buf 实现 Protobuf 代码的标准化生成，与前端 Connect-web 无缝对接，无需额外协议转换层，同时支持流式传输，适配订单状态同步、库存实时更新等电商核心场景。
+- Casdoor 身份体系集成：基于 OAuth 2.0/OIDC 标准协议，通过 Go SDK 完成全链路认证流程封装，在 Connect-go 中通过拦截器实现 JWT 令牌统一校验、用户身份解析，全平台用户、角色、权限统一由 Casdoor 管理，无需额外维护用户体系。
+- Fx 依赖注入框架：通过fx.Provide注册各微服务的构造函数、依赖组件（数据库连接、Redis 客户端、支付 SDK 等），通过fx.Invoke完成服务初始化、拦截器注册、生命周期管理，每个微服务封装独立 Fx 模块，实现模块化组装与解耦。
+- sqlc 数据库层封装：针对 PostgreSQL 做专属配置，通过sqlc.yaml定义 Schema 与查询规则，生成类型安全的 Go 数据库操作代码，在 Repository 层实现读写自动路由，完美适配 PostgreSQL 一主多从架构。
+- 全链路技术协同：前端 React+TypeScript 通过 Connect-web 实现类型安全的 API 调用，后端微服务通过 Kafka 实现领域事件通信，Kubernetes+Cilium 实现网络层管控，VictoriaMetrics+Grafana 实现可观测性，形成完整的技术闭环。
 
 ### 前后端通信协议规范
 
@@ -1216,3 +1208,8 @@ curl -v http://localhost:3000
 # 数据来源
 1. IP: https://developer.aliyun.com/article/1638991
 2. 中国省，市，区, 街道四级SQL数据: https://github.com/gaohuazi/china_regions
+
+## 开发
+### 推送
+- 推送到 gateway 单独仓库 ： `git subtree push --prefix=gateway gateway main`
+- 同步到主仓库 ： `git push main main`
