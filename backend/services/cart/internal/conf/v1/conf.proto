@@ -29,6 +29,9 @@ message Bootstrap {
   Log log = 7[
     (buf.validate.field).required = true
   ];
+  Store store = 8[
+    (buf.validate.field).required = false
+  ];
 }
 
 message Log {
@@ -189,6 +192,14 @@ message Auth {
     string application_name = 5;
     string certificate = 6;
   }
+}
+
+message Store {
+  message Minio {
+    string default_domain = 1;
+    map<string, string> buckets = 2; // 匹配key,用于查找该 bucket 是否有专属的独立域名/路径
+  }
+  Minio minio = 1;
 }
 
 message Observability {

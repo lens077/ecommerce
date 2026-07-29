@@ -126,6 +126,7 @@ func (q *Queries) AddProductToCart(ctx context.Context, arg AddProductToCartPara
 const GetCartItems = `-- name: GetCartItems :many
 SELECT id,
        merchant_id,
+       shop_name,
        spu_id,
        sku_id,
        quantity,
@@ -152,6 +153,7 @@ type GetCartItemsParams struct {
 type GetCartItemsRow struct {
 	ID              int64
 	MerchantID      uuid.UUID
+	ShopName        string
 	SpuID           int64
 	SkuID           int64
 	Quantity        int32
@@ -161,7 +163,7 @@ type GetCartItemsRow struct {
 	Price           pgtype.Numeric
 	SkuAttributes   []byte
 	SkuThumbnailUrl string
-	Status          interface{}
+	Status          CartCartType
 	CreatedAt       time.Time
 	UpdatedAt       time.Time
 }
@@ -170,6 +172,7 @@ type GetCartItemsRow struct {
 //
 //	SELECT id,
 //	       merchant_id,
+//	       shop_name,
 //	       spu_id,
 //	       sku_id,
 //	       quantity,
@@ -198,6 +201,7 @@ func (q *Queries) GetCartItems(ctx context.Context, arg GetCartItemsParams) ([]G
 		if err := rows.Scan(
 			&i.ID,
 			&i.MerchantID,
+			&i.ShopName,
 			&i.SpuID,
 			&i.SkuID,
 			&i.Quantity,

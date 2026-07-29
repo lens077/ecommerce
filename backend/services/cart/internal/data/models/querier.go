@@ -51,6 +51,7 @@ type Querier interface {
 	//
 	//  SELECT id,
 	//         merchant_id,
+	//         shop_name,
 	//         spu_id,
 	//         sku_id,
 	//         quantity,
