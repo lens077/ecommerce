@@ -90,6 +90,28 @@ export const tokens = {
   },
 } as const;
 
+/**
+ * MUI sx 专用的间距（像素字符串）
+ *
+ * 注意：MUI 的 sx 会把 `p/m/gap/py` 等间距属性的「数字」按主题系数(默认 8px)换算，
+ * 直接写 `p: tokens.spacing[4]`(=16) 会变成 128px。这里预先转成 "16px" 字符串，
+ * MUI 会当作字面值使用，从而与设计系统的像素间距保持一致。
+ * 用法：`sx={{ p: sp[4], gap: sp[2] }}`
+ */
+export const sp = {
+  0: "0px",
+  1: "4px",
+  2: "8px",
+  3: "12px",
+  4: "16px",
+  5: "20px",
+  6: "24px",
+  8: "32px",
+  10: "40px",
+  12: "48px",
+  16: "64px",
+} as const;
+
 // 便捷的间距常量
 export const space = {
   xs: tokens.spacing[1],   // 4px

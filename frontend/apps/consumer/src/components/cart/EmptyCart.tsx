@@ -6,7 +6,7 @@
 
 import { Box, Button, Typography } from "@mui/material";
 import { ShoppingCart } from "lucide-react";
-import { tokens } from "@/styles/tokens";
+import { sp, tokens } from "@/styles/tokens";
 
 interface EmptyCartProps {
   onNavigateHome: () => void;
@@ -20,8 +20,8 @@ export function EmptyCart({ onNavigateHome }: EmptyCartProps) {
         flexDirection: "column",
         alignItems: "center",
         justifyContent: "center",
-        py: tokens.spacing[6],
-        px: tokens.spacing[6],
+        py: sp[6],
+        px: sp[6],
         textAlign: "center",
       }}
     >
@@ -34,7 +34,7 @@ export function EmptyCart({ onNavigateHome }: EmptyCartProps) {
           justifyContent: "center",
           bgcolor: tokens.colors.background.primary,
           borderRadius: tokens.radius.full,
-          mb: tokens.spacing[6],
+          mb: sp[6],
         }}
       >
         <ShoppingCart
@@ -49,7 +49,7 @@ export function EmptyCart({ onNavigateHome }: EmptyCartProps) {
         sx={{
           color: tokens.colors.text.primary,
           fontWeight: 600,
-          mb: tokens.spacing[1],
+          mb: sp[1],
         }}
       >
         购物车是空的
@@ -59,7 +59,7 @@ export function EmptyCart({ onNavigateHome }: EmptyCartProps) {
         variant="body2"
         sx={{
           color: tokens.colors.text.secondary,
-          mb: tokens.spacing[3],
+          mb: sp[3],
         }}
       >
         快去挑选心仪的商品吧
@@ -69,7 +69,7 @@ export function EmptyCart({ onNavigateHome }: EmptyCartProps) {
         variant="contained"
         onClick={onNavigateHome}
         sx={{
-          px: tokens.spacing[8],
+          px: sp[8],
           height: 44,
           bgcolor: tokens.colors.accent.black,
           color: tokens.colors.text.inverse,

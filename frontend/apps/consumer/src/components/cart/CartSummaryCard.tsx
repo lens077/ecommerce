@@ -8,7 +8,7 @@
 
 import { Box, Button, Checkbox, Divider, Typography } from "@mui/material";
 import type { CartSummary } from "@/store/cart";
-import { tokens } from "@/styles/tokens";
+import { sp, tokens } from "@/styles/tokens";
 
 interface CartSummaryCardProps {
   summary: CartSummary;
@@ -37,7 +37,7 @@ export function CartSummaryCard({
         bgcolor: tokens.colors.background.card,
         border: `1px solid ${tokens.colors.border.default}`,
         borderRadius: tokens.radius.lg,
-        p: tokens.spacing[4],
+        p: sp[4],
       }}
     >
         {/* 全选 */}
@@ -47,8 +47,8 @@ export function CartSummaryCard({
             cursor: "pointer",
             display: "flex",
             alignItems: "center",
-            gap: tokens.spacing[2],
-            mb: tokens.spacing[4],
+            gap: sp[2],
+            mb: sp[4],
           }}
         >
           <Checkbox
@@ -67,13 +67,13 @@ export function CartSummaryCard({
           </Typography>
         </Box>
 
-        <Divider sx={{ borderColor: tokens.colors.border.default, mb: tokens.spacing[4] }} />
+        <Divider sx={{ borderColor: tokens.colors.border.default, mb: sp[4] }} />
 
         {/* 明细 */}
-        <Box sx={{ mb: tokens.spacing[4] }}>
+        <Box sx={{ mb: sp[4] }}>
           <Typography
             variant="body2"
-            sx={{ fontWeight: 600, color: tokens.colors.text.primary, mb: tokens.spacing[3] }}
+            sx={{ fontWeight: 600, color: tokens.colors.text.primary, mb: sp[3] }}
           >
             费用明细
           </Typography>
@@ -92,7 +92,7 @@ export function CartSummaryCard({
           />
         </Box>
 
-        <Divider sx={{ borderColor: tokens.colors.border.default, mb: tokens.spacing[4] }} />
+        <Divider sx={{ borderColor: tokens.colors.border.default, mb: sp[4] }} />
 
         {/* 合计 */}
         <Box
@@ -100,7 +100,7 @@ export function CartSummaryCard({
             display: "flex",
             alignItems: "baseline",
             justifyContent: "space-between",
-            mb: tokens.spacing[4],
+            mb: sp[4],
           }}
         >
           <Typography variant="body1" sx={{ color: tokens.colors.text.primary, fontWeight: 500 }}>
@@ -149,7 +149,7 @@ export function CartSummaryCard({
         right: 0,
         bgcolor: tokens.colors.background.card,
         borderTop: `1px solid ${tokens.colors.border.default}`,
-        p: tokens.spacing[4],
+        p: sp[4],
         zIndex: tokens.zIndex.fixed,
       }}
     >
@@ -160,13 +160,13 @@ export function CartSummaryCard({
             display: "flex",
             alignItems: "center",
             justifyContent: "space-between",
-            gap: tokens.spacing[4],
+            gap: sp[4],
           }}
         >
         {/* 全选 */}
         <Box
           onClick={() => onSelectAll(!allSelected)}
-          sx={{ display: "flex", alignItems: "center", gap: tokens.spacing[2], cursor: "pointer" }}
+          sx={{ display: "flex", alignItems: "center", gap: sp[2], cursor: "pointer" }}
         >
           <Checkbox
             checked={allSelected}
@@ -196,7 +196,7 @@ export function CartSummaryCard({
           <Typography
             component="span"
             variant="body1"
-            sx={{ color: tokens.colors.accent.red, fontWeight: 600, ml: tokens.spacing[1] }}
+            sx={{ color: tokens.colors.accent.red, fontWeight: 600, ml: sp[1] }}
           >
             ¥{summary.selectedPrice.toFixed(2)}
           </Typography>
@@ -236,7 +236,7 @@ function SummaryRow({ label, value }: { label: string; value: string }) {
         display: "flex",
         justifyContent: "space-between",
         alignItems: "center",
-        py: tokens.spacing[1],
+        py: sp[1],
       }}
     >
       <Typography variant="body2" sx={{ color: tokens.colors.text.secondary }}>
