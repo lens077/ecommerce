@@ -205,6 +205,7 @@ func (x *AddProductToCartRequest) GetStatus() CartStatus {
 type AddProductToCartResponse struct {
 	state            protoimpl.MessageState `protogen:"open.v1"`
 	CartItemQuantity uint32                 `protobuf:"varint,1,opt,name=cart_item_quantity,json=cartItemQuantity,proto3" json:"cart_item_quantity,omitempty"` // 购物车商品总数量
+	CartItemId       uint64                 `protobuf:"varint,2,opt,name=cart_item_id,json=cartItemId,proto3" json:"cart_item_id,omitempty"`                   // 新增/更新的购物车项ID（前端下单等场景需要真实ID）
 	unknownFields    protoimpl.UnknownFields
 	sizeCache        protoimpl.SizeCache
 }
@@ -242,6 +243,13 @@ func (*AddProductToCartResponse) Descriptor() ([]byte, []int) {
 func (x *AddProductToCartResponse) GetCartItemQuantity() uint32 {
 	if x != nil {
 		return x.CartItemQuantity
+	}
+	return 0
+}
+
+func (x *AddProductToCartResponse) GetCartItemId() uint64 {
+	if x != nil {
+		return x.CartItemId
 	}
 	return 0
 }
@@ -812,9 +820,11 @@ const file_api_cart_v1_cart_proto_rawDesc = "" +
 	"\x0esku_attributes\x18\t \x01(\v2\x17.google.protobuf.StructR\rskuAttributes\x12*\n" +
 	"\x11sku_thumbnail_url\x18\n" +
 	" \x01(\tR\x0fskuThumbnailUrl\x125\n" +
-	"\x06status\x18\v \x01(\x0e2\x13.cart.v1.CartStatusB\b\xbaH\x05\x82\x01\x02\x10\x01R\x06status\"H\n" +
+	"\x06status\x18\v \x01(\x0e2\x13.cart.v1.CartStatusB\b\xbaH\x05\x82\x01\x02\x10\x01R\x06status\"j\n" +
 	"\x18AddProductToCartResponse\x12,\n" +
-	"\x12cart_item_quantity\x18\x01 \x01(\rR\x10cartItemQuantity\"\xb7\x01\n" +
+	"\x12cart_item_quantity\x18\x01 \x01(\rR\x10cartItemQuantity\x12 \n" +
+	"\fcart_item_id\x18\x02 \x01(\x04R\n" +
+	"cartItemId\"\xb7\x01\n" +
 	"\x15RemoveCartItemRequest\x12\x17\n" +
 	"\aspu_ids\x18\x01 \x03(\x03R\x06spuIds\x12\x17\n" +
 	"\asku_ids\x18\x02 \x03(\x03R\x06skuIds\x120\n" +

@@ -46,7 +46,7 @@ type Querier interface {
 	//  SELECT COUNT(*) AS cart_item_quantity
 	//  FROM cart.cart_item
 	//  WHERE user_id = $1
-	AddProductToCart(ctx context.Context, arg AddProductToCartParams) (int64, error)
+	AddProductToCart(ctx context.Context, arg AddProductToCartParams) (AddProductToCartRow, error)
 	// 获取用户购物车所有商品
 	//
 	//  SELECT id,

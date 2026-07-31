@@ -1,7 +1,7 @@
 SET search_path TO cart;
 
 -- name: AddProductToCart :one
-WITH insert AS (
+WITH upsert AS (
     INSERT INTO cart.cart_item (user_id,
                                 merchant_id,
                                 spu_id,
@@ -32,10 +32,12 @@ WITH insert AS (
                 selected = EXCLUDED.selected,
                 -- 状态重新校准为正常
                 status = EXCLUDED.status,
-                updated_at = now())
-SELECT COUNT(*) AS cart_item_quantity
-FROM cart.cart_item
-WHERE user_id = @user_id;
+                updated_at = now()
+        -- 返回新增/更新命中的购物车项ID（前端下单需要真实ID）
+        RETURNING id)
+SELECT upsert.id                                                      AS cart_item_id,
+       (SELECT COUNT(*) FROM cart.cart_item WHERE user_id = @user_id) AS cart_item_quantity
+FROM upsert;
 
 -- 删除购物车项, 返回删除后的购物车总商品项和是否为空购物车和删除的购物车商品数量
 -- name: RemoveCartItem :one

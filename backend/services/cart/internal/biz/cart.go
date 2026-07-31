@@ -29,6 +29,7 @@ type (
 
 	AddProductToCartResponse struct {
 		CartItemQuantity int32
+		CartItemId       uint64 // 新增/更新的购物车项ID（前端下单需要真实ID）
 	}
 )
 type (

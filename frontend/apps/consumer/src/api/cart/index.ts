@@ -78,7 +78,7 @@ export class CartApiClient {
     });
 
     return {
-      cartItemId: `${Date.now()}`,
+      cartItemId: response.cartItemId.toString(),
       cartTotalQuantity: response.cartItemQuantity,
     };
   }
