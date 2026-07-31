@@ -255,7 +255,10 @@ func (r *configRepo) ListRevisions(ctx context.Context, namespace, environment, 
 	}
 	out := make([]*biz.ConfigRevision, 0, len(rows))
 	for _, m := range rows {
-		out = append(out, toRevision(m))
+		rev := toRevision(m)
+		// revision 表不存 is_secret,标记从 entry 带过来,让上层能按同一规则脱敏
+		rev.IsSecret = entry.IsSecret
+		out = append(out, rev)
 	}
 	return out, nil
 }
@@ -275,5 +278,7 @@ func (r *configRepo) GetRevision(ctx context.Context, namespace, environment, ke
 		}
 		return nil, err
 	}
-	return toRevision(m), nil
+	rev := toRevision(m)
+	rev.IsSecret = entry.IsSecret
+	return rev, nil
 }
