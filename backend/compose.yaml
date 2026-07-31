@@ -1,20 +1,210 @@
+# 一把拉起全部后端微服务,环境变量与各服务的 `make dev` 逐项一致。
+#
+# 前置:
+#   docker network create ecommerce
+#   docker login ccr.ccs.tencentyun.com
+# 用法:
+#   docker compose up -d              # 全部
+#   docker compose up -d ecommerce-cart   # 只起一个
+#
+# 说明:
+# 1. 容器注册进 Consul 的是它在 ecommerce 网桥里的 IP(172.x),网关必须接在同一个
+#    网络里才路由得到;宿主机侧仍可用下面映射出来的 30001~30010 直连。
+# 2. payment 暂不在列:services/payment/internal/data 里 NewPaymentRepo 还是注释状态,
+#    镜像编译不过,补齐后把它按同样格式加回来即可。
+
+x-service-common: &service-common
+  pull_policy: always
+  networks:
+    - ecommerce
+  restart: on-failure:3
+
+x-consul-env: &consul-env
+  # CONSUL_* 同时供「读配置」与「服务注册发现」使用
+  CONSUL_ENABLED: "true"
+  CONSUL_ADDR: "192.168.3.112:8500"
+  CONSUL_SCHEME: "http"
+  CONSUL_INSECURE_SKIP_VERIFY: "true"
+  SERVICE_VERSION: "v1"
+  DEPLOYMENT_MODE: "dev"
+  # 日志只走 stdout,不从应用内导出
+  OTEL_LOGS_EXPORTER: "none"
+
 services:
 
-  user:
-    image: harbor.apikv.com:5443/sumery/ecommerce/user:dev
-    environment:
-      HTTP_ADDR: 0.0.0.0:4000
-      RUN_MODE: prod
+  ecommerce-user:
+    <<: *service-common
+    image: ccr.ccs.tencentyun.com/sumery/user:dev
+    container_name: ecommerce-user
     ports:
-      - "0.0.0.0:4000:4000"
-    container_name: user
-    restart: on-failure:3
-#    environment:
-#      - DISCOVERY_DSN=consul://apikv.com:8500
-#      - DISCOVERY_CONFIG_PATH=ecommerce/gateway/config.yaml
-#    volumes:
-#      # 仅挂载本地配置文件（开发环境）
-#      - ./dynamic-config:/app/dynamic-config
-#    command: [ "/app/gateway" ]
-#    networks:
-#      - ecommerce
+      - "0.0.0.0:30001:30001"
+    environment:
+      <<: *consul-env
+      # SERVICE_NAME 就是注册进 Consul 的服务名,必须与网关 discovery:///user-identity 一致
+      SERVICE_NAME: "user-identity"
+      CONSUL_PATH: "ecommerce/user/dev.yml"
+    healthcheck:
+      # /healthz 在 DB/缓存不通时返回 503;镜像是 alpine,用 busybox 自带的 wget
+      test: ["CMD", "wget", "-q", "-O", "-", "http://127.0.0.1:30001/healthz"]
+      interval: 10s
+      timeout: 3s
+      retries: 3
+      start_period: 15s
+
+  ecommerce-search:
+    <<: *service-common
+    image: ccr.ccs.tencentyun.com/sumery/search:dev
+    container_name: ecommerce-search
+    ports:
+      - "0.0.0.0:30002:30002"
+    environment:
+      <<: *consul-env
+      # SERVICE_NAME 就是注册进 Consul 的服务名,必须与网关 discovery:///search-product 一致
+      SERVICE_NAME: "search-product"
+      CONSUL_PATH: "ecommerce/search/dev.yml"
+    healthcheck:
+      # /healthz 在 DB/缓存不通时返回 503;镜像是 alpine,用 busybox 自带的 wget
+      test: ["CMD", "wget", "-q", "-O", "-", "http://127.0.0.1:30002/healthz"]
+      interval: 10s
+      timeout: 3s
+      retries: 3
+      start_period: 15s
+
+  ecommerce-product:
+    <<: *service-common
+    image: ccr.ccs.tencentyun.com/sumery/product:dev
+    container_name: ecommerce-product
+    ports:
+      - "0.0.0.0:30003:30003"
+    environment:
+      <<: *consul-env
+      # SERVICE_NAME 就是注册进 Consul 的服务名,必须与网关 discovery:///product-service 一致
+      SERVICE_NAME: "product-service"
+      CONSUL_PATH: "ecommerce/product/dev.yml"
+    healthcheck:
+      # /healthz 在 DB/缓存不通时返回 503;镜像是 alpine,用 busybox 自带的 wget
+      test: ["CMD", "wget", "-q", "-O", "-", "http://127.0.0.1:30003/healthz"]
+      interval: 10s
+      timeout: 3s
+      retries: 3
+      start_period: 15s
+
+  ecommerce-order:
+    <<: *service-common
+    image: ccr.ccs.tencentyun.com/sumery/order:dev
+    container_name: ecommerce-order
+    ports:
+      - "0.0.0.0:30004:30004"
+    environment:
+      <<: *consul-env
+      # SERVICE_NAME 就是注册进 Consul 的服务名,必须与网关 discovery:///order-service 一致
+      SERVICE_NAME: "order-service"
+      CONSUL_PATH: "ecommerce/order/dev.yml"
+    healthcheck:
+      # /healthz 在 DB/缓存不通时返回 503;镜像是 alpine,用 busybox 自带的 wget
+      test: ["CMD", "wget", "-q", "-O", "-", "http://127.0.0.1:30004/healthz"]
+      interval: 10s
+      timeout: 3s
+      retries: 3
+      start_period: 15s
+
+  ecommerce-inventory:
+    <<: *service-common
+    image: ccr.ccs.tencentyun.com/sumery/inventory:dev
+    container_name: ecommerce-inventory
+    ports:
+      - "0.0.0.0:30005:30005"
+    environment:
+      <<: *consul-env
+      # SERVICE_NAME 就是注册进 Consul 的服务名,必须与网关 discovery:///inventory-service 一致
+      SERVICE_NAME: "inventory-service"
+      CONSUL_PATH: "ecommerce/inventory/dev.yml"
+    healthcheck:
+      # /healthz 在 DB/缓存不通时返回 503;镜像是 alpine,用 busybox 自带的 wget
+      test: ["CMD", "wget", "-q", "-O", "-", "http://127.0.0.1:30005/healthz"]
+      interval: 10s
+      timeout: 3s
+      retries: 3
+      start_period: 15s
+
+  ecommerce-cart:
+    <<: *service-common
+    image: ccr.ccs.tencentyun.com/sumery/cart:dev
+    container_name: ecommerce-cart
+    ports:
+      - "0.0.0.0:30006:30006"
+    environment:
+      <<: *consul-env
+      # SERVICE_NAME 就是注册进 Consul 的服务名,必须与网关 discovery:///cart-service 一致
+      SERVICE_NAME: "cart-service"
+      CONSUL_PATH: "ecommerce/cart/dev.yml"
+      # 配置数据源:consul(默认) | configcenter。显式二选一,不做失败自动降级。
+      CONFIG_SOURCE: "consul"
+    healthcheck:
+      # /healthz 在 DB/缓存不通时返回 503;镜像是 alpine,用 busybox 自带的 wget
+      test: ["CMD", "wget", "-q", "-O", "-", "http://127.0.0.1:30006/healthz"]
+      interval: 10s
+      timeout: 3s
+      retries: 3
+      start_period: 15s
+
+  ecommerce-merchant:
+    <<: *service-common
+    image: ccr.ccs.tencentyun.com/sumery/merchant:dev
+    container_name: ecommerce-merchant
+    ports:
+      - "0.0.0.0:30007:30007"
+    environment:
+      <<: *consul-env
+      # SERVICE_NAME 就是注册进 Consul 的服务名,必须与网关 discovery:///merchant-service 一致
+      SERVICE_NAME: "merchant-service"
+      CONSUL_PATH: "ecommerce/merchant/dev.yml"
+    healthcheck:
+      # /healthz 在 DB/缓存不通时返回 503;镜像是 alpine,用 busybox 自带的 wget
+      test: ["CMD", "wget", "-q", "-O", "-", "http://127.0.0.1:30007/healthz"]
+      interval: 10s
+      timeout: 3s
+      retries: 3
+      start_period: 15s
+
+  ecommerce-address:
+    <<: *service-common
+    image: ccr.ccs.tencentyun.com/sumery/address:dev
+    container_name: ecommerce-address
+    ports:
+      - "0.0.0.0:30009:30009"
+    environment:
+      <<: *consul-env
+      # SERVICE_NAME 就是注册进 Consul 的服务名,必须与网关 discovery:///address-service 一致
+      SERVICE_NAME: "address-service"
+      CONSUL_PATH: "ecommerce/address/dev.yml"
+    healthcheck:
+      # /healthz 在 DB/缓存不通时返回 503;镜像是 alpine,用 busybox 自带的 wget
+      test: ["CMD", "wget", "-q", "-O", "-", "http://127.0.0.1:30009/healthz"]
+      interval: 10s
+      timeout: 3s
+      retries: 3
+      start_period: 15s
+
+  ecommerce-config:
+    <<: *service-common
+    image: ccr.ccs.tencentyun.com/sumery/config:dev
+    container_name: ecommerce-config
+    ports:
+      - "0.0.0.0:30010:30010"
+    environment:
+      <<: *consul-env
+      # SERVICE_NAME 就是注册进 Consul 的服务名,必须与网关 discovery:///config-service 一致
+      SERVICE_NAME: "config-service"
+      CONSUL_PATH: "ecommerce/config/dev.yml"
+    healthcheck:
+      # /healthz 在 DB/缓存不通时返回 503;镜像是 alpine,用 busybox 自带的 wget
+      test: ["CMD", "wget", "-q", "-O", "-", "http://127.0.0.1:30010/healthz"]
+      interval: 10s
+      timeout: 3s
+      retries: 3
+      start_period: 15s
+
+networks:
+  ecommerce:
+    external: true

@@ -11,4 +11,3 @@ spec:
       port: 30001
       targetPort: 30001
   type: LoadBalancer
-

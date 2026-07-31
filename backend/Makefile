@@ -1,18 +1,11 @@
 # 默认值
 VERSION ?= dev
-GOIMAGE ?= golang:1.25.8-alpine3.22
-GOOS ?= linux
-GOARCH ?= amd64
-CGOENABLED ?= 0
 
-# 动态变量
-SERVICE = $(shell basename $$PWD)
-DOCKER_IMAGE=connect/$(SERVICE):$(VERSION)
-REPOSITORY = lens077/$(SERVICE)
-REGISTER = ccr.ccs.tencentyun.com
-ARM64=linux/arm64
-AMD64=linux/amd64
-CONSUL_ADDR=consul.app.com
+# 全部微服务。payment 暂不在列:internal/data 里 NewPaymentRepo 还是注释状态,镜像编译不过。
+SERVICES ?= user search product order inventory cart merchant address config
+
+# consul kv 导入导出用的地址。命令行可覆盖: make consul-kv-export CONSUL_ADDR=consul.app.com
+CONSUL_ADDR ?= 192.168.3.112:8500
 
 .PHONY: consul-kv-export
 consul-kv-export:
@@ -44,58 +37,45 @@ generate:
 conf:
 	buf generate --template buf.gen.yaml
 
-.PHONY: docker-build
-# 使用 docker 构建镜像
-docker-build:
-	@echo "构建的微服务: $(SERVICE)"
-	@echo "系统: $(GOOS) | CPU架构: $(GOARCH)"
-	@echo "镜像名: $(REPOSITORY):$(VERSION)"
-	docker build . \
-	  -f ./Dockerfile \
-	  --progress=plain \
-	  -t ecommerce/$(SERVICE):$(VERSION) \
-	  --build-arg SERVICE=$(SERVICE) \
-	  --build-arg CGOENABLED=$(CGOENABLED) \
-	  --build-arg GOIMAGE=$(GOIMAGE) \
-	  --build-arg GOOS=$(GOOS) \
-	  --build-arg GOARCH=$(GOARCH) \
-	  --build-arg VERSION=$(VERSION) \
-	  --platform $(GOOS)/$(GOARCH)
+# 镜像构建统一在各服务目录下做:Dockerfile 只有 services/<svc>/Dockerfile 一份,
+# 这里不重复实现,只做「对所有服务跑一遍」的扇出。
+# 单个服务请用: cd services/<svc> && make docker-build | docker-deploy | docker-deployx
 
-# 使用方式: make docker-push SERVICE=微服务名
-.PHONY: docker-push
-docker-push:
-	@echo "使用方式: make docker-push SERVICE=微服务名"
-	@echo "OS: $(GOOS) | ARCH: $(GOARCH)"
-	@echo "Docker image: $(REPOSITORY):$(VERSION)"
-	docker tag ecommerce/$(SERVICE):$(VERSION) $(REGISTER)/$(REPOSITORY):$(VERSION)
-	docker push $(REGISTER)/$(REPOSITORY):$(VERSION)
+.PHONY: docker-build-all
+# 逐个服务本地单架构构建(不推送)
+docker-build-all:
+	@for s in $(SERVICES); do \
+	  echo "===== docker-build $$s ====="; \
+	  $(MAKE) -C services/$$s docker-build VERSION=$(VERSION) || exit 1; \
+	done
 
-.PHONY: docker-deploy
-docker-deploy:
-	@echo "使用方式: make docker-deploy SERVICE=微服务名"
-	@echo "SERVICE=$(SERVICE)"
-	make docker-build SERVICE=$(SERVICE)
-	@echo "SERVICE=$(SERVICE)"
-	make docker-push SERVICE=$(SERVICE)
+.PHONY: docker-deployx-all
+# 逐个服务多架构构建并推送到镜像仓库(会覆盖远端同名 tag)
+docker-deployx-all:
+	@echo "即将构建并推送 tag=$(VERSION) 的镜像: $(SERVICES)"
+	@for s in $(SERVICES); do \
+	  echo "===== docker-deployx $$s ====="; \
+	  $(MAKE) -C services/$$s docker-deployx VERSION=$(VERSION) || exit 1; \
+	done
 
-.PHONY: docker-deployx
-# 使用 docker 构建多平台架构镜像
-docker-deployx:
-	@echo "构建的微服务: $(SERVICE)"
-	@echo "平台1: $(ARM64)"
-	@echo "平台2: $(AMD64)"
-	@echo "镜像名: $(REPOSITORY):$(VERSION)"
-	docker buildx build . \
-	  -f ./Dockerfile \
-	  --progress=plain \
-	  -t $(REGISTER)/$(REPOSITORY):$(VERSION) \
-	  --build-arg SERVICE=$(SERVICE) \
-	  --build-arg CGOENABLED=$(CGOENABLED) \
-	  --build-arg GOIMAGE=$(GOIMAGE) \
-	  --build-arg VERSION=$(VERSION) \
-	  --build-arg SERVICE=server \
-	  --platform $(ARM64),$(AMD64) \
-	  --push \
-	  --cache-from type=registry,ref=$(REGISTER)/$(REPOSITORY):cache \
-	  --cache-to type=registry,ref=$(REGISTER)/$(REPOSITORY):cache,mode=max
+.PHONY: compose-up
+# 一把拉起全部服务,环境变量与各服务的 make dev 一致
+compose-up:
+	docker network inspect ecommerce >/dev/null 2>&1 || docker network create ecommerce
+	docker compose up -d
+
+.PHONY: compose-down
+compose-down:
+	docker compose down
+
+.PHONY: compose-logs
+compose-logs:
+	docker compose logs -f --tail=100
+
+.PHONY: k8s-dev-all
+k8s-dev-all:
+	@for s in $(SERVICES); do kubectl apply -f services/$$s/deploy/dev || exit 1; done
+
+.PHONY: k8s-prod-all
+k8s-prod-all:
+	@for s in $(SERVICES); do kubectl apply -f services/$$s/deploy/prod || exit 1; done

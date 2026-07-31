@@ -1,29 +1,71 @@
 apiVersion: apps/v1
 kind: Deployment
 metadata:
-  name: ecommerce-user-deploy
+  name: ecommerce-order-deploy
   labels:
-    app: ecommerce-user
+    app: ecommerce-order
 spec:
   replicas: 1
   selector:
     matchLabels:
-      app: ecommerce-user
+      app: ecommerce-order
   template:
     metadata:
-      name: ecommerce-user
+      name: ecommerce-order
       labels:
-        app: ecommerce-user
+        app: ecommerce-order
     spec:
       containers:
-        - name: ecommerce-user
-          image: harbor.apikv.com:5443/ecommerce/user:dev
+        - name: ecommerce-order
+          image: ccr.ccs.tencentyun.com/sumery/order:prod
           imagePullPolicy: Always
+          env:
+            # 关闭应用内的 Log 导出器，只保留 Trace 和 Metric。
+            # 日志输出到 stdout，由部署在 k8s 的 Fluent Bit 统一采集
+            - name: OTEL_LOGS_EXPORTER
+              value: "none"
+            # SERVICE_NAME 就是注册进 Consul 的服务名,必须与网关
+            # gateway/configs/config.yaml 里的 discovery:///order-service 完全一致
+            - name: SERVICE_NAME
+              value: "order-service"
+            - name: SERVICE_VERSION
+              value: "v1"
+            - name: DEPLOYMENT_MODE
+              value: "prod"
+            # CONSUL_* 同时供「读配置」与「服务注册发现」使用
+            - name: CONSUL_ENABLED
+              value: "true"
+            - name: CONSUL_ADDR
+              value: "consul-server.consul.svc:8501"
+            - name: CONSUL_SCHEME
+              value: "https"
+            - name: CONSUL_INSECURE_SKIP_VERIFY
+              value: "true"
+            - name: CONSUL_PATH
+              value: "ecommerce/order/prod.yml"
           ports:
-            - containerPort: 30001
+            - containerPort: 30004
               protocol: TCP
-          envFrom:
-            - configMapRef:
-                name: ecommerce-user-config
+          # /healthz 在 DB/缓存不通时返回 503。就绪探针据此摘流量;
+          # 存活探针只探端口 —— 用 /healthz 做存活会让一次数据库抖动把所有 Pod 连环重启。
+          readinessProbe:
+            httpGet:
+              path: /healthz
+              port: 30004
+            initialDelaySeconds: 5
+            periodSeconds: 10
+            failureThreshold: 3
+          livenessProbe:
+            tcpSocket:
+              port: 30004
+            initialDelaySeconds: 20
+            periodSeconds: 20
+            failureThreshold: 3
+          resources:
+            requests:
+              cpu: 100m
+              memory: 128Mi
+            limits:
+              cpu: "1"
+              memory: 512Mi
       restartPolicy: Always
-      

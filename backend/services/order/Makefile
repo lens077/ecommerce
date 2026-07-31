@@ -2,7 +2,7 @@
 VERSION ?= dev
 GOIMAGE ?= golang:1.26.1-alpine3.22
 GOOS ?= linux
-GOARCH ?= arm64
+GOARCH ?= amd64
 CGOENABLED ?= 0
 
 # 动态变量
@@ -12,7 +12,10 @@ REPOSITORY = sumery/$(SERVICE)
 REGISTER = ccr.ccs.tencentyun.com
 ARM64=linux/arm64
 AMD64=linux/amd64
-CONSUL_ADDR=consul.app.com
+# 本地 make dev/pre 直连集群 Consul KV 读配置。
+# consul.app.com(192.168.3.110) 从宿主机访问会超时,所以默认写成可达的 IP;
+# 需要走域名时命令行覆盖即可: make dev CONSUL_KV_ADDR=consul.app.com
+CONSUL_KV_ADDR ?= 192.168.3.112:8500
 
 .PHONY: k8s-dev
 k8s-dev:
@@ -26,20 +29,20 @@ k8s-prod:
 dev:
 	SERVICE_NAME="order-service" \
 	CONSUL_ENABLED=true \
-	CONSUL_ADDR=$(CONSUL_ADDR) \
-    CONSUL_PATH=ecommerce/order/dev.yml \
-    CONSUL_SCHEME=http \
-    CONSUL_INSECURE_SKIP_VERIFY=true \
+	CONSUL_ADDR=$(CONSUL_KV_ADDR) \
+	CONSUL_PATH=ecommerce/order/dev.yml \
+	CONSUL_SCHEME=http \
+	CONSUL_INSECURE_SKIP_VERIFY=true \
 	go run cmd/server/main.go
 
 .PHONY: pre
 pre:
 	SERVICE_NAME="order-service" \
 	CONSUL_ENABLED=true \
-	CONSUL_ADDR=$(CONSUL_ADDR) \
-    CONSUL_PATH=ecommerce/order/pre.yaml \
-    CONSUL_SCHEME=http \
-    CONSUL_INSECURE_SKIP_VERIFY=true \
+	CONSUL_ADDR=$(CONSUL_KV_ADDR) \
+	CONSUL_PATH=ecommerce/order/pre.yaml \
+	CONSUL_SCHEME=http \
+	CONSUL_INSECURE_SKIP_VERIFY=true \
 	go run cmd/server/main.go
 
 .PHONY: test
@@ -74,16 +77,14 @@ docker-build:
 	@echo "系统: $(GOOS) | CPU架构: $(GOARCH)"
 	@echo "镜像名: $(REPOSITORY):$(VERSION)"
 	cd ../.. && docker build . \
-      -f ./services/$(SERVICE)/Dockerfile \
-      --progress=plain \
-      -t ecommerce/$(SERVICE):dev \
-      --build-arg SERVICE=$(SERVICE) \
-      --build-arg CGOENABLED=0 \
-      --build-arg GOIMAGE=golang:1.26.1-alpine3.22 \
-      --build-arg GOOS=linux \
-      --build-arg GOARCH=amd64 \
-      --build-arg VERSION=dev \
-      --platform linux/amd64
+	  -f ./services/$(SERVICE)/Dockerfile \
+	  --progress=plain \
+	  -t ecommerce/$(SERVICE):$(VERSION) \
+	  --build-arg SERVICE=$(SERVICE) \
+	  --build-arg CGOENABLED=$(CGOENABLED) \
+	  --build-arg GO_IMAGE=$(GOIMAGE) \
+	  --build-arg VERSION=$(VERSION) \
+	  --platform $(GOOS)/$(GOARCH)
 
 # 使用方式: make docker-push SERVICE=微服务名
 .PHONY: docker-push
@@ -115,7 +116,7 @@ docker-deployx:
 	  -t $(REGISTER)/$(REPOSITORY):$(VERSION) \
 	  --build-arg SERVICE=$(SERVICE) \
 	  --build-arg CGOENABLED=$(CGOENABLED) \
-	  --build-arg GOIMAGE=$(GOIMAGE) \
+	  --build-arg GO_IMAGE=$(GOIMAGE) \
 	  --build-arg VERSION=$(VERSION) \
 	  --platform $(ARM64),$(AMD64) \
 	  --push \
