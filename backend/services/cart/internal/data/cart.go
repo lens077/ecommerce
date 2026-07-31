@@ -139,7 +139,7 @@ func (c cartRepo) AddProductToCart(ctx context.Context, req biz.AddProductToCart
 	if err != nil {
 		return nil, err
 	}
-	cartItemQuantity, err := c.queries.AddProductToCart(ctx, models.AddProductToCartParams{
+	row, err := c.queries.AddProductToCart(ctx, models.AddProductToCartParams{
 		UserID: pgtype.UUID{
 			Bytes: req.ConsumerId,
 			Valid: true,
@@ -165,7 +165,8 @@ func (c cartRepo) AddProductToCart(ctx context.Context, req biz.AddProductToCart
 	}
 
 	return &biz.AddProductToCartResponse{
-		CartItemQuantity: int32(cartItemQuantity),
+		CartItemQuantity: int32(row.CartItemQuantity),
+		CartItemId:       uint64(row.CartItemID),
 	}, nil
 }
 
