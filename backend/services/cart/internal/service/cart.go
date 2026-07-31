@@ -53,6 +53,7 @@ func (cs *CartService) AddProductToCart(ctx context.Context, c *connect.Request[
 
 	response := connect.NewResponse(&v1.AddProductToCartResponse{
 		CartItemQuantity: uint32(cart.CartItemQuantity),
+		CartItemId:       cart.CartItemId,
 	})
 	return response, nil
 }

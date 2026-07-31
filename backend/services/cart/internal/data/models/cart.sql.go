@@ -14,7 +14,7 @@ import (
 )
 
 const AddProductToCart = `-- name: AddProductToCart :one
-WITH insert AS (
+WITH upsert AS (
     INSERT INTO cart.cart_item (user_id,
                                 merchant_id,
                                 spu_id,
@@ -45,10 +45,12 @@ WITH insert AS (
                 selected = EXCLUDED.selected,
                 -- 状态重新校准为正常
                 status = EXCLUDED.status,
-                updated_at = now())
-SELECT COUNT(*) AS cart_item_quantity
-FROM cart.cart_item
-WHERE user_id = $1
+                updated_at = now()
+        -- 返回新增/更新命中的购物车项ID（前端下单需要真实ID）
+        RETURNING id)
+SELECT upsert.id                                                      AS cart_item_id,
+       (SELECT COUNT(*) FROM cart.cart_item WHERE user_id = $1) AS cart_item_quantity
+FROM upsert
 `
 
 type AddProductToCartParams struct {
@@ -66,9 +68,14 @@ type AddProductToCartParams struct {
 	Status          *CartCartType
 }
 
+type AddProductToCartRow struct {
+	CartItemID       int64
+	CartItemQuantity int64
+}
+
 // AddProductToCart
 //
-//	WITH insert AS (
+//	WITH upsert AS (
 //	    INSERT INTO cart.cart_item (user_id,
 //	                                merchant_id,
 //	                                spu_id,
@@ -99,11 +106,13 @@ type AddProductToCartParams struct {
 //	                selected = EXCLUDED.selected,
 //	                -- 状态重新校准为正常
 //	                status = EXCLUDED.status,
-//	                updated_at = now())
-//	SELECT COUNT(*) AS cart_item_quantity
-//	FROM cart.cart_item
-//	WHERE user_id = $1
-func (q *Queries) AddProductToCart(ctx context.Context, arg AddProductToCartParams) (int64, error) {
+//	                updated_at = now()
+//	        -- 返回新增/更新命中的购物车项ID（前端下单需要真实ID）
+//	        RETURNING id)
+//	SELECT upsert.id                                                      AS cart_item_id,
+//	       (SELECT COUNT(*) FROM cart.cart_item WHERE user_id = $1) AS cart_item_quantity
+//	FROM upsert
+func (q *Queries) AddProductToCart(ctx context.Context, arg AddProductToCartParams) (AddProductToCartRow, error) {
 	row := q.db.QueryRow(ctx, AddProductToCart,
 		arg.UserID,
 		arg.MerchantID,
@@ -118,9 +127,9 @@ func (q *Queries) AddProductToCart(ctx context.Context, arg AddProductToCartPara
 		arg.SkuThumbnailUrl,
 		arg.Status,
 	)
-	var cart_item_quantity int64
-	err := row.Scan(&cart_item_quantity)
-	return cart_item_quantity, err
+	var i AddProductToCartRow
+	err := row.Scan(&i.CartItemID, &i.CartItemQuantity)
+	return i, err
 }
 
 const GetCartItems = `-- name: GetCartItems :many
