@@ -2,12 +2,11 @@ package registry
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"net"
-	"net/url"
 	"os"
 	"strconv"
-	"strings"
 	"time"
 
 	"github.com/lens077/ecommerce/backend/services/inventory/internal/constants"
@@ -20,13 +19,8 @@ import (
 	"go.uber.org/zap"
 )
 
-//	TtlDuration 定义了 Consul Agent 期望的心跳时间间隔。
-//
-// 建议：TTL 持续时间（如 15s）应比心跳间隔（如 5s）长，以提供冗余。
-const (
-	TtlDuration     = "30s"
-	TtlPingInterval = 10 * time.Second
-)
+// defaultTtlPingInterval 是 discovery.consul.check.ttl.ping_interval 缺失时的兜底心跳间隔
+const defaultTtlPingInterval = 10 * time.Second
 
 type ConsulRegistry struct {
 	Addr   string
@@ -93,13 +87,14 @@ var Module = fx.Module("registry",
 			// 使用生命周期钩子自动注册、启动心跳和注销
 			lc.Append(fx.Hook{
 				OnStart: func(ctx context.Context) error {
-					if err := reg.Register(); err != nil {
+					if err := reg.Register(conf, appInfo); err != nil {
 						logger.Warn("Failed to register with Consul, service discovery disabled", zap.Error(err))
 						return nil // 允许应用继续运行
 					}
 
-					// 启动 TTL 心跳 Pinger
-					go reg.TtlCheckPinger(ctx, conf)
+					// 心跳是常驻的,不能挂在 OnStart 的 ctx 上 —— 那个 ctx 只管启动超时,
+					// OnStart 一返回就被取消,心跳会立刻退出,服务 30s 后被 Consul 判死并摘除。
+					go reg.TtlCheckPinger(context.Background(), conf)
 					return nil
 				},
 				OnStop: func(ctx context.Context) error {
@@ -151,36 +146,54 @@ func NewConsulRegistry(addr, ID, Name string, opts ...Option) (*ConsulRegistry, 
 }
 
 // Register 使用 TTL 健康检查注册服务
-func (r *ConsulRegistry) Register() error {
-	host, port, err := net.SplitHostPort(r.Addr)
+func (r *ConsulRegistry) Register(conf *confv1.Bootstrap, info meta.AppInfo) error {
+	r.logger.Debug("registering service to Consul", zap.String("id", r.ID))
+	// 注册的必须是「服务自己」的地址和端口。这里原先拿的是 r.Addr —— 那是 Consul 的地址,
+	// 等于把 Consul 自己登记成了 inventory 的端点,网关按它路由会打回 Consul。
+	host := info.Host
+	// 端口从服务自身配置里取
+	_, portStr, err := net.SplitHostPort(conf.Server.Addr)
 	if err != nil {
-		fmt.Printf("拆分失败: %v\n", err)
 		return err
 	}
-	portNum, err := strconv.Atoi(port)
+	portNum, err := strconv.Atoi(portStr)
 	if err != nil {
 		return err
 	}
+
+	// 与 Tls 同理:下面要连着解引用 Check.Ttl,配置里没写 check 段就是空指针。
+	// 这里返回错误而不是裸注册 —— 没有健康检查的实例会被 Consul 一直当健康的,
+	// 流量照打进来,比注册失败更难发现。
+	if conf.Discovery == nil || conf.Discovery.Consul == nil ||
+		conf.Discovery.Consul.Check == nil || conf.Discovery.Consul.Check.Ttl == nil {
+		return errors.New("consul check configuration is missing: discovery.consul.check.ttl")
+	}
+
 	reg := &api.AgentServiceRegistration{
 		ID:      r.ID,
 		Name:    r.Name,
 		Address: host,
 		Port:    portNum,
-		Tags:    []string{constants.ConsulTagFx, constants.ConsulTagTtl},
+		Tags: []string{
+			info.Version,
+			constants.ConsulTagFx,
+			constants.ConsulTagTtl,
+		},
 		Check: &api.AgentServiceCheck{
-			// 1. 使用 TTL 替换 HTTP/TCP 检查
-			TTL: TtlDuration,
-			// 2. 配置在检查失败后自动注销
-			DeregisterCriticalServiceAfter: "10s",
+			// 使用 TTL 替换 HTTP/TCP 检查
+			TTL: conf.Discovery.Consul.Check.Ttl.Duration,
+			// 配置在检查失败后自动注销
+			DeregisterCriticalServiceAfter: conf.Discovery.Consul.Check.DeregisterCriticalServiceAfter,
 		},
 	}
+	r.logger.Debug("service registration completed", zap.String("id", r.ID))
 
 	if err := r.client.Agent().ServiceRegister(reg); err != nil {
 		r.logger.Error("Failed to register service with Consul", zap.Error(err))
 		return err
 	}
 
-	r.logger.Info("Service registered with Consul using TTL check", zap.String("id", r.ID), zap.String("ttl", TtlDuration))
+	r.logger.Info("Service registered with Consul using TTL check", zap.String("id", r.ID), zap.String("ttl", conf.Discovery.Consul.Check.Ttl.Duration))
 	return nil
 }
 
@@ -188,7 +201,7 @@ func (r *ConsulRegistry) Register() error {
 func (r *ConsulRegistry) TtlCheckPinger(ctx context.Context, conf *confv1.Bootstrap) {
 	// time.NewTicker 对 <=0 的间隔直接 panic,而这里跑在独立 goroutine 里,
 	// panic 会整个进程带走。配置缺失或写成 0 时回落到默认值。
-	ttlPingInterval := TtlPingInterval
+	ttlPingInterval := defaultTtlPingInterval
 	if conf.Discovery != nil && conf.Discovery.Consul != nil &&
 		conf.Discovery.Consul.Check != nil && conf.Discovery.Consul.Check.Ttl != nil &&
 		conf.Discovery.Consul.Check.Ttl.PingInterval.AsDuration() > 0 {
@@ -223,37 +236,4 @@ func (r *ConsulRegistry) TtlCheckPinger(ctx context.Context, conf *confv1.Bootst
 func (r *ConsulRegistry) Deregister() error {
 	r.logger.Info("Deregistering service from Consul", zap.String("id", r.ID))
 	return r.client.Agent().ServiceDeregister(r.ID)
-}
-
-func ParseToTCPAddr(rawURL string) (*net.TCPAddr, error) {
-	// 1. 解析 URL 结构
-	u, err := url.Parse(rawURL)
-	if err != nil {
-		return nil, fmt.Errorf("parse url failed: %w", err)
-	}
-
-	host := u.Host
-	if host == "" {
-		return nil, fmt.Errorf("empty host in url")
-	}
-
-	// 2. 处理端口问题
-	// SplitHostPort 如果发现字符串里没有端口会报错，所以需要判断
-	finalAddr := host
-	if !strings.Contains(host, ":") {
-		// 根据 Scheme 补齐默认端口
-		port := "80"
-		if u.Scheme == "https" {
-			port = "443"
-		}
-		finalAddr = net.JoinHostPort(host, port)
-	}
-
-	// 3. 解析为 TCPAddr (包含 DNS 查询)
-	tcpAddr, err := net.ResolveTCPAddr("tcp", finalAddr)
-	if err != nil {
-		return nil, fmt.Errorf("resolve tcp addr failed: %w", err)
-	}
-
-	return tcpAddr, nil
 }

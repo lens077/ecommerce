@@ -3,7 +3,6 @@ package registry
 import (
 	"os"
 	"testing"
-	"time"
 
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/suite"
@@ -75,66 +74,9 @@ func (suite *RegistryTestSuite) TestModuleCreation() {
 	assert.Contains(suite.T(), module.String(), "registry")
 }
 
-func (suite *RegistryTestSuite) TestParseToTCPAddr_ValidHTTPUrl() {
-	// 测试有效的 HTTP URL
-	addr, err := ParseToTCPAddr("http://localhost:8080")
-	assert.NoError(suite.T(), err)
-	assert.NotNil(suite.T(), addr)
-	// localhost 可能被解析为 127.0.0.1
-	assert.True(suite.T(), addr.IP.String() == "localhost" || addr.IP.String() == "127.0.0.1")
-	assert.Equal(suite.T(), 8080, addr.Port)
-}
-
-func (suite *RegistryTestSuite) TestParseToTCPAddr_ValidHTTPSUrl() {
-	// 测试有效的 HTTPS URL
-	addr, err := ParseToTCPAddr("https://localhost:8443")
-	assert.NoError(suite.T(), err)
-	assert.NotNil(suite.T(), addr)
-	// localhost 可能被解析为 127.0.0.1
-	assert.True(suite.T(), addr.IP.String() == "localhost" || addr.IP.String() == "127.0.0.1")
-	assert.Equal(suite.T(), 8443, addr.Port)
-}
-
-func (suite *RegistryTestSuite) TestParseToTCPAddr_WithoutPort() {
-	// 测试不带端口的 URL
-	addr, err := ParseToTCPAddr("http://example.com")
-	assert.NoError(suite.T(), err)
-	assert.NotNil(suite.T(), addr)
-	assert.Equal(suite.T(), 80, addr.Port) // 应该添加默认端口 80
-}
-
-func (suite *RegistryTestSuite) TestParseToTCPAddr_HTTPSWithoutPort() {
-	// 测试 HTTPS 不带端口的 URL
-	addr, err := ParseToTCPAddr("https://example.com")
-	assert.NoError(suite.T(), err)
-	assert.NotNil(suite.T(), addr)
-	assert.Equal(suite.T(), 443, addr.Port) // 应该添加默认端口 443
-}
-
-func (suite *RegistryTestSuite) TestParseToTCPAddr_InvalidUrl() {
-	// 测试无效 URL
-	addr, err := ParseToTCPAddr("invalid-url")
-	assert.Error(suite.T(), err)
-	assert.Nil(suite.T(), addr)
-}
-
-func (suite *RegistryTestSuite) TestParseToTCPAddr_EmptyHost() {
-	// 测试空 host
-	addr, err := ParseToTCPAddr("http://")
-	assert.Error(suite.T(), err)
-	assert.Nil(suite.T(), addr)
-}
-
 // 运行测试套件
 func TestRegistryTestSuite(t *testing.T) {
 	suite.Run(t, new(RegistryTestSuite))
-}
-
-// 单元测试函数
-func TestConstants(t *testing.T) {
-	// 测试常量定义
-	assert.Equal(t, "30s", TtlDuration)
-	assert.Equal(t, 10*time.Second, TtlPingInterval)
 }
 
 func TestNewConsulRegistry_PanicRecovery(t *testing.T) {
