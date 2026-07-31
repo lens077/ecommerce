@@ -24,6 +24,7 @@ import {
   Typography,
 } from "@mui/material";
 import { KeyRound, Plus, RefreshCw } from "lucide-react";
+import { toAppError } from "@ecommerce/api";
 import { configApi, ConfigFormat } from "@/api";
 import { useAuthState } from "@/providers/AuthProvider";
 import { editorStore, setEnvironment, setNamespace } from "@/store/editor";
@@ -168,7 +169,7 @@ function BrowserPage() {
           </Box>
         ) : isError ? (
           <Box sx={{ p: sp[4] }}>
-            <Typography color="error">加载失败:{String((error as Error)?.message ?? error)}</Typography>
+            <Typography color="error">加载失败:{toAppError(error).message}</Typography>
           </Box>
         ) : !data || data.entries.length === 0 ? (
           <Box sx={{ p: sp[6], textAlign: "center" }}>
