@@ -36,6 +36,18 @@ export const glassPanel = {
   borderRadius: "16px",
 } as const;
 
+// 全屏覆盖层:铺满视口盖住其它一切。
+// 用 CSS 覆盖而不是浏览器原生 Fullscreen API —— 后者要处理 fullscreenchange、
+// 权限失败回退,而且会连地址栏一起隐藏,对「专心看一份配置」来说反而碍事。
+export const fullscreenOverlay = {
+  position: "fixed",
+  inset: 0,
+  zIndex: (theme: { zIndex: { modal: number } }) => theme.zIndex.modal + 1,
+  m: 0,
+  borderRadius: 0,
+  maxWidth: "none",
+} as const;
+
 // 更强的玻璃(用于弹层/卡片悬浮)
 export const glassStrong = {
   background: "rgba(255, 255, 255, 0.72)",
