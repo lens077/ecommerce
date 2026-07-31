@@ -58,6 +58,30 @@ func toRevision(m models.ConfigRevision) *biz.ConfigRevision {
 	}
 }
 
+// ListNamespaces 把 (namespace, environment) 维度的行聚合成每个 namespace 一条记录。
+// 查询已按 namespace, environment 排序,故顺序聚合即可,无需再排序。
+func (r *configRepo) ListNamespaces(ctx context.Context) ([]*biz.NamespaceInfo, error) {
+	rows, err := r.queries.ListNamespaceEnvironments(ctx)
+	if err != nil {
+		return nil, err
+	}
+	out := make([]*biz.NamespaceInfo, 0, len(rows))
+	for _, row := range rows {
+		if n := len(out); n > 0 && out[n-1].Namespace == row.Namespace {
+			cur := out[n-1]
+			cur.Environments = append(cur.Environments, row.Environment)
+			cur.KeyCount += row.KeyCount
+			continue
+		}
+		out = append(out, &biz.NamespaceInfo{
+			Namespace:    row.Namespace,
+			Environments: []string{row.Environment},
+			KeyCount:     row.KeyCount,
+		})
+	}
+	return out, nil
+}
+
 func (r *configRepo) ListEntries(ctx context.Context, namespace, environment, keyPrefix string) ([]*biz.ConfigEntry, error) {
 	prefix := keyPrefix
 	rows, err := r.queries.ListEntries(ctx, models.ListEntriesParams{

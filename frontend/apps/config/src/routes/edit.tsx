@@ -87,6 +87,8 @@ function EditPage() {
       clearMarkers();
       qc.invalidateQueries({ queryKey: ["getKey", ns, env, key] });
       qc.invalidateQueries({ queryKey: ["listKeys"] });
+      // 新建 key 可能引入新的 namespace/environment,刷新下拉数据源
+      qc.invalidateQueries({ queryKey: ["listNamespaces"] });
       if (res.entry) setIsNew(false);
     },
     onError: (e) => {
@@ -101,6 +103,8 @@ function EditPage() {
     mutationFn: () => configApi.deleteKey(ns, env, key),
     onSuccess: () => {
       qc.invalidateQueries({ queryKey: ["listKeys"] });
+      // 删掉最后一个 key 时 namespace/environment 也会随之消失
+      qc.invalidateQueries({ queryKey: ["listNamespaces"] });
       navigate({ to: "/" });
     },
   });

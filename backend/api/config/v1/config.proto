@@ -11,6 +11,8 @@ option go_package = "github.com/lens077/ecommerce/backend/api/config/v1;configv1
 // 每个 key 独立存储/独立版本历史;value 携带 format 用于语法高亮与校验。
 // 鉴权复用网关:网关验 Casdoor JWT 后注入 x-md-global-* 头部,本服务不重复验 JWT。
 service ConfigService {
+  // 列出配置中心已有的 namespace 及其下已有配置的 environment,供前端下拉选择(免手输)。
+  rpc ListNamespaces(ListNamespacesRequest) returns (ListNamespacesResponse) {}
   // 列出某 namespace+environment 下(可按前缀过滤)的 key 元数据,不返回大 value。
   rpc ListKeys(ListKeysRequest) returns (ListKeysResponse) {}
   // 取单个 key 的当前值。
@@ -62,6 +64,18 @@ message ConfigRevision {
   string comment = 6;
   string author = 7;
   google.protobuf.Timestamp created_at = 8;
+}
+
+// namespace 概览:该 namespace 下已有配置的环境与 key 总数
+message NamespaceInfo {
+  string namespace = 1;
+  repeated string environments = 2; // 该 namespace 下确实存在配置的环境,按名排序
+  int32 key_count = 3;              // 所有环境合计的 key 数量
+}
+
+message ListNamespacesRequest {}
+message ListNamespacesResponse {
+  repeated NamespaceInfo namespaces = 1; // 按 namespace 名排序
 }
 
 message ListKeysRequest {

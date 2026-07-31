@@ -13,7 +13,7 @@ import type { Message } from "@bufbuild/protobuf";
  * Describes the file api/config/v1/config.proto.
  */
 export const file_api_config_v1_config: GenFile = /*@__PURE__*/
-  fileDesc("ChphcGkvY29uZmlnL3YxL2NvbmZpZy5wcm90bxIJY29uZmlnLnYxIrMCCgtDb25maWdFbnRyeRIKCgJpZBgBIAEoAxIRCgluYW1lc3BhY2UYAiABKAkSEwoLZW52aXJvbm1lbnQYAyABKAkSCwoDa2V5GAQgASgJEicKBmZvcm1hdBgFIAEoDjIXLmNvbmZpZy52MS5Db25maWdGb3JtYXQSDQoFdmFsdWUYBiABKAkSDwoHdmVyc2lvbhgHIAEoBRIRCglpc19zZWNyZXQYCCABKAgSEwoLZGVzY3JpcHRpb24YCSABKAkSEgoKdXBkYXRlZF9ieRgKIAEoCRIuCgpjcmVhdGVkX2F0GAsgASgLMhouZ29vZ2xlLnByb3RvYnVmLlRpbWVzdGFtcBIuCgp1cGRhdGVkX2F0GAwgASgLMhouZ29vZ2xlLnByb3RvYnVmLlRpbWVzdGFtcCLIAQoOQ29uZmlnUmV2aXNpb24SCgoCaWQYASABKAMSEAoIZW50cnlfaWQYAiABKAMSDwoHdmVyc2lvbhgDIAEoBRInCgZmb3JtYXQYBCABKA4yFy5jb25maWcudjEuQ29uZmlnRm9ybWF0Eg0KBXZhbHVlGAUgASgJEg8KB2NvbW1lbnQYBiABKAkSDgoGYXV0aG9yGAcgASgJEi4KCmNyZWF0ZWRfYXQYCCABKAsyGi5nb29nbGUucHJvdG9idWYuVGltZXN0YW1wIl0KD0xpc3RLZXlzUmVxdWVzdBIZCgluYW1lc3BhY2UYASABKAlCBrpIA8gBARIbCgtlbnZpcm9ubWVudBgCIAEoCUIGukgDyAEBEhIKCmtleV9wcmVmaXgYAyABKAkiOwoQTGlzdEtleXNSZXNwb25zZRInCgdlbnRyaWVzGAEgAygLMhYuY29uZmlnLnYxLkNvbmZpZ0VudHJ5IlwKDUdldEtleVJlcXVlc3QSGQoJbmFtZXNwYWNlGAEgASgJQga6SAPIAQESGwoLZW52aXJvbm1lbnQYAiABKAlCBrpIA8gBARITCgNrZXkYAyABKAlCBrpIA8gBASI3Cg5HZXRLZXlSZXNwb25zZRIlCgVlbnRyeRgBIAEoCzIWLmNvbmZpZy52MS5Db25maWdFbnRyeSLXAQoNUHV0S2V5UmVxdWVzdBIZCgluYW1lc3BhY2UYASABKAlCBrpIA8gBARIbCgtlbnZpcm9ubWVudBgCIAEoCUIGukgDyAEBEhMKA2tleRgDIAEoCUIGukgDyAEBEjEKBmZvcm1hdBgEIAEoDjIXLmNvbmZpZy52MS5Db25maWdGb3JtYXRCCLpIBYIBAhABEg0KBXZhbHVlGAUgASgJEg8KB2NvbW1lbnQYBiABKAkSEQoJaXNfc2VjcmV0GAcgASgIEhMKC2Rlc2NyaXB0aW9uGAggASgJIjcKDlB1dEtleVJlc3BvbnNlEiUKBWVudHJ5GAEgASgLMhYuY29uZmlnLnYxLkNvbmZpZ0VudHJ5Il8KEERlbGV0ZUtleVJlcXVlc3QSGQoJbmFtZXNwYWNlGAEgASgJQga6SAPIAQESGwoLZW52aXJvbm1lbnQYAiABKAlCBrpIA8gBARITCgNrZXkYAyABKAlCBrpIA8gBASIkChFEZWxldGVLZXlSZXNwb25zZRIPCgdkZWxldGVkGAEgASgIImMKFExpc3RSZXZpc2lvbnNSZXF1ZXN0EhkKCW5hbWVzcGFjZRgBIAEoCUIGukgDyAEBEhsKC2Vudmlyb25tZW50GAIgASgJQga6SAPIAQESEwoDa2V5GAMgASgJQga6SAPIAQEiRQoVTGlzdFJldmlzaW9uc1Jlc3BvbnNlEiwKCXJldmlzaW9ucxgBIAMoCzIZLmNvbmZpZy52MS5Db25maWdSZXZpc2lvbiJ7ChJHZXRSZXZpc2lvblJlcXVlc3QSGQoJbmFtZXNwYWNlGAEgASgJQga6SAPIAQESGwoLZW52aXJvbm1lbnQYAiABKAlCBrpIA8gBARITCgNrZXkYAyABKAlCBrpIA8gBARIYCgd2ZXJzaW9uGAQgASgFQge6SAQaAigBIkIKE0dldFJldmlzaW9uUmVzcG9uc2USKwoIcmV2aXNpb24YASABKAsyGS5jb25maWcudjEuQ29uZmlnUmV2aXNpb24iiQEKD1JvbGxiYWNrUmVxdWVzdBIZCgluYW1lc3BhY2UYASABKAlCBrpIA8gBARIbCgtlbnZpcm9ubWVudBgCIAEoCUIGukgDyAEBEhMKA2tleRgDIAEoCUIGukgDyAEBEhgKB3ZlcnNpb24YBCABKAVCB7pIBBoCKAESDwoHY29tbWVudBgFIAEoCSI5ChBSb2xsYmFja1Jlc3BvbnNlEiUKBWVudHJ5GAEgASgLMhYuY29uZmlnLnYxLkNvbmZpZ0VudHJ5KpIBCgxDb25maWdGb3JtYXQSHQoZQ09ORklHX0ZPUk1BVF9VTlNQRUNJRklFRBAAEhYKEkNPTkZJR19GT1JNQVRfWUFNTBABEhYKEkNPTkZJR19GT1JNQVRfVE9NTBACEhYKEkNPTkZJR19GT1JNQVRfSlNPThADEhsKF0NPTkZJR19GT1JNQVRfUExBSU5URVhUEAQyjwQKDUNvbmZpZ1NlcnZpY2USRQoITGlzdEtleXMSGi5jb25maWcudjEuTGlzdEtleXNSZXF1ZXN0GhsuY29uZmlnLnYxLkxpc3RLZXlzUmVzcG9uc2UiABI/CgZHZXRLZXkSGC5jb25maWcudjEuR2V0S2V5UmVxdWVzdBoZLmNvbmZpZy52MS5HZXRLZXlSZXNwb25zZSIAEj8KBlB1dEtleRIYLmNvbmZpZy52MS5QdXRLZXlSZXF1ZXN0GhkuY29uZmlnLnYxLlB1dEtleVJlc3BvbnNlIgASSAoJRGVsZXRlS2V5EhsuY29uZmlnLnYxLkRlbGV0ZUtleVJlcXVlc3QaHC5jb25maWcudjEuRGVsZXRlS2V5UmVzcG9uc2UiABJUCg1MaXN0UmV2aXNpb25zEh8uY29uZmlnLnYxLkxpc3RSZXZpc2lvbnNSZXF1ZXN0GiAuY29uZmlnLnYxLkxpc3RSZXZpc2lvbnNSZXNwb25zZSIAEk4KC0dldFJldmlzaW9uEh0uY29uZmlnLnYxLkdldFJldmlzaW9uUmVxdWVzdBoeLmNvbmZpZy52MS5HZXRSZXZpc2lvblJlc3BvbnNlIgASRQoIUm9sbGJhY2sSGi5jb25maWcudjEuUm9sbGJhY2tSZXF1ZXN0GhsuY29uZmlnLnYxLlJvbGxiYWNrUmVzcG9uc2UiAEKeAQoNY29tLmNvbmZpZy52MUILQ29uZmlnUHJvdG9QAVo7Z2l0aHViLmNvbS9sZW5zMDc3L2Vjb21tZXJjZS9iYWNrZW5kL2FwaS9jb25maWcvdjE7Y29uZmlndjGiAgNDWFiqAglDb25maWcuVjHKAglDb25maWdcVjHiAhVDb25maWdcVjFcR1BCTWV0YWRhdGHqAgpDb25maWc6OlYxYgZwcm90bzM", [file_google_protobuf_timestamp, file_third_party_validate_validate]);
+  fileDesc("ChphcGkvY29uZmlnL3YxL2NvbmZpZy5wcm90bxIJY29uZmlnLnYxIrMCCgtDb25maWdFbnRyeRIKCgJpZBgBIAEoAxIRCgluYW1lc3BhY2UYAiABKAkSEwoLZW52aXJvbm1lbnQYAyABKAkSCwoDa2V5GAQgASgJEicKBmZvcm1hdBgFIAEoDjIXLmNvbmZpZy52MS5Db25maWdGb3JtYXQSDQoFdmFsdWUYBiABKAkSDwoHdmVyc2lvbhgHIAEoBRIRCglpc19zZWNyZXQYCCABKAgSEwoLZGVzY3JpcHRpb24YCSABKAkSEgoKdXBkYXRlZF9ieRgKIAEoCRIuCgpjcmVhdGVkX2F0GAsgASgLMhouZ29vZ2xlLnByb3RvYnVmLlRpbWVzdGFtcBIuCgp1cGRhdGVkX2F0GAwgASgLMhouZ29vZ2xlLnByb3RvYnVmLlRpbWVzdGFtcCLIAQoOQ29uZmlnUmV2aXNpb24SCgoCaWQYASABKAMSEAoIZW50cnlfaWQYAiABKAMSDwoHdmVyc2lvbhgDIAEoBRInCgZmb3JtYXQYBCABKA4yFy5jb25maWcudjEuQ29uZmlnRm9ybWF0Eg0KBXZhbHVlGAUgASgJEg8KB2NvbW1lbnQYBiABKAkSDgoGYXV0aG9yGAcgASgJEi4KCmNyZWF0ZWRfYXQYCCABKAsyGi5nb29nbGUucHJvdG9idWYuVGltZXN0YW1wIksKDU5hbWVzcGFjZUluZm8SEQoJbmFtZXNwYWNlGAEgASgJEhQKDGVudmlyb25tZW50cxgCIAMoCRIRCglrZXlfY291bnQYAyABKAUiFwoVTGlzdE5hbWVzcGFjZXNSZXF1ZXN0IkYKFkxpc3ROYW1lc3BhY2VzUmVzcG9uc2USLAoKbmFtZXNwYWNlcxgBIAMoCzIYLmNvbmZpZy52MS5OYW1lc3BhY2VJbmZvIl0KD0xpc3RLZXlzUmVxdWVzdBIZCgluYW1lc3BhY2UYASABKAlCBrpIA8gBARIbCgtlbnZpcm9ubWVudBgCIAEoCUIGukgDyAEBEhIKCmtleV9wcmVmaXgYAyABKAkiOwoQTGlzdEtleXNSZXNwb25zZRInCgdlbnRyaWVzGAEgAygLMhYuY29uZmlnLnYxLkNvbmZpZ0VudHJ5IlwKDUdldEtleVJlcXVlc3QSGQoJbmFtZXNwYWNlGAEgASgJQga6SAPIAQESGwoLZW52aXJvbm1lbnQYAiABKAlCBrpIA8gBARITCgNrZXkYAyABKAlCBrpIA8gBASI3Cg5HZXRLZXlSZXNwb25zZRIlCgVlbnRyeRgBIAEoCzIWLmNvbmZpZy52MS5Db25maWdFbnRyeSLXAQoNUHV0S2V5UmVxdWVzdBIZCgluYW1lc3BhY2UYASABKAlCBrpIA8gBARIbCgtlbnZpcm9ubWVudBgCIAEoCUIGukgDyAEBEhMKA2tleRgDIAEoCUIGukgDyAEBEjEKBmZvcm1hdBgEIAEoDjIXLmNvbmZpZy52MS5Db25maWdGb3JtYXRCCLpIBYIBAhABEg0KBXZhbHVlGAUgASgJEg8KB2NvbW1lbnQYBiABKAkSEQoJaXNfc2VjcmV0GAcgASgIEhMKC2Rlc2NyaXB0aW9uGAggASgJIjcKDlB1dEtleVJlc3BvbnNlEiUKBWVudHJ5GAEgASgLMhYuY29uZmlnLnYxLkNvbmZpZ0VudHJ5Il8KEERlbGV0ZUtleVJlcXVlc3QSGQoJbmFtZXNwYWNlGAEgASgJQga6SAPIAQESGwoLZW52aXJvbm1lbnQYAiABKAlCBrpIA8gBARITCgNrZXkYAyABKAlCBrpIA8gBASIkChFEZWxldGVLZXlSZXNwb25zZRIPCgdkZWxldGVkGAEgASgIImMKFExpc3RSZXZpc2lvbnNSZXF1ZXN0EhkKCW5hbWVzcGFjZRgBIAEoCUIGukgDyAEBEhsKC2Vudmlyb25tZW50GAIgASgJQga6SAPIAQESEwoDa2V5GAMgASgJQga6SAPIAQEiRQoVTGlzdFJldmlzaW9uc1Jlc3BvbnNlEiwKCXJldmlzaW9ucxgBIAMoCzIZLmNvbmZpZy52MS5Db25maWdSZXZpc2lvbiJ7ChJHZXRSZXZpc2lvblJlcXVlc3QSGQoJbmFtZXNwYWNlGAEgASgJQga6SAPIAQESGwoLZW52aXJvbm1lbnQYAiABKAlCBrpIA8gBARITCgNrZXkYAyABKAlCBrpIA8gBARIYCgd2ZXJzaW9uGAQgASgFQge6SAQaAigBIkIKE0dldFJldmlzaW9uUmVzcG9uc2USKwoIcmV2aXNpb24YASABKAsyGS5jb25maWcudjEuQ29uZmlnUmV2aXNpb24iiQEKD1JvbGxiYWNrUmVxdWVzdBIZCgluYW1lc3BhY2UYASABKAlCBrpIA8gBARIbCgtlbnZpcm9ubWVudBgCIAEoCUIGukgDyAEBEhMKA2tleRgDIAEoCUIGukgDyAEBEhgKB3ZlcnNpb24YBCABKAVCB7pIBBoCKAESDwoHY29tbWVudBgFIAEoCSI5ChBSb2xsYmFja1Jlc3BvbnNlEiUKBWVudHJ5GAEgASgLMhYuY29uZmlnLnYxLkNvbmZpZ0VudHJ5KpIBCgxDb25maWdGb3JtYXQSHQoZQ09ORklHX0ZPUk1BVF9VTlNQRUNJRklFRBAAEhYKEkNPTkZJR19GT1JNQVRfWUFNTBABEhYKEkNPTkZJR19GT1JNQVRfVE9NTBACEhYKEkNPTkZJR19GT1JNQVRfSlNPThADEhsKF0NPTkZJR19GT1JNQVRfUExBSU5URVhUEAQy6AQKDUNvbmZpZ1NlcnZpY2USVwoOTGlzdE5hbWVzcGFjZXMSIC5jb25maWcudjEuTGlzdE5hbWVzcGFjZXNSZXF1ZXN0GiEuY29uZmlnLnYxLkxpc3ROYW1lc3BhY2VzUmVzcG9uc2UiABJFCghMaXN0S2V5cxIaLmNvbmZpZy52MS5MaXN0S2V5c1JlcXVlc3QaGy5jb25maWcudjEuTGlzdEtleXNSZXNwb25zZSIAEj8KBkdldEtleRIYLmNvbmZpZy52MS5HZXRLZXlSZXF1ZXN0GhkuY29uZmlnLnYxLkdldEtleVJlc3BvbnNlIgASPwoGUHV0S2V5EhguY29uZmlnLnYxLlB1dEtleVJlcXVlc3QaGS5jb25maWcudjEuUHV0S2V5UmVzcG9uc2UiABJICglEZWxldGVLZXkSGy5jb25maWcudjEuRGVsZXRlS2V5UmVxdWVzdBocLmNvbmZpZy52MS5EZWxldGVLZXlSZXNwb25zZSIAElQKDUxpc3RSZXZpc2lvbnMSHy5jb25maWcudjEuTGlzdFJldmlzaW9uc1JlcXVlc3QaIC5jb25maWcudjEuTGlzdFJldmlzaW9uc1Jlc3BvbnNlIgASTgoLR2V0UmV2aXNpb24SHS5jb25maWcudjEuR2V0UmV2aXNpb25SZXF1ZXN0Gh4uY29uZmlnLnYxLkdldFJldmlzaW9uUmVzcG9uc2UiABJFCghSb2xsYmFjaxIaLmNvbmZpZy52MS5Sb2xsYmFja1JlcXVlc3QaGy5jb25maWcudjEuUm9sbGJhY2tSZXNwb25zZSIAQp4BCg1jb20uY29uZmlnLnYxQgtDb25maWdQcm90b1ABWjtnaXRodWIuY29tL2xlbnMwNzcvZWNvbW1lcmNlL2JhY2tlbmQvYXBpL2NvbmZpZy92MTtjb25maWd2MaICA0NYWKoCCUNvbmZpZy5WMcoCCUNvbmZpZ1xWMeICFUNvbmZpZ1xWMVxHUEJNZXRhZGF0YeoCCkNvbmZpZzo6VjFiBnByb3RvMw", [file_google_protobuf_timestamp, file_third_party_validate_validate]);
 
 /**
  * 配置项(键 + 当前值 + 元数据)
@@ -146,6 +146,71 @@ export const ConfigRevisionSchema: GenMessage<ConfigRevision> = /*@__PURE__*/
   messageDesc(file_api_config_v1_config, 1);
 
 /**
+ * namespace 概览:该 namespace 下已有配置的环境与 key 总数
+ *
+ * @generated from message config.v1.NamespaceInfo
+ */
+export type NamespaceInfo = Message<"config.v1.NamespaceInfo"> & {
+  /**
+   * @generated from field: string namespace = 1;
+   */
+  namespace: string;
+
+  /**
+   * 该 namespace 下确实存在配置的环境,按名排序
+   *
+   * @generated from field: repeated string environments = 2;
+   */
+  environments: string[];
+
+  /**
+   * 所有环境合计的 key 数量
+   *
+   * @generated from field: int32 key_count = 3;
+   */
+  keyCount: number;
+};
+
+/**
+ * Describes the message config.v1.NamespaceInfo.
+ * Use `create(NamespaceInfoSchema)` to create a new message.
+ */
+export const NamespaceInfoSchema: GenMessage<NamespaceInfo> = /*@__PURE__*/
+  messageDesc(file_api_config_v1_config, 2);
+
+/**
+ * @generated from message config.v1.ListNamespacesRequest
+ */
+export type ListNamespacesRequest = Message<"config.v1.ListNamespacesRequest"> & {
+};
+
+/**
+ * Describes the message config.v1.ListNamespacesRequest.
+ * Use `create(ListNamespacesRequestSchema)` to create a new message.
+ */
+export const ListNamespacesRequestSchema: GenMessage<ListNamespacesRequest> = /*@__PURE__*/
+  messageDesc(file_api_config_v1_config, 3);
+
+/**
+ * @generated from message config.v1.ListNamespacesResponse
+ */
+export type ListNamespacesResponse = Message<"config.v1.ListNamespacesResponse"> & {
+  /**
+   * 按 namespace 名排序
+   *
+   * @generated from field: repeated config.v1.NamespaceInfo namespaces = 1;
+   */
+  namespaces: NamespaceInfo[];
+};
+
+/**
+ * Describes the message config.v1.ListNamespacesResponse.
+ * Use `create(ListNamespacesResponseSchema)` to create a new message.
+ */
+export const ListNamespacesResponseSchema: GenMessage<ListNamespacesResponse> = /*@__PURE__*/
+  messageDesc(file_api_config_v1_config, 4);
+
+/**
  * @generated from message config.v1.ListKeysRequest
  */
 export type ListKeysRequest = Message<"config.v1.ListKeysRequest"> & {
@@ -172,7 +237,7 @@ export type ListKeysRequest = Message<"config.v1.ListKeysRequest"> & {
  * Use `create(ListKeysRequestSchema)` to create a new message.
  */
 export const ListKeysRequestSchema: GenMessage<ListKeysRequest> = /*@__PURE__*/
-  messageDesc(file_api_config_v1_config, 2);
+  messageDesc(file_api_config_v1_config, 5);
 
 /**
  * @generated from message config.v1.ListKeysResponse
@@ -189,7 +254,7 @@ export type ListKeysResponse = Message<"config.v1.ListKeysResponse"> & {
  * Use `create(ListKeysResponseSchema)` to create a new message.
  */
 export const ListKeysResponseSchema: GenMessage<ListKeysResponse> = /*@__PURE__*/
-  messageDesc(file_api_config_v1_config, 3);
+  messageDesc(file_api_config_v1_config, 6);
 
 /**
  * @generated from message config.v1.GetKeyRequest
@@ -216,7 +281,7 @@ export type GetKeyRequest = Message<"config.v1.GetKeyRequest"> & {
  * Use `create(GetKeyRequestSchema)` to create a new message.
  */
 export const GetKeyRequestSchema: GenMessage<GetKeyRequest> = /*@__PURE__*/
-  messageDesc(file_api_config_v1_config, 4);
+  messageDesc(file_api_config_v1_config, 7);
 
 /**
  * @generated from message config.v1.GetKeyResponse
@@ -233,7 +298,7 @@ export type GetKeyResponse = Message<"config.v1.GetKeyResponse"> & {
  * Use `create(GetKeyResponseSchema)` to create a new message.
  */
 export const GetKeyResponseSchema: GenMessage<GetKeyResponse> = /*@__PURE__*/
-  messageDesc(file_api_config_v1_config, 5);
+  messageDesc(file_api_config_v1_config, 8);
 
 /**
  * @generated from message config.v1.PutKeyRequest
@@ -287,7 +352,7 @@ export type PutKeyRequest = Message<"config.v1.PutKeyRequest"> & {
  * Use `create(PutKeyRequestSchema)` to create a new message.
  */
 export const PutKeyRequestSchema: GenMessage<PutKeyRequest> = /*@__PURE__*/
-  messageDesc(file_api_config_v1_config, 6);
+  messageDesc(file_api_config_v1_config, 9);
 
 /**
  * @generated from message config.v1.PutKeyResponse
@@ -306,7 +371,7 @@ export type PutKeyResponse = Message<"config.v1.PutKeyResponse"> & {
  * Use `create(PutKeyResponseSchema)` to create a new message.
  */
 export const PutKeyResponseSchema: GenMessage<PutKeyResponse> = /*@__PURE__*/
-  messageDesc(file_api_config_v1_config, 7);
+  messageDesc(file_api_config_v1_config, 10);
 
 /**
  * @generated from message config.v1.DeleteKeyRequest
@@ -333,7 +398,7 @@ export type DeleteKeyRequest = Message<"config.v1.DeleteKeyRequest"> & {
  * Use `create(DeleteKeyRequestSchema)` to create a new message.
  */
 export const DeleteKeyRequestSchema: GenMessage<DeleteKeyRequest> = /*@__PURE__*/
-  messageDesc(file_api_config_v1_config, 8);
+  messageDesc(file_api_config_v1_config, 11);
 
 /**
  * @generated from message config.v1.DeleteKeyResponse
@@ -350,7 +415,7 @@ export type DeleteKeyResponse = Message<"config.v1.DeleteKeyResponse"> & {
  * Use `create(DeleteKeyResponseSchema)` to create a new message.
  */
 export const DeleteKeyResponseSchema: GenMessage<DeleteKeyResponse> = /*@__PURE__*/
-  messageDesc(file_api_config_v1_config, 9);
+  messageDesc(file_api_config_v1_config, 12);
 
 /**
  * @generated from message config.v1.ListRevisionsRequest
@@ -377,7 +442,7 @@ export type ListRevisionsRequest = Message<"config.v1.ListRevisionsRequest"> & {
  * Use `create(ListRevisionsRequestSchema)` to create a new message.
  */
 export const ListRevisionsRequestSchema: GenMessage<ListRevisionsRequest> = /*@__PURE__*/
-  messageDesc(file_api_config_v1_config, 10);
+  messageDesc(file_api_config_v1_config, 13);
 
 /**
  * @generated from message config.v1.ListRevisionsResponse
@@ -394,7 +459,7 @@ export type ListRevisionsResponse = Message<"config.v1.ListRevisionsResponse"> &
  * Use `create(ListRevisionsResponseSchema)` to create a new message.
  */
 export const ListRevisionsResponseSchema: GenMessage<ListRevisionsResponse> = /*@__PURE__*/
-  messageDesc(file_api_config_v1_config, 11);
+  messageDesc(file_api_config_v1_config, 14);
 
 /**
  * @generated from message config.v1.GetRevisionRequest
@@ -426,7 +491,7 @@ export type GetRevisionRequest = Message<"config.v1.GetRevisionRequest"> & {
  * Use `create(GetRevisionRequestSchema)` to create a new message.
  */
 export const GetRevisionRequestSchema: GenMessage<GetRevisionRequest> = /*@__PURE__*/
-  messageDesc(file_api_config_v1_config, 12);
+  messageDesc(file_api_config_v1_config, 15);
 
 /**
  * @generated from message config.v1.GetRevisionResponse
@@ -443,7 +508,7 @@ export type GetRevisionResponse = Message<"config.v1.GetRevisionResponse"> & {
  * Use `create(GetRevisionResponseSchema)` to create a new message.
  */
 export const GetRevisionResponseSchema: GenMessage<GetRevisionResponse> = /*@__PURE__*/
-  messageDesc(file_api_config_v1_config, 13);
+  messageDesc(file_api_config_v1_config, 16);
 
 /**
  * @generated from message config.v1.RollbackRequest
@@ -482,7 +547,7 @@ export type RollbackRequest = Message<"config.v1.RollbackRequest"> & {
  * Use `create(RollbackRequestSchema)` to create a new message.
  */
 export const RollbackRequestSchema: GenMessage<RollbackRequest> = /*@__PURE__*/
-  messageDesc(file_api_config_v1_config, 14);
+  messageDesc(file_api_config_v1_config, 17);
 
 /**
  * @generated from message config.v1.RollbackResponse
@@ -499,7 +564,7 @@ export type RollbackResponse = Message<"config.v1.RollbackResponse"> & {
  * Use `create(RollbackResponseSchema)` to create a new message.
  */
 export const RollbackResponseSchema: GenMessage<RollbackResponse> = /*@__PURE__*/
-  messageDesc(file_api_config_v1_config, 15);
+  messageDesc(file_api_config_v1_config, 18);
 
 /**
  * 配置内容格式
@@ -547,6 +612,16 @@ export const ConfigFormatSchema: GenEnum<ConfigFormat> = /*@__PURE__*/
  * @generated from service config.v1.ConfigService
  */
 export const ConfigService: GenService<{
+  /**
+   * 列出配置中心已有的 namespace 及其下已有配置的 environment,供前端下拉选择(免手输)。
+   *
+   * @generated from rpc config.v1.ConfigService.ListNamespaces
+   */
+  listNamespaces: {
+    methodKind: "unary";
+    input: typeof ListNamespacesRequestSchema;
+    output: typeof ListNamespacesResponseSchema;
+  },
   /**
    * 列出某 namespace+environment 下(可按前缀过滤)的 key 元数据,不返回大 value。
    *

@@ -61,6 +61,8 @@
 | 网关接入 config | ✅ | `gateway/configs/config.yaml` 新增 `/config* → discovery:///config-service`;`policies.csv` 新增 `p, admin, /config.v1.ConfigService/*, POST, allow`;已同步 Consul KV,网关热重载并发现 config-service |
 | 网关 JWT 时钟容差 | ✅ | `gateway/middleware/jwt/jwt.go` 增加 `jwt.WithLeeway(60s)`:修复登录后毫秒级请求因 `nbf` 零容差+微小时钟偏移被判 "token is not valid yet" → 401 → 前端退登死循环 |
 | Consul 配置 KV | ✅ | 新增 `ecommerce/config/dev.yml`(真实 DB/Redis/discovery),服务启动从此加载 |
+| ListNamespaces RPC | ✅ | 新增 `ListNamespaces` 返回 `NamespaceInfo{namespace, environments, key_count}`,SQL 按 `(namespace, environment)` 分组走 `idx_entry_ns_env`;前端命名空间/环境改为 Autocomplete 下拉(freeSolo,仍可输新值),删除写死的默认 namespace `ecommerce`,首次加载自动落到真实存在的 namespace。直连与经网关(401 非 404,前缀路由已匹配)均验证 |
+| cart 接入配置中心 | 🟡 | `cart/internal/pkg/config` 改为经 ConnectRPC `GetKey` 拉取整份 Bootstrap(`cart/dev/bootstrap.yaml` 已入库);Consul 仅保留服务发现。**待办**:`deploy/deployment.yaml` 与 `compose.yaml` 仍是旧的 `CONSUL_PATH`,未注入 `CONFIG_CENTER_*`,服务当前起不来 |
 | 前端 apps/config | 🟡 | 竖切页面 + 登录健壮性:token 有效性(过期)校验 + 认证失败死循环保护(登录后仍 401 则停在登录页) + `listKeys` 仅在已认证时发起;`vite build`/`tsc` 通过。玻璃态 UI,复用 Casdoor 登录,后端链路已通(网关 :8080)。待浏览器实测完整 CRUD/历史/回滚 |
 | root 脚本 dev:config | ✅ | `frontend/package.json` 增加 `dev:config → vp run config#dev`,与 `dev:merchant` 同款 |
 | 下发/Watch/SDK 热更新 | ⬜ | 后续：Consul 桥接、server-stream 推送、Go 客户端 SDK |

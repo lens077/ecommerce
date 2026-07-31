@@ -43,6 +43,22 @@ func (s *ConfigService) toErr(err error) error {
 	}
 }
 
+func (s *ConfigService) ListNamespaces(ctx context.Context, _ *connect.Request[v1.ListNamespacesRequest]) (*connect.Response[v1.ListNamespacesResponse], error) {
+	infos, err := s.uc.ListNamespaces(ctx)
+	if err != nil {
+		return nil, s.toErr(err)
+	}
+	pb := make([]*v1.NamespaceInfo, 0, len(infos))
+	for _, n := range infos {
+		pb = append(pb, &v1.NamespaceInfo{
+			Namespace:    n.Namespace,
+			Environments: n.Environments,
+			KeyCount:     n.KeyCount,
+		})
+	}
+	return connect.NewResponse(&v1.ListNamespacesResponse{Namespaces: pb}), nil
+}
+
 func (s *ConfigService) ListKeys(ctx context.Context, c *connect.Request[v1.ListKeysRequest]) (*connect.Response[v1.ListKeysResponse], error) {
 	entries, err := s.uc.ListKeys(ctx, c.Msg.Namespace, c.Msg.Environment, c.Msg.KeyPrefix)
 	if err != nil {
