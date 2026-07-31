@@ -318,6 +318,45 @@ func (q *Queries) ListEntries(ctx context.Context, arg ListEntriesParams) ([]Lis
 	return items, nil
 }
 
+const ListNamespaceEnvironments = `-- name: ListNamespaceEnvironments :many
+SELECT namespace, environment, COUNT(*)::int AS key_count
+FROM config.entry
+GROUP BY namespace, environment
+ORDER BY namespace, environment
+`
+
+type ListNamespaceEnvironmentsRow struct {
+	Namespace   string
+	Environment string
+	KeyCount    int32
+}
+
+// 走 idx_entry_ns_env 索引扫描,返回 (namespace, environment) 维度的 key 数量。
+//
+//	SELECT namespace, environment, COUNT(*)::int AS key_count
+//	FROM config.entry
+//	GROUP BY namespace, environment
+//	ORDER BY namespace, environment
+func (q *Queries) ListNamespaceEnvironments(ctx context.Context) ([]ListNamespaceEnvironmentsRow, error) {
+	rows, err := q.db.Query(ctx, ListNamespaceEnvironments)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	var items []ListNamespaceEnvironmentsRow
+	for rows.Next() {
+		var i ListNamespaceEnvironmentsRow
+		if err := rows.Scan(&i.Namespace, &i.Environment, &i.KeyCount); err != nil {
+			return nil, err
+		}
+		items = append(items, i)
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	return items, nil
+}
+
 const ListRevisions = `-- name: ListRevisions :many
 SELECT id, entry_id, version, format, value, comment, author, created_at
 FROM config.revision
