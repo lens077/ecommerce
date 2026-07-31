@@ -10,8 +10,8 @@
 # 说明:
 # 1. 容器注册进 Consul 的是它在 ecommerce 网桥里的 IP(172.x),网关必须接在同一个
 #    网络里才路由得到;宿主机侧仍可用下面映射出来的 30001~30010 直连。
-# 2. payment 暂不在列:services/payment/internal/data 里 NewPaymentRepo 还是注释状态,
-#    镜像编译不过,补齐后把它按同样格式加回来即可。
+# 2. payment 的 repo 层目前是显式返回 Unimplemented(code 12)的桩,服务本身能起、
+#    能注册、健康检查正常;网关 /payment* 打过来会拿到 12 而不是 503。
 
 x-service-common: &service-common
   pull_policy: always
@@ -200,6 +200,25 @@ services:
     healthcheck:
       # /healthz 在 DB/缓存不通时返回 503;镜像是 alpine,用 busybox 自带的 wget
       test: ["CMD", "wget", "-q", "-O", "-", "http://127.0.0.1:30010/healthz"]
+      interval: 10s
+      timeout: 3s
+      retries: 3
+      start_period: 15s
+
+  ecommerce-payment:
+    <<: *service-common
+    image: ccr.ccs.tencentyun.com/sumery/payment:dev
+    container_name: ecommerce-payment
+    ports:
+      - "0.0.0.0:30008:30008"
+    environment:
+      <<: *consul-env
+      # SERVICE_NAME 就是注册进 Consul 的服务名,必须与网关 discovery:///payment-service 一致
+      SERVICE_NAME: "payment-service"
+      CONSUL_PATH: "ecommerce/payment/dev.yml"
+    healthcheck:
+      # /healthz 在 DB/缓存不通时返回 503;镜像是 alpine,用 busybox 自带的 wget
+      test: ["CMD", "wget", "-q", "-O", "-", "http://127.0.0.1:30008/healthz"]
       interval: 10s
       timeout: 3s
       retries: 3

@@ -1,8 +1,9 @@
 # 默认值
 VERSION ?= dev
 
-# 全部微服务。payment 暂不在列:internal/data 里 NewPaymentRepo 还是注释状态,镜像编译不过。
-SERVICES ?= user search product order inventory cart merchant address config
+# 全部 10 个微服务。payment 之前不在列(NewPaymentRepo 还注释着、镜像编译不过),
+# 现在 repo 层是显式返回 Unimplemented 的桩,编译与启动都正常,已补回。
+SERVICES ?= user search product order inventory cart merchant address config payment
 
 # consul kv 导入导出用的地址。命令行可覆盖: make consul-kv-export CONSUL_ADDR=consul.app.com
 CONSUL_ADDR ?= 192.168.3.112:8500
