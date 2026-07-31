@@ -63,6 +63,7 @@
 | Consul 配置 KV | ✅ | 新增 `ecommerce/config/dev.yml`(真实 DB/Redis/discovery),服务启动从此加载 |
 | ListNamespaces RPC | ✅ | 新增 `ListNamespaces` 返回 `NamespaceInfo{namespace, environments, key_count}`,SQL 按 `(namespace, environment)` 分组走 `idx_entry_ns_env`;前端命名空间/环境改为 Autocomplete 下拉(freeSolo,仍可输新值),删除写死的默认 namespace `ecommerce`,首次加载自动落到真实存在的 namespace。直连与经网关(401 非 404,前缀路由已匹配)均验证 |
 | cart 双配置源 | ✅ | `cart/internal/pkg/config` 抽出 `Source` 接口,`source_consul.go` / `source_configcenter.go` 各自独立(自带 env 解析与客户端构造,删掉任一文件另一个仍可编译);`CONFIG_SOURCE=consul\|configcenter` 显式二选一,**不做失败自动降级**(静默降级会让服务用一份已废弃配置跑起来,比启动失败更难查);默认 `consul` 保证现有部署零改动。启动日志打印实际生效数据源。两条路径 + 两个错误分支(拼错值/缺必填 env)均实跑验证;`deployment.yaml`/`compose.yaml`/`Makefile`(`make dev` / `make dev-cc`)同步 |
+| 配置加载单测 + 竞态修复 | ✅ | 删除 payment/inventory/address/merchant 4 个引用已删 API(`updateConfig`/`ValidateConfig`/`Server_HTTP.Addr`)的 stale 测试；重写 product 同类 stale 测试(还停在 `Init(configPath)` 文件配置时代)。新用例在 `-race` 下抓到**真实生产竞态**:9 个服务的 `Init` 写 `conf` 未持锁，而 `GetConfig` 用 `RLock` 读(cart 已在双源改造时修过)——已统一补 `confMu.Lock()` |
 | 前端 apps/config | 🟡 | 竖切页面 + 登录健壮性:token 有效性(过期)校验 + 认证失败死循环保护(登录后仍 401 则停在登录页) + `listKeys` 仅在已认证时发起;`vite build`/`tsc` 通过。玻璃态 UI,复用 Casdoor 登录,后端链路已通(网关 :8080)。待浏览器实测完整 CRUD/历史/回滚 |
 | root 脚本 dev:config | ✅ | `frontend/package.json` 增加 `dev:config → vp run config#dev`,与 `dev:merchant` 同款 |
 | 下发/Watch/SDK 热更新 | ⬜ | 后续：Consul 桥接、server-stream 推送、Go 客户端 SDK |
@@ -97,7 +98,7 @@
 | 日志（Loki/fluent-bit） | ⬜ | 部署与采集链路未落地 |
 | 指标（VictoriaMetrics/Grafana） | ⬜ | 采集/看板未落地 |
 | 前端测试（playwright + vitest） | ⬜ | 仅 `vite.config.ts`，缺用例 |
-| 后端单元/集成测试 | ⬜ | 覆盖率低 |
+| 后端单元/集成测试 | 🟡 | `internal/pkg/config` 已补真实用例(cart + address/payment/inventory/merchant/product 共 6 个包，覆盖率 75%~85%，`-race` 全绿)：用 `httptest` 起 Consul KV / ConnectRPC 桩打**真实客户端**，覆盖选源、YAML 解析、duration 钩子、404/空值/不可达/context 取消等错误分支。其余 biz/data/service 层仍缺 |
 
 ---
 
