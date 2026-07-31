@@ -27,6 +27,9 @@ service ConfigService {
   rpc GetRevision(GetRevisionRequest) returns (GetRevisionResponse) {}
   // 回滚:用指定历史版本的值写为新版本。
   rpc Rollback(RollbackRequest) returns (RollbackResponse) {}
+  // 订阅配置变更(服务端流)。建流时先推一遍当前值(SNAPSHOT),之后推增量。
+  // 断线重连会重新收到 SNAPSHOT —— 断连期间漏掉的变更由此自愈,客户端无需自己补偿。
+  rpc WatchKeys(WatchKeysRequest) returns (stream WatchKeysResponse) {}
 }
 
 // 配置内容格式
@@ -147,4 +150,23 @@ message RollbackRequest {
 }
 message RollbackResponse {
   ConfigEntry entry = 1;
+}
+
+// 变更事件类型
+enum WatchEventType {
+  WATCH_EVENT_TYPE_UNSPECIFIED = 0;
+  WATCH_EVENT_TYPE_SNAPSHOT = 1;  // 建流时推送的当前值
+  WATCH_EVENT_TYPE_PUT = 2;       // 新增/更新/回滚
+  WATCH_EVENT_TYPE_DELETE = 3;    // 删除,entry 仅含 namespace/environment/key
+  WATCH_EVENT_TYPE_HEARTBEAT = 4; // 保活,entry 为空
+}
+
+message WatchKeysRequest {
+  string namespace = 1 [(buf.validate.field).required = true];
+  string environment = 2 [(buf.validate.field).required = true];
+  repeated string keys = 3; // 可选:留空表示订阅该 namespace+environment 下全部 key
+}
+message WatchKeysResponse {
+  WatchEventType type = 1;
+  ConfigEntry entry = 2; // HEARTBEAT 时为空;脱敏规则与 GetKey 一致
 }

@@ -22,6 +22,27 @@ type Source interface {
 	Load(ctx context.Context) (map[string]any, error)
 }
 
+// WatchEvent 一次配置推送。
+//
+// 三种情况互斥:Err 非空表示这一条推送处理失败(如内容不是合法 YAML),
+// Deleted 表示配置项在配置中心被删除,其余情况 Raw 为解析好的新配置。
+type WatchEvent struct {
+	Raw     map[string]any // Deleted 或 Err 非空时为 nil
+	Deleted bool
+	Err     error
+}
+
+// Watcher 可选能力:数据源支持变更推送时实现它。用类型断言发现,
+// 不实现的数据源(consul)保持「启动读一次」语义,源文件一行不改
+// —— 沿用本文件既有约定:删掉任一 source_*.go,另一个仍能独立编译。
+//
+// 实现方负责断线重连,Watch 只在 ctx 取消或遇到不可恢复的错误时返回。
+// 单条事件的错误经 WatchEvent.Err 上报,不中断整个订阅
+// —— 别人写坏一次配置不该让本服务从此收不到后续的修正。
+type Watcher interface {
+	Watch(ctx context.Context, onEvent func(WatchEvent)) error
+}
+
 // NewSource 按 CONFIG_SOURCE 选择数据源,未设置时用 constants.DefaultConfigSource。
 //
 // 刻意不做「主源失败自动降级到备源」:配置来源必须是确定的。静默降级会让服务

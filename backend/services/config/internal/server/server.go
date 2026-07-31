@@ -4,6 +4,7 @@ import (
 	"context"
 	"encoding/json"
 	"net/http"
+	"time"
 
 	"connectrpc.com/connect"
 	connectcors "connectrpc.com/cors"
@@ -59,6 +60,10 @@ func NewHTTPServer(
 	// 构建处理器链
 	handlerChain := withCORS(mux, cfg.Server.Cors.AllowedOrigins)
 
+	// WatchKeys 是长连接流,必须排在 WriteTimeout 之外(见 withoutWriteTimeout)
+	handlerChain = withoutWriteTimeout(handlerChain, logger,
+		configv1connect.ConfigServiceWatchKeysProcedure)
+
 	// 配置 HTTP/2 (H2C - 明文 HTTP/2)
 	h2s := &http2.Server{}
 	// 使用 h2c 包装处理器，支持同时处理 HTTP/1.1 和 HTTP/2
@@ -87,6 +92,33 @@ func NewHTTPServer(
 	})
 
 	return server
+}
+
+// withoutWriteTimeout 清掉指定路由的写截止时间。
+//
+// http.Server.WriteTimeout 在请求开始时就把整个响应的写截止时间钉死,
+// 它衡量的是「一元请求多久必须答完」,对长连接流则是致命的:
+// 快照能写出去,之后第一个心跳(30s)必然踩到 5s 的截止时间而失败,
+// 流就此断掉,客户端每 30s 重连一次并重收一遍快照 —— 功能看似正常,实则一直在抖。
+//
+// 只对流式路由清掉,其余接口继续受 WriteTimeout 保护。
+func withoutWriteTimeout(h http.Handler, logger *zap.Logger, procedures ...string) http.Handler {
+	streaming := make(map[string]struct{}, len(procedures))
+	for _, p := range procedures {
+		streaming[p] = struct{}{}
+	}
+
+	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		if _, ok := streaming[r.URL.Path]; ok {
+			// 零值 = 不设截止时间;流的存活由 ctx(客户端断开)与心跳负责
+			if err := http.NewResponseController(w).SetWriteDeadline(time.Time{}); err != nil {
+				// 不中断请求:退化成「流最多活 WriteTimeout 那么久」,靠客户端重连兜底
+				logger.Warn("无法清除流式响应的写截止时间,该流会受 WriteTimeout 限制",
+					zap.String("procedure", r.URL.Path), zap.Error(err))
+			}
+		}
+		h.ServeHTTP(w, r)
+	})
 }
 
 // withCORS 为处理器添加跨域支持

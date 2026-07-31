@@ -3,6 +3,7 @@ package service
 import (
 	"context"
 	"errors"
+	"time"
 
 	"connectrpc.com/connect"
 	v1 "github.com/lens077/ecommerce/backend/api/config/v1"
@@ -131,6 +132,128 @@ func (s *ConfigService) Rollback(ctx context.Context, c *connect.Request[v1.Roll
 		return nil, s.toErr(err)
 	}
 	return connect.NewResponse(&v1.RollbackResponse{Entry: toPBEntry(e, false)}), nil
+}
+
+// watchHeartbeatInterval 空闲时的保活间隔。配置可能几天不变,
+// 中间的负载均衡/代理会把长时间静默的连接当成死连接掐掉。
+const watchHeartbeatInterval = 30 * time.Second
+
+// WatchKeys 订阅配置变更。建流先推一遍当前值(SNAPSHOT),之后推增量。
+func (s *ConfigService) WatchKeys(
+	ctx context.Context,
+	req *connect.Request[v1.WatchKeysRequest],
+	stream *connect.ServerStream[v1.WatchKeysResponse],
+) error {
+	ns, env, keys := req.Msg.GetNamespace(), req.Msg.GetEnvironment(), req.Msg.GetKeys()
+
+	// 顺序很重要:先订阅再发快照。反过来的话,「读完快照」到「开始订阅」之间
+	// 发生的变更会两头落空 —— 快照里是旧值,事件也没订上,客户端就此停在旧配置上。
+	events, cancel := s.uc.WatchKeys(ns, env, keys)
+	defer cancel()
+
+	if err := s.sendSnapshot(ctx, stream, ns, env, keys); err != nil {
+		return err
+	}
+
+	ticker := time.NewTicker(watchHeartbeatInterval)
+	defer ticker.Stop()
+
+	for {
+		select {
+		case <-ctx.Done():
+			// 客户端主动断开,正常收尾
+			return nil
+
+		case ev, ok := <-events:
+			if !ok {
+				// channel 被关闭 = 下发链路已断(见 biz.ConfigWatcher)。
+				// 结束这条流让客户端重连重取快照,而不是留一条收不到事件的死流。
+				return connect.NewError(connect.CodeUnavailable,
+					errors.New("config change feed interrupted, reconnect to resync"))
+			}
+			if err := s.sendEvent(ctx, stream, ev); err != nil {
+				return err
+			}
+
+		case <-ticker.C:
+			if err := stream.Send(&v1.WatchKeysResponse{
+				Type: v1.WatchEventType_WATCH_EVENT_TYPE_HEARTBEAT,
+			}); err != nil {
+				return err
+			}
+		}
+	}
+}
+
+// sendSnapshot 推送当前值。keys 为空时覆盖该 namespace+environment 下的全部 key。
+func (s *ConfigService) sendSnapshot(
+	ctx context.Context,
+	stream *connect.ServerStream[v1.WatchKeysResponse],
+	ns, env string,
+	keys []string,
+) error {
+	if len(keys) == 0 {
+		entries, err := s.uc.ListKeys(ctx, ns, env, "")
+		if err != nil {
+			return s.toErr(err)
+		}
+		// ListKeys 只返回元数据(不含 value),这里只取 key 名,值走下面逐个回查
+		keys = make([]string, 0, len(entries))
+		for _, e := range entries {
+			keys = append(keys, e.Key)
+		}
+	}
+
+	for _, k := range keys {
+		e, err := s.uc.GetKey(ctx, ns, env, k)
+		if errors.Is(err, biz.ErrKeyNotFound) {
+			// 点名订阅了一个还不存在的 key 不算错误:它被创建时会收到 PUT
+			continue
+		}
+		if err != nil {
+			return s.toErr(err)
+		}
+		if err := stream.Send(&v1.WatchKeysResponse{
+			Type:  v1.WatchEventType_WATCH_EVENT_TYPE_SNAPSHOT,
+			Entry: toPBEntry(e, false),
+		}); err != nil {
+			return err
+		}
+	}
+	return nil
+}
+
+// sendEvent 把一条变更事件补齐成完整条目后下发。
+func (s *ConfigService) sendEvent(
+	ctx context.Context,
+	stream *connect.ServerStream[v1.WatchKeysResponse],
+	ev biz.ChangeEvent,
+) error {
+	deleted := &v1.WatchKeysResponse{
+		Type: v1.WatchEventType_WATCH_EVENT_TYPE_DELETE,
+		Entry: &v1.ConfigEntry{
+			Namespace:   ev.Namespace,
+			Environment: ev.Environment,
+			Key:         ev.Key,
+		},
+	}
+	if ev.Deleted {
+		return stream.Send(deleted)
+	}
+
+	// 事件只带定位信息,值在这里回查(顺带保证 is_secret 的脱敏规则与 GetKey 完全一致)
+	e, err := s.uc.GetKey(ctx, ev.Namespace, ev.Environment, ev.Key)
+	if errors.Is(err, biz.ErrKeyNotFound) {
+		// 写入后又被立刻删掉:按删除下发,别让客户端等一个永远不来的值
+		return stream.Send(deleted)
+	}
+	if err != nil {
+		return s.toErr(err)
+	}
+	return stream.Send(&v1.WatchKeysResponse{
+		Type:  v1.WatchEventType_WATCH_EVENT_TYPE_PUT,
+		Entry: toPBEntry(e, false),
+	})
 }
 
 // ---- 映射 helper ----

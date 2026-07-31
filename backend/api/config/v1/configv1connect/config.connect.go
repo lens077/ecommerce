@@ -52,6 +52,8 @@ const (
 	ConfigServiceGetRevisionProcedure = "/config.v1.ConfigService/GetRevision"
 	// ConfigServiceRollbackProcedure is the fully-qualified name of the ConfigService's Rollback RPC.
 	ConfigServiceRollbackProcedure = "/config.v1.ConfigService/Rollback"
+	// ConfigServiceWatchKeysProcedure is the fully-qualified name of the ConfigService's WatchKeys RPC.
+	ConfigServiceWatchKeysProcedure = "/config.v1.ConfigService/WatchKeys"
 )
 
 // ConfigServiceClient is a client for the config.v1.ConfigService service.
@@ -72,6 +74,9 @@ type ConfigServiceClient interface {
 	GetRevision(context.Context, *connect.Request[v1.GetRevisionRequest]) (*connect.Response[v1.GetRevisionResponse], error)
 	// 回滚:用指定历史版本的值写为新版本。
 	Rollback(context.Context, *connect.Request[v1.RollbackRequest]) (*connect.Response[v1.RollbackResponse], error)
+	// 订阅配置变更(服务端流)。建流时先推一遍当前值(SNAPSHOT),之后推增量。
+	// 断线重连会重新收到 SNAPSHOT —— 断连期间漏掉的变更由此自愈,客户端无需自己补偿。
+	WatchKeys(context.Context, *connect.Request[v1.WatchKeysRequest]) (*connect.ServerStreamForClient[v1.WatchKeysResponse], error)
 }
 
 // NewConfigServiceClient constructs a client for the config.v1.ConfigService service. By default,
@@ -133,6 +138,12 @@ func NewConfigServiceClient(httpClient connect.HTTPClient, baseURL string, opts 
 			connect.WithSchema(configServiceMethods.ByName("Rollback")),
 			connect.WithClientOptions(opts...),
 		),
+		watchKeys: connect.NewClient[v1.WatchKeysRequest, v1.WatchKeysResponse](
+			httpClient,
+			baseURL+ConfigServiceWatchKeysProcedure,
+			connect.WithSchema(configServiceMethods.ByName("WatchKeys")),
+			connect.WithClientOptions(opts...),
+		),
 	}
 }
 
@@ -146,6 +157,7 @@ type configServiceClient struct {
 	listRevisions  *connect.Client[v1.ListRevisionsRequest, v1.ListRevisionsResponse]
 	getRevision    *connect.Client[v1.GetRevisionRequest, v1.GetRevisionResponse]
 	rollback       *connect.Client[v1.RollbackRequest, v1.RollbackResponse]
+	watchKeys      *connect.Client[v1.WatchKeysRequest, v1.WatchKeysResponse]
 }
 
 // ListNamespaces calls config.v1.ConfigService.ListNamespaces.
@@ -188,6 +200,11 @@ func (c *configServiceClient) Rollback(ctx context.Context, req *connect.Request
 	return c.rollback.CallUnary(ctx, req)
 }
 
+// WatchKeys calls config.v1.ConfigService.WatchKeys.
+func (c *configServiceClient) WatchKeys(ctx context.Context, req *connect.Request[v1.WatchKeysRequest]) (*connect.ServerStreamForClient[v1.WatchKeysResponse], error) {
+	return c.watchKeys.CallServerStream(ctx, req)
+}
+
 // ConfigServiceHandler is an implementation of the config.v1.ConfigService service.
 type ConfigServiceHandler interface {
 	// 列出配置中心已有的 namespace 及其下已有配置的 environment,供前端下拉选择(免手输)。
@@ -206,6 +223,9 @@ type ConfigServiceHandler interface {
 	GetRevision(context.Context, *connect.Request[v1.GetRevisionRequest]) (*connect.Response[v1.GetRevisionResponse], error)
 	// 回滚:用指定历史版本的值写为新版本。
 	Rollback(context.Context, *connect.Request[v1.RollbackRequest]) (*connect.Response[v1.RollbackResponse], error)
+	// 订阅配置变更(服务端流)。建流时先推一遍当前值(SNAPSHOT),之后推增量。
+	// 断线重连会重新收到 SNAPSHOT —— 断连期间漏掉的变更由此自愈,客户端无需自己补偿。
+	WatchKeys(context.Context, *connect.Request[v1.WatchKeysRequest], *connect.ServerStream[v1.WatchKeysResponse]) error
 }
 
 // NewConfigServiceHandler builds an HTTP handler from the service implementation. It returns the
@@ -263,6 +283,12 @@ func NewConfigServiceHandler(svc ConfigServiceHandler, opts ...connect.HandlerOp
 		connect.WithSchema(configServiceMethods.ByName("Rollback")),
 		connect.WithHandlerOptions(opts...),
 	)
+	configServiceWatchKeysHandler := connect.NewServerStreamHandler(
+		ConfigServiceWatchKeysProcedure,
+		svc.WatchKeys,
+		connect.WithSchema(configServiceMethods.ByName("WatchKeys")),
+		connect.WithHandlerOptions(opts...),
+	)
 	return "/config.v1.ConfigService/", http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		switch r.URL.Path {
 		case ConfigServiceListNamespacesProcedure:
@@ -281,6 +307,8 @@ func NewConfigServiceHandler(svc ConfigServiceHandler, opts ...connect.HandlerOp
 			configServiceGetRevisionHandler.ServeHTTP(w, r)
 		case ConfigServiceRollbackProcedure:
 			configServiceRollbackHandler.ServeHTTP(w, r)
+		case ConfigServiceWatchKeysProcedure:
+			configServiceWatchKeysHandler.ServeHTTP(w, r)
 		default:
 			http.NotFound(w, r)
 		}
@@ -320,4 +348,8 @@ func (UnimplementedConfigServiceHandler) GetRevision(context.Context, *connect.R
 
 func (UnimplementedConfigServiceHandler) Rollback(context.Context, *connect.Request[v1.RollbackRequest]) (*connect.Response[v1.RollbackResponse], error) {
 	return nil, connect.NewError(connect.CodeUnimplemented, errors.New("config.v1.ConfigService.Rollback is not implemented"))
+}
+
+func (UnimplementedConfigServiceHandler) WatchKeys(context.Context, *connect.Request[v1.WatchKeysRequest], *connect.ServerStream[v1.WatchKeysResponse]) error {
+	return connect.NewError(connect.CodeUnimplemented, errors.New("config.v1.ConfigService.WatchKeys is not implemented"))
 }

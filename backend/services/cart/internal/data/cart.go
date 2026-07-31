@@ -4,12 +4,11 @@ import (
 	"github.com/jackc/pgx/v5/pgtype"
 	"github.com/lens077/ecommerce/backend/constants"
 	"github.com/lens077/ecommerce/backend/services/cart/internal/biz"
-	conf "github.com/lens077/ecommerce/backend/services/cart/internal/conf/v1"
 	"github.com/lens077/ecommerce/backend/services/cart/internal/data/models"
 	"github.com/lens077/ecommerce/backend/services/cart/internal/pkg"
+	"github.com/lens077/ecommerce/backend/services/cart/internal/pkg/config"
 	"github.com/lens077/ecommerce/backend/services/cart/internal/pkg/dbutil"
 	"github.com/lens077/ecommerce/backend/services/cart/internal/pkg/money"
-	"github.com/redis/go-redis/v9"
 
 	"context"
 
@@ -20,9 +19,11 @@ var _ biz.CartRepo = (*cartRepo)(nil)
 
 type cartRepo struct {
 	queries *models.Queries
-	rdb     *redis.Client
+	rdb     *LiveRedis
 	log     *zap.Logger
-	config  *conf.Bootstrap
+	// live 当前配置。存 *Live 而不是 *conf.Bootstrap:后者是构造那一刻的快照,
+	// 存下来就等于把这个 repo 永久钉死在启动时的配置上,热更新对它无效。
+	live *config.Live
 }
 
 func (c cartRepo) RemoveCartItem(ctx context.Context, req biz.RemoveCartItemRequest) (*biz.RemoveCartItemResponse, error) {
@@ -92,7 +93,8 @@ func (c cartRepo) GetCart(ctx context.Context, req biz.GetCartRequest) (*biz.Get
 	for _, row := range rows {
 		price, _ := money.NumericToFloat(row.Price)
 
-		skuThumbnailUrl := pkg.FormatObjectURL(string(constants.BucketEcommerce), row.SkuThumbnailUrl, c.config.Store)
+		// 每次请求都读当前配置:改完对象存储域名下一个请求就用新的,不必重启
+		skuThumbnailUrl := pkg.FormatObjectURL(string(constants.BucketEcommerce), row.SkuThumbnailUrl, c.live.Get().GetStore())
 		statusEnum := dbutil.ToCartStatusEnum(row.Status)
 		items = append(items, &biz.CartItem{
 			ID:              row.ID,
@@ -170,11 +172,12 @@ func (c cartRepo) AddProductToCart(ctx context.Context, req biz.AddProductToCart
 	}, nil
 }
 
-func NewCartRepo(data *Data, logger *zap.Logger, config *conf.Bootstrap) biz.CartRepo {
+func NewCartRepo(data *Data, logger *zap.Logger, live *config.Live) biz.CartRepo {
 	return &cartRepo{
+		// 传入 *PgPool 这个壳而非某个具体的池,连接池热重建后 queries 依旧有效
 		queries: models.New(data.db),
 		rdb:     data.rdb,
 		log:     logger,
-		config:  config,
+		live:    live,
 	}
 }

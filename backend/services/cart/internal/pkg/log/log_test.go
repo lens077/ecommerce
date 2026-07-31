@@ -9,6 +9,7 @@ import (
 
 	"github.com/lens077/ecommerce/backend/services/cart/constants"
 	confv1 "github.com/lens077/ecommerce/backend/services/cart/internal/conf/v1"
+	"github.com/lens077/ecommerce/backend/services/cart/internal/pkg/config"
 	"github.com/lens077/ecommerce/backend/services/cart/internal/pkg/meta"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
@@ -179,7 +180,7 @@ func TestModule_ProvidesLogger(t *testing.T) {
 
 	app := fx.New(
 		fx.NopLogger,
-		fx.Supply(newConf("info", constants.FormatJson), testAppInfo),
+		fx.Supply(newConf("info", constants.FormatJson), testAppInfo, config.NewLive(nil)),
 		Module,
 		fx.Populate(&logger),
 	)
@@ -210,7 +211,7 @@ func TestFxLogger(t *testing.T) {
 			// fx 的 logger 是在装配期构造的,所以顺带把它的输出也吞掉
 			_ = captureStdout(t, func() {
 				app := fx.New(
-					fx.Supply(conf, testAppInfo),
+					fx.Supply(conf, testAppInfo, config.NewLive(nil)),
 					Module,
 					FxLogger(),
 				)
