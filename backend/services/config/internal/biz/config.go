@@ -89,14 +89,39 @@ type ConfigRepo interface {
 	GetRevision(ctx context.Context, namespace, environment, key string, version int32) (*ConfigRevision, error)
 }
 
-// ConfigUseCase 配置中心用例
-type ConfigUseCase struct {
-	repo ConfigRepo
-	log  *zap.Logger
+// ChangeEvent 一次配置变更。只带定位信息,值由订阅方回查
+// —— 通知通道里流完整 value 既受长度限制,也没必要让密文多走一条路径。
+type ChangeEvent struct {
+	Namespace   string
+	Environment string
+	Key         string
+	Version     int32
+	Deleted     bool
 }
 
-func NewConfigUseCase(repo ConfigRepo, logger *zap.Logger) *ConfigUseCase {
-	return &ConfigUseCase{repo: repo, log: logger.Named("ConfigUseCase")}
+// ConfigWatcher 变更订阅(由 data 层实现)。
+//
+// 返回的 channel 被**关闭**表示下发链路已断(例如与数据库的监听连接掉线),
+// 订阅方应结束当前流、让客户端重连重取快照。刻意不做「继续返回一条永远
+// 收不到事件的 channel」:那会让调用方以为自己还在监听,是最难查的一类故障。
+type ConfigWatcher interface {
+	Subscribe(namespace, environment string, keys []string) (<-chan ChangeEvent, func())
+}
+
+// ConfigUseCase 配置中心用例
+type ConfigUseCase struct {
+	repo    ConfigRepo
+	watcher ConfigWatcher
+	log     *zap.Logger
+}
+
+func NewConfigUseCase(repo ConfigRepo, watcher ConfigWatcher, logger *zap.Logger) *ConfigUseCase {
+	return &ConfigUseCase{repo: repo, watcher: watcher, log: logger.Named("ConfigUseCase")}
+}
+
+// WatchKeys 订阅 namespace+environment 下若干 key 的变更;keys 为空表示订阅全部。
+func (uc *ConfigUseCase) WatchKeys(namespace, environment string, keys []string) (<-chan ChangeEvent, func()) {
+	return uc.watcher.Subscribe(namespace, environment, keys)
 }
 
 func (uc *ConfigUseCase) ListNamespaces(ctx context.Context) ([]*NamespaceInfo, error) {

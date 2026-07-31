@@ -79,6 +79,62 @@ func (ConfigFormat) EnumDescriptor() ([]byte, []int) {
 	return file_api_config_v1_config_proto_rawDescGZIP(), []int{0}
 }
 
+// 变更事件类型
+type WatchEventType int32
+
+const (
+	WatchEventType_WATCH_EVENT_TYPE_UNSPECIFIED WatchEventType = 0
+	WatchEventType_WATCH_EVENT_TYPE_SNAPSHOT    WatchEventType = 1 // 建流时推送的当前值
+	WatchEventType_WATCH_EVENT_TYPE_PUT         WatchEventType = 2 // 新增/更新/回滚
+	WatchEventType_WATCH_EVENT_TYPE_DELETE      WatchEventType = 3 // 删除,entry 仅含 namespace/environment/key
+	WatchEventType_WATCH_EVENT_TYPE_HEARTBEAT   WatchEventType = 4 // 保活,entry 为空
+)
+
+// Enum value maps for WatchEventType.
+var (
+	WatchEventType_name = map[int32]string{
+		0: "WATCH_EVENT_TYPE_UNSPECIFIED",
+		1: "WATCH_EVENT_TYPE_SNAPSHOT",
+		2: "WATCH_EVENT_TYPE_PUT",
+		3: "WATCH_EVENT_TYPE_DELETE",
+		4: "WATCH_EVENT_TYPE_HEARTBEAT",
+	}
+	WatchEventType_value = map[string]int32{
+		"WATCH_EVENT_TYPE_UNSPECIFIED": 0,
+		"WATCH_EVENT_TYPE_SNAPSHOT":    1,
+		"WATCH_EVENT_TYPE_PUT":         2,
+		"WATCH_EVENT_TYPE_DELETE":      3,
+		"WATCH_EVENT_TYPE_HEARTBEAT":   4,
+	}
+)
+
+func (x WatchEventType) Enum() *WatchEventType {
+	p := new(WatchEventType)
+	*p = x
+	return p
+}
+
+func (x WatchEventType) String() string {
+	return protoimpl.X.EnumStringOf(x.Descriptor(), protoreflect.EnumNumber(x))
+}
+
+func (WatchEventType) Descriptor() protoreflect.EnumDescriptor {
+	return file_api_config_v1_config_proto_enumTypes[1].Descriptor()
+}
+
+func (WatchEventType) Type() protoreflect.EnumType {
+	return &file_api_config_v1_config_proto_enumTypes[1]
+}
+
+func (x WatchEventType) Number() protoreflect.EnumNumber {
+	return protoreflect.EnumNumber(x)
+}
+
+// Deprecated: Use WatchEventType.Descriptor instead.
+func (WatchEventType) EnumDescriptor() ([]byte, []int) {
+	return file_api_config_v1_config_proto_rawDescGZIP(), []int{1}
+}
+
 // 配置项(键 + 当前值 + 元数据)
 type ConfigEntry struct {
 	state         protoimpl.MessageState `protogen:"open.v1"`
@@ -1246,6 +1302,118 @@ func (x *RollbackResponse) GetEntry() *ConfigEntry {
 	return nil
 }
 
+type WatchKeysRequest struct {
+	state         protoimpl.MessageState `protogen:"open.v1"`
+	Namespace     string                 `protobuf:"bytes,1,opt,name=namespace,proto3" json:"namespace,omitempty"`
+	Environment   string                 `protobuf:"bytes,2,opt,name=environment,proto3" json:"environment,omitempty"`
+	Keys          []string               `protobuf:"bytes,3,rep,name=keys,proto3" json:"keys,omitempty"` // 可选:留空表示订阅该 namespace+environment 下全部 key
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *WatchKeysRequest) Reset() {
+	*x = WatchKeysRequest{}
+	mi := &file_api_config_v1_config_proto_msgTypes[19]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *WatchKeysRequest) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*WatchKeysRequest) ProtoMessage() {}
+
+func (x *WatchKeysRequest) ProtoReflect() protoreflect.Message {
+	mi := &file_api_config_v1_config_proto_msgTypes[19]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use WatchKeysRequest.ProtoReflect.Descriptor instead.
+func (*WatchKeysRequest) Descriptor() ([]byte, []int) {
+	return file_api_config_v1_config_proto_rawDescGZIP(), []int{19}
+}
+
+func (x *WatchKeysRequest) GetNamespace() string {
+	if x != nil {
+		return x.Namespace
+	}
+	return ""
+}
+
+func (x *WatchKeysRequest) GetEnvironment() string {
+	if x != nil {
+		return x.Environment
+	}
+	return ""
+}
+
+func (x *WatchKeysRequest) GetKeys() []string {
+	if x != nil {
+		return x.Keys
+	}
+	return nil
+}
+
+type WatchKeysResponse struct {
+	state         protoimpl.MessageState `protogen:"open.v1"`
+	Type          WatchEventType         `protobuf:"varint,1,opt,name=type,proto3,enum=config.v1.WatchEventType" json:"type,omitempty"`
+	Entry         *ConfigEntry           `protobuf:"bytes,2,opt,name=entry,proto3" json:"entry,omitempty"` // HEARTBEAT 时为空;脱敏规则与 GetKey 一致
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *WatchKeysResponse) Reset() {
+	*x = WatchKeysResponse{}
+	mi := &file_api_config_v1_config_proto_msgTypes[20]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *WatchKeysResponse) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*WatchKeysResponse) ProtoMessage() {}
+
+func (x *WatchKeysResponse) ProtoReflect() protoreflect.Message {
+	mi := &file_api_config_v1_config_proto_msgTypes[20]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use WatchKeysResponse.ProtoReflect.Descriptor instead.
+func (*WatchKeysResponse) Descriptor() ([]byte, []int) {
+	return file_api_config_v1_config_proto_rawDescGZIP(), []int{20}
+}
+
+func (x *WatchKeysResponse) GetType() WatchEventType {
+	if x != nil {
+		return x.Type
+	}
+	return WatchEventType_WATCH_EVENT_TYPE_UNSPECIFIED
+}
+
+func (x *WatchKeysResponse) GetEntry() *ConfigEntry {
+	if x != nil {
+		return x.Entry
+	}
+	return nil
+}
+
 var File_api_config_v1_config_proto protoreflect.FileDescriptor
 
 const file_api_config_v1_config_proto_rawDesc = "" +
@@ -1337,13 +1505,26 @@ const file_api_config_v1_config_proto_rawDesc = "" +
 	"\aversion\x18\x04 \x01(\x05B\a\xbaH\x04\x1a\x02(\x01R\aversion\x12\x18\n" +
 	"\acomment\x18\x05 \x01(\tR\acomment\"@\n" +
 	"\x10RollbackResponse\x12,\n" +
-	"\x05entry\x18\x01 \x01(\v2\x16.config.v1.ConfigEntryR\x05entry*\x92\x01\n" +
+	"\x05entry\x18\x01 \x01(\v2\x16.config.v1.ConfigEntryR\x05entry\"v\n" +
+	"\x10WatchKeysRequest\x12$\n" +
+	"\tnamespace\x18\x01 \x01(\tB\x06\xbaH\x03\xc8\x01\x01R\tnamespace\x12(\n" +
+	"\venvironment\x18\x02 \x01(\tB\x06\xbaH\x03\xc8\x01\x01R\venvironment\x12\x12\n" +
+	"\x04keys\x18\x03 \x03(\tR\x04keys\"p\n" +
+	"\x11WatchKeysResponse\x12-\n" +
+	"\x04type\x18\x01 \x01(\x0e2\x19.config.v1.WatchEventTypeR\x04type\x12,\n" +
+	"\x05entry\x18\x02 \x01(\v2\x16.config.v1.ConfigEntryR\x05entry*\x92\x01\n" +
 	"\fConfigFormat\x12\x1d\n" +
 	"\x19CONFIG_FORMAT_UNSPECIFIED\x10\x00\x12\x16\n" +
 	"\x12CONFIG_FORMAT_YAML\x10\x01\x12\x16\n" +
 	"\x12CONFIG_FORMAT_TOML\x10\x02\x12\x16\n" +
 	"\x12CONFIG_FORMAT_JSON\x10\x03\x12\x1b\n" +
-	"\x17CONFIG_FORMAT_PLAINTEXT\x10\x042\xe8\x04\n" +
+	"\x17CONFIG_FORMAT_PLAINTEXT\x10\x04*\xa8\x01\n" +
+	"\x0eWatchEventType\x12 \n" +
+	"\x1cWATCH_EVENT_TYPE_UNSPECIFIED\x10\x00\x12\x1d\n" +
+	"\x19WATCH_EVENT_TYPE_SNAPSHOT\x10\x01\x12\x18\n" +
+	"\x14WATCH_EVENT_TYPE_PUT\x10\x02\x12\x1b\n" +
+	"\x17WATCH_EVENT_TYPE_DELETE\x10\x03\x12\x1e\n" +
+	"\x1aWATCH_EVENT_TYPE_HEARTBEAT\x10\x042\xb4\x05\n" +
 	"\rConfigService\x12W\n" +
 	"\x0eListNamespaces\x12 .config.v1.ListNamespacesRequest\x1a!.config.v1.ListNamespacesResponse\"\x00\x12E\n" +
 	"\bListKeys\x12\x1a.config.v1.ListKeysRequest\x1a\x1b.config.v1.ListKeysResponse\"\x00\x12?\n" +
@@ -1352,7 +1533,8 @@ const file_api_config_v1_config_proto_rawDesc = "" +
 	"\tDeleteKey\x12\x1b.config.v1.DeleteKeyRequest\x1a\x1c.config.v1.DeleteKeyResponse\"\x00\x12T\n" +
 	"\rListRevisions\x12\x1f.config.v1.ListRevisionsRequest\x1a .config.v1.ListRevisionsResponse\"\x00\x12N\n" +
 	"\vGetRevision\x12\x1d.config.v1.GetRevisionRequest\x1a\x1e.config.v1.GetRevisionResponse\"\x00\x12E\n" +
-	"\bRollback\x12\x1a.config.v1.RollbackRequest\x1a\x1b.config.v1.RollbackResponse\"\x00B\x9e\x01\n" +
+	"\bRollback\x12\x1a.config.v1.RollbackRequest\x1a\x1b.config.v1.RollbackResponse\"\x00\x12J\n" +
+	"\tWatchKeys\x12\x1b.config.v1.WatchKeysRequest\x1a\x1c.config.v1.WatchKeysResponse\"\x000\x01B\x9e\x01\n" +
 	"\rcom.config.v1B\vConfigProtoP\x01Z;github.com/lens077/ecommerce/backend/api/config/v1;configv1\xa2\x02\x03CXX\xaa\x02\tConfig.V1\xca\x02\tConfig\\V1\xe2\x02\x15Config\\V1\\GPBMetadata\xea\x02\n" +
 	"Config::V1b\x06proto3"
 
@@ -1368,66 +1550,73 @@ func file_api_config_v1_config_proto_rawDescGZIP() []byte {
 	return file_api_config_v1_config_proto_rawDescData
 }
 
-var file_api_config_v1_config_proto_enumTypes = make([]protoimpl.EnumInfo, 1)
-var file_api_config_v1_config_proto_msgTypes = make([]protoimpl.MessageInfo, 19)
+var file_api_config_v1_config_proto_enumTypes = make([]protoimpl.EnumInfo, 2)
+var file_api_config_v1_config_proto_msgTypes = make([]protoimpl.MessageInfo, 21)
 var file_api_config_v1_config_proto_goTypes = []any{
 	(ConfigFormat)(0),              // 0: config.v1.ConfigFormat
-	(*ConfigEntry)(nil),            // 1: config.v1.ConfigEntry
-	(*ConfigRevision)(nil),         // 2: config.v1.ConfigRevision
-	(*NamespaceInfo)(nil),          // 3: config.v1.NamespaceInfo
-	(*ListNamespacesRequest)(nil),  // 4: config.v1.ListNamespacesRequest
-	(*ListNamespacesResponse)(nil), // 5: config.v1.ListNamespacesResponse
-	(*ListKeysRequest)(nil),        // 6: config.v1.ListKeysRequest
-	(*ListKeysResponse)(nil),       // 7: config.v1.ListKeysResponse
-	(*GetKeyRequest)(nil),          // 8: config.v1.GetKeyRequest
-	(*GetKeyResponse)(nil),         // 9: config.v1.GetKeyResponse
-	(*PutKeyRequest)(nil),          // 10: config.v1.PutKeyRequest
-	(*PutKeyResponse)(nil),         // 11: config.v1.PutKeyResponse
-	(*DeleteKeyRequest)(nil),       // 12: config.v1.DeleteKeyRequest
-	(*DeleteKeyResponse)(nil),      // 13: config.v1.DeleteKeyResponse
-	(*ListRevisionsRequest)(nil),   // 14: config.v1.ListRevisionsRequest
-	(*ListRevisionsResponse)(nil),  // 15: config.v1.ListRevisionsResponse
-	(*GetRevisionRequest)(nil),     // 16: config.v1.GetRevisionRequest
-	(*GetRevisionResponse)(nil),    // 17: config.v1.GetRevisionResponse
-	(*RollbackRequest)(nil),        // 18: config.v1.RollbackRequest
-	(*RollbackResponse)(nil),       // 19: config.v1.RollbackResponse
-	(*timestamppb.Timestamp)(nil),  // 20: google.protobuf.Timestamp
+	(WatchEventType)(0),            // 1: config.v1.WatchEventType
+	(*ConfigEntry)(nil),            // 2: config.v1.ConfigEntry
+	(*ConfigRevision)(nil),         // 3: config.v1.ConfigRevision
+	(*NamespaceInfo)(nil),          // 4: config.v1.NamespaceInfo
+	(*ListNamespacesRequest)(nil),  // 5: config.v1.ListNamespacesRequest
+	(*ListNamespacesResponse)(nil), // 6: config.v1.ListNamespacesResponse
+	(*ListKeysRequest)(nil),        // 7: config.v1.ListKeysRequest
+	(*ListKeysResponse)(nil),       // 8: config.v1.ListKeysResponse
+	(*GetKeyRequest)(nil),          // 9: config.v1.GetKeyRequest
+	(*GetKeyResponse)(nil),         // 10: config.v1.GetKeyResponse
+	(*PutKeyRequest)(nil),          // 11: config.v1.PutKeyRequest
+	(*PutKeyResponse)(nil),         // 12: config.v1.PutKeyResponse
+	(*DeleteKeyRequest)(nil),       // 13: config.v1.DeleteKeyRequest
+	(*DeleteKeyResponse)(nil),      // 14: config.v1.DeleteKeyResponse
+	(*ListRevisionsRequest)(nil),   // 15: config.v1.ListRevisionsRequest
+	(*ListRevisionsResponse)(nil),  // 16: config.v1.ListRevisionsResponse
+	(*GetRevisionRequest)(nil),     // 17: config.v1.GetRevisionRequest
+	(*GetRevisionResponse)(nil),    // 18: config.v1.GetRevisionResponse
+	(*RollbackRequest)(nil),        // 19: config.v1.RollbackRequest
+	(*RollbackResponse)(nil),       // 20: config.v1.RollbackResponse
+	(*WatchKeysRequest)(nil),       // 21: config.v1.WatchKeysRequest
+	(*WatchKeysResponse)(nil),      // 22: config.v1.WatchKeysResponse
+	(*timestamppb.Timestamp)(nil),  // 23: google.protobuf.Timestamp
 }
 var file_api_config_v1_config_proto_depIdxs = []int32{
 	0,  // 0: config.v1.ConfigEntry.format:type_name -> config.v1.ConfigFormat
-	20, // 1: config.v1.ConfigEntry.created_at:type_name -> google.protobuf.Timestamp
-	20, // 2: config.v1.ConfigEntry.updated_at:type_name -> google.protobuf.Timestamp
+	23, // 1: config.v1.ConfigEntry.created_at:type_name -> google.protobuf.Timestamp
+	23, // 2: config.v1.ConfigEntry.updated_at:type_name -> google.protobuf.Timestamp
 	0,  // 3: config.v1.ConfigRevision.format:type_name -> config.v1.ConfigFormat
-	20, // 4: config.v1.ConfigRevision.created_at:type_name -> google.protobuf.Timestamp
-	3,  // 5: config.v1.ListNamespacesResponse.namespaces:type_name -> config.v1.NamespaceInfo
-	1,  // 6: config.v1.ListKeysResponse.entries:type_name -> config.v1.ConfigEntry
-	1,  // 7: config.v1.GetKeyResponse.entry:type_name -> config.v1.ConfigEntry
+	23, // 4: config.v1.ConfigRevision.created_at:type_name -> google.protobuf.Timestamp
+	4,  // 5: config.v1.ListNamespacesResponse.namespaces:type_name -> config.v1.NamespaceInfo
+	2,  // 6: config.v1.ListKeysResponse.entries:type_name -> config.v1.ConfigEntry
+	2,  // 7: config.v1.GetKeyResponse.entry:type_name -> config.v1.ConfigEntry
 	0,  // 8: config.v1.PutKeyRequest.format:type_name -> config.v1.ConfigFormat
-	1,  // 9: config.v1.PutKeyResponse.entry:type_name -> config.v1.ConfigEntry
-	2,  // 10: config.v1.ListRevisionsResponse.revisions:type_name -> config.v1.ConfigRevision
-	2,  // 11: config.v1.GetRevisionResponse.revision:type_name -> config.v1.ConfigRevision
-	1,  // 12: config.v1.RollbackResponse.entry:type_name -> config.v1.ConfigEntry
-	4,  // 13: config.v1.ConfigService.ListNamespaces:input_type -> config.v1.ListNamespacesRequest
-	6,  // 14: config.v1.ConfigService.ListKeys:input_type -> config.v1.ListKeysRequest
-	8,  // 15: config.v1.ConfigService.GetKey:input_type -> config.v1.GetKeyRequest
-	10, // 16: config.v1.ConfigService.PutKey:input_type -> config.v1.PutKeyRequest
-	12, // 17: config.v1.ConfigService.DeleteKey:input_type -> config.v1.DeleteKeyRequest
-	14, // 18: config.v1.ConfigService.ListRevisions:input_type -> config.v1.ListRevisionsRequest
-	16, // 19: config.v1.ConfigService.GetRevision:input_type -> config.v1.GetRevisionRequest
-	18, // 20: config.v1.ConfigService.Rollback:input_type -> config.v1.RollbackRequest
-	5,  // 21: config.v1.ConfigService.ListNamespaces:output_type -> config.v1.ListNamespacesResponse
-	7,  // 22: config.v1.ConfigService.ListKeys:output_type -> config.v1.ListKeysResponse
-	9,  // 23: config.v1.ConfigService.GetKey:output_type -> config.v1.GetKeyResponse
-	11, // 24: config.v1.ConfigService.PutKey:output_type -> config.v1.PutKeyResponse
-	13, // 25: config.v1.ConfigService.DeleteKey:output_type -> config.v1.DeleteKeyResponse
-	15, // 26: config.v1.ConfigService.ListRevisions:output_type -> config.v1.ListRevisionsResponse
-	17, // 27: config.v1.ConfigService.GetRevision:output_type -> config.v1.GetRevisionResponse
-	19, // 28: config.v1.ConfigService.Rollback:output_type -> config.v1.RollbackResponse
-	21, // [21:29] is the sub-list for method output_type
-	13, // [13:21] is the sub-list for method input_type
-	13, // [13:13] is the sub-list for extension type_name
-	13, // [13:13] is the sub-list for extension extendee
-	0,  // [0:13] is the sub-list for field type_name
+	2,  // 9: config.v1.PutKeyResponse.entry:type_name -> config.v1.ConfigEntry
+	3,  // 10: config.v1.ListRevisionsResponse.revisions:type_name -> config.v1.ConfigRevision
+	3,  // 11: config.v1.GetRevisionResponse.revision:type_name -> config.v1.ConfigRevision
+	2,  // 12: config.v1.RollbackResponse.entry:type_name -> config.v1.ConfigEntry
+	1,  // 13: config.v1.WatchKeysResponse.type:type_name -> config.v1.WatchEventType
+	2,  // 14: config.v1.WatchKeysResponse.entry:type_name -> config.v1.ConfigEntry
+	5,  // 15: config.v1.ConfigService.ListNamespaces:input_type -> config.v1.ListNamespacesRequest
+	7,  // 16: config.v1.ConfigService.ListKeys:input_type -> config.v1.ListKeysRequest
+	9,  // 17: config.v1.ConfigService.GetKey:input_type -> config.v1.GetKeyRequest
+	11, // 18: config.v1.ConfigService.PutKey:input_type -> config.v1.PutKeyRequest
+	13, // 19: config.v1.ConfigService.DeleteKey:input_type -> config.v1.DeleteKeyRequest
+	15, // 20: config.v1.ConfigService.ListRevisions:input_type -> config.v1.ListRevisionsRequest
+	17, // 21: config.v1.ConfigService.GetRevision:input_type -> config.v1.GetRevisionRequest
+	19, // 22: config.v1.ConfigService.Rollback:input_type -> config.v1.RollbackRequest
+	21, // 23: config.v1.ConfigService.WatchKeys:input_type -> config.v1.WatchKeysRequest
+	6,  // 24: config.v1.ConfigService.ListNamespaces:output_type -> config.v1.ListNamespacesResponse
+	8,  // 25: config.v1.ConfigService.ListKeys:output_type -> config.v1.ListKeysResponse
+	10, // 26: config.v1.ConfigService.GetKey:output_type -> config.v1.GetKeyResponse
+	12, // 27: config.v1.ConfigService.PutKey:output_type -> config.v1.PutKeyResponse
+	14, // 28: config.v1.ConfigService.DeleteKey:output_type -> config.v1.DeleteKeyResponse
+	16, // 29: config.v1.ConfigService.ListRevisions:output_type -> config.v1.ListRevisionsResponse
+	18, // 30: config.v1.ConfigService.GetRevision:output_type -> config.v1.GetRevisionResponse
+	20, // 31: config.v1.ConfigService.Rollback:output_type -> config.v1.RollbackResponse
+	22, // 32: config.v1.ConfigService.WatchKeys:output_type -> config.v1.WatchKeysResponse
+	24, // [24:33] is the sub-list for method output_type
+	15, // [15:24] is the sub-list for method input_type
+	15, // [15:15] is the sub-list for extension type_name
+	15, // [15:15] is the sub-list for extension extendee
+	0,  // [0:15] is the sub-list for field type_name
 }
 
 func init() { file_api_config_v1_config_proto_init() }
@@ -1440,8 +1629,8 @@ func file_api_config_v1_config_proto_init() {
 		File: protoimpl.DescBuilder{
 			GoPackagePath: reflect.TypeOf(x{}).PkgPath(),
 			RawDescriptor: unsafe.Slice(unsafe.StringData(file_api_config_v1_config_proto_rawDesc), len(file_api_config_v1_config_proto_rawDesc)),
-			NumEnums:      1,
-			NumMessages:   19,
+			NumEnums:      2,
+			NumMessages:   21,
 			NumExtensions: 0,
 			NumServices:   1,
 		},

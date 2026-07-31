@@ -13,7 +13,7 @@ import type { Message } from "@bufbuild/protobuf";
  * Describes the file api/config/v1/config.proto.
  */
 export const file_api_config_v1_config: GenFile = /*@__PURE__*/
-  fileDesc("ChphcGkvY29uZmlnL3YxL2NvbmZpZy5wcm90bxIJY29uZmlnLnYxIrMCCgtDb25maWdFbnRyeRIKCgJpZBgBIAEoAxIRCgluYW1lc3BhY2UYAiABKAkSEwoLZW52aXJvbm1lbnQYAyABKAkSCwoDa2V5GAQgASgJEicKBmZvcm1hdBgFIAEoDjIXLmNvbmZpZy52MS5Db25maWdGb3JtYXQSDQoFdmFsdWUYBiABKAkSDwoHdmVyc2lvbhgHIAEoBRIRCglpc19zZWNyZXQYCCABKAgSEwoLZGVzY3JpcHRpb24YCSABKAkSEgoKdXBkYXRlZF9ieRgKIAEoCRIuCgpjcmVhdGVkX2F0GAsgASgLMhouZ29vZ2xlLnByb3RvYnVmLlRpbWVzdGFtcBIuCgp1cGRhdGVkX2F0GAwgASgLMhouZ29vZ2xlLnByb3RvYnVmLlRpbWVzdGFtcCLIAQoOQ29uZmlnUmV2aXNpb24SCgoCaWQYASABKAMSEAoIZW50cnlfaWQYAiABKAMSDwoHdmVyc2lvbhgDIAEoBRInCgZmb3JtYXQYBCABKA4yFy5jb25maWcudjEuQ29uZmlnRm9ybWF0Eg0KBXZhbHVlGAUgASgJEg8KB2NvbW1lbnQYBiABKAkSDgoGYXV0aG9yGAcgASgJEi4KCmNyZWF0ZWRfYXQYCCABKAsyGi5nb29nbGUucHJvdG9idWYuVGltZXN0YW1wIksKDU5hbWVzcGFjZUluZm8SEQoJbmFtZXNwYWNlGAEgASgJEhQKDGVudmlyb25tZW50cxgCIAMoCRIRCglrZXlfY291bnQYAyABKAUiFwoVTGlzdE5hbWVzcGFjZXNSZXF1ZXN0IkYKFkxpc3ROYW1lc3BhY2VzUmVzcG9uc2USLAoKbmFtZXNwYWNlcxgBIAMoCzIYLmNvbmZpZy52MS5OYW1lc3BhY2VJbmZvIl0KD0xpc3RLZXlzUmVxdWVzdBIZCgluYW1lc3BhY2UYASABKAlCBrpIA8gBARIbCgtlbnZpcm9ubWVudBgCIAEoCUIGukgDyAEBEhIKCmtleV9wcmVmaXgYAyABKAkiOwoQTGlzdEtleXNSZXNwb25zZRInCgdlbnRyaWVzGAEgAygLMhYuY29uZmlnLnYxLkNvbmZpZ0VudHJ5IlwKDUdldEtleVJlcXVlc3QSGQoJbmFtZXNwYWNlGAEgASgJQga6SAPIAQESGwoLZW52aXJvbm1lbnQYAiABKAlCBrpIA8gBARITCgNrZXkYAyABKAlCBrpIA8gBASI3Cg5HZXRLZXlSZXNwb25zZRIlCgVlbnRyeRgBIAEoCzIWLmNvbmZpZy52MS5Db25maWdFbnRyeSLXAQoNUHV0S2V5UmVxdWVzdBIZCgluYW1lc3BhY2UYASABKAlCBrpIA8gBARIbCgtlbnZpcm9ubWVudBgCIAEoCUIGukgDyAEBEhMKA2tleRgDIAEoCUIGukgDyAEBEjEKBmZvcm1hdBgEIAEoDjIXLmNvbmZpZy52MS5Db25maWdGb3JtYXRCCLpIBYIBAhABEg0KBXZhbHVlGAUgASgJEg8KB2NvbW1lbnQYBiABKAkSEQoJaXNfc2VjcmV0GAcgASgIEhMKC2Rlc2NyaXB0aW9uGAggASgJIjcKDlB1dEtleVJlc3BvbnNlEiUKBWVudHJ5GAEgASgLMhYuY29uZmlnLnYxLkNvbmZpZ0VudHJ5Il8KEERlbGV0ZUtleVJlcXVlc3QSGQoJbmFtZXNwYWNlGAEgASgJQga6SAPIAQESGwoLZW52aXJvbm1lbnQYAiABKAlCBrpIA8gBARITCgNrZXkYAyABKAlCBrpIA8gBASIkChFEZWxldGVLZXlSZXNwb25zZRIPCgdkZWxldGVkGAEgASgIImMKFExpc3RSZXZpc2lvbnNSZXF1ZXN0EhkKCW5hbWVzcGFjZRgBIAEoCUIGukgDyAEBEhsKC2Vudmlyb25tZW50GAIgASgJQga6SAPIAQESEwoDa2V5GAMgASgJQga6SAPIAQEiRQoVTGlzdFJldmlzaW9uc1Jlc3BvbnNlEiwKCXJldmlzaW9ucxgBIAMoCzIZLmNvbmZpZy52MS5Db25maWdSZXZpc2lvbiJ7ChJHZXRSZXZpc2lvblJlcXVlc3QSGQoJbmFtZXNwYWNlGAEgASgJQga6SAPIAQESGwoLZW52aXJvbm1lbnQYAiABKAlCBrpIA8gBARITCgNrZXkYAyABKAlCBrpIA8gBARIYCgd2ZXJzaW9uGAQgASgFQge6SAQaAigBIkIKE0dldFJldmlzaW9uUmVzcG9uc2USKwoIcmV2aXNpb24YASABKAsyGS5jb25maWcudjEuQ29uZmlnUmV2aXNpb24iiQEKD1JvbGxiYWNrUmVxdWVzdBIZCgluYW1lc3BhY2UYASABKAlCBrpIA8gBARIbCgtlbnZpcm9ubWVudBgCIAEoCUIGukgDyAEBEhMKA2tleRgDIAEoCUIGukgDyAEBEhgKB3ZlcnNpb24YBCABKAVCB7pIBBoCKAESDwoHY29tbWVudBgFIAEoCSI5ChBSb2xsYmFja1Jlc3BvbnNlEiUKBWVudHJ5GAEgASgLMhYuY29uZmlnLnYxLkNvbmZpZ0VudHJ5KpIBCgxDb25maWdGb3JtYXQSHQoZQ09ORklHX0ZPUk1BVF9VTlNQRUNJRklFRBAAEhYKEkNPTkZJR19GT1JNQVRfWUFNTBABEhYKEkNPTkZJR19GT1JNQVRfVE9NTBACEhYKEkNPTkZJR19GT1JNQVRfSlNPThADEhsKF0NPTkZJR19GT1JNQVRfUExBSU5URVhUEAQy6AQKDUNvbmZpZ1NlcnZpY2USVwoOTGlzdE5hbWVzcGFjZXMSIC5jb25maWcudjEuTGlzdE5hbWVzcGFjZXNSZXF1ZXN0GiEuY29uZmlnLnYxLkxpc3ROYW1lc3BhY2VzUmVzcG9uc2UiABJFCghMaXN0S2V5cxIaLmNvbmZpZy52MS5MaXN0S2V5c1JlcXVlc3QaGy5jb25maWcudjEuTGlzdEtleXNSZXNwb25zZSIAEj8KBkdldEtleRIYLmNvbmZpZy52MS5HZXRLZXlSZXF1ZXN0GhkuY29uZmlnLnYxLkdldEtleVJlc3BvbnNlIgASPwoGUHV0S2V5EhguY29uZmlnLnYxLlB1dEtleVJlcXVlc3QaGS5jb25maWcudjEuUHV0S2V5UmVzcG9uc2UiABJICglEZWxldGVLZXkSGy5jb25maWcudjEuRGVsZXRlS2V5UmVxdWVzdBocLmNvbmZpZy52MS5EZWxldGVLZXlSZXNwb25zZSIAElQKDUxpc3RSZXZpc2lvbnMSHy5jb25maWcudjEuTGlzdFJldmlzaW9uc1JlcXVlc3QaIC5jb25maWcudjEuTGlzdFJldmlzaW9uc1Jlc3BvbnNlIgASTgoLR2V0UmV2aXNpb24SHS5jb25maWcudjEuR2V0UmV2aXNpb25SZXF1ZXN0Gh4uY29uZmlnLnYxLkdldFJldmlzaW9uUmVzcG9uc2UiABJFCghSb2xsYmFjaxIaLmNvbmZpZy52MS5Sb2xsYmFja1JlcXVlc3QaGy5jb25maWcudjEuUm9sbGJhY2tSZXNwb25zZSIAQp4BCg1jb20uY29uZmlnLnYxQgtDb25maWdQcm90b1ABWjtnaXRodWIuY29tL2xlbnMwNzcvZWNvbW1lcmNlL2JhY2tlbmQvYXBpL2NvbmZpZy92MTtjb25maWd2MaICA0NYWKoCCUNvbmZpZy5WMcoCCUNvbmZpZ1xWMeICFUNvbmZpZ1xWMVxHUEJNZXRhZGF0YeoCCkNvbmZpZzo6VjFiBnByb3RvMw", [file_google_protobuf_timestamp, file_third_party_validate_validate]);
+  fileDesc("ChphcGkvY29uZmlnL3YxL2NvbmZpZy5wcm90bxIJY29uZmlnLnYxIrMCCgtDb25maWdFbnRyeRIKCgJpZBgBIAEoAxIRCgluYW1lc3BhY2UYAiABKAkSEwoLZW52aXJvbm1lbnQYAyABKAkSCwoDa2V5GAQgASgJEicKBmZvcm1hdBgFIAEoDjIXLmNvbmZpZy52MS5Db25maWdGb3JtYXQSDQoFdmFsdWUYBiABKAkSDwoHdmVyc2lvbhgHIAEoBRIRCglpc19zZWNyZXQYCCABKAgSEwoLZGVzY3JpcHRpb24YCSABKAkSEgoKdXBkYXRlZF9ieRgKIAEoCRIuCgpjcmVhdGVkX2F0GAsgASgLMhouZ29vZ2xlLnByb3RvYnVmLlRpbWVzdGFtcBIuCgp1cGRhdGVkX2F0GAwgASgLMhouZ29vZ2xlLnByb3RvYnVmLlRpbWVzdGFtcCLIAQoOQ29uZmlnUmV2aXNpb24SCgoCaWQYASABKAMSEAoIZW50cnlfaWQYAiABKAMSDwoHdmVyc2lvbhgDIAEoBRInCgZmb3JtYXQYBCABKA4yFy5jb25maWcudjEuQ29uZmlnRm9ybWF0Eg0KBXZhbHVlGAUgASgJEg8KB2NvbW1lbnQYBiABKAkSDgoGYXV0aG9yGAcgASgJEi4KCmNyZWF0ZWRfYXQYCCABKAsyGi5nb29nbGUucHJvdG9idWYuVGltZXN0YW1wIksKDU5hbWVzcGFjZUluZm8SEQoJbmFtZXNwYWNlGAEgASgJEhQKDGVudmlyb25tZW50cxgCIAMoCRIRCglrZXlfY291bnQYAyABKAUiFwoVTGlzdE5hbWVzcGFjZXNSZXF1ZXN0IkYKFkxpc3ROYW1lc3BhY2VzUmVzcG9uc2USLAoKbmFtZXNwYWNlcxgBIAMoCzIYLmNvbmZpZy52MS5OYW1lc3BhY2VJbmZvIl0KD0xpc3RLZXlzUmVxdWVzdBIZCgluYW1lc3BhY2UYASABKAlCBrpIA8gBARIbCgtlbnZpcm9ubWVudBgCIAEoCUIGukgDyAEBEhIKCmtleV9wcmVmaXgYAyABKAkiOwoQTGlzdEtleXNSZXNwb25zZRInCgdlbnRyaWVzGAEgAygLMhYuY29uZmlnLnYxLkNvbmZpZ0VudHJ5IlwKDUdldEtleVJlcXVlc3QSGQoJbmFtZXNwYWNlGAEgASgJQga6SAPIAQESGwoLZW52aXJvbm1lbnQYAiABKAlCBrpIA8gBARITCgNrZXkYAyABKAlCBrpIA8gBASI3Cg5HZXRLZXlSZXNwb25zZRIlCgVlbnRyeRgBIAEoCzIWLmNvbmZpZy52MS5Db25maWdFbnRyeSLXAQoNUHV0S2V5UmVxdWVzdBIZCgluYW1lc3BhY2UYASABKAlCBrpIA8gBARIbCgtlbnZpcm9ubWVudBgCIAEoCUIGukgDyAEBEhMKA2tleRgDIAEoCUIGukgDyAEBEjEKBmZvcm1hdBgEIAEoDjIXLmNvbmZpZy52MS5Db25maWdGb3JtYXRCCLpIBYIBAhABEg0KBXZhbHVlGAUgASgJEg8KB2NvbW1lbnQYBiABKAkSEQoJaXNfc2VjcmV0GAcgASgIEhMKC2Rlc2NyaXB0aW9uGAggASgJIjcKDlB1dEtleVJlc3BvbnNlEiUKBWVudHJ5GAEgASgLMhYuY29uZmlnLnYxLkNvbmZpZ0VudHJ5Il8KEERlbGV0ZUtleVJlcXVlc3QSGQoJbmFtZXNwYWNlGAEgASgJQga6SAPIAQESGwoLZW52aXJvbm1lbnQYAiABKAlCBrpIA8gBARITCgNrZXkYAyABKAlCBrpIA8gBASIkChFEZWxldGVLZXlSZXNwb25zZRIPCgdkZWxldGVkGAEgASgIImMKFExpc3RSZXZpc2lvbnNSZXF1ZXN0EhkKCW5hbWVzcGFjZRgBIAEoCUIGukgDyAEBEhsKC2Vudmlyb25tZW50GAIgASgJQga6SAPIAQESEwoDa2V5GAMgASgJQga6SAPIAQEiRQoVTGlzdFJldmlzaW9uc1Jlc3BvbnNlEiwKCXJldmlzaW9ucxgBIAMoCzIZLmNvbmZpZy52MS5Db25maWdSZXZpc2lvbiJ7ChJHZXRSZXZpc2lvblJlcXVlc3QSGQoJbmFtZXNwYWNlGAEgASgJQga6SAPIAQESGwoLZW52aXJvbm1lbnQYAiABKAlCBrpIA8gBARITCgNrZXkYAyABKAlCBrpIA8gBARIYCgd2ZXJzaW9uGAQgASgFQge6SAQaAigBIkIKE0dldFJldmlzaW9uUmVzcG9uc2USKwoIcmV2aXNpb24YASABKAsyGS5jb25maWcudjEuQ29uZmlnUmV2aXNpb24iiQEKD1JvbGxiYWNrUmVxdWVzdBIZCgluYW1lc3BhY2UYASABKAlCBrpIA8gBARIbCgtlbnZpcm9ubWVudBgCIAEoCUIGukgDyAEBEhMKA2tleRgDIAEoCUIGukgDyAEBEhgKB3ZlcnNpb24YBCABKAVCB7pIBBoCKAESDwoHY29tbWVudBgFIAEoCSI5ChBSb2xsYmFja1Jlc3BvbnNlEiUKBWVudHJ5GAEgASgLMhYuY29uZmlnLnYxLkNvbmZpZ0VudHJ5IlgKEFdhdGNoS2V5c1JlcXVlc3QSGQoJbmFtZXNwYWNlGAEgASgJQga6SAPIAQESGwoLZW52aXJvbm1lbnQYAiABKAlCBrpIA8gBARIMCgRrZXlzGAMgAygJImMKEVdhdGNoS2V5c1Jlc3BvbnNlEicKBHR5cGUYASABKA4yGS5jb25maWcudjEuV2F0Y2hFdmVudFR5cGUSJQoFZW50cnkYAiABKAsyFi5jb25maWcudjEuQ29uZmlnRW50cnkqkgEKDENvbmZpZ0Zvcm1hdBIdChlDT05GSUdfRk9STUFUX1VOU1BFQ0lGSUVEEAASFgoSQ09ORklHX0ZPUk1BVF9ZQU1MEAESFgoSQ09ORklHX0ZPUk1BVF9UT01MEAISFgoSQ09ORklHX0ZPUk1BVF9KU09OEAMSGwoXQ09ORklHX0ZPUk1BVF9QTEFJTlRFWFQQBCqoAQoOV2F0Y2hFdmVudFR5cGUSIAocV0FUQ0hfRVZFTlRfVFlQRV9VTlNQRUNJRklFRBAAEh0KGVdBVENIX0VWRU5UX1RZUEVfU05BUFNIT1QQARIYChRXQVRDSF9FVkVOVF9UWVBFX1BVVBACEhsKF1dBVENIX0VWRU5UX1RZUEVfREVMRVRFEAMSHgoaV0FUQ0hfRVZFTlRfVFlQRV9IRUFSVEJFQVQQBDK0BQoNQ29uZmlnU2VydmljZRJXCg5MaXN0TmFtZXNwYWNlcxIgLmNvbmZpZy52MS5MaXN0TmFtZXNwYWNlc1JlcXVlc3QaIS5jb25maWcudjEuTGlzdE5hbWVzcGFjZXNSZXNwb25zZSIAEkUKCExpc3RLZXlzEhouY29uZmlnLnYxLkxpc3RLZXlzUmVxdWVzdBobLmNvbmZpZy52MS5MaXN0S2V5c1Jlc3BvbnNlIgASPwoGR2V0S2V5EhguY29uZmlnLnYxLkdldEtleVJlcXVlc3QaGS5jb25maWcudjEuR2V0S2V5UmVzcG9uc2UiABI/CgZQdXRLZXkSGC5jb25maWcudjEuUHV0S2V5UmVxdWVzdBoZLmNvbmZpZy52MS5QdXRLZXlSZXNwb25zZSIAEkgKCURlbGV0ZUtleRIbLmNvbmZpZy52MS5EZWxldGVLZXlSZXF1ZXN0GhwuY29uZmlnLnYxLkRlbGV0ZUtleVJlc3BvbnNlIgASVAoNTGlzdFJldmlzaW9ucxIfLmNvbmZpZy52MS5MaXN0UmV2aXNpb25zUmVxdWVzdBogLmNvbmZpZy52MS5MaXN0UmV2aXNpb25zUmVzcG9uc2UiABJOCgtHZXRSZXZpc2lvbhIdLmNvbmZpZy52MS5HZXRSZXZpc2lvblJlcXVlc3QaHi5jb25maWcudjEuR2V0UmV2aXNpb25SZXNwb25zZSIAEkUKCFJvbGxiYWNrEhouY29uZmlnLnYxLlJvbGxiYWNrUmVxdWVzdBobLmNvbmZpZy52MS5Sb2xsYmFja1Jlc3BvbnNlIgASSgoJV2F0Y2hLZXlzEhsuY29uZmlnLnYxLldhdGNoS2V5c1JlcXVlc3QaHC5jb25maWcudjEuV2F0Y2hLZXlzUmVzcG9uc2UiADABQp4BCg1jb20uY29uZmlnLnYxQgtDb25maWdQcm90b1ABWjtnaXRodWIuY29tL2xlbnMwNzcvZWNvbW1lcmNlL2JhY2tlbmQvYXBpL2NvbmZpZy92MTtjb25maWd2MaICA0NYWKoCCUNvbmZpZy5WMcoCCUNvbmZpZ1xWMeICFUNvbmZpZ1xWMVxHUEJNZXRhZGF0YeoCCkNvbmZpZzo6VjFiBnByb3RvMw", [file_google_protobuf_timestamp, file_third_party_validate_validate]);
 
 /**
  * 配置项(键 + 当前值 + 元数据)
@@ -567,6 +567,59 @@ export const RollbackResponseSchema: GenMessage<RollbackResponse> = /*@__PURE__*
   messageDesc(file_api_config_v1_config, 18);
 
 /**
+ * @generated from message config.v1.WatchKeysRequest
+ */
+export type WatchKeysRequest = Message<"config.v1.WatchKeysRequest"> & {
+  /**
+   * @generated from field: string namespace = 1;
+   */
+  namespace: string;
+
+  /**
+   * @generated from field: string environment = 2;
+   */
+  environment: string;
+
+  /**
+   * 可选:留空表示订阅该 namespace+environment 下全部 key
+   *
+   * @generated from field: repeated string keys = 3;
+   */
+  keys: string[];
+};
+
+/**
+ * Describes the message config.v1.WatchKeysRequest.
+ * Use `create(WatchKeysRequestSchema)` to create a new message.
+ */
+export const WatchKeysRequestSchema: GenMessage<WatchKeysRequest> = /*@__PURE__*/
+  messageDesc(file_api_config_v1_config, 19);
+
+/**
+ * @generated from message config.v1.WatchKeysResponse
+ */
+export type WatchKeysResponse = Message<"config.v1.WatchKeysResponse"> & {
+  /**
+   * @generated from field: config.v1.WatchEventType type = 1;
+   */
+  type: WatchEventType;
+
+  /**
+   * HEARTBEAT 时为空;脱敏规则与 GetKey 一致
+   *
+   * @generated from field: config.v1.ConfigEntry entry = 2;
+   */
+  entry?: ConfigEntry;
+};
+
+/**
+ * Describes the message config.v1.WatchKeysResponse.
+ * Use `create(WatchKeysResponseSchema)` to create a new message.
+ */
+export const WatchKeysResponseSchema: GenMessage<WatchKeysResponse> = /*@__PURE__*/
+  messageDesc(file_api_config_v1_config, 20);
+
+/**
  * 配置内容格式
  *
  * @generated from enum config.v1.ConfigFormat
@@ -603,6 +656,52 @@ export enum ConfigFormat {
  */
 export const ConfigFormatSchema: GenEnum<ConfigFormat> = /*@__PURE__*/
   enumDesc(file_api_config_v1_config, 0);
+
+/**
+ * 变更事件类型
+ *
+ * @generated from enum config.v1.WatchEventType
+ */
+export enum WatchEventType {
+  /**
+   * @generated from enum value: WATCH_EVENT_TYPE_UNSPECIFIED = 0;
+   */
+  UNSPECIFIED = 0,
+
+  /**
+   * 建流时推送的当前值
+   *
+   * @generated from enum value: WATCH_EVENT_TYPE_SNAPSHOT = 1;
+   */
+  SNAPSHOT = 1,
+
+  /**
+   * 新增/更新/回滚
+   *
+   * @generated from enum value: WATCH_EVENT_TYPE_PUT = 2;
+   */
+  PUT = 2,
+
+  /**
+   * 删除,entry 仅含 namespace/environment/key
+   *
+   * @generated from enum value: WATCH_EVENT_TYPE_DELETE = 3;
+   */
+  DELETE = 3,
+
+  /**
+   * 保活,entry 为空
+   *
+   * @generated from enum value: WATCH_EVENT_TYPE_HEARTBEAT = 4;
+   */
+  HEARTBEAT = 4,
+}
+
+/**
+ * Describes the enum config.v1.WatchEventType.
+ */
+export const WatchEventTypeSchema: GenEnum<WatchEventType> = /*@__PURE__*/
+  enumDesc(file_api_config_v1_config, 1);
 
 /**
  * ConfigService 配置中心服务(键值粒度)。
@@ -691,6 +790,17 @@ export const ConfigService: GenService<{
     methodKind: "unary";
     input: typeof RollbackRequestSchema;
     output: typeof RollbackResponseSchema;
+  },
+  /**
+   * 订阅配置变更(服务端流)。建流时先推一遍当前值(SNAPSHOT),之后推增量。
+   * 断线重连会重新收到 SNAPSHOT —— 断连期间漏掉的变更由此自愈,客户端无需自己补偿。
+   *
+   * @generated from rpc config.v1.ConfigService.WatchKeys
+   */
+  watchKeys: {
+    methodKind: "server_streaming";
+    input: typeof WatchKeysRequestSchema;
+    output: typeof WatchKeysResponseSchema;
   },
 }> = /*@__PURE__*/
   serviceDesc(file_api_config_v1_config, 0);

@@ -191,14 +191,32 @@ func (r *configRepo) PutEntry(ctx context.Context, in biz.PutParams) (*biz.Confi
 		return nil, fmt.Errorf("insert revision: %w", err)
 	}
 
+	// 在事务内发通知:提交才投递,回滚不会误发(见 watcher.go 的 notify)
+	if err = notify(ctx, tx, changePayload{
+		Namespace:   saved.Namespace,
+		Environment: saved.Environment,
+		Key:         saved.Key,
+		Version:     saved.Version,
+	}); err != nil {
+		return nil, err
+	}
+
 	if err = tx.Commit(ctx); err != nil {
 		return nil, fmt.Errorf("commit: %w", err)
 	}
 	return toEntry(saved), nil
 }
 
+// DeleteEntry 删除配置项(revision 由外键级联删除)。
+// 单条 DELETE 本可以不开事务,这里开是为了让变更通知与删除同生共死。
 func (r *configRepo) DeleteEntry(ctx context.Context, namespace, environment, key string) (bool, error) {
-	n, err := r.queries.DeleteEntry(ctx, models.DeleteEntryParams{
+	tx, err := r.db.Begin(ctx)
+	if err != nil {
+		return false, fmt.Errorf("begin tx: %w", err)
+	}
+	defer func() { _ = tx.Rollback(ctx) }()
+
+	n, err := models.New(tx).DeleteEntry(ctx, models.DeleteEntryParams{
 		Namespace:   namespace,
 		Environment: environment,
 		Key:         key,
@@ -206,7 +224,24 @@ func (r *configRepo) DeleteEntry(ctx context.Context, namespace, environment, ke
 	if err != nil {
 		return false, err
 	}
-	return n > 0, nil
+	if n == 0 {
+		// 没删到任何行就没有变更,不发通知
+		return false, nil
+	}
+
+	if err = notify(ctx, tx, changePayload{
+		Namespace:   namespace,
+		Environment: environment,
+		Key:         key,
+		Deleted:     true,
+	}); err != nil {
+		return false, err
+	}
+
+	if err = tx.Commit(ctx); err != nil {
+		return false, fmt.Errorf("commit: %w", err)
+	}
+	return true, nil
 }
 
 func (r *configRepo) ListRevisions(ctx context.Context, namespace, environment, key string) ([]*biz.ConfigRevision, error) {

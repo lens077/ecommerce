@@ -26,6 +26,7 @@ var Module = fx.Module("data",
 		NewPostgresPool,
 		NewRedisClient,
 		NewConfigRepo,
+		NewWatcher,
 	),
 )
 
