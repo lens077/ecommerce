@@ -8,7 +8,8 @@
     "dev:prod": "vp dev --port 3005 --mode prod",
     "build": "vite build && tsc",
     "serve": "vp preview",
-    "test": "vp test --environment=jsdom"
+    "test": "vp test --environment=jsdom --browser.enabled=false",
+    "test:browser": "vp test"
   },
   "dependencies": {
     "@bufbuild/protobuf": "catalog:",
@@ -32,10 +33,13 @@
     "@tanstack/react-router": "catalog:",
     "@tanstack/react-router-devtools": "catalog:",
     "casdoor-js-sdk": "catalog:",
+    "jsonc-parser": "catalog:",
     "lucide-react": "catalog:",
     "react": "catalog:",
     "react-dom": "catalog:",
+    "smol-toml": "catalog:",
     "valtio": "catalog:",
+    "yaml": "catalog:",
     "zod": "catalog:"
   },
   "devDependencies": {
@@ -46,6 +50,7 @@
     "@types/react": "catalog:",
     "@types/react-dom": "catalog:",
     "@vitejs/plugin-react": "catalog:",
+    "jsdom": "catalog:",
     "typescript": "catalog:",
     "vite": "npm:@voidzero-dev/vite-plus-core@^0.1.24",
     "vite-plus": "catalog:",

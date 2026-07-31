@@ -25,7 +25,9 @@ function RootLayout() {
   });
 
   return (
-    <Box sx={{ display: "flex", flexDirection: "column", minHeight: "100vh" }}>
+    // 用定高而不是 minHeight:让「谁滚动」下沉到 main,
+    // 编辑页才能靠 flex:1 吃满剩余高度,不用去硬编 AppBar 的 56/64px
+    <Box sx={{ display: "flex", flexDirection: "column", height: "100dvh" }}>
       <AppBar position="sticky">
         <Toolbar sx={{ gap: sp[3] }}>
           <SlidersHorizontal size={22} />
@@ -51,7 +53,17 @@ function RootLayout() {
         </Toolbar>
       </AppBar>
 
-      <Box component="main" sx={{ flex: 1, p: sp[4] }}>
+      <Box
+        component="main"
+        sx={{
+          flex: 1,
+          minHeight: 0,
+          overflow: "auto",
+          p: sp[4],
+          display: "flex",
+          flexDirection: "column",
+        }}
+      >
         {!isAuthenticated && !isCallback ? (
           <Typography color="text.secondary">请先登录以管理配置。</Typography>
         ) : (
