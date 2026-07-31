@@ -25,6 +25,15 @@ const (
 	EnvConsulKeyFile            = "CONSUL_KEY_FILE"
 )
 
+// Config Center 配置中心(替代 Consul KV 作为配置数据源;Consul 仅保留服务发现/注册)
+// 服务启动时经 ConnectRPC GetKey 从配置中心拉取整份 Bootstrap 配置(YAML)。
+const (
+	EnvConfigCenterAddr      = "CONFIG_CENTER_ADDR"      // config-service 地址,如 http://127.0.0.1:30010
+	EnvConfigCenterNamespace = "CONFIG_CENTER_NAMESPACE" // 命名空间,如 cart
+	EnvConfigCenterEnv       = "CONFIG_CENTER_ENV"       // 环境,如 dev/pre/prod
+	EnvConfigCenterKey       = "CONFIG_CENTER_KEY"       // 配置键,如 bootstrap.yaml
+)
+
 // GetEnvString 如果环境变量存在且不为空，则返回环境变量值，否则返回默认值
 func GetEnvString(key, defaultValue string) string {
 	if value, exists := os.LookupEnv(key); exists && value != "" {

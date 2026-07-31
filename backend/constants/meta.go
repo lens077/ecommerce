@@ -39,6 +39,12 @@ const (
 	ConsulToken              = ""
 )
 
+// Config Center 默认值
+const (
+	ConfigCenterAddr = "http://127.0.0.1:30010"
+	ConfigCenterKey  = "bootstrap.yaml"
+)
+
 // Consul service tags
 const (
 	ConsulTagFx  = "fx"
