@@ -113,7 +113,7 @@ class CartStore {
   /**
    * 添加商品到购物车
    */
-  addItem(item: Omit<CartItem, "cartItemId" | "createdAt" | "updatedAt">): void {
+  addItem(item: Omit<CartItem, "createdAt" | "updatedAt">): void {
     const existingIndex = this.state.items.findIndex(
       (i) => i.skuId === item.skuId && i.merchantId === item.merchantId
     );
@@ -123,11 +123,10 @@ class CartStore {
       this.state.items[existingIndex].quantity += item.quantity;
       this.state.items[existingIndex].updatedAt = new Date();
     } else {
-      // 新增
+      // 新增：cartItemId 来自后端（GetCart 返回的真实 cart_item_id），不再本地伪造
       const now = new Date();
       this.state.items.push({
         ...item,
-        cartItemId: `${Date.now()}-${Math.random().toString(36).slice(2, 9)}`,
         createdAt: now,
         updatedAt: now,
       });

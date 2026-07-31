@@ -26,7 +26,7 @@
 | 用户认证 user | 🟡 | `SignIn`、`UserProfile` | 令牌刷新、登出、多端会话、第三方登录适配 |
 | 商品 product | 🟡 | `GetProductDetail`（SPU/SKU） | 商品列表/分页、上下架、类目/品牌管理、`ProductChangedEvent` 同步 ES |
 | 购物车 cart | ✅ | `GetCart`、`GetCartSummary`、`AddProductToCart`、`RemoveCartItem`、`UpdateCartItemQuantity` + MinIO 缩略图 URL | 选中态服务端持久化（如需） |
-| 订单 order | 🟡 | `CreateOrder`、`CompleteOrder` | 订单查询/列表、取消、订单状态机、`OrderCreated/Paid/Cancelled` 事件 |
+| 订单 order | 🟡 | `CreateOrder`(桩)、`CompleteOrder` | **`CreateOrder` 主体待实现**（幂等/核价/拆单/取地址快照/同步 Reserve/事务落库）；proto 待补 `CreateOrderRequest.requestId`(幂等键) 与 `CreateOrderResponse.orderNo/payAmount/payDeadline`；订单查询/列表、取消、状态机、`OrderCreated/Paid/Cancelled` 事件 |
 | 支付 payment | 🟡 | `CreatePayment`、`GetPaymentStatus`、`HandlePaymentNotify`、`HandlePaymentCallback`（支付宝/微信） | 退款、幂等/验签加固、每日对账、`PaymentRefundedEvent` |
 | 库存 inventory | 🟡 | `Reserve`、`ReleaseReserve` | 扣减确认/回补、库存流水与对账、不足预警事件、Redis 分布式锁 |
 | 搜索 search | 🟡 | `Search`（ES + OTel） | CQRS 读写分离、商品数据实时同步、聚合筛选/智能排序、热门词 |
@@ -60,7 +60,7 @@
 | 分类 `categories` | 🟡 | 静态，未接类目 API |
 | 商品详情 `product/$spuCode` | ✅ | 已接 `GetProductDetail`（SPU/SKU） |
 | 购物车 `cart` | ✅ | 已接购物车 API；本次修复间距 8× 问题并重构紧凑布局 |
-| 结算 `checkout` | 🟡 | mock 数据，未接下单/优惠 API |
+| 结算 `checkout` | 🟡 | 已重写：接选中项(useCart 真实 `cart_item_id`)、地址弹层选择+新增(AddressService)、防重 `requestId`、下单调用(`api/order`)；运费恒 0、去优惠券、统一 `sp[]`。待后端补 `CreateOrderRequest.requestId` 与 `CreateOrderResponse.orderNo` 后接通 |
 | 订单列表/详情 `orders` | 🟡 | mock 数据，未接订单查询 API |
 | 支付结果 `payment/result` | 🟡 | 未接支付状态查询 |
 | 个人中心 `profile` | ✅ | 已接真实 API |
@@ -108,7 +108,9 @@
 - [ ] **订单服务**：补 `GetOrder` / `ListOrders` / `CancelOrder` RPC 与订单状态机（带守卫的状态迁移 + `order_log`）
 - [ ] **一致性底座**：落 Outbox 表 + Kafka relay，替换现有进程内 `GoEventBus`（跨服务事件当前到不了其他服务）
 - [ ] **建单全链路**：cart 补"按 CartItemIds 取选中项"RPC → 取商品/地址快照 → 拆单 → 事务落库 group/order/item → 同步 `Reserve` → 清空购物车
-- [ ] **consumer 结算页**：接下单 API，串联 购物车→结算→下单→支付
+- [x] **consumer 结算页（前端）**：已接选中项/地址弹层选择+新增/防重 requestId/下单调用，去优惠券、运费恒 0、统一 sp[]；生成 `api/order` 客户端并在 `gen/api` 导出 order
+- [ ] **consumer 结算页（待后端联通）**：后端补 `CreateOrderRequest.requestId`、`CreateOrderResponse.orderNo` 并 `make api` 后，提交订单接真实响应、跳真实支付页（现为固定 `/payment/result` 占位）
+- [x] **购物车 cart_item_id 修复**：删除 `store/cart.ts` 本地伪造 ID，`useCart` 从后端 `GetCart` 取真实 `cart_item_id`（下单需要真实 ID）；`api/cart` 乐观新增仍用临时 ID，随下次 `GetCart` 重载被真实值替换（后端 `AddProductToCartResponse` 未返回新 ID）
 - [ ] **consumer 订单页**：订单列表/详情接真实查询 API，替换 mock
 - [ ] **支付闭环**：`payment/result` 接支付状态查询 + 回调后订单状态同步（订单订阅 `OrderPaid`）
 - [ ] **库存联动**：下单同步 `Reserve`（TCC-Try），支付成功确认扣减，取消/超时 `ReleaseReserve`
