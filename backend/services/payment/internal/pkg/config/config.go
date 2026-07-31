@@ -121,7 +121,11 @@ func Init(ctx context.Context) (*confv1.Bootstrap, error) {
 		return nil, err
 	}
 
+	// 与 GetConfig 的 RLock 配对:启动期各 fx 组件会并发读 conf
+	confMu.Lock()
 	conf = localConf
+	confMu.Unlock()
+
 	return localConf, nil
 }
 
