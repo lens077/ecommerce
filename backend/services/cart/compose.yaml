@@ -8,8 +8,17 @@ services:
       - "0.0.0.0:30002:30002"
     environment:
       - RUN_MODE=prod
-      - CONFIG_CENTER=http://apikv.com:8500
-      - CONFIG_PATH=ecommerce/cart/dev.yml
+      # 配置数据源:consul(默认) | configcenter
+      - CONFIG_SOURCE=consul
+      # --- CONFIG_SOURCE=consul 时生效 ---
+      - CONSUL_ADDR=apikv.com:8500
+      - CONSUL_PATH=ecommerce/cart/dev.yml
+      - CONSUL_SCHEME=http
+      # --- CONFIG_SOURCE=configcenter 时生效(把上面改成 configcenter 并放开这几行) ---
+      # - CONFIG_CENTER_ADDR=http://config-service:30010
+      # - CONFIG_CENTER_NAMESPACE=cart
+      # - CONFIG_CENTER_ENV=dev
+      # - CONFIG_CENTER_KEY=bootstrap.yaml
     container_name: ecommerce-cart
     restart: on-failure:3
 

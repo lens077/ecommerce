@@ -25,8 +25,15 @@ const (
 	EnvConsulKeyFile            = "CONSUL_KEY_FILE"
 )
 
-// Config Center 配置中心(替代 Consul KV 作为配置数据源;Consul 仅保留服务发现/注册)
-// 服务启动时经 ConnectRPC GetKey 从配置中心拉取整份 Bootstrap 配置(YAML)。
+// 配置数据源选择。服务启动时读哪一份 Bootstrap 由这个变量决定,
+// 取值见 constants.ConfigSourceConsul / ConfigSourceConfigCenter。
+// 不设置时用 DefaultConfigSource,与历史部署行为一致。
+const (
+	EnvConfigSource = "CONFIG_SOURCE"
+)
+
+// Config Center 配置中心(可选的配置数据源之一;Consul 无论如何都保留服务发现/注册)
+// 选中该数据源时,服务启动经 ConnectRPC GetKey 拉取整份 Bootstrap 配置(YAML)。
 const (
 	EnvConfigCenterAddr      = "CONFIG_CENTER_ADDR"      // config-service 地址,如 http://127.0.0.1:30010
 	EnvConfigCenterNamespace = "CONFIG_CENTER_NAMESPACE" // 命名空间,如 cart
