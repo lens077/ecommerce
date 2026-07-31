@@ -1,0 +1,37 @@
+{
+  "include": ["src"],
+  "compilerOptions": {
+    "target": "ESNext",
+    "lib": ["ESNext", "DOM", "DOM.Iterable"],
+    "jsx": "react-jsx",
+
+    /* 模块解析*/
+    "module": "ESNext",
+    "moduleResolution": "bundler",
+    "types": ["vite/client"],
+
+    /* 现代工程化 */
+    "strict": true,
+    "skipLibCheck": true,
+    "esModuleInterop": true,
+    "isolatedModules": true,      // Vite 必须：确保每个文件可以单独转译
+    "noEmit": true,               // 只做类型检查，不生成 js
+
+    /* 路径别名 */
+    "baseUrl": ".",
+    "paths": {
+      "@/*": ["./src/*"],
+      "@ecommerce/api": ["../../packages/api/src/index.ts"],
+      "@ecommerce/configs": ["../../packages/configs/src/index.ts"],
+      "@ecommerce/constants": ["../../packages/constants/src/index.ts"],
+      "@ecommerce/types": ["../../packages/types/src/index.ts"],
+      "@ecommerce/ui": ["../../packages/ui/src/index.ts"],
+      "@ecommerce/utils": ["../../packages/utils/src/index.ts"],
+    },
+
+    /* 代码质量 */
+    "noUnusedLocals": true,
+    "noUnusedParameters": true,
+    "noFallthroughCasesInSwitch": true
+  }
+}
