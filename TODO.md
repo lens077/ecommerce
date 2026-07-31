@@ -57,7 +57,7 @@
 | 项目 | 状态 | 说明 |
 |------|------|------|
 | 设计文档 | ✅ | `CONFIG_CENTER_DESIGN.md`：架构/数据模型/RPC/鉴权/校验/玻璃态/路线图 |
-| 后端 config 服务 | ⬜ | proto + Postgres(entry/revision) + CRUD + 版本历史 + 服务端格式校验（本轮竖切） |
+| 后端 config 服务 | 🟡 | 竖切代码完成并通过 `go build`/`go vet`：proto + sqlc(entry/revision) + CRUD + 版本历史 + Rollback(事务) + 服务端 yml/toml/json 格式校验；待接本地 Postgres 联调 |
 | 前端 apps/config | ⬜ | 玻璃态 UI + key 浏览器 + Monaco 编辑器（yml/toml/json 高亮+校验）+ 历史 Diff/回滚（本轮竖切） |
 | 下发/Watch/SDK 热更新 | ⬜ | 后续：Consul 桥接、server-stream 推送、Go 客户端 SDK |
 | 审批/灰度/密钥加密/审计 | ⬜ | 后续阶段 |
