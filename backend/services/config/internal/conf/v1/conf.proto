@@ -1,0 +1,155 @@
+syntax = "proto3";
+
+package conf.v1;
+
+import "third_party/validate/validate.proto";
+import "google/protobuf/duration.proto";
+
+option go_package = "github.com/lens077/ecommerce/backend/services/config/internal/conf/v1;confv1";
+
+message Bootstrap {
+  Server server = 1 [(buf.validate.field).required = true];
+  Data data = 2 [(buf.validate.field).required = true];
+  Observability observability = 3 [(buf.validate.field).required = false];
+  Discovery discovery = 4 [(buf.validate.field).required = false];
+  Log log = 5 [(buf.validate.field).required = true];
+}
+
+message Log {
+  message Framework {
+    string format = 1 [(buf.validate.field).string = {in: ["console", "json"]}];
+    string log_level = 2 [(buf.validate.field).string = {in: ["debug", "info", "warn", "error", "dpanic", "panic", "fatal"]}];
+    string error_level = 3 [(buf.validate.field).string = {in: ["debug", "info", "warn", "error", "dpanic", "panic", "fatal"]}];
+  }
+  message Application {
+    string format = 1 [(buf.validate.field).string = {in: ["console", "json"]}];
+    string level = 2 [(buf.validate.field).string = {in: ["debug", "info", "warn", "error", "dpanic", "panic", "fatal"]}];
+  }
+  Framework framework = 1;
+  Application application = 2;
+}
+
+message Server {
+  string addr = 1 [
+    (buf.validate.field).string.address = true,
+    (buf.validate.field).string.example = "0.0.0.0"
+  ];
+  HTTP http = 2;
+  Cors cors = 3;
+  message HTTP {
+    google.protobuf.Duration read_timeout = 1 [(buf.validate.field).duration.gte = {seconds: 1}];
+    google.protobuf.Duration write_timeout = 2 [(buf.validate.field).duration.gte = {seconds: 1}];
+    google.protobuf.Duration idle_timeout = 3 [(buf.validate.field).duration.gte = {seconds: 1}];
+  }
+  message Cors {
+    repeated string allowed_origins = 1 [
+      (buf.validate.field).string.host_and_port = true,
+      (buf.validate.field).string.example = "http://localhost:3000"
+    ];
+  }
+}
+
+message Data {
+  message Database {
+    Postgres postgres = 1;
+    message Postgres {
+      string host = 1 [(buf.validate.field).string.address = true];
+      uint32 port = 2 [(buf.validate.field).int32.example = 5432];
+      string user = 3 [(buf.validate.field).string.example = "postgres"];
+      string password = 4 [(buf.validate.field).string.example = "postgres"];
+      string db_name = 5 [(buf.validate.field).string.example = "postgres"];
+      string timezone = 7 [(buf.validate.field).string.example = "Asia/Shanghai"];
+      DatabasePool pool = 8;
+      Tls tls = 9;
+
+      message DatabasePool {
+        uint32 max_conns = 1 [(buf.validate.field).int32 = {gte: 1}];
+        uint32 min_conns = 2 [(buf.validate.field).int32 = {gte: 1}];
+        google.protobuf.Duration max_conn_lifetime = 3 [(buf.validate.field).duration.gte = {seconds: 1}];
+        google.protobuf.Duration max_conn_idle_time = 4 [(buf.validate.field).duration.gte = {seconds: 1}];
+        google.protobuf.Duration ping_timeout = 5 [(buf.validate.field).duration.gte = {seconds: 1}];
+      }
+      message Tls {
+        bool enable = 1;
+        string ssl_mode = 6 [(buf.validate.field).string = {in: ["disable", "allow", "prefer", "require", "verify-ca", "verify-full"]}];
+        string ca_pem = 3;
+      }
+    }
+  }
+
+  message Cache {
+    Redis redis = 1;
+    message Redis {
+      string host = 1 [(buf.validate.field).string.address = true];
+      uint32 port = 2 [(buf.validate.field).int32.example = 6379];
+      string username = 3 [(buf.validate.field).string.example = "default"];
+      string password = 4 [(buf.validate.field).string.example = "password"];
+      uint32 db = 5;
+      google.protobuf.Duration dial_timeout = 6 [(buf.validate.field).duration.gte = {seconds: 1}];
+      google.protobuf.Duration read_timeout = 7 [(buf.validate.field).duration.gte = {seconds: 1}];
+      google.protobuf.Duration write_timeout = 8 [(buf.validate.field).duration.gte = {seconds: 1}];
+      uint32 pool_size = 9;
+      uint32 min_idle_conns = 10 [(buf.validate.field).int32 = {gte: 1}];
+      Tls tls = 11;
+
+      message Tls {
+        bool enable = 1;
+        string ca_pem = 2;
+        bool insecure_skip_verify = 3;
+      }
+    }
+  }
+
+  Database database = 1;
+  Cache cache = 2;
+}
+
+message Observability {
+  Trace trace = 1;
+  Metric metric = 2;
+  Logging log = 3;
+  bool enable = 4;
+
+  message Trace {
+    string endpoint = 1 [(buf.validate.field).string.host_and_port = true];
+    Tls tls = 2;
+  }
+  message Metric {
+    string endpoint = 1 [(buf.validate.field).string.host_and_port = true];
+    Tls tls = 2;
+  }
+  message Logging {
+    string endpoint = 1 [(buf.validate.field).string.host_and_port = true];
+    Tls tls = 2;
+  }
+  message Tls {
+    bool enable = 1;
+    string ca_pem = 2;
+    bool insecure_skip_verify = 3;
+  }
+}
+
+message Discovery {
+  message Consul {
+    string addr = 1 [(buf.validate.field).string.host_and_port = true];
+    string scheme = 2;
+    bool health_check = 3;
+    Tls tls = 4;
+    Check check = 5;
+
+    message Tls {
+      bool enable = 1;
+      bool insecure_skip_verify = 2;
+      string ca_pem = 3;
+    }
+    message Check {
+      TTL ttl = 1;
+      string deregister_critical_service_after = 2;
+      message TTL {
+        string duration = 1;
+        google.protobuf.Duration ping_interval = 2 [(buf.validate.field).duration.gte = {seconds: 5}];
+      }
+    }
+  }
+  Consul consul = 1;
+}
