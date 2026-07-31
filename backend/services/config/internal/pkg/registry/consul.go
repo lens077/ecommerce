@@ -2,6 +2,7 @@ package registry
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"net"
 	"net/http"
@@ -18,6 +19,9 @@ import (
 	"go.uber.org/fx"
 	"go.uber.org/zap"
 )
+
+// defaultTtlPingInterval 是 discovery.consul.check.ttl.ping_interval 缺失时的兜底心跳间隔
+const defaultTtlPingInterval = 10 * time.Second
 
 type ConsulRegistry struct {
 	Addr       string
@@ -159,6 +163,14 @@ func (r *ConsulRegistry) Register(conf *confv1.Bootstrap, info meta.AppInfo) err
 	if err != nil {
 		return err
 	}
+	// 与 Tls 同理:下面要连着解引用 Check.Ttl,配置里没写 check 段就是空指针。
+	// 这里返回错误而不是裸注册 —— 没有健康检查的实例会被 Consul 一直当健康的,
+	// 流量照打进来,比注册失败更难发现。
+	if conf.Discovery == nil || conf.Discovery.Consul == nil ||
+		conf.Discovery.Consul.Check == nil || conf.Discovery.Consul.Check.Ttl == nil {
+		return errors.New("consul check configuration is missing: discovery.consul.check.ttl")
+	}
+
 	reg := &api.AgentServiceRegistration{
 		ID:      r.ID,
 		Name:    r.Name,
@@ -189,7 +201,15 @@ func (r *ConsulRegistry) Register(conf *confv1.Bootstrap, info meta.AppInfo) err
 
 // TtlCheckPinger 负责定期向 Consul Agent 发送心跳信号
 func (r *ConsulRegistry) TtlCheckPinger(ctx context.Context, conf *confv1.Bootstrap) {
-	ttlPingInterval := conf.Discovery.Consul.Check.Ttl.PingInterval.AsDuration()
+	// time.NewTicker 对 <=0 的间隔直接 panic,而这里跑在独立 goroutine 里,
+	// panic 会整个进程带走。配置缺失或写成 0 时回落到默认值。
+	ttlPingInterval := defaultTtlPingInterval
+	if conf.Discovery != nil && conf.Discovery.Consul != nil &&
+		conf.Discovery.Consul.Check != nil && conf.Discovery.Consul.Check.Ttl != nil &&
+		conf.Discovery.Consul.Check.Ttl.PingInterval.AsDuration() > 0 {
+		ttlPingInterval = conf.Discovery.Consul.Check.Ttl.PingInterval.AsDuration()
+	}
+
 	ticker := time.NewTicker(ttlPingInterval)
 	defer ticker.Stop()
 

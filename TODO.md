@@ -100,7 +100,7 @@
 | 前端测试（playwright + vitest） | ⬜ | 仅 `vite.config.ts`，缺用例 |
 | 后端单元/集成测试 | 🟡 | `internal/pkg/config` **10 个服务全覆盖**(cart + address/payment/inventory/merchant/product/order/search/user/config，覆盖率 76%~85%，`-race` 全绿)：用 `httptest` 起 Consul KV / ConnectRPC 桩打**真实客户端**，覆盖选源、YAML 解析、duration 钩子、404/空值/不可达/context 取消等错误分支。cart 的 `internal/pkg/log`(100%)、`internal/pkg/registry`(90.1%) 已重写。仍缺：其余 9 个 stale 测试包(6 个 `log` + 3 个 `registry`，见下条)；各服务 biz/data/service 层 |
 | cart log/registry 单测重写 | ✅ | 两个 stale 测试跟着实现改签名后一直编译不过。`log`:改打 `*confv1.Bootstrap`，并把断言从 `Core().Enabled`(被 otel core Tee 后不可信)换成**接管 `os.Stdout` 断言真实输出** —— 级别过滤/JSON 可解析/console 非 JSON/caller 行号；顺带纠正老用例的错误断言(非法级别回落的是 **Debug** 不是 Info)。`registry`:删掉已不存在的 `ParseToTCPAddr`/`TtlDuration` 用例，改用 **httptest 桩 Consul Agent**(注册/心跳/注销三端点)打真实 client，断言注册报文的端口取自 `Server.Addr`、地址取自 `AppInfo.Host`、CheckID 为 `service:<ID>`、`Deregister` 先掐心跳再摘节点；并覆盖 fx `Module` 的完整生命周期与三条降级分支 |
-| Consul TLS 空指针修复 | ✅ | **10 个服务**的 `registry/consul.go` 都写成 `consulCfg.Tls.Enable && consulCfg.Tls != nil` —— 判空在解引用之后，配置里没写 `tls` 段(本地/内网集群的常态)就会 panic。已统一改为先判空。由新增的 `TestModule_WithoutTLSConfig` 抓到 |
+| Consul 注册路径空指针修复 | ✅ | **10 个服务**的 `registry/consul.go` 同一类"判空写在解引用之后"的错,三处一并修掉:①`consulCfg.Tls.Enable && consulCfg.Tls != nil` —— 配置没写 `tls` 段(本地/内网集群的常态)直接 panic；②`Register` 裸解引用 `Discovery.Consul.Check.Ttl.Duration`，没写 `check` 段同样 panic，改为返回错误(而非裸注册：没有健康检查的实例会被 Consul 一直当健康的，流量照打进来，比注册失败更难发现)；③`TtlCheckPinger` 把 `ping_interval` 直接喂给 `time.NewTicker`，缺失或为 0 时 panic —— 且它跑在独立 goroutine 里，**panic 会带走整个进程**，改为回落 10s 默认值。原有 5 个服务的判空版本也只判了 nil 没判 `>0`，一并统一。cart 侧由 `TestModule_WithoutTLSConfig` / `TestRegister_MissingCheckConfig` / `TestTtlCheckPinger_MissingPingInterval` 覆盖 |
 
 ---
 
