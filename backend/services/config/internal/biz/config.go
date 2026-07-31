@@ -54,11 +54,14 @@ type NamespaceInfo struct {
 
 // ConfigRevision 版本历史记录
 type ConfigRevision struct {
-	ID        int64
-	EntryID   int64
-	Version   int32
-	Format    ConfigFormat
-	Value     string
+	ID      int64
+	EntryID int64
+	Version int32
+	Format  ConfigFormat
+	Value   string
+	// IsSecret 取自所属 entry 的当前值(revision 表本身不存这一列)。
+	// 它只用于决定对外是否脱敏 —— 领域内部(如 Rollback)读到的始终是真值。
+	IsSecret  bool
 	Comment   string
 	Author    string
 	CreatedAt time.Time

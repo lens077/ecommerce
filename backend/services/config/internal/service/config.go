@@ -16,6 +16,10 @@ import (
 
 var _ configv1connect.ConfigServiceHandler = (*ConfigService)(nil)
 
+// maskedValue 密钥对外的占位值。当前值与历史版本共用同一个,
+// 免得两条读路径各写各的、其中一条忘了脱敏。
+const maskedValue = "******"
+
 type ConfigService struct {
 	uc  *biz.ConfigUseCase
 	log *zap.Logger
@@ -275,7 +279,7 @@ func toPBEntry(e *biz.ConfigEntry, metaOnly bool) *v1.ConfigEntry {
 	// 列表仅元数据;密钥值脱敏
 	if !metaOnly {
 		if e.IsSecret {
-			pb.Value = "******"
+			pb.Value = maskedValue
 		} else {
 			pb.Value = e.Value
 		}
@@ -283,13 +287,20 @@ func toPBEntry(e *biz.ConfigEntry, metaOnly bool) *v1.ConfigEntry {
 	return pb
 }
 
+// toPBRevision 与 toPBEntry 用同一条脱敏规则。
+// 历史版本存的是写入当时的明文,若这里不脱敏,GetKey 里被打成 ****** 的密钥
+// 换成 ListRevisions/GetRevision 就能原样读出来 —— 脱敏形同虚设。
 func toPBRevision(r *biz.ConfigRevision) *v1.ConfigRevision {
+	value := r.Value
+	if r.IsSecret {
+		value = maskedValue
+	}
 	return &v1.ConfigRevision{
 		Id:        r.ID,
 		EntryId:   r.EntryID,
 		Version:   r.Version,
 		Format:    toPBFormat(r.Format),
-		Value:     r.Value,
+		Value:     value,
 		Comment:   r.Comment,
 		Author:    r.Author,
 		CreatedAt: timestamppb.New(r.CreatedAt),
