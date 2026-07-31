@@ -98,7 +98,7 @@
 | 日志（Loki/fluent-bit） | ⬜ | 部署与采集链路未落地 |
 | 指标（VictoriaMetrics/Grafana） | ⬜ | 采集/看板未落地 |
 | 前端测试（playwright + vitest） | ⬜ | 仅 `vite.config.ts`，缺用例 |
-| 后端单元/集成测试 | 🟡 | `internal/pkg/config` 已补真实用例(cart + address/payment/inventory/merchant/product 共 6 个包，覆盖率 75%~85%，`-race` 全绿)：用 `httptest` 起 Consul KV / ConnectRPC 桩打**真实客户端**，覆盖选源、YAML 解析、duration 钩子、404/空值/不可达/context 取消等错误分支。其余 biz/data/service 层仍缺 |
+| 后端单元/集成测试 | 🟡 | `internal/pkg/config` **10 个服务全覆盖**(cart + address/payment/inventory/merchant/product/order/search/user/config，覆盖率 76%~85%，`-race` 全绿)：用 `httptest` 起 Consul KV / ConnectRPC 桩打**真实客户端**，覆盖选源、YAML 解析、duration 钩子、404/空值/不可达/context 取消等错误分支。仍缺：cart 的 `internal/pkg/log`、`internal/pkg/registry` 两个 stale 测试(引用已改签名的 `NewLogger`、已删的 `ParseToTCPAddr`)；各服务 biz/data/service 层 |
 
 ---
 
