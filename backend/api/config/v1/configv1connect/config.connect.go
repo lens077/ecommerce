@@ -33,6 +33,9 @@ const (
 // reflection-formatted method names, remove the leading slash and convert the remaining slash to a
 // period.
 const (
+	// ConfigServiceListNamespacesProcedure is the fully-qualified name of the ConfigService's
+	// ListNamespaces RPC.
+	ConfigServiceListNamespacesProcedure = "/config.v1.ConfigService/ListNamespaces"
 	// ConfigServiceListKeysProcedure is the fully-qualified name of the ConfigService's ListKeys RPC.
 	ConfigServiceListKeysProcedure = "/config.v1.ConfigService/ListKeys"
 	// ConfigServiceGetKeyProcedure is the fully-qualified name of the ConfigService's GetKey RPC.
@@ -53,6 +56,8 @@ const (
 
 // ConfigServiceClient is a client for the config.v1.ConfigService service.
 type ConfigServiceClient interface {
+	// 列出配置中心已有的 namespace 及其下已有配置的 environment,供前端下拉选择(免手输)。
+	ListNamespaces(context.Context, *connect.Request[v1.ListNamespacesRequest]) (*connect.Response[v1.ListNamespacesResponse], error)
 	// 列出某 namespace+environment 下(可按前缀过滤)的 key 元数据,不返回大 value。
 	ListKeys(context.Context, *connect.Request[v1.ListKeysRequest]) (*connect.Response[v1.ListKeysResponse], error)
 	// 取单个 key 的当前值。
@@ -80,6 +85,12 @@ func NewConfigServiceClient(httpClient connect.HTTPClient, baseURL string, opts 
 	baseURL = strings.TrimRight(baseURL, "/")
 	configServiceMethods := v1.File_api_config_v1_config_proto.Services().ByName("ConfigService").Methods()
 	return &configServiceClient{
+		listNamespaces: connect.NewClient[v1.ListNamespacesRequest, v1.ListNamespacesResponse](
+			httpClient,
+			baseURL+ConfigServiceListNamespacesProcedure,
+			connect.WithSchema(configServiceMethods.ByName("ListNamespaces")),
+			connect.WithClientOptions(opts...),
+		),
 		listKeys: connect.NewClient[v1.ListKeysRequest, v1.ListKeysResponse](
 			httpClient,
 			baseURL+ConfigServiceListKeysProcedure,
@@ -127,13 +138,19 @@ func NewConfigServiceClient(httpClient connect.HTTPClient, baseURL string, opts 
 
 // configServiceClient implements ConfigServiceClient.
 type configServiceClient struct {
-	listKeys      *connect.Client[v1.ListKeysRequest, v1.ListKeysResponse]
-	getKey        *connect.Client[v1.GetKeyRequest, v1.GetKeyResponse]
-	putKey        *connect.Client[v1.PutKeyRequest, v1.PutKeyResponse]
-	deleteKey     *connect.Client[v1.DeleteKeyRequest, v1.DeleteKeyResponse]
-	listRevisions *connect.Client[v1.ListRevisionsRequest, v1.ListRevisionsResponse]
-	getRevision   *connect.Client[v1.GetRevisionRequest, v1.GetRevisionResponse]
-	rollback      *connect.Client[v1.RollbackRequest, v1.RollbackResponse]
+	listNamespaces *connect.Client[v1.ListNamespacesRequest, v1.ListNamespacesResponse]
+	listKeys       *connect.Client[v1.ListKeysRequest, v1.ListKeysResponse]
+	getKey         *connect.Client[v1.GetKeyRequest, v1.GetKeyResponse]
+	putKey         *connect.Client[v1.PutKeyRequest, v1.PutKeyResponse]
+	deleteKey      *connect.Client[v1.DeleteKeyRequest, v1.DeleteKeyResponse]
+	listRevisions  *connect.Client[v1.ListRevisionsRequest, v1.ListRevisionsResponse]
+	getRevision    *connect.Client[v1.GetRevisionRequest, v1.GetRevisionResponse]
+	rollback       *connect.Client[v1.RollbackRequest, v1.RollbackResponse]
+}
+
+// ListNamespaces calls config.v1.ConfigService.ListNamespaces.
+func (c *configServiceClient) ListNamespaces(ctx context.Context, req *connect.Request[v1.ListNamespacesRequest]) (*connect.Response[v1.ListNamespacesResponse], error) {
+	return c.listNamespaces.CallUnary(ctx, req)
 }
 
 // ListKeys calls config.v1.ConfigService.ListKeys.
@@ -173,6 +190,8 @@ func (c *configServiceClient) Rollback(ctx context.Context, req *connect.Request
 
 // ConfigServiceHandler is an implementation of the config.v1.ConfigService service.
 type ConfigServiceHandler interface {
+	// 列出配置中心已有的 namespace 及其下已有配置的 environment,供前端下拉选择(免手输)。
+	ListNamespaces(context.Context, *connect.Request[v1.ListNamespacesRequest]) (*connect.Response[v1.ListNamespacesResponse], error)
 	// 列出某 namespace+environment 下(可按前缀过滤)的 key 元数据,不返回大 value。
 	ListKeys(context.Context, *connect.Request[v1.ListKeysRequest]) (*connect.Response[v1.ListKeysResponse], error)
 	// 取单个 key 的当前值。
@@ -196,6 +215,12 @@ type ConfigServiceHandler interface {
 // and JSON codecs. They also support gzip compression.
 func NewConfigServiceHandler(svc ConfigServiceHandler, opts ...connect.HandlerOption) (string, http.Handler) {
 	configServiceMethods := v1.File_api_config_v1_config_proto.Services().ByName("ConfigService").Methods()
+	configServiceListNamespacesHandler := connect.NewUnaryHandler(
+		ConfigServiceListNamespacesProcedure,
+		svc.ListNamespaces,
+		connect.WithSchema(configServiceMethods.ByName("ListNamespaces")),
+		connect.WithHandlerOptions(opts...),
+	)
 	configServiceListKeysHandler := connect.NewUnaryHandler(
 		ConfigServiceListKeysProcedure,
 		svc.ListKeys,
@@ -240,6 +265,8 @@ func NewConfigServiceHandler(svc ConfigServiceHandler, opts ...connect.HandlerOp
 	)
 	return "/config.v1.ConfigService/", http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		switch r.URL.Path {
+		case ConfigServiceListNamespacesProcedure:
+			configServiceListNamespacesHandler.ServeHTTP(w, r)
 		case ConfigServiceListKeysProcedure:
 			configServiceListKeysHandler.ServeHTTP(w, r)
 		case ConfigServiceGetKeyProcedure:
@@ -262,6 +289,10 @@ func NewConfigServiceHandler(svc ConfigServiceHandler, opts ...connect.HandlerOp
 
 // UnimplementedConfigServiceHandler returns CodeUnimplemented from all methods.
 type UnimplementedConfigServiceHandler struct{}
+
+func (UnimplementedConfigServiceHandler) ListNamespaces(context.Context, *connect.Request[v1.ListNamespacesRequest]) (*connect.Response[v1.ListNamespacesResponse], error) {
+	return nil, connect.NewError(connect.CodeUnimplemented, errors.New("config.v1.ConfigService.ListNamespaces is not implemented"))
+}
 
 func (UnimplementedConfigServiceHandler) ListKeys(context.Context, *connect.Request[v1.ListKeysRequest]) (*connect.Response[v1.ListKeysResponse], error) {
 	return nil, connect.NewError(connect.CodeUnimplemented, errors.New("config.v1.ConfigService.ListKeys is not implemented"))

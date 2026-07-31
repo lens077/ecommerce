@@ -313,6 +313,147 @@ func (x *ConfigRevision) GetCreatedAt() *timestamppb.Timestamp {
 	return nil
 }
 
+// namespace 概览:该 namespace 下已有配置的环境与 key 总数
+type NamespaceInfo struct {
+	state         protoimpl.MessageState `protogen:"open.v1"`
+	Namespace     string                 `protobuf:"bytes,1,opt,name=namespace,proto3" json:"namespace,omitempty"`
+	Environments  []string               `protobuf:"bytes,2,rep,name=environments,proto3" json:"environments,omitempty"`          // 该 namespace 下确实存在配置的环境,按名排序
+	KeyCount      int32                  `protobuf:"varint,3,opt,name=key_count,json=keyCount,proto3" json:"key_count,omitempty"` // 所有环境合计的 key 数量
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *NamespaceInfo) Reset() {
+	*x = NamespaceInfo{}
+	mi := &file_api_config_v1_config_proto_msgTypes[2]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *NamespaceInfo) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*NamespaceInfo) ProtoMessage() {}
+
+func (x *NamespaceInfo) ProtoReflect() protoreflect.Message {
+	mi := &file_api_config_v1_config_proto_msgTypes[2]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use NamespaceInfo.ProtoReflect.Descriptor instead.
+func (*NamespaceInfo) Descriptor() ([]byte, []int) {
+	return file_api_config_v1_config_proto_rawDescGZIP(), []int{2}
+}
+
+func (x *NamespaceInfo) GetNamespace() string {
+	if x != nil {
+		return x.Namespace
+	}
+	return ""
+}
+
+func (x *NamespaceInfo) GetEnvironments() []string {
+	if x != nil {
+		return x.Environments
+	}
+	return nil
+}
+
+func (x *NamespaceInfo) GetKeyCount() int32 {
+	if x != nil {
+		return x.KeyCount
+	}
+	return 0
+}
+
+type ListNamespacesRequest struct {
+	state         protoimpl.MessageState `protogen:"open.v1"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *ListNamespacesRequest) Reset() {
+	*x = ListNamespacesRequest{}
+	mi := &file_api_config_v1_config_proto_msgTypes[3]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *ListNamespacesRequest) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*ListNamespacesRequest) ProtoMessage() {}
+
+func (x *ListNamespacesRequest) ProtoReflect() protoreflect.Message {
+	mi := &file_api_config_v1_config_proto_msgTypes[3]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use ListNamespacesRequest.ProtoReflect.Descriptor instead.
+func (*ListNamespacesRequest) Descriptor() ([]byte, []int) {
+	return file_api_config_v1_config_proto_rawDescGZIP(), []int{3}
+}
+
+type ListNamespacesResponse struct {
+	state         protoimpl.MessageState `protogen:"open.v1"`
+	Namespaces    []*NamespaceInfo       `protobuf:"bytes,1,rep,name=namespaces,proto3" json:"namespaces,omitempty"` // 按 namespace 名排序
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *ListNamespacesResponse) Reset() {
+	*x = ListNamespacesResponse{}
+	mi := &file_api_config_v1_config_proto_msgTypes[4]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *ListNamespacesResponse) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*ListNamespacesResponse) ProtoMessage() {}
+
+func (x *ListNamespacesResponse) ProtoReflect() protoreflect.Message {
+	mi := &file_api_config_v1_config_proto_msgTypes[4]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use ListNamespacesResponse.ProtoReflect.Descriptor instead.
+func (*ListNamespacesResponse) Descriptor() ([]byte, []int) {
+	return file_api_config_v1_config_proto_rawDescGZIP(), []int{4}
+}
+
+func (x *ListNamespacesResponse) GetNamespaces() []*NamespaceInfo {
+	if x != nil {
+		return x.Namespaces
+	}
+	return nil
+}
+
 type ListKeysRequest struct {
 	state         protoimpl.MessageState `protogen:"open.v1"`
 	Namespace     string                 `protobuf:"bytes,1,opt,name=namespace,proto3" json:"namespace,omitempty"`
@@ -324,7 +465,7 @@ type ListKeysRequest struct {
 
 func (x *ListKeysRequest) Reset() {
 	*x = ListKeysRequest{}
-	mi := &file_api_config_v1_config_proto_msgTypes[2]
+	mi := &file_api_config_v1_config_proto_msgTypes[5]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -336,7 +477,7 @@ func (x *ListKeysRequest) String() string {
 func (*ListKeysRequest) ProtoMessage() {}
 
 func (x *ListKeysRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_api_config_v1_config_proto_msgTypes[2]
+	mi := &file_api_config_v1_config_proto_msgTypes[5]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -349,7 +490,7 @@ func (x *ListKeysRequest) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use ListKeysRequest.ProtoReflect.Descriptor instead.
 func (*ListKeysRequest) Descriptor() ([]byte, []int) {
-	return file_api_config_v1_config_proto_rawDescGZIP(), []int{2}
+	return file_api_config_v1_config_proto_rawDescGZIP(), []int{5}
 }
 
 func (x *ListKeysRequest) GetNamespace() string {
@@ -382,7 +523,7 @@ type ListKeysResponse struct {
 
 func (x *ListKeysResponse) Reset() {
 	*x = ListKeysResponse{}
-	mi := &file_api_config_v1_config_proto_msgTypes[3]
+	mi := &file_api_config_v1_config_proto_msgTypes[6]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -394,7 +535,7 @@ func (x *ListKeysResponse) String() string {
 func (*ListKeysResponse) ProtoMessage() {}
 
 func (x *ListKeysResponse) ProtoReflect() protoreflect.Message {
-	mi := &file_api_config_v1_config_proto_msgTypes[3]
+	mi := &file_api_config_v1_config_proto_msgTypes[6]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -407,7 +548,7 @@ func (x *ListKeysResponse) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use ListKeysResponse.ProtoReflect.Descriptor instead.
 func (*ListKeysResponse) Descriptor() ([]byte, []int) {
-	return file_api_config_v1_config_proto_rawDescGZIP(), []int{3}
+	return file_api_config_v1_config_proto_rawDescGZIP(), []int{6}
 }
 
 func (x *ListKeysResponse) GetEntries() []*ConfigEntry {
@@ -428,7 +569,7 @@ type GetKeyRequest struct {
 
 func (x *GetKeyRequest) Reset() {
 	*x = GetKeyRequest{}
-	mi := &file_api_config_v1_config_proto_msgTypes[4]
+	mi := &file_api_config_v1_config_proto_msgTypes[7]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -440,7 +581,7 @@ func (x *GetKeyRequest) String() string {
 func (*GetKeyRequest) ProtoMessage() {}
 
 func (x *GetKeyRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_api_config_v1_config_proto_msgTypes[4]
+	mi := &file_api_config_v1_config_proto_msgTypes[7]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -453,7 +594,7 @@ func (x *GetKeyRequest) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use GetKeyRequest.ProtoReflect.Descriptor instead.
 func (*GetKeyRequest) Descriptor() ([]byte, []int) {
-	return file_api_config_v1_config_proto_rawDescGZIP(), []int{4}
+	return file_api_config_v1_config_proto_rawDescGZIP(), []int{7}
 }
 
 func (x *GetKeyRequest) GetNamespace() string {
@@ -486,7 +627,7 @@ type GetKeyResponse struct {
 
 func (x *GetKeyResponse) Reset() {
 	*x = GetKeyResponse{}
-	mi := &file_api_config_v1_config_proto_msgTypes[5]
+	mi := &file_api_config_v1_config_proto_msgTypes[8]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -498,7 +639,7 @@ func (x *GetKeyResponse) String() string {
 func (*GetKeyResponse) ProtoMessage() {}
 
 func (x *GetKeyResponse) ProtoReflect() protoreflect.Message {
-	mi := &file_api_config_v1_config_proto_msgTypes[5]
+	mi := &file_api_config_v1_config_proto_msgTypes[8]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -511,7 +652,7 @@ func (x *GetKeyResponse) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use GetKeyResponse.ProtoReflect.Descriptor instead.
 func (*GetKeyResponse) Descriptor() ([]byte, []int) {
-	return file_api_config_v1_config_proto_rawDescGZIP(), []int{5}
+	return file_api_config_v1_config_proto_rawDescGZIP(), []int{8}
 }
 
 func (x *GetKeyResponse) GetEntry() *ConfigEntry {
@@ -537,7 +678,7 @@ type PutKeyRequest struct {
 
 func (x *PutKeyRequest) Reset() {
 	*x = PutKeyRequest{}
-	mi := &file_api_config_v1_config_proto_msgTypes[6]
+	mi := &file_api_config_v1_config_proto_msgTypes[9]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -549,7 +690,7 @@ func (x *PutKeyRequest) String() string {
 func (*PutKeyRequest) ProtoMessage() {}
 
 func (x *PutKeyRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_api_config_v1_config_proto_msgTypes[6]
+	mi := &file_api_config_v1_config_proto_msgTypes[9]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -562,7 +703,7 @@ func (x *PutKeyRequest) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use PutKeyRequest.ProtoReflect.Descriptor instead.
 func (*PutKeyRequest) Descriptor() ([]byte, []int) {
-	return file_api_config_v1_config_proto_rawDescGZIP(), []int{6}
+	return file_api_config_v1_config_proto_rawDescGZIP(), []int{9}
 }
 
 func (x *PutKeyRequest) GetNamespace() string {
@@ -630,7 +771,7 @@ type PutKeyResponse struct {
 
 func (x *PutKeyResponse) Reset() {
 	*x = PutKeyResponse{}
-	mi := &file_api_config_v1_config_proto_msgTypes[7]
+	mi := &file_api_config_v1_config_proto_msgTypes[10]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -642,7 +783,7 @@ func (x *PutKeyResponse) String() string {
 func (*PutKeyResponse) ProtoMessage() {}
 
 func (x *PutKeyResponse) ProtoReflect() protoreflect.Message {
-	mi := &file_api_config_v1_config_proto_msgTypes[7]
+	mi := &file_api_config_v1_config_proto_msgTypes[10]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -655,7 +796,7 @@ func (x *PutKeyResponse) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use PutKeyResponse.ProtoReflect.Descriptor instead.
 func (*PutKeyResponse) Descriptor() ([]byte, []int) {
-	return file_api_config_v1_config_proto_rawDescGZIP(), []int{7}
+	return file_api_config_v1_config_proto_rawDescGZIP(), []int{10}
 }
 
 func (x *PutKeyResponse) GetEntry() *ConfigEntry {
@@ -676,7 +817,7 @@ type DeleteKeyRequest struct {
 
 func (x *DeleteKeyRequest) Reset() {
 	*x = DeleteKeyRequest{}
-	mi := &file_api_config_v1_config_proto_msgTypes[8]
+	mi := &file_api_config_v1_config_proto_msgTypes[11]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -688,7 +829,7 @@ func (x *DeleteKeyRequest) String() string {
 func (*DeleteKeyRequest) ProtoMessage() {}
 
 func (x *DeleteKeyRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_api_config_v1_config_proto_msgTypes[8]
+	mi := &file_api_config_v1_config_proto_msgTypes[11]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -701,7 +842,7 @@ func (x *DeleteKeyRequest) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use DeleteKeyRequest.ProtoReflect.Descriptor instead.
 func (*DeleteKeyRequest) Descriptor() ([]byte, []int) {
-	return file_api_config_v1_config_proto_rawDescGZIP(), []int{8}
+	return file_api_config_v1_config_proto_rawDescGZIP(), []int{11}
 }
 
 func (x *DeleteKeyRequest) GetNamespace() string {
@@ -734,7 +875,7 @@ type DeleteKeyResponse struct {
 
 func (x *DeleteKeyResponse) Reset() {
 	*x = DeleteKeyResponse{}
-	mi := &file_api_config_v1_config_proto_msgTypes[9]
+	mi := &file_api_config_v1_config_proto_msgTypes[12]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -746,7 +887,7 @@ func (x *DeleteKeyResponse) String() string {
 func (*DeleteKeyResponse) ProtoMessage() {}
 
 func (x *DeleteKeyResponse) ProtoReflect() protoreflect.Message {
-	mi := &file_api_config_v1_config_proto_msgTypes[9]
+	mi := &file_api_config_v1_config_proto_msgTypes[12]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -759,7 +900,7 @@ func (x *DeleteKeyResponse) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use DeleteKeyResponse.ProtoReflect.Descriptor instead.
 func (*DeleteKeyResponse) Descriptor() ([]byte, []int) {
-	return file_api_config_v1_config_proto_rawDescGZIP(), []int{9}
+	return file_api_config_v1_config_proto_rawDescGZIP(), []int{12}
 }
 
 func (x *DeleteKeyResponse) GetDeleted() bool {
@@ -780,7 +921,7 @@ type ListRevisionsRequest struct {
 
 func (x *ListRevisionsRequest) Reset() {
 	*x = ListRevisionsRequest{}
-	mi := &file_api_config_v1_config_proto_msgTypes[10]
+	mi := &file_api_config_v1_config_proto_msgTypes[13]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -792,7 +933,7 @@ func (x *ListRevisionsRequest) String() string {
 func (*ListRevisionsRequest) ProtoMessage() {}
 
 func (x *ListRevisionsRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_api_config_v1_config_proto_msgTypes[10]
+	mi := &file_api_config_v1_config_proto_msgTypes[13]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -805,7 +946,7 @@ func (x *ListRevisionsRequest) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use ListRevisionsRequest.ProtoReflect.Descriptor instead.
 func (*ListRevisionsRequest) Descriptor() ([]byte, []int) {
-	return file_api_config_v1_config_proto_rawDescGZIP(), []int{10}
+	return file_api_config_v1_config_proto_rawDescGZIP(), []int{13}
 }
 
 func (x *ListRevisionsRequest) GetNamespace() string {
@@ -838,7 +979,7 @@ type ListRevisionsResponse struct {
 
 func (x *ListRevisionsResponse) Reset() {
 	*x = ListRevisionsResponse{}
-	mi := &file_api_config_v1_config_proto_msgTypes[11]
+	mi := &file_api_config_v1_config_proto_msgTypes[14]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -850,7 +991,7 @@ func (x *ListRevisionsResponse) String() string {
 func (*ListRevisionsResponse) ProtoMessage() {}
 
 func (x *ListRevisionsResponse) ProtoReflect() protoreflect.Message {
-	mi := &file_api_config_v1_config_proto_msgTypes[11]
+	mi := &file_api_config_v1_config_proto_msgTypes[14]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -863,7 +1004,7 @@ func (x *ListRevisionsResponse) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use ListRevisionsResponse.ProtoReflect.Descriptor instead.
 func (*ListRevisionsResponse) Descriptor() ([]byte, []int) {
-	return file_api_config_v1_config_proto_rawDescGZIP(), []int{11}
+	return file_api_config_v1_config_proto_rawDescGZIP(), []int{14}
 }
 
 func (x *ListRevisionsResponse) GetRevisions() []*ConfigRevision {
@@ -885,7 +1026,7 @@ type GetRevisionRequest struct {
 
 func (x *GetRevisionRequest) Reset() {
 	*x = GetRevisionRequest{}
-	mi := &file_api_config_v1_config_proto_msgTypes[12]
+	mi := &file_api_config_v1_config_proto_msgTypes[15]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -897,7 +1038,7 @@ func (x *GetRevisionRequest) String() string {
 func (*GetRevisionRequest) ProtoMessage() {}
 
 func (x *GetRevisionRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_api_config_v1_config_proto_msgTypes[12]
+	mi := &file_api_config_v1_config_proto_msgTypes[15]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -910,7 +1051,7 @@ func (x *GetRevisionRequest) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use GetRevisionRequest.ProtoReflect.Descriptor instead.
 func (*GetRevisionRequest) Descriptor() ([]byte, []int) {
-	return file_api_config_v1_config_proto_rawDescGZIP(), []int{12}
+	return file_api_config_v1_config_proto_rawDescGZIP(), []int{15}
 }
 
 func (x *GetRevisionRequest) GetNamespace() string {
@@ -950,7 +1091,7 @@ type GetRevisionResponse struct {
 
 func (x *GetRevisionResponse) Reset() {
 	*x = GetRevisionResponse{}
-	mi := &file_api_config_v1_config_proto_msgTypes[13]
+	mi := &file_api_config_v1_config_proto_msgTypes[16]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -962,7 +1103,7 @@ func (x *GetRevisionResponse) String() string {
 func (*GetRevisionResponse) ProtoMessage() {}
 
 func (x *GetRevisionResponse) ProtoReflect() protoreflect.Message {
-	mi := &file_api_config_v1_config_proto_msgTypes[13]
+	mi := &file_api_config_v1_config_proto_msgTypes[16]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -975,7 +1116,7 @@ func (x *GetRevisionResponse) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use GetRevisionResponse.ProtoReflect.Descriptor instead.
 func (*GetRevisionResponse) Descriptor() ([]byte, []int) {
-	return file_api_config_v1_config_proto_rawDescGZIP(), []int{13}
+	return file_api_config_v1_config_proto_rawDescGZIP(), []int{16}
 }
 
 func (x *GetRevisionResponse) GetRevision() *ConfigRevision {
@@ -998,7 +1139,7 @@ type RollbackRequest struct {
 
 func (x *RollbackRequest) Reset() {
 	*x = RollbackRequest{}
-	mi := &file_api_config_v1_config_proto_msgTypes[14]
+	mi := &file_api_config_v1_config_proto_msgTypes[17]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -1010,7 +1151,7 @@ func (x *RollbackRequest) String() string {
 func (*RollbackRequest) ProtoMessage() {}
 
 func (x *RollbackRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_api_config_v1_config_proto_msgTypes[14]
+	mi := &file_api_config_v1_config_proto_msgTypes[17]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -1023,7 +1164,7 @@ func (x *RollbackRequest) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use RollbackRequest.ProtoReflect.Descriptor instead.
 func (*RollbackRequest) Descriptor() ([]byte, []int) {
-	return file_api_config_v1_config_proto_rawDescGZIP(), []int{14}
+	return file_api_config_v1_config_proto_rawDescGZIP(), []int{17}
 }
 
 func (x *RollbackRequest) GetNamespace() string {
@@ -1070,7 +1211,7 @@ type RollbackResponse struct {
 
 func (x *RollbackResponse) Reset() {
 	*x = RollbackResponse{}
-	mi := &file_api_config_v1_config_proto_msgTypes[15]
+	mi := &file_api_config_v1_config_proto_msgTypes[18]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -1082,7 +1223,7 @@ func (x *RollbackResponse) String() string {
 func (*RollbackResponse) ProtoMessage() {}
 
 func (x *RollbackResponse) ProtoReflect() protoreflect.Message {
-	mi := &file_api_config_v1_config_proto_msgTypes[15]
+	mi := &file_api_config_v1_config_proto_msgTypes[18]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -1095,7 +1236,7 @@ func (x *RollbackResponse) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use RollbackResponse.ProtoReflect.Descriptor instead.
 func (*RollbackResponse) Descriptor() ([]byte, []int) {
-	return file_api_config_v1_config_proto_rawDescGZIP(), []int{15}
+	return file_api_config_v1_config_proto_rawDescGZIP(), []int{18}
 }
 
 func (x *RollbackResponse) GetEntry() *ConfigEntry {
@@ -1136,7 +1277,16 @@ const file_api_config_v1_config_proto_rawDesc = "" +
 	"\acomment\x18\x06 \x01(\tR\acomment\x12\x16\n" +
 	"\x06author\x18\a \x01(\tR\x06author\x129\n" +
 	"\n" +
-	"created_at\x18\b \x01(\v2\x1a.google.protobuf.TimestampR\tcreatedAt\"\x80\x01\n" +
+	"created_at\x18\b \x01(\v2\x1a.google.protobuf.TimestampR\tcreatedAt\"n\n" +
+	"\rNamespaceInfo\x12\x1c\n" +
+	"\tnamespace\x18\x01 \x01(\tR\tnamespace\x12\"\n" +
+	"\fenvironments\x18\x02 \x03(\tR\fenvironments\x12\x1b\n" +
+	"\tkey_count\x18\x03 \x01(\x05R\bkeyCount\"\x17\n" +
+	"\x15ListNamespacesRequest\"R\n" +
+	"\x16ListNamespacesResponse\x128\n" +
+	"\n" +
+	"namespaces\x18\x01 \x03(\v2\x18.config.v1.NamespaceInfoR\n" +
+	"namespaces\"\x80\x01\n" +
 	"\x0fListKeysRequest\x12$\n" +
 	"\tnamespace\x18\x01 \x01(\tB\x06\xbaH\x03\xc8\x01\x01R\tnamespace\x12(\n" +
 	"\venvironment\x18\x02 \x01(\tB\x06\xbaH\x03\xc8\x01\x01R\venvironment\x12\x1d\n" +
@@ -1193,8 +1343,9 @@ const file_api_config_v1_config_proto_rawDesc = "" +
 	"\x12CONFIG_FORMAT_YAML\x10\x01\x12\x16\n" +
 	"\x12CONFIG_FORMAT_TOML\x10\x02\x12\x16\n" +
 	"\x12CONFIG_FORMAT_JSON\x10\x03\x12\x1b\n" +
-	"\x17CONFIG_FORMAT_PLAINTEXT\x10\x042\x8f\x04\n" +
-	"\rConfigService\x12E\n" +
+	"\x17CONFIG_FORMAT_PLAINTEXT\x10\x042\xe8\x04\n" +
+	"\rConfigService\x12W\n" +
+	"\x0eListNamespaces\x12 .config.v1.ListNamespacesRequest\x1a!.config.v1.ListNamespacesResponse\"\x00\x12E\n" +
 	"\bListKeys\x12\x1a.config.v1.ListKeysRequest\x1a\x1b.config.v1.ListKeysResponse\"\x00\x12?\n" +
 	"\x06GetKey\x12\x18.config.v1.GetKeyRequest\x1a\x19.config.v1.GetKeyResponse\"\x00\x12?\n" +
 	"\x06PutKey\x12\x18.config.v1.PutKeyRequest\x1a\x19.config.v1.PutKeyResponse\"\x00\x12H\n" +
@@ -1218,59 +1369,65 @@ func file_api_config_v1_config_proto_rawDescGZIP() []byte {
 }
 
 var file_api_config_v1_config_proto_enumTypes = make([]protoimpl.EnumInfo, 1)
-var file_api_config_v1_config_proto_msgTypes = make([]protoimpl.MessageInfo, 16)
+var file_api_config_v1_config_proto_msgTypes = make([]protoimpl.MessageInfo, 19)
 var file_api_config_v1_config_proto_goTypes = []any{
-	(ConfigFormat)(0),             // 0: config.v1.ConfigFormat
-	(*ConfigEntry)(nil),           // 1: config.v1.ConfigEntry
-	(*ConfigRevision)(nil),        // 2: config.v1.ConfigRevision
-	(*ListKeysRequest)(nil),       // 3: config.v1.ListKeysRequest
-	(*ListKeysResponse)(nil),      // 4: config.v1.ListKeysResponse
-	(*GetKeyRequest)(nil),         // 5: config.v1.GetKeyRequest
-	(*GetKeyResponse)(nil),        // 6: config.v1.GetKeyResponse
-	(*PutKeyRequest)(nil),         // 7: config.v1.PutKeyRequest
-	(*PutKeyResponse)(nil),        // 8: config.v1.PutKeyResponse
-	(*DeleteKeyRequest)(nil),      // 9: config.v1.DeleteKeyRequest
-	(*DeleteKeyResponse)(nil),     // 10: config.v1.DeleteKeyResponse
-	(*ListRevisionsRequest)(nil),  // 11: config.v1.ListRevisionsRequest
-	(*ListRevisionsResponse)(nil), // 12: config.v1.ListRevisionsResponse
-	(*GetRevisionRequest)(nil),    // 13: config.v1.GetRevisionRequest
-	(*GetRevisionResponse)(nil),   // 14: config.v1.GetRevisionResponse
-	(*RollbackRequest)(nil),       // 15: config.v1.RollbackRequest
-	(*RollbackResponse)(nil),      // 16: config.v1.RollbackResponse
-	(*timestamppb.Timestamp)(nil), // 17: google.protobuf.Timestamp
+	(ConfigFormat)(0),              // 0: config.v1.ConfigFormat
+	(*ConfigEntry)(nil),            // 1: config.v1.ConfigEntry
+	(*ConfigRevision)(nil),         // 2: config.v1.ConfigRevision
+	(*NamespaceInfo)(nil),          // 3: config.v1.NamespaceInfo
+	(*ListNamespacesRequest)(nil),  // 4: config.v1.ListNamespacesRequest
+	(*ListNamespacesResponse)(nil), // 5: config.v1.ListNamespacesResponse
+	(*ListKeysRequest)(nil),        // 6: config.v1.ListKeysRequest
+	(*ListKeysResponse)(nil),       // 7: config.v1.ListKeysResponse
+	(*GetKeyRequest)(nil),          // 8: config.v1.GetKeyRequest
+	(*GetKeyResponse)(nil),         // 9: config.v1.GetKeyResponse
+	(*PutKeyRequest)(nil),          // 10: config.v1.PutKeyRequest
+	(*PutKeyResponse)(nil),         // 11: config.v1.PutKeyResponse
+	(*DeleteKeyRequest)(nil),       // 12: config.v1.DeleteKeyRequest
+	(*DeleteKeyResponse)(nil),      // 13: config.v1.DeleteKeyResponse
+	(*ListRevisionsRequest)(nil),   // 14: config.v1.ListRevisionsRequest
+	(*ListRevisionsResponse)(nil),  // 15: config.v1.ListRevisionsResponse
+	(*GetRevisionRequest)(nil),     // 16: config.v1.GetRevisionRequest
+	(*GetRevisionResponse)(nil),    // 17: config.v1.GetRevisionResponse
+	(*RollbackRequest)(nil),        // 18: config.v1.RollbackRequest
+	(*RollbackResponse)(nil),       // 19: config.v1.RollbackResponse
+	(*timestamppb.Timestamp)(nil),  // 20: google.protobuf.Timestamp
 }
 var file_api_config_v1_config_proto_depIdxs = []int32{
 	0,  // 0: config.v1.ConfigEntry.format:type_name -> config.v1.ConfigFormat
-	17, // 1: config.v1.ConfigEntry.created_at:type_name -> google.protobuf.Timestamp
-	17, // 2: config.v1.ConfigEntry.updated_at:type_name -> google.protobuf.Timestamp
+	20, // 1: config.v1.ConfigEntry.created_at:type_name -> google.protobuf.Timestamp
+	20, // 2: config.v1.ConfigEntry.updated_at:type_name -> google.protobuf.Timestamp
 	0,  // 3: config.v1.ConfigRevision.format:type_name -> config.v1.ConfigFormat
-	17, // 4: config.v1.ConfigRevision.created_at:type_name -> google.protobuf.Timestamp
-	1,  // 5: config.v1.ListKeysResponse.entries:type_name -> config.v1.ConfigEntry
-	1,  // 6: config.v1.GetKeyResponse.entry:type_name -> config.v1.ConfigEntry
-	0,  // 7: config.v1.PutKeyRequest.format:type_name -> config.v1.ConfigFormat
-	1,  // 8: config.v1.PutKeyResponse.entry:type_name -> config.v1.ConfigEntry
-	2,  // 9: config.v1.ListRevisionsResponse.revisions:type_name -> config.v1.ConfigRevision
-	2,  // 10: config.v1.GetRevisionResponse.revision:type_name -> config.v1.ConfigRevision
-	1,  // 11: config.v1.RollbackResponse.entry:type_name -> config.v1.ConfigEntry
-	3,  // 12: config.v1.ConfigService.ListKeys:input_type -> config.v1.ListKeysRequest
-	5,  // 13: config.v1.ConfigService.GetKey:input_type -> config.v1.GetKeyRequest
-	7,  // 14: config.v1.ConfigService.PutKey:input_type -> config.v1.PutKeyRequest
-	9,  // 15: config.v1.ConfigService.DeleteKey:input_type -> config.v1.DeleteKeyRequest
-	11, // 16: config.v1.ConfigService.ListRevisions:input_type -> config.v1.ListRevisionsRequest
-	13, // 17: config.v1.ConfigService.GetRevision:input_type -> config.v1.GetRevisionRequest
-	15, // 18: config.v1.ConfigService.Rollback:input_type -> config.v1.RollbackRequest
-	4,  // 19: config.v1.ConfigService.ListKeys:output_type -> config.v1.ListKeysResponse
-	6,  // 20: config.v1.ConfigService.GetKey:output_type -> config.v1.GetKeyResponse
-	8,  // 21: config.v1.ConfigService.PutKey:output_type -> config.v1.PutKeyResponse
-	10, // 22: config.v1.ConfigService.DeleteKey:output_type -> config.v1.DeleteKeyResponse
-	12, // 23: config.v1.ConfigService.ListRevisions:output_type -> config.v1.ListRevisionsResponse
-	14, // 24: config.v1.ConfigService.GetRevision:output_type -> config.v1.GetRevisionResponse
-	16, // 25: config.v1.ConfigService.Rollback:output_type -> config.v1.RollbackResponse
-	19, // [19:26] is the sub-list for method output_type
-	12, // [12:19] is the sub-list for method input_type
-	12, // [12:12] is the sub-list for extension type_name
-	12, // [12:12] is the sub-list for extension extendee
-	0,  // [0:12] is the sub-list for field type_name
+	20, // 4: config.v1.ConfigRevision.created_at:type_name -> google.protobuf.Timestamp
+	3,  // 5: config.v1.ListNamespacesResponse.namespaces:type_name -> config.v1.NamespaceInfo
+	1,  // 6: config.v1.ListKeysResponse.entries:type_name -> config.v1.ConfigEntry
+	1,  // 7: config.v1.GetKeyResponse.entry:type_name -> config.v1.ConfigEntry
+	0,  // 8: config.v1.PutKeyRequest.format:type_name -> config.v1.ConfigFormat
+	1,  // 9: config.v1.PutKeyResponse.entry:type_name -> config.v1.ConfigEntry
+	2,  // 10: config.v1.ListRevisionsResponse.revisions:type_name -> config.v1.ConfigRevision
+	2,  // 11: config.v1.GetRevisionResponse.revision:type_name -> config.v1.ConfigRevision
+	1,  // 12: config.v1.RollbackResponse.entry:type_name -> config.v1.ConfigEntry
+	4,  // 13: config.v1.ConfigService.ListNamespaces:input_type -> config.v1.ListNamespacesRequest
+	6,  // 14: config.v1.ConfigService.ListKeys:input_type -> config.v1.ListKeysRequest
+	8,  // 15: config.v1.ConfigService.GetKey:input_type -> config.v1.GetKeyRequest
+	10, // 16: config.v1.ConfigService.PutKey:input_type -> config.v1.PutKeyRequest
+	12, // 17: config.v1.ConfigService.DeleteKey:input_type -> config.v1.DeleteKeyRequest
+	14, // 18: config.v1.ConfigService.ListRevisions:input_type -> config.v1.ListRevisionsRequest
+	16, // 19: config.v1.ConfigService.GetRevision:input_type -> config.v1.GetRevisionRequest
+	18, // 20: config.v1.ConfigService.Rollback:input_type -> config.v1.RollbackRequest
+	5,  // 21: config.v1.ConfigService.ListNamespaces:output_type -> config.v1.ListNamespacesResponse
+	7,  // 22: config.v1.ConfigService.ListKeys:output_type -> config.v1.ListKeysResponse
+	9,  // 23: config.v1.ConfigService.GetKey:output_type -> config.v1.GetKeyResponse
+	11, // 24: config.v1.ConfigService.PutKey:output_type -> config.v1.PutKeyResponse
+	13, // 25: config.v1.ConfigService.DeleteKey:output_type -> config.v1.DeleteKeyResponse
+	15, // 26: config.v1.ConfigService.ListRevisions:output_type -> config.v1.ListRevisionsResponse
+	17, // 27: config.v1.ConfigService.GetRevision:output_type -> config.v1.GetRevisionResponse
+	19, // 28: config.v1.ConfigService.Rollback:output_type -> config.v1.RollbackResponse
+	21, // [21:29] is the sub-list for method output_type
+	13, // [13:21] is the sub-list for method input_type
+	13, // [13:13] is the sub-list for extension type_name
+	13, // [13:13] is the sub-list for extension extendee
+	0,  // [0:13] is the sub-list for field type_name
 }
 
 func init() { file_api_config_v1_config_proto_init() }
@@ -1284,7 +1441,7 @@ func file_api_config_v1_config_proto_init() {
 			GoPackagePath: reflect.TypeOf(x{}).PkgPath(),
 			RawDescriptor: unsafe.Slice(unsafe.StringData(file_api_config_v1_config_proto_rawDesc), len(file_api_config_v1_config_proto_rawDesc)),
 			NumEnums:      1,
-			NumMessages:   16,
+			NumMessages:   19,
 			NumExtensions: 0,
 			NumServices:   1,
 		},

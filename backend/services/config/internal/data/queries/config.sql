@@ -1,3 +1,10 @@
+-- name: ListNamespaceEnvironments :many
+-- 走 idx_entry_ns_env 索引扫描,返回 (namespace, environment) 维度的 key 数量。
+SELECT namespace, environment, COUNT(*)::int AS key_count
+FROM config.entry
+GROUP BY namespace, environment
+ORDER BY namespace, environment;
+
 -- name: ListEntries :many
 SELECT id, namespace, environment, key, format, version, is_secret, description, updated_by, created_at, updated_at
 FROM config.entry

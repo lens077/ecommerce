@@ -8,13 +8,22 @@ export interface EditorState {
   dirty: boolean;
 }
 
-const saved = localStorage.getItem("config_editor_ctx");
-const initial: Pick<EditorState, "namespace" | "environment"> = saved
-  ? JSON.parse(saved)
-  : { namespace: "ecommerce", environment: "dev" };
+// 上次选择的上下文;损坏的 localStorage 不应让整个应用白屏。
+function readSaved(): Partial<Pick<EditorState, "namespace" | "environment">> {
+  try {
+    const raw = localStorage.getItem("config_editor_ctx");
+    return raw ? JSON.parse(raw) : {};
+  } catch {
+    return {};
+  }
+}
 
+const initial = readSaved();
+
+// namespace 不设默认值:由 ListNamespaces 返回的真实列表决定(见 routes/index.tsx),
+// 避免写死一个配置中心里并不存在的 namespace 导致列表恒为空。
 export const editorStore = proxy<EditorState>({
-  namespace: initial.namespace || "ecommerce",
+  namespace: initial.namespace || "",
   environment: initial.environment || "dev",
   selectedKey: null,
   dirty: false,

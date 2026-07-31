@@ -1,8 +1,9 @@
 import { createFileRoute, useNavigate } from "@tanstack/react-router";
 import { useQuery } from "@tanstack/react-query";
 import { useSnapshot } from "valtio";
-import { useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import {
+  Autocomplete,
   Box,
   Button,
   Card,
@@ -26,6 +27,7 @@ import { KeyRound, Plus, RefreshCw } from "lucide-react";
 import { configApi, ConfigFormat } from "@/api";
 import { useAuthState } from "@/providers/AuthProvider";
 import { editorStore, setEnvironment, setNamespace } from "@/store/editor";
+
 import { ENV_OPTIONS, FORMAT_OPTIONS, formatLabel } from "@/lib/format";
 import { sp } from "@/styles/glass";
 
@@ -40,12 +42,56 @@ function BrowserPage() {
   const [prefix, setPrefix] = useState("");
   const [newOpen, setNewOpen] = useState(false);
 
+  // 配置中心里真实存在的 namespace / environment,用于下拉选择
+  const { data: nsData, refetch: refetchNamespaces } = useQuery({
+    queryKey: ["listNamespaces"],
+    queryFn: ({ signal }) => configApi.listNamespaces(signal),
+    enabled: isAuthenticated,
+  });
+
+  const namespaces = useMemo(() => nsData?.namespaces ?? [], [nsData]);
+  const nsOptions = useMemo(() => namespaces.map((n) => n.namespace), [namespaces]);
+
+  // 环境选项:当前 namespace 下确实有配置的环境优先,其余标准环境仍可选(用于新建)
+  const envOptions = useMemo(() => {
+    const existing = namespaces.find((n) => n.namespace === snap.namespace)?.environments ?? [];
+    return [...new Set([...existing, ...ENV_OPTIONS])];
+  }, [namespaces, snap.namespace]);
+
+  // 仅在 namespace 列表首次到达时纠正一次:本地存的 namespace 若已不存在(或为空),
+  // 落到第一个真实 namespace,避免停在空 namespace 上误以为「刷新不出配置」。
+  // 只跑一次是必须的 —— 否则用户手输一个尚不存在的新 namespace 时会被这里改回去。
+  const alignedRef = useRef(false);
+  useEffect(() => {
+    if (alignedRef.current || namespaces.length === 0) return;
+    alignedRef.current = true;
+
+    const { namespace, environment } = editorStore;
+    if (namespace && namespaces.some((n) => n.namespace === namespace)) return;
+
+    const first = namespaces[0];
+    setNamespace(first.namespace);
+    if (first.environments.length > 0 && !first.environments.includes(environment)) {
+      setEnvironment(first.environments[0]);
+    }
+  }, [namespaces]);
+
   const { data, isLoading, isError, error, refetch, isFetching } = useQuery({
     queryKey: ["listKeys", snap.namespace, snap.environment, prefix],
     queryFn: ({ signal }) => configApi.listKeys(snap.namespace, snap.environment, prefix, signal),
     // 仅在已认证时发起，避免未认证/坏 token 触发无谓的 401 与退登循环
-    enabled: isAuthenticated,
+    // namespace 为空时后端会因 required 校验报错，等下拉填好再查
+    enabled: isAuthenticated && snap.namespace !== "",
   });
+
+  // 当前 namespace 下「其它有配置的环境」,用于空列表时提示选错了环境
+  const otherEnvs = useMemo(
+    () =>
+      (namespaces.find((n) => n.namespace === snap.namespace)?.environments ?? []).filter(
+        (e) => e !== snap.environment,
+      ),
+    [namespaces, snap.namespace, snap.environment],
+  );
 
   const openKey = (key: string) => {
     navigate({ to: "/edit", search: { ns: snap.namespace, env: snap.environment, key } });
@@ -56,27 +102,34 @@ function BrowserPage() {
       {/* 顶部:命名空间 / 环境 / 搜索 */}
       <Card sx={{ p: sp[4] }}>
         <Box sx={{ display: "flex", flexWrap: "wrap", alignItems: "center", gap: sp[3] }}>
-          <TextField
-            label="命名空间"
-            size="small"
+          {/* freeSolo:既能从已有 namespace 里选,也能直接输入一个新的用于建首个 key */}
+          <Autocomplete
+            freeSolo
+            options={nsOptions}
             value={snap.namespace}
-            onChange={(e) => setNamespace(e.target.value)}
-            sx={{ minWidth: 160 }}
+            onChange={(_, v) => setNamespace(v ?? "")}
+            onInputChange={(_, v) => setNamespace(v)}
+            sx={{ minWidth: 200 }}
+            renderOption={(props, option) => {
+              const info = namespaces.find((n) => n.namespace === option);
+              return (
+                <Box component="li" {...props} key={option}>
+                  <Box sx={{ flex: 1 }}>{option}</Box>
+                  {info && <Chip label={`${info.keyCount} keys`} size="small" variant="outlined" />}
+                </Box>
+              );
+            }}
+            renderInput={(params) => <TextField {...params} label="命名空间" size="small" />}
           />
-          <TextField
-            select
-            label="环境"
-            size="small"
+          <Autocomplete
+            freeSolo
+            options={envOptions}
             value={snap.environment}
-            onChange={(e) => setEnvironment(e.target.value)}
-            sx={{ minWidth: 120 }}
-          >
-            {ENV_OPTIONS.map((e) => (
-              <MenuItem key={e} value={e}>
-                {e}
-              </MenuItem>
-            ))}
-          </TextField>
+            onChange={(_, v) => setEnvironment(v ?? "")}
+            onInputChange={(_, v) => setEnvironment(v)}
+            sx={{ minWidth: 140 }}
+            renderInput={(params) => <TextField {...params} label="环境" size="small" />}
+          />
           <TextField
             label="按 key 前缀过滤"
             size="small"
@@ -85,7 +138,12 @@ function BrowserPage() {
             sx={{ flex: 1, minWidth: 200 }}
           />
           <Tooltip title="刷新">
-            <IconButton onClick={() => refetch()}>
+            <IconButton
+              onClick={() => {
+                void refetchNamespaces();
+                void refetch();
+              }}
+            >
               <RefreshCw size={18} />
             </IconButton>
           </Tooltip>
@@ -114,7 +172,13 @@ function BrowserPage() {
           </Box>
         ) : !data || data.entries.length === 0 ? (
           <Box sx={{ p: sp[6], textAlign: "center" }}>
-            <Typography color="text.secondary">暂无配置项,点击「新建 Key」创建。</Typography>
+            <Typography color="text.secondary">
+              {!snap.namespace
+                ? "配置中心还没有任何命名空间,输入一个命名空间后点击「新建 Key」创建。"
+                : otherEnvs.length > 0
+                  ? `${snap.namespace} / ${snap.environment} 下暂无配置项;该命名空间在 ${otherEnvs.join("、")} 环境下有配置。`
+                  : "暂无配置项,点击「新建 Key」创建。"}
+            </Typography>
           </Box>
         ) : (
           <List disablePadding>

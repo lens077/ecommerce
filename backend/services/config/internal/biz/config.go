@@ -44,6 +44,14 @@ type ConfigEntry struct {
 	UpdatedAt   time.Time
 }
 
+// NamespaceInfo namespace 概览:该 namespace 下确实存在配置的环境与 key 总数。
+// 供前端下拉选择,避免手输 namespace/environment。
+type NamespaceInfo struct {
+	Namespace    string
+	Environments []string
+	KeyCount     int32
+}
+
 // ConfigRevision 版本历史记录
 type ConfigRevision struct {
 	ID        int64
@@ -71,6 +79,7 @@ type PutParams struct {
 
 // ConfigRepo 数据访问接口(由 data 层实现)
 type ConfigRepo interface {
+	ListNamespaces(ctx context.Context) ([]*NamespaceInfo, error)
 	ListEntries(ctx context.Context, namespace, environment, keyPrefix string) ([]*ConfigEntry, error)
 	GetEntry(ctx context.Context, namespace, environment, key string) (*ConfigEntry, error)
 	// PutEntry 在单事务内 upsert 配置项(version+1)并追加一条 revision,返回更新后的条目。
@@ -88,6 +97,10 @@ type ConfigUseCase struct {
 
 func NewConfigUseCase(repo ConfigRepo, logger *zap.Logger) *ConfigUseCase {
 	return &ConfigUseCase{repo: repo, log: logger.Named("ConfigUseCase")}
+}
+
+func (uc *ConfigUseCase) ListNamespaces(ctx context.Context) ([]*NamespaceInfo, error) {
+	return uc.repo.ListNamespaces(ctx)
 }
 
 func (uc *ConfigUseCase) ListKeys(ctx context.Context, namespace, environment, keyPrefix string) ([]*ConfigEntry, error) {

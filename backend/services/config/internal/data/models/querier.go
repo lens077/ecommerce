@@ -61,6 +61,13 @@ type Querier interface {
 	//    AND key LIKE $3 || '%'
 	//  ORDER BY key
 	ListEntries(ctx context.Context, arg ListEntriesParams) ([]ListEntriesRow, error)
+	// 走 idx_entry_ns_env 索引扫描,返回 (namespace, environment) 维度的 key 数量。
+	//
+	//  SELECT namespace, environment, COUNT(*)::int AS key_count
+	//  FROM config.entry
+	//  GROUP BY namespace, environment
+	//  ORDER BY namespace, environment
+	ListNamespaceEnvironments(ctx context.Context) ([]ListNamespaceEnvironmentsRow, error)
 	//ListRevisions
 	//
 	//  SELECT id, entry_id, version, format, value, comment, author, created_at

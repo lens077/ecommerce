@@ -23,6 +23,8 @@ export interface PutKeyInput {
 }
 
 export const configApi = {
+  listNamespaces: (signal?: AbortSignal) => client.listNamespaces({}, { signal }),
+
   listKeys: (namespace: string, environment: string, keyPrefix = "", signal?: AbortSignal) =>
     client.listKeys({ namespace, environment, keyPrefix }, { signal }),
 
