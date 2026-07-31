@@ -186,17 +186,22 @@ func (r *ConsulRegistry) Register() error {
 
 // TtlCheckPinger 负责定期向 Consul Agent 发送心跳信号
 func (r *ConsulRegistry) TtlCheckPinger(ctx context.Context, conf *confv1.Bootstrap) {
-	TtlPingInterval := 10 * time.Second // 默认值
-	if conf.Discovery != nil && conf.Discovery.Consul != nil && conf.Discovery.Consul.Check != nil && conf.Discovery.Consul.Check.Ttl != nil && conf.Discovery.Consul.Check.Ttl.PingInterval != nil {
-		TtlPingInterval = conf.Discovery.Consul.Check.Ttl.PingInterval.AsDuration()
+	// time.NewTicker 对 <=0 的间隔直接 panic,而这里跑在独立 goroutine 里,
+	// panic 会整个进程带走。配置缺失或写成 0 时回落到默认值。
+	ttlPingInterval := TtlPingInterval
+	if conf.Discovery != nil && conf.Discovery.Consul != nil &&
+		conf.Discovery.Consul.Check != nil && conf.Discovery.Consul.Check.Ttl != nil &&
+		conf.Discovery.Consul.Check.Ttl.PingInterval.AsDuration() > 0 {
+		ttlPingInterval = conf.Discovery.Consul.Check.Ttl.PingInterval.AsDuration()
 	}
-	ticker := time.NewTicker(TtlPingInterval)
+
+	ticker := time.NewTicker(ttlPingInterval)
 	defer ticker.Stop()
 
 	// Consul Agent 要求 CheckID 必须是 "service:<ID>" 的格式
 	checkID := fmt.Sprintf("service:%s", r.ID)
 
-	r.logger.Info("starting ttl pinger", zap.Duration("interval", TtlPingInterval), zap.String("checkID", checkID))
+	r.logger.Info("starting ttl pinger", zap.Duration("interval", ttlPingInterval), zap.String("checkID", checkID))
 
 	for {
 		select {
