@@ -77,6 +77,7 @@ export function useCart() {
                     cartStore.clear();
                     backendItems.forEach((item) => {
                         cartStore.addItem({
+                            cartItemId: item.cartItemId,
                             spuId: item.spuId,
                             skuId: item.skuId,
                             merchantId: item.merchantId,
@@ -118,11 +119,12 @@ export function useCart() {
 
             try {
                 // 调用 API（未来替换为真实 RPC）
-                await cartApi.addToCart(request);
+                const res = await cartApi.addToCart(request);
 
-                // 更新本地状态
+                // 更新本地状态（cartItemId 取后端返回值）
                 cartStore.addItem({
-                    ...request
+                    ...request,
+                    cartItemId: res.cartItemId,
                 });
             } catch (err) {
                 const message = err instanceof Error ? err.message : "添加失败";
@@ -227,7 +229,7 @@ export function useAddToCart(initialQuantity: number = 1) {
             setError(null);
 
             try {
-                await cartApi.addToCart({
+                const res = await cartApi.addToCart({
                     ...request,
                     quantity,
                     selected: true,
@@ -236,7 +238,8 @@ export function useAddToCart(initialQuantity: number = 1) {
                 cartStore.addItem({
                     ...request,
                     quantity,
-                    selected: true
+                    selected: true,
+                    cartItemId: res.cartItemId,
                 });
 
                 setIsSuccess(true);

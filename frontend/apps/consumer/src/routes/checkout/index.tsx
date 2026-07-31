@@ -1,153 +1,227 @@
 /**
  * 结算确认页面
+ *
+ * 数据来源：
+ * - 商品：进页时由 useCart 从后端重拉购物车，取「已选中」项（按商家分组展示）
+ * - 地址：AddressService 地址列表，页内弹层选择 / 新增（调用 createAddress）
+ *
+ * 下单：点「提交订单」→ orderApi.createOrder（携带防重 requestId）→ 跳支付页
+ * 说明：优惠券/发货微服务暂未实现，运费恒 0（仅展示「免运费」），无优惠。
  */
 
-import { createFileRoute, Link } from "@tanstack/react-router";
+import { createFileRoute, Link, useNavigate } from "@tanstack/react-router";
 import {
+  Alert,
   Box,
   Button,
   Card,
   CardContent,
   Checkbox,
+  CircularProgress,
+  Dialog,
+  DialogActions,
+  DialogContent,
+  DialogTitle,
   Divider,
+  IconButton,
+  Radio,
+  TextField,
   Typography,
 } from "@mui/material";
-import { useState } from "react";
-import { tokens } from "@/styles/tokens";
-import { useNavigate } from "@tanstack/react-router";
+import { Check, MapPin, Plus, X } from "lucide-react";
+import { useEffect, useMemo, useState } from "react";
+import { orderApi } from "@/api/order";
+import type { Address, AddressFormData } from "@/api/addresses/types";
+import { useAddresses } from "@/hooks/useAddresses";
+import { useCart } from "@/hooks/useCart";
+import type { CartItem } from "@/store/cart";
+import { sp, tokens } from "@/styles/tokens";
 
 export const Route = createFileRoute("/checkout/")({
   component: CheckoutPage,
 });
 
+interface MerchantGroup {
+  merchantId: string;
+  shopName: string;
+  items: CartItem[];
+}
+
 function CheckoutPage() {
   const navigate = useNavigate();
+  const { items, isInitializing } = useCart();
+  const { addresses, isLoading: addrLoading } = useAddresses();
 
-  // 模拟数据
-  const address = {
-    id: "addr-001",
-    name: "张三",
-    phone: "138****1234",
-    detail: "北京市朝阳区建国路88号SOHO现代城1号楼101室",
-    isDefault: true,
-  };
-
-  const cartItems = [
-    {
-      id: "cart-001",
-      merchantId: "m001",
-      merchantName: "优品数码旗舰店",
-      items: [
-        {
-          id: "item-001",
-          name: "iPhone 15 Pro Max 256GB 钛金色",
-          price: 9999,
-          quantity: 1,
-          image: "",
-          specs: "钛金色/256GB",
-          selected: true,
-        },
-      ],
-    },
-    {
-      id: "cart-002",
-      merchantId: "m002",
-      merchantName: "苹果官方旗舰店",
-      items: [
-        {
-          id: "item-002",
-          name: "AirPods Pro 2",
-          price: 1899,
-          quantity: 2,
-          image: "",
-          specs: "USB-C",
-          selected: true,
-        },
-      ],
-    },
-  ];
-
+  // 防重令牌：进结算页时生成一次，提交时携带（页面存活期间不变）
+  const [requestId] = useState(() => crypto.randomUUID());
   const [remark, setRemark] = useState("");
-  const [couponAmount, setCouponAmount] = useState(0);
-  const [freight] = useState(0);
+  const [selectedAddressId, setSelectedAddressId] = useState<string | null>(null);
+  const [addressDialogOpen, setAddressDialogOpen] = useState(false);
+  const [submitting, setSubmitting] = useState(false);
+  const [submitError, setSubmitError] = useState<string | null>(null);
 
-  // 计算金额
-  const totalAmount = cartItems.reduce((sum, merchant) => {
-    return sum + merchant.items.reduce((s, item) => s + item.price * item.quantity, 0);
-  }, 0);
+  // 已选中的购物车项，按商家分组
+  const selectedItems = useMemo(() => items.filter((i) => i.selected), [items]);
+  const merchantGroups = useMemo<MerchantGroup[]>(() => {
+    const map = new Map<string, MerchantGroup>();
+    for (const it of selectedItems) {
+      if (!map.has(it.merchantId)) {
+        map.set(it.merchantId, {
+          merchantId: it.merchantId,
+          shopName: it.shopName ?? "",
+          items: [],
+        });
+      }
+      map.get(it.merchantId)!.items.push(it);
+    }
+    return Array.from(map.values());
+  }, [selectedItems]);
 
-  const paymentAmount = totalAmount + freight - couponAmount;
+  // 默认选中默认地址（无默认则取第一个）
+  useEffect(() => {
+    if (!selectedAddressId && addresses && addresses.length > 0) {
+      const def = addresses.find((a) => a.isDefault) ?? addresses[0];
+      setSelectedAddressId(def.addressId);
+    }
+  }, [addresses, selectedAddressId]);
 
-  const handleSubmit = () => {
-    // TODO: 创建订单并跳转支付
-    navigate({ to: "/payment/result?orderId=ORD20240612001" });
+  const selectedAddress = addresses?.find((a) => a.addressId === selectedAddressId) ?? null;
+
+  const totalAmount = useMemo(
+    () => selectedItems.reduce((sum, it) => sum + it.price * it.quantity, 0),
+    [selectedItems],
+  );
+  const freight = 0;
+  const payAmount = totalAmount + freight;
+
+  const canSubmit =
+    !submitting && !!selectedAddressId && selectedItems.length > 0;
+
+  const handleSubmit = async () => {
+    if (!canSubmit || !selectedAddressId) return;
+    setSubmitting(true);
+    setSubmitError(null);
+    try {
+      await orderApi.createOrder({
+        cartItemIds: selectedItems.map((i) => i.cartItemId),
+        addressId: selectedAddressId,
+        remark,
+        requestId,
+      });
+      // 后端响应暂无 orderNo，先跳固定支付页占位
+      navigate({ to: "/payment/result" });
+    } catch (err) {
+      const message = err instanceof Error ? err.message : "下单失败，请重试";
+      setSubmitError(message);
+    } finally {
+      setSubmitting(false);
+    }
   };
+
+  // 加载中
+  if (isInitializing) {
+    return (
+      <Box sx={{ bgcolor: tokens.colors.background.primary, minHeight: "100vh" }}>
+        <CheckoutHeader />
+        <Box sx={{ display: "flex", justifyContent: "center", py: sp[16] }}>
+          <CircularProgress sx={{ color: tokens.colors.accent.black }} />
+        </Box>
+      </Box>
+    );
+  }
+
+  // 无选中商品
+  if (selectedItems.length === 0) {
+    return (
+      <Box sx={{ bgcolor: tokens.colors.background.primary, minHeight: "100vh" }}>
+        <CheckoutHeader />
+        <Box sx={{ textAlign: "center", py: sp[16], px: sp[4] }}>
+          <Typography variant="body1" sx={{ color: tokens.colors.text.secondary, mb: sp[4] }}>
+            没有选中的商品
+          </Typography>
+          <Button
+            component={Link}
+            to="/cart"
+            variant="contained"
+            sx={{ bgcolor: tokens.colors.accent.red, "&:hover": { bgcolor: "#dc2626" } }}
+          >
+            返回购物车
+          </Button>
+        </Box>
+      </Box>
+    );
+  }
 
   return (
-    <Box sx={{ bgcolor: tokens.colors.background.primary, minHeight: "100vh", pb: 10 }}>
-      {/* 顶部标题 */}
-      <Box
-        sx={{
-          bgcolor: tokens.colors.background.card,
-          p: 3,
-          borderBottom: `1px solid ${tokens.colors.border.default}`,
-        }}
-      >
-        <Typography variant="h5" sx={{ fontWeight: 700, color: tokens.colors.text.primary }}>
-          确认订单
-        </Typography>
-      </Box>
+    <Box sx={{ bgcolor: tokens.colors.background.primary, minHeight: "100vh", pb: "96px" }}>
+      <CheckoutHeader />
 
       {/* 收货地址 */}
-      <Card sx={{ mx: 2, mt: 2 }}>
-        <CardContent sx={{ p: 2 }}>
-          <Link
-            to="/profile/addresses"
+      <Card sx={{ mx: sp[4], mt: sp[4] }}>
+        <CardContent sx={{ p: sp[4] }}>
+          <Box
+            component="button"
+            onClick={() => setAddressDialogOpen(true)}
             sx={{
               display: "flex",
               alignItems: "flex-start",
-              gap: 2,
-              textDecoration: "none",
+              gap: sp[3],
+              width: "100%",
+              border: "none",
+              bgcolor: "transparent",
+              cursor: "pointer",
+              textAlign: "left",
+              p: 0,
             }}
           >
-            <Box sx={{ flex: 1 }}>
-              <Box sx={{ display: "flex", alignItems: "center", gap: 1, mb: 1 }}>
-                <Typography variant="body1" sx={{ fontWeight: 500, color: tokens.colors.text.primary }}>
-                  {address.name}
-                </Typography>
+            <MapPin size={20} color={tokens.colors.accent.red} style={{ flexShrink: 0, marginTop: 2 }} />
+            <Box sx={{ flex: 1, minWidth: 0 }}>
+              {selectedAddress ? (
+                <>
+                  <Box sx={{ display: "flex", alignItems: "center", gap: sp[2], mb: sp[1] }}>
+                    <Typography variant="body1" sx={{ fontWeight: 600, color: tokens.colors.text.primary }}>
+                      {selectedAddress.recipientName}
+                    </Typography>
+                    <Typography variant="body2" sx={{ color: tokens.colors.text.secondary }}>
+                      {selectedAddress.recipientPhone}
+                    </Typography>
+                  </Box>
+                  <Typography variant="body2" sx={{ color: tokens.colors.text.secondary }}>
+                    {addressFullText(selectedAddress)}
+                  </Typography>
+                </>
+              ) : (
                 <Typography variant="body2" sx={{ color: tokens.colors.text.secondary }}>
-                  {address.phone}
+                  {addrLoading ? "地址加载中…" : "请选择收货地址"}
                 </Typography>
-              </Box>
-              <Typography variant="body2" sx={{ color: tokens.colors.text.secondary }}>
-                {address.detail}
-              </Typography>
+              )}
             </Box>
-            <Typography variant="body2" sx={{ color: tokens.colors.text.secondary }}>
-              修改
+            <Typography variant="body2" sx={{ color: tokens.colors.text.secondary, flexShrink: 0 }}>
+              {selectedAddress ? "修改" : "选择"}
             </Typography>
-          </Link>
+          </Box>
         </CardContent>
       </Card>
 
-      {/* 商品列表 */}
-      {cartItems.map((merchant) => (
-        <Card key={merchant.id} sx={{ mx: 2, mt: 2 }}>
-          <CardContent sx={{ p: 2 }}>
-            <Typography
-              variant="body2"
-              sx={{ fontWeight: 500, color: tokens.colors.text.primary, mb: 2 }}
-            >
-              {merchant.merchantName}
+      {/* 商品列表（按商家分组） */}
+      {merchantGroups.map((group) => (
+        <Card key={group.merchantId} sx={{ mx: sp[4], mt: sp[4] }}>
+          <CardContent sx={{ p: sp[4] }}>
+            <Typography variant="body2" sx={{ fontWeight: 600, color: tokens.colors.text.primary, mb: sp[3] }}>
+              {group.shopName || "店铺"}
             </Typography>
-            <Box sx={{ display: "flex", flexDirection: "column", gap: 2 }}>
-              {merchant.items.map((item) => (
-                <Box key={item.id} sx={{ display: "flex", gap: 2 }}>
+            <Box sx={{ display: "flex", flexDirection: "column", gap: sp[3] }}>
+              {group.items.map((item) => (
+                <Box key={item.cartItemId} sx={{ display: "flex", gap: sp[3] }}>
                   <Box
+                    component="img"
+                    src={item.skuThumbnailUrl}
+                    alt={item.spuName}
                     sx={{
-                      width: 80,
-                      height: 80,
-                      borderRadius: 1,
+                      width: 64,
+                      height: 64,
+                      borderRadius: tokens.radius.md,
+                      objectFit: "cover",
                       bgcolor: tokens.colors.background.primary,
                       flexShrink: 0,
                     }}
@@ -162,19 +236,16 @@ function CheckoutPage() {
                         whiteSpace: "nowrap",
                       }}
                     >
-                      {item.name}
+                      {item.spuName}
                     </Typography>
                     <Typography variant="caption" sx={{ color: tokens.colors.text.secondary }}>
-                      {item.specs}
+                      {item.skuName}
                     </Typography>
-                    <Box sx={{ display: "flex", justifyContent: "space-between", mt: 1 }}>
+                    <Box sx={{ display: "flex", justifyContent: "space-between", mt: sp[1] }}>
                       <Typography variant="caption" sx={{ color: tokens.colors.text.secondary }}>
                         x{item.quantity}
                       </Typography>
-                      <Typography
-                        variant="body2"
-                        sx={{ fontWeight: 600, color: tokens.colors.accent.red }}
-                      >
+                      <Typography variant="body2" sx={{ fontWeight: 600, color: tokens.colors.accent.red }}>
                         ¥{item.price.toLocaleString()}
                       </Typography>
                     </Box>
@@ -186,53 +257,12 @@ function CheckoutPage() {
         </Card>
       ))}
 
-      {/* 优惠券 */}
-      <Card sx={{ mx: 2, mt: 2 }}>
-        <CardContent sx={{ p: 2 }}>
-          <Box
-            sx={{
-              display: "flex",
-              justifyContent: "space-between",
-              alignItems: "center",
-            }}
-          >
-            <Typography variant="body2" sx={{ fontWeight: 500, color: tokens.colors.text.primary }}>
-              优惠券
-            </Typography>
-            <Link
-              to="/coupons"
-              sx={{
-                display: "flex",
-                alignItems: "center",
-                gap: 1,
-                textDecoration: "none",
-              }}
-            >
-              <Typography
-                variant="body2"
-                sx={{ color: couponAmount > 0 ? tokens.colors.accent.red : tokens.colors.text.secondary }}
-              >
-                {couponAmount > 0 ? `-¥${couponAmount}` : "选择优惠券"}
-              </Typography>
-              <Typography variant="body2" sx={{ color: tokens.colors.text.secondary }}>
-                &gt;
-              </Typography>
-            </Link>
-          </Box>
-        </CardContent>
-      </Card>
-
-      {/* 配送方式 */}
-      <Card sx={{ mx: 2, mt: 2 }}>
-        <CardContent sx={{ p: 2 }}>
-          <Box sx={{ display: "flex", alignItems: "center", gap: 2 }}>
-            <Checkbox
-              checked={true}
-              size="small"
-              sx={{ p: 0 }}
-            />
-            <Box sx={{ flex: 1 }}>
-              <Typography variant="body2" sx={{ fontWeight: 500, color: tokens.colors.text.primary }}>
+      {/* 配送方式（暂无发货服务，恒免运费，仅展示） */}
+      <Card sx={{ mx: sp[4], mt: sp[4] }}>
+        <CardContent sx={{ p: sp[4] }}>
+          <Box sx={{ display: "flex", alignItems: "center", justifyContent: "space-between" }}>
+            <Box>
+              <Typography variant="body2" sx={{ fontWeight: 600, color: tokens.colors.text.primary }}>
                 普通配送
               </Typography>
               <Typography variant="caption" sx={{ color: tokens.colors.text.secondary }}>
@@ -240,17 +270,17 @@ function CheckoutPage() {
               </Typography>
             </Box>
             <Typography variant="body2" sx={{ color: tokens.colors.text.primary }}>
-              {freight === 0 ? "免运费" : `¥${freight}`}
+              免运费
             </Typography>
           </Box>
         </CardContent>
       </Card>
 
       {/* 订单备注 */}
-      <Card sx={{ mx: 2, mt: 2 }}>
-        <CardContent sx={{ p: 2 }}>
-          <Box sx={{ display: "flex", alignItems: "center", gap: 2 }}>
-            <Typography variant="body2" sx={{ fontWeight: 500, color: tokens.colors.text.primary }}>
+      <Card sx={{ mx: sp[4], mt: sp[4] }}>
+        <CardContent sx={{ p: sp[4] }}>
+          <Box sx={{ display: "flex", alignItems: "center", gap: sp[3] }}>
+            <Typography variant="body2" sx={{ fontWeight: 600, color: tokens.colors.text.primary, flexShrink: 0 }}>
               订单备注
             </Typography>
             <Box
@@ -266,9 +296,7 @@ function CheckoutPage() {
                 bgcolor: "transparent",
                 fontSize: "0.875rem",
                 color: tokens.colors.text.primary,
-                "&::placeholder": {
-                  color: tokens.colors.text.disabled,
-                },
+                "&::placeholder": { color: tokens.colors.text.disabled },
               }}
             />
           </Box>
@@ -276,9 +304,9 @@ function CheckoutPage() {
       </Card>
 
       {/* 金额明细 */}
-      <Card sx={{ mx: 2, mt: 2 }}>
-        <CardContent sx={{ p: 2 }}>
-          <Box sx={{ display: "flex", justifyContent: "space-between", mb: 1 }}>
+      <Card sx={{ mx: sp[4], mt: sp[4] }}>
+        <CardContent sx={{ p: sp[4] }}>
+          <Box sx={{ display: "flex", justifyContent: "space-between", mb: sp[2] }}>
             <Typography variant="body2" sx={{ color: tokens.colors.text.secondary }}>
               商品总价
             </Typography>
@@ -286,35 +314,31 @@ function CheckoutPage() {
               ¥{totalAmount.toLocaleString()}
             </Typography>
           </Box>
-          <Box sx={{ display: "flex", justifyContent: "space-between", mb: 1 }}>
+          <Box sx={{ display: "flex", justifyContent: "space-between", mb: sp[2] }}>
             <Typography variant="body2" sx={{ color: tokens.colors.text.secondary }}>
               运费
             </Typography>
             <Typography variant="body2" sx={{ color: tokens.colors.text.primary }}>
-              {freight === 0 ? "免运费" : `¥${freight}`}
+              免运费
             </Typography>
           </Box>
-          {couponAmount > 0 && (
-            <Box sx={{ display: "flex", justifyContent: "space-between", mb: 1 }}>
-              <Typography variant="body2" sx={{ color: tokens.colors.accent.green }}>
-                优惠券
-              </Typography>
-              <Typography variant="body2" sx={{ color: tokens.colors.accent.green }}>
-                -¥{couponAmount}
-              </Typography>
-            </Box>
-          )}
-          <Divider sx={{ my: 1 }} />
+          <Divider sx={{ my: sp[2] }} />
           <Box sx={{ display: "flex", justifyContent: "space-between" }}>
-            <Typography variant="body1" sx={{ fontWeight: 500, color: tokens.colors.text.primary }}>
+            <Typography variant="body1" sx={{ fontWeight: 600, color: tokens.colors.text.primary }}>
               合计
             </Typography>
             <Typography variant="body1" sx={{ fontWeight: 700, color: tokens.colors.accent.red }}>
-              ¥{paymentAmount.toLocaleString()}
+              ¥{payAmount.toLocaleString()}
             </Typography>
           </Box>
         </CardContent>
       </Card>
+
+      {submitError && (
+        <Alert severity="error" sx={{ mx: sp[4], mt: sp[4] }}>
+          {submitError}
+        </Alert>
+      )}
 
       {/* 底部提交栏 */}
       <Box
@@ -325,35 +349,286 @@ function CheckoutPage() {
           right: 0,
           bgcolor: tokens.colors.background.card,
           borderTop: `1px solid ${tokens.colors.border.default}`,
-          p: 2,
+          p: sp[4],
           display: "flex",
           alignItems: "center",
-          gap: 2,
+          gap: sp[3],
+          zIndex: tokens.zIndex.sticky,
         }}
       >
         <Box sx={{ flex: 1 }}>
           <Typography variant="caption" sx={{ color: tokens.colors.text.secondary }}>
             合计：
           </Typography>
-          <Typography
-            variant="h6"
-            sx={{ fontWeight: 700, color: tokens.colors.accent.red }}
-          >
-            ¥{paymentAmount.toLocaleString()}
+          <Typography variant="h6" sx={{ fontWeight: 700, color: tokens.colors.accent.red }}>
+            ¥{payAmount.toLocaleString()}
           </Typography>
         </Box>
         <Button
           variant="contained"
           onClick={handleSubmit}
+          disabled={!canSubmit}
           sx={{
             bgcolor: tokens.colors.accent.red,
-            px: 4,
+            px: sp[6],
             "&:hover": { bgcolor: "#dc2626" },
           }}
         >
-          提交订单
+          {submitting ? <CircularProgress size={20} sx={{ color: "#fff" }} /> : "提交订单"}
         </Button>
       </Box>
+
+      {/* 地址选择弹层 */}
+      <AddressPickerDialog
+        open={addressDialogOpen}
+        addresses={addresses ?? []}
+        loading={addrLoading}
+        selectedAddressId={selectedAddressId}
+        onClose={() => setAddressDialogOpen(false)}
+        onSelect={(id) => {
+          setSelectedAddressId(id);
+          setAddressDialogOpen(false);
+        }}
+      />
     </Box>
+  );
+}
+
+// 顶部标题
+function CheckoutHeader() {
+  return (
+    <Box
+      sx={{
+        position: "sticky",
+        top: 0,
+        zIndex: tokens.zIndex.sticky,
+        bgcolor: tokens.colors.background.card,
+        p: sp[4],
+        borderBottom: `1px solid ${tokens.colors.border.default}`,
+      }}
+    >
+      <Typography variant="h6" sx={{ fontWeight: 700, color: tokens.colors.text.primary }}>
+        确认订单
+      </Typography>
+    </Box>
+  );
+}
+
+// 地址完整文本
+function addressFullText(a: Address): string {
+  const d = a.detail;
+  return `${d?.province ?? ""} ${d?.city ?? ""} ${d?.district ?? ""} ${d?.detail ?? ""}`.trim();
+}
+
+const emptyAddressForm: AddressFormData = {
+  recipientName: "",
+  recipientPhone: "",
+  province: "",
+  city: "",
+  district: "",
+  detail: "",
+  isDefault: false,
+};
+
+// 地址选择弹层：列表选择 + 新增
+function AddressPickerDialog({
+  open,
+  addresses,
+  loading,
+  selectedAddressId,
+  onClose,
+  onSelect,
+}: {
+  open: boolean;
+  addresses: Address[];
+  loading: boolean;
+  selectedAddressId: string | null;
+  onClose: () => void;
+  onSelect: (addressId: string) => void;
+}) {
+  const { createAddress, isCreating } = useAddresses();
+  const [adding, setAdding] = useState(false);
+  const [form, setForm] = useState<AddressFormData>(emptyAddressForm);
+  const [formError, setFormError] = useState<string | null>(null);
+
+  const resetForm = () => {
+    setForm(emptyAddressForm);
+    setFormError(null);
+    setAdding(false);
+  };
+
+  const handleCreate = () => {
+    setFormError(null);
+    if (
+      !form.recipientName ||
+      !form.recipientPhone ||
+      !form.province ||
+      !form.city ||
+      !form.district ||
+      !form.detail
+    ) {
+      setFormError("请填写所有必填字段");
+      return;
+    }
+    // 调用地址微服务新增地址；成功后 useAddresses 会刷新列表
+    createAddress(form);
+    resetForm();
+  };
+
+  return (
+    <Dialog open={open} onClose={onClose} maxWidth="sm" fullWidth>
+      <DialogTitle sx={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
+        选择收货地址
+        <IconButton onClick={onClose} sx={{ p: 0 }}>
+          <X size={20} />
+        </IconButton>
+      </DialogTitle>
+      <DialogContent dividers>
+        {loading ? (
+          <Box sx={{ textAlign: "center", py: sp[8] }}>
+            <CircularProgress size={24} />
+          </Box>
+        ) : (
+          <Box sx={{ display: "flex", flexDirection: "column", gap: sp[2] }}>
+            {addresses.map((a) => (
+              <Box
+                key={a.addressId}
+                component="button"
+                onClick={() => onSelect(a.addressId)}
+                sx={{
+                  display: "flex",
+                  alignItems: "flex-start",
+                  gap: sp[2],
+                  p: sp[3],
+                  width: "100%",
+                  textAlign: "left",
+                  border: `1px solid ${tokens.colors.border.default}`,
+                  borderRadius: tokens.radius.lg,
+                  bgcolor: "transparent",
+                  cursor: "pointer",
+                }}
+              >
+                <Radio checked={a.addressId === selectedAddressId} size="small" sx={{ p: 0, mt: "2px" }} />
+                <Box sx={{ flex: 1, minWidth: 0 }}>
+                  <Box sx={{ display: "flex", alignItems: "center", gap: sp[2], mb: sp[1] }}>
+                    <Typography variant="body2" sx={{ fontWeight: 600, color: tokens.colors.text.primary }}>
+                      {a.recipientName}
+                    </Typography>
+                    <Typography variant="caption" sx={{ color: tokens.colors.text.secondary }}>
+                      {a.recipientPhone}
+                    </Typography>
+                    {a.isDefault && (
+                      <Box
+                        sx={{
+                          px: sp[1],
+                          borderRadius: tokens.radius.sm,
+                          bgcolor: tokens.colors.accent.red,
+                          color: "#fff",
+                          fontSize: "0.625rem",
+                        }}
+                      >
+                        默认
+                      </Box>
+                    )}
+                  </Box>
+                  <Typography variant="caption" sx={{ color: tokens.colors.text.secondary }}>
+                    {addressFullText(a)}
+                  </Typography>
+                </Box>
+              </Box>
+            ))}
+
+            {!adding && (
+              <Button
+                startIcon={<Plus size={16} />}
+                onClick={() => setAdding(true)}
+                sx={{ alignSelf: "flex-start", color: tokens.colors.accent.red, textTransform: "none" }}
+              >
+                添加新地址
+              </Button>
+            )}
+
+            {adding && (
+              <Box sx={{ display: "flex", flexDirection: "column", gap: sp[3], mt: sp[2] }}>
+                {formError && <Alert severity="error">{formError}</Alert>}
+                <Box sx={{ display: "flex", gap: sp[3] }}>
+                  <TextField
+                    label="收件人"
+                    size="small"
+                    fullWidth
+                    value={form.recipientName}
+                    onChange={(e) => setForm((p) => ({ ...p, recipientName: e.target.value }))}
+                  />
+                  <TextField
+                    label="手机号码"
+                    size="small"
+                    fullWidth
+                    value={form.recipientPhone}
+                    onChange={(e) => setForm((p) => ({ ...p, recipientPhone: e.target.value }))}
+                  />
+                </Box>
+                <Box sx={{ display: "flex", gap: sp[3] }}>
+                  <TextField
+                    label="省"
+                    size="small"
+                    fullWidth
+                    value={form.province}
+                    onChange={(e) => setForm((p) => ({ ...p, province: e.target.value }))}
+                  />
+                  <TextField
+                    label="市"
+                    size="small"
+                    fullWidth
+                    value={form.city}
+                    onChange={(e) => setForm((p) => ({ ...p, city: e.target.value }))}
+                  />
+                  <TextField
+                    label="区/县"
+                    size="small"
+                    fullWidth
+                    value={form.district}
+                    onChange={(e) => setForm((p) => ({ ...p, district: e.target.value }))}
+                  />
+                </Box>
+                <TextField
+                  label="详细地址"
+                  size="small"
+                  fullWidth
+                  multiline
+                  rows={2}
+                  value={form.detail}
+                  onChange={(e) => setForm((p) => ({ ...p, detail: e.target.value }))}
+                />
+                <Box sx={{ display: "flex", alignItems: "center" }}>
+                  <Checkbox
+                    checked={form.isDefault}
+                    onChange={(e) => setForm((p) => ({ ...p, isDefault: e.target.checked }))}
+                    size="small"
+                    sx={{ p: 0, mr: sp[2] }}
+                  />
+                  <Typography variant="body2">设为默认地址</Typography>
+                </Box>
+              </Box>
+            )}
+          </Box>
+        )}
+      </DialogContent>
+      {adding && (
+        <DialogActions>
+          <Button onClick={resetForm} disabled={isCreating} sx={{ textTransform: "none" }}>
+            取消
+          </Button>
+          <Button
+            variant="contained"
+            startIcon={<Check size={16} />}
+            onClick={handleCreate}
+            disabled={isCreating}
+            sx={{ textTransform: "none", bgcolor: tokens.colors.accent.red, "&:hover": { bgcolor: "#dc2626" } }}
+          >
+            {isCreating ? "保存中…" : "保存地址"}
+          </Button>
+        </DialogActions>
+      )}
+    </Dialog>
   );
 }
