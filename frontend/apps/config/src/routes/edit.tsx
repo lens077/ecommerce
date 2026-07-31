@@ -267,7 +267,7 @@ function EditPage() {
   const formatButton = (
     <Tooltip title={formattable ? "格式化 (Alt+Shift+F)" : `${formatLabel(format)} 没有可重排的结构`}>
       <span>
-        <Button startIcon={<Wand2 size={18} />} disabled={!formattable} onClick={doFormat}>
+        <Button size="small" startIcon={<Wand2 size={18} />} disabled={!formattable} onClick={doFormat}>
           格式化
         </Button>
       </span>
@@ -343,7 +343,6 @@ function EditPage() {
             <Chip label={`v${data?.entry?.version ?? "?"}`} size="small" />
           )}
           <Box sx={{ flex: 1 }} />
-          {formatButton}
           <Button
             startIcon={<History size={18} />}
             disabled={isNew}
@@ -427,7 +426,8 @@ function EditPage() {
           ...(isFullscreen ? fullscreenOverlay : { flex: 1, minHeight: 240 }),
         }}
       >
-        {/* 工具条:非全屏只放状态和全屏按钮;全屏时把格式化/保存也带上,免得为了保存退出全屏 */}
+        {/* 工具条:格式化紧挨全屏按钮(都是「对着编辑器本身」的操作,跟头部的 key 级操作分开);
+            全屏时额外把保存带上,免得为了保存先退出全屏 */}
         <Box
           sx={{
             display: "flex",
@@ -449,8 +449,8 @@ function EditPage() {
           )}
           {statusChip}
           <Box sx={{ flex: 1 }} />
-          {isFullscreen && formatButton}
           {isFullscreen && saveButton}
+          {formatButton}
           {fullscreenButton}
         </Box>
 
