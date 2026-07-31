@@ -79,7 +79,8 @@ var Module = fx.Module("registry",
 			opts := []Option{
 				WithLogger(logger),
 			}
-			if consulCfg.Tls.Enable && consulCfg.Tls != nil {
+			// 判空必须在解引用之前:配置里没写 tls 段时 Tls 为 nil,反过来写会直接 panic
+			if consulCfg.Tls != nil && consulCfg.Tls.Enable {
 				opts = append(opts, WithTLS(consulCfg.Tls.InsecureSkipVerify, consulCfg.Tls.CaPem))
 			}
 
