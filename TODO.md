@@ -59,8 +59,10 @@
 | 设计文档 | ✅ | `CONFIG_CENTER_DESIGN.md`：架构/数据模型/RPC/鉴权/校验/玻璃态/路线图 |
 | 后端 config 服务 | ✅ | 竖切代码 + **端到端联调通过**：proto + sqlc(entry/revision) + CRUD + 版本历史 + Rollback(事务) + 服务端 yml/toml/json 格式校验；已接本地集群真实 Postgres(verify-ca)/Redis(dragonfly:443)/Consul(192.168.3.112:8500);直连与经网关(admin JWT→RBAC→x-md-global-name)7 个 RPC 全部验证(含语法校验拒绝、删后 404) |
 | 网关接入 config | ✅ | `gateway/configs/config.yaml` 新增 `/config* → discovery:///config-service`;`policies.csv` 新增 `p, admin, /config.v1.ConfigService/*, POST, allow`;已同步 Consul KV,网关热重载并发现 config-service |
+| 网关 JWT 时钟容差 | ✅ | `gateway/middleware/jwt/jwt.go` 增加 `jwt.WithLeeway(60s)`:修复登录后毫秒级请求因 `nbf` 零容差+微小时钟偏移被判 "token is not valid yet" → 401 → 前端退登死循环 |
 | Consul 配置 KV | ✅ | 新增 `ecommerce/config/dev.yml`(真实 DB/Redis/discovery),服务启动从此加载 |
-| 前端 apps/config | 🟡 | 竖切页面完成并通过 `vite build`/`tsc`：key 浏览器(namespace/env/前缀)+ 新建 Key + Monaco 编辑器(yml/toml/json 高亮、JSON 实时校验、服务端语法错误标注)+ 保存/删除 + 历史列表 + Monaco DiffEditor + 回滚；玻璃态 UI，复用 Casdoor 登录。后端链路已通(网关 :8080),待浏览器实测 |
+| 前端 apps/config | 🟡 | 竖切页面 + 登录健壮性:token 有效性(过期)校验 + 认证失败死循环保护(登录后仍 401 则停在登录页) + `listKeys` 仅在已认证时发起;`vite build`/`tsc` 通过。玻璃态 UI,复用 Casdoor 登录,后端链路已通(网关 :8080)。待浏览器实测完整 CRUD/历史/回滚 |
+| root 脚本 dev:config | ✅ | `frontend/package.json` 增加 `dev:config → vp run config#dev`,与 `dev:merchant` 同款 |
 | 下发/Watch/SDK 热更新 | ⬜ | 后续：Consul 桥接、server-stream 推送、Go 客户端 SDK |
 | 审批/灰度/密钥加密/审计 | ⬜ | 后续阶段 |
 

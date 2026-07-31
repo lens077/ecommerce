@@ -24,6 +24,7 @@ import {
 } from "@mui/material";
 import { KeyRound, Plus, RefreshCw } from "lucide-react";
 import { configApi, ConfigFormat } from "@/api";
+import { useAuthState } from "@/providers/AuthProvider";
 import { editorStore, setEnvironment, setNamespace } from "@/store/editor";
 import { ENV_OPTIONS, FORMAT_OPTIONS, formatLabel } from "@/lib/format";
 import { sp } from "@/styles/glass";
@@ -34,6 +35,7 @@ export const Route = createFileRoute("/")({
 
 function BrowserPage() {
   const snap = useSnapshot(editorStore);
+  const { isAuthenticated } = useAuthState();
   const navigate = useNavigate();
   const [prefix, setPrefix] = useState("");
   const [newOpen, setNewOpen] = useState(false);
@@ -41,6 +43,8 @@ function BrowserPage() {
   const { data, isLoading, isError, error, refetch, isFetching } = useQuery({
     queryKey: ["listKeys", snap.namespace, snap.environment, prefix],
     queryFn: ({ signal }) => configApi.listKeys(snap.namespace, snap.environment, prefix, signal),
+    // 仅在已认证时发起，避免未认证/坏 token 触发无谓的 401 与退登循环
+    enabled: isAuthenticated,
   });
 
   const openKey = (key: string) => {
