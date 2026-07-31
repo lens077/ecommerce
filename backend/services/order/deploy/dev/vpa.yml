@@ -1,13 +1,14 @@
 apiVersion: autoscaling.k8s.io/v1
 kind: VerticalPodAutoscaler
 metadata:
-  name: shopping-cart-vpa # 每个微服务改一下名字
+  name: ecommerce-order-vpa # 每个微服务改一下名字
   namespace: ecommerce
 spec:
   targetRef:
     apiVersion: apps/v1
     kind: Deployment
-    name: shopping-cart # 对应你的微服务 Deployment 名字
+    # 必须与 deploy/dev/deployment.yaml 的 metadata.name 一致，写错 VPA 会静默不生效
+    name: ecommerce-order-deploy
   updatePolicy:
     updateMode: "InPlace" # 流量来了原地热扩容，不重启，微服务不断连
   resourcePolicy:

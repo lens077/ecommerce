@@ -1,0 +1,13 @@
+apiVersion: v1
+kind: Service
+metadata:
+  name: ecommerce-merchant-service
+spec:
+  externalTrafficPolicy: Local
+  selector:
+    app: ecommerce-merchant
+  ports:
+    - protocol: TCP
+      port: 30007
+      targetPort: 30007
+  type: LoadBalancer

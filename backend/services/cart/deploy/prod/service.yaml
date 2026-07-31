@@ -3,6 +3,7 @@ kind: Service
 metadata:
   name: ecommerce-cart-service
 spec:
+  externalTrafficPolicy: Local
   selector:
     app: ecommerce-cart
   ports:

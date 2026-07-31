@@ -1,25 +1,47 @@
+# 单个微服务的 compose,环境变量与 `make dev` 完全一致。
+# 前置:docker network create ecommerce
+#
+# 注意:容器注册进 Consul 的是它在 ecommerce 网桥里的 IP(172.x),
+# 所以调用方(网关)也必须接在同一个 ecommerce 网络里才解析得到;
+# 宿主机侧仍可用下面 ports 映射出来的端口直连。
 services:
 
-  connect-example-go:
-#    image: ccr.ccs.tencentyun.com/kratos/gateway:v2.0.0
-    image: harbor.apikv.com:5443/sumery/connect-example-backend:v1.2.19
-#    platform: linux/amd64
-    build:
-      context: .
-      target: final
-    environment:
-      HTTP_ADDR: 0.0.0.0:4000
-      RUN_MODE: prod
+  ecommerce-product:
+    image: ccr.ccs.tencentyun.com/sumery/product:dev
+    container_name: ecommerce-product
+    # 本地改代码后想直接起自己的构建:注释掉上面的 image,放开下面三行
+    # build:
+    #   context: ../..
+    #   dockerfile: services/product/Dockerfile
+    #   args:
+    #     SERVICE: product
+    pull_policy: always
+    networks:
+      - ecommerce
     ports:
-      - "0.0.0.0:4000:4000"
-    container_name: connect-example-go
+      - "0.0.0.0:30003:30003"
+    environment:
+      # 与 `make dev` 逐项对齐 —— 改一边就要改另一边,否则「本地能跑、compose 跑不起来」
+      - SERVICE_NAME=product-service
+      - SERVICE_VERSION=v1
+      - DEPLOYMENT_MODE=dev
+      # CONSUL_* 同时供「读配置」与「服务注册发现」使用
+      - CONSUL_ENABLED=true
+      - CONSUL_ADDR=192.168.3.112:8500
+      - CONSUL_PATH=ecommerce/product/dev.yml
+      - CONSUL_SCHEME=http
+      - CONSUL_INSECURE_SKIP_VERIFY=true
+      # 日志只走 stdout,不从应用内导出
+      - OTEL_LOGS_EXPORTER=none
+    healthcheck:
+      # /healthz 在 DB/缓存不通时返回 503;镜像是 alpine,用 busybox 自带的 wget
+      test: ["CMD", "wget", "-q", "-O", "-", "http://127.0.0.1:30003/healthz"]
+      interval: 10s
+      timeout: 3s
+      retries: 3
+      start_period: 15s
     restart: on-failure:3
-#    environment:
-#      - DISCOVERY_DSN=consul://apikv.com:8500
-#      - DISCOVERY_CONFIG_PATH=ecommerce/gateway/config.yaml
-#    volumes:
-#      # 仅挂载本地配置文件（开发环境）
-#      - ./dynamic-config:/app/dynamic-config
-#    command: [ "/app/gateway" ]
-#    networks:
-#      - ecommerce
+
+networks:
+  ecommerce:
+    external: true

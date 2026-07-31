@@ -1,12 +1,12 @@
 apiVersion: v1
 kind: Service
 metadata:
-  name: example-service
+  name: ecommerce-payment-service
 spec:
   selector:
-    app: example
+    app: ecommerce-payment
   ports:
     - protocol: TCP
-      port: 30000
-      targetPort: 30000
+      port: 30008
+      targetPort: 30008
   type: LoadBalancer

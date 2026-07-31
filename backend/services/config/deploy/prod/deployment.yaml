@@ -1,0 +1,71 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: ecommerce-config-deploy
+  labels:
+    app: ecommerce-config
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: ecommerce-config
+  template:
+    metadata:
+      name: ecommerce-config
+      labels:
+        app: ecommerce-config
+    spec:
+      containers:
+        - name: ecommerce-config
+          image: ccr.ccs.tencentyun.com/sumery/config:prod
+          imagePullPolicy: Always
+          env:
+            # 关闭应用内的 Log 导出器，只保留 Trace 和 Metric。
+            # 日志输出到 stdout，由部署在 k8s 的 Fluent Bit 统一采集
+            - name: OTEL_LOGS_EXPORTER
+              value: "none"
+            # SERVICE_NAME 就是注册进 Consul 的服务名,必须与网关
+            # gateway/configs/config.yaml 里的 discovery:///config-service 完全一致
+            - name: SERVICE_NAME
+              value: "config-service"
+            - name: SERVICE_VERSION
+              value: "v1"
+            - name: DEPLOYMENT_MODE
+              value: "prod"
+            # CONSUL_* 同时供「读配置」与「服务注册发现」使用
+            - name: CONSUL_ENABLED
+              value: "true"
+            - name: CONSUL_ADDR
+              value: "consul-server.consul.svc:8501"
+            - name: CONSUL_SCHEME
+              value: "https"
+            - name: CONSUL_INSECURE_SKIP_VERIFY
+              value: "true"
+            - name: CONSUL_PATH
+              value: "ecommerce/config/prod.yml"
+          ports:
+            - containerPort: 30010
+              protocol: TCP
+          # /healthz 在 DB/缓存不通时返回 503。就绪探针据此摘流量;
+          # 存活探针只探端口 —— 用 /healthz 做存活会让一次数据库抖动把所有 Pod 连环重启。
+          readinessProbe:
+            httpGet:
+              path: /healthz
+              port: 30010
+            initialDelaySeconds: 5
+            periodSeconds: 10
+            failureThreshold: 3
+          livenessProbe:
+            tcpSocket:
+              port: 30010
+            initialDelaySeconds: 20
+            periodSeconds: 20
+            failureThreshold: 3
+          resources:
+            requests:
+              cpu: 100m
+              memory: 128Mi
+            limits:
+              cpu: "1"
+              memory: 512Mi
+      restartPolicy: Always
