@@ -19,6 +19,9 @@ import (
 	"go.uber.org/zap"
 )
 
+// defaultTtlPingInterval 是 discovery.consul.check.ttl.ping_interval 缺失时的兜底心跳间隔
+const defaultTtlPingInterval = 10 * time.Second
+
 type ConsulRegistry struct {
 	Addr   string
 	ID     string
@@ -198,17 +201,22 @@ func (r *ConsulRegistry) Register(conf *confv1.Bootstrap, info meta.AppInfo) err
 
 // TtlCheckPinger 负责定期向 Consul Agent 发送心跳信号
 func (r *ConsulRegistry) TtlCheckPinger(ctx context.Context, conf *confv1.Bootstrap) {
-	TtlPingInterval := 10 * time.Second // 默认值
-	if conf.Discovery != nil && conf.Discovery.Consul != nil && conf.Discovery.Consul.Check != nil && conf.Discovery.Consul.Check.Ttl != nil && conf.Discovery.Consul.Check.Ttl.PingInterval != nil {
-		TtlPingInterval = conf.Discovery.Consul.Check.Ttl.PingInterval.AsDuration()
+	// time.NewTicker 对 <=0 的间隔直接 panic,而这里跑在独立 goroutine 里,
+	// panic 会整个进程带走。配置缺失或写成 0 时回落到默认值。
+	ttlPingInterval := defaultTtlPingInterval
+	if conf.Discovery != nil && conf.Discovery.Consul != nil &&
+		conf.Discovery.Consul.Check != nil && conf.Discovery.Consul.Check.Ttl != nil &&
+		conf.Discovery.Consul.Check.Ttl.PingInterval.AsDuration() > 0 {
+		ttlPingInterval = conf.Discovery.Consul.Check.Ttl.PingInterval.AsDuration()
 	}
-	ticker := time.NewTicker(TtlPingInterval)
+
+	ticker := time.NewTicker(ttlPingInterval)
 	defer ticker.Stop()
 
 	// Consul Agent 要求 CheckID 必须是 "service:<ID>" 的格式
 	checkID := fmt.Sprintf("service:%s", r.ID)
 
-	r.logger.Info("starting ttl pinger", zap.Duration("interval", TtlPingInterval), zap.String("checkID", checkID))
+	r.logger.Info("starting ttl pinger", zap.Duration("interval", ttlPingInterval), zap.String("checkID", checkID))
 
 	for {
 		select {

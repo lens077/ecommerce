@@ -322,6 +322,38 @@ func TestRegister_BadServerAddr(t *testing.T) {
 	}
 }
 
+// 配置里没写 check 段时 Register 必须报错而不是 panic,更不能裸注册:
+// 没有健康检查的实例会被 Consul 一直当健康的,流量照打进来,比注册失败更难发现。
+func TestRegister_MissingCheckConfig(t *testing.T) {
+	noCheck := newConf("0.0.0.0:30006", time.Second)
+	noCheck.Discovery.Consul.Check = nil
+	noTTL := newConf("0.0.0.0:30006", time.Second)
+	noTTL.Discovery.Consul.Check.Ttl = nil
+	noDiscovery := newConf("0.0.0.0:30006", time.Second)
+	noDiscovery.Discovery = nil
+
+	cases := []struct {
+		name string
+		conf *confv1.Bootstrap
+	}{
+		{"no check section", noCheck},
+		{"no ttl section", noTTL},
+		{"no discovery section", noDiscovery},
+	}
+
+	for _, c := range cases {
+		t.Run(c.name, func(t *testing.T) {
+			agent := startFakeConsulAgent(t)
+			reg := newRegistry(t, agent.addr)
+
+			var err error
+			require.NotPanics(t, func() { err = reg.Register(c.conf, testAppInfo) })
+			require.Error(t, err)
+			assert.Nil(t, agent.Registered(), "配置不全时不该发出注册请求")
+		})
+	}
+}
+
 // Agent 不可达时 Register 必须返回错误,让上层决定是降级还是退出
 func TestRegister_AgentUnreachable(t *testing.T) {
 	// 127.0.0.1:1 没有监听者,连接会立即被拒绝(比超时地址快)
@@ -358,6 +390,40 @@ func TestTtlCheckPinger_UpdatesTTL(t *testing.T) {
 
 	for _, id := range agent.TTLUpdates() {
 		assert.Equal(t, "service:"+testAppInfo.ID, id)
+	}
+}
+
+// ping_interval 缺失或写成 0 时 time.NewTicker 会 panic,而 pinger 跑在独立 goroutine 里,
+// panic 会把整个进程带走 —— 必须回落到默认间隔。
+func TestTtlCheckPinger_MissingPingInterval(t *testing.T) {
+	zeroInterval := newConf("0.0.0.0:30006", 0)
+	nilInterval := newConf("0.0.0.0:30006", time.Second)
+	nilInterval.Discovery.Consul.Check.Ttl.PingInterval = nil
+	nilTTL := newConf("0.0.0.0:30006", time.Second)
+	nilTTL.Discovery.Consul.Check.Ttl = nil
+	noDiscovery := newConf("0.0.0.0:30006", time.Second)
+	noDiscovery.Discovery = nil
+
+	cases := []struct {
+		name string
+		conf *confv1.Bootstrap
+	}{
+		{"zero interval", zeroInterval},
+		{"nil ping interval", nilInterval},
+		{"nil ttl", nilTTL},
+		{"no discovery section", noDiscovery},
+	}
+
+	for _, c := range cases {
+		t.Run(c.name, func(t *testing.T) {
+			agent := startFakeConsulAgent(t)
+			reg := newRegistry(t, agent.addr)
+
+			ctx, cancel := context.WithCancel(context.Background())
+			cancel() // 立刻取消:只验证起 ticker 那一步不炸,不必真等一个心跳周期
+
+			require.NotPanics(t, func() { reg.TtlCheckPinger(ctx, c.conf) })
+		})
 	}
 }
 
