@@ -7,7 +7,6 @@ import (
 	"sync"
 	"time"
 
-	"github.com/hashicorp/consul/api"
 	"github.com/lens077/ecommerce/backend/constants"
 	confv1 "github.com/lens077/ecommerce/backend/services/cart/internal/conf/v1"
 	"github.com/lens077/ecommerce/backend/services/cart/internal/pkg/env"
@@ -79,36 +78,20 @@ func decodeConfig(data map[string]any, target any) error {
 	return decoder.Decode(v.AllSettings())
 }
 
+// Init 从配置中心(而非 Consul KV)拉取整份 Bootstrap 配置。
+// 引导参数(config-service 地址、namespace/environment/key)来自环境变量;
+// 其余全部配置(含 Consul 发现地址、DB、Redis 等)由配置中心下发。
 func Init(ctx context.Context) (*confv1.Bootstrap, error) {
-	addr := env.GetEnvString(constants.EnvConsulAddr, constants.ConsulAddr)
-	path := env.GetEnvString(constants.EnvConsulPath, constants.ConsulPath)
-	if path == "" {
-		return nil, fmt.Errorf("required env %s is missing", constants.EnvConsulPath)
+	addr := env.GetEnvString(constants.EnvConfigCenterAddr, constants.ConfigCenterAddr)
+	namespace := env.GetEnvString(constants.EnvConfigCenterNamespace, "")
+	environment := env.GetEnvString(constants.EnvConfigCenterEnv, "")
+	key := env.GetEnvString(constants.EnvConfigCenterKey, constants.ConfigCenterKey)
+	if namespace == "" || environment == "" {
+		return nil, fmt.Errorf("required env %s and %s must be set",
+			constants.EnvConfigCenterNamespace, constants.EnvConfigCenterEnv)
 	}
 
-	consulCfg := api.DefaultConfig()
-	consulCfg.Address = addr
-	consulCfg.Token = env.GetEnvString(constants.EnvConsulToken, constants.ConsulToken)
-	consulCfg.Scheme = env.GetEnvString(constants.EnvConsulScheme, constants.ConsulScheme)
-
-	if consulCfg.Scheme == "https" {
-		if env.GetEnvBool(constants.EnvConsulInsecureSkipVerify, constants.ConsulInsecureSkipVerify) {
-			consulCfg.TLSConfig.InsecureSkipVerify = true
-		} else {
-			consulCfg.TLSConfig = api.TLSConfig{
-				CAFile:   env.GetEnvString(constants.EnvConsulCaFile, ""),
-				CertFile: env.GetEnvString(constants.EnvConsulCertFile, ""),
-				KeyFile:  env.GetEnvString(constants.EnvConsulKeyFile, ""),
-			}
-		}
-	}
-
-	consulClient, err := api.NewClient(consulCfg)
-	if err != nil {
-		return nil, fmt.Errorf("initialize consul client failed: %v", err)
-	}
-
-	rawConfig, err := GetConfigFromConsul(consulClient, path)
+	rawConfig, err := GetConfigFromConfigCenter(ctx, addr, namespace, environment, key)
 	if err != nil {
 		return nil, err
 	}
