@@ -46,7 +46,7 @@
 
 | 项目 | 状态 | 说明 |
 |------|------|------|
-| 网关（身份验证/授权/路由守卫） | 🟡 | `gateway/` 已实现，集中式 Casdoor 鉴权 + 策略文件；10 条 endpoint 全部落地（`/user* /search* /product* /cart* /address* /config* /order* /inventory* /merchant* /payment*`）。**待办**：远端 `ecommerce-gateway:latest` 是旧镜像（仍去 KV 找 `rbac/policies.csv`，而代码常量早已改为 `policies/`），启动即 FATAL —— `gateway/compose.yaml` 目前只能配本地构建的 tag 用，需重新构建推送 |
+| 网关（身份验证/授权/路由守卫） | 🟡 | `gateway/` 已实现，集中式 Casdoor 鉴权 + 策略文件；10 条 endpoint 全部落地（`/user* /search* /product* /cart* /address* /config* /order* /inventory* /merchant* /payment*`）。远端 `ecommerce-gateway:latest` 此前是旧镜像（仍去 KV 找 `rbac/policies.csv`，而代码常量早已改为 `policies/`），启动即 FATAL —— 已重新多架构构建推送并用 `docker compose up` 拉真实远端镜像验证：10 条路由全建起、7 条鉴权路由 401、支付宝回调 200+code 12、未定义前缀 404 |
 | RBAC 三角色（消费者/商家/管理员） | 🟡 | 策略模型（model.conf/policies.csv）已有；order/payment/merchant/inventory 已按 **RPC 粒度**授权（避免整段 `/svc.v1.*` 放行导致的越权），其余服务仍是整段放行待细化 |
 | Casdoor 集成 | 🟡 | 登录/令牌解析打通，权限适配持续完善 |
 
