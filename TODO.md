@@ -50,7 +50,19 @@
 | RBAC 三角色（消费者/商家/管理员） | 🟡 | 策略模型（model.conf/policies.csv）已有，细粒度权限校验待补齐 |
 | Casdoor 集成 | 🟡 | 登录/令牌解析打通，权限适配持续完善 |
 
-### 5. 前端
+### 5. 配置中心（Config Center）
+
+> 设计文档见 `CONFIG_CENTER_DESIGN.md`。以 Postgres 为数据源、键值粒度、Casdoor 鉴权、玻璃态前端。
+
+| 项目 | 状态 | 说明 |
+|------|------|------|
+| 设计文档 | ✅ | `CONFIG_CENTER_DESIGN.md`：架构/数据模型/RPC/鉴权/校验/玻璃态/路线图 |
+| 后端 config 服务 | ⬜ | proto + Postgres(entry/revision) + CRUD + 版本历史 + 服务端格式校验（本轮竖切） |
+| 前端 apps/config | ⬜ | 玻璃态 UI + key 浏览器 + Monaco 编辑器（yml/toml/json 高亮+校验）+ 历史 Diff/回滚（本轮竖切） |
+| 下发/Watch/SDK 热更新 | ⬜ | 后续：Consul 桥接、server-stream 推送、Go 客户端 SDK |
+| 审批/灰度/密钥加密/审计 | ⬜ | 后续阶段 |
+
+### 6. 前端
 
 **consumer（消费者端）**
 
