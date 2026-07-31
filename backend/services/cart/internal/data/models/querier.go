@@ -11,7 +11,7 @@ import (
 type Querier interface {
 	//AddProductToCart
 	//
-	//  WITH insert AS (
+	//  WITH upsert AS (
 	//      INSERT INTO cart.cart_item (user_id,
 	//                                  merchant_id,
 	//                                  spu_id,
@@ -42,10 +42,12 @@ type Querier interface {
 	//                  selected = EXCLUDED.selected,
 	//                  -- 状态重新校准为正常
 	//                  status = EXCLUDED.status,
-	//                  updated_at = now())
-	//  SELECT COUNT(*) AS cart_item_quantity
-	//  FROM cart.cart_item
-	//  WHERE user_id = $1
+	//                  updated_at = now()
+	//          -- 返回新增/更新命中的购物车项ID（前端下单需要真实ID）
+	//          RETURNING id)
+	//  SELECT upsert.id                                                      AS cart_item_id,
+	//         (SELECT COUNT(*) FROM cart.cart_item WHERE user_id = $1) AS cart_item_quantity
+	//  FROM upsert
 	AddProductToCart(ctx context.Context, arg AddProductToCartParams) (AddProductToCartRow, error)
 	// 获取用户购物车所有商品
 	//
