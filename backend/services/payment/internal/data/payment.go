@@ -1,19 +1,69 @@
 package data
 
 import (
+	"context"
+	"fmt"
+	"net/url"
+
+	"connectrpc.com/connect"
+	"github.com/lens077/ecommerce/backend/services/payment/internal/biz"
 	conf "github.com/lens077/ecommerce/backend/services/payment/internal/conf/v1"
 	"github.com/lens077/ecommerce/backend/services/payment/internal/data/models"
 
 	"go.uber.org/zap"
 )
 
-// var _ biz.PaymentRepo = (*paymentRepo)(nil)
+var _ biz.PaymentRepo = (*paymentRepo)(nil)
 
 type paymentRepo struct {
 	queries *models.Queries
 	data    *Data
 	log     *zap.SugaredLogger
 	conf    *conf.Pay
+}
+
+// NewPaymentRepo 构造 payment 仓储。
+//
+// 下面 5 个方法目前全部返回 Unimplemented:原实现(本文件后半段的注释块)依赖已经
+// 被移除的 balance / consumerOrder 两个 client,恢复它们是另一件事。这里做成显式
+// 桩而不是继续注释掉整个 provider,是为了让服务能编译、能起、能注册进 Consul ——
+// 否则网关的 /payment* 路由永远没有可用节点,调用方拿到的是 503 而不是"未实现",
+// 分不清是链路不通还是功能没做。
+func NewPaymentRepo(data *Data, c *conf.Pay, logger *zap.Logger) biz.PaymentRepo {
+	return &paymentRepo{
+		queries: models.New(data.db),
+		data:    data,
+		log:     logger.Sugar(),
+		conf:    c,
+	}
+}
+
+// errUnimplemented 统一的未实现错误,code = 12(Unimplemented)。
+func errUnimplemented(method string) error {
+	return connect.NewError(
+		connect.CodeUnimplemented,
+		fmt.Errorf("payment.v1.PaymentService/%s is not implemented yet", method),
+	)
+}
+
+func (r *paymentRepo) CreatePayment(_ context.Context, _ *biz.CreatePaymentReq) (*biz.CreatePaymentResp, error) {
+	return nil, errUnimplemented("CreatePayment")
+}
+
+func (r *paymentRepo) GetPaymentStatus(_ context.Context, _ *biz.GetPaymentStatusReq) (*biz.GetPaymentStatusResp, error) {
+	return nil, errUnimplemented("GetPaymentStatus")
+}
+
+func (r *paymentRepo) HandlePaymentNotify(_ context.Context, _ url.Values) (*biz.PaymentNotifyResp, error) {
+	return nil, errUnimplemented("HandlePaymentNotify")
+}
+
+func (r *paymentRepo) HandlePaymentCallback(_ context.Context, _ *biz.PaymentCallbackReq) (*biz.PaymentCallbackResp, error) {
+	return nil, errUnimplemented("HandlePaymentCallback")
+}
+
+func (r *paymentRepo) GetPaymentByOrderID(_ context.Context, _ *biz.GetPaymentByOrderIDRequest) (*biz.Payment, error) {
+	return nil, errUnimplemented("GetPaymentByOrderID")
 }
 
 // processBalanceTransfer 处理余额支付的资金转移

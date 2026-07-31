@@ -230,7 +230,18 @@ func NewPostgresPool(lc fx.Lifecycle, cfg *conf.Bootstrap, logger *zap.Logger) (
 }
 
 // NewAlipay 支付宝
-func NewAlipay(c *conf.Pay) *alipay.Client {
+//
+// 没配 pay.alipay(或 app_id 为空)时返回 nil 而不是 panic:支付宝的应用私钥/证书
+// 是真实凭据,不可能放进仓库或本地环境的 KV 里,而 fx 的 provider 一 panic 整个
+// 进程就起不来 —— 服务注册不进 Consul,网关的 /payment* 永远没有节点。
+// 当前 paymentRepo 是桩实现,不会解引用这个 client;真实实现恢复时,拿到 nil
+// 应当直接返回错误,而不是继续往下走。
+func NewAlipay(c *conf.Pay, logger *zap.Logger) *alipay.Client {
+	if c == nil || c.Alipay == nil || c.Alipay.AppId == "" {
+		logger.Warn("alipay is not configured (pay.alipay.app_id is empty), payment gateway calls will be unavailable")
+		return nil
+	}
+
 	// log.Debugf("config Pay: %+v", c)
 	client, err := alipay.New(c.Alipay.AppId, c.Alipay.PrivateKey, false)
 	if err != nil {
