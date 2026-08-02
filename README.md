@@ -55,7 +55,9 @@
 uber/fx)和第三方服务，例如注册发现(consul)
 
 6. 网关：身份验证和授权， 路由守卫，安全功能等集成到网关，将通用功能集成到网关层，后端每个微服务无需重复集成
-7. 前端：采用Vite+React TypeScript和husky+cz-git+biome来规范化，playwright+vitest用于测试
+7. 前端：pnpm workspace 的 monorepo，采用 vite-plus(vp) + React TypeScript。vite-plus 一个包同时提供 dev
+   server、构建、测试(vitest)、lint(oxlint)、格式化(oxfmt)、任务运行器和 git 钩子，所以没有 husky /
+   biome / eslint / prettier；提交信息由仓库根的 commitlint 校验。桌面端用 Tauri 套壳
 8. CI/CD：通过GitHub Actions将前后端项目构建/打包推送到容器注册表并更新清单仓库的版本号，由Argo CD监听清单仓库的变更并更新部署
 9. 可观测性：由fluent-bit采集日志（Info，Warn，Error），应用通过OpenTelemetry
    sdk发送应用指标，由Jaeger展示链路（微服务调用情况），来使用Grafana进行追踪，监控，优化
@@ -212,9 +214,25 @@ curl -v -X POST http://localhost:8080/user.v1.UserService/UserProfile \
 
 ## Frontend
 
+`frontend/` 是一个 pnpm workspace monorepo，5 个 app + 8 个共享包。
+结构、分包原则、四层目录职责和工具链细节见 [`frontend/README.md`](frontend/README.md)。
+
+| app        | 端口 | 说明                                     | 启动                |
+| ---------- | ---- | ---------------------------------------- | ------------------- |
+| `consumer` | 3000 | 消费者端：商品、购物车、下单、地址、订单 | `pnpm dev`          |
+| `merchant` | 3002 | 商家端：店铺、商品、订单、报表           | `pnpm dev:merchant` |
+| `admin`    | 3003 | 管理端：用户、商家、品类、报表           | `vp run admin#dev`  |
+| `config`   | 3005 | 配置中心：配置下发、历史、密钥脱敏       | `pnpm dev:config`   |
+| `desktop`  | —    | Tauri 壳，套在上面三个之一外面           | `pnpm desktop`      |
+
+共享包：`api`（Connect 传输层与拦截器）、`configs`、`constants`、`i18n`、
+`tauri`（桌面端胶水）、`tracker`（埋点）、`ui`、`utils`。
+
 ```bash
-pnpm i
-pnpm dev
+cd frontend
+pnpm i        # prepare 会跑 vp config 装 git 钩子（core.hooksPath 指向 frontend/.vite-hooks/_）
+pnpm dev      # consumer，端口 3000
+pnpm ready    # vp fmt && vp lint && vp run -r test && vp run -r build，提 PR 前跑它
 ```
 
 测试：

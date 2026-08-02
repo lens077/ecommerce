@@ -177,15 +177,45 @@ feat(address): :sparkles: 行政区划落库 + RegionService 三级级联接口
 | `:tada:` | 初始化项目 | chore / feat |
 | `:poop:` | 写下待改进的糟糕代码 | chore / fix |
 
+## Body 与 Footer
+
+两者都可选，但一旦写就有形状：
+
+- **body** 解释**为什么**这么改、与之前行为差在哪，不是复述 diff。每行不超过 72 字符
+- **footer** 只放两类：`BREAKING CHANGE: <描述>`（全大写，说明不兼容点）和 `Closes #123, #124`
+
+subject 控制在 50 字符以内；正文可以长，长的是 body 不是 header。
+
+```
+feat(api): 将用户接口从 REST 迁移至 GraphQL
+
+REST 版本每次拉用户主页要发四个请求，且字段固定，
+移动端只用到其中三分之一。改为 GraphQL 后由调用方声明字段。
+
+BREAKING CHANGE: 旧版 REST 接口 /api/user 已移除，请使用 GraphQL 查询。
+Closes #123, #124
+```
+
 ## 校验工具链
 
 ```
-commitlint.config.mjs     规则 + EMOJI_TYPES 白名单（唯一真相源）
-.husky/commit-msg         pnpm exec commitlint --edit "$1"
-package.json              仓库根，只装 @commitlint/cli + config-conventional + husky
+commitlint.config.mjs           规则 + EMOJI_TYPES 白名单（唯一真相源）
+package.json（仓库根）           只装 @commitlint/cli + @commitlint/config-conventional
+frontend/.vite-hooks/commit-msg  pnpm exec commitlint --edit "$1"
+frontend/.vite-hooks/pre-commit  cd frontend && vp staged
 ```
 
-新克隆仓库后跑一次 `pnpm install`（在**仓库根**，不是 `frontend/`）。`prepare: husky` 会自动把 `core.hooksPath` 设成 `.husky/_`。
+钩子由 **vite-plus** 安装，不是 husky：在 `frontend/` 下跑 `pnpm install`，其 `prepare: "vp config"` 会把仓库级的 `core.hooksPath` 设成 `frontend/.vite-hooks/_`。`core.hooksPath` 是仓库级设置，所以**后端 Go 的提交同样受这套校验**。
+
+⚠️ **不要把钩子挪回仓库根的 `.husky/`。** `vp config` 里有这么一段接管守卫：
+
+```js
+if (existingHooksPath && existingHooksPath !== target
+    && existingHooksPath !== ".husky" && !existingHooksPath.startsWith(".husky/"))
+  return { message: `core.hooksPath is already set to ..., skipping` };
+```
+
+它只在已有值「不像 husky」时才让路。只要 `core.hooksPath` 以 `.husky` 开头，下一次 `pnpm install` 就会被 vite-plus 悄悄接管过去，而 `_/h` 的 `[ ! -f "$s" ] && exit 0` 让缺失的钩子**静默放行**。两套钩子抢同一个 git 配置，抢输的那套就这么没的。
 
 自己验一条消息：
 
@@ -194,16 +224,23 @@ echo "feat(address): :sparkles: 行政区划落库" | pnpm exec commitlint
 pnpm exec commitlint --from HEAD~7 --to HEAD   # 回放校验既有提交
 ```
 
-### ⚠️ 这套东西曾经整整一年没生效
+### ⚠️ 这套东西曾经九个月一次都没生效
 
-2026-08-02 之前，四层同时是断的，所以**在此之前的全部提交都没被校验过**：
+从 2025-11-04 搭起到 2026-08-02 修好，**中间的全部提交都没被校验过**，前端后端都是。层层叠叠断了五处，任何一处单独存在都足以让它失效：
 
-1. `core.hooksPath` 指向 `frontend/.husky/_` —— **这个目录根本不存在**。git 对此不报错，只是静默地一个钩子都不跑
-2. `.husky/commit-msg` 里写的是 `pnpm exec --no – commitlint`，那个 `–` 是**全角连字符 U+2013**，不是 `--`
-3. 仓库根没有 `package.json`，`pnpm exec` 会报 `ERR_PNPM_RECURSIVE_EXEC_NO_PACKAGE`
-4. commitlint 和 cz-git **压根没装**，工作区里搜不到任何依赖声明
+1. `.husky/commit-msg` 的**全部内容**是一行
 
-教训：**校验类工具装完必须用一条故意写错的消息验证它真的拦得住**。「配置文件存在」不等于「规则在跑」——静默失效的钩子比没有钩子更危险，因为它给了一种虚假的安全感。
+   ```
+   echo "pnpm exec --no – commitlint --edit $1" > .husky/commit-msg
+   ```
+
+   这不是钩子，是**创建钩子的那条安装命令被原样粘进了它本该创建的文件里**（出处就是当时 `frontend/git-commit-conventional.md` 结尾的 `npx husky add .husky/commit-msg '...'` 那行）。每次提交它只是把自己重写一遍，然后退出 0。**从建立那天起就没调用过 commitlint 一次**——这是起点，后面四条都是在它之上叠的
+2. 它写出来的那行本身也是坏的：`–` 是全角连字符 U+2013 不是 `--`；`--no` 又是 pnpm 11 已废弃的 exec 参数
+3. `@commitlint/cli` 从未出现在任何 `devDependencies` 里（当时只有 cz-git / husky / lint-staged）
+4. `frontend/apps/consumer/.commitlintrc.cjs` 的 `rules: {}` 是空的，也没有 `extends` —— 零规则
+5. 2026-03-19 前端迁移到 vite-plus、删掉 `frontend/.husky/` 时，`vp config` 看到已有值 `frontend/.husky/_` —— 不等于 `.husky`、也不以 `.husky/` 开头 —— 守卫触发，打印 skipping 后放弃接管。于是 `core.hooksPath` 一直指着一个**已被删除的目录**，git 对此不报错，只是静默地一个钩子都不跑
+
+教训：**校验类工具装完必须用一条故意写错的消息验证它真的拦得住**。「配置文件存在」不等于「规则在跑」——静默失效的钩子比没有钩子更危险，因为它给了一种虚假的安全感。这条对第 1 层尤其致命：文件在、可执行位在、`git commit` 也确实调用了它，唯独它什么都没做。
 
 另外 `pnpm exec` 不要加 `--no`：pnpm 11 已不认这个 exec 参数，会报 `Command "--no" not found`，等于把校验变成**永远失败**——而 `--no-verify` 一旦成为肌肉记忆，等于没校验。
 
@@ -224,4 +261,7 @@ pnpm exec commitlint --from HEAD~7 --to HEAD   # 回放校验既有提交
 ## 相关
 
 - 知识沉淀闭环见 [`context/harness-framework/self-refinement.md`](../harness-framework/self-refinement.md)
+- 前端工具链与钩子安装见 [`frontend/README.md`](../../frontend/README.md)
 - 完整 emoji 语义见 [gitmoji.dev](https://gitmoji.dev/)
+
+（本文件已合并原 `frontend/git-commit-conventional.md`。同一件事不要两个真相源——那份文档最后那行 `npx husky add .husky/commit-msg '...'` 正是上面第 1 层故障的来源。）
