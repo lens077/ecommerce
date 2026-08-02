@@ -11,6 +11,22 @@ import (
 	"github.com/google/uuid"
 )
 
+const CountRegions = `-- name: CountRegions :one
+SELECT count(*)
+FROM addresses.regions
+`
+
+// 行政区划总数，给启动自检用：表空了说明 seed_regions.sql 没灌
+//
+//	SELECT count(*)
+//	FROM addresses.regions
+func (q *Queries) CountRegions(ctx context.Context) (int64, error) {
+	row := q.db.QueryRow(ctx, CountRegions)
+	var count int64
+	err := row.Scan(&count)
+	return count, err
+}
+
 const CreateAddress = `-- name: CreateAddress :exec
 INSERT INTO addresses.addresses (address_id, user_id, recipient_name, recipient_phone,
                        province, city, district, detail, postal_code, full_text, is_default, is_deleted)
@@ -187,6 +203,48 @@ func (q *Queries) ListAddressesByUserID(ctx context.Context, userID string) ([]A
 			&i.DeletedAt,
 			&i.CreatedAt,
 			&i.UpdatedAt,
+		); err != nil {
+			return nil, err
+		}
+		items = append(items, i)
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	return items, nil
+}
+
+const ListRegionsByParent = `-- name: ListRegionsByParent :many
+SELECT id, parent_id, level, code, name, name_en, pinyin, sort_order
+FROM addresses.regions
+WHERE parent_id = $1
+ORDER BY sort_order, id
+`
+
+// 按上级列出行政区划（parent_id = 0 即省级）
+//
+//	SELECT id, parent_id, level, code, name, name_en, pinyin, sort_order
+//	FROM addresses.regions
+//	WHERE parent_id = $1
+//	ORDER BY sort_order, id
+func (q *Queries) ListRegionsByParent(ctx context.Context, parentID int32) ([]AddressesRegion, error) {
+	rows, err := q.db.Query(ctx, ListRegionsByParent, parentID)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	var items []AddressesRegion
+	for rows.Next() {
+		var i AddressesRegion
+		if err := rows.Scan(
+			&i.ID,
+			&i.ParentID,
+			&i.Level,
+			&i.Code,
+			&i.Name,
+			&i.NameEn,
+			&i.Pinyin,
+			&i.SortOrder,
 		); err != nil {
 			return nil, err
 		}

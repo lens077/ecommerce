@@ -6,4 +6,5 @@ import (
 
 var Module = fx.Module("service",
 	fx.Provide(NewAddressService),
+	fx.Provide(NewRegionService),
 )

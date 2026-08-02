@@ -1,11 +1,9 @@
 import { createClient } from "@connectrpc/connect"
-import { createConnectTransport } from "@connectrpc/connect-web"
 import { SearchService } from "@/gen/api";
-import { errorInterceptor, loggerInterceptor } from "@ecommerce/api";
-import { env } from "@/env";
+import { createAppTransport, errorInterceptor, loggerInterceptor } from "@ecommerce/api";
 
-const transport = createConnectTransport({
-    baseUrl: env.VITE_GATEWAY_URL ?? "http://localhost:8080",
+// 搜索是公开接口，不带 auth 拦截器
+const transport = createAppTransport({
     interceptors: [loggerInterceptor,errorInterceptor]
 })
 const client = createClient(SearchService, transport)

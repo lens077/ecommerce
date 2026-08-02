@@ -11,6 +11,11 @@ import (
 )
 
 type Querier interface {
+	// 行政区划总数，给启动自检用：表空了说明 seed_regions.sql 没灌
+	//
+	//  SELECT count(*)
+	//  FROM addresses.regions
+	CountRegions(ctx context.Context) (int64, error)
 	// 创建地址
 	//
 	//  INSERT INTO addresses.addresses (address_id, user_id, recipient_name, recipient_phone,
@@ -48,6 +53,13 @@ type Querier interface {
 	//    AND is_deleted = false
 	//  ORDER BY is_default DESC, created_at DESC
 	ListAddressesByUserID(ctx context.Context, userID string) ([]AddressesAddress, error)
+	// 按上级列出行政区划（parent_id = 0 即省级）
+	//
+	//  SELECT id, parent_id, level, code, name, name_en, pinyin, sort_order
+	//  FROM addresses.regions
+	//  WHERE parent_id = $1
+	//  ORDER BY sort_order, id
+	ListRegionsByParent(ctx context.Context, parentID int32) ([]AddressesRegion, error)
 	// 设置指定地址为默认
 	//
 	//  UPDATE addresses.addresses

@@ -4,9 +4,7 @@
   "description": "",
   "private": true,
   "devDependencies": {
-    "@bufbuild/protobuf": "latest",
-    "@connectrpc/connect": "catalog:",
-    "@connectrpc/connect-web": "catalog:",
+    "@bufbuild/protobuf": "catalog:",
     "@t3-oss/env-core": "catalog:",
     "zod": "catalog:"
   },
@@ -17,6 +15,8 @@
     }
   },
   "dependencies": {
+    "@connectrpc/connect": "catalog:",
+    "@connectrpc/connect-web": "catalog:",
     "@ecommerce/utils": "workspace:*"
   }
 }

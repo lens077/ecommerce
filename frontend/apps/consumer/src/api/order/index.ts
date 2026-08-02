@@ -1,14 +1,9 @@
 // 订单API服务 — 调用后端 orderService（Connect-Go）
 import { createClient } from "@connectrpc/connect";
-import { createConnectTransport } from "@connectrpc/connect-web";
 import { orderService } from "@/gen/api";
-import { authInterceptor, errorInterceptor, loggerInterceptor } from "@ecommerce/api";
-import { env } from "@/env";
+import { createAppTransport } from "@ecommerce/api";
 
-const transport = createConnectTransport({
-  baseUrl: env.VITE_GATEWAY_URL ?? "http://localhost:8080",
-  interceptors: [authInterceptor, loggerInterceptor, errorInterceptor],
-});
+const transport = createAppTransport();
 
 const client = createClient(orderService, transport);
 

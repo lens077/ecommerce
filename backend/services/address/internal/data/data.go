@@ -33,6 +33,7 @@ var Module = fx.Module("data",
 		NewCasdoorAuthClient,
 		NewElasticSearchClient,
 		NewAddressRepo,
+		NewRegionRepo,
 	),
 )
 

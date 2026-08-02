@@ -37,3 +37,32 @@ export const goToLink = (link: string) => {
 export const getSigninUrl = () => {
   return CASDOOR_SDK.getSigninUrl();
 };
+
+/**
+ * 各 app 桌面端登录使用的回调地址。
+ *
+ * Casdoor 只会把浏览器重定向到已在应用里白名单的 http 地址，而桌面端主窗口的源是
+ * `tauri://localhost` —— 所以这里复用各 app web 端已经白名单的 dev 地址。这些地址
+ * 不会被真正访问：Tauri 在登录子窗口导航到它的瞬间就把 code/state 截下来了。
+ */
+export const DESKTOP_REDIRECT_URI = {
+  consumer: "http://localhost:3000/callback",
+  config: "http://localhost:3005/callback",
+} as const;
+
+/**
+ * 桌面端用的 Casdoor authorize 地址。
+ *
+ * 不能用 `CASDOOR_SDK.getSigninUrl()` —— 它内部拿 `window.location.origin` 拼
+ * redirect_uri，在 Tauri 下会拼出 `tauri://localhost/callback`。
+ */
+export const getDesktopSigninUrl = (redirectUri: string) => {
+  const params = new URLSearchParams({
+    client_id: CASDOOR_CONF.clientId,
+    response_type: "code",
+    redirect_uri: redirectUri,
+    scope: "read",
+    state: CASDOOR_CONF.appName,
+  });
+  return `${CASDOOR_CONF.serverUrl.trim()}/login/oauth/authorize?${params.toString()}`;
+};

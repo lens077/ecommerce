@@ -35,8 +35,9 @@ message AddressDetail {
   string province = 1 [(buf.validate.field).string.min_len = 1];
   // 城市
   string city = 2 [(buf.validate.field).string.min_len = 1];
-  // 区/县
-  string district = 3 [(buf.validate.field).string.min_len = 1];
+  // 区/县。允许为空：省直辖县级行政区（海南琼海市、湖北仙桃市、新疆石河子市等 49 个）
+  // 本身就是市级末端，下面没有区县，硬要求非空等于让这些地方填不出地址。
+  string district = 3;
   // 详细地址（街道、门牌号等）
   string detail = 4 [(buf.validate.field).string.min_len = 1];
   // 邮政编码（可选）

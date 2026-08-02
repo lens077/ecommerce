@@ -18,6 +18,7 @@
     "@ecommerce/api": "workspace:*",
     "@ecommerce/configs": "workspace:*",
     "@ecommerce/constants": "workspace:*",
+    "@ecommerce/tauri": "workspace:*",
     "@ecommerce/utils": "workspace:*",
     "@emotion/react": "catalog:",
     "@emotion/styled": "catalog:",
