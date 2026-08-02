@@ -1,0 +1,111 @@
+syntax = "proto3";
+
+// 用户行为采集 + 推荐读取。
+// 采集侧把"漫无目的地逛"这类隐式信号落库并投喂 gorse,读取侧从 gorse 取召回结果。
+
+import "third_party/validate/validate.proto";
+
+package behavior.v1;
+
+option go_package = "github.com/lens077/ecommerce/backend/api/behavior/v1;behaviorv1";
+
+service BehaviorService {
+  // Track 批量上报行为事件。
+  // 前端离开页面时用 navigator.sendBeacon 以 Connect JSON 直接打这个方法,
+  // 所以请求体必须是自包含的(不依赖自定义请求头)。
+  rpc Track(TrackRequest) returns (TrackResponse) {}
+  // Recommend 拉推荐列表。登录用户走个性化召回,匿名/冷启动用会话内事件兜底。
+  rpc Recommend(RecommendRequest) returns (RecommendResponse) {}
+  // SimilarItems 商品详情页的"相似商品",不依赖用户画像,冷启动可用。
+  rpc SimilarItems(SimilarItemsRequest) returns (SimilarItemsResponse) {}
+}
+
+// EventType 与 gorse config.toml 的 feedback 类型一一对应。
+// 改这里的同时必须同步改 [recommend.data_source] 的
+// positive_feedback_types / read_feedback_types,否则信号会被 gorse 静默忽略。
+enum EventType {
+  EVENT_TYPE_UNSPECIFIED = 0;
+  // 商品卡片在列表/搜索结果中进入视口,归入 read_feedback_types
+  EVENT_TYPE_IMPRESSION = 1;
+  // 点进商品详情,归入 read_feedback_types,累加到 read>=3 后转正样本
+  EVENT_TYPE_READ = 2;
+  // 详情页停留时长(value 为秒),dwell>=20 计入 positive_feedback_types
+  EVENT_TYPE_DWELL = 3;
+  // 加入购物车,positive
+  EVENT_TYPE_CART = 4;
+  // 收藏,positive
+  EVENT_TYPE_FAVORITE = 5;
+  // 支付成功,positive
+  EVENT_TYPE_PURCHASE = 6;
+  // 明确不感兴趣。当前 gorse 版本的 config.toml 没有 negative_feedback_types,
+  // 该事件只落 behavior_events 表,由我们自己在读取侧过滤,不投喂 gorse。
+  EVENT_TYPE_DISLIKE = 7;
+}
+
+message Event {
+  EventType type = 1 [(buf.validate.field).enum = {
+    defined_only: true
+    not_in: [0]
+  }];
+  // 商品标识,统一用 spu_code,与 gorse ItemId 保持一致
+  string item_id = 2 [(buf.validate.field).string = {
+    min_len: 1
+    max_len: 64
+  }];
+  // 事件强度: dwell 为停留秒数,其余事件恒为 1
+  double value = 3 [(buf.validate.field).double.gte = 0];
+  // 客户端事件时间(毫秒)。服务端会与自己的时钟比对,偏移过大的按接收时间纠正。
+  int64 ts_ms = 4 [(buf.validate.field).int64.gte = 0];
+  // 事件来源,便于后续做渠道归因: search:关键词 / category:3 / home_feed / neighbors
+  string source = 5 [(buf.validate.field).string.max_len = 128];
+}
+
+message TrackRequest {
+  // 匿名标识。登录用户由网关注入的 x-md-global-user-id 覆盖,该字段仅用于未登录场景。
+  string anon_id = 1 [(buf.validate.field).string.max_len = 64];
+  string session_id = 2 [(buf.validate.field).string.max_len = 64];
+  repeated Event events = 3 [(buf.validate.field).repeated = {
+    min_items: 1
+    max_items: 200
+  }];
+}
+
+message TrackResponse {
+  uint32 accepted = 1;
+  uint32 dropped = 2;
+}
+
+message RecommendRequest {
+  string anon_id = 1 [(buf.validate.field).string.max_len = 64];
+  // gorse 的 category,对应 spus.category_id;留空表示不限品类
+  string category = 2 [(buf.validate.field).string.max_len = 64];
+  uint32 n = 3 [(buf.validate.field).uint32.lte = 100];
+  uint32 offset = 4;
+  // 会话内的临时行为。匿名用户或无历史的新用户走 gorse 的 session recommend,
+  // 不需要等离线训练即可拿到结果。
+  repeated Event session_events = 5 [(buf.validate.field).repeated.max_items = 50];
+}
+
+message RecommendItem {
+  string item_id = 1;
+  double score = 2;
+}
+
+message RecommendResponse {
+  repeated RecommendItem items = 1;
+  // 实际命中的召回策略: personalized / session / latest
+  string strategy = 2;
+}
+
+message SimilarItemsRequest {
+  string item_id = 1 [(buf.validate.field).string = {
+    min_len: 1
+    max_len: 64
+  }];
+  string category = 2 [(buf.validate.field).string.max_len = 64];
+  uint32 n = 3 [(buf.validate.field).uint32.lte = 100];
+}
+
+message SimilarItemsResponse {
+  repeated RecommendItem items = 1;
+}

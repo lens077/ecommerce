@@ -7,135 +7,83 @@ import (
 	"fmt"
 	"time"
 
+	"github.com/casdoor/casdoor-go-sdk/casdoorsdk"
 	"github.com/exaring/otelpgx"
-	"github.com/jackc/pgx/v5"
-	"github.com/jackc/pgx/v5/pgconn"
 	"github.com/jackc/pgx/v5/pgxpool"
 	"github.com/lens077/ecommerce/backend/constants"
-	conf "github.com/lens077/ecommerce/backend/services/product/internal/conf/v1"
-	"github.com/lens077/ecommerce/backend/services/product/internal/data/models"
-	"github.com/lens077/ecommerce/backend/services/product/internal/pkg/dbutil"
+	"github.com/lens077/ecommerce/backend/pkg/gorse"
+	conf "github.com/lens077/ecommerce/backend/services/behavior/internal/conf/v1"
+	"github.com/lens077/ecommerce/backend/services/behavior/internal/pkg/dbutil"
 	"github.com/redis/go-redis/v9"
 	"go.uber.org/fx"
 	"go.uber.org/zap"
 )
 
+// Module 导出给 FX 的 Provider
 var Module = fx.Module("data",
 	fx.Provide(
 		NewData,
 		NewPostgresPool,
 		NewRedisClient,
-		NewProductRepo,
+		NewCasdoorAuthClient,
 		NewGorseClient,
-		NewItemSyncConfig,
-		NewCatalogRepo,
-		NewItemSyncRepo,
+		NewEventRepo,
+		NewRecommendRepo,
 	),
 )
 
-type contextTxKey struct{}
-
+// Data 包含所有数据源的客户端
 type Data struct {
-	db           *models.Queries
-	pgx          *pgxpool.Pool
-	rdb          *redis.Client
 	dbErrHandler *dbutil.Handler
+	db           *pgxpool.Pool
+	rdb          *redis.Client
+	auth         *casdoorsdk.Client
+	gorse        *gorse.Client
+	gorseEnabled bool
 	log          *zap.Logger
 }
 
-func NewData(db *pgxpool.Pool, rdb *redis.Client, logger *zap.Logger) *Data {
+// NewData 是 Data 的构造函数
+func NewData(
+	cfg *conf.Bootstrap,
+	db *pgxpool.Pool,
+	rdb *redis.Client,
+	auth *casdoorsdk.Client,
+	gorseClient *gorse.Client,
+	logger *zap.Logger,
+) *Data {
 	return &Data{
-		db:  models.New(db),
-		pgx: db,
-		rdb: rdb,
-		log: logger,
-		dbErrHandler: dbutil.NewHandler(
-			dbutil.WithLogging(true),
-			dbutil.WithLogger(func(err error, pgErr *pgconn.PgError) {
-				if pgErr != nil {
-					logger.Warn("database error",
-						zap.String("code", pgErr.Code),
-						zap.String("message", pgErr.Message),
-						zap.String("detail", pgErr.Detail),
-					)
-				}
-			}),
-		),
+		db:           db,
+		rdb:          rdb,
+		auth:         auth,
+		gorse:        gorseClient,
+		gorseEnabled: cfg.Recommend.GetGorse().GetEnable(),
+		log:          logger,
+		dbErrHandler: dbutil.NewHandler(),
 	}
-}
-
-func (d *Data) DB(ctx context.Context) *models.Queries {
-	if tx, ok := ctx.Value(contextTxKey{}).(pgx.Tx); ok {
-		return models.New(tx)
-	}
-	return d.db
-}
-
-func (d *Data) WithTx(ctx context.Context, tx pgx.Tx) context.Context {
-	return context.WithValue(ctx, contextTxKey{}, tx)
-}
-
-func (d *Data) ExecTx(ctx context.Context, fn func(context.Context) error) error {
-	if _, ok := ctx.Value(contextTxKey{}).(pgx.Tx); ok {
-		d.log.Debug("reuse existing transaction")
-		return fn(ctx)
-	}
-
-	d.log.Info("begin transaction")
-	tx, err := d.pgx.BeginTx(ctx, pgx.TxOptions{})
-	if err != nil {
-		return fmt.Errorf("begin tx failed: %w", err)
-	}
-
-	txCtx := d.WithTx(ctx, tx)
-
-	defer func() {
-		if p := recover(); p != nil {
-			_ = tx.Rollback(ctx)
-			panic(p)
-		}
-	}()
-
-	if err := fn(txCtx); err != nil {
-		if rbErr := tx.Rollback(ctx); rbErr != nil {
-			return fmt.Errorf("%w (rollback err: %v)", err, rbErr)
-		}
-		return err
-	}
-
-	if err := tx.Commit(ctx); err != nil {
-		return fmt.Errorf("commit failed: %w", err)
-	}
-	d.log.Info("transaction committed")
-	return nil
 }
 
 // NewPostgresPool 创建pg数据库连接池
 func NewPostgresPool(lc fx.Lifecycle, cfg *conf.Bootstrap, logger *zap.Logger) (*pgxpool.Pool, error) {
-	dbCfg := cfg.Data.Database.Postgres // 从 Config 中获取 Data 配置
+	dbCfg := cfg.Data.Database.Postgres
 
 	// 使用 ParseConfig 生成带有内部安全凭证的空模板
-	// 传入空字符串即可，它会生成一套标准的默认连接池参数
 	pgConf, err := pgxpool.ParseConfig("")
 	if err != nil {
 		return nil, fmt.Errorf("parse base pool config failed: %w", err)
 	}
 
-	// PostgreSQL 启动参数
 	if pgConf.ConnConfig.RuntimeParams == nil {
 		pgConf.ConnConfig.RuntimeParams = make(map[string]string)
 	}
-	// 时区配置（例如 "Asia/Shanghai" 或 "UTC"）
 	pgConf.ConnConfig.RuntimeParams["timezone"] = dbCfg.Timezone
 
-	// 将 Consul/Viper 读取到的具体配置灌入模板中
 	pgConf.ConnConfig.Host = dbCfg.Host
 	pgConf.ConnConfig.Port = uint16(dbCfg.Port)
 	pgConf.ConnConfig.Database = dbCfg.DbName
 	pgConf.ConnConfig.User = dbCfg.User
 	pgConf.ConnConfig.Password = dbCfg.Password
 
-	// 配置连接池熔断与超时属性
 	pgConf.MaxConnLifetime = dbCfg.Pool.MaxConnLifetime.AsDuration()
 	pgConf.MaxConnIdleTime = dbCfg.Pool.MaxConnIdleTime.AsDuration()
 	pgConf.PingTimeout = dbCfg.Pool.PingTimeout.AsDuration()
@@ -191,7 +139,6 @@ func NewPostgresPool(lc fx.Lifecycle, cfg *conf.Bootstrap, logger *zap.Logger) (
 		}
 	}
 
-	// 链路追踪配置
 	pgConf.ConnConfig.Tracer = otelpgx.NewTracer()
 
 	pool, err := pgxpool.NewWithConfig(context.Background(), pgConf)
@@ -199,12 +146,10 @@ func NewPostgresPool(lc fx.Lifecycle, cfg *conf.Bootstrap, logger *zap.Logger) (
 		return nil, fmt.Errorf("connect to database failed: %v", err)
 	}
 
-	// 记录数据库统计信息
 	if err := otelpgx.RecordStats(pool); err != nil {
 		return nil, fmt.Errorf("unable to record database stats: %w", err)
 	}
 
-	// 测试连接
 	ctx, cancel := context.WithTimeout(context.Background(), dbCfg.Pool.PingTimeout.AsDuration())
 	defer cancel()
 	if err := pool.Ping(ctx); err != nil {
@@ -224,6 +169,7 @@ func NewPostgresPool(lc fx.Lifecycle, cfg *conf.Bootstrap, logger *zap.Logger) (
 	return pool, nil
 }
 
+// NewRedisClient 创建 Redis 客户端。这里只用来做曝光去重,不存业务数据。
 func NewRedisClient(lc fx.Lifecycle, cfg *conf.Bootstrap, logger *zap.Logger) (*redis.Client, error) {
 	redisCfg := cfg.Data.Cache.Redis
 
@@ -243,7 +189,6 @@ func NewRedisClient(lc fx.Lifecycle, cfg *conf.Bootstrap, logger *zap.Logger) (*
 		tlsConfig := &tls.Config{
 			InsecureSkipVerify: redisCfg.Tls.InsecureSkipVerify,
 		}
-
 		if redisCfg.Tls.CaPem != "" {
 			caCertPool := x509.NewCertPool()
 			if ok := caCertPool.AppendCertsFromPEM([]byte(redisCfg.Tls.CaPem)); !ok {
@@ -251,7 +196,6 @@ func NewRedisClient(lc fx.Lifecycle, cfg *conf.Bootstrap, logger *zap.Logger) (*
 			}
 			tlsConfig.RootCAs = caCertPool
 		}
-
 		opts.TLSConfig = tlsConfig
 		logger.Info("tls connection initialized with CA string")
 	}
@@ -266,19 +210,15 @@ func NewRedisClient(lc fx.Lifecycle, cfg *conf.Bootstrap, logger *zap.Logger) (*
 			zap.String("addr", redisCfg.Host),
 			zap.Error(err),
 		)
-
 		if errClose := rdb.Close(); errClose != nil {
 			logger.Error("failed to close redis connection after ping failure",
 				zap.String("addr", redisCfg.Host),
 				zap.Error(errClose),
 			)
 		}
-
 		return nil, fmt.Errorf("redis ping failed: %w", err)
 	}
-	logger.Info("redis connected successfully",
-		zap.String("addr", redisCfg.Host),
-	)
+	logger.Info("redis connected successfully", zap.String("addr", redisCfg.Host))
 
 	lc.Append(fx.Hook{
 		OnStop: func(ctx context.Context) error {
@@ -290,20 +230,65 @@ func NewRedisClient(lc fx.Lifecycle, cfg *conf.Bootstrap, logger *zap.Logger) (*
 	return rdb, nil
 }
 
+func NewCasdoorAuthClient(conf *conf.Bootstrap, logger *zap.Logger) *casdoorsdk.Client {
+	casdoorCfg := conf.Auth.Casdoor
+	client := casdoorsdk.NewClient(
+		casdoorCfg.Endpoint,
+		casdoorCfg.ClientId,
+		casdoorCfg.ClientSecret,
+		casdoorCfg.Certificate,
+		casdoorCfg.OrganizationName,
+		casdoorCfg.ApplicationName,
+	)
+
+	logger.Info(fmt.Sprintf("casdoor connected successfully to %s", casdoorCfg.Endpoint))
+
+	return client
+}
+
+// NewGorseClient 创建 gorse 客户端。
+// 这里不做探活:gorse 挂了不该拦住服务启动,行为照样得落库,等它回来再补投。
+func NewGorseClient(cfg *conf.Bootstrap, logger *zap.Logger) *gorse.Client {
+	gorseCfg := cfg.Recommend.GetGorse()
+	if gorseCfg == nil || !gorseCfg.Enable {
+		logger.Warn("gorse disabled, behavior events will only be persisted locally")
+		return nil
+	}
+
+	logger.Info("gorse client initialized", zap.String("endpoint", gorseCfg.Endpoint))
+	return gorse.New(gorseCfg.Endpoint, gorseCfg.ApiKey, gorseCfg.Timeout.AsDuration())
+}
+
+// CheckDatabase 检查数据库连通性
 func (d *Data) CheckDatabase(ctx context.Context) error {
 	ctx, cancel := context.WithTimeout(ctx, 2*time.Second)
 	defer cancel()
-	if err := d.pgx.Ping(ctx); err != nil {
+	if err := d.db.Ping(ctx); err != nil {
 		return fmt.Errorf("database ping failed: %w", err)
 	}
 	return nil
 }
 
+// CheckCache 检查缓存连通性
 func (d *Data) CheckCache(ctx context.Context) error {
 	ctx, cancel := context.WithTimeout(ctx, 2*time.Second)
 	defer cancel()
 	if err := d.rdb.Ping(ctx).Err(); err != nil {
 		return fmt.Errorf("cache ping failed: %w", err)
+	}
+	return nil
+}
+
+// CheckGorse 检查 gorse 连通性。
+// 关掉 gorse 时视为健康 —— 此时它不是依赖项,只是没开的可选功能。
+func (d *Data) CheckGorse(ctx context.Context) error {
+	if !d.gorseEnabled || d.gorse == nil {
+		return nil
+	}
+	ctx, cancel := context.WithTimeout(ctx, 5*time.Second)
+	defer cancel()
+	if err := d.gorse.Healthz(ctx); err != nil {
+		return fmt.Errorf("gorse health check failed: %w", err)
 	}
 	return nil
 }
