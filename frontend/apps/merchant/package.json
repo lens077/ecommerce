@@ -8,7 +8,7 @@
     "dev:prod": "vp dev --port 3002 --mode prod",
     "build": "vite build && tsc",
     "serve": "vp preview",
-    "test": "vp test --environment=jsdom"
+    "test": "vp test --environment=jsdom --passWithNoTests"
   },
   "dependencies": {
     "@ecommerce/api": "workspace:*",
