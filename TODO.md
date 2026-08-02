@@ -41,6 +41,7 @@
 | 结算 settlement | ⬜ | — | 佣金计算、结算单、财务对账 |
 | 营销 marketing | ⬜ | — | 优惠券、满减、秒杀、会员/积分 |
 | 数据分析 analytics | ⬜ | — | 指标计算、行为分析、经营报表 |
+| 行为/推荐 behavior | 🟡 | `Track`、`Recommend`、`SimilarItems`（编译通过；gorse 侧语义与 product 目录同步已实测，服务本身待起） | 上传带 `recommend:` 的 Consul KV `ecommerce/behavior/dev.yml` → 起服务端到端验证；用户画像（`/api/users` labels）暂未投喂 |
 
 ### 4. 网关与 RBAC
 
@@ -73,6 +74,23 @@
 | 历史页面重做 + 密钥历史脱敏 | ✅ | **页面铺平**：删掉「卡片套卡片」的嵌套外壳，改成一块面板内左右分栏；去掉 `maxWidth:1200` 铺满宽度，diff 从固定 `58vh` 改为 `flex:1` 吃满剩余高度；diff 栏补 `minWidth:0`（缺了它 Monaco 的固有宽度会把这一栏顶成窄条，正是截图里配置文本被拦腰截断的样子），并开 `useInlineViewWhenSpaceIsLimited`+`renderSideBySideInlineBreakpoint:900`+`wordWrap`——窄容器自动切内联视图，长值折行而不是被裁掉。**真实历史列表**：每行给出 `vN` + 当前/初始标记 + 相对上一版的 `+增 −删` 行数（新增 `lib/linediff.ts`，掐公共前后缀后求 LCS，超 25 万格退化为整段替换；9 个单测）+ 备注 + 作者·相对时间（精确时间在 tooltip）；内容与上一版完全相同的标「无变更」。**「暂无历史」的真凶**：原页面把 `isError` 和「真的没有历史」画成同一个空态——一个 v22 的 key 在后端短暂不可用时看着像从没改过，错误被彻底吞掉；现在分成 加载中/加载失败(带真实 message + 重试)/空 三态，回滚错误也改走 `toAppError`。回滚移到 diff 工具条并加确认弹层（会产生新版本且立刻下发），新增「对比当前 / 对比上一版」切换，左右标签不再出现 `v—`。**后端**：`toPBRevision` 此前不脱敏，`GetKey` 里被打成 `****** ` 的密钥换 `ListRevisions`/`GetRevision` 就能原样读出来——`biz.ConfigRevision` 增 `IsSecret`（由 repo 从所属 entry 带过来），service 层与 `toPBEntry` 共用 `maskedValue` 常量；领域内部（`Rollback`）读到的仍是真值。3 个单测 + 实跑验证（密钥 key 三条读路径全部 `******`，非密钥 key 回滚仍取到真实值） |
 | 配置中心 Go 客户端 SDK | ⬜ | 后续：把 cart 的 `internal/pkg/config` 抽成共享包，避免 10 份复制 |
 | 审批/灰度/密钥加密/审计 | ⬜ | 后续阶段 |
+
+### 6. 推荐链路（gorse）
+
+> 目标：用户漫无目的地逛也能沉淀信号，喂给云上的 gorse，换回个性化/相似/兜底三路召回。
+
+| 项目 | 状态 | 说明 |
+|------|------|------|
+| gorse 部署排障 | ✅ | `failed to init meta database: unable to open database file: out of memory (14)` 的真凶是 **SQLITE_CANTOPEN(14) 被 gorse 错标成 "out of memory"**：v0.5 的 `--cache-path` 是**目录**不是文件（沿用了 0.4 时代的文件名且没挂 volume）。另外三处同类问题：`GORSE_CACHE_STORE` 把 Redis 指到了 5432、`vector_store` 用相对路径、`[blob] uri` 没挂 volume；镜像 entrypoint 本身已带 `-c /etc/gorse/config.toml`，不必重复传。已按上述修复部署到 `node2:8088`，`/api/health/ready` 全绿 |
+| `behavior.proto` + behavior 服务 | ✅ | `backend/api/behavior/v1/behavior.proto`：`Track`（批量埋点）/`Recommend`（个性化+会话+兜底三级降级）/`SimilarItems`。服务按 search 的模板竖切：conf(v1) → data(pg/redis/gorse) → biz → service → server，`go build`/`go vet` 全绿。**摄入侧**：内存队列 + 批量 flush（无消息队列可用，不为此引 Kafka），`behaviors.events` 表的 `synced_at IS NULL` 当 outbox 做补偿重投；Track 非阻塞，队列满即丢并计数，绝不拖慢前端。**时钟纠偏**：客户端时间戳偏移超阈值就用服务端时间，否则会污染 gorse 的 `positive_feedback_ttl` 淘汰 |
+| POST vs PUT 语义 | ✅ | gorse 反馈的唯一键是 `(FeedbackType, UserId, ItemId)` 三元组，**POST 累加 `Value`、PUT 覆盖**。只有 `read`/`impression` 走 POST（要配合 `read>=3` 计次），`dwell`（绝对秒数）/`cart`/`favorite`/`purchase`（布尔事实）一律走 PUT —— 加过三次购物车不该拿到 3 倍权重。官方 SDK 还是 `v0.5.0-alpha` 且没有 PUT，故自写 `backend/pkg/gorse` 最小客户端 |
+| `dislike` 的落法 | ✅ | 当前 gorse 版本的 `config.toml` **没有 `negative_feedback_types`**，负反馈无处安放。`dislike` 只落 `behaviors.events`，由 behavior 服务在返回推荐结果前自己过滤（`excludeDisliked`，召回时多取 20 条兜底）；`PendingSync` 也把它排除在外，否则补偿循环会对着一个永远同步不出去的事件空转 |
+| 网关路由 | ✅ | `/behavior* → discovery:///behavior-service`；三个 RPC 在 `jwt`/`rbac` 的 `router_filter` 里放行 —— **匿名浏览正是最该采集的时段**，要求登录等于把冷启动数据全丢了；服务端仍以网关注入的 `x-md-global-user-id` 优先于请求体的 `anon_id`（后者客户端可伪造）。超时 2s、只重试 1 次：重放埋点会把曝光计数刷虚 |
+| `frontend/packages/tracker` | ✅ | 曝光（IntersectionObserver，露出 ≥50% 且连续 ≥1s 才算，会话内去重）/ read / dwell（只计页面可见时间，心跳上报累计值配合 PUT 覆盖）/ cart / favorite / purchase / dislike。**手写 Connect unary JSON 线格式**而不用生成的 connect-web 客户端：`navigator.sendBeacon` 不允许设自定义头（`Connect-Protocol-Version`），而页面关闭时那一次上报带着最完整的停留时长，只有 beacon 送得出去。`anonId` 存 localStorage（跨会话画像的唯一线索）、`sessionId` 存 sessionStorage（曝光去重窗口），Safari 隐私模式降级为一次性 id。`tsc` 通过 |
+| product → gorse item 同步 | ✅ | gorse 只认 item，**反馈引用的 ItemId 不存在会被直接丢弃**，所以目录同步是推荐链路的前置条件而非锦上添花。product 服务没有 SPU 写入 RPC，无处挂写钩子；且只靠写路径也补不回 gorse 重装/网络抖动的缺口 —— 改为按 `updated_at` 游标的**增量对账**（游标存 Redis，回拨 1s 防批次边界切开同 `updated_at` 的行；扫满一批立即续扫不等下一个 tick）。下架用 `IsHidden` 而非删除（删了连带作废该商品上已积累的全部反馈）；标签给 brand/category/price_band（价格带取在售 SKU 最低价，`LEFT JOIN` 保证暂无在售 SKU 的 SPU 也同步）。另导出 `SyncByCodes`，将来的写路径直接调 |
+| 已实测 | ✅ | ① gorse 的 **POST 累加 / PUT 覆盖**在线上验证：两次 POST `read` → Value=2，两次 PUT `dwell`(30→45) → Value=45，与设计一致。② `behaviors.events` 已在 `ecommerce` 库建表（4 个索引齐全）。③ product 的目录同步走**真实 DB + 真实 gorse** 跑通：4 个 SPU 全量入库，`Categories`/`brand`/`price_band` 标签正确，`/api/latest/1001` 能按分类召回 |
+| Consul KV 配置 | ⬜ | KV 里 `ecommerce/{product,behavior}/dev.yml` **仍缺 `recommend:` 块**（behavior 的还是 cart 派生版，带无用的 `store:`/`search:`）。配置解码用 mapstructure 未开 `ErrorUnused`，多余键不报错，但缺 `recommend` 时生成的 getter 是 nil-safe 的 —— **gorse 会被静默关掉而不是启动失败**。待上传的两份完整内容已用服务自身的 `decodeConfig` 验证可解析 |
+| 待验证 | ⬜ | Consul KV 上传后端到端实跑 Track/Recommend/SimilarItems；清理 gorse 里的 `smoke-a/b/c` 测试数据；consumer 前端接入 tracker（`tsconfig` paths + `package.json` 依赖 + 入口 `initTracker` + 商品卡/详情页埋点） |
 
 ### 6. 前端
 
@@ -145,6 +163,8 @@
 - [ ] **库存联动**：下单同步 `Reserve`（TCC-Try），支付成功确认扣减，取消/超时 `ReleaseReserve`
 - [ ] **商品服务 ListProducts（设计已定，见 Design.md）**：首页无限滚动 + 游标(keyset)分页，无总数；`ProductCard` 含 brand/价格区间(min~max)。落地：`product.proto`→`make api`→`query.sql`→`make sqlc`→biz/data/service 样板→前端 `useInfiniteQuery` 接首页
 - [x] **商品示例数据**：`schema/examples/spu.sql`+`sku.sql` 追加 3 个商品（罗技鼠标/索尼耳机/Nike 跑鞋，SPU 5–7，多 SKU）
+- [ ] **推荐链路收尾**：~~建表~~ / ~~修 gorse 部署~~ / ~~product item 同步实测~~ 已完成；只差把带 `recommend:` 的 `ecommerce/{product,behavior}/dev.yml` 上传 Consul KV → 起服务端到端验证 Track/Recommend/SimilarItems → 删掉 gorse 里的 `smoke-a/b/c`
+- [ ] **consumer 接入 tracker**：`tsconfig.json` 加 `@ecommerce/tracker` paths、`package.json` 加 `workspace:*` 依赖、入口 `initTracker({gatewayUrl})`、商品卡挂 `useImpression`、详情页挂 `useProductView`、加购/收藏/支付成功处补 `tracker().cart/favorite/purchase`
 - [ ] **领域事件**：引入 Kafka，落地 `OrderCreated/OrderPaid/OrderCancelled` 事件驱动（编舞 Saga）
 - [ ] **订单缺陷修复**：金额改 `decimal`（现为 `float64`）、修 `AddressPostalCode` 空指针、统一 `merchant_id` 类型（UUID）、`Complete()` 应要求已发货
 - [ ] **merchant 端**：新增 `api/` 客户端，接商家入驻/商品/订单
