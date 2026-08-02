@@ -5,10 +5,10 @@
 package checkv1connect
 
 import (
-	v1 "connect-go-example/api/check/v1"
 	connect "connectrpc.com/connect"
 	context "context"
 	errors "errors"
+	v1 "github.com/lens077/ecommerce/backend/api/check/v1"
 	http "net/http"
 	strings "strings"
 )

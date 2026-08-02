@@ -2,7 +2,7 @@ syntax = "proto3";
 
 package check.v1;
 
-option go_package = "connect-go-example/api/check/v1;checkv1";
+option go_package = "github.com/lens077/ecommerce/backend/api/check/v1;checkv1";
 
 service CheckService {
   rpc Ready(ReadyCheckReq) returns(ReadyCheckReply){}

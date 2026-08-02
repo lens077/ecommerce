@@ -31,5 +31,3 @@
   `time.NewTicker` 会 panic，现已回落 10s 默认值。
 - 这段代码在 11 个服务里是复制关系，不是共享包。改一处要么全改，要么在提交里写清为什么只改一处。
   当前 pinger 块 11 份完全一致，fx hook 块已漂移出 5 个变体。
-- `address` / `merchant` / `payment` 三个服务的 `registry_test.go` 是 stale 的
-  （引用已删除的 `ParseToTCPAddr` / `TtlDuration`），测试包编译不过。这是既有问题。
