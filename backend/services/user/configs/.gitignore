@@ -1,5 +1,12 @@
+# 真实配置(含 DB/Redis/ES 密码、Casdoor client_secret、证书)只存在于
+# Consul KV 与配置中心,仓库里一份都不留 —— AGENTS.md 硬规则 4。
+# 这里的 dev.yml / pre.yml 是本地跑 make dev / make dev-cc 时的工作副本,
+# 结构参考同目录的 *.example,内容用 `make config-pull` 之类的方式从 KV 取。
+#
+# ⚠️ 曾经写成 per.yml(4a3eb70b),笔误让每个 pre.yml 都从缝里漏进了 git。
+# 校验方式:git check-ignore -v configs/pre.yml 必须有输出。
 config.yaml
 config.yml
 dev.yml
+pre.yml
 prod.yml
-per.yml
