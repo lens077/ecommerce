@@ -1,0 +1,20 @@
+{
+  "name": "ecommerce",
+  "version": "0.0.0",
+  "private": true,
+  "description": "仓库根，只承载跨前后端的工程化工具（提交信息校验）。业务代码在 backend/ 和 frontend/",
+  "type": "module",
+  "scripts": {
+    "prepare": "husky",
+    "commitlint": "commitlint --edit"
+  },
+  "devDependencies": {
+    "@commitlint/cli": "^21.2.1",
+    "@commitlint/config-conventional": "^21.2.0",
+    "husky": "^9.1.7"
+  },
+  "engines": {
+    "node": ">=22.12.0"
+  },
+  "packageManager": "pnpm@11.6.0"
+}
