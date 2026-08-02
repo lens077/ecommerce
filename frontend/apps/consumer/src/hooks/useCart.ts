@@ -8,7 +8,7 @@
 
 import { i18next } from "@ecommerce/i18n";
 import { useCallback, useEffect, useState } from "react";
-import { useQuery } from "@tanstack/react-query";
+import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { cartApi, type AddToCartRequest } from "@/api/cart";
 import {
   cartStore,
@@ -18,22 +18,41 @@ import {
   type MerchantGroup,
 } from "@/store/cart";
 
+// 共享查询
+
+/**
+ * 购物车条目的唯一 queryKey。
+ *
+ * useCartBadge 和 useCart 必须共用它 —— 之前两者各拉各的（badge 走 GetCartSummary，
+ * useCart 走裸 useEffect + GetCart），购物车页一次挂载会打出 4 个 POST：badge 1 次
+ * 加 1 次重试，useCart 在 StrictMode 下双发（它的 isMounted 只挡了 setState，没挡请求）。
+ * 合并后是 1 个请求，重试由 QueryClient 统一管。
+ */
+const CART_ITEMS_QUERY_KEY = ["cart", "items"] as const;
+
+function useCartItemsQuery() {
+  return useQuery({
+    queryKey: CART_ITEMS_QUERY_KEY,
+    queryFn: () => cartApi.getCartItems(),
+    staleTime: 10000,
+  });
+}
+
 // useCartBadge
 
 /**
  * 用于获取购物车数量的 Hook（轻量级，用于 AppBar 等）
- * 从后端 GetCartSummary 接口获取购物车数量
  *
- * @returns 购物车总数量
+ * 数字取 items.length 而不是 sum(quantity)：后端 GetCartSummary 的 SQL 是
+ * COUNT(*)，数的是行数而不是件数，两个接口的 status 过滤也都是 CartStatusActive，
+ * 所以 items.length 与原来的 totalCount 数值等价，用户看到的徽标不会变。
+ *
+ * @returns 购物车条目数
  */
 export function useCartBadge(): number {
-  const { data } = useQuery({
-    queryKey: ["cartSummary"],
-    queryFn: () => cartApi.getCartSummary(),
-    staleTime: 10000,
-  });
+  const { data } = useCartItemsQuery();
 
-  return data ?? 0;
+  return data?.length ?? 0;
 }
 
 // useCart
@@ -51,7 +70,9 @@ export function useCart() {
   );
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
-  const [isInitializing, setIsInitializing] = useState(true);
+
+  const queryClient = useQueryClient();
+  const { data: backendItems, isPending: isInitializing, error: loadError } = useCartItemsQuery();
 
   // 订阅状态变化
   useEffect(() => {
@@ -62,73 +83,65 @@ export function useCart() {
     });
   }, []);
 
-  // 初始化时从后端加载购物车数据
+  // 把后端数据灌进 store。依赖的是 react-query 的 data 引用：同一份数据引用稳定，
+  // 所以每次成功拉取只灌一次，StrictMode 重复执行 effect 也不会多发请求。
   useEffect(() => {
-    let isMounted = true;
+    if (!backendItems) return;
 
-    const loadCartFromBackend = async () => {
-      try {
-        const backendItems = await cartApi.getCartItems();
+    cartStore.clear();
+    backendItems.forEach((item) => {
+      cartStore.addItem({
+        cartItemId: item.cartItemId,
+        spuId: item.spuId,
+        skuId: item.skuId,
+        merchantId: item.merchantId,
+        shopName: item.shopName,
+        spuName: item.spuName,
+        skuName: item.skuName,
+        price: item.price,
+        costPrice: item.costPrice,
+        quantity: item.quantity,
+        selected: item.selected,
+        skuThumbnailUrl: item.skuThumbnailUrl,
+      });
+    });
+  }, [backendItems]);
 
-        if (isMounted) {
-          cartStore.clear();
-          backendItems.forEach((item) => {
-            cartStore.addItem({
-              cartItemId: item.cartItemId,
-              spuId: item.spuId,
-              skuId: item.skuId,
-              merchantId: item.merchantId,
-              shopName: item.shopName,
-              spuName: item.spuName,
-              skuName: item.skuName,
-              price: item.price,
-              costPrice: item.costPrice,
-              quantity: item.quantity,
-              selected: item.selected,
-              skuThumbnailUrl: item.skuThumbnailUrl,
-            });
-          });
-        }
-      } catch (err) {
-        console.warn("[useCart] Failed to load cart from backend:", err);
-      } finally {
-        if (isMounted) {
-          setIsInitializing(false);
-        }
-      }
-    };
-
-    loadCartFromBackend();
-
-    return () => {
-      isMounted = false;
-    };
-  }, []);
+  useEffect(() => {
+    if (loadError) {
+      console.warn("[useCart] Failed to load cart from backend:", loadError);
+    }
+  }, [loadError]);
 
   /**
    * 添加商品到购物车
    */
-  const addItem = useCallback(async (request: AddToCartRequest): Promise<void> => {
-    setIsLoading(true);
-    setError(null);
+  const addItem = useCallback(
+    async (request: AddToCartRequest): Promise<void> => {
+      setIsLoading(true);
+      setError(null);
 
-    try {
-      // 调用 API（未来替换为真实 RPC）
-      const res = await cartApi.addToCart(request);
+      try {
+        // 调用 API（未来替换为真实 RPC）
+        const res = await cartApi.addToCart(request);
 
-      // 更新本地状态（cartItemId 取后端返回值）
-      cartStore.addItem({
-        ...request,
-        cartItemId: res.cartItemId,
-      });
-    } catch (err) {
-      const message = err instanceof Error ? err.message : i18next.t("consumer:cart.addFailed");
-      setError(message);
-      throw err;
-    } finally {
-      setIsLoading(false);
-    }
-  }, []);
+        // 更新本地状态（cartItemId 取后端返回值）
+        cartStore.addItem({
+          ...request,
+          cartItemId: res.cartItemId,
+        });
+        // 服务端已经变了，让共享查询失效，AppBar 的徽标才会跟着刷新
+        await queryClient.invalidateQueries({ queryKey: CART_ITEMS_QUERY_KEY });
+      } catch (err) {
+        const message = err instanceof Error ? err.message : i18next.t("consumer:cart.addFailed");
+        setError(message);
+        throw err;
+      } finally {
+        setIsLoading(false);
+      }
+    },
+    [queryClient],
+  );
 
   /**
    * 移除商品
@@ -214,6 +227,8 @@ export function useAddToCart(initialQuantity: number = 1) {
   const [isSuccess, setIsSuccess] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
+  const queryClient = useQueryClient();
+
   const addToCart = useCallback(
     async (request: Omit<AddToCartRequest, "quantity">): Promise<void> => {
       setIsLoading(true);
@@ -232,6 +247,8 @@ export function useAddToCart(initialQuantity: number = 1) {
           selected: true,
           cartItemId: res.cartItemId,
         });
+        // 商详页加购之后 AppBar 徽标要立刻变,否则要等 staleTime 到期
+        await queryClient.invalidateQueries({ queryKey: CART_ITEMS_QUERY_KEY });
 
         setIsSuccess(true);
         setTimeout(() => setIsSuccess(false), 2000);
@@ -243,7 +260,7 @@ export function useAddToCart(initialQuantity: number = 1) {
         setIsLoading(false);
       }
     },
-    [quantity],
+    [quantity, queryClient],
   );
 
   const clearError = useCallback(() => {
