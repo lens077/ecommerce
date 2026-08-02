@@ -11,6 +11,7 @@
 | [config](config/INDEX.md) | `backend/services/*/internal/pkg/config/` + `backend/services/config/` | 一份配置三个副本；热更新的生效边界 |
 | [behavior](behavior/INDEX.md) | `backend/services/behavior/` | Consul KV 缺键导致 gorse 静默关闭 |
 | [consumer](consumer/INDEX.md) | `frontend/apps/consumer/` | MUI spacing ×8 踩坑；购物车重复请求 |
+| [frontend-api](frontend-api/INDEX.md) | `frontend/packages/api/` + `apps/*/src/api/` | Connect Query 数据拉取 SOP；transport 单例约束 |
 
 ## 尚无知识的模块
 
@@ -33,3 +34,6 @@
 命名与分层判据见 [`context/harness-framework/knowledge-layering.md`](../../harness-framework/knowledge-layering.md)。
 
 ⚠️ `config` 指后端配置中心服务（`backend/services/config/`），前端配置中心用 `config-fe`（`frontend/apps/config/`）。
+
+⚠️ `frontend-api` 指前端的 API 访问层（`frontend/packages/api/`），**不是** `backend/api/` 的 proto 契约。
+它和 `registry` 一样属于「跨多个代码目录的同一套代码」，所以按职责命名而不是按单一目录命名。
