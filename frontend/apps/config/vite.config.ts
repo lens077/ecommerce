@@ -26,28 +26,24 @@ export default defineConfig(({ mode }) => {
 
   // 根据环境合并测试配置
   const testConfig = isProduction
-      ? baseTestConfig // 生产环境无需浏览器测试
-      : { ...baseTestConfig, ...browserTestConfig };
+    ? baseTestConfig // 生产环境无需浏览器测试
+    : { ...baseTestConfig, ...browserTestConfig };
 
   return {
-    staged: {
-      "*": "vp check --fix",
-    },
-    fmt: {},
-    lint: {
-      jsPlugins: [{ name: "vite-plus", specifier: "vite-plus/oxlint-plugin" }],
-      rules: { "vite-plus/prefer-vite-plus-imports": "error" },
-      options: { typeAware: true, typeCheck: true },
-    },
+    // staged / fmt / lint 在 workspace 根的 frontend/vite.config.ts，别搬回来
     plugins: [
       tanstackRouter({
         target: "react",
         autoCodeSplitting: true,
+        // 必须写绝对路径：oxlint/oxfmt 以 workspace 根为 cwd 加载各 app 的配置，
+        // 而这两项默认相对 cwd 解析，写相对路径会让 vp lint/fmt 去 frontend/src/routes 找。
+        routesDirectory: resolve(__dirname, "./src/routes"),
+        generatedRouteTree: resolve(__dirname, "./src/routeTree.gen.ts"),
       }),
     ],
-//     run: {
-//       cache: true,
-//     },
+    //     run: {
+    //       cache: true,
+    //     },
     test: testConfig,
     server: {
       // Tauri 壳按固定端口连 dev server，端口被占时必须报错而不是静默换号

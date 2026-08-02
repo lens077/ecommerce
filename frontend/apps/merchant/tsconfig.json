@@ -9,8 +9,8 @@
     /* 模块解析*/
     "module": "ESNext",
     "moduleResolution": "bundler",
-    "resolveJsonModule": true,   // locales/*.json
-    "types": ["vite/client"],
+    "resolveJsonModule": true, // locales/*.json
+    "types": ["vite-plus/client"],
 
     /* 现代工程化 */
     "strict": true,
@@ -20,7 +20,6 @@
     "noEmit": true,
 
     /* 路径别名 */
-    "baseUrl": ".",
     "paths": {
       "@/*": ["./src/*"],
       "@ecommerce/api": ["../../packages/api/src/index.ts"],
