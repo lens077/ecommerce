@@ -27,9 +27,12 @@ C 端主应用。React 19 + MUI 9 + Emotion + TanStack Router/Query + Connect-RP
 - 所有 `createConnectTransport` 的 `baseUrl` 走 `env.VITE_GATEWAY_URL ?? "http://localhost:8080"`。
 - 错误处理统一走 `@ecommerce/api` 的 `toAppError`，区分 `AUTH_REASONS`（退登）与
   `PERMISSION_REASONS`（仅提示，不退登）。**不要再写 `String((error as Error)?.message)` 兜底。**
-- **数据拉取一律走 TanStack Query，不要写裸 `useEffect` + fetch。** `isMounted` 只挡 `setState`，
-  挡不住请求，StrictMode 下会实打实双发。同一份数据要复用同一个 `queryKey`
-  （购物车是 `["cart","items"]`）。
+- **数据拉取一律走查询层，不要写裸 `useEffect` + fetch。** `isMounted` 只挡 `setState`，
+  挡不住请求，StrictMode 下会实打实双发。具体写法见
+  [`frontend-api/sop/connect-query.md`](../frontend-api/sop/connect-query.md)：
+  正在从「手写 `queryKey` + `queryFn` 包 client」迁到 connect-query，key 由
+  `schema + input + transport` 自动推导，不再需要人为约定
+  （购物车原来的约定 key 是 `["cart","items"]`）。
 - `GetCartSummary.totalCount` 是 `COUNT(*)`（**行数**），`cartStore.totalQuantity` 是
   `sum(quantity)`（**件数**）。两者不可互换。
 
