@@ -18,6 +18,7 @@ import ShoppingCartIcon from "@mui/icons-material/ShoppingCart";
 import FlashOnIcon from "@mui/icons-material/FlashOn";
 import { styled } from "@mui/material/styles";
 import { useFormat, useTranslation } from "@ecommerce/i18n";
+import { toAppError } from "@ecommerce/api";
 import { useProductDetail } from "@/hooks/useProduct";
 import type { ProductSpuDetail } from "@/gen/api/product/v1/product_pb.ts";
 import { useState, useCallback, useMemo } from "react";
@@ -176,7 +177,9 @@ const ProductPage = () => {
 
   if (isError)
     return (
-      <Typography color="error">{t("product.loadFailed", { message: error.message })}</Typography>
+      <Typography color="error">
+        {t("product.loadFailed", { message: toAppError(error).message })}
+      </Typography>
     );
 
   if (!product || !product.skus) return null;

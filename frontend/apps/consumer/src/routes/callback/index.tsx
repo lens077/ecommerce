@@ -6,7 +6,8 @@ import { useEffect, useRef, useState } from "react";
 import { flushSync } from "react-dom";
 import { z } from "zod";
 import { i18next, useTranslation } from "@ecommerce/i18n";
-import { userApi } from "@/api";
+import { callUnaryMethod, useTransport } from "@connectrpc/connect-query";
+import { UserService } from "@/gen/api";
 import type { Status } from "@ecommerce/constants";
 import { setAccount } from "@/store/users";
 import { addNotification, setToken } from "@ecommerce/utils";
@@ -31,6 +32,7 @@ function RouteComponent() {
   const navigate = useNavigate();
   const { setIsAuthenticated } = useAuthActions();
   const { t } = useTranslation();
+  const transport = useTransport();
 
   useEffect(() => {
     // 防止重复提交
@@ -39,7 +41,11 @@ function RouteComponent() {
 
     const handleLogin = async () => {
       try {
-        const response = await userApi.signIn(code, state);
+        // 一次性的登录换 token，不进查询缓存，所以直接调而不是 useMutation
+        const response = await callUnaryMethod(transport, UserService.method.signIn, {
+          code,
+          state,
+        });
 
         if (response.state !== "ok" || !response.data) {
           throw new Error(i18next.t("consumer:callback.responseInvalid"));
@@ -100,7 +106,7 @@ function RouteComponent() {
     };
 
     handleLogin();
-  }, [code, state, navigate, setIsAuthenticated]);
+  }, [code, state, navigate, setIsAuthenticated, transport]);
 
   const render = () => {
     switch (status) {

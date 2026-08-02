@@ -19,7 +19,9 @@ import Toolbar from "@mui/material/Toolbar";
 import Typography from "@mui/material/Typography";
 import { useNavigate } from "@tanstack/react-router";
 import * as React from "react";
-import { searchApi } from "@/api/search";
+import { callUnaryMethod } from "@connectrpc/connect-query";
+import { getPublicTransport } from "@ecommerce/api";
+import { SearchService } from "@/gen/api";
 import { useFormat, useTranslation } from "@ecommerce/i18n";
 import { LocaleSwitcher } from "@ecommerce/ui";
 import { getSigninUrl, isLoggedIn } from "@ecommerce/configs";
@@ -200,9 +202,14 @@ export default function PrimarySearchAppBar() {
 
     setIsSearching(true);
 
-    // 调用搜索API
-    searchApi
-      .search(SEARCH_INDEX, searchInput.trim(), abortController.signal)
+    // 搜索是公开接口，走免鉴权 transport。自带节流与 abort，不进查询缓存，
+    // 所以用 callUnaryMethod 直接调而不是 useQuery
+    callUnaryMethod(
+      getPublicTransport(),
+      SearchService.method.search,
+      { index: SEARCH_INDEX, name: searchInput.trim() },
+      { signal: abortController.signal },
+    )
       .then((response) => {
         setSearchResults(response.products || []);
         setShowSearchResults(true);
