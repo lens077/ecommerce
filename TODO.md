@@ -16,8 +16,8 @@
 | GitOps（ArgoCD） | 🟡 | `argocd-app.yml`、`argocd-proj.yml` 已配置 |
 | CI/CD（GitHub Actions） | 🟡 | `.github/workflows/backend.yml`、`frontend.yml` 已有，制品推送/清单更新链路待完善 |
 | 注册发现（Consul） | 🟡 | `consul-kv.json`、配置中心接入已有 |
-| 提交规范（husky + commitlint） | ✅ | 仓库根 `package.json` 装 `@commitlint/cli` + `config-conventional` + `husky`，规则在 `commitlint.config.mjs`：Angular 十一类 type + 可选 gitmoji（带了就必须与 type 相符）+ subject 末尾禁标点。**此前四层同时是断的**（`core.hooksPath` 指向不存在的 `frontend/.husky/_`、钩子里是全角连字符 `–`、仓库根无 `package.json`、commitlint 压根没装），2026-08-02 修复并用故意写错的消息验证过拦截；cz-git 从未真正引入，不再提 |
-| 代码规范（biome） | 🟡 | 前端已用，未全量接入门禁 |
+| 提交规范（commitlint + vite-plus 钩子） | ✅ | 仓库根 `package.json` 只装 `@commitlint/cli` + `config-conventional`，规则在 `commitlint.config.mjs`：Angular 十一类 type + 可选 gitmoji（带了就必须与 type 相符）+ subject 末尾禁标点。钩子由 **vite-plus** 安装（`frontend/package.json` 的 `prepare: vp config` → `core.hooksPath = frontend/.vite-hooks/_`），husky 已删；`core.hooksPath` 是仓库级设置，后端 Go 的提交同样受管。**此前从 2025-11-04 到 2026-08-02 整整九个月一次都没生效**，层层叠了五处：①`.husky/commit-msg` 里放的是**创建钩子的那条安装命令本身**（`echo "..." > .husky/commit-msg`），每次提交只把自己重写一遍就退出 0 ②它写出的那行里 `–` 是全角连字符、`--no` 是 pnpm 11 已废弃的 exec 参数 ③`@commitlint/cli` 从未出现在任何 devDependencies ④`apps/consumer/.commitlintrc.cjs` 的 `rules: {}` 是空的且无 `extends` ⑤2026-03-19 迁移到 vite-plus 时 `vp config` 的接管守卫看到 `frontend/.husky/_` 选择 skipping，`core.hooksPath` 从此指着一个已删除的目录。2026-08-02 修复并用四条故意写错的消息验证过拦截；cz-git 从未真正引入，不再提 |
+| 代码规范（oxlint + oxfmt，vite-plus 内置） | 🟡 | biome 在 2026-03 迁移时已被 vite-plus 自带的 oxlint + oxfmt 取代。`vp lint` / `vp fmt` 此前因四个成因全挂（tanstackRouter 相对路径、`typeAware` 写在 app 层、九个 tsconfig 的 `baseUrl` 被 TS7 判为 Invalid、`vite-plus-core` 装了 0.1.24/0.2.7 两份导致类型重复），2026-08-02 修好，`pnpm ready` 端到端可跑；全仓跑过一次 oxfmt。仍缺：CI 门禁未接入，48 条 warning 未清 |
 
 ### 2. 后端微服务（核心）
 
