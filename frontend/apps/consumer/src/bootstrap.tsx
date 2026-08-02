@@ -21,47 +21,44 @@ const DesktopSettingsDialog = lazy(() => import("@ecommerce/tauri/dialog"));
 
 // Create a new router instance
 const router = createRouter({
-    routeTree,
-    // 注入初始的 context 类型占位
-    context: {
-        auth: {
-            isAuthenticated: false,
-            setIsAuthenticated: () => {},
-            login: () => {},
-            logout: () => {},
-        } as any, // 暂时使用 as any 占位，或者直接不加 user,
-    },
-    defaultPreload: "intent",
-    scrollRestoration: true,
-    defaultStructuralSharing: true,
-    defaultPreloadStaleTime: 0,
+  routeTree,
+  // 注入初始的 context 类型占位
+  context: {
+    auth: {
+      isAuthenticated: false,
+      setIsAuthenticated: () => {},
+      login: () => {},
+      logout: () => {},
+    } as any, // 暂时使用 as any 占位，或者直接不加 user,
+  },
+  defaultPreload: "intent",
+  scrollRestoration: true,
+  defaultStructuralSharing: true,
+  defaultPreloadStaleTime: 0,
 });
 
 // Register the router instance for type safety
 declare module "@tanstack/react-router" {
-    interface Register {
-        router: typeof router;
-    }
+  interface Register {
+    router: typeof router;
+  }
 }
 
 const queryClient = new QueryClient({
-    defaultOptions: {
-        queries: {
-            // 1. 自动重试策略
-            retry: (failureCount, error) => {
-                const connectErr = ConnectError.from(error);
-                // 如果是 404 或 权限问题，不进行重试
-                if (connectErr.code === Code.NotFound || connectErr.code === Code.PermissionDenied) {
-                    return false;
-                }
-                // 最多重试 3 次
-                return failureCount < 3;
-            },
-            // 2. 统一错误回调
-            throwOnError: false,
-            refetchOnWindowFocus: false,
-        },
+  defaultOptions: {
+    queries: {
+      retry: (failureCount, error) => {
+        const connectErr = ConnectError.from(error);
+        return (
+          failureCount < 1 &&
+          (connectErr.code === Code.Unavailable || connectErr.code === Code.DeadlineExceeded)
+        );
+      },
+      retryDelay: 300,
+      throwOnError: false,
+      refetchOnWindowFocus: false,
     },
+  },
 });
 
 const MUI_LOCALES = { "zh-CN": zhCN, en: enUS } as const;
@@ -72,48 +69,52 @@ const MUI_LOCALES = { "zh-CN": zhCN, en: enUS } as const;
  * MUI 内置文案（Autocomplete/TablePagination 之类）也跟着语言切换。
  */
 function LocalizedTheme({ children }: { children: ReactNode }) {
-    const { locale } = useLocale();
-    const theme = useMemo(() => createTheme({}, MUI_LOCALES[locale]), [locale]);
-    return <ThemeProvider theme={theme}>{children}</ThemeProvider>;
+  const { locale } = useLocale();
+  const theme = useMemo(() => createTheme({}, MUI_LOCALES[locale]), [locale]);
+  return <ThemeProvider theme={theme}>{children}</ThemeProvider>;
 }
 
 function InnerApp() {
-    // 获取原子状态（会触发重绘）与 动作方法（持久稳定引用）
-    const state = useAuthState();
-    const actions = useAuthActions();
+  // 获取原子状态（会触发重绘）与 动作方法（持久稳定引用）
+  const state = useAuthState();
+  const actions = useAuthActions();
 
-    // 将状态与方法聚合还原为一个完整的 auth 对象，下发给路由树的 context
-    // 这样 beforeLoad 里依然可以通过 context.auth.isAuthenticated 和 context.auth.login() 正常工作
-    const auth = {
-        ...state,
-        ...actions,
-    };
+  // 将状态与方法聚合还原为一个完整的 auth 对象，下发给路由树的 context
+  // 这样 beforeLoad 里依然可以通过 context.auth.isAuthenticated 和 context.auth.login() 正常工作
+  const auth = {
+    ...state,
+    ...actions,
+  };
 
-    return <RouterProvider router={router} context={{ auth }} />;
+  return <RouterProvider router={router} context={{ auth }} />;
 }
 
 // Render the app
 const rootElement = document.getElementById("app");
 if (rootElement && !rootElement.innerHTML) {
-    const root = ReactDOM.createRoot(rootElement);
+  const root = ReactDOM.createRoot(rootElement);
 
-    root.render(
-        <StrictMode>
-            <LocalizedTheme>
-                <QueryClientProvider client={queryClient}>
-                    <AuthProvider router={router}>
-                        <InnerApp/>
-                    </AuthProvider>
-                    {isTauri() && (
-                        <Suspense fallback={null}>
-                            <DesktopSettingsDialog/>
-                        </Suspense>
-                    )}
-                    <ReactQueryDevtools initialIsOpen={false} buttonPosition="bottom-right" position="bottom"/>
-                </QueryClientProvider>
-            </LocalizedTheme>
-        </StrictMode>,
-    );
+  root.render(
+    <StrictMode>
+      <LocalizedTheme>
+        <QueryClientProvider client={queryClient}>
+          <AuthProvider router={router}>
+            <InnerApp />
+          </AuthProvider>
+          {isTauri() && (
+            <Suspense fallback={null}>
+              <DesktopSettingsDialog />
+            </Suspense>
+          )}
+          <ReactQueryDevtools
+            initialIsOpen={false}
+            buttonPosition="bottom-right"
+            position="bottom"
+          />
+        </QueryClientProvider>
+      </LocalizedTheme>
+    </StrictMode>,
+  );
 }
 
 reportWebVitals();

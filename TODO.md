@@ -48,6 +48,7 @@
 | 项目 | 状态 | 说明 |
 |------|------|------|
 | 网关（身份验证/授权/路由守卫） | 🟡 | `gateway/` 已实现，集中式 Casdoor 鉴权 + 策略文件；10 条 endpoint 全部落地（`/user* /search* /product* /cart* /address* /config* /order* /inventory* /merchant* /payment*`）。远端 `ecommerce-gateway:latest` 此前是旧镜像（仍去 KV 找 `rbac/policies.csv`，而代码常量早已改为 `policies/`），启动即 FATAL —— 已重新多架构构建推送并用 `docker compose up` 拉真实远端镜像验证：10 条路由全建起、7 条鉴权路由 401、支付宝回调 200+code 12、未定义前缀 404 |
+| 网关服务发现恢复 | ✅ | Consul watcher 改为后台初始化，`Next()` 失效后按阶梯退避重建；生命周期与单个路由 applier 解耦，配置热重载关闭旧 client 不再误杀共享 watcher，最后一个 applier 清理后才停止。consumer 查询仅对 `Unavailable` / `DeadlineExceeded` 延迟 300ms 重试一次，避免瞬时 503 被放大为多次 POST。`make dev` 实测发现 `user-identity` 并在热重载后复用缓存；`go test -race ./client` 覆盖 watcher 断线恢复与旧 context 取消场景 |
 | RBAC 三角色（消费者/商家/管理员） | 🟡 | 策略模型（model.conf/policies.csv）已有；order/payment/merchant/inventory 已按 **RPC 粒度**授权（避免整段 `/svc.v1.*` 放行导致的越权），其余服务仍是整段放行待细化 |
 | Casdoor 集成 | 🟡 | 登录/令牌解析打通，权限适配持续完善 |
 
