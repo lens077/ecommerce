@@ -6,9 +6,10 @@
 
 | module | 代码路径 | 内容 |
 |---|---|---|
-| [gateway](gateway/INDEX.md) | `gateway/` | JWT / 时钟偏移踩坑 |
+| [gateway](gateway/INDEX.md) | `gateway/` | JWT / 时钟偏移踩坑；重试相乘与健康检查失效 |
+| [registry](registry/INDEX.md) | `backend/services/*/internal/pkg/registry/` | Consul TTL 注册与心跳（11 份同一套代码） |
 | [behavior](behavior/INDEX.md) | `backend/services/behavior/` | Consul KV 缺键导致 gorse 静默关闭 |
-| [consumer](consumer/INDEX.md) | `frontend/apps/consumer/` | MUI spacing ×8 踩坑 |
+| [consumer](consumer/INDEX.md) | `frontend/apps/consumer/` | MUI spacing ×8 踩坑；购物车重复请求 |
 
 ## 尚无知识的模块
 
