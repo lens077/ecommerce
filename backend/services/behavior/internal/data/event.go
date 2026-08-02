@@ -147,7 +147,7 @@ func (r *eventRepo) FilterFreshImpressions(ctx context.Context, events []biz.Eve
 	}
 	var candidates []candidate
 
-	pipe := r.data.rdb.Pipeline()
+	pipe := r.data.rdb.Client().Pipeline()
 	for i, e := range events {
 		// 没有 session_id 就无从划定窗口,直接放行
 		if e.Type != biz.EventImpression || e.SessionID == "" {

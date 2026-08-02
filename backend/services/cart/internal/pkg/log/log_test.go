@@ -220,3 +220,32 @@ func TestFxLogger(t *testing.T) {
 		})
 	}
 }
+
+// 日志级别热生效。这条必须真跑一遍 fx 装配后改 Live —— 订阅接错、
+// 级别开关没用 AtomicLevel、或者 newLogger 把 level 吞了,都不会有任何编译错误,
+// 只会表现为「改了配置中心的 level 没反应」,而那时没人会怀疑到这里。
+func TestModule_LogLevelHotReload(t *testing.T) {
+	live := config.NewLive(newConf("warn", constants.FormatJson))
+
+	out := captureStdout(t, func() {
+		var logger *zap.Logger
+		app := fx.New(
+			fx.NopLogger,
+			fx.Supply(newConf("warn", constants.FormatJson), testAppInfo, live),
+			Module,
+			fx.Populate(&logger),
+		)
+		require.NoError(t, app.Err())
+
+		logger.Debug("before-hot-reload")
+
+		// 只改日志级别这一段,其余配置原样
+		live.Set(newConf("debug", constants.FormatJson))
+
+		logger.Debug("after-hot-reload")
+	})
+
+	assert.NotContains(t, out, "before-hot-reload", "改之前是 warn,debug 不该被打出来")
+	assert.Contains(t, out, "after-hot-reload", "改成 debug 之后必须立刻生效,不能等重启")
+	assert.Contains(t, out, "log level changed", "级别变更要留一行日志,否则运维无从确认它生效了")
+}

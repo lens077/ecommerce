@@ -104,6 +104,13 @@ func NewApp(serviceName, deploymentMode, serviceVersion string) *fx.App {
 
 		// 配置验证和初始化
 		fx.Invoke(
+			// 打印本次启动实际生效的配置数据源,避免「改了配置没生效」时靠猜
+			func(_ *confv1.Bootstrap, logger *zap.Logger) {
+				logger.Info("bootstrap config loaded",
+					zap.String("source", config.SourceName()),
+				)
+			},
+
 			// 启动之前初始化 Consul 注册中心
 			func(reg *registry.ConsulRegistry, logger *zap.Logger) {
 				if reg != nil {

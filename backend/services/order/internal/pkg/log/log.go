@@ -5,6 +5,7 @@ import (
 
 	"github.com/lens077/ecommerce/backend/constants"
 	confv1 "github.com/lens077/ecommerce/backend/services/order/internal/conf/v1"
+	"github.com/lens077/ecommerce/backend/services/order/internal/pkg/config"
 	"github.com/lens077/ecommerce/backend/services/order/internal/pkg/meta"
 	"go.opentelemetry.io/contrib/bridges/otelzap"
 	"go.opentelemetry.io/otel/log/global"
@@ -19,8 +20,21 @@ import (
 var Module = fx.Module("log",
 	fx.Provide(
 		// 提供日志创建函数
-		func(conf *confv1.Bootstrap, info meta.AppInfo) *zap.Logger {
-			return NewLogger(conf, info)
+		func(conf *confv1.Bootstrap, info meta.AppInfo, live *config.Live) *zap.Logger {
+			logger, level := newLogger(conf, info)
+
+			// 日志级别热生效:线上出问题时把 level 调成 debug 看细节,
+			// 是最常见也最不该需要重启的一类配置改动。
+			live.Subscribe(func(_, cur *confv1.Bootstrap) {
+				want := parseLevel(cur.GetLog().GetApplication().GetLevel())
+				if want == level.Level() {
+					return
+				}
+				level.SetLevel(want)
+				logger.Info("log level changed", zap.String("level", want.String()))
+			})
+
+			return logger
 		},
 	),
 )
@@ -48,17 +62,29 @@ func FxLogger() fx.Option {
 	})
 }
 
-// NewLogger 创建一个新的 Zap Logger.
-// levelStr 可选的参数: debug / info / warn / error / dpanic / panic / fatal.
-// format 可选的参数: 参考constants/env.go的Log注释部分.
+// NewLogger 构造应用 logger。级别在启动后固定;需要热调级别的走 Module。
 func NewLogger(conf *confv1.Bootstrap, info meta.AppInfo) *zap.Logger {
-	logConfig := conf.Log.Application
-	var level zapcore.Level
-	if err := level.UnmarshalText([]byte(logConfig.Level)); err != nil {
-		level = zapcore.DebugLevel
-	}
+	logger, _ := newLogger(conf, info)
+	return logger
+}
 
-	// 定义基础的 Encoder (编码器)
+// parseLevel 解析日志级别,无法识别时退回 debug(与原有行为一致:
+// 宁可日志多一点,也不要因为写错一个字符而丢掉排查现场)。
+func parseLevel(s string) zapcore.Level {
+	var level zapcore.Level
+	if err := level.UnmarshalText([]byte(s)); err != nil {
+		return zapcore.DebugLevel
+	}
+	return level
+}
+
+// newLogger 额外返回可动态调整的级别开关,供配置热更新使用。
+func newLogger(conf *confv1.Bootstrap, info meta.AppInfo) (*zap.Logger, zap.AtomicLevel) {
+	logConfig := conf.Log.Application
+	// AtomicLevel 而不是固定的 Level:core 一旦建好就无法替换级别,
+	// 只有把这个开关留在外面,后续才改得动。
+	level := zap.NewAtomicLevelAt(parseLevel(logConfig.Level))
+
 	var encoder zapcore.Encoder
 	encoderConfig := zap.NewProductionEncoderConfig()
 	encoderConfig.EncodeTime = zapcore.ISO8601TimeEncoder
@@ -71,21 +97,14 @@ func NewLogger(conf *confv1.Bootstrap, info meta.AppInfo) *zap.Logger {
 		encoder = zapcore.NewJSONEncoder(encoderConfig)
 	}
 
-	// 创建标准输出 Core (Stdout)
 	stdCore := zapcore.NewCore(encoder, zapcore.AddSync(os.Stdout), level)
 
-	// 创建 OTel Core (发送到 OTLP)
-	// 这里使用 global.GetLoggerProvider()
 	otelCore := otelzap.NewCore(
-		info.Name, // 你的 Instrumentation Name
+		info.Name,
 		otelzap.WithLoggerProvider(global.GetLoggerProvider()),
 	)
 
-	// 4. 使用 Tee 组合两个 Core
-	// 这样 logger.Info 就会同时发往：
-	// 1. 控制台/JSON文件
-	// 2. OTel Collector
 	core := zapcore.NewTee(stdCore, otelCore)
 
-	return zap.New(core, zap.AddCaller())
+	return zap.New(core, zap.AddCaller()), level
 }
