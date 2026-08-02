@@ -5,7 +5,7 @@ package conf.v1;
 import "third_party/validate/validate.proto";
 import "google/protobuf/duration.proto";
 
-option go_package = "github.com/lens077/ecommerce/backend/services/product/internal/conf/v1;confv1";
+option go_package = "github.com/lens077/ecommerce/backend/services/behavior/internal/conf/v1;confv1";
 
 message Bootstrap {
   Server server = 1[
@@ -23,55 +23,12 @@ message Bootstrap {
   Discovery discovery = 5[
     (buf.validate.field).required = false
   ];
-  Search search = 6[
-    (buf.validate.field).required = false
+  Recommend recommend = 6[
+    (buf.validate.field).required = true
   ];
   Log log = 7[
     (buf.validate.field).required = true
   ];
-  Recommend recommend = 8[
-    (buf.validate.field).required = false
-  ];
-}
-
-// Recommend 把商品目录同步给 gorse。
-//
-// gorse 只认识 item,不认识我们的 SPU 表。用户行为(behavior 服务投喂的 feedback)
-// 引用的 ItemId 必须先作为 item 存在,否则那条反馈会被 gorse 直接丢掉 ——
-// 所以这份同步是推荐链路的前置条件,不是可选的锦上添花。
-message Recommend {
-  Gorse gorse = 1;
-  ItemSync item_sync = 2;
-
-  message Gorse {
-    // gorse-in-one 的 RESTful 端口,形如 http://gorse:8088
-    string endpoint = 1 [
-      (buf.validate.field).string.uri = true,
-      (buf.validate.field).string.example = "http://gorse:8088"
-    ];
-    // 对应 gorse config.toml 的 [server] api_key,空表示未开启鉴权
-    string api_key = 2;
-    google.protobuf.Duration timeout = 3 [(buf.validate.field).duration.gte = {seconds: 1}];
-    // 关掉之后完全不碰 gorse,用于 gorse 挂了时保住商品主链路
-    bool enable = 4;
-  }
-
-  // ItemSync 是按 updated_at 游标的增量对账。
-  //
-  // 商品服务目前没有 SPU 的写入 RPC,没有地方能挂"写完就同步"的钩子;
-  // 就算以后有了,单靠写路径同步也会在 gorse 重装、网络抖动后留下永久缺口。
-  // 所以这里用轮询兜底,写路径将来直接调 SyncByCodes 做即时补充。
-  message ItemSync {
-    // 两轮增量扫描的间隔
-    google.protobuf.Duration interval = 1 [(buf.validate.field).duration.gte = {seconds: 1}];
-    // 单轮最多扫多少行。批次内按 updated_at 推进游标,扫满了下一轮立即继续。
-    uint32 batch_size = 2 [(buf.validate.field).uint32.gte = 1];
-    // 游标回拨量。updated_at 相同的行可能跨批次,回拨一点重扫,
-    // upsert 本身幂等,重复同步的代价远小于漏掉商品。
-    google.protobuf.Duration cursor_lookback = 3;
-    // 关掉之后不启动后台同步,但 SyncByCodes 仍然可用
-    bool enable = 4;
-  }
 }
 
 message Log {
@@ -96,14 +53,8 @@ message Log {
     }];
   }
 
-  message ElasticSearch {
-    bool enable_request = 1;
-    bool enable_response = 2;
-  }
-
   Framework framework = 1;
   Application application = 2;
-  ElasticSearch elasticsearch = 3;
 }
 
 message Server {
@@ -298,22 +249,41 @@ message Discovery {
   Consul consul = 1;
 }
 
-message Search {
-  message ElasticSearch {
-    repeated string addresses = 1 [
-      (buf.validate.field).string.host_and_port = true,
-      (buf.validate.field).string.example = "http://es.example.com:9200"
+// Recommend 推荐链路配置:上游是 gorse,上行是行为采集。
+message Recommend {
+  Gorse gorse = 1;
+  Ingest ingest = 2;
+
+  message Gorse {
+    // gorse-in-one 的 RESTful 端口,形如 http://gorse:8088
+    string endpoint = 1 [
+      (buf.validate.field).string.uri = true,
+      (buf.validate.field).string.example = "http://gorse:8088"
     ];
-    string username = 2 [
-      (buf.validate.field).string.example = "elastic"
-    ];
-    string password = 3;
-    Tls tls = 4;
-    message Tls {
-      bool enable = 1;
-      bool insecure_skip_verify = 2;
-      string ca_pem = 3;
-    }
+    // 对应 gorse config.toml 的 [server] api_key,空表示未开启鉴权
+    string api_key = 2;
+    google.protobuf.Duration timeout = 3 [(buf.validate.field).duration.gte = {seconds: 1}];
+    // 关掉之后只落库不投喂,用于 gorse 挂了时保住主链路
+    bool enable = 4;
   }
-  ElasticSearch elastic_search = 1;
+
+  // Ingest 控制"逛"产生的高频事件如何被削峰。
+  message Ingest {
+    // 内存队列容量。写满后新事件直接丢弃并计入 dropped,绝不阻塞 Track 请求。
+    uint32 queue_size = 1 [(buf.validate.field).uint32.gte = 1];
+    // 攒够多少条立即 flush
+    uint32 batch_size = 2 [(buf.validate.field).uint32.gte = 1];
+    // 没攒够也要 flush 的兜底间隔
+    google.protobuf.Duration flush_interval = 3 [(buf.validate.field).duration.gte = {seconds: 1}];
+    // 客户端时间戳与服务端时钟的最大允许偏移,超过则用服务端接收时间纠正。
+    // 前端时钟不可信,不纠正会污染 gorse 的 positive_feedback_ttl 淘汰。
+    google.protobuf.Duration max_clock_skew = 4 [(buf.validate.field).duration.gte = {seconds: 1}];
+    // 同一会话内同一商品的曝光去重窗口。列表页滚动会反复触发曝光,不去重会把
+    // read_feedback_types 刷爆。
+    google.protobuf.Duration impression_dedup_ttl = 5 [(buf.validate.field).duration.gte = {seconds: 1}];
+    // 补偿投递:重扫 synced_at IS NULL 的事件重新投喂 gorse 的间隔,0 表示关闭
+    google.protobuf.Duration retry_interval = 6;
+    // 单次补偿投递最多捞多少条
+    uint32 retry_batch_size = 7;
+  }
 }
