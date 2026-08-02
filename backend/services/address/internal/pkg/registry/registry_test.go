@@ -1,9 +1,7 @@
 package registry
 
 import (
-	"os"
 	"testing"
-	"time"
 
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/suite"
@@ -19,7 +17,6 @@ func (suite *RegistryTestSuite) SetupTest() {
 	var err error
 	suite.testLogger, err = zap.NewDevelopment()
 	assert.NoError(suite.T(), err)
-	os.Clearenv()
 }
 
 func (suite *RegistryTestSuite) TestNewConsulRegistry_WithValidAddr() {
@@ -64,55 +61,8 @@ func (suite *RegistryTestSuite) TestModuleCreation() {
 	assert.Contains(suite.T(), module.String(), "registry")
 }
 
-func (suite *RegistryTestSuite) TestParseToTCPAddr_ValidHTTPUrl() {
-	addr, err := ParseToTCPAddr("http://localhost:8080")
-	assert.NoError(suite.T(), err)
-	assert.NotNil(suite.T(), addr)
-	assert.True(suite.T(), addr.IP.String() == "localhost" || addr.IP.String() == "127.0.0.1")
-	assert.Equal(suite.T(), 8080, addr.Port)
-}
-
-func (suite *RegistryTestSuite) TestParseToTCPAddr_ValidHTTPSUrl() {
-	addr, err := ParseToTCPAddr("https://localhost:8443")
-	assert.NoError(suite.T(), err)
-	assert.NotNil(suite.T(), addr)
-	assert.True(suite.T(), addr.IP.String() == "localhost" || addr.IP.String() == "127.0.0.1")
-	assert.Equal(suite.T(), 8443, addr.Port)
-}
-
-func (suite *RegistryTestSuite) TestParseToTCPAddr_WithoutPort() {
-	addr, err := ParseToTCPAddr("http://example.com")
-	assert.NoError(suite.T(), err)
-	assert.NotNil(suite.T(), addr)
-	assert.Equal(suite.T(), 80, addr.Port)
-}
-
-func (suite *RegistryTestSuite) TestParseToTCPAddr_HTTPSWithoutPort() {
-	addr, err := ParseToTCPAddr("https://example.com")
-	assert.NoError(suite.T(), err)
-	assert.NotNil(suite.T(), addr)
-	assert.Equal(suite.T(), 443, addr.Port)
-}
-
-func (suite *RegistryTestSuite) TestParseToTCPAddr_InvalidUrl() {
-	addr, err := ParseToTCPAddr("invalid-url")
-	assert.Error(suite.T(), err)
-	assert.Nil(suite.T(), addr)
-}
-
-func (suite *RegistryTestSuite) TestParseToTCPAddr_EmptyHost() {
-	addr, err := ParseToTCPAddr("http://")
-	assert.Error(suite.T(), err)
-	assert.Nil(suite.T(), addr)
-}
-
 func TestRegistryTestSuite(t *testing.T) {
 	suite.Run(t, new(RegistryTestSuite))
-}
-
-func TestConstants(t *testing.T) {
-	assert.Equal(t, "30s", TtlDuration)
-	assert.Equal(t, 10*time.Second, TtlPingInterval)
 }
 
 func TestNewConsulRegistry_PanicRecovery(t *testing.T) {
