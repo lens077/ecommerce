@@ -1,1 +1,8 @@
+# 暂存文件的格式化 + lint（规则在 frontend/vite.config.ts 的 staged 块）。
+#
+# 必须先 cd frontend：_/h 不做 cd，钩子的 cwd 是仓库根，而 vp staged 只从
+# cwd 找 vite.config.ts，在仓库根找不到就直接报
+# 「No "staged" config found in vite.config.ts」并让整个提交失败。
+# cd 之后 lint-staged 只挑 frontend/ 下的暂存文件，后端 Go 的改动不会被它碰。
+cd frontend || exit 0
 vp staged

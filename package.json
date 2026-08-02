@@ -2,16 +2,14 @@
   "name": "ecommerce",
   "version": "0.0.0",
   "private": true,
-  "description": "仓库根，只承载跨前后端的工程化工具（提交信息校验）。业务代码在 backend/ 和 frontend/",
+  "description": "仓库根，只承载跨前后端的提交信息校验（commitlint）。业务代码在 backend/ 和 frontend/；钩子由 frontend 的 vite-plus 安装，见 frontend/.vite-hooks/commit-msg",
   "type": "module",
   "scripts": {
-    "prepare": "husky",
     "commitlint": "commitlint --edit"
   },
   "devDependencies": {
     "@commitlint/cli": "^21.2.1",
-    "@commitlint/config-conventional": "^21.2.0",
-    "husky": "^9.1.7"
+    "@commitlint/config-conventional": "^21.2.0"
   },
   "engines": {
     "node": ">=22.12.0"
