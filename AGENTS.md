@@ -38,3 +38,25 @@
 - 配置：Consul KV `ecommerce/<svc>/dev.yml`
 - 鉴权：Casdoor + 网关集中式 JWT/RBAC
 - 进度真相源：`TODO.md`；架构真相源：`Design.md`、`CONFIG_CENTER_DESIGN.md`
+
+## Agent skills
+
+> 以下三份配置供 mattpocock 系列工程 skill（`/to-tickets` `/triage` `/to-spec` `/wayfinder`
+> `/domain-modeling` 等）读取。改配置改 `docs/agents/`，不要改这里的索引。
+
+### Issue tracker
+
+本地 markdown：issue 与 spec 存放在 `.scratch/<feature-slug>/`，入库，不走 GitHub/GitLab。
+见 [docs/agents/issue-tracker.md](docs/agents/issue-tracker.md)。
+
+### Triage labels
+
+沿用五个标准角色（`needs-triage` / `needs-info` / `ready-for-agent` / `ready-for-human` /
+`wontfix`），由 issue 文件里的 `Status:` 行承载。
+见 [docs/agents/triage-labels.md](docs/agents/triage-labels.md)。
+
+### Domain docs
+
+multi-context，但**不新建 `CONTEXT-MAP.md` / `CONTEXT.md` / `docs/adr/`**——直接复用既有的
+`context/` 三层知识库与 `.service-matrix.yaml`。
+见 [docs/agents/domain.md](docs/agents/domain.md)。
