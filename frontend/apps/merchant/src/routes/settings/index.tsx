@@ -18,13 +18,23 @@ import {
   FormControlLabel,
 } from "@mui/material";
 import { Camera, Save } from "lucide-react";
+import { useTranslation } from "@ecommerce/i18n";
 import { tokens } from "@/styles/theme";
+
+/** 通知开关。文案 key 显式列出，不用字段名拼。 */
+const NOTIFY_ITEMS = [
+  { labelKey: "settings.notify.newOrder.label", descKey: "settings.notify.newOrder.desc", defaultChecked: true },
+  { labelKey: "settings.notify.lowStock.label", descKey: "settings.notify.lowStock.desc", defaultChecked: true },
+  { labelKey: "settings.notify.refund.label", descKey: "settings.notify.refund.desc", defaultChecked: false },
+] as const;
 
 export const Route = createFileRoute("/settings/")({
   component: SettingsPage,
 });
 
 function SettingsPage() {
+  const { t } = useTranslation();
+
   const shopInfo = {
     name: "优品数码旗舰店",
     description: "专注数码产品销售，提供正品保障",
@@ -35,7 +45,7 @@ function SettingsPage() {
   return (
     <Box sx={{ maxWidth: 1200, mx: "auto" }}>
       <Typography variant="h4" sx={{ fontWeight: 700, color: "text.primary", mb: 3 }}>
-        店铺设置
+        {t("settings.title")}
       </Typography>
 
       <Box sx={{ display: "grid", gridTemplateColumns: { xs: "1fr", md: "2fr 1fr" }, gap: 3 }}>
@@ -43,29 +53,29 @@ function SettingsPage() {
         <Card>
           <CardContent sx={{ p: 3 }}>
             <Typography variant="h6" sx={{ fontWeight: 600, color: "text.primary", mb: 3 }}>
-              基本信息
+              {t("settings.basic.title")}
             </Typography>
             <Box sx={{ display: "flex", flexDirection: "column", gap: 2.5 }}>
               <Box>
-                <Typography variant="body2" sx={{ color: "text.secondary", mb: 1 }}>店铺名称</Typography>
+                <Typography variant="body2" sx={{ color: "text.secondary", mb: 1 }}>{t("settings.basic.name")}</Typography>
                 <TextField fullWidth size="small" defaultValue={shopInfo.name} />
               </Box>
               <Box>
-                <Typography variant="body2" sx={{ color: "text.secondary", mb: 1 }}>店铺简介</Typography>
+                <Typography variant="body2" sx={{ color: "text.secondary", mb: 1 }}>{t("settings.basic.description")}</Typography>
                 <TextField fullWidth size="small" defaultValue={shopInfo.description} multiline rows={3} />
               </Box>
               <Box>
-                <Typography variant="body2" sx={{ color: "text.secondary", mb: 1 }}>联系电话</Typography>
+                <Typography variant="body2" sx={{ color: "text.secondary", mb: 1 }}>{t("settings.basic.phone")}</Typography>
                 <TextField fullWidth size="small" defaultValue={shopInfo.phone} />
               </Box>
               <Box>
-                <Typography variant="body2" sx={{ color: "text.secondary", mb: 1 }}>店铺地址</Typography>
+                <Typography variant="body2" sx={{ color: "text.secondary", mb: 1 }}>{t("settings.basic.address")}</Typography>
                 <TextField fullWidth size="small" defaultValue={shopInfo.address} />
               </Box>
               <Divider sx={{ my: 1 }} />
               <Box sx={{ display: "flex", justifyContent: "flex-end" }}>
                 <Button variant="contained" startIcon={<Save size={16} />} sx={{ bgcolor: "primary.main" }}>
-                  保存修改
+                  {t("settings.save")}
                 </Button>
               </Box>
             </Box>
@@ -76,11 +86,11 @@ function SettingsPage() {
         <Card>
           <CardContent sx={{ p: 3 }}>
             <Typography variant="h6" sx={{ fontWeight: 600, color: "text.primary", mb: 3 }}>
-              店铺头像
+              {t("settings.avatar.title")}
             </Typography>
             <Box sx={{ display: "flex", flexDirection: "column", alignItems: "center" }}>
               <Box sx={{ position: "relative", mb: 2 }}>
-                <Avatar sx={{ width: 120, height: 120, bgcolor: "primary.main", fontSize: "2.5rem" }}>优</Avatar>
+                <Avatar sx={{ width: 120, height: 120, bgcolor: "primary.main", fontSize: "2.5rem" }}>{t("settings.avatar.initial")}</Avatar>
                 <Box
                   component="button"
                   sx={{
@@ -102,8 +112,8 @@ function SettingsPage() {
                   <Camera size={16} color="white" />
                 </Box>
               </Box>
-              <Typography variant="body2" sx={{ color: "text.secondary", textAlign: "center" }}>点击上传店铺头像</Typography>
-              <Typography variant="caption" sx={{ color: "text.disabled", mt: 0.5 }}>支持 JPG、PNG 格式</Typography>
+              <Typography variant="body2" sx={{ color: "text.secondary", textAlign: "center" }}>{t("settings.avatar.upload")}</Typography>
+              <Typography variant="caption" sx={{ color: "text.disabled", mt: 0.5 }}>{t("settings.avatar.formats")}</Typography>
             </Box>
           </CardContent>
         </Card>
@@ -112,12 +122,22 @@ function SettingsPage() {
         <Card sx={{ gridColumn: "1 / -1" }}>
           <CardContent sx={{ p: 3 }}>
             <Typography variant="h6" sx={{ fontWeight: 600, color: "text.primary", mb: 3 }}>
-              通知设置
+              {t("settings.notify.title")}
             </Typography>
             <Box sx={{ display: "flex", flexDirection: "column", gap: 2 }}>
-              <FormControlLabel control={<Switch defaultChecked />} label={<Box><Typography variant="body2" sx={{ fontWeight: 500 }}>新订单提醒</Typography><Typography variant="caption" sx={{ color: "text.secondary" }}>有新订单时发送通知</Typography></Box>} sx={{ mx: 0, alignItems: "flex-start", gap: 2 }} />
-              <FormControlLabel control={<Switch defaultChecked />} label={<Box><Typography variant="body2" sx={{ fontWeight: 500 }}>库存预警</Typography><Typography variant="caption" sx={{ color: "text.secondary" }}>库存不足时发送通知</Typography></Box>} sx={{ mx: 0, alignItems: "flex-start", gap: 2 }} />
-              <FormControlLabel control={<Switch />} label={<Box><Typography variant="body2" sx={{ fontWeight: 500 }}>退款通知</Typography><Typography variant="caption" sx={{ color: "text.secondary" }}>有退款申请时发送通知</Typography></Box>} sx={{ mx: 0, alignItems: "flex-start", gap: 2 }} />
+              {NOTIFY_ITEMS.map((item) => (
+                <FormControlLabel
+                  key={item.labelKey}
+                  control={<Switch defaultChecked={item.defaultChecked} />}
+                  label={
+                    <Box>
+                      <Typography variant="body2" sx={{ fontWeight: 500 }}>{t(item.labelKey)}</Typography>
+                      <Typography variant="caption" sx={{ color: "text.secondary" }}>{t(item.descKey)}</Typography>
+                    </Box>
+                  }
+                  sx={{ mx: 0, alignItems: "flex-start", gap: 2 }}
+                />
+              ))}
             </Box>
           </CardContent>
         </Card>

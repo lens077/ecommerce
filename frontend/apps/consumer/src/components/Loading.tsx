@@ -7,6 +7,7 @@
 import { Box, CircularProgress, Typography } from "@mui/material";
 import { createPortal } from "react-dom";
 import { useEffect, useState } from "react";
+import { i18next } from "@ecommerce/i18n";
 
 interface LoadingProps {
   isLoading: boolean;
@@ -58,26 +59,33 @@ export function Loading({ isLoading, message, fullscreen = false }: LoadingProps
   return createPortal(content, document.body);
 }
 
-// 全局加载状态 Hook
-import { create } from "zustand";
+// 全局加载状态，与 src/store/* 一致用 valtio
+import { proxy, useSnapshot } from "valtio";
 
-interface LoadingStore {
+interface LoadingState {
   isLoading: boolean;
   message: string;
-  show: (message?: string) => void;
-  hide: () => void;
 }
 
-export const useLoadingStore = create<LoadingStore>((set) => ({
+export const loadingStore = proxy<LoadingState>({
   isLoading: false,
   message: "",
-  show: (message) => set({ isLoading: true, message: message || "加载中..." }),
-  hide: () => set({ isLoading: false, message: "" }),
-}));
+});
+
+export const showLoading = (message?: string) => {
+  loadingStore.isLoading = true;
+  // 非组件环境，用 i18next 的 t 而不是 useTranslation
+  loadingStore.message = message || i18next.t("common:state.loading");
+};
+
+export const hideLoading = () => {
+  loadingStore.isLoading = false;
+  loadingStore.message = "";
+};
 
 // 全局加载 Provider
 export function GlobalLoadingProvider() {
-  const { isLoading, message } = useLoadingStore();
+  const { isLoading, message } = useSnapshot(loadingStore);
 
   return <Loading isLoading={isLoading} message={message} fullscreen />;
 }

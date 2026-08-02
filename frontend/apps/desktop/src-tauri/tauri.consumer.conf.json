@@ -1,0 +1,23 @@
+{
+  "$schema": "https://schema.tauri.app/config/2",
+  "productName": "Ecommerce",
+  "identifier": "com.ecommerce.consumer",
+  "build": {
+    "beforeDevCommand": "pnpm --filter @ecommerce/consumer dev",
+    "beforeBuildCommand": "pnpm --filter @ecommerce/consumer build",
+    "devUrl": "http://localhost:3000",
+    "frontendDist": "../../consumer/dist"
+  },
+  "app": {
+    "windows": [
+      {
+        "label": "main",
+        "title": "ecommerce",
+        "width": 1280,
+        "height": 800,
+        "minWidth": 960,
+        "minHeight": 640
+      }
+    ]
+  }
+}

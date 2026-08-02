@@ -1,8 +1,9 @@
 // src/providers/AuthProvider.tsx
 import React, { createContext, useContext, useState, useEffect } from "react";
 import SDK from "casdoor-js-sdk";
-import { CASDOOR_CONF } from "@ecommerce/configs";
+import { CASDOOR_CONF, DESKTOP_REDIRECT_URI, getDesktopSigninUrl } from "@ecommerce/configs";
 import { onAuthError } from "@ecommerce/api";
+import { isTauri } from "@ecommerce/tauri";
 import { isTokenExpired } from "@ecommerce/utils";
 import { setAccount } from "@/store/users";
 
@@ -54,6 +55,27 @@ export const AuthProvider: React.FC<{ children: React.ReactNode; router: any }> 
 
         // 记录本次自动跳转登录的时间戳，用于死循环保护（见下方 onAuthError）
         sessionStorage.setItem(LAST_LOGIN_REDIRECT_KEY, String(Date.now()));
+
+        // 桌面端不能硬跳转：主窗口的源是 tauri://localhost，跳出去 Casdoor 就回不来了。
+        // 改为开一个子窗口加载登录页，由 Rust 侧拦截回调地址把 code/state 送回来，
+        // 再手动导航到 /callback 复用既有的兑换逻辑。
+        if (isTauri()) {
+            void (async () => {
+                const { openCasdoorLogin, OauthCancelledError } = await import("@ecommerce/tauri/auth");
+                try {
+                    const redirectUri = DESKTOP_REDIRECT_URI.config;
+                    const { code, state } = await openCasdoorLogin(
+                        getDesktopSigninUrl(redirectUri),
+                        redirectUri,
+                    );
+                    await router.navigate({ to: "/callback", search: { code, state } });
+                } catch (err) {
+                    if (err instanceof OauthCancelledError) return;
+                    console.error("[Auth] 桌面端登录失败:", err);
+                }
+            })();
+            return;
+        }
 
         // 唤起 Casdoor 官方 SDK 提供的方法，直接改变浏览器地址栏进行硬重定向
         window.location.href = casdoor.getSigninUrl();

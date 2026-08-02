@@ -23,3 +23,6 @@ export { useDebounce, useDebouncedCallback, useDebounceWithPending } from "./use
 
 // 错误边界
 export { ErrorBoundary } from "./ErrorBoundary";
+
+// 语言切换
+export { LocaleSwitcher } from "./LocaleSwitcher";

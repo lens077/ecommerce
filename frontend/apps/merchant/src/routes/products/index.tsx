@@ -24,13 +24,27 @@ import {
 } from "@mui/material";
 import { Search, Plus, Edit, Trash2, Eye, Image as ImageIcon } from "lucide-react";
 import { useState } from "react";
+import { useFormat, useTranslation } from "@ecommerce/i18n";
 import { tokens } from "@/styles/theme";
+
+/** 表头。key 显式列出，不用下标拼。 */
+const COLUMNS = [
+  "products.table.product",
+  "products.table.category",
+  "products.table.price",
+  "products.table.stock",
+  "products.table.sales",
+  "products.table.status",
+  "products.table.actions",
+] as const;
 
 export const Route = createFileRoute("/products/")({
   component: ProductsPage,
 });
 
 function ProductsPage() {
+  const { t } = useTranslation();
+  const { formatCurrency } = useFormat();
   const [searchQuery, setSearchQuery] = useState("");
 
   const products = [
@@ -41,9 +55,9 @@ function ProductsPage() {
   ];
 
   const getStatusConfig = (status: string) => {
-    const configs: Record<string, { label: string; color: string; bg: string }> = {
-      online: { label: "已上架", color: tokens.colors.accent.green, bg: "rgba(16, 185, 129, 0.1)" },
-      offline: { label: "已下架", color: tokens.colors.text.secondary, bg: tokens.colors.background.primary },
+    const configs: Record<string, { labelKey: string; color: string; bg: string }> = {
+      online: { labelKey: "products.status.online", color: tokens.colors.accent.green, bg: "rgba(16, 185, 129, 0.1)" },
+      offline: { labelKey: "products.status.offline", color: tokens.colors.text.secondary, bg: tokens.colors.background.primary },
     };
     return configs[status] || configs.online;
   };
@@ -55,24 +69,24 @@ function ProductsPage() {
       {/* 页面标题 */}
       <Box sx={{ display: "flex", justifyContent: "space-between", alignItems: "center", mb: 3 }}>
         <Typography variant="h4" sx={{ fontWeight: 700, color: "text.primary" }}>
-          商品管理
+          {t("products.title")}
         </Typography>
         <Button variant="contained" startIcon={<Plus size={16} />} sx={{ bgcolor: "primary.main" }}>
-          添加商品
+          {t("products.add")}
         </Button>
       </Box>
 
       {/* 统计卡片 */}
       <Box sx={{ display: "grid", gridTemplateColumns: { xs: "1fr 1fr", md: "repeat(4, 1fr)" }, gap: 2, mb: 3 }}>
         {[
-          { label: "全部商品", value: products.length },
-          { label: "上架中", value: products.filter((p) => p.status === "online").length },
-          { label: "已下架", value: products.filter((p) => p.status === "offline").length },
-          { label: "库存不足", value: products.filter((p) => p.stock > 0 && p.stock < 10).length },
+          { labelKey: "products.stats.all", value: products.length },
+          { labelKey: "products.stats.online", value: products.filter((p) => p.status === "online").length },
+          { labelKey: "products.stats.offline", value: products.filter((p) => p.status === "offline").length },
+          { labelKey: "products.stats.lowStock", value: products.filter((p) => p.stock > 0 && p.stock < 10).length },
         ].map((stat) => (
-          <Card key={stat.label}>
+          <Card key={stat.labelKey}>
             <CardContent sx={{ p: 2, "&:last-child": { pb: 2 } }}>
-              <Typography variant="body2" sx={{ color: "text.secondary", mb: 0.5 }}>{stat.label}</Typography>
+              <Typography variant="body2" sx={{ color: "text.secondary", mb: 0.5 }}>{t(stat.labelKey)}</Typography>
               <Typography variant="h5" sx={{ fontWeight: 700, color: "text.primary" }}>{stat.value}</Typography>
             </CardContent>
           </Card>
@@ -84,7 +98,7 @@ function ProductsPage() {
         <CardContent sx={{ p: 2, "&:last-child": { pb: 2 } }}>
           <TextField
             size="small"
-            placeholder="搜索商品名称..."
+            placeholder={t("products.searchPlaceholder")}
             value={searchQuery}
             onChange={(e) => setSearchQuery(e.target.value)}
             slotProps={{
@@ -103,13 +117,9 @@ function ProductsPage() {
           <Table>
             <TableHead>
               <TableRow>
-                <TableCell sx={{ fontWeight: 500, color: "text.secondary" }}>商品信息</TableCell>
-                <TableCell sx={{ fontWeight: 500, color: "text.secondary" }}>分类</TableCell>
-                <TableCell sx={{ fontWeight: 500, color: "text.secondary" }}>价格</TableCell>
-                <TableCell sx={{ fontWeight: 500, color: "text.secondary" }}>库存</TableCell>
-                <TableCell sx={{ fontWeight: 500, color: "text.secondary" }}>销量</TableCell>
-                <TableCell sx={{ fontWeight: 500, color: "text.secondary" }}>状态</TableCell>
-                <TableCell sx={{ fontWeight: 500, color: "text.secondary" }}>操作</TableCell>
+                {COLUMNS.map((key) => (
+                  <TableCell key={key} sx={{ fontWeight: 500, color: "text.secondary" }}>{t(key)}</TableCell>
+                ))}
               </TableRow>
             </TableHead>
             <TableBody>
@@ -133,19 +143,19 @@ function ProductsPage() {
                     </TableCell>
                     <TableCell>
                       <Typography variant="body2" sx={{ fontWeight: 600, color: tokens.colors.accent.red }}>
-                        ¥{product.price.toLocaleString()}
+                        {formatCurrency(product.price)}
                       </Typography>
                     </TableCell>
                     <TableCell>
                       <Typography variant="body2" sx={{ color: product.stock === 0 ? tokens.colors.accent.red : "text.primary" }}>
-                        {product.stock === 0 ? "缺货" : product.stock}
+                        {product.stock === 0 ? t("products.outOfStock") : product.stock}
                       </Typography>
                     </TableCell>
                     <TableCell>
                       <Typography variant="body2" sx={{ color: "text.secondary" }}>{product.sales}</Typography>
                     </TableCell>
                     <TableCell>
-                      <Chip label={statusConfig.label} size="small" sx={{ bgcolor: statusConfig.bg, color: statusConfig.color, fontWeight: 500, borderRadius: 5 }} />
+                      <Chip label={t(statusConfig.labelKey)} size="small" sx={{ bgcolor: statusConfig.bg, color: statusConfig.color, fontWeight: 500, borderRadius: 5 }} />
                     </TableCell>
                     <TableCell>
                       <Box sx={{ display: "flex", gap: 0.5 }}>

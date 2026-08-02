@@ -6,6 +6,7 @@
 
 import { Box, Button, Typography } from "@mui/material";
 import { ShoppingCart } from "lucide-react";
+import { useTranslation } from "@ecommerce/i18n";
 import { sp, tokens } from "@/styles/tokens";
 
 interface EmptyCartProps {
@@ -13,6 +14,8 @@ interface EmptyCartProps {
 }
 
 export function EmptyCart({ onNavigateHome }: EmptyCartProps) {
+  const { t } = useTranslation();
+
   return (
     <Box
       sx={{
@@ -52,7 +55,7 @@ export function EmptyCart({ onNavigateHome }: EmptyCartProps) {
           mb: sp[1],
         }}
       >
-        购物车是空的
+        {t("cart.empty.title")}
       </Typography>
 
       <Typography
@@ -62,7 +65,7 @@ export function EmptyCart({ onNavigateHome }: EmptyCartProps) {
           mb: sp[3],
         }}
       >
-        快去挑选心仪的商品吧
+        {t("cart.empty.desc")}
       </Typography>
 
       <Button
@@ -84,7 +87,7 @@ export function EmptyCart({ onNavigateHome }: EmptyCartProps) {
             whiteSpace: "nowrap"
         }}
       >
-        去逛逛
+        {t("cart.empty.action")}
       </Button>
     </Box>
   );

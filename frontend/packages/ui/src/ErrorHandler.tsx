@@ -6,6 +6,7 @@ import {
   isUnauthenticated,
   toAppError,
 } from "@ecommerce/api";
+import { useTranslation } from "@ecommerce/i18n";
 
 interface ErrorHandlerProps {
   error: any;
@@ -46,18 +47,21 @@ const ErrorPanel: React.FC<{ message: string; actionLabel: string; onAction: () 
 );
 
 const ErrorHandler: React.FC<ErrorHandlerProps> = ({ error, onBack, loading, children }) => {
-  if (loading) return <div>加载中...</div>;
+  // 这是共享包，没有自己的命名空间，文案一律取 common
+  const { t } = useTranslation("common");
+
+  if (loading) return <div>{t("state.loading")}</div>;
 
   if (error) {
-    // 文案统一由 toAppError 决定：优先用网关/服务端返回的中文 message，
-    // 拿不到时按 reason、再按 code 兜底，不会再出现“未知错误”
+    // 文案统一由 toAppError 决定：先问 app 注入的解析器（切英文时走 errors 命名空间），
+    // 再按服务端 message、reason、code 兜底，不会再出现“未知错误”
     const appError = toAppError(error);
 
     if (isUnauthenticated(appError)) {
       return (
         <ErrorPanel
           message={appError.message}
-          actionLabel="去登录"
+          actionLabel={t("action.signIn")}
           onAction={() => (window.location.href = "/callback")}
         />
       );
@@ -67,7 +71,7 @@ const ErrorHandler: React.FC<ErrorHandlerProps> = ({ error, onBack, loading, chi
       return (
         <ErrorPanel
           message={appError.message}
-          actionLabel="返回上一页"
+          actionLabel={t("action.goBack")}
           onAction={onBack || (() => window.history.back())}
         />
       );
@@ -77,7 +81,7 @@ const ErrorHandler: React.FC<ErrorHandlerProps> = ({ error, onBack, loading, chi
       return (
         <ErrorPanel
           message={appError.message}
-          actionLabel="重新加载"
+          actionLabel={t("action.reload")}
           onAction={() => window.location.reload()}
         />
       );
@@ -87,7 +91,7 @@ const ErrorHandler: React.FC<ErrorHandlerProps> = ({ error, onBack, loading, chi
       <Container maxWidth="md" sx={{ py: 4 }}>
         <Paper elevation={0} sx={panelSx}>
           <Alert severity="error" sx={{ mb: 4 }}>
-            加载失败：{appError.message}
+            {t("error.loadFailed", { message: appError.message })}
           </Alert>
           <Typography variant="caption" color="text.secondary" component={Box} sx={{ mb: 2 }}>
             {appError.codeName} / {appError.reason}
@@ -98,7 +102,7 @@ const ErrorHandler: React.FC<ErrorHandlerProps> = ({ error, onBack, loading, chi
             onClick={() => window.location.reload()}
             sx={buttonSx}
           >
-            重新加载
+            {t("action.reload")}
           </Button>
         </Paper>
       </Container>

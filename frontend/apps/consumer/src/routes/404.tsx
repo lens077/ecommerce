@@ -6,6 +6,7 @@ import { createFileRoute } from "@tanstack/react-router";
 import { Box, Button, Typography } from "@mui/material";
 import { Home, ArrowLeft } from "lucide-react";
 import { useNavigate } from "@tanstack/react-router";
+import { useTranslation } from "@ecommerce/i18n";
 
 export const Route = createFileRoute("/404")({
   component: NotFoundPage,
@@ -13,6 +14,7 @@ export const Route = createFileRoute("/404")({
 
 function NotFoundPage() {
   const navigate = useNavigate();
+  const { t } = useTranslation();
 
   return (
     <Box
@@ -49,7 +51,7 @@ function NotFoundPage() {
           textAlign: "center",
         }}
       >
-        页面不存在
+        {t("notFound.title")}
       </Typography>
 
       {/* 描述 */}
@@ -62,7 +64,7 @@ function NotFoundPage() {
           maxWidth: 400,
         }}
       >
-        您访问的页面可能已失效或不存在，请检查链接是否正确
+        {t("notFound.desc")}
       </Typography>
 
       {/* 操作按钮 */}
@@ -80,7 +82,7 @@ function NotFoundPage() {
             },
           }}
         >
-          返回上一页
+          {t("notFound.back")}
         </Button>
         <Button
           variant="contained"
@@ -93,7 +95,7 @@ function NotFoundPage() {
             },
           }}
         >
-          返回首页
+          {t("notFound.home")}
         </Button>
       </Box>
     </Box>

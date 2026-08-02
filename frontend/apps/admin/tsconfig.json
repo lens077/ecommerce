@@ -8,6 +8,7 @@
     /* 模块解析*/
     "module": "ESNext",
     "moduleResolution": "bundler",
+    "resolveJsonModule": true,   // locales/*.json
     "types": ["vite/client"],
 
     /* 现代工程化 */
@@ -24,6 +25,7 @@
       "@ecommerce/api": ["../../packages/api/src/index.ts"],
       "@ecommerce/configs": ["../../packages/configs/src/index.ts"],
       "@ecommerce/constants": ["../../packages/constants/src/index.ts"],
+      "@ecommerce/i18n": ["../../packages/i18n/src/index.ts"],
       "@ecommerce/types": ["../../packages/types/src/index.ts"],
       "@ecommerce/ui": ["../../packages/ui/src/index.ts"],
       "@ecommerce/utils": ["../../packages/utils/src/index.ts"]

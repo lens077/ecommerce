@@ -1,6 +1,7 @@
 import { Box, Checkbox, Typography } from "@mui/material";
 import { Store } from "lucide-react";
 
+import { useTranslation } from "@ecommerce/i18n";
 import { CartItemCard } from "./CartItemCard";
 import type { MerchantGroup } from "@/store/cart";
 import { sp, tokens } from "@/styles/tokens";
@@ -21,10 +22,11 @@ export function MerchantCartGroup({
                                       onRemove,
                                       onSelectByMerchant,
                                   }: MerchantCartGroupProps) {
+    const { t } = useTranslation();
     const allSelected = group.items.every((item) => item.selected);
     const indeterminate =
         !allSelected && group.items.some((item) => item.selected);
-    const shopName = group.items[0]?.shopName || "商家";
+    const shopName = group.items[0]?.shopName || t("cart.defaultShopName");
 
     return (
         <Box

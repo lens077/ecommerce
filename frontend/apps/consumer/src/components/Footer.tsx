@@ -1,7 +1,10 @@
 import { Box, Container, Typography, Link } from "@mui/material";
 import StorefrontIcon from "@mui/icons-material/Storefront";
+import { useTranslation } from "@ecommerce/i18n";
 
 const Footer: React.FC = () => {
+  const { t } = useTranslation();
+
   return (
     <Box
       component="footer"
@@ -48,11 +51,11 @@ const Footer: React.FC = () => {
                   WebkitTextFillColor: "transparent",
                 }}
               >
-                电商平台
+                {t("footer.brand")}
               </Typography>
             </Box>
             <Typography variant="body2" color="text.secondary" sx={{ lineHeight: 1.8 }}>
-              打造极致的在线购物体验，为您提供优质的商品和服务。
+              {t("footer.tagline")}
             </Typography>
           </Box>
 
@@ -77,7 +80,7 @@ const Footer: React.FC = () => {
                   background: "linear-gradient(135deg, #667eea 0%, #764ba2 100%)",
                 }}
               />
-              关于我们
+              {t("footer.about.title")}
             </Typography>
             <Box sx={{ display: "flex", flexDirection: "column", gap: 1.5 }}>
               <Link
@@ -92,7 +95,7 @@ const Footer: React.FC = () => {
                   },
                 }}
               >
-                公司简介
+                {t("footer.about.company")}
               </Link>
               <Link
                 href="#"
@@ -106,7 +109,7 @@ const Footer: React.FC = () => {
                   },
                 }}
               >
-                联系我们
+                {t("footer.about.contact")}
               </Link>
               <Link
                 href="#"
@@ -120,7 +123,7 @@ const Footer: React.FC = () => {
                   },
                 }}
               >
-                加入我们
+                {t("footer.about.careers")}
               </Link>
             </Box>
           </Box>
@@ -146,7 +149,7 @@ const Footer: React.FC = () => {
                   background: "linear-gradient(135deg, #667eea 0%, #764ba2 100%)",
                 }}
               />
-              帮助中心
+              {t("footer.help.title")}
             </Typography>
             <Box sx={{ display: "flex", flexDirection: "column", gap: 1.5 }}>
               <Link
@@ -161,7 +164,7 @@ const Footer: React.FC = () => {
                   },
                 }}
               >
-                常见问题
+                {t("footer.help.faq")}
               </Link>
               <Link
                 href="#"
@@ -175,7 +178,7 @@ const Footer: React.FC = () => {
                   },
                 }}
               >
-                购物指南
+                {t("footer.help.guide")}
               </Link>
               <Link
                 href="#"
@@ -189,7 +192,7 @@ const Footer: React.FC = () => {
                   },
                 }}
               >
-                售后服务
+                {t("footer.help.afterSales")}
               </Link>
             </Box>
           </Box>
@@ -215,7 +218,7 @@ const Footer: React.FC = () => {
                   background: "linear-gradient(135deg, #667eea 0%, #764ba2 100%)",
                 }}
               />
-              隐私与条款
+              {t("footer.legal.title")}
             </Typography>
             <Box sx={{ display: "flex", flexDirection: "column", gap: 1.5 }}>
               <Link
@@ -230,7 +233,7 @@ const Footer: React.FC = () => {
                   },
                 }}
               >
-                隐私政策
+                {t("footer.legal.privacy")}
               </Link>
               <Link
                 href="#"
@@ -244,7 +247,7 @@ const Footer: React.FC = () => {
                   },
                 }}
               >
-                服务条款
+                {t("footer.legal.terms")}
               </Link>
               <Link
                 href="#"
@@ -258,7 +261,7 @@ const Footer: React.FC = () => {
                   },
                 }}
               >
-                Cookie政策
+                {t("footer.legal.cookie")}
               </Link>
             </Box>
           </Box>
@@ -284,7 +287,7 @@ const Footer: React.FC = () => {
           }}
         >
           <Typography variant="body2" color="text.secondary">
-            © {new Date().getFullYear()} 电商平台. 保留所有权利.
+            {t("footer.copyright", { year: new Date().getFullYear() })}
           </Typography>
           <Box sx={{ display: "flex", gap: 3 }}>
             <Link
@@ -296,7 +299,7 @@ const Footer: React.FC = () => {
                 "&:hover": { color: "primary.main" },
               }}
             >
-              网站地图
+              {t("footer.sitemap")}
             </Link>
             <Link
               href="#"
@@ -307,7 +310,7 @@ const Footer: React.FC = () => {
                 "&:hover": { color: "primary.main" },
               }}
             >
-              备案信息
+              {t("footer.icp")}
             </Link>
           </Box>
         </Box>

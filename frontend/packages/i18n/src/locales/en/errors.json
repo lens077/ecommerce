@@ -1,0 +1,37 @@
+{
+  "reason": {
+    "NO_AVAILABLE_NODE": "The backend service is unavailable. Please try again later.",
+    "NOT_FOUND": "The requested resource does not exist.",
+    "METHOD_NOT_ALLOWED": "This request method is not allowed.",
+    "CANCELED": "The request was canceled.",
+    "DEADLINE_EXCEEDED": "The request timed out. Please try again later.",
+    "BAD_GATEWAY": "The gateway could not reach the backend service.",
+    "JWT_AUTHN_REQUIRED": "You are not signed in, or your session has expired. Please sign in again.",
+    "MISSING_AUTH_TOKEN": "Missing credentials. Please sign in again.",
+    "TOKEN_EXPIRED": "Your session has expired. Please sign in again.",
+    "TOKEN_PARSE_FAILED": "Invalid credentials. Please sign in again.",
+    "INVALID_TOKEN_CLAIMS": "Invalid credentials. Please sign in again.",
+    "UNAUTHENTICATED": "Your session is no longer valid. Please sign in again.",
+    "PERMISSION_DENIED": "Permission check failed. Please verify your access rights.",
+    "FORBIDDEN_ROUTE": "Your role does not have access to this resource or page.",
+    "OPERATION_DENIED": "Insufficient permissions. Please contact an administrator.",
+    "INTERNAL_ERROR": "Internal server error. Please try again later.",
+    "SERVICE_UNAVAILABLE": "The service is temporarily unavailable. Please try again later."
+  },
+  "code": {
+    "canceled": "The request was canceled.",
+    "invalid_argument": "Invalid request parameters.",
+    "deadline_exceeded": "The request timed out. Please try again later.",
+    "not_found": "The requested resource does not exist.",
+    "already_exists": "This resource already exists.",
+    "permission_denied": "You do not have permission to perform this action.",
+    "resource_exhausted": "Too many requests. Please try again later.",
+    "failed_precondition": "This action is not allowed in the current state.",
+    "unimplemented": "This endpoint is not implemented yet.",
+    "internal": "Internal server error. Please try again later.",
+    "unavailable": "The service is temporarily unavailable. Please try again later.",
+    "unauthenticated": "Your session is no longer valid. Please sign in again."
+  },
+  "network": "Network connection failed. Please check your connection and try again.",
+  "fallback": "Something went wrong. Please try again later."
+}

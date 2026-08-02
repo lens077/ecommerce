@@ -20,6 +20,8 @@ import Typography from "@mui/material/Typography";
 import { useNavigate } from "@tanstack/react-router";
 import * as React from "react";
 import { searchApi } from "@/api/search";
+import { useFormat, useTranslation } from "@ecommerce/i18n";
+import { LocaleSwitcher } from "@ecommerce/ui";
 import { getSigninUrl, isLoggedIn } from "@ecommerce/configs";
 import { SEARCH_INDEX } from "@ecommerce/constants";
 import type { Product } from "@/gen/api";
@@ -101,6 +103,8 @@ const StyledInputBase = styled(InputBase)(({theme}) => ({
 
 export default function PrimarySearchAppBar() {
     const navigate = useNavigate();
+    const { t } = useTranslation();
+    const { formatCurrency } = useFormat();
     const cartCount = useCartBadge();
     const [anchorEl, setAnchorEl] = React.useState<null | HTMLElement>(null);
     const [mobileMoreAnchorEl, setMobileMoreAnchorEl] = React.useState<null | HTMLElement>(null);
@@ -151,7 +155,7 @@ export default function PrimarySearchAppBar() {
             };
             // 显示登出成功通知
             addNotification({
-                message: "登出成功",
+                message: t("appBar.signOutSuccess"),
                 severity: "success",
             });
             // 跳转到首页
@@ -242,11 +246,15 @@ export default function PrimarySearchAppBar() {
         >
             <MenuItem disabled>
                 <Typography variant="body2" color="text.secondary">
-                    Signed in as {userStore.account.name || userStore.account.email}
+                    {t("appBar.signedInAs", {
+                        name: userStore.account.name || userStore.account.email,
+                    })}
                 </Typography>
             </MenuItem>
-            <MenuItem onClick={() => handleMenuClose("/profile")}>My account</MenuItem>
-            <MenuItem onClick={() => handleMenuClose("/logout")}>Logout</MenuItem>
+            <MenuItem onClick={() => handleMenuClose("/profile")}>{t("appBar.myAccount")}</MenuItem>
+            <MenuItem onClick={() => handleMenuClose("/logout")}>
+                {t("common:action.signOut")}
+            </MenuItem>
         </Menu>
     );
 
@@ -277,7 +285,7 @@ export default function PrimarySearchAppBar() {
                         <ShoppingCartIcon/>
                     </Badge>
                 </IconButton>
-                <p>购物车</p>
+                <p>{t("appBar.cart")}</p>
             </MenuItem>
             <MenuItem onClick={handleProfileMenuOpen}>
                 <IconButton
@@ -293,7 +301,7 @@ export default function PrimarySearchAppBar() {
                         <AccountCircle/>
                     )}
                 </IconButton>
-                <p>个人中心</p>
+                <p>{t("appBar.profile")}</p>
             </MenuItem>
         </Menu>
     );
@@ -367,7 +375,7 @@ export default function PrimarySearchAppBar() {
                             }}
                         >
                             <StyledInputBase
-                                placeholder="搜索商品..."
+                                placeholder={t("appBar.searchPlaceholder")}
                                 inputProps={{"aria-label": "search"}}
                                 value={searchInput}
                                 onChange={handleSearchInputChange}
@@ -411,6 +419,7 @@ export default function PrimarySearchAppBar() {
                             gap: 1,
                         }}
                     >
+                        <LocaleSwitcher size="large" />
                         <IconButton
                             size="large"
                             aria-label="shopping cart"
@@ -464,11 +473,12 @@ export default function PrimarySearchAppBar() {
                                     },
                                 }}
                             >
-                                登录
+                                {t("common:action.signIn")}
                             </Button>
                         )}
                     </Box>
-                    <Box sx={{display: {xs: "flex", md: "none"}}}>
+                    <Box sx={{display: {xs: "flex", md: "none"}, alignItems: "center"}}>
+                        <LocaleSwitcher size="small" />
                         {isLoggedIn() ? (
                             <IconButton
                                 size="large"
@@ -492,7 +502,7 @@ export default function PrimarySearchAppBar() {
                                     color: "white",
                                 }}
                             >
-                                登录
+                                {t("common:action.signIn")}
                             </Button>
                         )}
                     </Box>
@@ -507,10 +517,10 @@ export default function PrimarySearchAppBar() {
                 >
                     <Box sx={{ display: "flex", alignItems: "center", gap: 1, mb: 2 }}>
                         <Typography variant="h6" sx={{ fontWeight: 600 }}>
-                            搜索结果
+                            {t("appBar.searchResults")}
                         </Typography>
                         <Typography variant="body2" color="text.secondary">
-                            ({searchResults.length} 个商品)
+                            {t("appBar.searchResultCount", { count: searchResults.length })}
                         </Typography>
                     </Box>
                     {isSearching ? (
@@ -576,10 +586,10 @@ export default function PrimarySearchAppBar() {
                                                 WebkitTextFillColor: "transparent",
                                             }}
                                         >
-                                            ¥{product.price}
+                                            {formatCurrency(product.price)}
                                         </Typography>
                                         <Typography variant="caption" color="text.secondary">
-                                            已售 {product.quantity}
+                                            {t("appBar.sold", { count: product.quantity })}
                                         </Typography>
                                     </Box>
                                 </Box>
@@ -587,7 +597,7 @@ export default function PrimarySearchAppBar() {
                         </Box>
                     ) : (
                         <Typography variant="body1" sx={{textAlign: "center", py: 4}}>
-                            未找到相关商品
+                            {t("appBar.searchEmpty")}
                         </Typography>
                     )}
                 </SearchResults>

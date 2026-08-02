@@ -27,13 +27,27 @@ import {
 } from "@mui/material";
 import { Search, Eye, Truck, Download, Filter } from "lucide-react";
 import { useState } from "react";
+import { useFormat, useTranslation } from "@ecommerce/i18n";
 import { tokens } from "@/styles/theme";
+
+/** 表头。key 显式列出，不用下标拼。 */
+const COLUMNS = [
+  "orders.table.orderNo",
+  "orders.table.customer",
+  "orders.table.items",
+  "orders.table.amount",
+  "orders.table.status",
+  "orders.table.createTime",
+  "orders.table.actions",
+] as const;
 
 export const Route = createFileRoute("/orders/")({
   component: OrdersPage,
 });
 
 function OrdersPage() {
+  const { t } = useTranslation();
+  const { formatCurrency } = useFormat();
   const [statusFilter, setStatusFilter] = useState("all");
 
   const orders = [
@@ -43,11 +57,12 @@ function OrdersPage() {
     { id: "ORD20240611002", customer: "赵女士", phone: "137****3456", items: "iPad Pro 12.9", quantity: 1, amount: 8499, status: "completed", createTime: "2024-06-11 14:20" },
   ];
 
+  // 状态文案复用 common ns 的订单状态表；这里只留颜色和 key 的映射
   const getStatusConfig = (status: string) => {
-    const configs: Record<string, { label: string; color: string; bg: string }> = {
-      pending: { label: "待发货", color: tokens.colors.accent.red, bg: "rgba(239, 68, 68, 0.1)" },
-      shipped: { label: "已发货", color: tokens.colors.accent.blue, bg: "rgba(59, 130, 246, 0.1)" },
-      completed: { label: "已完成", color: tokens.colors.accent.green, bg: "rgba(16, 185, 129, 0.1)" },
+    const configs: Record<string, { labelKey: string; color: string; bg: string }> = {
+      pending: { labelKey: "common:orderStatus.pending_shipment", color: tokens.colors.accent.red, bg: "rgba(239, 68, 68, 0.1)" },
+      shipped: { labelKey: "common:orderStatus.shipped", color: tokens.colors.accent.blue, bg: "rgba(59, 130, 246, 0.1)" },
+      completed: { labelKey: "common:orderStatus.completed", color: tokens.colors.accent.green, bg: "rgba(16, 185, 129, 0.1)" },
     };
     return configs[status] || configs.pending;
   };
@@ -59,10 +74,10 @@ function OrdersPage() {
       {/* 页面标题 */}
       <Box sx={{ display: "flex", justifyContent: "space-between", alignItems: "center", mb: 3 }}>
         <Typography variant="h4" sx={{ fontWeight: 700, color: "text.primary" }}>
-          订单管理
+          {t("orders.title")}
         </Typography>
         <Button variant="outlined" startIcon={<Download size={16} />} sx={{ borderColor: "divider", color: "text.secondary" }}>
-          导出订单
+          {t("orders.export")}
         </Button>
       </Box>
 
@@ -72,7 +87,7 @@ function OrdersPage() {
           <Box sx={{ display: "flex", alignItems: "center", gap: 2, flexWrap: "wrap" }}>
             <TextField
               size="small"
-              placeholder="搜索订单号、客户..."
+              placeholder={t("orders.searchPlaceholder")}
               slotProps={{
                 input: {
                   startAdornment: <InputAdornment position="start"><Search size={16} color="#6b7280" /></InputAdornment>,
@@ -82,14 +97,14 @@ function OrdersPage() {
             />
             <FormControl size="small" sx={{ minWidth: 120 }}>
               <Select value={statusFilter} onChange={(e) => setStatusFilter(e.target.value)} sx={{ borderRadius: 5 }}>
-                <MenuItem value="all">全部状态</MenuItem>
-                <MenuItem value="pending">待发货</MenuItem>
-                <MenuItem value="shipped">已发货</MenuItem>
-                <MenuItem value="completed">已完成</MenuItem>
+                <MenuItem value="all">{t("orders.filterAll")}</MenuItem>
+                <MenuItem value="pending">{t("common:orderStatus.pending_shipment")}</MenuItem>
+                <MenuItem value="shipped">{t("common:orderStatus.shipped")}</MenuItem>
+                <MenuItem value="completed">{t("common:orderStatus.completed")}</MenuItem>
               </Select>
             </FormControl>
             <Button variant="text" startIcon={<Filter size={16} />} sx={{ color: "text.secondary" }}>
-              更多筛选
+              {t("orders.moreFilters")}
             </Button>
           </Box>
         </CardContent>
@@ -101,13 +116,9 @@ function OrdersPage() {
           <Table>
             <TableHead>
               <TableRow>
-                <TableCell sx={{ fontWeight: 500, color: "text.secondary" }}>订单号</TableCell>
-                <TableCell sx={{ fontWeight: 500, color: "text.secondary" }}>客户信息</TableCell>
-                <TableCell sx={{ fontWeight: 500, color: "text.secondary" }}>商品信息</TableCell>
-                <TableCell sx={{ fontWeight: 500, color: "text.secondary" }}>金额</TableCell>
-                <TableCell sx={{ fontWeight: 500, color: "text.secondary" }}>状态</TableCell>
-                <TableCell sx={{ fontWeight: 500, color: "text.secondary" }}>下单时间</TableCell>
-                <TableCell sx={{ fontWeight: 500, color: "text.secondary" }}>操作</TableCell>
+                {COLUMNS.map((key) => (
+                  <TableCell key={key} sx={{ fontWeight: 500, color: "text.secondary" }}>{t(key)}</TableCell>
+                ))}
               </TableRow>
             </TableHead>
             <TableBody>
@@ -128,11 +139,11 @@ function OrdersPage() {
                     </TableCell>
                     <TableCell>
                       <Typography variant="body2" sx={{ fontWeight: 600, color: tokens.colors.accent.red }}>
-                        ¥{order.amount.toLocaleString()}
+                        {formatCurrency(order.amount)}
                       </Typography>
                     </TableCell>
                     <TableCell>
-                      <Chip label={statusConfig.label} size="small" sx={{ bgcolor: statusConfig.bg, color: statusConfig.color, fontWeight: 500, borderRadius: 5 }} />
+                      <Chip label={t(statusConfig.labelKey)} size="small" sx={{ bgcolor: statusConfig.bg, color: statusConfig.color, fontWeight: 500, borderRadius: 5 }} />
                     </TableCell>
                     <TableCell>
                       <Typography variant="body2" sx={{ color: "text.secondary" }}>{order.createTime}</Typography>

@@ -2,3 +2,7 @@ node_modules
 dist
 *.log
 .DS_Store
+
+# Tauri（Rust 编译产物 + 自动生成的权限 schema）
+apps/desktop/src-tauri/target
+apps/desktop/src-tauri/gen/schemas

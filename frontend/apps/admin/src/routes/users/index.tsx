@@ -21,6 +21,7 @@ import {
 } from "@mui/material";
 import { useState } from "react";
 import { Search } from "lucide-react";
+import { useFormat, useTranslation } from "@ecommerce/i18n";
 import { AdminLayout } from "@/components/AdminLayout";
 import { tokens } from "@/styles/tokens";
 
@@ -28,7 +29,18 @@ export const Route = createFileRoute("/users/")({
   component: UsersPage,
 });
 
+const COLUMNS = [
+  "users.table.info",
+  "users.table.phone",
+  "users.table.orders",
+  "users.table.amount",
+  "users.table.level",
+  "users.table.joinTime",
+] as const;
+
 function UsersPage() {
+  const { t } = useTranslation();
+  const { formatCurrency } = useFormat();
   const [search, setSearch] = useState("");
 
   const users = [
@@ -43,7 +55,7 @@ function UsersPage() {
     <AdminLayout>
       <Box sx={{ maxWidth: 1400 }}>
         <Typography variant="h4" sx={{ fontWeight: 700, color: "text.primary", mb: 4 }}>
-          用户管理
+          {t("users.title")}
         </Typography>
 
         {/* 操作栏 */}
@@ -51,16 +63,18 @@ function UsersPage() {
           <CardContent sx={{ p: 2 }}>
             <TextField
               size="small"
-              placeholder="搜索用户昵称/手机号..."
+              placeholder={t("users.searchPlaceholder")}
               value={search}
               onChange={(e) => setSearch(e.target.value)}
               sx={{ width: 300 }}
-              InputProps={{
-                startAdornment: (
-                  <InputAdornment position="start">
-                    <Search size={18} color={tokens.colors.text.secondary} />
-                  </InputAdornment>
-                ),
+              slotProps={{
+                input: {
+                  startAdornment: (
+                    <InputAdornment position="start">
+                      <Search size={18} color={tokens.colors.text.secondary} />
+                    </InputAdornment>
+                  ),
+                },
               }}
             />
           </CardContent>
@@ -72,12 +86,11 @@ function UsersPage() {
             <Table>
               <TableHead>
                 <TableRow>
-                  <TableCell sx={{ fontWeight: 500 }}>用户信息</TableCell>
-                  <TableCell sx={{ fontWeight: 500 }}>手机号</TableCell>
-                  <TableCell sx={{ fontWeight: 500 }}>订单数</TableCell>
-                  <TableCell sx={{ fontWeight: 500 }}>消费金额</TableCell>
-                  <TableCell sx={{ fontWeight: 500 }}>会员等级</TableCell>
-                  <TableCell sx={{ fontWeight: 500 }}>注册时间</TableCell>
+                  {COLUMNS.map((key) => (
+                    <TableCell key={key} sx={{ fontWeight: 500 }}>
+                      {t(key)}
+                    </TableCell>
+                  ))}
                 </TableRow>
               </TableHead>
               <TableBody>
@@ -105,17 +118,17 @@ function UsersPage() {
                     </TableCell>
                     <TableCell>
                       <Typography variant="body2" sx={{ color: "text.primary" }}>
-                        {user.orders} 单
+                        {t("users.orderCount", { count: user.orders })}
                       </Typography>
                     </TableCell>
                     <TableCell>
                       <Typography variant="body2" sx={{ fontWeight: 600, color: tokens.colors.accent.red }}>
-                        ¥{user.amount.toLocaleString()}
+                        {formatCurrency(user.amount)}
                       </Typography>
                     </TableCell>
                     <TableCell>
                       <Chip
-                        label={user.status === "vip" ? "VIP" : "普通"}
+                        label={t(user.status === "vip" ? "users.level.vip" : "users.level.normal")}
                         size="small"
                         sx={{
                           bgcolor: user.status === "vip" ? "rgba(245, 158, 11, 0.1)" : tokens.colors.background.primary,

@@ -1,0 +1,148 @@
+{
+  "meta": {
+    "title": "Merchant Center"
+  },
+  "sidebar": {
+    "brand": "Merchant Center",
+    "nav": {
+      "dashboard": "Dashboard",
+      "orders": "Orders",
+      "products": "Products",
+      "settings": "Shop Settings"
+    }
+  },
+  "header": {
+    "searchPlaceholder": "Search orders, products...",
+    "verified": "Verified merchant",
+    "avatarInitial": "M"
+  },
+  "dashboard": {
+    "title": "Merchant Dashboard",
+    "stats": {
+      "todayOrders": "Today's Orders",
+      "todaySales": "Today's Sales",
+      "pendingOrders": "Pending Orders",
+      "customers": "Total Customers"
+    },
+    "changeVsYesterday": "{{change}} vs. yesterday",
+    "recentOrders": "Recent Orders",
+    "table": {
+      "orderNo": "Order No.",
+      "customer": "Customer",
+      "amount": "Amount",
+      "status": "Status"
+    }
+  },
+  "orders": {
+    "title": "Order Management",
+    "export": "Export Orders",
+    "searchPlaceholder": "Search order no., customer...",
+    "filterAll": "All statuses",
+    "moreFilters": "More filters",
+    "table": {
+      "orderNo": "Order No.",
+      "customer": "Customer",
+      "items": "Items",
+      "amount": "Amount",
+      "status": "Status",
+      "createTime": "Placed At",
+      "actions": "Actions"
+    }
+  },
+  "products": {
+    "title": "Product Management",
+    "add": "Add Product",
+    "searchPlaceholder": "Search product name...",
+    "outOfStock": "Out of stock",
+    "stats": {
+      "all": "All Products",
+      "online": "Listed",
+      "offline": "Delisted",
+      "lowStock": "Low Stock"
+    },
+    "status": {
+      "online": "Listed",
+      "offline": "Delisted"
+    },
+    "table": {
+      "product": "Product",
+      "category": "Category",
+      "price": "Price",
+      "stock": "Stock",
+      "sales": "Sales",
+      "status": "Status",
+      "actions": "Actions"
+    }
+  },
+  "settings": {
+    "title": "Shop Settings",
+    "save": "Save Changes",
+    "basic": {
+      "title": "Basic Information",
+      "name": "Shop Name",
+      "description": "Shop Description",
+      "phone": "Contact Phone",
+      "address": "Shop Address"
+    },
+    "avatar": {
+      "title": "Shop Avatar",
+      "initial": "S",
+      "upload": "Click to upload a shop avatar",
+      "formats": "JPG and PNG supported"
+    },
+    "notify": {
+      "title": "Notification Settings",
+      "newOrder": {
+        "label": "New Order Alerts",
+        "desc": "Send a notification when a new order arrives"
+      },
+      "lowStock": {
+        "label": "Low Stock Alerts",
+        "desc": "Send a notification when stock runs low"
+      },
+      "refund": {
+        "label": "Refund Alerts",
+        "desc": "Send a notification when a refund is requested"
+      }
+    }
+  },
+  "reports": {
+    "title": "Analytics",
+    "range": {
+      "label": "Time Range",
+      "today": "Today",
+      "d7": "Last 7 days",
+      "d30": "Last 30 days",
+      "d90": "Last 90 days"
+    },
+    "stats": {
+      "sales": "Today's Sales",
+      "orders": "Today's Orders",
+      "visitors": "Today's Visitors",
+      "products": "Total Products"
+    },
+    "chart": {
+      "sales": "Sales",
+      "orders": "Orders",
+      "salesTrend": "Sales Trend",
+      "categoryShare": "Sales by Category",
+      "weekOrders": "Orders, Last 7 Days"
+    },
+    "weekday": {
+      "mon": "Mon",
+      "tue": "Tue",
+      "wed": "Wed",
+      "thu": "Thu",
+      "fri": "Fri",
+      "sat": "Sat",
+      "sun": "Sun"
+    },
+    "category": {
+      "phone": "Phones",
+      "computer": "Computers",
+      "accessory": "Accessories",
+      "wearable": "Wearables",
+      "other": "Other"
+    }
+  }
+}

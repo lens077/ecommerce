@@ -1,0 +1,115 @@
+{
+  "app": {
+    "title": "配置中心",
+    "signIn": "登录",
+    "signOut": "登出",
+    "loginRequired": "请先登录以管理配置。"
+  },
+  "format": {
+    "unspecified": "未指定"
+  },
+  "validate": {
+    "position": "第 {{line}} 行 第 {{column}} 列: {{message}}",
+    "json": {
+      "unknown": "JSON 语法错误(code {{code}})",
+      "1": "无法识别的符号",
+      "2": "数字格式不正确",
+      "3": "此处应为属性名",
+      "4": "此处应为一个值",
+      "5": "属性名后面缺少冒号",
+      "6": "缺少逗号分隔",
+      "7": "缺少右花括号 }",
+      "8": "缺少右方括号 ]",
+      "9": "此处应为文档结尾,后面还有多余内容",
+      "10": "JSON 不支持注释",
+      "11": "注释没有闭合",
+      "12": "字符串没有闭合",
+      "13": "数字没有写完",
+      "14": "Unicode 转义不合法",
+      "15": "转义字符不合法",
+      "16": "非法字符"
+    }
+  },
+  "browser": {
+    "namespace": "命名空间",
+    "environment": "环境",
+    "prefixFilter": "按 key 前缀过滤",
+    "newKey": "新建 Key",
+    "loadFailed": "加载失败:{{message}}",
+    "emptyNoNamespace": "配置中心还没有任何命名空间,输入一个命名空间后点击「新建 Key」创建。",
+    "emptyOtherEnvs": "{{namespace}} / {{environment}} 下暂无配置项;该命名空间在 {{envs}} 环境下有配置。",
+    "empty": "暂无配置项,点击「新建 Key」创建。",
+    "envJoin": "、"
+  },
+  "newKey": {
+    "title": "新建配置 Key",
+    "keyLabel": "Key(层级路径,如 gateway/config.yaml)",
+    "format": "格式",
+    "submit": "创建并编辑"
+  },
+  "edit": {
+    "loadFailed": "加载失败:{{message}}",
+    "saveBlocked": "内容不是合法的 {{format}},修好后才能保存",
+    "formatAction": "格式化配置",
+    "formatTooltip": "格式化 (Alt+Shift+F)",
+    "formatUnavailable": "{{format}} 没有可重排的结构",
+    "format": "格式化",
+    "saving": "保存中…",
+    "formatOk": "{{format}} 格式正确",
+    "issueTooltip": "{{message}}(点击跳转)",
+    "fullscreen": "全屏",
+    "exitFullscreen": "退出全屏 (Esc)",
+    "new": "新建",
+    "history": "历史",
+    "formatLabel": "格式",
+    "description": "说明",
+    "comment": "变更备注",
+    "secret": "密钥",
+    "saveFailed": "保存失败:{{message}}",
+    "secretWarning": "该项为密钥,值已脱敏显示为 {{masked}} ;直接保存会覆盖真实值。"
+  },
+  "history": {
+    "title": "版本历史",
+    "count": "共 {{total}} 个版本",
+    "back": "返回编辑",
+    "currentVersion": "当前 v{{version}}",
+    "secret": "密钥",
+    "current": "当前",
+    "initial": "初始",
+    "unchanged": "无变更",
+    "sameAsPrev": "与上一版内容完全相同",
+    "noComment": "无备注",
+    "noRevisions": "这个 key 还没有历史版本。",
+    "loading": "加载中…",
+    "pickVersion": "从左侧选一个版本查看差异。",
+    "maskedNotice": "该 key 标记为密钥,历史值已脱敏为 {{masked}},无法比对内容。版本、作者、时间与备注仍然可查。",
+    "oldestNotice": "v{{version}} 是初始版本,没有更早的版本可比。切到「对比当前」看它与线上值的差异。",
+    "compareCurrent": "对比当前",
+    "comparePrev": "对比上一版",
+    "diffLabel": "左:{{left}}　→　右:{{right}}",
+    "empty": "(空)",
+    "loadFailed": "加载历史失败:{{message}}",
+    "readCurrentFailed": "读取当前值失败:{{message}}",
+    "rollbackFailed": "回滚失败:{{message}}",
+    "rollbackComment": "回滚到 v{{version}}",
+    "rollbackTo": "回滚到 v{{version}}",
+    "rollbackTooltip": "把 v{{version}} 的内容写成新版本",
+    "alreadyCurrent": "这已经是当前版本",
+    "rollbackDialogTitle": "回滚到 v{{version}}?",
+    "rollbackDialogBody": "会把 v{{version}} 的内容写成新版本 v{{next}}(历史不会被删除),并立即下发给正在运行的服务。",
+    "confirmRollback": "确认回滚",
+    "relative": {
+      "justNow": "刚刚",
+      "minutes": "{{value}} 分钟前",
+      "hours": "{{value}} 小时前",
+      "days": "{{value}} 天前"
+    }
+  },
+  "callback": {
+    "responseInvalid": "登录响应异常",
+    "loginSuccess": "登录成功",
+    "loginFailed": "登录失败，请重试",
+    "successRedirect": "登录成功，正在跳转...",
+    "errorRedirect": "登录失败，正在跳转到首页..."
+  }
+}

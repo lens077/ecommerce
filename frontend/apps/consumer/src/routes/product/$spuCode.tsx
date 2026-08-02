@@ -17,6 +17,7 @@ import {
 import ShoppingCartIcon from "@mui/icons-material/ShoppingCart";
 import FlashOnIcon from "@mui/icons-material/FlashOn";
 import { styled } from "@mui/material/styles";
+import { useFormat, useTranslation } from "@ecommerce/i18n";
 import { useProductDetail } from "@/hooks/useProduct";
 import type { ProductSpuDetail } from "@/gen/api/product/v1/product_pb.ts";
 import { useState, useCallback, useMemo } from "react";
@@ -38,6 +39,8 @@ const ImageCard = styled(Card)(() => ({
 
 const ProductPage = () => {
     const {spuCode} = Route.useParams();
+    const {t} = useTranslation();
+    const {formatCurrency} = useFormat();
 
     console.log("spuCode", spuCode);
     const {data, isLoading, isError, error} = useProductDetail(spuCode);
@@ -153,7 +156,6 @@ const ProductPage = () => {
                 spuId: String(product.spuId),
                 skuId: String(selectedSku.skuId),
                 merchantId: selectedSku.merchantId,
-                shopName: selectedSku.shopName,
                 spuName: product.spuName,
                 skuName: selectedSku.skuName || Object.values(selectedAttrs).join(" / "),
                 price: formatMoney(selectedSku.price),
@@ -172,7 +174,7 @@ const ProductPage = () => {
 
     if (isLoading) return <ProductSkeleton/>;
 
-    if (isError) return <Typography color="error">加载失败: {error.message}</Typography>;
+    if (isError) return <Typography color="error">{t("product.loadFailed", {message: error.message})}</Typography>;
 
     if (!product || !product.skus) return null;
 
@@ -200,7 +202,7 @@ const ProductPage = () => {
                 {/* 面包屑导航 */}
                 <Box sx={{mb: 3}}>
                     <Typography variant="body2" color="text.secondary">
-                        首页 &gt; 商品详情
+                        {t("product.breadcrumb")}
                     </Typography>
                 </Box>
 
@@ -258,7 +260,7 @@ const ProductPage = () => {
                                                 color: tokens.colors.accent.red,
                                             }}
                                         >
-                                            ¥{currentPrice.toLocaleString()}
+                                            {formatCurrency(currentPrice)}
                                         </Typography>
                                     ) : (
                                         <Typography
@@ -268,7 +270,7 @@ const ProductPage = () => {
                                                 color: tokens.colors.text.secondary,
                                             }}
                                         >
-                                            请选择规格
+                                            {t("product.selectSpec")}
                                         </Typography>
                                     )}
                                 </Box>
@@ -276,7 +278,7 @@ const ProductPage = () => {
                                 <Box sx={{display: "flex", gap: 1.5, mb: 3}}>
                                     <Chip
                                         size="small"
-                                        label={`库存 ${Number(selectedSku?.stockLocked) || 0}`}
+                                        label={t("product.stock", {count: Number(selectedSku?.stockLocked) || 0})}
                                         sx={{
                                             bgcolor: selectedSku?.stockLocked ? tokens.colors.background.primary : "rgba(239, 68, 68, 0.1)",
                                             color: selectedSku?.stockLocked ? tokens.colors.text.secondary : tokens.colors.accent.red,
@@ -290,7 +292,7 @@ const ProductPage = () => {
                                 <Divider sx={{mb: 3, borderColor: tokens.colors.border.default}}/>
                                 <Typography variant="h6"
                                             sx={{mb: 2, fontWeight: 600, color: tokens.colors.text.primary}}>
-                                    选择配置
+                                    {t("product.selectConfig")}
                                 </Typography>
 
                                 {Object.entries(attributes).map(([key, values]) => (
@@ -346,7 +348,7 @@ const ProductPage = () => {
                                     mb: sp[4]
                                 }}>
                                     <Typography variant="body2" color="text.secondary" sx={{fontWeight: 500}}>
-                                        数量
+                                        {t("product.quantity")}
                                     </Typography>
                                     <Box
                                         sx={{
@@ -434,7 +436,7 @@ const ProductPage = () => {
                                             },
                                         }}
                                     >
-                                        {isAddingToCart ? "添加中..." : selectedSku ? "加入购物车" : "请选择规格"}
+                                        {isAddingToCart ? t("product.adding") : selectedSku ? t("product.addToCart") : t("product.selectSpec")}
                                     </Button>
                                     <Button
                                         variant="contained"
@@ -459,7 +461,7 @@ const ProductPage = () => {
                                             },
                                         }}
                                     >
-                                        立即购买
+                                        {t("product.buyNow")}
                                     </Button>
                                 </Box>
                             </Paper>
@@ -484,7 +486,7 @@ const ProductPage = () => {
                         borderRadius: tokens.radius.lg,
                     }}
                 >
-                    已成功加入购物车
+                    {t("product.addedToCart")}
                 </Alert>
             </Snackbar>
 

@@ -20,6 +20,7 @@ import {
 } from "@mui/material";
 import { ConnectError, Code } from "@connectrpc/connect";
 import { toAppError } from "@ecommerce/api";
+import { useTranslation } from "@ecommerce/i18n";
 import { CheckCircle2, History, Maximize2, Minimize2, Save, Trash2, Wand2, XCircle } from "lucide-react";
 import { configApi, ConfigFormat } from "@/api";
 import { FORMAT_OPTIONS, formatLabel, formatToLanguage } from "@/lib/format";
@@ -51,7 +52,11 @@ const MARKER_SERVER = "server";
 /** 边打字边解析的防抖窗口 */
 const VALIDATE_DEBOUNCE_MS = 300;
 
+/** 后端对密钥值的脱敏占位,与 history.tsx 保持一致 */
+const MASKED = "******";
+
 function EditPage() {
+  const { t } = useTranslation();
   const { ns, env, key } = Route.useSearch();
   const navigate = useNavigate();
   const qc = useQueryClient();
@@ -215,9 +220,7 @@ function EditPage() {
   const formattable = canFormat(format);
   const firstIssue = check.issues[0];
   const saveBlocked = !check.ok;
-  const saveDisabledReason = saveBlocked
-    ? `内容不是合法的 ${formatLabel(format)},修好后才能保存`
-    : "";
+  const saveDisabledReason = saveBlocked ? t("edit.saveBlocked", { format: formatLabel(format) }) : "";
 
   const editorNode = useMemo(
     () => (
@@ -231,7 +234,9 @@ function EditPage() {
           monacoRef.current = monaco;
           editor.addAction({
             id: "config-format-document",
-            label: "格式化配置",
+            // Monaco 的 action 只在 onMount 注册一次,这条命令面板文案不跟随语言切换;
+            // 它只出现在右键菜单/命令面板里,重进页面就是新语言,不值得为它加一层重注册
+            label: t("edit.formatAction"),
             keybindings: [monaco.KeyMod.Alt | monaco.KeyMod.Shift | monaco.KeyCode.KeyF],
             run: () => doFormatRef.current(),
           });
@@ -259,16 +264,22 @@ function EditPage() {
   if (isError) {
     return (
       <Box sx={{ maxWidth: 900, mx: "auto" }}>
-        <Alert severity="error">加载失败:{toAppError(error).message}</Alert>
+        <Alert severity="error">{t("edit.loadFailed", { message: toAppError(error).message })}</Alert>
       </Box>
     );
   }
 
   const formatButton = (
-    <Tooltip title={formattable ? "格式化 (Alt+Shift+F)" : `${formatLabel(format)} 没有可重排的结构`}>
+    <Tooltip
+      title={
+        formattable
+          ? t("edit.formatTooltip")
+          : t("edit.formatUnavailable", { format: formatLabel(format) })
+      }
+    >
       <span>
         <Button size="small" startIcon={<Wand2 size={18} />} disabled={!formattable} onClick={doFormat}>
-          格式化
+          {t("edit.format")}
         </Button>
       </span>
     </Tooltip>
@@ -283,7 +294,7 @@ function EditPage() {
           disabled={save.isPending || saveBlocked}
           onClick={() => save.mutate()}
         >
-          {save.isPending ? "保存中…" : "保存"}
+          {save.isPending ? t("edit.saving") : t("common:action.save")}
         </Button>
       </span>
     </Tooltip>
@@ -295,24 +306,28 @@ function EditPage() {
       color="success"
       variant="outlined"
       icon={<CheckCircle2 size={14} />}
-      label={`${formatLabel(format)} 格式正确`}
+      label={t("edit.formatOk", { format: formatLabel(format) })}
     />
   ) : (
-    <Tooltip title={`${firstIssue.message}(点击跳转)`}>
+    <Tooltip title={t("edit.issueTooltip", { message: firstIssue.message })}>
       <Chip
         size="small"
         color="error"
         variant="outlined"
         icon={<XCircle size={14} />}
         onClick={() => revealIssue(firstIssue)}
-        label={`第 ${firstIssue.line} 行 第 ${firstIssue.column} 列: ${firstIssue.message}`}
+        label={t("validate.position", {
+          line: firstIssue.line,
+          column: firstIssue.column,
+          message: firstIssue.message,
+        })}
         sx={{ maxWidth: 420, cursor: "pointer" }}
       />
     </Tooltip>
   );
 
   const fullscreenButton = (
-    <Tooltip title={isFullscreen ? "退出全屏 (Esc)" : "全屏"}>
+    <Tooltip title={isFullscreen ? t("edit.exitFullscreen") : t("edit.fullscreen")}>
       <IconButton size="small" onClick={() => setIsFullscreen((v) => !v)}>
         {isFullscreen ? <Minimize2 size={18} /> : <Maximize2 size={18} />}
       </IconButton>
@@ -338,7 +353,7 @@ function EditPage() {
           <Typography sx={{ fontFamily: "monospace", fontWeight: 700 }}>{key}</Typography>
           <Chip label={`${ns}/${env}`} size="small" variant="outlined" />
           {isNew ? (
-            <Chip label="新建" size="small" color="info" />
+            <Chip label={t("edit.new")} size="small" color="info" />
           ) : (
             <Chip label={`v${data?.entry?.version ?? "?"}`} size="small" />
           )}
@@ -348,7 +363,7 @@ function EditPage() {
             disabled={isNew}
             onClick={() => navigate({ to: "/history", search: { ns, env, key } })}
           >
-            历史
+            {t("edit.history")}
           </Button>
           <Button
             color="error"
@@ -356,7 +371,7 @@ function EditPage() {
             disabled={isNew || del.isPending}
             onClick={() => del.mutate()}
           >
-            删除
+            {t("common:action.delete")}
           </Button>
           {saveButton}
         </Box>
@@ -372,7 +387,7 @@ function EditPage() {
         >
           <TextField
             select
-            label="格式"
+            label={t("edit.formatLabel")}
             size="small"
             value={format}
             onChange={(e) => setFormat(Number(e.target.value) as ConfigFormat)}
@@ -385,14 +400,14 @@ function EditPage() {
             ))}
           </TextField>
           <TextField
-            label="说明"
+            label={t("edit.description")}
             size="small"
             value={description}
             onChange={(e) => setDescription(e.target.value)}
             sx={{ flex: 1, minWidth: 180 }}
           />
           <TextField
-            label="变更备注"
+            label={t("edit.comment")}
             size="small"
             value={comment}
             onChange={(e) => setComment(e.target.value)}
@@ -400,19 +415,19 @@ function EditPage() {
           />
           <FormControlLabel
             control={<Switch checked={isSecret} onChange={(e) => setIsSecret(e.target.checked)} />}
-            label="密钥"
+            label={t("edit.secret")}
           />
         </Box>
       </Card>
 
       {saveError && (
         <Alert severity="error" onClose={() => setSaveError(null)} sx={{ flexShrink: 0 }}>
-          保存失败:{saveError}
+          {t("edit.saveFailed", { message: saveError })}
         </Alert>
       )}
-      {isSecret && !isNew && data?.entry?.value === "******" && (
+      {isSecret && !isNew && data?.entry?.value === MASKED && (
         <Alert severity="warning" sx={{ flexShrink: 0 }}>
-          该项为密钥,值已脱敏显示为 ****** ;直接保存会覆盖真实值。
+          {t("edit.secretWarning", { masked: MASKED })}
         </Alert>
       )}
 

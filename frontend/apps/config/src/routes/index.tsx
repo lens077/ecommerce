@@ -25,6 +25,7 @@ import {
 } from "@mui/material";
 import { KeyRound, Plus, RefreshCw } from "lucide-react";
 import { toAppError } from "@ecommerce/api";
+import { useTranslation } from "@ecommerce/i18n";
 import { configApi, ConfigFormat } from "@/api";
 import { useAuthState } from "@/providers/AuthProvider";
 import { editorStore, setEnvironment, setNamespace } from "@/store/editor";
@@ -37,6 +38,7 @@ export const Route = createFileRoute("/")({
 });
 
 function BrowserPage() {
+  const { t } = useTranslation();
   const snap = useSnapshot(editorStore);
   const { isAuthenticated } = useAuthState();
   const navigate = useNavigate();
@@ -120,7 +122,7 @@ function BrowserPage() {
                 </Box>
               );
             }}
-            renderInput={(params) => <TextField {...params} label="命名空间" size="small" />}
+            renderInput={(params) => <TextField {...params} label={t("browser.namespace")} size="small" />}
           />
           <Autocomplete
             freeSolo
@@ -129,16 +131,16 @@ function BrowserPage() {
             onChange={(_, v) => setEnvironment(v ?? "")}
             onInputChange={(_, v) => setEnvironment(v)}
             sx={{ minWidth: 140 }}
-            renderInput={(params) => <TextField {...params} label="环境" size="small" />}
+            renderInput={(params) => <TextField {...params} label={t("browser.environment")} size="small" />}
           />
           <TextField
-            label="按 key 前缀过滤"
+            label={t("browser.prefixFilter")}
             size="small"
             value={prefix}
             onChange={(e) => setPrefix(e.target.value)}
             sx={{ flex: 1, minWidth: 200 }}
           />
-          <Tooltip title="刷新">
+          <Tooltip title={t("common:action.refresh")}>
             <IconButton
               onClick={() => {
                 void refetchNamespaces();
@@ -149,7 +151,7 @@ function BrowserPage() {
             </IconButton>
           </Tooltip>
           <Button variant="contained" startIcon={<Plus size={18} />} onClick={() => setNewOpen(true)}>
-            新建 Key
+            {t("browser.newKey")}
           </Button>
         </Box>
       </Card>
@@ -169,16 +171,23 @@ function BrowserPage() {
           </Box>
         ) : isError ? (
           <Box sx={{ p: sp[4] }}>
-            <Typography color="error">加载失败:{toAppError(error).message}</Typography>
+            <Typography color="error">
+              {t("browser.loadFailed", { message: toAppError(error).message })}
+            </Typography>
           </Box>
         ) : !data || data.entries.length === 0 ? (
           <Box sx={{ p: sp[6], textAlign: "center" }}>
             <Typography color="text.secondary">
               {!snap.namespace
-                ? "配置中心还没有任何命名空间,输入一个命名空间后点击「新建 Key」创建。"
+                ? t("browser.emptyNoNamespace")
                 : otherEnvs.length > 0
-                  ? `${snap.namespace} / ${snap.environment} 下暂无配置项;该命名空间在 ${otherEnvs.join("、")} 环境下有配置。`
-                  : "暂无配置项,点击「新建 Key」创建。"}
+                  ? t("browser.emptyOtherEnvs", {
+                      namespace: snap.namespace,
+                      environment: snap.environment,
+                      // 顿号在英文里要换成逗号,分隔符跟着语言走
+                      envs: otherEnvs.join(t("browser.envJoin")),
+                    })
+                  : t("browser.empty")}
             </Typography>
           </Box>
         ) : (
@@ -221,16 +230,17 @@ function NewKeyDialog({
   onClose: () => void;
   onCreate: (key: string) => void;
 }) {
+  const { t } = useTranslation();
   const [key, setKey] = useState("");
   const [format, setFormat] = useState<ConfigFormat>(ConfigFormat.YAML);
 
   return (
     <Dialog open={open} onClose={onClose} slotProps={{ paper: { sx: { minWidth: 420 } } }}>
-      <DialogTitle>新建配置 Key</DialogTitle>
+      <DialogTitle>{t("newKey.title")}</DialogTitle>
       <DialogContent>
         <Box sx={{ display: "flex", flexDirection: "column", gap: sp[3], mt: sp[1] }}>
           <TextField
-            label="Key(层级路径,如 gateway/config.yaml)"
+            label={t("newKey.keyLabel")}
             value={key}
             onChange={(e) => setKey(e.target.value)}
             fullWidth
@@ -238,7 +248,7 @@ function NewKeyDialog({
           />
           <TextField
             select
-            label="格式"
+            label={t("newKey.format")}
             value={format}
             onChange={(e) => setFormat(Number(e.target.value) as ConfigFormat)}
           >
@@ -251,9 +261,9 @@ function NewKeyDialog({
         </Box>
       </DialogContent>
       <DialogActions>
-        <Button onClick={onClose}>取消</Button>
+        <Button onClick={onClose}>{t("common:action.cancel")}</Button>
         <Button variant="contained" disabled={!key.trim()} onClick={() => onCreate(key.trim())}>
-          创建并编辑
+          {t("newKey.submit")}
         </Button>
       </DialogActions>
     </Dialog>

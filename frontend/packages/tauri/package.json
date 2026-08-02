@@ -1,0 +1,33 @@
+{
+  "name": "@ecommerce/tauri",
+  "version": "0.0.1",
+  "private": true,
+  "type": "module",
+  "description": "桌面端（Tauri）专属胶水：环境探测、Rust 侧 fetch、本地设置、OAuth 子窗口桥接",
+  "main": "./src/index.ts",
+  "types": "./src/index.ts",
+  "exports": {
+    ".": "./src/index.ts",
+    "./settings": "./src/settings.ts",
+    "./fetch": "./src/fetch.ts",
+    "./auth": "./src/auth.ts",
+    "./dialog": "./src/DesktopSettingsDialog.tsx"
+  },
+  "dependencies": {
+    "@ecommerce/api": "workspace:*",
+    "@ecommerce/i18n": "workspace:*",
+    "@emotion/react": "catalog:",
+    "@emotion/styled": "catalog:",
+    "@mui/material": "catalog:",
+    "@tauri-apps/api": "catalog:",
+    "@tauri-apps/plugin-http": "catalog:",
+    "@tauri-apps/plugin-notification": "catalog:",
+    "@tauri-apps/plugin-opener": "catalog:",
+    "@tauri-apps/plugin-store": "catalog:",
+    "react": "catalog:"
+  },
+  "devDependencies": {
+    "@types/react": "catalog:",
+    "typescript": "catalog:"
+  }
+}

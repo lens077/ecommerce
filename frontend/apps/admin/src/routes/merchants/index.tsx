@@ -24,6 +24,7 @@ import {
 } from "@mui/material";
 import { useState } from "react";
 import { Search, Eye, Check, X } from "lucide-react";
+import { useTranslation } from "@ecommerce/i18n";
 import { AdminLayout } from "@/components/AdminLayout";
 import { tokens } from "@/styles/tokens";
 
@@ -31,7 +32,29 @@ export const Route = createFileRoute("/merchants/")({
   component: MerchantsPage,
 });
 
+type MerchantStatus = "active" | "pending" | "suspended";
+
+/** 只放配色。文案走 t(`merchants.status.${status}`)，免得配色表跟着语言复制一份 */
+const STATUS_COLORS: Record<MerchantStatus, { color: string; bg: string }> = {
+  active: { color: tokens.colors.accent.green, bg: "rgba(16, 185, 129, 0.1)" },
+  pending: { color: tokens.colors.accent.yellow, bg: "rgba(245, 158, 11, 0.1)" },
+  suspended: { color: tokens.colors.accent.red, bg: "rgba(239, 68, 68, 0.1)" },
+};
+
+const TABS = ["all", "active", "pending", "suspended"] as const;
+
+const COLUMNS = [
+  "merchants.table.info",
+  "merchants.table.category",
+  "merchants.table.owner",
+  "merchants.table.contact",
+  "merchants.table.status",
+  "merchants.table.joinTime",
+  "merchants.table.actions",
+] as const;
+
 function MerchantsPage() {
+  const { t } = useTranslation();
   const [tab, setTab] = useState(0);
   const [search, setSearch] = useState("");
 
@@ -83,32 +106,16 @@ function MerchantsPage() {
     },
   ];
 
-  const tabs = [
-    { label: "全部商家", value: "all" },
-    { label: "营业中", value: "active" },
-    { label: "待审核", value: "pending" },
-    { label: "已暂停", value: "suspended" },
-  ];
-
-  const getStatusConfig = (status: string) => {
-    const configs: Record<string, { label: string; color: string; bg: string }> = {
-      active: { label: "营业中", color: tokens.colors.accent.green, bg: "rgba(16, 185, 129, 0.1)" },
-      pending: { label: "待审核", color: tokens.colors.accent.yellow, bg: "rgba(245, 158, 11, 0.1)" },
-      suspended: { label: "已暂停", color: tokens.colors.accent.red, bg: "rgba(239, 68, 68, 0.1)" },
-    };
-    return configs[status] || configs.pending;
-  };
-
   const filteredMerchants = merchants.filter((m) => {
     if (tab === 0) return true;
-    return m.status === tabs[tab].value;
+    return m.status === TABS[tab];
   });
 
   return (
     <AdminLayout>
       <Box sx={{ maxWidth: 1400 }}>
         <Typography variant="h4" sx={{ fontWeight: 700, color: "text.primary", mb: 4 }}>
-          商家管理
+          {t("merchants.title")}
         </Typography>
 
         {/* 操作栏 */}
@@ -120,26 +127,28 @@ function MerchantsPage() {
                 onChange={(_, v) => setTab(v)}
                 sx={{ minHeight: 36 }}
               >
-                {tabs.map((t) => (
+                {TABS.map((value) => (
                   <Tab
-                    key={t.value}
-                    label={t.label}
+                    key={value}
+                    label={t(`merchants.tabs.${value}`)}
                     sx={{ minHeight: 36, textTransform: "none" }}
                   />
                 ))}
               </Tabs>
               <TextField
                 size="small"
-                placeholder="搜索商家名称..."
+                placeholder={t("merchants.searchPlaceholder")}
                 value={search}
                 onChange={(e) => setSearch(e.target.value)}
                 sx={{ width: 240 }}
-                InputProps={{
-                  startAdornment: (
-                    <InputAdornment position="start">
-                      <Search size={18} color={tokens.colors.text.secondary} />
-                    </InputAdornment>
-                  ),
+                slotProps={{
+                  input: {
+                    startAdornment: (
+                      <InputAdornment position="start">
+                        <Search size={18} color={tokens.colors.text.secondary} />
+                      </InputAdornment>
+                    ),
+                  },
                 }}
               />
             </Box>
@@ -152,18 +161,16 @@ function MerchantsPage() {
             <Table>
               <TableHead>
                 <TableRow>
-                  <TableCell sx={{ fontWeight: 500 }}>商家信息</TableCell>
-                  <TableCell sx={{ fontWeight: 500 }}>类目</TableCell>
-                  <TableCell sx={{ fontWeight: 500 }}>负责人</TableCell>
-                  <TableCell sx={{ fontWeight: 500 }}>联系方式</TableCell>
-                  <TableCell sx={{ fontWeight: 500 }}>状态</TableCell>
-                  <TableCell sx={{ fontWeight: 500 }}>入驻时间</TableCell>
-                  <TableCell sx={{ fontWeight: 500 }}>操作</TableCell>
+                  {COLUMNS.map((key) => (
+                    <TableCell key={key} sx={{ fontWeight: 500 }}>
+                      {t(key)}
+                    </TableCell>
+                  ))}
                 </TableRow>
               </TableHead>
               <TableBody>
                 {filteredMerchants.map((merchant) => {
-                  const statusConfig = getStatusConfig(merchant.status);
+                  const statusColor = STATUS_COLORS[merchant.status as MerchantStatus];
                   return (
                     <TableRow key={merchant.id} hover>
                       <TableCell>
@@ -191,9 +198,9 @@ function MerchantsPage() {
                       </TableCell>
                       <TableCell>
                         <Chip
-                          label={statusConfig.label}
+                          label={t(`merchants.status.${merchant.status as MerchantStatus}`)}
                           size="small"
-                          sx={{ bgcolor: statusConfig.bg, color: statusConfig.color, fontWeight: 500 }}
+                          sx={{ bgcolor: statusColor.bg, color: statusColor.color, fontWeight: 500 }}
                         />
                       </TableCell>
                       <TableCell>
@@ -203,15 +210,27 @@ function MerchantsPage() {
                       </TableCell>
                       <TableCell>
                         <Box sx={{ display: "flex", gap: 1 }}>
-                          <IconButton size="small" sx={{ color: "text.secondary" }}>
+                          <IconButton
+                            size="small"
+                            aria-label={t("merchants.action.view")}
+                            sx={{ color: "text.secondary" }}
+                          >
                             <Eye size={18} />
                           </IconButton>
                           {merchant.status === "pending" && (
                             <>
-                              <IconButton size="small" sx={{ color: tokens.colors.accent.green }}>
+                              <IconButton
+                                size="small"
+                                aria-label={t("merchants.action.approve")}
+                                sx={{ color: tokens.colors.accent.green }}
+                              >
                                 <Check size={18} />
                               </IconButton>
-                              <IconButton size="small" sx={{ color: tokens.colors.accent.red }}>
+                              <IconButton
+                                size="small"
+                                aria-label={t("merchants.action.reject")}
+                                sx={{ color: tokens.colors.accent.red }}
+                              >
                                 <X size={18} />
                               </IconButton>
                             </>

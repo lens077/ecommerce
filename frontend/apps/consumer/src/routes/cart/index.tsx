@@ -2,6 +2,7 @@ import { createFileRoute, useNavigate } from "@tanstack/react-router";
 
 import { Box, CircularProgress, Container, Typography } from "@mui/material";
 import { ArrowLeft } from "lucide-react";
+import { useTranslation } from "@ecommerce/i18n";
 import { useCart } from "@/hooks/useCart";
 import { EmptyCart } from "@/components/cart/EmptyCart";
 import { CartSummaryCard } from "@/components/cart/CartSummaryCard";
@@ -10,6 +11,7 @@ import { sp, tokens } from "@/styles/tokens";
 
 function CartPage() {
     const navigate = useNavigate();
+    const { t } = useTranslation();
     const {
         summary,
         merchantGroups,
@@ -92,7 +94,7 @@ function CartPage() {
                                 color: tokens.colors.text.primary,
                             }}
                         >
-                            购物车商品
+                            {t("cart.itemsTitle")}
                         </Typography>
 
                         <Box sx={{display: "flex", flexDirection: "column", gap: sp[4]}}>
@@ -141,6 +143,8 @@ function CartHeader({totalQuantity, onNavigateHome}: {
     totalQuantity: number;
     onNavigateHome: () => void;
 }) {
+    const { t } = useTranslation();
+
     return (
         <Box
             sx={{
@@ -163,7 +167,7 @@ function CartHeader({totalQuantity, onNavigateHome}: {
                     <Box
                         component="button"
                         onClick={onNavigateHome}
-                        aria-label="返回首页"
+                        aria-label={t("notFound.home")}
                         sx={{
                             display: "flex",
                             alignItems: "center",
@@ -182,7 +186,7 @@ function CartHeader({totalQuantity, onNavigateHome}: {
                         <ArrowLeft size={20}/>
                     </Box>
                     <Typography variant="h6" sx={{fontWeight: 600, color: tokens.colors.text.primary}}>
-                        购物车
+                        {t("cart.title")}
                         {totalQuantity > 0 && (
                             <Typography
                                 component="span"

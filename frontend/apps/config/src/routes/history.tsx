@@ -23,6 +23,7 @@ import {
 } from "@mui/material";
 import { ArrowLeft, RefreshCw, RotateCcw } from "lucide-react";
 import { toAppError } from "@ecommerce/api";
+import { formatDate, i18next, useTranslation } from "@ecommerce/i18n";
 import { configApi, ConfigFormat } from "@/api";
 import { formatToLanguage } from "@/lib/format";
 import { lineDelta } from "@/lib/linediff";
@@ -53,25 +54,31 @@ function toDate(ts?: Timestamp): Date | null {
 }
 
 function fmtAbsolute(ts?: Timestamp): string {
-  return toDate(ts)?.toLocaleString() ?? "";
+  return formatDate(toDate(ts), "datetime");
 }
 
-/** 「3 分钟前」。列表里扫一眼就知道新旧,精确时间放 tooltip。 */
+/**
+ * 「3 分钟前」。列表里扫一眼就知道新旧,精确时间放 tooltip。
+ *
+ * 是模块级函数,拿不到组件里的 t —— 走 i18next.t 在调用时解析。
+ * 调用点在 render 里,切语言时组件会重渲染,文案跟着变。
+ */
 function fmtRelative(ts?: Timestamp): string {
   const d = toDate(ts);
   if (!d) return "";
   const sec = Math.round((Date.now() - d.getTime()) / 1000);
-  if (sec < 60) return "刚刚";
+  if (sec < 60) return i18next.t("config:history.relative.justNow");
   const min = Math.round(sec / 60);
-  if (min < 60) return `${min} 分钟前`;
+  if (min < 60) return i18next.t("config:history.relative.minutes", { value: min });
   const hour = Math.round(min / 60);
-  if (hour < 24) return `${hour} 小时前`;
+  if (hour < 24) return i18next.t("config:history.relative.hours", { value: hour });
   const day = Math.round(hour / 24);
-  if (day < 30) return `${day} 天前`;
-  return d.toLocaleDateString();
+  if (day < 30) return i18next.t("config:history.relative.days", { value: day });
+  return formatDate(d, "date");
 }
 
 function HistoryPage() {
+  const { t } = useTranslation();
   const { ns, env, key } = Route.useSearch();
   const navigate = useNavigate();
   const qc = useQueryClient();
@@ -99,7 +106,7 @@ function HistoryPage() {
 
   const rollback = useMutation({
     mutationFn: (version: number) =>
-      configApi.rollback(ns, env, key, version, `回滚到 v${version}`),
+      configApi.rollback(ns, env, key, version, t("history.rollbackComment", { version })),
     onSuccess: () => {
       qc.invalidateQueries({ queryKey: ["getKey", ns, env, key] });
       qc.invalidateQueries({ queryKey: ["listRevisions", ns, env, key] });
@@ -143,7 +150,9 @@ function HistoryPage() {
   const left = compareCurrent ? activeRev : olderRev;
   const right = compareCurrent ? undefined : activeRev;
   const rightValue = compareCurrent ? (entry?.value ?? "") : (right?.value ?? "");
-  const rightLabel = compareCurrent ? `当前 v${entry?.version ?? "?"}` : `v${right?.version ?? "?"}`;
+  const rightLabel = compareCurrent
+    ? t("history.currentVersion", { version: entry?.version ?? "?" })
+    : `v${right?.version ?? "?"}`;
 
   const isCurrent = (version: number) => entry != null && version === entry.version;
 
@@ -165,11 +174,11 @@ function HistoryPage() {
           severity="error"
           action={
             <Button size="small" color="inherit" onClick={() => revisions.refetch()}>
-              重试
+              {t("common:action.retry")}
             </Button>
           }
         >
-          加载历史失败:{toAppError(revisions.error).message}
+          {t("history.loadFailed", { message: toAppError(revisions.error).message })}
         </Alert>
       </Box>
     );
@@ -177,7 +186,7 @@ function HistoryPage() {
     listBody = (
       <Box sx={{ p: sp[4] }}>
         <Typography color="text.secondary" variant="body2">
-          这个 key 还没有历史版本。
+          {t("history.noRevisions")}
         </Typography>
       </Box>
     );
@@ -206,12 +215,12 @@ function HistoryPage() {
                 <Typography sx={{ fontFamily: "monospace", fontWeight: 700, fontSize: 14 }}>
                   v{rev.version}
                 </Typography>
-                {isCurrent(rev.version) && <Chip label="当前" size="small" color="primary" />}
-                {isOldest && <Chip label="初始" size="small" variant="outlined" />}
+                {isCurrent(rev.version) && <Chip label={t("history.current")} size="small" color="primary" />}
+                {isOldest && <Chip label={t("history.initial")} size="small" variant="outlined" />}
                 <Box sx={{ flex: 1 }} />
                 {unchanged ? (
-                  <Tooltip title="与上一版内容完全相同">
-                    <Chip label="无变更" size="small" variant="outlined" />
+                  <Tooltip title={t("history.sameAsPrev")}>
+                    <Chip label={t("history.unchanged")} size="small" variant="outlined" />
                   </Tooltip>
                 ) : (
                   delta && (
@@ -242,7 +251,7 @@ function HistoryPage() {
                 }}
                 title={rev.comment}
               >
-                {rev.comment || "无备注"}
+                {rev.comment || t("history.noComment")}
               </Typography>
 
               <Tooltip title={fmtAbsolute(rev.createdAt)} placement="right">
@@ -263,21 +272,21 @@ function HistoryPage() {
   if (masked && revs.length > 0) {
     diffBody = (
       <Alert severity="info" sx={{ m: sp[3] }}>
-        该 key 标记为密钥,历史值已脱敏为 {MASKED},无法比对内容。版本、作者、时间与备注仍然可查。
+        {t("history.maskedNotice", { masked: MASKED })}
       </Alert>
     );
   } else if (!activeRev) {
     diffBody = (
       <Box sx={{ p: sp[6], textAlign: "center" }}>
         <Typography color="text.secondary" variant="body2">
-          {revisions.isLoading ? "加载中…" : "从左侧选一个版本查看差异。"}
+          {revisions.isLoading ? t("history.loading") : t("history.pickVersion")}
         </Typography>
       </Box>
     );
   } else if (!compareCurrent && !olderRev) {
     diffBody = (
       <Alert severity="info" sx={{ m: sp[3] }}>
-        v{activeRev.version} 是初始版本,没有更早的版本可比。切到「对比当前」看它与线上值的差异。
+        {t("history.oldestNotice", { version: activeRev.version })}
       </Alert>
     );
   } else {
@@ -329,12 +338,14 @@ function HistoryPage() {
           startIcon={<ArrowLeft size={18} />}
           onClick={() => navigate({ to: "/edit", search: { ns, env, key } })}
         >
-          返回编辑
+          {t("history.back")}
         </Button>
         <Typography sx={{ fontFamily: "monospace", fontWeight: 700 }}>{key}</Typography>
         <Chip label={`${ns}/${env}`} size="small" variant="outlined" />
-        {entry && <Chip label={`当前 v${entry.version}`} size="small" />}
-        {entry?.isSecret && <Chip label="密钥" size="small" color="warning" variant="outlined" />}
+        {entry && <Chip label={t("history.currentVersion", { version: entry.version })} size="small" />}
+        {entry?.isSecret && (
+          <Chip label={t("history.secret")} size="small" color="warning" variant="outlined" />
+        )}
         <Box sx={{ flex: 1 }} />
         <Button
           size="small"
@@ -345,18 +356,18 @@ function HistoryPage() {
             current.refetch();
           }}
         >
-          刷新
+          {t("common:action.refresh")}
         </Button>
       </Box>
 
       {current.isError && (
         <Alert severity="error" sx={{ flexShrink: 0 }}>
-          读取当前值失败:{toAppError(current.error).message}
+          {t("history.readCurrentFailed", { message: toAppError(current.error).message })}
         </Alert>
       )}
       {rollback.isError && (
         <Alert severity="error" sx={{ flexShrink: 0 }} onClose={() => rollback.reset()}>
-          回滚失败:{toAppError(rollback.error).message}
+          {t("history.rollbackFailed", { message: toAppError(rollback.error).message })}
         </Alert>
       )}
 
@@ -396,11 +407,11 @@ function HistoryPage() {
             }}
           >
             <Typography variant="subtitle2" sx={{ fontWeight: 700 }}>
-              版本历史
+              {t("history.title")}
             </Typography>
             {rows.length > 0 && (
               <Typography variant="caption" color="text.secondary">
-                共 {rows.length} 个版本
+                {t("history.count", { total: rows.length })}
               </Typography>
             )}
           </Box>
@@ -427,13 +438,16 @@ function HistoryPage() {
               value={compareWith}
               onChange={(_, v) => v && setCompareWith(v)}
             >
-              <ToggleButton value="current">对比当前</ToggleButton>
-              <ToggleButton value="prev">对比上一版</ToggleButton>
+              <ToggleButton value="current">{t("history.compareCurrent")}</ToggleButton>
+              <ToggleButton value="prev">{t("history.comparePrev")}</ToggleButton>
             </ToggleButtonGroup>
 
             {activeRev && (
               <Typography variant="body2" color="text.secondary" sx={{ fontFamily: "monospace" }}>
-                左:{left ? `v${left.version}` : "(空)"}　→　右:{rightLabel}
+                {t("history.diffLabel", {
+                  left: left ? `v${left.version}` : t("history.empty"),
+                  right: rightLabel,
+                })}
               </Typography>
             )}
 
@@ -443,8 +457,8 @@ function HistoryPage() {
               <Tooltip
                 title={
                   isCurrent(activeRev.version)
-                    ? "这已经是当前版本"
-                    : `把 v${activeRev.version} 的内容写成新版本`
+                    ? t("history.alreadyCurrent")
+                    : t("history.rollbackTooltip", { version: activeRev.version })
                 }
               >
                 <span>
@@ -455,7 +469,7 @@ function HistoryPage() {
                     disabled={rollback.isPending || isCurrent(activeRev.version)}
                     onClick={() => setPendingRollback(activeRev.version)}
                   >
-                    回滚到 v{activeRev.version}
+                    {t("history.rollbackTo", { version: activeRev.version })}
                   </Button>
                 </span>
               </Tooltip>
@@ -468,15 +482,17 @@ function HistoryPage() {
 
       {/* 回滚会产生一个新版本并立刻下发给在跑的服务,值得先问一句 */}
       <Dialog open={pendingRollback !== null} onClose={() => setPendingRollback(null)}>
-        <DialogTitle>回滚到 v{pendingRollback}?</DialogTitle>
+        <DialogTitle>{t("history.rollbackDialogTitle", { version: pendingRollback })}</DialogTitle>
         <DialogContent>
           <DialogContentText>
-            会把 v{pendingRollback} 的内容写成新版本 v{(entry?.version ?? 0) + 1}(历史不会被删除),
-            并立即下发给正在运行的服务。
+            {t("history.rollbackDialogBody", {
+              version: pendingRollback,
+              next: (entry?.version ?? 0) + 1,
+            })}
           </DialogContentText>
         </DialogContent>
         <DialogActions>
-          <Button onClick={() => setPendingRollback(null)}>取消</Button>
+          <Button onClick={() => setPendingRollback(null)}>{t("common:action.cancel")}</Button>
           <Button
             variant="contained"
             disabled={rollback.isPending}
@@ -485,7 +501,7 @@ function HistoryPage() {
               setPendingRollback(null);
             }}
           >
-            确认回滚
+            {t("history.confirmRollback")}
           </Button>
         </DialogActions>
       </Dialog>

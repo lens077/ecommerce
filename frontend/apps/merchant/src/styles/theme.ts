@@ -4,7 +4,8 @@
  * 与消费者端保持一致的设计语言
  */
 
-import { createTheme } from "@mui/material/styles";
+import { createTheme, type ThemeOptions } from "@mui/material/styles";
+import type { Localization } from "@mui/material/locale";
 
 // 设计系统常量
 export const tokens = {
@@ -68,8 +69,8 @@ export const radius = {
   full: tokens.radius.full,
 };
 
-// 创建 MUI Theme
-export const theme = createTheme({
+// MUI Theme 配置。抽成常量是为了能带上语言包重建（见 createAppTheme）。
+const themeOptions: ThemeOptions = {
   palette: {
     mode: "light",
     primary: {
@@ -148,4 +149,14 @@ export const theme = createTheme({
       },
     },
   },
-});
+};
+
+/**
+ * 按当前语言建主题。
+ *
+ * 第二个参数是 @mui/material/locale 的语言包，负责 MUI 内置组件的文案
+ * （Autocomplete 的「无选项」、TablePagination 的「每页行数」之类）。
+ */
+export function createAppTheme(localization: Localization) {
+  return createTheme(themeOptions, localization);
+}

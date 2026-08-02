@@ -4,7 +4,7 @@
  * 用于大量数据的列表渲染，提升性能
  */
 
-import { Box, BoxProps } from "@mui/material";
+import { Box, type BoxProps } from "@mui/material";
 import { useCallback, useEffect, useRef, useState } from "react";
 
 interface VirtualListProps<T> {

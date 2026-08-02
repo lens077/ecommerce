@@ -6,6 +6,42 @@
 
 import { Box, Button, Typography } from "@mui/material";
 import { Component, type ReactNode } from "react";
+import { useTranslation } from "@ecommerce/i18n";
+
+/**
+ * 默认兜底 UI。
+ *
+ * 单独抽成函数组件是因为 ErrorBoundary 必须是 class（只有 class 有
+ * getDerivedStateFromError），而 class 里用不了 useTranslation。
+ * 抽出来之后文案照样跟着语言切换实时更新，比 i18next.t 直接取值更准。
+ */
+function DefaultFallback({ error, onReset }: { error: Error | null; onReset: () => void }) {
+  const { t } = useTranslation("common");
+
+  return (
+    <Box
+      sx={{
+        display: "flex",
+        flexDirection: "column",
+        alignItems: "center",
+        justifyContent: "center",
+        minHeight: 400,
+        p: 4,
+        textAlign: "center",
+      }}
+    >
+      <Typography variant="h5" sx={{ fontWeight: 600, color: "text.primary", mb: 2 }}>
+        {t("error.title")}
+      </Typography>
+      <Typography variant="body2" sx={{ color: "text.secondary", mb: 4, maxWidth: 400 }}>
+        {error?.message || t("error.unknown")}
+      </Typography>
+      <Button variant="contained" onClick={onReset}>
+        {t("action.reload")}
+      </Button>
+    </Box>
+  );
+}
 
 interface ErrorBoundaryProps {
   children: ReactNode;
@@ -43,29 +79,7 @@ export class ErrorBoundary extends Component<ErrorBoundaryProps, ErrorBoundarySt
         return this.props.fallback;
       }
 
-      return (
-        <Box
-          sx={{
-            display: "flex",
-            flexDirection: "column",
-            alignItems: "center",
-            justifyContent: "center",
-            minHeight: 400,
-            p: 4,
-            textAlign: "center",
-          }}
-        >
-          <Typography variant="h5" sx={{ fontWeight: 600, color: "text.primary", mb: 2 }}>
-            页面出错了
-          </Typography>
-          <Typography variant="body2" sx={{ color: "text.secondary", mb: 4, maxWidth: 400 }}>
-            {this.state.error?.message || "发生了未知错误，请稍后重试"}
-          </Typography>
-          <Button variant="contained" onClick={this.handleReset}>
-            重新加载
-          </Button>
-        </Box>
-      );
+      return <DefaultFallback error={this.state.error} onReset={this.handleReset} />;
     }
 
     return this.props.children;

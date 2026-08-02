@@ -1,0 +1,67 @@
+{
+  "locale": {
+    "zh-CN": "简体中文",
+    "en": "English",
+    "switch": "Language"
+  },
+  "action": {
+    "confirm": "Confirm",
+    "cancel": "Cancel",
+    "save": "Save",
+    "delete": "Delete",
+    "edit": "Edit",
+    "add": "Add",
+    "back": "Back",
+    "close": "Close",
+    "search": "Search",
+    "submit": "Submit",
+    "reset": "Reset",
+    "retry": "Retry",
+    "refresh": "Refresh",
+    "more": "More",
+    "viewDetail": "View details",
+    "signIn": "Sign in",
+    "signOut": "Sign out",
+    "reload": "Reload",
+    "goBack": "Go back"
+  },
+  "state": {
+    "loading": "Loading...",
+    "empty": "No data",
+    "loadFailed": "Failed to load",
+    "saveSuccess": "Saved",
+    "saveFailed": "Failed to save",
+    "deleteSuccess": "Deleted",
+    "deleteFailed": "Failed to delete"
+  },
+  "error": {
+    "title": "Something went wrong",
+    "unknown": "An unexpected error occurred. Please try again.",
+    "loadFailed": "Failed to load: {{message}}"
+  },
+  "desktop": {
+    "title": "Desktop settings",
+    "description": "The window reloads after saving so the new gateway URL takes effect.",
+    "gatewayUrl": "Gateway URL",
+    "gatewayUrlHelp": "Leave empty to use the default {{url}}",
+    "saveAndReload": "Save and reload"
+  },
+  "orderStatus": {
+    "pending_payment": "Pending payment",
+    "paid": "Paid",
+    "pending_shipment": "Awaiting shipment",
+    "shipped": "Shipped",
+    "completed": "Completed",
+    "cancelled": "Cancelled",
+    "refunding": "Refunding",
+    "refunded": "Refunded"
+  },
+  "shippingStatus": {
+    "unshipped": "Not shipped",
+    "shipped": "Shipped",
+    "in_transit": "In transit",
+    "delivered": "Delivered",
+    "returning": "Return in progress",
+    "returned": "Returned"
+  }
+}

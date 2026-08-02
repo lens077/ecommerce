@@ -11,16 +11,12 @@ import {
   DialogActions,
   DialogContent,
   DialogTitle,
-  FormControl,
   IconButton,
-  InputLabel,
   List,
   ListItem,
   ListItemSecondaryAction,
   ListItemText,
-  MenuItem,
   Paper,
-  Select,
   TextField,
   Typography,
 } from "@mui/material";
@@ -28,9 +24,11 @@ import { createFileRoute } from "@tanstack/react-router";
 import { useEffect, useState } from "react";
 import type { Address, AddressFormData } from "@/api/addresses/types";
 import { getLocationInfo, requestLocationPermission } from "@/api/location";
+import { RegionSelect } from "@/components/address/RegionSelect";
 import { useAddresses } from "@/hooks/useAddresses";
 import { useGetUserProfile } from "@/hooks/useProfile";
 import { setAccount } from "@/store/users";
+import { i18next, useTranslation } from "@ecommerce/i18n";
 import { addNotification, isTokenExpired } from "@ecommerce/utils";
 
 export const Route = createFileRoute("/profile/addresses/")({
@@ -41,7 +39,8 @@ export const Route = createFileRoute("/profile/addresses/")({
       console.warn("Token已过期或未登录，请重新登录。");
 
       addNotification({
-        message: "请先登录以管理收货地址",
+        // beforeLoad 不是组件环境，用 i18next 的 t
+        message: i18next.t("consumer:addresses.loginRequired"),
         severity: "warning",
       });
 
@@ -57,6 +56,7 @@ export const Route = createFileRoute("/profile/addresses/")({
 
 function RouteComponent() {
   const { data: userProfile } = useGetUserProfile();
+  const { t } = useTranslation();
   const {
     addresses,
     isLoading,
@@ -70,6 +70,9 @@ function RouteComponent() {
   const [currentAddress, setCurrentAddress] = useState<Address | null>(null);
   const [formError, setFormError] = useState<string | null>(null);
   const [isGettingLocation, setIsGettingLocation] = useState(false);
+  // 所选城市下有没有区县可选。省直辖县级行政区（琼海市、仙桃市等）没有下级，
+  // 这时把区县当必填会让这些地方的用户根本提交不了
+  const [districtRequired, setDistrictRequired] = useState(false);
   const [formData, setFormData] = useState<AddressFormData>({
     recipientName: "",
     recipientPhone: "",
@@ -86,7 +89,7 @@ function RouteComponent() {
     }
   }, [userProfile]);
 
-  if (!userProfile) return <div>未找到用户</div>;
+  if (!userProfile) return <div>{t("addresses.userNotFound")}</div>;
 
   const handleOpenDialog = (address: Address | null = null) => {
     if (address) {
@@ -169,10 +172,10 @@ function RouteComponent() {
       !formData.recipientPhone ||
       !formData.province ||
       !formData.city ||
-      !formData.district ||
+      (districtRequired && !formData.district) ||
       !formData.detail
     ) {
-      setFormError("请填写所有必填字段");
+      setFormError(t("addresses.form.required"));
       return;
     }
 
@@ -198,10 +201,10 @@ function RouteComponent() {
         {/* 页面标题 */}
         <Box sx={{ mb: 4 }}>
           <Typography variant="body2" color="text.secondary" sx={{ mb: 1 }}>
-            个人中心 &gt; 地址管理
+            {t("addresses.breadcrumb")}
           </Typography>
           <Typography variant="h4" component="h1" sx={{ fontWeight: 700, color: "text.primary" }}>
-            地址管理
+            {t("addresses.title")}
           </Typography>
         </Box>
 
@@ -226,7 +229,7 @@ function RouteComponent() {
             }}
           >
             <Typography variant="h6" sx={{ fontWeight: 600, color: "text.primary" }}>
-              我的收货地址
+              {t("addresses.myAddresses")}
             </Typography>
             <Button
               variant="contained"
@@ -243,7 +246,7 @@ function RouteComponent() {
                 },
               }}
             >
-              添加新地址
+              {t("addresses.add")}
             </Button>
           </Box>
 
@@ -251,7 +254,7 @@ function RouteComponent() {
           <Box sx={{ p: 3 }}>
             {addressError && (
               <Alert severity="error" sx={{ mb: 3, borderRadius: "12px" }}>
-                加载地址失败，请重试
+                {t("addresses.loadFailed")}
               </Alert>
             )}
 
@@ -292,7 +295,7 @@ function RouteComponent() {
                               fontWeight: 600,
                             }}
                           >
-                            默认
+                            {t("addresses.default")}
                           </Box>
                         )}
                       </Box>
@@ -346,7 +349,7 @@ function RouteComponent() {
               <Box sx={{ textAlign: "center", py: 4 }}>
                 <CircularProgress size={24} />
                 <Typography variant="body2" color="text.secondary" sx={{ mt: 2 }}>
-                  加载中...
+                  {t("common:state.loading")}
                 </Typography>
               </Box>
             ) : (
@@ -368,10 +371,10 @@ function RouteComponent() {
                     <LocationOn sx={{ fontSize: 40, color: "#667eea" }} />
                   </Box>
                   <Typography variant="body1" color="text.secondary" sx={{ mb: 2 }}>
-                    暂无收货地址
+                    {t("addresses.empty.title")}
                   </Typography>
                   <Typography variant="body2" color="text.secondary">
-                    点击上方按钮添加您的第一个收货地址
+                    {t("addresses.empty.desc")}
                   </Typography>
                 </Box>
               )
@@ -387,7 +390,7 @@ function RouteComponent() {
               alignItems: "center",
             }}
           >
-            {currentAddress ? "编辑地址" : "添加新地址"}
+            {currentAddress ? t("addresses.edit") : t("addresses.add")}
             <IconButton onClick={handleCloseDialog} sx={{ padding: 0 }}>
               <Close />
             </IconButton>
@@ -400,66 +403,31 @@ function RouteComponent() {
             )}
             <Box sx={{ mt: 2, display: "flex", gap: 2, flexWrap: "wrap" }}>
               <TextField
-                label="收件人"
+                label={t("addresses.form.recipient")}
                 fullWidth
                 value={formData.recipientName}
                 onChange={(e) => setFormData((prev) => ({ ...prev, recipientName: e.target.value }))}
                 sx={{ mb: 2 }}
               />
               <TextField
-                label="手机号码"
+                label={t("addresses.form.phone")}
                 fullWidth
                 value={formData.recipientPhone}
                 onChange={(e) => setFormData((prev) => ({ ...prev, recipientPhone: e.target.value }))}
                 sx={{ mb: 2 }}
               />
             </Box>
-            <Box sx={{ display: "flex", gap: 2, flexWrap: "wrap", mb: 2 }}>
-              <FormControl fullWidth>
-                <InputLabel id="province-label">省份</InputLabel>
-                <Select
-                  labelId="province-label"
-                  value={formData.province}
-                  label="省份"
-                  onChange={(e) => setFormData((prev) => ({ ...prev, province: e.target.value }))}
-                >
-                  <MenuItem value="广东省">广东省</MenuItem>
-                  <MenuItem value="北京市">北京市</MenuItem>
-                  <MenuItem value="上海市">上海市</MenuItem>
-                  <MenuItem value="江苏省">江苏省</MenuItem>
-                </Select>
-              </FormControl>
-              <FormControl fullWidth>
-                <InputLabel id="city-label">城市</InputLabel>
-                <Select
-                  labelId="city-label"
-                  value={formData.city}
-                  label="城市"
-                  onChange={(e) => setFormData({ ...formData, city: e.target.value })}
-                >
-                  <MenuItem value="深圳市">深圳市</MenuItem>
-                  <MenuItem value="北京市">北京市</MenuItem>
-                  <MenuItem value="上海市">上海市</MenuItem>
-                  <MenuItem value="南京市">南京市</MenuItem>
-                </Select>
-              </FormControl>
-              <FormControl fullWidth>
-                <InputLabel id="district-label">区/县</InputLabel>
-                <Select
-                  labelId="district-label"
-                  value={formData.district}
-                  label="区/县"
-                  onChange={(e) => setFormData((prev) => ({ ...prev, district: e.target.value }))}
-                >
-                  <MenuItem value="南山区">南山区</MenuItem>
-                  <MenuItem value="朝阳区">朝阳区</MenuItem>
-                  <MenuItem value="浦东新区">浦东新区</MenuItem>
-                  <MenuItem value="玄武区">玄武区</MenuItem>
-                </Select>
-              </FormControl>
-            </Box>
+            <RegionSelect
+              value={{
+                province: formData.province,
+                city: formData.city,
+                district: formData.district,
+              }}
+              onChange={(region) => setFormData((prev) => ({ ...prev, ...region }))}
+              onDistrictRequiredChange={setDistrictRequired}
+            />
             <TextField
-              label="详细地址"
+              label={t("addresses.form.detail")}
               fullWidth
               multiline
               rows={3}
@@ -478,12 +446,12 @@ function RouteComponent() {
                   },
                 }}
               />
-              <Typography variant="body2">设为默认地址</Typography>
+              <Typography variant="body2">{t("addresses.form.setDefault")}</Typography>
             </Box>
           </DialogContent>
           <DialogActions>
             <Button onClick={handleCloseDialog} disabled={isLoading} sx={{ textTransform: "none" }}>
-              取消
+              {t("common:action.cancel")}
             </Button>
             <Button
               variant="contained"
@@ -491,7 +459,7 @@ function RouteComponent() {
               disabled={isLoading}
               sx={{ textTransform: "none" }}
             >
-              {isLoading ? "保存中..." : "保存"}
+              {isLoading ? t("addresses.saving") : t("common:action.save")}
             </Button>
           </DialogActions>
         </Dialog>
@@ -517,20 +485,19 @@ function RouteComponent() {
               alignItems: "center",
             }}
           >
-            位置权限请求
+            {t("addresses.location.title")}
             <IconButton onClick={handleLocationPermissionCancel} sx={{ padding: 0 }}>
               <Close />
             </IconButton>
           </DialogTitle>
           <DialogContent>
             <Typography variant="body1" sx={{ mb: 2 }}>
-              我们将通过您的 IP
-              地址或地址权限为您推荐省市区信息，相关数据由第三方高德地图处理，是否同意？
+              {t("addresses.location.desc")}
             </Typography>
           </DialogContent>
           <DialogActions>
             <Button onClick={handleLocationPermissionCancel} sx={{ textTransform: "none" }}>
-              取消
+              {t("common:action.cancel")}
             </Button>
             <Button
               variant="contained"
@@ -538,7 +505,7 @@ function RouteComponent() {
               disabled={isGettingLocation}
               sx={{ textTransform: "none" }}
             >
-              {isGettingLocation ? "获取中..." : "同意"}
+              {isGettingLocation ? t("addresses.location.getting") : t("addresses.location.agree")}
             </Button>
           </DialogActions>
         </Dialog>

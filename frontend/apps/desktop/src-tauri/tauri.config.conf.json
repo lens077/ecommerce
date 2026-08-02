@@ -1,0 +1,23 @@
+{
+  "$schema": "https://schema.tauri.app/config/2",
+  "productName": "Ecommerce Config Center",
+  "identifier": "com.ecommerce.config",
+  "build": {
+    "beforeDevCommand": "pnpm --filter @ecommerce/config dev",
+    "beforeBuildCommand": "pnpm --filter @ecommerce/config build",
+    "devUrl": "http://localhost:3005",
+    "frontendDist": "../../config/dist"
+  },
+  "app": {
+    "windows": [
+      {
+        "label": "main",
+        "title": "配置中心",
+        "width": 1280,
+        "height": 860,
+        "minWidth": 1000,
+        "minHeight": 700
+      }
+    ]
+  }
+}

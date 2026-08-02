@@ -7,6 +7,7 @@
 
 import { createFileRoute, Link } from "@tanstack/react-router";
 import { Box, Container, Typography } from "@mui/material";
+import { useFormat, useTranslation } from "@ecommerce/i18n";
 import { sp, tokens } from "@/styles/tokens";
 import "./index.css";
 
@@ -24,6 +25,7 @@ interface ProductCardVM {
 }
 
 function HomePage() {
+  const { t } = useTranslation();
   // TODO(ListProduct): 接通商品微服务 ListProduct 后，用 useQuery 拉取分页商品列表。
   // 目前后端核心 SQL/逻辑待定（设计待确认），先渲染空态骨架。
   const products: ProductCardVM[] = [];
@@ -36,13 +38,13 @@ function HomePage() {
           variant="h6"
           sx={{ fontWeight: 600, color: tokens.colors.text.primary, mb: sp[4] }}
         >
-          精选商品
+          {t("home.featured")}
         </Typography>
 
         {products.length === 0 ? (
           <Box sx={{ textAlign: "center", py: sp[16] }}>
             <Typography variant="body1" sx={{ color: tokens.colors.text.secondary }}>
-              {isLoading ? "商品加载中…" : "商品即将上架，敬请期待"}
+              {isLoading ? t("home.loading") : t("home.comingSoon")}
             </Typography>
           </Box>
         ) : (
@@ -68,6 +70,9 @@ function HomePage() {
 }
 
 function ProductCard({ product }: { product: ProductCardVM }) {
+  const { t } = useTranslation();
+  const { formatCurrency } = useFormat();
+
   return (
     <Link
       to="/product/$spuCode"
@@ -105,9 +110,9 @@ function ProductCard({ product }: { product: ProductCardVM }) {
             {product.name}
           </Typography>
           <Typography variant="body1" sx={{ fontWeight: 700, color: tokens.colors.accent.red }}>
-            ¥{product.minPrice.toLocaleString()}
+            {formatCurrency(product.minPrice)}
             <Typography component="span" variant="caption" sx={{ color: tokens.colors.text.secondary, ml: sp[1] }}>
-              起
+              {t("home.priceFrom")}
             </Typography>
           </Typography>
         </Box>
