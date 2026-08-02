@@ -1,0 +1,217 @@
+{
+  "meta": {
+    "title": "Marketplace - Admin Console"
+  },
+  "sidebar": {
+    "brand": "Admin Console",
+    "nav": {
+      "dashboard": "Dashboard",
+      "merchants": "Merchants",
+      "orders": "Orders",
+      "products": "Product review",
+      "users": "Users",
+      "categories": "Categories",
+      "reports": "Reports",
+      "settings": "Settings"
+    },
+    "version": "Platform v{{version}}"
+  },
+  "header": {
+    "searchPlaceholder": "Search merchants, orders, products...",
+    "notifications": "Notifications",
+    "settings": "Settings",
+    "avatarInitial": "A"
+  },
+  "timeRange": {
+    "label": "Time range",
+    "today": "Today",
+    "last7d": "Last 7 days",
+    "last30d": "Last 30 days",
+    "last90d": "Last 90 days",
+    "all": "All time"
+  },
+  "dashboard": {
+    "title": "Dashboard",
+    "viewAll": "View all",
+    "stats": {
+      "todayOrders": "Orders today",
+      "todaySales": "Sales today",
+      "activeUsers": "Active users",
+      "totalMerchants": "Total merchants"
+    },
+    "recentOrders": "Recent orders",
+    "table": {
+      "orderNo": "Order no.",
+      "merchant": "Merchant",
+      "customer": "Customer",
+      "amount": "Amount",
+      "status": "Status"
+    },
+    "pendingMerchants": "Merchants awaiting review",
+    "pendingBadge": "Pending review"
+  },
+  "merchants": {
+    "title": "Merchants",
+    "searchPlaceholder": "Search merchant name...",
+    "tabs": {
+      "all": "All merchants",
+      "active": "Active",
+      "pending": "Pending review",
+      "suspended": "Suspended"
+    },
+    "status": {
+      "active": "Active",
+      "pending": "Pending review",
+      "suspended": "Suspended"
+    },
+    "table": {
+      "info": "Merchant",
+      "category": "Category",
+      "owner": "Owner",
+      "contact": "Contact",
+      "status": "Status",
+      "joinTime": "Joined",
+      "actions": "Actions"
+    },
+    "action": {
+      "view": "View details",
+      "approve": "Approve",
+      "reject": "Reject"
+    }
+  },
+  "orders": {
+    "title": "Orders",
+    "searchPlaceholder": "Search order no. / merchant / customer...",
+    "tabs": {
+      "all": "All",
+      "pending": "Pending",
+      "paid": "Paid",
+      "shipped": "Shipped",
+      "completed": "Completed",
+      "refunding": "Refunding"
+    },
+    "status": {
+      "pending": "Pending",
+      "paid": "Paid",
+      "shipped": "Shipped",
+      "completed": "Completed",
+      "refunding": "Refunding"
+    },
+    "table": {
+      "info": "Order",
+      "merchant": "Merchant",
+      "customer": "Customer",
+      "amount": "Order total",
+      "status": "Status",
+      "createTime": "Placed at",
+      "actions": "Actions"
+    },
+    "action": {
+      "view": "View details",
+      "remark": "Order notes"
+    }
+  },
+  "products": {
+    "title": "Product review",
+    "searchPlaceholder": "Search product name...",
+    "tabs": {
+      "pending": "Pending review",
+      "approved": "Approved",
+      "rejected": "Rejected"
+    },
+    "status": {
+      "pending": "Pending review",
+      "approved": "Approved",
+      "rejected": "Rejected"
+    },
+    "table": {
+      "info": "Product",
+      "merchant": "Merchant",
+      "category": "Category",
+      "price": "Price",
+      "stock": "Stock",
+      "status": "Status",
+      "submitTime": "Submitted",
+      "actions": "Actions"
+    },
+    "action": {
+      "view": "View details",
+      "approve": "Approve",
+      "reject": "Reject"
+    }
+  },
+  "users": {
+    "title": "Users",
+    "searchPlaceholder": "Search nickname or phone number...",
+    "table": {
+      "info": "User",
+      "phone": "Phone",
+      "orders": "Orders",
+      "amount": "Total spent",
+      "level": "Membership",
+      "joinTime": "Registered"
+    },
+    "orderCount_one": "{{count}} order",
+    "orderCount_other": "{{count}} orders",
+    "level": {
+      "vip": "VIP",
+      "normal": "Standard"
+    }
+  },
+  "categories": {
+    "title": "Categories",
+    "add": "Add category",
+    "table": {
+      "info": "Category",
+      "productCount": "Products",
+      "status": "Status",
+      "sort": "Order",
+      "actions": "Actions"
+    },
+    "status": {
+      "enabled": "Enabled",
+      "disabled": "Disabled"
+    },
+    "action": {
+      "edit": "Edit category",
+      "children": "View subcategories",
+      "delete": "Delete category"
+    }
+  },
+  "reports": {
+    "title": "Reports",
+    "stats": {
+      "sales": "Sales",
+      "orders": "Orders",
+      "visitors": "Visitors",
+      "merchants": "Merchants"
+    },
+    "salesTrend": "Sales trend",
+    "categoryShare": "Category share",
+    "chartPlaceholder": "Chart area (ECharts / Recharts)",
+    "pieChartPlaceholder": "Pie chart area"
+  },
+  "settings": {
+    "title": "Settings",
+    "basic": {
+      "title": "General",
+      "platformName": "Platform name",
+      "platformLogo": "Platform logo",
+      "copyright": "Copyright notice"
+    },
+    "order": {
+      "title": "Orders",
+      "timeout": "Payment timeout",
+      "minutes": "minutes",
+      "autoCancel": "Auto-cancel unpaid orders after timeout",
+      "autoReview": "Auto-submit a review once an order completes"
+    },
+    "security": {
+      "title": "Security",
+      "twoFactor": "Enable two-factor authentication",
+      "remoteLoginAlert": "Alert on sign-in from a new location",
+      "sensitiveOpVerify": "Require re-verification for sensitive actions"
+    },
+    "save": "Save settings"
+  }
+}

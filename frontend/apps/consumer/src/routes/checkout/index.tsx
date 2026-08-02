@@ -30,6 +30,7 @@ import {
 } from "@mui/material";
 import { Check, MapPin, Plus, X } from "lucide-react";
 import { useEffect, useMemo, useState } from "react";
+import { useFormat, useTranslation } from "@ecommerce/i18n";
 import { orderApi } from "@/api/order";
 import type { Address, AddressFormData } from "@/api/addresses/types";
 import { useAddresses } from "@/hooks/useAddresses";
@@ -49,6 +50,8 @@ interface MerchantGroup {
 
 function CheckoutPage() {
   const navigate = useNavigate();
+  const { t } = useTranslation();
+  const { formatCurrency } = useFormat();
   const { items, isInitializing } = useCart();
   const { addresses, isLoading: addrLoading } = useAddresses();
 
@@ -111,7 +114,7 @@ function CheckoutPage() {
       // 后端响应暂无 orderNo，先跳固定支付页占位
       navigate({ to: "/payment/result" });
     } catch (err) {
-      const message = err instanceof Error ? err.message : "下单失败，请重试";
+      const message = err instanceof Error ? err.message : t("checkout.submitFailed");
       setSubmitError(message);
     } finally {
       setSubmitting(false);
@@ -137,7 +140,7 @@ function CheckoutPage() {
         <CheckoutHeader />
         <Box sx={{ textAlign: "center", py: sp[16], px: sp[4] }}>
           <Typography variant="body1" sx={{ color: tokens.colors.text.secondary, mb: sp[4] }}>
-            没有选中的商品
+            {t("checkout.noSelection")}
           </Typography>
           <Button
             component={Link}
@@ -145,7 +148,7 @@ function CheckoutPage() {
             variant="contained"
             sx={{ bgcolor: tokens.colors.accent.red, "&:hover": { bgcolor: "#dc2626" } }}
           >
-            返回购物车
+            {t("checkout.backToCart")}
           </Button>
         </Box>
       </Box>
@@ -192,12 +195,12 @@ function CheckoutPage() {
                 </>
               ) : (
                 <Typography variant="body2" sx={{ color: tokens.colors.text.secondary }}>
-                  {addrLoading ? "地址加载中…" : "请选择收货地址"}
+                  {addrLoading ? t("checkout.addressLoading") : t("checkout.addressPick")}
                 </Typography>
               )}
             </Box>
             <Typography variant="body2" sx={{ color: tokens.colors.text.secondary, flexShrink: 0 }}>
-              {selectedAddress ? "修改" : "选择"}
+              {selectedAddress ? t("common:action.edit") : t("checkout.select")}
             </Typography>
           </Box>
         </CardContent>
@@ -208,7 +211,7 @@ function CheckoutPage() {
         <Card key={group.merchantId} sx={{ mx: sp[4], mt: sp[4] }}>
           <CardContent sx={{ p: sp[4] }}>
             <Typography variant="body2" sx={{ fontWeight: 600, color: tokens.colors.text.primary, mb: sp[3] }}>
-              {group.shopName || "店铺"}
+              {group.shopName || t("checkout.shop")}
             </Typography>
             <Box sx={{ display: "flex", flexDirection: "column", gap: sp[3] }}>
               {group.items.map((item) => (
@@ -246,7 +249,7 @@ function CheckoutPage() {
                         x{item.quantity}
                       </Typography>
                       <Typography variant="body2" sx={{ fontWeight: 600, color: tokens.colors.accent.red }}>
-                        ¥{item.price.toLocaleString()}
+                        {formatCurrency(item.price)}
                       </Typography>
                     </Box>
                   </Box>
@@ -263,14 +266,14 @@ function CheckoutPage() {
           <Box sx={{ display: "flex", alignItems: "center", justifyContent: "space-between" }}>
             <Box>
               <Typography variant="body2" sx={{ fontWeight: 600, color: tokens.colors.text.primary }}>
-                普通配送
+                {t("checkout.shipping.standard")}
               </Typography>
               <Typography variant="caption" sx={{ color: tokens.colors.text.secondary }}>
-                预计 3-5 天送达
+                {t("checkout.shipping.eta")}
               </Typography>
             </Box>
             <Typography variant="body2" sx={{ color: tokens.colors.text.primary }}>
-              免运费
+              {t("checkout.shipping.free")}
             </Typography>
           </Box>
         </CardContent>
@@ -281,12 +284,12 @@ function CheckoutPage() {
         <CardContent sx={{ p: sp[4] }}>
           <Box sx={{ display: "flex", alignItems: "center", gap: sp[3] }}>
             <Typography variant="body2" sx={{ fontWeight: 600, color: tokens.colors.text.primary, flexShrink: 0 }}>
-              订单备注
+              {t("checkout.remark.label")}
             </Typography>
             <Box
               component="input"
               type="text"
-              placeholder="选填，可备注特殊需求"
+              placeholder={t("checkout.remark.placeholder")}
               value={remark}
               onChange={(e) => setRemark(e.target.value)}
               sx={{
@@ -308,27 +311,27 @@ function CheckoutPage() {
         <CardContent sx={{ p: sp[4] }}>
           <Box sx={{ display: "flex", justifyContent: "space-between", mb: sp[2] }}>
             <Typography variant="body2" sx={{ color: tokens.colors.text.secondary }}>
-              商品总价
+              {t("checkout.amount.goods")}
             </Typography>
             <Typography variant="body2" sx={{ color: tokens.colors.text.primary }}>
-              ¥{totalAmount.toLocaleString()}
+              {formatCurrency(totalAmount)}
             </Typography>
           </Box>
           <Box sx={{ display: "flex", justifyContent: "space-between", mb: sp[2] }}>
             <Typography variant="body2" sx={{ color: tokens.colors.text.secondary }}>
-              运费
+              {t("checkout.amount.freight")}
             </Typography>
             <Typography variant="body2" sx={{ color: tokens.colors.text.primary }}>
-              免运费
+              {t("checkout.shipping.free")}
             </Typography>
           </Box>
           <Divider sx={{ my: sp[2] }} />
           <Box sx={{ display: "flex", justifyContent: "space-between" }}>
             <Typography variant="body1" sx={{ fontWeight: 600, color: tokens.colors.text.primary }}>
-              合计
+              {t("checkout.amount.total")}
             </Typography>
             <Typography variant="body1" sx={{ fontWeight: 700, color: tokens.colors.accent.red }}>
-              ¥{payAmount.toLocaleString()}
+              {formatCurrency(payAmount)}
             </Typography>
           </Box>
         </CardContent>
@@ -358,10 +361,10 @@ function CheckoutPage() {
       >
         <Box sx={{ flex: 1 }}>
           <Typography variant="caption" sx={{ color: tokens.colors.text.secondary }}>
-            合计：
+            {t("checkout.amount.totalInline")}
           </Typography>
           <Typography variant="h6" sx={{ fontWeight: 700, color: tokens.colors.accent.red }}>
-            ¥{payAmount.toLocaleString()}
+            {formatCurrency(payAmount)}
           </Typography>
         </Box>
         <Button
@@ -374,7 +377,7 @@ function CheckoutPage() {
             "&:hover": { bgcolor: "#dc2626" },
           }}
         >
-          {submitting ? <CircularProgress size={20} sx={{ color: "#fff" }} /> : "提交订单"}
+          {submitting ? <CircularProgress size={20} sx={{ color: "#fff" }} /> : t("checkout.submit")}
         </Button>
       </Box>
 
@@ -396,6 +399,8 @@ function CheckoutPage() {
 
 // 顶部标题
 function CheckoutHeader() {
+  const { t } = useTranslation();
+
   return (
     <Box
       sx={{
@@ -408,7 +413,7 @@ function CheckoutHeader() {
       }}
     >
       <Typography variant="h6" sx={{ fontWeight: 700, color: tokens.colors.text.primary }}>
-        确认订单
+        {t("checkout.title")}
       </Typography>
     </Box>
   );
@@ -446,6 +451,7 @@ function AddressPickerDialog({
   onClose: () => void;
   onSelect: (addressId: string) => void;
 }) {
+  const { t } = useTranslation();
   const { createAddress, isCreating } = useAddresses();
   const [adding, setAdding] = useState(false);
   const [form, setForm] = useState<AddressFormData>(emptyAddressForm);
@@ -467,7 +473,7 @@ function AddressPickerDialog({
       !form.district ||
       !form.detail
     ) {
-      setFormError("请填写所有必填字段");
+      setFormError(t("checkout.address.required"));
       return;
     }
     // 调用地址微服务新增地址；成功后 useAddresses 会刷新列表
@@ -478,7 +484,7 @@ function AddressPickerDialog({
   return (
     <Dialog open={open} onClose={onClose} maxWidth="sm" fullWidth>
       <DialogTitle sx={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
-        选择收货地址
+        {t("checkout.address.pickerTitle")}
         <IconButton onClick={onClose} sx={{ p: 0 }}>
           <X size={20} />
         </IconButton>
@@ -527,7 +533,7 @@ function AddressPickerDialog({
                           fontSize: "0.625rem",
                         }}
                       >
-                        默认
+                        {t("checkout.address.default")}
                       </Box>
                     )}
                   </Box>
@@ -544,7 +550,7 @@ function AddressPickerDialog({
                 onClick={() => setAdding(true)}
                 sx={{ alignSelf: "flex-start", color: tokens.colors.accent.red, textTransform: "none" }}
               >
-                添加新地址
+                {t("checkout.address.add")}
               </Button>
             )}
 
@@ -553,14 +559,14 @@ function AddressPickerDialog({
                 {formError && <Alert severity="error">{formError}</Alert>}
                 <Box sx={{ display: "flex", gap: sp[3] }}>
                   <TextField
-                    label="收件人"
+                    label={t("checkout.address.recipient")}
                     size="small"
                     fullWidth
                     value={form.recipientName}
                     onChange={(e) => setForm((p) => ({ ...p, recipientName: e.target.value }))}
                   />
                   <TextField
-                    label="手机号码"
+                    label={t("checkout.address.phone")}
                     size="small"
                     fullWidth
                     value={form.recipientPhone}
@@ -569,21 +575,21 @@ function AddressPickerDialog({
                 </Box>
                 <Box sx={{ display: "flex", gap: sp[3] }}>
                   <TextField
-                    label="省"
+                    label={t("checkout.address.province")}
                     size="small"
                     fullWidth
                     value={form.province}
                     onChange={(e) => setForm((p) => ({ ...p, province: e.target.value }))}
                   />
                   <TextField
-                    label="市"
+                    label={t("checkout.address.city")}
                     size="small"
                     fullWidth
                     value={form.city}
                     onChange={(e) => setForm((p) => ({ ...p, city: e.target.value }))}
                   />
                   <TextField
-                    label="区/县"
+                    label={t("checkout.address.district")}
                     size="small"
                     fullWidth
                     value={form.district}
@@ -591,7 +597,7 @@ function AddressPickerDialog({
                   />
                 </Box>
                 <TextField
-                  label="详细地址"
+                  label={t("checkout.address.detail")}
                   size="small"
                   fullWidth
                   multiline
@@ -606,7 +612,7 @@ function AddressPickerDialog({
                     size="small"
                     sx={{ p: 0, mr: sp[2] }}
                   />
-                  <Typography variant="body2">设为默认地址</Typography>
+                  <Typography variant="body2">{t("checkout.address.setDefault")}</Typography>
                 </Box>
               </Box>
             )}
@@ -616,7 +622,7 @@ function AddressPickerDialog({
       {adding && (
         <DialogActions>
           <Button onClick={resetForm} disabled={isCreating} sx={{ textTransform: "none" }}>
-            取消
+            {t("common:action.cancel")}
           </Button>
           <Button
             variant="contained"
@@ -625,7 +631,7 @@ function AddressPickerDialog({
             disabled={isCreating}
             sx={{ textTransform: "none", bgcolor: tokens.colors.accent.red, "&:hover": { bgcolor: "#dc2626" } }}
           >
-            {isCreating ? "保存中…" : "保存地址"}
+            {isCreating ? t("checkout.address.saving") : t("checkout.address.save")}
           </Button>
         </DialogActions>
       )}

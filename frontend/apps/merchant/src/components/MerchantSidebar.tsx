@@ -13,16 +13,19 @@ import {
   Store,
   LogOut,
 } from "lucide-react";
+import { useTranslation } from "@ecommerce/i18n";
 import { tokens } from "@/styles/theme";
 
+/** 侧边栏菜单。文案 key 显式写死，不用路径拼 key。 */
 const menuItems = [
-  { label: "数据中心", icon: LayoutDashboard, path: "/" },
-  { label: "订单管理", icon: FileText, path: "/orders" },
-  { label: "商品管理", icon: Package, path: "/products" },
-  { label: "店铺设置", icon: Store, path: "/settings" },
-];
+  { labelKey: "sidebar.nav.dashboard", icon: LayoutDashboard, path: "/" },
+  { labelKey: "sidebar.nav.orders", icon: FileText, path: "/orders" },
+  { labelKey: "sidebar.nav.products", icon: Package, path: "/products" },
+  { labelKey: "sidebar.nav.settings", icon: Store, path: "/settings" },
+] as const;
 
 export function MerchantSidebar() {
+  const { t } = useTranslation();
   const navigate = useNavigate();
   const location = useLocation();
 
@@ -63,7 +66,7 @@ export function MerchantSidebar() {
             <Store size={20} color="white" />
           </Box>
           <Typography variant="h6" sx={{ fontWeight: 700, color: "text.primary" }}>
-            商家中心
+            {t("sidebar.brand")}
           </Typography>
         </Box>
       </Box>
@@ -99,7 +102,7 @@ export function MerchantSidebar() {
               >
                 <item.icon size={18} />
                 <Typography variant="body2" sx={{ fontWeight: isActive ? 500 : 400 }}>
-                  {item.label}
+                  {t(item.labelKey)}
                 </Typography>
               </Box>
             );
@@ -132,7 +135,7 @@ export function MerchantSidebar() {
           }}
         >
           <LogOut size={18} />
-          <Typography variant="body2">退出登录</Typography>
+          <Typography variant="body2">{t("common:action.signOut")}</Typography>
         </Box>
       </Box>
     </Box>

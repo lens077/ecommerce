@@ -1,0 +1,259 @@
+{
+  "meta": {
+    "title": "Marketplace"
+  },
+  "appBar": {
+    "signOutSuccess": "Signed out",
+    "signedInAs": "Signed in as {{name}}",
+    "myAccount": "My account",
+    "cart": "Cart",
+    "profile": "Profile",
+    "searchPlaceholder": "Search products...",
+    "searchResults": "Search results",
+    "searchResultCount": "({{count}} found)",
+    "sold": "Sold {{count}}",
+    "searchEmpty": "No matching products"
+  },
+  "footer": {
+    "brand": "Marketplace",
+    "tagline": "Building a great online shopping experience with quality products and service.",
+    "about": {
+      "title": "About",
+      "company": "Company",
+      "contact": "Contact us",
+      "careers": "Careers"
+    },
+    "help": {
+      "title": "Help center",
+      "faq": "FAQ",
+      "guide": "Shopping guide",
+      "afterSales": "After-sales service"
+    },
+    "legal": {
+      "title": "Privacy & terms",
+      "privacy": "Privacy policy",
+      "terms": "Terms of service",
+      "cookie": "Cookie policy"
+    },
+    "copyright": "© {{year}} Marketplace. All rights reserved.",
+    "sitemap": "Sitemap",
+    "icp": "ICP filing"
+  },
+  "privacy": {
+    "title": "Privacy policy",
+    "intro": "We take your privacy seriously and are committed to protecting your personal information. Here is how we collect and use it:",
+    "analytics": {
+      "title": "Analytics",
+      "desc": "We use analytics tools to collect browsing behavior data so we can improve our service.",
+      "allow": "Allow analytics"
+    },
+    "location": {
+      "title": "Location",
+      "desc": "We may use your location to offer more relevant services.",
+      "allow": "Allow location"
+    },
+    "marketing": {
+      "title": "Marketing",
+      "desc": "We may send you marketing messages about our products and services.",
+      "allow": "Allow marketing messages"
+    },
+    "footnote": "You can change these options at any time from the privacy settings in the site footer.",
+    "rejectAll": "Reject all",
+    "saveSettings": "Save settings",
+    "acceptAll": "Accept all"
+  },
+  "home": {
+    "featured": "Featured products",
+    "loading": "Loading products…",
+    "comingSoon": "Products are on the way — stay tuned",
+    "priceFrom": "and up"
+  },
+  "notFound": {
+    "title": "Page not found",
+    "desc": "The page you are looking for may have expired or never existed. Please check the link.",
+    "back": "Go back",
+    "home": "Back to home"
+  },
+  "product": {
+    "breadcrumb": "Home > Product detail",
+    "loadFailed": "Failed to load: {{message}}",
+    "selectSpec": "Select a variant",
+    "stock": "Stock {{count}}",
+    "selectConfig": "Choose options",
+    "quantity": "Quantity",
+    "adding": "Adding...",
+    "addToCart": "Add to cart",
+    "buyNow": "Buy now",
+    "addedToCart": "Added to cart"
+  },
+  "cart": {
+    "title": "Cart",
+    "itemsTitle": "Cart items",
+    "decrease": "Decrease quantity",
+    "increase": "Increase quantity",
+    "removeItem": "Remove item",
+    "selectAll": "Select all",
+    "checkoutWithCount": "Checkout ({{count}})",
+    "defaultShopName": "Merchant",
+    "addFailed": "Failed to add",
+    "empty": {
+      "title": "Your cart is empty",
+      "desc": "Go find something you like",
+      "action": "Start shopping"
+    },
+    "summary": {
+      "title": "Order summary",
+      "totalItems": "Items",
+      "pieces": "{{count}} pcs",
+      "selectedItems": "Selected",
+      "subtotal": "Subtotal",
+      "total": "Total",
+      "totalInline": "Total:"
+    }
+  },
+  "checkout": {
+    "title": "Confirm order",
+    "submit": "Place order",
+    "submitFailed": "Could not place the order, please try again",
+    "noSelection": "No items selected",
+    "backToCart": "Back to cart",
+    "addressLoading": "Loading addresses…",
+    "addressPick": "Select a shipping address",
+    "select": "Select",
+    "shop": "Shop",
+    "remark": {
+      "label": "Order note",
+      "placeholder": "Optional — any special requests"
+    },
+    "shipping": {
+      "standard": "Standard shipping",
+      "eta": "Estimated 3-5 days",
+      "free": "Free shipping"
+    },
+    "amount": {
+      "goods": "Item total",
+      "freight": "Shipping",
+      "total": "Total",
+      "totalInline": "Total:"
+    },
+    "address": {
+      "required": "Please fill in all required fields",
+      "pickerTitle": "Select a shipping address",
+      "default": "Default",
+      "add": "Add address",
+      "recipient": "Recipient",
+      "phone": "Phone number",
+      "province": "Province",
+      "city": "City",
+      "district": "District",
+      "detail": "Street address",
+      "setDefault": "Set as default address",
+      "saving": "Saving…",
+      "save": "Save address"
+    }
+  },
+  "orders": {
+    "title": "My orders",
+    "empty": "No orders yet",
+    "tabs": {
+      "all": "All",
+      "pendingReceipt": "To receive"
+    }
+  },
+  "orderDetail": {
+    "hint": {
+      "pending": "Please complete payment within 30 minutes",
+      "paid": "The merchant is preparing your shipment",
+      "shipped": "Your order has shipped",
+      "completed": "Order complete — thanks for your purchase"
+    },
+    "cancelConfirm": "Cancel this order?",
+    "payNotReady": "Payment is not available yet...",
+    "orderNo": "Order number",
+    "createTime": "Placed at",
+    "payTime": "Paid at",
+    "shipTime": "Shipped at",
+    "goodsAmount": "Item total",
+    "coupon": "Coupon",
+    "cancel": "Cancel order",
+    "payNow": "Pay now",
+    "confirmReceive": "Confirm receipt",
+    "buyAgain": "Buy again"
+  },
+  "payment": {
+    "success": {
+      "title": "Payment successful",
+      "desc": "Thanks for your purchase — your order is being prepared for shipment"
+    },
+    "failed": {
+      "title": "Payment failed",
+      "desc": "The payment did not go through. Your order is still held, please try again."
+    },
+    "amount": "Amount paid",
+    "viewOrder": "View order",
+    "viewOrders": "View my orders"
+  },
+  "profile": {
+    "loginRequired": "Please sign in to access your profile",
+    "loadFailed": "Could not load your profile. Please refresh and try again.",
+    "tagLabel": "Tag: {{value}}",
+    "account": {
+      "title": "Account",
+      "userId": "User ID",
+      "username": "Username",
+      "email": "Email",
+      "createdAt": "Registered"
+    },
+    "nav": {
+      "title": "Shortcuts",
+      "addresses": {
+        "label": "Addresses",
+        "desc": "Manage your shipping addresses"
+      }
+    }
+  },
+  "addresses": {
+    "loginRequired": "Please sign in to manage your shipping addresses",
+    "userNotFound": "User not found",
+    "breadcrumb": "Profile > Addresses",
+    "title": "Addresses",
+    "myAddresses": "My shipping addresses",
+    "add": "Add address",
+    "edit": "Edit address",
+    "loadFailed": "Could not load addresses, please try again",
+    "default": "Default",
+    "saving": "Saving...",
+    "empty": {
+      "title": "No shipping addresses yet",
+      "desc": "Use the button above to add your first address"
+    },
+    "form": {
+      "required": "Please fill in all required fields",
+      "recipient": "Recipient",
+      "phone": "Phone number",
+      "province": "Province",
+      "city": "City",
+      "district": "District",
+      "selectProvince": "Select a province",
+      "selectCity": "Select a province first",
+      "selectDistrict": "Select a city first",
+      "noDistrict": "No districts under this city",
+      "regionLoading": "Loading…",
+      "detail": "Street address",
+      "setDefault": "Set as default address"
+    },
+    "location": {
+      "title": "Location permission",
+      "desc": "We use your IP address or location permission to suggest your province, city and district. This data is processed by a third party (Amap). Do you agree?",
+      "getting": "Locating...",
+      "agree": "Agree"
+    }
+  },
+  "callback": {
+    "responseInvalid": "Unexpected sign-in response",
+    "loginSuccess": "Signed in",
+    "loginFailed": "Sign-in failed, please try again",
+    "successRedirect": "Signed in, redirecting...",
+    "errorRedirect": "Sign-in failed, redirecting to home..."
+  }
+}

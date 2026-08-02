@@ -1,0 +1,216 @@
+{
+  "meta": {
+    "title": "电商平台 - 管理后台"
+  },
+  "sidebar": {
+    "brand": "电商管理后台",
+    "nav": {
+      "dashboard": "数据看板",
+      "merchants": "商家管理",
+      "orders": "订单管理",
+      "products": "商品审核",
+      "users": "用户管理",
+      "categories": "类目管理",
+      "reports": "运营报表",
+      "settings": "系统设置"
+    },
+    "version": "平台版本 v{{version}}"
+  },
+  "header": {
+    "searchPlaceholder": "搜索商家、订单、商品...",
+    "notifications": "通知",
+    "settings": "设置",
+    "avatarInitial": "管"
+  },
+  "timeRange": {
+    "label": "时间范围",
+    "today": "今天",
+    "last7d": "近 7 天",
+    "last30d": "近 30 天",
+    "last90d": "近 90 天",
+    "all": "全部"
+  },
+  "dashboard": {
+    "title": "数据看板",
+    "viewAll": "查看全部",
+    "stats": {
+      "todayOrders": "今日订单",
+      "todaySales": "今日销售额",
+      "activeUsers": "活跃用户",
+      "totalMerchants": "商家总数"
+    },
+    "recentOrders": "近期订单",
+    "table": {
+      "orderNo": "订单号",
+      "merchant": "商家",
+      "customer": "客户",
+      "amount": "金额",
+      "status": "状态"
+    },
+    "pendingMerchants": "待审核商家",
+    "pendingBadge": "待审核"
+  },
+  "merchants": {
+    "title": "商家管理",
+    "searchPlaceholder": "搜索商家名称...",
+    "tabs": {
+      "all": "全部商家",
+      "active": "营业中",
+      "pending": "待审核",
+      "suspended": "已暂停"
+    },
+    "status": {
+      "active": "营业中",
+      "pending": "待审核",
+      "suspended": "已暂停"
+    },
+    "table": {
+      "info": "商家信息",
+      "category": "类目",
+      "owner": "负责人",
+      "contact": "联系方式",
+      "status": "状态",
+      "joinTime": "入驻时间",
+      "actions": "操作"
+    },
+    "action": {
+      "view": "查看详情",
+      "approve": "通过审核",
+      "reject": "驳回申请"
+    }
+  },
+  "orders": {
+    "title": "订单管理",
+    "searchPlaceholder": "搜索订单号/商家/客户...",
+    "tabs": {
+      "all": "全部",
+      "pending": "待处理",
+      "paid": "已支付",
+      "shipped": "已发货",
+      "completed": "已完成",
+      "refunding": "退款中"
+    },
+    "status": {
+      "pending": "待处理",
+      "paid": "已支付",
+      "shipped": "已发货",
+      "completed": "已完成",
+      "refunding": "退款中"
+    },
+    "table": {
+      "info": "订单信息",
+      "merchant": "商家",
+      "customer": "客户",
+      "amount": "订单金额",
+      "status": "状态",
+      "createTime": "下单时间",
+      "actions": "操作"
+    },
+    "action": {
+      "view": "查看详情",
+      "remark": "订单备注"
+    }
+  },
+  "products": {
+    "title": "商品审核",
+    "searchPlaceholder": "搜索商品名称...",
+    "tabs": {
+      "pending": "待审核",
+      "approved": "已通过",
+      "rejected": "已驳回"
+    },
+    "status": {
+      "pending": "待审核",
+      "approved": "已通过",
+      "rejected": "已驳回"
+    },
+    "table": {
+      "info": "商品信息",
+      "merchant": "商家",
+      "category": "类目",
+      "price": "价格",
+      "stock": "库存",
+      "status": "状态",
+      "submitTime": "提交时间",
+      "actions": "操作"
+    },
+    "action": {
+      "view": "查看详情",
+      "approve": "通过审核",
+      "reject": "驳回商品"
+    }
+  },
+  "users": {
+    "title": "用户管理",
+    "searchPlaceholder": "搜索用户昵称/手机号...",
+    "table": {
+      "info": "用户信息",
+      "phone": "手机号",
+      "orders": "订单数",
+      "amount": "消费金额",
+      "level": "会员等级",
+      "joinTime": "注册时间"
+    },
+    "orderCount_other": "{{count}} 单",
+    "level": {
+      "vip": "VIP",
+      "normal": "普通"
+    }
+  },
+  "categories": {
+    "title": "类目管理",
+    "add": "添加类目",
+    "table": {
+      "info": "类目信息",
+      "productCount": "商品数",
+      "status": "状态",
+      "sort": "排序",
+      "actions": "操作"
+    },
+    "status": {
+      "enabled": "启用",
+      "disabled": "禁用"
+    },
+    "action": {
+      "edit": "编辑类目",
+      "children": "查看子类目",
+      "delete": "删除类目"
+    }
+  },
+  "reports": {
+    "title": "运营报表",
+    "stats": {
+      "sales": "销售额",
+      "orders": "订单数",
+      "visitors": "访客数",
+      "merchants": "商家数"
+    },
+    "salesTrend": "销售趋势",
+    "categoryShare": "类目占比",
+    "chartPlaceholder": "图表区域（ECharts / Recharts）",
+    "pieChartPlaceholder": "饼图区域"
+  },
+  "settings": {
+    "title": "系统设置",
+    "basic": {
+      "title": "基本设置",
+      "platformName": "平台名称",
+      "platformLogo": "平台 Logo",
+      "copyright": "版权信息"
+    },
+    "order": {
+      "title": "订单设置",
+      "timeout": "订单超时时间",
+      "minutes": "分钟",
+      "autoCancel": "允许自动取消超时未支付订单",
+      "autoReview": "订单完成后自动评价"
+    },
+    "security": {
+      "title": "安全设置",
+      "twoFactor": "开启双因素认证",
+      "remoteLoginAlert": "异地登录提醒",
+      "sensitiveOpVerify": "敏感操作需二次验证"
+    },
+    "save": "保存设置"
+  }
+}

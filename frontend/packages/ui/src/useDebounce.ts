@@ -27,7 +27,7 @@ type DebouncedCallback<T extends unknown[]> = (...args: T) => void;
  */
 export function useDebounce<T>({ value, delay }: UseDebounceOptions<T>): UseDebounceReturn<T>["debouncedValue"] {
   const [debouncedValue, setDebouncedValue] = useState<T>(value);
-  const timerRef = useRef<ReturnType<typeof setTimeout>>();
+  const timerRef = useRef<ReturnType<typeof setTimeout> | undefined>(undefined);
 
   useEffect(() => {
     timerRef.current = setTimeout(() => {
@@ -53,22 +53,38 @@ export function useDebouncedCallback<T extends unknown[]>(
   options?: UseDebounceCallbackOptions
 ): DebouncedCallback<T> {
   const callbackRef = useRef(callback);
-  const timeoutRef = useRef<ReturnType<typeof setTimeout>>();
+  const timeoutRef = useRef<ReturnType<typeof setTimeout> | undefined>(undefined);
+  // immediate: 首次调用立刻执行，之后 delay 内的调用被丢弃（前沿触发）；
+  // 默认是后沿触发，即安静 delay 之后才执行最后一次调用。
+  const immediateRef = useRef(options?.immediate ?? false);
 
   // 更新回调引用
   useEffect(() => {
     callbackRef.current = callback;
   }, [callback]);
 
+  useEffect(() => {
+    immediateRef.current = options?.immediate ?? false;
+  }, [options?.immediate]);
+
   const debouncedCallback = useCallback(
     (...args: T) => {
+      const callNow = immediateRef.current && !timeoutRef.current;
+
       if (timeoutRef.current) {
         clearTimeout(timeoutRef.current);
       }
 
       timeoutRef.current = setTimeout(() => {
-        callbackRef.current(...args);
+        timeoutRef.current = undefined;
+        if (!immediateRef.current) {
+          callbackRef.current(...args);
+        }
       }, delay);
+
+      if (callNow) {
+        callbackRef.current(...args);
+      }
     },
     [delay]
   );
@@ -91,7 +107,7 @@ export function useDebouncedCallback<T extends unknown[]>(
 export function useDebounceWithPending<T>(value: T, delay: number): UseDebounceReturn<T> {
   const [debouncedValue, setDebouncedValue] = useState<T>(value);
   const [isPending, setIsPending] = useState(false);
-  const timerRef = useRef<ReturnType<typeof setTimeout>>();
+  const timerRef = useRef<ReturnType<typeof setTimeout> | undefined>(undefined);
 
   useEffect(() => {
     setIsPending(true);

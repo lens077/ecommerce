@@ -9,6 +9,7 @@
 import { parseDocument } from "yaml";
 import { parse as parseToml, TomlError } from "smol-toml";
 import { type ParseError, parse as parseJsonc } from "jsonc-parser";
+import { i18next } from "@ecommerce/i18n";
 import { ConfigFormat } from "@/gen/api";
 import { formatToml } from "@/lib/toml-format";
 
@@ -53,32 +54,39 @@ function isBlank(text: string): boolean {
  * —— 一个位置都没有,行号只能瞎猜。jsonc-parser(Monaco 自己也在用)给的是
  * 精确的 offset + length,所以校验走它,严格模式关掉注释和尾逗号。
  */
-const JSON_ERROR_MESSAGES: Record<number, string> = {
-  1: "无法识别的符号",
-  2: "数字格式不正确",
-  3: "此处应为属性名",
-  4: "此处应为一个值",
-  5: "属性名后面缺少冒号",
-  6: "缺少逗号分隔",
-  7: "缺少右花括号 }",
-  8: "缺少右方括号 ]",
-  9: "此处应为文档结尾,后面还有多余内容",
-  10: "JSON 不支持注释",
-  11: "注释没有闭合",
-  12: "字符串没有闭合",
-  13: "数字没有写完",
-  14: "Unicode 转义不合法",
-  15: "转义字符不合法",
-  16: "非法字符",
-};
+// jsonc-parser 的错误码 -> 文案 key。key 显式列出而不是拼 `validate.json.${code}`,
+// 否则提取工具扫不到,将来漏翻也检测不出来。
+const JSON_ERROR_KEYS = {
+  1: "config:validate.json.1",
+  2: "config:validate.json.2",
+  3: "config:validate.json.3",
+  4: "config:validate.json.4",
+  5: "config:validate.json.5",
+  6: "config:validate.json.6",
+  7: "config:validate.json.7",
+  8: "config:validate.json.8",
+  9: "config:validate.json.9",
+  10: "config:validate.json.10",
+  11: "config:validate.json.11",
+  12: "config:validate.json.12",
+  13: "config:validate.json.13",
+  14: "config:validate.json.14",
+  15: "config:validate.json.15",
+  16: "config:validate.json.16",
+} as const;
+
+/** 文案在调用时才解析 —— 这是模块级的表,存翻译好的字符串会被语言切换甩在后面。 */
+function jsonErrorMessage(code: number): string {
+  const key = JSON_ERROR_KEYS[code as keyof typeof JSON_ERROR_KEYS];
+  return key ? i18next.t(key) : i18next.t("config:validate.json.unknown", { code });
+}
 
 function jsonIssues(text: string): FormatIssue[] {
   const errors: ParseError[] = [];
   parseJsonc(text, errors, { allowTrailingComma: false, disallowComments: true });
   return errors.map((e) => {
     const { line, column } = offsetToPos(text, e.offset);
-    const message = JSON_ERROR_MESSAGES[e.error] ?? `JSON 语法错误(code ${e.error})`;
-    return issueAt(line, column, message, Math.max(1, e.length));
+    return issueAt(line, column, jsonErrorMessage(e.error), Math.max(1, e.length));
   });
 }
 
@@ -176,7 +184,14 @@ export function formatContent(text: string, format: ConfigFormat): string {
   const check = validateContent(text, format);
   if (!check.ok) {
     const first = check.issues[0];
-    throw new FormatError(`第 ${first.line} 行 第 ${first.column} 列: ${first.message}`, check.issues);
+    throw new FormatError(
+      i18next.t("config:validate.position", {
+        line: first.line,
+        column: first.column,
+        message: first.message,
+      }),
+      check.issues,
+    );
   }
 
   switch (format) {

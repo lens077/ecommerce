@@ -1,8 +1,11 @@
+import { createTheme, ThemeProvider } from "@mui/material/styles";
+import { enUS, zhCN } from "@mui/material/locale";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { ReactQueryDevtools } from "@tanstack/react-query-devtools";
 import { createRouter, RouterProvider } from "@tanstack/react-router";
-import { lazy, StrictMode, Suspense } from "react";
+import { lazy, StrictMode, Suspense, useMemo, type ReactNode } from "react";
 import ReactDOM from "react-dom/client";
+import { useLocale } from "@ecommerce/i18n";
 import { isTauri } from "@ecommerce/tauri";
 import reportWebVitals from "./reportWebVitals";
 import { routeTree } from "./routeTree.gen";
@@ -61,6 +64,19 @@ const queryClient = new QueryClient({
     },
 });
 
+const MUI_LOCALES = { "zh-CN": zhCN, en: enUS } as const;
+
+/**
+ * consumer 原本没有 ThemeProvider，用的是 MUI 默认主题 + src/styles/tokens.ts。
+ * 这里用空对象建主题，spacing 因子仍然是默认的 8，样式行为不变；加它只是为了把
+ * MUI 内置文案（Autocomplete/TablePagination 之类）也跟着语言切换。
+ */
+function LocalizedTheme({ children }: { children: ReactNode }) {
+    const { locale } = useLocale();
+    const theme = useMemo(() => createTheme({}, MUI_LOCALES[locale]), [locale]);
+    return <ThemeProvider theme={theme}>{children}</ThemeProvider>;
+}
+
 function InnerApp() {
     // 获取原子状态（会触发重绘）与 动作方法（持久稳定引用）
     const state = useAuthState();
@@ -83,17 +99,19 @@ if (rootElement && !rootElement.innerHTML) {
 
     root.render(
         <StrictMode>
-            <QueryClientProvider client={queryClient}>
-                <AuthProvider router={router}>
-                    <InnerApp/>
-                </AuthProvider>
-                {isTauri() && (
-                    <Suspense fallback={null}>
-                        <DesktopSettingsDialog/>
-                    </Suspense>
-                )}
-                <ReactQueryDevtools initialIsOpen={false} buttonPosition="bottom-right" position="bottom"/>
-            </QueryClientProvider>
+            <LocalizedTheme>
+                <QueryClientProvider client={queryClient}>
+                    <AuthProvider router={router}>
+                        <InnerApp/>
+                    </AuthProvider>
+                    {isTauri() && (
+                        <Suspense fallback={null}>
+                            <DesktopSettingsDialog/>
+                        </Suspense>
+                    )}
+                    <ReactQueryDevtools initialIsOpen={false} buttonPosition="bottom-right" position="bottom"/>
+                </QueryClientProvider>
+            </LocalizedTheme>
         </StrictMode>,
     );
 }

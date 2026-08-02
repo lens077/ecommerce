@@ -18,6 +18,7 @@ import {
   IconButton,
 } from "@mui/material";
 import { Plus, Edit2, Trash2, ChevronRight } from "lucide-react";
+import { useFormat, useTranslation } from "@ecommerce/i18n";
 import { AdminLayout } from "@/components/AdminLayout";
 import { tokens } from "@/styles/tokens";
 
@@ -25,7 +26,18 @@ export const Route = createFileRoute("/categories/")({
   component: CategoriesPage,
 });
 
+const COLUMNS = [
+  "categories.table.info",
+  "categories.table.productCount",
+  "categories.table.status",
+  "categories.table.sort",
+  "categories.table.actions",
+] as const;
+
 function CategoriesPage() {
+  const { t } = useTranslation();
+  const { formatNumber } = useFormat();
+
   const categories = [
     { id: "c001", name: "手机通讯", icon: "📱", productCount: 1256, status: "enabled", sort: 1 },
     { id: "c002", name: "电脑办公", icon: "💻", productCount: 892, status: "enabled", sort: 2 },
@@ -41,10 +53,10 @@ function CategoriesPage() {
       <Box sx={{ maxWidth: 1400 }}>
         <Box sx={{ display: "flex", justifyContent: "space-between", alignItems: "center", mb: 4 }}>
           <Typography variant="h4" sx={{ fontWeight: 700, color: "text.primary" }}>
-            类目管理
+            {t("categories.title")}
           </Typography>
           <Button variant="contained" startIcon={<Plus size={18} />}>
-            添加类目
+            {t("categories.add")}
           </Button>
         </Box>
 
@@ -54,11 +66,11 @@ function CategoriesPage() {
             <Table>
               <TableHead>
                 <TableRow>
-                  <TableCell sx={{ fontWeight: 500 }}>类目信息</TableCell>
-                  <TableCell sx={{ fontWeight: 500 }}>商品数</TableCell>
-                  <TableCell sx={{ fontWeight: 500 }}>状态</TableCell>
-                  <TableCell sx={{ fontWeight: 500 }}>排序</TableCell>
-                  <TableCell sx={{ fontWeight: 500 }}>操作</TableCell>
+                  {COLUMNS.map((key) => (
+                    <TableCell key={key} sx={{ fontWeight: 500 }}>
+                      {t(key)}
+                    </TableCell>
+                  ))}
                 </TableRow>
               </TableHead>
               <TableBody>
@@ -74,7 +86,7 @@ function CategoriesPage() {
                     </TableCell>
                     <TableCell>
                       <Typography variant="body2" sx={{ color: "text.secondary" }}>
-                        {category.productCount.toLocaleString()}
+                        {formatNumber(category.productCount)}
                       </Typography>
                     </TableCell>
                     <TableCell>
@@ -90,7 +102,11 @@ function CategoriesPage() {
                           color: category.status === "enabled" ? tokens.colors.accent.green : tokens.colors.text.disabled,
                         }}
                       >
-                        {category.status === "enabled" ? "启用" : "禁用"}
+                        {t(
+                          category.status === "enabled"
+                            ? "categories.status.enabled"
+                            : "categories.status.disabled",
+                        )}
                       </Box>
                     </TableCell>
                     <TableCell>
@@ -100,13 +116,25 @@ function CategoriesPage() {
                     </TableCell>
                     <TableCell>
                       <Box sx={{ display: "flex", gap: 1 }}>
-                        <IconButton size="small" sx={{ color: "text.secondary" }}>
+                        <IconButton
+                          size="small"
+                          aria-label={t("categories.action.edit")}
+                          sx={{ color: "text.secondary" }}
+                        >
                           <Edit2 size={18} />
                         </IconButton>
-                        <IconButton size="small" sx={{ color: "text.secondary" }}>
+                        <IconButton
+                          size="small"
+                          aria-label={t("categories.action.children")}
+                          sx={{ color: "text.secondary" }}
+                        >
                           <ChevronRight size={18} />
                         </IconButton>
-                        <IconButton size="small" sx={{ color: tokens.colors.accent.red }}>
+                        <IconButton
+                          size="small"
+                          aria-label={t("categories.action.delete")}
+                          sx={{ color: tokens.colors.accent.red }}
+                        >
                           <Trash2 size={18} />
                         </IconButton>
                       </Box>

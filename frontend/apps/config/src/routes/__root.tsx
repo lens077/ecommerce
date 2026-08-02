@@ -1,6 +1,8 @@
 import { createRootRouteWithContext, Link, Outlet, useRouterState } from "@tanstack/react-router";
 import { AppBar, Box, Button, Chip, Toolbar, Typography } from "@mui/material";
 import { SlidersHorizontal } from "lucide-react";
+import { useTranslation } from "@ecommerce/i18n";
+import { LocaleSwitcher } from "@ecommerce/ui";
 import { useAuthActions, useAuthState } from "@/providers/AuthProvider";
 import { sp } from "@/styles/glass";
 
@@ -18,6 +20,7 @@ export const Route = createRootRouteWithContext<MyRouterContext>()({
 });
 
 function RootLayout() {
+  const { t } = useTranslation();
   const { isAuthenticated } = useAuthState();
   const { login, logout } = useAuthActions();
   const isCallback = useRouterState({
@@ -37,17 +40,18 @@ function RootLayout() {
             to="/"
             sx={{ fontWeight: 700, color: "inherit", textDecoration: "none" }}
           >
-            配置中心
+            {t("app.title")}
           </Typography>
           <Chip label="Config Center" size="small" variant="outlined" sx={{ ml: sp[1] }} />
           <Box sx={{ flex: 1 }} />
+          <LocaleSwitcher />
           {isAuthenticated ? (
             <Button variant="outlined" color="inherit" onClick={logout}>
-              登出
+              {t("app.signOut")}
             </Button>
           ) : (
             <Button variant="contained" onClick={login}>
-              登录
+              {t("app.signIn")}
             </Button>
           )}
         </Toolbar>
@@ -65,7 +69,7 @@ function RootLayout() {
         }}
       >
         {!isAuthenticated && !isCallback ? (
-          <Typography color="text.secondary">请先登录以管理配置。</Typography>
+          <Typography color="text.secondary">{t("app.loginRequired")}</Typography>
         ) : (
           <Outlet />
         )}

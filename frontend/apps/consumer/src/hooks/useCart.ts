@@ -6,6 +6,7 @@
  * - rerender-defer-reads: 使用订阅模式延迟读取
  */
 
+import { i18next } from "@ecommerce/i18n";
 import { useCallback, useEffect, useState } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { cartApi, type AddToCartRequest } from "@/api/cart";
@@ -127,7 +128,7 @@ export function useCart() {
                     cartItemId: res.cartItemId,
                 });
             } catch (err) {
-                const message = err instanceof Error ? err.message : "添加失败";
+                const message = err instanceof Error ? err.message : i18next.t("consumer:cart.addFailed");
                 setError(message);
                 throw err;
             } finally {
@@ -245,7 +246,7 @@ export function useAddToCart(initialQuantity: number = 1) {
                 setIsSuccess(true);
                 setTimeout(() => setIsSuccess(false), 2000);
             } catch (err) {
-                const message = err instanceof Error ? err.message : "添加失败";
+                const message = err instanceof Error ? err.message : i18next.t("consumer:cart.addFailed");
                 setError(message);
                 throw err;
             } finally {

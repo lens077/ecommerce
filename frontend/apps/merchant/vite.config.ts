@@ -16,6 +16,8 @@ export default defineConfig(({ mode }) => {
     server: {
       host,
       port,
+      // Tauri 壳按固定端口连 dev server，端口被占时必须报错而不是静默换号
+      strictPort: true,
     },
   };
 });

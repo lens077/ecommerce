@@ -25,6 +25,7 @@ import {
 } from "@mui/material";
 import { useState } from "react";
 import { Search, Eye, Check, X, Image as ImageIcon } from "lucide-react";
+import { useFormat, useTranslation } from "@ecommerce/i18n";
 import { AdminLayout } from "@/components/AdminLayout";
 import { tokens } from "@/styles/tokens";
 
@@ -32,7 +33,31 @@ export const Route = createFileRoute("/products/")({
   component: ProductsPage,
 });
 
+type ReviewStatus = "pending" | "approved" | "rejected";
+
+const STATUS_COLORS: Record<ReviewStatus, { color: string; bg: string }> = {
+  pending: { color: tokens.colors.accent.yellow, bg: "rgba(245, 158, 11, 0.1)" },
+  approved: { color: tokens.colors.accent.green, bg: "rgba(16, 185, 129, 0.1)" },
+  rejected: { color: tokens.colors.accent.red, bg: "rgba(239, 68, 68, 0.1)" },
+};
+
+/** tab 顺序即 status 顺序，筛选直接按下标取，不用再写一串 if */
+const TABS: readonly ReviewStatus[] = ["pending", "approved", "rejected"];
+
+const COLUMNS = [
+  "products.table.info",
+  "products.table.merchant",
+  "products.table.category",
+  "products.table.price",
+  "products.table.stock",
+  "products.table.status",
+  "products.table.submitTime",
+  "products.table.actions",
+] as const;
+
 function ProductsPage() {
+  const { t } = useTranslation();
+  const { formatCurrency, formatNumber } = useFormat();
   const [tab, setTab] = useState(0);
   const [search, setSearch] = useState("");
 
@@ -89,33 +114,13 @@ function ProductsPage() {
     },
   ];
 
-  const tabs = [
-    { label: "待审核", value: "pending" },
-    { label: "已通过", value: "approved" },
-    { label: "已驳回", value: "rejected" },
-  ];
-
-  const getStatusConfig = (status: string) => {
-    const configs: Record<string, { label: string; color: string; bg: string }> = {
-      pending: { label: "待审核", color: tokens.colors.accent.yellow, bg: "rgba(245, 158, 11, 0.1)" },
-      approved: { label: "已通过", color: tokens.colors.accent.green, bg: "rgba(16, 185, 129, 0.1)" },
-      rejected: { label: "已驳回", color: tokens.colors.accent.red, bg: "rgba(239, 68, 68, 0.1)" },
-    };
-    return configs[status] || configs.pending;
-  };
-
-  const filteredProducts = products.filter((p) => {
-    if (tab === 0) return p.status === "pending";
-    if (tab === 1) return p.status === "approved";
-    if (tab === 2) return p.status === "rejected";
-    return true;
-  });
+  const filteredProducts = products.filter((p) => p.status === TABS[tab]);
 
   return (
     <AdminLayout>
       <Box sx={{ maxWidth: 1400 }}>
         <Typography variant="h4" sx={{ fontWeight: 700, color: "text.primary", mb: 4 }}>
-          商品审核
+          {t("products.title")}
         </Typography>
 
         {/* 操作栏 */}
@@ -127,13 +132,13 @@ function ProductsPage() {
                 onChange={(_, v) => setTab(v)}
                 sx={{ minHeight: 36 }}
               >
-                {tabs.map((t) => (
+                {TABS.map((value) => (
                   <Tab
-                    key={t.value}
+                    key={value}
                     label={
                       <Box sx={{ display: "flex", alignItems: "center", gap: 1 }}>
-                        {t.label}
-                        {t.value === "pending" && (
+                        {t(`products.tabs.${value}`)}
+                        {value === "pending" && (
                           <Chip
                             label={products.filter((p) => p.status === "pending").length}
                             size="small"
@@ -153,16 +158,18 @@ function ProductsPage() {
               </Tabs>
               <TextField
                 size="small"
-                placeholder="搜索商品名称..."
+                placeholder={t("products.searchPlaceholder")}
                 value={search}
                 onChange={(e) => setSearch(e.target.value)}
                 sx={{ width: 240 }}
-                InputProps={{
-                  startAdornment: (
-                    <InputAdornment position="start">
-                      <Search size={18} color={tokens.colors.text.secondary} />
-                    </InputAdornment>
-                  ),
+                slotProps={{
+                  input: {
+                    startAdornment: (
+                      <InputAdornment position="start">
+                        <Search size={18} color={tokens.colors.text.secondary} />
+                      </InputAdornment>
+                    ),
+                  },
                 }}
               />
             </Box>
@@ -175,19 +182,16 @@ function ProductsPage() {
             <Table>
               <TableHead>
                 <TableRow>
-                  <TableCell sx={{ fontWeight: 500 }}>商品信息</TableCell>
-                  <TableCell sx={{ fontWeight: 500 }}>商家</TableCell>
-                  <TableCell sx={{ fontWeight: 500 }}>类目</TableCell>
-                  <TableCell sx={{ fontWeight: 500 }}>价格</TableCell>
-                  <TableCell sx={{ fontWeight: 500 }}>库存</TableCell>
-                  <TableCell sx={{ fontWeight: 500 }}>状态</TableCell>
-                  <TableCell sx={{ fontWeight: 500 }}>提交时间</TableCell>
-                  <TableCell sx={{ fontWeight: 500 }}>操作</TableCell>
+                  {COLUMNS.map((key) => (
+                    <TableCell key={key} sx={{ fontWeight: 500 }}>
+                      {t(key)}
+                    </TableCell>
+                  ))}
                 </TableRow>
               </TableHead>
               <TableBody>
                 {filteredProducts.map((product) => {
-                  const statusConfig = getStatusConfig(product.status);
+                  const statusColor = STATUS_COLORS[product.status as ReviewStatus];
                   return (
                     <TableRow key={product.id} hover>
                       <TableCell>
@@ -224,19 +228,19 @@ function ProductsPage() {
                       </TableCell>
                       <TableCell>
                         <Typography variant="body2" sx={{ fontWeight: 600, color: tokens.colors.accent.red }}>
-                          ¥{product.price.toLocaleString()}
+                          {formatCurrency(product.price)}
                         </Typography>
                       </TableCell>
                       <TableCell>
                         <Typography variant="body2" sx={{ color: "text.secondary" }}>
-                          {product.stock}
+                          {formatNumber(product.stock)}
                         </Typography>
                       </TableCell>
                       <TableCell>
                         <Chip
-                          label={statusConfig.label}
+                          label={t(`products.status.${product.status as ReviewStatus}`)}
                           size="small"
-                          sx={{ bgcolor: statusConfig.bg, color: statusConfig.color, fontWeight: 500 }}
+                          sx={{ bgcolor: statusColor.bg, color: statusColor.color, fontWeight: 500 }}
                         />
                       </TableCell>
                       <TableCell>
@@ -246,15 +250,27 @@ function ProductsPage() {
                       </TableCell>
                       <TableCell>
                         <Box sx={{ display: "flex", gap: 1 }}>
-                          <IconButton size="small" sx={{ color: "text.secondary" }}>
+                          <IconButton
+                            size="small"
+                            aria-label={t("products.action.view")}
+                            sx={{ color: "text.secondary" }}
+                          >
                             <Eye size={18} />
                           </IconButton>
                           {product.status === "pending" && (
                             <>
-                              <IconButton size="small" sx={{ color: tokens.colors.accent.green }}>
+                              <IconButton
+                                size="small"
+                                aria-label={t("products.action.approve")}
+                                sx={{ color: tokens.colors.accent.green }}
+                              >
                                 <Check size={18} />
                               </IconButton>
-                              <IconButton size="small" sx={{ color: tokens.colors.accent.red }}>
+                              <IconButton
+                                size="small"
+                                aria-label={t("products.action.reject")}
+                                sx={{ color: tokens.colors.accent.red }}
+                              >
                                 <X size={18} />
                               </IconButton>
                             </>

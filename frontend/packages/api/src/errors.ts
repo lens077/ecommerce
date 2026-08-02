@@ -1,4 +1,5 @@
 import { Code, ConnectError } from "@connectrpc/connect";
+import { getErrorMessageResolver } from "./runtime";
 
 /**
  * 统一的前端错误模型。
@@ -162,12 +163,24 @@ function isNetworkFailure(message: string): boolean {
     return NETWORK_ERROR_PATTERNS.some((pattern) => lower.includes(pattern));
 }
 
-function resolveMessage(raw: ConnectError, reason: string): string {
+function resolveMessage(raw: ConnectError, reason: string, codeName: string): string {
     const rawMessage = raw.rawMessage?.trim() ?? "";
-    if (rawMessage !== "" && !isNetworkFailure(rawMessage)) {
+    const networkFailure = rawMessage !== "" && isNetworkFailure(rawMessage);
+
+    // 接了国际化的 app 会注入解析器（见 runtime.ts 的 setErrorMessageResolver）。
+    // 返回 undefined 表示不接管，下面的默认逻辑照旧。
+    const resolved = getErrorMessageResolver()?.({
+        reason,
+        codeName,
+        serverMessage: rawMessage,
+        isNetworkFailure: networkFailure,
+    });
+    if (resolved) return resolved;
+
+    if (rawMessage !== "" && !networkFailure) {
         return rawMessage;
     }
-    if (rawMessage !== "" && isNetworkFailure(rawMessage)) {
+    if (networkFailure) {
         return "网络连接失败，请检查网络后重试";
     }
     return REASON_MESSAGES[reason] ?? CODE_MESSAGES[raw.code] ?? FALLBACK_MESSAGE;
@@ -184,12 +197,13 @@ export function toAppError(err: unknown): AppError {
     // reason 取值顺序：合规 details 的 debug -> 响应头 -> 由 code 推导
     const reason =
         info.reason || headers["x-error-reason"] || CODE_REASONS[raw.code] || "UNKNOWN_ERROR";
+    const codeName = CODE_NAMES[raw.code] ?? "unknown";
 
     return {
         code: raw.code,
-        codeName: CODE_NAMES[raw.code] ?? "unknown",
+        codeName,
         reason,
-        message: resolveMessage(raw, reason),
+        message: resolveMessage(raw, reason, codeName),
         metadata: { ...headers, ...info.metadata },
         raw,
     };

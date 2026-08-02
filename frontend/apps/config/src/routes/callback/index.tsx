@@ -5,6 +5,7 @@ import { createFileRoute, useNavigate } from "@tanstack/react-router";
 import { useEffect, useRef, useState } from "react";
 import { flushSync } from "react-dom";
 import { z } from "zod";
+import { i18next, useTranslation } from "@ecommerce/i18n";
 import { userApi } from "@/api";
 import type { Status } from "@ecommerce/constants";
 import { setAccount } from "@/store/users";
@@ -29,6 +30,7 @@ function RouteComponent() {
     const {code, state} = Route.useSearch();
     const navigate = useNavigate();
     const {setIsAuthenticated} = useAuthActions();
+    const {t} = useTranslation();
 
     useEffect(() => {
         // 防止重复提交
@@ -40,7 +42,7 @@ function RouteComponent() {
                 const response = await userApi.signIn(code, state);
 
                 if (response.state !== "ok" || !response.data) {
-                    throw new Error("登录响应异常");
+                    throw new Error(i18next.t("config:callback.responseInvalid"));
                 }
 
                 setToken(response.data);
@@ -72,7 +74,7 @@ function RouteComponent() {
                 }
 
                 addNotification({
-                    message: "登录成功",
+                    message: i18next.t("config:callback.loginSuccess"),
                     severity: "success",
                 });
 
@@ -90,7 +92,7 @@ function RouteComponent() {
                 setStatus("error");
                 console.error("RPC 调用错误:", err);
                 addNotification({
-                    message: "登录失败，请重试",
+                    message: i18next.t("config:callback.loginFailed"),
                     severity: "error",
                 });
                 await navigate({to: "/"});
@@ -105,11 +107,11 @@ function RouteComponent() {
             case "success":
                 return (
                     <Alert icon={<CheckIcon fontSize="inherit"/>} severity="success">
-                        登录成功，正在跳转...
+                        {t("callback.successRedirect")}
                     </Alert>
                 );
             case "error":
-                return <Alert severity="error">登录失败，正在跳转到首页...</Alert>;
+                return <Alert severity="error">{t("callback.errorRedirect")}</Alert>;
             case "loading":
                 return <CircularProgress/>;
         }

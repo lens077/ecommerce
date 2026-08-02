@@ -1,3 +1,4 @@
+import { i18next } from "@ecommerce/i18n";
 import { ConfigFormat } from "@/gen/api";
 
 // 格式 -> Monaco 语言标识(用于高亮)。
@@ -15,6 +16,7 @@ export function formatToLanguage(f: ConfigFormat): string {
   }
 }
 
+// 前四个是格式名,不翻译;只有兜底那句是文案。取值时才解析,跟着当前语言走。
 export function formatLabel(f: ConfigFormat): string {
   switch (f) {
     case ConfigFormat.YAML:
@@ -26,7 +28,7 @@ export function formatLabel(f: ConfigFormat): string {
     case ConfigFormat.PLAINTEXT:
       return "PlainText";
     default:
-      return "未指定";
+      return i18next.t("config:format.unspecified");
   }
 }
 

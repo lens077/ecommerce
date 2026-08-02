@@ -5,16 +5,24 @@
 import { createFileRoute, Link } from "@tanstack/react-router";
 import { Box, Button, Typography } from "@mui/material";
 import { CheckCircle, XCircle } from "lucide-react";
+import { z } from "zod";
+import { useFormat, useTranslation } from "@ecommerce/i18n";
 import { tokens } from "@/styles/tokens";
-import { useNavigate } from "@tanstack/react-router";
+
+// 不带 success 时按成功展示，见下方 isSuccess
+const PaymentResultSearchSchema = z.object({
+  success: z.boolean().optional(),
+});
 
 export const Route = createFileRoute("/payment/result")({
   component: PaymentResultPage,
+  validateSearch: PaymentResultSearchSchema,
 });
 
 function PaymentResultPage() {
   const { success } = Route.useSearch();
-  const navigate = useNavigate();
+  const { t } = useTranslation();
+  const { formatCurrency } = useFormat();
 
   const isSuccess = success !== false;
 
@@ -60,7 +68,7 @@ function PaymentResultPage() {
           textAlign: "center",
         }}
       >
-        {isSuccess ? "支付成功" : "支付失败"}
+        {isSuccess ? t("payment.success.title") : t("payment.failed.title")}
       </Typography>
 
       {/* 描述 */}
@@ -73,9 +81,7 @@ function PaymentResultPage() {
           maxWidth: 300,
         }}
       >
-        {isSuccess
-          ? "感谢您的购买，商品正在准备发货中"
-          : "支付未能完成，订单已保留，请稍后重试"}
+        {isSuccess ? t("payment.success.desc") : t("payment.failed.desc")}
       </Typography>
 
       {/* 订单金额 */}
@@ -92,13 +98,13 @@ function PaymentResultPage() {
           }}
         >
           <Typography variant="caption" sx={{ color: tokens.colors.text.secondary }}>
-            支付金额
+            {t("payment.amount")}
           </Typography>
           <Typography
             variant="h4"
             sx={{ fontWeight: 700, color: tokens.colors.accent.red, mt: 1 }}
           >
-            ¥9,999.00
+            {formatCurrency(9999)}
           </Typography>
         </Box>
       )}
@@ -108,7 +114,7 @@ function PaymentResultPage() {
         <Button
           variant="contained"
           component={Link}
-          to={isSuccess ? "/orders/ORD20240612001" : "/orders/"}
+          to={isSuccess ? "/orders/ORD20240612001" : "/orders"}
           sx={{
             bgcolor: isSuccess ? tokens.colors.accent.red : tokens.colors.text.primary,
             "&:hover": {
@@ -116,7 +122,7 @@ function PaymentResultPage() {
             },
           }}
         >
-          {isSuccess ? "查看订单详情" : "查看我的订单"}
+          {isSuccess ? t("payment.viewOrder") : t("payment.viewOrders")}
         </Button>
         <Button
           variant="outlined"
@@ -131,7 +137,7 @@ function PaymentResultPage() {
             },
           }}
         >
-          返回首页
+          {t("notFound.home")}
         </Button>
       </Box>
     </Box>

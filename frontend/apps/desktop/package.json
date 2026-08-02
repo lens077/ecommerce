@@ -1,0 +1,18 @@
+{
+  "name": "@ecommerce/desktop",
+  "version": "0.0.1",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "dev:consumer": "tauri dev --config src-tauri/tauri.consumer.conf.json",
+    "dev:merchant": "tauri dev --config src-tauri/tauri.merchant.conf.json",
+    "dev:config": "tauri dev --config src-tauri/tauri.config.conf.json",
+    "build:consumer": "tauri build --config src-tauri/tauri.consumer.conf.json",
+    "build:merchant": "tauri build --config src-tauri/tauri.merchant.conf.json",
+    "build:config": "tauri build --config src-tauri/tauri.config.conf.json",
+    "icon": "tauri icon"
+  },
+  "devDependencies": {
+    "@tauri-apps/cli": "catalog:"
+  }
+}

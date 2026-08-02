@@ -1,8 +1,10 @@
-import { createTheme } from "@mui/material/styles";
+import { createTheme, type ThemeOptions } from "@mui/material/styles";
+import type { Localization } from "@mui/material/locale";
 import { glassPanel } from "./glass";
 
 // 玻璃态 MUI 主题:半透明面板 + 背景模糊 + 发丝边框。
-export const theme = createTheme({
+// 抽成常量是为了能带上语言包重建(见 createAppTheme)。
+const themeOptions: ThemeOptions = {
   palette: {
     mode: "light",
     primary: { main: "#3b6cf6" },
@@ -70,4 +72,14 @@ export const theme = createTheme({
       },
     },
   },
-});
+};
+
+/**
+ * 按当前语言建主题。
+ *
+ * 第二个参数是 @mui/material/locale 的语言包,负责 MUI 内置组件的文案
+ * (Autocomplete 的「无选项」、TablePagination 的「每页行数」之类)。
+ */
+export function createAppTheme(localization: Localization) {
+  return createTheme(themeOptions, localization);
+}

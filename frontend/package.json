@@ -8,6 +8,9 @@
     "dev": "vp run consumer#dev",
     "dev:merchant": "vp run merchant#dev",
     "dev:config": "vp run config#dev",
+    "desktop": "pnpm --filter @ecommerce/desktop dev:consumer",
+    "desktop:merchant": "pnpm --filter @ecommerce/desktop dev:merchant",
+    "desktop:config": "pnpm --filter @ecommerce/desktop dev:config",
     "prepare": "vp config"
   },
   "devDependencies": {

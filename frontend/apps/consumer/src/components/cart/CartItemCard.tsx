@@ -1,5 +1,6 @@
 import { Box, Checkbox, Typography } from "@mui/material";
 import { Minus, Plus, Trash2 } from "lucide-react";
+import { useFormat, useTranslation } from "@ecommerce/i18n";
 import type { CartItem } from "@/store/cart";
 import { sp, tokens } from "@/styles/tokens";
 
@@ -17,6 +18,9 @@ export function CartItemCard({
                                  onUpdateQuantity,
                                  onRemove,
                              }: CartItemCardProps) {
+    const { t } = useTranslation();
+    const { formatCurrency } = useFormat();
+
     const handleDecrement = () => {
         if (item.quantity > 1) {
             onUpdateQuantity(item.cartItemId, item.quantity - 1);
@@ -115,7 +119,7 @@ export function CartItemCard({
                         textAlign: "right",
                     }}
                 >
-                    ¥{item.price.toFixed(2)}
+                    {formatCurrency(item.price)}
                 </Typography>
 
                 <Box
@@ -131,7 +135,7 @@ export function CartItemCard({
                         component="button"
                         onClick={handleDecrement}
                         disabled={item.quantity <= 1}
-                        aria-label="减少数量"
+                        aria-label={t("cart.decrease")}
                         sx={{
                             display: "flex",
                             alignItems: "center",
@@ -165,7 +169,7 @@ export function CartItemCard({
                     <Box
                         component="button"
                         onClick={handleIncrement}
-                        aria-label="增加数量"
+                        aria-label={t("cart.increase")}
                         sx={{
                             display: "flex",
                             alignItems: "center",
@@ -187,7 +191,7 @@ export function CartItemCard({
                 <Box
                     component="button"
                     onClick={() => onRemove(item.cartItemId)}
-                    aria-label="删除商品"
+                    aria-label={t("cart.removeItem")}
                     sx={{
                         display: "flex",
                         alignItems: "center",

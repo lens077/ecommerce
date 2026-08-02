@@ -2,11 +2,15 @@
  * 管理后台顶部导航
  */
 
-import { Box, Typography, Avatar, IconButton } from "@mui/material";
+import { Box, Avatar, IconButton, Tooltip } from "@mui/material";
 import { Bell, Search, Settings } from "lucide-react";
+import { useTranslation } from "@ecommerce/i18n";
+import { LocaleSwitcher } from "@ecommerce/ui";
 import { tokens } from "@/styles/tokens";
 
 export function AdminHeader() {
+  const { t } = useTranslation();
+
   return (
     <Box
       sx={{
@@ -36,7 +40,8 @@ export function AdminHeader() {
         <Box
           component="input"
           type="text"
-          placeholder="搜索商家、订单、商品..."
+          placeholder={t("header.searchPlaceholder")}
+          aria-label={t("header.searchPlaceholder")}
           sx={{
             border: "none",
             outline: "none",
@@ -53,22 +58,29 @@ export function AdminHeader() {
 
       {/* 右侧操作 */}
       <Box sx={{ display: "flex", alignItems: "center", gap: 1 }}>
-        <IconButton
-          sx={{
-            color: tokens.colors.text.secondary,
-            "&:hover": { bgcolor: tokens.colors.background.primary },
-          }}
-        >
-          <Bell size={20} />
-        </IconButton>
-        <IconButton
-          sx={{
-            color: tokens.colors.text.secondary,
-            "&:hover": { bgcolor: tokens.colors.background.primary },
-          }}
-        >
-          <Settings size={20} />
-        </IconButton>
+        <LocaleSwitcher size="medium" color="default" />
+        <Tooltip title={t("header.notifications")}>
+          <IconButton
+            aria-label={t("header.notifications")}
+            sx={{
+              color: tokens.colors.text.secondary,
+              "&:hover": { bgcolor: tokens.colors.background.primary },
+            }}
+          >
+            <Bell size={20} />
+          </IconButton>
+        </Tooltip>
+        <Tooltip title={t("header.settings")}>
+          <IconButton
+            aria-label={t("header.settings")}
+            sx={{
+              color: tokens.colors.text.secondary,
+              "&:hover": { bgcolor: tokens.colors.background.primary },
+            }}
+          >
+            <Settings size={20} />
+          </IconButton>
+        </Tooltip>
         <Avatar
           sx={{
             width: 36,
@@ -78,7 +90,7 @@ export function AdminHeader() {
             fontSize: "0.875rem",
           }}
         >
-          A
+          {t("header.avatarInitial")}
         </Avatar>
       </Box>
     </Box>

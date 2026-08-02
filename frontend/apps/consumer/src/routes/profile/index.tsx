@@ -23,6 +23,7 @@ import {
   Badge as BadgeIcon,
   Tag,
 } from "@mui/icons-material";
+import { i18next, useTranslation } from "@ecommerce/i18n";
 import { addNotification, isTokenExpired } from "@ecommerce/utils";
 import { sp, tokens } from "@/styles/tokens";
 
@@ -35,7 +36,8 @@ export const Route = createFileRoute("/profile/")({
       console.warn("Token已过期或未登录，请重新登录。");
 
       addNotification({
-        message: "请先登录以访问个人中心",
+        // beforeLoad 不是组件环境，用 i18next 的 t
+        message: i18next.t("consumer:profile.loginRequired"),
         severity: "warning",
       });
 
@@ -49,14 +51,20 @@ export const Route = createFileRoute("/profile/")({
   },
 });
 
-/** 个人中心导航项 */
+/** 个人中心导航项。文案 key 显式写死，不用路径拼 key。 */
 const NAV_ITEMS = [
-  { label: "地址管理", desc: "管理收货地址", icon: LocationOn, path: "/profile/addresses" },
+  {
+    labelKey: "profile.nav.addresses.label",
+    descKey: "profile.nav.addresses.desc",
+    icon: LocationOn,
+    path: "/profile/addresses",
+  },
 ] as const;
 
 function RouteComponent() {
   const navigate = useNavigate();
   const { data: userProfile, error } = useGetUserProfile();
+  const { t } = useTranslation();
 
   useEffect(() => {
     if (userProfile) {
@@ -75,7 +83,7 @@ function RouteComponent() {
   if (error) {
     return (
       <Typography color="error" sx={{ textAlign: "center", py: 4 }}>
-        无法加载用户信息，请刷新重试。
+        {t("profile.loadFailed")}
       </Typography>
     );
   }
@@ -110,7 +118,7 @@ function RouteComponent() {
             </Typography>
             {userProfile.tag && (
               <Typography variant="caption" sx={{ color: tokens.colors.text.secondary, mt: 0.5, display: "block" }}>
-                标签：{userProfile.tag}
+                {t("profile.tagLabel", { value: userProfile.tag })}
               </Typography>
             )}
           </Box>
@@ -128,15 +136,15 @@ function RouteComponent() {
         >
           <Box sx={{ p: sp[4], borderBottom: `1px solid ${tokens.colors.border.default}` }}>
             <Typography variant="subtitle1" sx={{ fontWeight: 600, color: tokens.colors.text.primary }}>
-              账号信息
+              {t("profile.account.title")}
             </Typography>
           </Box>
           <List dense>
-            <InfoRow icon={<BadgeIcon fontSize="small" />} label="用户ID" value={userProfile.id} />
-            <InfoRow icon={<Person fontSize="small" />} label="用户名" value={userProfile.name} />
-            <InfoRow icon={<Email fontSize="small" />} label="邮箱" value={userProfile.email} />
+            <InfoRow icon={<BadgeIcon fontSize="small" />} label={t("profile.account.userId")} value={userProfile.id} />
+            <InfoRow icon={<Person fontSize="small" />} label={t("profile.account.username")} value={userProfile.name} />
+            <InfoRow icon={<Email fontSize="small" />} label={t("profile.account.email")} value={userProfile.email} />
             {userProfile.createdTime && (
-              <InfoRow icon={<Tag fontSize="small" />} label="注册时间" value={userProfile.createdTime} />
+              <InfoRow icon={<Tag fontSize="small" />} label={t("profile.account.createdAt")} value={userProfile.createdTime} />
             )}
           </List>
         </Paper>
@@ -152,7 +160,7 @@ function RouteComponent() {
         >
           <Box sx={{ p: sp[4], borderBottom: `1px solid ${tokens.colors.border.default}` }}>
             <Typography variant="subtitle1" sx={{ fontWeight: 600, color: tokens.colors.text.primary }}>
-              常用功能
+              {t("profile.nav.title")}
             </Typography>
           </Box>
           <List>
@@ -173,12 +181,12 @@ function RouteComponent() {
                   <ListItemText
                     primary={
                       <Typography variant="body1" sx={{ fontWeight: 500, color: tokens.colors.text.primary }}>
-                        {item.label}
+                        {t(item.labelKey)}
                       </Typography>
                     }
                     secondary={
                       <Typography variant="body2" sx={{ color: tokens.colors.text.secondary }}>
-                        {item.desc}
+                        {t(item.descKey)}
                       </Typography>
                     }
                   />

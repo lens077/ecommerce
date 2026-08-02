@@ -22,6 +22,12 @@ catalog:
   "@tanstack/react-router": ^1.170.15
   "@tanstack/react-router-devtools": ^1.167.0
   "@tanstack/router-plugin": ^1.168.18
+  "@tauri-apps/api": ^2.11.1
+  "@tauri-apps/cli": ^2.11.4
+  "@tauri-apps/plugin-http": ^2.5.9
+  "@tauri-apps/plugin-notification": ^2.3.3
+  "@tauri-apps/plugin-opener": ^2.5.4
+  "@tauri-apps/plugin-store": ^2.4.4
   '@testing-library/react': ^16.3.2
   '@testing-library/user-event': ^14.6.1
   "@types/node": ^24.13.2
@@ -31,11 +37,13 @@ catalog:
   casdoor-js-sdk: ^0.18.0
   casdoor-react-sdk: ^1.2.0
   conventional-changelog: latest
+  i18next: ^26.3.6
   jsdom: ^29.1.1
   jsonc-parser: ^3.3.1
   lucide-react: ^1.17.0
   react: ^19.2.7
   react-dom: ^19.2.7
+  react-i18next: ^17.0.11
   smol-toml: ^1.7.1
   typescript: ^5.9.3
   valtio: ^2.3.2

@@ -27,6 +27,7 @@ import {
 } from "@mui/material";
 import { useState } from "react";
 import { Search, Eye, MessageSquare } from "lucide-react";
+import { useFormat, useTranslation } from "@ecommerce/i18n";
 import { AdminLayout } from "@/components/AdminLayout";
 import { tokens } from "@/styles/tokens";
 
@@ -34,7 +35,33 @@ export const Route = createFileRoute("/orders/")({
   component: OrdersPage,
 });
 
+type OrderStatus = "pending" | "paid" | "shipped" | "completed" | "refunding";
+
+const STATUS_COLORS: Record<OrderStatus, { color: string; bg: string }> = {
+  pending: { color: tokens.colors.accent.red, bg: "rgba(239, 68, 68, 0.1)" },
+  paid: { color: tokens.colors.accent.blue, bg: "rgba(59, 130, 246, 0.1)" },
+  shipped: { color: tokens.colors.accent.blue, bg: "rgba(59, 130, 246, 0.1)" },
+  completed: { color: tokens.colors.accent.green, bg: "rgba(16, 185, 129, 0.1)" },
+  refunding: { color: tokens.colors.accent.yellow, bg: "rgba(245, 158, 11, 0.1)" },
+};
+
+const TABS = ["all", "pending", "paid", "shipped", "completed", "refunding"] as const;
+
+const TIME_RANGES = ["today", "last7d", "last30d", "all"] as const;
+
+const COLUMNS = [
+  "orders.table.info",
+  "orders.table.merchant",
+  "orders.table.customer",
+  "orders.table.amount",
+  "orders.table.status",
+  "orders.table.createTime",
+  "orders.table.actions",
+] as const;
+
 function OrdersPage() {
+  const { t } = useTranslation();
+  const { formatCurrency } = useFormat();
   const [tab, setTab] = useState(0);
   const [search, setSearch] = useState("");
 
@@ -46,31 +73,11 @@ function OrdersPage() {
     { id: "ORD005", merchant: "优品数码", customer: "刘先生", amount: 3799, status: "refunding", createTime: "2024-06-11 14:20" },
   ];
 
-  const tabs = [
-    { label: "全部", value: "all" },
-    { label: "待处理", value: "pending" },
-    { label: "已支付", value: "paid" },
-    { label: "已发货", value: "shipped" },
-    { label: "已完成", value: "completed" },
-    { label: "退款中", value: "refunding" },
-  ];
-
-  const getStatusConfig = (status: string) => {
-    const configs: Record<string, { label: string; color: string; bg: string }> = {
-      pending: { label: "待处理", color: tokens.colors.accent.red, bg: "rgba(239, 68, 68, 0.1)" },
-      paid: { label: "已支付", color: tokens.colors.accent.blue, bg: "rgba(59, 130, 246, 0.1)" },
-      shipped: { label: "已发货", color: tokens.colors.accent.blue, bg: "rgba(59, 130, 246, 0.1)" },
-      completed: { label: "已完成", color: tokens.colors.accent.green, bg: "rgba(16, 185, 129, 0.1)" },
-      refunding: { label: "退款中", color: tokens.colors.accent.yellow, bg: "rgba(245, 158, 11, 0.1)" },
-    };
-    return configs[status] || configs.pending;
-  };
-
   return (
     <AdminLayout>
       <Box sx={{ maxWidth: 1400 }}>
         <Typography variant="h4" sx={{ fontWeight: 700, color: "text.primary", mb: 4 }}>
-          订单管理
+          {t("orders.title")}
         </Typography>
 
         {/* 操作栏 */}
@@ -84,36 +91,39 @@ function OrdersPage() {
                 scrollButtons="auto"
                 sx={{ minHeight: 36 }}
               >
-                {tabs.map((t) => (
+                {TABS.map((value) => (
                   <Tab
-                    key={t.value}
-                    label={t.label}
+                    key={value}
+                    label={t(`orders.tabs.${value}`)}
                     sx={{ minHeight: 36, textTransform: "none" }}
                   />
                 ))}
               </Tabs>
               <Box sx={{ display: "flex", gap: 2 }}>
                 <FormControl size="small" sx={{ minWidth: 120 }}>
-                  <InputLabel>时间范围</InputLabel>
-                  <Select label="时间范围" defaultValue="7d">
-                    <MenuItem value="today">今天</MenuItem>
-                    <MenuItem value="7d">近7天</MenuItem>
-                    <MenuItem value="30d">近30天</MenuItem>
-                    <MenuItem value="all">全部</MenuItem>
+                  <InputLabel>{t("timeRange.label")}</InputLabel>
+                  <Select label={t("timeRange.label")} defaultValue="last7d">
+                    {TIME_RANGES.map((value) => (
+                      <MenuItem key={value} value={value}>
+                        {t(`timeRange.${value}`)}
+                      </MenuItem>
+                    ))}
                   </Select>
                 </FormControl>
                 <TextField
                   size="small"
-                  placeholder="搜索订单号/商家/客户..."
+                  placeholder={t("orders.searchPlaceholder")}
                   value={search}
                   onChange={(e) => setSearch(e.target.value)}
                   sx={{ width: 240 }}
-                  InputProps={{
-                    startAdornment: (
-                      <InputAdornment position="start">
-                        <Search size={18} color={tokens.colors.text.secondary} />
-                      </InputAdornment>
-                    ),
+                  slotProps={{
+                    input: {
+                      startAdornment: (
+                        <InputAdornment position="start">
+                          <Search size={18} color={tokens.colors.text.secondary} />
+                        </InputAdornment>
+                      ),
+                    },
                   }}
                 />
               </Box>
@@ -127,18 +137,16 @@ function OrdersPage() {
             <Table>
               <TableHead>
                 <TableRow>
-                  <TableCell sx={{ fontWeight: 500 }}>订单信息</TableCell>
-                  <TableCell sx={{ fontWeight: 500 }}>商家</TableCell>
-                  <TableCell sx={{ fontWeight: 500 }}>客户</TableCell>
-                  <TableCell sx={{ fontWeight: 500 }}>订单金额</TableCell>
-                  <TableCell sx={{ fontWeight: 500 }}>状态</TableCell>
-                  <TableCell sx={{ fontWeight: 500 }}>下单时间</TableCell>
-                  <TableCell sx={{ fontWeight: 500 }}>操作</TableCell>
+                  {COLUMNS.map((key) => (
+                    <TableCell key={key} sx={{ fontWeight: 500 }}>
+                      {t(key)}
+                    </TableCell>
+                  ))}
                 </TableRow>
               </TableHead>
               <TableBody>
                 {orders.map((order) => {
-                  const statusConfig = getStatusConfig(order.status);
+                  const statusColor = STATUS_COLORS[order.status as OrderStatus];
                   return (
                     <TableRow key={order.id} hover>
                       <TableCell>
@@ -158,14 +166,14 @@ function OrdersPage() {
                       </TableCell>
                       <TableCell>
                         <Typography variant="body2" sx={{ fontWeight: 600, color: tokens.colors.accent.red }}>
-                          ¥{order.amount.toLocaleString()}
+                          {formatCurrency(order.amount)}
                         </Typography>
                       </TableCell>
                       <TableCell>
                         <Chip
-                          label={statusConfig.label}
+                          label={t(`orders.status.${order.status as OrderStatus}`)}
                           size="small"
-                          sx={{ bgcolor: statusConfig.bg, color: statusConfig.color, fontWeight: 500 }}
+                          sx={{ bgcolor: statusColor.bg, color: statusColor.color, fontWeight: 500 }}
                         />
                       </TableCell>
                       <TableCell>
@@ -175,10 +183,18 @@ function OrdersPage() {
                       </TableCell>
                       <TableCell>
                         <Box sx={{ display: "flex", gap: 1 }}>
-                          <IconButton size="small" sx={{ color: "text.secondary" }}>
+                          <IconButton
+                            size="small"
+                            aria-label={t("orders.action.view")}
+                            sx={{ color: "text.secondary" }}
+                          >
                             <Eye size={18} />
                           </IconButton>
-                          <IconButton size="small" sx={{ color: "text.secondary" }}>
+                          <IconButton
+                            size="small"
+                            aria-label={t("orders.action.remark")}
+                            sx={{ color: "text.secondary" }}
+                          >
                             <MessageSquare size={18} />
                           </IconButton>
                         </Box>

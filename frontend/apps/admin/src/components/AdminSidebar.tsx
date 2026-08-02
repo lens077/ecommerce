@@ -14,20 +14,23 @@ import {
   Settings,
   BarChart3,
 } from "lucide-react";
+import { useTranslation } from "@ecommerce/i18n";
 import { tokens } from "@/styles/tokens";
 
+// 存 key 而不是译文：菜单是模块级常量，只求值一次，存译文会被第一次渲染时的语言钉死
 const menuItems = [
-  { label: "数据看板", icon: LayoutDashboard, path: "/" },
-  { label: "商家管理", icon: Store, path: "/merchants" },
-  { label: "订单管理", icon: ShoppingBag, path: "/orders" },
-  { label: "商品审核", icon: Package, path: "/products" },
-  { label: "用户管理", icon: Users, path: "/users" },
-  { label: "类目管理", icon: Tag, path: "/categories" },
-  { label: "运营报表", icon: BarChart3, path: "/reports" },
-  { label: "系统设置", icon: Settings, path: "/settings" },
-];
+  { labelKey: "sidebar.nav.dashboard", icon: LayoutDashboard, path: "/" },
+  { labelKey: "sidebar.nav.merchants", icon: Store, path: "/merchants" },
+  { labelKey: "sidebar.nav.orders", icon: ShoppingBag, path: "/orders" },
+  { labelKey: "sidebar.nav.products", icon: Package, path: "/products" },
+  { labelKey: "sidebar.nav.users", icon: Users, path: "/users" },
+  { labelKey: "sidebar.nav.categories", icon: Tag, path: "/categories" },
+  { labelKey: "sidebar.nav.reports", icon: BarChart3, path: "/reports" },
+  { labelKey: "sidebar.nav.settings", icon: Settings, path: "/settings" },
+] as const;
 
 export function AdminSidebar() {
+  const { t } = useTranslation();
   const navigate = useNavigate();
   const location = useLocation();
 
@@ -67,7 +70,7 @@ export function AdminSidebar() {
             letterSpacing: "-0.02em",
           }}
         >
-          电商管理后台
+          {t("sidebar.brand")}
         </Typography>
       </Box>
 
@@ -95,11 +98,15 @@ export function AdminSidebar() {
                   />
                 </ListItemIcon>
                 <ListItemText
-                  primary={item.label}
-                  primaryTypographyProps={{
-                    variant: "body2",
-                    fontWeight: active ? 600 : 400,
-                    color: active ? tokens.colors.text.primary : tokens.colors.text.secondary,
+                  primary={t(item.labelKey)}
+                  slotProps={{
+                    primary: {
+                      variant: "body2",
+                      sx: {
+                        fontWeight: active ? 600 : 400,
+                        color: active ? tokens.colors.text.primary : tokens.colors.text.secondary,
+                      },
+                    },
                   }}
                 />
               </ListItemButton>
@@ -116,7 +123,7 @@ export function AdminSidebar() {
         }}
       >
         <Typography variant="caption" sx={{ color: tokens.colors.text.disabled }}>
-          平台版本 v1.0.0
+          {t("sidebar.version", { version: "1.0.0" })}
         </Typography>
       </Box>
     </Box>

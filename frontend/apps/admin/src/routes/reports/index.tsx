@@ -14,7 +14,8 @@ import {
   FormControl,
   InputLabel,
 } from "@mui/material";
-import { TrendingUp, TrendingDown, ShoppingBag, Users, DollarSign, Store } from "lucide-react";
+import { TrendingUp, ShoppingBag, Users, DollarSign, Store } from "lucide-react";
+import { useFormat, useTranslation } from "@ecommerce/i18n";
 import { AdminLayout } from "@/components/AdminLayout";
 import { tokens } from "@/styles/tokens";
 
@@ -22,52 +23,58 @@ export const Route = createFileRoute("/reports/")({
   component: ReportsPage,
 });
 
+const TIME_RANGES = ["today", "last7d", "last30d", "last90d"] as const;
+
 function ReportsPage() {
+  const { t } = useTranslation();
+  const { formatCurrency, formatNumber } = useFormat();
+
   const stats = [
     {
-      label: "销售额",
-      value: "¥1,285,600",
+      labelKey: "reports.stats.sales",
+      value: formatCurrency(1285600),
       change: "+12.5%",
       icon: DollarSign,
       color: tokens.colors.accent.green,
     },
     {
-      label: "订单数",
-      value: "12,340",
+      labelKey: "reports.stats.orders",
+      value: formatNumber(12340),
       change: "+8.3%",
       icon: ShoppingBag,
       color: tokens.colors.accent.blue,
     },
     {
-      label: "访客数",
-      value: "84,560",
+      labelKey: "reports.stats.visitors",
+      value: formatNumber(84560),
       change: "+15.2%",
       icon: Users,
       color: tokens.colors.accent.yellow,
     },
     {
-      label: "商家数",
-      value: "256",
+      labelKey: "reports.stats.merchants",
+      value: formatNumber(256),
       change: "+3",
       icon: Store,
       color: tokens.colors.accent.red,
     },
-  ];
+  ] as const;
 
   return (
     <AdminLayout>
       <Box sx={{ maxWidth: 1400 }}>
         <Box sx={{ display: "flex", justifyContent: "space-between", alignItems: "center", mb: 4 }}>
           <Typography variant="h4" sx={{ fontWeight: 700, color: "text.primary" }}>
-            运营报表
+            {t("reports.title")}
           </Typography>
           <FormControl size="small" sx={{ minWidth: 150 }}>
-            <InputLabel>时间范围</InputLabel>
-            <Select label="时间范围" defaultValue="7d">
-              <MenuItem value="today">今天</MenuItem>
-              <MenuItem value="7d">近7天</MenuItem>
-              <MenuItem value="30d">近30天</MenuItem>
-              <MenuItem value="90d">近90天</MenuItem>
+            <InputLabel>{t("timeRange.label")}</InputLabel>
+            <Select label={t("timeRange.label")} defaultValue="last7d">
+              {TIME_RANGES.map((value) => (
+                <MenuItem key={value} value={value}>
+                  {t(`timeRange.${value}`)}
+                </MenuItem>
+              ))}
             </Select>
           </FormControl>
         </Box>
@@ -75,7 +82,7 @@ function ReportsPage() {
         {/* 统计卡片 */}
         <Grid container spacing={3} sx={{ mb: 4 }}>
           {stats.map((stat) => (
-            <Grid item xs={12} sm={6} lg={3} key={stat.label}>
+            <Grid size={{ xs: 12, sm: 6, lg: 3 }} key={stat.labelKey}>
               <Card sx={{ height: "100%" }}>
                 <CardContent sx={{ p: 3 }}>
                   <Box sx={{ display: "flex", justifyContent: "space-between", mb: 2 }}>
@@ -103,7 +110,7 @@ function ReportsPage() {
                     {stat.value}
                   </Typography>
                   <Typography variant="body2" sx={{ color: "text.secondary" }}>
-                    {stat.label}
+                    {t(stat.labelKey)}
                   </Typography>
                 </CardContent>
               </Card>
@@ -113,11 +120,11 @@ function ReportsPage() {
 
         {/* 图表区域 */}
         <Grid container spacing={3}>
-          <Grid item xs={12} lg={8}>
+          <Grid size={{ xs: 12, lg: 8 }}>
             <Card sx={{ height: 400 }}>
               <CardContent sx={{ p: 3 }}>
                 <Typography variant="h6" sx={{ fontWeight: 600, color: "text.primary", mb: 2 }}>
-                  销售趋势
+                  {t("reports.salesTrend")}
                 </Typography>
                 <Box
                   sx={{
@@ -130,17 +137,17 @@ function ReportsPage() {
                   }}
                 >
                   <Typography variant="body2" sx={{ color: "text.secondary" }}>
-                    图表区域 (ECharts / Recharts)
+                    {t("reports.chartPlaceholder")}
                   </Typography>
                 </Box>
               </CardContent>
             </Card>
           </Grid>
-          <Grid item xs={12} lg={4}>
+          <Grid size={{ xs: 12, lg: 4 }}>
             <Card sx={{ height: 400 }}>
               <CardContent sx={{ p: 3 }}>
                 <Typography variant="h6" sx={{ fontWeight: 600, color: "text.primary", mb: 2 }}>
-                  类目占比
+                  {t("reports.categoryShare")}
                 </Typography>
                 <Box
                   sx={{
@@ -153,7 +160,7 @@ function ReportsPage() {
                   }}
                 >
                   <Typography variant="body2" sx={{ color: "text.secondary" }}>
-                    饼图区域
+                    {t("reports.pieChartPlaceholder")}
                   </Typography>
                 </Box>
               </CardContent>

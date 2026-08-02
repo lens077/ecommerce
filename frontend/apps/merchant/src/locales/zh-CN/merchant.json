@@ -1,0 +1,148 @@
+{
+  "meta": {
+    "title": "商家管理中心"
+  },
+  "sidebar": {
+    "brand": "商家中心",
+    "nav": {
+      "dashboard": "数据中心",
+      "orders": "订单管理",
+      "products": "商品管理",
+      "settings": "店铺设置"
+    }
+  },
+  "header": {
+    "searchPlaceholder": "搜索订单、商品...",
+    "verified": "已认证商家",
+    "avatarInitial": "商"
+  },
+  "dashboard": {
+    "title": "商家数据中心",
+    "stats": {
+      "todayOrders": "今日订单",
+      "todaySales": "今日销售额",
+      "pendingOrders": "待处理订单",
+      "customers": "客户总数"
+    },
+    "changeVsYesterday": "{{change}} 较昨日",
+    "recentOrders": "近期订单",
+    "table": {
+      "orderNo": "订单号",
+      "customer": "客户",
+      "amount": "金额",
+      "status": "状态"
+    }
+  },
+  "orders": {
+    "title": "订单管理",
+    "export": "导出订单",
+    "searchPlaceholder": "搜索订单号、客户...",
+    "filterAll": "全部状态",
+    "moreFilters": "更多筛选",
+    "table": {
+      "orderNo": "订单号",
+      "customer": "客户信息",
+      "items": "商品信息",
+      "amount": "金额",
+      "status": "状态",
+      "createTime": "下单时间",
+      "actions": "操作"
+    }
+  },
+  "products": {
+    "title": "商品管理",
+    "add": "添加商品",
+    "searchPlaceholder": "搜索商品名称...",
+    "outOfStock": "缺货",
+    "stats": {
+      "all": "全部商品",
+      "online": "上架中",
+      "offline": "已下架",
+      "lowStock": "库存不足"
+    },
+    "status": {
+      "online": "已上架",
+      "offline": "已下架"
+    },
+    "table": {
+      "product": "商品信息",
+      "category": "分类",
+      "price": "价格",
+      "stock": "库存",
+      "sales": "销量",
+      "status": "状态",
+      "actions": "操作"
+    }
+  },
+  "settings": {
+    "title": "店铺设置",
+    "save": "保存修改",
+    "basic": {
+      "title": "基本信息",
+      "name": "店铺名称",
+      "description": "店铺简介",
+      "phone": "联系电话",
+      "address": "店铺地址"
+    },
+    "avatar": {
+      "title": "店铺头像",
+      "initial": "优",
+      "upload": "点击上传店铺头像",
+      "formats": "支持 JPG、PNG 格式"
+    },
+    "notify": {
+      "title": "通知设置",
+      "newOrder": {
+        "label": "新订单提醒",
+        "desc": "有新订单时发送通知"
+      },
+      "lowStock": {
+        "label": "库存预警",
+        "desc": "库存不足时发送通知"
+      },
+      "refund": {
+        "label": "退款通知",
+        "desc": "有退款申请时发送通知"
+      }
+    }
+  },
+  "reports": {
+    "title": "运营报表",
+    "range": {
+      "label": "时间范围",
+      "today": "今天",
+      "d7": "近7天",
+      "d30": "近30天",
+      "d90": "近90天"
+    },
+    "stats": {
+      "sales": "今日销售额",
+      "orders": "今日订单",
+      "visitors": "今日访客",
+      "products": "商品总数"
+    },
+    "chart": {
+      "sales": "销售额",
+      "orders": "订单数",
+      "salesTrend": "销售趋势",
+      "categoryShare": "类目销售占比",
+      "weekOrders": "近7天订单趋势"
+    },
+    "weekday": {
+      "mon": "周一",
+      "tue": "周二",
+      "wed": "周三",
+      "thu": "周四",
+      "fri": "周五",
+      "sat": "周六",
+      "sun": "周日"
+    },
+    "category": {
+      "phone": "手机通讯",
+      "computer": "电脑办公",
+      "accessory": "数码配件",
+      "wearable": "智能穿戴",
+      "other": "其他"
+    }
+  }
+}

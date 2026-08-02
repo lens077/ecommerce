@@ -1,0 +1,259 @@
+{
+  "meta": {
+    "title": "电商平台"
+  },
+  "appBar": {
+    "signOutSuccess": "登出成功",
+    "signedInAs": "已登录：{{name}}",
+    "myAccount": "个人中心",
+    "cart": "购物车",
+    "profile": "个人中心",
+    "searchPlaceholder": "搜索商品...",
+    "searchResults": "搜索结果",
+    "searchResultCount": "（{{count}} 个商品）",
+    "sold": "已售 {{count}}",
+    "searchEmpty": "未找到相关商品"
+  },
+  "footer": {
+    "brand": "电商平台",
+    "tagline": "打造极致的在线购物体验，为您提供优质的商品和服务。",
+    "about": {
+      "title": "关于我们",
+      "company": "公司简介",
+      "contact": "联系我们",
+      "careers": "加入我们"
+    },
+    "help": {
+      "title": "帮助中心",
+      "faq": "常见问题",
+      "guide": "购物指南",
+      "afterSales": "售后服务"
+    },
+    "legal": {
+      "title": "隐私与条款",
+      "privacy": "隐私政策",
+      "terms": "服务条款",
+      "cookie": "Cookie 政策"
+    },
+    "copyright": "© {{year}} 电商平台. 保留所有权利.",
+    "sitemap": "网站地图",
+    "icp": "备案信息"
+  },
+  "privacy": {
+    "title": "隐私政策",
+    "intro": "我们重视您的隐私，致力于保护您的个人信息。以下是我们收集和使用您信息的方式：",
+    "analytics": {
+      "title": "数据分析",
+      "desc": "我们使用分析工具收集您的浏览行为数据，以改进我们的服务。",
+      "allow": "允许数据分析"
+    },
+    "location": {
+      "title": "位置信息",
+      "desc": "我们可能会使用您的位置信息为您提供更相关的服务。",
+      "allow": "允许位置信息"
+    },
+    "marketing": {
+      "title": "营销通讯",
+      "desc": "我们可能会向您发送有关我们产品和服务的营销信息。",
+      "allow": "允许营销通讯"
+    },
+    "footnote": "您可以随时在网站底部的隐私设置中修改这些选项。",
+    "rejectAll": "拒绝所有",
+    "saveSettings": "保存设置",
+    "acceptAll": "接受所有"
+  },
+  "home": {
+    "featured": "精选商品",
+    "loading": "商品加载中…",
+    "comingSoon": "商品即将上架，敬请期待",
+    "priceFrom": "起"
+  },
+  "notFound": {
+    "title": "页面不存在",
+    "desc": "您访问的页面可能已失效或不存在，请检查链接是否正确",
+    "back": "返回上一页",
+    "home": "返回首页"
+  },
+  "product": {
+    "breadcrumb": "首页 > 商品详情",
+    "loadFailed": "加载失败: {{message}}",
+    "selectSpec": "请选择规格",
+    "stock": "库存 {{count}}",
+    "selectConfig": "选择配置",
+    "quantity": "数量",
+    "adding": "添加中...",
+    "addToCart": "加入购物车",
+    "buyNow": "立即购买",
+    "addedToCart": "已成功加入购物车"
+  },
+  "cart": {
+    "title": "购物车",
+    "itemsTitle": "购物车商品",
+    "decrease": "减少数量",
+    "increase": "增加数量",
+    "removeItem": "删除商品",
+    "selectAll": "全选",
+    "checkoutWithCount": "结算（{{count}}）",
+    "defaultShopName": "商家",
+    "addFailed": "添加失败",
+    "empty": {
+      "title": "购物车是空的",
+      "desc": "快去挑选心仪的商品吧",
+      "action": "去逛逛"
+    },
+    "summary": {
+      "title": "费用明细",
+      "totalItems": "商品件数",
+      "pieces": "{{count}} 件",
+      "selectedItems": "已选商品",
+      "subtotal": "商品总额",
+      "total": "合计",
+      "totalInline": "合计："
+    }
+  },
+  "checkout": {
+    "title": "确认订单",
+    "submit": "提交订单",
+    "submitFailed": "下单失败，请重试",
+    "noSelection": "没有选中的商品",
+    "backToCart": "返回购物车",
+    "addressLoading": "地址加载中…",
+    "addressPick": "请选择收货地址",
+    "select": "选择",
+    "shop": "店铺",
+    "remark": {
+      "label": "订单备注",
+      "placeholder": "选填，可备注特殊需求"
+    },
+    "shipping": {
+      "standard": "普通配送",
+      "eta": "预计 3-5 天送达",
+      "free": "免运费"
+    },
+    "amount": {
+      "goods": "商品总价",
+      "freight": "运费",
+      "total": "合计",
+      "totalInline": "合计："
+    },
+    "address": {
+      "required": "请填写所有必填字段",
+      "pickerTitle": "选择收货地址",
+      "default": "默认",
+      "add": "添加新地址",
+      "recipient": "收件人",
+      "phone": "手机号码",
+      "province": "省",
+      "city": "市",
+      "district": "区/县",
+      "detail": "详细地址",
+      "setDefault": "设为默认地址",
+      "saving": "保存中…",
+      "save": "保存地址"
+    }
+  },
+  "orders": {
+    "title": "我的订单",
+    "empty": "暂无相关订单",
+    "tabs": {
+      "all": "全部",
+      "pendingReceipt": "待收货"
+    }
+  },
+  "orderDetail": {
+    "hint": {
+      "pending": "请在 30 分钟内完成支付",
+      "paid": "商家正在准备发货中",
+      "shipped": "商品已发货，请注意查收",
+      "completed": "交易已完成，感谢您的购买"
+    },
+    "cancelConfirm": "确定要取消该订单吗？",
+    "payNotReady": "支付功能开发中...",
+    "orderNo": "订单编号",
+    "createTime": "下单时间",
+    "payTime": "支付时间",
+    "shipTime": "发货时间",
+    "goodsAmount": "商品金额",
+    "coupon": "优惠券",
+    "cancel": "取消订单",
+    "payNow": "立即支付",
+    "confirmReceive": "确认收货",
+    "buyAgain": "再次购买"
+  },
+  "payment": {
+    "success": {
+      "title": "支付成功",
+      "desc": "感谢您的购买，商品正在准备发货中"
+    },
+    "failed": {
+      "title": "支付失败",
+      "desc": "支付未能完成，订单已保留，请稍后重试"
+    },
+    "amount": "支付金额",
+    "viewOrder": "查看订单详情",
+    "viewOrders": "查看我的订单"
+  },
+  "profile": {
+    "loginRequired": "请先登录以访问个人中心",
+    "loadFailed": "无法加载用户信息，请刷新重试。",
+    "tagLabel": "标签：{{value}}",
+    "account": {
+      "title": "账号信息",
+      "userId": "用户ID",
+      "username": "用户名",
+      "email": "邮箱",
+      "createdAt": "注册时间"
+    },
+    "nav": {
+      "title": "常用功能",
+      "addresses": {
+        "label": "地址管理",
+        "desc": "管理收货地址"
+      }
+    }
+  },
+  "addresses": {
+    "loginRequired": "请先登录以管理收货地址",
+    "userNotFound": "未找到用户",
+    "breadcrumb": "个人中心 > 地址管理",
+    "title": "地址管理",
+    "myAddresses": "我的收货地址",
+    "add": "添加新地址",
+    "edit": "编辑地址",
+    "loadFailed": "加载地址失败，请重试",
+    "default": "默认",
+    "saving": "保存中...",
+    "empty": {
+      "title": "暂无收货地址",
+      "desc": "点击上方按钮添加您的第一个收货地址"
+    },
+    "form": {
+      "required": "请填写所有必填字段",
+      "recipient": "收件人",
+      "phone": "手机号码",
+      "province": "省份",
+      "city": "城市",
+      "district": "区/县",
+      "selectProvince": "请选择省份",
+      "selectCity": "请先选择省份",
+      "selectDistrict": "请先选择城市",
+      "noDistrict": "该市下无区/县",
+      "regionLoading": "加载中…",
+      "detail": "详细地址",
+      "setDefault": "设为默认地址"
+    },
+    "location": {
+      "title": "位置权限请求",
+      "desc": "我们将通过您的 IP 地址或地址权限为您推荐省市区信息，相关数据由第三方高德地图处理，是否同意？",
+      "getting": "获取中...",
+      "agree": "同意"
+    }
+  },
+  "callback": {
+    "responseInvalid": "登录响应异常",
+    "loginSuccess": "登录成功",
+    "loginFailed": "登录失败，请重试",
+    "successRedirect": "登录成功，正在跳转...",
+    "errorRedirect": "登录失败，正在跳转到首页..."
+  }
+}

@@ -31,17 +31,22 @@ export const Route = createRootRouteWithContext<MyRouterContext>()({
                 </Box>
                 <Footer/>
                 <PrivacyConsent onConsent={handleConsent}/>
-                <TanStackDevtools
-                    config={{
-                        position: "bottom-right",
-                    }}
-                    plugins={[
-                        {
-                            name: "Tanstack Router",
-                            render: <TanStackRouterDevtoolsPanel/>,
-                        },
-                    ]}
-                />
+                {/* 只在 dev 挂载：devtools 的 client bus 会连 ws://<host>/__devtools/ws，
+                    桌面端生产包的 CSP 里没有开 ws，挂上去只会刷两条 violation；
+                    顺带也别让发布包里出现那个悬浮调试按钮。 */}
+                {import.meta.env.DEV && (
+                    <TanStackDevtools
+                        config={{
+                            position: "bottom-right",
+                        }}
+                        plugins={[
+                            {
+                                name: "Tanstack Router",
+                                render: <TanStackRouterDevtoolsPanel/>,
+                            },
+                        ]}
+                    />
+                )}
             </Box>
         );
     },

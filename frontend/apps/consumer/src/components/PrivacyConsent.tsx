@@ -11,6 +11,7 @@ import {
   IconButton,
 } from "@mui/material";
 import { Close } from "@mui/icons-material";
+import { useTranslation } from "@ecommerce/i18n";
 
 // 隐私设置类型
 interface PrivacySettings {
@@ -25,6 +26,7 @@ interface PrivacyConsentProps {
 }
 
 const PrivacyConsent: React.FC<PrivacyConsentProps> = ({ onConsent }) => {
+  const { t } = useTranslation();
   const [open, setOpen] = useState(false);
   const [settings, setSettings] = useState<PrivacySettings>({
     analytics: false,
@@ -93,22 +95,22 @@ const PrivacyConsent: React.FC<PrivacyConsentProps> = ({ onConsent }) => {
       }}
     >
       <DialogTitle sx={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
-        隐私政策
+        {t("privacy.title")}
         <IconButton onClick={() => setOpen(false)} sx={{ padding: 0 }}>
           <Close />
         </IconButton>
       </DialogTitle>
       <DialogContent>
         <Typography variant="body1" sx={{ mb: 3 }}>
-          我们重视您的隐私，致力于保护您的个人信息。以下是我们收集和使用您信息的方式：
+          {t("privacy.intro")}
         </Typography>
 
         <Box sx={{ mb: 2 }}>
           <Typography variant="subtitle1" sx={{ mb: 1 }}>
-            数据分析
+            {t("privacy.analytics.title")}
           </Typography>
           <Typography variant="body2" color="text.secondary" sx={{ mb: 1 }}>
-            我们使用分析工具收集您的浏览行为数据，以改进我们的服务。
+            {t("privacy.analytics.desc")}
           </Typography>
           <Box sx={{ display: "flex", alignItems: "center" }}>
             <input
@@ -118,16 +120,16 @@ const PrivacyConsent: React.FC<PrivacyConsentProps> = ({ onConsent }) => {
               onChange={() => handleToggleSetting("analytics")}
               style={{ marginRight: "8px" }}
             />
-            <label htmlFor="analytics">允许数据分析</label>
+            <label htmlFor="analytics">{t("privacy.analytics.allow")}</label>
           </Box>
         </Box>
 
         <Box sx={{ mb: 2 }}>
           <Typography variant="subtitle1" sx={{ mb: 1 }}>
-            位置信息
+            {t("privacy.location.title")}
           </Typography>
           <Typography variant="body2" color="text.secondary" sx={{ mb: 1 }}>
-            我们可能会使用您的位置信息为您提供更相关的服务。
+            {t("privacy.location.desc")}
           </Typography>
           <Box sx={{ display: "flex", alignItems: "center" }}>
             <input
@@ -137,16 +139,16 @@ const PrivacyConsent: React.FC<PrivacyConsentProps> = ({ onConsent }) => {
               onChange={() => handleToggleSetting("location")}
               style={{ marginRight: "8px" }}
             />
-            <label htmlFor="location">允许位置信息</label>
+            <label htmlFor="location">{t("privacy.location.allow")}</label>
           </Box>
         </Box>
 
         <Box sx={{ mb: 3 }}>
           <Typography variant="subtitle1" sx={{ mb: 1 }}>
-            营销通讯
+            {t("privacy.marketing.title")}
           </Typography>
           <Typography variant="body2" color="text.secondary" sx={{ mb: 1 }}>
-            我们可能会向您发送有关我们产品和服务的营销信息。
+            {t("privacy.marketing.desc")}
           </Typography>
           <Box sx={{ display: "flex", alignItems: "center" }}>
             <input
@@ -156,26 +158,26 @@ const PrivacyConsent: React.FC<PrivacyConsentProps> = ({ onConsent }) => {
               onChange={() => handleToggleSetting("marketing")}
               style={{ marginRight: "8px" }}
             />
-            <label htmlFor="marketing">允许营销通讯</label>
+            <label htmlFor="marketing">{t("privacy.marketing.allow")}</label>
           </Box>
         </Box>
 
         <Divider sx={{ my: 2 }} />
 
         <Typography variant="body2" color="text.secondary">
-          您可以随时在网站底部的隐私设置中修改这些选项。
+          {t("privacy.footnote")}
         </Typography>
       </DialogContent>
       <DialogActions sx={{ justifyContent: "space-between", px: 3, pb: 3 }}>
         <Button onClick={handleRejectAll} sx={{ textTransform: "none" }}>
-          拒绝所有
+          {t("privacy.rejectAll")}
         </Button>
         <Box>
           <Button onClick={handleSaveSettings} sx={{ textTransform: "none", mr: 2 }}>
-            保存设置
+            {t("privacy.saveSettings")}
           </Button>
           <Button variant="contained" onClick={handleAcceptAll} sx={{ textTransform: "none" }}>
-            接受所有
+            {t("privacy.acceptAll")}
           </Button>
         </Box>
       </DialogActions>

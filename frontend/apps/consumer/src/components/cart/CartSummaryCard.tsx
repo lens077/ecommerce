@@ -7,6 +7,7 @@
  */
 
 import { Box, Button, Checkbox, Divider, Typography } from "@mui/material";
+import { useFormat, useTranslation } from "@ecommerce/i18n";
 import type { CartSummary } from "@/store/cart";
 import { sp, tokens } from "@/styles/tokens";
 
@@ -25,6 +26,8 @@ export function CartSummaryCard({
   onCheckout,
   variant = "bottomBar",
 }: CartSummaryCardProps) {
+  const { t } = useTranslation();
+  const { formatCurrency } = useFormat();
   const hasSelectedItems = summary.selectedQuantity > 0;
 
   // ==================== 侧边栏模式（桌面端） ====================
@@ -63,7 +66,7 @@ export function CartSummaryCard({
             }}
           />
           <Typography variant="body2" sx={{ color: tokens.colors.text.primary }}>
-            全选
+            {t("cart.selectAll")}
           </Typography>
         </Box>
 
@@ -75,20 +78,20 @@ export function CartSummaryCard({
             variant="body2"
             sx={{ fontWeight: 600, color: tokens.colors.text.primary, mb: sp[3] }}
           >
-            费用明细
+            {t("cart.summary.title")}
           </Typography>
 
           <SummaryRow
-            label={`商品件数`}
-            value={`${summary.totalQuantity} 件`}
+            label={t("cart.summary.totalItems")}
+            value={t("cart.summary.pieces", { count: summary.totalQuantity })}
           />
           <SummaryRow
-            label={`已选商品`}
-            value={`${summary.selectedQuantity} 件`}
+            label={t("cart.summary.selectedItems")}
+            value={t("cart.summary.pieces", { count: summary.selectedQuantity })}
           />
           <SummaryRow
-            label={`商品总额`}
-            value={`¥${summary.totalPrice.toFixed(2)}`}
+            label={t("cart.summary.subtotal")}
+            value={formatCurrency(summary.totalPrice)}
           />
         </Box>
 
@@ -104,13 +107,13 @@ export function CartSummaryCard({
           }}
         >
           <Typography variant="body1" sx={{ color: tokens.colors.text.primary, fontWeight: 500 }}>
-            合计
+            {t("cart.summary.total")}
           </Typography>
           <Typography
             variant="h5"
             sx={{ color: tokens.colors.accent.red, fontWeight: 700 }}
           >
-            ¥{summary.selectedPrice.toFixed(2)}
+            {formatCurrency(summary.selectedPrice)}
           </Typography>
         </Box>
 
@@ -133,7 +136,7 @@ export function CartSummaryCard({
             "&:disabled": { bgcolor: tokens.colors.border.default, color: tokens.colors.text.disabled },
           }}
         >
-          结算（{summary.selectedQuantity}）
+          {t("cart.checkoutWithCount", { count: summary.selectedQuantity })}
         </Button>
       </Box>
     );
@@ -180,7 +183,7 @@ export function CartSummaryCard({
             }}
           />
           <Typography variant="body2" sx={{ color: tokens.colors.text.primary }}>
-            全选
+            {t("cart.selectAll")}
           </Typography>
         </Box>
 
@@ -191,14 +194,14 @@ export function CartSummaryCard({
             variant="body2"
             sx={{ color: tokens.colors.text.secondary }}
           >
-            合计：
+            {t("cart.summary.totalInline")}
           </Typography>
           <Typography
             component="span"
             variant="body1"
             sx={{ color: tokens.colors.accent.red, fontWeight: 600, ml: sp[1] }}
           >
-            ¥{summary.selectedPrice.toFixed(2)}
+            {formatCurrency(summary.selectedPrice)}
           </Typography>
         </Box>
 
@@ -221,7 +224,7 @@ export function CartSummaryCard({
             "&:disabled": { bgcolor: tokens.colors.border.default, color: tokens.colors.text.disabled },
           }}
         >
-          结算（{summary.selectedQuantity}）
+          {t("cart.checkoutWithCount", { count: summary.selectedQuantity })}
         </Button>
       </Box>
     </Box>

@@ -1,7 +1,14 @@
 import { describe, expect, test } from "vite-plus/test";
+import { initI18n } from "@ecommerce/i18n";
 import { ConfigFormat } from "@/gen/api";
+import configEn from "@/locales/en/config.json";
+import configZh from "@/locales/zh-CN/config.json";
 import { canFormat, FormatError, formatContent, offsetToPos, validateContent } from "@/lib/validate";
 import { formatToml } from "@/lib/toml-format";
+
+// 校验消息走 i18n,不装资源的话 t() 只会把 key 原样吐回来。
+// 这里钉死 zh-CN:断言的是中文文案,不该受跑测环境的 navigator.language 影响。
+await initI18n({ ns: "config", resources: { "zh-CN": configZh, en: configEn }, locale: "zh-CN" });
 
 describe("offsetToPos", () => {
   test("首字符是 1:1", () => {

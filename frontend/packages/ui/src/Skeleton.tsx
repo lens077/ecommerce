@@ -4,17 +4,7 @@
  * 提供各种场景的骨架屏占位
  */
 
-import { Box, Skeleton, keyframes } from "@mui/material";
-
-// 脉冲动画
-const pulse = keyframes`
-  0%, 100% {
-    opacity: 1;
-  }
-  50% {
-    opacity: 0.5;
-  }
-`;
+import { Box, Skeleton } from "@mui/material";
 
 // 产品卡片骨架屏
 export function ProductCardSkeleton() {

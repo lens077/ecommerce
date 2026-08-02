@@ -1,18 +1,24 @@
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { ReactQueryDevtools } from "@tanstack/react-query-devtools";
 import { createRouter, RouterProvider } from "@tanstack/react-router";
-import { StrictMode } from "react";
+import { lazy, StrictMode, Suspense, useMemo, type ReactNode } from "react";
 import ReactDOM from "react-dom/client";
+import { useLocale } from "@ecommerce/i18n";
+import { isTauri } from "@ecommerce/tauri";
 import { CssBaseline, GlobalStyles, ThemeProvider } from "@mui/material";
+import { enUS, zhCN } from "@mui/material/locale";
 import { Code, ConnectError } from "@connectrpc/connect";
 import "@fontsource/roboto/300.css";
 import "@fontsource/roboto/400.css";
 import "@fontsource/roboto/500.css";
 import "@fontsource/roboto/700.css";
 import { routeTree } from "./routeTree.gen";
-import { theme } from "@/styles/theme";
+import { createAppTheme } from "@/styles/theme";
 import { appBackground } from "@/styles/glass";
 import { AuthProvider, useAuthActions, useAuthState } from "@/providers/AuthProvider";
+
+// 桌面端设置面板（Cmd/Ctrl + , 唤起）。懒加载，web 构建里这个 chunk 不会被请求。
+const DesktopSettingsDialog = lazy(() => import("@ecommerce/tauri/dialog"));
 
 const router = createRouter({
   routeTree,
@@ -52,6 +58,15 @@ const queryClient = new QueryClient({
   },
 });
 
+const MUI_LOCALES = { "zh-CN": zhCN, en: enUS } as const;
+
+/** 主题跟着语言重建,把 MUI 内置组件的文案也带上。 */
+function LocalizedTheme({ children }: { children: ReactNode }) {
+  const { locale } = useLocale();
+  const theme = useMemo(() => createAppTheme(MUI_LOCALES[locale]), [locale]);
+  return <ThemeProvider theme={theme}>{children}</ThemeProvider>;
+}
+
 function InnerApp() {
   const state = useAuthState();
   const actions = useAuthActions();
@@ -64,7 +79,7 @@ if (rootElement && !rootElement.innerHTML) {
   const root = ReactDOM.createRoot(rootElement);
   root.render(
     <StrictMode>
-      <ThemeProvider theme={theme}>
+      <LocalizedTheme>
         <CssBaseline />
         <GlobalStyles
           styles={{
@@ -79,9 +94,14 @@ if (rootElement && !rootElement.innerHTML) {
           <AuthProvider router={router}>
             <InnerApp />
           </AuthProvider>
+          {isTauri() && (
+            <Suspense fallback={null}>
+              <DesktopSettingsDialog />
+            </Suspense>
+          )}
           <ReactQueryDevtools initialIsOpen={false} buttonPosition="bottom-right" position="bottom" />
         </QueryClientProvider>
-      </ThemeProvider>
+      </LocalizedTheme>
     </StrictMode>,
   );
 }

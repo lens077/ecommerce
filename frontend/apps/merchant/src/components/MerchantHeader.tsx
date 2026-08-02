@@ -6,8 +6,11 @@
 
 import { Box, Typography, Avatar } from "@mui/material";
 import { Bell, Search } from "lucide-react";
+import { useTranslation } from "@ecommerce/i18n";
+import { LocaleSwitcher } from "@ecommerce/ui";
 
 export function MerchantHeader() {
+  const { t } = useTranslation();
   const merchantInfo = {
     name: "优品数码旗舰店",
     avatar: "",
@@ -41,12 +44,15 @@ export function MerchantHeader() {
       >
         <Search size={16} color="#6b7280" />
         <Typography variant="body2" sx={{ color: "#9ca3af" }}>
-          搜索订单、商品...
+          {t("header.searchPlaceholder")}
         </Typography>
       </Box>
 
       {/* 右侧操作 */}
       <Box sx={{ display: "flex", alignItems: "center", gap: 3 }}>
+        {/* 语言切换 */}
+        <LocaleSwitcher size="small" color="default" />
+
         {/* 通知 */}
         <Box
           component="button"
@@ -87,7 +93,7 @@ export function MerchantHeader() {
               {merchantInfo.name}
             </Typography>
             <Typography variant="caption" sx={{ color: "text.secondary" }}>
-              已认证商家
+              {t("header.verified")}
             </Typography>
           </Box>
           <Avatar
@@ -98,7 +104,7 @@ export function MerchantHeader() {
               bgcolor: "primary.main",
             }}
           >
-            商
+            {t("header.avatarInitial")}
           </Avatar>
         </Box>
       </Box>

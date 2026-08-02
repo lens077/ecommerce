@@ -16,6 +16,7 @@
     "@ecommerce/ui": "workspace:*",
     "@ecommerce/configs": "workspace:*",
     "@ecommerce/constants": "workspace:*",
+    "@ecommerce/i18n": "workspace:*",
     "@ecommerce/utils": "workspace:*",
     "react": "catalog:",
     "react-dom": "catalog:",

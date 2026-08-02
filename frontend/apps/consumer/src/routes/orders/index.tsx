@@ -13,14 +13,27 @@ import {
   Tab,
 } from "@mui/material";
 import { useState } from "react";
+import { useFormat, useTranslation } from "@ecommerce/i18n";
 import { tokens } from "@/styles/tokens";
-import { OrderCardSkeleton } from "@ecommerce/ui";
 
 export const Route = createFileRoute("/orders/")({
   component: OrdersPage,
 });
 
+/**
+ * 订单状态 -> 文案 key 的显式映射。
+ * 不用字符串拼 key：拼出来的 key 提取工具扫不到，将来漏翻检测不出来。
+ */
+const STATUS_LABEL_KEY: Record<string, string> = {
+  pending: "common:orderStatus.pending_payment",
+  paid: "common:orderStatus.pending_shipment",
+  shipped: "common:orderStatus.shipped",
+  completed: "common:orderStatus.completed",
+};
+
 function OrdersPage() {
+  const { t } = useTranslation();
+  const { formatCurrency } = useFormat();
   const [tab, setTab] = useState(0);
 
   // 模拟订单数据
@@ -29,7 +42,6 @@ function OrdersPage() {
       id: "ORD20240612001",
       shopName: "优品数码旗舰店",
       status: "pending",
-      statusText: "待支付",
       items: [
         { name: "iPhone 15 Pro Max 256GB", price: 9999, quantity: 1, image: "" },
       ],
@@ -40,7 +52,6 @@ function OrdersPage() {
       id: "ORD20240612002",
       shopName: "苹果官方旗舰店",
       status: "paid",
-      statusText: "待发货",
       items: [
         { name: "AirPods Pro 2", price: 1899, quantity: 2, image: "" },
       ],
@@ -51,7 +62,6 @@ function OrdersPage() {
       id: "ORD20240611001",
       shopName: "优品数码旗舰店",
       status: "shipped",
-      statusText: "已发货",
       items: [
         { name: "MacBook Air M2", price: 7999, quantity: 1, image: "" },
       ],
@@ -62,7 +72,6 @@ function OrdersPage() {
       id: "ORD20240610001",
       shopName: "苹果官方旗舰店",
       status: "completed",
-      statusText: "已完成",
       items: [
         { name: "iPad Pro 12.9", price: 8499, quantity: 1, image: "" },
       ],
@@ -72,11 +81,11 @@ function OrdersPage() {
   ];
 
   const tabs = [
-    { label: "全部", value: "all" },
-    { label: "待支付", value: "pending" },
-    { label: "待发货", value: "paid" },
-    { label: "待收货", value: "shipped" },
-    { label: "已完成", value: "completed" },
+    { label: t("orders.tabs.all"), value: "all" },
+    { label: t("common:orderStatus.pending_payment"), value: "pending" },
+    { label: t("common:orderStatus.pending_shipment"), value: "paid" },
+    { label: t("orders.tabs.pendingReceipt"), value: "shipped" },
+    { label: t("common:orderStatus.completed"), value: "completed" },
   ];
 
   const filteredOrders = orders.filter((order) => {
@@ -105,7 +114,7 @@ function OrdersPage() {
         }}
       >
         <Typography variant="h5" sx={{ fontWeight: 700, color: tokens.colors.text.primary }}>
-          我的订单
+          {t("orders.title")}
         </Typography>
       </Box>
 
@@ -133,8 +142,8 @@ function OrdersPage() {
             },
           }}
         >
-          {tabs.map((t) => (
-            <Tab key={t.value} label={t.label} />
+          {tabs.map((item) => (
+            <Tab key={item.value} label={item.label} />
           ))}
         </Tabs>
       </Box>
@@ -144,7 +153,7 @@ function OrdersPage() {
         {filteredOrders.length === 0 ? (
           <Box sx={{ textAlign: "center", py: 8 }}>
             <Typography variant="body1" sx={{ color: tokens.colors.text.secondary }}>
-              暂无相关订单
+              {t("orders.empty")}
             </Typography>
           </Box>
         ) : (
@@ -169,7 +178,7 @@ function OrdersPage() {
                         {order.shopName}
                       </Typography>
                       <Chip
-                        label={order.statusText}
+                        label={t(STATUS_LABEL_KEY[order.status] ?? "common:state.empty")}
                         size="small"
                         sx={{
                           bgcolor: statusConfig.bg,
@@ -184,10 +193,12 @@ function OrdersPage() {
                       {order.items.map((item, index) => (
                         <Link
                           key={index}
-                          to={`/orders/${order.id}`}
-                          sx={{
+                          to="/orders/$orderId"
+                          params={{ orderId: order.id }}
+                          // Link 渲染的是原生 <a>，没有 sx；gap: 2 对应主题的 16px
+                          style={{
                             display: "flex",
-                            gap: 2,
+                            gap: 16,
                             textDecoration: "none",
                           }}
                         >
@@ -220,7 +231,7 @@ function OrdersPage() {
                             variant="body2"
                             sx={{ fontWeight: 600, color: tokens.colors.accent.red }}
                           >
-                            ¥{item.price.toLocaleString()}
+                            {formatCurrency(item.price)}
                           </Typography>
                         </Link>
                       ))}
@@ -239,13 +250,13 @@ function OrdersPage() {
                       </Typography>
                       <Box sx={{ display: "flex", alignItems: "center", gap: 2 }}>
                         <Typography variant="body2" sx={{ color: tokens.colors.text.secondary }}>
-                          合计：
+                          {t("checkout.amount.totalInline")}
                         </Typography>
                         <Typography
                           variant="body1"
                           sx={{ fontWeight: 600, color: tokens.colors.accent.red }}
                         >
-                          ¥{order.totalAmount.toLocaleString()}
+                          {formatCurrency(order.totalAmount)}
                         </Typography>
                       </Box>
                     </Box>

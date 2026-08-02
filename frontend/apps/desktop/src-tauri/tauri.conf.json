@@ -1,0 +1,39 @@
+{
+  "$schema": "https://schema.tauri.app/config/2",
+  "productName": "ecommerce-desktop",
+  "version": "0.1.0",
+  "identifier": "com.ecommerce.desktop",
+  "build": {
+    "beforeDevCommand": "pnpm --filter @ecommerce/consumer dev",
+    "beforeBuildCommand": "pnpm --filter @ecommerce/consumer build",
+    "devUrl": "http://localhost:3000",
+    "frontendDist": "../../consumer/dist"
+  },
+  "app": {
+    "windows": [
+      {
+        "label": "main",
+        "title": "ecommerce",
+        "width": 1280,
+        "height": 800,
+        "minWidth": 960,
+        "minHeight": 640
+      }
+    ],
+    "security": {
+      "csp": "default-src 'self'; script-src 'self'; style-src 'self' 'unsafe-inline'; img-src 'self' data: blob: https: http:; font-src 'self' data: https://cos.ap-guangzhou.myqcloud.com; media-src 'self' data: blob:; connect-src 'self' ipc: http://ipc.localhost; object-src 'none'; base-uri 'self'; form-action 'self'; frame-ancestors 'none'",
+      "devCsp": "default-src 'self' http://localhost:* ws://localhost:*; script-src 'self' 'unsafe-inline' 'unsafe-eval' http://localhost:*; style-src 'self' 'unsafe-inline' http://localhost:*; img-src 'self' data: blob: https: http:; font-src 'self' data: https: http://localhost:*; connect-src 'self' ipc: http://ipc.localhost http://localhost:* ws://localhost:*"
+    }
+  },
+  "bundle": {
+    "active": true,
+    "targets": "all",
+    "icon": [
+      "icons/32x32.png",
+      "icons/128x128.png",
+      "icons/128x128@2x.png",
+      "icons/icon.icns",
+      "icons/icon.ico"
+    ]
+  }
+}
