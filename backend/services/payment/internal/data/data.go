@@ -13,10 +13,12 @@ import (
 	"github.com/jackc/pgx/v5/pgxpool"
 	"github.com/lens077/ecommerce/backend/constants"
 	conf "github.com/lens077/ecommerce/backend/services/payment/internal/conf/v1"
+	"github.com/lens077/ecommerce/backend/services/payment/internal/pkg/config"
 	"github.com/lens077/ecommerce/backend/services/payment/internal/pkg/dbutil"
 	"github.com/smartwalle/alipay/v3"
 	"go.uber.org/fx"
 	"go.uber.org/zap"
+	"google.golang.org/protobuf/proto"
 )
 
 // Module 导出给 FX 的 Provider
@@ -33,14 +35,14 @@ type contextTxKey struct{}
 
 // Data 包含所有数据源的客户端
 type Data struct {
-	db           *pgxpool.Pool
+	db           *PgPool
 	alipay       *alipay.Client
 	dbErrHandler *dbutil.Handler
 	log          *zap.Logger
 }
 
 // NewData 是 Data 的构造函数
-func NewData(db *pgxpool.Pool, alipay *alipay.Client, logger *zap.Logger) *Data {
+func NewData(db *PgPool, alipay *alipay.Client, logger *zap.Logger) *Data {
 	return &Data{
 		db:     db,
 		alipay: alipay,
@@ -87,7 +89,7 @@ func (d *Data) ExecTx(ctx context.Context, fn func(context.Context) error) error
 	}
 
 	d.log.Info("begin transaction")
-	tx, err := d.db.BeginTx(ctx, pgx.TxOptions{})
+	tx, err := d.db.Pool().BeginTx(ctx, pgx.TxOptions{})
 	if err != nil {
 		return fmt.Errorf("begin tx failed: %w", err)
 	}
@@ -115,8 +117,58 @@ func (d *Data) ExecTx(ctx context.Context, fn func(context.Context) error) error
 	return nil
 }
 
-// NewPostgresPool 创建pg数据库连接池
-func NewPostgresPool(lc fx.Lifecycle, cfg *conf.Bootstrap, logger *zap.Logger) (*pgxpool.Pool, error) {
+// NewPostgresPool 创建 pg 连接池,并订阅配置变更做热重建。
+//
+// 返回 *PgPool 而不是 *pgxpool.Pool:池本身会在配置变更时被整个换掉,
+// 调用方必须持有那个「永远指向当前池」的壳,而不是某一刻的池。
+func NewPostgresPool(lc fx.Lifecycle, cfg *conf.Bootstrap, live *config.Live, logger *zap.Logger) (*PgPool, error) {
+	pool, err := buildPgPool(cfg, logger)
+	if err != nil {
+		return nil, err
+	}
+	holder := NewPgPool(pool)
+
+	// 指标注册在壳上而不是具体的池上,换池后仍然有效(见 PgPool 注释)
+	if err := otelpgx.RecordStats(holder); err != nil {
+		return nil, fmt.Errorf("unable to record database stats: %w", err)
+	}
+
+	unsub := live.Subscribe(func(old, cur *conf.Bootstrap) {
+		if proto.Equal(old.GetData().GetDatabase(), cur.GetData().GetDatabase()) {
+			return
+		}
+		logger.Info("database config changed, rebuilding pool",
+			zap.String("host", cur.GetData().GetDatabase().GetPostgres().GetHost()))
+
+		next, err := buildPgPool(cur, logger)
+		if err != nil {
+			// 新配置连不上就继续用旧池:一次配置手滑不该让在跑的流量全挂
+			logger.Error("rebuild database pool failed, keeping the current one", zap.Error(err))
+			return
+		}
+		// Ping 通过之后才换,保证任何时刻对外可见的都是一个能用的池
+		prev := holder.Swap(next)
+		logger.Info("database pool rebuilt")
+		if prev != nil {
+			// 延迟关闭:此刻可能还有查询跑在旧池上
+			time.AfterFunc(drainTimeout, prev.Close)
+		}
+	})
+
+	lc.Append(fx.Hook{
+		OnStop: func(ctx context.Context) error {
+			logger.Info("closing database connection...")
+			unsub()
+			holder.Pool().Close()
+			return nil
+		},
+	})
+
+	return holder, nil
+}
+
+// buildPgPool 按给定配置建一个池并 Ping 通过。纯函数,启动与热重建共用。
+func buildPgPool(cfg *conf.Bootstrap, logger *zap.Logger) (*pgxpool.Pool, error) {
 	dbCfg := cfg.Data.Database.Postgres // 从 Config 中获取 Data 配置
 
 	// 使用 ParseConfig 生成带有内部安全凭证的空模板
@@ -159,22 +211,27 @@ func NewPostgresPool(lc fx.Lifecycle, cfg *conf.Bootstrap, logger *zap.Logger) (
 			logger.Info("setting up ssl mode: verify-ca config")
 			pgConf.ConnConfig.TLSConfig = &tls.Config{
 				RootCAs:            caCertPool,
-				InsecureSkipVerify: true,
+				InsecureSkipVerify: true, // 必须为 true，以此绕过 Go 对 ServerName 的强制检查
+				// Go 语言的标准库 crypto/tls 不支持这种“只验 CA 不验域名”的中间态
+				// 手动实现“只验CA、不验域名”
 				VerifyPeerCertificate: func(rawCerts [][]byte, verifiedChains [][]*x509.Certificate) error {
 					opts := x509.VerifyOptions{
 						Roots:         caCertPool,
 						CurrentTime:   time.Now(),
 						Intermediates: x509.NewCertPool(),
 					}
+					// 拿到服务器传过来的第一个证书
 					cert, err := x509.ParseCertificate(rawCerts[0])
 					if err != nil {
 						return err
 					}
+					// 把后续的证书当作证书链辅助塞进去
 					for _, rawCert := range rawCerts[1:] {
 						if c, err := x509.ParseCertificate(rawCert); err == nil {
 							opts.Intermediates.AddCert(c)
 						}
 					}
+					// 校验合法性（注意：此时不校验 DNS / IP）
 					_, err = cert.Verify(opts)
 					return err
 				},
@@ -190,8 +247,8 @@ func NewPostgresPool(lc fx.Lifecycle, cfg *conf.Bootstrap, logger *zap.Logger) (
 			logger.Info("setting up TLS config")
 			pgConf.ConnConfig.TLSConfig = &tls.Config{
 				RootCAs:            caCertPool,
-				InsecureSkipVerify: false,
-				ServerName:         dbCfg.Host,
+				InsecureSkipVerify: false,      // 必须为 false，严格校验证书
+				ServerName:         dbCfg.Host, // 校验证书里的域名是否为该 Host
 			}
 		}
 	}
@@ -204,28 +261,16 @@ func NewPostgresPool(lc fx.Lifecycle, cfg *conf.Bootstrap, logger *zap.Logger) (
 		return nil, fmt.Errorf("connect to database failed: %v", err)
 	}
 
-	// 记录数据库统计信息
-	if err := otelpgx.RecordStats(pool); err != nil {
-		return nil, fmt.Errorf("unable to record database stats: %w", err)
-	}
-
 	// 测试连接
 	ctx, cancel := context.WithTimeout(context.Background(), dbCfg.Pool.PingTimeout.AsDuration())
 	defer cancel()
 	if err := pool.Ping(ctx); err != nil {
+		// 建池失败时必须自己收尾:热重建路径上没人替我们关这个半成品
+		pool.Close()
 		return nil, fmt.Errorf("database ping failed: %v", err)
 	}
 
 	logger.Info(fmt.Sprintf("database connected successfully to %s", dbCfg.Host))
-
-	lc.Append(fx.Hook{
-		OnStop: func(ctx context.Context) error {
-			logger.Info("closing database connection...")
-			pool.Close()
-			return nil
-		},
-	})
-
 	return pool, nil
 }
 
@@ -291,7 +336,7 @@ func NewAlipay(c *conf.Pay, logger *zap.Logger) *alipay.Client {
 func (d *Data) CheckDatabase(ctx context.Context) error {
 	ctx, cancel := context.WithTimeout(ctx, 2*time.Second)
 	defer cancel()
-	if err := d.db.Ping(ctx); err != nil {
+	if err := d.db.Pool().Ping(ctx); err != nil {
 		return fmt.Errorf("database ping failed: %w", err)
 	}
 	return nil

@@ -98,6 +98,13 @@ func NewApp(serviceName, deploymentMode, serviceVersion string) *fx.App {
 		fx.Supply(appInfo),
 
 		fx.Invoke(
+			// 打印本次启动实际生效的配置数据源,避免「改了配置没生效」时靠猜
+			func(_ *confv1.Bootstrap, logger *zap.Logger) {
+				logger.Info("bootstrap config loaded",
+					zap.String("source", config.SourceName()),
+				)
+			},
+
 			func(reg *registry.ConsulRegistry, logger *zap.Logger) {
 				if reg != nil {
 					logger.Info("consul service discovery component lifecycle successfully initialized")

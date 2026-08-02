@@ -141,11 +141,11 @@ var _ biz.ItemSyncRepo = (*itemSyncRepo)(nil)
 
 type itemSyncRepo struct {
 	client *gorse.Client
-	rdb    *redis.Client
+	rdb    *LiveRedis
 	log    *zap.Logger
 }
 
-func NewItemSyncRepo(client *gorse.Client, rdb *redis.Client, logger *zap.Logger) biz.ItemSyncRepo {
+func NewItemSyncRepo(client *gorse.Client, rdb *LiveRedis, logger *zap.Logger) biz.ItemSyncRepo {
 	return &itemSyncRepo{client: client, rdb: rdb, log: logger}
 }
 
@@ -175,7 +175,7 @@ func (r *itemSyncRepo) UpsertItems(ctx context.Context, items []biz.CatalogItem)
 }
 
 func (r *itemSyncRepo) LoadCursor(ctx context.Context) (time.Time, error) {
-	raw, err := r.rdb.Get(ctx, syncCursorKey).Result()
+	raw, err := r.rdb.Client().Get(ctx, syncCursorKey).Result()
 	if errors.Is(err, redis.Nil) {
 		// 没有游标就是首次运行,从零点开始扫全量
 		return time.Time{}, nil
@@ -195,7 +195,7 @@ func (r *itemSyncRepo) LoadCursor(ctx context.Context) (time.Time, error) {
 
 func (r *itemSyncRepo) SaveCursor(ctx context.Context, at time.Time) error {
 	// 不设过期:过期就等于悄悄触发一次全量重扫
-	if err := r.rdb.Set(ctx, syncCursorKey, at.Format(time.RFC3339Nano), 0).Err(); err != nil {
+	if err := r.rdb.Client().Set(ctx, syncCursorKey, at.Format(time.RFC3339Nano), 0).Err(); err != nil {
 		return fmt.Errorf("save sync cursor: %w", err)
 	}
 	return nil
