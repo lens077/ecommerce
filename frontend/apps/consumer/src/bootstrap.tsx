@@ -1,8 +1,9 @@
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { ReactQueryDevtools } from "@tanstack/react-query-devtools";
 import { createRouter, RouterProvider } from "@tanstack/react-router";
-import { StrictMode } from "react";
+import { lazy, StrictMode, Suspense } from "react";
 import ReactDOM from "react-dom/client";
+import { isTauri } from "@ecommerce/tauri";
 import reportWebVitals from "./reportWebVitals";
 import { routeTree } from "./routeTree.gen";
 import "@fontsource/roboto/300.css";
@@ -11,6 +12,9 @@ import "@fontsource/roboto/500.css";
 import "@fontsource/roboto/700.css";
 import { Code, ConnectError } from "@connectrpc/connect";
 import { AuthProvider, useAuthState, useAuthActions } from "@/providers/AuthProvider";
+
+// 桌面端设置面板（Cmd/Ctrl + , 唤起）。懒加载，web 构建里这个 chunk 不会被请求。
+const DesktopSettingsDialog = lazy(() => import("@ecommerce/tauri/dialog"));
 
 // Create a new router instance
 const router = createRouter({
@@ -83,6 +87,11 @@ if (rootElement && !rootElement.innerHTML) {
                 <AuthProvider router={router}>
                     <InnerApp/>
                 </AuthProvider>
+                {isTauri() && (
+                    <Suspense fallback={null}>
+                        <DesktopSettingsDialog/>
+                    </Suspense>
+                )}
                 <ReactQueryDevtools initialIsOpen={false} buttonPosition="bottom-right" position="bottom"/>
             </QueryClientProvider>
         </StrictMode>,

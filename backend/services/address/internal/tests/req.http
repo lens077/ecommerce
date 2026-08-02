@@ -247,3 +247,48 @@ Content-Type: application/json
 {
   "address_id": "{{address_id}}"
 }
+
+### ========== 行政区划(公开只读字典) ==========
+# 网关的 jwt / rbac 两个 router_filter 都放行了 ListRegions。
+# 下面三条**故意不带 Authorization**:未登录用户也要能在地址表单里选省市区,
+# 一旦返回 401/403 就说明网关放行配置没生效。
+
+### 网关 - 省级列表(不带 token,必须 200)
+POST http://{{k8s_gateway_host}}:{{k8s_gateway_port}}/address.v1.RegionService/ListRegions
+Content-Type: application/json
+
+{
+  "parent_id": 0
+}
+
+### 网关 - 广东省下的市(parent_id = 上一步返回的广东省 id,数据集里是 20)
+POST http://{{k8s_gateway_host}}:{{k8s_gateway_port}}/address.v1.RegionService/ListRegions
+Content-Type: application/json
+
+{
+  "parent_id": 20
+}
+
+### 网关 - 深圳市下的区(parent_id = 上一步返回的深圳市 id,数据集里是 323)
+POST http://{{k8s_gateway_host}}:{{k8s_gateway_port}}/address.v1.RegionService/ListRegions
+Content-Type: application/json
+
+{
+  "parent_id": 323
+}
+
+### 网关 - 直辖市:北京市 -> 合成的市级节点(code 110100),验证三级不塌成两级
+POST http://{{k8s_gateway_host}}:{{k8s_gateway_port}}/address.v1.RegionService/ListRegions
+Content-Type: application/json
+
+{
+  "parent_id": 1
+}
+
+### 直连后端 - 省级列表
+POST http://{{host}}:{{port}}/address.v1.RegionService/ListRegions
+Content-Type: application/json
+
+{
+  "parent_id": 0
+}

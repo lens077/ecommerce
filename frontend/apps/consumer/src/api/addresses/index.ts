@@ -1,16 +1,11 @@
 // 地址API服务 — 调用后端 AddressService（Connect-Go）
 import { createClient } from "@connectrpc/connect";
-import { createConnectTransport } from "@connectrpc/connect-web";
 import { AddressService } from "@/gen/api";
-import { errorInterceptor, loggerInterceptor, authInterceptor } from "@ecommerce/api";
+import { createAppTransport } from "@ecommerce/api";
 import { userStore } from "@/store/users";
 import type { Address, AddressFormData, UpdateAddressParams } from "./types";
-import { env } from "@/env";
 
-const transport = createConnectTransport({
-  baseUrl: env.VITE_GATEWAY_URL ?? "http://localhost:8080",
-  interceptors: [authInterceptor, loggerInterceptor, errorInterceptor],
-});
+const transport = createAppTransport();
 
 const client = createClient(AddressService, transport);
 

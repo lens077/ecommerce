@@ -26,3 +26,14 @@ type AddressesAddress struct {
 	CreatedAt      pgtype.Timestamptz
 	UpdatedAt      pgtype.Timestamptz
 }
+
+type AddressesRegion struct {
+	ID        int32
+	ParentID  int32
+	Level     int16
+	Code      string
+	Name      string
+	NameEn    string
+	Pinyin    string
+	SortOrder int32
+}

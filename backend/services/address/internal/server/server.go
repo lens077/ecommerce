@@ -29,6 +29,7 @@ func NewHTTPServer(
 	lc fx.Lifecycle,
 	cfg *conf.Bootstrap,
 	addressv1Service addressv1connect.AddressServiceHandler,
+	regionv1Service addressv1connect.RegionServiceHandler,
 	logger *zap.Logger,
 	connectOptions []connect.HandlerOption,
 	deps *data.Data, // 基础设施依赖
@@ -45,6 +46,14 @@ func NewHTTPServer(
 		combinedOptions...,
 	)
 	mux.Handle(addressv1connectPath, addressv1connectHandler)
+
+	// 行政区划字典。和 AddressService 同属 address.v1 包，
+	// 路径 /address.v1.RegionService/* 也就自然落在网关已有的 /address* 路由里
+	regionv1connectPath, regionv1connectHandler := addressv1connect.NewRegionServiceHandler(
+		regionv1Service,
+		combinedOptions...,
+	)
+	mux.Handle(regionv1connectPath, regionv1connectHandler)
 
 	// 应用本身的健康检查
 	mux.HandleFunc("/healthz", func(w http.ResponseWriter, r *http.Request) {

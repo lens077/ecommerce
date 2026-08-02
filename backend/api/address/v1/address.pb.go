@@ -31,7 +31,8 @@ type AddressDetail struct {
 	Province string `protobuf:"bytes,1,opt,name=province,proto3" json:"province,omitempty"`
 	// 城市
 	City string `protobuf:"bytes,2,opt,name=city,proto3" json:"city,omitempty"`
-	// 区/县
+	// 区/县。允许为空：省直辖县级行政区（海南琼海市、湖北仙桃市、新疆石河子市等 49 个）
+	// 本身就是市级末端，下面没有区县，硬要求非空等于让这些地方填不出地址。
 	District string `protobuf:"bytes,3,opt,name=district,proto3" json:"district,omitempty"`
 	// 详细地址（街道、门牌号等）
 	Detail string `protobuf:"bytes,4,opt,name=detail,proto3" json:"detail,omitempty"`
@@ -756,11 +757,11 @@ var File_api_address_v1_address_proto protoreflect.FileDescriptor
 const file_api_address_v1_address_proto_rawDesc = "" +
 	"\n" +
 	"\x1capi/address/v1/address.proto\x12\n" +
-	"address.v1\x1a#third_party/validate/validate.proto\x1a\x1fgoogle/protobuf/timestamp.proto\x1a\x1egoogle/protobuf/wrappers.proto\"\xd5\x01\n" +
+	"address.v1\x1a#third_party/validate/validate.proto\x1a\x1fgoogle/protobuf/timestamp.proto\x1a\x1egoogle/protobuf/wrappers.proto\"\xcc\x01\n" +
 	"\rAddressDetail\x12#\n" +
 	"\bprovince\x18\x01 \x01(\tB\a\xbaH\x04r\x02\x10\x01R\bprovince\x12\x1b\n" +
-	"\x04city\x18\x02 \x01(\tB\a\xbaH\x04r\x02\x10\x01R\x04city\x12#\n" +
-	"\bdistrict\x18\x03 \x01(\tB\a\xbaH\x04r\x02\x10\x01R\bdistrict\x12\x1f\n" +
+	"\x04city\x18\x02 \x01(\tB\a\xbaH\x04r\x02\x10\x01R\x04city\x12\x1a\n" +
+	"\bdistrict\x18\x03 \x01(\tR\bdistrict\x12\x1f\n" +
 	"\x06detail\x18\x04 \x01(\tB\a\xbaH\x04r\x02\x10\x01R\x06detail\x12\x1f\n" +
 	"\vpostal_code\x18\x05 \x01(\tR\n" +
 	"postalCode\x12\x1b\n" +
