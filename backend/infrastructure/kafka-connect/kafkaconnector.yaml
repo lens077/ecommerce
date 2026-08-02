@@ -1,0 +1,65 @@
+# Debezium PostgreSQL source connector：把 ecommerce 库的订单/商品变更流进 Kafka，
+# 下游由 postgres-kafka-es-streaming-pipeline 消费写入 Elasticsearch。
+#
+# 前置条件：先跑 setup.sql（建 publication、清孤儿槽、授权），
+# 再确认 my-connect-cluster-connect-0 已经 Ready，最后才 apply 本文件。
+# apply 之后 Debezium 会立刻对下面 6 张表做一次初始快照，然后转入流式增量。
+apiVersion: kafka.strimzi.io/v1
+kind: KafkaConnector
+metadata:
+  name: postgres-source-connector
+  namespace: kafka
+  labels:
+    strimzi.io/cluster: my-connect-cluster
+spec:
+  class: io.debezium.connector.postgresql.PostgresConnector
+  tasksMax: 1
+  config:
+    database.hostname: postgres-postgresql.postgres.svc
+    database.port: 5432
+    database.dbname: ecommerce
+    database.user: debezium_user
+    # TODO: 走 Strimzi 的 KubernetesSecretConfigProvider 引用 Secret。
+    # 暂时保持明文是为了和仓库现状一致（helm/values.yaml 里的 DB_SOURCE 也是明文），
+    # 不在修 CrashLoop 的同一轮里引入 RBAC 这个新的失败点。
+    database.password: ***REMOVED-PASSWORD***
+    database.sslmode: require
+    topic.prefix: ecommerce_cdc
+
+    # PG 自带的逻辑解码插件，不用装扩展。库的 wal_level 已经是 logical。
+    plugin.name: pgoutput
+    slot.name: dbz_ecommerce
+    # publication 由 setup.sql 里的 postgres 预先建好。
+    # debezium_user 不是超级用户，自己执行不了 CREATE PUBLICATION，
+    # 所以这里必须 disabled，否则 connector 会在权限错误上反复重试。
+    publication.name: dbz_ecommerce_pub
+    publication.autocreate.mode: disabled
+
+    # 只同步下游 pipeline 真正消费的 6 张表。
+    #
+    # 原配置是 schema.include.list=".*" + table.include.list=".*\..*"，
+    # 会把全部 9 个 schema、19 张表都快照进 Kafka —— 其中包括
+    # config.entry 和 config.revision，也就是配置中心存密钥及其历史版本的两张表。
+    # CDC 消息在 topic 里是明文的，等于把密钥原样落进 Kafka。
+    table.include.list: >-
+      orders.order_main,orders.order_item,orders.order_log,products.skus,products.spus,products.sale_detail
+
+    # 金额列是 NUMERIC(10,2)。用 double 的话 19.99 会变成 19.989999999999998，
+    # 而 ES 里这些字段的 mapping 已经是 text（全量重建那条路径本来就按字符串写），
+    # 用 string 才能让 CDC 增量和全量重建两条写入路径类型一致。
+    decimal.handling.mode: string
+    time.precision.mode: connect
+
+    # 原配置里还有一行 binary.handling.mode: utf8 —— 这不是合法值
+    # （只能是 bytes/base64/hex/base64-url-safe），Connect 因此对整个 connector 配置
+    # 返回 400，从 2026-06-09 起就没注册成功过。而全库根本没有 bytea 列，
+    # 这个参数对本项目完全无效，所以直接删掉、用默认的 bytes，不留误导。
+
+    # 摊平 Debezium 的 before/after 信封，只把变更后的行发给下游
+    transforms: unwrap
+    transforms.unwrap.type: io.debezium.transforms.ExtractNewRecordState
+    transforms.unwrap.drop.tombstones: true
+    transforms.unwrap.delete.handling.mode: rewrite
+
+    value.converter: org.apache.kafka.connect.json.JsonConverter
+    value.converter.schemas.enable: false
