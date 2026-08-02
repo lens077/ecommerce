@@ -23,7 +23,9 @@ layout:
   gateway: "gateway"
 
 conventions:
-  consul_kv: "ecommerce/{service}/{env}.yml" # env: dev | prod
+  consul_kv: "ecommerce/{service}/{env}.yml" # env: dev | pre（prod 的键尚未创建，见 known_gaps）
+  # 配置中心里的同一份配置:namespace=服务目录名, environment=dev|pre, key=bootstrap.yaml
+  config_center_key: "{service}/{env}/bootstrap.yaml"
   consul_addr_local: "192.168.3.112:8500" # 见 context/team/local-env.md
   # 各服务通用的配置块（除 config 外都有）：
   common_config_blocks: [server, data, auth, observability, discovery, search, log]
@@ -168,6 +170,7 @@ frontend:
 # ── 已知缺口（详情以 TODO.md 为准，本段只列影响拓扑的）─────────────────
 known_gaps:
   - "backend/services/consul-kv.json 是 0 字节空文件"
-  - "ecommerce/{behavior,product}/dev.yml 缺 recommend 块；behavior 的还是 cart 派生版"
   - "服务间调用几乎全未接线：order/payment 的 depends_on_planned 目前都是空的"
   - "buf breaking 未接 CI —— proto 破坏性变更目前没有门禁"
+  - "prod.yml 在 KV 里一个都不存在，但 deploy/prod 的 CONSUL_PATH 全指向它 —— prod 部署起不来"
+  - "同一份配置存在 Consul KV 与配置中心两处，靠 backend/tools/config-seed 手动同步，没有门禁防漂移"

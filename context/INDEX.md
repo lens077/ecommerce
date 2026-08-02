@@ -32,6 +32,7 @@ context/
 | 模块 | 代码路径 | experience |
 |---|---|---|
 | gateway | `gateway/` | [JWT nbf 时钟偏移导致登录死循环](project/ecommerce/gateway/experience/jwt-nbf-clock-skew-loop.md) |
+| config | `backend/services/*/internal/pkg/config/` | [一份配置三个副本](project/ecommerce/config/experience/three-copies-of-one-config.md)、[热更新的生效边界](project/ecommerce/config/experience/config-hot-reload-boundaries.md) |
 | behavior | `backend/services/behavior/` | [Consul KV 缺 recommend 块导致 gorse 静默关闭](project/ecommerce/behavior/experience/consul-kv-missing-key-silent-disable.md) |
 | consumer | `frontend/apps/consumer/` | [MUI sx spacing 被 ×8](project/ecommerce/consumer/experience/mui-spacing-tokens-8x.md) |
 
