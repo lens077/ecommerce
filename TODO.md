@@ -16,7 +16,7 @@
 | GitOps（ArgoCD） | 🟡 | `argocd-app.yml`、`argocd-proj.yml` 已配置 |
 | CI/CD（GitHub Actions） | 🟡 | `.github/workflows/backend.yml`、`frontend.yml` 已有，制品推送/清单更新链路待完善 |
 | 注册发现（Consul） | 🟡 | `consul-kv.json`、配置中心接入已有 |
-| 提交规范（husky + cz-git） | ✅ | `.husky/` 已配置 Conventional Commits |
+| 提交规范（husky + commitlint） | ✅ | 仓库根 `package.json` 装 `@commitlint/cli` + `config-conventional` + `husky`，规则在 `commitlint.config.mjs`：Angular 十一类 type + 可选 gitmoji（带了就必须与 type 相符）+ subject 末尾禁标点。**此前四层同时是断的**（`core.hooksPath` 指向不存在的 `frontend/.husky/_`、钩子里是全角连字符 `–`、仓库根无 `package.json`、commitlint 压根没装），2026-08-02 修复并用故意写错的消息验证过拦截；cz-git 从未真正引入，不再提 |
 | 代码规范（biome） | 🟡 | 前端已用，未全量接入门禁 |
 
 ### 2. 后端微服务（核心）

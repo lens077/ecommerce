@@ -5,5 +5,11 @@
 # go test -coverprofile 的产物
 coverage.out
 
+# 仓库根的 node_modules（只装 commitlint + husky，见 package.json）
+/node_modules
+
+# pnpm 的内容寻址存储，装依赖时落在仓库里，不该入库
+.pnpm-store/
+
 backend/infrastructure/consul/consul-local-kv.json
 backend/infrastructure/consul/consul-kv.json

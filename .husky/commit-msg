@@ -1,1 +1,10 @@
-pnpm exec --no – commitlint --edit .git/COMMIT_EDITMSG
+# 提交信息校验。规则在仓库根的 commitlint.config.mjs。
+#
+# 用 pnpm exec 而不是裸 commitlint：钩子的 PATH 里没有 node_modules/.bin，
+# 直接写命令名在非交互式 shell 下会 command not found。
+# 不要加 --no —— pnpm 11 已经不认这个 exec 参数，会直接报
+# 「Command "--no" not found」，等于把校验变成永远失败。
+#
+# 用 "$1"（git 传进来的消息文件路径）而不是写死 .git/COMMIT_EDITMSG——
+# git commit --amend、rebase reword、以及 worktree 里的路径都不是那个值。
+pnpm exec commitlint --edit "$1"
