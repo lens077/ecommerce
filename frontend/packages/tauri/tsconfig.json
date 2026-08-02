@@ -2,9 +2,9 @@
   "extends": "../../tsconfig.json",
   "compilerOptions": {
     "jsx": "react-jsx",
-    // 这个包不依赖 vite，基准配置里的 types: ["vite/client"] 在这里解析不到
+    // 这个包不依赖 vite-plus（见 package.json），基准配置里的
+    // types: ["vite-plus/client"] 在这里解析不到，所以清空
     "types": [],
-    "baseUrl": ".",
     "paths": {
       "@/*": ["./src/*"]
     }
