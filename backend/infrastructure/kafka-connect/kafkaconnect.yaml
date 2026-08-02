@@ -1,0 +1,84 @@
+# Kafka Connect 集群（Strimzi 托管），只跑一个 Debezium PostgreSQL source connector。
+#
+# 这份 manifest 是补录的 —— 集群里的 CR 原本是 kubectl 命令式创建的，只存在于 etcd，
+# 仓库里 grep 不到。Mac 上的 Parallels 虚拟机一旦真挂了（不是重启），这套配置就找不回来。
+#
+# 应用：kubectl apply -f backend/infrastructure/kafka-connect/kafkaconnect.yaml
+# 顺序：setup.sql → 本文件 → 等 connect-0 Ready → kafkaconnector.yaml
+apiVersion: kafka.strimzi.io/v1
+kind: KafkaConnect
+metadata:
+  name: my-connect-cluster
+  namespace: kafka
+  annotations:
+    # 允许用 KafkaConnector CR 管理 connector，而不是调 REST API
+    strimzi.io/use-connector-resources: "true"
+spec:
+  version: 4.2.0
+  replicas: 1
+  bootstrapServers: my-cluster-kafka-bootstrap:9092
+
+  groupId: my-connect-cluster
+  configStorageTopic: my-connect-cluster-configs
+  offsetStorageTopic: my-connect-cluster-offsets
+  statusStorageTopic: my-connect-cluster-status
+
+  config:
+    # 单节点 Kafka，副本因子只能是 1
+    config.storage.replication.factor: 1
+    offset.storage.replication.factor: 1
+    status.storage.replication.factor: 1
+
+  # ---------------------------------------------------------------------------
+  # 内存。这一段是本次新增的，也是 connect-0 连续 CrashLoopBackOff 263 次的解药。
+  #
+  # 之前 resources 是空的 → QoS = BestEffort → 调度器算账时它 request 为 0，
+  # 于是被塞进了 node3（requests 已占 99%、limits 已超卖到 152%，而且 PG 也在那台）。
+  # JVM 起来扫 debezium 插件时内存一涨，内核就挑这个 BestEffort 进程杀，
+  # 每次都是启动 7 秒后 exitCode 137 / OOMKilled。
+  #
+  # 真正把它救出来的是 requests.memory —— 有了它调度器才会拒绝 node3，
+  # 把 pod 放到 node1（只用了 4%）。limits 单独加是不够的。
+  # ---------------------------------------------------------------------------
+  resources:
+    requests:
+      cpu: 200m
+      memory: 768Mi
+    limits:
+      cpu: "1"
+      memory: 1536Mi
+
+  # 显式给堆封顶。不设的话 JVM 21 会按**节点**内存的 1/4 去猜（≈1.5Gi），
+  # 奔着一个这台机器根本给不出的数字去涨。
+  # limit 取 Xmx 的两倍，留给 metaspace / 直接内存 / 线程栈。
+  jvmOptions:
+    -Xms: 256m
+    -Xmx: 768m
+
+  # ---------------------------------------------------------------------------
+  # 镜像构建。原样保留 —— 改动这一段会触发 Strimzi 重新构建镜像，
+  # 需要 privileged 构建容器、能推到腾讯云 registry、还要从 repo1.maven.org 拉包，
+  # 在有 GFW 的网络下多一个失败点。等 connector 跑通了再单独处理。
+  #
+  # 已知问题（本次不改，跑通 connector 之后单独做）：
+  #   artifact 是 3.6.0.Beta1，而镜像 tag 写着 3.5.1，两者对不上。
+  #   Debezium 当前最新 GA 是 3.6.0.Final（3.7.0 只有 Alpha1），
+  #   同一条 3.6.0 线上 Beta1 → Final 是最小跳变。届时改两行：
+  #     image: ...strimzi-connect-debezium:3.6.0
+  #     url:   https://repo1.maven.org/maven2/io/debezium/debezium-connector-postgres/3.6.0.Final/debezium-connector-postgres-3.6.0.Final-plugin.tar.gz
+  # ---------------------------------------------------------------------------
+  build:
+    output:
+      type: docker
+      image: ccr.ccs.tencentyun.com/sumery/strimzi-connect-debezium:3.5.1
+      pushSecret: tcr-registry-secret
+    plugins:
+      - name: debezium-postgres-connector
+        artifacts:
+          - type: tgz
+            url: https://repo1.maven.org/maven2/io/debezium/debezium-connector-postgres/3.6.0.Beta1/debezium-connector-postgres-3.6.0.Beta1-plugin.tar.gz
+
+  template:
+    buildContainer:
+      securityContext:
+        privileged: true
