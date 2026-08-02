@@ -214,7 +214,22 @@ func (r *ConsulRegistry) TtlCheckPinger(ctx context.Context, conf *confv1.Bootst
 	// Consul Agent 要求 CheckID 必须是 "service:<ID>" 的格式
 	checkID := fmt.Sprintf("service:%s", r.ID)
 
+	// 发送 'pass' 状态的心跳
+	ping := func() {
+		if err := r.client.Agent().UpdateTTL(checkID, "ttl check passing", api.HealthPassing); err != nil {
+			// 记录错误，但不退出 Pinger，因为这可能是暂时的网络问题
+			// 如果长时间失败，Consul Agent 会将服务标记为 Critical
+			r.logger.Error("failed to update Consul TTL", zap.Error(err), zap.String("ID", r.ID))
+		}
+	}
+
 	r.logger.Info("starting ttl pinger", zap.Duration("interval", ttlPingInterval), zap.String("checkID", checkID))
+
+	// TTL 检查在 Register 之后的初始状态是 critical,而服务发现方(网关的 kratos
+	// consul registry)是用 passingOnly=true 查询的 —— 直接进 ticker 就意味着头一个
+	// ping_interval 内这个实例对外不可见,调用方只能拿到 503。所以注册完立刻补一次
+	// 心跳,把这段盲窗压到零。调用点保证 Register 已成功返回,checkID 一定存在。
+	ping()
 
 	for {
 		select {
@@ -222,13 +237,7 @@ func (r *ConsulRegistry) TtlCheckPinger(ctx context.Context, conf *confv1.Bootst
 			r.logger.Info("ttl pinger stopped gracefully")
 			return
 		case <-ticker.C:
-			// 发送 'pass' 状态的心跳
-			err := r.client.Agent().UpdateTTL(checkID, "ttl check passing", api.HealthPassing)
-			if err != nil {
-				// 记录错误，但不退出 Pinger，因为这可能是暂时的网络问题
-				// 如果长时间失败，Consul Agent 会将服务标记为 Critical
-				r.logger.Error("failed to update Consul TTL", zap.Error(err), zap.String("ID", r.ID))
-			}
+			ping()
 		}
 	}
 }
