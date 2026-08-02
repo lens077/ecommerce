@@ -13,3 +13,6 @@ coverage.out
 
 backend/infrastructure/consul/consul-local-kv.json
 backend/infrastructure/consul/consul-kv.json
+
+# 个人 AI 协作备忘录（tmux 驱动 codex 的命令速查），不属于项目产物
+ai-helper.sh
