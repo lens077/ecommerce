@@ -74,7 +74,9 @@ function RouteComponent() {
 
   if (!userProfile) {
     return (
-      <Box sx={{ display: "flex", justifyContent: "center", alignItems: "center", minHeight: "300px" }}>
+      <Box
+        sx={{ display: "flex", justifyContent: "center", alignItems: "center", minHeight: "300px" }}
+      >
         <CircularProgress />
       </Box>
     );
@@ -110,14 +112,20 @@ function RouteComponent() {
             sx={{ width: 72, height: 72, border: `2px solid ${tokens.colors.border.default}` }}
           />
           <Box sx={{ flex: 1, minWidth: 0 }}>
-            <Typography variant="h5" sx={{ fontWeight: 700, color: tokens.colors.text.primary, mb: 0.5 }}>
+            <Typography
+              variant="h5"
+              sx={{ fontWeight: 700, color: tokens.colors.text.primary, mb: 0.5 }}
+            >
               {userProfile.displayName || userProfile.name}
             </Typography>
             <Typography variant="body2" sx={{ color: tokens.colors.text.secondary }}>
               {userProfile.email}
             </Typography>
             {userProfile.tag && (
-              <Typography variant="caption" sx={{ color: tokens.colors.text.secondary, mt: 0.5, display: "block" }}>
+              <Typography
+                variant="caption"
+                sx={{ color: tokens.colors.text.secondary, mt: 0.5, display: "block" }}
+              >
                 {t("profile.tagLabel", { value: userProfile.tag })}
               </Typography>
             )}
@@ -135,16 +143,35 @@ function RouteComponent() {
           }}
         >
           <Box sx={{ p: sp[4], borderBottom: `1px solid ${tokens.colors.border.default}` }}>
-            <Typography variant="subtitle1" sx={{ fontWeight: 600, color: tokens.colors.text.primary }}>
+            <Typography
+              variant="subtitle1"
+              sx={{ fontWeight: 600, color: tokens.colors.text.primary }}
+            >
               {t("profile.account.title")}
             </Typography>
           </Box>
           <List dense>
-            <InfoRow icon={<BadgeIcon fontSize="small" />} label={t("profile.account.userId")} value={userProfile.id} />
-            <InfoRow icon={<Person fontSize="small" />} label={t("profile.account.username")} value={userProfile.name} />
-            <InfoRow icon={<Email fontSize="small" />} label={t("profile.account.email")} value={userProfile.email} />
+            <InfoRow
+              icon={<BadgeIcon fontSize="small" />}
+              label={t("profile.account.userId")}
+              value={userProfile.id}
+            />
+            <InfoRow
+              icon={<Person fontSize="small" />}
+              label={t("profile.account.username")}
+              value={userProfile.name}
+            />
+            <InfoRow
+              icon={<Email fontSize="small" />}
+              label={t("profile.account.email")}
+              value={userProfile.email}
+            />
             {userProfile.createdTime && (
-              <InfoRow icon={<Tag fontSize="small" />} label={t("profile.account.createdAt")} value={userProfile.createdTime} />
+              <InfoRow
+                icon={<Tag fontSize="small" />}
+                label={t("profile.account.createdAt")}
+                value={userProfile.createdTime}
+              />
             )}
           </List>
         </Paper>
@@ -159,7 +186,10 @@ function RouteComponent() {
           }}
         >
           <Box sx={{ p: sp[4], borderBottom: `1px solid ${tokens.colors.border.default}` }}>
-            <Typography variant="subtitle1" sx={{ fontWeight: 600, color: tokens.colors.text.primary }}>
+            <Typography
+              variant="subtitle1"
+              sx={{ fontWeight: 600, color: tokens.colors.text.primary }}
+            >
               {t("profile.nav.title")}
             </Typography>
           </Box>
@@ -180,7 +210,10 @@ function RouteComponent() {
                   </ListItemIcon>
                   <ListItemText
                     primary={
-                      <Typography variant="body1" sx={{ fontWeight: 500, color: tokens.colors.text.primary }}>
+                      <Typography
+                        variant="body1"
+                        sx={{ fontWeight: 500, color: tokens.colors.text.primary }}
+                      >
                         {t(item.labelKey)}
                       </Typography>
                     }
@@ -214,7 +247,9 @@ function InfoRow({ icon, label, value }: { icon: React.ReactNode; label: string;
           py: sp[2],
         }}
       >
-        <Box sx={{ color: tokens.colors.text.secondary, display: "flex", alignItems: "center" }}>{icon}</Box>
+        <Box sx={{ color: tokens.colors.text.secondary, display: "flex", alignItems: "center" }}>
+          {icon}
+        </Box>
         <Typography variant="body2" sx={{ color: tokens.colors.text.secondary, minWidth: 72 }}>
           {label}
         </Typography>

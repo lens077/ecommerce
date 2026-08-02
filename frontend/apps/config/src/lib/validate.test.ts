@@ -3,7 +3,13 @@ import { initI18n } from "@ecommerce/i18n";
 import { ConfigFormat } from "@/gen/api";
 import configEn from "@/locales/en/config.json";
 import configZh from "@/locales/zh-CN/config.json";
-import { canFormat, FormatError, formatContent, offsetToPos, validateContent } from "@/lib/validate";
+import {
+  canFormat,
+  FormatError,
+  formatContent,
+  offsetToPos,
+  validateContent,
+} from "@/lib/validate";
 import { formatToml } from "@/lib/toml-format";
 
 // 校验消息走 i18n,不装资源的话 t() 只会把 key 原样吐回来。
@@ -33,7 +39,12 @@ describe("offsetToPos", () => {
 
 describe("validateContent", () => {
   test("空白内容一律放行(新建 key 时不该锁死保存)", () => {
-    for (const f of [ConfigFormat.JSON, ConfigFormat.YAML, ConfigFormat.TOML, ConfigFormat.PLAINTEXT]) {
+    for (const f of [
+      ConfigFormat.JSON,
+      ConfigFormat.YAML,
+      ConfigFormat.TOML,
+      ConfigFormat.PLAINTEXT,
+    ]) {
       expect(validateContent("   \n\n ", f).ok).toBe(true);
     }
   });

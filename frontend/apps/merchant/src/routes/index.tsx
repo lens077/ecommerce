@@ -27,10 +27,34 @@ function DashboardPage() {
   const { formatCurrency, formatNumber } = useFormat();
 
   const stats = [
-    { labelKey: "dashboard.stats.todayOrders", value: formatNumber(128), change: "+12%", trend: "up", icon: ShoppingBag },
-    { labelKey: "dashboard.stats.todaySales", value: formatCurrency(12580), change: "+8%", trend: "up", icon: DollarSign },
-    { labelKey: "dashboard.stats.pendingOrders", value: formatNumber(24), change: "-3%", trend: "down", icon: Package },
-    { labelKey: "dashboard.stats.customers", value: formatNumber(1234), change: "+5%", trend: "up", icon: Users },
+    {
+      labelKey: "dashboard.stats.todayOrders",
+      value: formatNumber(128),
+      change: "+12%",
+      trend: "up",
+      icon: ShoppingBag,
+    },
+    {
+      labelKey: "dashboard.stats.todaySales",
+      value: formatCurrency(12580),
+      change: "+8%",
+      trend: "up",
+      icon: DollarSign,
+    },
+    {
+      labelKey: "dashboard.stats.pendingOrders",
+      value: formatNumber(24),
+      change: "-3%",
+      trend: "down",
+      icon: Package,
+    },
+    {
+      labelKey: "dashboard.stats.customers",
+      value: formatNumber(1234),
+      change: "+5%",
+      trend: "up",
+      icon: Users,
+    },
   ] as const;
 
   // status 存状态码而不是中文 —— 下面既要拿它渲染文案又要拿它判色，存文案会在切语言时判错
@@ -49,16 +73,28 @@ function DashboardPage() {
       </Typography>
 
       {/* 统计卡片 */}
-      <Box sx={{ display: "grid", gridTemplateColumns: { xs: "1fr", sm: "1fr 1fr", md: "repeat(4, 1fr)" }, gap: 2, mb: s.lg }}>
+      <Box
+        sx={{
+          display: "grid",
+          gridTemplateColumns: { xs: "1fr", sm: "1fr 1fr", md: "repeat(4, 1fr)" },
+          gap: 2,
+          mb: s.lg,
+        }}
+      >
         {stats.map((stat) => (
           <Card key={stat.labelKey} sx={{ height: "100%" }}>
             <CardContent sx={{ p: s.md }}>
-              <Box sx={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start" }}>
+              <Box
+                sx={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start" }}
+              >
                 <Box>
                   <Typography variant="body2" sx={{ color: "text.secondary", mb: s.xs }}>
                     {t(stat.labelKey)}
                   </Typography>
-                  <Typography variant="h4" sx={{ fontWeight: 700, color: "text.primary", mb: s.xs }}>
+                  <Typography
+                    variant="h4"
+                    sx={{ fontWeight: 700, color: "text.primary", mb: s.xs }}
+                  >
                     {stat.value}
                   </Typography>
                   <Box sx={{ display: "flex", alignItems: "center", gap: 0.5 }}>
@@ -69,7 +105,12 @@ function DashboardPage() {
                     )}
                     <Typography
                       variant="caption"
-                      sx={{ color: stat.trend === "up" ? tokens.colors.accent.green : tokens.colors.accent.red }}
+                      sx={{
+                        color:
+                          stat.trend === "up"
+                            ? tokens.colors.accent.green
+                            : tokens.colors.accent.red,
+                      }}
                     >
                       {t("dashboard.changeVsYesterday", { change: stat.change })}
                     </Typography>
@@ -103,9 +144,23 @@ function DashboardPage() {
           <Box sx={{ overflowX: "auto" }}>
             <Box component="table" sx={{ width: "100%", borderCollapse: "collapse" }}>
               <Box component="thead">
-                <Box component="tr" sx={{ borderBottom: `1px solid ${tokens.colors.border.default}` }}>
+                <Box
+                  component="tr"
+                  sx={{ borderBottom: `1px solid ${tokens.colors.border.default}` }}
+                >
                   {ORDER_COLUMNS.map((key) => (
-                    <Box component="th" key={key} sx={{ textAlign: "left", py: s.sm, px: s.md, fontWeight: 500, color: "text.secondary", fontSize: "0.875rem" }}>
+                    <Box
+                      component="th"
+                      key={key}
+                      sx={{
+                        textAlign: "left",
+                        py: s.sm,
+                        px: s.md,
+                        fontWeight: 500,
+                        color: "text.secondary",
+                        fontSize: "0.875rem",
+                      }}
+                    >
                       {t(key)}
                     </Box>
                   ))}
@@ -116,15 +171,24 @@ function DashboardPage() {
                   <Box
                     component="tr"
                     key={order.id}
-                    sx={{ borderBottom: `1px solid ${tokens.colors.border.default}`, "&:last-child": { borderBottom: "none" } }}
+                    sx={{
+                      borderBottom: `1px solid ${tokens.colors.border.default}`,
+                      "&:last-child": { borderBottom: "none" },
+                    }}
                   >
-                    <Box component="td" sx={{ py: s.sm, px: s.md, color: "text.primary", fontWeight: 500 }}>
+                    <Box
+                      component="td"
+                      sx={{ py: s.sm, px: s.md, color: "text.primary", fontWeight: 500 }}
+                    >
                       {order.id}
                     </Box>
                     <Box component="td" sx={{ py: s.sm, px: s.md, color: "text.secondary" }}>
                       {order.customer}
                     </Box>
-                    <Box component="td" sx={{ py: s.sm, px: s.md, color: tokens.colors.accent.red, fontWeight: 500 }}>
+                    <Box
+                      component="td"
+                      sx={{ py: s.sm, px: s.md, color: tokens.colors.accent.red, fontWeight: 500 }}
+                    >
                       {formatCurrency(order.amount)}
                     </Box>
                     <Box component="td" sx={{ py: s.sm, px: s.md }}>
@@ -137,8 +201,14 @@ function DashboardPage() {
                           borderRadius: 5,
                           fontSize: "0.75rem",
                           fontWeight: 500,
-                          bgcolor: order.status === "pending_shipment" ? "rgba(239, 68, 68, 0.1)" : "rgba(16, 185, 129, 0.1)",
-                          color: order.status === "pending_shipment" ? tokens.colors.accent.red : tokens.colors.accent.green,
+                          bgcolor:
+                            order.status === "pending_shipment"
+                              ? "rgba(239, 68, 68, 0.1)"
+                              : "rgba(16, 185, 129, 0.1)",
+                          color:
+                            order.status === "pending_shipment"
+                              ? tokens.colors.accent.red
+                              : tokens.colors.accent.green,
                         }}
                       >
                         {t(`common:orderStatus.${order.status}`)}

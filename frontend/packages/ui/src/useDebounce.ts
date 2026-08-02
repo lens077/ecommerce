@@ -1,6 +1,6 @@
 /**
  * 防抖 Hook
- * 
+ *
  * 延迟更新值，适用于搜索输入等场景
  */
 
@@ -25,7 +25,10 @@ type DebouncedCallback<T extends unknown[]> = (...args: T) => void;
 /**
  * 防抖值
  */
-export function useDebounce<T>({ value, delay }: UseDebounceOptions<T>): UseDebounceReturn<T>["debouncedValue"] {
+export function useDebounce<T>({
+  value,
+  delay,
+}: UseDebounceOptions<T>): UseDebounceReturn<T>["debouncedValue"] {
   const [debouncedValue, setDebouncedValue] = useState<T>(value);
   const timerRef = useRef<ReturnType<typeof setTimeout> | undefined>(undefined);
 
@@ -50,7 +53,7 @@ export function useDebounce<T>({ value, delay }: UseDebounceOptions<T>): UseDebo
 export function useDebouncedCallback<T extends unknown[]>(
   callback: (...args: T) => void,
   delay: number,
-  options?: UseDebounceCallbackOptions
+  options?: UseDebounceCallbackOptions,
 ): DebouncedCallback<T> {
   const callbackRef = useRef(callback);
   const timeoutRef = useRef<ReturnType<typeof setTimeout> | undefined>(undefined);
@@ -86,7 +89,7 @@ export function useDebouncedCallback<T extends unknown[]>(
         callbackRef.current(...args);
       }
     },
-    [delay]
+    [delay],
   );
 
   // 清理

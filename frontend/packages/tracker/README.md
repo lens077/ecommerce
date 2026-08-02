@@ -13,13 +13,13 @@ positive_feedback_types = ["purchase", "cart", "favorite", "read>=3", "dwell>=20
 read_feedback_types = ["impression", "read"]
 ```
 
-| 事件 | 触发时机 | value | 写入方式 |
-| --- | --- | --- | --- |
-| `impression` | 卡片在视口里露出 ≥50% 且停留 ≥1s | 1 | POST（累加） |
-| `read` | 点进商品详情 | 1 | POST（累加，满 3 次转正样本） |
-| `dwell` | 详情页可见停留秒数 | 秒数 | PUT（覆盖） |
-| `cart` / `favorite` / `purchase` | 对应业务动作 | 1 | PUT（覆盖） |
-| `dislike` | 用户点"不感兴趣" | 1 | **不进 gorse** |
+| 事件                             | 触发时机                         | value | 写入方式                      |
+| -------------------------------- | -------------------------------- | ----- | ----------------------------- |
+| `impression`                     | 卡片在视口里露出 ≥50% 且停留 ≥1s | 1     | POST（累加）                  |
+| `read`                           | 点进商品详情                     | 1     | POST（累加，满 3 次转正样本） |
+| `dwell`                          | 详情页可见停留秒数               | 秒数  | PUT（覆盖）                   |
+| `cart` / `favorite` / `purchase` | 对应业务动作                     | 1     | PUT（覆盖）                   |
+| `dislike`                        | 用户点"不感兴趣"                 | 1     | **不进 gorse**                |
 
 `dislike` 是个例外：当前 gorse 版本的 `config.toml` 没有 `negative_feedback_types`，
 负反馈无处安放。所以它只落到 `behaviors.events` 表，由 behavior 服务在返回推荐结果前
@@ -34,48 +34,48 @@ read_feedback_types = ["impression", "read"]
 应用入口初始化一次：
 
 ```ts
-import { initTracker } from "@ecommerce/tracker"
+import { initTracker } from "@ecommerce/tracker";
 
-initTracker({ gatewayUrl: import.meta.env.VITE_GATEWAY_URL })
+initTracker({ gatewayUrl: import.meta.env.VITE_GATEWAY_URL });
 ```
 
 列表页记曝光：
 
 ```tsx
-import { useImpression } from "@ecommerce/tracker/react"
+import { useImpression } from "@ecommerce/tracker/react";
 
 function ProductCard({ spu, source }: { spu: Spu; source: string }) {
-    const ref = useImpression<HTMLDivElement>(spu.spuCode, source)
-    return <div ref={ref}>{spu.name}</div>
+  const ref = useImpression<HTMLDivElement>(spu.spuCode, source);
+  return <div ref={ref}>{spu.name}</div>;
 }
 ```
 
 详情页记 read + 停留：
 
 ```tsx
-import { useProductView } from "@ecommerce/tracker/react"
+import { useProductView } from "@ecommerce/tracker/react";
 
-useProductView(spuCode, `search:${keyword}`)
+useProductView(spuCode, `search:${keyword}`);
 ```
 
 业务动作：
 
 ```ts
-import { tracker } from "@ecommerce/tracker"
+import { tracker } from "@ecommerce/tracker";
 
-tracker().cart(spuCode)
-tracker().favorite(spuCode)
-tracker().purchase(spuCode)
-tracker().dislike(spuCode)
+tracker().cart(spuCode);
+tracker().favorite(spuCode);
+tracker().purchase(spuCode);
+tracker().dislike(spuCode);
 ```
 
 取推荐（交给 react-query 管缓存）：
 
 ```ts
-import { recommend, similarItems } from "@ecommerce/tracker/react"
+import { recommend, similarItems } from "@ecommerce/tracker/react";
 
-useQuery({ queryKey: ["recommend", category], queryFn: () => recommend({ category, n: 20 }) })
-useQuery({ queryKey: ["similar", spuCode], queryFn: () => similarItems(spuCode, { n: 12 }) })
+useQuery({ queryKey: ["recommend", category], queryFn: () => recommend({ category, n: 20 }) });
+useQuery({ queryKey: ["similar", spuCode], queryFn: () => similarItems(spuCode, { n: 12 }) });
 ```
 
 `source` 用来做渠道归因，约定写成 `search:关键词` / `category:3` / `home_feed` / `neighbors`。

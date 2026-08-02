@@ -1,13 +1,8 @@
 {
   "name": "@ecommerce/api",
   "version": "1.0.0",
-  "description": "",
   "private": true,
-  "devDependencies": {
-    "@bufbuild/protobuf": "catalog:",
-    "@t3-oss/env-core": "catalog:",
-    "zod": "catalog:"
-  },
+  "description": "",
   "exports": {
     ".": {
       "types": "./src/index.ts",
@@ -18,5 +13,10 @@
     "@connectrpc/connect": "catalog:",
     "@connectrpc/connect-web": "catalog:",
     "@ecommerce/utils": "workspace:*"
+  },
+  "devDependencies": {
+    "@bufbuild/protobuf": "catalog:",
+    "@t3-oss/env-core": "catalog:",
+    "zod": "catalog:"
   }
 }

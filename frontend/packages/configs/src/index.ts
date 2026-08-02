@@ -1,1 +1,1 @@
-export * from "./casdoor"
+export * from "./casdoor";

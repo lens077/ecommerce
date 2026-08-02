@@ -35,7 +35,11 @@ export function lineDelta(oldText: string, newText: string): LineDelta {
 
   // 掐掉公共前缀/后缀:配置改动几乎总是局部的,这一步把 LCS 的规模压到很小
   let start = 0;
-  while (start < oldLines.length && start < newLines.length && oldLines[start] === newLines[start]) {
+  while (
+    start < oldLines.length &&
+    start < newLines.length &&
+    oldLines[start] === newLines[start]
+  ) {
     start++;
   }
   let endOld = oldLines.length;

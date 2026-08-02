@@ -97,8 +97,7 @@ function CheckoutPage() {
   const freight = 0;
   const payAmount = totalAmount + freight;
 
-  const canSubmit =
-    !submitting && !!selectedAddressId && selectedItems.length > 0;
+  const canSubmit = !submitting && !!selectedAddressId && selectedItems.length > 0;
 
   const handleSubmit = async () => {
     if (!canSubmit || !selectedAddressId) return;
@@ -177,12 +176,19 @@ function CheckoutPage() {
               p: 0,
             }}
           >
-            <MapPin size={20} color={tokens.colors.accent.red} style={{ flexShrink: 0, marginTop: 2 }} />
+            <MapPin
+              size={20}
+              color={tokens.colors.accent.red}
+              style={{ flexShrink: 0, marginTop: 2 }}
+            />
             <Box sx={{ flex: 1, minWidth: 0 }}>
               {selectedAddress ? (
                 <>
                   <Box sx={{ display: "flex", alignItems: "center", gap: sp[2], mb: sp[1] }}>
-                    <Typography variant="body1" sx={{ fontWeight: 600, color: tokens.colors.text.primary }}>
+                    <Typography
+                      variant="body1"
+                      sx={{ fontWeight: 600, color: tokens.colors.text.primary }}
+                    >
                       {selectedAddress.recipientName}
                     </Typography>
                     <Typography variant="body2" sx={{ color: tokens.colors.text.secondary }}>
@@ -210,7 +216,10 @@ function CheckoutPage() {
       {merchantGroups.map((group) => (
         <Card key={group.merchantId} sx={{ mx: sp[4], mt: sp[4] }}>
           <CardContent sx={{ p: sp[4] }}>
-            <Typography variant="body2" sx={{ fontWeight: 600, color: tokens.colors.text.primary, mb: sp[3] }}>
+            <Typography
+              variant="body2"
+              sx={{ fontWeight: 600, color: tokens.colors.text.primary, mb: sp[3] }}
+            >
               {group.shopName || t("checkout.shop")}
             </Typography>
             <Box sx={{ display: "flex", flexDirection: "column", gap: sp[3] }}>
@@ -248,7 +257,10 @@ function CheckoutPage() {
                       <Typography variant="caption" sx={{ color: tokens.colors.text.secondary }}>
                         x{item.quantity}
                       </Typography>
-                      <Typography variant="body2" sx={{ fontWeight: 600, color: tokens.colors.accent.red }}>
+                      <Typography
+                        variant="body2"
+                        sx={{ fontWeight: 600, color: tokens.colors.accent.red }}
+                      >
                         {formatCurrency(item.price)}
                       </Typography>
                     </Box>
@@ -265,7 +277,10 @@ function CheckoutPage() {
         <CardContent sx={{ p: sp[4] }}>
           <Box sx={{ display: "flex", alignItems: "center", justifyContent: "space-between" }}>
             <Box>
-              <Typography variant="body2" sx={{ fontWeight: 600, color: tokens.colors.text.primary }}>
+              <Typography
+                variant="body2"
+                sx={{ fontWeight: 600, color: tokens.colors.text.primary }}
+              >
                 {t("checkout.shipping.standard")}
               </Typography>
               <Typography variant="caption" sx={{ color: tokens.colors.text.secondary }}>
@@ -283,7 +298,10 @@ function CheckoutPage() {
       <Card sx={{ mx: sp[4], mt: sp[4] }}>
         <CardContent sx={{ p: sp[4] }}>
           <Box sx={{ display: "flex", alignItems: "center", gap: sp[3] }}>
-            <Typography variant="body2" sx={{ fontWeight: 600, color: tokens.colors.text.primary, flexShrink: 0 }}>
+            <Typography
+              variant="body2"
+              sx={{ fontWeight: 600, color: tokens.colors.text.primary, flexShrink: 0 }}
+            >
               {t("checkout.remark.label")}
             </Typography>
             <Box
@@ -377,7 +395,11 @@ function CheckoutPage() {
             "&:hover": { bgcolor: "#dc2626" },
           }}
         >
-          {submitting ? <CircularProgress size={20} sx={{ color: "#fff" }} /> : t("checkout.submit")}
+          {submitting ? (
+            <CircularProgress size={20} sx={{ color: "#fff" }} />
+          ) : (
+            t("checkout.submit")
+          )}
         </Button>
       </Box>
 
@@ -514,10 +536,17 @@ function AddressPickerDialog({
                   cursor: "pointer",
                 }}
               >
-                <Radio checked={a.addressId === selectedAddressId} size="small" sx={{ p: 0, mt: "2px" }} />
+                <Radio
+                  checked={a.addressId === selectedAddressId}
+                  size="small"
+                  sx={{ p: 0, mt: "2px" }}
+                />
                 <Box sx={{ flex: 1, minWidth: 0 }}>
                   <Box sx={{ display: "flex", alignItems: "center", gap: sp[2], mb: sp[1] }}>
-                    <Typography variant="body2" sx={{ fontWeight: 600, color: tokens.colors.text.primary }}>
+                    <Typography
+                      variant="body2"
+                      sx={{ fontWeight: 600, color: tokens.colors.text.primary }}
+                    >
                       {a.recipientName}
                     </Typography>
                     <Typography variant="caption" sx={{ color: tokens.colors.text.secondary }}>
@@ -548,7 +577,11 @@ function AddressPickerDialog({
               <Button
                 startIcon={<Plus size={16} />}
                 onClick={() => setAdding(true)}
-                sx={{ alignSelf: "flex-start", color: tokens.colors.accent.red, textTransform: "none" }}
+                sx={{
+                  alignSelf: "flex-start",
+                  color: tokens.colors.accent.red,
+                  textTransform: "none",
+                }}
               >
                 {t("checkout.address.add")}
               </Button>
@@ -629,7 +662,11 @@ function AddressPickerDialog({
             startIcon={<Check size={16} />}
             onClick={handleCreate}
             disabled={isCreating}
-            sx={{ textTransform: "none", bgcolor: tokens.colors.accent.red, "&:hover": { bgcolor: "#dc2626" } }}
+            sx={{
+              textTransform: "none",
+              bgcolor: tokens.colors.accent.red,
+              "&:hover": { bgcolor: "#dc2626" },
+            }}
           >
             {isCreating ? t("checkout.address.saving") : t("checkout.address.save")}
           </Button>

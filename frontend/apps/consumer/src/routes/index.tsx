@@ -95,7 +95,12 @@ function ProductCard({ product }: { product: ProductCardVM }) {
           component="img"
           src={product.mainMediaUrl}
           alt={product.name}
-          sx={{ width: "100%", aspectRatio: "1 / 1", objectFit: "cover", bgcolor: tokens.colors.background.primary }}
+          sx={{
+            width: "100%",
+            aspectRatio: "1 / 1",
+            objectFit: "cover",
+            bgcolor: tokens.colors.background.primary,
+          }}
         />
         <Box sx={{ p: sp[3], display: "flex", flexDirection: "column", gap: sp[1] }}>
           <Typography
@@ -111,7 +116,11 @@ function ProductCard({ product }: { product: ProductCardVM }) {
           </Typography>
           <Typography variant="body1" sx={{ fontWeight: 700, color: tokens.colors.accent.red }}>
             {formatCurrency(product.minPrice)}
-            <Typography component="span" variant="caption" sx={{ color: tokens.colors.text.secondary, ml: sp[1] }}>
+            <Typography
+              component="span"
+              variant="caption"
+              sx={{ color: tokens.colors.text.secondary, ml: sp[1] }}
+            >
               {t("home.priceFrom")}
             </Typography>
           </Typography>

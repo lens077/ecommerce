@@ -208,14 +208,18 @@ function HistoryPage() {
                 borderLeft: "3px solid",
                 borderLeftColor: active ? "primary.main" : "transparent",
                 background: active ? "rgba(37, 99, 235, 0.08)" : "transparent",
-                "&:hover": { background: active ? "rgba(37, 99, 235, 0.12)" : "rgba(15, 23, 42, 0.04)" },
+                "&:hover": {
+                  background: active ? "rgba(37, 99, 235, 0.12)" : "rgba(15, 23, 42, 0.04)",
+                },
               }}
             >
               <Box sx={{ display: "flex", alignItems: "center", gap: sp[2] }}>
                 <Typography sx={{ fontFamily: "monospace", fontWeight: 700, fontSize: 14 }}>
                   v{rev.version}
                 </Typography>
-                {isCurrent(rev.version) && <Chip label={t("history.current")} size="small" color="primary" />}
+                {isCurrent(rev.version) && (
+                  <Chip label={t("history.current")} size="small" color="primary" />
+                )}
                 {isOldest && <Chip label={t("history.initial")} size="small" variant="outlined" />}
                 <Box sx={{ flex: 1 }} />
                 {unchanged ? (
@@ -342,7 +346,9 @@ function HistoryPage() {
         </Button>
         <Typography sx={{ fontFamily: "monospace", fontWeight: 700 }}>{key}</Typography>
         <Chip label={`${ns}/${env}`} size="small" variant="outlined" />
-        {entry && <Chip label={t("history.currentVersion", { version: entry.version })} size="small" />}
+        {entry && (
+          <Chip label={t("history.currentVersion", { version: entry.version })} size="small" />
+        )}
         {entry?.isSecret && (
           <Chip label={t("history.secret")} size="small" color="warning" variant="outlined" />
         )}

@@ -9,26 +9,26 @@
     "preview": "vite preview"
   },
   "dependencies": {
+    "@ecommerce/configs": "workspace:*",
+    "@ecommerce/constants": "workspace:*",
+    "@ecommerce/i18n": "workspace:*",
+    "@ecommerce/ui": "workspace:*",
+    "@ecommerce/utils": "workspace:*",
     "@emotion/react": "catalog:",
     "@emotion/styled": "catalog:",
     "@mui/material": "catalog:",
     "@tanstack/react-router": "catalog:",
-    "@ecommerce/ui": "workspace:*",
-    "@ecommerce/configs": "workspace:*",
-    "@ecommerce/constants": "workspace:*",
-    "@ecommerce/i18n": "workspace:*",
-    "@ecommerce/utils": "workspace:*",
+    "lucide-react": "catalog:",
     "react": "catalog:",
-    "react-dom": "catalog:",
-    "lucide-react": "catalog:"
+    "react-dom": "catalog:"
   },
   "devDependencies": {
+    "@tanstack/router-plugin": "catalog:",
     "@types/react": "catalog:",
     "@types/react-dom": "catalog:",
     "@vitejs/plugin-react": "catalog:",
     "typescript": "catalog:",
     "vite": "npm:@voidzero-dev/vite-plus-core@^0.1.24",
-    "vite-plus": "catalog:",
-    "@tanstack/router-plugin": "catalog:"
+    "vite-plus": "catalog:"
   }
 }

@@ -21,7 +21,16 @@ import {
 import { ConnectError, Code } from "@connectrpc/connect";
 import { toAppError } from "@ecommerce/api";
 import { useTranslation } from "@ecommerce/i18n";
-import { CheckCircle2, History, Maximize2, Minimize2, Save, Trash2, Wand2, XCircle } from "lucide-react";
+import {
+  CheckCircle2,
+  History,
+  Maximize2,
+  Minimize2,
+  Save,
+  Trash2,
+  Wand2,
+  XCircle,
+} from "lucide-react";
 import { configApi, ConfigFormat } from "@/api";
 import { FORMAT_OPTIONS, formatLabel, formatToLanguage } from "@/lib/format";
 import {
@@ -171,7 +180,16 @@ function EditPage() {
 
   const save = useMutation({
     mutationFn: () =>
-      configApi.putKey({ namespace: ns, environment: env, key, format, value, comment, isSecret, description }),
+      configApi.putKey({
+        namespace: ns,
+        environment: env,
+        key,
+        format,
+        value,
+        comment,
+        isSecret,
+        description,
+      }),
     onSuccess: (res) => {
       setSaveError(null);
       setComment("");
@@ -187,7 +205,9 @@ function EditPage() {
       setSaveError(err.message);
       // 将服务端语法校验错误标注到编辑器首行
       if (err.code === Code.InvalidArgument) {
-        applyMarkers(MARKER_SERVER, [{ line: 1, column: 1, endLine: 1, endColumn: 200, message: err.message }]);
+        applyMarkers(MARKER_SERVER, [
+          { line: 1, column: 1, endLine: 1, endColumn: 200, message: err.message },
+        ]);
       }
     },
   });
@@ -220,7 +240,9 @@ function EditPage() {
   const formattable = canFormat(format);
   const firstIssue = check.issues[0];
   const saveBlocked = !check.ok;
-  const saveDisabledReason = saveBlocked ? t("edit.saveBlocked", { format: formatLabel(format) }) : "";
+  const saveDisabledReason = saveBlocked
+    ? t("edit.saveBlocked", { format: formatLabel(format) })
+    : "";
 
   const editorNode = useMemo(
     () => (
@@ -264,7 +286,9 @@ function EditPage() {
   if (isError) {
     return (
       <Box sx={{ maxWidth: 900, mx: "auto" }}>
-        <Alert severity="error">{t("edit.loadFailed", { message: toAppError(error).message })}</Alert>
+        <Alert severity="error">
+          {t("edit.loadFailed", { message: toAppError(error).message })}
+        </Alert>
       </Box>
     );
   }
@@ -278,7 +302,12 @@ function EditPage() {
       }
     >
       <span>
-        <Button size="small" startIcon={<Wand2 size={18} />} disabled={!formattable} onClick={doFormat}>
+        <Button
+          size="small"
+          startIcon={<Wand2 size={18} />}
+          disabled={!formattable}
+          onClick={doFormat}
+        >
           {t("edit.format")}
         </Button>
       </span>

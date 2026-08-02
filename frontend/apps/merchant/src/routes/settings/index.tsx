@@ -1,6 +1,6 @@
 /**
  * 商家端设置页面
- * 
+ *
  * 修复样式问题
  */
 
@@ -23,9 +23,21 @@ import { tokens } from "@/styles/theme";
 
 /** 通知开关。文案 key 显式列出，不用字段名拼。 */
 const NOTIFY_ITEMS = [
-  { labelKey: "settings.notify.newOrder.label", descKey: "settings.notify.newOrder.desc", defaultChecked: true },
-  { labelKey: "settings.notify.lowStock.label", descKey: "settings.notify.lowStock.desc", defaultChecked: true },
-  { labelKey: "settings.notify.refund.label", descKey: "settings.notify.refund.desc", defaultChecked: false },
+  {
+    labelKey: "settings.notify.newOrder.label",
+    descKey: "settings.notify.newOrder.desc",
+    defaultChecked: true,
+  },
+  {
+    labelKey: "settings.notify.lowStock.label",
+    descKey: "settings.notify.lowStock.desc",
+    defaultChecked: true,
+  },
+  {
+    labelKey: "settings.notify.refund.label",
+    descKey: "settings.notify.refund.desc",
+    defaultChecked: false,
+  },
 ] as const;
 
 export const Route = createFileRoute("/settings/")({
@@ -57,24 +69,42 @@ function SettingsPage() {
             </Typography>
             <Box sx={{ display: "flex", flexDirection: "column", gap: 2.5 }}>
               <Box>
-                <Typography variant="body2" sx={{ color: "text.secondary", mb: 1 }}>{t("settings.basic.name")}</Typography>
+                <Typography variant="body2" sx={{ color: "text.secondary", mb: 1 }}>
+                  {t("settings.basic.name")}
+                </Typography>
                 <TextField fullWidth size="small" defaultValue={shopInfo.name} />
               </Box>
               <Box>
-                <Typography variant="body2" sx={{ color: "text.secondary", mb: 1 }}>{t("settings.basic.description")}</Typography>
-                <TextField fullWidth size="small" defaultValue={shopInfo.description} multiline rows={3} />
+                <Typography variant="body2" sx={{ color: "text.secondary", mb: 1 }}>
+                  {t("settings.basic.description")}
+                </Typography>
+                <TextField
+                  fullWidth
+                  size="small"
+                  defaultValue={shopInfo.description}
+                  multiline
+                  rows={3}
+                />
               </Box>
               <Box>
-                <Typography variant="body2" sx={{ color: "text.secondary", mb: 1 }}>{t("settings.basic.phone")}</Typography>
+                <Typography variant="body2" sx={{ color: "text.secondary", mb: 1 }}>
+                  {t("settings.basic.phone")}
+                </Typography>
                 <TextField fullWidth size="small" defaultValue={shopInfo.phone} />
               </Box>
               <Box>
-                <Typography variant="body2" sx={{ color: "text.secondary", mb: 1 }}>{t("settings.basic.address")}</Typography>
+                <Typography variant="body2" sx={{ color: "text.secondary", mb: 1 }}>
+                  {t("settings.basic.address")}
+                </Typography>
                 <TextField fullWidth size="small" defaultValue={shopInfo.address} />
               </Box>
               <Divider sx={{ my: 1 }} />
               <Box sx={{ display: "flex", justifyContent: "flex-end" }}>
-                <Button variant="contained" startIcon={<Save size={16} />} sx={{ bgcolor: "primary.main" }}>
+                <Button
+                  variant="contained"
+                  startIcon={<Save size={16} />}
+                  sx={{ bgcolor: "primary.main" }}
+                >
                   {t("settings.save")}
                 </Button>
               </Box>
@@ -90,7 +120,11 @@ function SettingsPage() {
             </Typography>
             <Box sx={{ display: "flex", flexDirection: "column", alignItems: "center" }}>
               <Box sx={{ position: "relative", mb: 2 }}>
-                <Avatar sx={{ width: 120, height: 120, bgcolor: "primary.main", fontSize: "2.5rem" }}>{t("settings.avatar.initial")}</Avatar>
+                <Avatar
+                  sx={{ width: 120, height: 120, bgcolor: "primary.main", fontSize: "2.5rem" }}
+                >
+                  {t("settings.avatar.initial")}
+                </Avatar>
                 <Box
                   component="button"
                   sx={{
@@ -112,8 +146,12 @@ function SettingsPage() {
                   <Camera size={16} color="white" />
                 </Box>
               </Box>
-              <Typography variant="body2" sx={{ color: "text.secondary", textAlign: "center" }}>{t("settings.avatar.upload")}</Typography>
-              <Typography variant="caption" sx={{ color: "text.disabled", mt: 0.5 }}>{t("settings.avatar.formats")}</Typography>
+              <Typography variant="body2" sx={{ color: "text.secondary", textAlign: "center" }}>
+                {t("settings.avatar.upload")}
+              </Typography>
+              <Typography variant="caption" sx={{ color: "text.disabled", mt: 0.5 }}>
+                {t("settings.avatar.formats")}
+              </Typography>
             </Box>
           </CardContent>
         </Card>
@@ -131,8 +169,12 @@ function SettingsPage() {
                   control={<Switch defaultChecked={item.defaultChecked} />}
                   label={
                     <Box>
-                      <Typography variant="body2" sx={{ fontWeight: 500 }}>{t(item.labelKey)}</Typography>
-                      <Typography variant="caption" sx={{ color: "text.secondary" }}>{t(item.descKey)}</Typography>
+                      <Typography variant="body2" sx={{ fontWeight: 500 }}>
+                        {t(item.labelKey)}
+                      </Typography>
+                      <Typography variant="caption" sx={{ color: "text.secondary" }}>
+                        {t(item.descKey)}
+                      </Typography>
                     </Box>
                   }
                   sx={{ mx: 0, alignItems: "flex-start", gap: 2 }}

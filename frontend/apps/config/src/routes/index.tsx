@@ -122,7 +122,9 @@ function BrowserPage() {
                 </Box>
               );
             }}
-            renderInput={(params) => <TextField {...params} label={t("browser.namespace")} size="small" />}
+            renderInput={(params) => (
+              <TextField {...params} label={t("browser.namespace")} size="small" />
+            )}
           />
           <Autocomplete
             freeSolo
@@ -131,7 +133,9 @@ function BrowserPage() {
             onChange={(_, v) => setEnvironment(v ?? "")}
             onInputChange={(_, v) => setEnvironment(v)}
             sx={{ minWidth: 140 }}
-            renderInput={(params) => <TextField {...params} label={t("browser.environment")} size="small" />}
+            renderInput={(params) => (
+              <TextField {...params} label={t("browser.environment")} size="small" />
+            )}
           />
           <TextField
             label={t("browser.prefixFilter")}
@@ -150,7 +154,11 @@ function BrowserPage() {
               <RefreshCw size={18} />
             </IconButton>
           </Tooltip>
-          <Button variant="contained" startIcon={<Plus size={18} />} onClick={() => setNewOpen(true)}>
+          <Button
+            variant="contained"
+            startIcon={<Plus size={18} />}
+            onClick={() => setNewOpen(true)}
+          >
             {t("browser.newKey")}
           </Button>
         </Box>
@@ -196,11 +204,17 @@ function BrowserPage() {
               <ListItemButton key={e.key} onClick={() => openKey(e.key)} sx={{ px: sp[4] }}>
                 <KeyRound size={16} style={{ marginRight: 12, opacity: 0.6 }} />
                 <ListItemText
-                  primary={<Box component="span" sx={{ fontFamily: "monospace" }}>{e.key}</Box>}
+                  primary={
+                    <Box component="span" sx={{ fontFamily: "monospace" }}>
+                      {e.key}
+                    </Box>
+                  }
                   secondary={`v${e.version} · ${e.updatedBy || "—"}`}
                 />
                 <Box sx={{ display: "flex", alignItems: "center", gap: sp[1] }}>
-                  {e.isSecret && <Chip label="secret" size="small" color="warning" variant="outlined" />}
+                  {e.isSecret && (
+                    <Chip label="secret" size="small" color="warning" variant="outlined" />
+                  )}
                   <Chip label={formatLabel(e.format)} size="small" variant="outlined" />
                 </Box>
               </ListItemButton>

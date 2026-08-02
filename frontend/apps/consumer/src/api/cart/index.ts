@@ -102,7 +102,12 @@ export class CartApiClient {
     return response.totalCount;
   }
 
-  async updateCartItemQuantity(spuId: string, skuId: string, merchantId: string, quantity: number): Promise<number> {
+  async updateCartItemQuantity(
+    spuId: string,
+    skuId: string,
+    merchantId: string,
+    quantity: number,
+  ): Promise<number> {
     const response = await client.updateCartItemQuantity({
       spuId: BigInt(spuId),
       skuId: BigInt(skuId),

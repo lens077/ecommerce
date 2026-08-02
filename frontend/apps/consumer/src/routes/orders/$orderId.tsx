@@ -3,14 +3,7 @@
  */
 
 import { createFileRoute } from "@tanstack/react-router";
-import {
-  Box,
-  Button,
-  Card,
-  CardContent,
-  Divider,
-  Typography,
-} from "@mui/material";
+import { Box, Button, Card, CardContent, Divider, Typography } from "@mui/material";
 import { useNavigate } from "@tanstack/react-router";
 import { useState } from "react";
 import { useFormat, useTranslation } from "@ecommerce/i18n";
@@ -41,7 +34,9 @@ function OrderDetailPage() {
   const navigate = useNavigate();
   const { t } = useTranslation();
   const { formatCurrency } = useFormat();
-  const [orderStatus, setOrderStatus] = useState<"pending" | "paid" | "shipped" | "completed">("pending");
+  const [orderStatus, setOrderStatus] = useState<"pending" | "paid" | "shipped" | "completed">(
+    "pending",
+  );
 
   // 模拟订单数据
   const order = {
@@ -54,7 +49,13 @@ function OrderDetailPage() {
       detail: "北京市朝阳区建国路88号SOHO现代城1号楼101室",
     },
     items: [
-      { name: "iPhone 15 Pro Max 256GB 钛金色", price: 9999, quantity: 1, image: "", specs: "钛金色/256GB" },
+      {
+        name: "iPhone 15 Pro Max 256GB 钛金色",
+        price: 9999,
+        quantity: 1,
+        image: "",
+        specs: "钛金色/256GB",
+      },
     ],
     totalAmount: 9999,
     freight: 0,
@@ -115,7 +116,10 @@ function OrderDetailPage() {
         <CardContent sx={{ p: 2 }}>
           <Box sx={{ display: "flex", alignItems: "flex-start", gap: 2 }}>
             <Box sx={{ flex: 1 }}>
-              <Typography variant="body2" sx={{ fontWeight: 500, color: tokens.colors.text.primary, mb: 1 }}>
+              <Typography
+                variant="body2"
+                sx={{ fontWeight: 500, color: tokens.colors.text.primary, mb: 1 }}
+              >
                 {order.address.name} {order.address.phone}
               </Typography>
               <Typography variant="body2" sx={{ color: tokens.colors.text.secondary }}>
@@ -129,7 +133,10 @@ function OrderDetailPage() {
       {/* 商品列表 */}
       <Card sx={{ mx: 2, mt: 2 }}>
         <CardContent sx={{ p: 2 }}>
-          <Typography variant="body2" sx={{ fontWeight: 500, color: tokens.colors.text.primary, mb: 2 }}>
+          <Typography
+            variant="body2"
+            sx={{ fontWeight: 500, color: tokens.colors.text.primary, mb: 2 }}
+          >
             {order.shopName}
           </Typography>
           <Box sx={{ display: "flex", flexDirection: "column", gap: 2 }}>
@@ -155,7 +162,10 @@ function OrderDetailPage() {
                     <Typography variant="caption" sx={{ color: tokens.colors.text.secondary }}>
                       x{item.quantity}
                     </Typography>
-                    <Typography variant="body2" sx={{ fontWeight: 600, color: tokens.colors.accent.red }}>
+                    <Typography
+                      variant="body2"
+                      sx={{ fontWeight: 600, color: tokens.colors.accent.red }}
+                    >
                       {formatCurrency(item.price)}
                     </Typography>
                   </Box>
@@ -170,23 +180,39 @@ function OrderDetailPage() {
       <Card sx={{ mx: 2, mt: 2 }}>
         <CardContent sx={{ p: 2 }}>
           <Box sx={{ display: "flex", justifyContent: "space-between", mb: 1 }}>
-            <Typography variant="body2" sx={{ color: tokens.colors.text.secondary }}>{t("orderDetail.orderNo")}</Typography>
-            <Typography variant="body2" sx={{ color: tokens.colors.text.primary, fontWeight: 500 }}>{order.id}</Typography>
+            <Typography variant="body2" sx={{ color: tokens.colors.text.secondary }}>
+              {t("orderDetail.orderNo")}
+            </Typography>
+            <Typography variant="body2" sx={{ color: tokens.colors.text.primary, fontWeight: 500 }}>
+              {order.id}
+            </Typography>
           </Box>
           <Box sx={{ display: "flex", justifyContent: "space-between", mb: 1 }}>
-            <Typography variant="body2" sx={{ color: tokens.colors.text.secondary }}>{t("orderDetail.createTime")}</Typography>
-            <Typography variant="body2" sx={{ color: tokens.colors.text.primary }}>{order.createTime}</Typography>
+            <Typography variant="body2" sx={{ color: tokens.colors.text.secondary }}>
+              {t("orderDetail.createTime")}
+            </Typography>
+            <Typography variant="body2" sx={{ color: tokens.colors.text.primary }}>
+              {order.createTime}
+            </Typography>
           </Box>
           {order.payTime && (
             <Box sx={{ display: "flex", justifyContent: "space-between", mb: 1 }}>
-              <Typography variant="body2" sx={{ color: tokens.colors.text.secondary }}>{t("orderDetail.payTime")}</Typography>
-              <Typography variant="body2" sx={{ color: tokens.colors.text.primary }}>{order.payTime}</Typography>
+              <Typography variant="body2" sx={{ color: tokens.colors.text.secondary }}>
+                {t("orderDetail.payTime")}
+              </Typography>
+              <Typography variant="body2" sx={{ color: tokens.colors.text.primary }}>
+                {order.payTime}
+              </Typography>
             </Box>
           )}
           {order.shipTime && (
             <Box sx={{ display: "flex", justifyContent: "space-between", mb: 1 }}>
-              <Typography variant="body2" sx={{ color: tokens.colors.text.secondary }}>{t("orderDetail.shipTime")}</Typography>
-              <Typography variant="body2" sx={{ color: tokens.colors.text.primary }}>{order.shipTime}</Typography>
+              <Typography variant="body2" sx={{ color: tokens.colors.text.secondary }}>
+                {t("orderDetail.shipTime")}
+              </Typography>
+              <Typography variant="body2" sx={{ color: tokens.colors.text.primary }}>
+                {order.shipTime}
+              </Typography>
             </Box>
           )}
         </CardContent>
@@ -196,24 +222,36 @@ function OrderDetailPage() {
       <Card sx={{ mx: 2, mt: 2 }}>
         <CardContent sx={{ p: 2 }}>
           <Box sx={{ display: "flex", justifyContent: "space-between", mb: 1 }}>
-            <Typography variant="body2" sx={{ color: tokens.colors.text.secondary }}>{t("orderDetail.goodsAmount")}</Typography>
-            <Typography variant="body2" sx={{ color: tokens.colors.text.primary }}>{formatCurrency(order.totalAmount)}</Typography>
+            <Typography variant="body2" sx={{ color: tokens.colors.text.secondary }}>
+              {t("orderDetail.goodsAmount")}
+            </Typography>
+            <Typography variant="body2" sx={{ color: tokens.colors.text.primary }}>
+              {formatCurrency(order.totalAmount)}
+            </Typography>
           </Box>
           <Box sx={{ display: "flex", justifyContent: "space-between", mb: 1 }}>
-            <Typography variant="body2" sx={{ color: tokens.colors.text.secondary }}>{t("checkout.amount.freight")}</Typography>
+            <Typography variant="body2" sx={{ color: tokens.colors.text.secondary }}>
+              {t("checkout.amount.freight")}
+            </Typography>
             <Typography variant="body2" sx={{ color: tokens.colors.text.primary }}>
               {order.freight === 0 ? t("checkout.shipping.free") : formatCurrency(order.freight)}
             </Typography>
           </Box>
           {order.coupon > 0 && (
             <Box sx={{ display: "flex", justifyContent: "space-between", mb: 1 }}>
-              <Typography variant="body2" sx={{ color: tokens.colors.accent.green }}>{t("orderDetail.coupon")}</Typography>
-              <Typography variant="body2" sx={{ color: tokens.colors.accent.green }}>-{formatCurrency(order.coupon)}</Typography>
+              <Typography variant="body2" sx={{ color: tokens.colors.accent.green }}>
+                {t("orderDetail.coupon")}
+              </Typography>
+              <Typography variant="body2" sx={{ color: tokens.colors.accent.green }}>
+                -{formatCurrency(order.coupon)}
+              </Typography>
             </Box>
           )}
           <Divider sx={{ my: 1 }} />
           <Box sx={{ display: "flex", justifyContent: "space-between" }}>
-            <Typography variant="body1" sx={{ fontWeight: 500, color: tokens.colors.text.primary }}>{t("checkout.amount.total")}</Typography>
+            <Typography variant="body1" sx={{ fontWeight: 500, color: tokens.colors.text.primary }}>
+              {t("checkout.amount.total")}
+            </Typography>
             <Typography variant="body1" sx={{ fontWeight: 700, color: tokens.colors.accent.red }}>
               {formatCurrency(order.totalAmount + order.freight - order.coupon)}
             </Typography>

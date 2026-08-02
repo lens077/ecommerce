@@ -66,11 +66,46 @@ function OrdersPage() {
   const [search, setSearch] = useState("");
 
   const orders = [
-    { id: "ORD001", merchant: "优品数码", customer: "张先生", amount: 2999, status: "pending", createTime: "2024-06-12 10:30" },
-    { id: "ORD002", merchant: "苹果旗舰店", customer: "李女士", amount: 9999, status: "paid", createTime: "2024-06-12 09:15" },
-    { id: "ORD003", merchant: "小米专营店", customer: "王先生", amount: 599, status: "shipped", createTime: "2024-06-12 08:00" },
-    { id: "ORD004", merchant: "华为官方", customer: "赵女士", amount: 1299, status: "completed", createTime: "2024-06-11 16:45" },
-    { id: "ORD005", merchant: "优品数码", customer: "刘先生", amount: 3799, status: "refunding", createTime: "2024-06-11 14:20" },
+    {
+      id: "ORD001",
+      merchant: "优品数码",
+      customer: "张先生",
+      amount: 2999,
+      status: "pending",
+      createTime: "2024-06-12 10:30",
+    },
+    {
+      id: "ORD002",
+      merchant: "苹果旗舰店",
+      customer: "李女士",
+      amount: 9999,
+      status: "paid",
+      createTime: "2024-06-12 09:15",
+    },
+    {
+      id: "ORD003",
+      merchant: "小米专营店",
+      customer: "王先生",
+      amount: 599,
+      status: "shipped",
+      createTime: "2024-06-12 08:00",
+    },
+    {
+      id: "ORD004",
+      merchant: "华为官方",
+      customer: "赵女士",
+      amount: 1299,
+      status: "completed",
+      createTime: "2024-06-11 16:45",
+    },
+    {
+      id: "ORD005",
+      merchant: "优品数码",
+      customer: "刘先生",
+      amount: 3799,
+      status: "refunding",
+      createTime: "2024-06-11 14:20",
+    },
   ];
 
   return (
@@ -165,7 +200,10 @@ function OrdersPage() {
                         </Typography>
                       </TableCell>
                       <TableCell>
-                        <Typography variant="body2" sx={{ fontWeight: 600, color: tokens.colors.accent.red }}>
+                        <Typography
+                          variant="body2"
+                          sx={{ fontWeight: 600, color: tokens.colors.accent.red }}
+                        >
                           {formatCurrency(order.amount)}
                         </Typography>
                       </TableCell>
@@ -173,7 +211,11 @@ function OrdersPage() {
                         <Chip
                           label={t(`orders.status.${order.status as OrderStatus}`)}
                           size="small"
-                          sx={{ bgcolor: statusColor.bg, color: statusColor.color, fontWeight: 500 }}
+                          sx={{
+                            bgcolor: statusColor.bg,
+                            color: statusColor.color,
+                            fontWeight: 500,
+                          }}
                         />
                       </TableCell>
                       <TableCell>

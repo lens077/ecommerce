@@ -99,7 +99,14 @@ function ReportsPage() {
                     >
                       <stat.icon size={24} color={stat.color} />
                     </Box>
-                    <Box sx={{ display: "flex", alignItems: "center", gap: 0.5, color: tokens.colors.accent.green }}>
+                    <Box
+                      sx={{
+                        display: "flex",
+                        alignItems: "center",
+                        gap: 0.5,
+                        color: tokens.colors.accent.green,
+                      }}
+                    >
                       <TrendingUp size={14} />
                       <Typography variant="caption" sx={{ fontWeight: 500 }}>
                         {stat.change}

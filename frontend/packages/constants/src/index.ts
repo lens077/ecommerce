@@ -1,2 +1,2 @@
-export * from "./search"
-export * from "./status"
+export * from "./search";
+export * from "./status";

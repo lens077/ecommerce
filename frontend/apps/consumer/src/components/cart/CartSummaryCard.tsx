@@ -34,15 +34,15 @@ export function CartSummaryCard({
   if (variant === "sidebar") {
     return (
       <Box
-      sx={{
-        position: "sticky",
-        top: 64,
-        bgcolor: tokens.colors.background.card,
-        border: `1px solid ${tokens.colors.border.default}`,
-        borderRadius: tokens.radius.lg,
-        p: sp[4],
-      }}
-    >
+        sx={{
+          position: "sticky",
+          top: 64,
+          bgcolor: tokens.colors.background.card,
+          border: `1px solid ${tokens.colors.border.default}`,
+          borderRadius: tokens.radius.lg,
+          p: sp[4],
+        }}
+      >
         {/* 全选 */}
         <Box
           onClick={() => onSelectAll(!allSelected)}
@@ -109,10 +109,7 @@ export function CartSummaryCard({
           <Typography variant="body1" sx={{ color: tokens.colors.text.primary, fontWeight: 500 }}>
             {t("cart.summary.total")}
           </Typography>
-          <Typography
-            variant="h5"
-            sx={{ color: tokens.colors.accent.red, fontWeight: 700 }}
-          >
+          <Typography variant="h5" sx={{ color: tokens.colors.accent.red, fontWeight: 700 }}>
             {formatCurrency(summary.selectedPrice)}
           </Typography>
         </Box>
@@ -133,7 +130,10 @@ export function CartSummaryCard({
             fontSize: "1rem",
             boxShadow: "none",
             "&:hover": { bgcolor: tokens.colors.accent.darkGray, boxShadow: "none" },
-            "&:disabled": { bgcolor: tokens.colors.border.default, color: tokens.colors.text.disabled },
+            "&:disabled": {
+              bgcolor: tokens.colors.border.default,
+              color: tokens.colors.text.disabled,
+            },
           }}
         >
           {t("cart.checkoutWithCount", { count: summary.selectedQuantity })}
@@ -157,15 +157,15 @@ export function CartSummaryCard({
       }}
     >
       <Box
-          sx={{
-            maxWidth: 960,
-            mx: "auto",
-            display: "flex",
-            alignItems: "center",
-            justifyContent: "space-between",
-            gap: sp[4],
-          }}
-        >
+        sx={{
+          maxWidth: 960,
+          mx: "auto",
+          display: "flex",
+          alignItems: "center",
+          justifyContent: "space-between",
+          gap: sp[4],
+        }}
+      >
         {/* 全选 */}
         <Box
           onClick={() => onSelectAll(!allSelected)}
@@ -189,11 +189,7 @@ export function CartSummaryCard({
 
         {/* 价格汇总 */}
         <Box sx={{ flex: 1, textAlign: "right" }}>
-          <Typography
-            component="span"
-            variant="body2"
-            sx={{ color: tokens.colors.text.secondary }}
-          >
+          <Typography component="span" variant="body2" sx={{ color: tokens.colors.text.secondary }}>
             {t("cart.summary.totalInline")}
           </Typography>
           <Typography
@@ -221,7 +217,10 @@ export function CartSummaryCard({
             fontSize: "0.9rem",
             boxShadow: "none",
             "&:hover": { bgcolor: tokens.colors.accent.darkGray, boxShadow: "none" },
-            "&:disabled": { bgcolor: tokens.colors.border.default, color: tokens.colors.text.disabled },
+            "&:disabled": {
+              bgcolor: tokens.colors.border.default,
+              color: tokens.colors.text.disabled,
+            },
           }}
         >
           {t("cart.checkoutWithCount", { count: summary.selectedQuantity })}

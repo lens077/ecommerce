@@ -1,6 +1,6 @@
 /**
  * 空购物车组件
- * 
+ *
  * 购物车为空时显示
  */
 
@@ -40,11 +40,7 @@ export function EmptyCart({ onNavigateHome }: EmptyCartProps) {
           mb: sp[6],
         }}
       >
-        <ShoppingCart
-          size={50}
-          color={tokens.colors.text.disabled}
-          strokeWidth={1.5}
-        />
+        <ShoppingCart size={50} color={tokens.colors.text.disabled} strokeWidth={1.5} />
       </Box>
 
       <Typography
@@ -84,7 +80,7 @@ export function EmptyCart({ onNavigateHome }: EmptyCartProps) {
             bgcolor: tokens.colors.accent.darkGray,
             boxShadow: "none",
           },
-            whiteSpace: "nowrap"
+          whiteSpace: "nowrap",
         }}
       >
         {t("cart.empty.action")}

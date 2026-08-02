@@ -1,6 +1,6 @@
 /**
  * 虚拟列表组件
- * 
+ *
  * 用于大量数据的列表渲染，提升性能
  */
 
@@ -38,25 +38,28 @@ export function VirtualList<T>({
   const startIndex = Math.max(0, Math.floor(scrollTop / itemHeight) - overscan);
   const endIndex = Math.min(
     items.length - 1,
-    Math.ceil((scrollTop + containerHeight) / itemHeight) + overscan
+    Math.ceil((scrollTop + containerHeight) / itemHeight) + overscan,
   );
 
   // 滚动处理
-  const handleScroll = useCallback((event: React.UIEvent<HTMLDivElement>) => {
-    const target = event.currentTarget;
-    setScrollTop(target.scrollTop);
+  const handleScroll = useCallback(
+    (event: React.UIEvent<HTMLDivElement>) => {
+      const target = event.currentTarget;
+      setScrollTop(target.scrollTop);
 
-    // 检测是否滚动到底部
-    if (onEndReached) {
-      const { scrollHeight, scrollTop, clientHeight } = target;
-      const distanceFromBottom = scrollHeight - scrollTop - clientHeight;
-      const threshold = itemHeight * endReachedThreshold;
+      // 检测是否滚动到底部
+      if (onEndReached) {
+        const { scrollHeight, scrollTop, clientHeight } = target;
+        const distanceFromBottom = scrollHeight - scrollTop - clientHeight;
+        const threshold = itemHeight * endReachedThreshold;
 
-      if (distanceFromBottom < threshold) {
-        onEndReached();
+        if (distanceFromBottom < threshold) {
+          onEndReached();
+        }
       }
-    }
-  }, [itemHeight, onEndReached, endReachedThreshold]);
+    },
+    [itemHeight, onEndReached, endReachedThreshold],
+  );
 
   // 设置容器高度
   useEffect(() => {
@@ -91,7 +94,7 @@ export function VirtualList<T>({
           }}
         >
           {renderItem(items[i], i)}
-        </Box>
+        </Box>,
       );
     }
   }
@@ -107,9 +110,7 @@ export function VirtualList<T>({
         ...sx,
       }}
     >
-      <Box sx={{ height: totalHeight, position: "relative" }}>
-        {visibleItems}
-      </Box>
+      <Box sx={{ height: totalHeight, position: "relative" }}>{visibleItems}</Box>
     </Box>
   );
 }

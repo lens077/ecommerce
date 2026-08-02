@@ -161,7 +161,9 @@ export function validateContent(text: string, format: ConfigFormat): ValidateRes
 
 /** PLAINTEXT 无从格式化,其余三种都支持。 */
 export function canFormat(format: ConfigFormat): boolean {
-  return format === ConfigFormat.JSON || format === ConfigFormat.YAML || format === ConfigFormat.TOML;
+  return (
+    format === ConfigFormat.JSON || format === ConfigFormat.YAML || format === ConfigFormat.TOML
+  );
 }
 
 /**

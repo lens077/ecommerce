@@ -2,8 +2,8 @@
   "name": "@ecommerce/tauri",
   "version": "0.0.1",
   "private": true,
-  "type": "module",
   "description": "桌面端（Tauri）专属胶水：环境探测、Rust 侧 fetch、本地设置、OAuth 子窗口桥接",
+  "type": "module",
   "main": "./src/index.ts",
   "types": "./src/index.ts",
   "exports": {

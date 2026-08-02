@@ -1,5 +1,5 @@
-const ANON_KEY = "ecommerce.anon_id"
-const SESSION_KEY = "ecommerce.session_id"
+const ANON_KEY = "ecommerce.anon_id";
+const SESSION_KEY = "ecommerce.session_id";
 
 /**
  * 匿名标识。跨会话保留在 localStorage —— 这是把"同一个人上周逛过什么"和
@@ -8,7 +8,7 @@ const SESSION_KEY = "ecommerce.session_id"
  * 登录之后网关会注入 x-md-global-user-id，服务端优先用它，这个 id 就自动退居备用。
  */
 export function anonId(): string {
-    return persistentId(safeStorage("local"), ANON_KEY)
+  return persistentId(safeStorage("local"), ANON_KEY);
 }
 
 /**
@@ -17,38 +17,38 @@ export function anonId(): string {
  * 不按会话划窗口去重，read_feedback_types 会被刷成噪声。
  */
 export function sessionId(): string {
-    return persistentId(safeStorage("session"), SESSION_KEY)
+  return persistentId(safeStorage("session"), SESSION_KEY);
 }
 
 function persistentId(store: Storage | null, key: string): string {
-    if (!store) return randomId()
-    const existing = store.getItem(key)
-    if (existing) return existing
-    const fresh = randomId()
-    try {
-        store.setItem(key, fresh)
-    } catch {
-        // 隐私模式下写入会抛异常。降级成一次性 id，埋点照发，只是串不起来。
-    }
-    return fresh
+  if (!store) return randomId();
+  const existing = store.getItem(key);
+  if (existing) return existing;
+  const fresh = randomId();
+  try {
+    store.setItem(key, fresh);
+  } catch {
+    // 隐私模式下写入会抛异常。降级成一次性 id，埋点照发，只是串不起来。
+  }
+  return fresh;
 }
 
 function randomId(): string {
-    if (typeof crypto !== "undefined" && typeof crypto.randomUUID === "function") {
-        return crypto.randomUUID()
-    }
-    return `${Date.now().toString(36)}-${Math.random().toString(36).slice(2, 10)}`
+  if (typeof crypto !== "undefined" && typeof crypto.randomUUID === "function") {
+    return crypto.randomUUID();
+  }
+  return `${Date.now().toString(36)}-${Math.random().toString(36).slice(2, 10)}`;
 }
 
 /** Safari 隐私模式下访问 storage 会直接抛异常，不能裸用。 */
 function safeStorage(kind: "local" | "session"): Storage | null {
-    try {
-        const store = kind === "local" ? window.localStorage : window.sessionStorage
-        const probe = "__ecommerce_probe__"
-        store.setItem(probe, "1")
-        store.removeItem(probe)
-        return store
-    } catch {
-        return null
-    }
+  try {
+    const store = kind === "local" ? window.localStorage : window.sessionStorage;
+    const probe = "__ecommerce_probe__";
+    store.setItem(probe, "1");
+    store.removeItem(probe);
+    return store;
+  } catch {
+    return null;
+  }
 }

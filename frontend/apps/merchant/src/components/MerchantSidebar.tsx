@@ -1,18 +1,12 @@
 /**
  * 商家端侧边栏
- * 
+ *
  * 修复样式问题
  */
 
 import { Box, Typography } from "@mui/material";
 import { useNavigate, useLocation } from "@tanstack/react-router";
-import {
-  LayoutDashboard,
-  Package,
-  FileText,
-  Store,
-  LogOut,
-} from "lucide-react";
+import { LayoutDashboard, Package, FileText, Store, LogOut } from "lucide-react";
 import { useTranslation } from "@ecommerce/i18n";
 import { tokens } from "@/styles/theme";
 

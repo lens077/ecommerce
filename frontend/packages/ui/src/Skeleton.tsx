@@ -1,6 +1,6 @@
 /**
  * 骨架屏组件
- * 
+ *
  * 提供各种场景的骨架屏占位
  */
 
@@ -139,12 +139,7 @@ export function DetailPageSkeleton() {
     <Box sx={{ p: 3 }}>
       <Box sx={{ display: "flex", gap: 4, flexDirection: { xs: "column", md: "row" } }}>
         <Box sx={{ flex: 1 }}>
-          <Skeleton
-            variant="rectangular"
-            height={400}
-            sx={{ borderRadius: 2 }}
-            animation="wave"
-          />
+          <Skeleton variant="rectangular" height={400} sx={{ borderRadius: 2 }} animation="wave" />
         </Box>
         <Box sx={{ flex: 1 }}>
           <Skeleton width="80%" height={40} animation="wave" />
