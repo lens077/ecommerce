@@ -33,6 +33,10 @@ spec:
             - name: DEPLOYMENT_MODE
               value: "prod"
             # CONSUL_* 同时供「读配置」与「服务注册发现」使用
+            # 配置数据源:consul(默认) | configcenter。显式二选一,不做失败自动降级。
+            - name: CONFIG_SOURCE
+              value: "consul"
+            # CONSUL_* 同时供「读配置」与「服务注册发现」使用
             - name: CONSUL_ENABLED
               value: "true"
             - name: CONSUL_ADDR
@@ -43,6 +47,15 @@ spec:
               value: "true"
             - name: CONSUL_PATH
               value: "ecommerce/merchant/prod.yml"
+            # 仅 CONFIG_SOURCE=configcenter 时生效,切到配置中心时把上面改成 configcenter 并放开以下四项:
+            # - name: CONFIG_CENTER_ADDR
+            #   value: "http://ecommerce-config-service:30010"
+            # - name: CONFIG_CENTER_NAMESPACE
+            #   value: "merchant"
+            # - name: CONFIG_CENTER_ENV
+            #   value: "prod"
+            # - name: CONFIG_CENTER_KEY
+            #   value: "bootstrap.yaml"
           ports:
             - containerPort: 30007
               protocol: TCP

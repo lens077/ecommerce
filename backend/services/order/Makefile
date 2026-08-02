@@ -25,6 +25,10 @@ k8s-dev:
 k8s-prod:
 	kubectl apply -f deploy/prod
 
+# 配置数据源二选一,CONFIG_SOURCE 决定;两种情况下 Consul 都照常做服务注册/发现。
+# make dev      -> Consul KV(默认,与历史一致)
+# make dev-cc   -> 配置中心 config-service
+
 .PHONY: dev
 dev:
 	SERVICE_NAME="order-service" \
@@ -33,6 +37,17 @@ dev:
 	CONSUL_PATH=ecommerce/order/dev.yml \
 	CONSUL_SCHEME=http \
 	CONSUL_INSECURE_SKIP_VERIFY=true \
+	go run cmd/server/main.go
+
+.PHONY: dev-cc
+dev-cc:
+	SERVICE_NAME="order-service" \
+	CONSUL_ENABLED=true \
+	CONFIG_SOURCE=configcenter \
+	CONFIG_CENTER_ADDR=http://127.0.0.1:30010 \
+	CONFIG_CENTER_NAMESPACE=order \
+	CONFIG_CENTER_ENV=dev \
+	CONFIG_CENTER_KEY=bootstrap.yaml \
 	go run cmd/server/main.go
 
 .PHONY: pre
