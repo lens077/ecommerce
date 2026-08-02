@@ -49,7 +49,8 @@ p2c selector 返回 `ErrNoAvailable`，前端收到 503。
 调用点保证 `Register` 已同步返回，`checkID` 一定存在。
 11 个服务的这段代码此前字节完全相同（`internal/pkg/registry/consul.go`），统一修改。
 
-配套调了两个 KV 参数（11 份 `ecommerce/<svc>/dev.yml`）：
+配套调了两个 KV 参数（11 份 `ecommerce/<svc>/dev.yml` + 8 份 `ecommerce/<svc>/pre.yml`，
+两个环境逐字一致）：
 
 | 字段 | 旧值 | 新值 | 理由 |
 |---|---|---|---|
@@ -74,6 +75,11 @@ p2c selector 返回 `ErrNoAvailable`，前端收到 503。
   紧邻的注释写「当应用退出时，TtlCheckPinger 的 context 也会关闭」是**错的**。
   影响仅为退出时多一条 `UpdateTTL` 错误日志。
 - fx hook 块在 11 个服务里已漂移出 5 个变体，本轮没有统一。
+- **仓库里的 `backend/services/*/configs/{dev,pre}.yml` 仍是旧值**（`6s`/`25s`）。
+  它们不是运行时配置——服务只从 Consul KV 读（`CONFIG_SOURCE`，见
+  `backend/services/cart/internal/pkg/config/source.go`），这些文件是种子/参考副本。
+  其中 `merchant`/`payment`/`product` 的 `dev.yml` 还停在更老的 schema
+  （`ping_interval_seconds: 1`，没有 `check` 段），是独立的漂移问题。
 
 **排查捷径**
 
