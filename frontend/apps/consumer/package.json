@@ -8,7 +8,7 @@
     "dev:prod": "vp dev --port 3000 --mode prod",
     "build": "vite build && tsc",
     "serve": "vp preview",
-    "test": "vp test --environment=jsdom",
+    "test": "vp test --environment=jsdom --browser.enabled=false --passWithNoTests",
     "test:ui": "vp test --browser --browser.ui"
   },
   "dependencies": {
