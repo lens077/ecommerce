@@ -225,7 +225,8 @@ function RouteComponent() {
               alignItems: "center",
               p: 3,
               borderBottom: "1px solid rgba(102, 126, 234, 0.08)",
-              background: "linear-gradient(135deg, rgba(102, 126, 234, 0.03) 0%, rgba(118, 75, 162, 0.03) 100%)",
+              background:
+                "linear-gradient(135deg, rgba(102, 126, 234, 0.03) 0%, rgba(118, 75, 162, 0.03) 100%)",
             }}
           >
             <Typography variant="h6" sx={{ fontWeight: 600, color: "text.primary" }}>
@@ -280,7 +281,10 @@ function RouteComponent() {
                         <Typography variant="subtitle1" sx={{ fontWeight: 600 }}>
                           {address.recipientName}
                         </Typography>
-                        <Typography variant="subtitle1" sx={{ fontWeight: 600, color: "text.primary" }}>
+                        <Typography
+                          variant="subtitle1"
+                          sx={{ fontWeight: 600, color: "text.primary" }}
+                        >
                           {address.recipientPhone}
                         </Typography>
                         {address.isDefault && (
@@ -304,7 +308,8 @@ function RouteComponent() {
                       <Box sx={{ display: "flex", alignItems: "flex-start", gap: 1 }}>
                         <LocationOn sx={{ fontSize: 16, color: "text.secondary", mt: 0.3 }} />
                         <Typography variant="body2" color="text.secondary">
-                          {address.detail?.province} {address.detail?.city} {address.detail?.district} {address.detail?.detail}
+                          {address.detail?.province} {address.detail?.city}{" "}
+                          {address.detail?.district} {address.detail?.detail}
                         </Typography>
                       </Box>
                     }
@@ -360,7 +365,8 @@ function RouteComponent() {
                       width: 80,
                       height: 80,
                       borderRadius: "50%",
-                      background: "linear-gradient(135deg, rgba(102, 126, 234, 0.1) 0%, rgba(118, 75, 162, 0.1) 100%)",
+                      background:
+                        "linear-gradient(135deg, rgba(102, 126, 234, 0.1) 0%, rgba(118, 75, 162, 0.1) 100%)",
                       display: "flex",
                       alignItems: "center",
                       justifyContent: "center",
@@ -406,14 +412,18 @@ function RouteComponent() {
                 label={t("addresses.form.recipient")}
                 fullWidth
                 value={formData.recipientName}
-                onChange={(e) => setFormData((prev) => ({ ...prev, recipientName: e.target.value }))}
+                onChange={(e) =>
+                  setFormData((prev) => ({ ...prev, recipientName: e.target.value }))
+                }
                 sx={{ mb: 2 }}
               />
               <TextField
                 label={t("addresses.form.phone")}
                 fullWidth
                 value={formData.recipientPhone}
-                onChange={(e) => setFormData((prev) => ({ ...prev, recipientPhone: e.target.value }))}
+                onChange={(e) =>
+                  setFormData((prev) => ({ ...prev, recipientPhone: e.target.value }))
+                }
                 sx={{ mb: 2 }}
               />
             </Box>

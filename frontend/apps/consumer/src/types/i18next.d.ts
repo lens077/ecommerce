@@ -10,12 +10,12 @@ import type errors from "@ecommerce/i18n/src/locales/zh-CN/errors.json";
 import type consumer from "../locales/zh-CN/consumer.json";
 
 declare module "i18next" {
-    interface CustomTypeOptions {
-        defaultNS: "consumer";
-        resources: {
-            consumer: typeof consumer;
-            common: typeof common;
-            errors: typeof errors;
-        };
-    }
+  interface CustomTypeOptions {
+    defaultNS: "consumer";
+    resources: {
+      consumer: typeof consumer;
+      common: typeof common;
+      errors: typeof errors;
+    };
+  }
 }

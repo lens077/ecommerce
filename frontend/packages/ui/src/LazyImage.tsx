@@ -1,6 +1,6 @@
 /**
  * 懒加载图片组件
- * 
+ *
  * 使用 Intersection Observer API 实现图片懒加载
  * 当图片进入视口时才加载
  */
@@ -17,14 +17,7 @@ interface LazyImageProps {
   onError?: () => void;
 }
 
-export function LazyImage({
-  src,
-  alt,
-  sx,
-  placeholder,
-  onLoad,
-  onError,
-}: LazyImageProps) {
+export function LazyImage({ src, alt, sx, placeholder, onLoad, onError }: LazyImageProps) {
   const [isLoaded, setIsLoaded] = useState(false);
   const [isInView, setIsInView] = useState(false);
   const [hasError, setHasError] = useState(false);
@@ -45,7 +38,7 @@ export function LazyImage({
       {
         rootMargin: "100px",
         threshold: 0.1,
-      }
+      },
     );
 
     observer.observe(imgRef.current);

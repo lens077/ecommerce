@@ -100,10 +100,7 @@ function PaymentResultPage() {
           <Typography variant="caption" sx={{ color: tokens.colors.text.secondary }}>
             {t("payment.amount")}
           </Typography>
-          <Typography
-            variant="h4"
-            sx={{ fontWeight: 700, color: tokens.colors.accent.red, mt: 1 }}
-          >
+          <Typography variant="h4" sx={{ fontWeight: 700, color: tokens.colors.accent.red, mt: 1 }}>
             {formatCurrency(9999)}
           </Typography>
         </Box>

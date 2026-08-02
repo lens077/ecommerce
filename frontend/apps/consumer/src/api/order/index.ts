@@ -38,9 +38,7 @@ export class OrderApiClient {
     const message = {
       // 仅纯数字的ID才转 BigInt；当前购物车本地存储会生成非数字的临时ID
       // （见结算页报告中的 cart_item_id 缺口），此处容错以免提交时抛错。
-      CartItemIds: request.cartItemIds
-        .filter((id) => /^\d+$/.test(id))
-        .map((id) => BigInt(id)),
+      CartItemIds: request.cartItemIds.filter((id) => /^\d+$/.test(id)).map((id) => BigInt(id)),
       addressId: request.addressId,
       remark: request.remark,
       requestId: request.requestId,

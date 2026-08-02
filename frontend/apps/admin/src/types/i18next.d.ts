@@ -10,12 +10,12 @@ import type errors from "@ecommerce/i18n/src/locales/zh-CN/errors.json";
 import type admin from "../locales/zh-CN/admin.json";
 
 declare module "i18next" {
-    interface CustomTypeOptions {
-        defaultNS: "admin";
-        resources: {
-            admin: typeof admin;
-            common: typeof common;
-            errors: typeof errors;
-        };
-    }
+  interface CustomTypeOptions {
+    defaultNS: "admin";
+    resources: {
+      admin: typeof admin;
+      common: typeof common;
+      errors: typeof errors;
+    };
+  }
 }

@@ -122,11 +122,7 @@ function MerchantsPage() {
         <Card sx={{ mb: 3 }}>
           <CardContent sx={{ p: 2 }}>
             <Box sx={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
-              <Tabs
-                value={tab}
-                onChange={(_, v) => setTab(v)}
-                sx={{ minHeight: 36 }}
-              >
+              <Tabs value={tab} onChange={(_, v) => setTab(v)} sx={{ minHeight: 36 }}>
                 {TABS.map((value) => (
                   <Tab
                     key={value}
@@ -200,7 +196,11 @@ function MerchantsPage() {
                         <Chip
                           label={t(`merchants.status.${merchant.status as MerchantStatus}`)}
                           size="small"
-                          sx={{ bgcolor: statusColor.bg, color: statusColor.color, fontWeight: 500 }}
+                          sx={{
+                            bgcolor: statusColor.bg,
+                            color: statusColor.color,
+                            fontWeight: 500,
+                          }}
                         />
                       </TableCell>
                       <TableCell>

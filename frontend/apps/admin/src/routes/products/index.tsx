@@ -127,11 +127,7 @@ function ProductsPage() {
         <Card sx={{ mb: 3 }}>
           <CardContent sx={{ p: 2 }}>
             <Box sx={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
-              <Tabs
-                value={tab}
-                onChange={(_, v) => setTab(v)}
-                sx={{ minHeight: 36 }}
-              >
+              <Tabs value={tab} onChange={(_, v) => setTab(v)} sx={{ minHeight: 36 }}>
                 {TABS.map((value) => (
                   <Tab
                     key={value}
@@ -207,7 +203,10 @@ function ProductsPage() {
                             <ImageIcon size={20} color={tokens.colors.text.secondary} />
                           </Avatar>
                           <Box>
-                            <Typography variant="body2" sx={{ fontWeight: 500, color: "text.primary" }}>
+                            <Typography
+                              variant="body2"
+                              sx={{ fontWeight: 500, color: "text.primary" }}
+                            >
                               {product.name}
                             </Typography>
                             <Typography variant="caption" sx={{ color: "text.secondary" }}>
@@ -227,7 +226,10 @@ function ProductsPage() {
                         </Typography>
                       </TableCell>
                       <TableCell>
-                        <Typography variant="body2" sx={{ fontWeight: 600, color: tokens.colors.accent.red }}>
+                        <Typography
+                          variant="body2"
+                          sx={{ fontWeight: 600, color: tokens.colors.accent.red }}
+                        >
                           {formatCurrency(product.price)}
                         </Typography>
                       </TableCell>
@@ -240,7 +242,11 @@ function ProductsPage() {
                         <Chip
                           label={t(`products.status.${product.status as ReviewStatus}`)}
                           size="small"
-                          sx={{ bgcolor: statusColor.bg, color: statusColor.color, fontWeight: 500 }}
+                          sx={{
+                            bgcolor: statusColor.bg,
+                            color: statusColor.color,
+                            fontWeight: 500,
+                          }}
                         />
                       </TableCell>
                       <TableCell>

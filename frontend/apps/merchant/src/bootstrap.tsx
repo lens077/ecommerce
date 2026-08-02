@@ -79,5 +79,5 @@ ReactDOM.createRoot(document.getElementById("root")!).render(
         )}
       </LocalizedTheme>
     </QueryClientProvider>
-  </React.StrictMode>
+  </React.StrictMode>,
 );

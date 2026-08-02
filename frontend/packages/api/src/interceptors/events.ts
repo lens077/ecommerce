@@ -6,10 +6,10 @@ export type AuthErrorListener = (err: AppError) => void;
 const authErrorListeners = new Set<AuthErrorListener>();
 
 export const onAuthError = (listener: AuthErrorListener) => {
-    authErrorListeners.add(listener);
-    return () => authErrorListeners.delete(listener); // 返回取消订阅的函数
+  authErrorListeners.add(listener);
+  return () => authErrorListeners.delete(listener); // 返回取消订阅的函数
 };
 
 export const emitAuthError = (err: AppError) => {
-    authErrorListeners.forEach((l) => l(err));
+  authErrorListeners.forEach((l) => l(err));
 };

@@ -44,11 +44,51 @@ function UsersPage() {
   const [search, setSearch] = useState("");
 
   const users = [
-    { id: "u001", nickname: "张三", phone: "138****1234", orders: 12, amount: 15800, status: "normal", joinTime: "2024-01-15" },
-    { id: "u002", nickname: "李四", phone: "139****5678", orders: 8, amount: 8999, status: "normal", joinTime: "2024-02-20" },
-    { id: "u003", nickname: "王五", phone: "137****9012", orders: 25, amount: 45600, status: "vip", joinTime: "2024-03-10" },
-    { id: "u004", nickname: "赵六", phone: "136****3456", orders: 3, amount: 1200, status: "normal", joinTime: "2024-05-01" },
-    { id: "u005", nickname: "钱七", phone: "135****7890", orders: 18, amount: 28900, status: "vip", joinTime: "2024-04-15" },
+    {
+      id: "u001",
+      nickname: "张三",
+      phone: "138****1234",
+      orders: 12,
+      amount: 15800,
+      status: "normal",
+      joinTime: "2024-01-15",
+    },
+    {
+      id: "u002",
+      nickname: "李四",
+      phone: "139****5678",
+      orders: 8,
+      amount: 8999,
+      status: "normal",
+      joinTime: "2024-02-20",
+    },
+    {
+      id: "u003",
+      nickname: "王五",
+      phone: "137****9012",
+      orders: 25,
+      amount: 45600,
+      status: "vip",
+      joinTime: "2024-03-10",
+    },
+    {
+      id: "u004",
+      nickname: "赵六",
+      phone: "136****3456",
+      orders: 3,
+      amount: 1200,
+      status: "normal",
+      joinTime: "2024-05-01",
+    },
+    {
+      id: "u005",
+      nickname: "钱七",
+      phone: "135****7890",
+      orders: 18,
+      amount: 28900,
+      status: "vip",
+      joinTime: "2024-04-15",
+    },
   ];
 
   return (
@@ -102,7 +142,10 @@ function UsersPage() {
                           {user.nickname[0]}
                         </Avatar>
                         <Box>
-                          <Typography variant="body2" sx={{ fontWeight: 500, color: "text.primary" }}>
+                          <Typography
+                            variant="body2"
+                            sx={{ fontWeight: 500, color: "text.primary" }}
+                          >
                             {user.nickname}
                           </Typography>
                           <Typography variant="caption" sx={{ color: "text.secondary" }}>
@@ -122,7 +165,10 @@ function UsersPage() {
                       </Typography>
                     </TableCell>
                     <TableCell>
-                      <Typography variant="body2" sx={{ fontWeight: 600, color: tokens.colors.accent.red }}>
+                      <Typography
+                        variant="body2"
+                        sx={{ fontWeight: 600, color: tokens.colors.accent.red }}
+                      >
                         {formatCurrency(user.amount)}
                       </Typography>
                     </TableCell>
@@ -131,8 +177,14 @@ function UsersPage() {
                         label={t(user.status === "vip" ? "users.level.vip" : "users.level.normal")}
                         size="small"
                         sx={{
-                          bgcolor: user.status === "vip" ? "rgba(245, 158, 11, 0.1)" : tokens.colors.background.primary,
-                          color: user.status === "vip" ? tokens.colors.accent.yellow : tokens.colors.text.secondary,
+                          bgcolor:
+                            user.status === "vip"
+                              ? "rgba(245, 158, 11, 0.1)"
+                              : tokens.colors.background.primary,
+                          color:
+                            user.status === "vip"
+                              ? tokens.colors.accent.yellow
+                              : tokens.colors.text.secondary,
                           fontWeight: 500,
                         }}
                       />

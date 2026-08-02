@@ -1,4 +1,3 @@
-
 export interface CartItem {
   cartItemId: string;
   spuId: string;
@@ -33,9 +32,7 @@ export interface CartSummary {
   selectedPrice: number;
 }
 
-
 // Storage
-
 
 const STORAGE_KEY = "ecommerce_cart";
 
@@ -63,9 +60,7 @@ function saveToStorage(state: CartState): void {
   }
 }
 
-
 // Event System
-
 
 const UPDATE_EVENT = "cart-updated";
 
@@ -79,9 +74,7 @@ export function subscribe(callback: () => void): () => void {
   return () => window.removeEventListener(UPDATE_EVENT, handler);
 }
 
-
 // Cart Store
-
 
 class CartStore {
   private state: CartState;
@@ -99,10 +92,7 @@ class CartStore {
   }
 
   private recalculateTotal(): void {
-    this.state.totalQuantity = this.state.items.reduce(
-      (sum, item) => sum + item.quantity,
-      0
-    );
+    this.state.totalQuantity = this.state.items.reduce((sum, item) => sum + item.quantity, 0);
   }
 
   private persist(): void {
@@ -115,7 +105,7 @@ class CartStore {
    */
   addItem(item: Omit<CartItem, "createdAt" | "updatedAt">): void {
     const existingIndex = this.state.items.findIndex(
-      (i) => i.skuId === item.skuId && i.merchantId === item.merchantId
+      (i) => i.skuId === item.skuId && i.merchantId === item.merchantId,
     );
 
     if (existingIndex >= 0) {
@@ -236,18 +226,9 @@ class CartStore {
     const selectedItems = this.state.items.filter((item) => item.selected);
     return {
       totalQuantity: this.state.totalQuantity,
-      totalPrice: this.state.items.reduce(
-        (sum, item) => sum + item.price * item.quantity,
-        0
-      ),
-      selectedQuantity: selectedItems.reduce(
-        (sum, item) => sum + item.quantity,
-        0
-      ),
-      selectedPrice: selectedItems.reduce(
-        (sum, item) => sum + item.price * item.quantity,
-        0
-      ),
+      totalPrice: this.state.items.reduce((sum, item) => sum + item.price * item.quantity, 0),
+      selectedQuantity: selectedItems.reduce((sum, item) => sum + item.quantity, 0),
+      selectedPrice: selectedItems.reduce((sum, item) => sum + item.price * item.quantity, 0),
     };
   }
 }

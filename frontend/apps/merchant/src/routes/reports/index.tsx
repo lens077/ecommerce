@@ -123,7 +123,8 @@ function ReportsPage() {
         },
         axisLabel: {
           color: tokens.colors.text.secondary,
-          formatter: (value: number) => `¥${value >= 1000 ? `${(value / 1000).toFixed(1)}k` : value}`,
+          formatter: (value: number) =>
+            `¥${value >= 1000 ? `${(value / 1000).toFixed(1)}k` : value}`,
         },
         splitLine: {
           lineStyle: {
@@ -241,11 +242,31 @@ function ReportsPage() {
           },
         },
         data: [
-          { value: 4850, name: t("reports.category.phone"), itemStyle: { color: tokens.colors.accent.blue } },
-          { value: 3200, name: t("reports.category.computer"), itemStyle: { color: tokens.colors.accent.green } },
-          { value: 2340, name: t("reports.category.accessory"), itemStyle: { color: tokens.colors.accent.yellow } },
-          { value: 1560, name: t("reports.category.wearable"), itemStyle: { color: tokens.colors.accent.red } },
-          { value: 630, name: t("reports.category.other"), itemStyle: { color: tokens.colors.text.disabled } },
+          {
+            value: 4850,
+            name: t("reports.category.phone"),
+            itemStyle: { color: tokens.colors.accent.blue },
+          },
+          {
+            value: 3200,
+            name: t("reports.category.computer"),
+            itemStyle: { color: tokens.colors.accent.green },
+          },
+          {
+            value: 2340,
+            name: t("reports.category.accessory"),
+            itemStyle: { color: tokens.colors.accent.yellow },
+          },
+          {
+            value: 1560,
+            name: t("reports.category.wearable"),
+            itemStyle: { color: tokens.colors.accent.red },
+          },
+          {
+            value: 630,
+            name: t("reports.category.other"),
+            itemStyle: { color: tokens.colors.text.disabled },
+          },
         ],
       },
     ],
@@ -341,7 +362,14 @@ function ReportsPage() {
       </Box>
 
       {/* 统计卡片 */}
-      <Box sx={{ display: "grid", gridTemplateColumns: { xs: "1fr 1fr", md: "repeat(4, 1fr)" }, gap: 3, mb: 4 }}>
+      <Box
+        sx={{
+          display: "grid",
+          gridTemplateColumns: { xs: "1fr 1fr", md: "repeat(4, 1fr)" },
+          gap: 3,
+          mb: 4,
+        }}
+      >
         {stats.map((stat) => (
           <Card key={stat.labelKey} sx={{ height: "100%" }}>
             <CardContent sx={{ p: 3 }}>
@@ -359,7 +387,14 @@ function ReportsPage() {
                 >
                   <stat.icon size={24} color={stat.color} />
                 </Box>
-                <Box sx={{ display: "flex", alignItems: "center", gap: 0.5, color: tokens.colors.accent.green }}>
+                <Box
+                  sx={{
+                    display: "flex",
+                    alignItems: "center",
+                    gap: 0.5,
+                    color: tokens.colors.accent.green,
+                  }}
+                >
                   <TrendingUp size={14} />
                   <Typography variant="caption" sx={{ fontWeight: 500 }}>
                     {stat.change}

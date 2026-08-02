@@ -1,6 +1,6 @@
 /**
  * Design System - Design Tokens
- * 
+ *
  * 核心设计原则：极简主义 + 高端质感
  * - 扁平化设计，细边框
  * - 充足的空间感和呼吸感
@@ -12,30 +12,30 @@ export const tokens = {
   colors: {
     // 背景色
     background: {
-      primary: "#f9fafb",    // 极浅灰白
-      card: "#ffffff",       // 纯白卡片
-      overlay: "rgba(0, 0, 0, 0.5)",  // 遮罩层
+      primary: "#f9fafb", // 极浅灰白
+      card: "#ffffff", // 纯白卡片
+      overlay: "rgba(0, 0, 0, 0.5)", // 遮罩层
     },
     // 文本色
     text: {
-      primary: "#111827",    // 深炭黑（主文本）
+      primary: "#111827", // 深炭黑（主文本）
       secondary: "#6b7280", // 克制灰色（次要文本）
-      disabled: "#d1d5db",   // 禁用灰色
-      inverse: "#ffffff",   // 反色文本
+      disabled: "#d1d5db", // 禁用灰色
+      inverse: "#ffffff", // 反色文本
     },
     // 边框色
     border: {
-      default: "#e5e7eb",    // 极细浅灰边框
-      hover: "#d1d5db",    // 悬停边框
-      focus: "#000000",     // 聚焦边框
+      default: "#e5e7eb", // 极细浅灰边框
+      hover: "#d1d5db", // 悬停边框
+      focus: "#000000", // 聚焦边框
     },
     // 功能色
     accent: {
-      black: "#000000",     // 纯黑（主按钮）
-      darkGray: "#374151",  // 深灰（次要按钮）
-      red: "#ef4444",       // 红色（价格/警告）
-      green: "#10b981",     // 绿色（成功）
-      blue: "#3b82f6",      // 蓝色（链接）
+      black: "#000000", // 纯黑（主按钮）
+      darkGray: "#374151", // 深灰（次要按钮）
+      red: "#ef4444", // 红色（价格/警告）
+      green: "#10b981", // 绿色（成功）
+      blue: "#3b82f6", // 蓝色（链接）
     },
   },
 
@@ -114,19 +114,19 @@ export const sp = {
 
 // 便捷的间距常量
 export const space = {
-  xs: tokens.spacing[1],   // 4px
-  sm: tokens.spacing[2],   // 8px
-  md: tokens.spacing[4],    // 16px
-  lg: tokens.spacing[6],    // 24px
-  xl: tokens.spacing[8],    // 32px
+  xs: tokens.spacing[1], // 4px
+  sm: tokens.spacing[2], // 8px
+  md: tokens.spacing[4], // 16px
+  lg: tokens.spacing[6], // 24px
+  xl: tokens.spacing[8], // 32px
 } as const;
 
 // 圆角常量
 export const radius = {
-  sm: tokens.radius.sm,     // 4px
-  md: tokens.radius.md,     // 8px
-  lg: tokens.radius.lg,     // 12px
-  xl: tokens.radius.xl,     // 16px
+  sm: tokens.radius.sm, // 4px
+  md: tokens.radius.md, // 8px
+  lg: tokens.radius.lg, // 12px
+  xl: tokens.radius.xl, // 16px
   full: tokens.radius.full, // 全圆角
 } as const;
 

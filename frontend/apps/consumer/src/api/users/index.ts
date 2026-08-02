@@ -1,9 +1,9 @@
-import { createClient } from "@connectrpc/connect"
+import { createClient } from "@connectrpc/connect";
 import { UserService } from "@/gen/api";
 import { createAppTransport } from "@ecommerce/api";
 
-const transport = createAppTransport()
-const client = createClient(UserService, transport)
+const transport = createAppTransport();
+const client = createClient(UserService, transport);
 
 export const userApi = {
   getUserProfile: (signal?: AbortSignal) => {

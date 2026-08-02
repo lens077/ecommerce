@@ -271,7 +271,8 @@ const Footer: React.FC = () => {
         <Box
           sx={{
             height: 1,
-            background: "linear-gradient(90deg, transparent, rgba(102, 126, 234, 0.2), transparent)",
+            background:
+              "linear-gradient(90deg, transparent, rgba(102, 126, 234, 0.2), transparent)",
             mb: 4,
           }}
         />

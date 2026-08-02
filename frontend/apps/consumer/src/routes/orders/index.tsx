@@ -3,15 +3,7 @@
  */
 
 import { createFileRoute, Link } from "@tanstack/react-router";
-import {
-  Box,
-  Card,
-  CardContent,
-  Typography,
-  Chip,
-  Tabs,
-  Tab,
-} from "@mui/material";
+import { Box, Card, CardContent, Typography, Chip, Tabs, Tab } from "@mui/material";
 import { useState } from "react";
 import { useFormat, useTranslation } from "@ecommerce/i18n";
 import { tokens } from "@/styles/tokens";
@@ -42,9 +34,7 @@ function OrdersPage() {
       id: "ORD20240612001",
       shopName: "优品数码旗舰店",
       status: "pending",
-      items: [
-        { name: "iPhone 15 Pro Max 256GB", price: 9999, quantity: 1, image: "" },
-      ],
+      items: [{ name: "iPhone 15 Pro Max 256GB", price: 9999, quantity: 1, image: "" }],
       totalAmount: 9999,
       createTime: "2024-06-12 10:30:25",
     },
@@ -52,9 +42,7 @@ function OrdersPage() {
       id: "ORD20240612002",
       shopName: "苹果官方旗舰店",
       status: "paid",
-      items: [
-        { name: "AirPods Pro 2", price: 1899, quantity: 2, image: "" },
-      ],
+      items: [{ name: "AirPods Pro 2", price: 1899, quantity: 2, image: "" }],
       totalAmount: 3798,
       createTime: "2024-06-12 09:15:00",
     },
@@ -62,9 +50,7 @@ function OrdersPage() {
       id: "ORD20240611001",
       shopName: "优品数码旗舰店",
       status: "shipped",
-      items: [
-        { name: "MacBook Air M2", price: 7999, quantity: 1, image: "" },
-      ],
+      items: [{ name: "MacBook Air M2", price: 7999, quantity: 1, image: "" }],
       totalAmount: 7999,
       createTime: "2024-06-11 16:45:30",
     },
@@ -72,9 +58,7 @@ function OrdersPage() {
       id: "ORD20240610001",
       shopName: "苹果官方旗舰店",
       status: "completed",
-      items: [
-        { name: "iPad Pro 12.9", price: 8499, quantity: 1, image: "" },
-      ],
+      items: [{ name: "iPad Pro 12.9", price: 8499, quantity: 1, image: "" }],
       totalAmount: 8499,
       createTime: "2024-06-10 11:05:55",
     },
@@ -174,7 +158,10 @@ function OrdersPage() {
                         mb: 2,
                       }}
                     >
-                      <Typography variant="body2" sx={{ fontWeight: 500, color: tokens.colors.text.primary }}>
+                      <Typography
+                        variant="body2"
+                        sx={{ fontWeight: 500, color: tokens.colors.text.primary }}
+                      >
                         {order.shopName}
                       </Typography>
                       <Chip
@@ -223,7 +210,10 @@ function OrdersPage() {
                             >
                               {item.name}
                             </Typography>
-                            <Typography variant="caption" sx={{ color: tokens.colors.text.secondary }}>
+                            <Typography
+                              variant="caption"
+                              sx={{ color: tokens.colors.text.secondary }}
+                            >
                               x{item.quantity}
                             </Typography>
                           </Box>

@@ -13,9 +13,9 @@ import adminZh from "./locales/zh-CN/admin.json";
 
 // i18n 要在 bootstrap 之前就绪：渲染时资源已经在内存里，组件侧不需要 Suspense，也不会闪文案
 await initI18n({
-    ns: "admin",
-    resources: { "zh-CN": adminZh, en: adminEn },
-    titleKey: "meta.title",
+  ns: "admin",
+  resources: { "zh-CN": adminZh, en: adminEn },
+  titleKey: "meta.title",
 });
 
 await import("./bootstrap");

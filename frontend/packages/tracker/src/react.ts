@@ -1,7 +1,7 @@
-import { useCallback, useEffect, useRef } from "react"
+import { useCallback, useEffect, useRef } from "react";
 
-import { tracker } from "./tracker"
-import type { RecommendResult, TrackedEvent } from "./types"
+import { tracker } from "./tracker";
+import type { RecommendResult, TrackedEvent } from "./types";
 
 /**
  * 把 ref 挂到商品卡片上就会自动上报曝光：
@@ -12,27 +12,27 @@ import type { RecommendResult, TrackedEvent } from "./types"
  * itemId 变了会重新观察，组件卸载会自动解绑。
  */
 export function useImpression<T extends Element>(
-    itemId: string,
-    source?: string,
+  itemId: string,
+  source?: string,
 ): (el: T | null) => void {
-    const disposeRef = useRef<(() => void) | null>(null)
+  const disposeRef = useRef<(() => void) | null>(null);
 
-    // 卸载时收尾。ref 回调本身在元素被移除时会带着 null 再调一次，
-    // 但 React 严格模式下的双重挂载会绕过它，所以这里补一道。
-    useEffect(() => {
-        return () => {
-            disposeRef.current?.()
-            disposeRef.current = null
-        }
-    }, [])
+  // 卸载时收尾。ref 回调本身在元素被移除时会带着 null 再调一次，
+  // 但 React 严格模式下的双重挂载会绕过它，所以这里补一道。
+  useEffect(() => {
+    return () => {
+      disposeRef.current?.();
+      disposeRef.current = null;
+    };
+  }, []);
 
-    return useCallback(
-        (el: T | null) => {
-            disposeRef.current?.()
-            disposeRef.current = el ? tracker().observeImpression(el, itemId, source) : null
-        },
-        [itemId, source],
-    )
+  return useCallback(
+    (el: T | null) => {
+      disposeRef.current?.();
+      disposeRef.current = el ? tracker().observeImpression(el, itemId, source) : null;
+    },
+    [itemId, source],
+  );
 }
 
 /**
@@ -41,17 +41,17 @@ export function useImpression<T extends Element>(
  *   useProductView(spu.spuCode, "search:手机")
  */
 export function useProductView(itemId: string, source?: string): void {
-    useEffect(() => {
-        if (!itemId) return
-        const t = tracker()
-        t.read(itemId, source)
-        return t.startDwell(itemId, source)
-    }, [itemId, source])
+  useEffect(() => {
+    if (!itemId) return;
+    const t = tracker();
+    t.read(itemId, source);
+    return t.startDwell(itemId, source);
+  }, [itemId, source]);
 }
 
 /** 事件上报的函数式入口，避免在组件里到处 import tracker()。 */
 export function useTrack(): (event: TrackedEvent) => void {
-    return useCallback((event: TrackedEvent) => tracker().track(event), [])
+  return useCallback((event: TrackedEvent) => tracker().track(event), []);
 }
 
 /**
@@ -64,17 +64,17 @@ export function useTrack(): (event: TrackedEvent) => void {
  *   })
  */
 export function recommend(params?: {
-    category?: string
-    n?: number
-    offset?: number
-    sessionEvents?: TrackedEvent[]
+  category?: string;
+  n?: number;
+  offset?: number;
+  sessionEvents?: TrackedEvent[];
 }): Promise<RecommendResult> {
-    return tracker().recommend(params)
+  return tracker().recommend(params);
 }
 
 export function similarItems(
-    itemId: string,
-    params?: { category?: string; n?: number },
+  itemId: string,
+  params?: { category?: string; n?: number },
 ): Promise<RecommendResult> {
-    return tracker().similarItems(itemId, params)
+  return tracker().similarItems(itemId, params);
 }

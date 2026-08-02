@@ -1,8 +1,8 @@
 {
   "name": "@ecommerce/tracker",
   "version": "0.0.1",
-  "description": "浏览行为埋点，上报给 behavior 服务喂给 gorse",
   "private": true,
+  "description": "浏览行为埋点，上报给 behavior 服务喂给 gorse",
   "type": "module",
   "main": "./src/index.ts",
   "module": "./src/index.ts",
@@ -17,6 +17,11 @@
       "import": "./src/react.ts"
     }
   },
+  "devDependencies": {
+    "@types/react": "catalog:",
+    "react": "catalog:",
+    "typescript": "catalog:"
+  },
   "peerDependencies": {
     "react": "catalog:"
   },
@@ -24,10 +29,5 @@
     "react": {
       "optional": true
     }
-  },
-  "devDependencies": {
-    "@types/react": "catalog:",
-    "react": "catalog:",
-    "typescript": "catalog:"
   }
 }

@@ -63,10 +63,7 @@ export function RegionSelect({ value, onChange, onDistrictRequiredChange }: Regi
   }, [districts.data, onDistrictRequiredChange]);
 
   // 英文名个别缺失（数据里 name_en 允许为空）时退回中文，不留空白选项
-  const label = useCallback(
-    (r: Region) => (isEN && r.nameEn ? r.nameEn : r.name),
-    [isEN],
-  );
+  const label = useCallback((r: Region) => (isEN && r.nameEn ? r.nameEn : r.name), [isEN]);
 
   const handleProvince = (name: string) => {
     setProvinceId(provinces.data?.find((r) => r.name === name)?.id);

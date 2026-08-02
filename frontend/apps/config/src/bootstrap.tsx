@@ -99,7 +99,11 @@ if (rootElement && !rootElement.innerHTML) {
               <DesktopSettingsDialog />
             </Suspense>
           )}
-          <ReactQueryDevtools initialIsOpen={false} buttonPosition="bottom-right" position="bottom" />
+          <ReactQueryDevtools
+            initialIsOpen={false}
+            buttonPosition="bottom-right"
+            position="bottom"
+          />
         </QueryClientProvider>
       </LocalizedTheme>
     </StrictMode>,

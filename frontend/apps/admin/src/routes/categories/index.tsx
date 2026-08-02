@@ -98,8 +98,14 @@ function CategoriesPage() {
                           borderRadius: 1,
                           fontSize: "0.75rem",
                           fontWeight: 500,
-                          bgcolor: category.status === "enabled" ? "rgba(16, 185, 129, 0.1)" : tokens.colors.background.primary,
-                          color: category.status === "enabled" ? tokens.colors.accent.green : tokens.colors.text.disabled,
+                          bgcolor:
+                            category.status === "enabled"
+                              ? "rgba(16, 185, 129, 0.1)"
+                              : tokens.colors.background.primary,
+                          color:
+                            category.status === "enabled"
+                              ? tokens.colors.accent.green
+                              : tokens.colors.text.disabled,
                         }}
                       >
                         {t(

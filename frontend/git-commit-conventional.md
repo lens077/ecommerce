@@ -1,4 +1,3 @@
-
 ---
 name: git-commit-conventional
 description: |
@@ -59,9 +58,8 @@ fix(cart): 修复结算页金额计算错误
 ❌ 错误示例：
 
 text
-feat: 添加了微信快捷登录功能。   (结尾有句号且使用了“添加了”)
-Fix(Cart): 修复结算页金额计算错误 (首字母大写，scope 随意大写)
-2. Body - 详细描述（可选）
+feat: 添加了微信快捷登录功能。 (结尾有句号且使用了“添加了”)
+Fix(Cart): 修复结算页金额计算错误 (首字母大写，scope 随意大写) 2. Body - 详细描述（可选）
 解释 为什么 修改以及 如何 修改
 
 说明与之前行为的差异
@@ -76,8 +74,7 @@ fix(cart): 修复结算页金额计算错误
 由于未考虑运费优惠券的互斥逻辑，当用户同时使用满减券和免运费券时，
 总金额计算错误。本次修改增加了优惠券类型的优先级判断。
 
-Closes #245
-3. Footer - 备注（可选）
+Closes #245 3. Footer - 备注（可选）
 BREAKING CHANGE: 描述不兼容变更，全大写。
 
 Closes #issue 关闭关联的 Issue，可多个。
@@ -110,7 +107,7 @@ npx husky add .husky/commit-msg 'npx --no -- commitlint --edit "$1"'
 自动生成 CHANGELOG：使用 standard-version。
 
 bash
-npm run release   # 自动更新版本号、生成 changelog 并打 tag
+npm run release # 自动更新版本号、生成 changelog 并打 tag
 指令
 当用户要求编写 commit message、优化 git 提交、生成符合规范的提交信息时：
 

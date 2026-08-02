@@ -151,7 +151,14 @@ function DashboardPage() {
           <Grid size={{ xs: 12, lg: 8 }}>
             <Card>
               <CardContent sx={{ p: 3 }}>
-                <Box sx={{ display: "flex", justifyContent: "space-between", alignItems: "center", mb: 3 }}>
+                <Box
+                  sx={{
+                    display: "flex",
+                    justifyContent: "space-between",
+                    alignItems: "center",
+                    mb: 3,
+                  }}
+                >
                   <Typography variant="h6" sx={{ fontWeight: 600, color: "text.primary" }}>
                     {t("dashboard.recentOrders")}
                   </Typography>
@@ -198,9 +205,15 @@ function DashboardPage() {
                         <Box
                           component="tr"
                           key={order.id}
-                          sx={{ borderBottom: `1px solid ${tokens.colors.border.default}`, "&:last-child": { borderBottom: "none" } }}
+                          sx={{
+                            borderBottom: `1px solid ${tokens.colors.border.default}`,
+                            "&:last-child": { borderBottom: "none" },
+                          }}
                         >
-                          <Box component="td" sx={{ py: 1.5, px: 2, color: "text.primary", fontWeight: 500 }}>
+                          <Box
+                            component="td"
+                            sx={{ py: 1.5, px: 2, color: "text.primary", fontWeight: 500 }}
+                          >
                             {order.id}
                           </Box>
                           <Box component="td" sx={{ py: 1.5, px: 2, color: "text.secondary" }}>
@@ -209,7 +222,15 @@ function DashboardPage() {
                           <Box component="td" sx={{ py: 1.5, px: 2, color: "text.secondary" }}>
                             {order.customer}
                           </Box>
-                          <Box component="td" sx={{ py: 1.5, px: 2, color: tokens.colors.accent.red, fontWeight: 500 }}>
+                          <Box
+                            component="td"
+                            sx={{
+                              py: 1.5,
+                              px: 2,
+                              color: tokens.colors.accent.red,
+                              fontWeight: 500,
+                            }}
+                          >
                             {formatCurrency(order.amount)}
                           </Box>
                           <Box component="td" sx={{ py: 1.5, px: 2 }}>
@@ -242,7 +263,14 @@ function DashboardPage() {
           <Grid size={{ xs: 12, lg: 4 }}>
             <Card>
               <CardContent sx={{ p: 3 }}>
-                <Box sx={{ display: "flex", justifyContent: "space-between", alignItems: "center", mb: 3 }}>
+                <Box
+                  sx={{
+                    display: "flex",
+                    justifyContent: "space-between",
+                    alignItems: "center",
+                    mb: 3,
+                  }}
+                >
                   <Typography variant="h6" sx={{ fontWeight: 600, color: "text.primary" }}>
                     {t("dashboard.pendingMerchants")}
                   </Typography>
@@ -273,7 +301,10 @@ function DashboardPage() {
                       }}
                     >
                       <Box>
-                        <Typography variant="body2" sx={{ fontWeight: 500, color: "text.primary", mb: 0.5 }}>
+                        <Typography
+                          variant="body2"
+                          sx={{ fontWeight: 500, color: "text.primary", mb: 0.5 }}
+                        >
                           {merchant.name}
                         </Typography>
                         <Typography variant="caption" sx={{ color: "text.secondary" }}>
