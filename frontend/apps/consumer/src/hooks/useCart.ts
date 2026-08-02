@@ -7,9 +7,11 @@
  */
 
 import { i18next } from "@ecommerce/i18n";
+import { toAppError } from "@ecommerce/api";
 import { useCallback, useEffect, useState } from "react";
-import { useQuery, useQueryClient } from "@tanstack/react-query";
-import { cartApi, type AddToCartRequest } from "@/api/cart";
+import { createConnectQueryKey, useMutation, useQuery } from "@connectrpc/connect-query";
+import { useQueryClient } from "@tanstack/react-query";
+import { CartService, CartStatus, type GetCartResponse } from "@/gen/api";
 import {
   cartStore,
   subscribe,
@@ -18,24 +20,92 @@ import {
   type MerchantGroup,
 } from "@/store/cart";
 
+/** 灌进 store 的条目形状。createdAt/updatedAt 由 store 自己盖时间戳。 */
+type StoreCartInput = Omit<CartItem, "createdAt" | "updatedAt">;
+
 // 共享查询
 
 /**
- * 购物车条目的唯一 queryKey。
+ * 把 GetCart 的响应映射成 store 认的形状。
+ *
+ * 定义在模块作用域，理由有两条，第二条才是关键：
+ *
+ * 1. select 只在 `data` 引用变了**或 select 函数身份变了**时重跑。写成内联箭头函数
+ *    每次渲染都是新身份，于是每次渲染都重算一遍映射 —— 纯浪费。
+ * 2. 内联写法能不出事，全靠 TanStack 的结构共享（`replaceEqualDeep`）把新算出的数组
+ *    换回旧引用。一旦有人给这个查询加上 `structuralSharing: false`，内联 select 就会
+ *    每次渲染产出新引用 → 下面那个 `useEffect([backendItems])` 写 store → 订阅回调
+ *    setState → 再渲染 → **死循环**（实测过：测试进程根本跑不完）。模块级函数把这条
+ *    路堵死，不依赖结构共享兜底。
+ */
+function toStoreItems(res: GetCartResponse): StoreCartInput[] {
+  return res.items.map((item) => ({
+    cartItemId: item.cartItemId.toString(),
+    spuId: item.spuId.toString(),
+    skuId: item.skuId.toString(),
+    merchantId: item.merchantId,
+    shopName: item.shopName,
+    spuName: item.spuName,
+    skuName: item.skuName,
+    price: item.price,
+    // 后端没有单独的 costPrice 字段,沿用 price(与迁移前的行为一致)
+    costPrice: item.price,
+    quantity: item.quantity,
+    selected: item.selected,
+    skuThumbnailUrl: item.skuThumbnailUrl,
+  }));
+}
+
+/**
+ * 购物车条目查询。
  *
  * useCartBadge 和 useCart 必须共用它 —— 之前两者各拉各的（badge 走 GetCartSummary，
  * useCart 走裸 useEffect + GetCart），购物车页一次挂载会打出 4 个 POST：badge 1 次
  * 加 1 次重试，useCart 在 StrictMode 下双发（它的 isMounted 只挡了 setState，没挡请求）。
  * 合并后是 1 个请求，重试由 QueryClient 统一管。
+ *
+ * key 由 connect-query 从 schema + input + transport 推出，不再需要人为约定常量。
+ * select 是模块级函数，所以返回的数组引用在 data 不变时保持稳定 —— 见 toStoreItems。
  */
-const CART_ITEMS_QUERY_KEY = ["cart", "items"] as const;
-
 function useCartItemsQuery() {
-  return useQuery({
-    queryKey: CART_ITEMS_QUERY_KEY,
-    queryFn: () => cartApi.getCartItems(),
-    staleTime: 10000,
+  return useQuery(CartService.method.getCart, {}, { staleTime: 10000, select: toStoreItems });
+}
+
+/** GetCart 的 query key。写操作成功后拿它失效，AppBar 徽标才会跟着刷新。 */
+function useCartItemsKey() {
+  return createConnectQueryKey({
+    schema: CartService.method.getCart,
+    cardinality: "finite",
   });
+}
+
+/** 加购请求。字段与 AddProductToCart 对齐，但 ID 用 string，BigInt 转换收在 hook 里。 */
+export interface AddToCartRequest {
+  spuId: string;
+  skuId: string;
+  merchantId: string;
+  quantity: number;
+  selected: boolean;
+  spuName: string;
+  skuName: string;
+  price: number;
+  costPrice: number;
+  skuThumbnailUrl: string;
+}
+
+function toAddProductInput(request: AddToCartRequest) {
+  return {
+    spuId: BigInt(request.spuId),
+    skuId: BigInt(request.skuId),
+    merchantId: request.merchantId,
+    quantity: request.quantity,
+    selected: request.selected,
+    spuName: request.spuName,
+    skuName: request.skuName,
+    price: request.price,
+    skuThumbnailUrl: request.skuThumbnailUrl,
+    status: CartStatus.ACTIVE,
+  };
 }
 
 // useCartBadge
@@ -68,11 +138,16 @@ export function useCart() {
   const [merchantGroups, setMerchantGroups] = useState<MerchantGroup[]>(() =>
     cartStore.getMerchantGroups(),
   );
-  const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
   const queryClient = useQueryClient();
+  const cartItemsKey = useCartItemsKey();
   const { data: backendItems, isPending: isInitializing, error: loadError } = useCartItemsQuery();
+
+  const addProductToCart = useMutation(CartService.method.addProductToCart, {
+    // 服务端已经变了，让共享查询失效，AppBar 的徽标才会跟着刷新
+    onSuccess: () => queryClient.invalidateQueries({ queryKey: cartItemsKey }),
+  });
 
   // 订阅状态变化
   useEffect(() => {
@@ -83,28 +158,13 @@ export function useCart() {
     });
   }, []);
 
-  // 把后端数据灌进 store。依赖的是 react-query 的 data 引用：同一份数据引用稳定，
-  // 所以每次成功拉取只灌一次，StrictMode 重复执行 effect 也不会多发请求。
+  // 把后端数据灌进 store。映射本身在 toStoreItems 里（模块级 select，结果引用稳定），
+  // 这里只负责写 store —— 依赖只在真的拉到新数据时才变，StrictMode 下重复执行也不会多发请求。
   useEffect(() => {
     if (!backendItems) return;
 
     cartStore.clear();
-    backendItems.forEach((item) => {
-      cartStore.addItem({
-        cartItemId: item.cartItemId,
-        spuId: item.spuId,
-        skuId: item.skuId,
-        merchantId: item.merchantId,
-        shopName: item.shopName,
-        spuName: item.spuName,
-        skuName: item.skuName,
-        price: item.price,
-        costPrice: item.costPrice,
-        quantity: item.quantity,
-        selected: item.selected,
-        skuThumbnailUrl: item.skuThumbnailUrl,
-      });
-    });
+    backendItems.forEach((item) => cartStore.addItem(item));
   }, [backendItems]);
 
   useEffect(() => {
@@ -118,29 +178,23 @@ export function useCart() {
    */
   const addItem = useCallback(
     async (request: AddToCartRequest): Promise<void> => {
-      setIsLoading(true);
       setError(null);
 
       try {
-        // 调用 API（未来替换为真实 RPC）
-        const res = await cartApi.addToCart(request);
+        const res = await addProductToCart.mutateAsync(toAddProductInput(request));
 
         // 更新本地状态（cartItemId 取后端返回值）
         cartStore.addItem({
           ...request,
-          cartItemId: res.cartItemId,
+          cartItemId: res.cartItemId.toString(),
         });
-        // 服务端已经变了，让共享查询失效，AppBar 的徽标才会跟着刷新
-        await queryClient.invalidateQueries({ queryKey: CART_ITEMS_QUERY_KEY });
       } catch (err) {
-        const message = err instanceof Error ? err.message : i18next.t("consumer:cart.addFailed");
+        const message = toAppError(err).message || i18next.t("consumer:cart.addFailed");
         setError(message);
         throw err;
-      } finally {
-        setIsLoading(false);
       }
     },
-    [queryClient],
+    [addProductToCart],
   );
 
   /**
@@ -199,7 +253,7 @@ export function useCart() {
     items,
     summary,
     merchantGroups,
-    isLoading,
+    isLoading: addProductToCart.isPending,
     isInitializing,
     error,
     // 操作
@@ -223,44 +277,42 @@ export function useCart() {
  */
 export function useAddToCart(initialQuantity: number = 1) {
   const [quantity, setQuantity] = useState(initialQuantity);
-  const [isLoading, setIsLoading] = useState(false);
   const [isSuccess, setIsSuccess] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
   const queryClient = useQueryClient();
+  const cartItemsKey = useCartItemsKey();
+
+  const addProductToCart = useMutation(CartService.method.addProductToCart, {
+    // 商详页加购之后 AppBar 徽标要立刻变，否则要等 staleTime 到期
+    onSuccess: () => queryClient.invalidateQueries({ queryKey: cartItemsKey }),
+  });
 
   const addToCart = useCallback(
     async (request: Omit<AddToCartRequest, "quantity">): Promise<void> => {
-      setIsLoading(true);
       setError(null);
 
       try {
-        const res = await cartApi.addToCart({
-          ...request,
-          quantity,
-          selected: true,
-        });
+        const res = await addProductToCart.mutateAsync(
+          toAddProductInput({ ...request, quantity, selected: true }),
+        );
 
         cartStore.addItem({
           ...request,
           quantity,
           selected: true,
-          cartItemId: res.cartItemId,
+          cartItemId: res.cartItemId.toString(),
         });
-        // 商详页加购之后 AppBar 徽标要立刻变,否则要等 staleTime 到期
-        await queryClient.invalidateQueries({ queryKey: CART_ITEMS_QUERY_KEY });
 
         setIsSuccess(true);
         setTimeout(() => setIsSuccess(false), 2000);
       } catch (err) {
-        const message = err instanceof Error ? err.message : i18next.t("consumer:cart.addFailed");
+        const message = toAppError(err).message || i18next.t("consumer:cart.addFailed");
         setError(message);
         throw err;
-      } finally {
-        setIsLoading(false);
       }
     },
-    [quantity, queryClient],
+    [quantity, addProductToCart],
   );
 
   const clearError = useCallback(() => {
@@ -277,7 +329,7 @@ export function useAddToCart(initialQuantity: number = 1) {
 
   return {
     quantity,
-    isLoading,
+    isLoading: addProductToCart.isPending,
     isSuccess,
     error,
     increment,

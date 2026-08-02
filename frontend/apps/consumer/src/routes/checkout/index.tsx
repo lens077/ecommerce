@@ -5,7 +5,7 @@
  * - 商品：进页时由 useCart 从后端重拉购物车，取「已选中」项（按商家分组展示）
  * - 地址：AddressService 地址列表，页内弹层选择 / 新增（调用 createAddress）
  *
- * 下单：点「提交订单」→ orderApi.createOrder（携带防重 requestId）→ 跳支付页
+ * 下单：点「提交订单」→ orderService.CreateOrder → 跳支付页
  * 说明：优惠券/发货微服务暂未实现，运费恒 0（仅展示「免运费」），无优惠。
  */
 
@@ -31,7 +31,9 @@ import {
 import { Check, MapPin, Plus, X } from "lucide-react";
 import { useEffect, useMemo, useState } from "react";
 import { useFormat, useTranslation } from "@ecommerce/i18n";
-import { orderApi } from "@/api/order";
+import { useMutation } from "@connectrpc/connect-query";
+import { toAppError } from "@ecommerce/api";
+import { orderService } from "@/gen/api";
 import type { Address, AddressFormData } from "@/api/addresses/types";
 import { useAddresses } from "@/hooks/useAddresses";
 import { useCart } from "@/hooks/useCart";
@@ -55,13 +57,13 @@ function CheckoutPage() {
   const { items, isInitializing } = useCart();
   const { addresses, isLoading: addrLoading } = useAddresses();
 
-  // 防重令牌：进结算页时生成一次，提交时携带（页面存活期间不变）
-  const [requestId] = useState(() => crypto.randomUUID());
   const [remark, setRemark] = useState("");
   const [selectedAddressId, setSelectedAddressId] = useState<string | null>(null);
   const [addressDialogOpen, setAddressDialogOpen] = useState(false);
-  const [submitting, setSubmitting] = useState(false);
   const [submitError, setSubmitError] = useState<string | null>(null);
+
+  const createOrder = useMutation(orderService.method.createOrder);
+  const submitting = createOrder.isPending;
 
   // 已选中的购物车项，按商家分组
   const selectedItems = useMemo(() => items.filter((i) => i.selected), [items]);
@@ -101,22 +103,24 @@ function CheckoutPage() {
 
   const handleSubmit = async () => {
     if (!canSubmit || !selectedAddressId) return;
-    setSubmitting(true);
     setSubmitError(null);
     try {
-      await orderApi.createOrder({
-        cartItemIds: selectedItems.map((i) => i.cartItemId),
+      // TODO 防重令牌：proto 的 CreateOrderRequest 还没有 requestId 字段，
+      // 补字段并 `cd backend && make api` 之后再在这里带上，否则重复提交会建多单。
+      await createOrder.mutateAsync({
+        // 仅纯数字的 ID 才转 BigInt：本地临时购物车项的 ID 不是数字，
+        // 直接进 BigInt() 会在提交时抛错
+        CartItemIds: selectedItems
+          .map((i) => i.cartItemId)
+          .filter((id) => /^\d+$/.test(id))
+          .map((id) => BigInt(id)),
         addressId: selectedAddressId,
         remark,
-        requestId,
       });
       // 后端响应暂无 orderNo，先跳固定支付页占位
       navigate({ to: "/payment/result" });
     } catch (err) {
-      const message = err instanceof Error ? err.message : t("checkout.submitFailed");
-      setSubmitError(message);
-    } finally {
-      setSubmitting(false);
+      setSubmitError(toAppError(err).message || t("checkout.submitFailed"));
     }
   };
 

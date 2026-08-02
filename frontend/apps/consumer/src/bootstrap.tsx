@@ -14,6 +14,8 @@ import "@fontsource/roboto/400.css";
 import "@fontsource/roboto/500.css";
 import "@fontsource/roboto/700.css";
 import { Code, ConnectError } from "@connectrpc/connect";
+import { TransportProvider } from "@connectrpc/connect-query";
+import { getSharedTransport } from "@ecommerce/api";
 import { AuthProvider, useAuthState, useAuthActions } from "@/providers/AuthProvider";
 
 // 桌面端设置面板（Cmd/Ctrl + , 唤起）。懒加载，web 构建里这个 chunk 不会被请求。
@@ -97,21 +99,25 @@ if (rootElement && !rootElement.innerHTML) {
   root.render(
     <StrictMode>
       <LocalizedTheme>
-        <QueryClientProvider client={queryClient}>
-          <AuthProvider router={router}>
-            <InnerApp />
-          </AuthProvider>
-          {isTauri() && (
-            <Suspense fallback={null}>
-              <DesktopSettingsDialog />
-            </Suspense>
-          )}
-          <ReactQueryDevtools
-            initialIsOpen={false}
-            buttonPosition="bottom-right"
-            position="bottom"
-          />
-        </QueryClientProvider>
+        {/* TransportProvider 必须在 QueryClientProvider 外层：connect-query 的 hook
+            先取 transport 再算 query key。这里取的是单例，全 app 只有这一个引用。 */}
+        <TransportProvider transport={getSharedTransport()}>
+          <QueryClientProvider client={queryClient}>
+            <AuthProvider router={router}>
+              <InnerApp />
+            </AuthProvider>
+            {isTauri() && (
+              <Suspense fallback={null}>
+                <DesktopSettingsDialog />
+              </Suspense>
+            )}
+            <ReactQueryDevtools
+              initialIsOpen={false}
+              buttonPosition="bottom-right"
+              position="bottom"
+            />
+          </QueryClientProvider>
+        </TransportProvider>
       </LocalizedTheme>
     </StrictMode>,
   );
