@@ -13,8 +13,8 @@
 version: 1
 
 layout:
-  # 单仓：proto 契约与业务代码同仓，不存在多仓分支联动问题
-  mode: single-repo
+  # Config Center 已独立发布；其他服务仍在单仓。
+  mode: hybrid
   backend_service: "backend/services/{service}"
   backend_proto: "backend/api/{service}/v1"
   service_conf: "backend/services/{service}/internal/conf/v1/conf.proto"
@@ -127,7 +127,8 @@ services:
     # 注意：config 的 Bootstrap 没有 auth / search 块，只有 server data observability discovery log
     depends_on: []
     external: [postgres, redis]
-    note: "配置中心本体，设计见 CONFIG_CENTER_DESIGN.md"
+    repository: "github.com/lens077/config-center"
+    note: "独立配置中心；服务 Bootstrap 从 CONFIG_FILE 读取，设计见 CONFIG_CENTER_DESIGN.md"
 
   order:
     discovery: order-service

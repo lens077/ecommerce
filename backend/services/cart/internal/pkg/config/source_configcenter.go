@@ -18,23 +18,25 @@ var _ Source = (*configCenterSource)(nil)
 // configCenterSource 经 ConnectRPC 从 config-service 拉整份 Bootstrap。
 // 配置以「一个 key 一份 YAML」的粒度存储,由 namespace/environment/key 三元组定位。
 type configCenterSource struct {
-	client      configv1connect.ConfigServiceClient
-	addr        string
-	namespace   string
-	environment string
-	key         string
+	client       configv1connect.ConfigServiceClient
+	addr         string
+	namespace    string
+	environment  string
+	key          string
+	serviceToken string
 }
 
 // NewConfigCenterSource 由 CONFIG_CENTER_* 环境变量构造:
 // CONFIG_CENTER_ADDR / CONFIG_CENTER_NAMESPACE / CONFIG_CENTER_ENV / CONFIG_CENTER_KEY。
 //
 // namespace 与 environment 没有合理的默认值(猜错了只会静默读到空配置),故强制必填。
-// 服务对服务直连 config-service(集群内,不过网关),因此不需要 JWT。
+// 服务对服务直连 config-service(集群内,不过网关),以独立 service token 认证。
 func NewConfigCenterSource() (Source, error) {
 	addr := env.GetEnvString(constants.EnvConfigCenterAddr, constants.ConfigCenterAddr)
 	namespace := env.GetEnvString(constants.EnvConfigCenterNamespace, "")
 	environment := env.GetEnvString(constants.EnvConfigCenterEnv, "")
 	key := env.GetEnvString(constants.EnvConfigCenterKey, constants.ConfigCenterKey)
+	serviceToken := env.GetEnvString(constants.EnvConfigCenterServiceToken, "")
 
 	if namespace == "" || environment == "" {
 		return nil, fmt.Errorf("required env %s and %s must be set when %s=%s",
@@ -43,22 +45,23 @@ func NewConfigCenterSource() (Source, error) {
 	}
 
 	return &configCenterSource{
-		client:      configv1connect.NewConfigServiceClient(http.DefaultClient, addr),
-		addr:        addr,
-		namespace:   namespace,
-		environment: environment,
-		key:         key,
+		client:       configv1connect.NewConfigServiceClient(http.DefaultClient, addr),
+		addr:         addr,
+		namespace:    namespace,
+		environment:  environment,
+		key:          key,
+		serviceToken: serviceToken,
 	}, nil
 }
 
 func (s *configCenterSource) Name() string { return constants.ConfigSourceConfigCenter }
 
 func (s *configCenterSource) Load(ctx context.Context) (map[string]any, error) {
-	resp, err := s.client.GetKey(ctx, connect.NewRequest(&configv1.GetKeyRequest{
+	resp, err := s.client.GetKey(ctx, configCenterRequest(&configv1.GetKeyRequest{
 		Namespace:   s.namespace,
 		Environment: s.environment,
 		Key:         s.key,
-	}))
+	}, s.serviceToken))
 	if err != nil {
 		return nil, fmt.Errorf("config center get key failed (%s/%s/%s @ %s): %w",
 			s.namespace, s.environment, s.key, s.addr, err)
@@ -113,11 +116,11 @@ func (s *configCenterSource) Watch(ctx context.Context, onEvent func(WatchEvent)
 
 // watchOnce 跑一条流直到它结束,返回这条流上是否收到过事件。
 func (s *configCenterSource) watchOnce(ctx context.Context, onEvent func(WatchEvent)) (bool, error) {
-	stream, err := s.client.WatchKeys(ctx, connect.NewRequest(&configv1.WatchKeysRequest{
+	stream, err := s.client.WatchKeys(ctx, configCenterRequest(&configv1.WatchKeysRequest{
 		Namespace:   s.namespace,
 		Environment: s.environment,
 		Keys:        []string{s.key}, // 只订阅自己这一份,别人的配置与本进程无关
-	}))
+	}, s.serviceToken))
 	if err != nil {
 		return false, err
 	}
@@ -153,4 +156,12 @@ func (s *configCenterSource) watchOnce(ctx context.Context, onEvent func(WatchEv
 		}
 	}
 	return got, stream.Err()
+}
+
+func configCenterRequest[T any](message *T, serviceToken string) *connect.Request[T] {
+	request := connect.NewRequest(message)
+	if serviceToken != "" {
+		request.Header().Set("x-config-center-service-token", serviceToken)
+	}
+	return request
 }

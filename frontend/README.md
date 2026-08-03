@@ -21,7 +21,6 @@ frontend/
 | `consumer` | 3000 | 消费者端：商品、购物车、下单、地址、订单 | `pnpm dev`          |
 | `merchant` | 3002 | 商家端：店铺、商品、订单、报表           | `pnpm dev:merchant` |
 | `admin`    | 3003 | 管理端：用户、商家、品类、报表           | `vp run admin#dev`  |
-| `config`   | 3005 | 配置中心：配置下发、历史、密钥脱敏       | `pnpm dev:config`   |
 | `desktop`  | —    | Tauri 壳，按配置文件套在上面三个之一外面 | `pnpm desktop`      |
 
 `desktop` 不是第五个前端，它只是 Rust 侧的窗口 + 系统能力，页面仍然来自

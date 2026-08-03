@@ -2,12 +2,14 @@
 
 **代码路径**
 
-- 配置中心服务本体：`backend/services/config/`（设计见 `CONFIG_CENTER_DESIGN.md`）
+- 配置中心服务本体：独立仓 `github.com/lens077/config-center`（本机 `../config-center`；设计见 `CONFIG_CENTER_DESIGN.md`）
 - **各服务的配置加载层**：`backend/services/*/internal/pkg/config/`（10 份，同一套代码）
 - 灌入工具：`backend/tools/config-seed/`
 
 每个服务启动时读**整份 Bootstrap 配置**（一份 YAML），从哪儿读由 `CONFIG_SOURCE` 决定：
-`consul`（默认，Consul KV）或 `configcenter`（config-service，走 ConnectRPC）。
+`file`（本地文件）、`consul`（默认，Consul KV）或 `configcenter`（config-service，走 ConnectRPC）。
+长期选择契约由 `config-center/api/sdk/v1/source.proto` 的 `SourceConfig` 定义；Cart 先保留
+兼容层，待独立 Go module 发布版本后切到 SDK。
 两者显式二选一，**不做失败自动降级**——静默降级会让服务拿着一份你以为早废弃的配置正常跑起来，
 比直接启动失败难查得多。
 
@@ -46,8 +48,8 @@
 
 ## 已知注意事项
 
-- **config-service 不能从配置中心读自己的配置**（自举）。它只有 `source_consul.go`，
-  刻意不给 `source_configcenter.go`，Makefile 也没有 `dev-cc`——给了就是一个指向自己的死锁选项。
+- **config-service 不能从配置中心读自己的配置**（自举）。它从本地 `CONFIG_FILE` 启动，
+  Consul 只用于服务注册发现；把自身 Bootstrap 放进 ConfigService 会形成启动死锁。
 - **`required = true` 目前形同虚设**：配置解码只跑 mapstructure，从不调 `protovalidate`，
   且没开 `ErrorUnused`。缺块不报错、多余键也不报错，功能被静默关掉而不是启动失败。
   见 `.service-matrix.yaml` 的 `config_validation.known_defect`。

@@ -2,6 +2,7 @@ package config
 
 import (
 	"context"
+	"os"
 	"sync"
 	"testing"
 	"time"
@@ -122,6 +123,19 @@ func TestInit_FromConfigCenter(t *testing.T) {
 	assert.Equal(t, 10*time.Second, got.Server.Http.ReadTimeout.AsDuration())
 	assert.Equal(t, constants.ConfigSourceConfigCenter, SourceName())
 	assert.Same(t, got, GetConfig())
+}
+
+func TestInit_FromFile(t *testing.T) {
+	path := t.TempDir() + "/bootstrap.yaml"
+	require.NoError(t, os.WriteFile(path, []byte(testBootstrapYAML), 0o600))
+	clearSourceEnv(t)
+	t.Setenv(constants.EnvConfigSource, constants.ConfigSourceFile)
+	t.Setenv(constants.EnvConfigFile, path)
+
+	got, err := Init(context.Background())
+	require.NoError(t, err)
+	assert.Equal(t, "0.0.0.0:30006", got.Server.Addr)
+	assert.Equal(t, constants.ConfigSourceFile, SourceName())
 }
 
 func TestInit_UnknownSourceFailsFast(t *testing.T) {

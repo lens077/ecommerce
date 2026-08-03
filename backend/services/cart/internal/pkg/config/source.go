@@ -14,7 +14,7 @@ import (
 //
 // 每个实现放在自己的 source_*.go 里,自带环境变量解析与客户端构造,
 // 彼此不共享任何状态 —— 删掉其中一个文件,另一个仍能独立编译运行。
-// 新增数据源(如 etcd、Nacos、本地文件)只需实现本接口,再到 NewSource 加一个分支。
+// 新增数据源(如 etcd、Nacos)只需实现本接口,再到 NewSource 加一个分支。
 type Source interface {
 	// Name 数据源标识,与 CONFIG_SOURCE 的取值一致。
 	Name() string
@@ -50,14 +50,16 @@ type Watcher interface {
 func NewSource() (Source, error) {
 	name := env.GetEnvString(constants.EnvConfigSource, constants.DefaultConfigSource)
 	switch name {
+	case constants.ConfigSourceFile:
+		return NewFileSource()
 	case constants.ConfigSourceConsul:
 		return NewConsulSource()
 	case constants.ConfigSourceConfigCenter:
 		return NewConfigCenterSource()
 	default:
-		return nil, fmt.Errorf("unknown %s=%q, expect %q or %q",
+		return nil, fmt.Errorf("unknown %s=%q, expect %q, %q, or %q",
 			constants.EnvConfigSource, name,
-			constants.ConfigSourceConsul, constants.ConfigSourceConfigCenter)
+			constants.ConfigSourceFile, constants.ConfigSourceConsul, constants.ConfigSourceConfigCenter)
 	}
 }
 
