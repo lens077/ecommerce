@@ -15,10 +15,10 @@ import (
 func clearSourceEnv(t *testing.T) {
 	t.Helper()
 	for _, k := range []string{
-		constants.EnvConfigSource,
+		constants.EnvConfigSource, constants.EnvConfigFile,
 		constants.EnvConsulAddr, constants.EnvConsulPath, constants.EnvConsulScheme, constants.EnvConsulToken,
 		constants.EnvConfigCenterAddr, constants.EnvConfigCenterNamespace,
-		constants.EnvConfigCenterEnv, constants.EnvConfigCenterKey,
+		constants.EnvConfigCenterEnv, constants.EnvConfigCenterKey, constants.EnvConfigCenterServiceToken,
 	} {
 		t.Setenv(k, "")
 	}
@@ -52,6 +52,16 @@ func TestNewSource_ConfigCenter(t *testing.T) {
 	src, err := NewSource()
 	require.NoError(t, err)
 	assert.Equal(t, constants.ConfigSourceConfigCenter, src.Name())
+}
+
+func TestNewSource_File(t *testing.T) {
+	clearSourceEnv(t)
+	t.Setenv(constants.EnvConfigSource, constants.ConfigSourceFile)
+	t.Setenv(constants.EnvConfigFile, "configs/dev.yaml")
+
+	src, err := NewSource()
+	require.NoError(t, err)
+	assert.Equal(t, constants.ConfigSourceFile, src.Name())
 }
 
 // namespace/environment 猜错只会静默读到一份空配置,所以必须在构造期就报错,
@@ -93,6 +103,7 @@ func TestNewSource_UnknownValue(t *testing.T) {
 	require.Error(t, err)
 	// 拼错值时不能静默回落到默认源 —— 那会让服务读到一份你以为早已换掉的配置
 	assert.Contains(t, err.Error(), "etcd")
+	assert.Contains(t, err.Error(), constants.ConfigSourceFile)
 	assert.Contains(t, err.Error(), constants.ConfigSourceConsul)
 	assert.Contains(t, err.Error(), constants.ConfigSourceConfigCenter)
 }
@@ -127,6 +138,7 @@ func TestParseYAMLToMap_Empty(t *testing.T) {
 
 // 两个实现必须都满足 Source 接口(编译期已由 var _ Source 保证,这里再做一次运行期确认)
 func TestSourceNamesMatchConfigSourceValues(t *testing.T) {
+	assert.Equal(t, constants.ConfigSourceFile, (&fileSource{}).Name())
 	assert.Equal(t, constants.ConfigSourceConsul, (&consulSource{}).Name())
 	assert.Equal(t, constants.ConfigSourceConfigCenter, (&configCenterSource{}).Name())
 	// Name() 的返回值就是 CONFIG_SOURCE 的合法取值,不能带空格/大写

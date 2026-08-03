@@ -41,6 +41,7 @@ const (
 
 // 配置数据源取值(CONFIG_SOURCE)
 const (
+	ConfigSourceFile         = "file"         // 从本地文件读整份 Bootstrap
 	ConfigSourceConsul       = "consul"       // 从 Consul KV 的 CONSUL_PATH 读整份 Bootstrap
 	ConfigSourceConfigCenter = "configcenter" // 从 config-service 按 namespace/environment/key 拉取
 

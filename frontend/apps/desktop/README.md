@@ -9,7 +9,6 @@ consumer / merchant / config 三个前端应用共用的 Tauri 2 桌面外壳。
 | -------------------------------------- | --------------------- | -------- | ------------------------ |
 | `pnpm dev:consumer` / `build:consumer` | `@ecommerce/consumer` | 3000     | `com.ecommerce.consumer` |
 | `pnpm dev:merchant` / `build:merchant` | `@ecommerce/merchant` | 3002     | `com.ecommerce.merchant` |
-| `pnpm dev:config` / `build:config`     | `@ecommerce/config`   | 3005     | `com.ecommerce.config`   |
 
 `src-tauri/tauri.conf.json` 是公共层，`tauri.<product>.conf.json` 只覆盖
 `productName / identifier / build / 窗口`。

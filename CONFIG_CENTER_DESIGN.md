@@ -40,14 +40,14 @@
    - *不采用* FoundationDB(Apple 开源 KV):运维过重、无关系型 join、且会在 Consul 之外再引入第三套 KV。
    - *不采用* 继续以 Consul KV 为 SoR:无法做关系型的版本/审计/权限治理。
 2. **粒度:键值粒度。** 每个 key 一行,独立版本;value 可为带格式的文档(整份 yaml/toml/json 亦可作为单个 key 的 value,由 `format` 驱动高亮与校验)。
-3. **首轮范围:打通竖切。** 后端骨架 + Postgres 表 + CRUD + 版本历史;前端 apps/config + Monaco 编辑器 + 玻璃态 UI。
+3. **首轮范围:打通竖切。** 独立仓后端骨架 + Postgres 表 + CRUD + 版本历史;独立 Web 控制台 + Monaco 编辑器 + 玻璃态 UI。
 
 ### 总体架构
 
 ```
 ┌──────────────────── 配置中心(新 ConnectRPC 服务 config-service)────────────────────┐
 │                                                                                      │
-│   前端 apps/config(玻璃态 + Monaco)                                                  │
+│   独立 Web 控制台(玻璃态 + Monaco)                                                     │
 │        │ ConnectRPC-web(经网关,Casdoor JWT)                                          │
 │        ▼                                                                              │
 │   ConfigService(config.v1)                                                           │
@@ -105,7 +105,7 @@
 
 ## 四、RPC 契约(`config.v1.ConfigService`)
 
-proto 位于 `backend/api/config/v1/config.proto`,`package config.v1`,protovalidate 校验。
+proto 位于独立仓 `api/config/v1/config.proto`,`package config.v1`,protovalidate 校验。
 
 | RPC | 说明 |
 |-----|------|
@@ -123,12 +123,14 @@ proto 位于 `backend/api/config/v1/config.proto`,`package config.v1`,protovalid
 
 ## 五、鉴权模型
 
-复用现有网关模式(见 `gateway/middleware/{jwt,rbac}`),config 服务**不重复验 JWT**:
+复用现有 Casdoor 与网关模式(见 `gateway/middleware/{jwt,rbac}`)，但独立服务不信任可被
+直连客户端伪造的 `x-md-global-*` 头部：
 
 1. 前端登录走 Casdoor OIDC(复用 `@ecommerce/configs` 的 `CASDOOR_CONF` 与 `/callback`)。
-2. 网关验 Casdoor RS256 JWT → 注入 `x-md-global-user-id/-name/-role/-owner` 头部。
-3. 网关 Casbin(`gateway/configs/policies/policies.csv`)按角色放行路由:新增 `config.v1.ConfigService/*` 对 `admin` 等角色的授权。
-4. config 服务从 `x-md-global-name` 读取操作者写入 `updated_by/author`。
+2. 网关继续验 Casdoor RS256 JWT 与 Casbin 路由策略；配置中心用与 user 服务相同的 Casdoor
+   公钥证书再次验证 Bearer JWT，并仅接纳管理员身份。
+3. 服务间 SDK 直连使用独立 machine token，只允许 `GetKey` / `WatchKeys`，不能写入或回滚。
+4. 服务从已验证 principal 读取操作者写入 `updated_by/author`。
 
 **用户名密码**:当前无本地密码流,密码登录发生在 Casdoor 托管页;如需可开启 Casdoor 内置密码登录(仍是同一 JWT 格式)。
 
@@ -176,8 +178,8 @@ proto 位于 `backend/api/config/v1/config.proto`,`package config.v1`,protovalid
 
 | 部分 | 路径 |
 |------|------|
-| 后端服务 | `backend/services/config/`(镜像 `cart` 的 fx/sqlc 脚手架) |
-| 后端 API proto | `backend/api/config/v1/config.proto` → `config.pb.go` + `configv1connect/` |
-| 前端应用 | `frontend/apps/config/`(镜像 `consumer`,玻璃态主题) |
-| 前端生成客户端 | `frontend/apps/config/src/gen/`(buf `protoc-gen-es`) |
+| 后端服务 | 独立仓 `github.com/lens077/config-center` 根目录 |
+| 后端 API proto | `config-center/api/config/v1/config.proto` → `config.pb.go` + `configv1connect/` |
+| 前端应用 | `config-center/web/`（浏览器专用，不支持桌面端） |
+| 前端生成客户端 | `config-center/web/src/gen/`（buf `protoc-gen-es`） |
 | 网关放行 | `gateway/configs/policies/policies.csv` 增加 `config.v1.ConfigService/*` |
