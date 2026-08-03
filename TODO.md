@@ -125,6 +125,7 @@
 | 项目 | 状态 | 说明 |
 |------|------|------|
 | 链路追踪（OpenTelemetry/Jaeger） | 🟡 | 服务端 `otelhttp` 中间件、ES OTel 传输已接入 |
+| 前端性能监控（Web Vitals RUM） | ✅ | 新增 `frontend/packages/perf` + `backend/api/telemetry/v1` + behavior 进程顺带实现 `TelemetryService`。采集：五大指标走 **web-vitals/attribution**（LCP 定格/CLS 会话窗口/INP 高分位这三块手写极易错且错了不报错），LongTask 与 fetch/xhr 耗时拆解（DNS/TCP/TTFB/transferSize）手写 `PerformanceObserver`；**自身上报端点与 Track 埋点从采集中排除**（否则每次上报催生下一次上报）。上报：vitals 攒到 `pagehide`/`visibilitychange(hidden)` 一次 `sendBeacon`（Connect JSON 自包含体，与 tracker 同约定），API 批量走 keepalive fetch，失败不重试。落点：服务端转 OTel histogram（**显式桶**，CLS 用分数刻度；attr 只挂 page/rating —— `page` 是路由模式不是 URL，基数纪律）→ VictoriaMetrics；明细带 attribution 走 zap→otelzap→Loki（字段成结构化元数据可直接查）。网关 `/telemetry*` 路由 + jwt/rbac 白名单（sendBeacon 带不了 JWT 头）已同步 Consul KV。端到端实测：直连/经网关/CORS 预检/空请求 400/非法枚举 400 全过，VM 查得到 `web_vitals_lcp_milliseconds_bucket`（2100ms 落 le=2500 桶）、Loki 查得到带 attribution 的行。顺带删掉 consumer 里 CRA 残留的死代码 `reportWebVitals.ts`（`if (onPerfEntry)` 恒假，web-vitals chunk 从未加载过）。**浏览器真实点击流未跑**（等 consumer 日常使用即自然产生）；Grafana 看板未建（datasource 本就是手工配的） |
 | 日志（Loki/fluent-bit） | ⬜ | 部署与采集链路未落地 |
 | 指标（VictoriaMetrics/Grafana） | ⬜ | 采集/看板未落地 |
 | 前端测试（playwright + vitest） | 🟡 | consumer 首个用例落地：`hooks/useCart.test.tsx` 用 `createRouterTransport` 桩 GetCart，锁住「后端数据 → store」这条同步路径在重渲染与 StrictMode 下都只跑一次（effect 写 store → 订阅回调 setState → 再渲染，本身是个反馈环，查询结果引用一不稳就闭合成死循环）。config app 另有 `linediff`/`validate` 两组。仍缺：e2e 与其余 app |

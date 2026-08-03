@@ -22,6 +22,7 @@
 | 场景 | 文件 |
 |---|---|
 | 组件里要拿后端数据 / 写操作 / 缓存失效 / 报错展示 | [connect-query.md](sop/connect-query.md) |
+| 性能上报(Web Vitals/接口耗时)/ perf 与 tracker 怎么分工 | [web-vitals-reporting.md](sop/web-vitals-reporting.md) |
 
 ## 已知注意事项
 

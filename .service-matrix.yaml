@@ -100,6 +100,10 @@ services:
     extra_config: [recommend] # required = true
     depends_on: []
     external: [postgres, gorse]
+    note: |
+      进程级复用:同时实现 telemetry.v1.TelemetryService(网关前缀 /telemetry*,
+      前端性能上报 → OTel histogram/日志,不落业务库)。域是分开的,
+      将来 analytics 服务立起来把 handler 与网关 target 一并搬走即可。
 
   product:
     discovery: product-service
