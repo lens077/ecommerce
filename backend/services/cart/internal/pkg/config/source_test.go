@@ -1,6 +1,8 @@
 package config
 
 import (
+	"os"
+	"path/filepath"
 	"strings"
 	"testing"
 
@@ -15,7 +17,7 @@ import (
 func clearSourceEnv(t *testing.T) {
 	t.Helper()
 	for _, k := range []string{
-		constants.EnvConfigSource, constants.EnvConfigFile,
+		constants.EnvConfigSource, constants.EnvConfigFile, constants.EnvConfigSourceFile,
 		constants.EnvConsulAddr, constants.EnvConsulPath, constants.EnvConsulScheme, constants.EnvConsulToken,
 		constants.EnvConfigCenterAddr, constants.EnvConfigCenterNamespace,
 		constants.EnvConfigCenterEnv, constants.EnvConfigCenterKey, constants.EnvConfigCenterServiceToken,
@@ -43,15 +45,17 @@ func TestNewSource_Consul(t *testing.T) {
 	assert.Equal(t, constants.ConfigSourceConsul, src.Name())
 }
 
-func TestNewSource_ConfigCenter(t *testing.T) {
+func TestNewSource_SDKSelector(t *testing.T) {
 	clearSourceEnv(t)
-	t.Setenv(constants.EnvConfigSource, constants.ConfigSourceConfigCenter)
-	t.Setenv(constants.EnvConfigCenterNamespace, "cart")
-	t.Setenv(constants.EnvConfigCenterEnv, "dev")
+	businessConfig := filepath.Join(t.TempDir(), "cart.yaml")
+	require.NoError(t, os.WriteFile(businessConfig, []byte(testBootstrapYAML), 0o600))
+	selector := filepath.Join(t.TempDir(), "source.yaml")
+	require.NoError(t, os.WriteFile(selector, []byte("type: file\nfile:\n  path: "+businessConfig+"\n"), 0o600))
+	t.Setenv(constants.EnvConfigSourceFile, selector)
 
 	src, err := NewSource()
 	require.NoError(t, err)
-	assert.Equal(t, constants.ConfigSourceConfigCenter, src.Name())
+	assert.Equal(t, "file", src.Name())
 }
 
 func TestNewSource_File(t *testing.T) {
@@ -64,34 +68,14 @@ func TestNewSource_File(t *testing.T) {
 	assert.Equal(t, constants.ConfigSourceFile, src.Name())
 }
 
-// namespace/environment 猜错只会静默读到一份空配置,所以必须在构造期就报错,
-// 而不是等到 Load 之后拿着空 Bootstrap 继续跑。
-func TestNewSource_ConfigCenterRequiresNamespaceAndEnv(t *testing.T) {
-	cases := []struct {
-		name      string
-		namespace string
-		env       string
-	}{
-		{"both missing", "", ""},
-		{"namespace missing", "", "dev"},
-		{"environment missing", "cart", ""},
-	}
+func TestNewSource_DeprecatedConfigCenterEnvFailsFast(t *testing.T) {
+	clearSourceEnv(t)
+	t.Setenv(constants.EnvConfigSource, constants.ConfigSourceConfigCenter)
 
-	for _, c := range cases {
-		t.Run(c.name, func(t *testing.T) {
-			clearSourceEnv(t)
-			t.Setenv(constants.EnvConfigSource, constants.ConfigSourceConfigCenter)
-			t.Setenv(constants.EnvConfigCenterNamespace, c.namespace)
-			t.Setenv(constants.EnvConfigCenterEnv, c.env)
-
-			src, err := NewSource()
-			assert.Nil(t, src)
-			require.Error(t, err)
-			// 报错要直接点名缺哪个变量,不能只说「配置无效」
-			assert.Contains(t, err.Error(), constants.EnvConfigCenterNamespace)
-			assert.Contains(t, err.Error(), constants.EnvConfigCenterEnv)
-		})
-	}
+	src, err := NewSource()
+	assert.Nil(t, src)
+	require.Error(t, err)
+	assert.Contains(t, err.Error(), constants.EnvConfigSourceFile)
 }
 
 func TestNewSource_UnknownValue(t *testing.T) {
@@ -140,7 +124,6 @@ func TestParseYAMLToMap_Empty(t *testing.T) {
 func TestSourceNamesMatchConfigSourceValues(t *testing.T) {
 	assert.Equal(t, constants.ConfigSourceFile, (&fileSource{}).Name())
 	assert.Equal(t, constants.ConfigSourceConsul, (&consulSource{}).Name())
-	assert.Equal(t, constants.ConfigSourceConfigCenter, (&configCenterSource{}).Name())
 	// Name() 的返回值就是 CONFIG_SOURCE 的合法取值,不能带空格/大写
 	assert.Equal(t, strings.ToLower((&consulSource{}).Name()), (&consulSource{}).Name())
 }

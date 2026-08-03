@@ -6,10 +6,11 @@
 - **各服务的配置加载层**：`backend/services/*/internal/pkg/config/`（10 份，同一套代码）
 - 灌入工具：`backend/tools/config-seed/`
 
-每个服务启动时读**整份 Bootstrap 配置**（一份 YAML），从哪儿读由 `CONFIG_SOURCE` 决定：
-`file`（本地文件）、`consul`（默认，Consul KV）或 `configcenter`（config-service，走 ConnectRPC）。
-长期选择契约由 `config-center/api/sdk/v1/source.proto` 的 `SourceConfig` 定义；Cart 先保留
-兼容层，待独立 Go module 发布版本后切到 SDK。
+每个服务启动时读**整份 Bootstrap 配置**（一份 YAML）。其余服务仍由
+`CONFIG_SOURCE` 选择 `file`、`consul` 或 `configcenter`；Cart 已改为读取本地
+`CONFIG_SOURCE_FILE`，并使用独立 `config-center` Go SDK 的 `SourceConfig` 契约选择
+`file`、`consul` 或 `config_center`。Cart 当前锁定远程默认分支的伪版本，未使用本地
+`replace` 或发布 tag。
 两者显式二选一，**不做失败自动降级**——静默降级会让服务拿着一份你以为早废弃的配置正常跑起来，
 比直接启动失败难查得多。
 
