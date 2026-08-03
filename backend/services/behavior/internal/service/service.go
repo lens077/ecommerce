@@ -5,5 +5,8 @@ import (
 )
 
 var Module = fx.Module("service",
-	fx.Provide(NewBehaviorService),
+	fx.Provide(
+		NewBehaviorService,
+		NewTelemetryService,
+	),
 )
