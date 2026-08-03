@@ -29,8 +29,9 @@ const (
 // 取值见 constants.ConfigSourceFile / ConfigSourceConsul / ConfigSourceConfigCenter。
 // 不设置时用 DefaultConfigSource,与历史部署行为一致。
 const (
-	EnvConfigSource = "CONFIG_SOURCE"
-	EnvConfigFile   = "CONFIG_FILE"
+	EnvConfigSource     = "CONFIG_SOURCE"
+	EnvConfigFile       = "CONFIG_FILE"
+	EnvConfigSourceFile = "CONFIG_SOURCE_FILE"
 )
 
 // Config Center 配置中心(可选的配置数据源之一;Consul 无论如何都保留服务发现/注册)

@@ -48,6 +48,10 @@ type Watcher interface {
 // 刻意不做「主源失败自动降级到备源」:配置来源必须是确定的。静默降级会让服务
 // 拿着一份你以为早已废弃的配置正常跑起来,比直接启动失败难排查得多。
 func NewSource() (Source, error) {
+	if sourceConfigFile := env.GetEnvString(constants.EnvConfigSourceFile, ""); sourceConfigFile != "" {
+		return NewSDKSource(sourceConfigFile)
+	}
+
 	name := env.GetEnvString(constants.EnvConfigSource, constants.DefaultConfigSource)
 	switch name {
 	case constants.ConfigSourceFile:
@@ -55,7 +59,8 @@ func NewSource() (Source, error) {
 	case constants.ConfigSourceConsul:
 		return NewConsulSource()
 	case constants.ConfigSourceConfigCenter:
-		return NewConfigCenterSource()
+		return nil, fmt.Errorf("%s=%s is deprecated; set %s to a local SourceConfig file instead",
+			constants.EnvConfigSource, constants.ConfigSourceConfigCenter, constants.EnvConfigSourceFile)
 	default:
 		return nil, fmt.Errorf("unknown %s=%q, expect %q, %q, or %q",
 			constants.EnvConfigSource, name,

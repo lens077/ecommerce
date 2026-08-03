@@ -1,6 +1,6 @@
 module github.com/lens077/ecommerce/backend
 
-go 1.26.1
+go 1.26.5
 
 require (
 	buf.build/gen/go/bufbuild/protovalidate/protocolbuffers/go v1.36.11-20260415201107-50325440f8f2.1
@@ -15,8 +15,10 @@ require (
 	github.com/google/uuid v1.6.0
 	github.com/hashicorp/consul/api v1.34.2
 	github.com/jackc/pgx/v5 v5.9.2
+	github.com/lens077/config-center v0.0.0-20260803083330-8cbf572ce5f0
 	github.com/lib/pq v1.12.3
 	github.com/mitchellh/mapstructure v1.5.0
+	github.com/pelletier/go-toml/v2 v2.2.4
 	github.com/redis/go-redis/v9 v9.21.0
 	github.com/rs/cors v1.11.1
 	github.com/shopspring/decimal v1.4.0
@@ -41,6 +43,7 @@ require (
 	google.golang.org/genproto v0.0.0-20260427160629-7cedc36a6bc4
 	google.golang.org/grpc v1.81.1
 	google.golang.org/protobuf v1.36.11
+	gopkg.in/yaml.v3 v3.0.1
 )
 
 require (
@@ -77,7 +80,6 @@ require (
 	github.com/mattn/go-colorable v0.1.14 // indirect
 	github.com/mattn/go-isatty v0.0.20 // indirect
 	github.com/mitchellh/go-homedir v1.1.0 // indirect
-	github.com/pelletier/go-toml/v2 v2.2.4 // indirect
 	github.com/pmezard/go-difflib v1.0.1-0.20181226105442-5d4384ee4fb2 // indirect
 	github.com/sagikazarmark/locafero v0.11.0 // indirect
 	github.com/smartwalle/ncrypto v1.0.4 // indirect
@@ -102,7 +104,6 @@ require (
 	golang.org/x/text v0.38.0 // indirect
 	google.golang.org/genproto/googleapis/api v0.0.0-20260622175928-b703f567277d // indirect
 	google.golang.org/genproto/googleapis/rpc v0.0.0-20260622175928-b703f567277d // indirect
-	gopkg.in/yaml.v3 v3.0.1 // indirect
 )
 
 tool (

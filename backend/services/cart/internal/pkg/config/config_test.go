@@ -7,7 +7,7 @@ import (
 	"testing"
 	"time"
 
-	configv1 "github.com/lens077/ecommerce/backend/api/config/v1"
+	configv1 "github.com/lens077/config-center/api/config/v1"
 	"github.com/lens077/ecommerce/backend/constants"
 	confv1 "github.com/lens077/ecommerce/backend/services/cart/internal/conf/v1"
 	"github.com/stretchr/testify/assert"
@@ -121,7 +121,7 @@ func TestInit_FromConfigCenter(t *testing.T) {
 	// 同一份 YAML 经另一条链路进来,解析结果必须完全一致
 	assert.Equal(t, "0.0.0.0:30006", got.Server.Addr)
 	assert.Equal(t, 10*time.Second, got.Server.Http.ReadTimeout.AsDuration())
-	assert.Equal(t, constants.ConfigSourceConfigCenter, SourceName())
+	assert.Equal(t, "config_center", SourceName())
 	assert.Same(t, got, GetConfig())
 }
 
