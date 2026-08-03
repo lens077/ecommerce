@@ -9,6 +9,7 @@ import (
 	connectcors "connectrpc.com/cors"
 	"connectrpc.com/validate"
 	"github.com/lens077/ecommerce/backend/api/behavior/v1/behaviorv1connect"
+	"github.com/lens077/ecommerce/backend/api/telemetry/v1/telemetryv1connect"
 	conf "github.com/lens077/ecommerce/backend/services/behavior/internal/conf/v1"
 	"github.com/lens077/ecommerce/backend/services/behavior/internal/data"
 	"github.com/rs/cors"
@@ -29,6 +30,7 @@ func NewHTTPServer(
 	lc fx.Lifecycle,
 	cfg *conf.Bootstrap,
 	behaviorv1Service behaviorv1connect.BehaviorServiceHandler,
+	telemetryv1Service telemetryv1connect.TelemetryServiceHandler,
 	logger *zap.Logger,
 	connectOptions []connect.HandlerOption,
 	deps *data.Data,
@@ -43,6 +45,14 @@ func NewHTTPServer(
 		combinedOptions...,
 	)
 	mux.Handle(behaviorv1connectPath, behaviorv1connectHandler)
+
+	// telemetry.v1 与 behavior.v1 是两个域,共享本进程只是部署上的顺带
+	// (见 telemetry.proto 头注释);挂载点分开,将来搬去 analytics 只删这两行
+	telemetryv1connectPath, telemetryv1connectHandler := telemetryv1connect.NewTelemetryServiceHandler(
+		telemetryv1Service,
+		combinedOptions...,
+	)
+	mux.Handle(telemetryv1connectPath, telemetryv1connectHandler)
 
 	// 应用本身的健康检查
 	mux.HandleFunc("/healthz", func(w http.ResponseWriter, r *http.Request) {
