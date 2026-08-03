@@ -7,7 +7,8 @@ import { lazy, StrictMode, Suspense, useMemo, type ReactNode } from "react";
 import ReactDOM from "react-dom/client";
 import { useLocale } from "@ecommerce/i18n";
 import { isTauri } from "@ecommerce/tauri";
-import reportWebVitals from "./reportWebVitals";
+import { initPerf } from "@ecommerce/perf";
+import { env } from "./env";
 import { routeTree } from "./routeTree.gen";
 import "@fontsource/roboto/300.css";
 import "@fontsource/roboto/400.css";
@@ -123,4 +124,14 @@ if (rootElement && !rootElement.innerHTML) {
   );
 }
 
-reportWebVitals();
+// 性能监控:采集 Web Vitals/长任务/接口耗时,经网关 telemetry.v1 落 VM/Loki。
+// getRoute 返回**路由模式**(/product/$spuCode)而不是具体 URL —— 它是 metric 的
+// label,传具体 URL 会让 VictoriaMetrics 的序列数跟着商品数走。
+initPerf({
+  gatewayUrl: env.VITE_GATEWAY_URL ?? "http://localhost:8080",
+  getRoute: () => {
+    const matches = router.state.matches;
+    const last = matches[matches.length - 1];
+    return last?.routeId ?? window.location.pathname;
+  },
+});
