@@ -1,0 +1,117 @@
+syntax = "proto3";
+
+// 前端性能遥测采集(Web Vitals + API 耗时)。
+//
+// 与 behavior.v1 是两个域:behavior 采集的是"用户对内容的行为"(投喂推荐),
+// 这里采集的是"页面本身的表现"(投喂可观测性栈)。当前由 behavior 服务进程
+// 顺带实现(它已有免鉴权白名单与 sendBeacon 约定),将来 analytics 服务立起来
+// 可整体搬走 —— 域已分离,搬走只动部署不动契约。
+//
+// 数据落点:服务端把 vitals 转成 OTel histogram(→ VictoriaMetrics)与
+// 结构化日志(zap → otelzap → Loki),不落业务库。
+
+import "third_party/validate/validate.proto";
+
+package telemetry.v1;
+
+option go_package = "github.com/lens077/ecommerce/backend/api/telemetry/v1;telemetryv1";
+
+service TelemetryService {
+  // CollectWebVitals 批量上报性能数据。
+  // 前端离开页面时用 navigator.sendBeacon 以 Connect JSON 直接打这个方法,
+  // 所以请求体必须是自包含的(不依赖自定义请求头)—— 与 behavior.Track 同约定。
+  rpc CollectWebVitals(CollectWebVitalsRequest) returns (CollectWebVitalsResponse) {}
+}
+
+// WebVitalName 与 web-vitals 库的指标名一一对应,外加手写采集的 LONG_TASK。
+// value 的单位由指标决定:CLS 是无量纲分数,其余全部是毫秒。
+enum WebVitalName {
+  WEB_VITAL_NAME_UNSPECIFIED = 0;
+  // Largest Contentful Paint,主内容渲染完成时刻(ms)。及格线 2500ms
+  WEB_VITAL_NAME_LCP = 1;
+  // Cumulative Layout Shift,累积布局偏移(分数)。及格线 0.1
+  WEB_VITAL_NAME_CLS = 2;
+  // Interaction to Next Paint,全程交互延迟(ms)。及格线 200ms
+  WEB_VITAL_NAME_INP = 3;
+  // First Contentful Paint,首次内容绘制(ms)。及格线 1800ms
+  WEB_VITAL_NAME_FCP = 4;
+  // Time to First Byte,首字节时间(ms)。及格线 800ms
+  WEB_VITAL_NAME_TTFB = 5;
+  // 主线程长任务(ms),手写 PerformanceObserver 采集,无 rating
+  WEB_VITAL_NAME_LONG_TASK = 6;
+}
+
+message WebVital {
+  WebVitalName name = 1 [(buf.validate.field).enum = {
+    defined_only: true
+    not_in: [0]
+  }];
+  // CLS 是分数(通常 < 1),其余是毫秒。上限 36e5(一小时):再大的值只可能是
+  // 客户端时钟错乱,进了 histogram 会把桶分布拉到没法看
+  double value = 2 [(buf.validate.field).double = {
+    gte: 0
+    lte: 3600000
+  }];
+  // web-vitals 的三档评级;LONG_TASK 没有评级,留空
+  string rating = 3 [(buf.validate.field).string = {
+    in: ["", "good", "needs-improvement", "poor"]
+  }];
+  // 路由模式(如 /product/$spuCode),不是完整 URL —— 它会成为 metric 的
+  // attribute,必须低基数。上限对齐 behavior.Event.source 的量级
+  string page = 4 [(buf.validate.field).string.max_len = 128];
+  // 归因摘要:LCP 的元素 selector、INP 的交互目标、CLS 的最大偏移源、
+  // LONG_TASK 的容器(self/iframe)。只进日志不进 metric label
+  string attribution = 5 [(buf.validate.field).string.max_len = 256];
+  int64 ts_ms = 6 [(buf.validate.field).int64.gte = 0];
+  // navigate / reload / back-forward / back-forward-cache / prerender 等,
+  // 取自 web-vitals 的 navigationType
+  string nav_type = 7 [(buf.validate.field).string.max_len = 32];
+}
+
+// ApiTiming 一次 fetch/XHR 的耗时拆解,取自浏览器 Resource Timing。
+// 跨域资源没有 Timing-Allow-Origin 时 dns/tcp/ttfb 全是 0,这是浏览器行为,
+// 不代表真的为 0 —— 消费侧按 0 值剔除即可。
+message ApiTiming {
+  // 已去掉 query 与 origin 的路径。上限对齐 config 域对 URL 类文本的量级
+  string path = 1 [(buf.validate.field).string = {
+    min_len: 1
+    max_len: 256
+  }];
+  double duration_ms = 2 [(buf.validate.field).double = {
+    gte: 0
+    lte: 3600000
+  }];
+  // 首字节时间(responseStart - requestStart),后端处理慢的信号
+  double ttfb_ms = 3 [(buf.validate.field).double = {
+    gte: 0
+    lte: 3600000
+  }];
+  double dns_ms = 4 [(buf.validate.field).double = {
+    gte: 0
+    lte: 3600000
+  }];
+  double tcp_ms = 5 [(buf.validate.field).double = {
+    gte: 0
+    lte: 3600000
+  }];
+  // encoded body + headers 的传输字节数;跨域无 TAO 时为 0
+  int64 transfer_size = 6 [(buf.validate.field).int64.gte = 0];
+  int64 ts_ms = 7 [(buf.validate.field).int64.gte = 0];
+}
+
+message CollectWebVitalsRequest {
+  // 匿名标识。登录用户由网关注入的 x-md-global-user-id 覆盖 —— 与 Track 同约定
+  string anon_id = 1 [(buf.validate.field).string.max_len = 64];
+  string session_id = 2 [(buf.validate.field).string.max_len = 64];
+  // 一次页面生命周期最多产生 5 个核心指标 + 若干 LONG_TASK,50 足够;
+  // 超出说明客户端逻辑有 bug,拒收比收下更能暴露问题
+  repeated WebVital vitals = 3 [(buf.validate.field).repeated.max_items = 50];
+  // 批量上批的 API 耗时,上限对齐 Track.events 的 max_items
+  repeated ApiTiming api_timings = 4 [(buf.validate.field).repeated.max_items = 200];
+  // vitals 与 api_timings 至少一个非空 —— 本仓 proto 不用 message 级 CEL,
+  // 该约束在 service 层实施
+}
+
+message CollectWebVitalsResponse {
+  uint32 accepted = 1;
+}
