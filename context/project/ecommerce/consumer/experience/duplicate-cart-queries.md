@@ -73,6 +73,21 @@ AppBar 徽标立刻刷新而不用等 `staleTime` 到期。`useCart.addItem` 和
 - React 里数请求数量要在 dev 的 StrictMode 下数，然后除以 2 再对照 prod，
   或者直接看 `queryKey` 有几个不同的。
 
+**后续（2026-08）：`GetCartSummary` 已整条删除**
+
+上面的叙述是当时的现场，`GetCartSummary` 那个 RPC **现在已经不存在了**，别照着去后端找。
+
+合并之后它就零调用者了，而更彻底的理由是：`GetCartResponse.cart_item_quantity`
+在 `data/cart.go` 里就是 `len(rows)`，和 `GetCartSummary.totalCount` 是**同一条查询算出的同一个数**
+（两条 SQL 的 `WHERE user_id = @user_id AND status = @status` 逐字相同）。
+即 `GetCart` 的响应本来就带着这个数字，留着它只会让同一个数有两个来源，迟早对不上。
+
+已删的范围：proto 的 rpc 与两个 message、service handler、biz 的 req/resp+接口+usecase、
+data 实现、`queries/cart.sql` 的查询（`sqlc generate` 连生成物一并清掉）。
+proto3 无法对 rpc 名做 `reserved`，所以在 `cart.proto` 的 service 块里留了注释存档。
+
+**这条经验本身仍然成立**：换数据源前先对两边的 SQL 语义——正是这次对齐 SQL 才发现它是冗余的。
+
 **相关**
 
 - 网关侧的重试放大：[`gateway/experience/retry-amplification-and-phantom-health-check.md`](../../gateway/experience/retry-amplification-and-phantom-health-check.md)

@@ -33,9 +33,8 @@ C 端主应用。React 19 + MUI 9 + Emotion + TanStack Router/Query + Connect-RP
   正在从「手写 `queryKey` + `queryFn` 包 client」迁到 connect-query，key 由
   `schema + input + transport` 自动推导，不再需要人为约定
   （购物车原来的约定 key 是 `["cart","items"]`）。
-- `GetCartSummary.totalCount` 是 `COUNT(*)`（**行数**），`cartStore.totalQuantity` 是
-  `sum(quantity)`（**件数**）。两者不可互换。
-
-## 相关
-
+- 购物车徽标取 `GetCart` 的 `items.length`（**行数**），而 `cartStore.totalQuantity` 是
+  `sum(item.quantity)`（**件数**）——两者不是一回事，「一个 SKU 加 3 件」前者是 1 后者是 3。
+  改徽标取值时务必分清。（原 `GetCartSummary.totalCount` 也是行数，该 RPC 已于 2026-08 删除，
+  因为 `GetCartResponse.cart_item_quantity` 返回的就是同一个数）
 - 登录死循环见 [`gateway/experience/jwt-nbf-clock-skew-loop.md`](../gateway/experience/jwt-nbf-clock-skew-loop.md)
