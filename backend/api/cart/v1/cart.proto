@@ -11,8 +11,13 @@ option go_package = "github.com/lens077/ecommerce/backend/api/cart/v1;cartv1";
 
 service CartService {
   rpc GetCart(GetCartRequest) returns (GetCartResponse){}
-  // 首页获取购物车数量
-  rpc GetCartSummary(GetCartSummaryRequest) returns (GetCartSummaryResponse){}
+  // 2026-08 移除 GetCartSummary(原「首页获取购物车数量」)。
+  // 它与 GetCart 是同一条 SQL 的两种投影:两者的 WHERE 逐字相同
+  // (user_id + status=active),而 GetCartSummary 的 COUNT(*) 恰好等于
+  // GetCartResponse.cart_item_quantity(data/cart.go 里就是 len(rows))——
+  // 即 GetCart 的响应本来就带着这个数字。前端徽标已改用 GetCart,
+  // 保留它只会让同一个数有两个来源,迟早对不上。
+  // proto3 无法对 rpc 名做 reserved,故以注释存档,不要再用这个名字。
   rpc AddProductToCart(AddProductToCartRequest) returns (AddProductToCartResponse){}
   rpc RemoveCartItem(RemoveCartItemRequest) returns (RemoveCartItemResponse){}
   rpc UpdateCartItemQuantity(UpdateCartItemQuantityRequest) returns (UpdateCartItemQuantityResponse){}
@@ -97,10 +102,3 @@ message GetCartResponse {
   google.protobuf.BoolValue is_cart_empty = 3;      // 购物车是否为空
 }
 
-message GetCartSummaryRequest {
-
-}
-
-message GetCartSummaryResponse {
-  uint32 total_count = 1;
-}

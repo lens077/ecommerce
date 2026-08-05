@@ -71,13 +71,6 @@ type Querier interface {
 	//    AND status = $2
 	//  ORDER BY updated_at DESC
 	GetCartItems(ctx context.Context, arg GetCartItemsParams) ([]GetCartItemsRow, error)
-	//GetCartSummary
-	//
-	//  SELECT COUNT(*) AS total_count
-	//  FROM cart.cart_item
-	//  WHERE user_id = $1
-	//    AND status = $2
-	GetCartSummary(ctx context.Context, arg GetCartSummaryParams) (int64, error)
 	// 删除购物车项, 返回删除后的购物车总商品项和是否为空购物车和删除的购物车商品数量
 	//
 	//  WITH deleted AS (

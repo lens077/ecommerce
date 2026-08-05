@@ -1,84 +1,68 @@
-### healthz
-POST http://{{host}}:{{port}}/healthz
-Content-Type: application/json
+@cart_base_url = http://127.0.0.1:30006
+@consumer_id = 00000000-0000-4000-8000-000000000001
+@merchant_id = 8966c1f2-fcc2-44bc-84f5-9de615ff235f
+@spu_id = 5
+@sku_id = 9
 
-### k8s AddProductToCart example1
-POST http://{{gateway_host}}:{{gateway_port}}/cart.v1.CartService/AddProductToCart
+### Local health check
+GET {{cart_base_url}}/healthz
+
+### Read the full cart for the test consumer
+POST {{cart_base_url}}/cart.v1.CartService/GetCart
 Content-Type: application/json
-Authorization: Bearer {{token}}
+x-md-global-user-id: {{consumer_id}}
+
+{}
+
+### Read only the cart badge count for the test consumer
+POST {{cart_base_url}}/cart.v1.CartService/GetCartSummary
+Content-Type: application/json
+x-md-global-user-id: {{consumer_id}}
+
+{}
+
+### Add one item (mutates the development cart; run intentionally)
+POST {{cart_base_url}}/cart.v1.CartService/AddProductToCart
+Content-Type: application/json
+x-md-global-user-id: {{consumer_id}}
 
 {
-  "spuId": 5,
-  "skuId": 9,
-  "merchantId": "8966c1f2-fcc2-44bc-84f5-9de615ff235f",
+  "spuId": {{spu_id}},
+  "skuId": {{sku_id}},
+  "merchantId": "{{merchant_id}}",
   "quantity": 1,
   "selected": true,
-  "spuName": "Apple iPhone 15 Pro",
-  "skuName": "Apple iPhone 15 Pro 256GB 原色钛金属",
-  "price": 22.20,
+  "spuName": "Cart SDK smoke-test product",
+  "skuName": "Cart SDK smoke-test SKU",
+  "price": 22.2,
   "skuAttributes": {
-    "a": "a",
-    "b": 1
+    "color": "test",
+    "source": "ide-http-client"
   },
-  "skuThumbnailUrl": "https://cdn.example.com/iphone15pro/main.jpg",
-  "status": "CART_STATUS_CART_STATUS_ACTIVE"
-}
-
-### TODO k8s AddProductToCart example2
-POST http://{{gateway_host}}:{{gateway_port}}/cart.v1.CartService/AddProductToCart
-Content-Type: application/json
-Authorization: Bearer {{token}}
-
-{
-  "spuId": 4,
-  "skuId": 14,
-  "merchantId": "ca8ceec3-3345-48ce-b2db-40afe710eb62",
-  "quantity": 5,
-  "selected": true,
-  "spuName": "德龙 Nespresso 胶囊咖啡机",
-  "skuName": "德龙 Nespresso 胶囊咖啡机 珍珠白",
-  "price": 22.20,
-  "skuAttributes": {
-    "a": "a",
-    "b": 1
-  },
-  "skuThumbnailUrl": "https://cdn.example.com/iphone15pro/main.jpg",
+  "skuThumbnailUrl": "https://cdn.example.com/cart-sdk-smoke-test.jpg",
   "status": "CART_STATUS_ACTIVE"
 }
 
-### gateway RemoveCartItem
-POST http://{{gateway_host}}:{{gateway_port}}/cart.v1.CartService/RemoveCartItem
+### Change the test item quantity (mutates the development cart)
+POST {{cart_base_url}}/cart.v1.CartService/UpdateCartItemQuantity
 Content-Type: application/json
-Authorization: Bearer {{token}}
+x-md-global-user-id: {{consumer_id}}
 
 {
-  "spuId": 5,
-  "skuId": 9,
-  "merchantId": "eb70eac3-3b65-4a0a-a0e1-0d28fca13b82"
+  "spuId": {{spu_id}},
+  "skuId": {{sku_id}},
+  "merchantId": "{{merchant_id}}",
+  "quantity": 2
 }
 
-### RemoveCartItem
-POST http://{{gateway_host}}:{{gateway_port}}/cart.v1.CartService/RemoveCartItem
+### Remove the test item (mutates the development cart)
+POST {{cart_base_url}}/cart.v1.CartService/RemoveCartItem
 Content-Type: application/json
-Authorization: Bearer {{token}}
+x-md-global-user-id: {{consumer_id}}
 
 {
-  "spuId": [5],
-  "skuId": [9],
-  "merchantId": ["8966c1f2-fcc2-44bc-84f5-9de615ff235f"],
+  "spuIds": [{{spu_id}}],
+  "skuIds": [{{sku_id}}],
+  "merchantIds": ["{{merchant_id}}"],
   "status": ["CART_STATUS_ACTIVE"]
 }
-
-### GetCart
-POST http://{{gateway_host}}:{{gateway_port}}/cart.v1.CartService/GetCart
-Authorization: Bearer {{token}}
-Content-Type: application/json
-
-{}
-
-### GetCartSummary
-POST http://{{gateway_host}}:{{gateway_port}}/cart.v1.CartService/GetCartSummary
-Authorization: Bearer {{token}}
-Content-Type: application/json
-
-{}

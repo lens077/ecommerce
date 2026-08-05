@@ -180,27 +180,6 @@ func (cs *CartService) GetCart(ctx context.Context, c *connect.Request[v1.GetCar
 	return response, nil
 }
 
-func (cs *CartService) GetCartSummary(ctx context.Context, c *connect.Request[v1.GetCartSummaryRequest]) (*connect.Response[v1.GetCartSummaryResponse], error) {
-	userIdStr := c.Header().Get(constants.UserIdMetadataKey)
-	consumerId, err := uuid.Parse(userIdStr)
-	if err != nil {
-		return nil, err
-	}
-	cart, err := cs.uc.GetCartSummary(ctx, biz.GetCartSummaryRequest{
-		ConsumerId: consumerId,
-		Status:     constants.CartStatusActive,
-	})
-	if err != nil {
-		return nil, err
-	}
-
-	response := connect.NewResponse(&v1.GetCartSummaryResponse{
-		TotalCount: cart.TotalCount,
-	})
-
-	return response, nil
-}
-
 var _ cartv1connect.CartServiceHandler = (*CartService)(nil)
 
 func NewCartService(uc *biz.CartUseCase, log *zap.Logger) cartv1connect.CartServiceHandler {
