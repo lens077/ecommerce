@@ -25,7 +25,7 @@
 |------|------|-----------|----------|
 | 用户认证 user | 🟡 | `SignIn`、`UserProfile` | 令牌刷新、登出、多端会话、第三方登录适配 |
 | 商品 product | 🟡 | `GetProductDetail`（SPU/SKU） | **`ListProducts`（首页无限滚动/游标分页）设计已定，见 Design.md，待落地**；上下架、类目/品牌管理、`ProductChangedEvent` 同步 ES |
-| 购物车 cart | ✅ | `GetCart`、`GetCartSummary`、`AddProductToCart`、`RemoveCartItem`、`UpdateCartItemQuantity` + MinIO 缩略图 URL | 选中态服务端持久化（如需） |
+| 购物车 cart | 🟡 | `GetCart`、`AddProductToCart`、`RemoveCartItem`、`UpdateCartItemQuantity` + MinIO 缩略图 URL（`GetCartSummary` 已于 2026-08 删除，见下） | **`RemoveCartItem`/`UpdateCartItemQuantity` 前端未接线**（删除/改数量只动本地 store，刷新就回来）；`AddProductToCart` 的 `shop_name` 缺字段导致必然失败；选中态服务端持久化（如需） |
 | 订单 order | 🟡 | `CreateOrder`(桩)、`CompleteOrder` | **`CreateOrder` 主体待实现**（幂等/核价/拆单/取地址快照/同步 Reserve/事务落库）；proto 待补 `CreateOrderRequest.requestId`(幂等键) 与 `CreateOrderResponse.orderNo/payAmount/payDeadline`；订单查询/列表、取消、状态机、`OrderCreated/Paid/Cancelled` 事件 |
 | 支付 payment | 🟡 | 5 个 RPC 均为**桩**（显式返回 `Unimplemented`），服务可启动/注册/健康检查，网关 `/payment*` 已通 | **repo 主体待恢复**：原实现依赖已移除的 balance/consumerOrder client（保留在 `data/payment.go` 注释块）；支付宝凭据（`pay.alipay.*` 在 KV 里是空占位）；退款、幂等/验签加固、每日对账、`PaymentRefundedEvent` |
 | 库存 inventory | 🟡 | `Reserve`、`ReleaseReserve` | 扣减确认/回补、库存流水与对账、不足预警事件、Redis 分布式锁 |
@@ -51,7 +51,7 @@
 | 网关服务发现恢复 | ✅ | Consul watcher 改为后台初始化，`Next()` 失效后按阶梯退避重建；生命周期与单个路由 applier 解耦，配置热重载关闭旧 client 不再误杀共享 watcher，最后一个 applier 清理后才停止。consumer 查询仅对 `Unavailable` / `DeadlineExceeded` 延迟 300ms 重试一次，避免瞬时 503 被放大为多次 POST。`make dev` 实测发现 `user-identity` 并在热重载后复用缓存；`go test -race ./client` 覆盖 watcher 断线恢复与旧 context 取消场景 |
 | 「刷新几次才出数据」的真实根因 | ✅ | 上一条修好了 watcher，但**首屏仍要刷几次** —— 因为真凶不在网关而在服务注册侧：Consul TTL check 注册后的初始状态是 **critical**，而 `TtlCheckPinger` 进 `for` 循环前**先等一个完整的 `ping_interval`（KV 里是 25s）**才发第一次 `UpdateTTL(pass)`；kratos consul registry 用 `passingOnly=true` 查询，于是每次后端启动都有一段 **25 秒「已注册但对外不可见」的盲窗**，网关拿到空节点列表 → `ErrNoAvailable` → 503。用户日志正好坐实：ttl pinger 起于 `00:50:37.264`，首个 RPC 完成于 `00:51:02.526`（25.3s）。修复分四层：①**注册后立即补一次心跳**（11 个服务的 `internal/pkg/registry/consul.go`，pinger 块此前 11 份字节全同），盲窗压到 0，新增 `pinger_test.go` 3 例（先对旧代码跑红：「3s 内没有收到首次心跳」）；②**Consul KV 参数**：`ping_interval` 25s→10s（原值只比 `duration` 少 5s，网络抖一下就掉出 passing）、`deregister_critical_service_after` 6s→**1m**（Consul 对该字段有 1 分钟硬下限，写 6s 会被静默钳制，等于配置在骗人），11 份 `dev.yml` 与 8 份 `pre.yml` 全部更新并读回校验（改前已全量备份 25 个 key 到仓库外；两个环境的值和注释逐字一致）；③**网关内层重试 `defaultMaxRetries` 3→1**：它无延迟、无退避、无条件判断，与路由 `retry.attempts: 2` 相乘等于一个浏览器 POST 最多打上游 6 次，而 ConnectRPC 全是 POST、无幂等保证；④**删掉 15s 兜底轮询 `startRefreshLoop`**（watcher 修好后它只剩害处：刷屏 WARN、并发写 picker、其 Callback 把健康检查失败计数清零）并把 `healthChecker.updateNodes` 从「全删再全加」改为 **diff 语义** —— 原实现让服务发现每推送一次就赦免所有节点，`maxFailures` 永远攒不满，`HealthyNodeFilter` 形同虚设，新增 `health_checker_test.go` 3 例（旧代码 2 例红） |
 | 成功调用被记成 `rpc.code: "unknown"` | ✅ | 11 个服务的 `internal/server/logging.go` 都在 `err != nil` 分支之前就算好了 `fields`，而 connect 的 Code 常量从 1 开始、**没有 `CodeOK`**，`connect.CodeOf(nil)` 返回的是 `CodeUnknown` —— 每一次成功调用在日志和 span 属性里都记成 `unknown`，按 `rpc.code` 做的看板与告警全部失真。成功路径改为显式记 `"ok"` |
-| 前端购物车重复请求 | ✅ | `useCartBadge`（走 `GetCartSummary`）与 `useCart`（裸 `useEffect` + `isMounted`，只挡了 `setState` 没挡请求，StrictMode 下双发）各拉各的，购物车页一次挂载打 4 个 POST。合并到同一个 TanStack Query `["cart","items"]`（`staleTime` 10s，重试交给 QueryClient），一次挂载 1 个请求；加购后 `invalidateQueries` 让徽标即时刷新。徽标数值不变已核对：`GetCartSummary` 的 SQL 是 `COUNT(*)`（行数，非件数），两个 handler 都按 `CartStatusActive` 过滤，故 `items.length` 与原 `totalCount` 等价 |
+| 前端购物车重复请求 | ✅ | `useCartBadge`（走 `GetCartSummary`）与 `useCart`（裸 `useEffect` + `isMounted`，只挡了 `setState` 没挡请求，StrictMode 下双发）各拉各的，购物车页一次挂载打 4 个 POST。合并到同一个 TanStack Query `["cart","items"]`（`staleTime` 10s，重试交给 QueryClient），一次挂载 1 个请求；加购后 `invalidateQueries` 让徽标即时刷新。徽标数值不变已核对：`GetCartSummary` 的 SQL 是 `COUNT(*)`（行数，非件数），两个 handler 都按 `CartStatusActive` 过滤，故 `items.length` 与原 `totalCount` 等价。**`GetCartSummary` 已于 2026-08 整条删除**（proto/service/biz/data/sqlc 全链），因为 `GetCartResponse.cart_item_quantity` 在 `data/cart.go` 里就是 `len(rows)`，与它返回的是同一条查询的同一个数——同一个数有两个来源迟早对不上 |
 | RBAC 三角色（消费者/商家/管理员） | 🟡 | 策略模型（model.conf/policies.csv）已有；order/payment/merchant/inventory 已按 **RPC 粒度**授权（避免整段 `/svc.v1.*` 放行导致的越权），其余服务仍是整段放行待细化 |
 | Casdoor 集成 | 🟡 | 登录/令牌解析打通，权限适配持续完善 |
 
@@ -166,7 +166,7 @@
 - [x] **consumer 结算页（前端）**：已接选中项/地址弹层选择+新增/防重 requestId/下单调用，去优惠券、运费恒 0、统一 sp[]；生成 `api/order` 客户端并在 `gen/api` 导出 order
 - [ ] **consumer 结算页（待后端联通）**：后端补 `CreateOrderRequest.requestId`、`CreateOrderResponse.orderNo` 并 `make api` 后，提交订单接真实响应、跳真实支付页（现为固定 `/payment/result` 占位）
 - [ ] **下单防重的 `requestId` 一直是假的（迁 connect-query 时查实）**：旧代码 `client.createOrder(message as Parameters<...>[0])` 在假装 proto 有这个字段，而 `CreateOrderRequest` 只有 `cartItemIds`/`addressId`/`remark` 三个，那个 UUID 运行时直接被丢掉 —— 也就是说**防重从来没生效过**。迁移时删掉了那个 cast 和对应的 `useState`，把「假装成立」改成了明面上不成立，结算页留了 TODO。要真生效得先补 proto 字段再 `make api`，与上一条一起做
-- [ ] **cart 的三个 RPC 是死代码**：`RemoveCartItem` / `UpdateCartItemQuantity` / `GetCartSummary` 后端都实现了，前端一个调用者都没有 —— 购物车页的删除和改数量只动本地 valtio store，刷新页面就回来了。迁 connect-query 时按现状迁移（没恢复也没新建这些调用），删掉了那三个空包装。要修就是把 `useCart` 的 `removeItem`/`updateQuantity` 接上 mutation + `invalidateQueries`
+- [ ] **cart 的删除/改数量前端未接线**：`RemoveCartItem` / `UpdateCartItemQuantity` 后端实现完整，但前端 `useCart` 的 `removeItem`/`updateQuantity` 只动本地 valtio store 不发请求 —— **用户删掉商品后刷新页面它会回来**（`GetCart` 拉的还是旧数据，同步 effect 会 clear 再灌回去），即删除与改数量这两个功能对用户实际不存在。修法：两个 hook 各接 `useMutation` + `invalidateQueries`，模式与现有 `addProductToCart` 同构。**同批的 `GetCartSummary` 已删**（2026-08，见下一条）
 - [x] **购物车 cart_item_id 修复（前后端已闭环）**：后端 `AddProductToCart` SQL 改 `RETURNING id`、`AddProductToCartResponse` 增 `cart_item_id`（proto/biz/data/service 已改，`make api` 已跑，`make sqlc` 需在有 DB 的环境重跑以校验，手写已对齐）；前端 `store/cart.ts` 删除伪造 ID、`useCart` 从 `GetCart` 取真实 ID、`api/cart` 乐观新增改用后端返回的真实 `cart_item_id`
 - [ ] **consumer 订单页**：订单列表/详情接真实查询 API，替换 mock
 - [ ] **支付闭环**：`payment/result` 接支付状态查询 + 回调后订单状态同步（订单订阅 `OrderPaid`）
@@ -181,6 +181,7 @@
 - [ ] **admin 端**：新增 `api/` 客户端，接商家审核/用户/类目管理
 - [ ] **RBAC**：补齐三角色细粒度权限校验与网关策略
 - [ ] **测试**：补 consumer 关键路径 playwright/vitest 用例、后端核心 biz 单测
+- [ ] **日志限流（方案已定稿，待拍板实现）**：防"基础设施故障 → 周期性错误日志"风暴（真实暴露面：PG 挂时 behavior `flush()` 每 2s 一条 ERROR、Consul 断连时 11 个服务的 `TtlCheckPinger` 各每 10s 一条，且都经 otelzap 走网络到 Loki，故障时恰是网络最脆弱时；DEBUG 级别现在能热改，忘改回去的风险也变高了）。**机制**：用 zap 内置 Sampler Core 包在 `newLogger` 的 Tee 外层（两条通路 stdout+otelzap 都受管），按 message 键控——结构化日志的 message 是常量串，等价于 VM 按调用位置限流；不选 fluent-bit/collector 侧（只保护存储，保护不了应用自身 I/O）。**分级**：FATAL/PANIC 永不限；ERROR/WARN 每秒同消息前 3 条放行、之后 1/100；INFO 前 10 条；DEBUG 跟随或不限。**压制必须可见**：丢弃钩子打 OTel counter `logs_suppressed_total`（带 level 标签）进 VM——压制速率突增本身就是故障信号，比日志更早；静默压制是最大反模式。**配置**：第一版写常量不动 proto（阈值不是按环境调的东西），要调再走 `Log.Application` 加字段。**铺开**：`internal/pkg/log/log.go` 10 份复制关系全改（同日志级别热生效那轮的改法），网关日志栈不同这轮不动。**测试**（先跑红）：①1s 内 1000 条同消息 ERROR 只写出 ~13 条 ②counter 记到 ~987 ③风暴中其他消息与 FATAL 直通；端到端停 PG 实测"前 3 条 + 稀疏心跳"。待定两点：阈值 3/100 可调；INFO 是否纳管（更保守就只管 ERROR/WARN）
 - [ ] **可观测性**：落地 Loki 日志采集、VictoriaMetrics + Grafana 指标看板
 - [ ] **技术债**：修复 `product/$spuCode.tsx:156` 的 `shopName` 类型报错；清理其余 mock 数据
 
@@ -248,3 +249,72 @@
 3. 全链路压测前置：每个阶段上线前，都需要进行全链路压测，提前发现性能瓶颈、隐藏 bug，避免线上故障。
 4. 数据备份与灾备：核心数据定期备份，制定完善的故障恢复预案，定期进行故障演练，保障数据安全与系统可用性。
 5. 文档同步维护：维护完善的架构文档、API 文档、数据库设计文档，同步更新，避免文档与代码脱节，降低团队协作成本。
+
+---
+
+## 五、会话记录：配置中心迁移与 Cart 灰度（2026-08）
+
+### 问题：遗留的 registry 测试、网关测试包和 Check Connect import 应如何处理？
+
+**回答：** 目标是让测试只覆盖仍存在的实现：按照当前 registry/config 接口重写 stale
+测试，修正网关包的依赖与断言，并将 `checkv1connect` 的旧
+`connect-go-example/...` import 改为本仓模块路径；若仓库中已没有对应实现，则删除失效测试。
+本次迁移摘要没有保留这些子任务的可验证完成记录，继续处理前应重新运行相关包测试确认现状。
+
+**步骤：**
+
+1. 分别运行 address、merchant、payment 的 registry 测试，以及网关 config/cors/jwt/rbac/routerfilter 测试。
+2. 以仍在使用的构造函数、环境变量和接口为准改写断言，删除只引用已删 API 的用例。
+3. 搜索并替换 Check API 生成代码及调用处的旧 module import。
+4. 对每个修复后的包运行 `go test`，不要把其他代理的工作区改动纳入提交。
+
+### 问题：Cart 如何接入独立配置中心，同时支持随时切换配置来源？
+
+**回答：** Cart 已改用独立 `github.com/lens077/config-center` Go SDK。启动时读取本地
+`CONFIG_SOURCE_FILE` 的 `SourceConfig`，由 `type` 选择 `file`、`consul` 或
+`config_center`；不做静默自动降级。默认 `make dev` 走配置中心，`make dev-consul`
+保留历史 Consul 路径。
+
+**步骤：**
+
+1. 维护未入库的 `backend/services/cart/configs/source.dev.yaml`，填写当前灰度 source。
+2. 通过 `make dev` 启动 Cart，并确认它与独立配置中心建立连接。
+3. 需要回退或对照时使用 `make dev-consul`，而不是改业务代码。
+4. 生产迁移使用独立 SDK 的远端模块版本，不使用本地 `replace`。
+
+### 问题：使用既有配置进行配置中心和 Cart 灰度，应如何验证？
+
+**回答：** 已使用历史 Consul 中的 `ecommerce/config/dev.yml` 为独立配置中心启动自举，
+且不把敏感配置写入工作区。Config Center 的 `/healthz`（30010）与 Cart 的
+`/healthz`（30006）均返回 `200`；Cart 与 30010 存在已建立连接，说明 SDK 的
+`config_center` source 生效。
+
+**步骤：**
+
+1. 将历史 bootstrap 仅经标准输入传给配置中心的 `make dev`。
+2. 配置中心健康后启动 Cart 的 `make dev`。
+3. 用只读 `curl` 验证 `/healthz`、`GetCart`，避免测试写入共享开发数据。
+4. 集群阶段另建 Config Center IAM/bootstrap/Cart selector Secret，并以单副本 Cart canary 发布。
+
+### 问题：如何提供方便 IDE 调试的 Cart HTTP 请求并发布包含 SDK 的 dev 镜像？
+
+**回答：** `backend/services/cart/internal/tests/req.http` 已整理为本地直连的 Connect
+HTTP Client 请求，使用正确的 `x-md-global-user-id` 元数据与 RPC 字段，并明确标记
+会写入开发购物车的请求。`make docker-deploy VERSION=dev` 已构建并推送 Linux/amd64
+镜像 `ccr.ccs.tencentyun.com/sumery/cart:dev`。
+
+**步骤：**
+
+1. 在 IDE 打开 `internal/tests/req.http`，先运行健康检查和只读的 GetCart。
+2. 仅在需要时运行 Add/Update/Remove 三个写请求，之后可用 GetCart 确认结果。
+3. 使用等价 `curl` 进行自动化本地烟测；本次三条只读调用均返回 `HTTP 200`。
+4. 使用 `make docker-deploy VERSION=dev` 生成并推送镜像；构建基础镜像必须满足根
+   `go.mod` 的 Go 版本要求（目前为 `golang:1.26.5-alpine3.23`）。
+
+**验证记录：** `go test ./services/cart/...` 已通过；远端 `:dev` OCI index 摘要为
+`sha256:d4daa8ca7fa2f2e8272d449e1e6d887ec9cf07e05b63fa912edb3fd909ba2a74`，Linux/amd64
+manifest 为 `sha256:26537ddf368b58ea10067a58948c636a6de862307a20df5a54a784b92b525d5c`。
+
+**提交注意：** Cart 的 Dockerfile、Makefile 和 HTTP 请求文件应只单独暂存。提交钩子
+调用裸 `pnpm exec commitlint`；若环境仅有 `corepack pnpm` 而 PATH 中没有 `pnpm`，应先
+修复 pnpm shim，再正常提交，不能以 `--no-verify` 绕过规则。
