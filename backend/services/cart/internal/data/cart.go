@@ -121,21 +121,6 @@ func (c cartRepo) GetCart(ctx context.Context, req biz.GetCartRequest) (*biz.Get
 	}, nil
 }
 
-func (c cartRepo) GetCartSummary(ctx context.Context, req biz.GetCartSummaryRequest) (*biz.GetCartSummaryResponse, error) {
-	status := models.CartCartType(req.Status)
-	totalCount, err := c.queries.GetCartSummary(ctx, models.GetCartSummaryParams{
-		UserID: req.ConsumerId,
-		Status: status,
-	})
-	if err != nil {
-		return nil, err
-	}
-
-	return &biz.GetCartSummaryResponse{
-		TotalCount: uint32(totalCount),
-	}, nil
-}
-
 func (c cartRepo) AddProductToCart(ctx context.Context, req biz.AddProductToCartRequest) (*biz.AddProductToCartResponse, error) {
 	price, err := money.Float64ToNumeric(req.Price)
 	if err != nil {

@@ -89,15 +89,6 @@ type (
 		IsCartEmpty      bool
 	}
 )
-type (
-	GetCartSummaryRequest struct {
-		ConsumerId uuid.UUID
-		Status     constants.CartStatusEnum
-	}
-	GetCartSummaryResponse struct {
-		TotalCount uint32
-	}
-)
 
 // CartRepo 用户接口
 type CartRepo interface {
@@ -105,7 +96,6 @@ type CartRepo interface {
 	RemoveCartItem(ctx context.Context, req RemoveCartItemRequest) (*RemoveCartItemResponse, error)
 	UpdateCartItemQuantity(ctx context.Context, req UpdateCartItemQuantityRequest) (*UpdateCartItemQuantityResponse, error)
 	GetCart(ctx context.Context, req GetCartRequest) (*GetCartResponse, error)
-	GetCartSummary(ctx context.Context, req GetCartSummaryRequest) (*GetCartSummaryResponse, error)
 }
 
 type CartUseCase struct {
@@ -132,8 +122,4 @@ func (uc *CartUseCase) UpdateCartItemQuantity(ctx context.Context, req UpdateCar
 
 func (uc *CartUseCase) GetCart(ctx context.Context, req GetCartRequest) (*GetCartResponse, error) {
 	return uc.repo.GetCart(ctx, req)
-}
-
-func (uc *CartUseCase) GetCartSummary(ctx context.Context, req GetCartSummaryRequest) (*GetCartSummaryResponse, error) {
-	return uc.repo.GetCartSummary(ctx, req)
 }
