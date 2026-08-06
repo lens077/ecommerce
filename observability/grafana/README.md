@@ -89,20 +89,13 @@ cpu / memory / disk / network 都已开,所以基础设施盘才做得起来。
 2. **采集管道自身健康(`otelcol_*`)** —— 只在每个 collector pod 的 `:8888`,
    没有任何东西把它采进 VM。这是基础设施盘最大的缺口:现在无法回答
    「遥测有没有在半路丢」。补法是 collector 加 `prometheus` receiver 自采。
-3. **Go 运行时** —— 11 个电商服务都没埋。唯一在报的是**独立仓 config-center**
+3. **Go 运行时** —— 10 个电商服务都没埋。唯一在报的是**独立仓 config-center**
    (它实现了 `internal/pkg/sysstat`),不是本仓任何服务。
-4. **⚠️ `service_name="config-service"` 是两个程序在共用** —— 本仓的
-   `backend/services/config` 与独立仓 config-center 默认服务名相同、都绑
-   `0.0.0.0:30010`、连同一个 `pg-dev.app.com:5432/ecommerce` 池,连
-   `db_client_connection_pool_name` 都区分不开。**所以任何按
-   `service_name="config-service"` 过滤的面板(请求率/错误率/P95、DB 那一行)
-   展示的是两个进程的混合值 —— 不是空图,是错的值。** 在撞名解决之前,涉及
-   config-service 的数字一律不可信。
-   这里曾据此误判过一次:先前记录写成「`process_*` 在 12:52 后停报而同进程
-   `pgxpool_*` 仍正常,是 sysstat 侧问题」—— 已核实推翻,那两族指标根本不来自
-   同一个进程(用 `lsof -ti :30010` 拿到当时的 PID,其二进制里 `sysstat` /
-   `gopsutil` 等符号出现次数全是 0,压根不含那份代码);`process_*` 停在 12:52
-   只是带 sysstat 的那个实例被关掉了。详见 `TODO.md` 的「service_name 撞名」。
+4. **配置中心属于独立基础设施** —— 本仓旧 `backend/services/config` 已退役；
+   两张电商看板会排除 `service_name="config-service"` 的业务/API/DB/日志序列。
+   独立配置中心的运行时视图同时要求
+   `service_name="config-service",service_namespace="config-center"`，避免历史
+   同名序列混入。配置中心自身的 API、DB 与系统资源应在其 System 页面查看。
 5. **Web Vitals** —— behavior 侧六个指标(LCP/CLS/INP/FCP/TTFB/long_task)+
    `frontend.api.duration` 都已实现;当前无数据是因为 behavior 服务没起、
    前端也没在跑。历史上只有 LCP / INP 出过数(来自 `/e2e`、`/e2e-gw` 两个测试页)。

@@ -6,7 +6,6 @@
     system_*                collector host_metrics(cpu/memory/disk/network/filesystem)
     pgxpool_*               otelpgx RecordStats
     db_client_operation_*   otelpgx
-    process_* / process_runtime_go_*   仅 config-service(见 Row 4 说明)
     rpc_server_*            otelconnect(业务盘已用,这里只做「服务在不在」)
 
 已知盲区(都不是本看板能补的,记在 TODO.md「可观测性与测试」):
@@ -26,7 +25,9 @@ from common import (LOKI, PROM, cpu_used_ratio, dash_link, dump, fs_used_ratio,
 
 # 模板变量过滤片段。All 时 Grafana 把 $node 展开成正则 ".*",所以这里恒定可用。
 NODE = 'k8s_node_name=~"$node"'
-SVC = 'service_name=~"$service"'
+SVC = 'service_name=~"$service",service_name!="config-service"'
+ECOMMERCE_SERVICE = 'service_name!="config-service"'
+CONFIG_CENTER_SERVICE = 'service_name="config-service",service_namespace="config-center"'
 
 reset_ids()
 panels = []
@@ -44,9 +45,9 @@ panels.append(prom_stat("节点内存最高", f"max({mem_used_ratio()})", 8, y, 
     thresholds=steps(("green", None), ("yellow", 0.8), ("red", 0.9))))
 panels.append(prom_stat("节点磁盘最高", f"max({fs_used_ratio()})", 12, y, w=4, unit="percentunit",
     thresholds=steps(("green", None), ("yellow", 0.8), ("red", 0.9))))
-panels.append(prom_stat("DB 连接池饱和度最高", f"max({pool_saturation()})", 16, y, w=4, unit="percentunit",
+panels.append(prom_stat("DB 连接池饱和度最高", f"max({pool_saturation(ECOMMERCE_SERVICE)})", 16, y, w=4, unit="percentunit",
     thresholds=steps(("green", None), ("yellow", 0.7), ("red", 0.9))))
-panels.append(prom_stat("在报指标的服务数", 'count(count by (service_name) (rpc_server_duration_milliseconds_count))',
+panels.append(prom_stat("在报指标的服务数", 'count(count by (service_name) (rpc_server_duration_milliseconds_count{service_name!="config-service"}))',
     20, y, w=4, unit="none",
     desc="按 rpc_server_* 判活。只统计「近期有过调用」的服务,空闲服务不计入"))
 y += 4
@@ -98,41 +99,39 @@ panels.append(ts("网络错误与丢包", [
 y += 8
 
 # ───── Row 3 数据库依赖 ─────
-panels.append(row("数据库依赖(pgxpool / otelpgx)—— ⚠️ service_name=config-service 是两个程序的混合值,见 TODO", y)); y += 1
+panels.append(row("数据库依赖(pgxpool / otelpgx)", y)); y += 1
 panels.append(ts("连接池饱和度", [
     prom_t(pool_saturation(SVC), "{{service_name}}"),
 ], 0, y, w=8, unit="percentunit", percent=True,
     thresholds=steps(("green", None), ("red", 0.9)),
     desc="acquired / max。原看板这里用的是 pgxpool_total_conns / pgxpool_acquired_conns,\n"
          "这两个指标名不存在(otelpgx 导出的是 *_connections),所以一直是空图。\n"
-         "⚠️ service_name=config-service 这条曲线是**两个程序的混合值**:本仓\n"
-         "backend/services/config 与独立仓 config-center 服务名撞名、还连同一个 PG 池,\n"
-         "连 db_client_connection_pool_name 都区分不开。撞名解决前这条不可信"))
+         "独立 config-center 已从本仓指标范围排除，其资源指标请到配置中心 System 页面查看"))
 panels.append(ts("连接池构成", [
-    prom_t('pgxpool_acquired_connections{service_name=~"$service"}', "{{service_name}} 已占用"),
-    prom_t('pgxpool_idle_connections{service_name=~"$service"}', "{{service_name}} 空闲", "B"),
-    prom_t('pgxpool_total_connections{service_name=~"$service"}', "{{service_name}} 总数", "C"),
-    prom_t('pgxpool_max_connections{service_name=~"$service"}', "{{service_name}} 上限", "D"),
+    prom_t(f'pgxpool_acquired_connections{{{SVC}}}', "{{service_name}} 已占用"),
+    prom_t(f'pgxpool_idle_connections{{{SVC}}}', "{{service_name}} 空闲", "B"),
+    prom_t(f'pgxpool_total_connections{{{SVC}}}', "{{service_name}} 总数", "C"),
+    prom_t(f'pgxpool_max_connections{{{SVC}}}', "{{service_name}} 上限", "D"),
 ], 8, y, w=8, unit="none"))
 panels.append(ts("空池等待", [
-    prom_t('sum by (service_name) (rate(pgxpool_empty_acquire_total{service_name=~"$service"}[$__rate_interval]))', "{{service_name}} 次/秒"),
+    prom_t(f'sum by (service_name) (rate(pgxpool_empty_acquire_total{{{SVC}}}[$__rate_interval]))', "{{service_name}} 次/秒"),
 ], 16, y, w=8, unit="none",
     desc="池子被抽空、请求只能排队的频率。这才是「池不够用」的真信号 —— \n"
          "光看 acquired 贴着 max 可能只是稳态,而这个一涨就是真的在等"))
 y += 8
 panels.append(ts("空池平均等待时长", [
-    prom_t('rate(pgxpool_empty_acquire_wait_time_nanoseconds_total{service_name=~"$service"}[$__rate_interval])'
-           ' / clamp_min(rate(pgxpool_empty_acquire_total{service_name=~"$service"}[$__rate_interval]), 1)',
+    prom_t(f'rate(pgxpool_empty_acquire_wait_time_nanoseconds_total{{{SVC}}}[$__rate_interval])'
+           f' / clamp_min(rate(pgxpool_empty_acquire_total{{{SVC}}}[$__rate_interval]), 1)',
            "{{service_name}}"),
 ], 0, y, w=8, unit="ns",
     desc="clamp_min 防零除:没有空池等待时分母为 0,不夹住会画出 +Inf"))
 panels.append(ts("DB 操作 P95(分类型)", [
-    prom_t('histogram_quantile(0.95, sum by (le, pgx_operation_type) (rate(db_client_operation_duration_seconds_bucket{service_name=~"$service"}[$__rate_interval])))',
+    prom_t(f'histogram_quantile(0.95, sum by (le, pgx_operation_type) (rate(db_client_operation_duration_seconds_bucket{{{SVC}}}[$__rate_interval])))',
            "{{pgx_operation_type}}"),
 ], 8, y, w=8, unit="s",
     desc="acquire / connect / prepare / query 四类分开看:acquire 慢是池不够,query 慢是 SQL 或库的问题,两者处置完全不同"))
-_db_err = 'sum by (service_name) (rate(db_client_operation_errors_total{service_name=~"$service"}[$__rate_interval]))'
-_db_all = 'sum by (service_name) (rate(db_client_operation_duration_seconds_count{service_name=~"$service"}[$__rate_interval]))'
+_db_err = f'sum by (service_name) (rate(db_client_operation_errors_total{{{SVC}}}[$__rate_interval]))'
+_db_all = f'sum by (service_name) (rate(db_client_operation_duration_seconds_count{{{SVC}}}[$__rate_interval]))'
 panels.append(ts("DB 错误率", [
     prom_t(zero_filled(_db_err, _db_all), "{{service_name}}"),
 ], 16, y, w=8, unit="none", thresholds=steps(("green", None), ("red", 0.1)),
@@ -141,36 +140,35 @@ panels.append(ts("DB 错误率", [
 y += 8
 
 # ───── Row 4 Go 运行时 ─────
-panels.append(row("Go 运行时 —— 本仓 11 个服务都没埋,这里的数据来自独立仓 config-center", y)); y += 1
+panels.append(row("Go 运行时 —— 本仓 10 个服务都没埋,这里的数据来自独立仓 config-center", y)); y += 1
 panels.append(ts("goroutine 数", [
-    prom_t('process_runtime_go_goroutines', "{{service_name}}"),
+    prom_t(f'process_runtime_go_goroutines{{{CONFIG_CENTER_SERVICE}}}', "{{service_name}}"),
 ], 0, y, w=8, unit="none",
-    desc="本仓 11 个服务都没有 runtime 埋点,所以这张图上不会出现它们 —— 不是没数据,是没埋。\n"
-         "唯一在报的是**独立仓 config-center**(它实现了 internal/pkg/sysstat);\n"
-         "它上报的 service_name 恰好与本仓 backend/services/config 撞名,所以图例里的\n"
-         "「config-service」并不是本仓那个服务。详见 TODO.md 的「service_name 撞名」"))
+    desc="本仓 10 个服务都没有 runtime 埋点,所以这张图上不会出现它们 —— 不是没数据,是没埋。\n"
+         "唯一在报的是独立仓 config-center；通过 service.namespace 精确筛选，\n"
+         "不再与已退役的本仓 config 服务或历史同名序列混合"))
 panels.append(ts("Go 堆占用", [
-    prom_t('process_runtime_go_heap_usage_bytes', "{{service_name}}"),
+    prom_t(f'process_runtime_go_heap_usage_bytes{{{CONFIG_CENTER_SERVICE}}}', "{{service_name}}"),
 ], 8, y, w=8, unit="bytes"))
 panels.append(ts("进程 CPU / 内存", [
-    prom_t('process_cpu_utilization_ratio', "{{service_name}} CPU"),
-    prom_t('process_memory_usage_bytes / clamp_min(process_memory_limit_bytes, 1)', "{{service_name}} 内存占比", "B"),
+    prom_t(f'process_cpu_utilization_ratio{{{CONFIG_CENTER_SERVICE}}}', "{{service_name}} CPU"),
+    prom_t(f'process_memory_usage_bytes{{{CONFIG_CENTER_SERVICE}}} / clamp_min(process_memory_limit_bytes{{{CONFIG_CENTER_SERVICE}}}, 1)', "{{service_name}} 内存占比", "B"),
 ], 16, y, w=8, unit="percentunit"))
 y += 8
 
 # ───── Row 5 服务与日志 ─────
 panels.append(row("服务在线与基础设施日志", y)); y += 1
 panels.append(table("各服务请求量(时间范围内)",
-    'sort_desc(sum by (service_name) (increase(rpc_server_duration_milliseconds_count[$__range])))',
+    f'sort_desc(sum by (service_name) (increase(rpc_server_duration_milliseconds_count{{{ECOMMERCE_SERVICE}}}[$__range])))',
     0, y, w=8, h=8, unit="none", hide_regex="Time",
     desc="没出现在这里的服务 = 时间范围内没有被调用过(可能没启动,也可能只是空闲)"))
 panels.append(ts("日志速率(按级别)", [
     {"refId": "A", "datasource": LOKI,
-     "expr": 'sum by (detected_level) (rate({service_name=~".+"}[$__auto]))',
+     "expr": 'sum by (detected_level) (rate({service_name=~".+",service_name!="config-service"}[$__auto]))',
      "legendFormat": "{{detected_level}}"},
 ], 8, y, w=8, unit="none", datasource=LOKI,
     desc="error/warn 陡增通常比任何指标都先反映故障"))
-panels.append(logs("错误与告警日志", '{service_name=~".+"} | detected_level=~"error|warn"', 16, y, w=8, h=8,
+panels.append(logs("错误与告警日志", '{service_name=~".+",service_name!="config-service"} | detected_level=~"error|warn"', 16, y, w=8, h=8,
     desc="按 pod / namespace 下钻现在做不到:fluent-bit 的 Label_keys 写法有误,\n"
          "k8s__pod_name 等标签的值是字面量 \".pod_name\"。详见 TODO.md"))
 
@@ -185,11 +183,16 @@ print(dump(
          "includeAll": True, "multi": True, "current": {"text": ["All"], "value": ["$__all"]},
          "refresh": 2},
         {"name": "service", "label": "服务", "type": "query", "datasource": PROM,
-         "query": {"query": "label_values(pgxpool_max_connections, service_name)", "refId": "v"},
+         "query": {"query": "label_values(pgxpool_max_connections{service_name!=\"config-service\"}, service_name)", "refId": "v"},
          "includeAll": True, "multi": True, "current": {"text": ["All"], "value": ["$__all"]},
          "refresh": 2},
     ],
     time_from="now-6h",
+    # 刷新 1m → 5m。基础设施指标没有 1 分钟粒度的决策价值,而这张盘里那条
+    # `{service_name=~".+"}` 的 Loki 查询要扫全部 stream(实测单次 3h 范围扫 87MB /
+    # 7.7 万行)—— loki 是 SingleBinary 部署、内存上限 1Gi,1 分钟一次地打它并不划算。
+    # 5m 把这类查询的压力降到 1/5,代价是图上最多晚 5 分钟,对排查节点/DB 够用。
+    refresh="5m",
     tags=["ecommerce", "infrastructure", "generated"],
-    message="generated: 节点(host_metrics) + DB(pgxpool/otelpgx) + Go 运行时 + 日志(Loki)",
+    message="generated: 节点(host_metrics) + DB(pgxpool/otelpgx) + 日志(Loki)",
 ))
