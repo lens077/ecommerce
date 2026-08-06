@@ -11,6 +11,7 @@ import (
 	protoreflect "google.golang.org/protobuf/reflect/protoreflect"
 	protoimpl "google.golang.org/protobuf/runtime/protoimpl"
 	durationpb "google.golang.org/protobuf/types/known/durationpb"
+	wrapperspb "google.golang.org/protobuf/types/known/wrapperspb"
 	reflect "reflect"
 	sync "sync"
 	unsafe "unsafe"
@@ -1348,9 +1349,15 @@ func (x *Auth_Casdoor) GetCertificate() string {
 }
 
 type Observability_Trace struct {
-	state         protoimpl.MessageState `protogen:"open.v1"`
-	Endpoint      string                 `protobuf:"bytes,1,opt,name=endpoint,proto3" json:"endpoint,omitempty"`
-	Tls           *Observability_Tls     `protobuf:"bytes,2,opt,name=tls,proto3" json:"tls,omitempty"`
+	state    protoimpl.MessageState `protogen:"open.v1"`
+	Endpoint string                 `protobuf:"bytes,1,opt,name=endpoint,proto3" json:"endpoint,omitempty"`
+	Tls      *Observability_Tls     `protobuf:"bytes,2,opt,name=tls,proto3" json:"tls,omitempty"`
+	// 采样率 [0.0, 1.0]。1.0 = 全采,0.0 = 全不采。
+	// 用 wrapper 而不是裸 double:proto3 裸 double 的零值就是 0.0,和「没配置」
+	// 无法区分 —— 那样所有存量配置(都还没有这个字段)升级后会被解析成 0.0,
+	// 等于一条 trace 都不采,而且不报任何错。wrapper 让「没配」是 null,
+	// 由代码回落到 1.0,与升级前的 AlwaysSample 行为一致。
+	SampleRatio   *wrapperspb.DoubleValue `protobuf:"bytes,3,opt,name=sample_ratio,json=sampleRatio,proto3" json:"sample_ratio,omitempty"`
 	unknownFields protoimpl.UnknownFields
 	sizeCache     protoimpl.SizeCache
 }
@@ -1399,12 +1406,22 @@ func (x *Observability_Trace) GetTls() *Observability_Tls {
 	return nil
 }
 
+func (x *Observability_Trace) GetSampleRatio() *wrapperspb.DoubleValue {
+	if x != nil {
+		return x.SampleRatio
+	}
+	return nil
+}
+
 type Observability_Metric struct {
-	state         protoimpl.MessageState `protogen:"open.v1"`
-	Endpoint      string                 `protobuf:"bytes,1,opt,name=endpoint,proto3" json:"endpoint,omitempty"`
-	Tls           *Observability_Tls     `protobuf:"bytes,2,opt,name=tls,proto3" json:"tls,omitempty"`
-	unknownFields protoimpl.UnknownFields
-	sizeCache     protoimpl.SizeCache
+	state    protoimpl.MessageState `protogen:"open.v1"`
+	Endpoint string                 `protobuf:"bytes,1,opt,name=endpoint,proto3" json:"endpoint,omitempty"`
+	Tls      *Observability_Tls     `protobuf:"bytes,2,opt,name=tls,proto3" json:"tls,omitempty"`
+	// 指标导出间隔。不配置回落到 30s。
+	// (OTel SDK 默认 60s;这里取 30s,原来硬编码的 3s 对 collector 压力过大)
+	ExportInterval *durationpb.Duration `protobuf:"bytes,3,opt,name=export_interval,json=exportInterval,proto3" json:"export_interval,omitempty"`
+	unknownFields  protoimpl.UnknownFields
+	sizeCache      protoimpl.SizeCache
 }
 
 func (x *Observability_Metric) Reset() {
@@ -1447,6 +1464,13 @@ func (x *Observability_Metric) GetEndpoint() string {
 func (x *Observability_Metric) GetTls() *Observability_Tls {
 	if x != nil {
 		return x.Tls
+	}
+	return nil
+}
+
+func (x *Observability_Metric) GetExportInterval() *durationpb.Duration {
+	if x != nil {
+		return x.ExportInterval
 	}
 	return nil
 }
@@ -1935,7 +1959,7 @@ var File_services_inventory_internal_conf_v1_conf_proto protoreflect.FileDescrip
 
 const file_services_inventory_internal_conf_v1_conf_proto_rawDesc = "" +
 	"\n" +
-	".services/inventory/internal/conf/v1/conf.proto\x12\aconf.v1\x1a#third_party/validate/validate.proto\x1a\x1egoogle/protobuf/duration.proto\"\xeb\x02\n" +
+	".services/inventory/internal/conf/v1/conf.proto\x12\aconf.v1\x1a#third_party/validate/validate.proto\x1a\x1egoogle/protobuf/duration.proto\x1a\x1egoogle/protobuf/wrappers.proto\"\xeb\x02\n" +
 	"\tBootstrap\x12/\n" +
 	"\x06server\x18\x01 \x01(\v2\x0f.conf.v1.ServerB\x06\xbaH\x03\xc8\x01\x01R\x06server\x12)\n" +
 	"\x04data\x18\x02 \x01(\v2\r.conf.v1.DataB\x06\xbaH\x03\xc8\x01\x01R\x04data\x12)\n" +
@@ -2027,18 +2051,20 @@ const file_services_inventory_internal_conf_v1_conf_proto_rawDesc = "" +
 	"\rclient_secret\x18\x03 \x01(\tR\fclientSecret\x12+\n" +
 	"\x11organization_name\x18\x04 \x01(\tR\x10organizationName\x12)\n" +
 	"\x10application_name\x18\x05 \x01(\tR\x0fapplicationName\x12 \n" +
-	"\vcertificate\x18\x06 \x01(\tR\vcertificate\"\xf9\x04\n" +
+	"\vcertificate\x18\x06 \x01(\tR\vcertificate\"\x80\x06\n" +
 	"\rObservability\x122\n" +
 	"\x05trace\x18\x01 \x01(\v2\x1c.conf.v1.Observability.TraceR\x05trace\x125\n" +
 	"\x06metric\x18\x02 \x01(\v2\x1d.conf.v1.Observability.MetricR\x06metric\x120\n" +
 	"\x03log\x18\x03 \x01(\v2\x1e.conf.v1.Observability.LoggingR\x03log\x12\x16\n" +
-	"\x06enable\x18\x04 \x01(\bR\x06enable\x1al\n" +
+	"\x06enable\x18\x04 \x01(\bR\x06enable\x1a\xad\x01\n" +
 	"\x05Trace\x125\n" +
 	"\bendpoint\x18\x01 \x01(\tB\x19\xbaH\x16r\x14\x92\x02\x0elocalhost:4318\x80\x02\x01R\bendpoint\x12,\n" +
-	"\x03tls\x18\x02 \x01(\v2\x1a.conf.v1.Observability.TlsR\x03tls\x1am\n" +
+	"\x03tls\x18\x02 \x01(\v2\x1a.conf.v1.Observability.TlsR\x03tls\x12?\n" +
+	"\fsample_ratio\x18\x03 \x01(\v2\x1c.google.protobuf.DoubleValueR\vsampleRatio\x1a\xb1\x01\n" +
 	"\x06Metric\x125\n" +
 	"\bendpoint\x18\x01 \x01(\tB\x19\xbaH\x16r\x14\x92\x02\x0elocalhost:4318\x80\x02\x01R\bendpoint\x12,\n" +
-	"\x03tls\x18\x02 \x01(\v2\x1a.conf.v1.Observability.TlsR\x03tls\x1an\n" +
+	"\x03tls\x18\x02 \x01(\v2\x1a.conf.v1.Observability.TlsR\x03tls\x12B\n" +
+	"\x0fexport_interval\x18\x03 \x01(\v2\x19.google.protobuf.DurationR\x0eexportInterval\x1an\n" +
 	"\aLogging\x125\n" +
 	"\bendpoint\x18\x01 \x01(\tB\x19\xbaH\x16r\x14\x92\x02\x0elocalhost:4318\x80\x02\x01R\bendpoint\x12,\n" +
 	"\x03tls\x18\x02 \x01(\v2\x1a.conf.v1.Observability.TlsR\x03tls\x1af\n" +
@@ -2125,6 +2151,7 @@ var file_services_inventory_internal_conf_v1_conf_proto_goTypes = []any{
 	(*Search_ElasticSearch)(nil),                // 29: conf.v1.Search.ElasticSearch
 	(*Search_ElasticSearch_Tls)(nil),            // 30: conf.v1.Search.ElasticSearch.Tls
 	(*durationpb.Duration)(nil),                 // 31: google.protobuf.Duration
+	(*wrapperspb.DoubleValue)(nil),              // 32: google.protobuf.DoubleValue
 }
 var file_services_inventory_internal_conf_v1_conf_proto_depIdxs = []int32{
 	2,  // 0: conf.v1.Bootstrap.server:type_name -> conf.v1.Server
@@ -2162,18 +2189,20 @@ var file_services_inventory_internal_conf_v1_conf_proto_depIdxs = []int32{
 	31, // 32: conf.v1.Data.Cache.Redis.write_timeout:type_name -> google.protobuf.Duration
 	19, // 33: conf.v1.Data.Cache.Redis.tls:type_name -> conf.v1.Data.Cache.Redis.Tls
 	24, // 34: conf.v1.Observability.Trace.tls:type_name -> conf.v1.Observability.Tls
-	24, // 35: conf.v1.Observability.Metric.tls:type_name -> conf.v1.Observability.Tls
-	24, // 36: conf.v1.Observability.Logging.tls:type_name -> conf.v1.Observability.Tls
-	26, // 37: conf.v1.Discovery.Consul.tls:type_name -> conf.v1.Discovery.Consul.Tls
-	27, // 38: conf.v1.Discovery.Consul.check:type_name -> conf.v1.Discovery.Consul.Check
-	28, // 39: conf.v1.Discovery.Consul.Check.ttl:type_name -> conf.v1.Discovery.Consul.Check.TTL
-	31, // 40: conf.v1.Discovery.Consul.Check.TTL.ping_interval:type_name -> google.protobuf.Duration
-	30, // 41: conf.v1.Search.ElasticSearch.tls:type_name -> conf.v1.Search.ElasticSearch.Tls
-	42, // [42:42] is the sub-list for method output_type
-	42, // [42:42] is the sub-list for method input_type
-	42, // [42:42] is the sub-list for extension type_name
-	42, // [42:42] is the sub-list for extension extendee
-	0,  // [0:42] is the sub-list for field type_name
+	32, // 35: conf.v1.Observability.Trace.sample_ratio:type_name -> google.protobuf.DoubleValue
+	24, // 36: conf.v1.Observability.Metric.tls:type_name -> conf.v1.Observability.Tls
+	31, // 37: conf.v1.Observability.Metric.export_interval:type_name -> google.protobuf.Duration
+	24, // 38: conf.v1.Observability.Logging.tls:type_name -> conf.v1.Observability.Tls
+	26, // 39: conf.v1.Discovery.Consul.tls:type_name -> conf.v1.Discovery.Consul.Tls
+	27, // 40: conf.v1.Discovery.Consul.check:type_name -> conf.v1.Discovery.Consul.Check
+	28, // 41: conf.v1.Discovery.Consul.Check.ttl:type_name -> conf.v1.Discovery.Consul.Check.TTL
+	31, // 42: conf.v1.Discovery.Consul.Check.TTL.ping_interval:type_name -> google.protobuf.Duration
+	30, // 43: conf.v1.Search.ElasticSearch.tls:type_name -> conf.v1.Search.ElasticSearch.Tls
+	44, // [44:44] is the sub-list for method output_type
+	44, // [44:44] is the sub-list for method input_type
+	44, // [44:44] is the sub-list for extension type_name
+	44, // [44:44] is the sub-list for extension extendee
+	0,  // [0:44] is the sub-list for field type_name
 }
 
 func init() { file_services_inventory_internal_conf_v1_conf_proto_init() }

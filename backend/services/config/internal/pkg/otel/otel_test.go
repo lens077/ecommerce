@@ -5,8 +5,8 @@ import (
 	"testing"
 	"time"
 
-	confv1 "github.com/lens077/ecommerce/backend/services/search/internal/conf/v1"
-	"github.com/lens077/ecommerce/backend/services/search/internal/pkg/meta"
+	confv1 "github.com/lens077/ecommerce/backend/services/config/internal/conf/v1"
+	"github.com/lens077/ecommerce/backend/services/config/internal/pkg/meta"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/suite"
 	"go.uber.org/zap"

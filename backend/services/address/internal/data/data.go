@@ -268,7 +268,11 @@ func buildPgPool(cfg *conf.Bootstrap, logger *zap.Logger) (*pgxpool.Pool, error)
 	}
 
 	// 链路追踪配置
-	pgConf.ConnConfig.Tracer = otelpgx.NewTracer()
+	// WithTrimSQLInSpanName:span 名只留 sqlc 的查询名(如 "query GetCartItems"),
+	// 不带整段 SQL。默认行为会把带换行的完整 SQL 塞进 span name —— 而 span name
+	// 在后端是个索引维度,SQL 文本进去会把基数撑爆,Jaeger 的 operation 列表也没法用。
+	// 完整 SQL 仍然保留在 db.statement attribute 上,不丢信息。
+	pgConf.ConnConfig.Tracer = otelpgx.NewTracer(otelpgx.WithTrimSQLInSpanName())
 
 	pool, err := pgxpool.NewWithConfig(context.Background(), pgConf)
 	if err != nil {
