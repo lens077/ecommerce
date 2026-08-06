@@ -19,8 +19,9 @@
 
 ## 命令与验收锚点（可执行）
 
-> 完整可执行 runbook（含冻结验收集、前端、双审、提交流程）见
-> **[context/team/runbook.md](context/team/runbook.md)**。以下是提交前必跑的锚点：
+> **[context/team/runbook.md](context/team/runbook.md)** 是可执行入口:§0.1 是**按改动类型的
+> 必读路由**（动 Redis / 定时任务 / proto / 指标告警 / CI-CD 前各该先读哪份），
+> 其余是冻结验收集、前端、双审、提交流程。以下是提交前必跑的锚点：
 
 ```bash
 cd backend && go build ./... && go vet ./...        # 后端编译 + 静态检查(rc=0)
