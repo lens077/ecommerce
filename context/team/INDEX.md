@@ -5,6 +5,7 @@
 
 | 文件 | 约束什么 | 违反的后果 |
 |---|---|---|
+| [runbook.md](runbook.md) | 提交前必跑的命令与验收锚点、改动前必读的限制（规则的命令化汇总，供 Codex 直读） | 靠模型自报放行、跳过 build/test/structcheck |
 | [git-commit.md](git-commit.md) | 提交信息格式、分支策略、提交前必须更新 TODO.md | 文档与实现脱节 |
 | [proto-design.md](proto-design.md) | proto 字段的设计依据与校验约束 | 脏数据穿透到 biz 层 / 契约破坏炸前后端 |
 | [local-env.md](local-env.md) | 本地跑服务时连哪套基础设施 | 连不上、超时、白排查半天 |
