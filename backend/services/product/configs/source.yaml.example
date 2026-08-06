@@ -1,0 +1,10 @@
+# This selector must be mounted locally. It chooses where product loads its full
+# Bootstrap document before remote configuration is available.
+type: config_center
+config_center:
+  address: http://127.0.0.1:30010
+  namespace: product
+  environment: dev
+  key: bootstrap.yaml
+  # Keep the actual token in the ignored source.dev.yaml or a Kubernetes Secret.
+  service_token: ""
