@@ -31,7 +31,10 @@ func NewConnectOptions(
 		// 不加这个选项时 otelconnect 会强制 WithNewRoot(),把上游 context 降级成
 		// 一条 link —— 结果是网关和本服务在 Jaeger 里是两条独立的 trace,点不进去。
 		// 本服务只从网关入站(网关已做 JWT 鉴权),这个信任边界成立。
-		otelInterceptor, err := otelconnect.NewInterceptor(otelconnect.WithTrustRemote())
+		otelInterceptor, err := otelconnect.NewInterceptor(
+			otelconnect.WithTrustRemote(),
+			otelconnect.WithoutServerPeerAttributes(),
+		)
 		if err != nil {
 			logger.Fatal("failed to init otel interceptor", zap.Error(err))
 		}

@@ -42,14 +42,40 @@ GRAFANA_DS_PROM=xxx GRAFANA_DS_PG=yyy GRAFANA_DS_LOKI=zzz python3 build_infrastr
 
 本目录的业务盘搬自 `cloud-native-deploy/grafana/dashboards/build_ecommerce_overview.py`。
 搬过来时把**指标名与真实上报对了一遍**(逐条拿 VM 的 `/api/v1/label/__name__/values`
-和 `/api/v1/query` 验证,不是看代码猜),修了四处:
+和 `/api/v1/query` 验证,不是看代码猜),修了五处:
 
 | 原来 | 问题 | 现在 |
 |---|---|---|
+| 错误率 `sum(rate(m{code!=""}))/sum(rate(m))` | `rpc_connect_rpc_error_code` 只挂在**出错的序列**上,零错误时分子一条序列都没有,相除得空集而不是 0 —— **服务健康时图一片空白,看起来像看板坏了** | 用分母乘 0 兜底,见下「零填充」 |
 | `pgxpool_total_conns` / `pgxpool_acquired_conns` | **指标名不存在**,面板一直是空图。otelpgx 导出的是 `*_connections` | 移到基础设施盘,用 `pgxpool_total_connections` / `pgxpool_acquired_connections` |
 | `web_vitals_cls_milliseconds_bucket` | CLS 在 behavior 侧的 `unit` 是 `"1"` 不是 `"ms"`,OTLP→VM 的后缀是 `_ratio` | `web_vitals_cls_ratio_bucket` |
 | `http_server_request_duration_seconds_bucket` | **整个指标族不存在**:网关没有任何 meter,只有 tracing 中间件 | 面板删除(见下「未实现」) |
 | 文件系统使用率没有 mountpoint 过滤 | 会画出 8 条 `/var/lib/kubelet/pods/**` 的 PVC bind mount(每个带 PVC 的 Pod 一个,底下还是同一块盘) | 只留 ext4/xfs 且排除 `/var/lib/kubelet/**`;分母改用 `sum without(state)`,原来的 `used+free` 漏了 `reserved` |
+
+### 零填充(`common.py` 的 `zero_filled()`)
+
+「零事件时整条序列都不存在」的指标不能直接画,也不能直接做分子 —— 健康时会得到
+空图,而空图看起来像看板坏了,不像「一切正常」。写法:
+
+```promql
+(sum by (service_name) (rate(错误[$i])) or sum by (service_name) (rate(总量[$i])) * 0)
+  / sum by (service_name) (rate(总量[$i]))
+```
+
+**刻意不用 `or on() vector(0)`**:实测它在 VictoriaMetrics 上能出结果(VM 会把无
+标签的单序列当标量广播到右侧每个分组),但 Prometheus 不做这个广播 —— 无标签的左
+操作数匹配不上带 `service_name` 的右操作数,结果仍然是空,换个后端就又坏了。按分组
+乘 0 两边都对。
+
+有一个有意的性质:**只给分母里存在的分组补 0**。完全没有流量的服务仍然不出现在图
+上 —— 不该给一个没跑起来的服务画一条 0% 让人以为它健康。
+
+判断某个面板要不要零填充,标准是「该指标是否覆盖分母里的**每一个**分组」,而不是
+「它有没有序列」。按后者筛会漏 —— `db_client_operation_errors_total` 有 1 条序列
+(config-service),看着像正常,但 cart 做了 51 次 DB 操作、零错误,它在这个面板里
+就是不存在的。已按此标准核过:`system_network_errors_total` / `dropped_total`
+(hostmetrics 恒发,2 节点 × 2 方向 4 条全在)、`pgxpool_empty_acquire_total` /
+`canceled_acquires_total`(RecordStats 恒发,覆盖全部上报服务)都**不需要**兜底。
 
 顺带:原文件里「host_metrics 目前只开了 filesystem scraper」的说明已过期 ——
 cpu / memory / disk / network 都已开,所以基础设施盘才做得起来。
