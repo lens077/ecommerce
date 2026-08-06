@@ -3,7 +3,7 @@
     python3 build_business_overview.py > business-overview.json
 
 数据源分工:
-- Postgres  业务真相源:orders.order_main / cart.cart_item
+- Postgres  业务真相源:orders.order_group / orders.order_main / cart.cart_item
             (behaviors.events 表已建但没数据:tracker 未接线,所以漏斗用 RPC 近似)
 - VM        rpc_server_*(otelconnect)、web_vitals_*(behavior TelemetryService)、
             system_*(collector host_metrics)、pgxpool_*(otelpgx)
@@ -27,16 +27,18 @@ ECOMMERCE_SERVICE = 'service_name!="config-service"'
 
 # ───── Row 1 业务北极星 ─────
 panels.append(row("业务北极星(时间范围内)", y)); y += 1
-panels.append(pg_stat("订单数", "SELECT count(*) FROM orders.order_main WHERE $__timeFilter(created_at)", 0, y,
-                      desc="orders.order_main 落库数"))
-panels.append(pg_stat("GMV(应付)", "SELECT coalesce(sum(pay_amount),0) FROM orders.order_main WHERE $__timeFilter(created_at)", 4, y,
-                      unit="currencyCNY", desc="sum(pay_amount)。金额列是 numeric,汇总在库内做"))
-panels.append(pg_stat("客单价", "SELECT coalesce(avg(pay_amount),0) FROM orders.order_main WHERE $__timeFilter(created_at)", 8, y,
-                      unit="currencyCNY"))
+panels.append(pg_stat("订单数", "SELECT count(*) FROM orders.order_group WHERE $__timeFilter(created_at)", 0, y,
+                      desc="orders.order_group：一次用户结算，多商家拆单只算一单"))
+panels.append(pg_stat("GMV(应付)", "SELECT coalesce(sum(pay_amount),0) FROM orders.order_group WHERE $__timeFilter(created_at)", 4, y,
+                      unit="currencyCNY", decimals=2,
+                      desc="订单组实付总额。金额列是 numeric，汇总在库内做；包含尚未支付订单"))
+panels.append(pg_stat("客单价", "SELECT coalesce(avg(pay_amount),0) FROM orders.order_group WHERE $__timeFilter(created_at)", 8, y,
+                      unit="currencyCNY", decimals=2,
+                      desc="订单组平均实付金额：按用户一次结算计算，不按商家子订单拆分"))
 panels.append(pg_stat("加购条目数", "SELECT count(*) FROM cart.cart_item WHERE $__timeFilter(created_at)", 12, y,
                       desc="cart.cart_item 新增行数(同 SKU 累加数量不产生新行,口径偏保守)"))
 panels.append(pg_stat("加购→下单转化率",
-    "SELECT count(DISTINCT o.user_id)::float / nullif((SELECT count(DISTINCT user_id) FROM cart.cart_item WHERE $__timeFilter(created_at)),0) FROM orders.order_main o WHERE $__timeFilter(o.created_at)",
+    "SELECT count(DISTINCT o.user_id)::float / nullif((SELECT count(DISTINCT user_id) FROM cart.cart_item WHERE $__timeFilter(created_at)),0) FROM orders.order_group o WHERE $__timeFilter(o.created_at)",
     16, y, unit="percentunit",
     thresholds=steps(("red", None), ("yellow", 0.1), ("green", 0.3)),
     desc="下单用户数 / 加购用户数(用户去重口径,不是订单/条目比)"))
@@ -49,16 +51,16 @@ y += 4
 
 # ───── Row 2 业务趋势 ─────
 panels.append(row("业务趋势", y)); y += 1
-panels.append(ts("加购 vs 下单(按天)", [
+panels.append(ts("加购 vs 下单(按天，订单组)", [
     pg_t("SELECT $__timeGroup(created_at,'1d') AS time, count(*) AS \"加购条目\" FROM cart.cart_item WHERE $__timeFilter(created_at) GROUP BY 1 ORDER BY 1", "A"),
-    pg_t("SELECT $__timeGroup(created_at,'1d') AS time, count(*) AS \"订单\" FROM orders.order_main WHERE $__timeFilter(created_at) GROUP BY 1 ORDER BY 1", "B"),
+    pg_t("SELECT $__timeGroup(created_at,'1d') AS time, count(*) AS \"订单\" FROM orders.order_group WHERE $__timeFilter(created_at) GROUP BY 1 ORDER BY 1", "B"),
 ], 0, y, w=10, datasource=PG))
 panels.append(ts("GMV(按天)", [
-    pg_t("SELECT $__timeGroup(created_at,'1d') AS time, sum(pay_amount) AS \"GMV\" FROM orders.order_main WHERE $__timeFilter(created_at) GROUP BY 1 ORDER BY 1"),
-], 10, y, w=6, unit="currencyCNY", datasource=PG))
+    pg_t("SELECT $__timeGroup(created_at,'1d') AS time, sum(pay_amount) AS \"GMV\" FROM orders.order_group WHERE $__timeFilter(created_at) GROUP BY 1 ORDER BY 1"),
+], 10, y, w=6, unit="currencyCNY", datasource=PG, decimals=2))
 panels.append(piechart("订单状态分布",
     "SELECT order_status::text AS metric, count(*) AS n FROM orders.order_main WHERE $__timeFilter(created_at) GROUP BY 1",
-    16, y, w=8, desc="order_main.order_status"))
+    16, y, w=8, desc="商家子订单状态（order_main）；订单组没有独立状态字段"))
 y += 8
 
 # ───── Row 3 行为漏斗(RPC 近似) ─────

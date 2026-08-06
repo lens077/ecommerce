@@ -43,7 +43,7 @@ def steps(*pairs):
     return {"mode": "absolute", "steps": [{"color": c, "value": v} for c, v in pairs]}
 
 
-def pg_stat(title, sql, x, y, w=4, h=4, unit="none", thresholds=None, desc=""):
+def pg_stat(title, sql, x, y, w=4, h=4, unit="none", thresholds=None, desc="", decimals=None):
     p = {
         "id": nid(), "type": "stat", "title": title, "description": desc,
         "datasource": PG, "gridPos": gp(x, y, w, h),
@@ -54,6 +54,8 @@ def pg_stat(title, sql, x, y, w=4, h=4, unit="none", thresholds=None, desc=""):
     }
     if thresholds:
         p["fieldConfig"]["defaults"]["thresholds"] = thresholds
+    if decimals is not None:
+        p["fieldConfig"]["defaults"]["decimals"] = decimals
     return p
 
 
@@ -74,7 +76,7 @@ def prom_stat(title, expr, x, y, w=4, h=4, unit="ms", thresholds=None, desc="", 
 
 
 def ts(title, targets, x, y, w=12, h=8, unit="none", datasource=PROM, desc="",
-       percent=False, thresholds=None, stack=False):
+       percent=False, thresholds=None, stack=False, decimals=None):
     p = {
         "id": nid(), "type": "timeseries", "title": title, "description": desc,
         "datasource": datasource, "gridPos": gp(x, y, w, h),
@@ -92,6 +94,8 @@ def ts(title, targets, x, y, w=12, h=8, unit="none", datasource=PROM, desc="",
         p["fieldConfig"]["defaults"]["custom"]["thresholdsStyle"] = {"mode": "dashed"}
     if stack:
         p["fieldConfig"]["defaults"]["custom"]["stacking"] = {"mode": "normal", "group": "A"}
+    if decimals is not None:
+        p["fieldConfig"]["defaults"]["decimals"] = decimals
     return p
 
 
