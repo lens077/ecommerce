@@ -20,8 +20,8 @@ description: 同一份服务配置存在仓库、Consul KV、配置中心三处�
 
 | 位置 | 谁在读 |
 |---|---|
-| Consul KV `ecommerce/<svc>/<env>.yml` | `CONFIG_SOURCE=consul` 的服务（默认） |
-| 配置中心 `<svc>/<env>/bootstrap.yaml` | `CONFIG_SOURCE=configcenter` 的服务 |
+| Consul KV `ecommerce/<svc>/<env>.yml` | selector 的 `type: consul`，或 `make dev-consul` 的历史路径 |
+| 配置中心 `<svc>/<env>/bootstrap.yaml` | 本地 `CONFIG_SOURCE_FILE` selector 的 `type: config_center`（默认 `make dev`） |
 | 仓库 `backend/services/<svc>/configs/<env>.yml` | **没有任何程序读它** |
 
 第三个是关键：那些文件从来不是运行时配置，只是本地工作副本。但因为它们躺在仓库里、
@@ -58,6 +58,18 @@ description: 同一份服务配置存在仓库、Consul KV、配置中心三处�
 
 **验证方式**：用该服务真实的 `Bootstrap` 类型 + 与 `decodeConfig` 完全相同的解码链路解一遍，
 再列出实际被填充的顶层字段。只看 YAML 语法合法说明不了任何问题——上面每一份都是合法 YAML。
+
+## 配置中心必须经 SDK selector
+
+不要在服务内手写 Config Center 的 ConnectRPC client，也不要再使用
+`CONFIG_SOURCE=configcenter` 加 `CONFIG_CENTER_*` 环境变量。Config Center 对机器读取要求
+`x-config-center-service-token`；旧的手写客户端没有携带该 header，会得到 401。统一使用
+`github.com/lens077/config-center/sdk/configsource` 读取本地 `CONFIG_SOURCE_FILE`：SDK 从 selector
+的 `config_center.service_token` 创建请求头，并统一处理 `file`、`consul`、`config_center` 三种来源。
+
+selector 是加载远端 Bootstrap 之前唯一可用的启动配置。示例文件只记录地址、命名空间、环境和
+key；含 token 的 `configs/source.dev.yaml` 必须被 gitignore，集群用 Kubernetes Secret 以文件形式
+挂载。服务启动时 selector 缺失或 token 无效应直接失败，绝不静默降级到 Consul 或旧客户端。
 
 ## 陷阱
 

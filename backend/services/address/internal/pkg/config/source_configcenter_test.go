@@ -5,6 +5,8 @@ import (
 	"errors"
 	"net/http"
 	"net/http/httptest"
+	"os"
+	"path/filepath"
 	"sync"
 	"testing"
 
@@ -24,10 +26,11 @@ type fakeConfigService struct {
 	// entries 以 "namespace/environment/key" 为索引,构造后只读
 	entries map[string]*configv1.ConfigEntry
 
-	// httptest 每个连接一个 goroutine,并发用例下 handler 会同时写 lastReq,故加锁
+	// httptest 每个连接一个 goroutine,并发用例下 handler 会同时写断言字段,故加锁
 	mu sync.Mutex
 	// lastReq 记录最后一次请求,用于断言三元组被正确传递
-	lastReq *configv1.GetKeyRequest
+	lastReq    *configv1.GetKeyRequest
+	lastHeader http.Header
 }
 
 // LastReq 返回最后一次收到的 GetKey 请求
@@ -37,11 +40,18 @@ func (f *fakeConfigService) LastReq() *configv1.GetKeyRequest {
 	return f.lastReq
 }
 
+func (f *fakeConfigService) LastHeader() http.Header {
+	f.mu.Lock()
+	defer f.mu.Unlock()
+	return f.lastHeader.Clone()
+}
+
 func (f *fakeConfigService) GetKey(
 	_ context.Context, req *connect.Request[configv1.GetKeyRequest],
 ) (*connect.Response[configv1.GetKeyResponse], error) {
 	f.mu.Lock()
 	f.lastReq = req.Msg
+	f.lastHeader = req.Header().Clone()
 	f.mu.Unlock()
 
 	id := req.Msg.GetNamespace() + "/" + req.Msg.GetEnvironment() + "/" + req.Msg.GetKey()
@@ -65,15 +75,19 @@ func startFakeConfigService(t *testing.T, entries map[string]*configv1.ConfigEnt
 	return svc, server.URL
 }
 
-// useConfigCenterSource 把环境变量指向桩服务,返回构造好的数据源
+// useConfigCenterSource 把 SDK selector 指向桩服务,返回构造好的数据源。
 func useConfigCenterSource(t *testing.T, addr, namespace, environment, key string) Source {
 	t.Helper()
+	selector := filepath.Join(t.TempDir(), "source.yaml")
+	contents := []byte("type: config_center\nconfig_center:\n" +
+		"  address: " + addr + "\n" +
+		"  namespace: " + namespace + "\n" +
+		"  environment: " + environment + "\n" +
+		"  key: " + key + "\n" +
+		"  service_token: test-service-token\n")
+	require.NoError(t, os.WriteFile(selector, contents, 0o600))
 	clearSourceEnv(t)
-	t.Setenv(constants.EnvConfigSource, constants.ConfigSourceConfigCenter)
-	t.Setenv(constants.EnvConfigCenterAddr, addr)
-	t.Setenv(constants.EnvConfigCenterNamespace, namespace)
-	t.Setenv(constants.EnvConfigCenterEnv, environment)
-	t.Setenv(constants.EnvConfigCenterKey, key)
+	t.Setenv(constants.EnvConfigSourceFile, selector)
 
 	src, err := NewSource()
 	require.NoError(t, err)
@@ -105,18 +119,7 @@ func TestConfigCenterSource_Load(t *testing.T) {
 	assert.Equal(t, "cart", last.GetNamespace())
 	assert.Equal(t, "dev", last.GetEnvironment())
 	assert.Equal(t, "bootstrap.yaml", last.GetKey())
-}
-
-// 不设 CONFIG_CENTER_KEY 时应落到默认 key,与部署清单里的约定一致
-func TestConfigCenterSource_DefaultKey(t *testing.T) {
-	svc, addr := startFakeConfigService(t, map[string]*configv1.ConfigEntry{
-		"cart/dev/" + constants.ConfigCenterKey: {Value: testBootstrapYAML},
-	})
-
-	src := useConfigCenterSource(t, addr, "cart", "dev", "")
-	_, err := src.Load(context.Background())
-	require.NoError(t, err)
-	assert.Equal(t, constants.ConfigCenterKey, svc.LastReq().GetKey())
+	assert.Equal(t, "test-service-token", svc.LastHeader().Get("x-config-center-service-token"))
 }
 
 func TestConfigCenterSource_LoadNotFound(t *testing.T) {
@@ -126,9 +129,8 @@ func TestConfigCenterSource_LoadNotFound(t *testing.T) {
 	_, err := src.Load(context.Background())
 	require.Error(t, err)
 
-	// 报错要带齐 namespace/environment/key 和地址,便于一眼看出取的是哪一份
+	// 报错要带齐 namespace/environment/key,便于一眼看出取的是哪一份
 	assert.Contains(t, err.Error(), "cart/prod/bootstrap.yaml")
-	assert.Contains(t, err.Error(), addr)
 	assert.Equal(t, connect.CodeNotFound, connect.CodeOf(err))
 }
 
@@ -159,7 +161,7 @@ func TestConfigCenterSource_LoadUnreachable(t *testing.T) {
 
 	_, err := src.Load(context.Background())
 	require.Error(t, err)
-	assert.Contains(t, err.Error(), "config center get key failed")
+	assert.Contains(t, err.Error(), "read config center key")
 }
 
 func TestConfigCenterSource_LoadRespectsContext(t *testing.T) {

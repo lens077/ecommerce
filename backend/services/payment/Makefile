@@ -16,6 +16,7 @@ AMD64=linux/amd64
 # consul.app.com(192.168.3.110) 从宿主机访问会超时,所以默认写成可达的 IP;
 # 需要走域名时命令行覆盖即可: make dev CONSUL_KV_ADDR=consul.app.com
 CONSUL_KV_ADDR ?= 192.168.3.112:8500
+PAYMENT_SOURCE_CONFIG ?= configs/source.dev.yaml
 
 .PHONY: k8s-dev
 k8s-dev:
@@ -25,29 +26,30 @@ k8s-dev:
 k8s-prod:
 	kubectl apply -f deploy/prod
 
-# 配置数据源二选一,CONFIG_SOURCE 决定;两种情况下 Consul 都照常做服务注册/发现。
-# make dev      -> Consul KV(默认,与历史一致)
-# make dev-cc   -> 配置中心 config-service
+# Payment 通过独立 config-center SDK 读取本地 SourceConfig。selector 选择
+# file / consul / config_center；Consul 仍用于本服务注册发现。
+# make dev        -> SourceConfig(默认 config_center)
+# make dev-consul -> 历史 Consul KV 读取路径
 
 .PHONY: dev
 dev:
 	SERVICE_NAME="payment-service" \
 	CONSUL_ENABLED=true \
+	CONFIG_SOURCE_FILE=$(PAYMENT_SOURCE_CONFIG) \
 	CONSUL_ADDR=$(CONSUL_KV_ADDR) \
-	CONSUL_PATH=ecommerce/payment/dev.yml \
 	CONSUL_SCHEME=http \
 	CONSUL_INSECURE_SKIP_VERIFY=true \
 	go run cmd/server/main.go
 
-.PHONY: dev-cc
-dev-cc:
+.PHONY: dev-consul
+dev-consul:
 	SERVICE_NAME="payment-service" \
 	CONSUL_ENABLED=true \
-	CONFIG_SOURCE=configcenter \
-	CONFIG_CENTER_ADDR=http://127.0.0.1:30010 \
-	CONFIG_CENTER_NAMESPACE=payment \
-	CONFIG_CENTER_ENV=dev \
-	CONFIG_CENTER_KEY=bootstrap.yaml \
+	CONFIG_SOURCE=consul \
+	CONSUL_ADDR=$(CONSUL_KV_ADDR) \
+	CONSUL_PATH=ecommerce/payment/dev.yml \
+	CONSUL_SCHEME=http \
+	CONSUL_INSECURE_SKIP_VERIFY=true \
 	go run cmd/server/main.go
 
 .PHONY: test

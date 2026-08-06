@@ -120,7 +120,7 @@ func TestInit_FromConfigCenter(t *testing.T) {
 	// 同一份 YAML 经另一条链路进来,解析结果必须完全一致
 	assert.Equal(t, "0.0.0.0:30006", got.Server.Addr)
 	assert.Equal(t, 10*time.Second, got.Server.Http.ReadTimeout.AsDuration())
-	assert.Equal(t, constants.ConfigSourceConfigCenter, SourceName())
+	assert.Equal(t, "config_center", SourceName())
 	assert.Same(t, got, GetConfig())
 }
 

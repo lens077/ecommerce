@@ -7,6 +7,7 @@
 # 校验方式:git check-ignore -v configs/pre.yml 必须有输出。
 config.yaml
 config.yml
+source.dev.yaml
 dev.yml
 pre.yml
 prod.yml
