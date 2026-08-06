@@ -4,6 +4,7 @@ package conf.v1;
 
 import "third_party/validate/validate.proto";
 import "google/protobuf/duration.proto";
+import "google/protobuf/wrappers.proto";
 
 option go_package = "github.com/lens077/ecommerce/backend/services/search/internal/conf/v1;confv1";
 
@@ -203,6 +204,12 @@ message Observability {
       (buf.validate.field).string.example = "localhost:4318"
     ];
     Tls tls = 2;
+    // 采样率 [0.0, 1.0]。1.0 = 全采,0.0 = 全不采。
+    // 用 wrapper 而不是裸 double:proto3 裸 double 的零值就是 0.0,和「没配置」
+    // 无法区分 —— 那样所有存量配置(都还没有这个字段)升级后会被解析成 0.0,
+    // 等于一条 trace 都不采,而且不报任何错。wrapper 让「没配」是 null,
+    // 由代码回落到 1.0,与升级前的 AlwaysSample 行为一致。
+    google.protobuf.DoubleValue sample_ratio = 3;
   }
   message Metric {
     string endpoint = 1 [
@@ -210,6 +217,9 @@ message Observability {
       (buf.validate.field).string.example = "localhost:4318"
     ];
     Tls tls = 2;
+    // 指标导出间隔。不配置回落到 30s。
+    // (OTel SDK 默认 60s;这里取 30s,原来硬编码的 3s 对 collector 压力过大)
+    google.protobuf.Duration export_interval = 3;
   }
   message Logging {
     string endpoint = 1 [

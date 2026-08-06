@@ -2,7 +2,7 @@
 // versions:
 // 	protoc-gen-go v1.36.11
 // 	protoc        (unknown)
-// source: services/merchant/internal/conf/v1/conf.proto
+// source: internal/conf/v1/conf.proto
 
 package confv1
 
@@ -11,6 +11,7 @@ import (
 	protoreflect "google.golang.org/protobuf/reflect/protoreflect"
 	protoimpl "google.golang.org/protobuf/runtime/protoimpl"
 	durationpb "google.golang.org/protobuf/types/known/durationpb"
+	wrapperspb "google.golang.org/protobuf/types/known/wrapperspb"
 	reflect "reflect"
 	sync "sync"
 	unsafe "unsafe"
@@ -38,7 +39,7 @@ type Bootstrap struct {
 
 func (x *Bootstrap) Reset() {
 	*x = Bootstrap{}
-	mi := &file_services_merchant_internal_conf_v1_conf_proto_msgTypes[0]
+	mi := &file_internal_conf_v1_conf_proto_msgTypes[0]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -50,7 +51,7 @@ func (x *Bootstrap) String() string {
 func (*Bootstrap) ProtoMessage() {}
 
 func (x *Bootstrap) ProtoReflect() protoreflect.Message {
-	mi := &file_services_merchant_internal_conf_v1_conf_proto_msgTypes[0]
+	mi := &file_internal_conf_v1_conf_proto_msgTypes[0]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -63,7 +64,7 @@ func (x *Bootstrap) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use Bootstrap.ProtoReflect.Descriptor instead.
 func (*Bootstrap) Descriptor() ([]byte, []int) {
-	return file_services_merchant_internal_conf_v1_conf_proto_rawDescGZIP(), []int{0}
+	return file_internal_conf_v1_conf_proto_rawDescGZIP(), []int{0}
 }
 
 func (x *Bootstrap) GetServer() *Server {
@@ -126,7 +127,7 @@ type Log struct {
 
 func (x *Log) Reset() {
 	*x = Log{}
-	mi := &file_services_merchant_internal_conf_v1_conf_proto_msgTypes[1]
+	mi := &file_internal_conf_v1_conf_proto_msgTypes[1]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -138,7 +139,7 @@ func (x *Log) String() string {
 func (*Log) ProtoMessage() {}
 
 func (x *Log) ProtoReflect() protoreflect.Message {
-	mi := &file_services_merchant_internal_conf_v1_conf_proto_msgTypes[1]
+	mi := &file_internal_conf_v1_conf_proto_msgTypes[1]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -151,7 +152,7 @@ func (x *Log) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use Log.ProtoReflect.Descriptor instead.
 func (*Log) Descriptor() ([]byte, []int) {
-	return file_services_merchant_internal_conf_v1_conf_proto_rawDescGZIP(), []int{1}
+	return file_internal_conf_v1_conf_proto_rawDescGZIP(), []int{1}
 }
 
 func (x *Log) GetFramework() *Log_Framework {
@@ -186,7 +187,7 @@ type Server struct {
 
 func (x *Server) Reset() {
 	*x = Server{}
-	mi := &file_services_merchant_internal_conf_v1_conf_proto_msgTypes[2]
+	mi := &file_internal_conf_v1_conf_proto_msgTypes[2]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -198,7 +199,7 @@ func (x *Server) String() string {
 func (*Server) ProtoMessage() {}
 
 func (x *Server) ProtoReflect() protoreflect.Message {
-	mi := &file_services_merchant_internal_conf_v1_conf_proto_msgTypes[2]
+	mi := &file_internal_conf_v1_conf_proto_msgTypes[2]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -211,7 +212,7 @@ func (x *Server) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use Server.ProtoReflect.Descriptor instead.
 func (*Server) Descriptor() ([]byte, []int) {
-	return file_services_merchant_internal_conf_v1_conf_proto_rawDescGZIP(), []int{2}
+	return file_internal_conf_v1_conf_proto_rawDescGZIP(), []int{2}
 }
 
 func (x *Server) GetAddr() string {
@@ -245,7 +246,7 @@ type Data struct {
 
 func (x *Data) Reset() {
 	*x = Data{}
-	mi := &file_services_merchant_internal_conf_v1_conf_proto_msgTypes[3]
+	mi := &file_internal_conf_v1_conf_proto_msgTypes[3]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -257,7 +258,7 @@ func (x *Data) String() string {
 func (*Data) ProtoMessage() {}
 
 func (x *Data) ProtoReflect() protoreflect.Message {
-	mi := &file_services_merchant_internal_conf_v1_conf_proto_msgTypes[3]
+	mi := &file_internal_conf_v1_conf_proto_msgTypes[3]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -270,7 +271,7 @@ func (x *Data) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use Data.ProtoReflect.Descriptor instead.
 func (*Data) Descriptor() ([]byte, []int) {
-	return file_services_merchant_internal_conf_v1_conf_proto_rawDescGZIP(), []int{3}
+	return file_internal_conf_v1_conf_proto_rawDescGZIP(), []int{3}
 }
 
 func (x *Data) GetDatabase() *Data_Database {
@@ -296,7 +297,7 @@ type Auth struct {
 
 func (x *Auth) Reset() {
 	*x = Auth{}
-	mi := &file_services_merchant_internal_conf_v1_conf_proto_msgTypes[4]
+	mi := &file_internal_conf_v1_conf_proto_msgTypes[4]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -308,7 +309,7 @@ func (x *Auth) String() string {
 func (*Auth) ProtoMessage() {}
 
 func (x *Auth) ProtoReflect() protoreflect.Message {
-	mi := &file_services_merchant_internal_conf_v1_conf_proto_msgTypes[4]
+	mi := &file_internal_conf_v1_conf_proto_msgTypes[4]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -321,7 +322,7 @@ func (x *Auth) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use Auth.ProtoReflect.Descriptor instead.
 func (*Auth) Descriptor() ([]byte, []int) {
-	return file_services_merchant_internal_conf_v1_conf_proto_rawDescGZIP(), []int{4}
+	return file_internal_conf_v1_conf_proto_rawDescGZIP(), []int{4}
 }
 
 func (x *Auth) GetCasdoor() *Auth_Casdoor {
@@ -343,7 +344,7 @@ type Observability struct {
 
 func (x *Observability) Reset() {
 	*x = Observability{}
-	mi := &file_services_merchant_internal_conf_v1_conf_proto_msgTypes[5]
+	mi := &file_internal_conf_v1_conf_proto_msgTypes[5]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -355,7 +356,7 @@ func (x *Observability) String() string {
 func (*Observability) ProtoMessage() {}
 
 func (x *Observability) ProtoReflect() protoreflect.Message {
-	mi := &file_services_merchant_internal_conf_v1_conf_proto_msgTypes[5]
+	mi := &file_internal_conf_v1_conf_proto_msgTypes[5]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -368,7 +369,7 @@ func (x *Observability) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use Observability.ProtoReflect.Descriptor instead.
 func (*Observability) Descriptor() ([]byte, []int) {
-	return file_services_merchant_internal_conf_v1_conf_proto_rawDescGZIP(), []int{5}
+	return file_internal_conf_v1_conf_proto_rawDescGZIP(), []int{5}
 }
 
 func (x *Observability) GetTrace() *Observability_Trace {
@@ -408,7 +409,7 @@ type Discovery struct {
 
 func (x *Discovery) Reset() {
 	*x = Discovery{}
-	mi := &file_services_merchant_internal_conf_v1_conf_proto_msgTypes[6]
+	mi := &file_internal_conf_v1_conf_proto_msgTypes[6]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -420,7 +421,7 @@ func (x *Discovery) String() string {
 func (*Discovery) ProtoMessage() {}
 
 func (x *Discovery) ProtoReflect() protoreflect.Message {
-	mi := &file_services_merchant_internal_conf_v1_conf_proto_msgTypes[6]
+	mi := &file_internal_conf_v1_conf_proto_msgTypes[6]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -433,7 +434,7 @@ func (x *Discovery) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use Discovery.ProtoReflect.Descriptor instead.
 func (*Discovery) Descriptor() ([]byte, []int) {
-	return file_services_merchant_internal_conf_v1_conf_proto_rawDescGZIP(), []int{6}
+	return file_internal_conf_v1_conf_proto_rawDescGZIP(), []int{6}
 }
 
 func (x *Discovery) GetConsul() *Discovery_Consul {
@@ -452,7 +453,7 @@ type Search struct {
 
 func (x *Search) Reset() {
 	*x = Search{}
-	mi := &file_services_merchant_internal_conf_v1_conf_proto_msgTypes[7]
+	mi := &file_internal_conf_v1_conf_proto_msgTypes[7]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -464,7 +465,7 @@ func (x *Search) String() string {
 func (*Search) ProtoMessage() {}
 
 func (x *Search) ProtoReflect() protoreflect.Message {
-	mi := &file_services_merchant_internal_conf_v1_conf_proto_msgTypes[7]
+	mi := &file_internal_conf_v1_conf_proto_msgTypes[7]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -477,7 +478,7 @@ func (x *Search) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use Search.ProtoReflect.Descriptor instead.
 func (*Search) Descriptor() ([]byte, []int) {
-	return file_services_merchant_internal_conf_v1_conf_proto_rawDescGZIP(), []int{7}
+	return file_internal_conf_v1_conf_proto_rawDescGZIP(), []int{7}
 }
 
 func (x *Search) GetElasticSearch() *Search_ElasticSearch {
@@ -498,7 +499,7 @@ type Log_Framework struct {
 
 func (x *Log_Framework) Reset() {
 	*x = Log_Framework{}
-	mi := &file_services_merchant_internal_conf_v1_conf_proto_msgTypes[8]
+	mi := &file_internal_conf_v1_conf_proto_msgTypes[8]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -510,7 +511,7 @@ func (x *Log_Framework) String() string {
 func (*Log_Framework) ProtoMessage() {}
 
 func (x *Log_Framework) ProtoReflect() protoreflect.Message {
-	mi := &file_services_merchant_internal_conf_v1_conf_proto_msgTypes[8]
+	mi := &file_internal_conf_v1_conf_proto_msgTypes[8]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -523,7 +524,7 @@ func (x *Log_Framework) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use Log_Framework.ProtoReflect.Descriptor instead.
 func (*Log_Framework) Descriptor() ([]byte, []int) {
-	return file_services_merchant_internal_conf_v1_conf_proto_rawDescGZIP(), []int{1, 0}
+	return file_internal_conf_v1_conf_proto_rawDescGZIP(), []int{1, 0}
 }
 
 func (x *Log_Framework) GetFormat() string {
@@ -557,7 +558,7 @@ type Log_Application struct {
 
 func (x *Log_Application) Reset() {
 	*x = Log_Application{}
-	mi := &file_services_merchant_internal_conf_v1_conf_proto_msgTypes[9]
+	mi := &file_internal_conf_v1_conf_proto_msgTypes[9]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -569,7 +570,7 @@ func (x *Log_Application) String() string {
 func (*Log_Application) ProtoMessage() {}
 
 func (x *Log_Application) ProtoReflect() protoreflect.Message {
-	mi := &file_services_merchant_internal_conf_v1_conf_proto_msgTypes[9]
+	mi := &file_internal_conf_v1_conf_proto_msgTypes[9]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -582,7 +583,7 @@ func (x *Log_Application) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use Log_Application.ProtoReflect.Descriptor instead.
 func (*Log_Application) Descriptor() ([]byte, []int) {
-	return file_services_merchant_internal_conf_v1_conf_proto_rawDescGZIP(), []int{1, 1}
+	return file_internal_conf_v1_conf_proto_rawDescGZIP(), []int{1, 1}
 }
 
 func (x *Log_Application) GetFormat() string {
@@ -609,7 +610,7 @@ type Log_ElasticSearch struct {
 
 func (x *Log_ElasticSearch) Reset() {
 	*x = Log_ElasticSearch{}
-	mi := &file_services_merchant_internal_conf_v1_conf_proto_msgTypes[10]
+	mi := &file_internal_conf_v1_conf_proto_msgTypes[10]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -621,7 +622,7 @@ func (x *Log_ElasticSearch) String() string {
 func (*Log_ElasticSearch) ProtoMessage() {}
 
 func (x *Log_ElasticSearch) ProtoReflect() protoreflect.Message {
-	mi := &file_services_merchant_internal_conf_v1_conf_proto_msgTypes[10]
+	mi := &file_internal_conf_v1_conf_proto_msgTypes[10]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -634,7 +635,7 @@ func (x *Log_ElasticSearch) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use Log_ElasticSearch.ProtoReflect.Descriptor instead.
 func (*Log_ElasticSearch) Descriptor() ([]byte, []int) {
-	return file_services_merchant_internal_conf_v1_conf_proto_rawDescGZIP(), []int{1, 2}
+	return file_internal_conf_v1_conf_proto_rawDescGZIP(), []int{1, 2}
 }
 
 func (x *Log_ElasticSearch) GetEnableRequest() bool {
@@ -662,7 +663,7 @@ type Server_HTTP struct {
 
 func (x *Server_HTTP) Reset() {
 	*x = Server_HTTP{}
-	mi := &file_services_merchant_internal_conf_v1_conf_proto_msgTypes[11]
+	mi := &file_internal_conf_v1_conf_proto_msgTypes[11]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -674,7 +675,7 @@ func (x *Server_HTTP) String() string {
 func (*Server_HTTP) ProtoMessage() {}
 
 func (x *Server_HTTP) ProtoReflect() protoreflect.Message {
-	mi := &file_services_merchant_internal_conf_v1_conf_proto_msgTypes[11]
+	mi := &file_internal_conf_v1_conf_proto_msgTypes[11]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -687,7 +688,7 @@ func (x *Server_HTTP) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use Server_HTTP.ProtoReflect.Descriptor instead.
 func (*Server_HTTP) Descriptor() ([]byte, []int) {
-	return file_services_merchant_internal_conf_v1_conf_proto_rawDescGZIP(), []int{2, 0}
+	return file_internal_conf_v1_conf_proto_rawDescGZIP(), []int{2, 0}
 }
 
 func (x *Server_HTTP) GetReadTimeout() *durationpb.Duration {
@@ -720,7 +721,7 @@ type Server_Cors struct {
 
 func (x *Server_Cors) Reset() {
 	*x = Server_Cors{}
-	mi := &file_services_merchant_internal_conf_v1_conf_proto_msgTypes[12]
+	mi := &file_internal_conf_v1_conf_proto_msgTypes[12]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -732,7 +733,7 @@ func (x *Server_Cors) String() string {
 func (*Server_Cors) ProtoMessage() {}
 
 func (x *Server_Cors) ProtoReflect() protoreflect.Message {
-	mi := &file_services_merchant_internal_conf_v1_conf_proto_msgTypes[12]
+	mi := &file_internal_conf_v1_conf_proto_msgTypes[12]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -745,7 +746,7 @@ func (x *Server_Cors) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use Server_Cors.ProtoReflect.Descriptor instead.
 func (*Server_Cors) Descriptor() ([]byte, []int) {
-	return file_services_merchant_internal_conf_v1_conf_proto_rawDescGZIP(), []int{2, 1}
+	return file_internal_conf_v1_conf_proto_rawDescGZIP(), []int{2, 1}
 }
 
 func (x *Server_Cors) GetAllowedOrigins() []string {
@@ -764,7 +765,7 @@ type Data_Database struct {
 
 func (x *Data_Database) Reset() {
 	*x = Data_Database{}
-	mi := &file_services_merchant_internal_conf_v1_conf_proto_msgTypes[13]
+	mi := &file_internal_conf_v1_conf_proto_msgTypes[13]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -776,7 +777,7 @@ func (x *Data_Database) String() string {
 func (*Data_Database) ProtoMessage() {}
 
 func (x *Data_Database) ProtoReflect() protoreflect.Message {
-	mi := &file_services_merchant_internal_conf_v1_conf_proto_msgTypes[13]
+	mi := &file_internal_conf_v1_conf_proto_msgTypes[13]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -789,7 +790,7 @@ func (x *Data_Database) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use Data_Database.ProtoReflect.Descriptor instead.
 func (*Data_Database) Descriptor() ([]byte, []int) {
-	return file_services_merchant_internal_conf_v1_conf_proto_rawDescGZIP(), []int{3, 0}
+	return file_internal_conf_v1_conf_proto_rawDescGZIP(), []int{3, 0}
 }
 
 func (x *Data_Database) GetPostgres() *Data_Database_Postgres {
@@ -808,7 +809,7 @@ type Data_Cache struct {
 
 func (x *Data_Cache) Reset() {
 	*x = Data_Cache{}
-	mi := &file_services_merchant_internal_conf_v1_conf_proto_msgTypes[14]
+	mi := &file_internal_conf_v1_conf_proto_msgTypes[14]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -820,7 +821,7 @@ func (x *Data_Cache) String() string {
 func (*Data_Cache) ProtoMessage() {}
 
 func (x *Data_Cache) ProtoReflect() protoreflect.Message {
-	mi := &file_services_merchant_internal_conf_v1_conf_proto_msgTypes[14]
+	mi := &file_internal_conf_v1_conf_proto_msgTypes[14]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -833,7 +834,7 @@ func (x *Data_Cache) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use Data_Cache.ProtoReflect.Descriptor instead.
 func (*Data_Cache) Descriptor() ([]byte, []int) {
-	return file_services_merchant_internal_conf_v1_conf_proto_rawDescGZIP(), []int{3, 1}
+	return file_internal_conf_v1_conf_proto_rawDescGZIP(), []int{3, 1}
 }
 
 func (x *Data_Cache) GetRedis() *Data_Cache_Redis {
@@ -859,7 +860,7 @@ type Data_Database_Postgres struct {
 
 func (x *Data_Database_Postgres) Reset() {
 	*x = Data_Database_Postgres{}
-	mi := &file_services_merchant_internal_conf_v1_conf_proto_msgTypes[15]
+	mi := &file_internal_conf_v1_conf_proto_msgTypes[15]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -871,7 +872,7 @@ func (x *Data_Database_Postgres) String() string {
 func (*Data_Database_Postgres) ProtoMessage() {}
 
 func (x *Data_Database_Postgres) ProtoReflect() protoreflect.Message {
-	mi := &file_services_merchant_internal_conf_v1_conf_proto_msgTypes[15]
+	mi := &file_internal_conf_v1_conf_proto_msgTypes[15]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -884,7 +885,7 @@ func (x *Data_Database_Postgres) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use Data_Database_Postgres.ProtoReflect.Descriptor instead.
 func (*Data_Database_Postgres) Descriptor() ([]byte, []int) {
-	return file_services_merchant_internal_conf_v1_conf_proto_rawDescGZIP(), []int{3, 0, 0}
+	return file_internal_conf_v1_conf_proto_rawDescGZIP(), []int{3, 0, 0}
 }
 
 func (x *Data_Database_Postgres) GetHost() string {
@@ -956,7 +957,7 @@ type Data_Database_Postgres_DatabasePool struct {
 
 func (x *Data_Database_Postgres_DatabasePool) Reset() {
 	*x = Data_Database_Postgres_DatabasePool{}
-	mi := &file_services_merchant_internal_conf_v1_conf_proto_msgTypes[16]
+	mi := &file_internal_conf_v1_conf_proto_msgTypes[16]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -968,7 +969,7 @@ func (x *Data_Database_Postgres_DatabasePool) String() string {
 func (*Data_Database_Postgres_DatabasePool) ProtoMessage() {}
 
 func (x *Data_Database_Postgres_DatabasePool) ProtoReflect() protoreflect.Message {
-	mi := &file_services_merchant_internal_conf_v1_conf_proto_msgTypes[16]
+	mi := &file_internal_conf_v1_conf_proto_msgTypes[16]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -981,7 +982,7 @@ func (x *Data_Database_Postgres_DatabasePool) ProtoReflect() protoreflect.Messag
 
 // Deprecated: Use Data_Database_Postgres_DatabasePool.ProtoReflect.Descriptor instead.
 func (*Data_Database_Postgres_DatabasePool) Descriptor() ([]byte, []int) {
-	return file_services_merchant_internal_conf_v1_conf_proto_rawDescGZIP(), []int{3, 0, 0, 0}
+	return file_internal_conf_v1_conf_proto_rawDescGZIP(), []int{3, 0, 0, 0}
 }
 
 func (x *Data_Database_Postgres_DatabasePool) GetMaxConns() uint32 {
@@ -1030,7 +1031,7 @@ type Data_Database_Postgres_Tls struct {
 
 func (x *Data_Database_Postgres_Tls) Reset() {
 	*x = Data_Database_Postgres_Tls{}
-	mi := &file_services_merchant_internal_conf_v1_conf_proto_msgTypes[17]
+	mi := &file_internal_conf_v1_conf_proto_msgTypes[17]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -1042,7 +1043,7 @@ func (x *Data_Database_Postgres_Tls) String() string {
 func (*Data_Database_Postgres_Tls) ProtoMessage() {}
 
 func (x *Data_Database_Postgres_Tls) ProtoReflect() protoreflect.Message {
-	mi := &file_services_merchant_internal_conf_v1_conf_proto_msgTypes[17]
+	mi := &file_internal_conf_v1_conf_proto_msgTypes[17]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -1055,7 +1056,7 @@ func (x *Data_Database_Postgres_Tls) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use Data_Database_Postgres_Tls.ProtoReflect.Descriptor instead.
 func (*Data_Database_Postgres_Tls) Descriptor() ([]byte, []int) {
-	return file_services_merchant_internal_conf_v1_conf_proto_rawDescGZIP(), []int{3, 0, 0, 1}
+	return file_internal_conf_v1_conf_proto_rawDescGZIP(), []int{3, 0, 0, 1}
 }
 
 func (x *Data_Database_Postgres_Tls) GetEnable() bool {
@@ -1098,7 +1099,7 @@ type Data_Cache_Redis struct {
 
 func (x *Data_Cache_Redis) Reset() {
 	*x = Data_Cache_Redis{}
-	mi := &file_services_merchant_internal_conf_v1_conf_proto_msgTypes[18]
+	mi := &file_internal_conf_v1_conf_proto_msgTypes[18]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -1110,7 +1111,7 @@ func (x *Data_Cache_Redis) String() string {
 func (*Data_Cache_Redis) ProtoMessage() {}
 
 func (x *Data_Cache_Redis) ProtoReflect() protoreflect.Message {
-	mi := &file_services_merchant_internal_conf_v1_conf_proto_msgTypes[18]
+	mi := &file_internal_conf_v1_conf_proto_msgTypes[18]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -1123,7 +1124,7 @@ func (x *Data_Cache_Redis) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use Data_Cache_Redis.ProtoReflect.Descriptor instead.
 func (*Data_Cache_Redis) Descriptor() ([]byte, []int) {
-	return file_services_merchant_internal_conf_v1_conf_proto_rawDescGZIP(), []int{3, 1, 0}
+	return file_internal_conf_v1_conf_proto_rawDescGZIP(), []int{3, 1, 0}
 }
 
 func (x *Data_Cache_Redis) GetHost() string {
@@ -1214,7 +1215,7 @@ type Data_Cache_Redis_Tls struct {
 
 func (x *Data_Cache_Redis_Tls) Reset() {
 	*x = Data_Cache_Redis_Tls{}
-	mi := &file_services_merchant_internal_conf_v1_conf_proto_msgTypes[19]
+	mi := &file_internal_conf_v1_conf_proto_msgTypes[19]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -1226,7 +1227,7 @@ func (x *Data_Cache_Redis_Tls) String() string {
 func (*Data_Cache_Redis_Tls) ProtoMessage() {}
 
 func (x *Data_Cache_Redis_Tls) ProtoReflect() protoreflect.Message {
-	mi := &file_services_merchant_internal_conf_v1_conf_proto_msgTypes[19]
+	mi := &file_internal_conf_v1_conf_proto_msgTypes[19]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -1239,7 +1240,7 @@ func (x *Data_Cache_Redis_Tls) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use Data_Cache_Redis_Tls.ProtoReflect.Descriptor instead.
 func (*Data_Cache_Redis_Tls) Descriptor() ([]byte, []int) {
-	return file_services_merchant_internal_conf_v1_conf_proto_rawDescGZIP(), []int{3, 1, 0, 0}
+	return file_internal_conf_v1_conf_proto_rawDescGZIP(), []int{3, 1, 0, 0}
 }
 
 func (x *Data_Cache_Redis_Tls) GetEnable() bool {
@@ -1277,7 +1278,7 @@ type Auth_Casdoor struct {
 
 func (x *Auth_Casdoor) Reset() {
 	*x = Auth_Casdoor{}
-	mi := &file_services_merchant_internal_conf_v1_conf_proto_msgTypes[20]
+	mi := &file_internal_conf_v1_conf_proto_msgTypes[20]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -1289,7 +1290,7 @@ func (x *Auth_Casdoor) String() string {
 func (*Auth_Casdoor) ProtoMessage() {}
 
 func (x *Auth_Casdoor) ProtoReflect() protoreflect.Message {
-	mi := &file_services_merchant_internal_conf_v1_conf_proto_msgTypes[20]
+	mi := &file_internal_conf_v1_conf_proto_msgTypes[20]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -1302,7 +1303,7 @@ func (x *Auth_Casdoor) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use Auth_Casdoor.ProtoReflect.Descriptor instead.
 func (*Auth_Casdoor) Descriptor() ([]byte, []int) {
-	return file_services_merchant_internal_conf_v1_conf_proto_rawDescGZIP(), []int{4, 0}
+	return file_internal_conf_v1_conf_proto_rawDescGZIP(), []int{4, 0}
 }
 
 func (x *Auth_Casdoor) GetEndpoint() string {
@@ -1348,16 +1349,22 @@ func (x *Auth_Casdoor) GetCertificate() string {
 }
 
 type Observability_Trace struct {
-	state         protoimpl.MessageState `protogen:"open.v1"`
-	Endpoint      string                 `protobuf:"bytes,1,opt,name=endpoint,proto3" json:"endpoint,omitempty"`
-	Tls           *Observability_Tls     `protobuf:"bytes,2,opt,name=tls,proto3" json:"tls,omitempty"`
+	state    protoimpl.MessageState `protogen:"open.v1"`
+	Endpoint string                 `protobuf:"bytes,1,opt,name=endpoint,proto3" json:"endpoint,omitempty"`
+	Tls      *Observability_Tls     `protobuf:"bytes,2,opt,name=tls,proto3" json:"tls,omitempty"`
+	// 采样率 [0.0, 1.0]。1.0 = 全采,0.0 = 全不采。
+	// 用 wrapper 而不是裸 double:proto3 裸 double 的零值就是 0.0,和「没配置」
+	// 无法区分 —— 那样所有存量配置(都还没有这个字段)升级后会被解析成 0.0,
+	// 等于一条 trace 都不采,而且不报任何错。wrapper 让「没配」是 null,
+	// 由代码回落到 1.0,与升级前的 AlwaysSample 行为一致。
+	SampleRatio   *wrapperspb.DoubleValue `protobuf:"bytes,3,opt,name=sample_ratio,json=sampleRatio,proto3" json:"sample_ratio,omitempty"`
 	unknownFields protoimpl.UnknownFields
 	sizeCache     protoimpl.SizeCache
 }
 
 func (x *Observability_Trace) Reset() {
 	*x = Observability_Trace{}
-	mi := &file_services_merchant_internal_conf_v1_conf_proto_msgTypes[21]
+	mi := &file_internal_conf_v1_conf_proto_msgTypes[21]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -1369,7 +1376,7 @@ func (x *Observability_Trace) String() string {
 func (*Observability_Trace) ProtoMessage() {}
 
 func (x *Observability_Trace) ProtoReflect() protoreflect.Message {
-	mi := &file_services_merchant_internal_conf_v1_conf_proto_msgTypes[21]
+	mi := &file_internal_conf_v1_conf_proto_msgTypes[21]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -1382,7 +1389,7 @@ func (x *Observability_Trace) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use Observability_Trace.ProtoReflect.Descriptor instead.
 func (*Observability_Trace) Descriptor() ([]byte, []int) {
-	return file_services_merchant_internal_conf_v1_conf_proto_rawDescGZIP(), []int{5, 0}
+	return file_internal_conf_v1_conf_proto_rawDescGZIP(), []int{5, 0}
 }
 
 func (x *Observability_Trace) GetEndpoint() string {
@@ -1399,17 +1406,27 @@ func (x *Observability_Trace) GetTls() *Observability_Tls {
 	return nil
 }
 
+func (x *Observability_Trace) GetSampleRatio() *wrapperspb.DoubleValue {
+	if x != nil {
+		return x.SampleRatio
+	}
+	return nil
+}
+
 type Observability_Metric struct {
-	state         protoimpl.MessageState `protogen:"open.v1"`
-	Endpoint      string                 `protobuf:"bytes,1,opt,name=endpoint,proto3" json:"endpoint,omitempty"`
-	Tls           *Observability_Tls     `protobuf:"bytes,2,opt,name=tls,proto3" json:"tls,omitempty"`
-	unknownFields protoimpl.UnknownFields
-	sizeCache     protoimpl.SizeCache
+	state    protoimpl.MessageState `protogen:"open.v1"`
+	Endpoint string                 `protobuf:"bytes,1,opt,name=endpoint,proto3" json:"endpoint,omitempty"`
+	Tls      *Observability_Tls     `protobuf:"bytes,2,opt,name=tls,proto3" json:"tls,omitempty"`
+	// 指标导出间隔。不配置回落到 30s。
+	// (OTel SDK 默认 60s;这里取 30s,原来硬编码的 3s 对 collector 压力过大)
+	ExportInterval *durationpb.Duration `protobuf:"bytes,3,opt,name=export_interval,json=exportInterval,proto3" json:"export_interval,omitempty"`
+	unknownFields  protoimpl.UnknownFields
+	sizeCache      protoimpl.SizeCache
 }
 
 func (x *Observability_Metric) Reset() {
 	*x = Observability_Metric{}
-	mi := &file_services_merchant_internal_conf_v1_conf_proto_msgTypes[22]
+	mi := &file_internal_conf_v1_conf_proto_msgTypes[22]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -1421,7 +1438,7 @@ func (x *Observability_Metric) String() string {
 func (*Observability_Metric) ProtoMessage() {}
 
 func (x *Observability_Metric) ProtoReflect() protoreflect.Message {
-	mi := &file_services_merchant_internal_conf_v1_conf_proto_msgTypes[22]
+	mi := &file_internal_conf_v1_conf_proto_msgTypes[22]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -1434,7 +1451,7 @@ func (x *Observability_Metric) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use Observability_Metric.ProtoReflect.Descriptor instead.
 func (*Observability_Metric) Descriptor() ([]byte, []int) {
-	return file_services_merchant_internal_conf_v1_conf_proto_rawDescGZIP(), []int{5, 1}
+	return file_internal_conf_v1_conf_proto_rawDescGZIP(), []int{5, 1}
 }
 
 func (x *Observability_Metric) GetEndpoint() string {
@@ -1451,6 +1468,13 @@ func (x *Observability_Metric) GetTls() *Observability_Tls {
 	return nil
 }
 
+func (x *Observability_Metric) GetExportInterval() *durationpb.Duration {
+	if x != nil {
+		return x.ExportInterval
+	}
+	return nil
+}
+
 type Observability_Logging struct {
 	state         protoimpl.MessageState `protogen:"open.v1"`
 	Endpoint      string                 `protobuf:"bytes,1,opt,name=endpoint,proto3" json:"endpoint,omitempty"`
@@ -1461,7 +1485,7 @@ type Observability_Logging struct {
 
 func (x *Observability_Logging) Reset() {
 	*x = Observability_Logging{}
-	mi := &file_services_merchant_internal_conf_v1_conf_proto_msgTypes[23]
+	mi := &file_internal_conf_v1_conf_proto_msgTypes[23]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -1473,7 +1497,7 @@ func (x *Observability_Logging) String() string {
 func (*Observability_Logging) ProtoMessage() {}
 
 func (x *Observability_Logging) ProtoReflect() protoreflect.Message {
-	mi := &file_services_merchant_internal_conf_v1_conf_proto_msgTypes[23]
+	mi := &file_internal_conf_v1_conf_proto_msgTypes[23]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -1486,7 +1510,7 @@ func (x *Observability_Logging) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use Observability_Logging.ProtoReflect.Descriptor instead.
 func (*Observability_Logging) Descriptor() ([]byte, []int) {
-	return file_services_merchant_internal_conf_v1_conf_proto_rawDescGZIP(), []int{5, 2}
+	return file_internal_conf_v1_conf_proto_rawDescGZIP(), []int{5, 2}
 }
 
 func (x *Observability_Logging) GetEndpoint() string {
@@ -1514,7 +1538,7 @@ type Observability_Tls struct {
 
 func (x *Observability_Tls) Reset() {
 	*x = Observability_Tls{}
-	mi := &file_services_merchant_internal_conf_v1_conf_proto_msgTypes[24]
+	mi := &file_internal_conf_v1_conf_proto_msgTypes[24]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -1526,7 +1550,7 @@ func (x *Observability_Tls) String() string {
 func (*Observability_Tls) ProtoMessage() {}
 
 func (x *Observability_Tls) ProtoReflect() protoreflect.Message {
-	mi := &file_services_merchant_internal_conf_v1_conf_proto_msgTypes[24]
+	mi := &file_internal_conf_v1_conf_proto_msgTypes[24]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -1539,7 +1563,7 @@ func (x *Observability_Tls) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use Observability_Tls.ProtoReflect.Descriptor instead.
 func (*Observability_Tls) Descriptor() ([]byte, []int) {
-	return file_services_merchant_internal_conf_v1_conf_proto_rawDescGZIP(), []int{5, 3}
+	return file_internal_conf_v1_conf_proto_rawDescGZIP(), []int{5, 3}
 }
 
 func (x *Observability_Tls) GetEnable() bool {
@@ -1576,7 +1600,7 @@ type Discovery_Consul struct {
 
 func (x *Discovery_Consul) Reset() {
 	*x = Discovery_Consul{}
-	mi := &file_services_merchant_internal_conf_v1_conf_proto_msgTypes[25]
+	mi := &file_internal_conf_v1_conf_proto_msgTypes[25]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -1588,7 +1612,7 @@ func (x *Discovery_Consul) String() string {
 func (*Discovery_Consul) ProtoMessage() {}
 
 func (x *Discovery_Consul) ProtoReflect() protoreflect.Message {
-	mi := &file_services_merchant_internal_conf_v1_conf_proto_msgTypes[25]
+	mi := &file_internal_conf_v1_conf_proto_msgTypes[25]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -1601,7 +1625,7 @@ func (x *Discovery_Consul) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use Discovery_Consul.ProtoReflect.Descriptor instead.
 func (*Discovery_Consul) Descriptor() ([]byte, []int) {
-	return file_services_merchant_internal_conf_v1_conf_proto_rawDescGZIP(), []int{6, 0}
+	return file_internal_conf_v1_conf_proto_rawDescGZIP(), []int{6, 0}
 }
 
 func (x *Discovery_Consul) GetAddr() string {
@@ -1650,7 +1674,7 @@ type Discovery_Consul_Tls struct {
 
 func (x *Discovery_Consul_Tls) Reset() {
 	*x = Discovery_Consul_Tls{}
-	mi := &file_services_merchant_internal_conf_v1_conf_proto_msgTypes[26]
+	mi := &file_internal_conf_v1_conf_proto_msgTypes[26]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -1662,7 +1686,7 @@ func (x *Discovery_Consul_Tls) String() string {
 func (*Discovery_Consul_Tls) ProtoMessage() {}
 
 func (x *Discovery_Consul_Tls) ProtoReflect() protoreflect.Message {
-	mi := &file_services_merchant_internal_conf_v1_conf_proto_msgTypes[26]
+	mi := &file_internal_conf_v1_conf_proto_msgTypes[26]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -1675,7 +1699,7 @@ func (x *Discovery_Consul_Tls) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use Discovery_Consul_Tls.ProtoReflect.Descriptor instead.
 func (*Discovery_Consul_Tls) Descriptor() ([]byte, []int) {
-	return file_services_merchant_internal_conf_v1_conf_proto_rawDescGZIP(), []int{6, 0, 0}
+	return file_internal_conf_v1_conf_proto_rawDescGZIP(), []int{6, 0, 0}
 }
 
 func (x *Discovery_Consul_Tls) GetEnable() bool {
@@ -1709,7 +1733,7 @@ type Discovery_Consul_Check struct {
 
 func (x *Discovery_Consul_Check) Reset() {
 	*x = Discovery_Consul_Check{}
-	mi := &file_services_merchant_internal_conf_v1_conf_proto_msgTypes[27]
+	mi := &file_internal_conf_v1_conf_proto_msgTypes[27]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -1721,7 +1745,7 @@ func (x *Discovery_Consul_Check) String() string {
 func (*Discovery_Consul_Check) ProtoMessage() {}
 
 func (x *Discovery_Consul_Check) ProtoReflect() protoreflect.Message {
-	mi := &file_services_merchant_internal_conf_v1_conf_proto_msgTypes[27]
+	mi := &file_internal_conf_v1_conf_proto_msgTypes[27]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -1734,7 +1758,7 @@ func (x *Discovery_Consul_Check) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use Discovery_Consul_Check.ProtoReflect.Descriptor instead.
 func (*Discovery_Consul_Check) Descriptor() ([]byte, []int) {
-	return file_services_merchant_internal_conf_v1_conf_proto_rawDescGZIP(), []int{6, 0, 1}
+	return file_internal_conf_v1_conf_proto_rawDescGZIP(), []int{6, 0, 1}
 }
 
 func (x *Discovery_Consul_Check) GetTtl() *Discovery_Consul_Check_TTL {
@@ -1761,7 +1785,7 @@ type Discovery_Consul_Check_TTL struct {
 
 func (x *Discovery_Consul_Check_TTL) Reset() {
 	*x = Discovery_Consul_Check_TTL{}
-	mi := &file_services_merchant_internal_conf_v1_conf_proto_msgTypes[28]
+	mi := &file_internal_conf_v1_conf_proto_msgTypes[28]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -1773,7 +1797,7 @@ func (x *Discovery_Consul_Check_TTL) String() string {
 func (*Discovery_Consul_Check_TTL) ProtoMessage() {}
 
 func (x *Discovery_Consul_Check_TTL) ProtoReflect() protoreflect.Message {
-	mi := &file_services_merchant_internal_conf_v1_conf_proto_msgTypes[28]
+	mi := &file_internal_conf_v1_conf_proto_msgTypes[28]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -1786,7 +1810,7 @@ func (x *Discovery_Consul_Check_TTL) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use Discovery_Consul_Check_TTL.ProtoReflect.Descriptor instead.
 func (*Discovery_Consul_Check_TTL) Descriptor() ([]byte, []int) {
-	return file_services_merchant_internal_conf_v1_conf_proto_rawDescGZIP(), []int{6, 0, 1, 0}
+	return file_internal_conf_v1_conf_proto_rawDescGZIP(), []int{6, 0, 1, 0}
 }
 
 func (x *Discovery_Consul_Check_TTL) GetDuration() string {
@@ -1815,7 +1839,7 @@ type Search_ElasticSearch struct {
 
 func (x *Search_ElasticSearch) Reset() {
 	*x = Search_ElasticSearch{}
-	mi := &file_services_merchant_internal_conf_v1_conf_proto_msgTypes[29]
+	mi := &file_internal_conf_v1_conf_proto_msgTypes[29]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -1827,7 +1851,7 @@ func (x *Search_ElasticSearch) String() string {
 func (*Search_ElasticSearch) ProtoMessage() {}
 
 func (x *Search_ElasticSearch) ProtoReflect() protoreflect.Message {
-	mi := &file_services_merchant_internal_conf_v1_conf_proto_msgTypes[29]
+	mi := &file_internal_conf_v1_conf_proto_msgTypes[29]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -1840,7 +1864,7 @@ func (x *Search_ElasticSearch) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use Search_ElasticSearch.ProtoReflect.Descriptor instead.
 func (*Search_ElasticSearch) Descriptor() ([]byte, []int) {
-	return file_services_merchant_internal_conf_v1_conf_proto_rawDescGZIP(), []int{7, 0}
+	return file_internal_conf_v1_conf_proto_rawDescGZIP(), []int{7, 0}
 }
 
 func (x *Search_ElasticSearch) GetAddresses() []string {
@@ -1882,7 +1906,7 @@ type Search_ElasticSearch_Tls struct {
 
 func (x *Search_ElasticSearch_Tls) Reset() {
 	*x = Search_ElasticSearch_Tls{}
-	mi := &file_services_merchant_internal_conf_v1_conf_proto_msgTypes[30]
+	mi := &file_internal_conf_v1_conf_proto_msgTypes[30]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -1894,7 +1918,7 @@ func (x *Search_ElasticSearch_Tls) String() string {
 func (*Search_ElasticSearch_Tls) ProtoMessage() {}
 
 func (x *Search_ElasticSearch_Tls) ProtoReflect() protoreflect.Message {
-	mi := &file_services_merchant_internal_conf_v1_conf_proto_msgTypes[30]
+	mi := &file_internal_conf_v1_conf_proto_msgTypes[30]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -1907,7 +1931,7 @@ func (x *Search_ElasticSearch_Tls) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use Search_ElasticSearch_Tls.ProtoReflect.Descriptor instead.
 func (*Search_ElasticSearch_Tls) Descriptor() ([]byte, []int) {
-	return file_services_merchant_internal_conf_v1_conf_proto_rawDescGZIP(), []int{7, 0, 0}
+	return file_internal_conf_v1_conf_proto_rawDescGZIP(), []int{7, 0, 0}
 }
 
 func (x *Search_ElasticSearch_Tls) GetEnable() bool {
@@ -1931,11 +1955,11 @@ func (x *Search_ElasticSearch_Tls) GetCaPem() string {
 	return ""
 }
 
-var File_services_merchant_internal_conf_v1_conf_proto protoreflect.FileDescriptor
+var File_internal_conf_v1_conf_proto protoreflect.FileDescriptor
 
-const file_services_merchant_internal_conf_v1_conf_proto_rawDesc = "" +
+const file_internal_conf_v1_conf_proto_rawDesc = "" +
 	"\n" +
-	"-services/merchant/internal/conf/v1/conf.proto\x12\aconf.v1\x1a#third_party/validate/validate.proto\x1a\x1egoogle/protobuf/duration.proto\"\xeb\x02\n" +
+	"\x1binternal/conf/v1/conf.proto\x12\aconf.v1\x1a#third_party/validate/validate.proto\x1a\x1egoogle/protobuf/duration.proto\x1a\x1egoogle/protobuf/wrappers.proto\"\xeb\x02\n" +
 	"\tBootstrap\x12/\n" +
 	"\x06server\x18\x01 \x01(\v2\x0f.conf.v1.ServerB\x06\xbaH\x03\xc8\x01\x01R\x06server\x12)\n" +
 	"\x04data\x18\x02 \x01(\v2\r.conf.v1.DataB\x06\xbaH\x03\xc8\x01\x01R\x04data\x12)\n" +
@@ -2027,18 +2051,20 @@ const file_services_merchant_internal_conf_v1_conf_proto_rawDesc = "" +
 	"\rclient_secret\x18\x03 \x01(\tR\fclientSecret\x12+\n" +
 	"\x11organization_name\x18\x04 \x01(\tR\x10organizationName\x12)\n" +
 	"\x10application_name\x18\x05 \x01(\tR\x0fapplicationName\x12 \n" +
-	"\vcertificate\x18\x06 \x01(\tR\vcertificate\"\xf9\x04\n" +
+	"\vcertificate\x18\x06 \x01(\tR\vcertificate\"\x80\x06\n" +
 	"\rObservability\x122\n" +
 	"\x05trace\x18\x01 \x01(\v2\x1c.conf.v1.Observability.TraceR\x05trace\x125\n" +
 	"\x06metric\x18\x02 \x01(\v2\x1d.conf.v1.Observability.MetricR\x06metric\x120\n" +
 	"\x03log\x18\x03 \x01(\v2\x1e.conf.v1.Observability.LoggingR\x03log\x12\x16\n" +
-	"\x06enable\x18\x04 \x01(\bR\x06enable\x1al\n" +
+	"\x06enable\x18\x04 \x01(\bR\x06enable\x1a\xad\x01\n" +
 	"\x05Trace\x125\n" +
 	"\bendpoint\x18\x01 \x01(\tB\x19\xbaH\x16r\x14\x92\x02\x0elocalhost:4318\x80\x02\x01R\bendpoint\x12,\n" +
-	"\x03tls\x18\x02 \x01(\v2\x1a.conf.v1.Observability.TlsR\x03tls\x1am\n" +
+	"\x03tls\x18\x02 \x01(\v2\x1a.conf.v1.Observability.TlsR\x03tls\x12?\n" +
+	"\fsample_ratio\x18\x03 \x01(\v2\x1c.google.protobuf.DoubleValueR\vsampleRatio\x1a\xb1\x01\n" +
 	"\x06Metric\x125\n" +
 	"\bendpoint\x18\x01 \x01(\tB\x19\xbaH\x16r\x14\x92\x02\x0elocalhost:4318\x80\x02\x01R\bendpoint\x12,\n" +
-	"\x03tls\x18\x02 \x01(\v2\x1a.conf.v1.Observability.TlsR\x03tls\x1an\n" +
+	"\x03tls\x18\x02 \x01(\v2\x1a.conf.v1.Observability.TlsR\x03tls\x12B\n" +
+	"\x0fexport_interval\x18\x03 \x01(\v2\x19.google.protobuf.DurationR\x0eexportInterval\x1an\n" +
 	"\aLogging\x125\n" +
 	"\bendpoint\x18\x01 \x01(\tB\x19\xbaH\x16r\x14\x92\x02\x0elocalhost:4318\x80\x02\x01R\bendpoint\x12,\n" +
 	"\x03tls\x18\x02 \x01(\v2\x1a.conf.v1.Observability.TlsR\x03tls\x1af\n" +
@@ -2080,19 +2106,19 @@ const file_services_merchant_internal_conf_v1_conf_proto_rawDesc = "" +
 	"\vcom.conf.v1B\tConfProtoP\x01ZNgithub.com/lens077/ecommerce/backend/services/merchant/internal/conf/v1;confv1\xa2\x02\x03CXX\xaa\x02\aConf.V1\xca\x02\aConf\\V1\xe2\x02\x13Conf\\V1\\GPBMetadata\xea\x02\bConf::V1b\x06proto3"
 
 var (
-	file_services_merchant_internal_conf_v1_conf_proto_rawDescOnce sync.Once
-	file_services_merchant_internal_conf_v1_conf_proto_rawDescData []byte
+	file_internal_conf_v1_conf_proto_rawDescOnce sync.Once
+	file_internal_conf_v1_conf_proto_rawDescData []byte
 )
 
-func file_services_merchant_internal_conf_v1_conf_proto_rawDescGZIP() []byte {
-	file_services_merchant_internal_conf_v1_conf_proto_rawDescOnce.Do(func() {
-		file_services_merchant_internal_conf_v1_conf_proto_rawDescData = protoimpl.X.CompressGZIP(unsafe.Slice(unsafe.StringData(file_services_merchant_internal_conf_v1_conf_proto_rawDesc), len(file_services_merchant_internal_conf_v1_conf_proto_rawDesc)))
+func file_internal_conf_v1_conf_proto_rawDescGZIP() []byte {
+	file_internal_conf_v1_conf_proto_rawDescOnce.Do(func() {
+		file_internal_conf_v1_conf_proto_rawDescData = protoimpl.X.CompressGZIP(unsafe.Slice(unsafe.StringData(file_internal_conf_v1_conf_proto_rawDesc), len(file_internal_conf_v1_conf_proto_rawDesc)))
 	})
-	return file_services_merchant_internal_conf_v1_conf_proto_rawDescData
+	return file_internal_conf_v1_conf_proto_rawDescData
 }
 
-var file_services_merchant_internal_conf_v1_conf_proto_msgTypes = make([]protoimpl.MessageInfo, 31)
-var file_services_merchant_internal_conf_v1_conf_proto_goTypes = []any{
+var file_internal_conf_v1_conf_proto_msgTypes = make([]protoimpl.MessageInfo, 31)
+var file_internal_conf_v1_conf_proto_goTypes = []any{
 	(*Bootstrap)(nil),                           // 0: conf.v1.Bootstrap
 	(*Log)(nil),                                 // 1: conf.v1.Log
 	(*Server)(nil),                              // 2: conf.v1.Server
@@ -2125,8 +2151,9 @@ var file_services_merchant_internal_conf_v1_conf_proto_goTypes = []any{
 	(*Search_ElasticSearch)(nil),                // 29: conf.v1.Search.ElasticSearch
 	(*Search_ElasticSearch_Tls)(nil),            // 30: conf.v1.Search.ElasticSearch.Tls
 	(*durationpb.Duration)(nil),                 // 31: google.protobuf.Duration
+	(*wrapperspb.DoubleValue)(nil),              // 32: google.protobuf.DoubleValue
 }
-var file_services_merchant_internal_conf_v1_conf_proto_depIdxs = []int32{
+var file_internal_conf_v1_conf_proto_depIdxs = []int32{
 	2,  // 0: conf.v1.Bootstrap.server:type_name -> conf.v1.Server
 	3,  // 1: conf.v1.Bootstrap.data:type_name -> conf.v1.Data
 	4,  // 2: conf.v1.Bootstrap.auth:type_name -> conf.v1.Auth
@@ -2162,40 +2189,42 @@ var file_services_merchant_internal_conf_v1_conf_proto_depIdxs = []int32{
 	31, // 32: conf.v1.Data.Cache.Redis.write_timeout:type_name -> google.protobuf.Duration
 	19, // 33: conf.v1.Data.Cache.Redis.tls:type_name -> conf.v1.Data.Cache.Redis.Tls
 	24, // 34: conf.v1.Observability.Trace.tls:type_name -> conf.v1.Observability.Tls
-	24, // 35: conf.v1.Observability.Metric.tls:type_name -> conf.v1.Observability.Tls
-	24, // 36: conf.v1.Observability.Logging.tls:type_name -> conf.v1.Observability.Tls
-	26, // 37: conf.v1.Discovery.Consul.tls:type_name -> conf.v1.Discovery.Consul.Tls
-	27, // 38: conf.v1.Discovery.Consul.check:type_name -> conf.v1.Discovery.Consul.Check
-	28, // 39: conf.v1.Discovery.Consul.Check.ttl:type_name -> conf.v1.Discovery.Consul.Check.TTL
-	31, // 40: conf.v1.Discovery.Consul.Check.TTL.ping_interval:type_name -> google.protobuf.Duration
-	30, // 41: conf.v1.Search.ElasticSearch.tls:type_name -> conf.v1.Search.ElasticSearch.Tls
-	42, // [42:42] is the sub-list for method output_type
-	42, // [42:42] is the sub-list for method input_type
-	42, // [42:42] is the sub-list for extension type_name
-	42, // [42:42] is the sub-list for extension extendee
-	0,  // [0:42] is the sub-list for field type_name
+	32, // 35: conf.v1.Observability.Trace.sample_ratio:type_name -> google.protobuf.DoubleValue
+	24, // 36: conf.v1.Observability.Metric.tls:type_name -> conf.v1.Observability.Tls
+	31, // 37: conf.v1.Observability.Metric.export_interval:type_name -> google.protobuf.Duration
+	24, // 38: conf.v1.Observability.Logging.tls:type_name -> conf.v1.Observability.Tls
+	26, // 39: conf.v1.Discovery.Consul.tls:type_name -> conf.v1.Discovery.Consul.Tls
+	27, // 40: conf.v1.Discovery.Consul.check:type_name -> conf.v1.Discovery.Consul.Check
+	28, // 41: conf.v1.Discovery.Consul.Check.ttl:type_name -> conf.v1.Discovery.Consul.Check.TTL
+	31, // 42: conf.v1.Discovery.Consul.Check.TTL.ping_interval:type_name -> google.protobuf.Duration
+	30, // 43: conf.v1.Search.ElasticSearch.tls:type_name -> conf.v1.Search.ElasticSearch.Tls
+	44, // [44:44] is the sub-list for method output_type
+	44, // [44:44] is the sub-list for method input_type
+	44, // [44:44] is the sub-list for extension type_name
+	44, // [44:44] is the sub-list for extension extendee
+	0,  // [0:44] is the sub-list for field type_name
 }
 
-func init() { file_services_merchant_internal_conf_v1_conf_proto_init() }
-func file_services_merchant_internal_conf_v1_conf_proto_init() {
-	if File_services_merchant_internal_conf_v1_conf_proto != nil {
+func init() { file_internal_conf_v1_conf_proto_init() }
+func file_internal_conf_v1_conf_proto_init() {
+	if File_internal_conf_v1_conf_proto != nil {
 		return
 	}
 	type x struct{}
 	out := protoimpl.TypeBuilder{
 		File: protoimpl.DescBuilder{
 			GoPackagePath: reflect.TypeOf(x{}).PkgPath(),
-			RawDescriptor: unsafe.Slice(unsafe.StringData(file_services_merchant_internal_conf_v1_conf_proto_rawDesc), len(file_services_merchant_internal_conf_v1_conf_proto_rawDesc)),
+			RawDescriptor: unsafe.Slice(unsafe.StringData(file_internal_conf_v1_conf_proto_rawDesc), len(file_internal_conf_v1_conf_proto_rawDesc)),
 			NumEnums:      0,
 			NumMessages:   31,
 			NumExtensions: 0,
 			NumServices:   0,
 		},
-		GoTypes:           file_services_merchant_internal_conf_v1_conf_proto_goTypes,
-		DependencyIndexes: file_services_merchant_internal_conf_v1_conf_proto_depIdxs,
-		MessageInfos:      file_services_merchant_internal_conf_v1_conf_proto_msgTypes,
+		GoTypes:           file_internal_conf_v1_conf_proto_goTypes,
+		DependencyIndexes: file_internal_conf_v1_conf_proto_depIdxs,
+		MessageInfos:      file_internal_conf_v1_conf_proto_msgTypes,
 	}.Build()
-	File_services_merchant_internal_conf_v1_conf_proto = out.File
-	file_services_merchant_internal_conf_v1_conf_proto_goTypes = nil
-	file_services_merchant_internal_conf_v1_conf_proto_depIdxs = nil
+	File_internal_conf_v1_conf_proto = out.File
+	file_internal_conf_v1_conf_proto_goTypes = nil
+	file_internal_conf_v1_conf_proto_depIdxs = nil
 }
