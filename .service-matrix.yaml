@@ -55,6 +55,7 @@ externals:
   casdoor: { host: "node1", note: "JWT 公钥 kid=lens" }
   elasticsearch: { used_by: [search] }
   minio: { used_by: [cart], note: "商品缩略图 URL" }
+  config_center: { discovery: config-service, repository: "github.com/lens077/config-center", note: "独立配置控制面，从本地 CONFIG_FILE 自举" }
   gorse: { used_by: [behavior, product], note: "推荐引擎；客户端在 backend/pkg/gorse/" }
   alipay: { used_by: [payment], note: "pay.alipay.* 在 KV 里目前是空占位" }
 
@@ -116,23 +117,14 @@ services:
     discovery: cart-service
     gateway_prefix: /cart*
     extra_config: [store] # MinIO
-    depends_on: [config] # ✅ 已接线：配置下发热更新（不经 Consul 桥接）
-    external: [postgres, redis, minio]
+    depends_on: []
+    external: [postgres, redis, minio, config_center] # ✅ 已接线：配置下发热更新（不经 Consul 桥接）
 
   address:
     discovery: address-service
     gateway_prefix: /address*
     depends_on: []
     external: [postgres]
-
-  config:
-    discovery: config-service
-    gateway_prefix: /config*
-    # 注意：config 的 Bootstrap 没有 auth / search 块，只有 server data observability discovery log
-    depends_on: []
-    external: [postgres, redis]
-    repository: "github.com/lens077/config-center"
-    note: "独立配置中心；服务 Bootstrap 从 CONFIG_FILE 读取，设计见 CONFIG_CENTER_DESIGN.md"
 
   order:
     discovery: order-service

@@ -9,8 +9,8 @@ import (
 	"time"
 
 	"connectrpc.com/connect"
-	configv1 "github.com/lens077/ecommerce/backend/api/config/v1"
-	"github.com/lens077/ecommerce/backend/api/config/v1/configv1connect"
+	configv1 "github.com/lens077/config-center/api/config/v1"
+	"github.com/lens077/config-center/api/config/v1/configv1connect"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 )
