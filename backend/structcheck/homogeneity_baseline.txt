@@ -1,0 +1,25 @@
+# internal/pkg 同构漂移基线(棘轮:只许删行,不许加行——除非确属有意分叉并注明原因)
+#
+# 每行是一个 internal/pkg 下的相对路径,表示该文件当前在各服务副本间不一致
+# (原文与归一化服务名后都不一致)。TestInfraHomogeneity 对不在本清单里的
+# 漂移立即失败;本清单里的条目一旦收敛,测试会提示删除对应行。
+#
+# 生成于 2026-08-07,当时的典型漂移:registry/consul.go 有 8 个变体
+# (address 的空指针防护没同步到其他服务)、log/log.go 有 4 个变体。
+# 收敛路径:挑一个正确版本,同步到全部服务,然后删掉这里的行。
+#
+# 2026-08-07 同日删掉 3 行(source_configcenter_test.go 从未入过基线):
+# 它们在 9 个服务里逐字节相同,是归一化的误报——`address` 既是服务名又是配置项键名,
+# 替换只在 address 自己的副本里生效。判定改为原文/归一化两把尺子任一一致即算同构。
+config/config_test.go
+config/live.go
+config/source.go
+config/source_test.go
+dbutil/handler.go
+log/log.go
+log/log_test.go
+meta/meta_test.go
+money/numeric.go
+otel/otel_test.go
+registry/consul.go
+registry/registry_test.go
