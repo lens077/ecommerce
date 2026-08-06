@@ -118,7 +118,7 @@ function CheckoutPage() {
         remark,
       });
       // 后端响应暂无 orderNo，先跳固定支付页占位
-      navigate({ to: "/payment/result" });
+      void navigate({ to: "/payment/result" });
     } catch (err) {
       setSubmitError(toAppError(err).message || t("checkout.submitFailed"));
     }

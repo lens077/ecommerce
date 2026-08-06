@@ -227,7 +227,7 @@ export default function PrimarySearchAppBar() {
   const handleSearchResultClick = (product: Product) => {
     console.log("点击搜索结果:", product);
     // 导航到商品详情页
-    navigate({ to: "/product/$spuCode", params: { spuCode: product.spuCode } });
+    void navigate({ to: "/product/$spuCode", params: { spuCode: product.spuCode } });
     // 清空搜索状态
     setSearchInput("");
     setSearchResults([]);

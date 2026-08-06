@@ -6,7 +6,6 @@ import { createFileRoute } from "@tanstack/react-router";
 import {
   Box,
   Card,
-  CardContent,
   Typography,
   Button,
   Table,

@@ -1,4 +1,3 @@
-/// <reference types="vite-plus" />
 import { defineConfig } from "vite-plus";
 import { playwright } from "vite-plus/test/browser-playwright"; // 浏览器测试 provider
 import { tanstackRouter } from "@tanstack/router-plugin/vite";

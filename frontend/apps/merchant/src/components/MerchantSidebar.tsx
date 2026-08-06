@@ -8,7 +8,6 @@ import { Box, Typography } from "@mui/material";
 import { useNavigate, useLocation } from "@tanstack/react-router";
 import { LayoutDashboard, Package, FileText, Store, LogOut } from "lucide-react";
 import { useTranslation } from "@ecommerce/i18n";
-import { tokens } from "@/styles/theme";
 
 /** 侧边栏菜单。文案 key 显式写死，不用路径拼 key。 */
 const menuItems = [

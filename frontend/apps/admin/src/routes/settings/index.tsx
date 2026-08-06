@@ -12,7 +12,6 @@ import {
   Button,
   Switch,
   FormControlLabel,
-  Divider,
 } from "@mui/material";
 import { useTranslation } from "@ecommerce/i18n";
 import { AdminLayout } from "@/components/AdminLayout";

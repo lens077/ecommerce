@@ -1,4 +1,3 @@
-/// <reference types="vite-plus" />
 import { defineConfig } from "vite-plus";
 import { tanstackRouter } from "@tanstack/router-plugin/vite";
 import { resolve } from "node:path";

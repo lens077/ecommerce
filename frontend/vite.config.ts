@@ -1,4 +1,3 @@
-/// <reference types="vite-plus" />
 import { defineConfig } from "vite-plus";
 
 // workspace 根配置。这里不跑任何 app，只承载 vite-plus 的仓库级工具链设置。

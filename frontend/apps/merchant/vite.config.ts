@@ -1,5 +1,5 @@
-/// <reference types="vite-plus" />
 import { defineConfig } from "vite-plus";
+import { tanstackRouter } from "@tanstack/router-plugin/vite";
 import { resolve } from "node:path";
 
 const host = process.env.HOST || "0.0.0.0";
@@ -7,8 +7,15 @@ const port = parseInt(process.env.PORT || "3002", 10);
 
 export default defineConfig(() => {
   return {
-    // 不需要 @vitejs/plugin-react：vite-plus 内置 React 支持，
-    // 另外三个 app 也都没有显式挂这个插件
+    // Vite Plus 内置 React；路由插件负责把文件路由拆成按需加载的 chunk。
+    plugins: [
+      tanstackRouter({
+        target: "react",
+        autoCodeSplitting: true,
+        routesDirectory: resolve(__dirname, "./src/routes"),
+        generatedRouteTree: resolve(__dirname, "./src/routeTree.gen.ts"),
+      }),
+    ],
     resolve: {
       alias: {
         "@": resolve(__dirname, "./src"),
