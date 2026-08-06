@@ -23,7 +23,7 @@ import (
 	"go.opentelemetry.io/otel/sdk/metric"
 	"go.opentelemetry.io/otel/sdk/resource"
 	"go.opentelemetry.io/otel/sdk/trace"
-	semconv "go.opentelemetry.io/otel/semconv/v1.41.0"
+	semconv "go.opentelemetry.io/otel/semconv/v1.43.0"
 	"go.uber.org/fx"
 	"go.uber.org/zap"
 )
@@ -131,7 +131,10 @@ func tlsClientConfig(cfg *confv1.Observability_Tls, logger *zap.Logger) *tls.Con
 func newResource(info meta.AppInfo) (*resource.Resource, error) {
 	// 与 resource.Default() 合并,才能拿到 SDK 自己填的 telemetry.sdk.* 等属性。
 	// 前提是两边 semconv 版本一致 —— 本文件的 semconv 必须跟 sdk 内部用的版本对齐,
-	// 否则 Merge 会因 schema URL 冲突失败(sdk v1.44 内部用的是 v1.41.0)。
+	// 否则 Merge 会直接返回 ErrSchemaURLConflict —— 而本文件把 newResource 的错误当致命
+	// 处理,结果是服务起不来。sdk v1.45 内部用的是 semconv v1.43.0。
+	// (2026-08-06 实测:otel v1.44→v1.45 把内部 semconv 从 v1.41 换到 v1.43,
+	//  本文件没跟着改就会炸在启动阶段;TestNewResource 的 SchemaURL 断言就是防这个。)
 	return resource.Merge(
 		resource.Default(),
 		resource.NewWithAttributes(
