@@ -25,6 +25,27 @@ description: 给所有 AI 编码工具(尤其 Codex)的可执行命令与验收�
 - **凭据不入库**:密码/密钥只在 Consul KV 和本地环境,仓库里只写主机名和端口。
 - **不可逆动作(commit/push/合入/deploy/仓外写删)只由用户明示触发**,subagent 永不执行。
 
+### 0.1 按改动类型的必读路由
+
+> 本文件是入口,**不是内容的容器**。下面只给指针——同一条约束只写一处,复制会漂移
+> (`harness-framework/knowledge-layering.md`)。**动手前先按下表跳一次**,
+> 表里没有的再回 [`context/INDEX.md`](../INDEX.md) 逐层找。
+
+| 你要动的是 | 先读 | 不读会怎样 |
+|---|---|---|
+| 服务拓扑/注册名/网关前缀/KV 键 | [`.service-matrix.yaml`](../../.service-matrix.yaml) | 现搜猜错,把 `depends_on_planned` 当已接线 |
+| proto / API 契约 | [proto-design.md](proto-design.md) | 字段裸奔、破坏兼容性、炸前后端生成代码 |
+| Redis(缓存/锁/去重/计数) | [go-redis.md](go-redis.md) | 抓到已 Close 的旧客户端;`redis.Nil` 被当故障;非幂等命令被默认重试执行多次 |
+| 定时/周期任务、Ticker、后台 goroutine | [cron-jobs.md](cron-jobs.md) | 扩副本后同一任务跑 N 次;首次触发盲窗;挂错 ctx 导致心跳静默退出 |
+| 指标 / 看板 / 告警 | [`observability/OBSERVABILITY.md`](../../observability/OBSERVABILITY.md) | 标签基数失控;错误率画成速率;加了指标却没有可行动的告警 |
+| CI/CD、部署策略、镜像、migration | [`DEVOPS.md`](../../DEVOPS.md) | 镜像用 latest;单副本下滚更/金丝雀静默失效;migration 不兼容滚更期新旧共存 |
+| 本地起服务连不上基础设施 | [local-env.md](local-env.md) | 连 `consul.app.com` 超时;KV 缺子块导致功能被静默关掉 |
+| 提交信息 / 分支 / 分组 | [git-commit.md](git-commit.md) + 本文 §7 | type 自造、`perf` 滥用、`git add -A` 混提 |
+| 踩到坑之后 | [`harness-framework/self-refinement.md`](../harness-framework/self-refinement.md) | 同一个坑下个会话再踩一次 |
+
+⚠️ 两份**目标态**文档(`DEVOPS.md` / `OBSERVABILITY.md`)描述的是尚未实现的体系,
+读它们是为了不把新代码写歪,**不要据此认为对应能力已经存在**——现状一律以 `TODO.md` 为准。
+
 ---
 
 ## 1. 编译与静态检查(后端最基本的锚点)
