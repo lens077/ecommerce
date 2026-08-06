@@ -51,6 +51,7 @@ GRAFANA_DS_PROM=xxx GRAFANA_DS_PG=yyy GRAFANA_DS_LOKI=zzz python3 build_infrastr
 | `web_vitals_cls_milliseconds_bucket` | CLS 在 behavior 侧的 `unit` 是 `"1"` 不是 `"ms"`,OTLP→VM 的后缀是 `_ratio` | `web_vitals_cls_ratio_bucket` |
 | `http_server_request_duration_seconds_bucket` | **整个指标族不存在**:网关没有任何 meter,只有 tracing 中间件 | 面板删除(见下「未实现」) |
 | 文件系统使用率没有 mountpoint 过滤 | 会画出 8 条 `/var/lib/kubelet/pods/**` 的 PVC bind mount(每个带 PVC 的 Pod 一个,底下还是同一块盘) | 只留 ext4/xfs 且排除 `/var/lib/kubelet/**`;分母改用 `sum without(state)`,原来的 `used+free` 漏了 `reserved` |
+| 订单数 / GMV / 客单价读 `orders.order_main` | `order_main` 是按商家拆出的子订单；一次用户结算会被重复计数，客单价被拆低 | 改读一次结算一个记录的 `orders.order_group`；子订单状态和支付完成率仍读 `order_main` |
 
 ### 零填充(`common.py` 的 `zero_filled()`)
 
