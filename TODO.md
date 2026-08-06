@@ -18,6 +18,13 @@
 | 注册发现（Consul） | 🟡 | `consul-kv.json`、配置中心接入已有 |
 | 提交规范（commitlint + vite-plus 钩子） | ✅ | 仓库根 `package.json` 只装 `@commitlint/cli` + `config-conventional`，规则在 `commitlint.config.mjs`：Angular 十一类 type + 可选 gitmoji（带了就必须与 type 相符）+ subject 末尾禁标点。钩子由 **vite-plus** 安装（`frontend/package.json` 的 `prepare: vp config` → `core.hooksPath = frontend/.vite-hooks/_`），husky 已删；`core.hooksPath` 是仓库级设置，后端 Go 的提交同样受管。**此前从 2025-11-04 到 2026-08-02 整整九个月一次都没生效**，层层叠了五处：①`.husky/commit-msg` 里放的是**创建钩子的那条安装命令本身**（`echo "..." > .husky/commit-msg`），每次提交只把自己重写一遍就退出 0 ②它写出的那行里 `–` 是全角连字符、`--no` 是 pnpm 11 已废弃的 exec 参数 ③`@commitlint/cli` 从未出现在任何 devDependencies ④`apps/consumer/.commitlintrc.cjs` 的 `rules: {}` 是空的且无 `extends` ⑤2026-03-19 迁移到 vite-plus 时 `vp config` 的接管守卫看到 `frontend/.husky/_` 选择 skipping，`core.hooksPath` 从此指着一个已删除的目录。2026-08-02 修复并用四条故意写错的消息验证过拦截；cz-git 从未真正引入，不再提 |
 | 代码规范（oxlint + oxfmt，vite-plus 内置） | 🟡 | biome 在 2026-03 迁移时已被 vite-plus 自带的 oxlint + oxfmt 取代。`vp lint` / `vp fmt` 此前因四个成因全挂（tanstackRouter 相对路径、`typeAware` 写在 app 层、九个 tsconfig 的 `baseUrl` 被 TS7 判为 Invalid、`vite-plus-core` 装了 0.1.24/0.2.7 两份导致类型重复），2026-08-02 修好，`pnpm ready` 端到端可跑；全仓跑过一次 oxfmt。仍缺：CI 门禁未接入，48 条 warning 未清 |
+| 结构性门禁（`backend/structcheck`） | 🟡 | 2026-08-07 新增，随 `go test ./...` 进 CI。四项检查：`.service-matrix.yaml` ↔ `backend/services/` 目录双向对齐（`config` 撞名进程列为已知例外）、matrix 内部一致性（discovery/gateway_prefix 非空唯一、depends_on 指向已知服务）、matrix ↔ 网关实际接线（`gateway/configs/config.yaml` 的 endpoint path 与 `discovery:///` target 双向核对）、10 服务 `internal/pkg` 同构性（服务自身目录名归一化后同名文件必须字节一致）。**实测存量漂移 14 个文件**已记入 `homogeneity_baseline.txt`（棘轮：新漂移即红，收敛后删行），最严重的是 `registry/consul.go` 8 个变体——address 的 Consul check 空指针防护没同步到其余服务、`log/log.go` 4 个变体。**待办：按基线逐个文件收敛（挑对的版本同步到全部服务），清空后删除基线文件** |
+| 统一可执行 runbook（`context/team/runbook.md`） | ✅ | 2026-08-07 新增，把「规则与限制」命令化,供 Codex 等 CLI 直读直跑:动手前必读的限制(拓扑查 matrix、10 服务同构、proto 先读设计、凭据不入库、不可逆动作)+ 提交前验收锚点(`go build/vet`、`structcheck -count=1`、`go test -short`、`pnpm ready`、`verify-freeze`)+ 冻结/双审/提交流程。**不是新真相源,冲突以 `context/`/`.service-matrix.yaml`/`TODO.md` 为准**。Codex 只自动读 AGENTS.md,故两份 AGENTS.md(根+ecommerce,已同步)内联了 5 条锚点命令 + 指针,并挂进 `context/team/INDEX.md` |
+| harness 瘦身（AGENTS.md / context） | ✅ | 2026-08-07，参照 Anthropic/OpenAI 2026 的「减法」prompting 指引：AGENTS.md（根 + ecommerce 两份同步）「项目速览」改为「反直觉约定」，删掉读代码即可发现的技术栈/架构复述；硬规则 #1 从路径规定改写为「真相源冲突裁决」判据；新增硬规则 #6 不可逆动作（commit/push/合入/deploy/仓外写删）只能由用户明示触发、subagent 永不执行；PROGRESS/TODO 分工成文 `context/harness-framework/progress-and-todo.md` |
+| AI 异构双审（Claude + Codex） | 🟡 | 2026-08-07 评估过 CI 方案(`.github/workflows/ai-review.yml` + 两家 App + secret),因单人流程过重**已取消**该文件。改为**本地按需**做异构双审:push 前对着 diff 跑 `/adversarial-review`(隔离 fresh Claude + Codex,已验证合并),核心改动走、小改动跳。无需 GitHub App / secret / CI |
+| 冻结验收集门禁（Frozen Nodes） | 🟡 | 2026-08-07 新增，服务于 Graph Engineering 多闭环工作流的「改考题必须走审批」防线。`scripts/freeze.sh <feature> <测试路径...>` 把一组验收测试的内容哈希锁进 `.freeze/<feature>.sha256`（+`.meta` 记 commit/时间）；`scripts/verify-freeze.sh [--all\|<feature>]` 比对工作区与清单,内容变→DRIFT、删/移→MISSING,均退出码 1。新 CI `.github/workflows/freeze-check.yml` 在每个 PR/分支 push 跑 `--all`（与只在 tag 触发部署的 `backend.yml` 分开）。两层防线:CI 拦「偷改测试但没刷新清单」的静默漂移,`.github/CODEOWNERS`（`/.freeze/` + 三个脚本本身）+ `/adversarial-review`「diff 动测试即标红」拦「明改」。脚本兼容 bash 3.2(macOS)与 ubuntu(sha256sum/shasum 双回退),已自测 OK/DRIFT/MISSING/空目录四态。**已 PR #1 合入 github/main、CI 跑绿,并对 main 加分支保护(必需检查 `verify-freeze` strict、code-owner 审批已开、`enforce_admins=false` 不锁死);另补 GitLab 侧 `.gitlab-ci.yml` freeze-check job**。**待办:①本仓 origin 是 GitLab,`.gitlab-ci.yml` 要推到 GitLab 才在那侧生效;②单人仓下 code-owner 审批需第二身份(协作者/bot)才真正强制,现阶段你作为 admin 始终能兜底;③给某核心模块建第一份真实冻结集当范例(如 order/inventory 的验收测试)** |
+| DevOps 体系设计（`DEVOPS.md`） | ⬜ | 2026-08-07 新增设计文档 `DEVOPS.md`：以 Three Ways/CALMS/DORA 为骨架、DevOps 边界对齐 DDD 限界上下文，含现状盘点（与本表对齐）与四个落地阶段——①可重复构建（CI 模板化、路径触发、buf breaking、镜像禁 latest+trivy）②可重复交付（GitOps 全链路接管、同 digest 晋级、migration 流水线、副本/PDB 按集群现实分型）③看得见（OTel 全链路、`service.namespace` 唯一标签、SLO+错误预算）④快而不破（契约测试常态化、DORA 四指标自动采集、gitleaks/NetworkPolicy）。每阶段附行为验收标准（实测行为而非配置表面状态）。**状态：设计定稿、实现未开始；实现时逐项回填本表**。文档留在仓库根（就近原则），已在 `context/INDEX.md` 新增「工程体系文档」段登记指向，不复制内容 |
+| 可观测性方法论与指标基线（`observability/OBSERVABILITY.md`） | 🟡 | 2026-08-07 新增文档：三支柱分工（Metrics 发现 → Trace 定位 → Logs 看错误）、RED/USE 方法论、每个 Go 服务的最低指标配置（RED 四项、Goroutine/GC/Heap、pgx pool wait、Redis 命中率联动 DB QPS、Kafka Lag 预留）、第一批 7 条告警清单、6 条硬规则（唯一标签防 config 撞名、错误率画比率、控基数、凭据不入日志、告警按注入故障实测验收、监控随功能同一 PR 上线）。判据：**指标异常时答不出「该做什么」的不采**。🟡 依据：采集侧主体已存在（OTel→VM/Loki/Jaeger 端到端、11 服务同构基线），**文档列出的告警 0 条、网关无 meter、collector 自身无监控、无 k8s 对象指标均未落地**（与 `OBSERVABILITY_REVIEW_20260806.md` 一致），落地走 `DEVOPS.md` 阶段 3。文档留在 `observability/`（与看板脚本、评审报告同目录），已在 `context/INDEX.md` 登记指向 |
 
 ### 2. 后端微服务（核心）
 
@@ -26,17 +33,17 @@
 | 用户认证 user | 🟡 | `SignIn`、`UserProfile` | 令牌刷新、登出、多端会话、第三方登录适配 |
 | 商品 product | 🟡 | `GetProductDetail`（SPU/SKU） | **`ListProducts`（首页无限滚动/游标分页）设计已定，见 Design.md，待落地**；上下架、类目/品牌管理、`ProductChangedEvent` 同步 ES |
 | 购物车 cart | 🟡 | `GetCart`、`AddProductToCart`、`RemoveCartItem`、`UpdateCartItemQuantity` + MinIO 缩略图 URL（`GetCartSummary` 已于 2026-08 删除，见下） | **`RemoveCartItem`/`UpdateCartItemQuantity` 前端未接线**（删除/改数量只动本地 store，刷新就回来）；`AddProductToCart` 的 `shop_name` 缺字段导致必然失败；选中态服务端持久化（如需） |
-| 订单 order | 🟡 | `CreateOrder`(桩)、`CompleteOrder` | **`CreateOrder` 主体待实现**（幂等/核价/拆单/取地址快照/同步 Reserve/事务落库）；proto 待补 `CreateOrderRequest.requestId`(幂等键) 与 `CreateOrderResponse.orderNo/payAmount/payDeadline`；订单查询/列表、取消、状态机、`OrderCreated/Paid/Cancelled` 事件 |
+| 订单 order | 🔴 | `CreateOrder`(**假成功桩**)、`CompleteOrder`(**不落库**) | ❗**`CreateOrder` 不是普通的桩，它返回假成功**：service 层把 `req` 整个注释掉、硬编码 `CartItemIDs: nil, AddressID: 0`（`internal/service/order.go:31`），application 层直接 `return &domain.CreateOrderResponse{}, nil`（`application/order.go:61`）——而**结算页已真实接线**（`checkout/index.tsx:110` 调 `mutateAsync` 后跳支付页），用户会看到「下单成功」但系统里没有订单、购物车未清、库存未占。**先改成显式 `CodeUnimplemented` 止血**（学 payment 的做法），再实现主体；❗**`CompleteOrder` 的持久化是空的**：`SaveOrder` 只打一行 debug 日志就返回 nil（`internal/data/order.go:83`），`OrderCompleted` 事件却照发；`CompleteOrderResponse.Order` 还是零字段空 message（`api/order/v1/order.proto:28`）；service 层把 application 的 CodeNotFound 重包成 CodeInternal（`service/order.go:63`），违反本仓的错误分层规范。此外仍缺：`CreateOrder` 主体（幂等/核价/拆单/取地址快照/同步 Reserve/事务落库）；proto 待补 `CreateOrderRequest.requestId`(幂等键) 与 `CreateOrderResponse.orderNo/payAmount/payDeadline`；订单查询/列表、取消、状态机、`OrderCreated/Paid/Cancelled` 事件；`UpdateOrderStatus`/`SaveOrderLog` 仍是 panic |
 | 支付 payment | 🟡 | 5 个 RPC 均为**桩**（显式返回 `Unimplemented`），服务可启动/注册/健康检查，网关 `/payment*` 已通 | **repo 主体待恢复**：原实现依赖已移除的 balance/consumerOrder client（保留在 `data/payment.go` 注释块）；支付宝凭据（`pay.alipay.*` 在 KV 里是空占位）；退款、幂等/验签加固、每日对账、`PaymentRefundedEvent` |
-| 库存 inventory | 🟡 | `Reserve`、`ReleaseReserve` | 扣减确认/回补、库存流水与对账、不足预警事件、Redis 分布式锁 |
+| 库存 inventory | 🔴 | **无可用 RPC**（`Reserve`、`ReleaseReserve` 均已挂载但不可用） | ❗**`Reserve` 静默无操作**（`internal/data/inventory.go:52`，四处叠加：①传 `Version: stock.Version+1` 而 SQL 是 `AND version = @version`，WHERE 比对未来版本号→**永远命中 0 行**；②`_, reserveErr :=` 丢弃 `:execrows` 行数，0 行不报错；③`Quantity: stock.Available-item.Quantity` 传给 `available = available - @quantity`，语义颠倒；④错误分支传恒为 nil 的 `err` 而非 `reserveErr`，真失败返回 `(nil,nil)`）——净效果是**返回成功、库存不变、change_log 写入伪造流水**，注释声称的事务/回滚并不存在（无 `ExecTx`，`FOR UPDATE` 在自动提交下失效）。接上下方「建单同步 Reserve（TCC-Try）」即必然超卖；❗**`ReleaseReserve` 是 `panic("implement me")`**（:88），接上取消/超时补偿即每单必炸。此外仍缺：扣减确认/回补、库存流水与对账、不足预警事件、Redis 分布式锁 |
 | 搜索 search | 🟡 | `Search`（ES + OTel） | CQRS 读写分离、商品数据实时同步、聚合筛选/智能排序、热门词 |
 
 ### 3. 后端微服务（支撑）
 
 | 服务 | 状态 | 已实现 | 主要缺口 |
 |------|------|--------|----------|
-| 地址 address | ✅ | CRUD + `SetDefaultAddress` + `ListAddresses` | — |
-| 商家 merchant | 🟡 | 入驻申请生命周期（`Submit/Approve/Reject/Get/Activate`） | 店铺信息管理、商品运营权限、发货/售后、结算账单 |
+| 地址 address | 🔴 | CRUD + `SetDefaultAddress` + `ListAddresses`（功能齐全，**但全线越权**） | ❗**安全 BLOCKER**：`Get/Update/Delete/SetDefault` 的 SQL 只按 `address_id` 过滤、无 user 归属校验，`CreateAddress` 的 `user_id` 直接取自请求体（`internal/service/address.go:26,71,84,95`）；网关又整段放行 `p, consumer, /address.v1.AddressService/*`（`gateway/configs/policies/policies.csv:3`）——任何登录用户拿到或遍历到他人地址 UUID 即可读改删其隐私地址。修法：user 一律取自网关注入的身份头，所有查询加 `AND user_id = ?`，网关策略收敛到 RPC 粒度 |
+| 商家 merchant | 🔴 | 仅 `Submit`/`Get` 可用 | ❗**`ApproveApplication` 的 SQL 没有 WHERE 子句**（`internal/data/queries/merchant.sql:23`），repo 层还丢弃了 `ApplicationId`（`internal/data/merchant.go:23`）→ **批准一份申请 = 把所有待审申请一起改成 approved**，并覆盖上这一份的审核意见与时间戳；❗`RejectApplication`/`ActivateMerchant` 是 `panic("implement me")`（`internal/service/merchant_service.go:57,98`）——网关已把这两条按 RPC 粒度放行给 admin，调用即 panic。此外仍缺：店铺信息管理、商品运营权限、发货/售后、结算账单 |
 | 履约 fulfillment | ⬜ | — | 发货/物流轨迹、第三方物流对接、售后履约 |
 | 结算 settlement | ⬜ | — | 佣金计算、结算单、财务对账 |
 | 营销 marketing | ⬜ | — | 优惠券、满减、秒杀、会员/积分 |
@@ -68,7 +75,7 @@
 | 网关 JWT 时钟容差 | ✅ | `gateway/middleware/jwt/jwt.go` 增加 `jwt.WithLeeway(60s)`:修复登录后毫秒级请求因 `nbf` 零容差+微小时钟偏移被判 "token is not valid yet" → 401 → 前端退登死循环 |
 | Consul 配置 KV | ✅ | 新增 `ecommerce/config/dev.yml`(真实 DB/Redis/discovery),服务启动从此加载 |
 | ListNamespaces RPC | ✅ | 新增 `ListNamespaces` 返回 `NamespaceInfo{namespace, environments, key_count}`,SQL 按 `(namespace, environment)` 分组走 `idx_entry_ns_env`;前端命名空间/环境改为 Autocomplete 下拉(freeSolo,仍可输新值),删除写死的默认 namespace `ecommerce`,首次加载自动落到真实存在的 namespace。直连与经网关(401 非 404,前缀路由已匹配)均验证 |
-| cart 三配置源 | 🟡 | Cart 已使用独立仓 `sdk/configsource`：本地 `CONFIG_SOURCE_FILE` 的 `SourceConfig` 选择 `file` / `consul` / `config_center`，无自动降级；主仓旧 ConfigService 客户端已删除。依赖远程 `main` 的最新伪版本，Cart 配置包测试通过；集群 API、Consul 与本地 Docker 当前不可达，运行时 `make dev`/灰度待基础设施恢复 |
+| cart 三配置源 | 🟡 | Cart 已使用独立仓 `sdk/configsource`：本地 `CONFIG_SOURCE_FILE` 的 `SourceConfig` 选择 `file` / `consul` / `config_center`，无自动降级；主仓旧 ConfigService 客户端已删除。依赖已升级为语义化 tag `github.com/lens077/config-center v0.1.0`（`backend/go.mod:18` 实证，与 README 一致；本行原写「依赖远程 `main` 的最新伪版本」，是 v0.1.0 发布前的陈旧状态，2026-08-06 回扫订正），Cart 配置包测试通过；集群 API、Consul 与本地 Docker 当前不可达，运行时 `make dev`/灰度待基础设施恢复 |
 | 配置加载单测 + 竞态修复 | ✅ | 删除 payment/inventory/address/merchant 4 个引用已删 API(`updateConfig`/`ValidateConfig`/`Server_HTTP.Addr`)的 stale 测试；重写 product 同类 stale 测试(还停在 `Init(configPath)` 文件配置时代)。新用例在 `-race` 下抓到**真实生产竞态**:9 个服务的 `Init` 写 `conf` 未持锁，而 `GetConfig` 用 `RLock` 读(cart 已在双源改造时修过)——已统一补 `confMu.Lock()` |
 | 前端配置控制台 | 🟡 | 已迁至独立仓 `config-center/web`：保持 Monaco/玻璃态 CRUD、历史与回滚能力，改为浏览器专用（取消 Tauri 桌面端）并从 `public/config.json` 读取网关与公开 Casdoor 配置。待独立 pnpm 构建与浏览器 CRUD 验证 |
 | 配置编辑器增强 | ✅ | 新增 `lib/validate.ts` 统一校验/格式化层:JSON 走 `jsonc-parser`(V8 的 `JSON.parse` 报错常常**不带位置**,拿不到准确行号)、YAML 走 `yaml` 的 `parseDocument`(`toString` 保注释与 anchor)、TOML 走 `smol-toml` + 自写的 `lib/toml-format.ts` 按行格式化(**注释全保留**,代价是不重排 key 顺序;放弃 `@taplo/lib` —— 实测是 34MB 内联 wasm)。编辑器:300ms 防抖实时校验、错误行红波浪线(marker owner `config-format` 与服务端错误的 `server` 分开,互不覆盖)、状态 Chip 显示「第 N 行 第 M 列: 原因」且可点击跳转、格式化按钮 + `Alt+Shift+F`、**校验不过禁用保存**(服务端校验仍是最后一道)、CSS 覆盖层全屏(非原生 Fullscreen API)。布局:`__root.tsx` 改 `height:100dvh` 把滚动容器下沉到 `<main>`,编辑器靠 `flex:1` 吃满剩余高度,不硬编 AppBar 高度。25 个单测(含「同一份 YAML 选 YAML 通过、选 JSON 报错」,锁住校验跟的是下拉选的格式而非文件名) |
@@ -79,7 +86,7 @@
 | 其余 9 个服务全量迁移 | ✅ | address/behavior/inventory/merchant/order/payment/product/search/user 全部搬到 cart 那套：`internal/pkg/config` 换成 `Source`+`Live` 五文件（删掉 `consul_config.go`），`internal/data` 加 `live.go`（`PgPool`/`LiveRedis`）并把 `NewPostgresPool`/`NewRedisClient` 改成订阅式热重建，`pkg/log` 改 `zap.AtomicLevel` 接 `live.Subscribe`，`main.go` 补一行「本次生效的数据源」。调用点只有 1~7 处需要改（`BeginTx`/`Ping` 走 `.Pool()`，redis 一律 `.Client()`）——`PgPool` 实现了 `models.DBTX`，`models.New()` 之后所有 `queries.*` 一行没动。9 个 Makefile 补 `make dev-cc`，16 份 deploy 清单补上 `CONFIG_SOURCE`（仍显式写 `consul`）与注释掉的配置中心四项。**config 服务不迁**：配置中心的配置存进它自己就没人能把它拉起来，它必须从 Consul KV 自举，因此连 `source_configcenter.go` 都不给它 |
 | 三份配置对齐 + 灌入配置中心 | ✅ | 以 cart 为标准重排 10 个服务 × dev/pre 共 20 份配置（段序统一 `server → data → 服务专属段 → observability → discovery → search → log → auth`），逐份用各服务**真实的 `Bootstrap` 类型 + 与 `decodeConfig` 完全相同的解码链路**校验。修掉三处内容错误：**behavior 的 KV 一直是 cart 的复制品**（带着它 proto 里没有的 `store`/`search`，缺 `required=true` 的 `recommend`，这就是 `.service-matrix.yaml` 里那条 known_gap）、**product 的 KV 缺 `recommend`**、**payment 的仓库副本缺 `pay`**；补齐 4 份缺失文件（behavior/payment 的 pre 从无到有，product 的 pre 在仓库里缺，**cart 的 pre 缺 `store` 段**——`internal/data/cart.go` 拼 MinIO 缩略图 URL 要用它，pre 环境的图片链接一直是坏的）。**product 的 KV pre.yml 根本不是 pre**：连的是 `pg-dev.app.com`/`consul.app.com` 这些外部域名，是 dev 换了个端口，集群内跑必然解析不到。新增 `backend/tools/config-seed` 把 KV 灌进配置中心（源取 KV 而不是仓库文件，因为后者按硬规则 4 不入库、每台机器都不一样），默认 dry-run，写完逐份读回比对；20 个 key 全部写入校验通过 |
 | 凭据不再入库 | ✅ | `configs/.gitignore` 里 **`per.yml` 是 `pre.yml` 的笔误**（`4a3eb70b` 引入），加上 address/behavior/merchant/payment 四个服务压根没有这个文件，结果 **11 份含明文凭据的配置文件（PG/Redis/ES 密码、Casdoor `client_secret`、证书）一直被 git 跟踪**，直接违反 AGENTS.md 硬规则 4。已 `git rm --cached` 停止跟踪（本地文件保留）并给 10 个服务统一 `.gitignore`，`git check-ignore` 逐份验过 20/20 拦得住。⚠️ 历史提交里仍有这批凭据，彻底清除需要单独做 history rewrite；这些密码已经泄露过，真要安全得轮换 |
-| 配置中心 Go 客户端 SDK | 🟡 | 独立仓已提供 `sdk/configsource`、生成契约与 `SourceConfig{file, consul, config_center}`；Cart 已改用远程默认分支伪版本，后续再发布 v0.1.0 语义化 tag |
+| 配置中心 Go 客户端 SDK | ✅ | 独立仓已提供 `sdk/configsource`、生成契约与 `SourceConfig{file, consul, config_center}`；**`v0.1.0` 语义化 tag 已发布并被 `backend/go.mod:18` 钉住**（本行原写「Cart 已改用远程默认分支伪版本，后续再发布 v0.1.0」，与同表「后端 config 服务」行及 go.mod 自相矛盾，2026-08-06 回扫订正）。升级用 `go get github.com/lens077/config-center@v0.x.y`——`go mod tidy` 只增删不升级 |
 | 审批/灰度/密钥加密/审计 | ⬜ | 后续阶段 |
 
 ### 6. 推荐链路（gorse）
@@ -170,6 +177,39 @@
 
 先打通「消费者核心交易闭环」，再向商家/管理端与非核心能力扩展。
 
+### P0 · 假成功与越权（2026-08-06 对抗评审发现，优先于一切新功能）
+
+> 这批的共同点是**调用会「成功」但结果是错的**，或**任何登录用户都能越权**。
+> 比「未实现」更危险：不会在联调时暴露，只在上量后以超卖、丢单、数据泄露的形式爆发。
+> 双模型独立评审 + 逐条代码核实，全文见 `ADVERSARIAL_REVIEW_20260806.md`。
+> `payment` 显式返回 `Unimplemented` 的做法是本仓的正确示范，下面几处应向它看齐。
+
+- [ ] **库存 `Reserve` 静默无操作**（`inventory/internal/data/inventory.go:52`）：传当前 version 而非 `+1`、
+      检查 execrows 为 0 时返回冲突错误、修正扣减量语义、错误分支传对变量、整段包进 `ExecTx`
+- [ ] **库存 `ReleaseReserve` 是 panic 桩**（同文件 :88）：实现或至少改成显式 `Unimplemented`
+- [ ] **`CreateOrder` 返回假成功**（`order/internal/service/order.go:31`、`application/order.go:61`）：
+      **立即改成显式 `CodeUnimplemented` 止血**——结算页已接线，当前用户会看到「下单成功」但无订单
+- [ ] **`CompleteOrder` 不落库**（`order/internal/data/order.go:83`）：实现 `SaveOrder`；
+      持久化成功前不得发布 `OrderCompleted`
+- [ ] **地址服务全线越权**（`address/internal/service/address.go:26,71,84,95`）：user 取自网关身份头、
+      所有查询加 `AND user_id = ?`、网关策略从 `AddressService/*` 整段放行收敛到 RPC 粒度
+- [ ] **商家审批全表 UPDATE**（`merchant/internal/data/queries/merchant.sql:23`）：补
+      `WHERE application_id = @application_id`，repo 层把 `ApplicationId` 传下去
+- [ ] **登录 token 落日志**（`user/internal/data/user.go:39`）：删掉 `u.l.Debug(token.AccessToken)`
+- [ ] **`AddProductToCart` 必然失败**（`cart/internal/data/queries/cart.sql:3` vs `schema/cart.sql:17`）：
+      INSERT 补 `shop_name`（proto/biz/data 一路补字段）或给 schema 默认值——需先定契约
+- [ ] **`UpdateCartItemQuantityParams` 缺 Quantity 字段**（`cart/internal/data/cart.go:57`）
+- [ ] **商家 `RejectApplication`/`ActivateMerchant` 是 panic 桩**（`merchant_service.go:57,98`）
+- [ ] **网关重试可复制非幂等写**（`gateway/proxy/proxy.go:263-310`）：补 `requestId` 幂等键，
+      或对非幂等方法关闭重试（与下方「下单防重的 requestId 一直是假的」一起做）
+- [ ] **搜索读的字段与 `DESIGN.md:335-370` 的 ES mapping 不兼容**（`search/internal/data/search.go:63-90`）：
+      实现读 `id`/`skus[].price`/`sale_detail[].quantity`，设计写 `spu_id`/顶层 `price`/`sale_count`——
+      按设计建索引则结果全为零值。二者需对齐（改实现或改设计，待决策）
+- [ ] **给上述路径补测试**：本轮 22 条发现全部位于零覆盖路径上，`go test ./...` 却是全绿的——
+      不补测试，修完还会重演
+
+### 其余近期待办
+
 - [x] **`service_name` 撞名**：已退役 `backend/services/config`；独立 config-center 用 `service.namespace=config-center` 区分遥测，系统查询精确筛选，电商 Grafana 看板排除其基础设施指标
 - [ ] **订单服务**：补 `GetOrder` / `ListOrders` / `CancelOrder` RPC 与订单状态机（带守卫的状态迁移 + `order_log`）
 - [ ] **一致性底座**：落 Outbox 表 + Kafka relay，替换现有进程内 `GoEventBus`（跨服务事件当前到不了其他服务）
@@ -177,7 +217,7 @@
 - [x] **consumer 结算页（前端）**：已接选中项/地址弹层选择+新增/防重 requestId/下单调用，去优惠券、运费恒 0、统一 sp[]；生成 `api/order` 客户端并在 `gen/api` 导出 order
 - [ ] **consumer 结算页（待后端联通）**：后端补 `CreateOrderRequest.requestId`、`CreateOrderResponse.orderNo` 并 `make api` 后，提交订单接真实响应、跳真实支付页（现为固定 `/payment/result` 占位）
 - [ ] **下单防重的 `requestId` 一直是假的（迁 connect-query 时查实）**：旧代码 `client.createOrder(message as Parameters<...>[0])` 在假装 proto 有这个字段，而 `CreateOrderRequest` 只有 `cartItemIds`/`addressId`/`remark` 三个，那个 UUID 运行时直接被丢掉 —— 也就是说**防重从来没生效过**。迁移时删掉了那个 cast 和对应的 `useState`，把「假装成立」改成了明面上不成立，结算页留了 TODO。要真生效得先补 proto 字段再 `make api`，与上一条一起做
-- [ ] **cart 的删除/改数量前端未接线**：`RemoveCartItem` / `UpdateCartItemQuantity` 后端实现完整，但前端 `useCart` 的 `removeItem`/`updateQuantity` 只动本地 valtio store 不发请求 —— **用户删掉商品后刷新页面它会回来**（`GetCart` 拉的还是旧数据，同步 effect 会 clear 再灌回去），即删除与改数量这两个功能对用户实际不存在。修法：两个 hook 各接 `useMutation` + `invalidateQueries`，模式与现有 `addProductToCart` 同构。**同批的 `GetCartSummary` 已删**（2026-08，见下一条）
+- [ ] **cart 的删除/改数量前端未接线**：`RemoveCartItem` 后端实现完整；**`UpdateCartItemQuantity` 后端也不完整**——`UpdateCartItemQuantityParams` 里根本没有 Quantity 字段（`internal/data/cart.go:57`），即便前端接上也改不了数量，需先补字段（本行原写「后端实现完整」，2026-08-06 回扫订正）。前端 `useCart` 的 `removeItem`/`updateQuantity` 只动本地 valtio store 不发请求 —— **用户删掉商品后刷新页面它会回来**（`GetCart` 拉的还是旧数据，同步 effect 会 clear 再灌回去），即删除与改数量这两个功能对用户实际不存在。修法：两个 hook 各接 `useMutation` + `invalidateQueries`，模式与现有 `addProductToCart` 同构。**同批的 `GetCartSummary` 已删**（2026-08，见下一条）
 - [x] **购物车 cart_item_id 修复（前后端已闭环）**：后端 `AddProductToCart` SQL 改 `RETURNING id`、`AddProductToCartResponse` 增 `cart_item_id`（proto/biz/data/service 已改，`make api` 已跑，`make sqlc` 需在有 DB 的环境重跑以校验，手写已对齐）；前端 `store/cart.ts` 删除伪造 ID、`useCart` 从 `GetCart` 取真实 ID、`api/cart` 乐观新增改用后端返回的真实 `cart_item_id`
 - [ ] **consumer 订单页**：订单列表/详情接真实查询 API，替换 mock
 - [ ] **支付闭环**：`payment/result` 接支付状态查询 + 回调后订单状态同步（订单订阅 `OrderPaid`）
@@ -204,6 +244,25 @@
 - [ ] **可观测性 · 网关指标未实现**：`gateway/` 下没有任何 meter（只有 tracing 中间件），`http_server_*` 整族不存在，所以看板上「网关→上游 HTTP 时延」这张图已删。要看网关侧耗时得先加 metrics 中间件
 - [ ] **可观测性 · 10 个电商服务缺 Go 运行时指标**：goroutine/堆/进程 CPU 内存全都没有。唯一在报的是**独立仓 config-center**（它实现了 `internal/pkg/sysstat`），而不是本仓任何服务；它以 `service.namespace=config-center` 区分遥测。把那套搬进 10 个服务，或抽成共享埋点。附带：config-center 未装 OTel ErrorHandler，导出失败没有任何日志（本仓 10 个服务已在 2026-08-06 那轮补上，可照抄）
 - [ ] **技术债**：修复 `product/$spuCode.tsx:156` 的 `shopName` 类型报错；清理其余 mock 数据
+
+### 可观测性「统一关联底座」评审新增待办（2026-08-06,全文见 `observability/OBSERVABILITY_REVIEW_20260806.md`)
+
+> 该轮用集群真实数据 + 双模型对抗评审验证「五维统一采集·存储·查看·分析」目标。§234/236/237/238 四条**已被本轮实测复核确认仍未修**(尤其 §236 fluent-bit 标签,Loki 里 `k8s__pod_name` 就是 `.pod_name`,日志按 pod 下钻彻底不可用)。以下为**新查出的确认缺陷**:
+
+- [ ] **可观测性 · PII 脱敏形同虚设(P0 安全)**:部署中 fluent-bit lua 手机号脱敏用 `(%d{3})%d{4}(%d{4})`,**Lua 模式不支持 `{n}` 量词**,匹配不上任何手机号=空操作;更严重的是 `Merge_Log On`+`Keep_Log On` 保留原始 `log` 明文字段,连有效的 email 脱敏也被绕过——完整未脱敏 JSON 整条进 Loki。且脱敏只碰顶层 `email`/`phone` 两键,漏掉 `payment/internal/server/logging.go` dump 的 `form_data`(交易/回调数据)、RUM 的 `user_id`/`session_id`、debug 日志里的 bearer token。改法:`Keep_Log Off` + 手机号用有效 pattern + 扩展脱敏字段名单
+- [ ] **可观测性 · RUM 与后端 trace 无 join key**:前端 `packages/perf` 用 web-vitals + 手写 Connect-JSON,无 `@opentelemetry/*`、不透传 traceparent、后端不回 Server-Timing——慢 `frontend.api.duration` 无法关联到后端 span,`anon_id`/`session_id` 只在日志不在 metric/span。且只有 consumer 一个前端调 `initPerf`,merchant/admin/config 三个没接。DESIGN.md 声称的「前端→网关→微服务全链路」前端那段不存在
+- [ ] **可观测性 · 网关 5xx 被记成成功**:`tracing.go:81-90` 只在 `err!=nil`(传输层错误)时 `SetStatus(Error)`,后端返回 HTTP 503 但 `err==nil` → span 状态 OK、`logging.go` 记成 `LevelInfo`。Jaeger 错误检索、日志 error 级告警都漏掉真实 5xx。改法:按 `reply.StatusCode>=500` 设 span/日志级别
+- [ ] **可观测性 · 网关采样口径与后端相反**:gateway `AlwaysSample()`(非 `ParentBased`),后端 `ParentBased`;网关是 trace 根永远 100% 采样,设 `sample_ratio` 也压不住,高峰会压垮 collector + 单副本 Jaeger。网关改 `ParentBased(TraceIDRatioBased)` 并统一读同一采样率
+- [ ] **可观测性/安全 · 免鉴权入口身份可伪造**:gateway jwt 中间件命中白名单(`telemetry.v1/CollectWebVitals`、`behavior.v1/Track`)时直接 return 不剥离入站头,rewrite/remove-header 中间件在 config.yaml 全注释掉;`behavior/identity()` 又把 `x-md-global-user-id` 当可信源。攻击者带 `x-md-global-user-id:<受害者ID>` 即可冒名上报,污染统一口径身份基座。补一条入站 `x-md-*` 剥离中间件
+- [ ] **可观测性 · 看板两处口径错**:①`build_infrastructure.py:133-139`「DB 错误率」= `(errors or count*0)` 画的是**错误/秒不是比率**,1 err/s 混在 10000 ops/s 里飘红误报,需除以操作总量;②`build_infrastructure.py:38-41` 节点覆盖 stat 阈值 ≥2 为绿、desc 说「node1 是 control-plane collector 不调度」——**实测已不成立**(collector/fluent-bit DaemonSet 现 3/3,VM 里 node1/2/3 各 32 条 system 序列),阈值应对齐 3 节点否则掉 1 节点仍绿
+- [ ] **可观测性 · 事件/变更两维未采**:无 kube-state-metrics、无 k8s event exporter,Kubernetes 事件、Pod 状态、ArgoCD 变更历史/部署 marker 都不进面。CrashLoopBackOff+内存压力的发布事故无 event/restart 序列可查(与 §235 k8s 视角一并做)
+- [ ] **可观测性 · 生产级 HA 缺失**:Jaeger(badger 本地盘)、VM(single 本地 PV)、Loki(single-binary)、Grafana 均单副本,承载卷节点故障时无法带数据漂移。整个可观测栈在 `cloud-native-deploy` 的 imperative `install.sh` 里、未纳 GitOps,节点上还手改过 loki values;`loki/helm/other/install.sh:51` 等处 MinIO 凭据明文进 Git
+- [ ] **可观测性 · `OTEL_LOGS_EXPORTER: "none"` 是死配置**:该 env 无任何 Go 代码读(grep OTEL_ 零命中),`log.go` 无条件 `NewTee(stdout, otelOTLP)`。日志实际同时经 stdout→fluent-bit 和 OTLP→collector→Loki 两条路进 Loki,标签 schema 不兼容(`k8s__*` vs `service_name`),无单一 LogQL 覆盖全部日志。要么真接 autoexport 让该 env 生效,要么删掉误导性注释
+
+### 评审对既有证据的订正
+
+- 上一轮认为「基础设施盘 Loki 面板 `{service_name=~".+"}` 只能看到 0.05% 的 OTLP 流」**方向反了**:实测 Loki `service_name` 值就是 `"kube-logs"`(从 `job` fallback),`.+` 匹配得上主体(约 99.9%);真正缺陷是 §236 的坏 `k8s__*` 标签,不是「面板几乎空」
+- 「代码里完全没有 exemplar」措辞过强:OTel Go SDK v1.45 默认启用 trace-based exemplar filter,但 VM 数据源 + Grafana 未配 exemplar 导航,查询层做不到 metric→trace 跳转,实际结论(无法跳转)仍成立
 
 ---
 
