@@ -21,6 +21,10 @@ reset_ids()
 panels = []
 y = 0
 
+# Config Center 是独立基础设施，不能混入电商业务服务的指标与日志。
+SERVICE = 'service_name=~"$service",service_name!="config-service"'
+ECOMMERCE_SERVICE = 'service_name!="config-service"'
+
 # ───── Row 1 业务北极星 ─────
 panels.append(row("业务北极星(时间范围内)", y)); y += 1
 panels.append(pg_stat("订单数", "SELECT count(*) FROM orders.order_main WHERE $__timeFilter(created_at)", 0, y,
@@ -72,11 +76,11 @@ y += 8
 # ───── Row 4 服务健康 ─────
 panels.append(row("服务健康(RPC)", y)); y += 1
 panels.append(ts("请求率 by 服务", [
-    prom_t('sum(rate(rpc_server_duration_milliseconds_count{service_name=~"$service"}[$__rate_interval])) by (service_name)', "{{service_name}}"),
+    prom_t(f'sum(rate(rpc_server_duration_milliseconds_count{{{SERVICE}}}[$__rate_interval])) by (service_name)', "{{service_name}}"),
 ], 0, y, w=8, unit="reqps"))
 _RPC = "rpc_server_duration_milliseconds_count"
-_rpc_err = f'sum by (service_name) (rate({_RPC}{{service_name=~"$service",rpc_connect_rpc_error_code!=""}}[$__rate_interval]))'
-_rpc_all = f'sum by (service_name) (rate({_RPC}{{service_name=~"$service"}}[$__rate_interval]))'
+_rpc_err = f'sum by (service_name) (rate({_RPC}{{{SERVICE},rpc_connect_rpc_error_code!=""}}[$__rate_interval]))'
+_rpc_all = f'sum by (service_name) (rate({_RPC}{{{SERVICE}}}[$__rate_interval]))'
 panels.append(ts("错误率 by 服务", [
     prom_t(f"{zero_filled(_rpc_err, _rpc_all)} / {_rpc_all}", "{{service_name}}"),
 ], 8, y, w=8, unit="percentunit", percent=True,
@@ -84,13 +88,13 @@ panels.append(ts("错误率 by 服务", [
          "该标签只在出错的序列上存在,所以分子用总量乘 0 兜底 —— 否则服务健康时"
          "整张图是空的,看起来像看板坏了而不是「没有错误」"))
 panels.append(ts("P95 时延 by 服务", [
-    prom_t('histogram_quantile(0.95, sum(rate(rpc_server_duration_milliseconds_bucket{service_name=~"$service"}[$__rate_interval])) by (le, service_name))', "{{service_name}}"),
+    prom_t(f'histogram_quantile(0.95, sum(rate(rpc_server_duration_milliseconds_bucket{{{SERVICE}}}[$__rate_interval])) by (le, service_name))', "{{service_name}}"),
 ], 16, y, w=8, unit="ms"))
 y += 8
 panels.append(table("最慢方法 Top(P95,时间范围内)",
-    'topk(10, histogram_quantile(0.95, sum(increase(rpc_server_duration_milliseconds_bucket[$__range])) by (le, service_name, rpc_method)))',
+    f'topk(10, histogram_quantile(0.95, sum(increase(rpc_server_duration_milliseconds_bucket{{{ECOMMERCE_SERVICE}}}[$__range])) by (le, service_name, rpc_method)))',
     0, y, w=12, h=7, unit="ms"))
-panels.append(logs("错误日志(全服务)", '{service_name=~".+"} | detected_level=~"error|warn" |~ "(?i)error|fail|panic"', 12, y, w=12, h=7))
+panels.append(logs("错误日志(全服务)", '{service_name=~".+",service_name!="config-service"} | detected_level=~"error|warn" |~ "(?i)error|fail|panic"', 12, y, w=12, h=7))
 y += 7
 
 # ───── Row 5 前端体验(Web Vitals) ─────
@@ -141,7 +145,7 @@ panels.append(prom_stat("节点内存最高", f"max({mem_used_ratio()})", 6, y, 
 panels.append(prom_stat("节点磁盘最高", f"max({fs_used_ratio()})", 12, y, w=6, unit="percentunit",
     thresholds=steps(("green", None), ("yellow", 0.8), ("red", 0.9)), links=INFRA_LINK,
     desc="仅真实文件系统(ext4/xfs),已排除 kubelet 的 PVC bind mount"))
-panels.append(prom_stat("DB 连接池饱和度最高", f"max({pool_saturation()})", 18, y, w=6, unit="percentunit",
+panels.append(prom_stat("DB 连接池饱和度最高", f"max({pool_saturation(ECOMMERCE_SERVICE)})", 18, y, w=6, unit="percentunit",
     thresholds=steps(("green", None), ("yellow", 0.7), ("red", 0.9)), links=INFRA_LINK,
     desc="acquired / max。服务未启动时无数据"))
 
@@ -152,7 +156,7 @@ print(dump(
     links=[dash_link("基础设施", "ecommerce-infrastructure", "infrastructure", icon="cloud")],
     templating=[{
         "name": "service", "label": "服务", "type": "query", "datasource": PROM,
-        "query": {"query": "label_values(rpc_server_duration_milliseconds_count, service_name)", "refId": "v"},
+        "query": {"query": "label_values(rpc_server_duration_milliseconds_count{service_name!=\"config-service\"}, service_name)", "refId": "v"},
         "includeAll": True, "multi": True, "current": {"text": ["All"], "value": ["$__all"]},
         "refresh": 2,
     }],
