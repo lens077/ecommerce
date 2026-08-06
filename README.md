@@ -210,7 +210,8 @@ CONFIG_FILE=configs/config.yaml make dev             # 监听 :30010
 把 Consul KV 里的配置灌进配置中心用本仓的 `backend/tools/config-seed`
 （源取 KV 而非仓库里的 `configs/*.yml` —— 后者含密码、按硬规则不入库，每台机器都不一样）。
 
-⚠️ 主仓的 `backend/services/config` 目前还留着**兼容实现**，待新模块发版并完成部署切换后删除。
+主仓已不再保留 `backend/services/config` 或其重复 API 契约；服务接入一律使用
+`github.com/lens077/config-center@v0.1.0`。
 
 ## 网关：
 

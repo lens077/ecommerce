@@ -50,10 +50,10 @@ context/project/ecommerce/{module}/
 |---|---|
 | `gateway` | `gateway/` |
 | `cart` / `order` / `product` / `behavior` … | `backend/services/{module}/` |
-| `consumer` / `merchant` / `admin` / `config` | `frontend/apps/{module}/` |
+| `consumer` / `merchant` / `admin` | `frontend/apps/{module}/` |
 
-⚠️ `config` 有歧义：后端配置中心服务是 `backend/services/config/`，前端配置中心是 `frontend/apps/config/`。
-分别用 **`config`**（后端）和 **`config-fe`**（前端）区分。
+配置中心已迁至独立仓 `../config-center`；电商仓内的 `config` 指各业务服务的配置加载层，
+不再指一个本地微服务或前端应用。
 
 ## experience 文件的写法
 
