@@ -195,7 +195,7 @@
 - [ ] **可观测性 · k8s 视角（单独一轮，勿与看板混做）**：上 `kubelet_stats`（容器/Pod CPU 内存）+ `k8s_cluster`（Pod 重启次数、Deployment 副本状态）receiver，distro 里都有、无需引入新组件。两个前置约束：①都是基数敏感的，`kubelet_stats` 要按 collector CR 里已有的那套思路控制维度（**别带 pod 名**，Pod 名带 ReplicaSet 哈希，每次发版全部序列作废重开一套）②`k8s_cluster` 是集群单例语义，在 DaemonSet 下**必须配 `k8s_leader_elector`**，否则每个 pod 各采一遍 = N 倍重复计数，且要加 ClusterRole
 - [ ] **可观测性 · fluent-bit k8s 标签失效**：`fluent-bit.conf:78` 的 `Label_keys $k8s.pod_name, $k8s.namespace_name, $k8s.container_name` 取不到值，Loki 里这三个标签的值是字面量 `".pod_name"` 之类，日志按 pod/namespace 下钻不了。根因：第 61-62 行 `Nested_under kubernetes` + `Add_prefix k8s.` 把字段拍平成了名字里带点的**扁平 key**，而 record accessor 把 `.` 当嵌套分隔符。改 `$['k8s.pod_name']` 形式
 - [ ] **可观测性 · 网关指标未实现**：`gateway/` 下没有任何 meter（只有 tracing 中间件），`http_server_*` 整族不存在，所以看板上「网关→上游 HTTP 时延」这张图已删。要看网关侧耗时得先加 metrics 中间件
-- [ ] **可观测性 · 11 个电商服务缺 Go 运行时指标**：goroutine/堆/进程 CPU 内存目前只有 config-service 在报（它自己实现了 `internal/pkg/sysstat`）。把那套搬进 11 个服务，或抽成共享埋点。另：实测 config-service 的 `process_*` 在 2026-08-06 12:52 后停止上报，而同进程 `pgxpool_*` 仍正常——是 sysstat 侧的问题不是导出链路，且 config-center 未装 OTel ErrorHandler 所以没有任何日志（ecommerce 侧已在 2026-08-06 那轮补上 ErrorHandler，config-center 可照抄）
+- [ ] **可观测性 · 11 个电商服务缺 Go 运行时指标**：goroutine/堆/进程 CPU 内存全都没有。唯一在报的是**独立仓 config-center**（它实现了 `internal/pkg/sysstat`），而不是本仓任何服务 —— 之所以容易看错，是因为它报的 `service_name` 与本仓 `backend/services/config` 撞名（见上表「service_name 撞名」一行）。把那套搬进 11 个服务，或抽成共享埋点。附带：config-center 未装 OTel ErrorHandler，导出失败没有任何日志（本仓 11 个服务已在 2026-08-06 那轮补上，可照抄）
 - [ ] **技术债**：修复 `product/$spuCode.tsx:156` 的 `shopName` 类型报错；清理其余 mock 数据
 
 ---

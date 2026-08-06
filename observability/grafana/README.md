@@ -89,25 +89,35 @@ cpu / memory / disk / network 都已开,所以基础设施盘才做得起来。
 2. **采集管道自身健康(`otelcol_*`)** —— 只在每个 collector pod 的 `:8888`,
    没有任何东西把它采进 VM。这是基础设施盘最大的缺口:现在无法回答
    「遥测有没有在半路丢」。补法是 collector 加 `prometheus` receiver 自采。
-3. **Go 运行时** —— 只有 `config-service` 在报(它自己实现了 `internal/pkg/sysstat`),
-   11 个电商服务都没埋。另外实测发现 config-service 的 `process_*` 在 2026-08-06
-   12:52 之后就停了,而同进程的 `pgxpool_*` 仍在上报 —— 是 sysstat 那侧的问题,
-   不是导出链路,且 config-center 没装 OTel ErrorHandler 所以没有任何日志。
-4. **Web Vitals** —— behavior 侧六个指标(LCP/CLS/INP/FCP/TTFB/long_task)+
+3. **Go 运行时** —— 11 个电商服务都没埋。唯一在报的是**独立仓 config-center**
+   (它实现了 `internal/pkg/sysstat`),不是本仓任何服务。
+4. **⚠️ `service_name="config-service"` 是两个程序在共用** —— 本仓的
+   `backend/services/config` 与独立仓 config-center 默认服务名相同、都绑
+   `0.0.0.0:30010`、连同一个 `pg-dev.app.com:5432/ecommerce` 池,连
+   `db_client_connection_pool_name` 都区分不开。**所以任何按
+   `service_name="config-service"` 过滤的面板(请求率/错误率/P95、DB 那一行)
+   展示的是两个进程的混合值 —— 不是空图,是错的值。** 在撞名解决之前,涉及
+   config-service 的数字一律不可信。
+   这里曾据此误判过一次:先前记录写成「`process_*` 在 12:52 后停报而同进程
+   `pgxpool_*` 仍正常,是 sysstat 侧问题」—— 已核实推翻,那两族指标根本不来自
+   同一个进程(用 `lsof -ti :30010` 拿到当时的 PID,其二进制里 `sysstat` /
+   `gopsutil` 等符号出现次数全是 0,压根不含那份代码);`process_*` 停在 12:52
+   只是带 sysstat 的那个实例被关掉了。详见 `TODO.md` 的「service_name 撞名」。
+5. **Web Vitals** —— behavior 侧六个指标(LCP/CLS/INP/FCP/TTFB/long_task)+
    `frontend.api.duration` 都已实现;当前无数据是因为 behavior 服务没起、
    前端也没在跑。历史上只有 LCP / INP 出过数(来自 `/e2e`、`/e2e-gw` 两个测试页)。
-5. **行为漏斗** —— `behaviors.events` 表已建但没数据(tracker 未接线),所以漏斗
+6. **行为漏斗** —— `behaviors.events` 表已建但没数据(tracker 未接线),所以漏斗
    用 RPC 调用量近似,口径已写在面板标题里。
-6. **k8s 对象/容器级指标** —— 无 kube-state-metrics、无 cAdvisor,`metrics-server`
+7. **k8s 对象/容器级指标** —— 无 kube-state-metrics、无 cAdvisor,`metrics-server`
    只服务 HPA。「pod 重启几次 / 副本齐不齐 / 哪个容器吃内存」现在查不了。
-7. **node1(control-plane)没有主机指标** —— collector DaemonSet 只有 2 个副本,
+8. **node1(control-plane)没有主机指标** —— collector DaemonSet 只有 2 个副本,
    不调度到 control-plane。所以节点面板只覆盖 node2 / node3。
-8. **日志按 pod 下钻不了** —— fluent-bit 的 `Label_keys` 用了 `$k8s.pod_name`,
+9. **日志按 pod 下钻不了** —— fluent-bit 的 `Label_keys` 用了 `$k8s.pod_name`,
    而字段被 `Nested_under`+`Add_prefix` 拍平成了**名字里带点的扁平 key**,
    record accessor 把 `.` 当嵌套分隔符,取不到就把剩余部分原样输出,
    于是 `k8s__pod_name` 的值是字面量 `".pod_name"`。正确写法是 `$['k8s.pod_name']`。
 
-以上 2 / 6 / 8 记在仓库根 `TODO.md`。
+以上 2 / 4 / 7 / 9 记在仓库根 `TODO.md`。
 
 ## 验证方式
 

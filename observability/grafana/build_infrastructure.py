@@ -98,13 +98,16 @@ panels.append(ts("网络错误与丢包", [
 y += 8
 
 # ───── Row 3 数据库依赖 ─────
-panels.append(row("数据库依赖(pgxpool / otelpgx)", y)); y += 1
+panels.append(row("数据库依赖(pgxpool / otelpgx)—— ⚠️ service_name=config-service 是两个程序的混合值,见 TODO", y)); y += 1
 panels.append(ts("连接池饱和度", [
     prom_t(pool_saturation(SVC), "{{service_name}}"),
 ], 0, y, w=8, unit="percentunit", percent=True,
     thresholds=steps(("green", None), ("red", 0.9)),
     desc="acquired / max。原看板这里用的是 pgxpool_total_conns / pgxpool_acquired_conns,\n"
-         "这两个指标名不存在(otelpgx 导出的是 *_connections),所以一直是空图"))
+         "这两个指标名不存在(otelpgx 导出的是 *_connections),所以一直是空图。\n"
+         "⚠️ service_name=config-service 这条曲线是**两个程序的混合值**:本仓\n"
+         "backend/services/config 与独立仓 config-center 服务名撞名、还连同一个 PG 池,\n"
+         "连 db_client_connection_pool_name 都区分不开。撞名解决前这条不可信"))
 panels.append(ts("连接池构成", [
     prom_t('pgxpool_acquired_connections{service_name=~"$service"}', "{{service_name}} 已占用"),
     prom_t('pgxpool_idle_connections{service_name=~"$service"}', "{{service_name}} 空闲", "B"),
@@ -138,12 +141,14 @@ panels.append(ts("DB 错误率", [
 y += 8
 
 # ───── Row 4 Go 运行时 ─────
-panels.append(row("Go 运行时 —— 目前只有 config-service 在报(其余服务未接 sysstat,见 TODO)", y)); y += 1
+panels.append(row("Go 运行时 —— 本仓 11 个服务都没埋,这里的数据来自独立仓 config-center", y)); y += 1
 panels.append(ts("goroutine 数", [
     prom_t('process_runtime_go_goroutines', "{{service_name}}"),
 ], 0, y, w=8, unit="none",
-    desc="只有 config-service 有:它自己实现了 internal/pkg/sysstat。\n"
-         "11 个电商服务都没有 runtime 指标,所以这张图上不会出现它们 —— 不是没数据,是没埋"))
+    desc="本仓 11 个服务都没有 runtime 埋点,所以这张图上不会出现它们 —— 不是没数据,是没埋。\n"
+         "唯一在报的是**独立仓 config-center**(它实现了 internal/pkg/sysstat);\n"
+         "它上报的 service_name 恰好与本仓 backend/services/config 撞名,所以图例里的\n"
+         "「config-service」并不是本仓那个服务。详见 TODO.md 的「service_name 撞名」"))
 panels.append(ts("Go 堆占用", [
     prom_t('process_runtime_go_heap_usage_bytes', "{{service_name}}"),
 ], 8, y, w=8, unit="bytes"))
