@@ -4,6 +4,7 @@
 2. 云原生基础设施部署: https://github.com/lens077/cloud-native-deploy
 3. 微服务开发脚手架: https://github.com/lens077/go-connect-template-cli
 4. 微服务项目模板: https://github.com/lens077/go-connect-template
+5. 配置中心: https://github.com/lens077/config-center —— **已从本仓拆出，作为基础设施而非业务微服务**
 
 # Frontend stack
 
@@ -35,6 +36,11 @@
 - jaeger
 - grafana
 
+## Configuration
+
+- Consul（服务注册/发现 + KV 配置源）
+- [config-center](https://github.com/lens077/config-center)（独立配置控制面，见下）
+
 ## Databases
 
 - Postgres
@@ -60,7 +66,12 @@ uber/fx)和第三方服务，例如注册发现(consul)
    biome / eslint / prettier；提交信息由仓库根的 commitlint 校验。桌面端用 Tauri 套壳
 8. CI/CD：通过GitHub Actions将前后端项目构建/打包推送到容器注册表并更新清单仓库的版本号，由Argo CD监听清单仓库的变更并更新部署
 9. 可观测性：由fluent-bit采集日志（Info，Warn，Error），应用通过OpenTelemetry
-   sdk发送应用指标，由Jaeger展示链路（微服务调用情况），来使用Grafana进行追踪，监控，优化
+   sdk发送应用指标，由Jaeger展示链路（微服务调用情况），来使用Grafana进行追踪，监控，优化。
+   前端侧由 `@ecommerce/perf` 采 Web Vitals / 长任务 / 接口耗时，经网关的 `telemetry.v1`
+   转成 OTel histogram 与结构化日志，与后端指标汇入同一套 VictoriaMetrics / Loki
+10. 配置：配置源与业务配置分离。服务先读一份很小的本地选择器（`file`/`consul`/`config_center`），
+    再据此去取完整的业务 `Bootstrap` —— 这层间接正是为了避开「配置中心的配置存在配置中心里」的自举环。
+    配置中心本身是[独立仓库](https://github.com/lens077/config-center)，按基础设施对待
 
 # Backend stack
 
@@ -102,6 +113,11 @@ uber/fx)和第三方服务，例如注册发现(consul)
 - jaeger
 - grafana
 
+## Configuration
+
+- Consul（服务注册/发现 + KV 配置源）
+- [config-center](https://github.com/lens077/config-center)（独立配置控制面，见下）
+
 ## Databases
 
 - Postgres
@@ -115,6 +131,9 @@ uber/fx)和第三方服务，例如注册发现(consul)
 4. 数据库：Postgres >= 12
 5. 缓存：Redis >= 6
 6. 注册/发现：Consul
+
+配置中心（[config-center](https://github.com/lens077/config-center)）是**可选**的：
+各服务默认走 `CONFIG_SOURCE=consul`，只有显式切到 `config_center` 时才需要它跑起来。
 
 如果想体验完整项目，你还需安装:
 
@@ -150,15 +169,45 @@ data:
     host: "192.168.3.114"
 ```
 
-启动后端微服务
+启动后端微服务：
 
 ```bash
-cd services/<service>
-
-go run cmd/server/main.go \
--config-center=http://<consul-addr> \
--config-path=<consul-service-config-file>
+cd backend/services/<service>
+make dev        # 默认 CONFIG_SOURCE=consul，从 Consul KV 的 ecommerce/<service>/dev.yml 读整份配置
+make dev-cc     # 改从配置中心读（需 config-center 先跑在 :30010）
 ```
+
+配置源由 `CONFIG_SOURCE` 决定，取值 `consul`（默认）| `configcenter`。
+**显式二选一，不做失败自动降级** —— 静默降级会让服务拿着一份你以为早废弃的配置正常跑起来，
+比直接启动失败难查得多。启动日志会打出本次实际生效的数据源。
+
+> **cart 是例外，它已先行切到 config-center 的 SDK**：`make dev` 读本地
+> `configs/source.dev.yaml`（`CONFIG_SOURCE_FILE`）里的 `SourceConfig` 来选源，
+> 要走 Consul 用 `make dev-consul`，没有 `dev-cc`。其余服务待 SDK 发版后跟进。
+
+## 配置中心（基础设施）
+
+[config-center](https://github.com/lens077/config-center) 已从本仓拆为独立仓库，
+按基础设施而不是业务微服务对待 —— 它不属于电商领域，而是所有服务的配置控制面
+（同时带自己的 Web 控制台，原 `frontend/apps/config` 已随之迁出本仓）。
+
+```bash
+cd ../config-center
+cp configs/config.yaml.example configs/config.yaml   # 该文件已 gitignore，密码/证书走本地挂载
+CONFIG_FILE=configs/config.yaml make dev             # 监听 :30010
+```
+
+它在 Consul 注册为 `config-service` 供网关发现，但**从不从 Consul 读自己的 bootstrap** ——
+把自身配置放进它自己会形成启动死锁，所以只能从本地文件自举。
+
+服务侧接入用它发布的 Go SDK（`github.com/lens077/config-center`）：
+先读一份很小的本地 `SourceConfig` 选源（`file` / `consul` / `config_center`），
+再用选中的源去取完整的业务 `Bootstrap`。选择器留在业务文档之外，正是为了避开那个自举环。
+
+把 Consul KV 里的配置灌进配置中心用本仓的 `backend/tools/config-seed`
+（源取 KV 而非仓库里的 `configs/*.yml` —— 后者含密码、按硬规则不入库，每台机器都不一样）。
+
+⚠️ 主仓的 `backend/services/config` 目前还留着**兼容实现**，待新模块发版并完成部署切换后删除。
 
 ## 网关：
 
@@ -214,7 +263,7 @@ curl -v -X POST http://localhost:8080/user.v1.UserService/UserProfile \
 
 ## Frontend
 
-`frontend/` 是一个 pnpm workspace monorepo，5 个 app + 8 个共享包。
+`frontend/` 是一个 pnpm workspace monorepo，4 个 app + 9 个共享包。
 结构、分包原则、四层目录职责和工具链细节见 [`frontend/README.md`](frontend/README.md)。
 
 | app        | 端口 | 说明                                     | 启动                |
@@ -222,11 +271,13 @@ curl -v -X POST http://localhost:8080/user.v1.UserService/UserProfile \
 | `consumer` | 3000 | 消费者端：商品、购物车、下单、地址、订单 | `pnpm dev`          |
 | `merchant` | 3002 | 商家端：店铺、商品、订单、报表           | `pnpm dev:merchant` |
 | `admin`    | 3003 | 管理端：用户、商家、品类、报表           | `vp run admin#dev`  |
-| `config`   | 3005 | 配置中心：配置下发、历史、密钥脱敏       | `pnpm dev:config`   |
 | `desktop`  | —    | Tauri 壳，套在上面三个之一外面           | `pnpm desktop`      |
 
+> 配置中心的 Web 控制台原为本仓的 `config` app（3005），已随 config-center 一并迁出，
+> 现在是那个仓库的 `web/`。
+
 共享包：`api`（Connect 传输层与拦截器）、`configs`、`constants`、`i18n`、
-`tauri`（桌面端胶水）、`tracker`（埋点）、`ui`、`utils`。
+`perf`（Web Vitals 性能监控）、`tauri`（桌面端胶水）、`tracker`（行为埋点）、`ui`、`utils`。
 
 ```bash
 cd frontend
