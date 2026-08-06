@@ -186,25 +186,6 @@ services:
       retries: 3
       start_period: 15s
 
-  ecommerce-config:
-    <<: *service-common
-    image: ccr.ccs.tencentyun.com/sumery/config:dev
-    container_name: ecommerce-config
-    ports:
-      - "0.0.0.0:30010:30010"
-    environment:
-      <<: *consul-env
-      # SERVICE_NAME 就是注册进 Consul 的服务名,必须与网关 discovery:///config-service 一致
-      SERVICE_NAME: "config-service"
-      CONSUL_PATH: "ecommerce/config/dev.yml"
-    healthcheck:
-      # /healthz 在 DB/缓存不通时返回 503;镜像是 alpine,用 busybox 自带的 wget
-      test: ["CMD", "wget", "-q", "-O", "-", "http://127.0.0.1:30010/healthz"]
-      interval: 10s
-      timeout: 3s
-      retries: 3
-      start_period: 15s
-
   ecommerce-payment:
     <<: *service-common
     image: ccr.ccs.tencentyun.com/sumery/payment:dev

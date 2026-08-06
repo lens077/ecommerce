@@ -17,8 +17,8 @@
 //	# 只灌某几个服务的 pre
 //	go run ./tools/config-seed -services user,cart -envs pre -write
 //
-// config-service 需要先跑起来(cd backend/services/config && make dev)。
-// 它没有鉴权拦截器(鉴权在网关),直连 :30010 即可写。
+// 独立 config-center 需要先启动(cd ../config-center && make dev)。
+// 写入必须使用 Casdoor 管理员 JWT；服务 token 只能读，不能写入配置。
 package main
 
 import (
@@ -34,8 +34,8 @@ import (
 	"connectrpc.com/connect"
 	"github.com/hashicorp/consul/api"
 
-	configv1 "github.com/lens077/ecommerce/backend/api/config/v1"
-	"github.com/lens077/ecommerce/backend/api/config/v1/configv1connect"
+	configv1 "github.com/lens077/config-center/api/config/v1"
+	"github.com/lens077/config-center/api/config/v1/configv1connect"
 )
 
 const (
@@ -62,7 +62,8 @@ type entry struct {
 func main() {
 	var (
 		consulAddr = flag.String("consul", "192.168.3.112:8500", "Consul 地址,见 context/team/local-env.md")
-		base       = flag.String("base", "http://127.0.0.1:30010", "config-service 地址")
+		base       = flag.String("base", "http://127.0.0.1:30010", "config-center 地址")
+		adminToken = flag.String("admin-token", os.Getenv("CONFIG_CENTER_ADMIN_TOKEN"), "Casdoor 管理员 JWT（也可用 CONFIG_CENTER_ADMIN_TOKEN 提供）")
 		envsFlag   = flag.String("envs", "dev,pre", "要灌的环境,逗号分隔")
 		svcsFlag   = flag.String("services", "", "只灌这几个服务,逗号分隔;留空表示 KV 里的全部")
 		write      = flag.Bool("write", false, "真正写入。不加只做 dry-run")
@@ -81,8 +82,6 @@ func main() {
 		fail("没有匹配到任何配置,检查 -services / -envs")
 	}
 
-	client := configv1connect.NewConfigServiceClient(http.DefaultClient, *base)
-
 	if !*write {
 		fmt.Printf("dry-run(加 -write 才真正写入)。目标 %s,共 %d 项:\n", *base, len(entries))
 		for _, e := range entries {
@@ -91,8 +90,12 @@ func main() {
 		}
 		return
 	}
+	if strings.TrimSpace(*adminToken) == "" {
+		fail("写入需要 Casdoor 管理员 JWT: 设置 CONFIG_CENTER_ADMIN_TOKEN 或传入 -admin-token")
+	}
 
 	var failed int
+	client := configv1connect.NewConfigServiceClient(newAdminHTTPClient(*adminToken), *base)
 	for _, e := range entries {
 		if err := put(ctx, client, e); err != nil {
 			fmt.Fprintf(os.Stderr, "FAIL  %s/%s: %v\n", e.service, e.env, err)
@@ -119,6 +122,22 @@ func main() {
 		fail("%d/%d 项失败", failed, len(entries))
 	}
 	fmt.Printf("完成:%d 项全部写入并读回校验通过\n", len(entries))
+}
+
+type bearerTokenTransport struct {
+	base  http.RoundTripper
+	token string
+}
+
+func (t bearerTokenTransport) RoundTrip(req *http.Request) (*http.Response, error) {
+	clone := req.Clone(req.Context())
+	clone.Header = req.Header.Clone()
+	clone.Header.Set("Authorization", "Bearer "+t.token)
+	return t.base.RoundTrip(clone)
+}
+
+func newAdminHTTPClient(token string) *http.Client {
+	return &http.Client{Transport: bearerTokenTransport{base: http.DefaultTransport, token: token}}
 }
 
 func loadFromConsul(addr string, envs, only []string) ([]entry, error) {
