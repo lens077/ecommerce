@@ -15,7 +15,7 @@
 """
 from common import (PG, PROM, bargauge, cpu_used_ratio, dash_link, dump, fs_used_ratio,
                     logs, mem_used_ratio, pg_stat, pg_t, piechart, pool_saturation,
-                    prom_stat, prom_t, reset_ids, row, steps, table, ts)
+                    prom_stat, prom_t, reset_ids, row, steps, table, ts, zero_filled)
 
 reset_ids()
 panels = []
@@ -74,10 +74,15 @@ panels.append(row("服务健康(RPC)", y)); y += 1
 panels.append(ts("请求率 by 服务", [
     prom_t('sum(rate(rpc_server_duration_milliseconds_count{service_name=~"$service"}[$__rate_interval])) by (service_name)', "{{service_name}}"),
 ], 0, y, w=8, unit="reqps"))
+_RPC = "rpc_server_duration_milliseconds_count"
+_rpc_err = f'sum by (service_name) (rate({_RPC}{{service_name=~"$service",rpc_connect_rpc_error_code!=""}}[$__rate_interval]))'
+_rpc_all = f'sum by (service_name) (rate({_RPC}{{service_name=~"$service"}}[$__rate_interval]))'
 panels.append(ts("错误率 by 服务", [
-    prom_t('sum(rate(rpc_server_duration_milliseconds_count{service_name=~"$service", rpc_connect_rpc_error_code!=""}[$__rate_interval])) by (service_name) / sum(rate(rpc_server_duration_milliseconds_count{service_name=~"$service"}[$__rate_interval])) by (service_name)', "{{service_name}}"),
+    prom_t(f"{zero_filled(_rpc_err, _rpc_all)} / {_rpc_all}", "{{service_name}}"),
 ], 8, y, w=8, unit="percentunit", percent=True,
-    desc="rpc_connect_rpc_error_code 非空即错误(该标签只在出错的序列上存在,零错误时本图无数据而非 0)。分母为全部调用"))
+    desc="rpc_connect_rpc_error_code 非空即错误,分母为全部调用。\n"
+         "该标签只在出错的序列上存在,所以分子用总量乘 0 兜底 —— 否则服务健康时"
+         "整张图是空的,看起来像看板坏了而不是「没有错误」"))
 panels.append(ts("P95 时延 by 服务", [
     prom_t('histogram_quantile(0.95, sum(rate(rpc_server_duration_milliseconds_bucket{service_name=~"$service"}[$__rate_interval])) by (le, service_name))', "{{service_name}}"),
 ], 16, y, w=8, unit="ms"))
