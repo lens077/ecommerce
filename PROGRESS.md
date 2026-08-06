@@ -1,9 +1,11 @@
 # 电商项目进度表
 
-> 最后更新：2026-07-26
+> 最后更新：2026-08-06
 > 当前阶段：第一阶段 - 核心业务 MVP（中期）
-> 整体完成度：约 35%
-> 更新说明：本次更新基于对核心服务 biz 层的深入抽查，修正了之前仅基于接口定义的乐观评估
+> 整体完成度：约 37%
+> 更新说明：可观测性一轮改造落地（原属第三阶段，提前完成主体）。业务侧完成度未变 ——
+> 本次全部改动都在可观测性/基础设施层，`CreateOrder` 主体、payment 桩实现等核心缺口依旧。
+> 细节见 `TODO.md` 的「6. 可观测性与测试」，本文件只记结论与完成度。
 
 ---
 
@@ -108,14 +110,14 @@
 |------|----------|----------|------------|--------|
 | **API 网关** | 第一阶段 | ✅ 完整实现 | Consul 服务发现、JWT 认证、RBAC 权限、限流熔断、CORS、日志、链路追踪、协议转换、重试 | 85% |
 | **服务注册发现** | 第一阶段 | ✅ 已实现 | Consul 集成 | 90% |
-| **可观测性** | 第三阶段 | ⚠️ 基础集成 | OpenTelemetry 链路追踪、结构化日志 | 30% |
+| **可观测性** | 第三阶段（提前落地） | ✅ 主体完成 | Trace/Metric/Log 三管道端到端（→ Jaeger / VictoriaMetrics / Loki）；11 个服务 OTel SDK 装配收敛为一份基线（`ParentBased` 采样器 + 采样率可配、`service.instance.id`、`SetErrorHandler`、gzip）；跨服务 trace 已串联（网关→服务实测同一条 trace）；2 张 Grafana 看板（业务盘 + 基础设施盘，脚本生成）。**缺口：告警为 0**（Grafana 0 条规则、无 vmalert/alertmanager）、采集管道自身无监控（`otelcol_*` 未采集）、无 k8s 对象/容器级指标、网关无 meter | 60% |
 | **消息队列** | 第一阶段 | ⚠️ 部分集成 | 订单服务 EventBus/Kafka | 20% |
 | **缓存层** | 第一阶段 | ⚠️ 基础设施就绪 | Redis 部署配置，业务缓存待完善 | 20% |
 | **数据库** | 第一阶段 | ✅ 基础完成 | PostgreSQL + sqlc，各服务 Schema 已建 | 70% |
 | **容器化部署** | 第一阶段 | ✅ 基础完成 | Dockerfile、K8s Deployment、Helm Chart（部分） | 60% |
 | **CI/CD** | 第一阶段 | ⚠️ 基础配置 | GitHub Actions 工作流 | 40% |
 
-**基础设施整体完成度：约 50%**
+**基础设施整体完成度：约 55%**（相比上版 +5，全部来自可观测性 30% → 60%，其余组件未动）
 
 ### 4.1 网关中间件清单
 
@@ -126,7 +128,8 @@
 | JWT 认证 | ✅ | 令牌校验与用户解析 |
 | RBAC 权限 | ✅ | 基于 Casbin 的权限控制 |
 | 日志 | ✅ | 请求日志记录 |
-| 链路追踪 | ✅ | OpenTelemetry tracing |
+| 链路追踪 | ✅ | OpenTelemetry tracing。会向下游注入 `traceparent`，与服务端的 `WithTrustRemote()` 配对后网关→服务是同一条 trace（实测） |
+| 指标 | ⬜ | **网关没有任何 meter**，`http_server_*` 指标族不存在，所以看不到网关侧耗时/错误率。要补 metrics 中间件 |
 | 限流熔断 (BBR) | ✅ | 自适应限流 |
 | 协议转换 (Transcoder) | ✅ | Connect / gRPC-Web 协议转换 |
 | URL 重写 | ✅ | 请求路径重写 |
@@ -198,6 +201,11 @@
 - [ ] Kafka 集群部署与全服务接入
 - [ ] Redis 缓存策略落地（商品详情、库存、热点数据）
 - [ ] 全链路压测准备
+- [x] 可观测性主体（三管道 + SDK 基线 + 2 张 Grafana 看板），详见 `TODO.md`
+- [ ] **告警从 0 到 1**：目前 Grafana 0 条规则、无 vmalert/alertmanager，只有一个默认 email 联系点 —— 看板只能人盯，出事没人被叫醒。这是可观测性剩下的最大一块
+- [ ] 采集管道自身监控：`otelcol_*` 只在 collector pod 的 `:8888`，没被采进 VM，「遥测有没有在半路丢」查不了（collector 加 `prometheus` receiver 自采即可，代价极小）
+- [ ] 网关 metrics 中间件（当前网关只有 tracing，无 meter）
+- [ ] k8s 对象/容器级指标（`kubelet_stats` + `k8s_cluster`，基数敏感，单独一轮）
 
 ---
 
@@ -253,6 +261,11 @@
 2. **接口层面**：核心服务的 Protobuf 定义、Service 接口均已完成
 3. **业务逻辑层面**：大部分核心业务逻辑仍未实现（订单创建、支付回调、库存扣减等）
 4. **前端层面**：页面框架基本完成，部分页面已联调，核心流程（结算→下单→支付）未打通
+5. **可观测性层面**：原属第三阶段，已提前落地主体 —— 三管道端到端、跨服务 trace 串联、
+   2 张 Grafana 看板。但**告警仍是 0**，所以现阶段的定位是「出事后能查」，还不是
+   「出事时会被告知」。另外看板上不少面板当前是空的，成因是采集侧未实现（网关无 meter、
+   11 个服务无 Go runtime 指标）或服务未启动（behavior/product/order），不是看板坏了 ——
+   逐条成因记在 `observability/grafana/README.md` 的「未实现 / 当前无数据」
 
 ### 下一步核心任务
 
@@ -270,3 +283,4 @@
 |------|------|----------|--------|
 | 2026-07-26 | v1.0 | 初始进度表创建，梳理整体项目进度 | - |
 | 2026-07-26 | v1.1 | 深入抽查订单/支付/库存/商品服务 biz 层，修正完成度评估，新增业务逻辑详情 | - |
+| 2026-08-06 | v1.2 | 可观测性一轮改造。**修好跨服务 trace 断链**（otelconnect 默认 `WithNewRoot()` 把上游 context 降级成 link，网关与服务在 Jaeger 里是两条独立 trace，11 个服务加 `WithTrustRemote()`）；**11 份 otel.go 收敛为一份基线**并修 7 处（`ParentBased` 采样器 + 采样率/导出间隔可配、`service.instance.id`、semconv 运行时属性、`SetErrorHandler`、gzip、删 150 行 option 样板）；**RPC 指标基数失控**（`net_peer_port` 按 TCP 连接取值 → `rate()` 恒为 0，请求率/错误率/P95 算的都是错值，加 `WithoutServerPeerAttributes()`）；**pgx span 名**改取 sqlc 查询名；**semconv 跟上 sdk v1.45**（不改则 11 个服务启动即失败，靠上一轮埋的 `SchemaURL` 断言拦住）；**看板搬入本仓** `observability/grafana/` 并拆出基础设施盘，搬时逐条拿 VM 实测校对、修 5 处指标名/口径错误（含错误率零错误时画成空图）。业务侧完成度未变 | - |
