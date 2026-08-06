@@ -15,7 +15,7 @@ require (
 	github.com/google/uuid v1.6.0
 	github.com/hashicorp/consul/api v1.34.2
 	github.com/jackc/pgx/v5 v5.9.2
-	github.com/lens077/config-center v0.0.0-20260803083330-8cbf572ce5f0
+	github.com/lens077/config-center v0.1.0
 	github.com/lib/pq v1.12.3
 	github.com/mitchellh/mapstructure v1.5.0
 	github.com/pelletier/go-toml/v2 v2.2.4

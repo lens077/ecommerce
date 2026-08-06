@@ -9,8 +9,13 @@
 每个服务启动时读**整份 Bootstrap 配置**（一份 YAML）。其余服务仍由
 `CONFIG_SOURCE` 选择 `file`、`consul` 或 `configcenter`；Cart 已改为读取本地
 `CONFIG_SOURCE_FILE`，并使用独立 `config-center` Go SDK 的 `SourceConfig` 契约选择
-`file`、`consul` 或 `config_center`。Cart 当前锁定远程默认分支的伪版本，未使用本地
-`replace` 或发布 tag。
+`file`、`consul` 或 `config_center`。Cart 依赖 `config-center v0.1.0`（2026-08-06 发的
+首个 tag），不用本地 `replace`。
+
+⚠️ **`go mod tidy` 不会把依赖往前挪**——它只增删，版本仍是 `go.mod` 里钉住的那个。
+config-center 出了新版要用 `go get github.com/lens077/config-center@v0.x.y`；
+代理（goproxy.cn）有抓取延迟，新 tag 拿不到时先 `curl` 一下
+`https://goproxy.cn/github.com/lens077/config-center/@v/v0.x.y.info` 触发它去拉。
 两者显式二选一，**不做失败自动降级**——静默降级会让服务拿着一份你以为早废弃的配置正常跑起来，
 比直接启动失败难查得多。
 
