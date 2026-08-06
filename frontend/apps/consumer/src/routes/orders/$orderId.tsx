@@ -80,7 +80,7 @@ function OrderDetailPage() {
 
   const handleCancel = () => {
     if (confirm(t("orderDetail.cancelConfirm"))) {
-      navigate({ to: "/orders" });
+      void navigate({ to: "/orders" });
     }
   };
 

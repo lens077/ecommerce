@@ -77,6 +77,29 @@ export function VirtualList<T>({
 
   // 计算总高度
   const totalHeight = items.length * itemHeight;
+  const containerSx = Array.isArray(sx)
+    ? [
+        {
+          height,
+          overflow: "auto",
+          position: "relative",
+        },
+        ...sx,
+      ]
+    : sx
+      ? [
+          {
+            height,
+            overflow: "auto",
+            position: "relative",
+          },
+          sx,
+        ]
+      : {
+          height,
+          overflow: "auto",
+          position: "relative",
+        };
 
   // 渲染可见项
   const visibleItems = [];
@@ -100,16 +123,7 @@ export function VirtualList<T>({
   }
 
   return (
-    <Box
-      ref={containerRef}
-      onScroll={handleScroll}
-      sx={{
-        height,
-        overflow: "auto",
-        position: "relative",
-        ...sx,
-      }}
-    >
+    <Box ref={containerRef} onScroll={handleScroll} sx={containerSx}>
       <Box sx={{ height: totalHeight, position: "relative" }}>{visibleItems}</Box>
     </Box>
   );

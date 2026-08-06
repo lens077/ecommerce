@@ -29,7 +29,7 @@ const WEEKDAY_KEYS = [
   "reports.weekday.sun",
 ] as const;
 
-export const Route = createFileRoute("/reports" as any)({
+export const Route = createFileRoute("/reports/")({
   component: ReportsPage,
 });
 

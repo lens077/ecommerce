@@ -19,7 +19,6 @@ import {
 } from "@mui/material";
 import { Camera, Save } from "lucide-react";
 import { useTranslation } from "@ecommerce/i18n";
-import { tokens } from "@/styles/theme";
 
 /** 通知开关。文案 key 显式列出，不用字段名拼。 */
 const NOTIFY_ITEMS = [

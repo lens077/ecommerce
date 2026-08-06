@@ -105,7 +105,7 @@ function RouteComponent() {
       }
     };
 
-    handleLogin();
+    void handleLogin();
   }, [code, state, navigate, setIsAuthenticated, transport]);
 
   const render = () => {

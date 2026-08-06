@@ -21,6 +21,7 @@ import { useFormat, useTranslation } from "@ecommerce/i18n";
 import { toAppError } from "@ecommerce/api";
 import { useProductDetail } from "@/hooks/useProduct";
 import type { ProductSpuDetail } from "@/gen/api/product/v1/product_pb.ts";
+import type { JsonValue } from "@bufbuild/protobuf";
 import { useState, useCallback, useMemo } from "react";
 import { useAddToCart } from "@/hooks/useCart";
 import { sp, tokens } from "@/styles/tokens";
@@ -29,6 +30,13 @@ import type { Money } from "@/gen/third_party/google/type/money_pb.ts";
 const formatMoney = (money?: Money): number => {
   if (!money) return 0;
   return Number(money.units) + money.nanos / 1_000_000_000;
+};
+
+const formatAttributeValue = (value: JsonValue): string => {
+  if (value === null) return "";
+  if (typeof value === "string") return value;
+  if (typeof value === "number" || typeof value === "boolean") return String(value);
+  return JSON.stringify(value);
 };
 
 // 样式组件定义在外面，避免每次渲染重新创建
@@ -86,7 +94,7 @@ const ProductPage = () => {
         const values = new Set<string>();
         product.skus?.forEach((sku) => {
           if (sku.attributes?.[key]) {
-            const value = String(sku.attributes[key]);
+            const value = formatAttributeValue(sku.attributes[key]);
             values.add(value);
           }
         });
@@ -105,13 +113,13 @@ const ProductPage = () => {
       const available = new Set<string>();
       product.skus.forEach((sku) => {
         if (!sku.attributes || sku.attributes[key] === undefined) return;
-        const val = String(sku.attributes[key]);
+        const val = formatAttributeValue(sku.attributes[key]);
         // 检查该 SKU 是否匹配所有其他已选属性
         const matchesOtherSelections = Object.entries(selectedAttrs).every(
           ([otherKey, otherValue]) => {
             if (otherKey === key) return true; // 排除当前 key
             const skuValue = sku.attributes?.[otherKey];
-            return skuValue === undefined || String(skuValue) === otherValue;
+            return skuValue === undefined || formatAttributeValue(skuValue) === otherValue;
           },
         );
         if (matchesOtherSelections) {
@@ -131,7 +139,7 @@ const ProductPage = () => {
           if (!sku.attributes) return false;
           return Object.entries(selectedAttrs).every(([key, value]) => {
             const skuValue = sku.attributes?.[key];
-            return skuValue !== undefined && String(skuValue) === value;
+            return skuValue !== undefined && formatAttributeValue(skuValue) === value;
           });
         })
       : undefined;

@@ -5,7 +5,6 @@
 
 import { useEffect, useRef, memo } from "react";
 import * as echarts from "echarts/core";
-import type { EChartsOption } from "echarts";
 
 // 导入需要的图表类型
 import { LineChart, BarChart, PieChart } from "echarts/charts";

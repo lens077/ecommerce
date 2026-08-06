@@ -28,11 +28,11 @@ function CartPage() {
     summary.totalQuantity > 0 && summary.selectedQuantity === summary.totalQuantity;
 
   const handleCheckout = () => {
-    navigate({ to: "/checkout" });
+    void navigate({ to: "/checkout" });
   };
 
   const handleNavigateHome = () => {
-    navigate({ to: "/" });
+    void navigate({ to: "/" });
   };
 
   if (isInitializing) {

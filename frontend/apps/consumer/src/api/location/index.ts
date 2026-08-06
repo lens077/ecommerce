@@ -43,13 +43,10 @@ export const getLocationByGPS = (): Promise<LocationInfo | null> => {
     }
 
     navigator.geolocation.getCurrentPosition(
-      async (position) => {
+      (position) => {
         const { latitude, longitude } = position.coords;
-        // 模拟通过GPS坐标获取地址信息
-        // 实际项目中，这里应该调用高德地图API
-        try {
-          // 模拟API调用延迟
-          await new Promise((resolve) => setTimeout(resolve, 500));
+        // 模拟通过 GPS 坐标获取地址信息；实际项目中这里应调用地图服务。
+        window.setTimeout(() => {
           resolve({
             province: "广东省",
             city: "深圳市",
@@ -58,9 +55,7 @@ export const getLocationByGPS = (): Promise<LocationInfo | null> => {
             latitude,
             longitude,
           });
-        } catch (error) {
-          resolve(null);
-        }
+        }, 500);
       },
       () => {
         resolve(null);
@@ -70,13 +65,10 @@ export const getLocationByGPS = (): Promise<LocationInfo | null> => {
 };
 
 // 通过IP获取位置信息
-export const getLocationByIP = (): Promise<LocationInfo | null> => {
-  return new Promise(async (resolve) => {
-    try {
-      // 模拟API调用延迟
-      await new Promise((resolve) => setTimeout(resolve, 500));
-      // 模拟通过IP获取地址信息
-      // 实际项目中，这里应该调用高德地图IP定位API
+export const getLocationByIP = (): Promise<LocationInfo> => {
+  return new Promise((resolve) => {
+    // 模拟通过 IP 获取地址信息；实际项目中这里应调用地图服务。
+    window.setTimeout(() => {
       resolve({
         province: "广东省",
         city: "深圳市",
@@ -85,9 +77,7 @@ export const getLocationByIP = (): Promise<LocationInfo | null> => {
         latitude: 22.5431,
         longitude: 114.0579,
       });
-    } catch (error) {
-      resolve(null);
-    }
+    }, 500);
   });
 };
 
@@ -100,5 +90,5 @@ export const getLocationInfo = async (): Promise<LocationInfo | null> => {
   }
 
   // GPS失败，回退到IP获取
-  return await getLocationByIP();
+  return getLocationByIP();
 };
