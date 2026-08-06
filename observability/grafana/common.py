@@ -172,6 +172,28 @@ def dash_link(title, uid, slug, icon="apps"):
 # 之前写进 VM 的那批 PVC 挂载点序列还在索引里(要等保留期过),不过滤会有一堆
 # 僵尸曲线混进来。分母用 sum without(state) 而不是 used+free —— filesystem 的
 # state 有三个值(used/free/reserved),漏掉 reserved 会把使用率算高。
+def zero_filled(numerator, anchor):
+    """给「零事件时整条序列都不存在」的分子补 0。
+
+    这类指标的标签只在异常路径上出现(otelconnect 的 rpc_connect_rpc_error_code
+    只挂在出错的序列上;otelpgx 的 db_client_operation_errors_total 在没出错过的
+    服务上压根没有序列)。直接相除或直接画,健康时得到的是**空图** —— 而空图看
+    起来像看板坏了,不像「一切正常」。这是实测踩到的:服务明明健康,错误率图一片
+    空白,第一反应是查询写错了。
+
+    做法:用 anchor(总量,一定存在)乘 0 兜底。or 的语义是「取 A,A 里缺的分组
+    用 B 补」,所以每个有流量的分组都会得到 0。
+
+    注意这里刻意**不用** `or on() vector(0)`:它在 VictoriaMetrics 上能出结果
+    (VM 把无标签的单序列当标量广播到右侧每个分组),但在 Prometheus 里无标签的
+    左操作数匹配不上带 service_name 的右操作数,结果仍然是空。按分组乘 0 两边都对。
+
+    另一个有意的性质:完全没有流量的服务不会被补 0,仍然不出现在图上 ——
+    不该给一个没跑起来的服务画一条 0% 让人误以为它健康。
+    """
+    return f"({numerator} or {anchor} * 0)"
+
+
 def _sel(metric, *filters):
     """拼选择器。filters 里的空串会被丢掉,免得拼出 `{,foo="bar"}`。"""
     inner = ",".join(f for f in filters if f)

@@ -22,7 +22,7 @@
 """
 from common import (LOKI, PROM, cpu_used_ratio, dash_link, dump, fs_used_ratio,
                     inodes_used_ratio, logs, mem_used_ratio, pool_saturation, prom_stat,
-                    prom_t, reset_ids, row, steps, table, ts)
+                    prom_t, reset_ids, row, steps, table, ts, zero_filled)
 
 # 模板变量过滤片段。All 时 Grafana 把 $node 展开成正则 ".*",所以这里恒定可用。
 NODE = 'k8s_node_name=~"$node"'
@@ -128,9 +128,13 @@ panels.append(ts("DB 操作 P95(分类型)", [
            "{{pgx_operation_type}}"),
 ], 8, y, w=8, unit="s",
     desc="acquire / connect / prepare / query 四类分开看:acquire 慢是池不够,query 慢是 SQL 或库的问题,两者处置完全不同"))
+_db_err = 'sum by (service_name) (rate(db_client_operation_errors_total{service_name=~"$service"}[$__rate_interval]))'
+_db_all = 'sum by (service_name) (rate(db_client_operation_duration_seconds_count{service_name=~"$service"}[$__rate_interval]))'
 panels.append(ts("DB 错误率", [
-    prom_t('sum by (service_name) (rate(db_client_operation_errors_total{service_name=~"$service"}[$__rate_interval]))', "{{service_name}}"),
-], 16, y, w=8, unit="none", thresholds=steps(("green", None), ("red", 0.1))))
+    prom_t(zero_filled(_db_err, _db_all), "{{service_name}}"),
+], 16, y, w=8, unit="none", thresholds=steps(("green", None), ("red", 0.1)),
+    desc="db_client_operation_errors_total 在「从没出错过」的服务上整条序列都不存在\n"
+         "(实测:cart 做了 51 次 DB 操作、零错误,这里就没有它),所以用操作总数乘 0 兜底"))
 y += 8
 
 # ───── Row 4 Go 运行时 ─────
