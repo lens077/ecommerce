@@ -129,6 +129,44 @@ func (suite *OtelTestSuite) TestTLSClientConfig_BadCaPemFallsBack() {
 	assert.Nil(suite.T(), conf.RootCAs, "解析失败应退回系统根证书")
 }
 
+// sqlc 生成的语句长这样,第一个词是注释符 `--`。
+// otelpgx 自带的 WithTrimSQLInSpanName 取「第一个词」,于是所有查询的 span 名
+// 都会变成 "query --" —— 实测踩到过。这组用例守的就是别再退回那个行为。
+func (suite *OtelTestSuite) TestSQLSpanName_SqlcHeader() {
+	stmt := `-- name: GetCartItems :many
+SELECT id,
+       merchant_id
+FROM cart.cart_item
+WHERE user_id = $1`
+	assert.Equal(suite.T(), "GetCartItems", SQLSpanName(stmt))
+}
+
+func (suite *OtelTestSuite) TestSQLSpanName_DistinctQueriesStayDistinct() {
+	a := SQLSpanName("-- name: GetCartItems :many\nSELECT 1")
+	b := SQLSpanName("-- name: InsertCartItem :one\nINSERT INTO x VALUES (1)")
+	assert.NotEqual(suite.T(), a, b, "不同查询必须得到不同 span 名,否则等于没法区分")
+	assert.Equal(suite.T(), "GetCartItems", a)
+	assert.Equal(suite.T(), "InsertCartItem", b)
+}
+
+// 手写 SQL(没有 sqlc 头)退回取首个关键字,而不是返回注释符或整段语句。
+func (suite *OtelTestSuite) TestSQLSpanName_FallbackToKeyword() {
+	assert.Equal(suite.T(), "SELECT", SQLSpanName("SELECT 1"))
+	assert.Equal(suite.T(), "SELECT", SQLSpanName("\n\n  SELECT id FROM t\n"))
+	assert.Equal(suite.T(), "BEGIN", SQLSpanName("BEGIN"))
+	// 纯注释 / 空语句不能 panic,也不能返回空串
+	assert.Equal(suite.T(), "unknown", SQLSpanName(""))
+	assert.Equal(suite.T(), "unknown", SQLSpanName("-- just a comment\n"))
+}
+
+// span 名必须是有界的低基数值:不能把整段 SQL 带进去。
+func (suite *OtelTestSuite) TestSQLSpanName_IsBounded() {
+	stmt := "-- name: GetCartItems :many\n" + "SELECT " + string(make([]byte, 4096))
+	name := SQLSpanName(stmt)
+	assert.Equal(suite.T(), "GetCartItems", name)
+	assert.NotContains(suite.T(), name, "\n")
+}
+
 func (suite *OtelTestSuite) TestSetupOTelSDK_DisabledIsNoop() {
 	shutdown, err := SetupOTelSDK(context.Background(), suite.testAppInfo,
 		&confv1.Observability{Enable: false}, suite.testLogger)

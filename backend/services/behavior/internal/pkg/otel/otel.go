@@ -5,7 +5,9 @@ import (
 	"crypto/tls"
 	"crypto/x509"
 	"errors"
+	"regexp"
 	"runtime"
+	"strings"
 	"time"
 
 	confv1 "github.com/lens077/ecommerce/backend/services/behavior/internal/conf/v1"
@@ -154,6 +156,37 @@ func newPropagator() propagation.TextMapPropagator {
 		propagation.TraceContext{},
 		propagation.Baggage{},
 	)
+}
+
+// sqlcQueryNameRe 匹配 sqlc 生成的查询头:`-- name: GetCartItems :many`
+var sqlcQueryNameRe = regexp.MustCompile(`--\s*name:\s*(\S+)`)
+
+// SQLSpanName 从 SQL 语句推导 pgx span 名,给 otelpgx.WithSpanNameFunc 用。
+//
+// 为什么不用 otelpgx 自带的 WithTrimSQLInSpanName:它取的是「SQL 的第一个词」,
+// 而 sqlc 生成的语句第一个词是注释符 `--`,结果所有查询的 span 名都变成
+// "query --" —— 基数是降到 1 了,但也彻底分不出哪条是哪条,比不改更糟。
+// (这一点是实测发现的,不是照文档推断的。)
+//
+// 这里改成取 sqlc 的查询名,span 名形如 "query GetCartItems":既是有界的低基数,
+// 又能一眼看出跑的是哪条查询。完整 SQL 仍然在 db.statement attribute 上。
+func SQLSpanName(stmt string) string {
+	if m := sqlcQueryNameRe.FindStringSubmatch(stmt); m != nil {
+		return m[1]
+	}
+
+	// 退路:手写 SQL 没有 sqlc 头,取第一个非注释非空行的首个词(SELECT / INSERT ...)
+	for line := range strings.SplitSeq(stmt, "\n") {
+		line = strings.TrimSpace(line)
+		if line == "" || strings.HasPrefix(line, "--") {
+			continue
+		}
+		if i := strings.IndexAny(line, " \t("); i > 0 {
+			return line[:i]
+		}
+		return line
+	}
+	return "unknown"
 }
 
 // sampleRatio 读取配置里的采样率并夹到 [0,1]。

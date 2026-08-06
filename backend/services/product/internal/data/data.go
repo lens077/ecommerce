@@ -16,6 +16,7 @@ import (
 	"github.com/lens077/ecommerce/backend/services/product/internal/data/models"
 	"github.com/lens077/ecommerce/backend/services/product/internal/pkg/config"
 	"github.com/lens077/ecommerce/backend/services/product/internal/pkg/dbutil"
+	otelpkg "github.com/lens077/ecommerce/backend/services/product/internal/pkg/otel"
 	"github.com/redis/go-redis/v9"
 	"go.uber.org/fx"
 	"go.uber.org/zap"
@@ -249,11 +250,19 @@ func buildPgPool(cfg *conf.Bootstrap, logger *zap.Logger) (*pgxpool.Pool, error)
 	}
 
 	// 链路追踪配置
-	// WithTrimSQLInSpanName:span 名只留 sqlc 的查询名(如 "query GetCartItems"),
-	// 不带整段 SQL。默认行为会把带换行的完整 SQL 塞进 span name —— 而 span name
-	// 在后端是个索引维度,SQL 文本进去会把基数撑爆,Jaeger 的 operation 列表也没法用。
+	// span 名取 sqlc 的查询名(形如 "query GetCartItems"),不带整段 SQL。
+	// 默认行为会把带换行的完整 SQL 塞进 span name,而 span name 在后端是个索引
+	// 维度,SQL 文本进去会把基数撑爆,Jaeger 的 operation 列表也没法用。
 	// 完整 SQL 仍然保留在 db.statement attribute 上,不丢信息。
-	pgConf.ConnConfig.Tracer = otelpgx.NewTracer(otelpgx.WithTrimSQLInSpanName())
+	// 为什么不用 otelpgx 自带的 WithTrimSQLInSpanName,见 SQLSpanName 的注释。
+	// 两个选项必须一起给,少一个都不生效 —— otelpgx 的 API 在这里很反直觉:
+	// tracer.go 里是 `if t.trimQuerySpanName { spanName = t.spanNameCtxFunc(...) }`,
+	// 也就是说 WithTrimSQLInSpanName 才是「启用自定义 span 名」的开关,
+	// 只给 WithSpanNameFunc 的话 span 名依旧是整段 SQL(实测如此)。
+	pgConf.ConnConfig.Tracer = otelpgx.NewTracer(
+		otelpgx.WithTrimSQLInSpanName(),
+		otelpgx.WithSpanNameFunc(otelpkg.SQLSpanName),
+	)
 
 	pool, err := pgxpool.NewWithConfig(context.Background(), pgConf)
 	if err != nil {
