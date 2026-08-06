@@ -183,7 +183,10 @@ make dev-cc     # 改从配置中心读（需 config-center 先跑在 :30010）
 
 > **cart 是例外，它已先行切到 config-center 的 SDK**：`make dev` 读本地
 > `configs/source.dev.yaml`（`CONFIG_SOURCE_FILE`）里的 `SourceConfig` 来选源，
-> 要走 Consul 用 `make dev-consul`，没有 `dev-cc`。其余服务待 SDK 发版后跟进。
+> 要走 Consul 用 `make dev-consul`，没有 `dev-cc`。SDK 已发 `v0.1.0`，其余服务可陆续跟进。
+>
+> 依赖升级用 `go get github.com/lens077/config-center@v0.x.y` —— **`go mod tidy` 只增删不升级**，
+> 版本仍是 `go.mod` 里钉住的那个。
 
 ## 配置中心（基础设施）
 
@@ -200,7 +203,7 @@ CONFIG_FILE=configs/config.yaml make dev             # 监听 :30010
 它在 Consul 注册为 `config-service` 供网关发现，但**从不从 Consul 读自己的 bootstrap** ——
 把自身配置放进它自己会形成启动死锁，所以只能从本地文件自举。
 
-服务侧接入用它发布的 Go SDK（`github.com/lens077/config-center`）：
+服务侧接入用它发布的 Go SDK（`github.com/lens077/config-center`，当前 `v0.1.0`）：
 先读一份很小的本地 `SourceConfig` 选源（`file` / `consul` / `config_center`），
 再用选中的源去取完整的业务 `Bootstrap`。选择器留在业务文档之外，正是为了避开那个自举环。
 
