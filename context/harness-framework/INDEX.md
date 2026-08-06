@@ -6,6 +6,7 @@
 |---|---|
 | [knowledge-layering.md](knowledge-layering.md) | 一条知识该写进哪一层的判定规则 |
 | [self-refinement.md](self-refinement.md) | 纠错 → 判断模式性 → 沉淀 → 下次复用的闭环 |
+| [progress-and-todo.md](progress-and-todo.md) | PROGRESS.md 与 TODO.md 的分工、口径与「先回扫代码再声称完成」 |
 
 ## 这一层为什么存在
 

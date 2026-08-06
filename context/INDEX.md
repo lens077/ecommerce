@@ -17,6 +17,8 @@ context/
 | [git-commit.md](team/git-commit.md) | Conventional Commits + 提交前必须先更新 TODO.md |
 | [proto-design.md](team/proto-design.md) | 写 proto 前先读设计文档，每个字段都要有 buf.validate 约束 |
 | [local-env.md](team/local-env.md) | 本地集群地址：Consul 用 `192.168.3.112:8500`，不要用 consul.app.com |
+| [go-redis.md](team/go-redis.md) | go-redis v9：每次用都取 `Client()`（客户端会热重建）、`redis.Nil` 不是错误、Pipeline 的错误语义、默认重试对非幂等命令的影响 |
+| [cron-jobs.md](team/cron-jobs.md) | 定时任务的执行边界：进程内调度器扩副本即重复执行、Ticker 首次触发盲窗、重叠/panic/超时/时区/优雅停止、重要任务不能只靠一次回调 |
 
 ## 框架工程级 · [context/harness-framework/](harness-framework/INDEX.md)
 
@@ -24,6 +26,7 @@ context/
 |---|---|
 | [knowledge-layering.md](harness-framework/knowledge-layering.md) | 一条知识该写进哪一层的判定规则 |
 | [self-refinement.md](harness-framework/self-refinement.md) | 纠错 → 判断模式性 → 沉淀 → 下次复用的闭环 |
+| [progress-and-todo.md](harness-framework/progress-and-todo.md) | PROGRESS.md 与 TODO.md 的分工与口径,每次改动两份都要更新 |
 
 ## 服务级 · [context/project/ecommerce/](project/ecommerce/INDEX.md)
 
@@ -45,6 +48,23 @@ Consul 注册名、网关路径前缀、依赖关系、外部依赖、KV 键、�
 判据：**AI 每次都要现搜一遍的结构性事实** → 进 matrix；**需要解释「为什么」的经验** → 进 `context/`。
 
 ⚠️ `depends_on` 是代码里真的接线了，`depends_on_planned` 是设计要求但尚未接线。别混。
+
+matrix 与 `backend/services/`、网关实际接线的一致性,以及各服务 `internal/pkg` 基础设施
+副本的同构性,由 `backend/structcheck/` 的结构性测试在 CI(`go test ./...`)里强制。
+存量漂移记录在 `backend/structcheck/homogeneity_baseline.txt`,只许收敛不许新增。
+
+## 工程体系文档 · 不在 `context/` 里的真相源
+
+这两份是**目标态设计与方法论**，按就近原则留在原位（与它们描述的产物同目录），
+`context/` 只在这里登记指向，避免同一约束两处漂移。
+
+| 文档 | 一句话 | 何时读 |
+|---|---|---|
+| [`DEVOPS.md`](../DEVOPS.md)（仓库根） | DevOps 体系设计：Three Ways/CALMS/DORA 骨架，DevOps 边界对齐 DDD 限界上下文，四阶段落地路线与行为验收标准 | 动 CI/CD、GitOps、部署策略、镜像与 migration 流程前 |
+| [`observability/OBSERVABILITY.md`](../observability/OBSERVABILITY.md) | 可观测性方法论与指标基线：三支柱分工、RED/USE、逐服务最低指标、告警清单、6 条硬规则 | 加指标/看板/告警，或排障动线走不通时 |
+
+⚠️ 两份都是**目标态**，状态是「等待实现」。当前实况以 `TODO.md` 为准，
+可观测性的已确认缺陷见 [`observability/OBSERVABILITY_REVIEW_20260806.md`](../observability/OBSERVABILITY_REVIEW_20260806.md)。
 
 ## 检索约定
 
