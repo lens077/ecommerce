@@ -24,10 +24,10 @@
 
 | 领域 | 已有 | 主要缺口 |
 |------|------|----------|
-| CI | `.github/workflows/{backend,frontend}.yml`、`ai-review.yml`(双模型评审)、`freeze-check.yml`(冻结验收集)、structcheck 随 `go test` 进 CI、commitlint(vite-plus 钩子) | 制品推送/清单更新链路不完整;oxlint/oxfmt 未进 CI 门禁;无契约测试、无镜像扫描/签名/SBOM |
+| CI | `.github/workflows/{backend,frontend}.yml`、`freeze-check.yml`(冻结验收集)、structcheck 随 `go test` 进 CI、commitlint(vite-plus 钩子)、异构双审走本地 `/adversarial-review`(非 CI) | 制品推送/清单更新链路不完整;oxlint/oxfmt 未进 CI 门禁;无契约测试、无镜像扫描/签名/SBOM |
 | CD | `argocd-app.yml`/`argocd-proj.yml`、`helm/`、`deploy/{dev,prod}` 过 dry-run | GitOps 未真正接管(改镜像 tag 仍是手动);无环境晋级流程;无 migration 流水线 |
 | 基础设施 | k8s 集群(注意:实际仅 node2/node3 可调度,存储钉在 node3)、Consul(发现+KV 配置中心)、`application-vpa.yml` | 集群全单副本,滚更/金丝雀语义退化;VPA `--min-replicas` 默认 2 导致静默失效;无 IaC 管集群外资源 |
-| 可观测性 | OTel(部分服务)、Loki、`grafana/`、`observability/`(含 2026-08-06 评审) | 未全链路;`rpc.code` 失真已修但看板未回归;config 撞名进程指标混合;无 SLO/错误预算 |
+| 可观测性 | OTel(部分服务)、Loki、`observability/grafana/`(看板生成脚本)、`observability/`(含 2026-08-06 评审) | 未全链路;`rpc.code` 失真已修但看板未回归;config 撞名进程指标混合;无 SLO/错误预算 |
 | 安全 | 网关集中鉴权(Casdoor+Casbin)、部分 RPC 粒度策略 | 镜像/依赖/密钥扫描全缺;NetworkPolicy 缺;address 等服务越权问题在修 |
 | 度量 | — | DORA 四指标无采集 |
 
