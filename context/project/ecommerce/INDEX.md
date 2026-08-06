@@ -8,7 +8,7 @@
 |---|---|---|
 | [gateway](gateway/INDEX.md) | `gateway/` | JWT / 时钟偏移踩坑；重试相乘与健康检查失效 |
 | [registry](registry/INDEX.md) | `backend/services/*/internal/pkg/registry/` | Consul TTL 注册与心跳（11 份同一套代码） |
-| [config](config/INDEX.md) | `backend/services/*/internal/pkg/config/` + `backend/services/config/` | 一份配置三个副本；热更新的生效边界 |
+| [config](config/INDEX.md) | `backend/services/*/internal/pkg/config/` + `../config-center` | 一份配置三个副本；热更新的生效边界 |
 | [behavior](behavior/INDEX.md) | `backend/services/behavior/` | Consul KV 缺键导致 gorse 静默关闭 |
 | [consumer](consumer/INDEX.md) | `frontend/apps/consumer/` | MUI spacing ×8 踩坑；购物车重复请求 |
 | [frontend-api](frontend-api/INDEX.md) | `frontend/packages/api/` + `apps/*/src/api/` | Connect Query 数据拉取 SOP；transport 单例约束 |
@@ -33,7 +33,7 @@
 
 命名与分层判据见 [`context/harness-framework/knowledge-layering.md`](../../harness-framework/knowledge-layering.md)。
 
-⚠️ `config` 指后端配置中心服务（`backend/services/config/`），前端配置中心用 `config-fe`（`frontend/apps/config/`）。
+⚠️ `config` 指业务服务的配置加载层；配置中心本体在独立仓 `../config-center`。
 
 ⚠️ `frontend-api` 指前端的 API 访问层（`frontend/packages/api/`），**不是** `backend/api/` 的 proto 契约。
 它和 `registry` 一样属于「跨多个代码目录的同一套代码」，所以按职责命名而不是按单一目录命名。

@@ -21,7 +21,7 @@ description: 本地跑后端服务/网关时连本地 k8s 集群的地址约定�
 
 **陷阱**：主机名 `consul.app.com`（/etc/hosts 指向 `192.168.3.110:8500`）从宿主机访问会**超时**。
 
-所以凡是 Makefile 里硬编码了 `CONSUL_ADDR=consul.app.com` 的服务（例如 `backend/services/config/Makefile`），**从宿主机跑时必须覆盖成 `192.168.3.112:8500`**。
+因此，任何显式配置 `CONSUL_ADDR=consul.app.com` 的本地服务，**从宿主机跑时必须覆盖成 `192.168.3.112:8500`**。独立 `config-center` 从本地 `CONFIG_FILE` 自举；Consul 仅用于服务发现。
 
 ## 配置加载：Consul KV 是启动前置条件
 

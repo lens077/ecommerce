@@ -44,7 +44,7 @@ CartStatus status = 11 [(buf.validate.field).enum.defined_only = true];
 
 ## 按类型的默认约束清单
 
-以下取自本仓已落地的真实写法（`cart.proto` / `behavior.proto` / `address.proto` / `config.proto`）。
+以下取自已落地的真实写法（`cart.proto` / `behavior.proto` / `address.proto` / 独立 `config-center` 的 `config.proto`）。
 
 ### 枚举 —— 必须 `defined_only`
 
