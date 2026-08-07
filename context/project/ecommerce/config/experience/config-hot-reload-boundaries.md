@@ -22,7 +22,7 @@ description: 配置热更新到底哪些段会立刻生效、哪些只打 WARN�
 ```
 配置中心 PutKey
   → pg_notify(事务内)  → config-service 的 LISTEN → WatchKeys 流
-  → 服务侧 source_configcenter.Watch 收到 SNAPSHOT/PUT
+  → 服务侧 source_sdk.Watch 收到 SNAPSHOT/PUT
   → decodeConfig → live.Set(新的 *Bootstrap)
   → 各订阅者的回调(串行、同步)
 ```

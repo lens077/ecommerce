@@ -66,9 +66,10 @@ cd backend
 go test -count=1 ./structcheck/...   # -count=1 强制重跑:它读数据文件,go test 不按数据文件失效缓存
 ```
 
-检查四项:matrix ↔ `backend/services/` 目录双向对齐、matrix 内部一致性、matrix ↔ 网关
-接线、10 服务 `internal/pkg` 同构性。存量漂移记在 `backend/structcheck/homogeneity_baseline.txt`
-(棘轮:新漂移即红)。
+检查五项:matrix ↔ `backend/services/` 目录双向对齐、matrix 内部一致性、matrix ↔ 网关
+接线、10 服务 `internal/pkg` 同构性、10 服务配置加载生产文件集与 cart 基线一致。最后一项专门
+拦截「cart 新增了一份样板文件但其他服务没复制」——通用同构检查会忽略只有一个持有者的文件。
+存量漂移记在 `backend/structcheck/homogeneity_baseline.txt`(棘轮:新漂移即红)。
 
 ## 3. 后端测试
 

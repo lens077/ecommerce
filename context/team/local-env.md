@@ -23,15 +23,19 @@ description: 本地跑后端服务/网关时连本地 k8s 集群的地址约定�
 
 因此，任何显式配置 `CONSUL_ADDR=consul.app.com` 的本地服务，**从宿主机跑时必须覆盖成 `192.168.3.112:8500`**。独立 `config-center` 从本地 `CONFIG_FILE` 自举；Consul 仅用于服务发现。
 
-## 配置加载：Consul KV 是启动前置条件
+## 配置加载：默认走配置中心，Consul KV 是显式回退路径
 
-每个服务启动时从 Consul KV 加载**整份 Bootstrap 配置**：
+10 个服务的默认 `make dev` 都通过被忽略的 `configs/source.dev.yaml` 选择配置中心，
+selector 只负责自举，Consul 仍用于服务注册发现。需要回退或对照历史 KV 时显式运行
+`make dev-consul`，它从以下路径加载**整份 Bootstrap 配置**：
 
 ```
 ecommerce/<service>/dev.yml
 ```
 
-**这个 key 不存在，服务就起不来。** 新增服务时第一件事是上传它的 KV，不是写代码。
+配置中心对应键是 `<service>/dev/bootstrap.yaml`。两条路径都不做失败自动降级：selector
+缺失、token 无效或目标 key 不存在时服务直接启动失败；新增服务时必须同时准备 selector、
+配置中心键和用于回退的 Consul KV。
 
 ⚠️ 更隐蔽的失败模式：KV **存在但缺子块**时，配置解码用的 mapstructure 没开 `ErrorUnused`，多余键不报错、缺失键生成 nil-safe 的 getter —— 功能会被**静默关掉而不是启动失败**。踩过的实例见
 [`context/project/ecommerce/behavior/experience/consul-kv-missing-key-silent-disable.md`](../project/ecommerce/behavior/experience/consul-kv-missing-key-silent-disable.md)。

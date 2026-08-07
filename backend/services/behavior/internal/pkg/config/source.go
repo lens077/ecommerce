@@ -54,15 +54,17 @@ func NewSource() (Source, error) {
 
 	name := env.GetEnvString(constants.EnvConfigSource, constants.DefaultConfigSource)
 	switch name {
+	case constants.ConfigSourceFile:
+		return NewFileSource()
 	case constants.ConfigSourceConsul:
 		return NewConsulSource()
 	case constants.ConfigSourceConfigCenter:
 		return nil, fmt.Errorf("%s=%s is deprecated; set %s to a local SourceConfig file instead",
 			constants.EnvConfigSource, constants.ConfigSourceConfigCenter, constants.EnvConfigSourceFile)
 	default:
-		return nil, fmt.Errorf("unknown %s=%q, expect %q or %q",
+		return nil, fmt.Errorf("unknown %s=%q, expect %q, %q, or %q",
 			constants.EnvConfigSource, name,
-			constants.ConfigSourceConsul, constants.ConfigSourceConfigCenter)
+			constants.ConfigSourceFile, constants.ConfigSourceConsul, constants.ConfigSourceConfigCenter)
 	}
 }
 

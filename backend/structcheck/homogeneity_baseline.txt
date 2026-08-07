@@ -14,7 +14,6 @@
 config/config_test.go
 config/live.go
 config/source.go
-config/source_test.go
 dbutil/handler.go
 log/log.go
 log/log_test.go

@@ -63,6 +63,11 @@ func main() {
 
 // NewApp 创建并配置 FX 应用
 func NewApp(serviceName, deploymentMode, serviceVersion string) *fx.App {
+	return fx.New(appOptions(serviceName, deploymentMode, serviceVersion)...)
+}
+
+// appOptions 单独拆出来是为了能用 fx.ValidateApp 静态校验整张依赖图。
+func appOptions(serviceName, deploymentMode, serviceVersion string) []fx.Option {
 	host, err := meta.GetOutboundIP()
 	if err != nil {
 		zap.Error(err)
@@ -75,7 +80,7 @@ func NewApp(serviceName, deploymentMode, serviceVersion string) *fx.App {
 		Environment: deploymentMode,
 	}
 
-	return fx.New(
+	return []fx.Option{
 		// 基础模块
 		logger.Module,     // 日志
 		config.Module,     // 配置
@@ -152,5 +157,5 @@ func NewApp(serviceName, deploymentMode, serviceVersion string) *fx.App {
 				})
 			},
 		),
-	)
+	}
 }

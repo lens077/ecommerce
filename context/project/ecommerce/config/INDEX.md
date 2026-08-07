@@ -6,11 +6,13 @@
 - **各服务的配置加载层**：`backend/services/*/internal/pkg/config/`（10 份，同一套代码）
 - 灌入工具：`backend/tools/config-seed/`
 
-每个服务启动时读**整份 Bootstrap 配置**（一份 YAML）。其余服务仍由
-`CONFIG_SOURCE` 选择 `file`、`consul` 或 `configcenter`；Cart 已改为读取本地
+每个服务启动时读**整份 Bootstrap 配置**（一份 YAML）。10 个服务统一优先读取本地
 `CONFIG_SOURCE_FILE`，并使用独立 `config-center` Go SDK 的 `SourceConfig` 契约选择
-`file`、`consul` 或 `config_center`。Cart 依赖 `config-center v0.1.0`（2026-08-06 发的
-首个 tag），不用本地 `replace`。
+`file`、`consul` 或 `config_center`；默认 `make dev` 使用被忽略的
+`configs/source.dev.yaml` 走配置中心，`make dev-consul` 才显式回到历史 Consul KV。
+服务仍保留 `CONFIG_SOURCE=file|consul` 作为不经 selector 的兼容入口，旧的
+`CONFIG_SOURCE=configcenter` 会快速失败。后端依赖 `config-center v0.1.0`（2026-08-06
+发布的首个 tag），不用本地 `replace`。
 
 ⚠️ **`go mod tidy` 不会把依赖往前挪**——它只增删，版本仍是 `go.mod` 里钉住的那个。
 config-center 出了新版要用 `go get github.com/lens077/config-center@v0.x.y`；
@@ -23,8 +25,8 @@ config-center 出了新版要用 `go get github.com/lens077/config-center@v0.x.y
 
 | 位置 | 角色 | 谁在读 |
 |---|---|---|
-| Consul KV `ecommerce/<svc>/<env>.yml` | 事实上的源 | `CONFIG_SOURCE=consul` 的服务；`config-seed` 的输入 |
-| 配置中心 `<svc>/<env>/bootstrap.yaml` | 第二份，支持 Watch 热更新 | `CONFIG_SOURCE=configcenter` 的服务 |
+| Consul KV `ecommerce/<svc>/<env>.yml` | 事实上的源 | selector `type: consul`、`make dev-consul`；`config-seed` 的输入 |
+| 配置中心 `<svc>/<env>/bootstrap.yaml` | 第二份，支持 Watch 热更新 | selector `type: config_center`（默认 `make dev`） |
 | 仓库 `backend/services/<svc>/configs/<env>.yml` | 本地工作副本，**不入库** | 只有人 |
 
 ⚠️ **仓库那份是 gitignore 的**，因为它含 PG/Redis/ES 密码、Casdoor `client_secret` 和证书

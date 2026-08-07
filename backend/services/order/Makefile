@@ -1,6 +1,6 @@
 # 默认值
 VERSION ?= dev
-GOIMAGE ?= golang:1.26.1-alpine3.22
+GOIMAGE ?= golang:1.26.5-alpine3.23
 GOOS ?= linux
 GOARCH ?= amd64
 CGOENABLED ?= 0
@@ -12,9 +12,7 @@ REPOSITORY = sumery/$(SERVICE)
 REGISTER = ccr.ccs.tencentyun.com
 ARM64=linux/arm64
 AMD64=linux/amd64
-# 本地 make dev/pre 直连集群 Consul KV 读配置。
-# consul.app.com(192.168.3.110) 从宿主机访问会超时,所以默认写成可达的 IP;
-# 需要走域名时命令行覆盖即可: make dev CONSUL_KV_ADDR=consul.app.com
+# 本地读配置用的 Consul(consul.app.com 从宿主机不通,见 make dev-consul)
 CONSUL_KV_ADDR ?= 192.168.3.112:8500
 ORDER_SOURCE_CONFIG ?= configs/source.dev.yaml
 
@@ -48,16 +46,6 @@ dev-consul:
 	CONFIG_SOURCE=consul \
 	CONSUL_ADDR=$(CONSUL_KV_ADDR) \
 	CONSUL_PATH=ecommerce/order/dev.yml \
-	CONSUL_SCHEME=http \
-	CONSUL_INSECURE_SKIP_VERIFY=true \
-	go run cmd/server/main.go
-
-.PHONY: pre
-pre:
-	SERVICE_NAME="order-service" \
-	CONSUL_ENABLED=true \
-	CONSUL_ADDR=$(CONSUL_KV_ADDR) \
-	CONSUL_PATH=ecommerce/order/pre.yaml \
 	CONSUL_SCHEME=http \
 	CONSUL_INSECURE_SKIP_VERIFY=true \
 	go run cmd/server/main.go
