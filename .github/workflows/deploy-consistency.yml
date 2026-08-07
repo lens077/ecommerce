@@ -1,0 +1,59 @@
+# 部署清单一致性门禁。
+#
+# 为什么单独一个 workflow 而不是把 helm/** 加进 backend.yml 的 paths:
+# backend.yml 的 update-manifests job 会把镜像 tag 回写到 helm/values.yaml 再推 main,
+# 那里有一行明确的设计说明「helm/** 不在本 workflow 的 paths 里,回写不会再触发自己」。
+# 往 backend.yml 里加 helm/** 会破坏这个防自触发的设计,所以另起一个只读的 workflow。
+#
+# 本 workflow 只跑 structcheck,不做任何写回,自己不会构成循环。
+# 回写提交带 [skip ci],GitHub 原生跳过,这里再多一层保险。
+#
+# 这里只补 backend.yml 覆盖不到的路径,不重复:
+#   - helm/**            backend.yml 的 paths 里根本没有(防回写自触发)
+#   - backend/Makefile   在 backend/** 里会触发 backend.yml,但 detect 算不出受影响服务
+#     backend/compose.yaml  —— 两者既不匹配 SHARED_PATTERN,也不在 backend/services/<svc>/ 下,
+#                          于是 services='[]',ci job 被 if 跳过,structcheck 一次都不跑
+# .service-matrix.yaml 命中 backend.yml 的 SHARED_PATTERN(触发全量),已被覆盖,不在此重复。
+#
+# 本仓的习惯是直接提交 main,不走 PR —— 所以覆盖必须落在 push 触发上,
+# 只挂 pull_request 等于没挂。
+name: Deploy consistency
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - "helm/**"
+      - "backend/Makefile"
+      - "backend/compose.yaml"
+      - ".github/workflows/deploy-consistency.yml"
+  pull_request:
+    paths:
+      - "helm/**"
+      - "backend/Makefile"
+      - "backend/compose.yaml"
+      - ".service-matrix.yaml"
+  workflow_dispatch:
+
+jobs:
+  structcheck:
+    name: 服务清单四处对齐
+    runs-on: ubuntu-24.04
+    defaults:
+      run:
+        shell: bash
+        working-directory: backend
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v5
+
+      - name: Set up Go
+        uses: actions/setup-go@v5
+        with:
+          go-version-file: backend/go.mod
+          cache-dependency-path: backend/go.sum
+
+      # TestDeploymentListsMatchMatrix 比对 .service-matrix.yaml 与
+      # Makefile SERVICES / compose services / helm values 顶层键 / deploy 目录
+      - name: Structcheck
+        run: go test -count=1 ./structcheck/...

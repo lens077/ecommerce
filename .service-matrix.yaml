@@ -80,12 +80,13 @@ gateway:
 # ── 后端服务 ─────────────────────────────────────────────────────────
 # discovery: Consul 注册名（≠ 目录名，网关 target 用它）
 # extra_config: 通用块之外的配置块
+# 10 个服务的本地 make dev 默认经 SDK selector 走 config_center；deploy 清单仍显式走 Consul。
 services:
   user:
     discovery: user-identity
     gateway_prefix: /user*
     depends_on: [] # 无服务间调用
-    external: [postgres, casdoor]
+    external: [postgres, casdoor, config_center]
     note: "proto 侧引用 backend/api/casdoor/v1"
 
   search:
@@ -93,14 +94,14 @@ services:
     gateway_prefix: /search*
     depends_on: []
     depends_on_planned: [product] # ProductChangedEvent → 同步 ES（未接线）
-    external: [elasticsearch]
+    external: [elasticsearch, config_center]
 
   behavior:
     discovery: behavior-service
     gateway_prefix: /behavior*
     extra_config: [recommend] # required = true
     depends_on: []
-    external: [postgres, gorse]
+    external: [postgres, gorse, config_center]
     note: |
       进程级复用:同时实现 telemetry.v1.TelemetryService(网关前缀 /telemetry*,
       前端性能上报 → OTel histogram/日志,不落业务库)。域是分开的,
@@ -111,39 +112,39 @@ services:
     gateway_prefix: /product*
     extra_config: [recommend] # required = false ← 与 behavior 不一致，见 config_validation
     depends_on: []
-    external: [postgres, gorse]
+    external: [postgres, gorse, config_center]
 
   cart:
     discovery: cart-service
     gateway_prefix: /cart*
     extra_config: [store] # MinIO
     depends_on: []
-    external: [postgres, redis, minio, config_center] # ✅ 已接线：配置下发热更新（不经 Consul 桥接）
+    external: [postgres, redis, minio, config_center]
 
   address:
     discovery: address-service
     gateway_prefix: /address*
     depends_on: []
-    external: [postgres]
+    external: [postgres, config_center]
 
   order:
     discovery: order-service
     gateway_prefix: /order*
     depends_on: []
     depends_on_planned: [inventory, product, address] # Reserve / 核价 / 地址快照
-    external: [postgres, redis]
+    external: [postgres, redis, config_center]
 
   inventory:
     discovery: inventory-service
     gateway_prefix: /inventory*
     depends_on: []
-    external: [postgres]
+    external: [postgres, config_center]
 
   merchant:
     discovery: merchant-service
     gateway_prefix: /merchant*
     depends_on: []
-    external: [postgres]
+    external: [postgres, config_center]
 
   payment:
     discovery: payment-service
@@ -151,7 +152,29 @@ services:
     extra_config: [pay] # alipay 凭据，KV 里目前是空占位
     depends_on: []
     depends_on_planned: [order] # 原实现的 consumerOrder client，注释保留在 data/payment.go
-    external: [postgres, alipay]
+    external: [postgres, alipay, config_center]
+
+# ── 部署路径覆盖 ─────────────────────────────────────────────────────
+# 上面的 services 段是「有哪些服务」的真相源;这一段声明每条聚合部署入口
+# 各自覆盖了其中哪些。四处清单历史上是各抄一份、互相漂移的:
+#   - config 已随配置中心拆去独立仓库,却还留在 Makefile 的 SERVICES 里,
+#     而扇出写的是 `|| exit 1` —— k8s-dev-all 每次在它那儿中断,payment 永远轮不到
+#   - behavior 在 Makefile / compose / deploy / helm 四处皆无,等于没有部署路径
+#   - product 至今没有 helm chart,GitOps 那条路径根本部署不了它
+# 现在由 backend/structcheck 的 TestDeploymentListsMatchMatrix 强制对齐:
+#   - 出现在某条入口、但不在 services 段里的名字 → 直接失败(陈旧残留)
+#   - services 段里有、但某条入口缺的      → 失败,除非在 exceptions 里写明原因
+deployment_coverage:
+  paths:
+    makefile: "backend/Makefile 的 SERVICES 变量 —— docker-*-all / k8s-*-all 的扇出清单"
+    compose: "backend/compose.yaml 的 services 段 —— 本地一把拉起(键名去掉 ecommerce- 前缀)"
+    helm: "helm/values.yaml 的顶层键 —— ArgoCD GitOps 的集群权威真相源"
+    deploy: "backend/services/{service}/deploy/{dev,prod} —— ArgoCD 不可用时的应急手工路径"
+  # 例外必须写原因。不写例外 = 要求全覆盖。
+  exceptions:
+    helm:
+      behavior: "尚未建 chart。GitOps 目前刻意只收敛到 cart 单服务,见 TODO.md"
+      product: "尚未建 chart。同上"
 
 # ── 前端 ─────────────────────────────────────────────────────────────
 frontend:

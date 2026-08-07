@@ -1,0 +1,32 @@
+# 由集群级 CA 直接签发,与 config-center / loki / jaeger / vm / casdoor 同一种简化写法。
+#
+# 与 config-center 那份同理:入口挂的是 default 里的共享 cilium-gateway,
+# 它已经有泛域名证书 global-default-tls(CN=app.com, SAN=*.app.com),
+# cart-api.app.com 在覆盖范围内,所以**这份证书当前不是入口必需的**。
+#
+# 留着它是为了集群内直连的场景:网关按 Consul 注册的实例地址直连 cart Pod,
+# 这条链路不经过 Gateway,prod 若要开 TLS / mTLS 就需要 cart 自己的一张证书。
+# 用不到时它只是一个躺着的 Secret,不影响任何流量。
+apiVersion: cert-manager.io/v1
+kind: Certificate
+metadata:
+  name: ecommerce-cart-tls
+  namespace: ecommerce
+spec:
+  secretName: ecommerce-cart-tls-secret
+  issuerRef:
+    name: global-ca-issuer
+    kind: ClusterIssuer
+  commonName: cart-api.app.com
+  privateKey:
+    algorithm: ECDSA
+    size: 256
+  usages:
+    - server auth
+    - digital signature
+    - key encipherment
+  dnsNames:
+    - "cart-api.app.com"
+    # 集群内直连用的 Service DNS —— 网关经 Consul 发现后直连时校验证书用得上
+    - "ecommerce-cart-service.ecommerce.svc"
+    - "ecommerce-cart-service.ecommerce.svc.cluster.local"

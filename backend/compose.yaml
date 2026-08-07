@@ -205,6 +205,26 @@ services:
       retries: 3
       start_period: 15s
 
+  ecommerce-behavior:
+    <<: *service-common
+    image: ccr.ccs.tencentyun.com/sumery/behavior:dev
+    container_name: ecommerce-behavior
+    ports:
+      - "0.0.0.0:30011:30011"
+    environment:
+      <<: *consul-env
+      # SERVICE_NAME 就是注册进 Consul 的服务名,必须与网关 discovery:///behavior-service 一致。
+      # 本进程同时实现 telemetry.v1.TelemetryService(网关前缀 /telemetry*),共用这个注册名
+      SERVICE_NAME: "behavior-service"
+      CONSUL_PATH: "ecommerce/behavior/dev.yml"
+    healthcheck:
+      # /healthz 在 DB/缓存不通时返回 503;镜像是 alpine,用 busybox 自带的 wget
+      test: ["CMD", "wget", "-q", "-O", "-", "http://127.0.0.1:30011/healthz"]
+      interval: 10s
+      timeout: 3s
+      retries: 3
+      start_period: 15s
+
 networks:
   ecommerce:
     external: true

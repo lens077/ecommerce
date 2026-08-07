@@ -1,0 +1,34 @@
+# 挂 default 里的共享 cilium-gateway 的 https listener(mode: Terminate,
+# 证书是泛域名 global-default-tls,覆盖 *.app.com),与 config-center /
+# otel / grafana / loki / jaeger / vm 完全同一种接法。
+#
+# ⚠️ 安全前提(prod 尤其要看):cart 自己没有任何鉴权拦截器 ——
+# internal/server/middleware.go 只装了 logging 与 otelconnect,身份校验
+# 全靠网关的 Casbin。这条路由一旦 apply,cart 的 Connect RPC 就是**匿名可调**的。
+# prod 环境**默认不要 apply 这个文件**:cart 应当只由网关经
+# discovery:///cart-service 访问,service.yaml 已是 ClusterIP,
+# 不 apply 本文件就没有任何外部入口。
+# 只有在这条路由上补齐鉴权(如 CiliumEnvoyConfig / ext_authz)之后再启用。
+#
+# 按 host 而不是按 PathPrefix 区分:Connect 的路径是
+# /cart.v1.CartService/xxx,用路径前缀要写死 proto 包名,以后加 RPC 就得改路由。
+apiVersion: gateway.networking.k8s.io/v1
+kind: HTTPRoute
+metadata:
+  name: ecommerce-cart-route
+  namespace: ecommerce
+spec:
+  parentRefs:
+    - name: cilium-gateway
+      namespace: default
+      sectionName: https
+  hostnames:
+    - "cart-api.app.com"
+  rules:
+    - matches:
+        - path:
+            type: PathPrefix
+            value: /
+      backendRefs:
+        - name: ecommerce-cart-service
+          port: 30006

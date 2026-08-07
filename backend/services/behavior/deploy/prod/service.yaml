@@ -1,0 +1,16 @@
+apiVersion: v1
+kind: Service
+metadata:
+  name: ecommerce-behavior-service
+  namespace: ecommerce
+spec:
+  selector:
+    app: ecommerce-behavior
+  ports:
+    - name: http
+      protocol: TCP
+      port: 30011
+      targetPort: http
+  # ClusterIP 而不是 LoadBalancer:behavior 是网关经
+  # discovery:///behavior-service 访问的后端服务,不需要自己占一个 LB IP
+  type: ClusterIP
