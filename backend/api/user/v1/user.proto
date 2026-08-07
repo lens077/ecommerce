@@ -1,35 +1,38 @@
 syntax = "proto3";
 
-import "third_party/validate/validate.proto";
-import "api/casdoor/v1/user.proto";
-
 package user.v1;
+
+import "api/casdoor/v1/user.proto";
+import "third_party/validate/validate.proto";
 
 option go_package = "github.com/lens077/ecommerce/backend/api/user/v1;userv1";
 
 service UserService {
-  rpc SignIn(SignInRequest) returns(SignInResponse){}
-  rpc UserProfile(UserProfileRequest) returns(UserProfileResponse){}
+  rpc SignIn(SignInRequest) returns (SignInResponse) {}
+  rpc UserProfile(UserProfileRequest) returns (UserProfileResponse) {}
 }
 
 message SignInRequest {
-  string code = 1 [
-    (buf.validate.field).required = true
-  ];
-  string state = 2 [
-    (buf.validate.field).required = true
-  ];
+  string code = 1 [(buf.validate.field).string = {
+    min_len: 1
+    max_len: 2048
+  }];
+  string state = 2 [(buf.validate.field).string = {
+    min_len: 1
+    max_len: 512
+  }];
 }
 
 message SignInResponse {
-  string state = 1;
-  string data = 2;
+  string state = 1 [(buf.validate.field).string = {
+    min_len: 1
+    max_len: 64
+  }];
+  string data = 2 [(buf.validate.field).string.max_len = 16384];
 }
 
-message UserProfileRequest{
-
-}
+message UserProfileRequest {}
 
 message UserProfileResponse {
-  casdoor.v1.User user = 1;
+  casdoor.v1.User user = 1 [(buf.validate.field).required = true];
 }

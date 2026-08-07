@@ -3,30 +3,58 @@ syntax = "proto3";
 // 独立搜索功能
 
 package search.v1;
+
+import "third_party/validate/validate.proto";
+
 option go_package = "github.com/lens077/ecommerce/backend/api/search/v1;searchv1";
 
-import "google/protobuf/timestamp.proto";
-
 service SearchService {
-  rpc Search(SearchRequest) returns (SearchResponse){}
+  rpc Search(SearchRequest) returns (SearchResponse) {}
 }
 
 message SearchRequest {
-  string index = 1;
-  string name = 2;
+  string index = 1 [(buf.validate.field).string = {
+    min_len: 1
+    max_len: 255
+    pattern: "^[a-z0-9][a-z0-9._-]*$"
+  }];
+  string name = 2 [(buf.validate.field).string = {
+    min_len: 1
+    max_len: 128
+  }];
 }
 
 message SearchResponse {
-  repeated Product products = 1;
+  repeated Product products = 1 [(buf.validate.field).repeated.max_items = 100];
 }
 
 // 定义 Product 消息 (对应 Go 结构体中的 Product)
 message Product {
-  uint32 id = 1;
-  string spu_code = 2;
-  double price = 3;
-  string status = 4;
-  string main_media_url = 5;
+  uint32 id = 1 [(buf.validate.field).uint32.gt = 0];
+  string spu_code = 2 [(buf.validate.field).string = {
+    min_len: 1
+    max_len: 64
+  }];
+  double price = 3 [(buf.validate.field).double = {
+    gte: 0
+    lte: 99999999.99
+    finite: true
+  }];
+  string status = 4 [(buf.validate.field).string = {
+    in: [
+      "draft",
+      "online",
+      "offline",
+      "deleted"
+    ]
+  }];
+  string main_media_url = 5 [(buf.validate.field).string = {
+    min_len: 1
+    max_len: 500
+  }];
   uint32 quantity = 6;
-  string name = 7;
+  string name = 7 [(buf.validate.field).string = {
+    min_len: 1
+    max_len: 255
+  }];
 }

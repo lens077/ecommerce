@@ -1,16 +1,15 @@
 syntax = "proto3";
 
-import "google/protobuf/timestamp.proto";
+package cart.v1;
+
 import "google/protobuf/struct.proto";
 import "google/protobuf/wrappers.proto";
 import "third_party/validate/validate.proto";
 
-package cart.v1;
-
 option go_package = "github.com/lens077/ecommerce/backend/api/cart/v1;cartv1";
 
 service CartService {
-  rpc GetCart(GetCartRequest) returns (GetCartResponse){}
+  rpc GetCart(GetCartRequest) returns (GetCartResponse) {}
   // 2026-08 移除 GetCartSummary(原「首页获取购物车数量」)。
   // 它与 GetCart 是同一条 SQL 的两种投影:两者的 WHERE 逐字相同
   // (user_id + status=active),而 GetCartSummary 的 COUNT(*) 恰好等于
@@ -18,9 +17,9 @@ service CartService {
   // 即 GetCart 的响应本来就带着这个数字。前端徽标已改用 GetCart,
   // 保留它只会让同一个数有两个来源,迟早对不上。
   // proto3 无法对 rpc 名做 reserved,故以注释存档,不要再用这个名字。
-  rpc AddProductToCart(AddProductToCartRequest) returns (AddProductToCartResponse){}
-  rpc RemoveCartItem(RemoveCartItemRequest) returns (RemoveCartItemResponse){}
-  rpc UpdateCartItemQuantity(UpdateCartItemQuantityRequest) returns (UpdateCartItemQuantityResponse){}
+  rpc AddProductToCart(AddProductToCartRequest) returns (AddProductToCartResponse) {}
+  rpc RemoveCartItem(RemoveCartItemRequest) returns (RemoveCartItemResponse) {}
+  rpc UpdateCartItemQuantity(UpdateCartItemQuantityRequest) returns (UpdateCartItemQuantityResponse) {}
 }
 
 enum CartStatus {
@@ -31,74 +30,160 @@ enum CartStatus {
 }
 
 message AddProductToCartRequest {
-  uint64 spu_id = 1;
-  uint64 sku_id = 2;
-  string merchant_id = 3[(buf.validate.field).string.uuid = true];
-  uint32 quantity = 4;
+  uint64 spu_id = 1 [(buf.validate.field).uint64 = {
+    gte: 1
+    lte: 9223372036854775807
+  }];
+  uint64 sku_id = 2 [(buf.validate.field).uint64 = {
+    gte: 1
+    lte: 9223372036854775807
+  }];
+  string merchant_id = 3 [(buf.validate.field).string.uuid = true];
+  uint32 quantity = 4 [(buf.validate.field).uint32 = {
+    gte: 1
+    lte: 999
+  }];
   bool selected = 5; // 同步勾选状态, 多端同步
   // 商品快照, 避免商家修改商品
-  string spu_name = 6;
-  string sku_name = 7;
-  double price = 8;
-  google.protobuf.Struct sku_attributes = 9;
-  string sku_thumbnail_url = 10; // 商品图片
-  CartStatus status = 11 [(buf.validate.field).enum.defined_only = true];
+  string spu_name = 6 [(buf.validate.field).string = {
+    min_len: 1
+    max_len: 255
+  }];
+  string sku_name = 7 [(buf.validate.field).string = {
+    min_len: 1
+    max_len: 255
+  }];
+  double price = 8 [(buf.validate.field).double = {
+    gt: 0
+    lte: 99999999.99
+    finite: true
+  }];
+  google.protobuf.Struct sku_attributes = 9 [(buf.validate.field).required = true];
+  string sku_thumbnail_url = 10 [(buf.validate.field).string = {
+    min_len: 1
+    max_len: 500
+  }]; // 商品图片
+  CartStatus status = 11 [(buf.validate.field).enum.const = 1];
 }
 
 message AddProductToCartResponse {
-  uint32 cart_item_quantity = 1; // 购物车商品总数量
-  uint64 cart_item_id = 2;       // 新增/更新的购物车项ID（前端下单等场景需要真实ID）
+  uint32 cart_item_quantity = 1 [(buf.validate.field).uint32.lte = 10000]; // 购物车商品总数量
+  uint64 cart_item_id = 2 [(buf.validate.field).uint64 = {
+    gte: 1
+    lte: 9223372036854775807
+  }]; // 新增/更新的购物车项ID（前端下单等场景需要真实ID）
 }
 
 message RemoveCartItemRequest {
-  repeated int64 spu_ids = 1;
-  repeated int64 sku_ids = 2;
-  repeated string merchant_ids = 3[(buf.validate.field).repeated.items = {
-    string: {
-      uuid: true
+  option (buf.validate.message).cel = {
+    id: "remove_cart_item.parallel_arrays"
+    message: "spu_ids, sku_ids, merchant_ids, and status must have equal lengths"
+    expression: "size(this.spu_ids) == size(this.sku_ids) && size(this.spu_ids) == size(this.merchant_ids) && size(this.spu_ids) == size(this.status)"
+  };
+
+  repeated int64 spu_ids = 1 [(buf.validate.field).repeated = {
+    min_items: 1
+    max_items: 100
+    items: {
+      int64: {gt: 0}
     }
   }];
-  repeated CartStatus status = 4 [(buf.validate.field).repeated.items.enum.defined_only = true];
+  repeated int64 sku_ids = 2 [(buf.validate.field).repeated = {
+    min_items: 1
+    max_items: 100
+    items: {
+      int64: {gt: 0}
+    }
+  }];
+  repeated string merchant_ids = 3 [(buf.validate.field).repeated = {
+    min_items: 1
+    max_items: 100
+    items: {
+      string: {uuid: true}
+    }
+  }];
+  repeated CartStatus status = 4 [(buf.validate.field).repeated = {
+    min_items: 1
+    max_items: 100
+    items: {
+      enum: {
+        defined_only: true
+        not_in: [0]
+      }
+    }
+  }];
 }
 
 message RemoveCartItemResponse {
-  uint32 cart_item_quantity = 1; // 删除后，购物车商品总数量（用于刷新右上角小红点）
-  bool is_cart_empty = 2;         // 购物车是否已经彻底空了（用于前端直接切换到“空购物车”占位图）
+  uint32 cart_item_quantity = 1 [(buf.validate.field).uint32.lte = 10000]; // 删除后，购物车商品总数量（用于刷新右上角小红点）
+  bool is_cart_empty = 2; // 购物车是否已经彻底空了（用于前端直接切换到“空购物车”占位图）
 }
 
 message UpdateCartItemQuantityRequest {
-  uint64 spu_id = 1;
-  uint64 sku_id = 2;
-  string merchant_id = 3[(buf.validate.field).string.uuid = true];
-  uint32 quantity = 4; // 目标数量，如果为0则删除该商品项
+  uint64 spu_id = 1 [(buf.validate.field).uint64 = {
+    gte: 1
+    lte: 9223372036854775807
+  }];
+  uint64 sku_id = 2 [(buf.validate.field).uint64 = {
+    gte: 1
+    lte: 9223372036854775807
+  }];
+  string merchant_id = 3 [(buf.validate.field).string.uuid = true];
+  uint32 quantity = 4 [(buf.validate.field).uint32.lte = 999]; // 目标数量，如果为0则删除该商品项
 }
 
 message UpdateCartItemQuantityResponse {
-  uint32 cart_item_quantity = 1; // 更新后，购物车商品总数量（用于刷新右上角小红点）
+  uint32 cart_item_quantity = 1 [(buf.validate.field).uint32.lte = 10000]; // 更新后，购物车商品总数量（用于刷新右上角小红点）
 }
 
-message GetCartRequest {
-}
+message GetCartRequest {}
 
 message CartItem {
-  uint64 cart_item_id = 1;        // 购物车商品记录ID
-  uint64 spu_id = 2;
-  uint64 sku_id = 3;
-  string merchant_id = 4;
-  string shop_name = 13;
-  uint32 quantity = 5;
+  uint64 cart_item_id = 1 [(buf.validate.field).uint64 = {
+    gte: 1
+    lte: 9223372036854775807
+  }]; // 购物车商品记录ID
+  uint64 spu_id = 2 [(buf.validate.field).uint64 = {
+    gte: 1
+    lte: 9223372036854775807
+  }];
+  uint64 sku_id = 3 [(buf.validate.field).uint64 = {
+    gte: 1
+    lte: 9223372036854775807
+  }];
+  string merchant_id = 4 [(buf.validate.field).string.uuid = true];
+  string shop_name = 13 [(buf.validate.field).string = {
+    min_len: 1
+    max_len: 255
+  }];
+  uint32 quantity = 5 [(buf.validate.field).uint32 = {
+    gte: 1
+    lte: 999
+  }];
   bool selected = 6;
-  string spu_name = 7;
-  string sku_name = 8;
-  double price = 9;
-  google.protobuf.Struct sku_attributes = 10;
-  string sku_thumbnail_url = 11;
-  CartStatus status = 12[(buf.validate.field).enum.defined_only = true];
+  string spu_name = 7 [(buf.validate.field).string = {
+    min_len: 1
+    max_len: 255
+  }];
+  string sku_name = 8 [(buf.validate.field).string = {
+    min_len: 1
+    max_len: 255
+  }];
+  double price = 9 [(buf.validate.field).double = {
+    gt: 0
+    lte: 99999999.99
+    finite: true
+  }];
+  google.protobuf.Struct sku_attributes = 10 [(buf.validate.field).required = true];
+  string sku_thumbnail_url = 11 [(buf.validate.field).string = {
+    min_len: 1
+    max_len: 500
+  }];
+  CartStatus status = 12 [(buf.validate.field).enum.defined_only = true];
 }
 
 message GetCartResponse {
-  repeated CartItem items = 1;                     // 购物车商品列表
-  uint32 cart_item_quantity = 2;                  // 购物车商品总数量
-  google.protobuf.BoolValue is_cart_empty = 3;      // 购物车是否为空
+  repeated CartItem items = 1 [(buf.validate.field).repeated = {max_items: 1000}]; // 购物车商品列表
+  uint32 cart_item_quantity = 2 [(buf.validate.field).uint32.lte = 10000]; // 购物车商品总数量
+  google.protobuf.BoolValue is_cart_empty = 3 [(buf.validate.field).required = true]; // 购物车是否为空
 }
-

@@ -7,6 +7,7 @@
 package checkv1
 
 import (
+	_ "buf.build/gen/go/bufbuild/protovalidate/protocolbuffers/go/buf/validate"
 	protoreflect "google.golang.org/protobuf/reflect/protoreflect"
 	protoimpl "google.golang.org/protobuf/runtime/protoimpl"
 	reflect "reflect"
@@ -113,18 +114,16 @@ var File_api_check_v1_check_proto protoreflect.FileDescriptor
 
 const file_api_check_v1_check_proto_rawDesc = "" +
 	"\n" +
-	"\x18api/check/v1/check.proto\x12\bcheck.v1\"\x0f\n" +
-	"\rReadyCheckReq\"\xa7\x01\n" +
-	"\x0fReadyCheckReply\x12\x16\n" +
-	"\x06status\x18\x01 \x01(\tR\x06status\x12@\n" +
-	"\adetails\x18\x02 \x03(\v2&.check.v1.ReadyCheckReply.DetailsEntryR\adetails\x1a:\n" +
+	"\x18api/check/v1/check.proto\x12\bcheck.v1\x1a#third_party/validate/validate.proto\"\x0f\n" +
+	"\rReadyCheckReq\"\xcb\x01\n" +
+	"\x0fReadyCheckReply\x12!\n" +
+	"\x06status\x18\x01 \x01(\tB\t\xbaH\x06r\x04\x10\x01\x18 R\x06status\x12Y\n" +
+	"\adetails\x18\x02 \x03(\v2&.check.v1.ReadyCheckReply.DetailsEntryB\x17\xbaH\x14\x9a\x01\x11\x10 \"\x06r\x04\x10\x01\x18@*\x05r\x03\x18\x80\x04R\adetails\x1a:\n" +
 	"\fDetailsEntry\x12\x10\n" +
 	"\x03key\x18\x01 \x01(\tR\x03key\x12\x14\n" +
 	"\x05value\x18\x02 \x01(\tR\x05value:\x028\x012M\n" +
 	"\fCheckService\x12=\n" +
-	"\x05Ready\x12\x17.check.v1.ReadyCheckReq\x1a\x19.check.v1.ReadyCheckReply\"\x00B\x96\x01\n" +
-	"\fcom.check.v1B\n" +
-	"CheckProtoP\x01Z9github.com/lens077/ecommerce/backend/api/check/v1;checkv1\xa2\x02\x03CXX\xaa\x02\bCheck.V1\xca\x02\bCheck\\V1\xe2\x02\x14Check\\V1\\GPBMetadata\xea\x02\tCheck::V1b\x06proto3"
+	"\x05Ready\x12\x17.check.v1.ReadyCheckReq\x1a\x19.check.v1.ReadyCheckReply\"\x00B;Z9github.com/lens077/ecommerce/backend/api/check/v1;checkv1b\x06proto3"
 
 var (
 	file_api_check_v1_check_proto_rawDescOnce sync.Once

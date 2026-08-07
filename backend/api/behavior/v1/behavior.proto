@@ -3,9 +3,9 @@ syntax = "proto3";
 // 用户行为采集 + 推荐读取。
 // 采集侧把"漫无目的地逛"这类隐式信号落库并投喂 gorse,读取侧从 gorse 取召回结果。
 
-import "third_party/validate/validate.proto";
-
 package behavior.v1;
+
+import "third_party/validate/validate.proto";
 
 option go_package = "github.com/lens077/ecommerce/backend/api/behavior/v1;behaviorv1";
 
@@ -53,7 +53,11 @@ message Event {
     max_len: 64
   }];
   // 事件强度: dwell 为停留秒数,其余事件恒为 1
-  double value = 3 [(buf.validate.field).double.gte = 0];
+  double value = 3 [(buf.validate.field).double = {
+    gte: 0
+    lte: 86400
+    finite: true
+  }];
   // 客户端事件时间(毫秒)。服务端会与自己的时钟比对,偏移过大的按接收时间纠正。
   int64 ts_ms = 4 [(buf.validate.field).int64.gte = 0];
   // 事件来源,便于后续做渠道归因: search:关键词 / category:3 / home_feed / neighbors
@@ -71,8 +75,14 @@ message TrackRequest {
 }
 
 message TrackResponse {
-  uint32 accepted = 1;
-  uint32 dropped = 2;
+  option (buf.validate.message).cel = {
+    id: "track_response.batch_total"
+    message: "accepted plus dropped must not exceed 200"
+    expression: "this.accepted + this.dropped <= 200"
+  };
+
+  uint32 accepted = 1 [(buf.validate.field).uint32.lte = 200];
+  uint32 dropped = 2 [(buf.validate.field).uint32.lte = 200];
 }
 
 message RecommendRequest {
@@ -80,21 +90,31 @@ message RecommendRequest {
   // gorse 的 category,对应 spus.category_id;留空表示不限品类
   string category = 2 [(buf.validate.field).string.max_len = 64];
   uint32 n = 3 [(buf.validate.field).uint32.lte = 100];
-  uint32 offset = 4;
+  uint32 offset = 4 [(buf.validate.field).uint32.lte = 10000];
   // 会话内的临时行为。匿名用户或无历史的新用户走 gorse 的 session recommend,
   // 不需要等离线训练即可拿到结果。
-  repeated Event session_events = 5 [(buf.validate.field).repeated.max_items = 50];
+  repeated Event session_events = 5 [(buf.validate.field).repeated = {max_items: 50}];
 }
 
 message RecommendItem {
-  string item_id = 1;
-  double score = 2;
+  string item_id = 1 [(buf.validate.field).string = {
+    min_len: 1
+    max_len: 64
+  }];
+  double score = 2 [(buf.validate.field).double.finite = true];
 }
 
 message RecommendResponse {
-  repeated RecommendItem items = 1;
+  repeated RecommendItem items = 1 [(buf.validate.field).repeated = {max_items: 100}];
   // 实际命中的召回策略: personalized / session / latest
-  string strategy = 2;
+  string strategy = 2 [(buf.validate.field).string = {
+    in: [
+      "empty",
+      "personalized",
+      "session",
+      "latest"
+    ]
+  }];
 }
 
 message SimilarItemsRequest {
@@ -107,5 +127,5 @@ message SimilarItemsRequest {
 }
 
 message SimilarItemsResponse {
-  repeated RecommendItem items = 1;
+  repeated RecommendItem items = 1 [(buf.validate.field).repeated = {max_items: 100}];
 }

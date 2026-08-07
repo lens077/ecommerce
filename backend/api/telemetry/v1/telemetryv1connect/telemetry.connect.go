@@ -2,6 +2,16 @@
 //
 // Source: api/telemetry/v1/telemetry.proto
 
+// 前端性能遥测采集(Web Vitals + API 耗时)。
+//
+// 与 behavior.v1 是两个域:behavior 采集的是"用户对内容的行为"(投喂推荐),
+// 这里采集的是"页面本身的表现"(投喂可观测性栈)。当前由 behavior 服务进程
+// 顺带实现(它已有免鉴权白名单与 sendBeacon 约定),将来 analytics 服务立起来
+// 可整体搬走 —— 域已分离,搬走只动部署不动契约。
+//
+// 数据落点:服务端把 vitals 转成 OTel histogram(→ VictoriaMetrics)与
+// 结构化日志(zap → otelzap → Loki),不落业务库。
+
 package telemetryv1connect
 
 import (

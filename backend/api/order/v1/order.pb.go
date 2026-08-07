@@ -246,22 +246,20 @@ var File_api_order_v1_order_proto protoreflect.FileDescriptor
 
 const file_api_order_v1_order_proto_rawDesc = "" +
 	"\n" +
-	"\x18api/order/v1/order.proto\x12\border.v1\x1a#third_party/validate/validate.proto\"l\n" +
-	"\x12CreateOrderRequest\x12 \n" +
-	"\vCartItemIds\x18\x01 \x03(\x03R\vCartItemIds\x12\x1c\n" +
-	"\taddressId\x18\x02 \x01(\tR\taddressId\x12\x16\n" +
-	"\x06remark\x18\x03 \x01(\tR\x06remark\"\x15\n" +
-	"\x13CreateOrderResponse\"0\n" +
-	"\x14CompleteOrderRequest\x12\x18\n" +
-	"\aorderNo\x18\x01 \x01(\tR\aorderNo\">\n" +
-	"\x15CompleteOrderResponse\x12%\n" +
-	"\x05order\x18\x01 \x01(\v2\x0f.order.v1.OrderR\x05order\"\a\n" +
+	"\x18api/order/v1/order.proto\x12\border.v1\x1a#third_party/validate/validate.proto\"\x94\x01\n" +
+	"\x12CreateOrderRequest\x124\n" +
+	"\vCartItemIds\x18\x01 \x03(\x03B\x12\xbaH\x0f\x92\x01\f\b\x01\x10d\x18\x01\"\x04\"\x02 \x00R\vCartItemIds\x12&\n" +
+	"\taddressId\x18\x02 \x01(\tB\b\xbaH\x05r\x03\xb0\x01\x01R\taddressId\x12 \n" +
+	"\x06remark\x18\x03 \x01(\tB\b\xbaH\x05r\x03\x18\xd0\x0fR\x06remark\"\x15\n" +
+	"\x13CreateOrderResponse\";\n" +
+	"\x14CompleteOrderRequest\x12#\n" +
+	"\aorderNo\x18\x01 \x01(\tB\t\xbaH\x06r\x04\x10\x01\x18@R\aorderNo\"F\n" +
+	"\x15CompleteOrderResponse\x12-\n" +
+	"\x05order\x18\x01 \x01(\v2\x0f.order.v1.OrderB\x06\xbaH\x03\xc8\x01\x01R\x05order\"\a\n" +
 	"\x05Order2\xb0\x01\n" +
 	"\forderService\x12L\n" +
 	"\vCreateOrder\x12\x1c.order.v1.CreateOrderRequest\x1a\x1d.order.v1.CreateOrderResponse\"\x00\x12R\n" +
-	"\rCompleteOrder\x12\x1e.order.v1.CompleteOrderRequest\x1a\x1f.order.v1.CompleteOrderResponse\"\x00B\x96\x01\n" +
-	"\fcom.order.v1B\n" +
-	"OrderProtoP\x01Z9github.com/lens077/ecommerce/backend/api/order/v1;orderv1\xa2\x02\x03OXX\xaa\x02\bOrder.V1\xca\x02\bOrder\\V1\xe2\x02\x14Order\\V1\\GPBMetadata\xea\x02\tOrder::V1b\x06proto3"
+	"\rCompleteOrder\x12\x1e.order.v1.CompleteOrderRequest\x1a\x1f.order.v1.CompleteOrderResponse\"\x00B;Z9github.com/lens077/ecommerce/backend/api/order/v1;orderv1b\x06proto3"
 
 var (
 	file_api_order_v1_order_proto_rawDescOnce sync.Once

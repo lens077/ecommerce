@@ -4,6 +4,9 @@
 // 	protoc        (unknown)
 // source: api/behavior/v1/behavior.proto
 
+// 用户行为采集 + 推荐读取。
+// 采集侧把"漫无目的地逛"这类隐式信号落库并投喂 gorse,读取侧从 gorse 取召回结果。
+
 package behaviorv1
 
 import (
@@ -582,40 +585,41 @@ var File_api_behavior_v1_behavior_proto protoreflect.FileDescriptor
 
 const file_api_behavior_v1_behavior_proto_rawDesc = "" +
 	"\n" +
-	"\x1eapi/behavior/v1/behavior.proto\x12\vbehavior.v1\x1a#third_party/validate/validate.proto\"\xc9\x01\n" +
+	"\x1eapi/behavior/v1/behavior.proto\x12\vbehavior.v1\x1a#third_party/validate/validate.proto\"\xd4\x01\n" +
 	"\x05Event\x126\n" +
 	"\x04type\x18\x01 \x01(\x0e2\x16.behavior.v1.EventTypeB\n" +
 	"\xbaH\a\x82\x01\x04\x10\x01 \x00R\x04type\x12\"\n" +
-	"\aitem_id\x18\x02 \x01(\tB\t\xbaH\x06r\x04\x10\x01\x18@R\x06itemId\x12$\n" +
-	"\x05value\x18\x03 \x01(\x01B\x0e\xbaH\v\x12\t)\x00\x00\x00\x00\x00\x00\x00\x00R\x05value\x12\x1c\n" +
+	"\aitem_id\x18\x02 \x01(\tB\t\xbaH\x06r\x04\x10\x01\x18@R\x06itemId\x12/\n" +
+	"\x05value\x18\x03 \x01(\x01B\x19\xbaH\x16\x12\x14@\x01\x19\x00\x00\x00\x00\x00\x18\xf5@)\x00\x00\x00\x00\x00\x00\x00\x00R\x05value\x12\x1c\n" +
 	"\x05ts_ms\x18\x04 \x01(\x03B\a\xbaH\x04\"\x02(\x00R\x04tsMs\x12 \n" +
 	"\x06source\x18\x05 \x01(\tB\b\xbaH\x05r\x03\x18\x80\x01R\x06source\"\x91\x01\n" +
 	"\fTrackRequest\x12 \n" +
 	"\aanon_id\x18\x01 \x01(\tB\a\xbaH\x04r\x02\x18@R\x06anonId\x12&\n" +
 	"\n" +
 	"session_id\x18\x02 \x01(\tB\a\xbaH\x04r\x02\x18@R\tsessionId\x127\n" +
-	"\x06events\x18\x03 \x03(\v2\x12.behavior.v1.EventB\v\xbaH\b\x92\x01\x05\b\x01\x10\xc8\x01R\x06events\"E\n" +
-	"\rTrackResponse\x12\x1a\n" +
-	"\baccepted\x18\x01 \x01(\rR\baccepted\x12\x18\n" +
-	"\adropped\x18\x02 \x01(\rR\adropped\"\xcd\x01\n" +
+	"\x06events\x18\x03 \x03(\v2\x12.behavior.v1.EventB\v\xbaH\b\x92\x01\x05\b\x01\x10\xc8\x01R\x06events\"\xcc\x01\n" +
+	"\rTrackResponse\x12$\n" +
+	"\baccepted\x18\x01 \x01(\rB\b\xbaH\x05*\x03\x18\xc8\x01R\baccepted\x12\"\n" +
+	"\adropped\x18\x02 \x01(\rB\b\xbaH\x05*\x03\x18\xc8\x01R\adropped:q\xbaHn\x1al\n" +
+	"\x1atrack_response.batch_total\x12)accepted plus dropped must not exceed 200\x1a#this.accepted + this.dropped <= 200\"\xd7\x01\n" +
 	"\x10RecommendRequest\x12 \n" +
 	"\aanon_id\x18\x01 \x01(\tB\a\xbaH\x04r\x02\x18@R\x06anonId\x12#\n" +
 	"\bcategory\x18\x02 \x01(\tB\a\xbaH\x04r\x02\x18@R\bcategory\x12\x15\n" +
-	"\x01n\x18\x03 \x01(\rB\a\xbaH\x04*\x02\x18dR\x01n\x12\x16\n" +
-	"\x06offset\x18\x04 \x01(\rR\x06offset\x12C\n" +
-	"\x0esession_events\x18\x05 \x03(\v2\x12.behavior.v1.EventB\b\xbaH\x05\x92\x01\x02\x102R\rsessionEvents\">\n" +
-	"\rRecommendItem\x12\x17\n" +
-	"\aitem_id\x18\x01 \x01(\tR\x06itemId\x12\x14\n" +
-	"\x05score\x18\x02 \x01(\x01R\x05score\"a\n" +
-	"\x11RecommendResponse\x120\n" +
-	"\x05items\x18\x01 \x03(\v2\x1a.behavior.v1.RecommendItemR\x05items\x12\x1a\n" +
-	"\bstrategy\x18\x02 \x01(\tR\bstrategy\"u\n" +
+	"\x01n\x18\x03 \x01(\rB\a\xbaH\x04*\x02\x18dR\x01n\x12 \n" +
+	"\x06offset\x18\x04 \x01(\rB\b\xbaH\x05*\x03\x18\x90NR\x06offset\x12C\n" +
+	"\x0esession_events\x18\x05 \x03(\v2\x12.behavior.v1.EventB\b\xbaH\x05\x92\x01\x02\x102R\rsessionEvents\"R\n" +
+	"\rRecommendItem\x12\"\n" +
+	"\aitem_id\x18\x01 \x01(\tB\t\xbaH\x06r\x04\x10\x01\x18@R\x06itemId\x12\x1d\n" +
+	"\x05score\x18\x02 \x01(\x01B\a\xbaH\x04\x12\x02@\x01R\x05score\"\x98\x01\n" +
+	"\x11RecommendResponse\x12:\n" +
+	"\x05items\x18\x01 \x03(\v2\x1a.behavior.v1.RecommendItemB\b\xbaH\x05\x92\x01\x02\x10dR\x05items\x12G\n" +
+	"\bstrategy\x18\x02 \x01(\tB+\xbaH(r&R\x05emptyR\fpersonalizedR\asessionR\x06latestR\bstrategy\"u\n" +
 	"\x13SimilarItemsRequest\x12\"\n" +
 	"\aitem_id\x18\x01 \x01(\tB\t\xbaH\x06r\x04\x10\x01\x18@R\x06itemId\x12#\n" +
 	"\bcategory\x18\x02 \x01(\tB\a\xbaH\x04r\x02\x18@R\bcategory\x12\x15\n" +
-	"\x01n\x18\x03 \x01(\rB\a\xbaH\x04*\x02\x18dR\x01n\"H\n" +
-	"\x14SimilarItemsResponse\x120\n" +
-	"\x05items\x18\x01 \x03(\v2\x1a.behavior.v1.RecommendItemR\x05items*\xcc\x01\n" +
+	"\x01n\x18\x03 \x01(\rB\a\xbaH\x04*\x02\x18dR\x01n\"R\n" +
+	"\x14SimilarItemsResponse\x12:\n" +
+	"\x05items\x18\x01 \x03(\v2\x1a.behavior.v1.RecommendItemB\b\xbaH\x05\x92\x01\x02\x10dR\x05items*\xcc\x01\n" +
 	"\tEventType\x12\x1a\n" +
 	"\x16EVENT_TYPE_UNSPECIFIED\x10\x00\x12\x19\n" +
 	"\x15EVENT_TYPE_IMPRESSION\x10\x01\x12\x13\n" +
@@ -628,8 +632,7 @@ const file_api_behavior_v1_behavior_proto_rawDesc = "" +
 	"\x0fBehaviorService\x12@\n" +
 	"\x05Track\x12\x19.behavior.v1.TrackRequest\x1a\x1a.behavior.v1.TrackResponse\"\x00\x12L\n" +
 	"\tRecommend\x12\x1d.behavior.v1.RecommendRequest\x1a\x1e.behavior.v1.RecommendResponse\"\x00\x12U\n" +
-	"\fSimilarItems\x12 .behavior.v1.SimilarItemsRequest\x1a!.behavior.v1.SimilarItemsResponse\"\x00B\xae\x01\n" +
-	"\x0fcom.behavior.v1B\rBehaviorProtoP\x01Z?github.com/lens077/ecommerce/backend/api/behavior/v1;behaviorv1\xa2\x02\x03BXX\xaa\x02\vBehavior.V1\xca\x02\vBehavior\\V1\xe2\x02\x17Behavior\\V1\\GPBMetadata\xea\x02\fBehavior::V1b\x06proto3"
+	"\fSimilarItems\x12 .behavior.v1.SimilarItemsRequest\x1a!.behavior.v1.SimilarItemsResponse\"\x00BAZ?github.com/lens077/ecommerce/backend/api/behavior/v1;behaviorv1b\x06proto3"
 
 var (
 	file_api_behavior_v1_behavior_proto_rawDescOnce sync.Once

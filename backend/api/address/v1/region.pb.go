@@ -219,24 +219,21 @@ var File_api_address_v1_region_proto protoreflect.FileDescriptor
 const file_api_address_v1_region_proto_rawDesc = "" +
 	"\n" +
 	"\x1bapi/address/v1/region.proto\x12\n" +
-	"address.v1\x1a#third_party/validate/validate.proto\"\xa4\x01\n" +
-	"\x06Region\x12\x0e\n" +
-	"\x02id\x18\x01 \x01(\x05R\x02id\x12\x1b\n" +
-	"\tparent_id\x18\x02 \x01(\x05R\bparentId\x12\x14\n" +
-	"\x05level\x18\x03 \x01(\x05R\x05level\x12\x12\n" +
-	"\x04code\x18\x04 \x01(\tR\x04code\x12\x12\n" +
-	"\x04name\x18\x05 \x01(\tR\x04name\x12\x17\n" +
-	"\aname_en\x18\x06 \x01(\tR\x06nameEn\x12\x16\n" +
-	"\x06pinyin\x18\a \x01(\tR\x06pinyin\":\n" +
+	"address.v1\x1a#third_party/validate/validate.proto\"\xe9\x01\n" +
+	"\x06Region\x12\x17\n" +
+	"\x02id\x18\x01 \x01(\x05B\a\xbaH\x04\x1a\x02 \x00R\x02id\x12$\n" +
+	"\tparent_id\x18\x02 \x01(\x05B\a\xbaH\x04\x1a\x02(\x00R\bparentId\x12\x1f\n" +
+	"\x05level\x18\x03 \x01(\x05B\t\xbaH\x06\x1a\x04\x18\x03(\x01R\x05level\x12\x1b\n" +
+	"\x04code\x18\x04 \x01(\tB\a\xbaH\x04r\x02\x18\fR\x04code\x12\x1d\n" +
+	"\x04name\x18\x05 \x01(\tB\t\xbaH\x06r\x04\x10\x01\x18@R\x04name\x12!\n" +
+	"\aname_en\x18\x06 \x01(\tB\b\xbaH\x05r\x03\x18\x80\x01R\x06nameEn\x12 \n" +
+	"\x06pinyin\x18\a \x01(\tB\b\xbaH\x05r\x03\x18\x80\x01R\x06pinyin\":\n" +
 	"\x12ListRegionsRequest\x12$\n" +
-	"\tparent_id\x18\x01 \x01(\x05B\a\xbaH\x04\x1a\x02(\x00R\bparentId\"C\n" +
-	"\x13ListRegionsResponse\x12,\n" +
-	"\aregions\x18\x01 \x03(\v2\x12.address.v1.RegionR\aregions2_\n" +
+	"\tparent_id\x18\x01 \x01(\x05B\a\xbaH\x04\x1a\x02(\x00R\bparentId\"N\n" +
+	"\x13ListRegionsResponse\x127\n" +
+	"\aregions\x18\x01 \x03(\v2\x12.address.v1.RegionB\t\xbaH\x06\x92\x01\x03\x10\xf4\x03R\aregions2_\n" +
 	"\rRegionService\x12N\n" +
-	"\vListRegions\x12\x1e.address.v1.ListRegionsRequest\x1a\x1f.address.v1.ListRegionsResponseB\xa5\x01\n" +
-	"\x0ecom.address.v1B\vRegionProtoP\x01Z=github.com/lens077/ecommerce/backend/api/address/v1;addressv1\xa2\x02\x03AXX\xaa\x02\n" +
-	"Address.V1\xca\x02\n" +
-	"Address\\V1\xe2\x02\x16Address\\V1\\GPBMetadata\xea\x02\vAddress::V1b\x06proto3"
+	"\vListRegions\x12\x1e.address.v1.ListRegionsRequest\x1a\x1f.address.v1.ListRegionsResponseB?Z=github.com/lens077/ecommerce/backend/api/address/v1;addressv1b\x06proto3"
 
 var (
 	file_api_address_v1_region_proto_rawDescOnce sync.Once

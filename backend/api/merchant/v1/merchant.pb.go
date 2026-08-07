@@ -693,50 +693,56 @@ var File_api_merchant_v1_merchant_proto protoreflect.FileDescriptor
 
 const file_api_merchant_v1_merchant_proto_rawDesc = "" +
 	"\n" +
-	"\x1eapi/merchant/v1/merchant.proto\x12\vmerchant.v1\x1a\x1fgoogle/protobuf/timestamp.proto\x1a#third_party/validate/validate.proto\"\xda\x03\n" +
-	"\x18SubmitApplicationRequest\x12*\n" +
-	"\fcompany_name\x18\x01 \x01(\tB\a\xbaH\x04r\x02\x10\x01R\vcompanyName\x12(\n" +
-	"\vcredit_code\x18\x02 \x01(\tB\a\xbaH\x04r\x02\x10\x01R\n" +
-	"creditCode\x12*\n" +
-	"\flegal_person\x18\x03 \x01(\tB\a\xbaH\x04r\x02\x10\x01R\vlegalPerson\x12/\n" +
-	"\x0flegal_person_id\x18\x04 \x01(\tB\a\xbaH\x04r\x02\x10\x01R\rlegalPersonId\x12,\n" +
-	"\rcontact_phone\x18\x05 \x01(\tB\a\xbaH\x04r\x02\x10\x01R\fcontactPhone\x120\n" +
-	"\x14business_license_url\x18\x06 \x01(\tR\x12businessLicenseUrl\x128\n" +
-	"\x19legal_person_id_front_url\x18\a \x01(\tR\x15legalPersonIdFrontUrl\x126\n" +
-	"\x18legal_person_id_back_url\x18\b \x01(\tR\x14legalPersonIdBackUrl\x12!\n" +
-	"\fcategory_ids\x18\t \x03(\x03R\vcategoryIds\x12\x16\n" +
+	"\x1eapi/merchant/v1/merchant.proto\x12\vmerchant.v1\x1a\x1fgoogle/protobuf/timestamp.proto\x1a#third_party/validate/validate.proto\"\x9f\x04\n" +
+	"\x18SubmitApplicationRequest\x12-\n" +
+	"\fcompany_name\x18\x01 \x01(\tB\n" +
+	"\xbaH\ar\x05\x10\x01\x18\xff\x01R\vcompanyName\x12*\n" +
+	"\vcredit_code\x18\x02 \x01(\tB\t\xbaH\x06r\x04\x10\x01\x18@R\n" +
+	"creditCode\x12,\n" +
+	"\flegal_person\x18\x03 \x01(\tB\t\xbaH\x06r\x04\x10\x01\x18@R\vlegalPerson\x121\n" +
+	"\x0flegal_person_id\x18\x04 \x01(\tB\t\xbaH\x06r\x04\x10\x01\x18 R\rlegalPersonId\x12.\n" +
+	"\rcontact_phone\x18\x05 \x01(\tB\t\xbaH\x06r\x04\x10\x01\x18 R\fcontactPhone\x12:\n" +
+	"\x14business_license_url\x18\x06 \x01(\tB\b\xbaH\x05r\x03\x18\x80\x10R\x12businessLicenseUrl\x12B\n" +
+	"\x19legal_person_id_front_url\x18\a \x01(\tB\b\xbaH\x05r\x03\x18\x80\x10R\x15legalPersonIdFrontUrl\x12@\n" +
+	"\x18legal_person_id_back_url\x18\b \x01(\tB\b\xbaH\x05r\x03\x18\x80\x10R\x14legalPersonIdBackUrl\x123\n" +
+	"\fcategory_ids\x18\t \x03(\x03B\x10\xbaH\r\x92\x01\n" +
+	"\x10d\x18\x01\"\x04\"\x02 \x00R\vcategoryIds\x12 \n" +
 	"\x06remark\x18\n" +
-	" \x01(\tR\x06remark\"Z\n" +
-	"\x19SubmitApplicationResponse\x12%\n" +
-	"\x0eapplication_id\x18\x01 \x01(\tR\rapplicationId\x12\x16\n" +
-	"\x06status\x18\x02 \x01(\tR\x06status\"p\n" +
-	"\x19ApproveApplicationRequest\x12.\n" +
-	"\x0eapplication_id\x18\x01 \x01(\tB\a\xbaH\x04r\x02\x10\x01R\rapplicationId\x12#\n" +
-	"\raudit_comment\x18\x02 \x01(\tR\fauditComment\"\x1c\n" +
-	"\x1aApproveApplicationResponse\"k\n" +
-	"\x18RejectApplicationRequest\x12.\n" +
-	"\x0eapplication_id\x18\x01 \x01(\tB\a\xbaH\x04r\x02\x10\x01R\rapplicationId\x12\x1f\n" +
-	"\x06reason\x18\x02 \x01(\tB\a\xbaH\x04r\x02\x10\x01R\x06reason\"\x1b\n" +
-	"\x19RejectApplicationResponse\">\n" +
-	"\x15GetApplicationRequest\x12%\n" +
-	"\x0eapplication_id\x18\x01 \x01(\tR\rapplicationId\"\xa4\x03\n" +
-	"\x16GetApplicationResponse\x12%\n" +
-	"\x0eapplication_id\x18\x01 \x01(\tR\rapplicationId\x126\n" +
-	"\x06status\x18\x02 \x01(\x0e2\x1e.merchant.v1.ApplicationStatusR\x06status\x12!\n" +
-	"\fcompany_name\x18\x03 \x01(\tR\vcompanyName\x12\x1f\n" +
-	"\vcredit_code\x18\x04 \x01(\tR\n" +
-	"creditCode\x12!\n" +
-	"\flegal_person\x18\x05 \x01(\tR\vlegalPerson\x12#\n" +
-	"\rcontact_phone\x18\x06 \x01(\tR\fcontactPhone\x12#\n" +
-	"\rreject_reason\x18\a \x01(\tR\frejectReason\x12=\n" +
-	"\fsubmitted_at\x18\b \x01(\v2\x1a.google.protobuf.TimestampR\vsubmittedAt\x12;\n" +
+	" \x01(\tB\b\xbaH\x05r\x03\x18\xd0\x0fR\x06remark\"\x9a\x01\n" +
+	"\x19SubmitApplicationResponse\x12/\n" +
+	"\x0eapplication_id\x18\x01 \x01(\tB\b\xbaH\x05r\x03\xb0\x01\x01R\rapplicationId\x12L\n" +
+	"\x06status\x18\x02 \x01(\tB4\xbaH1r/R\x0epending_reviewR\bapprovedR\brejectedR\tactivatedR\x06status\"{\n" +
+	"\x19ApproveApplicationRequest\x12/\n" +
+	"\x0eapplication_id\x18\x01 \x01(\tB\b\xbaH\x05r\x03\xb0\x01\x01R\rapplicationId\x12-\n" +
+	"\raudit_comment\x18\x02 \x01(\tB\b\xbaH\x05r\x03\x18\xd0\x0fR\fauditComment\"\x1c\n" +
+	"\x1aApproveApplicationResponse\"o\n" +
+	"\x18RejectApplicationRequest\x12/\n" +
+	"\x0eapplication_id\x18\x01 \x01(\tB\b\xbaH\x05r\x03\xb0\x01\x01R\rapplicationId\x12\"\n" +
+	"\x06reason\x18\x02 \x01(\tB\n" +
+	"\xbaH\ar\x05\x10\x01\x18\xd0\x0fR\x06reason\"\x1b\n" +
+	"\x19RejectApplicationResponse\"H\n" +
+	"\x15GetApplicationRequest\x12/\n" +
+	"\x0eapplication_id\x18\x01 \x01(\tB\b\xbaH\x05r\x03\xb0\x01\x01R\rapplicationId\"\xf9\x03\n" +
+	"\x16GetApplicationResponse\x12/\n" +
+	"\x0eapplication_id\x18\x01 \x01(\tB\b\xbaH\x05r\x03\xb0\x01\x01R\rapplicationId\x12B\n" +
+	"\x06status\x18\x02 \x01(\x0e2\x1e.merchant.v1.ApplicationStatusB\n" +
+	"\xbaH\a\x82\x01\x04\x10\x01 \x00R\x06status\x12-\n" +
+	"\fcompany_name\x18\x03 \x01(\tB\n" +
+	"\xbaH\ar\x05\x10\x01\x18\xff\x01R\vcompanyName\x12*\n" +
+	"\vcredit_code\x18\x04 \x01(\tB\t\xbaH\x06r\x04\x10\x01\x18@R\n" +
+	"creditCode\x12,\n" +
+	"\flegal_person\x18\x05 \x01(\tB\t\xbaH\x06r\x04\x10\x01\x18@R\vlegalPerson\x12.\n" +
+	"\rcontact_phone\x18\x06 \x01(\tB\t\xbaH\x06r\x04\x10\x01\x18 R\fcontactPhone\x12-\n" +
+	"\rreject_reason\x18\a \x01(\tB\b\xbaH\x05r\x03\x18\xd0\x0fR\frejectReason\x12E\n" +
+	"\fsubmitted_at\x18\b \x01(\v2\x1a.google.protobuf.TimestampB\x06\xbaH\x03\xc8\x01\x01R\vsubmittedAt\x12;\n" +
 	"\vreviewed_at\x18\t \x01(\v2\x1a.google.protobuf.TimestampR\n" +
-	"reviewedAt\"\x84\x01\n" +
-	"\x17ActivateMerchantRequest\x12(\n" +
-	"\vmerchant_id\x18\x01 \x01(\tB\a\xbaH\x04r\x02\x10\x01R\n" +
-	"merchantId\x12\x1b\n" +
-	"\tshop_name\x18\x02 \x01(\tR\bshopName\x12\"\n" +
-	"\rshop_logo_url\x18\x03 \x01(\tR\vshopLogoUrl\"\x1a\n" +
+	"reviewedAt\"\x9c\x01\n" +
+	"\x17ActivateMerchantRequest\x12*\n" +
+	"\vmerchant_id\x18\x01 \x01(\tB\t\xbaH\x06r\x04\x10\x01\x18@R\n" +
+	"merchantId\x12'\n" +
+	"\tshop_name\x18\x02 \x01(\tB\n" +
+	"\xbaH\ar\x05\x10\x01\x18\xff\x01R\bshopName\x12,\n" +
+	"\rshop_logo_url\x18\x03 \x01(\tB\b\xbaH\x05r\x03\x18\x80\x10R\vshopLogoUrl\"\x1a\n" +
 	"\x18ActivateMerchantResponse*\xc2\x01\n" +
 	"\x11ApplicationStatus\x12\"\n" +
 	"\x1eAPPLICATION_STATUS_UNSPECIFIED\x10\x00\x12%\n" +
@@ -749,8 +755,7 @@ const file_api_merchant_v1_merchant_proto_rawDesc = "" +
 	"\x12ApproveApplication\x12&.merchant.v1.ApproveApplicationRequest\x1a'.merchant.v1.ApproveApplicationResponse\"\x00\x12d\n" +
 	"\x11RejectApplication\x12%.merchant.v1.RejectApplicationRequest\x1a&.merchant.v1.RejectApplicationResponse\"\x00\x12[\n" +
 	"\x0eGetApplication\x12\".merchant.v1.GetApplicationRequest\x1a#.merchant.v1.GetApplicationResponse\"\x00\x12a\n" +
-	"\x10ActivateMerchant\x12$.merchant.v1.ActivateMerchantRequest\x1a%.merchant.v1.ActivateMerchantResponse\"\x00B\xae\x01\n" +
-	"\x0fcom.merchant.v1B\rMerchantProtoP\x01Z?github.com/lens077/ecommerce/backend/api/merchant/v1;merchantv1\xa2\x02\x03MXX\xaa\x02\vMerchant.V1\xca\x02\vMerchant\\V1\xe2\x02\x17Merchant\\V1\\GPBMetadata\xea\x02\fMerchant::V1b\x06proto3"
+	"\x10ActivateMerchant\x12$.merchant.v1.ActivateMerchantRequest\x1a%.merchant.v1.ActivateMerchantResponse\"\x00BAZ?github.com/lens077/ecommerce/backend/api/merchant/v1;merchantv1b\x06proto3"
 
 var (
 	file_api_merchant_v1_merchant_proto_rawDescOnce sync.Once

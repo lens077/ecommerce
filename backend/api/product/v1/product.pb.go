@@ -12,7 +12,6 @@ import (
 	protoreflect "google.golang.org/protobuf/reflect/protoreflect"
 	protoimpl "google.golang.org/protobuf/runtime/protoimpl"
 	structpb "google.golang.org/protobuf/types/known/structpb"
-	_ "google.golang.org/protobuf/types/known/timestamppb"
 	reflect "reflect"
 	sync "sync"
 	unsafe "unsafe"
@@ -374,35 +373,39 @@ var File_api_product_v1_product_proto protoreflect.FileDescriptor
 const file_api_product_v1_product_proto_rawDesc = "" +
 	"\n" +
 	"\x1capi/product/v1/product.proto\x12\n" +
-	"product.v1\x1a\x1cgoogle/protobuf/struct.proto\x1a\x1fgoogle/protobuf/timestamp.proto\x1a#third_party/google/type/money.proto\x1a#third_party/validate/validate.proto\"4\n" +
-	"\x17GetProductDetailRequest\x12\x19\n" +
-	"\bspu_code\x18\x01 \x01(\tR\aspuCode\"_\n" +
-	"\x18GetProductDetailResponse\x12C\n" +
-	"\x0eproduct_detail\x18\x01 \x01(\v2\x1c.product.v1.ProductSpuDetailR\rproductDetail\"\xc7\x01\n" +
-	"\x10ProductSpuDetail\x12\x15\n" +
-	"\x06spu_id\x18\x01 \x01(\x03R\x05spuId\x12\x19\n" +
-	"\bspu_name\x18\x02 \x01(\tR\aspuName\x12\x19\n" +
-	"\bspu_code\x18\x03 \x01(\tR\aspuCode\x12:\n" +
-	"\fcommon_specs\x18\x04 \x01(\v2\x17.google.protobuf.StructR\vcommonSpecs\x12*\n" +
-	"\x04skus\x18\x05 \x03(\v2\x16.product.v1.ProductSkuR\x04skus\"\xb6\x03\n" +
+	"product.v1\x1a\x1cgoogle/protobuf/struct.proto\x1a#third_party/google/type/money.proto\x1a#third_party/validate/validate.proto\"?\n" +
+	"\x17GetProductDetailRequest\x12$\n" +
+	"\bspu_code\x18\x01 \x01(\tB\t\xbaH\x06r\x04\x10\x01\x18@R\aspuCode\"g\n" +
+	"\x18GetProductDetailResponse\x12K\n" +
+	"\x0eproduct_detail\x18\x01 \x01(\v2\x1c.product.v1.ProductSpuDetailB\x06\xbaH\x03\xc8\x01\x01R\rproductDetail\"\xfb\x01\n" +
+	"\x10ProductSpuDetail\x12\x1e\n" +
+	"\x06spu_id\x18\x01 \x01(\x03B\a\xbaH\x04\"\x02 \x00R\x05spuId\x12%\n" +
+	"\bspu_name\x18\x02 \x01(\tB\n" +
+	"\xbaH\ar\x05\x10\x01\x18\xff\x01R\aspuName\x12$\n" +
+	"\bspu_code\x18\x03 \x01(\tB\t\xbaH\x06r\x04\x10\x01\x18@R\aspuCode\x12B\n" +
+	"\fcommon_specs\x18\x04 \x01(\v2\x17.google.protobuf.StructB\x06\xbaH\x03\xc8\x01\x01R\vcommonSpecs\x126\n" +
+	"\x04skus\x18\x05 \x03(\v2\x16.product.v1.ProductSkuB\n" +
+	"\xbaH\a\x92\x01\x04\b\x01\x10dR\x04skus\"\xa2\x04\n" +
 	"\n" +
-	"ProductSku\x12\x15\n" +
-	"\x06sku_id\x18\x01 \x01(\x03R\x05skuId\x12\x19\n" +
-	"\bsku_code\x18\x02 \x01(\tR\askuCode\x12)\n" +
+	"ProductSku\x12\x1e\n" +
+	"\x06sku_id\x18\x01 \x01(\x03B\a\xbaH\x04\"\x02 \x00R\x05skuId\x12$\n" +
+	"\bsku_code\x18\x02 \x01(\tB\t\xbaH\x06r\x04\x10\x01\x18@R\askuCode\x12)\n" +
 	"\vmerchant_id\x18\x03 \x01(\tB\b\xbaH\x05r\x03\xb0\x01\x01R\n" +
-	"merchantId\x12(\n" +
-	"\x05price\x18\x04 \x01(\v2\x12.google.type.MoneyR\x05price\x121\n" +
+	"merchantId\x120\n" +
+	"\x05price\x18\x04 \x01(\v2\x12.google.type.MoneyB\x06\xbaH\x03\xc8\x01\x01R\x05price\x129\n" +
 	"\n" +
-	"cost_price\x18\x05 \x01(\v2\x12.google.type.MoneyR\tcostPrice\x12!\n" +
-	"\fstock_locked\x18\x06 \x01(\x03R\vstockLocked\x127\n" +
+	"cost_price\x18\x05 \x01(\v2\x12.google.type.MoneyB\x06\xbaH\x03\xc8\x01\x01R\tcostPrice\x12*\n" +
+	"\fstock_locked\x18\x06 \x01(\x03B\a\xbaH\x04\"\x02(\x00R\vstockLocked\x12?\n" +
 	"\n" +
-	"attributes\x18\a \x01(\v2\x17.google.protobuf.StructR\n" +
-	"attributes\x12#\n" +
-	"\rspec_template\x18\b \x03(\tR\fspecTemplate\x12\x19\n" +
-	"\bsku_name\x18\t \x01(\tR\askuName\x12#\n" +
+	"attributes\x18\a \x01(\v2\x17.google.protobuf.StructB\x06\xbaH\x03\xc8\x01\x01R\n" +
+	"attributes\x128\n" +
+	"\rspec_template\x18\b \x03(\tB\x13\xbaH\x10\x92\x01\r\x102\x18\x01\"\ar\x05\x10\x01\x18\x80\x01R\fspecTemplate\x12%\n" +
+	"\bsku_name\x18\t \x01(\tB\n" +
+	"\xbaH\ar\x05\x10\x01\x18\xff\x01R\askuName\x12/\n" +
 	"\rthumbnail_url\x18\n" +
-	" \x01(\tR\fthumbnailUrl\x12-\n" +
-	"\x06status\x18\v \x01(\x0e2\x15.product.v1.SPUStatusR\x06status*l\n" +
+	" \x01(\tB\n" +
+	"\xbaH\ar\x05\x10\x01\x18\xf4\x03R\fthumbnailUrl\x127\n" +
+	"\x06status\x18\v \x01(\x0e2\x15.product.v1.SPUStatusB\b\xbaH\x05\x82\x01\x02\x10\x01R\x06status*l\n" +
 	"\tSPUStatus\x12\x12\n" +
 	"\x0eSTATUS_UNKNOWN\x10\x00\x12\x10\n" +
 	"\fSTATUS_DRAFT\x10\x01\x12\x11\n" +
@@ -410,10 +413,7 @@ const file_api_product_v1_product_proto_rawDesc = "" +
 	"\x0eSTATUS_OFFLINE\x10\x03\x12\x12\n" +
 	"\x0eSTATUS_DELETED\x10\x042q\n" +
 	"\x0eProductService\x12_\n" +
-	"\x10GetProductDetail\x12#.product.v1.GetProductDetailRequest\x1a$.product.v1.GetProductDetailResponse\"\x00B\xa6\x01\n" +
-	"\x0ecom.product.v1B\fProductProtoP\x01Z=github.com/lens077/ecommerce/backend/api/product/v1;productv1\xa2\x02\x03PXX\xaa\x02\n" +
-	"Product.V1\xca\x02\n" +
-	"Product\\V1\xe2\x02\x16Product\\V1\\GPBMetadata\xea\x02\vProduct::V1b\x06proto3"
+	"\x10GetProductDetail\x12#.product.v1.GetProductDetailRequest\x1a$.product.v1.GetProductDetailResponse\"\x00B?Z=github.com/lens077/ecommerce/backend/api/product/v1;productv1b\x06proto3"
 
 var (
 	file_api_product_v1_product_proto_rawDescOnce sync.Once

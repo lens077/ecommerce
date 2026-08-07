@@ -10,9 +10,9 @@ syntax = "proto3";
 // 数据落点:服务端把 vitals 转成 OTel histogram(→ VictoriaMetrics)与
 // 结构化日志(zap → otelzap → Loki),不落业务库。
 
-import "third_party/validate/validate.proto";
-
 package telemetry.v1;
+
+import "third_party/validate/validate.proto";
 
 option go_package = "github.com/lens077/ecommerce/backend/api/telemetry/v1;telemetryv1";
 
@@ -51,10 +51,16 @@ message WebVital {
   double value = 2 [(buf.validate.field).double = {
     gte: 0
     lte: 3600000
+    finite: true
   }];
   // web-vitals 的三档评级;LONG_TASK 没有评级,留空
   string rating = 3 [(buf.validate.field).string = {
-    in: ["", "good", "needs-improvement", "poor"]
+    in: [
+      "",
+      "good",
+      "needs-improvement",
+      "poor"
+    ]
   }];
   // 路由模式(如 /product/$spuCode),不是完整 URL —— 它会成为 metric 的
   // attribute,必须低基数。上限对齐 behavior.Event.source 的量级
@@ -80,22 +86,29 @@ message ApiTiming {
   double duration_ms = 2 [(buf.validate.field).double = {
     gte: 0
     lte: 3600000
+    finite: true
   }];
   // 首字节时间(responseStart - requestStart),后端处理慢的信号
   double ttfb_ms = 3 [(buf.validate.field).double = {
     gte: 0
     lte: 3600000
+    finite: true
   }];
   double dns_ms = 4 [(buf.validate.field).double = {
     gte: 0
     lte: 3600000
+    finite: true
   }];
   double tcp_ms = 5 [(buf.validate.field).double = {
     gte: 0
     lte: 3600000
+    finite: true
   }];
   // encoded body + headers 的传输字节数;跨域无 TAO 时为 0
-  int64 transfer_size = 6 [(buf.validate.field).int64.gte = 0];
+  int64 transfer_size = 6 [(buf.validate.field).int64 = {
+    gte: 0
+    lte: 1073741824
+  }];
   int64 ts_ms = 7 [(buf.validate.field).int64.gte = 0];
 }
 
@@ -105,13 +118,13 @@ message CollectWebVitalsRequest {
   string session_id = 2 [(buf.validate.field).string.max_len = 64];
   // 一次页面生命周期最多产生 5 个核心指标 + 若干 LONG_TASK,50 足够;
   // 超出说明客户端逻辑有 bug,拒收比收下更能暴露问题
-  repeated WebVital vitals = 3 [(buf.validate.field).repeated.max_items = 50];
+  repeated WebVital vitals = 3 [(buf.validate.field).repeated = {max_items: 50}];
   // 批量上批的 API 耗时,上限对齐 Track.events 的 max_items
-  repeated ApiTiming api_timings = 4 [(buf.validate.field).repeated.max_items = 200];
+  repeated ApiTiming api_timings = 4 [(buf.validate.field).repeated = {max_items: 200}];
   // vitals 与 api_timings 至少一个非空 —— 本仓 proto 不用 message 级 CEL,
   // 该约束在 service 层实施
 }
 
 message CollectWebVitalsResponse {
-  uint32 accepted = 1;
+  uint32 accepted = 1 [(buf.validate.field).uint32.lte = 250];
 }
