@@ -94,6 +94,11 @@ jobs:
     name: ci
     needs: detect
     if: needs.detect.outputs.services != '[]'
+    # 被调用的 workflow 只能收窄、不能放大调用方的令牌权限，
+    # 所以推 GHCR 需要的 packages:write 必须在这里也给出
+    permissions:
+      contents: read
+      packages: write
     strategy:
       fail-fast: false
       matrix:
