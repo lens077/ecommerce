@@ -89,6 +89,32 @@ compose-down:
 compose-logs:
 	docker compose logs -f --tail=100
 
+# ── 便捷部署（推荐入口）─────────────────────────────────────────────
+# 底层是仓库根的 scripts/deploy-k8s.sh:先补齐集群里那些不在 Git 的前置状态
+# (namespace / tcr-pull-secret / pg-ca-cert),再走权威路径交付。
+# 与下面 k8s-*-all 的区别:这里用 helm/ 那份真相源(和 ArgoCD 同一份),
+# 下面那两个用各服务的裸 manifest,是应急路径。
+DEPLOY_SCRIPT = ../scripts/deploy-k8s.sh
+
+.PHONY: deploy
+# 渲染 helm/ 并 apply 全部服务。先看会动什么: make deploy DRY_RUN=1
+# 只部分服务: make deploy SERVICES="cart order"
+deploy:
+	@DRY_RUN="$(DRY_RUN)" SERVICES="$(SERVICES_OVERRIDE)" KUBE_CONTEXT="$(KUBE_CONTEXT)" \
+	  $(DEPLOY_SCRIPT)
+
+.PHONY: deploy-argocd
+# 只补前置状态并 apply ArgoCD 清单,集群状态交给 ArgoCD 拉
+deploy-argocd:
+	@DEPLOY_MODE=argocd DRY_RUN="$(DRY_RUN)" KUBE_CONTEXT="$(KUBE_CONTEXT)" \
+	  $(DEPLOY_SCRIPT)
+
+.PHONY: deploy-status
+deploy-status:
+	kubectl get pods,svc -n ecommerce
+	@echo "--- ArgoCD:"
+	@kubectl get application -n argocd 2>/dev/null || echo "(无 ArgoCD 或无权限)"
+
 # ⚠️ 这两个目标与 ArgoCD 互斥。裸 manifest 建的是 ecommerce-<svc>-deploy,
 # ArgoCD 从 helm/ 建的是 <svc>,两套名字不冲突所以会**同时活着**,而且都用同一个
 # SERVICE_NAME 注册进 Consul —— 网关会把流量轮询到两份不同镜像的实例上。
