@@ -2,7 +2,7 @@
 
 各个工程 skill 在探索代码前，应该怎么读本仓库的领域文档。
 
-本仓库是 **multi-context**（11 个后端 Go 服务 + 5 个前端 app），但**不使用** skill 的默认布局
+本仓库是 **multi-context**（10 个后端 Go 服务 + 4 个前端 app），但**不使用** skill 的默认布局
 （根目录 `CONTEXT-MAP.md` / `CONTEXT.md` / `docs/adr/`）。这些角色已经由既有的 `context/`
 三层知识库承担。**不要新建 `CONTEXT.md`、`CONTEXT-MAP.md` 或 `docs/adr/`** —— 那会造成
 两处口径漂移，正是 `context/INDEX.md` 明令避免的。

@@ -1,10 +1,10 @@
 # .service-matrix.yaml — 服务拓扑真相源
 #
-# 作用：让 AI 和 CI 不再靠搜 Design.md 猜服务关系、路径和配置键。
+# 作用：让 AI 和 CI 不再靠搜 DESIGN.md 猜服务关系、路径和配置键。
 # 判据：凡是「AI 每次都要现搜一遍」的结构性事实，都应该在这里查表拿到。
 #
 # ⚠️ 纪律：
-#   1. 本文件只记录**结构事实**，不记录设计理由（那在 Design.md）也不记录进度（那在 TODO.md）
+#   1. 本文件只记录**结构事实**，不记录设计理由（那在 DESIGN.md）也不记录进度（那在 TODO.md）
 #   2. depends_on = 代码里真的接线了；depends_on_planned = 设计要求但尚未接线。不要混
 #   3. 必需配置键**不在本文件重复** —— 已由各服务 internal/conf/v1/conf.proto 的
 #      (buf.validate.field).required 声明，重复会漂移。见 config_validation 段

@@ -2,7 +2,7 @@
 
 > 创建:2026-08-07。定位:**方法论 + 本仓指标基线清单**(应采什么、为什么、异常了该做什么)。
 > 与其他文档的关系:落地阶段与验收标准见 `DEVOPS.md` §5/阶段3;
-> 当前实况与缺陷清单以 `observability/OBSERVABILITY_REVIEW_20260806.md` 和 `TODO.md` 为准;
+> 当前实况与缺陷清单以 `docs/reviews/OBSERVABILITY_REVIEW_20260806.md` 和 `TODO.md` 为准;
 > 看板生成脚本在 `observability/grafana/`。
 > 核心取向(消化自 2026-08 一篇 Prometheus 方法论文章,结合本仓教训):
 > **上线前关注功能对不对,上线后要回答的是「服务现在健康吗」**。没有指标,出问题只能
@@ -49,7 +49,7 @@ VictoriaMetrics 做 Prometheus 兼容的指标存储,Grafana 统一展示,告警
 > 本仓已付过基数学费:`net_peer_port` 按 TCP 连接取值导致 rate() 恒为 0、请求率/错误率全错
 > (已修,`WithoutServerPeerAttributes()`)。
 
-### 3.1 服务层(RED,来自 otelconnect,11 服务同构中间件)
+### 3.1 服务层(RED,来自 otelconnect,10 服务同构中间件)
 
 | 指标 | 异常时的行动 |
 |------|-------------|
@@ -85,7 +85,7 @@ CPU、内存、磁盘、网络 + k8s 对象状态(Pod restart、OOMKill、Pendin
 ## 4. 采集架构
 
 ```
-11 × Go Service + Gateway ──OTel SDK──► otel-collector ──► VictoriaMetrics (Metrics)
+10 × Go Service + Gateway ──OTel SDK──► otel-collector ──► VictoriaMetrics (Metrics)
         │                                     ├──────────► Jaeger          (Trace)
         └──stdout──► fluent-bit ──────────────┴──────────► Loki            (Logs)
                                 Grafana(统一展示) + vmalert/Alertmanager(告警,待建)
@@ -129,4 +129,4 @@ CPU、内存、磁盘、网络 + k8s 对象状态(Pod restart、OOMKill、Pendin
 
 *来源:三支柱分工、RED/USE、Go 指标清单与「可行动性」判据消化自 2026-08 一篇
 Prometheus 方法论文章;所有「本仓教训」条目的证据见
-`OBSERVABILITY_REVIEW_20260806.md`、`ADVERSARIAL_REVIEW_20260806.md` 与 `TODO.md`。*
+`docs/reviews/OBSERVABILITY_REVIEW_20260806.md`、`docs/reviews/ADVERSARIAL_REVIEW_20260806.md` 与 `TODO.md`。*

@@ -1,3 +1,12 @@
+# Graph Engineering — 多闭环 AI 工作流方法论
+
+> 本文是一次方法论讨论的存档（原文口吻保留，含"要不要我帮你做"之类对话句式）。
+> **落地现状（2026-08-07）**：冻结节点已实现——`scripts/freeze.sh` + `scripts/verify-freeze.sh`
+> + CI（`.github/workflows/freeze-check.yml`、`.gitlab-ci.yml`）+ `.freeze/`（机制见 `.freeze/README.md`，
+> 但注意 `.sha256` 清单格式与本文设想的 `git rev-parse`/`sha256sum -c` 细节不同，以脚本为准）。
+> 文中的 `scripts/anchor.sh` **尚未创建**，锚点命令目前直接内联在 `AGENTS.md`
+> 与 `context/team/runbook.md` 里。hcom 相关部分未落地。
+
 第 0 步:用 hcom 之前必须先立的两根桩(hcom 不管)
 ① 锚点(Anchor)= 一条谁都改不了含义的"真绿"命令。 你这仓现成:
 

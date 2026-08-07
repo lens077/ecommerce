@@ -5,7 +5,7 @@
 
 ## 硬规则（不可跳过）
 
-1. **规范与拓扑以真相源为准**：规范的真相源是 `context/`（入口 `context/INDEX.md`），服务拓扑的真相源是 `.service-matrix.yaml`。现搜、推测或记忆与它们冲突时，以真相源为准；找不到对应知识 ≠ 没有约束，先读 `Design.md` / `TODO.md`，读完把结论沉淀回 `context/`（见 self-refinement）。
+1. **规范与拓扑以真相源为准**：规范的真相源是 `context/`（入口 `context/INDEX.md`），服务拓扑的真相源是 `.service-matrix.yaml`。现搜、推测或记忆与它们冲突时，以真相源为准；找不到对应知识 ≠ 没有约束，先读 `DESIGN.md` / `TODO.md`，读完把结论沉淀回 `context/`（见 self-refinement）。
 2. **写/改 proto 前必须先读设计文档**，并为每个字段推断出校验约束。见 `context/team/proto-design.md`。
 3. **提交前先更新 `TODO.md`**，再 `git commit`。提交信息走 Conventional Commits
    `<type>(<scope>): [:emoji:] <subject>`，由 `frontend/.vite-hooks/commit-msg` +
@@ -52,7 +52,7 @@ scripts/verify-freeze.sh --all                       # 冻结验收集未被动�
 > 技术栈、目录结构、服务拓扑不在这里复述——读代码与 `.service-matrix.yaml` 自明。
 
 - 工程化：前端用 vite-plus（`vp`）一个包覆盖 dev/build/test/lint/fmt/任务运行/git 钩子，没有 husky/biome/eslint/prettier；仓库根另有一个只装 commitlint 的 `package.json`，与 `frontend/` 的 workspace 相互独立
-- 进度真相源：`TODO.md`；架构真相源：`Design.md`、`CONFIG_CENTER_DESIGN.md`。两者分工见 `context/harness-framework/progress-and-todo.md`
+- 进度真相源：`TODO.md`；架构真相源：`DESIGN.md`、`CONFIG_CENTER_DESIGN.md`。两者分工见 `context/harness-framework/progress-and-todo.md`
 
 ## Agent skills
 

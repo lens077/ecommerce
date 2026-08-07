@@ -1,176 +1,77 @@
-# go-connect-template
+# 地址服务（address）— 领域设计
 
-一个基于 Go Connect 框架的微服务模板，用于快速构建现代化的云原生应用。
+> 本文原为 `backend/services/README.md`，2026-08-07 归位到本目录。
 
-## 技术栈
+此服务作为公共基础设施领域,地址服务包含“全国标准行政区划库（省市区）”和“用户私有地址簿”。行政区划库是静态元数据，用户地址是动态业务数据，将其独立出来便于做多级缓存（行政区划库几乎不变，适合全量本地缓存）。
 
-- **语言**: Go 1.26+
-- **RPC 框架**: Connect (connectrpc.com)
-- **依赖注入**: Uber FX
-- **数据库**: PostgreSQL (pgx/v5)
-- **缓存**: Redis
-- **搜索**: Elasticsearch
-- **服务发现**: Consul
-- **可观测性**: OpenTelemetry
-- **日志**: Zap
-- **配置**: Viper
+场景:
+多方调用：不仅消费者（C端）需要收货地址，商家（B端）需要发货地址/退货仓，快递员（服务端）需要取件地址。如果集成在“用户服务”中，会导致用户服务逻辑过重。
+解耦订单系统：订单服务下单时会调用地址服务获取详情。如果用户服务宕机，独立出来的地址服务配合缓存，仍能保证部分下单校验逻辑可用。
 
-## 项目结构
+# 技术链路设计：
+## 前端
+调用第三方 API（阿里公共API）获取公网 IP。
 
+## 后端网关
+1. 在 Header 中提取 X-Forwarded-For 进行二次比对，防止前端篡改。
+
+2. 地址服务：将 IP 发送给 高德 IP 定位接口，获取 adcode（行政区划代码）。
+
+3. 返回结果：地址服务根据 adcode 从自己的 标准地址库 中匹配出省市区文字，返回给前端展示。
+
+# 扩展性
+引入高德 SDK 与快递员角色的未来扩展
+当你引入高德 SDK 时，你的地址服务将进化为 “LBS（地理位置服务）中心”，这为后续的“快递员服务”提供了核心能力：
+
+1. 快递员微服务的核心逻辑
+   逆地理编码（Re-Geocoding）：用户输入的文字地址（如“xx大厦A座”）需要通过高德 SDK 转换为经纬度。
+
+电子围栏（Geofencing）：将城市划分为不同的“片区”，根据订单地址的经纬度，自动匹配该区域所属的快递员。
+
+路径规划：快递员 APP 调用高德 SDK，根据当日分配的 50 个收货点，计算最优的配送路径。
+
+2. 微服务间的边界与领域事件
+   地址服务 (Location Service)：负责地址到坐标的转换（Geocoding），提供行政区划查询。
+
+履约/派送服务 (Fulfillment/Delivery Service)：这是快递员业务的核心。它负责维护“快递员-区域”的绑定关系，监听“订单已支付”事件。
+
+领域事件流转：
 ```
-.
-├── cmd/server/main.go          # 服务入口
-├── api/                        # Protobuf API 定义
-├── constants/                  # 常量定义
-├── configs/                    # 配置文件
-├── deploy/                     # 部署配置 (Kubernetes)
-├── internal/
-│   ├── biz/                    # 业务逻辑层
-│   ├── conf/v1/               # 配置定义 (Protobuf)
-│   ├── data/                   # 数据访问层
-│   ├── pkg/                    # 工具包
-│   │   ├── config/             # 配置管理
-│   │   ├── log/                # 日志封装
-│   │   ├── meta/               # 元信息
-│   │   ├── otel/               # OpenTelemetry
-│   │   └── registry/           # 服务注册
-│   ├── server/                 # HTTP 服务器
-│   └── service/                # 业务服务层
-├── third_party/                # 第三方 Protobuf 定义
-├── buf.yaml                    # Buf 配置
-├── buf.gen.yaml               # Buf 生成配置
-├── compose.yaml               # Docker Compose
-├── Dockerfile                 # Docker 镜像构建
-├── go.mod                     # Go 依赖
-├── Makefile                   # 构建脚本
-└── sqlc.yaml                  # SQLC 配置
+Order Service 支付成功 -> 发送 Order_Paid_Event。
+
+Delivery Service 消费该事件 -> 调用 Location Service 将地址转为坐标。
+
+Delivery Service 根据坐标匹配片区快递员 -> 修改订单状态为 Pending_Dispatch。
 ```
 
-## 功能特性
+四、 数据库模型与 RBAC 的针对性设计
+为了支撑上述业务，你的地址服务数据库需要这样设计：
 
-- ✅ **Connect RPC**: 高性能 RPC 框架，支持 gRPC、gRPC-Web 和 Connect 协议
-- ✅ **依赖注入**: 使用 FX 实现声明式依赖管理
-- ✅ **多数据源**: PostgreSQL + Redis + Elasticsearch
-- ✅ **服务发现**: Consul 集成，支持健康检查和自动注销
-- ✅ **可观测性**: 完整的 OTel 追踪、指标和日志支持
-- ✅ **配置管理**: 支持本地文件和 Consul KV 配置中心
-- ✅ **健康检查**: 数据库、缓存、ES 的健康检查端点
-- ✅ **中间件**: 请求日志、CORS、错误处理
-- ✅ **优雅关闭**: 7 秒超时的优雅关闭流程
+1. 数据库表结构 (PostgreSQL)
+   sys_region (标准行政区划表)：存储全国省市区的 adcode、父子关系、经纬度中心点。
 
-## 快速开始
+user_address (用户地址簿)：存储 user_id、联系人、电话、adcode（关联标准库）、详细地址文字。关键点：增加 location 字段（Geometry类型），存储该地址的经纬度。
 
-### 本地开发
+courier_region (快递员负责区域表)：存储 courier_id 和该员负责的地理多边形（Polygon数据）。
 
-```bash
-# 启动开发环境
-make dev
+2. RBAC 扩展
+   消费者 (Consumer)：权限仅限 user_address 的 CRUD。
 
-# 或直接运行
-SERVICE_NAME=org-service-v1 \
-CONSUL_ENABLED=true \
-CONSUL_ADDR=consul.example.com \
-CONSUL_PATH=ecommerce/user/dev.yml \
-CONSUL_SCHEME=http \
-CONSUL_INSECURE_SKIP_VERIFY=true \
-go run cmd/server/main.go
-```
+商家 (Merchant)：拥有 warehouse_address 管理权限。
 
-### 构建命令
+快递员 (Courier)：
 
-```bash
-# 运行测试
-make test
+权限控制：只能查看分配给自己的订单中的地址详情。
 
-# 生成 API 代码
-make api
+地理鉴权：系统可校验快递员的当前位置（高德 SDK 实时上传）是否在订单地址的 500 米范围内，作为“已送达”的强制校验逻辑。
 
-# 生成配置代码
-make conf
+“运费模板计算”、“仓库就近发货逻辑”、“搜索结果按距离排序”全部都高度依赖这个独立的地址/LBS 服务。
 
-# 生成 SQL 代码
-make sqlc
+# 前端交互：新增地址页的“智能推荐/默认”
 
-# 构建 Docker 镜像
-make docker-build
+用户进入“新增地址”页面时，通过 IP 定位自动选中“省、市、区”，用户只需手动输入“详细地址（门牌号）”。
 
-# 推送 Docker 镜像
-make docker-push
+# 数据来源
 
-# 部署到 Kubernetes
-make k8s-dev
-```
-
-## 配置说明
-
-配置支持从以下来源加载（优先级从高到低）：
-
-1. 命令行参数
-2. 环境变量
-3. Consul KV（如果启用）
-4. 本地配置文件 (`configs/`)
-
-### 环境变量
-
-| 变量名 | 说明 | 默认值 |
-|--------|------|--------|
-| `SERVICE_NAME` | 服务名称 | org-service |
-| `SERVICE_VERSION` | 服务版本 | v1 |
-| `DEPLOYMENT_MODE` | 部署环境 | dev |
-| `CONSUL_ENABLED` | 是否启用 Consul | false |
-| `CONSUL_ADDR` | Consul 地址 | consul.example.com |
-| `CONSUL_PATH` | 配置路径 | ecommerce/user/dev.yml |
-
-## API 端点
-
-- **健康检查**: `GET /healthz`
-- **RPC 服务**: `POST /api.v1.ServiceName/MethodName`
-- **Connect 调试**: `GET /connect-debug`
-
-## 可观测性
-
-### OpenTelemetry 配置
-
-支持通过配置文件启用：
-
-- **Trace**: 通过 OTLP HTTP 导出到 Collector
-- **Metric**: 通过 OTLP HTTP 导出指标
-- **Logging**: 通过 OTLP HTTP 导出日志
-
-### 日志结构
-
-日志输出为 JSON 格式，包含以下字段：
-
-- `timestamp`: 时间戳
-- `level`: 日志级别 (DEBUG/INFO/WARN/ERROR)
-- `service`: 服务名称
-- `trace_id`: 追踪 ID
-- `span_id`: 跨度 ID
-- `message`: 日志消息
-- `fields`: 自定义字段
-
-## 服务注册
-
-服务启动时自动注册到 Consul，包含：
-
-- 服务名称和版本
-- 健康检查端点 (`/healthz`)
-- TTL 健康检查（10秒）
-- 服务标签
-
-## 数据库配置
-
-支持 PostgreSQL SSL 连接：
-
-- **disable**: 禁用 SSL
-- **require**: 要求 SSL，但不验证证书
-- **verify-ca**: 验证 CA 证书
-- **verify-full**: 验证 CA 证书和域名
-
-## 贡献
-
-欢迎提交 Issue 和 Pull Request！
-
-## 许可证
-
-MIT License
+1. IP 定位: https://developer.aliyun.com/article/1638991
+2. 中国省、市、区、街道四级 SQL 数据: https://github.com/gaohuazi/china_regions

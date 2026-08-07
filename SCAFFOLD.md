@@ -41,7 +41,7 @@
 ├── STACK.md                   # 从本项目的 STACK.md 改占位符
 ├── SCAFFOLD.md                # 本文件（供下一个项目再复用）
 ├── .service-matrix.yaml       # 模板 B（第五节）
-├── Design.md                  # 架构真相源（人写，AI 只读不猜）
+├── DESIGN.md                  # 架构真相源（人写，AI 只读不猜）
 ├── TODO.md                    # 模板 D（第七节）
 ├── context/                   # 模板 C（第六节）
 │   ├── INDEX.md
@@ -80,7 +80,7 @@
 
 ### 阶段 ① 骨架层
 
-产出：`go.mod` · `buf.yaml` · `buf.gen.yaml` · `buf.gen.ts.yaml` · `sqlc.yaml` · 根 `Makefile` · `pnpm-workspace.yaml`（catalog）· 根 `package.json` · `AGENTS.md` · `STACK.md` · `.service-matrix.yaml` · `TODO.md` · `context/` 骨架 · `Design.md` 大纲
+产出：`go.mod` · `buf.yaml` · `buf.gen.yaml` · `buf.gen.ts.yaml` · `sqlc.yaml` · 根 `Makefile` · `pnpm-workspace.yaml`（catalog）· 根 `package.json` · `AGENTS.md` · `STACK.md` · `.service-matrix.yaml` · `TODO.md` · `context/` 骨架 · `DESIGN.md` 大纲
 
 **验收**：`buf lint` 通过（哪怕还没有 proto）；`pnpm i` 成功；`context/INDEX.md` 三层入口齐全。
 
@@ -182,14 +182,14 @@ buf.gen.yaml → src/gen → env.ts(zod) → api/{domain} → routes → compone
 - 前端：pnpm workspace（`frontend/apps/*` + `frontend/packages/`），React 19 + MUI + TanStack + Connect-RPC
 - 配置：Consul KV `{{PROJECT}}/<svc>/dev.yml`
 - 鉴权：Casdoor + 网关集中式 JWT/RBAC
-- 进度真相源：`TODO.md`；架构真相源：`Design.md`；技术栈真相源：`STACK.md`
+- 进度真相源：`TODO.md`；架构真相源：`DESIGN.md`；技术栈真相源：`STACK.md`
 ````
 
 ---
 
 ## 五、模板 B — `.service-matrix.yaml`
 
-> 放仓库根。**只记结构事实**，不记设计理由（那在 `Design.md`）也不记进度（那在 `TODO.md`）。
+> 放仓库根。**只记结构事实**，不记设计理由（那在 `DESIGN.md`）也不记进度（那在 `TODO.md`）。
 > 判据：凡是「AI 每次都要现搜一遍的结构性事实」，都应该在这里查表拿到。
 
 ````yaml
@@ -198,7 +198,7 @@ buf.gen.yaml → src/gen → env.ts(zod) → api/{domain} → routes → compone
 # 作用：让 AI 和 CI 不再靠搜设计文档猜服务关系、路径和配置键。
 #
 # ⚠️ 纪律：
-#   1. 本文件只记录**结构事实**，不记录设计理由（Design.md）也不记录进度（TODO.md）
+#   1. 本文件只记录**结构事实**，不记录设计理由（DESIGN.md）也不记录进度（TODO.md）
 #   2. depends_on = 代码里真的接线了；depends_on_planned = 设计要求但尚未接线。不要混
 #   3. 必需配置键**不在本文件重复** —— 由各服务 internal/conf/v1/conf.proto 的
 #      (buf.validate.field).required 声明，重复会漂移。见 config_validation 段
@@ -325,7 +325,7 @@ context/
 - **不要全仓 grep 找服务拓扑**。查 `.service-matrix.yaml`。
 - **不要从代码反推技术约定**。查 `STACK.md`。
 - 找模块知识时路径是 `context/project/{{PROJECT}}/{module}/`，`{module}` 用**代码目录名**。
-- 找不到对应知识 ≠ 没有约束。先读 `Design.md` / `TODO.md`，读完把结论沉淀回来。
+- 找不到对应知识 ≠ 没有约束。先读 `DESIGN.md` / `TODO.md`，读完把结论沉淀回来。
 ````
 
 ### `context/harness-framework/knowledge-layering.md`（判定规则，原样复用）
@@ -383,7 +383,7 @@ description: 一条知识该写进 team / harness-framework / project 哪一层�
 ## 反模式
 
 - ❌ 同一条约束写两处 —— 口径会漂移。只写一处，另一处用链接指过去
-- ❌ 把 Design.md / STACK.md 的内容复制进 context/
+- ❌ 把 DESIGN.md / STACK.md 的内容复制进 context/
 - ❌ 写「一次性 diff」
 - ❌ 凭据进仓库
 ````
@@ -450,7 +450,7 @@ LLM 没有跨会话记忆。但**每一次用户纠正，都是一个信号**：
 ````markdown
 # 项目实现进度与待办
 
-> 依据 `Design.md` 的架构设计，对照当前代码实现整理。
+> 依据 `DESIGN.md` 的架构设计，对照当前代码实现整理。
 > 图例：✅ 已完成　🟡 部分完成（有核心能力，仍有缺口）　⬜ 未开始
 
 ---

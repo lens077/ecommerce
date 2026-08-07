@@ -22,7 +22,7 @@
 
 ## 为什么有第 2、3 条
 
-2026-08-06 的对抗评审(`ADVERSARIAL_REVIEW_20260806.md`)发现 PROGRESS.md 多处
+2026-08-06 的对抗评审(`docs/reviews/ADVERSARIAL_REVIEW_20260806.md`)发现 PROGRESS.md 多处
 「已实现/已联调」与代码不符——`CreateOrder` 返回假成功而前端已接线、`Reserve` 静默无操作、
 `ApproveApplication` 的 SQL 没有 WHERE——整体完成度虚高 9 个百分点。
 根因是混用了「接口已挂载」和「调用会成功」两种口径。这两条规则就是那次教训的沉淀。

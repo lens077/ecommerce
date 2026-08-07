@@ -21,7 +21,7 @@ description: 给所有 AI 编码工具(尤其 Codex)的可执行命令与验收�
 - **后端 10 个业务服务是同构副本**:`backend/services/*/internal/pkg/` 下的基础设施代码
   (otel/log/registry/config 等)一份逻辑铺 10 份,**改一处 = 改全部对应文件**,由
   structcheck 的同构检查兜底(见 §2)。整个后端只有一个 `go.mod`。
-- **写/改 proto 前先读 `Design.md`**,为每个字段推断校验约束(见 `proto-design.md`)。
+- **写/改 proto 前先读 `DESIGN.md`**,为每个字段推断校验约束(见 `proto-design.md`)。
 - **凭据不入库**:密码/密钥只在 Consul KV 和本地环境,仓库里只写主机名和端口。
 - **不可逆动作(commit/push/合入/deploy/仓外写删)只由用户明示触发**,subagent 永不执行。
 
@@ -149,5 +149,5 @@ main 分支保护里**唯一必需**的状态检查(GitLab 侧对应 `.gitlab-ci
 | 规范/约定 | `context/`(入口 `context/INDEX.md`) |
 | 服务拓扑 | `.service-matrix.yaml` |
 | 实现进度 | `TODO.md` |
-| 架构设计 | `Design.md` / `CONFIG_CENTER_DESIGN.md` |
+| 架构设计 | `DESIGN.md` / `CONFIG_CENTER_DESIGN.md` |
 | 提交校验规则 | `commitlint.config.mjs` |

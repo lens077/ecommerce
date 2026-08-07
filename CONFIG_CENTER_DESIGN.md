@@ -1,5 +1,9 @@
 # 配置中心(Config Center)设计文档
 
+> ⚠️ **代码已拆出本仓**：配置中心现为独立仓库 [lens077/config-center](https://github.com/lens077/config-center)
+> （含其 Web 控制台，原 `frontend/apps/config` 已随之迁出）。本文保留在主仓作为设计存档与
+> 服务侧接入（SDK `github.com/lens077/config-center`）的背景说明，文中提到的本仓代码路径均为历史位置。
+>
 > 面向网关与后端微服务的统一配置管理平台。类似 Consul KV,但补齐版本历史、语法/schema 校验、权限治理与玻璃态前端。
 > 图例:✅ 本轮交付　🟡 部分　⬜ 后续阶段
 

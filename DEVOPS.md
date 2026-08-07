@@ -4,7 +4,7 @@
 > 思想骨架:Patrick Debois 等《The DevOps Handbook》的 Three Ways(流动/反馈/持续学习)
 > + CALMS + DORA 四指标;并吸收 Debois 2026 "AI Native Dev" 主张——
 > **发现问题时优先修「产出系统」(流水线模板/守护规则/Harness),而不是逐个服务打补丁**。
-> 本仓 11 个同构服务(见 `backend/structcheck`)天然适合吃到这种一处修改、全员受益的乘数效应。
+> 本仓 10 个同构服务(见 `backend/structcheck`)天然适合吃到这种一处修改、全员受益的乘数效应。
 >
 > 与真相源的关系:实现进度以 `TODO.md` 为准;本文只描述目标态与验收标准,
 > 不声称任何一项「已完成」。现状列的依据见 `TODO.md`「基础设施与工程化」表。
@@ -83,9 +83,9 @@
 
 ## 5. 可观测性(Feedback)
 
-- **OTel 全链路**:前端 → 网关 → 11 服务 → Postgres/Kafka,trace context 全程透传;
+- **OTel 全链路**:前端 → 网关 → 10 服务 → Postgres/Kafka,trace context 全程透传;
   埋点中间件写在同构 `internal/pkg` 里,一份改动全员受益(`rpc.code:"unknown"` 修复
-  即是先例,已同步 11 份)。
+  即是先例,已同步 10 份)。
 - 指标:Prometheus + Grafana,**按限界上下文组织看板**,每服务四个黄金信号。
   硬规则:标签必须能区分同名进程——config-service 撞名教训,
   **强制 `service.namespace`/`service.instance` 唯一标签,禁止按进程名过滤**。
@@ -99,7 +99,7 @@
 - CI 内:govulncheck、npm audit/pnpm audit、trivy(镜像)、gitleaks(密钥泄漏)。
 - 集群内:NetworkPolicy 按限界上下文收紧东西向;Pod Security Standards;
   镜像签名准入(cosign + policy controller,二期)。
-- 网关层:认证鉴权继续集中在网关(共享组件即「铺装路」,不让 11 个服务各接一套);
+- 网关层:认证鉴权继续集中在网关(共享组件即「铺装路」,不让 10 个服务各接一套);
   策略从整段前缀放行收敛到 RPC 粒度(order/payment/merchant/inventory 已做,其余待办)。
 - 密钥:External Secrets Operator + 后端(Vault 或云 KMS),密钥不进 Git 与 Consul KV 明文。
 
@@ -121,7 +121,7 @@
 
 ### 阶段 1:可重复构建(CI 收口)
 
-- [ ] CI 模板化:一份可复用 workflow,11 服务 + 网关 + 前端参数化接入,按路径触发
+- [ ] CI 模板化:一份可复用 workflow,10 服务 + 网关 + 前端参数化接入,按路径触发
 - [ ] oxlint/oxfmt、golangci-lint、`go test -race`、structcheck 全部成为必过门禁
 - [ ] `buf breaking` 接入(基线 main),proto 破坏性变更拦截实测一例红
 - [ ] 镜像:禁 latest、digest 引用、trivy 扫描阻断高危;保留策略成文

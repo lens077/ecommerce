@@ -7,7 +7,7 @@
 | module | 代码路径 | 内容 |
 |---|---|---|
 | [gateway](gateway/INDEX.md) | `gateway/` | JWT / 时钟偏移踩坑；重试相乘与健康检查失效 |
-| [registry](registry/INDEX.md) | `backend/services/*/internal/pkg/registry/` | Consul TTL 注册与心跳（11 份同一套代码） |
+| [registry](registry/INDEX.md) | `backend/services/*/internal/pkg/registry/` | Consul TTL 注册与心跳（10 份同一套代码） |
 | [config](config/INDEX.md) | `backend/services/*/internal/pkg/config/` + `../config-center` | 一份配置三个副本；热更新的生效边界 |
 | [behavior](behavior/INDEX.md) | `backend/services/behavior/` | Consul KV 缺键导致 gorse 静默关闭 |
 | [consumer](consumer/INDEX.md) | `frontend/apps/consumer/` | MUI spacing ×8 踩坑；购物车重复请求 |
@@ -16,17 +16,17 @@
 ## 尚无知识的模块
 
 以下模块目前没有沉淀（不代表没有约束，只是还没踩到坑或还没写）。
-读它们的代码前先看 `Design.md` 对应章节和 `TODO.md` 的状态列。
+读它们的代码前先看 `DESIGN.md` 对应章节和 `TODO.md` 的状态列。
 
 **后端**：`user` `product` `cart` `order` `payment` `inventory` `search` `address` `merchant`
-**前端**：`merchant` `admin` `config-fe`
+**前端**：`merchant` `admin`（配置中心前端已随 config-center 迁出本仓）
 
 ## 目录约定
 
 ```
 {module}/
 ├── INDEX.md            入口
-├── architecture.md     架构补充（可选，不与 Design.md 重复）
+├── architecture.md     架构补充（可选，不与 DESIGN.md 重复）
 ├── experience/         一坑一文件
 └── sop/                标准操作规程（可选）
 ```
