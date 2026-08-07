@@ -9,6 +9,7 @@
 | [git-commit.md](git-commit.md) | 提交信息格式、分支策略、提交前必须更新 TODO.md | 文档与实现脱节 |
 | [proto-design.md](proto-design.md) | proto 字段的设计依据与校验约束 | 脏数据穿透到 biz 层 / 契约破坏炸前后端 |
 | [local-env.md](local-env.md) | 本地跑服务时连哪套基础设施 | 连不上、超时、白排查半天 |
+| [shell-scripting.md](shell-scripting.md) | 仓库脚本对 macOS Bash 3.2 的兼容边界 | `set -u` 下空数组展开导致入口在第一条命令前退出 |
 | [go-redis.md](go-redis.md) | go-redis v9 的客户端生命周期、`redis.Nil`、Pipeline、重试与锁 | 抓到已 Close 的旧客户端 / 缓存未命中被当故障 / 非幂等命令被重复执行 |
 | [cron-jobs.md](cron-jobs.md) | 定时任务的执行边界：重叠、panic、超时、时区、优雅停止、多实例与「错过不补」 | 扩副本后同一任务跑 N 次 / 对账悄悄漏掉一天 / 首次触发盲窗 |
 

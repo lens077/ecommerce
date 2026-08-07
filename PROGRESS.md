@@ -1,6 +1,6 @@
 # 电商项目进度表
 
-> 最后更新：2026-08-07
+> 最后更新：2026-08-08
 > 当前阶段：第一阶段 - 核心业务 MVP（中期）
 > 整体完成度：约 28%（**本轮回扫重估，下调 9 个百分点**，见下）
 > 更新说明：一次对抗评审（双模型独立审查 + 逐条代码核实）发现本表多处「已实现/已联调」
@@ -179,7 +179,7 @@
 | **消息队列** | 第一阶段 | ❌ 未集成 | **Kafka 客户端代码为 0**：`backend/go.mod` 里没有 sarama / franz-go / segmentio 任一依赖，订单的 EventBus 是**纯进程内总线**（`order/internal/eventbus/eventbus.go`），事件出不了本进程；`infrastructure/kafka-connect` 只是 Debezium 部署物（且当前 CrashLoopBackOff）。原记「EventBus/Kafka 部分集成 20%」把两件事混为一谈，制造了已接 MQ 的假象 | 5% |
 | **缓存层** | 第一阶段 | ⚠️ 基础设施就绪 | Redis 部署配置，业务缓存待完善 | 20% |
 | **数据库** | 第一阶段 | ✅ 基础完成 | PostgreSQL + sqlc，各服务 Schema 已建 | 70% |
-| **容器化部署** | 第一阶段 | ✅ 基础完成 | Dockerfile、K8s Deployment、Helm Chart（部分） | 60% |
+| **容器化部署** | 第一阶段 | ✅ 基础完成 | Dockerfile、K8s Deployment、Helm Chart（部分）；`make un-deploy` 按与部署相同的 Helm 渲染结果卸载 10 个微服务的 Deployment/Service，保留 namespace 与前置 Secret，支持 dry-run/context | 60% |
 | **CI/CD** | 第一阶段 | ⚠️ 基础配置 | GitHub Actions 工作流；2026-08-07 新增结构性门禁 `backend/structcheck`（matrix↔目录↔网关接线一致性 + internal/pkg 同构性棘轮），随 `go test ./...` 执行。同日新增 `DEVOPS.md` 体系设计（四阶段落地路线 + 行为验收标准），**仅设计定稿，实现未开始，完成度不因文档变化** | 45% |
 
 **基础设施整体完成度：约 55%**（相比上版 +5，全部来自可观测性 30% → 60%，其余组件未动）
@@ -388,6 +388,7 @@
 
 | 日期 | 版本 | 更新内容 | 更新人 |
 |------|------|----------|--------|
+| 2026-08-08 | v1.17 | **补齐全部微服务卸载入口并修复 macOS Bash 3.2 兼容问题**。`backend/Makefile` 新增 `un-deploy`，通过 `DEPLOY_ACTION=delete` 复用 `scripts/deploy-k8s.sh` 和权威 Helm 清单，删除 10 个 Deployment + 10 个 Service，刻意保留 `ecommerce` namespace、`tcr-pull-secret`、`pg-ca-cert`；支持 `DRY_RUN=1` 与 `KUBE_CONTEXT`，并提示 ArgoCD 自动同步会重建资源。首次实跑在 kubectl 前因 Bash 3.2 + `set -u` 无条件展开空数组报 `unbound variable`，现以始终非空的 apply/delete 子命令数组替代，并新增团队级 shell 兼容规范。实际删除在修复后尚未复跑，完成度不变 | - |
 | 2026-08-07 | v1.16 | **补齐并守护 10 服务的部署入口一致性**。以 `.service-matrix.yaml` 为真相源，新增 structcheck 双向比对 Makefile、Compose、Helm 与裸 manifest 四条路径，并用独立只读 GitHub Actions workflow 覆盖原后端矩阵无法识别的 Helm/聚合入口变更；移除拆仓后的 config 残留，补齐 behavior 的 Make/Compose/dev+prod 裸部署入口，聚合目标从首错中断改为全部执行后汇总失败。18 份既有 Deployment/Service 显式固定 `ecommerce` namespace；cart 补齐 ClusterIP、命名端口及 HTTPRoute/Certificate/VPA，behavior 补齐 Deployment/Service/VPA。Helm 尚缺 behavior/product，已用带原因例外保留缺口信号；cart 直连 HTTPRoute 会绕过网关鉴权，prod 清单已明确默认不得应用，待接入 ext_authz 等鉴权后再启用 | - |
 | 2026-08-07 | v1.15 | **以 cart 为基线完成 10 个微服务配置启动样板复核与收敛**。服务发现名逐项对照 `.service-matrix.yaml`，10/10 正确且是唯一允许的服务差异；九个服务补齐 cart 已有的直接 file source，并将配置加载文件集统一为 `source_file/source_consul/source_sdk`，保留 SDK selector 默认走配置中心、`make dev-consul` 显式回退的确定性语义。本机原先只有 cart 的 `configs/source.dev.yaml`，其余九个默认 `make dev` 会在启动前失败；现已从 cart selector 安全派生对应 namespace 的忽略文件并统一收紧为 `0600`，未把 token 写入 Git。10 个 `cmd/server` 统一拆出 `appOptions` 并用 `fx.ValidateApp` 做无外部依赖的启动图测试，由此发现 payment 漏供给 `*confv1.Pay`、此前要等真正启动到 data 模块才报错，已补齐。九份 Dockerfile/Makefile 的 Go 镜像从 1.26.1 对齐 cart/go.mod 的 1.26.5，修正 address `make conf` 误指 order，并删除 address/order 两个与基线不一致且路径写成 `pre.yaml` 的隐式 Consul target。`go build ./...`、`go vet ./...`、`go test -short ./...`、`go test -count=1 ./structcheck/...` 与冻结检查全绿 | - |
 | 2026-08-07 | v1.14 | **为 `backend/api/` 全部 14 份 proto 补齐 `buf.validate` 约束**。按各服务 SQL schema 映射字符串长度、UUID、正数/`int64` 范围、金额精度、枚举、批量上限与有限浮点数；用 CEL 保证购物车四组平行数组等长及埋点响应总数不超过批次上限。Casdoor 外部 DTO 因无本地表，采用兼容优先的宽上限防止异常输入放大。字段号/名称/类型均未改，Go/TypeScript 代码已重新生成并同步 consumer 副本；新增 `backend/api/validation_test.go`，以真实 Protovalidate 覆盖可选 wrapper、CEL、NaN/Inf、金额精度和外部 DTO 边界的正反例。`buf build`、`buf breaking`、`go test ./api/...`、`go build ./...`、`go vet ./...`、`go test -short ./...`、`pnpm ready` 与冻结检查全绿；`buf lint` 仅剩包目录和历史命名等存量兼容性告警 | - |

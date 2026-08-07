@@ -6,6 +6,8 @@
 #   helm   默认。渲染 helm/ 并 apply —— 与 ArgoCD 同一份真相源，
 #          用于 ArgoCD 不可用、或想在本机先看 diff 时。
 #   argocd 只补前置状态，apply argocd-{proj,repo,app}.yml，剩下交给 ArgoCD 拉。
+# DEPLOY_ACTION=delete 时，按 helm/ 渲染结果删除全部微服务资源；namespace、
+# tcr-pull-secret 与 pg-ca-cert 仍保留。
 #
 # 前置状态指这些（此前全靠手敲 kubectl，不在 Git 里，换个集群就丢）：
 #   - ecommerce 命名空间
@@ -16,6 +18,7 @@
 #   scripts/deploy-k8s.sh                      # helm 模式，渲染并 apply
 #   DRY_RUN=1 scripts/deploy-k8s.sh            # 只看会动什么（server-side dry-run）
 #   DEPLOY_MODE=argocd scripts/deploy-k8s.sh   # 交给 ArgoCD
+#   DEPLOY_ACTION=delete scripts/deploy-k8s.sh # 卸载全部微服务
 #   SERVICES="cart order" scripts/deploy-k8s.sh  # 只部分服务（helm 模式）
 set -Eeuo pipefail
 
@@ -23,6 +26,7 @@ script_dir="$(cd -- "$(dirname -- "${BASH_SOURCE[0]}")" && pwd)"
 repo_root="$(cd -- "${script_dir}/.." && pwd)"
 
 deploy_mode="${DEPLOY_MODE:-helm}"
+deploy_action="${DEPLOY_ACTION:-apply}"
 namespace="${NAMESPACE:-ecommerce}"
 kube_context="${KUBE_CONTEXT:-}"
 registry="${TCR_REGISTRY:-ccr.ccs.tencentyun.com}"
@@ -38,14 +42,29 @@ case "${deploy_mode}" in
     ;;
 esac
 
+case "${deploy_action}" in
+  apply | delete) ;;
+  *)
+    echo "DEPLOY_ACTION 必须是 apply 或 delete，收到：${deploy_action}" >&2
+    exit 1
+    ;;
+esac
+
+if [[ "${deploy_action}" == "delete" && "${deploy_mode}" != "helm" ]]; then
+  echo "DEPLOY_ACTION=delete 仅支持 helm 模式" >&2
+  exit 1
+fi
+
 kubectl_cmd=(kubectl)
 if [[ -n "${kube_context}" ]]; then
   kubectl_cmd+=(--context "${kube_context}")
 fi
 
-apply_args=()
+kubectl_apply_cmd=(apply)
+kubectl_delete_cmd=(delete)
 if [[ -n "${dry_run}" ]]; then
-  apply_args+=(--dry-run=server)
+  kubectl_apply_cmd+=(--dry-run=server)
+  kubectl_delete_cmd+=(--dry-run=server)
   echo "== DRY RUN：只打印将要发生的变更，不落盘"
 fi
 
@@ -58,12 +77,24 @@ need() {
 need kubectl
 [[ "${deploy_mode}" == "helm" ]] && need helm
 
-# ── 1. 命名空间 ─────────────────────────────────────────────────────
+if [[ "${deploy_action}" == "delete" ]]; then
+  echo "== helm 渲染并删除全部微服务（保留 namespace 与前置 Secret）"
+  helm template ecommerce "${repo_root}/helm" --namespace "${namespace}" |
+    "${kubectl_cmd[@]}" "${kubectl_delete_cmd[@]}" --ignore-not-found=true \
+      --namespace "${namespace}" -f -
+  if [[ -z "${dry_run}" ]]; then
+    echo "✅ 全部微服务已卸载"
+    echo "   注意：若 ArgoCD 自动同步仍开启，它会重新创建这些资源"
+  fi
+  exit 0
+fi
+
+# 命名空间
 echo "== 命名空间 ${namespace}"
 "${kubectl_cmd[@]}" create namespace "${namespace}" --dry-run=client -o yaml |
   "${kubectl_cmd[@]}" apply -f -
 
-# ── 2. TCR 拉取凭据 ──────────────────────────────────────────────────
+# TCR 拉取凭据
 # 凭据从本机 docker 凭据助手取，不落盘、不进 Git。已存在则跳过，
 # 避免每次部署都改写 Secret（改写会让所有 Pod 下次调度时重新拉镜像）。
 if "${kubectl_cmd[@]}" get secret tcr-pull-secret -n "${namespace}" >/dev/null 2>&1; then
@@ -82,7 +113,7 @@ else
     --docker-password="$(jq -r '.Secret' <<<"${cred}")"
 fi
 
-# ── 3. Postgres CA ──────────────────────────────────────────────────
+# Postgres CA
 # 各服务的 configs/pg_ca_pem.crt 是同一份 CA，取任意一份即可
 if [[ -f "${pg_ca_file}" ]]; then
   echo "== pg-ca-cert"
@@ -94,11 +125,11 @@ else
   echo "!! 找不到 ${pg_ca_file}，跳过 pg-ca-cert；服务连库会因 verify-ca 失败" >&2
 fi
 
-# ── 4. 交付 ─────────────────────────────────────────────────────────
+# 交付
 if [[ "${deploy_mode}" == "argocd" ]]; then
   echo "== apply ArgoCD 清单（AppProject / repo / ApplicationSet）"
   for f in argocd-proj.yml argocd-repo.yml argocd-app.yml; do
-    "${kubectl_cmd[@]}" apply "${apply_args[@]}" -f "${repo_root}/${f}"
+    "${kubectl_cmd[@]}" "${kubectl_apply_cmd[@]}" -f "${repo_root}/${f}"
   done
   echo "✅ 已交给 ArgoCD。看状态：kubectl get application -n argocd"
   exit 0
@@ -114,7 +145,8 @@ if [[ -n "${services}" ]]; then
   for s in ${services}; do helm_args+=(--set "${s}.enabled=true"); done
   echo "   只部署：${services}"
 fi
-helm "${helm_args[@]}" | "${kubectl_cmd[@]}" apply "${apply_args[@]}" -n "${namespace}" -f -
+helm "${helm_args[@]}" |
+  "${kubectl_cmd[@]}" "${kubectl_apply_cmd[@]}" -n "${namespace}" -f -
 
 if [[ -z "${dry_run}" ]]; then
   echo "✅ 已 apply。看状态：kubectl get pods -n ${namespace}"
