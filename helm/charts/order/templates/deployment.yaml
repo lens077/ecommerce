@@ -11,5 +11,6 @@
   "resources" .Values.resources
   "env" .Values.env
   "dbCaCert" .Values.dbCaCert
+  "imagePullSecrets" (.Values.global | default dict).imagePullSecrets
 -}}
 {{- include "library.deployment" $params -}}

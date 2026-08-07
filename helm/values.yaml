@@ -1,53 +1,25 @@
-search:
-  enabled: false
-  replicaCount: 1
-  image:
-    repository: "ccr.ccs.tencentyun.com/sumery/search"
-    tag: pre
-    pullPolicy: Always
-  service:
-    type: LoadBalancer
-    ports:
-      http:
-        enabled: true
-        port: 30002
-        targetPort: 30002
-      grpc:
-        enabled: false
-        port: 30000
-        targetPort: 30000
-  env:
-    - name: SERVICE_NAME
-      value: "search-product-v1"
-    - name: CONSUL_ENABLED
-      value: "true"
-    - name: CONSUL_ADDR
-      value: consul-expose-servers.consul.svc:8500
-    - name: CONSUL_PATH
-      value: "ecommerce/search/pre.yml"
-    - name: CONSUL_SCHEME
-      value: "http"
-    - name: CONSUL_INSECURE_SKIP_VERIFY
-      value: "true"
-  secret:
-    enabled: true
-    name: "search-db-secret"
-    data:
-      DB_SOURCE: "postgresql://postgres:msdnmm@192.168.3.109:5432/ecommerce?sslmode=require&sslrootcert=/etc/ssl/certs/pg_ca.crt&timezone=Asia/Shanghai"
-  dbCaCert:
-    enabled: true
-    secretName: "pg-ca-cert"
-    mountPath: "/etc/ssl/certs"
-    fileName: "pg_ca.crt"
-  resources:
-    requests:
-      cpu: "100m"
-      memory: "128Mi"
-    limits:
-      cpu: "1"
-      memory: "256Mi"
+# ArgoCD GitOps 的集群权威真相源：helm/ 下的 subchart 由 ArgoCD ApplicationSet
+# （argocd-app.yml）渲染，镜像 tag 由 CI 的 update-manifests job 回写。
+#
+# 本文件的三条口径，改之前先读：
+# 1. SERVICE_NAME 必须与 .service-matrix.yaml 的 discovery 逐字相同 —— 它是注册进
+#    Consul 的名字，网关按 `discovery:///<name>` 找服务。带 `-v1` 后缀的历史写法
+#    会注册成另一个名字，服务活得好好的但网关永远路由不到（cart 踩过这个）。
+# 2. 端口取各服务 configs/pre.yml 的 server.addr，与 deploy/{dev,prod} 同源。
+# 3. CONSUL_PATH 一律指 pre.yml：dev.yml 用的是 *.app.com 域名，只有开发机的
+#    hosts 能解析，进集群会连不上库（见 context/team/local-env.md）。
+#
+# 镜像走 TCR 而不是 GHCR：两处 CI 都推，但集群在 LAN 内，拉 ghcr.io 要过代理，
+# 而 TCR 是同区直连。GHCR 那份是给外部/公网消费的。
+
+# 必须挂在 global 下：subchart 只看得见自己那一层加上 global，
+# 写成顶层 imagePullSecrets 的话渲染出来一个都没有（实测过）。
+global:
+  imagePullSecrets:
+    - name: tcr-pull-secret
+
 user:
-  enabled: false
+  enabled: true
   replicaCount: 1
   image:
     repository: "ccr.ccs.tencentyun.com/sumery/user"
@@ -66,7 +38,15 @@ user:
         targetPort: 30001
   env:
     - name: SERVICE_NAME
-      value: "user-identity-v1"
+      value: "user-identity"
+    - name: SERVICE_VERSION
+      value: "v1"
+    - name: DEPLOYMENT_MODE
+      value: "pre"
+    - name: CONFIG_SOURCE
+      value: "consul"
+    - name: OTEL_LOGS_EXPORTER
+      value: "none"
     - name: CONSUL_ENABLED
       value: "true"
     - name: CONSUL_ADDR
@@ -77,11 +57,11 @@ user:
       value: "http"
     - name: CONSUL_INSECURE_SKIP_VERIFY
       value: "true"
+  # 关掉：这个 Secret 只有 DB_SOURCE 一个键，而全仓没有任何代码读它
+  # （deployment 模板也没有 envFrom/secretKeyRef），数据库凭据实际来自
+  # Consul KV 的 pre.yml。开着只会把明文口令铺到集群里。
   secret:
-    enabled: true
-    name: "user-db-secret"
-    data:
-      DB_SOURCE: "postgresql://postgres:msdnmm@192.168.3.109:5432/ecommerce?sslmode=require&sslrootcert=/etc/ssl/certs/pg_ca.crt&timezone=Asia/Shanghai"
+    enabled: false
   dbCaCert:
     enabled: true
     secretName: "pg-ca-cert"
@@ -94,11 +74,12 @@ user:
     limits:
       cpu: "1"
       memory: "256Mi"
-address:
-  enabled: false
+
+search:
+  enabled: true
   replicaCount: 1
   image:
-    repository: "ccr.ccs.tencentyun.com/sumery/address"
+    repository: "ccr.ccs.tencentyun.com/sumery/search"
     tag: pre
     pullPolicy: Always
   service:
@@ -106,30 +87,38 @@ address:
     ports:
       http:
         enabled: true
-        port: 30009
-        targetPort: 30009
+        port: 30002
+        targetPort: 30002
       grpc:
         enabled: false
-        port: 30004
-        targetPort: 30004
+        port: 30002
+        targetPort: 30002
   env:
     - name: SERVICE_NAME
-      value: "address-service-v1"
+      value: "search-product"
+    - name: SERVICE_VERSION
+      value: "v1"
+    - name: DEPLOYMENT_MODE
+      value: "pre"
+    - name: CONFIG_SOURCE
+      value: "consul"
+    - name: OTEL_LOGS_EXPORTER
+      value: "none"
     - name: CONSUL_ENABLED
       value: "true"
     - name: CONSUL_ADDR
       value: consul-expose-servers.consul.svc:8500
     - name: CONSUL_PATH
-      value: "ecommerce/address/pre.yml"
+      value: "ecommerce/search/pre.yml"
     - name: CONSUL_SCHEME
       value: "http"
     - name: CONSUL_INSECURE_SKIP_VERIFY
       value: "true"
+  # 关掉：这个 Secret 只有 DB_SOURCE 一个键，而全仓没有任何代码读它
+  # （deployment 模板也没有 envFrom/secretKeyRef），数据库凭据实际来自
+  # Consul KV 的 pre.yml。开着只会把明文口令铺到集群里。
   secret:
-    enabled: true
-    name: "address-db-secret"
-    data:
-      DB_SOURCE: "postgresql://postgres:msdnmm@192.168.3.109:5432/ecommerce?sslmode=require&sslrootcert=/etc/ssl/certs/pg_ca.crt&timezone=Asia/Shanghai"
+    enabled: false
   dbCaCert:
     enabled: true
     secretName: "pg-ca-cert"
@@ -142,6 +131,178 @@ address:
     limits:
       cpu: "1"
       memory: "256Mi"
+
+product:
+  enabled: true
+  replicaCount: 1
+  image:
+    repository: "ccr.ccs.tencentyun.com/sumery/product"
+    tag: pre
+    pullPolicy: Always
+  service:
+    type: LoadBalancer
+    ports:
+      http:
+        enabled: true
+        port: 30003
+        targetPort: 30003
+      grpc:
+        enabled: false
+        port: 30003
+        targetPort: 30003
+  env:
+    - name: SERVICE_NAME
+      value: "product-service"
+    - name: SERVICE_VERSION
+      value: "v1"
+    - name: DEPLOYMENT_MODE
+      value: "pre"
+    - name: CONFIG_SOURCE
+      value: "consul"
+    - name: OTEL_LOGS_EXPORTER
+      value: "none"
+    - name: CONSUL_ENABLED
+      value: "true"
+    - name: CONSUL_ADDR
+      value: consul-expose-servers.consul.svc:8500
+    - name: CONSUL_PATH
+      value: "ecommerce/product/pre.yml"
+    - name: CONSUL_SCHEME
+      value: "http"
+    - name: CONSUL_INSECURE_SKIP_VERIFY
+      value: "true"
+  # 关掉：这个 Secret 只有 DB_SOURCE 一个键，而全仓没有任何代码读它
+  # （deployment 模板也没有 envFrom/secretKeyRef），数据库凭据实际来自
+  # Consul KV 的 pre.yml。开着只会把明文口令铺到集群里。
+  secret:
+    enabled: false
+  dbCaCert:
+    enabled: true
+    secretName: "pg-ca-cert"
+    mountPath: "/etc/ssl/certs"
+    fileName: "pg_ca.crt"
+  resources:
+    requests:
+      cpu: "100m"
+      memory: "128Mi"
+    limits:
+      cpu: "1"
+      memory: "256Mi"
+
+order:
+  enabled: true
+  replicaCount: 1
+  image:
+    repository: "ccr.ccs.tencentyun.com/sumery/order"
+    tag: pre
+    pullPolicy: Always
+  service:
+    type: LoadBalancer
+    ports:
+      http:
+        enabled: true
+        port: 30004
+        targetPort: 30004
+      grpc:
+        enabled: false
+        port: 30004
+        targetPort: 30004
+  env:
+    - name: SERVICE_NAME
+      value: "order-service"
+    - name: SERVICE_VERSION
+      value: "v1"
+    - name: DEPLOYMENT_MODE
+      value: "pre"
+    - name: CONFIG_SOURCE
+      value: "consul"
+    - name: OTEL_LOGS_EXPORTER
+      value: "none"
+    - name: CONSUL_ENABLED
+      value: "true"
+    - name: CONSUL_ADDR
+      value: consul-expose-servers.consul.svc:8500
+    - name: CONSUL_PATH
+      value: "ecommerce/order/pre.yml"
+    - name: CONSUL_SCHEME
+      value: "http"
+    - name: CONSUL_INSECURE_SKIP_VERIFY
+      value: "true"
+  # 关掉：这个 Secret 只有 DB_SOURCE 一个键，而全仓没有任何代码读它
+  # （deployment 模板也没有 envFrom/secretKeyRef），数据库凭据实际来自
+  # Consul KV 的 pre.yml。开着只会把明文口令铺到集群里。
+  secret:
+    enabled: false
+  dbCaCert:
+    enabled: true
+    secretName: "pg-ca-cert"
+    mountPath: "/etc/ssl/certs"
+    fileName: "pg_ca.crt"
+  resources:
+    requests:
+      cpu: "100m"
+      memory: "128Mi"
+    limits:
+      cpu: "1"
+      memory: "256Mi"
+
+inventory:
+  enabled: true
+  replicaCount: 1
+  image:
+    repository: "ccr.ccs.tencentyun.com/sumery/inventory"
+    tag: pre
+    pullPolicy: Always
+  service:
+    type: LoadBalancer
+    ports:
+      http:
+        enabled: true
+        port: 30005
+        targetPort: 30005
+      grpc:
+        enabled: false
+        port: 30005
+        targetPort: 30005
+  env:
+    - name: SERVICE_NAME
+      value: "inventory-service"
+    - name: SERVICE_VERSION
+      value: "v1"
+    - name: DEPLOYMENT_MODE
+      value: "pre"
+    - name: CONFIG_SOURCE
+      value: "consul"
+    - name: OTEL_LOGS_EXPORTER
+      value: "none"
+    - name: CONSUL_ENABLED
+      value: "true"
+    - name: CONSUL_ADDR
+      value: consul-expose-servers.consul.svc:8500
+    - name: CONSUL_PATH
+      value: "ecommerce/inventory/pre.yml"
+    - name: CONSUL_SCHEME
+      value: "http"
+    - name: CONSUL_INSECURE_SKIP_VERIFY
+      value: "true"
+  # 关掉：这个 Secret 只有 DB_SOURCE 一个键，而全仓没有任何代码读它
+  # （deployment 模板也没有 envFrom/secretKeyRef），数据库凭据实际来自
+  # Consul KV 的 pre.yml。开着只会把明文口令铺到集群里。
+  secret:
+    enabled: false
+  dbCaCert:
+    enabled: true
+    secretName: "pg-ca-cert"
+    mountPath: "/etc/ssl/certs"
+    fileName: "pg_ca.crt"
+  resources:
+    requests:
+      cpu: "100m"
+      memory: "128Mi"
+    limits:
+      cpu: "1"
+      memory: "256Mi"
+
 cart:
   enabled: true
   replicaCount: 1
@@ -152,18 +313,14 @@ cart:
   service:
     type: LoadBalancer
     ports:
-      # cart 实际监听 30006(configs/{dev,pre}.yml 的 server.addr 与
-      # deploy/dev/service.yaml 一致),原 30005 是陈旧值
       http:
         enabled: true
         port: 30006
         targetPort: 30006
       grpc:
         enabled: false
-        port: 30007
-        targetPort: 30007
-  # env 对齐 deploy/dev/deployment.yaml 的权威清单;
-  # SERVICE_NAME 必须与 .service-matrix.yaml 的 discovery(网关 target)一致
+        port: 30006
+        targetPort: 30006
   env:
     - name: SERVICE_NAME
       value: "cart-service"
@@ -179,20 +336,17 @@ cart:
       value: "true"
     - name: CONSUL_ADDR
       value: consul-expose-servers.consul.svc:8500
-    # pre.yml 是面向集群内的环境(postgres/dragonfly/consul/otel 全用
-    # svc 域名);dev.yml 面向开发机(*.app.com 域名靠 /etc/hosts,集群内
-    # 是公网污染记录)。集群部署必须用 pre
     - name: CONSUL_PATH
       value: "ecommerce/cart/pre.yml"
     - name: CONSUL_SCHEME
       value: "http"
     - name: CONSUL_INSECURE_SKIP_VERIFY
       value: "true"
+  # 关掉：这个 Secret 只有 DB_SOURCE 一个键，而全仓没有任何代码读它
+  # （deployment 模板也没有 envFrom/secretKeyRef），数据库凭据实际来自
+  # Consul KV 的 pre.yml。开着只会把明文口令铺到集群里。
   secret:
-    enabled: true
-    name: "cart-db-secret"
-    data:
-      DB_SOURCE: "postgresql://postgres:msdnmm@192.168.3.109:5432/ecommerce?sslmode=require&sslrootcert=/etc/ssl/certs/pg_ca.crt&timezone=Asia/Shanghai"
+    enabled: false
   dbCaCert:
     enabled: true
     secretName: "pg-ca-cert"
@@ -205,56 +359,9 @@ cart:
     limits:
       cpu: "1"
       memory: "256Mi"
-inventory:
-  enabled: false
-  replicaCount: 1
-  image:
-    repository: "ccr.ccs.tencentyun.com/sumery/inventory"
-    tag: pre
-    pullPolicy: Always
-  service:
-    type: LoadBalancer
-    ports:
-      http:
-        enabled: true
-        port: 30005
-        targetPort: 30005
-      grpc:
-        enabled: false
-        port: 30008
-        targetPort: 30008
-  env:
-    - name: SERVICE_NAME
-      value: "inventory-service-v1"
-    - name: CONSUL_ENABLED
-      value: "true"
-    - name: CONSUL_ADDR
-      value: consul-expose-servers.consul.svc:8500
-    - name: CONSUL_PATH
-      value: "ecommerce/inventory/pre.yml"
-    - name: CONSUL_SCHEME
-      value: "http"
-    - name: CONSUL_INSECURE_SKIP_VERIFY
-      value: "true"
-  secret:
-    enabled: true
-    name: "inventory-db-secret"
-    data:
-      DB_SOURCE: "postgresql://postgres:msdnmm@192.168.3.109:5432/ecommerce?sslmode=require&sslrootcert=/etc/ssl/certs/pg_ca.crt&timezone=Asia/Shanghai"
-  dbCaCert:
-    enabled: true
-    secretName: "pg-ca-cert"
-    mountPath: "/etc/ssl/certs"
-    fileName: "pg_ca.crt"
-  resources:
-    requests:
-      cpu: "100m"
-      memory: "128Mi"
-    limits:
-      cpu: "1"
-      memory: "256Mi"
+
 merchant:
-  enabled: false
+  enabled: true
   replicaCount: 1
   image:
     repository: "ccr.ccs.tencentyun.com/sumery/merchant"
@@ -269,11 +376,19 @@ merchant:
         targetPort: 30007
       grpc:
         enabled: false
-        port: 30010
-        targetPort: 30010
+        port: 30007
+        targetPort: 30007
   env:
     - name: SERVICE_NAME
-      value: "merchant-service-v1"
+      value: "merchant-service"
+    - name: SERVICE_VERSION
+      value: "v1"
+    - name: DEPLOYMENT_MODE
+      value: "pre"
+    - name: CONFIG_SOURCE
+      value: "consul"
+    - name: OTEL_LOGS_EXPORTER
+      value: "none"
     - name: CONSUL_ENABLED
       value: "true"
     - name: CONSUL_ADDR
@@ -284,11 +399,11 @@ merchant:
       value: "http"
     - name: CONSUL_INSECURE_SKIP_VERIFY
       value: "true"
+  # 关掉：这个 Secret 只有 DB_SOURCE 一个键，而全仓没有任何代码读它
+  # （deployment 模板也没有 envFrom/secretKeyRef），数据库凭据实际来自
+  # Consul KV 的 pre.yml。开着只会把明文口令铺到集群里。
   secret:
-    enabled: true
-    name: "merchant-db-secret"
-    data:
-      DB_SOURCE: "postgresql://postgres:msdnmm@192.168.3.109:5432/ecommerce?sslmode=require&sslrootcert=/etc/ssl/certs/pg_ca.crt&timezone=Asia/Shanghai"
+    enabled: false
   dbCaCert:
     enabled: true
     secretName: "pg-ca-cert"
@@ -301,11 +416,12 @@ merchant:
     limits:
       cpu: "1"
       memory: "256Mi"
-order:
-  enabled: false
+
+address:
+  enabled: true
   replicaCount: 1
   image:
-    repository: "ccr.ccs.tencentyun.com/sumery/order"
+    repository: "ccr.ccs.tencentyun.com/sumery/address"
     tag: pre
     pullPolicy: Always
   service:
@@ -313,30 +429,38 @@ order:
     ports:
       http:
         enabled: true
-        port: 30004
-        targetPort: 30004
+        port: 30009
+        targetPort: 30009
       grpc:
         enabled: false
-        port: 30012
-        targetPort: 30012
+        port: 30009
+        targetPort: 30009
   env:
     - name: SERVICE_NAME
-      value: "order-service-v1"
+      value: "address-service"
+    - name: SERVICE_VERSION
+      value: "v1"
+    - name: DEPLOYMENT_MODE
+      value: "pre"
+    - name: CONFIG_SOURCE
+      value: "consul"
+    - name: OTEL_LOGS_EXPORTER
+      value: "none"
     - name: CONSUL_ENABLED
       value: "true"
     - name: CONSUL_ADDR
       value: consul-expose-servers.consul.svc:8500
     - name: CONSUL_PATH
-      value: "ecommerce/order/pre.yml"
+      value: "ecommerce/address/pre.yml"
     - name: CONSUL_SCHEME
       value: "http"
     - name: CONSUL_INSECURE_SKIP_VERIFY
       value: "true"
+  # 关掉：这个 Secret 只有 DB_SOURCE 一个键，而全仓没有任何代码读它
+  # （deployment 模板也没有 envFrom/secretKeyRef），数据库凭据实际来自
+  # Consul KV 的 pre.yml。开着只会把明文口令铺到集群里。
   secret:
-    enabled: true
-    name: "order-db-secret"
-    data:
-      DB_SOURCE: "postgresql://postgres:msdnmm@192.168.3.109:5432/ecommerce?sslmode=require&sslrootcert=/etc/ssl/certs/pg_ca.crt&timezone=Asia/Shanghai"
+    enabled: false
   dbCaCert:
     enabled: true
     secretName: "pg-ca-cert"
@@ -349,8 +473,66 @@ order:
     limits:
       cpu: "1"
       memory: "256Mi"
+
+behavior:
+  enabled: true
+  replicaCount: 1
+  image:
+    repository: "ccr.ccs.tencentyun.com/sumery/behavior"
+    tag: pre
+    pullPolicy: Always
+  service:
+    type: LoadBalancer
+    ports:
+      http:
+        enabled: true
+        port: 30011
+        targetPort: 30011
+      grpc:
+        enabled: false
+        port: 30011
+        targetPort: 30011
+  env:
+    - name: SERVICE_NAME
+      value: "behavior-service"
+    - name: SERVICE_VERSION
+      value: "v1"
+    - name: DEPLOYMENT_MODE
+      value: "pre"
+    - name: CONFIG_SOURCE
+      value: "consul"
+    - name: OTEL_LOGS_EXPORTER
+      value: "none"
+    - name: CONSUL_ENABLED
+      value: "true"
+    - name: CONSUL_ADDR
+      value: consul-expose-servers.consul.svc:8500
+    - name: CONSUL_PATH
+      value: "ecommerce/behavior/pre.yml"
+    - name: CONSUL_SCHEME
+      value: "http"
+    - name: CONSUL_INSECURE_SKIP_VERIFY
+      value: "true"
+  # 关掉：这个 Secret 只有 DB_SOURCE 一个键，而全仓没有任何代码读它
+  # （deployment 模板也没有 envFrom/secretKeyRef），数据库凭据实际来自
+  # Consul KV 的 pre.yml。开着只会把明文口令铺到集群里。
+  secret:
+    enabled: false
+  dbCaCert:
+    enabled: true
+    secretName: "pg-ca-cert"
+    mountPath: "/etc/ssl/certs"
+    fileName: "pg_ca.crt"
+  resources:
+    requests:
+      cpu: "100m"
+      memory: "128Mi"
+    limits:
+      cpu: "1"
+      memory: "256Mi"
+
 payment:
-  enabled: false
+  enabled: true
   replicaCount: 1
   image:
     repository: "ccr.ccs.tencentyun.com/sumery/payment"
@@ -365,11 +547,19 @@ payment:
         targetPort: 30008
       grpc:
         enabled: false
-        port: 30014
-        targetPort: 30014
+        port: 30008
+        targetPort: 30008
   env:
     - name: SERVICE_NAME
-      value: "payment-service-v1"
+      value: "payment-service"
+    - name: SERVICE_VERSION
+      value: "v1"
+    - name: DEPLOYMENT_MODE
+      value: "pre"
+    - name: CONFIG_SOURCE
+      value: "consul"
+    - name: OTEL_LOGS_EXPORTER
+      value: "none"
     - name: CONSUL_ENABLED
       value: "true"
     - name: CONSUL_ADDR
@@ -380,11 +570,11 @@ payment:
       value: "http"
     - name: CONSUL_INSECURE_SKIP_VERIFY
       value: "true"
+  # 关掉：这个 Secret 只有 DB_SOURCE 一个键，而全仓没有任何代码读它
+  # （deployment 模板也没有 envFrom/secretKeyRef），数据库凭据实际来自
+  # Consul KV 的 pre.yml。开着只会把明文口令铺到集群里。
   secret:
-    enabled: true
-    name: "payment-db-secret"
-    data:
-      DB_SOURCE: "postgresql://postgres:msdnmm@192.168.3.109:5432/ecommerce?sslmode=require&sslrootcert=/etc/ssl/certs/pg_ca.crt&timezone=Asia/Shanghai"
+    enabled: false
   dbCaCert:
     enabled: true
     secretName: "pg-ca-cert"

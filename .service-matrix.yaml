@@ -171,10 +171,9 @@ deployment_coverage:
     helm: "helm/values.yaml 的顶层键 —— ArgoCD GitOps 的集群权威真相源"
     deploy: "backend/services/{service}/deploy/{dev,prod} —— ArgoCD 不可用时的应急手工路径"
   # 例外必须写原因。不写例外 = 要求全覆盖。
-  exceptions:
-    helm:
-      behavior: "尚未建 chart。GitOps 目前刻意只收敛到 cart 单服务,见 TODO.md"
-      product: "尚未建 chart。同上"
+  # 2026-08-07:behavior/product 的 chart 已补齐,四条入口现已 10/10 全覆盖,
+  # 例外清空。
+  exceptions: {}
 
 # ── 前端 ─────────────────────────────────────────────────────────────
 frontend:
