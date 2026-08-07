@@ -103,6 +103,15 @@ deploy:
 	@DRY_RUN="$(DRY_RUN)" SERVICES="$(SERVICES_OVERRIDE)" KUBE_CONTEXT="$(KUBE_CONTEXT)" \
 	  $(DEPLOY_SCRIPT)
 
+.PHONY: un-deploy
+# 按 deploy 使用的同一份 helm 清单卸载全部微服务；保留 namespace 与前置 Secret。
+# 先看会删什么: make un-deploy DRY_RUN=1
+# KUBE_CONTEXT=ecommerce: 指的是 kubeconfig 中名为 ecommerce 的集群上下文，并不是 Kubernetes namespace。
+# 只有 kubectl config get-contexts 中确实存在该名称时才需要传它
+un-deploy:
+	@DEPLOY_ACTION=delete DRY_RUN="$(DRY_RUN)" SERVICES="" KUBE_CONTEXT="$(KUBE_CONTEXT)" \
+	  $(DEPLOY_SCRIPT)
+
 .PHONY: deploy-argocd
 # 只补前置状态并 apply ArgoCD 清单,集群状态交给 ArgoCD 拉
 deploy-argocd:
