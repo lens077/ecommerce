@@ -17,13 +17,12 @@
 global:
   imagePullSecrets:
     - name: tcr-pull-secret
-
 user:
   enabled: true
   replicaCount: 1
   image:
     repository: "ccr.ccs.tencentyun.com/sumery/user"
-    tag: pre
+    tag: sha-1ec5466
     pullPolicy: Always
   service:
     type: LoadBalancer
@@ -74,13 +73,12 @@ user:
     limits:
       cpu: "1"
       memory: "256Mi"
-
 search:
   enabled: true
   replicaCount: 1
   image:
     repository: "ccr.ccs.tencentyun.com/sumery/search"
-    tag: pre
+    tag: sha-1ec5466
     pullPolicy: Always
   service:
     type: LoadBalancer
@@ -131,13 +129,12 @@ search:
     limits:
       cpu: "1"
       memory: "256Mi"
-
 product:
   enabled: true
   replicaCount: 1
   image:
     repository: "ccr.ccs.tencentyun.com/sumery/product"
-    tag: pre
+    tag: sha-1ec5466
     pullPolicy: Always
   service:
     type: LoadBalancer
@@ -188,13 +185,12 @@ product:
     limits:
       cpu: "1"
       memory: "256Mi"
-
 order:
   enabled: true
   replicaCount: 1
   image:
     repository: "ccr.ccs.tencentyun.com/sumery/order"
-    tag: pre
+    tag: sha-1ec5466
     pullPolicy: Always
   service:
     type: LoadBalancer
@@ -245,13 +241,12 @@ order:
     limits:
       cpu: "1"
       memory: "256Mi"
-
 inventory:
   enabled: true
   replicaCount: 1
   image:
     repository: "ccr.ccs.tencentyun.com/sumery/inventory"
-    tag: pre
+    tag: sha-1ec5466
     pullPolicy: Always
   service:
     type: LoadBalancer
@@ -302,13 +297,12 @@ inventory:
     limits:
       cpu: "1"
       memory: "256Mi"
-
 cart:
   enabled: true
   replicaCount: 1
   image:
     repository: "ccr.ccs.tencentyun.com/sumery/cart"
-    tag: sha-168d71e
+    tag: sha-1ec5466
     pullPolicy: Always
   service:
     type: LoadBalancer
@@ -359,13 +353,12 @@ cart:
     limits:
       cpu: "1"
       memory: "256Mi"
-
 merchant:
   enabled: true
   replicaCount: 1
   image:
     repository: "ccr.ccs.tencentyun.com/sumery/merchant"
-    tag: pre
+    tag: sha-1ec5466
     pullPolicy: Always
   service:
     type: LoadBalancer
@@ -416,13 +409,12 @@ merchant:
     limits:
       cpu: "1"
       memory: "256Mi"
-
 address:
   enabled: true
   replicaCount: 1
   image:
     repository: "ccr.ccs.tencentyun.com/sumery/address"
-    tag: pre
+    tag: sha-1ec5466
     pullPolicy: Always
   service:
     type: LoadBalancer
@@ -473,13 +465,12 @@ address:
     limits:
       cpu: "1"
       memory: "256Mi"
-
 behavior:
   enabled: true
   replicaCount: 1
   image:
     repository: "ccr.ccs.tencentyun.com/sumery/behavior"
-    tag: pre
+    tag: sha-1ec5466
     pullPolicy: Always
   service:
     type: LoadBalancer
@@ -530,13 +521,12 @@ behavior:
     limits:
       cpu: "1"
       memory: "256Mi"
-
 payment:
   enabled: true
   replicaCount: 1
   image:
     repository: "ccr.ccs.tencentyun.com/sumery/payment"
-    tag: pre
+    tag: sha-1ec5466
     pullPolicy: Always
   service:
     type: LoadBalancer
