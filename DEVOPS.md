@@ -80,6 +80,12 @@
     已出现两次,验收标准一律是观测到的行为,不是配置表面状态。
 - **数据库变更进流水线**:golang-migrate/atlas + expand-contract(只允许向后兼容:
   先加列、双写、再删),因为滚更期间新旧版本共存。sqlc 生成物与 migration 同 PR 提交。
+- **远程 Docker 部署(无 k8s 的备用路径)**:`backend/compose.yaml` 已引用 TCR 镜像,
+  对无 k8s 的目标机用 `docker context create <name> --docker "host=ssh://user@host"`
+  + `docker --context <name> compose up -d <svc>` 直接拉起。**边界要认清:GitHub
+  托管 runner 在公网,推不进 192.168.x 的 LAN 主机**——push 式部署只能从本机/
+  自建 runner 做;集群内的 ArgoCD 是 pull 式不受此限,这是 CD 主路径选 GitOps
+  的原因之一。
 
 ## 5. 可观测性(Feedback)
 
@@ -122,6 +128,8 @@
 ### 阶段 1:可重复构建(CI 收口)
 
 - [ ] CI 模板化:一份可复用 workflow,10 服务 + 网关 + 前端参数化接入,按路径触发
+      (2026-08-07 后端已落地:`service-ci.yml` 模板 + `backend.yml` 入口矩阵,
+      服务清单读 `.service-matrix.yaml`;网关、前端未接入模板)
 - [ ] oxlint/oxfmt、golangci-lint、`go test -race`、structcheck 全部成为必过门禁
 - [ ] `buf breaking` 接入(基线 main),proto 破坏性变更拦截实测一例红
 - [ ] 镜像:禁 latest、digest 引用、trivy 扫描阻断高危;保留策略成文

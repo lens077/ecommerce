@@ -1,0 +1,107 @@
+# 单个后端微服务的可复用流水线模板（workflow_call）。
+# 全仓只维护这一份定义，服务名参数化——谁调用谁传 service。
+# 入口与矩阵分发在 backend.yml；服务清单的真相源是 .service-matrix.yaml。
+#
+# 镜像 tag 策略（DEVOPS.md 阶段 1：禁止 latest 参与部署）：
+#   ccr.ccs.tencentyun.com/sumery/<service>:sha-<7位提交哈希>  ← 部署引用这个（不可变）
+#   ccr.ccs.tencentyun.com/sumery/<service>:dev                ← 本地 compose 的便利 tag（可变）
+name: Service CI
+
+on:
+  workflow_call:
+    inputs:
+      service:
+        description: "服务名（backend/services/ 下的目录名）"
+        required: true
+        type: string
+      push-image:
+        description: "是否推送镜像（false 时只测试+构建验证）"
+        required: false
+        type: boolean
+        default: true
+    secrets:
+      TCR_USERNAME:
+        required: true
+      TCR_PASSWORD:
+        required: true
+
+env:
+  REGISTRY: ccr.ccs.tencentyun.com
+  REGISTRY_NAMESPACE: sumery
+
+jobs:
+  test:
+    name: test (${{ inputs.service }})
+    runs-on: ubuntu-24.04
+    defaults:
+      run:
+        shell: bash
+        working-directory: backend
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v5
+
+      - name: Set up Go
+        uses: actions/setup-go@v5
+        with:
+          go-version-file: backend/go.mod
+          cache-dependency-path: backend/go.sum
+
+      # structcheck 是全仓结构门禁（矩阵↔目录↔网关对齐、internal/pkg 同构棘轮），
+      # 任何服务的改动都必须过它；api 是共享契约，跟着服务一起验
+      - name: Build service
+        run: go build ./services/${{ inputs.service }}/...
+
+      - name: Vet
+        run: go vet ./services/${{ inputs.service }}/... ./api/...
+
+      - name: Test
+        run: |
+          go test -short -race -count=1 \
+            ./services/${{ inputs.service }}/... \
+            ./api/... \
+            ./structcheck/...
+
+  build:
+    name: image (${{ inputs.service }})
+    needs: test
+    runs-on: ubuntu-24.04
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v5
+
+      # 最终镜像层（alpine + apk）需要 arm64 模拟；Go 编译层用 BUILDPLATFORM 交叉编译，不吃模拟开销
+      - name: Set up QEMU
+        uses: docker/setup-qemu-action@v3
+
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v3
+
+      - name: Login to TCR
+        if: inputs.push-image
+        uses: docker/login-action@v3
+        with:
+          registry: ${{ env.REGISTRY }}
+          username: ${{ secrets.TCR_USERNAME }}
+          password: ${{ secrets.TCR_PASSWORD }}
+
+      - name: Compute image tag
+        id: meta
+        run: echo "tag=sha-${GITHUB_SHA::7}" >> "$GITHUB_OUTPUT"
+
+      - name: Build and push
+        uses: docker/build-push-action@v6
+        with:
+          context: backend
+          file: backend/services/${{ inputs.service }}/Dockerfile
+          platforms: linux/amd64,linux/arm64
+          push: ${{ inputs.push-image }}
+          cache-from: type=gha,scope=svc-${{ inputs.service }}
+          cache-to: type=gha,scope=svc-${{ inputs.service }},mode=max
+          build-args: |
+            SERVICE=${{ inputs.service }}
+            VERSION=${{ steps.meta.outputs.tag }}
+            GOPROXY=https://proxy.golang.org,direct
+          tags: |
+            ${{ env.REGISTRY }}/${{ env.REGISTRY_NAMESPACE }}/${{ inputs.service }}:${{ steps.meta.outputs.tag }}
+            ${{ env.REGISTRY }}/${{ env.REGISTRY_NAMESPACE }}/${{ inputs.service }}:dev

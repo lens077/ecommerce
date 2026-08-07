@@ -40,8 +40,11 @@ spec:
       project: ecommerce
 
       # 应用来源配置（Git 仓库及路径）
+      # 指向 GitHub 而非 GitLab origin：GitHub Actions 的 update-manifests job
+      # 会把新镜像 tag 回写到 GitHub main 的 helm/values.yaml，ArgoCD 必须
+      # 监听同一份仓库闭环才成立（仓库 public，拉取无需凭据）
       source:
-        repoURL: https://gitlab.com/sumery/ecommerce.git
+        repoURL: https://github.com/lens077/ecommerce.git
         targetRevision: main                           # 跟踪 main 分支
         path: helm                                     # 指向父 Chart 目录（包含 Chart.yaml）
         helm:
