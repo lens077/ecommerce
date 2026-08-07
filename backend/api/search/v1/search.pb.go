@@ -9,9 +9,9 @@
 package searchv1
 
 import (
+	_ "buf.build/gen/go/bufbuild/protovalidate/protocolbuffers/go/buf/validate"
 	protoreflect "google.golang.org/protobuf/reflect/protoreflect"
 	protoimpl "google.golang.org/protobuf/runtime/protoimpl"
-	_ "google.golang.org/protobuf/types/known/timestamppb"
 	reflect "reflect"
 	sync "sync"
 	unsafe "unsafe"
@@ -217,24 +217,25 @@ var File_api_search_v1_search_proto protoreflect.FileDescriptor
 
 const file_api_search_v1_search_proto_rawDesc = "" +
 	"\n" +
-	"\x1aapi/search/v1/search.proto\x12\tsearch.v1\x1a\x1fgoogle/protobuf/timestamp.proto\"9\n" +
-	"\rSearchRequest\x12\x14\n" +
-	"\x05index\x18\x01 \x01(\tR\x05index\x12\x12\n" +
-	"\x04name\x18\x02 \x01(\tR\x04name\"@\n" +
-	"\x0eSearchResponse\x12.\n" +
-	"\bproducts\x18\x01 \x03(\v2\x12.search.v1.ProductR\bproducts\"\xb8\x01\n" +
-	"\aProduct\x12\x0e\n" +
-	"\x02id\x18\x01 \x01(\rR\x02id\x12\x19\n" +
-	"\bspu_code\x18\x02 \x01(\tR\aspuCode\x12\x14\n" +
-	"\x05price\x18\x03 \x01(\x01R\x05price\x12\x16\n" +
-	"\x06status\x18\x04 \x01(\tR\x06status\x12$\n" +
-	"\x0emain_media_url\x18\x05 \x01(\tR\fmainMediaUrl\x12\x1a\n" +
-	"\bquantity\x18\x06 \x01(\rR\bquantity\x12\x12\n" +
-	"\x04name\x18\a \x01(\tR\x04name2P\n" +
+	"\x1aapi/search/v1/search.proto\x12\tsearch.v1\x1a#third_party/validate/validate.proto\"i\n" +
+	"\rSearchRequest\x128\n" +
+	"\x05index\x18\x01 \x01(\tB\"\xbaH\x1fr\x1d\x10\x01\x18\xff\x012\x16^[a-z0-9][a-z0-9._-]*$R\x05index\x12\x1e\n" +
+	"\x04name\x18\x02 \x01(\tB\n" +
+	"\xbaH\ar\x05\x10\x01\x18\x80\x01R\x04name\"J\n" +
+	"\x0eSearchResponse\x128\n" +
+	"\bproducts\x18\x01 \x03(\v2\x12.search.v1.ProductB\b\xbaH\x05\x92\x01\x02\x10dR\bproducts\"\xa7\x02\n" +
+	"\aProduct\x12\x17\n" +
+	"\x02id\x18\x01 \x01(\rB\a\xbaH\x04*\x02 \x00R\x02id\x12$\n" +
+	"\bspu_code\x18\x02 \x01(\tB\t\xbaH\x06r\x04\x10\x01\x18@R\aspuCode\x12/\n" +
+	"\x05price\x18\x03 \x01(\x01B\x19\xbaH\x16\x12\x14@\x01\x19\x8f\xc2\xf5\xff\x83חA)\x00\x00\x00\x00\x00\x00\x00\x00R\x05price\x12>\n" +
+	"\x06status\x18\x04 \x01(\tB&\xbaH#r!R\x05draftR\x06onlineR\aofflineR\adeletedR\x06status\x120\n" +
+	"\x0emain_media_url\x18\x05 \x01(\tB\n" +
+	"\xbaH\ar\x05\x10\x01\x18\xf4\x03R\fmainMediaUrl\x12\x1a\n" +
+	"\bquantity\x18\x06 \x01(\rR\bquantity\x12\x1e\n" +
+	"\x04name\x18\a \x01(\tB\n" +
+	"\xbaH\ar\x05\x10\x01\x18\xff\x01R\x04name2P\n" +
 	"\rSearchService\x12?\n" +
-	"\x06Search\x12\x18.search.v1.SearchRequest\x1a\x19.search.v1.SearchResponse\"\x00B\x9e\x01\n" +
-	"\rcom.search.v1B\vSearchProtoP\x01Z;github.com/lens077/ecommerce/backend/api/search/v1;searchv1\xa2\x02\x03SXX\xaa\x02\tSearch.V1\xca\x02\tSearch\\V1\xe2\x02\x15Search\\V1\\GPBMetadata\xea\x02\n" +
-	"Search::V1b\x06proto3"
+	"\x06Search\x12\x18.search.v1.SearchRequest\x1a\x19.search.v1.SearchResponse\"\x00B=Z;github.com/lens077/ecommerce/backend/api/search/v1;searchv1b\x06proto3"
 
 var (
 	file_api_search_v1_search_proto_rawDescOnce sync.Once

@@ -11,7 +11,6 @@ import (
 	protoreflect "google.golang.org/protobuf/reflect/protoreflect"
 	protoimpl "google.golang.org/protobuf/runtime/protoimpl"
 	structpb "google.golang.org/protobuf/types/known/structpb"
-	_ "google.golang.org/protobuf/types/known/timestamppb"
 	wrapperspb "google.golang.org/protobuf/types/known/wrapperspb"
 	reflect "reflect"
 	sync "sync"
@@ -726,65 +725,75 @@ var File_api_cart_v1_cart_proto protoreflect.FileDescriptor
 
 const file_api_cart_v1_cart_proto_rawDesc = "" +
 	"\n" +
-	"\x16api/cart/v1/cart.proto\x12\acart.v1\x1a\x1fgoogle/protobuf/timestamp.proto\x1a\x1cgoogle/protobuf/struct.proto\x1a\x1egoogle/protobuf/wrappers.proto\x1a#third_party/validate/validate.proto\"\x99\x03\n" +
-	"\x17AddProductToCartRequest\x12\x15\n" +
-	"\x06spu_id\x18\x01 \x01(\x04R\x05spuId\x12\x15\n" +
-	"\x06sku_id\x18\x02 \x01(\x04R\x05skuId\x12)\n" +
+	"\x16api/cart/v1/cart.proto\x12\acart.v1\x1a\x1cgoogle/protobuf/struct.proto\x1a\x1egoogle/protobuf/wrappers.proto\x1a#third_party/validate/validate.proto\"\x92\x04\n" +
+	"\x17AddProductToCartRequest\x12(\n" +
+	"\x06spu_id\x18\x01 \x01(\x04B\x11\xbaH\x0e2\f\x18\xff\xff\xff\xff\xff\xff\xff\xff\x7f(\x01R\x05spuId\x12(\n" +
+	"\x06sku_id\x18\x02 \x01(\x04B\x11\xbaH\x0e2\f\x18\xff\xff\xff\xff\xff\xff\xff\xff\x7f(\x01R\x05skuId\x12)\n" +
 	"\vmerchant_id\x18\x03 \x01(\tB\b\xbaH\x05r\x03\xb0\x01\x01R\n" +
-	"merchantId\x12\x1a\n" +
-	"\bquantity\x18\x04 \x01(\rR\bquantity\x12\x1a\n" +
-	"\bselected\x18\x05 \x01(\bR\bselected\x12\x19\n" +
-	"\bspu_name\x18\x06 \x01(\tR\aspuName\x12\x19\n" +
-	"\bsku_name\x18\a \x01(\tR\askuName\x12\x14\n" +
-	"\x05price\x18\b \x01(\x01R\x05price\x12>\n" +
-	"\x0esku_attributes\x18\t \x01(\v2\x17.google.protobuf.StructR\rskuAttributes\x12*\n" +
+	"merchantId\x12&\n" +
+	"\bquantity\x18\x04 \x01(\rB\n" +
+	"\xbaH\a*\x05\x18\xe7\a(\x01R\bquantity\x12\x1a\n" +
+	"\bselected\x18\x05 \x01(\bR\bselected\x12%\n" +
+	"\bspu_name\x18\x06 \x01(\tB\n" +
+	"\xbaH\ar\x05\x10\x01\x18\xff\x01R\aspuName\x12%\n" +
+	"\bsku_name\x18\a \x01(\tB\n" +
+	"\xbaH\ar\x05\x10\x01\x18\xff\x01R\askuName\x12/\n" +
+	"\x05price\x18\b \x01(\x01B\x19\xbaH\x16\x12\x14@\x01\x19\x8f\xc2\xf5\xff\x83חA!\x00\x00\x00\x00\x00\x00\x00\x00R\x05price\x12F\n" +
+	"\x0esku_attributes\x18\t \x01(\v2\x17.google.protobuf.StructB\x06\xbaH\x03\xc8\x01\x01R\rskuAttributes\x126\n" +
 	"\x11sku_thumbnail_url\x18\n" +
-	" \x01(\tR\x0fskuThumbnailUrl\x125\n" +
-	"\x06status\x18\v \x01(\x0e2\x13.cart.v1.CartStatusB\b\xbaH\x05\x82\x01\x02\x10\x01R\x06status\"j\n" +
-	"\x18AddProductToCartResponse\x12,\n" +
-	"\x12cart_item_quantity\x18\x01 \x01(\rR\x10cartItemQuantity\x12 \n" +
-	"\fcart_item_id\x18\x02 \x01(\x04R\n" +
-	"cartItemId\"\xb7\x01\n" +
-	"\x15RemoveCartItemRequest\x12\x17\n" +
-	"\aspu_ids\x18\x01 \x03(\x03R\x06spuIds\x12\x17\n" +
-	"\asku_ids\x18\x02 \x03(\x03R\x06skuIds\x120\n" +
-	"\fmerchant_ids\x18\x03 \x03(\tB\r\xbaH\n" +
-	"\x92\x01\a\"\x05r\x03\xb0\x01\x01R\vmerchantIds\x12:\n" +
-	"\x06status\x18\x04 \x03(\x0e2\x13.cart.v1.CartStatusB\r\xbaH\n" +
-	"\x92\x01\a\"\x05\x82\x01\x02\x10\x01R\x06status\"j\n" +
-	"\x16RemoveCartItemResponse\x12,\n" +
-	"\x12cart_item_quantity\x18\x01 \x01(\rR\x10cartItemQuantity\x12\"\n" +
-	"\ris_cart_empty\x18\x02 \x01(\bR\visCartEmpty\"\x94\x01\n" +
-	"\x1dUpdateCartItemQuantityRequest\x12\x15\n" +
-	"\x06spu_id\x18\x01 \x01(\x04R\x05spuId\x12\x15\n" +
-	"\x06sku_id\x18\x02 \x01(\x04R\x05skuId\x12)\n" +
+	" \x01(\tB\n" +
+	"\xbaH\ar\x05\x10\x01\x18\xf4\x03R\x0fskuThumbnailUrl\x125\n" +
+	"\x06status\x18\v \x01(\x0e2\x13.cart.v1.CartStatusB\b\xbaH\x05\x82\x01\x02\b\x01R\x06status\"\x87\x01\n" +
+	"\x18AddProductToCartResponse\x126\n" +
+	"\x12cart_item_quantity\x18\x01 \x01(\rB\b\xbaH\x05*\x03\x18\x90NR\x10cartItemQuantity\x123\n" +
+	"\fcart_item_id\x18\x02 \x01(\x04B\x11\xbaH\x0e2\f\x18\xff\xff\xff\xff\xff\xff\xff\xff\x7f(\x01R\n" +
+	"cartItemId\"\xdc\x03\n" +
+	"\x15RemoveCartItemRequest\x12)\n" +
+	"\aspu_ids\x18\x01 \x03(\x03B\x10\xbaH\r\x92\x01\n" +
+	"\b\x01\x10d\"\x04\"\x02 \x00R\x06spuIds\x12)\n" +
+	"\asku_ids\x18\x02 \x03(\x03B\x10\xbaH\r\x92\x01\n" +
+	"\b\x01\x10d\"\x04\"\x02 \x00R\x06skuIds\x124\n" +
+	"\fmerchant_ids\x18\x03 \x03(\tB\x11\xbaH\x0e\x92\x01\v\b\x01\x10d\"\x05r\x03\xb0\x01\x01R\vmerchantIds\x12@\n" +
+	"\x06status\x18\x04 \x03(\x0e2\x13.cart.v1.CartStatusB\x13\xbaH\x10\x92\x01\r\b\x01\x10d\"\a\x82\x01\x04\x10\x01 \x00R\x06status:\xf4\x01\xbaH\xf0\x01\x1a\xed\x01\n" +
+	" remove_cart_item.parallel_arrays\x12Bspu_ids, sku_ids, merchant_ids, and status must have equal lengths\x1a\x84\x01size(this.spu_ids) == size(this.sku_ids) && size(this.spu_ids) == size(this.merchant_ids) && size(this.spu_ids) == size(this.status)\"t\n" +
+	"\x16RemoveCartItemResponse\x126\n" +
+	"\x12cart_item_quantity\x18\x01 \x01(\rB\b\xbaH\x05*\x03\x18\x90NR\x10cartItemQuantity\x12\"\n" +
+	"\ris_cart_empty\x18\x02 \x01(\bR\visCartEmpty\"\xc4\x01\n" +
+	"\x1dUpdateCartItemQuantityRequest\x12(\n" +
+	"\x06spu_id\x18\x01 \x01(\x04B\x11\xbaH\x0e2\f\x18\xff\xff\xff\xff\xff\xff\xff\xff\x7f(\x01R\x05spuId\x12(\n" +
+	"\x06sku_id\x18\x02 \x01(\x04B\x11\xbaH\x0e2\f\x18\xff\xff\xff\xff\xff\xff\xff\xff\x7f(\x01R\x05skuId\x12)\n" +
 	"\vmerchant_id\x18\x03 \x01(\tB\b\xbaH\x05r\x03\xb0\x01\x01R\n" +
-	"merchantId\x12\x1a\n" +
-	"\bquantity\x18\x04 \x01(\rR\bquantity\"N\n" +
-	"\x1eUpdateCartItemQuantityResponse\x12,\n" +
-	"\x12cart_item_quantity\x18\x01 \x01(\rR\x10cartItemQuantity\"\x10\n" +
-	"\x0eGetCartRequest\"\xbf\x03\n" +
-	"\bCartItem\x12 \n" +
-	"\fcart_item_id\x18\x01 \x01(\x04R\n" +
-	"cartItemId\x12\x15\n" +
-	"\x06spu_id\x18\x02 \x01(\x04R\x05spuId\x12\x15\n" +
-	"\x06sku_id\x18\x03 \x01(\x04R\x05skuId\x12\x1f\n" +
-	"\vmerchant_id\x18\x04 \x01(\tR\n" +
-	"merchantId\x12\x1b\n" +
-	"\tshop_name\x18\r \x01(\tR\bshopName\x12\x1a\n" +
-	"\bquantity\x18\x05 \x01(\rR\bquantity\x12\x1a\n" +
-	"\bselected\x18\x06 \x01(\bR\bselected\x12\x19\n" +
-	"\bspu_name\x18\a \x01(\tR\aspuName\x12\x19\n" +
-	"\bsku_name\x18\b \x01(\tR\askuName\x12\x14\n" +
-	"\x05price\x18\t \x01(\x01R\x05price\x12>\n" +
+	"merchantId\x12$\n" +
+	"\bquantity\x18\x04 \x01(\rB\b\xbaH\x05*\x03\x18\xe7\aR\bquantity\"X\n" +
+	"\x1eUpdateCartItemQuantityResponse\x126\n" +
+	"\x12cart_item_quantity\x18\x01 \x01(\rB\b\xbaH\x05*\x03\x18\x90NR\x10cartItemQuantity\"\x10\n" +
+	"\x0eGetCartRequest\"\xe1\x04\n" +
+	"\bCartItem\x123\n" +
+	"\fcart_item_id\x18\x01 \x01(\x04B\x11\xbaH\x0e2\f\x18\xff\xff\xff\xff\xff\xff\xff\xff\x7f(\x01R\n" +
+	"cartItemId\x12(\n" +
+	"\x06spu_id\x18\x02 \x01(\x04B\x11\xbaH\x0e2\f\x18\xff\xff\xff\xff\xff\xff\xff\xff\x7f(\x01R\x05spuId\x12(\n" +
+	"\x06sku_id\x18\x03 \x01(\x04B\x11\xbaH\x0e2\f\x18\xff\xff\xff\xff\xff\xff\xff\xff\x7f(\x01R\x05skuId\x12)\n" +
+	"\vmerchant_id\x18\x04 \x01(\tB\b\xbaH\x05r\x03\xb0\x01\x01R\n" +
+	"merchantId\x12'\n" +
+	"\tshop_name\x18\r \x01(\tB\n" +
+	"\xbaH\ar\x05\x10\x01\x18\xff\x01R\bshopName\x12&\n" +
+	"\bquantity\x18\x05 \x01(\rB\n" +
+	"\xbaH\a*\x05\x18\xe7\a(\x01R\bquantity\x12\x1a\n" +
+	"\bselected\x18\x06 \x01(\bR\bselected\x12%\n" +
+	"\bspu_name\x18\a \x01(\tB\n" +
+	"\xbaH\ar\x05\x10\x01\x18\xff\x01R\aspuName\x12%\n" +
+	"\bsku_name\x18\b \x01(\tB\n" +
+	"\xbaH\ar\x05\x10\x01\x18\xff\x01R\askuName\x12/\n" +
+	"\x05price\x18\t \x01(\x01B\x19\xbaH\x16\x12\x14@\x01\x19\x8f\xc2\xf5\xff\x83חA!\x00\x00\x00\x00\x00\x00\x00\x00R\x05price\x12F\n" +
 	"\x0esku_attributes\x18\n" +
-	" \x01(\v2\x17.google.protobuf.StructR\rskuAttributes\x12*\n" +
-	"\x11sku_thumbnail_url\x18\v \x01(\tR\x0fskuThumbnailUrl\x125\n" +
-	"\x06status\x18\f \x01(\x0e2\x13.cart.v1.CartStatusB\b\xbaH\x05\x82\x01\x02\x10\x01R\x06status\"\xa8\x01\n" +
-	"\x0fGetCartResponse\x12'\n" +
-	"\x05items\x18\x01 \x03(\v2\x11.cart.v1.CartItemR\x05items\x12,\n" +
-	"\x12cart_item_quantity\x18\x02 \x01(\rR\x10cartItemQuantity\x12>\n" +
-	"\ris_cart_empty\x18\x03 \x01(\v2\x1a.google.protobuf.BoolValueR\visCartEmpty*o\n" +
+	" \x01(\v2\x17.google.protobuf.StructB\x06\xbaH\x03\xc8\x01\x01R\rskuAttributes\x126\n" +
+	"\x11sku_thumbnail_url\x18\v \x01(\tB\n" +
+	"\xbaH\ar\x05\x10\x01\x18\xf4\x03R\x0fskuThumbnailUrl\x125\n" +
+	"\x06status\x18\f \x01(\x0e2\x13.cart.v1.CartStatusB\b\xbaH\x05\x82\x01\x02\x10\x01R\x06status\"\xc5\x01\n" +
+	"\x0fGetCartResponse\x122\n" +
+	"\x05items\x18\x01 \x03(\v2\x11.cart.v1.CartItemB\t\xbaH\x06\x92\x01\x03\x10\xe8\aR\x05items\x126\n" +
+	"\x12cart_item_quantity\x18\x02 \x01(\rB\b\xbaH\x05*\x03\x18\x90NR\x10cartItemQuantity\x12F\n" +
+	"\ris_cart_empty\x18\x03 \x01(\v2\x1a.google.protobuf.BoolValueB\x06\xbaH\x03\xc8\x01\x01R\visCartEmpty*o\n" +
 	"\n" +
 	"CartStatus\x12\x17\n" +
 	"\x13CART_STATUS_UNKNOWN\x10\x00\x12\x16\n" +
@@ -795,8 +804,7 @@ const file_api_cart_v1_cart_proto_rawDesc = "" +
 	"\aGetCart\x12\x17.cart.v1.GetCartRequest\x1a\x18.cart.v1.GetCartResponse\"\x00\x12Y\n" +
 	"\x10AddProductToCart\x12 .cart.v1.AddProductToCartRequest\x1a!.cart.v1.AddProductToCartResponse\"\x00\x12S\n" +
 	"\x0eRemoveCartItem\x12\x1e.cart.v1.RemoveCartItemRequest\x1a\x1f.cart.v1.RemoveCartItemResponse\"\x00\x12k\n" +
-	"\x16UpdateCartItemQuantity\x12&.cart.v1.UpdateCartItemQuantityRequest\x1a'.cart.v1.UpdateCartItemQuantityResponse\"\x00B\x8e\x01\n" +
-	"\vcom.cart.v1B\tCartProtoP\x01Z7github.com/lens077/ecommerce/backend/api/cart/v1;cartv1\xa2\x02\x03CXX\xaa\x02\aCart.V1\xca\x02\aCart\\V1\xe2\x02\x13Cart\\V1\\GPBMetadata\xea\x02\bCart::V1b\x06proto3"
+	"\x16UpdateCartItemQuantity\x12&.cart.v1.UpdateCartItemQuantityRequest\x1a'.cart.v1.UpdateCartItemQuantityResponse\"\x00B9Z7github.com/lens077/ecommerce/backend/api/cart/v1;cartv1b\x06proto3"
 
 var (
 	file_api_cart_v1_cart_proto_rawDescOnce sync.Once

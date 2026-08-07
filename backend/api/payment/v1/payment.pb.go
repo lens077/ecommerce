@@ -721,65 +721,71 @@ var File_api_payment_v1_payment_proto protoreflect.FileDescriptor
 const file_api_payment_v1_payment_proto_rawDesc = "" +
 	"\n" +
 	"\x1capi/payment/v1/payment.proto\x12\n" +
-	"payment.v1\x1a#third_party/validate/validate.proto\"\xb4\x02\n" +
-	"\x14CreatePaymentRequest\x12\x19\n" +
-	"\border_id\x18\x01 \x01(\x03R\aorderId\x12\x1f\n" +
-	"\vconsumer_id\x18\x02 \x01(\tR\n" +
-	"consumerId\x12\x16\n" +
-	"\x06amount\x18\x03 \x01(\tR\x06amount\x12\x1a\n" +
-	"\bcurrency\x18\x04 \x01(\tR\bcurrency\x12\x18\n" +
-	"\asubject\x18\x05 \x01(\tR\asubject\x12\x1d\n" +
+	"payment.v1\x1a#third_party/validate/validate.proto\"\xe4\x03\n" +
+	"\x14CreatePaymentRequest\x12\"\n" +
+	"\border_id\x18\x01 \x01(\x03B\a\xbaH\x04\"\x02 \x00R\aorderId\x12)\n" +
+	"\vconsumer_id\x18\x02 \x01(\tB\b\xbaH\x05r\x03\xb0\x01\x01R\n" +
+	"consumerId\x12`\n" +
+	"\x06amount\x18\x03 \x01(\tBH\xbaHErC\x18\r2?^(?:0\\.(?:0[1-9]|[1-9][0-9])|[1-9][0-9]{0,9}(?:\\.[0-9]{1,2})?)$R\x06amount\x120\n" +
+	"\bcurrency\x18\x04 \x01(\tB\x14\xbaH\x11r\x0f2\n" +
+	"^[A-Z]{3}$\x98\x01\x03R\bcurrency\x12$\n" +
+	"\asubject\x18\x05 \x01(\tB\n" +
+	"\xbaH\ar\x05\x10\x01\x18\xff\x01R\asubject\x12*\n" +
 	"\n" +
-	"return_url\x18\x06 \x01(\tR\treturnUrl\x12\x1b\n" +
-	"\tfreeze_id\x18\b \x01(\x03R\bfreezeId\x12)\n" +
-	"\x10consumer_version\x18\t \x01(\x03R\x0fconsumerVersion\x12+\n" +
+	"return_url\x18\x06 \x01(\tB\v\xbaH\br\x06\x18\x80\x10\x88\x01\x01R\treturnUrl\x12$\n" +
+	"\tfreeze_id\x18\b \x01(\x03B\a\xbaH\x04\"\x02 \x00R\bfreezeId\x122\n" +
+	"\x10consumer_version\x18\t \x01(\x03B\a\xbaH\x04\"\x02(\x00R\x0fconsumerVersion\x12=\n" +
 	"\x11merchant_versions\x18\n" +
-	" \x03(\x03R\x10merchantVersions\"O\n" +
-	"\x15CreatePaymentResponse\x12\x1d\n" +
+	" \x03(\x03B\x10\xbaH\r\x92\x01\n" +
+	"\b\x01\x10d\"\x04\"\x02(\x00R\x10merchantVersions\"e\n" +
+	"\x15CreatePaymentResponse\x12&\n" +
 	"\n" +
-	"payment_id\x18\x01 \x01(\x03R\tpaymentId\x12\x17\n" +
-	"\apay_url\x18\x02 \x01(\tR\x06payUrl\"8\n" +
-	"\x17GetPaymentStatusRequest\x12\x1d\n" +
+	"payment_id\x18\x01 \x01(\x03B\a\xbaH\x04\"\x02 \x00R\tpaymentId\x12$\n" +
+	"\apay_url\x18\x02 \x01(\tB\v\xbaH\br\x06\x18\x80\x10\x88\x01\x01R\x06payUrl\"A\n" +
+	"\x17GetPaymentStatusRequest\x12&\n" +
 	"\n" +
-	"payment_id\x18\x01 \x01(\x03R\tpaymentId\"\xa2\x01\n" +
-	"\x18GetPaymentStatusResponse\x12\x1d\n" +
+	"payment_id\x18\x01 \x01(\x03B\a\xbaH\x04\"\x02 \x00R\tpaymentId\"\xca\x01\n" +
+	"\x18GetPaymentStatusResponse\x12&\n" +
 	"\n" +
-	"payment_id\x18\x01 \x01(\x03R\tpaymentId\x12\x19\n" +
-	"\border_id\x18\x02 \x01(\x03R\aorderId\x121\n" +
-	"\x06status\x18\x03 \x01(\x0e2\x19.payment.v1.PaymentStatusR\x06status\x12\x19\n" +
-	"\btrade_no\x18\x04 \x01(\tR\atradeNo\"4\n" +
-	"\bKeyValue\x12\x10\n" +
-	"\x03key\x18\x01 \x01(\tR\x03key\x12\x16\n" +
-	"\x06values\x18\x02 \x03(\tR\x06values\"7\n" +
-	"\tUrlValues\x12*\n" +
-	"\x05pairs\x18\x01 \x03(\v2\x14.payment.v1.KeyValueR\x05pairs\"Q\n" +
+	"payment_id\x18\x01 \x01(\x03B\a\xbaH\x04\"\x02 \x00R\tpaymentId\x12\"\n" +
+	"\border_id\x18\x02 \x01(\x03B\a\xbaH\x04\"\x02 \x00R\aorderId\x12=\n" +
+	"\x06status\x18\x03 \x01(\x0e2\x19.payment.v1.PaymentStatusB\n" +
+	"\xbaH\a\x82\x01\x04\x10\x01 \x00R\x06status\x12#\n" +
+	"\btrade_no\x18\x04 \x01(\tB\b\xbaH\x05r\x03\x18\xff\x01R\atradeNo\"P\n" +
+	"\bKeyValue\x12\x1b\n" +
+	"\x03key\x18\x01 \x01(\tB\t\xbaH\x06r\x04\x10\x01\x18@R\x03key\x12'\n" +
+	"\x06values\x18\x02 \x03(\tB\x0f\xbaH\f\x92\x01\t\x10\n" +
+	"\"\x05r\x03\x18\x80 R\x06values\"A\n" +
+	"\tUrlValues\x124\n" +
+	"\x05pairs\x18\x01 \x03(\v2\x14.payment.v1.KeyValueB\b\xbaH\x05\x92\x01\x02\x10@R\x05pairs\"[\n" +
 	"\x1bHandlePaymentNotifyResponse\x12\x18\n" +
-	"\asuccess\x18\x01 \x01(\bR\asuccess\x12\x18\n" +
-	"\amessage\x18\x02 \x01(\tR\amessage\"\xb3\x04\n" +
-	"\x1cHandlePaymentCallbackRequest\x12 \n" +
-	"\fout_trade_no\x18\x01 \x01(\tR\n" +
-	"outTradeNo\x12\x19\n" +
-	"\btrade_no\x18\x02 \x01(\tR\atradeNo\x12!\n" +
-	"\ftotal_amount\x18\x03 \x01(\tR\vtotalAmount\x12\x18\n" +
-	"\asubject\x18\x04 \x01(\tR\asubject\x12!\n" +
-	"\ftrade_status\x18\x05 \x01(\tR\vtradeStatus\x12\x18\n" +
-	"\acharset\x18\x06 \x01(\tR\acharset\x12\x16\n" +
-	"\x06method\x18\a \x01(\tR\x06method\x12\x12\n" +
-	"\x04sign\x18\b \x01(\tR\x04sign\x12\x1b\n" +
-	"\tsign_type\x18\t \x01(\tR\bsignType\x12\x15\n" +
+	"\asuccess\x18\x01 \x01(\bR\asuccess\x12\"\n" +
+	"\amessage\x18\x02 \x01(\tB\b\xbaH\x05r\x03\x18\x80\x04R\amessage\"\x95\x06\n" +
+	"\x1cHandlePaymentCallbackRequest\x12+\n" +
+	"\fout_trade_no\x18\x01 \x01(\tB\t\xbaH\x06r\x04\x10\x01\x18@R\n" +
+	"outTradeNo\x12$\n" +
+	"\btrade_no\x18\x02 \x01(\tB\t\xbaH\x06r\x04\x10\x01\x18@R\atradeNo\x12k\n" +
+	"\ftotal_amount\x18\x03 \x01(\tBH\xbaHErC\x18\r2?^(?:0\\.(?:0[1-9]|[1-9][0-9])|[1-9][0-9]{0,9}(?:\\.[0-9]{1,2})?)$R\vtotalAmount\x12\"\n" +
+	"\asubject\x18\x04 \x01(\tB\b\xbaH\x05r\x03\x18\xff\x01R\asubject\x12,\n" +
+	"\ftrade_status\x18\x05 \x01(\tB\t\xbaH\x06r\x04\x10\x01\x18 R\vtradeStatus\x12!\n" +
+	"\acharset\x18\x06 \x01(\tB\a\xbaH\x04r\x02\x18\x10R\acharset\x12\x1f\n" +
+	"\x06method\x18\a \x01(\tB\a\xbaH\x04r\x02\x18@R\x06method\x12\x1e\n" +
+	"\x04sign\x18\b \x01(\tB\n" +
+	"\xbaH\ar\x05\x10\x01\x18\x80 R\x04sign\x12$\n" +
+	"\tsign_type\x18\t \x01(\tB\a\xbaH\x04r\x02\x18\x10R\bsignType\x12\x1e\n" +
 	"\x06app_id\x18\n" +
-	" \x01(\tR\x05appId\x12\x1e\n" +
-	"\vauth_app_id\x18\f \x01(\tR\tauthAppId\x12\x18\n" +
-	"\aversion\x18\r \x01(\tR\aversion\x12\x1b\n" +
-	"\tseller_id\x18\x0e \x01(\tR\bsellerId\x12\x1c\n" +
-	"\ttimestamp\x18\x10 \x01(\tR\ttimestamp\x12L\n" +
-	"\x06params\x18\v \x03(\v24.payment.v1.HandlePaymentCallbackRequest.ParamsEntryR\x06params\x1a9\n" +
+	" \x01(\tB\a\xbaH\x04r\x02\x18 R\x05appId\x12'\n" +
+	"\vauth_app_id\x18\f \x01(\tB\a\xbaH\x04r\x02\x18 R\tauthAppId\x12!\n" +
+	"\aversion\x18\r \x01(\tB\a\xbaH\x04r\x02\x18\x10R\aversion\x12$\n" +
+	"\tseller_id\x18\x0e \x01(\tB\a\xbaH\x04r\x02\x18 R\bsellerId\x12%\n" +
+	"\ttimestamp\x18\x10 \x01(\tB\a\xbaH\x04r\x02\x18 R\ttimestamp\x12e\n" +
+	"\x06params\x18\v \x03(\v24.payment.v1.HandlePaymentCallbackRequest.ParamsEntryB\x17\xbaH\x14\x9a\x01\x11\x10@\"\x06r\x04\x10\x01\x18@*\x05r\x03\x18\x80 R\x06params\x1a9\n" +
 	"\vParamsEntry\x12\x10\n" +
 	"\x03key\x18\x01 \x01(\tR\x03key\x12\x14\n" +
-	"\x05value\x18\x02 \x01(\tR\x05value:\x028\x01\"S\n" +
+	"\x05value\x18\x02 \x01(\tR\x05value:\x028\x01\"]\n" +
 	"\x1dHandlePaymentCallbackResponse\x12\x18\n" +
-	"\asuccess\x18\x01 \x01(\bR\asuccess\x12\x18\n" +
-	"\amessage\x18\x02 \x01(\tR\amessage*\xb8\x01\n" +
+	"\asuccess\x18\x01 \x01(\bR\asuccess\x12\"\n" +
+	"\amessage\x18\x02 \x01(\tB\b\xbaH\x05r\x03\x18\x80\x04R\amessage*\xb8\x01\n" +
 	"\rPaymentStatus\x12\x1a\n" +
 	"\x16PAYMENT_STATUS_UNKNOWN\x10\x00\x12\x1a\n" +
 	"\x16PAYMENT_STATUS_PENDING\x10\x01\x12\x1d\n" +
@@ -791,10 +797,7 @@ const file_api_payment_v1_payment_proto_rawDesc = "" +
 	"\rCreatePayment\x12 .payment.v1.CreatePaymentRequest\x1a!.payment.v1.CreatePaymentResponse\"\x00\x12_\n" +
 	"\x10GetPaymentStatus\x12#.payment.v1.GetPaymentStatusRequest\x1a$.payment.v1.GetPaymentStatusResponse\"\x00\x12W\n" +
 	"\x13HandlePaymentNotify\x12\x15.payment.v1.UrlValues\x1a'.payment.v1.HandlePaymentNotifyResponse\"\x00\x12n\n" +
-	"\x15HandlePaymentCallback\x12(.payment.v1.HandlePaymentCallbackRequest\x1a).payment.v1.HandlePaymentCallbackResponse\"\x00B\xa6\x01\n" +
-	"\x0ecom.payment.v1B\fPaymentProtoP\x01Z=github.com/lens077/ecommerce/backend/api/payment/v1;paymentv1\xa2\x02\x03PXX\xaa\x02\n" +
-	"Payment.V1\xca\x02\n" +
-	"Payment\\V1\xe2\x02\x16Payment\\V1\\GPBMetadata\xea\x02\vPayment::V1b\x06proto3"
+	"\x15HandlePaymentCallback\x12(.payment.v1.HandlePaymentCallbackRequest\x1a).payment.v1.HandlePaymentCallbackResponse\"\x00B?Z=github.com/lens077/ecommerce/backend/api/payment/v1;paymentv1b\x06proto3"
 
 var (
 	file_api_payment_v1_payment_proto_rawDescOnce sync.Once

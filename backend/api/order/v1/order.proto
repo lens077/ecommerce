@@ -1,34 +1,40 @@
 syntax = "proto3";
 
-import "third_party/validate/validate.proto";
-
 package order.v1;
+
+import "third_party/validate/validate.proto";
 
 option go_package = "github.com/lens077/ecommerce/backend/api/order/v1;orderv1";
 
 service orderService {
-  rpc CreateOrder(CreateOrderRequest) returns(CreateOrderResponse){}
-  rpc CompleteOrder(CompleteOrderRequest) returns(CompleteOrderResponse){}
+  rpc CreateOrder(CreateOrderRequest) returns (CreateOrderResponse) {}
+  rpc CompleteOrder(CompleteOrderRequest) returns (CompleteOrderResponse) {}
 }
 
 message CreateOrderRequest {
-  repeated int64 CartItemIds = 1; // 用户在购物车中已选商品的唯一标识，订单服务只需知道用户勾选了哪些购物车项
-  string addressId = 2; // 下单时获取快照。用户可能在提交订单后修改收货地址，但历史订单必须保留当时的地址信息
-  string remark = 3;
+  repeated int64 CartItemIds = 1 [(buf.validate.field).repeated = {
+    min_items: 1
+    max_items: 100
+    unique: true
+    items: {
+      int64: {gt: 0}
+    }
+  }]; // 用户在购物车中已选商品的唯一标识，订单服务只需知道用户勾选了哪些购物车项
+  string addressId = 2 [(buf.validate.field).string.uuid = true]; // 下单时获取快照。用户可能在提交订单后修改收货地址，但历史订单必须保留当时的地址信息
+  string remark = 3 [(buf.validate.field).string.max_len = 2000];
 }
 
-message CreateOrderResponse {
-
-}
+message CreateOrderResponse {}
 
 message CompleteOrderRequest {
-  string orderNo = 1;
+  string orderNo = 1 [(buf.validate.field).string = {
+    min_len: 1
+    max_len: 64
+  }];
 }
 
 message CompleteOrderResponse {
-    Order order = 1;
+  Order order = 1 [(buf.validate.field).required = true];
 }
 
-message Order {
-
-}
+message Order {}

@@ -211,20 +211,21 @@ var File_api_user_v1_user_proto protoreflect.FileDescriptor
 
 const file_api_user_v1_user_proto_rawDesc = "" +
 	"\n" +
-	"\x16api/user/v1/user.proto\x12\auser.v1\x1a#third_party/validate/validate.proto\x1a\x19api/casdoor/v1/user.proto\"I\n" +
-	"\rSignInRequest\x12\x1a\n" +
-	"\x04code\x18\x01 \x01(\tB\x06\xbaH\x03\xc8\x01\x01R\x04code\x12\x1c\n" +
-	"\x05state\x18\x02 \x01(\tB\x06\xbaH\x03\xc8\x01\x01R\x05state\":\n" +
-	"\x0eSignInResponse\x12\x14\n" +
-	"\x05state\x18\x01 \x01(\tR\x05state\x12\x12\n" +
-	"\x04data\x18\x02 \x01(\tR\x04data\"\x14\n" +
-	"\x12UserProfileRequest\";\n" +
-	"\x13UserProfileResponse\x12$\n" +
-	"\x04user\x18\x01 \x01(\v2\x10.casdoor.v1.UserR\x04user2\x96\x01\n" +
+	"\x16api/user/v1/user.proto\x12\auser.v1\x1a\x19api/casdoor/v1/user.proto\x1a#third_party/validate/validate.proto\"Q\n" +
+	"\rSignInRequest\x12\x1e\n" +
+	"\x04code\x18\x01 \x01(\tB\n" +
+	"\xbaH\ar\x05\x10\x01\x18\x80\x10R\x04code\x12 \n" +
+	"\x05state\x18\x02 \x01(\tB\n" +
+	"\xbaH\ar\x05\x10\x01\x18\x80\x04R\x05state\"P\n" +
+	"\x0eSignInResponse\x12\x1f\n" +
+	"\x05state\x18\x01 \x01(\tB\t\xbaH\x06r\x04\x10\x01\x18@R\x05state\x12\x1d\n" +
+	"\x04data\x18\x02 \x01(\tB\t\xbaH\x06r\x04\x18\x80\x80\x01R\x04data\"\x14\n" +
+	"\x12UserProfileRequest\"C\n" +
+	"\x13UserProfileResponse\x12,\n" +
+	"\x04user\x18\x01 \x01(\v2\x10.casdoor.v1.UserB\x06\xbaH\x03\xc8\x01\x01R\x04user2\x96\x01\n" +
 	"\vUserService\x12;\n" +
 	"\x06SignIn\x12\x16.user.v1.SignInRequest\x1a\x17.user.v1.SignInResponse\"\x00\x12J\n" +
-	"\vUserProfile\x12\x1b.user.v1.UserProfileRequest\x1a\x1c.user.v1.UserProfileResponse\"\x00B\x8e\x01\n" +
-	"\vcom.user.v1B\tUserProtoP\x01Z7github.com/lens077/ecommerce/backend/api/user/v1;userv1\xa2\x02\x03UXX\xaa\x02\aUser.V1\xca\x02\aUser\\V1\xe2\x02\x13User\\V1\\GPBMetadata\xea\x02\bUser::V1b\x06proto3"
+	"\vUserProfile\x12\x1b.user.v1.UserProfileRequest\x1a\x1c.user.v1.UserProfileResponse\"\x00B9Z7github.com/lens077/ecommerce/backend/api/user/v1;userv1b\x06proto3"
 
 var (
 	file_api_user_v1_user_proto_rawDescOnce sync.Once

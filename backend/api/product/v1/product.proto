@@ -2,46 +2,75 @@ syntax = "proto3";
 
 package product.v1;
 
-option go_package = "github.com/lens077/ecommerce/backend/api/product/v1;productv1";
-
 import "google/protobuf/struct.proto";
-import "google/protobuf/timestamp.proto";
 import "third_party/google/type/money.proto";
 import "third_party/validate/validate.proto";
 
+option go_package = "github.com/lens077/ecommerce/backend/api/product/v1;productv1";
+
 service ProductService {
-  rpc GetProductDetail(GetProductDetailRequest) returns(GetProductDetailResponse){}
+  rpc GetProductDetail(GetProductDetailRequest) returns (GetProductDetailResponse) {}
 }
 
 message GetProductDetailRequest {
-  string spu_code = 1;
+  string spu_code = 1 [(buf.validate.field).string = {
+    min_len: 1
+    max_len: 64
+  }];
 }
 
 message GetProductDetailResponse {
-  ProductSpuDetail product_detail = 1;
+  ProductSpuDetail product_detail = 1 [(buf.validate.field).required = true];
 }
 
 message ProductSpuDetail {
-  int64 spu_id = 1;
-  string spu_name = 2;
-  string spu_code = 3;
+  int64 spu_id = 1 [(buf.validate.field).int64.gt = 0];
+  string spu_name = 2 [(buf.validate.field).string = {
+    min_len: 1
+    max_len: 255
+  }];
+  string spu_code = 3 [(buf.validate.field).string = {
+    min_len: 1
+    max_len: 64
+  }];
   // 使用 google.protobuf.Struct 来匹配 map[string]any
-  google.protobuf.Struct common_specs = 4;
-  repeated ProductSku skus = 5;
+  google.protobuf.Struct common_specs = 4 [(buf.validate.field).required = true];
+  repeated ProductSku skus = 5 [(buf.validate.field).repeated = {
+    min_items: 1
+    max_items: 100
+  }];
 }
 
 message ProductSku {
-  int64 sku_id = 1;
-  string sku_code = 2;
+  int64 sku_id = 1 [(buf.validate.field).int64.gt = 0];
+  string sku_code = 2 [(buf.validate.field).string = {
+    min_len: 1
+    max_len: 64
+  }];
   string merchant_id = 3 [(buf.validate.field).string.uuid = true];
-  google.type.Money price = 4;
-  google.type.Money cost_price = 5;
-  int64 stock_locked = 6;
-  google.protobuf.Struct attributes = 7;
-  repeated string spec_template = 8;
-  string sku_name = 9;
-  string thumbnail_url = 10;
-  SPUStatus status = 11;
+  google.type.Money price = 4 [(buf.validate.field).required = true];
+  google.type.Money cost_price = 5 [(buf.validate.field).required = true];
+  int64 stock_locked = 6 [(buf.validate.field).int64.gte = 0];
+  google.protobuf.Struct attributes = 7 [(buf.validate.field).required = true];
+  repeated string spec_template = 8 [(buf.validate.field).repeated = {
+    max_items: 50
+    unique: true
+    items: {
+      string: {
+        min_len: 1
+        max_len: 128
+      }
+    }
+  }];
+  string sku_name = 9 [(buf.validate.field).string = {
+    min_len: 1
+    max_len: 255
+  }];
+  string thumbnail_url = 10 [(buf.validate.field).string = {
+    min_len: 1
+    max_len: 500
+  }];
+  SPUStatus status = 11 [(buf.validate.field).enum.defined_only = true];
 }
 
 enum SPUStatus {

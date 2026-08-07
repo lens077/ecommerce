@@ -1,8 +1,8 @@
 syntax = "proto3"; // 指定使用 proto3 语法
 
-import "third_party/validate/validate.proto";
-
 package payment.v1; // 定义包名，用于命名空间隔离
+
+import "third_party/validate/validate.proto";
 
 // Go 语言生成代码的选项
 option go_package = "github.com/lens077/ecommerce/backend/api/payment/v1;paymentv1";
@@ -10,41 +10,62 @@ option go_package = "github.com/lens077/ecommerce/backend/api/payment/v1;payment
 // 定义支付服务接口
 service PaymentService {
   // 创建支付订单
-  rpc CreatePayment (CreatePaymentRequest) returns (CreatePaymentResponse) {}
+  rpc CreatePayment(CreatePaymentRequest) returns (CreatePaymentResponse) {}
 
   // 查询支付状态
-  rpc GetPaymentStatus (GetPaymentStatusRequest) returns (GetPaymentStatusResponse) {}
+  rpc GetPaymentStatus(GetPaymentStatusRequest) returns (GetPaymentStatusResponse) {}
 
   // 处理支付回调通知
   //  rpc HandlePaymentNotify (HandlePaymentNotifyRequest) returns (HandlePaymentNotifyResponse) {
-  rpc HandlePaymentNotify (UrlValues) returns (HandlePaymentNotifyResponse) {}
+  rpc HandlePaymentNotify(UrlValues) returns (HandlePaymentNotifyResponse) {}
 
   // 支付成功后的回调处理
-  rpc HandlePaymentCallback (HandlePaymentCallbackRequest) returns (HandlePaymentCallbackResponse) {}
+  rpc HandlePaymentCallback(HandlePaymentCallbackRequest) returns (HandlePaymentCallbackResponse) {}
 }
 
 // 创建支付订单请求
 message CreatePaymentRequest {
-  int64 order_id = 1;
-  string consumer_id = 2;
-  string amount = 3;
-  string currency = 4;
-  string subject = 5;
-  string return_url = 6;
-  int64 freeze_id = 8;
-  int64 consumer_version = 9;
-  repeated int64 merchant_versions = 10;
+  int64 order_id = 1 [(buf.validate.field).int64.gt = 0];
+  string consumer_id = 2 [(buf.validate.field).string.uuid = true];
+  string amount = 3 [(buf.validate.field).string = {
+    max_len: 13
+    pattern: "^(?:0\\.(?:0[1-9]|[1-9][0-9])|[1-9][0-9]{0,9}(?:\\.[0-9]{1,2})?)$"
+  }];
+  string currency = 4 [(buf.validate.field).string = {
+    len: 3
+    pattern: "^[A-Z]{3}$"
+  }];
+  string subject = 5 [(buf.validate.field).string = {
+    min_len: 1
+    max_len: 255
+  }];
+  string return_url = 6 [(buf.validate.field).string = {
+    max_len: 2048
+    uri: true
+  }];
+  int64 freeze_id = 8 [(buf.validate.field).int64.gt = 0];
+  int64 consumer_version = 9 [(buf.validate.field).int64.gte = 0];
+  repeated int64 merchant_versions = 10 [(buf.validate.field).repeated = {
+    min_items: 1
+    max_items: 100
+    items: {
+      int64: {gte: 0}
+    }
+  }];
 }
 
 // 创建支付订单响应
 message CreatePaymentResponse {
-  int64 payment_id = 1;
-  string pay_url = 2;
+  int64 payment_id = 1 [(buf.validate.field).int64.gt = 0];
+  string pay_url = 2 [(buf.validate.field).string = {
+    max_len: 2048
+    uri: true
+  }];
 }
 
 // 查询支付状态请求
 message GetPaymentStatusRequest {
-  int64 payment_id = 1;
+  int64 payment_id = 1 [(buf.validate.field).int64.gt = 0];
 }
 
 // 支付状态
@@ -59,10 +80,13 @@ enum PaymentStatus {
 
 // 查询支付状态响应
 message GetPaymentStatusResponse {
-  int64 payment_id = 1;
-  int64 order_id = 2;
-  PaymentStatus status = 3;
-  string trade_no = 4; // 支付宝交易号
+  int64 payment_id = 1 [(buf.validate.field).int64.gt = 0];
+  int64 order_id = 2 [(buf.validate.field).int64.gt = 0];
+  PaymentStatus status = 3 [(buf.validate.field).enum = {
+    defined_only: true
+    not_in: [0]
+  }];
+  string trade_no = 4 [(buf.validate.field).string.max_len = 255]; // 支付宝交易号
 }
 
 // 支付通知请求
@@ -81,40 +105,74 @@ message GetPaymentStatusResponse {
 //}
 
 message KeyValue {
-  string key = 1;
-  repeated string values = 2;
+  string key = 1 [(buf.validate.field).string = {
+    min_len: 1
+    max_len: 64
+  }];
+  repeated string values = 2 [(buf.validate.field).repeated = {
+    max_items: 10
+    items: {
+      string: {max_len: 4096}
+    }
+  }];
 }
 message UrlValues {
-  repeated KeyValue pairs = 1;
+  repeated KeyValue pairs = 1 [(buf.validate.field).repeated.max_items = 64];
 }
 
 // 支付通知响应
 message HandlePaymentNotifyResponse {
   bool success = 1;
-  string message = 2;
+  string message = 2 [(buf.validate.field).string.max_len = 512];
 }
 
 // 支付回调请求
 message HandlePaymentCallbackRequest {
-  string out_trade_no = 1;
-  string trade_no = 2;
-  string total_amount = 3;
-  string subject = 4;
-  string trade_status = 5;
-  string charset = 6; // 字符集
-  string method = 7; // 支付方式
-  string sign = 8; // 签名
-  string sign_type = 9; // 签名类型 RSA2
-  string app_id = 10; // 应用ID
-  string auth_app_id = 12; // 授权应用ID
-  string version = 13; // 版本号
-  string seller_id = 14; // 卖家ID
-  string timestamp = 16; // 时间戳
-  map<string, string> params = 11; // 存储所有回调参数
+  string out_trade_no = 1 [(buf.validate.field).string = {
+    min_len: 1
+    max_len: 64
+  }];
+  string trade_no = 2 [(buf.validate.field).string = {
+    min_len: 1
+    max_len: 64
+  }];
+  string total_amount = 3 [(buf.validate.field).string = {
+    max_len: 13
+    pattern: "^(?:0\\.(?:0[1-9]|[1-9][0-9])|[1-9][0-9]{0,9}(?:\\.[0-9]{1,2})?)$"
+  }];
+  string subject = 4 [(buf.validate.field).string.max_len = 255];
+  string trade_status = 5 [(buf.validate.field).string = {
+    min_len: 1
+    max_len: 32
+  }];
+  string charset = 6 [(buf.validate.field).string.max_len = 16]; // 字符集
+  string method = 7 [(buf.validate.field).string.max_len = 64]; // 支付方式
+  string sign = 8 [(buf.validate.field).string = {
+    min_len: 1
+    max_len: 4096
+  }]; // 签名
+  string sign_type = 9 [(buf.validate.field).string.max_len = 16]; // 签名类型 RSA2
+  string app_id = 10 [(buf.validate.field).string.max_len = 32]; // 应用ID
+  string auth_app_id = 12 [(buf.validate.field).string.max_len = 32]; // 授权应用ID
+  string version = 13 [(buf.validate.field).string.max_len = 16]; // 版本号
+  string seller_id = 14 [(buf.validate.field).string.max_len = 32]; // 卖家ID
+  string timestamp = 16 [(buf.validate.field).string.max_len = 32]; // 时间戳
+  map<string, string> params = 11 [(buf.validate.field).map = {
+    max_pairs: 64
+    keys: {
+      string: {
+        min_len: 1
+        max_len: 64
+      }
+    }
+    values: {
+      string: {max_len: 4096}
+    }
+  }]; // 存储所有回调参数
 }
 
 // 支付回调响应
 message HandlePaymentCallbackResponse {
   bool success = 1;
-  string message = 2;
+  string message = 2 [(buf.validate.field).string.max_len = 512];
 }

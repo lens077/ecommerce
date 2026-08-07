@@ -2,17 +2,31 @@ syntax = "proto3";
 
 package check.v1;
 
+import "third_party/validate/validate.proto";
+
 option go_package = "github.com/lens077/ecommerce/backend/api/check/v1;checkv1";
 
 service CheckService {
-  rpc Ready(ReadyCheckReq) returns(ReadyCheckReply){}
+  rpc Ready(ReadyCheckReq) returns (ReadyCheckReply) {}
 }
 
-message ReadyCheckReq {
-
-}
+message ReadyCheckReq {}
 
 message ReadyCheckReply {
-  string status = 1;
-  map<string, string> details = 2;
+  string status = 1 [(buf.validate.field).string = {
+    min_len: 1
+    max_len: 32
+  }];
+  map<string, string> details = 2 [(buf.validate.field).map = {
+    max_pairs: 32
+    keys: {
+      string: {
+        min_len: 1
+        max_len: 64
+      }
+    }
+    values: {
+      string: {max_len: 512}
+    }
+  }];
 }

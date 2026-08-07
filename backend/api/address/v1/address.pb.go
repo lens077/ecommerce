@@ -757,58 +757,64 @@ var File_api_address_v1_address_proto protoreflect.FileDescriptor
 const file_api_address_v1_address_proto_rawDesc = "" +
 	"\n" +
 	"\x1capi/address/v1/address.proto\x12\n" +
-	"address.v1\x1a#third_party/validate/validate.proto\x1a\x1fgoogle/protobuf/timestamp.proto\x1a\x1egoogle/protobuf/wrappers.proto\"\xcc\x01\n" +
-	"\rAddressDetail\x12#\n" +
-	"\bprovince\x18\x01 \x01(\tB\a\xbaH\x04r\x02\x10\x01R\bprovince\x12\x1b\n" +
-	"\x04city\x18\x02 \x01(\tB\a\xbaH\x04r\x02\x10\x01R\x04city\x12\x1a\n" +
-	"\bdistrict\x18\x03 \x01(\tR\bdistrict\x12\x1f\n" +
-	"\x06detail\x18\x04 \x01(\tB\a\xbaH\x04r\x02\x10\x01R\x06detail\x12\x1f\n" +
-	"\vpostal_code\x18\x05 \x01(\tR\n" +
-	"postalCode\x12\x1b\n" +
-	"\tfull_text\x18\x06 \x01(\tR\bfullText\"\xf4\x01\n" +
-	"\x14CreateAddressRequest\x12.\n" +
-	"\x0erecipient_name\x18\x01 \x01(\tB\a\xbaH\x04r\x02\x10\x01R\rrecipientName\x120\n" +
-	"\x0frecipient_phone\x18\x02 \x01(\tB\a\xbaH\x04r\x02\x10\x01R\x0erecipientPhone\x12 \n" +
-	"\auser_id\x18\x03 \x01(\tB\a\xbaH\x04r\x02\x10\x01R\x06userId\x129\n" +
+	"address.v1\x1a\x1fgoogle/protobuf/timestamp.proto\x1a\x1egoogle/protobuf/wrappers.proto\x1a#third_party/validate/validate.proto\"\xef\x01\n" +
+	"\rAddressDetail\x12%\n" +
+	"\bprovince\x18\x01 \x01(\tB\t\xbaH\x06r\x04\x10\x01\x18@R\bprovince\x12\x1d\n" +
+	"\x04city\x18\x02 \x01(\tB\t\xbaH\x06r\x04\x10\x01\x18@R\x04city\x12#\n" +
+	"\bdistrict\x18\x03 \x01(\tB\a\xbaH\x04r\x02\x18@R\bdistrict\x12\"\n" +
+	"\x06detail\x18\x04 \x01(\tB\n" +
+	"\xbaH\ar\x05\x10\x01\x18\xf4\x03R\x06detail\x12(\n" +
+	"\vpostal_code\x18\x05 \x01(\tB\a\xbaH\x04r\x02\x18\x10R\n" +
+	"postalCode\x12%\n" +
+	"\tfull_text\x18\x06 \x01(\tB\b\xbaH\x05r\x03\x18\x80\bR\bfullText\"\xfc\x01\n" +
+	"\x14CreateAddressRequest\x121\n" +
+	"\x0erecipient_name\x18\x01 \x01(\tB\n" +
+	"\xbaH\ar\x05\x10\x01\x18\xff\x01R\rrecipientName\x122\n" +
+	"\x0frecipient_phone\x18\x02 \x01(\tB\t\xbaH\x06r\x04\x10\x01\x182R\x0erecipientPhone\x12#\n" +
+	"\auser_id\x18\x03 \x01(\tB\n" +
+	"\xbaH\ar\x05\x10\x01\x18\xff\x01R\x06userId\x129\n" +
 	"\x06detail\x18\x04 \x01(\v2\x19.address.v1.AddressDetailB\x06\xbaH\x03\xc8\x01\x01R\x06detail\x12\x1d\n" +
 	"\n" +
-	"is_default\x18\x05 \x01(\bR\tisDefault\"6\n" +
-	"\x15CreateAddressResponse\x12\x1d\n" +
+	"is_default\x18\x05 \x01(\bR\tisDefault\"@\n" +
+	"\x15CreateAddressResponse\x12'\n" +
 	"\n" +
-	"address_id\x18\x01 \x01(\tR\taddressId\"\xfd\x01\n" +
-	"\x14UpdateAddressRequest\x12&\n" +
+	"address_id\x18\x01 \x01(\tB\b\xbaH\x05r\x03\xb0\x01\x01R\taddressId\"\x95\x02\n" +
+	"\x14UpdateAddressRequest\x12'\n" +
 	"\n" +
-	"address_id\x18\x01 \x01(\tB\a\xbaH\x04r\x02\x10\x01R\taddressId\x12C\n" +
-	"\x0erecipient_name\x18\x02 \x01(\v2\x1c.google.protobuf.StringValueR\rrecipientName\x12E\n" +
-	"\x0frecipient_phone\x18\x03 \x01(\v2\x1c.google.protobuf.StringValueR\x0erecipientPhone\x121\n" +
+	"address_id\x18\x01 \x01(\tB\b\xbaH\x05r\x03\xb0\x01\x01R\taddressId\x12O\n" +
+	"\x0erecipient_name\x18\x02 \x01(\v2\x1c.google.protobuf.StringValueB\n" +
+	"\xbaH\ar\x05\x10\x01\x18\xff\x01R\rrecipientName\x12P\n" +
+	"\x0frecipient_phone\x18\x03 \x01(\v2\x1c.google.protobuf.StringValueB\t\xbaH\x06r\x04\x10\x01\x182R\x0erecipientPhone\x121\n" +
 	"\x06detail\x18\x04 \x01(\v2\x19.address.v1.AddressDetailR\x06detail\"\x17\n" +
-	"\x15UpdateAddressResponse\">\n" +
-	"\x14DeleteAddressRequest\x12&\n" +
+	"\x15UpdateAddressResponse\"?\n" +
+	"\x14DeleteAddressRequest\x12'\n" +
 	"\n" +
-	"address_id\x18\x01 \x01(\tB\a\xbaH\x04r\x02\x10\x01R\taddressId\"\x17\n" +
-	"\x15DeleteAddressResponse\";\n" +
-	"\x11GetAddressRequest\x12&\n" +
+	"address_id\x18\x01 \x01(\tB\b\xbaH\x05r\x03\xb0\x01\x01R\taddressId\"\x17\n" +
+	"\x15DeleteAddressResponse\"<\n" +
+	"\x11GetAddressRequest\x12'\n" +
 	"\n" +
-	"address_id\x18\x01 \x01(\tB\a\xbaH\x04r\x02\x10\x01R\taddressId\"\xe4\x02\n" +
-	"\x12GetAddressResponse\x12\x1d\n" +
+	"address_id\x18\x01 \x01(\tB\b\xbaH\x05r\x03\xb0\x01\x01R\taddressId\"\xa9\x03\n" +
+	"\x12GetAddressResponse\x12'\n" +
 	"\n" +
-	"address_id\x18\x01 \x01(\tR\taddressId\x12%\n" +
-	"\x0erecipient_name\x18\x02 \x01(\tR\rrecipientName\x12'\n" +
-	"\x0frecipient_phone\x18\x03 \x01(\tR\x0erecipientPhone\x12\x17\n" +
-	"\auser_id\x18\x04 \x01(\tR\x06userId\x121\n" +
-	"\x06detail\x18\x05 \x01(\v2\x19.address.v1.AddressDetailR\x06detail\x12\x1d\n" +
+	"address_id\x18\x01 \x01(\tB\b\xbaH\x05r\x03\xb0\x01\x01R\taddressId\x121\n" +
+	"\x0erecipient_name\x18\x02 \x01(\tB\n" +
+	"\xbaH\ar\x05\x10\x01\x18\xff\x01R\rrecipientName\x122\n" +
+	"\x0frecipient_phone\x18\x03 \x01(\tB\t\xbaH\x06r\x04\x10\x01\x182R\x0erecipientPhone\x12#\n" +
+	"\auser_id\x18\x04 \x01(\tB\n" +
+	"\xbaH\ar\x05\x10\x01\x18\xff\x01R\x06userId\x129\n" +
+	"\x06detail\x18\x05 \x01(\v2\x19.address.v1.AddressDetailB\x06\xbaH\x03\xc8\x01\x01R\x06detail\x12\x1d\n" +
 	"\n" +
-	"is_default\x18\x06 \x01(\bR\tisDefault\x129\n" +
+	"is_default\x18\x06 \x01(\bR\tisDefault\x12A\n" +
 	"\n" +
-	"created_at\x18\a \x01(\v2\x1a.google.protobuf.TimestampR\tcreatedAt\x129\n" +
+	"created_at\x18\a \x01(\v2\x1a.google.protobuf.TimestampB\x06\xbaH\x03\xc8\x01\x01R\tcreatedAt\x12A\n" +
 	"\n" +
-	"updated_at\x18\b \x01(\v2\x1a.google.protobuf.TimestampR\tupdatedAt\"\x16\n" +
-	"\x14ListAddressesRequest\"U\n" +
-	"\x15ListAddressesResponse\x12<\n" +
-	"\taddresses\x18\x01 \x03(\v2\x1e.address.v1.GetAddressResponseR\taddresses\"B\n" +
-	"\x18SetDefaultAddressRequest\x12&\n" +
+	"updated_at\x18\b \x01(\v2\x1a.google.protobuf.TimestampB\x06\xbaH\x03\xc8\x01\x01R\tupdatedAt\"\x16\n" +
+	"\x14ListAddressesRequest\"_\n" +
+	"\x15ListAddressesResponse\x12F\n" +
+	"\taddresses\x18\x01 \x03(\v2\x1e.address.v1.GetAddressResponseB\b\xbaH\x05\x92\x01\x02\x10dR\taddresses\"C\n" +
+	"\x18SetDefaultAddressRequest\x12'\n" +
 	"\n" +
-	"address_id\x18\x01 \x01(\tB\a\xbaH\x04r\x02\x10\x01R\taddressId\"\x1b\n" +
+	"address_id\x18\x01 \x01(\tB\b\xbaH\x05r\x03\xb0\x01\x01R\taddressId\"\x1b\n" +
 	"\x19SetDefaultAddressResponse2\x97\x04\n" +
 	"\x0eAddressService\x12T\n" +
 	"\rCreateAddress\x12 .address.v1.CreateAddressRequest\x1a!.address.v1.CreateAddressResponse\x12T\n" +
@@ -817,10 +823,7 @@ const file_api_address_v1_address_proto_rawDesc = "" +
 	"\n" +
 	"GetAddress\x12\x1d.address.v1.GetAddressRequest\x1a\x1e.address.v1.GetAddressResponse\x12T\n" +
 	"\rListAddresses\x12 .address.v1.ListAddressesRequest\x1a!.address.v1.ListAddressesResponse\x12`\n" +
-	"\x11SetDefaultAddress\x12$.address.v1.SetDefaultAddressRequest\x1a%.address.v1.SetDefaultAddressResponseB\xa6\x01\n" +
-	"\x0ecom.address.v1B\fAddressProtoP\x01Z=github.com/lens077/ecommerce/backend/api/address/v1;addressv1\xa2\x02\x03AXX\xaa\x02\n" +
-	"Address.V1\xca\x02\n" +
-	"Address\\V1\xe2\x02\x16Address\\V1\\GPBMetadata\xea\x02\vAddress::V1b\x06proto3"
+	"\x11SetDefaultAddress\x12$.address.v1.SetDefaultAddressRequest\x1a%.address.v1.SetDefaultAddressResponseB?Z=github.com/lens077/ecommerce/backend/api/address/v1;addressv1b\x06proto3"
 
 var (
 	file_api_address_v1_address_proto_rawDescOnce sync.Once

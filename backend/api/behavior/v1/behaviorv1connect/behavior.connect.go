@@ -2,6 +2,9 @@
 //
 // Source: api/behavior/v1/behavior.proto
 
+// 用户行为采集 + 推荐读取。
+// 采集侧把"漫无目的地逛"这类隐式信号落库并投喂 gorse,读取侧从 gorse 取召回结果。
+
 package behaviorv1connect
 
 import (

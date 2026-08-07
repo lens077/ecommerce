@@ -2,9 +2,9 @@ syntax = "proto3";
 
 package address.v1;
 
-option go_package = "github.com/lens077/ecommerce/backend/api/address/v1;addressv1";
-
 import "third_party/validate/validate.proto";
+
+option go_package = "github.com/lens077/ecommerce/backend/api/address/v1;addressv1";
 
 // 行政区划服务。
 //
@@ -22,19 +22,25 @@ service RegionService {
 // 一个行政区划节点
 message Region {
   // 节点ID，级联查询用这个而不是 code —— 港澳的区/堂区在国标里没有编号
-  int32 id = 1;
+  int32 id = 1 [(buf.validate.field).int32.gt = 0];
   // 上级节点ID，0 表示省级
-  int32 parent_id = 2;
+  int32 parent_id = 2 [(buf.validate.field).int32.gte = 0];
   // 层级：1 省 / 2 市 / 3 区县
-  int32 level = 3;
+  int32 level = 3 [(buf.validate.field).int32 = {
+    gte: 1
+    lte: 3
+  }];
   // GB/T 2260 行政区划代码。港澳的下级及「海外」为空
-  string code = 4;
+  string code = 4 [(buf.validate.field).string.max_len = 12];
   // 规范中文名，含后缀：北京市 / 朝阳区。落库存的就是这个
-  string name = 5;
+  string name = 5 [(buf.validate.field).string = {
+    min_len: 1
+    max_len: 64
+  }];
   // 英文名，仅用于英文界面展示，不参与落库
-  string name_en = 6;
+  string name_en = 6 [(buf.validate.field).string.max_len = 128];
   // 拼音，留给后续的搜索/首字母定位
-  string pinyin = 7;
+  string pinyin = 7 [(buf.validate.field).string.max_len = 128];
 }
 
 // 列出行政区划请求
@@ -46,5 +52,5 @@ message ListRegionsRequest {
 message ListRegionsResponse {
   // 下级列表，已按展示顺序排好。
   // 空列表是合法结果：省直辖县级行政区（海南琼海市、湖北仙桃市等）下面确实没有区县
-  repeated Region regions = 1;
+  repeated Region regions = 1 [(buf.validate.field).repeated.max_items = 500];
 }

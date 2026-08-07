@@ -10,7 +10,6 @@ import (
 	_ "buf.build/gen/go/bufbuild/protovalidate/protocolbuffers/go/buf/validate"
 	protoreflect "google.golang.org/protobuf/reflect/protoreflect"
 	protoimpl "google.golang.org/protobuf/runtime/protoimpl"
-	_ "google.golang.org/protobuf/types/known/timestamppb"
 	reflect "reflect"
 	sync "sync"
 	unsafe "unsafe"
@@ -87,7 +86,7 @@ type ReserveItem struct {
 	state         protoimpl.MessageState `protogen:"open.v1"`
 	SkuId         int64                  `protobuf:"varint,1,opt,name=sku_id,json=skuId,proto3" json:"sku_id,omitempty"` // 商品SKU ID
 	Quantity      int32                  `protobuf:"varint,2,opt,name=quantity,proto3" json:"quantity,omitempty"`
-	WarehouseId   string                 `protobuf:"bytes,3,opt,name=warehouse_id,json=warehouseId,proto3" json:"warehouse_id,omitempty"`
+	WarehouseId   string                 `protobuf:"bytes,3,opt,name=warehouse_id,json=warehouseId,proto3" json:"warehouse_id,omitempty"` // 仓库ID, 例如: df0001
 	unknownFields protoimpl.UnknownFields
 	sizeCache     protoimpl.SizeCache
 }
@@ -311,32 +310,33 @@ var File_api_inventory_v1_inventory_proto protoreflect.FileDescriptor
 
 const file_api_inventory_v1_inventory_proto_rawDesc = "" +
 	"\n" +
-	" api/inventory/v1/inventory.proto\x12\finventory.v1\x1a\x1fgoogle/protobuf/timestamp.proto\x1a#third_party/validate/validate.proto\"\x87\x01\n" +
-	"\x0eReserveRequest\x12\x19\n" +
-	"\border_no\x18\x01 \x01(\tR\aorderNo\x12)\n" +
+	" api/inventory/v1/inventory.proto\x12\finventory.v1\x1a#third_party/validate/validate.proto\"\x9e\x01\n" +
+	"\x0eReserveRequest\x12$\n" +
+	"\border_no\x18\x01 \x01(\tB\t\xbaH\x06r\x04\x10\x01\x18@R\aorderNo\x12)\n" +
 	"\vmerchant_id\x18\x02 \x01(\tB\b\xbaH\x05r\x03\xb0\x01\x01R\n" +
-	"merchantId\x12/\n" +
-	"\x05items\x18\x03 \x03(\v2\x19.inventory.v1.ReserveItemR\x05items\"z\n" +
-	"\vReserveItem\x12\x15\n" +
-	"\x06sku_id\x18\x01 \x01(\x03R\x05skuId\x12&\n" +
+	"merchantId\x12;\n" +
+	"\x05items\x18\x03 \x03(\v2\x19.inventory.v1.ReserveItemB\n" +
+	"\xbaH\a\x92\x01\x04\b\x01\x10dR\x05items\"\x82\x01\n" +
+	"\vReserveItem\x12\x1e\n" +
+	"\x06sku_id\x18\x01 \x01(\x03B\a\xbaH\x04\"\x02 \x00R\x05skuId\x12&\n" +
 	"\bquantity\x18\x02 \x01(\x05B\n" +
-	"\xbaH\a\x1a\x05\x18\xe7\a \x00R\bquantity\x12,\n" +
-	"\fwarehouse_id\x18\x03 \x01(\tB\t\xbaH\x06r\x04\x10\x06\x18\x06R\vwarehouseId\";\n" +
+	"\xbaH\a\x1a\x05\x18\xe7\a \x00R\bquantity\x12+\n" +
+	"\fwarehouse_id\x18\x03 \x01(\tB\b\xbaH\x05r\x03\x98\x01\x06R\vwarehouseId\"E\n" +
 	"\x0fReserveResponse\x12\x16\n" +
-	"\x06status\x18\x01 \x01(\bR\x06status\x12\x10\n" +
-	"\x03msg\x18\x02 \x01(\tR\x03msg\"\x8e\x01\n" +
-	"\x15ReleaseReserveRequest\x12\x19\n" +
-	"\border_no\x18\x01 \x01(\tR\aorderNo\x12)\n" +
+	"\x06status\x18\x01 \x01(\bR\x06status\x12\x1a\n" +
+	"\x03msg\x18\x02 \x01(\tB\b\xbaH\x05r\x03\x18\x80\x04R\x03msg\"\xa5\x01\n" +
+	"\x15ReleaseReserveRequest\x12$\n" +
+	"\border_no\x18\x01 \x01(\tB\t\xbaH\x06r\x04\x10\x01\x18@R\aorderNo\x12)\n" +
 	"\vmerchant_id\x18\x02 \x01(\tB\b\xbaH\x05r\x03\xb0\x01\x01R\n" +
-	"merchantId\x12/\n" +
-	"\x05items\x18\x03 \x03(\v2\x19.inventory.v1.ReserveItemR\x05items\"B\n" +
+	"merchantId\x12;\n" +
+	"\x05items\x18\x03 \x03(\v2\x19.inventory.v1.ReserveItemB\n" +
+	"\xbaH\a\x92\x01\x04\b\x01\x10dR\x05items\"L\n" +
 	"\x16ReleaseReserveResponse\x12\x16\n" +
-	"\x06status\x18\x01 \x01(\bR\x06status\x12\x10\n" +
-	"\x03msg\x18\x02 \x01(\tR\x03msg2\xbb\x01\n" +
+	"\x06status\x18\x01 \x01(\bR\x06status\x12\x1a\n" +
+	"\x03msg\x18\x02 \x01(\tB\b\xbaH\x05r\x03\x18\x80\x04R\x03msg2\xbb\x01\n" +
 	"\x10InventoryService\x12H\n" +
 	"\aReserve\x12\x1c.inventory.v1.ReserveRequest\x1a\x1d.inventory.v1.ReserveResponse\"\x00\x12]\n" +
-	"\x0eReleaseReserve\x12#.inventory.v1.ReleaseReserveRequest\x1a$.inventory.v1.ReleaseReserveResponse\"\x00B\xb6\x01\n" +
-	"\x10com.inventory.v1B\x0eInventoryProtoP\x01ZAgithub.com/lens077/ecommerce/backend/api/inventory/v1;inventoryv1\xa2\x02\x03IXX\xaa\x02\fInventory.V1\xca\x02\fInventory\\V1\xe2\x02\x18Inventory\\V1\\GPBMetadata\xea\x02\rInventory::V1b\x06proto3"
+	"\x0eReleaseReserve\x12#.inventory.v1.ReleaseReserveRequest\x1a$.inventory.v1.ReleaseReserveResponse\"\x00BCZAgithub.com/lens077/ecommerce/backend/api/inventory/v1;inventoryv1b\x06proto3"
 
 var (
 	file_api_inventory_v1_inventory_proto_rawDescOnce sync.Once
