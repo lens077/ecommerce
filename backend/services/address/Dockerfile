@@ -22,6 +22,10 @@ COPY services/${SERVICE}/ ./services/${SERVICE}/
 # 微服务依赖的公共包
 COPY api/ ./api/
 COPY constants/ ./constants/
+# backend/pkg 是跨服务共享包(gorse 客户端等)。product/behavior 直接 import 它,
+# 少这一行它们在容器里编译不过 —— behavior 因此从来没有产出过镜像。
+# 十份 Dockerfile 保持逐字一致,不按用没用到分叉。
+COPY pkg/ ./pkg/
 
 # 编译代码，进入具体的服务目录或指定完整的包路径
 RUN --mount=type=cache,target=/go/pkg/mod \
