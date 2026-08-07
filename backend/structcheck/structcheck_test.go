@@ -276,6 +276,52 @@ func TestInfraHomogeneity(t *testing.T) {
 	}
 }
 
+// Cart is the configuration glue baseline. Every service must carry the same
+// production files; the general homogeneity check intentionally ignores files
+// that exist in only one service, so it cannot catch a newly omitted copy.
+func TestConfigGlueFileSet(t *testing.T) {
+	m := loadMatrix(t)
+	expected := configProductionFiles(t, "cart")
+
+	for name := range m.Services {
+		actual := configProductionFiles(t, name)
+		var missing, extra []string
+		for file := range expected {
+			if !actual[file] {
+				missing = append(missing, file)
+			}
+		}
+		for file := range actual {
+			if !expected[file] {
+				extra = append(extra, file)
+			}
+		}
+		sort.Strings(missing)
+		sort.Strings(extra)
+		if len(missing) > 0 || len(extra) > 0 {
+			t.Errorf("%s: internal/pkg/config production file set differs from cart; missing=%v extra=%v",
+				name, missing, extra)
+		}
+	}
+}
+
+func configProductionFiles(t *testing.T, service string) map[string]bool {
+	t.Helper()
+	dir := filepath.Join(servicesDir, service, "internal", "pkg", "config")
+	entries, err := os.ReadDir(dir)
+	if err != nil {
+		t.Fatalf("read %s: %v", dir, err)
+	}
+	files := map[string]bool{}
+	for _, entry := range entries {
+		name := entry.Name()
+		if !entry.IsDir() && strings.HasSuffix(name, ".go") && !strings.HasSuffix(name, "_test.go") {
+			files[name] = true
+		}
+	}
+	return files
+}
+
 func loadBaseline(t *testing.T) map[string]bool {
 	t.Helper()
 	f, err := os.Open(baselinePath)

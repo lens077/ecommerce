@@ -17,10 +17,10 @@ import (
 func clearSourceEnv(t *testing.T) {
 	t.Helper()
 	for _, k := range []string{
-		constants.EnvConfigSource, constants.EnvConfigSourceFile,
+		constants.EnvConfigSource, constants.EnvConfigFile, constants.EnvConfigSourceFile,
 		constants.EnvConsulAddr, constants.EnvConsulPath, constants.EnvConsulScheme, constants.EnvConsulToken,
 		constants.EnvConfigCenterAddr, constants.EnvConfigCenterNamespace,
-		constants.EnvConfigCenterEnv, constants.EnvConfigCenterKey,
+		constants.EnvConfigCenterEnv, constants.EnvConfigCenterKey, constants.EnvConfigCenterServiceToken,
 	} {
 		t.Setenv(k, "")
 	}
@@ -47,7 +47,7 @@ func TestNewSource_Consul(t *testing.T) {
 
 func TestNewSource_SDKSelector(t *testing.T) {
 	clearSourceEnv(t)
-	businessConfig := filepath.Join(t.TempDir(), "address.yaml")
+	businessConfig := filepath.Join(t.TempDir(), "cart.yaml")
 	require.NoError(t, os.WriteFile(businessConfig, []byte(testBootstrapYAML), 0o600))
 	selector := filepath.Join(t.TempDir(), "source.yaml")
 	require.NoError(t, os.WriteFile(selector, []byte("type: file\nfile:\n  path: "+businessConfig+"\n"), 0o600))
@@ -56,6 +56,16 @@ func TestNewSource_SDKSelector(t *testing.T) {
 	src, err := NewSource()
 	require.NoError(t, err)
 	assert.Equal(t, "file", src.Name())
+}
+
+func TestNewSource_File(t *testing.T) {
+	clearSourceEnv(t)
+	t.Setenv(constants.EnvConfigSource, constants.ConfigSourceFile)
+	t.Setenv(constants.EnvConfigFile, "configs/dev.yaml")
+
+	src, err := NewSource()
+	require.NoError(t, err)
+	assert.Equal(t, constants.ConfigSourceFile, src.Name())
 }
 
 func TestNewSource_DeprecatedConfigCenterEnvFailsFast(t *testing.T) {
@@ -77,6 +87,7 @@ func TestNewSource_UnknownValue(t *testing.T) {
 	require.Error(t, err)
 	// 拼错值时不能静默回落到默认源 —— 那会让服务读到一份你以为早已换掉的配置
 	assert.Contains(t, err.Error(), "etcd")
+	assert.Contains(t, err.Error(), constants.ConfigSourceFile)
 	assert.Contains(t, err.Error(), constants.ConfigSourceConsul)
 	assert.Contains(t, err.Error(), constants.ConfigSourceConfigCenter)
 }
@@ -111,6 +122,7 @@ func TestParseYAMLToMap_Empty(t *testing.T) {
 
 // 两个实现必须都满足 Source 接口(编译期已由 var _ Source 保证,这里再做一次运行期确认)
 func TestSourceNamesMatchConfigSourceValues(t *testing.T) {
+	assert.Equal(t, constants.ConfigSourceFile, (&fileSource{}).Name())
 	assert.Equal(t, constants.ConfigSourceConsul, (&consulSource{}).Name())
 	// Name() 的返回值就是 CONFIG_SOURCE 的合法取值,不能带空格/大写
 	assert.Equal(t, strings.ToLower((&consulSource{}).Name()), (&consulSource{}).Name())

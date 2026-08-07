@@ -13,7 +13,11 @@
 
 ### 现状
 
-当前 `ecommerce` 网关与全部后端服务的配置**已经**集中在 Consul KV(路径 `ecommerce/<svc>/<env>.yml`,整份 YAML),由各服务 `internal/pkg/config` 启动时经 Viper 解码为 proto `Bootstrap`(见 `backend/services/*/internal/pkg/config/config.go`)。网关额外支持本地优先目录合并 + 热重载(`gateway/config/config-loader/`)。
+当前 `ecommerce` 网关配置仍在 Consul KV；10 个后端服务的整份 YAML Bootstrap 同时保留在
+Consul KV（`ecommerce/<svc>/<env>.yml`）与独立配置中心（`<svc>/<env>/bootstrap.yaml`）。
+服务默认通过本地 `CONFIG_SOURCE_FILE` selector 走配置中心，只有显式 `make dev-consul` 才回到
+Consul KV；两条路径最终都由各服务 `internal/pkg/config` 经 Viper 解码为 proto `Bootstrap`。
+网关额外支持本地优先目录合并 + 热重载(`gateway/config/config-loader/`)。
 
 ### 痛点
 
@@ -40,7 +44,7 @@
 
 三项已确认决策:
 
-1. **架构:配置中心直接作为数据源。** 服务经 ConnectRPC 读取(拉取)+ Watch 流(推送)获取配置,逐步替代各服务直连 Consul KV。Postgres 为唯一事实源(SoR)。
+1. **架构:配置中心直接作为数据源。** 服务经 ConnectRPC 读取(拉取)+ Watch 流(推送)获取配置；10 个后端服务已默认走该路径，Consul KV 仅保留为显式回退源。Postgres 为配置中心事实源(SoR)，两份 Bootstrap 的人工同步缺口仍见 `.service-matrix.yaml`。
    - *不采用* FoundationDB(Apple 开源 KV):运维过重、无关系型 join、且会在 Consul 之外再引入第三套 KV。
    - *不采用* 继续以 Consul KV 为 SoR:无法做关系型的版本/审计/权限治理。
 2. **粒度:键值粒度。** 每个 key 一行,独立版本;value 可为带格式的文档(整份 yaml/toml/json 亦可作为单个 key 的 value,由 `format` 驱动高亮与校验)。
