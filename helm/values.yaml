@@ -1,5 +1,5 @@
 search:
-  enabled: true
+  enabled: false
   replicaCount: 1
   image:
     repository: "ccr.ccs.tencentyun.com/sumery/search"
@@ -47,7 +47,7 @@ search:
       cpu: "1"
       memory: "256Mi"
 user:
-  enabled: true
+  enabled: false
   replicaCount: 1
   image:
     repository: "ccr.ccs.tencentyun.com/sumery/user"
@@ -152,23 +152,35 @@ cart:
   service:
     type: LoadBalancer
     ports:
+      # cart 实际监听 30006(configs/{dev,pre}.yml 的 server.addr 与
+      # deploy/dev/service.yaml 一致),原 30005 是陈旧值
       http:
         enabled: true
-        port: 30005
-        targetPort: 30005
-      grpc:
-        enabled: false
         port: 30006
         targetPort: 30006
+      grpc:
+        enabled: false
+        port: 30007
+        targetPort: 30007
+  # env 对齐 deploy/dev/deployment.yaml 的权威清单;
+  # SERVICE_NAME 必须与 .service-matrix.yaml 的 discovery(网关 target)一致
   env:
     - name: SERVICE_NAME
-      value: "cart-service-v1"
+      value: "cart-service"
+    - name: SERVICE_VERSION
+      value: "v1"
+    - name: DEPLOYMENT_MODE
+      value: "dev"
+    - name: CONFIG_SOURCE
+      value: "consul"
+    - name: OTEL_LOGS_EXPORTER
+      value: "none"
     - name: CONSUL_ENABLED
       value: "true"
     - name: CONSUL_ADDR
       value: consul-expose-servers.consul.svc:8500
     - name: CONSUL_PATH
-      value: "ecommerce/cart/pre.yml"
+      value: "ecommerce/cart/dev.yml"
     - name: CONSUL_SCHEME
       value: "http"
     - name: CONSUL_INSECURE_SKIP_VERIFY
@@ -191,7 +203,7 @@ cart:
       cpu: "1"
       memory: "256Mi"
 inventory:
-  enabled: true
+  enabled: false
   replicaCount: 1
   image:
     repository: "ccr.ccs.tencentyun.com/sumery/inventory"
@@ -239,7 +251,7 @@ inventory:
       cpu: "1"
       memory: "256Mi"
 merchant:
-  enabled: true
+  enabled: false
   replicaCount: 1
   image:
     repository: "ccr.ccs.tencentyun.com/sumery/merchant"
@@ -287,7 +299,7 @@ merchant:
       cpu: "1"
       memory: "256Mi"
 order:
-  enabled: true
+  enabled: false
   replicaCount: 1
   image:
     repository: "ccr.ccs.tencentyun.com/sumery/order"
