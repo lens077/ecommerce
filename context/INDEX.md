@@ -30,19 +30,13 @@ context/
 
 ## 服务级 · [context/project/ecommerce/](project/ecommerce/INDEX.md)
 
-按模块分目录，每个模块下的 `experience/` 放踩坑记录。目前有记录的模块：
-
-| 模块 | 代码路径 | experience |
-|---|---|---|
-| gateway | `gateway/` | [JWT nbf 时钟偏移导致登录死循环](project/ecommerce/gateway/experience/jwt-nbf-clock-skew-loop.md) |
-| config | `backend/services/*/internal/pkg/config/` | [一份配置三个副本](project/ecommerce/config/experience/three-copies-of-one-config.md)、[热更新的生效边界](project/ecommerce/config/experience/config-hot-reload-boundaries.md) |
-| behavior | `backend/services/behavior/` | [Consul KV 缺 recommend 块导致 gorse 静默关闭](project/ecommerce/behavior/experience/consul-kv-missing-key-silent-disable.md) |
-| consumer | `frontend/apps/consumer/` | [MUI sx spacing 被 ×8](project/ecommerce/consumer/experience/mui-spacing-tokens-8x.md) |
-| frontend-api | `frontend/packages/api/` | sop：[Connect Query 数据拉取规范](project/ecommerce/frontend-api/sop/connect-query.md) |
+按模块分目录，每个模块下的 `experience/` 放踩坑记录。**逐篇清单只维护在
+[project/ecommerce/INDEX.md](project/ecommerce/INDEX.md) 一处**（避免两层索引漂移），
+目前有记录的模块：`gateway`、`registry`、`config`、`behavior`、`consumer`、`frontend-api`。
 
 ## 结构真相源 · [`.service-matrix.yaml`](../.service-matrix.yaml)（仓库根）
 
-不属于「知识」而属于「事实表」的东西放这里，供 AI 与 CI 查表：11 个后端服务的
+不属于「知识」而属于「事实表」的东西放这里，供 AI 与 CI 查表：10 个后端服务的
 Consul 注册名、网关路径前缀、依赖关系、外部依赖、KV 键、前端 4 个 app 的端口。
 
 判据：**AI 每次都要现搜一遍的结构性事实** → 进 matrix；**需要解释「为什么」的经验** → 进 `context/`。
@@ -55,23 +49,26 @@ matrix 与 `backend/services/`、网关实际接线的一致性,以及各服务 
 
 ## 工程体系文档 · 不在 `context/` 里的真相源
 
-这两份是**目标态设计与方法论**，按就近原则留在原位（与它们描述的产物同目录），
+这些是**目标态设计与方法论**，按就近原则留在原位（与它们描述的产物同目录），
 `context/` 只在这里登记指向，避免同一约束两处漂移。
 
 | 文档 | 一句话 | 何时读 |
 |---|---|---|
 | [`DEVOPS.md`](../DEVOPS.md)（仓库根） | DevOps 体系设计：Three Ways/CALMS/DORA 骨架，DevOps 边界对齐 DDD 限界上下文，四阶段落地路线与行为验收标准 | 动 CI/CD、GitOps、部署策略、镜像与 migration 流程前 |
 | [`observability/OBSERVABILITY.md`](../observability/OBSERVABILITY.md) | 可观测性方法论与指标基线：三支柱分工、RED/USE、逐服务最低指标、告警清单、6 条硬规则 | 加指标/看板/告警，或排障动线走不通时 |
+| [`Graph-Engineering.md`](../Graph-Engineering.md)（仓库根） | 多闭环 AI 工作流方法论：锚点命令、冻结节点（`.freeze/` + `scripts/freeze.sh`）、Loop 0~4 分工 | 调整 AI 协作流程、冻结验收集前 |
+| [`gateway/docs/ARCHITECTURE_EVOLUTION.md`](../gateway/docs/ARCHITECTURE_EVOLUTION.md) | 网关演进规划：Cilium 做边缘网关、自建网关转 BFF | 动网关架构方向前（**纯规划未落地**） |
 
-⚠️ 两份都是**目标态**，状态是「等待实现」。当前实况以 `TODO.md` 为准，
-可观测性的已确认缺陷见 [`observability/OBSERVABILITY_REVIEW_20260806.md`](../observability/OBSERVABILITY_REVIEW_20260806.md)。
+⚠️ 以上都是**目标态**，状态是「等待实现」。当前实况以 `TODO.md` 为准，
+可观测性的已确认缺陷见 [`docs/reviews/OBSERVABILITY_REVIEW_20260806.md`](../docs/reviews/OBSERVABILITY_REVIEW_20260806.md)。
+历史评审报告归档在 [`docs/reviews/`](../docs/reviews/)。
 
 ## 检索约定
 
 - **不要全仓 grep 找规范**。先看本文件 → 进对应层的 `INDEX.md` → 再进具体文件。
 - **不要全仓 grep 找服务拓扑**。查 `.service-matrix.yaml`。
 - 找模块知识时路径是 `context/project/ecommerce/{module}/`，`{module}` 用**代码目录名**（`gateway` / `behavior` / `consumer`），不是服务的中文名。
-- 找不到对应知识 ≠ 没有约束。先读 `Design.md` / `TODO.md`，读完把结论沉淀回来（见 self-refinement）。
+- 找不到对应知识 ≠ 没有约束。先读 `DESIGN.md` / `TODO.md`，读完把结论沉淀回来（见 self-refinement）。
 
 ## 与 `~/.claude` memory 的关系
 

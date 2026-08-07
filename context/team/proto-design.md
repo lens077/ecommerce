@@ -12,7 +12,7 @@ description: 设计/编写 proto 时必须先参考设计文档，并为每个�
 
 阅读优先级：
 
-1. `Design.md` —— 主架构与各域设计（如 `ListProducts` 的游标分页设计已在此定稿）
+1. `DESIGN.md` —— 主架构与各域设计（如 `ListProducts` 的游标分页设计已在此定稿）
 2. `CONFIG_CENTER_DESIGN.md` —— 配置中心域的数据模型 / RPC / 鉴权
 3. `TODO.md` —— 该 RPC 当前是 ✅ / 🟡 / ⬜，缺口写的是什么
 4. 同域已有的 proto 与 sqlc schema —— 字段命名、类型、列宽要对齐
@@ -35,7 +35,7 @@ CartStatus status = 11 [(buf.validate.field).enum.defined_only = true];
 
 | 优先级 | 来源 | 例 |
 |---|---|---|
-| 1 | 设计文档明写 | Design.md 写了「分页每页最多 100 条」→ `uint32.lte = 100` |
+| 1 | 设计文档明写 | DESIGN.md 写了「分页每页最多 100 条」→ `uint32.lte = 100` |
 | 2 | DB schema（sqlc / 建表语句）列宽与类型 | `varchar(64)` → `string.max_len = 64`；`numeric` 非负 → `gte = 0` |
 | 3 | 同域已有 proto 的同类字段 | `anon_id` 已是 `max_len = 64`，`session_id` 保持一致 |
 | 4 | 业务常识 + 下游承受能力 | 批量事件数组 → `repeated.max_items = 50`，防打爆 gorse |

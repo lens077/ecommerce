@@ -1,8 +1,8 @@
 # @ecommerce/desktop
 
-consumer / merchant / config 三个前端应用共用的 Tauri 2 桌面外壳。
+consumer / merchant 等前端应用共用的 Tauri 2 桌面外壳。
 
-这里**不放前端代码** —— 窗口加载的是 `apps/{consumer,merchant,config}` 的 dev server 或 `dist` 产物。
+这里**不放前端代码** —— 窗口加载的是 `apps/{consumer,merchant}` 的 dev server 或 `dist` 产物。
 一份 Rust crate（`src-tauri/`）+ 三份配置覆盖层，产出三个独立的桌面 App：
 
 | 命令                                   | 加载的应用            | dev 端口 | bundle identifier        |

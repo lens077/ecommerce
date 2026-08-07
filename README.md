@@ -1,157 +1,86 @@
-# 小镇做题家的电商项目
-本项目的组成使用(或部分使用)了本人其他的仓库:
-1. 网关: https://github.com/lens077/ecommerce-gateway
+# Ecommerce — Go 微服务电商
+
+Golang + React 的中大型电商实践项目：10 个后端微服务 + 自建网关 + pnpm monorepo 前端，
+RBAC 三角色（消费者 / 商家 / 管理员），全链路云原生部署与可观测性。
+
+本项目的组成使用(或部分使用)了本人其他的仓库：
+
+1. 网关: https://github.com/lens077/ecommerce-gateway （本仓 `gateway/` 经 git subtree 同步）
 2. 云原生基础设施部署: https://github.com/lens077/cloud-native-deploy
 3. 微服务开发脚手架: https://github.com/lens077/go-connect-template-cli
 4. 微服务项目模板: https://github.com/lens077/go-connect-template
 5. 配置中心: https://github.com/lens077/config-center —— **已从本仓拆出，作为基础设施而非业务微服务**
 
-# Frontend stack
+## 技术栈
 
-- React
-- TypeScript
-- Connect-web
-- Buf
+| 领域 | 选型 |
+|---|---|
+| 后端 | Golang、connect-go（兼容 gRPC）、Protobuf/Buf、sqlc、uber/fx、casdoor |
+| 前端 | React、TypeScript、Connect-Web、pnpm workspace、vite-plus（vp）、Tauri（桌面壳） |
+| 网关 | 基于 go-kratos/gateway 二次开发：集中鉴权（Casdoor + Casbin RBAC）、路由守卫、服务发现 |
+| 数据 | PostgreSQL、Redis、Elasticsearch（搜索）、MinIO（对象存储） |
+| 消息 | Kafka（规划中，当前事件走进程内 EventBus） |
+| 注册/配置 | Consul（服务注册发现 + KV 配置源）、[config-center](https://github.com/lens077/config-center)（独立配置控制面，可选） |
+| 编排/交付 | Docker、Kubernetes、Helm、GitHub Actions、Argo CD（GitOps） |
+| 可观测性 | OpenTelemetry、VictoriaMetrics、Loki、Jaeger、Grafana、fluent-bit |
 
-# Protocols
+架构要点（详见 [`DESIGN.md`](DESIGN.md) 与 [`STACK.md`](STACK.md)）：
 
-- RPC
+- **API 契约先行**：google protobuf 定义前后端交互，`@bufbuild/buf` 生成代码，每个字段带 `buf.validate` 约束
+- **后端分层**参考 go-kratos：biz（领域结构体）→ data（DB/MQ/ES 等中间件）→ service（proto 转换）→ server（fx 装配与注册发现）
+- **通用能力下沉网关**：身份验证、授权、路由守卫集中在网关层，微服务不重复集成
+- **配置源与业务配置分离**：服务先读一份很小的本地选择器（`file`/`consul`/`config_center`），再据此取完整业务 `Bootstrap`——这层间接是为了避开「配置中心的配置存在配置中心里」的自举环
+- **CI/CD**：GitHub Actions 构建推送镜像并更新清单仓库版本号，Argo CD 监听清单仓库变更完成部署
+- **可观测性**：fluent-bit 采日志，应用经 OTel SDK 发指标与链路；前端由 `@ecommerce/perf` 采 Web Vitals/长任务/接口耗时，经网关 `telemetry.v1` 转成 OTel histogram，与后端汇入同一套 VictoriaMetrics / Loki
 
-# Infrastructure
+## 仓库结构
 
-## Scheduling
+| 目录 | 内容 |
+|---|---|
+| `backend/` | 10 个微服务（user / product / cart / order / payment / inventory / search / address / merchant / behavior），`api/` 放 proto 契约，`structcheck/` 是结构性 CI 门禁 |
+| `frontend/` | pnpm monorepo：4 app（consumer / merchant / admin / desktop）+ 9 共享包，见 [`frontend/README.md`](frontend/README.md) |
+| `gateway/` | 自建 API 网关（subtree 同步到独立仓），文档导航见 [`gateway/README.md`](gateway/README.md) |
+| `context/` | AI/团队三层知识库（团队级 / 框架级 / 服务级），入口 [`context/INDEX.md`](context/INDEX.md) |
+| `observability/` | 可观测性方法论与 Grafana 看板生成脚本 |
+| `helm/`、`argocd-*.yml` | 部署清单与 GitOps 配置 |
+| `docs/` | agents 配置（`docs/agents/`）与历史评审报告归档（`docs/reviews/`） |
+| `.freeze/`、`scripts/` | 冻结验收集机制（改验收测试必须走审批），见 [`.freeze/README.md`](.freeze/README.md) |
+| `.scratch/` | 进行中的 spec / issue（本地 markdown 工作流） |
 
-- Docker
-- Kubernetes
+> `backend/services/config/` 只剩 `configs/` 空壳——配置中心代码已迁出至独立仓库。
 
-## Streaming
+## 文档导航
 
-- kafka
+| 文档 | 定位 |
+|---|---|
+| [`AGENTS.md`](AGENTS.md) | AI 协作入口：硬规则 + 验收锚点命令（**改代码前先读**） |
+| [`DESIGN.md`](DESIGN.md) | 架构设计总纲：微服务划分、DB 设计、RBAC、领域事件（真相源） |
+| [`STACK.md`](STACK.md) | 技术栈与工程约束：版本锁定、分层铁律、proto/sqlc 规则（真相源） |
+| [`.service-matrix.yaml`](.service-matrix.yaml) | 服务拓扑事实表：注册名、网关前缀、依赖、KV 键（CI 强制对齐） |
+| [`TODO.md`](TODO.md) | 实现进度真相源（当前实况以它为准） |
+| [`PROGRESS.md`](PROGRESS.md) | 进度百分比与更新日志（与 TODO 的分工见 `context/harness-framework/progress-and-todo.md`） |
+| [`DEVOPS.md`](DEVOPS.md) / [`observability/OBSERVABILITY.md`](observability/OBSERVABILITY.md) | DevOps 与可观测性的**目标态**设计 |
+| [`DESIGN-MERCHANT.md`](DESIGN-MERCHANT.md) | 商家端产品需求草稿 |
+| [`CONFIG_CENTER_DESIGN.md`](CONFIG_CENTER_DESIGN.md) | 配置中心设计存档（代码已迁出） |
+| [`SCAFFOLD.md`](SCAFFOLD.md) | 换领域复用本仓工程体系的新项目生成规范 |
+| [`Graph-Engineering.md`](Graph-Engineering.md) | 多闭环 AI 工作流方法论（冻结节点 + 锚点命令） |
 
-## Observability
+## 先决条件
 
-- loki
-- opentelemetry
-- victoria-metrics
-- jaeger
-- grafana
-
-## Configuration
-
-- Consul（服务注册/发现 + KV 配置源）
-- [config-center](https://github.com/lens077/config-center)（独立配置控制面，见下）
-
-## Databases
-
-- Postgres
-- Redis
-  这些技术栈来编写一个中大型的电商项目,预计代码量会超过5w,甚至10w以上代码,我需要通过RBAC权限模型来给电商的三个角色进行划分,目前是消费者,商家,管理员,
-  微服务划分包括但不限商品,搜索(ES),订单,支付,库存等常见功能,请你扮演一个专业的软件工程思想,10年经验的前端,后端,基础设施架构师和用户体验优先的产品经理,给我设计出这个电商的模型,
-  包括数据库, 后端架构设计, 微服务划分, 微服务之间的通信边界(领域事件),先给出电商最核心微服务,之后层层递进扩展
-
-# 技术设计
-
-1. 语言： Golang + React TypeScript
-2. API：使用google protobuf定义API来规范前后端的交互，@bufbuild/buf负责生成
-3. 通信：前后端使用connectrpc/connect(兼容gRPC)来进行RPC协议通信
-4. 数据库：编写SQL，使用工具生成go代码来调用
-5.
-
-后端：后端架构参考go-kratos的template来划分，biz层是定义结构体，data层负责与数据库/MQ/Search等中间件交互，service层负责转换proto，server则是应用本身的服务(
-uber/fx)和第三方服务，例如注册发现(consul)
-
-6. 网关：身份验证和授权， 路由守卫，安全功能等集成到网关，将通用功能集成到网关层，后端每个微服务无需重复集成
-7. 前端：pnpm workspace 的 monorepo，采用 vite-plus(vp) + React TypeScript。vite-plus 一个包同时提供 dev
-   server、构建、测试(vitest)、lint(oxlint)、格式化(oxfmt)、任务运行器和 git 钩子，所以没有 husky /
-   biome / eslint / prettier；提交信息由仓库根的 commitlint 校验。桌面端用 Tauri 套壳
-8. CI/CD：通过GitHub Actions将前后端项目构建/打包推送到容器注册表并更新清单仓库的版本号，由Argo CD监听清单仓库的变更并更新部署
-9. 可观测性：由fluent-bit采集日志（Info，Warn，Error），应用通过OpenTelemetry
-   sdk发送应用指标，由Jaeger展示链路（微服务调用情况），来使用Grafana进行追踪，监控，优化。
-   前端侧由 `@ecommerce/perf` 采 Web Vitals / 长任务 / 接口耗时，经网关的 `telemetry.v1`
-   转成 OTel histogram 与结构化日志，与后端指标汇入同一套 VictoriaMetrics / Loki
-10. 配置：配置源与业务配置分离。服务先读一份很小的本地选择器（`file`/`consul`/`config_center`），
-    再据此去取完整的业务 `Bootstrap` —— 这层间接正是为了避开「配置中心的配置存在配置中心里」的自举环。
-    配置中心本身是[独立仓库](https://github.com/lens077/config-center)，按基础设施对待
-
-# Backend stack
-
-- golang
-- connect-go
-- Buf
-- Protobuf
-- sqlc
-- fx
-- casdoor
-
-# Frontend stack
-
-- React
-- TypeScript
-- Connect-web
-- Buf
-
-# Protocols
-
-- RPC
-
-# Infrastructure
-
-## Scheduling
-
-- Docker
-- Kubernetes
-
-## Streaming
-
-- kafka
-
-## Observability
-
-- loki
-- opentelemetry
-- victoria-metrics
-- jaeger
-- grafana
-
-## Configuration
-
-- Consul（服务注册/发现 + KV 配置源）
-- [config-center](https://github.com/lens077/config-center)（独立配置控制面，见下）
-
-## Databases
-
-- Postgres
-- Redis
-
-# 先决条件
-
-1. 前端：Node.js >= 22
-2. 后端：Golang >= go1.13
-3. 网关: Golang >= go1.13
-4. 数据库：Postgres >= 12
-5. 缓存：Redis >= 6
-6. 注册/发现：Consul
+1. 后端：Go >= 1.26（`backend/go.mod`）；网关：Go >= 1.25（`gateway/go.mod`）
+2. 前端：Node.js >= 22、pnpm 11
+3. 数据库：PostgreSQL >= 12；缓存：Redis >= 6
+4. 注册/发现：Consul
 
 配置中心（[config-center](https://github.com/lens077/config-center)）是**可选**的：
 各服务默认走 `CONFIG_SOURCE=consul`，只有显式切到 `config_center` 时才需要它跑起来。
 
-如果想体验完整项目，你还需安装:
+如果想体验完整项目（K8s 部署 + 可观测性），还需：Docker、Kubernetes、ArgoCD、cert-manager、
+OpenTelemetry Collector、VictoriaMetrics、Grafana、Loki、Jaeger、fluent-bit。
 
-1. Docker
-2. Kubernetes
-3. ArgoCD
-4. Consul
-5. cert-manager
-6. OpenTelemetry
-7. Victoria metrics
-8. Grafana
-9. Loki
-10. Jaeger
-11. fluent-bit
+## 运行
 
-# 运行
-
-## backend
+### 后端
 
 ```bash
 docker compose -f backend/infrastructure/postgres up -d
@@ -159,7 +88,7 @@ docker compose -f backend/infrastructure/redis up -d
 docker compose -f backend/infrastructure/consul up -d
 ```
 
-修改`configs/config.yaml`为你的host地址:
+修改 `configs/config.yaml` 为你的 host 地址：
 
 ```yaml
 data:
@@ -188,7 +117,7 @@ make dev-cc     # 改从配置中心读（需 config-center 先跑在 :30010）
 > 依赖升级用 `go get github.com/lens077/config-center@v0.x.y` —— **`go mod tidy` 只增删不升级**，
 > 版本仍是 `go.mod` 里钉住的那个。
 
-## 配置中心（基础设施）
+### 配置中心（基础设施，可选）
 
 [config-center](https://github.com/lens077/config-center) 已从本仓拆为独立仓库，
 按基础设施而不是业务微服务对待 —— 它不属于电商领域，而是所有服务的配置控制面
@@ -203,17 +132,10 @@ CONFIG_FILE=configs/config.yaml make dev             # 监听 :30010
 它在 Consul 注册为 `config-service` 供网关发现，但**从不从 Consul 读自己的 bootstrap** ——
 把自身配置放进它自己会形成启动死锁，所以只能从本地文件自举。
 
-服务侧接入用它发布的 Go SDK（`github.com/lens077/config-center`，当前 `v0.1.0`）：
-先读一份很小的本地 `SourceConfig` 选源（`file` / `consul` / `config_center`），
-再用选中的源去取完整的业务 `Bootstrap`。选择器留在业务文档之外，正是为了避开那个自举环。
-
 把 Consul KV 里的配置灌进配置中心用本仓的 `backend/tools/config-seed`
 （源取 KV 而非仓库里的 `configs/*.yml` —— 后者含密码、按硬规则不入库，每台机器都不一样）。
 
-主仓已不再保留 `backend/services/config` 或其重复 API 契约；服务接入一律使用
-`github.com/lens077/config-center@v0.1.0`。
-
-## 网关：
+### 网关
 
 ```shell
 OWNER=OWNER \
@@ -228,44 +150,18 @@ HTTP_PORT=8080 \
 go run cmd/gateway/main.go
 ```
 
-测试：
-
-- 直接访问后端:
+验证（直连后端 / 经网关，鉴权路由需带 `Authorization: Bearer <token>`）：
 
 ```bash
 curl -v -X POST http://localhost:4000/greet.v1.GreetService/SubmitAuth \
---header 'Content-Type: application/json' \
---data-raw '{}'
-```
+  --header 'Content-Type: application/json' --data-raw '{}'
 
-- 经过网关:
-
-```shell
 curl -v -X POST http://localhost:8080/user.v1.UserService/UserProfile \
---header 'Content-Type: application/json' \
---header 'Authorization: Bearer ***REMOVED-JWT***' \
---data-raw '{}'
+  --header 'Content-Type: application/json' \
+  --header 'Authorization: Bearer <access-token>' --data-raw '{}'
 ```
 
-- CI:
-  ![img_3.png](images/img_3.png)
-
-- CD:
-  ![img_2.png](images/img_2.png)
-
-- Register/discover:
-  ![img.png](images/img.png)
-
-- Trace:
-  ![img_1.png](images/img_1.png)
-
-- Log:
-  ![img_4.png](images/img_4.png)
-
-- Metrics
-  ![img_5.png](images/img_5.png)
-
-## Frontend
+### 前端
 
 `frontend/` 是一个 pnpm workspace monorepo，4 个 app + 9 个共享包。
 结构、分包原则、四层目录职责和工具链细节见 [`frontend/README.md`](frontend/README.md)。
@@ -277,9 +173,6 @@ curl -v -X POST http://localhost:8080/user.v1.UserService/UserProfile \
 | `admin`    | 3003 | 管理端：用户、商家、品类、报表           | `vp run admin#dev`  |
 | `desktop`  | —    | Tauri 壳，套在上面三个之一外面           | `pnpm desktop`      |
 
-> 配置中心的 Web 控制台原为本仓的 `config` app（3005），已随 config-center 一并迁出，
-> 现在是那个仓库的 `web/`。
-
 共享包：`api`（Connect 传输层与拦截器）、`configs`、`constants`、`i18n`、
 `perf`（Web Vitals 性能监控）、`tauri`（桌面端胶水）、`tracker`（行为埋点）、`ui`、`utils`。
 
@@ -290,21 +183,31 @@ pnpm dev      # consumer，端口 3000
 pnpm ready    # vp fmt && vp lint && vp run -r test && vp run -r build，提 PR 前跑它
 ```
 
-测试：
+工具链说明：vite-plus（`vp`）一个包同时提供 dev server、构建、测试(vitest)、lint(oxlint)、
+格式化(oxfmt)、任务运行器和 git 钩子，所以没有 husky / biome / eslint / prettier；
+提交信息由仓库根的 commitlint 校验。
 
-```bash
-curl -v http://localhost:3000
-```
+## 效果截图
 
-## 前端设计
-### 地址页
-“智能推荐/默认”：当用户进入“新增地址”页面时，通过 IP 定位自动选中“省、市、区”，用户只需要手动输入“详细地址（门牌号）”。
+- CI:
+  ![img_3.png](images/img_3.png)
+- CD:
+  ![img_2.png](images/img_2.png)
+- Register/discover:
+  ![img.png](images/img.png)
+- Trace:
+  ![img_1.png](images/img_1.png)
+- Log:
+  ![img_4.png](images/img_4.png)
+- Metrics:
+  ![img_5.png](images/img_5.png)
 
-# 数据来源
-1. IP: https://developer.aliyun.com/article/1638991
-2. 中国省，市，区, 街道四级SQL数据: https://github.com/gaohuazi/china_regions
+## 开发工作流
 
-## 开发
-### 推送
-- 推送到 gateway 单独仓库 ： `git subtree push --prefix=gateway gateway main`
-- 同步到主仓库 ： `git push main main`
+- **提交规范**：Conventional Commits + 可选 gitmoji，commitlint + vite-plus 钩子强制；
+  提交前先更新 `TODO.md`。见 `context/team/git-commit.md`
+- **提交前验收锚点**（详见 [`AGENTS.md`](AGENTS.md)）：
+  `go build/vet`、`go test ./structcheck/...`、`go test -short ./...`、`pnpm ready`、
+  `scripts/verify-freeze.sh --all`
+- **网关 subtree 推送**：`git subtree push --prefix=gateway gateway main`；
+  同步到主仓库：`git push main main`

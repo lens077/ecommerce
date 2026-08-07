@@ -1,6 +1,6 @@
 # registry（服务注册与发现，后端共享模块）
 
-**代码路径**：`backend/services/*/internal/pkg/registry/`（11 份，同一套代码）
+**代码路径**：`backend/services/*/internal/pkg/registry/`（10 份，同一套代码）
 
 每个后端服务用 hashicorp 官方 `api` 客户端自行向 Consul Agent 注册，
 健康检查用 **TTL check**（服务主动上报，不是 Consul 来探），由 `TtlCheckPinger` 在
@@ -29,5 +29,5 @@
 - **`deregister_critical_service_after` 有 1 分钟硬下限**，写更小的值会被 Consul 静默钳制。
 - 心跳 goroutine 里 **panic 会带走整个进程**。`ping_interval` 缺失或为 0 时
   `time.NewTicker` 会 panic，现已回落 10s 默认值。
-- 这段代码在 11 个服务里是复制关系，不是共享包。改一处要么全改，要么在提交里写清为什么只改一处。
-  当前 pinger 块 11 份完全一致，fx hook 块已漂移出 5 个变体。
+- 这段代码在 10 个服务里是复制关系，不是共享包。改一处要么全改，要么在提交里写清为什么只改一处。
+  当前 pinger 块 10 份完全一致，fx hook 块已漂移出 5 个变体。

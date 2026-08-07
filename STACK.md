@@ -5,7 +5,7 @@
 > 分工：
 > - 技术选型与版本、分层规则、编码约束 → **本文件**
 > - 服务拓扑事实（注册名/前缀/依赖/KV 键/端口）→ [`.service-matrix.yaml`](.service-matrix.yaml)
-> - 架构设计与"为什么" → [`Design.md`](Design.md) / [`CONFIG_CENTER_DESIGN.md`](CONFIG_CENTER_DESIGN.md)
+> - 架构设计与"为什么" → [`DESIGN.md`](DESIGN.md) / [`CONFIG_CENTER_DESIGN.md`](CONFIG_CENTER_DESIGN.md)
 > - 实现进度 → [`TODO.md`](TODO.md)
 > - AI 协作行为基线 → [`AGENTS.md`](AGENTS.md) + [`context/`](context/INDEX.md)
 >
@@ -24,7 +24,7 @@ ecommerce/
 ├── STACK.md                   # ← 本文件
 ├── SCAFFOLD.md                # 新项目脚手架规范（换域即用）
 ├── .service-matrix.yaml       # 服务拓扑事实表（AI/CI 查表用，非设计文档）
-├── Design.md                  # 架构真相源
+├── DESIGN.md                  # 架构真相源
 ├── CONFIG_CENTER_DESIGN.md    # 配置中心域设计
 ├── TODO.md                    # 进度真相源（✅ / 🟡 / ⬜）
 ├── context/                   # 三层知识库（team / harness-framework / project）
@@ -250,7 +250,7 @@ default:
 
 ### 铁律一：写 proto 前必须先读设计文档
 
-阅读优先级：`Design.md` → 域设计文档 → `TODO.md` → 同域已有 proto 与 sqlc schema。
+阅读优先级：`DESIGN.md` → 域设计文档 → `TODO.md` → 同域已有 proto 与 sqlc schema。
 **设计文档没写清的字段，问，不要猜。**
 
 理由：proto 是服务边界和上下游契约。字段发布后前端 `frontend/packages/api` 和各服务生成代码都依赖它，语义搞错的代价从"改几行文档"升级到"回滚 proto + 重新生成前后端 + 处理已落库数据"。
@@ -362,7 +362,7 @@ CREATE INDEX idx_cart_user_id ON cart.cart_item (user_id);   -- 索引显式命�
 - Upsert 走 `ON CONFLICT ... DO UPDATE`（配合上面的 UNIQUE 约束）
 - PG 错误码映射交给 `internal/pkg/dbutil.Handler`（`23505` 唯一冲突、`23503` 外键）
 - 领域枚举在 `backend/constants/` 定义为 Go string 常量，与 PG enum 字面量**一一对应**
-- 列表分页用**游标（keyset）**，不用 `OFFSET` + `COUNT`：省 count，且翻页期间不会重复/漏项（见 `Design.md` 的 `ListProducts` 设计）
+- 列表分页用**游标（keyset）**，不用 `OFFSET` + `COUNT`：省 count，且翻页期间不会重复/漏项（见 `DESIGN.md` 的 `ListProducts` 设计）
 
 ---
 
@@ -563,7 +563,7 @@ pnpm ready          # vp fmt && vp lint && vp run test -r && vp run build -r
 
 文件名用 kebab-case 的**症状**而非原因 —— 下次遇到时你先看到的是症状。
 
-**反模式**：同一条约束写两处（口径会漂移，只写一处其余用链接）／把 `Design.md` 内容复制进 `context/`／写一次性 diff／凭据进仓库。
+**反模式**：同一条约束写两处（口径会漂移，只写一处其余用链接）／把 `DESIGN.md` 内容复制进 `context/`／写一次性 diff／凭据进仓库。
 
 ### Git 规范
 
@@ -575,7 +575,7 @@ pnpm ready          # vp fmt && vp lint && vp run test -r && vp run build -r
 
 ### 事实表 vs 知识
 
-`.service-matrix.yaml` 只记**结构事实**（注册名、网关前缀、依赖关系、外部依赖、KV 键、端口），不记设计理由（在 `Design.md`）也不记进度（在 `TODO.md`）。
+`.service-matrix.yaml` 只记**结构事实**（注册名、网关前缀、依赖关系、外部依赖、KV 键、端口），不记设计理由（在 `DESIGN.md`）也不记进度（在 `TODO.md`）。
 
 判据：**"AI 每次都要现搜一遍的结构性事实" → 进 matrix；"需要解释为什么的经验" → 进 `context/`**。
 
@@ -589,7 +589,7 @@ pnpm ready          # vp fmt && vp lint && vp run test -r && vp run build -r
 
 | 事项 | 现状 |
 |---|---|
-| **Kafka / 领域事件** | `Design.md` 写了 `OrderCreatedEvent` 等 6 个领域事件，**代码里一行 Kafka 都没有**。只有 order 服务有一个进程内 `GoEventBus`；behavior 用内存队列 + `synced_at IS NULL` 当 outbox 补偿。所谓"事件驱动"目前是纸面设计 |
+| **Kafka / 领域事件** | `DESIGN.md` 写了 `OrderCreatedEvent` 等 6 个领域事件，**代码里一行 Kafka 都没有**。只有 order 服务有一个进程内 `GoEventBus`；behavior 用内存队列 + `synced_at IS NULL` 当 outbox 补偿。所谓"事件驱动"目前是纸面设计 |
 | **服务间调用** | 11 个服务里只有 `cart → config` 真的接线了。order→inventory/product/address、payment→order、product→search 全是 `depends_on_planned` |
 | **protovalidate 从不作用于配置** | `conf.proto` 的 `required = true` 形同虚设 —— 配置加载只做 mapstructure 解码，**从不调用 `protovalidate.Validate`**；mapstructure 也没开 `ErrorUnused`。结果：KV 缺块 → 不报错 → nil-safe getter → 功能被**静默关掉而不是启动失败**（gorse 就这么被静默关过，见 [`consul-kv-missing-key-silent-disable.md`](context/project/ecommerce/behavior/experience/consul-kv-missing-key-silent-disable.md)） |
 | **buf breaking 未接 CI** | proto 破坏性变更目前**没有门禁** |
@@ -617,7 +617,7 @@ pnpm ready          # vp fmt && vp lint && vp run test -r && vp run build -r
 | [`SCAFFOLD.md`](SCAFFOLD.md) | 按这套栈起新项目的脚手架规范（含模板与生成提示词） |
 | [`AGENTS.md`](AGENTS.md) | AI 协作硬规则与知识索引 |
 | [`.service-matrix.yaml`](.service-matrix.yaml) | 服务拓扑事实表 |
-| [`Design.md`](Design.md) | 架构设计真相源 |
+| [`DESIGN.md`](DESIGN.md) | 架构设计真相源 |
 | [`CONFIG_CENTER_DESIGN.md`](CONFIG_CENTER_DESIGN.md) | 配置中心域设计 |
 | [`TODO.md`](TODO.md) | 实现进度真相源 |
 | [`context/INDEX.md`](context/INDEX.md) | 三层知识库导航 |

@@ -1,5 +1,9 @@
 # Kafka 进程间通信实现文档
 
+> ⚠️ **目标态设计，代码零落地**（2026-08-07 核实：`backend/services` 无任何 Kafka 引用，
+> `go.mod` 无 Kafka 依赖，事件目前走进程内 EventBus，见 `README-EventBus.md`）。
+> 本文保留作为落地时的实现蓝本，现状以 `TODO.md` 为准。
+
 ## 概述
 
 本文档描述了订单服务如何通过 Kafka 实现进程间通信，将订单创建事件（`OrderCreatedEvent`）发送到库存服务。
