@@ -46,7 +46,6 @@ search:
     limits:
       cpu: "1"
       memory: "256Mi"
-
 user:
   enabled: true
   replicaCount: 1
@@ -95,7 +94,6 @@ user:
     limits:
       cpu: "1"
       memory: "256Mi"
-
 address:
   enabled: false
   replicaCount: 1
@@ -144,13 +142,12 @@ address:
     limits:
       cpu: "1"
       memory: "256Mi"
-
 cart:
   enabled: true
   replicaCount: 1
   image:
     repository: "ccr.ccs.tencentyun.com/sumery/cart"
-    tag: pre
+    tag: sha-168d71e
     pullPolicy: Always
   service:
     type: LoadBalancer
@@ -193,7 +190,6 @@ cart:
     limits:
       cpu: "1"
       memory: "256Mi"
-
 inventory:
   enabled: true
   replicaCount: 1
@@ -242,7 +238,6 @@ inventory:
     limits:
       cpu: "1"
       memory: "256Mi"
-
 merchant:
   enabled: true
   replicaCount: 1
@@ -291,7 +286,6 @@ merchant:
     limits:
       cpu: "1"
       memory: "256Mi"
-
 order:
   enabled: true
   replicaCount: 1
@@ -340,7 +334,6 @@ order:
     limits:
       cpu: "1"
       memory: "256Mi"
-
 payment:
   enabled: false
   replicaCount: 1
