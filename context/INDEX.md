@@ -28,6 +28,8 @@ context/
 | [knowledge-layering.md](harness-framework/knowledge-layering.md) | 一条知识该写进哪一层的判定规则 |
 | [self-refinement.md](harness-framework/self-refinement.md) | 纠错 → 判断模式性 → 沉淀 → 下次复用的闭环 |
 | [progress-and-todo.md](harness-framework/progress-and-todo.md) | PROGRESS.md 与 TODO.md 的分工与口径,每次改动两份都要更新 |
+| [graph-engineering.md](harness-framework/graph-engineering.md) | 多闭环 AI 工作流方法论存档：锚点命令、冻结节点（`.freeze/` + `scripts/freeze.sh`）、Loop 0~4 分工 |
+| [evolution-log.md](harness-framework/evolution-log.md) | harness 每次改动的原因与触发它的事故——**改硬规则/门禁前必读**，防止把改对的东西改回去 |
 
 ## 服务级 · [context/project/ecommerce/](project/ecommerce/INDEX.md)
 
@@ -38,7 +40,7 @@ context/
 ## 结构真相源 · [`.service-matrix.yaml`](../.service-matrix.yaml)（仓库根）
 
 不属于「知识」而属于「事实表」的东西放这里，供 AI 与 CI 查表：10 个后端服务的
-Consul 注册名、网关路径前缀、依赖关系、外部依赖、KV 键、前端 4 个 app 的端口。
+Consul 注册名、网关路径前缀、依赖关系、外部依赖、Config Center 键、前端 4 个 app 的端口。
 
 判据：**AI 每次都要现搜一遍的结构性事实** → 进 matrix；**需要解释「为什么」的经验** → 进 `context/`。
 
@@ -57,7 +59,6 @@ matrix 与 `backend/services/`、网关实际接线的一致性,以及各服务 
 |---|---|---|
 | [`DEVOPS.md`](../DEVOPS.md)（仓库根） | DevOps 体系设计：Three Ways/CALMS/DORA 骨架，DevOps 边界对齐 DDD 限界上下文，四阶段落地路线与行为验收标准 | 动 CI/CD、GitOps、部署策略、镜像与 migration 流程前 |
 | [`observability/OBSERVABILITY.md`](../observability/OBSERVABILITY.md) | 可观测性方法论与指标基线：三支柱分工、RED/USE、逐服务最低指标、告警清单、6 条硬规则 | 加指标/看板/告警，或排障动线走不通时 |
-| [`Graph-Engineering.md`](../Graph-Engineering.md)（仓库根） | 多闭环 AI 工作流方法论：锚点命令、冻结节点（`.freeze/` + `scripts/freeze.sh`）、Loop 0~4 分工 | 调整 AI 协作流程、冻结验收集前 |
 | [`gateway/docs/ARCHITECTURE_EVOLUTION.md`](../gateway/docs/ARCHITECTURE_EVOLUTION.md) | 网关演进规划：Cilium 做边缘网关、自建网关转 BFF | 动网关架构方向前（**纯规划未落地**） |
 
 ⚠️ 以上都是**目标态**，状态是「等待实现」。当前实况以 `TODO.md` 为准，
@@ -69,7 +70,7 @@ matrix 与 `backend/services/`、网关实际接线的一致性,以及各服务 
 - **不要全仓 grep 找规范**。先看本文件 → 进对应层的 `INDEX.md` → 再进具体文件。
 - **不要全仓 grep 找服务拓扑**。查 `.service-matrix.yaml`。
 - 找模块知识时路径是 `context/project/ecommerce/{module}/`，`{module}` 用**代码目录名**（`gateway` / `behavior` / `consumer`），不是服务的中文名。
-- 找不到对应知识 ≠ 没有约束。先读 `DESIGN.md` / `TODO.md`，读完把结论沉淀回来（见 self-refinement）。
+- 找不到对应知识 ≠ 没有约束。先读 `docs/design/`（入口 `docs/design/README.md`）/ `TODO.md`，读完把结论沉淀回来（见 self-refinement）。
 
 ## 与 `~/.claude` memory 的关系
 

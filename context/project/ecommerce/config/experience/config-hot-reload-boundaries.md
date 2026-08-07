@@ -6,16 +6,11 @@ description: 配置热更新到底哪些段会立刻生效、哪些只打 WARN�
 
 # 配置改了到底生效没有
 
-## 前提：只有配置中心这条路有热更新
+## 前提：业务服务只允许 Config Center selector
 
-`CONFIG_SOURCE=consul` 时**没有热更新**，配置只在启动时读一次。这不是 bug 而是设计：
-`consulSource` 刻意不实现 `Watcher` 接口，`startWatch` 用类型断言发现不支持就打一行
-
-```
-当前配置数据源不支持变更推送,配置仅在启动时加载一次  source=consul
-```
-
-有这行日志，就别再指望改 KV 会生效了。
+Consul KV Bootstrap 已退役。正常启动必须设置 `CONFIG_SOURCE_FILE`，且 selector 的 `type`
+必须是 `config_center`；缺失或写成 `consul`/`file` 都会失败。直接 `CONFIG_SOURCE=file`
+只保留给显式本地测试，不是部署回退路径，也没有热更新。
 
 ## 三层结构
 
@@ -89,7 +84,7 @@ ERROR  rebuild database pool failed, keeping the current one  error=...no such h
 
 ```bash
 cd ../config-center && make dev                  # 配置中心得先起来
-cd backend/services/user   && make dev-cc       # 目标服务走配置中心
+cd backend/services/user   && make dev          # 目标服务走配置中心
 # 然后 PutKey 改一个值,盯日志
 ```
 

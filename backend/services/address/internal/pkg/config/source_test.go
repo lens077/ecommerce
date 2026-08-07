@@ -3,7 +3,6 @@ package config
 import (
 	"os"
 	"path/filepath"
-	"strings"
 	"testing"
 
 	"github.com/lens077/ecommerce/backend/constants"
@@ -18,7 +17,7 @@ func clearSourceEnv(t *testing.T) {
 	t.Helper()
 	for _, k := range []string{
 		constants.EnvConfigSource, constants.EnvConfigFile, constants.EnvConfigSourceFile,
-		constants.EnvConsulAddr, constants.EnvConsulPath, constants.EnvConsulScheme, constants.EnvConsulToken,
+		constants.EnvConsulAddr, constants.EnvConsulScheme, constants.EnvConsulToken,
 		constants.EnvConfigCenterAddr, constants.EnvConfigCenterNamespace,
 		constants.EnvConfigCenterEnv, constants.EnvConfigCenterKey, constants.EnvConfigCenterServiceToken,
 	} {
@@ -26,36 +25,46 @@ func clearSourceEnv(t *testing.T) {
 	}
 }
 
-func TestNewSource_DefaultIsConsul(t *testing.T) {
+func TestNewSource_MissingSelectorFails(t *testing.T) {
 	clearSourceEnv(t)
 
-	// 不设 CONFIG_SOURCE 时必须落到 Consul KV:现有部署清单一行不改也要能启动。
 	src, err := NewSource()
-	require.NoError(t, err)
-	assert.Equal(t, constants.ConfigSourceConsul, src.Name())
+	assert.Nil(t, src)
+	require.Error(t, err)
+	assert.Contains(t, err.Error(), constants.EnvConfigSourceFile)
 }
 
-func TestNewSource_Consul(t *testing.T) {
+func TestNewSource_ConsulIsRejected(t *testing.T) {
 	clearSourceEnv(t)
-	t.Setenv(constants.EnvConfigSource, constants.ConfigSourceConsul)
-	t.Setenv(constants.EnvConsulPath, "ecommerce/cart/dev.yml")
+	t.Setenv(constants.EnvConfigSource, "consul")
 
 	src, err := NewSource()
-	require.NoError(t, err)
-	assert.Equal(t, constants.ConfigSourceConsul, src.Name())
+	assert.Nil(t, src)
+	require.Error(t, err)
+	assert.Contains(t, err.Error(), constants.EnvConfigSourceFile)
 }
 
 func TestNewSource_SDKSelector(t *testing.T) {
 	clearSourceEnv(t)
-	businessConfig := filepath.Join(t.TempDir(), "cart.yaml")
-	require.NoError(t, os.WriteFile(businessConfig, []byte(testBootstrapYAML), 0o600))
 	selector := filepath.Join(t.TempDir(), "source.yaml")
-	require.NoError(t, os.WriteFile(selector, []byte("type: file\nfile:\n  path: "+businessConfig+"\n"), 0o600))
+	require.NoError(t, os.WriteFile(selector, []byte("type: config_center\nconfig_center:\n  address: http://config-center:30010\n  namespace: cart\n  environment: pre\n  key: bootstrap.yaml\n"), 0o600))
 	t.Setenv(constants.EnvConfigSourceFile, selector)
 
 	src, err := NewSource()
 	require.NoError(t, err)
-	assert.Equal(t, "file", src.Name())
+	assert.Equal(t, "config_center", src.Name())
+}
+
+func TestNewSource_SDKSelectorRejectsFile(t *testing.T) {
+	clearSourceEnv(t)
+	selector := filepath.Join(t.TempDir(), "source.yaml")
+	require.NoError(t, os.WriteFile(selector, []byte("type: file\nfile:\n  path: bootstrap.yaml\n"), 0o600))
+	t.Setenv(constants.EnvConfigSourceFile, selector)
+
+	src, err := NewSource()
+	assert.Nil(t, src)
+	require.Error(t, err)
+	assert.Contains(t, err.Error(), "must select config_center")
 }
 
 func TestNewSource_File(t *testing.T) {
@@ -88,8 +97,7 @@ func TestNewSource_UnknownValue(t *testing.T) {
 	// 拼错值时不能静默回落到默认源 —— 那会让服务读到一份你以为早已换掉的配置
 	assert.Contains(t, err.Error(), "etcd")
 	assert.Contains(t, err.Error(), constants.ConfigSourceFile)
-	assert.Contains(t, err.Error(), constants.ConfigSourceConsul)
-	assert.Contains(t, err.Error(), constants.ConfigSourceConfigCenter)
+	assert.Contains(t, err.Error(), constants.EnvConfigSourceFile)
 }
 
 func TestParseYAMLToMap(t *testing.T) {
@@ -120,10 +128,6 @@ func TestParseYAMLToMap_Empty(t *testing.T) {
 	assert.Empty(t, got)
 }
 
-// 两个实现必须都满足 Source 接口(编译期已由 var _ Source 保证,这里再做一次运行期确认)
-func TestSourceNamesMatchConfigSourceValues(t *testing.T) {
+func TestFileSourceNameMatchesConfigSourceValue(t *testing.T) {
 	assert.Equal(t, constants.ConfigSourceFile, (&fileSource{}).Name())
-	assert.Equal(t, constants.ConfigSourceConsul, (&consulSource{}).Name())
-	// Name() 的返回值就是 CONFIG_SOURCE 的合法取值,不能带空格/大写
-	assert.Equal(t, strings.ToLower((&consulSource{}).Name()), (&consulSource{}).Name())
 }

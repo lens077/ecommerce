@@ -1,10 +1,10 @@
 # .service-matrix.yaml — 服务拓扑真相源
 #
-# 作用：让 AI 和 CI 不再靠搜 DESIGN.md 猜服务关系、路径和配置键。
+# 作用：让 AI 和 CI 不再靠搜 docs/design/ 猜服务关系、路径和配置键。
 # 判据：凡是「AI 每次都要现搜一遍」的结构性事实，都应该在这里查表拿到。
 #
 # ⚠️ 纪律：
-#   1. 本文件只记录**结构事实**，不记录设计理由（那在 DESIGN.md）也不记录进度（那在 TODO.md）
+#   1. 本文件只记录**结构事实**，不记录设计理由（那在 docs/design/）也不记录进度（那在 TODO.md）
 #   2. depends_on = 代码里真的接线了；depends_on_planned = 设计要求但尚未接线。不要混
 #   3. 必需配置键**不在本文件重复** —— 已由各服务 internal/conf/v1/conf.proto 的
 #      (buf.validate.field).required 声明，重复会漂移。见 config_validation 段
@@ -23,12 +23,11 @@ layout:
   gateway: "gateway"
 
 conventions:
-  consul_kv: "ecommerce/{service}/{env}.yml" # env: dev | pre（prod 的键尚未创建，见 known_gaps）
-  # 配置中心里的同一份配置:namespace=服务目录名, environment=dev|pre, key=bootstrap.yaml
+  # Config Center 是 10 个业务服务唯一的 Bootstrap 来源。
   config_center_key: "{service}/{env}/bootstrap.yaml"
+  config_source_secret: "ecommerce-config-source-{env}"
   consul_addr_local: "192.168.3.112:8500" # 见 context/team/local-env.md
-  # 各服务通用的配置块（除 config 外都有）：
-  common_config_blocks: [server, data, auth, observability, discovery, search, log]
+  common_config_blocks: [server, data, observability, discovery, log]
 
 config_validation:
   # 必需性的唯一真相源是各服务的 conf.proto，例如：
@@ -39,15 +38,15 @@ config_validation:
   known_defect: |
     配置加载路径（如 behavior/internal/pkg/config/config.go 的 decodeConfig）只做
     mapstructure 解码，**从不调用 protovalidate**。于是 required=true 形同虚设：
-    KV 缺块 → 解码不报错 → getter nil-safe → 功能被静默关掉而不是启动失败。
+    Config Center Bootstrap 缺块 → 解码不报错 → getter nil-safe → 功能被静默关掉而不是启动失败。
     mapstructure 也未开 ErrorUnused，多余键同样不报错。
   fix_direction:
     - "配置解码后调用 protovalidate.Validate(bootstrap)，让 required 真正生效"
     - "mapstructure DecoderConfig 开启 ErrorUnused"
-    - "CI 里按本文件的服务清单校验每个 ecommerce/{service}/dev.yml 可解码且通过 validate"
+    - "CI 里按本文件的服务清单校验每个 {service}/dev/bootstrap.yaml 可解码且通过 validate"
   see: "context/project/ecommerce/behavior/experience/consul-kv-missing-key-silent-disable.md"
 
-# ── 外部基础设施（不是本仓的服务）────────────────────────────────────
+# 外部基础设施（不是本仓的服务）────────────────────────────────────
 externals:
   postgres: { host: "pg-dev.app.com", note: "TLS verify-ca" }
   redis: { host: "dragonfly.app.com:443", note: "Dragonfly, TLS insecure_skip_verify" }
@@ -57,9 +56,9 @@ externals:
   minio: { used_by: [cart], note: "商品缩略图 URL" }
   config_center: { discovery: config-service, repository: "github.com/lens077/config-center", note: "独立配置控制面，从本地 CONFIG_FILE 自举" }
   gorse: { used_by: [behavior, product], note: "推荐引擎；客户端在 backend/pkg/gorse/" }
-  alipay: { used_by: [payment], note: "pay.alipay.* 在 KV 里目前是空占位" }
+  alipay: { used_by: [payment], note: "pay.alipay.* 为空时支付网关能力禁用" }
 
-# ── 网关 ────────────────────────────────────────────────────────────
+# 网关
 gateway:
   path: "gateway"
   config: "gateway/configs/config.yaml"
@@ -77,14 +76,15 @@ gateway:
     - /behavior.v1.BehaviorService/Recommend
     - /behavior.v1.BehaviorService/SimilarItems
 
-# ── 后端服务 ─────────────────────────────────────────────────────────
+# 后端服务
 # discovery: Consul 注册名（≠ 目录名，网关 target 用它）
-# extra_config: 通用块之外的配置块
-# 10 个服务的本地 make dev 默认经 SDK selector 走 config_center；deploy 清单仍显式走 Consul。
+# extra_config: 通用块之外、该服务实际消费的配置块
+# 10 个服务统一经 SDK selector 走 config_center；Consul 只负责注册发现。
 services:
   user:
     discovery: user-identity
     gateway_prefix: /user*
+    extra_config: [auth]
     depends_on: [] # 无服务间调用
     external: [postgres, casdoor, config_center]
     note: "proto 侧引用 backend/api/casdoor/v1"
@@ -92,6 +92,7 @@ services:
   search:
     discovery: search-product
     gateway_prefix: /search*
+    extra_config: [auth, search]
     depends_on: []
     depends_on_planned: [product] # ProductChangedEvent → 同步 ES（未接线）
     external: [elasticsearch, config_center]
@@ -99,7 +100,7 @@ services:
   behavior:
     discovery: behavior-service
     gateway_prefix: /behavior*
-    extra_config: [recommend] # required = true
+    extra_config: [auth, recommend] # recommend required = true
     depends_on: []
     external: [postgres, gorse, config_center]
     note: |
@@ -124,6 +125,7 @@ services:
   address:
     discovery: address-service
     gateway_prefix: /address*
+    extra_config: [auth, search]
     depends_on: []
     external: [postgres, config_center]
 
@@ -143,6 +145,7 @@ services:
   merchant:
     discovery: merchant-service
     gateway_prefix: /merchant*
+    extra_config: [auth]
     depends_on: []
     external: [postgres, config_center]
 
@@ -154,7 +157,7 @@ services:
     depends_on_planned: [order] # 原实现的 consumerOrder client，注释保留在 data/payment.go
     external: [postgres, alipay, config_center]
 
-# ── 部署路径覆盖 ─────────────────────────────────────────────────────
+# 部署路径覆盖 ─────────────────────────────────────────────────────
 # 上面的 services 段是「有哪些服务」的真相源;这一段声明每条聚合部署入口
 # 各自覆盖了其中哪些。四处清单历史上是各抄一份、互相漂移的:
 #   - config 已随配置中心拆去独立仓库,却还留在 Makefile 的 SERVICES 里,
@@ -175,7 +178,7 @@ deployment_coverage:
   # 例外清空。
   exceptions: {}
 
-# ── 前端 ─────────────────────────────────────────────────────────────
+# 前端 ─
 frontend:
   workspace: "frontend" # pnpm workspace + vite-plus
   apps:
@@ -186,10 +189,8 @@ frontend:
   packages: [api, configs, constants, tracker, ui, utils]
   transport: "Connect-RPC → VITE_GATEWAY_URL（默认 http://localhost:8080）"
 
-# ── 已知缺口（详情以 TODO.md 为准，本段只列影响拓扑的）─────────────────
+# 已知缺口（详情以 TODO.md 为准，本段只列影响拓扑的）─────────────────
 known_gaps:
-  - "backend/services/consul-kv.json 是 0 字节空文件"
   - "服务间调用几乎全未接线：order/payment 的 depends_on_planned 目前都是空的"
   - "buf breaking 未接 CI —— proto 破坏性变更目前没有门禁"
-  - "prod.yml 在 KV 里一个都不存在，但 deploy/prod 的 CONSUL_PATH 全指向它 —— prod 部署起不来"
-  - "同一份配置存在 Consul KV 与配置中心两处，靠 backend/tools/config-seed 手动同步，没有门禁防漂移"
+  - "Bootstrap 解码后仍未执行 protovalidate，required 约束尚未成为运行时门禁"

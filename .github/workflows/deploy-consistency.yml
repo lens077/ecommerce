@@ -57,3 +57,10 @@ jobs:
       # Makefile SERVICES / compose services / helm values 顶层键 / deploy 目录
       - name: Structcheck
         run: go test -count=1 ./structcheck/...
+
+      # 软门禁伤疤:被基线/例外放行的存量问题不阻断流程,但必须在 CI 日志里显形。
+      # 「不阻断」不等于「什么都不做」——放行之后没人看见,基线就会退化成永久免罪符。
+      # 本步骤永远成功,只负责打印。
+      - name: Soft-gate scars
+        working-directory: .
+        run: scripts/harness-scars.sh

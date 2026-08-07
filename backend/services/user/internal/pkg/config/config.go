@@ -91,8 +91,8 @@ func decodeConfig(data map[string]any, target any) error {
 
 // Init 拉取并解析整份 Bootstrap 配置。
 //
-// 「从哪儿拉」由 CONFIG_SOURCE 决定(见 source.go),本函数只负责选源、解码、落盘,
-// 不感知任何数据源细节 —— 引导参数各自由对应 source 从环境变量读取,其余全部配置
+// 正常启动由 CONFIG_SOURCE_FILE 指向 Config Center selector（见 source.go）。本函数
+// 只负责加载、解码和发布，不感知远端细节；其余全部配置
 // (含 Consul 服务发现地址、DB、Redis 等)一律由选中的数据源下发。
 func Init(ctx context.Context) (*confv1.Bootstrap, error) {
 	src, err := NewSource()

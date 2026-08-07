@@ -3,3 +3,44 @@ version: 0.1.0
 name: ecommerce-helm
 description: ecommerce global helm values
 type: application
+dependencies:
+  - name: address
+    version: 0.1.0
+    repository: file://charts/address
+    condition: address.enabled
+  - name: behavior
+    version: 0.1.0
+    repository: file://charts/behavior
+    condition: behavior.enabled
+  - name: cart
+    version: 0.1.0
+    repository: file://charts/cart
+    condition: cart.enabled
+  - name: inventory
+    version: 0.1.0
+    repository: file://charts/inventory
+    condition: inventory.enabled
+  - name: merchant
+    version: 0.1.0
+    repository: file://charts/merchant
+    condition: merchant.enabled
+  - name: order
+    version: 0.1.0
+    repository: file://charts/order
+    condition: order.enabled
+  - name: payment
+    version: 0.1.0
+    repository: file://charts/payment
+    condition: payment.enabled
+  - name: product
+    version: 0.1.0
+    repository: file://charts/product
+    condition: product.enabled
+  - name: search
+    version: 0.1.0
+    repository: file://charts/search
+    condition: search.enabled
+  - name: user
+    version: 0.1.0
+    repository: file://charts/user
+    condition: user.enabled

@@ -16,6 +16,14 @@ spec:
         app.kubernetes.io/name: {{ .serviceName }}
         app.kubernetes.io/instance: {{ .serviceName }}
     spec:
+      {{- if and .configSource .configSource.enabled }}
+      securityContext:
+        runAsNonRoot: true
+        runAsUser: {{ .configSource.runAsUser }}
+        runAsGroup: {{ .configSource.runAsGroup }}
+        fsGroup: {{ .configSource.fsGroup }}
+        fsGroupChangePolicy: OnRootMismatch
+      {{- end }}
       {{- with .imagePullSecrets }}
       # TCR 是私有仓库，没有它 Pod 起不来。此前靠 `kubectl patch serviceaccount
       # default -n ecommerce` 注入，那是集群里的一处不在 Git 的手工状态：
@@ -55,15 +63,32 @@ spec:
             {{- end }}
           resources:
             {{- toYaml .resources | nindent 12 }}
-          {{- if and .dbCaCert .dbCaCert.enabled }}
+          {{- if or (and .dbCaCert .dbCaCert.enabled) (and .configSource .configSource.enabled) }}
           volumeMounts:
+            {{- if and .dbCaCert .dbCaCert.enabled }}
             - name: db-ca-cert
               mountPath: {{ .dbCaCert.mountPath }}
               readOnly: true
+            {{- end }}
+            {{- if and .configSource .configSource.enabled }}
+            - name: config-source
+              mountPath: {{ .configSource.mountPath }}
+              readOnly: true
+            {{- end }}
+          {{- end }}
+      {{- if or (and .dbCaCert .dbCaCert.enabled) (and .configSource .configSource.enabled) }}
       volumes:
+        {{- if and .dbCaCert .dbCaCert.enabled }}
         - name: db-ca-cert
           secret:
             secretName: {{ .dbCaCert.secretName }}
-          {{- end }}
+        {{- end }}
+        {{- if and .configSource .configSource.enabled }}
+        - name: config-source
+          secret:
+            secretName: {{ .configSource.secretName }}
+            defaultMode: 0400
+        {{- end }}
+      {{- end }}
 {{- end }}
 {{- end -}}

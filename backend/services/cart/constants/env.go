@@ -16,7 +16,6 @@ const (
 const (
 	EnvConsulEnabled            = "CONSUL_ENABLED"
 	EnvConsulAddr               = "CONSUL_ADDR"
-	EnvConsulPath               = "CONSUL_PATH"
 	EnvConsulScheme             = "CONSUL_SCHEME"
 	EnvConsulToken              = "CONSUL_TOKEN"
 	EnvConsulInsecureSkipVerify = "CONSUL_INSECURE_SKIP_VERIFY"

@@ -73,6 +73,15 @@ jobs:
             ./api/... \
             ./structcheck/...
 
+      # 基线对比棘轮:只拦「本次新增」的静态告警,存量由 .lint-baseline/ 冻结放行。
+      # 当前后端基线为空(go vet 干净),所以这一步实际等价于硬门禁;
+      # 将来接入 golangci-lint 时,先 snapshot 冻结存量即可立刻开门禁,不必先清债。
+      - name: Lint baseline (go-vet)
+        working-directory: .
+        env:
+          CHECKERS: go-vet
+        run: scripts/lint-baseline.sh check
+
   build:
     name: image (${{ inputs.service }})
     needs: test

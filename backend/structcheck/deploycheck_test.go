@@ -47,6 +47,52 @@ type deploymentCoverage struct {
 type coverageMatrix struct {
 	Services           map[string]yaml.Node `yaml:"services"`
 	DeploymentCoverage deploymentCoverage   `yaml:"deployment_coverage"`
+	Conventions        struct {
+		ConfigSourceSecret string `yaml:"config_source_secret"`
+	} `yaml:"conventions"`
+}
+
+type deploymentEnv struct {
+	Name  string `yaml:"name"`
+	Value string `yaml:"value"`
+}
+
+type deploymentVolumeMount struct {
+	Name      string `yaml:"name"`
+	MountPath string `yaml:"mountPath"`
+	ReadOnly  bool   `yaml:"readOnly"`
+}
+
+type deploymentVolume struct {
+	Name   string `yaml:"name"`
+	Secret struct {
+		SecretName  string `yaml:"secretName"`
+		DefaultMode int    `yaml:"defaultMode"`
+	} `yaml:"secret"`
+}
+
+type deploymentSecurityContext struct {
+	RunAsNonRoot        bool   `yaml:"runAsNonRoot"`
+	RunAsUser           int64  `yaml:"runAsUser"`
+	RunAsGroup          int64  `yaml:"runAsGroup"`
+	FSGroup             int64  `yaml:"fsGroup"`
+	FSGroupChangePolicy string `yaml:"fsGroupChangePolicy"`
+}
+
+type deploymentDocument struct {
+	Kind string `yaml:"kind"`
+	Spec struct {
+		Template struct {
+			Spec struct {
+				SecurityContext deploymentSecurityContext `yaml:"securityContext"`
+				Containers      []struct {
+					Env          []deploymentEnv         `yaml:"env"`
+					VolumeMounts []deploymentVolumeMount `yaml:"volumeMounts"`
+				} `yaml:"containers"`
+				Volumes []deploymentVolume `yaml:"volumes"`
+			} `yaml:"spec"`
+		} `yaml:"template"`
+	} `yaml:"spec"`
 }
 
 func loadCoverageMatrix(t *testing.T) coverageMatrix {
@@ -227,5 +273,155 @@ func TestDeploymentListsMatchMatrix(t *testing.T) {
 				}
 			}
 		})
+	}
+}
+
+// Config Center is the only Bootstrap source. Keep every committed deployment
+// entrypoint on the selector-file contract so Consul cannot return as a silent
+// fallback in one environment.
+func TestDeploymentsUseConfigCenterSelector(t *testing.T) {
+	m := loadCoverageMatrix(t)
+	if m.Conventions.ConfigSourceSecret == "" {
+		t.Fatal(".service-matrix.yaml conventions.config_source_secret is empty")
+	}
+
+	t.Run("helm", func(t *testing.T) {
+		data, err := os.ReadFile(helmValuesPath)
+		if err != nil {
+			t.Fatalf("read helm values: %v", err)
+		}
+		var values struct {
+			Global struct {
+				ConfigSource struct {
+					Enabled    bool   `yaml:"enabled"`
+					SecretName string `yaml:"secretName"`
+					MountPath  string `yaml:"mountPath"`
+					RunAsUser  int64  `yaml:"runAsUser"`
+					RunAsGroup int64  `yaml:"runAsGroup"`
+					FSGroup    int64  `yaml:"fsGroup"`
+				} `yaml:"configSource"`
+			} `yaml:"global"`
+			Services map[string]yaml.Node `yaml:",inline"`
+		}
+		if err := yaml.Unmarshal(data, &values); err != nil {
+			t.Fatalf("parse helm values: %v", err)
+		}
+		if !values.Global.ConfigSource.Enabled {
+			t.Error("helm global.configSource.enabled must be true")
+		}
+		wantSecret := strings.ReplaceAll(m.Conventions.ConfigSourceSecret, "{env}", "pre")
+		if values.Global.ConfigSource.SecretName != wantSecret {
+			t.Errorf("helm selector Secret = %q, want %q", values.Global.ConfigSource.SecretName, wantSecret)
+		}
+		if values.Global.ConfigSource.MountPath != "/etc/ecommerce/config-source" {
+			t.Errorf("helm selector mountPath = %q", values.Global.ConfigSource.MountPath)
+		}
+		if values.Global.ConfigSource.RunAsUser != 1000 ||
+			values.Global.ConfigSource.RunAsGroup != 1000 ||
+			values.Global.ConfigSource.FSGroup != 1000 {
+			t.Errorf("helm selector security IDs must all be 1000: %+v", values.Global.ConfigSource)
+		}
+
+		for service := range m.Services {
+			node, ok := values.Services[service]
+			if !ok {
+				t.Errorf("helm values missing service %q", service)
+				continue
+			}
+			var serviceValues struct {
+				Env []deploymentEnv `yaml:"env"`
+			}
+			if err := node.Decode(&serviceValues); err != nil {
+				t.Errorf("decode helm values for %s: %v", service, err)
+				continue
+			}
+			assertSelectorEnv(t, "helm "+service, serviceValues.Env, service)
+		}
+	})
+
+	for service := range m.Services {
+		service := service
+		for _, environment := range []string{"dev", "prod"} {
+			environment := environment
+			t.Run("manifest/"+service+"/"+environment, func(t *testing.T) {
+				path := filepath.Join(servicesDir, service, "deploy", environment, "deployment.yaml")
+				data, err := os.ReadFile(path)
+				if err != nil {
+					t.Fatalf("read %s: %v", path, err)
+				}
+				var deployment deploymentDocument
+				if err := yaml.Unmarshal(data, &deployment); err != nil {
+					t.Fatalf("parse %s: %v", path, err)
+				}
+				if deployment.Kind != "Deployment" || len(deployment.Spec.Template.Spec.Containers) != 1 {
+					t.Fatalf("%s must contain one Deployment container", path)
+				}
+				container := deployment.Spec.Template.Spec.Containers[0]
+				assertSelectorEnv(t, path, container.Env, service)
+				assertSelectorSecurityContext(t, path, deployment.Spec.Template.Spec.SecurityContext)
+				assertSelectorMount(t, path, container.VolumeMounts, deployment.Spec.Template.Spec.Volumes,
+					strings.ReplaceAll(m.Conventions.ConfigSourceSecret, "{env}", environment))
+			})
+		}
+	}
+}
+
+func assertSelectorSecurityContext(t *testing.T, source string, security deploymentSecurityContext) {
+	t.Helper()
+	if !security.RunAsNonRoot || security.RunAsUser != 1000 || security.RunAsGroup != 1000 ||
+		security.FSGroup != 1000 || security.FSGroupChangePolicy != "OnRootMismatch" {
+		t.Errorf("%s has invalid selector securityContext: %+v", source, security)
+	}
+}
+
+func assertSelectorEnv(t *testing.T, source string, env []deploymentEnv, service string) {
+	t.Helper()
+	values := make(map[string]string, len(env))
+	for _, item := range env {
+		values[item.Name] = item.Value
+	}
+	want := "/etc/ecommerce/config-source/" + service + ".yaml"
+	if values["CONFIG_SOURCE_FILE"] != want {
+		t.Errorf("%s CONFIG_SOURCE_FILE = %q, want %q", source, values["CONFIG_SOURCE_FILE"], want)
+	}
+	for _, retired := range []string{"CONFIG_SOURCE", "CONSUL_PATH"} {
+		if _, ok := values[retired]; ok {
+			t.Errorf("%s still declares retired %s", source, retired)
+		}
+	}
+}
+
+func assertSelectorMount(
+	t *testing.T,
+	source string,
+	mounts []deploymentVolumeMount,
+	volumes []deploymentVolume,
+	wantSecret string,
+) {
+	t.Helper()
+	var foundMount bool
+	for _, mount := range mounts {
+		if mount.Name == "config-source" {
+			foundMount = true
+			if mount.MountPath != "/etc/ecommerce/config-source" || !mount.ReadOnly {
+				t.Errorf("%s has invalid config-source mount: %+v", source, mount)
+			}
+		}
+	}
+	if !foundMount {
+		t.Errorf("%s is missing config-source volumeMount", source)
+	}
+
+	var foundVolume bool
+	for _, volume := range volumes {
+		if volume.Name == "config-source" {
+			foundVolume = true
+			if volume.Secret.SecretName != wantSecret || volume.Secret.DefaultMode != 0o400 {
+				t.Errorf("%s has invalid config-source Secret volume: %+v", source, volume.Secret)
+			}
+		}
+	}
+	if !foundVolume {
+		t.Errorf("%s is missing config-source Secret volume", source)
 	}
 }

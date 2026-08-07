@@ -12,8 +12,8 @@ REPOSITORY = sumery/$(SERVICE)
 REGISTER = ccr.ccs.tencentyun.com
 ARM64=linux/arm64
 AMD64=linux/amd64
-# 本地读配置用的 Consul(consul.app.com 从宿主机不通,见 make dev)
-CONSUL_KV_ADDR ?= 192.168.3.112:8500
+# 本地服务注册使用的 Consul 地址（consul.app.com 从宿主机不通）
+CONSUL_ADDR_LOCAL ?= 192.168.3.112:8500
 CART_SOURCE_CONFIG ?= configs/source.dev.yaml
 
 .PHONY: k8s-dev
@@ -24,28 +24,15 @@ k8s-dev:
 k8s-prod:
 	kubectl apply -f deploy/prod
 
-# Cart 通过独立 config-center SDK 读取本地 SourceConfig,由 selector 的 type 选择
-# file / consul / config_center; Consul 仍用于本服务注册发现。
-# make dev        -> SourceConfig(默认 config_center 灰度路径)
-# make dev-consul -> 历史 Consul KV 读取路径
+# Cart 通过独立 config-center SDK 读取本地 selector，只允许 config_center；
+# Consul 仅用于本服务注册发现。
 
 .PHONY: dev
 dev:
 	SERVICE_NAME="cart-service" \
 	CONSUL_ENABLED=true \
 	CONFIG_SOURCE_FILE=$(CART_SOURCE_CONFIG) \
-	CONSUL_ADDR=$(CONSUL_KV_ADDR) \
-	CONSUL_SCHEME=http \
-	CONSUL_INSECURE_SKIP_VERIFY=true \
-	go run cmd/server/main.go
-
-.PHONY: dev-consul
-dev-consul:
-	SERVICE_NAME="cart-service" \
-	CONSUL_ENABLED=true \
-	CONFIG_SOURCE=consul \
-	CONSUL_ADDR=$(CONSUL_KV_ADDR) \
-	CONSUL_PATH=ecommerce/cart/dev.yml \
+	CONSUL_ADDR=$(CONSUL_ADDR_LOCAL) \
 	CONSUL_SCHEME=http \
 	CONSUL_INSECURE_SKIP_VERIFY=true \
 	go run cmd/server/main.go

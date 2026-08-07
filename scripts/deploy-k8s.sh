@@ -13,6 +13,8 @@
 #   - ecommerce 命名空间
 #   - tcr-pull-secret：TCR 是私有仓库，没有它所有 Pod 都 ImagePullBackOff
 #   - pg-ca-cert：Postgres 走 verify-ca，缺了连不上库
+#   - ecommerce-config-source-pre：含机器 token 的 10 份 Config Center selector，
+#     必须由操作者在集群创建，不落盘、不进 Git
 #
 # 用法：
 #   scripts/deploy-k8s.sh                      # helm 模式，渲染并 apply
@@ -92,7 +94,7 @@ fi
 # 命名空间
 echo "== 命名空间 ${namespace}"
 "${kubectl_cmd[@]}" create namespace "${namespace}" --dry-run=client -o yaml |
-  "${kubectl_cmd[@]}" apply -f -
+  "${kubectl_cmd[@]}" "${kubectl_apply_cmd[@]}" -f -
 
 # TCR 拉取凭据
 # 凭据从本机 docker 凭据助手取，不落盘、不进 Git。已存在则跳过，
@@ -110,7 +112,9 @@ else
     --namespace="${namespace}" \
     --docker-server="${registry}" \
     --docker-username="$(jq -r '.Username' <<<"${cred}")" \
-    --docker-password="$(jq -r '.Secret' <<<"${cred}")"
+    --docker-password="$(jq -r '.Secret' <<<"${cred}")" \
+    --dry-run=client -o yaml |
+    "${kubectl_cmd[@]}" "${kubectl_apply_cmd[@]}" -f -
 fi
 
 # Postgres CA
@@ -120,9 +124,16 @@ if [[ -f "${pg_ca_file}" ]]; then
   "${kubectl_cmd[@]}" create secret generic pg-ca-cert \
     --namespace="${namespace}" \
     --from-file="pg_ca.crt=${pg_ca_file}" \
-    --dry-run=client -o yaml | "${kubectl_cmd[@]}" apply -f -
+    --dry-run=client -o yaml | "${kubectl_cmd[@]}" "${kubectl_apply_cmd[@]}" -f -
 else
   echo "!! 找不到 ${pg_ca_file}，跳过 pg-ca-cert；服务连库会因 verify-ca 失败" >&2
+fi
+
+# Config Center selector 含机器 token，不能由仓库内容生成。部署入口只校验它存在，
+# 避免先滚掉健康 Pod，才发现新 Pod 因缺 selector 无法启动。
+if ! "${kubectl_cmd[@]}" get secret ecommerce-config-source-pre -n "${namespace}" >/dev/null 2>&1; then
+  echo "缺少 ${namespace}/ecommerce-config-source-pre；请先创建不入库的 Config Center selector Secret" >&2
+  exit 1
 fi
 
 # 交付

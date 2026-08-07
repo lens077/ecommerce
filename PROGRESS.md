@@ -38,7 +38,7 @@
 | **订单服务** | 第一阶段 | ⚠️ 架构搭建 | CreateOrder、CompleteOrder | ❌ **两个都不可用**：`CreateOrder` 丢弃请求体并返回**假成功**（`service/order.go:31`，`application/order.go:61`），而结算页已真实接线；`CompleteOrder` 的 `SaveOrder` 只打日志不落库（`data/order.go:83`）却照发 `OrderCompleted` 事件 | 20% |
 | **支付服务** | 第一阶段 | ⚠️ 接口定义 | CreatePayment、GetPaymentStatus、HandlePaymentNotify、HandlePaymentCallback | 5 个 repo 方法**全部显式返回 `CodeUnimplemented`**（`payment/internal/data/payment.go:41`）。原实现依赖已移除的 balance/consumerOrder client，需整体恢复 | 10% |
 | **库存服务** | 第一阶段 | ❌ 不可用 | Reserve、ReleaseReserve（**均不可用**） | ❌ `Reserve` **静默无操作**：传 `version+1` 导致 WHERE 永不命中、丢弃 execrows、扣减量语义颠倒、错误变量传错致吞错（`inventory/internal/data/inventory.go:52`）——返回成功但库存不变，且写入假流水；`ReleaseReserve` 是 `panic("implement me")`（同文件 :88） | 5% |
-| **搜索服务** | 第一阶段 | ⚠️ 接口定义 | Search | 仅透传调用。⚠️ 读取字段（`id`/`skus[].price`/`sale_detail[].quantity`）与 `DESIGN.md:335-370` 的 ES mapping（`spu_id`/顶层 `price`/`sale_count`）**不兼容**，按设计建索引则结果全为零值 | 20% |
+| **搜索服务** | 第一阶段 | ⚠️ 接口定义 | Search | 仅透传调用。⚠️ 读取字段（`id`/`skus[].price`/`sale_detail[].quantity`）与 `docs/design/search/search.md` 的 ES mapping（`spu_id`/顶层 `price`/`sale_count`）**不兼容**，按设计建索引则结果全为零值 | 20% |
 | **购物车服务** | 第一阶段 | ⚠️ 部分可用 | GetCart、RemoveCartItem 可用；AddProductToCart、UpdateCartItemQuantity **不可用** | ❌ `AddProductToCart` 对任何新商品必然失败：schema 要求 `shop_name NOT NULL`（`data/schema/cart.sql:17`）而 INSERT 无此列（`data/queries/cart.sql:3`）；`UpdateCartItemQuantity` 的 Params **没有 Quantity 字段**（`data/cart.go:57`），改数量改不了 | 45% |
 | **地址服务** | 第一阶段 | ⚠️ 功能完整但越权 | CreateAddress、UpdateAddress、DeleteAddress、GetAddress、ListAddresses、SetDefaultAddress | 功能已实现。❌ **安全 BLOCKER**：Get/Update/Delete/SetDefault 的 SQL 仅按 `address_id` 过滤、无 user 归属校验，`CreateAddress` 的 `user_id` 取自请求体（`service/address.go:26,71,84,95`），网关又整段放行 `AddressService/*`（`policies.csv:3`）——任何登录用户可读改删他人地址 | 70% |
 | **行为/推荐服务 (behavior)** | 第一阶段 | ✅ 核心完成 | Track、Recommend、SimilarItems，并承载 TelemetryService | 已实现（`behavior/internal/biz/usecase.go`）。**此前本表完全遗漏该服务**，2026-08-06 回扫补入 | 60% |
@@ -88,7 +88,7 @@
   注释声称「开启事务/回滚重试」但**没有任何 `ExecTx` 包裹**，`FOR UPDATE` 在自动提交下立即失效。
   净效果：调用返回成功、库存分毫未动、change_log 里写下一条**伪造的扣减流水**。
   一旦按 `TODO.md` 的方案接上「建单同步 Reserve（TCC-Try）」，预占永远虚假成功 → **必然超卖**，
-  直接违反 `DESIGN.md` 的「从数据库层面杜绝超卖」
+  直接违反 `docs/design/inventory/inventory.md` 的「从数据库层面杜绝超卖」
 - ❌ **ReleaseReserve**：`panic("implement me")`（同文件 :88）。接上取消/超时补偿即每单必炸
 
 #### 购物车服务 (`backend/services/cart`)
@@ -115,7 +115,7 @@
   的 SQL 只按 `address_id` 过滤，无 user 归属校验；`CreateAddress` 的 `user_id` 直接取自
   请求体（`internal/service/address.go:26,71,84,95`）；网关策略又整段放行
   `p, consumer, /address.v1.AddressService/*`（`gateway/configs/policies/policies.csv:3`）。
-  任何登录用户拿到或遍历到他人地址 UUID 即可读改删其隐私地址，违反 `DESIGN.md` 的数据隔离不变量
+  任何登录用户拿到或遍历到他人地址 UUID 即可读改删其隐私地址，违反 `docs/design/platform/rbac.md` 的数据隔离不变量
 
 #### 商品服务 (`backend/services/product/internal/biz`)
 - ✅ **数据模型**：ProductSpu、ProductSku、ProductSpuDetail 完整定义
@@ -179,7 +179,7 @@
 | **消息队列** | 第一阶段 | ❌ 未集成 | **Kafka 客户端代码为 0**：`backend/go.mod` 里没有 sarama / franz-go / segmentio 任一依赖，订单的 EventBus 是**纯进程内总线**（`order/internal/eventbus/eventbus.go`），事件出不了本进程；`infrastructure/kafka-connect` 只是 Debezium 部署物（且当前 CrashLoopBackOff）。原记「EventBus/Kafka 部分集成 20%」把两件事混为一谈，制造了已接 MQ 的假象 | 5% |
 | **缓存层** | 第一阶段 | ⚠️ 基础设施就绪 | Redis 部署配置，业务缓存待完善 | 20% |
 | **数据库** | 第一阶段 | ✅ 基础完成 | PostgreSQL + sqlc，各服务 Schema 已建 | 70% |
-| **容器化部署** | 第一阶段 | ✅ 基础完成 | Dockerfile、K8s Deployment、Helm Chart（部分）；`make un-deploy` 按与部署相同的 Helm 渲染结果卸载 10 个微服务的 Deployment/Service，保留 namespace 与前置 Secret，支持 dry-run/context | 60% |
+| **容器化部署** | 第一阶段 | ✅ 基础完成 | Dockerfile、K8s Deployment、10 服务 Helm umbrella chart；`helm lint` 与 Config Center selector 结构门禁已接入；`make un-deploy` 按与部署相同的 Helm 渲染结果卸载 10 个微服务的 Deployment/Service，保留 namespace 与前置 Secret，支持 dry-run/context | 60% |
 | **CI/CD** | 第一阶段 | ⚠️ 基础配置 | GitHub Actions 工作流；2026-08-07 新增结构性门禁 `backend/structcheck`（matrix↔目录↔网关接线一致性 + internal/pkg 同构性棘轮），随 `go test ./...` 执行。同日新增 `DEVOPS.md` 体系设计（四阶段落地路线 + 行为验收标准），**仅设计定稿，实现未开始，完成度不因文档变化** | 45% |
 
 **基础设施整体完成度：约 55%**（相比上版 +5，全部来自可观测性 30% → 60%，其余组件未动）
@@ -388,6 +388,8 @@
 
 | 日期 | 版本 | 更新内容 | 更新人 |
 |------|------|----------|--------|
+| 2026-08-08 | v1.19 | **Config Center pre 直发跑通，但 GitOps 尚未闭环**。创建不入库的 `ecommerce-config-source-pre` 后暂停 ApplicationSet 自动同步并直接 apply；首次 rollout 的十服务共同报 `open /etc/ecommerce/config-source/<service>.yaml: permission denied`，根因是业务镜像以 UID/GID 1000 运行，而 Secret `defaultMode: 0400` 在没有 Pod `fsGroup` 时保持 `root:root`。没有放宽为 world-readable：Helm library、10 份内嵌依赖与 20 份裸 Deployment 统一增加 `runAsNonRoot`、`runAsUser/runAsGroup/fsGroup=1000`、`fsGroupChangePolicy: OnRootMismatch`，structcheck 同步守护；经验已沉淀到 `config/experience/consul-kv-retired.md`。`go test -count=1 ./structcheck/...`、`helm lint helm`、十服务渲染与 `git diff --check` 全绿；再次 apply 后 10/10 Pod 连续观察 56 秒均 `1/1 Running`、0 重启，Config Center API/Web 同期稳定。当前 ArgoCD 自动同步仍临时暂停，GitHub `main` 还是 Consul 旧清单；提交推送、恢复 self-heal 并由 ArgoCD 复验前迁移状态保持“进行中” | - |
+| 2026-08-08 | v1.18 | **Consul KV → Config Center 单源迁移进行中（仓库侧完成，集群侧未验收）**。10 个业务服务删除 Consul Bootstrap reader/测试、`CONSUL_PATH` 和 `dev-consul`，缺 `CONFIG_SOURCE_FILE` 或 selector 非 `config_center` 时快速失败；Consul 注册发现代码与地址变量保留。Compose、20 份裸 Deployment 和 Helm library/10 个 subchart 全部接入不入库的 `ecommerce-config-source-<env>` Secret，umbrella pre 配置逐服务指向 `/etc/ecommerce/config-source/<service>.yaml`；10 份打包 library 依赖已更新，`helm template` 验证挂载/env 均存在。umbrella `Chart.yaml` 已声明 10 个 subchart dependency/condition，`helm lint` 转绿；structcheck 新增逐服务 selector 路径、Secret、只读挂载与退役变量门禁；部署脚本的 namespace/TCR/PG CA 前置写入也统一进入 `DRY_RUN=1`，不再出现“最终 apply 是 dry-run、前置 Secret 却真实落地”。旧 `config-seed` 改为只输出版本/大小/哈希/段名的 Config Center 审计与一次性迁移工具，按当前实际消费者裁剪 Bootstrap，写入必须使用管理员 JWT，机器 token 仍只能 Get/Watch；新增裁剪测试。README/STACK/SCAFFOLD 与历史会话说明已收敛为禁止 Consul Bootstrap 回退。仓库验收已有 `go build ./...`、服务+structcheck 范围 `go vet`、`go test ./...`（含已审查的未跟踪 config-seed 测试）、`helm lint` 与冻结检查全绿；脚本语法检查仍被执行审查器拒绝。**尚未完成**：当前只能读取集群 Pod 列表（Config Center 与十服务均 Running）；Secret 元数据、Config Center 远端审计和 server-side dry-run 仍被安全审查器内部 JSON 错误拒绝。另已确认 ArgoCD 清单跟踪 GitHub main 且开启 `automated.selfHeal`，当前迁移 diff 未提交/推送，直接 Helm apply 会被旧 Git 状态自动回滚；在获得 commit+push 或暂停 self-heal 的明确选择前不执行假部署 | - |
 | 2026-08-08 | v1.17 | **补齐全部微服务卸载入口并修复 macOS Bash 3.2 兼容问题**。`backend/Makefile` 新增 `un-deploy`，通过 `DEPLOY_ACTION=delete` 复用 `scripts/deploy-k8s.sh` 和权威 Helm 清单，删除 10 个 Deployment + 10 个 Service，刻意保留 `ecommerce` namespace、`tcr-pull-secret`、`pg-ca-cert`；支持 `DRY_RUN=1` 与 `KUBE_CONTEXT`，并提示 ArgoCD 自动同步会重建资源。首次实跑在 kubectl 前因 Bash 3.2 + `set -u` 无条件展开空数组报 `unbound variable`，现以始终非空的 apply/delete 子命令数组替代，并新增团队级 shell 兼容规范。实际删除在修复后尚未复跑，完成度不变 | - |
 | 2026-08-07 | v1.16 | **补齐并守护 10 服务的部署入口一致性**。以 `.service-matrix.yaml` 为真相源，新增 structcheck 双向比对 Makefile、Compose、Helm 与裸 manifest 四条路径，并用独立只读 GitHub Actions workflow 覆盖原后端矩阵无法识别的 Helm/聚合入口变更；移除拆仓后的 config 残留，补齐 behavior 的 Make/Compose/dev+prod 裸部署入口，聚合目标从首错中断改为全部执行后汇总失败。18 份既有 Deployment/Service 显式固定 `ecommerce` namespace；cart 补齐 ClusterIP、命名端口及 HTTPRoute/Certificate/VPA，behavior 补齐 Deployment/Service/VPA。Helm 尚缺 behavior/product，已用带原因例外保留缺口信号；cart 直连 HTTPRoute 会绕过网关鉴权，prod 清单已明确默认不得应用，待接入 ext_authz 等鉴权后再启用 | - |
 | 2026-08-07 | v1.15 | **以 cart 为基线完成 10 个微服务配置启动样板复核与收敛**。服务发现名逐项对照 `.service-matrix.yaml`，10/10 正确且是唯一允许的服务差异；九个服务补齐 cart 已有的直接 file source，并将配置加载文件集统一为 `source_file/source_consul/source_sdk`，保留 SDK selector 默认走配置中心、`make dev-consul` 显式回退的确定性语义。本机原先只有 cart 的 `configs/source.dev.yaml`，其余九个默认 `make dev` 会在启动前失败；现已从 cart selector 安全派生对应 namespace 的忽略文件并统一收紧为 `0600`，未把 token 写入 Git。10 个 `cmd/server` 统一拆出 `appOptions` 并用 `fx.ValidateApp` 做无外部依赖的启动图测试，由此发现 payment 漏供给 `*confv1.Pay`、此前要等真正启动到 data 模块才报错，已补齐。九份 Dockerfile/Makefile 的 Go 镜像从 1.26.1 对齐 cart/go.mod 的 1.26.5，修正 address `make conf` 误指 order，并删除 address/order 两个与基线不一致且路径写成 `pre.yaml` 的隐式 Consul target。`go build ./...`、`go vet ./...`、`go test -short ./...`、`go test -count=1 ./structcheck/...` 与冻结检查全绿 | - |

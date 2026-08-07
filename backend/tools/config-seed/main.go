@@ -1,28 +1,14 @@
-// config-seed 把 Consul KV 里的整份 Bootstrap 配置灌进配置中心。
-//
-// 为什么源是 Consul KV 而不是仓库里的 configs/*.yml:那些文件含 DB/Redis/ES 密码、
-// Casdoor client_secret 和证书,按 AGENTS.md 硬规则 4 一律不入库(各服务
-// configs/.gitignore 拦着),因此它们只存在于某台机器上、内容各不相同。
-// Consul KV 才是「所有人都能取到同一份」的那个源。
-//
-// 两个数据源同内容是有意的:CONFIG_SOURCE 决定服务读哪一边,配置中心挂了还能切回
-// consul。代价是改配置要同步两处 —— 本工具就是那个同步动作。
-//
-// 用法:
-//
-//	# 先看会写什么(默认 dry-run,不写任何东西)
-//	go run ./tools/config-seed
-//	# 真写
-//	go run ./tools/config-seed -write
-//	# 只灌某几个服务的 pre
-//	go run ./tools/config-seed -services user,cart -envs pre -write
-//
-// 独立 config-center 需要先启动(cd ../config-center && make dev)。
-// 写入必须使用 Casdoor 管理员 JWT；服务 token 只能读，不能写入配置。
+// config-seed audits Config Center Bootstrap entries and performs the one-time
+// pre-environment migration from a local Consul export. It never prints values.
 package main
 
 import (
 	"context"
+	"crypto/sha256"
+	"encoding/base64"
+	"encoding/hex"
+	"encoding/json"
+	"errors"
 	"flag"
 	"fmt"
 	"net/http"
@@ -32,96 +18,272 @@ import (
 	"time"
 
 	"connectrpc.com/connect"
-	"github.com/hashicorp/consul/api"
-
 	configv1 "github.com/lens077/config-center/api/config/v1"
 	"github.com/lens077/config-center/api/config/v1/configv1connect"
+	"github.com/lens077/config-center/sdk/configsource"
+	"gopkg.in/yaml.v3"
 )
 
-const (
-	// kvPrefix Consul KV 里配置的固定前缀,形如 ecommerce/<svc>/<env>.yml
-	kvPrefix = "ecommerce/"
-	// configKey 配置中心里的键名,与各服务 Makefile 的 CONFIG_CENTER_KEY 一致
-	configKey = "bootstrap.yaml"
-)
+const configKey = "bootstrap.yaml"
 
-// skipServices 不参与灌入的服务。
-//
-// config 是配置中心本体,它的配置必须从 Consul KV 自举 —— 存进它自己里面,
-// 重启后就没人能把它拉起来了。gateway 不是微服务,KV 里那几个键是证书和策略文件,
-// 不是 Bootstrap。
-var skipServices = map[string]bool{"config": true, "gateway": true}
+var services = []string{
+	"address", "behavior", "cart", "inventory", "merchant",
+	"order", "payment", "product", "search", "user",
+}
 
-type entry struct {
-	service string
-	env     string
-	kvPath  string
-	value   []byte
+// Only sections used by the current service graph survive the migration.
+var topLevelSections = map[string]map[string]bool{
+	"address":   set("server", "data", "observability", "discovery", "search", "log", "auth"),
+	"behavior":  set("server", "data", "recommend", "observability", "discovery", "log", "auth"),
+	"cart":      set("server", "data", "store", "observability", "discovery", "log"),
+	"inventory": set("server", "data", "observability", "discovery", "log"),
+	"merchant":  set("server", "data", "observability", "discovery", "log", "auth"),
+	"order":     set("server", "data", "observability", "discovery", "log"),
+	"payment":   set("server", "data", "pay", "observability", "discovery", "log"),
+	"product":   set("server", "data", "recommend", "observability", "discovery", "log"),
+	"search":    set("server", "data", "observability", "discovery", "search", "log", "auth"),
+	"user":      set("server", "data", "observability", "discovery", "log", "auth"),
+}
+
+type consulExportEntry struct {
+	Key   string `json:"key"`
+	Value string `json:"value"`
+}
+
+type audit struct {
+	service  string
+	version  int32
+	contents []byte
+	sections []string
+	data     []string
 }
 
 func main() {
-	var (
-		consulAddr = flag.String("consul", "192.168.3.112:8500", "Consul 地址,见 context/team/local-env.md")
-		base       = flag.String("base", "http://127.0.0.1:30010", "config-center 地址")
-		adminToken = flag.String("admin-token", os.Getenv("CONFIG_CENTER_ADMIN_TOKEN"), "Casdoor 管理员 JWT（也可用 CONFIG_CENTER_ADMIN_TOKEN 提供）")
-		envsFlag   = flag.String("envs", "dev,pre", "要灌的环境,逗号分隔")
-		svcsFlag   = flag.String("services", "", "只灌这几个服务,逗号分隔;留空表示 KV 里的全部")
-		write      = flag.Bool("write", false, "真正写入。不加只做 dry-run")
-		timeout    = flag.Duration("timeout", 30*time.Second, "整体超时")
-	)
+	selector := flag.String("selector", "services/cart/configs/source.dev.yaml", "local config_center selector used for address and service token")
+	environment := flag.String("environment", "pre", "Config Center environment")
+	snapshot := flag.String("snapshot", "", "optional local Consul JSON export used as migration input")
+	write := flag.Bool("write", false, "write cropped snapshot entries to Config Center")
+	timeout := flag.Duration("timeout", 30*time.Second, "overall timeout")
 	flag.Parse()
+
+	cfg, err := configsource.LoadSourceConfig(*selector)
+	if err != nil {
+		fail("load selector: %v", err)
+	}
+	if cfg.Type != configsource.TypeConfigCenter {
+		fail("selector must use config_center, got %q", cfg.Type)
+	}
 
 	ctx, cancel := context.WithTimeout(context.Background(), *timeout)
 	defer cancel()
 
-	entries, err := loadFromConsul(*consulAddr, split(*envsFlag), split(*svcsFlag))
-	if err != nil {
-		fail("从 Consul 读配置失败: %v", err)
-	}
-	if len(entries) == 0 {
-		fail("没有匹配到任何配置,检查 -services / -envs")
-	}
-
+	machine := configv1connect.NewConfigServiceClient(http.DefaultClient, cfg.ConfigCenter.Address)
 	if !*write {
-		fmt.Printf("dry-run(加 -write 才真正写入)。目标 %s,共 %d 项:\n", *base, len(entries))
-		for _, e := range entries {
-			fmt.Printf("  %-12s %-4s %-34s %6d 字节 -> %s/%s/%s\n",
-				e.service, e.env, e.kvPath, len(e.value), e.service, e.env, configKey)
+		if *snapshot == "" {
+			auditRemote(ctx, machine, cfg.ConfigCenter.ServiceToken, *environment)
+			return
 		}
+		dryRunSnapshot(*snapshot, *environment)
 		return
 	}
-	if strings.TrimSpace(*adminToken) == "" {
-		fail("写入需要 Casdoor 管理员 JWT: 设置 CONFIG_CENTER_ADMIN_TOKEN 或传入 -admin-token")
+
+	if *snapshot == "" {
+		fail("-write requires -snapshot")
+	}
+	adminToken := strings.TrimSpace(os.Getenv("CONFIG_CENTER_ADMIN_TOKEN"))
+	if adminToken == "" {
+		fail("-write requires CONFIG_CENTER_ADMIN_TOKEN")
+	}
+	admin := configv1connect.NewConfigServiceClient(newAdminHTTPClient(adminToken), cfg.ConfigCenter.Address)
+	writeSnapshot(ctx, admin, machine, cfg.ConfigCenter.ServiceToken, *snapshot, *environment)
+}
+
+func auditRemote(ctx context.Context, client configv1connect.ConfigServiceClient, token, environment string) {
+	for _, service := range services {
+		a, err := getAudit(ctx, client, token, service, environment)
+		if err != nil {
+			fail("audit %s/%s/%s: %v", service, environment, configKey, err)
+		}
+		printAudit("REMOTE", a)
+	}
+}
+
+func dryRunSnapshot(path, environment string) {
+	entries, err := loadSnapshot(path)
+	if err != nil {
+		fail("load snapshot: %v", err)
+	}
+	for _, service := range services {
+		contents, err := snapshotBootstrap(entries, service, environment)
+		if err != nil {
+			fail("snapshot %s/%s: %v", service, environment, err)
+		}
+		cropped, err := cropBootstrap(service, contents)
+		if err != nil {
+			fail("crop %s/%s: %v", service, environment, err)
+		}
+		a, err := inspect(service, 0, cropped)
+		if err != nil {
+			fail("inspect %s/%s: %v", service, environment, err)
+		}
+		printAudit("DRYRUN", a)
+	}
+}
+
+func writeSnapshot(
+	ctx context.Context,
+	admin, machine configv1connect.ConfigServiceClient,
+	machineToken, path, environment string,
+) {
+	entries, err := loadSnapshot(path)
+	if err != nil {
+		fail("load snapshot: %v", err)
 	}
 
-	var failed int
-	client := configv1connect.NewConfigServiceClient(newAdminHTTPClient(*adminToken), *base)
-	for _, e := range entries {
-		if err := put(ctx, client, e); err != nil {
-			fmt.Fprintf(os.Stderr, "FAIL  %s/%s: %v\n", e.service, e.env, err)
-			failed++
-			continue
+	for _, service := range services {
+		contents, err := snapshotBootstrap(entries, service, environment)
+		if err != nil {
+			fail("snapshot %s/%s: %v", service, environment, err)
 		}
-		// 立刻读回:PutKey 返回成功不等于存进去的就是我们发的那一份
-		// (服务端会按 format 校验并可能规范化),不比对等于没验证。
-		got, err := get(ctx, client, e)
-		switch {
-		case err != nil:
-			fmt.Fprintf(os.Stderr, "FAIL  %s/%s 读回: %v\n", e.service, e.env, err)
-			failed++
-		case got != string(e.value):
-			fmt.Fprintf(os.Stderr, "FAIL  %s/%s 读回内容与写入不一致(本地 %d 字节,远端 %d 字节)\n",
-				e.service, e.env, len(e.value), len(got))
-			failed++
-		default:
-			fmt.Printf("OK    %-12s %-4s %6d 字节\n", e.service, e.env, len(e.value))
+		cropped, err := cropBootstrap(service, contents)
+		if err != nil {
+			fail("crop %s/%s: %v", service, environment, err)
 		}
-	}
 
-	if failed > 0 {
-		fail("%d/%d 项失败", failed, len(entries))
+		_, err = admin.PutKey(ctx, connect.NewRequest(&configv1.PutKeyRequest{
+			Namespace:   service,
+			Environment: environment,
+			Key:         configKey,
+			Format:      configv1.ConfigFormat_CONFIG_FORMAT_YAML,
+			Value:       string(cropped),
+			Comment:     "retire Consul KV Bootstrap source",
+			Description: "service Bootstrap; Config Center is the sole source",
+		}))
+		if err != nil {
+			fail("write %s/%s/%s: %v", service, environment, configKey, err)
+		}
+
+		got, err := getAudit(ctx, machine, machineToken, service, environment)
+		if err != nil {
+			fail("read back %s/%s/%s: %v", service, environment, configKey, err)
+		}
+		if sha256.Sum256(got.contents) != sha256.Sum256(cropped) {
+			fail("read back mismatch for %s/%s/%s", service, environment, configKey)
+		}
+		printAudit("WRITTEN", got)
 	}
-	fmt.Printf("完成:%d 项全部写入并读回校验通过\n", len(entries))
+}
+
+func getAudit(
+	ctx context.Context,
+	client configv1connect.ConfigServiceClient,
+	token, service, environment string,
+) (audit, error) {
+	req := connect.NewRequest(&configv1.GetKeyRequest{
+		Namespace: service, Environment: environment, Key: configKey,
+	})
+	if token != "" {
+		req.Header().Set("x-config-center-service-token", token)
+	}
+	resp, err := client.GetKey(ctx, req)
+	if err != nil {
+		return audit{}, err
+	}
+	entry := resp.Msg.GetEntry()
+	if entry.GetValue() == "" {
+		return audit{}, errors.New("entry is empty")
+	}
+	return inspect(service, entry.GetVersion(), []byte(entry.GetValue()))
+}
+
+func inspect(service string, version int32, contents []byte) (audit, error) {
+	var document map[string]any
+	if err := yaml.Unmarshal(contents, &document); err != nil {
+		return audit{}, err
+	}
+	sections := sortedKeys(document)
+	data := []string(nil)
+	if rawData, ok := document["data"].(map[string]any); ok {
+		data = sortedKeys(rawData)
+	}
+	return audit{service: service, version: version, contents: contents, sections: sections, data: data}, nil
+}
+
+func printAudit(prefix string, a audit) {
+	sum := sha256.Sum256(a.contents)
+	fmt.Printf("%-7s %-10s v%-4d bytes=%-5d sha256=%s sections=%s data=%s\n",
+		prefix, a.service, a.version, len(a.contents), hex.EncodeToString(sum[:8]),
+		strings.Join(a.sections, ","), strings.Join(a.data, ","))
+}
+
+func loadSnapshot(path string) (map[string]string, error) {
+	contents, err := os.ReadFile(path)
+	if err != nil {
+		return nil, err
+	}
+	var raw []consulExportEntry
+	if err := json.Unmarshal(contents, &raw); err != nil {
+		return nil, err
+	}
+	entries := make(map[string]string, len(raw))
+	for _, entry := range raw {
+		entries[entry.Key] = entry.Value
+	}
+	return entries, nil
+}
+
+func snapshotBootstrap(entries map[string]string, service, environment string) ([]byte, error) {
+	key := fmt.Sprintf("ecommerce/%s/%s.yml", service, environment)
+	encoded, ok := entries[key]
+	if !ok {
+		return nil, fmt.Errorf("missing %s", key)
+	}
+	contents, err := base64.StdEncoding.DecodeString(encoded)
+	if err != nil {
+		return nil, fmt.Errorf("decode %s: %w", key, err)
+	}
+	return contents, nil
+}
+
+func cropBootstrap(service string, contents []byte) ([]byte, error) {
+	var document yaml.Node
+	if err := yaml.Unmarshal(contents, &document); err != nil {
+		return nil, err
+	}
+	allowed, ok := topLevelSections[service]
+	if !ok {
+		return nil, fmt.Errorf("unknown service %q", service)
+	}
+	if len(document.Content) != 1 || document.Content[0].Kind != yaml.MappingNode {
+		return nil, errors.New("Bootstrap must be a YAML mapping")
+	}
+	root := document.Content[0]
+	retainMappingKeys(root, allowed)
+	if service == "payment" {
+		if data := mappingValue(root, "data"); data != nil && data.Kind == yaml.MappingNode {
+			retainMappingKeys(data, set("database"))
+		}
+	}
+	return yaml.Marshal(&document)
+}
+
+func retainMappingKeys(mapping *yaml.Node, allowed map[string]bool) {
+	kept := make([]*yaml.Node, 0, len(mapping.Content))
+	for i := 0; i+1 < len(mapping.Content); i += 2 {
+		if allowed[mapping.Content[i].Value] {
+			kept = append(kept, mapping.Content[i], mapping.Content[i+1])
+		}
+	}
+	mapping.Content = kept
+}
+
+func mappingValue(mapping *yaml.Node, key string) *yaml.Node {
+	for i := 0; i+1 < len(mapping.Content); i += 2 {
+		if mapping.Content[i].Value == key {
+			return mapping.Content[i+1]
+		}
+	}
+	return nil
 }
 
 type bearerTokenTransport struct {
@@ -140,91 +302,21 @@ func newAdminHTTPClient(token string) *http.Client {
 	return &http.Client{Transport: bearerTokenTransport{base: http.DefaultTransport, token: token}}
 }
 
-func loadFromConsul(addr string, envs, only []string) ([]entry, error) {
-	cfg := api.DefaultConfig()
-	cfg.Address = addr
-	c, err := api.NewClient(cfg)
-	if err != nil {
-		return nil, err
+func sortedKeys(values map[string]any) []string {
+	keys := make([]string, 0, len(values))
+	for key := range values {
+		keys = append(keys, key)
 	}
-
-	wanted := map[string]bool{}
-	for _, s := range only {
-		wanted[s] = true
-	}
-	envSet := map[string]bool{}
-	for _, e := range envs {
-		envSet[e] = true
-	}
-
-	pairs, _, err := c.KV().List(kvPrefix, nil)
-	if err != nil {
-		return nil, err
-	}
-
-	var out []entry
-	for _, p := range pairs {
-		// ecommerce/<svc>/<env>.yml —— 其余形状(gateway 的证书、策略文件)一律跳过
-		rest := strings.TrimPrefix(p.Key, kvPrefix)
-		parts := strings.Split(rest, "/")
-		if len(parts) != 2 || !strings.HasSuffix(parts[1], ".yml") {
-			continue
-		}
-		svc, env := parts[0], strings.TrimSuffix(parts[1], ".yml")
-		if skipServices[svc] || !envSet[env] {
-			continue
-		}
-		if len(wanted) > 0 && !wanted[svc] {
-			continue
-		}
-		if len(p.Value) == 0 {
-			return nil, fmt.Errorf("%s 是空的", p.Key)
-		}
-		out = append(out, entry{service: svc, env: env, kvPath: p.Key, value: p.Value})
-	}
-
-	sort.Slice(out, func(i, j int) bool {
-		if out[i].service != out[j].service {
-			return out[i].service < out[j].service
-		}
-		return out[i].env < out[j].env
-	})
-	return out, nil
+	sort.Strings(keys)
+	return keys
 }
 
-func put(ctx context.Context, c configv1connect.ConfigServiceClient, e entry) error {
-	_, err := c.PutKey(ctx, connect.NewRequest(&configv1.PutKeyRequest{
-		Namespace:   e.service,
-		Environment: e.env,
-		Key:         configKey,
-		Format:      configv1.ConfigFormat_CONFIG_FORMAT_YAML,
-		Value:       string(e.value),
-		Comment:     "seed from consul kv " + e.kvPath,
-		Description: "整份 Bootstrap 配置,与 Consul KV " + e.kvPath + " 同源",
-	}))
-	return err
-}
-
-func get(ctx context.Context, c configv1connect.ConfigServiceClient, e entry) (string, error) {
-	resp, err := c.GetKey(ctx, connect.NewRequest(&configv1.GetKeyRequest{
-		Namespace:   e.service,
-		Environment: e.env,
-		Key:         configKey,
-	}))
-	if err != nil {
-		return "", err
+func set(values ...string) map[string]bool {
+	result := make(map[string]bool, len(values))
+	for _, value := range values {
+		result[value] = true
 	}
-	return resp.Msg.GetEntry().GetValue(), nil
-}
-
-func split(s string) []string {
-	var out []string
-	for _, p := range strings.Split(s, ",") {
-		if p = strings.TrimSpace(p); p != "" {
-			out = append(out, p)
-		}
-	}
-	return out
+	return result
 }
 
 func fail(format string, args ...any) {

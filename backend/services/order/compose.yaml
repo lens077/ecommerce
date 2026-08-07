@@ -25,14 +25,16 @@ services:
       - SERVICE_NAME=order-service
       - SERVICE_VERSION=v1
       - DEPLOYMENT_MODE=dev
-      # CONSUL_* 同时供「读配置」与「服务注册发现」使用
+      - CONFIG_SOURCE_FILE=/etc/ecommerce/config-source.yaml
+      # Consul 只用于服务注册发现
       - CONSUL_ENABLED=true
       - CONSUL_ADDR=192.168.3.112:8500
-      - CONSUL_PATH=ecommerce/order/dev.yml
       - CONSUL_SCHEME=http
       - CONSUL_INSECURE_SKIP_VERIFY=true
       # 日志只走 stdout,不从应用内导出
       - OTEL_LOGS_EXPORTER=none
+    volumes:
+      - ./configs/source.dev.yaml:/etc/ecommerce/config-source.yaml:ro
     healthcheck:
       # /healthz 在 DB/缓存不通时返回 503;镜像是 alpine,用 busybox 自带的 wget
       test: ["CMD", "wget", "-q", "-O", "-", "http://127.0.0.1:30004/healthz"]

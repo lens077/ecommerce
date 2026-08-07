@@ -1,10 +1,13 @@
 ---
 name: three-copies-of-one-config
 layer: project/ecommerce/config
-description: 同一份服务配置存在仓库、Consul KV、配置中心三处，谁是源、谁会漂移、漂移会怎么静默生效
+description: 历史上同一份服务配置存在三处的漂移事故；现已由 Config Center 单源消除
 ---
 
-# 一份配置三个副本，谁也没拦着它们分叉
+# 历史事故：一份配置曾有三个副本
+
+> 2026-08-08 后本文仅作事故复盘。Consul KV Bootstrap 已删除，Config Center 是唯一
+> 运行时来源；禁止按本文历史路径恢复 KV 或 `dev-consul`。
 
 ## 症状
 
@@ -49,9 +52,8 @@ description: 同一份服务配置存在仓库、Consul KV、配置中心三处�
 
 ## 该怎么做
 
-**编辑入口固定在 Consul KV**，改完用 `go run ./tools/config-seed -write` 同步到配置中心。
-仓库副本只当本地工作文件，且它是 gitignore 的（含密码，AGENTS.md 硬规则 4）——
-所以**任何自动化都不能拿仓库副本当输入**，`config-seed` 的源是 KV 就是这个原因。
+**编辑入口现在固定在 Config Center 管理员 API/UI**。本地 Bootstrap 与 Consul 导出只可作为
+一次性迁移材料，不能成为自动回退源。服务端 machine token 只允许读取和 Watch，不能写配置。
 
 **改配置前先对着 `conf.proto` 的 `Bootstrap` 数一遍段**。判断某个段该不该有，
 唯一依据是那个服务自己的 proto，不是「隔壁服务有」。跨服务复制配置是这些错误的共同来源。
@@ -65,7 +67,7 @@ description: 同一份服务配置存在仓库、Consul KV、配置中心三处�
 `CONFIG_SOURCE=configcenter` 加 `CONFIG_CENTER_*` 环境变量。Config Center 对机器读取要求
 `x-config-center-service-token`；旧的手写客户端没有携带该 header，会得到 401。统一使用
 `github.com/lens077/config-center/sdk/configsource` 读取本地 `CONFIG_SOURCE_FILE`：SDK 从 selector
-的 `config_center.service_token` 创建请求头，并统一处理 `file`、`consul`、`config_center` 三种来源。
+的 `config_center.service_token` 创建请求头。业务服务额外限制 selector 只能是 `config_center`。
 
 selector 是加载远端 Bootstrap 之前唯一可用的启动配置。示例文件只记录地址、命名空间、环境和
 key；含 token 的 `configs/source.dev.yaml` 必须被 gitignore，集群用 Kubernetes Secret 以文件形式
@@ -78,7 +80,7 @@ key；含 token 的 `configs/source.dev.yaml` 必须被 gitignore，集群用 Ku
 - **`.gitignore` 里的 `per.yml` 是 `pre.yml` 的笔误**（`4a3eb70b`），加上四个服务压根没有这个文件，
   结果 11 份带明文凭据的配置一直被 git 跟踪。配了 ignore 不等于 ignore 生效，
   用 `git check-ignore -v <文件>` 逐份验，没有输出就是没拦住。
-- **`prod.yml` 在 KV 里一个都不存在**，但 `deploy/prod` 的 `CONSUL_PATH` 全指向它。
+- **历史 `prod.yml` 在 KV 里一个都不存在**；现已移除所有 `CONSUL_PATH`。
 
 ## 相关
 

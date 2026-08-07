@@ -25,21 +25,16 @@ services:
       - SERVICE_NAME=cart-service
       - SERVICE_VERSION=v1
       - DEPLOYMENT_MODE=dev
-      # 配置数据源:consul(默认) | configcenter。显式二选一,不做失败自动降级。
-      - CONFIG_SOURCE=consul
-      # CONSUL_* 同时供「读配置」与「服务注册发现」使用
+      - CONFIG_SOURCE_FILE=/etc/ecommerce/config-source.yaml
+      # Consul 只用于服务注册发现
       - CONSUL_ENABLED=true
       - CONSUL_ADDR=192.168.3.112:8500
-      - CONSUL_PATH=ecommerce/cart/dev.yml
       - CONSUL_SCHEME=http
       - CONSUL_INSECURE_SKIP_VERIFY=true
-      # --- 切到配置中心时:把 CONFIG_SOURCE 改成 configcenter 并放开下面四行 ---
-      # - CONFIG_CENTER_ADDR=http://ecommerce-config:30010
-      # - CONFIG_CENTER_NAMESPACE=cart
-      # - CONFIG_CENTER_ENV=dev
-      # - CONFIG_CENTER_KEY=bootstrap.yaml
       # 日志只走 stdout,不从应用内导出
       - OTEL_LOGS_EXPORTER=none
+    volumes:
+      - ./configs/source.dev.yaml:/etc/ecommerce/config-source.yaml:ro
     healthcheck:
       # /healthz 在 DB/缓存不通时返回 503;镜像是 alpine,用 busybox 自带的 wget
       test: ["CMD", "wget", "-q", "-O", "-", "http://127.0.0.1:30006/healthz"]

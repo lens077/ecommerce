@@ -14,9 +14,7 @@ import (
 	"github.com/stretchr/testify/require"
 )
 
-// testBootstrapYAML 是两个数据源共用的样例配置。
-// 两条链路取回的都是同一份 YAML 文本,差别只在从哪儿取,所以用同一份 fixture
-// 才能证明「换源不换语义」。含 duration 字段以覆盖 decodeConfig 的 duration 钩子。
+// testBootstrapYAML 是配置加载测试共用的样例，含 duration 字段以覆盖解码钩子。
 const testBootstrapYAML = `
 server:
   addr: "0.0.0.0:30006"
@@ -93,21 +91,6 @@ func TestDecodeConfig_IgnoresUnknownFields(t *testing.T) {
 	assert.Equal(t, ":1", got.Server.Addr)
 }
 
-func TestInit_FromConsul(t *testing.T) {
-	const path = "ecommerce/cart/dev.yml"
-	f := startFakeConsulKV(t, map[string]string{path: testBootstrapYAML})
-	useConsulSource(t, f, path)
-
-	got, err := Init(context.Background())
-	require.NoError(t, err)
-	require.NotNil(t, got)
-
-	assert.Equal(t, "0.0.0.0:30006", got.Server.Addr)
-	assert.Equal(t, constants.ConfigSourceConsul, SourceName())
-	// Init 之后 GetConfig 必须返回同一份,而不是初始空值
-	assert.Same(t, got, GetConfig())
-}
-
 func TestInit_FromConfigCenter(t *testing.T) {
 	_, addr := startFakeConfigService(t, map[string]*configv1.ConfigEntry{
 		"cart/dev/bootstrap.yaml": {Value: testBootstrapYAML},
@@ -118,7 +101,6 @@ func TestInit_FromConfigCenter(t *testing.T) {
 	require.NoError(t, err)
 	require.NotNil(t, got)
 
-	// 同一份 YAML 经另一条链路进来,解析结果必须完全一致
 	assert.Equal(t, "0.0.0.0:30006", got.Server.Addr)
 	assert.Equal(t, 10*time.Second, got.Server.Http.ReadTimeout.AsDuration())
 	assert.Equal(t, "config_center", SourceName())
@@ -149,11 +131,7 @@ func TestInit_UnknownSourceFailsFast(t *testing.T) {
 
 // 数据源不可达时 Init 必须返回错误,让进程起不来 —— 而不是留着上一份配置继续跑
 func TestInit_SourceUnreachable(t *testing.T) {
-	clearSourceEnv(t)
-	t.Setenv(constants.EnvConfigSource, constants.ConfigSourceConsul)
-	t.Setenv(constants.EnvConsulAddr, "127.0.0.1:1")
-	t.Setenv(constants.EnvConsulPath, "ecommerce/cart/dev.yml")
-	t.Setenv(constants.EnvConsulScheme, "http")
+	useConfigCenterSource(t, "http://127.0.0.1:1", "cart", "pre", "bootstrap.yaml")
 
 	got, err := Init(context.Background())
 	assert.Nil(t, got)
@@ -161,25 +139,25 @@ func TestInit_SourceUnreachable(t *testing.T) {
 }
 
 func TestInit_DecodeErrorMentionsSource(t *testing.T) {
-	const path = "ecommerce/cart/dev.yml"
-	f := startFakeConsulKV(t, map[string]string{
-		path: "server:\n  http:\n    read_timeout: not-a-duration\n",
+	_, addr := startFakeConfigService(t, map[string]*configv1.ConfigEntry{
+		"cart/pre/bootstrap.yaml": {Value: "server:\n  http:\n    read_timeout: not-a-duration\n"},
 	})
-	useConsulSource(t, f, path)
+	useConfigCenterSource(t, addr, "cart", "pre", "bootstrap.yaml")
 
 	got, err := Init(context.Background())
 	assert.Nil(t, got)
 	require.Error(t, err)
 	// 解析失败时要说清是哪个源的配置坏了
-	assert.Contains(t, err.Error(), constants.ConfigSourceConsul)
+	assert.Contains(t, err.Error(), "config_center")
 }
 
 // GetConfig/SourceName 会被各 fx 组件在启动期并发读,Init 在同期写。
 // 本用例在 -race 下才有意义:它守的是 confMu 别被将来的改动误删。
 func TestGetConfig_ConcurrentWithInit(t *testing.T) {
-	const path = "ecommerce/cart/dev.yml"
-	f := startFakeConsulKV(t, map[string]string{path: testBootstrapYAML})
-	useConsulSource(t, f, path)
+	_, addr := startFakeConfigService(t, map[string]*configv1.ConfigEntry{
+		"cart/pre/bootstrap.yaml": {Value: testBootstrapYAML},
+	})
+	useConfigCenterSource(t, addr, "cart", "pre", "bootstrap.yaml")
 
 	var wg sync.WaitGroup
 	for range 8 {
@@ -198,7 +176,7 @@ func TestGetConfig_ConcurrentWithInit(t *testing.T) {
 	}
 
 	wg.Wait()
-	assert.Equal(t, constants.ConfigSourceConsul, SourceName())
+	assert.Equal(t, "config_center", SourceName())
 }
 
 func TestModule(t *testing.T) {

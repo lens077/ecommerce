@@ -1,5 +1,11 @@
 replicaCount: 1
 enabled: true
+
+global:
+  configSource:
+    enabled: true
+    secretName: ecommerce-config-source-pre
+    mountPath: /etc/ecommerce/config-source
 image:
   repository: "ccr.ccs.tencentyun.com/sumery/product"
   tag: pre
@@ -22,8 +28,8 @@ env:
     value: "true"
   - name: CONSUL_ADDR
     value: consul-expose-servers.consul.svc:8500
-  - name: CONSUL_PATH
-    value: "ecommerce/product/pre.yml"
+  - name: CONFIG_SOURCE_FILE
+    value: "/etc/ecommerce/config-source/product.yaml"
   - name: CONSUL_SCHEME
     value: "http"
   - name: CONSUL_INSECURE_SKIP_VERIFY
