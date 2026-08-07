@@ -30,6 +30,16 @@ consul-kv-import:
 test:
 	go test -short -coverprofile=coverage.out ./...
 
+# 静态检查的基线棘轮(前后端一起跑)。存量由 .lint-baseline/ 冻结,只拦本次新增。
+# 存量被修好后 check 会要求刷新基线 —— 基线只许变少,不许留免罪符。
+.PHONY: lint-baseline
+lint-baseline:
+	cd .. && scripts/lint-baseline.sh check
+
+.PHONY: lint-baseline-snapshot
+lint-baseline-snapshot:
+	cd .. && scripts/lint-baseline.sh snapshot
+
 .PHONY: sqlc
 sqlc:
 	sqlc generate
@@ -100,6 +110,7 @@ DEPLOY_SCRIPT = ../scripts/deploy-k8s.sh
 # 渲染 helm/ 并 apply 全部服务。先看会动什么: make deploy DRY_RUN=1
 # 只部分服务: make deploy SERVICES="cart order"
 deploy:
+	@cd .. && scripts/harness-scars.sh --quiet
 	@DRY_RUN="$(DRY_RUN)" SERVICES="$(SERVICES_OVERRIDE)" KUBE_CONTEXT="$(KUBE_CONTEXT)" \
 	  $(DEPLOY_SCRIPT)
 
@@ -123,6 +134,13 @@ deploy-status:
 	kubectl get pods,svc -n ecommerce
 	@echo "--- ArgoCD:"
 	@kubectl get application -n argocd 2>/dev/null || echo "(无 ArgoCD 或无权限)"
+	@cd .. && scripts/harness-scars.sh
+
+# 软门禁伤疤面板:把三处被放行的存量问题(lint 基线 / 部署覆盖例外 / 同构漂移基线)
+# 集中显形。永远退出 0,是显形工具不是门禁。
+.PHONY: scars
+scars:
+	@cd .. && scripts/harness-scars.sh
 
 # ⚠️ 这两个目标与 ArgoCD 互斥。裸 manifest 建的是 ecommerce-<svc>-deploy,
 # ArgoCD 从 helm/ 建的是 <svc>,两套名字不冲突所以会**同时活着**,而且都用同一个

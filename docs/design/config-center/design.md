@@ -13,10 +13,9 @@
 
 ### 现状
 
-当前 `ecommerce` 网关配置仍在 Consul KV；10 个后端服务的整份 YAML Bootstrap 同时保留在
-Consul KV（`ecommerce/<svc>/<env>.yml`）与独立配置中心（`<svc>/<env>/bootstrap.yaml`）。
-服务默认通过本地 `CONFIG_SOURCE_FILE` selector 走配置中心，只有显式 `make dev-consul` 才回到
-Consul KV；两条路径最终都由各服务 `internal/pkg/config` 经 Viper 解码为 proto `Bootstrap`。
+`ecommerce` 网关配置仍在 Consul KV；10 个后端业务服务的整份 YAML Bootstrap 只保留在
+独立配置中心（`<svc>/<env>/bootstrap.yaml`）。服务通过本地 `CONFIG_SOURCE_FILE` selector
+读取配置中心，再由各服务 `internal/pkg/config` 经 Viper 解码为 proto `Bootstrap`。
 网关额外支持本地优先目录合并 + 热重载(`gateway/config/config-loader/`)。
 
 ### 痛点
@@ -44,7 +43,7 @@ Consul KV；两条路径最终都由各服务 `internal/pkg/config` 经 Viper �
 
 三项已确认决策:
 
-1. **架构:配置中心直接作为数据源。** 服务经 ConnectRPC 读取(拉取)+ Watch 流(推送)获取配置；10 个后端服务已默认走该路径，Consul KV 仅保留为显式回退源。Postgres 为配置中心事实源(SoR)，两份 Bootstrap 的人工同步缺口仍见 `.service-matrix.yaml`。
+1. **架构:配置中心直接作为唯一数据源。** 服务经 ConnectRPC 读取(拉取)+ Watch 流(推送)获取配置；Consul 只保留服务发现/注册职责。Postgres 是配置中心事实源(SoR)，不存在 Bootstrap 回退源。
    - *不采用* FoundationDB(Apple 开源 KV):运维过重、无关系型 join、且会在 Consul 之外再引入第三套 KV。
    - *不采用* 继续以 Consul KV 为 SoR:无法做关系型的版本/审计/权限治理。
 2. **粒度:键值粒度。** 每个 key 一行,独立版本;value 可为带格式的文档(整份 yaml/toml/json 亦可作为单个 key 的 value,由 `format` 驱动高亮与校验)。
@@ -174,11 +173,11 @@ proto 位于独立仓 `api/config/v1/config.proto`,`package config.v1`,protovali
 
 | 阶段 | 能力 |
 |------|------|
-| 下发 | 发布→Consul KV 桥接(过渡兼容现有服务)、Watch server-stream + Go 客户端 SDK 热更新、配置漂移检测 |
+| 下发 | Watch server-stream + Go 客户端 SDK 热更新已落地；后续补配置 schema/漂移检测，不再桥接 Consul KV |
 | 治理 | 草稿→审批→发布工作流、环境间 diff 与晋升(dev→pre→prod)、灰度/金丝雀发布 |
 | 安全 | 密钥标记 + 静态加密 + UI 脱敏 + 访问审计;审计日志(区别于版本历史) |
 | 权限 | per-namespace/per-key ACL、服务账号/机器 token |
-| 集成 | 变更通知(webhook/飞书/钉钉)、从现有 Consul KV 迁移导入、全文检索、标签、导入导出、备份恢复 |
+| 集成 | 变更通知(webhook/飞书/钉钉)、全文检索、标签、导入导出、备份恢复；Consul KV 仅保留历史导入能力 |
 
 ---
 

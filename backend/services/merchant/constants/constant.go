@@ -31,7 +31,6 @@ const (
 // Consul configs default values
 const (
 	ConsulAddr               = "127.0.0.1:8500"
-	ConsulPath               = "/consul/"
 	ConsulFileFormat         = "yaml"
 	ConsulScheme             = "http"
 	ConsulTlsScheme          = "https"

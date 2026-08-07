@@ -17,4 +17,4 @@
 
 - 某个服务特有的坑 → `context/project/ecommerce/{module}/experience/`
 - AI 协作机制本身的规则 → `context/harness-framework/`
-- 架构设计 → `Design.md` / `CONFIG_CENTER_DESIGN.md`（那是设计真相源，本层不复制）
+- 架构设计 → `docs/design/`（按微服务分目录，那是设计真相源，本层不复制）

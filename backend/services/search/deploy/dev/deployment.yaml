@@ -16,6 +16,12 @@ spec:
       labels:
         app: ecommerce-search
     spec:
+      securityContext:
+        runAsNonRoot: true
+        runAsUser: 1000
+        runAsGroup: 1000
+        fsGroup: 1000
+        fsGroupChangePolicy: OnRootMismatch
       containers:
         - name: ecommerce-search
           image: ccr.ccs.tencentyun.com/sumery/search:dev
@@ -33,11 +39,10 @@ spec:
               value: "v1"
             - name: DEPLOYMENT_MODE
               value: "dev"
-            # CONSUL_* 同时供「读配置」与「服务注册发现」使用
-            # 当前由 Consul 读取 Bootstrap；配置中心迁移必须挂载 SDK selector Secret。
-            - name: CONFIG_SOURCE
-              value: "consul"
-            # CONSUL_* 同时供「读配置」与「服务注册发现」使用
+            # Bootstrap 只从挂载的 Config Center selector 读取。
+            - name: CONFIG_SOURCE_FILE
+              value: "/etc/ecommerce/config-source/search.yaml"
+            # Consul 只用于服务注册发现。
             - name: CONSUL_ENABLED
               value: "true"
             - name: CONSUL_ADDR
@@ -46,9 +51,6 @@ spec:
               value: "http"
             - name: CONSUL_INSECURE_SKIP_VERIFY
               value: "true"
-            - name: CONSUL_PATH
-              value: "ecommerce/search/dev.yml"
-            # 配置中心迁移：设置 CONFIG_SOURCE_FILE 并挂载含 token 的 SDK selector Secret。
           ports:
             - containerPort: 30002
               protocol: TCP
@@ -74,4 +76,13 @@ spec:
             limits:
               cpu: "1"
               memory: 512Mi
+          volumeMounts:
+            - name: config-source
+              mountPath: /etc/ecommerce/config-source
+              readOnly: true
+      volumes:
+        - name: config-source
+          secret:
+            secretName: ecommerce-config-source-dev
+            defaultMode: 0400
       restartPolicy: Always

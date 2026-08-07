@@ -24,7 +24,7 @@ RBAC 三角色（消费者 / 商家 / 管理员），全链路云原生部署与
 | 编排/交付 | Docker、Kubernetes、Helm、GitHub Actions、Argo CD（GitOps） |
 | 可观测性 | OpenTelemetry、VictoriaMetrics、Loki、Jaeger、Grafana、fluent-bit |
 
-架构要点（详见 [`DESIGN.md`](DESIGN.md) 与 [`STACK.md`](STACK.md)）：
+架构要点（详见 [`docs/design/`](docs/design/README.md) 与 [`STACK.md`](STACK.md)）：
 
 - **API 契约先行**：google protobuf 定义前后端交互，`@bufbuild/buf` 生成代码，每个字段带 `buf.validate` 约束
 - **后端分层**参考 go-kratos：biz（领域结构体）→ data（DB/MQ/ES 等中间件）→ service（proto 转换）→ server（fx 装配与注册发现）
@@ -43,7 +43,7 @@ RBAC 三角色（消费者 / 商家 / 管理员），全链路云原生部署与
 | `context/` | AI/团队三层知识库（团队级 / 框架级 / 服务级），入口 [`context/INDEX.md`](context/INDEX.md) |
 | `observability/` | 可观测性方法论与 Grafana 看板生成脚本 |
 | `helm/`、`argocd-*.yml` | 部署清单与 GitOps 配置 |
-| `docs/` | agents 配置（`docs/agents/`）与历史评审报告归档（`docs/reviews/`） |
+| `docs/` | 架构与领域设计（`docs/design/`，按微服务分目录）、agents 配置（`docs/agents/`）、历史评审归档（`docs/reviews/`） |
 | `.freeze/`、`scripts/` | 冻结验收集机制（改验收测试必须走审批），见 [`.freeze/README.md`](.freeze/README.md) |
 | `.scratch/` | 进行中的 spec / issue（本地 markdown 工作流） |
 
@@ -54,16 +54,16 @@ RBAC 三角色（消费者 / 商家 / 管理员），全链路云原生部署与
 | 文档 | 定位 |
 |---|---|
 | [`AGENTS.md`](AGENTS.md) | AI 协作入口：硬规则 + 验收锚点命令（**改代码前先读**） |
-| [`DESIGN.md`](DESIGN.md) | 架构设计总纲：微服务划分、DB 设计、RBAC、领域事件（真相源） |
+| [`docs/design/`](docs/design/README.md) | 架构与领域设计真相源：按微服务分目录（platform/product/order/…），含拆分与删章记录 |
 | [`STACK.md`](STACK.md) | 技术栈与工程约束：版本锁定、分层铁律、proto/sqlc 规则（真相源） |
-| [`.service-matrix.yaml`](.service-matrix.yaml) | 服务拓扑事实表：注册名、网关前缀、依赖、KV 键（CI 强制对齐） |
+| [`.service-matrix.yaml`](.service-matrix.yaml) | 服务拓扑事实表：注册名、网关前缀、依赖、Config Center 键（CI 强制对齐） |
 | [`TODO.md`](TODO.md) | 实现进度真相源（当前实况以它为准） |
 | [`PROGRESS.md`](PROGRESS.md) | 进度百分比与更新日志（与 TODO 的分工见 `context/harness-framework/progress-and-todo.md`） |
 | [`DEVOPS.md`](DEVOPS.md) / [`observability/OBSERVABILITY.md`](observability/OBSERVABILITY.md) | DevOps 与可观测性的**目标态**设计 |
-| [`DESIGN-MERCHANT.md`](DESIGN-MERCHANT.md) | 商家端产品需求草稿 |
-| [`CONFIG_CENTER_DESIGN.md`](CONFIG_CENTER_DESIGN.md) | 配置中心设计存档（代码已迁出） |
+| [`docs/design/merchant/store-settings.md`](docs/design/merchant/store-settings.md) | 商家端产品需求草稿 |
+| [`docs/design/config-center/design.md`](docs/design/config-center/design.md) | 配置中心设计存档（代码已迁出） |
 | [`SCAFFOLD.md`](SCAFFOLD.md) | 换领域复用本仓工程体系的新项目生成规范 |
-| [`Graph-Engineering.md`](Graph-Engineering.md) | 多闭环 AI 工作流方法论（冻结节点 + 锚点命令） |
+| [`context/harness-framework/graph-engineering.md`](context/harness-framework/graph-engineering.md) | 多闭环 AI 工作流方法论（冻结节点 + 锚点命令） |
 
 ## 先决条件
 
@@ -72,8 +72,8 @@ RBAC 三角色（消费者 / 商家 / 管理员），全链路云原生部署与
 3. 数据库：PostgreSQL >= 12；缓存：Redis >= 6
 4. 注册/发现：Consul
 
-配置中心（[config-center](https://github.com/lens077/config-center)）是**可选**的：
-各服务默认走 `CONFIG_SOURCE=consul`，只有显式切到 `config_center` 时才需要它跑起来。
+配置中心（[config-center](https://github.com/lens077/config-center)）是 10 个业务服务的
+**必需启动依赖**。Consul 只负责服务注册发现，不再存储 Bootstrap。
 
 如果想体验完整项目（K8s 部署 + 可观测性），还需：Docker、Kubernetes、ArgoCD、cert-manager、
 OpenTelemetry Collector、VictoriaMetrics、Grafana、Loki、Jaeger、fluent-bit。
@@ -102,22 +102,17 @@ data:
 
 ```bash
 cd backend/services/<service>
-make dev        # 默认 CONFIG_SOURCE=consul，从 Consul KV 的 ecommerce/<service>/dev.yml 读整份配置
-make dev-cc     # 改从配置中心读（需 config-center 先跑在 :30010）
+make dev        # 读取被 gitignore 的 configs/source.dev.yaml，再从 Config Center 拉 Bootstrap
 ```
 
-配置源由 `CONFIG_SOURCE` 决定，取值 `consul`（默认）| `configcenter`。
-**显式二选一，不做失败自动降级** —— 静默降级会让服务拿着一份你以为早废弃的配置正常跑起来，
-比直接启动失败难查得多。启动日志会打出本次实际生效的数据源。
-
-> **cart 是例外，它已先行切到 config-center 的 SDK**：`make dev` 读本地
-> `configs/source.dev.yaml`（`CONFIG_SOURCE_FILE`）里的 `SourceConfig` 来选源，
-> 要走 Consul 用 `make dev-consul`，没有 `dev-cc`。SDK 已发 `v0.1.0`，其余服务可陆续跟进。
+所有服务都由 `CONFIG_SOURCE_FILE` 指向 SDK selector，且 selector 的 `type` 必须是
+`config_center`。selector 缺失、token 无效或远端 key 不存在时直接启动失败，不回退到
+Consul KV。本地单测可显式使用 `CONFIG_SOURCE=file`。
 >
 > 依赖升级用 `go get github.com/lens077/config-center@v0.x.y` —— **`go mod tidy` 只增删不升级**，
 > 版本仍是 `go.mod` 里钉住的那个。
 
-### 配置中心（基础设施，可选）
+### 配置中心（必需基础设施）
 
 [config-center](https://github.com/lens077/config-center) 已从本仓拆为独立仓库，
 按基础设施而不是业务微服务对待 —— 它不属于电商领域，而是所有服务的配置控制面

@@ -5,9 +5,9 @@
 # 1. SERVICE_NAME 必须与 .service-matrix.yaml 的 discovery 逐字相同 —— 它是注册进
 #    Consul 的名字，网关按 `discovery:///<name>` 找服务。带 `-v1` 后缀的历史写法
 #    会注册成另一个名字，服务活得好好的但网关永远路由不到（cart 踩过这个）。
-# 2. 端口取各服务 configs/pre.yml 的 server.addr，与 deploy/{dev,prod} 同源。
-# 3. CONSUL_PATH 一律指 pre.yml：dev.yml 用的是 *.app.com 域名，只有开发机的
-#    hosts 能解析，进集群会连不上库（见 context/team/local-env.md）。
+# 2. 端口取各服务 Config Center pre Bootstrap 的 server.addr。
+# 3. Bootstrap selector 来自不入库的 ecommerce-config-source-pre Secret；Consul
+#    环境变量只负责服务注册发现。
 #
 # 镜像走 TCR 而不是 GHCR：两处 CI 都推，但集群在 LAN 内，拉 ghcr.io 要过代理，
 # 而 TCR 是同区直连。GHCR 那份是给外部/公网消费的。
@@ -17,6 +17,13 @@
 global:
   imagePullSecrets:
     - name: tcr-pull-secret
+  configSource:
+    enabled: true
+    secretName: ecommerce-config-source-pre
+    mountPath: /etc/ecommerce/config-source
+    runAsUser: 1000
+    runAsGroup: 1000
+    fsGroup: 1000
 user:
   enabled: true
   replicaCount: 1
@@ -42,23 +49,20 @@ user:
       value: "v1"
     - name: DEPLOYMENT_MODE
       value: "pre"
-    - name: CONFIG_SOURCE
-      value: "consul"
+    - name: CONFIG_SOURCE_FILE
+      value: "/etc/ecommerce/config-source/user.yaml"
     - name: OTEL_LOGS_EXPORTER
       value: "none"
     - name: CONSUL_ENABLED
       value: "true"
     - name: CONSUL_ADDR
       value: consul-expose-servers.consul.svc:8500
-    - name: CONSUL_PATH
-      value: "ecommerce/user/pre.yml"
     - name: CONSUL_SCHEME
       value: "http"
     - name: CONSUL_INSECURE_SKIP_VERIFY
       value: "true"
-  # 关掉：这个 Secret 只有 DB_SOURCE 一个键，而全仓没有任何代码读它
-  # （deployment 模板也没有 envFrom/secretKeyRef），数据库凭据实际来自
-  # Consul KV 的 pre.yml。开着只会把明文口令铺到集群里。
+  # 这个历史 Secret 只有无人读取的 DB_SOURCE；Bootstrap 凭据来自 Config Center。
+  # 保持关闭，避免重复铺设明文口令。
   secret:
     enabled: false
   dbCaCert:
@@ -98,23 +102,20 @@ search:
       value: "v1"
     - name: DEPLOYMENT_MODE
       value: "pre"
-    - name: CONFIG_SOURCE
-      value: "consul"
+    - name: CONFIG_SOURCE_FILE
+      value: "/etc/ecommerce/config-source/search.yaml"
     - name: OTEL_LOGS_EXPORTER
       value: "none"
     - name: CONSUL_ENABLED
       value: "true"
     - name: CONSUL_ADDR
       value: consul-expose-servers.consul.svc:8500
-    - name: CONSUL_PATH
-      value: "ecommerce/search/pre.yml"
     - name: CONSUL_SCHEME
       value: "http"
     - name: CONSUL_INSECURE_SKIP_VERIFY
       value: "true"
-  # 关掉：这个 Secret 只有 DB_SOURCE 一个键，而全仓没有任何代码读它
-  # （deployment 模板也没有 envFrom/secretKeyRef），数据库凭据实际来自
-  # Consul KV 的 pre.yml。开着只会把明文口令铺到集群里。
+  # 这个历史 Secret 只有无人读取的 DB_SOURCE；Bootstrap 凭据来自 Config Center。
+  # 保持关闭，避免重复铺设明文口令。
   secret:
     enabled: false
   dbCaCert:
@@ -154,23 +155,20 @@ product:
       value: "v1"
     - name: DEPLOYMENT_MODE
       value: "pre"
-    - name: CONFIG_SOURCE
-      value: "consul"
+    - name: CONFIG_SOURCE_FILE
+      value: "/etc/ecommerce/config-source/product.yaml"
     - name: OTEL_LOGS_EXPORTER
       value: "none"
     - name: CONSUL_ENABLED
       value: "true"
     - name: CONSUL_ADDR
       value: consul-expose-servers.consul.svc:8500
-    - name: CONSUL_PATH
-      value: "ecommerce/product/pre.yml"
     - name: CONSUL_SCHEME
       value: "http"
     - name: CONSUL_INSECURE_SKIP_VERIFY
       value: "true"
-  # 关掉：这个 Secret 只有 DB_SOURCE 一个键，而全仓没有任何代码读它
-  # （deployment 模板也没有 envFrom/secretKeyRef），数据库凭据实际来自
-  # Consul KV 的 pre.yml。开着只会把明文口令铺到集群里。
+  # 这个历史 Secret 只有无人读取的 DB_SOURCE；Bootstrap 凭据来自 Config Center。
+  # 保持关闭，避免重复铺设明文口令。
   secret:
     enabled: false
   dbCaCert:
@@ -210,23 +208,20 @@ order:
       value: "v1"
     - name: DEPLOYMENT_MODE
       value: "pre"
-    - name: CONFIG_SOURCE
-      value: "consul"
+    - name: CONFIG_SOURCE_FILE
+      value: "/etc/ecommerce/config-source/order.yaml"
     - name: OTEL_LOGS_EXPORTER
       value: "none"
     - name: CONSUL_ENABLED
       value: "true"
     - name: CONSUL_ADDR
       value: consul-expose-servers.consul.svc:8500
-    - name: CONSUL_PATH
-      value: "ecommerce/order/pre.yml"
     - name: CONSUL_SCHEME
       value: "http"
     - name: CONSUL_INSECURE_SKIP_VERIFY
       value: "true"
-  # 关掉：这个 Secret 只有 DB_SOURCE 一个键，而全仓没有任何代码读它
-  # （deployment 模板也没有 envFrom/secretKeyRef），数据库凭据实际来自
-  # Consul KV 的 pre.yml。开着只会把明文口令铺到集群里。
+  # 这个历史 Secret 只有无人读取的 DB_SOURCE；Bootstrap 凭据来自 Config Center。
+  # 保持关闭，避免重复铺设明文口令。
   secret:
     enabled: false
   dbCaCert:
@@ -266,23 +261,20 @@ inventory:
       value: "v1"
     - name: DEPLOYMENT_MODE
       value: "pre"
-    - name: CONFIG_SOURCE
-      value: "consul"
+    - name: CONFIG_SOURCE_FILE
+      value: "/etc/ecommerce/config-source/inventory.yaml"
     - name: OTEL_LOGS_EXPORTER
       value: "none"
     - name: CONSUL_ENABLED
       value: "true"
     - name: CONSUL_ADDR
       value: consul-expose-servers.consul.svc:8500
-    - name: CONSUL_PATH
-      value: "ecommerce/inventory/pre.yml"
     - name: CONSUL_SCHEME
       value: "http"
     - name: CONSUL_INSECURE_SKIP_VERIFY
       value: "true"
-  # 关掉：这个 Secret 只有 DB_SOURCE 一个键，而全仓没有任何代码读它
-  # （deployment 模板也没有 envFrom/secretKeyRef），数据库凭据实际来自
-  # Consul KV 的 pre.yml。开着只会把明文口令铺到集群里。
+  # 这个历史 Secret 只有无人读取的 DB_SOURCE；Bootstrap 凭据来自 Config Center。
+  # 保持关闭，避免重复铺设明文口令。
   secret:
     enabled: false
   dbCaCert:
@@ -322,23 +314,20 @@ cart:
       value: "v1"
     - name: DEPLOYMENT_MODE
       value: "pre"
-    - name: CONFIG_SOURCE
-      value: "consul"
+    - name: CONFIG_SOURCE_FILE
+      value: "/etc/ecommerce/config-source/cart.yaml"
     - name: OTEL_LOGS_EXPORTER
       value: "none"
     - name: CONSUL_ENABLED
       value: "true"
     - name: CONSUL_ADDR
       value: consul-expose-servers.consul.svc:8500
-    - name: CONSUL_PATH
-      value: "ecommerce/cart/pre.yml"
     - name: CONSUL_SCHEME
       value: "http"
     - name: CONSUL_INSECURE_SKIP_VERIFY
       value: "true"
-  # 关掉：这个 Secret 只有 DB_SOURCE 一个键，而全仓没有任何代码读它
-  # （deployment 模板也没有 envFrom/secretKeyRef），数据库凭据实际来自
-  # Consul KV 的 pre.yml。开着只会把明文口令铺到集群里。
+  # 这个历史 Secret 只有无人读取的 DB_SOURCE；Bootstrap 凭据来自 Config Center。
+  # 保持关闭，避免重复铺设明文口令。
   secret:
     enabled: false
   dbCaCert:
@@ -378,23 +367,20 @@ merchant:
       value: "v1"
     - name: DEPLOYMENT_MODE
       value: "pre"
-    - name: CONFIG_SOURCE
-      value: "consul"
+    - name: CONFIG_SOURCE_FILE
+      value: "/etc/ecommerce/config-source/merchant.yaml"
     - name: OTEL_LOGS_EXPORTER
       value: "none"
     - name: CONSUL_ENABLED
       value: "true"
     - name: CONSUL_ADDR
       value: consul-expose-servers.consul.svc:8500
-    - name: CONSUL_PATH
-      value: "ecommerce/merchant/pre.yml"
     - name: CONSUL_SCHEME
       value: "http"
     - name: CONSUL_INSECURE_SKIP_VERIFY
       value: "true"
-  # 关掉：这个 Secret 只有 DB_SOURCE 一个键，而全仓没有任何代码读它
-  # （deployment 模板也没有 envFrom/secretKeyRef），数据库凭据实际来自
-  # Consul KV 的 pre.yml。开着只会把明文口令铺到集群里。
+  # 这个历史 Secret 只有无人读取的 DB_SOURCE；Bootstrap 凭据来自 Config Center。
+  # 保持关闭，避免重复铺设明文口令。
   secret:
     enabled: false
   dbCaCert:
@@ -434,23 +420,20 @@ address:
       value: "v1"
     - name: DEPLOYMENT_MODE
       value: "pre"
-    - name: CONFIG_SOURCE
-      value: "consul"
+    - name: CONFIG_SOURCE_FILE
+      value: "/etc/ecommerce/config-source/address.yaml"
     - name: OTEL_LOGS_EXPORTER
       value: "none"
     - name: CONSUL_ENABLED
       value: "true"
     - name: CONSUL_ADDR
       value: consul-expose-servers.consul.svc:8500
-    - name: CONSUL_PATH
-      value: "ecommerce/address/pre.yml"
     - name: CONSUL_SCHEME
       value: "http"
     - name: CONSUL_INSECURE_SKIP_VERIFY
       value: "true"
-  # 关掉：这个 Secret 只有 DB_SOURCE 一个键，而全仓没有任何代码读它
-  # （deployment 模板也没有 envFrom/secretKeyRef），数据库凭据实际来自
-  # Consul KV 的 pre.yml。开着只会把明文口令铺到集群里。
+  # 这个历史 Secret 只有无人读取的 DB_SOURCE；Bootstrap 凭据来自 Config Center。
+  # 保持关闭，避免重复铺设明文口令。
   secret:
     enabled: false
   dbCaCert:
@@ -490,23 +473,20 @@ behavior:
       value: "v1"
     - name: DEPLOYMENT_MODE
       value: "pre"
-    - name: CONFIG_SOURCE
-      value: "consul"
+    - name: CONFIG_SOURCE_FILE
+      value: "/etc/ecommerce/config-source/behavior.yaml"
     - name: OTEL_LOGS_EXPORTER
       value: "none"
     - name: CONSUL_ENABLED
       value: "true"
     - name: CONSUL_ADDR
       value: consul-expose-servers.consul.svc:8500
-    - name: CONSUL_PATH
-      value: "ecommerce/behavior/pre.yml"
     - name: CONSUL_SCHEME
       value: "http"
     - name: CONSUL_INSECURE_SKIP_VERIFY
       value: "true"
-  # 关掉：这个 Secret 只有 DB_SOURCE 一个键，而全仓没有任何代码读它
-  # （deployment 模板也没有 envFrom/secretKeyRef），数据库凭据实际来自
-  # Consul KV 的 pre.yml。开着只会把明文口令铺到集群里。
+  # 这个历史 Secret 只有无人读取的 DB_SOURCE；Bootstrap 凭据来自 Config Center。
+  # 保持关闭，避免重复铺设明文口令。
   secret:
     enabled: false
   dbCaCert:
@@ -546,23 +526,20 @@ payment:
       value: "v1"
     - name: DEPLOYMENT_MODE
       value: "pre"
-    - name: CONFIG_SOURCE
-      value: "consul"
+    - name: CONFIG_SOURCE_FILE
+      value: "/etc/ecommerce/config-source/payment.yaml"
     - name: OTEL_LOGS_EXPORTER
       value: "none"
     - name: CONSUL_ENABLED
       value: "true"
     - name: CONSUL_ADDR
       value: consul-expose-servers.consul.svc:8500
-    - name: CONSUL_PATH
-      value: "ecommerce/payment/pre.yml"
     - name: CONSUL_SCHEME
       value: "http"
     - name: CONSUL_INSECURE_SKIP_VERIFY
       value: "true"
-  # 关掉：这个 Secret 只有 DB_SOURCE 一个键，而全仓没有任何代码读它
-  # （deployment 模板也没有 envFrom/secretKeyRef），数据库凭据实际来自
-  # Consul KV 的 pre.yml。开着只会把明文口令铺到集群里。
+  # 这个历史 Secret 只有无人读取的 DB_SOURCE；Bootstrap 凭据来自 Config Center。
+  # 保持关闭，避免重复铺设明文口令。
   secret:
     enabled: false
   dbCaCert:

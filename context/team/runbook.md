@@ -15,15 +15,20 @@ description: 给所有 AI 编码工具(尤其 Codex)的可执行命令与验收�
 
 ## 0. 动手前必读(限制,不跑命令)
 
-- **查服务拓扑不要现搜**:注册名、网关前缀、依赖、Consul KV 键 → 一律查
+- **查服务拓扑不要现搜**:注册名、网关前缀、依赖、Config Center 键 → 一律查
   [`.service-matrix.yaml`](../../.service-matrix.yaml)。区分 `depends_on`(已接线)与
   `depends_on_planned`(设计要求但未接线),别把后者当已实现。
 - **后端 10 个业务服务是同构副本**:`backend/services/*/internal/pkg/` 下的基础设施代码
   (otel/log/registry/config 等)一份逻辑铺 10 份,**改一处 = 改全部对应文件**,由
   structcheck 的同构检查兜底(见 §2)。整个后端只有一个 `go.mod`。
-- **写/改 proto 前先读 `DESIGN.md`**,为每个字段推断校验约束(见 `proto-design.md`)。
+- **写/改 proto 前先读 `docs/design/` 对应服务目录**(入口 `docs/design/README.md`),为每个字段推断校验约束(见 `proto-design.md`)。
 - **凭据不入库**:密码/密钥只在 Consul KV 和本地环境,仓库里只写主机名和端口。
-- **不可逆动作(commit/push/合入/deploy/仓外写删)只由用户明示触发**,subagent 永不执行。
+- **不可逆动作(commit/push/合入/deploy/仓外写删)需要用户授权;
+  但用户已明确要求时就直接执行,不要二次确认**——「提交」「部署到 dev」「执行它」
+  都是授权,复述风险再问一遍只会拖慢工作。「帮我实现 X」不算授权;
+  授权不跨范围升级(dev ≠ prod、commit ≠ push)。只有「用户没要求且会丢数据/影响线上」
+  的动作才值得打断(删 PV、`push --force`、改 prod 鉴权)。subagent 永不执行。
+  全文见 [AGENTS.md](../../AGENTS.md) 硬规则 #6。
 
 ### 0.1 按改动类型的必读路由
 
@@ -33,7 +38,7 @@ description: 给所有 AI 编码工具(尤其 Codex)的可执行命令与验收�
 
 | 你要动的是 | 先读 | 不读会怎样 |
 |---|---|---|
-| 服务拓扑/注册名/网关前缀/KV 键 | [`.service-matrix.yaml`](../../.service-matrix.yaml) | 现搜猜错,把 `depends_on_planned` 当已接线 |
+| 服务拓扑/注册名/网关前缀/配置键 | [`.service-matrix.yaml`](../../.service-matrix.yaml) | 现搜猜错,把 `depends_on_planned` 当已接线 |
 | proto / API 契约 | [proto-design.md](proto-design.md) | 字段裸奔、破坏兼容性、炸前后端生成代码 |
 | Redis(缓存/锁/去重/计数) | [go-redis.md](go-redis.md) | 抓到已 Close 的旧客户端;`redis.Nil` 被当故障;非幂等命令被默认重试执行多次 |
 | 定时/周期任务、Ticker、后台 goroutine | [cron-jobs.md](cron-jobs.md) | 扩副本后同一任务跑 N 次;首次触发盲窗;挂错 ctx 导致心跳静默退出 |
@@ -151,5 +156,5 @@ main 分支保护里**唯一必需**的状态检查(GitLab 侧对应 `.gitlab-ci
 | 规范/约定 | `context/`(入口 `context/INDEX.md`) |
 | 服务拓扑 | `.service-matrix.yaml` |
 | 实现进度 | `TODO.md` |
-| 架构设计 | `DESIGN.md` / `CONFIG_CENTER_DESIGN.md` |
+| 架构设计 | `docs/design/`（入口 `docs/design/README.md`） |
 | 提交校验规则 | `commitlint.config.mjs` |

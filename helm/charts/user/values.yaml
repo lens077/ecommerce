@@ -1,6 +1,12 @@
 replicaCount: 1
 enabled: true
 
+global:
+  configSource:
+    enabled: true
+    secretName: ecommerce-config-source-pre
+    mountPath: /etc/ecommerce/config-source
+
 image:
   repository: "ccr.ccs.tencentyun.com/sumery/user"
   tag: latest

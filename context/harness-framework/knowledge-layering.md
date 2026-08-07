@@ -38,7 +38,7 @@ description: 一条知识该写进 team / harness-framework / project 哪一层�
 ```
 context/project/ecommerce/{module}/
 ├── INDEX.md            该模块的入口，列出下面有什么
-├── architecture.md     架构与关键设计（可选，别和 DESIGN.md 重复）
+├── architecture.md     架构与关键设计（可选，别和 docs/design/ 重复）
 ├── experience/         踩坑记录，一坑一文件
 │   └── {kebab-case-slug}.md
 └── sop/                标准操作规程（可选）
@@ -75,6 +75,6 @@ context/project/ecommerce/{module}/
 ## 反模式
 
 - ❌ **同一条约束写两处** —— 口径会漂移。只写一处，另一处用链接指过去
-- ❌ **把 DESIGN.md 的内容复制进 context/** —— DESIGN.md 是设计真相源，这里只做指引和补充
+- ❌ **把 docs/design/ 的内容复制进 context/** —— docs/design/ 是设计真相源，这里只做指引和补充
 - ❌ **写「一次性 diff」** —— 见 [self-refinement.md](self-refinement.md) 的模式性判断
 - ❌ **凭据进仓库** —— 密码/密钥只在 Consul KV 和本地环境

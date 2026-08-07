@@ -28,6 +28,9 @@ func NewSDKSource(sourceConfigFile string) (Source, error) {
 	if err != nil {
 		return nil, err
 	}
+	if cfg.Type != configsource.TypeConfigCenter {
+		return nil, fmt.Errorf("%s must select config_center, got %q", sourceConfigFile, cfg.Type)
+	}
 	return &sdkSource{config: cfg}, nil
 }
 
@@ -42,7 +45,6 @@ func (s *sdkSource) Load(ctx context.Context) (map[string]any, error) {
 }
 
 // Watch preserves Cart's reconnect semantics around the SDK's single stream.
-// File and Consul intentionally remain startup-only sources.
 func (s *sdkSource) Watch(ctx context.Context, onEvent func(WatchEvent)) error {
 	if s.config.Type != configsource.TypeConfigCenter {
 		return configsource.ErrUnsupportedWatch

@@ -5,7 +5,7 @@
 
 ## 硬规则（不可跳过）
 
-1. **规范与拓扑以真相源为准**：规范的真相源是 `context/`（入口 `context/INDEX.md`），服务拓扑的真相源是 `.service-matrix.yaml`。现搜、推测或记忆与它们冲突时，以真相源为准；找不到对应知识 ≠ 没有约束，先读 `DESIGN.md` / `TODO.md`，读完把结论沉淀回 `context/`（见 self-refinement）。
+1. **规范与拓扑以真相源为准**：规范的真相源是 `context/`（入口 `context/INDEX.md`），服务拓扑的真相源是 `.service-matrix.yaml`。现搜、推测或记忆与它们冲突时，以真相源为准；找不到对应知识 ≠ 没有约束，先读 `docs/design/`（入口 docs/design/README.md）/ `TODO.md`，读完把结论沉淀回 `context/`（见 self-refinement）。
 2. **写/改 proto 前必须先读设计文档**，并为每个字段推断出校验约束。见 `context/team/proto-design.md`。
 3. **提交前先更新 `TODO.md`**，再 `git commit`。提交信息走 Conventional Commits
    `<type>(<scope>): [:emoji:] <subject>`，由 `frontend/.vite-hooks/commit-msg` +
@@ -15,7 +15,15 @@
    见 `context/team/git-commit.md`。
 4. **不要把凭据写进仓库**。密码/密钥只存在 Consul KV 和本地环境，仓库里只写主机名和端口。
 5. **踩到坑要沉淀**：判断是「模式性教训」还是「一次性 diff」，前者写进 `context/`。见 `context/harness-framework/self-refinement.md`。
-6. **不可逆动作只能由用户明示触发**：`git commit`、`git push`、分支/MR 合入、deploy、发布制品、workspace 之外的写入与删除。「帮我实现 X」不构成对以上任何一项的授权；subagent 永久不得执行其中任何一项。
+   改动 harness 本身（本文件的硬规则、门禁脚本、structcheck 检查项、CI 门禁）时，
+   还要在 `context/harness-framework/evolution-log.md` 追加一条，**必须写清触发它的具体事故**——
+   规则可以从代码读出来，理由不能，没有理由的规则半年后会被人凭直觉改回去。
+6. **不可逆动作需要用户授权——但授权一旦给出就直接执行，不要二次确认**。这条规则有两半，缺任何一半都是错的：只拦不放会让工具变得没法用，只放不拦会误伤线上。
+   - **哪些算不可逆动作**：`git commit`、`git push`、分支/MR 合入、deploy（`kubectl apply/delete`、`helm` 装卸）、发布制品（`docker push`）、workspace 之外的写入与删除。
+   - **什么算授权 → 算了就动手**：用户这轮明确要求做这件事（「提交」「推上去」「部署到 dev」「跑 make deploy」「执行它」），或明确放宽了后续同类动作（「以后不用问」「直接提交」）。**此时直接做**，不要复述一遍风险再问「确认吗」——重复确认既拖慢工作，也让用户下次懒得看提示，反而削弱真正该拦的那次。做完如实报结果。
+   - **什么不算授权**：「帮我实现 X」「修好这个 bug」「看看能不能跑通」不构成上述任何一项的授权；授权也**不跨范围升级**——授权 apply 到 dev ≠ 授权 apply 到 prod，授权 commit ≠ 授权 push。
+   - **仍需先说明再做的例外**：用户没要求、且会丢数据或影响线上的动作（删 PV/namespace、`git push --force`、改 prod 的鉴权与网络策略、轮换/撤销凭据）。说清影响，拿到确认再做——**这类才值得打断用户**。
+   - subagent 永久不得执行其中任何一项：它拿不到用户的授权上下文，无法判断授权是否已给出。
 
 ## 命令与验收锚点（可执行）
 
@@ -52,7 +60,14 @@ scripts/verify-freeze.sh --all                       # 冻结验收集未被动�
 > 技术栈、目录结构、服务拓扑不在这里复述——读代码与 `.service-matrix.yaml` 自明。
 
 - 工程化：前端用 vite-plus（`vp`）一个包覆盖 dev/build/test/lint/fmt/任务运行/git 钩子，没有 husky/biome/eslint/prettier；仓库根另有一个只装 commitlint 的 `package.json`，与 `frontend/` 的 workspace 相互独立
-- 进度真相源：`TODO.md`；架构真相源：`DESIGN.md`、`CONFIG_CENTER_DESIGN.md`。两者分工见 `context/harness-framework/progress-and-todo.md`
+- 进度真相源：`TODO.md`；架构真相源：`docs/design/`（按微服务分目录，入口 `docs/design/README.md`，含 config-center 设计存档）。两者分工见 `context/harness-framework/progress-and-todo.md`
+
+## 中文文案约定
+
+写中文文档、界面文案和注释时走 `tech-doc-style-chinese` skill。该 skill **保持上游默认，不做本地改动**；本节只声明本项目要固化的两条：
+
+- **中文引号用直角引号 `「」`**——与 skill 默认一致。
+- **允许第二人称「你」**——skill 默认不直接称呼读者，本项目覆盖这条。文档读者是你自己和协作的 agent，直接说「你」比「开发者」「实施人员」更省事。skill 原文已写明第二人称「属于风格选择；项目约定可以覆盖默认规则」，这是它设计好的用法。
 
 ## Agent skills
 
