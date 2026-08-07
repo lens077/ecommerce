@@ -42,10 +42,24 @@ ecommerce/<service>/dev.yml
 |---|---|---|
 | Consul | `192.168.3.112:8500` | http，见上 |
 | Postgres | `pg-dev.app.com`（192.168.3.109） | TLS `verify-ca`，CA 为 postgres-internal-root-ca |
-| Redis (Dragonfly) | `dragonfly.app.com:443` | TLS，`insecure_skip_verify` |
+| Redis (Dragonfly) | `dragonfly.app.com:443`（192.168.3.114） | TLS，`insecure_skip_verify` |
 | Casdoor | 114.132.233.129 | JWT 公钥 kid=lens / public.pem |
 
 凭据去 Consul KV 对应的 `dev.yml` 里取，或问用户。
+
+**`*.app.com` 域名只在开发机可解析**：这些不是真实公网记录（公网 DNS 返回的是
+被污染的假 IP，如 108.160.167.174），映射只存在于开发机本地 hosts。
+由此产生两条硬约束（2026-08-07 部署 cart 时踩过）：
+
+1. **KV 配置分环境**：`ecommerce/{svc}/dev.yml` 用 `*.app.com` 域名，**只能在
+   开发机跑**；`pre.yml` 全用集群内 svc 域名（`postgres-postgresql.postgres.svc`、
+   `dragonfly.dragonfly.svc`、`consul-expose-servers.consul.svc:8500`、
+   `otel-collector.observability:4318`），**k8s 部署必须用 pre**。
+   拿错环境的症状：DB ping `context deadline exceeded` 起不来（dev.yml 进集群），
+   或 Consul 注册超时但服务照常跑、网关路由不到（`consul.app.com` 解析到假 IP）。
+2. **集群 CoreDNS 已补 hosts 映射**（pg-dev→192.168.3.109、dragonfly→192.168.3.114，
+   kube-system/coredns ConfigMap 的 hosts 插件段）：这是给误用 dev.yml 的兜底，
+   不是正路；`consul.app.com`/`otlp-http.app.com` 故意没加。
 
 ## 相关
 
