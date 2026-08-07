@@ -1,24 +1,25 @@
 apiVersion: apps/v1
 kind: Deployment
 metadata:
-  name: ecommerce-merchant-deploy
+  name: ecommerce-behavior-deploy
+  # 必须显式写 namespace —— 不写的话 kubectl apply 会落到当前 context 的 ns(通常是 default)
   namespace: ecommerce
   labels:
-    app: ecommerce-merchant
+    app: ecommerce-behavior
 spec:
   replicas: 1
   selector:
     matchLabels:
-      app: ecommerce-merchant
+      app: ecommerce-behavior
   template:
     metadata:
-      name: ecommerce-merchant
+      name: ecommerce-behavior
       labels:
-        app: ecommerce-merchant
+        app: ecommerce-behavior
     spec:
       containers:
-        - name: ecommerce-merchant
-          image: ccr.ccs.tencentyun.com/sumery/merchant:prod
+        - name: ecommerce-behavior
+          image: ccr.ccs.tencentyun.com/sumery/behavior:dev
           imagePullPolicy: Always
           env:
             # 关闭应用内的 Log 导出器，只保留 Trace 和 Metric。
@@ -26,14 +27,15 @@ spec:
             - name: OTEL_LOGS_EXPORTER
               value: "none"
             # SERVICE_NAME 就是注册进 Consul 的服务名,必须与网关
-            # gateway/configs/config.yaml 里的 discovery:///merchant-service 完全一致
+            # gateway/configs/config.yaml 里的 discovery:///behavior-service 完全一致。
+            # 注意本进程同时实现 telemetry.v1.TelemetryService(网关前缀 /telemetry*),
+            # 两个域共用这一个注册名,见 .service-matrix.yaml 的 behavior.note
             - name: SERVICE_NAME
-              value: "merchant-service"
+              value: "behavior-service"
             - name: SERVICE_VERSION
               value: "v1"
             - name: DEPLOYMENT_MODE
-              value: "prod"
-            # CONSUL_* 同时供「读配置」与「服务注册发现」使用
+              value: "dev"
             # 当前由 Consul 读取 Bootstrap；配置中心迁移必须挂载 SDK selector Secret。
             - name: CONFIG_SOURCE
               value: "consul"
@@ -41,29 +43,32 @@ spec:
             - name: CONSUL_ENABLED
               value: "true"
             - name: CONSUL_ADDR
-              value: "consul-server.consul.svc:8501"
+              value: "192.168.3.112:8500"
             - name: CONSUL_SCHEME
-              value: "https"
+              value: "http"
             - name: CONSUL_INSECURE_SKIP_VERIFY
               value: "true"
             - name: CONSUL_PATH
-              value: "ecommerce/merchant/prod.yml"
+              value: "ecommerce/behavior/dev.yml"
             # 配置中心迁移：设置 CONFIG_SOURCE_FILE 并挂载含 token 的 SDK selector Secret。
           ports:
-            - containerPort: 30007
+            # 端口必须命名:Service 的 targetPort 按名字找,改端口号时只动这一处。
+            # 30011 取自 KV ecommerce/behavior/dev.yml 的 server.addr
+            - name: http
+              containerPort: 30011
               protocol: TCP
           # /healthz 在 DB/缓存不通时返回 503。就绪探针据此摘流量;
           # 存活探针只探端口 —— 用 /healthz 做存活会让一次数据库抖动把所有 Pod 连环重启。
           readinessProbe:
             httpGet:
               path: /healthz
-              port: 30007
+              port: 30011
             initialDelaySeconds: 5
             periodSeconds: 10
             failureThreshold: 3
           livenessProbe:
             tcpSocket:
-              port: 30007
+              port: 30011
             initialDelaySeconds: 20
             periodSeconds: 20
             failureThreshold: 3

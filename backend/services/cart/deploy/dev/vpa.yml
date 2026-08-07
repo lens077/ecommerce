@@ -1,0 +1,30 @@
+# VPA 需要 controller 装好并打开 InPlace feature gate
+# (见 cloud-native-deploy/vpa/install.sh 里对 admission-controller 与 updater 的 patch)。
+# InPlace 原地调整资源不重启 Pod —— 对 cart 的意义是购物车写操作不会因为
+# 一次资源调整被打断,客户端不用重试。
+---
+apiVersion: autoscaling.k8s.io/v1
+kind: VerticalPodAutoscaler
+metadata:
+  name: ecommerce-cart-vpa
+  namespace: ecommerce
+spec:
+  targetRef:
+    apiVersion: apps/v1
+    kind: Deployment
+    # 必须与 deployment.yaml 的 metadata.name 逐字一致 —— 写错 VPA 会静默不生效,
+    # 不报错也不告警(仓库根的 application-vpa.yml 里 cart-vpa 写的是裸名 `cart`,
+    # 那个名字只对 Helm 渲染出来的 Deployment 成立,对这份裸 manifest 不成立)
+    name: ecommerce-cart-deploy
+  updatePolicy:
+    updateMode: "InPlace"
+  resourcePolicy:
+    containerPolicies:
+      - containerName: '*'
+        minAllowed:
+          cpu: "50m"
+          memory: "128Mi"
+        maxAllowed:
+          # 上限对齐 deployment 里的 limits,VPA 不该把它推到超出集群预算
+          cpu: "500m"
+          memory: "512Mi"
