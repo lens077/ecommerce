@@ -16,6 +16,16 @@ spec:
         app.kubernetes.io/name: {{ .serviceName }}
         app.kubernetes.io/instance: {{ .serviceName }}
     spec:
+      {{- with .imagePullSecrets }}
+      # TCR 是私有仓库，没有它 Pod 起不来。此前靠 `kubectl patch serviceaccount
+      # default -n ecommerce` 注入，那是集群里的一处不在 Git 的手工状态：
+      # 换命名空间、重建集群、或哪天有人重置了 SA 就静默失效。声明在这里，
+      # ArgoCD 能自愈，也能被 diff 看见
+      imagePullSecrets:
+        {{- range . }}
+        - name: {{ .name }}
+        {{- end }}
+      {{- end }}
       containers:
         - name: {{ .serviceName }}
           image: "{{ .repository }}:{{ .image.tag }}"

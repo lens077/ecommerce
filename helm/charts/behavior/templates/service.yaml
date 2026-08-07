@@ -1,0 +1,11 @@
+{{- if .Values.enabled }}
+{{- $params := dict
+    "serviceName" .Chart.Name
+    "serviceType" .Values.service.type
+    "ports" (dict
+      "http" .Values.service.ports.http
+      "grpc" .Values.service.ports.grpc
+    )
+-}}
+{{- include "library.service" $params | nindent 0 }}
+{{- end }}
