@@ -170,7 +170,7 @@ cart:
     - name: SERVICE_VERSION
       value: "v1"
     - name: DEPLOYMENT_MODE
-      value: "dev"
+      value: "pre"
     - name: CONFIG_SOURCE
       value: "consul"
     - name: OTEL_LOGS_EXPORTER
@@ -179,8 +179,11 @@ cart:
       value: "true"
     - name: CONSUL_ADDR
       value: consul-expose-servers.consul.svc:8500
+    # pre.yml 是面向集群内的环境(postgres/dragonfly/consul/otel 全用
+    # svc 域名);dev.yml 面向开发机(*.app.com 域名靠 /etc/hosts,集群内
+    # 是公网污染记录)。集群部署必须用 pre
     - name: CONSUL_PATH
-      value: "ecommerce/cart/dev.yml"
+      value: "ecommerce/cart/pre.yml"
     - name: CONSUL_SCHEME
       value: "http"
     - name: CONSUL_INSECURE_SKIP_VERIFY

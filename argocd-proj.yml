@@ -18,6 +18,7 @@ spec:
   #    可列出多个仓库，确保只从可信源拉取清单。
   
   sourceRepos:
+    - 'https://github.com/lens077/ecommerce.git'  # 主源：CI(update-manifests) 回写镜像 tag 的仓库，与 argocd-app.yml 的 repoURL 一致
     - 'https://gitlab.com/sumery/ecommerce.git'   # HTTPS 方式（读写可通过 Personal Access Token）
     - 'git@gitlab.com:sumery/ecommerce.git'       # SSH 方式（需配置 SSH 私钥）
   # 如果希望允许任何仓库（极不推荐），可使用：

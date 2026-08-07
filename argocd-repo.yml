@@ -1,0 +1,17 @@
+# ArgoCD 仓库连接配置（argocd.argoproj.io/secret-type: repository）。
+# 作用：为 repo-server 克隆 GitHub 仓库指定代理——集群在 LAN 内直连
+# github.com 极慢（首次全量克隆 >8 分钟不出结果），走 192.168.3.220:7890
+# 后恢复正常。仓库是 public，无凭据，本文件可安全入库。
+# 变更后 kubectl apply -f argocd-repo.yml 即生效（对新发起的 git 操作）。
+apiVersion: v1
+kind: Secret
+metadata:
+  name: repo-github-ecommerce
+  namespace: argocd
+  labels:
+    argocd.argoproj.io/secret-type: repository
+stringData:
+  type: git
+  name: ecommerce-github
+  url: https://github.com/lens077/ecommerce.git
+  proxy: http://192.168.3.220:7890
