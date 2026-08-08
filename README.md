@@ -1,5 +1,7 @@
 # Ecommerce — Go 微服务电商
 
+[![License: CC BY-NC-SA 4.0](https://img.shields.io/badge/License-CC%20BY--NC--SA%204.0-blue.svg)](LICENSE) ![Go](https://img.shields.io/badge/Go-1.26-00ADD8?logo=go&logoColor=white) ![React](https://img.shields.io/badge/React-19-61DAFB?logo=react&logoColor=black) ![TypeScript](https://img.shields.io/badge/TypeScript-5.9-3178C6?logo=typescript&logoColor=white) ![Kubernetes](https://img.shields.io/badge/Kubernetes-GitOps-326CE5?logo=kubernetes&logoColor=white) ![PRs Welcome](https://img.shields.io/badge/PRs-welcome-brightgreen.svg)
+
 Golang + React 的中大型电商实践项目：10 个后端微服务 + 自建网关 + pnpm monorepo 前端，
 RBAC 三角色（消费者 / 商家 / 管理员），全链路云原生部署与可观测性。
 
@@ -200,9 +202,33 @@ pnpm ready    # vp fmt && vp lint && vp run -r test && vp run -r build，提 PR 
 ## 开发工作流
 
 - **提交规范**：Conventional Commits + 可选 gitmoji，commitlint + vite-plus 钩子强制；
-  提交前先更新 `TODO.md`。见 `context/team/git-commit.md`
+  提交前按改动类型更新对应真相源（进度 → `TODO.md`）。见 `context/team/git-commit.md`
 - **提交前验收锚点**（详见 [`AGENTS.md`](AGENTS.md)）：
   `go build/vet`、`go test ./structcheck/...`、`go test -short ./...`、`pnpm ready`、
   `scripts/verify-freeze.sh --all`
 - **网关 subtree 推送**：`git subtree push --prefix=gateway gateway main`；
   同步到主仓库：`git push main main`
+
+## 贡献
+
+欢迎通过 issue 反馈问题、通过 Pull Request 参与改进。
+
+- **动手前先读 [`AGENTS.md`](AGENTS.md)**：硬规则 + 验收锚点，是本仓协作的地基。
+- **改动流程**：fork → 建分支 → 修改 → 本地跑通验收锚点 → 提 PR：
+  `go build ./... && go vet ./...`、`go test ./structcheck/...`、`go test -short ./...`、
+  `pnpm ready`、`scripts/verify-freeze.sh --all`。
+- **改动前查真相源，别凭记忆**：技术栈与分层约束看 [`STACK.md`](STACK.md)、服务拓扑看
+  [`.service-matrix.yaml`](.service-matrix.yaml)、架构设计看 [`docs/design/`](docs/design/README.md)；
+  按改动类型更新对应真相源（进度 → `TODO.md`，拓扑 → matrix，设计 → `docs/design/`）。
+- **提交信息**：遵循 Conventional Commits，gitmoji 可选但带了就必须与 type 相符，
+  由 commitlint 强制（细则见 `context/team/git-commit.md`）。
+- **改动测试验收集需走审批**：`.freeze/` 冻结机制会拦截未刷新清单的测试改动。
+
+## 许可
+
+本项目采用 **[CC BY-NC-SA 4.0](https://creativecommons.org/licenses/by-nc-sa/4.0/)**
+（署名—非商业性使用—相同方式共享）授权，详见 [`LICENSE`](LICENSE)：
+
+- 可用于个人学习、技术交流与非营利研究；衍生作品须以相同或更严格的协议开源，并注明出处。
+- **任何商业使用**（直接售卖、SaaS 集成、含付费内容或广告的平台等）须事先获得书面授权。
+- 商业授权或闭源例外请联系版权方：<https://github.com/lens077>
