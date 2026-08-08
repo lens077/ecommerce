@@ -14,6 +14,7 @@
 | [platform/performance.md](platform/performance.md) | 性能目标、四层架构、多级缓存、DB 集群、Redis 缓存（目标态） | DESIGN.md §性能与高可用 + §Redis + §数据库集群 |
 | [platform/rbac.md](platform/rbac.md) | 三角色 RBAC 模型、权限粒度、Casdoor 集成 | DESIGN.md §RBAC |
 | [platform/pre-environment.md](platform/pre-environment.md) | **Pre 环境基础设施接入清单（实测）**：各组件 IP/svc/路由/网关/TLS 现状与升级路径 | 2026-08-08 集群实测 |
+| [platform/i18n-routing.md](platform/i18n-routing.md) | i18n URL 与语言路由策略：公开页子目录 `/:lang/` 决策、方案对比、hreflang、SSR 前置、API 本地化（**设计草案**） | 2026-08-08 设计草案 |
 | [product/listing.md](product/listing.md) | ListProducts 无限滚动/游标分页（**设计已定待落地**） | DESIGN.md §商品列表 |
 | [product/schema.md](product/schema.md) | SPU/SKU 表早期稿 | DESIGN.md §数据库设计 |
 | [inventory/inventory.md](inventory/inventory.md) | 库存分层模型、状态机、高并发保障、库存表 | DESIGN.md §分布式库存状态机 |
