@@ -1,0 +1,54 @@
+{
+  "schema_version": 1,
+  "diagram_type": "architecture",
+  "meta": {
+    "title": "Ecommerce 平台整体架构",
+    "subtitle": "B2B2C 单仓 · 4 个前端应用 → Kratos 网关 → 10 个 Connect-RPC 微服务",
+    "output": "ecommerce-overall.html",
+    "quality_profile": "showcase",
+    "views": [
+      { "id": "main-path", "label": "主请求链路", "focus": ["clients", "gateway", "svc_commerce", "postgres"], "note": "从浏览器经网关落到交易主链路与主库的核心路径。" },
+      { "id": "identity", "label": "身份与鉴权", "focus": ["casdoor", "gateway", "svc_identity"], "note": "Casdoor 签发 JWT，网关统一验签与 RBAC，服务本身不做鉴权。" },
+      { "id": "control-plane", "label": "控制面", "focus": ["controlplane", "gateway", "svc_commerce"], "note": "Consul 只负责注册发现，Bootstrap 配置统一来自 Config Center。" }
+    ]
+  },
+  "components": [
+    { "id": "casdoor", "type": "security", "label": "Casdoor", "sublabel": "OIDC 身份提供方", "tag": "JWT kid=lens", "pos": [40, 90], "size": [170, 66] },
+    { "id": "clients", "type": "external", "label": "前端应用", "sublabel": "consumer · merchant · admin · desktop", "tag": "Connect-RPC / HTTPS", "pos": [40, 300], "size": [210, 76] },
+    { "id": "controlplane", "type": "cloud", "label": "控制面", "sublabel": "Consul 注册发现 · Config Center", "pos": [40, 520], "size": [210, 72] },
+    { "id": "gateway", "type": "backend", "label": "Kratos Gateway", "sublabel": "HTTP :8080 · 独立 Go module", "tag": "9 层中间件链", "pos": [330, 300], "size": [190, 80] },
+    { "id": "svc_discovery", "type": "backend", "label": "搜索与推荐", "sublabel": "search-product · behavior-service", "tag": "/search* /behavior*", "pos": [610, 80], "size": [235, 72] },
+    { "id": "svc_identity", "type": "backend", "label": "身份与商户", "sublabel": "user-identity · merchant-service", "tag": "/user* /merchant*", "pos": [610, 230], "size": [235, 72] },
+    { "id": "svc_commerce", "type": "backend", "label": "交易主链路", "sublabel": "product · cart · order · inventory · address", "tag": "/product* /cart* /order*", "pos": [610, 380], "size": [235, 80] },
+    { "id": "svc_payment", "type": "backend", "label": "支付", "sublabel": "payment-service", "tag": "/payment*", "pos": [610, 540], "size": [235, 72] },
+    { "id": "elasticsearch", "type": "database", "label": "Elasticsearch", "sublabel": "商品检索索引", "pos": [935, 80], "size": [180, 66] },
+    { "id": "postgres", "type": "database", "label": "PostgreSQL", "sublabel": "pg-dev.app.com", "tag": "TLS verify-ca", "pos": [935, 230], "size": [180, 66] },
+    { "id": "redis", "type": "database", "label": "Dragonfly", "sublabel": "Redis 协议 · 缓存", "pos": [935, 380], "size": [180, 66] },
+    { "id": "alipay", "type": "external", "label": "支付宝", "sublabel": "alipay/v3 开放平台", "pos": [935, 540], "size": [180, 66] }
+  ],
+  "boundaries": [
+    { "kind": "region", "label": "Kubernetes 集群（ArgoCD GitOps）", "wraps": ["gateway", "svc_discovery", "svc_identity", "svc_commerce", "svc_payment"] },
+    { "kind": "security-group", "label": "统一鉴权入口：JWT 验签 + Casbin RBAC", "wraps": ["gateway"] }
+  ],
+  "connections": [
+    { "id": "clients-to-gateway", "from": "clients", "to": "gateway", "variant": "emphasis" },
+    { "id": "casdoor-verify", "from": "casdoor", "to": "gateway", "variant": "security" },
+    { "id": "discovery-feed", "from": "controlplane", "to": "gateway", "variant": "dashed" },
+    { "id": "route-search", "from": "gateway", "to": "svc_discovery" },
+    { "id": "route-user", "from": "gateway", "to": "svc_identity" },
+    { "id": "route-commerce", "from": "gateway", "to": "svc_commerce" },
+    { "id": "route-payment", "from": "gateway", "to": "svc_payment" },
+    { "id": "search-index", "from": "svc_discovery", "to": "elasticsearch" },
+    { "id": "identity-sql", "from": "svc_identity", "to": "postgres" },
+    { "id": "commerce-sql", "from": "svc_commerce", "to": "postgres" },
+    { "id": "commerce-cache", "from": "svc_commerce", "to": "redis" },
+    { "id": "payment-gateway", "from": "svc_payment", "to": "alipay" }
+  ],
+  "cards": [
+    { "dot": "cyan", "title": "接入层", "items": ["pnpm workspace：4 个 app + 9 个共享 package", "统一经 Connect-RPC 打到 VITE_GATEWAY_URL（默认 :8080）", "desktop 为 Tauri 壳，复用同一套 Web 应用"] },
+    { "dot": "emerald", "title": "网关", "items": ["go-kratos/gateway fork，可 subtree 推独立仓复用", "全局中间件链 9 层，按序：ip → cors → logging → tracing → transcoder → jwt → rbac → bbr → circuitbreaker", "目录里另有 rewrite 与 routerfilter，未进全局链", "匿名路径 7 条：登录、商品详情、搜索、埋点、支付回调"] },
+    { "dot": "violet", "title": "服务层", "items": ["10 个服务共用一个 go.mod，靠目录与 internal/ 强制边界", "每服务一个独立 fx 应用，Connect / gRPC / gRPC-Web 三兼容", "节点 tag 为网关路由前缀，完整清单见 .service-matrix.yaml"] },
+    { "dot": "amber", "title": "数据与外部依赖", "items": ["PostgreSQL 为 9 个服务的共同主库，sqlc 生成类型安全代码", "另有 MinIO（cart 商品缩略图）与 gorse 推荐引擎（behavior / product）", "kafka-connect 只有 YAML，Go 代码中尚未接线"] },
+    { "dot": "rose", "title": "现状缺口（来自 .service-matrix.yaml）", "items": ["服务间调用几乎全未接线：order / payment 的 depends_on 目前为空", "Bootstrap 解码后未执行 protovalidate，required 约束尚未成为运行时门禁", "buf breaking 未接 CI，proto 破坏性变更无门禁"] }
+  ]
+}

@@ -1,0 +1,50 @@
+{
+  "schema_version": 1,
+  "diagram_type": "architecture",
+  "meta": {
+    "title": "前端架构：pnpm workspace",
+    "subtitle": "4 个 app + 9 个共享 package · React 19 + TanStack + Connect-RPC",
+    "output": "ecommerce-frontend.html",
+    "quality_profile": "showcase",
+    "views": [
+      { "id": "transport", "label": "请求链路", "focus": ["consumer", "pkg_api", "gen", "gateway"], "note": "所有业务请求经 @ecommerce/api 的拦截器统一打到网关。" },
+      { "id": "telemetry", "label": "上报链路", "focus": ["pkg_tracker", "pkg_perf", "gateway"], "note": "行为埋点喂 gorse 推荐，性能指标进 telemetry.v1。" },
+      { "id": "desktop", "label": "桌面端", "focus": ["desktop", "pkg_tauri", "pkg_api"], "note": "Tauri 壳复用同一套 Web 应用，仅由 tauri 包做能力桥接。" }
+    ]
+  },
+  "components": [
+    { "id": "consumer", "type": "frontend", "label": "consumer", "sublabel": "买家端 :3000", "pos": [40, 80], "size": [230, 70] },
+    { "id": "merchant", "type": "frontend", "label": "merchant", "sublabel": "商家端 :3002", "pos": [40, 210], "size": [230, 70] },
+    { "id": "admin", "type": "frontend", "label": "admin", "sublabel": "运营后台 :3003", "pos": [40, 340], "size": [230, 70] },
+    { "id": "desktop", "type": "frontend", "label": "desktop", "sublabel": "Tauri 壳 · 打包 consumer/merchant", "pos": [40, 470], "size": [230, 70] },
+    { "id": "gen", "type": "frontend", "label": "src/gen", "sublabel": "protoc-gen-es 产物", "pos": [370, 80], "size": [280, 70] },
+    { "id": "pkg_api", "type": "frontend", "label": "@ecommerce/api", "sublabel": "Connect 拦截器 · 统一错误模型", "pos": [370, 240], "size": [280, 84] },
+    { "id": "pkg_tauri", "type": "frontend", "label": "@ecommerce/tauri", "sublabel": "Rust fetch · OAuth 桥接", "pos": [370, 470], "size": [280, 70] },
+    { "id": "pkg_ui", "type": "frontend", "label": "@ecommerce/ui", "sublabel": "MUI 9 组件库", "pos": [740, 60], "size": [250, 70] },
+    { "id": "pkg_base", "type": "frontend", "label": "基础库", "sublabel": "configs · constants · utils · i18n", "pos": [740, 150], "size": [280, 76] },
+    { "id": "pkg_tracker", "type": "frontend", "label": "@ecommerce/tracker", "sublabel": "浏览埋点 → behavior", "pos": [740, 380], "size": [250, 70] },
+    { "id": "pkg_perf", "type": "frontend", "label": "@ecommerce/perf", "sublabel": "Web Vitals · LongTask", "pos": [740, 490], "size": [250, 70] },
+    { "id": "gateway", "type": "external", "label": "Kratos Gateway", "sublabel": "VITE_GATEWAY_URL :8080", "pos": [1100, 240], "size": [260, 76] }
+  ],
+  "boundaries": [
+    { "kind": "region", "label": "frontend/packages/* — pnpm workspace 共享层（catalog 统一版本）", "wraps": ["gen", "pkg_api", "pkg_tauri", "pkg_ui", "pkg_base", "pkg_tracker", "pkg_perf"] }
+  ],
+  "connections": [
+    { "id": "consumer-api", "from": "consumer", "to": "pkg_api" },
+    { "id": "merchant-api", "from": "merchant", "to": "pkg_api" },
+    { "id": "admin-api", "from": "admin", "to": "pkg_api" },
+    { "id": "desktop-api", "from": "desktop", "to": "pkg_api" },
+    { "id": "desktop-tauri", "from": "desktop", "to": "pkg_tauri" },
+    { "id": "gen-to-api", "from": "gen", "to": "pkg_api", "variant": "dashed" },
+    { "id": "api-to-gateway", "from": "pkg_api", "to": "gateway", "variant": "emphasis" },
+    { "id": "tracker-report", "from": "pkg_tracker", "to": "gateway" },
+    { "id": "perf-report", "from": "pkg_perf", "to": "gateway" }
+  ],
+  "cards": [
+    { "dot": "cyan", "title": "应用层", "items": ["4 个 app 共用一套 packages/*，靠 catalog 统一依赖版本", "TanStack Router 文件路由 + autoCodeSplitting", "服务端状态 TanStack Query，客户端状态 valtio"] },
+    { "dot": "emerald", "title": "传输层", "items": ["src/gen 由 Buf + protoc-gen-es 从 backend/api/**/*.proto 生成", "@ecommerce/api 在生成客户端外包一层拦截器与统一错误模型", "环境变量经 @t3-oss/env-core + zod 4 运行时校验"] },
+    { "dot": "violet", "title": "上报链路", "items": ["tracker：浏览行为埋点 → behavior 服务 → 喂 gorse 推荐", "perf：Web Vitals + LongTask + API 耗时 → telemetry.v1 → VictoriaMetrics / Loki", "两条上报都走网关，不直连服务"] },
+    { "dot": "amber", "title": "工具链", "items": ["vite-plus（vp）一体化 fmt / lint(oxlint) / test / build / dev", "pnpm 11.6 workspace，Node ≥ 22.12", "测试：vitest + Playwright browser mode + testing-library"] },
+    { "dot": "rose", "title": "事实核对（2026-08-08）", "items": ["matrix 前端段曾漂移：列已拆走的 config:3005、漏 desktop 与 i18n/perf/tauri，当日已修正对齐", "desktop 无独立端口：按 tauri.{consumer,merchant}.conf.json 打包对应 app", "本图与 frontend/ 目录及修正后的 .service-matrix.yaml 一致"] }
+  ]
+}
