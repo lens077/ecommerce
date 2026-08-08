@@ -185,8 +185,9 @@ frontend:
     consumer: { port: 3000, module_key: consumer }
     merchant: { port: 3002, module_key: merchant }
     admin: { port: 3003, module_key: admin }
-    config: { port: 3005, module_key: config-fe } # ⚠️ 与后端 config 服务区分
-  packages: [api, configs, constants, tracker, ui, utils]
+    # desktop 是 Tauri 壳：按 src-tauri/tauri.{consumer,merchant}.conf.json 打包对应 app，无独立端口
+    desktop: { module_key: desktop }
+  packages: [api, configs, constants, i18n, perf, tauri, tracker, ui, utils]
   transport: "Connect-RPC → VITE_GATEWAY_URL（默认 http://localhost:8080）"
 
 # 已知缺口（详情以 TODO.md 为准，本段只列影响拓扑的）─────────────────
