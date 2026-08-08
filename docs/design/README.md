@@ -28,6 +28,20 @@
 尚无设计文档的服务：user / cart / address / behavior（behavior 的推荐链路知识在
 `context/project/ecommerce/behavior/`）。新增设计时在对应服务目录建文件并回填本表。
 
+## 交互式架构图（docs/architecture/）
+
+archify 生成的系统地图，自包含 HTML（深浅主题 / 搜索 / 路径追踪 / 导出）；同名
+`.architecture.json` 是 typed 源，改图改 JSON 后用 archify `deliver` 重渲染，不要手改 HTML。
+
+| 图 | 文件 | 覆盖 |
+|---|---|---|
+| 整体 | [ecommerce-overall.html](../architecture/ecommerce-overall.html) | 4 前端应用 → 网关 → 服务分组 → 数据与外部依赖 |
+| 前端 | [ecommerce-frontend.html](../architecture/ecommerce-frontend.html) | pnpm workspace：apps × packages、tracker/perf 上报链路 |
+| 网关 | [ecommerce-gateway.html](../architecture/ecommerce-gateway.html) | 9 层中间件链实际顺序、JWT+RBAC、发现与回源重试 |
+| 后端 | [ecommerce-backend.html](../architecture/ecommerce-backend.html) | 单服务分层、proto/sqlc 双生成链、启动装配 |
+
+图内事实按生成当日（2026-08-08）代码实测，之后架构变了改 JSON 重渲染并更新本表。
+
 ## 拆分时删除的章节（内容已被取代，勿凭记忆找回）
 
 | 原 DESIGN.md 章节 | 为什么删 | 现在看哪里 |
