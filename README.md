@@ -58,11 +58,11 @@ RBAC 三角色（消费者 / 商家 / 管理员），全链路云原生部署与
 | [`STACK.md`](STACK.md) | 技术栈与工程约束：版本锁定、分层铁律、proto/sqlc 规则（真相源） |
 | [`.service-matrix.yaml`](.service-matrix.yaml) | 服务拓扑事实表：注册名、网关前缀、依赖、Config Center 键（CI 强制对齐） |
 | [`TODO.md`](TODO.md) | 实现进度真相源（当前实况以它为准） |
-| [`PROGRESS.md`](PROGRESS.md) | 进度百分比与更新日志（与 TODO 的分工见 `context/harness-framework/progress-and-todo.md`） |
-| [`DEVOPS.md`](DEVOPS.md) / [`observability/OBSERVABILITY.md`](observability/OBSERVABILITY.md) | DevOps 与可观测性的**目标态**设计 |
+| [`docs/PROGRESS.md`](docs/PROGRESS.md) | 进度百分比与更新日志（与 TODO 的分工见 `context/harness-framework/progress-and-todo.md`） |
+| [`docs/DEVOPS.md`](docs/DEVOPS.md) / [`observability/OBSERVABILITY.md`](observability/OBSERVABILITY.md) | DevOps 与可观测性的**目标态**设计 |
 | [`docs/design/merchant/store-settings.md`](docs/design/merchant/store-settings.md) | 商家端产品需求草稿 |
 | [`docs/design/config-center/design.md`](docs/design/config-center/design.md) | 配置中心设计存档（代码已迁出） |
-| [`SCAFFOLD.md`](SCAFFOLD.md) | 换领域复用本仓工程体系的新项目生成规范 |
+| [`docs/SCAFFOLD.md`](docs/SCAFFOLD.md) | 换领域复用本仓工程体系的新项目生成规范 |
 | [`context/harness-framework/graph-engineering.md`](context/harness-framework/graph-engineering.md) | 多闭环 AI 工作流方法论（冻结节点 + 锚点命令） |
 
 ## 先决条件

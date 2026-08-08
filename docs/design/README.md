@@ -1,7 +1,7 @@
 # docs/design/ — 架构与领域设计
 
 > 2026-08-08 由根目录 `DESIGN.md`（985 行单文件）按微服务拆分而来，并收编了散落在
-> 根目录的领域设计文档。**分工不变**：本目录回答「为什么这么设计」；
+> 根目录的领域设计文档（拆分后曾留桩兜旧引用，同日仓内引用清零后已删除，勿再重建）。**分工不变**：本目录回答「为什么这么设计」；
 > 技术选型与编码约束 → `STACK.md`；服务拓扑事实 → `.service-matrix.yaml`；
 > 实现进度 → `TODO.md`。文中「现状」类横幅描述的是拆分当日的实况，之后以 `TODO.md` 为准。
 
@@ -48,7 +48,7 @@ archify 生成的系统地图，自包含 HTML（深浅主题 / 搜索 / 路径�
 |---|---|---|
 | §技术栈集成架构设计 | 与技术栈真相源重复，且无版本信息 | [`STACK.md`](../../STACK.md) |
 | §可观测性体系设计 | 已被更具体的方法论+指标基线文档取代 | [`observability/OBSERVABILITY.md`](../../observability/OBSERVABILITY.md) |
-| §容器化与编排设计 | 示例清单与实际部署矛盾（namespace 划分、Deployment 结构均不同），目标态已归 DevOps 体系 | [`DEVOPS.md`](../../DEVOPS.md) + `helm/` + `backend/services/*/deploy/` |
+| §容器化与编排设计 | 示例清单与实际部署矛盾（namespace 划分、Deployment 结构均不同），目标态已归 DevOps 体系 | [`docs/DEVOPS.md`](../DEVOPS.md) + `helm/` + `backend/services/*/deploy/` |
 
 ## 阅读顺序建议
 

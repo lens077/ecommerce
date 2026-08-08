@@ -10,7 +10,7 @@
 > - AI 协作行为基线 → [`AGENTS.md`](AGENTS.md) + [`context/`](context/INDEX.md)
 >
 > ⚠️ 同一条事实只写一处。本文件不复制上述文件的内容，只做引用。
-> 想按这套栈起一个新项目，见 [`SCAFFOLD.md`](SCAFFOLD.md)。
+> 想按这套栈起一个新项目，见 [`docs/SCAFFOLD.md`](docs/SCAFFOLD.md)。
 
 ---
 
@@ -22,9 +22,9 @@
 ecommerce/
 ├── AGENTS.md                  # AI 协作入口（硬规则 + 索引）
 ├── STACK.md                   # ← 本文件
-├── SCAFFOLD.md                # 新项目脚手架规范（换域即用）
 ├── .service-matrix.yaml       # 服务拓扑事实表（AI/CI 查表用，非设计文档）
-├── docs/design/               # 架构与领域设计真相源（按微服务分目录）
+├── docs/                      # design/ 架构真相源 · architecture/ 交互式架构图
+│                              #   DEVOPS / PROGRESS / SCAFFOLD / PRIVACY 也收纳于此
 ├── TODO.md                    # 进度真相源（✅ / 🟡 / ⬜）
 ├── context/                   # 三层知识库（team / harness-framework / project）
 ├── backend/
@@ -616,7 +616,7 @@ pnpm ready          # vp fmt && vp lint && vp run test -r && vp run build -r
 
 | 文档 | 内容 |
 |---|---|
-| [`SCAFFOLD.md`](SCAFFOLD.md) | 按这套栈起新项目的脚手架规范（含模板与生成提示词） |
+| [`docs/SCAFFOLD.md`](docs/SCAFFOLD.md) | 按这套栈起新项目的脚手架规范（含模板与生成提示词） |
 | [`AGENTS.md`](AGENTS.md) | AI 协作硬规则与知识索引 |
 | [`.service-matrix.yaml`](.service-matrix.yaml) | 服务拓扑事实表 |
 | [`docs/design/`](docs/design/README.md) | 架构与领域设计真相源（按微服务分目录） |
