@@ -57,7 +57,7 @@ matrix 与 `backend/services/`、网关实际接线的一致性,以及各服务 
 
 | 文档 | 一句话 | 何时读 |
 |---|---|---|
-| [`DEVOPS.md`](../DEVOPS.md)（仓库根） | DevOps 体系设计：Three Ways/CALMS/DORA 骨架，DevOps 边界对齐 DDD 限界上下文，四阶段落地路线与行为验收标准 | 动 CI/CD、GitOps、部署策略、镜像与 migration 流程前 |
+| [`docs/DEVOPS.md`](../docs/DEVOPS.md) | DevOps 体系设计：Three Ways/CALMS/DORA 骨架，DevOps 边界对齐 DDD 限界上下文，四阶段落地路线与行为验收标准 | 动 CI/CD、GitOps、部署策略、镜像与 migration 流程前 |
 | [`observability/OBSERVABILITY.md`](../observability/OBSERVABILITY.md) | 可观测性方法论与指标基线：三支柱分工、RED/USE、逐服务最低指标、告警清单、6 条硬规则 | 加指标/看板/告警，或排障动线走不通时 |
 | [`gateway/docs/ARCHITECTURE_EVOLUTION.md`](../gateway/docs/ARCHITECTURE_EVOLUTION.md) | 网关演进规划：Cilium 做边缘网关、自建网关转 BFF | 动网关架构方向前（**纯规划未落地**） |
 

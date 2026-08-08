@@ -3,7 +3,7 @@
 > 本文件是**可执行的项目生成规范**：把技术栈、分层约束、模板文件和落地顺序打包成一份，
 > 换掉占位符就能让 AI 生成一个新项目的完整骨架。
 >
-> 技术栈的**依据**（为什么这么选、踩过什么坑）在 [`STACK.md`](STACK.md)，本文件不重复，只做引用。
+> 技术栈的**依据**（为什么这么选、踩过什么坑）在 [`STACK.md`](../STACK.md)，本文件不重复，只做引用。
 >
 > 用法：
 > 1. 填好第一节的占位符表
@@ -167,13 +167,13 @@ buf.gen.yaml → src/gen → env.ts(zod) → api/{domain} → routes → compone
 | 框架工程级 | `context/harness-framework/` | AI 协作机制本身（中频更新） |
 | 服务级 | `context/project/{{PROJECT}}/{module}/` | 特定模块（高频演进、量最大） |
 
-完整导航见 **[context/INDEX.md](context/INDEX.md)**。
+完整导航见 **[context/INDEX.md](../context/INDEX.md)**。
 
 **查服务拓扑不要现搜**：服务注册名、网关前缀、依赖关系、外部依赖、配置键，
-一律查 **[.service-matrix.yaml](.service-matrix.yaml)**。里面区分了 `depends_on`（已接线）
+一律查 **[.service-matrix.yaml](../.service-matrix.yaml)**。里面区分了 `depends_on`（已接线）
 和 `depends_on_planned`（设计要求但未接线），不要把后者当成已实现。
 
-**查技术栈与分层约束**：见 **[STACK.md](STACK.md)**。不要从代码里反推约定。
+**查技术栈与分层约束**：见 **[STACK.md](../STACK.md)**。不要从代码里反推约定。
 
 ## 项目速览
 

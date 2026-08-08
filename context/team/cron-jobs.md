@@ -28,7 +28,7 @@ description: 定时/周期任务的执行边界——重叠、panic、超时、�
 
 进程内调度器只认自己这个进程。三个副本就会在凌晨两点跑三次。
 
-本仓现在集群里基本都是单副本，所以这个问题**还没暴露**。但 [`DEVOPS.md`](../../DEVOPS.md)
+本仓现在集群里基本都是单副本，所以这个问题**还没暴露**。但 [`docs/DEVOPS.md`](../../docs/DEVOPS.md)
 阶段 2 明确要求无状态服务扩到 ≥2 副本 + PDB——**扩副本那天，所有进程内定时任务会立刻变成重复执行**。
 所以这是扩副本的前置条件，不是以后再说的事。
 
@@ -221,6 +221,6 @@ Asynq 关注「可靠地完成一件后台工作」。
 ## 相关
 
 - 分布式锁的落地要求：[go-redis.md](go-redis.md)
-- 副本数与部署策略：[`DEVOPS.md`](../../DEVOPS.md)（阶段 2）
+- 副本数与部署策略：[`docs/DEVOPS.md`](../../docs/DEVOPS.md)（阶段 2）
 - 任务的指标与告警口径：[`observability/OBSERVABILITY.md`](../../observability/OBSERVABILITY.md)
 - 首次触发盲窗的完整复盘：[`registry/experience/consul-ttl-first-ping-blind-window.md`](../project/ecommerce/registry/experience/consul-ttl-first-ping-blind-window.md)
