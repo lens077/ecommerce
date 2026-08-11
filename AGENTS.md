@@ -34,6 +34,7 @@
 - 只有验证变红才扩大范围，一次扩一级（再 grep → 追依赖 → 读下一个最相关文件），复用已有发现，不推倒重来
 - 措辞听起来局部但探测命中多处时，主动降置信、按高一级处理
 - 规模驱动开销：L1/L2 不开 plan mode、不派子代理、低 reasoning effort；L3 才值得 plan mode / Explore 子代理 / 高 effort
+- 正确性和可靠性是硬约束：便宜失败不算效率；没有可信验证器或风险较高时，初始估计保守一级
 - E3 **不豁免**硬规则：runbook §0.1 的必读路由、proto 前读设计文档属于最小路径的一部分；也**不要**反向加码写「先通读代码库 / be thorough」——实测这类指令又慢又更容易失败
 
 出处（arXiv:2607.13034）、路由表与护栏 hook 的验证方法见 [context/harness-framework/e3-execution.md](context/harness-framework/e3-execution.md)。
@@ -74,6 +75,7 @@ scripts/verify-freeze.sh --all                       # 冻结验收集未被动�
 
 - 工程化：前端用 vite-plus（`vp`）一个包覆盖 dev/build/test/lint/fmt/任务运行/git 钩子，没有 husky/biome/eslint/prettier；仓库根另有一个只装 commitlint 的 `package.json`，与 `frontend/` 的 workspace 相互独立
 - 进度真相源：`TODO.md`；架构真相源：`docs/design/`（按微服务分目录，入口 `docs/design/README.md`，含 config-center 设计存档）。两者分工见 `context/harness-framework/progress-and-todo.md`
+- 内环开发（`okteto up`）**必须先 `scripts/argocd-devwindow.sh off`、完事 `on`**：okteto 会新建 `<svc>-okteto` Deployment 并把原 Deployment 缩到 0，ArgoCD selfHeal 会把这两处漂移同步回去、无声干掉开发容器；忘了恢复更糟——GitOps 静默失效且无任何报错。判定与写 manifest 的七条检查清单见 [context/team/okteto-inner-loop.md](context/team/okteto-inner-loop.md)，操作手册见 [docs/OKTETO.md](docs/OKTETO.md)
 
 ## 中文文案约定
 
