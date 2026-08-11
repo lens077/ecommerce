@@ -6,6 +6,10 @@
  * 要等读完本地设置才知道 —— 所以真正的启动逻辑放在 bootstrap.tsx，用动态 import
  * 保证顺序确定，不依赖路由的 code splitting 恰好把 api 模块延后加载。
  */
+// 「灯市」世界的自托管宋体(按 unicode-range 切片,浏览器只拉用到的字形片)
+import "@fontsource/noto-serif-sc/400.css";
+import "@fontsource/noto-serif-sc/700.css";
+import "@fontsource/noto-serif-sc/900.css";
 import { setErrorMessageResolver } from "@ecommerce/api";
 import { createErrorMessageResolver, initI18n } from "@ecommerce/i18n";
 import { initLocaleStorage, initTransport } from "@ecommerce/tauri";

@@ -1,6 +1,6 @@
 {
   "meta": {
-    "title": "电商平台"
+    "title": "灯市"
   },
   "appBar": {
     "signOutSuccess": "登出成功",
@@ -15,8 +15,8 @@
     "searchEmpty": "未找到相关商品"
   },
   "footer": {
-    "brand": "电商平台",
-    "tagline": "打造极致的在线购物体验，为您提供优质的商品和服务。",
+    "brand": "灯市",
+    "tagline": "每件好物是一盏灯。灯市为你点亮数码、服饰、食百的整条长街。",
     "about": {
       "title": "关于我们",
       "company": "公司简介",
@@ -35,7 +35,7 @@
       "terms": "服务条款",
       "cookie": "Cookie 政策"
     },
-    "copyright": "© {{year}} 电商平台. 保留所有权利.",
+    "copyright": "© {{year}} 灯市. 保留所有权利.",
     "sitemap": "网站地图",
     "icp": "备案信息"
   },
@@ -66,7 +66,16 @@
     "featured": "精选商品",
     "loading": "商品加载中…",
     "comingSoon": "商品即将上架，敬请期待",
-    "priceFrom": "起"
+    "priceFrom": "起",
+    "slogan": "灯市开了。",
+    "sloganSub": "每件好物是一盏灯——数码、服饰、食百，从街头逛到亮为止。",
+    "enterMarket": "进灯市",
+    "heroToday": "本日主灯",
+    "viewLamp": "看灯去",
+    "categoriesTitle": "灯市街巷",
+    "gridTitle": "今日亮灯",
+    "demoBadge": "演示商品",
+    "demoNote": "以上为演示商品与虚构商家，商品服务（ListProduct）接通后即替换为真实货架。"
   },
   "notFound": {
     "title": "页面不存在",

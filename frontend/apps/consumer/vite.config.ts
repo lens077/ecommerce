@@ -47,6 +47,8 @@ export default defineConfig(({ mode }) => {
     server: {
       // Tauri 壳按固定端口连 dev server，端口被占时必须报错而不是静默换号
       strictPort: true,
+      // 经 Pangolin 隧道(dev.apikv.com → mac site → 127.0.0.1:3000)远程预览 dev server 用
+      allowedHosts: ["dev.apikv.com"],
     },
     resolve: {
       alias: {

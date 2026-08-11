@@ -1,12 +1,108 @@
-h1,
-h2,
-h3,
-h4,
-h5,
-h6,
-p,
-span,
-a,
-li {
-  letter-spacing: clamp(-0.05em, calc((1em - 1rem) / -10), 0em);
+/* 「灯市」首页 — 纸灯工坊世界
+   纸为场、竹为架、墨为字、朱砂只给要紧的动作与价格。 */
+
+/* 和纸纤维噪声(SVG data-uri,零网络依赖) */
+.lantern-page {
+  background-color: #f6efe1;
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='240' height='240'%3E%3Cfilter id='p'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.85' numOctaves='2' seed='7'/%3E%3CfeColorMatrix values='0 0 0 0 0.16 0 0 0 0 0.15 0 0 0 0 0.13 0 0 0 0.05 0'/%3E%3C/filter%3E%3Crect width='240' height='240' filter='url(%23p)'/%3E%3C/svg%3E");
+}
+
+/* 商品纸灯卡:默认熄灯(暗纸),入视后次第点亮到透光亮态。
+   纸纹理直接叠在灯面上(材质在灯上,不只在页底)。 */
+.lantern-card {
+  background-color: #efe6d2;
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='180' height='180'%3E%3Cfilter id='q'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='2' seed='11'/%3E%3CfeColorMatrix values='0 0 0 0 0.35 0 0 0 0 0.3 0 0 0 0 0.2 0 0 0 0.045 0'/%3E%3C/filter%3E%3Crect width='180' height='180' filter='url(%23q)'/%3E%3C/svg%3E");
+  transition:
+    background-color 180ms ease-out,
+    box-shadow 180ms ease-out,
+    border-color 180ms ease-out;
+}
+
+/* 点灯:唯一的 authored moment,由 IntersectionObserver 在网格入视时触发 */
+@keyframes lantern-light-up {
+  from {
+    background-color: #efe6d2;
+    box-shadow: none;
+    transform: translateY(6px);
+  }
+  to {
+    background-color: #fbf3df;
+    box-shadow:
+      inset 0 0 46px rgba(255, 227, 160, 0.9),
+      0 12px 30px -18px rgba(138, 106, 66, 0.5);
+    transform: translateY(0);
+  }
+}
+
+.lantern-grid-lit .lantern-card {
+  animation: lantern-light-up 700ms cubic-bezier(0.16, 1, 0.3, 1) both;
+  animation-delay: calc(var(--i, 0) * 70ms);
+}
+
+.lantern-grid-lit .lantern-card:hover,
+.lantern-grid-lit .lantern-card:focus-within {
+  background-color: #fff7e0;
+  box-shadow:
+    inset 0 0 56px rgba(255, 227, 160, 1),
+    0 14px 34px -16px rgba(138, 106, 66, 0.55);
+  border-color: #77592f !important;
+}
+
+/* 主灯:常明,呼吸极缓;纸纹理同样落在灯体上 */
+@keyframes lantern-breathe {
+  0%,
+  100% {
+    box-shadow: inset 0 0 60px rgba(255, 233, 184, 0.85);
+  }
+  50% {
+    box-shadow: inset 0 0 88px rgba(255, 233, 184, 1);
+  }
+}
+
+.lantern-hero-lamp {
+  background-color: #fff7e0;
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='180' height='180'%3E%3Cfilter id='q'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='2' seed='11'/%3E%3CfeColorMatrix values='0 0 0 0 0.35 0 0 0 0 0.3 0 0 0 0 0.2 0 0 0 0.045 0'/%3E%3C/filter%3E%3Crect width='180' height='180' filter='url(%23q)'/%3E%3C/svg%3E");
+  animation: lantern-breathe 5.5s ease-in-out infinite;
+}
+
+/* 朱砂印按钮:印章方章,白文 */
+.seal-btn {
+  appearance: none;
+  border: none;
+  cursor: pointer;
+  background-color: #c2372b;
+  color: #fdf8ec;
+  box-shadow: inset 0 0 0 1px rgba(253, 248, 236, 0.4);
+  border-radius: 6px;
+  transition:
+    background-color 140ms ease-out,
+    transform 140ms ease-out;
+}
+
+.seal-btn:hover {
+  background-color: #a82d22;
+}
+
+.seal-btn:active {
+  transform: scale(0.97);
+}
+
+.seal-btn:focus-visible {
+  outline: 2px solid #2a2a28;
+  outline-offset: 2px;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .lantern-card,
+  .lantern-grid-lit .lantern-card {
+    animation: none;
+    background-color: #fbf3df;
+    box-shadow:
+      inset 0 0 46px rgba(255, 227, 160, 0.9),
+      0 12px 30px -18px rgba(138, 106, 66, 0.5);
+  }
+  .lantern-hero-lamp {
+    animation: none;
+    box-shadow: inset 0 0 60px rgba(255, 233, 184, 0.85);
+  }
 }

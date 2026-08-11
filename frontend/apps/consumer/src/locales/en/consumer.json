@@ -1,6 +1,6 @@
 {
   "meta": {
-    "title": "Marketplace"
+    "title": "Lantern Market"
   },
   "appBar": {
     "signOutSuccess": "Signed out",
@@ -15,8 +15,8 @@
     "searchEmpty": "No matching products"
   },
   "footer": {
-    "brand": "Marketplace",
-    "tagline": "Building a great online shopping experience with quality products and service.",
+    "brand": "Lantern Market",
+    "tagline": "Every good find is a lit lantern. We light the whole street of electronics, fashion, food and more.",
     "about": {
       "title": "About",
       "company": "Company",
@@ -35,7 +35,7 @@
       "terms": "Terms of service",
       "cookie": "Cookie policy"
     },
-    "copyright": "© {{year}} Marketplace. All rights reserved.",
+    "copyright": "© {{year}} Lantern Market. All rights reserved.",
     "sitemap": "Sitemap",
     "icp": "ICP filing"
   },
@@ -66,7 +66,16 @@
     "featured": "Featured products",
     "loading": "Loading products…",
     "comingSoon": "Products are on the way — stay tuned",
-    "priceFrom": "and up"
+    "priceFrom": "and up",
+    "slogan": "The lantern market is open.",
+    "sloganSub": "Every good find is a lit lantern — electronics, fashion, food and more, browse until the street glows.",
+    "enterMarket": "Enter the market",
+    "heroToday": "Lantern of the day",
+    "viewLamp": "See this lantern",
+    "categoriesTitle": "Market lanes",
+    "gridTitle": "Lit today",
+    "demoBadge": "Demo products",
+    "demoNote": "Products and merchants above are illustrative demos; they will be replaced by the live catalog once ListProduct is wired up."
   },
   "notFound": {
     "title": "Page not found",
