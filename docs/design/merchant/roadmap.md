@@ -3,7 +3,9 @@
 > 2026-08-12 基于 [store-settings.md](store-settings.md)（Shopline 设置 20 页实录调研）
 > 筛选出适合本项目商家角色的功能，并定出 MVP 与扩展优先级。**前提**：本项目是
 > B2B2C 平台型商城（一个 consumer 前台服务所有买家），不是 Shopline 那种独立站
-> SaaS——所有取舍围绕「平台上的卖家」而非「独立站站长」。写作当日现状：merchant
+> SaaS——所有取舍围绕「平台上的卖家」而非「独立站站长」。平台管理员的对偶路线见
+> [platform/admin-roadmap.md](../platform/admin-roadmap.md)（admin 必补项与本文 P0
+> 同批做，互为依赖）。写作当日现状：merchant
 > 服务仅入驻 `Submit`/`Get` 可用（`ApproveApplication` 全表 UPDATE、`Reject`/
 > `Activate` 是 panic 桩），merchant 前端仅路由骨架未接后端；此后实况以 `TODO.md` 为准。
 
