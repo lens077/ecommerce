@@ -46,6 +46,7 @@ description: 给所有 AI 编码工具(尤其 Codex)的可执行命令与验收�
 | CI/CD、部署策略、镜像、migration | [`docs/DEVOPS.md`](../../docs/DEVOPS.md) | 镜像用 latest;单副本下滚更/金丝雀静默失效;migration 不兼容滚更期新旧共存 |
 | Shell / Make recipe | [shell-scripting.md](shell-scripting.md) | macOS Bash 3.2 + `set -u` 下空数组展开直接退出 |
 | 本地起服务连不上基础设施 | [local-env.md](local-env.md) | 连 `consul.app.com` 超时;KV 缺子块导致功能被静默关掉 |
+| 对外公开服务 / 内网穿透 / `*.apikv.com` | [pangolin-tunnel.md](pangolin-tunnel.md) | k8s target 走 80 得 envoy 404;改完配置不等 Traefik 5s 轮询就当故障排查 |
 | 提交信息 / 分支 / 分组 | [git-commit.md](git-commit.md) + 本文 §7 | type 自造、`perf` 滥用、`git add -A` 混提 |
 | 踩到坑之后 | [`harness-framework/self-refinement.md`](../harness-framework/self-refinement.md) | 同一个坑下个会话再踩一次 |
 
