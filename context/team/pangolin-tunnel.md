@@ -64,6 +64,13 @@ curl -s -c /tmp/pg.ck -X POST $U/auth/login -H "Content-Type: application/json" 
 `global-default-tls`,Traefik 已配 `serversTransport.insecureSkipVerify` 兼容)。
 判别 404 来源:响应头 `server: envoy` + 直连 svc ClusterIP 对比。
 
+## local site(node3-local) 的 target 写法(2026-08-11 kaneo 502 实付学费)
+
+- **禁写 `localhost`/`127.0.0.1`**——转发从 Traefik 容器发起,127.0.0.1 是容器自己,后端秒回 refused,外部表现为**响应很快的 502**(timeout 型 502 才是网络不通)
+- 宿主端口服务写 **`10.1.0.8:<port>`**(宿主内网 IP,服务需监听 0.0.0.0);容器服务接入 pangolin 网络后写**容器名**(blog 模式)
+- 排查 target 实际值不用登面板:宿主 `curl http://<pangolin容器IP>:3001/api/v1/traefik-config` 直接看 services 的 url
+- 面板不可用/无密码时可直改 `/home/docker/pangolin/config/db/db.sqlite` 的 `targets` 表(python3 自带 sqlite3,**先 cp 备份**),Pangolin 不缓存,Traefik 5s 轮询内生效
+
 ## 其它操作事实
 
 - **raw TCP/UDP**:入口已预留 30001/30002(tcp)、30003(udp)——compose 的 gerbil ports + Traefik entryPoints(命名必须 `tcp-30001` 格式)+ 腾讯云安全组三处一致才通;扩端口要改前两处并 `docker compose up -d --force-recreate gerbil traefik`(共享 netns,一起重建)
