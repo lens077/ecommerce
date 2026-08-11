@@ -3,8 +3,8 @@
 > 2026-08-12 基于 [merchant/store-settings.md](../merchant/store-settings.md)（Shopline
 > 调研）**反推**平台侧能力，并对照市面 B2B2C 平台 admin 标配（淘系/Shopee 平台侧、
 > Mirakl、CRMEB/mall4j 等开源商城）给出差距与优先级。admin 的技术形态 =
-> **角色 + 各域 admin 专属 API 面 + 专属前端**（见 §二；暂不立独立微服务，触发条件
-> 同节），治理能力横跨 merchant/order/product 等服务，故归 platform 目录；权限模型本体见
+> **角色 + 独立 admin 微服务（专属 API 面）+ 专属前端**（见 §二，含边界铁律与代价），
+> 治理能力横跨 merchant/order/product 等服务，故归 platform 目录；权限模型本体见
 > [rbac.md](rbac.md)，商家侧对偶路线见 [merchant/roadmap.md](../merchant/roadmap.md)。
 > 写作当日现状：admin 前端仅路由骨架（`index/users/merchants/products/orders/
 > categories/reports/settings`，未接后端）；RBAC 里 admin 是不可分的原子角色；网关
@@ -26,31 +26,49 @@ Shopline 是独立站 SaaS，后台"管理员"= 商家自己（店长），没�
 | §1 商品种类枚举、§15 政策模板库 | 平台定义行业分类、提供政策范本 | 类目/行业字典管理 + 平台政策模板库（商家「从模板创建」的源头） |
 | §7 风险账号图形验证 | 平台级风控介入登录/注册 | 风控位置在平台层，不在商家层 |
 
-## 二、技术形态：角色 × 专属 API 面 × 专属页面
+## 二、技术形态：角色 × 独立 admin 服务 × 专属页面
 
-admin 不只是一条 RBAC 规则，它同时拥有专属接口和专属页面；但专属接口**按域下沉**，
-不新建独立 admin 微服务：
+admin 不只是一条 RBAC 规则，它同时拥有专属接口和专属页面；专属接口以**独立
+admin 微服务**承载（2026-08-12 决定，替代此前「按域下沉 `<域>.admin.v1` 包」的
+初稿方案）：
 
 | 层 | 形态 | 现状 |
 |---|---|---|
 | 角色 | RBAC 继承链顶端（casdoor + Casbin），见 [rbac.md](rbac.md) | 已有 |
-| 专属 API 面 | 各域服务下的 admin proto 包：`backend/api/<域>/admin/v1/`，package `<域>.admin.v1`，由**域服务自己实现** | 无——当前 admin 操作混在 `<域>.v1` 里靠逐条 RPC 放行（如 `ApproveApplication`） |
-| 专属页面 | admin app（:3003），只调 `.admin.v1` 面 | 路由骨架已有，未接后端 |
+| 专属 API 面 | 独立微服务：契约 `backend/api/admin/v1/`（package `admin.v1`），部署为 `admin-service`，网关新增 `/admin*` endpoint 整段仅放 admin 角色 | 无——当前 admin 操作散在各域 `<域>.v1` 里靠逐条 RPC 放行（如 `ApproveApplication`） |
+| 专属页面 | admin app（:3003），只调 `admin.v1` 面 | 路由骨架已有，未接后端 |
 
-**为什么专属接口按域下沉而不是独立 admin 服务**：
+**为什么立独立 admin 服务（而不是把 admin 接口分散进各域服务）**：
 
-1. 治理写操作（批商家/强制下架/仲裁改判）必须与数据所有者同库同事务——独立
-   admin 服务还得回调各域服务，多一跳且拆散不变量
-2. 网关是前缀路由：`/merchant.admin.v1.*` 天然命中 `/merchant*` 路由到
-   merchant-service，**零新增 endpoint**；Casbin 一行 `/<域>.admin.v1.* → admin`
-   整包授权，比现在逐条 RPC 例外可审计得多
-3. 包边界即权限边界：`<域>.v1` 是 consumer/merchant 面，`<域>.admin.v1` 是治理
-   面——正好还掉 TODO 里「其余服务仍整段放行待细化」的债（即 §四必补 7 的落地机制）
+1. **治理域有自有状态**：审核工单、仲裁记录、审计中心、政策模板库、平台配置、
+   黑名单——分散方案下这批跨域数据没有归属，只能塞进某个业务服务污染其域模型；
+   独立服务给它们一个明确 owner
+2. **聚合读是 admin 的主要负载**：大盘与列表页天然跨域 join（商家×订单×结算额），
+   服务端聚合一次返回，胜过 admin 前端（Connect-Web，无 join 能力）扇出多请求自拼
+3. **权限边界最集中**：网关一条 `/admin*` endpoint + 一行 Casbin 策略覆盖整个治理
+   面；各域敏感 RPC 随迁移收为东西向调用，北向攻击面收窄（§四必补 7 的落地机制）
+4. **爆炸半径隔离**：治理功能的发布与故障不波及交易链路；admin 低频重查询的流量
+   特征与 C 端高频点查不同，资源与缓存策略可独立演进
+5. **与演进风格一致**：TODO 第二阶段本就按能力立服务（商家/履约/结算三个扩展微
+   服务）；也是本仓补练东西向调用与编排的合适场景（当前仅 order→inventory 一处）
 
-**独立 admin/governance 微服务的触发条件**（出现任一才立项，并登记
-`.service-matrix.yaml`）：①跨域治理工作流需要自有状态（统一审核工单中心）
-②Kafka 落地后的统一审计中心（消费各域事件）③风控引擎（实时消费 behavior 数据）。
-MVP 期仲裁状态挂 order 域（售后单在 order）、审计各域自记自查，均不足以立项。
+**边界铁律（防分布式单体）**：
+
+- admin-service **禁止直连各域数据库**；域写一律走域服务 RPC（商家审批仍由
+  merchant-service 实现并修复既有缺陷），admin-service 只做三件事：①跨域聚合读
+  ②治理工作流编排 ③治理自有数据（工单/审计/模板/平台配置/黑名单）
+- 域逻辑不复制进 admin-service：治理动作若涉及域内不变量，在域服务加内部 RPC，
+  不在 admin-service 重写
+
+**落地登记（立项即做）**：`.service-matrix.yaml` 增行（注册名 `admin-service`、
+网关前缀 `/admin*`、依赖清单、Config Center 键）、网关 policies 增
+`/admin.v1.* → admin`、服务数口径 10→11 全仓同步（按 2026-08-07 文档整理的口径
+修正惯例）。
+
+**代价（记录在案，不因反转而遗忘）**：①比分散方案多一跳东西向调用——admin 低频
+后台流量，可接受；②多一个部署单元的运维成本；③**东西向调用不经网关鉴权**：域服务
+的敏感内部 RPC 依赖调用方可信，而当前东西向没有 mTLS/服务身份（order→inventory
+已是同样处境的既有短板），admin-service 落地时需一并给内部 RPC 做调用方校验。
 
 ## 三、现状 vs 市面 B2B2C 标配的差距
 
@@ -84,7 +102,8 @@ MVP 期仲裁状态挂 order 域（售后单在 order）、审计各域自记自
 6. **审计日志**：与商家 P0 审计同一张表同一套采集，admin 多一个全局查询视角；
    无取证数据的仲裁没有公信力
 7. **RPC 授权收敛**：TODO 已列「其余服务仍整段放行待细化」——admin 权限过宽本身
-   是安全债；收敛机制即 §二的 `<域>.admin.v1` 包拆分 + 整包授权
+   是安全债；收敛机制即 §二：治理 RPC 迁入 admin-service 北向 `admin.v1` 面，各域
+   敏感 RPC 收为东西向，网关北向放行清单随迁移逐条下线
 
 ## 五、强烈推荐（第二梯队，与商家 P1 同步）
 
