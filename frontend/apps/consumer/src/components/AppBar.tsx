@@ -2,7 +2,6 @@ import AccountCircle from "@mui/icons-material/AccountCircle";
 import MoreVertIcon from "@mui/icons-material/MoreVert";
 import SearchIcon from "@mui/icons-material/Search";
 import ShoppingCartIcon from "@mui/icons-material/ShoppingCart";
-import StorefrontIcon from "@mui/icons-material/Storefront";
 import AppBar from "@mui/material/AppBar";
 import Avatar from "@mui/material/Avatar";
 import Badge from "@mui/material/Badge";
@@ -28,6 +27,8 @@ import { getSigninUrl, isLoggedIn } from "@ecommerce/configs";
 import { SEARCH_INDEX } from "@ecommerce/constants";
 import type { Product } from "@/gen/api";
 import { useCartBadge } from "@/hooks/useCart";
+import { lantern } from "@/styles/tokens";
+import { BrandMark } from "@/components/home/DemoArt";
 import { userStore } from "@/store/users";
 import { addNotification, clearToken } from "@ecommerce/utils";
 
@@ -49,19 +50,21 @@ const Search = styled("div")(({ theme }) => ({
   },
 }));
 
+// 「灯市」皮肤:纸底 + 竹线,结构与逻辑不动(见 context/team & DESIGN.md)
 const StyledAppBar = styled(AppBar)(() => ({
-  backgroundColor: "rgba(255, 255, 255, 0.8)",
+  backgroundColor: "rgba(246, 239, 225, 0.92)",
   backdropFilter: "blur(10px)",
   WebkitBackdropFilter: "blur(10px)",
-  boxShadow: "0 4px 30px rgba(0, 0, 0, 0.1)",
-  borderBottom: "1px solid rgba(255, 255, 255, 0.3)",
+  boxShadow: "none",
+  borderBottom: `1px solid ${lantern.bamboo}`,
 }));
 
 const SearchResults = styled(Paper)(({ theme }) => ({
   marginTop: theme.spacing(2),
   borderRadius: theme.shape.borderRadius,
-  boxShadow: theme.shadows[10],
-  backgroundColor: "rgba(255, 255, 255, 0.9)",
+  boxShadow: "0 14px 40px -18px rgba(42, 42, 40, 0.35)",
+  backgroundColor: "rgba(246, 239, 225, 0.96)",
+  border: "1px solid #D8B48A",
   backdropFilter: "blur(10px)",
   WebkitBackdropFilter: "blur(10px)",
   padding: theme.spacing(2),
@@ -334,15 +337,17 @@ export default function PrimarySearchAppBar() {
               sx={{
                 width: 36,
                 height: 36,
-                borderRadius: "10px",
-                background: "linear-gradient(135deg, #667eea 0%, #764ba2 100%)",
+                borderRadius: "6px",
+                backgroundColor: lantern.vermilion,
                 display: "flex",
                 alignItems: "center",
                 justifyContent: "center",
-                boxShadow: "0 4px 12px rgba(102, 126, 234, 0.4)",
+                boxShadow: "inset 0 0 0 1px rgba(253, 248, 236, 0.4)",
               }}
             >
-              <StorefrontIcon sx={{ color: "white", fontSize: 22 }} />
+              <Box sx={{ color: "#FDF8EC" }}>
+                <BrandMark size={22} />
+              </Box>
             </Box>
             <Typography
               variant="h6"
@@ -350,30 +355,30 @@ export default function PrimarySearchAppBar() {
               component="div"
               sx={{
                 display: { xs: "none", sm: "block" },
-                fontWeight: 700,
-                background: "linear-gradient(135deg, #667eea 0%, #764ba2 100%)",
-                WebkitBackgroundClip: "text",
-                WebkitTextFillColor: "transparent",
+                fontFamily: lantern.serif,
+                fontWeight: 900,
+                color: lantern.ink,
+                letterSpacing: "0.06em",
               }}
             >
-              {import.meta.env.VITE_APP_TITLE}
+              {t("meta.title")}
             </Typography>
           </Box>
           <SearchContainer>
             <Search
               sx={{
-                backgroundColor: "rgba(0, 0, 0, 0.04)",
-                borderRadius: "12px",
-                border: "1px solid transparent",
+                backgroundColor: lantern.paperAsh,
+                borderRadius: "6px",
+                border: `1px solid ${lantern.bamboo}`,
                 transition: "all 0.3s ease",
                 "&:hover": {
-                  backgroundColor: "rgba(0, 0, 0, 0.06)",
-                  border: "1px solid rgba(102, 126, 234, 0.3)",
+                  backgroundColor: "#EFE6D2",
+                  border: `1px solid ${lantern.bambooDeep}`,
                 },
                 "&:focus-within": {
-                  backgroundColor: "rgba(102, 126, 234, 0.08)",
-                  border: "1px solid #667eea",
-                  boxShadow: "0 0 0 3px rgba(102, 126, 234, 0.15)",
+                  backgroundColor: "#FFF7E0",
+                  border: `1px solid ${lantern.vermilion}`,
+                  boxShadow: "0 0 0 3px rgba(194, 55, 43, 0.14)",
                 },
               }}
             >
@@ -401,7 +406,7 @@ export default function PrimarySearchAppBar() {
                 onClick={handleSearch}
                 sx={{
                   "&:hover": {
-                    color: "#667eea",
+                    color: lantern.vermilion,
                   },
                 }}
               >
@@ -425,7 +430,7 @@ export default function PrimarySearchAppBar() {
               onClick={() => navigate({ to: "/cart" })}
               sx={{
                 "&:hover": {
-                  backgroundColor: "rgba(102, 126, 234, 0.1)",
+                  backgroundColor: "rgba(194, 55, 43, 0.08)",
                 },
               }}
             >
@@ -445,7 +450,7 @@ export default function PrimarySearchAppBar() {
                 sx={{
                   ml: 1,
                   "&:hover": {
-                    backgroundColor: "rgba(102, 126, 234, 0.1)",
+                    backgroundColor: "rgba(194, 55, 43, 0.08)",
                   },
                 }}
               >
@@ -463,11 +468,11 @@ export default function PrimarySearchAppBar() {
                 }}
                 sx={{
                   ml: 2,
-                  borderRadius: "8px",
-                  background: "linear-gradient(135deg, #667eea 0%, #764ba2 100%)",
-                  boxShadow: "0 4px 12px rgba(102, 126, 234, 0.3)",
+                  borderRadius: "6px",
+                  background: lantern.vermilion,
+                  boxShadow: "inset 0 0 0 1px rgba(253, 248, 236, 0.4)",
                   "&:hover": {
-                    background: "linear-gradient(135deg, #5a6fd6 0%, #6a4190 100%)",
+                    background: lantern.vermilionDeep,
                   },
                 }}
               >
@@ -495,9 +500,10 @@ export default function PrimarySearchAppBar() {
                   window.location.href = getSigninUrl();
                 }}
                 sx={{
-                  borderRadius: "8px",
-                  background: "linear-gradient(135deg, #667eea 0%, #764ba2 100%)",
-                  color: "white",
+                  borderRadius: "6px",
+                  background: lantern.vermilion,
+                  color: "#FDF8EC",
+                  "&:hover": { background: lantern.vermilionDeep },
                 }}
               >
                 {t("common:action.signIn")}
@@ -537,13 +543,15 @@ export default function PrimarySearchAppBar() {
                 <Box
                   key={product.id}
                   sx={{
-                    border: "1px solid rgba(0, 0, 0, 0.08)",
-                    borderRadius: "12px",
+                    border: `1px solid ${lantern.bamboo}`,
+                    borderRadius: "10px",
+                    backgroundColor: "#F9F3E6",
                     padding: 2,
                     transition: "all 0.2s ease",
                     "&:hover": {
-                      borderColor: "#667eea",
-                      boxShadow: "0 4px 20px rgba(102, 126, 234, 0.15)",
+                      borderColor: lantern.bambooDeep,
+                      backgroundColor: "#FFF7E0",
+                      boxShadow: "inset 0 0 30px rgba(255, 233, 184, 0.8)",
                       transform: "translateY(-2px)",
                     },
                     cursor: "pointer",
@@ -558,7 +566,7 @@ export default function PrimarySearchAppBar() {
                         width: 80,
                         height: 80,
                         mb: 2,
-                        borderRadius: "8px",
+                        borderRadius: "6px",
                       }}
                     />
                     <Typography
@@ -578,10 +586,10 @@ export default function PrimarySearchAppBar() {
                     <Typography
                       variant="h6"
                       sx={{
+                        fontFamily: lantern.serif,
                         fontWeight: 700,
-                        background: "linear-gradient(135deg, #667eea 0%, #764ba2 100%)",
-                        WebkitBackgroundClip: "text",
-                        WebkitTextFillColor: "transparent",
+                        color: lantern.vermilion,
+                        fontVariantNumeric: "tabular-nums",
                       }}
                     >
                       {formatCurrency(product.price)}

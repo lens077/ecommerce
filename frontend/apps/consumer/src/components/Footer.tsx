@@ -1,6 +1,7 @@
 import { Box, Container, Typography, Link } from "@mui/material";
-import StorefrontIcon from "@mui/icons-material/Storefront";
 import { useTranslation } from "@ecommerce/i18n";
+import { lantern } from "@/styles/tokens";
+import { BrandMark } from "@/components/home/DemoArt";
 
 const Footer: React.FC = () => {
   const { t } = useTranslation();
@@ -9,8 +10,10 @@ const Footer: React.FC = () => {
     <Box
       component="footer"
       sx={{
-        background: "linear-gradient(180deg, #f8f9ff 0%, #ffffff 100%)",
-        borderTop: "1px solid rgba(102, 126, 234, 0.1)",
+        // 「灯市」皮肤:纸灰底 + 竹线
+        backgroundColor: lantern.paperAsh,
+        borderTop: `1px solid ${lantern.bamboo}`,
+        color: lantern.ink,
         py: 6,
         mt: "auto",
       }}
@@ -32,23 +35,25 @@ const Footer: React.FC = () => {
                 sx={{
                   width: 40,
                   height: 40,
-                  borderRadius: "12px",
-                  background: "linear-gradient(135deg, #667eea 0%, #764ba2 100%)",
+                  borderRadius: "6px",
+                  backgroundColor: lantern.vermilion,
                   display: "flex",
                   alignItems: "center",
                   justifyContent: "center",
-                  boxShadow: "0 4px 12px rgba(102, 126, 234, 0.4)",
+                  boxShadow: "inset 0 0 0 1px rgba(253, 248, 236, 0.4)",
                 }}
               >
-                <StorefrontIcon sx={{ color: "white", fontSize: 24 }} />
+                <Box sx={{ color: "#FDF8EC" }}>
+                  <BrandMark size={24} />
+                </Box>
               </Box>
               <Typography
                 variant="h6"
                 sx={{
-                  fontWeight: 700,
-                  background: "linear-gradient(135deg, #667eea 0%, #764ba2 100%)",
-                  WebkitBackgroundClip: "text",
-                  WebkitTextFillColor: "transparent",
+                  fontFamily: lantern.serif,
+                  fontWeight: 900,
+                  color: lantern.ink,
+                  letterSpacing: "0.06em",
                 }}
               >
                 {t("footer.brand")}
@@ -64,22 +69,12 @@ const Footer: React.FC = () => {
             <Typography
               variant="subtitle2"
               sx={{
+                fontFamily: lantern.serif,
                 fontWeight: 700,
                 mb: 2,
-                color: "text.primary",
-                display: "flex",
-                alignItems: "center",
-                gap: 1,
+                color: lantern.ink,
               }}
             >
-              <Box
-                sx={{
-                  width: 4,
-                  height: 16,
-                  borderRadius: 2,
-                  background: "linear-gradient(135deg, #667eea 0%, #764ba2 100%)",
-                }}
-              />
               {t("footer.about.title")}
             </Typography>
             <Box sx={{ display: "flex", flexDirection: "column", gap: 1.5 }}>
@@ -90,7 +85,7 @@ const Footer: React.FC = () => {
                   color: "text.secondary",
                   transition: "color 0.2s ease",
                   "&:hover": {
-                    color: "primary.main",
+                    color: lantern.vermilion,
                     textDecoration: "underline",
                   },
                 }}
@@ -104,7 +99,7 @@ const Footer: React.FC = () => {
                   color: "text.secondary",
                   transition: "color 0.2s ease",
                   "&:hover": {
-                    color: "primary.main",
+                    color: lantern.vermilion,
                     textDecoration: "underline",
                   },
                 }}
@@ -118,7 +113,7 @@ const Footer: React.FC = () => {
                   color: "text.secondary",
                   transition: "color 0.2s ease",
                   "&:hover": {
-                    color: "primary.main",
+                    color: lantern.vermilion,
                     textDecoration: "underline",
                   },
                 }}
@@ -133,22 +128,12 @@ const Footer: React.FC = () => {
             <Typography
               variant="subtitle2"
               sx={{
+                fontFamily: lantern.serif,
                 fontWeight: 700,
                 mb: 2,
-                color: "text.primary",
-                display: "flex",
-                alignItems: "center",
-                gap: 1,
+                color: lantern.ink,
               }}
             >
-              <Box
-                sx={{
-                  width: 4,
-                  height: 16,
-                  borderRadius: 2,
-                  background: "linear-gradient(135deg, #667eea 0%, #764ba2 100%)",
-                }}
-              />
               {t("footer.help.title")}
             </Typography>
             <Box sx={{ display: "flex", flexDirection: "column", gap: 1.5 }}>
@@ -159,7 +144,7 @@ const Footer: React.FC = () => {
                   color: "text.secondary",
                   transition: "color 0.2s ease",
                   "&:hover": {
-                    color: "primary.main",
+                    color: lantern.vermilion,
                     textDecoration: "underline",
                   },
                 }}
@@ -173,7 +158,7 @@ const Footer: React.FC = () => {
                   color: "text.secondary",
                   transition: "color 0.2s ease",
                   "&:hover": {
-                    color: "primary.main",
+                    color: lantern.vermilion,
                     textDecoration: "underline",
                   },
                 }}
@@ -187,7 +172,7 @@ const Footer: React.FC = () => {
                   color: "text.secondary",
                   transition: "color 0.2s ease",
                   "&:hover": {
-                    color: "primary.main",
+                    color: lantern.vermilion,
                     textDecoration: "underline",
                   },
                 }}
@@ -202,22 +187,12 @@ const Footer: React.FC = () => {
             <Typography
               variant="subtitle2"
               sx={{
+                fontFamily: lantern.serif,
                 fontWeight: 700,
                 mb: 2,
-                color: "text.primary",
-                display: "flex",
-                alignItems: "center",
-                gap: 1,
+                color: lantern.ink,
               }}
             >
-              <Box
-                sx={{
-                  width: 4,
-                  height: 16,
-                  borderRadius: 2,
-                  background: "linear-gradient(135deg, #667eea 0%, #764ba2 100%)",
-                }}
-              />
               {t("footer.legal.title")}
             </Typography>
             <Box sx={{ display: "flex", flexDirection: "column", gap: 1.5 }}>
@@ -228,7 +203,7 @@ const Footer: React.FC = () => {
                   color: "text.secondary",
                   transition: "color 0.2s ease",
                   "&:hover": {
-                    color: "primary.main",
+                    color: lantern.vermilion,
                     textDecoration: "underline",
                   },
                 }}
@@ -242,7 +217,7 @@ const Footer: React.FC = () => {
                   color: "text.secondary",
                   transition: "color 0.2s ease",
                   "&:hover": {
-                    color: "primary.main",
+                    color: lantern.vermilion,
                     textDecoration: "underline",
                   },
                 }}
@@ -256,7 +231,7 @@ const Footer: React.FC = () => {
                   color: "text.secondary",
                   transition: "color 0.2s ease",
                   "&:hover": {
-                    color: "primary.main",
+                    color: lantern.vermilion,
                     textDecoration: "underline",
                   },
                 }}
@@ -270,9 +245,9 @@ const Footer: React.FC = () => {
         {/* 分隔线 */}
         <Box
           sx={{
-            height: 1,
-            background:
-              "linear-gradient(90deg, transparent, rgba(102, 126, 234, 0.2), transparent)",
+            height: "1px",
+            backgroundColor: lantern.bamboo,
+            opacity: 0.6,
             mb: 4,
           }}
         />
@@ -296,8 +271,8 @@ const Footer: React.FC = () => {
               sx={{
                 textDecoration: "none",
                 color: "text.secondary",
-                fontSize: "0.875rem",
-                "&:hover": { color: "primary.main" },
+                fontSize: "0.85rem",
+                "&:hover": { color: lantern.vermilion },
               }}
             >
               {t("footer.sitemap")}
@@ -307,8 +282,8 @@ const Footer: React.FC = () => {
               sx={{
                 textDecoration: "none",
                 color: "text.secondary",
-                fontSize: "0.875rem",
-                "&:hover": { color: "primary.main" },
+                fontSize: "0.85rem",
+                "&:hover": { color: lantern.vermilion },
               }}
             >
               {t("footer.icp")}

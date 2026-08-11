@@ -26,6 +26,7 @@
     "@ecommerce/utils": "workspace:*",
     "@emotion/react": "catalog:",
     "@emotion/styled": "catalog:",
+    "@fontsource/noto-serif-sc": "catalog:",
     "@fontsource/roboto": "catalog:",
     "@mui/icons-material": "catalog:",
     "@mui/material": "catalog:",
