@@ -31,6 +31,7 @@ context/
 | [self-refinement.md](harness-framework/self-refinement.md) | 纠错 → 判断模式性 → 沉淀 → 下次复用的闭环 |
 | [progress-and-todo.md](harness-framework/progress-and-todo.md) | PROGRESS.md 与 TODO.md 的分工与口径,每次改动两份都要更新 |
 | [graph-engineering.md](harness-framework/graph-engineering.md) | 多闭环 AI 工作流方法论存档：锚点命令、冻结节点（`.freeze/` + `scripts/freeze.sh`）、Loop 0~4 分工 |
+| [e3-execution.md](harness-framework/e3-execution.md) | E3 执行策略：动手前估计任务规模，走最小路径，验证失败才扩张；含护栏 hook 的验证方法 |
 | [evolution-log.md](harness-framework/evolution-log.md) | harness 每次改动的原因与触发它的事故——**改硬规则/门禁前必读**，防止把改对的东西改回去 |
 
 ## 服务级 · [context/project/ecommerce/](project/ecommerce/INDEX.md)

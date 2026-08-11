@@ -41,6 +41,30 @@ description: harness 本身（硬规则/门禁/Agent 约束）每次改动的原
 
 ---
 
+### 2026-08-12 引入 E3 执行策略（估计→最小执行→失败才扩张）与过度阅读护栏
+
+- **改了什么**：`AGENTS.md`（仓内 + `~/github/lens077/` 工作区副本）新增「执行策略：E3」
+  常驻节——动手前估计任务规模 L1/L2/L3，走最小路径，验证失败才逐级扩张，并按规模路由
+  plan mode / 子代理 / reasoning effort；新增 `context/harness-framework/e3-execution.md`
+  （出处、与锚点命令的对接、hook 文档与再验证方法）；用户级 `~/.claude/settings.json`
+  新增 PreToolUse hook `~/.claude/hooks/e3-overread-guard.py`——同会话首次编辑前完整读
+  第 6 个不同文件时拦下该次 Read 并提醒（重发即可继续；每会话最多一次；编辑后静默；
+  解析失败一律放行）。
+- **为什么**：agent 默认的「先读全仓求稳」在最简单的任务上冗余最大，而指令层的约束
+  会被忘，所以指令（AGENTS.md，Codex 也读）+ 机械护栏（hook，仅 Claude Code）各管一半。
+  护栏刻意做成一次性、可绕过、fail-open——吸取 2026-08-07 那条的教训：预防性规则缺少
+  真实事故校准时容易写过头，先把误伤成本压到「重发一次 Read」。
+- **触发事故**：无本仓事故，属预防性引入。触发点是 arXiv:2607.13034 的实测：模拟基准上
+  max-context-first 策略在单文件小改上 ACRR 达 22 倍；真模型实验里被指示「先读全部
+  再动手」的 gpt-4o 在欺骗性仓库级任务上三跑全败（步数耗尽/改错/撞限流）——过度阅读
+  不只是慢，会把步数和限流预算烧进失败。同理**禁止**在指令文件里写「先通读代码库 /
+  be thorough」类措辞。
+- **怎么验证的**：五组故意输入直喂 hook 脚本——①同会话连读 6 个不同文件：前 5 放行、
+  第 6 个 exit 2 且 stderr 输出提醒 ②第 7 次读放行（每会话只提醒一次）③先 Edit 再读
+  6 个全放行 ④同一文件重复读不计数 ⑤非 JSON 输入放行（fail-open）。接线后在真实会话
+  里 Read 一次，确认 `$TMPDIR/e3-guard-<session_id>.json` 即时生成且内容正确——hook
+  真的在跑，不是静默失效。
+
 ### 2026-08-08 静态检查引入基线棘轮，软门禁伤疤集中显形
 
 - **改了什么**：新增 `scripts/lint-baseline.sh`（snapshot/check/list 三模式，B−A 只拦新增）

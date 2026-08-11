@@ -25,6 +25,19 @@
    - **仍需先说明再做的例外**：用户没要求、且会丢数据或影响线上的动作（删 PV/namespace、`git push --force`、改 prod 的鉴权与网络策略、轮换/撤销凭据）。说清影响，拿到确认再做——**这类才值得打断用户**。
    - subagent 永久不得执行其中任何一项：它拿不到用户的授权上下文，无法判断授权是否已给出。
 
+## 执行策略：E3（先估计 → 最小执行 → 失败才扩张）
+
+动手前先花一步估计任务规模并明确说出来，最多一次廉价探测（查一次 `.service-matrix.yaml` 或一条 grep）：
+
+- **L1** 单文件局部修改 · **L2** 少数文件跨文件修改 · **L3** 仓库级重构（警惕 re-export/别名/网关接线/Config Center 键这类 grep 看不到的间接引用点）
+- 按估计走最小路径：只读预计要改的文件，不为局部修改通读代码库；改完立即跑下面锚点里**最便宜的适用验证**
+- 只有验证变红才扩大范围，一次扩一级（再 grep → 追依赖 → 读下一个最相关文件），复用已有发现，不推倒重来
+- 措辞听起来局部但探测命中多处时，主动降置信、按高一级处理
+- 规模驱动开销：L1/L2 不开 plan mode、不派子代理、低 reasoning effort；L3 才值得 plan mode / Explore 子代理 / 高 effort
+- E3 **不豁免**硬规则：runbook §0.1 的必读路由、proto 前读设计文档属于最小路径的一部分；也**不要**反向加码写「先通读代码库 / be thorough」——实测这类指令又慢又更容易失败
+
+出处（arXiv:2607.13034）、路由表与护栏 hook 的验证方法见 [context/harness-framework/e3-execution.md](context/harness-framework/e3-execution.md)。
+
 ## 命令与验收锚点（可执行）
 
 > **[context/team/runbook.md](context/team/runbook.md)** 是可执行入口:§0.1 是**按改动类型的
