@@ -1,8 +1,10 @@
 # OKTETO.md — 内环开发（在集群身份下改代码）
 
-> **这份文档回答**：什么时候该用它、怎么用、以及不先做哪一步会出事。
+> **这份文档回答**：在**本仓**什么时候该用它、怎么用、以及不先做哪一步会出事。
 >
-> - 判定规则（AI/人都要遵守）→ [`context/team/okteto-inner-loop.md`](../context/team/okteto-inner-loop.md)
+> - 不熟悉 Okteto 本身（概念、manifest 字段、与其它工具的取舍）→ 先读
+>   [`cloud-native-deploy/okteto/README.md`](https://github.com/lens077/cloud-native-deploy/blob/main/okteto/README.md)（通用指南，与项目无关）
+> - 判定规则 + 写 manifest 的七条检查清单（AI/人都要遵守）→ [`context/team/okteto-inner-loop.md`](../context/team/okteto-inner-loop.md)
 > - 测试策略（**不要**用它做测试环境）→ [`docs/TESTING.md`](TESTING.md) §8.1
 > - 技术栈与分层 → [`STACK.md`](../STACK.md)
 
