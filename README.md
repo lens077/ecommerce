@@ -62,7 +62,7 @@ RBAC 三角色（消费者 / 商家 / 管理员），全链路云原生部署与
 | [`TODO.md`](TODO.md) | 实现进度真相源（当前实况以它为准） |
 | [`docs/PROGRESS.md`](docs/PROGRESS.md) | 进度百分比与更新日志（与 TODO 的分工见 `context/harness-framework/progress-and-todo.md`） |
 | [`docs/DEVOPS.md`](docs/DEVOPS.md) / [`observability/OBSERVABILITY.md`](observability/OBSERVABILITY.md) | DevOps 与可观测性的**目标态**设计 |
-| [`docs/design/merchant/store-settings.md`](docs/design/merchant/store-settings.md) | 商家端产品需求草稿 |
+| [`docs/design/merchant/store-settings.md`](docs/design/merchant/store-settings.md) | Shopline 商店设置竞品调研；取舍与商家 MVP 路线见同目录 [`roadmap.md`](docs/design/merchant/roadmap.md) |
 | [`docs/design/config-center/design.md`](docs/design/config-center/design.md) | 配置中心设计存档（代码已迁出） |
 | [`docs/SCAFFOLD.md`](docs/SCAFFOLD.md) | 换领域复用本仓工程体系的新项目生成规范 |
 | [`context/harness-framework/graph-engineering.md`](context/harness-framework/graph-engineering.md) | 多闭环 AI 工作流方法论（冻结节点 + 锚点命令） |
