@@ -1,11 +1,24 @@
-.git/
-.idea/
-.vscode/
-vendor/
-bin/
-pkg/
-*.log
+// Okteto 文件同步(syncthing)的排除规则。语法不是 gitignore ——
+// 注释用 //,规则是 syntax-specific 的 glob。
+//
+// 目的:同步的是整个 backend/(单 go.mod 决定的),要把不需要进 Pod 的东西挡掉,
+// 否则首次同步慢、且 Mac 上的构建产物会污染容器里的编译。
 
+.git
+.DS_Store
 
-# dlv binary
-__debug_bin
+// 构建与测试产物:两侧架构不同(Mac arm64 / Pod amd64),同步过去只会互相污染
+bin
+coverage.out
+coverage-integration.out
+*.test
+*.out
+
+// 门禁与基线的本地状态,容器里用不到
+.freeze
+.lint-baseline
+
+// 编辑器
+.idea
+.vscode
+*.swp
