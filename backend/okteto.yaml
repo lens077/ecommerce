@@ -1,33 +1,73 @@
+# Okteto 内环开发（Development Container）。完整工作流见 ../docs/OKTETO.md
+#
+# 用法：
+#   scripts/argocd-devwindow.sh off        # ← 必须先做:否则 ArgoCD selfHeal 会杀掉开发容器
+#   cd backend && okteto up cart -n ecommerce
+#   cart:/workspace$ cd services/cart && go run cmd/server/main.go
+#   okteto down cart -n ecommerce
+#   scripts/argocd-devwindow.sh on
+#
+# 机制:把集群里 `cart` Deployment 的容器镜像换成下面的 dev 镜像、command 换成 sleep,
+# 并建立 Mac ↔ Pod 双向文件同步。Pod 的**其余部分原封不动** ——
+# env(DEPLOYMENT_MODE=pre / CONFIG_SOURCE_FILE)、Secret 只读挂载、db-ca-cert、
+# securityContext(runAsUser 1000 / runAsNonRoot)、Pod IP 与集群 DNS 全部继承。
+# 这正是它的价值:在**集群身份**下跑你正在改的代码。
+#
+# 目前只声明 cart 一个目标。铺开前先在它身上跑通,别一次写 10 份。
 dev:
-  connect-example-go:
-    metadata:
-      annotations:
-        fluxcd.io/ignore: "true"
-      labels:
-        custom.label/dev: "true"
-#    image: okteto/golang:1
-    image: ccr.ccs.tencentyun.com/sumery/golang:1.25.8
+  # ⚠️ key 必须与集群里的 Deployment 名逐字一致(ns=ecommerce 下就叫 cart)。
+  # 历史教训:此前 11 份 okteto.yaml 的 key 全是 `connect-example-go`(旧项目身份),
+  # 集群里根本没有这个 Deployment,okteto up 只会报找不到。
+  cart:
+    # 官方镜像即可,不必自建:
+    #   - golang 官方镜像把 GOPATH(/go) 设成 1777,uid 1000 能写 —— 满足 Pod 的 runAsUser 1000;
+    #   - 用 Debian 变体而非 -alpine,因为下面 command 是 bash(alpine 只有 ash)。
+    # 版本必须与 backend/go.mod 的 go 指令一致,否则 Go 会试图自动下载 toolchain。
+    image: golang:1.26.5
     command: bash
-    workdir: /build
-    forward:
-      - 4000:4001
+    workdir: /workspace
+
+    # 单一 go.mod:编译 cart 需要 api/ pkg/ constants/ 全在,
+    # 所以同步的是整个 backend/(约 26M),不是 services/cart/。
+    # 排除规则在 .stignore。
     sync:
-      - .:/build
-#    volumes:
-#      - /go
-    timeout: 40s
+      - .:/workspace
+
+    environment:
+      # HOME 默认是 /root,uid 1000 写不进去 → GOCACHE 落到 /root/.cache 会 permission denied。
+      # 指到 GOPATH 下(1777)即可,不需要改 securityContext 去当 root ——
+      # 保留 uid 1000 正是为了让「Secret 0400 读不到」这类问题当场暴露。
+      - HOME=/go
+      - GOCACHE=/go/.cache/go-build
+      - GOPROXY=https://goproxy.cn,direct
+      # 原 Deployment 把 db-ca-cert 挂到 /etc/ssl/certs，**整个目录被替换**,
+      # 里面只剩 pg_ca.crt —— 系统 CA 包被遮蔽,`go mod download` 会报
+      #   tls: failed to verify certificate: x509: certificate signed by unknown authority
+      # Debian 镜像的原始证书还在 /usr/share/ca-certificates/mozilla(150 份),指过去即可。
+      # ⚠️ 这条同时揭示一个生产侧风险:任何服务从容器里发起公网 HTTPS 调用
+      #    (payment→支付宝、user→Casdoor)都会因同样原因验不过证书。见 docs/OKTETO.md §七。
+      - SSL_CERT_DIR=/usr/share/ca-certificates/mozilla
+
+    # 持久化 /go(含 pkg/mod 与 build cache)。不开的话每次 okteto up 都要重新拉全部依赖。
+    persistentVolume:
+      enabled: true
+      size: 10Gi
+
+    forward:
+      - 30006:30006 # cart 的 http 端口,本机可直连绕过网关
+      - 40000:40000 # dlv 远程调试
+
     securityContext:
+      # 保住关键性质:**你的代码仍以 uid 1000 跑**,Secret 0400 读不到会当场暴露。
+      runAsUser: 1000
+      runAsGroup: 1000
+      fsGroup: 1000
+      # 但 okteto 自己的两个 init 容器(okteto-bin / okteto-init-volume)硬编码 runAsUser=0
+      # ——它们要 root 才能拷贝二进制、chown 持久卷。原 Deployment 继承下来的
+      # runAsNonRoot: true 会让 kubelet 直接拒绝:
+      #   Error: container's runAsUser breaks non-root policy (container: okteto-bin)
+      # 所以这里必须放行。折中点落在 okteto 的插件层,不在你的业务容器上。
+      runAsNonRoot: false
       capabilities:
         add:
-          - SYS_PTRACE
-
-#build:
-#  connect-example-go:
-#    context: .
-#
-#deploy:
-#  - name: Helm Install
-#    command: |
-#      helm upgrade --install connect-example ./helm \
-#      --set go.image.repository=${OKTETO_BUILD_CONNECT_EXAMPLE_GO_REGISTRY} \
-#      --set go.image.tag=test1
+          - SYS_PTRACE # dlv 附加进程需要
