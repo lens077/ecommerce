@@ -35,9 +35,19 @@ sqlc 项目里 SQL 是生成物的输入而非手写逻辑，**风险在后者**
 4. **测试基建只放 `backend/pkg/testutil`**，不进任何服务的 `internal/`
    （见 [`STACK.md`](../../STACK.md) 第十节"配置逻辑 10 份复制"的教训）；
 5. **mock 生成物入库**（`internal/biz/mocks/`），CI 不装 mockery；
-6. **PG 镜像 tag 必须与生产一致**，改这个常量前先核对真实版本，别抄默认值；
+6. **PG 镜像 tag 必须与生产一致**——生产是 **18.4.0**，测试用 `postgres:18-alpine`；生产升级时同步改；
 7. **两个方向都要验收**：不带 `-short` 全绿 **且** 带 `-short` 全 skip。
    只验一边等于不知道开关有没有真的生效（参见 [[silent-hook-failure]] 同类教训）。
+
+## 二之二、已否决的方案（别重新提）
+
+| 方案 | 否决理由（详见 [`docs/TESTING.md`](../../docs/TESTING.md) §8.1） |
+|---|---|
+| 用内网 k8s 现有基础设施当测试环境 | CI 是 GitHub Actions **云 runner**，够不到 192.168.3.x；共享库无隔离 |
+| Okteto（`okteto test`） | 同上第一条决定性；且它解决的是内环开发，数据隔离仍要自己做；自托管还要 license |
+
+**保留的口子**：`TEST_DB_URI` 环境变量——设了就直连内网真库、不起容器，
+用于验容器复现不了的东西（真实 TLS `verify-ca`、生产扩展、locale）。**默认路径永远是容器。**
 
 ## 三、写测试时的判断题
 

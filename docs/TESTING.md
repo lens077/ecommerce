@@ -74,15 +74,19 @@ brew install mockery      # 只在本机生成 mock 代码；生成物入库，C
 - **Docker 必须可用**（testcontainers 要起容器）。GitHub Actions 的 ubuntu runner 自带，无需额外配置；
 - macOS 上 Docker Desktop / OrbStack / Colima 任一即可，`docker info` 能通就行。
 
-### 2.4 版本对齐（必须核对，别抄默认值）
+### 2.4 版本对齐
 
 PG 镜像 tag **必须与生产一致**，否则测试通过不代表线上通过（`gen_random_uuid()`、
-`ON CONFLICT` 行为、enum 处理在大版本间有差异）。当前仓库没有把版本写进任何配置
-（外部依赖是 `pg-dev.app.com`，见 [`.service-matrix.yaml`](../.service-matrix.yaml) 的 `externals` 段），
-落地时先确认真实版本再填进 `testutil` 的常量：
+`ON CONFLICT` 行为、enum 处理在大版本间有差异）。
+
+**当前生产版本：PostgreSQL 18.4.0**（`pg-dev.app.com` / 192.168.3.109，在集群外，
+见 [`.service-matrix.yaml`](../.service-matrix.yaml) 的 `externals` 段）
+→ 测试镜像用 **`postgres:18-alpine`**。
+
+升级生产版本时，改 `testutil.PostgresImage` 是同一次变更的一部分。核对命令：
 
 ```bash
-psql "$DB_URI" -tAc 'show server_version'   # 或问 DBA / 看 local-env.md
+psql "$DB_URI" -tAc 'show server_version'
 ```
 
 ---
@@ -102,8 +106,11 @@ psql "$DB_URI" -tAc 'show server_version'   # 或问 DBA / 看 local-env.md
 package testutil
 
 const (
-    // PostgresImage 必须与生产版本一致。改这里之前先跑 `show server_version` 核对。
-    PostgresImage = "postgres:16-alpine"   // TODO: 落地时替换为核实后的版本
+    // PostgresImage 必须与生产版本一致(当前生产 18.4.0,见 §2.4)。
+    PostgresImage = "postgres:18-alpine"
+
+    // TestDBURIEnv 逃生舱:设了就直连该 DSN,不起容器(见 §3.1.1)。
+    TestDBURIEnv = "TEST_DB_URI"
 )
 
 // StartPostgres 起一个 PG 容器,按 schemaGlob 顺序执行建表脚本,返回连上去的池。
@@ -111,6 +118,7 @@ const (
 //   pool := testutil.StartPostgres(t, "../data/schema/*.sql")
 //
 // 带 -short 时直接 t.Skip,所以调用方不需要自己判断。
+// 设了 TEST_DB_URI 时改走真实库(仍然受 -short 跳过约束)。
 func StartPostgres(t *testing.T, schemaGlob string) *pgxpool.Pool
 ```
 
@@ -129,6 +137,36 @@ func StartPostgres(t *testing.T, schemaGlob string) *pgxpool.Pool
 
 > ⚠️ testcontainers-go 的 API 在 v0.3x 有过更名（`RunContainer` → `Run`）。
 > 装完先 `go doc github.com/testcontainers/testcontainers-go/modules/postgres` 对一遍再写。
+
+#### 3.1.1 逃生舱：用内网真实 PG 代替容器
+
+内网已有 PostgreSQL 18.4.0（`pg-dev.app.com`）。`StartPostgres` 检测到 `TEST_DB_URI`
+时直连该库、不起容器：
+
+```bash
+TEST_DB_URI='postgres://user:pw@pg-dev.app.com:5432/cart_test?sslmode=verify-ca' \
+  go test ./services/cart/internal/data/ -v
+```
+
+**什么时候用**：容器复现不了的东西——真实的 TLS `verify-ca` 链路、生产装的扩展、
+locale/排序规则、以及"我就想确认这条 SQL 在真的 18.4.0 上跑得动"。
+
+**什么时候不用**：CI（GitHub Actions 云 runner 够不到 192.168.3.x 内网）、
+以及任何要并行跑的场景（共享库没有隔离）。**默认路径永远是容器。**
+
+实现要点（三条都要有，缺一条这个逃生舱就是事故源）：
+
+1. **库名安全闸**：解析 DSN，dbname 不以 `_test` 结尾直接 `t.Fatalf`。
+   集成测试会 TRUNCATE/DROP，指错库就是把开发数据清了——这道闸比任何注释都管用；
+2. **不跑 initScripts，改跑幂等建表**：真库里 schema 可能已存在。schema 文件本身用的是
+   `CREATE SCHEMA IF NOT EXISTS` / `CREATE TABLE IF NOT EXISTS`，但 `CREATE TYPE` 没有
+   `IF NOT EXISTS` —— 需要包一层 `DO $$ BEGIN ... EXCEPTION WHEN duplicate_object THEN NULL; END $$;`
+   或先查 `pg_type`；
+3. **每个用例自己清场**：真库没有 Snapshot/Restore，用例开头 `TRUNCATE cart.cart_item RESTART IDENTITY CASCADE`，
+   并且**只清本服务 schema 的表**。
+
+> 凭据不进仓库（[`AGENTS.md`](../AGENTS.md) 硬规则）。`TEST_DB_URI` 只在本机 shell 里给，
+> 别写进 Makefile、`.env` 或任何提交物。
 
 ### 3.2 `backend/pkg/testutil/redis.go`
 
@@ -369,3 +407,28 @@ test-integration:
 | 不测 ES / MinIO / Consul | 接受。这些是 search/cart 的边缘路径 | 对应服务的核心链路依赖它们时 |
 | 不做契约测试（前后端） | 接受。proto + buf breaking 已覆盖大部分 | `buf breaking` 进 CI 之后再评估 |
 | `service` 层测试 | 接受。错误码映射靠 review | biz 层铺完之后 |
+| **不用 Okteto 做测试环境** | 见下节，2026-08-11 评估后否决 | 改用集群内 self-hosted CI runner 时重新评估 |
+
+### 8.1 为什么不用 Okteto（评估记录，别重复讨论）
+
+Okteto 确实有 `okteto test`（Test Containers + Remote Execution，manifest 的 `test:` 段
+支持 commands/context/depends_on/hosts/image），内网 k8s 也确实已有全套基础设施。
+仍然否决，三条理由按权重排：
+
+1. **CI 够不到内网（决定性）**：CI 是 GitHub Actions **云 runner**，到不了 192.168.3.x；
+   PG 还在集群外（192.168.3.109）。测试要当门禁就必须自包含。
+2. **共享库没有隔离**：集成测试要能随便 DROP/TRUNCATE/重置。打共享 pg-dev 要么弄脏开发数据，
+   要么被迫写依赖清理顺序的测试——那正是 flaky 的头号来源。容器的 Snapshot/Restore 白送干净状态。
+3. **它解决的是另一个问题**：Okteto 的价值在**内环开发**（代码同步进集群、对着真依赖跑服务）。
+   即便用 `okteto test`，**数据隔离仍然要自己解决**，等于绕一圈回到原点。
+
+附带成本：自托管要 license（开源的只是瘦客户端，装进集群的那部分是商业版；免费档 5 seats，
+self-hosted 文档写 1 年期而 pricing 页写"3 人以下免费"，口径不一致），还要配域名、认证、块存储。
+而且仓库里那 11 份 `okteto.yaml` 是**过期残留**（dev 目标名还是 `connect-example-go`，
+build/deploy 段全注释），真要启用得先修它们。
+
+**保留的部分**：内网 PG 的价值通过 §3.1.1 的 `TEST_DB_URI` 逃生舱拿到了——
+一个环境变量就能打真库，不需要装任何平台。
+
+**什么时候重新评估**：如果将来在集群里跑 self-hosted GitHub Actions runner
+（那条路本身就解决了理由 1，且不需要 Okteto），或者内环开发的痛点大到值得单独立项。
