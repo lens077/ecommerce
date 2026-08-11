@@ -47,6 +47,7 @@ description: 给所有 AI 编码工具(尤其 Codex)的可执行命令与验收�
 | Shell / Make recipe | [shell-scripting.md](shell-scripting.md) | macOS Bash 3.2 + `set -u` 下空数组展开直接退出 |
 | 本地起服务连不上基础设施 | [local-env.md](local-env.md) | 连 `consul.app.com` 超时;KV 缺子块导致功能被静默关掉 |
 | 对外公开服务 / 内网穿透 / `*.apikv.com` | [pangolin-tunnel.md](pangolin-tunnel.md) | k8s target 走 80 得 envoy 404;改完配置不等 Traefik 5s 轮询就当故障排查 |
+| 改 SSH 端口 / SSH 突然连不上 | [ssh-port-migration.md](ssh-port-migration.md) | Ubuntu 24.04 改 sshd_config 的 Port 无效;ListenStream 纯端口号 IPv4 全断把自己锁外面 |
 | 提交信息 / 分支 / 分组 | [git-commit.md](git-commit.md) + 本文 §7 | type 自造、`perf` 滥用、`git add -A` 混提 |
 | 踩到坑之后 | [`harness-framework/self-refinement.md`](../harness-framework/self-refinement.md) | 同一个坑下个会话再踩一次 |
 
