@@ -20,6 +20,7 @@ description: 公网暴露基础设施(Pangolin)的拓扑事实、面板 API 操�
         ~/apps/newt/         ns pangolin           站点资源 apikv.com/www → https://blog:443
 ```
 
+- 实例身份:腾讯云**轻量应用服务器 Lighthouse** `lhins-1of5dkfj`(ap-guangzhou-7),不是 CVM——防火墙是 Lighthouse 实例防火墙(`tccli lighthouse DescribeFirewallRules/DeleteFirewallRules --InstanceId`),没有安全组;TAT 助手在线,`tccli tat RunCommand` 可免 SSH 执行命令(带外救援通道,2026-08-11 实测可用);SSH 端口 34123(22/3389 已从防火墙移除)
 - 域名 `apikv.com`,**DNS 在 DNSPod(不是 Cloudflare)**,已有 `*` 泛解析 → 114.132.233.129;新子域**零 DNS 操作**
 - 泛域名证书 ZeroSSL `*.apikv.com`(acme.sh dns_dp 签),**2026-10-27 到期**;部署在两处:`/home/docker/blog/ssl/`(原件)与 node3 `/home/docker/pangolin/config/traefik/certs/apikv.com.{crt,key}`,**续期要同步两处**
 - k8s:node1-3 = 192.168.3.105-107(与办公内网同段),Cilium Gateway API,`cilium-gateway`(ns default,LB 192.168.3.110,ClusterIP **10.97.94.118**)

@@ -86,7 +86,7 @@ ss -tln | grep -E ":${NEW_PORT} "
 |---|---|
 | 腾讯云网页 VNC(OrcaTerm) | ✅ 最终走的路,不依赖 sshd |
 | Pangolin 预留 raw TCP 30001 → 面板建资源指 `127.0.0.1:22` | ✅ 30001 在 Traefik 上活着,备选(用完必须删资源) |
-| 腾讯云 TAT 自动化助手(tccli 免 SSH 下发命令) | ❌ 本机无 tccli 凭据 |
+| 腾讯云 TAT 自动化助手(tccli 免 SSH 下发命令) | ❌ 当时本机无 tccli 凭据;**事后已配好并实测,现为首选带外通道**(实例信息见 [pangolin-tunnel.md](pangolin-tunnel.md)) |
 | IPv6 直连 | ❌ 无 AAAA/公网 v6 |
 | 已建立的 SSH 会话 | ❌ 已断,没留 screen/tmux 长会话 |
 
