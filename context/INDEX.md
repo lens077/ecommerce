@@ -22,6 +22,7 @@ context/
 | [cron-jobs.md](team/cron-jobs.md) | 定时任务的执行边界：进程内调度器扩副本即重复执行、Ticker 首次触发盲窗、重叠/panic/超时/时区/优雅停止、重要任务不能只靠一次回调 |
 | [pangolin-tunnel.md](team/pangolin-tunnel.md) | 对外公开内网服务走 Pangolin(node3)：拓扑与凭据位置、面板 API、k8s HTTPRoute 必须走 Gateway 443（80 无路由） |
 | [ssh-port-migration.md](team/ssh-port-migration.md) | Ubuntu 24.04 改 SSH 端口：sshd_config 的 Port 被 ssh.socket 忽略、ListenStream 必须显式写 v4+v6、生效值只信 `sshd -T` |
+| [go-testing.md](team/go-testing.md) | 测试分层判定：biz 层 mock、data 层真库（testcontainers）、Redis 用 miniredis；`-short` 是唯一开关；禁用 go-sqlmock/pgxmock |
 
 ## 框架工程级 · [context/harness-framework/](harness-framework/INDEX.md)
 
@@ -62,6 +63,7 @@ matrix 与 `backend/services/`、网关实际接线的一致性,以及各服务 
 |---|---|---|
 | [`docs/DEVOPS.md`](../docs/DEVOPS.md) | DevOps 体系设计：Three Ways/CALMS/DORA 骨架，DevOps 边界对齐 DDD 限界上下文，四阶段落地路线与行为验收标准 | 动 CI/CD、GitOps、部署策略、镜像与 migration 流程前 |
 | [`observability/OBSERVABILITY.md`](../observability/OBSERVABILITY.md) | 可观测性方法论与指标基线：三支柱分工、RED/USE、逐服务最低指标、告警清单、6 条硬规则 | 加指标/看板/告警，或排障动线走不通时 |
+| [`docs/TESTING.md`](../docs/TESTING.md) | 测试操作手册：装什么库、`pkg/testutil` 怎么写、cart 六条必测清单、六步落地计划、Makefile/CI 接线 | 写测试时（判定规则先看 [go-testing.md](team/go-testing.md)） |
 | [`gateway/docs/ARCHITECTURE_EVOLUTION.md`](../gateway/docs/ARCHITECTURE_EVOLUTION.md) | 网关演进规划：Cilium 做边缘网关、自建网关转 BFF | 动网关架构方向前（**纯规划未落地**） |
 
 ⚠️ 以上都是**目标态**，状态是「等待实现」。当前实况以 `TODO.md` 为准，
