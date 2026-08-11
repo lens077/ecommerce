@@ -218,7 +218,7 @@
 
 ### 其余近期待办
 
-- [ ] **文档整理遗留（2026-08-07 盘点发现，本轮未动）**：①`docs/SCAFFOLD.md` §四内嵌的 AGENTS.md 模板还是旧版「项目速览」结构，与真身已分叉，需同步 ②~~`.github/workflows/backend.yml` 过时~~（2026-08-07 已重写为模板+矩阵，见上「CI/CD」行）；`frontend.yml`（2025-11）仍是 `connect-example-*` 旧身份待重写③`.trae/skills/前端规则/SKILL.md` 写「Vite 最新版脚手架」与 vite-plus 现状冲突，要么更新要么删 ④`gateway/README.md` 的 CI badge 与 `go.mod` module 名仍是上游 `go-kratos/gateway` 身份 ⑤`frontend/apps/{admin,merchant}` 缺 README（与 consumer/desktop 不对称）⑥`gateway/.github/workflows/gitee-sync.yaml` 上游残留可删 ⑦`.scratch/architecture-hardening/` 只有 spec.md 没按 `docs/agents/issue-tracker.md` 拆 issues/
+- [ ] **文档整理遗留（2026-08-07 盘点发现，本轮未动）**：①`docs/SCAFFOLD.md` §四内嵌的 AGENTS.md 模板还是旧版「项目速览」结构，与真身已分叉，需同步 ②~~`.github/workflows/backend.yml` 过时~~（2026-08-07 已重写为模板+矩阵，见上「CI/CD」行）；`frontend.yml`（2025-11）仍是 `connect-example-*` 旧身份待重写 ④`gateway/README.md` 的 CI badge 与 `go.mod` module 名仍是上游 `go-kratos/gateway` 身份 ⑤`frontend/apps/{admin,merchant}` 缺 README（与 consumer/desktop 不对称）⑥`gateway/.github/workflows/gitee-sync.yaml` 上游残留可删 ⑦`.scratch/architecture-hardening/` 只有 spec.md 没按 `docs/agents/issue-tracker.md` 拆 issues/
 - [x] **`service_name` 撞名**：已退役 `backend/services/config`；独立 config-center 用 `service.namespace=config-center` 区分遥测，系统查询精确筛选，电商 Grafana 看板排除其基础设施指标
 - [ ] **订单服务**：补 `GetOrder` / `ListOrders` / `CancelOrder` RPC 与订单状态机（带守卫的状态迁移 + `order_log`）
 - [ ] **一致性底座**：落 Outbox 表 + Kafka relay，替换现有进程内 `GoEventBus`（跨服务事件当前到不了其他服务）
