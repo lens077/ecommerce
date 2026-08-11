@@ -224,6 +224,23 @@ echo "feat(address): :sparkles: 行政区划落库" | pnpm exec commitlint
 pnpm exec commitlint --from HEAD~7 --to HEAD   # 回放校验既有提交
 ```
 
+### pnpm 从哪来：corepack shim（非交互 shell 也要找得到）
+
+钩子第 17 行的裸 `pnpm` 依赖**调用方进程的 PATH**——git 钩子不 source 任何 shell
+配置，`.zshrc` 里写什么都救不了它。本机 pnpm 没有独立安装，只由 corepack 按
+`package.json` 的 `packageManager: pnpm@11.6.0` 提供；`~/.zshrc` 里的
+`PNPM_HOME=~/Library/pnpm` 段是残留（那个目录只有 store，没有可执行文件）。
+
+2026-08-12 已跑 `corepack enable pnpm`：shim 写进 vite-plus node 运行时的 `bin/`，
+该目录钩子包装器（`_/h`）与非交互 shell 的 PATH 都带，所以 agent 会话、GUI 工具
+里的提交都能过钩子。
+
+⚠️ **再发条件**：vite-plus 升级 node 运行时后，shim 随旧版本目录一起消失。症状是
+提交时 `pnpm: command not found`（exit 127）——**这是环境断了，不是消息写错了**，
+重跑一次 `corepack enable pnpm` 即可。应急绕法（corepack 也不可用时）：
+`corepack pnpm exec commitlint --edit <消息文件>` 手动校验绿后再
+`git commit --no-verify`——校验没有被跳过，只是手动执行。
+
 ### ⚠️ 这套东西曾经九个月一次都没生效
 
 从 2025-11-04 搭起到 2026-08-02 修好，**中间的全部提交都没被校验过**，前端后端都是。层层叠叠断了五处，任何一处单独存在都足以让它失效：
