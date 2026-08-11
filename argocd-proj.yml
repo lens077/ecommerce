@@ -64,7 +64,22 @@ spec:
   #   groups:
   #   - my-admin-group
 
-  # 6. 可选：同步窗口（限制自动同步的时间段，如维护窗口）
+  # 6. 同步窗口（限制自动同步的时间段）
+  #
+  # ⚠️ 这里【刻意不写死】开发窗口。内环开发（okteto up 会直接改集群里的 Deployment，
+  #    与 selfHeal 冲突）用脚本按需开关，不进 Git：
+  #
+  #      scripts/argocd-devwindow.sh off      # 开发前：暂停自动同步
+  #      scripts/argocd-devwindow.sh on       # 开发后：恢复
+  #      scripts/argocd-devwindow.sh status   # 查当前状态
+  #
+  #    脚本往本字段追加一条「永远激活」的 deny 窗口
+  #    （kind=deny / schedule='* * * * *' / duration=24h / applications=['*'] / manualSync=true），
+  #    结束时只移除自己那条，不会动下面这类你手写的窗口。
+  #    写进 Git 会让「临时暂停」变成永久状态——GitOps 静默失效是最难排查的一类故障。
+  #    背景与完整工作流见 docs/OKTETO.md。
+  #
+  # 真正的长期窗口（如生产维护时段）才写在这里：
   # syncWindows:
   # - kind: allow
   #   schedule: '10 4 * * *'
