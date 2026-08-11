@@ -1,0 +1,209 @@
+{
+  "schemaVersion": 2,
+  "generatedAt": "2026-08-11T00:00:00+08:00",
+  "title": "Design System: 灯市(纸灯工坊)",
+  "extensions": {
+    "colorMeta": {
+      "vermilion": {
+        "role": "primary",
+        "displayName": "朱砂(印章红)",
+        "canonical": "#C2372B",
+        "tonalRamp": ["oklch(20% 0.10 29)", "oklch(30% 0.13 29)", "oklch(40% 0.15 29)", "oklch(52% 0.16 29)", "oklch(63% 0.14 29)", "oklch(74% 0.10 29)", "oklch(85% 0.06 29)", "oklch(94% 0.02 29)"]
+      },
+      "vermilion-deep": {
+        "role": "primary",
+        "displayName": "深朱砂(按下态)",
+        "canonical": "#A82D22",
+        "tonalRamp": ["oklch(18% 0.10 29)", "oklch(28% 0.13 29)", "oklch(38% 0.15 29)", "oklch(47% 0.15 29)", "oklch(58% 0.13 29)", "oklch(70% 0.09 29)", "oklch(82% 0.05 29)", "oklch(93% 0.02 29)"]
+      },
+      "ink": {
+        "role": "neutral",
+        "displayName": "炭墨(主文本)",
+        "canonical": "#2A2A28",
+        "tonalRamp": ["oklch(15% 0.005 110)", "oklch(25% 0.005 110)", "oklch(30% 0.005 110)", "oklch(42% 0.005 110)", "oklch(55% 0.005 110)", "oklch(70% 0.005 110)", "oklch(84% 0.005 110)", "oklch(95% 0.005 110)"]
+      },
+      "ink-soft": {
+        "role": "neutral",
+        "displayName": "暖墨(次要文本,纸面上 ≥4.5:1)",
+        "canonical": "#6B6357",
+        "tonalRamp": ["oklch(18% 0.02 80)", "oklch(28% 0.02 80)", "oklch(38% 0.02 80)", "oklch(50% 0.02 80)", "oklch(62% 0.02 80)", "oklch(74% 0.02 80)", "oklch(85% 0.02 80)", "oklch(95% 0.01 80)"]
+      },
+      "paper": {
+        "role": "neutral",
+        "displayName": "和纸象牙(页面场)",
+        "canonical": "#F6EFE1",
+        "tonalRamp": ["oklch(25% 0.02 90)", "oklch(40% 0.02 90)", "oklch(55% 0.02 90)", "oklch(68% 0.02 90)", "oklch(80% 0.02 90)", "oklch(88% 0.02 90)", "oklch(95% 0.02 90)", "oklch(98% 0.01 90)"]
+      },
+      "paper-ash": {
+        "role": "neutral",
+        "displayName": "纸灰(退后一级的纸面)",
+        "canonical": "#EDE5D4",
+        "tonalRamp": ["oklch(24% 0.02 90)", "oklch(38% 0.02 90)", "oklch(52% 0.02 90)", "oklch(65% 0.02 90)", "oklch(77% 0.02 90)", "oklch(86% 0.02 90)", "oklch(92% 0.02 90)", "oklch(97% 0.01 90)"]
+      },
+      "paper-dim": {
+        "role": "neutral",
+        "displayName": "暗纸(熄灯态灯卡)",
+        "canonical": "#EFE6D2",
+        "tonalRamp": ["oklch(24% 0.03 90)", "oklch(38% 0.03 90)", "oklch(52% 0.03 90)", "oklch(65% 0.03 90)", "oklch(78% 0.03 90)", "oklch(87% 0.03 90)", "oklch(93% 0.03 90)", "oklch(97% 0.02 90)"]
+      },
+      "paper-lit-rest": {
+        "role": "neutral",
+        "displayName": "常亮纸(点灯落定态)",
+        "canonical": "#FBF3DF",
+        "tonalRamp": ["oklch(26% 0.03 92)", "oklch(40% 0.03 92)", "oklch(55% 0.03 92)", "oklch(68% 0.03 92)", "oklch(80% 0.03 92)", "oklch(89% 0.03 92)", "oklch(96% 0.03 92)", "oklch(98% 0.02 92)"]
+      },
+      "paper-lit": {
+        "role": "neutral",
+        "displayName": "透光纸(hover/主灯/焦点)",
+        "canonical": "#FFF7E0",
+        "tonalRamp": ["oklch(27% 0.04 93)", "oklch(41% 0.04 93)", "oklch(56% 0.04 93)", "oklch(69% 0.04 93)", "oklch(81% 0.04 93)", "oklch(90% 0.04 93)", "oklch(97% 0.03 93)", "oklch(99% 0.02 93)"]
+      },
+      "glow": {
+        "role": "tertiary",
+        "displayName": "灯心光(仅限 inset 发光)",
+        "canonical": "#FFE9B8",
+        "tonalRamp": ["oklch(28% 0.06 85)", "oklch(42% 0.07 85)", "oklch(56% 0.08 85)", "oklch(70% 0.08 85)", "oklch(82% 0.08 85)", "oklch(93% 0.07 85)", "oklch(96% 0.05 85)", "oklch(98% 0.03 85)"]
+      },
+      "bamboo": {
+        "role": "secondary",
+        "displayName": "竹金(结构线,不承字)",
+        "canonical": "#D8B48A",
+        "tonalRamp": ["oklch(24% 0.05 75)", "oklch(36% 0.06 75)", "oklch(47% 0.07 75)", "oklch(58% 0.07 75)", "oklch(68% 0.07 75)", "oklch(79% 0.07 75)", "oklch(88% 0.05 75)", "oklch(96% 0.02 75)"]
+      },
+      "bamboo-deep": {
+        "role": "secondary",
+        "displayName": "深竹(文字安全竹色,#F6EFE1 上实测 ≥4.5:1)",
+        "canonical": "#77592F",
+        "tonalRamp": ["oklch(18% 0.05 70)", "oklch(28% 0.06 70)", "oklch(38% 0.07 70)", "oklch(47% 0.07 70)", "oklch(58% 0.07 70)", "oklch(70% 0.06 70)", "oklch(83% 0.05 70)", "oklch(94% 0.02 70)"]
+      },
+      "seal-text": {
+        "role": "neutral",
+        "displayName": "印面白(朱砂底上的字与线)",
+        "canonical": "#FDF8EC",
+        "tonalRamp": ["oklch(26% 0.01 90)", "oklch(40% 0.01 90)", "oklch(55% 0.01 90)", "oklch(68% 0.01 90)", "oklch(80% 0.01 90)", "oklch(89% 0.01 90)", "oklch(97% 0.01 90)", "oklch(99% 0.005 90)"]
+      }
+    },
+    "typographyMeta": {
+      "display": { "displayName": "Display(墨字大标)", "purpose": "首屏大标「灯市开了。」专用,一页一次;Noto Serif SC 900,自托管 unicode-range 切片。" },
+      "headline": { "displayName": "Headline(节题/品牌名)", "purpose": "「今日亮灯」等节题与 AppBar/Footer 品牌名(品牌名 letter-spacing 0.06em)。" },
+      "title": { "displayName": "Title(商品名)", "purpose": "主灯位商品名 700;灯卡内降为 600/0.95rem 两行截断。" },
+      "body": { "displayName": "Body(正文)", "purpose": "副句与说明,MUI 系统栈;副句 line-height 1.9、max-width 34em。" },
+      "label": { "displayName": "Label(印面文字)", "purpose": "按钮与印章:宋体 700 + 0.12–0.18em 字距;徽记竖排 vertical-rl。" }
+    },
+    "shadows": [
+      { "name": "card-lit", "value": "inset 0 0 46px rgba(255, 227, 160, 0.9), 0 12px 30px -18px rgba(138, 106, 66, 0.5)", "purpose": "灯卡常亮态:inset 暖光 + 暖棕落影,点灯动画的终态。" },
+      { "name": "card-glow-hover", "value": "inset 0 0 56px rgba(255, 227, 160, 1), 0 14px 34px -16px rgba(138, 106, 66, 0.55)", "purpose": "灯卡 hover/focus-within 透光态。" },
+      { "name": "hero-breathe-range", "value": "inset 0 0 60px rgba(255, 233, 184, 0.85) → inset 0 0 88px rgba(255, 233, 184, 1)", "purpose": "主灯 5.5s 呼吸的两个端点;reduced-motion 时静止在 60px 端。" },
+      { "name": "seal-rim", "value": "inset 0 0 0 1px rgba(253, 248, 236, 0.4)", "purpose": "所有朱砂印(按钮/方印/徽记)的印面白内描边。" },
+      { "name": "overlay-ink", "value": "0 14px 40px -18px rgba(42, 42, 40, 0.35)", "purpose": "唯一的炭墨外阴影,仅用于脱离纸面的浮层(搜索结果)。" },
+      { "name": "search-focus-ring", "value": "0 0 0 3px rgba(194, 55, 43, 0.14)", "purpose": "搜索框 focus-within 的朱砂焦环。" }
+    ],
+    "motion": [
+      { "name": "lantern-light-up", "value": "700ms cubic-bezier(0.16, 1, 0.3, 1), stagger calc(var(--i) * 70ms)", "purpose": "点灯——唯一的 authored moment;IntersectionObserver 入视触发一次(rootMargin 底部 -12%),IO 不可用直接点亮,reduced-motion 直接给终态。" },
+      { "name": "lantern-breathe", "value": "5.5s ease-in-out infinite", "purpose": "主灯呼吸,唯一的常驻动画。" },
+      { "name": "micro", "value": "140ms–180ms ease-out", "purpose": "全部微交互:按钮 140ms、灯面/边框 180ms。" }
+    ],
+    "breakpoints": [
+      { "name": "sm", "value": "600px" },
+      { "name": "md", "value": "900px" },
+      { "name": "lg", "value": "1200px" }
+    ]
+  },
+  "components": [
+    {
+      "name": "朱砂印按钮",
+      "kind": "button",
+      "refersTo": "button-seal",
+      "description": "6px 方章:朱砂底 + 印面白字 + 1px 印面白内描边;hover 深朱砂,active 盖章缩放。",
+      "html": "<button class=\"ds-seal-btn\">进灯市</button>",
+      "css": ".ds-seal-btn { appearance: none; border: none; cursor: pointer; background-color: #C2372B; color: #FDF8EC; box-shadow: inset 0 0 0 1px rgba(253, 248, 236, 0.4); border-radius: 6px; font-family: 'Noto Serif SC', 'Songti SC', 'SimSun', serif; font-weight: 700; font-size: 1.05rem; letter-spacing: 0.12em; padding: 14px 30px; transition: background-color 140ms ease-out, transform 140ms ease-out; } .ds-seal-btn:hover { background-color: #A82D22; } .ds-seal-btn:active { transform: scale(0.97); } .ds-seal-btn:focus-visible { outline: 2px solid #2A2A28; outline-offset: 2px; }"
+    },
+    {
+      "name": "纸灯商品卡",
+      "kind": "card",
+      "refersTo": "card-lantern-lit",
+      "description": "一盏灯的解剖:径向暖光(光从商品后面发出)+ 拱顶 + 竹肋,常亮态,hover 透光。",
+      "html": "<a class=\"ds-lantern-card\" href=\"#\"><div class=\"ds-lantern-body\"><svg viewBox=\"0 0 96 96\" aria-hidden=\"true\"><g fill=\"none\" stroke=\"#2A2A28\" stroke-width=\"2\" stroke-linecap=\"round\" stroke-linejoin=\"round\"><rect x=\"36\" y=\"30\" width=\"24\" height=\"46\" rx=\"8\"/><path d=\"M36 44 L60 44\" stroke-width=\"1.6\" stroke=\"#D8B48A\"/><rect x=\"40\" y=\"20\" width=\"16\" height=\"10\" rx=\"3\" fill=\"#EDE5D4\"/><path d=\"M42 58 C44 54 52 54 54 58\" stroke-width=\"1.6\" stroke=\"#C2372B\"/></g></svg></div><div class=\"ds-lantern-meta\"><p class=\"ds-lantern-name\">暖泉 保温杯 500ml</p><p class=\"ds-lantern-merchant\">铁瓷生活</p><p class=\"ds-price-ink\"><span class=\"ds-price-yen\">¥</span><span class=\"ds-price-num\">89</span><span class=\"ds-price-from\">起</span></p></div></a>",
+      "css": ".ds-lantern-card { display: flex; flex-direction: column; width: 240px; text-decoration: none; color: #2A2A28; background-color: #FBF3DF; background-image: url(\"data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='180' height='180'%3E%3Cfilter id='q'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='2' seed='11'/%3E%3CfeColorMatrix values='0 0 0 0 0.35 0 0 0 0 0.3 0 0 0 0 0.2 0 0 0 0.045 0'/%3E%3C/filter%3E%3Crect width='180' height='180' filter='url(%23q)'/%3E%3C/svg%3E\"); border: 1px solid #D8B48A; border-radius: 10px; overflow: hidden; box-shadow: inset 0 0 46px rgba(255, 227, 160, 0.9), 0 12px 30px -18px rgba(138, 106, 66, 0.5); transition: background-color 180ms ease-out, box-shadow 180ms ease-out, border-color 180ms ease-out; } .ds-lantern-card:hover, .ds-lantern-card:focus-visible { background-color: #FFF7E0; box-shadow: inset 0 0 56px rgba(255, 227, 160, 1), 0 14px 34px -16px rgba(138, 106, 66, 0.55); border-color: #77592F; } .ds-lantern-body { margin: 12px 12px 0; aspect-ratio: 1 / 1; background: repeating-linear-gradient(180deg, transparent 0 34px, rgba(181, 138, 84, 0.16) 34px 35px), radial-gradient(ellipse 72% 60% at 50% 42%, #FFF6DC 0%, #F5EBD2 62%, #EDE3CA 100%); border-radius: 56px 56px 8px 8px; border: 1px solid rgba(216, 180, 138, 0.55); padding: 8px; } .ds-lantern-body svg { display: block; width: 100%; height: 100%; } .ds-lantern-meta { padding: 12px; display: flex; flex-direction: column; gap: 4px; } .ds-lantern-name { margin: 0; font-size: 0.95rem; font-weight: 600; line-height: 1.5; } .ds-lantern-merchant { margin: 0; color: #6B6357; font-size: 0.8rem; } .ds-price-ink { margin: 4px 0 0; line-height: 1; white-space: nowrap; } .ds-price-yen { color: #C2372B; font-size: 0.85em; margin-right: 2px; } .ds-price-num { font-family: 'Noto Serif SC', 'Songti SC', 'SimSun', serif; font-weight: 700; font-size: 1.3rem; color: #C2372B; font-variant-numeric: tabular-nums; } .ds-price-from { color: #6B6357; font-size: 0.82rem; margin-left: 4px; }"
+    },
+    {
+      "name": "主灯位",
+      "kind": "custom",
+      "refersTo": "card-lantern-hover",
+      "description": "首屏灯笼形大灯:大拱顶 + 弯曲 SVG 竹肋 + 5.5s 呼吸光 + 竖排朱砂徽记。",
+      "html": "<div class=\"ds-hero-lamp\"><svg class=\"ds-hero-ribs\" viewBox=\"0 0 400 520\" preserveAspectRatio=\"none\" aria-hidden=\"true\"><g fill=\"none\" stroke=\"#D8B48A\" stroke-width=\"1.4\"><path d=\"M26 96 Q200 64 374 96\"/><path d=\"M10 186 Q200 156 390 186\"/><path d=\"M2 282 Q200 256 398 282\"/><path d=\"M6 378 Q200 356 394 378\"/><path d=\"M14 466 Q200 450 386 466\"/></g></svg><span class=\"ds-hero-badge\">本日主灯</span><p class=\"ds-hero-name\">山雾 · 超声波加湿器</p><p class=\"ds-hero-merchant\">云雾电器</p><p class=\"ds-price-ink-lg\"><span class=\"ds-price-yen\">¥</span><span class=\"ds-price-num-lg\">199</span><span class=\"ds-price-from\">起</span></p><span class=\"ds-hero-cta\">看灯去</span></div>",
+      "css": ".ds-hero-lamp { position: relative; width: 300px; background-color: #FFF7E0; background-image: url(\"data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='180' height='180'%3E%3Cfilter id='q'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='2' seed='11'/%3E%3CfeColorMatrix values='0 0 0 0 0.35 0 0 0 0 0.3 0 0 0 0 0.2 0 0 0 0.045 0'/%3E%3C/filter%3E%3Crect width='180' height='180' filter='url(%23q)'/%3E%3C/svg%3E\"); border: 1px solid #D8B48A; border-radius: 120px 120px 16px 16px; padding: 72px 32px 32px; text-align: center; color: #2A2A28; animation: ds-breathe 5.5s ease-in-out infinite; transition: border-color 180ms ease-out; } .ds-hero-lamp:hover { border-color: #77592F; } @keyframes ds-breathe { 0%, 100% { box-shadow: inset 0 0 60px rgba(255, 233, 184, 0.85); } 50% { box-shadow: inset 0 0 88px rgba(255, 233, 184, 1); } } @media (prefers-reduced-motion: reduce) { .ds-hero-lamp { animation: none; box-shadow: inset 0 0 60px rgba(255, 233, 184, 0.85); } } .ds-hero-ribs { position: absolute; inset: 0; width: 100%; height: 100%; opacity: 0.55; pointer-events: none; border-radius: inherit; } .ds-hero-badge { position: absolute; top: 26px; right: 22px; background: #C2372B; color: #FDF8EC; font-family: 'Noto Serif SC', 'Songti SC', 'SimSun', serif; font-weight: 700; font-size: 0.78rem; letter-spacing: 0.18em; writing-mode: vertical-rl; padding: 10px 7px; border-radius: 4px; box-shadow: inset 0 0 0 1px rgba(253, 248, 236, 0.4); } .ds-hero-name { position: relative; margin: 0 0 4px; font-family: 'Noto Serif SC', 'Songti SC', 'SimSun', serif; font-weight: 700; font-size: 1.45rem; } .ds-hero-merchant { position: relative; margin: 0 0 12px; color: #6B6357; font-size: 0.9rem; } .ds-price-ink-lg { position: relative; margin: 0; line-height: 1; white-space: nowrap; } .ds-price-yen { color: #C2372B; font-size: 0.85em; margin-right: 2px; } .ds-price-num-lg { font-family: 'Noto Serif SC', 'Songti SC', 'SimSun', serif; font-weight: 700; font-size: 1.9rem; color: #C2372B; font-variant-numeric: tabular-nums; } .ds-price-from { color: #6B6357; font-size: 0.82rem; margin-left: 4px; } .ds-hero-cta { position: relative; display: inline-block; margin-top: 16px; background: #C2372B; color: #FDF8EC; box-shadow: inset 0 0 0 1px rgba(253, 248, 236, 0.4); border-radius: 6px; font-family: 'Noto Serif SC', 'Songti SC', 'SimSun', serif; font-weight: 700; font-size: 0.95rem; letter-spacing: 0.14em; padding: 10px 22px; }"
+    },
+    {
+      "name": "品牌方印 BrandMark",
+      "kind": "custom",
+      "refersTo": "brand-seal",
+      "description": "Authored 章面:朱砂方章内的白描纸灯(提梁 + 拱顶纸罩 + 竹肋 + 底座),旁跟宋体 900 品牌名。",
+      "html": "<div class=\"ds-brand\"><span class=\"ds-brand-seal\"><svg viewBox=\"0 0 24 24\" aria-hidden=\"true\"><g fill=\"none\" stroke=\"currentColor\" stroke-width=\"1.8\" stroke-linecap=\"round\" stroke-linejoin=\"round\"><path d=\"M9 4 C9 2.6 15 2.6 15 4\"/><path d=\"M6.5 12 C6.5 7.6 9 5.4 12 5.4 C15 5.4 17.5 7.6 17.5 12 C17.5 15.4 15.6 17.4 12 17.4 C8.4 17.4 6.5 15.4 6.5 12 Z\"/><path d=\"M6.9 9.6 C9.4 8.9 14.6 8.9 17.1 9.6 M6.7 13.4 C9.3 14.1 14.7 14.1 17.3 13.4\" stroke-width=\"1.2\"/><path d=\"M10 17.4 L10 19.2 M14 17.4 L14 19.2 M12 17.4 L12 20.6\" stroke-width=\"1.2\"/></g></svg></span><span class=\"ds-brand-name\">灯市</span></div>",
+      "css": ".ds-brand { display: flex; align-items: center; gap: 8px; } .ds-brand-seal { width: 36px; height: 36px; border-radius: 6px; background-color: #C2372B; color: #FDF8EC; display: flex; align-items: center; justify-content: center; box-shadow: inset 0 0 0 1px rgba(253, 248, 236, 0.4); } .ds-brand-seal svg { display: block; width: 22px; height: 22px; } .ds-brand-name { font-family: 'Noto Serif SC', 'Songti SC', 'SimSun', serif; font-weight: 900; font-size: 1.25rem; color: #2A2A28; letter-spacing: 0.06em; }"
+    },
+    {
+      "name": "类目竹架项",
+      "kind": "nav",
+      "refersTo": "card-lantern",
+      "description": "两条竹线夹住的类目条中的一项:currentColor 墨线图标 + 宋体类目名,hover 整项转朱砂。",
+      "html": "<nav class=\"ds-cat-rack\"><a class=\"ds-cat-item\" href=\"#\"><svg viewBox=\"0 0 24 24\" aria-hidden=\"true\"><g fill=\"none\" stroke=\"currentColor\" stroke-width=\"1.6\" stroke-linecap=\"round\" stroke-linejoin=\"round\"><path d=\"M6 15 C5 10 8 6 12 6 C16 6 19 10 18 15\"/><rect x=\"4\" y=\"13\" width=\"4\" height=\"6\" rx=\"2\"/><rect x=\"16\" y=\"13\" width=\"4\" height=\"6\" rx=\"2\"/></g></svg><span>数码</span></a><a class=\"ds-cat-item\" href=\"#\"><svg viewBox=\"0 0 24 24\" aria-hidden=\"true\"><g fill=\"none\" stroke=\"currentColor\" stroke-width=\"1.6\" stroke-linecap=\"round\" stroke-linejoin=\"round\"><path d=\"M9 4 C10 5 14 5 15 4 L20 8 L17 11 L17 20 L7 20 L7 11 L4 8 Z\"/></g></svg><span>服饰</span></a></nav>",
+      "css": ".ds-cat-rack { display: flex; gap: 32px; justify-content: center; border-top: 1px solid #D8B48A; border-bottom: 1px solid #D8B48A; padding: 16px 24px; background-color: #F6EFE1; } .ds-cat-item { display: flex; flex-direction: column; align-items: center; gap: 8px; min-width: 56px; color: #2A2A28; text-decoration: none; transition: color 140ms ease-out; } .ds-cat-item:hover, .ds-cat-item:focus-visible { color: #C2372B; } .ds-cat-item svg { display: block; width: 22px; height: 22px; } .ds-cat-item span { font-family: 'Noto Serif SC', 'Songti SC', 'SimSun', serif; font-size: 0.92rem; font-weight: 600; }"
+    },
+    {
+      "name": "搜索框",
+      "kind": "input",
+      "refersTo": "input-search",
+      "description": "AppBar 搜索:纸灰底 + 竹线,hover 转暗纸 + 深竹线,focus 转透光纸 + 朱砂边框 + 朱砂焦环。",
+      "html": "<div class=\"ds-search\"><svg viewBox=\"0 0 24 24\" aria-hidden=\"true\"><g fill=\"none\" stroke=\"currentColor\" stroke-width=\"2\" stroke-linecap=\"round\"><circle cx=\"11\" cy=\"11\" r=\"7\"/><path d=\"M20 20 L16 16\"/></g></svg><input class=\"ds-search-input\" type=\"text\" placeholder=\"搜索商品...\" aria-label=\"search\" /></div>",
+      "css": ".ds-search { display: flex; align-items: center; gap: 8px; width: 280px; background-color: #EDE5D4; border: 1px solid #D8B48A; border-radius: 8px; padding: 8px 12px; color: #2A2A28; transition: all 0.3s ease; } .ds-search:hover { background-color: #EFE6D2; border-color: #77592F; } .ds-search:focus-within { background-color: #FFF7E0; border-color: #C2372B; box-shadow: 0 0 0 3px rgba(194, 55, 43, 0.14); } .ds-search svg { width: 18px; height: 18px; flex: none; } .ds-search-input { flex: 1; border: none; outline: none; background: transparent; color: inherit; font-size: 0.95rem; } .ds-search-input::placeholder { color: #6B6357; opacity: 0.7; }"
+    },
+    {
+      "name": "价格排印 PriceInk",
+      "kind": "custom",
+      "refersTo": "button-seal",
+      "description": "价格是排印不是标签:小 ¥ + 宋体 700 tabular 朱砂数字 + 暖墨「起」,一行不折。",
+      "html": "<p class=\"ds-priceink\"><span class=\"ds-priceink-yen\">¥</span><span class=\"ds-priceink-num\">199</span><span class=\"ds-priceink-from\">起</span></p>",
+      "css": ".ds-priceink { margin: 0; line-height: 1; white-space: nowrap; } .ds-priceink-yen { color: #C2372B; font-size: 0.85em; margin-right: 2px; } .ds-priceink-num { font-family: 'Noto Serif SC', 'Songti SC', 'SimSun', serif; font-weight: 700; font-size: 1.9rem; color: #C2372B; font-variant-numeric: tabular-nums; } .ds-priceink-from { color: #6B6357; font-size: 0.82rem; margin-left: 4px; }"
+    }
+  ],
+  "narrative": {
+    "northStar": "夜里亮着的灯市长街",
+    "overview": "综合商城的首页是一条夜里点亮的灯市:每件商品是一盏纸灯,光从商品后面发出,把纸照成暖色。整个世界只有四种材料——纸为场、竹为架、墨为字、朱砂只给要紧的动作与价格。它拒绝品类默认的「轮播 banner + 金刚区 + 瀑布流角标」排布:没有轮播、没有角标、没有促销贴纸,吸引力全部来自\"灯被点亮\"这一件事。形式语法取自 Akari 纸灯雕塑(用户亲选 challenger,seed ee8c0618):拱顶纸罩、横向竹肋、透光的纸。验证方式是\"去字测试\":把所有文字拿掉,竹线横架、拱顶纸卡与一片从内透出的暖光,仍能认出这是灯市。",
+    "keyCharacteristics": [
+      "单一暖纸场(#F6EFE1)承载一切,无白色卡片、无冷灰",
+      "光是从商品背后发出的(径向暖光),不是打在商品上的",
+      "竹金 1px 细线做全部结构分隔,从不承载文字",
+      "朱砂稀缺:只落在动作、价格与品牌印上",
+      "宋体(Noto Serif SC)三字重做全部标题与印面文字",
+      "唯一的 authored moment:灯阵入视后次第点亮,只放一次"
+    ],
+    "rules": [
+      { "name": "朱砂惜墨规则", "body": "朱砂只给要紧的东西:动作(按钮、hover)、价格、品牌印,以及 authored 插画里的单点红。一屏之内朱砂面积越小,点下去越像盖章。不得用朱砂做装饰底、标签雨或正文强调。", "section": "colors" },
+      { "name": "竹不承字规则", "body": "竹金 #D8B48A 只画线、只描肋、只做边框,永不写字;需要\"竹色的字\"时一律用深竹 #77592F(对比度以 #F6EFE1 为底实测 ≥4.5:1)。", "section": "colors" },
+      { "name": "光只从 inset 来规则", "body": "灯心光 #FFE9B8 一族只能以 inset box-shadow 的形式存在——光在纸里面,不在纸外面。", "section": "colors" },
+      { "name": "价格墨字规则(PriceInk)", "body": "价格是排印,不是标签:¥ 符缩至 0.85em、朱砂色;数字宋体 700、朱砂、tabular-nums(md 1.3rem / lg 1.9rem);「起」后缀 0.82rem 暖墨。三段一行,white-space: nowrap。全站价格一律走此语法。", "section": "typography" },
+      { "name": "竖排只给印章规则", "body": "writing-mode: vertical-rl 仅用于朱砂印章徽记(「本日主灯」),不用于正文或导航。", "section": "typography" },
+      { "name": "光即层级规则", "body": "表面的重要性用\"亮到什么程度\"表达,不用\"浮到多高\"表达:熄灯纸 #EFE6D2 → 常亮 #FBF3DF → 透光 #FFF7E0,内光随之增强。禁止给纸面内元素加冷色 drop shadow。", "section": "elevation" },
+      { "name": "纹在灯上规则", "body": "噪声纹理是灯纸的材质而非页面的壁纸:任何\"灯\"性质的表面(灯卡、主灯)必须自带灯面噪声层。", "section": "elevation" }
+    ],
+    "dos": [
+      "Do 让每盏灯带齐构成三件套:径向暖光(光从商品后面发出)、拱顶、竹肋。少一件就不是灯,是卡片。",
+      "Do 把纸噪声落在灯体上(卡与主灯自带 180px 噪声层),页底噪声(240px)只是场。",
+      "Do 用入视触发点灯:动画只在灯阵进入视口后播一次;IO 不可用直接点亮;reduced-motion 直接给终态。",
+      "Do 价格一律走 PriceInk 语法:小 ¥ + 宋体 700 tabular 数字 + 暖墨「起」,全部一行不折。",
+      "Do 微交互统一 140–180ms ease-out;唯一的常驻动画是主灯 5.5s 呼吸。",
+      "Do 所有朱砂印带 1px 印面白内描边(inset 0 0 0 1px rgba(253,248,236,0.4)),focus-visible 用炭墨 2px outline。",
+      "Do 对比度以 paper #F6EFE1 为底口径实测:正文用 ink,次级用 ink-soft,竹色文字只用 bamboo-deep。"
+    ],
+    "donts": [
+      "Don't 用竹金 #D8B48A 写字——它只许画线(竹不承字规则)。",
+      "Don't 把朱砂铺成面:不做装饰底、促销角标、标签雨;朱砂之外的强调靠\"更亮的纸\"(朱砂惜墨规则)。",
+      "Don't 给纸面内元素加冷灰/纯黑 drop shadow;发光一律 inset,炭墨外影只属于脱离纸面的浮层(光即层级规则)。",
+      "Don't 引入轮播 banner、金刚区色块、瀑布流角标——世界的成立就建立在拒绝这套品类默认上。",
+      "Don't 让点灯动画在折叠线下无人看见时空放,也不许滚动反复重播:一次入视,一次点亮。",
+      "Don't 虚构销量、评分、媒体背书;演示数据必须可辨识为演示(见附录·演示数据纪律)。",
+      "Don't 在 merchant/admin 使用发光戏法(见附录·模式延伸)。"
+    ]
+  }
+}
