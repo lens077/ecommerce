@@ -15,14 +15,13 @@
 """
 from common import (PG, PROM, bargauge, cpu_used_ratio, dash_link, dump, fs_used_ratio,
                     logs, mem_used_ratio, pg_stat, pg_t, piechart, pool_saturation,
-                    prom_stat, prom_t, reset_ids, row, steps, table, ts, zero_filled)
+                    prom_stat, prom_t, reset_ids, row, steps, svc_error_ratio, ts)
 
 reset_ids()
 panels = []
 y = 0
 
 # Config Center 是独立基础设施，不能混入电商业务服务的指标与日志。
-SERVICE = 'service_name=~"$service",service_name!="config-service"'
 ECOMMERCE_SERVICE = 'service_name!="config-service"'
 
 # ───── Row 1 业务北极星 ─────
@@ -75,29 +74,10 @@ panels.append(ts("漏斗各环节调用率", [
 ], 12, y, w=12, unit="reqps"))
 y += 8
 
-# ───── Row 4 服务健康 ─────
-panels.append(row("服务健康(RPC)", y)); y += 1
-panels.append(ts("请求率 by 服务", [
-    prom_t(f'sum(rate(rpc_server_duration_milliseconds_count{{{SERVICE}}}[$__rate_interval])) by (service_name)', "{{service_name}}"),
-], 0, y, w=8, unit="reqps"))
-_RPC = "rpc_server_duration_milliseconds_count"
-_rpc_err = f'sum by (service_name) (rate({_RPC}{{{SERVICE},rpc_connect_rpc_error_code!=""}}[$__rate_interval]))'
-_rpc_all = f'sum by (service_name) (rate({_RPC}{{{SERVICE}}}[$__rate_interval]))'
-panels.append(ts("错误率 by 服务", [
-    prom_t(f"{zero_filled(_rpc_err, _rpc_all)} / {_rpc_all}", "{{service_name}}"),
-], 8, y, w=8, unit="percentunit", percent=True,
-    desc="rpc_connect_rpc_error_code 非空即错误,分母为全部调用。\n"
-         "该标签只在出错的序列上存在,所以分子用总量乘 0 兜底 —— 否则服务健康时"
-         "整张图是空的,看起来像看板坏了而不是「没有错误」"))
-panels.append(ts("P95 时延 by 服务", [
-    prom_t(f'histogram_quantile(0.95, sum(rate(rpc_server_duration_milliseconds_bucket{{{SERVICE}}}[$__rate_interval])) by (le, service_name))', "{{service_name}}"),
-], 16, y, w=8, unit="ms"))
-y += 8
-panels.append(table("最慢方法 Top(P95,时间范围内)",
-    f'topk(10, histogram_quantile(0.95, sum(increase(rpc_server_duration_milliseconds_bucket{{{ECOMMERCE_SERVICE}}}[$__range])) by (le, service_name, rpc_method)))',
-    0, y, w=12, h=7, unit="ms"))
-panels.append(logs("错误日志(全服务)", '{service_name=~".+",service_name!="config-service"} | detected_level=~"error|warn" |~ "(?i)error|fail|panic"', 12, y, w=12, h=7))
-y += 7
+# 服务健康(RPC)整行已移到 APM 盘(ecommerce-apm)R1:服务健康类图统一归 APM,
+# 本盘只留 Row 6 红绿灯 —— 两张盘不重复画同一批图。错误率口径也随迁升级:
+# 旧版「error_code 非空即错误」会把 not_found 等客户端异常算进错误率,
+# APM 盘按 面板设计.md §1.1 只算服务侧错误码。
 
 # ───── Row 5 前端体验(Web Vitals) ─────
 panels.append(row("前端体验(Web Vitals RUM)", y)); y += 1
@@ -134,20 +114,28 @@ panels.append(logs("慢接口与性能明细(带归因)", '{service_name="behavi
     desc="attribution 字段:LCP 的元素 selector / INP 的交互目标 / 长任务的容器"))
 y += 8
 
-# ───── Row 6 基础设施(红绿灯,细节在另一张看板) ─────
-# 只留「有没有问题」,不留「问题是什么」—— 后者点右上角按钮或下面任一格进
-# 「基础设施」看板。这样业务盘不会被底层细节冲淡,也不和另一张盘重复画同样的图。
+# ───── Row 6 服务与基础设施(红绿灯,细节在另两张看板) ─────
+# 只留「有没有问题」,不留「问题是什么」—— 服务的事去 APM 盘,资源的事去基础设施盘。
+# 这样业务盘不会被底层细节冲淡,也不和另两张盘重复画同样的图。
 INFRA_LINK = [{"title": "查看基础设施明细", "url": "/d/ecommerce-infrastructure/infrastructure?$__url_time_range"}]
-panels.append(row("基础设施(概览 —— 明细见右上角「基础设施」按钮)", y)); y += 1
-panels.append(prom_stat("节点 CPU 最高", f"max({cpu_used_ratio()})", 0, y, w=6, unit="percentunit",
+APM_LINK = [{"title": "查看应用 APM", "url": "/d/ecommerce-apm/apm?$__url_time_range"}]
+panels.append(row("服务与基础设施(红绿灯 —— 明细见右上角「应用 APM」「基础设施」按钮)", y)); y += 1
+panels.append(prom_stat("服务侧错误率最高", f"max({svc_error_ratio()})", 0, y, w=4, unit="percentunit",
+    thresholds=steps(("green", None), ("yellow", 0.01), ("red", 0.05)), links=APM_LINK,
+    desc="全部服务里错误率最高的那个(服务侧口径,面板设计.md §1.1)。\n"
+         "payment 未实现前这里恒红 —— 点进 APM 盘 R1 的 Top 表看是不是只有它"))
+panels.append(prom_stat("在报服务数", 'count(count by (service_name) (rpc_server_duration_milliseconds_count{service_name!="config-service"}))',
+    4, y, w=4, unit="none", links=APM_LINK,
+    desc="按 rpc_server_* 判活,只统计「近期有过调用」的;数字异常低先查网关和 Consul"))
+panels.append(prom_stat("节点 CPU 最高", f"max({cpu_used_ratio()})", 8, y, w=4, unit="percentunit",
     thresholds=steps(("green", None), ("yellow", 0.75), ("red", 0.9)), links=INFRA_LINK,
-    desc="所有上报节点里最忙的那台。注意 node1(control-plane)不在其中:collector DaemonSet 不调度到那儿"))
-panels.append(prom_stat("节点内存最高", f"max({mem_used_ratio()})", 6, y, w=6, unit="percentunit",
+    desc="所有上报节点(3 台)里最忙的那台"))
+panels.append(prom_stat("节点内存最高", f"max({mem_used_ratio()})", 12, y, w=4, unit="percentunit",
     thresholds=steps(("green", None), ("yellow", 0.8), ("red", 0.9)), links=INFRA_LINK))
-panels.append(prom_stat("节点磁盘最高", f"max({fs_used_ratio()})", 12, y, w=6, unit="percentunit",
+panels.append(prom_stat("节点磁盘最高", f"max({fs_used_ratio()})", 16, y, w=4, unit="percentunit",
     thresholds=steps(("green", None), ("yellow", 0.8), ("red", 0.9)), links=INFRA_LINK,
     desc="仅真实文件系统(ext4/xfs),已排除 kubelet 的 PVC bind mount"))
-panels.append(prom_stat("DB 连接池饱和度最高", f"max({pool_saturation(ECOMMERCE_SERVICE)})", 18, y, w=6, unit="percentunit",
+panels.append(prom_stat("DB 连接池饱和度最高", f"max({pool_saturation(ECOMMERCE_SERVICE)})", 20, y, w=4, unit="percentunit",
     thresholds=steps(("green", None), ("yellow", 0.7), ("red", 0.9)), links=INFRA_LINK,
     desc="acquired / max。服务未启动时无数据"))
 
@@ -155,13 +143,11 @@ print(dump(
     uid="ecommerce-overview",
     title="电商大盘 · 业务与系统",
     panels=panels,
-    links=[dash_link("基础设施", "ecommerce-infrastructure", "infrastructure", icon="cloud")],
-    templating=[{
-        "name": "service", "label": "服务", "type": "query", "datasource": PROM,
-        "query": {"query": "label_values(rpc_server_duration_milliseconds_count{service_name!=\"config-service\"}, service_name)", "refId": "v"},
-        "includeAll": True, "multi": True, "current": {"text": ["All"], "value": ["$__all"]},
-        "refresh": 2,
-    }],
+    links=[dash_link("应用 APM", "ecommerce-apm", "apm", icon="bolt"),
+           dash_link("基础设施", "ecommerce-infrastructure", "infrastructure", icon="cloud")],
+    # $service 变量随服务健康行一起迁去了 APM 盘;本盘所有查询都是全局口径,
+    # 留一个不起作用的下拉框只会误导。
+    templating=[],
     time_from="now-90d",
     message="generated: 业务(PG) + RPC/Vitals(VM) + 日志(Loki);基础设施明细见 ecommerce-infrastructure",
 ))

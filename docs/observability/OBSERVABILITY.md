@@ -23,7 +23,10 @@
 这也是为什么标签规范是硬规则(见 §6)。
 
 Prometheus 与 OpenTelemetry 不是竞争关系:本仓用 OTel 做采集与传输的统一层,
-VictoriaMetrics 做 Prometheus 兼容的指标存储,Grafana 统一展示,告警走 vmalert/Alertmanager(待建)。
+VictoriaMetrics 做 Prometheus 兼容的指标存储,Grafana 统一展示;告警走 Grafana
+unified alerting(2026-08-12 定,理由与规则清单见 `面板设计.md` §6——集群无
+Prometheus Operator,vmalert/Alertmanager 要多养两个单副本组件,sidecar 的
+alerts provisioning 通道现成)。
 
 ## 2. 方法论:RED 看服务,USE 看资源
 
