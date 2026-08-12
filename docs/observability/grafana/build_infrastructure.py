@@ -142,11 +142,22 @@ y += 8
 # ───── Row 4 遥测管道健康(otelcol_*,P1:collector 自采部署后有数) ─────
 # 「监控监控系统」:collector 挂了/丢数据时,所有别的图都会安静地变好看 ——
 # 这一行是唯一能拆穿它的。指标名按 collector 版本预写,部署后核对(§7 清单)。
-panels.append(row("遥测管道健康(otelcol 自采)—— P1:等 collector 配置上线;这行全空 = 自采没通", y)); y += 1
+panels.append(row("遥测管道健康(otelcol 自采,2026-08-12 上线)", y)); y += 1
+# send_failed 是事件型指标,健康时整条序列不存在 —— 用同族恒发的 sent 做零填充
+# 锚点,否则健康时空图看起来像自采坏了。(部署后实测核对:sent/accepted/refused
+# 都在,send_failed 不在 = 从没失败过,名字形态与 sent 同族。)
+def _exp_fail(kind):
+    # 锚点必须同族:span 失败率拿 sent_spans 兜底(jaeger 只发 span,拿 metric
+    # points 做锚会漏掉它,victoriametrics 反而被补上一条无意义的 span 0 线)。
+    fail = f'sum by (exporter) (rate(otelcol_exporter_send_failed_{kind}_total[$__rate_interval]))'
+    sent = f'sum by (exporter) (rate(otelcol_exporter_sent_{kind}_total[$__rate_interval]))'
+    return zero_filled(fail, sent)
+
+
 panels.append(ts("导出失败(遥测正在丢)", [
-    prom_t('sum by (exporter) (rate(otelcol_exporter_send_failed_metric_points_total[$__rate_interval]))', "{{exporter}} 指标点"),
-    prom_t('sum by (exporter) (rate(otelcol_exporter_send_failed_spans_total[$__rate_interval]))', "{{exporter}} span", "B"),
-    prom_t('sum by (exporter) (rate(otelcol_exporter_send_failed_log_records_total[$__rate_interval]))', "{{exporter}} 日志", "C"),
+    prom_t(_exp_fail("metric_points"), "{{exporter}} 指标点"),
+    prom_t(_exp_fail("spans"), "{{exporter}} span", "B"),
+    prom_t(_exp_fail("log_records"), "{{exporter}} 日志", "C"),
 ], 0, y, w=8, unit="none",
     thresholds=steps(("green", None), ("red", 1)),
     desc="非零 = VM / Jaeger / Loki 某个后端收不进去。此时面板上的「一切正常」不可信"))
@@ -154,11 +165,14 @@ panels.append(ts("导出队列水位", [
     prom_t('otelcol_exporter_queue_size', "{{exporter}} ({{k8s_node_name}})"),
 ], 8, y, w=8, unit="none",
     desc="持续增长 = 后端写入跟不上,涨满开始丢(配合左图看)"))
-panels.append(ts("memory_limiter 拒收", [
-    prom_t('sum by (processor) (rate(otelcol_processor_refused_metric_points_total[$__rate_interval]))', "指标点"),
-    prom_t('sum by (processor) (rate(otelcol_processor_refused_spans_total[$__rate_interval]))', "span", "B"),
+# 预写的 otelcol_processor_refused_* 实测不存在:memory_limiter 拒收反映在
+# receiver 层的 otelcol_receiver_refused_*(2026-08-12 部署后核对改正)。
+_recv_ok = 'sum by (receiver) (rate(otelcol_receiver_accepted_metric_points_total[$__rate_interval]))'
+panels.append(ts("receiver 拒收(memory_limiter 生效中)", [
+    prom_t(zero_filled('sum by (receiver) (rate(otelcol_receiver_refused_metric_points_total[$__rate_interval]))', _recv_ok), "{{receiver}} 指标点"),
+    prom_t(zero_filled('sum by (receiver) (rate(otelcol_receiver_refused_log_records_total[$__rate_interval]))', _recv_ok), "{{receiver}} 日志", "B"),
 ], 16, y, w=8, unit="none",
-    desc="collector 内存顶到 limit_mib 后开始拒收 —— 出现即调 limit 或查数据量突增"))
+    desc="collector 内存顶到 limit_mib 后从入口开始拒收 —— 出现即调 limit 或查数据量突增"))
 y += 8
 
 # ───── Row 5 Kafka(Strimzi JMX,P1:metricsConfig 部署后有数) ─────
