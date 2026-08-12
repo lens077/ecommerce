@@ -64,10 +64,22 @@ curl -s -c /tmp/pg.ck -X POST $U/auth/login -H "Content-Type: application/json" 
 `global-default-tls`,Traefik 已配 `serversTransport.insecureSkipVerify` 兼容)。
 判别 404 来源:响应头 `server: envoy` + 直连 svc ClusterIP 对比。
 
-## local site(node3-local) 的 target 写法(2026-08-11 kaneo 502 实付学费)
+## local site(node3-local) 的 target 写法(2026-08-11 与 08-12 两次 kaneo 502 实付学费)
 
-- **禁写 `localhost`/`127.0.0.1`**——转发从 Traefik 容器发起,127.0.0.1 是容器自己,后端秒回 refused,外部表现为**响应很快的 502**(timeout 型 502 才是网络不通)
-- 宿主端口服务写 **`10.1.0.8:<port>`**(宿主内网 IP,服务需监听 0.0.0.0);容器服务接入 pangolin 网络后写**容器名**(blog 模式)
+**根源只有一条**:转发是从 **Traefik 容器**发起的,所以 target 必须写「Traefik 容器视角下能到达该服务的地址」,
+而不是「服务自己监听时用的地址」。**监听地址 ≠ 目的地址**——这两次都栽在把前者当后者填。
+
+| 写法 | 结果 | 为什么 |
+|---|---|---|
+| `10.1.0.8:<port>` | ✅ 唯一正确(宿主端口服务) | 宿主内网 IP,服务需监听 0.0.0.0 |
+| 容器名`:<port>` | ✅ 正确(容器接入 `pangolin_frontend` 网络后) | blog 模式,连宿主端口都不用发布 |
+| `localhost` / `127.0.0.1` | ❌ 快 502 | 是 Traefik **容器自己**,里面没有该端口(2026-08-11 踩) |
+| `0.0.0.0` | ❌ 快 502 | **监听地址不是目的地址**,语义同上(2026-08-12 踩) |
+| 公网 IP `114.132.233.129` | ⚠️ 绕公网再回来 | 多一跳,且可能被防火墙挡 |
+
+**快 502(<0.5s)= refused = target 写错或后端没起;慢 502(数秒)= 网络不通。** 先看耗时再排查,能省一半时间。
+分层核对顺序:①容器 `docker ps` 是否 healthy → ②宿主 `curl http://10.1.0.8:<port>` 是否 200 → ③下面那条后门看实际 target。
+两步都正常而外部 502,就一定是 target。
 - 排查 target 实际值不用登面板:宿主 `curl http://<pangolin容器IP>:3001/api/v1/traefik-config` 直接看 services 的 url
 - 面板不可用/无密码时可直改 `/home/docker/pangolin/config/db/db.sqlite` 的 `targets` 表(python3 自带 sqlite3,**先 cp 备份**),Pangolin 不缓存,Traefik 5s 轮询内生效
 
