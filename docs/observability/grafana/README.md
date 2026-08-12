@@ -14,7 +14,8 @@
 
 三张盘通过标题栏右上角的按钮互跳,`keepTime=true` —— 在业务盘看到某个时刻有尖峰,
 点进 APM / 基础设施还停在同一个时间窗。排障动线:业务盘红绿灯 → APM 锁定服务与
-层级 → 明细跳 Jaeger(需先 `kubectl -n observability port-forward svc/jaeger 16686:16686`)。
+层级 → 明细跳 Jaeger(`http://jaeger-ui.app.com`,内网域直达;换环境用
+`JAEGER_UI_BASE` 环境变量重新生成)。
 
 ## 生成与导入
 

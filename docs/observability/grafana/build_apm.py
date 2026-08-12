@@ -217,10 +217,9 @@ print(dump(
         dash_link("业务大盘", "ecommerce-overview", "ecommerce-overview", icon="apps"),
         dash_link("基础设施", "ecommerce-infrastructure", "infrastructure", icon="cloud"),
         # Jaeger 明细入口:面板管聚合,明细(慢请求瀑布/SQL 语句/错误堆栈)去 Jaeger。
-        # 需要先 port-forward(见 common.jaeger_link 注释)。
         {**jaeger_link(service="$service"), "type": "link", "icon": "external link",
-         "tooltip": "port-forward 16686 后可用", "keepTime": False, "asDropdown": False,
-         "includeVars": False, "tags": []},
+         "tooltip": "跳转 Jaeger 查当前服务的 trace 明细", "keepTime": False,
+         "asDropdown": False, "includeVars": False, "tags": []},
     ],
     templating=[{
         "name": "service", "label": "服务", "type": "query", "datasource": PROM,
