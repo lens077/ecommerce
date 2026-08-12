@@ -77,6 +77,37 @@ curl -s -c /tmp/pg.ck -X POST $U/auth/login -H "Content-Type: application/json" 
 | `0.0.0.0` | ❌ 快 502 | **监听地址不是目的地址**,语义同上(2026-08-12 踩) |
 | 公网 IP `node1` | ⚠️ 绕公网再回来 | 多一跳,且可能被防火墙挡 |
 
+### 地址怎么查(别猜,也别从 `docker ps` 抄)
+
+```bash
+# ① 宿主内网 IP —— 写 local site target 就用它。原理:问内核「发往公网时用哪个源地址」
+ip route get 1 | awk '{print $7; exit}'        # node3 → 10.1.0.8
+hostname -I | awk '{print $1}'                 # 备选
+
+# ② 容器在哪些网络上、各自什么 IP —— 判断能不能走容器名
+docker inspect -f '{{range $k,$v := .NetworkSettings.Networks}}{{$k}}={{$v.IPAddress}} {{end}}' <容器名>
+#   含 pangolin_frontend → target 写容器名(blog 模式)
+#   不含               → 只能走宿主端口 + 10.1.0.8
+```
+
+实测(2026-08-12):`blog`/`pangolin` 都在 `pangolin_frontend`,而 `kaneo-kaneo-1` 在
+`kaneo_default`(172.28.0.3)——**跨网络,Traefik 到不了它的容器 IP**,所以 kaneo 只能走宿主端口。
+
+⚠️ **`docker ps` 的 PORTS 列不能直接抄进 target**(2026-08-12 就是这么错的):
+
+```
+kaneo-kaneo-1        0.0.0.0:5173->5173/tcp     ← 0.0.0.0 是【宿主的监听地址】
+mediamtx-mediamtx-1  10.1.0.8:8889->8889/tcp    ← 这种才只绑内网
+```
+
+看到 `0.0.0.0:5173` 的正确解读是「宿主每个 IP 都能访问 5173,**包括 10.1.0.8**」,
+不是「目的地址是 0.0.0.0」。**容器 IP 重启会变,永远别写死** —— 要么容器名,要么宿主 IP。
+
+> 顺带:`0.0.0.0:5173` 意味着该端口也暴露在公网 IP 上(仅靠云防火墙未放行兜底)。
+> 收紧写法是 compose 里写 `"10.1.0.8:5173:5173"`,Pangolin 侧不受影响。
+
+### 排错
+
 **快 502(<0.5s)= refused = target 写错或后端没起;慢 502(数秒)= 网络不通。** 先看耗时再排查,能省一半时间。
 分层核对顺序:①容器 `docker ps` 是否 healthy → ②宿主 `curl http://10.1.0.8:<port>` 是否 200 → ③下面那条后门看实际 target。
 两步都正常而外部 502,就一定是 target。
