@@ -2,22 +2,19 @@
 
     python3 build_infrastructure.py > infrastructure.json
 
-只用**当前 VM 里真实存在**的指标族(2026-08 实测,共 5 族 57 个指标名):
-    system_*                collector host_metrics(cpu/memory/disk/network/filesystem)
-    pgxpool_*               otelpgx RecordStats
-    db_client_operation_*   otelpgx
-    rpc_server_*            otelconnect(业务盘已用,这里只做「服务在不在」)
+指标族与可用性(设计见 ../面板设计.md §5):
+    P0(在收): system_*(hostmetrics)、pgxpool_* / db_client_*(otelpgx)、
+              rpc_server_*(只做「服务在不在」)、Loki 日志
+    P1(占位): otelcol_*(collector 自采,2026-08-12 配置已改等部署)、
+              kafka_* / kafka_connect_*(Strimzi JMX exporter,同上)
+    P1 指标名按 collector 版本 / JMX rules 预写,部署后按 面板设计.md §7 清单核对。
 
-已知盲区(都不是本看板能补的,记在 TODO.md「可观测性与测试」):
-1. 采集管道自身健康(otelcol_*)不在 VM 里 —— 只在每个 collector pod 的 :8888,
-   没有任何东西采集它。要 collector 加 prometheus receiver 自采。
-   这是本看板最大的缺口:现在无法回答「遥测有没有在半路丢」。
-2. 无 k8s 对象/容器级指标(pod 重启、副本数、容器内存)—— 需要 kubelet_stats /
-   k8s_cluster receiver,基数敏感,单独一轮做。
-3. node1(control-plane)没有主机指标 —— collector DaemonSet 不调度到那儿
-   (desired=2),要覆盖得加 toleration。
-4. Loki 的 k8s 标签是坏的(值是字面量 ".pod_name"),所以日志按 pod 下钻不了,
+已知盲区(不是本看板能补的,记在 TODO.md「可观测性与测试」):
+1. 无 k8s 对象/容器级指标(pod 重启、副本数、容器内存)—— 需要 kubelet_stats /
+   k8s_cluster receiver,基数敏感,单独一轮做(P2)。
+2. Loki 的 k8s 标签是坏的(值是字面量 ".pod_name"),所以日志按 pod 下钻不了,
    只能按 detected_level 聚合。根因见 TODO.md。
+3. Go runtime 区块已移到 APM 盘(按 $service 看);本盘不再借 config-center 的数据。
 """
 from common import (LOKI, PROM, cpu_used_ratio, dash_link, dump, fs_used_ratio,
                     inodes_used_ratio, logs, mem_used_ratio, pool_saturation, prom_stat,
@@ -27,7 +24,6 @@ from common import (LOKI, PROM, cpu_used_ratio, dash_link, dump, fs_used_ratio,
 NODE = 'k8s_node_name=~"$node"'
 SVC = 'service_name=~"$service",service_name!="config-service"'
 ECOMMERCE_SERVICE = 'service_name!="config-service"'
-CONFIG_CENTER_SERVICE = 'service_name="config-service",service_namespace="config-center"'
 
 reset_ids()
 panels = []
@@ -37,8 +33,9 @@ y = 0
 panels.append(row("概览", y)); y += 1
 panels.append(prom_stat("上报指标的节点数", 'count(count by (k8s_node_name) (system_cpu_utilization_ratio))',
     0, y, w=4, unit="none",
-    thresholds=steps(("red", None), ("green", 2)),
-    desc="集群共 3 个节点,但 node1 是 control-plane、collector DaemonSet 不调度过去,所以正常值是 2"))
+    thresholds=steps(("red", None), ("green", 3)),
+    desc="正常值 3。旧版阈值是 ≥2(当时以为 collector 不调度 node1),2026-08-06 实测\n"
+         "DaemonSet 已 3/3、node1/2/3 各 32 条 system 序列 —— 掉任何一台都该红"))
 panels.append(prom_stat("节点 CPU 最高", f"max({cpu_used_ratio()})", 4, y, w=4, unit="percentunit",
     thresholds=steps(("green", None), ("yellow", 0.75), ("red", 0.9))))
 panels.append(prom_stat("节点内存最高", f"max({mem_used_ratio()})", 8, y, w=4, unit="percentunit",
@@ -125,38 +122,71 @@ panels.append(ts("空池平均等待时长", [
            "{{service_name}}"),
 ], 0, y, w=8, unit="ns",
     desc="clamp_min 防零除:没有空池等待时分母为 0,不夹住会画出 +Inf"))
+# db_client_* 是 semconv 共用名:otelpgx 与 redisotel 都在写,必须按 db_system_name
+# 区分(面板设计.md §1.5),否则 Redis 埋点上线当天这两张图会混入微秒级样本。
+_PG_ONLY = f'{SVC},db_system_name="postgresql"'
 panels.append(ts("DB 操作 P95(分类型)", [
-    prom_t(f'histogram_quantile(0.95, sum by (le, pgx_operation_type) (rate(db_client_operation_duration_seconds_bucket{{{SVC}}}[$__rate_interval])))',
+    prom_t(f'histogram_quantile(0.95, sum by (le, pgx_operation_type) (rate(db_client_operation_duration_seconds_bucket{{{_PG_ONLY}}}[$__rate_interval])))',
            "{{pgx_operation_type}}"),
 ], 8, y, w=8, unit="s",
     desc="acquire / connect / prepare / query 四类分开看:acquire 慢是池不够,query 慢是 SQL 或库的问题,两者处置完全不同"))
-_db_err = f'sum by (service_name) (rate(db_client_operation_errors_total{{{SVC}}}[$__rate_interval]))'
-_db_all = f'sum by (service_name) (rate(db_client_operation_duration_seconds_count{{{SVC}}}[$__rate_interval]))'
+_db_err = f'sum by (service_name) (rate(db_client_operation_errors_total{{{_PG_ONLY}}}[$__rate_interval]))'
+_db_all = f'sum by (service_name) (rate(db_client_operation_duration_seconds_count{{{_PG_ONLY}}}[$__rate_interval]))'
 panels.append(ts("DB 错误率", [
-    prom_t(zero_filled(_db_err, _db_all), "{{service_name}}"),
-], 16, y, w=8, unit="none", thresholds=steps(("green", None), ("red", 0.1)),
-    desc="db_client_operation_errors_total 在「从没出错过」的服务上整条序列都不存在\n"
-         "(实测:cart 做了 51 次 DB 操作、零错误,这里就没有它),所以用操作总数乘 0 兜底"))
+    prom_t(f"{zero_filled(_db_err, _db_all)} / {_db_all}", "{{service_name}}"),
+], 16, y, w=8, unit="percentunit", percent=True, thresholds=steps(("green", None), ("red", 0.01)),
+    desc="错误/操作总量(比率)。旧版少除了分母,画的是错误/秒 —— 1 err/s 混在\n"
+         "10000 ops/s 里也飘红(评审已列),本版修正。零事件序列不存在,分子用总量乘 0 兜底"))
 y += 8
 
-# ───── Row 4 Go 运行时 ─────
-panels.append(row("Go 运行时 —— 本仓 10 个服务都没埋,这里的数据来自独立仓 config-center", y)); y += 1
-panels.append(ts("goroutine 数", [
-    prom_t(f'process_runtime_go_goroutines{{{CONFIG_CENTER_SERVICE}}}', "{{service_name}}"),
+# ───── Row 4 遥测管道健康(otelcol_*,P1:collector 自采部署后有数) ─────
+# 「监控监控系统」:collector 挂了/丢数据时,所有别的图都会安静地变好看 ——
+# 这一行是唯一能拆穿它的。指标名按 collector 版本预写,部署后核对(§7 清单)。
+panels.append(row("遥测管道健康(otelcol 自采)—— P1:等 collector 配置上线;这行全空 = 自采没通", y)); y += 1
+panels.append(ts("导出失败(遥测正在丢)", [
+    prom_t('sum by (exporter) (rate(otelcol_exporter_send_failed_metric_points_total[$__rate_interval]))', "{{exporter}} 指标点"),
+    prom_t('sum by (exporter) (rate(otelcol_exporter_send_failed_spans_total[$__rate_interval]))', "{{exporter}} span", "B"),
+    prom_t('sum by (exporter) (rate(otelcol_exporter_send_failed_log_records_total[$__rate_interval]))', "{{exporter}} 日志", "C"),
 ], 0, y, w=8, unit="none",
-    desc="本仓 10 个服务都没有 runtime 埋点,所以这张图上不会出现它们 —— 不是没数据,是没埋。\n"
-         "唯一在报的是独立仓 config-center；通过 service.namespace 精确筛选，\n"
-         "不再与已退役的本仓 config 服务或历史同名序列混合"))
-panels.append(ts("Go 堆占用", [
-    prom_t(f'process_runtime_go_heap_usage_bytes{{{CONFIG_CENTER_SERVICE}}}', "{{service_name}}"),
-], 8, y, w=8, unit="bytes"))
-panels.append(ts("进程 CPU / 内存", [
-    prom_t(f'process_cpu_utilization_ratio{{{CONFIG_CENTER_SERVICE}}}', "{{service_name}} CPU"),
-    prom_t(f'process_memory_usage_bytes{{{CONFIG_CENTER_SERVICE}}} / clamp_min(process_memory_limit_bytes{{{CONFIG_CENTER_SERVICE}}}, 1)', "{{service_name}} 内存占比", "B"),
-], 16, y, w=8, unit="percentunit"))
+    thresholds=steps(("green", None), ("red", 1)),
+    desc="非零 = VM / Jaeger / Loki 某个后端收不进去。此时面板上的「一切正常」不可信"))
+panels.append(ts("导出队列水位", [
+    prom_t('otelcol_exporter_queue_size', "{{exporter}} ({{k8s_node_name}})"),
+], 8, y, w=8, unit="none",
+    desc="持续增长 = 后端写入跟不上,涨满开始丢(配合左图看)"))
+panels.append(ts("memory_limiter 拒收", [
+    prom_t('sum by (processor) (rate(otelcol_processor_refused_metric_points_total[$__rate_interval]))', "指标点"),
+    prom_t('sum by (processor) (rate(otelcol_processor_refused_spans_total[$__rate_interval]))', "span", "B"),
+], 16, y, w=8, unit="none",
+    desc="collector 内存顶到 limit_mib 后开始拒收 —— 出现即调 limit 或查数据量突增"))
 y += 8
 
-# ───── Row 5 服务与日志 ─────
+# ───── Row 5 Kafka(Strimzi JMX,P1:metricsConfig 部署后有数) ─────
+# broker 曾 OOMKill 41 次、Connect 重启 484 次,当时只能 kubectl describe —— 这一行
+# 就是为了下次别再盲修。Connect task failed 现在就该是红的(CDC 自 2026-06-09 未跑通),
+# 这是暴露不是误报;修好 CDC 后随首个 consumer 再上 lag 面板(P2,硬规则)。
+panels.append(row("Kafka(Strimzi)—— P1:等 metricsConfig 上线;task failed 红着是当前事实", y)); y += 1
+panels.append(ts("Connect connector/task 状态", [
+    prom_t('kafka_connect_connector_status', "{{connector}} {{status}}"),
+    prom_t('kafka_connect_connector_task_status', "{{connector}}/task-{{task}} {{status}}", "B"),
+], 0, y, w=8, unit="none",
+    desc="值恒为 1,看的是 status 标签(running/failed/paused)。failed 序列出现即异常;\n"
+         "postgres-source-connector 当前预期是 failed(CDC 配置错,见 TODO)"))
+panels.append(ts("broker 消息与字节速率", [
+    prom_t('rate(kafka_server_brokertopicmetrics_messagesin_total[$__rate_interval])', "消息/s"),
+    prom_t('rate(kafka_server_brokertopicmetrics_bytesin_total[$__rate_interval])', "写入 B/s", "B"),
+    prom_t('rate(kafka_server_brokertopicmetrics_bytesout_total[$__rate_interval])', "读出 B/s", "C"),
+], 8, y, w=8, unit="none",
+    desc="CDC 没跑通之前这里应接近 0;跑通后基线 = 6 张白名单表的变更速率"))
+panels.append(ts("broker 健康", [
+    prom_t('kafka_server_replicamanager_underreplicatedpartitions', "欠副本分区"),
+    prom_t('kafka_server_kafkarequesthandlerpool_requesthandleravgidle_percent', "请求线程空闲比", "B"),
+], 16, y, w=8, unit="none",
+    desc="单 broker 集群欠副本应恒 0;空闲比 <0.3 = broker 过载。\n"
+         "JMX javaagent 约占 50-100Mi 堆外内存,broker limit 1Gi,部署后盯一眼 RSS"))
+y += 8
+
+# ───── Row 6 服务与日志 ─────
 panels.append(row("服务在线与基础设施日志", y)); y += 1
 panels.append(table("各服务请求量(时间范围内)",
     f'sort_desc(sum by (service_name) (increase(rpc_server_duration_milliseconds_count{{{ECOMMERCE_SERVICE}}}[$__range])))',
@@ -176,7 +206,8 @@ print(dump(
     uid="ecommerce-infrastructure",
     title="基础设施 · 节点与依赖",
     panels=panels,
-    links=[dash_link("业务大盘", "ecommerce-overview", "ecommerce-overview", icon="apps")],
+    links=[dash_link("业务大盘", "ecommerce-overview", "ecommerce-overview", icon="apps"),
+           dash_link("应用 APM", "ecommerce-apm", "apm", icon="bolt")],
     templating=[
         {"name": "node", "label": "节点", "type": "query", "datasource": PROM,
          "query": {"query": "label_values(system_cpu_utilization_ratio, k8s_node_name)", "refId": "v"},

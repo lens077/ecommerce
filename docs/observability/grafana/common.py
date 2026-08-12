@@ -169,6 +169,55 @@ def dash_link(title, uid, slug, icon="apps"):
     }
 
 
+# ── 口径常量(定义见 ../面板设计.md §1,改动需过评审) ──────────────────────
+
+# 全部查询排除 config-service:与独立仓 config-center 撞名,按名过滤出的是混合值。
+# 电商服务未设 service_namespace(2026-08-12 实测),所以只能按名排除。
+ECOMMERCE = 'service_name!="config-service"'
+
+# connect 错误码两类划分(面板设计.md §1.1)。只有服务侧进错误率/SLO/告警;
+# 客户端侧单独观察。成功请求没有 rpc_connect_rpc_error_code 标签(实测口径,
+# OBSERVABILITY.md 说的「已修为 ok」只落在日志侧,metrics 不是)。
+SERVER_FAULT_CODES = "unknown|internal|unavailable|deadline_exceeded|resource_exhausted|data_loss|unimplemented"
+CLIENT_FAULT_CODES = "invalid_argument|not_found|already_exists|permission_denied|unauthenticated|failed_precondition|out_of_range|canceled|aborted"
+
+RPC_COUNT = "rpc_server_duration_milliseconds_count"
+RPC_BUCKET = "rpc_server_duration_milliseconds_bucket"
+
+
+def svc_error_ratio(extra="", by="service_name", window="$__rate_interval"):
+    """服务侧错误率(比率,零填充)。业务盘红绿灯、APM 盘、告警共用同一口径。
+
+    payment 全部 RPC 是 Unimplemented 桩,按此口径恒 100% —— 是暴露不是误报
+    (面板保留;告警侧单独排除,见 build_alerts.py)。
+    window:面板用默认的 $__rate_interval;告警里 Grafana 不展开 dashboard 变量,
+    必须传固定窗口(如 "5m")。
+    """
+    code_filter = f'rpc_connect_rpc_error_code=~"{SERVER_FAULT_CODES}"'
+    err = f"sum by ({by}) (rate({_sel(RPC_COUNT, code_filter, ECOMMERCE, extra)}[{window}]))"
+    total = f"sum by ({by}) (rate({_sel(RPC_COUNT, ECOMMERCE, extra)}[{window}]))"
+    return f"{zero_filled(err, total)} / {total}"
+
+
+def rpc_quantile(q, by="service_name", extra="", window="$__rate_interval"):
+    """RPC 延迟分位数。「慢」的唯一口径 —— 没有「慢调用次数」这种东西(§1.2)。"""
+    sel = _sel(RPC_BUCKET, ECOMMERCE, extra)
+    return f"histogram_quantile({q}, sum by (le, {by}) (rate({sel}[{window}])))"
+
+
+# Jaeger 跳转。集群里 Jaeger UI(16686)没有 ingress,排障时先:
+#   kubectl -n observability port-forward svc/jaeger 16686:16686
+# 链接按 localhost 写 —— 单人 dev 环境的现实做法;将来有 ingress 改这一处。
+JAEGER_BASE = os.getenv("JAEGER_UI_BASE", "http://localhost:16686")
+
+
+def jaeger_link(title="在 Jaeger 里查明细", service="${service}", tags=""):
+    url = f"{JAEGER_BASE}/search?service={service}&lookback=3h&limit=50"
+    if tags:
+        url += f"&tags={tags}"
+    return {"title": title, "url": url, "targetBlank": True}
+
+
 # ── 共用 PromQL ───────────────────────────────────────────────────────────
 # 业务盘的「红绿灯」和基础设施盘的明细必须算同一个数,所以表达式只在这里写一份。
 
