@@ -4,7 +4,7 @@
 # 仓库里 grep 不到。Mac 上的 Parallels 虚拟机一旦真挂了（不是重启），这套配置就找不回来。
 #
 # 应用：kubectl apply -f backend/infrastructure/kafka-connect/kafkaconnect.yaml
-# 顺序：setup.sql → 本文件 → 等 connect-0 Ready → kafkaconnector.yaml
+# 顺序：setup.sql → connect-metrics-configmap.yaml → 本文件 → 等 connect-0 Ready → kafkaconnector.yaml
 apiVersion: kafka.strimzi.io/v1
 kind: KafkaConnect
 metadata:
@@ -17,6 +17,17 @@ spec:
   version: 4.2.0
   replicas: 1
   bootstrapServers: my-cluster-kafka-bootstrap:9092
+
+  # JMX Prometheus Exporter（9404，容器端口名 tcp-prometheus）。
+  # 规则在 connect-metrics-configmap.yaml，必须先 apply 它再 apply 本文件。
+  # 改这一段只滚动重启 connect pod，不触发上面警告过的镜像重建（build 段没动）。
+  # 抓取方是 otel collector 的 prometheus/kafka receiver（按 strimzi.io/kind 发现）。
+  metricsConfig:
+    type: jmxPrometheusExporter
+    valueFrom:
+      configMapKeyRef:
+        name: connect-metrics
+        key: metrics-config.yml
 
   groupId: my-connect-cluster
   configStorageTopic: my-connect-cluster-configs
