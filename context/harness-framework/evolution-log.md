@@ -41,6 +41,22 @@ description: harness 本身（硬规则/门禁/Agent 约束）每次改动的原
 
 ---
 
+### 2026-08-12 将全自动权限处理与实质性选择分流到项目级 Codex 规则
+
+- **改了什么**：`ecommerce/AGENTS.md` 新增硬规则 #7：`Full Auto` /「全自动」会话不再用
+  权限确认打断用户，但遇到会实质改变结果的互斥选项仍弹选择对话框；新增
+  `.codex/config.toml`，启用 Default 模式的选择对话能力，并给自动审批器写入相同分流策略；
+  同步更新父级 `lens077/AGENTS.md`，仅保留其目录层级所需的链接前缀差异。
+- **为什么**：权限确认与产品/实现决策不是同一类交互。全自动模式应消除前者的人工停顿，
+  但不能因此替用户猜测会改变结果的选择；同时，规则只写在用户级 `~/.codex` 中无法随
+  ecommerce 项目传播，也不能保证从项目目录启动的新会话继承项目约定。
+- **触发事故**：上一轮只更新了用户级 `~/.codex/AGENTS.md` 与 `~/.codex/config.toml`，
+  用户随后明确指出还要修改 ecommerce 内的 Codex 规则，并把 ecommerce 的项目级
+  `AGENTS.md` 同步到 `lens077`；原实现的作用域不完整。
+- **怎么验证的**：对两份 `AGENTS.md` 做去除父级 `ecommerce/` 链接前缀后的逐字比较；
+  从 ecommerce 根运行 `codex features list`，确认项目配置可解析且
+  `default_mode_request_user_input` 为 `true`；另用 `git diff --check` 检查文本格式。
+
 ### 2026-08-12 引入 E3 执行策略（估计→最小执行→失败才扩张）与过度阅读护栏
 
 - **改了什么**：`AGENTS.md`（仓内 + `~/github/lens077/` 工作区副本）新增「执行策略：E3」

@@ -1,0 +1,10 @@
+[features]
+# Keep genuine user decisions available as dialogs in Default mode.
+default_mode_request_user_input = true
+
+[auto_review]
+policy = """
+When the environment or session explicitly indicates Full Auto or 全自动, resolve permission requests automatically whenever they satisfy the active safety policy; do not ask the user to confirm them.
+
+Keep substantive user decisions separate. When materially different valid outcomes require the user's judgment, allow the agent to use an interactive choice dialog. Never treat a permission request as such a decision, and never bypass a hard safety boundary or unavailable capability.
+"""
