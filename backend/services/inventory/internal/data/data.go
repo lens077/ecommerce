@@ -326,6 +326,9 @@ func NewRedisClient(lc fx.Lifecycle, cfg *conf.Bootstrap, live *config.Live, log
 
 // buildRedis 按给定配置建一个 Redis 客户端并 Ping 通过。启动与热重建共用。
 func buildRedis(cfg *conf.Bootstrap, logger *zap.Logger) (*redis.Client, error) {
+	// OTel 指标装配必须先于 NewClient,否则漏掉连接池 gauge(幂等,实现见 otel 包)。
+	otelpkg.EnsureRedisInstrumentation(logger)
+
 	redisCfg := cfg.Data.Cache.Redis
 
 	// 基础配置

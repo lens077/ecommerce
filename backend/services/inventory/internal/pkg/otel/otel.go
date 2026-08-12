@@ -8,11 +8,14 @@ import (
 	"regexp"
 	"runtime"
 	"strings"
+	"sync"
 	"time"
 
 	confv1 "github.com/lens077/ecommerce/backend/services/inventory/internal/conf/v1"
 	"github.com/lens077/ecommerce/backend/services/inventory/internal/pkg/meta"
 
+	redisotel "github.com/redis/go-redis/extra/redisotel-native/v9"
+	otelruntime "go.opentelemetry.io/contrib/instrumentation/runtime"
 	"go.opentelemetry.io/otel"
 	"go.opentelemetry.io/otel/exporters/otlp/otlplog/otlploghttp"
 	"go.opentelemetry.io/otel/exporters/otlp/otlpmetric/otlpmetrichttp"
@@ -97,6 +100,12 @@ func SetupOTelSDK(ctx context.Context, info meta.AppInfo, cfg *confv1.Observabil
 	}
 	shutdownFuncs = append(shutdownFuncs, meterProvider.Shutdown)
 	otel.SetMeterProvider(meterProvider)
+
+	// Go runtime 指标(goroutine 数、堆内存、GC 目标)。放在 SetMeterProvider
+	// 之后,observable 回调直接注册到真实 provider,不经过全局代理的延迟绑定。
+	if err := otelruntime.Start(); err != nil {
+		return shutdown, errors.Join(err, shutdown(ctx))
+	}
 
 	loggerProvider, err := newLoggerProvider(ctx, res, cfg.Log, logger)
 	if err != nil {
@@ -269,8 +278,34 @@ func newMeterProvider(ctx context.Context, res *resource.Resource, cfg *confv1.O
 
 	return metric.NewMeterProvider(
 		metric.WithResource(res),
-		metric.WithReader(metric.NewPeriodicReader(metricExporter, metric.WithInterval(interval))),
+		metric.WithReader(metric.NewPeriodicReader(metricExporter,
+			metric.WithInterval(interval),
+			// go.schedule.duration 直方图:goroutine 就绪后等到实际运行的时长。
+			// 新版 runtime 指标集没有 GC 暂停项,调度延迟是它的替代信号 ——
+			// GC STW 和 CPU 饱和都会先在这里冒头。
+			metric.WithProducer(otelruntime.NewProducer()),
+		)),
 	), nil
+}
+
+// redisOTelOnce 见 EnsureRedisInstrumentation。
+var redisOTelOnce sync.Once
+
+// EnsureRedisInstrumentation 给 go-redis 装配 OTel 指标(命令时延、连接池、错误)。
+// 幂等;必须在第一次 redis.NewClient 之前调用 —— 连接池 gauge 的注册发生在
+// NewClient 时刻,建完 client 再 Init 会漏掉池级指标。
+// 与 SetupOTelSDK 的先后无所谓:Init 从全局 MeterProvider 的延迟代理拿 meter,
+// SetMeterProvider 之后会自动接上。
+// 注意指标名与 otelpgx 共用 semconv 的 db.client.* 前缀,查询端必须按
+// db.system.name(redis / postgresql)区分,不能按指标名裸聚合。
+func EnsureRedisInstrumentation(logger *zap.Logger) {
+	redisOTelOnce.Do(func() {
+		cfg := redisotel.NewConfig().WithEnabled(true)
+		if err := redisotel.GetObservabilityInstance().Init(cfg); err != nil {
+			// 装配失败不拖垮主流程:记日志,redis 照常可用,只是没有指标。
+			logger.Error("failed to init redis otel instrumentation", zap.Error(err))
+		}
+	})
 }
 
 func newLoggerProvider(ctx context.Context, res *resource.Resource, cfg *confv1.Observability_Logging, logger *zap.Logger) (*log.LoggerProvider, error) {
