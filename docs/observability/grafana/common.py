@@ -205,10 +205,10 @@ def rpc_quantile(q, by="service_name", extra="", window="$__rate_interval"):
     return f"histogram_quantile({q}, sum by (le, {by}) (rate({sel}[{window}])))"
 
 
-# Jaeger 跳转。集群里 Jaeger UI(16686)没有 ingress,排障时先:
-#   kubectl -n observability port-forward svc/jaeger 16686:16686
-# 链接按 localhost 写 —— 单人 dev 环境的现实做法;将来有 ingress 改这一处。
-JAEGER_BASE = os.getenv("JAEGER_UI_BASE", "http://localhost:16686")
+# Jaeger 跳转。jaeger-ui.app.com 是本地内网域(与 pg-dev/dragonfly/es 同模式),
+# 浏览器直达,不需要 port-forward;换环境用环境变量覆盖。注意不带尾斜杠,
+# 下面拼 /search 时不会出现 //。
+JAEGER_BASE = os.getenv("JAEGER_UI_BASE", "http://jaeger-ui.app.com")
 
 
 def jaeger_link(title="在 Jaeger 里查明细", service="${service}", tags=""):
