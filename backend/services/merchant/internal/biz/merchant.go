@@ -13,6 +13,19 @@ var (
 )
 
 type (
+	GetMerchantAgreementRequest  struct{}
+	GetMerchantAgreementResponse struct {
+		Version       string
+		EffectiveDate time.Time
+		ContentUrl    string
+	}
+)
+type (
+	CreateMerchantRequest  struct{}
+	CreateMerchantResponse struct{}
+)
+
+type (
 	SubmitApplicationRequest struct {
 		CompanyName           string
 		CreditCode            string
@@ -69,6 +82,8 @@ type (
 
 // MerchantRepo 商家
 type MerchantRepo interface {
+	GetMerchantAgreement(ctx context.Context, req *GetMerchantAgreementRequest) (*GetMerchantAgreementResponse, error)
+	CreateMerchant(ctx context.Context, req *CreateMerchantRequest) (*CreateMerchantResponse, error)
 	SubmitApplication(ctx context.Context, req *SubmitApplicationRequest) (*SubmitApplicationResponse, error)
 	ApproveApplication(ctx context.Context, req *ApproveApplicationRequest) (*ApproveApplicationResponse, error)
 	RejectApplication(ctx context.Context, req *RejectApplicationRequest) (*RejectApplicationResponse, error)
@@ -84,6 +99,14 @@ func NewMerchantUseCase(repo MerchantRepo) *MerchantUseCase {
 	return &MerchantUseCase{
 		repo: repo,
 	}
+}
+
+func (uc *MerchantUseCase) GetMerchantAgreement(ctx context.Context, req *GetMerchantAgreementRequest) (*GetMerchantAgreementResponse, error) {
+	return uc.repo.GetMerchantAgreement(ctx, req)
+}
+
+func (uc *MerchantUseCase) CreateMerchant(ctx context.Context, req *CreateMerchantRequest) (*CreateMerchantResponse, error) {
+	return uc.repo.CreateMerchant(ctx, req)
 }
 
 func (uc *MerchantUseCase) SubmitApplication(ctx context.Context, req *SubmitApplicationRequest) (*SubmitApplicationResponse, error) {

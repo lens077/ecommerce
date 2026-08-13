@@ -51,7 +51,7 @@
 
 **验收口径：一个商家不求助平台就能走完「入驻→上架→接单→发货→退货→看到该结多少钱」。**
 
-1. **修入驻闭环三个已知缺陷**（审批全表 UPDATE、`RejectApplication`/`ActivateMerchant` panic 桩）——不是新功能，是地基（TODO P0 区已列）
+1. **修入驻闭环三个已知缺陷**（审批全表 UPDATE、`RejectApplication`/`ActivateMerchant` panic 桩）——不是新功能，是地基（TODO P0 区已列）。2026-08-13 起本条范围被 [onboarding.md](onboarding.md) 两段式入驻重构覆盖改写
 2. 店铺资料 + 营业状态 + 商品种类枚举（§1 裁剪版）
 3. 单默认地点：开店自动创建，对齐 inventory
 4. 通用运费模板：按配送区域一档价格

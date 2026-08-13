@@ -33,6 +33,12 @@ const (
 // reflection-formatted method names, remove the leading slash and convert the remaining slash to a
 // period.
 const (
+	// MerchantServiceGetMerchantAgreementProcedure is the fully-qualified name of the MerchantService's
+	// GetMerchantAgreement RPC.
+	MerchantServiceGetMerchantAgreementProcedure = "/merchant.v1.MerchantService/GetMerchantAgreement"
+	// MerchantServiceCreateMerchantProcedure is the fully-qualified name of the MerchantService's
+	// CreateMerchant RPC.
+	MerchantServiceCreateMerchantProcedure = "/merchant.v1.MerchantService/CreateMerchant"
 	// MerchantServiceSubmitApplicationProcedure is the fully-qualified name of the MerchantService's
 	// SubmitApplication RPC.
 	MerchantServiceSubmitApplicationProcedure = "/merchant.v1.MerchantService/SubmitApplication"
@@ -52,6 +58,10 @@ const (
 
 // MerchantServiceClient is a client for the merchant.v1.MerchantService service.
 type MerchantServiceClient interface {
+	// 获取当前生效的入驻协议元信息（无需登录）
+	GetMerchantAgreement(context.Context, *connect.Request[v1.GetMerchantAgreementRequest]) (*connect.Response[v1.GetMerchantAgreementResponse], error)
+	// 创建商家账号
+	CreateMerchant(context.Context, *connect.Request[v1.CreateMerchantRequest]) (*connect.Response[v1.CreateMerchantResponse], error)
 	// 商家提交入驻申请
 	SubmitApplication(context.Context, *connect.Request[v1.SubmitApplicationRequest]) (*connect.Response[v1.SubmitApplicationResponse], error)
 	// 通过入驻申请（管理员操作）, 发送领域事件(创建商家账户、店铺、库存初始化等）
@@ -75,6 +85,18 @@ func NewMerchantServiceClient(httpClient connect.HTTPClient, baseURL string, opt
 	baseURL = strings.TrimRight(baseURL, "/")
 	merchantServiceMethods := v1.File_api_merchant_v1_merchant_proto.Services().ByName("MerchantService").Methods()
 	return &merchantServiceClient{
+		getMerchantAgreement: connect.NewClient[v1.GetMerchantAgreementRequest, v1.GetMerchantAgreementResponse](
+			httpClient,
+			baseURL+MerchantServiceGetMerchantAgreementProcedure,
+			connect.WithSchema(merchantServiceMethods.ByName("GetMerchantAgreement")),
+			connect.WithClientOptions(opts...),
+		),
+		createMerchant: connect.NewClient[v1.CreateMerchantRequest, v1.CreateMerchantResponse](
+			httpClient,
+			baseURL+MerchantServiceCreateMerchantProcedure,
+			connect.WithSchema(merchantServiceMethods.ByName("CreateMerchant")),
+			connect.WithClientOptions(opts...),
+		),
 		submitApplication: connect.NewClient[v1.SubmitApplicationRequest, v1.SubmitApplicationResponse](
 			httpClient,
 			baseURL+MerchantServiceSubmitApplicationProcedure,
@@ -110,11 +132,23 @@ func NewMerchantServiceClient(httpClient connect.HTTPClient, baseURL string, opt
 
 // merchantServiceClient implements MerchantServiceClient.
 type merchantServiceClient struct {
-	submitApplication  *connect.Client[v1.SubmitApplicationRequest, v1.SubmitApplicationResponse]
-	approveApplication *connect.Client[v1.ApproveApplicationRequest, v1.ApproveApplicationResponse]
-	rejectApplication  *connect.Client[v1.RejectApplicationRequest, v1.RejectApplicationResponse]
-	getApplication     *connect.Client[v1.GetApplicationRequest, v1.GetApplicationResponse]
-	activateMerchant   *connect.Client[v1.ActivateMerchantRequest, v1.ActivateMerchantResponse]
+	getMerchantAgreement *connect.Client[v1.GetMerchantAgreementRequest, v1.GetMerchantAgreementResponse]
+	createMerchant       *connect.Client[v1.CreateMerchantRequest, v1.CreateMerchantResponse]
+	submitApplication    *connect.Client[v1.SubmitApplicationRequest, v1.SubmitApplicationResponse]
+	approveApplication   *connect.Client[v1.ApproveApplicationRequest, v1.ApproveApplicationResponse]
+	rejectApplication    *connect.Client[v1.RejectApplicationRequest, v1.RejectApplicationResponse]
+	getApplication       *connect.Client[v1.GetApplicationRequest, v1.GetApplicationResponse]
+	activateMerchant     *connect.Client[v1.ActivateMerchantRequest, v1.ActivateMerchantResponse]
+}
+
+// GetMerchantAgreement calls merchant.v1.MerchantService.GetMerchantAgreement.
+func (c *merchantServiceClient) GetMerchantAgreement(ctx context.Context, req *connect.Request[v1.GetMerchantAgreementRequest]) (*connect.Response[v1.GetMerchantAgreementResponse], error) {
+	return c.getMerchantAgreement.CallUnary(ctx, req)
+}
+
+// CreateMerchant calls merchant.v1.MerchantService.CreateMerchant.
+func (c *merchantServiceClient) CreateMerchant(ctx context.Context, req *connect.Request[v1.CreateMerchantRequest]) (*connect.Response[v1.CreateMerchantResponse], error) {
+	return c.createMerchant.CallUnary(ctx, req)
 }
 
 // SubmitApplication calls merchant.v1.MerchantService.SubmitApplication.
@@ -144,6 +178,10 @@ func (c *merchantServiceClient) ActivateMerchant(ctx context.Context, req *conne
 
 // MerchantServiceHandler is an implementation of the merchant.v1.MerchantService service.
 type MerchantServiceHandler interface {
+	// 获取当前生效的入驻协议元信息（无需登录）
+	GetMerchantAgreement(context.Context, *connect.Request[v1.GetMerchantAgreementRequest]) (*connect.Response[v1.GetMerchantAgreementResponse], error)
+	// 创建商家账号
+	CreateMerchant(context.Context, *connect.Request[v1.CreateMerchantRequest]) (*connect.Response[v1.CreateMerchantResponse], error)
 	// 商家提交入驻申请
 	SubmitApplication(context.Context, *connect.Request[v1.SubmitApplicationRequest]) (*connect.Response[v1.SubmitApplicationResponse], error)
 	// 通过入驻申请（管理员操作）, 发送领域事件(创建商家账户、店铺、库存初始化等）
@@ -163,6 +201,18 @@ type MerchantServiceHandler interface {
 // and JSON codecs. They also support gzip compression.
 func NewMerchantServiceHandler(svc MerchantServiceHandler, opts ...connect.HandlerOption) (string, http.Handler) {
 	merchantServiceMethods := v1.File_api_merchant_v1_merchant_proto.Services().ByName("MerchantService").Methods()
+	merchantServiceGetMerchantAgreementHandler := connect.NewUnaryHandler(
+		MerchantServiceGetMerchantAgreementProcedure,
+		svc.GetMerchantAgreement,
+		connect.WithSchema(merchantServiceMethods.ByName("GetMerchantAgreement")),
+		connect.WithHandlerOptions(opts...),
+	)
+	merchantServiceCreateMerchantHandler := connect.NewUnaryHandler(
+		MerchantServiceCreateMerchantProcedure,
+		svc.CreateMerchant,
+		connect.WithSchema(merchantServiceMethods.ByName("CreateMerchant")),
+		connect.WithHandlerOptions(opts...),
+	)
 	merchantServiceSubmitApplicationHandler := connect.NewUnaryHandler(
 		MerchantServiceSubmitApplicationProcedure,
 		svc.SubmitApplication,
@@ -195,6 +245,10 @@ func NewMerchantServiceHandler(svc MerchantServiceHandler, opts ...connect.Handl
 	)
 	return "/merchant.v1.MerchantService/", http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		switch r.URL.Path {
+		case MerchantServiceGetMerchantAgreementProcedure:
+			merchantServiceGetMerchantAgreementHandler.ServeHTTP(w, r)
+		case MerchantServiceCreateMerchantProcedure:
+			merchantServiceCreateMerchantHandler.ServeHTTP(w, r)
 		case MerchantServiceSubmitApplicationProcedure:
 			merchantServiceSubmitApplicationHandler.ServeHTTP(w, r)
 		case MerchantServiceApproveApplicationProcedure:
@@ -213,6 +267,14 @@ func NewMerchantServiceHandler(svc MerchantServiceHandler, opts ...connect.Handl
 
 // UnimplementedMerchantServiceHandler returns CodeUnimplemented from all methods.
 type UnimplementedMerchantServiceHandler struct{}
+
+func (UnimplementedMerchantServiceHandler) GetMerchantAgreement(context.Context, *connect.Request[v1.GetMerchantAgreementRequest]) (*connect.Response[v1.GetMerchantAgreementResponse], error) {
+	return nil, connect.NewError(connect.CodeUnimplemented, errors.New("merchant.v1.MerchantService.GetMerchantAgreement is not implemented"))
+}
+
+func (UnimplementedMerchantServiceHandler) CreateMerchant(context.Context, *connect.Request[v1.CreateMerchantRequest]) (*connect.Response[v1.CreateMerchantResponse], error) {
+	return nil, connect.NewError(connect.CodeUnimplemented, errors.New("merchant.v1.MerchantService.CreateMerchant is not implemented"))
+}
 
 func (UnimplementedMerchantServiceHandler) SubmitApplication(context.Context, *connect.Request[v1.SubmitApplicationRequest]) (*connect.Response[v1.SubmitApplicationResponse], error) {
 	return nil, connect.NewError(connect.CodeUnimplemented, errors.New("merchant.v1.MerchantService.SubmitApplication is not implemented"))

@@ -60,7 +60,7 @@
 | 服务 | 状态 | 已实现 | 主要缺口 |
 |------|------|--------|----------|
 | 地址 address | 🔴 | CRUD + `SetDefaultAddress` + `ListAddresses`（功能齐全，**但全线越权**） | ❗**安全 BLOCKER**：`Get/Update/Delete/SetDefault` 的 SQL 只按 `address_id` 过滤、无 user 归属校验，`CreateAddress` 的 `user_id` 直接取自请求体（`internal/service/address.go:26,71,84,95`）；网关又整段放行 `p, consumer, /address.v1.AddressService/*`（`gateway/configs/policies/policies.csv:3`）——任何登录用户拿到或遍历到他人地址 UUID 即可读改删其隐私地址。修法：user 一律取自网关注入的身份头，所有查询加 `AND user_id = ?`，网关策略收敛到 RPC 粒度 |
-| 商家 merchant | 🔴 | 仅 `Submit`/`Get` 可用 | ❗**`ApproveApplication` 的 SQL 没有 WHERE 子句**（`internal/data/queries/merchant.sql:23`），repo 层还丢弃了 `ApplicationId`（`internal/data/merchant.go:23`）→ **批准一份申请 = 把所有待审申请一起改成 approved**，并覆盖上这一份的审核意见与时间戳；❗`RejectApplication`/`ActivateMerchant` 是 `panic("implement me")`（`internal/service/merchant_service.go:57,98`）——网关已把这两条按 RPC 粒度放行给 admin，调用即 panic。此外仍缺：店铺信息管理、商品运营权限、发货/售后、结算账单 |
+| 商家 merchant | 🔴 | 仅 `Submit`/`Get` 可用；2026-08-13 两段式入驻（成为商家/开设店铺）设计定稿（`docs/design/merchant/onboarding.md`，配《商家入驻协议》v1.0 `docs/MERCHANT_AGREEMENT.md`），`GetMerchantAgreement`/`CreateMerchant` 的 proto/biz/data 骨架与 `merchants.agreement` 表已建——**均为占位**：`CreateMerchant` 三层全是 panic 桩，协议查询 data 层返回零值未接 SQL | ❗**`ApproveApplication` 的 SQL 没有 WHERE 子句**（`internal/data/queries/merchant.sql:23`），repo 层还丢弃了 `ApplicationId`（`internal/data/merchant.go:23`）→ **批准一份申请 = 把所有待审申请一起改成 approved**，并覆盖上这一份的审核意见与时间戳；❗`RejectApplication`/`ActivateMerchant` 是 `panic("implement me")`（`internal/service/merchant_service.go:57,98`）——网关已把这两条按 RPC 粒度放行给 admin，调用即 panic。此外仍缺：店铺信息管理、商品运营权限、发货/售后、结算账单 |
 | 履约 fulfillment | ⬜ | — | 发货/物流轨迹、第三方物流对接、售后履约 |
 | 结算 settlement | ⬜ | — | 佣金计算、结算单、财务对账 |
 | 营销 marketing | ⬜ | — | 优惠券、满减、秒杀、会员/积分 |

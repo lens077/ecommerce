@@ -20,6 +20,21 @@ type merchantRepo struct {
 	data    *Data
 }
 
+func (m *merchantRepo) GetMerchantAgreement(ctx context.Context, req *biz.GetMerchantAgreementRequest) (*biz.GetMerchantAgreementResponse, error) {
+	result := &biz.GetMerchantAgreementResponse{
+		Version:       "",
+		EffectiveDate: time.Time{},
+		ContentUrl:    "",
+	}
+
+	return result, nil
+}
+
+func (m *merchantRepo) CreateMerchant(ctx context.Context, req *biz.CreateMerchantRequest) (*biz.CreateMerchantResponse, error) {
+	// TODO implement me
+	panic("implement me")
+}
+
 func (m *merchantRepo) ApproveApplication(ctx context.Context, req *biz.ApproveApplicationRequest) (*biz.ApproveApplicationResponse, error) {
 	err := m.queries.ApproveApplication(ctx, models.ApproveApplicationParams{
 		Status:       string(constants.ApplicationStatusApproved),
