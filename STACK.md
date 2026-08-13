@@ -136,7 +136,7 @@ ecommerce/
 
 ### 2.5 基础设施与 CI/CD
 
-- **镜像**：多阶段 Docker，`golang:1.26.5-alpine3.23`（`ARG GO_IMAGE`，以各服务 Dockerfile 为准）；非 root（uid/gid 1000）；`CGO_ENABLED=0` 静态编译；`--mount=type=cache` 缓存 go mod 与 build
+- **镜像**：多阶段 Docker，`golang:1.26.5-alpine3.24`（`ARG GO_IMAGE`，以各服务 Dockerfile 为准）；非 root（uid/gid 1000）；`CGO_ENABLED=0` 静态编译；`--mount=type=cache` 缓存 go mod 与 build
 - **多架构**：`docker buildx --platform linux/amd64,linux/arm64`
 - **编排**：Kubernetes + Helm（每服务一个 chart + library chart）+ VPA
 - **GitOps**：ArgoCD **ApplicationSet**（list 生成器 + umbrella chart，`prune: true` / `selfHeal: true`）
