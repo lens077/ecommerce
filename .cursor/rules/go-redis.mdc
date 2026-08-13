@@ -1,0 +1,24 @@
+---
+description: go-redis v9：每次调用取 Client()（会热重建）、redis.Nil 不是错误、Pipeline 无原子性、默认重试会让非幂等命令执行多次。
+globs: backend/**/*.go
+alwaysApply: false
+---
+
+# go-redis v9
+
+完整约定：`context/team/go-redis.md`。连的是 Dragonfly，不是原生 Redis。11 个服务的客户端装配是同构副本，改一个必须同步全部。
+
+```go
+// ✅ 每次用的时候取，拿到的永远是当前客户端
+err := d.rdb.Client().Ping(ctx).Err()
+
+// ❌ 把 Client() 存进结构体 / 包级变量——配置热重建后那是已 Close 的旧客户端
+type repo struct{ rdb *redis.Client }
+```
+
+- `err == redis.Nil` 是缓存未命中，不是故障；不要当 5xx / 熔断
+- 缓存写失败记 warn 后继续，缓存不是真相源
+- `Pipeline()` 省的是 RTT，没有原子性；要原子用 `TxPipeline()`。`Exec()` 之前读不到结果
+- 默认 `MaxRetries: 3`，`INCR` / `LPUSH` / `SetNX` 网络抖动时可能执行多次。要么幂等，要么显式调小重试
+- 读-改-写用 `Watch` + `TxPipelined`，不要自己拼版本号。分布式锁必须带唯一 owner + TTL，Lua 校验 owner 解锁；单机 Redis 锁不是共识
+- 不要用 Redis 顶 Kafka。健康检查里 redis 与 postgres 分开报

@@ -1,0 +1,17 @@
+---
+description: 定时/Ticker/后台 goroutine：扩副本会重复执行、首次 tick 有盲窗、不要把心跳挂在 OnStart ctx 上、重要任务不能只靠一次回调。
+globs: backend/**/*.go
+alwaysApply: false
+---
+
+# 定时任务与后台 goroutine
+
+完整约定：`context/team/cron-jobs.md`。本仓没有 `robfig/cron`，周期任务都是 `time.Ticker`。
+
+- 进程内调度器扩副本即重复执行。本仓目前单副本掩盖了这个问题。任务本身必须幂等。独立可启容器的任务优先 K8s CronJob
+- `for { select { case <-ticker.C } }` 第一次执行在一个完整周期之后。承担「让自己可见」的任务必须注册后立即补一次（Consul TTL 心跳被咬过：启动 25s 对外不可见）
+- 写周期任务时显式决定「第一次要不要立刻执行」，并写进注释
+- 后台 goroutine 必须 recover + 堆栈 + 告警；Job 内部自建超时 ctx 并一路传到 pgx/redis/connect
+- 时区必须显式 `Asia/Shanghai`，不要依赖服务器默认时区
+- 长生命周期任务用 `context.Background()` 派生、用 `OnStop` 关。不要用 `OnStart` 的 ctx（inventory 心跳因此静默退出，30s 后被 Consul 摘除）
+- Cron 不补偿错过的执行。对账 / 超时兜底 / 结算必须落到 Postgres 任务表，不要一次回调直接干完

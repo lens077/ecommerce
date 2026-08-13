@@ -1,0 +1,26 @@
+---
+description: 前端数据拉取走 connect-query；transport 全 app 一个懒单例；手写 queryKey 不收；src/gen 不许手改；错误走 toAppError。
+globs: frontend/**/*.{ts,tsx}
+alwaysApply: false
+---
+
+# 前端数据拉取
+
+完整 SOP：`context/project/ecommerce/frontend-api/sop/connect-query.md`。工具链是 vite-plus（`vp`），没有 husky / biome / eslint / prettier。
+
+```ts
+// ✅ schema + input 自动推导 key
+useQuery(CartService.method.getCart, {}, { staleTime: 10_000 })
+useMutation(CartService.method.addProductToCart)
+
+// ❌ 不要再包 client、不要手写 queryKey
+useQuery({ queryKey: ["cart", "items"], queryFn: () => cartApi.getCartItems() })
+```
+
+- transport 只用 `getSharedTransport()` / `getPublicTransport()` 两个懒单例。多一个实例就多一套互不相通的缓存。不要调 `createAppTransport()`，也不要模块顶层建 transport（桌面端要先 `setGatewayBaseUrl`）
+- 失效用 `createConnectQueryKey({ schema, cardinality: "finite" })`，手写字符串 key 打不中且不报错
+- `select` 提到模块作用域，不要内联箭头函数
+- 错误走 `toAppError` + `ErrorHandler`。不要 `err.message` 兜底。认证失效由 `errorInterceptor` 退登，组件里不要再判一次
+- `src/gen/` 是生成物：改 proto 再 `cd backend && make api`。`int64` 传入 `BigInt(...)`，读出 `.toString()`
+- product / search 走 `getPublicTransport()`，挂 auth 会让未登录浏览触发退登
+- 条件拉取优先 `skipToken`。不进缓存的一次性调用用 `callUnaryMethod`

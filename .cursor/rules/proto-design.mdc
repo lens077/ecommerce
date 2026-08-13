@@ -1,0 +1,29 @@
+---
+description: 写/改 proto 前先读设计文档；每个字段必须有 buf.validate 约束；不删字段、不复用字段号、不改类型与语义。
+globs: backend/api/**/*.proto
+alwaysApply: false
+---
+
+# Proto 契约
+
+写或改 `backend/api/**/*.proto` 之前，先读 `docs/design/<service>/`，再看 `TODO.md` 与同域已有 proto / sqlc schema。设计文档没写清的字段，问，不要猜。完整规范：`context/team/proto-design.md`。
+
+不允许字段裸奔。校验来源优先级：设计文档 → DB 列宽 → 同域同类字段 → 问用户。不要拍脑袋填上限。
+
+```protobuf
+// ❌ 裸奔
+int32 page_size = 3;
+string keyword = 2;
+
+// ✅ 每个字段有推断依据
+uint32 page_size = 3 [(buf.validate.field).uint32 = { gte: 1, lte: 100 }];
+string keyword = 2 [(buf.validate.field).string.max_len = 128];
+OrderStatus status = 1 [(buf.validate.field).enum.defined_only = true];
+string merchant_id = 3 [(buf.validate.field).string.uuid = true];
+```
+
+- 枚举必须 `defined_only`；非 UUID 的业务 ID 用 `min_len` + `max_len`，不要只写 `max_len`
+- `repeated` 必须 `max_items`；金额不用 `double`/`float`，用整数分或 decimal 字符串
+- 不删字段（`reserved` 占号和名字）、不复用字段号、不改字段类型、不改字段语义
+- `buf.validate` 只管结构；业务不变量、权限留在 biz / 网关
+- 改完跑 `cd backend && make api`；`frontend/apps/*/src/gen/` 是生成物，不许手改

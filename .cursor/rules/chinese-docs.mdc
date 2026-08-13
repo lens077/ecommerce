@@ -1,0 +1,16 @@
+---
+description: 中文文档与界面文案：克制可扫读；直角引号「」；允许第二人称「你」；不改机器可读标识符。
+globs: "**/*.{md,mdc}"
+alwaysApply: false
+---
+
+# 中文文案
+
+走 `tech-doc-style-chinese` skill 的上游默认，本项目只覆盖两条：
+
+- 中文引号用直角引号 `「」`
+- 允许第二人称「你」（文档读者是你自己和协作的 agent）
+
+准确先于修辞。不新增来源不明的日期、数字、能力或结论。不把「计划 / 建议 / 通常」改成确定事实。不改代码字面量、JSON 键、URL、API 路径、字段名、命令。
+
+沉淀知识时：同一条约束只写一处，其余用链接。experience 文件名用症状（kebab-case），必须含「症状 / 关键陷阱 / 根因 / 修复」。分层判据见 `context/harness-framework/knowledge-layering.md`。

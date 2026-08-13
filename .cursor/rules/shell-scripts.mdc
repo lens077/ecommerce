@@ -1,0 +1,21 @@
+---
+description: macOS Bash 3.2：set -u 下不能无条件展开空数组；dry-run 必须覆盖全部写路径。
+globs: "**/*.{sh,bash}"
+alwaysApply: false
+---
+
+# Shell 脚本
+
+完整约定：`context/team/shell-scripting.md`。仓库脚本必须兼容 macOS 自带 Bash 3.2。
+
+`set -u` 下展开空数组 `"${args[@]}"` 会报 `unbound variable`，即使已经 `args=()`。让数组始终包含一个真实参数，再按条件追加：
+
+```bash
+kubectl_apply_cmd=(apply)
+if [[ -n "${dry_run}" ]]; then
+  kubectl_apply_cmd+=(--dry-run=server)
+fi
+kubectl "${kubectl_apply_cmd[@]}" -f manifest.yaml
+```
+
+dry-run 必须覆盖全部写路径（`apply` / `create` / `delete` / `patch` / `replace` / `rollout`），不能只给最后一条业务清单加 `--dry-run`。验收时至少覆盖一次可选参数为空的默认路径。

@@ -1,0 +1,26 @@
+---
+description: 知识路由与硬规则索引。规范本体在 context/，本文件只做 Cursor 侧入口，不另立真相源。
+alwaysApply: true
+---
+
+# 知识路由
+
+规范真相源是 `context/`（入口 `context/INDEX.md`），拓扑真相源是 `.service-matrix.yaml`，进度真相源是 `TODO.md`，架构真相源是 `docs/design/`。现搜、推测或记忆与它们冲突时，以真相源为准。找不到对应知识 ≠ 没有约束：先读设计文档 / `TODO.md`，读完按 `context/harness-framework/self-refinement.md` 沉淀回来。
+
+硬规则全文在 `AGENTS.md`。可执行命令与按改动类型的必读路由在 `context/team/runbook.md` §0.1。
+
+## 动手前
+
+1. 先估计规模并说出来：L1 单文件 · L2 少数文件 · L3 仓库级。L1/L2 走最小路径，验证变红才扩张。
+2. 查服务注册名、网关前缀、依赖、Config Center 键 → 只查 `.service-matrix.yaml`。`depends_on` 已接线，`depends_on_planned` 未接线。
+3. 后端 10 个业务服务的 `internal/pkg/` 是同构副本，改一处 = 改全部对应文件。
+4. 凭据不入库。不可逆动作（commit / push / deploy / 仓外写删）需用户授权；已明确要求则直接做，不要二次确认。subagent 永不执行这些动作。
+
+## 提交前最便宜的适用验证
+
+- 后端：`cd backend && go build ./... && go vet ./...`
+- 动 matrix / 加删服务：`go test -count=1 ./structcheck/...`
+- 前端：`cd frontend && pnpm ready`
+- 放行以命令真绿为准，不以模型自报为准。
+
+踩到模式性坑（凡是 A 就要 B）→ 写回 `context/` 对应层，不要只改这一处。
