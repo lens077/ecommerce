@@ -26,3 +26,7 @@ SET status        = @status,
     audit_comment = @audit_comment,
     reviewed_at   = @reviewed_at,
     updated_at    = @updated_at;
+
+-- name: GetMerchantAgreement :one
+SELECT *
+FROM merchants.agreement;

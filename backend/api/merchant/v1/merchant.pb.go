@@ -79,6 +79,199 @@ func (ApplicationStatus) EnumDescriptor() ([]byte, []int) {
 	return file_api_merchant_v1_merchant_proto_rawDescGZIP(), []int{0}
 }
 
+type GetMerchantAgreementRequest struct {
+	state         protoimpl.MessageState `protogen:"open.v1"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *GetMerchantAgreementRequest) Reset() {
+	*x = GetMerchantAgreementRequest{}
+	mi := &file_api_merchant_v1_merchant_proto_msgTypes[0]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *GetMerchantAgreementRequest) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*GetMerchantAgreementRequest) ProtoMessage() {}
+
+func (x *GetMerchantAgreementRequest) ProtoReflect() protoreflect.Message {
+	mi := &file_api_merchant_v1_merchant_proto_msgTypes[0]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use GetMerchantAgreementRequest.ProtoReflect.Descriptor instead.
+func (*GetMerchantAgreementRequest) Descriptor() ([]byte, []int) {
+	return file_api_merchant_v1_merchant_proto_rawDescGZIP(), []int{0}
+}
+
+type GetMerchantAgreementResponse struct {
+	state         protoimpl.MessageState `protogen:"open.v1"`
+	Version       string                 `protobuf:"bytes,1,opt,name=version,proto3" json:"version,omitempty"`                                  // "v1.0"
+	EffectiveDate string                 `protobuf:"bytes,2,opt,name=effective_date,json=effectiveDate,proto3" json:"effective_date,omitempty"` // "2026-08-13"
+	ContentUrl    string                 `protobuf:"bytes,3,opt,name=content_url,json=contentUrl,proto3" json:"content_url,omitempty"`          // 协议文本地址（先指向仓库文档，前端页面后置）
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *GetMerchantAgreementResponse) Reset() {
+	*x = GetMerchantAgreementResponse{}
+	mi := &file_api_merchant_v1_merchant_proto_msgTypes[1]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *GetMerchantAgreementResponse) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*GetMerchantAgreementResponse) ProtoMessage() {}
+
+func (x *GetMerchantAgreementResponse) ProtoReflect() protoreflect.Message {
+	mi := &file_api_merchant_v1_merchant_proto_msgTypes[1]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use GetMerchantAgreementResponse.ProtoReflect.Descriptor instead.
+func (*GetMerchantAgreementResponse) Descriptor() ([]byte, []int) {
+	return file_api_merchant_v1_merchant_proto_rawDescGZIP(), []int{1}
+}
+
+func (x *GetMerchantAgreementResponse) GetVersion() string {
+	if x != nil {
+		return x.Version
+	}
+	return ""
+}
+
+func (x *GetMerchantAgreementResponse) GetEffectiveDate() string {
+	if x != nil {
+		return x.EffectiveDate
+	}
+	return ""
+}
+
+func (x *GetMerchantAgreementResponse) GetContentUrl() string {
+	if x != nil {
+		return x.ContentUrl
+	}
+	return ""
+}
+
+type CreateMerchantRequest struct {
+	state protoimpl.MessageState `protogen:"open.v1"`
+	Phone string                 `protobuf:"bytes,1,opt,name=phone,proto3" json:"phone,omitempty"`
+	Mail  string                 `protobuf:"bytes,2,opt,name=mail,proto3" json:"mail,omitempty"`
+	// 确认协议的版本号
+	AgreementVersion string `protobuf:"bytes,3,opt,name=agreement_version,json=agreementVersion,proto3" json:"agreement_version,omitempty"`
+	unknownFields    protoimpl.UnknownFields
+	sizeCache        protoimpl.SizeCache
+}
+
+func (x *CreateMerchantRequest) Reset() {
+	*x = CreateMerchantRequest{}
+	mi := &file_api_merchant_v1_merchant_proto_msgTypes[2]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *CreateMerchantRequest) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*CreateMerchantRequest) ProtoMessage() {}
+
+func (x *CreateMerchantRequest) ProtoReflect() protoreflect.Message {
+	mi := &file_api_merchant_v1_merchant_proto_msgTypes[2]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use CreateMerchantRequest.ProtoReflect.Descriptor instead.
+func (*CreateMerchantRequest) Descriptor() ([]byte, []int) {
+	return file_api_merchant_v1_merchant_proto_rawDescGZIP(), []int{2}
+}
+
+func (x *CreateMerchantRequest) GetPhone() string {
+	if x != nil {
+		return x.Phone
+	}
+	return ""
+}
+
+func (x *CreateMerchantRequest) GetMail() string {
+	if x != nil {
+		return x.Mail
+	}
+	return ""
+}
+
+func (x *CreateMerchantRequest) GetAgreementVersion() string {
+	if x != nil {
+		return x.AgreementVersion
+	}
+	return ""
+}
+
+type CreateMerchantResponse struct {
+	state         protoimpl.MessageState `protogen:"open.v1"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *CreateMerchantResponse) Reset() {
+	*x = CreateMerchantResponse{}
+	mi := &file_api_merchant_v1_merchant_proto_msgTypes[3]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *CreateMerchantResponse) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*CreateMerchantResponse) ProtoMessage() {}
+
+func (x *CreateMerchantResponse) ProtoReflect() protoreflect.Message {
+	mi := &file_api_merchant_v1_merchant_proto_msgTypes[3]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use CreateMerchantResponse.ProtoReflect.Descriptor instead.
+func (*CreateMerchantResponse) Descriptor() ([]byte, []int) {
+	return file_api_merchant_v1_merchant_proto_rawDescGZIP(), []int{3}
+}
+
 type SubmitApplicationRequest struct {
 	state protoimpl.MessageState `protogen:"open.v1"`
 	// 公司名称
@@ -107,7 +300,7 @@ type SubmitApplicationRequest struct {
 
 func (x *SubmitApplicationRequest) Reset() {
 	*x = SubmitApplicationRequest{}
-	mi := &file_api_merchant_v1_merchant_proto_msgTypes[0]
+	mi := &file_api_merchant_v1_merchant_proto_msgTypes[4]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -119,7 +312,7 @@ func (x *SubmitApplicationRequest) String() string {
 func (*SubmitApplicationRequest) ProtoMessage() {}
 
 func (x *SubmitApplicationRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_api_merchant_v1_merchant_proto_msgTypes[0]
+	mi := &file_api_merchant_v1_merchant_proto_msgTypes[4]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -132,7 +325,7 @@ func (x *SubmitApplicationRequest) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use SubmitApplicationRequest.ProtoReflect.Descriptor instead.
 func (*SubmitApplicationRequest) Descriptor() ([]byte, []int) {
-	return file_api_merchant_v1_merchant_proto_rawDescGZIP(), []int{0}
+	return file_api_merchant_v1_merchant_proto_rawDescGZIP(), []int{4}
 }
 
 func (x *SubmitApplicationRequest) GetCompanyName() string {
@@ -217,7 +410,7 @@ type SubmitApplicationResponse struct {
 
 func (x *SubmitApplicationResponse) Reset() {
 	*x = SubmitApplicationResponse{}
-	mi := &file_api_merchant_v1_merchant_proto_msgTypes[1]
+	mi := &file_api_merchant_v1_merchant_proto_msgTypes[5]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -229,7 +422,7 @@ func (x *SubmitApplicationResponse) String() string {
 func (*SubmitApplicationResponse) ProtoMessage() {}
 
 func (x *SubmitApplicationResponse) ProtoReflect() protoreflect.Message {
-	mi := &file_api_merchant_v1_merchant_proto_msgTypes[1]
+	mi := &file_api_merchant_v1_merchant_proto_msgTypes[5]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -242,7 +435,7 @@ func (x *SubmitApplicationResponse) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use SubmitApplicationResponse.ProtoReflect.Descriptor instead.
 func (*SubmitApplicationResponse) Descriptor() ([]byte, []int) {
-	return file_api_merchant_v1_merchant_proto_rawDescGZIP(), []int{1}
+	return file_api_merchant_v1_merchant_proto_rawDescGZIP(), []int{5}
 }
 
 func (x *SubmitApplicationResponse) GetApplicationId() string {
@@ -271,7 +464,7 @@ type ApproveApplicationRequest struct {
 
 func (x *ApproveApplicationRequest) Reset() {
 	*x = ApproveApplicationRequest{}
-	mi := &file_api_merchant_v1_merchant_proto_msgTypes[2]
+	mi := &file_api_merchant_v1_merchant_proto_msgTypes[6]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -283,7 +476,7 @@ func (x *ApproveApplicationRequest) String() string {
 func (*ApproveApplicationRequest) ProtoMessage() {}
 
 func (x *ApproveApplicationRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_api_merchant_v1_merchant_proto_msgTypes[2]
+	mi := &file_api_merchant_v1_merchant_proto_msgTypes[6]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -296,7 +489,7 @@ func (x *ApproveApplicationRequest) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use ApproveApplicationRequest.ProtoReflect.Descriptor instead.
 func (*ApproveApplicationRequest) Descriptor() ([]byte, []int) {
-	return file_api_merchant_v1_merchant_proto_rawDescGZIP(), []int{2}
+	return file_api_merchant_v1_merchant_proto_rawDescGZIP(), []int{6}
 }
 
 func (x *ApproveApplicationRequest) GetApplicationId() string {
@@ -321,7 +514,7 @@ type ApproveApplicationResponse struct {
 
 func (x *ApproveApplicationResponse) Reset() {
 	*x = ApproveApplicationResponse{}
-	mi := &file_api_merchant_v1_merchant_proto_msgTypes[3]
+	mi := &file_api_merchant_v1_merchant_proto_msgTypes[7]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -333,7 +526,7 @@ func (x *ApproveApplicationResponse) String() string {
 func (*ApproveApplicationResponse) ProtoMessage() {}
 
 func (x *ApproveApplicationResponse) ProtoReflect() protoreflect.Message {
-	mi := &file_api_merchant_v1_merchant_proto_msgTypes[3]
+	mi := &file_api_merchant_v1_merchant_proto_msgTypes[7]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -346,7 +539,7 @@ func (x *ApproveApplicationResponse) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use ApproveApplicationResponse.ProtoReflect.Descriptor instead.
 func (*ApproveApplicationResponse) Descriptor() ([]byte, []int) {
-	return file_api_merchant_v1_merchant_proto_rawDescGZIP(), []int{3}
+	return file_api_merchant_v1_merchant_proto_rawDescGZIP(), []int{7}
 }
 
 type RejectApplicationRequest struct {
@@ -361,7 +554,7 @@ type RejectApplicationRequest struct {
 
 func (x *RejectApplicationRequest) Reset() {
 	*x = RejectApplicationRequest{}
-	mi := &file_api_merchant_v1_merchant_proto_msgTypes[4]
+	mi := &file_api_merchant_v1_merchant_proto_msgTypes[8]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -373,7 +566,7 @@ func (x *RejectApplicationRequest) String() string {
 func (*RejectApplicationRequest) ProtoMessage() {}
 
 func (x *RejectApplicationRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_api_merchant_v1_merchant_proto_msgTypes[4]
+	mi := &file_api_merchant_v1_merchant_proto_msgTypes[8]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -386,7 +579,7 @@ func (x *RejectApplicationRequest) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use RejectApplicationRequest.ProtoReflect.Descriptor instead.
 func (*RejectApplicationRequest) Descriptor() ([]byte, []int) {
-	return file_api_merchant_v1_merchant_proto_rawDescGZIP(), []int{4}
+	return file_api_merchant_v1_merchant_proto_rawDescGZIP(), []int{8}
 }
 
 func (x *RejectApplicationRequest) GetApplicationId() string {
@@ -411,7 +604,7 @@ type RejectApplicationResponse struct {
 
 func (x *RejectApplicationResponse) Reset() {
 	*x = RejectApplicationResponse{}
-	mi := &file_api_merchant_v1_merchant_proto_msgTypes[5]
+	mi := &file_api_merchant_v1_merchant_proto_msgTypes[9]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -423,7 +616,7 @@ func (x *RejectApplicationResponse) String() string {
 func (*RejectApplicationResponse) ProtoMessage() {}
 
 func (x *RejectApplicationResponse) ProtoReflect() protoreflect.Message {
-	mi := &file_api_merchant_v1_merchant_proto_msgTypes[5]
+	mi := &file_api_merchant_v1_merchant_proto_msgTypes[9]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -436,7 +629,7 @@ func (x *RejectApplicationResponse) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use RejectApplicationResponse.ProtoReflect.Descriptor instead.
 func (*RejectApplicationResponse) Descriptor() ([]byte, []int) {
-	return file_api_merchant_v1_merchant_proto_rawDescGZIP(), []int{5}
+	return file_api_merchant_v1_merchant_proto_rawDescGZIP(), []int{9}
 }
 
 // 查询申请状态请求
@@ -449,7 +642,7 @@ type GetApplicationRequest struct {
 
 func (x *GetApplicationRequest) Reset() {
 	*x = GetApplicationRequest{}
-	mi := &file_api_merchant_v1_merchant_proto_msgTypes[6]
+	mi := &file_api_merchant_v1_merchant_proto_msgTypes[10]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -461,7 +654,7 @@ func (x *GetApplicationRequest) String() string {
 func (*GetApplicationRequest) ProtoMessage() {}
 
 func (x *GetApplicationRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_api_merchant_v1_merchant_proto_msgTypes[6]
+	mi := &file_api_merchant_v1_merchant_proto_msgTypes[10]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -474,7 +667,7 @@ func (x *GetApplicationRequest) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use GetApplicationRequest.ProtoReflect.Descriptor instead.
 func (*GetApplicationRequest) Descriptor() ([]byte, []int) {
-	return file_api_merchant_v1_merchant_proto_rawDescGZIP(), []int{6}
+	return file_api_merchant_v1_merchant_proto_rawDescGZIP(), []int{10}
 }
 
 func (x *GetApplicationRequest) GetApplicationId() string {
@@ -501,7 +694,7 @@ type GetApplicationResponse struct {
 
 func (x *GetApplicationResponse) Reset() {
 	*x = GetApplicationResponse{}
-	mi := &file_api_merchant_v1_merchant_proto_msgTypes[7]
+	mi := &file_api_merchant_v1_merchant_proto_msgTypes[11]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -513,7 +706,7 @@ func (x *GetApplicationResponse) String() string {
 func (*GetApplicationResponse) ProtoMessage() {}
 
 func (x *GetApplicationResponse) ProtoReflect() protoreflect.Message {
-	mi := &file_api_merchant_v1_merchant_proto_msgTypes[7]
+	mi := &file_api_merchant_v1_merchant_proto_msgTypes[11]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -526,7 +719,7 @@ func (x *GetApplicationResponse) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use GetApplicationResponse.ProtoReflect.Descriptor instead.
 func (*GetApplicationResponse) Descriptor() ([]byte, []int) {
-	return file_api_merchant_v1_merchant_proto_rawDescGZIP(), []int{7}
+	return file_api_merchant_v1_merchant_proto_rawDescGZIP(), []int{11}
 }
 
 func (x *GetApplicationResponse) GetApplicationId() string {
@@ -604,7 +797,7 @@ type ActivateMerchantRequest struct {
 
 func (x *ActivateMerchantRequest) Reset() {
 	*x = ActivateMerchantRequest{}
-	mi := &file_api_merchant_v1_merchant_proto_msgTypes[8]
+	mi := &file_api_merchant_v1_merchant_proto_msgTypes[12]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -616,7 +809,7 @@ func (x *ActivateMerchantRequest) String() string {
 func (*ActivateMerchantRequest) ProtoMessage() {}
 
 func (x *ActivateMerchantRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_api_merchant_v1_merchant_proto_msgTypes[8]
+	mi := &file_api_merchant_v1_merchant_proto_msgTypes[12]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -629,7 +822,7 @@ func (x *ActivateMerchantRequest) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use ActivateMerchantRequest.ProtoReflect.Descriptor instead.
 func (*ActivateMerchantRequest) Descriptor() ([]byte, []int) {
-	return file_api_merchant_v1_merchant_proto_rawDescGZIP(), []int{8}
+	return file_api_merchant_v1_merchant_proto_rawDescGZIP(), []int{12}
 }
 
 func (x *ActivateMerchantRequest) GetMerchantId() string {
@@ -661,7 +854,7 @@ type ActivateMerchantResponse struct {
 
 func (x *ActivateMerchantResponse) Reset() {
 	*x = ActivateMerchantResponse{}
-	mi := &file_api_merchant_v1_merchant_proto_msgTypes[9]
+	mi := &file_api_merchant_v1_merchant_proto_msgTypes[13]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -673,7 +866,7 @@ func (x *ActivateMerchantResponse) String() string {
 func (*ActivateMerchantResponse) ProtoMessage() {}
 
 func (x *ActivateMerchantResponse) ProtoReflect() protoreflect.Message {
-	mi := &file_api_merchant_v1_merchant_proto_msgTypes[9]
+	mi := &file_api_merchant_v1_merchant_proto_msgTypes[13]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -686,14 +879,25 @@ func (x *ActivateMerchantResponse) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use ActivateMerchantResponse.ProtoReflect.Descriptor instead.
 func (*ActivateMerchantResponse) Descriptor() ([]byte, []int) {
-	return file_api_merchant_v1_merchant_proto_rawDescGZIP(), []int{9}
+	return file_api_merchant_v1_merchant_proto_rawDescGZIP(), []int{13}
 }
 
 var File_api_merchant_v1_merchant_proto protoreflect.FileDescriptor
 
 const file_api_merchant_v1_merchant_proto_rawDesc = "" +
 	"\n" +
-	"\x1eapi/merchant/v1/merchant.proto\x12\vmerchant.v1\x1a\x1fgoogle/protobuf/timestamp.proto\x1a#third_party/validate/validate.proto\"\x9f\x04\n" +
+	"\x1eapi/merchant/v1/merchant.proto\x12\vmerchant.v1\x1a\x1fgoogle/protobuf/timestamp.proto\x1a#third_party/validate/validate.proto\"\x1d\n" +
+	"\x1bGetMerchantAgreementRequest\"\x80\x01\n" +
+	"\x1cGetMerchantAgreementResponse\x12\x18\n" +
+	"\aversion\x18\x01 \x01(\tR\aversion\x12%\n" +
+	"\x0eeffective_date\x18\x02 \x01(\tR\reffectiveDate\x12\x1f\n" +
+	"\vcontent_url\x18\x03 \x01(\tR\n" +
+	"contentUrl\"\x84\x01\n" +
+	"\x15CreateMerchantRequest\x12\x1f\n" +
+	"\x05phone\x18\x01 \x01(\tB\t\xbaH\x06r\x04\x10\x01\x18\vR\x05phone\x12\x12\n" +
+	"\x04mail\x18\x02 \x01(\tR\x04mail\x126\n" +
+	"\x11agreement_version\x18\x03 \x01(\tB\t\xbaH\x06r\x04\x10\x01\x18\x10R\x10agreementVersion\"\x18\n" +
+	"\x16CreateMerchantResponse\"\x9f\x04\n" +
 	"\x18SubmitApplicationRequest\x12-\n" +
 	"\fcompany_name\x18\x01 \x01(\tB\n" +
 	"\xbaH\ar\x05\x10\x01\x18\xff\x01R\vcompanyName\x12*\n" +
@@ -749,13 +953,16 @@ const file_api_merchant_v1_merchant_proto_rawDesc = "" +
 	"!APPLICATION_STATUS_PENDING_REVIEW\x10\x01\x12\x1f\n" +
 	"\x1bAPPLICATION_STATUS_APPROVED\x10\x02\x12\x1f\n" +
 	"\x1bAPPLICATION_STATUS_REJECTED\x10\x03\x12 \n" +
-	"\x1cAPPLICATION_STATUS_ACTIVATED\x10\x042\x86\x04\n" +
-	"\x0fMerchantService\x12d\n" +
+	"\x1cAPPLICATION_STATUS_ACTIVATED\x10\x042\xd2\x05\n" +
+	"\x0fMerchantService\x12m\n" +
+	"\x14GetMerchantAgreement\x12(.merchant.v1.GetMerchantAgreementRequest\x1a).merchant.v1.GetMerchantAgreementResponse\"\x00\x12[\n" +
+	"\x0eCreateMerchant\x12\".merchant.v1.CreateMerchantRequest\x1a#.merchant.v1.CreateMerchantResponse\"\x00\x12d\n" +
 	"\x11SubmitApplication\x12%.merchant.v1.SubmitApplicationRequest\x1a&.merchant.v1.SubmitApplicationResponse\"\x00\x12g\n" +
 	"\x12ApproveApplication\x12&.merchant.v1.ApproveApplicationRequest\x1a'.merchant.v1.ApproveApplicationResponse\"\x00\x12d\n" +
 	"\x11RejectApplication\x12%.merchant.v1.RejectApplicationRequest\x1a&.merchant.v1.RejectApplicationResponse\"\x00\x12[\n" +
 	"\x0eGetApplication\x12\".merchant.v1.GetApplicationRequest\x1a#.merchant.v1.GetApplicationResponse\"\x00\x12a\n" +
-	"\x10ActivateMerchant\x12$.merchant.v1.ActivateMerchantRequest\x1a%.merchant.v1.ActivateMerchantResponse\"\x00BAZ?github.com/lens077/ecommerce/backend/api/merchant/v1;merchantv1b\x06proto3"
+	"\x10ActivateMerchant\x12$.merchant.v1.ActivateMerchantRequest\x1a%.merchant.v1.ActivateMerchantResponse\"\x00B\xae\x01\n" +
+	"\x0fcom.merchant.v1B\rMerchantProtoP\x01Z?github.com/lens077/ecommerce/backend/api/merchant/v1;merchantv1\xa2\x02\x03MXX\xaa\x02\vMerchant.V1\xca\x02\vMerchant\\V1\xe2\x02\x17Merchant\\V1\\GPBMetadata\xea\x02\fMerchant::V1b\x06proto3"
 
 var (
 	file_api_merchant_v1_merchant_proto_rawDescOnce sync.Once
@@ -770,37 +977,45 @@ func file_api_merchant_v1_merchant_proto_rawDescGZIP() []byte {
 }
 
 var file_api_merchant_v1_merchant_proto_enumTypes = make([]protoimpl.EnumInfo, 1)
-var file_api_merchant_v1_merchant_proto_msgTypes = make([]protoimpl.MessageInfo, 10)
+var file_api_merchant_v1_merchant_proto_msgTypes = make([]protoimpl.MessageInfo, 14)
 var file_api_merchant_v1_merchant_proto_goTypes = []any{
-	(ApplicationStatus)(0),             // 0: merchant.v1.ApplicationStatus
-	(*SubmitApplicationRequest)(nil),   // 1: merchant.v1.SubmitApplicationRequest
-	(*SubmitApplicationResponse)(nil),  // 2: merchant.v1.SubmitApplicationResponse
-	(*ApproveApplicationRequest)(nil),  // 3: merchant.v1.ApproveApplicationRequest
-	(*ApproveApplicationResponse)(nil), // 4: merchant.v1.ApproveApplicationResponse
-	(*RejectApplicationRequest)(nil),   // 5: merchant.v1.RejectApplicationRequest
-	(*RejectApplicationResponse)(nil),  // 6: merchant.v1.RejectApplicationResponse
-	(*GetApplicationRequest)(nil),      // 7: merchant.v1.GetApplicationRequest
-	(*GetApplicationResponse)(nil),     // 8: merchant.v1.GetApplicationResponse
-	(*ActivateMerchantRequest)(nil),    // 9: merchant.v1.ActivateMerchantRequest
-	(*ActivateMerchantResponse)(nil),   // 10: merchant.v1.ActivateMerchantResponse
-	(*timestamppb.Timestamp)(nil),      // 11: google.protobuf.Timestamp
+	(ApplicationStatus)(0),               // 0: merchant.v1.ApplicationStatus
+	(*GetMerchantAgreementRequest)(nil),  // 1: merchant.v1.GetMerchantAgreementRequest
+	(*GetMerchantAgreementResponse)(nil), // 2: merchant.v1.GetMerchantAgreementResponse
+	(*CreateMerchantRequest)(nil),        // 3: merchant.v1.CreateMerchantRequest
+	(*CreateMerchantResponse)(nil),       // 4: merchant.v1.CreateMerchantResponse
+	(*SubmitApplicationRequest)(nil),     // 5: merchant.v1.SubmitApplicationRequest
+	(*SubmitApplicationResponse)(nil),    // 6: merchant.v1.SubmitApplicationResponse
+	(*ApproveApplicationRequest)(nil),    // 7: merchant.v1.ApproveApplicationRequest
+	(*ApproveApplicationResponse)(nil),   // 8: merchant.v1.ApproveApplicationResponse
+	(*RejectApplicationRequest)(nil),     // 9: merchant.v1.RejectApplicationRequest
+	(*RejectApplicationResponse)(nil),    // 10: merchant.v1.RejectApplicationResponse
+	(*GetApplicationRequest)(nil),        // 11: merchant.v1.GetApplicationRequest
+	(*GetApplicationResponse)(nil),       // 12: merchant.v1.GetApplicationResponse
+	(*ActivateMerchantRequest)(nil),      // 13: merchant.v1.ActivateMerchantRequest
+	(*ActivateMerchantResponse)(nil),     // 14: merchant.v1.ActivateMerchantResponse
+	(*timestamppb.Timestamp)(nil),        // 15: google.protobuf.Timestamp
 }
 var file_api_merchant_v1_merchant_proto_depIdxs = []int32{
 	0,  // 0: merchant.v1.GetApplicationResponse.status:type_name -> merchant.v1.ApplicationStatus
-	11, // 1: merchant.v1.GetApplicationResponse.submitted_at:type_name -> google.protobuf.Timestamp
-	11, // 2: merchant.v1.GetApplicationResponse.reviewed_at:type_name -> google.protobuf.Timestamp
-	1,  // 3: merchant.v1.MerchantService.SubmitApplication:input_type -> merchant.v1.SubmitApplicationRequest
-	3,  // 4: merchant.v1.MerchantService.ApproveApplication:input_type -> merchant.v1.ApproveApplicationRequest
-	5,  // 5: merchant.v1.MerchantService.RejectApplication:input_type -> merchant.v1.RejectApplicationRequest
-	7,  // 6: merchant.v1.MerchantService.GetApplication:input_type -> merchant.v1.GetApplicationRequest
-	9,  // 7: merchant.v1.MerchantService.ActivateMerchant:input_type -> merchant.v1.ActivateMerchantRequest
-	2,  // 8: merchant.v1.MerchantService.SubmitApplication:output_type -> merchant.v1.SubmitApplicationResponse
-	4,  // 9: merchant.v1.MerchantService.ApproveApplication:output_type -> merchant.v1.ApproveApplicationResponse
-	6,  // 10: merchant.v1.MerchantService.RejectApplication:output_type -> merchant.v1.RejectApplicationResponse
-	8,  // 11: merchant.v1.MerchantService.GetApplication:output_type -> merchant.v1.GetApplicationResponse
-	10, // 12: merchant.v1.MerchantService.ActivateMerchant:output_type -> merchant.v1.ActivateMerchantResponse
-	8,  // [8:13] is the sub-list for method output_type
-	3,  // [3:8] is the sub-list for method input_type
+	15, // 1: merchant.v1.GetApplicationResponse.submitted_at:type_name -> google.protobuf.Timestamp
+	15, // 2: merchant.v1.GetApplicationResponse.reviewed_at:type_name -> google.protobuf.Timestamp
+	1,  // 3: merchant.v1.MerchantService.GetMerchantAgreement:input_type -> merchant.v1.GetMerchantAgreementRequest
+	3,  // 4: merchant.v1.MerchantService.CreateMerchant:input_type -> merchant.v1.CreateMerchantRequest
+	5,  // 5: merchant.v1.MerchantService.SubmitApplication:input_type -> merchant.v1.SubmitApplicationRequest
+	7,  // 6: merchant.v1.MerchantService.ApproveApplication:input_type -> merchant.v1.ApproveApplicationRequest
+	9,  // 7: merchant.v1.MerchantService.RejectApplication:input_type -> merchant.v1.RejectApplicationRequest
+	11, // 8: merchant.v1.MerchantService.GetApplication:input_type -> merchant.v1.GetApplicationRequest
+	13, // 9: merchant.v1.MerchantService.ActivateMerchant:input_type -> merchant.v1.ActivateMerchantRequest
+	2,  // 10: merchant.v1.MerchantService.GetMerchantAgreement:output_type -> merchant.v1.GetMerchantAgreementResponse
+	4,  // 11: merchant.v1.MerchantService.CreateMerchant:output_type -> merchant.v1.CreateMerchantResponse
+	6,  // 12: merchant.v1.MerchantService.SubmitApplication:output_type -> merchant.v1.SubmitApplicationResponse
+	8,  // 13: merchant.v1.MerchantService.ApproveApplication:output_type -> merchant.v1.ApproveApplicationResponse
+	10, // 14: merchant.v1.MerchantService.RejectApplication:output_type -> merchant.v1.RejectApplicationResponse
+	12, // 15: merchant.v1.MerchantService.GetApplication:output_type -> merchant.v1.GetApplicationResponse
+	14, // 16: merchant.v1.MerchantService.ActivateMerchant:output_type -> merchant.v1.ActivateMerchantResponse
+	10, // [10:17] is the sub-list for method output_type
+	3,  // [3:10] is the sub-list for method input_type
 	3,  // [3:3] is the sub-list for extension type_name
 	3,  // [3:3] is the sub-list for extension extendee
 	0,  // [0:3] is the sub-list for field type_name
@@ -817,7 +1032,7 @@ func file_api_merchant_v1_merchant_proto_init() {
 			GoPackagePath: reflect.TypeOf(x{}).PkgPath(),
 			RawDescriptor: unsafe.Slice(unsafe.StringData(file_api_merchant_v1_merchant_proto_rawDesc), len(file_api_merchant_v1_merchant_proto_rawDesc)),
 			NumEnums:      1,
-			NumMessages:   10,
+			NumMessages:   14,
 			NumExtensions: 0,
 			NumServices:   1,
 		},

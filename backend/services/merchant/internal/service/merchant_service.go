@@ -15,6 +15,27 @@ type MerchantService struct {
 	uc *biz.MerchantUseCase
 }
 
+func (s *MerchantService) GetMerchantAgreement(ctx context.Context, _ *connect.Request[v1.GetMerchantAgreementRequest]) (*connect.Response[v1.GetMerchantAgreementResponse], error) {
+	// req := c.Msg
+
+	result, err := s.uc.GetMerchantAgreement(ctx, &biz.GetMerchantAgreementRequest{})
+	if err != nil {
+		return nil, err
+	}
+	response := &v1.GetMerchantAgreementResponse{
+		Version:       result.Version,
+		EffectiveDate: result.EffectiveDate.String(),
+		ContentUrl:    result.ContentUrl,
+	}
+
+	return connect.NewResponse(response), err
+}
+
+func (s *MerchantService) CreateMerchant(ctx context.Context, c *connect.Request[v1.CreateMerchantRequest]) (*connect.Response[v1.CreateMerchantResponse], error) {
+	// TODO implement me
+	panic("implement me")
+}
+
 func (s *MerchantService) SubmitApplication(ctx context.Context, c *connect.Request[v1.SubmitApplicationRequest]) (*connect.Response[v1.SubmitApplicationResponse], error) {
 	req := c.Msg
 	result, err := s.uc.SubmitApplication(ctx, &biz.SubmitApplicationRequest{

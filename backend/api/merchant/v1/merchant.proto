@@ -8,6 +8,12 @@ import "third_party/validate/validate.proto";
 option go_package = "github.com/lens077/ecommerce/backend/api/merchant/v1;merchantv1";
 
 service MerchantService {
+  // 获取当前生效的入驻协议元信息（无需登录）
+  rpc GetMerchantAgreement(GetMerchantAgreementRequest) returns (GetMerchantAgreementResponse) {}
+
+  // 创建商家账号
+  rpc CreateMerchant(CreateMerchantRequest) returns (CreateMerchantResponse) {}
+
   // 商家提交入驻申请
   rpc SubmitApplication(SubmitApplicationRequest) returns (SubmitApplicationResponse) {}
 
@@ -31,6 +37,30 @@ enum ApplicationStatus {
   APPLICATION_STATUS_APPROVED = 2; // 已通过
   APPLICATION_STATUS_REJECTED = 3; // 已驳回
   APPLICATION_STATUS_ACTIVATED = 4; // 已激活（商家完成首次设置并激活店铺）
+}
+
+message GetMerchantAgreementRequest{}
+message GetMerchantAgreementResponse {
+  string version = 1;        // "v1.0"
+  string effective_date = 2; // "2026-08-13"
+  string content_url = 3;    // 协议文本地址
+}
+
+message CreateMerchantRequest {
+  string phone = 1 [(buf.validate.field).string = {
+    min_len: 1
+    max_len: 11
+  }];
+  string mail = 2;
+  //  确认协议的版本号
+  string agreement_version = 3 [(buf.validate.field).string = {
+    min_len: 1
+    max_len: 16
+  }];
+}
+
+message CreateMerchantResponse {
+
 }
 
 message SubmitApplicationRequest {

@@ -43,3 +43,6 @@ const (
 	ConsulTagFx  = "fx"
 	ConsulTagTtl = "ttl"
 )
+
+// MerchantAgreementVersion 当前生效的《商家入驻协议》版本，升版时与 docs/MERCHANT_AGREEMENT.md 文首同步修改
+const MerchantAgreementVersion = "v1.0"
