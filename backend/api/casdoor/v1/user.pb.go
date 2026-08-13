@@ -1833,7 +1833,10 @@ const file_api_casdoor_v1_user_proto_rawDesc = "" +
 	"\x14need_update_password\x18\x8f\x01 \x01(\bR\x12needUpdatePassword\x1a=\n" +
 	"\x0fPropertiesEntry\x12\x10\n" +
 	"\x03key\x18\x01 \x01(\tR\x03key\x12\x14\n" +
-	"\x05value\x18\x02 \x01(\tR\x05value:\x028\x01B?Z=github.com/lens077/ecommerce/backend/api/casdoor/v1;casdoorv1b\x06proto3"
+	"\x05value\x18\x02 \x01(\tR\x05value:\x028\x01B\xa3\x01\n" +
+	"\x0ecom.casdoor.v1B\tUserProtoP\x01Z=github.com/lens077/ecommerce/backend/api/casdoor/v1;casdoorv1\xa2\x02\x03CXX\xaa\x02\n" +
+	"Casdoor.V1\xca\x02\n" +
+	"Casdoor\\V1\xe2\x02\x16Casdoor\\V1\\GPBMetadata\xea\x02\vCasdoor::V1b\x06proto3"
 
 var (
 	file_api_casdoor_v1_user_proto_rawDescOnce sync.Once

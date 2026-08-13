@@ -336,7 +336,8 @@ const file_api_inventory_v1_inventory_proto_rawDesc = "" +
 	"\x03msg\x18\x02 \x01(\tB\b\xbaH\x05r\x03\x18\x80\x04R\x03msg2\xbb\x01\n" +
 	"\x10InventoryService\x12H\n" +
 	"\aReserve\x12\x1c.inventory.v1.ReserveRequest\x1a\x1d.inventory.v1.ReserveResponse\"\x00\x12]\n" +
-	"\x0eReleaseReserve\x12#.inventory.v1.ReleaseReserveRequest\x1a$.inventory.v1.ReleaseReserveResponse\"\x00BCZAgithub.com/lens077/ecommerce/backend/api/inventory/v1;inventoryv1b\x06proto3"
+	"\x0eReleaseReserve\x12#.inventory.v1.ReleaseReserveRequest\x1a$.inventory.v1.ReleaseReserveResponse\"\x00B\xb6\x01\n" +
+	"\x10com.inventory.v1B\x0eInventoryProtoP\x01ZAgithub.com/lens077/ecommerce/backend/api/inventory/v1;inventoryv1\xa2\x02\x03IXX\xaa\x02\fInventory.V1\xca\x02\fInventory\\V1\xe2\x02\x18Inventory\\V1\\GPBMetadata\xea\x02\rInventory::V1b\x06proto3"
 
 var (
 	file_api_inventory_v1_inventory_proto_rawDescOnce sync.Once

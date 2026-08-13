@@ -804,7 +804,8 @@ const file_api_cart_v1_cart_proto_rawDesc = "" +
 	"\aGetCart\x12\x17.cart.v1.GetCartRequest\x1a\x18.cart.v1.GetCartResponse\"\x00\x12Y\n" +
 	"\x10AddProductToCart\x12 .cart.v1.AddProductToCartRequest\x1a!.cart.v1.AddProductToCartResponse\"\x00\x12S\n" +
 	"\x0eRemoveCartItem\x12\x1e.cart.v1.RemoveCartItemRequest\x1a\x1f.cart.v1.RemoveCartItemResponse\"\x00\x12k\n" +
-	"\x16UpdateCartItemQuantity\x12&.cart.v1.UpdateCartItemQuantityRequest\x1a'.cart.v1.UpdateCartItemQuantityResponse\"\x00B9Z7github.com/lens077/ecommerce/backend/api/cart/v1;cartv1b\x06proto3"
+	"\x16UpdateCartItemQuantity\x12&.cart.v1.UpdateCartItemQuantityRequest\x1a'.cart.v1.UpdateCartItemQuantityResponse\"\x00B\x8e\x01\n" +
+	"\vcom.cart.v1B\tCartProtoP\x01Z7github.com/lens077/ecommerce/backend/api/cart/v1;cartv1\xa2\x02\x03CXX\xaa\x02\aCart.V1\xca\x02\aCart\\V1\xe2\x02\x13Cart\\V1\\GPBMetadata\xea\x02\bCart::V1b\x06proto3"
 
 var (
 	file_api_cart_v1_cart_proto_rawDescOnce sync.Once

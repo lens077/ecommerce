@@ -123,7 +123,9 @@ const file_api_check_v1_check_proto_rawDesc = "" +
 	"\x03key\x18\x01 \x01(\tR\x03key\x12\x14\n" +
 	"\x05value\x18\x02 \x01(\tR\x05value:\x028\x012M\n" +
 	"\fCheckService\x12=\n" +
-	"\x05Ready\x12\x17.check.v1.ReadyCheckReq\x1a\x19.check.v1.ReadyCheckReply\"\x00B;Z9github.com/lens077/ecommerce/backend/api/check/v1;checkv1b\x06proto3"
+	"\x05Ready\x12\x17.check.v1.ReadyCheckReq\x1a\x19.check.v1.ReadyCheckReply\"\x00B\x96\x01\n" +
+	"\fcom.check.v1B\n" +
+	"CheckProtoP\x01Z9github.com/lens077/ecommerce/backend/api/check/v1;checkv1\xa2\x02\x03CXX\xaa\x02\bCheck.V1\xca\x02\bCheck\\V1\xe2\x02\x14Check\\V1\\GPBMetadata\xea\x02\tCheck::V1b\x06proto3"
 
 var (
 	file_api_check_v1_check_proto_rawDescOnce sync.Once

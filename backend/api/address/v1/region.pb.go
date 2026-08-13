@@ -233,7 +233,10 @@ const file_api_address_v1_region_proto_rawDesc = "" +
 	"\x13ListRegionsResponse\x127\n" +
 	"\aregions\x18\x01 \x03(\v2\x12.address.v1.RegionB\t\xbaH\x06\x92\x01\x03\x10\xf4\x03R\aregions2_\n" +
 	"\rRegionService\x12N\n" +
-	"\vListRegions\x12\x1e.address.v1.ListRegionsRequest\x1a\x1f.address.v1.ListRegionsResponseB?Z=github.com/lens077/ecommerce/backend/api/address/v1;addressv1b\x06proto3"
+	"\vListRegions\x12\x1e.address.v1.ListRegionsRequest\x1a\x1f.address.v1.ListRegionsResponseB\xa5\x01\n" +
+	"\x0ecom.address.v1B\vRegionProtoP\x01Z=github.com/lens077/ecommerce/backend/api/address/v1;addressv1\xa2\x02\x03AXX\xaa\x02\n" +
+	"Address.V1\xca\x02\n" +
+	"Address\\V1\xe2\x02\x16Address\\V1\\GPBMetadata\xea\x02\vAddress::V1b\x06proto3"
 
 var (
 	file_api_address_v1_region_proto_rawDescOnce sync.Once

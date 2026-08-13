@@ -823,7 +823,10 @@ const file_api_address_v1_address_proto_rawDesc = "" +
 	"\n" +
 	"GetAddress\x12\x1d.address.v1.GetAddressRequest\x1a\x1e.address.v1.GetAddressResponse\x12T\n" +
 	"\rListAddresses\x12 .address.v1.ListAddressesRequest\x1a!.address.v1.ListAddressesResponse\x12`\n" +
-	"\x11SetDefaultAddress\x12$.address.v1.SetDefaultAddressRequest\x1a%.address.v1.SetDefaultAddressResponseB?Z=github.com/lens077/ecommerce/backend/api/address/v1;addressv1b\x06proto3"
+	"\x11SetDefaultAddress\x12$.address.v1.SetDefaultAddressRequest\x1a%.address.v1.SetDefaultAddressResponseB\xa6\x01\n" +
+	"\x0ecom.address.v1B\fAddressProtoP\x01Z=github.com/lens077/ecommerce/backend/api/address/v1;addressv1\xa2\x02\x03AXX\xaa\x02\n" +
+	"Address.V1\xca\x02\n" +
+	"Address\\V1\xe2\x02\x16Address\\V1\\GPBMetadata\xea\x02\vAddress::V1b\x06proto3"
 
 var (
 	file_api_address_v1_address_proto_rawDescOnce sync.Once

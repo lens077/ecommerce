@@ -413,7 +413,10 @@ const file_api_product_v1_product_proto_rawDesc = "" +
 	"\x0eSTATUS_OFFLINE\x10\x03\x12\x12\n" +
 	"\x0eSTATUS_DELETED\x10\x042q\n" +
 	"\x0eProductService\x12_\n" +
-	"\x10GetProductDetail\x12#.product.v1.GetProductDetailRequest\x1a$.product.v1.GetProductDetailResponse\"\x00B?Z=github.com/lens077/ecommerce/backend/api/product/v1;productv1b\x06proto3"
+	"\x10GetProductDetail\x12#.product.v1.GetProductDetailRequest\x1a$.product.v1.GetProductDetailResponse\"\x00B\xa6\x01\n" +
+	"\x0ecom.product.v1B\fProductProtoP\x01Z=github.com/lens077/ecommerce/backend/api/product/v1;productv1\xa2\x02\x03PXX\xaa\x02\n" +
+	"Product.V1\xca\x02\n" +
+	"Product\\V1\xe2\x02\x16Product\\V1\\GPBMetadata\xea\x02\vProduct::V1b\x06proto3"
 
 var (
 	file_api_product_v1_product_proto_rawDescOnce sync.Once

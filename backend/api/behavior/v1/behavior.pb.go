@@ -632,7 +632,8 @@ const file_api_behavior_v1_behavior_proto_rawDesc = "" +
 	"\x0fBehaviorService\x12@\n" +
 	"\x05Track\x12\x19.behavior.v1.TrackRequest\x1a\x1a.behavior.v1.TrackResponse\"\x00\x12L\n" +
 	"\tRecommend\x12\x1d.behavior.v1.RecommendRequest\x1a\x1e.behavior.v1.RecommendResponse\"\x00\x12U\n" +
-	"\fSimilarItems\x12 .behavior.v1.SimilarItemsRequest\x1a!.behavior.v1.SimilarItemsResponse\"\x00BAZ?github.com/lens077/ecommerce/backend/api/behavior/v1;behaviorv1b\x06proto3"
+	"\fSimilarItems\x12 .behavior.v1.SimilarItemsRequest\x1a!.behavior.v1.SimilarItemsResponse\"\x00B\xae\x01\n" +
+	"\x0fcom.behavior.v1B\rBehaviorProtoP\x01Z?github.com/lens077/ecommerce/backend/api/behavior/v1;behaviorv1\xa2\x02\x03BXX\xaa\x02\vBehavior.V1\xca\x02\vBehavior\\V1\xe2\x02\x17Behavior\\V1\\GPBMetadata\xea\x02\fBehavior::V1b\x06proto3"
 
 var (
 	file_api_behavior_v1_behavior_proto_rawDescOnce sync.Once
