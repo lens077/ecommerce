@@ -420,7 +420,7 @@ HTTP Client 请求，使用正确的 `x-md-global-user-id` 元数据与 RPC 字�
 2. 仅在需要时运行 Add/Update/Remove 三个写请求，之后可用 GetCart 确认结果。
 3. 使用等价 `curl` 进行自动化本地烟测；本次三条只读调用均返回 `HTTP 200`。
 4. 使用 `make docker-deploy VERSION=dev` 生成并推送镜像；构建基础镜像必须满足根
-   `go.mod` 的 Go 版本要求（目前为 `golang:1.26.5-alpine3.23`）。
+   `go.mod` 的 Go 版本要求（目前为 `golang:1.26.5-alpine3.24`）。
 
 **验证记录：** `go test ./services/cart/...` 已通过；远端 `:dev` OCI index 摘要为
 `sha256:d4daa8ca7fa2f2e8272d449e1e6d887ec9cf07e05b63fa912edb3fd909ba2a74`，Linux/amd64

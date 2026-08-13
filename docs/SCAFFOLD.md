@@ -588,7 +588,7 @@ sql:
 ### 服务 `Dockerfile`（多阶段 + 缓存挂载 + 非 root）
 
 ```dockerfile
-ARG GO_IMAGE=golang:1.26-alpine3.22
+ARG GO_IMAGE=golang:1.26.5-alpine3.24
 FROM --platform=$BUILDPLATFORM ${GO_IMAGE} AS compile
 ARG TARGETOS=linux
 ARG TARGETARCH
