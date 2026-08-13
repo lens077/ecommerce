@@ -4,7 +4,7 @@
 >
 > 分工：
 > - 技术选型与版本、分层规则、编码约束 → **本文件**
-> - 服务拓扑事实（注册名/前缀/依赖/KV 键/端口）→ [`.service-matrix.yaml`](.service-matrix.yaml)
+> - 服务拓扑事实（注册名/前缀/依赖/Config Center 键/端口）→ [`.service-matrix.yaml`](.service-matrix.yaml)
 > - 架构设计与"为什么" → [`docs/design/`](docs/design/README.md)（按微服务分目录，含 config-center 存档）
 > - 实现进度 → [`TODO.md`](TODO.md)
 > - AI 协作行为基线 → [`AGENTS.md`](AGENTS.md) + [`context/`](context/INDEX.md)
@@ -24,16 +24,16 @@ ecommerce/
 ├── STACK.md                   # ← 本文件
 ├── .service-matrix.yaml       # 服务拓扑事实表（AI/CI 查表用，非设计文档）
 ├── docs/                      # design/ 架构真相源 · architecture/ 交互式架构图
-│                              #   DEVOPS / PROGRESS / SCAFFOLD / PRIVACY 也收纳于此
+│                              #   DEVOPS / SCAFFOLD / PRIVACY / TESTING / OKTETO / observability/ 也收纳于此
 ├── TODO.md                    # 进度真相源（✅ / 🟡 / ⬜）
 ├── context/                   # 三层知识库（team / harness-framework / project）
 ├── backend/
 │   ├── api/{service}/v1/*.proto     # 对外契约（同时生成 Go 与 TS）
 │   ├── constants/                   # 跨服务共享枚举与元数据键
-│   ├── pkg/                         # 跨服务共享库（gorse client / types / product-sku）
+│   ├── pkg/                         # 跨服务共享库（gorse / product / types）
 │   ├── services/{service}/          # 每服务一个独立 fx 应用
 │   ├── buf.yaml · buf.gen.yaml · buf.gen.ts.yaml · sqlc.yaml · Makefile
-│   └── go.mod                       # 单一 module，11 个服务共享
+│   └── go.mod                       # 单一 module，10 个服务共享
 ├── gateway/                   # go-kratos/gateway fork（独立 module，subtree 到独立仓）
 ├── frontend/                  # pnpm workspace（apps/* + packages/*）
 ├── helm/{charts,library}      # 每服务一个 chart + 一个 library chart
@@ -44,7 +44,7 @@ ecommerce/
 
 | 决策 | 取舍 |
 |---|---|
-| 后端 11 个服务共用**一个 go.mod** | 省掉 11 份依赖升级；靠目录 + `internal/` 强制边界 |
+| 后端 10 个服务共用**一个 go.mod** | 省掉 10 份依赖升级；靠目录 + `internal/` 强制边界 |
 | proto 与实现同仓 | 契约改动一个 PR 可见全链路影响；代价是仓库大 |
 | 网关是**独立 module 的 fork** | 可 `git subtree push --prefix=gateway gateway main` 推到独立仓复用 |
 | 前端 4 个 app 一个 workspace | 靠 `packages/*` 复用拦截器/错误模型/UI，靠 catalog 统一版本 |
@@ -57,7 +57,7 @@ ecommerce/
 
 | 类别 | 选型 | 版本 |
 |---|---|---|
-| 语言 | Go | **1.26.1**（gateway 1.25.0） |
+| 语言 | Go | **1.26.5**（backend 与 gateway 同版，以两个 go.mod 为准） |
 | RPC 框架 | `connectrpc.com/connect` | v1.19.2 |
 | 协议 | Connect / gRPC / gRPC-Web 三兼容，HTTP/2 h2c 明文 | — |
 | IDL | Protobuf + Buf CLI | protobuf v1.36.11 |
@@ -116,8 +116,8 @@ ecommerce/
 | 测试 | vitest（vite-plus test）+ Playwright browser mode + testing-library | — |
 | 其他 | lucide-react · @fontsource/roboto · web-vitals · jsonc-parser · yaml · smol-toml | — |
 
-**Apps**：`consumer:3000` · `merchant:3002` · `admin:3003` · `config:3005`
-**Packages**：`api`（拦截器 + 统一错误模型）· `configs` · `constants` · `tracker`（埋点 SDK）· `ui` · `utils`
+**Apps**：`consumer:3000` · `merchant:3002` · `admin:3003` · `desktop`（Tauri 壳，套 consumer/merchant）
+**Packages**（9 个）：`api`（拦截器 + 统一错误模型）· `configs` · `constants` · `i18n` · `perf`（Web Vitals 上报）· `tauri` · `tracker`（埋点 SDK）· `ui` · `utils`
 
 ### 2.4 数据与中间件
 
@@ -127,16 +127,16 @@ ecommerce/
 | Redis (Dragonfly) | 缓存 / 游标 / 分布式锁 | TLS `insecure_skip_verify` |
 | Elasticsearch | search 服务 | — |
 | MinIO | 商品图 | cart 使用 |
-| Consul | 服务注册发现 **+ KV 配置源** | — |
+| Consul | **仅**服务注册发现（KV 配置源已退役，Bootstrap 走 Config Center） | — |
 | Casdoor | IdP（OAuth2/OIDC + JWT RS256，kid=lens） | — |
 | gorse | 推荐引擎 | behavior / product 使用 |
-| Kafka | **设计里有，代码里没有** | 见第十节 |
+| Kafka | 应用侧无客户端；CDC 基础设施（Strimzi kafka-connect + Debezium）已部署 | 见第十节 |
 
 具体主机名端口见 [`context/team/local-env.md`](context/team/local-env.md) 与 `.service-matrix.yaml` 的 `externals` 段。**凭据不进仓库。**
 
 ### 2.5 基础设施与 CI/CD
 
-- **镜像**：多阶段 Docker，`golang:1.26.1-alpine3.22` → `alpine:3.22`；非 root（uid/gid 1000）；`CGO_ENABLED=0` 静态编译；`--mount=type=cache` 缓存 go mod 与 build
+- **镜像**：多阶段 Docker，`golang:1.26.5-alpine3.23`（`ARG GO_IMAGE`，以各服务 Dockerfile 为准）；非 root（uid/gid 1000）；`CGO_ENABLED=0` 静态编译；`--mount=type=cache` 缓存 go mod 与 build
 - **多架构**：`docker buildx --platform linux/amd64,linux/arm64`
 - **编排**：Kubernetes + Helm（每服务一个 chart + library chart）+ VPA
 - **GitOps**：ArgoCD **ApplicationSet**（list 生成器 + umbrella chart，`prune: true` / `selfHeal: true`）
@@ -213,31 +213,10 @@ logger.Module → config.Module → logger.FxLogger() → registry.Module
 
 ### 三层错误处理规范
 
-```go
-// ① biz 层定义领域错误，带 [模块] 前缀
-var ErrUserNotFound = errors.New("[user] user not found")
-
-// ② data 层包装：第三方/不可恢复错误用 %w；业务错误也用 %w 并列，保证 errors.Is 可穿透
-return nil, fmt.Errorf("%w: casdoor get oauth token err: %w", biz.ErrAuthFailed, err)
-
-// ③ service 层 switch errors.Is → connect 错误码
-switch {
-case errors.Is(err, biz.ErrUserAlreadyExists):
-    return nil, connect.NewError(connect.CodeAlreadyExists, err)
-case errors.Is(err, biz.ErrUserNotFound):
-    return nil, connect.NewError(connect.CodeNotFound, err)
-default:
-    return nil, connect.NewError(connect.CodeUnknown, err)
-}
-```
-
-落到日志里长这样，排查只看一行：
-
-```
-2026-05-07T07:58:52.175+0800  ERROR  LoggingInterceptor  server/logging.go:37  rpc system error
-{"rpc.procedure": "/user.v1.UserService/SignIn", "rpc.code": "internal",
- "trace_id": "aed4697...", "error": "internal: [user] authentication failed: casdoor ..."}
-```
+biz 定义领域错误（`[模块]` 前缀）→ data 用 `%w` 双包装保证 `errors.Is` 可穿透 → service
+`switch errors.Is` 映射 connect 错误码。**代码样例与逐层规范见
+[`docs/design/platform/error-handling.md`](docs/design/platform/error-handling.md)（全服务通用规范，此前本节整段抄录已删）**；
+工具层的 PG 错误码映射用法见 `backend/services/inventory/internal/pkg/dbutil/README.md`。
 
 **网关侧还有一层**：404 / 405 / 无可用节点 / 超时等**非业务错误也按 Connect 规范**返回 `{code, message, details[]}` + `X-Error-Reason` 头 + `Access-Control-Expose-Headers`（跨域下前端才读得到该头）。实现在 `gateway/errors/`。
 
@@ -245,114 +224,31 @@ default:
 
 ## 四、契约层规则（proto）— 团队级铁律
 
-> 规范本体：[`context/team/proto-design.md`](context/team/proto-design.md)。下面是执行摘要。
+> 规范本体：[`context/team/proto-design.md`](context/team/proto-design.md)（含约束表、反例、
+> 值来源优先级）。此前本章 60% 复述其内容，已压缩——只留三条最高频踩的：
 
-### 铁律一：写 proto 前必须先读设计文档
+1. **写 proto 前先读设计文档**（`docs/design/<service>/` → `platform/` → `TODO.md`），设计没写清的字段问，不要猜。
+2. **每个字段都要有 buf.validate 约束**；**金额禁用 `double`/`float`**（用 `int64` 分或 decimal 字符串）——这条是当前仍在违反的活约束（见第十节）。
+3. **兼容性四红线**：不删字段（`reserved` 占号）、不复用字段号、不改类型、不改语义。
 
-阅读优先级：`docs/design/<service>/` → `docs/design/platform/` → `TODO.md` → 同域已有 proto 与 sqlc schema。
-**设计文档没写清的字段，问，不要猜。**
-
-理由：proto 是服务边界和上下游契约。字段发布后前端 `frontend/packages/api` 和各服务生成代码都依赖它，语义搞错的代价从"改几行文档"升级到"回滚 proto + 重新生成前后端 + 处理已落库数据"。
-
-### 铁律二：每个字段都要有 buf.validate 约束
-
-| 类型 | 强制约束 | 不加的后果 |
-|---|---|---|
-| 枚举 | `enum.defined_only = true` | 未知枚举穿透成 int，`switch` 落 default 产生静默错 |
-| UUID | `string.uuid = true` | — |
-| 业务 ID | `min_len` + `max_len` 组合 | 只写 max_len 时空串会通过 |
-| 自由文本 | 必须 `max_len`（对齐 DB 列宽） | 无上限的 string 是内存放大攻击面 |
-| 分页 | 必须 `lte` 上限 | 一个字段打爆下游的最典型场景 |
-| 数组 | 必须 `repeated.max_items` | 批量大小的决定权交给了调用方 |
-| 数值/时间戳 | 至少约束符号 `gte = 0` | — |
-| 金额 | **禁用 `double` / `float`** | 浮点精度；用 `int64` 分或 decimal 字符串 |
-
-约束值来源优先级：**① 设计文档明写 → ② DB 列宽/类型 → ③ 同域已有 proto → ④ 业务常识与下游承受能力**。
-推断不出来就问用户，**不要拍脑袋填数** —— 填错的上限比没有上限更难排查。
-
-### 兼容性四条红线
-
-1. **不删字段** —— 用 `reserved` 占住字段号和名字
-2. **不复用字段号** —— 已删除的号永久作废
-3. **不改字段类型** —— 包括 `int32 → int64` 这种"看起来兼容"的
-4. **不改字段语义** —— 最危险的一条，因为编译不报错
-
-### buf.validate 的职责边界
-
-只管**结构性约束**（格式、长度、范围、枚举合法性）。以下不属于它，必须留在别处：
-
-- 业务不变量（库存够不够、状态机能不能转）→ biz 层
-- 复杂跨字段一致性 → biz 层（简单的可用 CEL）
-- 谁能改这个字段 → 网关 RBAC
-
-**别因为加了 validate 就省掉 biz 层校验。**
-
-### buf 配置
-
-```yaml
-# backend/buf.yaml
-version: v2
-lint:
-  use: [STANDARD]
-  except: [FIELD_NOT_REQUIRED, PACKAGE_NO_IMPORT_CYCLE]
-  disallow_comment_ignores: true
-  ignore: [internal/conf]
-breaking:
-  use: [FILE]
-  except: [EXTENSION_NO_DELETE, FIELD_SAME_DEFAULT]
-```
-
-两套生成模板：
-
-- `buf.gen.yaml` → Go：`protoc-gen-go` + `protoc-gen-connect-go`，`opt: paths=source_relative`
-- `buf.gen.ts.yaml` → TS：`protoc-gen-es`，`target=ts`，**`exclude_paths: [internal/conf/v1]`**（配置 schema 不给前端）
-
----
+buf.validate 只管结构性约束；业务不变量在 biz 层、权限在网关 RBAC——**别因为加了 validate 就省掉 biz 校验**。
+buf 的 lint/breaking/生成配置**直读 `backend/buf.yaml` 与 `buf.gen*.yaml`**（此前粘贴的副本已删，唯一要记的非显然项：`buf.gen.ts.yaml` 的 `exclude_paths: [internal/conf/v1]`——配置 schema 不给前端）。
 
 ## 五、数据层规则（sqlc + PostgreSQL）
 
-### sqlc.yaml 关键选项
+### sqlc 与建表约定
 
-```yaml
-sql_package: pgx/v5
-emit_prepared_queries: true            # 预编译语句
-emit_interface: true                   # 生成 Querier 接口（可 mock）
-emit_pointers_for_null_types: true     # 可空列 → *string，而非 sql.NullString
-emit_enum_valid_method: true
-emit_all_enum_values: true
-emit_sql_as_comment: true              # 生成代码带原 SQL 注释，排查不用翻两个文件
-json_tags_case_style: camel
-query_parameter_limit: 1
-overrides:
-  - { db_type: timestamptz, go_type: time.Time }
-  - { db_type: uuid,        go_type: github.com/google/uuid.UUID }
-```
+`backend/sqlc.yaml` 直读即可，值得记的只有三个**非显然**选项的为什么：
+`emit_pointers_for_null_types: true`（可空列 → `*string` 而非 `sql.NullString`）、
+`emit_sql_as_comment: true`（生成代码带原 SQL，排查不用翻两个文件）、
+`query_parameter_limit: 1`（强制命名参数结构体）。`database.uri: ${DB_URI}`，凭据走环境变量。
 
-`database.uri: ${DB_URI}` —— 凭据走环境变量，不进仓库。
+建表四条硬约定（完整样例看任一 `internal/data/schema/*.sql`，如 cart）：
 
-### 建表约定
-
-```sql
-CREATE SCHEMA IF NOT EXISTS cart;                    -- 每服务一个 schema，物理隔离
-SET search_path TO cart;
-CREATE TYPE cart.cart_type AS ENUM ('active','expired','deleted');
-
-CREATE TABLE IF NOT EXISTS cart.cart_item (
-    id                BIGSERIAL PRIMARY KEY,          -- 内部自增主键
-    user_id           UUID           NOT NULL,        -- 跨服务身份一律 UUID
-    merchant_id       UUID           NOT NULL,
-    -- 商品快照（加入购物车时的信息），不做跨库 JOIN
-    spu_name          VARCHAR(255)   NOT NULL,
-    price             DECIMAL(10,2)  NOT NULL,        -- 金额用 DECIMAL，不用 float
-    sku_attributes    JSONB          NOT NULL DEFAULT '{}',
-    status            cart.cart_type NOT NULL DEFAULT 'active',
-    created_at        TIMESTAMPTZ    NOT NULL DEFAULT now(),
-    updated_at        TIMESTAMPTZ    NOT NULL DEFAULT now(),
-    UNIQUE (user_id, merchant_id, sku_id)             -- 支撑 ON CONFLICT upsert
-);
-COMMENT ON TABLE cart.cart_item IS '购物车明细表';      -- 表和关键列必须有注释
-CREATE INDEX idx_cart_user_id ON cart.cart_item (user_id);   -- 索引显式命名 idx_*
-```
+1. **每服务一个 schema** 物理隔离（`CREATE SCHEMA cart; SET search_path`）
+2. **金额用 `DECIMAL`**，跨服务身份一律 UUID，商品信息存**快照字段**不做跨库 JOIN
+3. 索引显式命名 `idx_*`；upsert 依赖显式 `UNIQUE` 约束
+4. **表和关键列必须有 `COMMENT`**
 
 ### 其余约定
 
@@ -450,13 +346,8 @@ WatchKeys server-stream RPC（先订阅再发快照，反过来会漏掉两步�
 
 ### Casbin 模型
 
-```ini
-[request_definition] r = sub, obj, act
-[policy_definition]  p = sub, obj, act, eft
-[role_definition]    g = _, _
-[policy_effect] e = some(where (p.eft == allow)) && !some(where (p.eft == deny))
-[matchers] m = g(r.sub, p.sub) && keyMatch2(r.obj, p.obj) && regexMatch(r.act, p.act)
-```
+直读 `gateway/configs/policies/model.conf`（此前粘贴的副本已删）。要点一句话：
+`keyMatch2` 匹配路径 + `g` 角色继承 + deny 优先（`!some(where p.eft == deny)`）。
 
 ### 策略编写纪律
 
@@ -489,19 +380,7 @@ g, admin, merchant
 
 ### 每个 app 的目录约定
 
-```
-apps/consumer/
-├── src/
-│   ├── routes/          TanStack 文件路由（autoCodeSplitting）
-│   ├── api/{domain}/    每域一个 Connect client + RPC DTO ⇄ 领域模型映射
-│   ├── gen/             buf 生成的 TS（禁止手改）
-│   ├── store/           valtio 状态
-│   ├── components/ hooks/ providers/ themes/ styles/
-│   └── env.ts           @t3-oss/env-core + zod 校验
-├── buf.gen.yaml         → out: src/gen
-├── vite.config.ts       vite-plus 配置（staged / fmt / lint / test / plugins / alias）
-├── Dockerfile · deploy/ · Makefile
-```
+见 [`frontend/README.md`](frontend/README.md)「app 内部的四层」（此前抄录的目录树已删）。
 
 ### 硬约定
 
@@ -528,62 +407,22 @@ apps/consumer/
 ```bash
 pnpm dev            # vp run consumer#dev
 pnpm dev:merchant   # vp run merchant#dev
-pnpm dev:config     # vp run config#dev
 pnpm ready          # vp fmt && vp lint && vp run test -r && vp run build -r
 ```
 
 ---
 
-## 九、通用规则与限制
+## 九、通用规则与限制（全部是指针，本章不复述）
 
-### AGENTS.md 五条硬规则（不可跳过）
+此前本章抄录过 AGENTS.md 硬规则（且漂移到只剩五条、缺了「不可逆动作授权」这条安全关键规则）、
+三层知识库判定、experience 四段式、Git 规范、事实表判据——2026-08-13 全部删除，以下真相源直读：
 
-1. **改代码前先读对应知识** —— 按 `context/INDEX.md` 逐层缩小范围，不要全仓 grep 猜
-2. **写/改 proto 前必须先读设计文档**，并为每个字段推断出校验约束
-3. **提交前先更新 `TODO.md`**，再 `git commit`
-4. **不要把凭据写进仓库** —— 密码/密钥只在 Consul KV 和本地环境，仓库只写主机名和端口
-5. **踩到坑要沉淀** —— 判断是「模式性教训」还是「一次性 diff」，前者写进 `context/`
-
-### 三层知识库判定
-
-| 层 | 判据 | 更新频率 |
-|---|---|---|
-| `context/team/` | 换个模块、换个服务，它依然成立 | 最低 |
-| `context/harness-framework/` | 约束的是 AI 协作机制本身，不是业务 | 中 |
-| `context/project/{proj}/{module}/` | 只对某一个模块成立 | 最高、量最大 |
-
-`{module}` 用**代码目录名**（`gateway` / `behavior` / `consumer`），不是中文名也不是 proto package 名。
-
-**experience 文件四段式（硬要求）**：
-
-```markdown
-**症状**：能观察到的现象，越具体越好（日志原文、报错文本、界面表现）
-**关键陷阱**：为什么容易误判 —— 这段最值钱
-**根因**：真正的原因
-**修复**：改了哪个文件的什么
-```
-
-文件名用 kebab-case 的**症状**而非原因 —— 下次遇到时你先看到的是症状。
-
-**反模式**：同一条约束写两处（口径会漂移，只写一处其余用链接）／把 `docs/design/` 内容复制进 `context/`／写一次性 diff／凭据进仓库。
-
-### Git 规范
-
-- **Conventional Commits**：`type(scope): subject`，type ∈ `feat / fix / perf / docs / chore`，subject 中英混用
-- husky + commitlint + cz-git 校验（`.husky/commit-msg`）
-- **直接提交到 `main`**，不走分支 / PR（除非用户明确要求）
-- **按逻辑分组提交**：前端 / 后端 / 文档分开，不要一次 `git add -A` 混在一起
-- 开始新改动前，工作区已有的未提交改动**先分组提交干净**，否则新旧改动混在一个提交里无法单独回滚
-
-### 事实表 vs 知识
-
-`.service-matrix.yaml` 只记**结构事实**（注册名、网关前缀、依赖关系、外部依赖、KV 键、端口），不记设计理由（在 `docs/design/`）也不记进度（在 `TODO.md`）。
-
-判据：**"AI 每次都要现搜一遍的结构性事实" → 进 matrix；"需要解释为什么的经验" → 进 `context/`**。
-
-⚠️ 严格区分 `depends_on`（代码里真的接线了）与 `depends_on_planned`（设计要求但未接线）。
-
----
+| 主题 | 真相源 |
+|---|---|
+| 硬规则（7 条）+ E3 执行策略 + 验收锚点 | [`AGENTS.md`](AGENTS.md) |
+| 三层知识库判定 + experience 四段式 | [`AGENTS.md`](AGENTS.md) §知识索引 + [`context/harness-framework/self-refinement.md`](context/harness-framework/self-refinement.md) |
+| Git 规范（Conventional Commits 十一类 type、vite-plus 钩子、直接提 main、分组提交） | [`context/team/git-commit.md`](context/team/git-commit.md) |
+| 事实表 vs 知识的判据、`depends_on` 与 `depends_on_planned` 的区分 | [`.service-matrix.yaml`](.service-matrix.yaml) 文件头纪律段 |
 
 ## 十、设计 ≠ 现实（照抄前必读）
 
@@ -591,15 +430,13 @@ pnpm ready          # vp fmt && vp lint && vp run test -r && vp run build -r
 
 | 事项 | 现状 |
 |---|---|
-| **Kafka / 领域事件** | `docs/design/platform/architecture.md` 写了 `OrderCreatedEvent` 等 6 个领域事件，**代码里一行 Kafka 都没有**。只有 order 服务有一个进程内 `GoEventBus`；behavior 用内存队列 + `synced_at IS NULL` 当 outbox 补偿。所谓"事件驱动"目前是纸面设计 |
-| **服务间调用** | 11 个服务里只有 `cart → config` 真的接线了。order→inventory/product/address、payment→order、product→search 全是 `depends_on_planned` |
+| **Kafka / 领域事件** | 设计写了 6 个领域事件，**应用侧无任何 Kafka 客户端**（`go.mod` 零依赖）；CDC 基础设施（Strimzi kafka-connect + Debezium PG connector）已部署但应用未消费。只有 order 服务有进程内 `GoEventBus`；behavior 用内存队列 + `synced_at IS NULL` 当 outbox 补偿。落地方案定稿在 `docs/design/order/consistency.md`（Outbox + relay），尚未开工 |
+| **服务间调用** | 10 个服务的 `depends_on` 目前**全部为空**（matrix 实测；曾经的 cart→config 已随配置中心拆仓断开）。order→inventory/product/address、payment→order 等全是 `depends_on_planned` |
 | **protovalidate 从不作用于配置** | `conf.proto` 的 `required = true` 形同虚设 —— 配置加载只做 mapstructure 解码，**从不调用 `protovalidate.Validate`**；mapstructure 也没开 `ErrorUnused`。结果：KV 缺块 → 不报错 → nil-safe getter → 功能被**静默关掉而不是启动失败**（gorse 就这么被静默关过，见 [`consul-kv-missing-key-silent-disable.md`](context/project/ecommerce/behavior/experience/consul-kv-missing-key-silent-disable.md)） |
 | **buf breaking 未接 CI** | proto 破坏性变更目前**没有门禁** |
-| **CI 与实际不匹配** | `.github/workflows/backend.yml` 的 `IMAGE_NAME` 还是 `connect-example-backend`，只构建单个 `SERVICE=server`，与 Makefile 里逐服务 `docker-deployx` 的实际做法不一致 |
 | **前端测试未接门禁** | Playwright 步骤在 workflow 里被注释掉；biome/oxlint 未全量接入 |
 | **金额类型不一致** | 规范说金额禁用 double，但 `cart.proto` / biz 里 `Price` 仍是 `float64`；DB 侧是 `DECIMAL(10,2)` |
 | **配置逻辑 10 份复制** | `internal/pkg/config` 在每个服务里各复制一份，尚未抽成共享包 |
-| **`backend/services/consul-kv.json` 是 0 字节空文件** | — |
 
 ### 新项目应做的修正
 
@@ -614,12 +451,4 @@ pnpm ready          # vp fmt && vp lint && vp run test -r && vp run build -r
 
 ## 十一、相关文档
 
-| 文档 | 内容 |
-|---|---|
-| [`docs/SCAFFOLD.md`](docs/SCAFFOLD.md) | 按这套栈起新项目的脚手架规范（含模板与生成提示词） |
-| [`AGENTS.md`](AGENTS.md) | AI 协作硬规则与知识索引 |
-| [`.service-matrix.yaml`](.service-matrix.yaml) | 服务拓扑事实表 |
-| [`docs/design/`](docs/design/README.md) | 架构与领域设计真相源（按微服务分目录） |
-| [`docs/design/config-center/design.md`](docs/design/config-center/design.md) | 配置中心域设计存档 |
-| [`TODO.md`](TODO.md) | 实现进度真相源 |
-| [`context/INDEX.md`](context/INDEX.md) | 三层知识库导航 |
+文档导航统一看根 [`README.md`](README.md) §文档导航与文件头的分工块，本章不再维护第三份副本。

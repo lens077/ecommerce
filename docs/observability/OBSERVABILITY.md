@@ -3,7 +3,7 @@
 > 创建:2026-08-07。定位:**方法论 + 本仓指标基线清单**(应采什么、为什么、异常了该做什么)。
 > 与其他文档的关系:落地阶段与验收标准见 `DEVOPS.md` §5/阶段3;
 > 当前实况与缺陷清单以 `docs/reviews/OBSERVABILITY_REVIEW_20260806.md` 和 `TODO.md` 为准;
-> 看板生成脚本在 `observability/grafana/`。
+> 看板生成脚本在 `grafana/`（本目录下）；**面板与告警的现行设计真相源是同目录 [`面板设计.md`](面板设计.md)**，与本文冲突时以它的实测口径为准。
 > 核心取向(消化自 2026-08 一篇 Prometheus 方法论文章,结合本仓教训):
 > **上线前关注功能对不对,上线后要回答的是「服务现在健康吗」**。没有指标,出问题只能
 > 看日志、查服务器、猜。
@@ -58,7 +58,7 @@ alerts provisioning 通道现成)。
 |------|-------------|
 | RPC QPS(按 service + rpc.method) | 对照基线:突降查上游/网关/发现,突增查刷量/重试风暴(网关重试放大已有前科:内层 3×路由 2=一个 POST 打 6 次,已收敛) |
 | p50/p95/p99 延迟 | p99 单独恶化 → 查慢查询/GC/锁;整体抬升 → 查依赖服务,用 trace 下钻 |
-| 错误率(`rpc.code` 维度) | 突升即告警。前提是 `rpc.code` 口径可信——成功曾被记成 `unknown`(connect 无 CodeOK,`CodeOf(nil)`=CodeUnknown),已修为显式 `"ok"`,看板/告警必须用修复后口径 |
+| 错误率(`rpc.code` 维度) | 突升即告警。⚠️ 口径注意:成功记 `"ok"` 的修复**只落在日志侧,metrics 实况并非如此**(实测见 `面板设计.md` §实测口径)——面板与告警一律按 `面板设计.md` 的实测口径写,不要按本行早期说法 |
 | 状态码/错误码分布 | 区分是客户端错(4xx/invalid_argument)还是服务端错(5xx/internal),定位责任边界 |
 
 ### 3.2 Go 运行时(RED 之下第一层怀疑对象)
@@ -66,7 +66,7 @@ alerts provisioning 通道现成)。
 | 指标 | 异常时的行动 |
 |------|-------------|
 | **Goroutine 数** | 持续增长 = 泄漏/Channel 阻塞/资源未释放,按服务定位到最近变更;这是 Go 服务最重要的单一健康指标 |
-| GC pause、GC 频率 | 接口变慢不一定是数据库——先排除 GC 压力 |
+| GC 压力(runtime instrumentation v0.70 **无 GC pause 指标**,用调度延迟直方图 `go.schedule.duration` 做替代信号,见 TODO.md 面板体系行) | 接口变慢不一定是数据库——先排除 GC/调度压力 |
 | Heap / Allocation rate | 与 GC 联看;持续爬升配合 goroutine 平稳 → 查缓存无界增长 |
 
 ### 3.3 依赖层(USE,故障往往在这层先冒头)
@@ -91,35 +91,32 @@ CPU、内存、磁盘、网络 + k8s 对象状态(Pod restart、OOMKill、Pendin
 10 × Go Service + Gateway ──OTel SDK──► otel-collector ──► VictoriaMetrics (Metrics)
         │                                     ├──────────► Jaeger          (Trace)
         └──stdout──► fluent-bit ──────────────┴──────────► Loki            (Logs)
-                                Grafana(统一展示) + vmalert/Alertmanager(告警,待建)
+                                Grafana(统一展示 + unified alerting 告警,2026-08-12 定)
 ```
 
 - 接入方式:OTel SDK 装配在同构 `internal/pkg`,一份基线全员生效(已收敛,含采样率可配、
   `service.instance.id`、gzip);新服务照抄即得全套,不允许自造。
-- 已知采集缺口(以评审为准):**网关无 meter**;collector 自身(`otelcol_*`)未被监控——
-  采集管道死了没人知道,属于「监控监控系统」的必修项。
+- ~~已知采集缺口:网关无 meter;collector 自身未被监控~~——两者已于 2026-08-12 补齐:
+  网关 MeterProvider 已接(`gateway/middleware/tracing/tracing.go`),`otelcol_*` 自采已配置并实测
+  核对指标名;「监控监控系统」的原则仍然成立,新增采集组件时照此办理。
 
-## 5. 告警:当前为 0 条,这是最大的窟窿
+## 5. 告警:方法论(规则清单已落地,真相源在面板设计.md)
 
 指标存在但没有告警 = 只有事后分析能力,没有「提前发现故障」能力(文章的核心判词:
 **成熟的监控不是收集更多指标,而是找到能帮你提前发现故障的那些**)。
 
-第一批告警(少而准,每条都有明确行动,对应 `DEVOPS.md` 阶段 3 的 SLO 工作):
-
-1. 各服务错误率 > 阈值(RED-E)—— 最直接的异常信号;
-2. p99 延迟超 SLO(RED-D);
-3. Goroutine 数持续增长(斜率告警,非绝对值);
-4. pgx pool wait count > 0 持续出现(USE-S);
-5. Pod OOMKill / restart 计数增加;
-6. collector 管道中断(`otelcol_*` 或心跳缺失);
-7. (Kafka 接入后)Consumer Lag 持续上升。
+~~当前为 0 条~~——2026-08-12 第一批 **17 条**规则已由 `grafana/build_alerts.py` 生成入库
+(Grafana unified alerting),**分级与逐条口径见 [`面板设计.md`](面板设计.md) §告警**,
+它取代了本文早期的 7 条候选清单。
 
 告警数量刻意克制:每条告警响起,值班者必须知道下一步做什么;做不到的降级为看板曲线。
 
 ## 6. 硬规则(本仓教训沉淀,新增指标/看板/告警一律遵守)
 
 1. **标签必须能区分同名进程**:强制 `service.namespace` + `service.instance.id`,
-   禁止按进程名过滤——config-service 两个程序撞名,按名过滤出的是混合值(不可信);
+   禁止按进程名过滤——config-service 两个程序撞名,按名过滤出的是混合值(不可信)。
+   实况注脚:电商 10 服务当前**未设** `service_namespace`(实测),面板过滤暂以
+   `service_name!="config-service"` 绕行(见 `面板设计.md`);新增服务仍应把两个标签设齐;
 2. **错误率画比率不画速率**,分位数不用平均值替代;
 3. **凭据/token 不得入日志**(user SignIn 曾把 access token 打进 debug 日志);
 4. **控制基数**:label 里禁止放无界值(port、uuid、user_id);新增 label 先回答基数上限是多少;

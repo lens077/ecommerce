@@ -63,7 +63,7 @@ sqlc 项目里 SQL 是生成物的输入而非手写逻辑，**风险在后者**
 ```bash
 cd backend
 make test               # 单元测试(带 -short),集成测试自动跳过
-make test-integration   # 全量(需 Docker)
+make test-integration   # 全量(需 Docker)——⚠️ target 待落地(TODO.md 测试体系行),当前跑会 No rule to make target
 go test ./services/cart/internal/data/ -run TestCartUpsert -v   # 单个用例
 ```
 

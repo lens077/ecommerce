@@ -1,7 +1,10 @@
 # docs/design/ — 架构与领域设计
 
-> 2026-08-08 由根目录 `DESIGN.md`（985 行单文件）按微服务拆分而来，并收编了散落在
-> 根目录的领域设计文档（拆分后曾留桩兜旧引用，同日仓内引用清零后已删除，勿再重建）。**分工不变**：本目录回答「为什么这么设计」；
+> 2026-08-08 由根目录旧架构总纲 `DESIGN.md`（985 行单文件）按微服务拆分而来，并收编了散落在
+> 根目录的领域设计文档（拆分后曾留桩兜旧引用，同日仓内引用清零后已删除）。
+> ⚠️ 注意同名不同物：现根目录的 [`DESIGN.md`](../../DESIGN.md) 是 2026-08-11 新增的「灯市」**视觉设计系统**
+>（配色/字体/间距 token，配套 [`PRODUCT.md`](../../PRODUCT.md) 产品定义，impeccable 工作流真相源），
+> 不是被拆分的架构文档回魂，也不归本目录管。**分工不变**：本目录回答「为什么这么设计」；
 > 技术选型与编码约束 → `STACK.md`；服务拓扑事实 → `.service-matrix.yaml`；
 > 实现进度 → `TODO.md`。文中「现状」类横幅描述的是拆分当日的实况，之后以 `TODO.md` 为准。
 
@@ -19,7 +22,7 @@
 | [product/listing.md](product/listing.md) | ListProducts 无限滚动/游标分页（**设计已定待落地**） | DESIGN.md §商品列表 |
 | [product/schema.md](product/schema.md) | SPU/SKU 表早期稿 | DESIGN.md §数据库设计 |
 | [inventory/inventory.md](inventory/inventory.md) | 库存分层模型、状态机、高并发保障、库存表 | DESIGN.md §分布式库存状态机 |
-| [order/checkout.md](order/checkout.md) | **下单功能终稿**：结算页、token、拆单、预占、超时自愈 | 原 docs/design/order.md |
+| [order/checkout.md](order/checkout.md) | **下单（CreateOrder）设计基线 v2**：报价 token、组原子预占、支付/订单接受分离、Outbox、超时自愈；6 轮对抗评审收敛 | 原 docs/design/order.md（v1 草稿已被 v2 推翻并删除） |
 | [order/consistency.md](order/consistency.md) | 跨服务一致性（Outbox + TCC-Try + 编舞 Saga） | 原 TODO.md §二 |
 | [order/schema.md](order/schema.md) | 订单表早期稿（被 checkout 终稿部分取代） | DESIGN.md §数据库设计 |
 | [payment/payment.md](payment/payment.md) | 支付渠道策略模式、流程、幂等、对账、支付/退款表 | DESIGN.md §支付系统 |
@@ -27,9 +30,15 @@
 | [merchant/store-settings.md](merchant/store-settings.md) | Shopline 商店设置 20 页竞品实录（含自研备注与服务映射） | 原 DESIGN-MERCHANT.md，2026-08-12 重写为实录调研 |
 | [merchant/roadmap.md](merchant/roadmap.md) | 商家角色功能取舍（引进/不引进）与 P0/P1/P2 路线图 | 2026-08-12 基于 store-settings.md 调研 |
 | [config-center/design.md](config-center/design.md) | 配置中心设计存档（代码已拆至独立仓库） | 原 CONFIG_CENTER_DESIGN.md |
+| [product/sales.md](product/sales.md) | 销量统计：Redis 实时 + PG 预聚合（**部分落地**，实况见文首横幅） | 原 product 服务 schema/design/ 目录，2026-08-13 移入 |
+| [cart/api-decisions.md](cart/api-decisions.md) | 购物车接口设计因果论证（**历史记录**，§3 方案已被 proto 的并行数组翻转） | 原 backend/api/cart/v1/README.md，2026-08-13 移入 |
 
-尚无设计文档的服务：user / cart / address / behavior（behavior 的推荐链路知识在
-`context/project/ecommerce/behavior/`）。新增设计时在对应服务目录建文件并回填本表。
+尚无设计文档的服务：user / behavior（behavior 的推荐链路知识在
+`context/project/ecommerce/behavior/`）。**部分服务的设计文档住在服务目录内**：
+address 领域设计 → `backend/services/address/README.md`；cart 表设计决策 →
+`backend/services/cart/internal/data/schema/README.md`；product 领域与接口早期稿 →
+`backend/services/product/README.md`（其接口命名与 [product/listing.md](product/listing.md)
+未统一，列表页现行设计以 listing.md 为准）。新增设计时在对应服务目录建文件并回填本表。
 
 ## 交互式架构图（docs/architecture/）
 
@@ -50,7 +59,7 @@ archify 生成的系统地图，自包含 HTML（深浅主题 / 搜索 / 路径�
 | 原 DESIGN.md 章节 | 为什么删 | 现在看哪里 |
 |---|---|---|
 | §技术栈集成架构设计 | 与技术栈真相源重复，且无版本信息 | [`STACK.md`](../../STACK.md) |
-| §可观测性体系设计 | 已被更具体的方法论+指标基线文档取代 | [`observability/OBSERVABILITY.md`](../../observability/OBSERVABILITY.md) |
+| §可观测性体系设计 | 已被更具体的方法论+指标基线文档取代 | [`observability/OBSERVABILITY.md`](../observability/OBSERVABILITY.md) |
 | §容器化与编排设计 | 示例清单与实际部署矛盾（namespace 划分、Deployment 结构均不同），目标态已归 DevOps 体系 | [`docs/DEVOPS.md`](../DEVOPS.md) + `helm/` + `backend/services/*/deploy/` |
 
 ## 阅读顺序建议

@@ -266,7 +266,7 @@ func GetBus() *EventBus {
 }
 
 // Publish 异步发布事件到指定投影
-func (eb *EventBus) Publish(projection string, data any) error {
+func (eb *EventBus) Publish(projection interface{}, data any) error {
 	return eb.store.Subscribe(context.Background(), GoEventBus.Event{
 		ID:         generateEventID(),
 		Projection: projection,

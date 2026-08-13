@@ -13,7 +13,7 @@
    subject 末尾不加标点。钩子由 vite-plus 安装（`core.hooksPath` 指向
    `frontend/.vite-hooks/_`），是仓库级设置，后端 Go 的提交同样受管。
    见 `context/team/git-commit.md`。
-4. **不要把凭据写进仓库**。密码/密钥只存在 Consul KV 和本地环境，仓库里只写主机名和端口。
+4. **不要把凭据写进仓库**。密码/密钥只存在 Config Center 和本地环境（K8s 里经 Secret 挂载），仓库里只写主机名和端口。Consul KV 已退役不再存配置（见 `context/project/ecommerce/config/experience/consul-kv-retired.md`）。
 5. **踩到坑要沉淀**：判断是「模式性教训」还是「一次性 diff」，前者写进 `context/`。见 `context/harness-framework/self-refinement.md`。
    改动 harness 本身（本文件的硬规则、门禁脚本、structcheck 检查项、CI 门禁）时，
    还要在 `context/harness-framework/evolution-log.md` 追加一条，**必须写清触发它的具体事故**——
@@ -68,7 +68,7 @@ scripts/verify-freeze.sh --all                       # 冻结验收集未被动�
 
 完整导航见 **[context/INDEX.md](context/INDEX.md)**；可执行命令汇总见 **[context/team/runbook.md](context/team/runbook.md)**。
 
-**查服务拓扑不要现搜**：服务注册名、网关前缀、依赖关系、外部依赖、Consul KV 键，
+**查服务拓扑不要现搜**：服务注册名、网关前缀、依赖关系、外部依赖、Config Center 键，
 一律查 **[.service-matrix.yaml](.service-matrix.yaml)**。里面区分了 `depends_on`（已接线）
 和 `depends_on_planned`（设计要求但未接线），不要把后者当成已实现。
 
@@ -77,7 +77,7 @@ scripts/verify-freeze.sh --all                       # 冻结验收集未被动�
 > 技术栈、目录结构、服务拓扑不在这里复述——读代码与 `.service-matrix.yaml` 自明。
 
 - 工程化：前端用 vite-plus（`vp`）一个包覆盖 dev/build/test/lint/fmt/任务运行/git 钩子，没有 husky/biome/eslint/prettier；仓库根另有一个只装 commitlint 的 `package.json`，与 `frontend/` 的 workspace 相互独立
-- 进度真相源：`TODO.md`；架构真相源：`docs/design/`（按微服务分目录，入口 `docs/design/README.md`，含 config-center 设计存档）。两者分工见 `context/harness-framework/progress-and-todo.md`
+- 进度真相源：`TODO.md`（**唯一**——`docs/PROGRESS.md` 及双文档纪律已于 2026-08-13 废止，见 `context/harness-framework/evolution-log.md`）；架构真相源：`docs/design/`（按微服务分目录，入口 `docs/design/README.md`，含 config-center 设计存档）
 - 内环开发（`okteto up`）**必须先 `scripts/argocd-devwindow.sh off`、完事 `on`**：okteto 会新建 `<svc>-okteto` Deployment 并把原 Deployment 缩到 0，ArgoCD selfHeal 会把这两处漂移同步回去、无声干掉开发容器；忘了恢复更糟——GitOps 静默失效且无任何报错。判定与写 manifest 的七条检查清单见 [context/team/okteto-inner-loop.md](context/team/okteto-inner-loop.md)，操作手册见 [docs/OKTETO.md](docs/OKTETO.md)
 
 ## 中文文案约定

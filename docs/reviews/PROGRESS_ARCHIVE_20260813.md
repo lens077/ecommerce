@@ -1,8 +1,20 @@
+# ⚠️ 已废止（2026-08-13）——历史归档，不再更新
+
+> 原 `docs/PROGRESS.md`。废止原因：双文档纪律（每次改动同时更新 TODO.md 与本表）于 08-08 后
+> 自然断裂——08-12 的「更新」只改了日期行，更新日志停在 v1.19（08-08）；08-07 全仓服务数
+> 11→10 修正漏掉本表 3 处；可观测性描述落后实况一轮。滞后的评估视图带着「最后更新：今天」
+> 的头部提供过期数字，比没有更糟。**进度唯一真相源：`TODO.md`**。
+> 决策记录：`context/harness-framework/evolution-log.md` 2026-08-13 条；
+> 「先回扫代码再声称完成」口径迁存 `context/team/runbook.md` §提交流程（继续有效）。
+
+---
+
 # 电商项目进度表
 
 > 最后更新：2026-08-12
 > 当前阶段：第一阶段 - 核心业务 MVP（中期）
 > 整体完成度：约 28%（**本轮回扫重估，下调 9 个百分点**，见下）
+> 2026-08-13 文档整理：按 08-12 实况订正可观测性相关描述（3 盘/17 条告警/网关 meter 已补/服务数 10），完成度数字未重估。
 > 更新说明：一次对抗评审（双模型独立审查 + 逐条代码核实）发现本表多处「已实现/已联调」
 > 与代码不符，本次按代码实际情况整体订正，完成度相应下调。**下调不代表功能倒退，
 > 而是此前的数字虚高**。订正依据逐条附 `file:line`，评审全文见
@@ -175,7 +187,7 @@
 |------|----------|----------|------------|--------|
 | **API 网关** | 第一阶段 | ✅ 主体完整 | Consul 服务发现、JWT 认证、RBAC 权限、限流熔断、CORS、日志、链路追踪、协议转换、重试。⚠️ **重试无幂等保护**：传输错误时无条件重放非幂等 POST（`gateway/proxy/proxy.go:263-310`，address 等路由 `attempts: 2`），而业务侧尚无幂等键 → 断连可产生重复写；⚠️ 生产 ConfigMap 用了代码不读的 `DISCOVERY_CONFIG_PATH`（`gateway/deploy/prod/configMap.yaml:9`，实际是 `CONSUL_CONFIG_PATH`） | 80% |
 | **服务注册发现** | 第一阶段 | ✅ 已实现 | Consul 集成 | 90% |
-| **可观测性** | 第三阶段（提前落地） | ✅ 主体完成 | Trace/Metric/Log 三管道端到端（→ Jaeger / VictoriaMetrics / Loki）；11 个服务 OTel SDK 装配收敛为一份基线（`ParentBased` 采样器 + 采样率可配、`service.instance.id`、`SetErrorHandler`、gzip）；跨服务 trace 已串联（网关→服务实测同一条 trace）；2 张 Grafana 看板（业务盘 + 基础设施盘，脚本生成）。**缺口：告警为 0**（Grafana 0 条规则、无 vmalert/alertmanager）、采集管道自身无监控（`otelcol_*` 未采集）、无 k8s 对象/容器级指标、网关无 meter。2026-08-07 新增方法论与指标基线文档 `observability/OBSERVABILITY.md`（RED/USE、逐服务最低指标配置、第一批 7 条告警清单、6 条硬规则），**纯文档，缺口未动，完成度不变** | 60% |
+| **可观测性** | 第三阶段（提前落地） | ✅ 主体完成 | Trace/Metric/Log 三管道端到端（→ Jaeger / VictoriaMetrics / Loki）；10 个服务 OTel SDK 装配收敛为一份基线（`ParentBased` 采样器 + 采样率可配、`service.instance.id`、`SetErrorHandler`、gzip）；跨服务 trace 已串联（网关→服务实测同一条 trace）；3 张 Grafana 看板（业务/APM/基础设施，脚本生成）。~~缺口：告警为 0、采集管道自身无监控、网关无 meter~~（2026-08-12 已补：17 条告警规则入库、otelcol 自采已配、网关 MeterProvider 已接）；仍缺：k8s 对象/容器级指标、告警通知路由（飞书）。2026-08-07 新增方法论与指标基线文档 `docs/observability/OBSERVABILITY.md`（RED/USE、逐服务最低指标配置、第一批 7 条告警清单、6 条硬规则），**纯文档，缺口未动，完成度不变** | 60% |
 | **消息队列** | 第一阶段 | ❌ 未集成 | **Kafka 客户端代码为 0**：`backend/go.mod` 里没有 sarama / franz-go / segmentio 任一依赖，订单的 EventBus 是**纯进程内总线**（`order/internal/eventbus/eventbus.go`），事件出不了本进程；`infrastructure/kafka-connect` 只是 Debezium 部署物（且当前 CrashLoopBackOff）。原记「EventBus/Kafka 部分集成 20%」把两件事混为一谈，制造了已接 MQ 的假象 | 5% |
 | **缓存层** | 第一阶段 | ⚠️ 基础设施就绪 | Redis 部署配置，业务缓存待完善 | 20% |
 | **数据库** | 第一阶段 | ✅ 基础完成 | PostgreSQL + sqlc，各服务 Schema 已建 | 70% |
@@ -194,7 +206,7 @@
 | RBAC 权限 | ✅ | 基于 Casbin 的权限控制 |
 | 日志 | ✅ | 请求日志记录 |
 | 链路追踪 | ✅ | OpenTelemetry tracing。会向下游注入 `traceparent`，与服务端的 `WithTrustRemote()` 配对后网关→服务是同一条 trace（实测） |
-| 指标 | ⬜ | **网关没有任何 meter**，`http_server_*` 指标族不存在，所以看不到网关侧耗时/错误率。要补 metrics 中间件 |
+| 指标 | 🟡 | ~~网关没有任何 meter~~ **2026-08-12 已补 MeterProvider**（`http_server_*` 出数，5550b31），待发版全量生效。原文：看不到网关侧耗时/错误率。要补 metrics 中间件 |
 | 限流熔断 (BBR) | ✅ | 自适应限流 |
 | 协议转换 (Transcoder) | ✅ | Connect / gRPC-Web 协议转换 |
 | URL 重写 | ✅ | 请求路径重写 |
@@ -300,8 +312,8 @@
 - [ ] Kafka 集群部署与全服务接入
 - [ ] Redis 缓存策略落地（商品详情、库存、热点数据）
 - [ ] 全链路压测准备
-- [x] 可观测性主体（三管道 + SDK 基线 + 2 张 Grafana 看板），详见 `TODO.md`
-- [ ] **告警从 0 到 1**：目前 Grafana 0 条规则、无 vmalert/alertmanager，只有一个默认 email 联系点 —— 看板只能人盯，出事没人被叫醒。这是可观测性剩下的最大一块
+- [x] 可观测性主体（三管道 + SDK 基线 + 3 张 Grafana 看板：业务/APM/基础设施），详见 `TODO.md`
+- [x] **告警从 0 到 1**：~~Grafana 0 条规则~~ 2026-08-12 第一批 **17 条**规则已入库（Grafana unified alerting，`docs/observability/grafana/build_alerts.py`）；通知路由（飞书 webhook）仍待接
 - [ ] 采集管道自身监控：`otelcol_*` 只在 collector pod 的 `:8888`，没被采进 VM，「遥测有没有在半路丢」查不了（collector 加 `prometheus` receiver 自采即可，代价极小）
 - [ ] 网关 metrics 中间件（当前网关只有 tracing，无 meter）
 - [ ] k8s 对象/容器级指标（`kubelet_stats` + `k8s_cluster`，基数敏感，单独一轮）
@@ -367,10 +379,10 @@
 5. **前端层面**：页面框架基本完成，部分页面已联调，核心流程（结算→下单→支付）未打通；
    结算页已接线但打到的是后端假接口，比未接线更糟
 5. **可观测性层面**：原属第三阶段，已提前落地主体 —— 三管道端到端、跨服务 trace 串联、
-   2 张 Grafana 看板。但**告警仍是 0**，所以现阶段的定位是「出事后能查」，还不是
-   「出事时会被告知」。另外看板上不少面板当前是空的，成因是采集侧未实现（网关无 meter、
-   11 个服务无 Go runtime 指标）或服务未启动（behavior/product/order），不是看板坏了 ——
-   逐条成因记在 `observability/grafana/README.md` 的「未实现 / 当前无数据」
+   3 张 Grafana 看板。~~告警仍是 0~~ 2026-08-12 已入库 17 条规则（通知路由待接）。
+   看板上部分面板当前是空的，成因是采集侧埋点刚补（网关 meter、
+   10 个服务 Go runtime 指标均已于 08-12 补齐埋点、待发版出数）或服务未启动（behavior/product/order），不是看板坏了 ——
+   逐条成因记在 `docs/observability/grafana/README.md` 的「未实现 / 当前无数据」
 
 ### 下一步核心任务
 

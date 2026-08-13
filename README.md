@@ -22,7 +22,7 @@ RBAC 三角色（消费者 / 商家 / 管理员），全链路云原生部署与
 | 网关 | 基于 go-kratos/gateway 二次开发：集中鉴权（Casdoor + Casbin RBAC）、路由守卫、服务发现 |
 | 数据 | PostgreSQL、Redis、Elasticsearch（搜索）、MinIO（对象存储） |
 | 消息 | Kafka（规划中，当前事件走进程内 EventBus） |
-| 注册/配置 | Consul（服务注册发现 + KV 配置源）、[config-center](https://github.com/lens077/config-center)（独立配置控制面，可选） |
+| 注册/配置 | Consul（仅服务注册发现）、[config-center](https://github.com/lens077/config-center)（独立配置控制面，业务服务的必需启动依赖） |
 | 编排/交付 | Docker、Kubernetes、Helm、GitHub Actions、Argo CD（GitOps） |
 | 可观测性 | OpenTelemetry、VictoriaMetrics、Loki、Jaeger、Grafana、fluent-bit |
 
@@ -31,7 +31,7 @@ RBAC 三角色（消费者 / 商家 / 管理员），全链路云原生部署与
 - **API 契约先行**：google protobuf 定义前后端交互，`@bufbuild/buf` 生成代码，每个字段带 `buf.validate` 约束
 - **后端分层**参考 go-kratos：biz（领域结构体）→ data（DB/MQ/ES 等中间件）→ service（proto 转换）→ server（fx 装配与注册发现）
 - **通用能力下沉网关**：身份验证、授权、路由守卫集中在网关层，微服务不重复集成
-- **配置源与业务配置分离**：服务先读一份很小的本地选择器（`file`/`consul`/`config_center`），再据此取完整业务 `Bootstrap`——这层间接是为了避开「配置中心的配置存在配置中心里」的自举环
+- **配置源与业务配置分离**：服务先读一份很小的本地选择器（`config_center`，`file` 仅限本地单测），再据此取完整业务 `Bootstrap`——这层间接是为了避开「配置中心的配置存在配置中心里」的自举环
 - **CI/CD**：GitHub Actions 构建推送镜像并更新清单仓库版本号，Argo CD 监听清单仓库变更完成部署
 - **可观测性**：fluent-bit 采日志，应用经 OTel SDK 发指标与链路；前端由 `@ecommerce/perf` 采 Web Vitals/长任务/接口耗时，经网关 `telemetry.v1` 转成 OTel histogram，与后端汇入同一套 VictoriaMetrics / Loki
 
@@ -43,13 +43,12 @@ RBAC 三角色（消费者 / 商家 / 管理员），全链路云原生部署与
 | `frontend/` | pnpm monorepo：4 app（consumer / merchant / admin / desktop）+ 9 共享包，见 [`frontend/README.md`](frontend/README.md) |
 | `gateway/` | 自建 API 网关（subtree 同步到独立仓），文档导航见 [`gateway/README.md`](gateway/README.md) |
 | `context/` | AI/团队三层知识库（团队级 / 框架级 / 服务级），入口 [`context/INDEX.md`](context/INDEX.md) |
-| `observability/` | 可观测性方法论与 Grafana 看板生成脚本 |
 | `helm/`、`argocd-*.yml` | 部署清单与 GitOps 配置 |
-| `docs/` | 架构与领域设计（`docs/design/`，按微服务分目录）、agents 配置（`docs/agents/`）、历史评审归档（`docs/reviews/`） |
+| `docs/` | 架构与领域设计（`docs/design/`，按微服务分目录）、可观测性方法论与看板脚本（`docs/observability/`）、agents 配置（`docs/agents/`）、历史评审归档（`docs/reviews/`） |
 | `.freeze/`、`scripts/` | 冻结验收集机制（改验收测试必须走审批），见 [`.freeze/README.md`](.freeze/README.md) |
 | `.scratch/` | 进行中的 spec / issue（本地 markdown 工作流） |
 
-> `backend/services/config/` 只剩 `configs/` 空壳——配置中心代码已迁出至独立仓库。
+> 配置中心代码已整体迁出至独立仓库，原 `backend/services/config/` 目录已删除。
 
 ## 文档导航
 
@@ -60,8 +59,8 @@ RBAC 三角色（消费者 / 商家 / 管理员），全链路云原生部署与
 | [`STACK.md`](STACK.md) | 技术栈与工程约束：版本锁定、分层铁律、proto/sqlc 规则（真相源） |
 | [`.service-matrix.yaml`](.service-matrix.yaml) | 服务拓扑事实表：注册名、网关前缀、依赖、Config Center 键（CI 强制对齐） |
 | [`TODO.md`](TODO.md) | 实现进度真相源（当前实况以它为准） |
-| [`docs/PROGRESS.md`](docs/PROGRESS.md) | 进度百分比与更新日志（与 TODO 的分工见 `context/harness-framework/progress-and-todo.md`） |
-| [`docs/DEVOPS.md`](docs/DEVOPS.md) / [`observability/OBSERVABILITY.md`](observability/OBSERVABILITY.md) | DevOps 与可观测性的**目标态**设计 |
+| [`PRODUCT.md`](PRODUCT.md) / [`DESIGN.md`](DESIGN.md) | 产品定义与「灯市」视觉设计系统（配色/字体/间距 token），前端设计工作流（impeccable）的真相源——与已拆分的旧架构 DESIGN.md 同名不同物 |
+| [`docs/DEVOPS.md`](docs/DEVOPS.md) / [`observability/OBSERVABILITY.md`](docs/observability/OBSERVABILITY.md) | DevOps 与可观测性的**目标态**设计 |
 | [`docs/design/merchant/store-settings.md`](docs/design/merchant/store-settings.md) | Shopline 商店设置竞品调研；取舍与商家 MVP 路线见同目录 [`roadmap.md`](docs/design/merchant/roadmap.md) |
 | [`docs/design/config-center/design.md`](docs/design/config-center/design.md) | 配置中心设计存档（代码已迁出） |
 | [`docs/SCAFFOLD.md`](docs/SCAFFOLD.md) | 换领域复用本仓工程体系的新项目生成规范 |
@@ -69,9 +68,9 @@ RBAC 三角色（消费者 / 商家 / 管理员），全链路云原生部署与
 
 ## 先决条件
 
-1. 后端：Go >= 1.26（`backend/go.mod`）；网关：Go >= 1.25（`gateway/go.mod`）
+1. Go >= 1.26（`backend/go.mod` 与 `gateway/go.mod` 当前同为 1.26.5）
 2. 前端：Node.js >= 22、pnpm 11
-3. 数据库：PostgreSQL >= 12；缓存：Redis >= 6
+3. 数据库：PostgreSQL 18（生产 18.4，测试容器同版对齐，见 `docs/TESTING.md`）；缓存：Redis >= 6
 4. 注册/发现：Consul
 
 配置中心（[config-center](https://github.com/lens077/config-center)）是 10 个业务服务的
@@ -85,22 +84,15 @@ OpenTelemetry Collector、VictoriaMetrics、Grafana、Loki、Jaeger、fluent-bit
 ### 后端
 
 ```bash
-docker compose -f backend/infrastructure/postgres up -d
-docker compose -f backend/infrastructure/redis up -d
-docker compose -f backend/infrastructure/consul up -d
+docker compose -f backend/infrastructure/postgres/compose.yaml up -d
+docker compose -f backend/infrastructure/redis/compose.yaml up -d
+docker compose -f backend/infrastructure/consul/compose.yaml up -d
 ```
 
-修改 `configs/config.yaml` 为你的 host 地址：
+基础设施地址（PG/Redis/ES 的 host 等）配置在 Config Center，不在仓库 yaml——
+要指向自己的中间件时改 Config Center 里对应服务的 Bootstrap 即可。
 
-```yaml
-data:
-  database:
-    host: "192.168.3.105"
-  redis:
-    host: "192.168.3.114"
-```
-
-启动后端微服务：
+启动后端微服务（一把拉起全部服务可用 `backend/compose.yaml`）：
 
 ```bash
 cd backend/services/<service>
@@ -129,8 +121,8 @@ CONFIG_FILE=configs/config.yaml make dev             # 监听 :30010
 它在 Consul 注册为 `config-service` 供网关发现，但**从不从 Consul 读自己的 bootstrap** ——
 把自身配置放进它自己会形成启动死锁，所以只能从本地文件自举。
 
-把 Consul KV 里的配置灌进配置中心用本仓的 `backend/tools/config-seed`
-（源取 KV 而非仓库里的 `configs/*.yml` —— 后者含密码、按硬规则不入库，每台机器都不一样）。
+历史上的 Consul KV → Config Center 配置迁移由 `backend/tools/config-seed` 完成
+（输入为 consul kv export JSON），迁移已于 2026-08-08 收尾、KV 条目已删除，工具留档备用。
 
 ### 网关
 
@@ -139,8 +131,8 @@ OWNER=OWNER \
 CASDOOR_URL=https://CASDOOR_URL \
 DISCOVERY_DSN=consul://<consul-addr> \
 DISCOVERY_CONFIG_PATH=<consul-service-config-file> \
-POLICIES_FILE_PATH=./dynamic-config/policies/policies.csv \
-MODEL_FILE_PATH=./dynamic-config/policies/model.conf \
+POLICIES_FILE_PATH=./configs/policies/policies.csv \
+MODEL_FILE_PATH=./configs/policies/model.conf \
 USE_TLS=false \
 USE_HTTP3=false \
 HTTP_PORT=8080 \
