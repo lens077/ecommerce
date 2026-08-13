@@ -1,0 +1,21 @@
+---
+description: consumer 没有 MUI ThemeProvider，sx 的 spacing 属性对数字会 ×8；必须用 sp[] 像素字符串。
+globs: frontend/apps/consumer/**/*.{ts,tsx}
+alwaysApply: false
+---
+
+# MUI spacing ×8
+
+consumer 没有 `ThemeProvider`，默认 spacing factor = 8。`tokens.spacing[n]` 返回裸像素数字，给 `p` / `m` / `gap` / `py` 等 spacing 属性会再乘 8。
+
+```tsx
+// ❌ p: 16 实际渲染成 128px；查 tokens.ts 看不出问题（值本身是对的）
+sx={{ p: tokens.spacing[4], pb: 96 }}
+
+// ✅ 字符串按原始 CSS，不 ×8
+sx={{ p: sp[4], gap: sp[2] }}
+```
+
+`width` / `height` 对数字按像素，不受影响。完整复盘：`context/project/ecommerce/consumer/experience/mui-spacing-tokens-8x.md`。
+
+购物车徽标是 `GetCart` 的 `items.length`（行数），`cartStore.totalQuantity` 是件数，两者不是一回事。

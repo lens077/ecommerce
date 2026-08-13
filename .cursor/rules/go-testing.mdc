@@ -1,0 +1,26 @@
+---
+description: 后端测试分层：biz 用 mock、data 用真 PG 容器、Redis 用 miniredis；禁止 go-sqlmock/pgxmock；-short 是唯一开关。
+globs: backend/**/*_test.go
+alwaysApply: false
+---
+
+# Go 测试
+
+判定规则在 `context/team/go-testing.md`，操作手册在 `docs/TESTING.md`。写测试前先读这两份。
+
+| 要验证的 | 用什么 | 不用什么 |
+|---|---|---|
+| 业务分支、错误语义、状态流转 | mock/fake `biz.XxxRepo` | 真库 |
+| SQL、schema、约束/枚举/精度 | testcontainers 真 PG | 任何 SQL mock |
+| Redis 键、序列化、过期 | miniredis | 真 Redis（除非测锁/Lua） |
+
+硬约束：
+
+1. 禁止 `DATA-DOG/go-sqlmock` 和 `pashagolub/pgxmock`（本仓走 pgx/v5 + sqlc）
+2. `-short` 是唯一开关，守卫写在 `testutil` 入口第一行；不用 build tag
+3. 测试基建只放 `backend/pkg/testutil`，不进服务 `internal/`
+4. mock 生成物入库（`internal/biz/mocks/`），CI 不装 mockery
+5. PG 镜像与生产一致：生产 18.4.0，测试 `postgres:18-alpine`
+6. 两个方向都要验收：不带 `-short` 全绿，且带 `-short` 全 skip
+
+`make test` 跑 `-short`；`make test-integration` 需 Docker。Okteto 不是测试环境。

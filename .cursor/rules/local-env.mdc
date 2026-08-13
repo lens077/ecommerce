@@ -1,0 +1,13 @@
+---
+description: 本地连基础设施：Consul 用 192.168.3.112:8500 不要用 consul.app.com；k8s 部署必须用 pre 配置；KV 缺子块会静默关掉功能。
+alwaysApply: false
+---
+
+# 本地环境
+
+完整约定：`context/team/local-env.md`。只记主机名和端口，凭据不入库。
+
+- Consul：宿主机用 `192.168.3.112:8500`。`consul.app.com` 从宿主机访问会超时
+- Config Center 是配置唯一来源，键是 `<service>/dev/bootstrap.yaml`。selector 缺失或 key 不存在时启动失败，没有 Consul KV 回退
+- KV 存在但缺子块时，mapstructure 没开 `ErrorUnused`，功能会被静默关掉而不是启动失败
+- `*.app.com` 只在开发机 hosts 可解析。`<svc>/dev/bootstrap.yaml` 只能在开发机跑；k8s 部署必须用 `<svc>/pre/bootstrap.yaml`（集群内 svc 域名）。拿错环境的症状是 DB ping `context deadline exceeded` 或 Consul 注册超时
