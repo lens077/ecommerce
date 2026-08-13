@@ -259,7 +259,9 @@ const file_api_order_v1_order_proto_rawDesc = "" +
 	"\x05Order2\xb0\x01\n" +
 	"\forderService\x12L\n" +
 	"\vCreateOrder\x12\x1c.order.v1.CreateOrderRequest\x1a\x1d.order.v1.CreateOrderResponse\"\x00\x12R\n" +
-	"\rCompleteOrder\x12\x1e.order.v1.CompleteOrderRequest\x1a\x1f.order.v1.CompleteOrderResponse\"\x00B;Z9github.com/lens077/ecommerce/backend/api/order/v1;orderv1b\x06proto3"
+	"\rCompleteOrder\x12\x1e.order.v1.CompleteOrderRequest\x1a\x1f.order.v1.CompleteOrderResponse\"\x00B\x96\x01\n" +
+	"\fcom.order.v1B\n" +
+	"OrderProtoP\x01Z9github.com/lens077/ecommerce/backend/api/order/v1;orderv1\xa2\x02\x03OXX\xaa\x02\bOrder.V1\xca\x02\bOrder\\V1\xe2\x02\x14Order\\V1\\GPBMetadata\xea\x02\tOrder::V1b\x06proto3"
 
 var (
 	file_api_order_v1_order_proto_rawDescOnce sync.Once

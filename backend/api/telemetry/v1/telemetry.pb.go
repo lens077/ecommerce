@@ -459,7 +459,8 @@ const file_api_telemetry_v1_telemetry_proto_rawDesc = "" +
 	"\x13WEB_VITAL_NAME_TTFB\x10\x05\x12\x1c\n" +
 	"\x18WEB_VITAL_NAME_LONG_TASK\x10\x062w\n" +
 	"\x10TelemetryService\x12c\n" +
-	"\x10CollectWebVitals\x12%.telemetry.v1.CollectWebVitalsRequest\x1a&.telemetry.v1.CollectWebVitalsResponse\"\x00BCZAgithub.com/lens077/ecommerce/backend/api/telemetry/v1;telemetryv1b\x06proto3"
+	"\x10CollectWebVitals\x12%.telemetry.v1.CollectWebVitalsRequest\x1a&.telemetry.v1.CollectWebVitalsResponse\"\x00B\xb6\x01\n" +
+	"\x10com.telemetry.v1B\x0eTelemetryProtoP\x01ZAgithub.com/lens077/ecommerce/backend/api/telemetry/v1;telemetryv1\xa2\x02\x03TXX\xaa\x02\fTelemetry.V1\xca\x02\fTelemetry\\V1\xe2\x02\x18Telemetry\\V1\\GPBMetadata\xea\x02\rTelemetry::V1b\x06proto3"
 
 var (
 	file_api_telemetry_v1_telemetry_proto_rawDescOnce sync.Once

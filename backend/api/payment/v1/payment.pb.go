@@ -797,7 +797,10 @@ const file_api_payment_v1_payment_proto_rawDesc = "" +
 	"\rCreatePayment\x12 .payment.v1.CreatePaymentRequest\x1a!.payment.v1.CreatePaymentResponse\"\x00\x12_\n" +
 	"\x10GetPaymentStatus\x12#.payment.v1.GetPaymentStatusRequest\x1a$.payment.v1.GetPaymentStatusResponse\"\x00\x12W\n" +
 	"\x13HandlePaymentNotify\x12\x15.payment.v1.UrlValues\x1a'.payment.v1.HandlePaymentNotifyResponse\"\x00\x12n\n" +
-	"\x15HandlePaymentCallback\x12(.payment.v1.HandlePaymentCallbackRequest\x1a).payment.v1.HandlePaymentCallbackResponse\"\x00B?Z=github.com/lens077/ecommerce/backend/api/payment/v1;paymentv1b\x06proto3"
+	"\x15HandlePaymentCallback\x12(.payment.v1.HandlePaymentCallbackRequest\x1a).payment.v1.HandlePaymentCallbackResponse\"\x00B\xa6\x01\n" +
+	"\x0ecom.payment.v1B\fPaymentProtoP\x01Z=github.com/lens077/ecommerce/backend/api/payment/v1;paymentv1\xa2\x02\x03PXX\xaa\x02\n" +
+	"Payment.V1\xca\x02\n" +
+	"Payment\\V1\xe2\x02\x16Payment\\V1\\GPBMetadata\xea\x02\vPayment::V1b\x06proto3"
 
 var (
 	file_api_payment_v1_payment_proto_rawDescOnce sync.Once
