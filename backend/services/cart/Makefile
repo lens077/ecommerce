@@ -37,6 +37,13 @@ dev:
 	CONSUL_INSECURE_SKIP_VERIFY=true \
 	go run cmd/server/main.go
 
+.PHONY: dev-file
+dev-file:
+	env -u CONFIG_SOURCE_FILE \
+	CONFIG_SOURCE=file \
+	CONFIG_FILE=configs/dev.yml \
+	go run cmd/server/main.go
+
 .PHONY: test
 test:
 	go test -short -coverprofile=coverage.out ./...
