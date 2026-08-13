@@ -3,12 +3,13 @@
   "diagram_type": "architecture",
   "meta": {
     "title": "网关架构：go-kratos/gateway fork",
-    "subtitle": "独立 Go module · 9 层中间件链 · Consul 发现与配置热更新",
+    "subtitle": "独立 Go module · 9 层中间件链 · Config Center 热更新 · Consul 服务发现",
     "output": "ecommerce-gateway.html",
     "quality_profile": "showcase",
     "views": [
       { "id": "chain", "label": "中间件链", "focus": ["mw_edge", "mw_obs", "mw_transcode", "mw_auth", "mw_guard"], "note": "顺序即 configs/config.yaml 中 middlewares 的声明顺序。" },
-      { "id": "auth", "label": "鉴权", "focus": ["casdoor_key", "mw_auth", "router"], "note": "JWT 本地公钥验签 + Casbin RBAC，两处各自维护匿名路径白名单。" },
+      { "id": "auth", "label": "鉴权", "focus": ["configcenter", "casdoor_key", "mw_auth", "router"], "note": "JWT 公钥与 Casbin 文件由 Config Center 下发；两处各自维护匿名路径白名单。" },
+      { "id": "config", "label": "配置热更新", "focus": ["configcenter", "casdoor_key", "mw_auth", "router", "proxy"], "note": "四个条目经 GetKey + WatchKeys 下发；无效更新保留上一份可用运行态。" },
       { "id": "upstream", "label": "回源", "focus": ["router", "proxy", "consul", "backends"], "note": "路径前缀匹配后经 discovery:/// 解析真实节点，失败按条件重试。" }
     ]
   },
@@ -18,12 +19,13 @@
     { "id": "mw_edge", "type": "backend", "label": "① 边缘", "sublabel": "ip · cors", "pos": [710, 60], "size": [260, 70] },
     { "id": "mw_obs", "type": "backend", "label": "② 可观测", "sublabel": "logging · tracing", "pos": [710, 175], "size": [260, 70] },
     { "id": "mw_transcode", "type": "backend", "label": "③ 协议转码", "sublabel": "transcoder", "pos": [710, 290], "size": [260, 70] },
-    { "id": "mw_auth", "type": "security", "label": "④ 鉴权", "sublabel": "jwt · rbac", "tag": "7 条匿名路径", "pos": [710, 405], "size": [260, 76] },
+    { "id": "mw_auth", "type": "security", "label": "④ 鉴权", "sublabel": "jwt · rbac", "tag": "10 条匿名路径", "pos": [710, 405], "size": [260, 76] },
     { "id": "mw_guard", "type": "backend", "label": "⑤ 过载保护", "sublabel": "bbr · circuitbreaker", "pos": [710, 530], "size": [260, 70] },
     { "id": "casdoor_key", "type": "security", "label": "JWT 公钥", "sublabel": "public.pem · kid=lens", "tag": "60s leeway", "pos": [370, 460], "size": [260, 76] },
+    { "id": "configcenter", "type": "cloud", "label": "Config Center", "sublabel": "routes · JWT 公钥 · RBAC", "tag": "GetKey + WatchKeys", "pos": [370, 580], "size": [260, 76] },
     { "id": "router", "type": "backend", "label": "Router mux", "sublabel": "路径前缀匹配 /user*", "pos": [1060, 250], "size": [260, 70] },
     { "id": "proxy", "type": "backend", "label": "Proxy", "sublabel": "重试 2 次 · perTry 2s", "pos": [1060, 380], "size": [260, 76] },
-    { "id": "consul", "type": "cloud", "label": "Consul", "sublabel": "服务发现 + 配置热更新", "pos": [1060, 540], "size": [260, 76] },
+    { "id": "consul", "type": "cloud", "label": "Consul", "sublabel": "仅服务发现", "pos": [1060, 540], "size": [260, 76] },
     { "id": "backends", "type": "external", "label": "10 个后端服务", "sublabel": "discovery:///user-identity", "tag": "protocol: GRPC", "pos": [1410, 300], "size": [280, 76] }
   ],
   "boundaries": [
@@ -37,16 +39,19 @@
     { "id": "transcode-auth", "from": "mw_transcode", "to": "mw_auth" },
     { "id": "auth-guard", "from": "mw_auth", "to": "mw_guard" },
     { "id": "key-to-auth", "from": "casdoor_key", "to": "mw_auth", "variant": "security" },
+    { "id": "config-to-key", "from": "configcenter", "to": "casdoor_key", "variant": "dashed" },
+    { "id": "config-to-router", "from": "configcenter", "to": "router", "variant": "dashed" },
     { "id": "guard-router", "from": "mw_guard", "to": "router" },
     { "id": "router-proxy", "from": "router", "to": "proxy" },
     { "id": "consul-proxy", "from": "consul", "to": "proxy", "variant": "dashed" },
     { "id": "proxy-upstream", "from": "proxy", "to": "backends", "variant": "emphasis" }
   ],
   "cards": [
-    { "dot": "cyan", "title": "入口", "items": ["HTTP_PORT :8080 承载 HTTP/1.1 与 HTTP/2（h2c 明文）", "USE_HTTP3 / USE_TLS 默认关闭，开启后走 QUIC :443", "配置 = Consul 中 ecommerce/gateway/config.yaml 与本地文件合并"] },
+    { "dot": "cyan", "title": "入口", "items": ["HTTP_PORT :8080 承载 HTTP/1.1 与 HTTP/2（h2c 明文）", "USE_HTTP3 / USE_TLS 默认关闭，开启后走 QUIC :443", "配置 = CONFIG_SOURCE_FILE selector → Config Center；Consul 只做服务发现"] },
     { "dot": "emerald", "title": "中间件链（9 层，按序）", "items": ["ip → cors → logging → tracing → transcoder → jwt → rbac → bbr → circuitbreaker", "目录里另有 rewrite 与 routerfilter，未进全局链（rewrite 在 endpoint 级被注释）", "创建失败会打 go_gateway_failed_middleware_create 指标"] },
-    { "dot": "rose", "title": "鉴权", "items": ["JWT 用本地 public.pem 验签，必须带 60s leeway", "Casbin RBAC：model.conf + policies.csv", "匿名路径 7 条，jwt 与 rbac 两处各自排除，改动需同步两边"] },
+    { "dot": "rose", "title": "鉴权", "items": ["JWT 用 Config Center 同步到本地的 public.pem 验签，必须带 60s leeway", "Casbin RBAC：model.conf + policies.csv，由 Config Center Watch 更新", "匿名路径 10 条，jwt 与 rbac 两处各自排除，改动需同步两边"] },
+    { "dot": "blue", "title": "Config Center", "items": ["同一 namespace/environment 下四键：config.yaml、secrets/public.pem、policies/policies.csv、policies/model.conf", "四键必须 is_secret=false；selector token 与 TLS 私钥留在 Secret", "Watch 断线 1s～30s 退避重连，无效更新保留上一份可用配置"] },
     { "dot": "violet", "title": "回源", "items": ["endpoint 声明 path 前缀 + protocol: GRPC，仅 GRPC 时去除路径前缀", "backends 用 discovery:///<注册名>，可切 direct:// 直连调试", "重试：attempts 2 · perTryTimeout 2s · 条件 502-504 或 Grpc-Status 14"] },
-    { "dot": "amber", "title": "工程约束", "items": ["module 名保留 github.com/go-kratos/gateway，便于跟上游同步", "可 git subtree push --prefix=gateway 推到独立仓复用", "Go 1.25.0（后端服务为 1.26.1）"] }
+    { "dot": "amber", "title": "工程约束", "items": ["module 名保留 github.com/go-kratos/gateway，便于跟上游同步", "可 git subtree push --prefix=gateway 推到独立仓复用", "Go 1.26.5"] }
   ]
 }

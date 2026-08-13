@@ -13,10 +13,11 @@
 
 ### 现状
 
-`ecommerce` 网关配置仍在 Consul KV；10 个后端业务服务的整份 YAML Bootstrap 只保留在
-独立配置中心（`<svc>/<env>/bootstrap.yaml`）。服务通过本地 `CONFIG_SOURCE_FILE` selector
-读取配置中心，再由各服务 `internal/pkg/config` 经 Viper 解码为 proto `Bootstrap`。
-网关额外支持本地优先目录合并 + 热重载(`gateway/config/config-loader/`)。
+`ecommerce` 的 10 个后端业务服务与 Gateway 都通过本地 `CONFIG_SOURCE_FILE` selector
+读取独立配置中心，Consul 只保留服务注册与发现职责。业务服务读取
+`<svc>/<env>/bootstrap.yaml`，再由各服务 `internal/pkg/config` 解码为 proto `Bootstrap`；
+Gateway 在一个 namespace/environment 下读取路由、JWT 公钥与两份 RBAC 文件，并支持
+Config Center Watch、本地优先目录合并和上一份可用配置回退。
 
 ### 痛点
 
@@ -62,12 +63,31 @@
 │        ▼                                                                              │
 │   Postgres  config.entry(当前值 + 版本号) / config.revision(append-only 历史)  ← SoR │
 │        │                                                                              │
-│        ├── GetKey / ListKeys ──────────►  服务拉取(读取路径,本轮)  ✅               │
-│        └── Watch(server-stream)────────►  服务热更新(推送,后续)   ⬜               │
+│        ├── GetKey / ListKeys ──────────►  服务拉取                         ✅       │
+│        └── WatchKeys(server-stream)────►  服务与 Gateway 热更新             ✅       │
 └──────────────────────────────────────────────────────────────────────────────────────┘
              ▲ 鉴权:复用现有网关 —— 网关验 Casdoor RS256 JWT + Casbin,注入
                x-md-global-user-id / -name / -role / -owner 头部,config 服务不重复验 JWT
 ```
+
+### Gateway 接入约束
+
+Gateway 使用与 Cart 相同的本地 selector 自举模式，正常启动只接受 `type: config_center`。
+`CONFIG_SOURCE=file` + `CONFIG_FILE` 仅供显式本地测试，不允许静默回退到 Consul KV。
+selector 的 namespace/environment 内必须有一组相邻条目：
+
+| 用途 | 默认 key |
+|---|---|
+| 路由、环境变量与中间件 | `config.yaml` |
+| JWT 验签公钥 | `secrets/public.pem` |
+| Casbin 策略 | `policies/policies.csv` |
+| Casbin 模型 | `policies/model.conf` |
+
+如果主 key 是 `gateway/config.yaml`，其余三个 key 同样带 `gateway/` 前缀。四个条目都必须
+设置 `is_secret=false`，因为 Config Center 会把密钥值脱敏为 `******`，只读机器 token
+无法从脱敏结果构建运行态。这里的公钥和策略不是凭据；selector 的机器 token、TLS 私钥等
+真正秘密仍只存本地或 Kubernetes Secret。Kubernetes 中 selector 以 `0400` 挂载，并通过
+Pod `fsGroup: 1000` 让 UID/GID 1000 的非 root 进程读取，不能放宽为全局可读。
 
 ---
 
@@ -84,7 +104,7 @@
 | format | TEXT | yaml/toml/json/plaintext |
 | value | TEXT | 当前值 |
 | version | INT | 当前版本号(每次 Put 自增) |
-| is_secret | BOOL | 是否密钥(后续:加密 + UI 脱敏) |
+| is_secret | BOOL | 是否密钥(API/UI 脱敏已实现，静态加密待补) |
 | description | TEXT | 说明 |
 | updated_by | TEXT | 最后修改人(取自网关 `x-md-global-name`) |
 | created_at / updated_at | TIMESTAMPTZ | |
@@ -136,7 +156,7 @@ proto 位于独立仓 `api/config/v1/config.proto`,`package config.v1`,protovali
 1. 前端登录走 Casdoor OIDC(复用 `@ecommerce/configs` 的 `CASDOOR_CONF` 与 `/callback`)。
 2. 网关继续验 Casdoor RS256 JWT 与 Casbin 路由策略；配置中心用与 user 服务相同的 Casdoor
    公钥证书再次验证 Bearer JWT，并仅接纳管理员身份。
-3. 服务间 SDK 直连使用独立 machine token，只允许 `GetKey` / `WatchKeys`，不能写入或回滚。
+3. 服务间 SDK 直连使用独立 machine token，只允许 `GetKey` / `WatchKeys`，不能写入或回滚；`is_secret=true` 的值仍只返回脱敏占位符。
 4. 服务从已验证 principal 读取操作者写入 `updated_by/author`。
 
 **用户名密码**:当前无本地密码流,密码登录发生在 Casdoor 托管页;如需可开启 Casdoor 内置密码登录(仍是同一 JWT 格式)。
@@ -190,3 +210,4 @@ proto 位于独立仓 `api/config/v1/config.proto`,`package config.v1`,protovali
 | 前端应用 | `config-center/web/`（浏览器专用，不支持桌面端） |
 | 前端生成客户端 | `config-center/web/src/gen/`（buf `protoc-gen-es`） |
 | 网关放行 | `gateway/configs/policies/policies.csv` 增加 `config.v1.ConfigService/*` |
+| Gateway 配置源 | `gateway/pkg/loader/source.go` + `gateway/config/config.go` |

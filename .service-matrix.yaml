@@ -62,6 +62,15 @@ externals:
 gateway:
   path: "gateway"
   config: "gateway/configs/config.yaml"
+  external: [config_center, consul] # Config Center 下发配置；Consul 仅服务发现
+  config_center:
+    namespace: gateway
+    keys:
+      routes: config.yaml
+      jwt_public_certificate: secrets/public.pem
+      rbac_policies: policies/policies.csv
+      rbac_model: policies/model.conf
+    note: "四个条目必须 is_secret=false；TLS 私钥只进本地/Kubernetes Secret"
   rbac:
     model: "configs/policies/model.conf" # MODEL_FILE_PATH
     policies: "configs/policies/policies.csv" # POLICIES_FILE_PATH
@@ -75,6 +84,8 @@ gateway:
     - /behavior.v1.BehaviorService/Track
     - /behavior.v1.BehaviorService/Recommend
     - /behavior.v1.BehaviorService/SimilarItems
+    - /telemetry.v1.TelemetryService/CollectWebVitals
+    - /address.v1.RegionService/ListRegions
 
 # 后端服务
 # discovery: Consul 注册名（≠ 目录名，网关 target 用它）
