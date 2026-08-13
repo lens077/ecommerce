@@ -16,16 +16,16 @@ frontend/
 
 ### apps
 
-| app        | 端口 | 说明                                     | 启动                |
-| ---------- | ---- | ---------------------------------------- | ------------------- |
-| `consumer` | 3000 | 消费者端：商品、购物车、下单、地址、订单 | `pnpm dev`          |
-| `merchant` | 3002 | 商家端：店铺、商品、订单、报表           | `pnpm dev:merchant` |
-| `admin`    | 3003 | 管理端：用户、商家、品类、报表           | `vp run admin#dev`  |
-| `desktop`  | —    | Tauri 壳，按配置文件套在上面三个之一外面 | `pnpm desktop`      |
+| app        | 端口 | 说明                                                  | 启动                |
+| ---------- | ---- | ----------------------------------------------------- | ------------------- |
+| `consumer` | 3000 | 消费者端：商品、购物车、下单、地址、订单              | `pnpm dev`          |
+| `merchant` | 3002 | 商家端：店铺、商品、订单、报表                        | `pnpm dev:merchant` |
+| `admin`    | 3003 | 管理端：用户、商家、品类、报表                        | `vp run admin#dev`  |
+| `desktop`  | —    | Tauri 壳，按配置文件套在 consumer / merchant 之一外面 | `pnpm desktop`      |
 
 `desktop` 不是第五个前端，它只是 Rust 侧的窗口 + 系统能力，页面仍然来自
-`consumer` / `merchant` / `config` 的 dev server。所以那三个 app 的 `server.strictPort`
-必须是 `true`：端口被占时要报错，不能静默换号，否则壳会连到一个空窗口。
+`consumer` / `merchant` 的 dev server（config app 已随配置中心迁出）。所以这两个 app 的
+`server.strictPort` 必须是 `true`：端口被占时要报错，不能静默换号，否则壳会连到一个空窗口。
 
 ### packages
 
@@ -35,6 +35,7 @@ frontend/
 | `configs`   | 跨端共享的静态配置（Casdoor 等）                                    |
 | `constants` | 跨端共享的枚举与常量（订单状态、搜索字段）                          |
 | `i18n`      | i18next 实例、语言探测、格式化、共享 locales                        |
+| `perf`      | Web Vitals / 长任务 / 接口耗时采集，经网关 `telemetry.v1` 上报      |
 | `tauri`     | 桌面端专属胶水：环境探测、Rust 侧 fetch、本地设置、OAuth 子窗口桥接 |
 | `tracker`   | 浏览行为埋点，上报给 behavior 服务喂给 gorse                        |
 | `ui`        | 与业务无关的展示组件与 hook（错误边界、懒加载图、虚拟列表、防抖）   |

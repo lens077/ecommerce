@@ -147,18 +147,11 @@ http server starting {"addr": "0.0.0.0:30006"}  environment: "pre"
 
 ## 六、manifest 说明（`backend/okteto.yaml`）
 
-只声明 `cart` 一个目标，铺开前先在它身上跑通。几处非显然的决定：
-
-| 决定 | 原因 |
-|---|---|
-| dev key 必须是 `cart` | 要与集群里的 Deployment 名逐字一致。**历史教训**：此前 11 份 okteto.yaml 的 key 全是 `connect-example-go`（旧项目身份），集群里没有这个 Deployment，`okteto up` 只会报找不到。这 11 份已删除 |
-| 用官方 `golang:1.26.5`，不自建镜像 | 官方镜像把 `GOPATH`(/go) 设成 1777，uid 1000 能写，正好满足 Pod 的 `runAsUser: 1000` |
-| 用 Debian 变体而非 `-alpine` | `command: bash`，alpine 只有 ash |
-| 版本必须等于 `go.mod` 的 go 指令 | 否则 Go 会试图自动下载 toolchain |
-| `HOME=/go` + `GOCACHE=/go/.cache/go-build` | 默认 `HOME=/root`，uid 1000 写不进去 → GOCACHE permission denied |
-| **不**改 securityContext 去当 root | 保留 uid 1000 正是为了让"Secret 读不到"这类问题当场暴露。改成 root 等于把要验的东西关掉 |
-| `sync: .:/workspace`（整个 backend/） | 单一 go.mod：编译 cart 需要 `api/` `pkg/` `constants/` 全在。排除规则见 `backend/.stignore` |
-| `persistentVolume.enabled: true` | 不开的话每次 up 都重新拉全部依赖 |
+只声明 `cart` 一个目标，铺开前先在它身上跑通。写 manifest 的**七条检查清单与逐条理由**
+（dev key=Deployment 名、镜像版本=go.mod、HOME/GOCACHE、SSL_CERT_DIR、securityContext、
+sync 范围、persistentVolume）见 [`context/team/okteto-inner-loop.md`](../context/team/okteto-inner-loop.md)
+§二之三——那是判定层真相源，本手册不再复制。
+（此前这里复制过一份 8 行表，已漂移：漏了 SSL_CERT_DIR 一条，2026-08-13 删表换指针。）
 
 ---
 

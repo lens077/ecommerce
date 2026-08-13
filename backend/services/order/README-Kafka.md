@@ -1,8 +1,11 @@
 # Kafka 进程间通信实现文档
 
-> ⚠️ **目标态设计，代码零落地**（2026-08-07 核实：`backend/services` 无任何 Kafka 引用，
-> `go.mod` 无 Kafka 依赖，事件目前走进程内 EventBus，见 `README-EventBus.md`）。
-> 本文保留作为落地时的实现蓝本，现状以 `TODO.md` 为准。
+> ⚠️ **本文方案已被取代，不要照抄**（2026-08-13 升级横幅）：
+> `docs/design/order/consistency.md`（2026-08-08 定稿）拍板的是 **Outbox 表 + 独立 relay 投递**，
+> 而本文步骤 6 在订单创建时直接 `producer.Publish()`——正是 consistency.md 要杜绝的
+> 「落库成功但事件丢失」双写。全文无一处 Outbox/Saga。
+> 落地时以 `consistency.md` + `order/checkout.md` §9 为准；本文仅配置结构、FX 装配可参考。
+> （代码现状仍是零落地：`go.mod` 无 Kafka 依赖，事件走进程内 EventBus，见 `README-EventBus.md`。）
 
 ## 概述
 

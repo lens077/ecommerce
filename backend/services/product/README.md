@@ -1,3 +1,10 @@
+# product 服务领域设计（早期稿）
+
+> ⚠️ 文末「SPU 与 SKU 职责分工」列的 7 个接口（ListSpus/GetSpuDetail/…）**均未进 proto**，
+> `product.proto` 现只有 `GetProductDetail`；列表页现行设计是
+> `docs/design/product/listing.md` 的 `ListProducts`（游标分页），与本文命名未统一——
+> 落地以 proto 为准。文中 Flink/Kafka 实时计算链路全仓未落地。
+
 商品微服务应承担的核心功能：
 
 1. 商品基础信息管理 (CUD 操作)商品服务负责数据的写入和更新。类目与属性管理：管理分类树（Category Tree）和属性模板（如手机的“内存”、“颜色”）。

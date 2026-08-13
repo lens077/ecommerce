@@ -1,5 +1,9 @@
 # 数据库错误处理使用指南
 
+> ⚠️ `dbutil` 包在 10 个服务里各有一份复制，`handler.go` 已分裂为**两个版本**（本文以 inventory
+> 版为基准，用前先 diff 你所在服务的版本）；且本 README 只有 inventory 这一份。
+> 错误分层约定（biz→data→service）见 `docs/design/platform/error-handling.md`，本文只讲工具用法。
+
 ## 概述
 
 这个包提供统一的 PostgreSQL 数据库错误处理方案，使用 `pqerror` 包中的常量替代硬编码的错误码，提供可读性强、易于维护的错误处理逻辑。

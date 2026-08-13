@@ -1,4 +1,11 @@
-# 🛒 购物车微服务核心接口设计规范与因果分析
+# 购物车接口设计的因果论证（历史记录）
+
+> 原 `backend/api/cart/v1/README.md`，2026-08-13 移入（放在 proto 旁易被当成契约说明）。
+> **这是论证记录，不是契约——契约一律以 `backend/api/cart/v1/cart.proto` 为准。**
+> 与 proto 现状的已知出入：§1 `selected` 与 `is_cart_empty` 仍成立；§2/§3 的字段名
+> `cart_total_quantity` 实际为 `cart_item_quantity`；**§3 整节的 `cart_item_id` 方案未被采纳**，
+> 实现走了它所批判的方向——`RemoveCartItemRequest` 用 `spu_ids/sku_ids/merchant_ids` 并行数组
+> （CEL 等长校验），翻转理由当时未记录。
 
 在分布式、多端同步的电商微服务架构中，接口的设计不能仅满足于前端眼前的“页面展示”，更需要守住**分布式事务一致性**、**全盘营销计算**、**网络性能（RPC 开销）**以及**多端持久化**的底线。
 
@@ -64,6 +71,8 @@ message AddProductToCartResponse {
 ---
 
 ## 3. 为什么“删除购物车商品”传 `cart_item_id` 比传 `sku_id` 更优雅？删除接口需要返回什么？
+
+> ⚠️ **本节方案已被翻转**：见文首横幅，实际 proto 用 spu/sku/merchant 并行数组。以下论证仅存档。
 
 ### 典型请求与返回模型
 

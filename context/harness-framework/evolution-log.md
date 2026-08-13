@@ -8,8 +8,8 @@ description: harness 本身（硬规则/门禁/Agent 约束）每次改动的原
 
 ## 这份日志解决什么
 
-`context/` 记录**规则是什么**，`TODO.md` 记录**做了什么**，`PROGRESS.md` 记录**完成度**。
-三者都不记录**「这条规则为什么是现在这个样子」**。
+`context/` 记录**规则是什么**，`TODO.md` 记录**做了什么与完成度**（`PROGRESS.md`
+已于 2026-08-13 废止归档）。两者都不记录**「这条规则为什么是现在这个样子」**。
 
 缺了这一层的后果很具体：一条规则被改对之后，半年后另一个人（或另一个 AI 会话）
 看到它觉得"太松了"或"太啰嗦"，凭直觉改回去，于是当初那次事故会原样重演一遍。
@@ -41,6 +41,30 @@ description: harness 本身（硬规则/门禁/Agent 约束）每次改动的原
 
 ---
 
+### 2026-08-13 废止 PROGRESS.md 与双文档进度纪律
+
+- **改了什么**：`docs/PROGRESS.md` 归档为 `docs/reviews/PROGRESS_ARCHIVE_20260813.md`（带废止横幅），
+  删除制度文件 `progress-and-todo.md`；**`TODO.md` 成为唯一进度真相源**。「声称完成前先回扫代码
+  （假成功/panic 按未实现计）」的口径保留在 `context/team/runbook.md` 提交流程与
+  `.cursor/rules/git-commit.mdc`。同步改引用：AGENTS.md、README 导航、DEVOPS.md 阶段验收、
+  runbook、两份 INDEX、git-commit.mdc、STACK.md 目录注释。
+- **为什么**：两份文档记同一进度，口径靠人肉双写维持。TODO.md 每次改动都被硬规则强制更新，
+  PROGRESS.md 没有独立的强制时机也没有验证器兜底，必然滞后；滞后的评估视图带着
+  「最后更新：今天」的头部提供过期数字，比没有更糟。
+- **触发事故**：08-08 后 PROGRESS.md 再无实质更新——08-12 的提交只改了日期行（更新日志停在
+  v1.19/08-08，且那次改动自己都没进日志）；08-07 全仓服务数 11→10 修正 12 处时漏掉本表 3 处；
+  08-13 文档整理发现其可观测性描述（告警 0 条/2 盘/网关无 meter/11 服务）整体落后实况一轮。
+  「每次改动两份都要更新」的硬性要求在无验证器兜底下 5 天内自然断裂。
+- **怎么验证的**：全仓 grep `PROGRESS`/`progress-and-todo`，活文档侧引用清零
+  （仅剩 TODO/evolution-log 历史条目与 reviews 归档自身）。
+
+### 2026-08-13 把团队规范投影为 Cursor project rules
+
+- **改了什么**：无 → `.cursor/rules/*.mdc`（12 条：1 条 alwaysApply 路由 + 按 glob 拆分的 proto / Go 测试 / Redis / 定时任务 / 前端 connect-query / MUI spacing / 提交 / shell / okteto / 本地环境 / 中文文案）。正文是蒸馏，完整约束仍只写在 `context/`。
+- **为什么**：`AGENTS.md` 是跨工具基线，每轮整份注入；Cursor 的 `.mdc` 可按打开的文件类型注入，把「改 proto 必须有 validate」「transport 必须单例」这类文件级约束送到真正改那些文件的会话里，而不把 Redis / okteto 全文塞进每个前端小改。
+- **触发事故**：用户要求把当前项目规则记入 Cursor 规则。此前仓库没有 `.cursor/` 目录，文件级约定只存在于 `context/`，Cursor 会话除非主动去读，否则看不到。
+- **怎么验证的**：12 个 `.mdc` 均有 YAML frontmatter；alwaysApply 仅 `knowledge-routing.mdc` 一条；其余靠 glob / description 触发；规则正文指向 `context/` 对应文件，不复制长文。
+
 ### 2026-08-12 将全自动权限处理与实质性选择分流到项目级 Codex 规则
 
 - **改了什么**：`ecommerce/AGENTS.md` 新增硬规则 #7：`Full Auto` /「全自动」会话不再用
@@ -56,6 +80,22 @@ description: harness 本身（硬规则/门禁/Agent 约束）每次改动的原
 - **怎么验证的**：对两份 `AGENTS.md` 做去除父级 `ecommerce/` 链接前缀后的逐字比较；
   从 ecommerce 根运行 `codex features list`，确认项目配置可解析且
   `default_mode_request_user_input` 为 `true`；另用 `git diff --check` 检查文本格式。
+
+### 2026-08-12 将 E3 提升为 Codex 全局执行偏好并启用本地记忆
+
+- **改了什么**：`~/.codex/AGENTS.md` 从只有通用安全策略，扩为所有仓库默认继承的 E3
+  执行规则；仓内 `AGENTS.md` 补上「便宜失败不算效率、无可信验证器或风险高时保守一级」；
+  `~/.codex/config.toml` 开启官方 `features.memories`，让合资格会话可在后台生成本地记忆。
+- **为什么**：E3 不能只在一个仓库里生效；它的关键也不是一味少读，而是把正确性当约束，
+  以最小可验证路径起步，再按失败证据扩张。论文的模拟降本数字不能当跨任务承诺，故全局规则
+  同时保留真实模型收益更温和、并非每个任务都获益的边界。
+- **触发事故**：用户明确要求读完 arXiv:2607.13034 后把结论同步到 Codex 全局文件、项目
+  Agent 和记忆。检查发现项目已有 E3 规则，但 `~/.codex/AGENTS.md` 完全没有 E3，且本地
+  `~/.codex/memories/` 为空、记忆功能仍是默认关闭；离开本仓或开启新会话后无法继承或回忆。
+- **怎么验证的**：通过 arXiv HTML 正文逐节核对问题定义、E3 算法、消融、稳健性与真实
+  gpt-4o 案例；改后检查两份 `AGENTS.md` 的 E3 关键句，运行 `codex features list`，确认
+  配置被解析为 `memories stable true`。记忆生成由 Codex 在会话空闲后异步执行，不把空目录
+  或手写文件冒充已经生成的记忆。
 
 ### 2026-08-12 引入 E3 执行策略（估计→最小执行→失败才扩张）与过度阅读护栏
 

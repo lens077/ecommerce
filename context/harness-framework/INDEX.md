@@ -6,7 +6,6 @@
 |---|---|
 | [knowledge-layering.md](knowledge-layering.md) | 一条知识该写进哪一层的判定规则 |
 | [self-refinement.md](self-refinement.md) | 纠错 → 判断模式性 → 沉淀 → 下次复用的闭环 |
-| [progress-and-todo.md](progress-and-todo.md) | PROGRESS.md 与 TODO.md 的分工、口径与「先回扫代码再声称完成」 |
 | [graph-engineering.md](graph-engineering.md) | 多闭环 AI 工作流方法论存档（2026-08-08 从仓库根移入）：锚点命令、冻结节点、Loop 0~4 分工 |
 | [e3-execution.md](e3-execution.md) | E3 执行策略（先估计→最小执行→失败才扩张）：出处、按规模路由、过度阅读护栏 hook 的配置与再验证 |
 | [evolution-log.md](evolution-log.md) | harness 本身每次改动的原因与**触发它的具体事故**——改硬规则/门禁前后都要看一眼，防止把改对的东西改回去 |

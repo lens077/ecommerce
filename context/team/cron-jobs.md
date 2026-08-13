@@ -222,5 +222,5 @@ Asynq 关注「可靠地完成一件后台工作」。
 
 - 分布式锁的落地要求：[go-redis.md](go-redis.md)
 - 副本数与部署策略：[`docs/DEVOPS.md`](../../docs/DEVOPS.md)（阶段 2）
-- 任务的指标与告警口径：[`observability/OBSERVABILITY.md`](../../observability/OBSERVABILITY.md)
+- 任务的指标与告警口径：[`observability/OBSERVABILITY.md`](../../docs/observability/OBSERVABILITY.md)
 - 首次触发盲窗的完整复盘：[`registry/experience/consul-ttl-first-ping-blind-window.md`](../project/ecommerce/registry/experience/consul-ttl-first-ping-blind-window.md)

@@ -25,8 +25,8 @@
 | `{{REGISTRY}}` | 镜像仓库 | `ccr.ccs.tencentyun.com/sumery` | |
 | `{{IDP_URL}}` | Casdoor 地址 | — | |
 | `{{CONSUL_ADDR}}` | Consul 地址（本地开发） | `192.168.3.112:8500` | |
-| `{{SERVICES}}` | 后端服务清单 | user search product order inventory cart merchant address config payment | |
-| `{{APPS}}` | 前端 app 清单 + 端口 | consumer:3000 merchant:3002 admin:3003 config:3005 | |
+| `{{SERVICES}}` | 后端服务清单 | user search product order inventory cart merchant address behavior payment | |
+| `{{APPS}}` | 前端 app 清单 + 端口 | consumer:3000 merchant:3002 admin:3003 desktop:—(Tauri 壳) | |
 | `{{ROLES}}` | RBAC 角色继承链 | `admin ⊃ merchant ⊃ consumer ⊃ public` | |
 
 **领域替换的最小改动面**：`{{SERVICES}}` / `{{APPS}}` / `{{ROLES}}` 决定业务形态，其余基础设施骨架原样复用。
@@ -39,13 +39,13 @@
 {{PROJECT}}/
 ├── AGENTS.md                  # 模板 A（第四节）
 ├── STACK.md                   # 从本项目的 STACK.md 改占位符
-├── SCAFFOLD.md                # 本文件（供下一个项目再复用）
+├── docs/SCAFFOLD.md           # 本文件（供下一个项目再复用；本项目里已收纳进 docs/）
 ├── .service-matrix.yaml       # 模板 B（第五节）
 ├── docs/design/               # 架构与领域设计（按服务分目录；人写，AI 只读不猜）
 ├── TODO.md                    # 模板 D（第七节）
 ├── context/                   # 模板 C（第六节）
 │   ├── INDEX.md
-│   ├── team/{INDEX,git-commit,proto-design,local-env}.md
+│   ├── team/{INDEX,runbook,git-commit,proto-design,go-testing,local-env}.md   # runbook 是可执行入口，必带
 │   ├── harness-framework/{INDEX,knowledge-layering,self-refinement}.md
 │   └── project/{{PROJECT}}/INDEX.md
 ├── backend/
@@ -54,7 +54,7 @@
 │   ├── api/{service}/v1/*.proto
 │   ├── constants/                   # 跨服务共享枚举与元数据键
 │   ├── pkg/                         # ★ 跨服务共享库（本项目的教训：第一天就抽出来）
-│   │   ├── config/  log/  otel/  registry/  env/  meta/  dbutil/  types/
+│   │   ├── gorse/  product/  types/    # 注意：config/log/otel/dbutil 等 8 个包在本项目实际住在各服务 internal/pkg/（10 份同构复制），并未做到「第一天抽到 pkg/」——新项目应真的抽出来
 │   └── services/{service}/
 │       ├── cmd/server/main.go
 │       ├── constants/
@@ -67,7 +67,7 @@
 │   ├── pnpm-workspace.yaml    # catalog 版本表
 │   ├── package.json
 │   ├── apps/{app}/            # 每 app 一个 vite-plus 工程
-│   └── packages/{api,configs,constants,ui,utils}
+│   └── packages/{api,configs,constants,i18n,perf,tauri,tracker,ui,utils}
 ├── helm/{charts,library}
 └── .github/workflows/{backend.yml,frontend.yml}
 ```
@@ -144,6 +144,8 @@ buf.gen.yaml → src/gen → env.ts(zod) → api/{domain} → routes → compone
 ## 四、模板 A — `AGENTS.md`
 
 > 放仓库根。这是所有 AI 编码工具的共同行为基线，**保持简短**，规范本体在 `context/`。
+> ⚠️ 本模板落后于本仓现行 `AGENTS.md` 一代（现行已 7 条硬规则 + E3 执行策略 + 验收锚点 +
+> 中文文案约定 + Agent skills）——生成新项目时以**根目录真 `AGENTS.md` 为蓝本**，本模板只当骨架参考。
 
 ````markdown
 # AGENTS.md — AI 协作入口

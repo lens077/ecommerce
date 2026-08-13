@@ -8,7 +8,7 @@
 下单跨服务事务采用 **混合模式**，不引入 Seata（Java 生态，Go 栈不适配）：
 
 1. **可靠投递底座（必选）**：本地事务 + **Outbox 表 + Kafka**。写订单与写 outbox 同一事务，独立 relay 投递，杜绝"落库成功但事件丢失"的双写问题。
-2. **A 段·建单↔库存预占（强一致 + 快反馈）**：建单事务内 **同步 RPC 调 `inventory.Reserve`**（即 TCC 的 Try），预占成功才建单成功，用户即时得到"库存不足"反馈；`inventory` 现有 `Reserve`/`ReleaseReserve` 天然是 Try/Cancel，支付成功后的确认扣减为 Confirm。
+2. **A 段·建单↔库存预占（强一致 + 快反馈）**：建单事务内 **同步 RPC 调库存预占**（即 TCC 的 Try），预占成功才建单成功，用户即时得到"库存不足"反馈；proto 现有 `Reserve`/`ReleaseReserve` 天然是 Try/Cancel，支付成功后的确认扣减为 Confirm。[checkout.md](checkout.md) v2 已决议把这组接口收敛为**全组原子**的 `ReserveGroup`/`ConfirmReservationGroup`/`ReleaseGroup`（一次请求一个库存事务），proto 改造在其 §14 清单内、尚未落地。
 3. **B 段·建单后→支付→履约/营销（最终一致）**：走 **编舞式 Saga（Choreography）**。经 Outbox 发 `OrderCreated`；支付回调发 `OrderPaid`（库存 Confirm、订单转已支付）；取消/超时发 `OrderCancelled`（库存 `ReleaseReserve` 补偿）。
 
 编舞 Saga 的四项治理（必须随事件驱动一起落，否则流程失控；落地进度见 `TODO.md`）：

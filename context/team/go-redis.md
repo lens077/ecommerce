@@ -86,7 +86,7 @@ Redis 侧同理:**要么让操作幂等(带唯一键的 SetNX、幂等的 Set),�
 不要默认「客户端重试是安全的」。
 
 超时值调得太短会把本可成功的命令变成重试,太长会让请求挂在那儿——两边都要看监控调,
-指标口径见 [`observability/OBSERVABILITY.md`](../../observability/OBSERVABILITY.md)
+指标口径见 [`observability/OBSERVABILITY.md`](../../docs/observability/OBSERVABILITY.md)
 (Redis 连接数/命中率/响应时间/错误数,以及命中率↓与 DB QPS↑ 的联动)。
 
 ## 五、读-改-写要用 WATCH,不要自己拼版本号
@@ -150,6 +150,6 @@ Stream / Pub-Sub 能做消息,但适用面是**轻量事件通知、实时推送
 ## 相关
 
 - 本地地址与基础设施主机:[local-env.md](local-env.md)
-- 指标与告警口径:[`observability/OBSERVABILITY.md`](../../observability/OBSERVABILITY.md)
+- 指标与告警口径:[`observability/OBSERVABILITY.md`](../../docs/observability/OBSERVABILITY.md)
 - 重试放大的前车之鉴:[`gateway/experience/retry-amplification-and-phantom-health-check.md`](../project/ecommerce/gateway/experience/retry-amplification-and-phantom-health-check.md)
 - 官方文档:<https://redis.io/docs/latest/develop/clients/go/>
