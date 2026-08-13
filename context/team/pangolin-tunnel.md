@@ -24,13 +24,13 @@ description: 公网暴露基础设施(Pangolin)的拓扑事实、面板 API 操�
 - 域名 `apikv.com`,**DNS 在 DNSPod(不是 Cloudflare)**,已有 `*` 泛解析 → node1;新子域**零 DNS 操作**
 - 泛域名证书 ZeroSSL `*.apikv.com`(acme.sh dns_dp 签),**2026-10-27 到期**;部署在两处:`/home/docker/blog/ssl/`(原件)与 node3 `/home/docker/pangolin/config/traefik/certs/apikv.com.{crt,key}`,**续期要同步两处**
 - k8s:node1-3 = 192.168.3.105-107(与办公内网同段),Cilium Gateway API,`cilium-gateway`(ns default,LB 192.168.3.110,ClusterIP **10.97.94.118**)
-- 另一台公网机 node2 跑 harbor/img(与 Pangolin 无关);`auth.apikv.com` 解析已指 node3(casdoor:8000 未暴露,要用时面板一键)
+- 另一台公网机 node2 跑 harbor/img(与 Pangolin 无关);`auth.apikv.com` 解析已指 node3(未建资源);casdoor 已由 `casdoor.apikv.com` 暴露(2026-08-13)
 
 ## 面板与站点/资源现状
 
 - 面板 `https://pangolin.apikv.com`,管理员 `admin@apikv.com`(密码在用户处),org `main`
 - Sites:`node3-local`(siteId 1, local)/ `mac`(siteId 2, newt)/ `k8s`(siteId 3, newt)
-- Resources:`apikv.com`+`www`(blog,SSO off)/ `config.apikv.com`(SSO on)/ `config-api.apikv.com`(SSO off,应用自带鉴权)
+- Resources:`apikv.com`+`www`(blog,SSO off)/ `config.apikv.com`(SSO on)/ `config-api.apikv.com`(SSO off,应用自带鉴权)/ `casdoor.apikv.com`(SSO off,自带鉴权,target `10.1.0.8:8000`)/ 另有 kaneo/dev/ntfy/stream/cat 等,以 `traefik-config` 后门实查为准
 - k8s newt:helm release `newt`(ns `pangolin`,chart `fossorial/newt`);凭据看 `helm get values newt -n pangolin`(inline,勿把 values 文件提交入库)
 - Mac newt:`~/apps/newt/newt` + 同目录 launchd plist(含凭据,在仓库外);日志 `/tmp/newt.log`
 
@@ -92,6 +92,7 @@ docker inspect -f '{{range $k,$v := .NetworkSettings.Networks}}{{$k}}={{$v.IPAdd
 
 实测(2026-08-12):`blog`/`pangolin` 都在 `pangolin_frontend`,而 `kaneo-kaneo-1` 在
 `kaneo_default`(172.28.0.3)——**跨网络,Traefik 到不了它的容器 IP**,所以 kaneo 只能走宿主端口。
+(2026-08-13 casdoor 又踩同款:target 填了 `casdoor_default` 的容器 IP 172.18.0.2,改 `10.1.0.8:8000` 即通。)
 
 ⚠️ **`docker ps` 的 PORTS 列不能直接抄进 target**(2026-08-12 就是这么错的):
 
@@ -113,6 +114,7 @@ mediamtx-mediamtx-1  10.1.0.8:8889->8889/tcp    ← 这种才只绑内网
 两步都正常而外部 502,就一定是 target。
 - 排查 target 实际值不用登面板:宿主 `curl http://<pangolin容器IP>:3001/api/v1/traefik-config` 直接看 services 的 url
 - 面板不可用/无密码时可直改 `/home/docker/pangolin/config/db/db.sqlite` 的 `targets` 表(python3 自带 sqlite3,**先 cp 备份**),Pangolin 不缓存,Traefik 5s 轮询内生效
+- **DB 后门关 SSO 改的是 `resourcePolicies` 表**(经 `resources.defaultResourcePolicyId` 关联)的 `sso` 列;`resources.sso` 是遗留列,置 0 无效(2026-08-13 casdoor 实测)。badger 中间件恒挂在 router 上,放行与否由 pangolin 运行时按 policy 判定,所以 traefik-config 里看不出 SSO 开关
 
 ## 其它操作事实
 
