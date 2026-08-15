@@ -262,6 +262,15 @@
 - [ ] **可观测性 · 10 个电商服务缺 Go 运行时指标**：goroutine/堆/进程 CPU 内存全都没有。唯一在报的是**独立仓 config-center**（它实现了 `internal/pkg/sysstat`），而不是本仓任何服务；它以 `service.namespace=config-center` 区分遥测。把那套搬进 10 个服务，或抽成共享埋点。附带：config-center 未装 OTel ErrorHandler，导出失败没有任何日志（本仓 10 个服务已在 2026-08-06 那轮补上，可照抄）
 - [ ] **技术债**：修复 `product/$spuCode.tsx:156` 的 `shopName` 类型报错；清理其余 mock 数据
 
+### 搜索引擎切换 Meilisearch（2026-08-16 拍板：ES → Meilisearch，两仓合计约 2 人日）
+
+> 背景：新集群安装器（`~/lens077/kubernetes/system`）的搜索组件已从 OpenSearch 改为 **Meilisearch v1.53**（svc: `search/meilisearch:7700`，master key 在集群 `/root/.k8s-installer-credentials`）。选型依据：官方 `go-elasticsearch` v8+/v9 客户端带产品头校验，连 OpenSearch 直接拒连；而本仓搜索面极小（search 服务仅 1 条 Search + 1 条 Index），正是 Meilisearch 甜点区——中文分词开箱（ES 需自定义 IK 镜像）、~300Mi 内存（ES 单节点需 1.5Gi 堆）、typo 容忍/即时搜索默认开启。**已知取舍**：无 ES 级聚合分析，将来若要在搜索数据上做统计报表需重新评估；排序语义与 ES 不同，切换后必须用真实商品数据抽查相关性。
+
+- [ ] **[本仓] search 服务 ES→Meilisearch**（`backend/services/search/internal/data/`）：`go-elasticsearch/v9`(typedapi) 换 `meilisearch-go`（当前 v0.36.3）；`search.go` 的 1 条 typedapi 查询重写为 Meilisearch `q`+`filter`（结果解析已是 `map[string]any`，不动）；`data.go` 的客户端初始化与 Info/Ping 健康检查替换为 `/health`。验收：搜索接口回归 + 真实商品数据相关性抽查
+- [ ] **[本仓] address 服务清理 ES 残留**（`address/internal/data/data.go:51,438`）：`TypedClient` 只有 fx DI 装配、无任何业务调用——直接删除依赖注入与 `NewElasticSearchClient`，不做迁移
+- [ ] **[本仓] 配置与依赖收尾**：服务配置（Config Center/Consul KV）中 ES 连接段换 `MEILI_HOST/MEILI_API_KEY`；`backend/go.mod` 移除 `go-elasticsearch/v9` 与 `elastic-transport-go`；compose/helm values 同步
+- [ ] **[postgres-kafka-es-streaming-pipeline 仓] CDC 写入端 ES→Meilisearch**：`internal/es/indexer.go` 的 `esutil.BulkIndexer` → documents 批量提交 + 任务队列确认；**补 Debezium 删除事件（tombstone / `op=d`）→ delete documents 映射**（现状只写不删的话切换时一并补齐）；`internal/reindex/reindexer.go`(typedapi) → Meilisearch 原生 **index swap** 原子操作（代码会变短）；`readiness.go` → `GET /health`；`cmd/server/main.go` 与 compose/deploy 的 `ES_*` 环境变量 → `MEILI_*`。Debezium 源端（PG→Kafka）零改动
+
 ### 可观测性「统一关联底座」评审新增待办（2026-08-06,全文见 `docs/reviews/OBSERVABILITY_REVIEW_20260806.md`)
 
 > 该轮用集群真实数据 + 双模型对抗评审验证「五维统一采集·存储·查看·分析」目标。§234/236/237/238 四条**已被本轮实测复核确认仍未修**(尤其 §236 fluent-bit 标签,Loki 里 `k8s__pod_name` 就是 `.pod_name`,日志按 pod 下钻彻底不可用)。以下为**新查出的确认缺陷**:
