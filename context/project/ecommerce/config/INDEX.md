@@ -53,7 +53,15 @@ IDEA 侧映射在 `.idea/jsonSchemas.xml`（被 gitignore，机器级文件）�
 `~/lens077/.idea/` 与仓库 `.idea/` 各一份，把 `configs/{dev,pre}.yml` 指到对应 schema。
 新机器丢失后在 Settings → JSON Schema Mappings 里重建，或找历史会话重新生成。
 **改了 conf.proto 要重跑 `make conf-schema` 并把 schema 随代码提交。**
-这只是编辑期校验——运行时 protovalidate 仍未接（见上方 known_defect）。
+
+2026-08-18 起运行时校验也已接线（同一套约束两道门）：`decodeConfig` 开了
+`ErrorUnused`（未知键报错），`Init` 与热更新在解码后调 `protovalidate.Validate`。
+启动时校验失败直接起不来；热更新校验失败保留当前配置只记 ERROR。每个服务
+config 包的 `TestRealConfigFiles_DecodeAndValidate` 在本机验证真实 dev/pre.yml
+过得了校验（文件 gitignore，CI 自动 skip）。**收紧约束前先跑这组测试**，
+防止把现网配置锁在门外。⚠️ 发布前须先对齐配置中心里的 bootstrap.yaml
+（未知键/缺段的副本会让服务重启后起不来），见 `.service-matrix.yaml`
+config_validation.rollout_warning。
 
 ## experience
 
