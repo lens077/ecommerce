@@ -1,0 +1,6 @@
+# context/ experience 格式基线 —— 存量冻结、只拦新增(反向棘轮:修好必须删行)。
+# 由 scripts/verify-context.sh 读取。一行一个路径,# 后是放行原因。
+# 这两篇不是「坑」体裁,是语义参考/退役声明,历史上放进了 experience/;
+# 迁走或补齐四段后删除对应行。
+context/project/ecommerce/config/experience/config-hot-reload-boundaries.md  # 语义参考文档,无单一「症状」
+context/project/ecommerce/config/experience/consul-kv-retired.md  # 退役声明,非踩坑记录

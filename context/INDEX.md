@@ -77,6 +77,9 @@ matrix 与 `backend/services/`、网关实际接线的一致性,以及各服务 
 - **不要全仓 grep 找服务拓扑**。查 `.service-matrix.yaml`。
 - 找模块知识时路径是 `context/project/ecommerce/{module}/`，`{module}` 用**代码目录名**（`gateway` / `behavior` / `consumer`），不是服务的中文名。
 - 找不到对应知识 ≠ 没有约束。先读 `docs/design/`（入口 `docs/design/README.md`）/ `TODO.md`，读完把结论沉淀回来（见 self-refinement）。
+- 本目录自身的结构由门禁守着：链接可达性、INDEX 覆盖（不许有孤儿文件）、frontmatter、
+  experience 格式、evolution-log 四要素、AGENTS.md 预算，改完跑 `scripts/verify-context.sh`
+  （CI 两侧都接了：`context-gate`）。存量豁免见 `scripts/context-format-baseline.txt`（反向棘轮）。
 
 ## 与 `~/.claude` memory 的关系
 
