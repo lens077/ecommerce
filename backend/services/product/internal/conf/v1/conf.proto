@@ -131,8 +131,8 @@ message Server {
   }
   message Cors {
     repeated string allowed_origins = 1 [
-      (buf.validate.field).string.host_and_port = true,
-      (buf.validate.field).string.example = "http://localhost:3000"
+      (buf.validate.field).repeated.items.string.uri = true,
+      (buf.validate.field).repeated.items.string.example = "http://localhost:3000"
     ];
   }
 }
@@ -146,7 +146,7 @@ message Data {
         (buf.validate.field).string.example = "localhost"
       ];
       uint32 port = 2 [
-        (buf.validate.field).int32.example = 5432
+        (buf.validate.field).uint32.example = 5432
       ];
       string user = 3 [
         (buf.validate.field).string.example = "postgres"
@@ -165,10 +165,10 @@ message Data {
       Tls tls = 9;
 
       message DatabasePool {
-        uint32 max_conns = 1 [(buf.validate.field).int32 = {
+        uint32 max_conns = 1 [(buf.validate.field).uint32 = {
           gte: 1
         }];
-        uint32 min_conns = 2 [(buf.validate.field).int32 = {
+        uint32 min_conns = 2 [(buf.validate.field).uint32 = {
           gte: 1
         }];
         google.protobuf.Duration max_conn_lifetime = 3 [(buf.validate.field).duration.gte = {seconds: 1}];
@@ -193,7 +193,7 @@ message Data {
     message Redis {
       string host = 1 [(buf.validate.field).string.address = true];
       uint32 port = 2 [
-        (buf.validate.field).int32.example = 5432
+        (buf.validate.field).uint32.example = 5432
       ];
       string username = 3 [
         (buf.validate.field).string.example = "default"
@@ -206,7 +206,7 @@ message Data {
       google.protobuf.Duration read_timeout = 7 [(buf.validate.field).duration.gte = {seconds: 1}];
       google.protobuf.Duration write_timeout = 8 [(buf.validate.field).duration.gte = {seconds: 1}];
       uint32 pool_size = 9;
-      uint32 min_idle_conns = 10 [(buf.validate.field).int32 = {
+      uint32 min_idle_conns = 10 [(buf.validate.field).uint32 = {
         gte: 1
       }];
       Tls tls = 11;
@@ -312,8 +312,8 @@ message Discovery {
 message Search {
   message ElasticSearch {
     repeated string addresses = 1 [
-      (buf.validate.field).string.host_and_port = true,
-      (buf.validate.field).string.example = "http://es.example.com:9200"
+      (buf.validate.field).repeated.items.string.uri = true,
+      (buf.validate.field).repeated.items.string.example = "http://es.example.com:9200"
     ];
     string username = 2 [
       (buf.validate.field).string.example = "elastic"
