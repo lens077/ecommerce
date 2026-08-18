@@ -51,8 +51,8 @@ config_validation:
 
 # 外部基础设施（不是本仓的服务）────────────────────────────────────
 externals:
-  postgres: { host: "pg-dev.app.com", note: "TLS verify-ca" }
-  redis: { host: "dragonfly.app.com:443", note: "Dragonfly, TLS insecure_skip_verify" }
+  postgres: { host: "pg-dev.dev.test", note: "TLS verify-ca" }
+  redis: { host: "dragonfly.dev.test:443", note: "Dragonfly, TLS insecure_skip_verify" }
   consul: { host: "192.168.3.112:8500" }
   casdoor: { host: "node1", note: "JWT 公钥 kid=lens" }
   elasticsearch: { used_by: [search] }

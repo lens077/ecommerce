@@ -15,7 +15,7 @@ VERSION ?= dev
 # 现在清单已修正,扇出也改成「收集失败再汇总退出」,见下面各 *-all 目标。
 SERVICES ?= user search product order inventory cart merchant address behavior payment
 
-# consul kv 导入导出用的地址。命令行可覆盖: make consul-kv-export CONSUL_ADDR=consul.app.com
+# consul kv 导入导出用的地址。命令行可覆盖: make consul-kv-export CONSUL_ADDR=consul.dev.test
 CONSUL_ADDR ?= 192.168.3.112:8500
 
 .PHONY: consul-kv-export
