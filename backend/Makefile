@@ -58,6 +58,33 @@ generate:
 conf:
 	buf generate --template buf.gen.yaml
 
+# ── 配置 JSON Schema(IDE 对 configs/*.yml 的高亮/补全/校验)──────────
+# 从各服务 internal/conf/v1/conf.proto 的 Bootstrap 生成自包含 JSON Schema 到
+# services/<svc>/configs/bootstrap.schema.json(protovalidate 的 in/required
+# 会分别变成 enum/required)。IDEA 侧的文件映射在 .idea/jsonSchemas.xml(被
+# gitignore):首次 clone 后该文件不存在,重跑一次映射生成或手动在
+# Settings → JSON Schema Mappings 里指到各服务的 bootstrap.schema.json。
+# 改了 conf.proto 要重跑本目标,schema 与 conf.pb.go 一样随代码提交。
+#
+# 后处理:google.protobuf.Duration 生成的是 format:"duration"(ISO 8601,
+# 形如 PT5S),但配置加载走 mapstructure + time.ParseDuration,实际写法是
+# Go 风格 "5s"/"1m30s" —— 替换成 Go duration 正则,否则 IDE 把合法配置标红。
+.PHONY: conf-schema
+conf-schema:
+	@fail=""; \
+	for s in $(SERVICES); do \
+	  echo "===== conf-schema $$s ====="; \
+	  tmp=$$(mktemp -d) && \
+	  buf generate --template buf.gen.jsonschema.yaml \
+	    --path services/$$s/internal/conf/v1/conf.proto -o $$tmp && \
+	  sed 's#"format": "duration",#"pattern": "^-?([0-9]+([.][0-9]+)?(ns|us|µs|ms|s|m|h))+$$",#' \
+	    $$tmp/conf.v1.Bootstrap.schema.bundle.json > services/$$s/configs/bootstrap.schema.json \
+	    || fail="$$fail $$s"; \
+	  rm -rf $$tmp; \
+	done; \
+	if [ -n "$$fail" ]; then echo "❌ schema 生成失败:$$fail"; exit 1; fi; \
+	echo "✅ 全部 $(words $(SERVICES)) 个服务的 bootstrap.schema.json 已生成"
+
 # 镜像构建统一在各服务目录下做:Dockerfile 只有 services/<svc>/Dockerfile 一份,
 # 这里不重复实现,只做「对所有服务跑一遍」的扇出。
 # 单个服务请用: cd services/<svc> && make docker-build | docker-deploy | docker-deployx
