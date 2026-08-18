@@ -1,0 +1,1468 @@
+{
+  "schema_version": 1,
+  "diagram_type": "architecture",
+  "meta": {
+    "title": "TODO 全量地图 · 82 项按域分组",
+    "output": "docs/diagrams/todo-full-map.html",
+    "quality_profile": "standard",
+    "viewBox": [
+      2048,
+      1240
+    ]
+  },
+  "components": [
+    {
+      "id": "g1h",
+      "type": "security",
+      "label": "P0 · 假成功与越权（13 项）",
+      "pos": [
+        72,
+        72
+      ],
+      "size": [
+        416,
+        44
+      ],
+      "tag": "最高优先"
+    },
+    {
+      "id": "g1i0",
+      "type": "security",
+      "label": "Reserve 静默无操作",
+      "pos": [
+        72,
+        132
+      ],
+      "size": [
+        200,
+        46
+      ]
+    },
+    {
+      "id": "g1i1",
+      "type": "security",
+      "label": "ReleaseReserve panic 桩",
+      "pos": [
+        288,
+        132
+      ],
+      "size": [
+        200,
+        46
+      ]
+    },
+    {
+      "id": "g1i2",
+      "type": "security",
+      "label": "CreateOrder 假成功止血",
+      "pos": [
+        72,
+        192
+      ],
+      "size": [
+        200,
+        46
+      ]
+    },
+    {
+      "id": "g1i3",
+      "type": "security",
+      "label": "CompleteOrder 不落库",
+      "pos": [
+        288,
+        192
+      ],
+      "size": [
+        200,
+        46
+      ]
+    },
+    {
+      "id": "g1i4",
+      "type": "security",
+      "label": "地址服务全线越权",
+      "pos": [
+        72,
+        252
+      ],
+      "size": [
+        200,
+        46
+      ]
+    },
+    {
+      "id": "g1i5",
+      "type": "security",
+      "label": "商家审批全表 UPDATE",
+      "pos": [
+        288,
+        252
+      ],
+      "size": [
+        200,
+        46
+      ]
+    },
+    {
+      "id": "g1i6",
+      "type": "security",
+      "label": "登录 token 落日志",
+      "pos": [
+        72,
+        312
+      ],
+      "size": [
+        200,
+        46
+      ]
+    },
+    {
+      "id": "g1i7",
+      "type": "security",
+      "label": "加购缺 shop_name 必失败",
+      "pos": [
+        288,
+        312
+      ],
+      "size": [
+        200,
+        46
+      ]
+    },
+    {
+      "id": "g1i8",
+      "type": "security",
+      "label": "改数量缺 Quantity 字段",
+      "pos": [
+        72,
+        372
+      ],
+      "size": [
+        200,
+        46
+      ]
+    },
+    {
+      "id": "g1i9",
+      "type": "security",
+      "label": "商家 Reject/Activate panic",
+      "pos": [
+        288,
+        372
+      ],
+      "size": [
+        200,
+        46
+      ]
+    },
+    {
+      "id": "g1i10",
+      "type": "security",
+      "label": "网关重试复制非幂等写",
+      "pos": [
+        72,
+        432
+      ],
+      "size": [
+        200,
+        46
+      ]
+    },
+    {
+      "id": "g1i11",
+      "type": "security",
+      "label": "search 实现与设计不符",
+      "pos": [
+        288,
+        432
+      ],
+      "size": [
+        200,
+        46
+      ]
+    },
+    {
+      "id": "g1i12",
+      "type": "security",
+      "label": "零覆盖路径补测试",
+      "pos": [
+        72,
+        492
+      ],
+      "size": [
+        200,
+        46
+      ]
+    },
+    {
+      "id": "g2h",
+      "type": "backend",
+      "label": "交易主线 · 订单/支付/库存（8 项）",
+      "pos": [
+        72,
+        622
+      ],
+      "size": [
+        416,
+        44
+      ]
+    },
+    {
+      "id": "g2i0",
+      "type": "backend",
+      "label": "订单查询/取消/状态机",
+      "pos": [
+        72,
+        682
+      ],
+      "size": [
+        200,
+        46
+      ]
+    },
+    {
+      "id": "g2i1",
+      "type": "backend",
+      "label": "建单全链路事务落库",
+      "pos": [
+        288,
+        682
+      ],
+      "size": [
+        200,
+        46
+      ]
+    },
+    {
+      "id": "g2i2",
+      "type": "backend",
+      "label": "支付闭环与回调同步",
+      "pos": [
+        72,
+        742
+      ],
+      "size": [
+        200,
+        46
+      ]
+    },
+    {
+      "id": "g2i3",
+      "type": "backend",
+      "label": "库存 TCC 预占/确认/释放",
+      "pos": [
+        288,
+        742
+      ],
+      "size": [
+        200,
+        46
+      ]
+    },
+    {
+      "id": "g2i4",
+      "type": "backend",
+      "label": "ListProducts 游标分页",
+      "pos": [
+        72,
+        802
+      ],
+      "size": [
+        200,
+        46
+      ]
+    },
+    {
+      "id": "g2i5",
+      "type": "backend",
+      "label": "金额 decimal 等订单缺陷",
+      "pos": [
+        288,
+        802
+      ],
+      "size": [
+        200,
+        46
+      ]
+    },
+    {
+      "id": "g2i6",
+      "type": "backend",
+      "label": "补 requestId/orderNo",
+      "pos": [
+        72,
+        862
+      ],
+      "size": [
+        200,
+        46
+      ]
+    },
+    {
+      "id": "g2i7",
+      "type": "backend",
+      "label": "结算页接真实下单响应",
+      "pos": [
+        288,
+        862
+      ],
+      "size": [
+        200,
+        46
+      ]
+    },
+    {
+      "id": "g9h",
+      "type": "security",
+      "label": "环境风险 · 并行排障（4 项）",
+      "pos": [
+        72,
+        992
+      ],
+      "size": [
+        416,
+        44
+      ]
+    },
+    {
+      "id": "g9i0",
+      "type": "security",
+      "label": "node3 新 Pod 卡死排障",
+      "pos": [
+        72,
+        1052
+      ],
+      "size": [
+        200,
+        46
+      ]
+    },
+    {
+      "id": "g9i1",
+      "type": "security",
+      "label": "db-ca-cert 遮蔽系统 CA",
+      "pos": [
+        288,
+        1052
+      ],
+      "size": [
+        200,
+        46
+      ]
+    },
+    {
+      "id": "g9i2",
+      "type": "security",
+      "label": "泄露凭据轮换",
+      "pos": [
+        72,
+        1112
+      ],
+      "size": [
+        200,
+        46
+      ]
+    },
+    {
+      "id": "g9i3",
+      "type": "security",
+      "label": "dragonfly 重启观察",
+      "pos": [
+        288,
+        1112
+      ],
+      "size": [
+        200,
+        46
+      ]
+    },
+    {
+      "id": "g3h",
+      "type": "messagebus",
+      "label": "一致性与领域事件（7 项）",
+      "pos": [
+        568,
+        72
+      ],
+      "size": [
+        416,
+        44
+      ]
+    },
+    {
+      "id": "g3i0",
+      "type": "messagebus",
+      "label": "Outbox 表 + Kafka relay",
+      "pos": [
+        568,
+        132
+      ],
+      "size": [
+        200,
+        46
+      ]
+    },
+    {
+      "id": "g3i1",
+      "type": "messagebus",
+      "label": "OrderCreated 等领域事件",
+      "pos": [
+        784,
+        132
+      ],
+      "size": [
+        200,
+        46
+      ]
+    },
+    {
+      "id": "g3i2",
+      "type": "messagebus",
+      "label": "幂等消费 order_no 去重",
+      "pos": [
+        568,
+        192
+      ],
+      "size": [
+        200,
+        46
+      ]
+    },
+    {
+      "id": "g3i3",
+      "type": "messagebus",
+      "label": "显式补偿事件设计",
+      "pos": [
+        784,
+        192
+      ],
+      "size": [
+        200,
+        46
+      ]
+    },
+    {
+      "id": "g3i4",
+      "type": "messagebus",
+      "label": "order_status 状态即真相",
+      "pos": [
+        568,
+        252
+      ],
+      "size": [
+        200,
+        46
+      ]
+    },
+    {
+      "id": "g3i5",
+      "type": "messagebus",
+      "label": "超时兜底 job 扫中间态",
+      "pos": [
+        784,
+        252
+      ],
+      "size": [
+        200,
+        46
+      ]
+    },
+    {
+      "id": "g3i6",
+      "type": "messagebus",
+      "label": "事件全链路 trace_id",
+      "pos": [
+        568,
+        312
+      ],
+      "size": [
+        200,
+        46
+      ]
+    },
+    {
+      "id": "g4h",
+      "type": "frontend",
+      "label": "前端与端应用（8 项）",
+      "pos": [
+        568,
+        442
+      ],
+      "size": [
+        416,
+        44
+      ]
+    },
+    {
+      "id": "g4i0",
+      "type": "frontend",
+      "label": "cart 删改数量接后端",
+      "pos": [
+        568,
+        502
+      ],
+      "size": [
+        200,
+        46
+      ]
+    },
+    {
+      "id": "g4i1",
+      "type": "frontend",
+      "label": "consumer 订单页去 mock",
+      "pos": [
+        784,
+        502
+      ],
+      "size": [
+        200,
+        46
+      ]
+    },
+    {
+      "id": "g4i2",
+      "type": "frontend",
+      "label": "merchant 端接 api/",
+      "pos": [
+        568,
+        562
+      ],
+      "size": [
+        200,
+        46
+      ]
+    },
+    {
+      "id": "g4i3",
+      "type": "frontend",
+      "label": "admin 端接 api/",
+      "pos": [
+        784,
+        562
+      ],
+      "size": [
+        200,
+        46
+      ]
+    },
+    {
+      "id": "g4i4",
+      "type": "frontend",
+      "label": "RBAC 三角色细化",
+      "pos": [
+        568,
+        622
+      ],
+      "size": [
+        200,
+        46
+      ]
+    },
+    {
+      "id": "g4i5",
+      "type": "frontend",
+      "label": "consumer 接入 tracker",
+      "pos": [
+        784,
+        622
+      ],
+      "size": [
+        200,
+        46
+      ]
+    },
+    {
+      "id": "g4i6",
+      "type": "frontend",
+      "label": "灯市换肤迁移清单",
+      "pos": [
+        568,
+        682
+      ],
+      "size": [
+        200,
+        46
+      ]
+    },
+    {
+      "id": "g4i7",
+      "type": "frontend",
+      "label": "shopName 类型与 mock 债",
+      "pos": [
+        784,
+        682
+      ],
+      "size": [
+        200,
+        46
+      ]
+    },
+    {
+      "id": "g5h",
+      "type": "cloud",
+      "label": "可观测性（16 项）",
+      "pos": [
+        1064,
+        72
+      ],
+      "size": [
+        416,
+        44
+      ]
+    },
+    {
+      "id": "g5i0",
+      "type": "cloud",
+      "label": "采集管道自采 otelcol",
+      "pos": [
+        1064,
+        132
+      ],
+      "size": [
+        200,
+        46
+      ]
+    },
+    {
+      "id": "g5i1",
+      "type": "cloud",
+      "label": "k8s 对象/容器指标",
+      "pos": [
+        1280,
+        132
+      ],
+      "size": [
+        200,
+        46
+      ]
+    },
+    {
+      "id": "g5i2",
+      "type": "cloud",
+      "label": "fluent-bit 标签修复",
+      "pos": [
+        1064,
+        192
+      ],
+      "size": [
+        200,
+        46
+      ]
+    },
+    {
+      "id": "g5i3",
+      "type": "cloud",
+      "label": "网关指标发版生效",
+      "pos": [
+        1280,
+        192
+      ],
+      "size": [
+        200,
+        46
+      ]
+    },
+    {
+      "id": "g5i4",
+      "type": "cloud",
+      "label": "runtime 指标发版生效",
+      "pos": [
+        1064,
+        252
+      ],
+      "size": [
+        200,
+        46
+      ]
+    },
+    {
+      "id": "g5i5",
+      "type": "cloud",
+      "label": "三盘与 17 条告警落地",
+      "pos": [
+        1280,
+        252
+      ],
+      "size": [
+        200,
+        46
+      ]
+    },
+    {
+      "id": "g5i6",
+      "type": "cloud",
+      "label": "PII 脱敏修复",
+      "pos": [
+        1064,
+        312
+      ],
+      "size": [
+        200,
+        46
+      ]
+    },
+    {
+      "id": "g5i7",
+      "type": "cloud",
+      "label": "RUM 关联后端 trace",
+      "pos": [
+        1280,
+        312
+      ],
+      "size": [
+        200,
+        46
+      ]
+    },
+    {
+      "id": "g5i8",
+      "type": "cloud",
+      "label": "网关 5xx 误记成功",
+      "pos": [
+        1064,
+        372
+      ],
+      "size": [
+        200,
+        46
+      ]
+    },
+    {
+      "id": "g5i9",
+      "type": "cloud",
+      "label": "网关采样 ParentBased",
+      "pos": [
+        1280,
+        372
+      ],
+      "size": [
+        200,
+        46
+      ]
+    },
+    {
+      "id": "g5i10",
+      "type": "cloud",
+      "label": "免鉴权 x-md-* 剥离",
+      "pos": [
+        1064,
+        432
+      ],
+      "size": [
+        200,
+        46
+      ]
+    },
+    {
+      "id": "g5i11",
+      "type": "cloud",
+      "label": "看板口径两处修正",
+      "pos": [
+        1280,
+        432
+      ],
+      "size": [
+        200,
+        46
+      ]
+    },
+    {
+      "id": "g5i12",
+      "type": "cloud",
+      "label": "k8s 事件/变更采集",
+      "pos": [
+        1064,
+        492
+      ],
+      "size": [
+        200,
+        46
+      ]
+    },
+    {
+      "id": "g5i13",
+      "type": "cloud",
+      "label": "观测栈单副本 HA",
+      "pos": [
+        1280,
+        492
+      ],
+      "size": [
+        200,
+        46
+      ]
+    },
+    {
+      "id": "g5i14",
+      "type": "cloud",
+      "label": "OTEL_LOGS 死配置清理",
+      "pos": [
+        1064,
+        552
+      ],
+      "size": [
+        200,
+        46
+      ]
+    },
+    {
+      "id": "g5i15",
+      "type": "cloud",
+      "label": "日志限流 Sampler",
+      "pos": [
+        1280,
+        552
+      ],
+      "size": [
+        200,
+        46
+      ]
+    },
+    {
+      "id": "g6h",
+      "type": "database",
+      "label": "搜索与推荐（5 项）",
+      "pos": [
+        1064,
+        682
+      ],
+      "size": [
+        416,
+        44
+      ]
+    },
+    {
+      "id": "g6i0",
+      "type": "database",
+      "label": "search 切 Meilisearch",
+      "pos": [
+        1064,
+        742
+      ],
+      "size": [
+        200,
+        46
+      ]
+    },
+    {
+      "id": "g6i1",
+      "type": "database",
+      "label": "address 清 ES 残留",
+      "pos": [
+        1280,
+        742
+      ],
+      "size": [
+        200,
+        46
+      ]
+    },
+    {
+      "id": "g6i2",
+      "type": "database",
+      "label": "MEILI 配置依赖收尾",
+      "pos": [
+        1064,
+        802
+      ],
+      "size": [
+        200,
+        46
+      ]
+    },
+    {
+      "id": "g6i3",
+      "type": "database",
+      "label": "CDC 切换补删除事件",
+      "pos": [
+        1280,
+        802
+      ],
+      "size": [
+        200,
+        46
+      ]
+    },
+    {
+      "id": "g6i4",
+      "type": "database",
+      "label": "推荐链路端到端验证",
+      "pos": [
+        1064,
+        862
+      ],
+      "size": [
+        200,
+        46
+      ]
+    },
+    {
+      "id": "g7h",
+      "type": "security",
+      "label": "基础设施 TLS 收敛（8 项）",
+      "pos": [
+        1560,
+        72
+      ],
+      "size": [
+        416,
+        44
+      ]
+    },
+    {
+      "id": "g7i0",
+      "type": "security",
+      "label": "12 条 HTTPRoute 迁 https",
+      "pos": [
+        1560,
+        132
+      ],
+      "size": [
+        200,
+        46
+      ]
+    },
+    {
+      "id": "g7i1",
+      "type": "security",
+      "label": "dragonfly 改 Passthrough",
+      "pos": [
+        1776,
+        132
+      ],
+      "size": [
+        200,
+        46
+      ]
+    },
+    {
+      "id": "g7i2",
+      "type": "security",
+      "label": "公网明文三端点",
+      "pos": [
+        1560,
+        192
+      ],
+      "size": [
+        200,
+        46
+      ]
+    },
+    {
+      "id": "g7i3",
+      "type": "security",
+      "label": "Consul 启用 TLS",
+      "pos": [
+        1776,
+        192
+      ],
+      "size": [
+        200,
+        46
+      ]
+    },
+    {
+      "id": "g7i4",
+      "type": "security",
+      "label": "ES 恢复 HTTP TLS",
+      "pos": [
+        1560,
+        252
+      ],
+      "size": [
+        200,
+        46
+      ]
+    },
+    {
+      "id": "g7i5",
+      "type": "security",
+      "label": "Kafka 9093 TLS 起步",
+      "pos": [
+        1776,
+        252
+      ],
+      "size": [
+        200,
+        46
+      ]
+    },
+    {
+      "id": "g7i6",
+      "type": "security",
+      "label": "清理两个僵尸 LB",
+      "pos": [
+        1560,
+        312
+      ],
+      "size": [
+        200,
+        46
+      ]
+    },
+    {
+      "id": "g7i7",
+      "type": "security",
+      "label": "OTel exporter TLS 口径",
+      "pos": [
+        1776,
+        312
+      ],
+      "size": [
+        200,
+        46
+      ]
+    },
+    {
+      "id": "g8h",
+      "type": "external",
+      "label": "工程化与平台（13 项）",
+      "pos": [
+        1560,
+        442
+      ],
+      "size": [
+        416,
+        44
+      ]
+    },
+    {
+      "id": "g8i0",
+      "type": "external",
+      "label": "DevOps 四阶段落地",
+      "pos": [
+        1560,
+        502
+      ],
+      "size": [
+        200,
+        46
+      ]
+    },
+    {
+      "id": "g8i1",
+      "type": "external",
+      "label": "测试体系六步落地",
+      "pos": [
+        1776,
+        502
+      ],
+      "size": [
+        200,
+        46
+      ]
+    },
+    {
+      "id": "g8i2",
+      "type": "external",
+      "label": "internal/pkg 同构收敛",
+      "pos": [
+        1560,
+        562
+      ],
+      "size": [
+        200,
+        46
+      ]
+    },
+    {
+      "id": "g8i3",
+      "type": "external",
+      "label": "frontend.yml 重写+lint CI",
+      "pos": [
+        1776,
+        562
+      ],
+      "size": [
+        200,
+        46
+      ]
+    },
+    {
+      "id": "g8i4",
+      "type": "external",
+      "label": "SCAFFOLD 等文档遗留",
+      "pos": [
+        1560,
+        622
+      ],
+      "size": [
+        200,
+        46
+      ]
+    },
+    {
+      "id": "g8i5",
+      "type": "external",
+      "label": "config-center 审批/灰度",
+      "pos": [
+        1776,
+        622
+      ],
+      "size": [
+        200,
+        46
+      ]
+    },
+    {
+      "id": "g8i6",
+      "type": "external",
+      "label": "go-redis 规范三待办",
+      "pos": [
+        1560,
+        682
+      ],
+      "size": [
+        200,
+        46
+      ]
+    },
+    {
+      "id": "g8i7",
+      "type": "external",
+      "label": "cron 归属与兜底落地",
+      "pos": [
+        1776,
+        682
+      ],
+      "size": [
+        200,
+        46
+      ]
+    },
+    {
+      "id": "g8i8",
+      "type": "external",
+      "label": "Kafka Connect CDC 修复",
+      "pos": [
+        1560,
+        742
+      ],
+      "size": [
+        200,
+        46
+      ]
+    },
+    {
+      "id": "g8i9",
+      "type": "external",
+      "label": "freeze 三项待办",
+      "pos": [
+        1776,
+        742
+      ],
+      "size": [
+        200,
+        46
+      ]
+    },
+    {
+      "id": "g8i10",
+      "type": "external",
+      "label": "MANIFEST PAT 细粒度",
+      "pos": [
+        1560,
+        802
+      ],
+      "size": [
+        200,
+        46
+      ]
+    },
+    {
+      "id": "g8i11",
+      "type": "external",
+      "label": "cart 直连路由鉴权",
+      "pos": [
+        1776,
+        802
+      ],
+      "size": [
+        200,
+        46
+      ]
+    },
+    {
+      "id": "g8i12",
+      "type": "external",
+      "label": "consumer/biz 测试补齐",
+      "pos": [
+        1560,
+        862
+      ],
+      "size": [
+        200,
+        46
+      ]
+    }
+  ],
+  "boundaries": [
+    {
+      "kind": "security-group",
+      "label": "P0 · 假成功与越权",
+      "wraps": [
+        "g1h",
+        "g1i0",
+        "g1i1",
+        "g1i2",
+        "g1i3",
+        "g1i4",
+        "g1i5",
+        "g1i6",
+        "g1i7",
+        "g1i8",
+        "g1i9",
+        "g1i10",
+        "g1i11",
+        "g1i12"
+      ]
+    },
+    {
+      "kind": "region",
+      "label": "交易主线 · 订单/支付/库存",
+      "wraps": [
+        "g2h",
+        "g2i0",
+        "g2i1",
+        "g2i2",
+        "g2i3",
+        "g2i4",
+        "g2i5",
+        "g2i6",
+        "g2i7"
+      ]
+    },
+    {
+      "kind": "security-group",
+      "label": "环境风险 · 并行排障",
+      "wraps": [
+        "g9h",
+        "g9i0",
+        "g9i1",
+        "g9i2",
+        "g9i3"
+      ]
+    },
+    {
+      "kind": "region",
+      "label": "一致性与领域事件",
+      "wraps": [
+        "g3h",
+        "g3i0",
+        "g3i1",
+        "g3i2",
+        "g3i3",
+        "g3i4",
+        "g3i5",
+        "g3i6"
+      ]
+    },
+    {
+      "kind": "region",
+      "label": "前端与端应用",
+      "wraps": [
+        "g4h",
+        "g4i0",
+        "g4i1",
+        "g4i2",
+        "g4i3",
+        "g4i4",
+        "g4i5",
+        "g4i6",
+        "g4i7"
+      ]
+    },
+    {
+      "kind": "region",
+      "label": "可观测性",
+      "wraps": [
+        "g5h",
+        "g5i0",
+        "g5i1",
+        "g5i2",
+        "g5i3",
+        "g5i4",
+        "g5i5",
+        "g5i6",
+        "g5i7",
+        "g5i8",
+        "g5i9",
+        "g5i10",
+        "g5i11",
+        "g5i12",
+        "g5i13",
+        "g5i14",
+        "g5i15"
+      ]
+    },
+    {
+      "kind": "region",
+      "label": "搜索与推荐",
+      "wraps": [
+        "g6h",
+        "g6i0",
+        "g6i1",
+        "g6i2",
+        "g6i3",
+        "g6i4"
+      ]
+    },
+    {
+      "kind": "security-group",
+      "label": "基础设施 TLS 收敛",
+      "wraps": [
+        "g7h",
+        "g7i0",
+        "g7i1",
+        "g7i2",
+        "g7i3",
+        "g7i4",
+        "g7i5",
+        "g7i6",
+        "g7i7"
+      ]
+    },
+    {
+      "kind": "region",
+      "label": "工程化与平台",
+      "wraps": [
+        "g8h",
+        "g8i0",
+        "g8i1",
+        "g8i2",
+        "g8i3",
+        "g8i4",
+        "g8i5",
+        "g8i6",
+        "g8i7",
+        "g8i8",
+        "g8i9",
+        "g8i10",
+        "g8i11",
+        "g8i12"
+      ]
+    }
+  ],
+  "connections": [
+    {
+      "from": "g1h",
+      "to": "g3h",
+      "variant": "emphasis",
+      "fromSide": "right",
+      "toSide": "left",
+      "route": "straight"
+    },
+    {
+      "from": "g3h",
+      "to": "g5h",
+      "variant": "emphasis",
+      "fromSide": "right",
+      "toSide": "left",
+      "route": "straight"
+    },
+    {
+      "from": "g5h",
+      "to": "g7h",
+      "variant": "emphasis",
+      "fromSide": "right",
+      "toSide": "left",
+      "route": "straight"
+    },
+    {
+      "from": "g1h",
+      "to": "g2h",
+      "variant": "dashed",
+      "fromSide": "left",
+      "toSide": "left",
+      "via": [
+        [
+          36,
+          94
+        ],
+        [
+          36,
+          644
+        ]
+      ]
+    },
+    {
+      "from": "g2h",
+      "to": "g4h",
+      "variant": "dashed",
+      "fromSide": "right",
+      "toSide": "left",
+      "via": [
+        [
+          528,
+          644
+        ],
+        [
+          528,
+          464
+        ]
+      ]
+    },
+    {
+      "from": "g4h",
+      "to": "g6h",
+      "variant": "dashed",
+      "fromSide": "right",
+      "toSide": "left",
+      "via": [
+        [
+          1024,
+          464
+        ],
+        [
+          1024,
+          704
+        ]
+      ]
+    },
+    {
+      "from": "g6h",
+      "to": "g8h",
+      "variant": "dashed",
+      "fromSide": "right",
+      "toSide": "left",
+      "via": [
+        [
+          1520,
+          704
+        ],
+        [
+          1520,
+          464
+        ]
+      ]
+    }
+  ],
+  "cards": [
+    {
+      "dot": "rose",
+      "title": "阅读顺序",
+      "items": [
+        "左→右按优先级：P0 止血与交易主线 → 一致性/前端 → 可观测/搜索 → TLS/工程化",
+        "实线为主线推进（组间），虚线为支线依赖；风险组独立并行排障",
+        "精简主线视图见同目录 roadmap-mainline.html"
+      ]
+    },
+    {
+      "dot": "amber",
+      "title": "统计口径",
+      "items": [
+        "82 项 = P0 13 + 交易 8 + 一致性 7 + 前端 8 + 可观测 16 + 搜索推荐 5 + TLS 8 + 工程化 13 + 风险 4",
+        "覆盖 TODO.md §二治理项、§三全部待办（含 Meilisearch/可观测评审/TLS 收敛）与 §一各 ⬜ 行",
+        "每项细节（文件行号/修法）以 TODO.md 为真相源"
+      ]
+    },
+    {
+      "dot": "cyan",
+      "title": "提问即添图",
+      "items": [
+        "新问题按域落入对应分组框，新增域则开新框",
+        "改 docs/diagrams/todo-full-map.json 后重新 deliver 即可"
+      ]
+    }
+  ]
+}
