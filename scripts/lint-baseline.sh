@@ -21,10 +21,13 @@
 # 归一化:finding 只保留「checker + 文件 + 规则 + 摘要」,**丢掉行号列号**。
 # 否则在文件顶部加一行注释就会让下方所有告警变成「新增」,基线立刻失效。
 #
-# ⚠️ 两个 shell 陷阱(都实测踩过,改本文件前先读):
+# ⚠️ 三个 shell 陷阱(都实测踩过,改本文件前先读):
 #   1. 干净时 lint 无输出,管道里的 grep 拿到空输入会返回 1,在 `set -o pipefail`
 #      下会直接掐掉整个脚本 —— 所以每条采集管道末尾都有 `|| true`。
 #   2. `grep -c` 计数为 0 时同样返回 1,不能直接用在 `$(...)` 里。
+#   3. 采集用 `2>&1` 合流,而 CI 冷模块缓存时 go 会把 `go: downloading …` 打到
+#      stderr —— 不滤掉就全变成「新增告警」。本机缓存热永远复现不了,只在 CI 红
+#      (2026-08-13/08-18 两轮 10 服务全红均为此因,不是真告警)。
 set -euo pipefail
 
 root=$(git rev-parse --show-toplevel) || { echo "lint-baseline: 不在 git 仓库内" >&2; exit 2; }
@@ -46,6 +49,7 @@ count_lines() {
 run_go-vet() {
   { ( cd backend && go vet ./... 2>&1 || true ) \
     | grep -v '^#' \
+    | grep -vE '^go: (downloading|extracting|finding) ' \
     | sed -E 's/^([^:]+):[0-9]+:[0-9]+:[[:space:]]*/\1	/' \
     | grep -v '^[[:space:]]*$' \
     | sed 's|^|go-vet	|' ; } || true
