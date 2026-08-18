@@ -12,7 +12,8 @@ description: 公网暴露基础设施(Pangolin)的拓扑事实、面板 API 操�
 ## 拓扑
 
 ```
-公网用户 ──HTTPS/TCP/UDP──> node3 VPS(ssh 别名 node3,hostname 显示 node1,114.132.233.129,腾讯云)
+公网用户 ──HTTPS/TCP/UDP──> node1 VPS(ssh 别名 node1,与 hostname 一致;旧称 node3 已于 2026-08-18 统一弃用,114.132.233.129,腾讯云)
+                              ⚠️ 与本地 k8s 集群的 node1(192.168.3.105)重名:本文的 node1 均指这台公网 VPS
                               Pangolin CE 1.21.1 + Gerbil 1.4.3 + Traefik v3.7,目录 /home/docker/pangolin/
                               │ WireGuard(UDP 51820/21820,内网侧纯出站)
               ┌───────────────┼───────────────────┐
@@ -22,14 +23,14 @@ description: 公网暴露基础设施(Pangolin)的拓扑事实、面板 API 操�
 
 - 实例身份:腾讯云**轻量应用服务器 Lighthouse** `lhins-1of5dkfj`(ap-guangzhou-7),不是 CVM——防火墙是 Lighthouse 实例防火墙(`tccli lighthouse DescribeFirewallRules/DeleteFirewallRules --InstanceId`),没有安全组;TAT 助手在线,`tccli tat RunCommand` 可免 SSH 执行命令(带外救援通道,2026-08-11 实测可用);SSH 端口 34123(22/3389 已从防火墙移除)
 - 域名 `apikv.com`,**DNS 在 DNSPod(不是 Cloudflare)**,已有 `*` 泛解析 → 114.132.233.129;新子域**零 DNS 操作**
-- 泛域名证书 ZeroSSL `*.apikv.com`(acme.sh dns_dp 签),**2026-10-27 到期**;部署在两处:`/home/docker/blog/ssl/`(原件)与 node3 `/home/docker/pangolin/config/traefik/certs/apikv.com.{crt,key}`,**续期要同步两处**
+- 泛域名证书 ZeroSSL `*.apikv.com`(acme.sh dns_dp 签),**2026-10-27 到期**;部署在两处:`/home/docker/blog/ssl/`(原件)与 node1 `/home/docker/pangolin/config/traefik/certs/apikv.com.{crt,key}`,**续期要同步两处**。**⚠️ 自动续期链路缺位(2026-08-18 实查)**:node1 上 acme.sh 只剩 `/usr/local/bin/acme.sh` 单文件,`/root/.acme.sh/` 无证书产物、domain conf 未存 DNSPod 凭据、root crontab 无续期条目——10-27 会硬过期,需在此前手动重签或重建续期链路(DNSPod 旧 Key 已作废,要用轮换后的新 Key 或腾讯云子账号走 dns_tencent)
 - k8s:node1-3 = 192.168.3.105-107(与办公内网同段),Cilium Gateway API,`cilium-gateway`(ns default,LB 192.168.3.110,ClusterIP **10.97.94.118**)
-- 另一台公网机 8.138.194.254 跑 harbor/img(与 Pangolin 无关);`auth.apikv.com` 解析已指 node3(未建资源);casdoor 已由 `casdoor.apikv.com` 暴露(2026-08-13)
+- 另一台公网机 8.138.194.254 跑 harbor/img(与 Pangolin 无关);`auth.apikv.com` 解析已指 node1(未建资源);casdoor 已由 `casdoor.apikv.com` 暴露(2026-08-13)
 
 ## 面板与站点/资源现状
 
 - 面板 `https://pangolin.apikv.com`,管理员 `admin@apikv.com`(密码在用户处),org `main`
-- Sites:`node3-local`(siteId 1, local)/ `mac`(siteId 2, newt)/ `k8s`(siteId 3, newt)
+- Sites:`node3-local`(siteId 1, local;**面板里的历史实体名,保持不改**,即 node1 本机)/ `mac`(siteId 2, newt)/ `k8s`(siteId 3, newt)
 - Resources:`blog.apikv.com`(blog,target `https://blog:443`;**2026-08-18 traefik-config 实查:早前的根域 `apikv.com`+`www` 已无 router,公网 404 空置**)/ `config.apikv.com`(SSO on)/ `config-api.apikv.com`(SSO off,应用自带鉴权)/ `casdoor.apikv.com`(SSO off,自带鉴权,target `10.1.0.8:8000`)/ 另有 kaneo/dev/ntfy/stream/cat 等,以 `traefik-config` 后门实查为准
 - k8s newt:helm release `newt`(ns `pangolin`,chart `fossorial/newt`);凭据看 `helm get values newt -n pangolin`(inline,勿把 values 文件提交入库)
 - Mac newt:`~/apps/newt/newt` + 同目录 launchd plist(含凭据,在仓库外);日志 `/tmp/newt.log`
@@ -81,7 +82,7 @@ curl -s -c /tmp/pg.ck -X POST $U/auth/login -H "Content-Type: application/json" 
 
 ```bash
 # ① 宿主内网 IP —— 写 local site target 就用它。原理:问内核「发往公网时用哪个源地址」
-ip route get 1 | awk '{print $7; exit}'        # node3 → 10.1.0.8
+ip route get 1 | awk '{print $7; exit}'        # node1 → 10.1.0.8
 hostname -I | awk '{print $1}'                 # 备选
 
 # ② 容器在哪些网络上、各自什么 IP —— 判断能不能走容器名
@@ -123,4 +124,4 @@ mediamtx-mediamtx-1  10.1.0.8:8889->8889/tcp    ← 这种才只绑内网
 - **blog 部署与回滚**(2026-08-18 起走 GitHub Actions:构建镜像 → scp 直送 → docker load → compose up,见 blog 仓 `.github/workflows/ci.yaml`;服务器 `/home/docker/blog/compose.yml` 是真相源,勿用仓库版覆盖):回滚用 30 天内保留的 sha tag 镜像 `docker tag ccr.ccs.tencentyun.com/sumery/blog:<旧sha> ...:latest && docker compose up -d`(原 `compose.yml.bak` 已不在服务器,该指引作废)
 - 面板证书状态永远 pending 是 BYO 证书的已知显示问题(上游 #3243),以浏览器实际握手为准
 - WireGuard 全走 UDP;若运营商晚高峰 QoS 严重,fallback 是 frp(TCP)换隧道层
-- DNSPod API 凭据(DP_Id/DP_Key)在 node3 `/root/.bash_history`(用户签证书时 export 过);泛解析已加,一般不再需要
+- DNSPod API 凭据(DP_Id/DP_Key)在 node1 `/root/.bash_history`(用户签证书时 export 过)——**该 Key 已于 2026-08-18 轮换作废**,续期证书要用新 Key;泛解析已加,一般不再需要

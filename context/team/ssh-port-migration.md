@@ -1,7 +1,7 @@
 ---
 name: ssh-port-migration
 layer: team
-description: SSH 改端口在 Ubuntu 24.04(socket activation)下的正确姿势与 2026-08-11 node3 锁死实录——改 sshd_config 的 Port 无效、ListenStream 纯端口号只绑 IPv6 导致 v4 全断、cloud-init 首值覆盖 PasswordAuthentication
+description: SSH 改端口在 Ubuntu 24.04(socket activation)下的正确姿势与 2026-08-11 node1 VPS(旧称 node3)锁死实录——改 sshd_config 的 Port 无效、ListenStream 纯端口号只绑 IPv6 导致 v4 全断、cloud-init 首值覆盖 PasswordAuthentication
 ---
 
 # SSH 端口迁移(Ubuntu 24.04 socket activation)
@@ -48,7 +48,7 @@ ss -tln | grep -E ":${NEW_PORT} "
 **迁移顺序铁律**:安全组放行新端口 → 服务器新旧双端口并行 → **从外部新建连接**验证新端口 →
 客户端切换 → 撤旧端口(drop-in + 安全组)。全程保证手里至少有一条已验证可用的登录通道。
 
-## 踩坑故事(2026-08-11 node3 实录)
+## 踩坑故事(2026-08-11 node1 VPS 实录,当时称 node3)
 
 ### 坑① 改 sshd_config 的 Port + reload,新端口 refused
 
