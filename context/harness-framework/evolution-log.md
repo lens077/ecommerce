@@ -55,9 +55,10 @@ description: harness 本身（硬规则/门禁/Agent 约束）每次改动的原
   期间 main 上的后端改动（含 protovalidate 接线）从未构建成镜像。
 - **怎么验证的**：合成输入直喂采集管道——downloading/extracting 行被滤掉、
   真 vet 行（`…cart.go:10:2: unreachable code`）正常归一化存活；
-  `CHECKERS=go-vet scripts/lint-baseline.sh check` 本地绿。CI 侧复验需要下一次触碰
-  backend 路径的 push 或 workflow_dispatch（`scripts/` 不在 backend.yml 触发路径里）；
-  dispatch 会连带构建镜像并经 GitOps 部署积压改动，属部署决策，未擅自触发。
+  `CHECKERS=go-vet scripts/lint-baseline.sh check` 本地绿。CI 侧经用户授权
+  workflow_dispatch(services=cart) 在冷缓存 runner 复验：test 2m49s 绿、镜像
+  sha-b482be9 构建推送、manifest 回写全链路通（run 32153791376）——修复前同环境必红。
+  注意 `scripts/` 不在 backend.yml 触发路径里，改门禁脚本不会自动触发 Backend CI。
 
 ### 2026-08-18 根外 AGENTS.md 从手工同步副本改为相对 symlink
 
