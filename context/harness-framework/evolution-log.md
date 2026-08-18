@@ -41,6 +41,23 @@ description: harness 本身（硬规则/门禁/Agent 约束）每次改动的原
 
 ---
 
+### 2026-08-18 根外 AGENTS.md 从手工同步副本改为相对 symlink
+
+- **改了什么**：`~/lens077/AGENTS.md` 由「仓内文件加 `ecommerce/` 链接前缀的生成副本」改为
+  指向 `ecommerce/AGENTS.md` 的**相对** symlink。原「改仓内必须手工同步根外、验证靠
+  去前缀逐字比对」的流程作废（2026-08-12 条目所记的同步方法随之退役，该条目按惯例不改）。
+- **为什么**：手工同步副本有两个死法——改了忘同步（静默漂移、无验证器兜底，与 PROGRESS.md
+  双文档纪律同款死因）、迁移/重装时整个丢失（它不在任何 git 仓里）。symlink 把两个一起消掉：
+  内容永远一致，且**相对**目标保证整个工作区挪路径后链接依然有效。deepseek-harness 仓内
+  `CLAUDE.md -> AGENTS.md` 是同款做法。**代价（已接受）**：放弃链接目标的 `ecommerce/`
+  前缀改写——从 ~/lens077 读时 markdown 链接需自行补前缀；影响有限，因为正文内联代码形式
+  的路径（`context/team/...`）本来就从未加过前缀，读者/agent 本来就要做这层推断。
+- **触发事故**：2026-08-14 机器重装恢复后根外副本整个消失，直到 08-18 参照 deepseek-harness
+  增强 harness 时才被发现——丢了 4 天没有任何机制报警。先恢复成生成副本，用户随即拍板改 symlink。
+- **怎么验证的**：`readlink` 确认目标是相对路径 `ecommerce/AGENTS.md`（正是 08-14 那次
+  `~/github/lens077` → `~/lens077` 迁移能存活的形态）；穿透读取与仓内文件 `diff` 为空；
+  确认 `~/lens077/` 下无 `context/` 同名目录，裸相对链接不会静默解析到错误文件。
+
 ### 2026-08-18 context/ 知识库自身接上结构门禁（参照 deepseek-harness）
 
 - **改了什么**：无 → `scripts/verify-context.sh` 六项检查（AGENTS.md + context/ 的链接可达性、
