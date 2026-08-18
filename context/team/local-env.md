@@ -85,8 +85,21 @@ PostgreSQL、Redis、Kafka、Silo(MinIO) 与 Grafana 由 Pigsty v4.5 部署在 `
 **TLS 现状**（2026-08-18 实测）：
 
 - PG 与 Silo 的证书由 Pigsty 自签 CA 签发（`O=pigsty, OU=ca, CN=pigsty-ca`），
-  可从 `http://192.168.3.210/ca.crt` 获取。两张证书的 SAN 都含 `IP:192.168.3.210`，
-  因此可以直接用 IP 走 `verify-full`，无需为它们加 DNS 记录。
+  可从 `http://192.168.3.210/ca.crt` 获取，仓内副本在 `infrastructure/pigsty-ca.crt`
+  （SHA256 指纹 `28:06:C8:B4:...:6F:6F:5B`，与服务端实时呈递的链已核对一致）。
+  两张证书的 SAN 都含 `IP:192.168.3.210`，因此可以直接用 IP 走 `verify-full`，
+  无需为它们加 DNS 记录。
+- **Go 服务不依赖系统信任库**：各服务 `dev.yml` 的 `data.database.postgres.tls.ca_pem`
+  直接内嵌这张 CA，与钥匙串无关。钥匙串只影响 `curl` / `psql` / 浏览器这类工具。
+- 导入 Pigsty CA 到 Mac 钥匙串（不导入时访问 `https://192.168.3.210:9000/9001`
+  会报 `unable to get local issuer certificate`）：
+
+  ```bash
+  sudo security add-trusted-cert -d -r trustRoot \
+    -k /Library/Keychains/System.keychain infrastructure/pigsty-ca.crt
+  ```
+
+  这与 k8s 的 `my-global-root-ca` 是**两张互不相干的 CA**，各管各的服务，都要导入。
 - **Redis 与 Kafka 无法加 TLS**：Pigsty v4.5 的 redis role 没有 TLS 参数（实例 conf 里
   `tls-port` 全是注释状态），`kafka_security` 只有 `plaintext | scram` 两个取值（`scram`
   是 SASL 认证，不是加密）。手改配置文件会被下次 `redis.yml` / `kafka.yml` 覆盖。
