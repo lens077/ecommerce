@@ -14,3 +14,16 @@ freeze-check:
   rules:
     - if: '$CI_PIPELINE_SOURCE == "merge_request_event"'
     - if: '$CI_COMMIT_BRANCH'
+
+# context/ 知识库结构门禁,与 GitHub 的 context-gate.yml 等价(检查项见脚本头注释)。
+context-gate:
+  stage: test
+  image: alpine:3.20
+  # busybox 的 grep/sed/awk 行为有差异,统一换 GNU 版,与本机/GitHub runner 对齐。
+  before_script:
+    - apk add --no-cache bash git grep sed gawk coreutils findutils
+  script:
+    - bash ./scripts/verify-context.sh
+  rules:
+    - if: '$CI_PIPELINE_SOURCE == "merge_request_event"'
+    - if: '$CI_COMMIT_BRANCH'

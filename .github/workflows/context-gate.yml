@@ -1,0 +1,23 @@
+name: Context knowledge-base gate
+
+# context/ 知识库结构门禁(参照 deepseek-harness 的 doc-sync 门禁族移植):
+# 链接可达性 / INDEX 覆盖(孤儿) / frontmatter / experience 格式(基线棘轮)
+# / evolution-log 四要素 / AGENTS.md 预算。
+# 与 freeze-check 同款触发:脚本毫秒级,每个 PR / 分支 push 全量跑,不做路径过滤
+# (路径过滤本身也是一处会漂移的手抄清单)。
+on:
+  pull_request:
+  push:
+    branches:
+      - '**'
+
+jobs:
+  verify-context:
+    runs-on: ubuntu-24.04
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v5
+
+      - name: Verify context knowledge base structure
+        shell: bash
+        run: ./scripts/verify-context.sh

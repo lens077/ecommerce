@@ -1,3 +1,9 @@
+---
+name: graph-engineering
+layer: harness-framework
+description: 多闭环 AI 工作流方法论存档——锚点命令、冻结节点（.freeze/ + scripts/freeze.sh）、Loop 0~4 分工；落地现状见文首横幅
+---
+
 # Graph Engineering — 多闭环 AI 工作流方法论
 
 > 本文是一次方法论讨论的存档（原文口吻保留，含"要不要我帮你做"之类对话句式）。
