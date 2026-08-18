@@ -34,16 +34,19 @@ config_validation:
   #   behavior: Recommend recommend = 6 [(buf.validate.field).required = true];
   #   product:  Recommend recommend = 8 [(buf.validate.field).required = false];
   declared_in: "backend/services/{service}/internal/conf/v1/conf.proto → message Bootstrap"
-  # ❗已知缺陷：声明了但没人执行
-  known_defect: |
-    配置加载路径（如 behavior/internal/pkg/config/config.go 的 decodeConfig）只做
-    mapstructure 解码，**从不调用 protovalidate**。于是 required=true 形同虚设：
-    Config Center Bootstrap 缺块 → 解码不报错 → getter nil-safe → 功能被静默关掉而不是启动失败。
-    mapstructure 也未开 ErrorUnused，多余键同样不报错。
-  fix_direction:
-    - "配置解码后调用 protovalidate.Validate(bootstrap)，让 required 真正生效"
-    - "mapstructure DecoderConfig 开启 ErrorUnused"
-    - "CI 里按本文件的服务清单校验每个 {service}/dev/bootstrap.yaml 可解码且通过 validate"
+  # ✅ 2026-08-18 已接线：decodeConfig 开 ErrorUnused（未知键报错）、Init/热更新
+  # 在解码后调 protovalidate.Validate（validateBootstrap）。启动时校验失败 → 起不来；
+  # 热更新校验失败 → 保留当前配置只记 ERROR。每个服务的 config 包新增
+  # TestRealConfigFiles_DecodeAndValidate,在有 configs/{dev,pre}.yml 的机器上
+  # 验证真实配置过得了校验（文件 gitignore,CI 里自动 skip）。
+  enforced_by: "backend/services/{service}/internal/pkg/config/config.go → validateBootstrap + ErrorUnused"
+  rollout_warning: |
+    服务重启后会用新校验读配置中心的 bootstrap.yaml：其中有未知键或缺 required 段
+    的副本会让服务直接起不来。发布前先按本地 configs/{dev,pre}.yml 对齐配置中心内容
+    （behavior 的副本曾有 conf.proto 未定义的 log.elasticsearch 块，本地已删，
+    配置中心那份未核实）。
+  remaining:
+    - "CI 里按本文件的服务清单校验每个 {service}/dev/bootstrap.yaml 可解码且通过 validate（需 CI 能访问配置中心，暂缓）"
   see: "context/project/ecommerce/behavior/experience/consul-kv-missing-key-silent-disable.md"
 
 # 外部基础设施（不是本仓的服务）────────────────────────────────────
