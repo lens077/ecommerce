@@ -39,7 +39,7 @@ context/
 
 按模块分目录，每个模块下的 `experience/` 放踩坑记录。**逐篇清单只维护在
 [project/ecommerce/INDEX.md](project/ecommerce/INDEX.md) 一处**（避免两层索引漂移），
-目前有记录的模块：`gateway`、`registry`、`config`、`behavior`、`consumer`、`frontend-api`。
+目前有记录的模块：`gateway`、`registry`、`config`、`behavior`、`consumer`、`merchant`、`frontend-api`。
 
 ## 结构真相源 · [`.service-matrix.yaml`](../.service-matrix.yaml)（仓库根）
 

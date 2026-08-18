@@ -11,6 +11,7 @@
 | [config](config/INDEX.md) | `backend/services/*/internal/pkg/config/` + `../config-center` | 一份配置三个副本；热更新的生效边界 |
 | [behavior](behavior/INDEX.md) | `backend/services/behavior/` | Consul KV 缺键导致 gorse 静默关闭 |
 | [consumer](consumer/INDEX.md) | `frontend/apps/consumer/` | MUI spacing ×8 踩坑；购物车重复请求 |
+| [merchant](merchant/INDEX.md) | `frontend/apps/merchant/` | ECharts 路由 chunk 的异步加载与拆分 |
 | [frontend-api](frontend-api/INDEX.md) | `frontend/packages/api/` + `apps/*/src/api/` | Connect Query 数据拉取 SOP；transport 单例约束 |
 
 ## 尚无知识的模块
@@ -19,7 +20,7 @@
 读它们的代码前先看 `docs/design/` 对应服务目录和 `TODO.md` 的状态列。
 
 **后端**：`user` `product` `cart` `order` `payment` `inventory` `search` `address` `merchant`
-**前端**：`merchant` `admin`（配置中心前端已随 config-center 迁出本仓）
+**前端**：`admin`（配置中心前端已随 config-center 迁出本仓）
 
 ## 目录约定
 
