@@ -3,6 +3,7 @@ package config
 import (
 	"context"
 	"os"
+	"path/filepath"
 	"sync"
 	"testing"
 	"time"
@@ -34,6 +35,20 @@ discovery:
     addr: 127.0.0.1:8500
     scheme: http
     health_check: true
+auth:
+  casdoor:
+    endpoint: "https://casdoor.example.com"
+log:
+  framework:
+    format: console
+    log_level: debug
+    error_level: error
+  application:
+    format: console
+    level: debug
+pay:
+  alipay:
+    app_id: ""
 `
 
 func TestDecodeConfig(t *testing.T) {
@@ -81,14 +96,15 @@ func TestDecodeConfig_InvalidDuration(t *testing.T) {
 	require.Error(t, err)
 }
 
-// 未知字段应被忽略而不是报错:配置中心里多一个还没被本服务用上的键,不该让服务起不来
-func TestDecodeConfig_IgnoresUnknownFields(t *testing.T) {
+// 未知键必须报错而不是静默忽略:键名打错的后果是功能被悄悄关掉,比启动失败
+// 难查得多(.service-matrix.yaml config_validation)。要加新键,先发代码再改配置。
+func TestDecodeConfig_RejectsUnknownKeys(t *testing.T) {
 	raw, err := parseYAMLToMap([]byte("server:\n  addr: \":1\"\nnot_a_real_section:\n  foo: bar\n"))
 	require.NoError(t, err)
 
-	got := &confv1.Bootstrap{}
-	require.NoError(t, decodeConfig(raw, got))
-	assert.Equal(t, ":1", got.Server.Addr)
+	err = decodeConfig(raw, &confv1.Bootstrap{})
+	require.Error(t, err)
+	assert.Contains(t, err.Error(), "not_a_real_section")
 }
 
 func TestInit_FromConfigCenter(t *testing.T) {
@@ -149,6 +165,41 @@ func TestInit_DecodeErrorMentionsSource(t *testing.T) {
 	require.Error(t, err)
 	// 解析失败时要说清是哪个源的配置坏了
 	assert.Contains(t, err.Error(), "config_center")
+}
+
+// conf.proto 里 required=true 的段缺了必须启动失败,
+// 不能靠 getter 的 nil-safe 把功能静默关掉(.service-matrix.yaml config_validation)。
+func TestInit_MissingRequiredSectionFailsFast(t *testing.T) {
+	// 只给 server/data/auth,漏掉 required 的 log 段
+	noLogYAML := "server:\n  addr: \"0.0.0.0:30006\"\ndata:\n  database:\n    postgres:\n      host: localhost\nauth:\n  casdoor:\n    endpoint: \"https://casdoor.example.com\"\n"
+	_, addr := startFakeConfigService(t, map[string]*configv1.ConfigEntry{
+		"payment/pre/bootstrap.yaml": {Value: noLogYAML},
+	})
+	useConfigCenterSource(t, addr, "payment", "pre", "bootstrap.yaml")
+
+	got, err := Init(context.Background())
+	assert.Nil(t, got)
+	require.Error(t, err)
+	// 报错要点名缺的段
+	assert.Contains(t, err.Error(), "log")
+}
+
+// 仓库不追踪 configs/{dev,pre}.yml(含凭据),本用例只在有这些文件的机器上跑,
+// 验证真实配置能通过解码+校验 —— 防止「约束收紧把现网配置锁在门外」。
+func TestRealConfigFiles_DecodeAndValidate(t *testing.T) {
+	for _, name := range []string{"dev.yml", "pre.yml"} {
+		path := filepath.Join("..", "..", "..", "configs", name)
+		data, err := os.ReadFile(path)
+		if err != nil {
+			t.Skipf("本机没有 %s,跳过", path)
+		}
+		raw, err := parseYAMLToMap(data)
+		require.NoError(t, err, name)
+
+		conf := &confv1.Bootstrap{}
+		require.NoError(t, decodeConfig(raw, conf), name)
+		require.NoError(t, validateBootstrap(conf), name)
+	}
 }
 
 // GetConfig/SourceName 会被各 fx 组件在启动期并发读,Init 在同期写。
