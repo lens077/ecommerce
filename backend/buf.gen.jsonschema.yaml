@@ -1,0 +1,12 @@
+# 从各服务 internal/conf/v1/conf.proto 生成 JSON Schema，供 IDE 对 configs/*.yml 做
+# 高亮/补全/校验（.idea/jsonSchemas.xml 里做文件映射）。
+# 注意：10 个服务的包名都是 conf.v1，输出文件名会同名冲突，因此必须按服务分别
+# 指定 --path 和 out（见 Makefile 的 conf-schema 目标），不能一次全量生成。
+#
+# 用本地插件而不是 remote: buf.build/bufbuild/protoschema-jsonschema——
+# 连续跑 10 个服务会触发 BSR 限流(resource_exhausted)。本地安装：
+#   go install github.com/bufbuild/protoschema-plugins/cmd/protoc-gen-jsonschema@latest
+version: v2
+plugins:
+  - local: protoc-gen-jsonschema
+    out: .
