@@ -141,8 +141,8 @@
         "^(minIdleConns)$": {
           "anyOf": [
             {
-              "maximum": 4294967295,
-              "minimum": 0,
+              "exclusiveMaximum": 4294967296,
+              "minimum": 1,
               "type": "integer"
             },
             {
@@ -199,8 +199,8 @@
         "min_idle_conns": {
           "anyOf": [
             {
-              "maximum": 4294967295,
-              "minimum": 0,
+              "exclusiveMaximum": 4294967296,
+              "minimum": 1,
               "type": "integer"
             },
             {
@@ -231,7 +231,7 @@
         "port": {
           "anyOf": [
             {
-              "maximum": 4294967295,
+              "exclusiveMaximum": 4294967296,
               "minimum": 0,
               "type": "integer"
             },
@@ -283,8 +283,8 @@
         "^(maxConns)$": {
           "anyOf": [
             {
-              "maximum": 4294967295,
-              "minimum": 0,
+              "exclusiveMaximum": 4294967296,
+              "minimum": 1,
               "type": "integer"
             },
             {
@@ -297,8 +297,8 @@
         "^(minConns)$": {
           "anyOf": [
             {
-              "maximum": 4294967295,
-              "minimum": 0,
+              "exclusiveMaximum": 4294967296,
+              "minimum": 1,
               "type": "integer"
             },
             {
@@ -322,8 +322,8 @@
         "max_conns": {
           "anyOf": [
             {
-              "maximum": 4294967295,
-              "minimum": 0,
+              "exclusiveMaximum": 4294967296,
+              "minimum": 1,
               "type": "integer"
             },
             {
@@ -336,8 +336,8 @@
         "min_conns": {
           "anyOf": [
             {
-              "maximum": 4294967295,
-              "minimum": 0,
+              "exclusiveMaximum": 4294967296,
+              "minimum": 1,
               "type": "integer"
             },
             {
@@ -429,7 +429,7 @@
         "port": {
           "anyOf": [
             {
-              "maximum": 4294967295,
+              "exclusiveMaximum": 4294967296,
               "minimum": 0,
               "type": "integer"
             },
@@ -973,6 +973,7 @@
       "properties": {
         "addresses": {
           "items": {
+            "pattern": "^(?:(?:[a-zA-Z][a-zA-Z\\d+\\-.]*):)?(?://(?:[A-Za-z0-9\\-\\.]+(?::\\d+)?))?(/[^\\?#]*)?(?:\\?([^\\#]*))?(?:\\#(.*))?$",
             "type": "string"
           },
           "type": "array"
@@ -1014,6 +1015,7 @@
       "patternProperties": {
         "^(allowedOrigins)$": {
           "items": {
+            "pattern": "^(?:(?:[a-zA-Z][a-zA-Z\\d+\\-.]*):)?(?://(?:[A-Za-z0-9\\-\\.]+(?::\\d+)?))?(/[^\\?#]*)?(?:\\?([^\\#]*))?(?:\\#(.*))?$",
             "type": "string"
           },
           "type": "array"
@@ -1022,6 +1024,7 @@
       "properties": {
         "allowed_origins": {
           "items": {
+            "pattern": "^(?:(?:[a-zA-Z][a-zA-Z\\d+\\-.]*):)?(?://(?:[A-Za-z0-9\\-\\.]+(?::\\d+)?))?(/[^\\?#]*)?(?:\\?([^\\#]*))?(?:\\#(.*))?$",
             "type": "string"
           },
           "type": "array"
