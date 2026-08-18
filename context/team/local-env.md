@@ -100,10 +100,17 @@ PostgreSQL、Redis、Kafka、Silo(MinIO) 与 Grafana 由 Pigsty v4.5 部署在 `
   ```
 
   这与 k8s 的 `my-global-root-ca` 是**两张互不相干的 CA**，各管各的服务，都要导入。
-- **Redis 与 Kafka 无法加 TLS**：Pigsty v4.5 的 redis role 没有 TLS 参数（实例 conf 里
-  `tls-port` 全是注释状态），`kafka_security` 只有 `plaintext | scram` 两个取值（`scram`
-  是 SASL 认证，不是加密）。手改配置文件会被下次 `redis.yml` / `kafka.yml` 覆盖。
-  要加密只能换部署方式或在前面加 TLS 代理。
+- **Kafka 可以加 TLS，当前未开**。`kafka_security: scram` 不是"只加 SASL 认证"，而是一个
+  完整档位，实测 v4.5 的 `roles/kafka/templates/server.properties.j2` 会渲染成
+  `listener.security.protocol.map=BROKER:SASL_SSL,CONTROLLER:SSL`，同时启用 Pigsty CA
+  签发的每节点证书、Controller 双向 TLS、`StandardAuthorizer` 默认拒绝，并需要用
+  `kafka_users` 声明客户端身份。开启方式：改 `pigsty.yml` 的 `kafka_security: scram`
+  并重跑 `./kafka.yml`（会重启 Broker，所有现有客户端都要改成带凭据 + TLS）。
+  ⚠️ Broker 的 `advertised.listeners` 用 `inventory_hostname`（这里是
+  `192.168.3.210`），客户端必须能直连该地址，不能靠 LB/VIP 中转。
+- **Redis 无法加 TLS**：Pigsty v4.5 的 redis role 没有任何 TLS 参数，
+  `templates/redis.conf` 里 27 行 tls 配置全是注释状态、无一行生效。
+  手改实例 conf 会被下次 `redis.yml` 覆盖。要加密只能换部署方式或前置 TLS 代理。
 
 ### 地址分段（三段互不重叠，2026-08-18 起）
 
