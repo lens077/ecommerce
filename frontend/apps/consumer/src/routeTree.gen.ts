@@ -9,52 +9,27 @@
 // Additionally, you should also exclude this file from your linter and/or formatter to prevent it from being checked or modified.
 
 import { Route as rootRouteImport } from './routes/__root'
-import { Route as R404RouteImport } from './routes/404'
 import { Route as IndexRouteImport } from './routes/index'
-import { Route as ProfileIndexRouteImport } from './routes/profile/index'
-import { Route as OrdersIndexRouteImport } from './routes/orders/index'
-import { Route as CheckoutIndexRouteImport } from './routes/checkout/index'
-import { Route as CategoriesIndexRouteImport } from './routes/categories/index'
-import { Route as CartIndexRouteImport } from './routes/cart/index'
+import { Route as R404RouteImport } from './routes/404'
 import { Route as CallbackIndexRouteImport } from './routes/callback/index'
-import { Route as ProductSpuCodeRouteImport } from './routes/product/$spuCode'
-import { Route as PaymentResultRouteImport } from './routes/payment/result'
+import { Route as CartIndexRouteImport } from './routes/cart/index'
+import { Route as CategoriesIndexRouteImport } from './routes/categories/index'
+import { Route as CheckoutIndexRouteImport } from './routes/checkout/index'
+import { Route as OrdersIndexRouteImport } from './routes/orders/index'
 import { Route as OrdersOrderIdRouteImport } from './routes/orders/$orderId'
+import { Route as PaymentResultRouteImport } from './routes/payment/result'
+import { Route as ProductSpuCodeRouteImport } from './routes/product/$spuCode'
+import { Route as ProfileIndexRouteImport } from './routes/profile/index'
 import { Route as ProfileAddressesIndexRouteImport } from './routes/profile/addresses/index'
 
-const R404Route = R404RouteImport.update({
-  id: '/404',
-  path: '/404',
-  getParentRoute: () => rootRouteImport,
-} as any)
 const IndexRoute = IndexRouteImport.update({
   id: '/',
   path: '/',
   getParentRoute: () => rootRouteImport,
 } as any)
-const ProfileIndexRoute = ProfileIndexRouteImport.update({
-  id: '/profile/',
-  path: '/profile/',
-  getParentRoute: () => rootRouteImport,
-} as any)
-const OrdersIndexRoute = OrdersIndexRouteImport.update({
-  id: '/orders/',
-  path: '/orders/',
-  getParentRoute: () => rootRouteImport,
-} as any)
-const CheckoutIndexRoute = CheckoutIndexRouteImport.update({
-  id: '/checkout/',
-  path: '/checkout/',
-  getParentRoute: () => rootRouteImport,
-} as any)
-const CategoriesIndexRoute = CategoriesIndexRouteImport.update({
-  id: '/categories/',
-  path: '/categories/',
-  getParentRoute: () => rootRouteImport,
-} as any)
-const CartIndexRoute = CartIndexRouteImport.update({
-  id: '/cart/',
-  path: '/cart/',
+const R404Route = R404RouteImport.update({
+  id: '/404',
+  path: '/404',
   getParentRoute: () => rootRouteImport,
 } as any)
 const CallbackIndexRoute = CallbackIndexRouteImport.update({
@@ -62,9 +37,29 @@ const CallbackIndexRoute = CallbackIndexRouteImport.update({
   path: '/callback/',
   getParentRoute: () => rootRouteImport,
 } as any)
-const ProductSpuCodeRoute = ProductSpuCodeRouteImport.update({
-  id: '/product/$spuCode',
-  path: '/product/$spuCode',
+const CartIndexRoute = CartIndexRouteImport.update({
+  id: '/cart/',
+  path: '/cart/',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const CategoriesIndexRoute = CategoriesIndexRouteImport.update({
+  id: '/categories/',
+  path: '/categories/',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const CheckoutIndexRoute = CheckoutIndexRouteImport.update({
+  id: '/checkout/',
+  path: '/checkout/',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const OrdersIndexRoute = OrdersIndexRouteImport.update({
+  id: '/orders/',
+  path: '/orders/',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const OrdersOrderIdRoute = OrdersOrderIdRouteImport.update({
+  id: '/orders/$orderId',
+  path: '/orders/$orderId',
   getParentRoute: () => rootRouteImport,
 } as any)
 const PaymentResultRoute = PaymentResultRouteImport.update({
@@ -72,9 +67,14 @@ const PaymentResultRoute = PaymentResultRouteImport.update({
   path: '/payment/result',
   getParentRoute: () => rootRouteImport,
 } as any)
-const OrdersOrderIdRoute = OrdersOrderIdRouteImport.update({
-  id: '/orders/$orderId',
-  path: '/orders/$orderId',
+const ProductSpuCodeRoute = ProductSpuCodeRouteImport.update({
+  id: '/product/$spuCode',
+  path: '/product/$spuCode',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const ProfileIndexRoute = ProfileIndexRouteImport.update({
+  id: '/profile/',
+  path: '/profile/',
   getParentRoute: () => rootRouteImport,
 } as any)
 const ProfileAddressesIndexRoute = ProfileAddressesIndexRouteImport.update({
@@ -188,13 +188,6 @@ export interface RootRouteChildren {
 
 declare module '@tanstack/react-router' {
   interface FileRoutesByPath {
-    '/404': {
-      id: '/404'
-      path: '/404'
-      fullPath: '/404'
-      preLoaderRoute: typeof R404RouteImport
-      parentRoute: typeof rootRouteImport
-    }
     '/': {
       id: '/'
       path: '/'
@@ -202,39 +195,11 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof IndexRouteImport
       parentRoute: typeof rootRouteImport
     }
-    '/profile/': {
-      id: '/profile/'
-      path: '/profile'
-      fullPath: '/profile/'
-      preLoaderRoute: typeof ProfileIndexRouteImport
-      parentRoute: typeof rootRouteImport
-    }
-    '/orders/': {
-      id: '/orders/'
-      path: '/orders'
-      fullPath: '/orders/'
-      preLoaderRoute: typeof OrdersIndexRouteImport
-      parentRoute: typeof rootRouteImport
-    }
-    '/checkout/': {
-      id: '/checkout/'
-      path: '/checkout'
-      fullPath: '/checkout/'
-      preLoaderRoute: typeof CheckoutIndexRouteImport
-      parentRoute: typeof rootRouteImport
-    }
-    '/categories/': {
-      id: '/categories/'
-      path: '/categories'
-      fullPath: '/categories/'
-      preLoaderRoute: typeof CategoriesIndexRouteImport
-      parentRoute: typeof rootRouteImport
-    }
-    '/cart/': {
-      id: '/cart/'
-      path: '/cart'
-      fullPath: '/cart/'
-      preLoaderRoute: typeof CartIndexRouteImport
+    '/404': {
+      id: '/404'
+      path: '/404'
+      fullPath: '/404'
+      preLoaderRoute: typeof R404RouteImport
       parentRoute: typeof rootRouteImport
     }
     '/callback/': {
@@ -244,11 +209,39 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof CallbackIndexRouteImport
       parentRoute: typeof rootRouteImport
     }
-    '/product/$spuCode': {
-      id: '/product/$spuCode'
-      path: '/product/$spuCode'
-      fullPath: '/product/$spuCode'
-      preLoaderRoute: typeof ProductSpuCodeRouteImport
+    '/cart/': {
+      id: '/cart/'
+      path: '/cart'
+      fullPath: '/cart/'
+      preLoaderRoute: typeof CartIndexRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/categories/': {
+      id: '/categories/'
+      path: '/categories'
+      fullPath: '/categories/'
+      preLoaderRoute: typeof CategoriesIndexRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/checkout/': {
+      id: '/checkout/'
+      path: '/checkout'
+      fullPath: '/checkout/'
+      preLoaderRoute: typeof CheckoutIndexRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/orders/': {
+      id: '/orders/'
+      path: '/orders'
+      fullPath: '/orders/'
+      preLoaderRoute: typeof OrdersIndexRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/orders/$orderId': {
+      id: '/orders/$orderId'
+      path: '/orders/$orderId'
+      fullPath: '/orders/$orderId'
+      preLoaderRoute: typeof OrdersOrderIdRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/payment/result': {
@@ -258,11 +251,18 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof PaymentResultRouteImport
       parentRoute: typeof rootRouteImport
     }
-    '/orders/$orderId': {
-      id: '/orders/$orderId'
-      path: '/orders/$orderId'
-      fullPath: '/orders/$orderId'
-      preLoaderRoute: typeof OrdersOrderIdRouteImport
+    '/product/$spuCode': {
+      id: '/product/$spuCode'
+      path: '/product/$spuCode'
+      fullPath: '/product/$spuCode'
+      preLoaderRoute: typeof ProductSpuCodeRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/profile/': {
+      id: '/profile/'
+      path: '/profile'
+      fullPath: '/profile/'
+      preLoaderRoute: typeof ProfileIndexRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/profile/addresses/': {

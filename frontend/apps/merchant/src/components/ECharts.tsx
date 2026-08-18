@@ -9,12 +9,7 @@ import * as echarts from "echarts/core";
 import { LineChart, BarChart, PieChart } from "echarts/charts";
 
 // 导入需要的组件
-import {
-  GridComponent,
-  TooltipComponent,
-  LegendComponent,
-  TitleComponent,
-} from "echarts/components";
+import { GridComponent, TooltipComponent, LegendComponent } from "echarts/components";
 
 // 导入渲染器
 import { CanvasRenderer } from "echarts/renderers";
@@ -27,7 +22,6 @@ echarts.use([
   GridComponent,
   TooltipComponent,
   LegendComponent,
-  TitleComponent,
   CanvasRenderer,
 ]);
 

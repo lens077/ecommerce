@@ -4,26 +4,26 @@ packages:
 allowBuilds:
   "@bufbuild/buf": true
 catalog:
-  "@bufbuild/buf": ^1.70.0
-  "@bufbuild/protobuf": ^2.12.0
-  "@bufbuild/protoc-gen-es": ^2.12.0
-  "@connectrpc/connect": ^2.1.1
-  "@connectrpc/connect-query": ^2.2.0
-  "@connectrpc/connect-web": ^2.1.1
+  "@bufbuild/buf": ^1.72.0
+  "@bufbuild/protobuf": ^2.14.0
+  "@bufbuild/protoc-gen-es": ^2.14.0
+  "@connectrpc/connect": ^2.1.2
+  "@connectrpc/connect-query": ^2.3.1
+  "@connectrpc/connect-web": ^2.1.2
   "@emotion/react": ^11.14.0
   "@emotion/styled": ^11.14.1
   "@fontsource/noto-serif-sc": ^5.3.0
-  "@fontsource/roboto": ^5.2.10
-  "@mui/icons-material": ^9.1.1
-  "@mui/material": ^9.1.1
-  "@mui/utils": ^9.1.1
+  "@fontsource/roboto": ^5.3.0
+  "@mui/icons-material": ^9.3.1
+  "@mui/material": ^9.3.1
+  "@mui/utils": ^9.3.0
   "@t3-oss/env-core": ^0.13.11
-  "@tanstack/react-devtools": ^0.10.5
-  "@tanstack/react-query": ^5.101.0
-  "@tanstack/react-query-devtools": ^5.101.0
-  "@tanstack/react-router": ^1.170.15
-  "@tanstack/react-router-devtools": ^1.167.0
-  "@tanstack/router-plugin": ^1.168.18
+  "@tanstack/react-devtools": ^0.10.10
+  "@tanstack/react-query": ^5.101.4
+  "@tanstack/react-query-devtools": ^5.101.4
+  "@tanstack/react-router": ^1.170.28
+  "@tanstack/react-router-devtools": ^1.167.1
+  "@tanstack/router-plugin": ^1.168.31
   "@tauri-apps/api": ^2.11.1
   "@tauri-apps/cli": ^2.11.4
   "@tauri-apps/plugin-http": ^2.5.9
@@ -31,35 +31,37 @@ catalog:
   "@tauri-apps/plugin-opener": ^2.5.4
   "@tauri-apps/plugin-store": ^2.4.4
   "@testing-library/react": ^16.3.2
-  "@testing-library/user-event": ^14.6.1
-  "@types/node": ^24.13.2
-  "@types/react": ^19.2.17
-  "@types/react-dom": ^19.2.3
-  "@vitejs/plugin-react": ^6.0.2
-  casdoor-js-sdk: ^0.18.0
+  "@testing-library/user-event": ^14.6.4
+  "@types/node": ^26.2.0
+  "@types/react": ^19.2.18
+  "@types/react-dom": ^19.2.4
+  "@vitejs/plugin-react": ^6.0.5
+  "@vitest/browser-playwright": 4.1.10
+  casdoor-js-sdk: ^0.20.0
   casdoor-react-sdk: ^1.2.0
   conventional-changelog: latest
+  echarts: ^6.1.0
+  echarts-for-react: ^3.0.6
   i18next: ^26.3.6
   jsdom: ^29.1.1
   jsonc-parser: ^3.3.1
-  lucide-react: ^1.17.0
-  react: ^19.2.7
-  react-dom: ^19.2.7
+  lucide-react: ^1.31.0
+  playwright: ^1.62.1
+  react: ^19.2.8
+  react-dom: ^19.2.8
   react-i18next: ^17.0.11
   smol-toml: ^1.7.1
-  typescript: ^5.9.3
+  typescript: ^7.0.2
   valtio: ^2.3.2
-  # 这三个必须锁死同一代：vite-plus 0.1.24 的 dependencies 里把
-  # @voidzero-dev/vite-plus-{core,test} 精确钉在 0.1.24。这两行原本写的是
-  # @latest，会漂到 0.2.x，于是仓库里同时装着 core 0.1.24（vite-plus 自己用）
-  # 和 core 0.2.7（@tanstack/router-plugin 通过 vite 别名拿到）两份。
-  # 两份结构相同但名义不同的 Plugin/UserConfig 类型撞在一起，vp lint 的
-  # 类型检查就会在 defineConfig 上报 TS2321 Excessive stack depth。
-  vite: npm:@voidzero-dev/vite-plus-core@0.1.24
-  vite-plus: ^0.1.24
-  vitest: npm:@voidzero-dev/vite-plus-test@0.1.24
+  # Vite+ 与 core 必须锁死同一版本，避免插件解析出两份 Vite 类型。
+  # pnpm 的 overrides 不创建依赖边：声明 vite-plus 的 package 还要直接声明 vite: catalog:，
+  # 否则 Vitest 的 peer 解析会静默补装一份上游 Vite，旧的 vite build 脚本会误用它。
+  # Vitest 也要与 Vite+ 内置版本一致；consumer 的浏览器测试需要直接依赖它。
+  vite: npm:@voidzero-dev/vite-plus-core@0.2.9
+  vite-plus: 0.2.9
+  vitest: 4.1.10
   "vitest-browser-react": ^2.2.0
-  web-vitals: ^5.3.0
+  web-vitals: ^6.1.0
   yaml: ^2.9.0
   zod: ^4.4.3
 
@@ -75,7 +77,5 @@ overrides:
 peerDependencyRules:
   allowAny:
     - vite
-    - vitest
   allowedVersions:
     vite: "*"
-    vitest: "*"

@@ -5,8 +5,8 @@
   "type": "module",
   "scripts": {
     "dev": "vp dev --port 3003 --mode dev",
-    "build": "vite build",
-    "preview": "vite preview"
+    "build": "vp build",
+    "preview": "vp preview"
   },
   "dependencies": {
     "@ecommerce/configs": "workspace:*",
@@ -28,7 +28,7 @@
     "@types/react-dom": "catalog:",
     "@vitejs/plugin-react": "catalog:",
     "typescript": "catalog:",
-    "vite": "npm:@voidzero-dev/vite-plus-core@^0.1.24",
+    "vite": "catalog:",
     "vite-plus": "catalog:"
   }
 }
