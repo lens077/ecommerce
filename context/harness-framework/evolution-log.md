@@ -41,6 +41,24 @@ description: harness 本身（硬规则/门禁/Agent 约束）每次改动的原
 
 ---
 
+### 2026-08-18 lint-baseline 采集管道滤掉 go 模块下载噪音
+
+- **改了什么**：`run_go-vet` 采集管道在归一化前加
+  `grep -vE '^go: (downloading|extracting|finding) '`；脚本头陷阱清单 2 条 → 3 条。
+- **为什么**：采集必须 `2>&1` 合流（vet 诊断本来就走 stderr），但 go 的模块下载进度
+  也走 stderr——两种输出无法按流向区分，只能按内容滤。`go: downloading/extracting/finding`
+  行是模块机制的机械噪音，永远不是 vet 诊断（诊断形态是 `file:line:col:`、`# pkg` 或 `vet:`）。
+- **触发事故**：Backend CI 自 08-13 起连续两轮全红（08-13 merchant「新增 11 条」/user
+  「新增 10 条」，08-18 十服务全红、cart「新增 14 条」），逐条看全是 `go: downloading …`。
+  本机模块缓存热**从不复现**，CI runner 冷缓存**必现**；且 test job 红连带堵死
+  update-manifests 的 GitOps 回写——一个幻影告警把镜像发布链路挂了 5 天，
+  期间 main 上的后端改动（含 protovalidate 接线）从未构建成镜像。
+- **怎么验证的**：合成输入直喂采集管道——downloading/extracting 行被滤掉、
+  真 vet 行（`…cart.go:10:2: unreachable code`）正常归一化存活；
+  `CHECKERS=go-vet scripts/lint-baseline.sh check` 本地绿。CI 侧复验需要下一次触碰
+  backend 路径的 push 或 workflow_dispatch（`scripts/` 不在 backend.yml 触发路径里）；
+  dispatch 会连带构建镜像并经 GitOps 部署积压改动，属部署决策，未擅自触发。
+
 ### 2026-08-18 根外 AGENTS.md 从手工同步副本改为相对 symlink
 
 - **改了什么**：`~/lens077/AGENTS.md` 由「仓内文件加 `ecommerce/` 链接前缀的生成副本」改为
