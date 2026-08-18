@@ -87,6 +87,11 @@ description: harness 本身（硬规则/门禁/Agent 约束）每次改动的原
   全部 rc=1 且违规 tag 正确，还原后全绿。脚本避开 Bash 3.2 禁区（无关联数组/mapfile，
   mktemp 用 BSD/GNU/busybox 三方兼容写法），GitLab 侧 alpine 显式装 GNU grep/sed/gawk
   防 busybox 行为差异。
+  **GitHub 首跑即抓到第 3 处存量漂移并暴露门禁自身盲区**：`pangolin-tunnel.md` 链接
+  仓库根 `ai-helper.sh`，该文件被 `.gitignore` 刻意排除——本机磁盘上有所以本地跑绿，
+  CI checkout 的提交树里没有所以红。文档改为纯文字引用；门禁补「目标存在但被
+  gitignore 也算 DEAD-LINK」（`git check-ignore -q`），使本机运行与 fresh clone 等价，
+  注入指向 ignored 文件的链接实测拦截。
 
 ### 2026-08-13 废止 PROGRESS.md 与双文档进度纪律
 
