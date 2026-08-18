@@ -1,5 +1,5 @@
 # 挂 default 里的共享 cilium-gateway 的 https listener(mode: Terminate,
-# 证书是泛域名 global-default-tls,覆盖 *.app.com),与 config-center /
+# 证书是泛域名 global-default-tls,覆盖 *.dev.test),与 config-center /
 # otel / grafana / loki / jaeger / vm 完全同一种接法。
 #
 # ⚠️ 安全前提:cart 自己没有任何鉴权拦截器 —— internal/server/middleware.go
@@ -24,7 +24,7 @@ spec:
       namespace: default
       sectionName: https
   hostnames:
-    - "cart-api.app.com"
+    - "cart-api.dev.test"
   rules:
     - matches:
         - path:

@@ -24,7 +24,11 @@ description: 公网暴露基础设施(Pangolin)的拓扑事实、面板 API 操�
 - 实例身份:腾讯云**轻量应用服务器 Lighthouse** `lhins-1of5dkfj`(ap-guangzhou-7),不是 CVM——防火墙是 Lighthouse 实例防火墙(`tccli lighthouse DescribeFirewallRules/DeleteFirewallRules --InstanceId`),没有安全组;TAT 助手在线,`tccli tat RunCommand` 可免 SSH 执行命令(带外救援通道,2026-08-11 实测可用);SSH 端口 34123(22/3389 已从防火墙移除)
 - 域名 `apikv.com`,**DNS 在 DNSPod(不是 Cloudflare)**,已有 `*` 泛解析 → 114.132.233.129;新子域**零 DNS 操作**
 - 泛域名证书 ZeroSSL `*.apikv.com`(acme.sh dns_dp 签),**2026-10-27 到期**;部署在两处:`/home/docker/blog/ssl/`(原件)与 node1 `/home/docker/pangolin/config/traefik/certs/apikv.com.{crt,key}`,**续期要同步两处**。**⚠️ 自动续期链路缺位(2026-08-18 实查)**:node1 上 acme.sh 只剩 `/usr/local/bin/acme.sh` 单文件,`/root/.acme.sh/` 无证书产物、domain conf 未存 DNSPod 凭据、root crontab 无续期条目——10-27 会硬过期,需在此前手动重签或重建续期链路(DNSPod 旧 Key 已作废,要用轮换后的新 Key 或腾讯云子账号走 dns_tencent)
-- k8s:node1-3 = 192.168.3.105-107(与办公内网同段),Cilium Gateway API,`cilium-gateway`(ns default,LB 192.168.3.110,ClusterIP **10.97.94.118**)
+- k8s:**集群已于 2026-08 重建**,现为 node1 `192.168.3.201` / node2 `192.168.3.202`(control-plane),
+  Cilium Gateway API,`cilium-gateway`(ns default,LB **192.168.3.100**,ClusterIP **10.99.145.85**)。
+  ⚠️ 下文「k8s HTTPRoute 暴露套路」里的 target `10.97.94.118:443` 是**旧集群的 ClusterIP,已失效**,
+  要用上面的新值;且新集群**尚无 `pangolin` 命名空间**,helm release `newt` 未重新部署,
+  k8s site 当前不通,需先重装 newt 才能走该路径(2026-08-18 实查)
 - 另一台公网机 8.138.194.254 跑 harbor/img(与 Pangolin 无关);`auth.apikv.com` 解析已指 node1(未建资源);casdoor 已由 `casdoor.apikv.com` 暴露(2026-08-13)
 
 ## 面板与站点/资源现状
@@ -56,9 +60,9 @@ curl -s -c /tmp/pg.ck -X POST $U/auth/login -H "Content-Type: application/json" 
 
 ## k8s HTTPRoute 暴露套路(两步,已验证)
 
-1. HTTPRoute `hostnames` **追加** `xxx.apikv.com`(保留原 `*.app.com`,增量可回退):
+1. HTTPRoute `hostnames` **追加** `xxx.apikv.com`(保留原 `*.dev.test`,增量可回退):
    `kubectl patch httproute <name> -n <ns> --type=json -p='[{"op":"add","path":"/spec/hostnames/-","value":"xxx.apikv.com"}]'`
-2. 面板建资源:subdomain `xxx`,site `k8s`,target **`10.97.94.118:443` 走 https**
+2. 面板建资源:subdomain `xxx`,site `k8s`,target **`10.99.145.85:443` 走 https**(重建后的新 ClusterIP)
 
 **坑(2026-08 实付学费)**:本仓的 HTTPRoute parentRef 都带 `sectionName: https` → 路由只挂 443 listener,
 **80 上无任何路由,envoy 对一切 Host 返 404**。target 走 80 会 404;必须 443/https(Gateway 用自签

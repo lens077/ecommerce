@@ -2071,11 +2071,11 @@ const file_services_search_internal_conf_v1_conf_proto_rawDesc = "" +
 	"\x03Tls\x12\x16\n" +
 	"\x06enable\x18\x01 \x01(\bR\x06enable\x12\x15\n" +
 	"\x06ca_pem\x18\x02 \x01(\tR\x05caPem\x120\n" +
-	"\x14insecure_skip_verify\x18\x03 \x01(\bR\x12insecureSkipVerify\"\xc3\x05\n" +
+	"\x14insecure_skip_verify\x18\x03 \x01(\bR\x12insecureSkipVerify\"\xc4\x05\n" +
 	"\tDiscovery\x121\n" +
-	"\x06consul\x18\x01 \x01(\v2\x19.conf.v1.Discovery.ConsulR\x06consul\x1a\x82\x05\n" +
-	"\x06Consul\x12r\n" +
-	"\x04addr\x18\x01 \x01(\tB^\xbaH[rY2\x1e^[A-Za-z0-9.-]+(:[0-9]{1,5})?$\x92\x02\x0econsul.app.com\x92\x02%consul-expose-servers.consul.svc:8500R\x04addr\x12\x16\n" +
+	"\x06consul\x18\x01 \x01(\v2\x19.conf.v1.Discovery.ConsulR\x06consul\x1a\x83\x05\n" +
+	"\x06Consul\x12s\n" +
+	"\x04addr\x18\x01 \x01(\tB_\xbaH\\rZ2\x1e^[A-Za-z0-9.-]+(:[0-9]{1,5})?$\x92\x02\x0fconsul.dev.test\x92\x02%consul-expose-servers.consul.svc:8500R\x04addr\x12\x16\n" +
 	"\x06scheme\x18\x02 \x01(\tR\x06scheme\x12!\n" +
 	"\fhealth_check\x18\x03 \x01(\bR\vhealthCheck\x12/\n" +
 	"\x03tls\x18\x04 \x01(\v2\x1d.conf.v1.Discovery.Consul.TlsR\x03tls\x125\n" +

@@ -34,7 +34,7 @@ config-center 出了新版要用 `go get github.com/lens077/config-center@v0.x.y
 | 事项 | 值 |
 |---|---|
 | 配置中心三元组 | `namespace` = 服务目录名，`environment` = `dev`/`pre`，`key` = `bootstrap.yaml` |
-| 环境语义 | `dev` = 从宿主机连集群，用外部域名 `*.app.com` + TLS；`pre` = 集群内，用 `*.svc` + 明文 |
+| 环境语义 | `dev` = 从宿主机连集群，用外部域名 `*.dev.test` + TLS；`pre` = 集群内，用 `*.svc` + 明文 |
 | 段序 | `server → data → <服务专属段> → observability → discovery → search → log → auth`（只保留该服务实际消费的段） |
 | 服务专属段 | `store`(cart) / `pay`(payment) / `recommend`(behavior、product)，以各服务 `conf.proto` 的 `Bootstrap` 字段为准 |
 | 热生效边界 | `server` / `discovery` / `observability` 三段只打 WARN，其余立即生效 |

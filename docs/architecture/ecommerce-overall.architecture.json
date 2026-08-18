@@ -22,7 +22,7 @@
     { "id": "svc_commerce", "type": "backend", "label": "交易主链路", "sublabel": "product · cart · order · inventory · address", "tag": "/product* /cart* /order*", "pos": [610, 380], "size": [235, 80] },
     { "id": "svc_payment", "type": "backend", "label": "支付", "sublabel": "payment-service", "tag": "/payment*", "pos": [610, 540], "size": [235, 72] },
     { "id": "elasticsearch", "type": "database", "label": "Elasticsearch", "sublabel": "商品检索索引", "pos": [935, 80], "size": [180, 66] },
-    { "id": "postgres", "type": "database", "label": "PostgreSQL", "sublabel": "pg-dev.app.com", "tag": "TLS verify-ca", "pos": [935, 230], "size": [180, 66] },
+    { "id": "postgres", "type": "database", "label": "PostgreSQL", "sublabel": "pg-dev.dev.test", "tag": "TLS verify-ca", "pos": [935, 230], "size": [180, 66] },
     { "id": "redis", "type": "database", "label": "Dragonfly", "sublabel": "Redis 协议 · 缓存", "pos": [935, 380], "size": [180, 66] },
     { "id": "alipay", "type": "external", "label": "支付宝", "sublabel": "alipay/v3 开放平台", "pos": [935, 540], "size": [180, 66] }
   ],

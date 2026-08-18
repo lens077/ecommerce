@@ -205,10 +205,10 @@ def rpc_quantile(q, by="service_name", extra="", window="$__rate_interval"):
     return f"histogram_quantile({q}, sum by (le, {by}) (rate({sel}[{window}])))"
 
 
-# Jaeger 跳转。jaeger-ui.app.com 是本地内网域(与 pg-dev/dragonfly/es 同模式),
+# Jaeger 跳转。jaeger-ui.dev.test 是本地内网域(与 pg-dev/dragonfly/es 同模式),
 # 浏览器直达,不需要 port-forward;换环境用环境变量覆盖。注意不带尾斜杠,
 # 下面拼 /search 时不会出现 //。
-JAEGER_BASE = os.getenv("JAEGER_UI_BASE", "http://jaeger-ui.app.com")
+JAEGER_BASE = os.getenv("JAEGER_UI_BASE", "http://jaeger-ui.dev.test")
 
 
 def jaeger_link(title="在 Jaeger 里查明细", service="${service}", tags=""):

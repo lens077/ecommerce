@@ -155,7 +155,7 @@ panels.append(ts("命令 QPS by 操作", [
 panels.append(ts("命令 P99", [
     prom_t(f'histogram_quantile(0.99, sum by (le) (rate(db_client_operation_duration_seconds_bucket{{{SVC},{_RD}}}[$__rate_interval])))', "P99"),
 ], 6, y, w=6, unit="s",
-    desc="Dragonfly 走 TLS(dragonfly.app.com:443),网络在这条曲线里 —— \n"
+    desc="Dragonfly 走 TLS(dragonfly.dev.test:443),网络在这条曲线里 —— \n"
          "缓存比 DB 慢的话缓存就失去意义了,这条线应远低于 R5 的 query P95"))
 panels.append(ts("连接池", [
     prom_t(f'db_client_connection_count{{{SVC},{_RD}}}', "{{state}}"),
