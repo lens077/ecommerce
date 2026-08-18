@@ -6,7 +6,7 @@
   "scripts": {
     "dev": "vp dev --port 3002 --mode dev",
     "dev:prod": "vp dev --port 3002 --mode prod",
-    "build": "vite build && tsc",
+    "build": "vp build && tsc",
     "serve": "vp preview",
     "test": "vp test --environment=jsdom --passWithNoTests"
   },
@@ -25,8 +25,8 @@
     "@mui/material": "catalog:",
     "@tanstack/react-query": "catalog:",
     "@tanstack/react-router": "catalog:",
-    "echarts": "npm:echarts@^5.5.0",
-    "echarts-for-react": "npm:echarts-for-react@^3.0.2",
+    "echarts": "catalog:",
+    "echarts-for-react": "catalog:",
     "lucide-react": "catalog:",
     "react": "catalog:",
     "react-dom": "catalog:",
@@ -40,8 +40,7 @@
     "@types/react-dom": "catalog:",
     "@vitejs/plugin-react": "catalog:",
     "typescript": "catalog:",
-    "vite": "npm:@voidzero-dev/vite-plus-core@^0.1.24",
-    "vite-plus": "catalog:",
-    "vitest": "npm:@voidzero-dev/vite-plus-test@^0.1.24"
+    "vite": "catalog:",
+    "vite-plus": "catalog:"
   }
 }

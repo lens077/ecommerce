@@ -4,33 +4,7 @@
  */
 
 import { useEffect, useRef, memo } from "react";
-import * as echarts from "echarts/core";
-
-// 导入需要的图表类型
-import { LineChart, BarChart, PieChart } from "echarts/charts";
-
-// 导入需要的组件
-import {
-  GridComponent,
-  TooltipComponent,
-  LegendComponent,
-  TitleComponent,
-} from "echarts/components";
-
-// 导入渲染器
-import { CanvasRenderer } from "echarts/renderers";
-
-// 注册必须的组件
-echarts.use([
-  LineChart,
-  BarChart,
-  PieChart,
-  GridComponent,
-  TooltipComponent,
-  LegendComponent,
-  TitleComponent,
-  CanvasRenderer,
-]);
+import type { ECharts } from "echarts/core";
 
 interface LazyEChartsProps {
   option: Record<string, any>;
@@ -44,33 +18,37 @@ export const LazyECharts = memo(function LazyECharts({
   className,
 }: LazyEChartsProps) {
   const containerRef = useRef<HTMLDivElement>(null);
-  const chartRef = useRef<echarts.ECharts | null>(null);
+  const chartRef = useRef<ECharts | null>(null);
+  const latestOptionRef = useRef(option);
 
   useEffect(() => {
-    if (!containerRef.current) return;
+    let disposed = false;
+    let removeResizeListener: (() => void) | undefined;
 
-    // 初始化图表
-    chartRef.current = echarts.init(containerRef.current);
+    void import("./ECharts").then(({ default: echarts }) => {
+      if (disposed || !containerRef.current) return;
 
-    // 设置配置
-    chartRef.current.setOption(option);
+      const chart = echarts.init(containerRef.current);
+      chartRef.current = chart;
+      chart.setOption(latestOptionRef.current);
 
-    // 响应式 resize
-    const handleResize = () => {
-      chartRef.current?.resize();
-    };
-
-    window.addEventListener("resize", handleResize);
+      const handleResize = () => chart.resize();
+      window.addEventListener("resize", handleResize);
+      removeResizeListener = () => window.removeEventListener("resize", handleResize);
+    });
 
     // 清理
     return () => {
-      window.removeEventListener("resize", handleResize);
+      disposed = true;
+      removeResizeListener?.();
       chartRef.current?.dispose();
+      chartRef.current = null;
     };
   }, []);
 
   // 更新配置
   useEffect(() => {
+    latestOptionRef.current = option;
     if (chartRef.current) {
       chartRef.current.setOption(option);
     }
