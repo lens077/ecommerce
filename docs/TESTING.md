@@ -79,7 +79,7 @@ brew install mockery      # 只在本机生成 mock 代码；生成物入库，C
 PG 镜像 tag **必须与生产一致**，否则测试通过不代表线上通过（`gen_random_uuid()`、
 `ON CONFLICT` 行为、enum 处理在大版本间有差异）。
 
-**当前生产版本：PostgreSQL 18.4.0**（`pg-dev.app.com` / 192.168.3.109，在集群外，
+**当前生产版本：PostgreSQL 18.4.0**（`pg-dev.dev.test` / 192.168.3.109，在集群外，
 见 [`.service-matrix.yaml`](../.service-matrix.yaml) 的 `externals` 段）
 → 测试镜像用 **`postgres:18-alpine`**。
 
@@ -140,11 +140,11 @@ func StartPostgres(t *testing.T, schemaGlob string) *pgxpool.Pool
 
 #### 3.1.1 逃生舱：用内网真实 PG 代替容器
 
-内网已有 PostgreSQL 18.4.0（`pg-dev.app.com`）。`StartPostgres` 检测到 `TEST_DB_URI`
+内网已有 PostgreSQL 18.4.0（`pg-dev.dev.test`）。`StartPostgres` 检测到 `TEST_DB_URI`
 时直连该库、不起容器：
 
 ```bash
-TEST_DB_URI='postgres://user:pw@pg-dev.app.com:5432/cart_test?sslmode=verify-ca' \
+TEST_DB_URI='postgres://user:pw@pg-dev.dev.test:5432/cart_test?sslmode=verify-ca' \
   go test ./services/cart/internal/data/ -v
 ```
 

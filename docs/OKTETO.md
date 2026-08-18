@@ -110,7 +110,7 @@ scripts/argocd-devwindow.sh on
 
 ```
 ENV     DEPLOYMENT_MODE=pre / CONFIG_SOURCE_FILE=/etc/ecommerce/config-source/cart.yaml
-        CONSUL_ADDR=consul-expose-servers.consul.svc:8500      ← 集群内 svc 域名，不是 *.app.com
+        CONSUL_ADDR=consul-expose-servers.consul.svc:8500      ← 集群内 svc 域名，不是 *.dev.test
 MOUNT   config-source → /etc/ecommerce/config-source (ro, 0400)
         db-ca-cert    → /etc/ssl/certs (ro)   ← 注意：整个目录被替换，见 §七 CA 那条
 SEC     runAsUser/Group 1000（你的代码确实以 uid 1000 跑）

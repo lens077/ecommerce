@@ -10,7 +10,7 @@ description: go-redis v9 在本仓的用法约定——客户端生命周期(热
 11 个服务的客户端装配是同构副本(`internal/data/data.go` 的 `NewRedisClient` + `buildRedis`,
 `internal/data/live.go` 的 `LiveRedis`),由 `backend/structcheck` 在 CI 强制,**改一个必须同步全部**。
 
-> 连的**不是原生 Redis 而是 Dragonfly**(`dragonfly.app.com:443`,见 [local-env.md](local-env.md))。
+> 连的**不是原生 Redis 而是 Dragonfly**(`dragonfly.dev.test:443`,见 [local-env.md](local-env.md))。
 > 它兼容 RESP 协议与常用命令,但不等于 Redis 的全部特性都在。用到下面标注「需先验证」的能力
 > (Cluster 拓扑、Stream 消费组、模块类命令)之前,先在目标环境实测,不要照搬 Redis 文档的结论。
 

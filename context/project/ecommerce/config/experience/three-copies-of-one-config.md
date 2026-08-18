@@ -34,7 +34,7 @@ description: 历史上同一份服务配置存在三处的漂移事故；现已�
   `store` 和 `search` 段，缺了 `required = true` 的 `recommend` 段
 - **product 的 KV 缺 `recommend`**，而仓库副本有
 - **payment 的仓库副本缺 `pay`**，而 KV 有
-- **product 的 KV `pre.yml` 根本不是 pre**：连的是 `pg-dev.app.com` / `consul.app.com`
+- **product 的 KV `pre.yml` 根本不是 pre**：连的是 `pg-dev.dev.test` / `consul.dev.test`
   这些从集群内解析不到的外部域名，它是 dev 换了个端口
 - **cart 的 `pre.yml` 缺 `store` 段**，而 `internal/data/cart.go` 要用它拼 MinIO 缩略图 URL
 - merchant / config 的仓库副本停在更老的 schema（`ping_interval_seconds: 1`、`host: 127.0.0.1`）

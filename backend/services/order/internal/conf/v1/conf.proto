@@ -239,7 +239,7 @@ message Discovery {
   message Consul {
     string addr = 1 [
       (buf.validate.field).string.pattern = "^[A-Za-z0-9.-]+(:[0-9]{1,5})?$",
-      (buf.validate.field).string.example = "consul.app.com",
+      (buf.validate.field).string.example = "consul.dev.test",
       (buf.validate.field).string.example = "consul-expose-servers.consul.svc:8500"
     ];
     string scheme = 2;

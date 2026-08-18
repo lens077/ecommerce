@@ -69,7 +69,7 @@ middlewares:
     options:
       '@type': type.googleapis.com/gateway.middleware.tracing.v1.Tracing
       httpEndpoint: 192.168.3.117:4318
-      #      httpEndpoint: otlp-http.app.com:443
+      #      httpEndpoint: otlp-http.dev.test:443
       insecure: true
   #      tls:
   #        enable: false

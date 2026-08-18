@@ -16,7 +16,7 @@ context/
 |---|---|
 | [git-commit.md](team/git-commit.md) | Conventional Commits + 提交前必须先更新 TODO.md |
 | [proto-design.md](team/proto-design.md) | 写 proto 前先读设计文档，每个字段都要有 buf.validate 约束 |
-| [local-env.md](team/local-env.md) | 本地集群地址：Consul 用 `192.168.3.112:8500`，不要用 consul.app.com |
+| [local-env.md](team/local-env.md) | 本地集群地址：Consul 用 `192.168.3.112:8500`，不要用 consul.dev.test |
 | [shell-scripting.md](team/shell-scripting.md) | macOS Bash 3.2：`set -u` 下不能无条件展开空数组 |
 | [go-redis.md](team/go-redis.md) | go-redis v9：每次用都取 `Client()`（客户端会热重建）、`redis.Nil` 不是错误、Pipeline 的错误语义、默认重试对非幂等命令的影响 |
 | [cron-jobs.md](team/cron-jobs.md) | 定时任务的执行边界：进程内调度器扩副本即重复执行、Ticker 首次触发盲窗、重叠/panic/超时/时区/优雅停止、重要任务不能只靠一次回调 |

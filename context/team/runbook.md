@@ -45,7 +45,7 @@ description: 给所有 AI 编码工具(尤其 Codex)的可执行命令与验收�
 | 指标 / 看板 / 告警 | [`observability/OBSERVABILITY.md`](../../docs/observability/OBSERVABILITY.md) | 标签基数失控;错误率画成速率;加了指标却没有可行动的告警 |
 | CI/CD、部署策略、镜像、migration | [`docs/DEVOPS.md`](../../docs/DEVOPS.md) | 镜像用 latest;单副本下滚更/金丝雀静默失效;migration 不兼容滚更期新旧共存 |
 | Shell / Make recipe | [shell-scripting.md](shell-scripting.md) | macOS Bash 3.2 + `set -u` 下空数组展开直接退出 |
-| 本地起服务连不上基础设施 | [local-env.md](local-env.md) | 连 `consul.app.com` 超时;KV 缺子块导致功能被静默关掉 |
+| 本地起服务连不上基础设施 | [local-env.md](local-env.md) | 连 `consul.dev.test` 超时;KV 缺子块导致功能被静默关掉 |
 | 对外公开服务 / 内网穿透 / `*.apikv.com` | [pangolin-tunnel.md](pangolin-tunnel.md) | k8s target 走 80 得 envoy 404;改完配置不等 Traefik 5s 轮询就当故障排查 |
 | 改 SSH 端口 / SSH 突然连不上 | [ssh-port-migration.md](ssh-port-migration.md) | Ubuntu 24.04 改 sshd_config 的 Port 无效;ListenStream 纯端口号 IPv4 全断把自己锁外面 |
 | 写测试 / 补测试 / 防回归 | [go-testing.md](go-testing.md) + [`docs/TESTING.md`](../../docs/TESTING.md) | 用 mock 测 sqlc 的 SQL 等于没测;引入 go-sqlmock 才发现接不上 pgx |
