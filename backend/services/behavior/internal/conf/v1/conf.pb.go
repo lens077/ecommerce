@@ -1972,9 +1972,9 @@ const file_services_behavior_internal_conf_v1_conf_proto_rawDesc = "" +
 	"errorLevel\x1a\x88\x01\n" +
 	"\vApplication\x12,\n" +
 	"\x06format\x18\x01 \x01(\tB\x14\xbaH\x11r\x0fR\aconsoleR\x04jsonR\x06format\x12K\n" +
-	"\x05level\x18\x02 \x01(\tB5\xbaH2r0R\x05debugR\x04infoR\x04warnR\x05errorR\x06dpanicR\x05panicR\x05fatalR\x05level\"\xd8\x03\n" +
-	"\x06Server\x122\n" +
-	"\x04addr\x18\x01 \x01(\tB\x1e\xbaH\x1br\x19\x92\x02\a0.0.0.0\x92\x02\tlocalhost\xa8\x01\x01R\x04addr\x12(\n" +
+	"\x05level\x18\x02 \x01(\tB5\xbaH2r0R\x05debugR\x04infoR\x04warnR\x05errorR\x06dpanicR\x05panicR\x05fatalR\x05level\"\xe3\x03\n" +
+	"\x06Server\x12=\n" +
+	"\x04addr\x18\x01 \x01(\tB)\xbaH&r$\x92\x02\r0.0.0.0:30001\x92\x02\x0elocalhost:8000\x80\x02\x01R\x04addr\x12(\n" +
 	"\x04http\x18\x02 \x01(\v2\x14.conf.v1.Server.HTTPR\x04http\x12(\n" +
 	"\x04cors\x18\x03 \x01(\v2\x14.conf.v1.Server.CorsR\x04cors\x1a\xf2\x01\n" +
 	"\x04HTTP\x12L\n" +
@@ -2036,7 +2036,7 @@ const file_services_behavior_internal_conf_v1_conf_proto_rawDesc = "" +
 	"\x04Auth\x12/\n" +
 	"\acasdoor\x18\x01 \x01(\v2\x15.conf.v1.Auth.CasdoorR\acasdoor\x1a\xeb\x01\n" +
 	"\aCasdoor\x12$\n" +
-	"\bendpoint\x18\x01 \x01(\tB\b\xbaH\x05r\x03\x80\x02\x01R\bendpoint\x12\x1b\n" +
+	"\bendpoint\x18\x01 \x01(\tB\b\xbaH\x05r\x03\x88\x01\x01R\bendpoint\x12\x1b\n" +
 	"\tclient_id\x18\x02 \x01(\tR\bclientId\x12#\n" +
 	"\rclient_secret\x18\x03 \x01(\tR\fclientSecret\x12+\n" +
 	"\x11organization_name\x18\x04 \x01(\tR\x10organizationName\x12)\n" +
@@ -2061,11 +2061,11 @@ const file_services_behavior_internal_conf_v1_conf_proto_rawDesc = "" +
 	"\x03Tls\x12\x16\n" +
 	"\x06enable\x18\x01 \x01(\bR\x06enable\x12\x15\n" +
 	"\x06ca_pem\x18\x02 \x01(\tR\x05caPem\x120\n" +
-	"\x14insecure_skip_verify\x18\x03 \x01(\bR\x12insecureSkipVerify\"\xfe\x04\n" +
+	"\x14insecure_skip_verify\x18\x03 \x01(\bR\x12insecureSkipVerify\"\xc3\x05\n" +
 	"\tDiscovery\x121\n" +
-	"\x06consul\x18\x01 \x01(\v2\x19.conf.v1.Discovery.ConsulR\x06consul\x1a\xbd\x04\n" +
-	"\x06Consul\x12-\n" +
-	"\x04addr\x18\x01 \x01(\tB\x19\xbaH\x16r\x14\x92\x02\x0elocalhost:4317\x80\x02\x01R\x04addr\x12\x16\n" +
+	"\x06consul\x18\x01 \x01(\v2\x19.conf.v1.Discovery.ConsulR\x06consul\x1a\x82\x05\n" +
+	"\x06Consul\x12r\n" +
+	"\x04addr\x18\x01 \x01(\tB^\xbaH[rY2\x1e^[A-Za-z0-9.-]+(:[0-9]{1,5})?$\x92\x02\x0econsul.app.com\x92\x02%consul-expose-servers.consul.svc:8500R\x04addr\x12\x16\n" +
 	"\x06scheme\x18\x02 \x01(\tR\x06scheme\x12!\n" +
 	"\fhealth_check\x18\x03 \x01(\bR\vhealthCheck\x12/\n" +
 	"\x03tls\x18\x04 \x01(\v2\x1d.conf.v1.Discovery.Consul.TlsR\x03tls\x125\n" +
