@@ -20,7 +20,7 @@ web
 
 ## Positioning
 
-综合商城形态(非内容/短视频带货、非垂类精品)。平台机制:多商家入驻(B2B2C),平台统一提供搜索(Elasticsearch)、推荐(Gorse)、交易、履约支撑;三端共享同一套账号与 RBAC 体系(Casdoor + Casbin)。
+综合商城形态(非内容/短视频带货、非垂类精品)。平台机制:多商家入驻(B2B2C),平台统一提供搜索(当前 Elasticsearch,迁移中,见 Capabilities)、推荐(Gorse)、交易、履约支撑;三端共享同一套账号与 RBAC 体系(Casdoor + Casbin)。
 
 ## Operating Context
 
@@ -30,14 +30,16 @@ web
 
 ## Capabilities and Constraints
 
-- 已有功能域(10 个后端微服务):用户、商品(含 SKU)、购物车、订单、支付、库存、搜索、地址、商家、行为(埋点/推荐信号);推荐由 Gorse 提供,搜索由 Elasticsearch 提供。拓扑真相源 `.service-matrix.yaml`,进度以 `TODO.md` 为准——**设计不得假定未接线的能力已存在**(区分 `depends_on` 与 `depends_on_planned`)。
+- 已有功能域(10 个后端微服务):用户、商品(含 SKU)、购物车、订单、支付、库存、搜索、地址、商家、行为(埋点/推荐信号);推荐由 Gorse 提供。搜索当前由 Elasticsearch 提供,**已拍板切换 Meilisearch(2026-08-16 决定,迁移未完成,详见 TODO.md)**——迁移完成前,设计不得假定 Meilisearch 特性(typo 容忍、即时搜索等)已可用;ES 级聚合分析在切换后将不可用,涉及搜索数据统计报表的设计需另行评估。拓扑真相源 `.service-matrix.yaml`,进度以 `TODO.md` 为准——**设计不得假定未接线的能力已存在**(区分 `depends_on` 与 `depends_on_planned`)。
 - API 契约先行(protobuf + buf.validate),前端类型由契约生成;界面字段与校验受 proto 约束。
 - 桌面壳是 Tauri 包 web 技术,设计语言仍为 web,不做平台原生化。
-- 未定(显式延后):品牌名(暂用 "Ecommerce")、支付渠道的真实品牌露出、多语言/国际化范围。
+- 未定(显式延后):支付渠道的真实品牌露出、多语言/国际化范围。
 
 ## Brand Commitments
 
-无既有品牌资产(2026-08-11 用户确认"品牌从零开始"):无名字、无 logo、无主色。视觉世界与品牌决策延后到 new-work 建立,本文件不预设。
+- **品牌名「灯市」**(2026-08-18 用户确认为正式品牌名):中文名「灯市」,拉丁转写 Dengshi / Lantern Market。
+- **品牌标识:** 朱砂方印 BrandMark(方章内嵌白描纸灯线稿),与宋体 900 字标「灯市」成对使用;视觉语言的唯一真相源在 DESIGN.md(灯市视觉世界)。
+- 起点:品牌从零建立(2026-08-11 确认无既有资产),名字与标识由灯市视觉世界确立后经用户确认转正。
 
 ## Evidence on Hand
 
