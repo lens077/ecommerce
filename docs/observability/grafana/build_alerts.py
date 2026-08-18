@@ -23,7 +23,7 @@ import os
 
 from common import svc_error_ratio, rpc_quantile, zero_filled, ECOMMERCE
 
-PROM_UID = os.getenv("GRAFANA_DS_PROM", "cfqdfyp4nyq68f")
+PROM_UID = os.getenv("GRAFANA_DS_PROM", "P4169E866C3094E38")
 
 W = "5m"  # 告警默认 rate 窗口(Grafana alerting 不展开 $__rate_interval)
 
@@ -127,11 +127,15 @@ infra_rules = [
           f'system_filesystem_inodes_usage{{state="used",{_fs}}} / ignoring(state) sum without(state) (system_filesystem_inodes_usage{{{_fs}}})',
           0.80, "30m", "critical",
           "节点 {{ $labels.k8s_node_name }} inode 超 80% —— 磁盘有空间但写不进去的那种满。"),
-    alert("ecom-a11-nodes-reporting", "A11 上报节点数 < 3",
+    # 2026-08 集群重建后只有 2 个节点,阈值随之从 3 调到 2。
+    # no_data 原为 Alerting(「数据没了本身就是事故」),但新集群的 collector 尚未
+    # 接 hostmetrics,该指标从未存在过 —— Alerting 会让它布上即永久 firing。
+    # 暂降为 OK;collector 接上主机指标后改回 Alerting(见 TODO 可观测性条目)。
+    alert("ecom-a11-nodes-reporting", "A11 上报节点数 < 2",
           "count(count by (k8s_node_name) (system_cpu_utilization_ratio))",
-          3, "10m", "critical",
-          "上报主机指标的节点少于 3。collector DaemonSet 掉实例或节点失联 —— 此时其他图的『正常』不可信。",
-          op="lt", no_data="Alerting"),
+          2, "10m", "critical",
+          "上报主机指标的节点少于 2。collector 掉实例或节点失联 —— 此时其他图的『正常』不可信。",
+          op="lt", no_data="OK"),
     # 这里的 or vector(0) 与 common.zero_filled 的禁令不冲突:三个 sum() 都没有
     # by 分组,两侧都是无标签单值,VM 和 Prometheus 行为一致;禁的是带分组的场景。
     alert("ecom-a12-otelcol-export-fail", "A12 collector 导出失败",

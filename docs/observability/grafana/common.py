@@ -10,7 +10,7 @@
 import json
 import os
 
-PROM = {"type": "prometheus", "uid": os.getenv("GRAFANA_DS_PROM", "cfqdfyp4nyq68f")}
+PROM = {"type": "prometheus", "uid": os.getenv("GRAFANA_DS_PROM", "P4169E866C3094E38")}
 PG = {"type": "grafana-postgresql-datasource", "uid": os.getenv("GRAFANA_DS_PG", "cfqdftoswcn40a")}
 LOKI = {"type": "loki", "uid": os.getenv("GRAFANA_DS_LOKI", "afqdfiefq0o3kf")}
 
