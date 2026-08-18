@@ -17,7 +17,7 @@ description: 公网暴露基础设施(Pangolin)的拓扑事实、面板 API 操�
                               │ WireGuard(UDP 51820/21820,内网侧纯出站)
               ┌───────────────┼───────────────────┐
         Mac(newt 1.15.0)   k8s 集群(helm newt)   [blog 容器:同机,不走隧道]
-        ~/apps/newt/         ns pangolin           站点资源 apikv.com/www → https://blog:443
+        ~/apps/newt/         ns pangolin           站点资源 blog.apikv.com → https://blog:443
 ```
 
 - 实例身份:腾讯云**轻量应用服务器 Lighthouse** `lhins-1of5dkfj`(ap-guangzhou-7),不是 CVM——防火墙是 Lighthouse 实例防火墙(`tccli lighthouse DescribeFirewallRules/DeleteFirewallRules --InstanceId`),没有安全组;TAT 助手在线,`tccli tat RunCommand` 可免 SSH 执行命令(带外救援通道,2026-08-11 实测可用);SSH 端口 34123(22/3389 已从防火墙移除)
@@ -30,7 +30,7 @@ description: 公网暴露基础设施(Pangolin)的拓扑事实、面板 API 操�
 
 - 面板 `https://pangolin.apikv.com`,管理员 `admin@apikv.com`(密码在用户处),org `main`
 - Sites:`node3-local`(siteId 1, local)/ `mac`(siteId 2, newt)/ `k8s`(siteId 3, newt)
-- Resources:`apikv.com`+`www`(blog,SSO off)/ `config.apikv.com`(SSO on)/ `config-api.apikv.com`(SSO off,应用自带鉴权)/ `casdoor.apikv.com`(SSO off,自带鉴权,target `10.1.0.8:8000`)/ 另有 kaneo/dev/ntfy/stream/cat 等,以 `traefik-config` 后门实查为准
+- Resources:`blog.apikv.com`(blog,target `https://blog:443`;**2026-08-18 traefik-config 实查:早前的根域 `apikv.com`+`www` 已无 router,公网 404 空置**)/ `config.apikv.com`(SSO on)/ `config-api.apikv.com`(SSO off,应用自带鉴权)/ `casdoor.apikv.com`(SSO off,自带鉴权,target `10.1.0.8:8000`)/ 另有 kaneo/dev/ntfy/stream/cat 等,以 `traefik-config` 后门实查为准
 - k8s newt:helm release `newt`(ns `pangolin`,chart `fossorial/newt`);凭据看 `helm get values newt -n pangolin`(inline,勿把 values 文件提交入库)
 - Mac newt:`~/apps/newt/newt` + 同目录 launchd plist(含凭据,在仓库外);日志 `/tmp/newt.log`
 
@@ -120,7 +120,7 @@ mediamtx-mediamtx-1  10.1.0.8:8889->8889/tcp    ← 这种才只绑内网
 
 - **raw TCP/UDP**:入口已预留 30001/30002(tcp)、30003(udp)——compose 的 gerbil ports + Traefik entryPoints(命名必须 `tcp-30001` 格式)+ 腾讯云安全组三处一致才通;扩端口要改前两处并 `docker compose up -d --force-recreate gerbil traefik`(共享 netns,一起重建)
 - **性能**:Mac/k8s 的 newt 是用户态 netstack(低流量够用);Linux 高吞吐场景加 `USE_NATIVE_MAIN_INTERFACE=true` + NET_ADMIN 切内核 WireGuard,验证:`wg show` 能看到接口才是内核态
-- **blog 回滚**(它已无宿主端口,挂在 pangolin_frontend 网络):恢复 `/home/docker/blog/compose.yml.bak` 并停 pangolin 即回到部署前
+- **blog 部署与回滚**(2026-08-18 起走 GitHub Actions:构建镜像 → scp 直送 → docker load → compose up,见 blog 仓 `.github/workflows/ci.yaml`;服务器 `/home/docker/blog/compose.yml` 是真相源,勿用仓库版覆盖):回滚用 30 天内保留的 sha tag 镜像 `docker tag ccr.ccs.tencentyun.com/sumery/blog:<旧sha> ...:latest && docker compose up -d`(原 `compose.yml.bak` 已不在服务器,该指引作废)
 - 面板证书状态永远 pending 是 BYO 证书的已知显示问题(上游 #3243),以浏览器实际握手为准
 - WireGuard 全走 UDP;若运营商晚高峰 QoS 严重,fallback 是 frp(TCP)换隧道层
 - DNSPod API 凭据(DP_Id/DP_Key)在 node3 `/root/.bash_history`(用户签证书时 export 过);泛解析已加,一般不再需要
