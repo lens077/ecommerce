@@ -226,6 +226,8 @@
 
 ### 其余近期待办
 
+- [x] **配置 YAML 的 IDE 校验（2026-08-18）**：`make conf-schema` 从各服务 `conf.proto` 生成 `configs/bootstrap.schema.json`（protovalidate `in`/`required` → schema `enum`/`required`，Duration 后处理成 Go 风格正则），IDEA 映射在 `.idea/jsonSchemas.xml`（gitignore，工作区 `~/lens077/.idea` 与仓库 `.idea` 各一份），GoLand 实测能拦枚举/类型/未知键/缺段。顺带修掉三处「约束从没匹配过现实」的 proto 漂移（server.addr 带端口、casdoor.endpoint 是 URL、consul.addr 端口可选）+ behavior 配置里 proto 未定义的 `log.elasticsearch` 块。详见 `context/project/ecommerce/config/INDEX.md`
+- [ ] **全量 `make generate`/`make conf` 是坏的（2026-08-18 发现，先于本轮存在）**：order/payment/address/cart/merchant 五个服务目录下各有一份 `services/<svc>/third_party/validate/validate.proto` 复制品，与 `backend/third_party/validate/validate.proto` 的扩展号 1159/1160 冲突，buf 全量 build 直接失败（`field number used more than once`）；带 `--path` 的按服务生成不受影响（conf-schema 就是这么绕的）。修法：删掉五份复制品（先确认没有 proto 以相对路径 import 它们）
 - [ ] **文档整理遗留（2026-08-07 盘点发现，本轮未动）**：①`docs/SCAFFOLD.md` §四内嵌的 AGENTS.md 模板还是旧版「项目速览」结构，与真身已分叉，需同步 ②~~`.github/workflows/backend.yml` 过时~~（2026-08-07 已重写为模板+矩阵，见上「CI/CD」行）；`frontend.yml`（2025-11）仍是 `connect-example-*` 旧身份待重写 ④`gateway/README.md` 的 CI badge 与 `go.mod` module 名仍是上游 `go-kratos/gateway` 身份 ⑤`frontend/apps/{admin,merchant}` 缺 README（与 consumer/desktop 不对称）⑥`gateway/.github/workflows/gitee-sync.yaml` 上游残留可删 ⑦`.scratch/architecture-hardening/` 只有 spec.md 没按 `docs/agents/issue-tracker.md` 拆 issues/
 - [x] **`service_name` 撞名**：已退役 `backend/services/config`；独立 config-center 用 `service.namespace=config-center` 区分遥测，系统查询精确筛选，电商 Grafana 看板排除其基础设施指标
 - [ ] **订单服务**：补 `GetOrder` / `ListOrders` / `CancelOrder` RPC 与订单状态机（带守卫的状态迁移 + `order_log`）

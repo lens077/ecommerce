@@ -39,6 +39,22 @@ config-center 出了新版要用 `go get github.com/lens077/config-center@v0.x.y
 | 服务专属段 | `store`(cart) / `pay`(payment) / `recommend`(behavior、product)，以各服务 `conf.proto` 的 `Bootstrap` 字段为准 |
 | 热生效边界 | `server` / `discovery` / `observability` 三段只打 WARN，其余立即生效 |
 
+## IDE 配置校验（JSON Schema，2026-08-18）
+
+`backend/services/<svc>/configs/bootstrap.schema.json` 由各服务 `conf.proto` 的 Bootstrap
+生成（`make conf-schema`，模板 `buf.gen.jsonschema.yaml`，本地插件
+`protoc-gen-jsonschema` 需 `go install github.com/bufbuild/protoschema-plugins/cmd/protoc-gen-jsonschema@latest`）。
+protovalidate 的 `in`/`required` 分别映射为 schema `enum`/`required`，未知键被
+`additionalProperties: false` 拦截；`google.protobuf.Duration` 的 `format: duration`
+（ISO 8601）会被 Makefile 后处理替换成 Go `time.ParseDuration` 风格正则（`"5s"`/`"1m30s"`），
+因为配置解码走 mapstructure 钩子而非 protojson。
+
+IDEA 侧映射在 `.idea/jsonSchemas.xml`（被 gitignore，机器级文件）：工作区
+`~/lens077/.idea/` 与仓库 `.idea/` 各一份，把 `configs/{dev,pre}.yml` 指到对应 schema。
+新机器丢失后在 Settings → JSON Schema Mappings 里重建，或找历史会话重新生成。
+**改了 conf.proto 要重跑 `make conf-schema` 并把 schema 随代码提交。**
+这只是编辑期校验——运行时 protovalidate 仍未接（见上方 known_defect）。
+
 ## experience
 
 | 症状 | 文件 |
