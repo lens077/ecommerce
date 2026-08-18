@@ -68,6 +68,30 @@ mapstructure 没开 `ErrorUnused`，多余键不报错、缺失键生成 nil-saf
 | Postgres | **未部署** | `cnpg-system` 只有 operator，没有 Cluster 实例 |
 | 搜索 | Meilisearch（`search` ns） | Elasticsearch 已退役，见 TODO.md 的迁移项 |
 
+### Pigsty 数据面（192.168.3.210）
+
+PostgreSQL、Redis、Kafka、Silo(MinIO) 与 Grafana 由 Pigsty v4.5 部署在 `192.168.3.210`，
+不在 k8s 集群内。部署记录与凭据在 `../pigsty-deploy/`（不入库）。
+
+| 服务 | 地址 | TLS | 备注 |
+|---|---|---|---|
+| PostgreSQL | `192.168.3.210:5432` | ✅ verify-full | 集群 pg-meta，PG 18.6，库 `ecommerce`，用户 `dbuser_meta` |
+| PgBouncer | `192.168.3.210:6432` | ❌ | 连接池，**不支持 SSL**（实测 SSLRequest 返回 N） |
+| Redis | `192.168.3.210:6379` | ❌ | redis-main，requirepass，ACL 用户 `default` |
+| Kafka | `192.168.3.210:9092` | ❌ | kf-dev，plaintext 无鉴权；ecommerce 尚未接线 |
+| Silo(MinIO) | `192.168.3.210:9000` | ✅ | bucket 为 `pgsql`/`meta`/`data`，**不含 ecommerce 业务桶** |
+| Grafana | `192.168.3.210:3000` | ❌ | Pigsty 自带监控，与 k8s 的 grafana.dev.test 是两套 |
+
+**TLS 现状**（2026-08-18 实测）：
+
+- PG 与 Silo 的证书由 Pigsty 自签 CA 签发（`O=pigsty, OU=ca, CN=pigsty-ca`），
+  可从 `http://192.168.3.210/ca.crt` 获取。两张证书的 SAN 都含 `IP:192.168.3.210`，
+  因此可以直接用 IP 走 `verify-full`，无需为它们加 DNS 记录。
+- **Redis 与 Kafka 无法加 TLS**：Pigsty v4.5 的 redis role 没有 TLS 参数（实例 conf 里
+  `tls-port` 全是注释状态），`kafka_security` 只有 `plaintext | scram` 两个取值（`scram`
+  是 SASL 认证，不是加密）。手改配置文件会被下次 `redis.yml` / `kafka.yml` 覆盖。
+  要加密只能换部署方式或在前面加 TLS 代理。
+
 ### 地址分段（三段互不重叠，2026-08-18 起）
 
 | 段 | 范围 | 用途 |
