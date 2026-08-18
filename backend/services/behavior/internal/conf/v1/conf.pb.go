@@ -1972,7 +1972,7 @@ const file_services_behavior_internal_conf_v1_conf_proto_rawDesc = "" +
 	"errorLevel\x1a\x88\x01\n" +
 	"\vApplication\x12,\n" +
 	"\x06format\x18\x01 \x01(\tB\x14\xbaH\x11r\x0fR\aconsoleR\x04jsonR\x06format\x12K\n" +
-	"\x05level\x18\x02 \x01(\tB5\xbaH2r0R\x05debugR\x04infoR\x04warnR\x05errorR\x06dpanicR\x05panicR\x05fatalR\x05level\"\xe3\x03\n" +
+	"\x05level\x18\x02 \x01(\tB5\xbaH2r0R\x05debugR\x04infoR\x04warnR\x05errorR\x06dpanicR\x05panicR\x05fatalR\x05level\"\xe8\x03\n" +
 	"\x06Server\x12=\n" +
 	"\x04addr\x18\x01 \x01(\tB)\xbaH&r$\x92\x02\r0.0.0.0:30001\x92\x02\x0elocalhost:8000\x80\x02\x01R\x04addr\x12(\n" +
 	"\x04http\x18\x02 \x01(\v2\x14.conf.v1.Server.HTTPR\x04http\x12(\n" +
@@ -1980,9 +1980,9 @@ const file_services_behavior_internal_conf_v1_conf_proto_rawDesc = "" +
 	"\x04HTTP\x12L\n" +
 	"\fread_timeout\x18\x01 \x01(\v2\x19.google.protobuf.DurationB\x0e\xbaH\v\xaa\x01\bJ\x02\b\x052\x02\b\x01R\vreadTimeout\x12N\n" +
 	"\rwrite_timeout\x18\x02 \x01(\v2\x19.google.protobuf.DurationB\x0e\xbaH\v\xaa\x01\bJ\x02\b\x052\x02\b\x01R\fwriteTimeout\x12L\n" +
-	"\fidle_timeout\x18\x03 \x01(\v2\x19.google.protobuf.DurationB\x0e\xbaH\v\xaa\x01\bJ\x02\b\x052\x02\b\x01R\vidleTimeout\x1aQ\n" +
-	"\x04Cors\x12I\n" +
-	"\x0fallowed_origins\x18\x01 \x03(\tB \xbaH\x1dr\x1b\x92\x02\x15http://localhost:3000\x80\x02\x01R\x0eallowedOrigins\"\xd0\r\n" +
+	"\fidle_timeout\x18\x03 \x01(\v2\x19.google.protobuf.DurationB\x0e\xbaH\v\xaa\x01\bJ\x02\b\x052\x02\b\x01R\vidleTimeout\x1aV\n" +
+	"\x04Cors\x12N\n" +
+	"\x0fallowed_origins\x18\x01 \x03(\tB%\xbaH\"\x92\x01\x1f\"\x1dr\x1b\x92\x02\x15http://localhost:3000\x88\x01\x01R\x0eallowedOrigins\"\xd0\r\n" +
 	"\x04Data\x122\n" +
 	"\bdatabase\x18\x01 \x01(\v2\x16.conf.v1.Data.DatabaseR\bdatabase\x12)\n" +
 	"\x05cache\x18\x02 \x01(\v2\x13.conf.v1.Data.CacheR\x05cache\x1a\xb7\a\n" +
@@ -1990,7 +1990,7 @@ const file_services_behavior_internal_conf_v1_conf_proto_rawDesc = "" +
 	"\bpostgres\x18\x01 \x01(\v2\x1f.conf.v1.Data.Database.PostgresR\bpostgres\x1a\xed\x06\n" +
 	"\bPostgres\x12(\n" +
 	"\x04host\x18\x01 \x01(\tB\x14\xbaH\x11r\x0f\x92\x02\tlocalhost\xa8\x01\x01R\x04host\x12\x1c\n" +
-	"\x04port\x18\x02 \x01(\rB\b\xbaH\x05\x1a\x03@\xb8*R\x04port\x12$\n" +
+	"\x04port\x18\x02 \x01(\rB\b\xbaH\x05*\x03@\xb8*R\x04port\x12$\n" +
 	"\x04user\x18\x03 \x01(\tB\x10\xbaH\rr\v\x92\x02\bpostgresR\x04user\x12,\n" +
 	"\bpassword\x18\x04 \x01(\tB\x10\xbaH\rr\v\x92\x02\bpostgresR\bpassword\x12)\n" +
 	"\adb_name\x18\x05 \x01(\tB\x10\xbaH\rr\v\x92\x02\bpostgresR\x06dbName\x127\n" +
@@ -1998,8 +1998,8 @@ const file_services_behavior_internal_conf_v1_conf_proto_rawDesc = "" +
 	"\x04pool\x18\b \x01(\v2,.conf.v1.Data.Database.Postgres.DatabasePoolR\x04pool\x125\n" +
 	"\x03tls\x18\t \x01(\v2#.conf.v1.Data.Database.Postgres.TlsR\x03tls\x1a\xcb\x02\n" +
 	"\fDatabasePool\x12$\n" +
-	"\tmax_conns\x18\x01 \x01(\rB\a\xbaH\x04\x1a\x02(\x01R\bmaxConns\x12$\n" +
-	"\tmin_conns\x18\x02 \x01(\rB\a\xbaH\x04\x1a\x02(\x01R\bminConns\x12Q\n" +
+	"\tmax_conns\x18\x01 \x01(\rB\a\xbaH\x04*\x02(\x01R\bmaxConns\x12$\n" +
+	"\tmin_conns\x18\x02 \x01(\rB\a\xbaH\x04*\x02(\x01R\bminConns\x12Q\n" +
 	"\x11max_conn_lifetime\x18\x03 \x01(\v2\x19.google.protobuf.DurationB\n" +
 	"\xbaH\a\xaa\x01\x042\x02\b\x01R\x0fmaxConnLifetime\x12R\n" +
 	"\x12max_conn_idle_time\x18\x04 \x01(\v2\x19.google.protobuf.DurationB\n" +
@@ -2014,7 +2014,7 @@ const file_services_behavior_internal_conf_v1_conf_proto_rawDesc = "" +
 	"\x05redis\x18\x01 \x01(\v2\x19.conf.v1.Data.Cache.RedisR\x05redis\x1a\xf3\x04\n" +
 	"\x05Redis\x12\x1c\n" +
 	"\x04host\x18\x01 \x01(\tB\b\xbaH\x05r\x03\xa8\x01\x01R\x04host\x12\x1c\n" +
-	"\x04port\x18\x02 \x01(\rB\b\xbaH\x05\x1a\x03@\xb8*R\x04port\x12+\n" +
+	"\x04port\x18\x02 \x01(\rB\b\xbaH\x05*\x03@\xb8*R\x04port\x12+\n" +
 	"\busername\x18\x03 \x01(\tB\x0f\xbaH\fr\n" +
 	"\x92\x02\adefaultR\busername\x12,\n" +
 	"\bpassword\x18\x04 \x01(\tB\x10\xbaH\rr\v\x92\x02\bpasswordR\bpassword\x12\x0e\n" +
@@ -2027,7 +2027,7 @@ const file_services_behavior_internal_conf_v1_conf_proto_rawDesc = "" +
 	"\xbaH\a\xaa\x01\x042\x02\b\x01R\fwriteTimeout\x12\x1b\n" +
 	"\tpool_size\x18\t \x01(\rR\bpoolSize\x12-\n" +
 	"\x0emin_idle_conns\x18\n" +
-	" \x01(\rB\a\xbaH\x04\x1a\x02(\x01R\fminIdleConns\x12/\n" +
+	" \x01(\rB\a\xbaH\x04*\x02(\x01R\fminIdleConns\x12/\n" +
 	"\x03tls\x18\v \x01(\v2\x1d.conf.v1.Data.Cache.Redis.TlsR\x03tls\x1af\n" +
 	"\x03Tls\x12\x16\n" +
 	"\x06enable\x18\x01 \x01(\bR\x06enable\x12\x15\n" +
