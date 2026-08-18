@@ -140,7 +140,12 @@ Pigsty Alertmanager(210:9059) ─────────────┘
 | 侧 | 路由条件 | 配置位置 |
 |---|---|---|
 | k8s Grafana | `severity=critical` 才发飞书，其余留 UI | contact point `feishu-critical` + policy，存 Grafana DB（**不在 git**，重装集群后要重建） |
-| Pigsty Alertmanager | `severity="CRIT"`（Pigsty 标签体系是大写 CRIT/WARN/INFO） | 模板 `roles/infra/templates/prometheus/alertmanager.yml` 与已部署文件**双改**（`./infra.yml -t alertmanager` 重跑不丢） |
+| Pigsty Alertmanager | `CRIT`（30s 等待/4h 重复）与 `WARN`（5m 等待/**24h 重复**）都发飞书；INFO 留 UI。标签体系是大写 CRIT/WARN/INFO | 模板 `roles/infra/templates/prometheus/alertmanager.yml` 与已部署文件**双改**（`./infra.yml -t alertmanager` 重跑不丢） |
+
+Pigsty 侧规则为自带全套（92 条：pgsql/redis/kafka/etcd/minio/node/infra/mysql），与官方
+monitor 文档推荐逐条核对过无缺口；派生指标（`redis:ins:*`/`node:ins:*`/`pg:db:*` 等
+recording rules）已抽查 9 项全部在算，告警不是摆设。mysql.yml 的 27 条因未装 MySQL
+恒为 NoData，不响不扰。
 
 - 转换层 compose 在 210 `/opt/prometheusalert/compose.yml`；管理台 8080（账号在 compose 里）
 - 飞书 webhook URL 属于凭据，只存在于 Grafana DB、210 的 alertmanager.yml 与转换层调用方，不入库
