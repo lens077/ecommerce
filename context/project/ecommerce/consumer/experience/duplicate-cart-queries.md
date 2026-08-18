@@ -50,7 +50,7 @@ function useCartItemsQuery() {
 AppBar 徽标立刻刷新而不用等 `staleTime` 到期。`useCart.addItem` 和 `useAddToCart.addToCart`
 两条路径都要加，商详页加购走的是后者。
 
-**⚠️ 合并时差点静默改掉徽标数字**
+**关键陷阱：合并时差点静默改掉徽标数字**
 
 徽标原来取 `GetCartSummary` 的 `totalCount`。合并后要从 items 推导，
 直觉是用 `cartStore.getSummary().totalQuantity`——**这会改变显示的数字**：

@@ -41,6 +41,36 @@ description: harness 本身（硬规则/门禁/Agent 约束）每次改动的原
 
 ---
 
+### 2026-08-18 context/ 知识库自身接上结构门禁（参照 deepseek-harness）
+
+- **改了什么**：无 → `scripts/verify-context.sh` 六项检查（AGENTS.md + context/ 的链接可达性、
+  INDEX 覆盖孤儿检测、frontmatter 与 name/layer/module 路径一致性、experience 的
+  「症状/关键陷阱」硬要求、evolution-log 四要素、AGENTS.md ≤14000 字节预算）+
+  `scripts/context-format-baseline.txt` 存量基线（反向棘轮：修好必须删行、陈旧条目必须删）+
+  两侧 CI（`.github/workflows/context-gate.yml`、`.gitlab-ci.yml` 的 `context-gate`，
+  与 freeze-check 同款每 push/PR 全量跑）+ AGENTS.md 锚点块一行。顺手修掉门禁首跑抓到的
+  存量：`graph-engineering.md` 补 frontmatter、`duplicate-cart-queries.md` 的
+  「⚠️ 合并时差点静默改掉徽标数字」重标为规范的「关键陷阱：…」标签。
+- **为什么**：本仓判例已两次证明「纯文档约束必然静默漂移」（08-07 internal/pkg 同构、
+  08-08 服务清单四处手抄），处理办法也定型了——能判定的约束变成脚本、存量走基线棘轮。
+  但 context/ 知识库**自身**的约定（INDEX 登记、frontmatter、experience 四段）一直是纯文档约束，
+  没享受同等待遇。deepseek-harness（TypeScript monorepo + Cordis 插件架构）把这层做成了
+  doc-sync 门禁族（verify-md-links / verify-agent-note-format / verify-doc-budgets 等
+  三十余个脚本），本条是它的最小移植。**否决的替代**：dsh 的字数预算全套、双语配对校验、
+  归档冻结清单、生成式目录（gen-*-catalog）不搬——单人仓收益不抵维护成本，且生成式目录
+  在本仓已有对等物（`.service-matrix.yaml` + structcheck）；只取「链接、覆盖、格式、预算」
+  四类可机械判定且当场抓到真漂移的。
+- **触发事故**：用户要求阅读 `~/lens077/deepseek-harness` 源码并参考它增强本仓 harness。
+  门禁写完首跑即抓到 2 处已存在的静默漂移（`graph-engineering.md` 整个 frontmatter 缺失——
+  08-08 从根目录搬进来时就没加；config 模块两篇 experience 非坑体裁、无四段结构），
+  证明缺口真实而非假设性加固。
+- **怎么验证的**：九类故意写错的输入逐一注入——坏链接 / 孤儿文件 / 缺 frontmatter /
+  name 与 layer 双重不匹配 / 新 experience 缺陷阱段 / 已合规文件塞回基线（反向棘轮）/
+  基线指向不存在的文件 / evolution-log 条目抹掉「触发事故」/ AGENTS.md 灌超 14000 字节——
+  全部 rc=1 且违规 tag 正确，还原后全绿。脚本避开 Bash 3.2 禁区（无关联数组/mapfile，
+  mktemp 用 BSD/GNU/busybox 三方兼容写法），GitLab 侧 alpine 显式装 GNU grep/sed/gawk
+  防 busybox 行为差异。
+
 ### 2026-08-13 废止 PROGRESS.md 与双文档进度纪律
 
 - **改了什么**：`docs/PROGRESS.md` 归档为 `docs/reviews/PROGRESS_ARCHIVE_20260813.md`（带废止横幅），

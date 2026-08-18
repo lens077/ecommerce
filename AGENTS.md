@@ -54,6 +54,7 @@ cd backend && go test -count=1 ./structcheck/...     # 改 .service-matrix.yaml/
 cd backend && go test -short ./...                   # 后端测试(CI 用 -short)
 cd frontend && pnpm ready                            # 前端 lint+fmt+类型+test
 scripts/verify-freeze.sh --all                       # 冻结验收集未被动过(main 上唯一必需的 CI 检查)
+scripts/verify-context.sh                            # 改 context/ 或本文件后必跑:链接/INDEX/格式门禁
 ```
 
 放行以「命令真绿」为准,不以模型自报为准。核心改动 push 前跑 `/adversarial-review` 做异构双审。
