@@ -6,7 +6,7 @@ description: 公网暴露基础设施(Pangolin)的拓扑事实、面板 API 操�
 
 # Pangolin 内网穿透 / 公网暴露(2026-08-08 部署)
 
-> 人类速查版(纯命令)在仓库根 [`ai-helper.sh`](../../ai-helper.sh) 的 Pangolin 小节;
+> 人类速查版(纯命令)在仓库根 `ai-helper.sh` 的 Pangolin 小节(本机文件,已 gitignore 不入库,fresh clone 没有);
 > 本文件是 AI 操作用的完整事实与接口。**凭据一律不写值,只写位置**(runbook §0 硬规则)。
 
 ## 拓扑

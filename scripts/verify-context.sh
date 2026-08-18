@@ -58,6 +58,10 @@ while IFS= read -r file; do
     [ -z "$path" ] && continue
     if [ ! -e "$dir/$path" ]; then
       fail "DEAD-LINK" "$file → $target"
+    elif git check-ignore -q "$dir/$path" 2>/dev/null; then
+      # 本机磁盘上有、但被 gitignore ——提交的树里不存在,对 fresh clone/CI 就是死链。
+      # 首跑 CI 抓到过真实案例(ai-helper.sh);没有这条,本机绿 CI 红。
+      fail "DEAD-LINK" "$file → $target(目标被 gitignore,不在提交树里)"
     fi
   done < <(_strip_fences "$file" | grep -oE '\]\([^)]+\)' | sed 's/^](//; s/)$//' || true)
 done < <(find AGENTS.md context -name "*.md" -type f)
