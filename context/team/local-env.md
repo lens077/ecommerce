@@ -126,6 +126,27 @@ PostgreSQL、Redis、Kafka、Silo(MinIO) 与 Grafana 由 Pigsty v4.5 部署在 `
   `templates/redis.conf` 里 27 行 tls 配置全是注释状态、无一行生效。
   手改实例 conf 会被下次 `redis.yml` 覆盖。要加密只能换部署方式或前置 TLS 代理。
 
+### 告警通知：飞书（2026-08-18 接入）
+
+两套告警栈都经 210 上的 PrometheusAlert 转换层出飞书（飞书 webhook 只认自己的
+消息格式，Grafana/Alertmanager 的 payload 都需转换）：
+
+```
+k8s Grafana(12.3.1, 无原生飞书) ──webhook──┐
+                                            ├─> PrometheusAlert(210:8080, docker) ─> 飞书群机器人
+Pigsty Alertmanager(210:9059) ─────────────┘
+```
+
+| 侧 | 路由条件 | 配置位置 |
+|---|---|---|
+| k8s Grafana | `severity=critical` 才发飞书，其余留 UI | contact point `feishu-critical` + policy，存 Grafana DB（**不在 git**，重装集群后要重建） |
+| Pigsty Alertmanager | `severity="CRIT"`（Pigsty 标签体系是大写 CRIT/WARN/INFO） | 模板 `roles/infra/templates/prometheus/alertmanager.yml` 与已部署文件**双改**（`./infra.yml -t alertmanager` 重跑不丢） |
+
+- 转换层 compose 在 210 `/opt/prometheusalert/compose.yml`；管理台 8080（账号在 compose 里）
+- 飞书 webhook URL 属于凭据，只存在于 Grafana DB、210 的 alertmanager.yml 与转换层调用方，不入库
+- ⚠️ 转换层的 `/prometheusalert` 端点对局域网开放且无鉴权——内网可接受，暴露到外网前必须加防护
+- 三条链路都已实测（直连 / Grafana testReceivers / Alertmanager 假告警），飞书侧均 success
+
 ### 地址分段（三段互不重叠，2026-08-18 起）
 
 | 段 | 范围 | 用途 |
