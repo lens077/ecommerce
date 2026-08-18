@@ -78,7 +78,7 @@ PostgreSQL、Redis、Kafka、Silo(MinIO) 与 Grafana 由 Pigsty v4.5 部署在 `
 | PostgreSQL | `192.168.3.210:5432` | ✅ verify-full | 集群 pg-meta，PG 18.6，库 `ecommerce`，用户 `dbuser_meta` |
 | PgBouncer | `192.168.3.210:6432` | ❌ | 连接池，**不支持 SSL**（实测 SSLRequest 返回 N） |
 | Redis | `192.168.3.210:6379` | ❌ | redis-main，requirepass，ACL 用户 `default` |
-| Kafka | `192.168.3.210:9092` | ❌ | kf-dev，plaintext 无鉴权；ecommerce 尚未接线 |
+| Kafka | `192.168.3.210:9092` | ✅ SASL_SSL | kf-dev，SCRAM-SHA-512 + TLS，默认拒绝；用户 `ecommerce` 限 `ecommerce.` 前缀 |
 | Silo(MinIO) | `192.168.3.210:9000` | ✅ | bucket 为 `pgsql`/`meta`/`data`，**不含 ecommerce 业务桶** |
 | Grafana | `192.168.3.210:3000` | ❌ | Pigsty 自带监控，与 k8s 的 grafana.dev.test 是两套 |
 
@@ -100,12 +100,26 @@ PostgreSQL、Redis、Kafka、Silo(MinIO) 与 Grafana 由 Pigsty v4.5 部署在 `
   ```
 
   这与 k8s 的 `my-global-root-ca` 是**两张互不相干的 CA**，各管各的服务，都要导入。
-- **Kafka 可以加 TLS，当前未开**。`kafka_security: scram` 不是"只加 SASL 认证"，而是一个
-  完整档位，实测 v4.5 的 `roles/kafka/templates/server.properties.j2` 会渲染成
-  `listener.security.protocol.map=BROKER:SASL_SSL,CONTROLLER:SSL`，同时启用 Pigsty CA
-  签发的每节点证书、Controller 双向 TLS、`StandardAuthorizer` 默认拒绝，并需要用
-  `kafka_users` 声明客户端身份。开启方式：改 `pigsty.yml` 的 `kafka_security: scram`
-  并重跑 `./kafka.yml`（会重启 Broker，所有现有客户端都要改成带凭据 + TLS）。
+- **Kafka 已开 TLS**（2026-08-18 切换）。`kafka_security: scram` 是完整安全档位，
+  实测生效的 `/etc/kafka/server.properties`：
+
+  ```
+  listener.security.protocol.map=BROKER:SASL_SSL,CONTROLLER:SSL
+  sasl.enabled.mechanisms=SCRAM-SHA-512
+  advertised.listeners=BROKER://192.168.3.210:9092
+  ```
+
+  证书由 Pigsty CA 签发（实测 `CN=pigsty-controller`，链校验通过），
+  `StandardAuthorizer` 默认拒绝。业务身份 `ecommerce` 已建，ACL 限定在
+  `ecommerce.` 前缀的 topic 与 consumer group（密码见 `../pigsty-deploy/pigsty.yml`，
+  不入本库）。
+
+  ⚠️ **切换安全模式必须重建集群**：Pigsty 有护栏
+  （`kafka_manifest_internal.security == kafka_security`），已格式化的存储不会被
+  自动改写，直接改 `kafka_security` 重跑 `./kafka.yml` 会 assert 失败且不做任何变更。
+  正确流程是 `./kafka-rm.yml -l kf-dev`（默认 `kafka_rm_data=true`，**会删数据**）
+  再 `./kafka.yml`。
+
   ⚠️ Broker 的 `advertised.listeners` 用 `inventory_hostname`（这里是
   `192.168.3.210`），客户端必须能直连该地址，不能靠 LB/VIP 中转。
 - **Redis 无法加 TLS**：Pigsty v4.5 的 redis role 没有任何 TLS 参数，
