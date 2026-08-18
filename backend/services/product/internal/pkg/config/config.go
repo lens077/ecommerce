@@ -7,6 +7,7 @@ import (
 	"sync"
 	"time"
 
+	"buf.build/go/protovalidate"
 	"github.com/lens077/ecommerce/backend/constants"
 	confv1 "github.com/lens077/ecommerce/backend/services/product/internal/conf/v1"
 	"github.com/mitchellh/mapstructure"
@@ -78,6 +79,9 @@ func decodeConfig(data map[string]any, target any) error {
 
 	decoder, err := mapstructure.NewDecoder(&mapstructure.DecoderConfig{
 		TagName: "json",
+		// 未知键直接报错:键名打错的后果是功能被静默关掉,比启动失败难查得多。
+		// 要加新键,先发能识别它的代码,再改配置。
+		ErrorUnused: true,
 		DecodeHook: mapstructure.ComposeDecodeHookFunc(
 			stringToProtoDurationHook,
 		),
@@ -87,6 +91,13 @@ func decodeConfig(data map[string]any, target any) error {
 		return err
 	}
 	return decoder.Decode(v.AllSettings())
+}
+
+// validateBootstrap 执行 conf.proto 里声明的 buf.validate 约束(required/枚举/格式)。
+// 解码只保证形状:不校验的话 required=true 形同虚设,缺块会被 getter 的 nil-safe
+// 吞掉,功能静默失能而不是启动失败(.service-matrix.yaml config_validation)。
+func validateBootstrap(conf *confv1.Bootstrap) error {
+	return protovalidate.Validate(conf)
 }
 
 // Init 拉取并解析整份 Bootstrap 配置。
@@ -108,6 +119,9 @@ func Init(ctx context.Context) (*confv1.Bootstrap, error) {
 	localConf := &confv1.Bootstrap{}
 	if err := decodeConfig(rawConfig, localConf); err != nil {
 		return nil, fmt.Errorf("decode bootstrap from %s: %w", src.Name(), err)
+	}
+	if err := validateBootstrap(localConf); err != nil {
+		return nil, fmt.Errorf("validate bootstrap from %s: %w", src.Name(), err)
 	}
 
 	srcMu.Lock()
@@ -170,6 +184,10 @@ func startWatch(lc fx.Lifecycle, logger *zap.Logger, live *Live) {
 						if err := decodeConfig(ev.Raw, cur); err != nil {
 							// 一份写错的配置不能把在跑的服务带塌
 							log.Error("热更新配置解码失败,保留当前配置", zap.Error(err))
+							return
+						}
+						if err := validateBootstrap(cur); err != nil {
+							log.Error("热更新配置未通过 conf.proto 校验,保留当前配置", zap.Error(err))
 							return
 						}
 						live.Set(cur)

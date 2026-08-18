@@ -2,6 +2,7 @@ package config
 
 import (
 	"context"
+	"strings"
 	"testing"
 	"time"
 
@@ -121,6 +122,22 @@ func TestStartWatch_KeepsCurrentConfigOnDecodeFailure(t *testing.T) {
 	src.send(t, WatchEvent{Raw: raw})
 
 	// 再投一条无害事件,确保上一条已被处理完(stub 无缓冲,收下即代表前一条回调结束)
+	src.send(t, WatchEvent{Err: assertErr})
+
+	assert.Equal(t, "keep-me", live.Get().GetServer().GetAddr())
+}
+
+// 解码得过但不满足 conf.proto 约束的配置同样不能生效:校验失败只记日志,当前配置原样保留。
+func TestStartWatch_KeepsCurrentConfigOnValidationFailure(t *testing.T) {
+	live := NewLive(&confv1.Bootstrap{Server: &confv1.Server{Addr: "keep-me"}})
+	src := runStartWatch(t, live)
+
+	// framework.format 只允许 console/json
+	bad := strings.Replace(testBootstrapYAML, "format: console", "format: xml", 1)
+	raw, err := parseYAMLToMap([]byte(bad))
+	require.NoError(t, err)
+	src.send(t, WatchEvent{Raw: raw})
+
 	src.send(t, WatchEvent{Err: assertErr})
 
 	assert.Equal(t, "keep-me", live.Get().GetServer().GetAddr())
