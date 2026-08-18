@@ -68,10 +68,30 @@ mapstructure 没开 `ErrorUnused`，多余键不报错、缺失键生成 nil-saf
 | Postgres | **未部署** | `cnpg-system` 只有 operator，没有 Cluster 实例 |
 | 搜索 | Meilisearch（`search` ns） | Elasticsearch 已退役，见 TODO.md 的迁移项 |
 
-⚠️ **`192.168.3.100` 有 IP 冲突风险**：Cilium LB 池是 `192.168.3.100-199`，与路由器 DHCP
-段重叠。2026-08-18 实测该地址一度被局域网其他设备（随机化 MAC）抢占，表现为 ping 通但
-延迟数百毫秒、80/443 全闭。绕开验证用 NodePort：`curl -H "Host: <域名>" http://192.168.3.201:31753/`
-（https 为 31825）。根治要把 LB 池收窄到 DHCP 段之外。
+### 地址分段（三段互不重叠，2026-08-18 起）
+
+| 段 | 范围 | 用途 |
+|---|---|---|
+| DHCP | `192.168.3.2-20` | 路由器动态分配 |
+| Cilium LB 池 | `192.168.3.100-199` | `CiliumLoadBalancerIPPool/default-pool` |
+| 静态 | `.201` `.202` `.220` | node1 / node2 / Mac |
+
+**新增静态地址前先确认不落在上面两段内**。2026-08-18 之前 DHCP 段覆盖了整个 LB 池，
+`192.168.3.100` 被局域网其他设备（随机化 MAC）抢占过，表现为 ping 通但延迟数百毫秒、
+80/443 全闭；把 DHCP 收窄到 `2-20` 后已解决。
+
+网关不通时可用 NodePort 绕开 LB 层定位问题：
+`curl -H "Host: <域名>" http://192.168.3.201:31753/`（https 为 31825）。
+
+### TLS 信任
+
+网关证书由集群自签根 CA `my-global-root-ca` 签发。该根 CA 已导入 Mac 系统钥匙串
+（2026-08-18），`curl https://<域名>` 无需 `-k` 即可通过校验。新机器需重新导入：
+
+```bash
+kubectl get secret global-root-ca-secret -n cert-manager -o jsonpath='{.data.ca\.crt}' | base64 -d > /tmp/global-root-ca.crt
+sudo security add-trusted-cert -d -r trustRoot -k /Library/Keychains/System.keychain /tmp/global-root-ca.crt
+```
 
 凭据由 Config Center 管理，或向用户确认；不要从历史 Consul 导出恢复运行时 KV。
 
