@@ -54,7 +54,7 @@ externals:
   postgres: { host: "192.168.3.210:5432", note: "Pigsty pg-meta，db=ecommerce，user=dbuser_meta，TLS verify-full（pigsty-ca）" }
   redis: { host: "192.168.3.210:6379", note: "Pigsty redis-main，requirepass；Pigsty v4.5 不支持 Redis TLS，明文" }
   consul: { host: "192.168.3.102:8500" }
-  kafka: { host: "192.168.3.210:9092", note: "Pigsty kf-dev，当前 plaintext 无鉴权；可用 kafka_security=scram 换成 SASL_SSL+双向TLS（未开）；ecommerce 尚未接线" }
+  kafka: { host: "192.168.3.210:9092", note: "Pigsty kf-dev，SASL_SSL + SCRAM-SHA-512，Pigsty CA；身份 ecommerce 限 ecommerce. 前缀；ecommerce 尚未接线" }
   casdoor: { host: "114.132.233.129", note: "JWT 公钥 kid=lens" }
   elasticsearch: { used_by: [search] }
   minio: { used_by: [cart], note: "商品缩略图 URL" }
