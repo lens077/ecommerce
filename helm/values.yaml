@@ -294,7 +294,7 @@ cart:
   replicaCount: 1
   image:
     repository: "ccr.ccs.tencentyun.com/sumery/cart"
-    tag: sha-1ec5466
+    tag: sha-b482be9
     pullPolicy: Always
   service:
     type: LoadBalancer
