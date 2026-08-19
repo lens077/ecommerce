@@ -16,6 +16,8 @@ import { CASDOOR_CONF } from "../casdoor";
 
 const AUTHORIZE_URL = `${CASDOOR_CONF.serverUrl}/login/oauth/authorize`;
 const TOKEN_URL = `${CASDOOR_CONF.serverUrl}/api/login/oauth/access_token`;
+/** OIDC 的 end_session_endpoint，取自 Casdoor 的 discovery 文档（实测就是这个路径） */
+const LOGOUT_URL = `${CASDOOR_CONF.serverUrl}/api/logout`;
 
 /** verifier 与 state 的暂存位置。
  *  用 sessionStorage 而非内存：授权要整页跳转，内存变量活不过跳转。
@@ -51,6 +53,8 @@ export interface TokenResult {
   refreshToken: string | null;
   /** 绝对过期时刻（epoch ms） */
   expiresAt: number;
+  /** OIDC id_token。登出时必须作为 id_token_hint 回传，否则 Casdoor 拒绝结束会话。 */
+  idToken: string | null;
 }
 
 const buildAuthorizeUrl = async (opts: {
@@ -80,6 +84,27 @@ const buildAuthorizeUrl = async (opts: {
 /** 发起登录（整页跳转）。 */
 export const startLogin = async (redirectUri: string): Promise<void> => {
   window.location.assign(await buildAuthorizeUrl({ redirectUri }));
+};
+
+/** 结束 Casdoor 侧的会话（OIDC end_session_endpoint）。
+ *
+ *  **为什么非做不可**：Casdoor 开了「保持登录会话」+「自动登录」，只清本地令牌的话
+ *  它那侧的 `casdoor_session_id` 还在，下一次 `restoreSession()` 会用 `prompt=none`
+ *  静默换到新令牌 —— 表现就是「登出后一刷新又登录了」。这不是前端状态没清干净，
+ *  是 IdP 侧的会话根本没结束。
+ *
+ *  **为什么必须整页跳转，不能 fetch / iframe**（2026-08-19 实测）：
+ *  - `fetch(credentials:"include")`：Casdoor 对带 `Origin` 的请求直接返回 **403**（未配 CORS）；
+ *  - `<iframe>`：`casdoor_session_id` 是 `HttpOnly` 且没有 `SameSite` 属性（按 `Lax` 处理），
+ *    而 Lax 只在**顶级导航**时随请求发送，子框架加载带不上它，等于登出请求是匿名的。
+ *  只有顶级导航能把会话 cookie 送到 Casdoor。 */
+export const buildLogoutUrl = (postLogoutRedirectUri: string, idToken: string | null): string => {
+  const params = new URLSearchParams({ post_logout_redirect_uri: postLogoutRedirectUri });
+  // ⚠️ id_token_hint 不是可选的：缺了它 Casdoor 返回
+  // {"status":"error","msg":"Missing parameter: id_token_hint"} 并且**不结束会话**，
+  // 页面还会停在那段 JSON 上（2026-08-19 实测）。
+  if (idToken) params.set("id_token_hint", idToken);
+  return `${LOGOUT_URL}?${params.toString()}`;
 };
 
 /** 桌面端(Tauri)用：只返回授权地址，由 Rust 侧在子窗口里打开并拦截回调。
@@ -132,9 +157,11 @@ const toTokenResult = (data: {
   access_token: string;
   refresh_token?: string;
   expires_in?: number;
+  id_token?: string;
 }): TokenResult => ({
   accessToken: data.access_token,
   refreshToken: data.refresh_token ?? null,
+  idToken: data.id_token ?? null,
   // expires_in 缺省时给 5 分钟保底，宁可多续几次也不要拿着过期令牌打请求
   expiresAt: Date.now() + (data.expires_in ?? 300) * 1000,
 });

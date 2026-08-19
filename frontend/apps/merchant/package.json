@@ -11,6 +11,8 @@
     "test": "vp test --environment=jsdom --passWithNoTests"
   },
   "dependencies": {
+    "@connectrpc/connect": "catalog:",
+    "@connectrpc/connect-query": "catalog:",
     "@ecommerce/api": "workspace:*",
     "@ecommerce/configs": "workspace:*",
     "@ecommerce/constants": "workspace:*",

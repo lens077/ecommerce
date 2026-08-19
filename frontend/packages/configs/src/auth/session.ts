@@ -24,7 +24,12 @@ export const configureSession = (uri: string) => {
 };
 
 const applyAndSchedule = (t: TokenResult) => {
-  setTokens({ accessToken: t.accessToken, refreshToken: t.refreshToken, expiresAt: t.expiresAt });
+  setTokens({
+    accessToken: t.accessToken,
+    refreshToken: t.refreshToken,
+    expiresAt: t.expiresAt,
+    idToken: t.idToken,
+  });
   scheduleRenew();
   return t;
 };
