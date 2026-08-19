@@ -1,10 +1,14 @@
 import SDK from "casdoor-js-sdk";
+import { hasToken } from "@ecommerce/utils";
 export const CASDOOR_CONF = {
-  // 第三方或自有的Casdoor服务端的URL
-  serverUrl: "http://node1:8000",
-  // 注册登录的接口, 默认为/api/signin
-  // signinPath:'/api/signin',
-  signinPath: "/user.v1.UserService/SignIn",
+  // Casdoor 服务端地址。
+  // ⚠️ 曾经写的是 `http://node1:8000` —— 明文 HTTP + 裸 IP，而且那个端口
+  //    在 casdoor 改由 Pangolin 以 HTTPS 暴露之后就关掉了（实测 connect timeout），
+  //    等于前端登录跳转整条是坏的。走域名 + HTTPS，与后端/网关口径一致。
+  serverUrl: "https://casdoor.apikv.com",
+  // signinPath 已删除：它只被 SDK 的 signin() 消费，而本仓从未调用它；
+  // 真要调还会拼出打向 Casdoor 主机的错误 URL。换 token 现在走 PKCE 直连
+  // （见 ./auth/pkce.ts），不再经网关调 user 服务。
   // 客户端ID, 在第三方或自有的Casdoor服务端生成
   clientId: "a36e6718e392099b7915",
   // 组织名, 在第三方或自有的Casdoor服务端生成
@@ -18,16 +22,14 @@ export const CASDOOR_CONF = {
 // 读取配置
 export const CASDOOR_SDK = new SDK(CASDOOR_CONF);
 
-// 判断是否登录
-export const isLoggedIn = () => {
-  const token = localStorage.getItem("token");
-  return token !== null && token.length > 0;
-};
+// 判断是否登录。
+// ⚠️ 令牌只存内存（防 XSS，见 packages/utils/src/tokenStore.ts），
+// 页面刷新后这里会短暂为 false，直到 restoreSession() 静默续期完成。
+// 需要"等恢复完再判断"的地方请 await restoreSession()，别直接调本函数。
+export const isLoggedIn = () => hasToken();
 
-// 设置token
-export const setToken = (token: string) => {
-  localStorage.setItem("token", token);
-};
+// setToken 已移除：请用 @ecommerce/utils 的 setTokens()（能一并记录 refresh token
+// 与过期时刻，无感续期依赖它）。原实现写 localStorage，是 XSS 长效令牌泄露的源头。
 
 // TODO 跳转到指定链接, 这里写的不好, 结合react router等路由库来跳转
 export const goToLink = (link: string) => {
@@ -51,18 +53,19 @@ export const DESKTOP_REDIRECT_URI = {
 } as const;
 
 /**
- * 桌面端用的 Casdoor authorize 地址。
+ * Web 端回调地址。PKCE 授权与兑换两步必须用**逐字相同**的 redirect_uri，
+ * 否则 Casdoor 会以 `redirect_uri mismatch` 拒绝兑换 —— 所以集中在这里取，
+ * 不要在调用点各拼各的。
  *
- * 不能用 `CASDOOR_SDK.getSigninUrl()` —— 它内部拿 `window.location.origin` 拼
- * redirect_uri，在 Tauri 下会拼出 `tauri://localhost/callback`。
+ * 取当前 origin 而非写死：开发机是 http://localhost:3000，
+ * 正式环境是 https://shop.apikv.com，两者都需要在 Casdoor 应用的
+ * redirectUris 白名单里登记。
  */
-export const getDesktopSigninUrl = (redirectUri: string) => {
-  const params = new URLSearchParams({
-    client_id: CASDOOR_CONF.clientId,
-    response_type: "code",
-    redirect_uri: redirectUri,
-    scope: "read",
-    state: CASDOOR_CONF.appName,
-  });
-  return `${CASDOOR_CONF.serverUrl.trim()}/login/oauth/authorize?${params.toString()}`;
-};
+export const WEB_REDIRECT_URI = `${window.location.origin}/callback`;
+
+// 桌面端授权地址已移到 ./auth/pkce.ts 的 buildDesktopLoginUrl()。
+//
+// 原先这里手工拼 URL，有两个问题：①state 写死成 appName("ecommerce")，固定值
+// 等于没有 CSRF 防护；②不带 PKCE。现在与 Web 端共用同一个 buildAuthorizeUrl，
+// 随机 state、code_challenge、redirect_uri 暂存三件事一次性对齐，
+// 回调侧 exchangeCode() 会统一校验 —— 少一处"两端各拼一遍"的漂移来源。

@@ -10,6 +10,7 @@
     }
   },
   "dependencies": {
+    "@ecommerce/utils": "workspace:*",
     "casdoor-js-sdk": "catalog:"
   }
 }

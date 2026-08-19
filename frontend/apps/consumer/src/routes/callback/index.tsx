@@ -6,12 +6,11 @@ import { useEffect, useRef, useState } from "react";
 import { flushSync } from "react-dom";
 import { z } from "zod";
 import { i18next, useTranslation } from "@ecommerce/i18n";
-import { callUnaryMethod, useTransport } from "@connectrpc/connect-query";
-import { UserService } from "@/gen/api";
 import type { Status } from "@ecommerce/constants";
 import { setAccount } from "@/store/users";
-import { addNotification, setToken } from "@ecommerce/utils";
-import { decodeJwtPayload, isTokenExpired } from "@ecommerce/utils";
+import { addNotification, setTokens } from "@ecommerce/utils";
+import { decodeJwtPayload } from "@ecommerce/utils";
+import { exchangeCode, scheduleRenew } from "@ecommerce/configs";
 import { useAuthActions } from "@/providers/AuthProvider";
 
 const CallbackSearchSchema = z.object({
@@ -32,7 +31,6 @@ function RouteComponent() {
   const navigate = useNavigate();
   const { setIsAuthenticated } = useAuthActions();
   const { t } = useTranslation();
-  const transport = useTransport();
 
   useEffect(() => {
     // 防止重复提交
@@ -41,17 +39,28 @@ function RouteComponent() {
 
     const handleLogin = async () => {
       try {
-        // 一次性的登录换 token，不进查询缓存，所以直接调而不是 useMutation
-        const response = await callUnaryMethod(transport, UserService.method.signIn, {
-          code,
-          state,
-        });
-
-        if (response.state !== "ok" || !response.data) {
-          throw new Error(i18next.t("consumer:callback.responseInvalid"));
+        // 静默续期的场景：本页被 renew 用的隐藏 iframe 加载。此时不能自己兑换
+        // （verifier 在顶层窗口的 sessionStorage 里，iframe 同源但兑换后令牌
+        // 只会落在 iframe 的内存里，顶层拿不到），把 code 抛回顶层由它兑换。
+        if (window.parent !== window) {
+          window.parent.postMessage(
+            { type: "oauth_silent_result", code, state },
+            window.location.origin,
+          );
+          return;
         }
 
-        setToken(response.data);
+        // 直接向 Casdoor 兑换（PKCE），不再经网关调 user 服务 ——
+        // 那一跳的唯一作用是替前端保管 client_secret，而 PKCE 不需要密钥。
+        // 顺带解掉「前端起来必须先起 user 服务」这个开发期依赖。
+        const tokens = await exchangeCode(code, state);
+
+        setTokens({
+          accessToken: tokens.accessToken,
+          refreshToken: tokens.refreshToken,
+          expiresAt: tokens.expiresAt,
+        });
+        scheduleRenew(); // 到期前 60s 自动续，用户无感
 
         // ✨ 关键修复：使用 flushSync 强制同步刷新 React 状态，
         // 确保 setIsAuthenticated 在 navigate 之前传播到 Router context，
@@ -62,13 +71,7 @@ function RouteComponent() {
 
         setStatus("success");
 
-        if (isTokenExpired(response.data)) {
-          console.warn("Token已过期，请重新登录或尝试刷新。");
-          setAccount({});
-          return;
-        }
-
-        const payload = decodeJwtPayload(response.data);
+        const payload = decodeJwtPayload(tokens.accessToken);
         if (payload) {
           setAccount({
             id: payload.id,
@@ -106,7 +109,7 @@ function RouteComponent() {
     };
 
     void handleLogin();
-  }, [code, state, navigate, setIsAuthenticated, transport]);
+  }, [code, state, navigate, setIsAuthenticated]);
 
   const render = () => {
     switch (status) {
