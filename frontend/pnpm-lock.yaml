@@ -502,6 +502,9 @@ importers:
 
   packages/configs:
     dependencies:
+      '@ecommerce/utils':
+        specifier: workspace:*
+        version: link:../utils
       casdoor-js-sdk:
         specifier: 'catalog:'
         version: 0.20.0
