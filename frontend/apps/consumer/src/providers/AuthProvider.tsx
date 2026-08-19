@@ -5,6 +5,7 @@ import {
   WEB_REDIRECT_URI,
   configureSession,
   buildDesktopLoginUrl,
+  buildLogoutUrl,
   restoreSession,
   renewSession,
   startLogin,
@@ -12,7 +13,7 @@ import {
 } from "@ecommerce/configs";
 import { onAuthError } from "@ecommerce/api";
 import { isTauri } from "@ecommerce/tauri";
-import { clearTokens, hasToken, subscribeToken } from "@ecommerce/utils";
+import { clearTokens, getIdToken, hasToken, subscribeToken } from "@ecommerce/utils";
 import { clearAccount } from "@/store/users";
 
 // 1. 只存放认证数据的 Context
@@ -74,6 +75,9 @@ export const AuthProvider: React.FC<{ children: React.ReactNode; router: any }> 
 
   // 🔓 登出逻辑
   const logout = React.useCallback(() => {
+    // ⚠️ 顺序：先取 id_token，再 clearTokens()。Casdoor 的 end_session_endpoint
+    // 强制要求 id_token_hint，清完就拿不到了。
+    const idToken = getIdToken();
     stopRenew(); // 先停掉定时续期，否则刚清完又被续回来
     clearTokens();
     localStorage.removeItem("redirect_after_login");
@@ -82,16 +86,28 @@ export const AuthProvider: React.FC<{ children: React.ReactNode; router: any }> 
     clearAccount();
     setIsAuthenticated(false);
 
-    // 使用传递进来的全局 router 实例安全导航
-    router.navigate({ to: "/" });
-  }, [router]);
+    // 最后一步：结束 Casdoor 侧的会话。
+    // 只做上面那些「本地清理」是不够的 —— Casdoor 开着「保持登录会话」+「自动登录」，
+    // 它那侧的 casdoor_session_id 还在，下次 restoreSession() 会 prompt=none 静默换回令牌，
+    // 用户看到的就是「登出后一刷新又登录了」。
+    // 用整页跳转而不是 router.navigate：会话 cookie 是 HttpOnly + SameSite=Lax，
+    // 只有顶级导航才会带上它（fetch 被 Casdoor 的 CORS 403 挡掉，iframe 带不上 cookie）。
+    // 跳转本身就把用户送回首页，所以这里不再 router.navigate。
+    window.location.assign(buildLogoutUrl(`${window.location.origin}/`, idToken));
+  }, []);
 
   // ❄️ 冷启动恢复：令牌只在内存，刷新页面就没了。
   // 靠 Casdoor 的会话 Cookie 静默换一份新的（prompt=none，隐藏 iframe，无跳转闪烁）。
   // 失败不是错误 —— 只说明当前确实未登录。
   useEffect(() => {
-    // callback 页面自己会完成兑换，不要和它抢（两边同时兑换会互相作废 verifier）
-    if (router.state.location.pathname.startsWith("/callback")) return;
+    // callback 页面自己会完成兑换，不要和它抢（两边同时兑换会互相作废 verifier）。
+    // ⚠️ 用 window.location 而不是 router.state.location：后者要等 TanStack Router
+    // 初始化完才是真值，effect 首跑时可能还是 "/"，于是这道防护形同虚设 ——
+    // restoreSession() 照跑，silentRenew 的 buildAuthorizeUrl 覆盖掉 startLogin 刚写的
+    // state/verifier，顶层 exchangeCode 就报 "OAuth state 校验失败"。
+    // 2026-08-19 本地实测复现：Casdoor 已成功回跳带 code，但兑换必失败。
+    // Casdoor 开了「保持登录会话」后 silentRenew 更容易成功，这个竞态被放大。
+    if (window.location.pathname.startsWith("/callback")) return;
     void restoreSession().then((ok) => setIsAuthenticated(ok));
   }, [router]);
 

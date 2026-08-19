@@ -57,6 +57,8 @@ function RouteComponent() {
           accessToken: tokens.accessToken,
           refreshToken: tokens.refreshToken,
           expiresAt: tokens.expiresAt,
+          // 登出要拿它当 id_token_hint，缺了 Casdoor 不结束会话
+          idToken: tokens.idToken,
         });
         scheduleRenew(); // 到期前 60s 自动续，用户无感
 

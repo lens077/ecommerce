@@ -23,7 +23,7 @@ import { getPublicTransport } from "@ecommerce/api";
 import { SearchService } from "@/gen/api";
 import { useFormat, useTranslation } from "@ecommerce/i18n";
 import { LocaleSwitcher } from "@ecommerce/ui";
-import { getSigninUrl } from "@ecommerce/configs";
+// getSigninUrl 已不再使用：登录统一走 AuthProvider 的 login()（PKCE）
 import { useAuthActions, useAuthState } from "@/providers/AuthProvider";
 import { SEARCH_INDEX } from "@ecommerce/constants";
 import type { Product } from "@/gen/api";
@@ -114,7 +114,7 @@ export default function PrimarySearchAppBar() {
   // 表现为"登录明明成功了（用户资料都已拿到），顶栏还显示未登录"（Playwright 实测）。
   // 它此前"碰巧能用"，只是因为读的是同步可读的 localStorage。
   const { isAuthenticated } = useAuthState();
-  const { logout } = useAuthActions();
+  const { login, logout } = useAuthActions();
   const navigate = useNavigate();
   const { t } = useTranslation();
   const { formatCurrency } = useFormat();
@@ -451,7 +451,14 @@ export default function PrimarySearchAppBar() {
               <Button
                 variant="contained"
                 onClick={() => {
-                  window.location.href = getSigninUrl();
+                  // 必须走 AuthProvider 的 login()（PKCE）。
+                  // 曾经这里是 `window.location.href = getSigninUrl()` —— casdoor-js-sdk 的
+                  // 老路径：它把 state 写进自己的 `casdoor-state`，且**不生成 code_verifier**，
+                  // 而 /callback 用的是 PKCE 的 exchangeCode()，读 `oauth_state`/`oauth_code_verifier`。
+                  // 两套机制混用 ⇒ 回调必然报「OAuth state 校验失败」。
+                  // 之所以一直没被发现：开了「自动登录」的用户靠 silentRenew 就静默登进去了，
+                  // 根本走不到这个按钮（2026-08-19 用全新浏览器实测复现）。
+                  login();
                 }}
                 sx={{
                   ml: 2,
@@ -484,7 +491,14 @@ export default function PrimarySearchAppBar() {
               <Button
                 size="small"
                 onClick={() => {
-                  window.location.href = getSigninUrl();
+                  // 必须走 AuthProvider 的 login()（PKCE）。
+                  // 曾经这里是 `window.location.href = getSigninUrl()` —— casdoor-js-sdk 的
+                  // 老路径：它把 state 写进自己的 `casdoor-state`，且**不生成 code_verifier**，
+                  // 而 /callback 用的是 PKCE 的 exchangeCode()，读 `oauth_state`/`oauth_code_verifier`。
+                  // 两套机制混用 ⇒ 回调必然报「OAuth state 校验失败」。
+                  // 之所以一直没被发现：开了「自动登录」的用户靠 silentRenew 就静默登进去了，
+                  // 根本走不到这个按钮（2026-08-19 用全新浏览器实测复现）。
+                  login();
                 }}
                 sx={{
                   borderRadius: "6px",
