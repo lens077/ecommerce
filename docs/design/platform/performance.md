@@ -39,6 +39,53 @@
 - 索引优化：针对高频查询场景设计精准索引，避免无效索引、联合索引顺序不合理等问题；定期执行索引分析，优化慢查询，保障数据库查询性能。
 - 行锁优化：所有更新操作均基于主键 / 唯一索引，避免表锁、间隙锁导致的并发性能问题，提升数据库并发处理能力。
 
+**Go Profile-Guided Optimization（PGO）**
+
+PGO 使用实际运行时采集的 CPU profile 指导编译器优化热点调用点。Go 编译器主要利用
+调用栈采样决定热点函数的内联，以及对目标类型稳定的接口调用执行去虚拟化。PGO
+属于算法、数据结构、I/O、缓存和数据库瓶颈优化之后的补充手段，不替代性能分析，
+也不作为当前已启用能力；实际落地状态仍记录在 `TODO.md`。
+
+适用边界：
+
+- 只对 CPU 热点稳定、能够构造代表性负载并具备可重复基准测试的服务评估 PGO。
+- CPU profile 必须覆盖主要请求类型、数据分布和并发水平。单一极端负载生成的 profile
+  可能只优化自身，对其他负载无收益，甚至造成轻微回退。
+- 外部 JSON 解析实验的最高提升为 4.7%，多数结果为 2%–3%；这些数字只说明 PGO
+  可能带来低成本的小幅收益，不是本项目的性能目标或上线验收值。
+
+最小验证流程：
+
+```bash
+# 使用同一 commit、Go toolchain 和构建参数生成普通版本
+go build -o /tmp/service-baseline ./path/to/service
+
+# 运行代表性负载并采集 /tmp/cpu.pprof，再生成 PGO 版本
+go build -pgo=/tmp/cpu.pprof -o /tmp/service-pgo ./path/to/service
+```
+
+1. 先对普通版本采集 CPU profile，采集窗口排除启动、预热和空闲阶段。
+2. 使用同一份代码和构建参数生成普通版本与 PGO 版本；除 `-pgo` 外不引入其他变量。
+3. 对主要负载和 profile 未覆盖的关键负载分别运行多轮基准测试。使用 `benchstat`
+   或等价统计方法比较吞吐量、P95/P99 延迟和单位请求 CPU，而不是只比较单次结果。
+4. 同时检查内存、二进制大小和冷启动时间，避免用局部 CPU 收益换取不可接受的回退。
+5. 只有收益超过测量噪声，且关键负载没有不可接受的回退时才启用 PGO；回退方式是移除
+   `-pgo` 并使用相同代码重新构建。
+
+Profile 管理：
+
+- 记录 profile 对应的 commit、Go toolchain、构建参数、采集环境、负载组成和采集时间。
+- 代码热点或生产流量结构变化后重新采集并执行交叉负载验证，不长期复用未经复验的
+  profile。
+- 生产 profile 可能包含函数名、构建路径和自定义 label。归档或纳入仓库前先检查敏感
+  信息；默认将原始 profile 作为受控构建制品保存，不直接提交。
+
+参考资料：
+
+- [Go 的性能剖析引导优化（PGO）](https://mp.weixin.qq.com/s/PXIdiRVHsxcsoulXuJyZtw)
+- [Profile-guided optimization in Go](https://lemire.me/blog/2026/08/09/profile-guided-optimization-in-go/)
+- [实验代码](https://github.com/lemire/Code-used-on-Daniel-Lemire-s-blog/tree/master/2026/08/09)
+
 ### 高可用保障机制
 
 1. 弹性扩缩容
