@@ -40,7 +40,7 @@ dragonfly 在用。GRPCRoute 有 CRD 无实例。`kube-system/cilium-ingress`（
 | ArgoCD | argocd | argocd-server:80 | argocd-server.dev.test → http(80) | ❌ 网关侧明文 |
 | Casdoor（集群外） | — | — | **apikv.com:8000 = node1，公网明文 HTTP** | ❌ OAuth 流量走公网 http |
 | MinIO（node2，集群外） | — | — | `https://minio.apikv.com`（443）→ Pangolin/Traefik → newt 隧道 → node2 `127.0.0.1:9000`；9000/9001 均已绑回环 | ✅ TLS（Traefik 终止，ZeroSSL `*.apikv.com`，**2026-10-27 到期**，2026-08-19 落地） |
-| gorse（node2，集群外） | — | — | `https://gorse.apikv.com` → 同上 → `127.0.0.1:8088`；8086/8088 均已绑回环。**当前服务停机**（Redis 依赖断，见 TODO.md） | ✅ TLS；暂由 Pangolin SSO 保护，恢复后改用 gorse 自带 `api_key` |
+| gorse（node2，集群外） | — | — | `https://gorse.apikv.com` → 同上 → `127.0.0.1:8088`；8086/8088 均已绑回环。`Ready:true` | ✅ TLS + gorse 自带鉴权（`api_key` 401 实测生效，Dashboard 302→`/login`） |
 
 ## 实测记录（2026-08-08）
 
