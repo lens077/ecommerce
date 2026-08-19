@@ -211,6 +211,28 @@ func ParseJwt(tokenString string) (*CustomClaims, error) {
 	return nil, kratoserrors.New(401, "INVALID_TOKEN_CLAIMS", "无效的令牌声明")
 }
 
+// inboundIdentityHeaders 是下游服务据以判断"我在为谁服务"的全部头。
+// 它们只允许由网关按验签结果注入，客户端传什么都必须先丢掉。
+// 新增同类头时**必须**登记到这里，否则又会出现一条可伪造的身份通道。
+var inboundIdentityHeaders = []string{
+	constants.UserIdMetadataKey,
+	constants.UserNameMetadataKey,
+	constants.UserRoleMetadataKey,  // RBAC 中间件注入，同样不能由客户端自带
+	constants.UserOwnerMetadataKey, // 同上
+}
+
+// stripInboundIdentity 丢弃客户端自带的身份头。
+// 用 Del 而不是 Set("")：Set("") 会留下一个空值的头，下游若用 "键是否存在" 判断就仍会误判。
+func stripInboundIdentity(req *http.Request) {
+	for _, h := range inboundIdentityHeaders {
+		if req.Header.Get(h) != "" {
+			// 这是被拦下的伪造尝试，值得留痕(只记键名与路径，不记值，避免把攻击载荷写进日志)
+			logger.Warnf("[JWT] 丢弃客户端自带的身份头 %s: %s %s", h, req.Method, req.URL.Path)
+		}
+		req.Header.Del(h)
+	}
+}
+
 func Middleware(c *config.Middleware) (middleware.Middleware, error) {
 	matchers := make([]*routerfilter.PathMatcher, 0)
 	if c.GetRouterFilter() != nil {
@@ -232,6 +254,16 @@ func Middleware(c *config.Middleware) (middleware.Middleware, error) {
 		return middleware.RoundTripperFunc(func(req *http.Request) (*http.Response, error) {
 			ctx, span := tracer.Start(req.Context(), "middleware.jwt", trace.WithSpanKind(trace.SpanKindInternal))
 			defer span.End()
+
+			// ⚠️ 必须是入口的第一件事，且在跳过规则之前 ——
+			// 下游服务(cart/address/behavior…)一律裸信 x-md-global-*，自己不验签，
+			// 信任模型是"网关是唯一入口且这些头只可能由网关注入"。
+			// 之前只在验签成功时 Set，从不 Del：白名单路径直接 next.RoundTrip 放行，
+			// 客户端自带的 x-md-global-user-id 就原样到了下游，等于任何人都能自称是谁。
+			// (behavior 的 identity() 明确写着"网关注入的是可信来源，优先级高于 anon_id")
+			//
+			// 白名单的语义是"不要求登录"，不是"允许自称身份"，所以这里无条件剥离。
+			stripInboundIdentity(req)
 
 			// 记录请求路径用于调试
 			logger.Infof("[JWT] 处理请求: %s %s", req.Method, req.URL.Path)

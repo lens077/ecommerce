@@ -61,6 +61,16 @@ user:
       value: "http"
     - name: CONSUL_INSECURE_SKIP_VERIFY
       value: "true"
+    # Consul 自 2026-08-18 起开了 ACL(default_policy=deny)，不带 token 的失败是**静默的**：
+    # 注册看似成功、读操作返回 200，但结果被 ACL 过滤成空 —— 表现为「服务活得好好的，
+    # 网关就是路由不到」(/v1/catalog/services 返回 {"consul":[]})。
+    # 变量名必须是 CONSUL_HTTP_TOKEN：backend/constants 里那个 CONSUL_TOKEN 没有任何代码读，
+    # registry 靠 consul/api 自己兜底读 CONSUL_HTTP_TOKEN。
+    - name: CONSUL_HTTP_TOKEN
+      valueFrom:
+        secretKeyRef:
+          name: consul-ecommerce-token
+          key: CONSUL_HTTP_TOKEN
   # 这个历史 Secret 只有无人读取的 DB_SOURCE；Bootstrap 凭据来自 Config Center。
   # 保持关闭，避免重复铺设明文口令。
   secret:
@@ -114,6 +124,16 @@ search:
       value: "http"
     - name: CONSUL_INSECURE_SKIP_VERIFY
       value: "true"
+    # Consul 自 2026-08-18 起开了 ACL(default_policy=deny)，不带 token 的失败是**静默的**：
+    # 注册看似成功、读操作返回 200，但结果被 ACL 过滤成空 —— 表现为「服务活得好好的，
+    # 网关就是路由不到」(/v1/catalog/services 返回 {"consul":[]})。
+    # 变量名必须是 CONSUL_HTTP_TOKEN：backend/constants 里那个 CONSUL_TOKEN 没有任何代码读，
+    # registry 靠 consul/api 自己兜底读 CONSUL_HTTP_TOKEN。
+    - name: CONSUL_HTTP_TOKEN
+      valueFrom:
+        secretKeyRef:
+          name: consul-ecommerce-token
+          key: CONSUL_HTTP_TOKEN
   # 这个历史 Secret 只有无人读取的 DB_SOURCE；Bootstrap 凭据来自 Config Center。
   # 保持关闭，避免重复铺设明文口令。
   secret:
@@ -167,6 +187,16 @@ product:
       value: "http"
     - name: CONSUL_INSECURE_SKIP_VERIFY
       value: "true"
+    # Consul 自 2026-08-18 起开了 ACL(default_policy=deny)，不带 token 的失败是**静默的**：
+    # 注册看似成功、读操作返回 200，但结果被 ACL 过滤成空 —— 表现为「服务活得好好的，
+    # 网关就是路由不到」(/v1/catalog/services 返回 {"consul":[]})。
+    # 变量名必须是 CONSUL_HTTP_TOKEN：backend/constants 里那个 CONSUL_TOKEN 没有任何代码读，
+    # registry 靠 consul/api 自己兜底读 CONSUL_HTTP_TOKEN。
+    - name: CONSUL_HTTP_TOKEN
+      valueFrom:
+        secretKeyRef:
+          name: consul-ecommerce-token
+          key: CONSUL_HTTP_TOKEN
   # 这个历史 Secret 只有无人读取的 DB_SOURCE；Bootstrap 凭据来自 Config Center。
   # 保持关闭，避免重复铺设明文口令。
   secret:
@@ -220,6 +250,16 @@ order:
       value: "http"
     - name: CONSUL_INSECURE_SKIP_VERIFY
       value: "true"
+    # Consul 自 2026-08-18 起开了 ACL(default_policy=deny)，不带 token 的失败是**静默的**：
+    # 注册看似成功、读操作返回 200，但结果被 ACL 过滤成空 —— 表现为「服务活得好好的，
+    # 网关就是路由不到」(/v1/catalog/services 返回 {"consul":[]})。
+    # 变量名必须是 CONSUL_HTTP_TOKEN：backend/constants 里那个 CONSUL_TOKEN 没有任何代码读，
+    # registry 靠 consul/api 自己兜底读 CONSUL_HTTP_TOKEN。
+    - name: CONSUL_HTTP_TOKEN
+      valueFrom:
+        secretKeyRef:
+          name: consul-ecommerce-token
+          key: CONSUL_HTTP_TOKEN
   # 这个历史 Secret 只有无人读取的 DB_SOURCE；Bootstrap 凭据来自 Config Center。
   # 保持关闭，避免重复铺设明文口令。
   secret:
@@ -273,6 +313,16 @@ inventory:
       value: "http"
     - name: CONSUL_INSECURE_SKIP_VERIFY
       value: "true"
+    # Consul 自 2026-08-18 起开了 ACL(default_policy=deny)，不带 token 的失败是**静默的**：
+    # 注册看似成功、读操作返回 200，但结果被 ACL 过滤成空 —— 表现为「服务活得好好的，
+    # 网关就是路由不到」(/v1/catalog/services 返回 {"consul":[]})。
+    # 变量名必须是 CONSUL_HTTP_TOKEN：backend/constants 里那个 CONSUL_TOKEN 没有任何代码读，
+    # registry 靠 consul/api 自己兜底读 CONSUL_HTTP_TOKEN。
+    - name: CONSUL_HTTP_TOKEN
+      valueFrom:
+        secretKeyRef:
+          name: consul-ecommerce-token
+          key: CONSUL_HTTP_TOKEN
   # 这个历史 Secret 只有无人读取的 DB_SOURCE；Bootstrap 凭据来自 Config Center。
   # 保持关闭，避免重复铺设明文口令。
   secret:
@@ -326,6 +376,16 @@ cart:
       value: "http"
     - name: CONSUL_INSECURE_SKIP_VERIFY
       value: "true"
+    # Consul 自 2026-08-18 起开了 ACL(default_policy=deny)，不带 token 的失败是**静默的**：
+    # 注册看似成功、读操作返回 200，但结果被 ACL 过滤成空 —— 表现为「服务活得好好的，
+    # 网关就是路由不到」(/v1/catalog/services 返回 {"consul":[]})。
+    # 变量名必须是 CONSUL_HTTP_TOKEN：backend/constants 里那个 CONSUL_TOKEN 没有任何代码读，
+    # registry 靠 consul/api 自己兜底读 CONSUL_HTTP_TOKEN。
+    - name: CONSUL_HTTP_TOKEN
+      valueFrom:
+        secretKeyRef:
+          name: consul-ecommerce-token
+          key: CONSUL_HTTP_TOKEN
   # 这个历史 Secret 只有无人读取的 DB_SOURCE；Bootstrap 凭据来自 Config Center。
   # 保持关闭，避免重复铺设明文口令。
   secret:
@@ -379,6 +439,16 @@ merchant:
       value: "http"
     - name: CONSUL_INSECURE_SKIP_VERIFY
       value: "true"
+    # Consul 自 2026-08-18 起开了 ACL(default_policy=deny)，不带 token 的失败是**静默的**：
+    # 注册看似成功、读操作返回 200，但结果被 ACL 过滤成空 —— 表现为「服务活得好好的，
+    # 网关就是路由不到」(/v1/catalog/services 返回 {"consul":[]})。
+    # 变量名必须是 CONSUL_HTTP_TOKEN：backend/constants 里那个 CONSUL_TOKEN 没有任何代码读，
+    # registry 靠 consul/api 自己兜底读 CONSUL_HTTP_TOKEN。
+    - name: CONSUL_HTTP_TOKEN
+      valueFrom:
+        secretKeyRef:
+          name: consul-ecommerce-token
+          key: CONSUL_HTTP_TOKEN
   # 这个历史 Secret 只有无人读取的 DB_SOURCE；Bootstrap 凭据来自 Config Center。
   # 保持关闭，避免重复铺设明文口令。
   secret:
@@ -432,6 +502,16 @@ address:
       value: "http"
     - name: CONSUL_INSECURE_SKIP_VERIFY
       value: "true"
+    # Consul 自 2026-08-18 起开了 ACL(default_policy=deny)，不带 token 的失败是**静默的**：
+    # 注册看似成功、读操作返回 200，但结果被 ACL 过滤成空 —— 表现为「服务活得好好的，
+    # 网关就是路由不到」(/v1/catalog/services 返回 {"consul":[]})。
+    # 变量名必须是 CONSUL_HTTP_TOKEN：backend/constants 里那个 CONSUL_TOKEN 没有任何代码读，
+    # registry 靠 consul/api 自己兜底读 CONSUL_HTTP_TOKEN。
+    - name: CONSUL_HTTP_TOKEN
+      valueFrom:
+        secretKeyRef:
+          name: consul-ecommerce-token
+          key: CONSUL_HTTP_TOKEN
   # 这个历史 Secret 只有无人读取的 DB_SOURCE；Bootstrap 凭据来自 Config Center。
   # 保持关闭，避免重复铺设明文口令。
   secret:
@@ -485,6 +565,16 @@ behavior:
       value: "http"
     - name: CONSUL_INSECURE_SKIP_VERIFY
       value: "true"
+    # Consul 自 2026-08-18 起开了 ACL(default_policy=deny)，不带 token 的失败是**静默的**：
+    # 注册看似成功、读操作返回 200，但结果被 ACL 过滤成空 —— 表现为「服务活得好好的，
+    # 网关就是路由不到」(/v1/catalog/services 返回 {"consul":[]})。
+    # 变量名必须是 CONSUL_HTTP_TOKEN：backend/constants 里那个 CONSUL_TOKEN 没有任何代码读，
+    # registry 靠 consul/api 自己兜底读 CONSUL_HTTP_TOKEN。
+    - name: CONSUL_HTTP_TOKEN
+      valueFrom:
+        secretKeyRef:
+          name: consul-ecommerce-token
+          key: CONSUL_HTTP_TOKEN
   # 这个历史 Secret 只有无人读取的 DB_SOURCE；Bootstrap 凭据来自 Config Center。
   # 保持关闭，避免重复铺设明文口令。
   secret:
@@ -538,6 +628,16 @@ payment:
       value: "http"
     - name: CONSUL_INSECURE_SKIP_VERIFY
       value: "true"
+    # Consul 自 2026-08-18 起开了 ACL(default_policy=deny)，不带 token 的失败是**静默的**：
+    # 注册看似成功、读操作返回 200，但结果被 ACL 过滤成空 —— 表现为「服务活得好好的，
+    # 网关就是路由不到」(/v1/catalog/services 返回 {"consul":[]})。
+    # 变量名必须是 CONSUL_HTTP_TOKEN：backend/constants 里那个 CONSUL_TOKEN 没有任何代码读，
+    # registry 靠 consul/api 自己兜底读 CONSUL_HTTP_TOKEN。
+    - name: CONSUL_HTTP_TOKEN
+      valueFrom:
+        secretKeyRef:
+          name: consul-ecommerce-token
+          key: CONSUL_HTTP_TOKEN
   # 这个历史 Secret 只有无人读取的 DB_SOURCE；Bootstrap 凭据来自 Config Center。
   # 保持关闭，避免重复铺设明文口令。
   secret:
