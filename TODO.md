@@ -227,6 +227,9 @@
 
 ### 其余近期待办
 
+- [x] **go-redis 使用约定补充（2026-08-19）**：阅读 OneUptime 教程，将 cache-aside、连接池、
+      `context`、Key/TTL、Pipeline、Pub/Sub 与锁的可靠性边界合并到 `context/team/go-redis.md`；
+      同步两级 INDEX，`verify-context` 与 `verify-freeze` 门禁通过
 - [x] **配置 YAML 的 IDE 校验（2026-08-18）**：`make conf-schema` 从各服务 `conf.proto` 生成 `configs/bootstrap.schema.json`（protovalidate `in`/`required` → schema `enum`/`required`，Duration 后处理成 Go 风格正则），IDEA 映射在 `.idea/jsonSchemas.xml`（gitignore，工作区 `~/lens077/.idea` 与仓库 `.idea` 各一份），GoLand 实测能拦枚举/类型/未知键/缺段。顺带修掉三处「约束从没匹配过现实」的 proto 漂移（server.addr 带端口、casdoor.endpoint 是 URL、consul.addr 端口可选）+ behavior 配置里 proto 未定义的 `log.elasticsearch` 块。详见 `context/project/ecommerce/config/INDEX.md`
 - [x] **运行时 protovalidate 接线（2026-08-18，matrix config_validation 的 known_defect 已修）**：10 个服务的 `decodeConfig` 开 `ErrorUnused`（未知键报错），`Init`/热更新在解码后调 `protovalidate.Validate`；启动校验失败直接起不来，热更新校验失败保留当前配置只记 ERROR。先跑红后跑绿（未知键/缺 required 段/校验失败保留配置三用例），每服务新增 `TestRealConfigFiles_DecodeAndValidate` 在本机验证真实 dev/pre.yml（CI 自动 skip）。**接线立即暴露并修掉一批规则类型错配**：`uint32` 字段挂 `int32` 规则、`repeated string` 挂标量 `string` 规则（protovalidate 运行时编译直接报错，schema 生成器此前静默忽略）——`allowed_origins`/ES `addresses` 改为 `repeated.items.string.uri`（真实值都带 scheme）。structcheck 同构门禁与全量构建通过
 - [x] **发布前置：配置中心 bootstrap.yaml 审计（2026-08-18 完成）**——经确认本地 `configs/{dev,pre}.yml` 即配置中心内容的副本。20 份全部通过「解码 + protovalidate」全链路（`go test -run TestRealConfigFiles ./services/*/internal/pkg/config/`），并用严格 YAML 解析器扫过无重复键。期间修掉 user/dev.yml 里 redis 块整套键重复（换本地 Redis 时旧 dragonfly 尾部键没删，Go 解析器静默取后者不报错，IDE 才看得见）。以后改配置后照这两条命令复验即可
