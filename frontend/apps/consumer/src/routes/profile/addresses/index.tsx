@@ -29,13 +29,18 @@ import { useAddresses } from "@/hooks/useAddresses";
 import { useGetUserProfile } from "@/hooks/useProfile";
 import { setAccount } from "@/store/users";
 import { i18next, useTranslation } from "@ecommerce/i18n";
+import { restoreSession } from "@ecommerce/configs";
+import { getAccessToken, clearTokens } from "@ecommerce/utils";
 import { addNotification, isTokenExpired } from "@ecommerce/utils";
 
 export const Route = createFileRoute("/profile/addresses/")({
   component: RouteComponent,
-  beforeLoad: ({ context }) => {
-    const token = localStorage.getItem("token");
-    if (!token || isTokenExpired(token)) {
+  // 令牌只存内存（防 XSS），页面刷新后需先等静默续期跑完再判断，
+  // 否则每次刷新受保护页面都会被误判成未登录而弹去登录页。
+  beforeLoad: async ({ context }) => {
+    const restored = await restoreSession();
+    const token = getAccessToken();
+    if (!restored || !token || isTokenExpired(token)) {
       console.warn("Token已过期或未登录，请重新登录。");
 
       addNotification({
@@ -45,7 +50,7 @@ export const Route = createFileRoute("/profile/addresses/")({
       });
 
       setAccount({});
-      localStorage.removeItem("token");
+      clearTokens();
 
       if (context?.auth?.login) {
         context.auth.login();
