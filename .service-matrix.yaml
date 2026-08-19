@@ -59,7 +59,9 @@ externals:
   elasticsearch: { used_by: [search] }
   minio: { host: "minio.apikv.com", used_by: [cart], note: "商品缩略图 URL；443 不带端口。机器是 8.138.194.254（ssh 别名 node2:34124，阿里云，与集群内 node2 192.168.3.202 无关），2026-08-19 起走 node1 的 Pangolin（Traefik 终止 TLS）经 newt 隧道回 node2，本机 9000/9001 已绑回环。⚠️ 不能直连该 IP 配域名：apikv.com 未在阿里云备案，域名直连必被 ICP 拦截" }
   config_center: { discovery: config-service, repository: "github.com/lens077/config-center", note: "独立配置控制面，从本地 CONFIG_FILE 自举" }
-  gorse: { host: "gorse.apikv.com", used_by: [behavior, product], note: "推荐引擎；客户端在 backend/pkg/gorse/（已支持 X-API-Key）。与 minio 同在 node2，2026-08-19 起走 Pangolin。⚠️ 当前服务是停的：启动强依赖 node1:6379 的 Redis，而该 Redis 已于 08-18 被停；恢复步骤见 TODO.md。资源暂开着 SSO，恢复后要换成 gorse 自带的 api_key" }
+  gorse: { host: "gorse.apikv.com", used_by: [behavior, product], note: "推荐引擎；客户端在 backend/pkg/gorse/（发 X-API-Key）。与 minio 同在 node2，2026-08-19 起走 Pangolin，本机 8086/8088 已绑回环。鉴权是 gorse 自带的（[server] api_key + dashboard 表单登录），非 Pangolin SSO。⚠️ 仓库配置的 api_key 按硬规则 4 留空，真值要灌 Config Center，否则业务全 401。依赖 node1 的 rediss://redis.apikv.com:6379 与 pg:5432" }
+  redis_gorse: { host: "redis.apikv.com:61246", used_by: [gorse], note: "gorse 专用 cache store，在 node1（≠ Pigsty 那台 192.168.3.210，也≠集群内 dragonfly）。2026-08-19 起 port 0 + 只收 rediss://，证书是 ZeroSSL *.apikv.com（2026-10-27 到期，无 IP SAN 故必须走域名）；宿主端口随机化为 61246（容器内仍 6379）。⚠️ 测试期对 0.0.0.0/0 开放，上线前收窄" }
+  postgres_gorse: { host: "114.132.233.129:52288", used_by: [gorse], note: "gorse 的 data store，在 node1（≠ CNPG，≠ Pigsty）。宿主端口 2026-08-19 由 5432 随机化为 52288（容器内仍 5432）。⚠️ 仍是明文 + msdnmm 弱口令 + 0.0.0.0/0，待上 TLS 与轮换" }
   alipay: { used_by: [payment], note: "pay.alipay.* 为空时支付网关能力禁用" }
 
 # 网关
