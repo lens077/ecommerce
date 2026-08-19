@@ -4,6 +4,18 @@ on:
   push:
     tags:
       - '[0-9]+.[0-9]+.[0-9]+'
+  # 登录冒烟测试要能脱离发版单独跑：它测的是**线上已部署**的那一份，
+  # 而这条链路的坏法（CSP 头、Casdoor 应用配置、Pangolin 隧道）多半不是
+  # 由本仓库的提交引起的 —— 只在打 tag 时跑等于永远发现不了。
+  workflow_dispatch:
+    inputs:
+      shop_url:
+        description: '被测站点（留空用 https://shop.apikv.com）'
+        required: false
+        default: ''
+  schedule:
+    # 每天 03:17 UTC（北京时间 11:17）。刻意避开整点，别和全球的 cron 挤在一起。
+    - cron: '17 3 * * *'
 
 # 共享环境变量
 env:
@@ -36,6 +48,8 @@ env:
 
 jobs:
   frontend-test:
+    # 只有打 tag 才构建发版。定时/手动触发只跑下面的 smoke-login。
+    if: startsWith(github.ref, 'refs/tags/')
     runs-on: ubuntu-latest
     defaults:
       run:
@@ -56,19 +70,6 @@ jobs:
         with:
           version: latest # 建议指定一个最新的 pnpm 版本
           run_install: false # 在下一步手动运行 pnpm install
-
-#      - name: Run Playwright Tests
-#        run: |
-#          pnpm exec playwright install --with-deps
-#          pnpm exec playwright test
-#
-#      - name: Upload Playwright Report
-#        uses: actions/upload-artifact@v4
-#        if: ${{ !cancelled() }}
-#        with:
-#          name: playwright-report-${{ env.VERSION }}
-#          path: ${{ env.FRONTEND_DIR }}/playwright-report/
-#          retention-days: 30
 
       - name: Set up QEMU
         uses: docker/setup-qemu-action@v3
@@ -113,6 +114,7 @@ jobs:
 
   frontend-deploy:
     needs: frontend-test
+    if: startsWith(github.ref, 'refs/tags/')
     runs-on: ubuntu-latest
     permissions:
       contents: write # 允许对源仓库进行提交
@@ -198,3 +200,81 @@ jobs:
           # 仅在有实际更改时提交
           git diff --cached --exit-code || git commit -m "CI: Auto update ${{ env.FRONTEND_DIR }} chart version to ${{ env.VERSION }} [skip ci]"
           git push
+
+  # ---------------------------------------------------------------------------
+  # 线上登录链路冒烟。对着**已经部署好**的站点跑真浏览器，不构建、不部署。
+  #
+  # 为什么单独一个 job 而不是塞进 frontend-test：
+  #   1. 它测的是线上那一份，放构建之前跑等于测上一个版本，放构建之后又要等
+  #      ArgoCD 同步完（时长不可控）—— 两头都不对，所以干脆解耦，靠定时 + 手动跑；
+  #   2. 它依赖外部基础设施（Casdoor、Pangolin 隧道、网关），红了不一定是代码的锅，
+  #      不该卡住发版流水线。
+  #
+  # 需要两个 secret：CASDOOR_E2E_USER / CASDOOR_E2E_PASS。**没配就整体跳过**，
+  # 不是失败 —— 否则 fork 和没配密钥的仓库会永远挂一条红。
+  # ---------------------------------------------------------------------------
+  smoke-login:
+    runs-on: ubuntu-latest
+    # 打 tag 时不跑（那时新版本还没同步上去），只在定时与手动触发时跑
+    if: github.event_name == 'schedule' || github.event_name == 'workflow_dispatch'
+    defaults:
+      run:
+        shell: bash
+        working-directory: ${{ env.FRONTEND_DIR }}
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v5
+
+      - name: Check credentials
+        id: creds
+        env:
+          E2E_USER: ${{ secrets.CASDOOR_E2E_USER }}
+        run: |
+          if [ -z "$E2E_USER" ]; then
+            echo "::notice::未配置 CASDOOR_E2E_USER/CASDOOR_E2E_PASS，跳过登录冒烟测试"
+            echo "ready=false" >> "$GITHUB_OUTPUT"
+          else
+            echo "ready=true" >> "$GITHUB_OUTPUT"
+          fi
+
+      - name: Set up Node.js
+        if: steps.creds.outputs.ready == 'true'
+        uses: actions/setup-node@v6
+        with:
+          node-version: ">=${{ env.NODE_VERSION }}"
+
+      - name: Setup pnpm
+        if: steps.creds.outputs.ready == 'true'
+        uses: pnpm/action-setup@v4
+        with:
+          version: latest
+          run_install: false
+
+      - name: Install dependencies
+        if: steps.creds.outputs.ready == 'true'
+        run: pnpm install --frozen-lockfile
+
+      # 只装 chromium：这个脚本只用它，装全套是三倍下载量
+      - name: Install Chromium
+        if: steps.creds.outputs.ready == 'true'
+        run: pnpm exec playwright install --with-deps chromium
+
+      - name: Run login smoke test
+        if: steps.creds.outputs.ready == 'true'
+        env:
+          CASDOOR_USER: ${{ secrets.CASDOOR_E2E_USER }}
+          CASDOOR_PASS: ${{ secrets.CASDOOR_E2E_PASS }}
+          SHOP_URL: ${{ inputs.shop_url || 'https://shop.apikv.com' }}
+          E2E_ARTIFACT_DIR: ${{ github.workspace }}/e2e-artifacts
+        run: |
+          mkdir -p "$E2E_ARTIFACT_DIR"
+          pnpm --filter @ecommerce/consumer e2e:login
+
+      - name: Upload failure screenshot
+        if: ${{ failure() && steps.creds.outputs.ready == 'true' }}
+        uses: actions/upload-artifact@v4
+        with:
+          name: e2e-login-failure-${{ github.run_id }}
+          path: e2e-artifacts/
+          retention-days: 14
+          if-no-files-found: ignore

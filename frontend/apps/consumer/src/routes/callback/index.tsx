@@ -7,9 +7,7 @@ import { flushSync } from "react-dom";
 import { z } from "zod";
 import { i18next, useTranslation } from "@ecommerce/i18n";
 import type { Status } from "@ecommerce/constants";
-import { setAccount } from "@/store/users";
 import { addNotification, setTokens } from "@ecommerce/utils";
-import { decodeJwtPayload } from "@ecommerce/utils";
 import { exchangeCode, scheduleRenew } from "@ecommerce/configs";
 import { useAuthActions } from "@/providers/AuthProvider";
 
@@ -71,16 +69,9 @@ function RouteComponent() {
 
         setStatus("success");
 
-        const payload = decodeJwtPayload(tokens.accessToken);
-        if (payload) {
-          setAccount({
-            id: payload.id,
-            displayName: payload.displayName,
-            name: payload.name,
-            email: payload.email,
-            avatar: payload.avatar,
-          });
-        }
+        // 用户资料不在这里填了：`setTokens()` 会同步触发令牌订阅，
+        // 由 `store/users.ts` 从 JWT 统一解出来。放在那儿才能同时覆盖
+        // 刷新页面的冷启动恢复与后台续期 —— 只在这里填的话，一刷新就空了。
 
         addNotification({
           message: i18next.t("consumer:callback.loginSuccess"),
