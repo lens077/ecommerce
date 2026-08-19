@@ -27,14 +27,24 @@ description: 公网暴露基础设施(Pangolin)的拓扑事实、面板 API 操�
 - k8s:**集群已于 2026-08 重建**,现为 node1 `192.168.3.201` / node2 `192.168.3.202`(control-plane),
   Cilium Gateway API,`cilium-gateway`(ns default,LB **192.168.3.100**,ClusterIP **10.99.145.85**)。
   ⚠️ 下文「k8s HTTPRoute 暴露套路」里的 target `10.97.94.118:443` 是**旧集群的 ClusterIP,已失效**,
-  要用上面的新值;且新集群**尚无 `pangolin` 命名空间**,helm release `newt` 未重新部署,
-  k8s site 当前不通,需先重装 newt 才能走该路径(2026-08-18 实查)
+  要用上面的新值。
+  **2026-08-19 newt 已重装并实测打通**:新建站点 `k8s-cluster`(siteId 4,online=true),
+  旧站点 `k8s`(siteId 3)保留但**永久不可用** —— 它的 secret 面板不回显、旧集群的
+  helm values 已随集群消失,拿不回来了(建站点那一刻的回显是唯一一次)。
+  newt 现由 **kubernetes 仓的 `components/newt/`** 管理(manifest 安装,不是 helm ——
+  上游 `https://fosrl.github.io/newt` 实测 404,没有可用 chart 仓库),凭据存
+  `creds/newt-{id,secret}` 不入库。资源 3/4(config/config-api)的 target 已从旧
+  ClusterIP 改到 `10.99.145.85:443`,并给两条 HTTPRoute 追加了 `.apikv.com` hostname
+  (原先只有 `.app.com`)。**实测:`config.apikv.com` 200 / `config-api.apikv.com` 401(自带鉴权)**
 - 另一台公网机 8.138.194.254 跑 harbor/img(与 Pangolin 无关);`auth.apikv.com` 解析已指 node1(未建资源);casdoor 已由 `casdoor.apikv.com` 暴露(2026-08-13)
 
 ## 面板与站点/资源现状
 
-- 面板 `https://pangolin.apikv.com`,管理员 `admin@apikv.com`(密码在用户处),org `main`
-- Sites:`node3-local`(siteId 1, local;**面板里的历史实体名,保持不改**,即 node1 本机)/ `mac`(siteId 2, newt)/ `k8s`(siteId 3, newt)
+- 面板 `https://pangolin.apikv.com`,管理员 `admin@apikv.com`(密码在用户处;2026-08-19 重置过一次 —— 密码以 argon2 哈希存 `config/db/db.sqlite` 的 `user.passwordHash`,**服务器上没有明文副本**,忘了只能改库重置)
+- Sites:`node3-local`(siteId 1, local;**面板里的历史实体名,保持不改**,即 node1 本机)/ `mac`(siteId 2, newt, 离线——Mac 重装后 newt 未恢复)/ **`k8s-cluster`(siteId 4, newt, 当前在用)**。
+  旧的 `k8s`(siteId 3)已于 2026-08-19 删除 —— 删之前先把资源 3/4 的 target 改到了 siteId 4,
+  删后实测 `config.apikv.com` 200 / `config-api.apikv.com` 401 不变。
+  **顺序很重要**:先迁 target 再删站点,反过来会让资源短暂失去后端
 - Resources:`blog.apikv.com`(blog,target `https://blog:443`;**2026-08-18 traefik-config 实查:早前的根域 `apikv.com`+`www` 已无 router,公网 404 空置**)/ `config.apikv.com`(SSO on)/ `config-api.apikv.com`(SSO off,应用自带鉴权)/ `casdoor.apikv.com`(SSO off,自带鉴权,target `10.1.0.8:8000`)/ 另有 kaneo/dev/ntfy/stream/cat 等,以 `traefik-config` 后门实查为准
 - k8s newt:helm release `newt`(ns `pangolin`,chart `fossorial/newt`);凭据看 `helm get values newt -n pangolin`(inline,勿把 values 文件提交入库)
 - Mac newt:`~/apps/newt/newt` + 同目录 launchd plist(含凭据,在仓库外);日志 `/tmp/newt.log`
