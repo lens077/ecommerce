@@ -42,6 +42,21 @@ const (
 
 	CasdoorUrl = "CASDOOR_URL"
 
+	// RBAC 角色缓存的 Redis（L2）。
+	// ⚠️ 它必须部署在**网关这一侧**：网关跑在局域网集群里，而 Casdoor 在公网 VPS，
+	// 缓存的全部意义就是省掉那一跳跨公网调用。把 Redis 放到 Casdoor 同机等于
+	// 读缓存也要跨公网，一点都不省，还要多暴露一个 6379 端口。
+	// 留空 = 不启用 L2，只用进程内 L1（单副本时完全够用）。
+	RedisAddr     = "REDIS_ADDR"
+	RedisPassword = "REDIS_PASSWORD"
+	RedisDB       = "REDIS_DB"
+	// RedisTLSCAFile 集群内 Redis 开了原生 TLS（service 端口 6379 → 容器 6380 的 TLS 口），
+	// 留空则不启用 TLS。
+	RedisTLSCAFile = "REDIS_TLS_CA_FILE"
+	// RbacRoleCacheTTL 角色缓存有效期，如 "5m"。留空取默认 5 分钟。
+	// 权衡：调大省 Casdoor 调用，但 Casdoor 侧改了角色要等这么久才生效。
+	RbacRoleCacheTTL = "RBAC_ROLE_CACHE_TTL"
+
 	Debug = "Debug"
 
 	// ServiceName 服务名

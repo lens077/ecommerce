@@ -6,7 +6,11 @@ version: v1.4.0
 # 环境变量
 envs:
   # 服务发现
-  CONSUL_ADDR: consul://192.168.3.112:8500
+  # ⚠️ 集群内必须走 Service DNS，不要写 LoadBalancer IP：
+  #    LB IP 每次集群重建都会漂（.112 → .102 已经发生过一次），写死就等于埋一颗定时炸弹，
+  #    而症状是 `context deadline exceeded` 而非"连不上"，很像网络抖动。
+  #    本机开发才用 IP（见 context/team/local-env.md）。
+  CONSUL_ADDR: consul://consul-server.consul.svc.cluster.local:8500
   #CONSUL_ADDR: consul://localhost:8500
   # 输出的日志等级
   LOG_LEVEL: debug
@@ -57,6 +61,12 @@ middlewares:
         - http://localhost:3000
         - http://localhost:3005
         - http://192.168.3.118:30080
+        # 正式站点（经 Pangolin 暴露）。allowCredentials=true 时**不能**用通配符 `*`，
+        # 必须逐条列出精确来源，否则浏览器直接拒收响应。
+        # 前端改走 PKCE 直连 Casdoor 后，浏览器会同时向两个源发请求：
+        # 本网关（业务 API）与 casdoor.apikv.com（换令牌）—— 后者的 CORS 由 Casdoor 侧管，
+        # 与这里无关，别在这里找 Casdoor 的跨域问题。
+        - https://shop.apikv.com
       allowMethods:
         - OPTIONS
         - GET
