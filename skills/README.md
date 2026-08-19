@@ -1,8 +1,18 @@
 # 项目使用到的Skills
 /Users/sumery/lens077/ecommerce/ai-helper.sh
 
+## hcom
+编码代理用它在终端间互相发送消息、监视和生成信息
+
+仓库：https://github.com/aannoo/hcom
+示例：
+```shell
+hcom claude
+hcom codex
+```
+
 ## archify
-图表制作：
+图表制作
 
 仓库：https://github.com/tt-a1i/archify/blob/main/README_ZH.md
 安装：
