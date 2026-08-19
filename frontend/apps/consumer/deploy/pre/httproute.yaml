@@ -1,0 +1,32 @@
+# 前端静态站点的对外入口。
+#   shop.dev.test    局域网直连
+#   shop.apikv.com   公网，经 Pangolin 隧道（资源 15，target 10.99.145.85:443 https）
+#
+# ⚠️ parentRef 必须带 sectionName: https —— 本仓 HTTPRoute 都只挂 443 listener，
+#    80 上没有任何路由，envoy 对一切 Host 返 404。
+#
+# 业务请求不经这里：前端直连 https://gateway.apikv.com（VITE_GATEWAY_URL），
+# 跨源由网关的 CORS 白名单放行。镜像里 Caddy 那条 /api 反代是同源方案的备用路径，
+# 当前没走它 —— 两套并存时记得只配一套，否则调试时分不清请求走了哪条。
+---
+apiVersion: gateway.networking.k8s.io/v1
+kind: HTTPRoute
+metadata:
+  name: ecommerce-frontend
+  namespace: ecommerce
+spec:
+  parentRefs:
+    - name: cilium-gateway
+      namespace: default
+      sectionName: https
+  hostnames:
+    - "shop.dev.test"
+    - "shop.apikv.com"
+  rules:
+    - matches:
+        - path:
+            type: PathPrefix
+            value: /
+      backendRefs:
+        - name: ecommerce-frontend-service
+          port: 30080
