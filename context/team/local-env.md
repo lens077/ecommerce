@@ -65,10 +65,32 @@ mapstructure 没开 `ErrorUnused`，多余键不报错、缺失键生成 nil-saf
 | Consul（发现） | `192.168.3.102:8500` | LoadBalancer，见上 |
 | Redis (Dragonfly) | `192.168.3.101:6379` | **纯 TCP，无 TLS**；需 AUTH（`dragonfly-password-secret`） |
 | Casdoor | node1 | JWT 公钥 kid=lens / public.pem |
-| Postgres | **未部署** | `cnpg-system` 只有 operator，没有 Cluster 实例 |
+| **Postgres (CNPG)** | 集群内 `pg-main-rw.postgresql.svc:5432` | 2026-08-19 起为业务库真相源。库 `ecommerce`（`Database` CR 声明式创建，owner=`app`），口令在 secret `pg-main-app`，CA 在 `pg-main-ca`；证书 SAN 含各 Service DNS，集群内可直接 `verify-full`。局域网入口 `192.168.3.103:5432` 是 **TLS passthrough**，客户端必须 `sslnegotiation=direct`（libpq ≥17），否则握不了手 |
+| **Redis (OSS 8.x)** | 集群内 `redis.redis.svc:6379` | 2026-08-19 起 ecommerce 缓存指向它（dragonfly 仍在，作纯缓存用途）。⚠️ **Service 端口是 6379，后端容器听的是 6380 的 TLS 口 —— 必须开 TLS**，明文连接会被 reset。口令 `redis-password-secret`，CA 在 secret `redis-tls` 的 `ca.crt`（= 集群根 CA）。局域网入口 `192.168.3.104:6380` |
+| **Config Center** | 集群内 `config-center.config-center.svc:30010` | 2026-08-19 随集群重建重新部署（`config-center/scripts/deploy-k8s.sh`，K8S_ENV=pre）。机器令牌只读，写配置需 Casdoor 管理员 |
+| **ecommerce 网关** | 集群内 `ecommerce-gateway-service.ecommerce.svc:8080`（LB `192.168.3.116:8080`） | 2026-08-19 首次部署到集群，清单在 `gateway/deploy/pre/`（新建，dev 用的是 `-dev` selector、且三份清单都没写 `namespace`）。对外 `gateway.apikv.com`（Pangolin 资源 14）与 `gateway.dev.test` |
+
+### ⚠️ 集群节点拉镜像依赖**这台 Mac 上的代理**
+
+节点的 containerd 配了 `http-proxy = 192.168.3.220:7890`，而 **192.168.3.220 就是开发用的这台 Mac**
+（FlClash 的混合端口）。**Mac 关机或代理没开 → 全集群拉不了任何新镜像**，
+症状是 `ImagePullBackOff` + `proxyconnect tcp: dial tcp 192.168.3.220:7890: connect: connection refused`
+—— 很容易误判成"私有仓凭据不对"（2026-08-19 实测踩过，当时 TCR 凭据完全正常）。
+
+判据：报错里出现 `proxyconnect` 就是代理问题，与 registry 凭据无关。
+已在集群里跑着的 Pod 不受影响（只在拉镜像时才走代理）。
+
+**这是个真实的单点**：把开发机当集群的镜像出口，笔记本合盖就等于集群失去发布能力。
+要去掉这个依赖，得给节点配 registry mirror（`certs.d`，与代理无关）或让节点直连。
 | 搜索 | Meilisearch（`search` ns） | Elasticsearch 已退役，见 TODO.md 的迁移项 |
 
-### Pigsty 数据面（192.168.3.210）
+### Pigsty 数据面（192.168.3.210）—— ⚠️ 2026-08-19 起已停机
+
+> **该机已关闭**，PostgreSQL 与 Redis 的位置改为集群内（见上表 CNPG / Redis 两行）。
+> 10 份 `configs/pre.yml` 与 config-center 的 `configs/pre.yaml` 已切走，旧值整块注释保留可回滚。
+> **`configs/dev.yml`（本机开发用）仍指向 210，尚未切换 —— 210 不开机则 `make dev` 连不上库。**
+> Kafka 与 Silo(MinIO) 也随之不可用，依赖它们的链路（CDC、对象存储）同样停摆。
+> 下面这一节保留为 210 重新开机时的参考。
 
 PostgreSQL、Redis、Kafka、Silo(MinIO) 与 Grafana 由 Pigsty v4.5 部署在 `192.168.3.210`，
 不在 k8s 集群内。部署记录与凭据在 `../pigsty-deploy/`（不入库）。
