@@ -57,9 +57,9 @@ externals:
   kafka: { host: "192.168.3.210:9092", note: "Pigsty kf-dev，SASL_SSL + SCRAM-SHA-512，Pigsty CA；身份 ecommerce 限 ecommerce. 前缀；ecommerce 尚未接线" }
   casdoor: { host: "node1", note: "JWT 公钥 kid=lens" }
   elasticsearch: { used_by: [search] }
-  minio: { host: "minio.apikv.com:9000", used_by: [cart], note: "商品缩略图 URL；机器是 node2（ssh 别名 node2:34124，阿里云，与集群内 node2 192.168.3.202 无关）。2026-08-19 上 TLS（ZeroSSL *.apikv.com，2026-10-27 到期，无 IP SAN 故必须走域名）；管理台 9001 已绑回环。⚠️ DNSPod 精确 A 记录待加，否则域名落到 node1" }
+  minio: { host: "minio.apikv.com", used_by: [cart], note: "商品缩略图 URL；443 不带端口。机器是 node2（ssh 别名 node2:34124，阿里云，与集群内 node2 192.168.3.202 无关），2026-08-19 起走 node1 的 Pangolin（Traefik 终止 TLS）经 newt 隧道回 node2，本机 9000/9001 已绑回环。⚠️ 不能直连该 IP 配域名：apikv.com 未在阿里云备案，域名直连必被 ICP 拦截" }
   config_center: { discovery: config-service, repository: "github.com/lens077/config-center", note: "独立配置控制面，从本地 CONFIG_FILE 自举" }
-  gorse: { used_by: [behavior, product], note: "推荐引擎；客户端在 backend/pkg/gorse/" }
+  gorse: { host: "gorse.apikv.com", used_by: [behavior, product], note: "推荐引擎；客户端在 backend/pkg/gorse/（已支持 X-API-Key）。与 minio 同在 node2，2026-08-19 起走 Pangolin。⚠️ 当前服务是停的：启动强依赖 node1:6379 的 Redis，而该 Redis 已于 08-18 被停；恢复步骤见 TODO.md。资源暂开着 SSO，恢复后要换成 gorse 自带的 api_key" }
   alipay: { used_by: [payment], note: "pay.alipay.* 为空时支付网关能力禁用" }
 
 # 网关
