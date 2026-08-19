@@ -1,0 +1,78 @@
+---
+name: tls-enablement
+layer: team
+description: 给「已经在跑」的服务补 TLS 时的固定检查清单——健康检查静默失效、证书挂载遮蔽、IP SAN 缺失、多处部署的续期同步；上 TLS 前必读
+---
+
+# 给在跑的服务补 TLS（2026-08-19 MinIO 实付学费）
+
+> 适用范围：TODO.md「基础设施 TLS 收敛」段里所有待办（gorse / casdoor / ES / Kafka / Consul）。
+> 这四条不是理论风险，是给 MinIO 上 TLS 时逐条撞到的。
+
+## 1. 健康检查会静默失效（最容易漏）
+
+**协议从 http 换到 https，健康检查里硬编码的 http 不会跟着变**，而它失败**不会**让容器重启
+（restart policy 只管退出码，不管 unhealthy），所以表现是「服务其实是好的，但状态永远 unhealthy」——
+或者反过来更糟：探针挂了你却以为是 TLS 没配好，回滚了本来正确的改动。
+
+MinIO 实例：原 healthcheck 是 `mc ready local`，而 `mc` 的 `local` alias 固化为
+`http://localhost:9000`（`docker exec minio mc alias list local` 可见）。改法：
+
+```yaml
+test: [ "CMD", "curl", "-fsk", "https://localhost:9000/minio/health/live" ]
+```
+
+`-k` 是必须的：证书 CN 是对外域名，与 `localhost` 天然不匹配。**上 TLS 前先把健康检查、
+k8s 探针、外部监控探测三处的 URL 都找出来**，别只改服务本身。
+
+## 2. 证书整卷挂载遮蔽容器内原目录，且 `:ro` 后无法自建子目录
+
+与 helm `db-ca-cert` 整卷挂 `/etc/ssl/certs` 遮蔽系统 CA 是**同一个坑的两个实例**。
+
+MinIO 的 `/root/.minio/certs/` 下本来有个空的 `CAs/`。整卷挂 `./certs:/root/.minio/certs:ro` 会
+遮蔽它；而因为挂了 `:ro`，MinIO 启动时也无法自己把 `CAs/` 建回来。**宿主机侧必须预先 `mkdir -p certs/CAs`**。
+
+一般规律：**整卷挂载前先 `ls -laR` 目标目录**，把原有结构在宿主机侧补齐；能挂单文件就别挂整卷。
+
+## 3. 公共 CA 证书不含 IP SAN → 所有 IP 端点配置都要改
+
+ZeroSSL/Let's Encrypt 这类公共 CA **不签 IP**。证书 SAN 只有 `*.apikv.com` + `apikv.com`，
+所以上 TLS 后 `https://node2:9000` 必然证书校验失败，**必须整条链路改走域名**：
+
+- 服务配置（本次：`cart` 的 `configs/{dev,pre}.yml` 的 `store.minio`）
+- Config Center 的 KV（**与仓库副本是两份，见「三份配置对齐」的教训**）
+- DNS：泛解析若指向别的机器，**必须加一条精确 A 记录覆盖它**。
+  本次 `*.apikv.com` 泛解析指向 node1，而 MinIO 在另一台，不加 `minio` 的精确记录就落到错误的机器。
+
+顺序是死的：**先加 DNS → 验证 → 再灌 KV**。反过来会让服务热更新到一个解析不到的域名。
+
+## 4. 泛域名证书每多部署一处，续期就多一处会静默挂
+
+`*.apikv.com` 现在是**三处**：`/home/docker/blog/ssl/`、node1 的
+`pangolin/config/traefik/certs/`、node2 的 `minio/certs/`。到期日 **2026-10-27**，
+而 node1 的自动续期链路是缺位的（`pangolin-tunnel.md:26`）。
+
+**复制证书到新机器时，同时把它登记进续期清单**，否则到期那天是三处一起挂，
+且 MinIO 这种「挂了只在浏览器控制台报错」的最难发现。
+
+## 5. 验收：必须包含「故意用错的输入」和「不带 -k 的严格校验」
+
+只测「该通的通了」证明不了任何事——配置没生效时它照样通。固定四条：
+
+```bash
+# ① 该关的真的关了(期望 000,不是 200/403)
+curl -s -m 8 -o /dev/null -w "%{http_code}\n" http://<ip>:<管理端口>/
+# ② 旧的明文端点确实失效
+curl -s -m 8 -o /dev/null -w "%{http_code}\n" http://<ip>:<port>/<health>
+# ③ 新的 TLS 端点可用
+curl -sk -m 8 -o /dev/null -w "%{http_code}\n" https://<ip>:<port>/<health>
+# ④ 关键:不带 -k 的严格校验,且用真实域名(DNS 未就绪时用 --resolve 强制指向)
+curl -s -m 10 -o /dev/null -w "%{http_code}\n" \
+  --resolve <域名>:<port>:<ip> https://<域名>:<port>/<health>
+```
+
+只有 ④ 能同时证明**证书链完整**（缺中间证书时这条会挂而 ③ 不会）、**域名匹配**、**公共 CA 可信**。
+
+> 附带的工具教训：`/dev/tcp/<host>/<port>` 探测端口在本机沙箱里会**对所有端口报 closed**，
+> 包括明明能通的。**任何探测法先用一个已知结果的对照组验证它自己**，否则会得出「全部端口不通」
+> 这种把人带偏的结论。curl 不受影响。
