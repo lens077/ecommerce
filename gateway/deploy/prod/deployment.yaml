@@ -23,7 +23,7 @@ spec:
         fsGroupChangePolicy: OnRootMismatch
       containers:
         - name: ecommerce-gateway
-          image: harbor.apikv.com:5443/ecommerce/gateway:latest
+          image: harbor.apikv.com/ecommerce/gateway:latest
           imagePullPolicy: Always
           ports:
             - containerPort: 8080

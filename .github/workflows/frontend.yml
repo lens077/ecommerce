@@ -19,16 +19,20 @@ on:
 
 # 共享环境变量
 env:
-  # 私有注册表URL
-  REGISTRY: harbor.apikv.com:5443
+  # 私有注册表URL。2026-08-19 由 harbor.apikv.com 改为 TCR，与线上实际跑的镜像对齐
+  # （集群里是 ccr.ccs.tencentyun.com/sumery/ecommerce-frontend）。
+  # 只填域名：镜像地址由 ${REGISTRY}/${REGISTER_USER}/${IMAGE_NAME} 拼出，
+  # 写成 ccr.ccs.tencentyun.com/sumery 会拼出重复的 sumery/sumery。
+  REGISTRY: ccr.ccs.tencentyun.com
   # 仓库名称
   REGISTER_USER: sumery
 
   # Docker Hub 用户名
   DOCKERHUB_USERNAME: lookeke
 
-  # 镜像名称
-  IMAGE_NAME: connect-example-frontend
+  # 镜像名称。2026-08-19 由 connect-example-frontend 改为 ecommerce-frontend，
+  # 与线上实际部署的镜像一致（原名是上游示例项目留下的）。
+  IMAGE_NAME: ecommerce-frontend
   # 版本，由标签推送决定
   VERSION: ${{ github.ref_name }}
 
@@ -36,8 +40,10 @@ env:
   NODE_VERSION: 22
   FRONTEND_DIR: frontend
 
-  # Helm 仓库URL
-  HELM_REGISTRY: harbor.apikv.com:5443
+  # Helm 仓库URL。**刻意与 REGISTRY 不同**：TCR 不支持 helm chart 存储，
+  # 所以 chart 仍推 harbor（2026-08-19 起 harbor 经 Pangolin 暴露，443 不带端口）。
+  # ⚠️ 需要 secret HELM_REGISTRY_PASS（harbor 机器人账号 rebot@github 的 token），目前仓库里没有。
+  HELM_REGISTRY: harbor.apikv.com
   # Helm 仓库的用户名
   HELM_REGISTRY_USER: rebot@github
   # Helm 仓库的名称
@@ -83,8 +89,10 @@ jobs:
           username: ${{ env.DOCKERHUB_USERNAME }}
           password: ${{ secrets.DOCKERHUB_TOKEN }}
 
+      # 2026-08-19: secret 名改为 TCR_*，这是仓库里实际存在的那两个；
+      # 原先写的 REGISTRY_USERNAME/REGISTRY_PASSWORD 从未配置过，这一步一直是拿空值登录。
       - name: Login to Private Registry
-        run: echo ${{ secrets.REGISTRY_PASSWORD }} | docker login ${{ env.REGISTRY }} --username ${{ secrets.REGISTRY_USERNAME }} --password-stdin
+        run: echo ${{ secrets.TCR_PASSWORD }} | docker login ${{ env.REGISTRY }} --username ${{ secrets.TCR_USERNAME }} --password-stdin
 
       - name: Login to GitHub Container Registry
         uses: docker/login-action@v3
