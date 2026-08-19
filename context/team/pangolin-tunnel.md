@@ -21,7 +21,29 @@ description: 公网暴露基础设施(Pangolin)的拓扑事实、面板 API 操�
         ~/apps/newt/         ns pangolin           站点资源 blog.apikv.com → https://blog:443
 ```
 
-- 实例身份:腾讯云**轻量应用服务器 Lighthouse** `lhins-1of5dkfj`(ap-guangzhou-7),不是 CVM——防火墙是 Lighthouse 实例防火墙(`tccli lighthouse DescribeFirewallRules/DeleteFirewallRules --InstanceId`),没有安全组;TAT 助手在线,`tccli tat RunCommand` 可免 SSH 执行命令(带外救援通道,2026-08-11 实测可用);SSH 端口 34123(22/3389 已从防火墙移除)
+- 实例身份:腾讯云**轻量应用服务器 Lighthouse** `lhins-1of5dkfj`(ap-guangzhou-7),不是 CVM——防火墙是 Lighthouse 实例防火墙(`tccli lighthouse DescribeFirewallRules/CreateFirewallRules/DeleteFirewallRules --InstanceId`),没有安全组;TAT 助手在线,`tccli tat RunCommand` 可免 SSH 执行命令(带外救援通道,2026-08-11 实测可用);SSH 端口 34123(22/3389 已从防火墙移除)
+- **放行端口时用 `CidrBlock` 锁死来源,别习惯性写 `0.0.0.0/0`**(2026-08-19):给 gorse 放行 redis 6379 时
+  锁到 `<node2-source-cidr>`,只有 node2 进得来——数据库/缓存这类带弱口令的服务尤其不能对全网开。
+  ```bash
+  tccli lighthouse CreateFirewallRules --InstanceId lhins-1of5dkfj --FirewallRules \
+    '[{"Protocol":"TCP","Port":"6379","CidrBlock":"<node2-source-cidr>","Action":"ACCEPT","FirewallRuleDescription":"..."}]'
+  ```
+  **验证要有对照组**:从"应该能连的机器"和"不该能连的机器"各测一次,再加一个已知放行的端口(如 443)
+  排除网络本身的问题——只测通不测拦,等于没验。
+  ⚠️ **`DeleteFirewallRules` 与 `CreateFirewallRules` 之间有裸奔/断连窗口**:先删后加时,若 Create
+  因参数问题失败(实测**描述里含 `://` 会让 tccli 解析成 usage 错误**),端口会处于"无规则=拒绝"状态,
+  依赖它的服务立刻断。**先加新规则再删旧规则**,或至少在 Create 失败后立刻补救
+- ⚠️ **每个端口的规则是成对的(IPv4 + IPv6)**:`DescribeFirewallRules` 里 `CidrBlock` 为空的那条,
+  其实是 `Ipv6CidrBlock: "::/0"`。**只删 IPv4 那条会留下 IPv6 半开**,删它要传 `Ipv6CidrBlock` 字段
+- 🔑 **`docker ps` 显示 `0.0.0.0:<port>` ≠ 公网可达——云防火墙才是真相**(2026-08-19 靠这条省掉一整轮改动):
+  node1 上 kaneo(5173)/casdoor(8000)/webhook(8082) 都绑着 `0.0.0.0`,看起来全在裸奔,
+  实测从公网**全部连不上**,因为 Lighthouse 根本没放行这些端口。给它们改端口/收紧绑定是零收益,
+  却要冒同步 Pangolin target 和 OAuth 配置的风险。**判断暴露面要从外部实测,不要读 `docker ps`**;
+  测的时候带一个已知放行的端口(443)当对照组,否则分不清"被拦"和"网络不通"
+- **node1 自己也跑着 gorse 依赖的 Redis**(`/home/docker/redis/`,与 Pigsty 那台和集群内 dragonfly 都无关):
+  2026-08-19 起 `port 0` + `tls-port 6379`,复用同一张 `*.apikv.com` 证书,客户端必须 `rediss://` 连
+  `redis.apikv.com`。**证书目录属主必须是 uid 999**(redis 官方镜像的运行用户),否则读不到私钥启动即失败;
+  `tls-auth-clients no` 时仍强制要求 `tls-ca-cert-file`,拿 fullchain 自身充数即可
 - 域名 `apikv.com`,**DNS 在 DNSPod(不是 Cloudflare)**,已有 `*` 泛解析 → node1;新子域**零 DNS 操作**
 - 泛域名证书 ZeroSSL `*.apikv.com`(acme.sh dns_dp 签),**2026-10-27 到期**;部署在两处:`/home/docker/blog/ssl/`(原件)与 node1 `/home/docker/pangolin/config/traefik/certs/apikv.com.{crt,key}`,**续期要同步两处**。**⚠️ 自动续期链路缺位(2026-08-18 实查)**:node1 上 acme.sh 只剩 `/usr/local/bin/acme.sh` 单文件,`/root/.acme.sh/` 无证书产物、domain conf 未存 DNSPod 凭据、root crontab 无续期条目——10-27 会硬过期,需在此前手动重签或重建续期链路(DNSPod 旧 Key 已作废,要用轮换后的新 Key 或腾讯云子账号走 dns_tencent)
 - k8s:**集群已于 2026-08 重建**,现为 node1 `192.168.3.201` / node2 `192.168.3.202`(control-plane),
@@ -65,11 +87,20 @@ description: 公网暴露基础设施(Pangolin)的拓扑事实、面板 API 操�
   配合"服务端口全绑 `127.0.0.1`"实现零公网暴露。这与 local site 那套"必须写 `10.1.0.8`"的规则**不同**,
   别混——那条约束的成因是 Traefik 在容器里
 - 资源:`minio.apikv.com`(rid 16, **SSO off**, target `127.0.0.1:9000` **https**——MinIO 只讲 TLS,
-  靠 Traefik 的 `insecureSkipVerify` 兼容证书域名不匹配)/ `gorse.apikv.com`(rid 17, **SSO on**,
-  target `127.0.0.1:8088` http)
+  靠 Traefik 的 `insecureSkipVerify` 兼容证书域名不匹配)/ `gorse.apikv.com`(rid 17, **SSO off**,
+  target `127.0.0.1:8088` http,改由 gorse 自带鉴权)/ `harbor.apikv.com`(rid 18, **SSO off**——
+  `docker login` 过不了 SSO, target `127.0.0.1:49600` **https**;harbor 的 http 端口会 308 跳
+  `https://<hostname>:<https_port>`,用 http target 会把浏览器导回那个被 ICP 拦的地址)
+- **harbor 换证书要放两处**:`harbor.yml` 里 `certificate:` 指的路径(`prepare` 从这里取)与
+  `data/secret/cert/server.{crt,key}`(实际生效的副本,属主 `10000:10000`)。只改前者不重跑 prepare 不生效,
+  只改后者下次 prepare 会被覆盖回去。同理改端口要**同时**改 `harbor.yml` 和 `docker-compose.yml`
 - ⚠️ **gorse 关 SSO 前必须先确认它自己的鉴权非空**:`8088` 是 RESTful API 和 **Dashboard 共用**的端口,
   而 gorse 默认 `dashboard_user_name`/`dashboard_password`/`api_key` **全是空串**——
-  关 SSO 等于把无鉴权管理面板挂公网
+  关 SSO 等于把无鉴权管理面板挂公网。2026-08-19 已三项都配上(`config.toml`,备份
+  `config.toml.bak-20260819`)才关的 SSO,实测无 key/错 key 均 401、Dashboard 302→`/login`
+- **SSO 与应用自带鉴权二选一**:业务是服务端 HTTP 调用,过不了 SSO 的浏览器登录流程,所以
+  凡是要被后端调用的资源都只能关 SSO + 依赖应用自身鉴权(同 `config-api.apikv.com` 的模式)。
+  没有自带鉴权的应用,别急着关 SSO——先给它配上
 
 ## 面板 API 操作模式(无需浏览器)
 
@@ -158,7 +189,16 @@ mediamtx-mediamtx-1  10.1.0.8:8889->8889/tcp    ← 这种才只绑内网
 - **raw TCP/UDP**:入口已预留 30001/30002(tcp)、30003(udp)——compose 的 gerbil ports + Traefik entryPoints(命名必须 `tcp-30001` 格式)+ 腾讯云安全组三处一致才通;扩端口要改前两处并 `docker compose up -d --force-recreate gerbil traefik`(共享 netns,一起重建)
 - **性能**:Mac/k8s 的 newt 是用户态 netstack(低流量够用);Linux 高吞吐场景加 `USE_NATIVE_MAIN_INTERFACE=true` + NET_ADMIN 切内核 WireGuard,验证:`wg show` 能看到接口才是内核态
 - **blog 部署与回滚**(走 GitHub Actions,见 blog 仓 `.github/workflows/ci.yaml`):push main → 构建 linux/amd64 镜像打 `latest`+短 sha 两个 tag → 推腾讯云 CCR → scp `compose.yml` 覆盖服务器 → `docker compose pull && up -d` → 清理 30 天前旧镜像 → curl 断言 `https://blog.apikv.com` 返回 200。**`compose.yml` 以 blog 仓库为真相源,每次部署覆盖服务器**(2026-08-19 实查订正:此前记的「scp 直送 → docker load」与「服务器版是真相源、勿用仓库版覆盖」描述的是更早的手工链路,已不成立)。回滚用 30 天内保留的 sha tag 镜像 `docker tag ccr.ccs.tencentyun.com/sumery/blog:<旧sha> ...:latest && docker compose up -d`(原 `compose.yml.bak` 已不在服务器,该指引作废)
-- **blog 的 nginx 配置有一处遮蔽**(2026-08-19 实查):`compose.yml` 把 `/home/docker/blog/conf` 整卷挂到 `/etc/nginx/conf.d`,遮蔽掉镜像里 `COPY` 进去的 `nginx.conf`。根因是仓库版用了 `${DOMAIN}` 模板变量,而 `conf.d/` 不做 envsubst(只有 `templates/` 才做),变量永远替换不掉,只能靠挂载一份硬编码的覆盖。服务器上那份是 2026-04-22 的,`server_name` 仍写死 `apikv.com`/`www`,与现域名 `blog.apikv.com` 不符——因 nginx 默认 server 行为仍能正常返回文件,故非故障源,但改域名时要记得它在那儿
+- **blog 的 nginx 配置曾被挂载遮蔽,已于 2026-08-19 收口**:`compose.yml` 把 `/home/docker/blog/conf` 整卷挂到 `/etc/nginx/conf.d`,遮蔽掉镜像里 `COPY` 进去的 `nginx.conf`。根因是仓库版用了 `${DOMAIN}` 模板变量,而 `conf.d/` **不做 envsubst**(只有 `templates/` 目录才做),变量永远替换不掉,当年只能靠挂载一份硬编码的覆盖——结果服务器上那份停留在 2026-04-22 长达数月无人察觉。
+  **现在 CI 会一并 scp `nginx.conf` 到 `conf/`,仓库是真相源**;`server_name` 改为 catch-all `_`(公网入口是 Traefik,Host 已在上游路由过,不再依赖模板变量)。
+  ⚠️ 镜像未变而只有挂载配置变时,`docker compose up -d` **认为无事可做**,必须显式 `docker exec blog nginx -t && nginx -s reload`(CI 已加,先验语法再重载,写坏时该步失败而不是把站点搞挂)。
+  改 nginx.conf 前可先在服务器上干跑验证语法,不碰生产容器:
+  ```bash
+  docker run --rm -v /tmp/test.conf:/etc/nginx/conf.d/nginx.conf:ro \
+    -v /home/docker/blog/ssl:/etc/nginx/ssl:ro \
+    --entrypoint nginx ccr.ccs.tencentyun.com/sumery/blog:latest -t
+  ```
+- **blog 曾是软 404(2026-08-19 修)**:`try_files $uri $uri/ /index.html` 是 SPA 写法,静态站用它会让**任何错误地址都返回首页 + HTTP 200**,搜索引擎当有效页面收录、读者输错也看不出来。已改为 `=404` + `error_page 404 /404.html`(Astro 的 `src/pages/404.astro` 产出),CI 的 verify 步骤加了 404 断言防回归
 - 面板证书状态永远 pending 是 BYO 证书的已知显示问题(上游 #3243),以浏览器实际握手为准
 - WireGuard 全走 UDP;若运营商晚高峰 QoS 严重,fallback 是 frp(TCP)换隧道层
 - DNSPod API 凭据(DP_Id/DP_Key)在 node1 `/root/.bash_history`(用户签证书时 export 过)——**该 Key 已于 2026-08-18 轮换作废**,续期证书要用新 Key;泛解析已加,一般不再需要
