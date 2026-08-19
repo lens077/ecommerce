@@ -52,6 +52,9 @@ func InitEnforcer(ctx context.Context, source loader.Source) error {
 	localPolicyFile = os.Getenv(constants.PoliciesfilePath)
 	localModelFile = os.Getenv(constants.ModelFilePath)
 
+	// 角色缓存（L1 进程内 + 可选 L2 Redis）。Redis 不可用会自动降级，不阻断启动。
+	initRoleCache()
+
 	initPathsErr := initPaths()
 	if initPathsErr != nil {
 		return initPathsErr
@@ -255,8 +258,15 @@ func (c *Cache) Set(key string, value interface{}) {
 	defer c.mu.Unlock()
 	c.items[key] = cacheItem{
 		value:      value,
-		expiration: time.Now().Add(5 * time.Minute).UnixNano(),
+		expiration: time.Now().Add(roleCacheTTL).UnixNano(),
 	}
+}
+
+// Delete 供 InvalidateRole 主动失效单个用户（见 rolecache.go）
+func (c *Cache) Delete(key string) {
+	c.mu.Lock()
+	defer c.mu.Unlock()
+	delete(c.items, key)
 }
 
 func Middleware(c *config.Middleware) (middleware.Middleware, error) {
@@ -349,16 +359,19 @@ func Middleware(c *config.Middleware) (middleware.Middleware, error) {
 }
 
 func getUserRoles(userID string) (string, error) {
-	// if cached, found := cache.Get(userID); found {
-	// 	return cached.(string), nil
-	// }
+	// 先查缓存（L1 进程内 → L2 Redis），未命中才回源 Casdoor。
+	// 此前这段是注释掉的，导致每个受保护请求都跨公网打一次 Casdoor —— 详见 rolecache.go 头部。
+	if role, ok := roleCacheGet(userID); ok {
+		return role, nil
+	}
 
 	role, err := fetchRolesFromCasdoor(userID)
 	if err != nil {
+		// 只缓存成功结果：错误若入缓存，Casdoor 抖一下就会把失败固化一个 TTL
 		return "", err
 	}
 
-	cache.Set(userID, role)
+	roleCacheSet(userID, role)
 	return role, nil
 }
 

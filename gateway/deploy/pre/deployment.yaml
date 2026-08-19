@@ -2,6 +2,7 @@ apiVersion: apps/v1
 kind: Deployment
 metadata:
   name: ecommerce-gateway-deploy
+  namespace: ecommerce
   labels:
     app: ecommerce-gateway
 spec:
@@ -23,8 +24,8 @@ spec:
         fsGroupChangePolicy: OnRootMismatch
       containers:
         - name: ecommerce-gateway
-          image: ccr.ccs.tencentyun.com/sumery/ecommerce-gateway:latest
-          imagePullPolicy: Always
+          image: ccr.ccs.tencentyun.com/sumery/ecommerce-gateway:sha-03f9fa5
+          imagePullPolicy: IfNotPresent
           ports:
             - containerPort: 8080
               protocol: TCP
@@ -36,7 +37,17 @@ spec:
             - name: CONFIG_SOURCE_FILE
               value: /etc/ecommerce/config-source/gateway.yaml
             - name: CONSUL_ADDR
-              value: consul://consul-server.consul.svc.cluster.local:8501
+              value: consul://consul-server.consul.svc.cluster.local:8500
+            # Consul 自 2026-08-18 开了 ACL(default_policy=deny)。不带 token 的症状
+            # **不是报错而是查不到**：读操作返回 200 但结果被 ACL 过滤成空
+            # （/v1/health/service/xxx → []），表现为"服务活着但网关永远路由不到"。
+            # 环境变量名必须是 CONSUL_HTTP_TOKEN（consul/api 的兜底读取），
+            # 不是 backend/constants 里那个未被 registry 读取的 CONSUL_TOKEN。
+            - name: CONSUL_HTTP_TOKEN
+              valueFrom:
+                secretKeyRef:
+                  name: consul-ecommerce-token
+                  key: CONSUL_HTTP_TOKEN
           envFrom:
             - configMapRef:
                 name: ecommerce-gateway-config
@@ -53,7 +64,7 @@ spec:
       volumes:
         - name: config-source
           secret:
-            secretName: ecommerce-config-source-dev
+            secretName: ecommerce-config-source-pre
             defaultMode: 0400
         - name: redis-tls
           secret:
