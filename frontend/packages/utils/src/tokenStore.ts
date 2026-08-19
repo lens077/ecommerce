@@ -24,6 +24,10 @@ let accessToken: string | null = null;
 let refreshToken: string | null = null;
 /** 绝对过期时刻（epoch ms），取自 JWT 的 exp。用于提前调度续期。 */
 let expiresAt = 0;
+/** OIDC 的 id_token。**只为登出用**：Casdoor 的 end_session_endpoint 强制要求
+ *  `id_token_hint`，缺了它直接返回 {"status":"error","msg":"Missing parameter: id_token_hint"}，
+ *  会话不会被结束（2026-08-19 实测）。与其它令牌一样只存内存。 */
+let idToken: string | null = null;
 
 const listeners = new Set<Listener>();
 
@@ -34,18 +38,22 @@ const notify = () => {
 export const getAccessToken = (): string | null => accessToken;
 export const getRefreshToken = (): string | null => refreshToken;
 export const getExpiresAt = (): number => expiresAt;
+export const getIdToken = (): string | null => idToken;
 
 export const setTokens = (opts: {
   accessToken: string;
   refreshToken?: string | null;
   /** 令牌剩余有效秒数；缺省时由调用方从 JWT exp 推 */
   expiresAt?: number;
+  /** OIDC id_token，登出时作为 id_token_hint 回传给 Casdoor */
+  idToken?: string | null;
 }) => {
   accessToken = opts.accessToken;
   // 刷新令牌同样只存内存：写进 storage 的话，前面那些 XSS 论证就全部作废
   // （拿到 refresh token 比拿到 access token 更糟——它能不断换新令牌）。
   if (opts.refreshToken !== undefined) refreshToken = opts.refreshToken;
   if (opts.expiresAt !== undefined) expiresAt = opts.expiresAt;
+  if (opts.idToken !== undefined) idToken = opts.idToken;
   notify();
 };
 
@@ -53,6 +61,7 @@ export const clearTokens = () => {
   accessToken = null;
   refreshToken = null;
   expiresAt = 0;
+  idToken = null;
   notify();
 };
 
