@@ -215,11 +215,31 @@
       两条 HTTPRoute 的 hostname 是 `.app.com` 而非 `.apikv.com`。
 - [x] ~~**Pangolin 资源**~~ `gateway.apikv.com`(resourceId 14) 与 `shop.apikv.com`(resourceId 15)
       已建，target `10.99.145.85:443` https，**SSO 已关**（应用自己走 Casdoor，再套一层会登录两次）。
-- [ ] **部署网关本体到集群** —— 当前 `ecommerce` ns 里**没有网关**（helm 伞 chart 只含 10 个业务服务，
-      网关有自己的 `gateway/deploy/{dev,prod}`）。这是 `gateway.apikv.com` 现在 404 的**唯一**原因；
-      部署后给它加一条 HTTPRoute（hostname `gateway.apikv.com`，`sectionName: https`）即可生效，
-      Pangolin 那侧不必再动。**不做这条，正式站点点开就是全 404。**
-- [ ] **部署前端** —— `shop.apikv.com` 404 同理，缺的是后端而非隧道。
+- [x] ~~**部署网关本体到集群**~~ **2026-08-19 已完成并端到端验证通过**。新建 `gateway/deploy/pre/`
+      （dev 那份用的是 `-dev` selector，且三份清单都没写 `namespace`，会随 context 漂）；
+      网关的四个条目灌进 Config Center（`namespace=gateway env=pre`，`is_secret=false`）；
+      镜像 `sha-03f9fa5`（含本次安全修复）。**三项验证**：
+      ① 公网 `https://gateway.apikv.com` → product 免鉴权路由 **200**（业务层参数校验响应）；
+      ② `cart.GetCart` 不带 token → **401**；
+      ③ **伪造 `x-md-global-user-id` 被剥离并留痕**（日志 `丢弃客户端自带的身份头`）。
+      RBAC 角色缓存已接入 Redis（`TLS=true, TTL 5m`）。
+
+      **过程中修掉的四个真问题**（都不是本次改动引入的，是集群重建后的存量）：
+      1. **10 个服务全都没有 `CONSUL_HTTP_TOKEN`** —— Consul 08-18 开了 ACL 后没人补。
+         失败是**静默的**：注册看似成功、读返回 200 但被 ACL 过滤成空，
+         `/v1/catalog/services` 只有 `{"consul":[]}`，表现为"服务活着、网关永远路由不到"。
+         已在 `helm/values.yaml` 给 10 个服务统一补上。
+      2. 网关配置里 Consul 地址写死成旧集群 LB IP `192.168.3.112`（现已漂到 `.102`），
+         且 configMap 指向 **8501/https —— 那个端口根本不存在**（只有 8500/http）。
+         症状是 `context deadline exceeded`，像网络抖动。已改走 Service DNS。
+      3. **`optional: true` 的 Secret 卷，若 Pod 早于 Secret 创建会挂成空目录且不回填**，
+         重启一次才有。`redis-tls-ca` 踩到，表现为"Secret 明明有内容、容器里却是空目录"。
+      4. 集群内 Redis 有 `requirepass`，缺密码时组件按设计降级为仅进程内缓存
+         （不阻断启动），因此 `NOAUTH` 只在日志出现一次，极易忽略。已补 `REDIS_PASSWORD`。
+
+      **另记一条 GitOps 现场教训**：直接 `kubectl apply` 改 Deployment 会被 ArgoCD 的
+      selfHeal 在秒级同步回去（本次实测撞上）。`helm/values.yaml` 是真相源，只能走 Git。
+- [ ] **部署前端** —— `shop.apikv.com` 仍 404，缺的是后端而非隧道（Pangolin 资源 15 已就绪）。
 - [ ] **网关部署补 `redis-tls-ca` Secret**：`deploy/dev/deployment.yaml` 已挂载但标了
       `optional: true`（缺了只退化成仅进程内缓存，不会让网关起不来）。
       `kubectl -n redis get secret redis-tls -o jsonpath='{.data.ca\.crt}' | base64 -d` 后

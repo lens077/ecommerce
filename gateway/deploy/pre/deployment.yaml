@@ -48,6 +48,14 @@ spec:
                 secretKeyRef:
                   name: consul-ecommerce-token
                   key: CONSUL_HTTP_TOKEN
+            # 集群内 Redis 开了 requirepass。不给密码的症状是
+            # `NOAUTH Authentication required` —— 本组件会降级为仅进程内缓存
+            # （不阻断启动），所以它只会在日志里出现一次，很容易被忽略。
+            - name: REDIS_PASSWORD
+              valueFrom:
+                secretKeyRef:
+                  name: redis-auth
+                  key: password
           envFrom:
             - configMapRef:
                 name: ecommerce-gateway-config
