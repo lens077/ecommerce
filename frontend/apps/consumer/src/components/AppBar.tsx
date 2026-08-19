@@ -23,7 +23,8 @@ import { getPublicTransport } from "@ecommerce/api";
 import { SearchService } from "@/gen/api";
 import { useFormat, useTranslation } from "@ecommerce/i18n";
 import { LocaleSwitcher } from "@ecommerce/ui";
-import { getSigninUrl, isLoggedIn } from "@ecommerce/configs";
+import { getSigninUrl } from "@ecommerce/configs";
+import { useAuthState } from "@/providers/AuthProvider";
 import { SEARCH_INDEX } from "@ecommerce/constants";
 import type { Product } from "@/gen/api";
 import { useCartBadge } from "@/hooks/useCart";
@@ -107,6 +108,12 @@ const StyledInputBase = styled(InputBase)(({ theme }) => ({
 }));
 
 export default function PrimarySearchAppBar() {
+  // ⚠️ 用订阅式的 useAuthState()，不要调 isLoggedIn()。
+  // 后者是普通函数：令牌改为**内存态**后（防 XSS，见 utils/tokenStore.ts），
+  // 登录成功不再产生任何能触发重渲染的信号，顶栏会永远停在首次渲染的结果 ——
+  // 表现为"登录明明成功了（用户资料都已拿到），顶栏还显示未登录"（Playwright 实测）。
+  // 它此前"碰巧能用"，只是因为读的是同步可读的 localStorage。
+  const { isAuthenticated } = useAuthState();
   const navigate = useNavigate();
   const { t } = useTranslation();
   const { formatCurrency } = useFormat();
@@ -438,7 +445,7 @@ export default function PrimarySearchAppBar() {
                 <ShoppingCartIcon />
               </Badge>
             </IconButton>
-            {isLoggedIn() ? (
+            {isAuthenticated ? (
               <IconButton
                 size="large"
                 edge="end"
@@ -482,7 +489,7 @@ export default function PrimarySearchAppBar() {
           </Box>
           <Box sx={{ display: { xs: "flex", md: "none" }, alignItems: "center" }}>
             <LocaleSwitcher size="small" />
-            {isLoggedIn() ? (
+            {isAuthenticated ? (
               <IconButton
                 size="large"
                 aria-label="show more"
