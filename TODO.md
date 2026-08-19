@@ -227,6 +227,9 @@
 
 ### 其余近期待办
 
+- [x] **Go PGO 评估与验收指南（2026-08-19）**：阅读 Go PGO 实测文章，将优化机制、
+      profile 代表性、交叉负载验证、收益边界、回退条件与 profile 管理要求补入
+      `docs/design/platform/performance.md`；外部实验的 2%–4.7% 提升不作为项目性能承诺
 - [x] **go-redis 使用约定补充（2026-08-19）**：阅读 OneUptime 教程，将 cache-aside、连接池、
       `context`、Key/TTL、Pipeline、Pub/Sub 与锁的可靠性边界合并到 `context/team/go-redis.md`；
       同步两级 INDEX，`verify-context` 与 `verify-freeze` 门禁通过
