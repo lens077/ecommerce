@@ -22,10 +22,19 @@ export const CASDOOR_CONF = {
 // 读取配置
 export const CASDOOR_SDK = new SDK(CASDOOR_CONF);
 
-// 判断是否登录。
-// ⚠️ 令牌只存内存（防 XSS，见 packages/utils/src/tokenStore.ts），
-// 页面刷新后这里会短暂为 false，直到 restoreSession() 静默续期完成。
-// 需要"等恢复完再判断"的地方请 await restoreSession()，别直接调本函数。
+/**
+ * 判断是否登录。**当前全仓无人调用，保留只为兼容外部引用。**
+ *
+ * @deprecated React 组件里一律用 `useAuthState()`，不要用本函数。
+ *
+ * 它是普通函数，不是订阅：令牌只存内存（防 XSS，见 `packages/utils/src/tokenStore.ts`）
+ * 之后，登录成功不再产生任何能触发重渲染的信号，读到什么就永远是什么 ——
+ * 顶栏就这么坏过一次（登录成功了却一直显示"未登录"），而且**不报任何错**。
+ * 它此前"碰巧能用"，只是因为读的是同步可读的 localStorage。
+ *
+ * 非组件环境（如路由 `beforeLoad`）需要判断时，先 `await restoreSession()`
+ * 等冷启动的静默续期跑完，再看结果——直接调本函数会在刷新后误判成未登录。
+ */
 export const isLoggedIn = () => hasToken();
 
 // setToken 已移除：请用 @ecommerce/utils 的 setTokens()（能一并记录 refresh token
