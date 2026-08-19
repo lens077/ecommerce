@@ -39,8 +39,8 @@ dragonfly 在用。GRPCRoute 有 CRD 无实例。`kube-system/cilium-ingress`（
 | Seata | seata | seata-server:8091 | seata.dev.test → http(80) | ❌ 明文 |
 | ArgoCD | argocd | argocd-server:80 | argocd-server.dev.test → http(80) | ❌ 网关侧明文 |
 | Casdoor（集群外） | — | — | **apikv.com:8000 = 114.132.233.129，公网明文 HTTP** | ❌ OAuth 流量走公网 http |
-| MinIO（集群外） | — | — | `https://minio.apikv.com:9000`（=8.138.194.254）；管理台 9001 已绑 `127.0.0.1` | ✅ TLS（ZeroSSL `*.apikv.com`，**2026-10-27 到期**，2026-08-19 落地） |
-| gorse（集群外） | — | — | **8.138.194.254**:8088 / :8086，公网明文 | ❌ 公网 http（实测 8088 匿名 200） |
+| MinIO（node2，集群外） | — | — | `https://minio.apikv.com`（443）→ Pangolin/Traefik → newt 隧道 → node2 `127.0.0.1:9000`；9000/9001 均已绑回环 | ✅ TLS（Traefik 终止，ZeroSSL `*.apikv.com`，**2026-10-27 到期**，2026-08-19 落地） |
+| gorse（node2，集群外） | — | — | `https://gorse.apikv.com` → 同上 → `127.0.0.1:8088`；8086/8088 均已绑回环。**当前服务停机**（Redis 依赖断，见 TODO.md） | ✅ TLS；暂由 Pangolin SSO 保护，恢复后改用 gorse 自带 `api_key` |
 
 ## 实测记录（2026-08-08）
 
@@ -69,5 +69,7 @@ dragonfly 在用。GRPCRoute 有 CRD 无实例。`kube-system/cilium-ingress`（
 3. **TCP 类不必退化到 L4**：凡客户端支持 TLS+SNI 的都能走 TLSRoute Passthrough——kafka 9093（TLS listener 现成，
    证书是 Strimzi 自己的 CA）、postgres（`public-web-gw/06-tls-route.yml` 的 pg-dev-route 示例写了但从未 apply；
    现状 LB+原生 TLS 也算达标）。真正只能 L4 明文的只剩「客户端不做 TLS」的场景。
-4. **公网明文最优先**：casdoor（OAuth code/token）与 8.138.194.254 的 gorse 仍走公网 http，
-   风险级别高于所有集群内明文。minio 已于 2026-08-19 上 TLS 并把管理台收回回环（见上表）。
+4. **公网明文最优先**：casdoor（OAuth code/token）仍走公网 http，风险级别高于所有集群内明文。
+   node2（8.138.194.254）的 minio 与 gorse 已于 2026-08-19 全部收敛：改走 node1 的 Pangolin
+   隧道，本机端口全绑回环。**注意该机不能自行配域名证书**——`apikv.com` 未在阿里云备案，
+   域名直连必被 ICP 拦截（`Server: Beaver`），这是走隧道而非就地上 TLS 的根本原因。
