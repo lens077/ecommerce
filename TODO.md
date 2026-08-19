@@ -239,7 +239,49 @@
 
       **另记一条 GitOps 现场教训**：直接 `kubectl apply` 改 Deployment 会被 ArgoCD 的
       selfHeal 在秒级同步回去（本次实测撞上）。`helm/values.yaml` 是真相源，只能走 Git。
-- [ ] **部署前端** —— `shop.apikv.com` 仍 404，缺的是后端而非隧道（Pangolin 资源 15 已就绪）。
+- [x] ~~**部署前端**~~ **已完成**：`https://shop.apikv.com` 首页 200。
+- [x] **真浏览器跑通登录后修掉的 5 个问题（2026-08-19）**——它们的共同点是
+      **单测和 tsc 一个字都不会说**，要么在响应头里，要么只在「真浏览器 + 真 Casdoor
+      + 真跨源」的组合下才显形；页面看着完全正常，但登录态是坏的。
+      ①**顶栏用 `isLoggedIn()` 这个非订阅式函数** —— 令牌改内存态后，登录成功不再
+      产生任何能触发重渲染的信号，顶栏永远停在首渲结果（表现为"用户资料都拿到了，
+      顶栏还显示未登录"）。改用 `useAuthState()`；`isLoggedIn` 已标 `@deprecated`，
+      全仓无调用方。②**CSP 漏 `font-src`** —— MUI 图标字体是 base64 `data:` URI，
+      只有 `default-src 'self'` 时被全拦（实测 5 条违规），图标是空的但不看控制台
+      发现不了。③**`frame-src` 漏 `'self'`** ④**`X-Frame-Options: DENY` 挡死静默续期** ——
+      ③④同一个成因：静默续期的最后一跳是 Casdoor 把 iframe **重定向回我们自己的
+      `/callback`**，两者都会把这一跳拒掉，`postMessage` 发不出来 → 每次刷新都要重登。
+      原注释断言"DENY 只约束别人嵌我们、不影响我们嵌别人"是**错的**；且控制台那条
+      CSP 违规写的是被拦的是 shop 自己的 URL，极易看反方向。已改 `SAMEORIGIN` +
+      `frame-ancestors 'self'`。⑤**`img-src` 漏 `cdn.casbin.org`**（Casdoor 默认头像）。
+      **线上实测已生效**：`curl -D-` 读 `https://shop.apikv.com/` 的响应头，
+      CSP 八段与 `X-Frame-Options: SAMEORIGIN` 与仓库一致。
+- [x] **删掉 `localStorage.user`，用户资料改从 JWT 派生（2026-08-19）**：它是令牌还存
+      localStorage 时代的产物，令牌改内存态后变成纯负债 —— PII 无限期留盘且登出带不走，
+      而且它是**未经验证的输入**（`hooks/useAddresses.ts` 直接拿 `account.id` 当 `userId`
+      发请求）。**但不能直接删**：它是当时唯一让资料跨刷新存活的东西，删掉会让刷新后
+      头像昵称变空、`useAddresses` 拿空 `userId` 发请求，且不报任何错。改为 store 订阅
+      令牌变化、从 JWT 解出资料（Casdoor 的 JWT 本来就带这些 claim），一处派生覆盖
+      登录/续期/冷启动/登出四条路径。**顺带修掉两个同源问题**：AppBar 的登出是第二条
+      并行路径，只调 `clearToken()` 漏了 `stopRenew()`——续期定时器在登出后照跑，到点用
+      Casdoor 会话 Cookie 静默换新令牌，即**登出后会自己登回去**；以及 `setAccount({})`
+      是 `{...旧值, ...{}}`，**什么都清不掉**，而登出与两处路由守卫全写的这个。
+      已补 6 条 store 单测（含反证：注掉订阅后 3 条转红）。
+- [x] **登录冒烟测试接进 CI（2026-08-19）**：`apps/consumer/e2e/login.smoke.mjs`，
+      `frontend.yml` 里独立 job `smoke-login`，走 `workflow_dispatch` + 每日定时，
+      **不挂在发版流水线上** —— 它测的是线上已部署的那一份，放构建前跑等于测上个版本，
+      放构建后又要等 ArgoCD 同步完（时长不可控）；且它依赖外部基础设施（Casdoor、
+      Pangolin 隧道、网关），红了不该卡发版。断言覆盖 PKCE 参数、无 `client_secret`、
+      localStorage 无 token/user、刷新后登录态与头像仍在、全程零 CSP 违规。
+      **待办**：仓库要配 `CASDOOR_E2E_USER` / `CASDOOR_E2E_PASS` 两个 secret，
+      没配时该 job 整体跳过（不是失败）。
+- [ ] ⚠️ **`frontend.yml` 的构建/发布段已经全是死引用，跑起来必失败**（2026-08-19 实查，
+      本轮只加了 smoke job，没动它）：`file: frontend/Dockerfile` **不存在**（真实位置是
+      `frontend/apps/consumer/Dockerfile`）、`helm/charts/frontend/` **不存在**、
+      registry 写的 `harbor.apikv.com:5443` 本集群没部署（前端实际用 TCR）、
+      Manifest 仓库路径 `connect-example/frontend/argo.yaml` 是另一个项目的布局。
+      前端目前是手工 `kubectl apply frontend/apps/consumer/deploy/pre/` 部署的。
+      要么按现状重写这条流水线，要么删掉只留 smoke job，别让它假装还在工作
 - [ ] **网关部署补 `redis-tls-ca` Secret**：`deploy/dev/deployment.yaml` 已挂载但标了
       `optional: true`（缺了只退化成仅进程内缓存，不会让网关起不来）。
       `kubectl -n redis get secret redis-tls -o jsonpath='{.data.ca\.crt}' | base64 -d` 后
@@ -365,8 +407,46 @@
 - [ ] **公网明文端点（优先级高于所有集群内明文）**：casdoor `apikv.com:8000`（=114.132.233.129）承载 OAuth code/token 交换，**走公网 http**。node2（8.138.194.254）上的 minio 与 gorse 已于 2026-08-19 全部解决，见下条
 - [x] **MinIO 上 TLS + 管理台收回内网（2026-08-19 完成）**：`8.138.194.254` 的 ssh 别名是 **`node2`（端口 34124，阿里云，与集群内 node2 `192.168.3.202` 重名但完全无关）**，同机还跑着 harbor 与 gorse。MinIO 是 docker 容器 `pgsty/minio`，compose 在 `/home/docker/minio/compose.yml`（**服务器侧是真相源**，备份 `compose.yml.bak-20260819`）。三处改动：①挂 node1 那张 ZeroSSL 泛域名证书 `*.apikv.com` 到 `/root/.minio/certs`——**宿主机侧必须自带空 `CAs/` 目录**，整卷挂载会遮蔽容器内原有结构，且挂 `:ro` 后 MinIO 无法自建（与 helm `db-ca-cert` 遮蔽系统 CA 是同一个坑）②9001 由 `9001:9001` 改 `127.0.0.1:9001:9001`，运维走 `ssh -p 34124 -L 9001:127.0.0.1:9001 node2` ③healthcheck 由 `mc ready local`（alias 硬编码 `http://localhost:9000`，启用 TLS 后必失败）改 `curl -fsk https://localhost:9000/minio/health/live`。**实测验收**：9001 公网 http/https 均 `000`、9000 明文 http 返 `400`、`https://minio.apikv.com:9000` **不带 `-k` 的严格校验** 200（证书 3 张链完整，SAN `*.apikv.com`+`apikv.com`，ECDSA P-256）
 - [x] **node2 接入 Pangolin + 全部端口收回回环（2026-08-19 完成）**：⚠️ **先记住这条硬约束**——`8.138.194.254` 是阿里云机，`apikv.com` **未在阿里云备案**，任何经该域名访问本机的请求都被阿里云在网络层拦掉（HTTP 返 403 `Server: Beaver` + `<title>Non-compliance ICP Filing</title>`，HTTPS 直接 reset）。`harbor`/`img` 两个早就存在的子域同样被拦。**所以"给这台机的服务配域名+证书直连"这条路根本走不通，唯一解是让公网流量落到 node1 再经隧道回来**。做法：node2 装 newt 1.15.0（二进制 `/home/docker/newt/newt` + systemd `newt.service`，`systemctl link` 自 `/home/docker/newt/`，凭据在同目录 `newt.env` 权限 600，不入库），建站点 **siteId 5 `node2`**；建资源 `minio.apikv.com`(rid 16, SSO off, target `127.0.0.1:9000` https) 与 `gorse.apikv.com`(rid 17, **SSO on**, target `127.0.0.1:8088` http)。随后 minio 9000/9001、gorse 8086/8088 **全部改绑 `127.0.0.1`**。**实测**：四个端口公网均 `000`，`https://minio.apikv.com` 严格校验 200，`https://gorse.apikv.com` 302（被 SSO 挡住）
-- [ ] **gorse 起不来：Redis 依赖已断（2026-08-19 暴露）**：`node1:6379` 的 redis 容器在 **2026-08-18 15:40 被主动停掉**（SIGTERM、退出码 0、正常存盘 36 keys），重启策略是 `no` 所以不会自愈。gorse **启动时强依赖它**（`failed to init database: dial tcp 114.132.233.129:6379: i/o timeout` → fatal → 重启循环），此前容器是 6 月启动的老实例，带着断掉的连接空转（`Ready:false`）才显得"还活着"，一重启就再也起不来。现已 `docker compose stop` 止住循环。**恢复前要先决定 Redis 怎么摆**：node1 的 `/home/docker/redis/compose.yml` 是 `"6379:6379"`（`HostIp` 空 = 0.0.0.0 公网），密码是 gorse 连接串里那个 `msdnmm` 弱口令——**直接拉起来等于把弱密码 Redis 重新挂上公网**。建议改为在 node2 本地跑一个绑 `127.0.0.1` 的专用 Redis 并改 `GORSE_CACHE_STORE`（cache store 是 gorse 自己的缓存，无需跨机共享，丢了可重建）。注意 `GORSE_DATA_STORE` 的 PostgreSQL（同在 node1:5432）实测是通的，本条只涉及 Redis
-- [ ] **gorse 恢复后要做的两步**：①**关掉 `gorse.apikv.com` 的 SSO**——已在 gorse 侧配好自己的鉴权（`config.toml` 的 `[server] api_key`、`admin_api_key`、`[master] dashboard_user_name/password`，备份 `config.toml.bak-20260819`），SSO 只是它零鉴权期间的临时护栏；**注意 dashboard 和 RESTful API 是同一个 8088 端口**，关 SSO 前必须确认这三项都非空，否则等于把无鉴权管理面板挂公网 ②**三份业务配置的 gorse endpoint 从 `http://8.138.194.254:8088` 改为 `https://gorse.apikv.com` 并填 `api_key`**（`backend/services/behavior/configs/{dev,pre}.yml`、`product/configs/pre.yml`；client 侧 `backend/pkg/gorse/client.go:205` 已经在发 `X-API-Key`，无需改代码）。**api_key 属于凭据，仓库副本保持空串，真值只灌 Config Center**（硬规则 4）
+- [x] **gorse 恢复 + 自带鉴权（2026-08-19 完成）**：故障链是「**Redis 被停 → gorse 启动时 fatal**」：`node1:6379` 的 redis 容器 2026-08-18 15:40 被主动停掉（SIGTERM、退出码 0、正常存盘 36 keys，重启策略 `no` 不自愈），而此前 gorse 是 6 月启动的老实例，带着断掉的连接空转（`Ready:false`）才显得"还活着"——**一重启就再也过不了启动检查**，这类隐性故障只有在重启时才暴露。恢复后还差一步：redis/pg 起来了但 **node2 仍连不上 6379**，根因是**腾讯云 Lighthouse 防火墙没放行 6379**（5432 早就是 `0.0.0.0/0` 所以 PG 一直通）。已加规则但**锁定源 IP 为 `8.138.194.254/32`**（Redis 密码是 `msdnmm` 弱口令，绝不能对全网开），实测本机连 6379 超时、node2 连通、对照组 443 两边都通。gorse 侧同时配好自己的鉴权（`config.toml` 备份 `config.toml.bak-20260819`）：`[server] api_key`、`admin_api_key`、`[master] dashboard_user_name/password` 原本**全是空串**。**实测验收**：`Ready:true`（两个 store 都连上）；经 `https://gorse.apikv.com` 无 key/错 key 均 **401**、正确 key 404（鉴权已过）、Dashboard 未登录 302→`/login`、`verify=0`；IP 直连 8088 仍 `000`。SSO 已关（改由 gorse 自身鉴权），三份业务配置已切到 `https://gorse.apikv.com`
+- [x] **彻底登出 + 修掉登录入口的两套机制混用（2026-08-19，本地实测通过）**：改动三处——①`logout()` 末尾跳 Casdoor 的 `end_session_endpoint`（`/api/logout`）②**必须带 `id_token_hint`**，缺了它 Casdoor 返回 `{"status":"error","msg":"Missing parameter: id_token_hint"}` 且**不结束会话**，页面还停在那段 JSON 上；为此把 `id_token` 一路接进 `TokenResult`→`setTokens`→`tokenStore`（同样只存内存），登出时**先取后清** ③`AppBar` 的登录按钮由 `window.location.href = getSigninUrl()`（casdoor-js-sdk 老路径，state 写进 `casdoor-state`、**不生成 code_verifier**）改为 `useAuthActions().login()`（PKCE）。**②③ 是两个独立的既有 bug，不是本次引入**：入口走 SDK、回调走 `exchangeCode()` 读 `oauth_state`/`oauth_code_verifier`，必然报「OAuth state 校验失败」——**线上同样是坏的**，只是开了「自动登录」的用户靠 `silentRenew` 直接静默登入，走不到那个按钮所以没暴露。**实测判据**（生产构建 + 全新浏览器）：登录成功 → 登出后自动跳回应用且未登录 → 刷新仍未登录 → **再点登录时 Casdoor 要求重新输密码**（最后这条才是「会话真的结束」的证据，前两条只能证明本地清理生效）
+- [ ] **`restoreSession` 与 callback 的竞态**：`AuthProvider` 用 `router.state.location.pathname` 判断是否跳过 `restoreSession()`，但那要等 TanStack Router 初始化完，effect 首跑时可能还是 `/`，防护形同虚设。已改用 `window.location.pathname`（不依赖框架初始化）。**Casdoor 开「保持登录会话」后 `silentRenew` 更容易成功，这个竞态被放大**。改动已验证不影响登录，但没有回归测试守着
+- [ ] **`e2e/login.smoke.mjs` 缺少隐私弹窗处理**：首页的 Privacy policy 模态会盖住顶栏，**点不到 SIGN IN**，脚本会在第一步就超时。本地实测必须先点 `Reject all`/`Accept all` 才能往下走。这条 e2e 至今没在 CI 里真跑过（secret 刚配上），跑起来第一次大概率就挂在这里
+- [ ] **前端没进 GitOps（2026-08-19 记录，用户明确暂缓）**：`frontend/apps/consumer/deploy/` 下 7 份 manifest（`deployment/service/configMap` + `pre/` 四份）是手工 `kubectl apply` 的，不在 ArgoCD 里。而且**和线上对不上**：manifest 写 `harbor.apikv.com/ecommerce/frontend:dev`，线上实际跑 `ccr.ccs.tencentyun.com/sumery/ecommerce-frontend:sha-auth4`（deploy 名 `ecommerce-frontend-deploy`，ns `ecommerce`，revision 5）。镜像 tag 是手打的（`sha-bf8dae2`→`sha-csp1`→`sha-auth2`→`sha-auth4`），不是 CI 产物。**基础设施稳定后再收口**
+- [ ] **接入企业微信告警（2026-08-19 探明拓扑与落点，只差凭据）**
+
+  **① 先分清三个端，别配错地方**（版本都不同，很容易混）：
+
+  | 端 | 是什么 | 发不发告警 |
+  |---|---|---|
+  | `grafana.dev.test` | **集群内** `observability` ns，**12.3.1** | ✅ k8s 侧发送方，已有飞书 contact point |
+  | `192.168.3.210:3000` | Pigsty 自带，**13.1.3** | ❌ 实测 **0 contact point / 0 规则**，纯看板 |
+  | `192.168.3.210:9059` | Pigsty **Alertmanager** 0.33.1 | ✅ 基础设施侧发送方 |
+
+  ⚠️ Alertmanager 配置里那行 `wechat_api_url` 是它的**全局默认值**（指向 `qyapi.weixin.qq.com`），**不代表已配企业微信** —— receivers 实际只有 `default` 和 `feishu`。
+
+  **② 两种企业微信形态，给的凭据不一样 —— 这是选型的关键分岔**：
+  - **应用消息**（`corp_id` + `agent_id` + `api_secret`）：Alertmanager 的 `wechat_configs` **只吃这种**；Grafana 的 WeCom 也支持。**推荐**，两边统一且不必再引入转换层
+  - **群机器人 webhook**：Grafana 能用，**Alertmanager 不能**（它发自己的格式，群机器人不认），只能经 PrometheusAlert 转换
+
+  **③ 凭据获取步骤**（[work.weixin.qq.com/wework_admin](https://work.weixin.qq.com/wework_admin/)）：
+  1. `corp_id`：「我的企业」→ 页面最下方「企业ID」
+  2. 「应用管理」→「应用」→「自建」→「创建应用」，**可见范围决定谁能收到告警**；创建后详情页拿 **AgentId**，**Secret** 点「查看」会推送到手机企业微信
+  3. ⚠️ **必须配「企业可信IP」**：应用详情 →「开发者接口」→「企业可信IP」→ 填 **`171.105.164.78`**（210 与集群 Grafana 实测是同一条家宽出口）。不配则调 API 报 `not allow to access from your ip`，**且该错误只在 Alertmanager 日志里，界面无感知**。这是家宽出口 IP，**会漂** —— 以后告警突然静默，先查它
+
+  **④ 落点已就绪**（2026-08-19）：210 的 SSH 已通，**用户名是 `root` 不是 `sumery`**（用后者会被 publickey/password 拒）；配置在 **`/etc/alertmanager.yml`**（不是 `/etc/alertmanager/alertmanager.yml`，路径从 `ps -eo args` 的 `--config.file=` 反查），已备份 `.bak-wecom-20260819`。现有结构：`route` 下两条子路由（`severity="CRIT"`→feishu/4h、`severity="WARN"`→feishu/24h），receivers 只有 `default`/`feishu`。**改法**：加 `wecom` receiver，CRIT 那条路由用 `continue: true` 让它同时进飞书和企业微信，不动现有飞书链路。⚠️ 按 `context/team/local-env.md`，Pigsty 侧要**模板与已部署文件双改**，否则 `./infra.yml -t alertmanager` 重跑会覆盖回去
+
+  **⑤ 仍缺**：企业微信三件套；**集群 Grafana（12.3.1）的 admin 密码**（用户此前给的 `FMU5...` 经实测是 210:3000 那个 13.1.3 的，对集群那个 401）
+
+  **⑥ 验收不能只测「发得出去」**：造一条 `severity=CRIT` 的假告警，确认**同时**进飞书和企业微信；再造一条 `WARN`，确认**不**进企业微信 —— 否则路由条件没生效等于全量轰炸
+- [ ] **告警链路已断：PrometheusAlert 转换层随 210 停机消失（2026-08-19 发现）**：`context/team/local-env.md` 记的链路是「k8s Grafana → PrometheusAlert(192.168.3.210:8080) → 飞书」，但 **210 已于 2026-08-19 停机**，实测 8080/9059/3000 全部不可达。集群里只有 Grafana（`observability` ns，12.3.1），**没有 alertmanager / prometheusalert**。所以飞书告警此刻发不出去，而且是**静默失败**（Grafana 侧只会在 UI 留错误）。Grafana 12 原生支持企业微信（`wecom` contact point）与飞书需要转换层不同，**接企业微信不必重建转换层**；但飞书那条要么把转换层迁到集群里，要么改用别的通道
+- [ ] **`HELM_REGISTRY_PASS` secret 缺失**：`.github/workflows/frontend.yml` 的 chart 推送用 `helm registry login harbor.apikv.com -u rebot@github`，但仓库里只有 `MANIFEST_PUSH_TOKEN`/`TCR_*`/`CASDOOR_E2E_*`，没有这个。要在 harbor 里建机器人账号 `rebot@github` 并把 token 配成 secret，否则打 tag 后 chart 推送步骤必失败
+- [ ] **给 Config Center 灌 gorse 的 api_key**：`backend/services/behavior/configs/{dev,pre}.yml` 与 `product/configs/pre.yml` 的 `api_key` 按硬规则 4 **保持空串**，但 gorse 侧鉴权已开——**KV 里不填真值的话业务调用会全部 401**。真值在 node2 的 `/home/docker/gorse/config.toml`
+- [x] **node1 的 Redis 上 TLS + 强随机密码（2026-08-19 完成）**：`/home/docker/redis/conf/redis.conf` 改为 **`port 0` + `tls-port 6379`**（明文端口彻底关闭），证书复用本机那张 ZeroSSL `*.apikv.com`（`/home/docker/redis/tls/`，**属主必须是 uid 999**，redis 官方镜像以该用户运行，否则读不到私钥启动即失败）；`tls-auth-clients no` 时 Redis 仍强制要求 `tls-ca-cert-file`，用 fullchain 自身充数即可。密码换成 40 位随机（原 `msdnmm`）。客户端必须 **`rediss://` + 连 `redis.apikv.com`**——证书无 IP SAN，连 `114.132.233.129` 校验必失败。gorse 的 `GORSE_CACHE_STORE` 已切换，实测 `Ready:true` / `CacheStoreConnected:true` / `DBSIZE` 回升。**实测验收**：公网 TLS 握手 + 系统 CA 严格校验通过（TLSv1.2，SAN `*.apikv.com`）、明文连接收到 TLS Alert `\x15\x03\x03`、未认证 `PING` 返回 `NOAUTH`、错误密码 `WRONGPASS`
+- [x] **公网 docker 端口随机化（2026-08-19 完成）**：全部改到 **>32767**（避开 k8s NodePort 的 30000-32767 段）。node1：redis `6379 → 61246`、postgres `5432 → 52288`（Lighthouse 防火墙同步迁移，**先加新规则再删旧规则**）；node2：harbor `5080 → 41311`、`5443 → 49600`（`harbor.yml` 与 `docker-compose.yml` **两处都要改**，前者供下次 `prepare` 用，否则会被覆盖回去）。gorse 的两个连接串已同步。**实测**：旧端口全 `000`、新端口可达、gorse `Ready:true`
+- [ ] **⚠️ Redis 61246 目前对 `0.0.0.0/0` 开放（测试期，上线前必须收窄）**：用户明确要求测试阶段公网可达。虽有 TLS + 40 位随机密码 + 非常规端口，但公网 Redis 会被持续扫描，**且 `protected-mode no` 仍在**。收窄命令见 `context/team/pangolin-tunnel.md` 的 Lighthouse 小节，把 `CidrBlock` 改回实际来源（如 `8.138.194.254/32`）。postgres 的 52288 同理
+- [x] **harbor 修复：换掉过期证书 + 经 Pangolin 暴露（2026-08-19 完成）**：浏览器报红有**两个叠加原因**，只修一个不够——①**证书早已过期**：harbor 用的是 `Apr 22 → Jul 21 2026` 那张（6 月放进去的），而 node1 上有效的是 `Jul 29 → Oct 27`；②**即使换新证书也还是红**：`*.apikv.com` 证书配 IP 访问必然域名不匹配，而域名访问又被阿里云 ICP 拦截。所以真正的解法是走 Pangolin：资源 `harbor.apikv.com`(rid 18, SSO off——docker login 过不了 SSO, target `127.0.0.1:49600` **https**；41311 是 http 会 308 跳转，用它会把浏览器导回被拦的地址)，并删掉 `harbor` 的 DNS A 记录让它回落泛解析到 node1。**证书要放两处**：`harbor.yml` 指定的 `ssl/`（原本是空目录，`prepare` 会从这里取）和 `data/secret/cert/`（实际生效的副本）。**实测**：`https://harbor.apikv.com` 严格证书校验通过、HTTP 200、`/v2/` 返回 401（registry API 正常）。仓库里 6 处 `harbor.apikv.com:5443` 引用已同步改为不带端口
+- [ ] **node1 的 PostgreSQL 5432 对全网开放且仍是明文 + `msdnmm` 弱口令**：比 Redis 更糟（Redis 至少已上 TLS+强密码）。同一张 `*.apikv.com` 证书可直接用于 PG 的 `ssl_cert_file`，改法参照上面 Redis 那条；密码也该一并轮换
+- [x] **修掉 node1 Redis 无持久化卷的隐患（2026-08-19）**：compose 原本只挂 `./conf`，**RDB 落在容器可写层**，`docker compose up --force-recreate` 一重建就丢——2026-08-19 已因此丢过一次 gorse 的 36 个缓存 key（可重建，无实质损失，重启后已回升到 28）。已加 `data:/data` 具名卷
 - [ ] **Config Center 的 cart KV 同步 MinIO 新端点**：仓库副本 `backend/services/cart/configs/{dev,pre}.yml` 已改为 `https://minio.apikv.com`（**443，不带 9000**——入口是 Pangolin 的 Traefik），但 KV 是另一份（「三份配置对齐」的教训）。灌之前先 `curl https://minio.apikv.com/minio/health/live` 确认隧道在
 - [ ] **证书续期现在是三处同步**：`*.apikv.com`（ZeroSSL，**2026-10-27 到期**）部署在 blog ssl / pangolin traefik certs / node2 的 `/home/docker/minio/certs`，而 node1 续期链路缺位（见 `context/team/pangolin-tunnel.md:26`）。影响面有别：前两处过期会让**所有** Pangolin 资源挂（blog/config/casdoor/minio/gorse 全部），node2 那份因 Traefik 侧 `insecureSkipVerify` 过期也不影响转发——**但别因此忘了它**
 - [ ] **Consul 启用 TLS**：8501/HTTPS 未启用、gossip `encrypted=false`。**连带修复**：`backend/services/*/deploy/prod/` 全部写着 `CONSUL_ADDR=consul-server.consul.svc:8501` + `CONSUL_SCHEME=https`——**这个端点不存在**，prod 清单照此起不来（与 known_gaps 里「prod.yml 键不存在」是两个独立断点）

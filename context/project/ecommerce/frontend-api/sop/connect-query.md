@@ -9,7 +9,8 @@ description: 前端数据拉取的唯一写法——connect-query 直接吃 prot
 **适用范围**：`frontend/apps/*/src/` 与 `frontend/packages/api/`。
 凡是「组件里要拿后端数据」，都按本文写。
 
-**迁移状态**：consumer 已全量迁完（2026-08-03）。merchant / admin 目前没有 RPC 调用。
+**迁移状态**：consumer 已全量迁完（2026-08-03）。merchant / admin 已接 `TransportProvider`
+（2026-08-19，依赖与 `QueryClient` 默认值同 consumer），暂无 RPC 调用，新增数据拉取直接按本文写。
 `config` 准备迁出本仓库，暂不改，它那两处 `createAppTransport()` 是仅存的旧写法。
 
 > 出处：改写自 Redpanda Console 的 `api-patterns` 规则集（Apache 2.0）。

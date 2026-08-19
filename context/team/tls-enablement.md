@@ -57,6 +57,15 @@ MinIO 的 `/root/.minio/certs/` 下本来有个空的 `CAs/`。整卷挂 `./cert
 
 一般规律：**整卷挂载前先 `ls -laR` 目标目录**，把原有结构在宿主机侧补齐；能挂单文件就别挂整卷。
 
+**另一半是属主**：容器里的服务多半不是 root 跑的，私钥 `600 root:root` 它读不到，**症状是启动即失败**
+（不是 TLS 不生效，是根本起不来）。redis 官方镜像是 uid 999，所以 `chown -R 999:999 tls/`；
+MinIO 的 `pgsty/minio` 是 root 所以没这问题。**挂证书前先确认容器的运行用户**：
+`docker inspect <c> --format '{{.Config.User}}'`，为空就查镜像文档。
+
+**顺带一个非 TLS 但同源的坑**：改这类服务的 compose 往往要 `--force-recreate`，
+**没挂数据卷的容器一重建就丢数据**（RDB/本地状态都在可写层）。2026-08-19 就这么丢了 node1 Redis
+的 36 个 key。动手前先 `docker inspect <c> --format '{{range .Mounts}}...'` 看数据目录挂没挂。
+
 ## 3. 公共 CA 证书不含 IP SAN → 所有 IP 端点配置都要改
 
 ZeroSSL/Let's Encrypt 这类公共 CA **不签 IP**。证书 SAN 只有 `*.apikv.com` + `apikv.com`，
@@ -95,6 +104,12 @@ curl -s -m 10 -o /dev/null -w "%{http_code}\n" \
 ```
 
 只有 ④ 能同时证明**证书链完整**（缺中间证书时这条会挂而 ③ 不会）、**域名匹配**、**公共 CA 可信**。
+
+**顺手改的密码，也要用新密码实测一次**。2026-08-19 给 Redis 写 `requirepass` 时用了
+`cat > conf <<EOF ... requirepass "\$PW"`——**未加引号的 heredoc 里 `\$` 会转义成字面量**，
+配置里落的是 `requirepass "$PW"` 这四个字符，等于把密码设成了 `$PW`。
+生成密码的那条命令回显完全正常，`grep` 出来也"看着像配好了"（值被自己的脱敏 sed 盖掉了），
+**只有用新密码真连一次才会暴露**。要么用 `<<'EOF'` + 后续替换，要么直接用 python 写文件绕开 shell 插值。
 
 > 附带的工具教训：`/dev/tcp/<host>/<port>` 探测端口在本机沙箱里会**对所有端口报 closed**，
 > 包括明明能通的。**任何探测法先用一个已知结果的对照组验证它自己**，否则会得出「全部端口不通」
