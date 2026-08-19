@@ -17,7 +17,7 @@ spec:
     spec:
       containers:
         - name: ecommerce-frontend
-          image: harbor.apikv.com:5443/ecommerce/frontend:dev
+          image: harbor.apikv.com/ecommerce/frontend:dev
           imagePullPolicy: Always
           ports:
             - containerPort: 30080

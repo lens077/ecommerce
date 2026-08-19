@@ -10,12 +10,12 @@ helm dependency update
 helm dependency build
 
 # 登录
-helm registry login harbor.apikv.com:5443
+helm registry login harbor.apikv.com
 
 # 打包
 helm package .
 # 推送
-helm push *-*.tgz oci://harbor.apikv.com:5443/sumery
+helm push *-*.tgz oci://harbor.apikv.com/sumery
 
 # 创建secret
 kubectl create secret generic pg-ca-cert \
