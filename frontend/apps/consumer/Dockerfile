@@ -99,16 +99,28 @@ RUN cat > /etc/caddy/Caddyfile <<'EOF'
 
     header {
         Strict-Transport-Security max-age=31536000;
-        X-Frame-Options DENY
+        # ⚠️ 不能用 DENY：静默续期的最后一跳是 Casdoor 把 iframe **重定向回我们自己的
+        # /callback**，DENY 会把这一跳也拒掉（iframe 变成 chrome-error），
+        # postMessage 发不出来 → 续期超时 → 每次刷新都要重新登录。
+        # SAMEORIGIN 仍然挡住第三方站点嵌我们（防点击劫持的目的不变），
+        # 只放行同源自嵌。CSP 的 frame-ancestors 是更现代的等价物，两者同时给以兼容老浏览器。
+        X-Frame-Options SAMEORIGIN
         X-Content-Type-Options nosniff
         # ⚠️ connect-src / frame-src 必须显式列出，不能只靠 default-src 'self'：
         #   - connect-src：PKCE 要 fetch 到 Casdoor 换令牌，业务请求要打网关，
         #     两者都是跨源；漏了的话浏览器直接拦下，控制台报 CSP 违规而不是网络错误，
         #     很容易被当成"接口挂了"。
-        #   - frame-src：静默续期用隐藏 iframe 加载 Casdoor 的 prompt=none 授权页，
-        #     漏了的话表现为"每次刷新页面都要重新登录"（续期静默失败、回退整页跳转）。
-        # 注意 X-Frame-Options: DENY 只约束**别人嵌入我们**，不影响我们嵌别人。
-        Content-Security-Policy "default-src 'self'; style-src 'self' 'unsafe-inline'; img-src 'self' data:; connect-src 'self' https://casdoor.apikv.com https://gateway.apikv.com; frame-src https://casdoor.apikv.com;"
+        #   - frame-src 必须**同时**含 'self' 与 Casdoor：iframe 先加载 Casdoor 的
+        #     prompt=none 授权页，Casdoor 认完会把 iframe **重定向回我们自己的
+        #     /callback**（带 code），那一跳同样受 frame-src 管。只放行 Casdoor 的话
+        #     iframe 卡在回跳这步、postMessage 发不出来，续期超时 ——
+        #     表现为"每次刷新都要重新登录"，而控制台那条 CSP 违规写的是被拦的是
+        #     shop 自己的 URL，很容易看反方向（Playwright 实测踩过）。
+        #   - img-src 要放行 cdn.casbin.org：Casdoor 用户的默认头像在那儿。
+        #   - font-src 'self' data:：MUI 把图标字体内联成 base64 data: URI，
+        #     只有 default-src 'self' 时会被全部拦掉（Playwright 实测抓到 5 条违规）。
+        #     页面看着"渲染正常"但图标是空的 —— 不看控制台根本发现不了。
+        Content-Security-Policy "default-src 'self'; script-src 'self'; style-src 'self' 'unsafe-inline'; img-src 'self' data: https://cdn.casbin.org; font-src 'self' data:; connect-src 'self' https://casdoor.apikv.com https://gateway.apikv.com; frame-src 'self' https://casdoor.apikv.com; frame-ancestors 'self';"
     }
 }
 EOF
