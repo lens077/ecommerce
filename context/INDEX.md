@@ -22,6 +22,7 @@ context/
 | [cron-jobs.md](team/cron-jobs.md) | 定时任务的执行边界：进程内调度器扩副本即重复执行、Ticker 首次触发盲窗、重叠/panic/超时/时区/优雅停止、重要任务不能只靠一次回调 |
 | [pangolin-tunnel.md](team/pangolin-tunnel.md) | 对外公开内网服务走 Pangolin(node1 VPS,旧称 node3)：拓扑与凭据位置、面板 API、k8s HTTPRoute 必须走 Gateway 443(80 无路由) |
 | [ssh-port-migration.md](team/ssh-port-migration.md) | Ubuntu 24.04 改 SSH 端口：sshd_config 的 Port 被 ssh.socket 忽略、ListenStream 必须显式写 v4+v6、生效值只信 `sshd -T` |
+| [tls-enablement.md](team/tls-enablement.md) | 给在跑的服务补 TLS：健康检查硬编码 http 会静默失效、证书整卷挂载遮蔽目录、公共 CA 不签 IP 故必须走域名、验收必须有「故意错的输入」+ 不带 `-k` 的严格校验 |
 | [go-testing.md](team/go-testing.md) | 测试分层判定：biz 层 mock、data 层真库（testcontainers）、Redis 用 miniredis；`-short` 是唯一开关；禁用 go-sqlmock/pgxmock |
 | [okteto-inner-loop.md](team/okteto-inner-loop.md) | 内环开发 `okteto up`：什么时候用、**必须先关 ArgoCD 自动同步**、不是测试环境 |
 
