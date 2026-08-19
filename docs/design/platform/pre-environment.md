@@ -39,7 +39,8 @@ dragonfly 在用。GRPCRoute 有 CRD 无实例。`kube-system/cilium-ingress`（
 | Seata | seata | seata-server:8091 | seata.dev.test → http(80) | ❌ 明文 |
 | ArgoCD | argocd | argocd-server:80 | argocd-server.dev.test → http(80) | ❌ 网关侧明文 |
 | Casdoor（集群外） | — | — | **apikv.com:8000 = 114.132.233.129，公网明文 HTTP** | ❌ OAuth 流量走公网 http |
-| MinIO+gorse（集群外） | — | — | **8.138.194.254**:9000（minio）/ :8088（gorse），公网明文 | ❌ 公网 http |
+| MinIO（集群外） | — | — | `https://minio.apikv.com:9000`（=8.138.194.254）；管理台 9001 已绑 `127.0.0.1` | ✅ TLS（ZeroSSL `*.apikv.com`，**2026-10-27 到期**，2026-08-19 落地） |
+| gorse（集群外） | — | — | **8.138.194.254**:8088 / :8086，公网明文 | ❌ 公网 http（实测 8088 匿名 200） |
 
 ## 实测记录（2026-08-08）
 
@@ -68,5 +69,5 @@ dragonfly 在用。GRPCRoute 有 CRD 无实例。`kube-system/cilium-ingress`（
 3. **TCP 类不必退化到 L4**：凡客户端支持 TLS+SNI 的都能走 TLSRoute Passthrough——kafka 9093（TLS listener 现成，
    证书是 Strimzi 自己的 CA）、postgres（`public-web-gw/06-tls-route.yml` 的 pg-dev-route 示例写了但从未 apply；
    现状 LB+原生 TLS 也算达标）。真正只能 L4 明文的只剩「客户端不做 TLS」的场景。
-4. **公网明文最优先**：casdoor（OAuth code/token）与 8.138.194.254 的 minio/gorse 走公网 http，
-   风险级别高于所有集群内明文。
+4. **公网明文最优先**：casdoor（OAuth code/token）与 8.138.194.254 的 gorse 仍走公网 http，
+   风险级别高于所有集群内明文。minio 已于 2026-08-19 上 TLS 并把管理台收回回环（见上表）。
