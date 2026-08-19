@@ -49,7 +49,8 @@ export const Route = createFileRoute("/profile/addresses/")({
         severity: "warning",
       });
 
-      setAccount({});
+      // clearTokens() 会经令牌订阅清空用户 Store（见 store/users.ts）。
+      // 此处原来写的是 setAccount({})，而它是 {...旧值, ...{}}，什么都清不掉。
       clearTokens();
 
       if (context?.auth?.login) {

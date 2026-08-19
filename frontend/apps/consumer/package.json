@@ -9,7 +9,8 @@
     "build": "vp build && tsc",
     "serve": "vp preview",
     "test": "vp test --environment=jsdom --browser.enabled=false --passWithNoTests",
-    "test:ui": "vp test --browser --browser.ui"
+    "test:ui": "vp test --browser --browser.ui",
+    "e2e:login": "node e2e/login.smoke.mjs"
   },
   "dependencies": {
     "@bufbuild/protobuf": "catalog:",

@@ -13,7 +13,7 @@ import {
 import { onAuthError } from "@ecommerce/api";
 import { isTauri } from "@ecommerce/tauri";
 import { clearTokens, hasToken, subscribeToken } from "@ecommerce/utils";
-import { setAccount } from "@/store/users";
+import { clearAccount } from "@/store/users";
 
 // 1. 只存放认证数据的 Context
 const AuthStateContext = createContext<{ isAuthenticated: boolean } | undefined>(undefined);
@@ -77,7 +77,9 @@ export const AuthProvider: React.FC<{ children: React.ReactNode; router: any }> 
     stopRenew(); // 先停掉定时续期，否则刚清完又被续回来
     clearTokens();
     localStorage.removeItem("redirect_after_login");
-    setAccount({}); // 清空全局用户 Store
+    // clearTokens() 已经会经令牌订阅清空 Store（见 store/users.ts），这里再显式写一次：
+    // 登出是唯一一条「必须清干净」的路径，不该依赖另一个模块的副作用来保证。
+    clearAccount();
     setIsAuthenticated(false);
 
     // 使用传递进来的全局 router 实例安全导航

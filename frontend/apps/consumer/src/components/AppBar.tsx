@@ -24,14 +24,14 @@ import { SearchService } from "@/gen/api";
 import { useFormat, useTranslation } from "@ecommerce/i18n";
 import { LocaleSwitcher } from "@ecommerce/ui";
 import { getSigninUrl } from "@ecommerce/configs";
-import { useAuthState } from "@/providers/AuthProvider";
+import { useAuthActions, useAuthState } from "@/providers/AuthProvider";
 import { SEARCH_INDEX } from "@ecommerce/constants";
 import type { Product } from "@/gen/api";
 import { useCartBadge } from "@/hooks/useCart";
 import { lantern } from "@/styles/tokens";
 import { BrandMark } from "@/components/home/DemoArt";
 import { userStore } from "@/store/users";
-import { addNotification, clearToken } from "@ecommerce/utils";
+import { addNotification } from "@ecommerce/utils";
 
 const Search = styled("div")(({ theme }) => ({
   position: "relative",
@@ -114,6 +114,7 @@ export default function PrimarySearchAppBar() {
   // 表现为"登录明明成功了（用户资料都已拿到），顶栏还显示未登录"（Playwright 实测）。
   // 它此前"碰巧能用"，只是因为读的是同步可读的 localStorage。
   const { isAuthenticated } = useAuthState();
+  const { logout } = useAuthActions();
   const navigate = useNavigate();
   const { t } = useTranslation();
   const { formatCurrency } = useFormat();
@@ -144,35 +145,14 @@ export default function PrimarySearchAppBar() {
     handleMobileMenuClose();
 
     if (path === "/logout") {
-      // 执行登出操作
-      clearToken();
-      // 清空用户store
-      userStore.account = {
-        createdTime: "",
-        displayName: "",
-        id: "",
-        accessToken: "",
-        affiliation: "",
-        email: "",
-        isAdmin: false,
-        language: "",
-        organization: "",
-        phone: "",
-        score: 0,
-        tag: "",
-        type: "",
-        username: "",
-        name: "",
-        avatar: "",
-      };
-      // 显示登出成功通知
+      // ⚠️ 必须走 AuthProvider 的 logout()，不要在这里自己清。
+      // 原实现只调了 clearToken() 并手工把 store 拍成空对象，**漏了 stopRenew()** ——
+      // 续期定时器在登出后照跑，到点用 Casdoor 的会话 Cookie 静默换一份新令牌，
+      // 于是「登出后过一会儿自己又登回去了」。清 store 与跳首页 logout() 里都有。
+      logout();
       addNotification({
         message: t("appBar.signOutSuccess"),
         severity: "success",
-      });
-      // 跳转到首页
-      await navigate({
-        to: "/",
       });
     } else if (path) {
       await navigate({
