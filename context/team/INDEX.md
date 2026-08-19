@@ -14,7 +14,7 @@
 | [cron-jobs.md](cron-jobs.md) | 定时任务的执行边界：重叠、panic、超时、时区、优雅停止、多实例与「错过不补」 | 扩副本后同一任务跑 N 次 / 对账悄悄漏掉一天 / 首次触发盲窗 |
 | [pangolin-tunnel.md](pangolin-tunnel.md) | 公网暴露基础设施：拓扑事实、面板 API 模式、k8s HTTPRoute 暴露两步法与 `sectionName: https` 坑 | target 走 80 得 envoy 404 白排查 / 证书只续一处 / 新资源忘了默认带登录保护 |
 | [ssh-port-migration.md](ssh-port-migration.md) | Ubuntu 24.04(socket activation) 改 SSH 端口的正确姿势与 node1 VPS 锁死实录 | 改 sshd_config 的 Port 白改 / ListenStream 纯端口号 v4 全断锁死 / cloud-init 首值覆盖 PasswordAuthentication |
-| [tls-enablement.md](tls-enablement.md) | 给已在跑的服务补 TLS 的四条检查项与验收法（MinIO 实付学费） | 健康检查硬编码 http 静默失效、服务好着却永远 unhealthy / 整卷挂证书遮蔽原目录且 `:ro` 后建不回来 / 拿公共 CA 证书去配 IP 端点（不签 IP SAN）/ 只测「该通的通了」，配置没生效也照样通 |
+| [tls-enablement.md](tls-enablement.md) | 给已在跑的服务补 TLS 的检查项与验收法（MinIO/gorse 实付学费） | **在未备案的云主机上就地配域名证书，白做一轮**（阿里云 ICP 拦截，纯 IP 通、带域名 403/reset）/ 健康检查硬编码 http 静默失效、服务好着却永远 unhealthy / 整卷挂证书遮蔽原目录且 `:ro` 后建不回来 / 拿公共 CA 证书去配 IP 端点（不签 IP SAN）/ 只测「该通的通了」，配置没生效也照样通 |
 | [go-testing.md](go-testing.md) | 测试分层判定与硬约束（操作手册在 `docs/TESTING.md`） | 用 mock 测 SQL 等于没测 / go-sqlmock 接不上 pgx / 用 build tag 让测试脱离静态检查 / 只验一个方向不知道 `-short` 开关有没有生效 |
 | [okteto-inner-loop.md](okteto-inner-loop.md) | 内环开发判定与硬约束（操作手册在 `docs/OKTETO.md`） | 忘了关 ArgoCD 自动同步 → 开发容器被无声干掉 / 忘了恢复 → GitOps 静默失效 / 把开发窗口写进 Git 变成永久 / 改 root 绕过反而把要验的东西关掉 |
 
