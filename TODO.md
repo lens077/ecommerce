@@ -227,6 +227,10 @@
 
 ### 其余近期待办
 
+- [x] **AI Coding 交付效率治理与日报（2026-08-19）**：阅读腾讯健康实践，将可信状态、
+      组织摩擦、P50/P85、长尾指标、人机责任边界和日报证据规则写入
+      `context/harness-framework/delivery-efficiency.md`；基于今日 3 个提交及已知本地修改生成
+      `docs/reports/2026-08-19.md`，来源不明的并发变更按用户要求排除
 - [x] **Go PGO 评估与验收指南（2026-08-19）**：阅读 Go PGO 实测文章，将优化机制、
       profile 代表性、交叉负载验证、收益边界、回退条件与 profile 管理要求补入
       `docs/design/platform/performance.md`；外部实验的 2%–4.7% 提升不作为项目性能承诺
