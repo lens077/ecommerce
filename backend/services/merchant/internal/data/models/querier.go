@@ -23,6 +23,11 @@ type Querier interface {
 	//  FROM merchants.merchant_application
 	//  WHERE application_id = $1
 	GetApplication(ctx context.Context, applicationID string) (MerchantsMerchantApplication, error)
+	//GetMerchantAgreement
+	//
+	//  SELECT default_version, version, effective_date, content_url
+	//  FROM merchants.agreement
+	GetMerchantAgreement(ctx context.Context) (MerchantsAgreement, error)
 	//SubmitApplication
 	//
 	//  INSERT INTO merchants.merchant_application(application_id, company_name, credit_code, legal_person, legal_person_id,

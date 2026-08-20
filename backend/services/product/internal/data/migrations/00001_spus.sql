@@ -1,0 +1,36 @@
+-- 商品服务：SPU 表。
+-- 2026-08-21 由 schema/spus.sql 原样转为 goose 版本化迁移（DDL 语义未动）；
+-- 存量环境先 `dbmigrate -svc product baseline` 记账。
+
+-- +goose Up
+CREATE SCHEMA IF NOT EXISTS products;
+-- （SET search_path 已去掉，理由见 cart/00001；对象全部显式限定）
+
+-- draft 草稿, online 上架, offline下架, deleted 逻辑删除
+CREATE TYPE products.spus_status_enum AS ENUM ('draft','online','offline','deleted');
+
+-- 商品核心信息
+CREATE TABLE IF NOT EXISTS products.spus
+(
+    id             BIGSERIAL PRIMARY KEY,
+    spu_code       VARCHAR(64)               NOT NULL UNIQUE,       -- SPU编码，例iphone15-pro
+    name           VARCHAR(255)              NOT NULL,              -- 商品名称
+    specs          JSONB       DEFAULT '{}',                        -- 商品通用规格
+    spec_template  JSONB                     NOT NULL DEFAULT '[]', -- 规格模板，固定展示顺序
+    description    TEXT                      NOT NULL,              -- 商品描述
+    category_id    BIGINT                    NOT NULL,              -- 商品分类ID
+    merchant_id    UUID                      NOT NULL,              -- 商家ID
+    brand_id       BIGINT                    NOT NULL,              -- 品牌ID
+    status         products.spus_status_enum NOT NULL,              -- 状态
+    main_media_url VARCHAR(500)              NOT NULL,              -- 主图/视频URL
+    images_gallery JSONB       DEFAULT '[{}]',                      -- 商品图集数组
+    created_at     timestamptz DEFAULT now() NOT NULL,              -- Unix时间戳，避免时区问题
+    updated_at     timestamptz DEFAULT now() NOT NULL
+);
+COMMENT
+    ON TABLE products.spus IS '商品概念表';
+
+-- +goose Down
+DROP TABLE IF EXISTS products.spus;
+DROP TYPE IF EXISTS products.spus_status_enum;
+DROP SCHEMA IF EXISTS products;
