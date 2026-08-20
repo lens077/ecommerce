@@ -26,7 +26,7 @@
 |------|------|----------|
 | CI | `.github/workflows/{backend,frontend}.yml`、`freeze-check.yml`(冻结验收集)、structcheck 随 `go test` 进 CI、commitlint(vite-plus 钩子)、异构双审走本地 `/adversarial-review`(非 CI) | 制品推送/清单更新链路不完整;oxlint/oxfmt 未进 CI 门禁;无契约测试、无镜像扫描/签名/SBOM |
 | CD | `argocd-app.yml`/`argocd-proj.yml`、`helm/`、`deploy/{dev,prod}` 过 dry-run | GitOps 未真正接管(改镜像 tag 仍是手动);无环境晋级流程;无 migration 流水线 |
-| 基础设施 | k8s 集群(注意:实际仅 node2/node3 可调度,存储钉在 node3)、Consul(服务发现)、Config Center(配置控制面,独立仓)、`application-vpa.yml` | 集群全单副本,滚更/金丝雀语义退化;VPA `--min-replicas` 默认 2 导致静默失效;无 IaC 管集群外资源 |
+| 基础设施 | k8s 集群(2026-08-20 实测:重建后为 **2 节点** node1 `192.168.3.201` / node2 `192.168.3.202`(control-plane),**两台都无 taint、均可调度**;存储 `openebs-lvm`(默认 SC)的 PV **全部钉在 node1**)、Consul(服务发现)、Config Center(配置控制面,独立仓)、`application-vpa.yml` | 集群全单副本,滚更/金丝雀语义退化;VPA `--min-replicas` 默认 2 导致静默失效;无 IaC 管集群外资源 |
 | 可观测性 | OTel(部分服务)、Loki、`docs/observability/grafana/`(看板生成脚本)、`docs/observability/`(方法论;08-06 评审已归档 `docs/reviews/`) | 未全链路;`rpc.code` 失真已修但看板未回归;config 撞名进程指标混合;无 SLO/错误预算 |
 | 安全 | 网关集中鉴权(Casdoor+Casbin)、部分 RPC 粒度策略 | 镜像/依赖/密钥扫描全缺;NetworkPolicy 缺;address 等服务越权问题在修 |
 | 度量 | — | DORA 四指标无采集 |
@@ -71,7 +71,7 @@
   禁止 kubectl 直改生产。副产品是审计:谁改的?人还是 Agent?——与 freeze/CODEOWNERS
   防线同源,对齐 Debois「dim factory 按风险分级自治」的主张。
 - **环境晋级**:`dev → prod`(现有 overlay 结构),**同一镜像 digest 一路晋级**,不重新构建。
-- **渐进式交付贴合集群现实**(单副本、仅 node2/node3 可调度、存储钉 node3):
+- **渐进式交付贴合集群现实**(单副本、2 节点均可调度、存储钉 node1):
   - 无状态服务(gateway、frontend、无 PVC 后端):≥2 副本 + RollingUpdate + PDB,
     这是任何金丝雀/滚更语义成立的前提;
   - 带 PV 的负载:Recreate + 维护窗口,验证靠 dev 环境而非生产金丝雀;
