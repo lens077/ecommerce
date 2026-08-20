@@ -82,7 +82,7 @@ alerts provisioning 通道现成)。
 
 CPU、内存、磁盘、网络 + k8s 对象状态(Pod restart、OOMKill、Pending)。
 当前缺口:无 kube-state-metrics/容器级指标(评审已列)。本仓集群约束放大了它的重要性:
-仅 node2/node3 可调度、存储钉 node3、多次 OOMKill 事故(Loki、kafka-connect)——
+仅 2 个节点(node1/node2,均可调度)、存储钉 node1、多次 OOMKill 事故(Loki、kafka-connect)——
 **OOMKill 与 restart 计数是本集群最值钱的告警源之一**。
 
 ## 4. 采集架构

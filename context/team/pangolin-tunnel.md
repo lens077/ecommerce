@@ -12,7 +12,7 @@ description: 公网暴露基础设施(Pangolin)的拓扑事实、面板 API 操�
 ## 拓扑
 
 ```
-公网用户 ──HTTPS/TCP/UDP──> node1 VPS(ssh 别名 node1,与 hostname 一致;旧称 node3 已于 2026-08-18 统一弃用,node1,腾讯云)
+公网用户 ──HTTPS/TCP/UDP──> node1 VPS(ssh 别名 node1,与 hostname 一致,node1,腾讯云)
                               ⚠️ 与本地 k8s 集群的 node1(192.168.3.105)重名:本文的 node1 均指这台公网 VPS
                               Pangolin CE 1.21.1 + Gerbil 1.4.3 + Traefik v3.7,目录 /home/docker/pangolin/
                               │ WireGuard(UDP 51820/21820,内网侧纯出站)

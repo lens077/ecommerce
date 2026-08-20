@@ -33,9 +33,11 @@ y = 0
 panels.append(row("概览", y)); y += 1
 panels.append(prom_stat("上报指标的节点数", 'count(count by (k8s_node_name) (system_cpu_utilization_ratio))',
     0, y, w=4, unit="none",
-    thresholds=steps(("red", None), ("green", 3)),
-    desc="正常值 3。旧版阈值是 ≥2(当时以为 collector 不调度 node1),2026-08-06 实测\n"
-         "DaemonSet 已 3/3、node1/2/3 各 32 条 system 序列 —— 掉任何一台都该红"))
+    thresholds=steps(("red", None), ("green", 2)),
+    desc="正常值 2。2026-08-20 实测:08-16 集群重建后只剩 node1/node2 两个节点\n"
+         "(均无 taint、都可调度) —— 掉任何一台都该红。与 build_alerts.py 的 A11 同口径。\n"
+         "历史:旧 3 节点集群时阈值为 3,更早是 ≥2(当时误以为 collector 不调度 node1)。\n"
+         "⚠️ 新集群 collector 尚未接 hostmetrics,该指标当前不存在,本图布上即空图"))
 panels.append(prom_stat("节点 CPU 最高", f"max({cpu_used_ratio()})", 4, y, w=4, unit="percentunit",
     thresholds=steps(("green", None), ("yellow", 0.75), ("red", 0.9))))
 panels.append(prom_stat("节点内存最高", f"max({mem_used_ratio()})", 8, y, w=4, unit="percentunit",
