@@ -7,8 +7,9 @@
 #   ghcr.io/lens077/<service>                GHCR，公网/外部消费用 —— 公开
 # 集群侧刻意仍指 TCR：LAN 里拉 ghcr.io 要过代理（ArgoCD 克隆 GitHub 就吃过这个亏）。
 #
-# tag 策略（DEVOPS.md 阶段 1：禁止 latest 参与部署）：
-#   <registry>/<service>:sha-<7位提交哈希>  ← 部署引用这个（不可变）
+# tag 策略（DEVOPS.md 阶段 1：禁止 latest 参与部署；2026-08-20 起增加版本 tag）：
+#   <registry>/<service>:X.Y.Z              ← tag 触发时的发布版本（不可变，部署回写用它）
+#   <registry>/<service>:sha-<7位提交哈希>  ← 恒有（不可变，可追溯）
 #   <registry>/<service>:dev                ← 本地 compose 的便利 tag（可变）
 name: Service CI
 
@@ -24,6 +25,11 @@ on:
         required: false
         type: boolean
         default: true
+      version:
+        description: "发布版本号（X.Y.Z，tag 触发时传入；非空则镜像额外打版本 tag）"
+        required: false
+        type: string
+        default: ""
     secrets:
       TCR_USERNAME:
         required: true
@@ -113,9 +119,25 @@ jobs:
           username: ${{ github.actor }}
           password: ${{ secrets.GITHUB_TOKEN }}
 
-      - name: Compute image tag
+      # tag 策略：sha-<7> 恒有（不可变、可追溯）；version 非空时（tag 触发）额外打 X.Y.Z
+      # （同样按不可变对待——tag 不复用不移动，见 context/team/git-commit.md）；dev 为便利可变 tag
+      - name: Compute image tags
         id: meta
-        run: echo "tag=sha-${GITHUB_SHA::7}" >> "$GITHUB_OUTPUT"
+        env:
+          VERSION: ${{ inputs.version }}
+        run: |
+          set -euo pipefail
+          SHA_TAG="sha-${GITHUB_SHA::7}"
+          echo "tag=${SHA_TAG}" >> "$GITHUB_OUTPUT"
+          {
+            echo 'tags<<EOF'
+            for repo in "${REGISTRY}/${REGISTRY_NAMESPACE}/${{ inputs.service }}" "${GHCR_NAMESPACE}/${{ inputs.service }}"; do
+              echo "${repo}:${SHA_TAG}"
+              echo "${repo}:dev"
+              if [[ -n "$VERSION" ]]; then echo "${repo}:${VERSION}"; fi
+            done
+            echo 'EOF'
+          } >> "$GITHUB_OUTPUT"
 
       - name: Build and push
         uses: docker/build-push-action@v6
@@ -128,10 +150,6 @@ jobs:
           cache-to: type=gha,scope=svc-${{ inputs.service }},mode=max
           build-args: |
             SERVICE=${{ inputs.service }}
-            VERSION=${{ steps.meta.outputs.tag }}
+            VERSION=${{ inputs.version != '' && inputs.version || steps.meta.outputs.tag }}
             GOPROXY=https://proxy.golang.org,direct
-          tags: |
-            ${{ env.REGISTRY }}/${{ env.REGISTRY_NAMESPACE }}/${{ inputs.service }}:${{ steps.meta.outputs.tag }}
-            ${{ env.REGISTRY }}/${{ env.REGISTRY_NAMESPACE }}/${{ inputs.service }}:dev
-            ${{ env.GHCR_NAMESPACE }}/${{ inputs.service }}:${{ steps.meta.outputs.tag }}
-            ${{ env.GHCR_NAMESPACE }}/${{ inputs.service }}:dev
+          tags: ${{ steps.meta.outputs.tags }}

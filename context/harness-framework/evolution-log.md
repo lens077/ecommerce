@@ -260,3 +260,17 @@ description: harness 本身（硬规则/门禁/Agent 约束）每次改动的原
   这类漂移在纯文档约束下已经存在了很久，没有任何人发现。
 - **怎么验证的**：注入一处漂移确认报红；同日还修掉了门禁自身的一处误报
   （服务名恰好是普通单词时归一化替换失效，导致 3 个逐字节相同的文件被误判）。
+
+### 2026-08-20 CI 触发从 push-path 改回仅 tag（并升级为版本化发布链）
+
+- **改了什么**：`backend.yml` 触发改为仅 semver tag `X.Y.Z`（`workflow_dispatch` 留作显式手动例外）；
+  detect 的 diff 基线从 `event.before` 改为上一 semver tag；镜像与 `helm/values.yaml` 回写
+  升级为版本 tag（`X.Y.Z` + `sha-<7>` 双标）。规范落
+  `context/team/git-commit.md`「发布 tag 与 CI 触发」，AGENTS.md 反直觉约定挂索引。
+- **为什么**：把发布节奏交还给打 tag 的人。push-path 触发下"提交即发布"，
+  文档/matrix 类提交也会引发十服务全量构建与部署。
+- **触发事故**：2026-08-20 当天两连击——①推送选型回填（含 `.service-matrix.yaml`）触发全量
+  构建，CI 机器人随即回写镜像 tag 直推 GitHub main；②该机器人提交使本地与远端历史分叉，
+  下一次推送被拒，只能 merge 收敛（`7438fd2`）。每次涉及共享路径的推送都会重演这个循环。
+- **怎么验证的**：`yq` 解析两份 workflow 通过；推送本变更到 main **未**触发运行（新 on: 块生效）；
+  随后打首个新制 tag `1.4.0` 实测全链（tag → 矩阵构建 → 版本镜像 → values 回写）。
