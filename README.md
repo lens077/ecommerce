@@ -59,6 +59,8 @@ RBAC 三角色（消费者 / 商家 / 管理员），全链路云原生部署与
 | [`STACK.md`](STACK.md) | 技术栈与工程约束：版本锁定、分层铁律、proto/sqlc 规则（真相源） |
 | [`.service-matrix.yaml`](.service-matrix.yaml) | 服务拓扑事实表：注册名、网关前缀、依赖、Config Center 键（CI 强制对齐） |
 | [`TODO.md`](TODO.md) | 实现进度真相源（当前实况以它为准） |
+| [`docs/PRIORITY.md`](docs/PRIORITY.md) | 待办优先级排序（P0→P7，按最终目标）：**不是进度真相源**，只回答「先做哪个」，冲突以 `TODO.md` 为准 |
+| [`docs/TECH-RADAR.md`](docs/TECH-RADAR.md) | CNCF Landscape 选型评估（2026-08-20 全量筛查，排除 Java）：逐项编号待议，✅ 采纳后落 `STACK.md`/`TODO.md`/`DEVOPS.md`，本文件只留结论 |
 | [`PRODUCT.md`](PRODUCT.md) / [`DESIGN.md`](DESIGN.md) | 产品定义与「灯市」视觉设计系统（配色/字体/间距 token），前端设计工作流（impeccable）的真相源——与已拆分的旧架构 DESIGN.md 同名不同物 |
 | [`docs/DEVOPS.md`](docs/DEVOPS.md) / [`observability/OBSERVABILITY.md`](docs/observability/OBSERVABILITY.md) | DevOps 与可观测性的**目标态**设计 |
 | [`docs/design/merchant/store-settings.md`](docs/design/merchant/store-settings.md) | Shopline 商店设置竞品调研；取舍与商家 MVP 路线见同目录 [`roadmap.md`](docs/design/merchant/roadmap.md) |
