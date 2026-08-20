@@ -41,15 +41,10 @@ spec:
     status.storage.replication.factor: 1
 
   # ---------------------------------------------------------------------------
-  # 内存。这一段是本次新增的，也是 connect-0 连续 CrashLoopBackOff 263 次的解药。
-  #
-  # 之前 resources 是空的 → QoS = BestEffort → 调度器算账时它 request 为 0，
-  # 于是被塞进了 node3（requests 已占 99%、limits 已超卖到 152%，而且 PG 也在那台）。
-  # JVM 起来扫 debezium 插件时内存一涨，内核就挑这个 BestEffort 进程杀，
-  # 每次都是启动 7 秒后 exitCode 137 / OOMKilled。
-  #
-  # 真正把它救出来的是 requests.memory —— 有了它调度器才会拒绝 node3，
-  # 把 pod 放到 node1（只用了 4%）。limits 单独加是不够的。
+  # 内存。**别把 resources 删回空**：空 resources → QoS = BestEffort → 调度器按
+  # request=0 算账，能把它塞进已经吃满的节点，JVM 扫 debezium 插件时内存一涨就被
+  # 内核 OOM-kill（exitCode 137），表现为启动几秒即 CrashLoopBackOff。
+  # 关键是 **requests.memory**——有了它调度器才会拒绝放不下的节点；只加 limits 不够。
   # ---------------------------------------------------------------------------
   resources:
     requests:
