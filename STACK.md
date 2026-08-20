@@ -147,7 +147,7 @@ ecommerce/
 - **多架构**：`docker buildx --platform linux/amd64,linux/arm64`
 - **编排**：Kubernetes + Helm（每服务一个 chart + library chart）+ VPA
 - **GitOps**：ArgoCD **ApplicationSet**（list 生成器 + umbrella chart，`prune: true` / `selfHeal: true`）
-- **CI**：GitHub Actions，**tag `[0-9]+.[0-9]+.[0-9]+` 触发** → test → buildx 三推（Docker Hub + ghcr.io + Harbor 私有仓）→ `helm package` 推 OCI → `yq` 改 Manifest 仓库 `targetRevision` → Argo 自动同步
+- **CI**：GitHub Actions，**仅发布 tag `X.Y.Z` 触发**（2026-08-20 定稿恢复 tag 制并升级链路；`workflow_dispatch` 留作显式手动例外）→ detect 按**上一 semver tag** diff 出受影响服务、矩阵分发 `service-ci.yml` → test → buildx 双推 **TCR + GHCR**（镜像 `X.Y.Z` + `sha-<7>` 双标，禁 latest）→ `update-manifests` 回写 `helm/values.yaml` 版本 tag（`[skip ci]`）→ ArgoCD 自动同步。tag 语义与打法见 [`context/team/git-commit.md`](context/team/git-commit.md)「发布 tag 与 CI 触发」
 - **可观测性栈**：fluent-bit → Loki（日志，**定稿替换为 Vector → VictoriaLogs**，2026-08-20 拍板，切换走 ≤72h 有界双写，见 TECH-RADAR §8）／OTel Collector → Jaeger（链路，保持）／VictoriaMetrics（指标）／Grafana（统一面板）
 - **集群内开发**：Okteto（**定稿降级为特例**：uid/Secret 权限等集群身份场景）；**mirrord 定稿为默认内环**（PoC 验收单见对抗第 3 轮 R3-B，通过后生效）
 
@@ -250,9 +250,12 @@ buf 的 lint/breaking/生成配置**直读 `backend/buf.yaml` 与 `buf.gen*.yaml
 `emit_sql_as_comment: true`（生成代码带原 SQL，排查不用翻两个文件）、
 `query_parameter_limit: 1`（强制命名参数结构体）。`database.uri: ${DB_URI}`，凭据走环境变量。
 
-建表四条硬约定（完整样例看任一 `internal/data/schema/*.sql`，如 cart）：
+建表走版本化迁移：`internal/data/migrations/*.sql`（goose 注解，2026-08-21 起；
+`make migrate-up/-create`，工具与 baseline 流程见 `backend/tools/dbmigrate/README.md`）。
+四条硬约定（完整样例看任一服务的 `internal/data/migrations/00001_*.sql`，如 cart）：
 
-1. **每服务一个 schema** 物理隔离（`CREATE SCHEMA cart; SET search_path`）
+1. **每服务一个 schema** 物理隔离（`CREATE SCHEMA cart;` 且对象显式限定；
+   **迁移里禁写 `SET search_path`**——goose 版本表按非限定名解析会被它带偏）
 2. **金额用 `DECIMAL`**，跨服务身份一律 UUID，商品信息存**快照字段**不做跨库 JOIN
 3. 索引显式命名 `idx_*`；upsert 依赖显式 `UNIQUE` 约束
 4. **表和关键列必须有 `COMMENT`**

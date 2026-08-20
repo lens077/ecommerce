@@ -79,6 +79,7 @@ scripts/verify-context.sh                            # 改 context/ 或本文件
 
 - 工程化：前端用 vite-plus（`vp`）一个包覆盖 dev/build/test/lint/fmt/任务运行/git 钩子，没有 husky/biome/eslint/prettier；仓库根另有一个只装 commitlint 的 `package.json`，与 `frontend/` 的 workspace 相互独立
 - 进度真相源：`TODO.md`（**唯一**——`docs/PROGRESS.md` 及双文档纪律已于 2026-08-13 废止，见 `context/harness-framework/evolution-log.md`）；架构真相源：`docs/design/`（按微服务分目录，入口 `docs/design/README.md`，含 config-center 设计存档）
+- **CI 仅由发布 tag 触发**（裸 semver `X.Y.Z`，`X`=破坏性/大版本；push main 不构建，2026-08-20 起）。需要 CI 验证或部署时**打 tag 并推到 `github` 远端**（origin 是 GitLab 无 Actions），版本随迭代递增；语义、手顺与四条纪律见 [context/team/git-commit.md](context/team/git-commit.md)「发布 tag 与 CI 触发」
 - 内环开发（`okteto up`）**必须先 `scripts/argocd-devwindow.sh off`、完事 `on`**：okteto 会新建 `<svc>-okteto` Deployment 并把原 Deployment 缩到 0，ArgoCD selfHeal 会把这两处漂移同步回去、无声干掉开发容器；忘了恢复更糟——GitOps 静默失效且无任何报错。判定与写 manifest 的七条检查清单见 [context/team/okteto-inner-loop.md](context/team/okteto-inner-loop.md)，操作手册见 [docs/OKTETO.md](docs/OKTETO.md)
 
 ## 中文文案约定
