@@ -177,7 +177,7 @@ type OrdersOrderItem struct {
 	ID              int64
 	OrderID         int64
 	OrderNo         string
-	MerchantID      int64
+	MerchantID      uuid.UUID
 	SpuID           int64
 	SkuID           int64
 	SpuName         string
@@ -196,7 +196,7 @@ type OrdersOrderLog struct {
 	ID           int64
 	OrderID      int64
 	OrderNo      string
-	MerchantID   int64
+	MerchantID   uuid.UUID
 	OldStatus    *OrdersOrderStatusEnum
 	NewStatus    OrdersOrderStatusEnum
 	OperatorType string

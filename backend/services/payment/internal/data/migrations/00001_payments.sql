@@ -1,0 +1,29 @@
+-- 支付服务初始结构。
+-- 2026-08-21 由 schema/schema.sql 原样转为 goose 版本化迁移（DDL 语义未动）；
+-- 存量环境先 `dbmigrate -svc payment baseline` 记账。
+
+-- +goose Up
+CREATE SCHEMA IF NOT EXISTS payments;
+-- （SET search_path 已去掉，理由见 cart/00001；对象全部显式限定）
+
+CREATE TABLE payments.payments
+(
+    id                BIGINT PRIMARY KEY,
+    order_id          BIGINT                    NOT NULL,                   -- 订单ID, 冗余存储，避免跨服务查询
+    consumer_id       UUID                      NOT NULL,                   -- 消费者ID
+    amount            NUMERIC(12, 2)            NOT NULL,                   -- 订单金额
+    currency          VARCHAR(3)                NOT NULL,                   -- 货币类型, 例如: CNY, USD
+    method            VARCHAR(20)               NOT NULL,                   -- 支付方式, 例如: 支付宝, 微信 等等
+    status            VARCHAR(20)               NOT NULL DEFAULT 'PENDING', -- 支付状态
+    subject           VARCHAR(255)              NOT NULL,                   -- 支付标题
+    trade_no          VARCHAR(255)              NOT NULL,                   -- 商户订单号
+    freeze_id         BIGINT                    NOT NULL,                   -- 冻结 ID
+    consumer_version  BIGINT                    NOT NULL,                   -- 消费者乐观锁版本
+    merchant_versions BIGINT                  NOT NULL,                   -- 商家乐观锁版本
+    created_at        timestamptz DEFAULT now() NOT NULL,
+    updated_at        timestamptz DEFAULT now() NOT NULL
+);
+
+-- +goose Down
+DROP TABLE IF EXISTS payments.payments;
+DROP SCHEMA IF EXISTS payments;

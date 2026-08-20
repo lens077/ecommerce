@@ -13,6 +13,67 @@ import (
 	"github.com/jackc/pgx/v5/pgtype"
 )
 
+type ProductsSkusStatusEnum string
+
+const (
+	ProductsSkusStatusEnumActive   ProductsSkusStatusEnum = "active"
+	ProductsSkusStatusEnumInactive ProductsSkusStatusEnum = "inactive"
+	ProductsSkusStatusEnumDeleted  ProductsSkusStatusEnum = "deleted"
+)
+
+func (e *ProductsSkusStatusEnum) Scan(src interface{}) error {
+	switch s := src.(type) {
+	case []byte:
+		*e = ProductsSkusStatusEnum(s)
+	case string:
+		*e = ProductsSkusStatusEnum(s)
+	default:
+		return fmt.Errorf("unsupported scan type for ProductsSkusStatusEnum: %T", src)
+	}
+	return nil
+}
+
+type NullProductsSkusStatusEnum struct {
+	ProductsSkusStatusEnum ProductsSkusStatusEnum
+	Valid                  bool // Valid is true if ProductsSkusStatusEnum is not NULL
+}
+
+// Scan implements the Scanner interface.
+func (ns *NullProductsSkusStatusEnum) Scan(value interface{}) error {
+	if value == nil {
+		ns.ProductsSkusStatusEnum, ns.Valid = "", false
+		return nil
+	}
+	ns.Valid = true
+	return ns.ProductsSkusStatusEnum.Scan(value)
+}
+
+// Value implements the driver Valuer interface.
+func (ns NullProductsSkusStatusEnum) Value() (driver.Value, error) {
+	if !ns.Valid {
+		return nil, nil
+	}
+	return string(ns.ProductsSkusStatusEnum), nil
+}
+
+func (e ProductsSkusStatusEnum) Valid() bool {
+	switch e {
+	case ProductsSkusStatusEnumActive,
+		ProductsSkusStatusEnumInactive,
+		ProductsSkusStatusEnumDeleted:
+		return true
+	}
+	return false
+}
+
+func AllProductsSkusStatusEnumValues() []ProductsSkusStatusEnum {
+	return []ProductsSkusStatusEnum{
+		ProductsSkusStatusEnumActive,
+		ProductsSkusStatusEnumInactive,
+		ProductsSkusStatusEnumDeleted,
+	}
+}
+
 type ProductsSpusStatusEnum string
 
 const (
@@ -77,65 +138,19 @@ func AllProductsSpusStatusEnumValues() []ProductsSpusStatusEnum {
 	}
 }
 
-type SkusStatusEnum string
-
-const (
-	SkusStatusEnumActive   SkusStatusEnum = "active"
-	SkusStatusEnumInactive SkusStatusEnum = "inactive"
-	SkusStatusEnumDeleted  SkusStatusEnum = "deleted"
-)
-
-func (e *SkusStatusEnum) Scan(src interface{}) error {
-	switch s := src.(type) {
-	case []byte:
-		*e = SkusStatusEnum(s)
-	case string:
-		*e = SkusStatusEnum(s)
-	default:
-		return fmt.Errorf("unsupported scan type for SkusStatusEnum: %T", src)
-	}
-	return nil
-}
-
-type NullSkusStatusEnum struct {
-	SkusStatusEnum SkusStatusEnum
-	Valid          bool // Valid is true if SkusStatusEnum is not NULL
-}
-
-// Scan implements the Scanner interface.
-func (ns *NullSkusStatusEnum) Scan(value interface{}) error {
-	if value == nil {
-		ns.SkusStatusEnum, ns.Valid = "", false
-		return nil
-	}
-	ns.Valid = true
-	return ns.SkusStatusEnum.Scan(value)
-}
-
-// Value implements the driver Valuer interface.
-func (ns NullSkusStatusEnum) Value() (driver.Value, error) {
-	if !ns.Valid {
-		return nil, nil
-	}
-	return string(ns.SkusStatusEnum), nil
-}
-
-func (e SkusStatusEnum) Valid() bool {
-	switch e {
-	case SkusStatusEnumActive,
-		SkusStatusEnumInactive,
-		SkusStatusEnumDeleted:
-		return true
-	}
-	return false
-}
-
-func AllSkusStatusEnumValues() []SkusStatusEnum {
-	return []SkusStatusEnum{
-		SkusStatusEnumActive,
-		SkusStatusEnumInactive,
-		SkusStatusEnumDeleted,
-	}
+// 事务性发件箱：与业务写同事务落库，由 relay 异步发布到 NATS JetStream
+type ProductsOutbox struct {
+	ID           int64
+	EventID      uuid.UUID
+	Source       string
+	Type         string
+	Subject      string
+	PartitionKey string
+	Payload      []byte
+	OccurredAt   time.Time
+	PublishedAt  pgtype.Timestamptz
+	Attempts     int32
+	LastError    *string
 }
 
 type ProductsSaleDetail struct {
@@ -168,7 +183,7 @@ type ProductsSku struct {
 	Attributes    []byte
 	BarCode       string
 	ThumbnailUrl  string
-	Status        SkusStatusEnum
+	Status        ProductsSkusStatusEnum
 	CreatedAt     time.Time
 	UpdatedAt     time.Time
 }
