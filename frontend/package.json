@@ -13,7 +13,7 @@
   },
   "devDependencies": {
     "typescript": "catalog:",
-    "vite": "npm:@voidzero-dev/vite-plus-core@0.2.9",
+    "vite": "catalog:",
     "vite-plus": "catalog:"
   },
   "engines": {

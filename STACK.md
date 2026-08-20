@@ -107,18 +107,18 @@ ecommerce/
 
 | 类别 | 选型 | 版本 |
 |---|---|---|
-| 包管理 | pnpm workspace + **catalog**（版本集中管理） | pnpm **11.6.0** |
-| Node | — | **>= 22.12.0** |
-| 工具链 | **vite-plus (`vp`)** — 一体化 fmt / lint(oxlint) / test / build / dev | ^0.1.24 |
-| UI 框架 | React | 19.2 |
-| 语言 | TypeScript | 5.9 |
-| 组件库 | MUI + emotion | @mui/material 9.1 |
-| 路由 | TanStack Router（文件路由 + autoCodeSplitting） | 1.170 |
-| 服务端状态 | TanStack Query | 5.101 |
-| 客户端状态 | **valtio** | 2.3 |
-| RPC 客户端 | `@connectrpc/connect` + `connect-web` | 2.1.1 |
-| 代码生成 | `@bufbuild/buf` + `protoc-gen-es` → `src/gen` | 1.70 / 2.12 |
-| 环境变量 | `@t3-oss/env-core` + **zod 4** 运行时校验 | — |
+| 包管理 | pnpm workspace + **catalog**（版本集中管理） | pnpm **11.22.0** |
+| Node | — | **^22.18.0 \|\| >=24.11.0** |
+| 工具链 | **vite-plus (`vp`)** — 一体化 fmt / lint(oxlint) / test / build / dev | 0.2.9 |
+| UI 框架 | React | 19.2.8 |
+| 语言 | TypeScript | 7.0.2 |
+| 组件库 | MUI + emotion | @mui/material 9.3.1 |
+| 路由 | TanStack Router（文件路由 + autoCodeSplitting） | 1.170.30 |
+| 服务端状态 | TanStack Query | 5.101.4 |
+| 客户端状态 | **valtio** | 2.3.2 |
+| RPC 客户端 | `@connectrpc/connect` + `connect-web` | 2.1.2 |
+| 代码生成 | `@bufbuild/buf` + `protoc-gen-es` → `src/gen` | 1.72.0 / 2.14.0 |
+| 环境变量 | `@t3-oss/env-core` + **zod 4** 运行时校验 | @t3-oss/env-core 0.13.11 / zod 4.4.3 |
 | 登录 | `casdoor-js-sdk` / `casdoor-react-sdk` | — |
 | 测试 | vitest（vite-plus test）+ Playwright browser mode + testing-library | — |
 | 其他 | lucide-react · @fontsource/roboto · web-vitals · jsonc-parser · yaml · smol-toml | — |
