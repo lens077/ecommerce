@@ -53,6 +53,13 @@ ecommerce/
 
 ## 二、技术栈（含实际锁定版本）
 
+> **选型定稿（2026-08-20，三轮对抗评审）**：新一轮选型已逐项定稿——结论与理由见
+> [`docs/TECH-RADAR.md`](docs/TECH-RADAR.md)（定稿版），过程证据见 [`docs/技术栈选型对抗/`](docs/技术栈选型对抗/)。
+> **已拍板未落地**的选型（NATS JetStream、Meilisearch 代码迁移、VictoriaLogs+Vector、KEDA、
+> Argo Rollouts、OpenFGA、trust-manager、ESO+OpenBao、Velero+SeaweedFS、ClickHouse、mirrord、
+> casdoor 收编等）以 [`TODO.md`](TODO.md)「技术选型定稿（2026-08-20）」小节为执行真相源；
+> **本文件只记录已在用的事实**，各项落地后再更新对应行。
+
 ### 2.1 后端（Go）
 
 | 类别 | 选型 | 版本 |
@@ -67,8 +74,8 @@ ecommerce/
 | DB 驱动 | `jackc/pgx/v5` + `exaring/otelpgx` | v5.9.2 / v0.10.0 |
 | DB 代码生成 | **sqlc**（写 SQL → 生成类型安全 Go） | driver `pgx/v5` |
 | 缓存 | `redis/go-redis/v9` | v9.21.0 |
-| 搜索 | `elastic/go-elasticsearch/v9` | v9.2.0 |
-| 注册发现 | `hashicorp/consul/api` | v1.34.2 |
+| 搜索 | `elastic/go-elasticsearch/v9`（**迁移中 → `meilisearch-go`**，2026-08-16 拍板，ES 已退役） | v9.2.0 |
+| 注册发现 | `hashicorp/consul/api`（**定稿退役 → K8s Service DNS**，见 TECH-RADAR §6） | v1.34.2 |
 | 认证 | `casdoor/casdoor-go-sdk` | v1.46.0 |
 | 支付 | `smartwalle/alipay/v3` | v3.2.29 |
 | 金额 | `shopspring/decimal` | v1.4.0 |
@@ -123,14 +130,14 @@ ecommerce/
 
 | 组件 | 用途 | 备注 |
 |---|---|---|
-| PostgreSQL | 主存储 | **每服务一个 schema**，TLS `verify-ca` |
-| Redis (Dragonfly) | 缓存 / 游标 / 分布式锁 | TLS `insecure_skip_verify` |
-| Elasticsearch | search 服务 | — |
-| MinIO | 商品图 | cart 使用 |
-| Consul | **仅**服务注册发现（KV 配置源已退役，Bootstrap 走 Config Center） | — |
-| Casdoor | IdP（OAuth2/OIDC + JWT RS256，kid=lens） | — |
-| gorse | 推荐引擎 | behavior / product 使用 |
-| Kafka | 应用侧无客户端；CDC 基础设施（Strimzi kafka-connect + Debezium）已部署 | 见第十节 |
+| PostgreSQL | 主存储 | **集群内 CloudNativePG `pg-main`**（2026-08-19 起；Pigsty 已关机退役），**每服务一个 schema**，TLS `verify-full`；定稿待办：instances=2 反亲和 + Barman Cloud Plugin 异地 PITR |
+| Redis | 缓存 / 游标 / 分布式锁 | `redis.redis.svc:6379`（Service 6379 → 容器 6380 **TLS 口，必须开 TLS**）；dragonfly 为残留部署待清理 |
+| Meilisearch | search 服务（**代码迁移中**） | v1.53 已装（`search/meilisearch:7700`）；代码仍是 `go-elasticsearch/v9`——ES 已退役，address/search 因此 CrashLoop，迁移见 TODO「搜索引擎切换」 |
+| MinIO | 商品图 | **上游仓库已归档（2026-02/04）**；定稿迁 SeaweedFS（4c4G 云箱兼作备份靶），新增备份流量不再写 MinIO（TECH-RADAR 10.6） |
+| Consul | **仅**服务注册发现（KV 配置源已退役） | **定稿退役** → K8s Service DNS + Cilium KPR，四步迁移见 TODO |
+| Casdoor | IdP（OAuth2/OIDC + JWT RS256，kid=lens） | 现经 Pangolin HTTPS（`casdoor.apikv.com`，8000 明文口已关）；**定稿收编进集群**，迁移方案见对抗第 3 轮 R3-A |
+| gorse | 推荐引擎 | behavior / product 使用（留守 node2 云箱，behavior 有三级降级兜底） |
+| Kafka / Strimzi / Debezium | **定稿退役**（应用侧零客户端，数据面已非可用前提） | 替代 = NATS JetStream + outbox 自写 relay + CloudEvents（TECH-RADAR §1），见第十节 |
 
 具体主机名端口见 [`context/team/local-env.md`](context/team/local-env.md) 与 `.service-matrix.yaml` 的 `externals` 段。**凭据不进仓库。**
 
@@ -141,8 +148,8 @@ ecommerce/
 - **编排**：Kubernetes + Helm（每服务一个 chart + library chart）+ VPA
 - **GitOps**：ArgoCD **ApplicationSet**（list 生成器 + umbrella chart，`prune: true` / `selfHeal: true`）
 - **CI**：GitHub Actions，**tag `[0-9]+.[0-9]+.[0-9]+` 触发** → test → buildx 三推（Docker Hub + ghcr.io + Harbor 私有仓）→ `helm package` 推 OCI → `yq` 改 Manifest 仓库 `targetRevision` → Argo 自动同步
-- **可观测性栈**：fluent-bit → Loki（日志）／OTel Collector → Jaeger（链路）／VictoriaMetrics（指标）／Grafana（统一面板）
-- **集群内开发**：Okteto
+- **可观测性栈**：fluent-bit → Loki（日志，**定稿替换为 Vector → VictoriaLogs**，2026-08-20 拍板，切换走 ≤72h 有界双写，见 TECH-RADAR §8）／OTel Collector → Jaeger（链路，保持）／VictoriaMetrics（指标）／Grafana（统一面板）
+- **集群内开发**：Okteto（**定稿降级为特例**：uid/Secret 权限等集群身份场景）；**mirrord 定稿为默认内环**（PoC 验收单见对抗第 3 轮 R3-B，通过后生效）
 
 ---
 
