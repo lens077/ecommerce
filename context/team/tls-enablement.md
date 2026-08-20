@@ -62,6 +62,15 @@ MinIO 的 `/root/.minio/certs/` 下本来有个空的 `CAs/`。整卷挂 `./cert
 MinIO 的 `pgsty/minio` 是 root 所以没这问题。**挂证书前先确认容器的运行用户**：
 `docker inspect <c> --format '{{.Config.User}}'`，为空就查镜像文档。
 
+**第三个变量是 `HOME`（2026-08-20 silo 实付学费）**：证书路径除了挂载点和属主，还跟着镜像的
+`$HOME` 走。MinIO 谱系默认从 `$HOME/.minio`（silo 为 `$HOME/.silo`）`/certs` 找证书；
+`pgsty/silo` 镜像仍以 root 运行但把 `HOME` 从 `/root` 改成了 `/tmp`，挂在 `/root/.minio/certs`
+的证书整卷被无声跳过，服务以 HTTP 起来——**不报错、不退出，TLS 静默降级**，症状是健康检查
+（https）unhealthy + 公网 500，而 `docker logs` 里服务「一切正常」。**对策**：换镜像/升级镜像时
+不依赖默认证书搜索路径，command 显式 `--certs-dir <挂载点>`；**验收第一眼看启动横幅协议**
+（`docker logs` 的 `API: https://` 还是 `http://`），再跑 §5 四条。判别命令：
+`docker exec <c> sh -c 'id; echo $HOME'` 对比证书挂载点。
+
 **顺带一个非 TLS 但同源的坑**：改这类服务的 compose 往往要 `--force-recreate`，
 **没挂数据卷的容器一重建就丢数据**（RDB/本地状态都在可写层）。2026-08-19 就这么丢了 node1 Redis
 的 36 个 key。动手前先 `docker inspect <c> --format '{{range .Mounts}}...'` 看数据目录挂没挂。

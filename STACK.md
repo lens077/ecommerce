@@ -56,7 +56,7 @@ ecommerce/
 > **选型定稿（2026-08-20，三轮对抗评审）**：新一轮选型已逐项定稿——结论与理由见
 > [`docs/TECH-RADAR.md`](docs/TECH-RADAR.md)（定稿版），过程证据见 [`docs/技术栈选型对抗/`](docs/技术栈选型对抗/)。
 > **已拍板未落地**的选型（NATS JetStream、Meilisearch 代码迁移、VictoriaLogs+Vector、KEDA、
-> Argo Rollouts、OpenFGA、trust-manager、ESO+OpenBao、Velero+SeaweedFS、ClickHouse、mirrord、
+> Argo Rollouts、OpenFGA、trust-manager、ESO+OpenBao、Velero+SeaweedFS、ClickHouse（2026-08-20 复审改触发式缓上）、mirrord、
 > casdoor 收编等）以 [`TODO.md`](TODO.md)「技术选型定稿（2026-08-20）」小节为执行真相源；
 > **本文件只记录已在用的事实**，各项落地后再更新对应行。
 

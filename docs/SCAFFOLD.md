@@ -101,7 +101,7 @@
 
 ```
 conf.proto → api/{svc}/v1/*.proto → buf generate
-→ internal/data/schema/*.sql → internal/data/queries/*.sql → sqlc generate
+→ internal/data/migrations/*.sql（goose 注解，`make migrate-create` 取号）→ internal/data/queries/*.sql → sqlc generate
 → internal/data → internal/biz → internal/service → internal/server → cmd/server/main.go
 → Dockerfile + Makefile(dev/test/sqlc/api/docker-*) + deploy/{dev,prod} + compose.yaml
 ```
@@ -563,7 +563,7 @@ inputs:
 ```yaml
 version: "2"
 sql:
-  - schema: "internal/data/schema"
+  - schema: "internal/data/migrations"   # goose 迁移目录同时是 sqlc 的 schema 输入
     queries: "internal/data/queries"
     engine: "postgresql"
     database: { uri: ${DB_URI} }        # 凭据走环境变量，不进仓库

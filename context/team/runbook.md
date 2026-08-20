@@ -43,7 +43,8 @@ description: 给所有 AI 编码工具(尤其 Codex)的可执行命令与验收�
 | Redis(缓存/锁/去重/计数) | [go-redis.md](go-redis.md) | 抓到已 Close 的旧客户端;`redis.Nil` 被当故障;非幂等命令被默认重试执行多次 |
 | 定时/周期任务、Ticker、后台 goroutine | [cron-jobs.md](cron-jobs.md) | 扩副本后同一任务跑 N 次;首次触发盲窗;挂错 ctx 导致心跳静默退出 |
 | 指标 / 看板 / 告警 | [`observability/OBSERVABILITY.md`](../../docs/observability/OBSERVABILITY.md) | 标签基数失控;错误率画成速率;加了指标却没有可行动的告警 |
-| CI/CD、部署策略、镜像、migration | [`docs/DEVOPS.md`](../../docs/DEVOPS.md) | 镜像用 latest;单副本下滚更/金丝雀静默失效;migration 不兼容滚更期新旧共存 |
+| CI/CD、部署策略、镜像 | [`docs/DEVOPS.md`](../../docs/DEVOPS.md) | 镜像用 latest;单副本下滚更/金丝雀静默失效 |
+| 数据库表结构 / 迁移 / 种子数据 | [db-migrations.md](db-migrations.md) + [`docs/DEVOPS.md`](../../docs/DEVOPS.md) | 迁移里写 SET search_path 版本表解析失败;sqlc 生成物落后 schema;种子不幂等重跑翻倍;不按 expand-contract 滚更炸旧副本 |
 | Shell / Make recipe | [shell-scripting.md](shell-scripting.md) | macOS Bash 3.2 + `set -u` 下空数组展开直接退出 |
 | 本地起服务连不上基础设施 | [local-env.md](local-env.md) | 连 `consul.dev.test` 超时;KV 缺子块导致功能被静默关掉 |
 | 对外公开服务 / 内网穿透 / `*.apikv.com` | [pangolin-tunnel.md](pangolin-tunnel.md) | k8s target 走 80 得 envoy 404;改完配置不等 Traefik 5s 轮询就当故障排查 |

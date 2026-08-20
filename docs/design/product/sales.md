@@ -3,7 +3,7 @@
 > 原 `backend/services/product/internal/data/schema/design/销量设计.md`，2026-08-13 移入本目录。
 > **落地现状（2026-08-13 核对）**：
 > - 明细表已落地但**改了名**：文档写 `products.sales_detail`，实际是
->   `products.sale_detail`（单数，`product/internal/data/schema/sale_detail.sql`），
+>   `products.sale_detail`（单数，`product/internal/data/migrations/00003_sale_detail.sql`），
 >   且实际多建了文档没有的 `products.spu_total_sales` 视图——表结构以 SQL 为准；
 > - **预聚合表（sales_daily）未落地**，「商家历史销量分析」整章仍是目标态；
 > - 「Kafka → 统计服务（Statistics Service）」链路**不存在**：全仓无 Kafka 客户端、
