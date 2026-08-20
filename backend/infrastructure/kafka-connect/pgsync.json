@@ -1,0 +1,72 @@
+[
+  {
+    "database": "ecommerce",
+    "index": "spus",
+    "nodes": {
+      "table": "spus",
+      "schema": "products",
+      "columns": [
+        "id",
+        "spu_code",
+        "name",
+        "description",
+        "category_id",
+        "brand_id",
+        "status",
+        "main_media_url",
+        "images_gallery",
+        "specs",
+        "created_at",
+        "updated_at"
+      ],
+      "children": [
+        {
+          "table": "skus",
+          "schema": "products",
+          "label": "skus",
+          "columns": [
+            "id",
+            "sku_code",
+            "price",
+            "cost_price",
+            "stock_quantity",
+            "stock_locked",
+            "attributes",
+            "bar_code",
+            "thumbnail_url",
+            "status",
+            "created_at",
+            "updated_at"
+          ],
+          "relationship": {
+            "type": "one_to_many",
+            "variant": "object",
+            "foreign_key": {
+              "child": ["spu_id"],
+              "parent": ["id"]
+            }
+          }
+        },
+        {
+          "table": "sale_detail",
+          "label": "sale_detail",
+          "schema": "products",
+          "columns": [
+            "quantity",
+            "price",
+            "total_amount",
+            "type"
+          ],
+          "relationship": {
+            "type": "one_to_many",
+            "variant": "object",
+            "foreign_key": {
+              "child": ["spu_id"],
+              "parent": ["id"]
+            }
+          }
+        }
+      ]
+    }
+  }
+]
