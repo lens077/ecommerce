@@ -165,7 +165,7 @@ AutoMQ、RocketMQ、Pulsar、EventMesh 均因 Java 排除。
 | # | 状态 | 工具 | 语言 | CNCF | 结论 |
 |---|---|---|---|---|---|
 | 7.1 | ✅ | **KEDA** | Go | graduated | 采纳：v2.20/10.4k⭐。`cron`（大促预热保底副本）+ `prometheus`（VictoriaMetrics）scaler **先行，不等 NATS**（对抗第 2 轮裁决）；NATS 落地后加 `nats-jetstream` scaler（社区维护，试点验收 lag 语义）。固定节点上限：`maxReplicaCount` 按余量圈死；与 VPA 分工（KEDA 管副本数、VPA 管 request），不同调同一指标 |
-| 7.2 | 🟡 | OpenKruise | Go | incubating | 试点缓上：**ImagePullJob 先用**（大促镜像预热、零工作负载迁移）；CloneSet 原地升级降为可选（Deployment→CloneSet 语义迁移，单人不全量吃） |
+| 7.2 | ❌ | OpenKruise | Go | incubating | **暂缓（2026-08-20 部署实测否决，覆盖此前 🟡 试点）**：其全局 fail-closed pod mutating webhook 在单副本 manager 崩溃期**冻结全集群 Pod 创建**（含挡自己新 pod 的死锁，2 节点测试集群实测复现后已卸载）；官方兼容表止于 K8s 1.32。翻盘条件 = 第 3 节点加入 + manager 稳定性复验，或上游支持无 webhook 的 ImagePullJob 最小安装。记录：`~/lens077/kubernetes/DEPLOY-RECORD-2026-08-20.md` |
 | 7.3 | ❌ | Karpenter | Go | 收录 | 否决：固定 3 VM 无按需节点供给可言 |
 | 7.4 | ❌ | Koordinator / Katalyst / gocrane | Go | sandbox/收录 | 否决：混部压榨在 19.5G 集群上无意义 |
 | 7.5 | 🟡 | OpenCost | Go | incubating | 可选：要核算服务成本时再上 |
@@ -209,7 +209,7 @@ AutoMQ、RocketMQ、Pulsar、EventMesh 均因 Java 排除。
 | 9.1 | ✅ | **Argo Rollouts** | Go | Argo graduated | 采纳：AnalysisTemplate 原生 Prometheus provider 直连 VM。**硬前置 = §6 Consul 退役**（网关现直连 pod IP，Service 权重切分此前不生效）；条件 = 无状态服务多副本+容量余量 |
 | 9.2 | ❌ | Flagger | Go | Flux 系 | 否决为备选：项目健康（v1.44 活跃），选 9.1 纯因 ArgoCD 同生态一个操作面 |
 | 9.3 | ✅ | **ko** | Go | sandbox | 采纳试点：10 服务全命中 CGO_ENABLED=0；免 Dockerfile 秒出多架构镜像+默认 SPDX SBOM；保留 buildx 主线过渡，对比镜像/SBOM/多架构一致性后切换 |
-| 9.4 | 🟡 | Spegel | Go | 收录 | **试装**（对抗第 2 轮翻案：第 3 节点触发条件命中；3 节点并发拉 TCR=3×WAN，P2P 省 2/3）：无损试装、保直连回退，按冷拉 p95/WAN 流量定去留 |
+| 9.4 | ✅ | Spegel | Go | 收录 | **试装验证通过（2026-08-20 实测）**：seed-and-probe——同镜像 node1 首拉 8.811s（公网）→ node2 **102ms**（86×）；`spegel_mirror_requests_total{cache="hit"}` docker.io=1、**TCR 自然流量 hit=2**（业务仓已受益）；libp2p resolve ≤5ms；containerd 2.3.4 实测 `use_local_image_pull=false` 不影响 mirror（此前顾虑消解，免改节点）。保留直连回退；记录见 `~/lens077/kubernetes/DEPLOY-RECORD-2026-08-20.md` |
 | 9.5 | ❌ | Dragonfly（P2P 分发） | Go | graduated | 否决：Manager/Scheduler/SeedPeer 控制面对 3 节点过重 |
 | 9.6 | ❌ | zot | Go | sandbox | 否决：已有 TCR+GHCR+Harbor 三仓，重复建设 |
 | 9.7 | ✅ | **k6** | Go | 收录 | 采纳：31k⭐ 压测事实标准；先建网关/搜索/订单/库存基线（也是 5.1 触发条件的测量工具） |
