@@ -1,6 +1,19 @@
 # 项目使用到的Skills
 /Users/sumery/lens077/ecommerce/ai-helper.sh
 
+# antigravity
+dsh插件：给dsh工具搜索用，默认是ds的v4，没有api就不能联网搜索
+再加免费搜索引擎。 Antigravity CLI 的综述质量更高，Tavily、Exa 或免费 Firecrawl key 能在免注册额度之上再加一份个人额度，都不要求绑卡。只有 agy 的浏览器登录需要你亲手完成
+安装搜索引擎，浏览器登录之后即可使用：
+```shell
+curl -fsSL https://antigravity.google/cli/install.sh | bash
+agy
+```
+注册登录：https://app.tavily.com/playground
+然后选了 key 的话，发一句话给 AI 即可：
+```shell
+「把我的 tavily key 设成 tvly-...」。
+```
 # impeccable
 仓库：https://github.com/pbakaus/impeccable
 示例：
