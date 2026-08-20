@@ -51,13 +51,14 @@ config_validation:
 
 # 外部基础设施（不是本仓的服务）────────────────────────────────────
 externals:
-  postgres: { host: "192.168.3.210:5432", note: "Pigsty pg-meta，db=ecommerce，user=dbuser_meta，TLS verify-full（pigsty-ca）" }
-  redis: { host: "192.168.3.210:6379", note: "Pigsty redis-main，requirepass；Pigsty v4.5 不支持 Redis TLS，明文" }
-  consul: { host: "192.168.3.102:8500" }
-  kafka: { host: "192.168.3.210:9092", note: "Pigsty kf-dev，SASL_SSL + SCRAM-SHA-512，Pigsty CA；身份 ecommerce 限 ecommerce. 前缀；ecommerce 尚未接线" }
-  casdoor: { host: "114.132.233.129", note: "JWT 公钥 kid=lens" }
-  elasticsearch: { used_by: [search] }
-  minio: { host: "minio.apikv.com", used_by: [cart], note: "商品缩略图 URL；443 不带端口。机器是 8.138.194.254（ssh 别名 node2:34124，阿里云，与集群内 node2 192.168.3.202 无关），2026-08-19 起走 node1 的 Pangolin（Traefik 终止 TLS）经 newt 隧道回 node2，本机 9000/9001 已绑回环。⚠️ 不能直连该 IP 配域名：apikv.com 未在阿里云备案，域名直连必被 ICP 拦截" }
+  postgres: { host: "pg-main-rw.postgresql.svc:5432", note: "集群内 CloudNativePG pg-main（单实例，2026-08-19 起；Pigsty 192.168.3.210 已关机退役），db=ecommerce owner=app（Database CR 声明式建库），TLS verify-full（pg-ca-cert=CNPG CA）" }
+  redis: { host: "redis.redis.svc:6379", note: "集群内 redis（2026-08-19 起）；Service 6379 → 容器 6380 为 TLS 口，客户端必须开 TLS，明文会被 reset。dragonfly ns 的部署为残留待清理（TODO ⑬）" }
+  consul: { host: "192.168.3.102:8500", note: "集群内 consul-server 经 LoadBalancer VIP 暴露；2026-08-20 选型定稿退役 → K8s Service DNS（迁移四步见 TODO ⑤），迁移完成前仍是注册发现事实源" }
+  kafka: { host: "（无实例）", note: "已退役：Pigsty broker 随宿主关机消失，集群内仅剩 strimzi operator 残留（无 Kafka CR）；2026-08-20 定稿替代 = NATS JetStream + outbox 自写 relay（TODO ③），应用侧本就零接线" }
+  casdoor: { host: "casdoor.apikv.com", note: "HTTPS 经 Pangolin（8000 明文口已关，2026-08-19 起）；JWT 公钥 kid=lens；2026-08-20 定稿收编进集群，迁移方案见 docs/技术栈选型对抗/对抗审阅表-第3轮.md R3-A" }
+  elasticsearch: { used_by: [search], note: "实例已退役（集群重建后不存在），search/address 代码仍引用故 CrashLoop；迁移 = TODO「搜索引擎切换 Meilisearch」" }
+  meilisearch: { host: "meilisearch.search.svc:7700", used_by: [], note: "v1.53 已装（集群安装器组件），search 服务代码尚未接线（接线后把 used_by 改为 [search] 并更新 search.external）" }
+  minio: { host: "minio.apikv.com", used_by: [cart], note: "⚠️ MinIO 上游仓库已归档（2026-02/04），2026-08-20 定稿迁 SeaweedFS（TODO ①，新增备份流量不再写 MinIO）。商品缩略图 URL；443 不带端口。机器是 8.138.194.254（ssh 别名 node2:34124，阿里云，与集群内 node2 192.168.3.202 无关），2026-08-19 起走 node1 的 Pangolin（Traefik 终止 TLS）经 newt 隧道回 node2，本机 9000/9001 已绑回环。⚠️ 不能直连该 IP 配域名：apikv.com 未在阿里云备案，域名直连必被 ICP 拦截" }
   config_center: { discovery: config-service, repository: "github.com/lens077/config-center", note: "独立配置控制面，从本地 CONFIG_FILE 自举" }
   gorse: { host: "gorse.apikv.com", used_by: [behavior, product], note: "推荐引擎；客户端在 backend/pkg/gorse/（发 X-API-Key）。与 minio 同在 node2，2026-08-19 起走 Pangolin，本机 8086/8088 已绑回环。鉴权是 gorse 自带的（[server] api_key + dashboard 表单登录），非 Pangolin SSO。⚠️ 仓库配置的 api_key 按硬规则 4 留空，真值要灌 Config Center，否则业务全 401。依赖 node1 的 rediss://redis.apikv.com:6379 与 pg:5432" }
   redis_gorse: { host: "redis.apikv.com:61246", used_by: [gorse], note: "gorse 专用 cache store，在 node1（≠ Pigsty 那台 192.168.3.210，也≠集群内 dragonfly）。2026-08-19 起 port 0 + 只收 rediss://，证书是 ZeroSSL *.apikv.com（2026-10-27 到期，无 IP SAN 故必须走域名）；宿主端口随机化为 61246（容器内仍 6379）。⚠️ 测试期对 0.0.0.0/0 开放，上线前收窄" }
@@ -111,8 +112,9 @@ services:
     gateway_prefix: /search*
     extra_config: [auth, search]
     depends_on: []
-    depends_on_planned: [product] # ProductChangedEvent → 同步 ES（未接线）
-    external: [elasticsearch, config_center]
+    depends_on_planned: [product] # ProductChangedEvent → 同步搜索索引（未接线）
+    external: [elasticsearch, config_center] # ES 实例已退役 → 服务 CrashLoop；迁 meilisearch 后更新本行
+    note: "ES→Meilisearch 迁移未开工（TODO「搜索引擎切换」），当前 CrashLoop 属已知状态"
 
   behavior:
     discovery: behavior-service
