@@ -37,7 +37,7 @@
 尚无设计文档的服务：user / behavior（behavior 的推荐链路知识在
 `context/project/ecommerce/behavior/`）。**部分服务的设计文档住在服务目录内**：
 address 领域设计 → `backend/services/address/README.md`；cart 表设计决策 →
-`backend/services/cart/internal/data/schema/README.md`；product 领域与接口早期稿 →
+`backend/services/cart/internal/data/migrations/README.md`；product 领域与接口早期稿 →
 `backend/services/product/README.md`（其接口命名与 [product/listing.md](product/listing.md)
 未统一，列表页现行设计以 listing.md 为准）。新增设计时在对应服务目录建文件并回填本表。
 

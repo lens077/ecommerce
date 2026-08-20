@@ -2,7 +2,7 @@
 
 > 从根 `DESIGN.md` 拆出（2026-08-08）。⚠️ 现状与设计差距极大：`Reserve` 静默无操作、
 > `ReleaseReserve` 是 panic 桩（2026-08-06 对抗评审，修复项见 `TODO.md` P0）。
-> 实际表结构以 [`backend/services/inventory/internal/data/schema/`](../../../backend/services/inventory/internal/data/schema/) 为准。
+> 实际表结构以 [`backend/services/inventory/internal/data/migrations/`](../../../backend/services/inventory/internal/data/migrations/) 为准。
 > 与订单的协作契约（Reserve=TCC Try、ConfirmReserve、reqid 关联键、预占 TTL 兜底）
 > 见 [order/checkout.md](../order/checkout.md) 与 [order/consistency.md](../order/consistency.md)。
 

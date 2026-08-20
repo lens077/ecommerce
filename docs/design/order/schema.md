@@ -3,7 +3,7 @@
 > 从根 `DESIGN.md` 拆出（2026-08-08）。⚠️ 已被下单终稿**部分取代**：
 > [checkout.md](checkout.md) 引入了 `order_group`（按商家拆单）+ `order_log`，
 > 本文的 `orders.main/item` 两表结构是拆单方案定稿前的版本。
-> 真相以 [`backend/services/order/internal/data/schema/order.sql`](../../../backend/services/order/internal/data/schema/order.sql) 为准。
+> 真相以 [`backend/services/order/internal/data/migrations/00001_order.sql`](../../../backend/services/order/internal/data/migrations/00001_order.sql) 为准。
 
 4. 订单表
 

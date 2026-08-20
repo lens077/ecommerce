@@ -139,7 +139,7 @@
 
 - [ ] CI → 清单仓 digest 更新 → ArgoCD 同步的全链路打通(补齐现缺环节)
 - [ ] dev → prod 同 digest 晋级;回滚 = revert 实测一次
-- [ ] migration 工具选型落地(golang-migrate 或 atlas),expand-contract 写进 AGENTS.md
+- [x] migration 工具选型落地——2026-08-21 异构对抗第4轮终裁 **goose v3**(golang-migrate 因 dirty 需人工 force 与无人链路冲突、atlas 因 Pro 付费墙出局),已落地 `backend/tools/dbmigrate` + per-service `internal/data/migrations`;expand-contract 纪律沉淀在 `context/team/db-migrations.md`(runbook §0.1 已挂路由,不进 AGENTS.md 正文——那里只放索引)
 - [ ] 无状态服务 ≥2 副本 + PDB;带 PV 服务显式 Recreate;逐项实测行为而非配置状态
 - [ ] 部署前镜像 pull 预检 hook
 - [ ] 验收:一次完整发布与一次回滚全程零 kubectl 手操作

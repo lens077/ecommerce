@@ -64,13 +64,17 @@ description: 公网暴露基础设施(Pangolin)的拓扑事实、面板 API 操�
 ## 面板与站点/资源现状
 
 - 面板 `https://pangolin.apikv.com`,管理员 `admin@apikv.com`(密码在用户处;2026-08-19 重置过一次 —— 密码以 argon2 哈希存 `config/db/db.sqlite` 的 `user.passwordHash`,**服务器上没有明文副本**,忘了只能改库重置)
-- Sites:`node3-local`(siteId 1, local;**面板里的历史实体名,保持不改**,即 node1 本机)/ `mac`(siteId 2, newt, 离线——Mac 重装后 newt 未恢复)/ **`k8s-cluster`(siteId 4, newt, 当前在用)** / **`node2`(siteId 5, newt, 2026-08-19 新建, subnet `100.89.128.8/30`)**。
+- Sites:`node3-local`(siteId 1, local;**面板里的历史实体名,保持不改**,即 node1 本机)/ `mac`(siteId 2, newt, **永久离线尸体**——Mac 重装后凭据丢失且面板不回显,已由 siteId 6 取代)/ **`k8s-cluster`(siteId 4, newt, 当前在用)** / **`node2`(siteId 5, newt, 2026-08-19 新建, subnet `100.89.128.8/30`)** / **`mac2`(siteId 6, newt 1.16.0, 2026-08-20 重建, 本 Mac 当前在用)**。
   旧的 `k8s`(siteId 3)已于 2026-08-19 删除 —— 删之前先把资源 3/4 的 target 改到了 siteId 4,
   删后实测 `config.apikv.com` 200 / `config-api.apikv.com` 401 不变。
   **顺序很重要**:先迁 target 再删站点,反过来会让资源短暂失去后端
-- Resources:`blog.apikv.com`(blog,target `https://blog:443`;**2026-08-18 traefik-config 实查:早前的根域 `apikv.com`+`www` 已无 router,公网 404 空置**)/ `config.apikv.com`(SSO on)/ `config-api.apikv.com`(SSO off,应用自带鉴权)/ `casdoor.apikv.com`(SSO off,自带鉴权,target `10.1.0.8:8000`)/ 另有 kaneo/dev/ntfy/stream/cat 等,以 `traefik-config` 后门实查为准
+- Resources:`blog.apikv.com`(blog,target `https://blog:443`;**2026-08-18 traefik-config 实查:早前的根域 `apikv.com`+`www` 已无 router,公网 404 空置**)/ `config.apikv.com`(SSO on)/ `config-api.apikv.com`(SSO off,应用自带鉴权)/ `casdoor.apikv.com`(SSO off,自带鉴权,target `10.1.0.8:8000`)/ **`dsh.apikv.com`(rid 19, **SSO on**, site `mac2`, target `127.0.0.1:3080` http——本 Mac 的 DSH Web GUI,2026-08-20 建)**/ 另有 kaneo/dev/ntfy/stream/cat 等,以 `traefik-config` 后门实查为准
 - k8s newt:helm release `newt`(ns `pangolin`,chart `fossorial/newt`);凭据看 `helm get values newt -n pangolin`(inline,勿把 values 文件提交入库)
-- Mac newt:`~/apps/newt/newt` + 同目录 launchd plist(含凭据,在仓库外);日志 `/tmp/newt.log`
+- Mac newt(2026-08-20 重建):二进制 `~/apps/newt/newt`(1.16.0, darwin-arm64;GitHub release 直连超时,
+  经开发机代理 `192.168.3.220:7890` 下载),凭据 `~/apps/newt/newt.env`(600,仓库外),
+  launchd `~/Library/LaunchAgents/com.apikv.newt.plist`(600,含凭据,RunAtLoad+KeepAlive);
+  日志 `/tmp/newt.log`。带 `--disable-clients`(node2 同款预防)。**newt 跑在宿主机 → target 写
+  `127.0.0.1:<port>`**(同 node2 规则,与 local site 的 `10.1.0.8` 规则不同)
 
 ### node2 站点(siteId 5, 2026-08-19 建)
 
@@ -119,7 +123,12 @@ curl -s -c /tmp/pg.ck -X POST $U/auth/login -H "Content-Type: application/json" 
 - `POST /resource/:rid` `{sso:false}` 关登录保护(新资源**默认有保护**)
 - `POST /target/:tid` 更新 target(**siteId 和 ip 必传**,只传 port/method 会校验失败)
 - `GET /org/main/pick-site-defaults` 生成新 site 的 newt 凭据
+- `PUT /org/main/site` `{name,type:"newt",exitNodeId,subnet,newtId,secret}` 建站点(2026-08-20 实测)。
+  ⚠️ **别把 pick-site-defaults 返回的 `address` 原样传回**——会 400 `Invalid address format`
+  (与 node2 那次 clients 地址缺掩码同族),省略该字段让服务端自行分配即可
 - 注意 Traefik 动态配置 **5s 轮询**,改完等 ≥6s 再验证,别把时序当故障
+- 验证「登录保护生效」的判据:未登录 curl 应 **302 → `pangolin.apikv.com/auth/resource/<guid>`**
+  且 body 无业务内容;只看 200/404 分不清保护与故障
 
 ## k8s HTTPRoute 暴露套路(两步,已验证)
 

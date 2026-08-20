@@ -358,6 +358,21 @@
 - **含义**：CNCF incubating 的细粒度授权服务（Go，Zanzibar 系）：应用把关系写成元组存入，运行时以 `check(主体, 关系, 资源)` 查询判定。
 - **本项目**：定稿形态=2 副本反亲和、store 在 `pg-main` 独立库；**边界条款**=网关 Casbin 管「角色×路由」粗闸（进程内），FGA 管资源实例关系，禁止网关热路径远程 check；失败分级「降级只准缩小授权集」。落地进度见 [`TODO.md`](../TODO.md) ⑪。
 
+### 影子双跑（shadow dual-run）
+
+- **含义**：新旧两套判定逻辑并行执行同一真实流量：旧逻辑继续拍板生效，新逻辑只记录结果并与旧逻辑比对差异；差异收敛到零后才让新逻辑转为强制。目的：用真实流量验证新系统的正确性，验证期零用户风险。
+- **本项目**：OpenFGA 首接 merchant 域的既定接入方式——先影子双跑（FGA 判定只记录不生效），比对通过后转强制（TECH-RADAR §4.1、TODO ⑪）。
+
+### fail-open 与 fail-close
+
+- **含义**：依赖组件故障时的两种默认姿态：fail-open=放行（可用性优先），fail-close=拒绝（安全优先）。授权系统的失败策略必须逐接口显式选择，不能全局一刀切。
+- **本项目**：T5 条款化为「**降级只准缩小授权集，不准扩大**」：写/资金/管理操作 fail-close；读单资源 owner==subject 本地短路、其余 fail-close；列表/推荐 fail-open 但降为「仅本人+公开」；公开读 fail-open（对抗第 2 轮 T5）。
+
+### JWKS（JSON Web Key Set）
+
+- **含义**：以 JSON 发布的公钥集合端点（常见路径 `/.well-known/…` 或 `/api/certs`），每把键带 `kid`（key id）；验签方按 JWT 头部的 `kid` 取对应公钥。它是「签发方换钥/多钥并存」与「验签方自动跟上」之间的标准接口。
+- **本项目**：Casdoor 的 JWKS 在 `/api/certs`（`kid=lens`）；网关验签公钥另存 Config Center `gateway` ns 的 `secrets/public.pem`。casdoor 收编迁移以「迁移前后 JWKS **diff==0**」为硬门禁——公钥逐字节不变，存量 token 与网关验签才能双双存活（R3-A）。
+
 ### trust-manager
 
 - **含义**：cert-manager 的配套项目：把 CA 证书打包为 Bundle 资源并自动分发到各命名空间的 ConfigMap/Secret——cert-manager 负责「签发」那一半，trust-manager 标准化「信任分发」这一半。
