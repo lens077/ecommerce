@@ -390,7 +390,7 @@
 - [ ] **⑪OpenFGA 落地**（用户拍板；形态=对抗第 2 轮 T5）：2 副本反亲和；store=pg-main `Database` CR 独立库+独立 role/连接池上限；**边界条款：Casbin 管路由粗闸（进程内不动）、FGA 管商家-店铺-商品-操作员资源关系、禁止网关热路径远程 check**；首接 merchant 域影子双跑→强制；p95≤15ms 验收/p99 25ms 目标/50ms 熔断；失败分级「降级只准缩小授权集」（写/资金 fail-close、列表/推荐降仅本人+公开）
 - [ ] **⑫ClickHouse 单节点**（用户拍板）：与 PG 主错开节点，`max_server_memory` 2G 顶格，数据目录 localPV SSD；摄入=原生 NATS 表引擎直连 JetStream 或批量导入；埋点断代可重放故单点可接受；PeerDB PoC（PG→CH CDC）待基线稳定后
 - [ ] **⑬资源与残留**（预算=对抗第 2 轮 T2）：先杀残留回收 ≈1.4Gi——seata(613Mi 零引用)/strimzi(随③)/loki(随④)/cilium-test/集群内 minio/tempo/dragonfly 残留/consul(随⑤)；全栈 requests 目标 ≈13Gi/19.5Gi（余量 ≥20%），limits=1.5×requests（CH/网关 2×），requests 按 VPA 实测校准；装不下按砍序：残留→Tetragon(已缓)→Kyverno audit-only→Jaeger 采样→CH 降档→KEDA→OpenFGA 2→1
-- [ ] **⑭真相源对齐**：`.service-matrix.yaml` externals 按集群现实重写（postgres→CNPG、redis、kafka/es 退役、minio 迁移中、casdoor 收编后更新）并跑 `go test ./structcheck/...`；`docs/DEVOPS.md` 阶段①④并入 ⑩ 的实施稿；OpenKruise ImagePullJob、Spegel 试装、ko 试点、k6 基线、Chaos 触发式、Tetragon 一周实测等 🟡 项按 TECH-RADAR 定稿的触发条件逐个开卡
+- [ ] **⑭真相源对齐**：~~`.service-matrix.yaml` externals 按集群现实重写并跑 structcheck~~（✅ 2026-08-20 完成：postgres→CNPG rw svc、redis 集群内 TLS、kafka「无实例已退役」、elasticsearch 退役标注、meilisearch 新增条目、casdoor/minio/consul 加定稿标注、search 服务加 CrashLoop 已知状态注；structcheck 通过。剩余：casdoor 收编落地后 host 改集群内 svc）；`docs/DEVOPS.md` 阶段①④并入 ⑩ 的实施稿；OpenKruise ImagePullJob、Spegel 试装、ko 试点、k6 基线、Chaos 触发式、Tetragon 一周实测等 🟡 项按 TECH-RADAR 定稿的触发条件逐个开卡
 
 ### 搜索引擎切换 Meilisearch（2026-08-16 拍板：ES → Meilisearch，两仓合计约 2 人日）
 
