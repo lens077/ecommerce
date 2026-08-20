@@ -3,7 +3,7 @@
 > 从根 `DESIGN.md` 拆出（2026-08-08）。现状：5 个 RPC 全部是显式 `Unimplemented` 桩，
 > 原实现依赖已移除的 balance/consumerOrder client（注释保留在 `data/payment.go`），
 > `pay.alipay.*` 凭据在 KV 里是空占位——恢复计划见 `TODO.md`。
-> 实际表结构以 [`backend/services/payment/internal/data/schema/`](../../../backend/services/payment/internal/data/schema/) 为准。
+> 实际表结构以 [`backend/services/payment/internal/data/migrations/`](../../../backend/services/payment/internal/data/migrations/) 为准。
 > 微信支付未接（依赖只有 `smartwalle/alipay`，见 `STACK.md`）。
 
 

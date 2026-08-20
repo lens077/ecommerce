@@ -2,7 +2,7 @@
 
 > 从根 `DESIGN.md` 拆出（2026-08-08）。⚠️ 本文是**设计期草稿**，与实际建表已有出入
 > （如 ListProducts 的 SQL 用的是 `products.spus`，本文写的是 `products.spu`）。
-> 真相以 [`backend/services/product/internal/data/schema/`](../../../backend/services/product/internal/data/schema/) 为准，
+> 真相以 [`backend/services/product/internal/data/migrations/`](../../../backend/services/product/internal/data/migrations/) 为准，
 > 本文仅保留字段取舍的设计意图。列表查询设计见 [listing.md](listing.md)。
 
 1. 商品 SPU 表
