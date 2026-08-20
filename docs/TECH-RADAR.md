@@ -99,7 +99,7 @@ AutoMQ、RocketMQ、Pulsar、EventMesh 均因 Java 排除。
 | 3.4 | ❌ | Databend | Rust | 收录 | 否决：仓库许可证 NOASSERTION 未澄清，不进核心路径 |
 | 3.5 | 🟡 | Multigres | Go | 收录 | 观察：PG 水平分片的未来答案，规模远未到 |
 | 3.6 | 🟡 | YugabyteDB / CockroachDB | — | 收录 | 观察：分布式 PG 路线，规模到了再议（CRDB 许可已非开源） |
-| 3.7 | ❌ | Valkey | C | 收录 | 备选记录不引进。**行内订正**：缓存现实已是 `redis.redis.svc`（TLS），dragonfly 为残留部署待清理（原「已是 DragonflyDB」表述过期） |
+| 3.7 | ❌ | Valkey | C | 收录 | 备选记录不引进。**行内订正（2026-08-20 二次更新）**：缓存主力已切回 **Dragonfly 原生 TLS**（`dragonfly.dragonfly.svc:6379` 单口 TLS-only，cert-manager 签发，密码与 redis 组件同源使切换 host-only；明文/TLS 三段冒烟+10 服务 healthz 实证）；redis 组件降回技术验证位并已关停留备。切换踩坑沉淀：config 域 experience `config-center-self-bootstrap-blindspot` |
 
 **附**：PeerDB（PG→CH CDC，AGPL，v0.37.4 活跃）🟡——CH 基线稳定后 PoC（验证 PG 版本/DDL/TOAST/断点恢复）。
 

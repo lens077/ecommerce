@@ -131,7 +131,7 @@ ecommerce/
 | 组件 | 用途 | 备注 |
 |---|---|---|
 | PostgreSQL | 主存储 | **集群内 CloudNativePG `pg-main`**（2026-08-19 起；Pigsty 已关机退役），**每服务一个 schema**，TLS `verify-full`；定稿待办：instances=2 反亲和 + Barman Cloud Plugin 异地 PITR |
-| Redis | 缓存 / 游标 / 分布式锁 | `redis.redis.svc:6379`（Service 6379 → 容器 6380 **TLS 口，必须开 TLS**）；dragonfly 为残留部署待清理 |
+| Redis 协议缓存 | 缓存 / 游标 / 分布式锁 | **Dragonfly** `dragonfly.dragonfly.svc:6379`（2026-08-20 切回，**原生 TLS 单口**，cert-manager 签发、客户端 verify CA；密码与 redis 组件同值故切换仅改 host）；redis 组件已关停留备回滚 |
 | Meilisearch | search 服务（**代码迁移中**） | v1.53 已装（`search/meilisearch:7700`）；代码仍是 `go-elasticsearch/v9`——ES 已退役，address/search 因此 CrashLoop，迁移见 TODO「搜索引擎切换」 |
 | MinIO | 商品图 | **上游仓库已归档（2026-02/04）**；定稿迁 SeaweedFS（4c4G 云箱兼作备份靶），新增备份流量不再写 MinIO（TECH-RADAR 10.6） |
 | Consul | **仅**服务注册发现（KV 配置源已退役） | **定稿退役** → K8s Service DNS + Cilium KPR，四步迁移见 TODO |

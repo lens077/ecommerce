@@ -70,6 +70,7 @@ config_validation.rollout_warning。
 | 配置改了没反应 / 想知道热更新到底能不能生效 | [config-hot-reload-boundaries.md](experience/config-hot-reload-boundaries.md) |
 | 配置文件在仓库、KV、配置中心之间对不上 | [three-copies-of-one-config.md](experience/three-copies-of-one-config.md) |
 | Consul KV 已退役，服务必须从配置中心启动 | [consul-kv-retired.md](experience/consul-kv-retired.md) |
+| 换基础设施后全量重启才爆雷 / 消费者盘点漏了 CC 自举配置 | [config-center-self-bootstrap-blindspot.md](experience/config-center-self-bootstrap-blindspot.md) |
 
 ## 已知注意事项
 

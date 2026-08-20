@@ -52,7 +52,7 @@ config_validation:
 # 外部基础设施（不是本仓的服务）────────────────────────────────────
 externals:
   postgres: { host: "pg-main-rw.postgresql.svc:5432", note: "集群内 CloudNativePG pg-main（单实例，2026-08-19 起；Pigsty 192.168.3.210 已关机退役），db=ecommerce owner=app（Database CR 声明式建库），TLS verify-full（pg-ca-cert=CNPG CA）" }
-  redis: { host: "redis.redis.svc:6379", note: "集群内 redis（2026-08-19 起）；Service 6379 → 容器 6380 为 TLS 口，客户端必须开 TLS，明文会被 reset。dragonfly ns 的部署为残留待清理（TODO ⑬）" }
+  redis: { host: "dragonfly.dragonfly.svc:6379", note: "集群内 Dragonfly 原生 TLS（2026-08-20 切回，证书 global-ca-issuer 签、SAN 含本 svc 名，密码与 redis 组件同值故服务侧仅换 host）；6379 单口 TLS-only，明文被拒。redis 组件（redis ns）已 scale 0 关停留备回滚；⚠️ Config Center 自身也是本项消费者（自举 Secret，不在 config.entry 里，见 config 域 experience）" }
   consul: { host: "192.168.3.102:8500", note: "集群内 consul-server 经 LoadBalancer VIP 暴露；2026-08-20 选型定稿退役 → K8s Service DNS（迁移四步见 TODO ⑤），迁移完成前仍是注册发现事实源" }
   kafka: { host: "（无实例）", note: "已退役：Pigsty broker 随宿主关机消失，集群内仅剩 strimzi operator 残留（无 Kafka CR）；2026-08-20 定稿替代 = NATS JetStream + outbox 自写 relay（TODO ③），应用侧本就零接线" }
   casdoor: { host: "casdoor.apikv.com", note: "HTTPS 经 Pangolin（8000 明文口已关，2026-08-19 起）；JWT 公钥 kid=lens；2026-08-20 定稿收编进集群，迁移方案见 docs/技术栈选型对抗/对抗审阅表-第3轮.md R3-A" }
