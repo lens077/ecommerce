@@ -29,7 +29,7 @@ user:
   replicaCount: 1
   image:
     repository: "ccr.ccs.tencentyun.com/sumery/user"
-    tag: sha-429cdb7
+    tag: sha-7438fd2
     pullPolicy: Always
   service:
     type: LoadBalancer
@@ -92,7 +92,7 @@ search:
   replicaCount: 1
   image:
     repository: "ccr.ccs.tencentyun.com/sumery/search"
-    tag: sha-429cdb7
+    tag: sha-7438fd2
     pullPolicy: Always
   service:
     type: LoadBalancer
@@ -155,7 +155,7 @@ product:
   replicaCount: 1
   image:
     repository: "ccr.ccs.tencentyun.com/sumery/product"
-    tag: sha-429cdb7
+    tag: sha-7438fd2
     pullPolicy: Always
   service:
     type: LoadBalancer
@@ -218,7 +218,7 @@ order:
   replicaCount: 1
   image:
     repository: "ccr.ccs.tencentyun.com/sumery/order"
-    tag: sha-429cdb7
+    tag: sha-7438fd2
     pullPolicy: Always
   service:
     type: LoadBalancer
@@ -281,7 +281,7 @@ inventory:
   replicaCount: 1
   image:
     repository: "ccr.ccs.tencentyun.com/sumery/inventory"
-    tag: sha-429cdb7
+    tag: sha-7438fd2
     pullPolicy: Always
   service:
     type: LoadBalancer
@@ -344,7 +344,7 @@ cart:
   replicaCount: 1
   image:
     repository: "ccr.ccs.tencentyun.com/sumery/cart"
-    tag: sha-429cdb7
+    tag: sha-7438fd2
     pullPolicy: Always
   service:
     type: LoadBalancer
@@ -407,7 +407,7 @@ merchant:
   replicaCount: 1
   image:
     repository: "ccr.ccs.tencentyun.com/sumery/merchant"
-    tag: sha-429cdb7
+    tag: sha-7438fd2
     pullPolicy: Always
   service:
     type: LoadBalancer
@@ -470,7 +470,7 @@ address:
   replicaCount: 1
   image:
     repository: "ccr.ccs.tencentyun.com/sumery/address"
-    tag: sha-429cdb7
+    tag: sha-7438fd2
     pullPolicy: Always
   service:
     type: LoadBalancer
@@ -533,7 +533,7 @@ behavior:
   replicaCount: 1
   image:
     repository: "ccr.ccs.tencentyun.com/sumery/behavior"
-    tag: sha-429cdb7
+    tag: sha-7438fd2
     pullPolicy: Always
   service:
     type: LoadBalancer
@@ -596,7 +596,7 @@ payment:
   replicaCount: 1
   image:
     repository: "ccr.ccs.tencentyun.com/sumery/payment"
-    tag: sha-429cdb7
+    tag: sha-7438fd2
     pullPolicy: Always
   service:
     type: LoadBalancer
