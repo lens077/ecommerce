@@ -12,14 +12,13 @@
 #                                code owner review），默认 GITHUB_TOKEN 推不动
 name: Backend CI
 
+# 触发（2026-08-20 起）：仅发布 tag 触发（semver X.Y.Z，裸格式不带 v——旧 v1.3.x 系冻结不匹配）。
+# push main 不再触发：发布节奏由打 tag 的人控制；文档/matrix 推送不再引发全量构建，
+# CI 机器人回写也不再与本地历史抢跑。语义与打法见 context/team/git-commit.md「发布 tag 与 CI 触发」。
 on:
   push:
-    branches: [main]
-    paths:
-      - "backend/**"
-      - ".github/workflows/backend.yml"
-      - ".github/workflows/service-ci.yml"
-      - ".service-matrix.yaml"
+    tags:
+      - "[0-9]+.[0-9]+.[0-9]+"
   workflow_dispatch:
     inputs:
       services:
@@ -48,7 +47,7 @@ jobs:
         id: detect
         env:
           EVENT_NAME: ${{ github.event_name }}
-          BEFORE_SHA: ${{ github.event.before }}
+          CURRENT_TAG: ${{ github.ref_name }}
           DISPATCH_SERVICES: ${{ inputs.services }}
         run: |
           set -euo pipefail
@@ -66,13 +65,19 @@ jobs:
               SELECTED="$ALL_SERVICES"
             fi
           else
-            # push 事件：diff 出改动文件。首推/强推时 before 是全零，退化为全量
-            if [[ "$BEFORE_SHA" =~ ^0+$ ]] || ! git cat-file -e "$BEFORE_SHA" 2>/dev/null; then
+            # tag 事件：与上一个 semver tag 之间 diff 出改动文件。
+            # 首个 tag（找不到前驱）退化为全量；旧 v1.3.x 系不算前驱。
+            PREV_TAG=$(git tag --list '[0-9]*.[0-9]*.[0-9]*' \
+              | grep -E '^[0-9]+\.[0-9]+\.[0-9]+$' | grep -vx "$CURRENT_TAG" \
+              | sort -V | tail -1 || true)
+            if [[ -z "$PREV_TAG" ]]; then
               CHANGED=""
               FULL_RUN=1
+              echo "无前驱 semver tag，全量构建"
             else
-              CHANGED=$(git diff --name-only "$BEFORE_SHA" "$GITHUB_SHA")
+              CHANGED=$(git diff --name-only "$PREV_TAG" "$GITHUB_SHA")
               FULL_RUN=0
+              echo "diff 基线: $PREV_TAG"
             fi
 
             # 共享路径 → 全量（单 go.mod 单模块，共享代码影响所有服务）
@@ -106,6 +111,8 @@ jobs:
     uses: ./.github/workflows/service-ci.yml
     with:
       service: ${{ matrix.service }}
+      # tag 触发时镜像同时打上版本号（X.Y.Z + sha-<7> 双标）；手动 dispatch 只有 sha
+      version: ${{ github.ref_type == 'tag' && github.ref_name || '' }}
     secrets: inherit
 
   # GitOps 回写：umbrella chart 的 helm/values.yaml 是部署真相源
@@ -127,9 +134,11 @@ jobs:
       - name: Bump image tags
         env:
           SERVICES: ${{ needs.detect.outputs.services }}
+          VERSION: ${{ github.ref_type == 'tag' && github.ref_name || '' }}
         run: |
           set -euo pipefail
-          TAG="sha-${GITHUB_SHA::7}"
+          # tag 触发用版本号（不可变，语义可读）；dispatch 退回 sha
+          TAG="${VERSION:-sha-${GITHUB_SHA::7}}"
           for svc in $(jq -r '.[]' <<<"$SERVICES"); do
             yq -i ".${svc}.image.tag = \"${TAG}\"" helm/values.yaml
           done
@@ -138,9 +147,10 @@ jobs:
       - name: Commit and push
         env:
           SERVICES: ${{ needs.detect.outputs.services }}
+          VERSION: ${{ github.ref_type == 'tag' && github.ref_name || '' }}
         run: |
           set -euo pipefail
-          TAG="sha-${GITHUB_SHA::7}"
+          TAG="${VERSION:-sha-${GITHUB_SHA::7}}"
           SVC_LIST=$(jq -r 'join(",")' <<<"$SERVICES")
           git config user.name "github-actions[bot]"
           git config user.email "github-actions[bot]@users.noreply.github.com"

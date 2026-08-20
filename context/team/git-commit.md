@@ -282,3 +282,33 @@ pnpm exec commitlint --from HEAD~7 --to HEAD   # 回放校验既有提交
 - 完整 emoji 语义见 [gitmoji.dev](https://gitmoji.dev/)
 
 （本文件已合并原 `frontend/git-commit-conventional.md`。同一件事不要两个真相源——那份文档最后那行 `npx husky add .husky/commit-msg '...'` 正是上面第 1 层故障的来源。）
+
+## 发布 tag 与 CI 触发（2026-08-20 起）
+
+**CI 只由发布 tag 触发**。push main 不再跑构建——发布节奏由打 tag 的人控制，
+文档推送不再引发全量构建，CI 机器人的 values 回写也不再与本地历史抢跑
+（触发事故见 evolution-log 同日条目）。`workflow_dispatch` 保留为显式手动例外。
+
+**tag 格式**：裸 semver `X.Y.Z`（不带 v、不补零；GitHub 过滤模式
+`[0-9]+.[0-9]+.[0-9]+`）。旧 `v1.3.x` 系（带 v + 补零）已冻结，天然不匹配新模式，
+不删除不复用。版本从 `1.4.0` 起延续项目迭代。
+
+**语义（semver 社区实践）**：
+
+| 位 | 何时递增 |
+|---|---|
+| `X` | 破坏性变更 / 大版本重构（proto 兼容性红线被有意打破、架构级替换） |
+| `Y` | 向后兼容的新功能、新服务、新组件接线 |
+| `Z` | 修复、文档、配置、依赖对齐等其余改动 |
+
+**操作手顺（人与 agent 一致）**：
+
+```bash
+git tag --list '[0-9]*' | grep -E '^[0-9]+\.[0-9]+\.[0-9]+$' | sort -V | tail -1   # 看最新
+git tag <X.Y.Z>              # 打在 main 上已推送的提交
+git push github <X.Y.Z>      # ⚠️ 必须推 github 远端——Actions 在那里；origin(GitLab) 无 CI
+```
+
+四条纪律：**tag 不可变**（打错就打新号，不 move 不复用）；tag 指向的提交必须已在
+main 上；**agent 需要触发 CI 验证或部署时，一律走打 tag**，并按上表选择递增位；
+镜像会同时带 `X.Y.Z` 与 `sha-<7>` 双标，`helm/values.yaml` 回写用版本号。
