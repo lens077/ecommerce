@@ -10,21 +10,30 @@ import (
 	"github.com/jackc/pgx/v5/pgtype"
 )
 
+type MerchantsAgreement struct {
+	DefaultVersion int32
+	Version        int32
+	EffectiveDate  time.Time
+	ContentUrl     string
+}
+
 type MerchantsMerchant struct {
-	ID            int64
-	MerchantID    string
-	ApplicationID string
-	CompanyName   string
-	CreditCode    string
-	LegalPerson   string
-	ContactPhone  string
-	Status        string
-	ShopName      *string
-	ShopLogoUrl   *string
-	OwnerUserID   string
-	ActivatedAt   pgtype.Timestamptz
-	CreatedAt     time.Time
-	UpdatedAt     time.Time
+	ID                  int64
+	MerchantID          string
+	ApplicationID       string
+	AgreementVersion    string
+	AgreementAcceptedAt time.Time
+	CompanyName         string
+	CreditCode          string
+	LegalPerson         string
+	ContactPhone        string
+	Status              string
+	ShopName            *string
+	ShopLogoUrl         *string
+	OwnerUserID         string
+	ActivatedAt         pgtype.Timestamptz
+	CreatedAt           time.Time
+	UpdatedAt           time.Time
 }
 
 type MerchantsMerchantApplication struct {

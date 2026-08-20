@@ -1,6 +1,7 @@
 // Command regionseed 把行政区划数据集(regions.tsv)转成灌库用的 seed_regions.sql。
 //
-// 仓库没有 migration 工具,schema.sql 一直是手工 psql 执行的,行政区划数据也照这个来:
+// 表结构自 2026-08-21 起由 goose 迁移管理(internal/data/migrations,工具 tools/dbmigrate),
+// 但行政区划字典刻意不进 goose 种子——16k 行生成文件带自己的 BEGIN/TRUNCATE 整表重灌语义:
 // 产物 SQL 一起提交,部署时 psql -f 一次即可。这个程序只在数据集更新时才需要重跑。
 //
 //	go run ./cmd/regionseed
@@ -372,7 +373,7 @@ func writeSQL(path string, records []record) error {
 -- 数据源: https://github.com/eduosi/district (Apache-2.0)
 --   快照 commit 5202a44613461c6e556fba50f4764ce6b1fdaef7 (2026-01-22)
 --
--- 用法(先执行过 schema.sql):
+-- 用法(先跑过迁移 make migrate-up MIGRATE_SVC=address):
 --   psql "$DSN" -f seed_regions.sql
 --
 -- 整表重灌。行政区划是只读字典,addresses 表存的是中文名字符串而非外键,

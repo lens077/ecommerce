@@ -44,6 +44,50 @@ lint-baseline-snapshot:
 sqlc:
 	sqlc generate
 
+# ── 数据库迁移与种子（goose 以库形态内嵌在 tools/dbmigrate，无外部 CLI 依赖）────
+# 常用: make migrate-up / migrate-status / seed;单服务: make migrate-up MIGRATE_SVC=cart
+# DSN 优先级: DB_URI > DB_SOURCE > 本地默认(127.0.0.1:15432/ecommerce)。
+# 首次接管已手工建过表的存量库(如集群 CNPG): make migrate-baseline。
+# 详见 tools/dbmigrate/README.md;迁移写法纪律(expand-contract)见 docs/DEVOPS.md。
+MIGRATE_SVC ?= all
+
+.PHONY: migrate-up migrate-status migrate-version migrate-down migrate-down-to migrate-baseline migrate-create seed seed-down
+migrate-up:
+	go run ./tools/dbmigrate -svc $(MIGRATE_SVC) up
+
+migrate-status:
+	go run ./tools/dbmigrate -svc $(MIGRATE_SVC) status
+
+migrate-version:
+	go run ./tools/dbmigrate -svc $(MIGRATE_SVC) version
+
+migrate-down:
+	go run ./tools/dbmigrate -svc $(MIGRATE_SVC) down
+
+# 用法: make migrate-down-to MIGRATE_SVC=cart V=0
+migrate-down-to:
+	go run ./tools/dbmigrate -svc $(MIGRATE_SVC) down-to $(V)
+
+migrate-baseline:
+	go run ./tools/dbmigrate -svc $(MIGRATE_SVC) baseline
+
+# 用法: make migrate-create MIGRATE_SVC=cart NAME=add_coupon_column
+migrate-create:
+	go run ./tools/dbmigrate -svc $(MIGRATE_SVC) create $(NAME)
+
+seed:
+	go run ./tools/dbmigrate -svc $(MIGRATE_SVC) seed
+
+seed-down:
+	go run ./tools/dbmigrate -svc $(MIGRATE_SVC) seed-down
+
+# 集群 CNPG 全量建表(重建场景一键; 2026-08-21 真库实测): 临时 LB 直连 pg-main。
+# 空库: make migrate-cnpg-up SEED=1;接管存量库: make migrate-cnpg-up CMD=baseline。
+# 详见 tools/dbmigrate/README.md「集群重建全量建表」。
+.PHONY: migrate-cnpg-up
+migrate-cnpg-up:
+	./tools/dbmigrate/cnpg-up.sh
+
 .PHONY: api
 api:
 	buf generate --template buf.gen.yaml

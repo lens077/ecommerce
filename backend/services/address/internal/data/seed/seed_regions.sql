@@ -2,7 +2,7 @@
 -- 数据源: https://github.com/eduosi/district (Apache-2.0)
 --   快照 commit 5202a44613461c6e556fba50f4764ce6b1fdaef7 (2026-01-22)
 --
--- 用法(先执行过 schema.sql):
+-- 用法(先跑过迁移 make migrate-up MIGRATE_SVC=address):
 --   psql "$DSN" -f seed_regions.sql
 --
 -- 整表重灌。行政区划是只读字典,addresses 表存的是中文名字符串而非外键,

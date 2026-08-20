@@ -81,6 +81,27 @@ func (q *Queries) GetApplication(ctx context.Context, applicationID string) (Mer
 	return i, err
 }
 
+const GetMerchantAgreement = `-- name: GetMerchantAgreement :one
+SELECT default_version, version, effective_date, content_url
+FROM merchants.agreement
+`
+
+// GetMerchantAgreement
+//
+//	SELECT default_version, version, effective_date, content_url
+//	FROM merchants.agreement
+func (q *Queries) GetMerchantAgreement(ctx context.Context) (MerchantsAgreement, error) {
+	row := q.db.QueryRow(ctx, GetMerchantAgreement)
+	var i MerchantsAgreement
+	err := row.Scan(
+		&i.DefaultVersion,
+		&i.Version,
+		&i.EffectiveDate,
+		&i.ContentUrl,
+	)
+	return i, err
+}
+
 const SubmitApplication = `-- name: SubmitApplication :exec
 INSERT INTO merchants.merchant_application(application_id, company_name, credit_code, legal_person, legal_person_id,
                                            contact_phone, business_license_url, legal_person_id_front_url,
