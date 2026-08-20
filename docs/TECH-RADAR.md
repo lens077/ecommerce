@@ -20,14 +20,14 @@
 |---|---|---|
 | §1 | 消息 / 事件流 | ✅ NATS JetStream + outbox 自写 relay + CloudEvents；Kafka 全家桶退役 |
 | §2 | 搜索 | ✅ Meilisearch（既有拍板维持）+ pgvector 起步；ES 退役 |
-| §3 | 数据层 | ✅ CNPG 既成事实补强（2 实例+Barman）+ ClickHouse 单节点（用户拍板） |
+| §3 | 数据层 | ✅ CNPG 既成事实补强（2 实例+Barman）；ClickHouse 🟡 触发式缓上（2026-08-20 拍板人复审改判，见 §3.2） |
 | §4 | 身份 / 授权 / 凭据 | ✅ OpenFGA（用户拍板）+ trust-manager（用户拍板）+ ESO+OpenBao（治理修订先行）+ SOPS；Casbin/Casdoor 保持（casdoor 收编进集群） |
 | §5 | 网关与流量面 | ✅ 保持自研网关 / 不上网格 / LB Cilium 零新增（用户拍板）；Envoy Gateway 为远期候选 |
 | §6 | 服务发现 | ✅ Consul 退役 → K8s Service DNS；开发机通信 = mirrord + 网关 VIP |
 | §7 | 弹性 / 调度 | ✅ KEDA；OpenKruise 仅 ImagePullJob 先用 |
 | §8 | 可观测性 | ✅ VictoriaLogs + Vector（用户拍板，≤72h 有界双写切换）；Jaeger 保持 |
 | §9 | 交付 / 构建 / 测试 | ✅ Argo Rollouts（前置=Consul 退役）+ ko + k6 + mirrord；Spegel 试装 |
-| §10 | 存储 / 备份 | ✅ Velero + CNPG-Barman 异地 PITR；MinIO→SeaweedFS（上游已归档） |
+| §10 | 存储 / 备份 | ⏸ 备份三件套（Velero + CNPG-Barman 异地 PITR）**用户拍板暂缓**（2026-08-20：测试期数据不重要，触发条件见 10.3）；MinIO→SeaweedFS 迁移独立保留 |
 | §11 | 安全 / 供应链 | ✅ Kyverno + Trivy + Syft + cosign（key-based 仅 TCR）；Tetragon 缓 |
 | §12 | 应用架构 | ❌ Dapr；✅ OpenFeature（引擎=Config Center provider 首选） |
 
@@ -94,7 +94,7 @@ AutoMQ、RocketMQ、Pulsar、EventMesh 均因 Java 排除。
 | # | 状态 | 工具 | 语言 | CNCF | 结论 |
 |---|---|---|---|---|---|
 | 3.1 | ✅ | **CloudNativePG** | Go | sandbox（incubation 尽调中） | **既成事实确认 + 补强定稿**：集群重建时已采用（`pg-main`，Database CR 声明式建库模式已验证）。补强待办：**instances=2 反亲和（N1/N2，异步复制——同宿主 sync 无意义）+ Barman Cloud Plugin → 4c4G 云箱异地 PITR + 每周恢复演练**。第 1 轮「保持 Pigsty」结论因前提过期作废（captain 认账在案） |
-| 3.2 | ✅ | **ClickHouse** | C++ | 收录 | **采纳（用户拍板：单节点）**：49k⭐/Apache-2.0；官方 clickhouse-go v2.48。落地：单节点 @与 PG 主错开的节点，`max_server_memory` 顶格 2G（T2 预算），数据目录 localPV SSD；摄入用**原生 NATS 表引擎**直连 JetStream（免 Kafka）或批量导入；埋点可断代重放故单点可接受。装不下时按 T2 砍序可暂停（埋点断代重放） |
+| 3.2 | 🟡 | **ClickHouse** | C++ | 收录 | **触发式缓上（2026-08-20 拍板人复审改判，原「单节点常驻」撤回）**：复审账——分析消费者 0（埋点落 PG `behaviors.events`、CH 全仓零接线）、1–2Gi 是预算表唯一零消费者常驻大户（N3 节点份额 20–40%）、「断代可重放」使「先装避免回填」不成立；⓪ 测试环境已验证（SQL 通、帽 1.2G）故缓上零风险、拉起零摸索。**触发条件（任一）**：①第一个真实分析需求（报表/漏斗/商品统计）②`behaviors.events` 千万行级或分析查询可测影响交易库 ③gorse 特征加工需流式清洗。触发后照抄原形态：单节点 @与 PG 主错开节点、`max_server_memory` 2G 顶格、localPV SSD、**原生 NATS 表引擎**或批量摄入、历史自 PG/NATS 回灌。基础数据存档：49k⭐/Apache-2.0/clickhouse-go v2.48 |
 | 3.3 | ❌ | GreptimeDB | Rust | 收录 | 否决：2026 年才推进 v1.0 GA、主轴偏时序，广泛使用不及 CH |
 | 3.4 | ❌ | Databend | Rust | 收录 | 否决：仓库许可证 NOASSERTION 未澄清，不进核心路径 |
 | 3.5 | 🟡 | Multigres | Go | 收录 | 观察：PG 水平分片的未来答案，规模远未到 |
@@ -172,7 +172,7 @@ AutoMQ、RocketMQ、Pulsar、EventMesh 均因 Java 排除。
 | 7.6 | 🟡 | Goldilocks | Go | 收录 | 可选：已有 VPA，仅是建议可视化 |
 | 7.7 | ❌ | kube-green | Go | sandbox | 否决：无独立 dev 负载可休眠 |
 
-**附（T2 资源预算定稿）**：先杀残留回收 ≈1.4Gi（seata 613Mi 零引用领衔/strimzi/loki 切换后/cilium-test/集群内 minio/tempo/dragonfly/consul 退役后）；全栈 requests ≈12.9–13.3Gi/19.5Gi，**余量 22–34%（≥20% 达标）**；limits=1.5×requests（CH/网关 2×）；requests 按 VPA 实测校准（现状教训：requests 95% vs 实用 62%）。砍序：残留→Tetragon→Kyverno audit-only→Jaeger 采样→CH 降档→KEDA 缓→OpenFGA 2→1。不可砍：CNPG×2、VL+Vector、VM、网关+服务、redis、cert-manager、ArgoCD、备份组件。全表见 [`对抗审阅表-第2轮.md`](技术栈选型对抗/对抗审阅表-第2轮.md) C'.1。
+**附（T2 资源预算定稿）**：先杀残留回收 ≈1.4Gi（seata 613Mi 零引用领衔/strimzi/loki 切换后/cilium-test/集群内 minio/tempo/dragonfly/consul 退役后）；全栈 requests ≈12.9–13.3Gi/19.5Gi，**余量 22–34%（≥20% 达标）**；limits=1.5×requests（CH/网关 2×）；requests 按 VPA 实测校准（现状教训：requests 95% vs 实用 62%）。砍序：残留→Tetragon→Kyverno audit-only→Jaeger 采样→KEDA 缓→OpenFGA 2→1（CH 已于 2026-08-20 复审改触发式缓上，出列）。不可砍：CNPG×2、VL+Vector、VM、网关+服务、redis、cert-manager、ArgoCD、备份组件。全表见 [`对抗审阅表-第2轮.md`](技术栈选型对抗/对抗审阅表-第2轮.md) C'.1。
 
 ---
 
@@ -228,12 +228,14 @@ AutoMQ、RocketMQ、Pulsar、EventMesh 均因 Java 排除。
 |---|---|---|---|---|---|
 | 10.1 | ❌ | Longhorn v2 引擎 | Go+SPDK | incubating | 否决不动：v2 仍按技术预览对待（hugepages/NVMe-oF 前提、实例管理器 ~1 CPU）；localPV 继续，节点级风险由备份补偿 |
 | 10.2 | ❌ | Piraeus / LINSTOR | Go+DRBD | sandbox | 否决：运维复杂度不匹配，且同宿主复制无容灾意义 |
-| 10.3 | ✅ | **Velero** | Go | sandbox | **采纳（分工经对抗精确化）**：Velero FSB/Kopia 管 K8s 资源与非 PG localPV；**CNPG 一致性恢复归 Barman Cloud Plugin**（「Velero 文件备份 ≠ DB 一致性恢复」）。目标 = 4c4G 云箱 SeaweedFS S3，**age 客户端加密后密文着陆**；推送型+归档年龄监控+哨兵互拨告警；RPO=WAL 5min/夜间 Velero；**每周恢复演练**；可选冷云第三副本凑 3-2-1 |
+| 10.3 | ⏸ | **Velero**（+CNPG Barman） | Go | sandbox | **选型采纳、实施用户拍板暂缓（2026-08-20）**：测试期数据不重要、Mac 全灭场景接受重建，暂不部署。**重启触发条件（任一命中即执行）**：①出现真实用户/不可再生数据或上线前 ②casdoor 收编落地（IdP 数据入集群）③OpenBao 成为正式凭据后端（其 file 存储里是真凭据）。方案存档不变：Velero FSB/Kopia 管 K8s 资源与非 PG localPV，**CNPG 一致性恢复归 Barman Cloud Plugin**（「Velero 文件备份 ≠ DB 一致性恢复」）；目标 4c4G 云箱 SeaweedFS，age 密文着陆，RPO=WAL 5min，每周恢复演练，可选 3-2-1 |
 | 10.4 | ❌ | K8up / Kanister | Go | sandbox | 否决：需应用一致性 hook 时再补，不替代 Velero |
 | 10.5 | ❌ | JuiceFS | Go | 收录 | 否决：无 POSIX 共享盘场景 |
-| 10.6 | ✅ | **MinIO → SeaweedFS 迁移** | Go | ⚠️仓外 | **采纳（风险已兑现：上游归档）**：SeaweedFS 34k⭐/Apache-2.0/Go 本体，4.42 活跃。落点：4c4G 云箱跑 SeaweedFS 单机 S3 作备份靶 + 商品图迁移（S3 兼容 PoC：签名/multipart/presigned/生命周期）；**新增备份流量即刻不写 MinIO**；加速触发 = 未修复 CVE 或 SDK 兼容故障。Garage（AGPL）轻量备选；RustFS 无正式 release 只看不碰 |
+| 10.6 | ✅ | **MinIO → SeaweedFS 迁移** | Go | ⚠️仓外 | **采纳（风险已兑现：上游归档；与 10.3 暂缓解绑独立保留——它是供应链风险不是数据丢失风险）**：SeaweedFS 34k⭐/Apache-2.0/Go 本体，4.42 活跃。落点：4c4G 云箱跑 SeaweedFS 单机 S3，先承接商品图迁移（S3 兼容 PoC：签名/multipart/presigned/生命周期），10.3 重启时兼作备份靶；未来任何备份流量不写 MinIO；加速触发 = 未修复 CVE 或 SDK 兼容故障。Garage（AGPL）轻量备选；RustFS 无正式 release 只看不碰 |
 
 **附（2c2G 云箱定位）**：域外哨兵——拨测网关 VIP/集群健康 + 独立于集群的告警出口；容量允许时做备份第二副本。两台云箱均不承载业务（casdoor 收编见 §4 附）。
+
+**复审附记 — Silo 分叉（2026-08-20 定稿当日，据用户补充情报复审；GitHub API 实测）**：MinIO 存在社区延续分叉 **Silo**（[`pgsty/silo`](https://github.com/pgsty/silo)，Pigsty/Vonng 维护，前身 `pgsty/minio` 自 2025-10）——**node2 现役镜像 `pgsty/minio` 本就是该谱系**。实测：AGPL-3.0（CVE 延续型分叉，非换证型）；Go；2.45k⭐/145 fork/48 万 Docker pulls；领先上游 108 commits；首个 Silo 名义版 RELEASE.2026-08-06（改名仅两周）；7 releases/19 安全修复；回补上游只修 AIStor 的 CVE（例 CVE-2026-39414）；`MINIO_*` 配置面与 `/minio/*` 线协议保留，side-by-side 迁移 + legacy-user drop-in 文档化；发布链带 SBOM/cosign。**裁决：10.6 主结论维持**——备份靶仍 SeaweedFS（灾备层不押注 ~10 个月龄单厂商分叉的存活；Apache-2.0 与 34k⭐ 成熟度差距未被改变）。三处修订：①论据降级——「上游无人修 CVE」改为「上游归档、修复线转移至单厂商分叉」，加速触发条款改为盯 silo 的 CVE 响应时效；②止血已拍板并执行（同日）——node2 存量切 `pgsty/silo:RELEASE.2026-08-06`（pin digest；实操坑=镜像 `HOME=/tmp` 致证书静默不加载、TLS 降级 HTTP，须显式 `--certs-dir`，沉淀 tls-enablement.md；验收与回退记录见 TODO ⓪d）；③silo 🟡 收编为 AGPL 备选位，与 Garage 并列（silo 长于兼容存量、Garage 长于独立上游）。**翻盘条件（商品图长期留 silo、放弃单引擎终态）= 分叉稳定维护 ≥12 个月且关键 CVE 响应 ≤30 天，且 SeaweedFS 商品图 PoC 受阻**。评审纪律自省：分叉于定稿时已存在 10 个月、集群实跑其镜像，却未进对抗评审视野——「现状盘点必须含镜像谱系」记为教训候选（待沉淀 context/）。
 
 ---
 
@@ -277,7 +279,7 @@ AutoMQ、RocketMQ、Pulsar、EventMesh 均因 Java 排除。
 
 ## 优先级建议（定稿版，按风险与依赖排序）
 
-1. **灾备与对象存储止血（唯一「不做会出事」层）**：Velero + CNPG Barman Cloud Plugin → 4c4G SeaweedFS 备份靶（age 加密）；每周恢复演练；MinIO 停止新增写入。
+1. ~~灾备止血~~（**用户拍板暂缓 2026-08-20**：测试期数据不重要；触发条件见 10.3，命中即回到第 1 位）；对象存储部分独立保留：SeaweedFS 承接商品图迁移（10.6，供应链风险与数据无关）。后续各步顺延递补。
 2. **凭据整改次序化**：止血轮换（即刻，用现有手段）→ AGENTS.md 硬规则 4 治理修订 → ESO + OpenBao → 新链路轮换闭环；trust-manager 同窗上。
 3. **NATS JetStream + CloudEvents + 自写 relay**：3-server meta R3、stream 交易 R3/埋点 R1；首接 search 索引喂养；R1 故障重放演练是交易事件前置。
 4. **VictoriaLogs + Vector**：≤72h 有界双写切换；VRL 重写 PII 脱敏（P0）并带反例用例进 CI。
