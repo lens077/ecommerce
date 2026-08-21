@@ -17,6 +17,19 @@ description: 双向同步 TODO.md 与 Kaneo「备忘录」看板 — 用户说"�
 - project `leu92oiuymkh862btnbhubli`（备忘录，slug `back`）
 - 列 slug：`to-do` / `in-progress` / `in-review` / `done`
 
+## 前置：按需启用 kaneo MCP（2026-08-21 起不再全局常驻）
+
+kaneo MCP 已从 `~/.claude.json` 用户级注册移除——它的工具 Schema 曾在**所有项目的每轮
+对话**里常驻计费，而只有本技能用得到。配置收在仓库 `.claude/kaneo-mcp.json`（只有 URL，
+无凭据）。若当前会话没有 `mcp__kaneo__*` 工具，先让用户以按需方式启动会话：
+
+```bash
+claude --mcp-config .claude/kaneo-mcp.json   # 仅本次会话挂载 kaneo
+```
+
+或临时注册、用完即删：`claude mcp add --transport http kaneo https://kaneo.apikv.com/api/mcp`
+→ 同步完 `claude mcp remove kaneo`。**不要**把它加回用户级常驻配置。
+
 ## 同步流程
 
 1. **提取本地清单**：
