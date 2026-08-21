@@ -92,12 +92,12 @@
 
 > 判据：**已建成的东西正在退化**。集群 8/10、前端流水线跑起来必失败。
 
-- [ ] **address 服务清理 ES 残留（最高性价比，先做这条）** — 已代码核实：`es` 字段只在健康检查 `Ping` 用到（`data.go:497,503`），无任何业务调用。删掉 `NewElasticSearchClient` 与依赖注入、健康检查去掉 ES 一项即可。**收益：address 从 CrashLoop 恢复，8/10 → 9/10，且它是交易闭环必经的收货地址服务。**<sub>TODO L378</sub>
-- [ ] **search 服务 ES→Meilisearch** — `go-elasticsearch/v9`(typedapi) 换 `meilisearch-go`；1 条 typedapi 查询重写为 `q`+`filter`（结果解析已是 `map[string]any`，不动）；健康检查换 `/health`。搜索面极小正是甜点区。验收：接口回归 + 真实商品数据相关性抽查。<sub>TODO L377</sub>
-- [ ] **配置与依赖收尾** — ES 连接段换 `MEILI_HOST/MEILI_API_KEY`；`go.mod` 移除 `go-elasticsearch/v9`；compose/helm values 同步。<sub>TODO L379</sub>
+- [x] ~~**address 服务清理 ES 残留**~~ — 已删除无业务调用的 ES 客户端、Fx 注入和健康检查，address 恢复 Ready。<sub>TODO「搜索引擎切换 Meilisearch」</sub>
+- [x] ~~**search 服务 ES→Meilisearch**~~ — 查询、健康检查和扁平文档解析均已迁移；服务端固定 `products` 索引并过滤 `status = online`，合成文档端到端验收通过。<sub>TODO「搜索引擎切换 Meilisearch」</sub>
+- [x] ~~**配置与依赖收尾**~~ — Config Center dev、配置契约和依赖已切换到 Meilisearch，`go-elasticsearch/v9` 已移除。<sub>TODO「搜索引擎切换 Meilisearch」</sub>
 - [ ] **`frontend.yml` 构建/发布段全是死引用，跑起来必失败** — `frontend/Dockerfile` 不存在、`helm/charts/frontend/` 不存在、registry 指向未部署的 harbor 端口、Manifest 路径是另一个项目的布局。前端目前是手工 `kubectl apply`。**要么按现状重写，要么删掉只留 smoke job，别让它假装还在工作。**<sub>TODO L275</sub>
 - [ ] **网关部署补 `redis-tls-ca` Secret** — 已挂载但标 `optional: true`，缺了只退化成仅进程内缓存（不阻断启动，因此容易一直没人发现）。<sub>TODO L282</sub>
-- [ ] **[另一仓] CDC 写入端 ES→Meilisearch** — `postgres-kafka-es-streaming-pipeline` 仓；顺带补 Debezium 删除事件（tombstone/`op=d`）→ delete documents 映射（**现状只写不删**）。Debezium 源端零改动。<sub>TODO L380</sub>
+- [x] ~~**[另一仓] CDC 写入端 ES→Meilisearch**~~ — Kafka/Debezium 管道已退役；替代写入端位于本仓 `backend/pkg/searchindex`。dev 集群已部署 JetStream、relay 和 indexer，并完成回灌；Product Service 事务内 outbox 接线仍单独待办。<sub>TODO「③NATS JetStream 落地」</sub>
 
 **同层级已完成**
 

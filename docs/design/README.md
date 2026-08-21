@@ -27,7 +27,7 @@
 | [order/consistency.md](order/consistency.md) | 跨服务一致性（Outbox + TCC-Try + 编舞 Saga） | 原 TODO.md §二 |
 | [order/schema.md](order/schema.md) | 订单表早期稿（被 checkout 终稿部分取代） | DESIGN.md §数据库设计 |
 | [payment/payment.md](payment/payment.md) | 支付渠道策略模式、流程、幂等、对账、支付/退款表 | DESIGN.md §支付系统 |
-| [search/search.md](search/search.md) | CQRS 读写分离、ES 索引 Mapping、搜索能力 | DESIGN.md §搜索服务 |
+| [search/search.md](search/search.md) | CQRS 读写分离、Meilisearch 索引契约与查询边界 | DESIGN.md §搜索服务 |
 | [merchant/store-settings.md](merchant/store-settings.md) | Shopline 商店设置 20 页竞品实录（含自研备注与服务映射） | 原 DESIGN-MERCHANT.md，2026-08-12 重写为实录调研 |
 | [merchant/roadmap.md](merchant/roadmap.md) | 商家角色功能取舍（引进/不引进）与 P0/P1/P2 路线图 | 2026-08-12 基于 store-settings.md 调研 |
 | [config-center/design.md](config-center/design.md) | 配置中心设计存档（代码已拆至独立仓库） | 原 CONFIG_CENTER_DESIGN.md |
