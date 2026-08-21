@@ -47,6 +47,7 @@ description: 给所有 AI 编码工具(尤其 Codex)的可执行命令与验收�
 | 数据库表结构 / 迁移 / 种子数据 | [db-migrations.md](db-migrations.md) + [`docs/DEVOPS.md`](../../docs/DEVOPS.md) | 迁移里写 SET search_path 版本表解析失败;sqlc 生成物落后 schema;种子不幂等重跑翻倍;不按 expand-contract 滚更炸旧副本 |
 | Shell / Make recipe | [shell-scripting.md](shell-scripting.md) | macOS Bash 3.2 + `set -u` 下空数组展开直接退出 |
 | 本地起服务连不上基础设施 | [local-env.md](local-env.md) | 连 `consul.dev.test` 超时;KV 缺子块导致功能被静默关掉 |
+| Kubernetes 节点关机/重启、终态 Pod 累积 | [node-graceful-shutdown.md](node-graceful-shutdown.md) | 把正常的 90 秒等待当卡死后强断电;把 `Succeeded/Failed` 历史误判成运行副本;只改 kubelet 不改 logind 导致提前关机 |
 | 对外公开服务 / 内网穿透 / `*.apikv.com` | [pangolin-tunnel.md](pangolin-tunnel.md) | k8s target 走 80 得 envoy 404;改完配置不等 Traefik 5s 轮询就当故障排查 |
 | 改 SSH 端口 / SSH 突然连不上 | [ssh-port-migration.md](ssh-port-migration.md) | Ubuntu 24.04 改 sshd_config 的 Port 无效;ListenStream 纯端口号 IPv4 全断把自己锁外面 |
 | 写测试 / 补测试 / 防回归 | [go-testing.md](go-testing.md) + [`docs/TESTING.md`](../../docs/TESTING.md) | 用 mock 测 sqlc 的 SQL 等于没测;引入 go-sqlmock 才发现接不上 pgx |
