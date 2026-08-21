@@ -21,6 +21,7 @@ import (
 	"strings"
 	"time"
 
+	"github.com/jackc/pgx/v5"
 	"github.com/jackc/pgx/v5/pgxpool"
 	"github.com/meilisearch/meilisearch-go"
 	"github.com/nats-io/nats.go"
@@ -281,21 +282,84 @@ func scanDocs(ctx context.Context, pool *pgxpool.Pool, since time.Time) (upserts
 	return upserts, deletes, rows.Err()
 }
 
+const (
+	reindexLockSQL      = `SELECT pg_try_advisory_lock(hashtextextended($1, 0))`
+	reindexUnlockSQL    = `SELECT pg_advisory_unlock(hashtextextended($1, 0))`
+	reindexWatermarkSQL = `SELECT clock_timestamp() - interval '5 seconds'`
+)
+
+type queryRowFunc func(context.Context, string, ...any) pgx.Row
+
+func databaseWatermark(ctx context.Context, queryRow queryRowFunc) (time.Time, error) {
+	var watermark time.Time
+	if err := queryRow(ctx, reindexWatermarkSQL).Scan(&watermark); err != nil {
+		return time.Time{}, fmt.Errorf("searchindex: 读取数据库水位失败: %w", err)
+	}
+	return watermark, nil
+}
+
+func acquireReindexLock(ctx context.Context, pool *pgxpool.Pool, index string, logger *slog.Logger) (func(), error) {
+	conn, err := pool.Acquire(ctx)
+	if err != nil {
+		return nil, fmt.Errorf("searchindex: 获取重建锁连接失败: %w", err)
+	}
+	lockName := "searchindex/reindex/" + index
+	var locked bool
+	if err := conn.QueryRow(ctx, reindexLockSQL, lockName).Scan(&locked); err != nil {
+		conn.Release()
+		return nil, fmt.Errorf("searchindex: 获取重建锁失败: %w", err)
+	}
+	if !locked {
+		conn.Release()
+		return nil, fmt.Errorf("searchindex: 索引 %s 已有重建任务运行", index)
+	}
+
+	return func() {
+		defer conn.Release()
+		unlockCtx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
+		defer cancel()
+		var unlocked bool
+		if err := conn.QueryRow(unlockCtx, reindexUnlockSQL, lockName).Scan(&unlocked); err != nil || !unlocked {
+			logger.Error("释放重建锁失败", "index", index, "unlocked", unlocked, "err", err)
+		}
+	}, nil
+}
+
+func deleteIndexAndWait(ctx context.Context, sm meilisearch.ServiceManager, index string) error {
+	task, err := sm.DeleteIndexWithContext(ctx, index)
+	if err != nil {
+		return fmt.Errorf("searchindex: 删除索引 %s 失败: %w", index, err)
+	}
+	if err := waitTask(ctx, sm, task.TaskUID); err != nil {
+		return fmt.Errorf("searchindex: 等待索引 %s 删除失败: %w", index, err)
+	}
+	return nil
+}
+
 // Reindex 全量重建：灌到 <index>_rebuild 临时索引，成功后原子 swap，再删临时索引，
 // 最后按**水位**做一次 delta 补偿。线上索引在整个过程中持续可查。
 //
 // 水位竞态（对抗第4轮 codex t3-C5）：快照扫描到 swap 之间发生的变更事件会被消费者
 // 应用到「旧内容」上，swap 后随旧内容一起被换出——单靠「全量=swap、增量=事件」会丢
-// 这个窗口。补偿：记录扫描前水位，swap 完成后把 updated_at >= 水位的行（含转 deleted
-// 的删除侧）重放到已上线的新索引；文档投影完全派生自 PG，重放即闭环，无需回拨流游标。
+// 这个窗口。补偿：从 PostgreSQL 读取扫描前水位，swap 完成后把 updated_at >= 水位的行
+// （含转 deleted 的删除侧）重放到已上线的新索引；文档投影完全派生自 PG，重放即闭环，
+// 无需回拨流游标。
 func Reindex(ctx context.Context, pool *pgxpool.Pool, sm meilisearch.ServiceManager, index string, logger *slog.Logger) error {
 	if logger == nil {
 		logger = slog.Default()
 	}
-	tmp := index + "_rebuild"
+	unlock, err := acquireReindexLock(ctx, pool, index, logger)
+	if err != nil {
+		return err
+	}
+	defer unlock()
 
-	// 水位取扫描前一刻并留 5s 时钟余量；delta 多补几行没关系（upsert 幂等）。
-	watermark := time.Now().Add(-5 * time.Second)
+	tmp := index + "_rebuild"
+	// 水位来自 PostgreSQL 时钟并留 5s 余量，避免 worker 与数据库时钟偏差漏掉窗口写入。
+	watermark, err := databaseWatermark(ctx, pool.QueryRow)
+	if err != nil {
+		return err
+	}
 	docs, _, err := scanDocs(ctx, pool, time.Time{})
 	if err != nil {
 		return err
@@ -304,11 +368,7 @@ func Reindex(ctx context.Context, pool *pgxpool.Pool, sm meilisearch.ServiceMana
 
 	// 临时索引：先删残留再建，保证从零开始。
 	if _, err := sm.GetIndexWithContext(ctx, tmp); err == nil {
-		task, err := sm.DeleteIndexWithContext(ctx, tmp)
-		if err != nil {
-			return err
-		}
-		if err := waitTask(ctx, sm, task.TaskUID); err != nil {
+		if err := deleteIndexAndWait(ctx, sm, tmp); err != nil {
 			return err
 		}
 	}
@@ -335,8 +395,8 @@ func Reindex(ctx context.Context, pool *pgxpool.Pool, sm meilisearch.ServiceMana
 	if err := waitTask(ctx, sm, task.TaskUID); err != nil {
 		return err
 	}
-	if task, err := sm.DeleteIndexWithContext(ctx, tmp); err == nil {
-		_ = func() error { return waitTask(ctx, sm, task.TaskUID) }()
+	if err := deleteIndexAndWait(ctx, sm, tmp); err != nil {
+		return err
 	}
 
 	// 水位补偿：重放快照期间的变更到已上线的新索引，闭掉 swap 竞态窗口。

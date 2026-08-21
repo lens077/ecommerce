@@ -26,6 +26,9 @@ services/<svc>/internal/data/
   **种子没有应用账本**（对抗第4轮 codex 攻击点），只对本地/演示环境执行；
   对集群库执行前必须确认环境与 DSN——工具不做环境探测（port-forward 会把远端伪装成
   localhost，探测只会给假安全感）。
+- **不要用 `psql -f` 直接执行 `seeds/*.sql`**。`-- +goose Up/Down` 对 `psql` 只是注释，
+  `psql` 会先执行 Up 段，再执行 Down 段；多文件种子还可能在后续文件报外键错误。必须通过
+  `dbmigrate ... seed` 或本目录的 dev Seed Job 执行，让 goose 只选择 Up 段。
 - address 的行政区划字典（16k 行生成物）**不走** goose 种子，保持原路径：
   `psql "$DSN" -f services/address/internal/data/seed/seed_regions.sql`（见 cmd/regionseed）。
 
