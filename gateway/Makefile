@@ -26,7 +26,7 @@ dev-file:
 .PHONY: dev
 dev:
 	CASDOOR_URL=https://casdoor.apikv.com \
-	CONSUL_ADDR=consul://192.168.3.112:8500 \
+	CONSUL_ADDR=consul://192.168.3.120:8500 \
 	CONFIG_SOURCE_FILE=configs/source.dev.yaml \
 	POLICIES_FILE_PATH=./dynamic-config/policies/policies.csv \
 	MODEL_FILE_PATH=./dynamic-config/policies/model.conf \

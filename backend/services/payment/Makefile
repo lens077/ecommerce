@@ -13,7 +13,7 @@ REGISTER = ccr.ccs.tencentyun.com
 ARM64=linux/arm64
 AMD64=linux/amd64
 # 本地服务注册使用的 Consul 地址（consul.dev.test 从宿主机不通）
-CONSUL_ADDR_LOCAL ?= 192.168.3.112:8500
+CONSUL_ADDR_LOCAL ?= 192.168.3.120:8500
 PAYMENT_SOURCE_CONFIG ?= configs/source.dev.yaml
 
 .PHONY: k8s-dev
