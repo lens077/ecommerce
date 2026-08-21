@@ -186,10 +186,11 @@ AutoMQ、RocketMQ、Pulsar、EventMesh 均因 Java 排除。
 | 8.2 | ❌ | Quickwit | Rust | 收录 | 否决：8.1 已拍板；节奏减分同 2.1 |
 | 8.3 | ❌ | OpenObserve | Rust | 收录 | 否决：8.1 已拍板；一体化单二进制与既有 VM/Jaeger 栈重叠 |
 | 8.4 | ❌ | Parseable / SigLens | Rust/Go | 收录 | 否决：更年轻无翻盘论据 |
-| 8.5 | ✅ | **Vector** | Rust | 收录 | **采纳（用户拍板替 fluent-bit）**：22.4k⭐/MPL-2.0，Datadog 治下发版正常（v0.57 线）。DaemonSet 采集容器日志；**VRL 重写 PII 脱敏 + `vector test` 把「故意未脱敏样本必须被拦截」用例进 CI**（正面修 P0 + 固化「静默失效要实测」教训）；端到端 ack。应用日志继续 OTLP 直发，不走「Collector filelog 一把抓」 |
+| 8.5 | ✅ | **Vector** | Rust | 收录 | **采纳（用户拍板替 fluent-bit）**：22.4k⭐/MPL-2.0，Datadog 治下发版正常（v0.57 线）。DaemonSet 采集容器日志；**VRL 重写 PII 脱敏 + `vector test` 把「故意未脱敏样本必须被拦截」用例进 CI**（正面修 P0 + 固化「静默失效要实测」教训）；端到端 ack。应用日志继续 OTLP 直发，不走「Collector filelog 一把抓」。**默认配置陷阱已修（2026-08-21）**：`glob_minimum_cooldown_ms` 默认 60s 致新 Pod 头分钟日志静默丢失——本集群 08-20 实测踩中，与 [VM 官方 log-collectors-benchmark](https://victoriametrics.com/blog/log-collectors-benchmark-2026/) 独立互证；已收紧 10s + `read_from: beginning`（部署仓 vector 组件）。同报告的轮转断句/FD 泄漏在本量级风险低，列观察 |
 | 8.6 | ❌ | Grafana Tempo | Go | 收录 | 否决：保持 Jaeger（graduated，v2 已基于 OTel Collector 重构）；触发条件 = 需要 TraceQL/对象存储规模化 |
 | 8.7 | 🟡 | Profiling：Parca（首选）/ Pyroscope | Go | 收录 | **不常驻（三方收敛）**：先用 Go 原生 pprof/PGO；需要持续平台时做 **Parca 短 PoC**（Apache-2.0，vs Pyroscope AGPL+更活跃——许可优先取 Parca，属可辩护偏好）。用法=大促前/回归排查短期开 |
 | 8.8 | 🟡 | Coroot | Go | 收录 | 观察：7.9k⭐/Apache-2.0 活跃，但已有手动 OTel+Hubble，再引 eBPF APM 属重复采集；历史有许可反复，用则锁版本 |
+| 8.9 | 🟡 | vlagent | Go | VM 系 | **观察（2026-08-21 记档）**：VM 新采集器，官方基准（开源可复现）吞吐/资源断层领先且正确性零翻车——但**厂商主场作战**（零调优+纯 JSON 考题恰避其短板）。对本项目非候选：**无 VRL 等价转换=做不了采集侧 PII 脱敏（硬需求）**，无多行合并/自定义解析。**翻盘条件**：脱敏等价能力+多行+自定义解析落地 + 第三方独立复现基准；届时其 at-least-once/磁盘缓冲/多目的地特性可再评 |
 | 8.9 | ❌ | Pixie | C++/Go | sandbox | 否决：latest release 停在 2025-01 |
 | 8.10 | ❌ | DeepFlow | Rust/Go | 收录 | 否决：重复采集 + 资源脚印 |
 | 8.11 | ❌ | Odigos | Go | 收录 | 否决：已有全量手动 OTel 插桩，自动注入无增量 |
