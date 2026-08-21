@@ -34,10 +34,10 @@ config-center 出了新版要用 `go get github.com/lens077/config-center@v0.x.y
 | 事项 | 值 |
 |---|---|
 | 配置中心三元组 | `namespace` = 服务目录名，`environment` = `dev`/`pre`，`key` = `bootstrap.yaml` |
-| 环境语义 | `dev` = 从宿主机连集群，用外部域名 `*.dev.test` + TLS；`pre` = 集群内，用 `*.svc` + 明文 |
+| 环境语义 | `environment` 只选择 Config Center 键；端点必须按实际运行位置配置。当前 `dev` 服务部署在集群内，因此使用 `*.svc`；TLS 是否开启由依赖本身决定 |
 | 段序 | `server → data → <服务专属段> → observability → discovery → search → log → auth`（只保留该服务实际消费的段） |
-| 服务专属段 | `store`(cart) / `pay`(payment) / `recommend`(behavior、product)，以各服务 `conf.proto` 的 `Bootstrap` 字段为准 |
-| 热生效边界 | `server` / `discovery` / `observability` 三段只打 WARN，其余立即生效 |
+| 服务专属段 | `store`(cart) / `pay`(payment) / `recommend`(behavior、product) / `search.meilisearch`(search)，以各服务 `conf.proto` 的 `Bootstrap` 字段为准 |
+| 热生效边界 | `server` / `discovery` / `observability` 只打 WARN；search 服务的 `search.meilisearch` 也需重启；数据库、缓存和日志级别可立即生效 |
 
 ## IDE 配置校验（JSON Schema，2026-08-18）
 
@@ -71,13 +71,17 @@ config_validation.rollout_warning。
 | 配置文件在仓库、KV、配置中心之间对不上 | [three-copies-of-one-config.md](experience/three-copies-of-one-config.md) |
 | Consul KV 已退役，服务必须从配置中心启动 | [consul-kv-retired.md](experience/consul-kv-retired.md) |
 | 换基础设施后全量重启才爆雷 / 消费者盘点漏了 CC 自举配置 | [config-center-self-bootstrap-blindspot.md](experience/config-center-self-bootstrap-blindspot.md) |
+| Secret 看似存在但 HTTP 客户端报 `invalid header field value` | [kubernetes-secret-trailing-newline.md](experience/kubernetes-secret-trailing-newline.md) |
 
 ## 已知注意事项
 
 - **config-service 不能从配置中心读自己的配置**（自举）。它从本地 `CONFIG_FILE` 启动，
   Consul 只用于服务注册发现；把自身 Bootstrap 放进 ConfigService 会形成启动死锁。
-- **`required = true` 目前形同虚设**：配置解码只跑 mapstructure，从不调 `protovalidate`，
-  且没开 `ErrorUnused`。缺块不报错、多余键也不报错，功能被静默关掉而不是启动失败。
-  见 `.service-matrix.yaml` 的 `config_validation.known_defect`。
+- Config Center 当前会把 `is_secret=true` 的值统一返回为 `******`，machine token 也不例外。
+  业务服务读取的是包含密码和 API key 的整份 Bootstrap，因此条目暂时必须使用
+  `is_secret=false`，并依靠 Config Center 鉴权限制读取。改为字段级 Secret 引用或支持
+  machine principal 读取原值后，才能安全启用该标记。
+- `required` 与未知键校验已在启动和热更新路径接入。缺少必需段会阻止启动；热更新内容
+  无效时保留上一份可用配置。修改 `conf.proto` 后必须先更新 Config Center，再滚动服务。
 - 这套加载代码在 10 个服务里是**复制关系**，不是共享包（抽共享包见 TODO.md）。
   改一处要么全改，要么在提交里写清为什么只改一处。

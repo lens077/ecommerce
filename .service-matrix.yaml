@@ -26,7 +26,7 @@ conventions:
   # Config Center 是 10 个业务服务唯一的 Bootstrap 来源。
   config_center_key: "{service}/{env}/bootstrap.yaml"
   config_source_secret: "ecommerce-config-source-{env}"
-  consul_addr_local: "192.168.3.112:8500" # 见 context/team/local-env.md
+  consul_addr_local: "192.168.3.120:8500" # 见 context/team/local-env.md
   common_config_blocks: [server, data, observability, discovery, log]
 
 config_validation:
@@ -53,11 +53,12 @@ config_validation:
 externals:
   postgres: { host: "pg-main-rw.postgresql.svc:5432", note: "集群内 CloudNativePG pg-main（单实例，2026-08-19 起；Pigsty 192.168.3.210 已关机退役），db=ecommerce owner=app（Database CR 声明式建库），TLS verify-full（pg-ca-cert=CNPG CA）" }
   redis: { host: "dragonfly.dragonfly.svc:6379", note: "集群内 Dragonfly 原生 TLS（2026-08-20 切回，证书 global-ca-issuer 签、SAN 含本 svc 名，密码与 redis 组件同值故服务侧仅换 host）；6379 单口 TLS-only，明文被拒。redis 组件（redis ns）已 scale 0 关停留备回滚；⚠️ Config Center 自身也是本项消费者（自举 Secret，不在 config.entry 里，见 config 域 experience）" }
-  consul: { host: "192.168.3.102:8500", note: "集群内 consul-server 经 LoadBalancer VIP 暴露；2026-08-20 选型定稿退役 → K8s Service DNS（迁移四步见 TODO ⑤），迁移完成前仍是注册发现事实源" }
+  consul: { host: "192.168.3.120:8500", note: "集群内工作负载使用 consul-server.consul.svc:8500；本地进程使用 LoadBalancer VIP。Consul 只承担注册发现，配置仍由 Config Center 提供" }
   kafka: { host: "（无实例）", note: "已退役：Pigsty broker 随宿主关机消失，集群内仅剩 strimzi operator 残留（无 Kafka CR）；2026-08-20 定稿替代 = NATS JetStream + outbox 自写 relay（TODO ③），应用侧本就零接线" }
+  nats: { host: "nats.nats.svc:4222", note: "dev 为 3-server JetStream；搜索索引使用可重建 R1 ECOMMERCE_EVENTS。relay/indexer 已部署，Product Service 事务内生产者、TLS/客户端认证和 NACK CRD 未完成" }
   casdoor: { host: "casdoor.apikv.com", note: "HTTPS 经 Pangolin（8000 明文口已关，2026-08-19 起）；JWT 公钥 kid=lens；2026-08-20 定稿收编进集群，迁移方案见 docs/技术栈选型对抗/对抗审阅表-第3轮.md R3-A" }
-  elasticsearch: { used_by: [search], note: "实例已退役（集群重建后不存在），search/address 代码仍引用故 CrashLoop；迁移 = TODO「搜索引擎切换 Meilisearch」" }
-  meilisearch: { host: "meilisearch.search.svc:7700", used_by: [], note: "v1.53 已装（集群安装器组件），search 服务代码尚未接线（接线后把 used_by 改为 [search] 并更新 search.external）" }
+  elasticsearch: { used_by: [], note: "实例已退役；search 已迁移到 Meilisearch，address 的无效依赖也已清理" }
+  meilisearch: { host: "meilisearch.search.svc:7700", used_by: [search], note: "v1.53 集群组件；search 使用服务端固定的 products 索引和仅限 search 动作的 API key" }
   minio: { host: "minio.apikv.com", used_by: [cart], note: "⚠️ MinIO 上游仓库已归档（2026-02/04），2026-08-20 定稿迁 SeaweedFS（TODO ①，新增备份流量不再写 MinIO）。存量已同日切 Silo 分叉修复线：pgsty/silo RELEASE.2026-08-06 pin digest + command 显式 --certs-dir（镜像 HOME=/tmp 坑，见 TODO ⓪d）。商品缩略图 URL；443 不带端口。机器是 8.138.194.254（ssh 别名 node2:34124，阿里云，与集群内 node2 192.168.3.202 无关），2026-08-19 起走 node1 的 Pangolin（Traefik 终止 TLS）经 newt 隧道回 node2，本机 9000/9001 已绑回环。⚠️ 不能直连该 IP 配域名：apikv.com 未在阿里云备案，域名直连必被 ICP 拦截" }
   config_center: { discovery: config-service, repository: "github.com/lens077/config-center", note: "独立配置控制面，从本地 CONFIG_FILE 自举" }
   gorse: { host: "gorse.apikv.com", used_by: [behavior, product], note: "推荐引擎；客户端在 backend/pkg/gorse/（发 X-API-Key）。与 minio 同在 node2，2026-08-19 起走 Pangolin，本机 8086/8088 已绑回环。鉴权是 gorse 自带的（[server] api_key + dashboard 表单登录），非 Pangolin SSO。⚠️ 仓库配置的 api_key 按硬规则 4 留空，真值要灌 Config Center，否则业务全 401。依赖 node1 的 rediss://redis.apikv.com:6379 与 pg:5432" }
@@ -112,9 +113,8 @@ services:
     gateway_prefix: /search*
     extra_config: [auth, search]
     depends_on: []
-    depends_on_planned: [product] # ProductChangedEvent → 同步搜索索引（未接线）
-    external: [elasticsearch, config_center] # ES 实例已退役 → 服务 CrashLoop；迁 meilisearch 后更新本行
-    note: "ES→Meilisearch 迁移未开工（TODO「搜索引擎切换」），当前 CrashLoop 属已知状态"
+    external: [meilisearch, config_center]
+    note: "查询进程只读服务端固定的 products 索引；独立 indexer 经 NATS 写入。Product Service 事务内 outbox 生产者尚未接线；SearchRequest.index 仅为旧客户端兼容而保留，服务端忽略"
 
   behavior:
     discovery: behavior-service
@@ -144,7 +144,7 @@ services:
   address:
     discovery: address-service
     gateway_prefix: /address*
-    extra_config: [auth, search]
+    extra_config: [auth]
     depends_on: []
     external: [postgres, config_center]
 

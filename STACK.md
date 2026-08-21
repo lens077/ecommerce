@@ -55,10 +55,10 @@ ecommerce/
 
 > **选型定稿（2026-08-20，三轮对抗评审）**：新一轮选型已逐项定稿——结论与理由见
 > [`docs/TECH-RADAR.md`](docs/TECH-RADAR.md)（定稿版），过程证据见 [`docs/技术栈选型对抗/`](docs/技术栈选型对抗/)。
-> **已拍板未落地**的选型（NATS JetStream、Meilisearch 代码迁移、VictoriaLogs+Vector、KEDA、
-> Argo Rollouts、OpenFGA、trust-manager、ESO+OpenBao、Velero+SeaweedFS、ClickHouse（2026-08-20 复审改触发式缓上）、mirrord、
-> casdoor 收编等）以 [`TODO.md`](TODO.md)「技术选型定稿（2026-08-20）」小节为执行真相源；
-> **本文件只记录已在用的事实**，各项落地后再更新对应行。
+> 选型的执行状态以 [`TODO.md`](TODO.md)「技术选型定稿（2026-08-20）」小节为真相源。
+> NATS JetStream、Meilisearch、VictoriaLogs+Vector、KEDA、Argo Rollouts、OpenFGA、
+> trust-manager 和 ESO+OpenBao 已有不同程度的集群落地；Velero+SeaweedFS、mirrord、casdoor
+> 收编等仍待实施。**本文件只记录已验证的在用事实**，不要从「已拍板」反推「已接线」。
 
 ### 2.1 后端（Go）
 
@@ -74,7 +74,7 @@ ecommerce/
 | DB 驱动 | `jackc/pgx/v5` + `exaring/otelpgx` | v5.9.2 / v0.10.0 |
 | DB 代码生成 | **sqlc**（写 SQL → 生成类型安全 Go） | driver `pgx/v5` |
 | 缓存 | `redis/go-redis/v9` | v9.21.0 |
-| 搜索 | `elastic/go-elasticsearch/v9`（**迁移中 → `meilisearch-go`**，2026-08-16 拍板，ES 已退役） | v9.2.0 |
+| 搜索 | `meilisearch-go`；search 使用服务端固定索引和仅限 `search` 动作的 API key | v0.36.3 |
 | 注册发现 | `hashicorp/consul/api`（**定稿退役 → K8s Service DNS**，见 TECH-RADAR §6） | v1.34.2 |
 | 认证 | `casdoor/casdoor-go-sdk` | v1.46.0 |
 | 支付 | `smartwalle/alipay/v3` | v3.2.29 |
@@ -132,12 +132,13 @@ ecommerce/
 |---|---|---|
 | PostgreSQL | 主存储 | **集群内 CloudNativePG `pg-main`**（2026-08-19 起；Pigsty 已关机退役），**每服务一个 schema**，TLS `verify-full`；定稿待办：instances=2 反亲和 + Barman Cloud Plugin 异地 PITR |
 | Redis 协议缓存 | 缓存 / 游标 / 分布式锁 | **Dragonfly** `dragonfly.dragonfly.svc:6379`（2026-08-20 切回，**原生 TLS 单口**，cert-manager 签发、客户端 verify CA；密码与 redis 组件同值故切换仅改 host）；redis 组件已关停留备回滚 |
-| Meilisearch | search 服务（**代码迁移中**） | v1.53 已装（`search/meilisearch:7700`）；代码仍是 `go-elasticsearch/v9`——ES 已退役，address/search 因此 CrashLoop，迁移见 TODO「搜索引擎切换」 |
+| Meilisearch | search 服务的商品检索索引 | v1.53（`search/meilisearch:7700`）；search 已完成读路径迁移，dev 已回灌 7 个示例 SPU，address 已清理无效 ES 依赖 |
 | MinIO | 商品图 | **上游仓库已归档（2026-02/04）**；定稿迁 SeaweedFS（4c4G 云箱兼作备份靶），新增备份流量不再写 MinIO（TECH-RADAR 10.6） |
 | Consul | **仅**服务注册发现（KV 配置源已退役） | **定稿退役** → K8s Service DNS + Cilium KPR，四步迁移见 TODO |
 | Casdoor | IdP（OAuth2/OIDC + JWT RS256，kid=lens） | 现经 Pangolin HTTPS（`casdoor.apikv.com`，8000 明文口已关）；**定稿收编进集群**，迁移方案见对抗第 3 轮 R3-A |
 | gorse | 推荐引擎 | behavior / product 使用（留守 node2 云箱，behavior 有三级降级兜底） |
-| Kafka / Strimzi / Debezium | **定稿退役**（应用侧零客户端，数据面已非可用前提） | 替代 = NATS JetStream + outbox 自写 relay + CloudEvents（TECH-RADAR §1），见第十节 |
+| NATS JetStream | 商品索引事件流 | dev 运行 3 个 server、每实例 2Gi PVC；`ECOMMERCE_EVENTS` 为可重建 R1 stream，relay/indexer 已部署。Product Service 事务内生产者、TLS/客户端认证和 NACK CRD 仍待补齐 |
+| Kafka / Strimzi / Debezium | **定稿退役**（应用侧零客户端，数据面已非可用前提） | 替代 = NATS JetStream + outbox 自写 relay + CloudEvents（TECH-RADAR §1） |
 
 具体主机名端口见 [`context/team/local-env.md`](context/team/local-env.md) 与 `.service-matrix.yaml` 的 `externals` 段。**凭据不进仓库。**
 
@@ -440,7 +441,7 @@ pnpm ready          # vp fmt && vp lint && vp run test -r && vp run build -r
 
 | 事项 | 现状 |
 |---|---|
-| **Kafka / 领域事件** | 设计写了 6 个领域事件，**应用侧无任何 Kafka 客户端**（`go.mod` 零依赖）；CDC 基础设施（Strimzi kafka-connect + Debezium PG connector）已部署但应用未消费。只有 order 服务有进程内 `GoEventBus`；behavior 用内存队列 + `synced_at IS NULL` 当 outbox 补偿。落地方案定稿在 `docs/design/order/consistency.md`（Outbox + relay），尚未开工 |
+| **领域事件** | Kafka / Strimzi / Debezium 已退役。dev 已部署 NATS JetStream、`products.outbox` relay 和 search indexer，并完成 R1 stream、全量回灌与 relay 停机积压重放验证；但 Product Service 尚无商品写 RPC，也未在业务事务中调用 `outbox.Insert`。order 仍使用进程内 `GoEventBus`，behavior 仍使用内存队列 + `synced_at IS NULL` 补偿，不能据此宣称领域事件底座已全域接通 |
 | **服务间调用** | 10 个服务的 `depends_on` 目前**全部为空**（matrix 实测；曾经的 cart→config 已随配置中心拆仓断开）。order→inventory/product/address、payment→order 等全是 `depends_on_planned` |
 | **protovalidate 从不作用于配置** | `conf.proto` 的 `required = true` 形同虚设 —— 配置加载只做 mapstructure 解码，**从不调用 `protovalidate.Validate`**；mapstructure 也没开 `ErrorUnused`。结果：KV 缺块 → 不报错 → nil-safe getter → 功能被**静默关掉而不是启动失败**（gorse 就这么被静默关过，见 [`consul-kv-missing-key-silent-disable.md`](context/project/ecommerce/behavior/experience/consul-kv-missing-key-silent-disable.md)） |
 | **buf breaking 未接 CI** | proto 破坏性变更目前**没有门禁** |
