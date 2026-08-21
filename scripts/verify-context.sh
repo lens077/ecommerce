@@ -16,7 +16,9 @@
 #                  (格式定义见 context/harness-framework/knowledge-layering.md)
 #   [EVOLOG]      evolution-log.md 每条必须四要素齐全(改了什么/为什么/触发事故/怎么验证的)
 #   [BUDGET]      AGENTS.md ≤ 14000 字节 —— 它每轮整份注入所有 AI 工具的上下文,
-#                  超限先把内容搬进 context/ 对应层,不要先提额度
+#                  超限先把内容搬进 context/ 对应层,不要先提额度;
+#                  TODO.md ≤ 96000 字节 —— 每个提交回合都要读它,
+#                  超限把证据长文/会话记录按日期归档进 docs/progress-archive/
 #
 # 基线棘轮(scripts/context-format-baseline.txt):
 #   [FORMAT] 的存量违规冻结在基线里放行;新文件必须合规;
@@ -176,6 +178,17 @@ budget=14000
 size=$(wc -c < AGENTS.md | tr -d ' ')
 if [ "$size" -gt "$budget" ]; then
   fail "BUDGET" "AGENTS.md ${size}B > ${budget}B——它每轮整份注入,先把内容搬进 context/,别先提额度"
+fi
+
+# ── 6.5 TODO.md 预算 ─────────────────────────────────────────
+# 硬规则 #3 要求每次提交前先更新 TODO.md,它因此在每个提交回合都被读入/回写。
+# 2026-08-21 它膨胀到 199KB(验收证据长文+会话记录堆积),瘦身后立此门禁。
+# 超限的处理不是提额度,而是把非活跃内容(已完成项的证据长文、会话记录)
+# 按日期归档到 docs/progress-archive/(不可变历史,非并行真相源),TODO.md 留链接。
+todo_budget=96000
+todo_size=$(wc -c < TODO.md | tr -d ' ')
+if [ "$todo_size" -gt "$todo_budget" ]; then
+  fail "BUDGET" "TODO.md ${todo_size}B > ${todo_budget}B——每个提交回合都要读它,把证据长文/会话记录归档进 docs/progress-archive/,别先提额度"
 fi
 
 # ── 汇总 ─────────────────────────────────────────────────────

@@ -49,12 +49,13 @@
 > 其余是冻结验收集、前端、双审、提交流程。以下是提交前必跑的锚点：
 
 ```bash
-cd backend && go build ./... && go vet ./...        # 后端编译 + 静态检查(rc=0)
+scripts/verify-quick.sh                              # 默认入口:后端链+前端并行,绿只打一行、红只打失败段
+cd backend && go build ./... && go vet ./...        # ↑ 的分解动作:后端编译 + 静态检查(rc=0)
 cd backend && go test -count=1 ./structcheck/...     # 改 .service-matrix.yaml/加删服务后必跑
 cd backend && go test -short ./...                   # 后端测试(CI 用 -short)
 cd frontend && pnpm ready                            # 前端 lint+fmt+类型+test
 scripts/verify-freeze.sh --all                       # 冻结验收集未被动过(main 上唯一必需的 CI 检查)
-scripts/verify-context.sh                            # 改 context/ 或本文件后必跑:链接/INDEX/格式门禁
+scripts/verify-context.sh                            # 改 context/ 或本文件后必跑:链接/INDEX/格式/预算门禁
 ```
 
 放行以「命令真绿」为准,不以模型自报为准。核心改动 push 前跑 `/adversarial-review` 做异构双审。

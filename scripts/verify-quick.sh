@@ -1,0 +1,74 @@
+#!/usr/bin/env bash
+# verify-quick.sh — 提交前验收锚点的一键并行版。
+#
+# 动机(2026-08-21,对照腾讯《Multi-Agent 工作流降本》复盘):
+#   ① 后端链(go build/vet/test -short)与前端 pnpm ready 无数据依赖,串行跑
+#      白白多等一侧;② 全量输出在 AI 修复循环里反复进上下文——绿的部分是纯噪音。
+# 因此:两侧并行跑;每侧绿了只打一行摘要,红了只打该侧日志尾部(默认 60 行)。
+# 完整日志始终落在临时文件里,路径在摘要中给出,需要时自己看。
+#
+# 用法:
+#   scripts/verify-quick.sh            # 前后端都跑
+#   scripts/verify-quick.sh backend    # 只跑后端
+#   scripts/verify-quick.sh frontend   # 只跑前端
+#
+# 注意:这是「最便宜的适用验证」入口,不替代按需锚点——
+#   改了 .service-matrix.yaml 仍要单独跑 backend/structcheck(已含在 -short 全量里),
+#   改了冻结验收集要跑 scripts/verify-freeze.sh --all,
+#   改了 context/ 或 AGENTS.md 要跑 scripts/verify-context.sh。
+set -uo pipefail
+
+root=$(git rev-parse --show-toplevel) || { echo "verify-quick: 不在 git 仓库内" >&2; exit 2; }
+cd "$root"
+
+want=${1:-all}
+case "$want" in all|backend|frontend) ;; *) echo "用法: $0 [backend|frontend]" >&2; exit 2 ;; esac
+
+tail_lines=${VERIFY_QUICK_TAIL:-60}
+logdir=$(mktemp -d "${TMPDIR:-/tmp}/verify-quick.XXXXXX")
+
+run_backend() {
+  cd backend \
+    && go build ./... \
+    && go vet ./... \
+    && go test -short ./...
+}
+
+run_frontend() {
+  cd frontend && pnpm ready
+}
+
+be_pid="" fe_pid=""
+start=$SECONDS
+if [ "$want" != "frontend" ]; then
+  run_backend >"$logdir/backend.log" 2>&1 &
+  be_pid=$!
+fi
+if [ "$want" != "backend" ]; then
+  run_frontend >"$logdir/frontend.log" 2>&1 &
+  fe_pid=$!
+fi
+
+report() { # report <名字> <rc> <log>
+  local name=$1 rc=$2 log=$3
+  if [ "$rc" = 0 ]; then
+    echo "✅ $name 绿($(( SECONDS - start ))s)——输出已省略,完整日志: $log"
+  else
+    echo "❌ $name 红(rc=$rc)——日志尾部 ${tail_lines} 行(完整日志: $log):"
+    tail -n "$tail_lines" "$log" | sed 's/^/  | /'
+  fi
+}
+
+overall=0
+if [ -n "$be_pid" ]; then
+  be_rc=0; wait "$be_pid" || be_rc=$?
+  report "backend(go build+vet+test -short)" "$be_rc" "$logdir/backend.log"
+  [ "$be_rc" = 0 ] || overall=1
+fi
+if [ -n "$fe_pid" ]; then
+  fe_rc=0; wait "$fe_pid" || fe_rc=$?
+  report "frontend(pnpm ready)" "$fe_rc" "$logdir/frontend.log"
+  [ "$fe_rc" = 0 ] || overall=1
+fi
+
+exit "$overall"
