@@ -37,6 +37,7 @@ context/
 | [graph-engineering.md](harness-framework/graph-engineering.md) | 多闭环 AI 工作流方法论存档：锚点命令、冻结节点（`.freeze/` + `scripts/freeze.sh`）、Loop 0~4 分工 |
 | [delivery-efficiency.md](harness-framework/delivery-efficiency.md) | AI Coding 交付效率治理：可信状态、P50/P85 与长尾、日报证据和人机责任边界 |
 | [e3-execution.md](harness-framework/e3-execution.md) | E3 执行策略：动手前估计任务规模，走最小路径，验证失败才扩张；含护栏 hook 的验证方法 |
+| [subagent-dispatch.md](harness-framework/subagent-dispatch.md) | 子代理派发三条硬约定：只回结构化摘要、按角色裁剪能力、按角色分层模型 |
 | [cordis-evaluation.md](harness-framework/cordis-evaluation.md) | 已评估「底层改 Cordis 插件框架」：暂不采用的理由与重新评估条件 |
 | [evolution-log.md](harness-framework/evolution-log.md) | harness 每次改动的原因与触发它的事故——**改硬规则/门禁前必读**，防止把改对的东西改回去 |
 
