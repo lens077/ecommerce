@@ -25,7 +25,6 @@ import { useFormat, useTranslation } from "@ecommerce/i18n";
 import { LocaleSwitcher } from "@ecommerce/ui";
 // getSigninUrl 已不再使用：登录统一走 AuthProvider 的 login()（PKCE）
 import { useAuthActions, useAuthState } from "@/providers/AuthProvider";
-import { SEARCH_INDEX } from "@ecommerce/constants";
 import type { Product } from "@/gen/api";
 import { useCartBadge } from "@/hooks/useCart";
 import { lantern } from "@/styles/tokens";
@@ -197,7 +196,7 @@ export default function PrimarySearchAppBar() {
     callUnaryMethod(
       getPublicTransport(),
       SearchService.method.search,
-      { index: SEARCH_INDEX, name: searchInput.trim() },
+      { name: searchInput.trim() },
       { signal: abortController.signal },
     )
       .then((response) => {

@@ -25,9 +25,12 @@ const (
 )
 
 type SearchRequest struct {
-	state         protoimpl.MessageState `protogen:"open.v1"`
-	Index         string                 `protobuf:"bytes,1,opt,name=index,proto3" json:"index,omitempty"`
-	Name          string                 `protobuf:"bytes,2,opt,name=name,proto3" json:"name,omitempty"`
+	state protoimpl.MessageState `protogen:"open.v1"`
+	// 索引由服务端配置选择；保留字段号兼容旧客户端，但忽略传入值。
+	//
+	// Deprecated: Marked as deprecated in api/search/v1/search.proto.
+	Index         string `protobuf:"bytes,1,opt,name=index,proto3" json:"index,omitempty"`
+	Name          string `protobuf:"bytes,2,opt,name=name,proto3" json:"name,omitempty"`
 	unknownFields protoimpl.UnknownFields
 	sizeCache     protoimpl.SizeCache
 }
@@ -62,6 +65,7 @@ func (*SearchRequest) Descriptor() ([]byte, []int) {
 	return file_api_search_v1_search_proto_rawDescGZIP(), []int{0}
 }
 
+// Deprecated: Marked as deprecated in api/search/v1/search.proto.
 func (x *SearchRequest) GetIndex() string {
 	if x != nil {
 		return x.Index
@@ -217,9 +221,10 @@ var File_api_search_v1_search_proto protoreflect.FileDescriptor
 
 const file_api_search_v1_search_proto_rawDesc = "" +
 	"\n" +
-	"\x1aapi/search/v1/search.proto\x12\tsearch.v1\x1a#third_party/validate/validate.proto\"i\n" +
-	"\rSearchRequest\x128\n" +
-	"\x05index\x18\x01 \x01(\tB\"\xbaH\x1fr\x1d\x10\x01\x18\xff\x012\x16^[a-z0-9][a-z0-9._-]*$R\x05index\x12\x1e\n" +
+	"\x1aapi/search/v1/search.proto\x12\tsearch.v1\x1a#third_party/validate/validate.proto\"Q\n" +
+	"\rSearchRequest\x12 \n" +
+	"\x05index\x18\x01 \x01(\tB\n" +
+	"\xbaH\x05r\x03\x18\xff\x01\x18\x01R\x05index\x12\x1e\n" +
 	"\x04name\x18\x02 \x01(\tB\n" +
 	"\xbaH\ar\x05\x10\x01\x18\x80\x01R\x04name\"J\n" +
 	"\x0eSearchResponse\x128\n" +

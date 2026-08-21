@@ -5,11 +5,9 @@ import (
 	"crypto/tls"
 	"crypto/x509"
 	"fmt"
-	"net/http"
 	"time"
 
 	"github.com/casdoor/casdoor-go-sdk/casdoorsdk"
-	"github.com/elastic/go-elasticsearch/v9"
 	"github.com/exaring/otelpgx"
 	"github.com/jackc/pgx/v5"
 	"github.com/jackc/pgx/v5/pgconn"
@@ -19,7 +17,6 @@ import (
 	"github.com/lens077/ecommerce/backend/services/address/internal/data/models"
 	"github.com/lens077/ecommerce/backend/services/address/internal/pkg/config"
 	"github.com/lens077/ecommerce/backend/services/address/internal/pkg/dbutil"
-	"github.com/lens077/ecommerce/backend/services/address/internal/pkg/log"
 	otelpkg "github.com/lens077/ecommerce/backend/services/address/internal/pkg/otel"
 	"github.com/redis/go-redis/v9"
 	"go.uber.org/fx"
@@ -34,7 +31,6 @@ var Module = fx.Module("data",
 		NewPostgresPool,
 		NewRedisClient,
 		NewCasdoorAuthClient,
-		NewElasticSearchClient,
 		NewAddressRepo,
 		NewRegionRepo,
 	),
@@ -48,19 +44,17 @@ type Data struct {
 	queries      *models.Queries
 	rdb          *LiveRedis
 	auth         *casdoorsdk.Client
-	es           *elasticsearch.TypedClient
 	dbErrHandler *dbutil.Handler
 	log          *zap.Logger
 }
 
 // NewData 是 Data 的构造函数
-func NewData(db *PgPool, rdb *LiveRedis, auth *casdoorsdk.Client, es *elasticsearch.TypedClient, logger *zap.Logger) *Data {
+func NewData(db *PgPool, rdb *LiveRedis, auth *casdoorsdk.Client, logger *zap.Logger) *Data {
 	return &Data{
 		db:      db,
 		queries: models.New(db),
 		rdb:     rdb,
 		auth:    auth,
-		es:      es,
 		log:     logger,
 		dbErrHandler: dbutil.NewHandler(
 			// dbutil.WithErrorMapping("23505", biz.ErrAlreadyExists),
@@ -435,43 +429,6 @@ func NewCasdoorAuthClient(conf *conf.Bootstrap, logger *zap.Logger) *casdoorsdk.
 	return client
 }
 
-// NewElasticSearchClient https://www.elastic.co/docs/reference/elasticsearch/clients/go/examples
-func NewElasticSearchClient(lc fx.Lifecycle, conf *conf.Bootstrap, logger *zap.Logger) (*elasticsearch.TypedClient, error) {
-	cfg := conf.Search.ElasticSearch
-	transport := http.DefaultTransport.(*http.Transport).Clone()
-	// Elasticsearch 通常是高频内部调用，默认的 MaxIdleConnsPerHost（默认为 2）可能太小了
-	// 如果并发请求很多，这会导致连接频繁创建和销毁，造成大量 TIME_WAIT
-	// transport.MaxIdleConnsPerHost = 20
-
-	if cfg.Tls.Enable {
-		transport.TLSClientConfig = &tls.Config{InsecureSkipVerify: cfg.Tls.InsecureSkipVerify}
-		if cfg.Tls.CaPem != "" {
-			pool := x509.NewCertPool()
-			if pool.AppendCertsFromPEM([]byte(cfg.Tls.CaPem)) {
-				transport.TLSClientConfig.RootCAs = pool
-			}
-		}
-	}
-
-	esCfg := elasticsearch.Config{
-		Addresses: cfg.Addresses,
-		Username:  cfg.Username,
-		Password:  cfg.Password,
-		Logger:    &log.ZapESLogger{Logger: logger, Conf: conf.Log},
-		Transport: transport,
-	}
-
-	es, err := elasticsearch.NewTypedClient(esCfg)
-	if err != nil {
-		logger.Error("failed to initialize elasticsearch client", zap.Error(err))
-		return nil, err
-	}
-
-	logger.Info("elasticsearch client initialized", zap.Strings("addresses", cfg.Addresses))
-
-	return es, nil
-}
-
 // CheckDatabase 检查数据库连通性
 func (d *Data) CheckDatabase(ctx context.Context) error {
 	ctx, cancel := context.WithTimeout(ctx, 2*time.Second)
@@ -488,21 +445,6 @@ func (d *Data) CheckCache(ctx context.Context) error {
 	defer cancel()
 	if err := d.rdb.Client().Ping(ctx).Err(); err != nil {
 		return fmt.Errorf("cache ping failed: %w", err)
-	}
-	return nil
-}
-
-// CheckElasticSearch 检查ES连通性
-func (d *Data) CheckElasticSearch(ctx context.Context) error {
-	if d.es == nil {
-		return fmt.Errorf("elasticsearch client not initialized")
-	}
-	// 调用 Ping 方法
-	ctx, cancel := context.WithTimeout(ctx, 5*time.Second)
-	defer cancel()
-	_, err := d.es.Ping().Do(ctx)
-	if err != nil {
-		return fmt.Errorf("elasticsearch ping failed: %w", err)
 	}
 	return nil
 }

@@ -10,30 +10,30 @@ Content-Type: application/json
 POST http://localhost:8080/search.v1.SearchService/Search
 Content-Type: application/json
 
-{"index": "ecommerce_products_spus", "name": "iphone"}
+{"name": "iphone"}
 
-### 网关
+### 旧客户端兼容：index 字段由服务端忽略
 POST http://localhost:8080/search.v1.SearchService/Search
 Content-Type: application/json
 
-{"index": "ecommerce_products_spus1", "name": "iphone"}
+{"index": "legacy-or-untrusted-index", "name": "iphone"}
 
 ### k8s网关
 POST http://192.168.3.114:8080/search.v1.SearchService/Search
 Content-Type: application/json
 
-{"index": "ecommerce_products_spus", "name": "iphone"}
+{"name": "iphone"}
 
 ### 直连后端
 POST http://localhost:30002/search.v1.SearchService/Search
 Content-Type: application/json
 
-{"index": "ecommerce_products_spus", "name": "iphone"}
+{"name": "iphone"}
 
 ### 直连k8s后端
 POST http://192.168.3.116:30002/search.v1.SearchService/Search
 Content-Type: application/json
 
-{"index": "ecommerce_products_spus", "name": "iphone"}
+{"name": "iphone"}
 
 ###

@@ -22,8 +22,7 @@ func NewSearchService(uc *biz.SearchUseCase) searchv1connect.SearchServiceHandle
 func (s *SearchService) Search(ctx context.Context, c *connect.Request[v1.SearchRequest]) (*connect.Response[v1.SearchResponse], error) {
 	// 1. 调用业务逻辑层
 	result, err := s.uc.Search(ctx, biz.SearchRequest{
-		Index: c.Msg.Index,
-		Name:  c.Msg.Name,
+		Name: c.Msg.Name,
 	})
 	if err != nil {
 		return nil, err

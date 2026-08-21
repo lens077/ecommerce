@@ -138,11 +138,6 @@ func appOptions(serviceName, deploymentMode, serviceVersion string) []fx.Option 
 						if err := d.CheckCache(ctx); err != nil {
 							return err
 						}
-						// 检查 Elasticsearch
-						if err := d.CheckElasticSearch(ctx); err != nil {
-							return err
-						}
-
 						logger.Info("starting server",
 							zap.String("addr", srv.Addr),
 							zap.String("environment", deploymentMode),

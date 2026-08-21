@@ -92,6 +92,7 @@
         "server",
         "data",
         "auth",
+        "search",
         "log"
       ],
       "title": "Bootstrap",
@@ -620,32 +621,6 @@
       "title": "Application",
       "type": "object"
     },
-    "conf.v1.Log.ElasticSearch.schema.json": {
-      "$schema": "https://json-schema.org/draft/2020-12/schema",
-      "additionalProperties": false,
-      "patternProperties": {
-        "^(enableRequest)$": {
-          "default": false,
-          "type": "boolean"
-        },
-        "^(enableResponse)$": {
-          "default": false,
-          "type": "boolean"
-        }
-      },
-      "properties": {
-        "enable_request": {
-          "default": false,
-          "type": "boolean"
-        },
-        "enable_response": {
-          "default": false,
-          "type": "boolean"
-        }
-      },
-      "title": "Elastic Search",
-      "type": "object"
-    },
     "conf.v1.Log.Framework.schema.json": {
       "$schema": "https://json-schema.org/draft/2020-12/schema",
       "additionalProperties": false,
@@ -722,9 +697,6 @@
       "properties": {
         "application": {
           "$ref": "#/$defs/conf.v1.Log.Application.schema.json"
-        },
-        "elasticsearch": {
-          "$ref": "#/$defs/conf.v1.Log.ElasticSearch.schema.json"
         },
         "framework": {
           "$ref": "#/$defs/conf.v1.Log.Framework.schema.json"
@@ -852,75 +824,51 @@
       "title": "Observability",
       "type": "object"
     },
-    "conf.v1.Search.ElasticSearch.Tls.schema.json": {
+    "conf.v1.Search.Meilisearch.schema.json": {
       "$schema": "https://json-schema.org/draft/2020-12/schema",
       "additionalProperties": false,
       "patternProperties": {
-        "^(caPem)$": {
+        "^(apiKey)$": {
           "default": "",
+          "maxLength": 512,
+          "minLength": 16,
           "type": "string"
-        },
-        "^(insecureSkipVerify)$": {
-          "default": false,
-          "type": "boolean"
         }
       },
       "properties": {
-        "ca_pem": {
+        "api_key": {
           "default": "",
+          "maxLength": 512,
+          "minLength": 16,
           "type": "string"
         },
-        "enable": {
-          "default": false,
-          "type": "boolean"
-        },
-        "insecure_skip_verify": {
-          "default": false,
-          "type": "boolean"
-        }
-      },
-      "title": "Tls",
-      "type": "object"
-    },
-    "conf.v1.Search.ElasticSearch.schema.json": {
-      "$schema": "https://json-schema.org/draft/2020-12/schema",
-      "additionalProperties": false,
-      "properties": {
-        "addresses": {
-          "items": {
-            "pattern": "^(?:(?:[a-zA-Z][a-zA-Z\\d+\\-.]*):)?(?://(?:[A-Za-z0-9\\-\\.]+(?::\\d+)?))?(/[^\\?#]*)?(?:\\?([^\\#]*))?(?:\\#(.*))?$",
-            "type": "string"
-          },
-          "type": "array"
-        },
-        "password": {
+        "host": {
           "default": "",
+          "pattern": "^(?:(?:[a-zA-Z][a-zA-Z\\d+\\-.]*):)?(?://(?:[A-Za-z0-9\\-\\.]+(?::\\d+)?))?(/[^\\?#]*)?(?:\\?([^\\#]*))?(?:\\#(.*))?$",
           "type": "string"
         },
-        "tls": {
-          "$ref": "#/$defs/conf.v1.Search.ElasticSearch.Tls.schema.json"
-        },
-        "username": {
+        "index": {
           "default": "",
+          "maxLength": 255,
+          "minLength": 1,
+          "pattern": "^[a-z0-9][a-z0-9._-]*$",
           "type": "string"
         }
       },
-      "title": "Elastic Search",
+      "title": "Meilisearch",
       "type": "object"
     },
     "conf.v1.Search.schema.json": {
       "$schema": "https://json-schema.org/draft/2020-12/schema",
       "additionalProperties": false,
-      "patternProperties": {
-        "^(elasticSearch)$": {
-          "$ref": "#/$defs/conf.v1.Search.ElasticSearch.schema.json"
-        }
-      },
       "properties": {
-        "elastic_search": {
-          "$ref": "#/$defs/conf.v1.Search.ElasticSearch.schema.json"
+        "meilisearch": {
+          "$ref": "#/$defs/conf.v1.Search.Meilisearch.schema.json"
         }
       },
+      "required": [
+        "meilisearch"
+      ],
       "title": "Search",
       "type": "object"
     },
@@ -1018,7 +966,7 @@
     },
     "google.protobuf.Duration.schema.json": {
       "$schema": "https://json-schema.org/draft/2020-12/schema",
-      "pattern": "^-?([0-9]+([.][0-9]+)?(ns|us|µs|ms|s|m|h))+$",
+      "pattern": "^-?([0-9]+([.][0-9]+)?(ns|us|µs|ms|s|m|h))+$$",
       "title": "Duration",
       "type": "string"
     }

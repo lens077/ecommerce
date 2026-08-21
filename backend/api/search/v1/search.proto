@@ -13,11 +13,11 @@ service SearchService {
 }
 
 message SearchRequest {
-  string index = 1 [(buf.validate.field).string = {
-    min_len: 1
-    max_len: 255
-    pattern: "^[a-z0-9][a-z0-9._-]*$"
-  }];
+  // 索引由服务端配置选择；保留字段号兼容旧客户端，但忽略传入值。
+  string index = 1 [
+    deprecated = true,
+    (buf.validate.field).string.max_len = 255
+  ];
   string name = 2 [(buf.validate.field).string = {
     min_len: 1
     max_len: 128
