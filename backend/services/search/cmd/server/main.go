@@ -130,16 +130,8 @@ func appOptions(serviceName, deploymentMode, serviceVersion string) []fx.Option 
 					OnStart: func(ctx context.Context) error {
 						logger.Info("performing startup health checks...")
 
-						// 检查数据库
-						if err := d.CheckDatabase(ctx); err != nil {
-							return err
-						}
-						// 检查缓存
-						if err := d.CheckCache(ctx); err != nil {
-							return err
-						}
-						// 检查 Elasticsearch
-						if err := d.CheckElasticSearch(ctx); err != nil {
+						// 深度检查同时验证 API key、索引和过滤设置。
+						if err := d.CheckSearch(ctx); err != nil {
 							return err
 						}
 

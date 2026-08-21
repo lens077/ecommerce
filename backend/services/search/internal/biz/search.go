@@ -21,8 +21,7 @@ type Product struct {
 
 type (
 	SearchRequest struct {
-		Index string
-		Name  string
+		Name string
 	}
 
 	SearchResponse struct {

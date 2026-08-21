@@ -38,6 +38,11 @@ discovery:
 auth:
   casdoor:
     endpoint: "https://casdoor.example.com"
+search:
+  meilisearch:
+    host: "http://meilisearch.example.com:7700"
+    api_key: "0123456789abcdef"
+    index: products
 log:
   framework:
     format: console
@@ -72,6 +77,17 @@ func TestDecodeConfig(t *testing.T) {
 
 // YAML 里的 "10s" 是字符串,protobuf 侧是 *durationpb.Duration,
 // 靠 decodeConfig 里的 stringToProtoDurationHook 搭桥 —— 这块坏了服务会静默用零超时。
+func TestExampleConfig_DecodeAndValidate(t *testing.T) {
+	contents, err := os.ReadFile(filepath.Join("..", "..", "..", "configs", "config.yml.example"))
+	require.NoError(t, err)
+	raw, err := parseYAMLToMap(contents)
+	require.NoError(t, err)
+
+	got := &confv1.Bootstrap{}
+	require.NoError(t, decodeConfig(raw, got))
+	require.NoError(t, validateBootstrap(got))
+}
+
 func TestDecodeConfig_DurationHook(t *testing.T) {
 	raw, err := parseYAMLToMap([]byte(testBootstrapYAML))
 	require.NoError(t, err)
@@ -167,8 +183,8 @@ func TestInit_DecodeErrorMentionsSource(t *testing.T) {
 // conf.proto 里 required=true 的段缺了必须启动失败,
 // 不能靠 getter 的 nil-safe 把功能静默关掉(.service-matrix.yaml config_validation)。
 func TestInit_MissingRequiredSectionFailsFast(t *testing.T) {
-	// 只给 server/data/auth,漏掉 required 的 log 段
-	noLogYAML := "server:\n  addr: \"0.0.0.0:30006\"\ndata:\n  database:\n    postgres:\n      host: localhost\nauth:\n  casdoor:\n    endpoint: \"https://casdoor.example.com\"\n"
+	// 只漏掉 required 的 log 段。
+	noLogYAML := "server:\n  addr: \"0.0.0.0:30006\"\ndata:\n  database:\n    postgres:\n      host: localhost\nauth:\n  casdoor:\n    endpoint: \"https://casdoor.example.com\"\nsearch:\n  meilisearch:\n    host: \"http://meilisearch.example.com:7700\"\n    api_key: \"0123456789abcdef\"\n    index: products\n"
 	_, addr := startFakeConfigService(t, map[string]*configv1.ConfigEntry{
 		"search/pre/bootstrap.yaml": {Value: noLogYAML},
 	})
