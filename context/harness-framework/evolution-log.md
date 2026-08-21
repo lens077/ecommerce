@@ -274,3 +274,29 @@ description: harness 本身（硬规则/门禁/Agent 约束）每次改动的原
   下一次推送被拒，只能 merge 收敛（`7438fd2`）。每次涉及共享路径的推送都会重演这个循环。
 - **怎么验证的**：`yq` 解析两份 workflow 通过；推送本变更到 main **未**触发运行（新 on: 块生效）；
   随后打首个新制 tag `1.4.0` 实测全链（tag → 矩阵构建 → 版本镜像 → values 回写）。
+
+### 2026-08-21 token 成本治理:对照腾讯《Multi-Agent 降本》复盘的六处改动
+
+- **改了什么**:①`TODO.md` 瘦身 199KB→92KB——「实现进度对照」说明列裁剪为首句、
+  「技术选型定稿回填」与「会话记录」整段移出,原文全量存入
+  `docs/progress-archive/2026-08-21-todo-evidence.md`(不可变历史归档,非并行真相源);
+  ②`verify-context.sh` 新增 TODO.md ≤ 96000B 预算门禁(与 AGENTS.md 预算同款反向棘轮);
+  ③新增 `scripts/verify-quick.sh`:后端链与 `pnpm ready` 并行跑、绿只打一行红只打失败段,
+  接入 AGENTS.md 锚点区与 runbook §0.5;④runbook §0 的硬规则 #6 副本压成指针
+  (全文只留 AGENTS.md 一处);⑤新增 `harness-framework/subagent-dispatch.md`
+  (子代理只回结构化摘要/按角色裁剪能力/按角色分层模型);⑥kaneo MCP 从 `~/.claude.json`
+  用户级常驻注册移除,收窄为按需挂载(仓库 `.claude/kaneo-mcp.json` + skill 前置说明);
+  impeccable PostToolUse 钩子加 `frontend/` 路径过滤包装(`.claude/hooks/`)。
+- **为什么**:主会话/每轮常驻的字节在后续所有轮次被重复计费。TODO.md 被硬规则 #3 绑进
+  每个提交回合,是单文件最大的重复计费源;kaneo Schema 与 impeccable 全路径触发是
+  「用不上也常驻」;锚点串行+全量输出是修复循环里的重复噪音。方法论对照
+  腾讯技术工程《靠 10 个优化点把 Multi-Agent 工作流成本降 50%以上》(2026-08)的
+  「只看到需要的/减少无关/减少重复」三原则。
+- **触发事故**:2026-08-21 对照该文复盘时量出 `TODO.md` 已膨胀到 199,057B、
+  单行最长 3.8KB(验收证据长文与会话问答堆在进度真相源里),17 行超 2000 字符;
+  同时发现 kaneo MCP 在所有项目的每轮对话常驻 Schema 而仅 kaneo-sync 一个 skill 使用。
+  无单次爆炸事故,属于「滚雪球到量变临界」的主动治理。
+- **怎么验证的**:瘦身脚本跑完后 `TODO.md` 92,103B、超长行清零,抽查表格行与归档原文
+  完整性通过;`scripts/verify-context.sh` 全绿(含新门禁与新文件的 INDEX/frontmatter 检查);
+  `scripts/verify-quick.sh` 实跑(后端+前端并行)通过;hook 包装用后端路径 stdin
+  冒烟测试确认跳过;`~/.claude.json` 改前有备份(`.bak-20260821`),剩余 5 个 server 完好。
