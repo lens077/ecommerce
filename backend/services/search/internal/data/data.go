@@ -8,17 +8,15 @@ import (
 	"net/http"
 	"time"
 
-	"github.com/lens077/ecommerce/backend/services/search/internal/pkg/dbutil"
 	otelpkg "github.com/lens077/ecommerce/backend/services/search/internal/pkg/otel"
 
 	"github.com/casdoor/casdoor-go-sdk/casdoorsdk"
-	"github.com/elastic/go-elasticsearch/v9"
 	"github.com/exaring/otelpgx"
 	"github.com/jackc/pgx/v5/pgxpool"
 	"github.com/lens077/ecommerce/backend/constants"
 	conf "github.com/lens077/ecommerce/backend/services/search/internal/conf/v1"
 	"github.com/lens077/ecommerce/backend/services/search/internal/pkg/config"
-	"github.com/lens077/ecommerce/backend/services/search/internal/pkg/log"
+	"github.com/meilisearch/meilisearch-go"
 	"github.com/redis/go-redis/v9"
 	"go.opentelemetry.io/contrib/instrumentation/net/http/otelhttp"
 	"go.uber.org/fx"
@@ -30,10 +28,7 @@ import (
 var Module = fx.Module("data",
 	fx.Provide(
 		NewData,
-		NewPostgresPool,
-		NewRedisClient,
-		NewCasdoorAuthClient,
-		NewElasticSearchClient,
+		NewMeilisearchClient,
 		NewSearchRepo,
 	),
 )
@@ -41,27 +36,25 @@ var Module = fx.Module("data",
 // Data 包含所有数据源的客户端
 type contextTxKey struct{}
 
-// Data 包含所有数据源的客户端
+// Data 包含搜索服务的运行时数据源。
 type Data struct {
-	pgx          *PgPool
-	dbErrHandler *dbutil.Handler
-	db           *PgPool
-	rdb          *LiveRedis
-	auth         *casdoorsdk.Client
-	es           *elasticsearch.TypedClient
-	log          *zap.Logger
+	search SearchEngine
 }
 
-// NewData 是 Data 的构造函数
-func NewData(db *PgPool, rdb *LiveRedis, auth *casdoorsdk.Client, es *elasticsearch.TypedClient, logger *zap.Logger) *Data {
-	return &Data{
-		db:           db,
-		rdb:          rdb,
-		auth:         auth,
-		es:           es,
-		log:          logger,
-		dbErrHandler: dbutil.NewHandler(),
-	}
+// SearchEngine isolates the repository from the concrete Meilisearch client.
+type SearchEngine interface {
+	Search(context.Context, string) (*meilisearch.SearchResponse, error)
+	Health(context.Context) error
+}
+
+type meilisearchEngine struct {
+	client meilisearch.ServiceManager
+	index  string
+}
+
+// NewData 是 Data 的构造函数。
+func NewData(search SearchEngine) *Data {
+	return &Data{search: search}
 }
 
 // NewPostgresPool 创建 pg 连接池,并订阅配置变更做热重建。
@@ -367,81 +360,71 @@ func NewCasdoorAuthClient(conf *conf.Bootstrap, logger *zap.Logger) *casdoorsdk.
 	return client
 }
 
-// NewElasticSearchClient https://www.elastic.co/docs/reference/elasticsearch/clients/go/examples
-func NewElasticSearchClient(conf *conf.Bootstrap, logger *zap.Logger) (*elasticsearch.TypedClient, error) {
-	cfg := conf.Search.ElasticSearch
-
-	// 创建带有 OTel 追踪的 HTTP Transport
+func NewMeilisearchClient(lc fx.Lifecycle, bootstrap *conf.Bootstrap, live *config.Live, logger *zap.Logger) SearchEngine {
+	cfg := bootstrap.Search.Meilisearch
 	baseTransport := http.DefaultTransport.(*http.Transport).Clone()
+	baseTransport.MaxIdleConnsPerHost = 20
 
-	// Elasticsearch 通常是高频内部调用，默认的 MaxIdleConnsPerHost（默认为 2）可能太小了
-	// 如果并发请求很多，这会导致连接频繁创建和销毁，造成大量 TIME_WAIT
-	// baseTransport.MaxIdleConnsPerHost = 20
-
-	if cfg.Tls.Enable {
-		baseTransport.TLSClientConfig = &tls.Config{InsecureSkipVerify: cfg.Tls.InsecureSkipVerify}
-		if cfg.Tls.CaPem != "" {
-			pool := x509.NewCertPool()
-			if pool.AppendCertsFromPEM([]byte(cfg.Tls.CaPem)) {
-				baseTransport.TLSClientConfig.RootCAs = pool
-			}
+	client := meilisearch.New(
+		cfg.Host,
+		meilisearch.WithAPIKey(cfg.ApiKey),
+		meilisearch.WithCustomClient(&http.Client{
+			Transport: otelhttp.NewTransport(baseTransport),
+			Timeout:   10 * time.Second,
+		}),
+	)
+	unsub := live.Subscribe(func(old, cur *conf.Bootstrap) {
+		if !proto.Equal(old.GetSearch(), cur.GetSearch()) {
+			logger.Warn("该配置段已变更,但需要重启服务才会生效", zap.String("section", "search"))
 		}
-	}
+	})
+	lc.Append(fx.Hook{OnStop: func(context.Context) error {
+		unsub()
+		client.Close()
+		return nil
+	}})
+	logger.Info("meilisearch client initialized",
+		zap.String("host", cfg.Host),
+		zap.String("index", cfg.Index),
+	)
+	return &meilisearchEngine{client: client, index: cfg.Index}
+}
 
-	// 使用 OTel HTTP 包装 transport
-	transport := otelhttp.NewTransport(baseTransport)
+func (m *meilisearchEngine) Search(ctx context.Context, query string) (*meilisearch.SearchResponse, error) {
+	return m.client.Index(m.index).SearchWithContext(ctx, query, &meilisearch.SearchRequest{
+		Filter:               "status = online",
+		AttributesToRetrieve: []string{"id", "spu_code", "name", "status", "main_media_url", "price", "sale_count"},
+	})
+}
 
-	logger.Debug("Conf", zap.Any("cfg", conf.Log))
-	esCfg := elasticsearch.Config{
-		Addresses: cfg.Addresses,
-		Username:  cfg.Username,
-		Password:  cfg.Password,
-		Logger:    &log.ZapESLogger{Logger: logger, Conf: conf.Log},
-		Transport: transport,
-	}
-
-	es, err := elasticsearch.NewTypedClient(esCfg)
+func (m *meilisearchEngine) Health(ctx context.Context) error {
+	health, err := m.client.HealthWithContext(ctx)
 	if err != nil {
-		logger.Error("failed to initialize elasticsearch client", zap.Error(err))
-		return nil, err
+		return err
 	}
-
-	logger.Info("elasticsearch client initialized", zap.Strings("addresses", cfg.Addresses))
-
-	return es, nil
-}
-
-// CheckDatabase 检查数据库连通性
-func (d *Data) CheckDatabase(ctx context.Context) error {
-	ctx, cancel := context.WithTimeout(ctx, 2*time.Second)
-	defer cancel()
-	if err := d.db.Pool().Ping(ctx); err != nil {
-		return fmt.Errorf("database ping failed: %w", err)
+	if health.Status != "available" {
+		return fmt.Errorf("unexpected status %q", health.Status)
+	}
+	_, err = m.client.Index(m.index).SearchWithContext(ctx, "", &meilisearch.SearchRequest{
+		Filter:               "status = online",
+		Limit:                1,
+		AttributesToRetrieve: []string{"id"},
+	})
+	if err != nil {
+		return fmt.Errorf("index readiness probe: %w", err)
 	}
 	return nil
 }
 
-// CheckCache 检查缓存连通性
-func (d *Data) CheckCache(ctx context.Context) error {
-	ctx, cancel := context.WithTimeout(ctx, 2*time.Second)
-	defer cancel()
-	if err := d.rdb.Client().Ping(ctx).Err(); err != nil {
-		return fmt.Errorf("cache ping failed: %w", err)
+// CheckSearch 检查 Meilisearch 连通性。
+func (d *Data) CheckSearch(ctx context.Context) error {
+	if d.search == nil {
+		return fmt.Errorf("meilisearch client not initialized")
 	}
-	return nil
-}
-
-// CheckElasticSearch 检查ES连通性
-func (d *Data) CheckElasticSearch(ctx context.Context) error {
-	if d.es == nil {
-		return fmt.Errorf("elasticsearch client not initialized")
-	}
-	// 调用 Ping 方法
 	ctx, cancel := context.WithTimeout(ctx, 5*time.Second)
 	defer cancel()
-	_, err := d.es.Ping().Do(ctx)
-	if err != nil {
-		return fmt.Errorf("elasticsearch ping failed: %w", err)
+	if err := d.search.Health(ctx); err != nil {
+		return fmt.Errorf("meilisearch health check failed: %w", err)
 	}
 	return nil
 }
