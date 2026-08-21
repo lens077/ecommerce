@@ -16,7 +16,7 @@ VERSION ?= dev
 SERVICES ?= user search product order inventory cart merchant address behavior payment
 
 # consul kv 导入导出用的地址。命令行可覆盖: make consul-kv-export CONSUL_ADDR=consul.dev.test
-CONSUL_ADDR ?= 192.168.3.112:8500
+CONSUL_ADDR ?= 192.168.3.120:8500
 
 .PHONY: consul-kv-export
 consul-kv-export:
