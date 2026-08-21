@@ -1,0 +1,8 @@
+{
+  "mcpServers": {
+    "kaneo": {
+      "type": "http",
+      "url": "https://kaneo.apikv.com/api/mcp"
+    }
+  }
+}
