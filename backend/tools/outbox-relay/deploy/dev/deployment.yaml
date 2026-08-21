@@ -36,7 +36,7 @@ spec:
           type: RuntimeDefault
       containers:
         - name: outbox-relay
-          image: ccr.ccs.tencentyun.com/sumery/outbox-relay:cdc-dev-68332951cf5c@sha256:a333fcab7490900b904079104249e7b799c2ba52db897fca6028feb9046f8d13
+          image: ccr.ccs.tencentyun.com/sumery/outbox-relay:cdc-dev-035dfa48b0fb@sha256:6f78f8c346f85d34cb847d34716d83cf4458813ab550e8f6689e56151b5ccb56
           imagePullPolicy: IfNotPresent
           args:
             - -table=products.outbox
