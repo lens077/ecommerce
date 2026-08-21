@@ -22,6 +22,13 @@ Secret 只存于 Kubernetes 和忽略的本地凭据清单，不创建带明文�
 `MEILI_API_KEY` 时，必须确保文件末尾没有换行；换行会进入 HTTP `Authorization` 头，Go
 客户端随后返回 `invalid header field value`。
 
+## 镜像纪律
+
+worker 使用 Linux ARM64 静态二进制。构建时固定使用 `CGO_ENABLED=0`、`GOOS=linux`、
+`GOARCH=arm64`、`-buildvcs=false`、`-trimpath` 和 `-ldflags='-s -w'`；tag 取二进制 SHA-256
+前 12 位，清单再固定 registry digest。不要省略 `-buildvcs=false`，否则同一源码会因 Git commit
+或 dirty 状态不同而产生不同二进制哈希。
+
 ## 部署顺序
 
 1. 部署 relay。relay 幂等创建 R1 `ECOMMERCE_EVENTS` stream，并抢占 PostgreSQL 咨询锁。

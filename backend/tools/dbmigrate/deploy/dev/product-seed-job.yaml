@@ -33,7 +33,7 @@ spec:
           type: RuntimeDefault
       containers:
         - name: product-seed
-          image: ccr.ccs.tencentyun.com/sumery/dbmigrate:seed-dev-cc2233e34bbd@sha256:3c37ca9202b447d558d8a2476bb01ed5379323c2b0c0100e01c52e26323de9a3
+          image: ccr.ccs.tencentyun.com/sumery/dbmigrate:seed-dev-f383a4661b63@sha256:3f3229fca0c8b20193102f6070599c65f103dda1f4e6cb0e411c28bbe9fa777b
           imagePullPolicy: IfNotPresent
           args:
             - -base=/app/services
