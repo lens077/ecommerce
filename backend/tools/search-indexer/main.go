@@ -3,8 +3,8 @@
 //	go run ./tools/search-indexer                 # 持续消费（durable pull）
 //	go run ./tools/search-indexer -mode reindex   # 全量重建（临时索引 + 原子 swap）
 //
-// 该二进制与 search 服务解耦（search 仍在 ES→Meili 迁移卡上，CrashLoop 中）；
-// 逻辑都在 backend/pkg/searchindex，search 服务接线 Meilisearch 时直接内嵌同一包。
+// 该二进制与 search 查询服务解耦：查询服务只读 Meilisearch，本进程独立消费事件并维护索引。
+// 逻辑集中在 backend/pkg/searchindex，供持续消费和一次性全量重建复用。
 package main
 
 import (
@@ -32,7 +32,7 @@ func main() {
 		durable    = flag.String("durable", "search-indexer", "durable consumer 名")
 		filter     = flag.String("filter", "events.product.>", "订阅过滤 subject")
 		meiliHost  = flag.String("meili", "", "Meilisearch 地址（缺省 MEILI_HOST / http://127.0.0.1:17700）")
-		meiliKey   = flag.String("meili-key", "", "Meilisearch API key（缺省 MEILI_MASTER_KEY）")
+		meiliKey   = flag.String("meili-key", "", "Meilisearch API key（缺省 MEILI_API_KEY，兼容 MEILI_MASTER_KEY）")
 		index      = flag.String("index", "products", "索引 uid")
 		maxDeliver = flag.Int("max-deliver", 5, "毒消息投递上限（TERM 前）")
 		maxAckPend = flag.Int("max-ack-pending", 1, "在途未 ACK 上限；1=串行保序（默认），调大自担重投乱序")
@@ -44,10 +44,7 @@ func main() {
 	ctx, stop := signal.NotifyContext(context.Background(), syscall.SIGINT, syscall.SIGTERM)
 	defer stop()
 
-	key := *meiliKey
-	if key == "" {
-		key = os.Getenv("MEILI_MASTER_KEY")
-	}
+	key := resolveMeiliKey(*meiliKey)
 	host := *meiliHost
 	if host == "" {
 		if e := os.Getenv("MEILI_HOST"); e != "" {
@@ -80,11 +77,11 @@ func main() {
 			fatal(logger, "初始化 JetStream 失败", err)
 		}
 		c := &searchindex.Consumer{
-			JS:         js,
-			Meili:      sm,
-			Stream:     *stream,
-			Durable:    *durable,
-			Filter:     *filter,
+			JS:            js,
+			Meili:         sm,
+			Stream:        *stream,
+			Durable:       *durable,
+			Filter:        *filter,
 			Index:         *index,
 			MaxDeliver:    *maxDeliver,
 			MaxAckPending: *maxAckPend,
@@ -97,6 +94,16 @@ func main() {
 	default:
 		fatal(logger, "未知 mode", fmt.Errorf("%q", *mode))
 	}
+}
+
+func resolveMeiliKey(v string) string {
+	if v != "" {
+		return v
+	}
+	if e := os.Getenv("MEILI_API_KEY"); e != "" {
+		return e
+	}
+	return os.Getenv("MEILI_MASTER_KEY")
 }
 
 func resolveDSN(v string) string {
