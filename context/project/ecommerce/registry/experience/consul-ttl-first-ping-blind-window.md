@@ -86,7 +86,7 @@ p2c selector 返回 `ErrNoAvailable`，前端收到 503。
 - 「服务日志干净但前端拿不到数据」时，先问**请求有没有到服务端**。
   服务端没有对应的 `rpc completed`，就说明问题在它前面，别在服务内部找。
 - 直接查 Consul 看健康状态，不要只看服务是否注册：
-  `curl -s http://192.168.3.112:8500/v1/health/service/<name> | jq '.[].Checks[].Status'`
+  `curl -s http://192.168.3.120:8500/v1/health/service/<name> | jq '.[].Checks[].Status'`
 - 一个已宣告修好的 bug 仍然复现时，先确认修的是不是**同一层**。
   本例中网关 watcher 的修复是真的、也有效，但它和真凶是两个独立故障。
 

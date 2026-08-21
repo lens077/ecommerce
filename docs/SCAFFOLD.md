@@ -24,7 +24,7 @@
 | `{{K8S_NAMESPACE}}` | Kubernetes 命名空间 | `ecommerce` | |
 | `{{REGISTRY}}` | 镜像仓库 | `ccr.ccs.tencentyun.com/sumery` | |
 | `{{IDP_URL}}` | Casdoor 地址 | — | |
-| `{{CONSUL_ADDR}}` | Consul 地址（本地开发） | `192.168.3.112:8500` | |
+| `{{CONSUL_ADDR}}` | Consul 地址（本地开发） | `192.168.3.120:8500` | |
 | `{{SERVICES}}` | 后端服务清单 | user search product order inventory cart merchant address behavior payment | |
 | `{{APPS}}` | 前端 app 清单 + 端口 | consumer:3000 merchant:3002 admin:3003 desktop:—(Tauri 壳) | |
 | `{{ROLES}}` | RBAC 角色继承链 | `admin ⊃ merchant ⊃ consumer ⊃ public` | |

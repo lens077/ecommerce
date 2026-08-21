@@ -16,7 +16,7 @@ context/
 |---|---|
 | [git-commit.md](team/git-commit.md) | Conventional Commits + 提交前必须先更新 TODO.md |
 | [proto-design.md](team/proto-design.md) | 写 proto 前先读设计文档，每个字段都要有 buf.validate 约束 |
-| [local-env.md](team/local-env.md) | 本地集群地址：Consul 用 `192.168.3.112:8500`，不要用 consul.dev.test |
+| [local-env.md](team/local-env.md) | 本地集群地址：Consul 用 `192.168.3.120:8500`，不要用 consul.dev.test |
 | [node-graceful-shutdown.md](team/node-graceful-shutdown.md) | Kubernetes 节点关机/重启的 90/30 秒优雅退出、systemd inhibitor、终态 Pod 与清理边界 |
 | [shell-scripting.md](team/shell-scripting.md) | macOS Bash 3.2：`set -u` 下不能无条件展开空数组 |
 | [go-redis.md](team/go-redis.md) | go-redis v9：热重建客户端、cache-aside、连接池与 context、Key/TTL、Pipeline、重试、锁及 Pub/Sub 边界 |
