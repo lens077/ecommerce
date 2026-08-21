@@ -1,0 +1,100 @@
+apiVersion: batch/v1
+kind: Job
+metadata:
+  name: ecommerce-product-seed
+  namespace: ecommerce
+  labels:
+    app.kubernetes.io/name: ecommerce-product-seed
+    app.kubernetes.io/component: product-seed
+    app.kubernetes.io/part-of: ecommerce
+spec:
+  backoffLimit: 1
+  activeDeadlineSeconds: 600
+  ttlSecondsAfterFinished: 86400
+  template:
+    metadata:
+      labels:
+        app.kubernetes.io/name: ecommerce-product-seed
+        app.kubernetes.io/component: product-seed
+        app.kubernetes.io/part-of: ecommerce
+    spec:
+      automountServiceAccountToken: false
+      enableServiceLinks: false
+      imagePullSecrets:
+        - name: tcr-pull-secret
+      restartPolicy: Never
+      securityContext:
+        runAsNonRoot: true
+        runAsUser: 1000
+        runAsGroup: 1000
+        fsGroup: 1000
+        fsGroupChangePolicy: OnRootMismatch
+        seccompProfile:
+          type: RuntimeDefault
+      containers:
+        - name: product-seed
+          image: ccr.ccs.tencentyun.com/sumery/dbmigrate:seed-dev-cc2233e34bbd@sha256:3c37ca9202b447d558d8a2476bb01ed5379323c2b0c0100e01c52e26323de9a3
+          imagePullPolicy: IfNotPresent
+          args:
+            - -base=/app/services
+            - -svc=product
+            - seed
+          env:
+            - name: DB_URI
+              valueFrom:
+                secretKeyRef:
+                  name: ecommerce-cdc-postgres
+                  key: DB_URI
+          securityContext:
+            allowPrivilegeEscalation: false
+            readOnlyRootFilesystem: true
+            capabilities:
+              drop: ["ALL"]
+          resources:
+            requests:
+              cpu: 100m
+              memory: 128Mi
+            limits:
+              cpu: 500m
+              memory: 512Mi
+          volumeMounts:
+            - name: postgres-ca
+              mountPath: /etc/postgresql/ca
+              readOnly: true
+      volumes:
+        - name: postgres-ca
+          secret:
+            secretName: ecommerce-cdc-postgres-ca
+            defaultMode: 0400
+            items:
+              - key: ca.crt
+                path: ca.crt
+---
+apiVersion: networking.k8s.io/v1
+kind: NetworkPolicy
+metadata:
+  name: ecommerce-product-seed
+  namespace: ecommerce
+spec:
+  podSelector:
+    matchLabels:
+      app.kubernetes.io/name: ecommerce-product-seed
+  policyTypes: ["Ingress", "Egress"]
+  ingress: []
+  egress:
+    - to:
+        - namespaceSelector:
+            matchLabels:
+              kubernetes.io/metadata.name: kube-system
+          podSelector:
+            matchLabels:
+              k8s-app: kube-dns
+      ports:
+        - { protocol: UDP, port: 53 }
+        - { protocol: TCP, port: 53 }
+    - to:
+        - namespaceSelector:
+            matchLabels:
+              kubernetes.io/metadata.name: postgresql
+      ports:
+        - { protocol: TCP, port: 5432 }

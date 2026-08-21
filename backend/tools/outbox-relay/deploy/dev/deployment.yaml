@@ -1,0 +1,116 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: ecommerce-outbox-relay
+  namespace: ecommerce
+  labels:
+    app.kubernetes.io/name: ecommerce-outbox-relay
+    app.kubernetes.io/component: cdc-relay
+    app.kubernetes.io/part-of: ecommerce
+spec:
+  replicas: 1
+  strategy:
+    type: Recreate
+  selector:
+    matchLabels:
+      app.kubernetes.io/name: ecommerce-outbox-relay
+  template:
+    metadata:
+      labels:
+        app.kubernetes.io/name: ecommerce-outbox-relay
+        app.kubernetes.io/component: cdc-relay
+        app.kubernetes.io/part-of: ecommerce
+    spec:
+      automountServiceAccountToken: false
+      enableServiceLinks: false
+      imagePullSecrets:
+        - name: tcr-pull-secret
+      terminationGracePeriodSeconds: 30
+      securityContext:
+        runAsNonRoot: true
+        runAsUser: 1000
+        runAsGroup: 1000
+        fsGroup: 1000
+        fsGroupChangePolicy: OnRootMismatch
+        seccompProfile:
+          type: RuntimeDefault
+      containers:
+        - name: outbox-relay
+          image: ccr.ccs.tencentyun.com/sumery/outbox-relay:cdc-dev-68332951cf5c@sha256:a333fcab7490900b904079104249e7b799c2ba52db897fca6028feb9046f8d13
+          imagePullPolicy: IfNotPresent
+          args:
+            - -table=products.outbox
+            - -stream=ECOMMERCE_EVENTS
+            - -subjects=events.>
+            - -replicas=1
+            - -batch=100
+            - -poll=1s
+            # 持久 DLQ 落地前保留已发布行，避免 terminal event 的重放源被清理。
+            - -retention=-1s
+          env:
+            - name: DB_URI
+              valueFrom:
+                secretKeyRef:
+                  name: ecommerce-cdc-postgres
+                  key: DB_URI
+            - name: NATS_URL
+              value: nats://nats.nats.svc:4222
+          securityContext:
+            allowPrivilegeEscalation: false
+            readOnlyRootFilesystem: true
+            capabilities:
+              drop: ["ALL"]
+          resources:
+            requests:
+              cpu: 50m
+              memory: 96Mi
+            limits:
+              cpu: 250m
+              memory: 256Mi
+          volumeMounts:
+            - name: postgres-ca
+              mountPath: /etc/postgresql/ca
+              readOnly: true
+      volumes:
+        - name: postgres-ca
+          secret:
+            secretName: ecommerce-cdc-postgres-ca
+            defaultMode: 0400
+            items:
+              - key: ca.crt
+                path: ca.crt
+---
+apiVersion: networking.k8s.io/v1
+kind: NetworkPolicy
+metadata:
+  name: ecommerce-outbox-relay
+  namespace: ecommerce
+spec:
+  podSelector:
+    matchLabels:
+      app.kubernetes.io/name: ecommerce-outbox-relay
+  policyTypes: ["Ingress", "Egress"]
+  ingress: []
+  egress:
+    - to:
+        - namespaceSelector:
+            matchLabels:
+              kubernetes.io/metadata.name: kube-system
+          podSelector:
+            matchLabels:
+              k8s-app: kube-dns
+      ports:
+        - { protocol: UDP, port: 53 }
+        - { protocol: TCP, port: 53 }
+    - to:
+        - namespaceSelector:
+            matchLabels:
+              kubernetes.io/metadata.name: postgresql
+      ports:
+        - { protocol: TCP, port: 5432 }
+    - to:
+        - namespaceSelector:
+            matchLabels:
+              kubernetes.io/metadata.name: nats
+      ports:
+        - { protocol: TCP, port: 4222 }
