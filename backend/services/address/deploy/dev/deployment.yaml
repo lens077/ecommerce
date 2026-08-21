@@ -24,7 +24,7 @@ spec:
         fsGroupChangePolicy: OnRootMismatch
       containers:
         - name: ecommerce-address
-          image: ccr.ccs.tencentyun.com/sumery/address:dev
+          image: ccr.ccs.tencentyun.com/sumery/address:meili-dev-c0d3f933eb8f
           imagePullPolicy: Always
           env:
             # 关闭应用内的 Log 导出器，只保留 Trace 和 Metric。
@@ -46,11 +46,16 @@ spec:
             - name: CONSUL_ENABLED
               value: "true"
             - name: CONSUL_ADDR
-              value: "192.168.3.112:8500"
+              value: "consul-server.consul.svc:8500"
             - name: CONSUL_SCHEME
               value: "http"
             - name: CONSUL_INSECURE_SKIP_VERIFY
-              value: "true"
+              value: "false"
+            - name: CONSUL_HTTP_TOKEN
+              valueFrom:
+                secretKeyRef:
+                  name: consul-ecommerce-token
+                  key: CONSUL_HTTP_TOKEN
           ports:
             - containerPort: 30009
               protocol: TCP
