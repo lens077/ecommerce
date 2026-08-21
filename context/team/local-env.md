@@ -58,6 +58,8 @@ mapstructure 没开 `ErrorUnused`，多余键不报错、缺失键生成 nil-saf
 ## 基础设施主机
 
 集群于 2026-08 重建，节点为 node1 `192.168.3.201` / node2 `192.168.3.202`（control-plane）。
+节点执行 `shutdown now` 时会进入最多 90 秒的优雅退出窗口；机制、验证与终态 Pod 清理见
+[node-graceful-shutdown.md](node-graceful-shutdown.md)。
 
 | 组件 | 地址 | 备注 |
 |---|---|---|
