@@ -74,7 +74,7 @@ AutoMQ、RocketMQ、Pulsar、EventMesh 均因 Java 排除。
 
 ## §2 搜索 — 替换 Elasticsearch(Java)
 
-**现状订正（2026-08-20）**：ES 已随集群重建退役（address/search 两服务因此 CrashLoop）；**Meilisearch v1.53 已装**（`search/meilisearch:7700`），2026-08-16 已有拍板，代码迁移在 TODO「搜索引擎切换」小节。
+**现状订正（2026-08-21）**：ES 已退役；search 查询端已迁移到 **Meilisearch v1.53**（`search/meilisearch:7700`），address 已清理无效 ES 依赖，两项服务均恢复 Ready。dev 集群已部署 3 节点 JetStream、R1 `ECOMMERCE_EVENTS`、relay 和 indexer，并完成 7 个示例 SPU 回灌与 outbox 重放验证。Product Service 尚无商品写 RPC，事务内 outbox 生产者、NATS TLS/客户端认证和 NACK CRD 仍待落地。
 
 | # | 状态 | 工具 | 语言 | 来源 | 结论 |
 |---|---|---|---|---|---|

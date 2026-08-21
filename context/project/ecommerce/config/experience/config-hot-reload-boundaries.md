@@ -35,8 +35,9 @@ Consul KV Bootstrap 已退役。正常启动必须设置 `CONFIG_SOURCE_FILE`，
 | `server` | 只打 WARN，不重新绑端口 |
 | `discovery` | 只打 WARN，不重新注册 |
 | `observability` | 只打 WARN，不重建 tracer |
+| `search.meilisearch`（search 服务） | 只打 WARN，不重建客户端；主机、API key 或索引变更后滚动重启 |
 
-后三段不热生效是权衡后的取舍（重新绑端口会切断 in-flight 连接、重注册要先摘节点、
+这些段不热生效是权衡后的取舍（重新绑端口会切断 in-flight 连接、重注册要先摘节点、
 重建 tracer 会丢未导出的 span），滚动重启更可控。但**沉默是不可接受的**——
 改完没反应又没人说一声，只会让人以为热更新坏了，所以一律打
 

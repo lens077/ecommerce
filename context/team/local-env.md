@@ -1,7 +1,7 @@
 ---
 name: local-env
 layer: team
-description: 本地跑后端服务/网关时连本地 k8s 集群的地址约定；开发域名后缀 dev.test，Consul 用 192.168.3.102:8500
+description: 本地后端服务和网关连接当前 Kubernetes 集群时使用的地址、TLS 与凭据约定
 ---
 
 # 本地开发环境约定
@@ -9,20 +9,22 @@ description: 本地跑后端服务/网关时连本地 k8s 集群的地址约定�
 > ⚠️ **本文件只记录主机名和端口，不记录任何凭据。**
 > 用户名/密码/密钥只存在于 Config Center、Kubernetes Secret 和本地环境，不进仓库。
 
-## Consul：用 IP，不要用域名
+## Consul：按运行位置选择地址
 
-本地跑后端服务 / 网关连本地 k8s 集群时，Consul 地址是：
+本地进程连接 Consul 时，使用 LoadBalancer 地址：
 
+```text
+192.168.3.120:8500    # HTTP，consul-expose-servers
 ```
-192.168.3.102:8500    (http，consul-expose-servers LoadBalancer)
+
+Kubernetes Pod 连接 Consul 时，使用集群内地址：
+
+```text
+consul-server.consul.svc:8500
 ```
 
-**陷阱**：`consul.dev.test` 解析到共享网关 `192.168.3.100`，走的是 HTTPRoute（UI/HTTP），
-**不是 8500 的服务发现端口**。服务注册发现必须用上面的 LB 地址，或用
-`consul-api.dev.test`（dnsmasq 中已指向 192.168.3.102）。
-
-`gateway/Makefile` 的 `dev` target 里的 `CONSUL_ADDR` 若仍写旧地址，从宿主机跑时必须覆盖。
-独立 `config-center` 从本地 `CONFIG_FILE` 自举；Consul 仅用于服务发现。
+`consul.dev.test` 通过共享网关提供 Consul UI，不是服务注册发现地址。独立的 Config Center
+从本地 `CONFIG_FILE` 自举；Consul 只用于服务注册发现。
 
 ### 2026-08-18 起 Consul 开了 ACL，本地跑服务必须带 token
 
@@ -57,20 +59,26 @@ mapstructure 没开 `ErrorUnused`，多余键不报错、缺失键生成 nil-saf
 
 ## 基础设施主机
 
-集群于 2026-08 重建，节点为 node1 `192.168.3.201` / node2 `192.168.3.202`（control-plane）。
+当前集群有 3 个节点：control plane `node101`（`192.168.3.101`）以及 worker
+`node102`（`192.168.3.102`）和 `node103`（`192.168.3.103`）。3 个节点都允许调度工作负载。
 节点执行 `shutdown now` 时会进入最多 90 秒的优雅退出窗口；机制、验证与终态 Pod 清理见
 [node-graceful-shutdown.md](node-graceful-shutdown.md)。
 
 | 组件 | 地址 | 备注 |
 |---|---|---|
-| 共享网关 | `192.168.3.100`:80/443 | Cilium Gateway，全部 HTTPRoute 挂这里；证书 `*.dev.test` |
-| Consul（发现） | `192.168.3.102:8500` | LoadBalancer，见上 |
-| Redis (Dragonfly) | `192.168.3.101:6379` | **纯 TCP，无 TLS**；需 AUTH（`dragonfly-password-secret`） |
-| Casdoor | node1 | JWT 公钥 kid=lens / public.pem |
-| **Postgres (CNPG)** | 集群内 `pg-main-rw.postgresql.svc:5432` | 2026-08-19 起为业务库真相源。库 `ecommerce`（`Database` CR 声明式创建，owner=`app`），口令在 secret `pg-main-app`，CA 在 `pg-main-ca`；证书 SAN 含各 Service DNS，集群内可直接 `verify-full`。局域网入口 `192.168.3.103:5432` 是 **TLS passthrough**，客户端必须 `sslnegotiation=direct`（libpq ≥17），否则握不了手 |
-| **Redis (OSS 8.x)** | 集群内 `redis.redis.svc:6379` | 2026-08-19 起 ecommerce 缓存指向它（dragonfly 仍在，作纯缓存用途）。⚠️ **Service 端口是 6379，后端容器听的是 6380 的 TLS 口 —— 必须开 TLS**，明文连接会被 reset。口令 `redis-password-secret`，CA 在 secret `redis-tls` 的 `ca.crt`（= 集群根 CA）。局域网入口 `192.168.3.104:6380` |
-| **Config Center** | 集群内 `config-center.config-center.svc:30010` | 2026-08-19 随集群重建重新部署（`config-center/scripts/deploy-k8s.sh`，K8S_ENV=pre）。机器令牌只读，写配置需 Casdoor 管理员 |
-| **ecommerce 网关** | 集群内 `ecommerce-gateway-service.ecommerce.svc:8080`（LB `192.168.3.116:8080`） | 2026-08-19 首次部署到集群，清单在 `gateway/deploy/pre/`（新建，dev 用的是 `-dev` selector、且三份清单都没写 `namespace`）。对外 `gateway.apikv.com`（Pangolin 资源 14）与 `gateway.dev.test` |
+| 共享网关 | `192.168.3.121:80/443` | Cilium Gateway；HTTPRoute 按各自 hostname 接入 |
+| Consul（发现） | 本地 `192.168.3.120:8500`；集群内 `consul-server.consul.svc:8500` | 已启用 ACL；token 从 Kubernetes Secret 或本地环境注入 |
+| Dragonfly | 集群内 `dragonfly.dragonfly.svc:6379`；本地 `192.168.3.122:6380` | TLS-only，需 AUTH；CA 在 Secret `dragonfly-tls` |
+| Casdoor | `https://casdoor.apikv.com` | JWT 公钥由各服务配置和 Config Center bootstrap 提供 |
+| PostgreSQL（CNPG） | `pg-main-rw.postgresql.svc:5432` | 数据库 `ecommerce`，owner=`app`；凭据在 Secret `pg-main-app`，CA 在 `pg-main-ca`，使用 `verify-full` |
+| Config Center | `config-center.config-center.svc:30010` | dev Deployment；Web 为 `https://config.app.com`，API 为 `https://config-api.app.com` |
+
+### OpenBao 自动解封
+
+`node101` 上的 `openbao-auto-unseal.timer` 每 60 秒检查一次 OpenBao。OpenBao sealed 时，
+`openbao-auto-unseal.service` 读取 `/var/lib/k8s-installer/creds/openbao-init` 并执行解封。
+这套方案满足无人值守重启，但 unseal key 与集群管理权限位于同一信任域。它不能替代外部 KMS
+或独立 Transit auto-unseal；生产环境迁移到独立信任根后应移除该 timer。
 
 ### ⚠️ 集群节点拉镜像依赖**这台 Mac 上的代理**
 
