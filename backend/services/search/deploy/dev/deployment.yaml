@@ -24,7 +24,7 @@ spec:
         fsGroupChangePolicy: OnRootMismatch
       containers:
         - name: ecommerce-search
-          image: ccr.ccs.tencentyun.com/sumery/search:dev
+          image: ccr.ccs.tencentyun.com/sumery/search:meili-dev-3cf0771826fe
           imagePullPolicy: Always
           env:
             # 关闭应用内的 Log 导出器，只保留 Trace 和 Metric。
@@ -46,16 +46,21 @@ spec:
             - name: CONSUL_ENABLED
               value: "true"
             - name: CONSUL_ADDR
-              value: "192.168.3.112:8500"
+              value: "consul-server.consul.svc:8500"
             - name: CONSUL_SCHEME
               value: "http"
             - name: CONSUL_INSECURE_SKIP_VERIFY
-              value: "true"
+              value: "false"
+            - name: CONSUL_HTTP_TOKEN
+              valueFrom:
+                secretKeyRef:
+                  name: consul-ecommerce-token
+                  key: CONSUL_HTTP_TOKEN
           ports:
             - containerPort: 30002
               protocol: TCP
-          # /healthz 在 DB/缓存不通时返回 503。就绪探针据此摘流量;
-          # 存活探针只探端口 —— 用 /healthz 做存活会让一次数据库抖动把所有 Pod 连环重启。
+          # /healthz 深度验证 API key、索引和过滤设置；失败时由就绪探针摘流量。
+          # 存活探针只探端口，避免 Meilisearch 短暂抖动触发 Pod 连环重启。
           readinessProbe:
             httpGet:
               path: /healthz

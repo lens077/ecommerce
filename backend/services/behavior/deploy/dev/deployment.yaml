@@ -49,11 +49,16 @@ spec:
             - name: CONSUL_ENABLED
               value: "true"
             - name: CONSUL_ADDR
-              value: "192.168.3.112:8500"
+              value: "consul-server.consul.svc:8500"
             - name: CONSUL_SCHEME
               value: "http"
             - name: CONSUL_INSECURE_SKIP_VERIFY
-              value: "true"
+              value: "false"
+            - name: CONSUL_HTTP_TOKEN
+              valueFrom:
+                secretKeyRef:
+                  name: consul-ecommerce-token
+                  key: CONSUL_HTTP_TOKEN
           ports:
             # 端口必须命名:Service 的 targetPort 按名字找,改端口号时只动这一处。
             # 30011 取自 KV ecommerce/behavior/dev.yml 的 server.addr
