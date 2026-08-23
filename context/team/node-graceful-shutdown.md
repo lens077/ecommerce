@@ -140,6 +140,12 @@ node101 并执行 50 阶段：38 秒内完成控制器重建，静态清单、li
 三个节点保持 Ready。本次变更前快照位于
 `/var/lib/k8s-installer/backups/podgc/20260823T082815Z-46112/`。
 
+首次运行 90 阶段时，2026-08-21 遗留的 VPA recommender `Failed/Terminated` Pod 被表格状态
+`Error` 误判为当前控制面故障；同一 ReplicaSet 的活动 Pod 实际为 `1/1 Running`。健康检查已
+改为只阻断未在删除中且仍应活动的 Pending、Unknown 或 Running/NotReady Pod。同步修复后，
+全量 90 阶段在 85 秒内通过控制面、Cilium、系统调优、`90s/30s` 关机预算、PodGC、PVC、
+LoadBalancer 和 metrics/logs/traces 冒烟，终态 Pod 保持 `100/100`。
+
 以前「完成后不显示」不代表 Kubernetes 会隐藏 `Completed`。更可能的路径是：旧配置中
 `shutdownGracePeriod: 0s`，节点直接离线后由 Node Controller 驱逐并删除 Pod 对象；或者管理
 界面当时过滤了终态对象。当前安装器明确启用了 GracefulNodeShutdown，所以 kubelet 会主动写回
