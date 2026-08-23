@@ -321,3 +321,13 @@ description: harness 本身（硬规则/门禁/Agent 约束）每次改动的原
 - **怎么验证的**:`cd backend && go test -count=1 ./structcheck/...` 全绿
   (含新增匿名核对,10 条逐字对齐);故意把 matrix 一条 gateway_prefix 改错后测试变红、
   改回后复绿;CI 凭据步骤在本地以空环境变量演练报错路径。
+
+### 2026-08-23（补记）control-tower 转 public，CI 私仓凭据步骤撤除
+
+- **改了什么**：同日撤掉 service-ci.yml 与 deploy-consistency.yml 的
+  「Configure private Go modules」步骤（上一条的③），改为注释说明默认 GOPROXY 可拉。
+- **为什么**：用户当日把 github.com/lens077/control-tower 设为 public,
+  凭据步骤从必需变成误伤源(硬性 exit 1 会红掉本可通过的 CI)。
+- **触发事故**：无;跟随仓库可见性变更的即时纠偏。
+- **怎么验证的**：本地清掉 GOPRIVATE 后 `go mod download github.com/lens077/control-tower`
+  经默认代理成功;structcheck 复跑绿。

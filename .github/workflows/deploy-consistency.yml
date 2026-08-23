@@ -53,18 +53,8 @@ jobs:
           go-version-file: backend/go.mod
           cache-dependency-path: backend/go.sum
 
-      # structcheck 依赖私有 module control-tower（网关路由模板双向核对）。
-      - name: Configure private Go modules
-        env:
-          GH_MODULES_TOKEN: ${{ secrets.GH_MODULES_TOKEN }}
-        run: |
-          if [ -z "$GH_MODULES_TOKEN" ]; then
-            echo "::error::缺少 GH_MODULES_TOKEN Secret,无法拉取 github.com/lens077/control-tower"
-            exit 1
-          fi
-          git config --global url."https://x-access-token:${GH_MODULES_TOKEN}@github.com/lens077/".insteadOf "https://github.com/lens077/"
-          echo "GOPRIVATE=github.com/lens077" >> "$GITHUB_ENV"
-
+      # structcheck 依赖 module control-tower（网关路由模板双向核对）；
+      # 该仓 2026-08-23 起为 public，默认 GOPROXY 可拉，无需凭据。
       # TestDeploymentListsMatchMatrix 比对 .service-matrix.yaml 与
       # Makefile SERVICES / compose services / helm values 顶层键 / deploy 目录
       - name: Structcheck
