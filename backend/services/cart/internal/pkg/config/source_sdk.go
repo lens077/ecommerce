@@ -5,7 +5,7 @@ import (
 	"fmt"
 	"time"
 
-	"github.com/lens077/config-center/sdk/configsource"
+	"github.com/lens077/control-tower/sdk/configsource"
 )
 
 var _ Source = (*sdkSource)(nil)
