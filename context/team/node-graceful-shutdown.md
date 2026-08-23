@@ -126,12 +126,17 @@ ReplicaSet 的 `replicas: 1` 只表示需要 1 个**活动副本**，不表示 A
 3. 控制器创建新 Pod，继续满足 `replicas: 1`。
 4. 旧 Pod 对象没有立即删除，因此管理界面同时显示新 Pod 和历史终态 Pod。
 
-当前 kube-controller-manager 没有显式设置 `--terminated-pod-gc-threshold`，所以使用默认阈值
-`12500`。终态 Pod 总数低于阈值时，PodGC 不会主动批量清理。
+首次排查时，kube-controller-manager 没有显式设置 `--terminated-pod-gc-threshold`，因此使用
+默认阈值 `12500`。终态 Pod 总数低于阈值时，PodGC 不会主动批量清理。
 
-2026-08-21 的排查现场共有 327 个终态 Pod：326 个由 ReplicaSet 管理，另有 1 个已完成
+2026-08-21 的首次排查现场共有 327 个终态 Pod：326 个由 ReplicaSet 管理，另有 1 个已完成
 Job。清理 326 个 ReplicaSet 终态 Pod 后，所有业务 Deployment 仍保持
 `DESIRED=1/CURRENT=1`。这说明它们是历史记录，不是 326 个运行副本。
+
+同日重建后的三节点集群运行 Kubernetes v1.36.4。重建两天后已经再次累积 112 个终态 Pod，
+而运行中的 kube-controller-manager 仍未显式设置该参数。安装器现已增加
+`KCM_TERMINATED_POD_GC_THRESHOLD="100"`；在控制面执行新版 50 阶段前，运行集群仍使用
+默认阈值 `12500`。
 
 以前「完成后不显示」不代表 Kubernetes 会隐藏 `Completed`。更可能的路径是：旧配置中
 `shutdownGracePeriod: 0s`，节点直接离线后由 Node Controller 驱逐并删除 Pod 对象；或者管理
@@ -212,6 +217,32 @@ kubectl get pods -A -o json | jq -r '
 不要仅凭同名前缀的 Pod 数量判断副本数。副本数应检查 Deployment、StatefulSet 或 ReplicaSet
 的 `spec.replicas` 与 `status.readyReplicas`。
 
+### 5. 检查终态 Pod GC
+
+检查运行中 kube-controller-manager 的参数：
+
+```bash
+kubectl -n kube-system get pods -l component=kube-controller-manager -o json \
+  | jq -r '.items[].spec.containers[].command[]' \
+  | grep -- '--terminated-pod-gc-threshold='
+```
+
+期望返回：
+
+```text
+--terminated-pod-gc-threshold=100
+```
+
+统计当前终态 Pod：
+
+```bash
+kubectl get pods -A -o json \
+  | jq '[.items[] | select(.status.phase == "Succeeded" or .status.phase == "Failed")] | length'
+```
+
+新版 50 阶段会等待该数量在 180 秒内收敛到阈值以内。90 阶段会再次检查静态 Pod 清单、
+运行中的控制器参数和终态数量。
+
 ## 清理终态 Pod
 
 终态 Pod 不再占用运行时 CPU 或内存，但会占用 API/etcd 记录，并干扰管理界面和排障。
@@ -235,14 +266,22 @@ kubectl get pods -A -o json \
     done
 ```
 
-长期治理可在 kube-controller-manager 设置较低的正整数阈值，例如：
+安装器通过以下配置治理终态 Pod：
 
-```text
---terminated-pod-gc-threshold=100
+```bash
+KCM_TERMINATED_POD_GC_THRESHOLD="100"
 ```
 
-该参数是全局数量阈值，不是「完成后立即删除」的 TTL。设置过低会缩短现场日志和状态的保留
-时间；设置为 `0` 会关闭终态 Pod GC，不能用于「立即清零」。
+新建控制面时，50 阶段通过 kubeadm 生成 `--terminated-pod-gc-threshold=100`。已有控制面会
+先更新 `kube-system/kubeadm-config`，避免后续 kubeadm upgrade 覆盖参数，再原子更新
+`/etc/kubernetes/manifests/kube-controller-manager.yaml`，等待控制器恢复 Ready，并确认终态
+Pod 数量在 180 秒内收敛到阈值以内。配置值进入步骤状态键，修改阈值后不会被旧的断点状态
+跳过。90 阶段会重复验收 kubeadm-config、静态 Pod 清单、运行参数和终态数量。
+
+该参数是全局数量阈值，不是「完成后立即删除」的 TTL。超过阈值后，PodGC 可能删除已完成
+Job 的 Pod 和对应容器日志，但不会因此删除 Job 对象。设置过低会缩短现场日志和状态的保留
+时间；设置为 `0` 或负数会关闭终态 Pod GC，安装器会直接拒绝。优雅关机预算继续保持
+`90s/30s`，不能通过把 `shutdownGracePeriod` 改为 `0s` 来隐藏终态 Pod。
 
 ## 操作边界
 
