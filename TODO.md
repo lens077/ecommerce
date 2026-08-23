@@ -48,7 +48,7 @@
 | 静态检查基线棘轮 + 软门禁伤疤面板 | ✅ | 2026-08-08 参照《从 Vibe Coding 到 Harness》（腾讯 TAB）的「基线对比」与「软门禁留伤疤」两处设计落地。… |
 | context/ 知识库结构门禁（`scripts/verify-context.sh`） | ✅ | 2026-08-18 参照 `~/lens077/deepseek-harness`（DeepSeek 开源 agent harness：TS monorepo + Cordis 插件架构，doc-sync 门禁族 30+ 脚本）做最小移植：六项检查（AGENTS.md+context/ 链接可达性… |
 | harness 演进日志（`context/harness-framework/evolution-log.md`） | ✅ | 2026-08-08 补上「四块拼图」里唯一缺失的**进化**那块。`context/` 记规则是什么、`TODO.md` 记做了什么、`PROGRESS.md` 记完成度，三者都不记**「这条规则为什么是现在这个样子」**——规则能从代码读出来，理由不能，半年后会被人凭直觉改回去。… |
-| 节点优雅关机约定（`context/team/node-graceful-shutdown.md`） | ✅ | 2026-08-21 固化 `90s/30s` GracefulNodeShutdown；安装器新增 `KCM_TERMINATED_POD_GC_THRESHOLD=100`。已有控制面按次快照、原子更新运行清单并只定向修改 live ClusterConfiguration，中途失败双侧回滚；50/90 阶段硬验配置、观察终态数量。运行集群执行新版 50 阶段前仍是默认阈值 `12500`。 |
+| 节点优雅关机约定（`context/team/node-graceful-shutdown.md`） | ✅ | 2026-08-21 固化 `90s/30s` GracefulNodeShutdown；安装器新增 `KCM_TERMINATED_POD_GC_THRESHOLD=100`，已有控制面按次快照、原子更新运行清单并只定向修改 live ClusterConfiguration，中途失败双侧回滚。2026-08-23 已部署 node101：控制器 38 秒内恢复，三层配置均为 `100`，终态 Pod `112→100`，三节点保持 Ready。 |
 
 ### 2. 后端微服务（核心）
 
