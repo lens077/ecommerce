@@ -78,7 +78,8 @@
 
 | 项目 | 状态 | 说明 |
 |------|------|------|
-| 网关（身份验证/授权/路由守卫） | 🟡 | `gateway/` 已实现，集中式 Casdoor 鉴权 + 策略文件；10 条 endpoint 全部落地（`/user* /search* /product* /cart* /address* /config* /order* /inventory* /merchant* /payment*`）。… |
+| 2026-08-23 网关重写迁 control-tower 合一仓（P4 接线完成） | 🟡 | 网关按 connect+buf 重写并与配置中心合一（`github.com/lens077/control-tower`，方案/终裁/实测档案在工作区 `.migration-scratch/`）。本仓已完成：`backend/go.mod` 与 41 处 import 换 `control-tower v0.1.0` SDK（wire 冻结，旧 SDK 跨版本四场景实测过）；structcheck 网关核对改 import 其 `routes` 包（含新增匿名清单双向核对，红绿演练过）；matrix gateway 段改外部仓+六键入册；service-ci/deploy-consistency 增私有 module 凭据步骤。**待办**：① 仓库 Secret `GH_MODULES_TOKEN`（lens077 私仓 read PAT）不配则后端 CI 红；② Casdoor access token TTL 调 15min（已授权，控制台操作）；③ P5 切流按 control-tower `docs/design/cutover.md`（并行部署→selector 原子切→烘烤→冷回滚演练）；④ 烘烤期满退役 `gateway/` 目录与冻结键。merchant/admin 前端**尚无登录会话**（无 callback/restoreSession，属下行「RBAC 三角色」既有待办），短 TTL 不影响，接入时复用 consumer `AuthProvider` 模式 |
+| 网关（身份验证/授权/路由守卫） | 🟡 | 【烘烤期旧栈】`gateway/` 已实现，集中式 Casdoor 鉴权 + 策略文件；10 条 endpoint 全部落地（`/user* /search* /product* /cart* /address* /config* /order* /inventory* /merchant* /payment*`）。… |
 | 网关服务发现恢复 | ✅ | Consul watcher 改为后台初始化，`Next()` 失效后按阶梯退避重建；… |
 | 「刷新几次才出数据」的真实根因 | ✅ | 上一条修好了 watcher，但**首屏仍要刷几次** —— 因为真凶不在网关而在服务注册侧：Consul TTL check 注册后的初始状态是 **critical**，而 `TtlCheckPinger` 进 `for` 循环前**先等一个完整的 `ping_interval`（KV 里是 25s）**才发第一次 `UpdateTTL(pass)`；… |
 | 成功调用被记成 `rpc.code: "unknown"` | ✅ | 11 个服务的 `internal/server/logging.go` 都在 `err != nil` 分支之前就算好了 `fields`，而 connect 的 Code 常量从 1 开始、**没有 `CodeOK`**，`connect.CodeOf(nil)` 返回的是 `CodeUnkno… |
@@ -315,7 +316,7 @@
       INSERT 补 `shop_name`（proto/biz/data 一路补字段）或给 schema 默认值——需先定契约
 - [ ] **`UpdateCartItemQuantityParams` 缺 Quantity 字段**（`cart/internal/data/cart.go:57`）
 - [ ] **商家 `RejectApplication`/`ActivateMerchant` 是 panic 桩**（`merchant_service.go:57,98`）
-- [ ] **网关重试可复制非幂等写**（`gateway/proxy/proxy.go:263-310`）：补 `requestId` 幂等键，
+- [ ] **网关重试可复制非幂等写**（`gateway/proxy/proxy.go:263-310`）〔2026-08-23：control-tower 新网关已按「默认关闭重试」根治（其 decisions.md），本条随旧网关退役即关；`requestId` 幂等键仍是订单侧待办〕：补 `requestId` 幂等键，
       或对非幂等方法关闭重试（与下方「下单防重的 requestId 一直是假的」一起做）
 - [ ] **搜索读的字段与 `docs/design/search/search.md` 的 ES mapping 不兼容**（`search/internal/data/search.go:63-90`）：
       实现读 `id`/`skus[].price`/`sale_detail[].quantity`，设计写 `spu_id`/顶层 `price`/`sale_count`——
@@ -373,7 +374,7 @@
 - [ ] **可观测性 · 采集管道自盲（优先级最高，代价最小）**：`otelcol_*` 不在 VM 里，只在每个 collector pod 的 `:8888`，没有任何东西采集它。后果是"遥测有没有在半路丢"只能靠 `kubectl port-forward` 逐个 pod 看——2026-08-06 排查 trace 断链时就是这么干的。补法：collector 加 `prometheus` receiver 自采 `127.0.0.1:8888`，约 30 个序列。做完基础设施盘补一行 accepted/sent/send_failed + 队列深度
 - [ ] **可观测性 · k8s 视角（单独一轮，勿与看板混做）**：上 `kubelet_stats`（容器/Pod CPU 内存）+ `k8s_cluster`（Pod 重启次数、Deployment 副本状态）receiver，distro 里都有、无需引入新组件。两个前置约束：①都是基数敏感的，`kubelet_stats` 要按 collector CR 里已有的那套思路控制维度（**别带 pod 名**，Pod 名带 ReplicaSet 哈希，每次发版全部序列作废重开一套）②`k8s_cluster` 是集群单例语义，在 DaemonSet 下**必须配 `k8s_leader_elector`**，否则每个 pod 各采一遍 = N 倍重复计数，且要加 ClusterRole
 - [ ] **可观测性 · fluent-bit k8s 标签失效**：`fluent-bit.conf:78` 的 `Label_keys $k8s.pod_name, $k8s.namespace_name, $k8s.container_name` 取不到值，Loki 里这三个标签的值是字面量 `".pod_name"` 之类，日志按 pod/namespace 下钻不了。根因：第 61-62 行 `Nested_under kubernetes` + `Add_prefix k8s.` 把字段拍平成了名字里带点的**扁平 key**，而 record accessor 把 `.` 当嵌套分隔符。改 `$['k8s.pod_name']` 形式
-- [ ] **可观测性 · 网关指标未实现**：`gateway/` 下没有任何 meter（只有 tracing 中间件），`http_server_*` 整族不存在，所以看板上「网关→上游 HTTP 时延」这张图已删。要看网关侧耗时得先加 metrics 中间件
+- [ ] **可观测性 · 网关指标未实现**〔2026-08-23：control-tower 新网关已带 otelhttp meter + ParentBased 采样对齐后端，切流后本条关闭并恢复看板〕：`gateway/` 下没有任何 meter（只有 tracing 中间件），`http_server_*` 整族不存在，所以看板上「网关→上游 HTTP 时延」这张图已删。要看网关侧耗时得先加 metrics 中间件
 - [ ] **可观测性 · 10 个电商服务缺 Go 运行时指标**：goroutine/堆/进程 CPU 内存全都没有。唯一在报的是**独立仓 config-center**（它实现了 `internal/pkg/sysstat`），而不是本仓任何服务；它以 `service.namespace=config-center` 区分遥测。把那套搬进 10 个服务，或抽成共享埋点。附带：config-center 未装 OTel ErrorHandler，导出失败没有任何日志（本仓 10 个服务已在 2026-08-06 那轮补上，可照抄）
 - [ ] **技术债**：修复 `product/$spuCode.tsx:156` 的 `shopName` 类型报错；清理其余 mock 数据
 ### 技术选型定稿（2026-08-20 三轮对抗评审，已归档）

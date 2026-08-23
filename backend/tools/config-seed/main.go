@@ -18,9 +18,9 @@ import (
 	"time"
 
 	"connectrpc.com/connect"
-	configv1 "github.com/lens077/config-center/api/config/v1"
-	"github.com/lens077/config-center/api/config/v1/configv1connect"
-	"github.com/lens077/config-center/sdk/configsource"
+	configv1 "github.com/lens077/control-tower/api/config/v1"
+	"github.com/lens077/control-tower/api/config/v1/configv1connect"
+	"github.com/lens077/control-tower/sdk/configsource"
 	"gopkg.in/yaml.v3"
 )
 

@@ -8,7 +8,7 @@ import (
 	"testing"
 	"time"
 
-	configv1 "github.com/lens077/config-center/api/config/v1"
+	configv1 "github.com/lens077/control-tower/api/config/v1"
 	"github.com/lens077/ecommerce/backend/constants"
 	confv1 "github.com/lens077/ecommerce/backend/services/order/internal/conf/v1"
 	"github.com/stretchr/testify/assert"

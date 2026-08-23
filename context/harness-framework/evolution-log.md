@@ -300,3 +300,24 @@ description: harness 本身（硬规则/门禁/Agent 约束）每次改动的原
   完整性通过;`scripts/verify-context.sh` 全绿(含新门禁与新文件的 INDEX/frontmatter 检查);
   `scripts/verify-quick.sh` 实跑(后端+前端并行)通过;hook 包装用后端路径 stdin
   冒烟测试确认跳过;`~/.claude.json` 改前有备份(`.bak-20260821`),剩余 5 个 server 完好。
+
+### 2026-08-23 structcheck 网关核对改 import control-tower routes 包
+
+- **改了什么**：①`TestGatewayWiringMatchesMatrix` 的数据源由「读 `gateway/configs/config.yaml`
+  文件」改为 import `github.com/lens077/control-tower/routes`（go:embed 导出的路由模板,
+  dev/pre 两环境都核对）;前缀映射为「去掉首 `/` 尾 `*` 即一级 proto 包名」;
+  删除 `gatewayTargetsNotInMatrix` 例外表(config-service 路由已随 `/config*` 删除而消失)。
+  ②新增 `TestGatewayAnonymousMatchesMatrix`:matrix `gateway.anonymous_paths` 与路由模板
+  `anonymous` 双向相等(匿名清单单一真相源落进门禁)。③service-ci.yml 与
+  deploy-consistency.yml 增加私有 module 凭据步骤(`GH_MODULES_TOKEN` + insteadOf),
+  缺 Secret 时显式报错而非静默挂起。
+- **为什么**:网关重写迁入合一仓 control-tower 后,`gateway/configs/config.yaml` 只剩
+  旧网关的冻结副本,继续核对它=核对将死之物;路由真值改经 module 版本流动,
+  「路由变更必须同 PR 升依赖版本,否则 structcheck 红」形成自动闭环,
+  替代对抗评审中被否的「注释纪律双写」方案(评审 P1-4/§8-1 合并裁决)。
+- **触发事故**:无单次事故,属网关迁移(control-tower 方案 v2 P4)的配套改造;
+  评审阶段 codex-sol 指出旧方案「structcheck 被人工双写取代」会静默漂移,
+  claude-fable 提出 go:embed+import 载体,终裁采纳合并方案。
+- **怎么验证的**:`cd backend && go test -count=1 ./structcheck/...` 全绿
+  (含新增匿名核对,10 条逐字对齐);故意把 matrix 一条 gateway_prefix 改错后测试变红、
+  改回后复绿;CI 凭据步骤在本地以空环境变量演练报错路径。
