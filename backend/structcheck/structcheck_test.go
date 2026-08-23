@@ -1,7 +1,8 @@
 // Package structcheck 把仓库的结构性约束固化成可执行测试,随 `go test ./...` 在 CI 里跑。
 //
 // 覆盖两类约束:
-//  1. .service-matrix.yaml 与 backend/services/、gateway/configs/config.yaml 的一致性
+//  1. .service-matrix.yaml 与 backend/services/、control-tower 网关路由模板
+//     (github.com/lens077/control-tower/routes,go:embed 导出)的一致性
 //     —— matrix 自称「服务拓扑真相源」,真相源与实际接线漂移时必须在 CI 里报警。
 //  2. 各服务 internal/pkg 基础设施副本的同构性 —— 同名文件原文或归一化服务名后
 //     必须字节一致;存量漂移记录在 homogeneity_baseline.txt,只许收敛不许新增(棘轮)。
@@ -19,15 +20,15 @@ import (
 	"strings"
 	"testing"
 
+	ctroutes "github.com/lens077/control-tower/routes"
 	"gopkg.in/yaml.v3"
 )
 
 const (
-	repoRoot      = "../.."
-	servicesDir   = "../services"
-	matrixPath    = "../../.service-matrix.yaml"
-	gatewayConfig = "../../gateway/configs/config.yaml"
-	baselinePath  = "homogeneity_baseline.txt"
+	repoRoot     = "../.."
+	servicesDir  = "../services"
+	matrixPath   = "../../.service-matrix.yaml"
+	baselinePath = "homogeneity_baseline.txt"
 )
 
 // backend/services 下存在、但按约不进 matrix services 段的目录。
@@ -36,12 +37,9 @@ var dirsNotInMatrix = map[string]string{
 	"config": "配置中心撞名进程,见 .service-matrix.yaml externals.config_center",
 }
 
-// 网关里存在、但不对应 matrix services 条目的 discovery target。
-// telemetry 复用 behavior-service(matrix 的 behavior.note 有记录),behavior-service
-// 本身能对上,无需例外;config-service 对应上面的 config 目录。
-var gatewayTargetsNotInMatrix = map[string]string{
-	"config-service": "配置中心撞名进程",
-}
+// 说明:旧例外表 gatewayTargetsNotInMatrix 已随 /config* 路由删除而移除——
+// 新路由模板不再有 config 条目(config web/api 独立域名直连,不过网关);
+// telemetry 复用 behavior-service,而 behavior-service 本身在 matrix 中,反向核对天然通过。
 
 type serviceEntry struct {
 	Discovery        string   `yaml:"discovery"`
@@ -135,59 +133,84 @@ func TestMatrixInternalConsistency(t *testing.T) {
 	}
 }
 
-type gatewayEndpoint struct {
-	Path     string `yaml:"path"`
-	Backends []struct {
-		Target string `yaml:"target"`
-	} `yaml:"backends"`
-}
-
-type gatewayConf struct {
-	Endpoints []gatewayEndpoint `yaml:"endpoints"`
-}
-
-// matrix 的 (gateway_prefix, discovery) 必须与网关配置的实际接线一致,双向核对。
+// matrix 的 (gateway_prefix, discovery) 必须与网关路由模板的实际接线一致,双向核对。
+//
+// 2026-08-23 起网关由 control-tower 承载:路由模板经其 routes 包(go:embed)导出,
+// 本测试 import 该包核对——路由变更必须同 PR 升级本仓对 control-tower 的依赖版本,
+// 否则这里就红(自动闭环,替代旧的「读 gateway/configs/config.yaml 文件」)。
+// 旧模板 path 形如 /user*,新模板是一级 proto 包名 user;映射=去掉首「/」尾「*」。
 func TestGatewayWiringMatchesMatrix(t *testing.T) {
 	m := loadMatrix(t)
-	data, err := os.ReadFile(gatewayConfig)
-	if err != nil {
-		t.Fatalf("读取网关配置: %v", err)
-	}
-	var gw gatewayConf
-	if err := yaml.Unmarshal(data, &gw); err != nil {
-		t.Fatalf("解析网关配置: %v", err)
-	}
-	// path → discovery 名集合
-	wired := map[string]map[string]bool{}
-	for _, ep := range gw.Endpoints {
-		targets := map[string]bool{}
-		for _, b := range ep.Backends {
-			if name, ok := strings.CutPrefix(b.Target, "discovery:///"); ok {
-				targets[name] = true
-			}
-		}
-		wired[ep.Path] = targets
+	knownDiscovery := map[string]bool{}
+	for _, svc := range m.Services {
+		knownDiscovery[svc.Discovery] = true
 	}
 
-	knownDiscovery := map[string]bool{}
-	for name, svc := range m.Services {
-		knownDiscovery[svc.Discovery] = true
-		targets, ok := wired[svc.GatewayPrefix]
-		if !ok {
-			t.Errorf("%s: matrix 声明前缀 %q,网关配置里没有这个 endpoint", name, svc.GatewayPrefix)
-			continue
+	for _, env := range ctroutes.Envs() {
+		parsed, err := ctroutes.Parse(env)
+		if err != nil {
+			t.Fatalf("解析 control-tower 路由模板 %s: %v", env, err)
 		}
-		if !targets[svc.Discovery] {
-			t.Errorf("%s: 网关 endpoint %q 的 target 不含 discovery:///%s(matrix 与实际接线漂移)",
-				name, svc.GatewayPrefix, svc.Discovery)
+		wired := map[string]string{} // package → discovery 名
+		for _, e := range parsed.Routes {
+			wired[e.Package] = e.DiscoveryTarget()
+		}
+
+		for name, svc := range m.Services {
+			pkg := strings.TrimSuffix(strings.TrimPrefix(svc.GatewayPrefix, "/"), "*")
+			target, ok := wired[pkg]
+			if !ok {
+				t.Errorf("[%s] %s: matrix 前缀 %q(包名 %q)在路由模板中没有条目", env, name, svc.GatewayPrefix, pkg)
+				continue
+			}
+			if target != svc.Discovery {
+				t.Errorf("[%s] %s: 路由包 %q 指向 %q,matrix 声明 %q(接线漂移)", env, name, pkg, target, svc.Discovery)
+			}
+		}
+		for pkg, target := range wired {
+			if !knownDiscovery[target] {
+				t.Errorf("[%s] 路由包 %q 指向 discovery:///%s,但 matrix 里没有对应服务", env, pkg, target)
+			}
 		}
 	}
-	for path, targets := range wired {
-		for target := range targets {
-			if !knownDiscovery[target] {
-				if _, allowed := gatewayTargetsNotInMatrix[target]; !allowed {
-					t.Errorf("网关 endpoint %q 指向 discovery:///%s,但 matrix 里没有对应服务", path, target)
-				}
+}
+
+// matrix 的 anonymous_paths 与路由模板的 anonymous 必须是同一个集合(单一真相源双向核对)。
+func TestGatewayAnonymousMatchesMatrix(t *testing.T) {
+	data, err := os.ReadFile(matrixPath)
+	if err != nil {
+		t.Fatalf("读取 .service-matrix.yaml: %v", err)
+	}
+	var doc struct {
+		Gateway struct {
+			AnonymousPaths []string `yaml:"anonymous_paths"`
+		} `yaml:"gateway"`
+	}
+	if err := yaml.Unmarshal(data, &doc); err != nil {
+		t.Fatalf("解析 .service-matrix.yaml: %v", err)
+	}
+	if len(doc.Gateway.AnonymousPaths) == 0 {
+		t.Fatal("matrix gateway.anonymous_paths 为空")
+	}
+	want := map[string]bool{}
+	for _, p := range doc.Gateway.AnonymousPaths {
+		want[p] = true
+	}
+	for _, env := range ctroutes.Envs() {
+		parsed, err := ctroutes.Parse(env)
+		if err != nil {
+			t.Fatal(err)
+		}
+		got := map[string]bool{}
+		for _, p := range parsed.Anonymous {
+			got[p] = true
+			if !want[p] {
+				t.Errorf("[%s] 路由模板匿名项 %q 不在 matrix.anonymous_paths", env, p)
+			}
+		}
+		for p := range want {
+			if !got[p] {
+				t.Errorf("[%s] matrix.anonymous_paths 的 %q 不在路由模板", env, p)
 			}
 		}
 	}
