@@ -134,9 +134,11 @@ Job。清理 326 个 ReplicaSet 终态 Pod 后，所有业务 Deployment 仍保�
 `DESIRED=1/CURRENT=1`。这说明它们是历史记录，不是 326 个运行副本。
 
 同日重建后的三节点集群运行 Kubernetes v1.36.4。重建两天后已经再次累积 112 个终态 Pod，
-而运行中的 kube-controller-manager 仍未显式设置该参数。安装器现已增加
-`KCM_TERMINATED_POD_GC_THRESHOLD="100"`；在控制面执行新版 50 阶段前，运行集群仍使用
-默认阈值 `12500`。
+运行中的 kube-controller-manager 仍使用默认阈值 `12500`。2026-08-23 将新版安装器同步到
+node101 并执行 50 阶段：38 秒内完成控制器重建，静态清单、live ClusterConfiguration 和运行
+参数均为 `--terminated-pod-gc-threshold=100`，非 terminating 的终态 Pod 从 112 收敛到 100，
+三个节点保持 Ready。本次变更前快照位于
+`/var/lib/k8s-installer/backups/podgc/20260823T082815Z-46112/`。
 
 以前「完成后不显示」不代表 Kubernetes 会隐藏 `Completed`。更可能的路径是：旧配置中
 `shutdownGracePeriod: 0s`，节点直接离线后由 Node Controller 驱逐并删除 Pod 对象；或者管理
