@@ -64,20 +64,8 @@ jobs:
           go-version-file: backend/go.mod
           cache-dependency-path: backend/go.sum
 
-      # 私有 module：github.com/lens077/control-tower（配置中心 SDK + 网关路由模板）。
-      # 需要仓库 Secret GH_MODULES_TOKEN（对 lens077 私仓有 read 权限的 PAT）；
-      # GITHUB_TOKEN 只覆盖本仓，读不到其他私仓。
-      - name: Configure private Go modules
-        env:
-          GH_MODULES_TOKEN: ${{ secrets.GH_MODULES_TOKEN }}
-        run: |
-          if [ -z "$GH_MODULES_TOKEN" ]; then
-            echo "::error::缺少 GH_MODULES_TOKEN Secret,无法拉取 github.com/lens077/control-tower"
-            exit 1
-          fi
-          git config --global url."https://x-access-token:${GH_MODULES_TOKEN}@github.com/lens077/".insteadOf "https://github.com/lens077/"
-          echo "GOPRIVATE=github.com/lens077" >> "$GITHUB_ENV"
-
+      # 依赖 github.com/lens077/control-tower（配置中心 SDK + 网关路由模板）。
+      # 该仓 2026-08-23 起为 public，走默认 GOPROXY 即可，无需私仓凭据。
       # structcheck 是全仓结构门禁（矩阵↔目录↔网关对齐、internal/pkg 同构棘轮），
       # 任何服务的改动都必须过它；api 是共享契约，跟着服务一起验
       - name: Build service
