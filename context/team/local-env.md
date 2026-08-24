@@ -321,32 +321,45 @@ vector / fluent-bit 这条 DaemonSet 通路，根本不经过 collector。只切
 查 `k8s_*` 是查不到的）、`service.name="behavior-service"` 的 span、
 以及 argocd/consul/ecommerce/kube-system/logging/openebs/search 七个命名空间的容器日志。
 
-#### 集群内可观测组件已停机（2026-08-24）
+#### 集群内可观测组件已删除（2026-08-24）
 
-以下全部 scale 0 / 停止调度（**PVC 保留，可随时拉回来**）：
+**不是 scale 0，是连 Helm release 和 PVC 一起删掉了**，回收约 23Gi：
 
-| 组件 | ns | 动作 |
+| 组件 | ns | 处理 |
 |---|---|---|
-| grafana | observability | `scale deploy --replicas=0`（改用 node3 Grafana） |
-| jaeger | observability | `scale deploy --replicas=0` |
-| loki | logging | `scale sts --replicas=0` |
-| vl-victoria-logs-single-server | logging | `scale sts --replicas=0` |
-| vm-single-victoria-metrics-single-server | victoriametrics | `scale sts --replicas=0` |
-| fluent-bit | logging | 打不可满足的 nodeSelector 停止调度（它与 vector 重复采集同一批容器日志） |
+| grafana / jaeger | observability | helm uninstall + 删 PVC（grafana 5Gi、jaeger-badger 5Gi） |
+| loki / vl-victoria-logs / fluent-bit | logging | helm uninstall + 删 PVC（vl 5Gi） |
+| vm-single | victoriametrics | helm uninstall + 删 PVC（8Gi） |
+| otel-collector | opentelemetry | helm uninstall（服务已直连 node3，它成了多余的一跳） |
 
-**保留的两个，以及为什么不能一起停**：
+**只剩 `vector` 一个 DaemonSet**——它是把容器日志送到 node3 的那条腿，删了日志就断。
 
-- `vector`（DaemonSet）—— 它就是把容器日志送到 node3 的那条腿，停了日志就断了。
-- `otel-collector` —— **服务侧的 OTLP 配置只接受 `host:port`**
-  （`conf.proto` 的 `Observability.Trace.endpoint` 带 `host_and_port` 校验），
-  而 node3 的 Victoria 全家桶暴露的是**带路径的 HTTP 端点**
-  （`/insert/opentelemetry/v1/logs` 之类），host:port 到不了那些路径。
-  所以 collector 必须留下做本地 OTLP 入口再转发到 node3。
+要恢复：kubernetes 仓 `components/{grafana,jaeger,loki,victoria-logs,victoriametrics,fluent-bit,opentelemetry}/install.sh` 重跑即可，
+但 `components/opentelemetry/component.env` 里的 `REMOTE_*_URL` 与 `components/vector/values.yaml` 的 sink 要先决定是否改回集群内。
 
-  要真正把 collector 也挪走，只有两条路：① 在 node3 上装一个 collector 并经 Pangolin
-  暴露成 raw TCP（需要 Pangolin 建资源）；② 在 node3 的 nginx 上加一段
-  `/v1/{traces,metrics,logs}` → Victoria 各自路径的反代，再作为 HTTP 资源暴露成
-  `node3-otlp.apikv.com:443`（这个形态符合 `host_and_port`）。两条都卡在 Pangolin 建资源。
+#### 服务 OTLP 直连 node3（2026-08-24）
+
+十个业务服务 + 网关的 `observability.{trace,metric,log}.endpoint` 已改为
+`node3-otlp.apikv.com:443`（`tls.enable: true`），不再经过集群内的 collector。
+
+**关键在于 node3 上加了一层 nginx 路径改写**（`/etc/nginx/conf.d/otlp-ingress.conf`，
+监听 `127.0.0.1:18080`，Pangolin resourceId 30 暴露成 `node3-otlp.apikv.com`）：
+
+```
+/v1/traces   -> 127.0.0.1:10428/insert/opentelemetry/v1/traces
+/v1/metrics  -> 127.0.0.1:8428/opentelemetry/v1/metrics      （注意：无 /insert）
+/v1/logs     -> 127.0.0.1:9428/insert/opentelemetry/v1/logs
+```
+
+**为什么非要这层**：服务侧 `Observability.endpoint` 带 `host_and_port` 校验，只接受
+`host:port`，而 OTel 的 HTTP exporter 会自己拼 `/v1/{signal}`——直接指向 Victoria
+会打到错误路径。三个后端的真实路径还各不相同（VictoriaMetrics 没有 `/insert` 前缀，
+另外两个有），所以只能在 nginx 这层抹平。
+
+验收：node3 nginx access log 里能看到
+`"POST /v1/metrics" 200 "OTel Go OTLP over HTTP/protobuf metrics exporter/1.43.0"`；
+node3 VictoriaMetrics 的 `service.name` 标签列出 13 个服务。
+⚠️ **查询时标签名带点**（`service.name` / `k8s.container.*`），不是下划线。
 
 #### 网关 OTLP 端点已修（2026-08-24）
 
@@ -486,3 +499,26 @@ sudo security add-trusted-cert -d -r trustRoot -k /Library/Keychains/System.keyc
 
 - 网关 JWT 与 Casdoor 时钟偏移的坑见
   [`context/project/ecommerce/gateway/experience/jwt-nbf-clock-skew-loop.md`](../project/ecommerce/gateway/experience/jwt-nbf-clock-skew-loop.md)
+**Config Center 也已切到 node3，CNPG 已 hibernate**（2026-08-24 补做）。切它之前必须先
+把 `config` schema 重新同步一遍——PG 切流之后所有 `PutKey` 写的都是 CNPG，node3 上那份
+是切流前的旧数据，**直接切会把十个服务的配置悄悄退回指向 CNPG**。手顺：
+
+```bash
+kubectl exec -n postgresql pg-main-1 -c postgres -- \
+  pg_dump -U postgres -d ecommerce --schema=config --no-owner --no-privileges --clean --if-exists \
+  | <灌进 node3:30001>
+# 再改 secret config-center-bootstrap 的 config.yaml（host/port/password/ssl_mode/ca_pem）
+kubectl annotate cluster pg-main -n postgresql cnpg.io/hibernation=on --overwrite
+```
+
+Config Center 自己**不从 Config Center 读配置**（`CONFIG_FILE` 指向本地文件，由 secret
+挂载），所以没有先有鸡还是先有蛋的问题。
+
+⚠️ **`outbox-relay` 会被 NetworkPolicy 挡住**。只有 `outbox-relay` / `search-indexer` /
+`product-seed` / `search-reindex` 这几个 tool 带 NetworkPolicy，里面只放行了 `postgresql`
+命名空间的 5432。库搬到集群外之后，egress 白名单必须补一条
+`ipBlock: 114.132.233.129/32` + `port 30001`，否则症状是 **`connect: connection timed out`**
+而不是拒绝——十个业务服务全好、唯独 relay 起不来，很容易误判成隧道不稳。
+已在 `backend/tools/outbox-relay/deploy/dev/deployment.yaml` 补好。
+
+
