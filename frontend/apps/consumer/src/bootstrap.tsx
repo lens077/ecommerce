@@ -7,8 +7,8 @@ import { lazy, StrictMode, Suspense, useMemo, type ReactNode } from "react";
 import ReactDOM from "react-dom/client";
 import { useLocale } from "@ecommerce/i18n";
 import { isTauri } from "@ecommerce/tauri";
+import { getGatewayBaseUrl } from "@ecommerce/api";
 import { initPerf } from "@ecommerce/perf";
-import { env } from "./env";
 import { routeTree } from "./routeTree.gen";
 import "@fontsource/roboto/300.css";
 import "@fontsource/roboto/400.css";
@@ -128,7 +128,8 @@ if (rootElement && !rootElement.innerHTML) {
 // getRoute 返回**路由模式**(/product/$spuCode)而不是具体 URL —— 它是 metric 的
 // label,传具体 URL 会让 VictoriaMetrics 的序列数跟着商品数走。
 initPerf({
-  gatewayUrl: env.VITE_GATEWAY_URL ?? "http://localhost:8080",
+  // 用运行时地址：桌面端的网关来自用户设置，构建期 env 在那儿是相对路径（/api）。
+  gatewayUrl: getGatewayBaseUrl(),
   getRoute: () => {
     const matches = router.state.matches;
     const last = matches[matches.length - 1];

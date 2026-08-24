@@ -520,6 +520,9 @@ importers:
 
   packages/configs:
     dependencies:
+      '@ecommerce/api':
+        specifier: workspace:*
+        version: link:../api
       '@ecommerce/utils':
         specifier: workspace:*
         version: link:../utils
