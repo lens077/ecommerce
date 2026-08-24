@@ -88,8 +88,9 @@ externals:
       tlsServerName=sss.pigsty，sso 关闭）。
       **集群内可观测已整体删除**（含 Helm release 与 PVC，回收约 23Gi）：
       grafana/jaeger/loki/vl-victoria-logs/vm-single/fluent-bit/otel-collector 全删，
-      只剩 vector DaemonSet 送容器日志。服务 OTLP 直连 node3-otlp.apikv.com:443
-      （node3 nginx 做 /v1/* → Victoria 各自路径的改写，Pangolin resourceId 30）。
+      只剩 vector DaemonSet 送容器日志。服务 OTLP 发到 node3-otlp.apikv.com:443
+      （Pangolin resourceId 30 → node3 上 docker 跑的 otelcol:4318，再分发到本机三个
+      Victoria 后端）。容器日志不走 collector——vector 推的是 jsonline 不是 OTLP。
       ⚠️ 集群外依赖已成硬依赖：node3 或 Pangolin 隧道故障 = 数据面连不上库、观测全断。
       Kafka 虽已就绪，但本项目 2026-08-20 已定稿用 NATS JetStream，不因它存在而翻案。
 
