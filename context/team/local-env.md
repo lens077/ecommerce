@@ -226,16 +226,22 @@ TCP 类走 **node1 `114.132.233.129`** 的 raw 端口（Pangolin siteResource �
 > 排查提示：这三个端口不是常规端口号，`nc 211.144.221.229 5432` 这种探法**永远是 filtered**，
 > 会让人误判成「没通路」。要测就测 node1 的 `30001/30002/30004`，域名要带 `node3-` 前缀。
 
-**Silo 的入口还没建。** 参照 node2 minio 那条资源（Pangolin resourceId 16 → target
-`127.0.0.1:9000` method `https`），node3 要加的是同形状的一条：站点 `node3`（siteId 7）、
-target `127.0.0.1:9000`、method `https`、域名 `node3-minio.apikv.com`。
-两个注意点：
+**Silo 入口已建**（2026-08-24，Pangolin resourceId 29）：`https://node3-minio.apikv.com`
+→ 站点 `node3`(siteId 7) → target `127.0.0.1:9000` method `https`。
+实测 `/minio/health/live` 200、`/` 返回 S3 的 `AccessDenied` XML 且响应头 `server: Silo`。
 
-- Pangolin 里**一个 API key 都没有**（`apiKeys` 表 0 行），只能在面板
-  `https://pangolin.apikv.com` 里手工建，或先建一个 API key 再走 API。
-- Silo 的证书是 Pigsty 自签、CN/SAN 为 `sss.pigsty`，**不是** `*.apikv.com`。
-  Traefik 回源时要么设 `tlsServerName: sss.pigsty` 并信任 Pigsty CA，要么跳过校验。
-  node2 那条不需要这一步是因为它挂的是 ZeroSSL 泛域名证书——**别照抄它的配置**。
+建的时候有三个坑：
+
+- **`tlsServerName` 必须设成 `sss.pigsty`**。Silo 用的是 Pigsty 自签证书，
+  CN/SAN 都是 `sss.pigsty` 而非 `*.apikv.com`，不设的话 Traefik 回源校验过不去。
+  node2 minio 那条不需要这步是因为它挂 ZeroSSL 泛域名证书——**别照抄它的配置**。
+- **必须关掉 SSO**（`sso: false`）。默认开着，S3 客户端拿不到 302 跳转的登录页，
+  症状是所有请求都返回 302。
+- **Pangolin API 有个静态 CSRF 门槛**：所有非 GET 请求要带 `x-csrf-token: x-csrf-protection`
+  （值就是这个字面量，见 `csrfProtectionMiddleware`），否则一律 403。
+  登录走 `POST /api/v1/auth/login`，之后 `PUT /api/v1/org/main/resource` 建资源、
+  `PUT /api/v1/resource/<id>/target` 挂 target、`POST /api/v1/resource/<id>` 改属性。
+  ⚠️ `apiKeys` 表仍是 0 行，目前只能用面板管理员账号登录后调 API。
 
 #### 加密现状
 
@@ -372,9 +378,31 @@ collector 统一分流，不要直连某个后端），control-tower 仓 `deploy
 不设 `set timezone='UTC'` 直接比 md5 会全部不一致——那是渲染差异，不是数据差异。
 **这个时区差本身也是切流风险**：任何依赖会话时区而非显式 UTC 的代码，切过去行为会变。
 
-⚠️ **服务仍连着 CNPG，没有切**。真要切，`config` schema（Config Center 自己的数据）
-也跟着走——意味着 control-tower 的 config 服务要连 node3，而它是 10 个服务的 bootstrap 来源。
-一旦 node3 或隧道断了，整个平台起不来。切之前先想清楚这条依赖链。
+#### PG 已切流（2026-08-24）—— 业务库走 node3，Config Center 留在 CNPG
+
+10 个业务服务的 `data.database.postgres` 已改指 `114.132.233.129:30001`，经 Config Center
+`PutKey` 下发。实测 13/13 Deployment 就绪，node3 上 70 个连接，网关读商品详情
+（`GetProductDetail spuCode=iphone-15-pro`）返回真实数据。
+
+**刻意没有一起搬的是 `config` schema**：Config Center 仍连 CNPG（残留 8 个连接）。
+理由是它是 10 个服务的 bootstrap 来源——它要是也依赖 node3，隧道一断整个平台起不来。
+业务库挪走已经拿到了绝大部分收益，把控制面也押上去不划算。
+
+改的时候踩到三个坑，都值得记：
+
+1. **整块替换 `postgres:` 会把 `pool:` 一起吃掉**。该块里 `tls.ca_pem` 之后还有
+   `pool:`（`ping_timeout` / `max_conns` / `min_conns` / …），漏掉它的直接后果是
+   `NewPostgresPool` 空指针 panic、服务 CrashLoopBackOff。**只改需要改的行，别整块换**。
+2. **`ssl_mode` 必须降到 `verify-ca`，不能用 `verify-full`**。经隧道是以 IP
+   `114.132.233.129` 连接，而 node3 的 PG 证书 `CN=pg-meta-1`、SAN 只有
+   `localhost / pg-meta / pg-meta-1 / 127.0.0.1 / 10.10.21.172`，主机名对不上。
+   `verify-ca` 仍校验 CA 且全程加密，只是不校验主机名。CA 用 node3 的 `/etc/pki/ca.crt`。
+3. **时区差其实已经被配置挡掉了**：`data.database.postgres.timezone` 本来就显式写着
+   `Asia/Shanghai`，与 node3 服务端时区一致，所以之前担心的 UTC/上海渲染差异不成立。
+   前提是这一行别删。
+
+回滚：把 `host/port/password/ssl_mode/ca_pem` 五项改回 `pg-main-rw.postgresql.svc:5432`
+与 CNPG 的 CA 即可，`pool:` 不动。Config Center 有 revision 历史可查。
 
 ### OpenBao 自动解封
 
