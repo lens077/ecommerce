@@ -2,8 +2,13 @@
 
 **代码路径**：`frontend/packages/api/`（共享传输层）+ `frontend/apps/*/src/api/`（各 app 的域客户端）
 
-跨 app 的前端数据访问层。四个 app（consumer / merchant / admin / config）共用
-`@ecommerce/api` 的 transport、拦截器与错误模型，所以这一层的约定改一处、影响四个 app。
+跨 app 的前端数据访问层。`frontend/apps/` 下四个 app——**consumer / merchant / admin / desktop**
+——共用 `@ecommerce/api` 的 transport、拦截器与错误模型，所以这一层的约定改一处、影响四个 app。
+其中 `desktop` 是 Tauri 壳，按 `src-tauri/tauri.{consumer,merchant}.conf.json` 打包对应 app，
+无独立端口，但它是下面「transport 创建时就固化 baseUrl」那条约束的唯一受害者。
+
+⚠️ 曾经的第四个 app `config` **已随配置中心迁出本仓**（现在是 control-tower 的 web 控制台），
+本仓不再有它。看到旧文档写「四个 app 含 config」时以本节为准。
 
 ## 关键结构
 
@@ -15,7 +20,7 @@
 | `packages/api/src/interceptors/` | `auth` / `logger` / `error`，`errorInterceptor` 负责触发全局退登 |
 | `apps/*/src/gen/` | buf 从 `backend/api/` 生成的 protobuf-es v2 代码（**生成物**） |
 | `apps/*/src/hooks/use*.ts` | connect-query hook，数据拉取的唯一入口（见下方 SOP） |
-| `apps/*/src/api/` | 只剩表单类型与非 RPC 工具；RPC 包装层已删（config 除外，待迁出） |
+| `apps/*/src/api/` | 只剩表单类型与非 RPC 工具；RPC 包装层已删 |
 
 ## sop
 

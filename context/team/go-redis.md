@@ -6,14 +6,18 @@ description: go-redis v9 在本仓的用法约定——客户端热重建、cach
 
 # go-redis 使用约定
 
-依赖:`github.com/redis/go-redis/v9 v9.21.0`(`backend/go.mod:22`)。
+依赖:`github.com/redis/go-redis/v9 v9.22.0`(`backend/go.mod:25`)。
 各业务服务的客户端装配是同构副本(`internal/data/data.go` 的 `NewRedisClient` + `buildRedis`,
 `internal/data/live.go` 的 `LiveRedis`),由 `backend/structcheck` 在 CI 强制,**改一个必须同步全部**。
 
-> 本仓不同环境可能连接 Redis OSS 或 Dragonfly，地址、TLS 与当前可用性查
-> [local-env.md](local-env.md) 和 [`.service-matrix.yaml`](../../.service-matrix.yaml)。两者都兼容常用
-> RESP 命令，但不能假定高级能力完全相同。使用 Cluster 拓扑、Stream 消费组或模块类命令前，
-> 必须在目标后端实测。
+> **后端只有 Dragonfly 一个**（`dragonfly` ns；集群内 `dragonfly.dragonfly.svc:6379`，
+> LAN `192.168.3.122:6380`）。**TLS-only，明文连接会被拒**，客户端必须配 TLS + AUTH。
+> `redis` namespace 已不存在，**没有回滚到 Redis OSS 的路径**。地址与凭据位置查
+> [local-env.md](local-env.md) 和 [`.service-matrix.yaml`](../../.service-matrix.yaml)。
+>
+> ⚠️ **RESP 兼容 ≠ 行为等价**：Dragonfly 兼容常用 RESP 命令，但不能假定高级能力完全相同。
+> 用 Cluster 拓扑、Stream 消费组或模块类命令前必须在 Dragonfly 上实测——
+> 本文凡是引用 Redis OSS 行为的地方，都按这条打折读。
 
 ## 一、客户端生命周期:本仓比「启动时建一次」更严
 
@@ -130,7 +134,7 @@ Redis 侧同理:**要么让操作幂等且结果可判定（唯一操作 ID、�
 
 `redis.Client` 并发安全且自带连接池。不要按请求创建 Client；本仓仍须遵守第一节的热重建边界。
 
-go-redis v9.21.0 的 `PoolSize` 是基础连接数，**不是硬上限**。连接不足时，客户端可以继续分配连接；
+go-redis v9.22.0 的 `PoolSize` 是基础连接数，**不是硬上限**。连接不足时，客户端可以继续分配连接；
 真正的上限由 `MaxActiveConns` 控制。当前同构装配只传入 `PoolSize` 和 `MinIdleConns`，因此估算容量时
 必须按「每个 Pod × 每个 Client × 每个 Redis/Cluster 节点」计算总连接数，不能把 `PoolSize` 当成
 整个部署的最大连接数。Cluster 的连接池按节点分别建立；目标后端是 Dragonfly 时，Cluster 行为仍需
@@ -152,7 +156,7 @@ go-redis v9.21.0 的 `PoolSize` 是基础连接数，**不是硬上限**。连�
 派生 timeout。不要在 repository 或刷新 goroutine 中换成 `context.Background()`，否则请求取消和服务
 停止都无法终止工作。
 
-go-redis v9.21.0 只有在 `ContextTimeoutEnabled` 开启时，才把 context 的 timeout/deadline 用于连接 I/O。
+go-redis v9.22.0 只有在 `ContextTimeoutEnabled` 开启时，才把 context 的 timeout/deadline 用于连接 I/O。
 当前同构装配没有开启该选项，因此仍要正确配置 socket 的 `DialTimeout`、`ReadTimeout` 和
 `WriteTimeout`；不能只包一层 `context.WithTimeout` 就假定阻塞 I/O 一定按该 deadline 返回。
 
@@ -205,21 +209,24 @@ rdb := redis.NewClusterClient(&redis.ClusterOptions{
 - **Cluster 下没有多 DB**(`db` 只能是 0),本仓配置里的 `db` 字段在迁移时要归零。
 
 另外:Dragonfly 的 Cluster 支持**需先验证**,不要假定与 Redis OSS 的拓扑行为一致。
-真要改,改的是同构的 `buildRedis`——11 份一起改,并让 `LiveRedis` 的持有类型跟着变。
+真要改,改的是同构的 `buildRedis`——10 份一起改,并让 `LiveRedis` 的持有类型跟着变。
 
 ## 十、Redis 不是消息队列的替代品
 
 Stream / Pub-Sub 能做消息,但适用面是**轻量事件通知、实时推送、短生命周期任务**。
-大吞吐、复杂路由、长期留存、消费者组治理与重放,仍应交给 Kafka。
+大吞吐、复杂路由、长期留存、消费者组治理与重放,仍应交给 **NATS JetStream**
+(集群内 `nats` ns,nats-0/1/2)。**Kafka 已退役,集群零残留**,不要再按它设计。
 
 Pub/Sub 是 at-most-once 的即时投递：订阅者离线、断线或处理失败时，消息不会补发。`Publish()` 返回的
 订阅者数量只表示当时匹配的订阅者，不是业务处理 ACK。长驻订阅还会持有专用连接；订阅循环必须在
 连接关闭后从 `LiveRedis.Client()` 重新取得当前 Client、重建订阅并确认成功，不能永久抓住旧
 `*redis.Client`。
 
-本仓的现状是:订单的 EventBus 还是**进程内总线**、Kafka 依赖为 0(见 `TODO.md`),
+本仓的现状是:订单的 EventBus 还是**进程内总线**(见 `TODO.md`),
 所以「用 Redis 顶一下」看起来很诱人。**不要这么做**——事件是跨服务契约,
-换掉传输层的代价远大于一次性接好 Kafka。真要临时过渡,必须在 TODO 写明是过渡态与退出条件。
+换掉传输层的代价远大于一次性接到 **NATS JetStream + outbox relay** 上。
+这条链路已经在跑(`ecommerce-outbox-relay`、`ecommerce-search-indexer` 两个 Deployment),
+不是待建选项,接进去就行。真要临时过渡,必须在 TODO 写明是过渡态与退出条件。
 
 ## 十一、Key、TTL 与批量维护
 

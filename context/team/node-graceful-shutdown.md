@@ -15,7 +15,7 @@ description: Kubernetes 节点关机与重启的 GracefulNodeShutdown 设计：9
 
 这套机制只处理**单个节点的本地关机**，不等于整套集群的关机编排：
 
-- 它不会保证两个节点按顺序关闭，也不会等待跨节点复制完成。
+- 它不会保证多个节点按顺序关闭，也不会等待跨节点复制完成。
 - 它不会让容器跨重启继续运行。节点恢复后，由 Deployment、StatefulSet 等控制器恢复期望副本。
 - 它不会立即删除已经进入 `Succeeded` 或 `Failed` 的 Pod API 对象。终态记录由 PodGC 或人工清理。
 - 断电、宿主机崩溃、Parallels 强制停止等非正常关机不会获得这 90 秒。
@@ -86,24 +86,26 @@ systemd 继续关机或重启
 
 ## 当前集群的验证证据
 
-2026-08-20 23:38 的最近一次关机验证了完整链路：
+**当前集群是三节点**：node101 / node102 / node103（`192.168.3.101-103`，全 arm64，
+Kubernetes v1.36.4）。下面这次关机取证发生在 2026-08-20，**是重建前的两节点集群**
+（当时节点还叫 node1/node2），机制结论不变，节点名不要照抄：
 
-- node1 的 systemd-logind 在 23:38:52 记录 `The system will power off now!`。
+- 关机节点的 systemd-logind 在 23:38:52 记录 `The system will power off now!`。
 - kubelet 随后停止 Pod，并等待容器和卷退出。
-- node1 在 23:40:22 记录 delay inhibitor 到达上限，间隔正好 90 秒。
+- 该节点在 23:40:22 记录 delay inhibitor 到达上限，间隔正好 90 秒。
 - kubelet 同时记录 `Failed while waiting for all the volumes ... context deadline exceeded`；
   未及时卸载的对象包括 OpenEBS 本地卷。
 - logind 到达上限后继续关机，因此「优雅」是有上限的尽力清理，不是无限等待或全部成功保证。
-- node2 更早完成了本地清理，没有必须等待满 90 秒。
+- 另一个节点更早完成本地清理，没有必须等待满 90 秒——**90 秒是上限，不是固定耗时**。
 
-当前两个节点的 `/var/lib/kubelet/config.yaml` 都是：
+当前三个节点的 `/var/lib/kubelet/config.yaml` 都是：
 
 ```yaml
 shutdownGracePeriod: 90s
 shutdownGracePeriodCriticalPods: 30s
 ```
 
-两个节点的有效 logind 配置也都先读取 unattended-upgrades 的 `InhibitDelayMaxSec=30`，再由
+三个节点的有效 logind 配置也都先读取 unattended-upgrades 的 `InhibitDelayMaxSec=30`，再由
 `zzz-kubelet.conf` 覆盖为 `InhibitDelayMaxSec=90`。因此当前运行状态与安装器设计一致。
 
 节点每次启动时，kubelet 日志都会重新记录：
@@ -126,32 +128,24 @@ ReplicaSet 的 `replicas: 1` 只表示需要 1 个**活动副本**，不表示 A
 3. 控制器创建新 Pod，继续满足 `replicas: 1`。
 4. 旧 Pod 对象没有立即删除，因此管理界面同时显示新 Pod 和历史终态 Pod。
 
-首次排查时，kube-controller-manager 没有显式设置 `--terminated-pod-gc-threshold`，因此使用
-默认阈值 `12500`。终态 Pod 总数低于阈值时，PodGC 不会主动批量清理。
+**结论（阈值）**：kube-controller-manager 的 PodGC 阈值现为
+`--terminated-pod-gc-threshold=100`（默认值 `12500` 实际等于不清理——终态 Pod 总数低于阈值时
+PodGC 不主动批量清理，所以一度累积到 327 个）。当前三节点集群稳定保持终态 Pod `100/100`。
 
-2026-08-21 的首次排查现场共有 327 个终态 Pod：326 个由 ReplicaSet 管理，另有 1 个已完成
-Job。清理 326 个 ReplicaSet 终态 Pod 后，所有业务 Deployment 仍保持
-`DESIRED=1/CURRENT=1`。这说明它们是历史记录，不是 326 个运行副本。
+**由此得到两条判据**：
 
-同日重建后的三节点集群运行 Kubernetes v1.36.4。重建两天后已经再次累积 112 个终态 Pod，
-运行中的 kube-controller-manager 仍使用默认阈值 `12500`。2026-08-23 将新版安装器同步到
-node101 并执行 50 阶段：38 秒内完成控制器重建，静态清单、live ClusterConfiguration 和运行
-参数均为 `--terminated-pod-gc-threshold=100`，非 terminating 的终态 Pod 从 112 收敛到 100，
-三个节点保持 Ready。本次变更前快照位于
-`/var/lib/k8s-installer/backups/podgc/20260823T082815Z-46112/`。
-
-首次运行 90 阶段时，2026-08-21 遗留的 VPA recommender `Failed/Terminated` Pod 被表格状态
-`Error` 误判为当前控制面故障；同一 ReplicaSet 的活动 Pod 实际为 `1/1 Running`。健康检查已
-改为只阻断未在删除中且仍应活动的 Pending、Unknown 或 Running/NotReady Pod。同步修复后，
-全量 90 阶段在 85 秒内通过控制面、Cilium、系统调优、`90s/30s` 关机预算、PodGC、PVC、
-LoadBalancer 和 metrics/logs/traces 冒烟，终态 Pod 保持 `100/100`。
+1. **终态 Pod 数量 ≠ 运行副本数量。** 清理 326 个 ReplicaSet 终态 Pod 后，所有业务
+   Deployment 仍是 `DESIRED=1/CURRENT=1`——它们是历史记录。看副本数要看 Deployment，
+   不要数 Pod 行数。
+2. **`Error`/`Failed` 的终态 Pod 不等于当前故障。** 曾把遗留的 VPA recommender
+   `Failed/Terminated` Pod 误判成控制面故障，而同一 ReplicaSet 的活动 Pod 实际是
+   `1/1 Running`。健康检查已改为**只阻断未在删除中、且仍应活动的** Pending / Unknown /
+   Running-NotReady Pod。
 
 以前「完成后不显示」不代表 Kubernetes 会隐藏 `Completed`。更可能的路径是：旧配置中
 `shutdownGracePeriod: 0s`，节点直接离线后由 Node Controller 驱逐并删除 Pod 对象；或者管理
 界面当时过滤了终态对象。当前安装器明确启用了 GracefulNodeShutdown，所以 kubelet 会主动写回
-终态，Pod 对象在被删除前一直可见。本次排查也在节点命令历史中确认过将
-`shutdownGracePeriod` 从 `0s` 改为 `90s`、将关键 Pod 预算从 `0s` 改为 `30s` 的操作，
-因此行为变化与启用该功能相吻合。
+终态，Pod 对象在被删除前一直可见。
 
 ## 检查与判定
 
@@ -160,13 +154,13 @@ LoadBalancer 和 metrics/logs/traces 冒烟，终态 Pod 保持 `100/100`。
 从 Kubernetes API 查询，避免只看安装器模板：
 
 ```bash
-for node in node1 node2; do
+for node in node101 node102 node103; do
   kubectl get --raw "/api/v1/nodes/$node/proxy/configz" \
     | jq '.kubeletconfig | {shutdownGracePeriod, shutdownGracePeriodCriticalPods}'
 done
 ```
 
-期望两个节点都返回 `1m30s` 和 `30s`。节点 API 不可用时，在节点上检查：
+期望三个节点都返回 `1m30s` 和 `30s`。节点 API 不可用时，在节点上检查：
 
 ```bash
 sed -n '/^shutdownGracePeriod:/p; /^shutdownGracePeriodCriticalPods:/p' \
@@ -248,9 +242,8 @@ kubectl get pods -A -o json \
   | jq '[.items[] | select(.status.phase == "Succeeded" or .status.phase == "Failed")] | length'
 ```
 
-新版 50 阶段最多观察 180 秒的终态 Pod 数量。仍高于阈值时只告警，避免活跃集群持续产生
-新终态 Pod 时误判配置失败。90 阶段会硬校验 kubeadm-config、静态 Pod 清单、本节点具名控制器
-的运行参数和 Ready 状态；终态数量作为观察值报告，不包含已经带 `deletionTimestamp` 的 Pod。
+安装器 50 阶段最多观察 180 秒终态 Pod 数量，未收敛只告警（活跃集群会持续产生新终态 Pod，
+硬失败会误判）；90 阶段硬校验配置一致性，对数量只做观察。统计不含已带 `deletionTimestamp` 的 Pod。
 
 ## 清理终态 Pod
 
@@ -275,25 +268,21 @@ kubectl get pods -A -o json \
     done
 ```
 
-安装器通过以下配置治理终态 Pod：
+安装器以 `KCM_TERMINATED_POD_GC_THRESHOLD="100"` 治理该参数，每次执行重新调和（不依赖
+`.done` 标记）：先把 live ClusterConfiguration 与静态 Pod 清单备份到
+`/var/lib/k8s-installer/backups/podgc/<UTC时间>-<PID>/`，再原子替换
+`/etc/kubernetes/manifests/kube-controller-manager.yaml`，确认 node101 具名控制器生效且
+Ready 后才定向更新 `kubeadm-config` 的对应 extraArg（不覆盖其他字段）。中途失败双向回滚。
 
-```bash
-KCM_TERMINATED_POD_GC_THRESHOLD="100"
-```
+**改这个参数前必须知道的四件事**：
 
-新建控制面时，50 阶段通过 kubeadm 生成 `--terminated-pod-gc-threshold=100`。已有控制面每次
-执行都会重新调和，不依赖历史 `.done` 标记：先把 live ClusterConfiguration 和静态 Pod 清单
-保存到 `/var/lib/k8s-installer/backups/podgc/<UTC时间>-<PID>/`，再原子替换
-`/etc/kubernetes/manifests/kube-controller-manager.yaml`。确认 node101 上具名控制器使用新参数并
-恢复 Ready 后，只定向更新 `kube-system/kubeadm-config` 的对应 extraArg，不会用安装器模板覆盖
-升级或人工维护产生的其他字段。中途失败会同时回滚运行清单和持久配置。
+- 它是**全局数量阈值，不是 TTL**——不是「完成后立即删除」。
+- 超阈值后 PodGC **可能删掉已完成 Job 的 Pod 和容器日志**（不删 Job 对象本身）。
+- **删掉的日志和现场无法恢复**，恢复配置快照也救不回来。设太低会缩短排障窗口。
+- 设为 `0` 或负数会关闭终态 Pod GC，**安装器直接拒绝**。
 
-50 阶段最多观察 180 秒的终态 Pod 数量，未收敛只告警；90 阶段硬校验配置一致性，对数量只做
-观察。该参数是全局数量阈值，不是「完成后立即删除」的 TTL。超过阈值后，PodGC 可能删除已
-完成 Job 的 Pod 和对应容器日志，但不会因此删除 Job 对象。即使恢复配置快照，已经删除的 Pod、
-容器日志和现场状态也无法恢复。设置过低会缩短排障窗口；设置为 `0` 或负数会关闭终态 Pod GC，
-安装器会直接拒绝。优雅关机预算继续保持 `90s/30s`，不能通过把 `shutdownGracePeriod` 改为
-`0s` 来隐藏终态 Pod。
+⚠️ 优雅关机预算必须保持 `90s/30s`。**不要把 `shutdownGracePeriod` 改成 `0s` 来「让终态 Pod 不出现」**
+——那是关掉优雅关机，不是清理。
 
 ## 操作边界
 

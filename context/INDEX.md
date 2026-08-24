@@ -14,6 +14,8 @@ context/
 
 | 文件 | 一句话 |
 |---|---|
+| [runbook.md](team/runbook.md) | **可执行入口**：§0.1 按改动类型的必读路由，以及提交前必跑的验收锚点 |
+| [db-migrations.md](team/db-migrations.md) | schema 变更与种子数据的唯一路径：goose + CNPG 基线接管 + sqlc 同步生成 |
 | [git-commit.md](team/git-commit.md) | Conventional Commits + 提交前必须先更新 TODO.md |
 | [proto-design.md](team/proto-design.md) | 写 proto 前先读设计文档，每个字段都要有 buf.validate 约束 |
 | [local-env.md](team/local-env.md) | 本地集群地址：Consul 用 `192.168.3.120:8500`，不要用 consul.dev.test |
@@ -22,7 +24,6 @@ context/
 | [go-redis.md](team/go-redis.md) | go-redis v9：热重建客户端、cache-aside、连接池与 context、Key/TTL、Pipeline、重试、锁及 Pub/Sub 边界 |
 | [cron-jobs.md](team/cron-jobs.md) | 定时任务的执行边界：进程内调度器扩副本即重复执行、Ticker 首次触发盲窗、重叠/panic/超时/时区/优雅停止、重要任务不能只靠一次回调 |
 | [pangolin-tunnel.md](team/pangolin-tunnel.md) | 对外公开内网服务走 Pangolin(node1 VPS)：拓扑与凭据位置、面板 API、k8s HTTPRoute 必须走 Gateway 443(80 无路由) |
-| [ssh-port-migration.md](team/ssh-port-migration.md) | Ubuntu 24.04 改 SSH 端口：sshd_config 的 Port 被 ssh.socket 忽略、ListenStream 必须显式写 v4+v6、生效值只信 `sshd -T` |
 | [tls-enablement.md](team/tls-enablement.md) | 给在跑的服务补 TLS：**先判云厂商 ICP 拦截**（未备案机器上配域名证书是白做，纯 IP 通、带域名 403/reset）、健康检查硬编码 http 会静默失效、证书整卷挂载遮蔽目录、公共 CA 不签 IP 故必须走域名、换镜像后 HOME 漂移致证书静默不加载、验收必须有「故意错的输入」+ 不带 `-k` 的严格校验 |
 | [go-testing.md](team/go-testing.md) | 测试分层判定：biz 层 mock、data 层真库（testcontainers）、Redis 用 miniredis；`-short` 是唯一开关；禁用 go-sqlmock/pgxmock |
 | [okteto-inner-loop.md](team/okteto-inner-loop.md) | 内环开发 `okteto up`：什么时候用、**必须先关 ArgoCD 自动同步**、不是测试环境 |
@@ -34,7 +35,7 @@ context/
 |---|---|
 | [knowledge-layering.md](harness-framework/knowledge-layering.md) | 一条知识该写进哪一层的判定规则 |
 | [self-refinement.md](harness-framework/self-refinement.md) | 纠错 → 判断模式性 → 沉淀 → 下次复用的闭环 |
-| [graph-engineering.md](harness-framework/graph-engineering.md) | 多闭环 AI 工作流方法论存档：锚点命令、冻结节点（`.freeze/` + `scripts/freeze.sh`）、Loop 0~4 分工 |
+| [graph-engineering.md](harness-framework/graph-engineering.md) | 多闭环 AI 工作流方法论存档：锚点命令、Loop 0~4 分工；其中的冻结节点机制已于 2026-08-24 整套删除，文内留有「不要重建」的说明 |
 | [delivery-efficiency.md](harness-framework/delivery-efficiency.md) | AI Coding 交付效率治理：可信状态、P50/P85 与长尾、日报证据和人机责任边界 |
 | [e3-execution.md](harness-framework/e3-execution.md) | E3 执行策略：动手前估计任务规模，走最小路径，验证失败才扩张；含护栏 hook 的验证方法 |
 | [subagent-dispatch.md](harness-framework/subagent-dispatch.md) | 子代理派发三条硬约定：只回结构化摘要、按角色裁剪能力、按角色分层模型 |
@@ -71,7 +72,7 @@ matrix 与 `backend/services/`、网关实际接线的一致性,以及各服务 
 | [`observability/OBSERVABILITY.md`](../docs/observability/OBSERVABILITY.md) | 可观测性方法论与指标基线：三支柱分工、RED/USE、逐服务最低指标、告警清单、6 条硬规则 | 加指标/看板/告警，或排障动线走不通时 |
 | [`docs/TESTING.md`](../docs/TESTING.md) | 测试操作手册：装什么库、`pkg/testutil` 怎么写、cart 六条必测清单、六步落地计划、Makefile/CI 接线 | 写测试时（判定规则先看 [go-testing.md](team/go-testing.md)） |
 | [`docs/OKTETO.md`](../docs/OKTETO.md) | 内环开发手册：ArgoCD 开发窗口、`okteto up` 工作流、manifest 逐条决定、四个已实测的坑 | 要在集群身份下改代码时（判定先看 [okteto-inner-loop.md](team/okteto-inner-loop.md)） |
-| [`gateway/docs/ARCHITECTURE_EVOLUTION.md`](../gateway/docs/ARCHITECTURE_EVOLUTION.md) | 网关演进规划：Cilium 做边缘网关、自建网关转 BFF | 动网关架构方向前（**纯规划未落地**） |
+| control-tower `docs/design/` | 网关与配置中心的架构、鉴权、砍掉清单、切流手顺 —— 在**同级仓** `../control-tower/`，不在本仓 | 动网关或配置面之前 |
 
 ⚠️ 以上都是**目标态**，状态是「等待实现」。当前实况以 `TODO.md` 为准，
 可观测性的已确认缺陷见 [`docs/reviews/OBSERVABILITY_REVIEW_20260806.md`](../docs/reviews/OBSERVABILITY_REVIEW_20260806.md)。

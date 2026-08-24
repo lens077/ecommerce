@@ -29,17 +29,22 @@ token has invalid claims: token is not valid yet
 
 - Casdoor 签发的令牌 `nbf` / `iat` ≈ `now`
 - golang-jwt v5 对 `nbf` / `exp` **默认零容差**
-- 网关机器与 Casdoor（node1）存在**亚秒级时钟偏移**
+- 网关机器与 Casdoor（`casdoor.apikv.com`）存在**亚秒级时钟偏移**
 
 → 刚签发的 token，其 `nbf` 比网关本地时钟大一点点 → 判定「尚未生效」→ 拒绝。
 
 **修复**
 
-`gateway/middleware/jwt/jwt.go` 的 `jwt.ParseWithClaims` 加：
+`control-tower/services/gateway/internal/authn/verifier.go` 的 `jwt.ParseWithClaims` 加：
 
 ```go
-jwt.WithLeeway(60 * time.Second)
+const Leeway = 60 * time.Second
+jwt.WithLeeway(Leeway)
 ```
+
+这条教训已随网关重写一起搬过去：`Leeway` 常量的注释直接写明它来自本次事故，
+`verifier_test.go` 的 `TestExpiredRejectedButLeewayHolds` 有一个专门的用例
+（`nbf` 在未来 30s 必须放行，注释标着「登录死循环的历史教训」）。**别把它当成可调参数删掉。**
 
 其它自己验 JWT 的服务需同样处理。
 

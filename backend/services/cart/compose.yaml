@@ -27,7 +27,7 @@ services:
       - DEPLOYMENT_MODE=dev
       - CONFIG_SOURCE_FILE=/etc/ecommerce/config-source.yaml
       # Consul 只用于服务注册发现
-      - CONSUL_ENABLED=true
+      - CONSUL_ENABLED=false
       - CONSUL_ADDR=192.168.3.120:8500
       - CONSUL_SCHEME=http
       - CONSUL_INSECURE_SKIP_VERIFY=true

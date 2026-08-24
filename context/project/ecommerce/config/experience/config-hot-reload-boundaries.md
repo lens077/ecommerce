@@ -84,7 +84,7 @@ ERROR  rebuild database pool failed, keeping the current one  error=...no such h
 这一层每一条都是「不生效也不报错」的，所以必须实跑，不能只看代码：
 
 ```bash
-cd ../config-center && make dev                  # 配置中心得先起来
+cd ../control-tower && scripts/dev-local.sh config   # 配置中心（control-tower 的 config 服务）得先起来
 cd backend/services/user   && make dev          # 目标服务走配置中心
 # 然后 PutKey 改一个值,盯日志
 ```

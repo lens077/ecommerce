@@ -6,15 +6,17 @@
 健康检查用 **TTL check**（服务主动上报，不是 Consul 来探），由 `TtlCheckPinger` 在
 独立 goroutine 里周期性 `UpdateTTL(pass)`。生命周期挂在 fx 的 `OnStart` / `OnStop` 上。
 
-发现侧不在这里——网关用的是 kratos `contrib/registry/consul/v2`，
-**以 `passingOnly=true` 查询**。这条是理解本模块大多数问题的前提。
+发现侧不在这里——网关（`control-tower/services/gateway/internal/resolver`）用自己的
+Consul 目录 Watch（blocking query），**只取 `passing` 实例**
+（`consul.go` 里 `Health().Service(service, "", true, ...)` 的第三个参数）。
+这条是理解本模块大多数问题的前提：**没转 passing 的实例对网关等于不存在**。
 
 ## 关键约定
 
 | 事项 | 值 |
 |---|---|
 | CheckID 格式 | `service:<实例 ID>`，Consul Agent 强制 |
-| 心跳参数来源 | Consul KV `ecommerce/<svc>/dev.yml` 的 `discovery.consul.check` |
+| 心跳参数来源 | Config Center `<svc>/<env>/bootstrap.yaml` 的 `discovery.consul.check`（Consul KV 已退役） |
 | 注册地址 | `AppInfo.Host` + 自身 `server.addr` 的端口（**不是** Consul 的地址） |
 | 服务名 | 必须与网关 `discovery:///<name>` 一致，不带 `-v1` 后缀 |
 
