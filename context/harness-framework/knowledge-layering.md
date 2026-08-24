@@ -52,8 +52,9 @@ context/project/ecommerce/{module}/
 | `cart` / `order` / `product` / `behavior` … | `backend/services/{module}/` |
 | `consumer` / `merchant` / `admin` | `frontend/apps/{module}/` |
 
-配置中心已迁至独立仓 `../config-center`；电商仓内的 `config` 指各业务服务的配置加载层，
-不再指一个本地微服务或前端应用。
+Config Center 由 sibling 仓 control-tower 提供（SDK 为
+`github.com/lens077/control-tower/sdk/configsource`，`backend/go.mod` 已钉）；
+电商仓内的 `config` 指各业务服务的配置加载层，不再指一个本地微服务或前端应用。
 
 ## experience 文件的写法
 
@@ -81,4 +82,4 @@ context/project/ecommerce/{module}/
 - ❌ **同一条约束写两处** —— 口径会漂移。只写一处，另一处用链接指过去
 - ❌ **把 docs/design/ 的内容复制进 context/** —— docs/design/ 是设计真相源，这里只做指引和补充
 - ❌ **写「一次性 diff」** —— 见 [self-refinement.md](self-refinement.md) 的模式性判断
-- ❌ **凭据进仓库** —— 密码/密钥只在 Consul KV 和本地环境
+- ❌ **凭据进仓库** —— 密码/密钥只在 Config Center 和本地环境（K8s 里经 Secret 挂载）

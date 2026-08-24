@@ -1,19 +1,11 @@
-# GitLab CI —— 冻结验收集守卫(Frozen Nodes)。
-# 与 GitHub 的 .github/workflows/freeze-check.yml 等价:在每次 push 与 MR 上跑,
-# 校验已冻结的验收测试没被偷偷改动(内容变 DRIFT / 删移 MISSING → 退出码 1 → 流水线红)。
-# 正规更新验收集须走 freeze.sh 重新冻结 + GitLab 的 CODEOWNERS/审批(Premium)把关。
-
-freeze-check:
-  stage: test
-  image: alpine:3.20
-  # verify-freeze.sh 需要 bash(用了字符串切片)、git(取仓库根)、sha256sum(coreutils)。
-  before_script:
-    - apk add --no-cache bash git coreutils
-  script:
-    - bash ./scripts/verify-freeze.sh --all
-  rules:
-    - if: '$CI_PIPELINE_SOURCE == "merge_request_event"'
-    - if: '$CI_COMMIT_BRANCH'
+# GitLab CI —— origin(GitLab) 侧的结构门禁。
+#
+# 这里只放**不依赖构建产物**的检查:GitLab 侧没有 Actions,发布构建全部走
+# github 远端的 tag 触发(见 context/team/git-commit.md)。
+#
+# 2026-08-24:原本还有一个 freeze-check job(冻结验收集守卫),随整套 Frozen Nodes
+# 机制一并删除——`.freeze/` 建起来之后从未放进过一组真实冻结集,`verify-freeze.sh`
+# 恒返回 rc=0,是一道恒绿的假门禁。理由见 context/harness-framework/evolution-log.md。
 
 # context/ 知识库结构门禁,与 GitHub 的 context-gate.yml 等价(检查项见脚本头注释)。
 context-gate:

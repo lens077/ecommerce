@@ -6,6 +6,14 @@ description: 公网暴露基础设施(Pangolin)的拓扑事实、面板 API 操�
 
 # Pangolin 内网穿透 / 公网暴露(2026-08-08 部署)
 
+> 🔴 **证书 2026-10-27 硬过期,且当前没有自动续期链路。**
+> 泛域名证书 ZeroSSL `*.apikv.com` 到期后,**所有 `*.apikv.com` 公网入口一起挂**
+> (blog / config / config-api / casdoor / pangolin 面板 / minio / gorse / harbor / dsh …),
+> 以及 node1 上复用同一张证书的 `rediss://redis.apikv.com`。
+> node1 的 acme.sh 只剩单文件,`/root/.acme.sh/` 无证书产物、无 DNSPod 凭据、crontab 无续期条目
+> (2026-08-18 实查)。**必须在 10-27 前手动重签或重建续期链路**,DNSPod 旧 Key 已作废,
+> 要用轮换后的新 Key 或腾讯云子账号走 dns_tencent。续期后记得**同步两处**部署点(见下)。
+
 > 人类速查版(纯命令)在仓库根 `ai-helper.sh` 的 Pangolin 小节(本机文件,已 gitignore 不入库,fresh clone 没有);
 > 本文件是 AI 操作用的完整事实与接口。**凭据一律不写值,只写位置**(runbook §0 硬规则)。
 
@@ -13,7 +21,8 @@ description: 公网暴露基础设施(Pangolin)的拓扑事实、面板 API 操�
 
 ```
 公网用户 ──HTTPS/TCP/UDP──> node1 VPS(ssh 别名 node1,与 hostname 一致,114.132.233.129,腾讯云)
-                              ⚠️ 与本地 k8s 集群的 node1(192.168.3.105)重名:本文的 node1 均指这台公网 VPS
+                              ⚠️ 本文的 node1/node2 **一律指公网 VPS**,与集群节点无关——
+                              集群节点叫 node101/102/103(192.168.3.101-103),命名不再冲突
                               Pangolin CE 1.21.1 + Gerbil 1.4.3 + Traefik v3.7,目录 /home/docker/pangolin/
                               │ WireGuard(UDP 51820/21820,内网侧纯出站)
               ┌───────────────┼───────────────────┐
@@ -45,36 +54,41 @@ description: 公网暴露基础设施(Pangolin)的拓扑事实、面板 API 操�
   `redis.apikv.com`。**证书目录属主必须是 uid 999**(redis 官方镜像的运行用户),否则读不到私钥启动即失败;
   `tls-auth-clients no` 时仍强制要求 `tls-ca-cert-file`,拿 fullchain 自身充数即可
 - 域名 `apikv.com`,**DNS 在 DNSPod(不是 Cloudflare)**,已有 `*` 泛解析 → 114.132.233.129;新子域**零 DNS 操作**
-- 泛域名证书 ZeroSSL `*.apikv.com`(acme.sh dns_dp 签),**2026-10-27 到期**;部署在两处:`/home/docker/blog/ssl/`(原件)与 node1 `/home/docker/pangolin/config/traefik/certs/apikv.com.{crt,key}`,**续期要同步两处**。**⚠️ 自动续期链路缺位(2026-08-18 实查)**:node1 上 acme.sh 只剩 `/usr/local/bin/acme.sh` 单文件,`/root/.acme.sh/` 无证书产物、domain conf 未存 DNSPod 凭据、root crontab 无续期条目——10-27 会硬过期,需在此前手动重签或重建续期链路(DNSPod 旧 Key 已作废,要用轮换后的新 Key 或腾讯云子账号走 dns_tencent)
-- k8s:**集群已于 2026-08 重建**,现为 node1 `192.168.3.201` / node2 `192.168.3.202`(control-plane),
-  Cilium Gateway API,`cilium-gateway`(ns default,LB **192.168.3.100**,ClusterIP **10.99.145.85**)。
+- 泛域名证书 ZeroSSL `*.apikv.com`(acme.sh dns_dp 签),**2026-10-27 到期**(详见文首红框);
+  部署在两处:`/home/docker/blog/ssl/`(原件)与 node1
+  `/home/docker/pangolin/config/traefik/certs/apikv.com.{crt,key}`,**续期要同步两处**
+- k8s:**集群已于 2026-08 重建**,现为 node101/node102/node103 = `192.168.3.101-103`
+  (control-plane 是 node101),全 arm64。Cilium Gateway API,
+  `cilium-gateway`(ns default,LB **192.168.3.121**,ClusterIP **10.99.145.85**)。
   ⚠️ 下文「k8s HTTPRoute 暴露套路」里的 target `10.97.94.118:443` 是**旧集群的 ClusterIP,已失效**,
   要用上面的新值。
-  **2026-08-19 newt 已重装并实测打通**:新建站点 `k8s-cluster`(siteId 4,online=true),
-  旧站点 `k8s`(siteId 3)保留但**永久不可用** —— 它的 secret 面板不回显、旧集群的
-  helm values 已随集群消失,拿不回来了(建站点那一刻的回显是唯一一次)。
-  newt 现由 **kubernetes 仓的 `components/newt/`** 管理(manifest 安装,不是 helm ——
+  newt 由 **kubernetes 仓的 `components/newt/`** 管理(**manifest 安装,不是 helm**——
   上游 `https://fosrl.github.io/newt` 实测 404,没有可用 chart 仓库),凭据存
-  `creds/newt-{id,secret}` 不入库。资源 3/4(config/config-api)的 target 已从旧
-  ClusterIP 改到 `10.99.145.85:443`,并给两条 HTTPRoute 追加了 `.apikv.com` hostname
-  (原先只有 `.app.com`)。**实测:`config.apikv.com` 200 / `config-api.apikv.com` 401(自带鉴权)**
-- 另一台公网机 8.138.194.254(ssh 别名 **node2**,端口 34124,**阿里云**,与集群内 node2 `192.168.3.202` 重名但无关)跑 harbor/img/minio/gorse。**2026-08-19 已接入 Pangolin**(站点 `node2`, siteId 5),见下面「node2 站点」一节;`auth.apikv.com` 解析已指 node1(未建资源);casdoor 已由 `casdoor.apikv.com` 暴露(2026-08-13)
-- ⚠️ **阿里云 ICP 拦截(2026-08-19 实付学费)**:`apikv.com` **未在阿里云备案**,任何经该域名访问 8.138.194.254 的请求都被阿里云在网络层拦截——HTTP 返 403(`Server: Beaver`,body 是 `<title>Non-compliance ICP Filing</title>` + 跳 `aliyun.com/beian/beian-block`),HTTPS 在 SNI 后直接 reset。`harbor`/`img` 这两个早就存在的子域同样被拦。**所以给这台机的服务"配域名+证书直连"是死路,唯一解是走隧道让公网流量落到 node1(腾讯云,不拦)**。判别方法:纯 IP 访问通、带 Host/SNI 的域名访问 403/reset,就是它
+  `creds/newt-{id,secret}` 不入库。资源 3/4(config/config-api)target 为 `10.99.145.85:443`,
+  两条 HTTPRoute 都追加了 `.apikv.com` hostname(原先只有 `.app.com`)。
+  实测:`config.apikv.com` 200 / `config-api.apikv.com` 401(自带鉴权)
+- 另一台公网机 8.138.194.254(ssh 别名 **node2**,端口 34124,**阿里云**;与集群节点无关)跑 harbor/img/minio/gorse。**2026-08-19 已接入 Pangolin**(站点 `node2`, siteId 5),见下面「node2 站点」一节;`auth.apikv.com` 解析已指 node1(未建资源);casdoor 已由 `casdoor.apikv.com` 暴露(2026-08-13)
+- ⚠️ **阿里云 ICP 拦截(2026-08-19 实付学费;本条是该结论的唯一出处,
+  [tls-enablement.md](tls-enablement.md) 指回这里)**:`apikv.com` **未在阿里云备案**,任何经该域名访问 8.138.194.254 的请求都被阿里云在网络层拦截——HTTP 返 403(`Server: Beaver`,body 是 `<title>Non-compliance ICP Filing</title>` + 跳 `aliyun.com/beian/beian-block`),HTTPS 在 SNI 后直接 reset。`harbor`/`img` 这两个早就存在的子域同样被拦。**所以给这台机的服务"配域名+证书直连"是死路,唯一解是走隧道让公网流量落到 node1(腾讯云,不拦)**。判别方法:纯 IP 访问通、带 Host/SNI 的域名访问 403/reset,就是它
 
 ## 面板与站点/资源现状
 
 - 面板 `https://pangolin.apikv.com`,管理员 `admin@apikv.com`(密码在用户处;2026-08-19 重置过一次 —— 密码以 argon2 哈希存 `config/db/db.sqlite` 的 `user.passwordHash`,**服务器上没有明文副本**,忘了只能改库重置)
-- Sites:`node3-local`(siteId 1, local;**面板里的历史实体名,保持不改**,即 node1 本机)/ `mac`(siteId 2, newt, **永久离线尸体**——Mac 重装后凭据丢失且面板不回显,已由 siteId 6 取代)/ **`k8s-cluster`(siteId 4, newt, 当前在用)** / **`node2`(siteId 5, newt, 2026-08-19 新建, subnet `100.89.128.8/30`)** / **`mac2`(siteId 6, newt 1.16.0, 2026-08-20 重建, 本 Mac 当前在用)**。
-  旧的 `k8s`(siteId 3)已于 2026-08-19 删除 —— 删之前先把资源 3/4 的 target 改到了 siteId 4,
-  删后实测 `config.apikv.com` 200 / `config-api.apikv.com` 401 不变。
-  **顺序很重要**:先迁 target 再删站点,反过来会让资源短暂失去后端
-- Resources:`blog.apikv.com`(blog,target `https://blog:443`;**2026-08-18 traefik-config 实查:早前的根域 `apikv.com`+`www` 已无 router,公网 404 空置**)/ `config.apikv.com`(SSO on)/ `config-api.apikv.com`(SSO off,应用自带鉴权)/ `casdoor.apikv.com`(SSO off,自带鉴权,target `10.1.0.8:8000`)/ **`dsh.apikv.com`(rid 19, **SSO on**, site `mac2`, target `127.0.0.1:3080` http——本 Mac 的 DSH Web GUI,2026-08-20 建)**/ 另有 kaneo/dev/ntfy/stream/cat 等,以 `traefik-config` 后门实查为准
+- Sites:`node3-local`(siteId 1, local;**面板里的历史实体名,保持不改**,即 node1 本机)/
+  **`k8s-cluster`(siteId 4, newt)** / **`node2`(siteId 5, newt, subnet `100.89.128.8/30`)** /
+  **`mac2`(siteId 6, newt 1.16.0, 本 Mac 当前在用)**。已删/已死的站点(siteId 2 `mac`、
+  siteId 3 `k8s`)留下一条通用教训:**站点凭据的回显只有建站那一刻有,面板事后不回显**——
+  丢了就只能重建站点。删站点前**先把资源 target 迁到新站点再删**,反过来资源会短暂失去后端
+- Resources:`blog.apikv.com`(blog,target `https://blog:443`;**2026-08-18 traefik-config 实查:早前的根域 `apikv.com`+`www` 已无 router,公网 404 空置**)/ `config.apikv.com`(SSO on)/ `config-api.apikv.com`(SSO off,应用自带鉴权)/ `casdoor.apikv.com`(SSO off,自带鉴权,target `10.1.0.8:8000`)/ **`dsh.apikv.com`(rid 19, **SSO on**, site `mac2`, target `127.0.0.1:3080` http)——
+  ⚠️ DSH 自带浏览器信任栅栏:Host 非回环且不在 trustedHosts 就 403,**外壳能开但工作区永远为空**;
+  已在 `~/.dsh/profiles/web/cordis.patch.yml` 的 `connection` 条目补 `trustedHosts: ['dsh.apikv.com']`
+  (热生效不用重启,**必须写纯 YAML 数组——`!!js` 表达式在用户补丁层实测不生效**)。
+  经隧道时 settings/credentials 等特权方法仍 403 属设计内**/ 另有 kaneo/dev/ntfy/stream/cat 等,以 `traefik-config` 后门实查为准
 - k8s newt:helm release `newt`(ns `pangolin`,chart `fossorial/newt`);凭据看 `helm get values newt -n pangolin`(inline,勿把 values 文件提交入库)
-- Mac newt(2026-08-20 重建):二进制 `~/apps/newt/newt`(1.16.0, darwin-arm64;GitHub release 直连超时,
-  经开发机代理 `192.168.3.220:7890` 下载),凭据 `~/apps/newt/newt.env`(600,仓库外),
-  launchd `~/Library/LaunchAgents/com.apikv.newt.plist`(600,含凭据,RunAtLoad+KeepAlive);
-  日志 `/tmp/newt.log`。带 `--disable-clients`(node2 同款预防)。**newt 跑在宿主机 → target 写
-  `127.0.0.1:<port>`**(同 node2 规则,与 local site 的 `10.1.0.8` 规则不同)
+- Mac newt(2026-08-20 重建):二进制 `~/apps/newt/newt`(1.16.0, darwin-arm64),凭据
+  `~/apps/newt/newt.env`(600,仓库外),launchd `~/Library/LaunchAgents/com.apikv.newt.plist`
+  (600,含凭据,RunAtLoad+KeepAlive),日志 `/tmp/newt.log`,带 `--disable-clients`。
+  **newt 跑在宿主机 → target 写 `127.0.0.1:<port>`**(同 node2 规则,与 local site 的 `10.1.0.8` 不同)
 
 ### node2 站点(siteId 5, 2026-08-19 建)
 
@@ -134,7 +148,8 @@ curl -s -c /tmp/pg.ck -X POST $U/auth/login -H "Content-Type: application/json" 
 
 1. HTTPRoute `hostnames` **追加** `xxx.apikv.com`(保留原 `*.dev.test`,增量可回退):
    `kubectl patch httproute <name> -n <ns> --type=json -p='[{"op":"add","path":"/spec/hostnames/-","value":"xxx.apikv.com"}]'`
-2. 面板建资源:subdomain `xxx`,site `k8s`,target **`10.99.145.85:443` 走 https**(重建后的新 ClusterIP)
+2. 面板建资源:subdomain `xxx`,site **`k8s-cluster`(siteId 4)**,target
+   **`10.99.145.85:443` 走 https**(cilium-gateway 的 ClusterIP;LB 侧是 `192.168.3.121`)
 
 **坑(2026-08 实付学费)**:本仓的 HTTPRoute parentRef 都带 `sectionName: https` → 路由只挂 443 listener,
 **80 上无任何路由,envoy 对一切 Host 返 404**。target 走 80 会 404;必须 443/https(Gateway 用自签
@@ -187,6 +202,13 @@ mediamtx-mediamtx-1  10.1.0.8:8889->8889/tcp    ← 这种才只绑内网
 ### 排错
 
 **快 502(<0.5s)= refused = target 写错或后端没起;慢 502(数秒)= 网络不通。** 先看耗时再排查,能省一半时间。
+
+**同族判别(从已归档的 ssh 端口迁移实录提炼,适用于任何「连不上」)**:
+**Connection refused** = 包到达了主机但无监听(或 REJECT 规则)→ 云防火墙是好的,查服务端监听;
+**timeout** = 包根本没到(安全组/防火墙 DROP)→ 查云控制台放行。
+这一条把「云厂商放行了吗」和「服务起来了吗」一刀切开,少猜半小时。
+动远程访问配置前:确认带外通道能用(node1 的 TAT `tccli tat RunCommand` 是首选)、
+留一个 tmux 长会话、新旧入口并行过渡。
 分层核对顺序:①容器 `docker ps` 是否 healthy → ②宿主 `curl http://10.1.0.8:<port>` 是否 200 → ③下面那条后门看实际 target。
 两步都正常而外部 502,就一定是 target。
 - 排查 target 实际值不用登面板:宿主 `curl http://<pangolin容器IP>:3001/api/v1/traefik-config` 直接看 services 的 url
@@ -197,17 +219,6 @@ mediamtx-mediamtx-1  10.1.0.8:8889->8889/tcp    ← 这种才只绑内网
 
 - **raw TCP/UDP**:入口已预留 30001/30002(tcp)、30003(udp)——compose 的 gerbil ports + Traefik entryPoints(命名必须 `tcp-30001` 格式)+ 腾讯云安全组三处一致才通;扩端口要改前两处并 `docker compose up -d --force-recreate gerbil traefik`(共享 netns,一起重建)
 - **性能**:Mac/k8s 的 newt 是用户态 netstack(低流量够用);Linux 高吞吐场景加 `USE_NATIVE_MAIN_INTERFACE=true` + NET_ADMIN 切内核 WireGuard,验证:`wg show` 能看到接口才是内核态
-- **blog 部署与回滚**(走 GitHub Actions,见 blog 仓 `.github/workflows/ci.yaml`):push main → 构建 linux/amd64 镜像打 `latest`+短 sha 两个 tag → 推腾讯云 CCR → scp `compose.yml` 覆盖服务器 → `docker compose pull && up -d` → 清理 30 天前旧镜像 → curl 断言 `https://blog.apikv.com` 返回 200。**`compose.yml` 以 blog 仓库为真相源,每次部署覆盖服务器**(2026-08-19 实查订正:此前记的「scp 直送 → docker load」与「服务器版是真相源、勿用仓库版覆盖」描述的是更早的手工链路,已不成立)。回滚用 30 天内保留的 sha tag 镜像 `docker tag ccr.ccs.tencentyun.com/sumery/blog:<旧sha> ...:latest && docker compose up -d`(原 `compose.yml.bak` 已不在服务器,该指引作废)
-- **blog 的 nginx 配置曾被挂载遮蔽,已于 2026-08-19 收口**:`compose.yml` 把 `/home/docker/blog/conf` 整卷挂到 `/etc/nginx/conf.d`,遮蔽掉镜像里 `COPY` 进去的 `nginx.conf`。根因是仓库版用了 `${DOMAIN}` 模板变量,而 `conf.d/` **不做 envsubst**(只有 `templates/` 目录才做),变量永远替换不掉,当年只能靠挂载一份硬编码的覆盖——结果服务器上那份停留在 2026-04-22 长达数月无人察觉。
-  **现在 CI 会一并 scp `nginx.conf` 到 `conf/`,仓库是真相源**;`server_name` 改为 catch-all `_`(公网入口是 Traefik,Host 已在上游路由过,不再依赖模板变量)。
-  ⚠️ 镜像未变而只有挂载配置变时,`docker compose up -d` **认为无事可做**,必须显式 `docker exec blog nginx -t && nginx -s reload`(CI 已加,先验语法再重载,写坏时该步失败而不是把站点搞挂)。
-  改 nginx.conf 前可先在服务器上干跑验证语法,不碰生产容器:
-  ```bash
-  docker run --rm -v /tmp/test.conf:/etc/nginx/conf.d/nginx.conf:ro \
-    -v /home/docker/blog/ssl:/etc/nginx/ssl:ro \
-    --entrypoint nginx ccr.ccs.tencentyun.com/sumery/blog:latest -t
-  ```
-- **blog 曾是软 404(2026-08-19 修)**:`try_files $uri $uri/ /index.html` 是 SPA 写法,静态站用它会让**任何错误地址都返回首页 + HTTP 200**,搜索引擎当有效页面收录、读者输错也看不出来。已改为 `=404` + `error_page 404 /404.html`(Astro 的 `src/pages/404.astro` 产出),CI 的 verify 步骤加了 404 断言防回归
 - 面板证书状态永远 pending 是 BYO 证书的已知显示问题(上游 #3243),以浏览器实际握手为准
 - WireGuard 全走 UDP;若运营商晚高峰 QoS 严重,fallback 是 frp(TCP)换隧道层
 - DNSPod API 凭据(DP_Id/DP_Key)在 node1 `/root/.bash_history`(用户签证书时 export 过)——**该 Key 已于 2026-08-18 轮换作废**,续期证书要用新 Key;泛解析已加,一般不再需要

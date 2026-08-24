@@ -64,7 +64,8 @@ Reasoning and Execution》（Yin & Feng，2026-07，代码已开源）。论文�
   `Read|Edit|Write|MultiEdit|NotebookEdit`
 - **行为**：同一会话在**首次编辑发生前**，完整 Read 第 6 个不同文件时拦下该次
   Read（exit 2），把提醒喂回模型；重发同一 Read 即可继续。每会话最多提醒一次；
-  一旦发生过任何编辑即永久静默。状态存 `/tmp/e3-guard-<session_id>.json`。
+  一旦发生过任何编辑即永久静默。状态存 `$TMPDIR/e3-guard-<session_id>.json`
+  （脚本用 `tempfile.gettempdir()`，macOS 上不是 `/tmp`）。
 - **已知局限**：统计包含子代理的读取——Explore 子代理大量读文件属正常，提醒文案
   已写明此时可忽略；纯调研会话（只读不改）会吃到一次提醒，代价是一次重发；
   Codex 没有 hook 体系，那边只靠 AGENTS.md 指令自觉。

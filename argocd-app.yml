@@ -1,3 +1,32 @@
+# ⚠️⚠️ apply 之前必读（2026-08-24 实测）⚠️⚠️
+#
+# 本文件当前**不可直接 apply**。集群零 Application、零 ApplicationSet，
+# 而 `helm/` 那套 chart 从来没跟真实部署对齐过 —— 三处都对不上：
+#
+#   | 项目        | chart 渲染出的                | 集群实际跑的
+#   |------------|------------------------------|---------------------------
+#   | Deployment | user / cart / …              | ecommerce-user-deploy / …
+#   | 标签方案    | app.kubernetes.io/name: user | app: ecommerce-user
+#   | 镜像 tag    | 1.4.0                        | :dev / meili-dev-* / cdc-dev-*
+#
+# 后果不是「同步一下就对齐」，而是**起一整套平行的影子服务**：
+#   - 资源名与标签都不重叠 → 不会覆盖现有工作负载，而是并排新建 10 个 Deployment
+#   - Service selector 也不重叠 → HTTP 流量不会串
+#   - **但 chart 里 CONSUL_ENABLED=true** —— 影子 pod 会用相同的 discovery 名注册进
+#     Consul，而 control-tower 网关正是走 Consul discovery:/// 解析后端。
+#     结果：网关把真实流量负载均衡到 1.4.0 的影子 pod 上。这是线上事故。
+#
+# 另外 chart 里**根本没有** control-tower-gateway / outbox-relay / search-indexer
+# 这三个已在跑的工作负载，所以它也不是一份完整的集群描述。
+#
+# 接回 GitOps 的正确顺序：
+#   1. 改 helm/ 让它描述真实拓扑（资源名、标签、真实 tag，并补上述三个工作负载）
+#   2. `helm template` 与 `kubectl get -o yaml` 逐项比对，diff 为空
+#   3. 再把下面的 syncPolicy.automated 放开
+# 在第 2 步通过之前，syncPolicy 保持手动（automated 已注释掉），
+# 这样即使有人 apply 了本文件，ArgoCD 也只观察和报告漂移，不动集群。
+#
+# ---------------------------------------------------------------------------
 # 作用：通过 ApplicationSet 的 list 生成器，为 ecommerce 项目部署一个
 # 包含所有微服务的 Helm 父 Chart（Umbrella Chart）。
 # 此配置使用 list 生成器，目前仅定义了一个环境（集群和命名空间），
@@ -57,8 +86,12 @@ spec:
         namespace: '{{.namespace}}'                    # 从 list 元素中获取 namespace
 
       # 同步策略
-      syncPolicy:
-        automated: # 自动同步
-          prune: true                                 # 自动删除不再需要的资源
-          selfHeal: true                              # 自动修复集群状态漂移
-        # 注意：此处未设置 syncOptions，如果需要可添加，例如 CreateNamespace=true
+      #
+      # ⚠️ automated 已于 2026-08-24 注释掉 —— 理由见文件顶部告警：
+      # chart 与集群实况三处不符，开自动同步会起一套影子服务并经 Consul 抢走网关流量。
+      # 等 helm/ 对齐、`helm template` 与集群 diff 为空之后，再放开下面四行。
+      syncPolicy: {}
+      #   automated:          # 自动同步
+      #     prune: true       # 自动删除不再需要的资源
+      #     selfHeal: true    # 自动修复集群状态漂移
+      # 注意：此处未设置 syncOptions，如果需要可添加，例如 CreateNamespace=true

@@ -44,8 +44,25 @@ die() { echo "❌ $*" >&2; exit 1; }
 command -v kubectl >/dev/null || die "找不到 kubectl"
 command -v jq >/dev/null      || die "找不到 jq"
 
+# GitOps 没接线时诚实地空转,而不是报错退出。
+#
+# 2026-08-24 之前这里是 die ——「AppProject 不存在就报错」。但集群当时零 Application、
+# 零 ApplicationSet,于是 okteto 内环的第一条命令必然红,照文档做的人卡在这里,
+# 还以为是自己环境坏了。守卫的对象不存在时,正确行为是「没什么要守的」而不是「失败」。
+#
+# 判据用 Application 数而非 AppProject 是否存在:selfHeal 由 Application 产生,
+# 没有 Application 就没有漂移会被同步回去,哪怕 AppProject 建着也一样。
+app_count=$(kubectl get applications -A --no-headers 2>/dev/null | wc -l | tr -d ' ')
+if [ "${app_count:-0}" = "0" ]; then
+  echo "ℹ️  当前集群没有任何 ArgoCD Application —— 没有 selfHeal 会干掉你的开发容器,"
+  echo "    无需开发窗口。直接 okteto up 即可。"
+  echo "    (接回 GitOps 后本脚本自动恢复作用;接线前先读 argocd-app.yml 顶部的告警)"
+  exit 0
+fi
+
 kubectl get appproject "$PROJECT" -n "$NAMESPACE" >/dev/null 2>&1 \
-  || die "AppProject $PROJECT (ns=$NAMESPACE) 不存在。先 kubectl apply -f argocd-proj.yml"
+  || die "AppProject $PROJECT (ns=$NAMESPACE) 不存在,但集群里有 $app_count 个 Application。
+   要么它们属于别的 project(用 ARGOCD_PROJECT=<名字> 指定),要么先 kubectl apply -f argocd-proj.yml"
 
 # 当前 syncWindows(不存在时给 [],避免下游 jq 收到 null)
 current_windows() {

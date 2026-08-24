@@ -10,8 +10,10 @@ description: 前端数据拉取的唯一写法——connect-query 直接吃 prot
 凡是「组件里要拿后端数据」，都按本文写。
 
 **迁移状态**：consumer 已全量迁完（2026-08-03）。merchant / admin 已接 `TransportProvider`
-（2026-08-19，依赖与 `QueryClient` 默认值同 consumer），暂无 RPC 调用，新增数据拉取直接按本文写。
-`config` 准备迁出本仓库，暂不改，它那两处 `createAppTransport()` 是仅存的旧写法。
+（2026-08-19，依赖与 `QueryClient` 默认值同 consumer），**仍无 RPC 调用**——2026-08-24 复核：
+两个 app 都只有 `bootstrap.tsx` 里的一处 `getSharedTransport()`，既没有 `src/gen/` 也没有
+`use*.ts` hook。新增数据拉取直接按本文写。`createAppTransport()` 的旧写法在本仓已绝迹
+（`config` app 已随配置中心迁出本仓库）。
 
 > 出处：改写自 Redpanda Console 的 `api-patterns` 规则集（Apache 2.0）。
 > 原文假定的是 Redpanda 自己的目录（`/src/protogen/`、`task proto:generate`、
@@ -335,9 +337,8 @@ const create = useMutation(AddressService.method.createAddress, {
 
 | 路径 | 说明 |
 |---|---|
-| `frontend/apps/consumer/src/gen/` | buf 从 `backend/api/*.proto` 生成 |
-| `frontend/apps/config/src/gen/` | 同上 |
-| 生成模板 | `frontend/apps/{consumer,config}/buf.gen.yaml`（`protoc-gen-es`，`opt: target=ts`） |
+| `frontend/apps/consumer/src/gen/` | buf 从 `backend/api/*.proto` 生成（本仓当前唯一一份） |
+| 生成模板 | `frontend/apps/consumer/buf.gen.yaml`（`protoc-gen-es`，`opt: target=ts`） |
 
 生成物已入库（不在 `.gitignore` 里），但在根 `frontend/vite.config.ts` 的 `IGNORED` 里
 被排除出 lint 和 fmt —— 所以**手改了不会被格式化工具打回，只会在下次生成时无声丢失**。
@@ -402,7 +403,7 @@ useQuery(ProductService.method.getProductDetail, { spuCode }, {
 
 ## 迁移检查清单
 
-consumer 已按此顺序走完，config 迁回来时照抄：
+consumer 已按此顺序走完。merchant / admin 要接第一个 RPC 时照抄：
 
 1. `pnpm-workspace.yaml` catalog 加 `@connectrpc/connect-query`，给 app 的 `package.json` 加依赖
 2. `packages/api` 的 `getSharedTransport()` / `getPublicTransport()` 直接用，不要再 `createAppTransport()`

@@ -34,3 +34,8 @@ DSH 的 harness 是一个长驻 TypeScript 进程，agent loop、模型适配器
 
 - 决定自建 agent 运行时（独立项目，不是本仓改造）。届时 Cordis 与 Pi（`earendil-works/pi`）的极简路线一起选型。
 - DSH 结束 preview 后想要它的运行时收益（append-only session log 的 resume / fork / replay、Web UI、headless runner）。正确姿态是把 `dsh` 作为又一个消费本 harness 的运行时接进来——读同一份 `AGENTS.md` 和 `context/`——并先在 ecommerce 之外的沙盒实测。
+
+## 状态更新
+
+**2026-08-24**：第二条触发条件已发生——本仓已在 DSH 运行时下跑真实任务，`dsh` 确实是作为「又一个消费本 harness 的运行时」接入的，读同一份 `AGENTS.md` 与 `context/`，与上面预设的姿态一致。
+**结论不变**：这验证的是「纯文件形态的 harness 能被多运行时共同消费」，恰好是暂不采用 Cordis 的理由 2；真要重评仍需第一条触发（决定自建 agent 运行时）。

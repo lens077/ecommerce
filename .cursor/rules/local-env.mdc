@@ -1,5 +1,5 @@
 ---
-description: 本地连基础设施：Consul 用 192.168.3.112:8500 不要用 consul.dev.test；k8s 部署必须用 pre 配置；KV 缺子块会静默关掉功能。
+description: 本地连基础设施：Consul 用 192.168.3.120:8500；Dragonfly 6380 单口 TLS；Config Center 是唯一配置源（Consul KV 已退役）；k8s 部署必须用 pre 配置。
 alwaysApply: false
 ---
 
@@ -7,7 +7,10 @@ alwaysApply: false
 
 完整约定：`context/team/local-env.md`。只记主机名和端口，凭据不入库。
 
-- Consul：宿主机用 `192.168.3.112:8500`。`consul.dev.test` 从宿主机访问会超时
-- Config Center 是配置唯一来源，键是 `<service>/dev/bootstrap.yaml`。selector 缺失或 key 不存在时启动失败，没有 Consul KV 回退
-- KV 存在但缺子块时，mapstructure 没开 `ErrorUnused`，功能会被静默关掉而不是启动失败
-- `*.dev.test` 只在开发机 hosts 可解析。`<svc>/dev/bootstrap.yaml` 只能在开发机跑；k8s 部署必须用 `<svc>/pre/bootstrap.yaml`（集群内 svc 域名）。拿错环境的症状是 DB ping `context deadline exceeded` 或 Consul 注册超时
+- Consul：宿主机用 `192.168.3.120:8500`（LoadBalancer VIP）；集群内工作负载用 `consul-server.consul.svc:8500`。⚠️ 无 ACL token 会**静默返回 `{}`** 而不是报错
+- Dragonfly（Redis）：集群内 `dragonfly.dragonfly.svc:6379`；宿主机走 Cilium Gateway `192.168.3.122:6380`。**单口 TLS-only，明文被拒**
+- PostgreSQL：`pg-main-rw.postgresql.svc:5432`（CNPG）。集群内 ClusterIP，宿主机要 `kubectl port-forward`
+- Config Center 是配置唯一来源（现由同级仓 **control-tower** 的 config 服务承载），键是 `<service>/dev/bootstrap.yaml`。selector 缺失或 key 不存在时启动失败。**Consul KV 已退役，没有回退**——Consul 只做注册发现
+- 缺子块的老坑已修：`decodeConfig` 开了 `ErrorUnused`、解码后跑 protovalidate，缺 required 段现在**启动失败**而不是静默关功能；热更新校验失败则保留当前配置只记 ERROR
+- ⚠️ `*.dev.test` 的解析链当前是**断的**：`/etc/resolver/dev.test` 与 `splitdns` 都指向 192.168.3.202，而集群只有 .101/.102/.103，查询落到公共 DNS 返回 NXDOMAIN。绕法见 `context/team/local-env.md`
+- `<svc>/dev/bootstrap.yaml` 只能在开发机跑；k8s 部署必须用 `<svc>/pre/bootstrap.yaml`（集群内 svc 域名）。拿错环境的症状是 DB ping `context deadline exceeded` 或 Consul 注册超时

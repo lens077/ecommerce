@@ -20,7 +20,7 @@ layout:
   service_conf: "backend/services/{service}/internal/conf/v1/conf.proto"
   frontend_app: "frontend/apps/{app}"
   frontend_package: "frontend/packages/{pkg}"
-  gateway: "gateway"
+  # gateway: 旧网关目录已于 2026-08-24 删除。网关在同级仓 control-tower/services/gateway
 
 conventions:
   # Config Center 是 10 个业务服务唯一的 Bootstrap 来源。
@@ -51,20 +51,39 @@ config_validation:
 
 # 外部基础设施（不是本仓的服务）────────────────────────────────────
 externals:
-  postgres: { host: "pg-main-rw.postgresql.svc:5432", note: "集群内 CloudNativePG pg-main（单实例，2026-08-19 起；Pigsty 192.168.3.210 已关机退役），db=ecommerce owner=app（Database CR 声明式建库），TLS verify-full（pg-ca-cert=CNPG CA）" }
-  redis: { host: "dragonfly.dragonfly.svc:6379", note: "集群内 Dragonfly 原生 TLS（2026-08-20 切回，证书 global-ca-issuer 签、SAN 含本 svc 名，密码与 redis 组件同值故服务侧仅换 host）；6379 单口 TLS-only，明文被拒。redis 组件（redis ns）已 scale 0 关停留备回滚；⚠️ Config Center 自身也是本项消费者（自举 Secret，不在 config.entry 里，见 config 域 experience）" }
+  postgres: { host: "pg-main-rw.postgresql.svc:5432", note: "集群内 CloudNativePG pg-main（单实例，2026-08-19 起；Pigsty 192.168.3.210 已关机退役），db=ecommerce owner=app（Database CR 声明式建库）；宿主网 pg.dev.test/192.168.3.132:5432 经 TLSRoute passthrough，客户端须 verify-full + direct TLS negotiation，CA=pg-main-ca" }
+  redis: { host: "dragonfly.dragonfly.svc:6379", note: "集群内 Dragonfly 原生 TLS（2026-08-20 切回，证书 global-ca-issuer 签、SAN 含本 svc 名，密码与 redis 组件同值故服务侧仅换 host）；6379 单口 TLS-only，明文被拒；宿主机走 Cilium Gateway 192.168.3.122:6380。⚠️ 原「redis 组件（redis ns）已 scale 0 留备回滚」已作废——2026-08-24 实测 redis 命名空间**已删除**，该回滚路径不存在；⚠️ Config Center 自身也是本项消费者（自举 Secret，不在 config.entry 里，见 config 域 experience）" }
   consul: { host: "192.168.3.120:8500", note: "集群内工作负载使用 consul-server.consul.svc:8500；本地进程使用 LoadBalancer VIP。Consul 只承担注册发现，配置仍由 Config Center 提供" }
-  kafka: { host: "（无实例）", note: "已退役：Pigsty broker 随宿主关机消失，集群内仅剩 strimzi operator 残留（无 Kafka CR）；2026-08-20 定稿替代 = NATS JetStream + outbox 自写 relay（TODO ③），应用侧本就零接线" }
+  kafka: { host: "（无实例）", note: "已退役：Pigsty broker 随宿主关机消失；2026-08-24 全集群 grep 确认 **strimzi/kafka 零残留**（此前记的 operator 残留已清干净）；2026-08-20 定稿替代 = NATS JetStream + outbox 自写 relay（TODO ③），应用侧本就零接线" }
   nats: { host: "nats.nats.svc:4222", note: "dev 为 3-server JetStream；搜索索引使用可重建 R1 ECOMMERCE_EVENTS。relay/indexer 已部署，Product Service 事务内生产者、TLS/客户端认证和 NACK CRD 未完成" }
   casdoor: { host: "casdoor.apikv.com", note: "HTTPS 经 Pangolin（8000 明文口已关，2026-08-19 起）；JWT 公钥 kid=lens；2026-08-20 定稿收编进集群，迁移方案见 docs/技术栈选型对抗/对抗审阅表-第3轮.md R3-A" }
   elasticsearch: { used_by: [], note: "实例已退役；search 已迁移到 Meilisearch，address 的无效依赖也已清理" }
   meilisearch: { host: "meilisearch.search.svc:7700", used_by: [search], note: "v1.53 集群组件；search 使用服务端固定的 products 索引和仅限 search 动作的 API key" }
-  minio: { host: "minio.apikv.com", used_by: [cart], note: "⚠️ MinIO 上游仓库已归档（2026-02/04），2026-08-20 定稿迁 SeaweedFS（TODO ①，新增备份流量不再写 MinIO）。存量已同日切 Silo 分叉修复线：pgsty/silo RELEASE.2026-08-06 pin digest + command 显式 --certs-dir（镜像 HOME=/tmp 坑，见 TODO ⓪d）。商品缩略图 URL；443 不带端口。机器是 8.138.194.254（ssh 别名 node2:34124，阿里云，与集群内 node2 192.168.3.202 无关），2026-08-19 起走 node1 的 Pangolin（Traefik 终止 TLS）经 newt 隧道回 node2，本机 9000/9001 已绑回环。⚠️ 不能直连该 IP 配域名：apikv.com 未在阿里云备案，域名直连必被 ICP 拦截" }
+  minio: { host: "minio.apikv.com", used_by: [cart], note: "⚠️ MinIO 上游仓库已归档（2026-02/04），2026-08-20 定稿迁 SeaweedFS（TODO ①，新增备份流量不再写 MinIO）。存量已同日切 Silo 分叉修复线：pgsty/silo RELEASE.2026-08-06 pin digest + command 显式 --certs-dir（镜像 HOME=/tmp 坑，见 TODO ⓪d）。商品缩略图 URL；443 不带端口。机器是 8.138.194.254（ssh 别名 node2:34124，阿里云，与 k8s 集群无关——集群只有 node101/102/103 = 192.168.3.101-103，不存在 .202），2026-08-19 起走 node1 的 Pangolin（Traefik 终止 TLS）经 newt 隧道回 node2，本机 9000/9001 已绑回环。⚠️ 不能直连该 IP 配域名：apikv.com 未在阿里云备案，域名直连必被 ICP 拦截" }
   config_center: { discovery: config-service, repository: "github.com/lens077/control-tower", note: "配置控制面，2026-08-23 起由合一仓 control-tower 的 config 服务承载（wire 冻结,旧 SDK v0.1.0 兼容已实测）；从本地 CONFIG_FILE 自举；SDK=github.com/lens077/control-tower/sdk/configsource" }
   gorse: { host: "gorse.apikv.com", used_by: [behavior, product], note: "推荐引擎；客户端在 backend/pkg/gorse/（发 X-API-Key）。与 minio 同在 node2，2026-08-19 起走 Pangolin，本机 8086/8088 已绑回环。鉴权是 gorse 自带的（[server] api_key + dashboard 表单登录），非 Pangolin SSO。⚠️ 仓库配置的 api_key 按硬规则 4 留空，真值要灌 Config Center，否则业务全 401。依赖 node1 的 rediss://redis.apikv.com:6379 与 pg:5432" }
   redis_gorse: { host: "redis.apikv.com:61246", used_by: [gorse], note: "gorse 专用 cache store，在 node1（≠ Pigsty 那台 192.168.3.210，也≠集群内 dragonfly）。2026-08-19 起 port 0 + 只收 rediss://，证书是 ZeroSSL *.apikv.com（2026-10-27 到期，无 IP SAN 故必须走域名）；宿主端口随机化为 61246（容器内仍 6379）。⚠️ 测试期对 0.0.0.0/0 开放，上线前收窄" }
   postgres_gorse: { host: "114.132.233.129:52288", used_by: [gorse], note: "gorse 的 data store，在 node1（≠ CNPG，≠ Pigsty）。宿主端口 2026-08-19 由 5432 随机化为 52288（容器内仍 5432）。⚠️ 仍是明文 + msdnmm 弱口令 + 0.0.0.0/0，待上 TLS 与轮换" }
   alipay: { used_by: [payment], note: "pay.alipay.* 为空时支付网关能力禁用" }
+
+  # node3 Pigsty —— 已部署、通路已实测可用，但**业务侧尚未接线任何一项**（used_by 全空）。
+  # 记在这里是因为它属于「每次都要现搜一遍」的结构事实：入口端口号不常规，极易误判成不通。
+  pigsty_node3:
+    used_by: []
+    note: |
+      Pigsty v4.5.0，ssh 别名 node3（211.144.221.229:44172），内网 10.10.21.172，x86_64。
+      自身公网只开 SSH；一切访问经 node1 的 Pangolin（newt 站点 node3，siteId 7）。
+      TCP 入口在 node1 114.132.233.129：PostgreSQL 30001 / Redis 30002 / Kafka 30004。
+      HTTP 入口：node3-{grafana,metrics,logs,traces,vmalert,alerts}.apikv.com（443）。
+      已预建 db=ecommerce user=app、Kafka SCRAM 用户 ecommerce_app 与 topic ecommerce.events。
+      Silo（Pigsty MINIO 模块）2026-08-24 已补装：S3 9000 / 控制台 9001，桶 pgsql/meta/data。
+      ⚠️ 接线前先读 context/team/local-env.md 的 node3 一节，三条未解决：
+        ① Redis 无 TLS 且 30002 对公网开放，客户端→node1 那段是明文
+           （集群内 Dragonfly 是 TLS-only，切过去属于安全降级）
+        ② ecommerce 库是空的（只有 monitor.heartbeat），切 PG 等于一次数据迁移
+        ③ Silo 尚无 Pangolin 入口，9000/9001 只在 node3 本机可达；且它的证书是
+           自签 sss.pigsty，不是 *.apikv.com，回源要设 tlsServerName 或跳过校验
+      Kafka 虽已就绪，但本项目 2026-08-20 已定稿用 NATS JetStream，不因它存在而翻案。
 
 # 网关
 gateway:
@@ -72,7 +91,7 @@ gateway:
   # 旧 gateway/ 目录处于烘烤期待退役（切流/回滚手顺见 control-tower docs/design/cutover.md）；
   # 期间旧网关消费的 config.yaml 键冻结不动，保「selector 切回+冷重启」回滚路径。
   repository: "github.com/lens077/control-tower"
-  path: "gateway" # 旧网关目录，烘烤期满后删除；新网关在 control-tower/services/gateway
+  path: "（本仓已无网关目录）" # 旧 gateway/ 于 2026-08-24 删除，历史见 tag backup/pre-control-tower-20260823
   routes_module: "github.com/lens077/control-tower/routes" # structcheck import 此包与本文件双向核对
   external: [config_center, consul] # Config Center 下发配置；Consul 仅服务发现
   config_center:
@@ -196,8 +215,10 @@ deployment_coverage:
   paths:
     makefile: "backend/Makefile 的 SERVICES 变量 —— docker-*-all / k8s-*-all 的扇出清单"
     compose: "backend/compose.yaml 的 services 段 —— 本地一把拉起(键名去掉 ecommerce- 前缀)"
-    helm: "helm/values.yaml 的顶层键 —— ArgoCD GitOps 的集群权威真相源"
-    deploy: "backend/services/{service}/deploy/{dev,prod} —— ArgoCD 不可用时的应急手工路径"
+    # ⚠️ 2026-08-24 更正：这两条的角色实际上是**反的**。
+    helm: "helm/values.yaml 的顶层键 —— 曾被当作 GitOps 真相源，但 ArgoCD 现在零 Application，
+      且 chart 的资源名/标签/tag 与集群实况均不符。当前只是一份待重建的部署描述，不是真相源"
+    deploy: "backend/services/{service}/deploy/{dev,prod} —— **当前实际在用的部署路径**（集群就是这么来的）"
   # 例外必须写原因。不写例外 = 要求全覆盖。
   # 2026-08-07:behavior/product 的 chart 已补齐,四条入口现已 10/10 全覆盖,
   # 例外清空。
@@ -219,4 +240,12 @@ frontend:
 known_gaps:
   - "服务间调用几乎全未接线：order/payment 的 depends_on_planned 目前都是空的"
   - "buf breaking 未接 CI —— proto 破坏性变更目前没有门禁"
-  - "Bootstrap 解码后仍未执行 protovalidate，required 约束尚未成为运行时门禁"
+  # 原第三条「Bootstrap 解码后仍未执行 protovalidate」与本文件 config_validation 段
+  # 直接矛盾（那里 2026-08-18 已标 ✅ 接线），2026-08-24 核对代码后删除：
+  # 十个服务的 internal/pkg/config/config.go 都开了 ErrorUnused 并在解码后跑 protovalidate。
+  - "GitOps 断线（2026-08-24 实测）：ArgoCD 在跑但零 Application / 零 ApplicationSet，
+     AppProject 只有 default。helm/values.yaml **不是**集群真相源——它钉着 1.4.0，
+     集群实跑 :dev。集群由 backend/services/{service}/deploy/ 的手工路径驱动"
+  - "helm/ 不是完整的集群描述：control-tower-gateway、ecommerce-outbox-relay、
+     ecommerce-search-indexer 三个在跑的工作负载都不在 chart 里；且 chart 渲染出的
+     资源名/标签与实况不符，接回 GitOps 前先读 argocd-app.yml 顶部告警"
