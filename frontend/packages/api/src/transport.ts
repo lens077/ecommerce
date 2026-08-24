@@ -16,7 +16,10 @@ import { getAppFetch, getGatewayBaseUrl } from "./runtime";
 export function createAppTransport(options: Partial<ConnectTransportOptions> = {}) {
   return createConnectTransport({
     baseUrl: getGatewayBaseUrl(),
-    fetch: getAppFetch(),
+    // credentials: "include" 是 BFF 会话轨的前提（ADR-0002）：
+    // 会话 id 在 httpOnly cookie 里，不带上就等于匿名请求。
+    // 对桌面端（仍走 bearer）无副作用——它根本没有这枚 cookie。
+    fetch: (input, init) => getAppFetch()(input, { ...init, credentials: "include" }),
     interceptors: [authInterceptor, loggerInterceptor, errorInterceptor],
     ...options,
   });
