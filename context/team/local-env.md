@@ -138,9 +138,7 @@ status，不要永久假定 `.132`。
 该机 2026-08-19 停机并已下线，PostgreSQL / Redis / Kafka / Silo(MinIO) / Grafana
 全部改由集群内组件承担（见上表）。不要再按它写配置或排查。
 
-⚠️ 工作区 `pigsty-deploy/pigsty-redis-silo-kafka-deployment.md` 写的是**这台已退役的机器**
-（ARM64、`192.168.3.210`、Kafka plaintext），且含明文口令。它不适用于下面的 node3，
-读之前先看清 IP。
+工作区 `pigsty-deploy/pigsty-node3-deployment.md` 记的是下面这台 node3 的部署实录。
 
 ### node3（新 Pigsty，2026-08-24 盘点）—— 已部署，经 Pangolin 可达，业务侧尚未接线
 
@@ -239,20 +237,110 @@ target `127.0.0.1:9000`、method `https`、域名 `node3-minio.apikv.com`。
   Traefik 回源时要么设 `tlsServerName: sss.pigsty` 并信任 Pigsty CA，要么跳过校验。
   node2 那条不需要这一步是因为它挂的是 ZeroSSL 泛域名证书——**别照抄它的配置**。
 
-#### ⚠️ 切过去之前必须先解决的两件事
+#### 加密现状
 
-**一、Redis 是明文，且暴露在公网。** 两个实例（`6379`/`6380`）的配置里都只有 `port`，
-没有 `tls-port` 和 `tls-cert-file`——**没开 TLS**。而 `30002` 监听 `0.0.0.0`，于是
-「客户端 → node1:30002」这一段是**公网明文**，`AUTH` 口令和全部缓存数据都在明文里跑。
-（node1 → node3 那一段被 gerbil 的 WireGuard 保护，问题只在第一段。）
-这跟集群内 Dragonfly 的 **TLS-only、明文直接拒绝** 是反过来的，属于安全降级，
-切之前要么给 node3 Redis 开 TLS，要么把 `30002` 收窄到固定来源 IP。
+| 通路 | 状态 |
+|---|---|
+| PostgreSQL `30001` | 对 SSLRequest 回 `S`，客户端用 `sslmode=require` 及以上即端到端加密 |
+| Redis `30002` | **2026-08-24 已上 TLS**（做法见下）。明文 `PING` 得空响应，TLS 1.3 握手后 `AUTH` → `+OK` |
+| Kafka `30004` | SCRAM-SHA-512，口令不过明文，但载荷仍未加密 |
 
-PostgreSQL 没有这个问题：`30001` 对 SSLRequest 回 `S`，客户端用 `sslmode=require`
-及以上就是端到端加密。Kafka 用 SCRAM-SHA-512，口令不过明文，但载荷仍未加密。
+#### 给 node3 Redis 加 TLS（2026-08-24 实施，含为什么不用原生 TLS）
 
-**二、`ecommerce` 库是空的。** 只有一张 `monitor.heartbeat`，业务数据还在集群的 CNPG 里。
-切 PG 是一次**数据迁移**，不是改连接串。
+**Pigsty v4.5 的 redis 角色没有任何 TLS 变量**——`roles/redis/defaults/main.yml` 里
+`redis_tls_*` 一个都没有，`files/pki/redis/` 是空目录，角色 tasks 里 grep 不到 cert/tls。
+要走 Redis 原生 TLS，得改**四处 Pigsty 自带文件**：角色模板 `redis.conf`、
+`redis_exporter_options`、`/infra/targets/redis/*.yml` 里的 `redis://` 前缀，
+以及 infra 的 `/data/infra/prometheus.yml` 里 `^redis://(.*):(\d+)$` 那条 relabel 正则。
+**每次 Pigsty 升级都会被覆盖**，所以没走这条路。
+
+实际做法是外挂 TLS 终止器——一个 Pigsty 支持的变量 + 一个独立服务：
+
+```text
+客户端 ─TLS─> node1:30002 ─WireGuard─> newt ─> 127.0.0.1:6379 (stunnel) ─明文─> 10.10.21.172:6379 (redis)
+```
+
+1. **签证书**（用 Pigsty 自签 CA `files/pki/ca/ca.key`），SAN 必须含
+   `redis.pigsty` / `node3` / `localhost` / `10.10.21.172` / `127.0.0.1`：
+
+   ```bash
+   openssl genrsa -out redis.key 2048
+   openssl req -new -key redis.key -out redis.csr -config redis-san.cnf
+   openssl x509 -req -in redis.csr -CA files/pki/ca/ca.crt -CAkey files/pki/ca/ca.key \
+     -CAcreateserial -out redis.crt -days 3650 -extensions v3 -extfile redis-san.cnf
+   ```
+
+   装到 `/etc/redis/certs/`（属主 `redis`，key 权限 640）。
+
+2. **把 `127.0.0.1:6379` 让给 stunnel**：`pigsty.yml` 的 `redis-ms` 组里
+   `redis_bind_address: 0.0.0.0` → `10.10.21.172`，再 `./redis.yml -l redis-ms`。
+   `redis_bind_address` **是 Pigsty 支持的变量，能存活重跑**——这是整个方案的关键。
+
+3. **stunnel**：`/etc/stunnel/redis-tls.conf` 写 `accept = 127.0.0.1:6379`、
+   `connect = 10.10.21.172:6379`、`cert` 指向 crt+key 合并的 pem（属主 `stunnel4`，600）、
+   `sslVersionMin = TLSv1.2`。别忘了 `/etc/default/stunnel4` 里 `ENABLED=1`。
+
+**为什么不用动 Pangolin**：它的 target 本来就是 `127.0.0.1:6379`，换成 stunnel 监听后
+自动变 TLS，资源定义一个字都不用改（正好——那边没有 API key，本来也改不了）。
+
+**为什么 exporter 和主从复制没坏**：两者连的都是 `10.10.21.172:6379/6380` 而非回环，
+Redis 收到 LAN 地址后照常工作。实测 `master_link_status:up`、`connected_slaves:1`、
+exporter `redis_up 1`。
+
+⚠️ **仍未解决**：`10.10.21.172/24` 是 VPS 厂商的共享内网，而 ufw 放行了整个 `10.0.0.0/8`，
+同网段其他租户理论上能明文摸到 6379/6380（有密码，但仍是暴露面）。
+要收紧就把 ufw 对 6379/6380 的来源限制到 node3 自己。
+
+#### 可观测已切到 node3（2026-08-24）
+
+三条信号都已改推 node3，集群内不再写本地后端。改的是 **kubernetes 仓**两处：
+
+| 信号 | 通路 | 改哪里 |
+|---|---|---|
+| metrics | otel collector → `node3-metrics.apikv.com/opentelemetry/v1/metrics` | `components/opentelemetry/{component.env,install.sh}` 的 `REMOTE_METRICS_URL` |
+| traces | otel collector → `node3-traces.apikv.com/insert/opentelemetry/v1/traces` | 同上 `REMOTE_TRACES_URL` |
+| 应用 OTLP 日志 | otel collector → `node3-logs.apikv.com/insert/opentelemetry/v1/logs` | 同上 `REMOTE_LOGS_URL` |
+| **容器日志** | vector DaemonSet → `node3-logs.apikv.com/insert/jsonline?...` | `components/vector/values.yaml` 的 sink uri |
+
+**为什么容器日志要单独改**：otel collector 只承载**应用侧 OTLP 日志**；容器日志走
+vector / fluent-bit 这条 DaemonSet 通路，根本不经过 collector。只切 collector 的话
+日志大头仍然落在内网，与「把观测负载挪出内网」的目的不符。
+
+**路径里的 `/insert` 不能省**：VictoriaLogs 与 VictoriaTraces 的 OTLP 摄入路径带
+`/insert` 前缀。实测 `node3-traces.apikv.com/opentelemetry/v1/traces` 返回 400，
+带 `/insert` 的返回 200。用 otlphttp 的 `endpoint` 字段会被自动补成 `/v1/xxx` 而打错地方，
+必须用 `metrics_endpoint` / `logs_endpoint` / `traces_endpoint` 给全路径。
+
+实测验收：node3 上查到 `k8s.container.*` 等集群指标（⚠️ VictoriaMetrics 里**点号原样保留**，
+查 `k8s_*` 是查不到的）、`service.name="behavior-service"` 的 span、
+以及 argocd/consul/ecommerce/kube-system/logging/openebs/search 七个命名空间的容器日志。
+
+**仍留在内网的**：`fluent-bit` DaemonSet 还在往集群内 Loki 推同一批容器日志——
+它和 vector 是两套并行的日志采集，本来就重复。要彻底挪走就把 fluent-bit 也切掉或停掉。
+
+#### 顺手发现的 bug（未修）
+
+切日志后从 node3 的日志里直接看到：`control-tower-gateway` 在刷
+`failed to send metrics to http://jaeger.observability.svc:4318/v1/metrics: 404 Not Found`。
+网关把**指标**发到了 Jaeger 的 OTLP 端口，而 Jaeger 不收指标。应指向 otel collector
+（`otel-opentelemetry-collector.opentelemetry.svc:4318`）。这是 control-tower 侧的配置问题。
+
+#### PG 数据已迁移（2026-08-24），但服务尚未切过去
+
+`ecommerce` 库原本只有 `monitor.heartbeat`，现已从 CNPG 全量迁入：
+`pg_dump --no-owner --no-privileges --clean --if-exists` → 经 `30001` 灌进 node3。
+
+验收：32 张表行数与源库**逐表一致**（node3 多出的 `monitor.heartbeat` 是它自己的）；
+`config.entry` / `products.spus` / `products.sale_detail` / `products.skus` 四张表
+内容 md5 完全相同。
+
+⚠️ **对比时必须统一会话参数**：两边时区不同（CNPG `Etc/UTC`，node3 `Asia/Shanghai`），
+不设 `set timezone='UTC'` 直接比 md5 会全部不一致——那是渲染差异，不是数据差异。
+**这个时区差本身也是切流风险**：任何依赖会话时区而非显式 UTC 的代码，切过去行为会变。
+
+⚠️ **服务仍连着 CNPG，没有切**。真要切，`config` schema（Config Center 自己的数据）
+也跟着走——意味着 control-tower 的 config 服务要连 node3，而它是 10 个服务的 bootstrap 来源。
+一旦 node3 或隧道断了，整个平台起不来。切之前先想清楚这条依赖链。
 
 ### OpenBao 自动解封
 

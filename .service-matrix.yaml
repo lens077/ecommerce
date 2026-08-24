@@ -77,12 +77,18 @@ externals:
       HTTP 入口：node3-{grafana,metrics,logs,traces,vmalert,alerts}.apikv.com（443）。
       已预建 db=ecommerce user=app、Kafka SCRAM 用户 ecommerce_app 与 topic ecommerce.events。
       Silo（Pigsty MINIO 模块）2026-08-24 已补装：S3 9000 / 控制台 9001，桶 pgsql/meta/data。
-      ⚠️ 接线前先读 context/team/local-env.md 的 node3 一节，三条未解决：
-        ① Redis 无 TLS 且 30002 对公网开放，客户端→node1 那段是明文
-           （集群内 Dragonfly 是 TLS-only，切过去属于安全降级）
-        ② ecommerce 库是空的（只有 monitor.heartbeat），切 PG 等于一次数据迁移
-        ③ Silo 尚无 Pangolin 入口，9000/9001 只在 node3 本机可达；且它的证书是
-           自签 sss.pigsty，不是 *.apikv.com，回源要设 tlsServerName 或跳过校验
+      **已接入**：可观测三条信号全部改推 node3（metrics/traces/应用 OTLP 日志经 otel collector，
+      容器日志经 vector DaemonSet——两条通路不同，必须分别切）；Redis 已上 TLS
+      （stunnel 终止在 127.0.0.1:6379；Pigsty redis 角色本身没有任何 TLS 变量）；
+      PG 数据已从 CNPG 全量迁入（32 表行数逐表一致、抽样内容 md5 相同）。
+      ⚠️ 仍未解决，接线前先读 context/team/local-env.md 的 node3 一节：
+        ① **10 个服务仍连 CNPG，PG 未切流**。真切的话 config schema（Config Center 自己的数据）
+           也跟着走 → control-tower 的 config 服务要连 node3，而它是 10 个服务的 bootstrap 来源；
+           node3 或隧道一断，整个平台起不来
+        ② 两边时区不同（CNPG Etc/UTC，node3 Asia/Shanghai），依赖会话时区的代码切过去行为会变
+        ③ Silo 尚无 Pangolin 入口，9000/9001 只在 node3 本机可达；它的证书是自签 sss.pigsty
+           而非 *.apikv.com，回源要设 tlsServerName；且 Pangolin 没有任何 API key，只能面板手工建
+        ④ fluent-bit 仍在往集群内 Loki 推同一批容器日志（与 vector 重复采集）
       Kafka 虽已就绪，但本项目 2026-08-20 已定稿用 NATS JetStream，不因它存在而翻案。
 
 # 网关
