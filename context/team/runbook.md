@@ -22,7 +22,8 @@ description: 给所有 AI 编码工具(尤其 Codex)的可执行命令与验收�
   (otel/log/registry/config 等)一份逻辑铺 10 份,**改一处 = 改全部对应文件**,由
   structcheck 的同构检查兜底(见 §2)。整个后端只有一个 `go.mod`。
 - **写/改 proto 前先读 `docs/design/` 对应服务目录**(入口 `docs/design/README.md`),为每个字段推断校验约束(见 `proto-design.md`)。
-- **凭据不入库**:密码/密钥只在 Consul KV 和本地环境,仓库里只写主机名和端口。
+- **凭据不入库**:密码/密钥只存在 **Config Center 和本地环境**(K8s 里经 Secret 挂载),
+  仓库里只写主机名和端口。**Consul KV 已退役,不再存任何配置**(AGENTS.md 硬规则 #4)。
 - **不可逆动作(commit/push/合入/deploy/仓外写删)**:授权判定的全文**只写在
   [AGENTS.md](../../AGENTS.md) 硬规则 #6 一处**,本文件不再保留副本(2026-08-21 消重,
   两处并存时已出现措辞漂移风险)。一句话版:用户明确要求 = 授权,直接执行不二次确认;
@@ -47,10 +48,10 @@ description: 给所有 AI 编码工具(尤其 Codex)的可执行命令与验收�
 | 本地起服务连不上基础设施 | [local-env.md](local-env.md) | 连 `consul.dev.test` 超时;KV 缺子块导致功能被静默关掉 |
 | Kubernetes 节点关机/重启、终态 Pod 累积 | [node-graceful-shutdown.md](node-graceful-shutdown.md) | 把正常的 90 秒等待当卡死后强断电;把 `Succeeded/Failed` 历史误判成运行副本;只改 kubelet 不改 logind 导致提前关机 |
 | 对外公开服务 / 内网穿透 / `*.apikv.com` | [pangolin-tunnel.md](pangolin-tunnel.md) | k8s target 走 80 得 envoy 404;改完配置不等 Traefik 5s 轮询就当故障排查 |
-| 改 SSH 端口 / SSH 突然连不上 | [ssh-port-migration.md](ssh-port-migration.md) | Ubuntu 24.04 改 sshd_config 的 Port 无效;ListenStream 纯端口号 IPv4 全断把自己锁外面 |
+| 改 SSH 端口 / SSH 突然连不上 | 已归档至 [`docs/progress-archive/ssh-port-migration-20260811.md`](../../docs/progress-archive/ssh-port-migration-20260811.md)(一次性主机运维实录,前提为 Ubuntu 24.04,与当前 26.04 不同,仅供参考) | 改 sshd_config 的 Port 在 socket activation 下无效;ListenStream 纯端口号 IPv4 全断把自己锁外面 |
 | 写测试 / 补测试 / 防回归 | [go-testing.md](go-testing.md) + [`docs/TESTING.md`](../../docs/TESTING.md) | 用 mock 测 sqlc 的 SQL 等于没测;引入 go-sqlmock 才发现接不上 pgx |
 | 在集群身份下改代码(okteto) | [okteto-inner-loop.md](okteto-inner-loop.md) + [`docs/OKTETO.md`](../../docs/OKTETO.md) | 没关 ArgoCD 自动同步 → 开发容器被无声干掉;开发完忘了恢复 → GitOps 静默失效 |
-| 提交信息 / 分支 / 分组 | [git-commit.md](git-commit.md) + 本文 §7 | type 自造、`perf` 滥用、`git add -A` 混提 |
+| 提交信息 / 分支 / 分组 | [git-commit.md](git-commit.md) + 本文 §6 | type 自造、`perf` 滥用、`git add -A` 混提 |
 | 踩到坑之后 | [`harness-framework/self-refinement.md`](../harness-framework/self-refinement.md) | 同一个坑下个会话再踩一次 |
 
 ⚠️ 两份**目标态**文档(`DEVOPS.md` / `OBSERVABILITY.md`)描述的是尚未实现的体系,
@@ -67,8 +68,8 @@ scripts/verify-quick.sh backend     # 只跑后端;frontend 同理
 
 后端链与 `pnpm ready` **无数据依赖,不要串行等待**;全量输出在修复循环里反复进上下文,
 绿的部分是纯噪音,所以默认入口只回报失败段(完整日志路径在摘要里)。
-§1–§4 是它的分解动作,**定位单个失败时再单跑**;§2(structcheck `-count=1`)、
-§5(冻结)、`verify-context.sh` 不在其中,按各自触发条件跑。
+§1–§4 是它的分解动作,**定位单个失败时再单跑**;§2(structcheck `-count=1`)与
+`scripts/verify-context.sh` 不在其中,按各自触发条件跑。
 
 ## 1. 编译与静态检查(后端最基本的锚点)
 
@@ -112,20 +113,7 @@ pnpm ready            # vite-plus 聚合:lint(oxlint)+ fmt(oxfmt)+ 类型 + test
 **没有 husky/biome/eslint/prettier**。别把 git 钩子挪回 `.husky/`(会被 vp 静默接管,
 见 `git-commit.md`)。
 
-## 5. 冻结验收集(Frozen Nodes,做核心模块时)
-
-```bash
-scripts/freeze.sh <feature> <测试路径...>   # 把一组验收测试的内容哈希锁进 .freeze/<feature>.sha256
-scripts/verify-freeze.sh --all              # 校验没被动过;DRIFT(内容变)/MISSING(删移)即 rc=1
-scripts/verify-freeze.sh <feature>          # 只校验一个
-```
-
-冻结后**单独一个 commit** 提交 `.freeze/` 产物并声明冻结;之后改动这些测试需重跑
-`freeze.sh` 并走审批(`.github/CODEOWNERS` 管 `/.freeze/`)。CI
-`.github/workflows/freeze-check.yml` 在 PR/push 上跑 `verify-freeze.sh --all`,是 GitHub
-main 分支保护里**唯一必需**的状态检查(GitLab 侧对应 `.gitlab-ci.yml` 的 `freeze-check`)。
-
-## 6. 本地异构双审(push 前,替代 CI 里的 AI 审查)
+## 5. 本地异构双审(push 前,替代 CI 里的 AI 审查)
 
 核心改动 push 前对着 diff 跑 **`/adversarial-review`**(隔离 fresh Claude + Codex 独立审、
 逐条核实合并);小改动可跳。这是「异构监督」防线,放行仍以 §1–§3 的执行事实(build/test 真绿)
@@ -133,7 +121,7 @@ main 分支保护里**唯一必需**的状态检查(GitLab 侧对应 `.gitlab-ci
 
 ---
 
-## 7. 提交流程(可执行)
+## 6. 提交流程(可执行)
 
 顺序不能乱:
 
@@ -150,6 +138,10 @@ main 分支保护里**唯一必需**的状态检查(GitLab 侧对应 `.gitlab-ci
 4. **自检提交信息**(可选):`echo "feat(cart): 示例" | pnpm exec commitlint`
 5. **提交**:`git commit`。项目历史全部**直接提交 `main`**,不走分支/PR,除非用户明确要求开分支。
 
+⚠️ **push main 不会构建任何东西**——CI 只由发布 tag 触发,且 tag 只推 `github` 远端
+(origin 是 GitLab,没有 Actions)。要触发 CI 验证或部署,见
+[git-commit.md](git-commit.md) 的「发布 tag 与 CI 触发」。
+
 钩子说明:commit-msg 钩子由 vite-plus 装(`core.hooksPath=frontend/.vite-hooks/_`),调
 `pnpm exec commitlint`。**若某 shell 里 `pnpm` 不在 PATH**(钩子退出 127),说明是环境问题
 不是消息问题——先人工比对上面第 3 条规则,确认无误后才可 `--no-verify`,并在回复里说明。
@@ -157,7 +149,7 @@ main 分支保护里**唯一必需**的状态检查(GitLab 侧对应 `.gitlab-ci
 
 ---
 
-## 8. 收尾:踩坑要沉淀
+## 7. 收尾:踩坑要沉淀
 
 判断是「模式性教训」(换个模块仍成立)还是「一次性 diff」。前者写回 `context/` 对应层:
 团队级 → `context/team/`;协作机制 → `context/harness-framework/`;某服务特有坑 →
@@ -165,12 +157,8 @@ main 分支保护里**唯一必需**的状态检查(GitLab 侧对应 `.gitlab-ci
 
 ---
 
-## 真相源清单(冲突时以这些为准)
+## 真相源清单
 
-| 关注点 | 真相源 |
-|---|---|
-| 规范/约定 | `context/`(入口 `context/INDEX.md`) |
-| 服务拓扑 | `.service-matrix.yaml` |
-| 实现进度 | `TODO.md` |
-| 架构设计 | `docs/design/`（入口 `docs/design/README.md`） |
-| 提交校验规则 | `commitlint.config.mjs` |
+**不在这里重复**——完整的分层导航与真相源清单见 [`context/INDEX.md`](../INDEX.md)。
+本文开头已给出冲突时的裁决顺序:规范看 `context/`,拓扑看 `.service-matrix.yaml`,
+进度看 `TODO.md`,提交校验规则看 `commitlint.config.mjs`。

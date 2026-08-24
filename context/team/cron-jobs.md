@@ -1,7 +1,7 @@
 ---
 name: cron-jobs
 layer: team
-description: 定时/周期任务的执行边界——重叠、panic、超时、时区、优雅停止、多实例重复执行与「错过不补」；调度与执行分离（任务表 / Asynq）；robfig/cron 与 time.Ticker、K8s CronJob 的选型
+description: 定时/周期任务的执行边界——重叠、panic、超时、时区、优雅停止、多实例重复执行与「错过不补」；调度与执行分离（Postgres 任务表 / NATS JetStream）；robfig/cron 与 time.Ticker、K8s CronJob 的选型
 ---
 
 # 定时任务约定
@@ -15,10 +15,10 @@ description: 定时/周期任务的执行边界——重叠、panic、超时、�
 
 | 位置 | 干什么 | 形状 |
 |---|---|---|
-| `*/internal/pkg/registry/consul.go` | Consul TTL 心跳（11 服务同构副本） | 固定周期，永不重叠 |
+| `*/internal/pkg/registry/consul.go` | Consul TTL 心跳（10 服务同构副本） | 固定周期，永不重叠 |
 | `product/internal/biz/recommend.go:122` | 按 `updated_at` 游标增量同步 SPU 到 gorse | 串行循环，扫满一批立即续扫、不等下一个 tick |
 | `behavior/internal/biz/usecase.go:268,312` | 事件批量 flush、失败重试 | 单 goroutine 消费队列 |
-| `gateway/client/health_checker.go`、`gateway/middleware/rbac/rbac.go` | 主动健康检查、策略刷新 | 固定周期 |
+| 网关的主动健康检查、策略刷新（现由 sibling 仓 control-tower 承担） | 主动健康检查、策略刷新 | 固定周期 |
 
 **判据**：单一固定周期、与组件生命周期绑定的 → 继续用 Ticker，不要为它引库。
 出现**多条不同时间规则**（每天 2 点、每月 1 号、工作日）、需要动态增删任务、
@@ -158,49 +158,29 @@ Worker 幂等执行 + 失败重试 + 记录状态
 支持人工重跑与补偿
 ```
 
-⚠️ 本仓 **Kafka 依赖当前为 0**（EventBus 还是进程内总线），所以现阶段这条链只能落到
-**Postgres 任务表**。不要因为没有 MQ 就退回「一次 cron 回调直接干完」——
+**这条链的两段现在都有现成载体**：**NATS JetStream 已在集群里跑**（`nats` ns，nats-0/1/2），
+outbox relay 也已上线（`ecommerce-outbox-relay`）。所以「发消息」这一段不再是待建选项。
+
+选哪个看**可靠性要求**，不看有没有 MQ：绝不能丢的任务（订单超时兜底、对账、结算）
+仍走 **Postgres 任务表**——它能和 Outbox 同事务写入，这是 JetStream 给不了的；
+其余可重发的走 JetStream。不要因为「觉得没有 MQ」就退回「一次 cron 回调直接干完」——
 那正是对账类任务最容易悄悄漏掉一天的方式。
 
 **越界信号**：当 cron 回调里开始堆 retry、recover、超时控制、状态记录、goroutine 池，
 真正的业务代码反而越来越少时，说明调度器已经在承担 Worker 的职责。
 这时候该拆的是架构（按上面的链路把执行挪出去），不是继续给回调打补丁。
 
-## 八·五、当「拆开」想要一个现成框架时：Asynq
+## 八·五、Asynq：评估过，暂不采用
 
-[Asynq](https://github.com/hibiken/asynq)（`hibiken/asynq`）是 Go 生态基于 Redis 的
-分布式后台任务框架，恰好就是上面那条链的现成实现：
+[Asynq](https://github.com/hibiken/asynq) 是 Go 生态基于 Redis 的分布式后台任务框架，
+正好是上面那条链的现成实现（Enqueue → Redis 持久化 → 多 Worker 消费，
+Retry/Timeout/Priority/Unique 都是框架属性）。**它不替代 Cron**——Cron 决定什么时候开始，
+Asynq 决定能不能可靠地结束。
 
-```
-Cron（或 asynq 自带 PeriodicTaskManager）
-      ↓ client.Enqueue(task)        —— 到点只做一件事：入队
-    Redis                            —— 任务持久在队列里，Worker 重启不丢
-      ↓
-  Worker（可多副本）                  —— Retry / Timeout / Priority / Unique / 状态可查
-      ↓
-    业务代码
-```
-
-它的价值不在「Redis 队列」本身，而在**职责划分**：`Client / Server / ServeMux / Handler`
-各管一事，用法贴近 `net/http`；`generateReport()` 从一次函数调用变成一个有生命周期的
-Task——重试、延迟、超时、优先级、去重都是框架属性，不用再写进回调里。
-扩容 = 加 Worker 副本，业务代码不动；多 Worker 消费同一队列也天然解决第二节的
-「多实例重复执行」（**执行侧**的；Enqueue 侧仍要保证单点或幂等入队，用 `Unique` 选项兜底）。
-
-**它不替代 Cron**——Cron 决定什么时候开始，Asynq 决定能不能可靠地结束，二者是上下游。
-也**不等于 RabbitMQ/Kafka**：MQ 关注消息路由、发布订阅、跨语言通信；
-Asynq 关注「可靠地完成一件后台工作」。
-
-本仓的判断：
-
-- Redis 是现成依赖（[go-redis.md](go-redis.md)），引入成本远低于 Kafka；
-- 但 Asynq 的可靠性上限 = **Redis 的持久化配置**。绝不能丢的任务
-  （订单超时兜底、对账、结算）仍以第八节的 **Postgres 任务表**为准——
-  任务表与业务数据同库，才能和 Outbox 同事务写入；
-- Asynq 适合的是「量大、可重发」的后台工作：邮件/通知、报表导出、图片处理、
-  推荐模型的推理触发；
-- 现阶段没有这类负载，**不预先引入**。第一个此类需求出现时直接上 Asynq，
-  不要先用 goroutine + channel 手搓半个任务系统。
+**结论：现阶段不引入。** 理由：可靠性上限 = Dragonfly 的持久化配置，
+而绝不能丢的任务已由 Postgres 任务表覆盖（同事务写 Outbox）；它擅长的「量大、可重发」
+负载（邮件、报表导出、图片处理）本仓暂时没有。第一个此类需求出现时**直接上 Asynq，
+不要用 goroutine + channel 手搓半个任务系统**。
 
 刷缓存、更新统计、清理临时文件这类轻任务，Ticker / cron 本身就够，不必为它入队。
 
@@ -211,8 +191,9 @@ Asynq 关注「可靠地完成一件后台工作」。
 | `time.Ticker` | 单一固定周期、与组件生命周期绑定（心跳、flush、健康检查）——**本仓现状** |
 | `robfig/cron` | 多条不同时间规则、需要动态增删、需要统一的重叠/panic/日志包装；单进程或单调度实例 |
 | K8s CronJob | 任务可独立起容器、希望调度与业务解耦、天然单实例（对账、清理、报表）——**本仓首选** |
-| Redis 任务队列（Asynq） | 量大、可重发的后台工作（邮件、导出、推理触发），要 Retry/Delay/多 Worker 扩容（§八·五） |
+| NATS JetStream | 跨服务事件、可重发的异步链路——**集群已在跑**，配合 `ecommerce-outbox-relay`（§八） |
 | Postgres 任务表 | 绝不能丢、要与业务数据同事务（Outbox 同源）、要人工补偿的任务（§八） |
+| Redis 任务队列（Asynq） | 量大、可重发的后台工作（邮件、导出、推理触发）——**评估过，暂不引入**（§八·五） |
 
 一句话：**Cron 只决定任务什么时候开始，能不能可靠地结束是另一套工程**——
 是否幂等、会不会重叠、失败怎么办、重启会不会漏、多实例会不会重复。

@@ -1,5 +1,5 @@
 ---
-description: okteto up 必须先关 ArgoCD 自动同步、完事再开；dev key 必须等于集群 Deployment 名；它不是测试环境。
+description: okteto up 的判定与硬约束；dev key 必须等于集群 Deployment 名（ecommerce-<svc>-deploy）；ArgoCD 开发窗口当前不适用；它不是测试环境。
 globs: "**/okteto.{yml,yaml}"
 alwaysApply: false
 ---
@@ -10,9 +10,9 @@ alwaysApply: false
 
 只有问题成因是集群身份（pre.yml、Secret 0400、uid 1000、Pod IP、集群 DNS）时才用 `okteto up`。改业务逻辑用 `make dev`；集成测试用 testcontainers。
 
-1. `okteto up` 之前必须 `scripts/argocd-devwindow.sh off`，之后必须 `on`。忘了关 → 开发容器被 selfHeal 无声干掉；忘了开 → GitOps 静默失效
+1. **ArgoCD 纳管本仓时**才需要 `scripts/argocd-devwindow.sh off` / `on`（忘了关 → 开发容器被 selfHeal 无声干掉；忘了开 → GitOps 静默失效）。先自检：`kubectl get applications -A`。**2026-08-24 实测零 Application，本条当前不适用**，该脚本此时会直接报错退出
 2. 不要把开发窗口写进 `argocd-proj.yml`（进 Git 就变成永久）
 3. 不要改 securityContext 去当 root。GOCACHE 用 `HOME=/go` + `GOCACHE=/go/.cache/go-build`
-4. `dev:` 下的 key 必须等于集群 Deployment 名。`image` 版本等于 `backend/go.mod` 的 go 指令，用 Debian 变体
+4. `dev:` 下的 key 必须**逐字等于集群 Deployment 名**，即 `ecommerce-<svc>-deploy`（例 `ecommerce-cart-deploy`），**不是** `cart`。`image` 版本等于 `backend/go.mod` 的 go 指令，用 Debian 变体
 5. `sync` 指向整个 `backend/`（单一 go.mod）。`persistentVolume.enabled: true`
 6. 它打的是共享 pre 库，不是测试环境。不要一次给 10 个服务写 manifest，跑通一个再加下一个

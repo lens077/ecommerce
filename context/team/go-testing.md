@@ -35,7 +35,9 @@ sqlc 项目里 SQL 是生成物的输入而非手写逻辑，**风险在后者**
 4. **测试基建只放 `backend/pkg/testutil`**，不进任何服务的 `internal/`
    （见 [`STACK.md`](../../STACK.md) 第十节"配置逻辑 10 份复制"的教训）；
 5. **mock 生成物入库**（`internal/biz/mocks/`），CI 不装 mockery；
-6. **PG 镜像 tag 必须与生产一致**——生产是 **18.4.0**，测试用 `postgres:18-alpine`；生产升级时同步改；
+6. **PG 镜像 tag 必须与生产一致**——生产是 CloudNativePG 集群 `pg-main`，镜像
+   **`ghcr.io/cloudnative-pg/postgresql:18.4-system-trixie`**（`kubectl get cluster -n postgresql -o yaml | grep image` 可核），
+   测试用 `postgres:18-alpine`；生产升级时同步改；
 7. **两个方向都要验收**：不带 `-short` 全绿 **且** 带 `-short` 全 skip。
    只验一边等于不知道开关有没有真的生效（参见 [[silent-hook-failure]] 同类教训）。
 
@@ -63,9 +65,12 @@ sqlc 项目里 SQL 是生成物的输入而非手写逻辑，**风险在后者**
 ```bash
 cd backend
 make test               # 单元测试(带 -short),集成测试自动跳过
-make test-integration   # 全量(需 Docker)——⚠️ target 待落地(TODO.md 测试体系行),当前跑会 No rule to make target
 go test ./services/cart/internal/data/ -run TestCartUpsert -v   # 单个用例
 ```
+
+⚠️ **`make test-integration` 还不存在**——`backend/Makefile` 里没有这个 target,
+跑它只会得到 `No rule to make target`。落地进度见 TODO.md 测试体系行。
+在它出现之前,跑全量集成测试用 `go test -count=1 ./...`(需 Docker)。
 
 ## 五、不属于这一层的
 

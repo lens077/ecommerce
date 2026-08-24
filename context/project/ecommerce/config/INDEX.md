@@ -2,20 +2,25 @@
 
 **代码路径**
 
-- 配置中心服务本体：独立仓 `github.com/lens077/config-center`（本机 `../config-center`；设计见 `docs/design/config-center/design.md`）
+- 配置控制面本体：合一仓 `github.com/lens077/control-tower` 的 **`config` 服务**
+  （本机 `../control-tower/services/config`；设计存档见 `docs/design/config-center/design.md`）。
+  2026-08-23 起由它承载，**已切流上线**：`config-center` ns 里的两个 Deployment
+  仍叫老名字，但镜像已经是 `control-tower-config` / `control-tower-config-web`——
+  那只是没改的遗留标签，**不代表旧的独立 config-center 还在跑**。
 - **各服务的配置加载层**：`backend/services/*/internal/pkg/config/`（10 份，同一套代码）
 - 审计/迁移工具：`backend/tools/config-seed/`（只输出版本、大小、哈希和段名，不输出值）
 
 每个服务启动时读**整份 Bootstrap 配置**（一份 YAML）。10 个服务统一优先读取本地
-`CONFIG_SOURCE_FILE`，并使用独立 `config-center` Go SDK 的 `SourceConfig` 契约读取
-`config_center`。selector 选择其他类型会快速失败；不设 selector 也会失败，不存在 Consul
-KV 回退。`CONFIG_SOURCE=file` 只保留为显式本地测试入口。默认 `make dev` 使用被忽略的
-`configs/source.dev.yaml`。后端依赖 `config-center v0.1.0`，不用本地 `replace`。
+`CONFIG_SOURCE_FILE`，并使用 `github.com/lens077/control-tower/sdk/configsource`
+的 `SourceConfig` 契约读取 `config_center`。selector 选择其他类型会快速失败；不设
+selector 也会失败，不存在 Consul KV 回退。`CONFIG_SOURCE=file` 只保留为显式本地测试入口。
+默认 `make dev` 使用被忽略的 `configs/source.dev.yaml`。后端 `go.mod` 钉
+`github.com/lens077/control-tower v0.1.0`，不用本地 `replace`。
 
 ⚠️ **`go mod tidy` 不会把依赖往前挪**——它只增删，版本仍是 `go.mod` 里钉住的那个。
-config-center 出了新版要用 `go get github.com/lens077/config-center@v0.x.y`；
+control-tower 出了新版要用 `go get github.com/lens077/control-tower@v0.x.y`；
 代理（goproxy.cn）有抓取延迟，新 tag 拿不到时先 `curl` 一下
-`https://goproxy.cn/github.com/lens077/config-center/@v/v0.x.y.info` 触发它去拉。
+`https://goproxy.cn/github.com/lens077/control-tower/@v/v0.x.y.info` 触发它去拉。
 配置中心不可达、selector 缺失、token 无效或 key 不存在时都必须直接启动失败。
 
 ## 配置的唯一运行时来源
@@ -75,7 +80,7 @@ config_validation.rollout_warning。
 
 ## 已知注意事项
 
-- **config-service 不能从配置中心读自己的配置**（自举）。它从本地 `CONFIG_FILE` 启动，
+- **config 服务不能从配置中心读自己的配置**（自举）。它从本地 `CONFIG_FILE` 启动，
   Consul 只用于服务注册发现；把自身 Bootstrap 放进 ConfigService 会形成启动死锁。
 - Config Center 当前会把 `is_secret=true` 的值统一返回为 `******`，machine token 也不例外。
   业务服务读取的是包含密码和 API key 的整份 Bootstrap，因此条目暂时必须使用

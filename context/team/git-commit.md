@@ -34,7 +34,8 @@ TODO 更新可以和代码改动放**同一个提交**，也可以紧跟一个 `
 ```
 
 - **type**：下面十一类之一，**不可自造**
-- **scope**：模块名，可省略。常见 `cart` / `product` / `address` / `order` / `gateway` / `frontend` / `api` / `config-center` / `kafka-connect` / `recommend`
+- **scope**：模块名，可省略。常见 `cart` / `product` / `address` / `order` / `frontend` / `api` / `search` / `recommend`。
+  网关与配置中心已迁到 sibling 仓 control-tower，本仓不再有对应 scope
 - **emoji**：**可选**。仓库既有历史全部不带，强制加上只会让 `git log --oneline` 一半带一半不带。但一旦写了就必须与 type 相符
 - **subject**：中英文混用，描述做了什么，**末尾不加标点**
 
@@ -73,109 +74,29 @@ feat(address): :sparkles: 行政区划落库 + RegionService 三级级联接口
 
 语义以 [gitmoji.dev](https://gitmoji.dev/) 官方定义为准，**不要望文生义**。同一个 emoji 允许对应多个 type —— `:necktie:`（业务逻辑）新写是 `feat`、改错是 `fix`、只挪不改行为是 `refactor`，三种都成立。但 `:bug:` 只能是 `fix`、`:sparkles:` 只能是 `feat`，这类没有第二种读法。
 
-**这份表的唯一真相源是 `commitlint.config.mjs` 里的 `EMOJI_TYPES`**，下表是它的可读副本，改动请两边同步。
-
-### feat
-
-| emoji | 含义 | 也可用于 |
-| --- | --- | --- |
-| `:sparkles:` | 引入新特性 | — |
-| `:boom:` | 破坏性变更 | refactor |
-| `:globe_with_meridians:` | 国际化与本地化 | fix |
-| `:chart_with_upwards_trend:` | 添加或更新分析、埋点代码 | — |
-| `:speech_balloon:` | 添加或更新文案与字面量 | docs / style |
-| `:triangular_flag_on_post:` | 添加、更新或删除特性开关 | chore |
-| `:label:` | 添加或更新类型 | refactor / chore |
-| `:necktie:` | 添加或更新业务逻辑 | fix / refactor |
-| `:safety_vest:` | 添加或更新校验相关代码 | fix / refactor |
-| `:passport_control:` | 授权、角色与权限相关代码 | fix |
-| `:stethoscope:` | 添加或更新健康检查 | chore |
-| `:card_file_box:` | 数据库相关变更 | fix / chore |
-| `:loud_sound:` | 添加或更新日志 | chore |
-| `:goal_net:` | 捕获错误 | fix |
-| `:thread:` | 多线程与并发相关代码 | fix / perf / refactor |
-| `:wheelchair:` | 提升可访问性 | fix |
-| `:seedling:` | 添加或更新种子数据 | chore |
-| `:egg:` | 添加或更新彩蛋 | — |
-
-### fix
-
-| emoji | 含义 | 也可用于 |
-| --- | --- | --- |
-| `:bug:` | 修复 bug | — |
-| `:ambulance:` | 关键热修复 | — |
-| `:adhesive_bandage:` | 非关键问题的简单修复 | — |
-| `:pencil2:` | 修复拼写错误 | docs |
-| `:lock:` | 修复安全或隐私问题 | — |
-| `:rotating_light:` | 修复编译器或 linter 告警 | style / chore |
-| `:alien:` | 因外部 API 变更而修改代码 | refactor |
-| `:green_heart:` | 修复 CI 构建 | ci |
-
-### perf
-
-| emoji | 含义 | 也可用于 |
-| --- | --- | --- |
-| `:zap:` | 提升性能 | — |
-| `:mag:` | 改进 SEO | feat |
-| `:children_crossing:` | 改善用户体验与可用性 | feat / fix |
-| `:thread:` | 优化多线程与并发代码 | feat / fix / refactor |
-
-### refactor
-
-| emoji | 含义 | 也可用于 |
-| --- | --- | --- |
-| `:recycle:` | 重构代码 | — |
-| `:building_construction:` | 架构变更 | — |
-| `:art:` | 改进代码结构与格式 | style |
-| `:truck:` | 移动或重命名资源 | chore |
-| `:coffin:` | 删除死代码 | chore |
-| `:fire:` | 删除代码或文件 | chore |
-| `:wastebasket:` | 弃用需要清理的代码 | chore |
-| `:mute:` | 删除日志 | chore |
-| `:bulb:` | 添加或更新源码注释 | docs |
-
-### style / test / docs
+> **完整白名单的真相源是 `commitlint.config.mjs` 的 `EMOJI_TYPES`**（机器可读，校验以它为准）。
+> 下表只列最常用的十几个，**不是全集**；要查某个 emoji 允不允许，直接读那个文件，
+> 或 `echo "<消息>" | pnpm exec commitlint` 让它告诉你。
 
 | emoji | 含义 | type |
 | --- | --- | --- |
-| `:lipstick:` | 添加或更新 UI 与样式文件 | style / feat |
-| `:iphone:` | 响应式设计 | style / feat |
-| `:dizzy:` | 添加或更新动画与过渡 | style / feat |
-| `:white_check_mark:` | 添加、更新或让测试通过 | test |
-| `:test_tube:` | 添加一个失败的测试（TDD） | test |
-| `:clown_face:` | mock 数据 | test |
-| `:camera_flash:` | 添加或更新快照 | test |
+| `:sparkles:` | 引入新特性 | feat |
+| `:necktie:` | 业务逻辑 | feat / fix / refactor |
+| `:card_file_box:` | 数据库相关变更 | feat / fix / chore |
+| `:safety_vest:` | 校验相关代码 | feat / fix / refactor |
+| `:bug:` | 修复 bug | fix |
+| `:ambulance:` | 关键热修复 | fix |
+| `:green_heart:` | 修复 CI 构建 | fix / ci |
+| `:zap:` | 提升性能 | perf |
+| `:recycle:` | 重构代码 | refactor |
+| `:building_construction:` | 架构变更 | refactor |
+| `:fire:` | 删除代码或文件 | refactor / chore |
+| `:white_check_mark:` | 添加或让测试通过 | test |
 | `:memo:` | 添加或更新文档 | docs |
-| `:page_facing_up:` | 添加或更新许可证 | docs / chore |
-| `:busts_in_silhouette:` | 添加或更新贡献者 | docs / chore |
-| `:money_with_wings:` | 添加赞助或资金相关 | docs / chore |
-
-### build / ci / revert / chore
-
-| emoji | 含义 | type |
-| --- | --- | --- |
-| `:heavy_plus_sign:` | 添加依赖 | build |
-| `:heavy_minus_sign:` | 移除依赖 | build |
 | `:arrow_up:` | 升级依赖 | build |
-| `:arrow_down:` | 降级依赖 | build |
-| `:pushpin:` | 将依赖锁定到指定版本 | build |
-| `:package:` | 添加或更新编译产物与分发包 | build |
-| `:bricks:` | 基础设施相关变更 | build / chore / feat |
 | `:wrench:` | 添加或更新配置文件 | chore / build |
-| `:hammer:` | 添加或更新开发脚本 | chore / build |
 | `:construction_worker:` | 添加或更新 CI 构建系统 | ci |
-| `:rocket:` | 部署 | ci / chore |
 | `:rewind:` | 回退变更 | revert |
-| `:closed_lock_with_key:` | 添加或更新密钥 | chore |
-| `:see_no_evil:` | 添加或更新 `.gitignore` | chore |
-| `:bento:` | 添加或更新静态资源 | chore / feat |
-| `:construction:` | 工作进行中 | chore |
-| `:twisted_rightwards_arrows:` | 合并分支 | chore |
-| `:alembic:` | 进行实验 | chore / feat |
-| `:monocle_face:` | 数据探查与检查 | chore |
-| `:technologist:` | 改善开发者体验 | chore |
-| `:tada:` | 初始化项目 | chore / feat |
-| `:poop:` | 写下待改进的糟糕代码 | chore / fix |
 
 ## Body 与 Footer
 
@@ -241,25 +162,9 @@ pnpm exec commitlint --from HEAD~7 --to HEAD   # 回放校验既有提交
 `corepack pnpm exec commitlint --edit <消息文件>` 手动校验绿后再
 `git commit --no-verify`——校验没有被跳过，只是手动执行。
 
-### ⚠️ 这套东西曾经九个月一次都没生效
-
-从 2025-11-04 搭起到 2026-08-02 修好，**中间的全部提交都没被校验过**，前端后端都是。层层叠叠断了五处，任何一处单独存在都足以让它失效：
-
-1. `.husky/commit-msg` 的**全部内容**是一行
-
-   ```
-   echo "pnpm exec --no – commitlint --edit $1" > .husky/commit-msg
-   ```
-
-   这不是钩子，是**创建钩子的那条安装命令被原样粘进了它本该创建的文件里**（出处就是当时 `frontend/git-commit-conventional.md` 结尾的 `npx husky add .husky/commit-msg '...'` 那行）。每次提交它只是把自己重写一遍，然后退出 0。**从建立那天起就没调用过 commitlint 一次**——这是起点，后面四条都是在它之上叠的
-2. 它写出来的那行本身也是坏的：`–` 是全角连字符 U+2013 不是 `--`；`--no` 又是 pnpm 11 已废弃的 exec 参数
-3. `@commitlint/cli` 从未出现在任何 `devDependencies` 里（当时只有 cz-git / husky / lint-staged）
-4. `frontend/apps/consumer/.commitlintrc.cjs` 的 `rules: {}` 是空的，也没有 `extends` —— 零规则
-5. 2026-03-19 前端迁移到 vite-plus、删掉 `frontend/.husky/` 时，`vp config` 看到已有值 `frontend/.husky/_` —— 不等于 `.husky`、也不以 `.husky/` 开头 —— 守卫触发，打印 skipping 后放弃接管。于是 `core.hooksPath` 一直指着一个**已被删除的目录**，git 对此不报错，只是静默地一个钩子都不跑
-
-教训：**校验类工具装完必须用一条故意写错的消息验证它真的拦得住**。「配置文件存在」不等于「规则在跑」——静默失效的钩子比没有钩子更危险，因为它给了一种虚假的安全感。这条对第 1 层尤其致命：文件在、可执行位在、`git commit` 也确实调用了它，唯独它什么都没做。
-
-另外 `pnpm exec` 不要加 `--no`：pnpm 11 已不认这个 exec 参数，会报 `Command "--no" not found`，等于把校验变成**永远失败**——而 `--no-verify` 一旦成为肌肉记忆，等于没校验。
+> ⚠️ **这套校验曾经九个月一次都没生效**（2025-11-04 → 2026-08-02，期间全部提交都没被校验过）。
+> 五处串联失效的完整复盘已移到 [self-refinement.md 的「教训存档」](../harness-framework/self-refinement.md#教训存档)——它讲的是 harness 门禁静默失效，
+> 不是提交规范本身。这里只留结论：**校验类工具装完，必须用一条故意写错的消息验证它真的拦得住。**
 
 ## 分支策略
 
@@ -282,6 +187,15 @@ pnpm exec commitlint --from HEAD~7 --to HEAD   # 回放校验既有提交
 - 完整 emoji 语义见 [gitmoji.dev](https://gitmoji.dev/)
 
 （本文件已合并原 `frontend/git-commit-conventional.md`。同一件事不要两个真相源——那份文档最后那行 `npx husky add .husky/commit-msg '...'` 正是上面第 1 层故障的来源。）
+
+## 远端：只有 origin 和 github 两个
+
+```
+origin   GitLab  (sumery/ecommerce)     ← 日常 push 的去处，无 Actions
+github   GitHub  (lens077/ecommerce)    ← CI 在这里，发布 tag 只推它
+```
+
+**发布 tag 只推 `github`**。除这两个之外不要再往别的远端推任何东西。
 
 ## 发布 tag 与 CI 触发（2026-08-20 起）
 

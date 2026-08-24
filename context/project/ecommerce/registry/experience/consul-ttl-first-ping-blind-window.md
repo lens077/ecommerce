@@ -27,8 +27,13 @@ Consul UI 里也能看到这个实例。但前端首屏拿到的是 503，要手
 1. Consul 的 TTL check 在 `Register` 之后**初始状态是 `critical`**，不是 passing。
    必须等第一次 `UpdateTTL(..., api.HealthPassing)` 才转 passing。
 2. `TtlCheckPinger` 原来的写法是 `NewTicker` 之后直接进 `for { select { case <-ticker.C: ... } }`
-   ——**第一次心跳要等一个完整的 `ping_interval`**。KV 里配的是 25s。
-3. 服务发现方（网关用的 kratos `contrib/registry/consul/v2`）是用 **`passingOnly=true`** 查询的。
+   ——**第一次心跳要等一个完整的 `ping_interval`**。当时配的是 25s。
+3. 服务发现方**只认 `passing` 实例**。
+
+⚠️ 第 3 条的归属换过一次：当年是网关用的 kratos `contrib/registry/consul/v2` 加
+`passingOnly=true`；那份代码已随旧网关删除。但新网关
+（`control-tower/services/gateway/internal/resolver/consul.go`）的 Consul 目录 Watch
+**同样只取 passing**，所以**这个故障模式原样活过了网关重写**——别以为换了网关就没了。
 
 于是每次后端启动都存在一段 **25 秒的「已注册但对外不可见」盲窗**：
 Consul 里有这个实例，但它是 critical，`passingOnly` 把它过滤掉，网关拿到空节点列表，
@@ -47,10 +52,10 @@ p2c selector 返回 `ErrNoAvailable`，前端收到 503。
 
 `TtlCheckPinger` 在进 ticker 循环**之前**先 `ping()` 一次，把盲窗压到零。
 调用点保证 `Register` 已同步返回，`checkID` 一定存在。
-11 个服务的这段代码此前字节完全相同（`internal/pkg/registry/consul.go`），统一修改。
+10 个服务的这段代码此前字节完全相同（`internal/pkg/registry/consul.go`），统一修改。
 
-配套调了两个 KV 参数（11 份 `ecommerce/<svc>/dev.yml` + 8 份 `ecommerce/<svc>/pre.yml`，
-两个环境逐字一致）：
+配套调了两个 `discovery.consul.check` 参数（当年在 Consul KV，现在的载体是 Config Center
+的 `<svc>/<env>/bootstrap.yaml`，dev/pre 两个环境逐字一致）：
 
 | 字段 | 旧值 | 新值 | 理由 |
 |---|---|---|---|
@@ -74,12 +79,10 @@ p2c selector 返回 `ErrNoAvailable`，前端收到 503。
 - `consul.go` 里 pinger 用的是 `context.Background()`，应用退出时不会取消；
   紧邻的注释写「当应用退出时，TtlCheckPinger 的 context 也会关闭」是**错的**。
   影响仅为退出时多一条 `UpdateTTL` 错误日志。
-- fx hook 块在 11 个服务里已漂移出 5 个变体，本轮没有统一。
+- fx hook 块在 10 个服务里已漂移出 5 个变体，本轮没有统一。
 - **仓库里的 `backend/services/*/configs/{dev,pre}.yml` 仍是旧值**（`6s`/`25s`）。
-  它们不是运行时配置——服务只从 Consul KV 读（`CONFIG_SOURCE`，见
-  `backend/services/cart/internal/pkg/config/source.go`），这些文件是种子/参考副本。
-  其中 `merchant`/`payment`/`product` 的 `dev.yml` 还停在更老的 schema
-  （`ping_interval_seconds: 1`，没有 `check` 段），是独立的漂移问题。
+  它们不是运行时配置，只是本地工作副本——运行时配置的唯一来源是 Config Center，
+  见 [`../../config/experience/three-copies-of-one-config.md`](../../config/experience/three-copies-of-one-config.md)。
 
 **排查捷径**
 
@@ -92,6 +95,6 @@ p2c selector 返回 `ErrNoAvailable`，前端收到 503。
 
 **相关**
 
-- 网关侧的重试放大与健康检查失效：[`gateway/experience/retry-amplification-and-phantom-health-check.md`](../../gateway/experience/retry-amplification-and-phantom-health-check.md)
+- 网关侧的健康检查失效：[`gateway/experience/retry-amplification-and-phantom-health-check.md`](../../gateway/experience/retry-amplification-and-phantom-health-check.md)
 - 前端侧的重复请求：[`consumer/experience/duplicate-cart-queries.md`](../../consumer/experience/duplicate-cart-queries.md)
-- Consul 地址与 KV 路径见 [`context/team/local-env.md`](../../../../team/local-env.md)
+- Consul 地址见 [`context/team/local-env.md`](../../../../team/local-env.md)（Consul 现在只做注册发现，不存配置）

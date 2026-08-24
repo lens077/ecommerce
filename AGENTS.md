@@ -13,7 +13,7 @@
    subject 末尾不加标点。钩子由 vite-plus 安装（`core.hooksPath` 指向
    `frontend/.vite-hooks/_`），是仓库级设置，后端 Go 的提交同样受管。
    见 `context/team/git-commit.md`。
-4. **不要把凭据写进仓库**。密码/密钥只存在 Config Center 和本地环境（K8s 里经 Secret 挂载），仓库里只写主机名和端口。Consul KV 已退役不再存配置（见 `context/project/ecommerce/config/experience/consul-kv-retired.md`）。
+4. **不要把凭据写进仓库**。密码/密钥只存在 Config Center 和本地环境（K8s 里经 Secret 挂载），仓库里只写主机名和端口。Config Center 现由同级仓 **control-tower** 的 config 服务承载。Consul KV 已退役不再存配置，Consul 只做注册发现（见 `context/project/ecommerce/config/experience/consul-kv-retired.md`）。
 5. **踩到坑要沉淀**：判断是「模式性教训」还是「一次性 diff」，前者写进 `context/`。见 `context/harness-framework/self-refinement.md`。
    改动 harness 本身（本文件的硬规则、门禁脚本、structcheck 检查项、CI 门禁）时，
    还要在 `context/harness-framework/evolution-log.md` 追加一条，**必须写清触发它的具体事故**——
@@ -46,7 +46,7 @@
 
 > **[context/team/runbook.md](context/team/runbook.md)** 是可执行入口:§0.1 是**按改动类型的
 > 必读路由**（动 Redis / 定时任务 / proto / 指标告警 / CI-CD 前各该先读哪份），
-> 其余是冻结验收集、前端、双审、提交流程。以下是提交前必跑的锚点：
+> 其余是前端、双审、提交流程。以下是提交前必跑的锚点：
 
 ```bash
 scripts/verify-quick.sh                              # 默认入口:后端链+前端并行,绿只打一行、红只打失败段
@@ -54,9 +54,12 @@ cd backend && go build ./... && go vet ./...        # ↑ 的分解动作:后端
 cd backend && go test -count=1 ./structcheck/...     # 改 .service-matrix.yaml/加删服务后必跑
 cd backend && go test -short ./...                   # 后端测试(CI 用 -short)
 cd frontend && pnpm ready                            # 前端 lint+fmt+类型+test
-scripts/verify-freeze.sh --all                       # 冻结验收集未被动过(main 上唯一必需的 CI 检查)
 scripts/verify-context.sh                            # 改 context/ 或本文件后必跑:链接/INDEX/格式/预算门禁
 ```
+
+`verify-context.sh` 是 **main 上唯一必需的 CI 检查**（GitHub `context-gate` + GitLab 同名 job）。
+原本还有一道 `verify-freeze.sh`,已于 2026-08-24 连同整套 `.freeze/` 机制删除——
+它建起来后从未放进过一组真实冻结集,恒返回 rc=0,是一道假门禁。理由见 evolution-log。
 
 放行以「命令真绿」为准,不以模型自报为准。核心改动 push 前跑 `/adversarial-review` 做异构双审。
 
@@ -79,9 +82,10 @@ scripts/verify-context.sh                            # 改 context/ 或本文件
 > 技术栈、目录结构、服务拓扑不在这里复述——读代码与 `.service-matrix.yaml` 自明。
 
 - 工程化：前端用 vite-plus（`vp`）一个包覆盖 dev/build/test/lint/fmt/任务运行/git 钩子，没有 husky/biome/eslint/prettier；仓库根另有一个只装 commitlint 的 `package.json`，与 `frontend/` 的 workspace 相互独立
-- 进度真相源：`TODO.md`（**唯一**——`docs/PROGRESS.md` 及双文档纪律已于 2026-08-13 废止，见 `context/harness-framework/evolution-log.md`）；架构真相源：`docs/design/`（按微服务分目录，入口 `docs/design/README.md`，含 config-center 设计存档）
+- 进度真相源：`TODO.md`（**唯一**——`docs/PROGRESS.md` 及双文档纪律已于 2026-08-13 废止，见 `context/harness-framework/evolution-log.md`）；架构真相源：`docs/design/`（按微服务分目录，入口 `docs/design/README.md`）。**网关与配置面的设计不在本仓**——在同级仓 `../control-tower/docs/design/`
+- **网关和配置中心都不在本仓**：2026-08-23 起由同级仓 **control-tower**（`services/gateway` + `services/config`）承载，两个服务均已切流上线。集群里 `config-center` 这个 ns/Deployment 名只是没改的遗留标签，跑的镜像是 `control-tower-config`。本仓的旧 `gateway/` 目录已于 2026-08-24 删除（历史在 tag `backup/pre-control-tower-20260823`）；`backend/structcheck` 直接 import `github.com/lens077/control-tower/routes` 核对路由，**改路由模板必须同 PR 升级本仓对 control-tower 的依赖版本**
 - **CI 仅由发布 tag 触发**（裸 semver `X.Y.Z`，`X`=破坏性/大版本；push main 不构建，2026-08-20 起）。需要 CI 验证或部署时**打 tag 并推到 `github` 远端**（origin 是 GitLab 无 Actions），版本随迭代递增；语义、手顺与四条纪律见 [context/team/git-commit.md](context/team/git-commit.md)「发布 tag 与 CI 触发」
-- 内环开发（`okteto up`）**必须先 `scripts/argocd-devwindow.sh off`、完事 `on`**：okteto 会新建 `<svc>-okteto` Deployment 并把原 Deployment 缩到 0，ArgoCD selfHeal 会把这两处漂移同步回去、无声干掉开发容器；忘了恢复更糟——GitOps 静默失效且无任何报错。判定与写 manifest 的七条检查清单见 [context/team/okteto-inner-loop.md](context/team/okteto-inner-loop.md)，操作手册见 [docs/OKTETO.md](docs/OKTETO.md)
+- **GitOps 当前是断的**（2026-08-24 实测）：ArgoCD 装着且在跑，但零 Application、零 ApplicationSet，AppProject 只有 `default`——集群实际由 `backend/services/*/deploy/` 的手工路径驱动，`helm/values.yaml` **不是**集群真相源（它还钉着 1.4.0，集群实跑 `:dev`）。由此，内环开发（`okteto up`）那条「必须先 `scripts/argocd-devwindow.sh off`、完事 `on`」**当前不适用**（该脚本已改为诚实空转）。接回 GitOps 前先读 `argocd-app.yml` 顶部告警：chart 与实况在资源名/标签/tag 三处不符，直接开 selfHeal 会起一整套影子服务并经 Consul 抢走网关流量。判定与 manifest 检查清单见 [context/team/okteto-inner-loop.md](context/team/okteto-inner-loop.md)，操作手册见 [docs/OKTETO.md](docs/OKTETO.md)
 
 ## 中文文案约定
 
@@ -92,8 +96,11 @@ scripts/verify-context.sh                            # 改 context/ 或本文件
 
 ## Agent skills
 
-> 以下三份配置供 mattpocock 系列工程 skill（`/to-tickets` `/triage` `/to-spec` `/wayfinder`
-> `/domain-modeling` 等）读取。改配置改 `docs/agents/`，不要改这里的索引。
+> 配置全部在 `docs/agents/`，改配置改那里，不要改这里的索引。
+> **本项目用到哪些 skill、装没装**见 [docs/agents/skills.md](docs/agents/skills.md)
+> （2026-08-24 取代原 `skills/README.md`，消除两个 skills 位置）。
+> 以下三份供 mattpocock 系列工程 skill（`/to-tickets` `/triage` `/to-spec` `/wayfinder`
+> `/domain-modeling` 等）读取。
 
 ### Issue tracker
 

@@ -2,12 +2,12 @@
 #
 # 用法：
 #   scripts/argocd-devwindow.sh off        # ← 必须先做:否则 ArgoCD selfHeal 会杀掉开发容器
-#   cd backend && okteto up cart -n ecommerce
+#   cd backend && okteto up ecommerce-cart-deploy -n ecommerce
 #   cart:/workspace$ cd services/cart && go run cmd/server/main.go
-#   okteto down cart -n ecommerce
+#   okteto down ecommerce-cart-deploy -n ecommerce
 #   scripts/argocd-devwindow.sh on
 #
-# 机制:把集群里 `cart` Deployment 的容器镜像换成下面的 dev 镜像、command 换成 sleep,
+# 机制:把集群里 `ecommerce-cart-deploy` Deployment 的容器镜像换成下面的 dev 镜像、command 换成 sleep,
 # 并建立 Mac ↔ Pod 双向文件同步。Pod 的**其余部分原封不动** ——
 # env(DEPLOYMENT_MODE=pre / CONFIG_SOURCE_FILE)、Secret 只读挂载、db-ca-cert、
 # securityContext(runAsUser 1000 / runAsNonRoot)、Pod IP 与集群 DNS 全部继承。
@@ -15,10 +15,10 @@
 #
 # 目前只声明 cart 一个目标。铺开前先在它身上跑通,别一次写 10 份。
 dev:
-  # ⚠️ key 必须与集群里的 Deployment 名逐字一致(ns=ecommerce 下就叫 cart)。
+  # ⚠️ key 必须与集群里的 Deployment 名逐字一致(ns=ecommerce 下叫 ecommerce-cart-deploy,不是 cart)。
   # 历史教训:此前 11 份 okteto.yaml 的 key 全是 `connect-example-go`(旧项目身份),
   # 集群里根本没有这个 Deployment,okteto up 只会报找不到。
-  cart:
+  ecommerce-cart-deploy:
     # 官方镜像即可,不必自建:
     #   - golang 官方镜像把 GOPATH(/go) 设成 1777,uid 1000 能写 —— 满足 Pod 的 runAsUser 1000;
     #   - 用 Debian 变体而非 -alpine,因为下面 command 是 bash(alpine 只有 ash)。

@@ -7,7 +7,8 @@ description: 技术选型与现状盘点：「上游已死」类结论定稿前�
 # 技术选型：上游状态类结论的盘点纪律
 
 > **触发事故（2026-08-20，Silo）**：技术雷达 §10.6 以「MinIO 上游归档、无人修 CVE、风险已兑现」定稿
-> MinIO→SeaweedFS 迁移，三轮异构对抗评审无一方发现：集群 node2 实跑镜像 `pgsty/minio`
+> MinIO→SeaweedFS 迁移，三轮异构对抗评审无一方发现：公网机 node2（阿里云 `node2`，
+> **是 VPS 主机名，不是集群节点**——集群节点叫 node101/102/103）实跑镜像 `pgsty/minio`
 > 正是社区延续分叉 Silo（`pgsty/silo`）的前身——分叉当时已存在 10 个月、专门回补上游停发的
 > CVE 修复、发布了 drop-in 迁移文档。复审记录见 [docs/TECH-RADAR.md](../../docs/TECH-RADAR.md) §10 复审附记。
 
@@ -36,6 +37,21 @@ Silo 收编 🟡 备选位、存量止血项待拍板；本文件固化下述规
    实测 stars / 推送时间 / release，不凭印象）。
 3. **社区回应**：搜 `<project> fork maintained / successor`。上游死亡后 3–12 个月是延续分叉
    出现的典型窗口；评审日期离上游死亡越近，越要主动搜。
+
+## 规则：新装的集群能力必须当场登记
+
+装进集群的东西**在安装那一刻**就要登记进 [`.service-matrix.yaml`](../../.service-matrix.yaml)
+和 [`docs/TECH-RADAR.md`](../../docs/TECH-RADAR.md)。不是「等用起来再说」——
+未登记的能力等于不存在：AI 每次都要现搜一遍，选型时会重复评估已经装好的东西，
+排查时会漏掉真正的依赖。
+
+**这条规则是被欠账逼出来的**。2026-08-24 实测发现下面十项都在集群里跑着，
+但两份清单里一个字都没有：
+
+`openbao`、`openfga`、`kyverno`、`keda`、Cilium Gateway API、`victoriametrics`、
+`spegel`、`external-secrets`、`cert-manager`、`argo-rollouts`。
+
+登记至少要写清：namespace、承担什么职责、谁依赖它、有没有对外入口（HTTPRoute/LB）。
 
 ## 边界：查到分叉 ≠ 采用分叉
 

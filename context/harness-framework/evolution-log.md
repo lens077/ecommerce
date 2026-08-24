@@ -39,7 +39,67 @@ description: harness 本身（硬规则/门禁/Agent 约束）每次改动的原
 
 倒序排列，最新的在最上面。
 
+> ⚠️ 排序有存量破损：2026-08-20 之后的几条历史条目掉在了文件末尾，没有按倒序归位。
+> 新增条目请仍然加在本行下方，不要跟着错。
+
 ---
+
+### 2026-08-24 删除整套 Frozen Nodes 冻结验收集机制
+
+- **改了什么**：删除 `.freeze/`、`scripts/freeze.sh`、`scripts/verify-freeze.sh`、
+  `.github/workflows/freeze-check.yml`、`.gitlab-ci.yml` 的 `freeze-check` job、
+  `.github/CODEOWNERS`（四条规则全是 freeze 相关，删完只剩注释，整份删除）；
+  AGENTS.md 锚点块去掉 `verify-freeze.sh --all` 一行，并改口称
+  `verify-context.sh` 才是 main 上唯一必需的 CI 检查。
+- **为什么**：这道门禁从建立起就没有数据。`.freeze/` 里只有 `README.md`，一组冻结集都没有，
+  于是 `verify-freeze.sh --all` 无条件返回 rc=0。机制、两侧 CI 接线、CODEOWNERS 保护全都正确，
+  唯独缺「考题」本身——而 AGENTS.md 却把它写成 main 上唯一必需的检查。
+  留着一道恒绿的门禁比没有门禁更坏：它提供虚假的安全感，让人以为验收集受保护。
+  要么补一组真实冻结集，要么整套删掉；用户选了后者。
+- **触发事故**：2026-08-24 的环境漂移审计中直接执行 `scripts/verify-freeze.sh --all`，
+  输出「`.freeze/` 下暂无冻结集,跳过(OK)」且 rc=0。回查 git 历史，该机制 2026-08-07 建立，
+  **十七天里从未冻结过任何一组测试**。同一轮审计还发现另一个同构问题：
+  `scripts/argocd-devwindow.sh` 守护的 ArgoCD Application 根本不存在。
+  两者是同一种失效——**门禁的存在性被当成了门禁的有效性**。
+- **怎么验证的**：删除后 `scripts/verify-context.sh` 仍绿（rc=0）、
+  `go test ./structcheck/...` 仍绿；`grep -rn 'freeze' --include='*.yml' --include='*.sh'`
+  在 `.github/`、`scripts/`、`.gitlab-ci.yml` 中零命中；`context/team/runbook.md` 与
+  `graph-engineering.md` 的冻结小节同步删除，链接门禁未报断链。
+  判定这类失效的通用方法已写进 [self-refinement.md](self-refinement.md) 的「教训存档」：
+  **要验的不是「门禁装了吗」，而是「它红过吗」。**
+
+### 2026-08-24 规则与真实环境重新对齐（control-tower 接管、GitOps 断线）
+
+- **改了什么**：AGENTS.md 硬规则 4 补明 Config Center 由同级仓 control-tower 承载；
+  反直觉约定新增两条（网关与配置中心都不在本仓、GitOps 当前是断的），删除旧的
+  okteto/selfHeal 无条件表述；`.service-matrix.yaml` 更正 helm/deploy 两条部署路径的角色、
+  redis 回滚路径、Kafka 残留、旧网关目录、不存在的 `192.168.3.202`，并删掉与自身
+  `config_validation` 段自相矛盾的 known_gap；`scripts/argocd-devwindow.sh` 从
+  「AppProject 不存在就 die」改为「零 Application 就诚实空转 exit 0」；
+  `argocd-app.yml` 关掉 `automated` 并加顶部告警；删除本仓 `gateway/` 目录与 `gateway` 远端；
+  `.claude/settings.local.json` 权限白名单 20 → 8 条；`skills/README.md` 并入
+  `docs/agents/skills.md`；`frontend.yml` 删掉两个必红的构建 job。
+- **为什么**：规则文件是 AI 每轮的行为基线，其中的过期事实不是「文档陈旧」而是
+  **主动误导**——AI 会照着不存在的地址、不存在的存储、不存在的门禁去执行。
+  尤其 `runbook.md` 曾写「凭据只在 Consul KV」，与 AGENTS.md 硬规则 4 直接冲突，
+  而 runbook 是 agent 最先读的那份。
+- **触发事故**：2026-08-24 全面审计发现两条**照做就会失败**的命令：
+  ① `scripts/argocd-devwindow.sh off`（okteto 内环的第一条命令）因 AppProject 不存在
+  直接 `exit 1`，照文档做的人卡在入口还以为是自己环境坏了；
+  ② `node-graceful-shutdown.md` 的验证循环写 `for node in node1 node2`，
+  而真实节点是 node101/102/103，命令必然报错。
+  同时发现 `helm/values.yaml` 钉着 `1.4.0` 而集群实跑 `:dev`，
+  且 chart 渲染出的资源名与标签方案与集群完全不同——若照原计划 apply
+  `argocd-app.yml`（`prune: true` + `selfHeal: true`），会并排起一套 1.4.0 影子服务，
+  且因 chart 里 `CONSUL_ENABLED=true`，影子 pod 会注册进 Consul 并被
+  control-tower 网关解析到，**把真实流量导过去**。这是本轮唯一被拦下的线上事故风险。
+- **怎么验证的**：所有更正都以实测为准而非文档推断——`kubectl get applications -A`
+  返回 No resources found、`kubectl get ns redis` 返回 NotFound、全集群 grep
+  strimzi/kafka 零命中、逐个 Pod 核对 `config-center` ns 跑的是
+  `control-tower-config:sha-a27f90a`。改完 `scripts/verify-context.sh` 绿、
+  `go test ./structcheck/...` 绿、`shellcheck scripts/argocd-devwindow.sh` 无告警。
+  影子服务风险用 `helm template` 渲染后与 `kubectl get deploy/svc -o json` 逐项比对确认。
+  完整实测记录见 `.scratch/env-resync/ground-truth.md`。
 
 ### 2026-08-18 lint-baseline 采集管道滤掉 go 模块下载噪音
 

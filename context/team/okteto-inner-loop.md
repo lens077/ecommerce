@@ -19,18 +19,38 @@ description: 内环开发用 okteto up 在集群身份下跑代码——什么�
 | 验配置/Secret/权限/网络身份在集群里的行为 | **`okteto up`** |
 
 **判据一句话**：只有当问题的成因是**集群身份**（配置来源 pre.yml、Secret 0400 可读性、
-uid 1000、Pod IP、集群 DNS、amd64）时才用它。其余场景本地更快。
+uid 1000、Pod IP、集群 DNS）时才用它。其余场景本地更快。
+（架构不构成理由：集群三个节点与开发 Mac 同为 arm64。）
 
 ## 二、硬约束
 
-1. **`okteto up` 之前必须先 `scripts/argocd-devwindow.sh off`**，之后必须 `on`。
-   okteto 会新建 `<svc>-okteto` Deployment 并把原 Deployment 缩到 0——ArgoCD 的 selfHeal
-   会把两处漂移都同步回去，开发容器被无声干掉。**忘了 `on` 更糟**：GitOps 静默失效。
+1. **当 ArgoCD 纳管本仓 Application 时**，`okteto up` 之前必须先
+   `scripts/argocd-devwindow.sh off`、之后必须 `on`。okteto 会新建 `<svc>-okteto`
+   Deployment 并把原 Deployment 缩到 0——selfHeal 会把两处漂移都同步回去，开发容器被
+   无声干掉；**忘了 `on` 更糟**：GitOps 静默失效且无任何报错。
+
+   动手前先自检当前适不适用：
+
+   ```bash
+   kubectl get applications -A     # No resources found ⇒ 无 selfHeal，本条不适用
+   ```
+
+   ⚠️ **2026-08-24 实测：当前不适用。** 集群零 Application、零 ApplicationSet，
+   AppProject 只有 `default`，仓库根三个 `argocd-*.yml` 从未 apply。此时
+   `scripts/argocd-devwindow.sh off` 会在前置检查处**直接报错退出**（不是空转），
+   跳过即可——不要为了让脚本过而手工去建 AppProject。
+
+   接回 GitOps 之前**先读 `argocd-app.yml` 顶部的告警**：`helm/` 那套 chart 与集群实况
+   在资源名、标签方案、镜像 tag 三处都对不上，直接开 selfHeal 会起一整套影子服务并经
+   Consul 抢走网关流量。GitOps 接回来后本条自动恢复效力，**接线的人负责删掉这段状态注记**。
 2. **不要把开发窗口写进 `argocd-proj.yml`**——"临时暂停"一旦进 Git 就变成永久状态。
 3. **不要改 securityContext 去当 root**。保留 uid 1000 正是为了让"Secret 读不到"当场暴露；
    改成 root 等于把要验的东西关掉。GOCACHE 权限问题用 `HOME=/go` + `GOCACHE=/go/.cache/go-build` 解决。
-4. **dev key 必须与集群里的 Deployment 名逐字一致**。历史教训：11 份 okteto.yaml 的 key
-   全是 `connect-example-go`（旧项目身份），集群里没这个 Deployment，`up` 只会报找不到。已删除。
+4. **dev key 必须与集群里的 Deployment 名逐字一致**。集群里的名字是
+   `ecommerce-<svc>-deploy`（例：`ecommerce-cart-deploy`），**不是** `cart`。
+   历史教训：11 份 okteto.yaml 的 key 全是 `connect-example-go`（旧项目身份），
+   集群里没这个 Deployment，`up` 只会报找不到。2026-08-24 复查时 `backend/okteto.yaml`
+   仍写着 `cart`——同一个坑换了个名字又踩一遍，已改回 `ecommerce-cart-deploy`。
 5. **不要一次给 10 个服务写 manifest**。上一批就是这么烂掉的：写完没人用，改名后集体过期。
    跑通一个再加下一个。
 6. **它不是测试环境**（打的是共享 pre 库，无数据隔离）。见 [`docs/TESTING.md`](../../docs/TESTING.md) §8.1。
@@ -41,7 +61,7 @@ uid 1000、Pod IP、集群 DNS、amd64）时才用它。其余场景本地更快
 
 | # | 必须 | 不这么做会怎样 |
 |---|---|---|
-| 1 | `dev:` 下的 key **等于集群 Deployment 名**（`kubectl get deploy -n ecommerce` 核对） | `okteto up` 报找不到目标。旧 11 份 manifest 全栽在这（key 是 `connect-example-go`） |
+| 1 | `dev:` 下的 key **等于集群 Deployment 名**——`ecommerce-cart-deploy`，不是 `cart`。**动手前先跑 `kubectl get deploy -n ecommerce` 核对** | `okteto up` 报找不到目标。旧 11 份 manifest 栽在这（key 是 `connect-example-go`），本仓 2026-08-24 又以 `cart` 栽了一次 |
 | 2 | `image` 版本 **等于 `backend/go.mod` 的 go 指令**（当前 `golang:1.26.5`），且用 Debian 变体 | 版本不符会触发 toolchain 自动下载；alpine 没有 bash，`command: bash` 起不来 |
 | 3 | `environment` 里有 `HOME=/go` + `GOCACHE=/go/.cache/go-build` | 默认 `HOME=/root`，uid 1000 写不进去 → 编译报 permission denied |
 | 4 | `environment` 里有 `SSL_CERT_DIR=/usr/share/ca-certificates/mozilla` | `db-ca-cert` 挂载替换了整个 `/etc/ssl/certs`，系统 CA 全没 → `go mod download` 全线 x509 失败 |

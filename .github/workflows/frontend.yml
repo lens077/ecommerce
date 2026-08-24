@@ -1,12 +1,20 @@
-name: Connect-example Frontend GitOps Deployment
+name: Frontend login smoke test
+
+# 2026-08-24:本 workflow 原名「Connect-example Frontend GitOps Deployment」,
+# 含 frontend-test / frontend-deploy 两个构建发布 job。它们已整体删除,原因是三处
+# 引用的东西根本不存在,于是**每个发布 tag 都必红**:
+#   - helm/charts/frontend/        —— 该目录不存在(helm/charts/ 下只有 10 个后端服务)
+#   - NAMESPACE: connect-example   —— 集群里没有这个 ns,前端与服务都在 ecommerce
+#   - sunmery/Manifest 外部仓 + connect-example/<dir>/argo.yaml
+#                                  —— 为一个不存在的 ArgoCD Application 改 targetRevision
+#   - secret HELM_REGISTRY_PASS    —— 自述「目前仓库里没有」
+# 前端镜像的构建发布路径待重建;重建前不要把这两个 job 抄回来,先确认上面四项。
+#
+# 保留下来的 smoke-login 是原文件里唯一能跑通的部分:它测的是**线上已部署**的那一份,
+# 而这条链路的坏法(CSP 头、Casdoor 应用配置、Pangolin 隧道)多半不由本仓提交引起,
+# 只在打 tag 时跑等于永远发现不了 —— 所以它走定时 + 手动,不挂在发版上。
 
 on:
-  push:
-    tags:
-      - '[0-9]+.[0-9]+.[0-9]+'
-  # 登录冒烟测试要能脱离发版单独跑：它测的是**线上已部署**的那一份，
-  # 而这条链路的坏法（CSP 头、Casdoor 应用配置、Pangolin 隧道）多半不是
-  # 由本仓库的提交引起的 —— 只在打 tag 时跑等于永远发现不了。
   workflow_dispatch:
     inputs:
       shop_url:
@@ -17,214 +25,15 @@ on:
     # 每天 03:17 UTC（北京时间 11:17）。刻意避开整点，别和全球的 cron 挤在一起。
     - cron: '17 3 * * *'
 
-# 共享环境变量
 env:
-  # 私有注册表URL。2026-08-19 由 harbor.apikv.com 改为 TCR，与线上实际跑的镜像对齐
-  # （集群里是 ccr.ccs.tencentyun.com/sumery/ecommerce-frontend）。
-  # 只填域名：镜像地址由 ${REGISTRY}/${REGISTER_USER}/${IMAGE_NAME} 拼出，
-  # 写成 ccr.ccs.tencentyun.com/sumery 会拼出重复的 sumery/sumery。
-  REGISTRY: ccr.ccs.tencentyun.com
-  # 仓库名称
-  REGISTER_USER: sumery
-
-  # Docker Hub 用户名
-  DOCKERHUB_USERNAME: lookeke
-
-  # 镜像名称。2026-08-19 由 connect-example-frontend 改为 ecommerce-frontend，
-  # 与线上实际部署的镜像一致（原名是上游示例项目留下的）。
-  IMAGE_NAME: ecommerce-frontend
-  # 版本，由标签推送决定
-  VERSION: ${{ github.ref_name }}
-
-  # Node.js 相关参数
   NODE_VERSION: 22
   FRONTEND_DIR: frontend
 
-  # Helm 仓库URL。**刻意与 REGISTRY 不同**：TCR 不支持 helm chart 存储，
-  # 所以 chart 仍推 harbor（2026-08-19 起 harbor 经 Pangolin 暴露，443 不带端口）。
-  # ⚠️ 需要 secret HELM_REGISTRY_PASS（harbor 机器人账号 rebot@github 的 token），目前仓库里没有。
-  HELM_REGISTRY: harbor.apikv.com
-  # Helm 仓库的用户名
-  HELM_REGISTRY_USER: rebot@github
-  # Helm 仓库的名称
-  HELM_REPO: sumery
-
-  # 部署应用的kubernetes 命名空间
-  NAMESPACE: connect-example
-
 jobs:
-  frontend-test:
-    # 只有打 tag 才构建发版。定时/手动触发只跑下面的 smoke-login。
-    if: startsWith(github.ref, 'refs/tags/')
-    runs-on: ubuntu-latest
-    defaults:
-      run:
-        shell: bash
-        working-directory: ${{ env.FRONTEND_DIR }}
-
-    steps:
-      - name: Checkout repository
-        uses: actions/checkout@v5
-
-      - name: Set up Node.js
-        uses: actions/setup-node@v6
-        with:
-          node-version: ">=${{ env.NODE_VERSION }}"
-
-      - name: Setup pnpm
-        uses: pnpm/action-setup@v4 # 使用 pnpm 官方 action
-        with:
-          version: latest # 建议指定一个最新的 pnpm 版本
-          run_install: false # 在下一步手动运行 pnpm install
-
-      - name: Set up QEMU
-        uses: docker/setup-qemu-action@v3
-
-      - name: Set up Docker Buildx
-        uses: docker/setup-buildx-action@v3
-
-      - name: Login to Docker Hub
-        uses: docker/login-action@v3
-        with:
-          username: ${{ env.DOCKERHUB_USERNAME }}
-          password: ${{ secrets.DOCKERHUB_TOKEN }}
-
-      # 2026-08-19: secret 名改为 TCR_*，这是仓库里实际存在的那两个；
-      # 原先写的 REGISTRY_USERNAME/REGISTRY_PASSWORD 从未配置过，这一步一直是拿空值登录。
-      - name: Login to Private Registry
-        run: echo ${{ secrets.TCR_PASSWORD }} | docker login ${{ env.REGISTRY }} --username ${{ secrets.TCR_USERNAME }} --password-stdin
-
-      - name: Login to GitHub Container Registry
-        uses: docker/login-action@v3
-        with:
-          registry: ghcr.io
-          username: ${{ github.repository }}
-          password: ${{ secrets.MANIFEST_REPO_PAT }}
-
-      - name: Build and push Frontend Image
-        uses: docker/build-push-action@v6
-        with:
-          context: ${{ env.FRONTEND_DIR }}
-          file: ${{ env.FRONTEND_DIR }}/Dockerfile
-          platforms: linux/amd64,linux/arm64
-          push: true
-          cache-from: type=gha,scope=${{ env.FRONTEND_DIR }}-build
-          cache-to: type=gha,scope=${{ env.FRONTEND_DIR }}-build,mode=max
-          build-args: |
-            VERSION=${{ env.VERSION }}
-          tags: |
-            ${{ env.DOCKERHUB_USERNAME }}/${{ env.IMAGE_NAME }}:${{ env.VERSION }}
-            ${{ env.DOCKERHUB_USERNAME }}/${{ env.IMAGE_NAME }}:latest
-            ghcr.io/${{ github.repository }}/${{ env.IMAGE_NAME }}:${{ env.VERSION }}
-            ghcr.io/${{ github.repository }}/${{ env.IMAGE_NAME }}:latest
-            ${{ env.REGISTRY }}/${{ env.REGISTER_USER }}/${{ env.IMAGE_NAME }}:${{ env.VERSION }}
-            ${{ env.REGISTRY }}/${{ env.REGISTER_USER }}/${{ env.IMAGE_NAME }}:latest
-
-  frontend-deploy:
-    needs: frontend-test
-    if: startsWith(github.ref, 'refs/tags/')
-    runs-on: ubuntu-latest
-    permissions:
-      contents: write # 允许对源仓库进行提交
-      pull-requests: write
-    defaults:
-      run:
-        shell: bash
-    steps:
-      - name: Checkout Current Repository (for Helm Chart)
-        uses: actions/checkout@v5
-        with:
-          ref: ${{ github.ref_name }}
-          submodules: 'false'
-
-      
-      # 更新 Chart 版本和镜像标签
-      - name: Update Frontend Chart Version and Image Tag
-        run: |
-          yq e '.version = "${{ env.VERSION }}"' -i helm/charts/${{ env.FRONTEND_DIR }}/Chart.yaml
-          yq e '.image.tag = "${{ env.VERSION }}"' -i helm/charts/${{ env.FRONTEND_DIR }}/values.yaml
-
-      # 打包和发布 Helm Chart
-      - name: Bump Chart Version and Package
-        run: |
-          helm dependency update helm/charts/${{ env.FRONTEND_DIR }}/
-          helm package helm/charts/${{ env.FRONTEND_DIR }}/ -d chart-packages/
-
-      - name: Publish Chart Package
-        run: |
-          echo "${{ secrets.HELM_REGISTRY_PASS }}" | helm registry login ${{ env.HELM_REGISTRY }} -u ${{ env.HELM_REGISTRY_USER }} --password-stdin
-          # 推送到 私有注册表
-          helm push chart-packages/*-${{ env.VERSION }}.tgz oci://${{ env.HELM_REGISTRY }}/${{ env.HELM_REPO }}
-          
-          echo "${{ secrets.MANIFEST_REPO_PAT }}" | helm registry login ghcr.io -u ${{ github.actor }} --password-stdin
-          # 推送到 GitHub Container Registry(ghcr.io)
-          helm push chart-packages/*-${{ env.VERSION }}.tgz oci://ghcr.io/${{ github.repository }}
-
-      
-      # 提交 Chart 文件更改到源仓库
-      - name: Auto Commit Chart Changes
-        uses: stefanzweifel/git-auto-commit-action@v5
-        with:
-          #branch: '${{ github.head_ref }}'
-          branch: main
-          skip_dirty_check: true
-          commit_message: "CI: Auto update ${{ env.FRONTEND_DIR }} chart version to ${{ env.VERSION }} [skip ci]"
-          file_pattern: "helm/charts/${{ env.FRONTEND_DIR }}/*"
-          commit_user_name: "github-actions[bot]"
-          commit_user_email: "github-actions[bot]@users.noreply.github.com"
-          
-      # 检出 Manifest 配置仓库
-      - name: Checkout Manifest Repository
-        uses: actions/checkout@v5
-        with:
-          repository: sunmery/Manifest
-          token: ${{ secrets.MANIFEST_REPO_PAT }}
-          ref: ${{ github.event.repository.default_branch }}
-
-      # 更新 ArgoCD Application配置文件
-      - name: Update ArgoCD Configs File
-        run: |
-          export NEW_CHART_VERSION="${{ env.VERSION }}"
-          MANIFEST_FILE="connect-example/${{ env.FRONTEND_DIR }}/argo.yaml"
-
-          which yq || sudo apt-get install -y yq
-          
-          echo "Updating $MANIFEST_FILE with targetRevision: $NEW_CHART_VERSION"
-
-          # 更新 spec.source.targetRevision 字段 (OCI Chart 版本)
-          yq e '.spec.source.targetRevision = env(NEW_CHART_VERSION)' -i $MANIFEST_FILE
-
-          cat $MANIFEST_FILE
-
-      # 提交并将更改推送到 Manifest 仓库
-      - name: Commit and Push Manifest Changes
-        working-directory: connect-example
-        run: |
-          git config user.email "github-actions[bot]@users.noreply.github.com"
-          git config user.name "github-actions[bot]"
-          
-          git add ${{ env.FRONTEND_DIR }}/argo.yaml
-          
-          # 仅在有实际更改时提交
-          git diff --cached --exit-code || git commit -m "CI: Auto update ${{ env.FRONTEND_DIR }} chart version to ${{ env.VERSION }} [skip ci]"
-          git push
-
-  # ---------------------------------------------------------------------------
-  # 线上登录链路冒烟。对着**已经部署好**的站点跑真浏览器，不构建、不部署。
-  #
-  # 为什么单独一个 job 而不是塞进 frontend-test：
-  #   1. 它测的是线上那一份，放构建之前跑等于测上一个版本，放构建之后又要等
-  #      ArgoCD 同步完（时长不可控）—— 两头都不对，所以干脆解耦，靠定时 + 手动跑；
-  #   2. 它依赖外部基础设施（Casdoor、Pangolin 隧道、网关），红了不一定是代码的锅，
-  #      不该卡住发版流水线。
-  #
   # 需要两个 secret：CASDOOR_E2E_USER / CASDOOR_E2E_PASS。**没配就整体跳过**，
   # 不是失败 —— 否则 fork 和没配密钥的仓库会永远挂一条红。
-  # ---------------------------------------------------------------------------
   smoke-login:
     runs-on: ubuntu-latest
-    # 打 tag 时不跑（那时新版本还没同步上去），只在定时与手动触发时跑
-    if: github.event_name == 'schedule' || github.event_name == 'workflow_dispatch'
     defaults:
       run:
         shell: bash
