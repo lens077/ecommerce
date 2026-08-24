@@ -11,7 +11,6 @@
 import { Route as rootRouteImport } from './routes/__root'
 import { Route as IndexRouteImport } from './routes/index'
 import { Route as R404RouteImport } from './routes/404'
-import { Route as CallbackIndexRouteImport } from './routes/callback/index'
 import { Route as CartIndexRouteImport } from './routes/cart/index'
 import { Route as CategoriesIndexRouteImport } from './routes/categories/index'
 import { Route as CheckoutIndexRouteImport } from './routes/checkout/index'
@@ -30,11 +29,6 @@ const IndexRoute = IndexRouteImport.update({
 const R404Route = R404RouteImport.update({
   id: '/404',
   path: '/404',
-  getParentRoute: () => rootRouteImport,
-} as any)
-const CallbackIndexRoute = CallbackIndexRouteImport.update({
-  id: '/callback/',
-  path: '/callback/',
   getParentRoute: () => rootRouteImport,
 } as any)
 const CartIndexRoute = CartIndexRouteImport.update({
@@ -89,7 +83,6 @@ export interface FileRoutesByFullPath {
   '/orders/$orderId': typeof OrdersOrderIdRoute
   '/payment/result': typeof PaymentResultRoute
   '/product/$spuCode': typeof ProductSpuCodeRoute
-  '/callback/': typeof CallbackIndexRoute
   '/cart/': typeof CartIndexRoute
   '/categories/': typeof CategoriesIndexRoute
   '/checkout/': typeof CheckoutIndexRoute
@@ -103,7 +96,6 @@ export interface FileRoutesByTo {
   '/orders/$orderId': typeof OrdersOrderIdRoute
   '/payment/result': typeof PaymentResultRoute
   '/product/$spuCode': typeof ProductSpuCodeRoute
-  '/callback': typeof CallbackIndexRoute
   '/cart': typeof CartIndexRoute
   '/categories': typeof CategoriesIndexRoute
   '/checkout': typeof CheckoutIndexRoute
@@ -118,7 +110,6 @@ export interface FileRoutesById {
   '/orders/$orderId': typeof OrdersOrderIdRoute
   '/payment/result': typeof PaymentResultRoute
   '/product/$spuCode': typeof ProductSpuCodeRoute
-  '/callback/': typeof CallbackIndexRoute
   '/cart/': typeof CartIndexRoute
   '/categories/': typeof CategoriesIndexRoute
   '/checkout/': typeof CheckoutIndexRoute
@@ -134,7 +125,6 @@ export interface FileRouteTypes {
     | '/orders/$orderId'
     | '/payment/result'
     | '/product/$spuCode'
-    | '/callback/'
     | '/cart/'
     | '/categories/'
     | '/checkout/'
@@ -148,7 +138,6 @@ export interface FileRouteTypes {
     | '/orders/$orderId'
     | '/payment/result'
     | '/product/$spuCode'
-    | '/callback'
     | '/cart'
     | '/categories'
     | '/checkout'
@@ -162,7 +151,6 @@ export interface FileRouteTypes {
     | '/orders/$orderId'
     | '/payment/result'
     | '/product/$spuCode'
-    | '/callback/'
     | '/cart/'
     | '/categories/'
     | '/checkout/'
@@ -177,7 +165,6 @@ export interface RootRouteChildren {
   OrdersOrderIdRoute: typeof OrdersOrderIdRoute
   PaymentResultRoute: typeof PaymentResultRoute
   ProductSpuCodeRoute: typeof ProductSpuCodeRoute
-  CallbackIndexRoute: typeof CallbackIndexRoute
   CartIndexRoute: typeof CartIndexRoute
   CategoriesIndexRoute: typeof CategoriesIndexRoute
   CheckoutIndexRoute: typeof CheckoutIndexRoute
@@ -200,13 +187,6 @@ declare module '@tanstack/react-router' {
       path: '/404'
       fullPath: '/404'
       preLoaderRoute: typeof R404RouteImport
-      parentRoute: typeof rootRouteImport
-    }
-    '/callback/': {
-      id: '/callback/'
-      path: '/callback'
-      fullPath: '/callback/'
-      preLoaderRoute: typeof CallbackIndexRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/cart/': {
@@ -281,7 +261,6 @@ const rootRouteChildren: RootRouteChildren = {
   OrdersOrderIdRoute: OrdersOrderIdRoute,
   PaymentResultRoute: PaymentResultRoute,
   ProductSpuCodeRoute: ProductSpuCodeRoute,
-  CallbackIndexRoute: CallbackIndexRoute,
   CartIndexRoute: CartIndexRoute,
   CategoriesIndexRoute: CategoriesIndexRoute,
   CheckoutIndexRoute: CheckoutIndexRoute,

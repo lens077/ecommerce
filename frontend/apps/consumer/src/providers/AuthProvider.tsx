@@ -19,7 +19,7 @@ import {
 import { onAuthError } from "@ecommerce/api";
 import { isTauri } from "@ecommerce/tauri";
 import { clearSessionId, setSessionId } from "@ecommerce/utils";
-import { clearAccount } from "@/store/users";
+import { clearAccount, setAccount } from "@/store/users";
 
 // 1. 只存放认证数据的 Context
 const AuthStateContext = createContext<
@@ -44,6 +44,22 @@ export const AuthProvider: React.FC<{ children: React.ReactNode; router: any }> 
   const [roles, setRoles] = useState<string[]>([]);
   const [name, setName] = useState<string | null>(null);
 
+  // 身份落地：组件状态 + 用户 store（顶栏读它）。
+  // P4 起 store 不再由令牌订阅填充——浏览器已经没有令牌了。
+  const applyIdentity = React.useCallback(
+    (id: { authenticated: boolean; roles?: string[]; name?: string }) => {
+      setIsAuthenticated(id.authenticated);
+      setRoles(id.roles ?? []);
+      setName(id.name ?? null);
+      if (id.authenticated && id.name) {
+        setAccount({ name: id.name, displayName: id.name });
+      } else if (!id.authenticated) {
+        clearAccount();
+      }
+    },
+    [],
+  );
+
   // 🔐 登录
   const login = React.useCallback(() => {
     // 桌面端不能硬跳转：主窗口的源是 tauri://localhost，跳出去 Casdoor 就回不来了。
@@ -59,10 +75,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode; router: any }> 
           // 所以不再需要 /callback 那步兑换——PKCE 在桌面端也退场了。
           const { code } = await openCasdoorLogin(buildNativeLoginUrl(redirectUri), redirectUri);
           setSessionId(code);
-          const id = await fetchIdentity();
-          setIsAuthenticated(id.authenticated);
-          setRoles(id.roles ?? []);
-          setName(id.name ?? null);
+          applyIdentity(await fetchIdentity());
         } catch (err) {
           if (err instanceof OauthCancelledError) return;
           console.error("[Auth] 桌面端登录失败:", err);
@@ -99,12 +112,8 @@ export const AuthProvider: React.FC<{ children: React.ReactNode; router: any }> 
   // Web 端凭 cookie，桌面端凭内存里的会话 id（重启后为空 → 判定未登录，需重新登录；
   // 要免登录应把会话 id 存 OS keychain，见 sessionStore.ts 的取舍说明）。
   useEffect(() => {
-    void fetchIdentity().then((id) => {
-      setIsAuthenticated(id.authenticated);
-      setRoles(id.roles ?? []);
-      setName(id.name ?? null);
-    });
-  }, []);
+    void fetchIdentity().then(applyIdentity);
+  }, [applyIdentity]);
 
   // 📡 集中式拦截：监听来自 packages/api 的 401 信号。
   // 两端同一处理：续期是网关的事（它在请求链路上顺手做），这里收到 401 就意味着
