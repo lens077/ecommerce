@@ -14,7 +14,16 @@ export const env = createEnv({
 
   client: {
     VITE_APP_TITLE: z.string().min(1).optional(),
-    VITE_GATEWAY_URL: z.url().optional(),
+    // 允许两种形态：绝对 URL（prod 直连网关域名），或以 "/" 开头的同源前缀
+    // （dev 经 vite proxy 走同源，见 vite.config.ts；BFF 会话 cookie 是
+    // SameSite=Lax，跨站不会被带上，所以 dev 必须同源）。
+    VITE_GATEWAY_URL: z
+      .union([z.url(), z.string().regex(/^\/[^/]/, "同源前缀须以单个 / 开头，如 /api")])
+      .optional(),
+    // BFF 端点基地址；留空即与前端同源。
+    VITE_BFF_BASE_URL: z
+      .union([z.url(), z.string().regex(/^\/[^/]/, "同源前缀须以单个 / 开头")])
+      .optional(),
   },
 
   /**

@@ -1,14 +1,25 @@
 // src/providers/AuthProvider.tsx
+//
+// 两条并存的登录路径（control-tower ADR-0002 / bff-migration.md）：
+//
+//   Web 端  → **BFF 会话**：网关跑完 OAuth，令牌全留服务端，浏览器只有一枚 httpOnly
+//             session id。前端不存令牌、不做续期、不解析 JWT——登录态问 /auth/me。
+//   桌面端  → **保留 PKCE + bearer**：Tauri 主窗口的源是 tauri://localhost，拿不到
+//             浏览器 cookie，所以整套 pkce/tokenStore 仍在为它服务。切换见 P3。
+//
+// 网关同时接受两种凭据（cookie ∥ bearer），所以两条路径可以长期并存、互不影响。
 import React, { createContext, useContext, useState, useEffect } from "react";
 import {
   DESKTOP_REDIRECT_URI,
   WEB_REDIRECT_URI,
-  configureSession,
+  bffLogout,
   buildDesktopLoginUrl,
   buildLogoutUrl,
-  restoreSession,
+  configureSession,
+  fetchIdentity,
   renewSession,
-  startLogin,
+  restoreSession,
+  startBffLogin,
   stopRenew,
 } from "@ecommerce/configs";
 import { onAuthError } from "@ecommerce/api";
@@ -17,7 +28,9 @@ import { clearTokens, getIdToken, hasToken, subscribeToken } from "@ecommerce/ut
 import { clearAccount } from "@/store/users";
 
 // 1. 只存放认证数据的 Context
-const AuthStateContext = createContext<{ isAuthenticated: boolean } | undefined>(undefined);
+const AuthStateContext = createContext<
+  { isAuthenticated: boolean; roles: string[]; name: string | null } | undefined
+>(undefined);
 
 // 2. 只存放操作方法的 Context
 interface AuthActionsContextType {
@@ -27,28 +40,26 @@ interface AuthActionsContextType {
 }
 const AuthActionsContext = createContext<AuthActionsContextType | undefined>(undefined);
 
-// 告诉会话模块用哪个 redirect_uri —— 授权与兑换必须逐字一致
+// 告诉会话模块用哪个 redirect_uri —— 授权与兑换必须逐字一致（仅桌面端 PKCE 用到）
 configureSession(WEB_REDIRECT_URI);
 
 export const AuthProvider: React.FC<{ children: React.ReactNode; router: any }> = ({
   children,
   router,
 }) => {
-  // 令牌只存内存（防 XSS，见 packages/utils/src/tokenStore.ts），
-  // 所以刷新页面后这里必然是 false，由下面的冷启动恢复接回来。
-  const [isAuthenticated, setIsAuthenticated] = useState(hasToken());
+  // 桌面端令牌只存内存，刷新即空；Web 端压根没有令牌，登录态由 /auth/me 决定。
+  const [isAuthenticated, setIsAuthenticated] = useState(() => (isTauri() ? hasToken() : false));
+  const [roles, setRoles] = useState<string[]>([]);
+  const [name, setName] = useState<string | null>(null);
 
-  // 🔐 编写完整的 Casdoor 登录逻辑
+  // 🔐 登录
   const login = React.useCallback(() => {
-    // 通过 router.state.location 拿到 TanStack Router 当前最新的路由路径和参数
-    // 拼接成完整的 Href，以便登录后重定向回来（实现无缝回跳）
-    const currentHref = window.location.origin + router.state.location.href;
-    localStorage.setItem("redirect_after_login", currentHref);
-
     // 桌面端不能硬跳转：主窗口的源是 tauri://localhost，跳出去 Casdoor 就回不来了。
     // 改为开一个子窗口加载登录页，由 Rust 侧拦截回调地址把 code/state 送回来，
     // 再手动导航到 /callback 复用既有的兑换逻辑。
     if (isTauri()) {
+      const currentHref = window.location.origin + router.state.location.href;
+      localStorage.setItem("redirect_after_login", currentHref);
       void (async () => {
         const { openCasdoorLogin, OauthCancelledError } = await import("@ecommerce/tauri/auth");
         try {
@@ -69,65 +80,81 @@ export const AuthProvider: React.FC<{ children: React.ReactNode; router: any }> 
       return;
     }
 
-    // Web 端：PKCE 授权跳转（生成 verifier + challenge 后整页跳 Casdoor）
-    void startLogin(WEB_REDIRECT_URI);
+    // Web 端：整页跳到网关，由它跑完 OAuth 再跳回来。
+    // 回跳目标用相对路径，网关只接受相对路径或白名单来源（防开放重定向）。
+    startBffLogin(router.state.location.href);
   }, [router]);
 
-  // 🔓 登出逻辑
+  // 🔓 登出
   const logout = React.useCallback(() => {
-    // ⚠️ 顺序：先取 id_token，再 clearTokens()。Casdoor 的 end_session_endpoint
-    // 强制要求 id_token_hint，清完就拿不到了。
-    const idToken = getIdToken();
-    stopRenew(); // 先停掉定时续期，否则刚清完又被续回来
-    clearTokens();
-    localStorage.removeItem("redirect_after_login");
-    // clearTokens() 已经会经令牌订阅清空 Store（见 store/users.ts），这里再显式写一次：
-    // 登出是唯一一条「必须清干净」的路径，不该依赖另一个模块的副作用来保证。
-    clearAccount();
-    setIsAuthenticated(false);
+    if (isTauri()) {
+      // ⚠️ 顺序：先取 id_token，再 clearTokens()。Casdoor 的 end_session_endpoint
+      // 强制要求 id_token_hint，清完就拿不到了。
+      const idToken = getIdToken();
+      stopRenew(); // 先停掉定时续期，否则刚清完又被续回来
+      clearTokens();
+      localStorage.removeItem("redirect_after_login");
+      clearAccount();
+      setIsAuthenticated(false);
+      // 结束 Casdoor 侧会话，否则下次静默续期又把用户"登"回来。
+      window.location.assign(buildLogoutUrl(`${window.location.origin}/`, idToken));
+      return;
+    }
 
-    // 最后一步：结束 Casdoor 侧的会话。
-    // 只做上面那些「本地清理」是不够的 —— Casdoor 开着「保持登录会话」+「自动登录」，
-    // 它那侧的 casdoor_session_id 还在，下次 restoreSession() 会 prompt=none 静默换回令牌，
-    // 用户看到的就是「登出后一刷新又登录了」。
-    // 用整页跳转而不是 router.navigate：会话 cookie 是 HttpOnly + SameSite=Lax，
-    // 只有顶级导航才会带上它（fetch 被 Casdoor 的 CORS 403 挡掉，iframe 带不上 cookie）。
-    // 跳转本身就把用户送回首页，所以这里不再 router.navigate。
-    window.location.assign(buildLogoutUrl(`${window.location.origin}/`, idToken));
+    // Web 端：一次 POST 就够——网关删会话（即时生效）并清 cookie。
+    // Casdoor 侧会话是否一并结束由网关决定，前端不再拼 end_session_endpoint。
+    void bffLogout().finally(() => {
+      clearAccount();
+      setIsAuthenticated(false);
+      setRoles([]);
+      setName(null);
+      window.location.assign("/");
+    });
   }, []);
 
-  // ❄️ 冷启动恢复：令牌只在内存，刷新页面就没了。
-  // 靠 Casdoor 的会话 Cookie 静默换一份新的（prompt=none，隐藏 iframe，无跳转闪烁）。
-  // 失败不是错误 —— 只说明当前确实未登录。
+  // ❄️ 冷启动：确定当前登录态
   useEffect(() => {
-    // callback 页面自己会完成兑换，不要和它抢（两边同时兑换会互相作废 verifier）。
-    // ⚠️ 用 window.location 而不是 router.state.location：后者要等 TanStack Router
-    // 初始化完才是真值，effect 首跑时可能还是 "/"，于是这道防护形同虚设 ——
-    // restoreSession() 照跑，silentRenew 的 buildAuthorizeUrl 覆盖掉 startLogin 刚写的
-    // state/verifier，顶层 exchangeCode 就报 "OAuth state 校验失败"。
-    // 2026-08-19 本地实测复现：Casdoor 已成功回跳带 code，但兑换必失败。
-    // Casdoor 开了「保持登录会话」后 silentRenew 更容易成功，这个竞态被放大。
-    if (window.location.pathname.startsWith("/callback")) return;
-    void restoreSession().then((ok) => setIsAuthenticated(ok));
+    if (isTauri()) {
+      // 桌面端：令牌只在内存，刷新就没了，靠 Casdoor 会话 Cookie 静默换一份新的。
+      // callback 页面自己会完成兑换，不要和它抢（两边同时兑换会互相作废 verifier）。
+      if (window.location.pathname.startsWith("/callback")) return;
+      void restoreSession().then((ok) => setIsAuthenticated(ok));
+      return;
+    }
+    // Web 端：问网关。没有令牌可恢复，也没有 iframe 静默续期那套竞态。
+    void fetchIdentity().then((id) => {
+      setIsAuthenticated(id.authenticated);
+      setRoles(id.roles ?? []);
+      setName(id.name ?? null);
+    });
   }, [router]);
 
-  // 令牌被续期/清空时同步组件状态，避免 UI 与实际登录态脱节
-  useEffect(() => subscribeToken((tk) => setIsAuthenticated(tk !== null)), []);
+  // 桌面端令牌被续期/清空时同步组件状态；Web 端没有令牌，无需订阅。
+  useEffect(() => {
+    if (!isTauri()) return;
+    return subscribeToken((tk) => setIsAuthenticated(tk !== null));
+  }, []);
 
-  // 📡 集中式拦截：监听来自 packages/api 的 Axios/Connect-Web 401 信号
+  // 📡 集中式拦截：监听来自 packages/api 的 401 信号
   useEffect(() => {
     const unsubscribe = onAuthError((err) => {
-      // 如果当前在 callback 页面，跳过自动重定向
-      // callback 页面的 signIn 调用如果返回 Unauthenticated，会先触发 emitAuthError，
-      // 如果不跳过，login() 会在 callback 的 catch 块处理之前就重定向到 Casdoor，导致登录死循环
       if (router.state.location.pathname.startsWith("/callback")) {
         console.warn("[Auth] 在 callback 页面捕获到认证错误，跳过自动重定向:", err);
         return;
       }
 
-      // 先尝试静默续期再决定是否踢人：令牌到期是常态（而且现在只存内存，
-      // 切回一个放置很久的标签页必然过期），能续上就不该打断用户。
-      // 续不上才说明 Casdoor 侧会话也没了，这时跳登录才是对的。
+      if (!isTauri()) {
+        // Web 端：续期是网关的事（它在请求链路上顺手做）。这里收到 401 就意味着
+        // 会话真的没了（过期/被撤销/被登出），前端再"续"一次既做不到也没意义——
+        // 直接跳登录。这也去掉了旧实现里"401 → 静默续期 → 竞态"那条路径。
+        setIsAuthenticated(false);
+        setRoles([]);
+        setName(null);
+        startBffLogin(router.state.location.href);
+        return;
+      }
+
+      // 桌面端：仍是"先静默续期，续不上才踢人"。
       void renewSession()
         .then(() => {
           console.info("[Auth] 401 后静默续期成功，用户无感");
@@ -145,14 +172,17 @@ export const AuthProvider: React.FC<{ children: React.ReactNode; router: any }> 
     return () => {
       unsubscribe();
     };
-    // login 引用稳定（router 不变则不变），无需在路由变化时重新订阅
-  }, [login]);
+  }, [login, router]);
 
   // 缓存 Action 对象，确保引用绝对稳定，防止下游组件无意义重绘
   const actions = React.useMemo(() => ({ setIsAuthenticated, login, logout }), [login, logout]);
+  const state = React.useMemo(
+    () => ({ isAuthenticated, roles, name }),
+    [isAuthenticated, roles, name],
+  );
 
   return (
-    <AuthStateContext.Provider value={{ isAuthenticated }}>
+    <AuthStateContext.Provider value={state}>
       <AuthActionsContext.Provider value={actions}>{children}</AuthActionsContext.Provider>
     </AuthStateContext.Provider>
   );
