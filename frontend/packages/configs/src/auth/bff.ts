@@ -7,6 +7,7 @@
 // 与 pkce.ts 的分工：pkce.ts 现在**只服务桌面端**（Tauri 主窗口的源是 tauri://localhost，
 // 拿不到浏览器 cookie，仍走 PKCE + bearer）。桌面端切到 session header 见 P3。
 
+import { getAppFetch, getGatewayBaseUrl } from "@ecommerce/api";
 import { getSessionId, sessionHeaderName } from "@ecommerce/utils";
 
 const trimSlash = (s: string) => s.replace(/\/+$/, "");
@@ -17,9 +18,16 @@ const sessionHeaders = (): Record<string, string> => {
   return id ? { [sessionHeaderName()]: id } : {};
 };
 
-/** BFF 端点基地址。dev 经 vite proxy 走同源（空串），prod 指向网关域名。 */
-const bffBase = (): string =>
-  trimSlash(import.meta.env.VITE_BFF_BASE_URL ?? import.meta.env.VITE_GATEWAY_URL ?? "");
+/** BFF 端点基地址。
+ *
+ * 取**运行时**网关地址（initTransport 注入）而不是构建期 env——桌面端的地址来自
+ * 用户设置，且 Tauri 主窗口的源是 tauri://localhost，相对路径会解析成
+ * tauri://localhost/... 根本打不到网关。VITE_BFF_BASE_URL 仅作显式覆盖用。 */
+const bffBase = (): string => {
+  const override = import.meta.env.VITE_BFF_BASE_URL;
+  if (override) return trimSlash(override);
+  return trimSlash(getGatewayBaseUrl());
+};
 
 export interface BffIdentity {
   authenticated: boolean;
@@ -31,10 +39,14 @@ export interface BffIdentity {
 
 const ANONYMOUS: BffIdentity = { authenticated: false };
 
-/** 问网关「我是谁」。cookie 是 httpOnly，前端只能这样拿登录态。 */
+/** 问网关「我是谁」。cookie 是 httpOnly，前端只能这样拿登录态。
+ *
+ *  用 getAppFetch() 而不是全局 fetch：桌面端注入的是 Rust 侧 http 插件的 fetch，
+ *  它绕开 CORS——Tauri 主窗口的源是 tauri://localhost，不在网关允许列表里，
+ *  用全局 fetch 会被预检直接挡掉。 */
 export const fetchIdentity = async (): Promise<BffIdentity> => {
   try {
-    const resp = await fetch(`${bffBase()}/auth/me`, {
+    const resp = await getAppFetch()(`${bffBase()}/auth/me`, {
       credentials: "include",
       headers: sessionHeaders(),
     });
@@ -67,7 +79,7 @@ export const buildNativeLoginUrl = (loopbackRedirect: string): string =>
  *  POST 受网关 CSRF 校验（浏览器自动带 Origin），不能改成 no-cors。 */
 export const bffLogout = async (): Promise<void> => {
   try {
-    await fetch(`${bffBase()}/auth/logout`, {
+    await getAppFetch()(`${bffBase()}/auth/logout`, {
       method: "POST",
       credentials: "include",
       headers: sessionHeaders(),
