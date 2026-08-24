@@ -343,7 +343,7 @@ vector / fluent-bit 这条 DaemonSet 通路，根本不经过 collector。只切
 |---|---|---|---|
 | 1 | kubernetes 仓 `components/opentelemetry/component.env` | `REMOTE_{METRICS,LOGS,TRACES}_URL` = node3 | 注释掉这三行 |
 | 2 | kubernetes 仓 `components/vector/values.yaml` 的 sink `uri` | `node3-logs.apikv.com/insert/jsonline?...` | `http://vl-victoria-logs-single-server.logging.svc.cluster.local:9428/insert/jsonline?...` |
-| 3 | **Config Center 里 10 服务 + 网关的 `observability.{trace,metric,log}.endpoint`** | `node3-otlp.apikv.com:443`，`tls.enable: true` | `otel-opentelemetry-collector.opentelemetry.svc:4318`，`tls.enable: false` |
+| 3 | **Config Center 里 10 服务 + 网关的 `observability.{trace,metric,log}.endpoint`** | `node3-otlp.apikv.com:443`，`tls.enable: true`（对端是 node3 上的 collector） | `otel-opentelemetry-collector.opentelemetry.svc:4318`，`tls.enable: false` |
 
 **第 3 处最容易漏**：collector 现在根本不在链路上，服务是直连 node3 的。不改它的话，
 就算 collector 重装了、`REMOTE_*_URL` 也清了，collector 依然收不到任何数据——没人往它发。
@@ -358,28 +358,48 @@ vector / fluent-bit 这条 DaemonSet 通路，根本不经过 collector。只切
 `components/{grafana,jaeger,loki,victoria-logs,victoriametrics,fluent-bit,opentelemetry}/install.sh`
 → 重启十个服务让它们重读配置 → **查一次集群内后端有没有真数据**再宣布恢复完成。
 
-#### 服务 OTLP 直连 node3（2026-08-24）
+#### 服务 OTLP → node3 的 collector（2026-08-24）
 
-十个业务服务 + 网关的 `observability.{trace,metric,log}.endpoint` 已改为
-`node3-otlp.apikv.com:443`（`tls.enable: true`），不再经过集群内的 collector。
-
-**关键在于 node3 上加了一层 nginx 路径改写**（`/etc/nginx/conf.d/otlp-ingress.conf`，
-监听 `127.0.0.1:18080`，Pangolin resourceId 30 暴露成 `node3-otlp.apikv.com`）：
+十个业务服务 + 网关的 `observability.{trace,metric,log}.endpoint` 指向
+`node3-otlp.apikv.com:443`（`tls.enable: true`），经 Pangolin（resourceId 30）
+落到 node3 上的 **OTel Collector**（docker，`--network host`，监听 4317/4318），
+再由它分发到本机三个 Victoria 后端。
 
 ```
-/v1/traces   -> 127.0.0.1:10428/insert/opentelemetry/v1/traces
-/v1/metrics  -> 127.0.0.1:8428/opentelemetry/v1/metrics      （注意：无 /insert）
-/v1/logs     -> 127.0.0.1:9428/insert/opentelemetry/v1/logs
+服务 ─OTLP/HTTPS─> node3-otlp.apikv.com:443 ─Pangolin─> node3:4318 (otelcol)
+                                                          ├─> 127.0.0.1:8428  VictoriaMetrics
+                                                          ├─> 127.0.0.1:9428  VictoriaLogs
+                                                          └─> 127.0.0.1:10428 VictoriaTraces
 ```
 
-**为什么非要这层**：服务侧 `Observability.endpoint` 带 `host_and_port` 校验，只接受
-`host:port`，而 OTel 的 HTTP exporter 会自己拼 `/v1/{signal}`——直接指向 Victoria
-会打到错误路径。三个后端的真实路径还各不相同（VictoriaMetrics 没有 `/insert` 前缀，
-另外两个有），所以只能在 nginx 这层抹平。
+配置在 node3 的 `/etc/otelcol/config.yaml`，容器 `otelcol`
+（`otel/opentelemetry-collector-contrib`，`--restart unless-stopped`，docker 已开机自启）。
 
-验收：node3 nginx access log 里能看到
-`"POST /v1/metrics" 200 "OTel Go OTLP over HTTP/protobuf metrics exporter/1.43.0"`；
-node3 VictoriaMetrics 的 `service.name` 标签列出 13 个服务。
+**端点写 base，让 otlphttp 自己拼 `/v1/{signal}`**——这是唯一容易写错的地方，
+因为三个后端的前缀并不一致：
+
+| 后端 | exporter endpoint | 实际收到 |
+|---|---|---|
+| VictoriaMetrics | `http://127.0.0.1:8428/opentelemetry` | `/opentelemetry/v1/metrics`（**无** `/insert`） |
+| VictoriaLogs | `http://127.0.0.1:9428/insert/opentelemetry` | `/insert/opentelemetry/v1/logs` |
+| VictoriaTraces | `http://127.0.0.1:10428/insert/opentelemetry` | `/insert/opentelemetry/v1/traces` |
+
+**为什么用 collector 而不是让服务直连后端**（一开始是直连 + nginx 改写 `/v1/*`，已废弃）：
+
+1. 直连要在 nginx 上做路径改写才能对上三个不一致的前缀——多一层无谓转换，
+   而 collector 天然就按 `/v1/{signal}` 收。
+2. **直连没有批处理与重试**：公网隧道抖一下就直接丢数据。collector 有 `batch` 与导出队列。
+3. 脱敏、采样、打标这类处理只能在 collector 做。
+
+改端点时**不需要动服务配置**：`node3-otlp.apikv.com` 这个域名不变，只在 Pangolin 里
+把 resource 30 的 target 从旧地址改到 `127.0.0.1:4318` 即可（改 target 要带 `siteId`，
+否则报 `Invalid site ID`）。
+
+⚠️ **容器日志不走这条链**：`vector` 推的是 jsonline 格式而非 OTLP，直接写
+`node3-logs.apikv.com/insert/jsonline?...`。它不经过 collector，也不该经过。
+
+验收：node3 `docker logs otelcol` 无错误行；VictoriaMetrics 的 `service.name` 标签
+列出 13 个服务；traces 时间戳持续推进。
 ⚠️ **查询时标签名带点**（`service.name` / `k8s.container.*`），不是下划线。
 
 #### 网关 OTLP 端点已修（2026-08-24）
