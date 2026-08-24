@@ -315,15 +315,49 @@ vector / fluent-bit 这条 DaemonSet 通路，根本不经过 collector。只切
 查 `k8s_*` 是查不到的）、`service.name="behavior-service"` 的 span、
 以及 argocd/consul/ecommerce/kube-system/logging/openebs/search 七个命名空间的容器日志。
 
-**仍留在内网的**：`fluent-bit` DaemonSet 还在往集群内 Loki 推同一批容器日志——
-它和 vector 是两套并行的日志采集，本来就重复。要彻底挪走就把 fluent-bit 也切掉或停掉。
+#### 集群内可观测组件已停机（2026-08-24）
 
-#### 顺手发现的 bug（未修）
+以下全部 scale 0 / 停止调度（**PVC 保留，可随时拉回来**）：
 
-切日志后从 node3 的日志里直接看到：`control-tower-gateway` 在刷
-`failed to send metrics to http://jaeger.observability.svc:4318/v1/metrics: 404 Not Found`。
-网关把**指标**发到了 Jaeger 的 OTLP 端口，而 Jaeger 不收指标。应指向 otel collector
-（`otel-opentelemetry-collector.opentelemetry.svc:4318`）。这是 control-tower 侧的配置问题。
+| 组件 | ns | 动作 |
+|---|---|---|
+| grafana | observability | `scale deploy --replicas=0`（改用 node3 Grafana） |
+| jaeger | observability | `scale deploy --replicas=0` |
+| loki | logging | `scale sts --replicas=0` |
+| vl-victoria-logs-single-server | logging | `scale sts --replicas=0` |
+| vm-single-victoria-metrics-single-server | victoriametrics | `scale sts --replicas=0` |
+| fluent-bit | logging | 打不可满足的 nodeSelector 停止调度（它与 vector 重复采集同一批容器日志） |
+
+**保留的两个，以及为什么不能一起停**：
+
+- `vector`（DaemonSet）—— 它就是把容器日志送到 node3 的那条腿，停了日志就断了。
+- `otel-collector` —— **服务侧的 OTLP 配置只接受 `host:port`**
+  （`conf.proto` 的 `Observability.Trace.endpoint` 带 `host_and_port` 校验），
+  而 node3 的 Victoria 全家桶暴露的是**带路径的 HTTP 端点**
+  （`/insert/opentelemetry/v1/logs` 之类），host:port 到不了那些路径。
+  所以 collector 必须留下做本地 OTLP 入口再转发到 node3。
+
+  要真正把 collector 也挪走，只有两条路：① 在 node3 上装一个 collector 并经 Pangolin
+  暴露成 raw TCP（需要 Pangolin 建资源）；② 在 node3 的 nginx 上加一段
+  `/v1/{traces,metrics,logs}` → Victoria 各自路径的反代，再作为 HTTP 资源暴露成
+  `node3-otlp.apikv.com:443`（这个形态符合 `host_and_port`）。两条都卡在 Pangolin 建资源。
+
+#### 网关 OTLP 端点已修（2026-08-24）
+
+切日志后从 node3 的日志里直接看到网关在刷
+`failed to send metrics to http://jaeger.observability.svc:4318/v1/metrics: 404`——
+它把**指标**发到了 Jaeger 的 OTLP 端口，而 Jaeger 只收 trace。
+
+值在 ConfigMap `control-tower-gateway-config` 的 `OTEL_EXPORTER_OTLP_ENDPOINT`，
+已改为 `otel-opentelemetry-collector.opentelemetry.svc:4318`（OTLP 三种信号交给
+collector 统一分流，不要直连某个后端），control-tower 仓 `deploy/dev/gateway/deployment.yaml`
+同步改好。重启后实测该报错归零。
+
+⚠️ 顺带发现**第二个坑**：control-tower 仓当前的 Deployment 清单里这个 env 是
+`valueFrom configMapKeyRef ... optional: true` 且 ConfigMap 原值有问题，而网关代码是
+`os.Getenv("OTEL_EXPORTER_OTLP_ENDPOINT")` 且**空值 = 直接 no-op 不报错**——
+也就是说这个 key 一旦缺失或拼错，网关的可观测会**静默关闭**，没有任何告警。
+改这一项时务必回头看一眼 pod 里的实际环境变量。
 
 #### PG 数据已迁移（2026-08-24），但服务尚未切过去
 
