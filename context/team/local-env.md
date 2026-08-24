@@ -334,8 +334,29 @@ vector / fluent-bit 这条 DaemonSet 通路，根本不经过 collector。只切
 
 **只剩 `vector` 一个 DaemonSet**——它是把容器日志送到 node3 的那条腿，删了日志就断。
 
-要恢复：kubernetes 仓 `components/{grafana,jaeger,loki,victoria-logs,victoriametrics,fluent-bit,opentelemetry}/install.sh` 重跑即可，
-但 `components/opentelemetry/component.env` 里的 `REMOTE_*_URL` 与 `components/vector/values.yaml` 的 sink 要先决定是否改回集群内。
+#### ⚠️ 想恢复内网可观测：重装组件只是一半，另一半不做会得到一个空壳
+
+删掉的是**消费端**（存储与 UI）。但「数据往哪发」由**生产端**决定，而生产端的配置全都改过，
+重装消费端**不会**把它们改回来。三处都得改，缺一处就白装：
+
+| # | 改哪里 | 现在指向 | 改回集群内 |
+|---|---|---|---|
+| 1 | kubernetes 仓 `components/opentelemetry/component.env` | `REMOTE_{METRICS,LOGS,TRACES}_URL` = node3 | 注释掉这三行 |
+| 2 | kubernetes 仓 `components/vector/values.yaml` 的 sink `uri` | `node3-logs.apikv.com/insert/jsonline?...` | `http://vl-victoria-logs-single-server.logging.svc.cluster.local:9428/insert/jsonline?...` |
+| 3 | **Config Center 里 10 服务 + 网关的 `observability.{trace,metric,log}.endpoint`** | `node3-otlp.apikv.com:443`，`tls.enable: true` | `otel-opentelemetry-collector.opentelemetry.svc:4318`，`tls.enable: false` |
+
+**第 3 处最容易漏**：collector 现在根本不在链路上，服务是直连 node3 的。不改它的话，
+就算 collector 重装了、`REMOTE_*_URL` 也清了，collector 依然收不到任何数据——没人往它发。
+
+**第 1 处的坑在 `elif`**：`install.sh` 的判定是「`REMOTE_*_URL` 非空 → 推远端」
+**`elif`**「集群内装了对应后端 → 推本地」。只要那三行还在，重装 collector 也只会往 node3 发。
+
+失败时的症状是**沉默的**：后端全起来、Grafana 能打开、里面是空的，不报任何错。
+与 `.freeze/` 恒绿门禁同一类问题——**装了不等于在工作，要验的是「它收到数据了吗」**。
+
+完整恢复顺序：改 1、2、3 → 重跑
+`components/{grafana,jaeger,loki,victoria-logs,victoriametrics,fluent-bit,opentelemetry}/install.sh`
+→ 重启十个服务让它们重读配置 → **查一次集群内后端有没有真数据**再宣布恢复完成。
 
 #### 服务 OTLP 直连 node3（2026-08-24）
 
