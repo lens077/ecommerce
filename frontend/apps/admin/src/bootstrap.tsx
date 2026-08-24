@@ -4,6 +4,7 @@ import { RouterProvider, createRouter } from "@tanstack/react-router";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { Code, ConnectError } from "@connectrpc/connect";
 import { TransportProvider } from "@connectrpc/connect-query";
+import { BffAuthProvider } from "@ecommerce/ui";
 import { getSharedTransport } from "@ecommerce/api";
 import { ThemeProvider, CssBaseline } from "@mui/material";
 import { routeTree } from "./routeTree.gen";
@@ -45,7 +46,10 @@ ReactDOM.createRoot(document.getElementById("root")!).render(
           先取 transport 再算 query key。transport 是全 app 单例（见 packages/api/src/transport.ts）。 */}
       <TransportProvider transport={getSharedTransport()}>
         <QueryClientProvider client={queryClient}>
-          <RouterProvider router={router} />
+          {/* BFF 登录态：会话在 httpOnly cookie 里，401 自动跳登录（ADR-0002） */}
+          <BffAuthProvider>
+            <RouterProvider router={router} />
+          </BffAuthProvider>
         </QueryClientProvider>
       </TransportProvider>
     </ThemeProvider>

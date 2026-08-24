@@ -1,5 +1,4 @@
 import SDK from "casdoor-js-sdk";
-import { hasToken } from "@ecommerce/utils";
 export const CASDOOR_CONF = {
   // Casdoor 服务端地址。
   // ⚠️ 曾经写的是 `http://node1:8000` —— 明文 HTTP + 裸 IP，而且那个端口
@@ -35,7 +34,6 @@ export const CASDOOR_SDK = new SDK(CASDOOR_CONF);
  * 非组件环境（如路由 `beforeLoad`）需要判断时，先 `await restoreSession()`
  * 等冷启动的静默续期跑完，再看结果——直接调本函数会在刷新后误判成未登录。
  */
-export const isLoggedIn = () => hasToken();
 
 // setToken 已移除：请用 @ecommerce/utils 的 setTokens()（能一并记录 refresh token
 // 与过期时刻，无感续期依赖它）。原实现写 localStorage，是 XSS 长效令牌泄露的源头。
@@ -60,17 +58,6 @@ export const DESKTOP_REDIRECT_URI = {
   consumer: "http://localhost:3000/callback",
   config: "http://localhost:3005/callback",
 } as const;
-
-/**
- * Web 端回调地址。PKCE 授权与兑换两步必须用**逐字相同**的 redirect_uri，
- * 否则 Casdoor 会以 `redirect_uri mismatch` 拒绝兑换 —— 所以集中在这里取，
- * 不要在调用点各拼各的。
- *
- * 取当前 origin 而非写死：开发机是 http://localhost:3000，
- * 正式环境是 https://shop.apikv.com，两者都需要在 Casdoor 应用的
- * redirectUris 白名单里登记。
- */
-export const WEB_REDIRECT_URI = `${window.location.origin}/callback`;
 
 // 桌面端授权地址已移到 ./auth/pkce.ts 的 buildDesktopLoginUrl()。
 //

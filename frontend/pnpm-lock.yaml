@@ -617,6 +617,9 @@ importers:
       '@ecommerce/api':
         specifier: workspace:*
         version: link:../api
+      '@ecommerce/configs':
+        specifier: workspace:*
+        version: link:../configs
       '@ecommerce/i18n':
         specifier: workspace:*
         version: link:../i18n

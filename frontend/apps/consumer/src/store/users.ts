@@ -16,7 +16,6 @@
 // 而冷启动的静默续期一定会产生一次令牌写入。所以这里直接订阅令牌变化，
 // 令牌在就解出资料、令牌没了就清空 —— 一处派生，覆盖登录/续期/冷启动/登出四条路径。
 import { proxy } from "valtio";
-import { decodeJwtPayload, subscribeToken } from "@ecommerce/utils";
 import { Account } from "@/api/users/types";
 
 export interface UserState {
@@ -60,21 +59,7 @@ export const clearAccount = () => {
   userStore.account = { ...EMPTY_ACCOUNT };
 };
 
-// 资料随令牌走。注册在模块顶层（替换掉原先那个写 localStorage 的 subscribe），
-// 不放 React 组件里：路由的 `beforeLoad` 会在组件挂载之前就调 `clearTokens()`，
-// 挂在组件里会漏掉那一路。
-subscribeToken((token) => {
-  if (!token) {
-    clearAccount();
-    return;
-  }
-  const payload = decodeJwtPayload(token);
-  if (!payload) return;
-  setAccount({
-    id: payload.id,
-    name: payload.name,
-    displayName: payload.displayName,
-    email: payload.email,
-    avatar: payload.avatar,
-  });
-});
+// P4：原先这里订阅令牌变化、从 JWT 载荷填资料。BFF 化后浏览器不再持有令牌，
+// 该订阅永远不会触发（静默失效），故删除。现在：
+//   - 登录/登出时由 AuthProvider 调 setAccount()/clearAccount()；
+//   - 完整资料（头像、邮箱等）由 UserProfile RPC 提供。

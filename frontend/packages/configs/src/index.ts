@@ -1,5 +1,3 @@
 export * from "./casdoor";
-// pkce/session 现在只服务桌面端（Tauri）；Web 端走 bff（见 ADR-0002）。
-export * from "./auth/pkce";
-export * from "./auth/session";
+// Web 与桌面端统一走 BFF 会话（ADR-0002）；PKCE/tokenStore 已于 P4 删除。
 export * from "./auth/bff";
