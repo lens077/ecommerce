@@ -81,18 +81,16 @@ externals:
       容器日志经 vector DaemonSet——两条通路不同，必须分别切）；Redis 已上 TLS
       （stunnel 终止在 127.0.0.1:6379；Pigsty redis 角色本身没有任何 TLS 变量）；
       PG 数据已从 CNPG 全量迁入（32 表行数逐表一致、抽样内容 md5 相同）。
-      **PG 已切流**（2026-08-24）：10 个业务服务的 data.database.postgres 指向
-      node1:30001，ssl_mode=verify-ca（经隧道以 IP 连接，证书主机名对不上，
-      verify-full 不可用）。**Config Center 仍留在 CNPG**——它是 10 服务的 bootstrap 来源，
-      不能反过来依赖隧道。
+      **PG 全量切流**（2026-08-24）：10 个业务服务 + outbox-relay + Config Center 自身
+      全部指向 node1:30001，ssl_mode=verify-ca（经隧道以 IP 连接，证书主机名对不上）。
+      **集群内 CNPG 已 hibernate**（数据保留，pod 归零）。
       **Silo 入口已建**：https://node3-minio.apikv.com（Pangolin resourceId 29，
       tlsServerName=sss.pigsty，sso 关闭）。
-      **集群内可观测已全部停机**：grafana/jaeger/loki/vl/vm-single scale 0，fluent-bit 停调度；
-      仅保留 vector 与 otel-collector 两个转发器。
-      ⚠️ 仍未解决：
-        ① otel-collector 还在集群内。服务侧 endpoint 带 host_and_port 校验只接受 host:port，
-           而 node3 的 Victoria 端点是带路径的 HTTP，要挪走得先在 node3 立一个 OTLP 入口
-        ② config schema 与业务库现在分处两库（CNPG / node3），是有意为之，别当成漂移
+      **集群内可观测已整体删除**（含 Helm release 与 PVC，回收约 23Gi）：
+      grafana/jaeger/loki/vl-victoria-logs/vm-single/fluent-bit/otel-collector 全删，
+      只剩 vector DaemonSet 送容器日志。服务 OTLP 直连 node3-otlp.apikv.com:443
+      （node3 nginx 做 /v1/* → Victoria 各自路径的改写，Pangolin resourceId 30）。
+      ⚠️ 集群外依赖已成硬依赖：node3 或 Pangolin 隧道故障 = 数据面连不上库、观测全断。
       Kafka 虽已就绪，但本项目 2026-08-20 已定稿用 NATS JetStream，不因它存在而翻案。
 
 # 网关
