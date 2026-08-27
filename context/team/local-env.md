@@ -398,6 +398,36 @@ vector / fluent-bit 这条 DaemonSet 通路，根本不经过 collector。只切
 ⚠️ **容器日志不走这条链**：`vector` 推的是 jsonline 格式而非 OTLP，直接写
 `node3-logs.apikv.com/insert/jsonline?...`。它不经过 collector，也不该经过。
 
+##### OTLP 已强制鉴权（2026-08-27，匿名写入已关闭）
+
+`node3-otlp` **不能挂 Pangolin SSO**（机器客户端过不了浏览器登录墙），鉴权因此落在 collector
+自己这一层：`bearertokenauth/otlp` 扩展挂在 otlp receiver 的 grpc + http 两个协议上，
+token 列表读 `/run/secrets/otel-tokens`（宿主 `/etc/otelcol/otel-tokens`，**每行一个**）。
+无 token / 错 token 一律 **401**（三个信号实测）。
+
+第一阶段三个身份（真相源 Vault `secret/observability/otlp`，仓库里只有引用）：
+
+| 身份 | Vault key | 谁在用 | 怎么拿到 |
+|---|---|---|---|
+| Mac 本地 | `mac_default` | 本机 `make dev` 起的 10 服务 | `~/.config/apikv/otel.mk`（0600，仓库外），各服务 Makefile `-include` 它 |
+| k8s 车队 | `k8s_ecommerce` | 集群里 10 服务 | ESO → Secret `otel-auth` → env（`helm/templates/otel-auth-externalsecret.yaml`） |
+| 网关 | `gateway` | control-tower gateway | 同上，用 `OTEL_EXPORTER_OTLP_HEADERS_GATEWAY` 键 |
+
+**应用代码零改动**：三个 exporter（trace/metric/log）原生认标准环境变量
+`OTEL_EXPORTER_OTLP_HEADERS`，现有代码只显式设 endpoint/TLS，headers 位留给环境变量。
+值的格式是 `Authorization=Bearer%20<token>`——**空格必须写 `%20`**（按 W3C baggage 规则解码），
+写成真空格会被截断。
+
+两个坑：
+
+- **容器以 `10001:10001` 跑**，token 文件给 `0600 root` 会读不到（症状是启动即失败）。
+  正确权限是 `0640 root:10001`。
+- 该容器是**裸 `docker run`**（无 compose，`--network host`），加挂载必须 `docker rm -f` 后
+  用等价参数重建；重建前先 `docker run --rm ... validate --config` 干跑校验配置。
+
+k8s 的 env 都写了 `optional: true`：Secret 未就绪时退回匿名发送而不是 CrashLoop——但匿名现在
+会被 collector 拒（401），表现为遥测丢失而非服务挂掉。集群回线后先确认 `otel-auth` 已 Synced。
+
 验收：node3 `docker logs otelcol` 无错误行；VictoriaMetrics 的 `service.name` 标签
 列出 13 个服务；traces 时间戳持续推进。
 ⚠️ **查询时标签名带点**（`service.name` / `k8s.container.*`），不是下划线。
