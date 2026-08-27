@@ -31,6 +31,14 @@ spec:
             # 日志输出到 stdout，由部署在 k8s 的 Fluent Bit 统一采集
             - name: OTEL_LOGS_EXPORTER
               value: "none"
+            # OTLP 鉴权头(Vault → ExternalSecret otel-auth)。optional=true：
+            # Secret 未就绪时退回匿名发送而不是 CrashLoop。
+            - name: OTEL_EXPORTER_OTLP_HEADERS
+              valueFrom:
+                secretKeyRef:
+                  name: otel-auth
+                  key: OTEL_EXPORTER_OTLP_HEADERS
+                  optional: true
             # SERVICE_NAME 就是注册进 Consul 的服务名,必须与网关
             # gateway/configs/config.yaml 里的 discovery:///product-service 完全一致
             - name: SERVICE_NAME

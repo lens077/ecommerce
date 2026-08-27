@@ -53,6 +53,14 @@ user:
       value: "/etc/ecommerce/config-source/user.yaml"
     - name: OTEL_LOGS_EXPORTER
       value: "none"
+    # OTLP 鉴权头(Vault → ExternalSecret otel-auth)。optional=true：
+    # Secret 未就绪时按匿名发送而不是 CrashLoop —— 过渡期两种都收。
+    - name: OTEL_EXPORTER_OTLP_HEADERS
+      valueFrom:
+        secretKeyRef:
+          name: otel-auth
+          key: OTEL_EXPORTER_OTLP_HEADERS
+          optional: true
     - name: CONSUL_ENABLED
       value: "true"
     - name: CONSUL_ADDR
@@ -116,6 +124,14 @@ search:
       value: "/etc/ecommerce/config-source/search.yaml"
     - name: OTEL_LOGS_EXPORTER
       value: "none"
+    # OTLP 鉴权头(Vault → ExternalSecret otel-auth)。optional=true：
+    # Secret 未就绪时按匿名发送而不是 CrashLoop —— 过渡期两种都收。
+    - name: OTEL_EXPORTER_OTLP_HEADERS
+      valueFrom:
+        secretKeyRef:
+          name: otel-auth
+          key: OTEL_EXPORTER_OTLP_HEADERS
+          optional: true
     - name: CONSUL_ENABLED
       value: "true"
     - name: CONSUL_ADDR
@@ -179,6 +195,14 @@ product:
       value: "/etc/ecommerce/config-source/product.yaml"
     - name: OTEL_LOGS_EXPORTER
       value: "none"
+    # OTLP 鉴权头(Vault → ExternalSecret otel-auth)。optional=true：
+    # Secret 未就绪时按匿名发送而不是 CrashLoop —— 过渡期两种都收。
+    - name: OTEL_EXPORTER_OTLP_HEADERS
+      valueFrom:
+        secretKeyRef:
+          name: otel-auth
+          key: OTEL_EXPORTER_OTLP_HEADERS
+          optional: true
     - name: CONSUL_ENABLED
       value: "true"
     - name: CONSUL_ADDR
@@ -242,6 +266,14 @@ order:
       value: "/etc/ecommerce/config-source/order.yaml"
     - name: OTEL_LOGS_EXPORTER
       value: "none"
+    # OTLP 鉴权头(Vault → ExternalSecret otel-auth)。optional=true：
+    # Secret 未就绪时按匿名发送而不是 CrashLoop —— 过渡期两种都收。
+    - name: OTEL_EXPORTER_OTLP_HEADERS
+      valueFrom:
+        secretKeyRef:
+          name: otel-auth
+          key: OTEL_EXPORTER_OTLP_HEADERS
+          optional: true
     - name: CONSUL_ENABLED
       value: "true"
     - name: CONSUL_ADDR
@@ -305,6 +337,14 @@ inventory:
       value: "/etc/ecommerce/config-source/inventory.yaml"
     - name: OTEL_LOGS_EXPORTER
       value: "none"
+    # OTLP 鉴权头(Vault → ExternalSecret otel-auth)。optional=true：
+    # Secret 未就绪时按匿名发送而不是 CrashLoop —— 过渡期两种都收。
+    - name: OTEL_EXPORTER_OTLP_HEADERS
+      valueFrom:
+        secretKeyRef:
+          name: otel-auth
+          key: OTEL_EXPORTER_OTLP_HEADERS
+          optional: true
     - name: CONSUL_ENABLED
       value: "true"
     - name: CONSUL_ADDR
@@ -368,6 +408,14 @@ cart:
       value: "/etc/ecommerce/config-source/cart.yaml"
     - name: OTEL_LOGS_EXPORTER
       value: "none"
+    # OTLP 鉴权头(Vault → ExternalSecret otel-auth)。optional=true：
+    # Secret 未就绪时按匿名发送而不是 CrashLoop —— 过渡期两种都收。
+    - name: OTEL_EXPORTER_OTLP_HEADERS
+      valueFrom:
+        secretKeyRef:
+          name: otel-auth
+          key: OTEL_EXPORTER_OTLP_HEADERS
+          optional: true
     - name: CONSUL_ENABLED
       value: "true"
     - name: CONSUL_ADDR
@@ -431,6 +479,14 @@ merchant:
       value: "/etc/ecommerce/config-source/merchant.yaml"
     - name: OTEL_LOGS_EXPORTER
       value: "none"
+    # OTLP 鉴权头(Vault → ExternalSecret otel-auth)。optional=true：
+    # Secret 未就绪时按匿名发送而不是 CrashLoop —— 过渡期两种都收。
+    - name: OTEL_EXPORTER_OTLP_HEADERS
+      valueFrom:
+        secretKeyRef:
+          name: otel-auth
+          key: OTEL_EXPORTER_OTLP_HEADERS
+          optional: true
     - name: CONSUL_ENABLED
       value: "true"
     - name: CONSUL_ADDR
@@ -494,6 +550,14 @@ address:
       value: "/etc/ecommerce/config-source/address.yaml"
     - name: OTEL_LOGS_EXPORTER
       value: "none"
+    # OTLP 鉴权头(Vault → ExternalSecret otel-auth)。optional=true：
+    # Secret 未就绪时按匿名发送而不是 CrashLoop —— 过渡期两种都收。
+    - name: OTEL_EXPORTER_OTLP_HEADERS
+      valueFrom:
+        secretKeyRef:
+          name: otel-auth
+          key: OTEL_EXPORTER_OTLP_HEADERS
+          optional: true
     - name: CONSUL_ENABLED
       value: "true"
     - name: CONSUL_ADDR
@@ -557,6 +621,14 @@ behavior:
       value: "/etc/ecommerce/config-source/behavior.yaml"
     - name: OTEL_LOGS_EXPORTER
       value: "none"
+    # OTLP 鉴权头(Vault → ExternalSecret otel-auth)。optional=true：
+    # Secret 未就绪时按匿名发送而不是 CrashLoop —— 过渡期两种都收。
+    - name: OTEL_EXPORTER_OTLP_HEADERS
+      valueFrom:
+        secretKeyRef:
+          name: otel-auth
+          key: OTEL_EXPORTER_OTLP_HEADERS
+          optional: true
     - name: CONSUL_ENABLED
       value: "true"
     - name: CONSUL_ADDR
@@ -620,6 +692,14 @@ payment:
       value: "/etc/ecommerce/config-source/payment.yaml"
     - name: OTEL_LOGS_EXPORTER
       value: "none"
+    # OTLP 鉴权头(Vault → ExternalSecret otel-auth)。optional=true：
+    # Secret 未就绪时按匿名发送而不是 CrashLoop —— 过渡期两种都收。
+    - name: OTEL_EXPORTER_OTLP_HEADERS
+      valueFrom:
+        secretKeyRef:
+          name: otel-auth
+          key: OTEL_EXPORTER_OTLP_HEADERS
+          optional: true
     - name: CONSUL_ENABLED
       value: "true"
     - name: CONSUL_ADDR

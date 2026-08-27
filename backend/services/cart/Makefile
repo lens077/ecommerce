@@ -16,6 +16,11 @@ AMD64=linux/amd64
 CONSUL_ADDR_LOCAL ?= 192.168.3.120:8500
 CART_SOURCE_CONFIG ?= configs/source.dev.yaml
 
+# 本机 OTLP 凭据(仓库外, 0600): ~/.config/apikv/otel.mk 定义并 export
+# OTEL_EXPORTER_OTLP_HEADERS=Authorization=Bearer%20<token>。
+# 缺文件时静默跳过 —— CI 与他人 clone 不受影响, 只是不带鉴权头。
+-include $(HOME)/.config/apikv/otel.mk
+
 .PHONY: k8s-dev
 k8s-dev:
 	kubectl apply -f deploy/dev
