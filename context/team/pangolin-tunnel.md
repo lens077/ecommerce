@@ -85,6 +85,9 @@ description: 公网暴露基础设施(Pangolin)的拓扑事实、面板 API 操�
   (热生效不用重启,**必须写纯 YAML 数组——`!!js` 表达式在用户补丁层实测不生效**)。
   经隧道时 settings/credentials 等特权方法仍 403 属设计内**/ 另有 kaneo/dev/ntfy/stream/cat 等,以 `traefik-config` 后门实查为准
 - k8s newt:helm release `newt`(ns `pangolin`,chart `fossorial/newt`);凭据看 `helm get values newt -n pangolin`(inline,勿把 values 文件提交入库)
+- **k8s 站点(siteId 4)的资源全部指同一个 target `10.110.51.106:443 https`** —— 那是 `cilium-gateway` 的 ClusterIP,分流靠 HTTPRoute 的 hostname 而非不同 target。2026-08-27 新增四个(均 **SSO on**,控制面靠登录墙兜底):`argocd`(rid 31)/`consul`(rid 32)/`search`(rid 33)/`cart-api`(rid 34)。
+  ⚠️ **302 只证明 Pangolin 拦住了,不证明后端活着**——验后端要在集群内直连 `curl -H "Host: xxx.apikv.com" https://10.110.51.106/`,否则 502 会被登录墙掩盖。
+  ⚠️ 2026-08-24 那轮 helm uninstall 之后,`observability`/`victoriametrics`/`logging` 里 **Grafana/Jaeger/Loki/VictoriaMetrics 的 HTTPRoute 是孤儿**(命名空间里零 Deployment,`kubectl get endpoints` 无后端),给它们建公网入口只会得到 502。建资源前先查 endpoints。
 - Mac newt(2026-08-20 重建):二进制 `~/apps/newt/newt`(1.16.0, darwin-arm64),凭据
   `~/apps/newt/newt.env`(600,仓库外),launchd `~/Library/LaunchAgents/com.apikv.newt.plist`
   (600,含凭据,RunAtLoad+KeepAlive),日志 `/tmp/newt.log`,带 `--disable-clients`。
