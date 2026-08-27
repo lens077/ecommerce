@@ -428,6 +428,19 @@ token 列表读 `/run/secrets/otel-tokens`（宿主 `/etc/otelcol/otel-tokens`�
 k8s 的 env 都写了 `optional: true`：Secret 未就绪时退回匿名发送而不是 CrashLoop——但匿名现在
 会被 collector 拒（401），表现为遥测丢失而非服务挂掉。集群回线后先确认 `otel-auth` 已 Synced。
 
+**2026-08-27 集群回线后的落地实录（两个坑，都会让「看起来正常」但遥测全丢）**：
+
+1. **`vault-approle` Secret 在集群重建后没有重新注入** → ESO 报 `unable to create client`，
+   `ClusterSecretStore vault` 是 `InvalidProviderConfig/False`，`otel-auth` 压根没被创建。
+   凭据在 node1 `/home/docker/vault/approle-eso.json`（`role_id`/`secret_id`），注入后
+   `kubectl annotate clustersecretstore vault force-sync=$(date +%s) --overwrite` 触发重连，
+   否则要等最长 7 分钟的 reconcile 周期——**别看日志时间戳就下结论，旧错误会误导判断**。
+2. **ESO 的模板占位符会被 Helm 提前吃掉**：`{{ .k8s }}` 写在 helm 模板里，Helm 渲染阶段就当成
+   自己的变量求值（空），ESO 拿到的是写死的 `Authorization=Bearer%20`。**Secret 照样
+   `SecretSynced=True`，看起来一切正常，但 token 是空的**，所有 OTLP 会被判 401 静默丢弃。
+   正确写法是 `{{ `"...{{ .k8s }}"` }}` 转义。判据：`kubectl get secret otel-auth -o
+   jsonpath='{.data.OTEL_EXPORTER_OTLP_HEADERS}' | base64 -d | wc -c` 应约 **87**，只有 23 就是被吃了。
+
 验收：node3 `docker logs otelcol` 无错误行；VictoriaMetrics 的 `service.name` 标签
 列出 13 个服务；traces 时间戳持续推进。
 ⚠️ **查询时标签名带点**（`service.name` / `k8s.container.*`），不是下划线。
