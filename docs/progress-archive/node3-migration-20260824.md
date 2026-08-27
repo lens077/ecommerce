@@ -1,0 +1,21 @@
+# node3 迁移与可观测外移（2026-08-24 完成，证据归档）
+
+> 2026-08-27 从 `TODO.md` 归档（该文件有 96KB 预算门禁，证据长文归这里）。
+> 记录 PG / Config Center / 可观测三条链路从集群内搬到 node3 的过程与坑。
+> **后续状态以 `TODO.md` 与 `context/team/local-env.md` 为准**——尤其 OTLP 已于
+> 2026-08-27 强制鉴权，本文描述的是当时的无鉴权形态。
+
+- [x] **node3 补装 Silo（2026-08-24）**：`pigsty.yml` 原本无 `minio` 分组，补齐后跑 `./minio.yml -l minio`（`ok=34 changed=20 failed=0`）。`silo.service` active、0 重启，`https://sss.pigsty:9000` 健康 200，桶 `pgsql`/`meta`/`data` 已建并实测 put/cat/delete 通过。配置备份 `node3:/root/pigsty-deploy/pigsty.yml.bak-20260824T095349Z`
+- [x] **可观测全量切到 node3（2026-08-24）**：metrics / traces / 应用 OTLP 日志经 otel collector（kubernetes 仓 `components/opentelemetry/` 新增 `REMOTE_{METRICS,LOGS,TRACES}_URL` 开关，设了就不再写集群内 VM/Loki/Jaeger——双写等于内网还多扛一份），容器日志经 vector DaemonSet 直推（`components/vector/values.yaml` 的 sink）。**两条通路必须分别切**：collector 只承载应用侧 OTLP 日志，容器日志根本不经过它。实测 node3 上查到 `k8s.container.*` 集群指标（⚠️ VictoriaMetrics 里点号原样保留，查 `k8s_*` 查不到）、`service.name="behavior-service"` 的 span、七个命名空间的容器日志。⚠️ `fluent-bit` 仍在往集群内 Loki 推同一批容器日志（与 vector 重复采集），要彻底挪走得一并处理
+- [x] **node3 Redis 上 TLS（2026-08-24）**：Pigsty v4.5 的 redis 角色**没有任何 TLS 变量**，原生 TLS 要改四处 Pigsty 自带文件且每次升级被覆盖；改用 stunnel 外挂终止器（`127.0.0.1:6379` TLS → `10.10.21.172:6379` 明文），配合 Pigsty 支持的 `redis_bind_address` 把回环让出来。Pangolin 的 target 本来就是 `127.0.0.1:6379`，因此**一个字都不用改**即变 TLS；exporter 与主从复制连的是 LAN 地址，不受影响。实测明文 `PING` 得空响应、TLS 1.3 `AUTH` → `+OK`，`master_link_status:up`
+- [x] **PG 数据迁入 node3（2026-08-24）**：`pg_dump --no-owner --no-privileges --clean --if-exists` → 经 `30001` 灌入。**32 张表行数逐表一致**，`config.entry`/`products.spus`/`products.sale_detail`/`products.skus` 内容 md5 相同。⚠️ 对比必须先 `set timezone='UTC'`——两边时区不同（CNPG `Etc/UTC` vs node3 `Asia/Shanghai`），否则 md5 全不一致（渲染差异非数据差异），**这个时区差本身也是切流风险**
+- [x] **PG 切流完成（2026-08-24）**：10 个业务服务的 `data.database.postgres` 经 Config Center `PutKey` 改指 `node1:30001`；13/13 Deployment 就绪，node3 70 连接，网关读 `GetProductDetail spuCode=iphone-15-pro` 返回真实数据。**Config Center 刻意留在 CNPG**（它是 10 服务的 bootstrap 来源，不能反过来依赖隧道）。三个坑：①整块替换 `postgres:` 会吃掉后面的 `pool:` → `NewPostgresPool` 空指针 CrashLoop，只能逐行改；②`ssl_mode` 必须 `verify-ca`，经隧道以 IP 连接而证书 CN=pg-meta-1 主机名对不上；③时区差已被配置里显式的 `timezone: Asia/Shanghai` 挡掉，别删那行
+- [x] **Silo 入口已建（2026-08-24）**：`https://node3-minio.apikv.com`（Pangolin resourceId 29）。三个坑：①`tlsServerName` 要设 `sss.pigsty`（Silo 自签证书，别照抄 node2 minio 的 ZeroSSL 配置）；②必须关 SSO，否则 S3 客户端全收 302；③Pangolin API 有静态 CSRF 门槛，非 GET 要带 `x-csrf-token: x-csrf-protection`。⚠️ `apiKeys` 仍 0 行，仍需管理员账号登录调 API
+- [x] **control-tower 网关指标发错地方（2026-08-24 已修）**：ConfigMap `control-tower-gateway-config` 的 `OTEL_EXPORTER_OTLP_ENDPOINT` 由 `jaeger.observability.svc:4318` 改为 `otel-opentelemetry-collector.opentelemetry.svc:4318`，control-tower 仓 `deploy/dev/gateway/deployment.yaml` 同步；重启后报错归零。⚠️ 顺带发现第二个坑：网关代码是 `os.Getenv` 且**空值 = 静默关闭可观测不报错**，该 key 缺失或拼错不会有任何告警
+- [x] **集群内可观测组件已停机（2026-08-24）**：grafana / jaeger / loki / vl-victoria-logs / vm-single 全部 scale 0，fluent-bit 打不可满足 nodeSelector 停止调度（与 vector 重复采集）。PVC 保留可回滚。**保留 vector 与 otel-collector**——前者是送日志到 node3 的那条腿，后者是本地 OTLP 入口：服务侧 `Observability.endpoint` 带 `host_and_port` 校验，只接受 host:port，而 node3 的 Victoria 端点是带路径的 HTTP，host:port 到不了
+- [x] **可观测彻底挪出内网（2026-08-24）**：node3 上 docker 跑 OTel Collector（`--network host`，配置 `/etc/otelcol/config.yaml`，Pangolin resourceId 30 → `node3-otlp.apikv.com` → `127.0.0.1:4318`），十个服务 + 网关的 OTLP 发给它，再分发到本机三个 Victoria 后端；**helm uninstall + 删 PVC** 清掉 grafana/jaeger/loki/vl/vm-single/fluent-bit/otel-collector，回收约 23Gi，只留 vector 送容器日志（jsonline 非 OTLP，不经 collector）。
+  - 起初是「服务直连后端 + nginx 改写 `/v1/*`」，已废弃改为 collector：直连要在 nginx 抹平三个后端不一致的路径前缀（VictoriaMetrics 无 `/insert`，另两个有），**且没有批处理与重试——公网隧道抖一下就丢数据**。
+  - exporter 端点写 base 让 otlphttp 自己拼 `/v1/{signal}`；改 Pangolin target 要带 `siteId`，否则报 `Invalid site ID`。
+  - ⚠️ 查 node3 指标时标签名带点（`service.name`/`k8s.container.*`）不是下划线
+- [x] **Config Center 切 node3 + CNPG hibernate（2026-08-24）**：切之前必须先重新同步 `config` schema——PG 切流后所有 PutKey 写的都是 CNPG，node3 那份是旧的，**直接切会把十个服务的配置悄悄退回指向 CNPG**。Config Center 自己走 `CONFIG_FILE` 本地文件，无先有鸡蛋问题
+- [x] **outbox-relay 的 NetworkPolicy 补 egress（2026-08-24）**：只有 relay/search-indexer/product-seed/search-reindex 带 NetworkPolicy 且只放行 postgresql 命名空间 5432。库搬到集群外后症状是 `connect: connection timed out`（不是拒绝），十个业务服务全好唯独 relay 起不来，极易误判成隧道不稳
