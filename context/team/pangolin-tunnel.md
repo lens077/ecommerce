@@ -79,7 +79,7 @@ description: 公网暴露基础设施(Pangolin)的拓扑事实、面板 API 操�
   **`mac2`(siteId 6, newt 1.16.0, 本 Mac 当前在用)**。已删/已死的站点(siteId 2 `mac`、
   siteId 3 `k8s`)留下一条通用教训:**站点凭据的回显只有建站那一刻有,面板事后不回显**——
   丢了就只能重建站点。删站点前**先把资源 target 迁到新站点再删**,反过来资源会短暂失去后端
-- Resources:`blog.apikv.com`(blog,target `https://blog:443`;**2026-08-18 traefik-config 实查:早前的根域 `apikv.com`+`www` 已无 router,公网 404 空置**)/ `config.apikv.com`(SSO on)/ `config-api.apikv.com`(SSO off,应用自带鉴权)/ `casdoor.apikv.com`(SSO off,自带鉴权,target `10.1.0.8:8000`)/ **`dsh.apikv.com`(rid 19, **SSO on**, site `mac2`, target `127.0.0.1:3080` http)——
+- Resources:`blog.apikv.com`(blog,target `https://blog:443`)/ **根域 `apikv.com`+`www`=静态导航页(2026-08-26 起,容器 `homepage` 走 file provider 路由,不在面板;部署物 docker-deploy 仓 `homepage/`,此前 404 空置)**/ `config.apikv.com`(SSO off,2026-08-26 库实查)/ `config-api.apikv.com`(SSO off,应用自带鉴权)/ `casdoor.apikv.com`(SSO off,自带鉴权,target `10.1.0.8:8000`)/ **`dsh.apikv.com`(rid 19, **SSO on**, site `mac2`, target `127.0.0.1:3080` http)——
   ⚠️ DSH 自带浏览器信任栅栏:Host 非回环且不在 trustedHosts 就 403,**外壳能开但工作区永远为空**;
   已在 `~/.dsh/profiles/web/cordis.patch.yml` 的 `connection` 条目补 `trustedHosts: ['dsh.apikv.com']`
   (热生效不用重启,**必须写纯 YAML 数组——`!!js` 表达式在用户补丁层实测不生效**)。
@@ -214,6 +214,7 @@ mediamtx-mediamtx-1  10.1.0.8:8889->8889/tcp    ← 这种才只绑内网
 - 排查 target 实际值不用登面板:宿主 `curl http://<pangolin容器IP>:3001/api/v1/traefik-config` 直接看 services 的 url
 - 面板不可用/无密码时可直改 `/home/docker/pangolin/config/db/db.sqlite` 的 `targets` 表(python3 自带 sqlite3,**先 cp 备份**),Pangolin 不缓存,Traefik 5s 轮询内生效
 - **DB 后门关 SSO 改的是 `resourcePolicies` 表**(经 `resources.defaultResourcePolicyId` 关联)的 `sso` 列;`resources.sso` 是遗留列,置 0 无效(2026-08-13 casdoor 实测)。badger 中间件恒挂在 router 上,放行与否由 pangolin 运行时按 policy 判定,所以 traefik-config 里看不出 SSO 开关
+- **DB 后门也能加路径放行规则**(2026-08-26 node3 观测五资源实测):`resourcePolicyRules` 插 `(ruleId,resourcePolicyId,enabled=1,priority,action='ACCEPT',match='PATH',value='/insert/*')` 并把对应 `resourcePolicies.applyRules` 置 1,**即时生效不用重启**;备份用 sqlite backup API 而非 cp(库是热的)。据此 `node3-{metrics,logs,traces,vmalert,alerts}` 已挂 SSO,前三者放行写入路径(`/insert/*`、`/opentelemetry/*`、`/api/v1/write`,vector 与 OTLP 推送不受影响);`node3-otlp` **不挂 Pangolin 鉴权是刻意的**——机器客户端过不了 SSO,该资源的鉴权落在 collector 自己的 `bearertokenauth` 上(2026-08-27 起匿名写入已关闭,详见 [local-env.md](local-env.md)「OTLP 已强制鉴权」)。遗留表 `resourceRules` 当时同步双写了一份,未验证是否被读
 
 ## 其它操作事实
 

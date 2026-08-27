@@ -21,7 +21,7 @@
 | 2026-08-19 鉴权链路改造：前端 PKCE 直连 + 网关身份头加固 | 🟡 | **起因**：前端每次启动都要先起 user 服务才有 JWT。查下来 user 服务在登录里**只是一层 40 行的 code→token 代理**（`backend/services/user/internal/data/user.go:35` 调 `GetOAuthToken` 后原样返回，不… |
 | CI/CD（GitHub Actions） | 🟡 | **2026-08-07 后端 CI 重写为「一份模板 + 矩阵分发」**：`service-ci.yml`（workflow_call 可复用模板：build/vet/test(-race)+structcheck → buildx 多架构镜像推 TCR，tag=`sha-<7位>` 不可变 +… |
 | 注册发现（Consul） | 🟡 | Consul 仅保留注册发现；应用配置统一由独立 Config Center 下发。… |
-| 提交规范（commitlint + vite-plus 钩子） | ✅ | 仓库根 `package.json` 只装 `@commitlint/cli` + `config-conventional`，规则在 `commitlint.config.mjs`：Angular 十一类 type + 可选 gitmoji（带了就必须与 type 相符）+ subject 末尾禁标点。… |
+| 提交规范（commitlint + vite-plus 钩子） | ✅ | 2026-08-26 起 commitlint 由 frontend workspace 承载（根三件套已删，钩子直调 `frontend/node_modules/.bin/commitlint` + 显式 `--config frontend/commitlint.config.mjs`，三探针红测通过）：Angular 十一类 type + 可选 gitmoji（带了就必须与 type 相符）+ subject 末尾禁标点。… |
 | 代码规范（oxlint + oxfmt，vite-plus 内置） | 🟡 | biome 在 2026-03 迁移时已被 vite-plus 自带的 oxlint + oxfmt 取代。… |
 | API Protobuf 输入约束（Protovalidate） | ✅ | 2026-08-07 完成 `backend/api/` 下 13 个 API 包、14 份源 proto 的 `buf.validate` 覆盖。… |
 | 结构性门禁（`backend/structcheck`） | 🟡 | 2026-08-07 新增，随 `go test ./...` 进 CI。五项检查：`.service-matrix.yaml` ↔ `backend/services/` 目录双向对齐（`config` 撞名进程列为已知例外）、matrix 内部一致性（discovery/gateway_pref… |
@@ -29,6 +29,7 @@
 | 统一可执行 runbook（`context/team/runbook.md`） | ✅ | 2026-08-07 新增，把「规则与限制」命令化,供 Codex 等 CLI 直读直跑:动手前必读的限制(拓扑查 matrix、10 服务同构、proto 先读设计、凭据不入库、不可逆动作)+ 提交前验收锚点(`go build/vet`、`structcheck -count=1`、`go te… |
 | harness 瘦身（AGENTS.md / context） | ✅ | 2026-08-07，参照 Anthropic/OpenAI 2026 的「减法」prompting 指引：AGENTS.md（根 + ecommerce 两份同步）「项目速览」改为「反直觉约定」，删掉读代码即可发现的技术栈/架构复述；… |
 | token 成本治理（对照腾讯《Multi-Agent 降本》复盘） | ✅ | 2026-08-21 六处落地：TODO.md 瘦身 199KB→92KB（证据归档 `docs/progress-archive/`）+ 96KB 预算门禁；`scripts/verify-quick.sh` 并行锚点（绿一行/红失败段）；runbook 硬规则 #6 副本消重；`harness-framework/subagent-dispatch.md` 三条派发约定；kaneo MCP 收窄按需（`.claude/kaneo-mcp.json`）；impeccable 钩子限定 `frontend/`。四要素记录见 evolution-log |
+| 飞轮评测与门禁元评测（对照腾讯《Agent 自进化飞轮》） | ✅ | 2026-08-26 四齿对照评测：新增 `scripts/verify-context-canary.sh`（十探针，接两侧 context-gate CI）+ `context/harness-framework/flywheel-audit.md`（评测结论 + 方向性审计约定）。同日对照 Kun Chen《Your AGENTS.md is a Neural Net》补「Session 反传」：首轮蒸馏捞到 1 条漏沉淀（`logout-auto-relogin.md`）+ 1 条陈旧索引行；蒸馏器固化为 `scripts/backpass-distill.sh`（三存储含 DSH），共用能力经 `portable-harness.md` + lens077 根 symlink 分发。四要素见 evolution-log |
 | AI 异构双审（Claude + Codex） | 🟡 | 2026-08-07 评估过 CI 方案(`.github/workflows/ai-review.yml` + 两家 App + secret),因单人流程过重**已取消**该文件。… |
 | 冻结验收集门禁（Frozen Nodes） | 🟡 | 2026-08-07 新增，服务于 Graph Engineering 多闭环工作流的「改考题必须走审批」防线。… |
 | DevOps 体系设计（`docs/DEVOPS.md`） | ⬜ | 2026-08-07 新增设计文档 `docs/DEVOPS.md`：以 Three Ways/CALMS/DORA 为骨架、DevOps 边界对齐 DDD 限界上下文，含现状盘点（与本表对齐）与四个落地阶段——①可重复构建（CI 模板化、路径触发、buf breaking、镜像禁 latest+t… |
@@ -202,6 +203,16 @@
 
 先打通「消费者核心交易闭环」，再向商家/管理端与非核心能力扩展。
 
+### 宪法矛盾修复（2026-08-26，对照 mall 宪法 25 项裁决，详单 `.scratch/constitution-fixes/plan.md`）
+
+P0 文档收敛当日全部完成（消息底座/搜索/缓存/事件表/库存公式/%w/认证位置一说化，performance.md 删、payment 作废横幅、死链清零）。余下代码/基础设施债：
+
+- [x] [P1] cart 金额改为 `int64 unit_price_cents`：proto 旧 `price` 号/名已 reserved，Go/TS 生成物、biz/data/consumer 结算链路统一整数分；`cart/internal/data/migrations/00002_price_cents_constraint.sql` 校验存量仅含分精度，`backend/buf.yaml` + `service-ci.yml` 以 reserved 规则跑 breaking
+- [ ] [P1] cart 条目契约迁回 cart_item_id（08-26 裁决，checkout v2 依赖）
+- [ ] [P1] 下线 seata-server 与 Kafka/Strimzi 集群残留（执行需授权）
+- [ ] [P1] 清理 5 服务 auth 配置块；东西向服务身份（mTLS/token）
+- [ ] [P2] 跨 schema FK→ID+快照；merchant_id/金额类型收敛（ADR）；listing Money 豁免 ADR；性能目标绑压测重立
+
 ### P0 · 鉴权改造的收尾（2026-08-19，代码已完成，剩下的都在 Casdoor 控制台/基础设施侧）
 
 - [x] ~~**Casdoor 开 `enableSigninSession`**~~ **已完成**（连同 `enableAutoSignin`）。
@@ -342,6 +353,11 @@
   - 起初是「服务直连后端 + nginx 改写 `/v1/*`」，已废弃改为 collector：直连要在 nginx 抹平三个后端不一致的路径前缀（VictoriaMetrics 无 `/insert`，另两个有），**且没有批处理与重试——公网隧道抖一下就丢数据**。
   - exporter 端点写 base 让 otlphttp 自己拼 `/v1/{signal}`；改 Pangolin target 要带 `siteId`，否则报 `Invalid site ID`。
   - ⚠️ 查 node3 指标时标签名带点（`service.name`/`k8s.container.*`）不是下划线
+- [x] **OTLP 入口关闭匿名写入（2026-08-27）**：`node3-otlp` 此前对公网无鉴权，任何人可注入伪造 trace/log/metric（污染排障证据 + 打 node3 存储）。**不能挂 Pangolin SSO**——机器客户端过不了浏览器登录墙，302 会让三信号全停；鉴权改落在 collector 自己的 `bearertokenauth` 扩展（token 列表读 `/run/secrets/otel-tokens`，每行一个）。实测无 token / 错 token 三信号一律 **401**，三份 token 均 200，且用 `make` 注入的凭据真发的 span 已落进 VictoriaTraces。
+  - **应用代码零改动**：原计划改 10 份 proto + 同构 `internal/pkg/otel`，实查源码后否掉——三个 exporter 原生认标准环境变量 `OTEL_EXPORTER_OTLP_HEADERS`，而现有代码只显式设 endpoint/TLS，headers 位是空的。值必须写 `Authorization=Bearer%20<token>`，**空格写 `%20`**（按 W3C baggage 规则解码），真空格会被截断。
+  - 三身份（真相源 Vault `secret/observability/otlp`，仓库零明文）：`mac_default`（本机 `make dev`，经 `~/.config/apikv/otel.mk` + 11 份 Makefile 的 `-include`，缺文件静默跳过不影响 CI）、`k8s_ecommerce`（集群车队）、`gateway`（网关独立，可单独撤销）。后两者经 ESO → Secret `otel-auth` → env。
+  - ⚠️ **collector 容器以 `10001:10001` 非 root 跑**，token 文件给 `0600 root` 会读不到（启动即失败），正确是 `0640 root:10001`；该容器是**裸 `docker run`**（无 compose），加挂载必须 `rm -f` 重建，重建前先 `docker run --rm ... validate --config` 干跑校验。
+  - k8s 侧 env 写了 `optional: true`：Secret 未就绪退回匿名发送而非 CrashLoop——但匿名现在会被 401，**表现为遥测缺失而非服务挂**。集群回线后先确认 `otel-auth` 已 Synced。轮换走 old/new 双 token 窗口（文件加一行 → 重启 collector → 切客户端 → 删旧行 → 再重启）。
 - [x] **Config Center 切 node3 + CNPG hibernate（2026-08-24）**：切之前必须先重新同步 `config` schema——PG 切流后所有 PutKey 写的都是 CNPG，node3 那份是旧的，**直接切会把十个服务的配置悄悄退回指向 CNPG**。Config Center 自己走 `CONFIG_FILE` 本地文件，无先有鸡蛋问题
 - [x] **outbox-relay 的 NetworkPolicy 补 egress（2026-08-24）**：只有 relay/search-indexer/product-seed/search-reindex 带 NetworkPolicy 且只放行 postgresql 命名空间 5432。库搬到集群外后症状是 `connect: connection timed out`（不是拒绝），十个业务服务全好唯独 relay 起不来，极易误判成隧道不稳
 - [ ] **集群外依赖已成硬依赖**：node3 或 Pangolin 隧道故障 = 数据面连不上库 + 观测全断。CNPG 是 hibernate 不是删除，回滚路径还在（改回 `pg-main-rw.postgresql.svc:5432` 并取消 hibernation 注解）
@@ -540,14 +556,6 @@
 | 支付状态不一致    | 支付回调异常，导致订单支付状态与第三方支付状态不一致   | 1. 支付回调验签 + 幂等处理，避免重复回调异常；2.主动轮询查询支付状态，作为回调的兜底方案；3. 每日自动对账，修复状态差异；4. 支付状态变更通过事件驱动，保证各服务数据同步          |
 | 大促峰值流量过载   | 秒杀、大促场景下，流量突增导致系统响应慢、甚至宕机    | 1. 采用 Kafka 实现请求削峰，同步转异步；2.多级缓存架构，热点数据全缓存，避免请求打穿到数据库；3. 全链路限流熔断，保护核心服务；4. 基于 K8s 实现弹性扩缩容，快速应对流量增长    |
 | 微服务复杂度失控   | 微服务数量过多，服务间依赖复杂，导致运维、迭代难度提升  | 1. 严格遵循 DDD 领域边界划分，避免微服务过度拆分；2.采用事件驱动架构，解耦服务间依赖；3. 统一的代码规范、工程结构，降低维护成本；4. 完善的可观测性体系，快速定位问题           |
-
-## 建议
-
-1. 代码规范与工程化：统一前后端代码规范、工程结构，通过 CI/CD 流水线实现代码门禁、单元测试、自动部署，保障代码质量，避免技术债务累积。
-2. 先闭环后优化：优先完成核心交易闭环，再逐步优化性能、扩展功能，避免过早优化导致的开发周期延长，快速验证业务模式。
-3. 全链路压测前置：每个阶段上线前，都需要进行全链路压测，提前发现性能瓶颈、隐藏 bug，避免线上故障。
-4. 数据备份与灾备：核心数据定期备份，制定完善的故障恢复预案，定期进行故障演练，保障数据安全与系统可用性。
-5. 文档同步维护：维护完善的架构文档、API 文档、数据库设计文档，同步更新，避免文档与代码脱节，降低团队协作成本。
 
 ---
 ## 五、会话记录（已归档）
