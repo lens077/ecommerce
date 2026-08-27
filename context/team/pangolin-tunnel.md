@@ -159,6 +159,59 @@ curl -s -c /tmp/pg.ck -X POST $U/auth/login -H "Content-Type: application/json" 
 `global-default-tls`,Traefik 已配 `serversTransport.insecureSkipVerify` 兼容)。
 判别 404 来源:响应头 `server: envoy` + 直连 svc ClusterIP 对比。
 
+## 新增资源:正确姿势与 503 排查(2026-08-27 一次性付清四笔学费)
+
+> 这一节是**加站点前必读**。四个站点曾以「已上线」交付但实际全是 503,根因是验收判据错了。
+
+### ⛔ 建资源**必须走面板/API**,DB 后门只能改已有资源
+
+`targets.internalPort`(WireGuard 隧道内的映射端口)与 `authToken`(加密令牌)由 Pangolin
+**运行时生成**,后门 INSERT 补不出来;还会漏掉 `roleResources` 授权行(缺了连 API 都会
+`403 User does not have access to this resource`,自己都管不了自己建的资源)。
+症状:`servers: []` → 公网 **503**。DB 后门的正当用途只有改 target 值、SSO 开关、路径放行规则。
+
+### Pangolin 把 target 踢出 `servers` 的四个否决条件(`/app/dist/server.mjs` 源码实证)
+
+排查 503 按这个顺序查,**比逐个字段猜快得多**:
+
+```js
+if (!target.enabled) return false;                        // ① 手动禁用
+if (target.health == "unhealthy") return false;           // ② 健康检查判死
+if (anySitesOnline && !target.site.online) return false;  // ③ 站点离线
+if (site.type === "newt" && (!target.internalPort || !target.method || !site.subnet))
+    return false;                                          // ④ newt 三件套缺一不可
+```
+
+⚠️ **面板建资源不要勾 Health Check**:28 个 target 里 27 个 `hcEnabled=0`,唯一开启的
+`silo` 就因 `hcPath=/` + `hcPort` 空被判 `unhealthy` 而 503——**而后端一直是健康的**
+(隧道端口实测 REACHABLE、直连 9001 三个路径全 200)。要开必须同时配对 `hcPort`/`hcPath`。
+`resources.health` 是运行时回写的**结果**字段,改它无效,会被覆盖。
+
+### 三条验收,缺一不可
+
+**302 只证明 SSO 登录墙生效,它发生在回源之前,证明不了后端活着**——这正是四个站点被误报
+「已上线」的原因。
+
+```bash
+# ① servers 非空(最关键,漏掉这条就会误报)
+ssh node1 'PIP=$(docker inspect pangolin --format "{{range .NetworkSettings.Networks}}{{.IPAddress}}{{end}}")
+  curl -s http://$PIP:3001/api/v1/traefik-config' | grep -A2 '<rid>-.*-service'
+#   期望 [{"url":"https://100.89.128.x:<internalPort>"}];空数组 = 必 503
+
+# ② 公网响应(等 Traefik 5s 轮询)。SSO on → 302;SSO off → 应用自身响应
+curl -sk -o /dev/null -w '%{http_code}\n' https://xxx.apikv.com/
+
+# ③ 后端真实回源(绕过登录墙)。带 Host 头,裸 IP 无 Host 会被 envoy 判 404 误导
+ssh node1 'docker exec traefik sh -c "wget -q -S -O /dev/null --no-check-certificate \
+  --header=\"Host: xxx.apikv.com\" https://100.89.128.x:<internalPort>/ 2>&1 | grep -m1 HTTP/"'
+```
+
+### 加站点前置:先确认后端活着
+
+k8s 服务查 `kubectl -n <ns> get endpoints <svc>`(08-24 有四条指向已卸载服务的孤儿路由,
+建入口只会得到 502);主机服务直连实测协议与端口——**不要照抄同机其他服务**,
+`silo` 的 9001 是 `minio-1.pigsty` 而同机 9000 是 `sss.pigsty`,`tlsServerName` 照抄必失败。
+
 ## local site(node3-local) 的 target 写法(2026-08-11 与 08-12 两次 kaneo 502 实付学费)
 
 **根源只有一条**:转发是从 **Traefik 容器**发起的,所以 target 必须写「Traefik 容器视角下能到达该服务的地址」,
