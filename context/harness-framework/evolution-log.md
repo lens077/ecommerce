@@ -56,7 +56,7 @@ description: harness 本身（硬规则/门禁/Agent 约束）每次改动的原
 - **改了什么**：根目录 `application-vpa.yml` 收敛为覆盖 15 个 ecommerce Deployment 的完整 VPA 集合，统一使用 `updateMode: Off`、`RequestsOnly` 和显式 container 名称；已有 service-local VPA 同步为相同的 recommendation-only 语义。`backend/structcheck` 新增门禁，双向检查 target/VPA/container 名称、15 个目标全覆盖、无重复、禁止 `InPlace`/`Auto`，并禁止观测阶段用 `minAllowed`/`maxAllowed` 裁剪推荐。
 - **为什么**：当前集群只安装 recommender，没有 updater/admission-controller。把 CR 写成 `InPlace` 现在不会生效，却会在以后补装组件时静默跨越为自动改 Pod；观测阶段的边界还会把人工假设伪装成 Target。容量定稿必须先保留原始推荐，再结合启动峰值、k6 和 N+1 预算人工写回 requests。
 - **触发事故**：live 仅有 behavior/cart/order 三个 VPA，三者的内存 Lower/Target/Upper/Uncapped 全部恰好为 `250Mi`，证明被 recommender 默认地板顶住；根 `application-vpa.yml` 仍使用不存在的裸 Deployment 名，archive 也记录这些 targetRef 曾悬空 44 天。同期 17 个业务 Pod 合计 request 为 `1500m/2240Mi`，低流量瞬时实际仅约 `20m/378Mi`，而 frontend 完全没有 requests，说明当前值既有虚高也有缺失，不能靠一次快照直接缩容。
-- **怎么验证的**：`go test -count=1 ./structcheck/...` 通过；15 个 VPA 与 5 份 service-local 清单均通过 Kubernetes server dry-run；VPA Helm 渲染只包含 recommender，且 `10m/32Mi` 推荐地板参数进入容器 args。容量定稿、节点/资源/并发 rollout/扩缩容演练、持续 skew 与调度失败告警均保留在 `docs/design/platform/capacity-balancing.md`。同日后续取得 dev 部署授权后，Helm revision 2 与 15 个 `Off` VPA 已发布；全部 `RecommendationProvided=True`，无 webhook/updater，发布前后的业务 Deployment 与 Pod 身份未变化。
+- **怎么验证的**：`go test -count=1 ./structcheck/...` 通过；15 个 VPA 与 5 份 service-local 清单均通过 Kubernetes server dry-run；VPA Helm 渲染只包含 recommender，且 `10m/32Mi` 推荐地板参数进入容器 args。同日后续取得 dev 部署授权后，Helm revision 2 与 15 个 `Off` VPA 已发布；全部 `RecommendationProvided=True`，无 webhook/updater，发布前后的业务 Deployment 与 Pod 身份未变化。容量定稿、节点/资源/并发 rollout、扩缩容演练、持续 skew 与调度失败告警仍需补成版本化设计文档。
 
 ### 2026-08-28 跨服务节点均衡与 Helm 缓存纳入 structcheck
 
