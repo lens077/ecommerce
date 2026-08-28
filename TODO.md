@@ -342,15 +342,17 @@ P0 文档收敛当日全部完成（消息底座/搜索/缓存/事件表/库存�
 - [ ] **前端没进 GitOps（2026-08-19 记录，用户明确暂缓）**：`frontend/apps/consumer/deploy/` 下 7 份 manifest（`deployment/service/configMap` + `pre/` 四份）是手工 `kubectl apply` 的，不在 ArgoCD 里。而且**和线上对不上**：manifest 写 `harbor.apikv.com/ecommerce/frontend:dev`，线上实际跑 `ccr.ccs.tencentyun.com/sumery/ecommerce-frontend:sha-auth4`（deploy 名 `ecommerce-frontend-deploy`，ns `ecommerce`，revision 5）。镜像 tag 是手打的（`sha-bf8dae2`→`sha-csp1`→`sha-auth2`→`sha-auth4`），不是 CI 产物。**基础设施稳定后再收口**
 - [ ] **接入企业微信告警（2026-08-19 探明拓扑与落点，只差凭据）**
 
-  **① 先分清三个端，别配错地方**（版本都不同，很容易混）：
+  ⚠️ **2026-08-29 重新核对：下面 ①③④ 原先记的是已下线的 `192.168.3.210` 和已删除的集群内 Grafana，落点已整体搬到 node3，值全部换过。**
+
+  **① 先分清两个端，别配错地方**（`192.168.3.210` 已停机下线；集群内 `observability` ns 的 Grafana 已 `helm uninstall`，那两个端都不存在了）：
 
   | 端 | 是什么 | 发不发告警 |
   |---|---|---|
-  | `grafana.dev.test` | **集群内** `observability` ns，**12.3.1** | ✅ k8s 侧发送方，已有飞书 contact point |
-  | `192.168.3.210:3000` | Pigsty 自带，**13.1.3** | ❌ 实测 **0 contact point / 0 规则**，纯看板 |
-  | `192.168.3.210:9059` | Pigsty **Alertmanager** 0.33.1 | ✅ 基础设施侧发送方 |
+  | `https://node3-grafana.apikv.com`（node3 `:3000`） | Pigsty 自带 **13.1.3** | ❔ 未复核 contact point；旧机上是纯看板 |
+  | `https://node3-alerts.apikv.com`（node3 `:9059`） | Pigsty **Alertmanager 0.33.1** | ✅ **唯一发送方** |
+  | `https://node3-vmalert.apikv.com`（node3 `:8880`） | vmalert | 规则求值，投递交给上面的 Alertmanager |
 
-  ⚠️ Alertmanager 配置里那行 `wechat_api_url` 是它的**全局默认值**（指向 `qyapi.weixin.qq.com`），**不代表已配企业微信** —— receivers 实际只有 `default` 和 `feishu`。
+  ⚠️ Alertmanager 配置里那行 `wechat_api_url` 是它的**全局默认值**（指向 `qyapi.weixin.qq.com`），**不代表已配企业微信**。
 
   **② 两种企业微信形态，给的凭据不一样 —— 这是选型的关键分岔**：
   - **应用消息**（`corp_id` + `agent_id` + `api_secret`）：Alertmanager 的 `wechat_configs` **只吃这种**；Grafana 的 WeCom 也支持。**推荐**，两边统一且不必再引入转换层
@@ -359,13 +361,17 @@ P0 文档收敛当日全部完成（消息底座/搜索/缓存/事件表/库存�
   **③ 凭据获取步骤**（[work.weixin.qq.com/wework_admin](https://work.weixin.qq.com/wework_admin/)）：
   1. `corp_id`：「我的企业」→ 页面最下方「企业ID」
   2. 「应用管理」→「应用」→「自建」→「创建应用」，**可见范围决定谁能收到告警**；创建后详情页拿 **AgentId**，**Secret** 点「查看」会推送到手机企业微信
-  3. ⚠️ **必须配「企业可信IP」**：应用详情 →「开发者接口」→「企业可信IP」→ 填 **`<operator-egress-ip-b>`**（210 与集群 Grafana 实测是同一条家宽出口）。不配则调 API 报 `not allow to access from your ip`，**且该错误只在 Alertmanager 日志里，界面无感知**。这是家宽出口 IP，**会漂** —— 以后告警突然静默，先查它
+  3. ⚠️ **必须配「企业可信IP」**：应用详情 →「开发者接口」→「企业可信IP」→ 填 **node3 的出口 IP `<node3-egress-ip>`**（2026-08-29 实测；旧记录里的 `<operator-egress-ip-b>` 是已下线 210 的家宽出口，**不要再填**）。不配则调 API 报 `not allow to access from your ip`，**且该错误只在 Alertmanager 日志里，界面无感知**。云主机出口 IP 也可能变 —— 以后告警突然静默，先查它
 
-  **④ 落点已就绪**（2026-08-19）：210 的 SSH 已通，**用户名是 `root` 不是 `sumery`**（用后者会被 publickey/password 拒）；配置在 **`/etc/alertmanager.yml`**（不是 `/etc/alertmanager/alertmanager.yml`，路径从 `ps -eo args` 的 `--config.file=` 反查），已备份 `.bak-wecom-20260819`。现有结构：`route` 下两条子路由（`severity="CRIT"`→feishu/4h、`severity="WARN"`→feishu/24h），receivers 只有 `default`/`feishu`。**改法**：加 `wecom` receiver，CRIT 那条路由用 `continue: true` 让它同时进飞书和企业微信，不动现有飞书链路。⚠️ 按 `context/team/local-env.md`，Pigsty 侧要**模板与已部署文件双改**，否则 `./infra.yml -t alertmanager` 重跑会覆盖回去
+  **④ 落点**（2026-08-29 在 node3 重新核对）：ssh 别名 `node3`，**用户名 `root`**；配置在 **`/etc/alertmanager.yml`**（不是 `/etc/alertmanager/alertmanager.yml`，路径从 `ps -eo args` 的 `--config.file=` 反查）。
+  **现有结构与旧机不同**：`route.receiver` 是 `local-audit`（一个 webhook），receivers 只有 `default` / `local-audit` —— **node3 上没有飞书链路**，所以「用 `continue: true` 并进飞书和企业微信」那个旧改法不适用，得先决定飞书要不要一起重建。
+  ⚠️ **Pigsty 侧必须模板与已部署文件双改**，否则 `./infra.yml -t alertmanager` 重跑会覆盖回去。这次实测出的两个真实路径：
+  - 模板 `node3:/root/pigsty-deploy/roles/infra/templates/prometheus/alertmanager.yml`
+  - 部署产物 `node3:/etc/alertmanager.yml`（owner `prometheus:infra` 0644，已有备份 `.bak-20260824135114`）
 
-  **⑤ 仍缺**：企业微信三件套；**集群 Grafana（12.3.1）的 admin 密码**（用户此前给的 `FMU5...` 经实测是 210:3000 那个 13.1.3 的，对集群那个 401）
+  **⑤ 仍缺**：企业微信三件套；node3 Grafana（13.1.3）的 admin 口令在 `node3:/root/pigsty-deploy/pigsty.yml`（不入库）。原先记的「集群 Grafana 12.3.1 密码」已随该实例删除而作废
 
-  **⑥ 验收不能只测「发得出去」**：造一条 `severity=CRIT` 的假告警，确认**同时**进飞书和企业微信；再造一条 `WARN`，确认**不**进企业微信 —— 否则路由条件没生效等于全量轰炸
+  **⑥ 验收不能只测「发得出去」**：造一条 `severity=CRIT` 的假告警，确认进企业微信（若同时重建了飞书，确认两边**都**收到）；再造一条 `WARN`，确认**不**进企业微信 —— 否则路由条件没生效等于全量轰炸
 - [ ] **给 Config Center 灌 gorse 的 api_key**：`backend/services/behavior/configs/{dev,pre}.yml` 与 `product/configs/pre.yml` 的 `api_key` 按硬规则 4 **保持空串**，但 gorse 侧鉴权已开——**KV 里不填真值的话业务调用会全部 401**。真值在 node2 的 `/home/docker/gorse/config.toml`
 - [ ] **收窄 node1 公网数据端口**：测试期 Redis `61246`、PostgreSQL `52288` 对 `0.0.0.0/0` 开放；上线前按 `context/team/pangolin-tunnel.md` 收窄来源。Redis 有 TLS/强凭据但仍会被扫描
 - [ ] **node1 PostgreSQL 加 TLS、轮换弱凭据**：当前 `52288` 明文且全网可达；与上一条同时收口
