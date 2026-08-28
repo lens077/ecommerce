@@ -19,10 +19,9 @@ spec:
     database.port: 5432
     database.dbname: ecommerce
     database.user: debezium_user
-    # TODO: 走 Strimzi 的 KubernetesSecretConfigProvider 引用 Secret。
-    # 暂时保持明文是为了和仓库现状一致（helm/values.yaml 里的 DB_SOURCE 也是明文），
-    # 不在修 CrashLoop 的同一轮里引入 RBAC 这个新的失败点。
-    database.password: ***REMOVED-PASSWORD***
+    # KafkaConnect 把 Secret 注入环境变量，再由 EnvVarConfigProvider 展开。
+    # Secret `debezium-database-credentials` 必须在 apply 前由外部凭据系统创建。
+    database.password: ${env:DEBEZIUM_DATABASE_PASSWORD}
     database.sslmode: require
     topic.prefix: ecommerce_cdc
 
