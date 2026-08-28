@@ -98,10 +98,25 @@ Syft 已接入 `.github/workflows/service-ci.yml`：仅发布 tag 且实际推�
 
 因此，**Syft tag 阶段已完成远端双架构验收**。
 
-### Cosign 下一步
+### `1.5.3` GHCR keyless 验收
 
-Cosign 3.1.3 的 GHCR keyless 代码已经准备：固定版本并校验官方 checksums；对 OCI index digest 签名，对 amd64/arm64 child digest 分别附加对应 SPDX attestation，并在同一 job 以 GitHub Actions OIDC issuer 与 workflow identity 回验。该代码尚未通过新的远端 tag 实跑，不能宣称签名阶段完成。
+发布 tag `1.5.3` 指向提交 `8f4d223`。GitHub Actions run `33154780470` 的 22 个 jobs 全部成功，10 个服务均生成包含 SPDX 与 Sigstore bundle 的 artifact。
 
-仍未验证或落地：TCR 签名兼容性、Harbor Helm 签名、Trivy image、Kyverno `verifyImages`。
+抽查 `user:1.5.3`：
 
-**下一步指示**：发布下一裸 semver tag，验证 GHCR index 签名、两个平台的 SPDX attestation、Fulcio workflow identity 与 Rekor bundle；GHCR 全绿后再单独测试同一 digest 的 TCR Cosign 工件兼容性。
+- index digest 为 `sha256:0b4b2a46bc503d8a26e49f5686f3e13c827fb9ceb63d37d3e8da62edbc1e9910`；
+- index keyless 签名回验得到 1 个有效签名；
+- amd64 child digest 为 `sha256:aa1877d71a894f22194fe7a5214bc2093aaa8823005262f59dd3b328545796cc`，arm64 为 `sha256:e14d0f0af462bf8625c9a1b6bbb3534d112e0ff1f756e0b7769b4a14136ac8b6`；
+- 两个平台的 `spdxjson` attestation 均通过 Fulcio CA、透明日志和 Cosign claims 验证；
+- `signature.bundle.json` 与两个 attestation bundle 均为 `application/vnd.dev.sigstore.bundle.v0.3+json`，包含 verification material；
+- Fulcio 证书 SAN 精确为 `https://github.com/lens077/ecommerce/.github/workflows/service-ci.yml@refs/tags/1.5.3`，issuer 为 Sigstore intermediate；验签同时约束 GitHub Actions OIDC issuer。
+
+因此，**Cosign 3.1.3 GHCR keyless 签名与平台 SBOM attestation 阶段已完成远端验收**。
+
+### TCR 下一步
+
+GHCR 与 TCR 的 `user:1.5.3` index digest、amd64/arm64 child digest 完全一致。下一步只用 `user` 服务探测 TCR 个人版：签 index、分别附加两个平台的 SPDX attestation，并立即从 TCR 回验。探测代码已经接入；通过前不扩展到其他服务，也不将 Kyverno `verifyImages` 指向 TCR。
+
+仍未验证或落地：TCR Cosign 工件兼容性、Harbor Helm 签名、Trivy image、Kyverno `verifyImages`。
+
+**下一步指示**：发布下一裸 semver tag 执行 TCR 单服务探测；若 registry 拒绝 OCI referrers 或无法回读，保留 GHCR 为唯一 keyless 验签源并记录 TCR 不兼容，不使用宽松 fallback 掩盖失败。
