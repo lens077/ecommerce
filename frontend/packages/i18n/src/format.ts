@@ -47,6 +47,27 @@ export function formatCurrencyIn(
   return numberFormat(locale, { style: "currency", currency }).format(amount);
 }
 
+/** Formats exact integer cents without converting the transaction amount through floating point. */
+export function formatCurrencyCentsIn(
+  locale: Locale,
+  cents: bigint,
+  currency: string = DEFAULT_CURRENCY,
+): string {
+  const formatter = numberFormat(locale, { style: "currency", currency });
+  const major = cents / 100n;
+  const minor = cents < 0n ? -(cents % 100n) : cents % 100n;
+  const majorFormatted = formatter.format(major);
+  if (minor === 0n) return majorFormatted;
+
+  const decimalSeparator = new Intl.NumberFormat(locale)
+    .formatToParts(1.1)
+    .find((part) => part.type === "decimal")?.value;
+  if (!decimalSeparator) return majorFormatted;
+
+  const fraction = minor.toString().padStart(2, "0");
+  return majorFormatted.replace(`${decimalSeparator}00`, `${decimalSeparator}${fraction}`);
+}
+
 /** 纯数字的千分位格式化，不带货币符号。 */
 export function formatNumberIn(
   locale: Locale,

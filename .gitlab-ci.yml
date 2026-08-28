@@ -16,6 +16,8 @@ context-gate:
     - apk add --no-cache bash git grep sed gawk coreutils findutils
   script:
     - bash ./scripts/verify-context.sh
+    # 门禁的元评测:注错断言门禁还会红,防恒绿失效(与 GitHub 侧同款)。
+    - bash ./scripts/verify-context-canary.sh
   rules:
     - if: '$CI_PIPELINE_SOURCE == "merge_request_event"'
     - if: '$CI_COMMIT_BRANCH'

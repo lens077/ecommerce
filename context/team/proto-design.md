@@ -13,7 +13,7 @@ description: 设计/编写 proto 时必须先参考设计文档，并为每个�
 阅读优先级：
 
 1. `docs/design/<service>/` —— 各域设计（如 `ListProducts` 游标分页在 `docs/design/product/listing.md`），平台级在 `docs/design/platform/`
-2. `docs/design/config-center/design.md` —— 配置中心域的数据模型 / RPC / 鉴权
+2. 配置控制面 proto：同级仓 `../control-tower/docs/design/`（先读其 `AGENTS.md`）；业务 Bootstrap proto：对应服务的 `internal/conf/v1/conf.proto`
 3. `TODO.md` —— 该 RPC 当前是 ✅ / 🟡 / ⬜，缺口写的是什么
 4. 同域已有的 proto 与 sqlc schema —— 字段命名、类型、列宽要对齐
 
@@ -167,4 +167,4 @@ message ListOrdersRequest {
 ## 相关
 
 - 契约破坏的连带影响见 [`context/project/ecommerce/`](../project/ecommerce/INDEX.md)
-- 配置类字段的服务端校验见 `docs/design/config-center/design.md`
+- 配置控制面契约见 `../control-tower/docs/design/`；业务 Bootstrap 校验事实见 `.service-matrix.yaml` 的 `config_validation` 段

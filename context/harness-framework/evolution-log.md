@@ -44,6 +44,149 @@ description: harness 本身（硬规则/门禁/Agent 约束）每次改动的原
 
 ---
 
+### 2026-08-26 链接门禁扩围至设计文档与根双档,canary 补第 11 探针
+
+- **改了什么**：`verify-context.sh` 的 [DEAD-LINK] 扫描源由「AGENTS.md + context/」
+  扩为「AGENTS.md + README.md + STACK.md + context/ + docs/design/」（其余五项检查
+  范围不变,docs/design 无 frontmatter/INDEX 约定）;canary 沙箱同步纳入三个新扫描源
+  与其链接目标桩,新增红探针 `dead-link-design`（10 → 11 探针）;AGENTS.md 锚点
+  注释同步。
+- **为什么**：mall 宪法原则 I「引用不存在的文档即 CI 失败」在本仓机械化;
+  链接检查是纯存在性判定,扩围零误报成本,而 docs/design 恰是矛盾最密的区域。
+- **触发事故**：2026-08-26 一天内三轮死链全靠临时 python 脚本抓到——
+  README/design README 引用已不存在的 `config-center/design.md`、README 的
+  `gateway/README.md` 与 `.freeze/README.md`（两处 08-24 删除时漏清）、我自己
+  刚写错的 `../../order/checkout.md` 相对路径;门禁不覆盖的区域,烂的速度比审计快。
+  用户随后明确要求「docs/design 添加门禁」。
+- **怎么验证的**：扩围后门禁对当前树全绿（存量当日刚清零,恰好接得上硬门禁）;
+  canary 11 探针双 locale 全过,其中新探针实测:沙箱 design README 注入坏链 →
+  rc=1 且 [DEAD-LINK] tag 正确;CI 两侧无需改动（context-gate 本就每 push 跑）。
+
+### 2026-08-26 共用能力抽取:portable-harness 索引 + 蒸馏器固化 + lens077 根 symlink
+
+- **改了什么**：新增 `scripts/backpass-distill.sh`（Session 反传蒸馏器固化版:三存储
+  Claude Code/Codex/**DSH**（zstd 流尽力解析）、剔 skill 注入噪音、(sid,msg) 去重,
+  接受任意仓路径参数）;新增 `context/harness-framework/portable-harness.md`
+  （可复用能力清单、新项目五步采纳、根 symlink 登记表、不搬清单）;
+  lens077 根新增两个相对 symlink:`HARNESS.md`、`backpass-distill.sh`。
+- **为什么**：用户要求把可共用能力抽到工作区根让后续项目受益。分发模式沿用
+  2026-08-18 判例——根外裸副本重装即丢,正文只住仓内受门禁,根外只放相对链接;
+  蒸馏器固化同时偿清审计记录挂的「DSH transcript 蒸馏留待下轮」。
+- **触发事故**：第 4 轮任务（瘦身+抽取）执行中被宪法修复任务打断,用户完成度
+  质询时回扫发现抽取两件套仅有方案未落地;且首轮反传的蒸馏管线只存在于 /tmp,
+  会话结束即失忆——正是「Harness 层改动必须持久化到文件」要求的反面。
+- **怎么验证的**：shellcheck 仅余 SC2044 已注释说明;双仓实测
+  （ecommerce 近 14 天 1492→647 条/134 会话;lens077 近 3 天 1388→368 条,
+  其中 **DSH 源 342 条**提取成功）;经根 symlink 穿透执行同样成功;
+  `readlink` 确认两链接均为相对目标（迁移可存活）;两级 INDEX 登记后
+  `verify-context.sh` 与 canary 全绿（见本日门禁记录）。
+
+### 2026-08-26 canary 修 locale 依赖:变量紧邻全角字符必须加花括号
+
+- **改了什么**：`verify-context-canary.sh` 第 138 行 `$workdir` 改 `${workdir}`
+  并留原因注释——它后面紧跟全角「）」。
+- **为什么**：bash 3.2 在 UTF-8 locale 下会把紧邻多字节字符的首字节并进变量名,
+  `set -u` 下报 `workdir?: unbound variable`;C locale 则正常。同一脚本因调用方
+  环境不同而间歇性红,比恒红更难排查。约定:**变量紧邻非 ASCII 字符一律加花括号**。
+- **触发事故**：2026-08-26 收尾复跑 canary 首次撞上该错(此前多次全绿——调用方
+  locale 恰好宽松);`LC_ALL=C` 绿、`LC_ALL=en_US.UTF-8` 红,复现清晰。
+  全仓扫描 `$var` 紧邻非 ASCII 仅此一处真实命中。
+- **怎么验证的**：修复后 `LC_ALL=en_US.UTF-8` 与 `LC_ALL=C` 双跑 canary 均十探针
+  全过;`verify-context.sh` 复跑绿。
+
+### 2026-08-26 lint-baseline 的 vp-lint 采集器适配新格式并加失聪自检
+
+- **改了什么**：`run_vp-lint` 解析从旧单行格式(`path:line:col: …`)改为 miette 画框
+  格式(消息行 `! plugin(rule): …` 与其后定位行 `,-[path:line:col]` 配对),路径补
+  `frontend/` 前缀;新增**失聪自检**——vp 汇总行报 N>0 条而解析出 0 条时,产出
+  `PARSE-FAILURE` 哨兵行强制 check 变红;脚本头陷阱清单 3 条 → 4 条。
+- **为什么**：采集正则与上游输出格式耦合,格式一变就「解析 0 条 = 恒绿」,与
+  freeze/commitlint 同款静默失效。哨兵行把「脱钩」从静默态变成阻断态——
+  下次格式再漂移会当场红,而不是等下一次审计撞见。
+- **触发事故**：2026-08-26 按 flywheel-audit 清单 #1 红测:向 `main.tsx` 注入
+  `debugger` 后 `CHECKERS=vp-lint scripts/lint-baseline.sh check` 返回 rc=0
+  「无新增」,而 `vp lint` 本身明确报 `Found 1 warning`——vite-plus 某次升级把
+  输出改成画框格式后采集器已恒绿了未知时长(08-08 建立时同款注错实测拦得住)。
+  这是本日审计抓到的第三处「建立后无人再考」,同构事故第三次出现,
+  按清单 #5 升级为机械约束(失聪自检)。
+- **怎么验证的**：三态实测——①注错 → rc=1 且 finding 行正确
+  (`frontend/apps/consumer/src/main.tsx` + no-debugger);②还原 → rc=0;
+  ③用 perl 临时打断解析正则模拟下一次格式漂移 → rc=1 且出 PARSE-FAILURE 哨兵行;
+  全还原后默认全链(go-vet+vp-lint)rc=0。shellcheck 仅余 2 条 SC2329 info
+  (函数经 `"run_$1"` 间接调用的既有误报,非本次引入)。
+
+### 2026-08-26 commitlint 整链迁入 frontend workspace,钩子改直调二进制
+
+- **改了什么**：根目录 `package.json`/`pnpm-lock.yaml`/`commitlint.config.mjs` 三件套
+  删除（用户裁决保留删除）;规则文件迁为 `frontend/commitlint.config.mjs`（顺手修掉
+  头注释里陈旧的 `.husky` 路径）,`@commitlint/cli` + `config-conventional` 进
+  frontend devDependencies;`frontend/.vite-hooks/commit-msg` 由 `pnpm exec commitlint`
+  改为直调 `commitlint --config "$(dirname "$0")/../commitlint.config.mjs" --edit "$1"`
+  （`_/h` 本就把 `frontend/node_modules/.bin` 注入 PATH）;AGENTS.md 硬规则 3 与
+  反直觉约定、runbook §6 四处、git-commit.md 三节（真相源路径/工具链表/127 读法,
+  corepack 节按新依赖链收窄）、TODO 提交规范行同步改写。
+- **为什么**：钩子旧实现依赖 cwd 向上解析到根 workspace;根三件套删除后
+  `pnpm exec` 恒红,所有提交被阻断。迁入 frontend 保留机械校验
+  （「能判定的约束变成脚本」）,直调二进制还消掉了 pnpm 这层曾出过
+  `--no` 事故的间接层;根目录从此无 Node workspace。
+- **触发事故**：2026-08-26 用户在并行会话清理根目录三件套（经询问确认保留删除）;
+  按「门禁还红吗」清单红测钩子,实测**恒红**:合法消息 `feat(cart): …` 也退出 1,
+  报 `ERR_PNPM_RECURSIVE_EXEC_NO_PACKAGE`——与 2025-11 起九个月恒绿事故互为镜像,
+  这次是恒红,同样由「注错+注对双向实测」暴露。
+- **怎么验证的**：迁移后经真实分发链 `sh frontend/.vite-hooks/_/commit-msg` 三探针:
+  坏消息 rc=1、emoji 与 type 错配（`feat: :bug:`）rc=1、合法消息 rc=0;
+  `pnpm install` 在 frontend 实装 21.2.2 双包;全仓 grep 确认无残留的
+  根路径 `commitlint.config.mjs` 引用;`scripts/verify-context.sh` 复跑全绿。
+
+### 2026-08-26 审计新增「Session 反传」输入（对照 Kun Chen《Your AGENTS.md is a Neural Net》）
+
+- **改了什么**：`flywheel-audit.md` 新增「Session 反传」节（机械蒸馏在前/批量门槛/
+  小步带引用/落点分层/人工裁决）与审计清单第 6 项,「评估过不建」表新增 backpass
+  工具行;`self-refinement.md` 指针句补「打捞没被当场抓住的教训」;首轮反传的
+  梯度产出:新增 `consumer/experience/logout-auto-relogin.md`,修剪 consumer INDEX
+  陈旧行「token 存 localStorage」（实况:Web httpOnly cookie / 桌面内存,
+  `store/users.test.ts` 锁不变量）。
+- **为什么**：文章把项目记忆文件当神经网络训——预算/小步/防遗忘本仓已机械化
+  （14KB 门禁、「没有事故就别改规则」、evolution-log）,唯独 loss 只收
+  「会话内被当场识别」一路;transcript（本仓 Claude Code 51 个/101MB、Codex 30 个、
+  DSH `~/.dsh/sessions/`）从未进过沉淀闭环,离线批量反传正是缺的那路输入。
+  工具本体缓用:提案只训单一 AGENTS.md 与本仓分层冲突、采集不覆盖 DSH、
+  apply 门控未齐。
+- **触发事故**：首轮人工反传实测（近 14 天 341 条用户消息 → 剔除 5 组以 user 角色
+  注入的 skill 全文 → 246 条人话）即捞到一条漏网:08-19 会话里用户完整讲解的
+  「登出后自己登回去（漏 `stopRenew()`）」教训,代码注释与 TODO 都留痕,
+  context/ 没有检索入口——self-refinement 第 ④ 步在那个会话没发生。
+  同轮另有两条候选被批量门槛正确拒绝（同一上午重复指令属同一事件;
+  另一条属别的项目）,证明门槛在拒噪而非空转。
+- **怎么验证的**：候选逐条与代码/TODO/context 三处交叉核实
+  （`AppBar.tsx:148` 注释、`TODO.md` 08-19 条、`grep -rn stopRenew context/` 为空;
+  INDEX 陈旧行以 `AuthProvider.tsx:41/94/112` 与 `users.test.ts` 实测反证）;
+  改完 `scripts/verify-context.sh` 全绿、`scripts/verify-context-canary.sh` 十探针全绿。
+
+### 2026-08-26 门禁接上元评测 canary,方向性审计成文（对照《Agent 自进化飞轮》）
+
+- **改了什么**：新增 `scripts/verify-context-canary.sh`（十探针:干净沙箱必须绿 +
+  九类注错必须红且违规 tag 正确;沙箱 = 真身 `context/`/AGENTS.md/TODO.md +
+  仓外链接目标动态打桩 + 临时 git 仓,桩清单不手抄,漏了由探针 0 当场暴露）,
+  接进两侧 context-gate CI 在 `verify-context.sh` 之后每次 push 跑;新增
+  `context/harness-framework/flywheel-audit.md`（四齿对照评测结论、「评估过不建」
+  清单、方向性审计的触发/清单/记录）;AGENTS.md 锚点区与 runbook §0.5 各补一行;
+
+- **为什么**：对照腾讯《一篇讲透 Agent 自进化飞轮怎么搭:评测→记忆→落地→控制》
+  逐条评测本仓 harness:单次事件驱动的环节（纠错沉淀/门禁建立/授权分级）已规避
+  文章多数坑,踩中的集中在**周期兜底缺失**——评估器自身无人复评、跨会话慢变量
+  无人巡检。文章的「元评测集」方法论恰好给已内化判据「要验它红过吗」一个机械载体;
+  「方向性审计」补的是同步门禁天然看不见的对齐漂移。
+- **触发事故**：本次评测核对 git 历史发现:`verify-context.sh` 的九类注错验证只在
+  2026-08-18 建立时手工跑过,此后脚本改过两次（gitignore 检测、TODO 预算）,其中
+  08-21 的 TODO 预算门禁只验证过绿路径,**红路径从未被考过**——与 commitlint
+  九个月、freeze 十七天同构的「建立后再无人考它」状态第三次出现,这次在兑现前拦下。
+- **怎么验证的**：canary 本地实跑十探针全过（约 55s,耗时主体是被测门禁的 10 次
+  真实运行）;红路径实测——把门禁的 `budget=14000` 临时削成 `99999999` 后 canary
+  退出 1 并精确报 `budget-agents: 期望 rc=1,实得 rc=0`,还原后 `git diff` 为空;
+  改完 `scripts/verify-context.sh` 全绿（新文件的 INDEX/frontmatter/链接均过）,
+  AGENTS.md 预算余量经门禁复核。
+
 ### 2026-08-24 删除整套 Frozen Nodes 冻结验收集机制
 
 - **改了什么**：删除 `.freeze/`、`scripts/freeze.sh`、`scripts/verify-freeze.sh`、

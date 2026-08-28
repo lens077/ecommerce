@@ -51,11 +51,11 @@ config_validation:
 
 # 外部基础设施（不是本仓的服务）────────────────────────────────────
 externals:
-  postgres: { host: "pg-main-rw.postgresql.svc:5432", note: "集群内 CloudNativePG pg-main（单实例，2026-08-19 起；Pigsty 192.168.3.210 已关机退役），db=ecommerce owner=app（Database CR 声明式建库）；宿主网 pg.dev.test/192.168.3.132:5432 经 TLSRoute passthrough，客户端须 verify-full + direct TLS negotiation，CA=pg-main-ca" }
-  redis: { host: "dragonfly.dragonfly.svc:6379", note: "集群内 Dragonfly 原生 TLS（2026-08-20 切回，证书 global-ca-issuer 签、SAN 含本 svc 名，密码与 redis 组件同值故服务侧仅换 host）；6379 单口 TLS-only，明文被拒；宿主机走 Cilium Gateway 192.168.3.122:6380。⚠️ 原「redis 组件（redis ns）已 scale 0 留备回滚」已作废——2026-08-24 实测 redis 命名空间**已删除**，该回滚路径不存在；⚠️ Config Center 自身也是本项消费者（自举 Secret，不在 config.entry 里，见 config 域 experience）" }
+  postgres: { host: "node1:30001", note: "10 个业务服务当前已切到 node3 Pigsty；客户端 sslmode=verify-ca，沿用 pg-main CA 兼容证书。集群内 CloudNativePG pg-main 已 hibernate，仅作为回切候选，不是当前主库；db=ecommerce，每服务独立 schema" }
+  redis: { host: "dragonfly.dragonfly.svc:6379", note: "集群内 Dragonfly 原生 TLS，6379 单口 TLS-only，明文被拒；宿主机走 Cilium Gateway 192.168.3.122:6380。业务服务只放可丢缓存，不得承载锁、幂等键或领域真相；control-tower gateway 的 BFF session 是已接受例外，依赖不可用时 fail-closed。旧 redis namespace 已删除，不存在回滚组件；Config Center 自身也是本项消费者（自举 Secret，不在 config.entry 里）" }
   consul: { host: "192.168.3.120:8500", note: "集群内工作负载使用 consul-server.consul.svc:8500；本地进程使用 LoadBalancer VIP。Consul 只承担注册发现，配置仍由 Config Center 提供" }
-  kafka: { host: "（无实例）", note: "已退役：Pigsty broker 随宿主关机消失；2026-08-24 全集群 grep 确认 **strimzi/kafka 零残留**（此前记的 operator 残留已清干净）；2026-08-20 定稿替代 = NATS JetStream + outbox 自写 relay（TODO ③），应用侧本就零接线" }
-  nats: { host: "nats.nats.svc:4222", note: "dev 为 3-server JetStream；搜索索引使用可重建 R1 ECOMMERCE_EVENTS。relay/indexer 已部署，Product Service 事务内生产者、TLS/客户端认证和 NACK CRD 未完成" }
+  kafka: { host: "node1:30004", used_by: [], note: "node3 已预建 Kafka SCRAM 用户与 ecommerce.events topic，但本仓无客户端、producer、consumer 或业务接线；仅记录现存实验资源，不属于当前目标事件栈。企业常见度和学习兴趣不是采用依据，只有 NATS 经治理和压测仍无法满足量化需求时才重新评估" }
+  nats: { host: "nats.nats.svc:4222", note: "当前事件主干；dev 为 3-server JetStream，搜索索引使用可重建 R1 ECOMMERCE_EVENTS，relay/indexer 已部署。Product/Order producer、Inbox、NACK/DLQ、交易流 R3、重放治理与容量/恢复证据仍未闭环" }
   casdoor: { host: "casdoor.apikv.com", note: "HTTPS 经 Pangolin（8000 明文口已关，2026-08-19 起）；JWT 公钥 kid=lens；2026-08-20 定稿收编进集群，迁移方案见 docs/技术栈选型对抗/对抗审阅表-第3轮.md R3-A" }
   elasticsearch: { used_by: [], note: "实例已退役；search 已迁移到 Meilisearch，address 的无效依赖也已清理" }
   meilisearch: { host: "meilisearch.search.svc:7700", used_by: [search], note: "v1.53 集群组件；search 使用服务端固定的 products 索引和仅限 search 动作的 API key" }
@@ -66,10 +66,10 @@ externals:
   postgres_gorse: { host: "node1:52288", used_by: [gorse], note: "gorse 的 data store，在 node1（≠ CNPG，≠ Pigsty）。宿主端口 2026-08-19 由 5432 随机化为 52288（容器内仍 5432）。⚠️ 仍是明文 + ***REMOVED-PASSWORD*** 弱口令 + 0.0.0.0/0，待上 TLS 与轮换" }
   alipay: { used_by: [payment], note: "pay.alipay.* 为空时支付网关能力禁用" }
 
-  # node3 Pigsty —— 已部署、通路已实测可用，但**业务侧尚未接线任何一项**（used_by 全空）。
+  # node3 Pigsty —— PG 与可观测三支柱已接线；Kafka/Redis/Silo 的存在不代表业务采用。
   # 记在这里是因为它属于「每次都要现搜一遍」的结构事实：入口端口号不常规，极易误判成不通。
   pigsty_node3:
-    used_by: []
+    used_by: [user, search, behavior, product, cart, address, order, inventory, merchant, payment]
     note: |
       Pigsty v4.5.0，ssh 别名 node3（node3:44172），内网 10.10.21.172，x86_64。
       自身公网只开 SSH；一切访问经 node1 的 Pangolin（newt 站点 node3，siteId 7）。
@@ -92,30 +92,28 @@ externals:
       （Pangolin resourceId 30 → node3 上 docker 跑的 otelcol:4318，再分发到本机三个
       Victoria 后端）。容器日志不走 collector——vector 推的是 jsonline 不是 OTLP。
       ⚠️ 集群外依赖已成硬依赖：node3 或 Pangolin 隧道故障 = 数据面连不上库、观测全断。
-      Kafka 虽已就绪，但本项目 2026-08-20 已定稿用 NATS JetStream，不因它存在而翻案。
+      Kafka 当前仅为未接应用的实验资源；采用门禁见 docs/design/platform/production-scale-goal.md。
 
 # 网关
 gateway:
   # 2026-08-23 起网关由合一仓 control-tower 承载（services/gateway，connect+buf 重写）。
-  # 旧 gateway/ 目录处于烘烤期待退役（切流/回滚手顺见 control-tower docs/design/cutover.md）；
-  # 期间旧网关消费的 config.yaml 键冻结不动，保「selector 切回+冷重启」回滚路径。
+  # 旧 gateway/ 已删除，control-tower 是唯一现行实现；不存在切回旧进程的冷回滚路径。
   repository: "github.com/lens077/control-tower"
   path: "（本仓已无网关目录）" # 旧 gateway/ 于 2026-08-24 删除，历史见 tag backup/pre-control-tower-20260823
   routes_module: "github.com/lens077/control-tower/routes" # structcheck import 此包与本文件双向核对
-  external: [config_center, consul] # Config Center 下发配置；Consul 仅服务发现
+  external: [config_center, consul, redis, casdoor] # Config/发现 + BFF session + Casdoor code exchange
   config_center:
     namespace: gateway
     keys:
       routes: routes.yaml # 新网关 RouteConfig（v2；路由+匿名清单+online_check+CORS）
-      revocations: auth/revocations.yaml # 撤销名单（秒级推送；三场景见 control-tower docs/design/auth.md）
+      revocations: auth/revocations.yaml # 仅 legacy bearer 轨使用；BFF 撤权直接删除 session
       jwt_public_certificate: secrets/public.pem # 新旧网关共用（只读）
       rbac_policies: policies/policies.csv # 新旧网关共用（只读）
       rbac_model: policies/model.conf # 新旧网关共用（只读）
-      legacy_routes_frozen: config.yaml # 旧网关冻结键；退役后归档删除
     note: "非机密条目必须 is_secret=false；selector machine token 与 TLS 私钥只进本地/Kubernetes Secret"
   rbac:
-    model: "configs/policies/model.conf" # MODEL_FILE_PATH
-    policies: "configs/policies/policies.csv" # POLICIES_FILE_PATH
+    model: "config_center://gateway/policies/model.conf"
+    policies: "config_center://gateway/policies/policies.csv"
   # 无需 JWT 的路径（jwt + rbac 两处都排除）
   anonymous_paths:
     - /search.v1.SearchService/Search
@@ -171,7 +169,7 @@ services:
   cart:
     discovery: cart-service
     gateway_prefix: /cart*
-    extra_config: [store] # MinIO
+    extra_config: [store] # S3-compatible；当前 endpoint 为 Silo
     depends_on: []
     external: [postgres, redis, minio, config_center]
 
@@ -193,7 +191,7 @@ services:
     discovery: inventory-service
     gateway_prefix: /inventory*
     depends_on: []
-    external: [postgres, config_center]
+    external: [postgres, redis, config_center]
 
   merchant:
     discovery: merchant-service
@@ -247,8 +245,10 @@ frontend:
 
 # 已知缺口（详情以 TODO.md 为准，本段只列影响拓扑的）─────────────────
 known_gaps:
-  - "服务间调用几乎全未接线：order/payment 的 depends_on_planned 目前都是空的"
-  - "buf breaking 未接 CI —— proto 破坏性变更目前没有门禁"
+  - "服务间调用几乎全未接线：10 个服务的 depends_on 当前均为空；order/payment 只有 depends_on_planned"
+  - "NATS 是当前事件主干，但 Product/Order 事务内 producer、consumer Inbox、NACK/DLQ、R3、重放审计和积压恢复证据未闭环；Kafka used_by 为空且本仓无客户端，不能冒充已采用"
+  - "没有 logistics/warehouse 前端 app，也没有独立物流/仓储微服务；履约按设计并入 order，inventory 不是 WMS"
+  - "10 个业务服务没有完整的默认拒绝 NetworkPolicy/CiliumNetworkPolicy；后端信任网关注入身份头的边界尚未由网络策略全面强制"
   # 原第三条「Bootstrap 解码后仍未执行 protovalidate」与本文件 config_validation 段
   # 直接矛盾（那里 2026-08-18 已标 ✅ 接线），2026-08-24 核对代码后删除：
   # 十个服务的 internal/pkg/config/config.go 都开了 ErrorUnused 并在解码后跑 protovalidate。

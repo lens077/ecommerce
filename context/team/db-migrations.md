@@ -50,6 +50,4 @@ description: 数据库结构变更与种子数据的唯一路径——goose 版�
 
 ## 与 CDC/outbox 的关系
 
-事件生产者的 outbox 表也是普通迁移（如 product 的 `00004_outbox.sql`），
-CloudEvents 属性列 + `published_at IS NULL` 部分索引；写入必须与业务写同事务
-（`backend/pkg/outbox`）。链路契约见对抗审阅表第4轮与 `backend/tools/cdc-demo/`。
+事件生产者的 outbox 表也是普通迁移（如 product 的 `00004_outbox.sql`），写入必须与业务写同事务（`backend/pkg/outbox`）。双 broker 迁移走 expand→contract：`00005_add_outbox_delivery.sql` 先新增 `(event_id,destination)` 独立 ack、`next_attempt_at/dead_lettered_at` 和每 destination 的 `last_outbox_id` cursor；delivery 同时保存 `outbox_id` 支撑 backlog 顺序热路径；默认无限重试，显式 dead letter 必须保留原 outbox，requeue 需抢 destination lock 并原子写不随 retention 删除、受 mutation trigger 保护且普通应用角色不可修改的 audit，迁移 transaction 不做全表复制，而是安装 trigger，让新 outbox 行在 producer transaction 内生成 required delivery；新 NATS relay 拿到旧表级锁后，再从旧 `published_at` 按 batch 增量补迁移前历史状态；滚更期保留旧列且只镜像 NATS，等 Kafka 切流和回滚窗口结束后再删除。不能一步把单一时间戳解释成两个 destination 的完成状态。安装或删除 outbox trigger 会与 producer 写锁冲突；上线前必须确认没有长事务，并用受控 lock timeout 让抢锁失败可重试，不能无限阻塞写流量。当前 delivery trigger 使用 `SECURITY INVOKER`，producer 数据库角色必须具备 cursor SELECT 与 delivery INSERT 的最小权限；不得为绕过 grant 改成无 owner 治理的 `SECURITY DEFINER`，且 `products` schema 不得向不可信角色开放 CREATE。

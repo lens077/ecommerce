@@ -53,7 +53,7 @@ interface MerchantGroup {
 function CheckoutPage() {
   const navigate = useNavigate();
   const { t } = useTranslation();
-  const { formatCurrency } = useFormat();
+  const { formatCurrencyCents } = useFormat();
   const { items, isInitializing } = useCart();
   const { addresses, isLoading: addrLoading } = useAddresses();
 
@@ -92,12 +92,13 @@ function CheckoutPage() {
 
   const selectedAddress = addresses?.find((a) => a.addressId === selectedAddressId) ?? null;
 
-  const totalAmount = useMemo(
-    () => selectedItems.reduce((sum, it) => sum + it.price * it.quantity, 0),
+  const totalAmountCents = useMemo(
+    () =>
+      selectedItems.reduce((sum, item) => sum + item.unitPriceCents * BigInt(item.quantity), 0n),
     [selectedItems],
   );
-  const freight = 0;
-  const payAmount = totalAmount + freight;
+  const freightCents = 0n;
+  const payAmountCents = totalAmountCents + freightCents;
 
   const canSubmit = !submitting && !!selectedAddressId && selectedItems.length > 0;
 
@@ -265,7 +266,7 @@ function CheckoutPage() {
                         variant="body2"
                         sx={{ fontWeight: 600, color: tokens.colors.accent.red }}
                       >
-                        {formatCurrency(item.price)}
+                        {formatCurrencyCents(item.unitPriceCents)}
                       </Typography>
                     </Box>
                   </Box>
@@ -336,7 +337,7 @@ function CheckoutPage() {
               {t("checkout.amount.goods")}
             </Typography>
             <Typography variant="body2" sx={{ color: tokens.colors.text.primary }}>
-              {formatCurrency(totalAmount)}
+              {formatCurrencyCents(totalAmountCents)}
             </Typography>
           </Box>
           <Box sx={{ display: "flex", justifyContent: "space-between", mb: sp[2] }}>
@@ -353,7 +354,7 @@ function CheckoutPage() {
               {t("checkout.amount.total")}
             </Typography>
             <Typography variant="body1" sx={{ fontWeight: 700, color: tokens.colors.accent.red }}>
-              {formatCurrency(payAmount)}
+              {formatCurrencyCents(payAmountCents)}
             </Typography>
           </Box>
         </CardContent>
@@ -386,7 +387,7 @@ function CheckoutPage() {
             {t("checkout.amount.totalInline")}
           </Typography>
           <Typography variant="h6" sx={{ fontWeight: 700, color: tokens.colors.accent.red }}>
-            {formatCurrency(payAmount)}
+            {formatCurrencyCents(payAmountCents)}
           </Typography>
         </Box>
         <Button

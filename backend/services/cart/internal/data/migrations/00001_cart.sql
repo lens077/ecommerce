@@ -30,7 +30,7 @@ CREATE TABLE IF NOT EXISTS cart.cart_item
     -- 商品快照（加入购物车时的信息）
     spu_name          VARCHAR(255)   NOT NULL,                  -- SPU名称快照
     sku_name          VARCHAR(255)   NOT NULL,                  -- SKU名称快照
-    price             DECIMAL(10, 2) NOT NULL,                  -- 加入时单价
+    price             DECIMAL(10, 2) NOT NULL,                  -- 加入时单价（精确到分）
     sku_attributes    JSONB          NOT NULL DEFAULT '{}',     -- SKU销售属性快照
     sku_thumbnail_url VARCHAR(500)   NOT NULL,                  -- SKU缩略图快照
 
@@ -42,6 +42,7 @@ CREATE TABLE IF NOT EXISTS cart.cart_item
     UNIQUE (user_id, merchant_id, sku_id)
 );
 COMMENT ON TABLE cart.cart_item IS '购物车明细表';
+COMMENT ON COLUMN cart.cart_item.price IS '加入购物车时的单价快照，精确到分；API 使用 unit_price_cents int64';
 
 -- 索引
 CREATE INDEX idx_cart_user_id ON cart.cart_item (user_id);

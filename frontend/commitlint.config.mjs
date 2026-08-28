@@ -1,5 +1,5 @@
 /**
- * 提交信息校验规则。由 .husky/commit-msg 在每次 git commit 时调用。
+ * 提交信息校验规则。由 frontend/.vite-hooks/commit-msg 在每次 git commit 时调用（2026-08-26 自仓库根迁入 frontend workspace，原头注释的 .husky 路径系陈旧残留）。
  *
  * 格式：<type>(<scope>): [:emoji:] <subject>
  *

@@ -109,38 +109,23 @@ mapstructure 没开 `ErrorUnused`，多余键不报错、缺失键生成 nil-saf
 | Consul（发现） | 本地 `192.168.3.120:8500`；集群内 `consul-server.consul.svc:8500` | 已启用 ACL；token 从 Kubernetes Secret 或本地环境注入 |
 | Dragonfly | 集群内 `dragonfly.dragonfly.svc:6379`；本地 `192.168.3.122:6380` | TLS-only，需 AUTH，明文被拒；CA 在 Secret `dragonfly-tls` |
 | Casdoor | `https://casdoor.apikv.com` | **仍是集群外的外部服务**；JWT 公钥由各服务配置和 Config Center bootstrap 提供 |
-| PostgreSQL（CNPG） | 集群内 `pg-main-rw.postgresql.svc:5432`；本地 `192.168.3.132:5432`（SNI `pg.dev.test`） | TLSRoute passthrough；数据库 `ecommerce`，owner=`app`；Secret `pg-main-app`，CA `pg-main-ca`；宿主客户端须 `verify-full` + direct TLS negotiation |
+| PostgreSQL（当前 node3 Pigsty） | `node1:30001` | 10 个业务服务当前使用，`sslmode=verify-ca`；CNPG `pg-main` 已 hibernate，只是保留数据的回切候选 |
 | Config Center | `config-center.config-center.svc:30010` | **跑的是 control-tower 的 config 镜像**，ns 名只是遗留标签；Web `https://config.app.com`，API `https://config-api.app.com` |
 | 搜索 | Meilisearch（`search` ns），`search.dev.test` | Elasticsearch 已退役 |
-| 消息 | NATS JetStream（`nats` ns，nats-0/1/2） | Kafka 已退役，零残留 |
+| 消息 | 当前 NATS JetStream（`nats` ns，nats-0/1/2）；Kafka 学习入口 `node1:30004` | NATS 仍承载搜索链；Kafka 已重新纳入目标栈但本仓 used_by 为空，生产目标另建 Strimzi/KRaft 私网拓扑 |
 
 > **网关与配置中心都由 control-tower 提供**（sibling 仓 `../control-tower`）。
 > 旧 `gateway/` 目录和旧 config-center 都已不再运行，不要按「两个独立仓」来理解。
 
-CNPG 的宿主网入口不做 TLS 终止，客户端直接校验 CNPG CA 和 `pg.dev.test`。libpq 17+
-连接示例：
-
-```bash
-psql "host=pg.dev.test hostaddr=192.168.3.132 port=5432 dbname=ecommerce user=app \
-  sslmode=verify-full sslnegotiation=direct sslrootcert=<pg-main-ca 的 ca.crt>"
-```
-
-局域网 DNS 当前没有 `pg.dev.test` 记录；`psql` 用上面的 `hostaddr` 直连 VIP，同时仍以
-`host=pg.dev.test` 做 SNI 和证书校验。只支持单一 host 字段的 GUI 客户端需在宿主机增加
-`192.168.3.132 pg.dev.test` 映射。VIP 来自 Cilium 地址池，集群重建后应重新查询 Gateway
-status，不要永久假定 `.132`。
-
-旧客户端不能发送 direct TLS ClientHello 时，不要降低 `sslmode`；改用 Kubernetes 仓
-`components/postgres/examples/pg-tcproute.yaml` 的兼容入口。
+当前 PostgreSQL 经 node1 Pangolin TCP 入口访问 node3 Pigsty：`node1:30001`。业务配置使用 `sslmode=verify-ca`；CA 与账号从 Config Center/Kubernetes Secret 或本地环境注入，不在本文给出。CNPG 的 `192.168.3.132:5432` 入口只属于 hibernate 回切候选，取消 hibernate 并完成数据回切前不得作为当前配置。
 
 ### Pigsty 数据面（192.168.3.210）—— 已退役
 
-该机 2026-08-19 停机并已下线，PostgreSQL / Redis / Kafka / Silo(MinIO) / Grafana
-全部改由集群内组件承担（见上表）。不要再按它写配置或排查。
+该旧机 2026-08-19 停机并已下线；当时组件曾迁回集群，之后 PostgreSQL 与可观测数据面又切到下面的新 node3。不要把旧机 `192.168.3.210` 与当前 node3 混为一谈。
 
 工作区 `pigsty-deploy/pigsty-node3-deployment.md` 记的是下面这台 node3 的部署实录。
 
-### node3（新 Pigsty，2026-08-24 盘点）—— 已部署，经 Pangolin 可达，业务侧尚未接线
+### node3（新 Pigsty，2026-08-24/27 盘点）—— PG 与可观测已接线，Kafka 仅 PoC 入口
 
 另一台 Pigsty v4.5.0，ssh 别名 `node3`。它**不在家里的内网**，是一台 NAT 后的云主机。
 
@@ -182,11 +167,9 @@ Pigsty v4.5 保留 MINIO 模块名与剧本名，实际装的是 **Silo**（`sil
         minio_users: []
 ```
 
-⚠️ **Silo 还没有对外入口**：`9000/9001` 只在 node3 本机可达，Pangolin 里还没建对应资源，
-所以集群和本机都还连不上它。要建的资源见下面「怎么连」表格后的说明。
+Silo S3 入口已建为 `https://node3-minio.apikv.com`，但业务当前对象 endpoint 仍是 node2 Silo/MinIO-compatible 路径；迁移和备份验收完成前不能把 node3 Silo 写成业务真相。
 
-已为本项目预建账号：数据库 `ecommerce`、用户 `app`、Kafka 用户 `ecommerce_app`。
-但 `ecommerce` 库**目前只有 1 张表 `monitor.heartbeat`**，是空库，没有迁过业务数据。
+已为本项目预建数据库 `ecommerce`、用户 `app`、Kafka 用户 `ecommerce_app`。PG 已完成业务全量迁移并成为当前主库；Kafka 只有预建账号/topic；本仓已有未部署的 producer Adapter，但没有业务 producer/consumer。
 
 #### 凭据位置（**只记路径，值不入库**）
 

@@ -20,9 +20,9 @@
 | skill / 工具 | 状态 | 说明 |
 |---|---|---|
 | `archify` | ✅ 已装 | 架构图/流程图。`npx skills add tt-a1i/archify -g` |
-| `agent-reach` | ⚠️ **skill 在，运行时缺** | 全网调研。`~/.agent-reach-venv` 已不存在，用之前要重建虚拟环境；`.claude/settings.local.json` 里那几条指向它的权限已随本轮清理删除。 |
+| `agy`（Antigravity CLI） | ⚠️ 已装但**已摘出引擎链** | 原用于给 DSH 补联网搜索。2026-08-27：其登录态过期且本机连不上 Google，Firecrawl 冷却后每次 `read_page` 都落到它并弹 OAuth，故 `modsearch config set agy.bin /nonexistent/agy-disabled` 摘出。本体仍可手动 `agy` 使用。 |
+| `agent-reach` | ✅ 已装 | 多平台调研。搜索走 Exa MCP（`mcporter call exa.web_search_exa`），2026-08-27 补齐 `mcporter` + `~/.mcporter/mcporter.json` 的 exa 条目后实测可用，**无需 API key**。B站/YouTube 可用；小红书/Reddit/Twitter 需登录态。 |
 | `hcom` | ✅ brew 已装 | 编码代理之间在终端互发消息。全局 `~/.claude/settings.json` 的 Notification/Permission 钩子在用它。`brew install aannoo/hcom/hcom` |
-| `agy`（Antigravity CLI） | ✅ 已装 | 给 DSH 补联网搜索。`curl -fsSL https://antigravity.google/cli/install.sh \| bash` |
 
 ## 已移除的条目
 

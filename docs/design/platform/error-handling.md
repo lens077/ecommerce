@@ -14,7 +14,7 @@ var (
 	ErrAuthFailed        = errors.New("[user] authentication failed")
 )
 ```
-2. 基础设施层根据错误类型, 如果是第三方库错误或不可能恢复的错误, 使用`%w`, 对于业务错误, 使用`%v`包装错误
+2. 基础设施层（data）一律用 `%w` 包装——**业务哨兵错误与底层错误都必须保持 `errors.Is` 可穿透**，service 层全靠 `errors.Is` 做错误码映射，用 `%v` 会切断整条映射链。（2026-08-26 修正：本条旧文写「业务错误用 %v」，与下方示例代码及 `STACK.md` 相反，按示例与 STACK 的 `%w` 收敛为唯一规则。）
 ```go
 func (u userRepo) SignIn(_ context.Context, req biz.SignInRequest) (*biz.SignInResponse, error) {
 	if u.auth == nil {

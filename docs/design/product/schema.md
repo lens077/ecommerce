@@ -4,6 +4,9 @@
 > （如 ListProducts 的 SQL 用的是 `products.spus`，本文写的是 `products.spu`）。
 > 真相以 [`backend/services/product/internal/data/migrations/`](../../../backend/services/product/internal/data/migrations/) 为准，
 > 本文仅保留字段取舍的设计意图。列表查询设计见 [listing.md](listing.md)。
+> ⚠️ 2026-08-26 标注两处与定稿冲突项（新表禁止效仿，存量迁移属代码债，看板 P2）：
+> ① `price DECIMAL(10,2)` 违反「金额 int64 最小单位（分）/ PG 用 NUMERIC 无损」铁律；
+> ② `merchant_id BIGINT` 与「跨服务标识一律 UUID 字符串」漂移（proto 与搜索投影里它是 string）。
 
 1. 商品 SPU 表
 

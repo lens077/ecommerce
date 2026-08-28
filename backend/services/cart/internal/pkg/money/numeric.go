@@ -1,42 +1,49 @@
 package money
 
 import (
+	"errors"
 	"fmt"
+	"math/big"
 
 	"github.com/jackc/pgx/v5/pgtype"
 )
 
-func NumericToFloat(n pgtype.Numeric) (float64, error) {
-	// 1. 检查 Numeric 是否有效（非 NULL）
-	if !n.Valid {
-		return 0, fmt.Errorf("numeric value is NULL")
+var errInvalidCents = errors.New("money value must use at most two decimal places")
+
+// NumericToCents converts an exact PostgreSQL NUMERIC amount to integer cents.
+func NumericToCents(n pgtype.Numeric) (int64, error) {
+	if !n.Valid || n.Int == nil {
+		return 0, errors.New("numeric value is NULL")
 	}
 
-	// 2. 使用内置方法转换为 float64
-	floatValue, err := n.Float64Value()
-	if err != nil {
-		return 0, fmt.Errorf("convert numeric to float64 failed: %w", err)
+	value := new(big.Int).Set(n.Int)
+	scale := n.Exp + 2
+	if scale >= 0 {
+		value.Mul(value, pow10(scale))
+	} else {
+		divisor := pow10(-scale)
+		quotient, remainder := new(big.Int), new(big.Int)
+		quotient.QuoRem(value, divisor, remainder)
+		if remainder.Sign() != 0 {
+			return 0, errInvalidCents
+		}
+		value = quotient
 	}
 
-	// 3. 检查转换结果是否有效
-	if !floatValue.Valid {
-		return 0, fmt.Errorf("numeric cannot be represented as float64")
+	if !value.IsInt64() {
+		return 0, errors.New("numeric cents overflow int64")
 	}
-
-	return floatValue.Float64, nil
+	return value.Int64(), nil
 }
 
-// Float64ToNumeric 将 float64 转换为 pgtype.Numeric
-func Float64ToNumeric(value float64) (pgtype.Numeric, error) {
-	// 将 float64 转换为字符串
-	str := fmt.Sprintf("%v", value)
-
-	// 创建 pgtype.Numeric 实例
-	var numeric pgtype.Numeric
-	err := numeric.Scan(str)
-	if err != nil {
-		return pgtype.Numeric{}, fmt.Errorf("failed to convert float64 to pgtype.Numeric: %w", err)
+// CentsToNumeric converts integer cents to an exact PostgreSQL NUMERIC amount.
+func CentsToNumeric(cents int64) (pgtype.Numeric, error) {
+	if cents < 0 {
+		return pgtype.Numeric{}, fmt.Errorf("cents must be non-negative: %d", cents)
 	}
+	return pgtype.Numeric{Int: big.NewInt(cents), Exp: -2, Valid: true}, nil
+}
 
-	return numeric, nil
+func pow10(exponent int32) *big.Int {
+	return new(big.Int).Exp(big.NewInt(10), big.NewInt(int64(exponent)), nil)
 }

@@ -3,7 +3,7 @@
 **代码路径**
 
 - 配置控制面本体：合一仓 `github.com/lens077/control-tower` 的 **`config` 服务**
-  （本机 `../control-tower/services/config`；设计存档见 `docs/design/config-center/design.md`）。
+  （本机 `../control-tower/services/config`；设计见同级仓 `docs/design/architecture.md` 与 `docs/design/machine-token.md`）。
   2026-08-23 起由它承载，**已切流上线**：`config-center` ns 里的两个 Deployment
   仍叫老名字，但镜像已经是 `control-tower-config` / `control-tower-config-web`——
   那只是没改的遗留标签，**不代表旧的独立 config-center 还在跑**。
