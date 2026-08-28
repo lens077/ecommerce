@@ -1,6 +1,5 @@
 server:
   addr: "0.0.0.0:30001"
-  timeout: 10
   cors:
     allowed_origins:
       - http://localhost:3000
@@ -21,8 +20,8 @@ data:
       pool:
         max_conns: 20
         min_conns: 5
-        max_conn_lifetime: 3600
-        max_conn_idle_time: 300
+        max_conn_lifetime: "1h"
+        max_conn_idle_time: "5m"
   cache:
     redis:
       host: localhost
@@ -34,9 +33,9 @@ data:
       username: username
       password: password
       db: 0
-      dial_timeout: 5
-      read_timeout: 3
-      write_timeout: 3
+      dial_timeout: "5s"
+      read_timeout: "3s"
+      write_timeout: "3s"
       pool_size: 10
       min_idle_conns: 5
 
@@ -75,18 +74,21 @@ discovery:
     addr: localhost:8500
     health_check: true
     scheme: http
-    ttl:
-      duration: "30s"
-      ping_interval_seconds: 1
+    check:
+      deregister_critical_service_after: "1m"
+      ttl:
+        duration: "30s"
+        ping_interval: "10s"
     tls:
       enable: false
       insecure_skip_verify: true
       ca_pem: ""
 
-kafka:
-  brokers:
-    - "192.168.3.120:9092"
-  topic: "order-events"
-  batch_size: 1
-  batch_timeout_ms: 10
-  async: true
+auth:
+  casdoor:
+    endpoint: "http://localhost:8000"
+    client_id: "client_id"
+    client_secret: "client_secret"
+    organization_name: "organization_name"
+    application_name: "application_name"
+    certificate: ""

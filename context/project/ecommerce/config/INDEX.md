@@ -40,8 +40,8 @@ control-tower 出了新版要用 `go get github.com/lens077/control-tower@v0.x.y
 |---|---|
 | 配置中心三元组 | `namespace` = 服务目录名，`environment` = `dev`/`pre`，`key` = `bootstrap.yaml` |
 | 环境语义 | `environment` 只选择 Config Center 键；端点必须按实际运行位置配置。当前 `dev` 服务部署在集群内，因此使用 `*.svc`；TLS 是否开启由依赖本身决定 |
-| 段序 | `server → data → <服务专属段> → observability → discovery → search → log → auth`（只保留该服务实际消费的段） |
-| 服务专属段 | `store`(cart) / `pay`(payment) / `recommend`(behavior、product) / `search.meilisearch`(search)，以各服务 `conf.proto` 的 `Bootstrap` 字段为准 |
+| 段序 | `server → data → <服务专属段> → observability → discovery → log → auth`（只保留该服务实际消费的段） |
+| 服务专属段 | `store`(cart) / `pay`(payment) / `recommend`(behavior、product) / `search.meilisearch`(search)，以各服务 `conf.proto` 的 `Bootstrap` 字段为准；顶层 `search` 只属于 search 服务，其他服务已 `reserved 6` / `reserved "search"` |
 | 热生效边界 | `server` / `discovery` / `observability` 只打 WARN；search 服务的 `search.meilisearch` 也需重启；数据库、缓存和日志级别可立即生效 |
 
 ## IDE 配置校验（JSON Schema，2026-08-18）
@@ -63,10 +63,21 @@ IDEA 侧映射在 `.idea/jsonSchemas.xml`（被 gitignore，机器级文件）�
 `ErrorUnused`（未知键报错），`Init` 与热更新在解码后调 `protovalidate.Validate`。
 启动时校验失败直接起不来；热更新校验失败保留当前配置只记 ERROR。每个服务
 config 包的 `TestRealConfigFiles_DecodeAndValidate` 在本机验证真实 dev/pre.yml
-过得了校验（文件 gitignore，CI 自动 skip）。**收紧约束前先跑这组测试**，
-防止把现网配置锁在门外。⚠️ 发布前须先对齐配置中心里的 bootstrap.yaml
-（未知键/缺段的副本会让服务重启后起不来），见 `.service-matrix.yaml`
+过得了校验（文件 gitignore，CI 自动 skip）。
+
+2026-08-29 又在 `backend/structcheck` 接入 JSON Schema 硬校验：CI 始终验证已提交的
+`config.yaml.example`，本机存在 dev/pre.yml 时一并验证；错误只打印实例路径，不打印值，
+避免把配置里的凭据带进日志。门禁还检查 Bootstrap 必须设置
+`additionalProperties: false`，且顶层 `search` 只允许 search 服务持有。
+**收紧约束前先跑这两组测试**，防止把现网配置锁在门外。⚠️ 发布前须先对齐配置中心里的
+bootstrap.yaml（未知键/缺段的副本会让服务重启后起不来），见 `.service-matrix.yaml`
 config_validation.rollout_warning。
+
+Config Center 的 `PutKey` 也会在持久化前使用同一批 JSON Schema；快照内嵌在 sibling
+`control-tower`，来源 revision 可审计。修改 Bootstrap 契约时必须按「本仓生成并提交 Schema →
+control-tower 执行 `make sync-ecommerce-schemas` 并先发布 config 服务 → 写配置 → 发布消费服务」
+的顺序推进，不能让旧控制面 Schema 阻断新字段。紧急旁路与错误脱敏见
+`../control-tower/docs/design/config-schema.md`。
 
 ## experience
 

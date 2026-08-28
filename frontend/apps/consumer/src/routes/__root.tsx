@@ -3,6 +3,7 @@ import { createRootRouteWithContext, Outlet } from "@tanstack/react-router";
 import { TanStackRouterDevtoolsPanel } from "@tanstack/react-router-devtools";
 import { Box } from "@mui/material";
 import AppBar from "@/components/AppBar";
+import NotificationsHost from "@/components/NotificationsHost";
 import PrivacyConsent from "@/components/PrivacyConsent";
 import Footer from "@/components/Footer";
 
@@ -30,6 +31,7 @@ export const Route = createRootRouteWithContext<MyRouterContext>()({
           <Outlet />
         </Box>
         <Footer />
+        <NotificationsHost />
         <PrivacyConsent onConsent={handleConsent} />
         {/* 只在 dev 挂载：devtools 的 client bus 会连 ws://<host>/__devtools/ws，
                     桌面端生产包的 CSP 里没有开 ws，挂上去只会刷两条 violation；

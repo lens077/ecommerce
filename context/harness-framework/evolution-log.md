@@ -44,6 +44,62 @@ description: harness 本身（硬规则/门禁/Agent 约束）每次改动的原
 
 ---
 
+### 2026-08-29 Bootstrap 服务边界与明文凭据纳入双门禁
+
+- **改了什么**：7 个非 search 服务的 Bootstrap proto 用 `reserved 6` / `reserved "search"` 删除无主的 `Search` 字段，生成代码与 JSON Schema 同步收口。`backend/structcheck` 新增 schema 白名单与配置实例校验：CI 验证已提交 example，本机存在 dev/pre.yml 时一并验证，失败只打印路径不打印值。`verify-quick.sh` 新增并行凭据扫描，覆盖 tracked 与未忽略的新配置文件；扫描结果只报 `path:line:key`。同时把 Kafka Connect 数据库口令改为 Secret 注入，删除两个已过期的测试 JWT。
+- **为什么**：只改 JSON Schema 会出现「IDE/CI 拒绝、运行时 proto 仍接受」的双门不一致；只靠文档要求凭据不入库也已被事实证明不够。proto 字段所有权、schema、真实配置与凭据扫描必须形成同一条可执行链路，并且门禁日志不能反过来泄露被扫描的值。
+- **触发事故**：评审 `local-env.md` 时发现 7 个非 search 服务的本地和 Config Center Bootstrap 都携带 `search.elastic_search`：域名 `es.dev.test` 无 Route、集群无 Elasticsearch，配置却还含一个曾进入 Git 历史的明文口令；唯一真正做搜索的 search 服务反而不使用该块。继续接门禁时又扫到 KafkaConnector 的明文数据库口令，以及 address/cart 测试文件里的完整 Casdoor JWT。这些配置长期未报错，因为共享 proto 仍声明死字段，历史上也没有提交前凭据扫描。
+- **怎么验证的**：先在单事务中把 Config Center 7 个条目各升一版、追加 revision 并发 `config_changed`，回读确认 `elastic_search`、死域名和旧口令均为 0 命中，7 个 Deployment 保持 Ready；节点、Kubernetes Secret、工作区与 Config Center 当前值均未发现旧口令复用，当前 PostgreSQL 也不存在旧 `debezium_user`，因此没有可轮换的活账号。20 份本地 dev/pre 配置通过运行时 decode/protovalidate 和 JSON Schema 双校验；`TestBootstrap*` 全绿；凭据扫描 canary 能拦截随机口令且输出不含原值。
+
+### 2026-08-29 VPA recommendation-only 容量基线纳入 structcheck
+
+- **改了什么**：根目录 `application-vpa.yml` 收敛为覆盖 15 个 ecommerce Deployment 的完整 VPA 集合，统一使用 `updateMode: Off`、`RequestsOnly` 和显式 container 名称；已有 service-local VPA 同步为相同的 recommendation-only 语义。`backend/structcheck` 新增门禁，双向检查 target/VPA/container 名称、15 个目标全覆盖、无重复、禁止 `InPlace`/`Auto`，并禁止观测阶段用 `minAllowed`/`maxAllowed` 裁剪推荐。
+- **为什么**：当前集群只安装 recommender，没有 updater/admission-controller。把 CR 写成 `InPlace` 现在不会生效，却会在以后补装组件时静默跨越为自动改 Pod；观测阶段的边界还会把人工假设伪装成 Target。容量定稿必须先保留原始推荐，再结合启动峰值、k6 和 N+1 预算人工写回 requests。
+- **触发事故**：live 仅有 behavior/cart/order 三个 VPA，三者的内存 Lower/Target/Upper/Uncapped 全部恰好为 `250Mi`，证明被 recommender 默认地板顶住；根 `application-vpa.yml` 仍使用不存在的裸 Deployment 名，archive 也记录这些 targetRef 曾悬空 44 天。同期 17 个业务 Pod 合计 request 为 `1500m/2240Mi`，低流量瞬时实际仅约 `20m/378Mi`，而 frontend 完全没有 requests，说明当前值既有虚高也有缺失，不能靠一次快照直接缩容。
+- **怎么验证的**：`go test -count=1 ./structcheck/...` 通过；15 个 VPA 与 5 份 service-local 清单均通过 Kubernetes server dry-run；VPA Helm 渲染只包含 recommender，且 `10m/32Mi` 推荐地板参数进入容器 args。容量定稿、节点/资源/并发 rollout/扩缩容演练、持续 skew 与调度失败告警均保留在 `docs/design/platform/capacity-balancing.md`。同日后续取得 dev 部署授权后，Helm revision 2 与 15 个 `Off` VPA 已发布；全部 `RecommendationProvided=True`，无 webhook/updater，发布前后的业务 Deployment 与 Pod 身份未变化。
+
+### 2026-08-28 跨服务节点均衡与 Helm 缓存纳入 structcheck
+
+- **改了什么**：25 份 ecommerce Deployment 统一增加 suite-wide `topologySpreadConstraints`；`backend/structcheck` 要求 Pod template 带共同的 `app.kubernetes.io/part-of=ecommerce` 标签，约束必须使用 hostname、`maxSkew=1`、`ScheduleAnyway` 和 `Honor` policies，同时禁止把共同标签加入已有 Deployment 的 immutable selector。测试还逐个读取 10 个子 chart 的 `library-0.1.0.tgz`，确认实际消费的缓存模板包含同一约束。
+- **为什么**：10 个 API 都是单副本。如果每个 Deployment 只按自己的 `app` 做 spread，scheduler 看不到其他服务，无法平衡整套工作负载；共同标签才能让不同服务进入同一个计数集合。选择软约束是为了优先压低 skew，同时避免节点资源不足时把发布永久卡住。
+- **触发事故**：live 审计发现 ecommerce 的 17 个 ReplicaSet Pod 分布为 node101 `12`、node102 `4`、node103 `1`，虽无业务 `nodeSelector`，scheduler 也不会主动重平衡历史 Pod；此前 Tetragon DaemonSet 又曾被手工 `nodeSelector=node103` 限成 `1/3`，造成另外两个节点的运行时审计盲区。本轮第一次执行 `helm dependency update` 还在只更新 3 个子 chart 后超时，证明只检查 library 源模板仍会放过部分陈旧 tgz。
+- **怎么验证的**：`go test -count=1 ./structcheck/...` 通过；10 个 Helm Deployment 渲染后均包含共同标签和约束；22 份 backend、3 份 frontend 清单以及 Helm 全量资源均通过 Kubernetes server dry-run。未获本轮 dev apply 授权，因此这些验证只证明发布候选有效，live 落点仍待受控 rollout 后复核。
+
+### 2026-08-28 TCR Cosign 兼容性只做单服务硬失败探测
+
+- **改了什么**：tag 发布仅对 `user` 服务在 TCR 重复 index 签名与两个平台 SPDX attestation，并立即从 TCR 回验；不加兼容性 fallback，不在探测成功前扩展到其他服务或 Kyverno。
+- **为什么**：TCR 个人版没有对 Cosign OCI referrers 的官方兼容性承诺。一次性给所有服务签名会放大失败成本，软失败又会产生「看起来已双签」的错误结论。
+- **触发事故**：`1.5.3` 验收确认 GHCR 与 TCR 的 index 及 child digest 完全相同，但 digest 相同只能证明镜像内容一致，不能证明 TCR 能保存和回读 Cosign signature/attestation 工件。
+- **怎么验证的**：tag `1.5.4` 的 22 个 jobs 全绿；独立从 TCR 回验 `user` index 得到 1 个有效签名，amd64/arm64 的 SPDX attestation 均通过 Fulcio CA、GitHub Actions OIDC workflow identity、透明日志与 Cosign claims 验证，三个 TCR bundle 均为 Sigstore bundle v0.3。结论只覆盖本次实际 digest，不升级为腾讯云官方兼容承诺。
+
+### 2026-08-28 GHCR keyless 签名绑定 workflow identity
+
+- **改了什么**：Cosign 3.1.3 固定版本并校验官方 checksums；tag 发布对多架构 index digest 做 keyless 签名，对 amd64/arm64 child digest 分别附加 SPDX attestation，并以 GitHub Actions OIDC issuer 与当前 workflow identity 在同一 job 回验。调用方与 reusable workflow 只增加必要的 `id-token: write`。
+- **为什么**：签名存在不等于可信，验签必须约束签发者与具体 workflow；平台 SBOM 也必须附到对应 child digest，不能把两份互异的平台内容都模糊附到 index。
+- **触发事故**：`1.5.2` 首次远端 SBOM 验收证明 OCI index 除两个平台外还包含 `unknown/unknown` provenance manifest；仅按 tag 或只对 index 附一份 SBOM，会失去平台与内容的确定关联。既有文档还要求 Cosign 版本不低于修复 legacy bundle 绕过漏洞的 3.1.3。
+- **怎么验证的**：tag `1.5.3` 的 22 个 jobs 与 10 个签名 artifact 全绿；抽查 `user` index 签名和两个 child digest 的 SPDX attestation 均通过 Fulcio CA、透明日志与 claims 回验，证书 SAN 精确指向 `service-ci.yml@refs/tags/1.5.3`，bundle 为 Sigstore v0.3。
+
+### 2026-08-28 工作负载身份与 token 关闭纳入 structcheck
+
+- **改了什么**：`backend/structcheck` 新增工作负载身份棘轮，要求 10 个服务 dev/prod、frontend、consumer-next dev、relay/indexer 与 search reindex Job 使用预期 ServiceAccount，显式关闭 token automount 与 service links；同时检查 canonical 零信任清单包含全部 SA、恰有一份 CNP，且不引入任何 Role/RoleBinding。
+- **为什么**：业务不调用 Kubernetes API，零 RBAC 绑定和不挂 token 才是最小权限。该约束散落在裸清单、Helm library、工具 Job 与两个 frontend 中，只靠人工审阅会再次漂移。
+- **触发事故**：live 审计发现 gateway、frontend 与 10 个 API 全部使用 default SA 并挂载 3607 秒 projected token；第一轮修复后又发现 search reindex Job 虽关闭 automount，仍未指定独立 SA，而且并发开发的 consumer-next 仍使用 default SA。Helm 子 chart 因缓存 library tgz 也没有自动继承共享模板改动。
+- **怎么验证的**：`go test -count=1 ./structcheck/...`、backend build/vet/test-short、Helm lint/render 与完整 server-side dry-run 全绿；dev 集群滚动后，受管的 15 个 Deployment 均使用独立 SA 且无 `kube-api-access-*`，consumer-next 两副本也完成最小 CNP 与 SSR/ISR 验收。
+
+### 2026-08-28 tag SBOM 按多架构 index digest 分平台生成
+
+- **改了什么**：在 Buildx 推送完成后读取不可变 OCI index digest，Syft 1.51.1 分别为 `linux/amd64`、`linux/arm64` 生成 SPDX 2.3；连同 index digest 清单上传为按服务隔离的 Actions artifact。仅 tag 发布运行，不签名、不发布 attestation。
+- **为什么**：对可变 tag 生成 SBOM 无法证明对应哪个制品；对多架构 index 只扫描 runner 默认平台，又会把单平台内容误称为整个发布物。必须同时固定 index digest 和平台。
+- **触发事故**：本地 TCR PoC 镜像实际只有 `linux/arm64` 加一个 `unknown/unknown` provenance manifest；若不显式指定平台，Syft 仍可产出一份看似正常的 355-package SBOM，容易被误判为多架构发布物已覆盖。
+- **怎么验证的**：指定 `linux/arm64` 生成 SPDX 成功；指定不存在的 `linux/amd64` 返回 1，证明缺平台会硬失败。workflow YAML、shellcheck、zizmor 与完整 PR 供应链门禁均通过；真正双架构产物仍须由下一次远端 tag 运行验收。
+
+### 2026-08-28 PR 供应链扫描改为提交范围与存量棘轮
+
+- **改了什么**：新增独立 PR 门禁，Gitleaks 只扫描 base commit 到 HEAD；zizmor 与 Trivy fs/config 全仓扫描，但只阻断基线外新增的中高风险告警。工具版本与发布物摘要固定，基线只减不增。
+- **为什么**：首次接入必须既能阻断新增风险，又不能因既有技术债让所有 PR 永久失败；工作树密钥扫描还会读取被 `.gitignore` 排除的本地凭据副本，不等于 PR 引入。
+- **触发事故**：首次真实扫描得到 Gitleaks 107 条、zizmor 43 个定位和 Trivy 40 条 HIGH；直接硬门禁会恒红。随后并行新增的两个前端 Deployment 又产生 5 条基线外 HIGH，证明门禁必须区分存量与新增，且不能用扩基线掩盖真实回归。
+- **怎么验证的**：临时 clone 注入随机格式 AWS 密钥和未钉 SHA 的 Action，Gitleaks、zizmor 均返回 1；Trivy 对新增 Deployment HIGH 返回 1。补齐 Pod/Container `securityContext` 后，`./scripts/supply-chain-pr.sh` 三项返回 0，Trivy 存量由 40 条降为 34 条。
+
 ### 2026-08-26 链接门禁扩围至设计文档与根双档,canary 补第 11 探针
 
 - **改了什么**：`verify-context.sh` 的 [DEAD-LINK] 扫描源由「AGENTS.md + context/」
@@ -534,3 +590,15 @@ description: harness 本身（硬规则/门禁/Agent 约束）每次改动的原
 - **触发事故**：无;跟随仓库可见性变更的即时纠偏。
 - **怎么验证的**：本地清掉 GOPRIVATE 后 `go mod download github.com/lens077/control-tower`
   经默认代理成功;structcheck 复跑绿。
+
+### 2026-08-28 TODO 预算 canary 改为动态越界
+
+- **改了什么**：`verify-context-canary.sh` 的 `budget-todo` 注错不再固定追加 4000B，改为按
+  当前 `TODO.md` 大小动态追加到 96001B，保证无论真文件经过多少次瘦身都能越过 96KB 门槛。
+- **为什么**：canary 测的是「预算门禁能否拦截超限」，注错量应由门槛与当前大小决定；固定增量
+  把测试错误地绑定到了 2026-08-21 当时约 92KB 的文件体积。
+- **触发事故**：2026-08-28 Tetragon 文档 PR 的 GitHub `verify-context` 主检查通过，但元评测
+  `budget-todo` 期望 rc=1、实际 rc=0；原因是 TODO 再次瘦身后追加 4000B 仍未达到 96KB，导致
+  CI 把健康的预算门禁误判为失效并阻塞合并。
+- **怎么验证的**：本地运行 `scripts/verify-context-canary.sh`，干净沙箱保持绿色，十类注错均被
+  对应 tag 拦截；随后运行 `scripts/verify-context.sh` 复核真实仓库仍为绿色。

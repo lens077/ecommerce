@@ -40,6 +40,8 @@ on:
 permissions:
   contents: read
   packages: write
+  # tag 发布时供 Cosign keyless 获取 GitHub Actions OIDC；非签名步骤不读取令牌。
+  id-token: write
 
 env:
   REGISTRY: ccr.ccs.tencentyun.com
@@ -163,6 +165,7 @@ jobs:
           } >> "$GITHUB_OUTPUT"
 
       - name: Build and push
+        id: build
         uses: docker/build-push-action@v6
         with:
           context: backend
@@ -176,3 +179,112 @@ jobs:
             VERSION=${{ inputs.version != '' && inputs.version || steps.meta.outputs.tag }}
             GOPROXY=https://proxy.golang.org,direct
           tags: ${{ steps.meta.outputs.tags }}
+
+      # tag 发布阶段：Buildx 输出多架构 OCI index digest；分别解析 amd64/arm64，
+      # 避免只记录 runner 默认平台，并为后续每个平台的 SBOM attestation 固定 child digest。
+      - name: Generate SPDX SBOMs from immutable digest
+        if: inputs.push-image && inputs.version != ''
+        env:
+          SERVICE: ${{ inputs.service }}
+          VERSION: ${{ inputs.version }}
+          IMAGE_DIGEST: ${{ steps.build.outputs.digest }}
+        run: |
+          set -euo pipefail
+          IMAGE="${GHCR_NAMESPACE}/${SERVICE}@${IMAGE_DIGEST}"
+          OUT="sbom/${SERVICE}/${VERSION}"
+          mkdir -p "$OUT"
+          RAW_INDEX=$(docker buildx imagetools inspect "$IMAGE" --raw)
+          AMD64_DIGEST=$(jq -er '.manifests[] | select(.platform.os == "linux" and .platform.architecture == "amd64") | .digest' <<<"$RAW_INDEX")
+          ARM64_DIGEST=$(jq -er '.manifests[] | select(.platform.os == "linux" and .platform.architecture == "arm64") | .digest' <<<"$RAW_INDEX")
+          for platform in linux/amd64 linux/arm64; do
+            arch=${platform#linux/}
+            SYFT_PLATFORM="$platform" ./scripts/generate-sbom.sh \
+              "registry:${IMAGE}" "${OUT}/${SERVICE}-${arch}.spdx.json"
+          done
+          jq -n \
+            --arg service "$SERVICE" \
+            --arg version "$VERSION" \
+            --arg image "$IMAGE" \
+            --arg digest "$IMAGE_DIGEST" \
+            --arg amd64 "$AMD64_DIGEST" \
+            --arg arm64 "$ARM64_DIGEST" \
+            '{service: $service, version: $version, image: $image, indexDigest: $digest, platformDigests: {"linux/amd64": $amd64, "linux/arm64": $arm64}}' \
+            > "${OUT}/manifest.json"
+
+      - name: Keyless sign index and attest platform SBOMs
+        if: inputs.push-image && inputs.version != ''
+        env:
+          SERVICE: ${{ inputs.service }}
+          VERSION: ${{ inputs.version }}
+          # reusable workflow 的 Fulcio SAN 可能取 caller workflow_ref 或 job_workflow_ref；
+          # 只放行本仓两份明确的发布 workflow 与裸 semver tag。
+          CERT_IDENTITY_RE: ^https://github\.com/lens077/ecommerce/\.github/workflows/(backend|service-ci)\.yml@refs/tags/[0-9]+\.[0-9]+\.[0-9]+$
+          CERT_ISSUER: https://token.actions.githubusercontent.com
+        run: |
+          set -euo pipefail
+          COSIGN=$(./scripts/install-cosign.sh)
+          OUT="sbom/${SERVICE}/${VERSION}"
+          IMAGE=$(jq -er '.image' "${OUT}/manifest.json")
+          "$COSIGN" sign --yes --bundle "${OUT}/signature.bundle.json" "$IMAGE"
+          "$COSIGN" verify \
+            --certificate-identity-regexp "$CERT_IDENTITY_RE" \
+            --certificate-oidc-issuer "$CERT_ISSUER" \
+            "$IMAGE" >/dev/null
+          for arch in amd64 arm64; do
+            child_digest=$(jq -er --arg platform "linux/${arch}" '.platformDigests[$platform]' "${OUT}/manifest.json")
+            child_image="${GHCR_NAMESPACE}/${SERVICE}@${child_digest}"
+            "$COSIGN" attest --yes \
+              --predicate "${OUT}/${SERVICE}-${arch}.spdx.json" \
+              --type spdxjson \
+              --bundle "${OUT}/${SERVICE}-${arch}.attestation.bundle.json" \
+              "$child_image"
+            "$COSIGN" verify-attestation \
+              --certificate-identity-regexp "$CERT_IDENTITY_RE" \
+              --certificate-oidc-issuer "$CERT_ISSUER" \
+              --type spdxjson \
+              "$child_image" >/dev/null
+          done
+
+      # TCR 个人版对 Cosign/OCI referrers 没有官方兼容性承诺；先只用 user 服务探测，
+      # 探测通过前不扩大到全服务，也不把 Kyverno verifyImages 指向 TCR。
+      - name: Probe TCR Cosign compatibility
+        if: inputs.push-image && inputs.version != '' && inputs.service == 'user'
+        env:
+          SERVICE: ${{ inputs.service }}
+          VERSION: ${{ inputs.version }}
+          CERT_IDENTITY_RE: ^https://github\.com/lens077/ecommerce/\.github/workflows/(backend|service-ci)\.yml@refs/tags/[0-9]+\.[0-9]+\.[0-9]+$
+          CERT_ISSUER: https://token.actions.githubusercontent.com
+        run: |
+          set -euo pipefail
+          COSIGN=$(./scripts/install-cosign.sh)
+          OUT="sbom/${SERVICE}/${VERSION}"
+          index_digest=$(jq -er '.indexDigest' "${OUT}/manifest.json")
+          image="${REGISTRY}/${REGISTRY_NAMESPACE}/${SERVICE}@${index_digest}"
+          "$COSIGN" sign --yes --bundle "${OUT}/tcr-signature.bundle.json" "$image"
+          "$COSIGN" verify \
+            --certificate-identity-regexp "$CERT_IDENTITY_RE" \
+            --certificate-oidc-issuer "$CERT_ISSUER" \
+            "$image" >/dev/null
+          for arch in amd64 arm64; do
+            child_digest=$(jq -er --arg platform "linux/${arch}" '.platformDigests[$platform]' "${OUT}/manifest.json")
+            child_image="${REGISTRY}/${REGISTRY_NAMESPACE}/${SERVICE}@${child_digest}"
+            "$COSIGN" attest --yes \
+              --predicate "${OUT}/${SERVICE}-${arch}.spdx.json" \
+              --type spdxjson \
+              --bundle "${OUT}/tcr-${SERVICE}-${arch}.attestation.bundle.json" \
+              "$child_image"
+            "$COSIGN" verify-attestation \
+              --certificate-identity-regexp "$CERT_IDENTITY_RE" \
+              --certificate-oidc-issuer "$CERT_ISSUER" \
+              --type spdxjson \
+              "$child_image" >/dev/null
+          done
+
+      - name: Upload SPDX SBOM artifact
+        if: inputs.push-image && inputs.version != ''
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
+        with:
+          name: sbom-${{ inputs.service }}-${{ inputs.version }}
+          path: sbom/${{ inputs.service }}/${{ inputs.version }}/
+          if-no-files-found: error
+          retention-days: 30

@@ -14,12 +14,12 @@
 #
 # 注意:这是「最便宜的适用验证」入口,不替代按需锚点——
 #   改了 .service-matrix.yaml 仍要单独跑 backend/structcheck(已含在 -short 全量里),
-#   改了冻结验收集要跑 scripts/verify-freeze.sh --all,
 #   改了 context/ 或 AGENTS.md 要跑 scripts/verify-context.sh。
+# 凭据扫描与前后端并行执行,只打印 path:line:key,绝不把疑似值带进日志。
 set -uo pipefail
 
 root=$(git rev-parse --show-toplevel) || { echo "verify-quick: 不在 git 仓库内" >&2; exit 2; }
-cd "$root"
+cd "$root" || exit 2
 
 want=${1:-all}
 case "$want" in all|backend|frontend) ;; *) echo "用法: $0 [backend|frontend]" >&2; exit 2 ;; esac
@@ -38,7 +38,11 @@ run_frontend() {
   cd frontend && pnpm ready
 }
 
-be_pid="" fe_pid=""
+run_secrets() {
+  python3 scripts/verify-secrets.py
+}
+
+be_pid="" fe_pid="" secrets_pid=""
 start=$SECONDS
 if [ "$want" != "frontend" ]; then
   run_backend >"$logdir/backend.log" 2>&1 &
@@ -48,6 +52,8 @@ if [ "$want" != "backend" ]; then
   run_frontend >"$logdir/frontend.log" 2>&1 &
   fe_pid=$!
 fi
+run_secrets >"$logdir/secrets.log" 2>&1 &
+secrets_pid=$!
 
 report() { # report <名字> <rc> <log>
   local name=$1 rc=$2 log=$3
@@ -70,5 +76,8 @@ if [ -n "$fe_pid" ]; then
   report "frontend(pnpm ready)" "$fe_rc" "$logdir/frontend.log"
   [ "$fe_rc" = 0 ] || overall=1
 fi
+secrets_rc=0; wait "$secrets_pid" || secrets_rc=$?
+report "secrets(working-tree tripwire)" "$secrets_rc" "$logdir/secrets.log"
+[ "$secrets_rc" = 0 ] || overall=1
 
 exit "$overall"
