@@ -15,6 +15,8 @@
 | 项目 | 状态 | 说明 |
 |------|------|------|
 | 容器化（Docker） | ✅ | 10 个服务的 Makefile/compose 已对齐（见下「构建与部署清单对齐」）；`make docker-deployx` 多架构构建+推送实跑通过 |
+| 本地开发 DNS（devdns） | ✅ | 2026-08-28 修好长期悬空的 `*.dev.test` 解析：DNS 落点定为**集群内** CoreDNS（`devdns` ns，Cilium 专用 `/32` 池把 LB 钉在 `192.168.3.202`），对齐 Mac 既有 splitdns 配置、Mac 侧零改动。分流：`pg→.132`、`dragonfly→.122`、其余通配 `→.121`。清单在同级仓 `../kubernetes/components/devdns/devdns.yaml`；教程与三处同步纪律见 `context/team/local-env.md`。**坑**：CoreDNS 同 zone 内 `template` 先于 `hosts` 执行，覆盖记录必须拆独立 zone 块 |
+| 前端 dev 代理地址订正 | ✅ | `consumer/vite.config.ts` 的默认网关从已消失的 `http://192.168.3.131:8080` 改为 `https://gateway.dev.test`（经 splitdns；业务 HTTPRoute 只挂 443，故 `changeOrigin:true` + `secure:false`），实测经 `localhost:3000/api` 取到真实商品数据 |
 | Kubernetes 编排 | 🟡 | `deploy/{dev,prod}` 已重写并过 `kubectl apply --dry-run=client`；`helm/`、`application-vpa.yml` 已有，集群级压测/弹性未验证 |
 | GitOps（ArgoCD） | 🔴 | 2026-08-24 实测控制器在跑但零 Application/ApplicationSet，AppProject 仅 default；Helm 与现网名称/标签/tag 不一致，当前部署走 `backend/services/*/deploy/`，禁止直接开启 selfHeal |
 | 2026-08-19 鉴权链路改造：前端 PKCE 直连 + 网关身份头加固 | 🟡 | **起因**：前端每次启动都要先起 user 服务才有 JWT。查下来 user 服务在登录里**只是一层 40 行的 code→token 代理**（`backend/services/user/internal/data/user.go:35` 调 `GetOAuthToken` 后原样返回，不… |
@@ -48,6 +50,8 @@
 | context/ 知识库结构门禁（`scripts/verify-context.sh`） | ✅ | 2026-08-18 参照 `~/lens077/deepseek-harness`（DeepSeek 开源 agent harness：TS monorepo + Cordis 插件架构，doc-sync 门禁族 30+ 脚本）做最小移植：六项检查（AGENTS.md+context/ 链接可达性… |
 | harness 演进日志（`context/harness-framework/evolution-log.md`） | ✅ | 2026-08-08 补上「四块拼图」里唯一缺失的**进化**那块。`context/` 记规则是什么、`TODO.md` 记做了什么、`PROGRESS.md` 记完成度，三者都不记**「这条规则为什么是现在这个样子」**——规则能从代码读出来，理由不能，半年后会被人凭直觉改回去。… |
 | 技术栈与系统边界核验（`STACK.md`） | ✅ | 2026-08-27 按 matrix、control-tower 与集群审计统一现状：B2B2C 终端边界、容量证据、BFF/网关能力、Pigsty/Dragonfly/Meilisearch、Cilium 安全边界、制品仓库、GitOps 与 Victoria 可观测性；明确「已运行 / 部分落地 / 已选型」 |
+| 全库对齐 `docs/TECH.md`（2026-08-28） | ✅ | `docs/TECH.md` 定为技术架构/选型/基础设施最高真相源后，51 份文档一次性对齐：事件主干 Kafka、搜索回 Elasticsearch、链路 VictoriaTraces、对象存储 Silo、数据库外部 Pigsty、鉴权 Casdoor Session+OpenFGA（废 JWT/Casbin）、制品 TCR 主镜像+Harbor Helm+GHCR 可选、Fulfillment/Notification 独立成域、协同模式不做全局强制。原则：选型冲突覆盖、现状不谎报（存量标「迁移中」）、历史记录不改写（加「后续决策覆盖」注记）。`verify-context.sh` 全绿 |
+| 技术评估深度调研（2026-08-28） | ✅ | 7 个并行代理一手来源调研，结论存 `docs/reports/2026-08-28-tech-research.md`：valtio→Zustand（已执行）、Next.js 局部迁（已转正）、mirrord/Okteto 内环（Cilium KPR 已知阻断，PoC 前不定主路径）、Kafka Streams/ksqlDB 不引入（维持 franz-go）、ES 回归容量门禁、零信任四件套暂缓、供应链分阶段管线（PR 三件套已全绿；Syft 已接 tag workflow，待远端双架构 artifact 验收；TCR 对 cosign 支持待实测）、OpenCost/Pyroscope/Chaos Mesh/Temporal 触发条件、GlitchTip→维持 Bugsink（已改判） |
 | 百万/千万级生产化目标 | 🟡 | 目标与完成定义已写入 `docs/design/platform/production-scale-goal.md`；当前优先交易正确性、安全边界、capacity profile、PITR/RTO/RPO 和成本证据。2026-08-28 按 `docs/TECH.md` 定稿：Kafka（外部非 K8s 集群）为目标事件主干、搜索存储回归 Elasticsearch；存量 NATS/Meilisearch 迁移期维护 |
 | 节点优雅关机约定（`context/team/node-graceful-shutdown.md`） | ✅ | 2026-08-21 固化 `90s/30s` GracefulNodeShutdown；安装器新增 `KCM_TERMINATED_POD_GC_THRESHOLD=100`，已有控制面按次快照、原子更新运行清单并只定向修改 live ClusterConfiguration，中途失败双侧回滚。2026-08-23 已部署 node101：控制器 38 秒内恢复，三层配置均为 `100`，终态 Pod `112→100`；修正 VPA 终态历史误报后，全量 90 阶段及 PVC/LB/可观测链路冒烟全部通过。 |
 
@@ -135,6 +139,15 @@
 | 待验证 | ⬜ | Config Center pre 配置部署后端到端实跑 Track/Recommend/SimilarItems；… |
 
 ### 7. 前端
+
+**consumer-next（公开可收录页，Next.js App Router）**
+
+| 项目 | 状态 | 说明 |
+|------|------|------|
+| 公开页局部迁移 Next.js | ✅ | 2026-08-28 POC 判 go 并转正上线 dev：`frontend/apps/consumer-next`（16.3.3，App Router，standalone/arm64），匿名 server transport + `revalidate=60` ISR + 客户端个性化层；2 副本分节点 + PDB + `/healthz` 探针；HTTPRoute 在 `shop.dev.test`/`shop.apikv.com` 按 `/zh` `/en` `/_next` 分流，SPA 保持 `/` catch-all。内网与公网端到端均实测 200 + 真实数据。**架构规则**：公开 ISR 页服务端取数必须匿名，per-request Cookie transport 只用于显式 dynamic 路由。证据：`docs/reports/2026-08-28-nextjs-poc.md` |
+| 扩页（分类/首页） | ⬜ | **受阻**：后端 `ListProducts` RPC 未实现，无列表数据源；待该 RPC 落地后按报告实施序扩页 |
+| 登录态 dynamic 路由联调 | ⬜ | 匿名链路已实测；带认证 Cookie 的 dynamic 路由需真实 Casdoor 会话，待人工联调 |
+| 多 Pod 缓存一致性 | 🟡 | 已量化：各 Pod 独立 ISR 缓存，当前用短 TTL（60s）压窗口；需严格一致时升级共享 `cacheHandler`（未实测） |
 
 **consumer（消费者端）**
 

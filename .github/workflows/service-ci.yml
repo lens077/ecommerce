@@ -163,6 +163,7 @@ jobs:
           } >> "$GITHUB_OUTPUT"
 
       - name: Build and push
+        id: build
         uses: docker/build-push-action@v6
         with:
           context: backend
@@ -176,3 +177,38 @@ jobs:
             VERSION=${{ inputs.version != '' && inputs.version || steps.meta.outputs.tag }}
             GOPROXY=https://proxy.golang.org,direct
           tags: ${{ steps.meta.outputs.tags }}
+
+      # tag 发布阶段第 1 步：只生成/保存 SBOM，不在本步骤签名或发布 attestation。
+      # Buildx 输出的是多架构 OCI index digest；分别解析 amd64/arm64，避免只记录 runner 默认平台。
+      - name: Generate SPDX SBOMs from immutable digest
+        if: inputs.push-image && inputs.version != ''
+        env:
+          SERVICE: ${{ inputs.service }}
+          VERSION: ${{ inputs.version }}
+          IMAGE_DIGEST: ${{ steps.build.outputs.digest }}
+        run: |
+          set -euo pipefail
+          IMAGE="${GHCR_NAMESPACE}/${SERVICE}@${IMAGE_DIGEST}"
+          OUT="sbom/${SERVICE}/${VERSION}"
+          mkdir -p "$OUT"
+          for platform in linux/amd64 linux/arm64; do
+            arch=${platform#linux/}
+            SYFT_PLATFORM="$platform" ./scripts/generate-sbom.sh \
+              "registry:${IMAGE}" "${OUT}/${SERVICE}-${arch}.spdx.json"
+          done
+          jq -n \
+            --arg service "$SERVICE" \
+            --arg version "$VERSION" \
+            --arg image "$IMAGE" \
+            --arg digest "$IMAGE_DIGEST" \
+            '{service: $service, version: $version, image: $image, indexDigest: $digest, platforms: ["linux/amd64", "linux/arm64"]}' \
+            > "${OUT}/manifest.json"
+
+      - name: Upload SPDX SBOM artifact
+        if: inputs.push-image && inputs.version != ''
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
+        with:
+          name: sbom-${{ inputs.service }}-${{ inputs.version }}
+          path: sbom/${{ inputs.service }}/${{ inputs.version }}/
+          if-no-files-found: error
+          retention-days: 30
