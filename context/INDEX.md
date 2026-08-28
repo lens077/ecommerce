@@ -15,10 +15,10 @@ context/
 | 文件 | 一句话 |
 |---|---|
 | [runbook.md](team/runbook.md) | **可执行入口**：§0.1 按改动类型的必读路由，以及提交前必跑的验收锚点 |
-| [db-migrations.md](team/db-migrations.md) | schema 变更与种子数据的唯一路径：goose + CNPG 基线接管 + sqlc 同步生成 |
+| [db-migrations.md](team/db-migrations.md) | schema 变更与种子数据的唯一路径：goose + Pigsty 存量库基线接管 + sqlc 同步生成 |
 | [git-commit.md](team/git-commit.md) | Conventional Commits + 提交前必须先更新 TODO.md |
 | [proto-design.md](team/proto-design.md) | 写 proto 前先读设计文档，每个字段都要有 buf.validate 约束 |
-| [local-env.md](team/local-env.md) | 本地集群地址：Consul 用 `192.168.3.120:8500`，不要用 consul.dev.test |
+| [local-env.md](team/local-env.md) | 现在往哪连：活地址表（PG/Consul/Dragonfly/Config Center/node3 观测）、配置只有 `dev` 一个环境、`*.dev.test` 解析与 TLS 信任，以及镜像代理单点等几个白排查半天的坑 |
 | [node-graceful-shutdown.md](team/node-graceful-shutdown.md) | Kubernetes 节点关机/重启的 90/30 秒优雅退出、systemd inhibitor、终态 Pod 与清理边界 |
 | [shell-scripting.md](team/shell-scripting.md) | macOS Bash 3.2：`set -u` 下不能无条件展开空数组 |
 | [go-redis.md](team/go-redis.md) | go-redis v9：热重建客户端、cache-aside、连接池与 context、Key/TTL、Pipeline、重试、锁及 Pub/Sub 边界 |
@@ -53,7 +53,7 @@ context/
 ## 结构真相源 · [`.service-matrix.yaml`](../.service-matrix.yaml)（仓库根）
 
 不属于「知识」而属于「事实表」的东西放这里，供 AI 与 CI 查表：10 个后端服务的
-Consul 注册名、网关路径前缀、依赖关系、外部依赖、Config Center 键、前端 4 个 app 的端口。
+存量 Consul 注册名、网关路径前缀、依赖关系、外部依赖、Config Center 键、前端 4 个 app 的端口。服务注册发现目标按 `docs/TECH.md` 为生产 K8s Service + CoreDNS；pre 半生产测试走 Docker Compose 服务名（开发内环评估中）。
 
 判据：**AI 每次都要现搜一遍的结构性事实** → 进 matrix；**需要解释「为什么」的经验** → 进 `context/`。
 
