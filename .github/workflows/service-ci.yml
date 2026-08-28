@@ -40,6 +40,8 @@ on:
 permissions:
   contents: read
   packages: write
+  # tag 发布时供 Cosign keyless 获取 GitHub Actions OIDC；非签名步骤不读取令牌。
+  id-token: write
 
 env:
   REGISTRY: ccr.ccs.tencentyun.com
@@ -178,8 +180,8 @@ jobs:
             GOPROXY=https://proxy.golang.org,direct
           tags: ${{ steps.meta.outputs.tags }}
 
-      # tag 发布阶段第 1 步：只生成/保存 SBOM，不在本步骤签名或发布 attestation。
-      # Buildx 输出的是多架构 OCI index digest；分别解析 amd64/arm64，避免只记录 runner 默认平台。
+      # tag 发布阶段：Buildx 输出多架构 OCI index digest；分别解析 amd64/arm64，
+      # 避免只记录 runner 默认平台，并为后续每个平台的 SBOM attestation 固定 child digest。
       - name: Generate SPDX SBOMs from immutable digest
         if: inputs.push-image && inputs.version != ''
         env:
@@ -191,6 +193,9 @@ jobs:
           IMAGE="${GHCR_NAMESPACE}/${SERVICE}@${IMAGE_DIGEST}"
           OUT="sbom/${SERVICE}/${VERSION}"
           mkdir -p "$OUT"
+          RAW_INDEX=$(docker buildx imagetools inspect "$IMAGE" --raw)
+          AMD64_DIGEST=$(jq -er '.manifests[] | select(.platform.os == "linux" and .platform.architecture == "amd64") | .digest' <<<"$RAW_INDEX")
+          ARM64_DIGEST=$(jq -er '.manifests[] | select(.platform.os == "linux" and .platform.architecture == "arm64") | .digest' <<<"$RAW_INDEX")
           for platform in linux/amd64 linux/arm64; do
             arch=${platform#linux/}
             SYFT_PLATFORM="$platform" ./scripts/generate-sbom.sh \
@@ -201,8 +206,44 @@ jobs:
             --arg version "$VERSION" \
             --arg image "$IMAGE" \
             --arg digest "$IMAGE_DIGEST" \
-            '{service: $service, version: $version, image: $image, indexDigest: $digest, platforms: ["linux/amd64", "linux/arm64"]}' \
+            --arg amd64 "$AMD64_DIGEST" \
+            --arg arm64 "$ARM64_DIGEST" \
+            '{service: $service, version: $version, image: $image, indexDigest: $digest, platformDigests: {"linux/amd64": $amd64, "linux/arm64": $arm64}}' \
             > "${OUT}/manifest.json"
+
+      - name: Keyless sign index and attest platform SBOMs
+        if: inputs.push-image && inputs.version != ''
+        env:
+          SERVICE: ${{ inputs.service }}
+          VERSION: ${{ inputs.version }}
+          # reusable workflow 的 Fulcio SAN 可能取 caller workflow_ref 或 job_workflow_ref；
+          # 只放行本仓两份明确的发布 workflow 与裸 semver tag。
+          CERT_IDENTITY_RE: ^https://github\.com/lens077/ecommerce/\.github/workflows/(backend|service-ci)\.yml@refs/tags/[0-9]+\.[0-9]+\.[0-9]+$
+          CERT_ISSUER: https://token.actions.githubusercontent.com
+        run: |
+          set -euo pipefail
+          COSIGN=$(./scripts/install-cosign.sh)
+          OUT="sbom/${SERVICE}/${VERSION}"
+          IMAGE=$(jq -er '.image' "${OUT}/manifest.json")
+          "$COSIGN" sign --yes --bundle "${OUT}/signature.bundle.json" "$IMAGE"
+          "$COSIGN" verify \
+            --certificate-identity-regexp "$CERT_IDENTITY_RE" \
+            --certificate-oidc-issuer "$CERT_ISSUER" \
+            "$IMAGE" >/dev/null
+          for arch in amd64 arm64; do
+            child_digest=$(jq -er --arg platform "linux/${arch}" '.platformDigests[$platform]' "${OUT}/manifest.json")
+            child_image="${GHCR_NAMESPACE}/${SERVICE}@${child_digest}"
+            "$COSIGN" attest --yes \
+              --predicate "${OUT}/${SERVICE}-${arch}.spdx.json" \
+              --type spdxjson \
+              --bundle "${OUT}/${SERVICE}-${arch}.attestation.bundle.json" \
+              "$child_image"
+            "$COSIGN" verify-attestation \
+              --certificate-identity-regexp "$CERT_IDENTITY_RE" \
+              --certificate-oidc-issuer "$CERT_ISSUER" \
+              --type spdxjson \
+              "$child_image" >/dev/null
+          done
 
       - name: Upload SPDX SBOM artifact
         if: inputs.push-image && inputs.version != ''

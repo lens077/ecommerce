@@ -44,6 +44,13 @@ description: harness 本身（硬规则/门禁/Agent 约束）每次改动的原
 
 ---
 
+### 2026-08-28 GHCR keyless 签名绑定 workflow identity
+
+- **改了什么**：Cosign 3.1.3 固定版本并校验官方 checksums；tag 发布对多架构 index digest 做 keyless 签名，对 amd64/arm64 child digest 分别附加 SPDX attestation，并以 GitHub Actions OIDC issuer 与当前 workflow identity 在同一 job 回验。调用方与 reusable workflow 只增加必要的 `id-token: write`。
+- **为什么**：签名存在不等于可信，验签必须约束签发者与具体 workflow；平台 SBOM 也必须附到对应 child digest，不能把两份互异的平台内容都模糊附到 index。
+- **触发事故**：`1.5.2` 首次远端 SBOM 验收证明 OCI index 除两个平台外还包含 `unknown/unknown` provenance manifest；仅按 tag 或只对 index 附一份 SBOM，会失去平台与内容的确定关联。既有文档还要求 Cosign 版本不低于修复 legacy bundle 绕过漏洞的 3.1.3。
+- **怎么验证的**：安装脚本在 macOS ARM64 下载 Cosign 3.1.3 并通过官方 SHA256；workflow YAML、zizmor 与 PR 三件套通过。GHCR keyless 的 Fulcio identity、Rekor bundle 和 registry attachment 仍须由下一发布 tag 远端实跑验收。
+
 ### 2026-08-28 tag SBOM 按多架构 index digest 分平台生成
 
 - **改了什么**：在 Buildx 推送完成后读取不可变 OCI index digest，Syft 1.51.1 分别为 `linux/amd64`、`linux/arm64` 生成 SPDX 2.3；连同 index digest 清单上传为按服务隔离的 Actions artifact。仅 tag 发布运行，不签名、不发布 attestation。

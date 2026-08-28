@@ -85,6 +85,23 @@ Syft 已接入 `.github/workflows/service-ci.yml`：仅发布 tag 且实际推�
 
 本地红绿验证结果：指定现有 TCR 镜像的 `linux/arm64` 平台成功生成 355-package SBOM；指定该镜像不存在的 `linux/amd64` 平台返回 1，证明平台缺失不会静默生成错误 SBOM。现有本地/TCR PoC 镜像并非 CI 目标的双架构产物，因此本次没有伪造「双架构远端实跑成功」结论。
 
-本次仍未验证或落地：Cosign 3.1.3、GHCR keyless、TCR 签名兼容性、Harbor Helm 签名、Trivy image、Kyverno `verifyImages`。
+### `1.5.2` 远端验收
 
-**下一步指示**：推送一个新的裸 semver tag，让 GitHub Actions 实际构建双架构 OCI index；下载某个服务的 SBOM artifact，核对 `manifest.json.indexDigest` 等于 Buildx 输出，并确认 amd64/arm64 两份 SPDX 均非空。该远端验收通过后，才进入 Cosign attestation/sign 子步骤。
+发布 tag `1.5.2` 指向提交 `8b33eb4`。GitHub Actions run `33152252670` 的 10 个服务测试、双架构构建与 SBOM 上传全部成功，共产生 10 个 `sbom-<service>-1.5.2` artifact。
+
+抽查 `sbom-user-1.5.2`：
+
+- `manifest.json.indexDigest` 为 `sha256:cffac6e6ac2200c38cb276c1d88e0b05c0ecb945ed4aff3d46ff6b67f31b200e`，与 GHCR `user:1.5.2` 远端 OCI index digest 完全一致；
+- 远端索引包含 `linux/amd64`、`linux/arm64`，另有 BuildKit provenance 的 `unknown/unknown` manifest；
+- `user-amd64.spdx.json` 与 `user-arm64.spdx.json` 均为 SPDX 2.3，各包含 107 个 packages 与 415 个 relationships；
+- 三个文件的 JSON 结构、服务名、版本、镜像 digest 与平台列表全部校验通过。
+
+因此，**Syft tag 阶段已完成远端双架构验收**。
+
+### Cosign 下一步
+
+Cosign 3.1.3 的 GHCR keyless 代码已经准备：固定版本并校验官方 checksums；对 OCI index digest 签名，对 amd64/arm64 child digest 分别附加对应 SPDX attestation，并在同一 job 以 GitHub Actions OIDC issuer 与 workflow identity 回验。该代码尚未通过新的远端 tag 实跑，不能宣称签名阶段完成。
+
+仍未验证或落地：TCR 签名兼容性、Harbor Helm 签名、Trivy image、Kyverno `verifyImages`。
+
+**下一步指示**：发布下一裸 semver tag，验证 GHCR index 签名、两个平台的 SPDX attestation、Fulcio workflow identity 与 Rekor bundle；GHCR 全绿后再单独测试同一 digest 的 TCR Cosign 工件兼容性。
