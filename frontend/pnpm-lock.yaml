@@ -138,9 +138,6 @@ catalogs:
     typescript:
       specifier: ^7.0.2
       version: 7.0.2
-    valtio:
-      specifier: ^2.3.2
-      version: 2.3.2
     vite-plus:
       specifier: 0.2.9
       version: 0.2.9
@@ -153,6 +150,9 @@ catalogs:
     zod:
       specifier: ^4.4.3
       version: 4.4.3
+    zustand:
+      specifier: ^5.0.15
+      version: 5.0.15
 
 overrides:
   vite: npm:@voidzero-dev/vite-plus-core@0.2.9
@@ -349,12 +349,12 @@ importers:
       react-dom:
         specifier: 'catalog:'
         version: 19.2.8(react@19.2.8)
-      valtio:
-        specifier: 'catalog:'
-        version: 2.3.2(@types/react@19.2.18)(react@19.2.8)
       zod:
         specifier: 'catalog:'
         version: 4.4.3
+      zustand:
+        specifier: 'catalog:'
+        version: 5.0.15(@types/react@19.2.18)(react@19.2.8)(use-sync-external-store@1.6.0(react@19.2.8))
     devDependencies:
       '@bufbuild/buf':
         specifier: 'catalog:'
@@ -470,9 +470,6 @@ importers:
       react-dom:
         specifier: 'catalog:'
         version: 19.2.8(react@19.2.8)
-      valtio:
-        specifier: 'catalog:'
-        version: 2.3.2(@types/react@19.2.18)(react@19.2.8)
       zod:
         specifier: 'catalog:'
         version: 4.4.3
@@ -651,9 +648,9 @@ importers:
 
   packages/utils:
     dependencies:
-      valtio:
+      zustand:
         specifier: 'catalog:'
-        version: 2.3.2(@types/react@19.2.18)(react@19.2.8)
+        version: 5.0.15(@types/react@19.2.18)(react@19.2.8)(use-sync-external-store@1.6.0(react@19.2.8))
 
 packages:
 
@@ -2786,9 +2783,6 @@ packages:
   prop-types@15.8.1:
     resolution: {integrity: sha512-oj87CgZICdulUohogVAR7AjlC0327U4el4L6eAvOqCeudMDVU0NThNaV+b9Df4dXgSP1gXMTnPdhfe/2qDH5cg==}
 
-  proxy-compare@3.0.1:
-    resolution: {integrity: sha512-V9plBAt3qjMlS1+nC8771KNf6oJ12gExvaxnNzN/9yVRLdTv/lc+oJlnSzrdYDAvBfTStPCoiaCOTmTs0adv7Q==}
-
   punycode@2.3.1:
     resolution: {integrity: sha512-vYt7UD1U9Wg6138shLtLOvdAu+8DsC/ilFtEVHcH+wydcSpNE20AfSOduf6MkRFahL5FY7X1oU7nKVZFtfq8Fg==}
     engines: {node: '>=6'}
@@ -3041,18 +3035,6 @@ packages:
     peerDependencies:
       react: ^16.8.0 || ^17.0.0 || ^18.0.0 || ^19.0.0
 
-  valtio@2.3.2:
-    resolution: {integrity: sha512-YXhWQei9IN/ZDce9rhL3trCq9+vVq8M1gWmKVdP3YSZ2gxsmmNWVbxXwf9yG6ffu/dAvAD91nevg8xirGr4Dhg==}
-    engines: {node: '>=12.20.0'}
-    peerDependencies:
-      '@types/react': '>=18.0.0'
-      react: '>=18.0.0'
-    peerDependenciesMeta:
-      '@types/react':
-        optional: true
-      react:
-        optional: true
-
   vite-plus@0.2.9:
     resolution: {integrity: sha512-8uRNqAxh9no3AU4Lep8BEYhkim07+3NO+mhuxTWiN0k30syGT/2+ue/DtWYhtzQ7yi2f2WKpjOhoI4/QkWWbUg==}
     engines: {node: ^20.19.0 || ^22.18.0 || >=24.11.0}
@@ -3206,6 +3188,24 @@ packages:
 
   zrender@6.1.0:
     resolution: {integrity: sha512-oEGMDB6pOP2S6OwRR4PdVv610zrjnA3Bh+JnSG12fYJlBKjtNAoEb5fSUoCOOINlH96I2fU38/A2UpRKs67xYQ==}
+
+  zustand@5.0.15:
+    resolution: {integrity: sha512-MpSEjRiBkA9crSYeOUH32rJC7SVqAbm0Fqcqge/bUi2PPoLcBWKOsG+C8mevmpr8TwXHBVkChbbJiyvkE+i/3A==}
+    engines: {node: '>=12.20.0'}
+    peerDependencies:
+      '@types/react': '>=18.0.0'
+      immer: '>=9.0.6'
+      react: '>=18.0.0'
+      use-sync-external-store: '>=1.2.0'
+    peerDependenciesMeta:
+      '@types/react':
+        optional: true
+      immer:
+        optional: true
+      react:
+        optional: true
+      use-sync-external-store:
+        optional: true
 
 snapshots:
 
@@ -5098,8 +5098,6 @@ snapshots:
       object-assign: 4.1.1
       react-is: 16.13.1
 
-  proxy-compare@3.0.1: {}
-
   punycode@2.3.1:
     optional: true
 
@@ -5301,13 +5299,6 @@ snapshots:
 
   use-sync-external-store@1.6.0(react@19.2.8):
     dependencies:
-      react: 19.2.8
-
-  valtio@2.3.2(@types/react@19.2.18)(react@19.2.8):
-    dependencies:
-      proxy-compare: 3.0.1
-    optionalDependencies:
-      '@types/react': 19.2.18
       react: 19.2.8
 
   vite-plus@0.2.9(@types/node@26.2.0)(@vitest/browser-playwright@4.1.10(@voidzero-dev/vite-plus-core@0.2.9(@types/node@26.2.0)(jiti@2.7.0)(typescript@7.0.2)(yaml@2.9.0))(playwright@1.62.1)(vitest@4.1.10))(@voidzero-dev/vite-plus-core@0.2.9(@types/node@26.2.0)(jiti@2.7.0)(typescript@7.0.2)(yaml@2.9.0))(jiti@2.7.0)(jsdom@29.1.1)(typescript@7.0.2)(yaml@2.9.0):
@@ -5567,3 +5558,9 @@ snapshots:
   zrender@6.1.0:
     dependencies:
       tslib: 2.3.0
+
+  zustand@5.0.15(@types/react@19.2.18)(react@19.2.8)(use-sync-external-store@1.6.0(react@19.2.8)):
+    optionalDependencies:
+      '@types/react': 19.2.18
+      react: 19.2.8
+      use-sync-external-store: 1.6.0(react@19.2.8)

@@ -7,6 +7,8 @@
 import { Box, CircularProgress, Typography } from "@mui/material";
 import { createPortal } from "react-dom";
 import { useEffect, useState } from "react";
+import { useStore } from "zustand";
+import { createStore } from "zustand/vanilla";
 import { i18next } from "@ecommerce/i18n";
 
 interface LoadingProps {
@@ -59,33 +61,34 @@ export function Loading({ isLoading, message, fullscreen = false }: LoadingProps
   return createPortal(content, document.body);
 }
 
-// 全局加载状态，与 src/store/* 一致用 valtio
-import { proxy, useSnapshot } from "valtio";
+// 全局加载状态，与 src/store/* 一致用 zustand（vanilla store + 模块级 action）
 
 interface LoadingState {
   isLoading: boolean;
   message: string;
 }
 
-export const loadingStore = proxy<LoadingState>({
+export const loadingStore = createStore<LoadingState>()(() => ({
   isLoading: false,
   message: "",
-});
+}));
 
 export const showLoading = (message?: string) => {
-  loadingStore.isLoading = true;
-  // 非组件环境，用 i18next 的 t 而不是 useTranslation
-  loadingStore.message = message || i18next.t("common:state.loading");
+  loadingStore.setState({
+    isLoading: true,
+    // 非组件环境，用 i18next 的 t 而不是 useTranslation
+    message: message || i18next.t("common:state.loading"),
+  });
 };
 
 export const hideLoading = () => {
-  loadingStore.isLoading = false;
-  loadingStore.message = "";
+  loadingStore.setState({ isLoading: false, message: "" });
 };
 
-// 全局加载 Provider
+// 全局加载 Provider：用窄 selector 订阅，任一字段变化即重渲染
 export function GlobalLoadingProvider() {
-  const { isLoading, message } = useSnapshot(loadingStore);
+  const isLoading = useStore(loadingStore, (state) => state.isLoading);
+  const message = useStore(loadingStore, (state) => state.message);
 
   return <Loading isLoading={isLoading} message={message} fullscreen />;
 }
