@@ -44,6 +44,13 @@ description: harness 本身（硬规则/门禁/Agent 约束）每次改动的原
 
 ---
 
+### 2026-08-28 TCR Cosign 兼容性只做单服务硬失败探测
+
+- **改了什么**：tag 发布仅对 `user` 服务在 TCR 重复 index 签名与两个平台 SPDX attestation，并立即从 TCR 回验；不加兼容性 fallback，不在探测成功前扩展到其他服务或 Kyverno。
+- **为什么**：TCR 个人版没有对 Cosign OCI referrers 的官方兼容性承诺。一次性给所有服务签名会放大失败成本，软失败又会产生「看起来已双签」的错误结论。
+- **触发事故**：`1.5.3` 验收确认 GHCR 与 TCR 的 index 及 child digest 完全相同，但 digest 相同只能证明镜像内容一致，不能证明 TCR 能保存和回读 Cosign signature/attestation 工件。
+- **怎么验证的**：本地比较两仓 `user:1.5.3` 的 index、amd64、arm64 digest 全部一致；workflow YAML、zizmor 与 PR 三件套通过。最终兼容性结论由下一 tag 的 TCR 写入及回读结果决定。
+
 ### 2026-08-28 GHCR keyless 签名绑定 workflow identity
 
 - **改了什么**：Cosign 3.1.3 固定版本并校验官方 checksums；tag 发布对多架构 index digest 做 keyless 签名，对 amd64/arm64 child digest 分别附加 SPDX attestation，并以 GitHub Actions OIDC issuer 与当前 workflow identity 在同一 job 回验。调用方与 reusable workflow 只增加必要的 `id-token: write`。

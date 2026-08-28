@@ -245,6 +245,41 @@ jobs:
               "$child_image" >/dev/null
           done
 
+      # TCR 个人版对 Cosign/OCI referrers 没有官方兼容性承诺；先只用 user 服务探测，
+      # 探测通过前不扩大到全服务，也不把 Kyverno verifyImages 指向 TCR。
+      - name: Probe TCR Cosign compatibility
+        if: inputs.push-image && inputs.version != '' && inputs.service == 'user'
+        env:
+          SERVICE: ${{ inputs.service }}
+          VERSION: ${{ inputs.version }}
+          CERT_IDENTITY_RE: ^https://github\.com/lens077/ecommerce/\.github/workflows/(backend|service-ci)\.yml@refs/tags/[0-9]+\.[0-9]+\.[0-9]+$
+          CERT_ISSUER: https://token.actions.githubusercontent.com
+        run: |
+          set -euo pipefail
+          COSIGN=$(./scripts/install-cosign.sh)
+          OUT="sbom/${SERVICE}/${VERSION}"
+          index_digest=$(jq -er '.indexDigest' "${OUT}/manifest.json")
+          image="${REGISTRY}/${REGISTRY_NAMESPACE}/${SERVICE}@${index_digest}"
+          "$COSIGN" sign --yes --bundle "${OUT}/tcr-signature.bundle.json" "$image"
+          "$COSIGN" verify \
+            --certificate-identity-regexp "$CERT_IDENTITY_RE" \
+            --certificate-oidc-issuer "$CERT_ISSUER" \
+            "$image" >/dev/null
+          for arch in amd64 arm64; do
+            child_digest=$(jq -er --arg platform "linux/${arch}" '.platformDigests[$platform]' "${OUT}/manifest.json")
+            child_image="${REGISTRY}/${REGISTRY_NAMESPACE}/${SERVICE}@${child_digest}"
+            "$COSIGN" attest --yes \
+              --predicate "${OUT}/${SERVICE}-${arch}.spdx.json" \
+              --type spdxjson \
+              --bundle "${OUT}/tcr-${SERVICE}-${arch}.attestation.bundle.json" \
+              "$child_image"
+            "$COSIGN" verify-attestation \
+              --certificate-identity-regexp "$CERT_IDENTITY_RE" \
+              --certificate-oidc-issuer "$CERT_ISSUER" \
+              --type spdxjson \
+              "$child_image" >/dev/null
+          done
+
       - name: Upload SPDX SBOM artifact
         if: inputs.push-image && inputs.version != ''
         uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
