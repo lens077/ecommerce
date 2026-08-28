@@ -44,6 +44,20 @@ description: harness 本身（硬规则/门禁/Agent 约束）每次改动的原
 
 ---
 
+### 2026-08-28 tag SBOM 按多架构 index digest 分平台生成
+
+- **改了什么**：在 Buildx 推送完成后读取不可变 OCI index digest，Syft 1.51.1 分别为 `linux/amd64`、`linux/arm64` 生成 SPDX 2.3；连同 index digest 清单上传为按服务隔离的 Actions artifact。仅 tag 发布运行，不签名、不发布 attestation。
+- **为什么**：对可变 tag 生成 SBOM 无法证明对应哪个制品；对多架构 index 只扫描 runner 默认平台，又会把单平台内容误称为整个发布物。必须同时固定 index digest 和平台。
+- **触发事故**：本地 TCR PoC 镜像实际只有 `linux/arm64` 加一个 `unknown/unknown` provenance manifest；若不显式指定平台，Syft 仍可产出一份看似正常的 355-package SBOM，容易被误判为多架构发布物已覆盖。
+- **怎么验证的**：指定 `linux/arm64` 生成 SPDX 成功；指定不存在的 `linux/amd64` 返回 1，证明缺平台会硬失败。workflow YAML、shellcheck、zizmor 与完整 PR 供应链门禁均通过；真正双架构产物仍须由下一次远端 tag 运行验收。
+
+### 2026-08-28 PR 供应链扫描改为提交范围与存量棘轮
+
+- **改了什么**：新增独立 PR 门禁，Gitleaks 只扫描 base commit 到 HEAD；zizmor 与 Trivy fs/config 全仓扫描，但只阻断基线外新增的中高风险告警。工具版本与发布物摘要固定，基线只减不增。
+- **为什么**：首次接入必须既能阻断新增风险，又不能因既有技术债让所有 PR 永久失败；工作树密钥扫描还会读取被 `.gitignore` 排除的本地凭据副本，不等于 PR 引入。
+- **触发事故**：首次真实扫描得到 Gitleaks 107 条、zizmor 43 个定位和 Trivy 40 条 HIGH；直接硬门禁会恒红。随后并行新增的两个前端 Deployment 又产生 5 条基线外 HIGH，证明门禁必须区分存量与新增，且不能用扩基线掩盖真实回归。
+- **怎么验证的**：临时 clone 注入随机格式 AWS 密钥和未钉 SHA 的 Action，Gitleaks、zizmor 均返回 1；Trivy 对新增 Deployment HIGH 返回 1。补齐 Pod/Container `securityContext` 后，`./scripts/supply-chain-pr.sh` 三项返回 0，Trivy 存量由 40 条降为 34 条。
+
 ### 2026-08-26 链接门禁扩围至设计文档与根双档,canary 补第 11 探针
 
 - **改了什么**：`verify-context.sh` 的 [DEAD-LINK] 扫描源由「AGENTS.md + context/」

@@ -13,30 +13,35 @@
 | API 定义与代码生成 | Protobuf 3 + Buf CLI + Protovalidate | 定义 API 契约；Buf 管理 proto 文件与兼容性；Protovalidate 做请求参数校验 |
 | 前端框架 | React + TanStack Router + TanStack Query | SPA 开发；路由与状态管理 |
 | 前端 API 通信 | Connect Query ES + Connect Web + Protobuf-ES | 类型安全的 RPC 客户端；与网关交互 |
-| 前端构建 | Vite Pro | 开发与构建工具 |
+| 前端构建 | vite-plus（`vp`） | 开发与构建工具（一体化 dev/build/test/lint/fmt/git 钩子） |
 | 桌面端 | Tauri | 桌面客户端壳 |
 | 测试 | k6（负载/容量）、Playwright（E2E）、property-based testing（如 gopter）、状态机测试 | 验证容量基线、关键业务旅程、领域不变量 |
-| 安全 | Casdoor（IAM）、OpenFGA（关系授权）、GlitchTip（错误监控） | 身份认证、对象级授权、前端异常监控 |
+| 安全 | Casdoor（IAM）、OpenFGA（关系授权）、Bugsink（错误监控） | 身份认证、对象级授权、前端异常监控 |
 | 可观测性 SDK | OpenTelemetry Go SDK + Protobuf-ES 内置追踪 | 日志、指标、链路埋点 |
 | 消息序列化 | Protobuf | RPC 与领域事件的统一序列化格式 |
 | 构建与 CI | Docker Buildx、GitHub Actions、Renovate | 多架构镜像构建、自动化流水线、依赖更新 |
+| 开发内环 | mirrord（mirror）+ Okteto（2026-08-28 PoC 定稿分工） | **观察用 mirrord mirror**（本地 `go run` 按需获得集群 DNS/出站、镜像入站真实流量，只读零影响）；**接管用 Okteto**（`okteto up` 替换工作负载，本地代码真实接请求、复现 Pod 身份）。steal 在本集群不可用不启用（Cilium KPR/BPF host routing 绕过 netfilter）；日常默认仍是本地 `make dev`。证据与使用约定：`docs/reports/2026-08-28-mirrord-poc.md` |
 
 ### B. 正在研究和考虑中的技术栈与工具
 
 | 领域 | 技术/工具 | 状态 | 说明 |
 |------|-----------|------|------|
-| 前端 SSR | Next.js | 评估中 | Consumer 端首屏与 SEO；需评估 ConnectRPC 在 SSR 场景的集成方案 |
+| 前端 SSR | Next.js | 已确定：局部迁（2026-08-28 POC 判 go 并转正） | 公开可收录页归 `consumer-next`（App Router，匿名 transport + ISR `revalidate=60`，2 副本 + PDB，`/zh` `/en` `/_next` 前缀分流）；登录后交易页与 Merchant/Admin/Tauri 留 vite-plus SPA。架构规则：公开 ISR 页服务端取数必须匿名，per-request Cookie transport 只用于显式 dynamic 路由。证据：[Next.js POC](reports/2026-08-28-nextjs-poc.md) |
+| 前端本地状态 | Zustand | 已确定（2026-08-28 迁移完成） | valtio→zustand 全量迁移收口：3 个 store 重写为 vanilla store + 模块级 action，valtio 依赖移除，顺带修复 `AppBar` 直读 proxy 不订阅的刷新 bug；服务端状态仍归 TanStack Query |
+| 前端编译优化 | React Compiler（Oxc 原生） | 已评估：搁置（2026-08-28 试点） | consumer 单应用试点通过（构建/测试/冒烟绿，Zustand 组件零诊断），但原生实现仍实验性、生产构建 2 处显式 bailout、全量 JS gzip +7.97%，运行时收益未证实可抵消体积增长。保持默认关闭，环境变量可复跑同一试点。证据：[试点报告](reports/2026-08-28-react-compiler-pilot.md) |
+| 按请求接管（多人个人金丝雀） | Telepresence personal intercept / mirrord Teams | 待触发 | 「多人同时对同一服务做按请求接管」（filter 式个人金丝雀）是 steal 真正不可替代、当前给不了的能力——Okteto 接管是排他的整体替换。触发信号（任一）：出现第二个长期后端贡献者共享 dev 联调；发生「一人的 okteto up/调试会话打断另一人联调」的真实冲突；前端/QA 需同时验证两个未合入后端分支；每人独立环境的资源账算不过来。触发后先验 Telepresence personal intercept（开源，但须复测本集群 Cilium KPR 兼容——mirrord steal 的教训），对照 mirrord Teams（约 $50/人/月）；两者都不行才考虑「基线+泳道」自建染色路由。此前不为此花任何成本。开发内环现行分工见 A 表；mirror 推广门禁：cart 及一个下游完成 K8s DNS 调用 |
 | 东西向身份 | SPIFFE/SPIRE | 评估中 | 服务间 workload identity；是否需要独立于 K8s ServiceAccount 的身份体系 |
 | 传输层安全 | mTLS | 评估中 | 服务间加密与身份验证；与 Cilium 网络策略的关系需明确 |
-| 运行时安全 | Tetragon | 评估中 | 基于 eBPF 的运行时行为检测；需验证内核兼容性与性能开销 |
+| 运行时安全 | Tetragon | 试点观察中（2026-08-28 已部署） | 单节点（node103）观察模式已部署：chart 1.7.1，arm64 内核 7.0 BTF 兼容已实测，仅导出 `ecommerce` 命名空间 `PROCESS_EXEC/EXIT`，零 TracingPolicy（纯观察不阻断）。扩节点门槛：连续 24h 稳态内存 <250Mi、CPU <100m、业务 P99 劣化 <3%、零丢事件；部署资产在 `~/lens077/kubernetes/components/tetragon/` |
 | 混沌工程 | Chaos Mesh | 评估中 | 自动化故障注入；P1 阶段引入 |
-| 供应链安全 | Cosign、Syft、Kyverno、Trivy、Grype、Gitleaks、zizmor | 部分评估/部分采用 | 镜像签名、SBOM 生成、策略执行、漏洞扫描、密钥扫描、CI 安全检查 |
+| 供应链安全 | Cosign、Syft、Kyverno、Trivy、Grype、Gitleaks、zizmor | PR 阶段已落地并全绿；tag 阶段 Syft 已接入、待远端 tag 实跑 | PR 阶段采用 Gitleaks 提交范围扫描 + zizmor/Trivy 存量棘轮，已真实红测并在修复新 HIGH 后全绿。Syft 1.51.1 已接入发布 workflow：按 Buildx OCI index digest 分别生成 amd64/arm64 SPDX 2.3 并上传 artifact；本地单平台红绿测试通过，尚未执行新的远端 tag 验收，也未完成 Cosign、Trivy image 或 Kyverno 验签。实测结论见 [PR 阶段供应链门禁验证](reports/2026-08-28-supply-chain-pr-validation.md) |
 | 成本治理 | OpenCost | 评估中 | 每服务/每订单成本模型；P1 阶段引入 |
 | 长流程编排 | Temporal | 待触发（P2） | 仅当长流程、定时器、补偿数量失控时引入 |
 | 消息流式处理 | Kafka Streams / ksqlDB | 评估中 | 实时聚合、窗口计算；当前由消费者自行处理，暂不强制 |
-| 持续性能分析 | Pyrocope / Parca | 评估中 | CPU/Heap/锁/Goroutine 热点分析 |
+| 嵌入式分析（OLAP 跑批） | DuckDB（v1.5.5，MIT） | 采纳（试点待执行，2026-08-28） | 定位=**零常驻批分析/报表/对账引擎**：支付渠道账单对账、`behaviors.events` 增量导出 Parquet 落 Silo 后的分析卸载、经营报表 ad-hoc 维度。集成形态：**CLI 子进程跑批优先**——业务服务 `CGO_ENABLED=0` 一字不改（duckdb-go 预编译静态库仍需 cgo）；复杂化后建独立 analytics-runner 镜像（显式 CGO 例外）；不嵌业务服务、不做常驻任意 SQL 服务、不用 Quack（Beta）。红线：不替代 PG（OLTP 真相源）/搜索投影/Kafka/VictoriaMetrics/流处理（<30s 新鲜度归流处理触发项）。升级路径：多写者/快照/模式演进需求出现后启用 DuckLake 1.0（catalog 存 Pigsty PG + Parquet 落 Silo）。与 ClickHouse 关系：承接其触发条款①②的第一响应，CH 触发条件升级为服务化信号。证据：`docs/reports/2026-08-28-duckdb-evaluation.md` |
+| 持续性能分析 | Pyroscope / Parca | 评估中 | CPU/Heap/锁/Goroutine 热点分析 |
 | 服务网格 | Cilium Service Mesh | 评估中 | 目前由 Cilium CNI + NetworkPolicy 覆盖，暂不引入完整网格 |
-| 前端错误监控替代 | GlitchTip | 已确定 | 兼容 Sentry SDK，内存占用更低 |
+| 前端错误监控 | Bugsink（现役 2.5.x，node3） | 已确定（2026-08-28 复核维持） | 兼容 Sentry SDK 错误事件；单容器 + PostgreSQL 已稳定运行并接通 ntfy 告警。GlitchTip 改为条件采纳：出现 transaction/span 聚合、错误频率告警或统一 uptime/logs 需求时再评估迁移。接入手册与容量证据见 §11.3 |
 
 ---
 
@@ -103,6 +108,8 @@
 ### 3.1 设计决策
 
 系统不采用单一的中心化编排引擎，也不完全依赖去中心化编舞。**根据场景特点灵活组合两种模式，甚至可以在同一个业务流程中混合使用**。这种混合协同模型兼顾了强一致性与系统伸缩性。
+
+**不做全局强制**：各微服务/限界上下文按自身场景自行选择编排、编舞或组合模式（下文 Order 的 Saga 编排是该域的选择，不是全系统模板）；但无论选哪种，都必须符合对应模式的最佳实践——幂等消费、超时与逆向补偿、状态机合法迁移、Outbox/Inbox 契约与全链路可观测。
 
 ```text
                                ┌─────────────────────────────────────────┐
@@ -520,7 +527,7 @@ spec:
 | 事件总线 | Apache Kafka | 部署于非 K8s 物理集群；按限界上下文规划 Topic，以 `aggregate_id` 作为 Partition Key 保证顺序 |
 | 搜索存储 | Elasticsearch | 作为只读 Projection，隐藏于 `SearchCatalog` 接口后；支持从 PG 全量重建索引 |
 | 对象存储 | Silo (基于 MinIO) | S3 兼容，开启 Versioning 与 Lifecycle。前端上传统一使用 Backend 签发的预签名 URL |
-| 镜像仓库 | Harbor | 唯一内网制品源。TCR/GHCR 作为外部备份 |
+| 制品仓库 | TCR（主）+ Harbor（Helm）+ GHCR（可选） | TCR 为主仓库，主要存储业务镜像（集群同区直连拉取）；Harbor 存储 Helm 制品（OCI）；GHCR 可选，可同时存储镜像与 Helm 制品，因网络差异是否推送由 CI 决定 |
 
 ### 7.2 K8s 网络策略与 Pod 高可用隔离
 
@@ -677,7 +684,8 @@ type order
 | 环境 | 方案 |
 |------|------|
 | **生产（K8s）** | Kubernetes Service + CoreDNS，DNS 名格式 `<service>.<namespace>.svc.cluster.local` |
-| **Mac 单机开发** | Docker Compose 编排，通过 Compose 服务名作为 DNS 名互访 |
+| **pre 半生产测试** | Docker Compose 编排，通过 Compose 服务名作为 DNS 名互访 |
+| **Mac 开发内环** | 已定分工（2026-08-28 PoC）：日常默认本地 `make dev` 直连；**观察用 mirrord mirror**（按需集群 DNS/出站/入站镜像）；**接管用 Okteto**（`okteto up` 整体替换，复现 Pod 身份）；steal 不可用不启用。多人按请求接管属待触发评估（见 B 表） |
 
 **统一抽象**：在配置层抽象一个 `ServiceRegistry` 接口，业务代码不感知具体发现机制：
 
@@ -694,25 +702,25 @@ cfg.GetServiceAddr("inventory-service") // 从 K8s DNS 解析
 
 ### 11.1 当前技术栈（保留）
 
-- **构建**：Vite Pro
+- **构建**：vite-plus（`vp`）
 - **API 通信**：Connect Query ES + Connect Web
 - **API 契约**：Protobuf-ES 生成的类型安全客户端
-- **状态管理**：TanStack Query 管服务端状态，Zustand 管本地 UI 状态
+- **状态管理**：TanStack Query 管服务端状态；本地 UI 状态定稿 **Zustand**（2026-08-28 完成 valtio→zustand 全量迁移：3 个 store，vanilla store + 模块级 action）
 
 ### 11.2 Next.js 评估
 
-| 维度 | Vite Pro + SPA | Next.js |
+| 维度 | vite-plus + SPA | Next.js |
 |------|---------------|---------|
 | 首屏速度 | 依赖客户端渲染 | SSR/SSG 显著提升 LCP |
 | SEO | 差 | 原生支持 SSR/SSG/ISR |
 | ConnectRPC 集成 | Connect Query ES 原生支持 | 需配置 SSR 场景下的数据获取 |
 | 适用场景 | Merchant/Admin 后台 | Consumer 端 |
 
-**结论**：Consumer 端优先评估迁移 Next.js；Merchant/Admin 保持 Vite Pro SPA。两者共享 API 契约。
+**结论**（2026-08-28 定稿并转正）：Consumer 端**局部迁**——公开可收录页（商品详情起步）归 `consumer-next`（App Router + Connect Query 注水 + ISR 短 TTL `revalidate=60` 缓解多 Pod 缓存不一致），登录后交易页与 Merchant/Admin/Tauri 留 vite-plus SPA，两者共享 API 契约。POC 判定、架构规则（公开 ISR 页匿名取数 / Cookie transport 仅 dynamic 路由）与转正部署证据见 [`docs/reports/2026-08-28-nextjs-poc.md`](reports/2026-08-28-nextjs-poc.md)。
 
 ### 11.3 错误监控
 
-推荐 **GlitchTip**：兼容 Sentry SDK，前端无需修改代码，内存占用明显低于 Sentry。部署在非 K8s 基础设施集群上。
+**维持 Bugsink**（2026-08-28 复核，推翻此前 GlitchTip 替换定稿）：兼容 Sentry SDK 的错误事件（官方明确不处理 traces/metrics，推荐 `traces_sample_rate=0`），单容器 + PostgreSQL 部署在非 K8s 基础设施节点（node3），New Issue 告警已接通认证 ntfy。复核依据：GlitchTip「兼容 Sentry SDK、比 Sentry 轻」两条理由对 Bugsink 同样成立，且无基准证明 GlitchTip 更省内存；链路追踪已由 OTel + VictoriaTraces 承担，与 Bugsink 职责边界清晰。GlitchTip 转为条件采纳：确需 Sentry SDK 的 transaction/span 端点聚合、错误频率阈值告警或统一 uptime/logs 入口时再评估。**接入手册**（改动清单/验收门禁/回退）见 [`docs/observability/error-monitoring.md`](observability/error-monitoring.md)；**容量证据与调研结论**（node3 实测 55 MiB/0.02% CPU、官方 2 GiB/10 worker≈150 万事件/日容量参考、三阶段接入）见 [`docs/reports/2026-08-28-bugsink-integration-research.md`](reports/2026-08-28-bugsink-integration-research.md)。
 
 
 ## 12. 实施路线图
@@ -731,9 +739,9 @@ cfg.GetServiceAddr("inventory-service") // 从 K8s DNS 解析
 
 ### P1 阶段：业务扩展与自动化
 
-- [ ] Next.js SSR（Consumer 端）评估与部署
+- [x] Next.js SSR（Consumer 端）评估与部署——公开可收录页已转正上线 dev（`consumer-next` 2 副本 + PDB，`shop.dev.test`/`shop.apikv.com` 按 `/zh` `/en` `/_next` 前缀分流，公网链路已实测）；剩余扩页（分类/首页）受阻于 `ListProducts` RPC 未实现，登录态 dynamic 路由联调待真实会话
 - [ ] HPA / KEDA 自动伸缩 + Argo Rollouts 灰度发布
-- [ ] GlitchTip 错误监控上线
+- [ ] 前端接入 Bugsink 错误监控（SDK + Source Map 验收；服务端已运行）
 - [ ] 供应链安全扫描流水线（Gitleaks + Trivy + Syft + Cosign + Kyverno）
 - [ ] Chaos Mesh 自动化故障演练
 - [ ] 商家子账号、履约、售后、结算、双重记账
@@ -856,6 +864,8 @@ cfg.GetServiceAddr("inventory-service") // 从 K8s DNS 解析
 
 ## 7. 供应链安全
 
+PR 阶段已经落地 Gitleaks、zizmor、Trivy fs/config 三件套。首次全量扫描存在较多存量告警，因此采用「Gitleaks 只扫 PR 提交范围，zizmor/Trivy 全量扫描但仅阻断基线外新增项」的棘轮门禁；基线只能因修复而缩小。红测、Deployment 加固与最终全绿结果见 [2026-08-28 PR 阶段供应链门禁验证](reports/2026-08-28-supply-chain-pr-validation.md)。tag 阶段已把 Syft 1.51.1 接到 Buildx digest 后：分别生成 amd64/arm64 SPDX 2.3 并上传 Actions artifact；本地单平台红绿测试通过，但尚未用新 tag 验收双架构远端产物，也不代表 Cosign、三仓签名、Trivy image 或 Kyverno `verifyImages` 已完成。
+
 | 技术/标准 | 规范/标准出处 | 说明 |
 |---|---|---|
 | **SLSA** | [SLSA Specification](https://slsa.dev/) | 软件供应链安全等级框架 |
@@ -880,7 +890,7 @@ cfg.GetServiceAddr("inventory-service") // 从 K8s DNS 解析
 | **Protobuf-ES** | [Protobuf-ES Documentation](https://github.com/bufbuild/protobuf-es) | Buf 官方前端 Protobuf 运行时 |
 | **Vite** | [Vite Documentation](https://vite.dev/) | 构建工具 |
 | **Tauri** | [Tauri Documentation](https://tauri.app/) | 桌面客户端框架 |
-| **Next.js** | [Next.js Documentation](https://nextjs.org/docs) | SSR/SSG 框架（评估中） |
+| **Next.js** | [Next.js Documentation](https://nextjs.org/docs) | SSR/SSG 框架（已定局部迁：Consumer 公开页） |
 | **Playwright** | [Playwright Documentation](https://playwright.dev/) | E2E 测试 |
 | **k6** | [k6 Documentation](https://grafana.com/docs/k6/latest/) | 负载测试 |
 | **Lighthouse CI** | [Lighthouse CI Documentation](https://github.com/GoogleChrome/lighthouse-ci) | Web 性能指标（LCP/INP/CLS） |
