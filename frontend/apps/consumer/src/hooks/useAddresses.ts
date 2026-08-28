@@ -59,7 +59,8 @@ export const useAddresses = () => {
       createAddressMutation.mutate({
         recipientName: data.recipientName,
         recipientPhone: data.recipientPhone,
-        userId: userStore.account.id,
+        // 回调时刻即时读取（zustand getState），不需要渲染订阅
+        userId: userStore.getState().account.id,
         detail: buildDetail(data),
         isDefault: data.isDefault,
       }),

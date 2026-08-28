@@ -105,7 +105,14 @@ generate:
 
 .PHONY: conf
 conf:
-	buf generate --template buf.gen.yaml
+	@fail=""; \
+	for s in $(SERVICES); do \
+	  echo "===== conf $$s ====="; \
+	  buf generate --template buf.gen.yaml \
+	    --path services/$$s/internal/conf/v1/conf.proto || fail="$$fail $$s"; \
+	done; \
+	if [ -n "$$fail" ]; then echo "❌ conf 生成失败:$$fail"; exit 1; fi; \
+	echo "✅ 全部 $(words $(SERVICES)) 个服务的配置 protobuf 已生成"
 
 # ── 配置 JSON Schema(IDE 对 configs/*.yml 的高亮/补全/校验)──────────
 # 从各服务 internal/conf/v1/conf.proto 的 Bootstrap 生成自包含 JSON Schema 到
