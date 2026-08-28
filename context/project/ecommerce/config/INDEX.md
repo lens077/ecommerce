@@ -73,6 +73,12 @@ config 包的 `TestRealConfigFiles_DecodeAndValidate` 在本机验证真实 dev/
 bootstrap.yaml（未知键/缺段的副本会让服务重启后起不来），见 `.service-matrix.yaml`
 config_validation.rollout_warning。
 
+Config Center 的 `PutKey` 也会在持久化前使用同一批 JSON Schema；快照内嵌在 sibling
+`control-tower`，来源 revision 可审计。修改 Bootstrap 契约时必须按「本仓生成并提交 Schema →
+control-tower 执行 `make sync-ecommerce-schemas` 并先发布 config 服务 → 写配置 → 发布消费服务」
+的顺序推进，不能让旧控制面 Schema 阻断新字段。紧急旁路与错误脱敏见
+`../control-tower/docs/design/config-schema.md`。
+
 ## experience
 
 | 症状 | 文件 |
