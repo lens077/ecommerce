@@ -202,8 +202,7 @@ AppProject 只有 `default`（2026-08-29 复测仍然如此）。集群实际由
 **Pod 节点均衡**：业务 Deployment 统一带 `app.kubernetes.io/part-of: ecommerce` +
 namespace 内共享的硬 `topologySpreadConstraints`（`maxSkew: 1`、`DoNotSchedule`），当前分布 5/6/6。
 **不得用 `kubernetes.io/hostname: node103` 之类硬钉实现「稳定」**——那把节点故障升级成不可调度。
-约束全文、rollout 死锁处理与 VPA/Descheduler 路线见
-[`docs/design/platform/capacity-balancing.md`](../../docs/design/platform/capacity-balancing.md)。
+容量定稿前还需补齐 rollout 死锁处理、VPA/Descheduler 路线和故障演练的版本化设计文档。
 
 ## 自助核对
 
