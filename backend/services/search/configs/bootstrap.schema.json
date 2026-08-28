@@ -966,7 +966,7 @@
     },
     "google.protobuf.Duration.schema.json": {
       "$schema": "https://json-schema.org/draft/2020-12/schema",
-      "pattern": "^-?([0-9]+([.][0-9]+)?(ns|us|µs|ms|s|m|h))+$$",
+      "pattern": "^-?([0-9]+([.][0-9]+)?(ns|us|µs|ms|s|m|h))+$",
       "title": "Duration",
       "type": "string"
     }

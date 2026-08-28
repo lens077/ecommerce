@@ -39,6 +39,9 @@ spec:
     config.storage.replication.factor: 1
     offset.storage.replication.factor: 1
     status.storage.replication.factor: 1
+    # Connector 配置只保留环境变量引用，凭据由 Pod Secret 注入。
+    config.providers: env
+    config.providers.env.class: org.apache.kafka.common.config.provider.EnvVarConfigProvider
 
   # ---------------------------------------------------------------------------
   # 内存。**别把 resources 删回空**：空 resources → QoS = BestEffort → 调度器按
@@ -85,6 +88,13 @@ spec:
             url: https://repo1.maven.org/maven2/io/debezium/debezium-connector-postgres/3.6.0.Beta1/debezium-connector-postgres-3.6.0.Beta1-plugin.tar.gz
 
   template:
+    connectContainer:
+      env:
+        - name: DEBEZIUM_DATABASE_PASSWORD
+          valueFrom:
+            secretKeyRef:
+              name: debezium-database-credentials
+              key: password
     buildContainer:
       securityContext:
         privileged: true

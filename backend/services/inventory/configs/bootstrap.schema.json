@@ -81,9 +81,6 @@
         "observability": {
           "$ref": "#/$defs/conf.v1.Observability.schema.json"
         },
-        "search": {
-          "$ref": "#/$defs/conf.v1.Search.schema.json"
-        },
         "server": {
           "$ref": "#/$defs/conf.v1.Server.schema.json"
         }
@@ -850,78 +847,6 @@
         }
       },
       "title": "Observability",
-      "type": "object"
-    },
-    "conf.v1.Search.ElasticSearch.Tls.schema.json": {
-      "$schema": "https://json-schema.org/draft/2020-12/schema",
-      "additionalProperties": false,
-      "patternProperties": {
-        "^(caPem)$": {
-          "default": "",
-          "type": "string"
-        },
-        "^(insecureSkipVerify)$": {
-          "default": false,
-          "type": "boolean"
-        }
-      },
-      "properties": {
-        "ca_pem": {
-          "default": "",
-          "type": "string"
-        },
-        "enable": {
-          "default": false,
-          "type": "boolean"
-        },
-        "insecure_skip_verify": {
-          "default": false,
-          "type": "boolean"
-        }
-      },
-      "title": "Tls",
-      "type": "object"
-    },
-    "conf.v1.Search.ElasticSearch.schema.json": {
-      "$schema": "https://json-schema.org/draft/2020-12/schema",
-      "additionalProperties": false,
-      "properties": {
-        "addresses": {
-          "items": {
-            "pattern": "^(?:(?:[a-zA-Z][a-zA-Z\\d+\\-.]*):)?(?://(?:[A-Za-z0-9\\-\\.]+(?::\\d+)?))?(/[^\\?#]*)?(?:\\?([^\\#]*))?(?:\\#(.*))?$",
-            "type": "string"
-          },
-          "type": "array"
-        },
-        "password": {
-          "default": "",
-          "type": "string"
-        },
-        "tls": {
-          "$ref": "#/$defs/conf.v1.Search.ElasticSearch.Tls.schema.json"
-        },
-        "username": {
-          "default": "",
-          "type": "string"
-        }
-      },
-      "title": "Elastic Search",
-      "type": "object"
-    },
-    "conf.v1.Search.schema.json": {
-      "$schema": "https://json-schema.org/draft/2020-12/schema",
-      "additionalProperties": false,
-      "patternProperties": {
-        "^(elasticSearch)$": {
-          "$ref": "#/$defs/conf.v1.Search.ElasticSearch.schema.json"
-        }
-      },
-      "properties": {
-        "elastic_search": {
-          "$ref": "#/$defs/conf.v1.Search.ElasticSearch.schema.json"
-        }
-      },
-      "title": "Search",
       "type": "object"
     },
     "conf.v1.Server.Cors.schema.json": {

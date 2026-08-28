@@ -87,7 +87,6 @@ worker `node102`（`.102`）、`node103`（`.103`）。节点 `shutdown now` 有
 1. 用上表的活地址覆盖（PG `114.132.233.129:30001`、Dragonfly `192.168.3.122:6380`、Consul `192.168.3.120:8500`）；
 2. 走内环开发，在集群身份下跑代码 —— [okteto-inner-loop.md](okteto-inner-loop.md)。
 
-7 个服务的 `dev.yml` 里还留着 `http://es.dev.test`（无对应 Route，是死地址）。
 
 ## `*.dev.test` 解析与 TLS 信任
 
