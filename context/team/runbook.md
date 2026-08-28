@@ -40,6 +40,7 @@ description: 给所有 AI 编码工具(尤其 Codex)的可执行命令与验收�
 | 服务拓扑/注册名/网关前缀/配置键 | [`.service-matrix.yaml`](../../.service-matrix.yaml) | 现搜猜错,把 `depends_on_planned` 当已接线 |
 | proto / API 契约 | [proto-design.md](proto-design.md) | 字段裸奔、破坏兼容性、炸前后端生成代码 |
 | Redis(缓存/锁/去重/计数) | [go-redis.md](go-redis.md) | 抓到已 Close 的旧客户端;`redis.Nil` 被当故障;非幂等命令被默认重试执行多次 |
+| Kafka / NATS / outbox / Inbox / 领域事件 | [events/INDEX.md](../project/ecommerce/events/INDEX.md) + [生产目标与 Kafka 路线](../../docs/design/platform/production-scale-goal.md) | 事务内双写 broker、把 EOS 当端到端 exactly-once、双栈消费者重复产生副作用 |
 | 定时/周期任务、Ticker、后台 goroutine | [cron-jobs.md](cron-jobs.md) | 扩副本后同一任务跑 N 次;首次触发盲窗;挂错 ctx 导致心跳静默退出 |
 | 指标 / 看板 / 告警 | [`observability/OBSERVABILITY.md`](../../docs/observability/OBSERVABILITY.md) | 标签基数失控;错误率画成速率;加了指标却没有可行动的告警 |
 | CI/CD、部署策略、镜像 | [`docs/DEVOPS.md`](../../docs/DEVOPS.md) | 镜像用 latest;单副本下滚更/金丝雀静默失效 |
@@ -54,7 +55,7 @@ description: 给所有 AI 编码工具(尤其 Codex)的可执行命令与验收�
 | 提交信息 / 分支 / 分组 | [git-commit.md](git-commit.md) + 本文 §6 | type 自造、`perf` 滥用、`git add -A` 混提 |
 | 踩到坑之后 | [`harness-framework/self-refinement.md`](../harness-framework/self-refinement.md) | 同一个坑下个会话再踩一次 |
 
-⚠️ 两份**目标态**文档(`DEVOPS.md` / `OBSERVABILITY.md`)描述的是尚未实现的体系,
+⚠️ **目标态**文档（`DEVOPS.md` / `OBSERVABILITY.md` / `design/platform/production-scale-goal.md`）描述的是尚未实现的体系,
 读它们是为了不把新代码写歪,**不要据此认为对应能力已经存在**——现状一律以 `TODO.md` 为准。
 
 ---
@@ -69,7 +70,9 @@ scripts/verify-quick.sh backend     # 只跑后端;frontend 同理
 后端链与 `pnpm ready` **无数据依赖,不要串行等待**;全量输出在修复循环里反复进上下文,
 绿的部分是纯噪音,所以默认入口只回报失败段(完整日志路径在摘要里)。
 §1–§4 是它的分解动作,**定位单个失败时再单跑**;§2(structcheck `-count=1`)与
-`scripts/verify-context.sh` 不在其中,按各自触发条件跑。
+`scripts/verify-context.sh` 不在其中,按各自触发条件跑。改 `verify-context.sh` **本身**后
+再跑 `scripts/verify-context-canary.sh`(门禁的元评测:注错断言它还会红,CI 每次 push 也跑,
+由来见 [`harness-framework/flywheel-audit.md`](../harness-framework/flywheel-audit.md))。
 
 ## 1. 编译与静态检查(后端最基本的锚点)
 
@@ -133,18 +136,20 @@ pnpm ready            # vite-plus 聚合:lint(oxlint)+ fmt(oxfmt)+ 类型 + test
 3. **提交信息** Conventional Commits:`<type>(<scope>): <subject>`,
    - type 限 11 类(`feat fix perf refactor style test docs build ci chore revert`),不可自造;
      `perf` 只用于**真的**更快/更省(重构、删死代码、挪文件都不是 perf);
-   - emoji 可选,写了必须与 type 相符(白名单唯一真相源是 `commitlint.config.mjs`);
+   - emoji 可选,写了必须与 type 相符(白名单唯一真相源是 `frontend/commitlint.config.mjs`);
    - subject 末尾**不加标点**,控制在 50 字符内。
-4. **自检提交信息**(可选):`echo "feat(cart): 示例" | pnpm exec commitlint`
+4. **自检提交信息**(可选):`cd frontend && echo "feat(cart): 示例" | pnpm exec commitlint`
 5. **提交**:`git commit`。项目历史全部**直接提交 `main`**,不走分支/PR,除非用户明确要求开分支。
 
 ⚠️ **push main 不会构建任何东西**——CI 只由发布 tag 触发,且 tag 只推 `github` 远端
 (origin 是 GitLab,没有 Actions)。要触发 CI 验证或部署,见
 [git-commit.md](git-commit.md) 的「发布 tag 与 CI 触发」。
 
-钩子说明:commit-msg 钩子由 vite-plus 装(`core.hooksPath=frontend/.vite-hooks/_`),调
-`pnpm exec commitlint`。**若某 shell 里 `pnpm` 不在 PATH**(钩子退出 127),说明是环境问题
-不是消息问题——先人工比对上面第 3 条规则,确认无误后才可 `--no-verify`,并在回复里说明。
+钩子说明:commit-msg 钩子由 vite-plus 装(`core.hooksPath=frontend/.vite-hooks/_`),直调
+`frontend/node_modules/.bin` 里的 commitlint(2026-08-26 起不再经 pnpm exec,理由与
+127 的读法见 [git-commit.md](git-commit.md)「钩子退出 127 怎么读」)。**钩子退出 127** =
+frontend 依赖未装(`cd frontend && pnpm install`),是环境问题不是消息问题——先人工比对
+上面第 3 条规则,确认无误后才可 `--no-verify`,并在回复里说明。
 不要把 `--no-verify` 变成肌肉记忆。
 
 ---
@@ -161,4 +166,4 @@ pnpm ready            # vite-plus 聚合:lint(oxlint)+ fmt(oxfmt)+ 类型 + test
 
 **不在这里重复**——完整的分层导航与真相源清单见 [`context/INDEX.md`](../INDEX.md)。
 本文开头已给出冲突时的裁决顺序:规范看 `context/`,拓扑看 `.service-matrix.yaml`,
-进度看 `TODO.md`,提交校验规则看 `commitlint.config.mjs`。
+进度看 `TODO.md`,提交校验规则看 `frontend/commitlint.config.mjs`。

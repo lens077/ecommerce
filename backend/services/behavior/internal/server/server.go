@@ -10,6 +10,7 @@ import (
 	"connectrpc.com/validate"
 	"github.com/lens077/ecommerce/backend/api/behavior/v1/behaviorv1connect"
 	"github.com/lens077/ecommerce/backend/api/telemetry/v1/telemetryv1connect"
+	"github.com/lens077/ecommerce/backend/pkg/healthcheck"
 	conf "github.com/lens077/ecommerce/backend/services/behavior/internal/conf/v1"
 	"github.com/lens077/ecommerce/backend/services/behavior/internal/data"
 	"github.com/rs/cors"
@@ -53,6 +54,13 @@ func NewHTTPServer(
 		combinedOptions...,
 	)
 	mux.Handle(telemetryv1connectPath, telemetryv1connectHandler)
+
+	healthPath, healthHandler := healthcheck.NewGRPCHandler(
+		func(ctx context.Context) bool { return healthStatus(ctx, deps).Healthy },
+		behaviorv1connect.BehaviorServiceName,
+		telemetryv1connect.TelemetryServiceName,
+	)
+	mux.Handle(healthPath, healthHandler)
 
 	// 应用本身的健康检查
 	mux.HandleFunc("/healthz", func(w http.ResponseWriter, r *http.Request) {

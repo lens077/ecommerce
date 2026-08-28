@@ -86,7 +86,7 @@ type AddProductToCartRequest struct {
 	// 商品快照, 避免商家修改商品
 	SpuName         string           `protobuf:"bytes,6,opt,name=spu_name,json=spuName,proto3" json:"spu_name,omitempty"`
 	SkuName         string           `protobuf:"bytes,7,opt,name=sku_name,json=skuName,proto3" json:"sku_name,omitempty"`
-	Price           float64          `protobuf:"fixed64,8,opt,name=price,proto3" json:"price,omitempty"`
+	UnitPriceCents  int64            `protobuf:"varint,12,opt,name=unit_price_cents,json=unitPriceCents,proto3" json:"unit_price_cents,omitempty"`
 	SkuAttributes   *structpb.Struct `protobuf:"bytes,9,opt,name=sku_attributes,json=skuAttributes,proto3" json:"sku_attributes,omitempty"`
 	SkuThumbnailUrl string           `protobuf:"bytes,10,opt,name=sku_thumbnail_url,json=skuThumbnailUrl,proto3" json:"sku_thumbnail_url,omitempty"` // 商品图片
 	Status          CartStatus       `protobuf:"varint,11,opt,name=status,proto3,enum=cart.v1.CartStatus" json:"status,omitempty"`
@@ -173,9 +173,9 @@ func (x *AddProductToCartRequest) GetSkuName() string {
 	return ""
 }
 
-func (x *AddProductToCartRequest) GetPrice() float64 {
+func (x *AddProductToCartRequest) GetUnitPriceCents() int64 {
 	if x != nil {
-		return x.Price
+		return x.UnitPriceCents
 	}
 	return 0
 }
@@ -532,7 +532,7 @@ type CartItem struct {
 	Selected        bool                   `protobuf:"varint,6,opt,name=selected,proto3" json:"selected,omitempty"`
 	SpuName         string                 `protobuf:"bytes,7,opt,name=spu_name,json=spuName,proto3" json:"spu_name,omitempty"`
 	SkuName         string                 `protobuf:"bytes,8,opt,name=sku_name,json=skuName,proto3" json:"sku_name,omitempty"`
-	Price           float64                `protobuf:"fixed64,9,opt,name=price,proto3" json:"price,omitempty"`
+	UnitPriceCents  int64                  `protobuf:"varint,14,opt,name=unit_price_cents,json=unitPriceCents,proto3" json:"unit_price_cents,omitempty"`
 	SkuAttributes   *structpb.Struct       `protobuf:"bytes,10,opt,name=sku_attributes,json=skuAttributes,proto3" json:"sku_attributes,omitempty"`
 	SkuThumbnailUrl string                 `protobuf:"bytes,11,opt,name=sku_thumbnail_url,json=skuThumbnailUrl,proto3" json:"sku_thumbnail_url,omitempty"`
 	Status          CartStatus             `protobuf:"varint,12,opt,name=status,proto3,enum=cart.v1.CartStatus" json:"status,omitempty"`
@@ -633,9 +633,9 @@ func (x *CartItem) GetSkuName() string {
 	return ""
 }
 
-func (x *CartItem) GetPrice() float64 {
+func (x *CartItem) GetUnitPriceCents() int64 {
 	if x != nil {
-		return x.Price
+		return x.UnitPriceCents
 	}
 	return 0
 }
@@ -725,7 +725,7 @@ var File_api_cart_v1_cart_proto protoreflect.FileDescriptor
 
 const file_api_cart_v1_cart_proto_rawDesc = "" +
 	"\n" +
-	"\x16api/cart/v1/cart.proto\x12\acart.v1\x1a\x1cgoogle/protobuf/struct.proto\x1a\x1egoogle/protobuf/wrappers.proto\x1a#third_party/validate/validate.proto\"\x92\x04\n" +
+	"\x16api/cart/v1/cart.proto\x12\acart.v1\x1a\x1cgoogle/protobuf/struct.proto\x1a\x1egoogle/protobuf/wrappers.proto\x1a#third_party/validate/validate.proto\"\xa7\x04\n" +
 	"\x17AddProductToCartRequest\x12(\n" +
 	"\x06spu_id\x18\x01 \x01(\x04B\x11\xbaH\x0e2\f\x18\xff\xff\xff\xff\xff\xff\xff\xff\x7f(\x01R\x05spuId\x12(\n" +
 	"\x06sku_id\x18\x02 \x01(\x04B\x11\xbaH\x0e2\f\x18\xff\xff\xff\xff\xff\xff\xff\xff\x7f(\x01R\x05skuId\x12)\n" +
@@ -737,13 +737,14 @@ const file_api_cart_v1_cart_proto_rawDesc = "" +
 	"\bspu_name\x18\x06 \x01(\tB\n" +
 	"\xbaH\ar\x05\x10\x01\x18\xff\x01R\aspuName\x12%\n" +
 	"\bsku_name\x18\a \x01(\tB\n" +
-	"\xbaH\ar\x05\x10\x01\x18\xff\x01R\askuName\x12/\n" +
-	"\x05price\x18\b \x01(\x01B\x19\xbaH\x16\x12\x14@\x01\x19\x8f\xc2\xf5\xff\x83חA!\x00\x00\x00\x00\x00\x00\x00\x00R\x05price\x12F\n" +
+	"\xbaH\ar\x05\x10\x01\x18\xff\x01R\askuName\x127\n" +
+	"\x10unit_price_cents\x18\f \x01(\x03B\r\xbaH\n" +
+	"\"\b\x18\xffǯ\xa0% \x00R\x0eunitPriceCents\x12F\n" +
 	"\x0esku_attributes\x18\t \x01(\v2\x17.google.protobuf.StructB\x06\xbaH\x03\xc8\x01\x01R\rskuAttributes\x126\n" +
 	"\x11sku_thumbnail_url\x18\n" +
 	" \x01(\tB\n" +
 	"\xbaH\ar\x05\x10\x01\x18\xf4\x03R\x0fskuThumbnailUrl\x125\n" +
-	"\x06status\x18\v \x01(\x0e2\x13.cart.v1.CartStatusB\b\xbaH\x05\x82\x01\x02\b\x01R\x06status\"\x87\x01\n" +
+	"\x06status\x18\v \x01(\x0e2\x13.cart.v1.CartStatusB\b\xbaH\x05\x82\x01\x02\b\x01R\x06statusJ\x04\b\b\x10\tR\x05price\"\x87\x01\n" +
 	"\x18AddProductToCartResponse\x126\n" +
 	"\x12cart_item_quantity\x18\x01 \x01(\rB\b\xbaH\x05*\x03\x18\x90NR\x10cartItemQuantity\x123\n" +
 	"\fcart_item_id\x18\x02 \x01(\x04B\x11\xbaH\x0e2\f\x18\xff\xff\xff\xff\xff\xff\xff\xff\x7f(\x01R\n" +
@@ -767,7 +768,7 @@ const file_api_cart_v1_cart_proto_rawDesc = "" +
 	"\bquantity\x18\x04 \x01(\rB\b\xbaH\x05*\x03\x18\xe7\aR\bquantity\"X\n" +
 	"\x1eUpdateCartItemQuantityResponse\x126\n" +
 	"\x12cart_item_quantity\x18\x01 \x01(\rB\b\xbaH\x05*\x03\x18\x90NR\x10cartItemQuantity\"\x10\n" +
-	"\x0eGetCartRequest\"\xe1\x04\n" +
+	"\x0eGetCartRequest\"\xf6\x04\n" +
 	"\bCartItem\x123\n" +
 	"\fcart_item_id\x18\x01 \x01(\x04B\x11\xbaH\x0e2\f\x18\xff\xff\xff\xff\xff\xff\xff\xff\x7f(\x01R\n" +
 	"cartItemId\x12(\n" +
@@ -783,13 +784,15 @@ const file_api_cart_v1_cart_proto_rawDesc = "" +
 	"\bspu_name\x18\a \x01(\tB\n" +
 	"\xbaH\ar\x05\x10\x01\x18\xff\x01R\aspuName\x12%\n" +
 	"\bsku_name\x18\b \x01(\tB\n" +
-	"\xbaH\ar\x05\x10\x01\x18\xff\x01R\askuName\x12/\n" +
-	"\x05price\x18\t \x01(\x01B\x19\xbaH\x16\x12\x14@\x01\x19\x8f\xc2\xf5\xff\x83חA!\x00\x00\x00\x00\x00\x00\x00\x00R\x05price\x12F\n" +
+	"\xbaH\ar\x05\x10\x01\x18\xff\x01R\askuName\x127\n" +
+	"\x10unit_price_cents\x18\x0e \x01(\x03B\r\xbaH\n" +
+	"\"\b\x18\xffǯ\xa0% \x00R\x0eunitPriceCents\x12F\n" +
 	"\x0esku_attributes\x18\n" +
 	" \x01(\v2\x17.google.protobuf.StructB\x06\xbaH\x03\xc8\x01\x01R\rskuAttributes\x126\n" +
 	"\x11sku_thumbnail_url\x18\v \x01(\tB\n" +
 	"\xbaH\ar\x05\x10\x01\x18\xf4\x03R\x0fskuThumbnailUrl\x125\n" +
-	"\x06status\x18\f \x01(\x0e2\x13.cart.v1.CartStatusB\b\xbaH\x05\x82\x01\x02\x10\x01R\x06status\"\xc5\x01\n" +
+	"\x06status\x18\f \x01(\x0e2\x13.cart.v1.CartStatusB\b\xbaH\x05\x82\x01\x02\x10\x01R\x06statusJ\x04\b\t\x10\n" +
+	"R\x05price\"\xc5\x01\n" +
 	"\x0fGetCartResponse\x122\n" +
 	"\x05items\x18\x01 \x03(\v2\x11.cart.v1.CartItemB\t\xbaH\x06\x92\x01\x03\x10\xe8\aR\x05items\x126\n" +
 	"\x12cart_item_quantity\x18\x02 \x01(\rB\b\xbaH\x05*\x03\x18\x90NR\x10cartItemQuantity\x12F\n" +

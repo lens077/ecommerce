@@ -27,7 +27,7 @@ export function CartSummaryCard({
   variant = "bottomBar",
 }: CartSummaryCardProps) {
   const { t } = useTranslation();
-  const { formatCurrency } = useFormat();
+  const { formatCurrencyCents } = useFormat();
   const hasSelectedItems = summary.selectedQuantity > 0;
 
   // ==================== 侧边栏模式（桌面端） ====================
@@ -91,7 +91,7 @@ export function CartSummaryCard({
           />
           <SummaryRow
             label={t("cart.summary.subtotal")}
-            value={formatCurrency(summary.totalPrice)}
+            value={formatCurrencyCents(summary.totalPriceCents)}
           />
         </Box>
 
@@ -110,7 +110,7 @@ export function CartSummaryCard({
             {t("cart.summary.total")}
           </Typography>
           <Typography variant="h5" sx={{ color: tokens.colors.accent.red, fontWeight: 700 }}>
-            {formatCurrency(summary.selectedPrice)}
+            {formatCurrencyCents(summary.selectedPriceCents)}
           </Typography>
         </Box>
 
@@ -197,7 +197,7 @@ export function CartSummaryCard({
             variant="body1"
             sx={{ color: tokens.colors.accent.red, fontWeight: 600, ml: sp[1] }}
           >
-            {formatCurrency(summary.selectedPrice)}
+            {formatCurrencyCents(summary.selectedPriceCents)}
           </Typography>
         </Box>
 

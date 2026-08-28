@@ -19,7 +19,7 @@ export function CartItemCard({
   onRemove,
 }: CartItemCardProps) {
   const { t } = useTranslation();
-  const { formatCurrency } = useFormat();
+  const { formatCurrencyCents } = useFormat();
 
   const handleDecrement = () => {
     if (item.quantity > 1) {
@@ -119,7 +119,7 @@ export function CartItemCard({
             textAlign: "right",
           }}
         >
-          {formatCurrency(item.price)}
+          {formatCurrencyCents(item.unitPriceCents)}
         </Typography>
 
         <Box

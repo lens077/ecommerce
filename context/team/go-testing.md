@@ -64,13 +64,12 @@ sqlc 项目里 SQL 是生成物的输入而非手写逻辑，**风险在后者**
 
 ```bash
 cd backend
-make test               # 单元测试(带 -short),集成测试自动跳过
+make test               # 单元测试（带 -short），集成测试自动跳过
+make test-integration   # 不带 -short 的全量测试，需要 Docker
 go test ./services/cart/internal/data/ -run TestCartUpsert -v   # 单个用例
 ```
 
-⚠️ **`make test-integration` 还不存在**——`backend/Makefile` 里没有这个 target,
-跑它只会得到 `No rule to make target`。落地进度见 TODO.md 测试体系行。
-在它出现之前,跑全量集成测试用 `go test -count=1 ./...`(需 Docker)。
+`test-integration` 已落到 `backend/Makefile`。本地 Docker 不可用时 testcontainers 用例会明确跳过；CI 环境不允许据此跳过，容器启动失败必须让 job 变红。
 
 ## 五、不属于这一层的
 

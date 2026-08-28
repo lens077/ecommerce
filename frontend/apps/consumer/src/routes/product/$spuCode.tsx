@@ -27,6 +27,12 @@ import { useAddToCart } from "@/hooks/useCart";
 import { sp, tokens } from "@/styles/tokens";
 import type { Money } from "@/gen/third_party/google/type/money_pb.ts";
 
+const moneyToCents = (money?: Money): bigint => {
+  if (!money) return 0n;
+  if (money.nanos % 10_000_000 !== 0) throw new Error("商品金额必须精确到分");
+  return money.units * 100n + BigInt(money.nanos / 10_000_000);
+};
+
 const formatMoney = (money?: Money): number => {
   if (!money) return 0;
   return Number(money.units) + money.nanos / 1_000_000_000;
@@ -167,8 +173,8 @@ const ProductPage = () => {
         merchantId: selectedSku.merchantId,
         spuName: product.spuName,
         skuName: selectedSku.skuName || Object.values(selectedAttrs).join(" / "),
-        price: formatMoney(selectedSku.price),
-        costPrice: formatMoney(selectedSku.costPrice),
+        unitPriceCents: moneyToCents(selectedSku.price),
+        costPriceCents: moneyToCents(selectedSku.costPrice),
         skuThumbnailUrl: selectedSku.thumbnailUrl || product.skus?.[0]?.thumbnailUrl || "",
         selected: true,
       });

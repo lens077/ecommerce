@@ -4,6 +4,9 @@
 > [checkout.md](checkout.md) 引入了 `order_group`（按商家拆单）+ `order_log`，
 > 本文的 `orders.main/item` 两表结构是拆单方案定稿前的版本。
 > 真相以 [`backend/services/order/internal/data/migrations/00001_order.sql`](../../../backend/services/order/internal/data/migrations/00001_order.sql) 为准。
+> ⚠️ 本文 `order.item` 的 `sku_id … REFERENCES products.skus(id)` 是**跨 schema 外键**，
+> 违反 `STACK.md`「零跨 schema 外键」铁律（2026-08-26 标注）——目标形态是只存
+> ID + 业务快照；实际迁移属代码债（看板 P2），新表设计禁止效仿。
 
 4. 订单表
 

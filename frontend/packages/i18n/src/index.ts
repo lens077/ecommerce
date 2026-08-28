@@ -29,7 +29,13 @@ import {
   SUPPORTED_LOCALES,
   type Locale,
 } from "./detect";
-import { formatCurrencyIn, formatDateIn, formatNumberIn, type DateStyle } from "./format";
+import {
+  formatCurrencyCentsIn,
+  formatCurrencyIn,
+  formatDateIn,
+  formatNumberIn,
+  type DateStyle,
+} from "./format";
 
 export {
   DEFAULT_LOCALE,
@@ -40,7 +46,7 @@ export {
   type Locale,
   type LocaleStorage,
 } from "./detect";
-export { DEFAULT_CURRENCY, type DateStyle } from "./format";
+export { DEFAULT_CURRENCY, formatCurrencyCentsIn, type DateStyle } from "./format";
 export { Trans, useTranslation } from "react-i18next";
 export { i18next };
 
@@ -152,12 +158,14 @@ export function useLocale(): { locale: Locale; setLocale: (locale: Locale) => Pr
 /** 绑定了当前 locale 的格式化函数。语言变化时会触发重渲染。 */
 export function useFormat(): {
   formatCurrency: (amount: number, currency?: string) => string;
+  formatCurrencyCents: (cents: bigint, currency?: string) => string;
   formatNumber: (value: number, options?: Intl.NumberFormatOptions) => string;
   formatDate: (value: Date | number | string | null | undefined, style?: DateStyle) => string;
 } {
   const { locale } = useLocale();
   return {
     formatCurrency: (amount, currency) => formatCurrencyIn(locale, amount, currency),
+    formatCurrencyCents: (cents, currency) => formatCurrencyCentsIn(locale, cents, currency),
     formatNumber: (value, options) => formatNumberIn(locale, value, options),
     formatDate: (value, style) => formatDateIn(locale, value, style),
   };

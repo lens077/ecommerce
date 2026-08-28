@@ -6,6 +6,11 @@
 > `cart_total_quantity` 实际为 `cart_item_quantity`；**§3 整节的 `cart_item_id` 方案未被采纳**，
 > 实现走了它所批判的方向——`RemoveCartItemRequest` 用 `spu_ids/sku_ids/merchant_ids` 并行数组
 > （CEL 等长校验），翻转理由当时未记录。
+>
+> **2026-08-26 裁决（用户确认）**：`cart_item_id` 为条目唯一标识——本文 §3 论证成立，
+> 且 [order/checkout.md](../order/checkout.md) v2 的 `BatchGetCartItems`/按数量核销
+> 依赖此语义；无记录的并行数组翻转不再延续，proto 迁回 `cart_item_id` 列**看板 P1**
+> （涉及 cart.proto + 前端调用改造）。此后任何契约翻转必须留 ADR。
 
 在分布式、多端同步的电商微服务架构中，接口的设计不能仅满足于前端眼前的“页面展示”，更需要守住**分布式事务一致性**、**全盘营销计算**、**网络性能（RPC 开销）**以及**多端持久化**的底线。
 

@@ -13,10 +13,11 @@
 | 目录 | 内容 | 来源 |
 |---|---|---|
 | [platform/architecture.md](platform/architecture.md) | 服务边界、核心/支撑服务规划、领域事件、通信协议 | DESIGN.md §微服务架构核心设计 |
+| [platform/production-scale-goal.md](platform/production-scale-goal.md) | 百万/千万级生产化目标、容量模型、现有技术栈边界、证据门禁、P0/P1/P2 与完成定义 | 2026-08-27 用户目标，后续按证据驱动方向修订 |
 | [platform/error-handling.md](platform/error-handling.md) | biz→data→service 三层错误分层约定（**全服务通用规范**） | DESIGN.md §错误处理 |
-| [platform/performance.md](platform/performance.md) | 性能目标、四层架构、多级缓存、DB 集群、Redis 缓存（目标态） | DESIGN.md §性能与高可用 + §Redis + §数据库集群 |
+
 | [platform/rbac.md](platform/rbac.md) | 三角色 RBAC 模型、权限粒度、Casdoor 集成 | DESIGN.md §RBAC |
-| [platform/pre-environment.md](platform/pre-environment.md) | **Pre 环境基础设施接入清单（实测）**：各组件 IP/svc/路由/网关/TLS 现状与升级路径 | 2026-08-08 集群实测 |
+| [platform/pre-environment.md](platform/pre-environment.md) | **历史快照，禁止作为当前配置源**：保留旧集群协议握手与迁移教训；当前实况看 matrix 与 infrastructure audit | 2026-08-08/24 集群实测 |
 | [platform/i18n-routing.md](platform/i18n-routing.md) | i18n URL 与语言路由策略：公开页子目录 `/:lang/` 决策、方案对比、hreflang、SSR 前置、API 本地化（**设计草案**） | 2026-08-08 设计草案 |
 | [platform/admin-roadmap.md](platform/admin-roadmap.md) | 管理员角色技术形态（角色×独立 admin-service×专属页面，含边界铁律）与能力取舍、竞品差距 | 2026-08-12 基于 merchant/store-settings.md 反推 |
 | [platform/gin-b2c-mall-comparison.md](platform/gin-b2c-mall-comparison.md) | 对照调研：Gin 单体 B2C 商城与本仓的定位/架构/工程化差异及三点启示（快照，含介绍原文附录） | 2026-08-19 外部项目介绍文本 |
@@ -26,13 +27,12 @@
 | [order/checkout.md](order/checkout.md) | **下单（CreateOrder）设计基线 v2**：报价 token、组原子预占、支付/订单接受分离、Outbox、超时自愈；6 轮对抗评审收敛 | 原 docs/design/order.md（v1 草稿已被 v2 推翻并删除） |
 | [order/consistency.md](order/consistency.md) | 跨服务一致性（Outbox + TCC-Try + 编舞 Saga） | 原 TODO.md §二 |
 | [order/schema.md](order/schema.md) | 订单表早期稿（被 checkout 终稿部分取代） | DESIGN.md §数据库设计 |
-| [payment/payment.md](payment/payment.md) | 支付渠道策略模式、流程、幂等、对账、支付/退款表 | DESIGN.md §支付系统 |
+| [payment/payment.md](payment/payment.md) | **已作废**（文首横幅）：单订单支付单+单轴状态模型被 checkout v2 按组支付、capture/refund 双轴取代；仅存渠道对接与对账素材 | DESIGN.md §支付系统 |
 | [search/search.md](search/search.md) | CQRS 读写分离、Meilisearch 索引契约与查询边界 | DESIGN.md §搜索服务 |
 | [merchant/store-settings.md](merchant/store-settings.md) | Shopline 商店设置 20 页竞品实录（含自研备注与服务映射） | 原 DESIGN-MERCHANT.md，2026-08-12 重写为实录调研 |
 | [merchant/roadmap.md](merchant/roadmap.md) | 商家角色功能取舍（引进/不引进）与 P0/P1/P2 路线图 | 2026-08-12 基于 store-settings.md 调研 |
-| [config-center/design.md](config-center/design.md) | 配置中心设计存档（代码已拆至独立仓库） | 原 CONFIG_CENTER_DESIGN.md |
 | [product/sales.md](product/sales.md) | 销量统计：Redis 实时 + PG 预聚合（**部分落地**，实况见文首横幅） | 原 product 服务 schema/design/ 目录，2026-08-13 移入 |
-| [cart/api-decisions.md](cart/api-decisions.md) | 购物车接口设计因果论证（**历史记录**，§3 方案已被 proto 的并行数组翻转） | 原 backend/api/cart/v1/README.md，2026-08-13 移入 |
+| [cart/api-decisions.md](cart/api-decisions.md) | 购物车接口设计因果论证（**历史记录**）。2026-08-26 裁决：`cart_item_id` 为唯一条目标识（checkout v2 依赖此语义），proto 现行并行数组属未记录的翻转，迁移列 P1 | 原 backend/api/cart/v1/README.md，2026-08-13 移入 |
 
 尚无设计文档的服务：user / behavior（behavior 的推荐链路知识在
 `context/project/ecommerce/behavior/`）。**部分服务的设计文档住在服务目录内**：
@@ -50,15 +50,17 @@ archify 生成的系统地图，自包含 HTML（深浅主题 / 搜索 / 路径�
 |---|---|---|
 | 整体 | [ecommerce-overall.html](../architecture/ecommerce-overall.html) | 4 前端应用 → 网关 → 服务分组 → 数据与外部依赖 |
 | 前端 | [ecommerce-frontend.html](../architecture/ecommerce-frontend.html) | pnpm workspace：apps × packages、tracker/perf 上报链路 |
-| 网关 | [ecommerce-gateway.html](../architecture/ecommerce-gateway.html) | 9 层中间件链实际顺序、JWT+RBAC、发现与回源重试 |
+| 网关 | [ecommerce-gateway.html](../architecture/ecommerce-gateway.html) | （**历史快照**：本仓旧网关，2026-08-23 已迁 control-tower）9 层中间件链、JWT+RBAC、发现与回源重试 |
 | 后端 | [ecommerce-backend.html](../architecture/ecommerce-backend.html) | 单服务分层、proto/sqlc 双生成链、启动装配 |
 
 图内事实按生成当日（2026-08-08）代码实测，之后架构变了改 JSON 重渲染并更新本表。
 
 ## 拆分时删除的章节（内容已被取代，勿凭记忆找回）
 
-| 原 DESIGN.md 章节 | 为什么删 | 现在看哪里 |
+| 原文档/章节 | 为什么删 | 现在看哪里 |
 |---|---|---|
+| `platform/performance.md`（整篇，2026-08-26 删） | 主张已被定稿逐项击穿：ES→Meilisearch、业务分布式锁→PostgreSQL 正确性锚点、浏览器鉴权→control-tower BFF session（Dragonfly 为已接受例外）、网关实现→control-tower、「sqlc 自动读写路由」系虚构能力；100 万 DAU/5 万 QPS 目标未绑定压测环境 | 并发正确性 → [order/checkout.md](order/checkout.md)；选型定稿 → [`STACK.md`](../../STACK.md)；性能目标须绑定压测脚本后重立 |
+| `config-center/design.md`（2026-08-26 删） | 配置面与网关已随代码迁至同级仓 control-tower（2026-08-23 切流），本仓副本只会漂移 | `../control-tower/docs/design/` |
 | §技术栈集成架构设计 | 与技术栈真相源重复，且无版本信息 | [`STACK.md`](../../STACK.md) |
 | §可观测性体系设计 | 已被更具体的方法论+指标基线文档取代 | [`observability/OBSERVABILITY.md`](../observability/OBSERVABILITY.md) |
 | §容器化与编排设计 | 示例清单与实际部署矛盾（namespace 划分、Deployment 结构均不同），目标态已归 DevOps 体系 | [`docs/DEVOPS.md`](../DEVOPS.md) + `helm/` + `backend/services/*/deploy/` |

@@ -7,7 +7,9 @@
 > **环境前提（用户设定，2026-08-20）**：集群 = 3 台同宿主 Mac(M2 Max 32G) 的 PD 虚拟机（arm64 Ubuntu 26.04，各 4c/6.5G）——**quorum 可凑、物理故障域=1**，异地备份是硬前提；线上仅 2 台低可用 docker 机（4c4G=备份靶、2c2G=哨兵，均不载业务）。
 > **用户直接拍板项**：ClickHouse 单节点、网关保持自研/不上网格/LB 走 Cilium 零新增、VictoriaLogs 替 Loki + Vector、OpenFGA 添加、trust-manager 添加。
 >
-> **来源与方法**：2026-08-20 抓取 <https://landscape.cncf.io/> 全量数据（2409 条目），排除会员公司条目、纯托管服务、已归档项目，并按本次评估约束**排除 Java 实现**；对抗轮另做 GitHub API 实测（stars/推送/许可证/归档）与集群实地核验。
+> **后续决策覆盖（2026-08-27）**：为建设百万/千万级生产项目并学习企业常用事件平台，重新采用 Apache Kafka。Kafka/KRaft/Strimzi/franz-go 成为目标栈，NATS 仅保留迁移期当前搜索链，完成 Kafka 业务链后目标退役。§1 原 NATS 论证保留为历史决策证据，不再代表目标态；详见 [生产目标与 Kafka 路线](design/platform/production-scale-goal.md)。
+>
+> **来源与方法**：2026-08-20 抓取 <https://landscape.cncf.io/> 全量数据（2409 条目），排除会员公司条目、纯托管服务、已归档项目，并按当时约束排除 Java 实现；2026-08-27 起 Kafka/Strimzi/Debezium/Kafka Connect 是事件平台的明确例外。对抗轮另做 GitHub API 实测（stars/推送/许可证/归档）与集群实地核验。
 > **评估基线订正**：原基线写「DragonflyDB 不动」——集群现实已是 `redis.redis.svc`（TLS），dragonfly 为残留部署待清理；PG 已迁集群内 CNPG（Pigsty 关机）。其余不动件维持：Cilium netkit/BBR/KPR、VictoriaMetrics、connect-go、quic-go、sqlc+pgx、OTel、ArgoCD ApplicationSet。
 >
 > **状态标记**：✅ 采纳（写明落点）· 🟡 观察/试验（写明触发条件）· ❌ 否决（写明原因）。**本版无 ⬜。**
@@ -18,7 +20,7 @@
 
 | 节 | 领域 | 定稿结论 |
 |---|---|---|
-| §1 | 消息 / 事件流 | ✅ NATS JetStream + outbox 自写 relay + CloudEvents；Kafka 全家桶退役 |
+| §1 | 消息 / 事件流 | ✅ 目标态 Apache Kafka/KRaft + Strimzi + franz-go + outbox/inbox；NATS 为迁移期当前链路 |
 | §2 | 搜索 | ✅ Meilisearch（既有拍板维持）+ pgvector 起步；ES 退役 |
 | §3 | 数据层 | ✅ CNPG 既成事实补强（2 实例+Barman）；ClickHouse 🟡 触发式缓上（2026-08-20 拍板人复审改判，见 §3.2） |
 | §4 | 身份 / 授权 / 凭据 | ✅ OpenFGA（用户拍板）+ trust-manager（用户拍板）+ ESO+OpenBao（治理修订先行）+ SOPS；Casbin/Casdoor 保持（casdoor 收编进集群） |
@@ -35,14 +37,15 @@
 
 ---
 
-## §1 消息 / 事件流 — 替换 Kafka 全家桶
+## §1 消息 / 事件流 — Kafka 目标态与 NATS 历史决策
 
-**现状**：Strimzi(Java) + Kafka(Java) + Debezium(Java) 已部署但**应用侧零消费**，数据面已不作可用前提（集群重建后）；换引擎零迁移成本。
+**当前事实**：NATS JetStream、relay 与 search indexer 在运行；node3 有 Kafka/SCRAM/topic，本仓已有未部署的 Kafka producer Adapter、destination delivery migration/relay 与持久增量 cursor，但业务 producer/consumer 仍为零。**目标态**：Kafka 成为持久领域事件主干，先迁可重建搜索投影，再迁交易事件，最后退役 NATS 业务流。
 
 | # | 状态 | 工具 | 语言 | CNCF | 定位 | 结论 |
 |---|---|---|---|---|---|---|
+| 1.0 | ✅ | **Apache Kafka / Strimzi** | Java + Go client | Strimzi incubating | 目标事件主干 | **2026-08-27 用户拍板重新引入**：KRaft + Strimzi + franz-go + Protobuf/Schema Registry；原因包括生产工程目标、企业技术对齐和真实学习产出。outbox/inbox 保持正确性锚点，Debezium/Connect 只走分析 CDC。落地与迁移门禁见 [目标文档](design/platform/production-scale-goal.md) |
 | 1.1 | ❌ | Redpanda | C++ | 收录 | 对抗对照组 | **否决（对抗第 1 轮）**：BSL 源可用非开源；无存量 Kafka 消费者使「协议兼容」价值为零；Seastar 每节点 2GB+ 脚印不适配 6.5G 节点。翻盘三条件（行为数据必须走流式主干 + 需现成 Kafka 连接器生态 + 两年内大流量回放）经对抗验证均不成立 |
-| 1.2 | ✅ | **NATS / JetStream** | Go | incubating | **§1 主选型（三轮对抗定稿）** | 健康实测：nats-server 20.5k⭐/Apache-2.0/v2.14.5+v2.12 LTS 双线；nats.go v1.53；治理风波 2025-05 和解收尾。**落地形态（第 2 轮 T4 定）**：3-server 集群（meta R3）；stream 分级副本——交易域 R3、埋点大流量 R1（可重放不值 3× 盘）；**R3 只防 VM 级故障不提升 DR**（3 VM 同宿主），容灾靠 outbox 重放 + 异地备份。**交易事件接入前置 = R1 故障→outbox 积压重放演练通过**（不等第三故障域）。首接消费者 = search 索引喂养（等米下锅）。论证与自认弱点存档见下「选型论证」 |
+| 1.2 | 🟡 | **NATS / JetStream** | Go | incubating | 迁移期当前实现 | 3-server/R1 ECOMMERCE_EVENTS、relay 和 search indexer 已运行；不再接新领域事件。Kafka 搜索链和交易链验收后目标退役，原主选型论证保留在下节作历史证据 |
 | 1.3 | ❌ | Fluvio | Rust | 收录 | 前沿流平台 | 否决：无官方 Go 客户端（社区 fluvio-go 15⭐ 停更 2021）；v0.18.1 后一年无 release，母司转向商业产品 |
 | 1.4 | ❌ | Tremor | Rust | sandbox | 事件预处理 | 否决：项目实质死亡（52 周 0 commit，团队解散）；定位由 Vector 与 Numaflow 覆盖 |
 | 1.5 | 🟡 | Numaflow | Go | 收录 | K8s 原生流处理 | 观察：v1.8.3 活跃、JetStream source 同族；Intuit 单厂商 + CRD 控制面对单人过重。**触发条件 = 埋点实时加工（清洗/特征→gorse）需求落地** |
@@ -50,9 +53,9 @@
 | 1.7 | ❌ | Drasi | Rust 为主 | sandbox | 变更即触发 | 否决：无场景且 sandbox 早期；需要「持续查询」场景时再评 |
 | 1.8 | ✅ | 搬运层：**outbox + 自写 relay** | — | ⚠️仓外 | 替 Debezium | 定稿：自写 relay（复用 Config Center pg_notify 全套经验，约 200 行零新组件）＞ pgstream 库嵌入（Apache-2.0 活跃，需 WAL 断点续传时升级）＞ Sequin（**停更实锤**：2026-02 起零推送，❌）。配置式管道如需要用 **Bento（MIT）** 而非许可证混杂的 Redpanda Connect |
 
-AutoMQ、RocketMQ、Pulsar、EventMesh 均因 Java 排除。
+Kafka/Strimzi/Debezium/Kafka Connect 是 Java 例外；AutoMQ、RocketMQ、Pulsar、EventMesh 仍未采用。
 
-### §1 选型论证（2026-08-20 初选存档，对抗评审已通过）
+### §1 历史选型论证（2026-08-20 NATS 决策存档，已被 2026-08-27 目标覆盖）
 
 > **定稿附记**：本节为初选论证存档。对抗评审结论——四条主论据全部成立；自认弱点 1（CDC 出口窄）确认不成立（自写 relay 定稿）；弱点 2（非数据主干）由「分析线 NATS 表引擎/批量直入 ClickHouse，不过消息层」化解；弱点 3（subject 顺序）落 `consistency.md` 显式设计；出题清单余项（fsync 表现、LTS 选线、KV 边界腐蚀）转为落地验收项进 TODO。**KEDA 不等 NATS**（cron/prometheus scaler 先行即有价值，第 2 轮裁决）。
 
@@ -282,14 +285,14 @@ AutoMQ、RocketMQ、Pulsar、EventMesh 均因 Java 排除。
 
 1. ~~灾备止血~~（**用户拍板暂缓 2026-08-20**：测试期数据不重要；触发条件见 10.3，命中即回到第 1 位）；对象存储部分独立保留：SeaweedFS 承接商品图迁移（10.6，供应链风险与数据无关）。后续各步顺延递补。
 2. **凭据整改次序化**：止血轮换（即刻，用现有手段）→ AGENTS.md 硬规则 4 治理修订 → ESO + OpenBao → 新链路轮换闭环；trust-manager 同窗上。
-3. **NATS JetStream + CloudEvents + 自写 relay**：3-server meta R3、stream 交易 R3/埋点 R1；首接 search 索引喂养；R1 故障重放演练是交易事件前置。
+3. **Kafka 学习与受控迁移**：Strimzi/KRaft + franz-go + Protobuf/Schema Registry；先 ProductChanged 搜索影子链，再迁交易事件，完成后退役 NATS 业务流。
 4. **VictoriaLogs + Vector**：≤72h 有界双写切换；VRL 重写 PII 脱敏（P0）并带反例用例进 CI。
 5. **Consul 退役四步走 → KEDA（cron/prometheus 先行）→ Argo Rollouts**：注意 Rollouts 硬依赖发现改造完成。
 6. **搜索收尾 + OpenFGA + CI 供应链**：Meilisearch 代码迁移（TODO 既有小节）；OpenFGA merchant 域影子双跑；Trivy/cosign/Kyverno 按 R3-C 实施稿三阶段。
 
-## 附录 — 因 Java 被排除（明确不引进）
+## 附录 — Java 例外与仍未引进项
 
-Kafka、Strimzi、Debezium、Kafka Connect、Pulsar、RocketMQ、Flink、AutoMQ、EventMesh、Elasticsearch、OpenSearch、Keycloak、Nacos、Seata、ShardingSphere、Cassandra、Doris/StarRocks(FE)、SkyWalking、Zipkin、Pinpoint、Jenkins、Microcks；Backstage（TS/Node 但体量重，一并不引）。
+Kafka、Strimzi、Debezium、Kafka Connect 已成为事件平台的明确例外。当前仍未引进：Pulsar、RocketMQ、Flink、AutoMQ、EventMesh、Elasticsearch、OpenSearch、Keycloak、Nacos、Seata、ShardingSphere、Cassandra、Doris/StarRocks(FE)、SkyWalking、Zipkin、Pinpoint、Jenkins、Microcks；Backstage（TS/Node 但体量重）也未引进。
 
 ## 附录 — 与真相源的关系
 

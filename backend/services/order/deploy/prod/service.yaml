@@ -4,11 +4,11 @@ metadata:
   name: ecommerce-order-service
   namespace: ecommerce
 spec:
-  externalTrafficPolicy: Local
   selector:
     app: ecommerce-order
   ports:
     - protocol: TCP
       port: 30004
       targetPort: 30004
-  type: LoadBalancer
+  # 业务入口统一走共享 Gateway，不再占用 LB IP、L2 Lease 与 NodePort。
+  type: ClusterIP

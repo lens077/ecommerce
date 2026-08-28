@@ -9,7 +9,7 @@ C 端主应用。React 19 + MUI 9 + Emotion + TanStack Router/Query + Connect-RP
 | 路径 | 作用 |
 |---|---|
 | `src/api/{cart,order,product,search,addresses,users}/` | 各域的 Connect transport + client |
-| `src/providers/AuthProvider.tsx` | Casdoor 登录态，token 存 localStorage |
+| `src/providers/AuthProvider.tsx` | Casdoor 登录态；Web 凭 httpOnly cookie、桌面凭内存会话 id，**不落 localStorage**（`store/users.test.ts` 锁此不变量；2026-08-26 修正本行陈旧描述「token 存 localStorage」） |
 | `src/routes/callback/` | OAuth 回调 |
 | `src/styles/tokens.ts` | 设计 token（⚠️ 见下方 experience） |
 | `src/store/cart.ts` | valtio 购物车状态，localStorage 持久化 |
@@ -20,6 +20,7 @@ C 端主应用。React 19 + MUI 9 + Emotion + TanStack Router/Query + Connect-RP
 |---|---|
 | 间距大得离谱，购物车每项高约 500px | [mui-spacing-tokens-8x.md](experience/mui-spacing-tokens-8x.md) |
 | 购物车页一次挂载打出 4 个 POST | [duplicate-cart-queries.md](experience/duplicate-cart-queries.md) |
+| 登出后过一会儿自己又登回去 | [logout-auto-relogin.md](experience/logout-auto-relogin.md) |
 
 ## 已知注意事项
 

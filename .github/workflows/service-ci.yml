@@ -57,6 +57,8 @@ jobs:
     steps:
       - name: Checkout
         uses: actions/checkout@v5
+        with:
+          fetch-depth: 0
 
       - name: Set up Go
         uses: actions/setup-go@v5
@@ -66,6 +68,25 @@ jobs:
 
       # 依赖 github.com/lens077/control-tower（配置中心 SDK + 网关路由模板）。
       # 该仓 2026-08-23 起为 public，走默认 GOPROXY 即可，无需私仓凭据。
+      - name: Set up Buf
+        uses: bufbuild/buf-setup-action@v1
+        with:
+          github_token: ${{ github.token }}
+
+      - name: Check protobuf compatibility
+        run: |
+          BASE_REF=main
+          if [[ "${GITHUB_REF_TYPE}" == "tag" ]]; then
+            BASE_REF=$(git tag --list '[0-9]*.[0-9]*.[0-9]*' \
+              | grep -E '^[0-9]+\.[0-9]+\.[0-9]+$' | grep -vx "${GITHUB_REF_NAME}" \
+              | sort -V | tail -1 || true)
+          fi
+          if [[ -z "$BASE_REF" ]]; then
+            echo "无可用 protobuf breaking 基线，跳过"
+            exit 0
+          fi
+          buf breaking --path api --against "../.git#ref=${BASE_REF},subdir=backend"
+
       # structcheck 是全仓结构门禁（矩阵↔目录↔网关对齐、internal/pkg 同构棘轮），
       # 任何服务的改动都必须过它；api 是共享契约，跟着服务一起验
       - name: Build service

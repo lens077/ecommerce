@@ -1,12 +1,16 @@
 # RBAC 权限模型设计
 
-> 从根 `DESIGN.md` 拆出（2026-08-08）。已落地部分：网关集中鉴权（Casdoor JWT +
-> Casbin RBAC，策略在 `gateway/configs/policies/`），角色继承链 `admin ⊃ merchant ⊃
-> consumer ⊃ public`。未落地：数据级权限（repo 层按 merchant_id/user_id 自动过滤——
-> address 服务的越权问题正源于此缺失，见 `TODO.md` P0）、商家子账号。
-
-
-基于 Casdoor 构建统一的 RBAC 权限体系，适配消费者、商家、管理员三个核心角色，实现细粒度的权限管控。
+> 从根 `DESIGN.md` 拆出（2026-08-08），已按 control-tower ADR-0002 更新。
+>
+> **已落地**：control-tower gateway 的 BFF session/legacy JWT、Casbin RPC 级 RBAC、
+> 入站 `x-md-global-*` 剥离与可信身份头注入；角色继承链为
+> `admin ⊃ merchant ⊃ consumer ⊃ public`。
+>
+> **未落地**：统一的数据级 owner 过滤、商家子账号、服务工作负载身份与 OpenFGA。
+> address 等存量越权风险说明「网关 RBAC 通过」不等于「对象归属正确」。
+>
+> Casdoor 是身份提供方，control-tower 是 session owner 和入口授权点；业务服务不解析
+> 浏览器凭据，只消费可信身份头并执行领域/数据权限。
 
 ### 核心角色与权限定义
 
@@ -20,26 +24,28 @@
 
 ### 权限模型设计
 
-采用「用户 - 角色 - 权限」三级 RBAC 模型，基于 Casdoor 实现全生命周期管理：
+权限分成三层，不能互相替代：
 
-1. 权限粒度设计
-    - 资源级权限：按微服务、API 接口维度定义权限点，例：product:spu:create、order:list:read、payment:refund:create，每个 API
-      接口对应唯一的权限点。
-    - 数据级权限：通过 merchant_id 实现数据权限隔离，商家仅能操作自己店铺的商品、订单、结算数据，管理员可操作全平台数据，消费者仅能操作自己的订单、个人数据。
+1. **入口身份**：Casdoor 完成 OAuth2/OIDC；control-tower 用机密客户端交换 token，并把 Web/Tauri 会话保存在 Dragonfly。迁移期 legacy bearer JWT 仍由 gateway 验签。
+2. **RPC 级 RBAC**：Casbin 以「角色 × Connect procedure」匹配 allow/deny，策略由 Config Center Watch，默认拒绝。审批、退款、发货等动作必须按 procedure 授权，不能整段服务放行。
+3. **数据/对象权限**：Repository 或领域层必须按可信 `user_id`/`merchant_id` 加 owner 条件。商家只能操作本店商品、订单和售后；消费者只能操作本人订单与地址。该层尚未统一落地，OpenFGA 是演进方向，不得在落地前当成现有能力。
 
-2. 角色与权限绑定
-    - 在 Casdoor 中创建三个核心角色，为每个角色绑定对应的权限点，支持角色权限的灵活配置、动态更新，无需修改代码。
-    - 支持自定义角色，例如商家可创建店铺子账号，分配商品管理、订单管理等细分权限，适配商家多人员运营场景。
+### 权限校验流程
 
-3. 权限校验流程
-    - 用户登录：通过 Casdoor 完成身份认证，获取包含用户角色、权限信息的 JWT 令牌。
-    - 请求拦截：前端请求携带 JWT 令牌，网关层 / Connect-go 拦截器解析令牌，验证用户身份有效性。
-    - 权限校验：根据请求的 API 接口，匹配对应的权限点，校验用户角色是否具备该权限，无权限则直接返回 403。
-    - 数据权限过滤：在 Repository 层，根据用户角色、用户 ID/merchant_id，自动添加数据过滤条件，确保用户仅能访问有权限的数据。
+```text
+Client session/JWT
+→ gateway 验证凭据并取得 roles
+→ Casbin 校验 Connect procedure
+→ 剥离后重注入 x-md-global-user-id / merchant-id / roles
+→ service/biz 校验领域动作
+→ repository 带 owner 条件访问 PostgreSQL
+```
 
-### Casdoor 集成适配
+任何一步失败都应 fail-closed。gateway 的 `permission denied` 不能掩盖 service/repository 缺少 owner 条件；后者会造成 IDOR。
 
-- 所有用户账号、角色、权限统一在 Casdoor 中管理，无需在业务系统中维护用户表，保证用户体系的一致性。
-- 基于 Casdoor Go SDK 封装认证客户端，通过 Fx 注入到各微服务中，实现统一的令牌校验、用户信息解析。
-- 支持 Casdoor 的单点登录（SSO），适配商家后台、管理后台、用户端多端统一登录。
-- 支持第三方登录（微信、支付宝等），由 Casdoor 统一适配，业务系统无需单独对接。
+### Casdoor 集成边界
+
+- Casdoor 管理账号与基础角色，control-tower 管理业务 session；user 服务只保存业务 profile。
+- Web 使用 httpOnly cookie，Tauri 使用 session header；前端不保存或解析 access/refresh token。
+- 业务微服务不通过 Casdoor SDK 验证用户凭据。存量 auth 配置块与 SDK 引用属于迁移债，不是推荐模式。
+- 第三方登录是否启用取决于 Casdoor 应用配置；未完成端到端验收前不宣称微信/支付宝登录可用。

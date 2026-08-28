@@ -3,9 +3,6 @@ sql:
   - schema: "internal/data/migrations"
     queries: "internal/data/queries"
     engine: "postgresql"
-    database:
-      #uri: ${DB_SOURCE}
-      uri: ${DB_SOURCE}
     gen:
       go:
         package: "models"

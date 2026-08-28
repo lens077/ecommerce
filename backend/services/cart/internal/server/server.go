@@ -9,6 +9,7 @@ import (
 	connectcors "connectrpc.com/cors"
 	"connectrpc.com/validate"
 	"github.com/lens077/ecommerce/backend/api/cart/v1/cartv1connect"
+	"github.com/lens077/ecommerce/backend/pkg/healthcheck"
 	conf "github.com/lens077/ecommerce/backend/services/cart/internal/conf/v1"
 	"github.com/lens077/ecommerce/backend/services/cart/internal/data"
 	"github.com/rs/cors"
@@ -45,6 +46,12 @@ func NewHTTPServer(
 		combinedOptions...,
 	)
 	mux.Handle(cartv1connectPath, cartv1connectHandler)
+
+	healthPath, healthHandler := healthcheck.NewGRPCHandler(
+		func(ctx context.Context) bool { return healthStatus(ctx, deps).Healthy },
+		cartv1connect.CartServiceName,
+	)
+	mux.Handle(healthPath, healthHandler)
 
 	// 应用本身的健康检查
 	mux.HandleFunc("/healthz", func(w http.ResponseWriter, r *http.Request) {

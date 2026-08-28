@@ -1,6 +1,6 @@
 ---
 description: 提交前先更新 TODO.md（唯一进度真相源）；Conventional Commits 十一类 type；emoji 可选但必须与 type 相符；前端/后端/文档分开提交。
-globs: "{TODO.md,commitlint.config.mjs}"
+globs: "{TODO.md,frontend/commitlint.config.mjs}"
 alwaysApply: false
 ---
 
@@ -15,8 +15,8 @@ alwaysApply: false
 ```
 
 - type 限十一类：`feat` `fix` `perf` `refactor` `style` `test` `docs` `build` `ci` `chore` `revert`。不可自造。`perf` 只用于真的更快/更省，重构和删死代码不是 perf
-- emoji 可选；写了必须用 gitmoji 短代码（`:bug:`）且与 type 相符。白名单真相源是 `commitlint.config.mjs`
+- emoji 可选；写了必须用 gitmoji 短代码（`:bug:`）且与 type 相符。白名单真相源是 `frontend/commitlint.config.mjs`（2026-08-26 自仓库根迁入）
 - subject 末尾不加标点，控制在 50 字符内
 - 前端 / 后端 / 文档分开提交，不要 `git add -A`。拆分会编译不过时才合并，并在 body 写明原因
 - 历史直接提交 `main`，除非用户明确要求开分支
-- 钩子由 vite-plus 安装（`core.hooksPath=frontend/.vite-hooks/_`），不要挪回 `.husky/`。`pnpm: command not found` 是环境断了（重跑 `corepack enable pnpm`），不是消息写错
+- 钩子由 vite-plus 安装（`core.hooksPath=frontend/.vite-hooks/_`），不要挪回 `.husky/`。钩子退出 127 是环境断了（`cd frontend && pnpm install`），不是消息写错

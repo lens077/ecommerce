@@ -74,9 +74,9 @@ feat(address): :sparkles: 行政区划落库 + RegionService 三级级联接口
 
 语义以 [gitmoji.dev](https://gitmoji.dev/) 官方定义为准，**不要望文生义**。同一个 emoji 允许对应多个 type —— `:necktie:`（业务逻辑）新写是 `feat`、改错是 `fix`、只挪不改行为是 `refactor`，三种都成立。但 `:bug:` 只能是 `fix`、`:sparkles:` 只能是 `feat`，这类没有第二种读法。
 
-> **完整白名单的真相源是 `commitlint.config.mjs` 的 `EMOJI_TYPES`**（机器可读，校验以它为准）。
+> **完整白名单的真相源是 `frontend/commitlint.config.mjs` 的 `EMOJI_TYPES`**（机器可读，校验以它为准）。
 > 下表只列最常用的十几个，**不是全集**；要查某个 emoji 允不允许，直接读那个文件，
-> 或 `echo "<消息>" | pnpm exec commitlint` 让它告诉你。
+> 或 `cd frontend && echo "<消息>" | pnpm exec commitlint` 让它告诉你。
 
 | emoji | 含义 | type |
 | --- | --- | --- |
@@ -120,11 +120,15 @@ Closes #123, #124
 ## 校验工具链
 
 ```
-commitlint.config.mjs           规则 + EMOJI_TYPES 白名单（唯一真相源）
-package.json（仓库根）           只装 @commitlint/cli + @commitlint/config-conventional
-frontend/.vite-hooks/commit-msg  pnpm exec commitlint --edit "$1"
+frontend/commitlint.config.mjs   规则 + EMOJI_TYPES 白名单（唯一真相源）
+frontend/package.json            devDependencies 装 @commitlint/cli + config-conventional
+frontend/.vite-hooks/commit-msg  commitlint --config <$0 推导>/commitlint.config.mjs --edit "$1"
 frontend/.vite-hooks/pre-commit  cd frontend && vp staged
 ```
+
+> 2026-08-26 起 commitlint 由 frontend workspace 承载：仓库根的
+> `package.json` / `pnpm-lock.yaml` / `commitlint.config.mjs` 三件套已删，
+> 根目录不再有 Node workspace。迁移理由与红测记录见 evolution-log 同日条目。
 
 钩子由 **vite-plus** 安装，不是 husky：在 `frontend/` 下跑 `pnpm install`，其 `prepare: "vp config"` 会把仓库级的 `core.hooksPath` 设成 `frontend/.vite-hooks/_`。`core.hooksPath` 是仓库级设置，所以**后端 Go 的提交同样受这套校验**。
 
@@ -138,29 +142,29 @@ if (existingHooksPath && existingHooksPath !== target
 
 它只在已有值「不像 husky」时才让路。只要 `core.hooksPath` 以 `.husky` 开头，下一次 `pnpm install` 就会被 vite-plus 悄悄接管过去，而 `_/h` 的 `[ ! -f "$s" ] && exit 0` 让缺失的钩子**静默放行**。两套钩子抢同一个 git 配置，抢输的那套就这么没的。
 
-自己验一条消息：
+自己验一条消息（在 `frontend/` 下执行——commitlint 装在那个 workspace）：
 
 ```bash
+cd frontend
 echo "feat(address): :sparkles: 行政区划落库" | pnpm exec commitlint
 pnpm exec commitlint --from HEAD~7 --to HEAD   # 回放校验既有提交
 ```
 
-### pnpm 从哪来：corepack shim（非交互 shell 也要找得到）
+### 钩子退出 127 怎么读（2026-08-26 依赖链变更后）
 
-钩子第 17 行的裸 `pnpm` 依赖**调用方进程的 PATH**——git 钩子不 source 任何 shell
-配置，`.zshrc` 里写什么都救不了它。本机 pnpm 没有独立安装，只由 corepack 按
-`package.json` 的 `packageManager: pnpm@11.6.0` 提供；`~/.zshrc` 里的
-`PNPM_HOME=~/Library/pnpm` 段是残留（那个目录只有 store，没有可执行文件）。
+钩子**不再调 pnpm**：`_/h` 把 `frontend/node_modules/.bin` 注入 PATH，脚本直调
+`commitlint` 二进制并显式 `--config`。原因：2026-08-26 根目录 Node workspace
+三件套删除后，`pnpm exec` 因 cwd 向上找不到 workspace 而**恒红**（合法消息也报
+`ERR_PNPM_RECURSIVE_EXEC_NO_PACKAGE`），故整链迁入 frontend workspace 并改直调。
 
-2026-08-12 已跑 `corepack enable pnpm`：shim 写进 vite-plus node 运行时的 `bin/`，
-该目录钩子包装器（`_/h`）与非交互 shell 的 PATH 都带，所以 agent 会话、GUI 工具
-里的提交都能过钩子。
-
-⚠️ **再发条件**：vite-plus 升级 node 运行时后，shim 随旧版本目录一起消失。症状是
-提交时 `pnpm: command not found`（exit 127）——**这是环境断了，不是消息写错了**，
-重跑一次 `corepack enable pnpm` 即可。应急绕法（corepack 也不可用时）：
-`corepack pnpm exec commitlint --edit <消息文件>` 手动校验绿后再
-`git commit --no-verify`——校验没有被跳过，只是手动执行。
+- **钩子 exit 127**（command not found）= frontend 依赖未装：`cd frontend && pnpm install`。
+  **这是环境断了，不是消息写错了。**
+- 上面的手动校验命令仍需 pnpm——本机 pnpm 无独立安装，由 corepack 按
+  `frontend/package.json` 的 `packageManager` 提供；`pnpm: command not found` 时
+  重跑一次 `corepack enable pnpm`（vite-plus 升级 node 运行时后 shim 随旧目录
+  消失，属已知再发条件）。
+- 应急绕法（依赖装不上时）：手动校验绿后再 `git commit --no-verify`——
+  校验没有被跳过，只是手动执行。
 
 > ⚠️ **这套校验曾经九个月一次都没生效**（2025-11-04 → 2026-08-02，期间全部提交都没被校验过）。
 > 五处串联失效的完整复盘已移到 [self-refinement.md 的「教训存档」](../harness-framework/self-refinement.md#教训存档)——它讲的是 harness 门禁静默失效，

@@ -3,14 +3,14 @@
 > 从根 `DESIGN.md` 拆出（2026-08-08）。2026-08-21，查询端已从退役的 Elasticsearch
 > 迁移到 Meilisearch；dev 集群已部署 NATS JetStream、outbox relay 和 search indexer，并完成
 > 7 个示例 SPU 的全量回灌与相关性验收。Product Service 尚无商品写 RPC，因此增量生产者接线
-> 仍未完成。进度以 `TODO.md` 为准。
+> 仍未完成。2026-08-27 已决策把本链作为 NATS→Kafka 的首条迁移链，先写 shadow index 再切流；进度以 `TODO.md` 为准。
 
 搜索服务采用 CQRS 命令查询职责分离架构。PostgreSQL 保存商品真相，Meilisearch 只保存面向查询的商品投影。
 
 ## 核心架构
 
 1. 命令端：商品创建、更新、上下架等写操作由 Product Service 写入 PostgreSQL。
-2. 事件端：Product Service 应在同一事务写入 outbox，relay 将商品事件发布到 NATS JetStream。
+2. 事件端：Product Service 应在同一事务写入 broker-neutral outbox；目标 relay 发布到 Kafka。当前 NATS 链保留到 Kafka shadow index 验收通过。
 3. 索引端：search indexer 消费商品事件，并以幂等方式更新 Meilisearch 的 `products` 索引。
 4. 查询端：Search Service 只读取 Meilisearch，不回查 PostgreSQL。
 
@@ -74,9 +74,7 @@
   释放锁后重跑成功且没有残留 `products_rebuild` 索引。
 - 已知缺口：`苹果手机` 尚不能召回英文名称 `Apple iPhone 15 Pro`。同义词、拼音和中文品牌
   归一化需要单独定义词表与离线评测集，不能用本次 7 个示例商品宣称通用中文相关性。
-- 尚未完成：Product Service 事务内 `outbox.Insert` 接线、terminal delivery 的持久 DLQ/告警、
-  NATS TLS/客户端认证、NACK CRD、KEDA lag 扩缩和真实业务商品的大样本相关性评测。DLQ
-  完成前，dev relay 使用 `-retention=-1s` 禁用已发布 outbox 自动清理。
+- 尚未完成：Product Service 事务内 `outbox.Insert`、Kafka topic/schema/ACL、Kafka relay/indexer、shadow index 差异校验、持久 retry/DLQ、KEDA lag 扩缩和真实商品大样本评测。Kafka 切流前，当前 NATS 链与回滚数据不得提前删除。
 
 ## dev 部署清单
 
@@ -97,7 +95,7 @@
 ## 性能与一致性
 
 - 搜索读取不占用商品主库查询资源。
-- Meilisearch 写入是异步任务；indexer 仅在任务成功后确认 NATS 消息。
+- Meilisearch 写入是异步任务；当前 indexer 仅在任务成功后 ack NATS，目标 Kafka consumer 也必须在任务成功后提交 offset。
 - 商品事件采用完整文档投影，重复消费以整文档覆盖方式收敛。
 - 删除事件写入 tombstone，重建索引使用临时索引与原子 swap。
 - reindex 从 PostgreSQL 时钟读取扫描前水位，并在 swap 后重放水位后的行；PostgreSQL 咨询锁

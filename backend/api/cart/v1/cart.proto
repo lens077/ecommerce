@@ -53,10 +53,11 @@ message AddProductToCartRequest {
     min_len: 1
     max_len: 255
   }];
-  double price = 8 [(buf.validate.field).double = {
+  reserved 8;
+  reserved "price";
+  int64 unit_price_cents = 12 [(buf.validate.field).int64 = {
     gt: 0
-    lte: 99999999.99
-    finite: true
+    lte: 9999999999
   }];
   google.protobuf.Struct sku_attributes = 9 [(buf.validate.field).required = true];
   string sku_thumbnail_url = 10 [(buf.validate.field).string = {
@@ -139,6 +140,9 @@ message UpdateCartItemQuantityResponse {
 message GetCartRequest {}
 
 message CartItem {
+  reserved 9;
+  reserved "price";
+
   uint64 cart_item_id = 1 [(buf.validate.field).uint64 = {
     gte: 1
     lte: 9223372036854775807
@@ -169,10 +173,9 @@ message CartItem {
     min_len: 1
     max_len: 255
   }];
-  double price = 9 [(buf.validate.field).double = {
+  int64 unit_price_cents = 14 [(buf.validate.field).int64 = {
     gt: 0
-    lte: 99999999.99
-    finite: true
+    lte: 9999999999
   }];
   google.protobuf.Struct sku_attributes = 10 [(buf.validate.field).required = true];
   string sku_thumbnail_url = 11 [(buf.validate.field).string = {

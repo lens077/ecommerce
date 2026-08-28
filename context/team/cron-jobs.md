@@ -184,6 +184,26 @@ Asynq 决定能不能可靠地结束。
 
 刷缓存、更新统计、清理临时文件这类轻任务，Ticker / cron 本身就够，不必为它入队。
 
+## 八·六、Healthchecks：任务观察面，不是调度器
+
+Healthchecks 只做 dead-man switch：任务按预期时间发送 `/start`、成功或 `/fail` 心跳；
+信号缺失或任务主动报错时，它把检查标为异常。它不触发任务，也不拥有重试、锁、并发、
+幂等、补偿和业务状态，因此以后引入 K8s CronJob、应用调度器或任务表时不构成重复调度。
+
+接入约束：
+
+- 调度和执行仍以 cron、systemd timer、K8s CronJob 或任务表为真相源；不要把同一份 schedule
+  再配置成 Healthchecks 的执行规则。
+- 心跳失败不能阻止或回滚原任务。请求必须设置短连接/总超时和有限重试，并用 best-effort 发送。
+- 一个端到端任务对应一个 check；不要给内部每一步建一串检查，也不要为尚不存在的未来任务建占位检查。
+- Ping UUID 和 project key 按凭据处理，只放本地 secret 或 K8s Secret，禁止进 Git。
+- Healthchecks 与任务同机时只能发现任务失败、未执行和超时，无法在整机失联期间自行告警；
+  要覆盖主机故障，观察端必须放到独立故障域。
+
+2026-08-27 实况：node3 运行 Healthchecks v4.3，只监听 `127.0.0.1:8000`。当前唯一 check 是 `pgBackRest full backup`（24 小时周期 + 2 小时 grace），wrapper 为 `/etc/healthchecks/pg-backup-heartbeat.sh`，ping URL 位于 `/etc/healthchecks/pgbackrest.url`。通知使用 v4.3 原生 `ntfy` Channel 和 bearer token，不使用 generic webhook。start/success/fail 与 ntfy 都已实测；Healthchecks、任务和 ntfy bridge 仍同在 node3，整机失联风险未消除。
+
+ZeroSSL 续期在 node1 `apikv-cert-renew.timer`，失败/成功直接发 ntfy，过期兜底由 Gatus 检查。Healthchecks 只监听 node3 loopback，因此不要为 node1 timer 创建一个无法发送的占位 check。
+
 ## 九、选型
 
 | 用 | 适合 |

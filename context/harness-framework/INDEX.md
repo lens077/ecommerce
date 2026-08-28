@@ -11,6 +11,8 @@
 | [e3-execution.md](e3-execution.md) | E3 执行策略（先估计→最小执行→失败才扩张）：出处、按规模路由、过度阅读护栏 hook 的配置与再验证 |
 | [subagent-dispatch.md](subagent-dispatch.md) | 子代理派发三条硬约定：只回结构化摘要、按角色裁剪能力、按角色分层模型（何时拆分看 e3-execution） |
 | [cordis-evaluation.md](cordis-evaluation.md) | 已评估「底层改 Cordis 插件框架」：暂不采用的理由与重新评估条件 |
+| [flywheel-audit.md](flywheel-audit.md) | 对照《Agent 自进化飞轮》的四齿评测结论 + 方向性审计约定（触发/清单/记录）；门禁元评测 canary 的由来 |
+| [portable-harness.md](portable-harness.md) | 跨项目共用能力清单与新项目采纳步骤；lens077 根 symlink 登记处（HARNESS.md / backpass-distill.sh） |
 | [evolution-log.md](evolution-log.md) | harness 本身每次改动的原因与**触发它的具体事故**——改硬规则/门禁前后都要看一眼，防止把改对的东西改回去 |
 
 ## 这一层为什么存在

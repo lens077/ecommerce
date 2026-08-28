@@ -7,7 +7,7 @@ description: 给「已经在跑」的服务补 TLS 时的固定检查清单—�
 # 给在跑的服务补 TLS（2026-08-19 MinIO 实付学费）
 
 > 适用范围：TODO.md「基础设施 TLS 收敛」段里所有待办（gorse / casdoor / Consul）。
-> Elasticsearch 与 Kafka 已退役，不再是目标。
+> Elasticsearch 已退役。Kafka 已于 2026-08-27 重新纳入目标栈；为 Kafka/Strimzi/Schema Registry 补 TLS 时同样执行本文检查，并以 `docs/design/platform/production-scale-goal.md` 的最小权限与私网要求为准。
 > 下面六节不是理论风险，是给 MinIO 上 TLS 时逐条撞到的。
 
 ## 0. 先决条件：这台机到底能不能用域名
@@ -51,7 +51,7 @@ MinIO 的 `/root/.minio/certs/` 下本来有个空的 `CAs/`。整卷挂 `./cert
 **另一半是属主**：容器里的服务多半不是 root 跑的，私钥 `600 root:root` 它读不到，**症状是启动即失败**
 （不是 TLS 不生效，是根本起不来）。redis 官方镜像是 uid 999，所以 `chown -R 999:999 tls/`；
 MinIO 的 `pgsty/minio` 是 root 所以没这问题。**挂证书前先确认容器的运行用户**：
-`docker inspect <c> --format '{{.Config.User}}'`，为空就查镜像文档。
+`docker inspect <c> --format '{{.Config.User}}'`，为空就查镜像文档。2026-08-27 自动分发首次实跑时，blog 容器以 `nginx` uid 100/gid 101 运行，`0600 root:root` 让 `nginx -t` 失败；脚本自动回滚后改为 `0640 root:101` 才通过。权限判据是「只有必要身份可读且实际进程能读」，不是机械套 `0600`。
 
 **第三个变量是 `HOME`（2026-08-20 silo 实付学费）**：证书路径除了挂载点和属主，还跟着镜像的
 `$HOME` 走。MinIO 谱系默认从 `$HOME/.minio`（silo 为 `$HOME/.silo`）`/certs` 找证书；
@@ -80,12 +80,9 @@ ZeroSSL/Let's Encrypt 这类公共 CA **不签 IP**。证书 SAN 只有 `*.apikv
 
 ## 4. 泛域名证书每多部署一处，续期就多一处会静默挂
 
-`*.apikv.com` 现在是**三处**：`/home/docker/blog/ssl/`、node1 的
-`pangolin/config/traefik/certs/`、node2 的 `minio/certs/`。到期日 **2026-10-27**，
-而 node1 的自动续期链路是缺位的（`pangolin-tunnel.md:26`）。
+`*.apikv.com` 的实际消费方包括 node1 Traefik、blog、Redis，以及 node2 Silo、Harbor 配置源和 Harbor 运行副本。2026-08-27 起由 node1 `apikv-cert-renew.timer` 统一续期；`apikv-cert-distribute` 和 node2 强制命令 `apikv-cert-receive` 负责原子替换、属主修正、reload/restart、严格 TLS 指纹校验和失败回滚。凭据只保存在 `/home/acme.sh/data/`，分发 SSH key 被限制为只能执行证书 receiver。
 
-**复制证书到新机器时，同时把它登记进续期清单**，否则到期那天是三处一起挂，
-且 MinIO 这种「挂了只在浏览器控制台报错」的最难发现。
+**复制证书到新机器时，必须在同一变更里登记分发目标、正确 UID/GID、reload 方法、严格握手探针和回滚文件。**只复制文件不 reload，或只改 Harbor `harbor.yml` 的源文件不改 `data/secret/cert` 运行副本，都属于未完成。自动任务失败和续期成功走 authenticated ntfy；Gatus 的 30 天证书检查是独立兜底。完整矩阵见 `docs/INFRASTRUCTURE-OPERATIONS.md`，当前指纹和到期日用 `./ai-helper.sh cert-status` 获取，不在知识文档里固化会过时的倒计时。
 
 ## 5. 验收：必须包含「故意用错的输入」和「不带 -k 的严格校验」
 

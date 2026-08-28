@@ -21,13 +21,18 @@
 # 归一化:finding 只保留「checker + 文件 + 规则 + 摘要」,**丢掉行号列号**。
 # 否则在文件顶部加一行注释就会让下方所有告警变成「新增」,基线立刻失效。
 #
-# ⚠️ 三个 shell 陷阱(都实测踩过,改本文件前先读):
+# ⚠️ 四个陷阱(都实测踩过,改本文件前先读):
 #   1. 干净时 lint 无输出,管道里的 grep 拿到空输入会返回 1,在 `set -o pipefail`
 #      下会直接掐掉整个脚本 —— 所以每条采集管道末尾都有 `|| true`。
 #   2. `grep -c` 计数为 0 时同样返回 1,不能直接用在 `$(...)` 里。
 #   3. 采集用 `2>&1` 合流,而 CI 冷模块缓存时 go 会把 `go: downloading …` 打到
 #      stderr —— 不滤掉就全变成「新增告警」。本机缓存热永远复现不了,只在 CI 红
 #      (2026-08-13/08-18 两轮 10 服务全红均为此因,不是真告警)。
+#   4. 采集正则与上游输出格式**耦合**,格式一变就恒绿(解析 0 条 ≠ 0 条告警)。
+#      vp lint 从单行格式改 miette 画框后 vp-lint 采集器静默失效,2026-08-26
+#      注错红测才暴露 —— 修复后 run_vp-lint 加了「汇总行报 N 条 vs 解析 0 条」
+#      失聪自检,脱钩时产出 PARSE-FAILURE 哨兵行强制 check 变红。改采集器后
+#      必须注错复测(注入 debugger → check 必须 rc=1,还原 → rc=0)。
 set -euo pipefail
 
 root=$(git rev-parse --show-toplevel) || { echo "lint-baseline: 不在 git 仓库内" >&2; exit 2; }
@@ -60,12 +65,35 @@ run_vp-lint() {
     echo "lint-baseline: 前端依赖未安装,跳过 vp-lint(先 cd frontend && pnpm install)" >&2
     return 0
   fi
-  # vp lint 输出形如: path:line:col: severity plugin(rule): message help: ...
-  { ( cd frontend && ./node_modules/.bin/vp lint 2>&1 || true ) \
-    | grep -E '^[^[:space:]]+:[0-9]+:[0-9]+:' \
-    | sed -E 's/^([^:]+):[0-9]+:[0-9]+:[[:space:]]*/\1	/' \
-    | sed -E 's/[[:space:]]+help:.*$//' \
-    | sed 's|^|vp-lint	|' ; } || true
+  # vp lint(oxlint)现输出 miette 画框格式(2026-08-26 从旧单行格式适配,见陷阱 4):
+  #     ! eslint(no-debugger): `debugger` statement is not allowed
+  #       ,-[apps/consumer/src/main.tsx:35:1]
+  # 消息行(!/x 前缀)与其后最近的 ,-[path:line:col] 定位行配对成一条 finding;
+  # 行号列号照旧丢弃(见「归一化」)。路径补 frontend/ 前缀,与仓库根相对路径一致。
+  out=$( ( cd frontend && ./node_modules/.bin/vp lint 2>&1 ) || true )
+  rows=$(printf '%s\n' "$out" | awk '
+    /^[[:space:]]*[!x][[:space:]]/ { msg=$0; sub(/^[[:space:]]*/,"",msg); next }
+    match($0, /,-\[[^]]+:[0-9]+:[0-9]+\]/) && msg != "" {
+      loc=substr($0, RSTART+3, RLENGTH-4)
+      sub(/:[0-9]+:[0-9]+$/, "", loc)
+      printf "vp-lint\tfrontend/%s\t%s\n", loc, msg
+      msg=""
+    }')
+  # 失聪自检:vp 的汇总行报了 N 条而上面解析出 0 条 → 采集器与上游格式脱钩。
+  # 2026-08-26 实测就是这么静默失效的(格式从单行改画框后恒绿了一段时间),
+  # 用哨兵行强制 check 变红,决不静默换绿(见陷阱 4)。
+  reported=$(printf '%s\n' "$out" \
+    | sed -n -E 's/^Found ([0-9]+) warnings? and ([0-9]+) errors?.*$/\1 \2/p' | head -1)
+  if [ -n "$reported" ]; then
+    total=$(( $(echo "$reported" | cut -d' ' -f1) + $(echo "$reported" | cut -d' ' -f2) ))
+    parsed=$(printf '%s' "$rows" | awk 'NF{n++} END{print n+0}')
+    if [ "$total" -gt 0 ] && [ "$parsed" -eq 0 ]; then
+      echo "lint-baseline: vp lint 报告 $total 条但采集为 0——采集器与输出格式脱钩,先修 run_vp-lint" >&2
+      printf 'vp-lint\t__collector__\tPARSE-FAILURE: 上游报 %s 条而解析为 0,采集器失聪\n' "$total"
+    fi
+  fi
+  [ -n "$rows" ] && printf '%s\n' "$rows"
+  return 0
 }
 
 collect() { "run_$1" | LC_ALL=C sort -u; }

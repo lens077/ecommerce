@@ -1,5 +1,11 @@
 # 支付系统设计（支付宝 / 微信 SDK 适配）
 
+> ⚠️ **本文核心模型已作废（2026-08-26 确认）**：单订单支付单 + 单轴状态枚举已被
+> [order/checkout.md](../order/checkout.md) v2 取代——按**订单组**支付、资金事实
+> `payment_attempt` 只增不改、capture/refund **双轴**、`accepted_pay_no` CAS 唯一接受、
+> **金额一律服务端权威（客户端不传金额）**。本文仅存渠道对接（支付宝 SDK 适配）与
+> 对账素材价值；与 checkout v2 冲突处一律以 v2 为准。
+
 > 从根 `DESIGN.md` 拆出（2026-08-08）。现状：5 个 RPC 全部是显式 `Unimplemented` 桩，
 > 原实现依赖已移除的 balance/consumerOrder client（注释保留在 `data/payment.go`），
 > `pay.alipay.*` 凭据在 KV 里是空占位——恢复计划见 `TODO.md`。

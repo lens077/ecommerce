@@ -6,8 +6,8 @@ export interface CartItem {
   shopName?: string;
   spuName: string;
   skuName: string;
-  price: number;
-  costPrice: number;
+  unitPriceCents: bigint;
+  costPriceCents: bigint;
   quantity: number;
   selected: boolean;
   skuThumbnailUrl: string;
@@ -27,9 +27,9 @@ export interface MerchantGroup {
 
 export interface CartSummary {
   totalQuantity: number;
-  totalPrice: number;
+  totalPriceCents: bigint;
   selectedQuantity: number;
-  selectedPrice: number;
+  selectedPriceCents: bigint;
 }
 
 // Storage
@@ -40,9 +40,21 @@ function loadFromStorage(): CartState {
   try {
     const stored = localStorage.getItem(STORAGE_KEY);
     if (stored) {
-      const parsed = JSON.parse(stored);
+      const parsed = JSON.parse(stored) as {
+        items?: Array<
+          Omit<CartItem, "unitPriceCents" | "costPriceCents"> & {
+            unitPriceCents: string;
+            costPriceCents: string;
+          }
+        >;
+        totalQuantity?: number;
+      };
       return {
-        items: parsed.items || [],
+        items: (parsed.items || []).map((item) => ({
+          ...item,
+          unitPriceCents: BigInt(item.unitPriceCents),
+          costPriceCents: BigInt(item.costPriceCents),
+        })),
         totalQuantity: parsed.totalQuantity || 0,
       };
     }
@@ -54,7 +66,12 @@ function loadFromStorage(): CartState {
 
 function saveToStorage(state: CartState): void {
   try {
-    localStorage.setItem(STORAGE_KEY, JSON.stringify(state));
+    localStorage.setItem(
+      STORAGE_KEY,
+      JSON.stringify(state, (_key, value) =>
+        typeof value === "bigint" ? value.toString() : value,
+      ),
+    );
   } catch {
     console.error("Failed to save cart to storage");
   }
@@ -226,9 +243,15 @@ class CartStore {
     const selectedItems = this.state.items.filter((item) => item.selected);
     return {
       totalQuantity: this.state.totalQuantity,
-      totalPrice: this.state.items.reduce((sum, item) => sum + item.price * item.quantity, 0),
+      totalPriceCents: this.state.items.reduce(
+        (sum, item) => sum + item.unitPriceCents * BigInt(item.quantity),
+        0n,
+      ),
       selectedQuantity: selectedItems.reduce((sum, item) => sum + item.quantity, 0),
-      selectedPrice: selectedItems.reduce((sum, item) => sum + item.price * item.quantity, 0),
+      selectedPriceCents: selectedItems.reduce(
+        (sum, item) => sum + item.unitPriceCents * BigInt(item.quantity),
+        0n,
+      ),
     };
   }
 }

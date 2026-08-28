@@ -37,25 +37,25 @@
 | 售后与履约 | 退款售后、快递 100 物流轨迹 | 退款与对账在 [`payment/payment.md`](../payment/payment.md) 有设计（落地进度以 `TODO.md` 为准）；售后工单、物流轨迹无对应服务 |
 | 内容与评价 | 评价评分、图文/视频、文章管理 | 无 UGC 与内容域 |
 | 区域数据 | 区域管理（省市区） | address 服务的 `RegionService/ListRegions`（双方都有） |
-| 本仓独有 | — | 独立 inventory；search（ES，已拍板迁 Meilisearch，迁移未完成）；behavior 埋点 + gorse 推荐；merchant 入驻 |
+| 本仓独有 | — | 独立 inventory；search（Meilisearch 查询已迁）；behavior 埋点 + Gorse 推荐；merchant 入驻 |
 
 ## 二、技术架构
 
 | 维度 | 对照项目（据其介绍） | 本仓 |
 |---|---|---|
-| 总体架构 | 单体三层 Handler → Service → Model | 10 微服务 + 自建网关（go-kratos/gateway fork），四层 server → service → biz ← data，fx 装配 |
-| API 形态 | Gin REST，`routes.go` 集中注册 | 契约先行：Protobuf + buf.validate，connect-go（Connect / gRPC / gRPC-Web 三兼容），前端类型由 proto 生成 |
+| 总体架构 | 单体三层 Handler → Service → Model | 10 微服务 + 同级 control-tower gateway/config，四层 server → service → biz ← data，Fx 装配 |
+| API 形态 | Gin REST，`routes.go` 集中注册 | 契约先行：Protobuf + buf.validate，ConnectRPC Go（Connect/gRPC/gRPC-Web 兼容），前端由 Protobuf-ES 生成类型 |
 | 数据访问 | GORM，PostgreSQL 连接池限 8 | sqlc（手写 SQL 生成类型安全代码）+ pgx，每服务一个 schema |
-| 鉴权 | 应用内 JWT 中间件，按路径前缀分管理端/客户端 | 下沉网关：Casdoor OIDC + JWT RS256 验签（60s leeway）+ Casbin RBAC（RPC 粒度、默认拒绝、角色继承），身份经 `x-md-global-user-id` 注入下游 |
-| 限流 | 应用内 x/time/rate 令牌桶，按接口差异化频控（下单 10 秒 1 次、支付 5 秒 1 次、登录 60 秒 3 次、通用 30/秒） | 网关 aegis BBR 自适应限流 + 熔断；**无按业务接口的频控** |
-| 中间件链 | cors → auth(JWT) → ratelimit → error recovery，应用内编排 | 网关 11 个中间件（ip / cors / jwt / rbac / logging / tracing / bbr / circuitbreaker / rewrite / routerfilter / transcoder） |
-| 配置 | 应用内「系统配置」模块参数化 | 独立 Config Center（proto 定义 Bootstrap + protovalidate 校验 + pg_notify 热更新），业务服务的必需启动依赖 |
-| 注册发现 | 不需要（单体） | Consul（仅注册发现） |
-| 存储与中间件 | COS + CDN；介绍未提缓存与搜索引擎 | MinIO、Redis (Dragonfly)、Elasticsearch、gorse |
+| 鉴权 | 应用内 JWT 中间件，按路径前缀分管理端/客户端 | control-tower BFF session + legacy JWT + Casbin RPC 级 RBAC，身份经 `x-md-global-*` 注入下游；数据归属仍由服务校验 |
+| 限流 | 应用内 x/time/rate 令牌桶，按接口差异化频控 | 当前 gateway 没有通用限流或熔断；业务防滥用与过载保护都是待设计项 |
+| 中间件链 | cors → auth(JWT) → ratelimit → error recovery，应用内编排 | recover → otel → access log → CORS → auth → proxy；默认无重试、无协议转码 |
+| 配置 | 应用内「系统配置」模块参数化 | control-tower Config Center（proto Bootstrap + Protovalidate + pg_notify/Watch），是业务服务必需启动依赖 |
+| 注册发现 | 不需要（单体） | Consul 仅注册发现，目标迁 K8s Service DNS + Cilium KPR |
+| 存储与中间件 | COS + CDN；介绍未提缓存与搜索引擎 | Pigsty PostgreSQL、Dragonfly、Meilisearch、Silo S3-compatible、Gorse；当前 NATS 搜索链，目标 Kafka 主干 |
 | 支付渠道 | 微信支付 | 支付宝（smartwalle/alipay） |
 | 定时任务 | Goroutine 自实现 SchedulerService | 无统一调度组件（behavior 以内存队列 + `synced_at` 做 outbox 补偿） |
 | 输入安全 | bluemonday HTML 消毒防 XSS | buf.validate 结构校验 + React 默认转义；无富文本消毒（当前无 UGC） |
-| 管理端前端 | UmiJS 4 + Ant Design 6.4 + umi-presets-pro + keepalive | pnpm monorepo（4 app + 9 包）+ vite-plus + MUI + TanStack Router/Query + valtio + Connect-Web |
+| 管理端前端 | UmiJS 4 + Ant Design 6.4 + umi-presets-pro + keepalive | pnpm monorepo（4 app + 9 包）+ vite-plus + MUI + TanStack Router/Query + valtio + ConnectRPC/Protobuf-ES |
 
 两侧都用 React 19；差别在组织方式——它按 UmiJS 约定式框架走，本仓自组 monorepo 工具链。
 
@@ -63,23 +63,19 @@
 
 对照项目介绍中交付相关的内容只有「构建时注入 Git commit hash」。本仓是完整闭环，且多数无对位物：
 
-- **CI/CD**：GitHub Actions tag 触发 → buildx 多架构三推（Docker Hub / ghcr / Harbor）→
-  Helm OCI → ArgoCD ApplicationSet GitOps 自动同步。
-- **可观测性**：OTel 全链路（VictoriaMetrics / Loki / Jaeger / Grafana / fluent-bit），
-  前端 Web Vitals 经 `telemetry.v1` 与后端汇入同一套指标。
-- **结构门禁**：structcheck 结构性 CI、`.freeze` 冻结验收集、`.service-matrix.yaml` 部署清单对齐。
+- **CI/CD**：GitHub Actions 由 semver tag 触发，Buildx 多架构双推 TCR/GHCR；Harbor 只在 Helm OCI helper 中使用。ArgoCD 当前零 Application，尚无自动同步。
+- **可观测性**：OTel 全链路，Vector + VictoriaMetrics/Logs/Traces + Grafana；前端 Web Vitals 经 `telemetry.v1` 汇入指标。
+- **结构门禁**：structcheck、`.service-matrix.yaml`、verify-context/canary 与 vite-plus/commitlint；`.freeze` 已删除。
 
 ## 四、对本仓的启示
 
-1. **业务级频控是网关的真实缺口。** BBR 解决的是过载保护，防不了「支付接口被单用户高频打」
-   这类业务滥用。对照项目按下单/支付/登录分档的令牌桶思路值得引入网关中间件链
-   （按路由 + 用户/IP 维度），与 BBR 互补而非替代。
+1. **业务级频控与过载保护都是网关的真实缺口。** 两者目标不同：前者限制用户/IP 对敏感 procedure 的滥用，后者保护依赖和容量。应先用压测与失败语义定义阈值、key 和降级方式，再决定实现位置。
 2. **UGC 消毒要在评价/图文详情上马前预留。** buf.validate 只管结构约束；
    一旦商家图文详情或用户评价引入富文本，需要 bluemonday 类的 HTML 消毒环节，
    校验层不能替代。
 3. **「全链路闭环」是它此刻成立、本仓不成立的宣称。** 本仓 order→inventory/product/address、
    payment→order 均为 `depends_on_planned`，`depends_on` 实测全空（matrix），
-   Kafka 应用侧零依赖（`STACK.md` §十）。对照之下，服务协同接线
+   outbox 当前只有 NATS 搜索投影链部分接线，Kafka 目标链尚未开始（`STACK.md` §十）。对照之下，服务协同接线
    （[`order/consistency.md`](../order/consistency.md) 的 Outbox + relay 方案）仍是主线短板。
 
 ## 五、对比的局限

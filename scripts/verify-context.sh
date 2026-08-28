@@ -6,8 +6,11 @@
 # 能判定的约束变成脚本,存量漂移走基线棘轮(见 scripts/lint-baseline.sh 的设计)。
 #
 # 六项检查(任一违规 → 退出码 1):
-#   [DEAD-LINK]    AGENTS.md 与 context/**/*.md 的相对 markdown 链接必须可达
-#                  (跳过代码块、http(s)/mailto、纯锚点;带 #fragment 的只查文件部分)
+#   [DEAD-LINK]    AGENTS.md/README.md/STACK.md 与 context/**、docs/design/** 的
+#                  相对 markdown 链接必须可达(2026-08-26 扩:原只查 AGENTS+context,
+#                  当日 README/STACK/docs/design 三处死链全靠临时脚本抓到——
+#                  宪法原则 I「引用不存在的文档即 CI 失败」由此机械化;
+#                  跳过代码块、http(s)/mailto、纯锚点;带 #fragment 的只查文件部分)
 #   [ORPHAN]      context/ 下每个非 INDEX 文件必须被所属层的 INDEX.md 链接;
 #                  模块 INDEX 必须被 project/ecommerce/INDEX.md 链接
 #   [FRONTMATTER] 非 INDEX 文件必须有 frontmatter 且 name/description 齐全,
@@ -66,7 +69,7 @@ while IFS= read -r file; do
       fail "DEAD-LINK" "$file → $target(目标被 gitignore,不在提交树里)"
     fi
   done < <(_strip_fences "$file" | grep -oE '\]\([^)]+\)' | sed 's/^](//; s/)$//' || true)
-done < <(find AGENTS.md context -name "*.md" -type f)
+done < <(find AGENTS.md README.md STACK.md context docs/design -name "*.md" -type f)
 
 # ── 2. INDEX 覆盖性(孤儿检测)────────────────────────────────
 # 层入口: context/INDEX.md 必须链接三个层 INDEX

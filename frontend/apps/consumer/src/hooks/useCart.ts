@@ -47,9 +47,9 @@ function toStoreItems(res: GetCartResponse): StoreCartInput[] {
     shopName: item.shopName,
     spuName: item.spuName,
     skuName: item.skuName,
-    price: item.price,
-    // 后端没有单独的 costPrice 字段,沿用 price(与迁移前的行为一致)
-    costPrice: item.price,
+    unitPriceCents: item.unitPriceCents,
+    // 后端没有单独的成本价字段，沿用单价分值（与迁移前行为一致）。
+    costPriceCents: item.unitPriceCents,
     quantity: item.quantity,
     selected: item.selected,
     skuThumbnailUrl: item.skuThumbnailUrl,
@@ -88,8 +88,8 @@ export interface AddToCartRequest {
   selected: boolean;
   spuName: string;
   skuName: string;
-  price: number;
-  costPrice: number;
+  unitPriceCents: bigint;
+  costPriceCents: bigint;
   skuThumbnailUrl: string;
 }
 
@@ -102,7 +102,7 @@ function toAddProductInput(request: AddToCartRequest) {
     selected: request.selected,
     spuName: request.spuName,
     skuName: request.skuName,
-    price: request.price,
+    unitPriceCents: request.unitPriceCents,
     skuThumbnailUrl: request.skuThumbnailUrl,
     status: CartStatus.ACTIVE,
   };

@@ -185,15 +185,14 @@ for i := 0; i < maxRetries; i++ {
 }
 ```
 
-⚠️ 这条对**库存**尤其重要。`inventory` 目前的乐观锁写在 SQL 里且是坏的
-(WHERE 比对未来版本号、丢弃 execrows,见 `TODO.md` P0),而 TODO 里还计划引入
-「Redis 分布式锁」。落地时注意:**锁必须带唯一 owner 与 TTL,解锁要用 Lua 校验 owner**
-(否则会解掉别人的锁),并且**单实例 Redis 锁不是共识算法**——它降低冲突概率,
-不能替代数据库层的最终一致性校验(库存扣减的 SQL 条件必须自带 `available >= @quantity`)。
+⚠️ **本项目的库存、订单、支付和幂等禁止使用 Redis/Dragonfly 锁作为正确性手段。**
+Dragonfly 采用可驱逐缓存策略，锁键可能消失；checkout v2 已裁决把正确性锚定在 PostgreSQL
+事务、条件更新/CAS、行锁、唯一约束和幂等表。库存扣减 SQL 必须自带
+`available >= @quantity`，并检查受影响行数。
 
-续租也必须用 Lua 同时校验 owner 并更新 TTL。即使续租和解锁都正确，持有者仍可能在租约过期后继续
-执行；会写入关键状态的流程还需要 fencing token 或数据库条件写，不能把 Redlock 的多数派成功直接
-等同于业务正确性。抢锁重试必须受 `ctx`、次数和带抖动的退避约束。
+若其他项目在「锁丢失只影响效率、不影响正确性」的场景使用租约锁，仍须有唯一 owner、TTL、
+Lua 校验解锁/续租、受 `ctx` 约束的退避，并在最终写入处使用 fencing token 或数据库条件。
+单实例锁和 Redlock 都不能替代业务正确性约束。
 
 ## 九、单机 → Cluster:业务代码基本不用改
 
@@ -214,8 +213,7 @@ rdb := redis.NewClusterClient(&redis.ClusterOptions{
 ## 十、Redis 不是消息队列的替代品
 
 Stream / Pub-Sub 能做消息,但适用面是**轻量事件通知、实时推送、短生命周期任务**。
-大吞吐、复杂路由、长期留存、消费者组治理与重放,仍应交给 **NATS JetStream**
-(集群内 `nats` ns,nats-0/1/2)。**Kafka 已退役,集群零残留**,不要再按它设计。
+大吞吐、长期留存、消费者组治理与重放应交给持久事件主干。当前搜索链使用 **NATS JetStream**（`nats` ns，nats-0/1/2）；目标主干已改为 **Apache Kafka**，迁移路线见 `docs/design/platform/production-scale-goal.md`。不要用 Redis Stream/Pub/Sub 绕过 outbox/inbox 和迁移门禁。
 
 Pub/Sub 是 at-most-once 的即时投递：订阅者离线、断线或处理失败时，消息不会补发。`Publish()` 返回的
 订阅者数量只表示当时匹配的订阅者，不是业务处理 ACK。长驻订阅还会持有专用连接；订阅循环必须在
@@ -224,9 +222,7 @@ Pub/Sub 是 at-most-once 的即时投递：订阅者离线、断线或处理失�
 
 本仓的现状是:订单的 EventBus 还是**进程内总线**(见 `TODO.md`),
 所以「用 Redis 顶一下」看起来很诱人。**不要这么做**——事件是跨服务契约,
-换掉传输层的代价远大于一次性接到 **NATS JetStream + outbox relay** 上。
-这条链路已经在跑(`ecommerce-outbox-relay`、`ecommerce-search-indexer` 两个 Deployment),
-不是待建选项,接进去就行。真要临时过渡,必须在 TODO 写明是过渡态与退出条件。
+换掉传输层的代价远大于接入既定的 **outbox/inbox + 事件主干**。当前 `ecommerce-outbox-relay` 和 `ecommerce-search-indexer` 仍走 NATS；新领域事件不得继续扩大 NATS 面，按 K0–K6 路线接 Kafka。任何临时传输都必须在 TODO 写明退出条件。
 
 ## 十一、Key、TTL 与批量维护
 
