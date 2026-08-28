@@ -44,6 +44,20 @@ description: harness 本身（硬规则/门禁/Agent 约束）每次改动的原
 
 ---
 
+### 2026-08-29 Bootstrap 服务边界与明文凭据纳入双门禁
+
+- **改了什么**：7 个非 search 服务的 Bootstrap proto 用 `reserved 6` / `reserved "search"` 删除无主的 `Search` 字段，生成代码与 JSON Schema 同步收口。`backend/structcheck` 新增 schema 白名单与配置实例校验：CI 验证已提交 example，本机存在 dev/pre.yml 时一并验证，失败只打印路径不打印值。`verify-quick.sh` 新增并行凭据扫描，覆盖 tracked 与未忽略的新配置文件；扫描结果只报 `path:line:key`。同时把 Kafka Connect 数据库口令改为 Secret 注入，删除两个已过期的测试 JWT。
+- **为什么**：只改 JSON Schema 会出现「IDE/CI 拒绝、运行时 proto 仍接受」的双门不一致；只靠文档要求凭据不入库也已被事实证明不够。proto 字段所有权、schema、真实配置与凭据扫描必须形成同一条可执行链路，并且门禁日志不能反过来泄露被扫描的值。
+- **触发事故**：评审 `local-env.md` 时发现 7 个非 search 服务的本地和 Config Center Bootstrap 都携带 `search.elastic_search`：域名 `es.dev.test` 无 Route、集群无 Elasticsearch，配置却还含一个曾进入 Git 历史的明文口令；唯一真正做搜索的 search 服务反而不使用该块。继续接门禁时又扫到 KafkaConnector 的明文数据库口令，以及 address/cart 测试文件里的完整 Casdoor JWT。这些配置长期未报错，因为共享 proto 仍声明死字段，历史上也没有提交前凭据扫描。
+- **怎么验证的**：先在单事务中把 Config Center 7 个条目各升一版、追加 revision 并发 `config_changed`，回读确认 `elastic_search`、死域名和旧口令均为 0 命中，7 个 Deployment 保持 Ready；节点、Kubernetes Secret、工作区与 Config Center 当前值均未发现旧口令复用，当前 PostgreSQL 也不存在旧 `debezium_user`，因此没有可轮换的活账号。20 份本地 dev/pre 配置通过运行时 decode/protovalidate 和 JSON Schema 双校验；`TestBootstrap*` 全绿；凭据扫描 canary 能拦截随机口令且输出不含原值。
+
+### 2026-08-29 VPA recommendation-only 容量基线纳入 structcheck
+
+- **改了什么**：根目录 `application-vpa.yml` 收敛为覆盖 15 个 ecommerce Deployment 的完整 VPA 集合，统一使用 `updateMode: Off`、`RequestsOnly` 和显式 container 名称；已有 service-local VPA 同步为相同的 recommendation-only 语义。`backend/structcheck` 新增门禁，双向检查 target/VPA/container 名称、15 个目标全覆盖、无重复、禁止 `InPlace`/`Auto`，并禁止观测阶段用 `minAllowed`/`maxAllowed` 裁剪推荐。
+- **为什么**：当前集群只安装 recommender，没有 updater/admission-controller。把 CR 写成 `InPlace` 现在不会生效，却会在以后补装组件时静默跨越为自动改 Pod；观测阶段的边界还会把人工假设伪装成 Target。容量定稿必须先保留原始推荐，再结合启动峰值、k6 和 N+1 预算人工写回 requests。
+- **触发事故**：live 仅有 behavior/cart/order 三个 VPA，三者的内存 Lower/Target/Upper/Uncapped 全部恰好为 `250Mi`，证明被 recommender 默认地板顶住；根 `application-vpa.yml` 仍使用不存在的裸 Deployment 名，archive 也记录这些 targetRef 曾悬空 44 天。同期 17 个业务 Pod 合计 request 为 `1500m/2240Mi`，低流量瞬时实际仅约 `20m/378Mi`，而 frontend 完全没有 requests，说明当前值既有虚高也有缺失，不能靠一次快照直接缩容。
+- **怎么验证的**：`go test -count=1 ./structcheck/...` 通过；15 个 VPA 与 5 份 service-local 清单均通过 Kubernetes server dry-run；VPA Helm 渲染只包含 recommender，且 `10m/32Mi` 推荐地板参数进入容器 args。容量定稿、节点/资源/并发 rollout/扩缩容演练、持续 skew 与调度失败告警均保留在 `docs/design/platform/capacity-balancing.md`。同日后续取得 dev 部署授权后，Helm revision 2 与 15 个 `Off` VPA 已发布；全部 `RecommendationProvided=True`，无 webhook/updater，发布前后的业务 Deployment 与 Pod 身份未变化。
+
 ### 2026-08-28 跨服务节点均衡与 Helm 缓存纳入 structcheck
 
 - **改了什么**：25 份 ecommerce Deployment 统一增加 suite-wide `topologySpreadConstraints`；`backend/structcheck` 要求 Pod template 带共同的 `app.kubernetes.io/part-of=ecommerce` 标签，约束必须使用 hostname、`maxSkew=1`、`ScheduleAnyway` 和 `Honor` policies，同时禁止把共同标签加入已有 Deployment 的 immutable selector。测试还逐个读取 10 个子 chart 的 `library-0.1.0.tgz`，确认实际消费的缓存模板包含同一约束。
