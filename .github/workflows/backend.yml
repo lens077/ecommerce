@@ -104,6 +104,8 @@ jobs:
     permissions:
       contents: read
       packages: write
+      # reusable workflow 只能收窄调用方权限，Cosign keyless 需要调用方显式授予 OIDC。
+      id-token: write
     strategy:
       fail-fast: false
       matrix:
