@@ -1,5 +1,7 @@
 # B2B2C 电商平台：生产级架构蓝图与实施纲领（最终修订版）
 
+> Tetragon 三节点 audit-only 闭环之后仍未完成的权限、长期基线、事件完整性、配置残留与 enforcement 门禁，统一见 [Tetragon 后续工作与已知缺口](reports/2026-08-28-tetragon-follow-ups.md)。
+
 ## 技术选型总览与研究中项目
 
 ### A. 已确定的核心技术选型（非基础设施类）
@@ -30,17 +32,17 @@
 | 前端本地状态 | Zustand | 已确定（2026-08-28 迁移完成） | valtio→zustand 全量迁移收口：3 个 store 重写为 vanilla store + 模块级 action，valtio 依赖移除，顺带修复 `AppBar` 直读 proxy 不订阅的刷新 bug；服务端状态仍归 TanStack Query |
 | 前端编译优化 | React Compiler（Oxc 原生） | 已评估：搁置（2026-08-28 试点） | consumer 单应用试点通过（构建/测试/冒烟绿，Zustand 组件零诊断），但原生实现仍实验性、生产构建 2 处显式 bailout、全量 JS gzip +7.97%，运行时收益未证实可抵消体积增长。保持默认关闭，环境变量可复跑同一试点。证据：[试点报告](reports/2026-08-28-react-compiler-pilot.md) |
 | 按请求接管（多人个人金丝雀） | Telepresence personal intercept / mirrord Teams | 待触发 | 「多人同时对同一服务做按请求接管」（filter 式个人金丝雀）是 steal 真正不可替代、当前给不了的能力——Okteto 接管是排他的整体替换。触发信号（任一）：出现第二个长期后端贡献者共享 dev 联调；发生「一人的 okteto up/调试会话打断另一人联调」的真实冲突；前端/QA 需同时验证两个未合入后端分支；每人独立环境的资源账算不过来。触发后先验 Telepresence personal intercept（开源，但须复测本集群 Cilium KPR 兼容——mirrord steal 的教训），对照 mirrord Teams（约 $50/人/月）；两者都不行才考虑「基线+泳道」自建染色路由。此前不为此花任何成本。开发内环现行分工见 A 表；mirror 推广门禁：cart 及一个下游完成 K8s DNS 调用 |
-| 东西向身份 | SPIFFE/SPIRE | 评估中 | 服务间 workload identity；是否需要独立于 K8s ServiceAccount 的身份体系 |
-| 传输层安全 | mTLS | 评估中 | 服务间加密与身份验证；与 Cilium 网络策略的关系需明确 |
-| 运行时安全 | Tetragon | 试点观察中（2026-08-28 已部署） | 单节点（node103）观察模式已部署：chart 1.7.1，arm64 内核 7.0 BTF 兼容已实测，仅导出 `ecommerce` 命名空间 `PROCESS_EXEC/EXIT`，零 TracingPolicy（纯观察不阻断）。扩节点门槛：连续 24h 稳态内存 <250Mi、CPU <100m、业务 P99 劣化 <3%、零丢事件；部署资产在 `~/lens077/kubernetes/components/tetragon/` |
-| 混沌工程 | Chaos Mesh | 评估中 | 自动化故障注入；P1 阶段引入 |
-| 供应链安全 | Cosign、Syft、Kyverno、Trivy、Grype、Gitleaks、zizmor | PR 阶段已落地并全绿；tag 阶段 Syft 已接入、待远端 tag 实跑 | PR 阶段采用 Gitleaks 提交范围扫描 + zizmor/Trivy 存量棘轮，已真实红测并在修复新 HIGH 后全绿。Syft 1.51.1 已接入发布 workflow：按 Buildx OCI index digest 分别生成 amd64/arm64 SPDX 2.3 并上传 artifact；本地单平台红绿测试通过，尚未执行新的远端 tag 验收，也未完成 Cosign、Trivy image 或 Kyverno 验签。实测结论见 [PR 阶段供应链门禁验证](reports/2026-08-28-supply-chain-pr-validation.md) |
-| 成本治理 | OpenCost | 评估中 | 每服务/每订单成本模型；P1 阶段引入 |
-| 长流程编排 | Temporal | 待触发（P2） | 仅当长流程、定时器、补偿数量失控时引入 |
-| 消息流式处理 | Kafka Streams / ksqlDB | 评估中 | 实时聚合、窗口计算；当前由消费者自行处理，暂不强制 |
+| 东西向身份 | SPIFFE/SPIRE | 暂不引入（2026-08-28 调研收口） | 先做低成本高确定性动作：CiliumNetworkPolicy default-deny 补全、每服务独立 ServiceAccount + 最小 RBAC、关闭无用 token automount、审计 projected SA token 与「只信任网关头」边界。需要 workload 级身份时首选评估 Istio Ambient，不单独引入 SPIRE（`csi-driver-spiffe` v0.15.0 活跃，但须禁用 cert-manager 默认 approver 以防审批竞速绕过策略）。证据：[技术调研](reports/2026-08-28-tech-research.md) §6 |
+| 传输层安全 | mTLS | 分阶段：先节点级加密（2026-08-28 调研收口） | 优先级排序：①**Cilium WireGuard 节点间透明加密**（零应用改造，非 workload 级）——首选，小范围实测后再全集群启用；②真需要 workload mTLS + 授权时首选评估 Istio Ambient；③**Cilium Mutual Authentication 1.20.1 仍 Beta 且官方自述安全模型不完整，不得当作 workload mTLS**；④Linkerd OSS 自 2024 起不再发 semver stable 工件，不选。ConnectRPC 从 H2C 切 mTLS 的代码改动相对集中，真实成本在身份注册、授权矩阵、证书轮换与探针——这正是它留在 P2 的原因。证据：[技术调研](reports/2026-08-28-tech-research.md) §6 |
+| 运行时安全 | Tetragon | 三节点观察与告警闭环已落地（2026-08-28） | chart 1.7.1 在 node101/102/103 `3/3` Ready，ARM64 内核 7.0 BTF 已实测；仅导出 `ecommerce` 的 `PROCESS_EXEC/EXIT/KPROBE`，开启 credential/namespace 上下文。唯一策略 `ecommerce-service-account-token-access` 为 namespaced audit-only，不阻断；原始事件已入 VictoriaLogs，token-access/可疑 exec 指标已入 VictoriaMetrics，vmalert→Alertmanager→通知审计桥已真实注入验收。部署资产在 `~/lens077/kubernetes/components/tetragon/`，策略真相源在 `infrastructure/tetragon/`；enforcement 仍待独立评估 |
+| 混沌工程 | Chaos Mesh | P1 条件触发（2026-08-28 由「必引入」改判） | v2.8.4，CNCF Incubating，官方构建链含 arm64。最小形态：**仅 staging**、不装 Dashboard、只启用 `PodChaos`/`NetworkChaos`，禁 StressChaos 与内核/IO/DNS 类。前置门槛（全满足才引入）：staging 副本/PDB/告警与生产一致、手工演练 ≥2 轮、每类实验有稳态指标与中止条件、承诺每季度至少跑一次（否则撤掉控制面）。常驻预算约 0.2–0.35 CPU / 448–640Mi。对照 Litmus：月更更快但 ChaosCenter+MongoDB 控制面更重，单集群场景无收益。证据：[技术调研](reports/2026-08-28-tech-research.md) §8 |
+| 供应链安全 | Cosign、Syft、Kyverno、Trivy、Grype、Gitleaks、zizmor | PR、Syft 与 GHCR keyless 已全绿；TCR 单服务兼容实测通过 | PR 三件套已红测并全绿；`1.5.2` 完成 10 服务双架构 SPDX，`1.5.3` 完成 GHCR index keyless 签名与平台 attestation，`1.5.4` 在 TCR `user` 实际 digest 上成功写入并回读同类 Cosign 工件。当前最大缺口是签名前 Trivy image；Kyverno 尚未开始。进度、边界与剩余路线见 [供应链安全演变全景](reports/2026-08-28-supply-chain-evolution-overview.md)，命令与验收证据见 [详细验证报告](reports/2026-08-28-supply-chain-pr-validation.md) |
+| 成本治理 | OpenCost | P1 条件评估（2026-08-28 由「P1 引入」改判） | v1.121.1，CNCF Incubating。三项前置未完成前不常驻：①节点小时成本模型达成共识（Helm `customPricing`：硬件摊销+电力+存储+网络 ÷730h；仅异构节点才用 CSVProvider）②VictoriaMetrics 兼容 PoC（Prometheus API 足以起步，但无官方认证矩阵，须实测 7 天/30 天窗口查询不超时）③10 服务统一成本标签。**「每订单成本」不是 OpenCost 的原生模型**——它只给资源成本，业务分摊需自建（资源成本 ÷ 可归因订单数），且**禁止给 `order_id` 打 metric label**（基数爆炸）。预算 100–250m CPU / 256–512Mi（官方默认 request 10m/55Mi 是调度值非容量）。证据：[技术调研](reports/2026-08-28-tech-research.md) §8 |
+| 长流程编排 | Temporal | 待触发（P2，2026-08-28 触发信号已量化） | v1.31.0。**强信号（任一即评估）**：跨服务 >24h 的 durable workflow ≥3 条；单流程 ≥8 个持久步骤或 ≥4 个补偿分支；人工恢复每月 >4 次或 >8 工时；≥2 个服务各自实现 Saga/定时器/重试框架。**弱信号（三项连续两个迭代成立）**：PG 活跃未来任务 >10 万、到期定时器峰值 >1 万/分钟、单流程状态机迁移 >15 条边等。PG 任务表若要通用化，**下一步先看 River**（Go + PG 事务型队列，无新增控制面）而非直接上 Temporal。自托管可用 PostgreSQL（12+ 兼 Advanced Visibility，不必 ES）；生产 HA 需 3–6 CPU / 6–12Gi + DB，超出现集群承载，若触发应落外置基础设施。证据：[技术调研](reports/2026-08-28-tech-research.md) §8 |
+| 消息流式处理 | Kafka Streams / ksqlDB | 不引入（2026-08-28 调研收口） | 维持 **franz-go 自写消费者**（Inbox 幂等 + 状态写 PG + 投影可重建）：搜索投影、通知、对账、销量累计全是无窗口幂等 sink 或副作用工作流，不需要通用流引擎。Kafka Streams 是嵌入 JVM 应用的库，纯 Go 团队引入 = 长期维护 Java 服务孤岛（JDK/GC/RocksDB 状态/rebalance 全套）；ksqlDB 仍发版但 license 为 Confluent Community License（非 OSI），且 Confluent 新增战略投入已明显转向 Flink。触发（任两项：生产窗口聚合/流 join ≥3 条、≥2 个消费者重复实现 watermark/迟到修正/状态 TTL、报表新鲜度要求 P95 <30s、PG Cron 聚合开始影响 OLTP）后**先 POC RisingWave**（Apache-2.0、PG wire protocol、单机起点约 2c/8Gi）；只有乱序/watermark/多流 temporal join/大状态 checkpoint 成为业务正确性的一部分才评估 Flink。证据：[技术调研](reports/2026-08-28-tech-research.md) §4 |
 | 嵌入式分析（OLAP 跑批） | DuckDB（v1.5.5，MIT） | 采纳（试点待执行，2026-08-28） | 定位=**零常驻批分析/报表/对账引擎**：支付渠道账单对账、`behaviors.events` 增量导出 Parquet 落 Silo 后的分析卸载、经营报表 ad-hoc 维度。集成形态：**CLI 子进程跑批优先**——业务服务 `CGO_ENABLED=0` 一字不改（duckdb-go 预编译静态库仍需 cgo）；复杂化后建独立 analytics-runner 镜像（显式 CGO 例外）；不嵌业务服务、不做常驻任意 SQL 服务、不用 Quack（Beta）。红线：不替代 PG（OLTP 真相源）/搜索投影/Kafka/VictoriaMetrics/流处理（<30s 新鲜度归流处理触发项）。升级路径：多写者/快照/模式演进需求出现后启用 DuckLake 1.0（catalog 存 Pigsty PG + Parquet 落 Silo）。与 ClickHouse 关系：承接其触发条款①②的第一响应，CH 触发条件升级为服务化信号。证据：`docs/reports/2026-08-28-duckdb-evaluation.md` |
-| 持续性能分析 | Pyroscope / Parca | 评估中 | CPU/Heap/锁/Goroutine 热点分析 |
-| 服务网格 | Cilium Service Mesh | 评估中 | 目前由 Cilium CNI + NetworkPolicy 覆盖，暂不引入完整网格 |
+| 持续性能分析 | Pyroscope / Parca | 待触发（2026-08-28 调研收口） | 先用 Go 原生 `pprof`/trace/基准测试 + PGO，不常驻任何分析平台。触发（至少两项）：30 天内 ≥2 次靠指标/trace/一次性 pprof 定位不了的性能故障；需要跨版本连续对比 profile；CPU 常态 >60% 可分配容量。触发后**优先 Pyroscope Go SDK push**（v2.3.0，与现有 Grafana 契合；预算 250–500m / 512Mi–1Gi + 10–20Gi 存储，SDK 端约 <1% CPU 须实测）；**Parca 暂不选**——官方 issue 明确其新 eBPF profiler 对 arm64 支持尚不完整，且 Grafana 的 Parca datasource 已弃用（2027-01 结束支持）。注意 eBPF 全局采集不替代 Go heap/mutex/goroutine profile。证据：[技术调研](reports/2026-08-28-tech-research.md) §8 |
+| 服务网格 | Cilium Service Mesh | 暂不引入（2026-08-28 调研收口） | 维持 Cilium CNI + NetworkPolicy + Gateway API 覆盖。理由：Mutual Authentication 在 1.20.1 仍是 Beta 且官方自述安全模型不完整；官方也没有可直接套用于 3 节点 arm64 小集群的每节点 Envoy 内存基准（旧版大规模 agent 测试数据不可外推）。将来确需 workload mTLS + L7 授权时，评估对象是 Istio Ambient 而非本项。证据：[技术调研](reports/2026-08-28-tech-research.md) §6 |
 | 前端错误监控 | Bugsink（现役 2.5.x，node3） | 已确定（2026-08-28 复核维持） | 兼容 Sentry SDK 错误事件；单容器 + PostgreSQL 已稳定运行并接通 ntfy 告警。GlitchTip 改为条件采纳：出现 transaction/span 聚合、错误频率告警或统一 uptime/logs 需求时再评估迁移。接入手册与容量证据见 §11.3 |
 
 ---
@@ -750,7 +752,7 @@ cfg.GetServiceAddr("inventory-service") // 从 K8s DNS 解析
 ### P2 阶段：极高负载演进（待需求触发）
 
 - [ ] SPIFFE/SPIRE 东西向微服务身份标识
-- [ ] Tetragon 运行时安全监控
+- [x] Tetragon 三节点运行时安全观察与告警闭环（audit-only；enforcement 待独立评估）
 - [ ] 多 Region Active-Passive 容灾
 
 
@@ -864,7 +866,7 @@ cfg.GetServiceAddr("inventory-service") // 从 K8s DNS 解析
 
 ## 7. 供应链安全
 
-PR 阶段已经落地 Gitleaks、zizmor、Trivy fs/config 三件套。首次全量扫描存在较多存量告警，因此采用「Gitleaks 只扫 PR 提交范围，zizmor/Trivy 全量扫描但仅阻断基线外新增项」的棘轮门禁；基线只能因修复而缩小。红测、Deployment 加固与最终全绿结果见 [2026-08-28 PR 阶段供应链门禁验证](reports/2026-08-28-supply-chain-pr-validation.md)。tag 阶段已把 Syft 1.51.1 接到 Buildx digest 后：分别生成 amd64/arm64 SPDX 2.3 并上传 Actions artifact；本地单平台红绿测试通过，但尚未用新 tag 验收双架构远端产物，也不代表 Cosign、三仓签名、Trivy image 或 Kyverno `verifyImages` 已完成。
+PR 阶段已经落地 Gitleaks、zizmor、Trivy fs/config 三件套，并采用「Gitleaks 扫提交范围，zizmor/Trivy 只阻断基线外新增项」的棘轮门禁。tag `1.5.2` 已验收 10 服务双架构 SPDX；`1.5.3` 已验收 GHCR Cosign 3.1.3 keyless index 签名与平台 SBOM attestation；`1.5.4` 已在 TCR `user` 实际 digest 上完成同类工件写入和回读。TCR 结论是有边界的兼容实测，不是腾讯云官方承诺。当前最大缺口为签名前 Trivy image；TCR 全服务扩展、Harbor Helm 签名和 Kyverno `verifyImages` 尚未完成。目标、演变、已做/未做、遗漏与剩余路线见 [供应链安全演变全景](reports/2026-08-28-supply-chain-evolution-overview.md)，详细命令与验收证据见 [供应链验证报告](reports/2026-08-28-supply-chain-pr-validation.md)。
 
 | 技术/标准 | 规范/标准出处 | 说明 |
 |---|---|---|
@@ -904,15 +906,15 @@ PR 阶段已经落地 Gitleaks、zizmor、Trivy fs/config 三件套。首次全�
 | **Kubernetes NetworkPolicy** | [K8s NetworkPolicy Documentation](https://kubernetes.io/docs/concepts/services-networking/network-policies/) | K8s 原生网络策略 |
 | **Zero Trust Architecture** | [NIST SP 800-207](https://csrc.nist.gov/pubs/sp/800/207/final) | 零信任架构标准 |
 | **HMAC API 认证** | [RFC 2104 (HMAC)](https://www.rfc-editor.org/rfc/rfc2104) | 第三方 API 签名认证 |
-| **mTLS** | [RFC 8446 (TLS 1.3)](https://www.rfc-editor.org/rfc/rfc8446) | 双向 TLS 认证（评估中） |
-| **SPIFFE/SPIRE** | [SPIFFE Specification](https://spiffe.io/docs/latest/spiffe-about/overview/) | 工作负载身份标准（评估中） |
+| **mTLS** | [RFC 8446 (TLS 1.3)](https://www.rfc-editor.org/rfc/rfc8446) | 双向 TLS 认证（分阶段：先 WireGuard 节点级） |
+| **SPIFFE/SPIRE** | [SPIFFE Specification](https://spiffe.io/docs/latest/spiffe-about/overview/) | 工作负载身份标准（暂不引入） |
 
 
 ## 10. 故障演练与混沌工程
 
 | 技术/模式 | 规范/标准出处 | 说明 |
 |---|---|---|
-| **Chaos Mesh** | [Chaos Mesh Documentation](https://chaos-mesh.org/docs/) | K8s 混沌工程平台（评估中） |
+| **Chaos Mesh** | [Chaos Mesh Documentation](https://chaos-mesh.org/docs/) | K8s 混沌工程平台（P1 条件触发，仅 staging） |
 | **Chaos Engineering Principles** | [Principles of Chaos Engineering](https://principlesofchaos.org/) | 混沌工程核心原则 |
 | **Toxiproxy** | [Toxiproxy Documentation](https://github.com/Shopify/toxiproxy) | 网络故障注入工具 |
 
