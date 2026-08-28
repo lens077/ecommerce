@@ -44,19 +44,33 @@ description: harness 本身（硬规则/门禁/Agent 约束）每次改动的原
 
 ---
 
+### 2026-08-28 跨服务节点均衡与 Helm 缓存纳入 structcheck
+
+- **改了什么**：25 份 ecommerce Deployment 统一增加 suite-wide `topologySpreadConstraints`；`backend/structcheck` 要求 Pod template 带共同的 `app.kubernetes.io/part-of=ecommerce` 标签，约束必须使用 hostname、`maxSkew=1`、`ScheduleAnyway` 和 `Honor` policies，同时禁止把共同标签加入已有 Deployment 的 immutable selector。测试还逐个读取 10 个子 chart 的 `library-0.1.0.tgz`，确认实际消费的缓存模板包含同一约束。
+- **为什么**：10 个 API 都是单副本。如果每个 Deployment 只按自己的 `app` 做 spread，scheduler 看不到其他服务，无法平衡整套工作负载；共同标签才能让不同服务进入同一个计数集合。选择软约束是为了优先压低 skew，同时避免节点资源不足时把发布永久卡住。
+- **触发事故**：live 审计发现 ecommerce 的 17 个 ReplicaSet Pod 分布为 node101 `12`、node102 `4`、node103 `1`，虽无业务 `nodeSelector`，scheduler 也不会主动重平衡历史 Pod；此前 Tetragon DaemonSet 又曾被手工 `nodeSelector=node103` 限成 `1/3`，造成另外两个节点的运行时审计盲区。本轮第一次执行 `helm dependency update` 还在只更新 3 个子 chart 后超时，证明只检查 library 源模板仍会放过部分陈旧 tgz。
+- **怎么验证的**：`go test -count=1 ./structcheck/...` 通过；10 个 Helm Deployment 渲染后均包含共同标签和约束；22 份 backend、3 份 frontend 清单以及 Helm 全量资源均通过 Kubernetes server dry-run。未获本轮 dev apply 授权，因此这些验证只证明发布候选有效，live 落点仍待受控 rollout 后复核。
+
 ### 2026-08-28 TCR Cosign 兼容性只做单服务硬失败探测
 
 - **改了什么**：tag 发布仅对 `user` 服务在 TCR 重复 index 签名与两个平台 SPDX attestation，并立即从 TCR 回验；不加兼容性 fallback，不在探测成功前扩展到其他服务或 Kyverno。
 - **为什么**：TCR 个人版没有对 Cosign OCI referrers 的官方兼容性承诺。一次性给所有服务签名会放大失败成本，软失败又会产生「看起来已双签」的错误结论。
 - **触发事故**：`1.5.3` 验收确认 GHCR 与 TCR 的 index 及 child digest 完全相同，但 digest 相同只能证明镜像内容一致，不能证明 TCR 能保存和回读 Cosign signature/attestation 工件。
-- **怎么验证的**：本地比较两仓 `user:1.5.3` 的 index、amd64、arm64 digest 全部一致；workflow YAML、zizmor 与 PR 三件套通过。最终兼容性结论由下一 tag 的 TCR 写入及回读结果决定。
+- **怎么验证的**：tag `1.5.4` 的 22 个 jobs 全绿；独立从 TCR 回验 `user` index 得到 1 个有效签名，amd64/arm64 的 SPDX attestation 均通过 Fulcio CA、GitHub Actions OIDC workflow identity、透明日志与 Cosign claims 验证，三个 TCR bundle 均为 Sigstore bundle v0.3。结论只覆盖本次实际 digest，不升级为腾讯云官方兼容承诺。
 
 ### 2026-08-28 GHCR keyless 签名绑定 workflow identity
 
 - **改了什么**：Cosign 3.1.3 固定版本并校验官方 checksums；tag 发布对多架构 index digest 做 keyless 签名，对 amd64/arm64 child digest 分别附加 SPDX attestation，并以 GitHub Actions OIDC issuer 与当前 workflow identity 在同一 job 回验。调用方与 reusable workflow 只增加必要的 `id-token: write`。
 - **为什么**：签名存在不等于可信，验签必须约束签发者与具体 workflow；平台 SBOM 也必须附到对应 child digest，不能把两份互异的平台内容都模糊附到 index。
 - **触发事故**：`1.5.2` 首次远端 SBOM 验收证明 OCI index 除两个平台外还包含 `unknown/unknown` provenance manifest；仅按 tag 或只对 index 附一份 SBOM，会失去平台与内容的确定关联。既有文档还要求 Cosign 版本不低于修复 legacy bundle 绕过漏洞的 3.1.3。
-- **怎么验证的**：安装脚本在 macOS ARM64 下载 Cosign 3.1.3 并通过官方 SHA256；workflow YAML、zizmor 与 PR 三件套通过。GHCR keyless 的 Fulcio identity、Rekor bundle 和 registry attachment 仍须由下一发布 tag 远端实跑验收。
+- **怎么验证的**：tag `1.5.3` 的 22 个 jobs 与 10 个签名 artifact 全绿；抽查 `user` index 签名和两个 child digest 的 SPDX attestation 均通过 Fulcio CA、透明日志与 claims 回验，证书 SAN 精确指向 `service-ci.yml@refs/tags/1.5.3`，bundle 为 Sigstore v0.3。
+
+### 2026-08-28 工作负载身份与 token 关闭纳入 structcheck
+
+- **改了什么**：`backend/structcheck` 新增工作负载身份棘轮，要求 10 个服务 dev/prod、frontend、consumer-next dev、relay/indexer 与 search reindex Job 使用预期 ServiceAccount，显式关闭 token automount 与 service links；同时检查 canonical 零信任清单包含全部 SA、恰有一份 CNP，且不引入任何 Role/RoleBinding。
+- **为什么**：业务不调用 Kubernetes API，零 RBAC 绑定和不挂 token 才是最小权限。该约束散落在裸清单、Helm library、工具 Job 与两个 frontend 中，只靠人工审阅会再次漂移。
+- **触发事故**：live 审计发现 gateway、frontend 与 10 个 API 全部使用 default SA 并挂载 3607 秒 projected token；第一轮修复后又发现 search reindex Job 虽关闭 automount，仍未指定独立 SA，而且并发开发的 consumer-next 仍使用 default SA。Helm 子 chart 因缓存 library tgz 也没有自动继承共享模板改动。
+- **怎么验证的**：`go test -count=1 ./structcheck/...`、backend build/vet/test-short、Helm lint/render 与完整 server-side dry-run 全绿；dev 集群滚动后，受管的 15 个 Deployment 均使用独立 SA 且无 `kube-api-access-*`，consumer-next 两副本也完成最小 CNP 与 SSR/ISR 验收。
 
 ### 2026-08-28 tag SBOM 按多架构 index digest 分平台生成
 
@@ -562,3 +576,15 @@ description: harness 本身（硬规则/门禁/Agent 约束）每次改动的原
 - **触发事故**：无;跟随仓库可见性变更的即时纠偏。
 - **怎么验证的**：本地清掉 GOPRIVATE 后 `go mod download github.com/lens077/control-tower`
   经默认代理成功;structcheck 复跑绿。
+
+### 2026-08-28 TODO 预算 canary 改为动态越界
+
+- **改了什么**：`verify-context-canary.sh` 的 `budget-todo` 注错不再固定追加 4000B，改为按
+  当前 `TODO.md` 大小动态追加到 96001B，保证无论真文件经过多少次瘦身都能越过 96KB 门槛。
+- **为什么**：canary 测的是「预算门禁能否拦截超限」，注错量应由门槛与当前大小决定；固定增量
+  把测试错误地绑定到了 2026-08-21 当时约 92KB 的文件体积。
+- **触发事故**：2026-08-28 Tetragon 文档 PR 的 GitHub `verify-context` 主检查通过，但元评测
+  `budget-todo` 期望 rc=1、实际 rc=0；原因是 TODO 再次瘦身后追加 4000B 仍未达到 96KB，导致
+  CI 把健康的预算门禁误判为失效并阻塞合并。
+- **怎么验证的**：本地运行 `scripts/verify-context-canary.sh`，干净沙箱保持绿色，十类注错均被
+  对应 tag 拦截；随后运行 `scripts/verify-context.sh` 复核真实仓库仍为绿色。
