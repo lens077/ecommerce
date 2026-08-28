@@ -15,9 +15,10 @@
 | 项目 | 状态 | 说明 |
 |------|------|------|
 | 容器化（Docker） | ✅ | 10 个服务的 Makefile/compose 已对齐（见下「构建与部署清单对齐」）；`make docker-deployx` 多架构构建+推送实跑通过 |
-| 本地开发 DNS（devdns） | ✅ | 2026-08-28 修好长期悬空的 `*.dev.test` 解析：DNS 落点定为**集群内** CoreDNS（`devdns` ns，Cilium 专用 `/32` 池把 LB 钉在 `192.168.3.202`），对齐 Mac 既有 splitdns 配置、Mac 侧零改动。分流：`pg→.132`、`dragonfly→.122`、其余通配 `→.121`。清单在同级仓 `../kubernetes/components/devdns/devdns.yaml`；教程与三处同步纪律见 `context/team/local-env.md`。**坑**：CoreDNS 同 zone 内 `template` 先于 `hosts` 执行，覆盖记录必须拆独立 zone 块 |
+| 本地开发 DNS（devdns） | ✅ | 2026-08-28 修好长期悬空的 `*.dev.test` 解析：DNS 落点定为**集群内** CoreDNS（`devdns` ns，Cilium 专用 `/32` 池把 LB 钉在 `192.168.3.202`），对齐 Mac 既有 splitdns 配置、Mac 侧零改动。分流：`pg→.132`、`dragonfly→.122`、其余通配 `→.121`。**2 副本分节点 + PDB**（唯一解析来源且 consumer dev 代理依赖它；删 Pod 实测零中断）。清单在同级仓 `../kubernetes/components/devdns/devdns.yaml`；教程与三处同步纪律见 `context/team/local-env.md`。**坑**：CoreDNS 同 zone 内 `template` 先于 `hosts` 执行，覆盖记录必须拆独立 zone 块 |
 | 前端 dev 代理地址订正 | ✅ | `consumer/vite.config.ts` 的默认网关从已消失的 `http://192.168.3.131:8080` 改为 `https://gateway.dev.test`（经 splitdns；业务 HTTPRoute 只挂 443，故 `changeOrigin:true` + `secure:false`），实测经 `localhost:3000/api` 取到真实商品数据 |
-| Kubernetes 编排 | 🟡 | `deploy/{dev,prod}` 已重写并过 `kubectl apply --dry-run=client`；`helm/`、`application-vpa.yml` 已有，集群级压测/弹性未验证 |
+| Kubernetes 编排 | 🟡 | 25 份 ecommerce Deployment 与 10 个 Helm 子 chart 已增加跨服务 hostname topology spread（共同 `part-of` 标签、`maxSkew=1`、`ScheduleAnyway`），structcheck 与 server dry-run 通过。live 当前仍为 node101/node102/node103=`12/4/1`，本轮未获 dev apply 授权；受控 rollout 后复核 skew，集群级压测/弹性仍未验证 |
+| dev 零信任与运行时安全 | 🟡 | 2026-08-28 已发布 15 个独立 SA/零 RBAC/token off、ServiceAccount identity CNP、cart 直连 Route 下线、三节点 Tetragon、Hubble Relay TLS 与 Vector→Victoria→vmalert 告警闭环；consumer-next SSR/ISR、Consul 10/10 deep readiness、10 API OTLP auth 已验收。Gorse 两条 Config Center version 3 更新仍等待 Casdoor 管理员登录；address BOLA 按用户决策保留。证据：`docs/reports/2026-08-28-zero-trust-runtime-security.md`；剩余权限治理、长期基线、事件完整性与 enforcement 门禁见 `docs/reports/2026-08-28-tetragon-follow-ups.md` |
 | GitOps（ArgoCD） | 🔴 | 2026-08-24 实测控制器在跑但零 Application/ApplicationSet，AppProject 仅 default；Helm 与现网名称/标签/tag 不一致，当前部署走 `backend/services/*/deploy/`，禁止直接开启 selfHeal |
 | 2026-08-19 鉴权链路改造：前端 PKCE 直连 + 网关身份头加固 | 🟡 | **起因**：前端每次启动都要先起 user 服务才有 JWT。查下来 user 服务在登录里**只是一层 40 行的 code→token 代理**（`backend/services/user/internal/data/user.go:35` 调 `GetOAuthToken` 后原样返回，不… |
 | CI/CD（GitHub Actions） | 🟡 | **2026-08-07 后端 CI 重写为「一份模板 + 矩阵分发」**：`service-ci.yml`（workflow_call 可复用模板：build/vet/test(-race)+structcheck → buildx 多架构镜像推 TCR，tag=`sha-<7位>` 不可变 +… |
@@ -144,7 +145,7 @@
 
 | 项目 | 状态 | 说明 |
 |------|------|------|
-| 公开页局部迁移 Next.js | ✅ | 2026-08-28 POC 判 go 并转正上线 dev：`frontend/apps/consumer-next`（16.3.3，App Router，standalone/arm64），匿名 server transport + `revalidate=60` ISR + 客户端个性化层；2 副本分节点 + PDB + `/healthz` 探针；HTTPRoute 在 `shop.dev.test`/`shop.apikv.com` 按 `/zh` `/en` `/_next` 分流，SPA 保持 `/` catch-all。内网与公网端到端均实测 200 + 真实数据。**架构规则**：公开 ISR 页服务端取数必须匿名，per-request Cookie transport 只用于显式 dynamic 路由。证据：`docs/reports/2026-08-28-nextjs-poc.md` |
+| 公开页局部迁移 Next.js | ✅ | 2026-08-28 POC 判 go 并转正上线 dev：`frontend/apps/consumer-next`（16.3.3，App Router，standalone/arm64），匿名 server transport + `revalidate=60` ISR + 客户端个性化层；2 副本分节点 + PDB + `/healthz` 探针；HTTPRoute 在 `shop.dev.test`/`shop.apikv.com` 按 `/zh` `/en` `/_next` 分流，SPA 保持 `/` catch-all。内网与公网端到端均实测 200 + 真实数据。**架构规则**：公开 ISR 页服务端取数必须匿名，per-request Cookie transport 只用于显式 dynamic 路由。安全基线：独立 `ecommerce-consumer-next` SA、token off、read-only root + ISR `emptyDir`、只到 gateway 的 egress CNP；两副本均验证 MISS→HIT，无 EROFS/ENOENT。证据：`docs/reports/2026-08-28-nextjs-poc.md`、`docs/reports/2026-08-28-zero-trust-runtime-security.md` |
 | 扩页（分类/首页） | ⬜ | **受阻**：后端 `ListProducts` RPC 未实现，无列表数据源；待该 RPC 落地后按报告实施序扩页 |
 | 登录态 dynamic 路由联调 | ⬜ | 匿名链路已实测；带认证 Cookie 的 dynamic 路由需真实 Casdoor 会话，待人工联调 |
 | 多 Pod 缓存一致性 | 🟡 | 已量化：各 Pod 独立 ISR 缓存，当前用短 TTL（60s）压窗口；需严格一致时升级共享 `cacheHandler`（未实测） |
@@ -280,7 +281,8 @@ P0 文档收敛当日全部完成（消息底座/搜索/缓存/事件表/库存�
 - [ ] **支付闭环**：`payment/result` 接支付状态查询 + 回调后订单状态同步（订单订阅 `OrderPaid`）
 - [ ] **库存联动**：下单同步 `Reserve`（TCC-Try），支付成功确认扣减，取消/超时 `ReleaseReserve`
 - [ ] **商品服务 ListProducts（设计已定，见 `docs/design/product/listing.md`）**：首页无限滚动 + 游标(keyset)分页，无总数；`ProductCard` 含 brand/价格区间(min~max)。落地：`product.proto`→`make api`→`query.sql`→`make sqlc`→biz/data/service 样板→前端 `useInfiniteQuery` 接首页
-- [ ] **推荐链路收尾**：~~建表~~ / ~~修 gorse 部署~~ / ~~product item 同步实测~~ 已完成；只差把 product/behavior Bootstrap 的 `recommend:` 段写入 Config Center（`{service}/dev/bootstrap.yaml`；Consul KV 已退役）→ 起服务端到端验证 Track/Recommend/SimilarItems → 删掉 gorse 里的 `smoke-a/b/c`
+- [ ] **推荐链路收尾**：~~建表~~ / ~~修 gorse 部署~~ / ~~product item 同步实测~~ 已完成；product/behavior dev `bootstrap.yaml` 已有 `recommend`（均为 version 3），只差 Casdoor 管理员登录后把 product endpoint 改为 `https://gorse.apikv.com`、为两者写入 node2 当前 Gorse key，再重启并端到端验证 Track/Recommend/SimilarItems。machine token 只有 Get/Watch，不得绕过 Config Center 直写数据库。当前 product 对退役 endpoint 的重试由 `EcommerceNetworkPolicyDeniedBurst` 如实告警。
+- [ ] **安全 · 轮换 Config Center 预览中暴露的搜索凭据**：2026-08-28 一次跨行正则预览越过目标段，既有凭据进入会话工具日志；临时文件已删、仓库未落值，但日志不可撤回，应按已暴露处理。管理窗口内同步轮换 Elasticsearch 与 Config Center，滚动受影响消费者并验收旧凭据失效；固定手顺见 `context/project/ecommerce/config/experience/config-preview-allowlist.md`。
 - [ ] **consumer 接入 tracker**：`tsconfig.json` 加 `@ecommerce/tracker` paths、`package.json` 加 `workspace:*` 依赖、入口 `initTracker({gatewayUrl})`、商品卡挂 `useImpression`、详情页挂 `useProductView`、加购/收藏/支付成功处补 `tracker().cart/favorite/purchase`
 - [ ] **领域事件**：目标主干按 `docs/TECH.md` 为 Outbox → Kafka（存量 outbox→NATS 链迁移期维护）；落地 `OrderCreated/OrderPaid/OrderCancelled/OrderReadyForFulfillment`——按 TECH.md §3 混合协同：Order 内 Saga 编排器驱动强一致主流程，事件编舞驱动副作用；Protobuf envelope（event_id/aggregate_id/tenant_id/trace_id/schema_version/occurred_at）
 - [ ] **事件 E0 容量与拓扑**：为每个 Kafka topic 声明 owner、partition（key=`aggregate_id`）、replication、retention、最长积压和恢复 SLO；用真实 payload 压测吞吐、磁盘和成本（存量 NATS stream 迁移期同口径）
