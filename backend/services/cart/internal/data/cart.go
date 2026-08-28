@@ -11,6 +11,7 @@ import (
 	"github.com/lens077/ecommerce/backend/services/cart/internal/pkg/money"
 
 	"context"
+	"fmt"
 
 	"go.uber.org/zap"
 )
@@ -91,7 +92,10 @@ func (c cartRepo) GetCart(ctx context.Context, req biz.GetCartRequest) (*biz.Get
 	var items []*biz.CartItem
 
 	for _, row := range rows {
-		price, _ := money.NumericToFloat(row.Price)
+		unitPriceCents, err := money.NumericToCents(row.Price)
+		if err != nil {
+			return nil, fmt.Errorf("convert cart item %d price to cents: %w", row.ID, err)
+		}
 
 		// 每次请求都读当前配置:改完对象存储域名下一个请求就用新的,不必重启
 		skuThumbnailUrl := pkg.FormatObjectURL(string(constants.BucketEcommerce), row.SkuThumbnailUrl, c.live.Get().GetStore())
@@ -106,7 +110,7 @@ func (c cartRepo) GetCart(ctx context.Context, req biz.GetCartRequest) (*biz.Get
 			Selected:        row.Selected,
 			SpuName:         row.SpuName,
 			SkuName:         row.SkuName,
-			Price:           price,
+			UnitPriceCents:  unitPriceCents,
 			SkuAttributes:   row.SkuAttributes,
 			SkuThumbnailUrl: skuThumbnailUrl,
 			Status:          statusEnum,
@@ -122,7 +126,7 @@ func (c cartRepo) GetCart(ctx context.Context, req biz.GetCartRequest) (*biz.Get
 }
 
 func (c cartRepo) AddProductToCart(ctx context.Context, req biz.AddProductToCartRequest) (*biz.AddProductToCartResponse, error) {
-	price, err := money.Float64ToNumeric(req.Price)
+	price, err := money.CentsToNumeric(req.UnitPriceCents)
 	if err != nil {
 		return nil, err
 	}

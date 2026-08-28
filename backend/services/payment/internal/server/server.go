@@ -11,6 +11,7 @@ import (
 	"connectrpc.com/validate"
 	"github.com/lens077/ecommerce/backend/api/payment/v1/paymentv1connect"
 	"github.com/lens077/ecommerce/backend/constants"
+	"github.com/lens077/ecommerce/backend/pkg/healthcheck"
 	conf "github.com/lens077/ecommerce/backend/services/payment/internal/conf/v1"
 	"github.com/lens077/ecommerce/backend/services/payment/internal/data"
 	"github.com/rs/cors"
@@ -47,6 +48,12 @@ func NewHTTPServer(
 		combinedOptions...,
 	)
 	mux.Handle(paymentv1connectPath, paymentv1connectHandler)
+
+	healthPath, healthHandler := healthcheck.NewGRPCHandler(
+		func(ctx context.Context) bool { return healthStatus(ctx, deps).Healthy },
+		paymentv1connect.PaymentServiceName,
+	)
+	mux.Handle(healthPath, healthHandler)
 
 	// 应用本身的健康检查
 	mux.HandleFunc("/healthz", func(w http.ResponseWriter, r *http.Request) {

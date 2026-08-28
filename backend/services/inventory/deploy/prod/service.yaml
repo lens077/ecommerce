@@ -4,11 +4,11 @@ metadata:
   name: ecommerce-inventory-service
   namespace: ecommerce
 spec:
-  externalTrafficPolicy: Local
   selector:
     app: ecommerce-inventory
   ports:
     - protocol: TCP
       port: 30005
       targetPort: 30005
-  type: LoadBalancer
+  # 业务入口统一走共享 Gateway，不再占用 LB IP、L2 Lease 与 NodePort。
+  type: ClusterIP

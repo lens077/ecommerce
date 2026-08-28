@@ -1,39 +1,40 @@
 # Ecommerce — Go 微服务电商
 
-[![License: CC BY-NC-SA 4.0](https://img.shields.io/badge/License-CC%20BY--NC--SA%204.0-blue.svg)](LICENSE) ![Go](https://img.shields.io/badge/Go-1.26-00ADD8?logo=go&logoColor=white) ![React](https://img.shields.io/badge/React-19-61DAFB?logo=react&logoColor=black) ![TypeScript](https://img.shields.io/badge/TypeScript-5.9-3178C6?logo=typescript&logoColor=white) ![Kubernetes](https://img.shields.io/badge/Kubernetes-GitOps-326CE5?logo=kubernetes&logoColor=white) ![PRs Welcome](https://img.shields.io/badge/PRs-welcome-brightgreen.svg)
+[![License: CC BY-NC-SA 4.0](https://img.shields.io/badge/License-CC%20BY--NC--SA%204.0-blue.svg)](LICENSE) ![Go](https://img.shields.io/badge/Go-1.26-00ADD8?logo=go&logoColor=white) ![React](https://img.shields.io/badge/React-19-61DAFB?logo=react&logoColor=black) ![TypeScript](https://img.shields.io/badge/TypeScript-7.0-3178C6?logo=typescript&logoColor=white) ![Kubernetes](https://img.shields.io/badge/Kubernetes-Cilium%20Gateway%20API-326CE5?logo=kubernetes&logoColor=white) ![PRs Welcome](https://img.shields.io/badge/PRs-welcome-brightgreen.svg)
 
-Golang + React 的中大型电商实践项目：10 个后端微服务 + 自建网关 + pnpm monorepo 前端，
-RBAC 三角色（消费者 / 商家 / 管理员），全链路云原生部署与可观测性。
+Golang + React 的 B2B2C 多商家电商实践项目：10 个后端微服务、control-tower 平台控制面与 pnpm monorepo 前端。消费者端已有部分业务，商家端和管理端仍以骨架为主；当前没有独立物流端或仓储端，也没有百万/千万级容量验收结论。
 
 本项目的组成使用(或部分使用)了本人其他的仓库：
 
-1. 网关: https://github.com/lens077/ecommerce-gateway （本仓 `gateway/` 经 git subtree 同步）
+1. 网关与配置控制面: https://github.com/lens077/control-tower （同级仓，gateway/config 已切流）
 2. 云原生基础设施部署: https://github.com/lens077/cloud-native-deploy
 3. 微服务开发脚手架: https://github.com/lens077/go-connect-template-cli
 4. 微服务项目模板: https://github.com/lens077/go-connect-template
-5. 配置中心: https://github.com/lens077/config-center —— **已从本仓拆出，作为基础设施而非业务微服务**
 
 ## 技术栈
 
 | 领域 | 选型 |
 |---|---|
-| 后端 | Golang、connect-go（兼容 gRPC）、Protobuf/Buf、sqlc、uber/fx、casdoor |
-| 前端 | React、TypeScript、Connect-Web、pnpm workspace、vite-plus（vp）、Tauri（桌面壳） |
-| 网关 | 基于 go-kratos/gateway 二次开发：集中鉴权（Casdoor + Casbin RBAC）、路由守卫、服务发现 |
-| 数据 | PostgreSQL、Redis、Elasticsearch（搜索）、MinIO（对象存储） |
-| 消息 | Kafka（规划中，当前事件走进程内 EventBus） |
-| 注册/配置 | Consul（仅服务注册发现）、[config-center](https://github.com/lens077/config-center)（独立配置控制面，业务服务的必需启动依赖） |
-| 编排/交付 | Docker、Kubernetes、Helm、GitHub Actions、Argo CD（GitOps） |
-| 可观测性 | OpenTelemetry、VictoriaMetrics、Loki、Jaeger、Grafana、fluent-bit |
+| 后端 | Go、ConnectRPC Go、Protobuf/Buf、Protovalidate、Fx、pgx、sqlc、goose、OpenTelemetry |
+| 前端 | React、TypeScript、ConnectRPC/Protobuf-ES、pnpm workspace、vite-plus（vp）、Tauri |
+| 网关/配置 | [control-tower](https://github.com/lens077/control-tower)：BFF session + legacy JWT、Casbin RBAC、Connect 直通、Config Center；默认无重试、无 BBR/熔断/HTTP/3 |
+| 数据 | node3 Pigsty PostgreSQL、Dragonfly（业务可丢缓存 + BFF session）、Meilisearch、Silo S3-compatible；CNPG 休眠，SeaweedFS 尚待迁移 |
+| 事件 | PostgreSQL outbox + relay + NATS JetStream + search indexer；当前优先补 NATS R3、Inbox、NACK/DLQ、重放与容量/恢复证据，分析 CDC 仅在真实需求成立后评估 |
+| 注册/配置 | Consul 仅做注册发现并待迁 K8s Service DNS；Config Center 是 10 个服务唯一 Bootstrap 来源 |
+| 边缘/安全 | Cilium CNI/KPR/LB/Gateway API、cert-manager、ESO + Vault；业务服务的默认拒绝 NetworkPolicy 和 east-west 身份仍不完整 |
+| 制品/交付 | Docker Buildx、TCR + GHCR 镜像、Harbor Helm OCI helper、Kubernetes manifest、Helm、GitHub Actions；ArgoCD 当前断线 |
+| 可观测性 | OpenTelemetry、Vector、VictoriaMetrics/Logs/Traces、Grafana、vmalert、Alertmanager；外部告警通知仍未闭环 |
+| 工程工具 | vite-plus、oxlint/oxfmt、Vitest/Playwright、Buf breaking、structcheck、verify-context/canary、commitlint |
 
 架构要点（详见 [`docs/design/`](docs/design/README.md) 与 [`STACK.md`](STACK.md)）：
 
 - **API 契约先行**：google protobuf 定义前后端交互，`@bufbuild/buf` 生成代码，每个字段带 `buf.validate` 约束
-- **后端分层**参考 go-kratos：biz（领域结构体）→ data（DB/MQ/ES 等中间件）→ service（proto 转换）→ server（fx 装配与注册发现）
-- **通用能力下沉网关**：身份验证、授权、路由守卫集中在网关层，微服务不重复集成
-- **配置源与业务配置分离**：服务先读一份很小的本地选择器（`config_center`，`file` 仅限本地单测），再据此取完整业务 `Bootstrap`——这层间接是为了避开「配置中心的配置存在配置中心里」的自举环
-- **CI/CD**：GitHub Actions 构建推送镜像并更新清单仓库版本号，Argo CD 监听清单仓库变更完成部署
-- **可观测性**：fluent-bit 采日志，应用经 OTel SDK 发指标与链路；前端由 `@ecommerce/perf` 采 Web Vitals/长任务/接口耗时，经网关 `telemetry.v1` 转成 OTel histogram，与后端汇入同一套 VictoriaMetrics / Loki
+- **后端分层**参考 go-kratos：biz（领域结构体）→ data（DB/cache/search/event/object）→ service（proto 转换）→ server（fx 装配与注册发现）
+- **入口能力集中**：BFF session/JWT、Casbin 授权、路由、超时与可信身份头由 control-tower gateway 处理；服务仍负责数据归属与领域权限
+- **配置源与业务配置分离**：服务先读一份很小的 selector，再从 Config Center 取完整 `Bootstrap`；不存在 Consul KV 回退
+- **交付实况**：GitHub Actions 按 semver tag 构建并双推 TCR/GHCR，再回写 Helm tag；ArgoCD 当前没有 Application，部署仍走 `backend/services/*/deploy/`
+- **可观测性**：Vector 采容器日志，应用经 OTel SDK 输出三支柱；node3 的 VictoriaMetrics/Logs/Traces 与 Grafana 汇总查询
+- **容量边界**：规模必须以固定数据集、k6 脚本、资源配额、延迟/错误率结果和故障恢复证据验收，当前未建立百万/千万级承诺
 
 ## 仓库结构
 
@@ -41,14 +42,15 @@ RBAC 三角色（消费者 / 商家 / 管理员），全链路云原生部署与
 |---|---|
 | `backend/` | 10 个微服务（user / product / cart / order / payment / inventory / search / address / merchant / behavior），`api/` 放 proto 契约，`structcheck/` 是结构性 CI 门禁 |
 | `frontend/` | pnpm monorepo：4 app（consumer / merchant / admin / desktop）+ 9 共享包，见 [`frontend/README.md`](frontend/README.md) |
-| `gateway/` | 自建 API 网关（subtree 同步到独立仓），文档导航见 [`gateway/README.md`](gateway/README.md) |
 | `context/` | AI/团队三层知识库（团队级 / 框架级 / 服务级），入口 [`context/INDEX.md`](context/INDEX.md) |
-| `helm/`、`argocd-*.yml` | 部署清单与 GitOps 配置 |
+| `helm/`、`argocd-*.yml` | 待修复的 Helm/GitOps 描述；当前部署实况以各服务 `deploy/` 为准 |
 | `docs/` | 架构与领域设计（`docs/design/`，按微服务分目录）、可观测性方法论与看板脚本（`docs/observability/`）、agents 配置（`docs/agents/`）、历史评审归档（`docs/reviews/`） |
-| `.freeze/`、`scripts/` | 冻结验收集机制（改验收测试必须走审批），见 [`.freeze/README.md`](.freeze/README.md) |
+| `scripts/` | 验收锚点与门禁脚本（verify-quick / verify-context + canary / lint-baseline / harness-scars） |
 | `.scratch/` | 进行中的 spec / issue（本地 markdown 工作流） |
 
-> 配置中心代码已整体迁出至独立仓库，原 `backend/services/config/` 目录已删除。
+> 网关与配置中心均由同级仓 control-tower 承载：本仓旧 `gateway/` 目录 2026-08-24 已删
+> （历史在 tag `backup/pre-control-tower-20260823`），原 `backend/services/config/` 目录已删除。
+> `.freeze/` 冻结验收集机制已于 2026-08-24 整套移除（恒绿假门禁，见 evolution-log）。
 
 ## 文档导航
 
@@ -56,30 +58,30 @@ RBAC 三角色（消费者 / 商家 / 管理员），全链路云原生部署与
 |---|---|
 | [`AGENTS.md`](AGENTS.md) | AI 协作入口：硬规则 + 验收锚点命令（**改代码前先读**） |
 | [`docs/design/`](docs/design/README.md) | 架构与领域设计真相源：按微服务分目录（platform/product/order/…），含拆分与删章记录 |
+| [`production-scale-goal.md`](docs/design/platform/production-scale-goal.md) | 百万/千万级生产化目标、现有技术栈边界、证据门禁、分阶段路线和完成定义 |
 | [`STACK.md`](STACK.md) | 技术栈与工程约束：版本锁定、分层铁律、proto/sqlc 规则（真相源） |
 | [`.service-matrix.yaml`](.service-matrix.yaml) | 服务拓扑事实表：注册名、网关前缀、依赖、Config Center 键（CI 强制对齐） |
 | [`TODO.md`](TODO.md) | 实现进度真相源（当前实况以它为准） |
 | [`docs/PRIORITY.md`](docs/PRIORITY.md) | 待办优先级排序（P0→P7，按最终目标）：**不是进度真相源**，只回答「先做哪个」，冲突以 `TODO.md` 为准 |
-| [`docs/TECH-RADAR.md`](docs/TECH-RADAR.md) | CNCF Landscape 选型评估（2026-08-20 全量筛查，排除 Java）：逐项编号待议，✅ 采纳后落 `STACK.md`/`TODO.md`/`DEVOPS.md`，本文件只留结论 |
+| [`docs/TECH-RADAR.md`](docs/TECH-RADAR.md) | CNCF Landscape 选型评估；新增基础设施必须由量化需求、容量或故障证据触发 |
 | [`PRODUCT.md`](PRODUCT.md) / [`DESIGN.md`](DESIGN.md) | 产品定义与「灯市」视觉设计系统（配色/字体/间距 token），前端设计工作流（impeccable）的真相源——与已拆分的旧架构 DESIGN.md 同名不同物 |
 | [`docs/DEVOPS.md`](docs/DEVOPS.md) / [`observability/OBSERVABILITY.md`](docs/observability/OBSERVABILITY.md) | DevOps 与可观测性的**目标态**设计 |
 | [`docs/design/merchant/store-settings.md`](docs/design/merchant/store-settings.md) | Shopline 商店设置竞品调研；取舍与商家 MVP 路线见同目录 [`roadmap.md`](docs/design/merchant/roadmap.md) |
-| [`docs/design/config-center/design.md`](docs/design/config-center/design.md) | 配置中心设计存档（代码已迁出） |
+| 网关与配置面设计 | 已随代码迁至同级仓 control-tower（`../control-tower/docs/design/`），本仓不再保留副本 |
 | [`docs/SCAFFOLD.md`](docs/SCAFFOLD.md) | 换领域复用本仓工程体系的新项目生成规范 |
 | [`context/harness-framework/graph-engineering.md`](context/harness-framework/graph-engineering.md) | 多闭环 AI 工作流方法论（冻结节点 + 锚点命令） |
 
 ## 先决条件
 
-1. Go >= 1.26（`backend/go.mod` 与 `gateway/go.mod` 当前同为 1.26.5）
+1. Go >= 1.26（`backend/go.mod` 当前 1.26.5；网关在同级仓 control-tower）
 2. 前端：Node.js >= 22、pnpm 11
-3. 数据库：PostgreSQL 18（生产 18.4，测试容器同版对齐，见 `docs/TESTING.md`）；缓存：Redis >= 6
-4. 注册/发现：Consul
+3. 数据库：PostgreSQL 18（当前主库由 node3 Pigsty 承载）；Dragonfly 用于业务可丢缓存和 control-tower BFF session。领域锁、幂等键与库存真相必须锚定 PostgreSQL
+4. 注册/发现：Consul（**定稿退役 → K8s Service DNS**，四步迁移见 TODO；迁移完成前运行仍需）
 
-配置中心（[config-center](https://github.com/lens077/config-center)）是 10 个业务服务的
-**必需启动依赖**。Consul 只负责服务注册发现，不再存储 Bootstrap。
+配置中心（同级仓 [control-tower](https://github.com/lens077/control-tower) 的 config 服务）是
+10 个业务服务的**必需启动依赖**。Consul 只负责服务注册发现，不再存储 Bootstrap。
 
-如果想体验完整项目（K8s 部署 + 可观测性），还需：Docker、Kubernetes、ArgoCD、cert-manager、
-OpenTelemetry Collector、VictoriaMetrics、Grafana、Loki、Jaeger、fluent-bit。
+如果要体验完整环境，还需 Docker、Kubernetes、Cilium Gateway API、cert-manager、ESO/Vault，以及外置的 OpenTelemetry Collector、VictoriaMetrics、VictoriaLogs、VictoriaTraces、Vector、Grafana、vmalert 与 Alertmanager。ArgoCD 虽已安装，但当前没有 Application，不能作为部署前提。
 
 ## 运行
 
@@ -91,7 +93,7 @@ docker compose -f backend/infrastructure/redis/compose.yaml up -d
 docker compose -f backend/infrastructure/consul/compose.yaml up -d
 ```
 
-基础设施地址（PG/Redis/ES 的 host 等）配置在 Config Center，不在仓库 yaml——
+基础设施地址（PG、Dragonfly、Meilisearch、NATS、Kafka、对象存储等）配置在 Config Center，不在仓库 YAML——
 要指向自己的中间件时改 Config Center 里对应服务的 Bootstrap 即可。
 
 启动后端微服务（一把拉起全部服务可用 `backend/compose.yaml`）：
@@ -105,52 +107,31 @@ make dev        # 读取被 gitignore 的 configs/source.dev.yaml，再从 Confi
 `config_center`。selector 缺失、token 无效或远端 key 不存在时直接启动失败，不回退到
 Consul KV。本地单测可显式使用 `CONFIG_SOURCE=file`。
 >
-> 依赖升级用 `go get github.com/lens077/config-center@v0.x.y` —— **`go mod tidy` 只增删不升级**，
-> 版本仍是 `go.mod` 里钉住的那个。
+> 配置 SDK 随 control-tower module 发布。升级使用 `go get github.com/lens077/control-tower@v0.x.y`；
+> **`go mod tidy` 只增删依赖，不会主动升级已钉版本。**
 
 ### 配置中心（必需基础设施）
 
-[config-center](https://github.com/lens077/config-center) 已从本仓拆为独立仓库，
-按基础设施而不是业务微服务对待 —— 它不属于电商领域，而是所有服务的配置控制面
-（同时带自己的 Web 控制台，原 `frontend/apps/config` 已随之迁出本仓）。
+配置中心现由同级仓 [control-tower](https://github.com/lens077/control-tower) 的 `services/config` 承载；旧独立 config-center 仓已退役。集群 namespace 与 Deployment 仍保留 `config-center` 名称，但镜像已经是 `control-tower-config` / `control-tower-config-web`。
 
 ```bash
-cd ../config-center
-cp configs/config.yaml.example configs/config.yaml   # 该文件已 gitignore，密码/证书走本地挂载
-CONFIG_FILE=configs/config.yaml make dev             # 监听 :30010
+cd ../control-tower
+scripts/dev-local.sh config   # 从集群 Secret 生成 0600 临时配置，退出即删除
+make verify                   # build + buf lint + go vet + test -race
 ```
 
-它在 Consul 注册为 `config-service` 供网关发现，但**从不从 Consul 读自己的 bootstrap** ——
-把自身配置放进它自己会形成启动死锁，所以只能从本地文件自举。
-
-历史上的 Consul KV → Config Center 配置迁移由 `backend/tools/config-seed` 完成
-（输入为 consul kv export JSON），迁移已于 2026-08-08 收尾、KV 条目已删除，工具留档备用。
+config 服务必须从本地文件或 Kubernetes Secret 自举，不能把自己的唯一启动配置放进自己。历史 Consul KV 已删除；`backend/tools/config-seed` 只保留为迁移/审计工具。
 
 ### 网关
 
-```shell
-OWNER=OWNER \
-CASDOOR_URL=https://CASDOOR_URL \
-DISCOVERY_DSN=consul://<consul-addr> \
-DISCOVERY_CONFIG_PATH=<consul-service-config-file> \
-POLICIES_FILE_PATH=./configs/policies/policies.csv \
-MODEL_FILE_PATH=./configs/policies/model.conf \
-USE_TLS=false \
-USE_HTTP3=false \
-HTTP_PORT=8080 \
-go run cmd/gateway/main.go
-```
-
-验证（直连后端 / 经网关，鉴权路由需带 `Authorization: Bearer <token>`）：
+网关代码也在 `../control-tower`。本地 gateway 使用 file resolver 和端口转发，避免 Consul 返回 Mac 无法路由的 Pod IP：
 
 ```bash
-curl -v -X POST http://localhost:4000/greet.v1.GreetService/SubmitAuth \
-  --header 'Content-Type: application/json' --data-raw '{}'
-
-curl -v -X POST http://localhost:8080/user.v1.UserService/UserProfile \
-  --header 'Content-Type: application/json' \
-  --header 'Authorization: Bearer <access-token>' --data-raw '{}'
+cd ../control-tower
+scripts/dev-local.sh gateway
 ```
+
+Web 登录经 `/auth/login → Casdoor → /auth/callback` 建立 httpOnly cookie session；Tauri 使用 session header；legacy 客户端迁移期仍可使用 bearer JWT。后端验证应优先经过 gateway，直连只用于明确的内部调试，不能用来证明生产安全边界。
 
 ### 前端
 
@@ -159,10 +140,10 @@ curl -v -X POST http://localhost:8080/user.v1.UserService/UserProfile \
 
 | app        | 端口 | 说明                                     | 启动                |
 | ---------- | ---- | ---------------------------------------- | ------------------- |
-| `consumer` | 3000 | 消费者端：商品、购物车、下单、地址、订单 | `pnpm dev`          |
-| `merchant` | 3002 | 商家端：店铺、商品、订单、报表           | `pnpm dev:merchant` |
-| `admin`    | 3003 | 管理端：用户、商家、品类、报表           | `vp run admin#dev`  |
-| `desktop`  | —    | Tauri 壳，套在上面三个之一外面           | `pnpm desktop`      |
+| `consumer` | 3000 | 商品/购物车/地址部分可用；下单/支付/库存闭环未完成 | `pnpm dev` |
+| `merchant` | 3002 | 商家端路由与登录壳，业务 API 接线很少 | `pnpm dev:merchant` |
+| `admin` | 3003 | 管理端路由与登录壳，业务 API 接线很少 | `vp run admin#dev` |
+| `desktop` | — | Tauri 2 壳，可套 consumer 或 merchant | `pnpm desktop` / `pnpm desktop:merchant` |
 
 共享包：`api`（Connect 传输层与拦截器）、`configs`、`constants`、`i18n`、
 `perf`（Web Vitals 性能监控）、`tauri`（桌面端胶水）、`tracker`（行为埋点）、`ui`、`utils`。
@@ -176,7 +157,7 @@ pnpm ready    # vp fmt && vp lint && vp run -r test && vp run -r build，提 PR 
 
 工具链说明：vite-plus（`vp`）一个包同时提供 dev server、构建、测试(vitest)、lint(oxlint)、
 格式化(oxfmt)、任务运行器和 git 钩子，所以没有 husky / biome / eslint / prettier；
-提交信息由仓库根的 commitlint 校验。
+提交信息由 frontend workspace 的 commitlint 校验，配置在 `frontend/commitlint.config.mjs`。
 
 ## 效果截图
 
@@ -197,26 +178,21 @@ pnpm ready    # vp fmt && vp lint && vp run -r test && vp run -r build，提 PR 
 
 - **提交规范**：Conventional Commits + 可选 gitmoji，commitlint + vite-plus 钩子强制；
   提交前按改动类型更新对应真相源（进度 → `TODO.md`）。见 `context/team/git-commit.md`
-- **提交前验收锚点**（详见 [`AGENTS.md`](AGENTS.md)）：
-  `go build/vet`、`go test ./structcheck/...`、`go test -short ./...`、`pnpm ready`、
-  `scripts/verify-freeze.sh --all`
-- **网关 subtree 推送**：`git subtree push --prefix=gateway gateway main`；
-  同步到主仓库：`git push main main`
+- **提交前验收锚点**（详见 [`AGENTS.md`](AGENTS.md)）：默认先跑 `scripts/verify-quick.sh`；修改服务矩阵再跑 `cd backend && go test -count=1 ./structcheck/...`；修改 context、设计索引或 STACK 再跑 `scripts/verify-context.sh`
+- **跨仓变更**：网关/config 代码在 `../control-tower` 独立提交；路由模板与本仓 structcheck 契约必须同版本升级
 
 ## 贡献
 
 欢迎通过 issue 反馈问题、通过 Pull Request 参与改进。
 
 - **动手前先读 [`AGENTS.md`](AGENTS.md)**：硬规则 + 验收锚点，是本仓协作的地基。
-- **改动流程**：fork → 建分支 → 修改 → 本地跑通验收锚点 → 提 PR：
-  `go build ./... && go vet ./...`、`go test ./structcheck/...`、`go test -short ./...`、
-  `pnpm ready`、`scripts/verify-freeze.sh --all`。
+- **改动流程**：fork → 建分支 → 修改 → 按改动类型跑通 `AGENTS.md` 的验收锚点 → 提 PR；默认入口是 `scripts/verify-quick.sh`。
 - **改动前查真相源，别凭记忆**：技术栈与分层约束看 [`STACK.md`](STACK.md)、服务拓扑看
   [`.service-matrix.yaml`](.service-matrix.yaml)、架构设计看 [`docs/design/`](docs/design/README.md)；
   按改动类型更新对应真相源（进度 → `TODO.md`，拓扑 → matrix，设计 → `docs/design/`）。
 - **提交信息**：遵循 Conventional Commits，gitmoji 可选但带了就必须与 type 相符，
   由 commitlint 强制（细则见 `context/team/git-commit.md`）。
-- **改动测试验收集需走审批**：`.freeze/` 冻结机制会拦截未刷新清单的测试改动。
+- **文档与门禁变更**：修改 `context/`、`docs/design/README.md`、`STACK.md` 或门禁脚本后，运行 `scripts/verify-context.sh`；修改门禁本身再运行 canary。
 
 ## 许可
 

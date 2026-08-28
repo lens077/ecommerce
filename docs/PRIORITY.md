@@ -97,7 +97,7 @@
 - [x] ~~**配置与依赖收尾**~~ — Config Center dev、配置契约和依赖已切换到 Meilisearch，`go-elasticsearch/v9` 已移除。<sub>TODO「搜索引擎切换 Meilisearch」</sub>
 - [ ] **`frontend.yml` 构建/发布段全是死引用，跑起来必失败** — `frontend/Dockerfile` 不存在、`helm/charts/frontend/` 不存在、registry 指向未部署的 harbor 端口、Manifest 路径是另一个项目的布局。前端目前是手工 `kubectl apply`。**要么按现状重写，要么删掉只留 smoke job，别让它假装还在工作。**<sub>TODO L275</sub>
 - [ ] **网关部署补 `redis-tls-ca` Secret** — 已挂载但标 `optional: true`，缺了只退化成仅进程内缓存（不阻断启动，因此容易一直没人发现）。<sub>TODO L282</sub>
-- [x] ~~**[另一仓] CDC 写入端 ES→Meilisearch**~~ — Kafka/Debezium 管道已退役；替代写入端位于本仓 `backend/pkg/searchindex`。dev 集群已部署 JetStream、relay 和 indexer，并完成回灌；Product Service 事务内 outbox 接线仍单独待办。<sub>TODO「③NATS JetStream 落地」</sub>
+- [x] ~~**[另一仓] 旧 CDC 写入端 ES→Meilisearch**~~ — 当时随旧 Kafka 管道退役；新 Kafka 目标不直接复活旧实现。当前 NATS relay/indexer 保留到 Kafka shadow index 验收，Product Service 事务内 outbox 仍待接。<sub>目标见 `production-scale-goal.md` K0–K6</sub>
 
 **同层级已完成**
 
@@ -123,8 +123,8 @@
 - [ ] **consumer 订单页接真实查询 API** — 替换 mock。<sub>TODO L347</sub>
 - [ ] **支付闭环** — `payment/result` 接支付状态查询 + 回调后订单状态同步（订单订阅 `OrderPaid`）。<sub>TODO L348</sub>
 - [ ] **payment repo 主体恢复** — 5 个 RPC 目前均为显式 `Unimplemented` 桩（**这是本仓的正确示范**，不是缺陷）。原实现依赖已移除的 balance/consumerOrder client；另需支付宝真实凭据（`pay.alipay.*` 现为空占位）。<sub>TODO L56</sub>
-- [ ] **一致性底座** — 落 Outbox 表 + Kafka relay，替换进程内 `GoEventBus`（**跨服务事件当前到不了其他服务**）。<sub>TODO L340</sub>
-- [ ] **领域事件** — `OrderCreated/OrderPaid/OrderCancelled` 事件驱动（编舞 Saga）。<sub>TODO L354</sub>
+- [ ] **一致性底座** — broker-neutral Outbox/Inbox + Kafka relay，替换进程内 `GoEventBus`；当前 NATS 搜索链只作迁移基线。禁止事务内双写两个 broker。<sub>TODO「Kafka K0–K6」</sub>
+- [ ] **领域事件** — Kafka 承载 `OrderCreated/OrderPaid/OrderCancelled/OrderReadyForFulfillment` 编舞 Saga，消费者使用 Inbox 幂等。<sub>TODO「Kafka K4」</sub>
 - [ ] **编舞 Saga 四项治理**（必须随事件驱动一起落，否则流程失控）：幂等消费 / 显式补偿事件 / 状态即真相 / 超时兜底 job / 全链路 trace_id。方案本体见 `docs/design/order/consistency.md`。<sub>TODO L184-188</sub>
 - [ ] **订单缺陷修复** — 金额改 `decimal`（现为 `float64`）、修 `AddressPostalCode` 空指针、统一 `merchant_id` 类型(UUID)、`Complete()` 应要求已发货。<sub>TODO L355</sub>
 - [ ] **搜索读的字段与设计的 ES mapping 不兼容** — 实现读 `id`/`skus[].price`，设计写 `spu_id`/顶层 `price`。**按设计建索引则结果全为零值**。待决策改哪边（注意：Meilisearch 迁移会重新洗一遍这个问题，宜合并处理）。<sub>TODO L315</sub>
@@ -142,9 +142,9 @@
 
 > 判据：**不修会让已有成果慢慢退化**，且有明确到期日的排在前面。
 
-- [ ] **告警链路已断（静默失败）** — PrometheusAlert 转换层随 192.168.3.210 停机消失，实测 8080/9059/3000 全不可达。集群里只有 Grafana，**没有 alertmanager / prometheusalert**。飞书告警此刻发不出去，且 Grafana 侧只在 UI 留错误。<sub>TODO L438</sub>
+- [x] **authenticated ntfy 告警链已恢复** — node3 vmalert/Alertmanager bridge、Gatus、Healthchecks、Bugsink 和证书 timer 均已接入私有 ntfy；firing/resolved 与真实 failure/recovery 已实测。企业微信仍按下一条单独跟踪。
 - [ ] **接入企业微信告警** — 拓扑与落点已探明（2026-08-19），只差凭据三件套 + 集群 Grafana admin 密码。⚠️ 必须配「企业可信IP」`171.105.164.78`，不配则报错**只在 Alertmanager 日志里、界面无感知**；且这是家宽出口 IP **会漂**。验收不能只测"发得出去"，要造 CRIT/WARN 各一条验证路由条件。<sub>TODO L412</sub>
-- [ ] **证书续期是三处同步，且 node1 续期链路缺位** — `*.apikv.com`（ZeroSSL）**2026-10-27 到期**，部署在 blog ssl / pangolin traefik certs / node2 minio certs。**前两处过期会让所有 Pangolin 资源挂**（blog/config/casdoor/minio/gorse 全部）。<sub>TODO L448</sub>
+- [x] **ZeroSSL 自动续期与跨节点分发** — 新证书 2026-11-25 到期；node1 timer 通过 DNSPod DNS-01 续期，并向 node1 Traefik/blog/Redis 与 node2 Silo/Harbor 原子分发、reload、严格验指纹、失败回滚和 ntfy 通知。
 - [ ] **生产风险：系统 CA 被挂载遮蔽** — 10 个服务把 `db-ca-cert` 挂到 `/etc/ssl/certs`，**这会替换整个目录**，发行版 CA 完全不可见 → 容器内任何走公网 HTTPS 的出站调用都会 `x509: unknown authority`。最可疑的是 `payment → 支付宝`、`user → Casdoor`。**正确修法不是加环境变量**，而是 `subPath` 只挂单文件或挂到 `/usr/local/share/ca-certificates/`。<sub>TODO L32</sub>
 - [ ] **公网明文端点：casdoor `apikv.com:8000`** — 承载 OAuth code/token 交换，走公网 http。node2 的 minio/gorse 已解决，只剩这个。<sub>TODO L404</sub>
 - [ ] **前端没进 GitOps（用户明确暂缓）** — 7 份 manifest 手工 apply，且**和线上对不上**：manifest 写 harbor 镜像，线上实际跑 TCR 的手打 tag。基础设施稳定后再收口。<sub>TODO L411</sub>
@@ -154,8 +154,8 @@
 - [ ] **12 条基础设施 HTTPRoute 从 http listener 迁到 https** — 一行改动一批，收益最大；泛域名证书已覆盖，无需新签。验收以**实测**为准：改前 https 返 404、改后返回业务响应。<sub>TODO L402</sub>
 - [ ] **修 dragonfly 网关路径：Terminate → Passthrough** — 现状网关解密后把**明文 redis 协议**转给只收 TLS 的后端，**这条路径是坏的**（握手成功但 `PING` 无响应）。<sub>TODO L403</sub>
 - [ ] **Consul 启用 TLS** — 8501/HTTPS 未启用、gossip 未加密。**连带**：`deploy/prod/` 全部写着不存在的 `consul-server.consul.svc:8501`，prod 清单照此起不来。<sub>TODO L449</sub>
-- [ ] **Kafka 启用 9093 TLS listener** — Strimzi 已定义但无人使用。Kafka 客户端代码为 0，**接 Kafka 时直接从 9093 起步**，别先接明文再改。<sub>TODO L451</sub>
-- [ ] **Kafka / Debezium CDC 未在新集群部署** — 2026-08-20 实测：集群里 `kafka` ns 只有 strimzi operator，**没有任何 `Kafka` / `KafkaConnect` / `KafkaConnector` CR**。⚠️ **CDC 至今从未成功跑起来过**，此前旧集群那次是 BestEffort 被内核 OOM-kill + connector 配置非法两个成因叠加；两处修法都已落进仓库清单（`kafkaconnect.yaml` 已设 `resources`、`kafkaconnector.yaml:53` 记录非法值已删），所以**这次是从"部署"开始而不是从"排障"开始**。它同时是 P3「一致性底座 Outbox + Kafka relay」的前置。<sub>出处：`backend/infrastructure/kafka-connect/`（原 TODO 事故记录行已于 2026-08-20 删除）</sub>
+- [ ] **Kafka K0 私网 TLS 学习环境** — 新建 Strimzi/KRaft，不复活旧 CR；从第一天启用 TLS、独立 principal/ACL、Schema Registry、Kafka UI 与 broker/consumer 指标。<sub>TODO「Kafka K0」</sub>
+- [ ] **Debezium / Kafka Connect 分析 PoC** — 等 Kafka 搜索链稳定且出现真实 ClickHouse/报表需求后再做；CDC topic 与领域事件 topic 分离，不作为 Kafka 领域事件前置。<sub>TODO「Kafka K5 分析链」</sub>
 - [ ] **`restoreSession` 与 callback 的竞态** — 已改用 `window.location.pathname`，但**没有回归测试守着**。<sub>TODO L409</sub>
 - [ ] **`e2e/login.smoke.mjs` 缺少隐私弹窗处理** — 模态盖住顶栏点不到 SIGN IN，**这条 e2e 至今没在 CI 里真跑过**，跑起来第一次大概率挂在这里。<sub>TODO L410</sub>
 - [ ] **清理两个僵尸 LoadBalancer（占 IP）** + **统一 cart `pre.yml` 的 OTel exporter TLS 口径** + **（观察项）dragonfly pod 57 天重启 32 次**。<sub>TODO L452-454</sub>
@@ -267,7 +267,7 @@ P1 UpdateCartItemQuantity 补字段 ────────►│──► P3 c
 P1 CreateOrder 止血 ─────────────────────►│──► P3 建单全链路
 P3 proto 补 requestId ───────────────────►│──► P1 网关重试幂等（两条必须一起做）
 P3 ListProducts ─────────────────────────►│──► P6 删 demoProducts.ts 换真实货架
-P3 Outbox + Kafka ───────────────────────►│──► P3 领域事件 ──► Saga 四项治理
-P4 Kafka 9093 TLS ───────────────────────►│  （接 Kafka 时直接从 9093 起步，别先接明文）
+P1 Kafka K0/K1 + Product outbox ─────────►│──► Kafka K2 影子链 ──► K3 搜索切流
+Kafka K3 通过 ────────────────────────────►│──► Kafka K4 交易事件 ──► Saga 治理 ──► K6 NATS 退役
 P7 扩副本前先定 Ticker 归属 ──────────────►│──► DEVOPS 阶段 2 多副本
 ```

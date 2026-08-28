@@ -40,6 +40,8 @@ context/
 | [e3-execution.md](harness-framework/e3-execution.md) | E3 执行策略：动手前估计任务规模，走最小路径，验证失败才扩张；含护栏 hook 的验证方法 |
 | [subagent-dispatch.md](harness-framework/subagent-dispatch.md) | 子代理派发三条硬约定：只回结构化摘要、按角色裁剪能力、按角色分层模型 |
 | [cordis-evaluation.md](harness-framework/cordis-evaluation.md) | 已评估「底层改 Cordis 插件框架」：暂不采用的理由与重新评估条件 |
+| [flywheel-audit.md](harness-framework/flywheel-audit.md) | 对照《Agent 自进化飞轮》的评测结论 + 方向性审计约定；门禁元评测 canary 的由来 |
+| [portable-harness.md](harness-framework/portable-harness.md) | 跨项目共用能力清单与采纳步骤；lens077 根 symlink 登记处 |
 | [evolution-log.md](harness-framework/evolution-log.md) | harness 每次改动的原因与触发它的事故——**改硬规则/门禁前必读**，防止把改对的东西改回去 |
 
 ## 服务级 · [context/project/ecommerce/](project/ecommerce/INDEX.md)

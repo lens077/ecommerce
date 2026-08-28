@@ -1,14 +1,17 @@
 # gateway
 
-> 旧网关（本仓 `gateway/`，go-kratos/gateway 分叉）已于 2026-08-23 退役，目录待删；
-> 历史见 tag `backup/pre-control-tower-20260823`。
+> 旧网关（本仓原 `gateway/`，go-kratos/gateway 分叉）已于 2026-08-23 退役，
+> 目录已在 2026-08-24 删除；历史见 tag `backup/pre-control-tower-20260823`。
 
 **代码路径**：`/Users/sumery/lens077/control-tower/services/gateway`（合一仓 control-tower，
 Connect 原生重写，零 kratos 代码）。集群里跑的是 `control-tower-gateway`（ecommerce ns）。
 
-请求链：`recover → otel → accesslog → cors → auth → proxy`。
-转发是端到端 Connect 直通——无转码、无请求体缓存、**默认无重试**；
-选点走 Consul 目录 Watch + P2C，Consul 只负责服务发现，配置全部来自 Config Center。
+请求链：`recover → otel → accesslog → cors → auth → proxy`。auth 主路径是
+BFF session（Web httpOnly cookie、Tauri session header），迁移期兼容 legacy bearer JWT；
+Casbin 做 roles × procedure 授权，转发前先剥离再注入 `x-md-global-*`。
+转发是端到端 Connect 直通——无转码、无请求体缓存、**默认无重试**；旧网关的
+BBR、熔断与 HTTP/3 已删除。选点走 Consul Watch + P2C，配置全部来自 Config Center。
+现行会话决策见 `../control-tower/docs/design/adr-0002-bff-session.md`。
 
 ## Config Center 五键（namespace=`gateway`）
 
@@ -17,7 +20,7 @@ Connect 原生重写，零 kratos 代码）。集群里跑的是 `control-tower-
 | `routes.yaml` | RouteConfig v2：路由表 + 匿名清单 + `online_check` + CORS |
 | `secrets/public.pem` | JWT 验签公钥 |
 | `policies/policies.csv` + `policies/model.conf` | Casbin RBAC |
-| `auth/revocations.yaml` | 撤销名单（首次拉取 NotFound 容忍为空表） |
+| `auth/revocations.yaml` | legacy bearer 撤销名单；BFF session 撤权直接删 session |
 
 - **五个条目必须 `is_secret=false`**。Config Center 把 `is_secret=true` 的值统一返回
   `******`，机器 token 也不例外，网关会解析失败。selector token 与 TLS 私钥只进

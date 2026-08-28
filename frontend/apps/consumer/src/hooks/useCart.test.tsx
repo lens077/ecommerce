@@ -30,7 +30,7 @@ const ITEMS = [
     shopName: "店铺一",
     spuName: "商品一",
     skuName: "规格一",
-    price: 1990,
+    unitPriceCents: 199000n,
     quantity: 2,
     selected: true,
     skuThumbnailUrl: "http://example.com/a.png",

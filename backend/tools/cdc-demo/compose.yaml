@@ -1,5 +1,5 @@
 # CDC 链路本地演示环境：PostgreSQL 18 + NATS JetStream + Meilisearch v1.53。
-# 版本与集群对齐（PG 18.4 / Meili v1.53，见 .service-matrix.yaml 与 docs/TESTING.md）。
+# 版本与当前主库大版本对齐（PG 18 / Meili v1.53，见 context/team/local-env.md 与 docs/TESTING.md）。
 # 就绪探测放在 run.sh 宿主侧（curl/pg_isready）——nats/meili 镜像内没有可靠的
 # curl/wget，容器内 healthcheck 会永远不过（实测踩过，run.sh 曾卡死在 --wait）。
 # 端口刻意避开常用位（15432/14222/17700）。

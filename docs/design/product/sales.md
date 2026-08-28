@@ -6,8 +6,8 @@
 >   `products.sale_detail`（单数，`product/internal/data/migrations/00003_sale_detail.sql`），
 >   且实际多建了文档没有的 `products.spu_total_sales` 视图——表结构以 SQL 为准；
 > - **预聚合表（sales_daily）未落地**，「商家历史销量分析」整章仍是目标态；
-> - 「Kafka → 统计服务（Statistics Service）」链路**不存在**：全仓无 Kafka 客户端、
->   无 statistics 服务，事件底座依赖 `../order/consistency.md` 的 Outbox 方案先行。
+> - 「Kafka → 统计服务（Statistics Service）」链路**当前不存在**：只有通用 Kafka producer Adapter，
+>   没有业务 producer、consumer 或 statistics 服务。必须先完成 Outbox/Kafka 迁移与 product 域内 consumer，不因已有 Adapter 就把链路写成已落地。
 
 方案为「Redis 实时缓存 + PostgreSQL 预聚合分析」，技术栈统一且维护成本低，后续数据量上来后可平滑迁移至 ClickHouse。
 一、核心方案架构（PostgreSQL 版）
@@ -19,7 +19,7 @@
 销量数据持久化与回溯	PostgreSQL 销量明细表	数据可靠存储、支持异常修复
 1.2 数据流转链路
 ```plaintext
-订单支付成功 → Kafka 发布「销量变更事件」→ 统计服务（Statistics Service）消费事件
+订单支付成功 → Kafka 发布「销量变更事件」（经 outbox；当前 NATS 迁移中）→ 统计消费者（并入 product 域）消费事件
                                                               ↓
                     ┌─────────────────────────────────────────┴─────────────────────────────────────────┐
                     ↓                                                                                         ↓
@@ -126,7 +126,7 @@ func (s *StatisticsService) writeSalesDetail(ctx context.Context, item *OrderIte
     return err
 }
 ```
-定时聚合至预聚合表：每天凌晨 2 点通过定时任务（如 cron job 或 Temporal），从前一天的 sales_detail 聚合数据写入 sales_daily_agg：
+定时聚合至预聚合表：每天凌晨 2 点通过 **K8s CronJob（`concurrencyPolicy: Forbid` + `FOR UPDATE SKIP LOCKED` + 幂等 upsert）**（2026-08-26 收敛：与 checkout v2 的调度口径统一，不引入 Temporal——工作流引擎须先过 ADR），从前一天的 sales_detail 聚合数据写入 sales_daily_agg：
 ```sql
 -- 聚合前一天数据（幂等操作，使用 INSERT ON CONFLICT）
 INSERT INTO products.sales_daily_agg

@@ -1,4 +1,5 @@
-# 提交信息校验。规则在仓库根的 commitlint.config.mjs。
+# 提交信息校验。规则在 frontend/commitlint.config.mjs（2026-08-26 自仓库根迁入，
+# 根目录的 package.json/pnpm-lock.yaml/commitlint.config.mjs 三件套已删）。
 #
 # 为什么钩子在 frontend/ 下却管着整个仓库：core.hooksPath 是仓库级设置，
 # 由 frontend/package.json 的 prepare(vp config) 指到 frontend/.vite-hooks/_，
@@ -6,12 +7,14 @@
 # 会主动接管任何 .husky 开头的 hooksPath，两套钩子抢同一个 git 配置，
 # 抢输的那套就静默失效（2025-11 到 2026-08 的九个月就是这么没的）。
 #
-# 用 pnpm exec 而不是裸 commitlint：_/h 只把 frontend/node_modules/.bin
-# 放进 PATH，而 commitlint 装在仓库根。钩子的 cwd 是仓库根，pnpm 从那儿
-# 向上找到根 package.json，正好用上根的 node_modules/.bin。
-# 不要加 --no —— pnpm 11 已经不认这个 exec 参数，会直接报
-# 「Command "--no" not found」，等于把校验变成永远失败。
+# 直接调 commitlint 二进制而不是 pnpm exec：_/h 已把 frontend/node_modules/.bin
+# 注入 PATH，commitlint 现在就装在那里；而 pnpm exec 依赖 cwd 向上找到的
+# workspace——根 package.json 删除后它恒红（2026-08-26 实测：合法消息也报
+# ERR_PNPM_RECURSIVE_EXEC_NO_PACKAGE）。钩子退出 127 = frontend 依赖未装
+# （cd frontend && pnpm install），不是消息问题。
 #
+# --config 必须显式给：钩子 cwd 是仓库顶层，那里已没有配置文件，缺省解析
+# 会因找不到配置而失败；从 $0 推导路径，worktree 里各自解析到自己那份。
 # 用 "$1"（git 传进来的消息文件路径）而不是写死 .git/COMMIT_EDITMSG——
 # git commit --amend、rebase reword、以及 worktree 里的路径都不是那个值。
-pnpm exec commitlint --edit "$1"
+commitlint --config "$(dirname "$0")/../commitlint.config.mjs" --edit "$1"

@@ -3,6 +3,7 @@ package registry
 import (
 	"context"
 	"encoding/json"
+	"fmt"
 	"net/http"
 	"net/http/httptest"
 	"strings"
@@ -61,6 +62,7 @@ type fakeConsulAgent struct {
 	// httptest 每个连接一个 goroutine,心跳用例下 handler 与断言并发,故加锁
 	mu           sync.Mutex
 	registered   *api.AgentServiceRegistration
+	checkIDs     map[string]struct{}
 	ttlCheckIDs  []string
 	deregistered []string
 }
@@ -95,14 +97,39 @@ func startFakeConsulAgent(t *testing.T) *fakeConsulAgent {
 				w.WriteHeader(http.StatusBadRequest)
 				return
 			}
+			checks := make(api.AgentServiceChecks, 0, 1+len(reg.Checks))
+			if reg.Check != nil {
+				checks = append(checks, reg.Check)
+			}
+			checks = append(checks, reg.Checks...)
+			checkIDs := make(map[string]struct{}, len(checks))
+			for i, check := range checks {
+				checkID := check.CheckID
+				if checkID == "" {
+					checkID = "service:" + reg.ID
+					if len(checks) > 1 {
+						checkID += fmt.Sprintf(":%d", i+1)
+					}
+				}
+				checkIDs[checkID] = struct{}{}
+			}
 			f.mu.Lock()
 			f.registered = reg
+			f.checkIDs = checkIDs
 			f.mu.Unlock()
 
 		case strings.HasPrefix(r.URL.Path, "/v1/agent/check/update/"):
+			checkID := strings.TrimPrefix(r.URL.Path, "/v1/agent/check/update/")
 			f.mu.Lock()
-			f.ttlCheckIDs = append(f.ttlCheckIDs, strings.TrimPrefix(r.URL.Path, "/v1/agent/check/update/"))
+			_, exists := f.checkIDs[checkID]
+			if exists {
+				f.ttlCheckIDs = append(f.ttlCheckIDs, checkID)
+			}
 			f.mu.Unlock()
+			if !exists {
+				w.WriteHeader(http.StatusNotFound)
+				return
+			}
 
 		case strings.HasPrefix(r.URL.Path, "/v1/agent/service/deregister/"):
 			f.mu.Lock()
@@ -293,11 +320,21 @@ func TestRegister(t *testing.T) {
 	assert.ElementsMatch(t, []string{testAppInfo.Version, constants.ConsulTagFx, constants.ConsulTagTtl}, got.Tags)
 
 	require.NotNil(t, got.Check)
+	assert.Equal(t, "service:"+testAppInfo.ID, got.Check.CheckID)
+	assert.Equal(t, "TTL process liveness", got.Check.Name)
 	assert.Equal(t, "30s", got.Check.TTL)
 	assert.Equal(t, "1m", got.Check.DeregisterCriticalServiceAfter)
-	// TTL 检查不能同时带 HTTP/TCP 检查,否则 Consul 会按后者探活
+	// TTL 只承担进程存活与自动注销；第二个检查通过标准 gRPC Health 读取深度就绪状态。
 	assert.Empty(t, got.Check.HTTP)
 	assert.Empty(t, got.Check.TCP)
+	require.Len(t, got.Checks, 1)
+	readiness := got.Checks[0]
+	assert.Equal(t, "service:"+testAppInfo.ID+":grpc-readiness", readiness.CheckID)
+	assert.Equal(t, testAppInfo.Host+":30006", readiness.GRPC)
+	assert.Equal(t, "1s", readiness.Interval)
+	assert.Equal(t, "12s", readiness.Timeout)
+	assert.Equal(t, 3, readiness.FailuresBeforeCritical)
+	assert.Empty(t, readiness.DeregisterCriticalServiceAfter)
 }
 
 func TestRegister_BadServerAddr(t *testing.T) {
@@ -367,6 +404,7 @@ func TestTtlCheckPinger_UpdatesTTL(t *testing.T) {
 	agent := startFakeConsulAgent(t)
 	reg := newRegistry(t, agent.addr)
 	conf := newConf("0.0.0.0:30006", 5*time.Millisecond)
+	require.NoError(t, reg.Register(conf, testAppInfo))
 
 	ctx, cancel := context.WithCancel(context.Background())
 	defer cancel()

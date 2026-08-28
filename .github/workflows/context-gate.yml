@@ -21,3 +21,9 @@ jobs:
       - name: Verify context knowledge base structure
         shell: bash
         run: ./scripts/verify-context.sh
+
+      # 门禁的元评测:注入九类已知坏样本,断言门禁还会红(防 commitlint/freeze 式恒绿失效)。
+      # 每次 push 都跑 = 把「它红过吗」从一次性手工验证变成持续证明。约 1 分钟。
+      - name: Canary the gate itself (must still turn red)
+        shell: bash
+        run: ./scripts/verify-context-canary.sh

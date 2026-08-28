@@ -79,9 +79,7 @@ brew install mockery      # 只在本机生成 mock 代码；生成物入库，C
 PG 镜像 tag **必须与生产一致**，否则测试通过不代表线上通过（`gen_random_uuid()`、
 `ON CONFLICT` 行为、enum 处理在大版本间有差异）。
 
-**当前生产版本：PostgreSQL 18.4.0**（`pg-dev.dev.test` / 192.168.3.109，在集群外，
-见 [`.service-matrix.yaml`](../.service-matrix.yaml) 的 `externals` 段）
-→ 测试镜像用 **`postgres:18-alpine`**。
+**当前主库版本：PostgreSQL 18.6**（node3 Pigsty；入口与验证证据见 [`context/team/local-env.md`](../context/team/local-env.md)）→ 测试镜像使用同一大版本的 **`postgres:18-alpine`**。patch 版本变化时先确认官方镜像 tag，再同步 `testutil.PostgresImage`。
 
 升级生产版本时，改 `testutil.PostgresImage` 是同一次变更的一部分。核对命令：
 
@@ -96,52 +94,24 @@ psql "$DB_URI" -tAc 'show server_version'
 **放共享包，不进任何服务的 `internal/`。** 直接吸取 [`STACK.md`](../STACK.md) 第十节
 "配置逻辑 10 份复制"的教训——测试基建一旦复制 10 份，改一次 PG 版本要改 10 个地方。
 
-### 3.1 `backend/pkg/testutil/pg.go`
+### 3.1 `backend/pkg/testutil/postgres.go`
 
-职责：起 PG 容器 → 喂该服务的 `schema/*.sql` → 返回 `*pgxpool.Pool` → `t.Cleanup` 回收。
+当前已实现 `StartPostgres(t) *testutil.Postgres`，返回 `DSN` 与 `*pgxpool.Pool`。入口第一行检查 `testing.Short()`；默认使用 testcontainers-go v0.44 的 `postgres.Run`、`BasicWaitStrategies` 和 `postgres:18-alpine`，`t.Cleanup` 先关连接池，再在有界时间内终止容器。
 
 ```go
-// Package testutil 提供集成测试的共享基建。
-// 所有入口都在第一行做 -short 跳过,保证 `make test` 零改动。
-package testutil
-
-const (
-    // PostgresImage 必须与生产版本一致(当前生产 18.4.0,见 §2.4)。
-    PostgresImage = "postgres:18-alpine"
-
-    // TestDBURIEnv 逃生舱:设了就直连该 DSN,不起容器(见 §3.1.1)。
-    TestDBURIEnv = "TEST_DB_URI"
-)
-
-// StartPostgres 起一个 PG 容器,按 schemaGlob 顺序执行建表脚本,返回连上去的池。
-//
-//   pool := testutil.StartPostgres(t, "../data/schema/*.sql")
-//
-// 带 -short 时直接 t.Skip,所以调用方不需要自己判断。
-// 设了 TEST_DB_URI 时改走真实库(仍然受 -short 跳过约束)。
-func StartPostgres(t *testing.T, schemaGlob string) *pgxpool.Pool
+postgres := testutil.StartPostgres(t)
+db, _ := sql.Open("pgx", postgres.DSN)
+require.NoError(t, goose.Up(db, migrationDir))
+// 通过 postgres.Pool 执行被测 SQL。
 ```
 
-实现要点（写的时候照这几条来）：
+helper **不使用 `WithInitScripts` 直接执行 migration 文件**：goose SQL 同时包含 Up/Down，交给 PostgreSQL 当普通脚本会把刚建的对象在 Down 段删掉。调用方必须使用 goose 按版本应用真实 migration，这也让测试覆盖生产迁移路径。
 
-1. **`testing.Short()` 守卫放在函数第一行**，`t.Skip("integration test; run without -short")`；
-2. 用 `postgres.Run(ctx, PostgresImage, ...)` + `postgres.WithInitScripts(files...)` 喂 schema
-   —— `files` 由 `filepath.Glob(schemaGlob)` 得到并 **`sort.Strings` 排序**（建表有依赖顺序，
-   glob 的返回顺序不保证）；
-3. 等待策略用 module 自带的（`wait.ForLog("database system is ready to accept connections")`
-   出现两次 + `wait.ForListeningPort`）—— PG 初始化期间会先起一次再重启，只等一次会连到半死的实例；
-4. `ctr.ConnectionString(ctx, "sslmode=disable")` 拿 DSN，`pgxpool.New` 建池；
-5. `t.Cleanup` 里先 `pool.Close()` 再 `testcontainers.TerminateContainer(ctr)`；
-6. 容器启动约 1–3 秒。**同一个测试包内复用同一个容器**（用 `TestMain` 或 `sync.Once`），
-   逐个用例之间用 `Snapshot`/`Restore` 回到干净状态，别每个用例起一个容器。
-
-> ⚠️ testcontainers-go 的 API 在 v0.3x 有过更名（`RunContainer` → `Run`）。
-> 装完先 `go doc github.com/testcontainers/testcontainers-go/modules/postgres` 对一遍再写。
+当前首个用例是 `pkg/outbox.TestRelayTracksAckPerDestination`，覆盖纯 expand migration、producer transaction trigger、sequence 晚提交防跳过、relay 有界历史 backfill、双 destination ack、顺序阻塞退避、dead-letter/requeue 和清理门禁。本地 Docker 不可用时 testcontainers 会明确跳过；`CI` 环境不允许用缺少 Docker 作为跳过理由，容器启动会直接失败。CI 仍需把不带 `-short` 的集成测试设为必需检查。一个包扩展到多个数据库用例后，再引入包级容器复用与 snapshot/restore，避免提前加入未被验证的共享状态机制。
 
 #### 3.1.1 逃生舱：用内网真实 PG 代替容器
 
-内网已有 PostgreSQL 18.4.0（`pg-dev.dev.test`）。`StartPostgres` 检测到 `TEST_DB_URI`
-时直连该库、不起容器：
+需要验证真实 TLS、扩展或 locale 时，`StartPostgres` 检测到 `TEST_DB_URI` 后直连指定测试库，不起容器：
 
 ```bash
 TEST_DB_URI='postgres://user:pw@pg-dev.dev.test:5432/cart_test?sslmode=verify-ca' \
@@ -149,7 +119,7 @@ TEST_DB_URI='postgres://user:pw@pg-dev.dev.test:5432/cart_test?sslmode=verify-ca
 ```
 
 **什么时候用**：容器复现不了的东西——真实的 TLS `verify-ca` 链路、生产装的扩展、
-locale/排序规则、以及"我就想确认这条 SQL 在真的 18.4.0 上跑得动"。
+locale/排序规则，以及「确认 SQL 在当前 node3 PostgreSQL 18.6 上跑得动」。
 
 **什么时候不用**：CI（GitHub Actions 云 runner 够不到 192.168.3.x 内网）、
 以及任何要并行跑的场景（共享库没有隔离）。**默认路径永远是容器。**
@@ -158,12 +128,8 @@ locale/排序规则、以及"我就想确认这条 SQL 在真的 18.4.0 上跑�
 
 1. **库名安全闸**：解析 DSN，dbname 不以 `_test` 结尾直接 `t.Fatalf`。
    集成测试会 TRUNCATE/DROP，指错库就是把开发数据清了——这道闸比任何注释都管用；
-2. **不跑 initScripts，改跑幂等建表**：真库里 schema 可能已存在。schema 文件本身用的是
-   `CREATE SCHEMA IF NOT EXISTS` / `CREATE TABLE IF NOT EXISTS`，但 `CREATE TYPE` 没有
-   `IF NOT EXISTS` —— 需要包一层 `DO $$ BEGIN ... EXCEPTION WHEN duplicate_object THEN NULL; END $$;`
-   或先查 `pg_type`；
-3. **每个用例自己清场**：真库没有 Snapshot/Restore，用例开头 `TRUNCATE cart.cart_item RESTART IDENTITY CASCADE`，
-   并且**只清本服务 schema 的表**。
+2. helper 只建立连接，不偷偷执行 schema；调用方仍通过 goose 应用真实 migration。外部测试库必须是可独占、可回滚的 `*_test`，不得指向共享开发库；
+3. **每个用例自己清场**：外部库没有容器级隔离，只允许清本服务 schema，并在结束时恢复到可重复执行状态。
 
 > 凭据不进仓库（[`AGENTS.md`](../AGENTS.md) 硬规则）。`TEST_DB_URI` 只在本机 shell 里给，
 > 别写进 Makefile、`.env` 或任何提交物。
@@ -207,8 +173,10 @@ func NewCartRepo(data *Data, logger *zap.Logger, live *config.Live) biz.CartRepo
 所以一行就能拿到 Queries，不需要 `Data`/`LiveRedis`/`config.Live` 那套装配：
 
 ```go
-pool := testutil.StartPostgres(t, "../data/schema/*.sql")
-q := models.New(pool)
+postgres := testutil.StartPostgres(t)
+db, _ := sql.Open("pgx", postgres.DSN)
+require.NoError(t, goose.Up(db, "../data/migrations"))
+q := models.New(postgres.Pool)
 ```
 
 上面第一节那六条全部能在这一层覆盖，成本最低。
@@ -218,7 +186,7 @@ q := models.New(pool)
 要走 `NewCartRepo`，就得把 `*Data` 装出来：
 
 ```go
-d := NewData(NewPgPool(pool), NewLiveRedis(testutil.StartRedis(t)), zap.NewNop())
+d := NewData(NewPgPool(postgres.Pool), NewLiveRedis(testutil.StartRedis(t)), zap.NewNop())
 repo := NewCartRepo(d, zap.NewNop(), config.NewLive(&confv1.Bootstrap{ /* 最小可用配置 */ }))
 ```
 
@@ -259,16 +227,22 @@ package data
 
 import (
     "context"
+    "database/sql"
     "testing"
 
+    _ "github.com/jackc/pgx/v5/stdlib"
+    "github.com/pressly/goose/v3"
     "github.com/stretchr/testify/require"
     "github.com/lens077/ecommerce/backend/pkg/testutil"
     "github.com/lens077/ecommerce/backend/services/cart/internal/data/models"
 )
 
 func TestCartUpsert_HitsUniqueConstraint(t *testing.T) {
-    pool := testutil.StartPostgres(t, "schema/*.sql")   // -short 时在这里就 skip 了
-    q := models.New(pool)
+    postgres := testutil.StartPostgres(t) // -short 时在这里就 skip 了
+    db, err := sql.Open("pgx", postgres.DSN)
+    require.NoError(t, err)
+    require.NoError(t, goose.Up(db, "migrations"))
+    q := models.New(postgres.Pool)
     ctx := context.Background()
 
     userID, merchantID, skuID := newUUID(t), newUUID(t), int64(1001)
@@ -372,14 +346,14 @@ test:
 	go test -short -coverprofile=coverage.out ./...
 ```
 
-新增：
+已新增：
 
 ```make
 # 集成测试:需要 Docker。不带 -short,testutil 里的守卫因此放行。
 # 单独的 coverage 文件,避免覆盖单元测试那份。
 .PHONY: test-integration
 test-integration:
-	go test -coverprofile=coverage-integration.out -timeout 10m ./...
+	go test -count=1 -timeout 10m -coverprofile=coverage-integration.out ./...
 ```
 
 `-timeout 10m`：默认 10 分钟其实够，但容器冷拉镜像那次很慢，显式写出来免得别人误以为卡死。

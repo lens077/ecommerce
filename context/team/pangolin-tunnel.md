@@ -6,13 +6,16 @@ description: 公网暴露基础设施(Pangolin)的拓扑事实、面板 API 操�
 
 # Pangolin 内网穿透 / 公网暴露(2026-08-08 部署)
 
-> 🔴 **证书 2026-10-27 硬过期,且当前没有自动续期链路。**
-> 泛域名证书 ZeroSSL `*.apikv.com` 到期后,**所有 `*.apikv.com` 公网入口一起挂**
+> 🟡 **证书已续期至 2026-11-25,但自动续期链路仍然缺位。**
+> 2026-08-27 实查:两处部署点(`/home/docker/pangolin/config/traefik/certs/apikv.com.crt`
+> 与 `/home/docker/blog/ssl/nginx.crt`)均已是新证书 `notAfter=Nov 25 23:59:59 2026`,
+> 公网实测同步生效。**但 `/root/.acme.sh/` 仍无证书产物、crontab 仍无续期条目**——
+> 也就是说这次是手工续的,下次(11-25 前)还得手工来。
+> 到期后果不变:**所有 `*.apikv.com` 公网入口一起挂**
 > (blog / config / config-api / casdoor / pangolin 面板 / minio / gorse / harbor / dsh …),
 > 以及 node1 上复用同一张证书的 `rediss://redis.apikv.com`。
-> node1 的 acme.sh 只剩单文件,`/root/.acme.sh/` 无证书产物、无 DNSPod 凭据、crontab 无续期条目
-> (2026-08-18 实查)。**必须在 10-27 前手动重签或重建续期链路**,DNSPod 旧 Key 已作废,
-> 要用轮换后的新 Key 或腾讯云子账号走 dns_tencent。续期后记得**同步两处**部署点(见下)。
+> 重建续期链路时 DNSPod 旧 Key 已作废,要用轮换后的新 Key 或腾讯云子账号走 dns_tencent。
+> **续期后记得同步两处部署点**(见下),并重启 traefik 让它加载新证书。
 
 > 人类速查版(纯命令)在仓库根 `ai-helper.sh` 的 Pangolin 小节(本机文件,已 gitignore 不入库,fresh clone 没有);
 > 本文件是 AI 操作用的完整事实与接口。**凭据一律不写值,只写位置**(runbook §0 硬规则)。
@@ -54,7 +57,7 @@ description: 公网暴露基础设施(Pangolin)的拓扑事实、面板 API 操�
   `redis.apikv.com`。**证书目录属主必须是 uid 999**(redis 官方镜像的运行用户),否则读不到私钥启动即失败;
   `tls-auth-clients no` 时仍强制要求 `tls-ca-cert-file`,拿 fullchain 自身充数即可
 - 域名 `apikv.com`,**DNS 在 DNSPod(不是 Cloudflare)**,已有 `*` 泛解析 → 114.132.233.129;新子域**零 DNS 操作**
-- 泛域名证书 ZeroSSL `*.apikv.com`(acme.sh dns_dp 签),**2026-10-27 到期**(详见文首红框);
+- 泛域名证书 ZeroSSL `*.apikv.com`(acme.sh dns_dp 签),**2026-11-25 到期**(2026-08-27 已手工续期,详见文首横幅);
   部署在两处:`/home/docker/blog/ssl/`(原件)与 node1
   `/home/docker/pangolin/config/traefik/certs/apikv.com.{crt,key}`,**续期要同步两处**
 - k8s:**集群已于 2026-08 重建**,现为 node101/node102/node103 = `192.168.3.101-103`

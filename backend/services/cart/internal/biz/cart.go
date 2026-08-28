@@ -21,7 +21,7 @@ type (
 		Selected        bool
 		SpuName         string
 		SkuName         string
-		Price           float64
+		UnitPriceCents  int64
 		SkuAttributes   json.RawMessage
 		SkuThumbnailUrl string
 		Status          constants.CartStatusEnum
@@ -72,7 +72,7 @@ type CartItem struct {
 	Selected        bool
 	SpuName         string
 	SkuName         string
-	Price           float64
+	UnitPriceCents  int64
 	SkuAttributes   json.RawMessage
 	SkuThumbnailUrl string
 	Status          constants.CartStatusEnum

@@ -3,7 +3,6 @@ package registry
 import (
 	"context"
 	"errors"
-	"fmt"
 	"net"
 	"net/http"
 	"os"
@@ -11,6 +10,7 @@ import (
 	"time"
 
 	"github.com/lens077/ecommerce/backend/constants"
+	"github.com/lens077/ecommerce/backend/pkg/healthcheck"
 	"github.com/lens077/ecommerce/backend/services/product/internal/pkg/meta"
 
 	confv1 "github.com/lens077/ecommerce/backend/services/product/internal/conf/v1"
@@ -152,7 +152,7 @@ func NewConsulRegistry(addr, ID, Name string, opts ...Option) (*ConsulRegistry, 
 	}, nil
 }
 
-// Register 使用 TTL 健康检查注册服务
+// Register 同时注册 TTL 存活检查与 gRPC 深度就绪检查
 func (r *ConsulRegistry) Register(conf *confv1.Bootstrap, info meta.AppInfo) error {
 	r.logger.Debug("registering service to Consul", zap.String("id", r.ID))
 	// 使用服务本身的地址和端口，而不是 Consul 的地址
@@ -184,11 +184,13 @@ func (r *ConsulRegistry) Register(conf *confv1.Bootstrap, info meta.AppInfo) err
 			constants.ConsulTagFx,
 			constants.ConsulTagTtl,
 		},
-		Check: &api.AgentServiceCheck{
-			// 使用 TTL 替换 HTTP/TCP 检查
-			TTL: conf.Discovery.Consul.Check.Ttl.Duration,
-			// 配置在检查失败后自动注销
-			DeregisterCriticalServiceAfter: conf.Discovery.Consul.Check.DeregisterCriticalServiceAfter,
+		Check: healthcheck.NewConsulTTLCheck(
+			r.ID,
+			conf.Discovery.Consul.Check.Ttl.Duration,
+			conf.Discovery.Consul.Check.DeregisterCriticalServiceAfter,
+		),
+		Checks: api.AgentServiceChecks{
+			healthcheck.NewConsulGRPCCheck(r.ID, host, portNum, conf.Discovery.Consul.Check.Ttl.PingInterval.AsDuration()),
 		},
 	}
 	r.logger.Debug("service registration completed", zap.String("id", r.ID))
@@ -198,7 +200,7 @@ func (r *ConsulRegistry) Register(conf *confv1.Bootstrap, info meta.AppInfo) err
 		return err
 	}
 
-	r.logger.Info("Service registered with Consul using TTL check", zap.String("id", r.ID), zap.String("ttl", conf.Discovery.Consul.Check.Ttl.Duration))
+	r.logger.Info("Service registered with Consul using TTL and gRPC readiness checks", zap.String("id", r.ID), zap.String("ttl", conf.Discovery.Consul.Check.Ttl.Duration))
 	return nil
 }
 
@@ -216,8 +218,8 @@ func (r *ConsulRegistry) TtlCheckPinger(ctx context.Context, conf *confv1.Bootst
 	ticker := time.NewTicker(ttlPingInterval)
 	defer ticker.Stop()
 
-	// Consul Agent 要求 CheckID 必须是 "service:<ID>" 的格式
-	checkID := fmt.Sprintf("service:%s", r.ID)
+	// 注册与心跳必须共用显式 CheckID；多检查时不能依赖 Consul 的位置编号
+	checkID := healthcheck.ConsulTTLCheckID(r.ID)
 
 	// 发送 'pass' 状态的心跳
 	ping := func() {

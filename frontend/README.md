@@ -88,12 +88,13 @@ vite-plus 一个包覆盖了 dev server、构建、测试（vitest）、lint（o
 `frontend/package.json` 的 `prepare: "vp config"` 负责安装，它会把仓库级的
 `core.hooksPath` 指到 `frontend/.vite-hooks/_`。**因此整个仓库（含后端 Go）的提交都走这里。**
 
-| 钩子         | 做什么                                                      |
-| ------------ | ----------------------------------------------------------- |
-| `pre-commit` | `cd frontend && vp staged` —— 对暂存文件跑 `vp check --fix` |
-| `commit-msg` | `pnpm exec commitlint --edit "$1"` —— 规则在仓库根          |
+| 钩子         | 做什么                                                                     |
+| ------------ | -------------------------------------------------------------------------- |
+| `pre-commit` | `cd frontend && vp staged` —— 对暂存文件跑 `vp check --fix`                |
+| `commit-msg` | `pnpm exec commitlint --config frontend/commitlint.config.mjs --edit "$1"` |
 
-vite-plus 不提供提交信息校验，所以 commitlint 仍装在仓库根，只是改由 vp 的钩子目录来调。
+vite-plus 不提供提交信息校验，所以 commitlint 由 frontend workspace 承载，规则在
+`frontend/commitlint.config.mjs`；仓库根不再有 Node workspace。
 不要把钩子挪回仓库根的 `.husky/`：`vp config` 会主动接管任何以 `.husky` 开头的
 `core.hooksPath`，两套钩子抢同一个 git 配置，抢输的那套静默失效。
 详见 `frontend/.vite-hooks/commit-msg` 里的注释和 `context/team/git-commit.md`。

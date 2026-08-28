@@ -105,9 +105,7 @@ cpu / memory / disk / network 都已开,所以基础设施盘才做得起来。
 3. **网关(`http_server_request_duration_seconds_*`)** —— 网关此前有 otelhttp
    handler 但没有 MeterProvider(指标挂在 noop 上),`middleware/tracing` 已补
    → APM 盘 R7;
-4. **采集管道自身健康(`otelcol_*`)** —— collector 已加 `prometheus/internal`
-   receiver 自采 8888(兄弟仓配置),`kubectl -n observability apply` 生效
-   → 基础设施盘 R4;
+4. **采集管道自身健康（`otelcol_*`）** —— `opentelemetry` namespace 的 collector 自采 `:8888`，accepted/sent/failed/refused、queue 和 process 指标已进入 node3 VictoriaMetrics → 基础设施盘 R3；
 5. **Kafka(`kafka_server_*` / `kafka_connect_*`)** —— Strimzi metricsConfig 与
    collector `prometheus/kafka` receiver 已配(兄弟仓 + 本仓 kafka-connect),
    broker patch 会滚动重启 → 基础设施盘 R5。
@@ -118,7 +116,7 @@ cpu / memory / disk / network 都已开,所以基础设施盘才做得起来。
 2. **行为漏斗** —— `behaviors.events` 表没数据(tracker 未接线),漏斗用 RPC 近似;
 3. **RPC 类曲线在空闲时段为空** —— dev 环境没有持续流量,rate 窗口内无样本即空图,
    有调用即出线(序列 14 天窗口内可查到);
-4. **k8s 对象/容器级指标(P2)** —— 无 kube-state-metrics/cAdvisor,单独一轮做;
+4. **Kubernetes 容器实际资源指标（P2）** —— workload/Pod 状态、ready/restart、requests/limits 与 Event 已由 OTel `k8s_cluster`/`k8sobjects` 提供；实际 CPU/MEM/filesystem/network 仍缺 kubeletstats/cAdvisor；
 5. **日志按 pod 下钻不了** —— fluent-bit 的 `Label_keys` 用了 `$k8s.pod_name`,
    而字段被拍平成名字里带点的扁平 key,`k8s__pod_name` 的值是字面量 `".pod_name"`。
    正确写法是 `$['k8s.pod_name']`(待修,记在 TODO.md);
@@ -127,7 +125,6 @@ cpu / memory / disk / network 都已开,所以基础设施盘才做得起来。
 
 ## 验证方式
 
-改完脚本后,除了看 Grafana 渲染,把每条 PromQL 拿去 VM 实跑一遍 —— 空图有两种
-成因(语法错 / 真没数据),混在一起会让人误判。2026-08-12 重构后三张盘 + 17 条
-告警共 109 条 Prometheus 查询全部语法通过、40 条当场有数据,空图成因均已归入上节
-两类;P1 部署后要再跑一遍核对预写的指标名。
+改完脚本后，除检查 Grafana 渲染外，还要在 node3 VictoriaMetrics 实跑每条 MetricsQL。空图可能是语法错误，也可能是真实无数据，不能混为同一个结论。名称含点号的 OTel metric 使用 `{__name__="k8s.…"}` selector。
+
+2026-08-12 的三张盘、17 条 Grafana unified alerting 和 109 条查询只保留为历史生成证据。现网规则链是 vmalert → Alertmanager → authenticated ntfy；不得直接 apply 历史 ConfigMap。部署前按 `../面板设计.md` 的现网口径重新验证。

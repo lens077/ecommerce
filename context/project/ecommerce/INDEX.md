@@ -10,6 +10,7 @@
 | [registry](registry/INDEX.md) | `backend/services/*/internal/pkg/registry/` | Consul TTL 注册与心跳（10 份同一套代码） |
 | [config](config/INDEX.md) | `backend/services/*/internal/pkg/config/` + `../control-tower/services/config` | 一份配置三个副本；热更新的生效边界 |
 | [behavior](behavior/INDEX.md) | `backend/services/behavior/` | 缺配置块导致 gorse 静默关闭 |
+| [events](events/INDEX.md) | `backend/pkg/outbox/` + `backend/tools/outbox-relay/` | PostgreSQL outbox → NATS JetStream → projection 的 at-least-once、幂等与恢复边界 |
 | [consumer](consumer/INDEX.md) | `frontend/apps/consumer/` | MUI spacing ×8 踩坑；购物车重复请求 |
 | [merchant](merchant/INDEX.md) | `frontend/apps/merchant/` | ECharts 路由 chunk 的异步加载与拆分 |
 | [frontend-api](frontend-api/INDEX.md) | `frontend/packages/api/` + `apps/*/src/api/` | Connect Query 数据拉取 SOP；transport 单例约束 |
@@ -40,8 +41,7 @@ Deployment 名只是没改的遗留标签，镜像早已是 `control-tower-confi
 独立 config-center 还在跑。
 
 ⚠️ `gateway` 模块指的也是 control-tower 的网关（`../control-tower/services/gateway`）。
-本仓 `gateway/` 目录是 2026-08-23 退役的旧 kratos 分叉，正在删除，**不要往里链接**；
-历史见 tag `backup/pre-control-tower-20260823`。
+本仓原 `gateway/` 目录是 2026-08-23 退役的旧 kratos 分叉，已于 2026-08-24 删除，**不要往里链接**；历史见 tag `backup/pre-control-tower-20260823`。
 
 ⚠️ `frontend-api` 指前端的 API 访问层（`frontend/packages/api/`），**不是** `backend/api/` 的 proto 契约。
 它和 `registry` 一样属于「跨多个代码目录的同一套代码」，所以按职责命名而不是按单一目录命名。

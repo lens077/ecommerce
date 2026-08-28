@@ -1,5 +1,7 @@
-# Pre 环境基础设施接入清单（实测）
+# Pre 环境基础设施接入清单（历史快照）
 
+> ⚠️ **不要用本文配置当前环境。** 2026-08-24 之后 PostgreSQL 已切 node3 Pigsty，本文列出的旧 Kafka/Elasticsearch/Loki/Jaeger/集群内 MinIO 等实例已退役，可观测性已外移，ArgoCD 也再次断线。2026-08-27 Kafka 已作为新目标重新纳入，但不复活本文旧拓扑。当前结构事实看 [`.service-matrix.yaml`](../../../.service-matrix.yaml)，集群实况看 [`docs/reports/2026-08-27-infrastructure-audit.md`](../../reports/2026-08-27-infrastructure-audit.md)。本文仅保留当时的协议握手证据与迁移教训。
+>
 > 2026-08-08 首次盘点，2026-08-24 在三节点重建集群上复核 CNPG、共享网关和 Dragonfly
 > 入口。该清单用于编写和修正服务配置；**再次核实以实测为准**——网关资源显示 Accepted
 > 仍不能代替宿主网协议握手和业务查询。
@@ -39,7 +41,7 @@ Gateway API v1.6 的 TCPRoute 与 TLSRoute v1 CRD 均已安装。Dragonfly 使�
 | Seata | seata | seata-server:8091 | seata.dev.test → http(80) | ❌ 明文 |
 | ArgoCD | argocd | argocd-server:80 | argocd-server.dev.test → http(80) | ❌ 网关侧明文 |
 | Casdoor（集群外） | — | — | **apikv.com:8000 = 114.132.233.129，公网明文 HTTP** | ❌ OAuth 流量走公网 http |
-| MinIO（node2，集群外） | — | — | `https://minio.apikv.com`（443）→ Pangolin/Traefik → newt 隧道 → node2 `127.0.0.1:9000`；9000/9001 均已绑回环 | ✅ TLS（Traefik 终止，ZeroSSL `*.apikv.com`，**2026-10-27 到期**，2026-08-19 落地） |
+| MinIO（node2，集群外） | — | — | `https://minio.apikv.com`（443）→ Pangolin/Traefik → newt 隧道 → node2 `127.0.0.1:9000`；9000/9001 均已绑回环 | ✅ TLS（Traefik 终止，ZeroSSL `*.apikv.com`，**2026-11-25 到期**（2026-08-27 手工续期），2026-08-19 落地） |
 | gorse（node2，集群外） | — | — | `https://gorse.apikv.com` → 同上 → `127.0.0.1:8088`；8086/8088 均已绑回环。`Ready:true` | ✅ TLS + gorse 自带鉴权（`api_key` 401 实测生效，Dashboard 302→`/login`） |
 
 ## 实测记录（2026-08-08）

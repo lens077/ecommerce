@@ -50,9 +50,13 @@ p2c selector 返回 `ErrNoAvailable`，前端收到 503。
 
 **修复**
 
-`TtlCheckPinger` 在进 ticker 循环**之前**先 `ping()` 一次，把盲窗压到零。
+`TtlCheckPinger` 在进 ticker 循环**之前**先 `ping()` 一次，把 TTL 自身造成的盲窗压到零。
 调用点保证 `Register` 已同步返回，`checkID` 一定存在。
 10 个服务的这段代码此前字节完全相同（`internal/pkg/registry/consul.go`），统一修改。
+
+2026-08-27 起，每个实例还注册了主动 gRPC deep readiness check。该检查初始为 critical，实例要等
+第一次深度检查成功后才进入 `passingOnly` 结果；这段最多一个检查周期的等待是有意的 readiness gate，
+不是 TTL pinger 回归。不要用初始 `passing` 绕过它。
 
 配套调了两个 `discovery.consul.check` 参数（当年在 Consul KV，现在的载体是 Config Center
 的 `<svc>/<env>/bootstrap.yaml`，dev/pre 两个环境逐字一致）：

@@ -5,49 +5,93 @@
 > 分工：
 > - 技术选型与版本、分层规则、编码约束 → **本文件**
 > - 服务拓扑事实（注册名/前缀/依赖/Config Center 键/端口）→ [`.service-matrix.yaml`](.service-matrix.yaml)
-> - 架构设计与"为什么" → [`docs/design/`](docs/design/README.md)（按微服务分目录，含 config-center 存档）
+> - 业务架构与「为什么」→ [`docs/design/`](docs/design/README.md)；网关/配置面设计 → 同级仓 `../control-tower/docs/design/`
 > - 实现进度 → [`TODO.md`](TODO.md)
 > - AI 协作行为基线 → [`AGENTS.md`](AGENTS.md) + [`context/`](context/INDEX.md)
 >
 > ⚠️ 同一条事实只写一处。本文件不复制上述文件的内容，只做引用。
 > 想按这套栈起一个新项目，见 [`docs/SCAFFOLD.md`](docs/SCAFFOLD.md)。
+> 百万/千万级生产化目标与证据门禁见 [`docs/design/platform/production-scale-goal.md`](docs/design/platform/production-scale-goal.md)；目标态不得冒充当前能力。
 
 ---
 
-## 一、项目定位与仓库形态
+## 一、项目定位、业务边界与仓库形态
 
-**单仓（single-repo）B2B2C 电商平台**。proto 契约与业务代码同仓，前端 monorepo 与后端微服务并列，不存在多仓分支联动问题。
+这是一个**正在实现中的 B2B2C 多商家电商平台**，不是已经完成生产验收的全功能商城。业务代码以本仓为主，网关与配置控制面位于同级仓 `control-tower`，因此仓库形态是「业务单仓 + 平台控制面外置」的 hybrid，而不是纯 single-repo。
 
-```
+### 1.1 当前终端与领域边界
+
+| 终端或领域 | 当前事实 | 不应宣称的能力 |
+|---|---|---|
+| 消费者端 `consumer` | React 应用已存在，商品、购物车、地址等路径部分接线 | 下单、库存、支付链路仍有阻断项，尚不是可上线交易闭环 |
+| 商家端 `merchant` | React 应用与登录壳已存在，后端 merchant 仅少量 RPC 可用 | 完整店铺运营、商品管理、履约和结算后台 |
+| 管理端 `admin` | React 应用与通用登录能力已存在 | 完整平台运营、审核、仲裁和审计后台 |
+| 桌面端 `desktop` | Tauri 壳，复用 consumer 或 merchant 页面 | 独立业务前端 |
+| 物流履约 | 最新裁决并入 order 域，由 `OrderReadyForFulfillment` 触发 | 独立 fulfillment 服务或物流端 |
+| 库存 | 有 inventory 服务，但核心 RPC 当前不可用 | WMS、仓库作业端、多仓调拨和库内流程 |
+
+实际后端为 10 个业务服务：`user / search / behavior / product / cart / address / order / inventory / merchant / payment`。不存在独立的 logistics、warehouse、fulfillment、settlement、marketing 或 analytics 服务；新增服务须先用 ADR 证明独立伸缩或故障域的必要性。
+
+### 1.2 容量结论
+
+**当前不能宣称「已承受百万到千万级数据量」或「支持 100 万 DAU / 5 万 QPS」。** PostgreSQL 能保存多少行，不等于整条交易链已经完成容量验证；原性能目标已因没有绑定压测环境而删除。
+
+恢复规模承诺前，至少要同时给出以下证据：
+
+1. **数据口径**：用户、SPU/SKU、订单、库存流水、行为事件分别是总量、日增量还是保留期内总量。
+2. **流量模型**：读写比、峰值 QPS/TPS、并发连接、热点 SKU、请求体大小和大促放大系数。
+3. **存储方案**：大表分区与归档、索引膨胀、备份/PITR、Meilisearch 单节点容量，以及 JetStream stream/副本/保留/回放策略。
+4. **可复现压测**：以 k6 脚本、固定数据集、固定资源配额和 P50/P95/P99/错误率/资源曲线为准，不以组件宣传值推断。
+5. **可靠性目标**：按核心链路定义 SLO、错误预算、RTO/RPO，并完成节点故障、依赖故障、恢复与积压重放演练。
+
+### 1.3 完整 B2B2C 仍缺少的能力
+
+下列是**业务能力清单，不是微服务清单**。优先放入现有领域模块；只有独立伸缩、团队边界或故障域成立时才拆服务。
+
+| 能力组 | 主要缺口 |
+|---|---|
+| 交易正确性 | 统一报价 token、订单组、库存全组原子预占/确认/释放、支付 capture/refund 双轴、幂等、对账与补偿 |
+| 商家经营 | 店铺资料、商品/价格/运费模板、订单履约、售后、结算单、佣金、经营报表、子账号与审计 |
+| 平台运营 | 商家审核、类目/品牌治理、争议仲裁、风控、操作审计、平台配置与数据级管理员授权 |
+| 物流与仓储集成 | 承运商 adapter、电子面单、轨迹、退货物流；WMS 的库位、波次、拣配、盘点、调拨属于外部/后续边界，当前 inventory 不具备 |
+| 营销与内容 | 优惠券、满减、秒杀、会员/积分、评价/UGC、富文本消毒；是否独立成域取决于真实需求 |
+| 财务与合规 | 商家分账、发票/税务、退款对账、审计留痕、隐私删除/导出、数据保留策略 |
+| 通知与客服 | 邮件/短信/站内信/企业 IM adapter、模板、重试、退订、客服工单；当前无统一通知中心 |
+| 数据与分析 | 事件 schema 治理、数仓/BI、经营指标、数据质量与回溯；当前 behavior/Gorse 不是通用分析平台 |
+| 安全与韧性 | 默认拒绝网络策略、workload identity、对象级授权、防滥用、供应链签名、备份/PITR、灾备与容量演练 |
+
+### 1.4 仓库布局
+
+```text
 ecommerce/
 ├── AGENTS.md                  # AI 协作入口（硬规则 + 索引）
-├── STACK.md                   # ← 本文件
-├── .service-matrix.yaml       # 服务拓扑事实表（AI/CI 查表用，非设计文档）
-├── docs/                      # design/ 架构真相源 · architecture/ 交互式架构图
-│                              #   DEVOPS / SCAFFOLD / PRIVACY / TESTING / OKTETO / observability/ 也收纳于此
-├── TODO.md                    # 进度真相源（✅ / 🟡 / ⬜）
-├── context/                   # 三层知识库（team / harness-framework / project）
+├── STACK.md                   # 技术栈、边界与工程工具真相源
+├── .service-matrix.yaml       # 服务拓扑事实表
+├── TODO.md                    # 实现进度真相源
+├── context/                   # 团队、框架、项目知识库
+├── docs/design/               # 业务与平台设计
 ├── backend/
-│   ├── api/{service}/v1/*.proto     # 对外契约（同时生成 Go 与 TS）
-│   ├── constants/                   # 跨服务共享枚举与元数据键
-│   ├── pkg/                         # 跨服务共享库（gorse / product / types）
-│   ├── services/{service}/          # 每服务一个独立 fx 应用
-│   ├── buf.yaml · buf.gen.yaml · buf.gen.ts.yaml · sqlc.yaml · Makefile
-│   └── go.mod                       # 单一 module，10 个服务共享
-├── gateway/                   # go-kratos/gateway fork（独立 module，subtree 到独立仓）
-├── frontend/                  # pnpm workspace（apps/* + packages/*）
-├── helm/{charts,library}      # 每服务一个 chart + 一个 library chart
-└── .github/workflows/         # backend.yml / frontend.yml，tag 触发 GitOps
+│   ├── api/{service}/v1/*.proto     # API 契约，生成 Go 与 TypeScript
+│   ├── pkg/ · constants/ · tools/  # 共享库、常量、relay/indexer/migration 工具
+│   ├── services/{service}/          # 10 个独立 fx 应用
+│   └── go.mod                       # 10 个服务共享一个 Go module
+├── frontend/                  # pnpm workspace：4 app + 9 package
+├── helm/                      # 待重建的部署描述；当前不是集群真相源
+└── .github/workflows/         # tag 驱动的 CI 与镜像发布
+
+../control-tower/              # 单 Go module：gateway + config + config web
+../kubernetes/                 # Cilium/Gateway API 等集群安装与组件清单
 ```
 
 **关键结构决策**
 
 | 决策 | 取舍 |
 |---|---|
-| 后端 10 个服务共用**一个 go.mod** | 省掉 10 份依赖升级；靠目录 + `internal/` 强制边界 |
-| proto 与实现同仓 | 契约改动一个 PR 可见全链路影响；代价是仓库大 |
-| 网关是**独立 module 的 fork** | 可 `git subtree push --prefix=gateway gateway main` 推到独立仓复用 |
-| 前端 4 个 app 一个 workspace | 靠 `packages/*` 复用拦截器/错误模型/UI，靠 catalog 统一版本 |
+| 后端 10 个服务共用一个 `go.mod` | 统一依赖版本；靠目录与 `internal/` 约束边界 |
+| API proto 与业务实现同仓 | 一次变更可检查 Go/TypeScript 全链路；必须用 Buf breaking 守兼容性 |
+| gateway/config 迁入 `control-tower` | 平台能力独立发布；本仓必须同步其 SDK 与路由模板版本 |
+| 前端 4 个 app 共用 pnpm workspace | 共享 transport、错误模型、UI、i18n、埋点与性能采集；catalog 统一版本 |
+| 当前部署以裸 manifest 为准 | ArgoCD 当前零 Application/ApplicationSet；`helm/` 不能冒充运行时真相源 |
 
 ---
 
@@ -55,53 +99,70 @@ ecommerce/
 
 > **选型定稿（2026-08-20，三轮对抗评审）**：新一轮选型已逐项定稿——结论与理由见
 > [`docs/TECH-RADAR.md`](docs/TECH-RADAR.md)（定稿版），过程证据见 [`docs/技术栈选型对抗/`](docs/技术栈选型对抗/)。
-> 选型的执行状态以 [`TODO.md`](TODO.md)「技术选型定稿（2026-08-20）」小节为真相源。
-> NATS JetStream、Meilisearch、VictoriaLogs+Vector、KEDA、Argo Rollouts、OpenFGA、
-> trust-manager 和 ESO+OpenBao 已有不同程度的集群落地；Velero+SeaweedFS、mirrord、casdoor
-> 收编等仍待实施。**本文件只记录已验证的在用事实**，不要从「已拍板」反推「已接线」。
+> 版本以当前 manifest 与 lockfile 为准；运行状态以 [`TODO.md`](TODO.md) 和
+> [`.service-matrix.yaml`](.service-matrix.yaml) 为准。下文统一使用「在用」「部分落地」
+> 「已选型」三种状态；**已选型不等于已部署，集群里存在对象也不等于业务已接线**。
 
 ### 2.1 后端（Go）
 
-| 类别 | 选型 | 版本 |
+| 类别 | 选型 | 锁定版本或状态 |
 |---|---|---|
-| 语言 | Go | **1.26.5**（backend 与 gateway 同版，以两个 go.mod 为准） |
-| RPC 框架 | `connectrpc.com/connect` | v1.19.2 |
-| 协议 | Connect / gRPC / gRPC-Web 三兼容，HTTP/2 h2c 明文 | — |
-| IDL | Protobuf + Buf CLI | protobuf v1.36.11 |
-| 参数校验 | `buf.build/go/protovalidate` + `connectrpc.com/validate` 拦截器 | v1.2.0 / v0.6.0 |
+| 语言 | Go | **1.26.5**（backend 与 control-tower 同版） |
+| RPC 框架 | `connectrpc.com/connect` | v1.20.0 |
+| 传输 | Connect、gRPC、gRPC-Web 兼容；服务端 h2c 同时接受 HTTP/1.1 与 HTTP/2 | Connect unary 可走 HTTP/1.1；gRPC 必须走 HTTP/2 |
+| IDL | Protobuf 3 + Buf CLI | `google.golang.org/protobuf` v1.36.12 |
+| 参数校验 | Protovalidate + `connectrpc.com/validate` 拦截器 | v1.3.0 / v0.6.0 |
 | 依赖注入 | `go.uber.org/fx` | v1.24.0 |
-| 日志 | `go.uber.org/zap` + `otelzap` bridge | v1.28.0 / v0.18.0 |
-| DB 驱动 | `jackc/pgx/v5` + `exaring/otelpgx` | v5.9.2 / v0.10.0 |
-| DB 代码生成 | **sqlc**（写 SQL → 生成类型安全 Go） | driver `pgx/v5` |
-| 缓存 | `redis/go-redis/v9` | v9.21.0 |
-| 搜索 | `meilisearch-go`；search 使用服务端固定索引和仅限 `search` 动作的 API key | v0.36.3 |
-| 注册发现 | `hashicorp/consul/api`（**定稿退役 → K8s Service DNS**，见 TECH-RADAR §6） | v1.34.2 |
-| 认证 | `casdoor/casdoor-go-sdk` | v1.46.0 |
+| 日志 | `go.uber.org/zap` + `otelzap` bridge | v1.28.0 / v0.20.0 |
+| DB 驱动 | `jackc/pgx/v5` + `exaring/otelpgx` | v5.10.0 / v0.11.1 |
+| SQL 与迁移 | sqlc + goose | pgx/v5 driver / goose v3.27.3 |
+| Redis 协议客户端 | `redis/go-redis/v9` + `redisotel-native` | v9.22.0 / v9.21.0 |
+| 搜索客户端 | `meilisearch-go` | v0.36.3 |
+| 消息客户端 | `nats.go` | v1.53.1 |
+| 注册发现 | `hashicorp/consul/api` | v1.34.4；在用，已选型迁 K8s Service DNS |
+| 配置 SDK | `github.com/lens077/control-tower/sdk/configsource` | control-tower v0.1.0 |
 | 支付 | `smartwalle/alipay/v3` | v3.2.29 |
-| 金额 | `shopspring/decimal` | v1.4.0 |
-| 配置解析 | `spf13/viper` + `mitchellh/mapstructure` | v1.21.0 / v1.5.0 |
-| 可观测性 | OpenTelemetry SDK（trace / metric / log 全 OTLP-HTTP） | v1.44.0 |
+| 金额 | `shopspring/decimal` | v1.4.0；新 proto 优先 `int64` 分或 decimal 字符串 |
+| 配置解析 | Viper + mapstructure | v1.21.0 / v1.5.0；未知字段拒绝 + 解码后校验 |
+| 可观测性 | OpenTelemetry SDK，trace/metric/log 走 OTLP-HTTP | SDK v1.45.0，log v0.21.0 |
 | 测试 | `stretchr/testify` | v1.11.1 |
 | CORS | `rs/cors` + `connectrpc.com/cors` | v1.11.1 / v0.1.0 |
-| 推荐引擎 | gorse（官方 SDK 停在 v0.5.0-alpha 且无 PUT，自写 `backend/pkg/gorse`） | — |
-| 进程内事件总线 | `Protocol-Lattice/GoEventBus`（仅 order 服务） | v0.2.5 |
+| 推荐引擎 | Gorse，自写 `backend/pkg/gorse` client | 外部服务，非进程内库 |
+| 进程内事件 | `Protocol-Lattice/GoEventBus` | v0.2.5；仅 order 存量路径，不是跨服务消息总线 |
 
-### 2.2 网关（独立 Go 服务）
+### 2.2 边缘网关与配置控制面（control-tower）
 
-基于 **go-kratos/gateway** fork，module 名保留 `github.com/go-kratos/gateway`。
+同级仓 `../control-tower` 是单 Go module、三个独立部署单元：
 
-| 组件 | 版本 | 用途 |
+| 部署单元 | 角色 | 当前状态 |
 |---|---|---|
-| `go-kratos/kratos/v2` + consul registry contrib | v2.8.3 | 服务发现、配置热加载 |
-| `casbin/casbin/v2` | v2.103.0 | RBAC 策略引擎 |
-| `golang-jwt/jwt/v5` | v5.2.2 | JWT 验签（**必须带 60s leeway**） |
-| `quic-go/quic-go` | v0.57.0 | 可选 HTTP/3 |
-| `go-kratos/aegis` | v0.2.0 | BBR 自适应限流、熔断 |
-| `prometheus/client_golang` | v1.21.0 | 指标暴露 |
-| OTel + otelhttp | v1.44.0 | 链路 |
+| `services/gateway` | Connect 原生反向代理、BFF 会话、认证、Casbin 授权、路由与服务发现 | 已切流，运行在 `ecommerce` namespace |
+| `services/config` | 配置 API、Watch、审计与 selector 鉴权 | 已切流；集群对象仍保留 `config-center` 旧名称 |
+| `web` | 配置中心管理界面 | 已部署，独立于业务前端 workspace |
 
-中间件目录（`gateway/middleware/`）：
-`ip · cors · jwt · rbac · logging · tracing · bbr · circuitbreaker · rewrite · routerfilter · transcoder`
+集群入口的主链路如下：
+
+```text
+Client
+→ [公网暴露时可先经过 Pangolin / Traefik / newt]
+→ Cilium Gateway API（TLS listener）
+→ control-tower gateway（HTTP/1.1 + h2c）
+→ recover → otelhttp → access log → CORS
+→ 剥离所有入站 x-md-global-* 身份头
+→ 路由与匿名清单
+→ BFF session 或迁移期 legacy bearer JWT
+→ Casbin（roles × Connect procedure）
+→ 注入可信身份头 + 路由级总超时
+→ Consul Watch + 健康过滤 + P2C 选点
+→ h2c Transport
+→ 后端 Connect 服务
+```
+
+鉴权主路径已经从「浏览器持有 JWT」演进为 **BFF + 服务端 session**：浏览器使用 httpOnly cookie，Tauri 使用 session header，token 与角色只保存在 gateway 侧 Dragonfly；迁移收尾前仍兼容 legacy bearer JWT。后端只接收网关注入的 `x-md-global-*` 身份，不解析浏览器凭据。
+
+网关从 Config Center Watch 路由、JWT 公钥、Casbin model/policy、撤销名单等键，采用原子替换、last-known-good 和指数退避。业务服务从各自 `<service>/<env>/bootstrap.yaml` 拉取完整 Bootstrap；Consul KV 已退役且无回退。
+
+**当前明确没有的能力**：旧 go-kratos fork 的 BBR 限流、熔断、HTTP/3、协议转码和重写中间件均已删除；默认不重试、也不缓存请求体。当前可称为「治理」的只有认证授权、路由、超时、健康节点选择和可观测性。若要加限流、熔断、灰度或重试，必须先定义失败语义、幂等边界和压测验收，不能写成现有能力。
 
 ### 2.3 前端
 
@@ -119,38 +180,98 @@ ecommerce/
 | RPC 客户端 | `@connectrpc/connect` + `connect-web` | 2.1.2 |
 | 代码生成 | `@bufbuild/buf` + `protoc-gen-es` → `src/gen` | 1.72.0 / 2.14.0 |
 | 环境变量 | `@t3-oss/env-core` + **zod 4** 运行时校验 | @t3-oss/env-core 0.13.11 / zod 4.4.3 |
-| 登录 | `casdoor-js-sdk` / `casdoor-react-sdk` | — |
+| 登录 | control-tower BFF：Web 用 httpOnly cookie，Tauri 用 session header，`/auth/me` 为登录态真相源；Casdoor SDK 仍有迁移残留 | — |
+| 桌面壳 | Tauri + Rust（edition 2021）+ opener/http/store/notification plugins | Tauri 2 |
 | 测试 | vitest（vite-plus test）+ Playwright browser mode + testing-library | — |
 | 其他 | lucide-react · @fontsource/roboto · web-vitals · jsonc-parser · yaml · smol-toml | — |
 
 **Apps**：`consumer:3000` · `merchant:3002` · `admin:3003` · `desktop`（Tauri 壳，套 consumer/merchant）
 **Packages**（9 个）：`api`（拦截器 + 统一错误模型）· `configs` · `constants` · `i18n` · `perf`（Web Vitals 上报）· `tauri` · `tracker`（埋点 SDK）· `ui` · `utils`
 
-### 2.4 数据与中间件
+### 2.4 数据、搜索、对象存储与事件流
 
-| 组件 | 用途 | 备注 |
+| 组件 | 当前用途 | 状态与边界 |
 |---|---|---|
-| PostgreSQL | 主存储 | **集群内 CloudNativePG `pg-main`**（2026-08-19 起；Pigsty 已关机退役），**每服务一个 schema**，TLS `verify-full`；定稿待办：instances=2 反亲和 + Barman Cloud Plugin 异地 PITR |
-| Redis 协议缓存 | 缓存 / 游标 / 分布式锁 | **Dragonfly** `dragonfly.dragonfly.svc:6379`（2026-08-20 切回，**原生 TLS 单口**，cert-manager 签发、客户端 verify CA；密码与 redis 组件同值故切换仅改 host）；redis 组件已关停留备回滚 |
-| Meilisearch | search 服务的商品检索索引 | v1.53（`search/meilisearch:7700`）；search 已完成读路径迁移，dev 已回灌 7 个示例 SPU，address 已清理无效 ES 依赖 |
-| MinIO | 商品图 | **上游仓库已归档（2026-02/04）**；定稿迁 SeaweedFS（4c4G 云箱兼作备份靶），新增备份流量不再写 MinIO（TECH-RADAR 10.6） |
-| Consul | **仅**服务注册发现（KV 配置源已退役） | **定稿退役** → K8s Service DNS + Cilium KPR，四步迁移见 TODO |
-| Casdoor | IdP（OAuth2/OIDC + JWT RS256，kid=lens） | 现经 Pangolin HTTPS（`casdoor.apikv.com`，8000 明文口已关）；**定稿收编进集群**，迁移方案见对抗第 3 轮 R3-A |
-| gorse | 推荐引擎 | behavior / product 使用（留守 node2 云箱，behavior 有三级降级兜底） |
-| NATS JetStream | 商品索引事件流 | dev 运行 3 个 server、每实例 2Gi PVC；`ECOMMERCE_EVENTS` 为可重建 R1 stream，relay/indexer 已部署。Product Service 事务内生产者、TLS/客户端认证和 NACK CRD 仍待补齐 |
-| Kafka / Strimzi / Debezium | **定稿退役**（应用侧零客户端，数据面已非可用前提） | 替代 = NATS JetStream + outbox 自写 relay + CloudEvents（TECH-RADAR §1） |
+| PostgreSQL / Pigsty | 10 个服务的核心数据，每服务一个 schema | 已切到 node3 Pigsty；客户端 TLS `verify-ca`。集群内 CNPG `pg-main` 已 hibernate，只是回切候选，不是当前主库 |
+| Dragonfly | 业务可丢缓存；control-tower BFF session | Redis 协议、TLS-only。业务域不得把库存真相、锁、幂等键或唯一正确性状态放进去；BFF session 是已接受的例外，丢失时 fail-closed 并要求重新登录 |
+| Meilisearch | 商品搜索投影 | v1.53，读路径已迁移；当前 CE 单节点不提供分片/HA，不能据此承诺千万级索引或无损故障切换 |
+| S3 兼容对象存储 | cart 的商品图等对象 | 当前指向 Silo 的 MinIO-compatible API；不是「集群内 MinIO」。SeaweedFS 是已选迁移方向，尚未完成 |
+| NATS JetStream | 当前领域事件主干与商品搜索事件流 | dev 3 server；可重建 `ECOMMERCE_EVENTS` 当前为 R1。relay/indexer 已运行；交易流是否升 R3、retention、DLQ、Inbox 和积压恢复仍需证据，不宣称已生产就绪 |
+| Apache Kafka | node3 独立实验资源 | 应用 `used_by=[]`，本仓无客户端或业务接线；企业常见度和学习兴趣不是采用依据，只有 NATS 经治理和压测仍不能满足量化需求时才重新评估 |
+| PostgreSQL outbox | 事务事件待发布表 | 业务写与 outbox 同 transaction，relay 收到 JetStream PubAck 后才标记 published；consumer 必须 Inbox 幂等 |
+| 分析 CDC | 需求触发的独立数据链 | 当前未接线；只在真实 ClickHouse/报表需求成立后评估逻辑复制/connector，不能替代领域事件 |
+| Consul | 服务注册发现 | KV 配置已退役；仍在网关选点与服务注册热路径，目标迁 K8s Service DNS + Cilium KPR |
+| Casdoor | OAuth2/OIDC 身份提供方 | control-tower 以机密客户端完成 code 交换；浏览器不再持有 token |
+| Gorse | 推荐引擎 | behavior/product 的外部依赖，使用独立 PostgreSQL/Redis；API key 配置仍有待办 |
+| Elasticsearch | 历史栈 | 已退役，不是当前依赖，也不是回退路径 |
 
-具体主机名端口见 [`context/team/local-env.md`](context/team/local-env.md) 与 `.service-matrix.yaml` 的 `externals` 段。**凭据不进仓库。**
+具体端点见 [`.service-matrix.yaml`](.service-matrix.yaml) 的 `externals` 段。凭据只进入 Config Center、Vault 与 Kubernetes Secret，**不进入仓库**。
 
-### 2.5 基础设施与 CI/CD
+### 2.5 边缘网络与安全边界
 
-- **镜像**：多阶段 Docker，`golang:1.26.5-alpine3.24`（`ARG GO_IMAGE`，以各服务 Dockerfile 为准）；非 root（uid/gid 1000）；`CGO_ENABLED=0` 静态编译；`--mount=type=cache` 缓存 go mod 与 build
-- **多架构**：`docker buildx --platform linux/amd64,linux/arm64`
-- **编排**：Kubernetes + Helm（每服务一个 chart + library chart）+ VPA
-- **GitOps**：ArgoCD **ApplicationSet**（list 生成器 + umbrella chart，`prune: true` / `selfHeal: true`）
-- **CI**：GitHub Actions，**仅发布 tag `X.Y.Z` 触发**（2026-08-20 定稿恢复 tag 制并升级链路；`workflow_dispatch` 留作显式手动例外）→ detect 按**上一 semver tag** diff 出受影响服务、矩阵分发 `service-ci.yml` → test → buildx 双推 **TCR + GHCR**（镜像 `X.Y.Z` + `sha-<7>` 双标，禁 latest）→ `update-manifests` 回写 `helm/values.yaml` 版本 tag（`[skip ci]`）→ ArgoCD 自动同步。tag 语义与打法见 [`context/team/git-commit.md`](context/team/git-commit.md)「发布 tag 与 CI 触发」
-- **可观测性栈**：fluent-bit → Loki（日志，**定稿替换为 Vector → VictoriaLogs**，2026-08-20 拍板，切换走 ≤72h 有界双写，见 TECH-RADAR §8）／OTel Collector → Jaeger（链路，保持）／VictoriaMetrics（指标）／Grafana（统一面板）
-- **集群内开发**：Okteto（**定稿降级为特例**：uid/Secret 权限等集群身份场景）；**mirrord 定稿为默认内环**（PoC 验收单见对抗第 3 轮 R3-B，通过后生效）
+| 层 | 在用能力 | 仍缺少或不能过度宣称的能力 |
+|---|---|---|
+| Cilium | CNI、kube-proxy replacement、LoadBalancer/IPAM、Gateway API 数据面 | 本仓没有覆盖 10 个业务服务的 CiliumNetworkPolicy；只有少量工具 workload 的标准 NetworkPolicy，不能宣称已完成默认拒绝 |
+| Gateway API | Cilium `Gateway`、`HTTPRoute`/`TLSRoute`，部分 listener 终止 TLS | 公网资源可能先经过 Pangolin/Traefik/newt；仍有 HTTP 路由迁移项，所以「所有 TLS 都只在 Cilium 终止」不准确 |
+| 证书 | cert-manager 签发服务证书；CA 分发逐步使用 trust-manager | 覆盖面仍需按 workload 验收，不能只看 Certificate Ready |
+| Secret | Config Center selector Secret；ESO 从 Vault 下发 OTLP 等 Secret | OpenBao/SOPS 是选型方向，不应把文档定稿写成现网事实 |
+| 业务服务身份 | 网关剥离伪造头后注入 `x-md-global-*`，后端据此识别用户 | 后端不验 session/JWT，也没有完整 east-west mTLS/workload identity；网络隔离不完整时「只信任网关」只是设计假设 |
+| 授权 | gateway Casbin 做 RPC 粒度 RBAC | 商家数据级 `merchant_id` 隔离、子账号和对象级权限未完成；OpenFGA 仍是演进方向 |
+| 服务网格 | 不使用 | 限流、熔断、重试和灰度没有由网格兜底，必须在 gateway、应用或 K8s 层显式设计 |
+
+### 2.6 构建、制品与部署
+
+| 环节 | 工具 | 当前事实 |
+|---|---|---|
+| 容器构建 | Docker 多阶段构建 + BuildKit cache | Go 服务 `CGO_ENABLED=0`，非 root 运行 |
+| 多架构 | Docker Buildx + QEMU | 发布 `linux/amd64,linux/arm64` |
+| 镜像仓库 | TCR + GHCR | GitHub Actions 当前双推，`X.Y.Z` 与 `sha-<7>` 双 tag，禁用 `latest` |
+| Helm Chart OCI | Helm + Harbor | `helm/helper.sh` 可登录并推送 `oci://harbor.apikv.com/sumery`；尚未成为 CI 主发布链，Harbor 也不是当前业务镜像主仓 |
+| Kubernetes 清单 | `backend/services/*/deploy/` | 当前运行部署路径；dev/prod manifest 与少量 VPA 已存在 |
+| Helm | umbrella chart + service/library chart | 描述不完整且版本落后，缺 control-tower gateway、outbox relay、search indexer，不是现网真相源 |
+| ArgoCD | GitOps 控制器 | 控制器在运行，但当前零 Application/ApplicationSet；没有自动同步、自愈或 prune |
+| 弹性与发布策略 | VPA 部分 manifest；KEDA、Argo Rollouts 已选型 | 尚无可证明的全链路弹性、事件扩缩容或 canary 验收 |
+| CI | GitHub Actions + GitLab context gate | 质量门禁按 PR/push 运行；镜像发布由裸 semver tag `X.Y.Z` 触发，push main 不构建发布制品 |
+
+### 2.7 可观测性与告警
+
+当前观测数据面已外移 node3，不再是「集群内 Loki + Jaeger + VictoriaMetrics」：
+
+```text
+Go OTel SDK --OTLP/HTTP + Bearer--> Pangolin --> node3 OTel Collector
+  ├── metrics --> VictoriaMetrics
+  ├── logs ----> VictoriaLogs
+  └── traces --> VictoriaTraces
+Kubernetes Vector DaemonSet -----------------------> VictoriaLogs
+Grafana -------------------------------------------> VM / VL / VT
+vmalert --> Alertmanager
+```
+
+- Go 服务以 OTel SDK 输出 trace、metric、log；前端 `@ecommerce/perf` 与 `tracker` 上报 Web Vitals、长任务、接口耗时和行为事件。
+- Vector 是当前容器日志采集器；fluent-bit、Loki、集群内 Jaeger/VM/Grafana/OTel Collector 已删除或退役。
+- Grafana、vmalert 与 Alertmanager 在用，但 Alertmanager 当前 receiver 仍未形成可靠的飞书/企业微信/ntfy 外部闭环；Gatus/Healthchecks 也不能替代告警通知验收。
+- 指标标签禁止用户、订单、SKU 等高基数字段；这些信息进入结构化日志并通过 trace id 关联。
+
+### 2.8 围绕技术栈的工程工具
+
+| 目的 | 工具与入口 | 状态 |
+|---|---|---|
+| Workspace 与前端任务 | pnpm workspace/catalog + vite-plus（`vp`） | 在用；`vp` 统一 dev/build/test/lint/fmt/staged，不使用 Husky/Biome/ESLint/Prettier |
+| API 契约与代码生成 | Protobuf 3、Buf CLI、`protoc-gen-go`、`protoc-gen-connect-go`、Protobuf-ES | 在用；同一 proto 生成 Go 与 TypeScript，`buf breaking` 已进 CI |
+| 事件工程 | PostgreSQL outbox、NATS JetStream、Protobuf/Buf、CloudEvents、nats bench、Toxiproxy | outbox relay 与搜索 indexer 已运行；Product/Order 事务内 producer、consumer Inbox、NACK/DLQ、R3、重放审计、积压 SLO 和故障演练仍未闭环 |
+| 输入校验 | buf.validate + Protovalidate | 在用；API 字段约束、Bootstrap 解码校验与未知字段拒绝均已接线 |
+| 数据访问 | sqlc + pgx | 在用；手写 SQL，生成类型安全模型与查询 |
+| Schema 迁移 | goose + `backend/tools/dbmigrate` | 在用；按服务 schema 管理版本，不由服务启动时偷偷迁移 |
+| 后端质量 | `go build`、`go vet`、`go test -short`、race、testify、fx.ValidateApp | 在用；测试分层规则见 `docs/TESTING.md` 与 `context/team/go-testing.md` |
+| 集成测试辅助 | 受控 PostgreSQL 测试库、miniredis、mockery 生成物 | 数据层验证必须运行真实 PostgreSQL 语义；当前各服务覆盖不完整，禁止用 pgxmock/go-sqlmock 冒充真实数据层验证 |
+| 前端质量 | oxlint、oxfmt、Vitest、Playwright browser mode、Testing Library | 在用程度不一；统一入口 `cd frontend && pnpm ready`，端到端覆盖仍不完整 |
+| Git 门禁 | vite-plus hooks + commitlint | 在用；仓库级 `core.hooksPath` 指向 `frontend/.vite-hooks/_` |
+| 结构门禁 | `backend/structcheck` | 在用；核对服务矩阵、目录、部署清单、网关路由和 Config Center 契约 |
+| 文档门禁 | `scripts/verify-context.sh` + canary | 在用；校验链接、索引、格式、文档预算与门禁自测 |
+| 快速验收 | `scripts/verify-quick.sh` | 在用；并行后端 build/vet 与前端 ready，成功只输出摘要 |
+| 本地/集群开发 | Make、Docker Compose、Okteto | 在用；Okteto 只用于必须复现集群身份的场景。mirrord 已选型但未完成 PoC |
+| 容量与故障验证 | k6、故障演练脚本 | 目标工具；当前没有可复现的百万/千万级容量验收报告 |
+| 供应链加固 | Trivy、Cosign/Syft、Gitleaks、Kyverno | 规划或局部评估，不能写成已完成发布门禁 |
 
 ---
 
@@ -165,7 +286,7 @@ internal/
 ├── server/                 HTTP server、拦截器链、健康检查、CORS
 ├── service/                proto ⇄ biz 转换 + 错误码映射（唯一接触 proto 的层）
 ├── biz/                    领域模型（纯 struct）+ Repo 接口 + UseCase
-├── data/                   实现 Repo：pgx / redis / ES / 第三方
+├── data/                   实现 Repo：pgx / cache / search / event / object / 第三方
 │   ├── schema/*.sql        建表 DDL（sqlc 输入）
 │   ├── queries/*.sql       业务 SQL（sqlc 输入）
 │   └── models/             sqlc 生成物（禁止手改）
@@ -226,7 +347,7 @@ biz 定义领域错误（`[模块]` 前缀）→ data 用 `%w` 双包装保证 `
 [`docs/design/platform/error-handling.md`](docs/design/platform/error-handling.md)（全服务通用规范，此前本节整段抄录已删）**；
 工具层的 PG 错误码映射用法见 `backend/services/inventory/internal/pkg/dbutil/README.md`。
 
-**网关侧还有一层**：404 / 405 / 无可用节点 / 超时等**非业务错误也按 Connect 规范**返回 `{code, message, details[]}` + `X-Error-Reason` 头 + `Access-Control-Expose-Headers`（跨域下前端才读得到该头）。实现在 `gateway/errors/`。
+**网关侧还有一层**：404 / 405 / 无可用节点 / 超时等**非业务错误也按 Connect 规范**返回 `{code, message, details[]}` + `X-Error-Reason` 头 + `Access-Control-Expose-Headers`（跨域下前端才读得到该头）。实现在 `../control-tower/internal/gwerrors/`。
 
 ---
 
@@ -236,10 +357,10 @@ biz 定义领域错误（`[模块]` 前缀）→ data 用 `%w` 双包装保证 `
 > 值来源优先级）。此前本章 60% 复述其内容，已压缩——只留三条最高频踩的：
 
 1. **写 proto 前先读设计文档**（`docs/design/<service>/` → `platform/` → `TODO.md`），设计没写清的字段问，不要猜。
-2. **每个字段都要有 buf.validate 约束**；**金额禁用 `double`/`float`**（用 `int64` 分或 decimal 字符串）——这条是当前仍在违反的活约束（见第十节）。
+2. **每个字段都要有 buf.validate 约束**；**金额禁用 `double`/`float`**，统一使用 `int64` 分或 decimal 字符串。
 3. **兼容性四红线**：不删字段（`reserved` 占号）、不复用字段号、不改类型、不改语义。
 
-buf.validate 只管结构性约束；业务不变量在 biz 层、权限在网关 RBAC——**别因为加了 validate 就省掉 biz 校验**。
+buf.validate 只管结构性约束；业务不变量在 biz 层，入口角色权限在 gateway，数据归属在领域/Repository 层——**别因为加了 validate 或 RBAC 就省掉 owner 校验**。
 buf 的 lint/breaking/生成配置**直读 `backend/buf.yaml` 与 `buf.gen*.yaml`**（此前粘贴的副本已删，唯一要记的非显然项：`buf.gen.ts.yaml` 的 `exclude_paths: [internal/conf/v1]`——配置 schema 不给前端）。
 
 ## 五、数据层规则（sqlc + PostgreSQL）
@@ -283,8 +404,8 @@ server · data · observability · discovery · log
 ```
 
 按实际消费者追加：user / search / behavior / address / merchant → `auth`；address / search →
-`search`；cart → `store`（MinIO）；behavior / product → `recommend`（gorse）；payment →
-`pay`（支付宝）。
+`search`；cart → `store`（S3 兼容对象存储）；behavior / product → `recommend`（Gorse）；
+payment → `pay`（支付宝）。
 
 字段同样带 `buf.validate` 约束：`log.level` 用 `string.in: [debug,info,...]`，`ssl_mode` 用 `in: [disable,...,verify-full]`，超时 `duration.gte = {seconds:1}`。
 
@@ -339,51 +460,36 @@ WatchKeys server-stream RPC（先订阅再发快照，反过来会漏掉两步�
 
 ---
 
-## 七、认证鉴权（集中在网关，微服务零重复）
+## 七、认证、会话与授权边界
 
-```
-浏览器 ──Casdoor OAuth2/OIDC──▶ JWT (RS256, kid=lens)
-   │
-   └─ POST /svc.v1.Service/Method ──▶ 网关
-          ├ ip → cors → jwt → rbac → tracing → logging → bbr → circuitbreaker
-          ├ jwt : 公钥验签 + WithLeeway(60s)
-          │       ← 不加会因时钟偏移导致 nbf 判定失败 → 401 → 前端退登死循环
-          ├ rbac: Casbin keyMatch2 + 角色继承
-          └ 注入 x-md-global-user-id / x-md-global-name 到下游
-                    │
-                    ▼
-          discovery:///{service}-name（Consul）
+### 7.1 当前凭据模型
+
+```text
+Web 浏览器 ── httpOnly cookie ─┐
+Tauri ─────── session header ───┼─> control-tower gateway
+legacy client ─ bearer JWT ─────┘        │
+                                         ├─ session 查 Dragonfly / JWT 验签
+Casdoor <── code exchange/refresh ───────┤
+                                         ├─ Casbin：roles × procedure
+                                         └─ 注入 x-md-global-* → backend
 ```
 
-### Casbin 模型
+- Web 与 Tauri 的主路径是 **BFF + 服务端 session**。Casdoor access/refresh token、身份和角色保存在 gateway 侧，客户端只持不透明 session id。
+- legacy bearer JWT 在迁移收尾前继续兼容；其验签包含 issuer、audience、token type、subject、`iat`、`exp` 与 60 秒时钟偏移容忍。
+- 删除 session 即时撤权；Dragonfly 不可达时会话鉴权 fail-closed。`/readyz` 必须把 session store 可达性纳入条件。
+- cookie 使用 Secure、HttpOnly、SameSite；跨域写请求还受 Origin allowlist、CORS 与 Connect 协议头约束。
 
-直读 `gateway/configs/policies/model.conf`（此前粘贴的副本已删）。要点一句话：
-`keyMatch2` 匹配路径 + `g` 角色继承 + deny 优先（`!some(where p.eft == deny)`）。
+### 7.2 信任边界
 
-### 策略编写纪律
+1. gateway 在匿名判断前无条件删除客户端传入的全部 `x-md-global-*`，完成认证后再注入可信身份。
+2. Casbin 只负责 RPC 级角色授权，默认拒绝；策略与路由由 Config Center 下发并 Watch。
+3. service 层从可信 header 读取 user/merchant 身份，绝不信任请求体里的 `user_id` 或 `merchant_id`。
+4. RBAC 不能替代数据归属校验。每条用户/商家查询仍须在 SQL 或领域层带 owner 条件，防止 IDOR。
+5. 业务服务不重复解析 JWT/session，但这不等于「后端无需安全」。只有完成默认拒绝网络策略、移除直连入口和 east-west 身份后，「只信任网关」才是可强制执行的不变式。
+6. 服务到服务调用不能冒用前端角色；应使用独立工作负载身份或明确的内部 procedure 策略。当前这部分仍是缺口。
 
-```csv
-p, consumer, /cart.v1.CartService/*, POST, allow
-p, consumer, /order.v1.orderService/CreateOrder, POST, allow     # proto 里 service 名大小写敏感
-p, merchant, /order.v1.orderService/CompleteOrder, POST, allow   # 履约动作不给消费者
-p, consumer, /merchant.v1.MerchantService/SubmitApplication, POST, allow
-p, admin,    /merchant.v1.MerchantService/ApproveApplication, POST, allow  # 否则申请人自批自
-p, admin,    /inventory.v1.InventoryService/*, POST, allow       # 服务间调用，不是前端接口
-p, anyone, /*, .*, deny                                          # 默认拒绝兜底
-
-g, consumer, public
-g, merchant, consumer      # 角色继承链：admin ⊃ merchant ⊃ consumer ⊃ public
-g, admin, merchant
-```
-
-六条规则：
-
-1. **默认拒绝 + 白名单**，`p, anyone, /*, .*, deny` 收底
-2. 涉及**审批 / 履约 / 服务间调用**的，必须 **RPC 粒度**授权，禁止整段 `/svc.v1.*` 放行
-3. 匿名路径（登录、搜索、商品详情、支付回调、埋点）必须在 `jwt` 和 `rbac` **两处 router_filter 都排除**
-4. 埋点接口刻意匿名放行 —— 匿名浏览正是最该采集的时段，要求登录等于把冷启动数据全丢了
-5. 但服务端仍以**网关注入的 `x-md-global-user-id` 优先于请求体的 `anon_id`**（后者客户端可伪造）
-6. **service 层从 header 取身份，绝不信任请求体里的 userId**
+现行设计与配置位置：`../control-tower/docs/design/adr-0002-bff-session.md`、
+`../control-tower/docs/design/auth.md`、`../control-tower/routes/{dev,pre}.yaml`。本仓只记录业务所依赖的不变式，不复制实时策略内容。
 
 ---
 
@@ -441,22 +547,25 @@ pnpm ready          # vp fmt && vp lint && vp run test -r && vp run build -r
 
 | 事项 | 现状 |
 |---|---|
-| **领域事件** | Kafka / Strimzi / Debezium 已退役。dev 已部署 NATS JetStream、`products.outbox` relay 和 search indexer，并完成 R1 stream、全量回灌与 relay 停机积压重放验证；但 Product Service 尚无商品写 RPC，也未在业务事务中调用 `outbox.Insert`。order 仍使用进程内 `GoEventBus`，behavior 仍使用内存队列 + `synced_at IS NULL` 补偿，不能据此宣称领域事件底座已全域接通 |
-| **服务间调用** | 10 个服务的 `depends_on` 目前**全部为空**（matrix 实测；曾经的 cart→config 已随配置中心拆仓断开）。order→inventory/product/address、payment→order 等全是 `depends_on_planned` |
-| **protovalidate 从不作用于配置** | `conf.proto` 的 `required = true` 形同虚设 —— 配置加载只做 mapstructure 解码，**从不调用 `protovalidate.Validate`**；mapstructure 也没开 `ErrorUnused`。结果：KV 缺块 → 不报错 → nil-safe getter → 功能被**静默关掉而不是启动失败**（gorse 就这么被静默关过，见 [`consul-kv-missing-key-silent-disable.md`](context/project/ecommerce/behavior/experience/consul-kv-missing-key-silent-disable.md)） |
-| **buf breaking 未接 CI** | proto 破坏性变更目前**没有门禁** |
-| **前端测试未接门禁** | Playwright 步骤在 workflow 里被注释掉；biome/oxlint 未全量接入 |
-| **金额类型不一致** | 规范说金额禁用 double，但 `cart.proto` / biz 里 `Price` 仍是 `float64`；DB 侧是 `DECIMAL(10,2)` |
-| **配置逻辑 10 份复制** | `internal/pkg/config` 在每个服务里各复制一份，尚未抽成共享包 |
+| **交易闭环** | order 仍有假成功路径，payment 多个 RPC 未实现，inventory 无可用核心 RPC；不能把消费者端称为可上线商城 |
+| **终端与领域覆盖** | merchant/admin 主要是壳；没有独立物流端、仓储端或 WMS。履约并入 order，但领域动作仍待实现 |
+| **服务间调用** | 10 个服务的 `depends_on` 当前全部为空；order→inventory/product/address、payment→order 等只存在于 `depends_on_planned` |
+| **领域事件** | 当前 JetStream、relay、indexer 和回灌已验证，但 Product 事务内 outbox 生产者未接，order/behavior 仍有进程内路径；Kafka producer Adapter 与 destination-aware relay 已有代码和测试场景，但 migration 未应用、PostgreSQL 容器场景未取得本轮运行证据，也没有业务 producer 或 consumer，仍处于 K1 迁移地基阶段 |
+| **容量与 HA** | 没有固定数据集与 k6 结果；Meilisearch CE 单节点、JetStream R1、Kafka 仅有代码 Adapter 且未部署，主库/对象存储/备份路径也未形成百万或千万级验收证据 |
+| **安全边界** | gateway 已完成 BFF/JWT/Casbin 与身份头剥离，但业务服务没有统一 workload identity，10 个服务也没有完整默认拒绝 NetworkPolicy；数据级归属校验仍有缺口 |
+| **交付** | ArgoCD 当前零 Application/ApplicationSet；Helm 与运行实况不一致，自动同步、自愈和回滚未闭环 |
+| **可观测性告警** | VM/VL/VT/Grafana/vmalert/Alertmanager 在用，但外部通知与 resolved 演练未闭环 |
+| **前端质量** | `pnpm ready` 已覆盖 lint/fmt/type/test/build，浏览器与端到端用例仍不足，merchant/admin 业务覆盖尤其薄弱 |
+| **重复基础代码** | `internal/pkg/{config,log,otel,registry,...}` 仍在 10 个服务中复制，修复需要同构回填并由 structcheck 防漂移 |
 
-### 新项目应做的修正
+### 继续补齐的优先顺序
 
-1. 配置解码后调用 `protovalidate.Validate(bootstrap)`，`mapstructure.DecoderConfig` 开 `ErrorUnused`
-2. `buf lint` + `buf breaking` 接进 CI（低成本高收益的门禁）
-3. 从第一天就把 `internal/pkg/{config,log,otel,registry,env,meta,dbutil}` 抽成 `backend/pkg/*` 共享包
-4. 金额统一用 `int64`（分）或 decimal 字符串，**在 proto 层面就定死**
-5. 要么真上 Kafka/NATS，要么在设计文档里明确写"当前不做事件驱动，用同步 RPC + outbox 表"
-6. CI 的镜像名与服务列表跟 Makefile 的 `SERVICES` 对齐，避免两处漂移
+1. 先完成下单、库存、支付、幂等、对账与补偿；正确性以 PostgreSQL 约束和事务为锚点。
+2. 收紧直连入口，补默认拒绝 NetworkPolicy、服务工作负载身份和商家/用户数据归属校验。
+3. 按 [生产目标与 Kafka 路线](docs/design/platform/production-scale-goal.md) 先完成 Kafka 学习沙箱和 ProductChanged 搜索影子链，再迁 Order/Inventory/Payment；定义 topic、partition key、幂等、retry/DLQ、保留与重放边界。
+4. 以明确数据口径建立容量模型与 k6 基线，再决定 PG 分区、Meilisearch 拓扑、Kafka partition/副本和缓存策略。
+5. 对齐裸 manifest、Helm 与运行资源后再重建 ArgoCD Application；未对齐前禁止直接开启 selfHeal。
+6. 完成备份/PITR、RTO/RPO、外部告警通知及 failure/resolved/依赖故障演练。
 
 ---
 
