@@ -134,8 +134,11 @@ mut_evolog() { # 抹掉全部「触发事故」要素
 mut_budget_agents() {
   head -c 4000 /dev/zero | tr '\0' 'x' >> "$1/AGENTS.md"
 }
-mut_budget_todo() { # 08-21 新增的 TODO 预算门禁,红路径此前从未被考过
-  head -c 4000 /dev/zero | tr '\0' 'x' >> "$1/TODO.md"
+mut_budget_todo() { # 无论 TODO 当前多瘦，都精确推过 96KB 门槛
+  current=$(wc -c < "$1/TODO.md" | tr -d ' ')
+  grow=$((96001 - current))
+  [ "$grow" -gt 0 ] || grow=1
+  head -c "$grow" /dev/zero | tr '\0' 'x' >> "$1/TODO.md"
 }
 
 # ── 执行 ─────────────────────────────────────────────────────
