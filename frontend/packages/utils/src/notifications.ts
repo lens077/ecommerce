@@ -18,8 +18,12 @@ export const notificationStore = createStore<NotificationState>()(() => ({
   notifications: [],
 }));
 
+// 单调序列号：同一毫秒内连续 addNotification 时，纯 Date.now() 会撞 id，
+// 届时 removeNotification 按 id 过滤会把同批通知一起删掉。
+let seq = 0;
+
 export const addNotification = (notification: Omit<Notification, "id">) => {
-  const id = Date.now().toString();
+  const id = `${Date.now()}-${++seq}`;
   notificationStore.setState((state) => ({
     notifications: [...state.notifications, { ...notification, id }],
   }));
