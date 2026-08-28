@@ -31,16 +31,16 @@ describe("用户资料 store", () => {
 
   it("setAccount 写入后可读", () => {
     setAccount(ACCOUNT);
-    expect(userStore.account.name).toBe("alice");
-    expect(userStore.account.displayName).toBe("Alice");
+    expect(userStore.getState().account.name).toBe("alice");
+    expect(userStore.getState().account.displayName).toBe("Alice");
   });
 
   it("clearAccount 必须真的清空（不能残留上一个人的资料）", () => {
     setAccount(ACCOUNT);
     clearAccount();
-    expect(userStore.account).toEqual(EMPTY_ACCOUNT);
-    expect(userStore.account.name).toBeFalsy();
-    expect(userStore.account.avatar).toBeFalsy();
+    expect(userStore.getState().account).toEqual(EMPTY_ACCOUNT);
+    expect(userStore.getState().account.name).toBeFalsy();
+    expect(userStore.getState().account.avatar).toBeFalsy();
   });
 
   it("资料绝不落 localStorage", () => {

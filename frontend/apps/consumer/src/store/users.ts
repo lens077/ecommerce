@@ -15,7 +15,8 @@
 // id/name/displayName/email/avatar（`callback` 原本也正是这么填的），
 // 而冷启动的静默续期一定会产生一次令牌写入。所以这里直接订阅令牌变化，
 // 令牌在就解出资料、令牌没了就清空 —— 一处派生，覆盖登录/续期/冷启动/登出四条路径。
-import { proxy } from "valtio";
+import { useStore } from "zustand";
+import { createStore } from "zustand/vanilla";
 import { Account } from "@/api/users/types";
 
 export interface UserState {
@@ -42,13 +43,19 @@ export const EMPTY_ACCOUNT: Account = {
   accessToken: "",
 };
 
-export const userStore = proxy<UserState>({
+/** zustand vanilla store：React 内用 `useUserStore(selector)` 订阅，
+ *  非渲染代码（回调/守卫/Provider）用 `userStore.getState()` 即时读、
+ *  用下面的模块级 action 写。禁止在 React 渲染里直接 `userStore.getState()` —— 不会触发重渲染。 */
+export const userStore = createStore<UserState>()(() => ({
   account: { ...EMPTY_ACCOUNT },
-});
+}));
+
+/** React 组件订阅入口：`const name = useUserStore((s) => s.account.name)`。 */
+export const useUserStore = <T>(selector: (state: UserState) => T): T =>
+  useStore(userStore, selector);
 
 export const setAccount = (account: Partial<Account>) => {
-  // 使用 Object.assign 或扩展运算符来合并新数据
-  userStore.account = { ...userStore.account, ...account };
+  userStore.setState((state) => ({ account: { ...state.account, ...account } }));
 };
 
 /** 清空账户。
@@ -56,7 +63,7 @@ export const setAccount = (account: Partial<Account>) => {
  *  原先登出与两处 `beforeLoad` 守卫都写的是 `setAccount({})`，等于登出后顶栏
  *  还挂着上一个人的头像和昵称。 */
 export const clearAccount = () => {
-  userStore.account = { ...EMPTY_ACCOUNT };
+  userStore.setState({ account: { ...EMPTY_ACCOUNT } });
 };
 
 // P4：原先这里订阅令牌变化、从 JWT 载荷填资料。BFF 化后浏览器不再持有令牌，
