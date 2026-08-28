@@ -29,7 +29,7 @@ import type { Product } from "@/gen/api";
 import { useCartBadge } from "@/hooks/useCart";
 import { lantern } from "@/styles/tokens";
 import { BrandMark } from "@/components/home/DemoArt";
-import { userStore } from "@/store/users";
+import { useUserStore } from "@/store/users";
 import { addNotification } from "@ecommerce/utils";
 
 const Search = styled("div")(({ theme }) => ({
@@ -114,6 +114,9 @@ export default function PrimarySearchAppBar() {
   // 它此前"碰巧能用"，只是因为读的是同步可读的 localStorage。
   const { isAuthenticated } = useAuthState();
   const { login, logout } = useAuthActions();
+  // zustand selector 订阅：资料（登录/登出/UserProfile RPC 回填）一变，顶栏立即刷新。
+  // 旧实现直读 valtio proxy 却不订阅，头像/昵称要靠父组件碰巧重渲染才更新。
+  const account = useUserStore((state) => state.account);
   const navigate = useNavigate();
   const { t } = useTranslation();
   const { formatCurrency } = useFormat();
@@ -243,7 +246,7 @@ export default function PrimarySearchAppBar() {
       <MenuItem disabled>
         <Typography variant="body2" color="text.secondary">
           {t("appBar.signedInAs", {
-            name: userStore.account.name || userStore.account.email,
+            name: account.name || account.email,
           })}
         </Typography>
       </MenuItem>
@@ -285,11 +288,7 @@ export default function PrimarySearchAppBar() {
           aria-haspopup="true"
           color="inherit"
         >
-          {userStore.account.avatar ? (
-            <Avatar src={userStore.account.avatar} alt={userStore.account.name} />
-          ) : (
-            <AccountCircle />
-          )}
+          {account.avatar ? <Avatar src={account.avatar} alt={account.name} /> : <AccountCircle />}
         </IconButton>
         <p>{t("appBar.profile")}</p>
       </MenuItem>
@@ -440,8 +439,8 @@ export default function PrimarySearchAppBar() {
                   },
                 }}
               >
-                {userStore.account.avatar ? (
-                  <Avatar src={userStore.account.avatar} alt={userStore.account.name} />
+                {account.avatar ? (
+                  <Avatar src={account.avatar} alt={account.name} />
                 ) : (
                   <AccountCircle />
                 )}

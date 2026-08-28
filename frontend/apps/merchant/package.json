@@ -32,7 +32,6 @@
     "lucide-react": "catalog:",
     "react": "catalog:",
     "react-dom": "catalog:",
-    "valtio": "catalog:",
     "zod": "catalog:"
   },
   "devDependencies": {

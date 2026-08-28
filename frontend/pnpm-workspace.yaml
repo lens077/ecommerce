@@ -52,7 +52,6 @@ catalog:
   react-i18next: ^17.0.11
   smol-toml: ^1.7.1
   typescript: ^7.0.2
-  valtio: ^2.3.2
   # Vite+ 与 core 必须锁死同一版本，避免插件解析出两份 Vite 类型。
   # pnpm 的 overrides 不创建依赖边：声明 vite-plus 的 package 还要直接声明 vite: catalog:，
   # 否则 Vitest 的 peer 解析会静默补装一份上游 Vite，旧的 vite build 脚本会误用它。
@@ -64,6 +63,7 @@ catalog:
   web-vitals: ^6.1.1
   yaml: ^2.9.0
   zod: ^4.4.3
+  zustand: ^5.0.15
 
 catalogMode: prefer
 
