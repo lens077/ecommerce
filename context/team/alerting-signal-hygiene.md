@@ -119,6 +119,36 @@ absent({__name__="<关键指标>"}) == 1   for: 10m
 现网已有 `HubbleFlowTelemetryMissing` 是这个模式，但它只保 hubble；
 新增任何一类指标的告警时，都要配一条对称的 `absent()`。
 
+## K8s 告警规则（2026-08-29 已落地）
+
+规则文件在 node3 `/infra/rules/ecommerce-k8s.yml`（组名 `ecommerce-k8s`，6 条，属主
+`victoria:victoria`，与 `ecommerce-security.yml` 同目录同约定）：
+
+| 规则 | 表达式要点 | `for` | severity |
+|---|---|---|---|
+| `K8sPodRestartStorm` | 15 分钟重启增量 > 2（稳态 CrashLoop 退避上限 5 分钟≈3 次，正常发布为 1 次） | 5m | critical |
+| `K8sContainerNotReady` | `k8s.container.ready == 0` | 15m | warning |
+| `K8sDeploymentDegraded` | `available < on("k8s.deployment.uid") desired` | 10m | warning |
+| `K8sNodeNotReady` | `k8s.node.condition_ready == 0` | 5m | critical |
+| `K8sClusterMetricsMissing` | `absent(...)` 兜底 | 10m | critical |
+| `AlertFiringTooLong` | `(time() - ALERTS_FOR_STATE{alertname!="AlertFiringTooLong"}) > 4*3600` | 15m | warning |
+
+**数据来源不需要 kube-state-metrics**：集群内 otel collector 的 `k8s_cluster` receiver
+已在采集并远端写入 node3，26 个 `k8s.*` 指标可用。
+
+写这类规则时的三个硬坑（都实测踩过）：
+
+1. **指标名与 label 名带点号**（VM 的 OTLP 摄入未开 `usePrometheusNaming`）。必须写
+   `{__name__="k8s.container.restarts"}`、`by ("k8s.namespace.name")`；写成
+   `k8s_container_restarts` **查不到数据且不报错**。
+2. **以 `{` 开头的表达式必须加引号**，否则 YAML 把它解析成 flow mapping 直接报错。
+3. **`ALERTS_FOR_STATE` 没有 `alertstate` label**。加了该过滤条件会永远查不到，
+   元规则静默失效。
+
+**验收方式（只验「加载成功」不算数）**：把规则表达式用 `query_range` 回放到历史事故窗口，
+确认它当时会命中；再确认当前健康态下不命中。本组 `K8sPodRestartStorm` 回放到
+2026-08-29 06:00Z 命中 31 个 Pod，当前为 `inactive`。
+
 ## 本项目的现网事实（实测 2026-08-29）
 
 - 告警链路：vmalert（node3 `/infra/rules/*.yml`，10s 评估）→ Alertmanager（`receiver: local-audit`）
