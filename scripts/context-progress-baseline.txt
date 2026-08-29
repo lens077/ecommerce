@@ -7,5 +7,4 @@
 # 清理方向见 docs/todo/文档与协作机制.md「消除并行进度源」。
 
 docs/SCAFFOLD.md  34  # 新项目验收模板,非本仓进度(§十 已写明「复制到新项目的 TODO.md 里逐条勾」);文件头已加声明。可长期保留,但不应再增
-docs/DEVOPS.md  21  # 四阶段落地路线的验收清单,与 docs/todo/供应链与交付流水线.md 平行;应改为无勾选的「验收标准」
 docs/design/platform/capacity-balancing.md  12  # 阶段 B 演练清单与持续告警清单;条目应上移进 docs/todo/基础设施与部署模型.md

@@ -1,17 +1,38 @@
 # 技术雷达 — CNCF Landscape 选型评估（2026-08-20 定稿）
 
-> **本文件不是进度真相源**。它是选型评估清单的**定稿版**：
-> 逐项讨论 → 回填结论 → 定稿项落进对应真相源（选型进 [`STACK.md`](../STACK.md)、待办进 [`TODO.md`](../TODO.md)、CI/交付类并入 [`docs/DEVOPS.md`](DEVOPS.md)）后，本文件对应行只留结论与指针。
+> ## 怎么读这份文件（2026-08-29 合并原先叠了三层的覆盖横幅）
 >
-> **⭐ 定稿记录（2026-08-20）**：全部条目经**三轮异构对抗评审**定稿——claude 主稿 × codex（gpt-5.6-terra）× claude2 三方独立调研，8 个分歧逐项裁决、5 个环境议题收敛、3 份实施稿过红队验收。过程与证据：[`技术栈选型对抗/`](技术栈选型对抗/)（三份立场稿 + 三轮审阅表）。
-> **环境前提（用户设定，2026-08-20）**：集群 = 3 台同宿主 Mac(M2 Max 32G) 的 PD 虚拟机（arm64 Ubuntu 26.04，各 4c/6.5G）——**quorum 可凑、物理故障域=1**，异地备份是硬前提；线上仅 2 台低可用 docker 机（4c4G=备份靶、2c2G=哨兵，均不载业务）。
-> **用户直接拍板项**：ClickHouse 单节点、网关保持自研/不上网格/LB 走 Cilium 零新增、VictoriaLogs 替 Loki + Vector、OpenFGA 添加、trust-manager 添加。
+> **一句话**：本文是 **2026-08-20 那一轮选型评估的历史存档**，
+> **目标态一律以 [`docs/TECH.md`](TECH.md) 为准**；两者冲突时本文作废。
+> 它既不是进度真相源（那是 [`TODO.md`](../TODO.md)），也不再是选型真相源。
 >
-> **后续决策覆盖（2026-08-27）**：为建设百万/千万级生产项目并学习企业常用事件平台，重新采用 Apache Kafka。Kafka/KRaft/Strimzi/franz-go 成为目标栈，NATS 仅保留迁移期当前搜索链，完成 Kafka 业务链后目标退役。§1 原 NATS 论证保留为历史决策证据，不再代表目标态；详见 [生产目标与 Kafka 路线](design/platform/production-scale-goal.md)。
-> **后续决策覆盖（2026-08-28）**：本文件的现状记录与历史选型论证继续保留，但目标态统一以 [docs/TECH.md](TECH.md) 为准：搜索迁回 Elasticsearch（推翻 §2 Meilisearch 定稿——当年 ES 退役主因是节点内存预算不足，资源条件现已满足，性能局限解除，聚合分析缺口一并解决），Jaeger 改为 VictoriaTraces，SeaweedFS 迁移改为 Silo，CNPG 改为外部 Pigsty，网关 Casbin 改为 OpenFGA；Kafka 部署于非 K8s 独立集群；错误监控维持现役 Bugsink（同日复核推翻「GlitchTip 取代」——GlitchTip 转为条件采纳，触发条件见 TECH.md §11.3）。制品分工（同日用户定稿）：TCR 为主镜像仓库（集群直连拉取），Harbor 存储 Helm 制品（OCI），GHCR 可选双存（镜像+Helm）、是否推送由 CI 按网络决定。开发内环已收口为 mirrord mirror + Okteto 接管，前端本地状态已迁 Zustand；Tetragon `1.7.1` 已三节点落地并完成 VictoriaLogs/VictoriaMetrics/vmalert 告警闭环，保持 audit-only，enforcement 待独立评估。
+> **仍然有效的三样东西**：
+> 1. **评估方法与证据链**——2026-08-20 抓取 <https://landscape.cncf.io/> 全量 2409 条目，
+>    排除会员公司条目、纯托管服务、已归档项目；另做 GitHub API 实测（stars/推送/许可证/归档）
+>    与集群实地核验。经**三轮异构对抗评审**（claude 主稿 × codex(gpt-5.6-terra) × claude2 独立调研，
+>    8 个分歧逐项裁决、5 个环境议题收敛）。过程见 [`技术栈选型对抗/`](技术栈选型对抗/)。
+> 2. **环境前提**（用户设定）——集群 = 3 台同宿主 Mac(M2 Max 32G) 的 PD 虚拟机
+>    （arm64 Ubuntu 26.04，各 4c/6.5G）：**quorum 可凑、物理故障域 = 1**，异地备份是硬前提；
+>    线上另有 2 台低可用 docker 机（4c4G 备份靶、2c2G 哨兵，均不载业务）。
+> 3. **一条仍在执行的纪律**——新增基础设施必须由量化需求、容量或故障证据触发，不得凭「看起来有用」引入。
 >
-> **来源与方法**：2026-08-20 抓取 <https://landscape.cncf.io/> 全量数据（2409 条目），排除会员公司条目、纯托管服务、已归档项目，并按当时约束排除 Java 实现；2026-08-27 起 Kafka/Strimzi/Debezium/Kafka Connect 是事件平台的明确例外。对抗轮另做 GitHub API 实测（stars/推送/许可证/归档）与集群实地核验。
-> **评估基线订正**：本行保留 2026-08-20 的集群现状记录；目标态已由 [docs/TECH.md](TECH.md) 覆盖：Dragonfly 为定稿缓存并按 Session／Cache／限流强制分实例隔离，PostgreSQL 定稿为外部 Pigsty，集群内 CNPG 仅为存量休眠资源。其余不动件维持：Cilium netkit/BBR/KPR、VictoriaMetrics、connect-go、quic-go、sqlc+pgx、OTel、ArgoCD ApplicationSet。
+> **已被推翻的结论（读正文时按此对照，不要照抄）**：
+>
+> | 本文原结论 | 现行定稿 | 推翻时间与原因 |
+> |---|---|---|
+> | NATS 为事件主干 | **Apache Kafka**（KRaft，部署于**非 K8s 独立集群**；客户端 franz-go） | 2026-08-27：转向百万/千万级生产目标。NATS 仅留迁移期搜索链，完成后退役 |
+> | Meilisearch（§2 定稿） | **Elasticsearch** | 2026-08-28：当年 ES 退役主因是节点内存不足，资源条件已满足，聚合分析缺口一并解决 |
+> | Jaeger | **VictoriaTraces** | 2026-08-28 |
+> | SeaweedFS | **Silo**（MinIO 分叉线） | 2026-08-28 |
+> | CNPG（集群内） | **外部 Pigsty**；集群内 CNPG 仅存量休眠 | 2026-08-28 |
+> | 网关 Casbin | **OpenFGA**（对象级授权） | 2026-08-28 |
+> | GlitchTip 取代 Bugsink | 维持现役 **Bugsink**；GlitchTip 降为条件采纳 | 2026-08-28 复核推翻，触发条件见 TECH.md §11.3 |
+>
+> **维持不动的**：Cilium netkit/BBR/KPR、VictoriaMetrics、VictoriaLogs + Vector、connect-go、
+> quic-go、sqlc+pgx、OTel、ArgoCD ApplicationSet、Dragonfly（按 Session／Cache／限流强制分实例）、
+> ClickHouse 单节点、网关自研不上网格、trust-manager。
+> 制品分工（2026-08-28 用户定稿）：TCR 主镜像仓库（集群直连拉取）、Harbor 存 Helm 制品（OCI）、
+> GHCR 可选双存，是否推送由 CI 按网络决定。
 >
 > **状态标记**：✅ 采纳（写明落点）· 🟡 观察/试验（写明触发条件）· ❌ 否决（写明原因）。**本版无 ⬜。**
 
