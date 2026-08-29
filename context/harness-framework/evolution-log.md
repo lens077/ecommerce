@@ -44,6 +44,47 @@ description: harness 本身（硬规则/门禁/Agent 约束）每次改动的原
 
 ---
 
+### 2026-08-29 structcheck 加两条断言 + 签名前 Trivy 扫描
+
+- **改了什么**：①`TestExternalUsedByMatchesCode`——`.service-matrix.yaml` 的
+  `externals.*.used_by` 点名的服务，必须在自己目录下有 `.go` 文件引用该依赖；
+  `used_by` 里的非服务名（如 `redis_gorse.used_by: [gorse]`，gorse 是外部引擎）
+  必须能在 `externals` 段找到，否则报「写错名字」。②`TestNoSecretVolumeShadowsSystemCABundle`
+  ——扫 `helm/`、`backend/services/*/deploy/`、`backend/tools/*/deploy/` 下所有 YAML，
+  禁止 `mountPath` 指向 `/etc/ssl/certs` 根目录。③`service-ci.yml` 在 SBOM 与
+  Cosign 签名之间插入 Trivy 扫描，`security-events: write` 在 reusable workflow
+  与调用方 `backend.yml` 两处都加。
+- **为什么**：这三件事的共同点是**错了不会被编译、测试或部署发现**。
+  拓扑边写错只会让查拓扑的人做错判断；CA 挂载遮蔽要等到公网 HTTPS 调用时才炸，
+  且报错指向证书而非挂载；签名在扫描之前则会让高危镜像带着**有效签名**流出。
+  `used_by` 的判定刻意宽松（大小写不敏感、含生成的 `conf.pb.go`）：它的语义是
+  「这个服务用到该外部依赖」，用法未必是导入客户端库——cart 只从配置取 minio host
+  拼缩略图 URL，证据就落在生成的配置 schema 里。**要拦的是「一次引用都没有」，
+  不是「用法不够典型」**；误报会让人删断言。
+  Trivy 用 `ignore-unfixed`，同理：把无修复漏洞算进阻断集会让流水线长期红着，
+  最后被加 `continue-on-error` 绕过，比没有扫描更糟。
+- **触发事故**：①`.service-matrix.yaml` 写着 `nats: used_by: [search]`，而 search 服务
+  对 nats **零引用**——真正的导入方是 `backend/tools/{search-indexer,outbox-relay}`，
+  不在 `services` 段。该文件自称「服务拓扑真相源」，这条错误边会让人把 search
+  误判成 NATS 消费者。②`helm/` 下 **20 处**把 `db-ca-cert` 挂到 `/etc/ssl/certs`
+  （`values.yaml` 10 + 各 chart `values*.yaml` 10）。K8s 卷挂载会**替换整个目录**，
+  容器内只剩 `pg_ca.crt`，发行版 CA bundle 全部不可见。它当时没炸只因 GitOps 是断的、
+  这套 chart 没被 apply；一旦接回 ArgoCD，payment→支付宝、user→Casdoor 会同时验不过证书。
+  ③签名链里 SBOM 之后直接 Cosign，中间没有任何漏洞门禁。
+- **怎么验证的**：两条断言都做了「注错必红、还原必绿」实测。
+  `used_by`：把 nats 的 `used_by` 改回 `[search]` → 精确报出
+  「externals.nats.used_by 声称 search 用了它，但 backend/services/search/ 下没有任何
+  .go 文件提到 [nats]」并给出两条可执行修法；还原后 ok。
+  CA：用 python 精确把 `helm/values.yaml` 的一处 `/etc/postgresql/ca` 改回
+  `/etc/ssl/certs` → 报 `../../helm/values.yaml:89`；还原后 ok。
+  （首次用 BSD `sed` 的空模式复用 `s||...|` 注错**没生效**，测试假绿——
+  换 python 精确替换才真正验证到。**注错验证本身也会失败，要确认注入真的发生了**。）
+  首条断言上线时立刻抓到我自己的疏漏：`externals.pigsty_node3` 有 `used_by`
+  但我漏了判定模式，10 个服务各报一次——「新增 external 要同步补模式」这条
+  由断言自己强制，不靠人记。
+  Trivy 尚未在真实 tag 发布上验证过（CI 仅由发布 tag 触发），已在
+  `docs/todo/供应链与交付流水线.md` 标注首发需确认的两项风险。
+
 ### 2026-08-29 新增 [LIVE-FACT] 门禁：运行时观测值必须带实测日期
 
 - **改了什么**：`verify-context.sh` 扩到九项，新增 `[LIVE-FACT]`：三类低歧义的运行时

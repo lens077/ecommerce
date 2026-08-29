@@ -49,7 +49,40 @@ type serviceEntry struct {
 }
 
 type serviceMatrix struct {
-	Services map[string]serviceEntry `yaml:"services"`
+	Services  map[string]serviceEntry  `yaml:"services"`
+	Externals map[string]externalEntry `yaml:"externals"`
+}
+
+// externalEntry 只取 used_by —— 其余字段(host/note)是自由文本,不参与结构断言。
+type externalEntry struct {
+	UsedBy []string `yaml:"used_by"`
+}
+
+// externalRefPatterns: external 名 → 在服务代码里能证明「确实用了它」的字符串。
+//
+// 判定刻意宽松(大小写不敏感、含生成的 conf.pb.go):`used_by` 的语义是「这个服务用到
+// 该外部依赖」,而用法未必是导入客户端库 —— 例如 cart 只从配置里取 minio host 拼
+// 缩略图 URL,证据就落在生成的配置 schema 里。**要拦的是「一次引用都没有」那种错**,
+// 不是「用法不够典型」。宁可漏报不可误报:误报会让人删断言。
+//
+// 触发事故(2026-08-29):matrix 里写着 `nats: used_by: [search]`,而 search 服务对
+// nats **零引用** —— 真正的导入方是 backend/tools/{search-indexer,outbox-relay}。
+// 查拓扑的人会据此把 search 误判成 NATS 消费者。
+var externalRefPatterns = map[string][]string{
+	"meilisearch":    {"meilisearch"},
+	"minio":          {"minio", "silo"},
+	"gorse":          {"gorse"},
+	"alipay":         {"alipay"},
+	"nats":           {"nats"},
+	"kafka":          {"kafka", "franz-go"},
+	"elasticsearch":  {"elasticsearch", "opensearch"},
+	"casdoor":        {"casdoor"},
+	"consul":         {"consul"},
+	"dragonfly":      {"redis", "dragonfly"},
+	"config_center":  {"configsource", "config-center", "configcenter"},
+	"redis_gorse":    {"gorse"},
+	"postgres_gorse": {"gorse"},
+	"pigsty_node3":   {"pgx", "postgres", "pgxpool"},
 }
 
 func loadMatrix(t *testing.T) serviceMatrix {
@@ -81,6 +114,72 @@ func listServiceDirs(t *testing.T) []string {
 		}
 	}
 	return dirs
+}
+
+// serviceReferences 报告 backend/services/<svc>/ 下是否有任一 .go 文件提到 pats 之一。
+func serviceReferences(t *testing.T, svc string, pats []string) bool {
+	t.Helper()
+	root := filepath.Join(servicesDir, svc)
+	found := false
+	err := filepath.WalkDir(root, func(p string, d os.DirEntry, err error) error {
+		if err != nil || d.IsDir() || found || !strings.HasSuffix(p, ".go") {
+			return nil //nolint:nilerr // 单个文件读不到不应中断整棵树的遍历
+		}
+		b, readErr := os.ReadFile(p)
+		if readErr != nil {
+			return nil
+		}
+		low := strings.ToLower(string(b))
+		for _, pat := range pats {
+			if strings.Contains(low, strings.ToLower(pat)) {
+				found = true
+				return filepath.SkipAll
+			}
+		}
+		return nil
+	})
+	if err != nil {
+		t.Fatalf("遍历 %s: %v", root, err)
+	}
+	return found
+}
+
+// externals.*.used_by 里点名的服务,必须在自己的代码里真的引用了该外部依赖。
+//
+// 这条断言防的是「真相源写了拓扑边,代码里却没有」——查拓扑的人会照着它做错误判断,
+// 而这种错不会被编译、测试或部署发现,只能靠交叉核对。
+func TestExternalUsedByMatchesCode(t *testing.T) {
+	m := loadMatrix(t)
+	if len(m.Externals) == 0 {
+		t.Fatal(".service-matrix.yaml 的 externals 段为空")
+	}
+
+	for ext, entry := range m.Externals {
+		for _, consumer := range entry.UsedBy {
+			// used_by 允许点名非本仓服务(如 redis_gorse.used_by:[gorse],gorse 是外部引擎)。
+			// 这类跳过 —— 本仓没有它的代码可查。
+			if _, isService := m.Services[consumer]; !isService {
+				if _, isExternal := m.Externals[consumer]; !isExternal {
+					t.Errorf("externals.%s.used_by 里的 %q 既不是 services 段的服务,"+
+						"也不是 externals 段的条目 —— 写错名字或该条目已删除", ext, consumer)
+				}
+				continue
+			}
+
+			pats, ok := externalRefPatterns[ext]
+			if !ok {
+				t.Errorf("externals.%s 有 used_by 但 externalRefPatterns 缺少它的判定模式 —— "+
+					"新增 external 时要同步在 structcheck 里补一行,否则这条边不受任何检查", ext)
+				continue
+			}
+			if !serviceReferences(t, consumer, pats) {
+				t.Errorf("externals.%s.used_by 声称 %s 用了它,但 backend/services/%s/ 下"+
+					"没有任何 .go 文件提到 %v —— 要么删掉这个 used_by 条目,"+
+					"要么它的真实使用方不在 services 段(如 backend/tools/,应在 note 里写明)",
+					ext, consumer, consumer, pats)
+			}
+		}
+	}
 }
 
 // matrix services 与 backend/services 目录双向对齐。

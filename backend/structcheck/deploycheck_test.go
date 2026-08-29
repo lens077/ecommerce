@@ -11,6 +11,7 @@ package structcheck
 
 import (
 	"archive/tar"
+	"bufio"
 	"compress/gzip"
 	"fmt"
 	"io"
@@ -802,5 +803,73 @@ func assertSelectorMount(
 	}
 	if !foundVolume {
 		t.Errorf("%s is missing config-source Secret volume", source)
+	}
+}
+
+// 禁止把 Secret/ConfigMap 卷挂到 /etc/ssl/certs 根目录。
+//
+// K8s 的卷挂载会**替换**挂载点的整个目录内容。挂到 /etc/ssl/certs 之后,容器里只剩
+// 卷里那几个文件,**发行版自带的 CA bundle 全部不可见** —— 任何从容器发起的公网
+// HTTPS 调用都会以 `x509: certificate signed by unknown authority` 失败。
+//
+// 触发事故(2026-08-29):helm/ 下 20 处(values.yaml 10 + 各 chart values*.yaml 10)
+// 把 db-ca-cert 挂到 /etc/ssl/certs。它当时没炸,只因为 GitOps 是断的、这套 chart
+// 没被 apply;`backend/services/*/deploy/` 那条真正在跑的路径用的是 /etc/postgresql/ca。
+// 一旦接回 ArgoCD,payment→支付宝、user→Casdoor 的 HTTPS 出站会同时失效,
+// 且失败信息指向证书而非挂载,极难归因。
+//
+// 附带结论:那个卷本身也是多余的 —— 数据库 CA 实际由配置里的 Tls.CaPem(PEM 字符串)
+// 加载,没有任何 Go 代码读这个挂载文件。保留断言是为了防止有人再挂回来。
+//
+// 要挂单个证书文件时用 subPath(只替换一个文件而非整个目录),或换一个专用目录
+// 如 /etc/postgresql/ca 并让应用显式指向它。
+func TestNoSecretVolumeShadowsSystemCABundle(t *testing.T) {
+	// 匹配 mountPath 指向 /etc/ssl/certs 本身(带不带引号、有无尾斜杠都算)。
+	// 挂到它**下面**的具体文件(如 /etc/ssl/certs/foo.crt)不在此列 —— 那是 subPath 式
+	// 单文件挂载,不会替换整个目录。
+	re := regexp.MustCompile(`mountPath:\s*["']?/etc/ssl/certs/?["']?\s*$`)
+
+	var hits []string
+	roots := []string{
+		filepath.Join(repoRoot, "helm"),
+		filepath.Join(repoRoot, "backend", "services"),
+		filepath.Join(repoRoot, "backend", "tools"),
+	}
+	for _, root := range roots {
+		if _, err := os.Stat(root); os.IsNotExist(err) {
+			continue
+		}
+		err := filepath.WalkDir(root, func(p string, d os.DirEntry, err error) error {
+			if err != nil || d.IsDir() {
+				return nil //nolint:nilerr // 单文件异常不中断遍历
+			}
+			if ext := filepath.Ext(p); ext != ".yaml" && ext != ".yml" {
+				return nil
+			}
+			f, openErr := os.Open(p)
+			if openErr != nil {
+				return nil
+			}
+			defer f.Close()
+			sc := bufio.NewScanner(f)
+			sc.Buffer(make([]byte, 0, 64*1024), 1024*1024)
+			for line := 1; sc.Scan(); line++ {
+				if re.MatchString(sc.Text()) {
+					hits = append(hits, fmt.Sprintf("%s:%d", p, line))
+				}
+			}
+			return nil
+		})
+		if err != nil {
+			t.Fatalf("遍历 %s: %v", root, err)
+		}
+	}
+
+	if len(hits) > 0 {
+		sort.Strings(hits)
+		t.Errorf("以下 %d 处把卷挂到 /etc/ssl/certs 根目录,会遮蔽发行版 CA bundle,"+
+			"导致容器内所有公网 HTTPS 调用验不过证书:\n  %s\n"+
+			"改法:换用专用目录(如 /etc/postgresql/ca),或用 subPath 只挂单个文件。",
+			len(hits), strings.Join(hits, "\n  "))
 	}
 }
