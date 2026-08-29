@@ -74,9 +74,10 @@
 
 ## 3. requests 校准流程
 
-### 阶段 A：发布 recommendation-only VPA（已完成）
+### 阶段 A：发布 recommendation-only VPA
 
-已完成以下操作：
+本阶段的发布内容如下（**完成状态不在本文承载**——见 [`TODO.md`](../../../TODO.md)
+与 [`docs/todo/基础设施与部署模型.md`](../../todo/基础设施与部署模型.md)）：
 
 1. 确认 live Deployment 的 targetRef、container 名称和源码一致。
 2. 将现有 behavior/cart/order VPA 从 `InPlace` 改为 `Off`。

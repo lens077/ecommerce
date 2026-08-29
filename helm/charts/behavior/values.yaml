@@ -42,7 +42,7 @@ secret:
 dbCaCert:
   enabled: true
   secretName: "pg-ca-cert"
-  mountPath: "/etc/ssl/certs"
+  mountPath: "/etc/postgresql/ca"
   fileName: "pg_ca.crt"
 resources:
   requests:
