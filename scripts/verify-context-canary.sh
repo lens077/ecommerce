@@ -144,6 +144,14 @@ mut_budget_todo() { # 无论 TODO 当前多瘦，都精确推过 96KB 门槛
   [ "$grow" -gt 0 ] || grow=1
   head -c "$grow" /dev/zero | tr '\0' 'x' >> "$1/TODO.md"
 }
+mut_live_fact() { # 运行时观测值不带实测日期 → 读者分不清「结构事实」与「某一刻快照」
+  printf '\n当前 ecommerce 分布为 5/6/6，15/15 Running，镜像 sha-0b9b9ad。\n' \
+    >> "$1/context/team/local-env.md"
+}
+mut_live_fact_dated_ok() { # 带实测日期的快照**不得**误报(假阳性守卫)
+  printf '\n当前 ecommerce 分布为 5/6/6，15/15 Running〔实测 2026-08-29〕。\n' \
+    >> "$1/context/team/local-env.md"
+}
 mut_progress_src() { # 未登记基线的文件长出复选框 → 新的并行进度源
   cat > "$1/docs/tmp-canary-progress.md" <<'EOF'
 # canary 注错样本——TODO.md 之外的第二套进度视图
@@ -213,9 +221,12 @@ probe progress-fenced-ok  0 ""             mut_progress_fenced_ok
 probe retired             1 "RETIRED"      mut_retired
 # 假阳性守卫:带横幅的历史陈述必须放行,否则会逼人删掉真实的踩坑记录
 probe retired-banner-ok   0 ""             mut_retired_banner_ok
+probe live-fact           1 "LIVE-FACT"    mut_live_fact
+# 假阳性守卫:带实测日期的快照必须放行,否则这条规矩本身没法遵守
+probe live-fact-dated-ok  0 ""             mut_live_fact_dated_ok
 
 if [ "$fails" -gt 0 ]; then
   echo "verify-context-canary: $fails 个探针失败——门禁可能已静默失效,先修门禁再改内容"
   exit 1
 fi
-echo "verify-context-canary: OK（17 探针全过:干净沙箱绿 + 十四类注错被拦且 tag 正确 + 三道假阳性守卫）"
+echo "verify-context-canary: OK（19 探针全过:干净沙箱绿 + 十五类注错被拦且 tag 正确 + 四道假阳性守卫）"

@@ -5,7 +5,7 @@
 # verify-agent-note-format / verify-doc-budgets)移植,落地方式沿用本仓惯例:
 # 能判定的约束变成脚本,存量漂移走基线棘轮(见 scripts/lint-baseline.sh 的设计)。
 #
-# 八项检查(任一违规 → 退出码 1):
+# 九项检查(任一违规 → 退出码 1):
 #   [DEAD-LINK]    AGENTS.md/README.md/STACK.md 与 context/**、docs/design/** 的
 #                  相对 markdown 链接必须可达(2026-08-26 扩:原只查 AGENTS+context,
 #                  当日 README/STACK/docs/design 三处死链全靠临时脚本抓到——
@@ -307,10 +307,63 @@ done < <(find context docs/design docs/observability -name "*.md" -type f) | whi
   fail "RETIRED" "${hit} 提到已退役组件却无「存量/已退役/历史」等横幅——读者会照着死链路操作"
 done
 
+# ── 9. 运行时观测值必须带实测日期 ────────────────────────────
+# 集群数字写进文档的那一刻都是对的,然后安静地变错——读者无法区分
+# 「结构事实」与「某一刻的快照」。2026-08-29 实测到三种坏法同时存在:
+#   写错  —— AGENTS.md 说「集群实跑 :dev」,实际 5 种 tag 并存、无一个 :dev
+#   过期  —— 文档记的 8/4/5,健康态其实是 5/6/6
+#   故障态被当稳态 —— 8/4/5 是 scheduler 崩溃期间的快照,不是文档过期
+#
+# 对策不是删掉数字(它们解释了很多决策,且删了挡不住下一个 agent 重新写回),
+# 而是**强制标注观测时点**:耐久内容是「不变量 + 查法」,数字降级为带日期的注解。
+# 写法与三层分类见 context/team/live-facts.md。
+#
+# 只认三类低歧义的观测值,宁可漏报不可误报(误报会让人关掉门禁):
+#   分布      5/6/6 且同行有集群语境词(排除 node101/102/103 这类节点名列表)
+#   就绪计数  4/4 Running(排除 1/1 —— 那几乎总是「单副本健康」的通用示例)
+#   镜像 tag  sha-xxxxxxx
+# 放行:同行/±2 行、或最近的上级标题里出现「实测|实况|快照|观测」+ YYYY-MM-DD。
+# 不扫:reports/ progress-archive/ 选型对抗/(按定义就是带日期的历史)、
+#      evolution-log(每条自带 ### 日期)、TECH-RADAR(自述历史存档)、
+#      experience/(踩坑记录里的数字是症状举例,不是集群观测)。
+while IFS= read -r file; do
+  awk -v F="$file" '
+    BEGIN{
+      V1="(^|[^0-9/])[0-9]{1,2}/[0-9]{1,2}/[0-9]{1,2}([^0-9/]|$)"
+      CTX1="分布|skew|node10|Pod|副本"
+      V2="([2-9][0-9]*|[0-9]{2,})/[0-9]+ *(Ready|Running)"
+      V3="sha-[0-9a-f]{7}"
+      DATE="20[0-9][0-9]-[0-9][0-9]-[0-9][0-9]"
+      WORD="实测|实况|快照|观测"
+    }
+    { n++; L[n]=$0; if ($0 ~ /^#{1,6} /) H[n]=1 }
+    function dated(s){ return (s ~ DATE && s ~ WORD) }
+    END{
+      for(i=1;i<=n;i++){
+        l=L[i]; hit=""
+        if (l ~ V1 && l ~ CTX1) hit="分布"
+        else if (l ~ V2) hit="就绪计数"
+        else if (l ~ V3) hit="镜像tag"
+        if (hit=="") continue
+        ok=0
+        lo=(i-2<1?1:i-2); hi=(i+2>n?n:i+2)
+        for(j=lo;j<=hi;j++) if (dated(L[j])) ok=1
+        if (!ok) for(k=i;k>=1;k--) if (H[k]) { if (dated(L[k])) ok=1; break }
+        if (!ok) printf "%s:%d|%s\n", F, i, hit
+      }
+    }' "$file"
+#      live-facts.md 自身(它是**定义这条规则**的文档,必须引用 5/6/6、4/4 Running
+#      这些模式做示例——与 verify-context-canary.sh 故意内含坏样本同理)。
+done < <(find AGENTS.md README.md STACK.md TODO.md context docs -name "*.md" -type f \
+         | grep -vE 'docs/(progress-archive|reports|技术栈选型对抗)/|evolution-log\.md|TECH-RADAR\.md|/experience/|context/team/live-facts\.md') \
+| while IFS='|' read -r loc kind; do
+  fail "LIVE-FACT" "${loc} 的${kind}是某一刻的观测值却无实测日期——写法见 context/team/live-facts.md"
+done
+
 # ── 汇总 ─────────────────────────────────────────────────────
 if [ -s "$violations" ]; then
   echo "verify-context: 发现 $(wc -l < "$violations" | tr -d ' ') 处违规"
   cat "$violations"
   exit 1
 fi
-echo "verify-context: OK(链接/INDEX 覆盖/frontmatter/experience 格式/evolution-log/预算/并行进度源/退役物横幅 全部通过)"
+echo "verify-context: OK(链接/INDEX 覆盖/frontmatter/experience 格式/evolution-log/预算/并行进度源/退役物横幅/实测日期 全部通过)"

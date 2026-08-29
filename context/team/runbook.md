@@ -51,6 +51,7 @@ description: 给所有 AI 编码工具(尤其 Codex)的可执行命令与验收�
 | 对外公开服务 / 内网穿透 / `*.apikv.com` | [pangolin-tunnel.md](pangolin-tunnel.md) | k8s target 走 80 得 envoy 404;改完配置不等 Traefik 5s 轮询就当故障排查 |
 | 改 SSH 端口 / SSH 突然连不上 | 已归档至 [`docs/progress-archive/ssh-port-migration-20260811.md`](../../docs/progress-archive/ssh-port-migration-20260811.md)(一次性主机运维实录,前提为 Ubuntu 24.04,与当前 26.04 不同,仅供参考) | 改 sshd_config 的 Port 在 socket activation 下无效;ListenStream 纯端口号 IPv4 全断把自己锁外面 |
 | 写测试 / 补测试 / 防回归 | [go-testing.md](go-testing.md) + [`docs/TESTING.md`](../../docs/TESTING.md) | 用 mock 测 sqlc 的 SQL 等于没测;引入 go-sqlmock 才发现接不上 pgx |
+| **往文档里写集群/运行时数字**(Pod 分布、就绪计数、镜像 tag、节点内存) | [live-facts.md](live-facts.md) | 把某一刻的快照写成永久事实;**在集群故障期采数,把故障态固化成「现状」**;`[LIVE-FACT]` 门禁会红 |
 | 在集群身份下改代码(okteto) | [okteto-inner-loop.md](okteto-inner-loop.md) + [`docs/OKTETO.md`](../../docs/OKTETO.md) | 没关 ArgoCD 自动同步 → 开发容器被无声干掉;开发完忘了恢复 → GitOps 静默失效 |
 | 提交信息 / 分支 / 分组 | [git-commit.md](git-commit.md) + 本文 §6 | type 自造、`perf` 滥用、`git add -A` 混提 |
 | 踩到坑之后 | [`harness-framework/self-refinement.md`](../harness-framework/self-refinement.md) | 同一个坑下个会话再踩一次 |
