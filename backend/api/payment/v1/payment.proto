@@ -25,8 +25,14 @@ service PaymentService {
 
 // 创建支付订单请求
 message CreatePaymentRequest {
+  // 2026-08-29 术语统一：买家实体一律 Customer，consumer 让位给 Kafka/NATS 的消息消费者。
+  // 走 proto-design.md「删除字段的正确写法」reserved 换号，而不是原地改名——
+  // 原地改名会被 buf.yaml 的 FIELD_NO_DELETE_UNLESS_NAME_RESERVED 拦下（已实测 exit 100）。
+  reserved 2, 9;
+  reserved "consumer_id", "consumer_version";
+
   int64 order_id = 1 [(buf.validate.field).int64.gt = 0];
-  string consumer_id = 2 [(buf.validate.field).string.uuid = true];
+  string customer_id = 11 [(buf.validate.field).string.uuid = true];
   string amount = 3 [(buf.validate.field).string = {
     max_len: 13
     pattern: "^(?:0\\.(?:0[1-9]|[1-9][0-9])|[1-9][0-9]{0,9}(?:\\.[0-9]{1,2})?)$"
@@ -44,7 +50,7 @@ message CreatePaymentRequest {
     uri: true
   }];
   int64 freeze_id = 8 [(buf.validate.field).int64.gt = 0];
-  int64 consumer_version = 9 [(buf.validate.field).int64.gte = 0];
+  int64 customer_version = 12 [(buf.validate.field).int64.gte = 0];
   repeated int64 merchant_versions = 10 [(buf.validate.field).repeated = {
     min_items: 1
     max_items: 100

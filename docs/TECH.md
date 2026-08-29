@@ -244,7 +244,7 @@ spec:
 **核心职责**：管理认证主体的业务身份、商家/店铺的组织结构、成员关系，以及对象级授权的业务上下文。它不负责认证本身（认证由 Casdoor 处理），而是负责认证通过后的业务身份和关系维护。
 
 **边界澄清**：
-- Casdoor 负责：用户登录、密码、OAuth、MFA、Session 管理、粗粒度角色（admin/merchant/consumer）。
+- Casdoor 负责：用户登录、密码、OAuth、MFA、Session 管理、粗粒度角色（admin/merchant/customer）。
 - identity-service 负责：用户档案（昵称、头像、联系方式）、商家入驻信息、店铺信息、成员关系（谁属于哪个商家/店铺、什么角色）、业务层面的身份聚合。
 
 **领域模型**：
@@ -252,7 +252,7 @@ spec:
 - `Merchant`：入驻商家（法律主体、经营信息、结算账户）。
 - `Store`：商家经营的店铺（一个商家可有多个店铺）。
 - `MerchantMember`：用户在某商家/店铺中的成员关系和职务（如店长、员工、管理员）。
-- `Consumer`：消费者业务身份（关联 UserProfile，但可能有额外字段如收货地址偏好）。
+- `Customer`：消费者业务身份（关联 UserProfile，但可能有额外字段如收货地址偏好）。
 
 **关键不变量**：
 - 一个用户可以是多个商家的成员，但在同一商家内只能有一个角色（可扩展为多个）。
@@ -619,9 +619,9 @@ type store
 type order
   relations
     define parent: [store]
-    define consumer: [user]
-    define can_view: consumer or manager from parent or admin from parent
-    define can_cancel: consumer or manager from parent
+    define customer: [user]
+    define can_view: customer or manager from parent or admin from parent
+    define can_cancel: customer or manager from parent
 ```
 
 ### 8.3 鉴权评估与异常处理矩阵

@@ -13,7 +13,7 @@ var ErrInvalidCartStatus = errors.New("invalid cart status")
 
 type (
 	AddProductToCartRequest struct {
-		ConsumerId      uuid.UUID
+		CustomerId      uuid.UUID
 		MerchantId      uuid.UUID
 		SpuID           uint64
 		SkuID           uint64
@@ -36,7 +36,7 @@ type (
 	RemoveCartItem struct {
 	}
 	RemoveCartItemRequest struct {
-		ConsumerId  uuid.UUID
+		CustomerId  uuid.UUID
 		MerchantIds []uuid.UUID
 		SpuIds      []int64
 		SkuIds      []int64
@@ -50,7 +50,7 @@ type (
 
 type (
 	UpdateCartItemQuantityRequest struct {
-		ConsumerId uuid.UUID
+		CustomerId uuid.UUID
 		MerchantId uuid.UUID
 		SpuId      uint64
 		SkuId      uint64
@@ -80,7 +80,7 @@ type CartItem struct {
 
 type (
 	GetCartRequest struct {
-		ConsumerId uuid.UUID
+		CustomerId uuid.UUID
 		Status     constants.CartStatusEnum
 	}
 	GetCartResponse struct {

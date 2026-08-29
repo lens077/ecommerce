@@ -1,5 +1,5 @@
 @cart_base_url = http://127.0.0.1:30006
-@consumer_id = 00000000-0000-4000-8000-000000000001
+@customer_id = 00000000-0000-4000-8000-000000000001
 @merchant_id = 8966c1f2-fcc2-44bc-84f5-9de615ff235f
 @spu_id = 5
 @sku_id = 9
@@ -7,24 +7,24 @@
 ### Local health check
 GET {{cart_base_url}}/healthz
 
-### Read the full cart for the test consumer
+### Read the full cart for the test customer
 POST {{cart_base_url}}/cart.v1.CartService/GetCart
 Content-Type: application/json
-x-md-global-user-id: {{consumer_id}}
+x-md-global-user-id: {{customer_id}}
 
 {}
 
-### Read only the cart badge count for the test consumer
+### Read only the cart badge count for the test customer
 POST {{cart_base_url}}/cart.v1.CartService/GetCartSummary
 Content-Type: application/json
-x-md-global-user-id: {{consumer_id}}
+x-md-global-user-id: {{customer_id}}
 
 {}
 
 ### Add one item (mutates the development cart; run intentionally)
 POST {{cart_base_url}}/cart.v1.CartService/AddProductToCart
 Content-Type: application/json
-x-md-global-user-id: {{consumer_id}}
+x-md-global-user-id: {{customer_id}}
 
 {
   "spuId": {{spu_id}},
@@ -46,7 +46,7 @@ x-md-global-user-id: {{consumer_id}}
 ### Change the test item quantity (mutates the development cart)
 POST {{cart_base_url}}/cart.v1.CartService/UpdateCartItemQuantity
 Content-Type: application/json
-x-md-global-user-id: {{consumer_id}}
+x-md-global-user-id: {{customer_id}}
 
 {
   "spuId": {{spu_id}},
@@ -58,7 +58,7 @@ x-md-global-user-id: {{consumer_id}}
 ### Remove the test item (mutates the development cart)
 POST {{cart_base_url}}/cart.v1.CartService/RemoveCartItem
 Content-Type: application/json
-x-md-global-user-id: {{consumer_id}}
+x-md-global-user-id: {{customer_id}}
 
 {
   "spuIds": [{{spu_id}}],

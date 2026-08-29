@@ -28,6 +28,23 @@
 - **含义**：用户在某个 Merchant 或 Store 中的成员关系和职务。
 - **本项目**：归属 Identity Service，并作为 OpenFGA 关系授权的业务上下文。
 
+### Customer（买家实体，**不要写成 Consumer**）
+
+- **含义**：与商家建立交易关系的一方——下单、付款、收货、退款的主体。Customer 由「相对卖家的关系」定义，Consumer 由「相对商品的使用」定义：**买礼物送人时，你是 Customer，收礼的人是 Consumer**。挂在订单、地址簿、支付方式上的都是 Customer。
+- **本项目**：买家实体一律用 `Customer` / `customer_id` / `CustomerID`。这不是风格偏好，是**命名空间冲突**——`consumer` 在本仓已被消息消费者占用且改不动（Kafka `consumer group`、NATS `durable consumer`、Inbox 的 `(consumer_group, event_id)` 主键都是外部词汇）。若买家也叫 consumer，`grep consumer` 会同时捞出买家和消息消费者，术语统一反而制造歧义。
+- **三者边界**（同一个词根，三种含义，靠拼写和位置区分）：
+
+| 写法 | 指什么 | 出现位置 |
+|---|---|---|
+| `Customer` / `customer_id` | **买家实体** | proto 字段、DB 列、Go 结构体、OpenFGA relation、领域模型 |
+| `customer` | Casdoor 粗粒度**角色**名 | `admin ⊃ merchant ⊃ customer ⊃ public` |
+| `consumer` / `consumer group` | **消息消费者** | Kafka / NATS / KEDA lag / Inbox 幂等主键 |
+| `consumer` / `consumer-next` | **C 端前端应用目录名** | `frontend/apps/`、`context/project/ecommerce/consumer/` |
+
+  最后一行刻意保留：应用名表达的是「平台侧别」，与 `merchant` / `admin` 对称。在 marketplace 里「平台的 customer」有歧义（商家也是平台的客户），所以**端名用 consumer、实体名用 Customer** 是有意为之，不是漏改。
+
+- **历史**：2026-08-29 曾把全仓 customer 批量改成 consumer，撞上上述冲突后回退并统一到 Customer；payment.proto 的 `consumer_id`/`consumer_version` 按 reserved 换号迁到 `customer_id=11`/`customer_version=12`。
+
 ### B2B2C
 
 - **含义**：Business-to-Business-to-Consumer，平台连接商家与消费者的电商模式。平台提供交易、支付和治理能力，商家负责供给商品并履约。
@@ -450,7 +467,7 @@
 ### RBAC
 
 - **含义**：Role-Based Access Control，基于角色分配权限的访问控制模型。
-- **本项目**：RBAC 仅用于 Casdoor 的粗粒度角色（admin、merchant、consumer）；对象级业务授权统一由 OpenFGA 关系模型判定。存量 Casbin RBAC 处于迁移期，不作为目标授权路径。
+- **本项目**：RBAC 仅用于 Casdoor 的粗粒度角色（admin、merchant、customer）；对象级业务授权统一由 OpenFGA 关系模型判定。存量 Casbin RBAC 处于迁移期，不作为目标授权路径。
 
 ### Casbin
 

@@ -125,13 +125,13 @@ func (s *AddressService) GetAddress(ctx context.Context, c *connect.Request[v1.G
 
 func (s *AddressService) ListAddresses(ctx context.Context, c *connect.Request[v1.ListAddressesRequest]) (*connect.Response[v1.ListAddressesResponse], error) {
 	userIdStr := c.Header().Get(constants.UserIdMetadataKey)
-	consumerId, err := uuid.Parse(userIdStr)
+	customerId, err := uuid.Parse(userIdStr)
 	if err != nil {
 		return nil, err
 	}
 
 	result, err := s.uc.ListAddresses(ctx, biz.ListAddressesRequest{
-		UserID: consumerId,
+		UserID: customerId,
 	})
 	if err != nil {
 		return nil, err

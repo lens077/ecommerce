@@ -43,7 +43,7 @@
     "table": {
       "orderNo": "Order no.",
       "merchant": "Merchant",
-      "consumer": "Consumer",
+      "customer": "Customer",
       "amount": "Amount",
       "status": "Status"
     },
@@ -81,7 +81,7 @@
   },
   "orders": {
     "title": "Orders",
-    "searchPlaceholder": "Search order no. / merchant / consumer...",
+    "searchPlaceholder": "Search order no. / merchant / customer...",
     "tabs": {
       "all": "All",
       "pending": "Pending",
@@ -100,7 +100,7 @@
     "table": {
       "info": "Order",
       "merchant": "Merchant",
-      "consumer": "Consumer",
+      "customer": "Customer",
       "amount": "Order total",
       "status": "Status",
       "createTime": "Placed at",

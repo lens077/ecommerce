@@ -13,16 +13,16 @@ import (
 )
 
 const CreatePaymentQuery = `-- name: CreatePaymentQuery :one
-INSERT INTO payments.payments (id, order_id, consumer_id, amount, currency, method, status,
-                               subject, trade_no, freeze_id,consumer_version, merchant_versions)
+INSERT INTO payments.payments (id, order_id, customer_id, amount, currency, method, status,
+                               subject, trade_no, freeze_id,customer_version, merchant_versions)
 VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12)
-RETURNING id, order_id, consumer_id, amount, currency, method, status, subject, trade_no, freeze_id, consumer_version, merchant_versions, created_at, updated_at
+RETURNING id, order_id, customer_id, amount, currency, method, status, subject, trade_no, freeze_id, customer_version, merchant_versions, created_at, updated_at
 `
 
 type CreatePaymentQueryParams struct {
 	ID               int64
 	OrderID          int64
-	ConsumerID       uuid.UUID
+	CustomerID       uuid.UUID
 	Amount           pgtype.Numeric
 	Currency         string
 	Method           string
@@ -30,21 +30,21 @@ type CreatePaymentQueryParams struct {
 	Subject          string
 	TradeNo          string
 	FreezeID         int64
-	ConsumerVersion  int64
+	CustomerVersion  int64
 	MerchantVersions int64
 }
 
 // CreatePaymentQuery
 //
-//	INSERT INTO payments.payments (id, order_id, consumer_id, amount, currency, method, status,
-//	                               subject, trade_no, freeze_id,consumer_version, merchant_versions)
+//	INSERT INTO payments.payments (id, order_id, customer_id, amount, currency, method, status,
+//	                               subject, trade_no, freeze_id,customer_version, merchant_versions)
 //	VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12)
-//	RETURNING id, order_id, consumer_id, amount, currency, method, status, subject, trade_no, freeze_id, consumer_version, merchant_versions, created_at, updated_at
+//	RETURNING id, order_id, customer_id, amount, currency, method, status, subject, trade_no, freeze_id, customer_version, merchant_versions, created_at, updated_at
 func (q *Queries) CreatePaymentQuery(ctx context.Context, arg CreatePaymentQueryParams) (PaymentsPayment, error) {
 	row := q.db.QueryRow(ctx, CreatePaymentQuery,
 		arg.ID,
 		arg.OrderID,
-		arg.ConsumerID,
+		arg.CustomerID,
 		arg.Amount,
 		arg.Currency,
 		arg.Method,
@@ -52,14 +52,14 @@ func (q *Queries) CreatePaymentQuery(ctx context.Context, arg CreatePaymentQuery
 		arg.Subject,
 		arg.TradeNo,
 		arg.FreezeID,
-		arg.ConsumerVersion,
+		arg.CustomerVersion,
 		arg.MerchantVersions,
 	)
 	var i PaymentsPayment
 	err := row.Scan(
 		&i.ID,
 		&i.OrderID,
-		&i.ConsumerID,
+		&i.CustomerID,
 		&i.Amount,
 		&i.Currency,
 		&i.Method,
@@ -67,7 +67,7 @@ func (q *Queries) CreatePaymentQuery(ctx context.Context, arg CreatePaymentQuery
 		&i.Subject,
 		&i.TradeNo,
 		&i.FreezeID,
-		&i.ConsumerVersion,
+		&i.CustomerVersion,
 		&i.MerchantVersions,
 		&i.CreatedAt,
 		&i.UpdatedAt,
@@ -76,14 +76,14 @@ func (q *Queries) CreatePaymentQuery(ctx context.Context, arg CreatePaymentQuery
 }
 
 const GetByIDQuery = `-- name: GetByIDQuery :one
-SELECT id, order_id, consumer_id, amount, currency, method, status, subject, trade_no, freeze_id, consumer_version, merchant_versions, created_at, updated_at
+SELECT id, order_id, customer_id, amount, currency, method, status, subject, trade_no, freeze_id, customer_version, merchant_versions, created_at, updated_at
 FROM payments.payments
 WHERE id = $1
 `
 
 // GetByIDQuery
 //
-//	SELECT id, order_id, consumer_id, amount, currency, method, status, subject, trade_no, freeze_id, consumer_version, merchant_versions, created_at, updated_at
+//	SELECT id, order_id, customer_id, amount, currency, method, status, subject, trade_no, freeze_id, customer_version, merchant_versions, created_at, updated_at
 //	FROM payments.payments
 //	WHERE id = $1
 func (q *Queries) GetByIDQuery(ctx context.Context, id int64) (PaymentsPayment, error) {
@@ -92,7 +92,7 @@ func (q *Queries) GetByIDQuery(ctx context.Context, id int64) (PaymentsPayment, 
 	err := row.Scan(
 		&i.ID,
 		&i.OrderID,
-		&i.ConsumerID,
+		&i.CustomerID,
 		&i.Amount,
 		&i.Currency,
 		&i.Method,
@@ -100,7 +100,7 @@ func (q *Queries) GetByIDQuery(ctx context.Context, id int64) (PaymentsPayment, 
 		&i.Subject,
 		&i.TradeNo,
 		&i.FreezeID,
-		&i.ConsumerVersion,
+		&i.CustomerVersion,
 		&i.MerchantVersions,
 		&i.CreatedAt,
 		&i.UpdatedAt,
@@ -109,14 +109,14 @@ func (q *Queries) GetByIDQuery(ctx context.Context, id int64) (PaymentsPayment, 
 }
 
 const GetByOrderIDQuery = `-- name: GetByOrderIDQuery :one
-SELECT id, order_id, consumer_id, amount, currency, method, status, subject, trade_no, freeze_id, consumer_version, merchant_versions, created_at, updated_at
+SELECT id, order_id, customer_id, amount, currency, method, status, subject, trade_no, freeze_id, customer_version, merchant_versions, created_at, updated_at
 FROM payments.payments
 WHERE order_id = $1
 `
 
 // GetByOrderIDQuery
 //
-//	SELECT id, order_id, consumer_id, amount, currency, method, status, subject, trade_no, freeze_id, consumer_version, merchant_versions, created_at, updated_at
+//	SELECT id, order_id, customer_id, amount, currency, method, status, subject, trade_no, freeze_id, customer_version, merchant_versions, created_at, updated_at
 //	FROM payments.payments
 //	WHERE order_id = $1
 func (q *Queries) GetByOrderIDQuery(ctx context.Context, orderID int64) (PaymentsPayment, error) {
@@ -125,7 +125,7 @@ func (q *Queries) GetByOrderIDQuery(ctx context.Context, orderID int64) (Payment
 	err := row.Scan(
 		&i.ID,
 		&i.OrderID,
-		&i.ConsumerID,
+		&i.CustomerID,
 		&i.Amount,
 		&i.Currency,
 		&i.Method,
@@ -133,7 +133,7 @@ func (q *Queries) GetByOrderIDQuery(ctx context.Context, orderID int64) (Payment
 		&i.Subject,
 		&i.TradeNo,
 		&i.FreezeID,
-		&i.ConsumerVersion,
+		&i.CustomerVersion,
 		&i.MerchantVersions,
 		&i.CreatedAt,
 		&i.UpdatedAt,
@@ -142,14 +142,14 @@ func (q *Queries) GetByOrderIDQuery(ctx context.Context, orderID int64) (Payment
 }
 
 const GetPayment = `-- name: GetPayment :one
-SELECT id, order_id, consumer_id, amount, currency, method, status, subject, trade_no, freeze_id, consumer_version, merchant_versions, created_at, updated_at
+SELECT id, order_id, customer_id, amount, currency, method, status, subject, trade_no, freeze_id, customer_version, merchant_versions, created_at, updated_at
 FROM payments.payments
 WHERE id = $1
 `
 
 // GetPayment
 //
-//	SELECT id, order_id, consumer_id, amount, currency, method, status, subject, trade_no, freeze_id, consumer_version, merchant_versions, created_at, updated_at
+//	SELECT id, order_id, customer_id, amount, currency, method, status, subject, trade_no, freeze_id, customer_version, merchant_versions, created_at, updated_at
 //	FROM payments.payments
 //	WHERE id = $1
 func (q *Queries) GetPayment(ctx context.Context, id int64) (PaymentsPayment, error) {
@@ -158,7 +158,7 @@ func (q *Queries) GetPayment(ctx context.Context, id int64) (PaymentsPayment, er
 	err := row.Scan(
 		&i.ID,
 		&i.OrderID,
-		&i.ConsumerID,
+		&i.CustomerID,
 		&i.Amount,
 		&i.Currency,
 		&i.Method,
@@ -166,7 +166,7 @@ func (q *Queries) GetPayment(ctx context.Context, id int64) (PaymentsPayment, er
 		&i.Subject,
 		&i.TradeNo,
 		&i.FreezeID,
-		&i.ConsumerVersion,
+		&i.CustomerVersion,
 		&i.MerchantVersions,
 		&i.CreatedAt,
 		&i.UpdatedAt,
@@ -175,14 +175,14 @@ func (q *Queries) GetPayment(ctx context.Context, id int64) (PaymentsPayment, er
 }
 
 const GetPaymentByOrderID = `-- name: GetPaymentByOrderID :one
-SELECT id, order_id, consumer_id, amount, currency, method, status, subject, trade_no, freeze_id, consumer_version, merchant_versions, created_at, updated_at
+SELECT id, order_id, customer_id, amount, currency, method, status, subject, trade_no, freeze_id, customer_version, merchant_versions, created_at, updated_at
 FROM payments.payments
 WHERE order_id = $1
 `
 
 // GetPaymentByOrderID
 //
-//	SELECT id, order_id, consumer_id, amount, currency, method, status, subject, trade_no, freeze_id, consumer_version, merchant_versions, created_at, updated_at
+//	SELECT id, order_id, customer_id, amount, currency, method, status, subject, trade_no, freeze_id, customer_version, merchant_versions, created_at, updated_at
 //	FROM payments.payments
 //	WHERE order_id = $1
 func (q *Queries) GetPaymentByOrderID(ctx context.Context, orderID int64) (PaymentsPayment, error) {
@@ -191,7 +191,7 @@ func (q *Queries) GetPaymentByOrderID(ctx context.Context, orderID int64) (Payme
 	err := row.Scan(
 		&i.ID,
 		&i.OrderID,
-		&i.ConsumerID,
+		&i.CustomerID,
 		&i.Amount,
 		&i.Currency,
 		&i.Method,
@@ -199,7 +199,7 @@ func (q *Queries) GetPaymentByOrderID(ctx context.Context, orderID int64) (Payme
 		&i.Subject,
 		&i.TradeNo,
 		&i.FreezeID,
-		&i.ConsumerVersion,
+		&i.CustomerVersion,
 		&i.MerchantVersions,
 		&i.CreatedAt,
 		&i.UpdatedAt,
@@ -208,14 +208,14 @@ func (q *Queries) GetPaymentByOrderID(ctx context.Context, orderID int64) (Payme
 }
 
 const GetPaymentByTradeNo = `-- name: GetPaymentByTradeNo :one
-SELECT id, order_id, consumer_id, amount, currency, method, status, subject, trade_no, freeze_id, consumer_version, merchant_versions, created_at, updated_at
+SELECT id, order_id, customer_id, amount, currency, method, status, subject, trade_no, freeze_id, customer_version, merchant_versions, created_at, updated_at
 FROM payments.payments
 WHERE trade_no = $1
 `
 
 // 根据商户订单号查询支付记录
 //
-//	SELECT id, order_id, consumer_id, amount, currency, method, status, subject, trade_no, freeze_id, consumer_version, merchant_versions, created_at, updated_at
+//	SELECT id, order_id, customer_id, amount, currency, method, status, subject, trade_no, freeze_id, customer_version, merchant_versions, created_at, updated_at
 //	FROM payments.payments
 //	WHERE trade_no = $1
 func (q *Queries) GetPaymentByTradeNo(ctx context.Context, tradeNo string) (PaymentsPayment, error) {
@@ -224,7 +224,7 @@ func (q *Queries) GetPaymentByTradeNo(ctx context.Context, tradeNo string) (Paym
 	err := row.Scan(
 		&i.ID,
 		&i.OrderID,
-		&i.ConsumerID,
+		&i.CustomerID,
 		&i.Amount,
 		&i.Currency,
 		&i.Method,
@@ -232,7 +232,7 @@ func (q *Queries) GetPaymentByTradeNo(ctx context.Context, tradeNo string) (Paym
 		&i.Subject,
 		&i.TradeNo,
 		&i.FreezeID,
-		&i.ConsumerVersion,
+		&i.CustomerVersion,
 		&i.MerchantVersions,
 		&i.CreatedAt,
 		&i.UpdatedAt,
@@ -246,7 +246,7 @@ SET status     = $1,
     updated_at = now()
 WHERE (id = $2 AND $2 != 0)
    OR (order_id = $3 AND $3 != 0)
-RETURNING id, order_id, consumer_id, amount, currency, method, status, subject, trade_no, freeze_id, consumer_version, merchant_versions, created_at, updated_at
+RETURNING id, order_id, customer_id, amount, currency, method, status, subject, trade_no, freeze_id, customer_version, merchant_versions, created_at, updated_at
 `
 
 type UpdatePaymentStatusParams struct {
@@ -262,14 +262,14 @@ type UpdatePaymentStatusParams struct {
 //	    updated_at = now()
 //	WHERE (id = $2 AND $2 != 0)
 //	   OR (order_id = $3 AND $3 != 0)
-//	RETURNING id, order_id, consumer_id, amount, currency, method, status, subject, trade_no, freeze_id, consumer_version, merchant_versions, created_at, updated_at
+//	RETURNING id, order_id, customer_id, amount, currency, method, status, subject, trade_no, freeze_id, customer_version, merchant_versions, created_at, updated_at
 func (q *Queries) UpdatePaymentStatus(ctx context.Context, arg UpdatePaymentStatusParams) (PaymentsPayment, error) {
 	row := q.db.QueryRow(ctx, UpdatePaymentStatus, arg.Status, arg.ID, arg.OrderID)
 	var i PaymentsPayment
 	err := row.Scan(
 		&i.ID,
 		&i.OrderID,
-		&i.ConsumerID,
+		&i.CustomerID,
 		&i.Amount,
 		&i.Currency,
 		&i.Method,
@@ -277,7 +277,7 @@ func (q *Queries) UpdatePaymentStatus(ctx context.Context, arg UpdatePaymentStat
 		&i.Subject,
 		&i.TradeNo,
 		&i.FreezeID,
-		&i.ConsumerVersion,
+		&i.CustomerVersion,
 		&i.MerchantVersions,
 		&i.CreatedAt,
 		&i.UpdatedAt,
@@ -291,7 +291,7 @@ SET status     = $2,
     id         = $3,
     updated_at = now()
 WHERE id = $1
-RETURNING id, order_id, consumer_id, amount, currency, method, status, subject, trade_no, freeze_id, consumer_version, merchant_versions, created_at, updated_at
+RETURNING id, order_id, customer_id, amount, currency, method, status, subject, trade_no, freeze_id, customer_version, merchant_versions, created_at, updated_at
 `
 
 type UpdateStatusQueryParams struct {
@@ -307,14 +307,14 @@ type UpdateStatusQueryParams struct {
 //	    id         = $3,
 //	    updated_at = now()
 //	WHERE id = $1
-//	RETURNING id, order_id, consumer_id, amount, currency, method, status, subject, trade_no, freeze_id, consumer_version, merchant_versions, created_at, updated_at
+//	RETURNING id, order_id, customer_id, amount, currency, method, status, subject, trade_no, freeze_id, customer_version, merchant_versions, created_at, updated_at
 func (q *Queries) UpdateStatusQuery(ctx context.Context, arg UpdateStatusQueryParams) (PaymentsPayment, error) {
 	row := q.db.QueryRow(ctx, UpdateStatusQuery, arg.ID, arg.Status, arg.ID_2)
 	var i PaymentsPayment
 	err := row.Scan(
 		&i.ID,
 		&i.OrderID,
-		&i.ConsumerID,
+		&i.CustomerID,
 		&i.Amount,
 		&i.Currency,
 		&i.Method,
@@ -322,7 +322,7 @@ func (q *Queries) UpdateStatusQuery(ctx context.Context, arg UpdateStatusQueryPa
 		&i.Subject,
 		&i.TradeNo,
 		&i.FreezeID,
-		&i.ConsumerVersion,
+		&i.CustomerVersion,
 		&i.MerchantVersions,
 		&i.CreatedAt,
 		&i.UpdatedAt,

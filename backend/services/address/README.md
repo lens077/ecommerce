@@ -55,7 +55,7 @@ user_address (用户地址簿)：存储 user_id、联系人、电话、adcode（
 courier_region (快递员负责区域表)：存储 courier_id 和该员负责的地理多边形（Polygon数据）。
 
 2. RBAC 扩展
-   消费者 (Consumer)：权限仅限 user_address 的 CRUD。
+   消费者 (Customer)：权限仅限 user_address 的 CRUD。
 
 商家 (Merchant)：拥有 warehouse_address 管理权限。
 

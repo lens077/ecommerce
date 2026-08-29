@@ -29,7 +29,7 @@ type (
 type Payment struct {
 	ID         int64
 	OrderID    int64
-	ConsumerID uuid.UUID
+	CustomerID uuid.UUID
 	Amount     float64
 	Currency   string
 	Subject    string
@@ -44,14 +44,14 @@ type Payment struct {
 // CreatePaymentReq 创建支付请求
 type CreatePaymentReq struct {
 	OrderID    int64
-	ConsumerID uuid.UUID
+	CustomerID uuid.UUID
 	// MerchantID      uuid.UUID
 	Amount          string
 	Currency        string
 	Subject         string
 	ReturnURL       string
 	FreezeId        int64
-	ConsumerVersion int64
+	CustomerVersion int64
 	MerchanVersions []int64
 }
 
