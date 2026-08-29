@@ -184,6 +184,40 @@ pnpm exec commitlint --from HEAD~7 --to HEAD   # 回放校验既有提交
 
 例外：当拆分会产出**编译不过的中间提交**时，合并成一个提交，并在 body 里写清楚为什么不拆。拆坏的提交比大提交更没用。
 
+### 暂存三步走（别靠记性，靠动作）
+
+> ⚠️ **上面那句「不要 `git add -A`」在 2026-08-29 被违反了，而当时执行者读过本文件。**
+> 劝诫式规则挡不住顺手——所以这条改成三个必须执行的动作。
+
+1. **`git status --short` 先看全貌**，问自己：这里面**哪些不是我改的**？
+   共享工作区里几乎总有别人的在途工作。
+2. **用显式文件列表暂存**，不用 `-A`、不用 `.`：
+   ```bash
+   git add STACK.md docs/todo/xxx.md backend/services/*/Dockerfile
+   ```
+3. **`git diff --cached --name-only` 复核**，确认列表与第 1 步的判断一致，再 commit。
+
+**触发事故（2026-08-29）**：AI 在 `docker-deploy` 仓刚因发现「文件里混着用户未提交的卡片新增」
+而主动停下来问用户，转头在 `ecommerce` 仓用了 `git add -A`，把用户 **604 行**在途工作
+（告警信号卫生 138 行 + 通知链路手册 315 行 + Debezium 经验 133 行 + 四处 INDEX/TECH 登记）
+一起并进了标题为「alpine 基底升级」的提交并推送到两个远端。
+
+**善后成本远高于事前一条 `git status`**：`reset --soft` 重拆 → 两次提交 →
+GitLab force-push 成功但 **GitHub 被 `allow_force_pushes: False` 拒绝**
+（`enforce_admins: False` 只放行普通推送，**不覆盖 force-push**，两个开关独立）→
+需临时改分支保护、推完立即关回。
+
+**拆分后必须验树哈希**，确认零内容丢失：
+
+```bash
+git tag backup/mixed-commit-<date> <混合提交>          # 先留退路
+# ……拆分……
+[ "$(git rev-parse HEAD^{tree})" = "$(git rev-parse backup/mixed-commit-<date>^{tree})" ] \
+  && echo "内容零差异" || echo "有丢失，别推"
+```
+
+比对**树**而非 diff：树哈希相同即两个历史的最终文件内容逐字节一致，比逐文件看 diff 可靠。
+
 ## 相关
 
 - 知识沉淀闭环见 [`context/harness-framework/self-refinement.md`](../harness-framework/self-refinement.md)

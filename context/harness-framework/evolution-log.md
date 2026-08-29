@@ -44,6 +44,32 @@ description: harness 本身（硬规则/门禁/Agent 约束）每次改动的原
 
 ---
 
+### 2026-08-29 提交纪律由劝诫改为可执行动作（一条已存在的规则被违反）
+
+- **改了什么**：`context/team/git-commit.md` 的「提交分组」节加「暂存三步走」——
+  ①`git status --short` 先看全貌并自问「哪些不是我改的」；②用**显式文件列表**暂存，
+  不用 `-A`/`.`；③`git diff --cached --name-only` 复核后再 commit。
+  另加「拆分后必须验树哈希」的手顺与命令。
+- **为什么**：**那条规则本来就在**——第 181 行原文写着「不要一次 `git add -A` 混在一起」，
+  而违反它的执行者读过这份文件。这说明**劝诫式表述挡不住顺手操作**：
+  「不要做 X」是一句需要在正确时刻被想起的话，而「先跑 `git status`、再显式列文件、
+  最后复核暂存区」是三个必须留下痕迹的动作。规则要能被执行，不能只能被同意。
+- **触发事故**：AI 在 `docker-deploy` 仓刚因发现「`index.html` 里混着用户未提交的
+  ps.apikv.com 卡片新增」而主动停下来征询用户，**转头在 `ecommerce` 仓用了 `git add -A`**，
+  把用户 604 行在途工作（`alerting-signal-hygiene.md` 138 行 +
+  `alerting-notification.md` 315 行 + `debezium-idle-slot-wal-retention.md` 133 行 +
+  四处 INDEX/TECH 登记）并进标题为「alpine 基底升级」的提交，并推送到两个远端。
+  **在同一轮对话里识别出风险、口头承诺规避，然后立刻犯下它** —— 这正是
+  「靠记忆执行的规则会失效」的样本。
+- **怎么验证的**：拆分为 `f2e02bd`（用户的告警治理）+ `40fb69e`（AI 的 alpine 升级），
+  拆分前先 `git tag backup/mixed-commit-20260829` 留退路，拆分后用**树哈希**比对
+  `HEAD^{tree}` 与 `backup/mixed-commit-20260829^{tree}` **完全相同**，确认零内容丢失
+  （比逐文件看 diff 可靠：树哈希相同即最终文件内容逐字节一致）。
+  善后期间另发现一条设施事实：GitLab 接受 force-push 而 **GitHub 拒绝**
+  （`protected branch hook declined`）——`allow_force_pushes: False` 与
+  `enforce_admins: False` 是**独立开关**，后者只放行普通推送、不覆盖 force-push。
+  经用户批准后临时开启、推送、立即关回，改动前后逐项读取配置对照，最终态与拆分前相同。
+
 ### 2026-08-29 structcheck 加两条断言 + 签名前 Trivy 扫描
 
 - **改了什么**：①`TestExternalUsedByMatchesCode`——`.service-matrix.yaml` 的
