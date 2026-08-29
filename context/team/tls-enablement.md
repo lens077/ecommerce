@@ -137,9 +137,13 @@ curl -s -m 10 -o /dev/null -w "%{http_code}\n" \
 Redis 的 exporter 与主从复制走的是 `10.10.21.172`）。PostgreSQL 从 10 起支持 SIGHUP
 重载证书，`pg_reload_conf()` 即可生效，不必重启实例。
 
-完整步骤、安装前两道自检（私钥配对、CA 链验证）、验收命令与回滚，见 pigsty-deploy 仓的
-[`cert-san-resign.md`](../../../pigsty-deploy/cert-san-resign.md)——**那里是这条结论的 owner**，
+完整步骤、安装前两道自检（私钥配对、CA 链验证）、验收命令与回滚，见**同级仓**
+`../pigsty-deploy/cert-san-resign.md`——**那里是这条结论的 owner**，
 本节只保留判别法与踩坑，避免两份漂移。
+
+> 跨仓引用一律写成反引号行内代码，不写 markdown 链接：`verify-context.sh` 的
+> `[DEAD-LINK]` 只认本仓文件，本机有同级仓所以**本地绿、CI 红**（2026-08-29 实测，
+> 本节初版就是这么翻的）。`context/INDEX.md` 引 control-tower 用的也是反引号形式。
 
 验收仍按 §5 的纪律执行，只是把第 ④ 条换成自签 CA 的版本：
 
