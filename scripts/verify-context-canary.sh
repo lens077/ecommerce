@@ -38,6 +38,10 @@ build_template() { # build_template <dir>
   cp -R docs/design "$sb/docs/design"   # 2026-08-26 门禁扩围至设计文档,沙箱同步
   cp scripts/verify-context.sh "$sb/scripts/"
   [ -f scripts/context-format-baseline.txt ] && cp scripts/context-format-baseline.txt "$sb/scripts/"
+  # [PROGRESS-SRC] 的基线与它登记的文件必须同时进沙箱,否则 pristine-green 会假红,
+  # 且 progress-grow 会在一个不存在的文件上「误报成功」——2026-08-29 首跑实测到这两种。
+  [ -f scripts/context-progress-baseline.txt ] && cp scripts/context-progress-baseline.txt "$sb/scripts/"
+  for f in docs/DEVOPS.md docs/SCAFFOLD.md; do [ -f "$f" ] && cp "$f" "$sb/docs/"; done
   [ -f .gitignore ] && cp .gitignore "$sb/"
   # 仓外链接目标放桩：门禁只查 [ -e ] 与 gitignore,不读内容。
   # 动态提取而非手抄清单——新增链接自动获得桩,漏了会被探针 0 当场暴露。
@@ -140,6 +144,41 @@ mut_budget_todo() { # 无论 TODO 当前多瘦，都精确推过 96KB 门槛
   [ "$grow" -gt 0 ] || grow=1
   head -c "$grow" /dev/zero | tr '\0' 'x' >> "$1/TODO.md"
 }
+mut_progress_src() { # 未登记基线的文件长出复选框 → 新的并行进度源
+  cat > "$1/docs/tmp-canary-progress.md" <<'EOF'
+# canary 注错样本——TODO.md 之外的第二套进度视图
+
+- [ ] 未完成项
+- [x] 已完成项
+EOF
+}
+mut_progress_grow() { # 已登记基线的文件继续增长 → 只许减不许增
+  printf '\n- [ ] canary 新增的并行进度项\n' >> "$1/docs/DEVOPS.md"
+}
+mut_progress_ratchet() { # 基线文件已清零却没删行 → 反向棘轮
+  f="$1/docs/design/platform/capacity-balancing.md"
+  grep -v '^[[:space:]]*- \[[ x]\]' "$f" > "$f.new" && mv "$f.new" "$f"
+}
+mut_progress_fenced_ok() { # 围栏内的复选框是模板占位符,**不得**误报(假阳性守卫)
+  # 用 ````markdown 包一层,内部再嵌 ``` —— 正是 SCAFFOLD.md 的写法,
+  # 简单的 f=!f 翻转会在这里把后半段误判成正文。
+  cat > "$1/docs/tmp-canary-fenced.md" <<'EOF'
+# canary：围栏内复选框不应触发 PROGRESS-SRC
+
+````markdown
+## 给新项目用的模板
+
+- [ ] 模板占位项
+- [x] 模板已完成项
+
+```bash
+echo "嵌套围栏"
+```
+
+- [ ] 嵌套围栏之后仍在外层围栏内
+````
+EOF
+}
 
 # ── 执行 ─────────────────────────────────────────────────────
 # ${workdir} 必须带花括号:后面紧跟全角「）」时,bash 3.2 在 UTF-8 locale 下会把
@@ -158,9 +197,14 @@ probe baseline-ratchet    1 "BASELINE"    mut_baseline
 probe evolog              1 "EVOLOG"      mut_evolog
 probe budget-agents       1 "BUDGET"      mut_budget_agents
 probe budget-todo         1 "BUDGET"      mut_budget_todo
+probe progress-src        1 "PROGRESS-SRC" mut_progress_src
+probe progress-grow       1 "PROGRESS-SRC" mut_progress_grow
+probe progress-ratchet    1 "BASELINE"     mut_progress_ratchet
+# 假阳性守卫:围栏内的模板占位符必须**不**触发,否则 SCAFFOLD.md 这类文件会被误杀
+probe progress-fenced-ok  0 ""             mut_progress_fenced_ok
 
 if [ "$fails" -gt 0 ]; then
   echo "verify-context-canary: $fails 个探针失败——门禁可能已静默失效,先修门禁再改内容"
   exit 1
 fi
-echo "verify-context-canary: OK（11 探针全过:干净沙箱绿 + 十类注错全部被拦且 tag 正确）"
+echo "verify-context-canary: OK（15 探针全过:干净沙箱绿 + 十三类注错被拦且 tag 正确 + 围栏假阳性守卫）"

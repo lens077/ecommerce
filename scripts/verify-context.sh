@@ -5,7 +5,7 @@
 # verify-agent-note-format / verify-doc-budgets)移植,落地方式沿用本仓惯例:
 # 能判定的约束变成脚本,存量漂移走基线棘轮(见 scripts/lint-baseline.sh 的设计)。
 #
-# 六项检查(任一违规 → 退出码 1):
+# 七项检查(任一违规 → 退出码 1):
 #   [DEAD-LINK]    AGENTS.md/README.md/STACK.md 与 context/**、docs/design/** 的
 #                  相对 markdown 链接必须可达(2026-08-26 扩:原只查 AGENTS+context,
 #                  当日 README/STACK/docs/design 三处死链全靠临时脚本抓到——
@@ -22,10 +22,16 @@
 #                  超限先把内容搬进 context/ 对应层,不要先提额度;
 #                  TODO.md ≤ 96000 字节 —— 每个提交回合都要读它,
 #                  超限把证据长文/会话记录按日期归档进 docs/progress-archive/
+#   [PROGRESS-SRC] 复选框(`- [ ]`/`- [x]`)只允许长在 TODO 体系与不可变归档里
+#                  (TODO.md / docs/todo/ / progress-archive/ / reports/ / 选型对抗/ /
+#                   .scratch/ / 围栏代码块内);别处出现即第二套进度视图,
+#                  与 TODO.md 必然漂移。2026-08-29 立此门禁,见 evolution-log 同日条目
 #
-# 基线棘轮(scripts/context-format-baseline.txt):
-#   [FORMAT] 的存量违规冻结在基线里放行;新文件必须合规;
-#   基线条目已合规或已消失 → [BASELINE] 报错要求删行(防止基线变成永久免罪符)。
+# 基线棘轮(两份):
+#   scripts/context-format-baseline.txt   —— [FORMAT] 的存量违规冻结放行
+#   scripts/context-progress-baseline.txt —— [PROGRESS-SRC] 的存量,**按计数**冻结
+#   共同规则:新增必须合规;基线条目已合规/数字降了/文件消失 → [BASELINE] 报错要求
+#   改行或删行(反向棘轮,防止基线变成永久免罪符)。
 #
 # 用法: scripts/verify-context.sh
 set -euo pipefail
@@ -194,10 +200,81 @@ if [ "$todo_size" -gt "$todo_budget" ]; then
   fail "BUDGET" "TODO.md ${todo_size}B > ${todo_budget}B——每个提交回合都要读它,把证据长文/会话记录归档进 docs/progress-archive/,别先提额度"
 fi
 
+# ── 7. 并行进度源(复选框只允许长在 TODO 体系里)───────────────
+# AGENTS.md 反直觉约定:进度真相源是 TODO.md(唯一)。任何别处的 `- [ ]`/`- [x]`
+# 都是第二套进度视图,必然与 TODO.md 漂移——2026-08-29 实测到 docs/TECH.md §12
+# 自己长出 19 个复选框且已漂移(P1/P2 各勾一项,P0 九项全空,与真实进度不符)。
+#
+# 放行的位置各有理由:
+#   TODO.md / docs/todo/**            —— 进度真相源本体与其分类明细
+#   docs/progress-archive/**          —— 不可变历史,顶部自带失效声明
+#   docs/reports/**                   —— 带日期的一次性证据
+#   docs/技术栈选型对抗/**            —— 带日期的评审存档
+#   .scratch/**                       —— issue/spec 工作区(docs/agents/issue-tracker.md)
+#   围栏代码块内                       —— 给新项目用的模板占位符(SCAFFOLD.md 就是这种)
+progress_baseline="scripts/context-progress-baseline.txt"
+
+# 围栏外复选框计数。**必须按围栏长度配对**:``` 不能关闭 ````,
+# 否则 ````markdown 模板里嵌套的 ``` 会把后半段误判成正文
+# (上面 _strip_fences 的 f=!f 就有这个缺陷,它只服务 DEAD-LINK 且扫描集里暂无嵌套围栏,
+#  本检查不复用它)。
+count_checkboxes() {
+  awk '
+    {
+      if (match($0, /^[ \t]*`+/)) {
+        s = substr($0, RSTART, RLENGTH); gsub(/[ \t]/, "", s); n = length(s)
+        if (n >= 3) {
+          if (fence == 0)      { fence = n; next }
+          else if (n >= fence) { fence = 0; next }
+        }
+      }
+      if (fence == 0 && $0 ~ /^[ \t]*- \[[ x]\]/) c++
+    }
+    END { print c+0 }
+  ' "$1"
+}
+
+progress_allowed() { # 该路径是否豁免
+  case "$1" in
+    TODO.md|docs/todo/*|docs/progress-archive/*|docs/reports/*) return 0 ;;
+    docs/技术栈选型对抗/*|.scratch/*|.impeccable/*|*/.impeccable/*) return 0 ;;
+    */node_modules/*) return 0 ;;
+  esac
+  return 1
+}
+
+while IFS= read -r file; do
+  rel="${file#./}"
+  progress_allowed "$rel" && continue
+  n=$(count_checkboxes "$file")
+  base=$(awk -v p="$rel" '$1==p {print $2; exit}' "$progress_baseline" 2>/dev/null || true)
+  if [ -z "$base" ]; then
+    [ "$n" -gt 0 ] && fail "PROGRESS-SRC" \
+      "$rel 有 ${n} 个复选框——进度真相源只有 TODO.md,明细写进 docs/todo/(存量请登记 ${progress_baseline})"
+  elif [ "$n" -gt "$base" ]; then
+    # ${n} 必须带花括号:后面紧跟全角「——」时,bash 3.2 在 UTF-8 locale 下会把
+    # 多字节首字节并进变量名,报 `n?: unbound variable`(canary 首跑当场抓到)。
+    fail "PROGRESS-SRC" "$rel 复选框由基线 ${base} 增至 ${n}——并行进度源只许减不许增"
+  elif [ "$n" -eq 0 ]; then
+    fail "BASELINE" "$rel 已无复选框,请从 $progress_baseline 删除该行(反向棘轮)"
+  elif [ "$n" -lt "$base" ]; then
+    fail "BASELINE" "$rel 复选框已降至 $n(基线记 $base),请更新 $progress_baseline 收紧棘轮"
+  fi
+done < <(find . -name "*.md" -type f ! -path "./.git/*" ! -path "*/node_modules/*")
+
+# 基线里指向不存在文件的行必须删
+if [ -f "$progress_baseline" ]; then
+  while IFS= read -r line; do
+    entry="${line%%[[:space:]]*}"
+    case "$entry" in ""|\#*) continue ;; esac
+    [ -f "$entry" ] || fail "BASELINE" "进度基线条目已不存在: $entry,请从 $progress_baseline 删除"
+  done < "$progress_baseline"
+fi
+
 # ── 汇总 ─────────────────────────────────────────────────────
 if [ -s "$violations" ]; then
   echo "verify-context: 发现 $(wc -l < "$violations" | tr -d ' ') 处违规"
   cat "$violations"
   exit 1
 fi
-echo "verify-context: OK(链接/INDEX 覆盖/frontmatter/experience 格式/evolution-log/预算 全部通过)"
+echo "verify-context: OK(链接/INDEX 覆盖/frontmatter/experience 格式/evolution-log/预算/并行进度源 全部通过)"
