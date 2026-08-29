@@ -3,7 +3,7 @@
 > 本文件是**可执行的项目生成规范**：把技术栈、分层约束、模板文件和落地顺序打包成一份，
 > 换掉占位符就能让 AI 生成一个新项目的完整骨架。
 >
-> 技术栈的**依据**（为什么这么选、踩过什么坑）在 [`STACK.md`](../STACK.md)，本文件不重复，只做引用。
+> 技术选型真相源为 [docs/TECH.md](TECH.md)。现行工程事实可参考 [`STACK.md`](../STACK.md)，选型冲突以 `TECH.md` 为准。
 >
 > 用法：
 > 1. 填好第一节的占位符表
@@ -16,20 +16,22 @@
 
 | 占位符 | 含义 | 本项目的值（示例） | 你的值 |
 |---|---|---|---|
-| `{{PROJECT}}` | 项目/仓库名，同时是 Consul KV 前缀与 npm scope | `ecommerce` | |
+| `{{PROJECT}}` | 项目/仓库名，同时是 Config Center namespace 与 npm scope | `ecommerce` | |
 | `{{DOMAIN}}` | 业务领域一句话描述 | B2B2C 电商平台 | |
 | `{{ORG}}` | GitHub / GitLab 组织名 | `lens077` | |
 | `{{GO_MODULE}}` | 后端 Go module 路径 | `github.com/lens077/ecommerce/backend` | |
 | `{{NPM_SCOPE}}` | 前端内部包 scope | `@ecommerce` | |
 | `{{K8S_NAMESPACE}}` | Kubernetes 命名空间 | `ecommerce` | |
-| `{{REGISTRY}}` | 镜像仓库 | `ccr.ccs.tencentyun.com/sumery` | |
+| `{{REGISTRY}}` | 主镜像仓库（如 TCR，集群直连拉取） | `ccr.ccs.tencentyun.com/example` | |
+| `{{HELM_REGISTRY}}` | Helm 制品仓库（Harbor OCI） | `harbor.example.com/example` | |
 | `{{IDP_URL}}` | Casdoor 地址 | — | |
-| `{{CONSUL_ADDR}}` | Consul 地址（本地开发） | `192.168.3.120:8500` | |
+| `{{OPENFGA_URL}}` | OpenFGA 地址 | — | |
+| `{{CONFIG_CENTER_URL}}` | control-tower Config Center 地址 | `http://config-center:8080` | |
 | `{{SERVICES}}` | 后端服务清单 | user search product order inventory cart merchant address behavior payment | |
 | `{{APPS}}` | 前端 app 清单 + 端口 | consumer:3000 merchant:3002 admin:3003 desktop:—(Tauri 壳) | |
-| `{{ROLES}}` | RBAC 角色继承链 | `admin ⊃ merchant ⊃ consumer ⊃ public` | |
+| `{{RELATIONS}}` | OpenFGA 领域关系模型摘要 | `merchant: admin/staff；store: manager/member` | |
 
-**领域替换的最小改动面**：`{{SERVICES}}` / `{{APPS}}` / `{{ROLES}}` 决定业务形态，其余基础设施骨架原样复用。
+**领域替换的最小改动面**：`{{SERVICES}}` / `{{APPS}}` / `{{RELATIONS}}` 决定业务形态，其余基础设施骨架原样复用。
 
 ---
 
@@ -60,16 +62,15 @@
 │       ├── constants/
 │       ├── internal/{conf/v1, server, service, biz, data, pkg}
 │       ├── configs/  deploy/{dev,prod}/  Makefile  Dockerfile  compose.yaml
-├── gateway/                   # 独立 module，可 subtree 到独立仓
-│   ├── configs/{config.yaml, policies/{model.conf,policies.csv}}
-│   └── middleware/{ip,cors,jwt,rbac,logging,tracing,bbr,circuitbreaker,routerfilter}
+├── platform/
+│   └── control-tower/         # 同级仓 control-tower 的版本/路由契约指针；网关与 Config Center 不复制进业务仓
 ├── frontend/
 │   ├── pnpm-workspace.yaml    # catalog 版本表
 │   ├── package.json
 │   ├── apps/{app}/            # 每 app 一个 vite-plus 工程
 │   └── packages/{api,configs,constants,i18n,perf,tauri,tracker,ui,utils}
-├── helm/{charts,library}
-└── .github/workflows/{backend.yml,frontend.yml}
+├── deploy/k8s/                # CiliumNetworkPolicy、HPA/KEDA、PDB、Argo Rollouts（P1）
+└── .github/{workflows/{backend.yml,frontend.yml},renovate.json}
 ```
 
 ---
@@ -91,7 +92,7 @@
 - `backend/constants/`
 - `frontend/packages/{api,configs,constants,utils,ui}`
 
-其中 `pkg/config` 必须包含：`Source` 接口 + `source_consul.go` + `Live`（`atomic.Pointer` + 订阅）+ **解码后调用 `protovalidate.Validate`** + `mapstructure` 开 `ErrorUnused`。
+其中 `pkg/config` 必须包含：`Source` 接口 + Config Center SDK selector（`type=config_center`）+ `Live`（`atomic.Pointer` + 订阅）+ **解码后调用 `protovalidate.Validate`** + `mapstructure` 开 `ErrorUnused`；`pkg/registry` 暴露 `ServiceRegistry`，生产使用 K8s Service + CoreDNS，本地使用 Docker Compose 服务名。
 
 **验收**：`go build ./...` 通过；`pkg/config` 有单测覆盖「缺必填块 → 启动失败」这一条（这是本项目最贵的教训，见 `STACK.md` 第十节）。
 
@@ -109,16 +110,16 @@ conf.proto → api/{svc}/v1/*.proto → buf generate
 **验收**（缺一不可）：
 - [ ] `make dev` 起得来，启动日志打印了实际生效的配置数据源
 - [ ] `GET /healthz` 返回 200 且 DB/Cache 都绿
-- [ ] Consul 里看得到注册实例
-- [ ] `curl` 直连服务端口打通一个 RPC
+- [ ] K8s Service / Compose DNS 可解析，`GET /healthz` 通过
+- [ ] 使用 HTTP/2（H2C）直连服务端口打通一个 ConnectRPC，且不存在 HTTP/1.1 降级
 - [ ] 故意传一个越界参数，被 protovalidate 拦在 biz 层之前
 - [ ] `fx.ValidateApp` 在测试里跑通
 
 ### 阶段 ④ 网关
 
-产出：`configs/config.yaml`（envs + middlewares + endpoints）· `policies/model.conf` · `policies/policies.csv`
+产出：同级仓 control-tower 的路由与匿名清单、Casdoor Stateful Session 配置、Dragonfly Session Store、OpenFGA 关系模型、租户路由、可信身份头注入与路由超时配置；生产入口位于 Cilium Gateway API 之后。
 
-**验收**：三条路径分别验证 —— 匿名路径 200 / 缺 token 401 / 角色不足 403 / 未定义前缀 404 且错误体符合 Connect 规范（带 `X-Error-Reason` 头）。
+**验收**：分别验证匿名路径 200 / 缺 Session 401 / OpenFGA 拒绝 403 / 未定义前缀 404；错误体符合 Connect 规范（带 `X-Error-Reason` 头），后端只收到网关注入的 `X-User-ID` / `X-Merchant-ID`，全链路保持 HTTP/2（H2C）。
 
 ### 阶段 ⑤ 第一个前端 app
 
@@ -133,11 +134,11 @@ buf.gen.yaml → src/gen → env.ts(zod) → api/{domain} → routes → compone
 每个服务重复阶段 ③，只改 `proto` / `schema` / `biz` / `data`；`server` / `pkg` 从共享层引用。
 **每加一个服务，同步更新 `.service-matrix.yaml` 和 `TODO.md`。**
 
-### 阶段 ⑦ 可观测性 + CI/CD + Helm/Argo
+### 阶段 ⑦ 可观测性 + CI/CD + Kubernetes/Argo
 
-产出：OTel 接入验证（trace 能在 Jaeger 看到跨服务链路）· `.github/workflows/*` · `helm/charts/*` · ArgoCD ApplicationSet
+产出：OTel SDK / Vector / VMAgent（K8s 内轻量采集）→ 外置 OTel Collector → VictoriaLogs / VictoriaMetrics / VictoriaTraces 的接入验证 · Docker Buildx 多架构 `.github/workflows/*` · Renovate · Kubernetes 清单 · CiliumNetworkPolicy default-deny · HPA / KEDA（Kafka lag scaler）· Argo Rollouts（P1）
 
-**验收**：打一个 tag，镜像与 chart 都推上去，Manifest 仓库的 `targetRevision` 被自动改写。
+**验收**：GitHub Actions 打一个 tag 后，通过 Docker Buildx 生成多架构镜像并推送到主镜像仓库（`{{REGISTRY}}`，如 TCR）；Helm 制品推送 `{{HELM_REGISTRY}}`（Harbor OCI）；GHCR 可选双存，是否推送由 CI 按网络决定。K8s 部署健康，default-deny 策略生效，trace 能在 VictoriaTraces（Grafana）看到跨服务链路。
 
 ---
 
@@ -175,16 +176,16 @@ buf.gen.yaml → src/gen → env.ts(zod) → api/{domain} → routes → compone
 一律查 **[.service-matrix.yaml](../.service-matrix.yaml)**。里面区分了 `depends_on`（已接线）
 和 `depends_on_planned`（设计要求但未接线），不要把后者当成已实现。
 
-**查技术栈与分层约束**：见 **[STACK.md](../STACK.md)**。不要从代码里反推约定。
+**查技术选型与分层约束**：技术选型见 **[docs/TECH.md](../docs/TECH.md)**，现行工程约束见 **[STACK.md](../STACK.md)**。不要从代码里反推约定；两者冲突时以 `docs/TECH.md` 为准。
 
 ## 项目速览
 
 - 领域：{{DOMAIN}}
-- 后端：Go + Connect-RPC 微服务（`backend/services/`），proto 契约在 `backend/api/`，网关在 `gateway/`
-- 前端：pnpm workspace（`frontend/apps/*` + `frontend/packages/`），React 19 + MUI + TanStack + Connect-RPC
-- 配置：Consul KV `{{PROJECT}}/<svc>/dev.yml`
-- 鉴权：Casdoor + 网关集中式 JWT/RBAC
-- 进度真相源：`TODO.md`；架构真相源：`docs/design/`；技术栈真相源：`STACK.md`
+- 后端：Go + ConnectRPC 微服务（`backend/services/`），Fx 装配，proto 契约在 `backend/api/`；网关由同级仓 control-tower 承载
+- 前端：pnpm workspace（`frontend/apps/*` + `frontend/packages/`），React + TanStack Router / Query + 本地状态库 **Zustand** + Connect Query ES / Connect Web / Protobuf-ES，使用 vite-plus（`vp`）构建
+- 配置：`CONFIG_SOURCE_FILE` 指向 Config Center SDK selector（`type=config_center`），key 为 `{service}/{env}/bootstrap.yaml`
+- 鉴权：Casdoor Stateful Session + Dragonfly Session Store + OpenFGA 关系授权，不保留 JWT 双轨
+- 进度真相源：`TODO.md`；架构真相源：`docs/design/`；技术选型真相源：`docs/TECH.md`
 ````
 
 ---
@@ -215,11 +216,14 @@ layout:
   service_conf: "backend/services/{service}/internal/conf/v1/conf.proto"
   frontend_app: "frontend/apps/{app}"
   frontend_package: "frontend/packages/{pkg}"
-  gateway: "gateway"
+  gateway: "../control-tower/services/gateway"
 
 conventions:
-  consul_kv: "{{PROJECT}}/{service}/{env}.yml" # env: dev | prod
-  consul_addr_local: "{{CONSUL_ADDR}}"          # 见 context/team/local-env.md
+  config_center_key: "{service}/{env}/bootstrap.yaml" # env: dev | prod
+  config_source_file: "CONFIG_SOURCE_FILE"             # 指向 type=config_center 的 SDK selector
+  config_center_url: "{{CONFIG_CENTER_URL}}"
+  service_registry: "K8s Service + CoreDNS（生产）/ Docker Compose 服务名（本地）"
+  transport: "ConnectRPC over HTTP/2 (H2C)，严禁降级 HTTP/1.1"
   # 各服务通用的配置块：
   common_config_blocks: [server, data, auth, observability, discovery, log]
 
@@ -232,26 +236,39 @@ config_validation:
 
 # ── 外部基础设施（不是本仓的服务）────────────────────────────────────
 externals:
-  postgres: { host: "<host>", note: "TLS 模式写这里，凭据不写" }
-  redis: { host: "<host:port>", note: "" }
-  consul: { host: "{{CONSUL_ADDR}}" }
-  casdoor: { host: "{{IDP_URL}}", note: "JWT 公钥 kid" }
-  # 按需增删：elasticsearch / minio / 对象存储 / 支付渠道 / 推荐引擎 …
+  postgres: { host: "<pigsty-pgbouncer-host>", note: "Pigsty / Patroni HA；TLS 模式写这里，凭据不写；UUIDv7 主键" }
+  dragonfly_session: { host: "<host:port>", note: "noeviction + 持久化" }
+  dragonfly_cache: { host: "<host:port>", note: "allkeys-lru，与 Session/限流实例隔离" }
+  dragonfly_ratelimit: { host: "<host:port>", note: "独立限流实例" }
+  config_center: { host: "{{CONFIG_CENTER_URL}}" }
+  casdoor: { host: "{{IDP_URL}}", note: "Stateful Session 身份源" }
+  openfga: { host: "{{OPENFGA_URL}}", note: "关系授权真相源" }
+  kafka: { host: "<brokers>", note: "外部非 K8s 集群；partition key=aggregate_id" }
+  elasticsearch: { host: "<host>", note: "只读投影，隐藏于 SearchCatalog 接口" }
+  silo: { host: "<s3-endpoint>", note: "基于 MinIO 的 S3 兼容对象存储；使用预签名 URL" }
+  # 按需增删：支付渠道 / 推荐引擎 …
 
 # ── 网关 ────────────────────────────────────────────────────────────
 gateway:
-  path: "gateway"
-  config: "gateway/configs/config.yaml"
-  rbac:
-    model: "configs/policies/model.conf"       # MODEL_FILE_PATH
-    policies: "configs/policies/policies.csv"  # POLICIES_FILE_PATH
-  # 无需 JWT 的路径（jwt + rbac 两处都必须排除）
+  path: "../control-tower/services/gateway"
+  upstream: "Cilium Gateway API"
+  transport: "ConnectRPC over HTTP/2 (H2C)"
+  session:
+    provider: casdoor
+    store: dragonfly_session
+  authorization:
+    provider: openfga
+    relations: "{{RELATIONS}}"
+  trusted_identity_headers: [X-User-ID, X-Merchant-ID]
+  tenant_routing: true
+  route_timeout: required
+  # 匿名路径只在网关路由匿名清单声明；不保留旧式双轨鉴权。
   anonymous_paths:
     - /<svc>.v1.<Svc>Service/SignIn
     - # …回调 / 公开查询 / 埋点
 
 # ── 后端服务 ─────────────────────────────────────────────────────────
-# discovery: 注册中心里的服务名（≠ 目录名，网关 target 用它）
+# discovery: K8s Service / Compose DNS 服务名（≠ 目录名，网关 target 用它）
 # extra_config: 通用块之外的配置块
 services:
   <service-a>:
@@ -272,7 +289,7 @@ frontend:
     <app-a>: { port: 3000, module_key: <app-a> }
     # …按 {{APPS}} 补全；⚠️ 若 app 名与后端服务名重名，module_key 加后缀区分
   packages: [api, configs, constants, ui, utils]
-  transport: "Connect-RPC → VITE_GATEWAY_URL（默认 http://localhost:8080）"
+  transport: "Connect Query ES / Connect Web / Protobuf-ES → VITE_GATEWAY_URL（默认 http://localhost:8080）"
 
 # ── 已知缺口（详情以 TODO.md 为准，本段只列影响拓扑的）─────────────────
 known_gaps: []
@@ -325,7 +342,7 @@ context/
 
 - **不要全仓 grep 找规范**。先看本文件 → 进对应层的 `INDEX.md` → 再进具体文件。
 - **不要全仓 grep 找服务拓扑**。查 `.service-matrix.yaml`。
-- **不要从代码反推技术约定**。查 `STACK.md`。
+- **不要从代码反推技术约定**。技术选型查 `docs/TECH.md`，现行工程事实查 `STACK.md`；冲突时以 `docs/TECH.md` 为准。
 - 找模块知识时路径是 `context/project/{{PROJECT}}/{module}/`，`{module}` 用**代码目录名**。
 - 找不到对应知识 ≠ 没有约束。先读 `docs/design/` / `TODO.md`，读完把结论沉淀回来。
 ````
@@ -467,8 +484,8 @@ LLM 没有跨会话记忆。但**每一次用户纠正，都是一个信号**：
 | Kubernetes 编排 | ⬜ | |
 | GitOps（ArgoCD） | ⬜ | |
 | CI/CD（GitHub Actions） | ⬜ | |
-| 注册发现 / 配置源 | ⬜ | |
-| 提交规范（husky + commitlint） | ⬜ | |
+| K8s Service / Compose DNS + Config Center | ⬜ | |
+| 提交规范（vite-plus hooks + commitlint） | ⬜ | |
 | proto 门禁（buf lint + breaking 接 CI） | ⬜ | |
 
 ### 2. 后端微服务
@@ -477,13 +494,13 @@ LLM 没有跨会话记忆。但**每一次用户纠正，都是一个信号**：
 |------|------|-----------|----------|
 | | ⬜ | | |
 
-### 3. 网关与 RBAC
+### 3. 网关、Session 与关系授权
 
 | 项目 | 状态 | 说明 |
 |------|------|------|
-| 网关（认证/授权/路由守卫/限流熔断） | ⬜ | |
-| RBAC 角色（{{ROLES}}） | ⬜ | |
-| IdP 集成 | ⬜ | |
+| control-tower 网关（Session 校验/OpenFGA/租户路由/可信身份头/超时） | ⬜ | |
+| OpenFGA 关系模型（{{RELATIONS}}） | ⬜ | |
+| Casdoor Stateful Session + Dragonfly Session Store | ⬜ | |
 
 ### 4. 前端
 
@@ -625,15 +642,14 @@ ENTRYPOINT ["/app/service"]
 ```makefile
 VERSION ?= dev
 SERVICE = $(shell basename $$PWD)
-CONSUL_KV_ADDR ?= {{CONSUL_ADDR}}
+CONFIG_CENTER_URL ?= {{CONFIG_CENTER_URL}}
 
 .PHONY: dev
 dev:
 	SERVICE_NAME="$(SERVICE)-service" \
 	CONFIG_SOURCE_FILE="$(PWD)/configs/source.dev.yaml" \
-	CONSUL_ENABLED=true \
-	CONSUL_ADDR=$(CONSUL_KV_ADDR) \
-	CONSUL_SCHEME=http \
+	CONFIG_CENTER_URL=$(CONFIG_CENTER_URL) \
+	CONFIG_CENTER_KEY="$(SERVICE)/dev/bootstrap.yaml" \
 	go run cmd/server/main.go
 
 .PHONY: test
@@ -686,8 +702,10 @@ catalogMode: prefer
 catalog:
   "@bufbuild/buf": ^1.70.0
   "@bufbuild/protobuf": ^2.12.0
+  "@bufbuild/protobuf-es": ^2.12.0
   "@bufbuild/protoc-gen-es": ^2.12.0
   "@connectrpc/connect": ^2.1.1
+  "@connectrpc/connect-query": ^2.1.1
   "@connectrpc/connect-web": ^2.1.1
   "@mui/material": ^9.1.1
   "@mui/icons-material": ^9.1.1
@@ -700,52 +718,76 @@ catalog:
   react: ^19.2.7
   react-dom: ^19.2.7
   typescript: ^5.9.3
-  valtio: ^2.3.2
+  zustand: ^5.0.0
   zod: ^4.4.3
-  vite-plus: ^0.1.24
+  vite-plus: ^0.2.9
   vite: npm:@voidzero-dev/vite-plus-core@latest
   vitest: npm:@voidzero-dev/vite-plus-test@latest
 onlyBuiltDependencies: ["@bufbuild/buf", "@swc/core", esbuild]
 ```
 
-### `gateway/configs/policies/policies.csv`（默认拒绝骨架）
+### `platform/openfga/model.fga`（关系授权骨架）
 
-```csv
-# 规则：默认拒绝 + 白名单。审批/履约/服务间调用必须 RPC 粒度授权，禁止整段 /svc.v1.* 放行。
-p, <role>, /<svc>.v1.<Svc>Service/<Method>, POST, allow
+```fga
+model
+  schema 1.1
 
-p, anyone, /*, .*, deny     # 兜底，必须在最后
+type user
 
-# 角色继承链：{{ROLES}}
-g, consumer, public
-g, merchant, consumer
-g, admin, merchant
+type merchant
+  relations
+    define admin: [user]
+    define staff: [user]
+
+type resource
+  relations
+    define parent: [merchant]
+    define owner: [user]
+    define can_view: owner or admin from parent or staff from parent
+    define can_edit: owner or admin from parent
 ```
+
+关系按 `{{RELATIONS}}` 和领域设计扩展。默认拒绝由 OpenFGA 未建立关系时的 `DENY` 保证；匿名路径只在 control-tower 路由匿名清单声明。
 
 ---
 
 ## 九、生成提示词（连同本文件一起喂给 AI）
 
 ```
-按 SCAFFOLD.md 生成 {{PROJECT}}（{{DOMAIN}}）的项目骨架，技术栈严格对齐 STACK.md。
+按 SCAFFOLD.md 生成 {{PROJECT}}（{{DOMAIN}}）的项目骨架，技术选型严格对齐 docs/TECH.md；STACK.md 仅用于核实现行工程事实。
 
 【后端】Go 1.26 单 go.mod 多服务（module {{GO_MODULE}}）；
-  Connect-RPC(connectrpc.com/connect) + Buf(protovalidate) + uber/fx 依赖注入
-  + sqlc(pgx/v5) + zap + OpenTelemetry 全链路；
-  四层架构 server/service/biz/data，依赖方向 server→service→biz←data，
-  biz 定义 Repo 接口且不导入 proto 与 data，service 是唯一 import proto 的层。
-【网关】go-kratos/gateway，Casbin RBAC + Casdoor JWT(必须带 60s leeway)，
-  认证/授权/限流/熔断/追踪全部集中在网关，微服务不重复实现。
-【前端】pnpm workspace + catalog；vite-plus + React 19 + TS 5.9 + MUI 9
-  + TanStack Router(文件路由) + TanStack Query + valtio
-  + @connectrpc/connect-web + zod 环境变量校验；内部包 scope {{NPM_SCOPE}}。
-【数据】PostgreSQL（每服务独立 schema、跨服务身份用 UUID、金额用 DECIMAL、
-  时间用 TIMESTAMPTZ、PG ENUM、索引显式命名 idx_*、表与关键列必须有 COMMENT、
-  跨服务只存 ID+快照不做跨库 JOIN、列表分页用游标不用 OFFSET+COUNT）+ Redis。
-【配置】proto 定义 Bootstrap schema；Consul KV `{{PROJECT}}/{service}/{env}.yml`；
-  解码后必须调用 protovalidate.Validate，mapstructure 必须开 ErrorUnused。
+  ConnectRPC(connectrpc.com/connect) + Buf(protovalidate) + uber/fx 依赖注入
+  + sqlc(pgx/v5) + goose + zap + OpenTelemetry 全链路；服务间及网关到后端统一
+  ConnectRPC over HTTP/2（H2C），严禁降级 HTTP/1.1。四层架构 server/service/biz/data，
+  依赖方向 server→service→biz←data，biz 定义 Repo 接口且不导入 proto 与 data，
+  service 是唯一 import proto 的层。
+【网关】使用同级仓 control-tower，位于 Cilium Gateway API 之后；Casdoor Stateful Session
+  + Dragonfly Session Store + OpenFGA 关系授权，集中处理 Session 校验、租户路由、
+  X-User-ID / X-Merchant-ID 可信身份头注入与超时；完全废弃 JWT，不允许双轨，
+  不生成 Casbin RBAC、BBR、协议转码、重写或旧 go-kratos 中间件。
+【前端】pnpm workspace + catalog；vite-plus（vp）+ React + TypeScript + MUI
+  + TanStack Router（文件路由）+ TanStack Query + 本地 UI 状态库 Zustand
+  + Connect Query ES + Connect Web + Protobuf-ES + zod 环境变量校验；内部包 scope {{NPM_SCOPE}}；
+  桌面端使用 Tauri，Consumer 端 Next.js SSR 仅标记为评估中。
+【数据】PostgreSQL（外部 Pigsty / Patroni HA + PgBouncer；UUIDv7 主键；每服务独立 schema；
+  跨服务身份用 UUID；金额用 DECIMAL；时间用 TIMESTAMPTZ；PG ENUM；索引显式命名 idx_*；
+  表与关键列必须有 COMMENT；跨服务只存 ID+快照，不做跨库 JOIN；列表分页用游标）
+  + Dragonfly 分实例（Session noeviction / Cache allkeys-lru / 限流独立）
+  + Elasticsearch 只读投影（隐藏于 SearchCatalog 接口）
+  + Silo（基于 MinIO，S3 兼容，使用预签名 URL）。
+【事件】Apache Kafka 外部非 K8s 集群 + Transactional Outbox / Relay / Inbox + DLQ；
+  partition key=aggregate_id，事件使用 Protobuf。
+【配置】proto 定义 Bootstrap schema；CONFIG_SOURCE_FILE 指向 Config Center SDK selector
+  （type=config_center），key 为 `{service}/{env}/bootstrap.yaml`；解码后必须调用
+  protovalidate.Validate，mapstructure 必须开 ErrorUnused；配置层抽象 ServiceRegistry，
+  生产使用 K8s Service + CoreDNS，本地使用 Docker Compose 服务名。
+【可观测性】OTel SDK / Vector / VMAgent（K8s 内轻量采集）→ 外置 OTel Collector
+  → VictoriaLogs / VictoriaMetrics / VictoriaTraces，通过 Grafana 查询。
 【部署】多阶段 Docker（alpine + 非 root uid 1000 + CGO_ENABLED=0 + cache mount）
-  + buildx 多架构 + Helm + ArgoCD ApplicationSet + tag 触发的 GitHub Actions。
+  + Docker Buildx 多架构 + GitHub Actions + Renovate；制品分工：{{REGISTRY}}（主镜像仓库，
+  如 TCR）+ {{HELM_REGISTRY}}（Harbor，Helm OCI 制品）+ GHCR 可选双存（CI 按网络决定）；
+  K8s + CiliumNetworkPolicy default-deny + HPA / KEDA（Kafka lag scaler）+ Argo Rollouts（P1）。
 
 必须遵守的硬规则：
 1. 每个 proto 字段都要有 buf.validate 约束：枚举 defined_only、UUID 用 string.uuid、
@@ -755,21 +797,24 @@ g, admin, merchant
 2. proto 兼容性四红线：不删字段(用 reserved)、不复用字段号、不改类型、不改语义。
 3. 错误三层：biz 定义 var Err*（带 [模块] 前缀）→ data 用 %w 包装
    → service switch errors.Is 映射 connect 错误码。网关侧非业务错误也按 Connect 规范返回。
-4. 身份只从网关注入的 header 取，永不信任请求体里的 userId。
-5. RBAC 默认拒绝 + 白名单；审批/履约/服务间调用必须 RPC 粒度授权；
-   匿名路径要在 jwt 和 rbac 两处 router_filter 都排除。
+4. 身份只从网关注入的 `X-User-ID` / `X-Merchant-ID` 取，永不信任请求体里的 userId/merchantId。
+5. OpenFGA 关系授权默认拒绝；匿名路径只在网关路由的匿名清单声明；完全废弃 JWT，禁止保留双轨鉴权。
 6. 不把凭据写进仓库，只写主机名和端口。
 7. fx 装配必须把 appOptions() 拆成独立函数以便 fx.ValidateApp 静态校验；
-   OnStart 先做 DB/Cache 健康检查再监听；OnStop 7s 内完成注销/Shutdown/OTel flush。
+   OnStart 先做 DB/Cache 健康检查再监听；OnStop 7s 内完成 Shutdown/OTel flush。
 8. 共享工具（config/log/otel/registry/env/meta/dbutil）从第一天就放 backend/pkg/，
    不要在每个服务里复制。
+9. 事件写入采用 Transactional Outbox，Relay 收到 Kafka `acks=all` 后才标记 published；
+   消费端使用 Inbox 幂等，失败进入 DLQ，同一聚合以 aggregate_id 分区。
+10. 测试必须包含 k6 容量基线、Playwright E2E、gopter 属性测试和状态机测试；
+    后端保留 go build / go vet / go test 门禁。
 
 必须生成的治理文件：
 - AGENTS.md（模板 A）
 - .service-matrix.yaml（模板 B），区分 depends_on 与 depends_on_planned
 - context/ 三层知识库骨架（模板 C）
 - TODO.md（模板 D）
-- STACK.md（技术栈与约束真相源）
+- docs/TECH.md（技术选型真相源）+ STACK.md（现行工程事实与约束）
 
 工作方式：
 先只输出「服务划分 + 各服务 Bootstrap 配置块 + .service-matrix.yaml + 分阶段落地顺序」，
@@ -787,8 +832,8 @@ g, admin, merchant
 - [ ] `AGENTS.md` 五条硬规则齐全，且指向 `context/` 而非复制内容
 - [ ] `.service-matrix.yaml` 覆盖全部服务，`depends_on` / `depends_on_planned` 分清
 - [ ] `context/` 三层 INDEX 齐全，`experience/` 模板四段式写明
-- [ ] `STACK.md` 的占位符全部替换，没有残留 `{{ }}`
-- [ ] 全仓 grep 不到密码/密钥/token
+- [ ] `docs/TECH.md` 与 `STACK.md` 中面向新项目的占位符全部替换，没有残留 `{{ }}`
+- [ ] 全仓 grep 不到密码/密钥；`Session Token` 等术语仅出现在安全设计说明，不出现真实凭据
 
 **契约**
 - [ ] `buf lint` 通过，`buf breaking` **已接进 CI**
@@ -803,9 +848,11 @@ g, admin, merchant
 - [ ] `/healthz` 在 DB 挂掉时返回 503
 
 **网关**
-- [ ] `p, anyone, /*, .*, deny` 在 policies.csv 最后一行
-- [ ] 匿名路径在 jwt 和 rbac 两处都排除了
-- [ ] JWT 校验带 leeway
+- [ ] control-tower 位于 Cilium Gateway API 之后，网关到后端保持 ConnectRPC over HTTP/2（H2C），无 HTTP/1.1 降级
+- [ ] Casdoor Stateful Session 存入独立 Dragonfly Session 实例，Session Store 不可用时 fail-closed
+- [ ] OpenFGA 关系授权默认拒绝，匿名路径只在网关路由匿名清单声明
+- [ ] 客户端伪造的身份头被剥离，后端只收到网关注入的 `X-User-ID` / `X-Merchant-ID`
+- [ ] 全仓不存在 JWT/Casbin 双轨、BBR、转码或重写中间件
 - [ ] 404 / 超时等非业务错误的响应体符合 Connect 规范且 message 非空
 
 **前端**
@@ -813,6 +860,10 @@ g, admin, merchant
 - [ ] `vp fmt && vp lint && vp run test -r && vp run build -r` 全绿
 - [ ] 生成的 proto 类型没有直接进 store
 
-**交付**
-- [ ] 打一个 tag，镜像 + chart 都推上去，Manifest 仓库 `targetRevision` 被自动改写
-- [ ] Jaeger 里能看到一条跨越 前端 → 网关 → 服务 → DB 的完整链路
+**测试与交付**
+- [ ] `go build ./...`、`go vet ./...`、`go test -short ./...` 全绿
+- [ ] k6 固定数据集容量基线、Playwright E2E、gopter 属性测试与状态机测试通过
+- [ ] GitHub Actions 使用 Docker Buildx 构建多架构镜像并推送主镜像仓库（如 TCR）；Helm 制品推 Harbor（OCI）；GHCR 可选双存由 CI 决定；Renovate 已启用
+- [ ] K8s CiliumNetworkPolicy default-deny 生效；在线服务由 HPA、Kafka 消费者由 KEDA lag scaler 扩缩容
+- [ ] Argo Rollouts 灰度发布作为 P1 验收项登记
+- [ ] VictoriaTraces（Grafana）里能看到一条跨越前端 → 网关 → 服务 → DB 的完整链路

@@ -46,7 +46,7 @@ E-commerce 隐私政策（开源演示版）
 
 技术架构防护：
 
-后端接口采用 JWT 加密鉴权。
+后端接口经网关的有状态 Session 鉴权（Casdoor）与 OpenFGA 授权控制访问；Session 存储于独立的 Dragonfly Session Store，登出后立即删除并失效。
 
 数据库（PostgreSQL/Redis）运行在 Docker/K8S 私有子网中，不直接暴露于公网。
 

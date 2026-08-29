@@ -15,7 +15,7 @@ backend/infrastructure/consul/consul-local-kv.json
 backend/infrastructure/consul/consul-kv.json
 
 # 个人 AI 协作备忘录（tmux 驱动 codex 的命令速查），不属于项目产物
-ai-helper.sh
+helper.sh
 
 # Impeccable 过程产物（截图/参考图/临时脚本/决策页/hook 缓存）；design.json 与 surfaces/ 入仓
 .impeccable/shots/
@@ -24,3 +24,6 @@ ai-helper.sh
 .impeccable/*.mjs
 **/.impeccable/hook.cache.json
 .agent-teams/
+
+# playwright-cli 的页面快照产物（带时间戳，每次运行都新增一份），不是项目产物
+frontend/.playwright-cli/

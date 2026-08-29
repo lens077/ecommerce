@@ -7,18 +7,20 @@
 > - 判定规则 + 写 manifest 的七条检查清单（AI/人都要遵守）→ [`context/team/okteto-inner-loop.md`](../context/team/okteto-inner-loop.md)
 > - 测试策略（**不要**用它做测试环境）→ [`docs/TESTING.md`](TESTING.md) §8.1
 > - 技术栈与分层 → [`STACK.md`](../STACK.md)
+>
+> **后续决策覆盖（2026-08-28）**：本文的 Consul 相关流程已被 [TECH.md](TECH.md) 覆盖。服务发现目标态为生产 Kubernetes Service + CoreDNS，并通过 `ServiceRegistry` 抽象；Docker Compose 定位为 pre 半生产环境测试；开发内环（mirrord/Okteto 开发便捷性）重新评估中——评估期内本文的 Okteto 流程继续有效。Consul 仅是存量迁移期组件，相关注册流程随迁移作废，下文保留 Consul 表述只用于记录当时实况与迁移期排错。
 
 ---
 
 ## 一、它解决什么
 
-**不是替代 `make dev`。** 本地 `go run` 已经很快（原生编译、LAN 直连 pg-dev/dragonfly/consul），
+**不是替代 `make dev`。** 本地 `go run` 已经很快（原生编译、LAN 直连 pg-dev/dragonfly/存量 Consul），
 Okteto 在那条路上没有增量。
 
 它替掉的是**"想看它在集群里的样子"**那条链路：
 
 ```
-现在：改代码 → buildx 双架构 → 推 TCR → CI 回写 helm tag → ArgoCD 同步 → Pod 重启   （分钟~十几分钟）
+现在：改代码 → buildx 双架构 → 推 TCR（主镜像仓库，集群直连拉取）→ CI 回写 helm tag → ArgoCD 同步 → Pod 重启   （分钟~十几分钟）
 Okteto：改代码 → 文件同步进 Pod（毫秒）→ 在 Pod 里重跑 go run                      （秒级）
 ```
 
@@ -30,7 +32,7 @@ Okteto：改代码 → 文件同步进 Pod（毫秒）→ 在 Pod 里重跑 go r
 | Secret `0400 root:root` → uid 1000 读不到 selector | ❌ 本地是你自己的 uid | ✅ Pod 强制 uid 1000 |
 | 缺 `runAsUser/fsGroup` → CrashLoop | ❌ 本地没有 securityContext | ✅ 继承 Pod 的 securityContext |
 | Dockerfile 漏 COPY `pkg/` → 容器里编译不过 | ❌ 本地有完整源码树 | ⚠️ 部分（同步的是全量源码） |
-| Consul 注册地址错 → 网关路由不到 | ⚠️ 本地注册的是 Mac IP | ✅ 注册的是 Pod IP |
+| 存量 Consul 注册地址错 → 网关路由不到 | ⚠️ 迁移期本地注册的是 Mac IP | ✅ 迁移期注册的是 Pod IP；目标态由 K8s Service + CoreDNS 取代 |
 
 **不解决**：多服务联调（一次只 up 一个）、数据隔离（打的是共享 pre 库）、前端（vite 本地更快）。
 
@@ -110,11 +112,11 @@ scripts/argocd-devwindow.sh on
 
 ```
 ENV     DEPLOYMENT_MODE=pre / CONFIG_SOURCE_FILE=/etc/ecommerce/config-source/cart.yaml
-        CONSUL_ADDR=consul-expose-servers.consul.svc:8500      ← 集群内 svc 域名，不是 *.dev.test
+        CONSUL_ADDR=consul-expose-servers.consul.svc:8500      ← 存量迁移期配置；目标态不再依赖 Consul
 MOUNT   config-source → /etc/ecommerce/config-source (ro, 0400)
         db-ca-cert    → /etc/ssl/certs (ro)   ← 注意：整个目录被替换，见 §七 CA 那条
 SEC     runAsUser/Group 1000（你的代码确实以 uid 1000 跑）
-NET     Pod IP + 集群 DNS；Consul 注册的是 Pod 地址，网关能路由到你的开发容器
+NET     Pod IP + 集群 DNS；迁移期 Consul 注册的是 Pod 地址，网关能路由到开发容器；目标态由 K8s Service + CoreDNS 路由
 ```
 
 **架构不是差异点**：集群三个节点都是 **arm64**（Ubuntu 26.04），与 Mac 同架构。
@@ -135,7 +137,7 @@ go build              → BUILD OK (49M)
 setting up ssl mode: verify-ca
 database connected successfully to postgres-postgresql.postgres.svc   ← 集群内 svc 域名
 redis connected successfully {"addr": "dragonfly.dragonfly.svc"}
-Service registered with Consul using TTL check
+Service registered with Consul using TTL check                # 2026-08-11 存量实况，目标态迁移退役
 http server starting {"addr": "0.0.0.0:30006"}  environment: "pre"
 配置已热更新 {"source": "config_center"}
 ```
@@ -161,7 +163,7 @@ sync 范围、persistentVolume）见 [`context/team/okteto-inner-loop.md`](../co
 |---|---|---|
 | shell 敲着敲着断了 | ArgoCD selfHeal 把漂移同步回去了 | `scripts/argocd-devwindow.sh off` |
 | `okteto up` 报找不到目标 | manifest 的 dev key 与 Deployment 名不一致 | `kubectl get deploy -n ecommerce` 核对 |
-| Pod 卡 `Init:0/2` 很久 | init 镜像 `ghcr.io/okteto/okteto:<ver>` 来自 ghcr.io，LAN 内拉可能很慢 | 可用 `OKTETO_CLI_IMAGE` 指向 TCR 镜像副本 |
+| Pod 卡 `Init:0/2` 很久 | init 镜像 `ghcr.io/okteto/okteto:<ver>` 来自 ghcr.io，LAN 内拉可能很慢 | 可用 `OKTETO_CLI_IMAGE` 指向 TCR/内网镜像副本（TCR 为主镜像仓库，LAN 拉取最快） |
 | Pod 卡 `ContainerCreating`、**零事件、无 IP** | **不是 okteto 的问题**，是节点起不了新 Pod | 见下节 |
 | GOCACHE permission denied | 没设 `HOME`/`GOCACHE` | 见 §六 |
 | 文件同步卡住 | syncthing 状态坏了 | `okteto up cart --reset` |

@@ -1,22 +1,22 @@
+# 该文件供单服务目录部署使用；完整 ecommerce VPA 集合见根目录 application-vpa.yml。
+# 当前集群只安装 recommender，因此必须保持 Off，仅生成 requests 推荐值。
 apiVersion: autoscaling.k8s.io/v1
 kind: VerticalPodAutoscaler
 metadata:
-  name: ecommerce-order-vpa # 每个微服务改一下名字
+  name: ecommerce-order-vpa
   namespace: ecommerce
+  labels:
+    app.kubernetes.io/part-of: ecommerce
+    app.kubernetes.io/component: capacity-recommendation
 spec:
   targetRef:
     apiVersion: apps/v1
     kind: Deployment
-    # 必须与 deploy/dev/deployment.yaml 的 metadata.name 一致，写错 VPA 会静默不生效
     name: ecommerce-order-deploy
   updatePolicy:
-    updateMode: "InPlace" # 流量来了原地热扩容，不重启，微服务不断连
+    updateMode: "Off"
   resourcePolicy:
     containerPolicies:
-      - containerName: '*'
-        minAllowed:
-          cpu: "30m"
-          memory: "100Mi"  # 极低启动，平时帮你省内存
-        maxAllowed:
-          cpu: "500m"
-          memory: "384Mi"  # 11个微服务如果同时飙到上限会吃掉 4GB 内存，384M 是安全边界
+      - containerName: ecommerce-order
+        controlledResources: [cpu, memory]
+        controlledValues: RequestsOnly

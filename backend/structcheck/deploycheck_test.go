@@ -10,6 +10,10 @@
 package structcheck
 
 import (
+	"archive/tar"
+	"compress/gzip"
+	"fmt"
+	"io"
 	"os"
 	"path/filepath"
 	"regexp"
@@ -44,11 +48,22 @@ type deploymentCoverage struct {
 	Exceptions map[string]map[string]string `yaml:"exceptions"`
 }
 
+type deploymentTopologySpreadConvention struct {
+	LabelKey           string `yaml:"label_key"`
+	LabelValue         string `yaml:"label_value"`
+	TopologyKey        string `yaml:"topology_key"`
+	MaxSkew            int    `yaml:"max_skew"`
+	WhenUnsatisfiable  string `yaml:"when_unsatisfiable"`
+	NodeAffinityPolicy string `yaml:"node_affinity_policy"`
+	NodeTaintsPolicy   string `yaml:"node_taints_policy"`
+}
+
 type coverageMatrix struct {
 	Services           map[string]yaml.Node `yaml:"services"`
 	DeploymentCoverage deploymentCoverage   `yaml:"deployment_coverage"`
 	Conventions        struct {
-		ConfigSourceSecret string `yaml:"config_source_secret"`
+		ConfigSourceSecret string                             `yaml:"config_source_secret"`
+		PodTopologySpread  deploymentTopologySpreadConvention `yaml:"pod_topology_spread"`
 	} `yaml:"conventions"`
 }
 
@@ -79,13 +94,49 @@ type deploymentSecurityContext struct {
 	FSGroupChangePolicy string `yaml:"fsGroupChangePolicy"`
 }
 
+type deploymentTopologySpreadConstraint struct {
+	MaxSkew            int    `yaml:"maxSkew"`
+	TopologyKey        string `yaml:"topologyKey"`
+	WhenUnsatisfiable  string `yaml:"whenUnsatisfiable"`
+	NodeAffinityPolicy string `yaml:"nodeAffinityPolicy"`
+	NodeTaintsPolicy   string `yaml:"nodeTaintsPolicy"`
+	LabelSelector      struct {
+		MatchLabels map[string]string `yaml:"matchLabels"`
+	} `yaml:"labelSelector"`
+}
+
+type deploymentRollingStrategy struct {
+	Type          string `yaml:"type"`
+	RollingUpdate struct {
+		MaxUnavailable int `yaml:"maxUnavailable"`
+		MaxSurge       int `yaml:"maxSurge"`
+	} `yaml:"rollingUpdate"`
+}
+
+type deploymentPodAntiAffinityTerm struct {
+	TopologyKey   string `yaml:"topologyKey"`
+	LabelSelector struct {
+		MatchLabels map[string]string `yaml:"matchLabels"`
+	} `yaml:"labelSelector"`
+}
+
 type deploymentDocument struct {
 	Kind string `yaml:"kind"`
 	Spec struct {
+		Selector struct {
+			MatchLabels map[string]string `yaml:"matchLabels"`
+		} `yaml:"selector"`
 		Template struct {
+			Metadata struct {
+				Labels map[string]string `yaml:"labels"`
+			} `yaml:"metadata"`
 			Spec struct {
-				SecurityContext deploymentSecurityContext `yaml:"securityContext"`
-				Containers      []struct {
+				ServiceAccountName           string                               `yaml:"serviceAccountName"`
+				AutomountServiceAccountToken *bool                                `yaml:"automountServiceAccountToken"`
+				EnableServiceLinks           *bool                                `yaml:"enableServiceLinks"`
+				SecurityContext              deploymentSecurityContext            `yaml:"securityContext"`
+				TopologySpreadConstraints    []deploymentTopologySpreadConstraint `yaml:"topologySpreadConstraints"`
+				Containers                   []struct {
 					Env          []deploymentEnv         `yaml:"env"`
 					VolumeMounts []deploymentVolumeMount `yaml:"volumeMounts"`
 				} `yaml:"containers"`
@@ -356,14 +407,342 @@ func TestDeploymentsUseConfigCenterSelector(t *testing.T) {
 				if deployment.Kind != "Deployment" || len(deployment.Spec.Template.Spec.Containers) != 1 {
 					t.Fatalf("%s must contain one Deployment container", path)
 				}
-				container := deployment.Spec.Template.Spec.Containers[0]
+				podSpec := deployment.Spec.Template.Spec
+				container := podSpec.Containers[0]
+				assertWorkloadIdentity(t, path, "ecommerce-"+service, podSpec.ServiceAccountName,
+					podSpec.AutomountServiceAccountToken, podSpec.EnableServiceLinks)
+				assertEcommerceNodeSpread(t, path, m.Conventions.PodTopologySpread,
+					deployment.Spec.Selector.MatchLabels, deployment.Spec.Template.Metadata.Labels,
+					podSpec.TopologySpreadConstraints)
 				assertSelectorEnv(t, path, container.Env, service)
-				assertSelectorSecurityContext(t, path, deployment.Spec.Template.Spec.SecurityContext)
+				assertSelectorSecurityContext(t, path, podSpec.SecurityContext)
 				assertSelectorMount(t, path, container.VolumeMounts, deployment.Spec.Template.Spec.Volumes,
 					strings.ReplaceAll(m.Conventions.ConfigSourceSecret, "{env}", environment))
 			})
 		}
 	}
+}
+
+func TestWorkloadIdentityBaseline(t *testing.T) {
+	m := loadCoverageMatrix(t)
+
+	// The canonical manifest is shared by Helm and the emergency raw path.
+	f, err := os.Open("../../helm/files/zero-trust.yaml")
+	if err != nil {
+		t.Fatalf("open zero-trust manifest: %v", err)
+	}
+	defer f.Close()
+
+	serviceAccounts := map[string]bool{}
+	var cnpCount int
+	decoder := yaml.NewDecoder(f)
+	for {
+		var doc struct {
+			Kind     string `yaml:"kind"`
+			Metadata struct {
+				Name string `yaml:"name"`
+			} `yaml:"metadata"`
+		}
+		if err := decoder.Decode(&doc); err != nil {
+			if err == io.EOF {
+				break
+			}
+			t.Fatalf("parse zero-trust manifest: %v", err)
+		}
+		switch doc.Kind {
+		case "ServiceAccount":
+			serviceAccounts[doc.Metadata.Name] = true
+		case "CiliumNetworkPolicy":
+			cnpCount++
+		case "Role", "RoleBinding", "ClusterRole", "ClusterRoleBinding":
+			t.Errorf("zero-trust manifest grants RBAC via %s/%s; workloads currently need zero Kubernetes API permissions",
+				doc.Kind, doc.Metadata.Name)
+		}
+	}
+	for service := range m.Services {
+		name := "ecommerce-" + service
+		if !serviceAccounts[name] {
+			t.Errorf("zero-trust manifest missing ServiceAccount %q", name)
+		}
+	}
+	for _, name := range []string{"ecommerce-frontend", "ecommerce-outbox-relay", "ecommerce-search-indexer"} {
+		if !serviceAccounts[name] {
+			t.Errorf("zero-trust manifest missing ServiceAccount %q", name)
+		}
+	}
+	if cnpCount != 1 {
+		t.Errorf("zero-trust manifest has %d CiliumNetworkPolicy resources, want 1 canonical multi-rule policy", cnpCount)
+	}
+
+	extraDeployments := map[string]string{
+		"../tools/outbox-relay/deploy/dev/deployment.yaml":        "ecommerce-outbox-relay",
+		"../tools/search-indexer/deploy/dev/deployment.yaml":      "ecommerce-search-indexer",
+		"../../frontend/apps/consumer/deploy/deployment.yaml":     "ecommerce-frontend",
+		"../../frontend/apps/consumer/deploy/pre/deployment.yaml": "ecommerce-frontend",
+	}
+	for path, wantSA := range extraDeployments {
+		data, err := os.ReadFile(path)
+		if err != nil {
+			t.Errorf("read %s: %v", path, err)
+			continue
+		}
+		var deployment deploymentDocument
+		if err := yaml.Unmarshal(data, &deployment); err != nil {
+			t.Errorf("parse %s: %v", path, err)
+			continue
+		}
+		podSpec := deployment.Spec.Template.Spec
+		assertWorkloadIdentity(t, path, wantSA, podSpec.ServiceAccountName,
+			podSpec.AutomountServiceAccountToken, podSpec.EnableServiceLinks)
+		assertEcommerceNodeSpread(t, path, m.Conventions.PodTopologySpread,
+			deployment.Spec.Selector.MatchLabels, deployment.Spec.Template.Metadata.Labels,
+			podSpec.TopologySpreadConstraints)
+	}
+
+	jobPath := "../tools/search-indexer/deploy/dev/reindex-job.yaml"
+	data, err := os.ReadFile(jobPath)
+	if err != nil {
+		t.Fatalf("read %s: %v", jobPath, err)
+	}
+	var job struct {
+		Kind string `yaml:"kind"`
+		Spec struct {
+			Template struct {
+				Spec struct {
+					ServiceAccountName           string `yaml:"serviceAccountName"`
+					AutomountServiceAccountToken *bool  `yaml:"automountServiceAccountToken"`
+					EnableServiceLinks           *bool  `yaml:"enableServiceLinks"`
+				} `yaml:"spec"`
+			} `yaml:"template"`
+		} `yaml:"spec"`
+	}
+	if err := yaml.Unmarshal(data, &job); err != nil {
+		t.Fatalf("parse %s: %v", jobPath, err)
+	}
+	if job.Kind != "Job" {
+		t.Fatalf("%s first document must be a Job", jobPath)
+	}
+	podSpec := job.Spec.Template.Spec
+	assertWorkloadIdentity(t, jobPath, "ecommerce-search-indexer", podSpec.ServiceAccountName,
+		podSpec.AutomountServiceAccountToken, podSpec.EnableServiceLinks)
+
+	nextPath := "../../frontend/apps/consumer-next/deploy/dev.yaml"
+	f, err = os.Open(nextPath)
+	if err != nil {
+		t.Fatalf("open %s: %v", nextPath, err)
+	}
+	defer f.Close()
+	decoder = yaml.NewDecoder(f)
+	var foundNextSA, foundNextDeployment bool
+	for {
+		var doc struct {
+			Kind     string `yaml:"kind"`
+			Metadata struct {
+				Name string `yaml:"name"`
+			} `yaml:"metadata"`
+			AutomountServiceAccountToken *bool `yaml:"automountServiceAccountToken"`
+			Spec                         struct {
+				Strategy deploymentRollingStrategy `yaml:"strategy"`
+				Selector struct {
+					MatchLabels map[string]string `yaml:"matchLabels"`
+				} `yaml:"selector"`
+				Template struct {
+					Metadata struct {
+						Labels map[string]string `yaml:"labels"`
+					} `yaml:"metadata"`
+					Spec struct {
+						Affinity struct {
+							PodAntiAffinity struct {
+								Required []deploymentPodAntiAffinityTerm `yaml:"requiredDuringSchedulingIgnoredDuringExecution"`
+							} `yaml:"podAntiAffinity"`
+						} `yaml:"affinity"`
+						ServiceAccountName           string                               `yaml:"serviceAccountName"`
+						AutomountServiceAccountToken *bool                                `yaml:"automountServiceAccountToken"`
+						EnableServiceLinks           *bool                                `yaml:"enableServiceLinks"`
+						TopologySpreadConstraints    []deploymentTopologySpreadConstraint `yaml:"topologySpreadConstraints"`
+					} `yaml:"spec"`
+				} `yaml:"template"`
+			} `yaml:"spec"`
+		}
+		if err := decoder.Decode(&doc); err != nil {
+			if err == io.EOF {
+				break
+			}
+			t.Fatalf("parse %s: %v", nextPath, err)
+		}
+		switch doc.Kind {
+		case "ServiceAccount":
+			if doc.Metadata.Name == "ecommerce-consumer-next" {
+				foundNextSA = true
+				if doc.AutomountServiceAccountToken == nil || *doc.AutomountServiceAccountToken {
+					t.Errorf("%s ServiceAccount must disable token automount", nextPath)
+				}
+			}
+		case "Deployment":
+			if doc.Metadata.Name == "consumer-next" {
+				foundNextDeployment = true
+				podSpec := doc.Spec.Template.Spec
+				assertWorkloadIdentity(t, nextPath, "ecommerce-consumer-next", podSpec.ServiceAccountName,
+					podSpec.AutomountServiceAccountToken, podSpec.EnableServiceLinks)
+				assertEcommerceNodeSpread(t, nextPath, m.Conventions.PodTopologySpread,
+					doc.Spec.Selector.MatchLabels, doc.Spec.Template.Metadata.Labels,
+					podSpec.TopologySpreadConstraints)
+				assertRequiredPodAntiAffinity(t, nextPath, podSpec.Affinity.PodAntiAffinity.Required,
+					"app", "consumer-next")
+				assertNoSurgeReplicatedRollout(t, nextPath, doc.Spec.Strategy)
+			}
+		}
+	}
+	if !foundNextSA || !foundNextDeployment {
+		t.Errorf("%s must contain ecommerce-consumer-next ServiceAccount and consumer-next Deployment", nextPath)
+	}
+}
+
+func TestHelmLibraryArchivesUseEcommerceNodeSpread(t *testing.T) {
+	m := loadCoverageMatrix(t)
+	services := make([]string, 0, len(m.Services))
+	for service := range m.Services {
+		services = append(services, service)
+	}
+	sort.Strings(services)
+
+	spread := m.Conventions.PodTopologySpread
+	const entry = "library/templates/_deployment.tpl"
+	for _, service := range services {
+		path := filepath.Join("../../helm/charts", service, "charts/library-0.1.0.tgz")
+		template := readTarGzEntry(t, path, entry)
+		for _, required := range []string{
+			fmt.Sprintf("%s: %s", spread.LabelKey, spread.LabelValue),
+			"topologySpreadConstraints:",
+			fmt.Sprintf("maxSkew: %d", spread.MaxSkew),
+			fmt.Sprintf("topologyKey: %s", spread.TopologyKey),
+			fmt.Sprintf("whenUnsatisfiable: %s", spread.WhenUnsatisfiable),
+			fmt.Sprintf("nodeAffinityPolicy: %s", spread.NodeAffinityPolicy),
+			fmt.Sprintf("nodeTaintsPolicy: %s", spread.NodeTaintsPolicy),
+		} {
+			if !strings.Contains(string(template), required) {
+				t.Errorf("%s %s missing %q", path, entry, required)
+			}
+		}
+	}
+}
+
+func readTarGzEntry(t *testing.T, path, entry string) []byte {
+	t.Helper()
+	file, err := os.Open(path)
+	if err != nil {
+		t.Fatalf("open %s: %v", path, err)
+	}
+	defer file.Close()
+
+	gz, err := gzip.NewReader(file)
+	if err != nil {
+		t.Fatalf("read gzip %s: %v", path, err)
+	}
+	defer gz.Close()
+
+	archive := tar.NewReader(gz)
+	for {
+		header, err := archive.Next()
+		if err == io.EOF {
+			break
+		}
+		if err != nil {
+			t.Fatalf("read tar %s: %v", path, err)
+		}
+		if header.Name != entry {
+			continue
+		}
+		data, err := io.ReadAll(archive)
+		if err != nil {
+			t.Fatalf("read %s from %s: %v", entry, path, err)
+		}
+		return data
+	}
+	t.Fatalf("%s missing %s", path, entry)
+	return nil
+}
+
+func assertWorkloadIdentity(
+	t *testing.T,
+	source string,
+	wantServiceAccount string,
+	serviceAccount string,
+	automount *bool,
+	serviceLinks *bool,
+) {
+	t.Helper()
+	if serviceAccount != wantServiceAccount {
+		t.Errorf("%s serviceAccountName = %q, want %q", source, serviceAccount, wantServiceAccount)
+	}
+	if automount == nil || *automount {
+		t.Errorf("%s must explicitly set automountServiceAccountToken: false", source)
+	}
+	if serviceLinks == nil || *serviceLinks {
+		t.Errorf("%s must explicitly set enableServiceLinks: false", source)
+	}
+}
+
+func assertEcommerceNodeSpread(
+	t *testing.T,
+	source string,
+	want deploymentTopologySpreadConvention,
+	selectorLabels map[string]string,
+	podLabels map[string]string,
+	constraints []deploymentTopologySpreadConstraint,
+) {
+	t.Helper()
+	if want.LabelKey == "" || want.LabelValue == "" || want.TopologyKey == "" || want.MaxSkew < 1 {
+		t.Fatalf("%s has incomplete pod_topology_spread convention: %+v", matrixPath, want)
+	}
+	if podLabels[want.LabelKey] != want.LabelValue {
+		t.Errorf("%s pod template must label %s=%s", source, want.LabelKey, want.LabelValue)
+	}
+	if _, ok := selectorLabels[want.LabelKey]; ok {
+		t.Errorf("%s must not add %s to the immutable Deployment selector", source, want.LabelKey)
+	}
+
+	matched := 0
+	for _, constraint := range constraints {
+		if constraint.LabelSelector.MatchLabels[want.LabelKey] != want.LabelValue {
+			continue
+		}
+		matched++
+		if constraint.MaxSkew != want.MaxSkew || constraint.TopologyKey != want.TopologyKey ||
+			constraint.WhenUnsatisfiable != want.WhenUnsatisfiable ||
+			constraint.NodeAffinityPolicy != want.NodeAffinityPolicy ||
+			constraint.NodeTaintsPolicy != want.NodeTaintsPolicy || len(constraint.LabelSelector.MatchLabels) != 1 {
+			t.Errorf("%s has invalid ecommerce node spread constraint: %+v; want %+v", source, constraint, want)
+		}
+	}
+	if matched != 1 {
+		t.Errorf("%s has %d suite-wide ecommerce node spread constraints, want 1", source, matched)
+	}
+}
+
+func assertNoSurgeReplicatedRollout(t *testing.T, source string, strategy deploymentRollingStrategy) {
+	t.Helper()
+	if strategy.Type != "RollingUpdate" || strategy.RollingUpdate.MaxUnavailable != 1 ||
+		strategy.RollingUpdate.MaxSurge != 0 {
+		t.Errorf("%s must roll replicated hard-spread workloads with maxUnavailable=1 and maxSurge=0", source)
+	}
+}
+
+func assertRequiredPodAntiAffinity(
+	t *testing.T,
+	source string,
+	terms []deploymentPodAntiAffinityTerm,
+	labelKey string,
+	labelValue string,
+) {
+	t.Helper()
+	for _, term := range terms {
+		if term.TopologyKey == "kubernetes.io/hostname" &&
+			term.LabelSelector.MatchLabels[labelKey] == labelValue {
+			return
+		}
+	}
+	t.Errorf("%s must require pod anti-affinity for %s=%s on kubernetes.io/hostname", source, labelKey, labelValue)
 }
 
 func assertSelectorSecurityContext(t *testing.T, source string, security deploymentSecurityContext) {

@@ -79,7 +79,7 @@ FROM caddy:alpine AS final
 
 # 配置 Caddy（可根据需求调整，以下为示例）
 RUN cat > /etc/caddy/Caddyfile <<'EOF'
-:80 {
+:30080 {
     root * /usr/share/caddy
     encode gzip
 

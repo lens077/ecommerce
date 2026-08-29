@@ -1,0 +1,145 @@
+:root {
+  color-scheme: light;
+  --ink: #16231c;
+  --paper: #f4efe3;
+  --leaf: #315a44;
+  --line: #c9c1af;
+  --accent: #d16f3d;
+}
+
+* {
+  box-sizing: border-box;
+}
+
+body {
+  min-height: 100vh;
+  margin: 0;
+  color: var(--ink);
+  background:
+    radial-gradient(circle at 82% 12%, rgb(209 111 61 / 20%), transparent 28rem),
+    linear-gradient(135deg, #faf7ef 0%, var(--paper) 60%, #e4ebdf 100%);
+  font-family: Georgia, "Times New Roman", serif;
+}
+
+.shell,
+.status {
+  width: min(68rem, calc(100% - 2rem));
+  margin: 0 auto;
+}
+
+.shell {
+  padding: clamp(3rem, 8vw, 7rem) 0;
+}
+
+.hero {
+  max-width: 48rem;
+  padding-left: clamp(1rem, 4vw, 3rem);
+  border-left: 0.35rem solid var(--accent);
+}
+
+.eyebrow,
+.skuLabel,
+.code,
+dt {
+  font-family: "Trebuchet MS", sans-serif;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+}
+
+.eyebrow,
+.skuLabel {
+  color: var(--leaf);
+  font-size: 0.78rem;
+  font-weight: 700;
+}
+
+h1 {
+  margin: 0.4rem 0;
+  font-size: clamp(2.7rem, 8vw, 6.5rem);
+  font-weight: 500;
+  line-height: 0.95;
+}
+
+.code {
+  margin-top: 1.25rem;
+  color: #5c665f;
+  font-size: 0.75rem;
+}
+
+.skuGrid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(15rem, 1fr));
+  gap: 1rem;
+  margin-top: clamp(3rem, 7vw, 6rem);
+}
+
+.skuCard {
+  padding: 1.5rem;
+  border: 1px solid var(--line);
+  border-radius: 0.25rem 1.5rem 0.25rem 0.25rem;
+  background: rgb(255 255 255 / 55%);
+  backdrop-filter: blur(0.5rem);
+}
+
+.skuCard h2 {
+  min-height: 3rem;
+  margin: 0.45rem 0 2rem;
+  font-size: 1.45rem;
+  font-weight: 500;
+}
+
+dl {
+  display: grid;
+  gap: 0.85rem;
+  margin: 0;
+}
+
+dl div {
+  display: flex;
+  justify-content: space-between;
+  gap: 1rem;
+  padding-top: 0.7rem;
+  border-top: 1px solid var(--line);
+}
+
+dt {
+  color: #5c665f;
+  font-size: 0.67rem;
+}
+
+dd {
+  margin: 0;
+  font-variant-numeric: tabular-nums;
+}
+
+.personalized {
+  width: min(68rem, calc(100% - 2rem));
+  margin: -3rem auto 4rem;
+  padding: 1.25rem 1.5rem;
+  border: 1px dashed var(--leaf);
+  background: rgb(244 239 227 / 75%);
+  font-family: "Trebuchet MS", sans-serif;
+}
+
+.personalized p:last-child {
+  margin-bottom: 0;
+}
+
+.status {
+  padding-top: 20vh;
+  font-size: 1.2rem;
+}
+
+.statusError {
+  color: #8b2f23;
+}
+
+@media (max-width: 38rem) {
+  .shell {
+    padding-top: 3rem;
+  }
+
+  .skuGrid {
+    grid-template-columns: 1fr;
+  }
+}

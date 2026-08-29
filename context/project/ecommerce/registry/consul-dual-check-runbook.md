@@ -6,6 +6,8 @@ description: 在 dev 集群验证 10 个服务的 Consul TTL 与 gRPC readiness�
 
 # Consul 双健康检查验证手册
 
+> **迁移期定位（2026-08-28）**：按 `docs/TECH.md`，注册发现目标为生产 Kubernetes Service + CoreDNS、Mac 单机开发 Docker Compose 服务名；本文适用于 Consul 退役完成前，以下操作、地址与判据保持不变。
+
 本文用于在 dev 集群复验后端服务的 Consul 双健康检查。验证分为两部分：先确认 10 个服务的每个实例同时具备 TTL 与 gRPC readiness，再对 inventory 注入可逆的依赖故障，确认 Consul 摘流与恢复语义。
 
 本文只提供操作与判据。执行故障实验前，先确认当前 Kubernetes context 指向 dev 集群。

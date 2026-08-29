@@ -11,7 +11,7 @@ description: 前端性能上报的链路、perf 与 tracker 的分工、自循�
 ```
 @ecommerce/perf(采集) → 网关 /telemetry*(免 JWT) → behavior 进程的 telemetry.v1
   → OTel histogram → VictoriaMetrics(查:web_vitals_* / frontend_api_duration_*)
-  → zap 结构化日志 → otelzap → Loki(查:{service_name="behavior-service"} |= "web_vital")
+  → zap 结构化日志 → otelzap → VictoriaLogs(LogsQL 查:service_name:"behavior-service" AND "web_vital")
 ```
 
 接入只需一行:`initPerf({ gatewayUrl, getRoute })`(见 consumer 的 `bootstrap.tsx`)。
@@ -21,7 +21,7 @@ description: 前端性能上报的链路、perf 与 tracker 的分工、自循�
 | | `@ecommerce/tracker` | `@ecommerce/perf` |
 |---|---|---|
 | 采什么 | 用户对**内容**的行为(曝光/点击/加购) | **页面本身**的表现(LCP/卡顿/接口耗时) |
-| 喂给谁 | gorse(推荐) | 可观测性栈(VM/Loki) |
+| 喂给谁 | gorse(推荐) | 可观测性栈(VictoriaMetrics / VictoriaLogs) |
 | proto | behavior.v1(枚举封死,`item_id` 必填) | telemetry.v1 |
 
 性能数据塞不进 behavior.v1 不是巧合:那个 proto 的每个约束都为推荐语义服务。

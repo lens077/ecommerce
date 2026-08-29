@@ -559,10 +559,27 @@ Cilium Gateway API ──► control-tower 网关 ──► 业务服务 Pod Cel
 
 | 机制 | 作用 | 本项目配置 |
 |------|------|------------|
-| **Pod 反亲和与拓扑分布** | 确保同一服务的 Pod 分布在不同节点 | 强制配置 `topologySpreadConstraints`，按 `kubernetes.io/hostname` 均匀分布，`maxSkew: 1` |
-| **中断预算 (PDB)** | 声明服务可容忍的最小可用副本数 | 核心服务（Order/Payment/Inventory）配置 `minAvailable: 2` |
-| **容量冗余 (N+1)** | 集群总容量 = 峰值需求 + 1 个节点冗余 | 任意 1 台 Node 宕机不引发级联驱逐 |
+| **Pod 反亲和与拓扑分布** | 同时控制整套应用的节点 skew 和同一服务的故障域 | 所有业务 Pod 以共同 `part-of` 标签进入 suite-wide hostname spread，`maxSkew: 1`、`DoNotSchedule`；多副本服务另用 required pod anti-affinity |
+| **中断预算 (PDB)** | 声明服务可容忍的最小可用副本数 | 当前只有双副本的 consumer-next 与 gateway 使用 `minAvailable: 1`；其余 13 个单副本 Deployment 无法无损 eviction，扩为多副本并补 PDB 是进入自动重平衡或灰度发布的前置条件 |
+| **容量冗余 (N+1)** | 集群总容量 = 峰值需求 + 1 个节点冗余 | 当前尚未完成可信 requests 与单节点故障容量验证；「任意 1 台 Node 宕机不引发级联 Pending」是待验收目标，不是 live 既成事实 |
 
+### 7.3 Pod 容量调度与资源校准
+
+容量治理必须区分三个层次：
+
+| 层次 | 回答的问题 | 工程规则 |
+|---|---|---|
+| Pod 数量均衡 | 各节点承载多少个业务 Pod | suite-wide `topologySpreadConstraints` 使用 `DoNotSchedule` 和 `maxSkew: 1`；这是硬约束，不是调度偏好 |
+| 调度容量均衡 | scheduler 认为各节点还剩多少 CPU/内存 | 所有容器必须提供经过验证的 `resources.requests`；缺失或虚高都会让调度评分失真 |
+| 实际利用率均衡 | 节点和容器真实消耗是否接近 | 结合长期指标、VPA 推荐、k6 容量窗口和节点宿主机开销判断，不能用 Pod 数或一次 `kubectl top` 代替 |
+
+VPA 只以 recommendation 模式进入容量流程：当前组件只安装 recommender，业务 VPA 必须使用 `updateMode: Off` 和 `controlledValues: RequestsOnly`。推荐值至少观察 7 天，并覆盖正常发布启动和固定数据集的 k6 容量窗口；Target 只是 requests 候选值，必须与 Uncapped Target、实际峰值、OOM/GC、延迟和 N+1 预算交叉验证。未经这组证据，不启用 updater、admission-controller 或自动 `InPlaceOrRecreate`。
+
+节点重启不保证全局重平衡。Pod 对象仍绑定原节点时，容器通常在原节点恢复；只有 Pod 被终止或驱逐后，新副本才会重新经过 scheduler。原节点恢复不会让已经迁走的 Pod 自动搬回，需要通过告警发现持续 skew，再执行受控 rollout。
+
+**当前定稿不安装 Descheduler**：现有 `5/6/6` 分布无需修复，13 个单副本服务没有 PDB，requests 尚未校准，node101 的部分内存又来自不可迁移的 control-plane 与宿主机开销。VPA Off 校准后的 requests rollout 本身会触发一次重新调度；在当前三节点、17 个 Pod 的规模下，硬 spread + 可信 requests + skew 告警 + 节点恢复 Runbook 比常驻 eviction 控制器更可控。只有节点变化或 placement drift 反复出现，并且多副本、PDB、N+1 和告警均已验证时，才重新评估 `RemovePodsViolatingTopologySpreadConstraint`；`LowNodeUtilization` 仍需额外证明容量漂移无法由 requests 校准和正常 rollout 收敛。
+
+VPA recommendation-only 的发布证据、经验、回滚与下一步操作见 [`docs/reports/2026-08-29-vpa-recommendation-only.md`](reports/2026-08-29-vpa-recommendation-only.md)；Descheduler 的替代方案与重评条件见 [`docs/reports/2026-08-29-descheduler-decision.md`](reports/2026-08-29-descheduler-decision.md)；容量校准、故障注入与持续告警清单见 [`docs/design/platform/capacity-balancing.md`](design/platform/capacity-balancing.md)。
 
 ## 8. 零信任鉴权与统一 Session 架构
 
@@ -727,33 +744,36 @@ cfg.GetServiceAddr("inventory-service") // 从 K8s DNS 解析
 
 ## 12. 实施路线图
 
-### P0 阶段：生产发布基线
+> **本节只声明「哪件事属于哪个阶段」，不承载完成状态。**
+> 进度与待办的唯一真相源是 [`TODO.md`](../TODO.md)，分类明细在 [`docs/todo/`](todo/README.md)。
+> 2026-08-29 起本节刻意去掉复选框：目标文档一旦长出第二套勾选视图，必然与 `TODO.md` 漂移
+> （当时已实测到漂移——P1/P2 各有一项被勾选，而 P0 九项全空，与真实进度不符）。
 
-- [ ] 核心交易闭环（Cart → Checkout → Order → Payment → Inventory）
-- [ ] PostgreSQL HA（Pigsty）与 PITR 恢复演练完成
-- [ ] Dragonfly 分实例拆分（Session / Cache / Ratelimit）
-- [ ] Cilium Gateway API + Namespace default-deny 网络隔离
-- [ ] Outbox + Relay + Kafka（外部集群）+ Inbox 幂等保障
-- [ ] Casdoor Stateful Session + OpenFGA 鉴权落地
-- [ ] Vector + VMAgent + OTel → 外部 OTel Collector → VictoriaStack 链路贯通
-- [ ] 固定数据集、k6 基线、容量文档
-- [ ] 核心服务 SLO、Runbook、手动故障演练
+**P0 阶段 · 生产发布基线**
 
-### P1 阶段：业务扩展与自动化
+核心交易闭环（Cart → Checkout → Order → Payment → Inventory）；
+PostgreSQL HA（Pigsty）与 PITR 恢复演练；
+Dragonfly 分实例拆分（Session / Cache / Ratelimit）；
+Cilium Gateway API + Namespace default-deny 网络隔离；
+Outbox + Relay + Kafka（外部集群）+ Inbox 幂等保障；
+Casdoor Stateful Session + OpenFGA 鉴权落地；
+Vector + VMAgent + OTel → 外部 OTel Collector → VictoriaStack 链路贯通；
+固定数据集、k6 基线、容量文档；核心服务 SLO、Runbook、手动故障演练。
 
-- [x] Next.js SSR（Consumer 端）评估与部署——公开可收录页已转正上线 dev（`consumer-next` 2 副本 + PDB，`shop.dev.test`/`shop.apikv.com` 按 `/zh` `/en` `/_next` 前缀分流，公网链路已实测）；剩余扩页（分类/首页）受阻于 `ListProducts` RPC 未实现，登录态 dynamic 路由联调待真实会话
-- [ ] HPA / KEDA 自动伸缩 + Argo Rollouts 灰度发布
-- [ ] 前端接入 Bugsink 错误监控（SDK + Source Map 验收；服务端已运行）
-- [ ] 供应链安全扫描流水线（Gitleaks + Trivy + Syft + Cosign + Kyverno）
-- [ ] Chaos Mesh 自动化故障演练
-- [ ] 商家子账号、履约、售后、结算、双重记账
-- [ ] 数据分区、冷热归档、成本治理（OpenCost）
+**P1 阶段 · 业务扩展与自动化**
 
-### P2 阶段：极高负载演进（待需求触发）
+Next.js SSR（Consumer 端公开可收录页）；HPA / KEDA 自动伸缩 + Argo Rollouts 灰度发布；
+前端接入 Bugsink 错误监控（SDK + Source Map 验收）；
+供应链安全扫描流水线（Gitleaks + Trivy + Syft + Cosign + Kyverno）；
+Chaos Mesh 自动化故障演练（仅 staging，条件触发）；
+商家子账号、履约、售后、结算、双重记账；
+数据分区、冷热归档、成本治理（OpenCost，条件评估）。
 
-- [ ] SPIFFE/SPIRE 东西向微服务身份标识
-- [x] Tetragon 三节点运行时安全观察与告警闭环（audit-only；enforcement 待独立评估）
-- [ ] 多 Region Active-Passive 容灾
+**P2 阶段 · 极高负载演进（待需求触发）**
+
+SPIFFE/SPIRE 东西向微服务身份标识（当前判定暂不引入，见 B 表）；
+Tetragon 运行时安全 enforcement（audit-only 已落地，enforcement 待独立评估）；
+多 Region Active-Passive 容灾。
 
 
 ## 13. 绝对工程红线

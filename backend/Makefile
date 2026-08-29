@@ -245,7 +245,9 @@ k8s-prod-all:
 # 都不中断循环 —— 一个服务坏掉不该让后面的服务全部漏掉
 .PHONY: k8s-apply-all
 k8s-apply-all:
-	@fail=""; missing=""; \
+	@echo "===== kubectl apply shared zero-trust baseline ====="; \
+	kubectl apply $(KUBECTL_ARGS) -f ../helm/files/zero-trust.yaml || exit 1; \
+	fail=""; missing=""; \
 	for s in $(SERVICES); do \
 	  if [ ! -d services/$$s/deploy/$(K8S_ENV) ]; then missing="$$missing $$s"; continue; fi; \
 	  echo "===== kubectl apply $$s ($(K8S_ENV)) ====="; \

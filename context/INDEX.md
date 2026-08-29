@@ -77,8 +77,10 @@ matrix 与 `backend/services/`、网关实际接线的一致性,以及各服务 
 | control-tower `docs/design/` | 网关与配置中心的架构、鉴权、砍掉清单、切流手顺 —— 在**同级仓** `../control-tower/`，不在本仓 | 动网关或配置面之前 |
 
 ⚠️ 以上都是**目标态**，状态是「等待实现」。当前实况以 `TODO.md` 为准，
-可观测性的已确认缺陷见 [`docs/reviews/OBSERVABILITY_REVIEW_20260806.md`](../docs/reviews/OBSERVABILITY_REVIEW_20260806.md)。
-历史评审报告归档在 [`docs/reviews/`](../docs/reviews/)。
+待办明细按 `docs/TECH.md` 体系分类在 [`docs/todo/`](../docs/todo/README.md)；
+可观测性的已确认缺陷见 [`统一可观测性体系.md`](../docs/todo/统一可观测性体系.md)，
+原始评审报告归档在 [`docs/progress-archive/`](../docs/progress-archive/)
+（2026-08-29 起 `docs/reviews/` 已并入该目录，消除两个归档位置）。
 
 ## 检索约定
 

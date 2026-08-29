@@ -4,6 +4,10 @@ apiVersion: apps/v1
 kind: Deployment
 metadata:
   name: {{ .serviceName }}
+  labels:
+    app.kubernetes.io/name: {{ .serviceName }}
+    app.kubernetes.io/instance: {{ .serviceName }}
+    app.kubernetes.io/part-of: ecommerce
 spec:
   replicas: {{ .replicaCount }}
   selector:
@@ -15,7 +19,25 @@ spec:
       labels:
         app.kubernetes.io/name: {{ .serviceName }}
         app.kubernetes.io/instance: {{ .serviceName }}
+        app.kubernetes.io/part-of: ecommerce
     spec:
+      # Count the complete ecommerce suite so one-replica services do not all
+      # accumulate on the first node. DoNotSchedule makes maxSkew=1 enforceable;
+      # Honor excludes nodes that affinity or taints make ineligible.
+      topologySpreadConstraints:
+        - maxSkew: 1
+          topologyKey: kubernetes.io/hostname
+          whenUnsatisfiable: DoNotSchedule
+          nodeAffinityPolicy: Honor
+          nodeTaintsPolicy: Honor
+          labelSelector:
+            matchLabels:
+              app.kubernetes.io/part-of: ecommerce
+      serviceAccountName: ecommerce-{{ .serviceName }}
+      # No workload currently calls the Kubernetes API. Keep the pod-level
+      # switch as defense in depth even though the ServiceAccount also disables it.
+      automountServiceAccountToken: false
+      enableServiceLinks: false
       {{- if and .configSource .configSource.enabled }}
       securityContext:
         runAsNonRoot: true

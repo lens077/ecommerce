@@ -1,14 +1,22 @@
 import { defineConfig } from "vite-plus";
 import { playwright } from "vite-plus/test/browser-playwright"; // 浏览器测试 provider
 import { tanstackRouter } from "@tanstack/router-plugin/vite";
+import react from "@vitejs/plugin-react";
 import { resolve } from "node:path";
 
 export default defineConfig(({ mode }) => {
   // 判断是否为生产构建（构建命令下 mode 通常为 'production'）
   const isProduction = mode === "production" || process.env.NODE_ENV === "production";
 
-  // dev 代理目标：默认 dev 集群网关 LB，换环境时用环境变量覆盖，不必改代码。
-  const gatewayTarget = process.env.GATEWAY_PROXY_TARGET ?? "http://192.168.3.131:8080";
+  // dev 代理目标：Mac /etc/hosts 把 gateway.dev.test 映射到 192.168.3.121（Cilium Gateway）
+  // → control-tower。业务 HTTPRoute 只挂 443 listener，故必须 https；证书为集群内部 CA，
+  // 所以下方 proxy 配 secure:false（仅 dev 信任）。换环境用 GATEWAY_PROXY_TARGET 覆盖。
+  // hosts 条目见 context/team/local-env.md；未配置时这里会解析失败。
+  // 2026-08-28 订正：旧默认 http://192.168.3.131:8080 的 LB 已不存在。
+  const gatewayTarget = process.env.GATEWAY_PROXY_TARGET ?? "https://gateway.dev.test";
+
+  // 试点默认关闭；显式设为 1 时才加载原生 Oxc React Compiler。
+  const reactCompilerEnabled = process.env.REACT_COMPILER === "1";
 
   // 基础测试配置（所有环境共享）
   const baseTestConfig = {
@@ -42,6 +50,7 @@ export default defineConfig(({ mode }) => {
         routesDirectory: resolve(__dirname, "./src/routes"),
         generatedRouteTree: resolve(__dirname, "./src/routeTree.gen.ts"),
       }),
+      ...(reactCompilerEnabled ? [react({ compiler: true })] : []),
     ],
     //     run: {
     //       cache: true,
@@ -57,16 +66,23 @@ export default defineConfig(({ mode }) => {
       // 网关在集群 LB，属跨站——所以把网关代理到同源之下。
       // 生产不需要这层：shop/gateway/casdoor 三个域同属 apikv.com，本就是 same-site。
       proxy: {
+        // 经 Cilium Gateway 的域名路由需要 SNI/Host = gateway.dev.test，所以 changeOrigin: true；
+        // secure: false 只是让 dev 代理信任集群内部 CA 证书。
+        // ⚠️ BFF 登录联调注意：changeOrigin 会把上游看到的 Host 变成 gateway.dev.test；
+        // 若 OAuth 回调链路需要保留 localhost:3000 语义，用 GATEWAY_PROXY_TARGET 指向
+        // `kubectl port-forward svc/ecommerce-gateway-service -n ecommerce 18080:8080` 的 http://127.0.0.1:18080（直连网关、不经 Host 路由）。
         // BFF 端点（含 OAuth 回调）：不改写路径，Casdoor 白名单里填
         // http://localhost:3000/auth/callback 即可。
         "/auth": {
           target: gatewayTarget,
-          changeOrigin: false,
+          changeOrigin: true,
+          secure: false,
         },
         // Connect RPC：前端以 /api 为 baseUrl，转发时剥掉这层前缀。
         "/api": {
           target: gatewayTarget,
-          changeOrigin: false,
+          changeOrigin: true,
+          secure: false,
           rewrite: (p: string) => p.replace(/^\/api/, ""),
         },
       },

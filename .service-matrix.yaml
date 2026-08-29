@@ -9,6 +9,11 @@
 #   3. 必需配置键**不在本文件重复** —— 已由各服务 internal/conf/v1/conf.proto 的
 #      (buf.validate.field).required 声明，重复会漂移。见 config_validation 段
 #   4. 不写凭据
+#   5. **选型决策不进本表**（真相源是 docs/TECH.md）。note 只写「现在是什么、接没接线、
+#      有什么坑」，不写「为什么选它、将来换成谁、什么条件才重估」。
+#      2026-08-28 教训：kafka 的 note 里留着「只有 NATS 不满足才重估 Kafka」这句已被
+#      docs/TECH.md 推翻的决策——本表是 AI 查拓扑的第一站，混进过期决策比文档过期更误导。
+#      需要指方向时只写一句「选型方向见 docs/TECH.md」，不复述结论。
 
 version: 1
 
@@ -28,6 +33,15 @@ conventions:
   config_source_secret: "ecommerce-config-source-{env}"
   consul_addr_local: "192.168.3.120:8500" # 见 context/team/local-env.md
   common_config_blocks: [server, data, observability, discovery, log]
+  # 10 个单副本 API 必须跨服务共同计数；每个服务只看自己的 app 标签没有均衡作用。
+  pod_topology_spread:
+    label_key: app.kubernetes.io/part-of
+    label_value: ecommerce
+    topology_key: kubernetes.io/hostname
+    max_skew: 1
+    when_unsatisfiable: DoNotSchedule
+    node_affinity_policy: Honor
+    node_taints_policy: Honor
 
 config_validation:
   # 必需性的唯一真相源是各服务的 conf.proto，例如：
@@ -51,15 +65,15 @@ config_validation:
 
 # 外部基础设施（不是本仓的服务）────────────────────────────────────
 externals:
-  postgres: { host: "node1:30001", note: "10 个业务服务当前已切到 node3 Pigsty；客户端 sslmode=verify-ca，沿用 pg-main CA 兼容证书。集群内 CloudNativePG pg-main 已 hibernate，仅作为回切候选，不是当前主库；db=ecommerce，每服务独立 schema" }
+  postgres: { host: "node1:30001", note: "10 个业务服务当前已切到 node3 Pigsty；客户端 sslmode=verify-ca，沿用 pg-main CA 兼容证书。集群内 CloudNativePG pg-main 处于 hibernate，不是当前主库；db=ecommerce，每服务独立 schema。选型方向见 docs/TECH.md" }
   redis: { host: "dragonfly.dragonfly.svc:6379", note: "集群内 Dragonfly 原生 TLS，6379 单口 TLS-only，明文被拒；宿主机走 Cilium Gateway 192.168.3.122:6380。业务服务只放可丢缓存，不得承载锁、幂等键或领域真相；control-tower gateway 的 BFF session 是已接受例外，依赖不可用时 fail-closed。旧 redis namespace 已删除，不存在回滚组件；Config Center 自身也是本项消费者（自举 Secret，不在 config.entry 里）" }
   consul: { host: "192.168.3.120:8500", note: "集群内工作负载使用 consul-server.consul.svc:8500；本地进程使用 LoadBalancer VIP。Consul 只承担注册发现，配置仍由 Config Center 提供" }
-  kafka: { host: "node1:30004", used_by: [], note: "node3 已预建 Kafka SCRAM 用户与 ecommerce.events topic，但本仓无客户端、producer、consumer 或业务接线；仅记录现存实验资源，不属于当前目标事件栈。企业常见度和学习兴趣不是采用依据，只有 NATS 经治理和压测仍无法满足量化需求时才重新评估" }
-  nats: { host: "nats.nats.svc:4222", note: "当前事件主干；dev 为 3-server JetStream，搜索索引使用可重建 R1 ECOMMERCE_EVENTS，relay/indexer 已部署。Product/Order producer、Inbox、NACK/DLQ、交易流 R3、重放治理与容量/恢复证据仍未闭环" }
+  kafka: { host: "node1:30004", used_by: [], note: "node3 已预建 Kafka SCRAM 用户与 ecommerce.events topic；本仓当前无客户端、producer、consumer 或业务接线（used_by 为空即事实）。选型方向见 docs/TECH.md" }
+  nats: { host: "nats.nats.svc:4222", used_by: [search], note: "dev 为 3-server JetStream，搜索索引使用可重建 R1 ECOMMERCE_EVENTS，relay/indexer 已部署；Product/Order 事务内 producer、Inbox、NACK/DLQ 均未接线。选型方向见 docs/TECH.md" }
   casdoor: { host: "casdoor.apikv.com", note: "HTTPS 经 Pangolin（8000 明文口已关，2026-08-19 起）；JWT 公钥 kid=lens；2026-08-20 定稿收编进集群，迁移方案见 docs/技术栈选型对抗/对抗审阅表-第3轮.md R3-A" }
-  elasticsearch: { used_by: [], note: "实例已退役；search 已迁移到 Meilisearch，address 的无效依赖也已清理" }
-  meilisearch: { host: "meilisearch.search.svc:7700", used_by: [search], note: "v1.53 集群组件；search 使用服务端固定的 products 索引和仅限 search 动作的 API key" }
-  minio: { host: "minio.apikv.com", used_by: [cart], note: "⚠️ MinIO 上游仓库已归档（2026-02/04），2026-08-20 定稿迁 SeaweedFS（TODO ①，新增备份流量不再写 MinIO）。存量已同日切 Silo 分叉修复线：pgsty/silo RELEASE.2026-08-06 pin digest + command 显式 --certs-dir（镜像 HOME=/tmp 坑，见 TODO ⓪d）。商品缩略图 URL；443 不带端口。机器是 node2（ssh 别名 node2:34124，阿里云，与 k8s 集群无关——集群只有 node101/102/103 = 192.168.3.101-103，不存在 .202），2026-08-19 起走 node1 的 Pangolin（Traefik 终止 TLS）经 newt 隧道回 node2，本机 9000/9001 已绑回环。⚠️ 不能直连该 IP 配域名：apikv.com 未在阿里云备案，域名直连必被 ICP 拦截" }
+  elasticsearch: { host: "node3 127.0.0.1:9200（容器 cdc-elasticsearch，仅回环，需 ssh 隧道；已开鉴权，匿名请求 401）", used_by: [], note: "集群内旧实例已退役；node3 现有 CDC 用 ES 容器（同机 cdc-connect 127.0.0.1:8083），本仓无服务连接它。⚠️ 容量事实：node3 总内存 7.25GiB、该容器 limit 2GiB，与观测数据面同机。选型方向见 docs/TECH.md" }
+  meilisearch: { host: "meilisearch.search.svc:7700", used_by: [search], note: "v1.53 集群组件；search 使用服务端固定的 products 索引和仅限 search 动作的 API key。选型方向见 docs/TECH.md" }
+  minio: { host: "minio.apikv.com", used_by: [cart], note: "⚠️ MinIO 上游仓库已归档（2026-02/04）；现役镜像为分叉修复线 pgsty/silo RELEASE.2026-08-06（pin digest + command 显式 --certs-dir，镜像 HOME=/tmp 坑见 TODO ⓪d）。商品缩略图 URL；443 不带端口。机器是 node2（ssh 别名 node2:34124，阿里云，与 k8s 集群无关——k8s 节点是 node101/102/103 = 192.168.3.101-103），2026-08-19 起走 node1 的 Pangolin（Traefik 终止 TLS）经 newt 隧道回 node2，本机 9000/9001 已绑回环。⚠️ 不能直连该 IP 配域名：apikv.com 未在阿里云备案，域名直连必被 ICP 拦截。选型方向见 docs/TECH.md" }
   config_center: { discovery: config-service, repository: "github.com/lens077/control-tower", note: "配置控制面，2026-08-23 起由合一仓 control-tower 的 config 服务承载（wire 冻结,旧 SDK v0.1.0 兼容已实测）；从本地 CONFIG_FILE 自举；SDK=github.com/lens077/control-tower/sdk/configsource" }
   gorse: { host: "gorse.apikv.com", used_by: [behavior, product], note: "推荐引擎；客户端在 backend/pkg/gorse/（发 X-API-Key）。与 minio 同在 node2，2026-08-19 起走 Pangolin，本机 8086/8088 已绑回环。鉴权是 gorse 自带的（[server] api_key + dashboard 表单登录），非 Pangolin SSO。⚠️ 仓库配置的 api_key 按硬规则 4 留空，真值要灌 Config Center，否则业务全 401。依赖 node1 的 rediss://redis.apikv.com:6379 与 pg:5432" }
   redis_gorse: { host: "redis.apikv.com:61246", used_by: [gorse], note: "gorse 专用 cache store，在 node1（≠ Pigsty 那台 192.168.3.210，也≠集群内 dragonfly）。2026-08-19 起 port 0 + 只收 rediss://，证书是 ZeroSSL *.apikv.com（2026-10-27 到期，无 IP SAN 故必须走域名）；宿主端口随机化为 61246（容器内仍 6379）。⚠️ 测试期对 0.0.0.0/0 开放，上线前收窄" }
@@ -137,7 +151,7 @@ services:
     gateway_prefix: /user*
     extra_config: [auth]
     depends_on: [] # 无服务间调用
-    external: [postgres, casdoor, config_center]
+    external: [postgres, redis, casdoor, config_center]
     note: "proto 侧引用 backend/api/casdoor/v1"
 
   search:
@@ -153,7 +167,7 @@ services:
     gateway_prefix: /behavior*
     extra_config: [auth, recommend] # recommend required = true
     depends_on: []
-    external: [postgres, gorse, config_center]
+    external: [postgres, redis, gorse, config_center]
     note: |
       进程级复用:同时实现 telemetry.v1.TelemetryService(网关前缀 /telemetry*,
       前端性能上报 → OTel histogram/日志,不落业务库)。域是分开的,
@@ -164,7 +178,8 @@ services:
     gateway_prefix: /product*
     extra_config: [recommend] # required = false ← 与 behavior 不一致，见 config_validation
     depends_on: []
-    external: [postgres, gorse, config_center]
+    external: [postgres, redis, gorse, config_center]
+    note: "dev Config Center 仍指向已拒绝连接的旧 Gorse 直连端点 node2:8088；CNP 不放行该退役端点，启用推荐前须迁移到 gorse.apikv.com:443"
 
   cart:
     discovery: cart-service
@@ -178,7 +193,7 @@ services:
     gateway_prefix: /address*
     extra_config: [auth]
     depends_on: []
-    external: [postgres, config_center]
+    external: [postgres, redis, config_center]
 
   order:
     discovery: order-service
@@ -198,7 +213,7 @@ services:
     gateway_prefix: /merchant*
     extra_config: [auth]
     depends_on: []
-    external: [postgres, config_center]
+    external: [postgres, redis, config_center]
 
   payment:
     discovery: payment-service

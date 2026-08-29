@@ -191,7 +191,7 @@ AppProject 只有 `default`（2026-08-29 复测仍然如此）。集群实际由
 | 证书与密钥 | `cert-manager`、`trust-system`(trust-manager)、`external-secrets`、`openbao` |
 | 策略与授权 | `openfga`、`kyverno` |
 | 运行时安全 | `tetragon`（2026-08-28 装，事件经 vector 进 node3 日志） |
-| 弹性与发布 | `keda`、`argo-rollouts`、`argocd`（见坑 ③）、`vpa`（**只有 recommender**，无 updater/webhook，live 5 个 VPA 不会真的改 Pod） |
+| 弹性与发布 | `keda`、`argo-rollouts`、`argocd`（见坑 ③）、`vpa`（**只有 recommender**，无 updater/webhook；live 共 17 个 VPA，其中 ecommerce 15 个均为 `Off`） |
 | 网络与穿透 | Cilium Gateway API、`cilium-secrets`、`pangolin`(newt，2026-08-28 起集群内也有站点) |
 | 存储与镜像 | `openebs`、`cnpg-system`（cluster 已 hibernate）、`spegel` |
 
@@ -202,6 +202,15 @@ AppProject 只有 `default`（2026-08-29 复测仍然如此）。集群实际由
 **Pod 节点均衡**：业务 Deployment 统一带 `app.kubernetes.io/part-of: ecommerce` +
 namespace 内共享的硬 `topologySpreadConstraints`（`maxSkew: 1`、`DoNotSchedule`），当前分布 5/6/6。
 **不得用 `kubernetes.io/hostname: node103` 之类硬钉实现「稳定」**——那把节点故障升级成不可调度。
+
+**VPA recommendation-only 基线（2026-08-29）**：Helm revision 2 只运行 recommender `1.7.1`，
+推荐地板为 `10m/32Mi`。ecommerce 的 15 个 VPA 全部是 `Off`/`RequestsOnly`，且
+`RecommendationProvided=True`；发布前后 17 个 active Pod 身份未变化。初始推荐仅用于确认采集链，
+至少观察 7 天并覆盖 k6/启动窗口后才能写回 requests。config-center 的两个历史 VPA 仍为
+`InPlace`，但当前没有 updater/webhook，不会修改 Pod；未来启用自动组件前必须先复查它们。
+
+VPA 发布证据、经验与下一步见
+[`docs/reports/2026-08-29-vpa-recommendation-only.md`](../../docs/reports/2026-08-29-vpa-recommendation-only.md)；
 约束全文、rollout 死锁处理与 VPA/Descheduler 路线见
 [`docs/design/platform/capacity-balancing.md`](../../docs/design/platform/capacity-balancing.md)。
 

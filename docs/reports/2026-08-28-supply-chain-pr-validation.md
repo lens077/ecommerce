@@ -113,10 +113,20 @@ Syft 已接入 `.github/workflows/service-ci.yml`：仅发布 tag 且实际推�
 
 因此，**Cosign 3.1.3 GHCR keyless 签名与平台 SBOM attestation 阶段已完成远端验收**。
 
-### TCR 下一步
+### `1.5.4` TCR 兼容性验收
 
-GHCR 与 TCR 的 `user:1.5.3` index digest、amd64/arm64 child digest 完全一致。下一步只用 `user` 服务探测 TCR 个人版：签 index、分别附加两个平台的 SPDX attestation，并立即从 TCR 回验。探测代码已经接入；通过前不扩展到其他服务，也不将 Kyverno `verifyImages` 指向 TCR。
+发布 tag `1.5.4` 指向提交 `7d9354b`。GitHub Actions run `33169663904` 的 22 个 jobs 全部成功；TCR 探测严格限定为 `user` 服务。
 
-仍未验证或落地：TCR Cosign 工件兼容性、Harbor Helm 签名、Trivy image、Kyverno `verifyImages`。
+独立从 TCR 回验 `ccr.ccs.tencentyun.com/sumery/user@sha256:1cd199a2fcd4f9b96aed2ecac65e5a009b287bdf1e2e8f5c6396113d9b22d05f`：
 
-**下一步指示**：发布下一裸 semver tag 执行 TCR 单服务探测；若 registry 拒绝 OCI referrers 或无法回读，保留 GHCR 为唯一 keyless 验签源并记录 TCR 不兼容，不使用宽松 fallback 掩盖失败。
+- index keyless 签名回验得到 1 个有效签名；
+- amd64 child digest `sha256:4237b30c453a836ef3cd0d4d46cef475aaa13b1de8eb29e1f93643840fa12c22` 的 SPDX attestation 回验通过；
+- arm64 child digest `sha256:bfb90868cfcfdab48a11fb93ad50cc421ab5971a6e65037b786a97c188e3c536` 的 SPDX attestation 回验通过；
+- TCR signature 与两个 attestation bundle 均为 Sigstore bundle v0.3，包含 verification material；
+- Fulcio CA、GitHub Actions OIDC issuer、workflow identity、透明日志与 Cosign claims 检查全部通过。
+
+因此，**TCR 个人版在本项目 `user:1.5.4` 的实际 OCI index/child digest 上能够保存并回读 Cosign 3.1.3 keyless signature 与 SPDX attestation**。这是一次有边界的兼容性实测，不等于腾讯云对 TCR 个人版提供官方兼容性承诺；TCR 企业高级版 KMS「镜像签名」仍是不同机制。
+
+仍未验证或落地：其他服务的 TCR 双签扩展、Harbor Helm 签名、Trivy image、Kyverno `verifyImages`。
+
+**下一步指示**：先把 tag 阶段的 Trivy image 扫描接到签名前，按 GHCR 不可变 digest 分别扫描 amd64/arm64，并以 `CRITICAL` + `--ignore-unfixed` 作为初始硬门禁；真实基线稳定后再评估是否提高到 HIGH。镜像扫描全绿后，再把 TCR 双签扩展到其他服务并进入 Kyverno Audit。

@@ -1,0 +1,16 @@
+{
+  "target": "targetless",
+  "agent": {
+    "namespace": "ecommerce",
+    "ttl": 30
+  },
+  "feature": {
+    "network": {
+      "dns": true,
+      "outgoing": true,
+      "incoming": "off"
+    },
+    "env": false,
+    "fs": "local"
+  }
+}

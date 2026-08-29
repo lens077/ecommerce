@@ -30,7 +30,7 @@
   前端 E2E 实际走的是 `frontend/apps/consumer` 的 `pnpm e2e:login`（Playwright 库，不是这个 CLI），
   由 `.github/workflows/frontend.yml` 的 smoke-login 定时跑。
   另：`playwright` MCP 只挂在 `/Users/sumery/lens077/go-connect-template-cli`，不在本仓。
-- **`ai-helper.sh` 那行裸路径** —— 原文件首行是一个没有说明的绝对路径。该脚本仍在仓库根，
+- **`helper.sh` 那行裸路径** —— 原文件首行是一个没有说明的绝对路径。该脚本仍在仓库根，
   但它不是 skill，与本文件无关。
 
 ## 相关但不在这里的

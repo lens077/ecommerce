@@ -3,7 +3,8 @@
 本仓库的 issue 与 spec（spec 也常被叫作 PRD）以 markdown 文件形式存放在 `.scratch/`，
 不使用 GitHub Issues 或 GitLab Issues。
 
-> 本仓有三个 remote（`origin` → GitLab，`github` / `gateway` → GitHub），都**不是** issue 的去处。
+> 本仓有两个 remote（`origin` → GitLab，`github` → GitHub），都**不是** issue 的去处。
+> （原第三个 `gateway` remote 已于 2026-08-24 随旧 `gateway/` 目录一并删除。）
 > 不要用 `gh issue` / `glab issue` 建单。
 
 ## 约定

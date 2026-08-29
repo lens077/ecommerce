@@ -1,4 +1,4 @@
-# 商品销量统计设计（Redis 实时 + PostgreSQL 预聚合）
+# 商品销量统计设计（PostgreSQL 事实 + Dragonfly 加速 + PostgreSQL 预聚合）
 
 > 原 `backend/services/product/internal/data/schema/design/销量设计.md`，2026-08-13 移入本目录。
 > **落地现状（2026-08-13 核对）**：
@@ -9,23 +9,25 @@
 > - 「Kafka → 统计服务（Statistics Service）」链路**当前不存在**：只有通用 Kafka producer Adapter，
 >   没有业务 producer、consumer 或 statistics 服务。必须先完成 Outbox/Kafka 迁移与 product 域内 consumer，不因已有 Adapter 就把链路写成已落地。
 
-方案为「Redis 实时缓存 + PostgreSQL 预聚合分析」，技术栈统一且维护成本低，后续数据量上来后可平滑迁移至 ClickHouse。
+方案为「PostgreSQL 销量明细事实 + Dragonfly 可丢缓存 + PostgreSQL 预聚合分析」，技术栈统一且维护成本低，后续数据量上来后可平滑迁移至 ClickHouse。
 一、核心方案架构（PostgreSQL 版）
 1.1 分层设计思路
 表格
 场景	存储方案	核心优势
-首页 / 商品列表实时销量展示	Redis 缓存	高并发读写、毫秒级响应
+首页 / 商品列表实时销量展示	Dragonfly（Redis 协议）可丢缓存	高并发读写、毫秒级响应
 商家历史销量分析（趋势 / 多维度聚合）	PostgreSQL 预聚合表 + 索引优化	技术栈统一、初期数据量下性能足够
 销量数据持久化与回溯	PostgreSQL 销量明细表	数据可靠存储、支持异常修复
 1.2 数据流转链路
 ```plaintext
-订单支付成功 → Kafka 发布「销量变更事件」（经 outbox；当前 NATS 迁移中）→ 统计消费者（并入 product 域）消费事件
+订单支付成功 → Kafka 发布「销量变更事件」（经 Outbox；当前 NATS 迁移中）→ Catalog 域统计消费者以 Inbox 幂等消费
+                                                              ↓
+                                                   写入 PostgreSQL 销量明细事实
                                                               ↓
                     ┌─────────────────────────────────────────┴─────────────────────────────────────────┐
                     ↓                                                                                         ↓
-          更新 Redis 实时销量（SKU/SPU 维度）                                    写入 PostgreSQL 销量明细表
+          best-effort 更新 Dragonfly 销量缓存                                   每日定时任务聚合数据至预聚合表
                     ↓                                                                                         ↓
-          首页/商品列表直接读取 Redis 展示销量                                    每日定时任务聚合数据至预聚合表
+          首页/商品列表优先读缓存，miss 回源 PG                                  商家后台从预聚合表查询历史分析
                                                                                                               ↓
                                                                                                 商家后台从预聚合表查询历史分析
 ```
@@ -39,7 +41,7 @@ SET sales:sku:1001 500
 SET sales:spu:2001 1200
 ```
 2.2 首页读取逻辑（保持不变）
-优先读 Redis，异常时从 PostgreSQL「最近 1 天销量」兜底：
+优先读 Dragonfly（Redis 协议），miss 或异常时从 PostgreSQL 事实/投影回填。缓存只能加速，不得决定销量正确性：
 ```go
 func (p *ProductService) GetSpuSales(ctx context.Context, spuID int64) (int64, error) {
     sales, err := redisClient.Get(ctx, fmt.Sprintf("sales:spu:%d", spuID)).Int64()
@@ -215,7 +217,7 @@ CREATE TABLE products.sales_detail_202401 PARTITION OF products.sales_detail
     FOR VALUES FROM ('2024-01-01') TO ('2024-02-01');
 ```
 四、销量更新逻辑（调整版）
-统计服务消费事件后，同时更新 Redis 和写入 PostgreSQL 明细表：
+product 域编舞消费者先以 Inbox 幂等方式写入 PostgreSQL 明细事实，再 best-effort 更新 Dragonfly；缓存失败不得回滚或丢失 PostgreSQL 事实：
 ```go
 func (s *StatisticsService) HandleOrderPaid(ctx context.Context, event *OrderPaidEvent) error {
     for _, item := range event.OrderItems {
@@ -252,7 +254,7 @@ func (s *StatisticsService) HandleOrderRefund(ctx context.Context, event *OrderR
 查询切分阶段：商家后台查询优先走 ClickHouse，异常时兜底到 PostgreSQL。
 下线阶段：停止 PostgreSQL 预聚合任务，完全切换至 ClickHouse，PostgreSQL 仅作为历史数据备份。
 六、方案优势总结
-技术栈统一：初期仅用 PostgreSQL + Redis，降低运维和学习成本。
+技术栈统一：初期使用 PostgreSQL + Dragonfly（Redis 协议），降低运维和学习成本。
 性能足够：预聚合表 + 索引优化，可支撑百万级数据下的商家分析秒级响应。
 可扩展：表结构预留维度字段，后续可轻松添加渠道、活动等分析维度。
 平滑迁移：数据结构与 ClickHouse 兼容，后续迁移无需大幅修改代码。

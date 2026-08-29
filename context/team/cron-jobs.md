@@ -1,7 +1,7 @@
 ---
 name: cron-jobs
 layer: team
-description: 定时/周期任务的执行边界——重叠、panic、超时、时区、优雅停止、多实例重复执行与「错过不补」；调度与执行分离（Postgres 任务表 / NATS JetStream）；robfig/cron 与 time.Ticker、K8s CronJob 的选型
+description: 定时/周期任务的执行边界——重叠、panic、超时、时区、优雅停止、多实例重复执行与「错过不补」；调度与执行分离（Postgres 任务表 / Kafka，存量 NATS JetStream 迁移期维护）；robfig/cron 与 time.Ticker、K8s CronJob 的选型
 ---
 
 # 定时任务约定
@@ -158,12 +158,12 @@ Worker 幂等执行 + 失败重试 + 记录状态
 支持人工重跑与补偿
 ```
 
-**这条链的两段现在都有现成载体**：**NATS JetStream 已在集群里跑**（`nats` ns，nats-0/1/2），
-outbox relay 也已上线（`ecommerce-outbox-relay`）。所以「发消息」这一段不再是待建选项。
+**存量载体已经存在**：NATS JetStream 仍在集群运行（`nats` ns，nats-0/1/2），
+outbox relay 也已上线（`ecommerce-outbox-relay`）。按 `docs/TECH.md`，目标事件主干是外部非 K8s Apache Kafka，采用 Outbox/Relay/Inbox + DLQ；NATS 只用于退役完成前的存量链路。
 
 选哪个看**可靠性要求**，不看有没有 MQ：绝不能丢的任务（订单超时兜底、对账、结算）
-仍走 **Postgres 任务表**——它能和 Outbox 同事务写入，这是 JetStream 给不了的；
-其余可重发的走 JetStream。不要因为「觉得没有 MQ」就退回「一次 cron 回调直接干完」——
+仍走 **Postgres 任务表**——它能和 Outbox 同事务写入；其余可重发任务接目标 Kafka 事件主干。
+迁移期间不得扩大 NATS 面。不要因为「觉得没有 MQ」就退回「一次 cron 回调直接干完」——
 那正是对账类任务最容易悄悄漏掉一天的方式。
 
 **越界信号**：当 cron 回调里开始堆 retry、recover、超时控制、状态记录、goroutine 池，
@@ -211,7 +211,7 @@ ZeroSSL 续期在 node1 `apikv-cert-renew.timer`，失败/成功直接发 ntfy�
 | `time.Ticker` | 单一固定周期、与组件生命周期绑定（心跳、flush、健康检查）——**本仓现状** |
 | `robfig/cron` | 多条不同时间规则、需要动态增删、需要统一的重叠/panic/日志包装；单进程或单调度实例 |
 | K8s CronJob | 任务可独立起容器、希望调度与业务解耦、天然单实例（对账、清理、报表）——**本仓首选** |
-| NATS JetStream | 跨服务事件、可重发的异步链路——**集群已在跑**，配合 `ecommerce-outbox-relay`（§八） |
+| Apache Kafka | 跨服务事件与可重发异步链路的目标主干；外部非 K8s 集群，配合 Outbox/Relay/Inbox + DLQ。NATS JetStream 仅为存量迁移链（§八） |
 | Postgres 任务表 | 绝不能丢、要与业务数据同事务（Outbox 同源）、要人工补偿的任务（§八） |
 | Redis 任务队列（Asynq） | 量大、可重发的后台工作（邮件、导出、推理触发）——**评估过，暂不引入**（§八·五） |
 

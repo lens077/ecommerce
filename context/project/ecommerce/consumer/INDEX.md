@@ -2,7 +2,8 @@
 
 **代码路径**：`frontend/apps/consumer/`　**端口**：3000
 
-C 端主应用。React 19 + MUI 9 + Emotion + TanStack Router/Query + Connect-RPC + Casdoor + valtio。
+C 端主应用。React 19 + MUI 9 + Emotion + TanStack Router/Query + Connect-RPC + Casdoor + Zustand
+（2026-08-28 完成 valtio→zustand 全量迁移，valtio 依赖已移除）。
 
 ## 关键结构
 
@@ -12,7 +13,7 @@ C 端主应用。React 19 + MUI 9 + Emotion + TanStack Router/Query + Connect-RP
 | `src/providers/AuthProvider.tsx` | Casdoor 登录态；Web 凭 httpOnly cookie、桌面凭内存会话 id，**不落 localStorage**（`store/users.test.ts` 锁此不变量；2026-08-26 修正本行陈旧描述「token 存 localStorage」） |
 | `src/routes/callback/` | OAuth 回调 |
 | `src/styles/tokens.ts` | 设计 token（⚠️ 见下方 experience） |
-| `src/store/cart.ts` | valtio 购物车状态，localStorage 持久化 |
+| `src/store/cart.ts` | Zustand 购物车状态（vanilla store + 模块级 action），localStorage 持久化 |
 
 ## experience
 

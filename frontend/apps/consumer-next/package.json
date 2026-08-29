@@ -1,0 +1,34 @@
+{
+  "name": "@ecommerce/consumer-next",
+  "version": "0.0.0-poc",
+  "private": true,
+  "scripts": {
+    "dev": "next dev -p 3004",
+    "build": "next build",
+    "start": "next start -p 3004",
+    "test": "node -e \"console.log('consumer-next: runtime POC checks are documented in the report')\"",
+    "generate": "buf generate ../../../backend --template buf.gen.yaml --path ../../../backend/api/product/v1/product.proto",
+    "mock:gateway": "node scripts/mock-gateway.mjs",
+    "verify:runtime": "node scripts/verify-runtime.mjs",
+    "verify:browser": "pnpm build && node scripts/verify-browser.mjs"
+  },
+  "dependencies": {
+    "@bufbuild/protobuf": "catalog:",
+    "@connectrpc/connect": "catalog:",
+    "@connectrpc/connect-node": "catalog:",
+    "@connectrpc/connect-query": "catalog:",
+    "@connectrpc/connect-web": "catalog:",
+    "@tanstack/react-query": "catalog:",
+    "next": "catalog:",
+    "react": "catalog:",
+    "react-dom": "catalog:"
+  },
+  "devDependencies": {
+    "@bufbuild/buf": "catalog:",
+    "@bufbuild/protoc-gen-es": "catalog:",
+    "@types/node": "catalog:",
+    "@types/react": "catalog:",
+    "@types/react-dom": "catalog:",
+    "typescript": "catalog:"
+  }
+}

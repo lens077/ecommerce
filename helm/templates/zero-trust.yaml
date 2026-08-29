@@ -1,0 +1,2 @@
+{{- /* Canonical plain YAML is shared with the emergency raw-manifest path. */ -}}
+{{- .Files.Get "files/zero-trust.yaml" -}}

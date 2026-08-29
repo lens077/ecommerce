@@ -3,7 +3,7 @@
 > 创建:2026-08-07。定位:**方法论 + 本仓指标基线清单**(应采什么、为什么、异常了该做什么)。
 > 与其他文档的关系:落地阶段与验收标准见 `DEVOPS.md` §5/阶段3;
 > 当前实况与缺陷以 `.service-matrix.yaml`、`docs/reports/2026-08-27-infrastructure-audit.md` 和 `TODO.md` 为准；旧 review 只作历史证据;
-> 看板生成脚本在 `grafana/`（本目录下）；[`面板设计.md`](面板设计.md) 保留指标口径与信息架构，但其中 Jaeger/Loki/Grafana unified alerting 配置尚未迁到 VictoriaTraces/VictoriaLogs/vmalert，不能作为现网部署真相源。
+> 看板生成脚本在 `grafana/`（本目录下）；[`面板设计.md`](面板设计.md) 保留指标口径与信息架构，但其中 VictoriaTraces/VictoriaLogs/vmalert 目标态配置尚未全部落地，不能作为现网部署真相源。
 > 核心取向(消化自 2026-08 一篇 Prometheus 方法论文章,结合本仓教训):
 > **上线前关注功能对不对,上线后要回答的是「服务现在健康吗」**。没有指标,出问题只能
 > 看日志、查服务器、猜。
@@ -72,7 +72,7 @@ Prometheus 与 OpenTelemetry 不是竞争关系：本仓用 OTel 统一应用侧
 | **pgx 连接池**:active / idle / **wait count** | 「很多故障不是数据库挂了,是连接池耗尽」——wait 出现即预警,查慢查询占坑或池子配小 |
 | Redis:连接数、**命中率**、响应时间、错误数 | 经典联动:**Redis Hit ↓ + DB QPS ↑ = 缓存失效击穿**,两条曲线必须放同一张看板 |
 | Kafka **consumer lag / lag growth / rebalance / commit latency**；迁移期同时看 NATS pending/redelivery | 持续增加 = 消费能力不足、rebalance 抖动或 poison message；扩消费者前先查幂等、retry/DLQ 与下游慢逻辑。首个 Kafka consumer 必须同时带指标与告警 |
-| Meilisearch / S3-compatible / Consul 客户端错误数 | 依赖不可用通常先于业务错误率上升，需与 gateway 无节点、indexer lag 联看 |
+| Elasticsearch / S3-compatible / Consul 客户端错误数；迁移期同时看 Meilisearch | 依赖不可用通常先于业务错误率上升，需与 gateway 无节点、搜索投影 lag 联看；目标搜索依赖是隐藏在 `SearchCatalog` 接口后的 Elasticsearch 只读投影 |
 
 ### 3.4 资源层(USE,节点与容器)
 
@@ -84,20 +84,22 @@ Prometheus 与 OpenTelemetry 不是竞争关系：本仓用 OTel 统一应用侧
 
 ```text
 10 × Go Service + control-tower gateway
-  └── OTel SDK / OTLP-HTTP + Bearer（目标；部分 logs 现网鉴权失败）
-        └── Pangolin → node3 OTel Collector
-              ├── VictoriaMetrics
-              ├── VictoriaLogs
-              └── VictoriaTraces
-Kubernetes OTel collector(k8s_cluster + k8sobjects)
-  └── public write-only paths ─────→ VictoriaMetrics / VictoriaLogs
-Kubernetes stdout → Vector DaemonSet ─────────→ VictoriaLogs
+  └── OTel SDK / Agent（OTLP 导出 trace；部分 logs 现网鉴权失败）──┐
+Kubernetes stdout → Vector DaemonSet（轻量采集，不做复杂过滤）──────┤
+VMAgent（指标抓取）───────────────────────────────────────────────┤
+Kubernetes OTel collector(k8s_cluster + k8sobjects，存量)─────────┤
+                                                                 ▼
+                                            外置 OTel Collector 中继
+                                              ├── 尾采样：Error/高延迟 100%，正常 1%~5%
+                                              ├── PII 脱敏与 /healthz、/metrics 噪声过滤
+                                              ├── 动态批处理与按租户/服务重打标
+                                              └── VictoriaMetrics / VictoriaLogs / VictoriaTraces
 Grafana → VM/VL/VT                 vmalert → Alertmanager → ntfy
 Gatus / Healthchecks / Bugsink / certificate timer ───────→ ntfy
 ```
 
-- 应用 OTel SDK 装配在同构 `internal/pkg`，gateway 在 control-tower 中独立装配。SDK 支持资源标签、采样、gzip 与 OTLP 认证，但 2026-08-27 现网多个服务向 `node3-otlp.apikv.com/v1/logs` 发送时收到 `401 missing or empty authorization header`；必须单独修正运行时 endpoint/header，不能把代码支持写成现网已生效。
-- 容器 stdout 不经 OTel Collector，而由 Vector 直接写 VictoriaLogs。stdout 链与 Kubernetes Event 链当前正常；排查日志缺失时必须区分「应用 OTel log」「容器 stdout」和「Kubernetes Event」三条链。
+- 应用 OTel SDK 装配在同构 `internal/pkg`，gateway 在 control-tower 中独立装配。SDK 支持资源标签、gzip 与 OTLP 认证；最终采样决策由外置 OTel Collector 的尾采样承担，SDK 侧不承担最终采样决策。2026-08-27 现网多个服务向 `node3-otlp.apikv.com/v1/logs` 发送时收到 `401 missing or empty authorization header`；必须单独修正运行时 endpoint/header，不能把代码支持写成现网已生效。
+- 容器 stdout 由 Vector 直接写 VictoriaLogs 是存量现状，目标态按 [`docs/TECH.md`](../TECH.md) §9.1 收为「Vector 轻量采集 → 外置 OTel Collector 中继 → VictoriaLogs」。stdout 链与 Kubernetes Event 链当前正常；排查日志缺失时必须区分「应用 OTel log」「容器 stdout」和「Kubernetes Event」三条链。
 - collector、Vector、Pangolin、Victoria 后端和 Alertmanager 都必须自监控；配置存在不等于数据到达。
 
 ## 5. 告警:方法论(规则清单已落地,真相源在面板设计.md)
@@ -107,7 +109,7 @@ Gatus / Healthchecks / Bugsink / certificate timer ───────→ ntfy
 
 历史上由 `grafana/build_alerts.py` 生成过 17 条 Grafana unified alerting 规则；现网已迁为 vmalert + Alertmanager，规则是否等价迁移必须逐条实测。Alertmanager 的 firing/resolved payload 已经通过本机 bridge 实际送达认证 ntfy；这只证明 receiver 链可用，不代表 17 条规则都已完成故障注入。
 
-ntfy 不是单一兼容 webhook：Gatus 直接使用 bearer provider，Healthchecks 使用 v4.3 原生 `ntfy` Channel，Bugsink 通过带随机 URL token 的本机 Slack-compatible bridge，证书 timer 由 root wrapper 直接发布。token、topic、Healthchecks ping URL 和 Bugsink DSN 均不得进入仓库或日志。
+ntfy 不是单一兼容 webhook：Gatus 直接使用 bearer provider，Healthchecks 使用 v4.3 原生 `ntfy` Channel，Bugsink（错误监控定稿，2026-08-28 复核维持，兼容 Sentry SDK 错误事件）通过带随机 URL token 的本机 Slack-compatible bridge，证书 timer 由 root wrapper 直接发布。token、topic、Healthchecks ping URL 和错误监控 DSN 均不得进入仓库或日志。前端 SDK 接入手册见 [error-monitoring.md](error-monitoring.md)，容量证据见 [`../reports/2026-08-28-bugsink-integration-research.md`](../reports/2026-08-28-bugsink-integration-research.md)。
 
 告警数量刻意克制:每条告警响起,值班者必须知道下一步做什么;做不到的降级为看板曲线。Gatus、Healthchecks、Bugsink 和 Victoria 数据面都在 node3，本机监控不能发现 node3 整机失联；异机探针仍是未消除的故障域。
 
@@ -122,11 +124,13 @@ ntfy 不是单一兼容 webhook：Gatus 直接使用 bearer provider，Healthche
 4. **控制基数**:label 里禁止放无界值(port、uuid、user_id);新增 label 先回答基数上限是多少;
 5. **验收看实测行为不看配置**:看板/告警上线后要用注入故障(杀 Pod、断依赖)验证真的会响——
    「配置在骗人」在本仓已出现两次(VPA min-replicas、consul deregister 钳制);
-6. **监控随功能同行**：新依赖（如 NATS consumer、Meilisearch indexer）接入的同一个 PR 里必须带上对应指标与告警，
+6. **监控随功能同行**：新依赖（如 Kafka consumer、Elasticsearch 搜索投影）接入的同一个 PR 里必须带上对应指标与告警；存量 NATS consumer、Meilisearch indexer 在迁移期继续保留对应监控，
    不接受「先上线后补监控」。
 
 ---
 
 *来源:三支柱分工、RED/USE、Go 指标清单与「可行动性」判据消化自 2026-08 一篇
 Prometheus 方法论文章;所有「本仓教训」条目的证据见
-`docs/reviews/OBSERVABILITY_REVIEW_20260806.md`、`docs/reviews/ADVERSARIAL_REVIEW_20260806.md` 与 `TODO.md`。*
+`docs/progress-archive/OBSERVABILITY_REVIEW_20260806.md`、
+`docs/progress-archive/ADVERSARIAL_REVIEW_20260806.md`；未完成项见
+`docs/todo/统一可观测性体系.md`，状态以 `TODO.md` 为准。*

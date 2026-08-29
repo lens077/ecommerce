@@ -10,8 +10,8 @@ description: go-redis v9 在本仓的用法约定——客户端热重建、cach
 各业务服务的客户端装配是同构副本(`internal/data/data.go` 的 `NewRedisClient` + `buildRedis`,
 `internal/data/live.go` 的 `LiveRedis`),由 `backend/structcheck` 在 CI 强制,**改一个必须同步全部**。
 
-> **后端只有 Dragonfly 一个**（`dragonfly` ns；集群内 `dragonfly.dragonfly.svc:6379`，
-> LAN `192.168.3.122:6380`）。**TLS-only，明文连接会被拒**，客户端必须配 TLS + AUTH。
+> **后端使用 Dragonfly**。按 `docs/TECH.md`，必须按故障域分实例：Session 实例启用 `noeviction` + 持久化，业务 Cache 实例启用 `allkeys-lru`，限流实例独立，严禁混用。当前仍有单实例存量，迁移完成前不得把它描述为已隔离。
+> 当前存量地址为 `dragonfly` ns、集群内 `dragonfly.dragonfly.svc:6379`、LAN `192.168.3.122:6380`。**TLS-only，明文连接会被拒**，客户端必须配 TLS + AUTH。
 > `redis` namespace 已不存在，**没有回滚到 Redis OSS 的路径**。地址与凭据位置查
 > [local-env.md](local-env.md) 和 [`.service-matrix.yaml`](../../.service-matrix.yaml)。
 >
@@ -186,7 +186,7 @@ for i := 0; i < maxRetries; i++ {
 ```
 
 ⚠️ **本项目的库存、订单、支付和幂等禁止使用 Redis/Dragonfly 锁作为正确性手段。**
-Dragonfly 采用可驱逐缓存策略，锁键可能消失；checkout v2 已裁决把正确性锚定在 PostgreSQL
+即使 Session 实例使用 `noeviction`，关键不变量也绝不能建立在缓存上。业务 Cache 实例采用可驱逐策略，锁键可能消失；checkout v2 已裁决把正确性锚定在 PostgreSQL
 事务、条件更新/CAS、行锁、唯一约束和幂等表。库存扣减 SQL 必须自带
 `available >= @quantity`，并检查受影响行数。
 
@@ -213,7 +213,7 @@ rdb := redis.NewClusterClient(&redis.ClusterOptions{
 ## 十、Redis 不是消息队列的替代品
 
 Stream / Pub-Sub 能做消息,但适用面是**轻量事件通知、实时推送、短生命周期任务**。
-大吞吐、长期留存、消费者组治理与重放应交给持久事件主干。当前搜索链使用 **NATS JetStream**（`nats` ns，nats-0/1/2）；目标主干已改为 **Apache Kafka**，迁移路线见 `docs/design/platform/production-scale-goal.md`。不要用 Redis Stream/Pub/Sub 绕过 outbox/inbox 和迁移门禁。
+大吞吐、长期留存、消费者组治理与重放应交给持久事件主干。当前搜索链仍使用存量 **NATS JetStream**（`nats` ns，nats-0/1/2）；目标主干按 `docs/TECH.md` 为外部非 K8s **Apache Kafka** + Outbox/Relay/Inbox + DLQ。不要用 Redis Stream/Pub/Sub 绕过事件可靠性与迁移门禁。
 
 Pub/Sub 是 at-most-once 的即时投递：订阅者离线、断线或处理失败时，消息不会补发。`Publish()` 返回的
 订阅者数量只表示当时匹配的订阅者，不是业务处理 ACK。长驻订阅还会持有专用连接；订阅循环必须在

@@ -58,3 +58,5 @@ jwt.WithLeeway(Leeway)
 | `token is not valid yet` | **nbf 时钟偏移，就是本条** |
 
 前端已加死循环保护：登录后 < 15s 仍认证失败会停在登录页，而不是无限跳转。
+
+**后续决策覆盖（2026-08-28）**：本条结论已被 docs/TECH.md 覆盖：现行鉴权采用 Casdoor 有状态 Session（Dragonfly Session Store）+ OpenFGA，完全废弃 JWT，严禁保留双重鉴权路径。

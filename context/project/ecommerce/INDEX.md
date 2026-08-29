@@ -6,11 +6,11 @@
 
 | module | 代码路径 | 内容 |
 |---|---|---|
-| [gateway](gateway/INDEX.md) | `../control-tower/services/gateway` | JWT / 时钟偏移踩坑；健康检查被「兜底」代码清零 |
-| [registry](registry/INDEX.md) | `backend/services/*/internal/pkg/registry/` | Consul TTL 注册与心跳（10 份同一套代码） |
+| [gateway](gateway/INDEX.md) | `../control-tower/services/gateway` | Casdoor 有状态 Session + OpenFGA 现行约束；JWT / 时钟偏移历史踩坑；健康检查被「兜底」代码清零 |
+| [registry](registry/INDEX.md) | `backend/services/*/internal/pkg/registry/` | 存量 Consul TTL 注册与心跳；目标发现为生产 K8s Service DNS、开发 Docker Compose 服务名 |
 | [config](config/INDEX.md) | `backend/services/*/internal/pkg/config/` + `../control-tower/services/config` | 一份配置三个副本；热更新的生效边界 |
 | [behavior](behavior/INDEX.md) | `backend/services/behavior/` | 缺配置块导致 gorse 静默关闭 |
-| [events](events/INDEX.md) | `backend/pkg/outbox/` + `backend/tools/outbox-relay/` | PostgreSQL outbox → NATS JetStream → projection 的 at-least-once、幂等与恢复边界 |
+| [events](events/INDEX.md) | `backend/pkg/outbox/` + `backend/tools/outbox-relay/` | 存量 NATS 链与目标 Kafka + Outbox/Relay/Inbox + DLQ 的迁移边界、幂等与恢复约束 |
 | [consumer](consumer/INDEX.md) | `frontend/apps/consumer/` | MUI spacing ×8 踩坑；购物车重复请求 |
 | [merchant](merchant/INDEX.md) | `frontend/apps/merchant/` | ECharts 路由 chunk 的异步加载与拆分 |
 | [frontend-api](frontend-api/INDEX.md) | `frontend/packages/api/` + `apps/*/src/api/` | Connect Query 数据拉取 SOP；transport 单例约束 |

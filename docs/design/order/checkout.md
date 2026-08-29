@@ -4,7 +4,7 @@
 >   取代 2026-08-08 曾存于本路径的 v1 草稿——settlement 独立服务、报价 TTL 5 分钟等方案已被 §17 决策推翻，v1 原文只在 git 历史（053173c 之前）。
 > 日期：2026-08-08
 > 范围：消费者下单主链（报价 → 提交 → 支付 → 库存确认 → 超时/退款自愈）；不含售后与履约实现
-> 关联：[platform/architecture.md](../platform/architecture.md)（服务边界与领域事件表）、[inventory/inventory.md](../inventory/inventory.md)（库存状态机）、[consistency.md](consistency.md)（Outbox + 编舞 Saga 一致性底座）、[schema.md](schema.md)（订单表早期稿）；落地进度看 `TODO.md` 对应服务行
+> 关联：[platform/architecture.md](../platform/architecture.md)（服务边界与领域事件表）、[inventory/inventory.md](../inventory/inventory.md)（库存状态机）、[consistency.md](consistency.md)（Order Saga 编排 + Outbox/Inbox + Kafka 编舞一致性底座）、[schema.md](schema.md)（订单表早期稿）；落地进度看 `TODO.md` 对应服务行
 
 ## 0. 结论速览
 
@@ -13,8 +13,8 @@
 - **v1 全成全败**：任一商家/SKU 不满足 → 整单失败，不落任何业务订单；部分成交是 v2 产品需求（需结算页显式勾选授权）。
 - 库存交互**全组原子**：`ReserveGroup` / `ConfirmReservationGroup` / `ReleaseGroup`，一次请求一个库存事务，消灭跨商家补偿窗口与混合库存态。
 - 支付把**资金事实**（payment_attempt，只增不改）与**订单接受**（order_group.accepted_pay_no，CAS 唯一）分开；订单取消后到达的成功支付一律自动退款，不复活订单。
-- 跨服务副作用两条腿：同步链 = RPC + 持久化补偿任务；异步链 = **Outbox + 持久事件主干 + Inbox 幂等消费**。当前 broker 是 NATS JetStream；2026-08-27 已决策迁往 Kafka。正确性依赖 outbox/inbox，不依赖某个 broker 宣称的 exactly-once。
-- 履约门禁：只有 **OrderReadyForFulfillment**（库存确认成功后发出）可触发履约；OrderPaid 不再直接触发履约（[platform/architecture.md](../platform/architecture.md) 领域事件表已于 2026-08-26 随本决议修订，闭环）。
+- 跨服务副作用两条腿：同步链 = RPC + 持久化补偿任务；异步链 = **Outbox + 持久事件主干 + Inbox 幂等消费**。存量 broker 是 NATS JetStream；目标是外部非 K8s Kafka。正确性依赖 outbox/inbox，不依赖某个 broker 宣称的 exactly-once。
+- 履约门禁：只有 **OrderReadyForFulfillment**（库存确认成功后发出）可触发独立 Fulfillment Service；OrderPaid 不再直接触发履约（[platform/architecture.md](../platform/architecture.md) 领域事件表已于 2026-08-26 随本决议修订，闭环）。
 - 库存状态机对齐 [inventory/inventory.md](../inventory/inventory.md) §3.2：支付确认 = 预占 → **locked**；发货完成才 locked → deducted。
 
 ## 1. 术语
@@ -239,10 +239,10 @@ OrderPaid 不再被履约订阅（platform/architecture.md 领域事件表已于
 
 ## 9. Outbox / Inbox 硬性契约
 
-- 事件带全局 event_id；Kafka partition key = group_no，保证同订单组事件进入同一 partition。relay 收到 Kafka ack 才标记对应 destination delivery 完成；ack 后、落库前崩溃允许重复投递。迁移期如需双 broker，两个 ack 必须独立记录。
-- 每个消费者：`processed_event` 唯一约束（consumer, event_id）+ 业务更新 + 下游 outbox **三者同一本地事务**——幂等消费是表结构不是口号。
+- 事件带全局 event_id；Kafka partition key = group_no，保证同订单组事件进入同一 partition。relay 收到 Kafka `acks=all` 才标记对应 destination delivery 为 `published`；ack 后、落库前崩溃允许重复投递。迁移期如需双 broker，两个 ack 必须独立记录。
+- 每个消费者：`processed_event` 唯一约束（`consumer_group`, `event_id`）+ 业务更新 + 下游 outbox **三者同一本地事务**——幂等消费是表结构不是口号。
 - 语义边界：**允许重复，不允许已确认事件不可追踪地丢失**。报价（Redis）是全系统唯一允许真丢的数据。
-- 监控：outbox 未发布滞留年龄、消费 lag、死信告警。
+- 监控：outbox 未发布滞留年龄、消费 lag、死信告警；连续消费失败超过 5 次必须转投 DLQ 并触发告警。
 
 ## 10. 正确性论证
 
@@ -261,14 +261,14 @@ OrderPaid 不再被履约订阅（platform/architecture.md 领域事件表已于
 | 「已付款无订单」 | — | 不可能：CreatePayment 前置校验订单存在且可支付，因果序保证 |
 | 「已付款无库存」 | — | 有界：expire_at 裕量覆盖正常迟到；超界走补占一次或退款，钱货两清必居其一 |
 
-事实源表述：正确性不是某一个 Postgres 单独保证的。**order、payment、inventory 三个数据库加支付渠道共四个权威事实源，各自靠唯一约束和条件状态迁移守住本域，域间靠可靠事件传播、靠对账收敛。**单一真相源在本系统不存在，存在的是收敛机制。
+事实源表述：PostgreSQL 是平台 OLTP 的唯一真相源，但各限界上下文分别拥有自己的权威 PostgreSQL 状态；外部支付渠道是需对账的外部事实。**Order、Payment、Inventory 各自靠唯一约束和条件状态迁移守住本域，域间由 Order Saga 编排核心链路，并靠可靠事件与对账收敛。**搜索、缓存、分析与消息投影均不是交易真相源。
 
 ## 11. 身份与授权
 
-- user_id **只**取网关 JWT 过滤器验证后注入的 `UserIdMetadataKey`（x-md-global-user-id，jwt.go:294），永不从请求体或 token 内容取。order 现有桩读 UserNameMetadataKey（order.go:33）是要修的错。
+- user_id **只**取 control-tower 校验 Casdoor 有状态 Session 后注入的 `UserIdMetadataKey`（x-md-global-user-id，jwt.go:294），永不从请求体或 token 内容取。order 现有桩读 UserNameMetadataKey（order.go:33）是要修的错。
 - 网关硬规则：转发前**剥离入站请求携带的全部 x-md-global-\* 头**再注入，防伪造。
 - cart 反查恒带 user_id；address 服务校验 addressId 属主；token 校验 quote.user_id == 认证身份；重放校验 DB 级属主（§5.1）。
-- 网关路由与 RBAC：CreateQuote/CreateOrder/CreatePayment → consumer；渠道回调匿名放行、可信性靠验签；GetOrderRequestState 为服务间内部 RPC 不过网关。
+- 网关授权：Casdoor 粗粒度 customer 角色 + OpenFGA 对 cart/address/order 对象关系校验；CreateQuote/CreateOrder/CreatePayment → customer；渠道回调匿名放行、可信性靠验签；GetOrderRequestState 为服务间内部 RPC 不过网关。
 
 ## 12. 金额规范
 
@@ -297,7 +297,7 @@ OrderPaid 不再被履约订阅（platform/architecture.md 领域事件表已于
 - proto：order（CreateQuote 新增、CreateOrderRequest/Response 重定义、GetOrderRequestState 内部 RPC）、inventory（三个 Group RPC + 查询）、payment（CreatePayment 契约重做）、cart/product/merchant（前置项）。
 - DB migration：orders（order_request、group 加列、outbox、processed_event、compensation_task、job_run）、inventory（§3.2）、payment（§3.3 + refund_task）。
 - 基础设施：Kafka relay、消费者（order/inventory/payment 各自的 Inbox 消费）、两个 cron（超时取消、库存对账）、退款 worker；NATS 仅为迁移期现有搜索链，不作为新交易事件目标。
-- 网关：三条消费者路由 + RBAC、回调放行、x-md-global-* 剥离。
+- 网关：三条消费者路由 + Casdoor Session/OpenFGA、回调放行、x-md-global-* 剥离。
 - 文档修订：~~platform/architecture.md 事件订阅拓扑（履约改挂 OrderReadyForFulfillment）、inventory/inventory.md 库存公式注释~~（两处均已于 2026-08-26 修订完成）。
 - 配置 seed、deploy 清单、`.service-matrix.yaml`、监控指标与告警（§6.3/§8/§9 所列）。
 

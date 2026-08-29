@@ -4,71 +4,11 @@
 
 ## 1. 快速入口
 
-仓库根的 `ai-helper.sh` 是可执行命令入口，不再只是不可执行的命令草稿：
+仓库根的 `helper.sh` 是**命令备忘**（2026-08-28 起改为纯备忘：打开阅读、按小节逐条复制执行，不要整体运行；文件顶部有 `exit 0` 防呆，误执行零副作用）。分节：一、状态检查（只读）；二、恢复与演练（有副作用）；三、本地开发域名（`/etc/hosts`）；四、Pangolin；五、根域导航页；六、OTLP 鉴权；七、工具速查。
 
-```bash
-./ai-helper.sh --help
-./ai-helper.sh all-status
-```
+有副作用的只有第二节三组命令：newt 重启、告警链路测试、强制证书续期。其余状态检查小节均只读。强制续期会执行真实 DNS-01 并短暂重启 Traefik、Redis 和 Silo，不要当普通健康检查反复运行。
 
-会改变运行时的命令只有：
-
-```bash
-./ai-helper.sh newt-restart
-./ai-helper.sh alerts-test
-./ai-helper.sh cert-renew-force
-```
-
-其他 status 命令只读。`cert-renew-force` 会执行真实 DNS-01 并短暂重启 Traefik、Redis 和 Silo，不要当普通健康检查反复运行。
-
-## 2. Kubernetes newt 与四个核心入口
-
-### 当前实况
-
-- Deployment：`pangolin/newt`，1 副本，`Recreate`。
-- 镜像：`docker.io/fosrl/newt:1.15.0`。恢复期不升级到 1.16.0，也不扩副本。
-- 凭据：Kubernetes Secret `newt-credentials`，仓库不保存值。
-- Cilium Gateway：Service `default/cilium-gateway-cilium-gateway`，ClusterIP `10.110.51.106`，LB IP `192.168.3.121`。
-- Pangolin site：`k8s-cluster`，siteId 4。
-- 核心资源 rid 3/4/14/15 都指向 `10.110.51.106:443 https`。
-
-| 入口 | 验收路径 | 期望 |
-|---|---|---|
-| `shop.apikv.com` | `/` | `200` |
-| `gateway.apikv.com` | `/healthz` | `200` |
-| `config.apikv.com` | `/` | `200` |
-| `config-api.apikv.com` | `/health` | `401`，这是应用鉴权边界，不是故障 |
-
-```bash
-./ai-helper.sh core-status
-```
-
-### 2026-08-27 故障结论
-
-故障有两层，不能只修第一层：
-
-1. Kubernetes newt workload 缺失时，四个入口快速返回 `502`。
-2. 恢复 newt 后，入口转为慢 `504`。Pangolin SQLite 中的四个 target 仍指向旧 Gateway ClusterIP `10.99.145.85`。
-
-恢复顺序是：恢复固定版本单副本 newt → 用 SQLite backup API 备份 Pangolin DB → 在一个事务中把 rid 3/4/14/15 更新到 `10.110.51.106` → 重启 newt 重新下发 target → 集群内 Host/SNI 与公网双向验证。
-
-```bash
-ssh node1 'python3 -' <<'PY'
-import sqlite3
-c = sqlite3.connect("file:/home/docker/pangolin/config/db/db.sqlite?mode=ro", uri=True)
-for row in c.execute("""
-  select r.resourceId, r.fullDomain, t.siteId, t.ip, t.port, t.method
-  from resources r join targets t on t.resourceId=r.resourceId
-  where r.resourceId in (3,4,14,15)
-  order by r.resourceId
-"""):
-    print(row)
-PY
-```
-
-Pangolin DB 是热 SQLite。修改前必须用 SQLite backup API，不能用热 `cp` 冒充一致性备份。`Websocket connected` 只证明控制连接存在；必须在 newt 日志看到四条 `Started tcp proxy to 10.110.51.106:443`，再看业务响应。
-
-## 3. ntfy 告警闭环
+## ntfy 告警闭环
 
 所有通道使用私有 topic 和 bearer token，凭据分别保存在 node1/node3 本地 secret 文件。
 
@@ -81,7 +21,7 @@ Pangolin DB 是热 SQLite。修改前必须用 SQLite backup API，不能用热 
 | ZeroSSL timer | node1 root wrapper 直接发 ntfy | 续期/分发成功与任一步失败 |
 
 ```bash
-./ai-helper.sh alerts-test
+# 端到端测试命令见 helper.sh 第二节「告警链路测试」（有副作用：会真实发送 ntfy）
 ssh node3 'systemctl status pigsty-alert-audit.service --no-pager'
 ssh node3 'journalctl -u pigsty-alert-audit.service -n 50 --no-pager'
 ```
@@ -106,7 +46,7 @@ ssh -L 8000:127.0.0.1:8000 node3
 - 通知：附加一个启用状态的原生 `ntfy` Channel。
 
 ```bash
-./ai-helper.sh healthchecks-status
+# 状态检查见 helper.sh 第一节「node3：Healthchecks 与 Gatus」（只读）
 ssh node3 'curl -fsS http://127.0.0.1:8000/api/v3/status/'
 ```
 
@@ -114,7 +54,7 @@ Healthchecks 与被监控的 pgBackRest 同在 node3，只能发现任务未执�
 
 ## 5. Kubernetes 状态与 Event 采集
 
-集群 OTel Helm chart 固定为 0.171.0，collector 为 0.158.0，Deployment 位于 `opentelemetry` namespace。启用项：
+启用项：
 
 - `clusterMetrics` → `k8s_cluster` receiver → node3 VictoriaMetrics。
 - `kubernetesEvents` → `k8sobjects` receiver → node3 VictoriaLogs。
@@ -128,7 +68,7 @@ Healthchecks 与被监控的 pgBackRest 同在 node3，只能发现任务未执�
 - `https://node3-traces.apikv.com/insert/opentelemetry/v1/traces`
 
 ```bash
-./ai-helper.sh otel-status
+# 摄入链路检查见 helper.sh 第一节「node3：K8s 状态/Event 摄入链路」（只读）
 ssh node3 'docker logs --since 10m gatus 2>&1 | grep -E "k8s-(cluster-state|event)-ingestion.*success=true"'
 ```
 
@@ -138,17 +78,19 @@ ssh node3 'docker logs --since 10m gatus 2>&1 | grep -E "k8s-(cluster-state|even
 
 ## 6. Bugsink
 
-Bugsink 2.5.0 运行在 node3，容器只发布 `127.0.0.1:8010`。公网资源 `bugsink.apikv.com` 是 Pangolin rid 35，siteId 7，target `127.0.0.1:8010 http`，SSO off。SDK 无法通过交互式 SSO，访问控制由 Bugsink 登录、项目成员和 DSN 承担。
+> **决策更新（2026-08-28 复核）**：错误监控定稿**维持 Bugsink**，本节从「存量待替换」恢复为目标态运行事实；GlitchTip 转为条件采纳（触发条件见 [TECH.md](TECH.md) §11.3）。
+
+Bugsink 2.5.0 当前仍运行在 node3，容器只发布 `127.0.0.1:8010`。公网资源 `bugsink.apikv.com` 是 Pangolin rid 35，siteId 7，target `127.0.0.1:8010 http`，SSO off。SDK 无法通过交互式 SSO，访问控制由 Bugsink 登录、项目成员和 DSN 承担。
 
 ```bash
-./ai-helper.sh bugsink-status
+# 状态检查见 helper.sh 第一节「node3：Bugsink」（只读）
 curl -fsS https://bugsink.apikv.com/health/ready
 ssh node3 'cd /data/bugsink && docker compose ps'
 ```
 
 已创建 `infrastructure-validation` 项目。Python Sentry SDK 提交 2 个同栈异常后，保存 2 个 Event 并聚合成 1 个 Issue，release 为 `infrastructure-validation@2026.08.27`；New Issue 实际触发 authenticated ntfy。DSN 和管理员凭据只在 Bugsink UI/node3 secret 中，不写入文档。
 
-详细部署、升级、桥接和备份说明见同级仓 `../../docker-deploy/bugsink/README.md`。
+详细部署、升级、桥接和备份说明见同级仓 `../../docker-deploy/bugsink/README.md`；本仓前端 SDK 接入手册见 [docs/observability/error-monitoring.md](observability/error-monitoring.md)，容量实测与调研结论见 [docs/reports/2026-08-28-bugsink-integration-research.md](reports/2026-08-28-bugsink-integration-research.md)。
 
 ## 7. ZeroSSL wildcard 证书结论
 
@@ -177,20 +119,20 @@ ssh node3 'cd /data/bugsink && docker compose ps'
 node1 到 node2 使用独立 Ed25519 key；node2 `authorized_keys` 配置 `restrict` 和强制 receiver，不能用该 key 获得通用 root shell。两个节点都在 `/var/lib/apikv-cert/backups/<UTC timestamp>/` 保留更新前副本。node2 更新失败时在本机回滚；node1 后续步骤失败时，node1 恢复本机并把旧证书重新发送到 node2。跨节点回滚是 best-effort，不具备数据库事务语义；回滚失败时必须按两个节点的备份手工恢复并重新执行严格握手验证。
 
 ```bash
-./ai-helper.sh cert-status
+# 指纹/到期日检查见 helper.sh 第一节「证书」（只读）
 ssh node1 'systemctl list-timers apikv-cert-renew.timer --no-pager'
 ssh node1 'journalctl -u apikv-cert-renew.service -n 100 --no-pager'
 ```
 
 本轮首次分发故意暴露出一个权限错误：blog 容器以 uid 100/gid 101 的 `nginx` 运行，`root:root`/`0600` 私钥导致 `nginx -t` 失败。node1 自动回滚恢复旧证书，修正为 `root:101`/`0640` 后重试成功。这个结果证明回滚路径实际执行过，也说明「私钥一律 0600」不是脱离进程身份的绝对规则。
 
-2026-08-27 严格握手验证中，Traefik、blog、Bugsink、Silo/MinIO、Harbor 和 Redis 都呈现上述新指纹与 `2026-11-25` 到期日。以后仍以 `cert-status` 的实际握手结果为准；只比较磁盘文件不能证明服务已 reload。
+2026-08-27 严格握手验证中，Traefik、blog、Bugsink、Silo/MinIO、Harbor 和 Redis 都呈现上述新指纹与 `2026-11-25` 到期日。以后仍以 `helper.sh`「证书」小节命令的实际握手结果为准；只比较磁盘文件不能证明服务已 reload。
 
 ## 8. 残余风险
 
-- Gatus、Healthchecks、Bugsink、Victoria 数据面都在 node3，node3 整机失联需要异机探针发现。
+- Gatus、Healthchecks、Bugsink、Victoria 数据面都在 node3，node3 整机失联需要异机探针发现；错误监控定稿维持 Bugsink（[TECH.md](TECH.md) §11.3），该单点故障域靠异机探针缓解而不是靠迁移消除。
 - Kubernetes Gateway HTTPS listener 仍引用 `default/global-default-tls`，集群直连特定域名会呈现 `dev.test` wildcard；公网在 node1 终止 ZeroSSL，因此不影响本轮四个公网入口，但 certificateRef 收敛仍单独跟踪。
-- Bugsink Source Map 上传路径尚未做真实前端构建验收。
+- Bugsink Source Map 上传路径尚未做真实前端构建验收；前端接入时用 `sentry-cli sourcemaps inject`（debug ID）+ artifact bundle 链路验收（Bugsink 2.0.14+ 支持，见接入报告）。
 - 部分电商服务仍向受保护的 `node3-otlp.apikv.com/v1/logs` 直发日志，2026-08-27 观察到 `401 missing or empty authorization header`。stdout → Vector → VL 与本轮 Kubernetes Event pipeline 不受影响；应用 SDK endpoint/header 需要单独收敛。
 - OTel `k8sobjects` alias 有弃用提示，当前稳定配置暂不在恢复期改为 `k8s_objects`；升级 chart/collector 时再迁移并回归 Event 查询。
 - 本轮不部署 Velero。

@@ -34,3 +34,5 @@ Kubernetes Secret、base64 编码和 Pod 环境变量都工作正常；问题是
 
 此规则只适用于单行密码、token 和 API key。不要对 PEM、证书链、YAML 或其他多行内容执行
 `tr -d '\r\n'`；删除这些内容的换行会破坏格式。
+
+**后续决策覆盖（2026-08-28）**：本条结论已被 docs/TECH.md 覆盖：搜索目标为隐藏在 `SearchCatalog` 接口后的 Elasticsearch 只读投影；Meilisearch 仅为存量待迁，Secret 换行处理规则仍然有效。
