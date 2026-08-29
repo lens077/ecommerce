@@ -2,7 +2,9 @@
 
 **代码路径**：`backend/pkg/outbox/`、`backend/tools/outbox-relay/`、`backend/pkg/searchindex/`
 
-PostgreSQL 事务发件箱、NATS JetStream relay 与搜索 projection 链。
+PostgreSQL 事务发件箱、存量 NATS JetStream relay 与搜索 projection 链。
+
+> **目标态（2026-08-28）**：按 `docs/TECH.md`，事件主干为外部非 K8s Apache Kafka，并强制采用 Outbox/Relay/Inbox + DLQ；NATS JetStream 仅为退役完成前的存量迁移组件。搜索投影目标为隐藏在 `SearchCatalog` 接口后的 Elasticsearch 只读投影，Meilisearch 为存量待迁。
 
 ## 当前事实
 

@@ -21,6 +21,16 @@ spec:
         app.kubernetes.io/component: cdc-relay
         app.kubernetes.io/part-of: ecommerce
     spec:
+      topologySpreadConstraints:
+        - maxSkew: 1
+          topologyKey: kubernetes.io/hostname
+          whenUnsatisfiable: DoNotSchedule
+          nodeAffinityPolicy: Honor
+          nodeTaintsPolicy: Honor
+          labelSelector:
+            matchLabels:
+              app.kubernetes.io/part-of: ecommerce
+      serviceAccountName: ecommerce-outbox-relay
       automountServiceAccountToken: false
       enableServiceLinks: false
       imagePullSecrets:

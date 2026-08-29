@@ -6,6 +6,8 @@ description: 内环开发用 okteto up 在集群身份下跑代码——什么�
 
 # 内环开发（okteto up）：判定与硬约束
 
+> **定位（2026-08-28 PoC 定稿）**：按 `docs/TECH.md` 开发内环分工——日常默认 `make dev`；**观察用 mirrord mirror**（集群 DNS/出站/入站流量镜像，只读；steal 在本集群 Cilium KPR/BPF host routing 下不可用不启用）；**接管用 Okteto（本文）**——需要本地代码真实接请求或复现 Pod 身份（Secret mode/uid/容器 CA/Pod IP）时走 `okteto up`。注意 Okteto 接管是排他的整体替换；「多人同时对同一服务按请求接管」是待触发评估项（Telepresence personal intercept / mirrord Teams，触发信号见 `docs/reports/2026-08-28-mirrord-poc.md` 裁决 §7）。Docker Compose 定位为 pre 半生产环境测试，生产注册发现使用 K8s Service + CoreDNS。正文中的 Consul 操作保留为存量活系统约束。
+>
 > **操作手册（命令、manifest、排错）在 [`docs/OKTETO.md`](../../docs/OKTETO.md)。**
 > 本文件只写判定与不可协商的约束。
 

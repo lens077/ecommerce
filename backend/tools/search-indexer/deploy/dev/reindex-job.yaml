@@ -18,6 +18,7 @@ spec:
         app.kubernetes.io/component: search-reindex
         app.kubernetes.io/part-of: ecommerce
     spec:
+      serviceAccountName: ecommerce-search-indexer
       automountServiceAccountToken: false
       enableServiceLinks: false
       imagePullSecrets:

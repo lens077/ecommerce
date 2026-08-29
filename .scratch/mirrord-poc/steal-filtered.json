@@ -1,0 +1,23 @@
+{
+  "target": {
+    "path": "deployment/ecommerce-cart-deploy",
+    "namespace": "ecommerce"
+  },
+  "agent": {
+    "ttl": 30
+  },
+  "feature": {
+    "network": {
+      "incoming": {
+        "mode": "steal",
+        "http_filter": {
+          "header_filter": "x-mirrord-poc: 1"
+        }
+      },
+      "dns": true,
+      "outgoing": true
+    },
+    "env": false,
+    "fs": "local"
+  }
+}

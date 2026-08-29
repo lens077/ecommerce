@@ -6,21 +6,21 @@
 **代码路径**：`/Users/sumery/lens077/control-tower/services/gateway`（合一仓 control-tower，
 Connect 原生重写，零 kratos 代码）。集群里跑的是 `control-tower-gateway`（ecommerce ns）。
 
-请求链：`recover → otel → accesslog → cors → auth → proxy`。auth 主路径是
-BFF session（Web httpOnly cookie、Tauri session header），迁移期兼容 legacy bearer JWT；
-Casbin 做 roles × procedure 授权，转发前先剥离再注入 `x-md-global-*`。
-转发是端到端 Connect 直通——无转码、无请求体缓存、**默认无重试**；旧网关的
-BBR、熔断与 HTTP/3 已删除。选点走 Consul Watch + P2C，配置全部来自 Config Center。
+请求链：`recover → otel → accesslog → cors → auth → proxy`。按 `docs/TECH.md`，现行鉴权规范是
+Casdoor 有状态 Session（Dragonfly Session Store）+ OpenFGA；**完全废弃 JWT，严禁保留双重鉴权路径**。
+转发前先剥离再注入 `x-md-global-*`。转发是端到端 ConnectRPC over HTTP/2（H2C）直通——
+严禁降级 HTTP/1.1，无转码、无请求体缓存、**默认无重试**；旧网关的 BBR、熔断与 HTTP/3 已删除。
+当前选点仍走存量 Consul Watch + P2C；注册发现目标为 K8s Service + CoreDNS。配置全部来自 Config Center。
 现行会话决策见 `../control-tower/docs/design/adr-0002-bff-session.md`。
 
-## Config Center 五键（namespace=`gateway`）
+## 存量 Config Center 五键（namespace=`gateway`）
 
 | 键 | 作用 |
 |---|---|
 | `routes.yaml` | RouteConfig v2：路由表 + 匿名清单 + `online_check` + CORS |
-| `secrets/public.pem` | JWT 验签公钥 |
-| `policies/policies.csv` + `policies/model.conf` | Casbin RBAC |
-| `auth/revocations.yaml` | legacy bearer 撤销名单；BFF session 撤权直接删 session |
+| `secrets/public.pem` | 存量 JWT 验签公钥；目标态删除 |
+| `policies/policies.csv` + `policies/model.conf` | 存量 Casbin RBAC；目标态由 OpenFGA 替代 |
+| `auth/revocations.yaml` | 存量 legacy bearer 撤销名单；目标态不保留 JWT 路径，Session 撤权直接删 Dragonfly Session |
 
 - **五个条目必须 `is_secret=false`**。Config Center 把 `is_secret=true` 的值统一返回
   `******`，机器 token 也不例外，网关会解析失败。selector token 与 TLS 私钥只进

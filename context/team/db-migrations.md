@@ -25,7 +25,7 @@ description: 数据库结构变更与种子数据的唯一路径——goose 版�
    `ON CONFLICT DO NOTHING/UPDATE` 或 `WHERE NOT EXISTS` 是硬要求；
    外键一律用业务键子查询（`(SELECT id FROM products.spus WHERE spu_code=...)`），
    写死自增 ID 的种子在非空库上必错位。
-4. **存量环境接管用 baseline，不改 DDL 语义**：已手工建过表的库（集群 CNPG）跑
+4. **存量环境接管用 baseline，不改 DDL 语义**：已手工建过表的库（当前外部 Pigsty；CNPG 仅为存量休眠环境）跑
    `make migrate-baseline` 把「现状=已应用」记进版本表；**不要**为了可重放把
    `CREATE TYPE` 包进 `DO $$ ... EXCEPTION` ——sqlc 的解析器没有 DO 块分支，
    包进去的类型会从 catalog 里消失，枚举模型直接退化（对抗第4轮 codex 实证）。

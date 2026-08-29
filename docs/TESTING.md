@@ -378,7 +378,7 @@ test-integration:
 |---|---|---|
 | 10 个服务各起一个 PG 容器 | 接受。包级复用 + Snapshot/Restore 已经够快 | 全量集成测试超过 5 分钟时，开 testcontainers 的 `WithReuse` 跨包复用 |
 | Redis 用 miniredis 而非真 Dragonfly | 接受。绝大多数用例只验键结构与序列化 | 测分布式锁/Lua 脚本时，换 generic container 起 Dragonfly |
-| 不测 ES / MinIO / Consul | 接受。这些是 search/cart 的边缘路径 | 对应服务的核心链路依赖它们时 |
+| 不测 Elasticsearch / Silo / Consul | 接受。Elasticsearch 只读投影与 Silo 是 search/cart 的边缘路径；Consul 仅为迁移期存量 | 对应服务的核心链路依赖 Elasticsearch/Silo 时；Consul 随服务发现迁移退役，不新增目标态测试 |
 | 不做契约测试（前后端） | 接受。proto + buf breaking 已覆盖大部分 | `buf breaking` 进 CI 之后再评估 |
 | `service` 层测试 | 接受。错误码映射靠 review | biz 层铺完之后 |
 | **不用 Okteto 做测试环境** | 见下节，2026-08-11 评估后否决 | 改用集群内 self-hosted CI runner 时重新评估 |

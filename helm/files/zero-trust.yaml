@@ -1,0 +1,465 @@
+# Canonical ecommerce workload identity and network baseline.
+#
+# This file is intentionally plain Kubernetes YAML (not a Helm template):
+# - helm/templates/zero-trust.yaml includes it verbatim;
+# - backend/Makefile applies the same file before emergency raw manifests.
+# Keeping one source prevents Helm and raw-deploy security rules from drifting.
+#
+# None of these workloads calls the Kubernetes API. Each therefore gets a
+# dedicated identity with no RoleBinding and no automatically projected token.
+apiVersion: v1
+kind: ServiceAccount
+metadata:
+  name: ecommerce-user
+  namespace: ecommerce
+automountServiceAccountToken: false
+---
+apiVersion: v1
+kind: ServiceAccount
+metadata:
+  name: ecommerce-search
+  namespace: ecommerce
+automountServiceAccountToken: false
+---
+apiVersion: v1
+kind: ServiceAccount
+metadata:
+  name: ecommerce-product
+  namespace: ecommerce
+automountServiceAccountToken: false
+---
+apiVersion: v1
+kind: ServiceAccount
+metadata:
+  name: ecommerce-order
+  namespace: ecommerce
+automountServiceAccountToken: false
+---
+apiVersion: v1
+kind: ServiceAccount
+metadata:
+  name: ecommerce-inventory
+  namespace: ecommerce
+automountServiceAccountToken: false
+---
+apiVersion: v1
+kind: ServiceAccount
+metadata:
+  name: ecommerce-cart
+  namespace: ecommerce
+automountServiceAccountToken: false
+---
+apiVersion: v1
+kind: ServiceAccount
+metadata:
+  name: ecommerce-merchant
+  namespace: ecommerce
+automountServiceAccountToken: false
+---
+apiVersion: v1
+kind: ServiceAccount
+metadata:
+  name: ecommerce-address
+  namespace: ecommerce
+automountServiceAccountToken: false
+---
+apiVersion: v1
+kind: ServiceAccount
+metadata:
+  name: ecommerce-behavior
+  namespace: ecommerce
+automountServiceAccountToken: false
+---
+apiVersion: v1
+kind: ServiceAccount
+metadata:
+  name: ecommerce-payment
+  namespace: ecommerce
+automountServiceAccountToken: false
+---
+apiVersion: v1
+kind: ServiceAccount
+metadata:
+  name: ecommerce-frontend
+  namespace: ecommerce
+automountServiceAccountToken: false
+---
+apiVersion: v1
+kind: ServiceAccount
+metadata:
+  name: ecommerce-outbox-relay
+  namespace: ecommerce
+automountServiceAccountToken: false
+---
+apiVersion: v1
+kind: ServiceAccount
+metadata:
+  name: ecommerce-search-indexer
+  namespace: ecommerce
+automountServiceAccountToken: false
+---
+# The API services trust x-md-* identity headers injected by control-tower.
+# Network policy is therefore part of the authentication boundary: only the
+# gateway workload may reach RPC ports. host/remote-node is limited to the same
+# port for kubelet readiness/liveness probes; a compromised node remains a
+# trusted-computing-base risk and cannot be solved with a pod network policy.
+apiVersion: cilium.io/v2
+kind: CiliumNetworkPolicy
+metadata:
+  name: ecommerce-api-default-deny
+  namespace: ecommerce
+specs:
+  - description: "user: gateway-only ingress; Postgres, Dragonfly and Casdoor dependencies"
+    endpointSelector:
+      matchLabels:
+        io.cilium.k8s.policy.serviceaccount: ecommerce-user
+    enableDefaultDeny: { ingress: true, egress: true }
+    ingress:
+      - fromEndpoints: &gateway
+          - matchLabels:
+              k8s:io.kubernetes.pod.namespace: ecommerce
+              io.cilium.k8s.policy.serviceaccount: control-tower-gateway
+        toPorts:
+          - ports: [{ port: "30001", protocol: TCP }]
+      - fromEntities: [host, remote-node]
+        toPorts:
+          - ports: [{ port: "30001", protocol: TCP }]
+      - fromEndpoints: &consul_checker
+          - matchLabels:
+              k8s:io.kubernetes.pod.namespace: consul
+              io.cilium.k8s.policy.serviceaccount: consul-server
+        toPorts:
+          - ports: [{ port: "30001", protocol: TCP }]
+    egress:
+      - &dns
+        toEndpoints:
+          - matchLabels:
+              k8s:io.kubernetes.pod.namespace: kube-system
+              k8s-app: kube-dns
+        toPorts:
+          - ports:
+              - { port: "53", protocol: UDP }
+              - { port: "53", protocol: TCP }
+            rules:
+              dns:
+                - matchPattern: "*"
+      - &config_center
+        toServices:
+          - k8sService:
+              namespace: config-center
+              serviceName: config-center
+        toPorts:
+          - ports: [{ port: "30010", protocol: TCP }]
+      - &consul
+        toEndpoints:
+          - matchLabels:
+              k8s:io.kubernetes.pod.namespace: consul
+              app: consul
+              component: server
+        toPorts:
+          - ports:
+              - { port: "8500", protocol: TCP }
+              - { port: "8501", protocol: TCP }
+      - &otlp
+        toFQDNs:
+          - matchName: node3-otlp.apikv.com
+        toPorts:
+          - ports: [{ port: "443", protocol: TCP }]
+      - &postgres
+        toCIDR:
+          - <node1-source-cidr>
+        toPorts:
+          - ports: [{ port: "30001", protocol: TCP }]
+      - &casdoor
+        toFQDNs:
+          - matchName: casdoor.apikv.com
+        toPorts:
+          - ports: [{ port: "443", protocol: TCP }]
+      - &dragonfly
+        toEndpoints:
+          - matchLabels:
+              k8s:io.kubernetes.pod.namespace: dragonfly
+              app.kubernetes.io/instance: dragonfly
+              app.kubernetes.io/name: dragonfly
+        toPorts:
+          - ports: [{ port: "6379", protocol: TCP }]
+  - description: "gateway: public ingress; exact control-plane/session/identity/API dependencies"
+    endpointSelector:
+      matchLabels:
+        io.cilium.k8s.policy.serviceaccount: control-tower-gateway
+    enableDefaultDeny: { ingress: true, egress: true }
+    ingress:
+      - fromEntities: [ingress]
+        toPorts:
+          - ports: [{ port: "8080", protocol: TCP }]
+      - fromEndpoints:
+          - matchLabels:
+              k8s:io.kubernetes.pod.namespace: ecommerce
+              io.cilium.k8s.policy.serviceaccount: ecommerce-consumer-next
+        toPorts:
+          - ports: [{ port: "8080", protocol: TCP }]
+      - fromEntities: [host, remote-node]
+        toPorts:
+          - ports: [{ port: "8080", protocol: TCP }]
+    egress:
+      - *dns
+      - *config_center
+      - *consul
+      - *casdoor
+      - toServices:
+          - k8sService:
+              namespace: opentelemetry
+              serviceName: otel-opentelemetry-collector
+          - k8sService:
+              namespace: observability
+              serviceName: jaeger
+        toPorts:
+          - ports: [{ port: "4318", protocol: TCP }]
+      - *dragonfly
+      - toEndpoints:
+          # Current raw manifests.
+          - matchExpressions:
+              - key: app
+                operator: In
+                values:
+                  - ecommerce-user
+                  - ecommerce-search
+                  - ecommerce-product
+                  - ecommerce-order
+                  - ecommerce-inventory
+                  - ecommerce-cart
+                  - ecommerce-merchant
+                  - ecommerce-address
+                  - ecommerce-behavior
+                  - ecommerce-payment
+          # Helm subcharts use app.kubernetes.io/name instead.
+          - matchExpressions:
+              - key: app.kubernetes.io/name
+                operator: In
+                values: [user, search, product, order, inventory, cart, merchant, address, behavior, payment]
+        toPorts:
+          - ports:
+              - { port: "30001", protocol: TCP }
+              - { port: "30002", protocol: TCP }
+              - { port: "30003", protocol: TCP }
+              - { port: "30004", protocol: TCP }
+              - { port: "30005", protocol: TCP }
+              - { port: "30006", protocol: TCP }
+              - { port: "30007", protocol: TCP }
+              - { port: "30008", protocol: TCP }
+              - { port: "30009", protocol: TCP }
+              - { port: "30011", protocol: TCP }
+  - description: "search: gateway-only ingress; Meilisearch projection query path"
+    endpointSelector:
+      matchLabels:
+        io.cilium.k8s.policy.serviceaccount: ecommerce-search
+    enableDefaultDeny: { ingress: true, egress: true }
+    ingress:
+      - fromEndpoints: *gateway
+        toPorts:
+          - ports: [{ port: "30002", protocol: TCP }]
+      - fromEntities: [host, remote-node]
+        toPorts:
+          - ports: [{ port: "30002", protocol: TCP }]
+      - fromEndpoints: *consul_checker
+        toPorts:
+          - ports: [{ port: "30002", protocol: TCP }]
+    egress:
+      - *dns
+      - *config_center
+      - *consul
+      - *otlp
+      - &meilisearch
+        toEndpoints:
+          - matchLabels:
+              k8s:io.kubernetes.pod.namespace: search
+              app.kubernetes.io/instance: meilisearch
+              app.kubernetes.io/name: meilisearch
+        toPorts:
+          - ports: [{ port: "7700", protocol: TCP }]
+  - description: "product: gateway-only ingress; Postgres, Dragonfly and Gorse dependencies"
+    endpointSelector:
+      matchLabels:
+        io.cilium.k8s.policy.serviceaccount: ecommerce-product
+    enableDefaultDeny: { ingress: true, egress: true }
+    ingress:
+      - fromEndpoints: *gateway
+        toPorts:
+          - ports: [{ port: "30003", protocol: TCP }]
+      - fromEntities: [host, remote-node]
+        toPorts:
+          - ports: [{ port: "30003", protocol: TCP }]
+      - fromEndpoints: *consul_checker
+        toPorts:
+          - ports: [{ port: "30003", protocol: TCP }]
+    egress:
+      - *dns
+      - *config_center
+      - *consul
+      - *otlp
+      - *postgres
+      - *dragonfly
+      - &gorse
+        toFQDNs:
+          - matchName: gorse.apikv.com
+        toPorts:
+          - ports: [{ port: "443", protocol: TCP }]
+  - description: "order: gateway-only ingress; Postgres and Dragonfly dependencies"
+    endpointSelector:
+      matchLabels:
+        io.cilium.k8s.policy.serviceaccount: ecommerce-order
+    enableDefaultDeny: { ingress: true, egress: true }
+    ingress:
+      - fromEndpoints: *gateway
+        toPorts:
+          - ports: [{ port: "30004", protocol: TCP }]
+      - fromEntities: [host, remote-node]
+        toPorts:
+          - ports: [{ port: "30004", protocol: TCP }]
+      - fromEndpoints: *consul_checker
+        toPorts:
+          - ports: [{ port: "30004", protocol: TCP }]
+    egress:
+      - *dns
+      - *config_center
+      - *consul
+      - *otlp
+      - *postgres
+      - *dragonfly
+  - description: "inventory: gateway-only ingress; Postgres and Dragonfly dependencies"
+    endpointSelector:
+      matchLabels:
+        io.cilium.k8s.policy.serviceaccount: ecommerce-inventory
+    enableDefaultDeny: { ingress: true, egress: true }
+    ingress:
+      - fromEndpoints: *gateway
+        toPorts:
+          - ports: [{ port: "30005", protocol: TCP }]
+      - fromEntities: [host, remote-node]
+        toPorts:
+          - ports: [{ port: "30005", protocol: TCP }]
+      - fromEndpoints: *consul_checker
+        toPorts:
+          - ports: [{ port: "30005", protocol: TCP }]
+    egress: [*dns, *config_center, *consul, *otlp, *postgres, *dragonfly]
+  - description: "cart: gateway-only ingress; Postgres, Dragonfly and S3 dependencies"
+    endpointSelector:
+      matchLabels:
+        io.cilium.k8s.policy.serviceaccount: ecommerce-cart
+    enableDefaultDeny: { ingress: true, egress: true }
+    ingress:
+      - fromEndpoints: *gateway
+        toPorts:
+          - ports: [{ port: "30006", protocol: TCP }]
+      - fromEntities: [host, remote-node]
+        toPorts:
+          - ports: [{ port: "30006", protocol: TCP }]
+      - fromEndpoints: *consul_checker
+        toPorts:
+          - ports: [{ port: "30006", protocol: TCP }]
+    egress:
+      - *dns
+      - *config_center
+      - *consul
+      - *otlp
+      - *postgres
+      - *dragonfly
+      - &minio
+        toFQDNs:
+          - matchName: minio.apikv.com
+        toPorts:
+          - ports: [{ port: "443", protocol: TCP }]
+  - description: "merchant: gateway-only ingress; Postgres and Dragonfly dependencies"
+    endpointSelector:
+      matchLabels:
+        io.cilium.k8s.policy.serviceaccount: ecommerce-merchant
+    enableDefaultDeny: { ingress: true, egress: true }
+    ingress:
+      - fromEndpoints: *gateway
+        toPorts:
+          - ports: [{ port: "30007", protocol: TCP }]
+      - fromEntities: [host, remote-node]
+        toPorts:
+          - ports: [{ port: "30007", protocol: TCP }]
+      - fromEndpoints: *consul_checker
+        toPorts:
+          - ports: [{ port: "30007", protocol: TCP }]
+    egress: [*dns, *config_center, *consul, *otlp, *postgres, *dragonfly]
+  - description: "payment: gateway-only ingress; Alipay remains blocked until configured"
+    endpointSelector:
+      matchLabels:
+        io.cilium.k8s.policy.serviceaccount: ecommerce-payment
+    enableDefaultDeny: { ingress: true, egress: true }
+    ingress:
+      - fromEndpoints: *gateway
+        toPorts:
+          - ports: [{ port: "30008", protocol: TCP }]
+      - fromEntities: [host, remote-node]
+        toPorts:
+          - ports: [{ port: "30008", protocol: TCP }]
+      - fromEndpoints: *consul_checker
+        toPorts:
+          - ports: [{ port: "30008", protocol: TCP }]
+    egress: [*dns, *config_center, *consul, *otlp, *postgres]
+  - description: "address: gateway-only ingress; Postgres and Dragonfly dependencies"
+    endpointSelector:
+      matchLabels:
+        io.cilium.k8s.policy.serviceaccount: ecommerce-address
+    enableDefaultDeny: { ingress: true, egress: true }
+    ingress:
+      - fromEndpoints: *gateway
+        toPorts:
+          - ports: [{ port: "30009", protocol: TCP }]
+      - fromEntities: [host, remote-node]
+        toPorts:
+          - ports: [{ port: "30009", protocol: TCP }]
+      - fromEndpoints: *consul_checker
+        toPorts:
+          - ports: [{ port: "30009", protocol: TCP }]
+    egress: [*dns, *config_center, *consul, *otlp, *postgres, *dragonfly]
+  - description: "behavior/telemetry: gateway-only ingress; Postgres, Dragonfly and Gorse dependencies"
+    endpointSelector:
+      matchLabels:
+        io.cilium.k8s.policy.serviceaccount: ecommerce-behavior
+    enableDefaultDeny: { ingress: true, egress: true }
+    ingress:
+      - fromEndpoints: *gateway
+        toPorts:
+          - ports: [{ port: "30011", protocol: TCP }]
+      - fromEntities: [host, remote-node]
+        toPorts:
+          - ports: [{ port: "30011", protocol: TCP }]
+      - fromEndpoints: *consul_checker
+        toPorts:
+          - ports: [{ port: "30011", protocol: TCP }]
+    egress: [*dns, *config_center, *consul, *otlp, *postgres, *dragonfly, *gorse]
+  - description: "consumer-next SSR: Cilium Gateway ingress; gateway-only runtime egress"
+    endpointSelector:
+      matchLabels:
+        io.cilium.k8s.policy.serviceaccount: ecommerce-consumer-next
+    enableDefaultDeny: { ingress: true, egress: true }
+    ingress:
+      - fromEntities: [ingress]
+        toPorts:
+          - ports: [{ port: "3004", protocol: TCP }]
+      - fromEntities: [host, remote-node]
+        toPorts:
+          - ports: [{ port: "3004", protocol: TCP }]
+    egress:
+      - *dns
+      - toEndpoints: *gateway
+        toPorts:
+          - ports: [{ port: "8080", protocol: TCP }]
+  - description: "static frontend: Cilium Gateway ingress only; no runtime egress"
+    endpointSelector:
+      matchLabels:
+        io.cilium.k8s.policy.serviceaccount: ecommerce-frontend
+    enableDefaultDeny: { ingress: true, egress: true }
+    ingress:
+      - fromEntities: [ingress]
+        toPorts:
+          - ports: [{ port: "80", protocol: TCP }]
+      - fromEntities: [host, remote-node]
+        toPorts:
+          - ports: [{ port: "80", protocol: TCP }]
+    egress: []

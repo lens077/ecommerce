@@ -55,7 +55,7 @@
 | 支付渠道 | 微信支付 | 支付宝（smartwalle/alipay） |
 | 定时任务 | Goroutine 自实现 SchedulerService | 无统一调度组件（behavior 以内存队列 + `synced_at` 做 outbox 补偿） |
 | 输入安全 | bluemonday HTML 消毒防 XSS | buf.validate 结构校验 + React 默认转义；无富文本消毒（当前无 UGC） |
-| 管理端前端 | UmiJS 4 + Ant Design 6.4 + umi-presets-pro + keepalive | pnpm monorepo（4 app + 9 包）+ vite-plus + MUI + TanStack Router/Query + valtio + ConnectRPC/Protobuf-ES |
+| 管理端前端 | UmiJS 4 + Ant Design 6.4 + umi-presets-pro + keepalive | pnpm monorepo（4 app + 9 包）+ vite-plus + MUI + TanStack Router/Query + Zustand + ConnectRPC/Protobuf-ES |
 
 两侧都用 React 19；差别在组织方式——它按 UmiJS 约定式框架走，本仓自组 monorepo 工具链。
 

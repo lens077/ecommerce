@@ -17,20 +17,20 @@ Golang + React 的 B2B2C 多商家电商实践项目：10 个后端微服务、c
 |---|---|
 | 后端 | Go、ConnectRPC Go、Protobuf/Buf、Protovalidate、Fx、pgx、sqlc、goose、OpenTelemetry |
 | 前端 | React、TypeScript、ConnectRPC/Protobuf-ES、pnpm workspace、vite-plus（vp）、Tauri |
-| 网关/配置 | [control-tower](https://github.com/lens077/control-tower)：BFF session + legacy JWT、Casbin RBAC、Connect 直通、Config Center；默认无重试、无 BBR/熔断/HTTP/3 |
-| 数据 | node3 Pigsty PostgreSQL、Dragonfly（业务可丢缓存 + BFF session）、Meilisearch、Silo S3-compatible；CNPG 休眠，SeaweedFS 尚待迁移 |
-| 事件 | PostgreSQL outbox + relay + NATS JetStream + search indexer；当前优先补 NATS R3、Inbox、NACK/DLQ、重放与容量/恢复证据，分析 CDC 仅在真实需求成立后评估 |
-| 注册/配置 | Consul 仅做注册发现并待迁 K8s Service DNS；Config Center 是 10 个服务唯一 Bootstrap 来源 |
+| 网关/配置 | [control-tower](https://github.com/lens077/control-tower)：Casdoor 有状态 Session（BFF）、Connect 直通（H2C）、Config Center；目标按 [`docs/TECH.md`](docs/TECH.md) 以 OpenFGA 关系授权取代存量 Casbin、移除 legacy JWT 兼容轨；默认无重试、无 BBR/熔断/HTTP/3 |
+| 数据 | node3 Pigsty PostgreSQL（Patroni HA + PgBouncer，UUIDv7 主键）、Dragonfly（分实例：Session/Cache/限流，业务可丢缓存 + BFF session）、Silo（基于 MinIO，定稿）；搜索定稿 Elasticsearch（`SearchCatalog` 只读投影），存量 Meilisearch 待迁；CNPG 仅存量休眠 |
+| 事件 | PostgreSQL outbox + relay + Inbox 幂等 + DLQ；主干定稿 Apache Kafka（外部非 K8s 集群，见 [`docs/TECH.md`](docs/TECH.md)），存量 NATS JetStream + search indexer 迁移期维护、验收后退役 |
+| 注册/配置 | 服务发现定稿 K8s Service + CoreDNS；pre 半生产测试走 Docker Compose 服务名，开发内环（mirrord/Okteto）评估中；Consul 为存量迁移期组件；Config Center 是 10 个服务唯一 Bootstrap 来源 |
 | 边缘/安全 | Cilium CNI/KPR/LB/Gateway API、cert-manager、ESO + Vault；业务服务的默认拒绝 NetworkPolicy 和 east-west 身份仍不完整 |
-| 制品/交付 | Docker Buildx、TCR + GHCR 镜像、Harbor Helm OCI helper、Kubernetes manifest、Helm、GitHub Actions；ArgoCD 当前断线 |
+| 制品/交付 | Docker Buildx、GitHub Actions、Renovate；制品分工（[`docs/TECH.md`](docs/TECH.md) §7.1）：TCR 为主镜像仓库（集群直连拉取）、Harbor 存 Helm 制品（OCI）、GHCR 可选双存（镜像+Helm，是否推送由 CI 按网络决定）；Kubernetes manifest、Helm；ArgoCD 当前断线 |
 | 可观测性 | OpenTelemetry、Vector、VictoriaMetrics/Logs/Traces、Grafana、vmalert、Alertmanager；外部告警通知仍未闭环 |
 | 工程工具 | vite-plus、oxlint/oxfmt、Vitest/Playwright、Buf breaking、structcheck、verify-context/canary、commitlint |
 
-架构要点（详见 [`docs/design/`](docs/design/README.md) 与 [`STACK.md`](STACK.md)）：
+架构要点（技术架构/选型/基础设施真相源为 [`docs/TECH.md`](docs/TECH.md)，业务设计详见 [`docs/design/`](docs/design/README.md)，工程约束见 [`STACK.md`](STACK.md)）：
 
 - **API 契约先行**：google protobuf 定义前后端交互，`@bufbuild/buf` 生成代码，每个字段带 `buf.validate` 约束
 - **后端分层**参考 go-kratos：biz（领域结构体）→ data（DB/cache/search/event/object）→ service（proto 转换）→ server（fx 装配与注册发现）
-- **入口能力集中**：BFF session/JWT、Casbin 授权、路由、超时与可信身份头由 control-tower gateway 处理；服务仍负责数据归属与领域权限
+- **入口能力集中**：Casdoor 有状态 Session 校验、授权（目标 OpenFGA，存量 Casbin/legacy JWT 待移除）、路由、超时与可信身份头由 control-tower gateway 处理；服务仍负责数据归属与领域权限
 - **配置源与业务配置分离**：服务先读一份很小的 selector，再从 Config Center 取完整 `Bootstrap`；不存在 Consul KV 回退
 - **交付实况**：GitHub Actions 按 semver tag 构建并双推 TCR/GHCR，再回写 Helm tag；ArgoCD 当前没有 Application，部署仍走 `backend/services/*/deploy/`
 - **可观测性**：Vector 采容器日志，应用经 OTel SDK 输出三支柱；node3 的 VictoriaMetrics/Logs/Traces 与 Grafana 汇总查询
@@ -44,7 +44,7 @@ Golang + React 的 B2B2C 多商家电商实践项目：10 个后端微服务、c
 | `frontend/` | pnpm monorepo：4 app（consumer / merchant / admin / desktop）+ 9 共享包，见 [`frontend/README.md`](frontend/README.md) |
 | `context/` | AI/团队三层知识库（团队级 / 框架级 / 服务级），入口 [`context/INDEX.md`](context/INDEX.md) |
 | `helm/`、`argocd-*.yml` | 待修复的 Helm/GitOps 描述；当前部署实况以各服务 `deploy/` 为准 |
-| `docs/` | 架构与领域设计（`docs/design/`，按微服务分目录）、可观测性方法论与看板脚本（`docs/observability/`）、agents 配置（`docs/agents/`）、历史评审归档（`docs/reviews/`） |
+| `docs/` | 技术真相源（`docs/TECH.md`）、架构与领域设计（`docs/design/`，按微服务分目录）、**待办明细**（`docs/todo/`，按 TECH.md 体系分类）、可观测性方法论与看板脚本（`docs/observability/`）、agents 配置（`docs/agents/`）、不可变历史归档（`docs/progress-archive/`）、调研报告（`docs/reports/`） |
 | `scripts/` | 验收锚点与门禁脚本（verify-quick / verify-context + canary / lint-baseline / harness-scars） |
 | `.scratch/` | 进行中的 spec / issue（本地 markdown 工作流） |
 
@@ -57,12 +57,13 @@ Golang + React 的 B2B2C 多商家电商实践项目：10 个后端微服务、c
 | 文档 | 定位 |
 |---|---|
 | [`AGENTS.md`](AGENTS.md) | AI 协作入口：硬规则 + 验收锚点命令（**改代码前先读**） |
-| [`docs/design/`](docs/design/README.md) | 架构与领域设计真相源：按微服务分目录（platform/product/order/…），含拆分与删章记录 |
+| [`docs/TECH.md`](docs/TECH.md) | **技术架构、技术选型与基础设施真相源**（2026-08-28 定稿）：选型总览、流量拓扑、协同模型、微服务纲领、鉴权与可观测性体系、实施路线图与工程红线；其他文档与之冲突处以它为准 |
+| [`docs/design/`](docs/design/README.md) | 业务与领域设计真相源：按微服务分目录（platform/product/order/…），含拆分与删章记录 |
 | [`production-scale-goal.md`](docs/design/platform/production-scale-goal.md) | 百万/千万级生产化目标、现有技术栈边界、证据门禁、分阶段路线和完成定义 |
-| [`STACK.md`](STACK.md) | 技术栈与工程约束：版本锁定、分层铁律、proto/sqlc 规则（真相源） |
+| [`STACK.md`](STACK.md) | 工程约束与现状边界：版本锁定、分层铁律、proto/sqlc 规则；选型冲突以 `docs/TECH.md` 为准 |
 | [`.service-matrix.yaml`](.service-matrix.yaml) | 服务拓扑事实表：注册名、网关前缀、依赖、Config Center 键（CI 强制对齐） |
-| [`TODO.md`](TODO.md) | 实现进度真相源（当前实况以它为准） |
-| [`docs/PRIORITY.md`](docs/PRIORITY.md) | 待办优先级排序（P0→P7，按最终目标）：**不是进度真相源**，只回答「先做哪个」，冲突以 `TODO.md` 为准 |
+| [`TODO.md`](TODO.md) | **进度与待办的唯一真相源**：全局优先级视图 + 分类索引；任何待办变更都要落到它 |
+| [`docs/todo/`](docs/todo/README.md) | 待办明细，按 `docs/TECH.md` 的体系分类（可观测性/事件驱动/鉴权/基础设施…）；由 `TODO.md` 索引 |
 | [`docs/TECH-RADAR.md`](docs/TECH-RADAR.md) | CNCF Landscape 选型评估；新增基础设施必须由量化需求、容量或故障证据触发 |
 | [`PRODUCT.md`](PRODUCT.md) / [`DESIGN.md`](DESIGN.md) | 产品定义与「灯市」视觉设计系统（配色/字体/间距 token），前端设计工作流（impeccable）的真相源——与已拆分的旧架构 DESIGN.md 同名不同物 |
 | [`docs/DEVOPS.md`](docs/DEVOPS.md) / [`observability/OBSERVABILITY.md`](docs/observability/OBSERVABILITY.md) | DevOps 与可观测性的**目标态**设计 |
@@ -76,7 +77,7 @@ Golang + React 的 B2B2C 多商家电商实践项目：10 个后端微服务、c
 1. Go >= 1.26（`backend/go.mod` 当前 1.26.5；网关在同级仓 control-tower）
 2. 前端：Node.js >= 22、pnpm 11
 3. 数据库：PostgreSQL 18（当前主库由 node3 Pigsty 承载）；Dragonfly 用于业务可丢缓存和 control-tower BFF session。领域锁、幂等键与库存真相必须锚定 PostgreSQL
-4. 注册/发现：Consul（**定稿退役 → K8s Service DNS**，四步迁移见 TODO；迁移完成前运行仍需）
+4. 注册/发现：Consul（**定稿退役 → K8s Service + CoreDNS，开发环境 Docker Compose 服务名**，见 [`docs/TECH.md`](docs/TECH.md) §10.2；四步迁移见 TODO；迁移完成前运行仍需）
 
 配置中心（同级仓 [control-tower](https://github.com/lens077/control-tower) 的 config 服务）是
 10 个业务服务的**必需启动依赖**。Consul 只负责服务注册发现，不再存储 Bootstrap。

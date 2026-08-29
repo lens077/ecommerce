@@ -122,9 +122,9 @@ address 仍存在 BOLA：`CreateAddress` 信任请求体 `user_id`，Update/Dele
 
 ### 发布结果
 
-- Helm release 从 revision 2 升级到 revision 3；
+- Helm release 当前为 revision 5；
 - DaemonSet 从 node103 单点改为 node101/node102/node103 三节点 `3/3` Ready；
-- live operator 仍固定 node103；后续源码已取消该硬钉，但尚未执行新的 Helm upgrade；
+- operator 已取消 node103 selector，当前单副本落在 node101；
 - 开启 process credential/namespace 上下文；
 - exporter 保留 ecommerce `PROCESS_EXEC`、`PROCESS_EXIT`、`PROCESS_KPROBE` 与敏感命令行参数脱敏。
 
@@ -165,12 +165,15 @@ path=/var/run/secrets/tokens/audit-token
 
 完整数据路径、调查入口与回滚见 `infrastructure/observability/README.md`。
 
-## Pod 节点落点补充（源码已验证，未发布）
+## Pod 节点落点补充（已发布并验收）
 
 - Tetragon DaemonSet 曾因 `nodeSelector=node103` 只运行 `1/3`，结果不是性能下降，而是 node101、node102 上的 syscall/process 事件完全不可见；工作负载迁移后审计覆盖随节点变化，node103 故障则整条运行时审计消失。当前 DaemonSet 已是无 selector 的 `3/3`。
-- 业务 Deployment 没有 node103 selector。审计时 ecommerce 的 17 个 ReplicaSet Pod 实际分布为 node101 `12`、node102 `4`、node103 `1`；scheduler 不会主动重平衡历史 Pod，因此「没有硬钉」不等于「自然均匀」。
-- 25 份 Deployment 源清单和 10 个 Helm 子 chart 已统一加 `app.kubernetes.io/part-of=ecommerce` 与 suite-wide hostname spread。它以 `maxSkew=1` 做调度偏好，并用 `ScheduleAnyway` 避免某节点资源不足时阻塞发布；consumer-next 另保留按自身 app 的 `DoNotSchedule`，保证两个副本不落同一节点。
-- **后续状态覆盖（2026-08-28）**：Tetragon agent 三节点声明已写回 `~/lens077/kubernetes/components/tetragon/values.yaml` 并发布为 Helm revision 4；三个 agent `3/3` Ready，operator 仍固定 node103。业务 Deployment 的拓扑扩散源码已通过 server dry-run，但 live 业务分布是否已按该源码重滚仍须按当时发布记录核实。
+- 业务 Deployment 从未钉在 node103。首次审计时，ecommerce 的 17 个 ReplicaSet Pod 实际分布为 node101 `12`、node102 `4`、node103 `1`；scheduler 不会主动重平衡历史 Pod，因此「没有硬钉」不等于「自然均匀」。
+- 25 份 Deployment 源清单、10 个 Helm 子 chart 和 control-tower gateway dev/pre 已统一加 `app.kubernetes.io/part-of=ecommerce` 与 suite-wide hostname spread。第一轮 `ScheduleAnyway` 只把 live 分布改善到 `7/5/5`，实际 skew 仍为 `2`；随后收紧为 `DoNotSchedule`，把可调度节点间的 `maxSkew=1` 变成硬约束。
+- consumer-next 与 gateway 使用 hostname `podAntiAffinity` 保证各自两个副本分节点。硬 spread 与 anti-affinity 会让 surge-first 滚动无合法落点，因此二者固定 `maxSurge=0`、`maxUnavailable=1`，滚动时仍保留一个 Ready 副本。
+- 硬均衡 rollout 首次暴露三个节点的 containerd 仍依赖已停机的 `192.168.3.220:7890`。三个节点直连 TCR 均可达，因此将 `ccr.ccs.tencentyun.com` 加入 `NO_PROXY`，逐节点重启 containerd 并验收 Node Ready；持久配置同步到 `../kubernetes/bootstrap/`。address 旧副本在修复期间一直 Ready，没有业务中断。
+- 最终 15 个 Deployment、17 个 active Pod 全部 Ready，node101/node102/node103=`5/6/6`，skew=`1`；consumer-next 落在 node101/node103，gateway 落在 node101/node102。15 个 live 镜像引用保持不变。
+- Tetragon canonical values 已写入 `../kubernetes/components/tetragon/values.yaml` 并发布为 Helm revision 5；agent `3/3` Ready，operator 也已取消 node103 selector，当前落在 node101。
 
 ## 已知配置漂移
 
@@ -194,7 +197,10 @@ Ordinary identity -> next/gateway/user          3/3 DENIED
 Gateway public ready + anonymous RPC            PASS
 Cart direct Gateway host                       404
 10 API OTLP header / new auth 401              10/10 PASS, 0 errors
-Tetragon Helm revision 4                       deployed（三节点声明已写回）
+Ecommerce Deployment / active Pod              15/15 Ready, 17/17 Ready
+Pod placement node101/node102/node103           5/6/6, skew=1
+TCR NO_PROXY / containerd / Node Ready          3/3 PASS
+Tetragon Helm revision 5                       deployed（agent/operator 均取消硬钉）
 Tetragon DaemonSet                             3/3 Ready
 Tetragon PROCESS_EXEC                          node101/102/103 PASS
 Projected-token PROCESS_KPROBE + metric         PASS
@@ -208,7 +214,8 @@ Context/link gate                              PASS
 
 - 业务网络异常：先删除 `ecommerce-api-default-deny`，不要重新开启 token 或退回 default SA；
 - gateway 身份异常：回滚 Deployment Pod template，但保留独立 SA；
-- Tetragon 异常：删除 namespaced token policy，再 `helm rollback tetragon 2 -n tetragon`；
+- Tetragon 异常：先删除 namespaced token policy；不要直接回退到仍含 hostname selector 的 revision 4，使用 canonical values 重新发布前先确认 agent/operator 都没有 `nodeSelector`；
+- TCR 直连异常：仅在 `192.168.3.220:7890` 已恢复并通过三节点连通性检查后，逐节点恢复 `http-proxy.conf.before-tcr-no-proxy-20260828T143723Z` 并重启 containerd；每次只处理一个节点，并等待 CRI 与 Node Ready；
 - 安全告警异常：先移除 node3 `/infra/rules/ecommerce-security.yml` 并 reload vmalert，再分别回滚 Vector/OTel；不要删除原始 VictoriaLogs；
 - Hubble 异常：先保留 CNP，确认业务健康后才 `helm rollback cilium 2 -n kube-system`；revision 3 是明文 Relay，不作为安全回滚目标；
 - cart Route 只有在重新建立完整 gateway 认证边界后才能恢复，不能把 direct HTTPRoute 当调试入口。

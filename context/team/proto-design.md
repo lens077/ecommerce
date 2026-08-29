@@ -157,7 +157,7 @@ message ListOrdersRequest {
 message ListOrdersRequest {
   // 设计文档：仅按已定义状态过滤
   OrderStatus status = 1 [(buf.validate.field).enum.defined_only = true];
-  // DB: keyword 走 Meilisearch，对齐 search 服务的查询串上限
+  // SearchCatalog: keyword 走 Elasticsearch 只读投影，对齐 search 服务的查询串上限
   string keyword = 2 [(buf.validate.field).string.max_len = 128];
   // 设计文档：分页每页最多 100
   uint32 page_size = 3 [(buf.validate.field).uint32 = { gte: 1, lte: 100 }];

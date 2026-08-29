@@ -5,6 +5,7 @@ metadata:
   namespace: ecommerce
   labels:
     app: ecommerce-frontend
+    app.kubernetes.io/part-of: ecommerce
 spec:
   replicas: 1
   selector:
@@ -15,7 +16,20 @@ spec:
       name: ecommerce-frontend
       labels:
         app: ecommerce-frontend
+        app.kubernetes.io/part-of: ecommerce
     spec:
+      topologySpreadConstraints:
+        - maxSkew: 1
+          topologyKey: kubernetes.io/hostname
+          whenUnsatisfiable: DoNotSchedule
+          nodeAffinityPolicy: Honor
+          nodeTaintsPolicy: Honor
+          labelSelector:
+            matchLabels:
+              app.kubernetes.io/part-of: ecommerce
+      serviceAccountName: ecommerce-frontend
+      automountServiceAccountToken: false
+      enableServiceLinks: false
       containers:
         - name: ecommerce-frontend
           # Harbor 在本集群未部署（ARM64 卡在官方 v2.16 之前），改用 TCR。
@@ -23,7 +37,7 @@ spec:
           image: ccr.ccs.tencentyun.com/sumery/ecommerce-frontend:sha-bf8dae2
           imagePullPolicy: Always
           ports:
-            - containerPort: 30080
+            - containerPort: 80
               protocol: TCP
           envFrom:
             - configMapRef:

@@ -10,7 +10,7 @@ monorepo 的整体结构、分包原则、`conf / utils / hooks / providers` 四
 
 - `src/routes/` —— TanStack Router 文件式路由；`routeTree.gen.ts` 是生成物
 - `src/gen/` —— buf 从 `backend/api` 的 proto 生成的 Connect 客户端，同样是生成物
-- `src/store/` —— valtio 的通知队列
+- `src/store/` —— Zustand 的通知队列（2026-08-28 由 valtio 迁移完成）
 - `src/themes/`、`src/styles/`、`src/base.css` —— MUI 主题与全局样式
 - `src/reportWebVitals.ts` —— Web Vitals 上报
 

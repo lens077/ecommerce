@@ -1,0 +1,20 @@
+{
+  "target": {
+    "path": "deployment/ecommerce-cart-deploy",
+    "namespace": "ecommerce"
+  },
+  "agent": {
+    "ttl": 60
+  },
+  "feature": {
+    "network": {
+      "incoming": {
+        "mode": "mirror"
+      },
+      "dns": true,
+      "outgoing": true
+    },
+    "env": false,
+    "fs": "local"
+  }
+}

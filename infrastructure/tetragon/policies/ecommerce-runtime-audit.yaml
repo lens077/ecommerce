@@ -1,0 +1,33 @@
+# Audit-only policy. It never kills, overrides, or blocks a workload.
+#
+# Expected steady state after the ServiceAccount hardening:
+# - no service opens a projected Kubernetes API token.
+#
+# Shell/debug-tool execution is audited through the built-in PROCESS_EXEC stream.
+# A sys_execve kprobe cannot reliably attach pod metadata before the new process
+# enters Tetragon's process map, so keeping a second policy would create a false
+# sense of coverage. Any event emitted by this policy is actionable evidence of
+# drift or an incident.
+apiVersion: cilium.io/v1alpha1
+kind: TracingPolicyNamespaced
+metadata:
+  name: ecommerce-service-account-token-access
+  namespace: ecommerce
+spec:
+  podSelector: {}
+  kprobes:
+    - call: sys_openat
+      syscall: true
+      message: ecommerce workload opened a projected service-account token
+      args:
+        - index: 1
+          type: string
+      selectors:
+        - matchArgs:
+            - index: 1
+              operator: Prefix
+              values:
+                - /var/run/secrets/kubernetes.io/serviceaccount/
+                - /var/run/secrets/tokens/
+          matchActions:
+            - action: Post

@@ -2,8 +2,10 @@ apiVersion: apps/v1
 kind: Deployment
 metadata:
   name: ecommerce-frontend-deploy
+  namespace: ecommerce
   labels:
     app: ecommerce-frontend
+    app.kubernetes.io/part-of: ecommerce
 spec:
   replicas: 1
   selector:
@@ -14,15 +16,55 @@ spec:
       name: ecommerce-frontend
       labels:
         app: ecommerce-frontend
+        app.kubernetes.io/part-of: ecommerce
     spec:
+      topologySpreadConstraints:
+        - maxSkew: 1
+          topologyKey: kubernetes.io/hostname
+          whenUnsatisfiable: DoNotSchedule
+          nodeAffinityPolicy: Honor
+          nodeTaintsPolicy: Honor
+          labelSelector:
+            matchLabels:
+              app.kubernetes.io/part-of: ecommerce
+      securityContext:
+        runAsNonRoot: true
+        runAsUser: 1000
+        runAsGroup: 1000
+        fsGroup: 1000
+        seccompProfile:
+          type: RuntimeDefault
+      serviceAccountName: ecommerce-frontend
+      automountServiceAccountToken: false
+      enableServiceLinks: false
       containers:
         - name: ecommerce-frontend
           image: harbor.apikv.com/ecommerce/frontend:dev
           imagePullPolicy: Always
+          securityContext:
+            allowPrivilegeEscalation: false
+            readOnlyRootFilesystem: true
+            capabilities:
+              drop:
+                - ALL
           ports:
-            - containerPort: 30080
+            - containerPort: 80
               protocol: TCP
           envFrom:
             - configMapRef:
                 name: ecommerce-frontend-config
+          volumeMounts:
+            - name: caddy-data
+              mountPath: /data
+            - name: caddy-config
+              mountPath: /config
+            - name: tmp
+              mountPath: /tmp
+      volumes:
+        - name: caddy-data
+          emptyDir: {}
+        - name: caddy-config
+          emptyDir: {}
+        - name: tmp
+          emptyDir: {}
       restartPolicy: Always

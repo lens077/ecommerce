@@ -1,0 +1,58 @@
+# Tetragon 1.7.1 baseline for the three-node ARM64 LAN cluster.
+# Apply only through an explicit deployment change window; this file does not
+# install anything by itself.
+crds:
+  installMethod: operator
+
+hostNetwork: true
+# DaemonSet must cover every schedulable node. The 2026-08-28 manual install
+# pinned this to node103, leaving node102 workloads invisible.
+nodeSelector: {}
+
+rthooks:
+  enabled: false
+
+export:
+  mode: stdout
+  resources:
+    requests: { cpu: 5m, memory: 16Mi }
+    limits: { cpu: 25m, memory: 64Mi }
+
+tetragon:
+  debug: false
+  enableProcessCred: true
+  enableProcessNs: true
+  exportAllowList: '{"namespace":["ecommerce"],"event_set":["PROCESS_EXEC","PROCESS_EXIT","PROCESS_KPROBE"]}'
+  exportDenyList: '{"health_check":true}'
+  redactionFilters: '{"redact":["--password(?:\\s+|=)(\\S*)","--token(?:\\s+|=)(\\S*)","--secret(?:\\s+|=)(\\S*)"]}'
+  grpc:
+    enabled: true
+    address: localhost:54321
+  pprof:
+    enabled: false
+  processCacheSize: 16384
+  prometheus:
+    enabled: true
+    metricsLabelFilter: namespace,workload
+    serviceMonitor:
+      enabled: false
+  resources:
+    requests: { cpu: 50m, memory: 128Mi }
+    limits: { cpu: 100m, memory: 250Mi }
+
+tetragonOperator:
+  # The singleton operator may run on any eligible node. A hard node103 pin
+  # adds a needless recovery dependency without increasing sensor coverage.
+  nodeSelector: {}
+  replicas: 1
+  podInfo:
+    enabled: false
+  tracingPolicy:
+    enabled: true
+  prometheus:
+    enabled: true
+    serviceMonitor:
+      enabled: false
+  resources:
+    requests: { cpu: 10m, memory: 64Mi }
+    limits: { cpu: 50m, memory: 128Mi }

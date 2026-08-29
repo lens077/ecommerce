@@ -5,20 +5,22 @@
 > 7 个示例 SPU 的全量回灌与相关性验收。Product Service 尚无商品写 RPC，因此增量生产者接线
 > 仍未完成。2026-08-27 已决策把本链作为 NATS→Kafka 的首条迁移链，先写 shadow index 再切流；进度以 `TODO.md` 为准。
 
-搜索服务采用 CQRS 命令查询职责分离架构。PostgreSQL 保存商品真相，Meilisearch 只保存面向查询的商品投影。
+搜索服务采用 CQRS 命令查询职责分离架构。PostgreSQL 保存商品真相，搜索存储只保存可重建的只读投影。存量 Meilisearch 仍在运行；目标按 [TECH.md](../../TECH.md) 迁移到隐藏于 `SearchCatalog` 接口后的 Elasticsearch。
 
 ## 核心架构
 
-1. 命令端：商品创建、更新、上下架等写操作由 Product Service 写入 PostgreSQL。
+1. 命令端：存量 Product Service 写 PostgreSQL；目标由 Catalog Service 管理 Product（SPU）、SKU、Listing、Category。
 2. 事件端：Product Service 应在同一事务写入 broker-neutral outbox；目标 relay 发布到 Kafka。当前 NATS 链保留到 Kafka shadow index 验收通过。
-3. 索引端：search indexer 消费商品事件，并以幂等方式更新 Meilisearch 的 `products` 索引。
-4. 查询端：Search Service 只读取 Meilisearch，不回查 PostgreSQL。
+3. 索引端：search-projection 消费 Catalog 领域事件，并以幂等方式更新目标 Elasticsearch 索引；存量 indexer 继续写 Meilisearch，直到新投影完成验证和切流。
+4. 查询端：Search Service 通过 `SearchCatalog` 读取搜索投影，不在请求路径回查 PostgreSQL；索引必须支持从 PostgreSQL 全量重建。
 
 索引写入组件和 dev Deployment 已部署。当前 Product Service 只有查询路径，没有商品写 RPC，
 也没有调用 `outbox.Insert`；因此 reindex 可以从 PostgreSQL 全量回灌，增量链路则只处理已写入
 `products.outbox` 的事件。新增商品写路径时，必须在同一业务事务中补齐第 2 步。
 
 ## 商品索引契约
+
+**后续决策覆盖（2026-08-28）**：以下字段与业务语义继续作为投影契约输入，但 Meilisearch 专属的 settings、key scope、index swap task 等实现细节不再是目标契约；目标须按 Elasticsearch 重建 mapping、alias、权限与原子切换方案，并隐藏于 `SearchCatalog` 接口后。
 
 `backend/pkg/searchindex.Doc` 是索引文档的代码真相源：
 
@@ -48,7 +50,7 @@
 
 ## 查询边界
 
-- 当前 `Search` RPC 使用请求的 `name` 作为 Meilisearch 查询串。
+- 当前 `Search` RPC 使用请求的 `name` 作为存量 Meilisearch 查询串；目标查询由 `SearchCatalog` 适配 Elasticsearch。
 - 服务端固定查询配置中的 `products` 索引，并强制使用 `status = online` 过滤条件。
 - `SearchRequest.index` 仅为兼容旧客户端保留，已标记为 deprecated，服务端忽略传入值。
 - 搜索结果按扁平索引字段解析：`price` 对应价格，`sale_count` 对应返回值中的 `quantity`。
@@ -94,8 +96,8 @@
 
 ## 性能与一致性
 
-- 搜索读取不占用商品主库查询资源。
-- Meilisearch 写入是异步任务；当前 indexer 仅在任务成功后 ack NATS，目标 Kafka consumer 也必须在任务成功后提交 offset。
+- 搜索读取不占用商品主库查询资源；搜索投影故障不得影响交易正确性。
+- 存量 Meilisearch 写入是异步任务；当前 indexer 仅在任务成功后 ack NATS。目标 Elasticsearch consumer 成功更新投影后才提交 Kafka offset，并遵守统一 Inbox/DLQ 契约。
 - 商品事件采用完整文档投影，重复消费以整文档覆盖方式收敛。
 - 删除事件写入 tombstone，重建索引使用临时索引与原子 swap。
 - reindex 从 PostgreSQL 时钟读取扫描前水位，并在 swap 后重放水位后的行；PostgreSQL 咨询锁

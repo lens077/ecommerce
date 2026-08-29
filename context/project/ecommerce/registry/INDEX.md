@@ -2,6 +2,8 @@
 
 **代码路径**：`backend/services/*/internal/pkg/registry/`（10 份，同一套代码）
 
+> **迁移期定位（2026-08-28）**：按 `docs/TECH.md`，生产注册发现目标为 Kubernetes Service + CoreDNS，pre 半生产测试使用 Docker Compose 服务名（开发内环评估中）；本文记录 Consul 退役完成前的活系统行为与操作约束。
+
 每个后端服务用 hashicorp 官方 `api` 客户端自行向 Consul Agent 注册，并挂两个健康检查：
 
 - **TTL check**：服务通过 `TtlCheckPinger` 主动上报，只证明进程还在运行；进程退出并持续

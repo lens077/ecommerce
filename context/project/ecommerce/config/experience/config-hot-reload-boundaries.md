@@ -108,3 +108,5 @@ cd backend/services/user   && make dev          # 目标服务走配置中心
 
 - 三处副本谁是源：[`three-copies-of-one-config.md`](three-copies-of-one-config.md)
 - 模块总览与约定：[`../INDEX.md`](../INDEX.md)
+
+**后续决策覆盖（2026-08-28）**：本条结论已被 docs/TECH.md 覆盖：搜索目标为隐藏在 `SearchCatalog` 接口后的 Elasticsearch 只读投影；`search.meilisearch` 仅描述存量迁移期配置。

@@ -1,0 +1,177 @@
+# consumer-next dev 部署（公开可收录页：Next.js App Router）
+# 架构：shop.* 域名下按最长 PathPrefix 分流——/zh、/en、/_next → consumer-next；
+#       其余（含 /、/cart、/checkout、/account…）继续由 ecommerce-frontend（Vite SPA）承载。
+# 缓存一致性拍板：短 TTL（页面 revalidate=60s，各 Pod 独立 ISR 缓存的最大不一致窗口 60s）；
+#       需要严格一致时升级共享 cacheHandler（见 docs/reports/2026-08-28-nextjs-poc.md）。
+apiVersion: v1
+kind: ServiceAccount
+metadata:
+  name: ecommerce-consumer-next
+  namespace: ecommerce
+automountServiceAccountToken: false
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: consumer-next
+  namespace: ecommerce
+  labels:
+    app: consumer-next
+    app.kubernetes.io/part-of: ecommerce
+spec:
+  replicas: 2
+  strategy:
+    type: RollingUpdate
+    rollingUpdate:
+      # 硬 topology spread + pod anti-affinity 下，surge Pod 可能没有合法节点。
+      # 先缩一个旧副本再补新副本，滚动期间仍保留 1 个 Ready Pod。
+      maxUnavailable: 1
+      maxSurge: 0
+  selector:
+    matchLabels:
+      app: consumer-next
+  template:
+    metadata:
+      labels:
+        app: consumer-next
+        app.kubernetes.io/part-of: ecommerce
+    spec:
+      serviceAccountName: ecommerce-consumer-next
+      automountServiceAccountToken: false
+      enableServiceLinks: false
+      securityContext:
+        runAsNonRoot: true
+        runAsUser: 1001
+        runAsGroup: 1001
+        fsGroup: 1001
+        seccompProfile:
+          type: RuntimeDefault
+      imagePullSecrets:
+        - name: tcr-pull
+      affinity:
+        podAntiAffinity:
+          requiredDuringSchedulingIgnoredDuringExecution:
+            - labelSelector:
+                matchLabels:
+                  app: consumer-next
+              topologyKey: kubernetes.io/hostname
+      topologySpreadConstraints:
+        - maxSkew: 1
+          topologyKey: kubernetes.io/hostname
+          whenUnsatisfiable: DoNotSchedule
+          nodeAffinityPolicy: Honor
+          nodeTaintsPolicy: Honor
+          labelSelector:
+            matchLabels:
+              app.kubernetes.io/part-of: ecommerce
+      containers:
+        - name: consumer-next
+          image: ccr.ccs.tencentyun.com/sumery/consumer-next:dev-20260828-2
+          securityContext:
+            allowPrivilegeEscalation: false
+            readOnlyRootFilesystem: true
+            capabilities:
+              drop:
+                - ALL
+          ports:
+            - containerPort: 3004
+          env:
+            - name: CONSUMER_NEXT_GATEWAY_URL
+              value: http://ecommerce-gateway-service.ecommerce.svc.cluster.local:8080
+            - name: CONSUMER_NEXT_PUBLIC_URL
+              value: https://shop.dev.test
+          volumeMounts:
+            - name: next-cache
+              mountPath: /app/apps/consumer-next/.next/cache
+            - name: next-isr-zh
+              mountPath: /app/apps/consumer-next/.next/server/app/zh
+            - name: next-isr-en
+              mountPath: /app/apps/consumer-next/.next/server/app/en
+            - name: tmp
+              mountPath: /tmp
+          resources:
+            requests:
+              cpu: 50m
+              memory: 128Mi
+            limits:
+              cpu: 500m
+              memory: 384Mi
+          readinessProbe:
+            httpGet:
+              path: /healthz
+              port: 3004
+            initialDelaySeconds: 2
+            periodSeconds: 5
+          livenessProbe:
+            httpGet:
+              path: /healthz
+              port: 3004
+            initialDelaySeconds: 5
+            periodSeconds: 10
+      volumes:
+        - name: next-cache
+          emptyDir: {}
+        - name: next-isr-zh
+          emptyDir: {}
+        - name: next-isr-en
+          emptyDir: {}
+        - name: tmp
+          emptyDir: {}
+---
+apiVersion: policy/v1
+kind: PodDisruptionBudget
+metadata:
+  name: consumer-next
+  namespace: ecommerce
+spec:
+  minAvailable: 1
+  selector:
+    matchLabels:
+      app: consumer-next
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: consumer-next-service
+  namespace: ecommerce
+  labels:
+    app: consumer-next
+spec:
+  selector:
+    app: consumer-next
+  ports:
+    - port: 3004
+      targetPort: 3004
+---
+apiVersion: gateway.networking.k8s.io/v1
+kind: HTTPRoute
+metadata:
+  name: consumer-next-public
+  namespace: ecommerce
+spec:
+  hostnames:
+    - shop.dev.test
+    - shop.apikv.com
+  parentRefs:
+    - group: gateway.networking.k8s.io
+      kind: Gateway
+      name: cilium-gateway
+      namespace: default
+      sectionName: https
+  rules:
+    - matches:
+        - path:
+            type: PathPrefix
+            value: /zh
+        - path:
+            type: PathPrefix
+            value: /en
+        - path:
+            type: PathPrefix
+            value: /_next
+      backendRefs:
+        - group: ""
+          kind: Service
+          name: consumer-next-service
+          port: 3004
+          weight: 1

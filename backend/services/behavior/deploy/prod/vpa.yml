@@ -1,26 +1,22 @@
-# VPA 需要 controller 装好并打开 InPlace feature gate
-# (见 cloud-native-deploy/vpa/install.sh 里对 admission-controller 与 updater 的 patch)。
----
+# 该文件供单服务目录部署使用；完整 ecommerce VPA 集合见根目录 application-vpa.yml。
+# 当前集群只安装 recommender，因此必须保持 Off，仅生成 requests 推荐值。
 apiVersion: autoscaling.k8s.io/v1
 kind: VerticalPodAutoscaler
 metadata:
   name: ecommerce-behavior-vpa
   namespace: ecommerce
+  labels:
+    app.kubernetes.io/part-of: ecommerce
+    app.kubernetes.io/component: capacity-recommendation
 spec:
   targetRef:
     apiVersion: apps/v1
     kind: Deployment
-    # 必须与 deployment.yaml 的 metadata.name 逐字一致 —— 写错 VPA 会静默不生效,不报错也不告警
     name: ecommerce-behavior-deploy
   updatePolicy:
-    updateMode: "InPlace"
+    updateMode: "Off"
   resourcePolicy:
     containerPolicies:
-      - containerName: '*'
-        minAllowed:
-          cpu: "50m"
-          memory: "128Mi"
-        maxAllowed:
-          # 上限对齐 deployment 里的 limits,VPA 不该把它推到超出集群预算
-          cpu: "500m"
-          memory: "512Mi"
+      - containerName: ecommerce-behavior
+        controlledResources: [cpu, memory]
+        controlledValues: RequestsOnly

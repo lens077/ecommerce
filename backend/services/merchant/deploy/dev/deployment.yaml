@@ -5,6 +5,7 @@ metadata:
   namespace: ecommerce
   labels:
     app: ecommerce-merchant
+    app.kubernetes.io/part-of: ecommerce
 spec:
   replicas: 1
   selector:
@@ -15,7 +16,20 @@ spec:
       name: ecommerce-merchant
       labels:
         app: ecommerce-merchant
+        app.kubernetes.io/part-of: ecommerce
     spec:
+      topologySpreadConstraints:
+        - maxSkew: 1
+          topologyKey: kubernetes.io/hostname
+          whenUnsatisfiable: DoNotSchedule
+          nodeAffinityPolicy: Honor
+          nodeTaintsPolicy: Honor
+          labelSelector:
+            matchLabels:
+              app.kubernetes.io/part-of: ecommerce
+      serviceAccountName: ecommerce-merchant
+      automountServiceAccountToken: false
+      enableServiceLinks: false
       securityContext:
         runAsNonRoot: true
         runAsUser: 1000

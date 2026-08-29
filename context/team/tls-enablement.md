@@ -7,7 +7,7 @@ description: 给「已经在跑」的服务补 TLS 时的固定检查清单—�
 # 给在跑的服务补 TLS（2026-08-19 MinIO 实付学费）
 
 > 适用范围：TODO.md「基础设施 TLS 收敛」段里所有待办（gorse / casdoor / Consul）。
-> Elasticsearch 已退役。Kafka 已于 2026-08-27 重新纳入目标栈；为 Kafka/Strimzi/Schema Registry 补 TLS 时同样执行本文检查，并以 `docs/design/platform/production-scale-goal.md` 的最小权限与私网要求为准。
+> 当前存量搜索链为 Meilisearch；目标按 `docs/TECH.md` 为 Elasticsearch 只读投影。事件主干目标为外部非 K8s Kafka；为 Kafka/Schema Registry 补 TLS 时同样执行本文检查，并以 `docs/TECH.md` 的最小权限与私网要求为准。
 > 下面六节不是理论风险，是给 MinIO 上 TLS 时逐条撞到的。
 
 ## 0. 先决条件：这台机到底能不能用域名
@@ -82,7 +82,7 @@ ZeroSSL/Let's Encrypt 这类公共 CA **不签 IP**。证书 SAN 只有 `*.apikv
 
 `*.apikv.com` 的实际消费方包括 node1 Traefik、blog、Redis，以及 node2 Silo、Harbor 配置源和 Harbor 运行副本。2026-08-27 起由 node1 `apikv-cert-renew.timer` 统一续期；`apikv-cert-distribute` 和 node2 强制命令 `apikv-cert-receive` 负责原子替换、属主修正、reload/restart、严格 TLS 指纹校验和失败回滚。凭据只保存在 `/home/acme.sh/data/`，分发 SSH key 被限制为只能执行证书 receiver。
 
-**复制证书到新机器时，必须在同一变更里登记分发目标、正确 UID/GID、reload 方法、严格握手探针和回滚文件。**只复制文件不 reload，或只改 Harbor `harbor.yml` 的源文件不改 `data/secret/cert` 运行副本，都属于未完成。自动任务失败和续期成功走 authenticated ntfy；Gatus 的 30 天证书检查是独立兜底。完整矩阵见 `docs/INFRASTRUCTURE-OPERATIONS.md`，当前指纹和到期日用 `./ai-helper.sh cert-status` 获取，不在知识文档里固化会过时的倒计时。
+**复制证书到新机器时，必须在同一变更里登记分发目标、正确 UID/GID、reload 方法、严格握手探针和回滚文件。**只复制文件不 reload，或只改 Harbor `harbor.yml` 的源文件不改 `data/secret/cert` 运行副本，都属于未完成。自动任务失败和续期成功走 authenticated ntfy；Gatus 的 30 天证书检查是独立兜底。完整矩阵见 `docs/INFRASTRUCTURE-OPERATIONS.md`，当前指纹和到期日用仓库根 `helper.sh`「证书」小节的命令获取（命令备忘，逐条复制执行），不在知识文档里固化会过时的倒计时。
 
 ## 5. 验收：必须包含「故意用错的输入」和「不带 -k 的严格校验」
 

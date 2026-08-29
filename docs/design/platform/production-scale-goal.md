@@ -1,8 +1,10 @@
 # 百万/千万级 B2B2C 生产化目标
 
 > 状态：目标态，已决策；实现进度以 `TODO.md` 为准。
-> 当前运行事实以 `.service-matrix.yaml` 和 `STACK.md` 为准。
+> 当前运行事实以 `.service-matrix.yaml` 和 `STACK.md` 为准；技术选型与基础设施目标以 [TECH.md](../../TECH.md) 为准。
 > 本文定义「要证明什么、按什么证据验收、什么条件下才增加组件」，不把规划写成现状。
+>
+> **后续决策覆盖（2026-08-28）**：本文原有「NATS 继续作为目标主干、Kafka 仅证据触发」「Meilisearch 继续作为目标搜索引擎」「Pangolin 不进入生产主路径」「Casbin 为目标 RBAC、OpenFGA 后置」等结论已被 [TECH.md](../../TECH.md) 覆盖：目标采用外部非 K8s Kafka、Elasticsearch、CDN/WAF → Pangolin → Cilium Gateway API → control-tower，以及 Casdoor 有状态 Session + OpenFGA。存量 NATS、Meilisearch、Casbin 与 legacy JWT 仍按迁移现状记录，不改写为已删除。
 
 ## 一、北极星目标
 
@@ -20,7 +22,7 @@
 6. 单订单、百万请求和数据保留成本；
 7. 证据证明现有技术达到边界后，再评估新增基础设施。
 
-禁止以「中大型项目都在用」或个人学习目标作为业务基础设施接线理由。node3 已存在的 Kafka 只视为独立实验资源，当前应用 `used_by=[]`；不进入业务主链、不替代 NATS，也不构成已采用技术栈。
+禁止以「中大型项目都在用」或个人学习目标作为业务基础设施接线理由。node3 已存在的 Kafka 在本文写作时只视为独立实验资源，当前应用 `used_by=[]`；该现状不等于目标已接线。目标按 [TECH.md](../../TECH.md) 将事件主干迁往外部非 K8s Apache Kafka 集群。
 
 ## 二、规模必须拆成可测维度
 
@@ -42,7 +44,7 @@
 ### 2.1 必备计算模型
 
 - 峰值并发约等于「峰值到达率 × P95 响应时间」（Little’s Law）。
-- JetStream 最大积压约等于「峰值事件速率 × 最长恢复时间 × P95 事件大小」，还要计入副本与存储余量。
+- Kafka 最大积压约等于「峰值事件速率 × 最长恢复时间 × P95 事件大小」，还要计入副本、保留期与存储余量；存量 JetStream 迁移容量另行核算。
 - session 内存包括并发 session、序列化、索引、TTL、复制和 allocator 开销。
 - PostgreSQL 容量必须同时计算 heap、索引、WAL、膨胀、临时空间、备份和恢复工作空间。
 - 搜索容量必须使用真实商品文档与查询分布压测，不能从原始 JSON 大小线性外推。
@@ -91,23 +93,23 @@
 ```text
 用户
   → CDN / WAF / DDoS 防护
-  → 云负载均衡或生产级公网入口
-  → Cilium Gateway API
+  → Pangolin 公网入口
+  → Cilium Gateway API（TLS 终止、KPR 严格模式）
   → control-tower gateway
-      ├── BFF session / Casbin / quota / load shedding
-      └── tenant/user → 业务 Cell
+      ├── Casdoor Stateful Session / OpenFGA / quota / load shedding
+      └── tenant/user → 业务 Cell（ConnectRPC over HTTP/2 H2C）
 
 业务 Cell（初期仅一个）
-  ├── Product / Cart / Checkout / Order / Inventory / Payment
-  ├── PostgreSQL OLTP
-  ├── 独立 session store / 业务 cache
+  ├── Identity / Catalog / Cart / Order(Saga) / Payment / Inventory / Fulfillment / Notification
+  ├── PostgreSQL OLTP（外部 Pigsty/Patroni + PgBouncer）
+  ├── Dragonfly：Session / Cache / Ratelimit 分实例
   └── PostgreSQL Outbox / Inbox
 
-PostgreSQL outbox → NATS JetStream
-  ├── Search projection → Meilisearch
+PostgreSQL Outbox → Apache Kafka（外部非 K8s 集群）
+  ├── Search projection → Elasticsearch
   ├── Notification
   ├── Reconciliation
-  └── 领域 consumer
+  └── Analytics / 领域 consumer
 
 OLTP PostgreSQL → 独立分析 CDC → ClickHouse（需求成立后）
 对象存储 → CDN / 图片处理
@@ -142,17 +144,17 @@ OTel / Vector / Hubble / Profiling → Victoria / Grafana / Alertmanager
 
 必须实测 Dragonfly 复制、故障转移、持久化和 Cluster 语义，不能因 Redis 协议兼容就假定行为完全一致。
 
-### 5.3 NATS JetStream 与事件治理
+### 5.3 Apache Kafka 与事件治理
 
-NATS JetStream 继续作为当前事件主干。生产化要求：
+目标事件主干是部署于非 K8s 独立集群的 Apache Kafka；存量 NATS JetStream 仅在迁移期间继续承载现有搜索链，不再作为新业务事件目标。生产化要求：
 
-- 交易/不可重建 stream 使用跨节点 R3；可重建 projection 是否保持 R1 由 RTO 和重建成本决定。
-- 业务事务与 outbox insert 同一 PostgreSQL transaction；relay 收到 JetStream ack 后才标记 published。
-- consumer 使用 Inbox/幂等表，不追求虚假的端到端 exactly-once。
-- 统一定义 event id、aggregate id、tenant id、trace id、schema version 和 occurred_at。
-- payload 采用 Protobuf，Buf 管理兼容；CloudEvents 只做 envelope，不替代领域事件设计。
-- 明确 subject、retention、最大积压、NACK、DLQ、poison message、重放权限和审计。
-- KEDA 只能在幂等、backpressure 和下游容量得到证明后按 lag 扩 consumer。
+- 业务事务与 Outbox insert 位于同一 PostgreSQL transaction；Relay 仅在收到 Kafka `acks=all` 后标记 `published`。
+- consumer 使用主键为 `(consumer_group, event_id)` 的 Inbox 表，不追求虚假的端到端 exactly-once。
+- Topic 按限界上下文划分，以 `aggregate_id` 作为 partition key 保证同聚合事件顺序。
+- 事件 envelope 统一包含 `event_id`、`aggregate_id`、`tenant_id`、`trace_id`、`schema_version`、`occurred_at`。
+- payload 采用 Protobuf，由 Buf Schema Registry 管理兼容；CloudEvents 只可作为 envelope 参考，不替代领域事件设计。
+- 连续消费失败超过 5 次转投 DLQ Topic，并触发 Alertmanager 告警；同时治理 retention、最大积压、poison message、重放权限和审计。
+- KEDA 只能在幂等、backpressure 和下游容量得到证明后按 Kafka consumer lag 扩容。
 - 业务事件与分析 CDC 分离：Outbox 表达「业务发生了什么」，逻辑复制表达「数据库哪些行变了」。
 
 ### 5.4 长流程与后台任务
@@ -164,7 +166,7 @@ NATS JetStream 继续作为当前事件主干。生产化要求：
 
 ### 5.5 搜索
 
-Meilisearch 继续使用，并逐步收敛到深 Module：
+目标搜索存储定稿为 Elasticsearch，并收敛到 Deep Module；存量 Meilisearch 在迁移期继续运行，不能写成已删除：
 
 ```text
 SearchCatalog
@@ -175,11 +177,11 @@ SearchCatalog
 - SwapIndex
 ```
 
-搜索必须是可重建 projection，PostgreSQL 才是真相源。数百万到低千万文档且功能简单时先压测 Meilisearch；只有分片 HA、复杂聚合或实测容量不足时，才评估 OpenSearch/Elasticsearch 或托管搜索。
+搜索必须是可重建的只读 Projection，PostgreSQL 才是真相源。Elasticsearch 实现隐藏于 `SearchCatalog` 后，必须支持从 PostgreSQL 全量重建；迁移期以 shadow index 与差异校验完成切流。
 
 ### 5.6 对象存储与 CDN
 
-- 生产优先评估托管 S3/COS/OSS；自建 SeaweedFS/Ceph/Garage 必须计算运维成本。
+- 对象存储按 [`TECH.md`](../../TECH.md) 定稿为 Silo（基于 MinIO，S3 兼容）；生产容量与备份证据须以 Silo 验证，托管 S3/COS/OSS 仅作对照评估，且任何自建替代都必须计算运维成本。
 - 开启版本、生命周期、异地复制与不可变备份。
 - 商品图片通过 CDN 和 imgproxy 类处理层输出 AVIF/WebP 与多尺寸。
 - 上传使用预签名 URL，并异步做类型、大小、病毒和内容审核。
@@ -187,7 +189,7 @@ SearchCatalog
 
 ### 5.7 流量入口与网关
 
-- Pangolin、家庭出口和跨公网隧道不得作为中大型生产流量主路径。
+- 生产入口固定为 CDN/WAF → Pangolin → Cilium Gateway API → control-tower；Pangolin 仅承担公网入口/安全反向代理，不叠加 WireGuard/IPsec 隧道，家庭出口和临时跨公网隧道不得成为依赖。
 - control-tower 逐 procedure 落实请求大小、并发、deadline、quota 和 load shedding。
 - 只对已证明幂等的操作重试，并服从 retry budget 与总 deadline。
 - 用 bulkhead 隔离支付、搜索和埋点；熔断必须有明确恢复和降级语义。
@@ -198,7 +200,7 @@ SearchCatalog
 
 - namespace 级 default-deny ingress/egress。
 - 只允许 Cilium Gateway/control-tower 进入业务服务。
-- egress 只开放 `.service-matrix.yaml` 声明的 PostgreSQL、Dragonfly、NATS、Meilisearch 等依赖。
+- egress 只开放 `.service-matrix.yaml` 声明的依赖；目标包括外部 Pigsty PostgreSQL、分实例 Dragonfly、外部 Kafka 与 Elasticsearch，迁移期同时保留已登记的 NATS、Meilisearch 通路。
 - 用 Hubble 观察真实流量后逐步收紧，并为 deny 提供可查询证据。
 - ServiceAccount 是 workload identity 基础；需要强 east-west 身份时再评估 SPIFFE/SPIRE。
 - 不使用 service mesh 时，ConnectRPC client/server 必须明确 mTLS、轮换和身份映射。
@@ -209,11 +211,11 @@ SearchCatalog
 
 授权分三层：
 
-1. Gateway Casbin：procedure 粗粒度 RBAC；
-2. 业务服务：状态机和领域不变量；
-3. Repository：owner/tenant 条件；关系复杂后再评估 OpenFGA。
+1. Casdoor：有状态 Session 与 admin/merchant/customer 粗粒度角色；
+2. control-tower + OpenFGA：merchant/store/order 对象级关系授权；
+3. 业务服务与 Repository：状态机、领域不变量及 tenant/owner 数据隔离条件。
 
-不得让 Casbin、OpenFGA 和数据库长期维护同一份权限真相。
+存量 Casbin procedure 策略是迁移现状，不再作为目标授权真相源；OpenFGA 关系 tuple 与数据库业务归属应有明确同步契约，禁止长期双写漂移。
 
 ### 5.10 Kubernetes 与交付
 
@@ -230,7 +232,7 @@ SearchCatalog
 - OTel Collector tail-based sampling 保留错误和慢链路，并限制高基数。
 - Pyroscope/Parca 补 CPU、heap、锁和 goroutine 持续 profiling。
 - Hubble 提供网络流与 policy deny 证据。
-- k6 负责业务场景；pgbench、nats bench 和真实 Meilisearch 数据集负责组件基线。
+- k6 负责业务场景；pgbench、Kafka benchmark 和真实 Elasticsearch 数据集负责目标组件基线；迁移期继续保留 NATS/Meilisearch 基线用于切流对照。
 - Toxiproxy 注入延迟、断连、丢包和半开；Chaos Mesh/Litmus 演练 Pod、网络、节点和依赖故障。
 - 外部探针运行在业务故障域之外。
 - 每条 critical 告警必须声明 owner、影响、Runbook、Silence 条件和恢复验证。
@@ -277,7 +279,7 @@ SearchCatalog
 - Ports and Adapters 隔离支付、对象存储和搜索实现。
 - CQRS 只用于搜索、报表等读模型，不把所有 CRUD 事件化。
 - Outbox + Inbox 提供 at-least-once 下的事务发布意图与消费幂等。
-- Saga/TCC 明确同步强一致段与异步补偿段。
+- Order 内置 Saga Process Manager 显式编排同步强一致核心步骤与逆向补偿；阶段性终态通过 Kafka 编舞解耦副作用。
 - 资金、库存、积分采用不可变 ledger，不只保存余额。
 - Bulkhead/Cell 隔离故障；backpressure/load shedding 在容量上限前主动拒绝。
 - SLO/error budget 决定可靠性投资；RTO/RPO 必须通过恢复演练，不由备份存在性推断。
@@ -297,7 +299,7 @@ SearchCatalog
 6. GitOps 真相源统一；
 7. 外部告警、resolved 通知和值班闭环；
 8. 固定数据集、capacity profile、k6 基线和成本报告；
-9. NATS R3、outbox/inbox、DLQ、重放与积压恢复；
+9. 外部 Kafka、Outbox/Inbox、DLQ、重放与积压恢复；存量 NATS 搜索链在切流验证前保留；
 10. 核心旅程 SLO、Runbook 和故障演练。
 
 ### P1：业务增长后
@@ -315,15 +317,12 @@ SearchCatalog
 
 | 能力 | 触发条件 |
 |---|---|
-| OpenFGA | 对象关系复杂到 repository owner 条件无法清晰维护 |
 | Temporal | 长流程、定时器、人工等待和补偿数量失控 |
-| OpenSearch | Meilisearch 的容量、HA 或聚合能力实测不达标 |
 | Citus/分片 | 单 PostgreSQL 经过索引、分区、缓存和查询优化后仍不达标 |
 | SPIFFE/SPIRE | 确实需要独立 east-west workload identity |
 | Cell Architecture | 单集群故障域或租户噪声无法接受 |
 | 多区域 active-active | 业务 RTO 明确无法由 active-passive 满足 |
 | Backstage | 服务和 owner 数量使人工目录明显失控 |
-| Kafka | NATS 在已治理、扩容和压测后仍无法满足已量化的保留、吞吐、生态或数据集成需求；企业常见度和学习兴趣不是触发条件 |
 
 ## 九、Production Readiness Review 验收
 
@@ -345,7 +344,7 @@ SearchCatalog
 
 ## 十、明确不做
 
-- 不因「中大型项目都使用」而重新引入 Kafka 或其他基础设施。
+- 不因「中大型项目都使用」而引入 TECH.md 未定稿的其他基础设施；Kafka 已是目标事件主干，但接线仍须遵守证据门禁。
 - 不把全部业务改成 Event Sourcing。
 - 不为履约、营销、结算和分析的每个名词立即创建微服务。
 - 不在没有明确 RTO 的情况下建设多区域 active-active。

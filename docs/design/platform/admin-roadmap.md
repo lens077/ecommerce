@@ -34,8 +34,8 @@ admin 微服务**承载（2026-08-12 决定，替代此前「按域下沉 `<域>
 
 | 层 | 形态 | 现状 |
 |---|---|---|
-| 角色 | RBAC 继承链顶端（casdoor + Casbin），见 [rbac.md](rbac.md) | 已有 |
-| 专属 API 面 | 独立微服务：契约 `backend/api/admin/v1/`（package `admin.v1`），部署为 `admin-service`，网关新增 `/admin*` endpoint 整段仅放 admin 角色 | 无——当前 admin 操作散在各域 `<域>.v1` 里靠逐条 RPC 放行（如 `ApproveApplication`） |
+| 角色 | Casdoor 粗粒度 admin；对象级授权目标由 OpenFGA 承担，见 [rbac.md](rbac.md) | Casdoor/admin 现有，OpenFGA 未落地 |
+| 专属 API 面 | 独立微服务：契约 `backend/api/admin/v1/`（package `admin.v1`），部署为 `admin-service`，网关新增 `/admin*` endpoint，由 Casdoor admin 角色做入口约束，并以 OpenFGA 校验具体治理对象关系 | 无——当前 admin 操作散在各域 `<域>.v1` 里靠逐条 RPC 放行（如 `ApproveApplication`） |
 | 专属页面 | admin app（:3003），只调 `admin.v1` 面 | 路由骨架已有，未接后端 |
 
 **为什么立独立 admin 服务（而不是把 admin 接口分散进各域服务）**：
@@ -45,7 +45,7 @@ admin 微服务**承载（2026-08-12 决定，替代此前「按域下沉 `<域>
    独立服务给它们一个明确 owner
 2. **聚合读是 admin 的主要负载**：大盘与列表页天然跨域 join（商家×订单×结算额），
    服务端聚合一次返回，胜过 admin 前端（Connect-Web，无 join 能力）扇出多请求自拼
-3. **权限边界最集中**：网关一条 `/admin*` endpoint + 一行 Casbin 策略覆盖整个治理
+3. **权限边界最集中**：网关以 Casdoor admin 角色约束 `/admin*` 入口，并以 OpenFGA 逐对象授权整个治理
    面；各域敏感 RPC 随迁移收为东西向调用，北向攻击面收窄（§四必补 7 的落地机制）
 4. **爆炸半径隔离**：治理功能的发布与故障不波及交易链路；admin 低频重查询的流量
    特征与 C 端高频点查不同，资源与缓存策略可独立演进
@@ -116,7 +116,7 @@ admin 微服务**承载（2026-08-12 决定，替代此前「按域下沉 `<域>
 5. **平台配置页**：政策模板库、协议文本、商品种类字典的维护入口（骨架 `settings` 路由）
 6. **风控基线**：黑名单 + 登录异常标记，消费 behavior 已有数据
 7. **平台运营子账号**：照搬 §8 店长/员工模型到平台侧，配 2FA；casdoor 有现成能力，
-   工作量在 Casbin 策略分层（与 rbac.md 商家子账号是同一套机制的两次实例化）
+   工作量在 OpenFGA 关系模型与 tuple 生命周期（与 rbac.md 商家子账号共用关系授权底座）
 
 ## 六、明确不做
 
@@ -133,6 +133,6 @@ admin 微服务**承载（2026-08-12 决定，替代此前「按域下沉 `<域>
 | P0-8 审计简版 | 必补 6（同表同采集，双视角） |
 | P1-1 结算与账单 | 推荐 1（规则与审核在 admin 侧） |
 | P1-3 通知模板中心 | 推荐 3（模板管理权在 admin） |
-| P1-2 员工与权限 | 推荐 7（同一套 Casbin 分层机制） |
+| P1-2 员工与权限 | 推荐 7（同一套 OpenFGA 关系授权机制） |
 
 排期原则：admin 的「必补」与商家 P0 同批做（互为依赖），「强烈推荐」与商家 P1 对齐。

@@ -24,11 +24,11 @@
 
 | 领域 | 已有 | 主要缺口 |
 |------|------|----------|
-| CI | `.github/workflows/{backend,frontend}.yml`、`freeze-check.yml`(冻结验收集)、structcheck 随 `go test` 进 CI、commitlint(vite-plus 钩子)、异构双审走本地 `/adversarial-review`(非 CI) | 制品推送/清单更新链路不完整;oxlint/oxfmt 未进 CI 门禁;无契约测试、无镜像扫描/签名/SBOM |
-| CD | `argocd-app.yml`/`argocd-proj.yml`、`helm/`、`deploy/{dev,prod}` 过 dry-run | GitOps 未真正接管(改镜像 tag 仍是手动);无环境晋级流程;无 migration 流水线 |
-| 基础设施 | k8s 集群(2026-08-20 实测:重建后为 **2 节点** node1 `192.168.3.201` / node2 `192.168.3.202`(control-plane),**两台都无 taint、均可调度**;存储 `openebs-lvm`(默认 SC)的 PV **全部钉在 node1**)、Consul(服务发现)、Config Center(配置控制面,独立仓)、`application-vpa.yml` | 集群全单副本,滚更/金丝雀语义退化;VPA `--min-replicas` 默认 2 导致静默失效;无 IaC 管集群外资源 |
-| 可观测性 | OTel(部分服务)、Loki、`docs/observability/grafana/`(看板生成脚本)、`docs/observability/`(方法论;08-06 评审已归档 `docs/reviews/`) | 未全链路;`rpc.code` 失真已修但看板未回归;config 撞名进程指标混合;无 SLO/错误预算 |
-| 安全 | 网关集中鉴权(Casdoor+Casbin)、部分 RPC 粒度策略 | 镜像/依赖/密钥扫描全缺;NetworkPolicy 缺;address 等服务越权问题在修 |
+| CI | `.github/workflows/{backend,frontend}.yml`、`freeze-check.yml`(冻结验收集)、structcheck 随 `go test` 进 CI、commitlint(vite-plus 钩子)、异构双审走本地 `/adversarial-review`(非 CI) | 制品推送/清单更新链路不完整;oxlint/oxfmt 未进 CI 门禁;无契约测试、无镜像扫描/签名/SBOM。**后续决策覆盖（2026-08-28）**：本条已被 [TECH.md](TECH.md) 覆盖：构建与 CI 定稿为 Docker Buildx + GitHub Actions + Renovate，供应链扫描按 P1 落地 Gitleaks + Trivy + Syft + Cosign + Kyverno。 |
+| CD | `argocd-app.yml`/`argocd-proj.yml`、`helm/`、`deploy/{dev,prod}` 过 dry-run | GitOps 未真正接管(改镜像 tag 仍是手动);无环境晋级流程;无 migration 流水线。**后续决策覆盖（2026-08-28）**：本条已被 [TECH.md](TECH.md) 覆盖：Argo Rollouts 灰度发布属于 P1 交付路线。 |
+| 基础设施 | Kubernetes `1.36.4` 三节点 node101/node102/node103，均 Ready 且可调度；`openebs-lvm`、Consul（存量发现）、独立 control-tower Config Center；VPA Helm revision 2 只运行 recommender `1.7.1`，15 个 ecommerce VPA 均为 `Off`/`RequestsOnly` | 13 个 Deployment 仍为单副本且无 PDB；requests 尚处于至少 7 天观测与 k6 校准期；Descheduler 不安装；集群外资源仍缺 IaC。VPA 证据与下一步见 [发布报告](reports/2026-08-29-vpa-recommendation-only.md)；服务发现目标态以 [TECH.md](TECH.md) 为准。 |
+| 可观测性 | OTel(部分服务)、Loki(存量链路)、`docs/observability/grafana/`(看板生成脚本)、`docs/observability/`(方法论;08-06 评审已归档 `docs/progress-archive/`) | 未全链路;`rpc.code` 失真已修但看板未回归;config 撞名进程指标混合;无 SLO/错误预算。**后续决策覆盖（2026-08-28）**：本条已被 [TECH.md](TECH.md) 覆盖：采集与存储定稿为 K8s 内 Vector/VMAgent/OTel SDK → 外置 OTel Collector → VictoriaLogs/VictoriaMetrics/VictoriaTraces。 |
+| 安全 | 网关集中鉴权(Casdoor+Casbin，存量)、部分 RPC 粒度策略 | 镜像/依赖/密钥扫描全缺;NetworkPolicy 缺;address 等服务越权问题在修。**后续决策覆盖（2026-08-28）**：本条已被 [TECH.md](TECH.md) 覆盖：完全废弃 JWT，采用 Casdoor 有状态 Session（Dragonfly Session Store）+ OpenFGA，Casbin 为存量待替换。 |
 | 度量 | — | DORA 四指标无采集 |
 
 ## 2. 代码与分支(Flow 的起点)
@@ -55,11 +55,12 @@
      真正接入 schema registry 放二期。
 4. **构建镜像**:多阶段构建(已有 `make docker-deployx` 多架构);
    待加:cosign 签名、syft 生成 SBOM、trivy 漏洞扫描(高危阻断)。
-5. **集成测试**:testcontainers 起真实依赖(Postgres/Kafka/Consul),
+5. **集成测试**:testcontainers 起真实依赖(Postgres/Kafka;迁移期仍依赖 Consul 的边界才起 Consul),
    只测本服务边界,不起全链路。
 
 **镜像仓库策略(本仓已付过学费,硬规则)**:
 
+- **后续决策覆盖（2026-08-28）**：本条已被 [TECH.md](TECH.md) §7.1 覆盖：TCR 为主镜像仓库（集群同区直连拉取），Harbor 存储 Helm 制品（OCI），GHCR 可选双存（镜像+Helm）、是否推送由 CI 按网络情况决定;
 - 禁止 `latest` 参与部署(网关旧 `latest` 镜像启动即 FATAL 的教训);
 - 保留策略不得清理生产在跑的 tag——**老 Pod 可能靠本地缓存活着,驱逐后拉不动就再也起不来**;
 - 部署前对目标 digest 做 pull 预检(job 或 ArgoCD PreSync hook)。
@@ -71,16 +72,17 @@
   禁止 kubectl 直改生产。副产品是审计:谁改的?人还是 Agent?——与 freeze/CODEOWNERS
   防线同源,对齐 Debois「dim factory 按风险分级自治」的主张。
 - **环境晋级**:`dev → prod`(现有 overlay 结构),**同一镜像 digest 一路晋级**,不重新构建。
-- **渐进式交付贴合集群现实**(单副本、2 节点均可调度、存储钉 node1):
-  - 无状态服务(gateway、frontend、无 PVC 后端):≥2 副本 + RollingUpdate + PDB,
-    这是任何金丝雀/滚更语义成立的前提;
-  - 带 PV 的负载:Recreate + 维护窗口,验证靠 dev 环境而非生产金丝雀;
-  - **每项机制上线后验证真的生效**——VPA `PROVIDED=True` 不代表生效、
-    `deregister_critical_service_after` 写 6s 被静默钳到 1m,这类「配置在骗人」
-    已出现两次,验收标准一律是观测到的行为,不是配置表面状态。
+- **渐进式交付贴合集群现实**（三节点可调度、13 个业务 Deployment 仍为单副本）:
+  - 无状态服务（gateway、frontend、无 PVC 后端）先达到 ≥2 副本 + RollingUpdate + PDB，
+    再引入 Argo Rollouts 灰度发布；这是金丝雀和无损滚动语义成立的前提；
+  - 在线服务由 HPA 管理，Kafka 消费者由 KEDA 的 Kafka scaler 管理，两者不得控制同一资源；
+  - 带 PV 的负载使用 Recreate + 维护窗口，验证靠 dev 环境而非生产金丝雀；
+  - **每项机制上线后验证实际行为**——VPA `RecommendationProvided=True` 只证明有推荐，
+    不证明窗口充分、数值可信或已自动应用；`deregister_critical_service_after` 写 6s
+    又曾被静默钳到 1m。验收标准必须是可观察行为，而不是配置表面状态。
 - **数据库变更进流水线**:golang-migrate/atlas + expand-contract(只允许向后兼容:
   先加列、双写、再删),因为滚更期间新旧版本共存。sqlc 生成物与 migration 同 PR 提交。
-- **远程 Docker 部署(无 k8s 的备用路径)**:`backend/compose.yaml` 已引用 TCR 镜像,
+- **远程 Docker 部署(无 k8s 的备用路径)**:`backend/compose.yaml` 引用 TCR 镜像,与制品分工一致(TCR 为主镜像仓库),
   对无 k8s 的目标机用 `docker context create <name> --docker "host=ssh://user@host"`
   + `docker --context <name> compose up -d <svc>` 直接拉起。**边界要认清:GitHub
   托管 runner 在公网,推不进 192.168.x 的 LAN 主机**——push 式部署只能从本机/
@@ -92,10 +94,10 @@
 - **OTel 全链路**:前端 → 网关 → 10 服务 → Postgres/Kafka,trace context 全程透传;
   埋点中间件写在同构 `internal/pkg` 里,一份改动全员受益(`rpc.code:"unknown"` 修复
   即是先例,已同步 10 份)。
-- 指标:Prometheus + Grafana,**按限界上下文组织看板**,每服务四个黄金信号。
+- 指标:VictoriaMetrics + Grafana,**按限界上下文组织看板**,每服务四个黄金信号。
   硬规则:标签必须能区分同名进程——config-service 撞名教训,
   **强制 `service.namespace`/`service.instance` 唯一标签,禁止按进程名过滤**。
-- 日志:结构化 JSON + Loki,带 trace_id 三支柱互跳。
+- 日志:结构化 JSON,由 Vector 采集并经外置 OTel Collector 做 PII 脱敏和 `/healthz`、`/metrics` 噪声清洗后写入 VictoriaLogs,带 trace_id 三支柱互跳;链路写入 VictoriaTraces,错误/高延迟 100% 保留,正常请求采样 1%~5%。
   硬规则:凭据/token 不得入日志(user 服务 SignIn 打 token 的教训,修复后应加 lint/审查项)。
 - **SLO + 错误预算**:每上下文定义 SLO;错误预算烧完冻结该服务非修复类发布——
   把「反馈」做成硬机制。一期先给 gateway、user、order、cart 四个上柜。
@@ -104,9 +106,10 @@
 
 - CI 内:govulncheck、npm audit/pnpm audit、trivy(镜像)、gitleaks(密钥泄漏)。
 - 集群内:NetworkPolicy 按限界上下文收紧东西向;Pod Security Standards;
-  镜像签名准入(cosign + policy controller,二期)。
+  镜像签名与准入按 P1 落地 Cosign + Kyverno。
 - 网关层:认证鉴权继续集中在网关(共享组件即「铺装路」,不让 10 个服务各接一套);
-  策略从整段前缀放行收敛到 RPC 粒度(order/payment/merchant/inventory 已做,其余待办)。
+  完全移除 JWT 兼容路径,采用 Casdoor 有状态 Session(Dragonfly Session Store)+OpenFGA;
+  策略从整段前缀放行收敛到 RPC 粒度(order/payment/merchant/inventory 已做,其余待办),Casbin 作为存量迁移退役。
 - 密钥:External Secrets Operator + 后端(Vault 或云 KMS),密钥不进 Git 与 Consul KV 明文。
 
 ## 7. 度量与持续学习
@@ -132,7 +135,7 @@
       服务清单读 `.service-matrix.yaml`;网关、前端未接入模板)
 - [ ] oxlint/oxfmt、golangci-lint、`go test -race`、structcheck 全部成为必过门禁
 - [ ] `buf breaking` 接入(基线 main),proto 破坏性变更拦截实测一例红
-- [ ] 镜像:禁 latest、digest 引用、trivy 扫描阻断高危;保留策略成文
+- [ ] 制品:按 [TECH.md](TECH.md) §7.1 分工——TCR 主镜像仓库、Harbor 存 Helm 制品(OCI)、GHCR 可选双存(CI 按网络决定);禁 latest、digest 引用、Trivy 扫描阻断高危;保留策略成文
 - [ ] 验收:任意服务单文件改动,只触发该服务流水线且 < 10 分钟出镜像
 
 ### 阶段 2:可重复交付(GitOps 收口)
@@ -146,17 +149,18 @@
 
 ### 阶段 3:看得见(可观测性收口)
 
-- [ ] OTel 前端→网关→服务→DB/Kafka 全链路,一条 trace 实测贯通
+- [ ] K8s 内 Vector/VMAgent/OTel SDK → 外置 OTel Collector → VictoriaLogs/VictoriaMetrics/VictoriaTraces 全链路,一条 trace 实测贯通
+- [ ] 外置 OTel Collector 落地尾采样(错误/高延迟 100%、正常 1%~5%)、PII 脱敏与 `/healthz`、`/metrics` 噪声清洗
 - [ ] `service.namespace`/`service.instance` 标签全量落地,config 撞名指标可区分
 - [ ] 四黄金信号看板按上下文重组;`rpc.code` 修复后的看板/告警回归
 - [ ] gateway/user/order/cart 四个 SLO + 错误预算规则上线
-- [ ] 验收:注入一次故障(杀 Pod),从告警响起到定位到 trace ≤ 5 分钟
+- [ ] 验收:注入一次故障(杀 Pod),从 Alertmanager 告警响起到在 Grafana 定位 VictoriaTraces trace ≤ 5 分钟
 
 ### 阶段 4:快而不破(反馈闭环)
 
 - [ ] 契约测试常态化(buf breaking + 事件 schema),破坏性变更在 PR 内被拦截
 - [ ] DORA 四指标自动采集与月度看板
-- [ ] gitleaks/govulncheck/NetworkPolicy 落地
+- [ ] P1 供应链安全扫描(Gitleaks + Trivy + Syft + Cosign + Kyverno)、govulncheck、NetworkPolicy 与 Chaos Mesh 落地
 - [ ] 无责复盘模板 + 「事故结论 → 守护规则」转化流程成文
 - [ ] 验收:连续两周 DORA 数据自动产出,无手填
 

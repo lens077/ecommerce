@@ -88,11 +88,12 @@ control-tower 执行 `make sync-ecommerce-schemas` 并先发布 config 服务 �
 | Consul KV 已退役，服务必须从配置中心启动 | [consul-kv-retired.md](experience/consul-kv-retired.md) |
 | 换基础设施后全量重启才爆雷 / 消费者盘点漏了 CC 自举配置 | [config-center-self-bootstrap-blindspot.md](experience/config-center-self-bootstrap-blindspot.md) |
 | Secret 看似存在但 HTTP 客户端报 `invalid header field value` | [kubernetes-secret-trailing-newline.md](experience/kubernetes-secret-trailing-newline.md) |
+| 只想看一个配置段却把邻接凭据打进工具日志 | [config-preview-allowlist.md](experience/config-preview-allowlist.md) |
 
 ## 已知注意事项
 
-- **config 服务不能从配置中心读自己的配置**（自举）。它从本地 `CONFIG_FILE` 启动，
-  Consul 只用于服务注册发现；把自身 Bootstrap 放进 ConfigService 会形成启动死锁。
+- **config 服务不能从配置中心读自己的配置**（自举）。它从本地 `CONFIG_FILE` 启动。
+  当前 Consul 仅承担存量迁移期注册发现；目标按 `docs/TECH.md` 为 K8s Service + CoreDNS。把自身 Bootstrap 放进 ConfigService 会形成启动死锁。
 - Config Center 当前会把 `is_secret=true` 的值统一返回为 `******`，machine token 也不例外。
   业务服务读取的是包含密码和 API key 的整份 Bootstrap，因此条目暂时必须使用
   `is_secret=false`，并依靠 Config Center 鉴权限制读取。改为字段级 Secret 引用或支持

@@ -5,7 +5,7 @@
 > ⚠️ 注意同名不同物：现根目录的 [`DESIGN.md`](../../DESIGN.md) 是 2026-08-11 新增的「灯市」**视觉设计系统**
 >（配色/字体/间距 token，配套 [`PRODUCT.md`](../../PRODUCT.md) 产品定义，impeccable 工作流真相源），
 > 不是被拆分的架构文档回魂，也不归本目录管。**分工不变**：本目录回答「为什么这么设计」；
-> 技术选型与编码约束 → `STACK.md`；服务拓扑事实 → `.service-matrix.yaml`；
+> 技术选型与基础设施真相源 → [../TECH.md](../TECH.md)；编码约束 → `STACK.md`；服务拓扑事实 → `.service-matrix.yaml`；
 > 实现进度 → `TODO.md`。文中「现状」类横幅描述的是拆分当日的实况，之后以 `TODO.md` 为准。
 
 ## 目录
@@ -14,9 +14,10 @@
 |---|---|---|
 | [platform/architecture.md](platform/architecture.md) | 服务边界、核心/支撑服务规划、领域事件、通信协议 | DESIGN.md §微服务架构核心设计 |
 | [platform/production-scale-goal.md](platform/production-scale-goal.md) | 百万/千万级生产化目标、容量模型、现有技术栈边界、证据门禁、P0/P1/P2 与完成定义 | 2026-08-27 用户目标，后续按证据驱动方向修订 |
+| [platform/capacity-balancing.md](platform/capacity-balancing.md) | VPA recommendation、可信 requests、节点重启、Descheduler 准入、容量/故障演练与持续告警 | 2026-08-29 三节点调度审计与 [VPA recommendation-only 发布报告](../reports/2026-08-29-vpa-recommendation-only.md) |
 | [platform/error-handling.md](platform/error-handling.md) | biz→data→service 三层错误分层约定（**全服务通用规范**） | DESIGN.md §错误处理 |
 
-| [platform/rbac.md](platform/rbac.md) | 三角色 RBAC 模型、权限粒度、Casdoor 集成 | DESIGN.md §RBAC |
+| [platform/rbac.md](platform/rbac.md) | Casdoor 三角色与 OpenFGA 对象关系授权（覆盖存量 Casbin RBAC） | DESIGN.md §RBAC |
 | [platform/pre-environment.md](platform/pre-environment.md) | **历史快照，禁止作为当前配置源**：保留旧集群协议握手与迁移教训；当前实况看 matrix 与 infrastructure audit | 2026-08-08/24 集群实测 |
 | [platform/i18n-routing.md](platform/i18n-routing.md) | i18n URL 与语言路由策略：公开页子目录 `/:lang/` 决策、方案对比、hreflang、SSR 前置、API 本地化（**设计草案**） | 2026-08-08 设计草案 |
 | [platform/admin-roadmap.md](platform/admin-roadmap.md) | 管理员角色技术形态（角色×独立 admin-service×专属页面，含边界铁律）与能力取舍、竞品差距 | 2026-08-12 基于 merchant/store-settings.md 反推 |
@@ -25,13 +26,13 @@
 | [product/schema.md](product/schema.md) | SPU/SKU 表早期稿 | DESIGN.md §数据库设计 |
 | [inventory/inventory.md](inventory/inventory.md) | 库存分层模型、状态机、高并发保障、库存表 | DESIGN.md §分布式库存状态机 |
 | [order/checkout.md](order/checkout.md) | **下单（CreateOrder）设计基线 v2**：报价 token、组原子预占、支付/订单接受分离、Outbox、超时自愈；6 轮对抗评审收敛 | 原 docs/design/order.md（v1 草稿已被 v2 推翻并删除） |
-| [order/consistency.md](order/consistency.md) | 跨服务一致性（Outbox + TCC-Try + 编舞 Saga） | 原 TODO.md §二 |
+| [order/consistency.md](order/consistency.md) | 跨服务一致性（Order Saga 编排 + Outbox/Inbox + Kafka 编舞） | 原 TODO.md §二 |
 | [order/schema.md](order/schema.md) | 订单表早期稿（被 checkout 终稿部分取代） | DESIGN.md §数据库设计 |
 | [payment/payment.md](payment/payment.md) | **已作废**（文首横幅）：单订单支付单+单轴状态模型被 checkout v2 按组支付、capture/refund 双轴取代；仅存渠道对接与对账素材 | DESIGN.md §支付系统 |
-| [search/search.md](search/search.md) | CQRS 读写分离、Meilisearch 索引契约与查询边界 | DESIGN.md §搜索服务 |
+| [search/search.md](search/search.md) | CQRS 读写分离、搜索投影索引契约（目标 Elasticsearch，见 docs/TECH.md）与查询边界 | DESIGN.md §搜索服务 |
 | [merchant/store-settings.md](merchant/store-settings.md) | Shopline 商店设置 20 页竞品实录（含自研备注与服务映射） | 原 DESIGN-MERCHANT.md，2026-08-12 重写为实录调研 |
 | [merchant/roadmap.md](merchant/roadmap.md) | 商家角色功能取舍（引进/不引进）与 P0/P1/P2 路线图 | 2026-08-12 基于 store-settings.md 调研 |
-| [product/sales.md](product/sales.md) | 销量统计：Redis 实时 + PG 预聚合（**部分落地**，实况见文首横幅） | 原 product 服务 schema/design/ 目录，2026-08-13 移入 |
+| [product/sales.md](product/sales.md) | 销量统计：PG 事实与预聚合 + Dragonfly 可丢加速层（**部分落地**，实况见文首横幅） | 原 product 服务 schema/design/ 目录，2026-08-13 移入 |
 | [cart/api-decisions.md](cart/api-decisions.md) | 购物车接口设计因果论证（**历史记录**）。2026-08-26 裁决：`cart_item_id` 为唯一条目标识（checkout v2 依赖此语义），proto 现行并行数组属未记录的翻转，迁移列 P1 | 原 backend/api/cart/v1/README.md，2026-08-13 移入 |
 
 尚无设计文档的服务：user / behavior（behavior 的推荐链路知识在

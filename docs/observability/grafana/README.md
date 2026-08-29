@@ -14,8 +14,9 @@
 
 三张盘通过标题栏右上角的按钮互跳,`keepTime=true` —— 在业务盘看到某个时刻有尖峰,
 点进 APM / 基础设施还停在同一个时间窗。排障动线:业务盘红绿灯 → APM 锁定服务与
-层级 → 明细跳 Jaeger(`http://jaeger-ui.dev.test`,内网域直达;换环境用
-`JAEGER_UI_BASE` 环境变量重新生成)。
+层级 → 通过 Grafana 查询 VictoriaTraces。
+
+**后续决策覆盖（2026-08-28）**：本条已被 [`docs/TECH.md`](../../TECH.md) 覆盖：现行链路存储为 VictoriaTraces，统一经 Grafana 查询；脚本中的 `JAEGER_UI_BASE` 和既有 JSON 属于历史机器可读内容，本次不改。
 
 ## 生成与导入
 
@@ -41,8 +42,9 @@ kubectl -n observability apply -f alerts/ecommerce-alerts-configmap.json
 ```
 
 请求体里已经带了 `overwrite: true`,重复导入是覆盖而不是新建。
-告警当前**不配通知渠道**,只在 Grafana UI(Alerting → Alert rules)里看;
-将来接飞书 webhook 时只路由 `severity=critical`(决策记录见 `../面板设计.md` §6)。
+以上 `build_alerts.py` 生成与 `kubectl apply` 步骤只用于复现历史产物，不得部署到现网。
+
+**后续决策覆盖（2026-08-28）**：本条已被 [`docs/TECH.md`](../../TECH.md) 覆盖：现行告警链为 vmalert → Alertmanager；历史 Grafana unified alerting 配置不再作为部署指引。
 
 数据源 UID 硬编码在 `common.py`,与 2026-08 的实例一致;换实例或重建数据源时用
 环境变量覆盖,不必改代码:
@@ -117,9 +119,9 @@ cpu / memory / disk / network 都已开,所以基础设施盘才做得起来。
 3. **RPC 类曲线在空闲时段为空** —— dev 环境没有持续流量,rate 窗口内无样本即空图,
    有调用即出线(序列 14 天窗口内可查到);
 4. **Kubernetes 容器实际资源指标（P2）** —— workload/Pod 状态、ready/restart、requests/limits 与 Event 已由 OTel `k8s_cluster`/`k8sobjects` 提供；实际 CPU/MEM/filesystem/network 仍缺 kubeletstats/cAdvisor；
-5. **日志按 pod 下钻不了** —— fluent-bit 的 `Label_keys` 用了 `$k8s.pod_name`,
+5. **日志按 pod 下钻不了（存量 fluent-bit 链）** —— fluent-bit 的 `Label_keys` 用了 `$k8s.pod_name`,
    而字段被拍平成名字里带点的扁平 key,`k8s__pod_name` 的值是字面量 `".pod_name"`。
-   正确写法是 `$['k8s.pod_name']`(待修,记在 TODO.md);
+   正确写法是 `$['k8s.pod_name']`(待修,记在 TODO.md)。目标态按 [`docs/TECH.md`](../../TECH.md) §9.1 使用 Vector 轻量采集，经外置 OTel Collector 中继后写入 VictoriaLogs;
 6. **配置中心属于独立基础设施** —— 全部查询排除 `service_name="config-service"`,
    其运行时视图去配置中心自己的 System 页面看。
 

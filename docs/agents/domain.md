@@ -27,7 +27,7 @@
 3. 与本次改动相关的模块目录 `context/project/ecommerce/{module}/`，含其 `experience/` 踩坑记录
    和 `adr/`（若存在）。
 4. [`.service-matrix.yaml`](../../.service-matrix.yaml) —— 需要服务注册名、网关前缀、依赖关系、
-   外部依赖、Consul KV 键、前端端口时查这里。
+   外部依赖、Config Center 键、前端端口时查这里。
 
 **不要全仓 grep 找规范或拓扑。** 走上面的路径。
 

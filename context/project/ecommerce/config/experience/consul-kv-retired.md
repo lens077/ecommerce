@@ -8,8 +8,9 @@ description: Consul KV no longer stores service Bootstrap configuration
 
 As of 2026-08-08, the `ecommerce/<service>/<environment>.yml` Consul KV
 entries have been deliberately deleted. Config Center is the sole Bootstrap
-source for every business service. Consul remains only for service discovery
-and registration.
+source for every business service. Consul remains only as a migration-period
+service discovery and registration component; the target is Kubernetes Service
+and CoreDNS in production, with Docker Compose service names for Mac development.
 
 Do not restore `CONFIG_SOURCE=consul`, `CONSUL_PATH`, a Consul Bootstrap
 reader, or a fallback path. A missing Config Center selector, invalid machine

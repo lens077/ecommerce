@@ -3,7 +3,7 @@
 > 从根 `DESIGN.md` 拆出（2026-08-08）。⚠️ 现状与设计差距极大：`Reserve` 静默无操作、
 > `ReleaseReserve` 是 panic 桩（2026-08-06 对抗评审，修复项见 `TODO.md` P0）。
 > 实际表结构以 [`backend/services/inventory/internal/data/migrations/`](../../../backend/services/inventory/internal/data/migrations/) 为准。
-> 与订单的协作契约（Reserve=TCC Try、ConfirmReserve、reqid 关联键、预占 TTL 兜底）
+> 与订单的协作契约（Order Saga 同步调用 Reserve、ConfirmReserve、reqid 关联键、预占 TTL 兜底）
 > 见 [order/checkout.md](../order/checkout.md) 与 [order/consistency.md](../order/consistency.md)。
 
 
@@ -11,14 +11,14 @@
 
 ### 库存分层模型
 
-采用「实物库存 + 逻辑库存」双层模型，兼顾数据准确性与业务灵活性：
+采用「库存流水真相 + 余额投影」模型，并保留实物库存与逻辑库存的业务视图，兼顾数据准确性与业务灵活性：
 
 1. 实物库存（Physical Stock）
     - 核心维度：SKU_ID + 仓库 ID 唯一标识，记录仓库内实物库存的真实数据
     - 核心字段：在手库存（On-hand）、预占库存（Reserved）、已锁定库存（Locked）、可用库存（Available）
     - 计算公式：**`available = on_hand − reserved − locked`**（2026-08-26 修正：旧公式漏掉了本文自己定义的「预占」态，[order/checkout.md](../order/checkout.md) 已点名该注释是 bug；此公式为唯一成文版本，须由属性测试守护——任意操作序列后不变量恒成立）
-    - 用途：仓储实际库存管理，所有库存扣减、调整的最终依据，保证账实一致
-2. 逻辑库存（Logic Stock）
+    - 用途：仓储实际库存管理；余额是 `StockLedger` 流水的投影，不是最终真相
+2. 逻辑库存（Logic Stock，只读投影）
     - 核心维度：SKU_ID 维度汇总全渠道可用库存，面向前端展示与下单校验
     - 用途：商品详情页库存展示、下单前置校验，支持预售等特殊业务场景的库存配置，与实物库存实时同步。
 
@@ -47,13 +47,15 @@
    `allkeys-lru` 驱逐）**不得承载锁/幂等等「丢失即出错」的数据**——锁键可被驱逐即超卖。
    此为 [order/checkout.md](../order/checkout.md) 六轮对抗评审定稿结论，本节旧文与其相悖故废止。
 2. 库存操作原子化（**唯一正确性锚点**）
-    - 所有库存扣减、预占、释放操作，均通过 PostgreSQL 的事务 + 行锁实现数据库层面的原子性，避免并发更新导致的数据不一致。
+    - 所有库存扣减、预占、释放操作均落 PostgreSQL，并以单条条件更新把「校验 `available >= quantity`」与变更合为一个原子动作；事务与固定锁序负责跨行整组操作，严禁把正确性放入 Dragonfly/Redis。
     - 核心扣减 SQL 强制添加库存校验条件，例：UPDATE inventory SET locked = locked + ? WHERE sku_id = ? AND
       warehouse_id = ? AND
       available >= ?，从数据库层面杜绝超卖。
-3. 库存流水与可追溯
+3. 库存流水与可追溯（`StockLedger` 是库存绝对真相源）
     - 每一次库存变动都生成唯一的库存流水记录，关联订单号、操作类型、变动前后库存、操作人、操作时间，支持全链路库存追溯，方便问题排查与对账。
-4. 库存预警机制（目标态）
+4. 预占生命周期与库存预警（目标态）
+    - 预占与释放必须成对且总量平衡；预占到期由后台任务或延迟事件自动释放。
+    - 库存预警机制
     - 库存事务写 broker-neutral outbox，目标经 relay 发布到 Kafka；消费者通过 Inbox 幂等处理低库存事件，再调用通知适配器。当前生产者、Kafka consumer、通知服务与商家渠道均未接线。
 
 ## 库存表（早期设计稿）

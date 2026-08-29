@@ -44,6 +44,35 @@ description: harness 本身（硬规则/门禁/Agent 约束）每次改动的原
 
 ---
 
+### 2026-08-29 GitHub 门禁全面收敛为发布 tag 触发（Actions 预算超支）
+
+- **改了什么**：四个还挂在 push/PR/定时上的 GitHub workflow 一次性改掉触发条件——
+  `context-gate.yml`（原 `pull_request` + `push: '**'`）、`deploy-consistency.yml`
+  （原 push main + PR 路径过滤）、`supply-chain-pr.yml`（原 `pull_request`）统一改为
+  仅 `push: tags: ['[0-9]+.[0-9]+.[0-9]+']` + `workflow_dispatch`；`frontend.yml`
+  删除每日 `cron: '17 3 * * *'`，只留手动。`backend.yml` 本就是 tag 触发，未动。
+  顺带给 `supply-chain-pr.yml` 补「Resolve release range」步骤，把 `BASE_REF`
+  显式算成上一个 semver tag。tag 格式**维持裸 semver `X.Y.Z`**（见下）。
+- **为什么**：GitHub Actions 预算超支，平台会**直接拒绝运行**排队的 workflow。
+  此时「门禁挂在每次 push 上」不是更严格，而是把额度烧在信噪比最低的地方，
+  并让真正需要证据的那一刻（发版）反而跑不动。per-push 覆盖没有丢：
+  `.gitlab-ci.yml` 的同名 `context-gate` job 仍挂在 `$CI_COMMIT_BRANCH` 与 MR 上，
+  而 origin 就是 GitLab——日常 push 先到有门禁那一侧。
+  用户曾提出改用 `vX.Y.Z` 格式，经核对后维持裸 `X.Y.Z`：`git-commit.md` 的
+  freeze 设计依赖「旧 `v1.3.x` 系不匹配新模式」，且 `backend.yml` 的 PREV_TAG
+  求值与 `helm/values.yaml` 回写都按裸 semver 写死，改前缀要同步动四处且会
+  解冻历史 tag。
+- **触发事故**：GitHub Actions 预算超支导致 Actions 被拒绝运行。旧配置下每次分支 push
+  都会同时排队 `context-gate`（含约 1 分钟的 canary 元评测）与可能的
+  `deploy-consistency`，加上一条每天无条件下载 Chromium 跑 Playwright 的
+  `frontend.yml` cron——后者测的还是**线上已部署的站点**，与本仓提交无关，
+  是常驻消耗里最贵且最不该由 push 节奏承担的一条。
+- **怎么验证的**：用 `python3` + `yaml.safe_load` 逐份解析 `.github/workflows/*.yml`
+  并断言「分支 push / `pull_request` / `schedule`」三类触发计数为 **0**，非零即退出 1；
+  实测六份文件只剩 tag push、`workflow_dispatch` 与 `service-ci.yml` 的 `workflow_call`。
+  核对 `scripts/supply-chain-pr.sh:134-143` 后确认 BASE_REF 为空时脚本会退化成
+  `HEAD~1`（只扫一个提交），故补上按上一个 semver tag 求值的步骤。
+
 ### 2026-08-29 Bootstrap 服务边界与明文凭据纳入双门禁
 
 - **改了什么**：7 个非 search 服务的 Bootstrap proto 用 `reserved 6` / `reserved "search"` 删除无主的 `Search` 字段，生成代码与 JSON Schema 同步收口。`backend/structcheck` 新增 schema 白名单与配置实例校验：CI 验证已提交 example，本机存在 dev/pre.yml 时一并验证，失败只打印路径不打印值。`verify-quick.sh` 新增并行凭据扫描，覆盖 tracked 与未忽略的新配置文件；扫描结果只报 `path:line:key`。同时把 Kafka Connect 数据库口令改为 Secret 注入，删除两个已过期的测试 JWT。
@@ -56,14 +85,14 @@ description: harness 本身（硬规则/门禁/Agent 约束）每次改动的原
 - **改了什么**：根目录 `application-vpa.yml` 收敛为覆盖 15 个 ecommerce Deployment 的完整 VPA 集合，统一使用 `updateMode: Off`、`RequestsOnly` 和显式 container 名称；已有 service-local VPA 同步为相同的 recommendation-only 语义。`backend/structcheck` 新增门禁，双向检查 target/VPA/container 名称、15 个目标全覆盖、无重复、禁止 `InPlace`/`Auto`，并禁止观测阶段用 `minAllowed`/`maxAllowed` 裁剪推荐。
 - **为什么**：当前集群只安装 recommender，没有 updater/admission-controller。把 CR 写成 `InPlace` 现在不会生效，却会在以后补装组件时静默跨越为自动改 Pod；观测阶段的边界还会把人工假设伪装成 Target。容量定稿必须先保留原始推荐，再结合启动峰值、k6 和 N+1 预算人工写回 requests。
 - **触发事故**：live 仅有 behavior/cart/order 三个 VPA，三者的内存 Lower/Target/Upper/Uncapped 全部恰好为 `250Mi`，证明被 recommender 默认地板顶住；根 `application-vpa.yml` 仍使用不存在的裸 Deployment 名，archive 也记录这些 targetRef 曾悬空 44 天。同期 17 个业务 Pod 合计 request 为 `1500m/2240Mi`，低流量瞬时实际仅约 `20m/378Mi`，而 frontend 完全没有 requests，说明当前值既有虚高也有缺失，不能靠一次快照直接缩容。
-- **怎么验证的**：`go test -count=1 ./structcheck/...` 通过；15 个 VPA 与 5 份 service-local 清单均通过 Kubernetes server dry-run；VPA Helm 渲染只包含 recommender，且 `10m/32Mi` 推荐地板参数进入容器 args。容量定稿、节点/资源/并发 rollout/扩缩容演练、持续 skew 与调度失败告警均保留在 `docs/design/platform/capacity-balancing.md`。同日后续取得 dev 部署授权后，Helm revision 2 与 15 个 `Off` VPA 已发布；全部 `RecommendationProvided=True`，无 webhook/updater，发布前后的业务 Deployment 与 Pod 身份未变化。
+- **怎么验证的**：`go test -count=1 ./structcheck/...` 通过；15 个 VPA 与 5 份 service-local 清单均通过 Kubernetes server dry-run；VPA Helm 渲染只包含 recommender，且 `10m/32Mi` 推荐地板参数进入容器 args。容量定稿、节点/资源/并发 rollout/扩缩容演练、持续 skew 与调度失败告警均保留在 `docs/design/platform/capacity-balancing.md`。同日后续取得 dev 部署授权后，Helm revision 2 与 15 个 `Off` VPA 已发布；全部 `RecommendationProvided=True`，无 webhook/updater，发布前后的业务 Deployment 与 Pod 身份未变化。完整发布证据、经验、回滚与下一步见 `docs/reports/2026-08-29-vpa-recommendation-only.md`。
 
 ### 2026-08-28 跨服务节点均衡与 Helm 缓存纳入 structcheck
 
-- **改了什么**：25 份 ecommerce Deployment 统一增加 suite-wide `topologySpreadConstraints`；`backend/structcheck` 要求 Pod template 带共同的 `app.kubernetes.io/part-of=ecommerce` 标签，约束必须使用 hostname、`maxSkew=1`、`ScheduleAnyway` 和 `Honor` policies，同时禁止把共同标签加入已有 Deployment 的 immutable selector。测试还逐个读取 10 个子 chart 的 `library-0.1.0.tgz`，确认实际消费的缓存模板包含同一约束。
-- **为什么**：10 个 API 都是单副本。如果每个 Deployment 只按自己的 `app` 做 spread，scheduler 看不到其他服务，无法平衡整套工作负载；共同标签才能让不同服务进入同一个计数集合。选择软约束是为了优先压低 skew，同时避免节点资源不足时把发布永久卡住。
-- **触发事故**：live 审计发现 ecommerce 的 17 个 ReplicaSet Pod 分布为 node101 `12`、node102 `4`、node103 `1`，虽无业务 `nodeSelector`，scheduler 也不会主动重平衡历史 Pod；此前 Tetragon DaemonSet 又曾被手工 `nodeSelector=node103` 限成 `1/3`，造成另外两个节点的运行时审计盲区。本轮第一次执行 `helm dependency update` 还在只更新 3 个子 chart 后超时，证明只检查 library 源模板仍会放过部分陈旧 tgz。
-- **怎么验证的**：`go test -count=1 ./structcheck/...` 通过；10 个 Helm Deployment 渲染后均包含共同标签和约束；22 份 backend、3 份 frontend 清单以及 Helm 全量资源均通过 Kubernetes server dry-run。未获本轮 dev apply 授权，因此这些验证只证明发布候选有效，live 落点仍待受控 rollout 后复核。
+- **改了什么**：25 份 ecommerce Deployment、10 个 Helm 子 chart 和 control-tower gateway dev/pre 统一增加 suite-wide `topologySpreadConstraints`。`backend/structcheck` 要求 Pod template 带共同的 `app.kubernetes.io/part-of=ecommerce` 标签，约束必须使用 hostname、`maxSkew=1`、`DoNotSchedule` 和 `Honor` policies，同时禁止把共同标签加入已有 Deployment 的 immutable selector。consumer-next 与 gateway 另用 hostname `podAntiAffinity` 分散自身双副本，并固定 `maxSurge=0`、`maxUnavailable=1`。测试还逐个读取 10 个子 chart 的 `library-0.1.0.tgz`，确认实际消费的缓存模板包含同一约束。
+- **为什么**：10 个 API 都是单副本。如果每个 Deployment 只按自己的 `app` 做 spread，scheduler 看不到其他服务，无法平衡整套工作负载；共同标签才能让不同服务进入同一个计数集合。实际发布证明 `ScheduleAnyway` 只提供调度偏好，不能保证 `maxSkew=1`。双副本应用不能再增加 topology key 与 `whenUnsatisfiable` 都相同的第二条 spread，因此改用 pod anti-affinity；硬 spread 与 anti-affinity 同时生效时，surge-first 滚动可能没有合法落点，因此双副本应用采用先缩后补。
+- **触发事故**：live 审计发现 17 个 ReplicaSet Pod 分布为 node101 `12`、node102 `4`、node103 `1`，虽无业务 `nodeSelector`，scheduler 也不会主动重平衡历史 Pod；此前 Tetragon DaemonSet 又曾被手工 `nodeSelector=node103` 限成 `1/3`，造成另外两个节点的运行时审计盲区。第一轮软约束 rollout 只得到 `7/5/5`；收紧后，Kubernetes 拒绝 consumer-next 的重复 spread key，改用 anti-affinity 后又因默认 surge 策略出现 `0/3 nodes are available`。硬约束 rollout 还暴露三个节点的 containerd 依赖已停机的 `192.168.3.220:7890`，address 新副本进入 `ImagePullBackOff`；TCR 直连验证成功后，将 TCR 加入 `NO_PROXY` 并逐节点重启 containerd。本轮第一次执行 `helm dependency update` 还在只更新 3 个子 chart 后超时，证明只检查 library 源模板仍会放过部分陈旧 tgz。
+- **怎么验证的**：`go test -count=1 ./structcheck/...` 与 control-tower deploy 测试通过；10 个 Helm Deployment、22 份 backend、3 份 frontend 清单和 gateway dev/pre 均通过 Kubernetes server dry-run。dev 受控 rollout 后，15 个 Deployment、17 个 active Pod 全部 Ready，node101/node102/node103=`5/6/6`，skew=`1`；consumer-next 与 gateway 的两个副本分别落在不同节点，15 个 live 镜像引用保持不变。三个节点的 containerd、CRI 和 Node Ready 均通过，Consul 深健康为 `10/10`，Gateway 与 shop 路径返回 200。
 
 ### 2026-08-28 TCR Cosign 兼容性只做单服务硬失败探测
 

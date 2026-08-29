@@ -164,12 +164,12 @@ Kafka/Strimzi/Debezium/Kafka Connect 是 Java 例外；AutoMQ、RocketMQ、Pulsa
 
 ## §7 弹性 / 调度 / 成本
 
-**现状**：VPA 已用；无事件驱动扩缩；发布走 Deployment 滚动重建。
+**现状**：VPA recommendation-only 已发布，15 个 ecommerce VPA 均为 `Off`/`RequestsOnly`；当前没有 HPA、KEDA ScaledObject 或 Descheduler，发布仍走 Deployment 滚动重建。发布证据与校准计划见 [`2026-08-29-vpa-recommendation-only.md`](reports/2026-08-29-vpa-recommendation-only.md)。
 
 | # | 状态 | 工具 | 语言 | CNCF | 结论 |
 |---|---|---|---|---|---|
 | 7.1 | ✅ | **KEDA** | Go | graduated | 采纳：主场景为 Kafka Consumer Group lag，使用 Kafka Scaler，基准 `lagThreshold: "50"`。HPA 管在线请求服务，KEDA 管 Kafka 消费者，两者不得控制同一资源；原 `nats-jetstream` scaler 计划不再代表目标态 |
-| 7.2 | ❌ | OpenKruise | Go | incubating | **暂缓（2026-08-20 部署实测否决，覆盖此前 🟡 试点）**：其全局 fail-closed pod mutating webhook 在单副本 manager 崩溃期**冻结全集群 Pod 创建**（含挡自己新 pod 的死锁，2 节点测试集群实测复现后已卸载）；官方兼容表止于 K8s 1.32。翻盘条件 = 第 3 节点加入 + manager 稳定性复验，或上游支持无 webhook 的 ImagePullJob 最小安装。记录：`~/lens077/kubernetes/DEPLOY-RECORD-2026-08-20.md` |
+| 7.2 | ❌ | OpenKruise | Go | incubating | **暂缓（2026-08-20 部署实测否决，覆盖此前 🟡 试点）**：其全局 fail-closed pod mutating webhook 在单副本 manager 崩溃期冻结全集群 Pod 创建，且官方兼容表止于 K8s 1.32。当前虽已扩为 3 节点，但集群为 K8s 1.36，兼容性与 fail-closed 风险仍未解除；只有上游明确支持当前版本并完成 manager 故障复验，或提供无 webhook 的最小 ImagePullJob 安装时才重评。记录：`~/lens077/kubernetes/DEPLOY-RECORD-2026-08-20.md` |
 | 7.3 | ❌ | Karpenter | Go | 收录 | 否决：固定 3 VM 无按需节点供给可言 |
 | 7.4 | ❌ | Koordinator / Katalyst / gocrane | Go | sandbox/收录 | 否决：混部压榨在 19.5G 集群上无意义 |
 | 7.5 | 🟡 | OpenCost | Go | incubating | **评估中**：用于每服务／每订单成本模型，P1 阶段引入 |

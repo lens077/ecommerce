@@ -8,6 +8,26 @@
 
 ## 电商与商品
 
+### UserProfile
+
+- **含义**：用户的通用业务属性，例如头像和昵称，独立于 IAM 账号认证信息。
+- **本项目**：归属 Identity Service，并通过 Casdoor `user_id` 关联认证主体。
+
+### Merchant
+
+- **含义**：签署入驻协议的商家法律主体，包含经营信息与结算账户。
+- **本项目**：归属 Identity Service；一个 Merchant 可以拥有多个 Store。
+
+### Store
+
+- **含义**：Merchant 开设的实体或线上店铺。
+- **本项目**：归属 Identity Service，是 Listing、MerchantOrder 和成员授权关系的重要业务边界。
+
+### MerchantMember
+
+- **含义**：用户在某个 Merchant 或 Store 中的成员关系和职务。
+- **本项目**：归属 Identity Service，并作为 OpenFGA 关系授权的业务上下文。
+
 ### B2B2C
 
 - **含义**：Business-to-Business-to-Consumer，平台连接商家与消费者的电商模式。平台提供交易、支付和治理能力，商家负责供给商品并履约。
@@ -22,6 +42,16 @@
 
 - **含义**：Stock Keeping Unit，库存量单位。它是可定价、可计数和可交易的最小商品规格，例如某款手机的特定颜色与容量组合。
 - **本项目**：价格、库存和订单明细都落到 SKU 粒度；库存通常以 `sku_id + warehouse_id` 唯一定位。
+
+### Product（SPU）
+
+- **含义**：标准商品单元，定义商品名称、描述、品牌和类目等通用属性。
+- **本项目**：归属 Catalog Service；可购买的具体规格由 SKU 表示。
+
+### Listing
+
+- **含义**：店铺上架项，绑定 Store 与 SKU，包含特定店铺的售价和上下架状态。
+- **本项目**：归属 Catalog Service；库存由 Inventory Service 管理，不属于 Listing。
 
 ### 商品快照
 
@@ -49,6 +79,81 @@
 - **本项目**：支付、订单和库存分别保存本域事实，跨域异常依靠事件重试与定时对账收敛。
 
 ## 库存与交易一致性
+
+### OrderGroup
+
+- **含义**：用户一次 Checkout 产生的总订单，包含一个或多个 MerchantOrder。
+- **本项目**：归属 Order Service，是跨商家拆单后的展示与支付聚合根。
+
+### MerchantOrder
+
+- **含义**：归属于单一 Merchant 的子订单，是履约和结算的基本单元。
+- **本项目**：归属 Order Service，并关联 Merchant 与 Store。
+
+### OrderLine
+
+- **含义**：订单明细行，固化下单时刻的 SKU 信息、快照单价与分摊优惠。
+- **本项目**：归属 Order Service，创建后作为历史交易快照保存。
+
+### Saga Manager
+
+- **含义**：Order Service 内置的分布式事务编排器，显式调度主流程、状态迁移和补偿动作。
+- **本项目**：负责 Checkout、价格快照、库存预占和支付意图创建等核心交易链路；派生与副作用链路通过 Kafka 编舞。
+
+### PaymentIntent
+
+- **含义**：一次交易支付的声明，跟踪整个支付生命周期。
+- **本项目**：归属 Payment Service，并关联订单、金额、币种和支付状态。
+
+### PaymentAttempt
+
+- **含义**：针对某个 PaymentIntent 发起的一次具体支付尝试。
+- **本项目**：归属 Payment Service；通道失败后可以产生新的 PaymentAttempt，但幂等回调只处理一次。
+
+### Authorization
+
+- **含义**：支付预授权，记录获准冻结或后续捕获的金额。
+- **本项目**：归属 Payment Service；Capture 总额不得超过 Authorization 总额。
+
+### Capture
+
+- **含义**：对已授权款项执行实际扣款。
+- **本项目**：归属 Payment Service；Refund 总额不得超过已 Capture 金额。
+
+### Refund
+
+- **含义**：把已 Capture 的款项退还给付款方。
+- **本项目**：归属 Payment Service，并受支付幂等与金额不变量约束。
+
+### StockItem
+
+- **含义**：某个 SKU 在特定仓库或店铺的库存汇总记录。
+- **本项目**：归属 Inventory Service，维护 `available`、`reserved` 和 `on_hand` 等数量。
+
+### StockLedger
+
+- **含义**：记录每次预占、扣减与释放的库存变动流水。
+- **本项目**：归属 Inventory Service，是库存变动的绝对真相源。
+
+### Reservation
+
+- **含义**：关联订单与 SKU 的库存预占记录，包含预占数量和到期时间戳。
+- **本项目**：归属 Inventory Service；防超卖依靠数据库单条原子语句与状态机不变量，不依赖先查后改。
+
+### FulfillmentOrder
+
+- **含义**：对应已支付 MerchantOrder 的履约任务。
+- **本项目**：归属独立的 Fulfillment Service，管理备货、发货与交付状态。
+
+### Shipment
+
+- **含义**：物流发货单，包含物流单号、承运商和包裹明细。
+- **本项目**：归属 Fulfillment Service，发货数量不得超过订单中对应 SKU 的数量。
+
+### TrackingEvent
+
+- **含义**：物流供应商回调或主动查询产生的跟踪事件。
+- **本项目**：归属 Fulfillment Service，用于推进 Shipment 与 FulfillmentOrder 状态。
 
 ### 在手库存（on-hand）
 
@@ -108,12 +213,12 @@
 ### Saga
 
 - **含义**：把跨服务长事务拆成一系列本地事务，通过事件推进，并在失败时执行补偿。
-- **本项目**：下单后的支付、库存确认和履约采用编舞式 Saga；每个服务只处理本地事务和订阅事件，没有中央流程执行器。
+- **本项目**：采用中心化编排与去中心化编舞的混合模型。Order Service 内置 Saga Manager，显式编排 Checkout、价格快照、库存预占与支付意图创建等核心链路；搜索投影、通知、分析和对账等副作用由 Kafka 领域事件驱动。
 
 ### 编舞式 Saga（choreography）
 
 - **含义**：参与服务根据事件自主决定下一步，不由中央编排器逐步调用。
-- **本项目**：Order、Payment 与 Inventory 通过领域事件推进状态；因此必须同时具备幂等消费、显式补偿、超时任务和链路追踪。
+- **本项目**：编舞用于搜索投影、通知、分析和对账等可延迟的副作用链路；服务通过 Kafka 领域事件推进本地处理，并具备 Inbox 幂等消费、显式补偿、超时任务、DLQ 和链路追踪。核心交易链路由 Order Service 内置 Saga Manager 编排。
 
 ### 最终一致性
 
@@ -132,20 +237,25 @@
 - **含义**：描述领域内已经发生且值得其他组件感知的事实，例如订单已创建、支付已捕获或库存已确认。
 - **本项目**：事件用于跨服务异步协作。设计文档中的事件不等于已落地能力，当前状态以 [`TODO.md`](../TODO.md) 和 [`.service-matrix.yaml`](../.service-matrix.yaml) 为准。
 
+### Inbox / Outbox
+
+- **含义**：基于数据库事务的消息收发记录表，用于保证事件至少一次投递和幂等消费。
+- **本项目**：Outbox 与业务变更写入同一 PostgreSQL 本地事务，由 Relay 投递到外部非 K8s Kafka 集群；Inbox 以 `(consumer_group, event_id)` 唯一约束识别重复事件，并与本地业务更新放在同一事务中。
+
 ### Outbox
 
 - **含义**：在业务数据库中保存待发布事件的表。业务变更与事件写入同一本地事务，再由 relay 异步投递。
-- **本项目**：Outbox 解决「业务落库成功但消息未发送」的双写问题；消息系统确认后才标记 `published_at`。
+- **本项目**：Outbox 解决「业务落库成功但消息未发送」的双写问题；Kafka Broker 返回 `acks=all` 后才标记 `published_at`。
 
 ### Inbox
 
 - **含义**：消费者记录已处理消息的表或等价机制，用于识别重复投递。
-- **本项目**：`processed_event` 以 `(consumer, event_id)` 唯一约束去重，并与业务更新、下游 Outbox 写入放在同一本地事务中。
+- **本项目**：`inbox_events` 以 `(consumer_group, event_id)` 唯一约束去重，并与业务更新、下游 Outbox 写入放在同一本地事务中。
 
 ### Relay
 
 - **含义**：扫描 Outbox、发布事件并回写发布状态的独立进程或任务。
-- **本项目**：relay 收到消息系统确认后再标记事件已发布；确认后、标记前崩溃会导致重复投递，因此消费者必须幂等。
+- **本项目**：Relay 收到 Kafka Broker 的 `acks=all` 确认后再标记事件已发布；确认后、标记前崩溃会导致重复投递，因此消费者必须通过 Inbox 保证幂等。连续失败超过规定次数的事件转入 DLQ 并触发告警。
 
 ### 至少一次投递（at-least-once delivery）
 
@@ -167,7 +277,7 @@
 ### 单仓（single-repo）
 
 - **含义**：多个组件或服务的源代码存放在同一个 Git 仓库中。
-- **本项目**：10 个后端服务、前端 workspace、网关和部署清单位于同仓；配置中心已拆为独立仓库。
+- **本项目**：存量 10 个后端服务（user、search、behavior、product、cart、address、order、inventory、merchant、payment）、前端 workspace 和部署清单位于同仓；网关与配置中心已拆至独立仓库。存量服务是迁移起点，目标限界上下文为 identity、catalog、cart、order、payment、inventory、fulfillment、notification，另有 search-projection、analytics 编舞消费者。
 
 ### Monorepo
 
@@ -202,7 +312,7 @@
 ### API 网关
 
 - **含义**：客户端访问后端服务的统一入口，集中处理路由、认证、授权、限流和协议转换等横切能力。
-- **本项目**：网关负责 JWT 验签、Casbin RBAC、服务发现和 Connect 规范错误响应，并向下游注入可信身份元数据。
+- **本项目**：网关执行 Casdoor 有状态 Session 校验与 OpenFGA 关系授权，并向下游注入可信身份元数据。Session 存储于独立的 Dragonfly Session Store，登出即删除并立即失效；完全废弃 JWT，不保留 JWT 兼容或双重鉴权路径。
 
 ### 服务发现
 
@@ -306,17 +416,17 @@
 ### 认证（authentication）
 
 - **含义**：确认调用者是谁。
-- **本项目**：Casdoor 作为身份提供方，网关验证 JWT 后把可信用户身份注入下游元数据。
+- **本项目**：Casdoor 作为身份提供方并管理有状态 Session；网关通过独立的 Dragonfly Session Store 校验 Session，认证通过后把可信用户身份注入下游元数据。登出时删除 Session，使其立即失效。
 
 ### 授权（authorization）
 
 - **含义**：判断已确认身份是否允许执行某个操作。
-- **本项目**：网关通过 Casbin RBAC 按角色、RPC 路径和 HTTP 方法匹配策略，默认拒绝未显式允许的操作。
+- **本项目**：网关通过 OpenFGA 按「主体—关系—资源」执行对象级授权，默认拒绝未显式允许的操作；存量 Casbin RBAC 仅在迁移期保留。
 
 ### IdP
 
 - **含义**：Identity Provider，身份提供方，负责登录、用户身份和令牌签发。
-- **本项目**：Casdoor 是 IdP，提供 OAuth 2.0/OIDC 登录与 JWT。
+- **本项目**：Casdoor 是 IdP，提供 OAuth 2.0/OIDC 登录并管理有状态 Session；业务访问不使用 JWT 鉴权。
 
 ### OAuth 2.0
 
@@ -331,37 +441,39 @@
 ### JWT
 
 - **含义**：JSON Web Token，一种带签名的紧凑令牌格式，常用于传递身份和授权声明。
-- **本项目**：网关验证 RS256 签名、`kid` 和时间声明，并使用 60 秒 leeway 容忍受控时钟偏差。
+- **本项目**：JWT 鉴权已被 [`TECH.md`](TECH.md) 明确废弃；网关只允许 Casdoor 有状态 Session 鉴权，不保留 JWT 兼容或双重鉴权路径。
 
 ### RBAC
 
 - **含义**：Role-Based Access Control，基于角色分配权限的访问控制模型。
-- **本项目**：角色继承关系为管理员包含商家权限、商家包含消费者权限、消费者包含公开权限；高风险操作按 RPC 粒度授权。
+- **本项目**：RBAC 仅用于 Casdoor 的粗粒度角色（admin、merchant、customer）；对象级业务授权统一由 OpenFGA 关系模型判定。存量 Casbin RBAC 处于迁移期，不作为目标授权路径。
 
 ### Casbin
 
 - **含义**：通用访问控制策略引擎，可按模型和策略文件执行权限判断。
-- **本项目**：网关使用 Casbin 实现 RBAC、路径匹配和 deny 优先规则。
+- **本项目**：Casbin 是存量迁移期组件；目标授权路径为 OpenFGA 关系授权，不保留 Casbin 与 OpenFGA 的双重鉴权路径。
 
 ### Casdoor
 
 - **含义**：Go 编写的开源身份提供方（IdP），提供登录界面、用户目录、OAuth 2.0/OIDC 协议端点与 JWT 签发。
 - **本项目**：唯一 IdP（`casdoor.apikv.com`，RS256、`kid=lens`）；2026-08-20 定稿收编进集群，迁移方案与 JWKS diff==0 门禁见 [`docs/技术栈选型对抗/对抗审阅表-第3轮.md`](技术栈选型对抗/对抗审阅表-第3轮.md) R3-A。
 
+**后续决策覆盖（2026-08-28）**：本条已被 [`TECH.md`](TECH.md) 覆盖：Casdoor 作为 IAM 管理有状态 Session，Session 存储于独立的 Dragonfly Session Store；系统完全废弃 JWT 鉴权，不保留兼容路径。
+
 ### ReBAC 与 Zanzibar
 
 - **含义**：Relationship-Based Access Control，把授权表达为「主体—关系—资源」元组构成的图，判定即图上的可达性查询；源自 Google Zanzibar 论文（Drive/Docs 的全局授权系统）。相比 RBAC 的「角色 → 权限包」，ReBAC 能回答**资源实例级**问题（「这个用户对这一件资源是否有这一种关系」）。
-- **本项目**：OpenFGA 即 ReBAC 实现，规划建模商家-店铺-商品-操作员关系（TECH-RADAR §4.1）。
+- **本项目**：OpenFGA 是对象级授权的唯一真相源，统一建模用户、商家、店铺、订单等资源关系；网关在 Session 校验后调用 OpenFGA Check API 判定访问权限。
 
 ### OpenFGA
 
 - **含义**：CNCF incubating 的细粒度授权服务（Go，Zanzibar 系）：应用把关系写成元组存入，运行时以 `check(主体, 关系, 资源)` 查询判定。
-- **本项目**：定稿形态=2 副本反亲和、store 在 `pg-main` 独立库；**边界条款**=网关 Casbin 管「角色×路由」粗闸（进程内），FGA 管资源实例关系，禁止网关热路径远程 check；失败分级「降级只准缩小授权集」。落地进度见 [`TODO.md`](../TODO.md) ⑪。
+- **本项目**：OpenFGA 是对象级授权真相源；网关在 Casdoor 有状态 Session 校验后调用 Check API，按用户、商家、店铺和订单等资源关系判定权限。授权异常时默认拒绝，不得扩大授权集。落地进度见 [`TODO.md`](../TODO.md) ⑪。
 
 ### 影子双跑（shadow dual-run）
 
 - **含义**：新旧两套判定逻辑并行执行同一真实流量：旧逻辑继续拍板生效，新逻辑只记录结果并与旧逻辑比对差异；差异收敛到零后才让新逻辑转为强制。目的：用真实流量验证新系统的正确性，验证期零用户风险。
-- **本项目**：OpenFGA 首接 merchant 域的既定接入方式——先影子双跑（FGA 判定只记录不生效），比对通过后转强制（TECH-RADAR §4.1、TODO ⑪）。
+- **本项目**：影子双跑仅用于存量 Casbin 向 OpenFGA 迁移期间验证判定差异；目标态只保留 Casdoor 有状态 Session 与 OpenFGA 授权，不形成长期双重鉴权路径。
 
 ### fail-open 与 fail-close
 
@@ -400,19 +512,19 @@
 ### 匿名路径
 
 - **含义**：不要求登录即可访问的接口路径。
-- **本项目**：登录、公开搜索、商品详情、支付回调和匿名行为采集等路径需同时从 JWT 与 RBAC 过滤器中排除。
+- **本项目**：登录、公开搜索、商品详情、支付回调和匿名行为采集等路径由网关显式列为免 Session 鉴权路径；其余路径统一执行 Casdoor 有状态 Session 校验与 OpenFGA 授权。
 
 ## 数据、缓存与搜索
 
 ### 真相源与派生视图（source of truth / derived view）
 
 - **含义**：真相源是权威数据落点；派生视图是从真相源计算出的副本，可丢弃并重建。
-- **本项目**：PostgreSQL 保存主要业务事实；搜索索引、Redis 缓存和部分分析数据属于派生视图。订单、支付、库存仍各有本域权威事实，不存在覆盖所有域的单一数据库真相源。
+- **本项目**：PostgreSQL 是 OLTP 唯一真相源；订单、支付、库存等限界上下文分别维护本域事实。Elasticsearch 搜索索引、Dragonfly 缓存和分析数据均为可丢弃、可重建的派生视图。
 
 ### Cache-Aside
 
 - **含义**：应用先读缓存，未命中时读数据库并回填；写入时更新或删除缓存。
-- **本项目**：Redis 用于缓存、报价和部分实时数据。缓存不能承载唯一业务事实，删除或驱逐后必须能够恢复或安全降级。
+- **本项目**：Dragonfly 按故障域分为 Session、业务 Cache 和限流实例，严禁混用；Session 实例启用 `noeviction` 与持久化，业务 Cache 实例启用 `allkeys-lru`，限流实例独立。缓存不能承载唯一业务事实，删除或驱逐后必须能够恢复或安全降级。
 
 ### TTL
 
@@ -462,12 +574,12 @@
 ### 分词器（analyzer）
 
 - **含义**：把文本标准化并切分为可索引词项的组件，通常包含字符过滤、分词和词项过滤步骤。
-- **本项目**：早期 Elasticsearch 设计使用 IK 分词；迁移后的实际中文分词行为以 Meilisearch 配置和验收结果为准。
+- **本项目**：存量搜索使用 Meilisearch；按 [`TECH.md`](TECH.md) 定稿迁回 Elasticsearch 后，中文分词行为以 Elasticsearch 索引配置和验收结果为准。
 
 ### Facet 过滤（faceted search）
 
 - **含义**：按类目、品牌、价格或属性等维度筛选，并同时返回各取值的命中计数。
-- **本项目**：商品搜索页的筛选栏依赖该能力；Meilisearch 通过 `filterableAttributes` 与 facets 查询提供支持。
+- **本项目**：商品搜索页的筛选栏依赖该能力；存量 Meilisearch 通过 `filterableAttributes` 与 facets 查询提供支持，目标 Elasticsearch 只读投影通过聚合查询提供支持。
 
 ### typo 容错（typo tolerance）
 
@@ -482,7 +594,7 @@
 ### 混合搜索（hybrid search）
 
 - **含义**：融合关键词检索与向量语义检索的召回或排序方式。
-- **本项目**：Meilisearch 作为召回展示层，向量由外部生成；该能力的实际启用状态以 `TODO.md` 为准。
+- **本项目**：存量 Meilisearch 作为召回展示层，向量由外部生成；按 [`TECH.md`](TECH.md) 定稿迁回 Elasticsearch 后，混合搜索隐藏于 `SearchCatalog` 接口后。该能力的实际启用状态以 `TODO.md` 为准。
 
 ### HNSW
 
@@ -499,7 +611,7 @@
 ### 可观测性
 
 - **含义**：通过系统输出推断其内部状态的能力，通常由指标、日志和链路追踪组成。
-- **本项目**：应用经 OpenTelemetry 输出遥测数据，Grafana 用于统一查看；方法论与指标基线见 [`docs/observability/OBSERVABILITY.md`](observability/OBSERVABILITY.md)。
+- **本项目**：应用经 OpenTelemetry 输出遥测数据，统一通过外置 OTel Collector 管道处理，再分流至 VictoriaMetrics、VictoriaLogs 和 VictoriaTraces；Grafana 用于统一查看。方法论与指标基线见 [`docs/observability/OBSERVABILITY.md`](observability/OBSERVABILITY.md)。
 
 ### OpenTelemetry（OTel）
 
@@ -509,7 +621,7 @@
 ### Trace
 
 - **含义**：一次请求跨进程、跨服务执行路径的完整记录，由多个 Span 组成。
-- **本项目**：同步 RPC 与异步事件都应传播 `trace_id`，以便在 Jaeger 中关联下单、支付和库存处理。
+- **本项目**：同步 RPC 与 Kafka 异步事件都应传播 `trace_id`，经外置 OTel Collector 管道处理后写入 VictoriaTraces，以关联下单、支付和库存处理。
 
 ### Span
 
@@ -524,7 +636,7 @@
 ### Log
 
 - **含义**：带时间戳的离散事件记录，通常包含级别、消息和结构化字段。
-- **本项目**：日志应包含 RPC procedure、错误码、`trace_id` 等关联字段，避免记录凭据和敏感数据。
+- **本项目**：日志应包含 RPC procedure、错误码、`trace_id` 等关联字段，避免记录凭据和敏感数据。K8s 内由 Vector 采集，经外置 OTel Collector 管道处理后写入 VictoriaLogs。
 
 ### RED
 
@@ -606,12 +718,12 @@
 ### Operator
 
 - **含义**：把特定系统的运维知识编码为 Kubernetes 控制器，通过自定义资源执行部署、升级和恢复。
-- **本项目**：CloudNativePG Operator 管理 PostgreSQL 集群。
+- **本项目**：CloudNativePG Operator 管理存量 PostgreSQL 集群；目标 OLTP 数据库迁移至外部 Pigsty 集群。
 
 ### CNPG
 
 - **含义**：CloudNativePG，在 Kubernetes 上以 Operator 方式管理 PostgreSQL 集群的开源项目。
-- **本项目**：业务 PostgreSQL 集群 `pg-main` 由 CNPG 管理，包含声明式建库、TLS 和备份恢复能力。
+- **本项目**：存量 CNPG 属迁移起点；目标 OLTP 数据库按 [`TECH.md`](TECH.md) 外置部署于 Pigsty，由 Patroni 提供自动故障转移、PgBouncer 治理连接池，并以 UUIDv7 作为默认主键。
 
 ### CRD 与 CR
 
@@ -631,7 +743,7 @@
 ### PITR
 
 - **含义**：Point-in-Time Recovery，把数据库恢复到指定时间点，通常依赖基础备份与持续归档的 WAL。
-- **本项目**：CNPG 的异地备份与 PITR 是 PostgreSQL 高可用和灾难恢复补强项。
+- **本项目**：目标 PostgreSQL 外置部署于 Pigsty，PITR 是高可用和灾难恢复的必要能力；存量 CNPG 方案处于迁移期。
 
 ### TLS verify-full
 
@@ -643,7 +755,7 @@
 ### 对象存储（object storage）
 
 - **含义**：以对象（内容 + 元数据 + 唯一键）为单位、经 HTTP API 读写的扁平存储，适合图片、备份和归档等一次写入、多次读取的非结构化数据；不提供 POSIX 文件语义。
-- **本项目**：商品缩略图与备份制品的落地层；数据库使用本地块存储（OpenEBS LVM localPV），不落对象存储。
+- **本项目**：Silo（基于 MinIO）是 S3 兼容对象存储，用于商品图片与备份制品；开启 Versioning 与 Lifecycle，前端上传统一使用后端签发的预签名 URL。数据库不落对象存储。
 
 ### S3 兼容（S3-compatible）
 
@@ -653,12 +765,14 @@
 ### MinIO
 
 - **含义**：Go 编写的 S3 兼容对象存储，曾是自建对象存储的事实标准；上游仓库已于 2026 年归档，社区版停止演进，不再获得功能与安全修复。
-- **本项目**：现役承载 cart 的商品缩略图（`minio.apikv.com`），另有集群内残留实例待清理；已定稿迁移到 SeaweedFS，新增备份流量不再写入 MinIO。现状与迁移进度以 [`.service-matrix.yaml`](../.service-matrix.yaml) 和 [`TODO.md`](../TODO.md) 为准。
+- **本项目**：现役 MinIO 实例属于存量迁移对象；目标对象存储按 [`TECH.md`](TECH.md) 统一为 Silo（基于 MinIO），现状与迁移进度以 [`.service-matrix.yaml`](../.service-matrix.yaml) 和 [`TODO.md`](../TODO.md) 为准。
 
 ### Silo（pgsty/silo）
 
 - **含义**：MinIO 上游归档后由 Pigsty 社区维护的延续分叉（前身 `pgsty/minio`），AGPL-3.0、Go 编写；保留 MinIO 的 S3 API、`MINIO_*` 配置面与线协议，回补上游不再向社区版发布的安全修复，定位是存量 MinIO 部署的 drop-in 升级线。
-- **本项目**：node2 存量实例已于 2026-08-20 切至该分叉（pin digest + 显式 `--certs-dir`，验收与踩坑见 [`TODO.md`](../TODO.md) ⓪d）。主选型仍是 SeaweedFS，silo 定位=存量止血修复线与 AGPL 备选（见 [`TECH-RADAR.md`](TECH-RADAR.md) §10 复审附记）。
+- **本项目**：node2 存量实例已于 2026-08-20 切至该分叉（pin digest + 显式 `--certs-dir`，验收与踩坑见 [`TODO.md`](../TODO.md) ⓪d）。
+
+**后续决策覆盖（2026-08-28）**：本条已被 [`TECH.md`](TECH.md) 覆盖：Silo（基于 MinIO）是目标对象存储，统一承载 S3 兼容对象数据。
 
 ### 社区分叉（community fork）
 
@@ -668,7 +782,7 @@
 ### SeaweedFS
 
 - **含义**：Go 编写的开源分布式文件与对象存储（Apache-2.0），设计源自 Facebook Haystack 论文——海量小文件聚合进大 volume 文件以压低元数据开销；提供 S3 网关、filer、POSIX 挂载等多种形态。
-- **本项目**：MinIO 的定稿接替者，仅使用单机 S3 形态；规划落点是 4c4G 云箱备份靶与商品图迁移目标（TECH-RADAR §10.6）。属已定稿方向，落地状态以 [`TODO.md`](../TODO.md) 为准。
+- **本项目**：SeaweedFS 是历史评估方案，不再是目标对象存储；目标按 [`TECH.md`](TECH.md) 统一为 Silo（基于 MinIO）。
 
 ### 3-2-1 备份原则
 
@@ -678,7 +792,7 @@
 ### Velero
 
 - **含义**：CNCF 生态的 Kubernetes 集群备份/恢复工具（Go）。把集群里的资源对象（Deployment、Secret、CR 等）连同 PVC 盘数据（文件系统备份走 Kopia/FSB）打包推送到 S3 兼容存储，支持整簇或按命名空间恢复、迁移。
-- **本项目**：TECH-RADAR 10.3 定稿采纳，分工是「管 K8s 资源与非 PG 的盘数据」；数据库一致性恢复明确**不归它**（文件级复制对运行中的 PG 不安全），归 CNPG 的 Barman 插件。落点=推送到 4c4G 云箱的 SeaweedFS，见 TODO ①。
+- **本项目**：TECH-RADAR 10.3 定稿采纳，分工是「管 K8s 资源与非 PG 的盘数据」；数据库一致性恢复明确**不归它**（文件级复制对运行中的 PG 不安全），归 CNPG 的 Barman 插件。落点=推送到 4c4G 云箱的 S3 兼容备份靶（原定 SeaweedFS；[`TECH.md`](TECH.md) 定稿对象存储为 Silo 后，备份靶选型随备份三件套重启时重议），见 TODO ①。
 
 ### Barman Cloud Plugin（CNPG-Barman）
 
@@ -720,7 +834,7 @@
 ### 客户端状态
 
 - **含义**：只在当前客户端交互中存在的本地状态，例如弹窗、草稿和界面偏好。
-- **本项目**：使用 Valtio 管理，不能把生成的 Proto DTO 直接存入 store。
+- **本项目**：使用 **Zustand** 管理（2026-08-28 由 valtio 全量迁移完成），不能把生成的 Proto DTO 直接存入 store。
 
 ### Web Vitals
 
@@ -757,17 +871,17 @@
 ### Meilisearch
 
 - **含义**：面向应用搜索的开源搜索引擎，提供 typo 容错、Facet、排序与可选向量检索能力。
-- **本项目**：已选作 Elasticsearch 的迁移目标；实例与代码接线状态分别以 [`.service-matrix.yaml`](../.service-matrix.yaml) 和 [`TODO.md`](../TODO.md) 为准。
+- **本项目**：Meilisearch 是仍在运行的存量搜索引擎，处于迁移期；目标按 [`TECH.md`](TECH.md) 迁回 Elasticsearch。实例与代码接线状态分别以 [`.service-matrix.yaml`](../.service-matrix.yaml) 和 [`TODO.md`](../TODO.md) 为准。
 
 ### Elasticsearch（ES）
 
 - **含义**：基于 Lucene 的分布式搜索与分析引擎，支持全文检索、聚合和水平扩展。
-- **本项目**：代码仍有历史引用，但实例已退役，搜索能力正在迁移到 Meilisearch。
+- **本项目**：Elasticsearch 是目标搜索存储，作为隐藏于 `SearchCatalog` 接口后的只读投影，可从 PostgreSQL 全量重建；存量 Meilisearch 迁移完成前仍在运行。
 
 ### sortable（可排序字段）
 
 - **含义**：允许查询按指定字段排序的索引能力，通常需要额外索引结构。
-- **本项目**：商品列表可按价格、销量和上架时间排序；Meilisearch 通过 `sortableAttributes` 声明。
+- **本项目**：商品列表可按价格、销量和上架时间排序；存量 Meilisearch 通过 `sortableAttributes` 声明，目标 Elasticsearch 只读投影通过排序字段映射提供该能力。
 
 ### 相关度（relevancy）
 
