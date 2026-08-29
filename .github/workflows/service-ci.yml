@@ -226,9 +226,12 @@ jobs:
       # —— 那比没有扫描更糟。无修复项仍会在 SARIF 里上报,只是不阻断。
       - name: Scan image for vulnerabilities (pre-signature gate)
         if: inputs.push-image && inputs.version != ''
-        # ⚠️ 上游 tag 带 v 前缀，原先写的 `@0.28.0` 是不存在的 ref，会 Unable to resolve action。
-        # 按 blanket policy 固定到 v0.28.0 的 commit hash（zizmor unpinned-uses）。
-        uses: aquasecurity/trivy-action@915b19bbe73b92a6cf82a1bc12b087c9a19a5fe2 # v0.28.0
+        # ⚠️ 选版本要看它内部怎么引 setup-trivy，不能只看自己的 tag 在不在：
+        #   @0.28.0  上游 tag 带 v 前缀，这个 ref 压根不存在 → Unable to resolve action
+        #   @v0.28.0 自身存在，但内部引 setup-trivy@v0.2.1，该 tag 已被上游删除 → 同样解析失败
+        #   @v0.36.0 内部对 setup-trivy 是 commit hash 固定，不受上游删 tag 影响 → 用这个
+        # （现存 setup-trivy tag 只剩 v0.3.1/v0.3.0/v0.2.6，2026-08-29 实测）
+        uses: aquasecurity/trivy-action@ed142fd0673e97e23eac54620cfb913e5ce36c25 # v0.36.0
         with:
           image-ref: ${{ env.GHCR_NAMESPACE }}/${{ inputs.service }}@${{ steps.build.outputs.digest }}
           format: sarif
