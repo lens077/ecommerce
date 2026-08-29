@@ -226,7 +226,9 @@ jobs:
       # —— 那比没有扫描更糟。无修复项仍会在 SARIF 里上报,只是不阻断。
       - name: Scan image for vulnerabilities (pre-signature gate)
         if: inputs.push-image && inputs.version != ''
-        uses: aquasecurity/trivy-action@0.28.0
+        # ⚠️ 上游 tag 带 v 前缀，原先写的 `@0.28.0` 是不存在的 ref，会 Unable to resolve action。
+        # 按 blanket policy 固定到 v0.28.0 的 commit hash（zizmor unpinned-uses）。
+        uses: aquasecurity/trivy-action@915b19bbe73b92a6cf82a1bc12b087c9a19a5fe2 # v0.28.0
         with:
           image-ref: ${{ env.GHCR_NAMESPACE }}/${{ inputs.service }}@${{ steps.build.outputs.digest }}
           format: sarif
@@ -244,7 +246,7 @@ jobs:
       - name: Upload Trivy SARIF
         # 扫描失败时也要上报 —— 否则最需要看结果的那次反而拿不到报告。
         if: always() && inputs.push-image && inputs.version != ''
-        uses: github/codeql-action/upload-sarif@v3
+        uses: github/codeql-action/upload-sarif@6f5948dfacef28e207b48d0905cf90c03365536d # v3
         with:
           sarif_file: trivy-results.sarif
           category: trivy-image-${{ inputs.service }}
