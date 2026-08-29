@@ -71,7 +71,7 @@
 
 ## 二、现状对照
 
-### 0. 最近一次发布（2026-08-29）
+### 0. 最近一次发布（2026-08-29 实测）
 
 已发布 **control-tower `0.2.0`**（config `sha-c30713c`）与 **ecommerce `1.5.5`**；
 dev 的 7 个相关服务已滚到 `sha-0b9b9ad`，15/15 Deployment Ready、发布 Pod restart 均为 0。
@@ -96,7 +96,7 @@ dev 的 7 个相关服务已滚到 `sha-0b9b9ad`，15/15 Deployment Ready、发�
 | 已装但零使用 | 🔴 | KEDA（0 ScaledObject）、Argo Rollouts（0 Rollout）、Kyverno（0 生效策略）——占内存与 etcd 却无产出 |
 | 未安装 | — | Descheduler、OpenCost、Chaos Mesh（均为条件触发，见 TECH.md B 表） |
 
-### 2. 事件与搜索（**目标基础设施已存在，缺业务接线**）
+### 2. 事件与搜索（2026-08-29 实测；**目标基础设施已存在，缺业务接线**）
 
 | 组件 | 位置 | 状态 |
 |---|---|---|
@@ -124,7 +124,7 @@ dev 的 7 个相关服务已滚到 `sha-0b9b9ad`，15/15 Deployment Ready、发�
 | behavior | 🟡 | `Track`/`Recommend`/`SimilarItems` 已编译通过 |
 | 履约 | ⬜ | 不单独建服务，并入 order 域 |
 
-### 4. 网关与鉴权
+### 4. 网关与鉴权（2026-08-29 实测）
 
 | 项目 | 状态 | 说明 |
 |---|---|---|

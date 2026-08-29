@@ -14,7 +14,8 @@
 - `nodeAffinityPolicy: Honor`；
 - `nodeTaintsPolicy: Honor`。
 
-因此当前约束是**硬约束**。17 个 active Pod 已分布为 node101/node102/node103=`5/6/6`。consumer-next 与 gateway 另使用 required pod anti-affinity，保证各自两个副本不落在同一节点。
+因此当前约束是**硬约束**。17 个 active Pod 已分布为 node101/node102/node103=`5/6/6`
+〔实测 2026-08-29；复验 `kubectl get pods -n ecommerce -o jsonpath='{range .items[?(@.status.phase=="Running")]}{.spec.nodeName}{"\n"}{end}' | sort | uniq -c`〕。consumer-next 与 gateway 另使用 required pod anti-affinity，保证各自两个副本不落在同一节点。
 
 硬 spread 只限制参与计数的 Pod 数量。它不理解某个 Pod 是高负载 API 还是低负载 relay，也不会按实际 CPU、内存或节点宿主机开销加权。
 

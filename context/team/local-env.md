@@ -200,7 +200,7 @@ AppProject 只有 `default`（2026-08-29 复测仍然如此）。集群实际由
 同信任域——它**不能**替代外部 KMS 或 Transit auto-unseal，迁到独立信任根后应移除该 timer。
 
 **Pod 节点均衡**：业务 Deployment 统一带 `app.kubernetes.io/part-of: ecommerce` +
-namespace 内共享的硬 `topologySpreadConstraints`（`maxSkew: 1`、`DoNotSchedule`），当前分布 5/6/6。
+namespace 内共享的硬 `topologySpreadConstraints`（`maxSkew: 1`、`DoNotSchedule`），当前分布 5/6/6〔实测 2026-08-29〕。
 **不得用 `kubernetes.io/hostname: node103` 之类硬钉实现「稳定」**——那把节点故障升级成不可调度。
 
 **VPA recommendation-only 基线（2026-08-29）**：Helm revision 2 只运行 recommender `1.7.1`，

@@ -18,7 +18,7 @@ OpenFGA 关系授权的零信任体系。
 **红线（TECH.md §13）**：严格遵循 Casdoor 有状态 Session 模型，
 **绝不允许同时维护 JWT 兼容逻辑或双重鉴权代码路径**。
 
-## 当前事实
+## 当前事实（2026-08-29 实测）
 
 - BFF session 已上线：Web 用 httpOnly cookie、Tauri 用 session header，`/auth/me` 为登录态真相源
 - 浏览器侧令牌机制已全部退场（`pkce.ts`/`tokenStore.ts`/`session.ts` 等已删）

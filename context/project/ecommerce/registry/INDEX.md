@@ -37,6 +37,7 @@ Consul 目录 Watch（blocking query），**只取所有检查均为 `passing` �
 | 症状 | 文件 |
 |---|---|
 | 服务日志干净，前端却要刷好几次才出数据 | [consul-ttl-first-ping-blind-window.md](experience/consul-ttl-first-ping-blind-window.md) |
+| 服务 `1/1 Running` 零重启，网关却说它不存在 | [consul-register-once-then-give-up.md](experience/consul-register-once-then-give-up.md) |
 | 复验 10 个服务的双检查与可逆依赖故障 | [consul-dual-check-runbook.md](consul-dual-check-runbook.md) |
 
 ## 2026-08-27 dev 验证
