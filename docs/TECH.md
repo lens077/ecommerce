@@ -690,6 +690,16 @@ type order
 ```
 
 
+### 9.3 告警与通知链路
+
+指标规则（vmalert）、黑盒探测（Gatus）与前端错误（Bugsink）三条链路的通知出口**统一收敛到 ntfy**。告警栈整体位于 node3，与业务集群故障域隔离——集群侧只有采集器，没有任何告警组件。三条链路共用同一个 topic，因此噪音会叠加。
+
+K8s 指标由集群内 OTel Collector 的 `k8s_cluster` receiver 直接产出，经 OTLP 落 VictoriaMetrics，**不需要 kube-state-metrics**。⚠️ 该路径保留 OTel 的**点号命名**（`k8s.container.restarts`，不是 `k8s_container_restarts`，label 同样带点），写 MetricsQL 必须用 `{__name__="..."}` 匹配——按下划线搜索会一无所获并误判成「没有采集」。
+
+**关键工程约束：慢性 firing 的告警会掩盖急性事故。** 2026-08-29 一次持续 9 小时无人发现的故障，根因不是缺少告警，而是一条告警因慢性配置错误已连续红了一整天，真正的急性事故到来时它无法产生任何新信号。由此定两条规矩：每条规则都必须设 `for:`；必须**先修慢性问题再调阈值**，反过来做等于把真问题静音。
+
+三条链路的边界、Gatus 通知中文化（内置 `ntfy` provider 文案硬编码于 Go，须改用 `custom` provider + JSON 发布格式）、K8s 指标口径、验收与回退，见接入手册 [`docs/observability/alerting-notification.md`](observability/alerting-notification.md)。
+
 ## 10. 服务间通信与服务发现
 
 ### 10.1 同步通信：ConnectRPC over HTTP/2

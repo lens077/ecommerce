@@ -109,7 +109,7 @@ Gatus / Healthchecks / Bugsink / certificate timer ───────→ ntfy
 
 历史上由 `grafana/build_alerts.py` 生成过 17 条 Grafana unified alerting 规则；现网已迁为 vmalert + Alertmanager，规则是否等价迁移必须逐条实测。Alertmanager 的 firing/resolved payload 已经通过本机 bridge 实际送达认证 ntfy；这只证明 receiver 链可用，不代表 17 条规则都已完成故障注入。
 
-ntfy 不是单一兼容 webhook：Gatus 直接使用 bearer provider，Healthchecks 使用 v4.3 原生 `ntfy` Channel，Bugsink（错误监控定稿，2026-08-28 复核维持，兼容 Sentry SDK 错误事件）通过带随机 URL token 的本机 Slack-compatible bridge，证书 timer 由 root wrapper 直接发布。token、topic、Healthchecks ping URL 和错误监控 DSN 均不得进入仓库或日志。前端 SDK 接入手册见 [error-monitoring.md](error-monitoring.md)，容量证据见 [`../reports/2026-08-28-bugsink-integration-research.md`](../reports/2026-08-28-bugsink-integration-research.md)。
+ntfy 不是单一兼容 webhook：Gatus 用 `custom` provider 直接 POST ntfy 的 JSON 发布格式（2026-08-29 由内置 bearer `ntfy` provider 改造，因其通知文案硬编码在 Go 源码里、无法中文化），Healthchecks 使用 v4.3 原生 `ntfy` Channel，Bugsink（错误监控定稿，2026-08-28 复核维持，兼容 Sentry SDK 错误事件）通过带随机 URL token 的本机 Slack-compatible bridge，证书 timer 由 root wrapper 直接发布。token、topic、Healthchecks ping URL 和错误监控 DSN 均不得进入仓库或日志。**告警与通知链路接入手册**（三条链路边界、Gatus 中文化、K8s 指标点号命名口径、验收与回退）见 [alerting-notification.md](alerting-notification.md)；前端 SDK 接入手册见 [error-monitoring.md](error-monitoring.md)，容量证据见 [`../reports/2026-08-28-bugsink-integration-research.md`](../reports/2026-08-28-bugsink-integration-research.md)。
 
 告警数量刻意克制:每条告警响起,值班者必须知道下一步做什么;做不到的降级为看板曲线。Gatus、Healthchecks、Bugsink 和 Victoria 数据面都在 node3，本机监控不能发现 node3 整机失联；异机探针仍是未消除的故障域。
 
