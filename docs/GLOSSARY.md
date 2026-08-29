@@ -450,7 +450,7 @@
 ### RBAC
 
 - **含义**：Role-Based Access Control，基于角色分配权限的访问控制模型。
-- **本项目**：RBAC 仅用于 Casdoor 的粗粒度角色（admin、merchant、customer）；对象级业务授权统一由 OpenFGA 关系模型判定。存量 Casbin RBAC 处于迁移期，不作为目标授权路径。
+- **本项目**：RBAC 仅用于 Casdoor 的粗粒度角色（admin、merchant、consumer）；对象级业务授权统一由 OpenFGA 关系模型判定。存量 Casbin RBAC 处于迁移期，不作为目标授权路径。
 
 ### Casbin
 

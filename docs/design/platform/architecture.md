@@ -20,7 +20,7 @@
 
 | 微服务名称                   | 	核心职责                     | 	技术栈                        | 	核心功能详情                                                                          |
 |-------------------------|---------------------------|-----------------------------|----------------------------------------------------------------------------------|
-| 身份与组织域（Identity，目标；user + merchant 迁移合并） | UserProfile、Merchant、Store、MerchantMember | Go + PostgreSQL；Casdoor + OpenFGA | Casdoor 管认证、Session 与 admin/merchant/customer 粗粒度角色；Identity 管业务身份和组织关系；OpenFGA 管 merchant/store/order 对象关系授权                          |
+| 身份与组织域（Identity，目标；user + merchant 迁移合并） | UserProfile、Merchant、Store、MerchantMember | Go + PostgreSQL；Casdoor + OpenFGA | Casdoor 管认证、Session 与 admin/merchant/consumer 粗粒度角色；Identity 管业务身份和组织关系；OpenFGA 管 merchant/store/order 对象关系授权                          |
 | 商品目录域（Catalog，目标；product 迁移）   | 	Product（SPU）、SKU、Listing、Category | 	Go + PostgreSQL + Dragonfly（可丢缓存） | 	商品本体与店铺售卖信息分离；发布 Catalog 领域事件驱动 Elasticsearch 搜索投影，库存不属于 Catalog                         |
 | 订单服务（Order Service）     | 	OrderGroup/MerchantOrder/OrderLine、订单状态机、内置 Saga Process Manager  | 	Go + PostgreSQL + Kafka（目标态；NATS 迁移中） | 	订单创建 / 取消 / 修改；同步编排 Catalog 价格快照、Inventory 预占与 PaymentIntent 创建，失败自动逆向补偿；阶段性终态经 Outbox 发布 Kafka 事件；`OrderReadyForFulfillment` 触发独立 Fulfillment 域 |
 | 支付服务（Payment Service）   | 	PaymentIntent/Attempt/Authorization/Capture/Refund 与 PaymentPort 渠道抽象       | 	Go + PostgreSQL + Redis    | 	支付宝、微信支付 SDK 适配与聚合；支付单创建、支付状态同步、退款申请与处理；平台与商家对账管理；支付流水记录留存                      |

@@ -244,7 +244,7 @@ SearchCatalog: SearchProducts / UpsertProjection / DeleteProjection / RebuildInd
 | 概念 | 含义 |
 |---|---|
 | Principal | 当前认证主体（用户、商家员工、管理员或工作负载） |
-| Customer | 消费者业务身份，不等同登录账号 |
+| consumer | 消费者业务身份，不等同登录账号 |
 | Merchant | 入驻法律/经营主体 |
 | Store | Merchant 经营的店铺；**一个 Merchant 可开多个 Store（D3）**；审核对象是店铺 |
 | MerchantMember | 用户在某 Merchant/Store 的成员关系与职务 |

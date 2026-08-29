@@ -43,7 +43,7 @@
     "table": {
       "orderNo": "订单号",
       "merchant": "商家",
-      "customer": "客户",
+      "consumer": "客户",
       "amount": "金额",
       "status": "状态"
     },
@@ -100,7 +100,7 @@
     "table": {
       "info": "订单信息",
       "merchant": "商家",
-      "customer": "客户",
+      "consumer": "客户",
       "amount": "订单金额",
       "status": "状态",
       "createTime": "下单时间",
