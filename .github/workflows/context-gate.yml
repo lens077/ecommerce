@@ -4,15 +4,23 @@ name: Context knowledge-base gate
 # 链接可达性 / INDEX 覆盖(孤儿) / frontmatter / experience 格式(基线棘轮)
 # / evolution-log 四要素 / AGENTS.md 预算。
 #
-# 触发(2026-08-29 起):**仅发布 tag**(裸 semver `X.Y.Z`,与 backend.yml 同一条纪律)。
-# 原为「每个 PR / 分支 push 全量跑」,已停——GitHub Actions 预算超支后平台会直接
-# 拒绝运行;把额度烧在每次 push 上,反而让真正需要证据的发版时刻跑不动。
+# 触发:每个 PR / 分支 push 全量跑,不做路径过滤(路径过滤本身也是一处会漂移的手抄清单),
+# 外加发布 tag。**本仓是 public + 标准 runner,GitHub Actions 对其零计费**
+# (2026-08-29 实测账单:8 月 ecommerce 用了 2625 分钟,grossAmount $15.75、
+# discountAmount −$15.75、**netAmount $0.00**),所以这条门禁的运行成本是零。
 #
-# ⚠️ per-push 覆盖没有丢:`.gitlab-ci.yml` 的同名 context-gate job 仍挂在
-# `$CI_COMMIT_BRANCH` 与 MR 上,而 origin 就是 GitLab(github 是第二远端),
-# 日常 push 先到的是有门禁那一侧。本地 `scripts/verify-context.sh` 仍是提交前锚点。
+# ⚠️ 不要因为「省额度」把它改回 tag 触发——2026-08-29 曾这么改过一次,
+# 依据是「Actions 预算超支」,但实测证伪:Actions `enabled:true`、改动前 35 秒成功跑完、
+# 账单净额为 0。改成 tag 触发的真实后果是:GitHub 分支保护把 `verify-context` 列为
+# 必需检查,而它永远不再产生结果,PR 会永久卡在 `expected`。理由见 evolution-log 同日条目。
+#
+# 本 job 约 35 秒(脚本毫秒级,canary 元评测占大头);真正贵的是 backend.yml 的
+# 多架构 buildx(单次 6m32s),那条保持 tag 触发。
 on:
+  pull_request:
   push:
+    branches:
+      - '**'
     tags:
       - "[0-9]+.[0-9]+.[0-9]+"
   workflow_dispatch:

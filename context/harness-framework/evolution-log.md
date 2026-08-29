@@ -44,34 +44,45 @@ description: harness 本身（硬规则/门禁/Agent 约束）每次改动的原
 
 ---
 
-### 2026-08-29 GitHub 门禁全面收敛为发布 tag 触发（Actions 预算超支）
+### 2026-08-29 重 workflow 收敛到 tag 触发；context-gate 保持 per-push（附一次前提证伪）
 
-- **改了什么**：四个还挂在 push/PR/定时上的 GitHub workflow 一次性改掉触发条件——
-  `context-gate.yml`（原 `pull_request` + `push: '**'`）、`deploy-consistency.yml`
-  （原 push main + PR 路径过滤）、`supply-chain-pr.yml`（原 `pull_request`）统一改为
-  仅 `push: tags: ['[0-9]+.[0-9]+.[0-9]+']` + `workflow_dispatch`；`frontend.yml`
-  删除每日 `cron: '17 3 * * *'`，只留手动。`backend.yml` 本就是 tag 触发，未动。
+- **改了什么**：三个**重**的 GitHub workflow 改为仅发布 tag / 手动触发——
+  `deploy-consistency.yml`（原 push main + PR 路径过滤）、`supply-chain-pr.yml`
+  （原 `pull_request`）改为仅 `push: tags: ['[0-9]+.[0-9]+.[0-9]+']` + `workflow_dispatch`；
+  `frontend.yml` 删除每日 `cron: '17 3 * * *'` 只留手动。`backend.yml` 本就是 tag 触发。
+  **`context-gate.yml` 维持 `pull_request` + `push: '**'`（另加 tag）不变。**
   顺带给 `supply-chain-pr.yml` 补「Resolve release range」步骤，把 `BASE_REF`
   显式算成上一个 semver tag。tag 格式**维持裸 semver `X.Y.Z`**（见下）。
-- **为什么**：GitHub Actions 预算超支，平台会**直接拒绝运行**排队的 workflow。
-  此时「门禁挂在每次 push 上」不是更严格，而是把额度烧在信噪比最低的地方，
-  并让真正需要证据的那一刻（发版）反而跑不动。per-push 覆盖没有丢：
-  `.gitlab-ci.yml` 的同名 `context-gate` job 仍挂在 `$CI_COMMIT_BRANCH` 与 MR 上，
-  而 origin 就是 GitLab——日常 push 先到有门禁那一侧。
-  用户曾提出改用 `vX.Y.Z` 格式，经核对后维持裸 `X.Y.Z`：`git-commit.md` 的
-  freeze 设计依赖「旧 `v1.3.x` 系不匹配新模式」，且 `backend.yml` 的 PREV_TAG
-  求值与 `helm/values.yaml` 回写都按裸 semver 写死，改前缀要同步动四处且会
-  解冻历史 tag。
-- **触发事故**：GitHub Actions 预算超支导致 Actions 被拒绝运行。旧配置下每次分支 push
-  都会同时排队 `context-gate`（含约 1 分钟的 canary 元评测）与可能的
-  `deploy-consistency`，加上一条每天无条件下载 Chromium 跑 Playwright 的
-  `frontend.yml` cron——后者测的还是**线上已部署的站点**，与本仓提交无关，
-  是常驻消耗里最贵且最不该由 push 节奏承担的一条。
-- **怎么验证的**：用 `python3` + `yaml.safe_load` 逐份解析 `.github/workflows/*.yml`
-  并断言「分支 push / `pull_request` / `schedule`」三类触发计数为 **0**，非零即退出 1；
-  实测六份文件只剩 tag push、`workflow_dispatch` 与 `service-ci.yml` 的 `workflow_call`。
-  核对 `scripts/supply-chain-pr.sh:134-143` 后确认 BASE_REF 为空时脚本会退化成
-  `HEAD~1`（只扫一个提交），故补上按上一个 semver tag 求值的步骤。
+- **为什么**：区分「贵」和「便宜」，而不是一刀切。`backend.yml` 单次 6m32s
+  （10 服务多架构 buildx）、`frontend.yml` 每天无条件下载 Chromium 跑 Playwright
+  且测的是**线上已部署站点**（与本仓提交无关）——这两条挂在 push/定时上信噪比极低。
+  而 `context-gate.yml` 只有 **35 秒**，且它是 GitHub 分支保护里的**必需状态检查**，
+  停掉它会让 PR 永远卡在 `expected`。
+  tag 格式维持裸 `X.Y.Z`：`git-commit.md` 的 freeze 设计依赖「旧 `v1.3.x` 系不匹配
+  新模式」，且 `backend.yml` 的 PREV_TAG 求值与 `helm/values.yaml` 回写都按裸 semver
+  写死，改前缀要同步动四处且会解冻历史 tag。
+- **触发事故**：**一次基于错误前提的过度收敛，以及它暴露的分支保护死结。**
+  当日先按「GitHub Actions 预算超支、平台会拒绝运行」把**全部四个** workflow
+  （含 context-gate）收敛为 tag 触发。推送后 GitHub 提示
+  `Required status check "verify-context" is expected`——才发现分支保护
+  （`required_status_checks: ['verify-context']`、`strict: true`、
+  `required_pull_request_reviews: true`、`enforce_admins: false`）要求这个检查，
+  而它已不再产生结果：admin 因 `enforce_admins:false` 仍能直推，但**任何 PR 会永久卡死**，
+  且症状是「检查一直没来」而非「检查失败」，极具迷惑性。
+  随后核查前提，**证伪**：本仓 `visibility: public` + 全部 `runs-on` 为标准 runner
+  （`ubuntu-24.04`/`ubuntu-latest`），GitHub 对此零计费。
+  **教训：改门禁前先验证「省下来的是什么」——这次省的是 0 元，代价是一道必需检查失效。**
+  也说明「用量数字」不等于「欠费」：GitHub 新计费 API 会先记 gross 再全额折扣。
+- **怎么验证的**：`gh api repos/lens077/ecommerce` → `{"private":false,"visibility":"public"}`；
+  `gh api repos/lens077/ecommerce/actions/permissions` → `{"enabled":true,"allowed_actions":"all"}`；
+  `gh run list` 显示收敛前最后一次 `Context knowledge-base gate` 于 2026-08-28T19:29:40Z
+  **success、35s**，历史里无任何因计费导致的 `startup_failure`。
+  账单走新端点 `gh api /users/lens077/settings/billing/usage`（旧
+  `/settings/billing/actions` 已 410 Gone）：8 月 `ecommerce` 用 **2625 分钟**，
+  `grossAmount $15.75`、`discountAmount −$15.75`、**`netAmount 0.0`**；
+  其余仓库（deepseek-harness macOS 148 分钟、mcm Windows 270 分钟）同样净额为 0。
+  分支保护配置由 `gh api repos/lens077/ecommerce/branches/main/protection` 读出。
+  恢复后用 `yaml.safe_load` 复核六份 workflow 的实际 `on:` 结构。
 
 ### 2026-08-29 Bootstrap 服务边界与明文凭据纳入双门禁
 
