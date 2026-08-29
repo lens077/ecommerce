@@ -29,7 +29,7 @@ user:
   replicaCount: 1
   image:
     repository: "ccr.ccs.tencentyun.com/sumery/user"
-    tag: 1.4.0
+    tag: 1.5.5
     pullPolicy: Always
   service:
     type: LoadBalancer
@@ -100,7 +100,7 @@ search:
   replicaCount: 1
   image:
     repository: "ccr.ccs.tencentyun.com/sumery/search"
-    tag: 1.4.0
+    tag: 1.5.5
     pullPolicy: Always
   service:
     type: LoadBalancer
@@ -171,7 +171,7 @@ product:
   replicaCount: 1
   image:
     repository: "ccr.ccs.tencentyun.com/sumery/product"
-    tag: 1.4.0
+    tag: 1.5.5
     pullPolicy: Always
   service:
     type: LoadBalancer
@@ -242,7 +242,7 @@ order:
   replicaCount: 1
   image:
     repository: "ccr.ccs.tencentyun.com/sumery/order"
-    tag: 1.4.0
+    tag: 1.5.5
     pullPolicy: Always
   service:
     type: LoadBalancer
@@ -313,7 +313,7 @@ inventory:
   replicaCount: 1
   image:
     repository: "ccr.ccs.tencentyun.com/sumery/inventory"
-    tag: 1.4.0
+    tag: 1.5.5
     pullPolicy: Always
   service:
     type: LoadBalancer
@@ -384,7 +384,7 @@ cart:
   replicaCount: 1
   image:
     repository: "ccr.ccs.tencentyun.com/sumery/cart"
-    tag: 1.4.0
+    tag: 1.5.5
     pullPolicy: Always
   service:
     type: LoadBalancer
@@ -455,7 +455,7 @@ merchant:
   replicaCount: 1
   image:
     repository: "ccr.ccs.tencentyun.com/sumery/merchant"
-    tag: 1.4.0
+    tag: 1.5.5
     pullPolicy: Always
   service:
     type: LoadBalancer
@@ -526,7 +526,7 @@ address:
   replicaCount: 1
   image:
     repository: "ccr.ccs.tencentyun.com/sumery/address"
-    tag: 1.4.0
+    tag: 1.5.5
     pullPolicy: Always
   service:
     type: LoadBalancer
@@ -597,7 +597,7 @@ behavior:
   replicaCount: 1
   image:
     repository: "ccr.ccs.tencentyun.com/sumery/behavior"
-    tag: 1.4.0
+    tag: 1.5.5
     pullPolicy: Always
   service:
     type: LoadBalancer
@@ -668,7 +668,7 @@ payment:
   replicaCount: 1
   image:
     repository: "ccr.ccs.tencentyun.com/sumery/payment"
-    tag: 1.4.0
+    tag: 1.5.5
     pullPolicy: Always
   service:
     type: LoadBalancer
