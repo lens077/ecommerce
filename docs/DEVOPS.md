@@ -124,45 +124,46 @@
 - Agent 协作侧(本仓特色,保留并深化):AGENTS.md 硬规则、freeze 冻结验收集、
   AI 异构双审、TODO.md 进度纪律(双文档制已于 2026-08-13 废止),统一视为 DevOps 的「持续学习」层。
 
-## 8. 落地阶段与验收标准(待实现)
+## 8. 落地阶段与验收标准
 
-> 完成勾选前,按仓库规则先回扫代码/实测行为;每阶段完成同步 TODO.md。
+> **本节只描述目标态与阶段划分,不承载进度。**
+> 进度与待办的唯一真相源是 [`TODO.md`](../TODO.md),明细在 [`docs/todo/`](todo/README.md)。
+> 2026-08-29 之前本节自带 21 个复选框,构成与 `docs/todo/` 平行的第二套进度视图;
+> 逐项比对后 13 项迁入 `docs/todo/` 对应分类(其余 7 项那里已有),复选框一并去掉。
+> 迁入去向:[`供应链与交付流水线.md`](todo/供应链与交付流水线.md)(阶段一、二、四)、
+> [`统一可观测性体系.md`](todo/统一可观测性体系.md)(阶段 3)、
+> [`文档与协作机制.md`](todo/文档与协作机制.md)(无责复盘)。
 
-### 阶段 1:可重复构建(CI 收口)
+**阶段 1 · 可重复构建(CI 收口)** —— CI 模板化(一份可复用 workflow,10 服务 + 网关 +
+前端参数化接入、按路径触发);oxlint/oxfmt、golangci-lint、`go test -race`、structcheck
+全部成为必过门禁;`buf breaking` 接入(基线 main);制品按 [TECH.md](TECH.md) §7.1 分工
+——TCR 主镜像仓库、Harbor 存 Helm 制品(OCI)、GHCR 可选双存,禁 latest、digest 引用、
+Trivy 扫描阻断高危、保留策略成文。
+**验收标准**:任意服务单文件改动,只触发该服务流水线且 < 10 分钟出镜像。
 
-- [ ] CI 模板化:一份可复用 workflow,10 服务 + 网关 + 前端参数化接入,按路径触发
-      (2026-08-07 后端已落地:`service-ci.yml` 模板 + `backend.yml` 入口矩阵,
-      服务清单读 `.service-matrix.yaml`;网关、前端未接入模板)
-- [ ] oxlint/oxfmt、golangci-lint、`go test -race`、structcheck 全部成为必过门禁
-- [ ] `buf breaking` 接入(基线 main),proto 破坏性变更拦截实测一例红
-- [ ] 制品:按 [TECH.md](TECH.md) §7.1 分工——TCR 主镜像仓库、Harbor 存 Helm 制品(OCI)、GHCR 可选双存(CI 按网络决定);禁 latest、digest 引用、Trivy 扫描阻断高危;保留策略成文
-- [ ] 验收:任意服务单文件改动,只触发该服务流水线且 < 10 分钟出镜像
+**阶段 2 · 可重复交付(GitOps 收口)** —— CI → 清单仓 digest 更新 → ArgoCD 同步的全链路;
+dev → prod 同 digest 晋级,回滚 = revert;无状态服务 ≥2 副本 + PDB,带 PV 服务显式
+Recreate(逐项实测行为而非配置状态);部署前镜像 pull 预检 hook。
+**验收标准**:一次完整发布与一次回滚全程零 `kubectl` 手操作。
 
-### 阶段 2:可重复交付(GitOps 收口)
+> migration 工具选型是本阶段的已定事项(**非进度**):2026-08-21 异构对抗第 4 轮终裁
+> **goose v3**——golang-migrate 因 dirty 需人工 force 与无人链路冲突、atlas 因 Pro 付费墙出局。
+> 载体是 `backend/tools/dbmigrate` + per-service `internal/data/migrations`;
+> expand-contract 纪律见 `context/team/db-migrations.md`(runbook §0.1 已挂路由)。
 
-- [ ] CI → 清单仓 digest 更新 → ArgoCD 同步的全链路打通(补齐现缺环节)
-- [ ] dev → prod 同 digest 晋级;回滚 = revert 实测一次
-- migration 工具选型——2026-08-21 异构对抗第4轮终裁 **goose v3**(golang-migrate 因 dirty 需人工 force 与无人链路冲突、atlas 因 Pro 付费墙出局),已落地 `backend/tools/dbmigrate` + per-service `internal/data/migrations`;expand-contract 纪律沉淀在 `context/team/db-migrations.md`(runbook §0.1 已挂路由,不进 AGENTS.md 正文——那里只放索引)
-- [ ] 无状态服务 ≥2 副本 + PDB;带 PV 服务显式 Recreate;逐项实测行为而非配置状态
-- [ ] 部署前镜像 pull 预检 hook
-- [ ] 验收:一次完整发布与一次回滚全程零 kubectl 手操作
+**阶段 3 · 看得见(可观测性收口)** —— K8s 内 Vector/VMAgent/OTel SDK → 外置 OTel Collector
+→ VictoriaLogs/VictoriaMetrics/VictoriaTraces 全链路;外置 Collector 落地尾采样
+(错误/高延迟 100%、正常 1%~5%)、PII 脱敏与 `/healthz`、`/metrics` 噪声清洗;
+`service.namespace`/`service.instance` 标签全量落地;四黄金信号看板按上下文重组;
+gateway/user/order/cart 四个 SLO + 错误预算规则。
+**验收标准**:注入一次故障(杀 Pod),从 Alertmanager 告警响起到在 Grafana 定位
+VictoriaTraces trace ≤ 5 分钟。
 
-### 阶段 3:看得见(可观测性收口)
-
-- [ ] K8s 内 Vector/VMAgent/OTel SDK → 外置 OTel Collector → VictoriaLogs/VictoriaMetrics/VictoriaTraces 全链路,一条 trace 实测贯通
-- [ ] 外置 OTel Collector 落地尾采样(错误/高延迟 100%、正常 1%~5%)、PII 脱敏与 `/healthz`、`/metrics` 噪声清洗
-- [ ] `service.namespace`/`service.instance` 标签全量落地,config 撞名指标可区分
-- [ ] 四黄金信号看板按上下文重组;`rpc.code` 修复后的看板/告警回归
-- [ ] gateway/user/order/cart 四个 SLO + 错误预算规则上线
-- [ ] 验收:注入一次故障(杀 Pod),从 Alertmanager 告警响起到在 Grafana 定位 VictoriaTraces trace ≤ 5 分钟
-
-### 阶段 4:快而不破(反馈闭环)
-
-- [ ] 契约测试常态化(buf breaking + 事件 schema),破坏性变更在 PR 内被拦截
-- [ ] DORA 四指标自动采集与月度看板
-- [ ] P1 供应链安全扫描(Gitleaks + Trivy + Syft + Cosign + Kyverno)、govulncheck、NetworkPolicy 与 Chaos Mesh 落地
-- [ ] 无责复盘模板 + 「事故结论 → 守护规则」转化流程成文
-- [ ] 验收:连续两周 DORA 数据自动产出,无手填
+**阶段 4 · 快而不破(反馈闭环)** —— 契约测试常态化(`buf breaking` + 事件 schema);
+DORA 四指标自动采集与月度看板;P1 供应链安全扫描(Gitleaks + Trivy + Syft + Cosign +
+Kyverno)、govulncheck、NetworkPolicy 与 Chaos Mesh;无责复盘模板 +
+「事故结论 → 守护规则」转化流程成文。
+**验收标准**:连续两周 DORA 数据自动产出,无手填。
 
 ---
 
