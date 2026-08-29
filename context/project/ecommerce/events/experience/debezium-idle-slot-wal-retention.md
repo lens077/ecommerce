@@ -1,7 +1,7 @@
 ---
 name: debezium-idle-slot-wal-retention
 module: events
-description: 被监控表长期无写入时 Debezium 不提交 offset，逻辑复制槽位点冻结、WAL 无限滞留，最终触发 max_slot_wal_keep_size 作废槽并被迫全量重快照；加 heartbeat 修复前必须先开 Kafka topic ACL，否则 task 直接 FAILED
+description: 被监控表长期无写入时 Debezium 默认的「按事件处理刷 LSN」不会推进位点，逻辑复制槽 WAL 无限滞留，最终触发 max_slot_wal_keep_size 作废槽并被迫全量重快照；正解是 lsn.flush.mode=connector_and_driver（不需要心跳表），而 heartbeat.interval.ms 单独无效且加它之前必须先开 Kafka topic ACL 否则 task 直接 FAILED
 ---
 
 # CDC 一切正常，却在悄悄撑爆 WAL
@@ -67,20 +67,41 @@ max_slot_wal_keep_size = 12288 MB
 → 约 43 天后 PostgreSQL 作废该槽，Debezium 丢失位点，被迫全量重快照
 ```
 
-**修复（⚠️ 不是一行配置，我按一行做，把 CDC 干挂了）**
+**修复：`lsn.flush.mode=connector_and_driver`（2026-08-29 实测有效）**
 
-正解分两个层次，**不要跳到第二层**：
+Debezium 3.6 为这个场景做了专门的选项，**不需要心跳表**：
 
-| 配置 | 作用 | 何时需要 |
-|---|---|---|
-| `heartbeat.interval.ms` | 定期产出心跳记录，**记录本身携带当前 offset**，提交后位点推进 | 低流量库的常规解法，不碰 schema |
-| `heartbeat.action.query` | 主动往库里 INSERT，人为制造可解码 WAL | 只在「本库完全收不到可解码变更」时才要（[Debezium 邮件列表](https://groups.google.com/g/debezium/c/39mmGEHii_8)：「useful to address situations with **multiple databases**, otherwise no/low traffic」） |
+```
+lsn.flush.mode = connector_and_driver
+```
 
-判据是 `write_lag`：本例 `write_lag=3.9 秒`，说明 Debezium **收到的位置是当前的**，
-它不缺「知道现在在哪」，只缺「有条记录可提交」。所以只需要第一层，**不需要建心跳表**。
+官方文档原文（`/connector-plugins/.../config/validate` 取得）：
 
-**⚠️ 但第一层也有前置条件：Kafka topic ACL。** 2026-08-29 实测，只加
-`heartbeat.interval.ms=60000` 后 task 立刻 FAILED：
+> `'connector'`（默认）Debezium 托管 LSN flush；`'manual'` 外部托管；
+> **`'connector_and_driver'` 在此基础上让 pgjdbc driver 用 server keepalive LSN
+> 刷新未被监控的 LSN，防止低活跃度数据库上的 WAL 增长。**
+
+切换后启动日志会从 `keepalive flush is DISABLED` 变成 `ENABLED`。实测效果：
+
+```
+confirmed_flush_lsn  0/61001028 → 0/71000000
+confirmed 滞后        256 MB → 0 bytes
+walsender flush_lag  22:17:57 → 10 秒（与 write_lag 齐平）
+```
+
+**⚠️ 走过的两个弯路，都要避开**
+
+**弯路一：以为 `heartbeat.interval.ms` 够。不够。** 实测加了它之后心跳消息确实产出
+（topic 里有 5 条），但位点只在 task 重启时动了一次就再次冻结。原因写在 Debezium 自己的启动日志里：
+
+```
+Using LSN flush mode 'connector': Debezium will flush LSN on event processing.
+```
+
+**「on event processing」**——按事件处理时刷。被监控表没有事件，心跳消息本身不算事件，
+所以不刷。同一条日志的后半句就是它给的建议。
+
+**弯路二：加 heartbeat 前必须先开 Kafka topic ACL，否则 task 直接 FAILED。**
 
 ```
 TopicAuthorizationException: Not authorized to access topics: [__debezium-heartbeat.ecommerce_cdc]
@@ -88,26 +109,44 @@ ConnectException: Unrecoverable exception from producer send callback
 → task FAILED → 槽 active=false → 连流都断了，比原来更糟
 ```
 
-心跳走的是**独立的 `__debezium-heartbeat.<topic.prefix>` topic**，SCRAM 用户
-`ecommerce_app` 只有业务 topic 的 ACL。正确顺序：
+心跳走**独立的 `__debezium-heartbeat.<topic.prefix>` topic**，不在业务前缀的 ACL 覆盖范围内。
+两个容易搞错的前提：
+
+- **principal 是 `User:cdc-connect`，不是 `User:ecommerce_app`**（后者是业务服务用的）
+- **`auto.create.topics.enable=false`**，topic 不会自动创建，必须先手工建
+
+正确顺序（本集群实测通过）：
 
 ```bash
-# 1. 先开 ACL（/opt/kafka/bin/kafka-acls.sh，broker 配置 /etc/kafka/server.properties）
-#    给 ecommerce_app 加 __debezium-heartbeat. 前缀的 Write/Describe/Create
-# 2. 再加 heartbeat.interval.ms
-# 3. 验证：连续采样 confirmed_flush_lsn，必须看到位点前进，不要看 flush_lag
+B=10.10.21.172:9092; CC=/etc/kafka/admin.properties   # pigsty-admin，SASL_SSL
+/opt/kafka/bin/kafka-topics.sh --bootstrap-server $B --command-config $CC \
+  --create --topic __debezium-heartbeat.ecommerce_cdc --partitions 1 --replication-factor 1
+/opt/kafka/bin/kafka-acls.sh --bootstrap-server $B --command-config $CC \
+  --add --allow-principal User:cdc-connect --operation Write --operation Describe \
+  --topic __debezium-heartbeat. --resource-pattern-type prefixed
 ```
 
-回滚方式（我用过，有效）：`PUT /connectors/<name>/config` 去掉该键 +
-`POST /connectors/<name>/tasks/0/restart`，20 秒内恢复 `RUNNING` + `active=true`。
+> 若只想解决 WAL 增长、不要心跳消息，**可以完全跳过 heartbeat 和这套 ACL**，
+> 只设 `lsn.flush.mode=connector_and_driver` 即可——这是本次真正起作用的那一项。
+> 另一条省 ACL 的路子是设 `topic.heartbeat.prefix`，让心跳 topic 落进已有业务前缀。
 
-⚠️ Kafka Connect 的 `PUT /config` 是**整体替换**：必须先 GET 全量、改完再 PUT 回去，
-只 PUT 一个键会清空其余 29 项配置。
+**操作注意**
+
+- Kafka Connect 的 `PUT /connectors/<name>/config` 是**整体替换**：必须先 GET 全量、
+  改完再 PUT 回去，只 PUT 一个键会清空其余配置。
+- 回滚：PUT 去掉该键 + `POST /connectors/<name>/tasks/0/restart`，20 秒内恢复。
+- 查这个版本支持哪些配置项，别猜，直接问：
+  `PUT /connector-plugins/io.debezium.connector.postgresql.PostgresConnector/config/validate`
 
 **遗留（已知，未改）**
 
-- ACL 尚未添加，`heartbeat.interval.ms` 已回滚，**槽仍在 256 MB 滞留并增长**，倒计时约 43 天。
-- 重启 task 会让 `flush_lag` 归零但不释放滞留，因此「重启一下就好了」是假象，且会周期性复发。
+- **`PostgresReplicationLag` 修好之后仍会永远 firing。** 规则是
+  `pg:ins:lag_bytes > 1MB or pg:ins:lag_seconds > 1s`，而 keepalive flush 的周期本就是
+  ~10 秒，`lag_seconds` 永远 > 1。这是**物理 HA 阈值套在逻辑 CDC 槽上**的类别错误
+  （本集群 `pg-meta` 是单节点，压根没有物理副本）。正解是把逻辑槽排除出这两条规则，
+  另加一条真正有意义的「逻辑槽滞留 > 2 GB」告警。
+- `restart_lsn` 侧的 240 MB 滞留要等 checkpoint 回收，不会立刻归零；判断是否修好看
+  `confirmed` 差值是否为 0，不看 `retained`。
 - events/INDEX.md 的「当前事实」只描述了 outbox → NATS → Meilisearch 这条链，
   **没有记录 Debezium → Kafka → Elasticsearch 这条 CDC 链**（`cdc-connect` + `cdc-elasticsearch`
   两个容器在 node3，占 1.9 GiB）。两条链并存这件事本身该补进去。
