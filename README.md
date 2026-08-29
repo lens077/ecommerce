@@ -64,6 +64,7 @@ Golang + React 的 B2B2C 多商家电商实践项目：10 个后端微服务、c
 | [`.service-matrix.yaml`](.service-matrix.yaml) | 服务拓扑事实表：注册名、网关前缀、依赖、Config Center 键（CI 强制对齐） |
 | [`TODO.md`](TODO.md) | **进度与待办的唯一真相源**：全局优先级视图 + 分类索引；任何待办变更都要落到它 |
 | [`docs/todo/`](docs/todo/README.md) | 待办明细，按 `docs/TECH.md` 的体系分类（可观测性/事件驱动/鉴权/基础设施…）；由 `TODO.md` 索引 |
+| [`docs/GLOSSARY.md`](docs/GLOSSARY.md) | **领域术语表**：189 个 B2B2C 电商与平台词条（SPU/SKU/商品快照/拆单/履约/OrderGroup/Saga Manager/PaymentIntent/StockLedger…）。读设计文档或写 proto 前遇到不认识的业务名词先查这里 |
 | [`docs/TECH-RADAR.md`](docs/TECH-RADAR.md) | CNCF Landscape 选型评估；新增基础设施必须由量化需求、容量或故障证据触发 |
 | [`PRODUCT.md`](PRODUCT.md) / [`DESIGN.md`](DESIGN.md) | 产品定义与「灯市」视觉设计系统（配色/字体/间距 token），前端设计工作流（impeccable）的真相源——与已拆分的旧架构 DESIGN.md 同名不同物 |
 | [`docs/DEVOPS.md`](docs/DEVOPS.md) / [`observability/OBSERVABILITY.md`](docs/observability/OBSERVABILITY.md) | DevOps 与可观测性的**目标态**设计 |
