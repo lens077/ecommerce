@@ -39,8 +39,11 @@ RUN --mount=type=cache,target=/go/pkg/mod \
 # 最终镜像部分
 FROM alpine:3.24 AS final
 
-# 安装必要的依赖
-RUN apk add --no-cache libc6-compat
+# 安装必要的依赖。
+# apk upgrade 是 Trivy 门禁要求的:基础镜像 tag 刷新滞后于 alpine 仓库的安全更新,
+# 2026-08-29 实测 alpine:3.24 内置 libcrypto3/libssl3 3.5.7-r0,而仓库已有修复了
+# CVE-2026-14456 的 3.5.8-r0。不 upgrade 会被签名前扫描直接拦下。
+RUN apk upgrade --no-cache && apk add --no-cache libc6-compat
 
 # 创建非root用户
 RUN addgroup -g 1000 appuser && adduser -u 1000 -G appuser -D appuser

@@ -47,9 +47,27 @@ fail() { # 记一条违规: fail <TAG> <正文>
   printf '  [%s] %s\n' "$1" "$2" >> "$violations"
 }
 
-# 剥掉 ``` 围栏代码块后输出正文(避免把示例里的链接当成真链接)
+# 剥掉代码围栏后输出正文(避免把示例里的链接当成真链接)。
+#
+# **按围栏长度配对**,不是简单的 f=!f 翻转:``` 不能关闭 ````。
+# 2026-08-29 修——原实现遇到 ````markdown 内嵌 ``` 时会提前「关闭」外层围栏,
+# 把模板后半段当成正文,于是示例里的相对链接会被当真链接查、报假 DEAD-LINK。
+# 当时扫描集(AGENTS/README/STACK/context/docs/design)里恰好没有嵌套围栏所以没炸,
+# 但那是运气不是设计:docs/SCAFFOLD.md 就有 ````markdown 内嵌 ``` 的写法(第 469-524 行),
+# 一旦有人把这类文件纳入扫描集、或在 context/ 里写带嵌套围栏的模板,就会立刻误报。
+# 判定逻辑与 [PROGRESS-SRC] 的 count_checkboxes 一致,那边 2026-08-29 已用 canary 验证过。
 _strip_fences() {
-  awk 'BEGIN{f=0} /^```/{f=!f; next} !f{print}' "$1"
+  awk '
+    {
+      if (match($0, /^[ \t]*`+/)) {
+        s = substr($0, RSTART, RLENGTH); gsub(/[ \t]/, "", s); n = length(s)
+        if (n >= 3) {
+          if (fence == 0)      { fence = n; next }   # 开围栏,记住长度
+          else if (n >= fence) { fence = 0; next }   # 只有同长或更长才能关
+        }
+      }
+      if (fence == 0) print
+    }' "$1"
 }
 
 in_baseline() { # 路径是否被基线豁免
