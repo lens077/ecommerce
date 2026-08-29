@@ -1,10 +1,22 @@
 name: Supply chain PR gate
 
+# 触发(2026-08-29 起):**仅发布 tag**(裸 semver `X.Y.Z`)。原为 `pull_request`,已停——
+# Actions 预算超支后平台会拒绝运行,而本仓习惯直接提交 main 不走 PR,这条 PR 门禁命中率本就极低。
+#
+# ⚠️ 名字里的 "PR" 与 BASE_REF 语义保留不改:脚本 `scripts/supply-chain-pr.sh` 与基线目录
+# `.supply-chain-baseline/` 都按这个名字组织,改名要动三处且无收益。
+#
+# ⚠️ tag 触发必须**显式算出 BASE_REF**:`scripts/supply-chain-pr.sh:134-143` 在 BASE_REF 与
+# GITHUB_BASE_REF 都为空时会退化成 `HEAD~1`,那只扫打 tag 的那一个提交,会漏掉上个版本以来
+# 的全部改动。下面的 "Resolve release range" 把基线设成**上一个 semver tag**(查法与
+# backend.yml 的 detect job 一致)。zizmor/Trivy 是全仓扫 + 基线棘轮,不受区间影响。
 on:
-  pull_request:
+  push:
+    tags:
+      - "[0-9]+.[0-9]+.[0-9]+"
   workflow_dispatch:
 
-# PR 阶段只读仓库；不授予 packages、id-token 或 security-events 写权限。
+# 只读仓库；不授予 packages、id-token 或 security-events 写权限。
 permissions:
   contents: read
 
@@ -30,8 +42,29 @@ jobs:
           path: ~/.cache/ecommerce-supply-chain
           key: supply-chain-tools-v1-${{ runner.os }}-${{ runner.arch }}
 
-      - name: Run PR supply-chain gate
+      # tag 触发时把扫描区间从「最后一个提交」扩到「整个发布区间」:只认裸 semver、
+      # 排除当前 tag、`sort -V` 取最大;找不到前驱(首个 tag)则留空,由脚本自行退化。
+      - name: Resolve release range
+        id: range
         shell: bash
         env:
-          BASE_REF: ${{ github.event.pull_request.base.sha || '' }}
+          CURRENT_TAG: ${{ github.ref_name }}
+          PR_BASE: ${{ github.event.pull_request.base.sha || '' }}
+        run: |
+          set -euo pipefail
+          if [[ -n "$PR_BASE" ]]; then
+            echo "base=$PR_BASE" >> "$GITHUB_OUTPUT"
+            echo "基线取 PR base: $PR_BASE"
+            exit 0
+          fi
+          PREV_TAG=$(git tag --list '[0-9]*.[0-9]*.[0-9]*' \
+            | grep -E '^[0-9]+\.[0-9]+\.[0-9]+$' | grep -vx "$CURRENT_TAG" \
+            | sort -V | tail -1 || true)
+          echo "base=${PREV_TAG}" >> "$GITHUB_OUTPUT"
+          echo "扫描基线: ${PREV_TAG:-<无前驱 tag，脚本退化为 HEAD~1>}"
+
+      - name: Run supply-chain gate
+        shell: bash
+        env:
+          BASE_REF: ${{ steps.range.outputs.base }}
         run: ./scripts/supply-chain-pr.sh

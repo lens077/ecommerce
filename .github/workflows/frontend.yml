@@ -14,6 +14,13 @@ name: Frontend login smoke test
 # 而这条链路的坏法(CSP 头、Casdoor 应用配置、Pangolin 隧道)多半不由本仓提交引起,
 # 只在打 tag 时跑等于永远发现不了 —— 所以它走定时 + 手动,不挂在发版上。
 
+# 触发(2026-08-29 起):**仅手动**。原有的每日 `cron: '17 3 * * *'` 已删除——
+# Actions 预算超支后平台会拒绝运行,而一条每天无条件装 Chromium 跑 Playwright 的定时任务
+# 是本仓最贵的常驻消耗,且它测的是线上部署、与本仓提交无关。
+#
+# ⚠️ 这条**不挂 tag**:上面第 13-15 行的原始理由仍成立——它测线上已部署的那一份,
+# 坏法(CSP 头 / Casdoor 应用配置 / Pangolin 隧道)多半不由本仓提交引起,挂发版上没意义。
+# 需要时手动 `workflow_dispatch`;预算恢复后可考虑放回 cron(建议降到每周一次)。
 on:
   workflow_dispatch:
     inputs:
@@ -21,9 +28,6 @@ on:
         description: '被测站点（留空用 https://shop.apikv.com）'
         required: false
         default: ''
-  schedule:
-    # 每天 03:17 UTC（北京时间 11:17）。刻意避开整点，别和全球的 cron 挤在一起。
-    - cron: '17 3 * * *'
 
 env:
   NODE_VERSION: 22

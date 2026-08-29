@@ -15,24 +15,18 @@
 #                          于是 services='[]',ci job 被 if 跳过,structcheck 一次都不跑
 # .service-matrix.yaml 命中 backend.yml 的 SHARED_PATTERN(触发全量),已被覆盖,不在此重复。
 #
-# 本仓的习惯是直接提交 main,不走 PR —— 所以覆盖必须落在 push 触发上,
-# 只挂 pull_request 等于没挂。
+# 触发(2026-08-29 起):**仅发布 tag**(裸 semver `X.Y.Z`),与 backend.yml /
+# context-gate.yml 同一条纪律。原为 push main + PR 的路径过滤触发,已停——
+# Actions 预算超支后平台会拒绝运行,保留一条烧额度的门禁不如挪到发版这个真正要证据的时刻。
+#
+# ⚠️ 覆盖没有丢:structcheck 是本地提交前锚点(AGENTS.md 明确「改 .service-matrix.yaml
+# / 加删服务后必跑」),且 backend.yml 的每个服务 CI job 里也会跑它。这里只补一次全量确认。
 name: Deploy consistency
 
 on:
   push:
-    branches: [main]
-    paths:
-      - "helm/**"
-      - "backend/Makefile"
-      - "backend/compose.yaml"
-      - ".github/workflows/deploy-consistency.yml"
-  pull_request:
-    paths:
-      - "helm/**"
-      - "backend/Makefile"
-      - "backend/compose.yaml"
-      - ".service-matrix.yaml"
+    tags:
+      - "[0-9]+.[0-9]+.[0-9]+"
   workflow_dispatch:
 
 jobs:
