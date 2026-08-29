@@ -2,7 +2,7 @@
 
 > ⚠️ **这是过渡态，不是目标态**（2026-08-29 加横幅）：
 > 本文描述的进程内 EventBus **是 order 服务当前真正在用的机制**（`go.mod` 无 Kafka 依赖，
-> 服务内无 Outbox 代码），但它带着和 [`README-Kafka.md`](README-Kafka.md) **同一个缺陷**——
+> 服务内无 Outbox 代码），但它带着和 [`kafka-legacy.md`](kafka-legacy.md) **同一个缺陷**——
 > 先 `SaveOrder()` 再 `Publish()` 的**双写**：两步之间进程崩溃，事件就永久丢失，
 > 而订单已经落库。
 >
@@ -67,7 +67,7 @@ Outbox 模型下，第 4 步变成「往同一事务的 outbox 表插一行」�
 
 ## 相关文档
 
-- [`README-Kafka.md`](README-Kafka.md) — Kafka 方案存档，**同样已被 Outbox 取代**，仅配置结构与 fx 装配可参考
+- [`kafka-legacy.md`](kafka-legacy.md) — Kafka 方案存档，**同样已被 Outbox 取代**，仅配置结构与 fx 装配可参考
 - [`docs/design/order/consistency.md`](../../../docs/design/order/consistency.md) — Outbox + Relay 的权威设计
 - [`docs/design/order/checkout.md`](../../../docs/design/order/checkout.md) §9 — 下单链路里的事件时序
 - [`docs/TECH.md`](../../../docs/TECH.md) §4.1 — 技术定稿

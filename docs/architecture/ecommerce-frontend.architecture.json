@@ -41,7 +41,7 @@
     { "id": "perf-report", "from": "pkg_perf", "to": "gateway" }
   ],
   "cards": [
-    { "dot": "cyan", "title": "应用层", "items": ["4 个 app 共用一套 packages/*，靠 catalog 统一依赖版本", "TanStack Router 文件路由 + autoCodeSplitting", "服务端状态 TanStack Query，客户端状态 valtio"] },
+    { "dot": "cyan", "title": "应用层", "items": ["4 个 app 共用一套 packages/*，靠 catalog 统一依赖版本", "TanStack Router 文件路由 + autoCodeSplitting", "服务端状态 TanStack Query，客户端状态 Zustand"] },
     { "dot": "emerald", "title": "传输层", "items": ["src/gen 由 Buf + protoc-gen-es 从 backend/api/**/*.proto 生成", "@ecommerce/api 在生成客户端外包一层拦截器与统一错误模型", "环境变量经 @t3-oss/env-core + zod 4 运行时校验"] },
     { "dot": "violet", "title": "上报链路", "items": ["tracker：浏览行为埋点 → behavior 服务 → 喂 gorse 推荐", "perf：Web Vitals + LongTask + API 耗时 → telemetry.v1 → VictoriaMetrics / Loki", "两条上报都走网关，不直连服务"] },
     { "dot": "amber", "title": "工具链", "items": ["vite-plus（vp）一体化 fmt / lint(oxlint) / test / build / dev", "pnpm 11.6 workspace，Node ≥ 22.12", "测试：vitest + Playwright browser mode + testing-library"] },
