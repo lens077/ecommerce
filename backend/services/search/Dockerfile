@@ -37,7 +37,7 @@ RUN --mount=type=cache,target=/go/pkg/mod \
     chmod +x /app/service
 
 # 最终镜像部分
-FROM alpine:3.22 AS final
+FROM alpine:3.24 AS final
 
 # 安装必要的依赖
 RUN apk add --no-cache libc6-compat

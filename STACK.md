@@ -111,6 +111,8 @@ ecommerce/
 | 类别 | 选型 | 锁定版本或状态 |
 |---|---|---|
 | 语言 | Go | **1.26.5**（backend 与 control-tower 同版） |
+| 构建镜像 | `golang:<ver>-alpine<ver>` | **`golang:1.26.5-alpine3.24`**（各服务 `Makefile` 的 `GOIMAGE`） |
+| 运行基底 | Alpine（+ `libc6-compat`，非 root `appuser` uid/gid 1000） | **`alpine:3.24`**，10 个 Dockerfile 全部一致。⚠️ 2026-08-29 前是 `alpine:3.22`、比构建镜像落后两个小版本且**无人记录**；因签名前已接入 Trivy 门禁（只阻断**可修复** CVE），旧基底会直接抬高发版被拦的概率，故对齐并纳入本表 |
 | RPC 框架 | `connectrpc.com/connect` | v1.20.0 |
 | 传输 | Connect、gRPC、gRPC-Web 兼容；服务间与网关-后端统一 ConnectRPC over HTTP/2（H2C） | 按 [`docs/TECH.md`](docs/TECH.md) 红线**严禁降级 HTTP/1.1**；存量 h2c 端仍能受理 HTTP/1.1，仅限本地调试，不得作为服务间通道 |
 | IDL | Protobuf 3 + Buf CLI | `google.golang.org/protobuf` v1.36.12 |
