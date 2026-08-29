@@ -46,6 +46,12 @@ go test -count=1 ./pkg/outbox ./pkg/searchindex ./tools/outbox-relay ./tools/sea
 go build ./tools/outbox-relay ./tools/search-indexer
 ```
 
+## experience
+
+| 症状 | 文件 |
+|---|---|
+| CDC 全绿（容器 healthy / 连接器 RUNNING / 无报错）却在悄悄撑爆 WAL | [debezium-idle-slot-wal-retention.md](experience/debezium-idle-slot-wal-retention.md) |
+
 ## 相关
 
 - 生产化目标：[`docs/design/platform/production-scale-goal.md`](../../../../docs/design/platform/production-scale-goal.md)

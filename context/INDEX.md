@@ -28,6 +28,7 @@ context/
 | [go-testing.md](team/go-testing.md) | 测试分层判定：biz 层 mock、data 层真库（testcontainers）、Redis 用 miniredis；`-short` 是唯一开关；禁用 go-sqlmock/pgxmock |
 | [okteto-inner-loop.md](team/okteto-inner-loop.md) | 内环开发 `okteto up`：什么时候用、**必须先关 ArgoCD 自动同步**、不是测试环境 |
 | [tech-selection.md](team/tech-selection.md) | 「上游已死」类选型结论定稿前必查镜像谱系与社区延续分叉；查到分叉 ≠ 采用 |
+| [alerting-signal-hygiene.md](team/alerting-signal-hygiene.md) | 告警的价值 = 它承载的新信息量，慢性红等于没有告警；降噪优先级「修根因 > 调 `repeat_interval` > 改阈值」；探针要探「功能有没有推进」；含给告警本身加告警的元规则 |
 | [cilium-datapath-ops.md](team/cilium-datapath-ops.md) | Cilium 数据面只能实测的两条：ipcache 身份失配让写好的放行规则静默失效（控制面全绿）；`bpf-map-dynamic-size-ratio` 按节点内存百分比预分配，缩容后旧 map 被 cilium-envoy 持有成孤儿并从 Pod 指标里消失 |
 
 ## 框架工程级 · [context/harness-framework/](harness-framework/INDEX.md)
