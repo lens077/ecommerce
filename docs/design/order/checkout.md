@@ -268,7 +268,7 @@ OrderPaid 不再被履约订阅（platform/architecture.md 领域事件表已于
 - user_id **只**取 control-tower 校验 Casdoor 有状态 Session 后注入的 `UserIdMetadataKey`（x-md-global-user-id，jwt.go:294），永不从请求体或 token 内容取。order 现有桩读 UserNameMetadataKey（order.go:33）是要修的错。
 - 网关硬规则：转发前**剥离入站请求携带的全部 x-md-global-\* 头**再注入，防伪造。
 - cart 反查恒带 user_id；address 服务校验 addressId 属主；token 校验 quote.user_id == 认证身份；重放校验 DB 级属主（§5.1）。
-- 网关授权：Casdoor 粗粒度 consumer 角色 + OpenFGA 对 cart/address/order 对象关系校验；CreateQuote/CreateOrder/CreatePayment → consumer；渠道回调匿名放行、可信性靠验签；GetOrderRequestState 为服务间内部 RPC 不过网关。
+- 网关授权：Casdoor 粗粒度 customer 角色 + OpenFGA 对 cart/address/order 对象关系校验；CreateQuote/CreateOrder/CreatePayment → customer；渠道回调匿名放行、可信性靠验签；GetOrderRequestState 为服务间内部 RPC 不过网关。
 
 ## 12. 金额规范
 

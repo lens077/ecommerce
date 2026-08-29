@@ -85,13 +85,13 @@ func (PaymentStatus) EnumDescriptor() ([]byte, []int) {
 type CreatePaymentRequest struct {
 	state            protoimpl.MessageState `protogen:"open.v1"`
 	OrderId          int64                  `protobuf:"varint,1,opt,name=order_id,json=orderId,proto3" json:"order_id,omitempty"`
-	ConsumerId       string                 `protobuf:"bytes,2,opt,name=consumer_id,json=consumerId,proto3" json:"consumer_id,omitempty"`
+	CustomerId       string                 `protobuf:"bytes,11,opt,name=customer_id,json=customerId,proto3" json:"customer_id,omitempty"`
 	Amount           string                 `protobuf:"bytes,3,opt,name=amount,proto3" json:"amount,omitempty"`
 	Currency         string                 `protobuf:"bytes,4,opt,name=currency,proto3" json:"currency,omitempty"`
 	Subject          string                 `protobuf:"bytes,5,opt,name=subject,proto3" json:"subject,omitempty"`
 	ReturnUrl        string                 `protobuf:"bytes,6,opt,name=return_url,json=returnUrl,proto3" json:"return_url,omitempty"`
 	FreezeId         int64                  `protobuf:"varint,8,opt,name=freeze_id,json=freezeId,proto3" json:"freeze_id,omitempty"`
-	ConsumerVersion  int64                  `protobuf:"varint,9,opt,name=consumer_version,json=consumerVersion,proto3" json:"consumer_version,omitempty"`
+	CustomerVersion  int64                  `protobuf:"varint,12,opt,name=customer_version,json=customerVersion,proto3" json:"customer_version,omitempty"`
 	MerchantVersions []int64                `protobuf:"varint,10,rep,packed,name=merchant_versions,json=merchantVersions,proto3" json:"merchant_versions,omitempty"`
 	unknownFields    protoimpl.UnknownFields
 	sizeCache        protoimpl.SizeCache
@@ -134,9 +134,9 @@ func (x *CreatePaymentRequest) GetOrderId() int64 {
 	return 0
 }
 
-func (x *CreatePaymentRequest) GetConsumerId() string {
+func (x *CreatePaymentRequest) GetCustomerId() string {
 	if x != nil {
-		return x.ConsumerId
+		return x.CustomerId
 	}
 	return ""
 }
@@ -176,9 +176,9 @@ func (x *CreatePaymentRequest) GetFreezeId() int64 {
 	return 0
 }
 
-func (x *CreatePaymentRequest) GetConsumerVersion() int64 {
+func (x *CreatePaymentRequest) GetCustomerVersion() int64 {
 	if x != nil {
-		return x.ConsumerVersion
+		return x.CustomerVersion
 	}
 	return 0
 }
@@ -721,11 +721,11 @@ var File_api_payment_v1_payment_proto protoreflect.FileDescriptor
 const file_api_payment_v1_payment_proto_rawDesc = "" +
 	"\n" +
 	"\x1capi/payment/v1/payment.proto\x12\n" +
-	"payment.v1\x1a#third_party/validate/validate.proto\"\xe4\x03\n" +
+	"payment.v1\x1a#third_party/validate/validate.proto\"\x8f\x04\n" +
 	"\x14CreatePaymentRequest\x12\"\n" +
 	"\border_id\x18\x01 \x01(\x03B\a\xbaH\x04\"\x02 \x00R\aorderId\x12)\n" +
-	"\vconsumer_id\x18\x02 \x01(\tB\b\xbaH\x05r\x03\xb0\x01\x01R\n" +
-	"consumerId\x12`\n" +
+	"\vcustomer_id\x18\v \x01(\tB\b\xbaH\x05r\x03\xb0\x01\x01R\n" +
+	"customerId\x12`\n" +
 	"\x06amount\x18\x03 \x01(\tBH\xbaHErC\x18\r2?^(?:0\\.(?:0[1-9]|[1-9][0-9])|[1-9][0-9]{0,9}(?:\\.[0-9]{1,2})?)$R\x06amount\x120\n" +
 	"\bcurrency\x18\x04 \x01(\tB\x14\xbaH\x11r\x0f2\n" +
 	"^[A-Z]{3}$\x98\x01\x03R\bcurrency\x12$\n" +
@@ -734,10 +734,11 @@ const file_api_payment_v1_payment_proto_rawDesc = "" +
 	"\n" +
 	"return_url\x18\x06 \x01(\tB\v\xbaH\br\x06\x18\x80\x10\x88\x01\x01R\treturnUrl\x12$\n" +
 	"\tfreeze_id\x18\b \x01(\x03B\a\xbaH\x04\"\x02 \x00R\bfreezeId\x122\n" +
-	"\x10consumer_version\x18\t \x01(\x03B\a\xbaH\x04\"\x02(\x00R\x0fconsumerVersion\x12=\n" +
+	"\x10customer_version\x18\f \x01(\x03B\a\xbaH\x04\"\x02(\x00R\x0fcustomerVersion\x12=\n" +
 	"\x11merchant_versions\x18\n" +
 	" \x03(\x03B\x10\xbaH\r\x92\x01\n" +
-	"\b\x01\x10d\"\x04\"\x02(\x00R\x10merchantVersions\"e\n" +
+	"\b\x01\x10d\"\x04\"\x02(\x00R\x10merchantVersionsJ\x04\b\x02\x10\x03J\x04\b\t\x10\n" +
+	"R\vconsumer_idR\x10consumer_version\"e\n" +
 	"\x15CreatePaymentResponse\x12&\n" +
 	"\n" +
 	"payment_id\x18\x01 \x01(\x03B\a\xbaH\x04\"\x02 \x00R\tpaymentId\x12$\n" +

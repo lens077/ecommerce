@@ -12,17 +12,19 @@ import (
 )
 
 type PaymentsPayment struct {
-	ID               int64
-	OrderID          int64
-	ConsumerID       uuid.UUID
-	Amount           pgtype.Numeric
-	Currency         string
-	Method           string
-	Status           string
-	Subject          string
-	TradeNo          string
-	FreezeID         int64
-	ConsumerVersion  int64
+	ID      int64
+	OrderID int64
+	// 买家 ID
+	CustomerID uuid.UUID
+	Amount     pgtype.Numeric
+	Currency   string
+	Method     string
+	Status     string
+	Subject    string
+	TradeNo    string
+	FreezeID   int64
+	// 买家乐观锁版本
+	CustomerVersion  int64
 	MerchantVersions int64
 	CreatedAt        time.Time
 	UpdatedAt        time.Time

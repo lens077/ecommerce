@@ -207,11 +207,11 @@ SearchCatalog
 
 ### 5.9 多租户与授权
 
-固定概念：`Principal`、`Consumer`、`Merchant`、`Store`、`MerchantMember`、`Role`、`Permission`、`Relation`。
+固定概念：`Principal`、`Customer`、`Merchant`、`Store`、`MerchantMember`、`Role`、`Permission`、`Relation`。
 
 授权分三层：
 
-1. Casdoor：有状态 Session 与 admin/merchant/consumer 粗粒度角色；
+1. Casdoor：有状态 Session 与 admin/merchant/customer 粗粒度角色；
 2. control-tower + OpenFGA：merchant/store/order 对象级关系授权；
 3. 业务服务与 Repository：状态机、领域不变量及 tenant/owner 数据隔离条件。
 

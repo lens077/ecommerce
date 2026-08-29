@@ -22,13 +22,13 @@
       "todayOrders": "Today's Orders",
       "todaySales": "Today's Sales",
       "pendingOrders": "Pending Orders",
-      "consumers": "Total Consumers"
+      "customers": "Total Customers"
     },
     "changeVsYesterday": "{{change}} vs. yesterday",
     "recentOrders": "Recent Orders",
     "table": {
       "orderNo": "Order No.",
-      "consumer": "Consumer",
+      "customer": "Customer",
       "amount": "Amount",
       "status": "Status"
     }
@@ -36,12 +36,12 @@
   "orders": {
     "title": "Order Management",
     "export": "Export Orders",
-    "searchPlaceholder": "Search order no., consumer...",
+    "searchPlaceholder": "Search order no., customer...",
     "filterAll": "All statuses",
     "moreFilters": "More filters",
     "table": {
       "orderNo": "Order No.",
-      "consumer": "Consumer",
+      "customer": "Customer",
       "items": "Items",
       "amount": "Amount",
       "status": "Status",

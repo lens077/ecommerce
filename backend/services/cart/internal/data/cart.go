@@ -37,7 +37,7 @@ func (c cartRepo) RemoveCartItem(ctx context.Context, req biz.RemoveCartItemRequ
 	c.log.Sugar().Debugf("11231%+v", statuses)
 	var cart, err = c.queries.RemoveCartItem(ctx, models.RemoveCartItemParams{
 		UserID: pgtype.UUID{
-			Bytes: req.ConsumerId,
+			Bytes: req.CustomerId,
 			Valid: true,
 		},
 		MerchantIds: req.MerchantIds,
@@ -63,7 +63,7 @@ func (c cartRepo) UpdateCartItemQuantity(ctx context.Context, req biz.UpdateCart
 			Valid: true,
 		},
 		UserID: pgtype.UUID{
-			Bytes: req.ConsumerId,
+			Bytes: req.CustomerId,
 			Valid: true,
 		},
 		SpuID:  new(int64(req.SpuId)),
@@ -81,7 +81,7 @@ func (c cartRepo) UpdateCartItemQuantity(ctx context.Context, req biz.UpdateCart
 func (c cartRepo) GetCart(ctx context.Context, req biz.GetCartRequest) (*biz.GetCartResponse, error) {
 	status := models.CartCartType(req.Status)
 	rows, err := c.queries.GetCartItems(ctx, models.GetCartItemsParams{
-		UserID: req.ConsumerId,
+		UserID: req.CustomerId,
 		Status: status,
 	})
 	if err != nil {
@@ -132,7 +132,7 @@ func (c cartRepo) AddProductToCart(ctx context.Context, req biz.AddProductToCart
 	}
 	row, err := c.queries.AddProductToCart(ctx, models.AddProductToCartParams{
 		UserID: pgtype.UUID{
-			Bytes: req.ConsumerId,
+			Bytes: req.CustomerId,
 			Valid: true,
 		},
 		MerchantID: pgtype.UUID{

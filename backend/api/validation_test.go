@@ -62,7 +62,7 @@ func TestValidationRulesCompileAndRejectInvalidPayloads(t *testing.T) {
 			name: "payment decimal precision",
 			msg: &paymentv1.CreatePaymentRequest{
 				OrderId:          1,
-				ConsumerId:       "018f47a2-9e4b-7d83-a5a0-b09a4bb9422d",
+				CustomerId:       "018f47a2-9e4b-7d83-a5a0-b09a4bb9422d",
 				Amount:           "12.345",
 				Currency:         "CNY",
 				Subject:          "order",
@@ -140,7 +140,7 @@ func TestValidationRulesAcceptBoundaryPayloads(t *testing.T) {
 			name: "payment decimal",
 			msg: &paymentv1.CreatePaymentRequest{
 				OrderId:          1,
-				ConsumerId:       "018f47a2-9e4b-7d83-a5a0-b09a4bb9422d",
+				CustomerId:       "018f47a2-9e4b-7d83-a5a0-b09a4bb9422d",
 				Amount:           "12.34",
 				Currency:         "CNY",
 				Subject:          "order",

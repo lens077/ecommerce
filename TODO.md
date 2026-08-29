@@ -116,7 +116,7 @@ dev 的 7 个相关服务已滚到 `sha-0b9b9ad`，15/15 Deployment Ready、发�
 | product | 🟡 | `ListProducts`、上下架、类目/品牌；事务内 outbox 生产者未接 |
 | cart | 🟡 | `RemoveCartItem`/`UpdateCartItemQuantity` **前端未接线** |
 | order | 🔴 | `CreateOrder` 假成功、`CompleteOrder` 不落库 |
-| payment | 🟡 | 5 个 RPC 均为显式 `Unimplemented` 桩（**本仓正确示范**）；repo 主体待恢复 |
+| payment | 🟡 | 5 个 RPC 均为显式 `Unimplemented` 桩（**本仓正确示范**）；repo 主体待恢复。⚠️ 新增迁移 `00002_rename_consumer_to_customer`（买家列改名），**存量库需跑 `make migrate-up MIGRATE_SVC=payment`** |
 | inventory | 🔴 | `Reserve` 静默无操作、`ReleaseReserve` panic |
 | search | 🟡 | 查询路径已迁；商品事务生产者、聚合筛选、热门词待补 |
 | address | 🔴 | 功能齐全**但全线越权** |

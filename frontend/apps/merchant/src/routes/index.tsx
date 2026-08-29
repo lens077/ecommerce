@@ -13,7 +13,7 @@ const s = { xs: 0.5, sm: 1, md: 2, lg: 3, xl: 4 };
 /** 近期订单表头。key 显式列出，不用下标拼。 */
 const ORDER_COLUMNS = [
   "dashboard.table.orderNo",
-  "dashboard.table.consumer",
+  "dashboard.table.customer",
   "dashboard.table.amount",
   "dashboard.table.status",
 ] as const;
@@ -49,7 +49,7 @@ function DashboardPage() {
       icon: Package,
     },
     {
-      labelKey: "dashboard.stats.consumers",
+      labelKey: "dashboard.stats.customers",
       value: formatNumber(1234),
       change: "+5%",
       trend: "up",
@@ -59,11 +59,11 @@ function DashboardPage() {
 
   // status 存状态码而不是中文 —— 下面既要拿它渲染文案又要拿它判色，存文案会在切语言时判错
   const recentOrders = [
-    { id: "ORD001", consumer: "张先生", amount: 299, status: "pending_shipment" },
-    { id: "ORD002", consumer: "李女士", amount: 1280, status: "pending_shipment" },
-    { id: "ORD003", consumer: "王先生", amount: 89, status: "completed" },
-    { id: "ORD004", consumer: "赵女士", amount: 456, status: "pending_shipment" },
-    { id: "ORD005", consumer: "刘先生", amount: 2100, status: "completed" },
+    { id: "ORD001", customer: "张先生", amount: 299, status: "pending_shipment" },
+    { id: "ORD002", customer: "李女士", amount: 1280, status: "pending_shipment" },
+    { id: "ORD003", customer: "王先生", amount: 89, status: "completed" },
+    { id: "ORD004", customer: "赵女士", amount: 456, status: "pending_shipment" },
+    { id: "ORD005", customer: "刘先生", amount: 2100, status: "completed" },
   ] as const;
 
   return (
@@ -183,7 +183,7 @@ function DashboardPage() {
                       {order.id}
                     </Box>
                     <Box component="td" sx={{ py: s.sm, px: s.md, color: "text.secondary" }}>
-                      {order.consumer}
+                      {order.customer}
                     </Box>
                     <Box
                       component="td"

@@ -24,12 +24,12 @@ type PaymentService struct {
 // CreatePayment 创建支付订单
 func (s *PaymentService) CreatePayment(ctx context.Context, c *connect.Request[v1.CreatePaymentRequest]) (*connect.Response[v1.CreatePaymentResponse], error) {
 	req := c.Msg
-	consumerId, err := uuid.Parse(req.ConsumerId)
+	customerId, err := uuid.Parse(req.CustomerId)
 	if err != nil {
 		return nil, status.Error(codes.InvalidArgument, "无效的用户ID")
 	}
 
-	s.log.Debugf("consumerId%v", consumerId)
+	s.log.Debugf("customerId%v", customerId)
 
 	// merchantId, err := uuid.Parse(req.MerchantId)
 	// if err != nil {
@@ -48,14 +48,14 @@ func (s *PaymentService) CreatePayment(ctx context.Context, c *connect.Request[v
 	// merchanVersions := make([]int64, 0, len(req.MerchanVersion))
 	createReq := &biz.CreatePaymentReq{
 		OrderID:    orderID,
-		ConsumerID: consumerId,
+		CustomerID: customerId,
 		// MerchantID:      merchantId,
 		Amount:          req.Amount,
 		Currency:        req.Currency,
 		Subject:         req.Subject,
 		ReturnURL:       req.ReturnUrl,
 		FreezeId:        req.FreezeId,
-		ConsumerVersion: req.ConsumerVersion,
+		CustomerVersion: req.CustomerVersion,
 		MerchanVersions: req.MerchantVersions,
 	}
 

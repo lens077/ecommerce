@@ -15,7 +15,7 @@
 | 4 | 地点 | `/admin/settings/location` |
 | 5 | 税费 | `/admin/settings/taxes` |
 | 6 | 语言 | `/admin/settings/lang` |
-| 7 | 客户账户 | `/admin/settings/consumer` |
+| 7 | 客户账户 | `/admin/settings/customer` |
 | 8 | 管理员和权限 | `/admin/settings/adminpermission` |
 | 9 | 文件库 | `/admin/settings/fileManage` |
 | 10 | 通知 | `/admin/settings/notice` |
@@ -205,7 +205,7 @@ ACQTECH、Adyen、Aiglobalpay、Airwallex、AsiaBill、Aventra、Aventrapay、Cl
 
 ---
 
-## 7. 客户账户 `/admin/settings/consumer`
+## 7. 客户账户 `/admin/settings/customer`
 
 ### 登录链接
 > 管理店铺内客户登录入口链接到的客户账户版本

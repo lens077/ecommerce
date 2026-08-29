@@ -70,7 +70,7 @@ func (r *paymentRepo) GetPaymentByOrderID(_ context.Context, _ *biz.GetPaymentBy
 // func (r *paymentRepo) processBalanceTransfer(ctx context.Context, payment models.PaymentsPayments) {
 // 	// 查询订单的所有子订单信息
 // 	orderInfo, err := r.data.consumerOrderv1.GetConsumerOrdersWithSuborders(ctx, &consumerOrderv1.GetConsumerOrdersWithSubordersRequest{
-// 		UserId:  payment.ConsumerID.String(),
+// 		UserId:  payment.CustomerID.String(),
 // 		OrderId: payment.OrderID,
 // 	})
 // 	if err != nil {
@@ -97,7 +97,7 @@ func (r *paymentRepo) GetPaymentByOrderID(_ context.Context, _ *biz.GetPaymentBy
 // 				FreezeId:                payment.FreezeID,
 // 				MerchantId:              merchantId,
 // 				IdempotencyKey:          strconv.FormatInt(payment.OrderID, 10),
-// 				ExpectedUserVersion:     int32(payment.ConsumerVersion),
+// 				ExpectedUserVersion:     int32(payment.CustomerVersion),
 // 				ExpectedMerchantVersion: int32(v),
 // 				PaymentAccount:          "", // 余额支付不需要支付账号
 // 			}
@@ -173,7 +173,7 @@ func (r *paymentRepo) GetPaymentByOrderID(_ context.Context, _ *biz.GetPaymentBy
 // 	payments, paymentsErr := r.data.DB(ctx).CreatePaymentQuery(ctx, models.CreatePaymentQueryParams{
 // 		ID:               id.SnowflakeID(),
 // 		OrderID:          req.OrderID,
-// 		ConsumerID:       req.ConsumerID,
+// 		CustomerID:       req.CustomerID,
 // 		Amount:           amount,
 // 		Currency:         req.Currency,
 // 		Method:           paymentMethod,
@@ -181,7 +181,7 @@ func (r *paymentRepo) GetPaymentByOrderID(_ context.Context, _ *biz.GetPaymentBy
 // 		Subject:          req.Subject,
 // 		TradeNo:          tradeNo,
 // 		FreezeID:         req.FreezeId,
-// 		ConsumerVersion:  req.ConsumerVersion,
+// 		CustomerVersion:  req.CustomerVersion,
 // 		MerchantVersions: req.MerchanVersions,
 // 	})
 // 	if paymentsErr != nil {
@@ -197,7 +197,7 @@ func (r *paymentRepo) GetPaymentByOrderID(_ context.Context, _ *biz.GetPaymentBy
 // 	// 如果是余额支付，直接调用订单服务标记订单为已支付
 // 	if paymentMethod == string(constants.PaymentMethodBalance) {
 // 		// 传递用户 ID
-// 		metadataCtx := metadata.AppendToClientContext(ctx, constants.UserId, req.ConsumerID.String())
+// 		metadataCtx := metadata.AppendToClientContext(ctx, constants.UserId, req.CustomerID.String())
 // 		_, markOrderErr := r.data.orderv1.MarkOrderPaid(metadataCtx, &orderv1.MarkOrderPaidReq{
 // 			OrderId: req.OrderID,
 // 		})
@@ -214,7 +214,7 @@ func (r *paymentRepo) GetPaymentByOrderID(_ context.Context, _ *biz.GetPaymentBy
 // 		Payment: &biz.Payment{
 // 			ID:         payments.ID,
 // 			OrderID:    payments.OrderID,
-// 			ConsumerID: payments.ConsumerID,
+// 			CustomerID: payments.CustomerID,
 // 			Amount:     amountResp,
 // 			Currency:   payments.Currency,
 // 			Subject:    req.Subject,
@@ -249,7 +249,7 @@ func (r *paymentRepo) GetPaymentByOrderID(_ context.Context, _ *biz.GetPaymentBy
 // 		Payment: &biz.Payment{
 // 			ID:         payment.ID,
 // 			OrderID:    payment.OrderID,
-// 			ConsumerID: payment.ConsumerID,
+// 			CustomerID: payment.CustomerID,
 // 			// MerchantID: payment.MerchantID,
 // 			Amount:     amount,
 // 			Currency:   payment.Currency,
@@ -333,9 +333,9 @@ func (r *paymentRepo) GetPaymentByOrderID(_ context.Context, _ *biz.GetPaymentBy
 // 	}
 //
 // 	// 传递用户 ID
-// 	metadataCtx := metadata.AppendToClientContext(ctx, constants.UserId, payment.ConsumerID.String())
+// 	metadataCtx := metadata.AppendToClientContext(ctx, constants.UserId, payment.CustomerID.String())
 // 	_, err = r.data.orderv1.MarkOrderPaid(metadataCtx, &orderv1.MarkOrderPaidReq{
-// 		// UserId:  payment.ConsumerID.String(),
+// 		// UserId:  payment.CustomerID.String(),
 // 		OrderId: payment.OrderID,
 // 	})
 // 	if err != nil {
@@ -477,9 +477,9 @@ func (r *paymentRepo) GetPaymentByOrderID(_ context.Context, _ *biz.GetPaymentBy
 // 	}
 //
 // 	// 标记订单为已支付
-// 	metadataCtx := metadata.AppendToClientContext(ctx, constants.UserId, payment.ConsumerID.String())
+// 	metadataCtx := metadata.AppendToClientContext(ctx, constants.UserId, payment.CustomerID.String())
 // 	_, err = r.data.orderv1.MarkOrderPaid(metadataCtx, &orderv1.MarkOrderPaidReq{
-// 		// UserId:  payment.ConsumerID.String(),
+// 		// UserId:  payment.CustomerID.String(),
 // 		OrderId: payment.OrderID,
 // 	})
 // 	if err != nil {
@@ -488,7 +488,7 @@ func (r *paymentRepo) GetPaymentByOrderID(_ context.Context, _ *biz.GetPaymentBy
 //
 // 	// 查询订单的所有子订单信息
 // 	orderInfo, err := r.data.consumerOrderv1.GetConsumerOrdersWithSuborders(ctx, &consumerOrderv1.GetConsumerOrdersWithSubordersRequest{
-// 		UserId:  payment.ConsumerID.String(),
+// 		UserId:  payment.CustomerID.String(),
 // 		OrderId: payment.OrderID,
 // 	})
 // 	if err != nil {
@@ -518,7 +518,7 @@ func (r *paymentRepo) GetPaymentByOrderID(_ context.Context, _ *biz.GetPaymentBy
 // 				FreezeId:                payment.FreezeID,
 // 				MerchantId:              merchantId,
 // 				IdempotencyKey:          strconv.FormatInt(payment.OrderID, 10),
-// 				ExpectedUserVersion:     int32(payment.ConsumerVersion),
+// 				ExpectedUserVersion:     int32(payment.CustomerVersion),
 // 				ExpectedMerchantVersion: int32(v),
 // 				PaymentAccount:          "", // TODO PaymentAccount
 // 			}
@@ -580,7 +580,7 @@ func (r *paymentRepo) GetPaymentByOrderID(_ context.Context, _ *biz.GetPaymentBy
 // 	return &biz.Payment{
 // 		ID:         payment.ID,
 // 		OrderID:    payment.OrderID,
-// 		ConsumerID: payment.ConsumerID,
+// 		CustomerID: payment.CustomerID,
 // 		Amount:     amount,
 // 		Currency:   payment.Currency,
 // 		Subject:    payment.Subject,

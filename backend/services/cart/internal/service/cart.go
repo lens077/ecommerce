@@ -23,7 +23,7 @@ type CartService struct {
 func (cs *CartService) AddProductToCart(ctx context.Context, c *connect.Request[v1.AddProductToCartRequest]) (*connect.Response[v1.AddProductToCartResponse], error) {
 	req := c.Msg
 	userIdStr := c.Header().Get(constants.UserIdMetadataKey)
-	consumerId, err := uuid.Parse(userIdStr)
+	customerId, err := uuid.Parse(userIdStr)
 	if err != nil {
 		return nil, err
 	}
@@ -34,7 +34,7 @@ func (cs *CartService) AddProductToCart(ctx context.Context, c *connect.Request[
 	}
 	skuAttributesExtra, err := json.Marshal(req.SkuAttributes.AsMap())
 	cart, err := cs.uc.AddProductToCart(ctx, biz.AddProductToCartRequest{
-		ConsumerId:      consumerId,
+		CustomerId:      customerId,
 		MerchantId:      merchantId,
 		SpuID:           req.SpuId,
 		SkuID:           req.SkuId,
@@ -61,7 +61,7 @@ func (cs *CartService) AddProductToCart(ctx context.Context, c *connect.Request[
 func (cs *CartService) RemoveCartItem(ctx context.Context, c *connect.Request[v1.RemoveCartItemRequest]) (*connect.Response[v1.RemoveCartItemResponse], error) {
 	req := c.Msg
 	userIdStr := c.Header().Get(constants.UserIdMetadataKey)
-	consumerId, err := uuid.Parse(userIdStr)
+	customerId, err := uuid.Parse(userIdStr)
 	if err != nil {
 		return nil, err
 	}
@@ -85,7 +85,7 @@ func (cs *CartService) RemoveCartItem(ctx context.Context, c *connect.Request[v1
 	cs.log.Sugar().Debug("status: %+v\n", statuses)
 
 	cart, err := cs.uc.RemoveCartItem(ctx, biz.RemoveCartItemRequest{
-		ConsumerId:  consumerId,
+		CustomerId:  customerId,
 		MerchantIds: merchantIds,
 		SpuIds:      req.SpuIds,
 		SkuIds:      req.SkuIds,
@@ -105,7 +105,7 @@ func (cs *CartService) RemoveCartItem(ctx context.Context, c *connect.Request[v1
 func (cs *CartService) UpdateCartItemQuantity(ctx context.Context, c *connect.Request[v1.UpdateCartItemQuantityRequest]) (*connect.Response[v1.UpdateCartItemQuantityResponse], error) {
 	req := c.Msg
 	userIdStr := c.Header().Get(constants.UserIdMetadataKey)
-	consumerId, err := uuid.Parse(userIdStr)
+	customerId, err := uuid.Parse(userIdStr)
 	if err != nil {
 		return nil, err
 	}
@@ -114,7 +114,7 @@ func (cs *CartService) UpdateCartItemQuantity(ctx context.Context, c *connect.Re
 		return nil, err
 	}
 	cart, err := cs.uc.UpdateCartItemQuantity(ctx, biz.UpdateCartItemQuantityRequest{
-		ConsumerId: consumerId,
+		CustomerId: customerId,
 		MerchantId: merchantId,
 		SpuId:      req.SpuId,
 		SkuId:      req.SkuId,
@@ -134,12 +134,12 @@ func (cs *CartService) UpdateCartItemQuantity(ctx context.Context, c *connect.Re
 func (cs *CartService) GetCart(ctx context.Context, c *connect.Request[v1.GetCartRequest]) (*connect.Response[v1.GetCartResponse], error) {
 	userIdStr := c.Header().Get(constants.UserIdMetadataKey)
 
-	consumerId, err := uuid.Parse(userIdStr)
+	customerId, err := uuid.Parse(userIdStr)
 	if err != nil {
 		return nil, err
 	}
 	cart, err := cs.uc.GetCart(ctx, biz.GetCartRequest{
-		ConsumerId: consumerId,
+		CustomerId: customerId,
 		Status:     constants.CartStatusActive,
 	})
 	if err != nil {
