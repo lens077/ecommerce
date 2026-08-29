@@ -151,7 +151,7 @@ dev 的 7 个相关服务已滚到 `sha-0b9b9ad`，15/15 Deployment Ready、发�
 | 采集层 | 🟡 | Vector **3/3**、集群内 OTel Collector **1/1**；**VMAgent 缺位**（TECH.md §9 要求） |
 | 存储层 | ✅ | node3：VictoriaMetrics v1.149.0 / VictoriaLogs v1.52.0 / VictoriaTraces v0.10.0 |
 | 存量链 | ✅ | Loki / fluent-bit / Jaeger / 集群内 Grafana **均已退役且确认不存在** |
-| 告警 | 🟡 | node3 Alertmanager 0.33.1，`route.receiver=local-audit`；**无企业微信、无飞书**（配置里全是注释） |
+| 告警 | 🟡 | node3 Alertmanager 0.33.1，`route.receiver=local-audit`；已加 `ecommerce-k8s.yml` 6 条 K8s 规则（数据来自 otel `k8s_cluster` receiver，不需要 kube-state-metrics）；**无企业微信、无飞书**（配置里全是注释） |
 | 链路追踪 | 🟡 | 10 个服务 + 网关 OTel 已统一至 v1.45.0；网关采样口径与后端相反待修 |
 | Go 运行时指标 | 🔴 | 10 个电商服务 **全缺**（goroutine/堆/进程 CPU 内存） |
 
