@@ -59,8 +59,9 @@ export default defineConfig(({ mode }) => {
     server: {
       // Tauri 壳按固定端口连 dev server，端口被占时必须报错而不是静默换号
       strictPort: true,
-      // 经 Pangolin 隧道(dev.apikv.com → mac site → 127.0.0.1:3000)远程预览 dev server 用
-      allowedHosts: ["dev.apikv.com"],
+      // 不设 allowedHosts:走 Vite 默认(仅回环)。原先为经 Pangolin 隧道远程预览开了
+      // `dev.apikv.com`,该资源已于 2026-08-29 随 dev 子域一并删除(实测 404),配置一并移除。
+      // 若将来重开远程预览,需同时:建 Pangolin 资源 → 指向当前 mac 站点(siteId 6)→ 在此加回域名。
       // BFF 会话轨要求同源（control-tower ADR-0002）：会话 cookie 是
       // SameSite=Lax，跨站请求根本不会带上它。dev 里前端在 localhost:3000、
       // 网关在集群 LB，属跨站——所以把网关代理到同源之下。

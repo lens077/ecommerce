@@ -79,14 +79,20 @@ description: 公网暴露基础设施(Pangolin)的拓扑事实、面板 API 操�
 - 面板 `https://pangolin.apikv.com`,管理员 `admin@apikv.com`(密码在用户处;2026-08-19 重置过一次 —— 密码以 argon2 哈希存 `config/db/db.sqlite` 的 `user.passwordHash`,**服务器上没有明文副本**,忘了只能改库重置)
 - Sites:`node3-local`(siteId 1, local;**面板里的历史实体名,保持不改**,即 node1 本机)/
   **`k8s-cluster`(siteId 4, newt)** / **`node2`(siteId 5, newt, subnet `100.89.128.8/30`)** /
-  **`mac2`(siteId 6, newt 1.16.0, 本 Mac 当前在用)**。已删/已死的站点(siteId 2 `mac`、
-  siteId 3 `k8s`)留下一条通用教训:**站点凭据的回显只有建站那一刻有,面板事后不回显**——
+  **`mac`(siteId 6, newt 1.16.0, 本 Mac 当前在用)**。
+  ⚠️ **同名不同 id 的坑(2026-08-29)**:当前的 `mac` 是 **siteId 6**,它由原 `mac2` 改名而来;
+  过期无用的旧 `mac`(**siteId 2**)已在同一次操作里删除。**查站点认 siteId、不要认名字**——
+  历史文档、旧截图和面板日志里的 `mac` 可能指向已删的 siteId 2,`mac2` 则是现役 siteId 6 的旧名。
+  已删/已死的站点(siteId 2 旧 `mac`、siteId 3 `k8s`)留下一条通用教训:
+  **站点凭据的回显只有建站那一刻有,面板事后不回显**——
   丢了就只能重建站点。删站点前**先把资源 target 迁到新站点再删**,反过来资源会短暂失去后端
-- Resources:`blog.apikv.com`(blog,target `https://blog:443`)/ **根域 `apikv.com`+`www`=静态导航页(2026-08-26 起,容器 `homepage` 走 file provider 路由,不在面板;部署物 docker-deploy 仓 `homepage/`,此前 404 空置)**/ `config.apikv.com`(SSO off,2026-08-26 库实查)/ `config-api.apikv.com`(SSO off,应用自带鉴权)/ `casdoor.apikv.com`(SSO off,自带鉴权,target `10.1.0.8:8000`)/ **`dsh.apikv.com`(rid 19, **SSO on**, site `mac2`, target `127.0.0.1:3080` http)——
+- Resources:`blog.apikv.com`(blog,target `https://blog:443`)/ **根域 `apikv.com`+`www`=静态导航页(2026-08-26 起,容器 `homepage` 走 file provider 路由,不在面板;部署物 docker-deploy 仓 `homepage/`,此前 404 空置)**/ `config.apikv.com`(SSO off,2026-08-26 库实查)/ `config-api.apikv.com`(SSO off,应用自带鉴权)/ `casdoor.apikv.com`(SSO off,自带鉴权,target `10.1.0.8:8000`)/ **`dsh.apikv.com`(rid 19, **SSO on**, site `mac`=siteId 6, target `127.0.0.1:3080` http)——
   ⚠️ DSH 自带浏览器信任栅栏:Host 非回环且不在 trustedHosts 就 403,**外壳能开但工作区永远为空**;
   已在 `~/.dsh/profiles/web/cordis.patch.yml` 的 `connection` 条目补 `trustedHosts: ['dsh.apikv.com']`
   (热生效不用重启,**必须写纯 YAML 数组——`!!js` 表达式在用户补丁层实测不生效**)。
-  经隧道时 settings/credentials 等特权方法仍 403 属设计内**/ 另有 kaneo/dev/ntfy/stream/cat 等,以 `traefik-config` 后门实查为准
+  经隧道时 settings/credentials 等特权方法仍 403 属设计内**/ 另有 kaneo/ntfy/stream/cat 等,以 `traefik-config` 后门实查为准。
+  **已删:`dev.apikv.com`(前端 dev server 远程预览)——2026-08-29 随 dev 子域资源一并删除,实测返回 404;
+  静态导航页(docker-deploy 仓 `homepage/site/index.html`)的对应卡片已同步移除**
 - k8s newt:helm release `newt`(ns `pangolin`,chart `fossorial/newt`);凭据看 `helm get values newt -n pangolin`(inline,勿把 values 文件提交入库)
 - **k8s 站点(siteId 4)的资源全部指同一个 target `10.110.51.106:443 https`** —— 那是 `cilium-gateway` 的 ClusterIP,分流靠 HTTPRoute 的 hostname 而非不同 target。2026-08-27 新增四个(均 **SSO on**,控制面靠登录墙兜底):`argocd`(rid 31)/`consul`(rid 32)/`search`(rid 33)/`cart-api`(rid 34)。
   ⚠️ **302 只证明 Pangolin 拦住了,不证明后端活着**——验后端要在集群内直连 `curl -H "Host: xxx.apikv.com" https://10.110.51.106/`,否则 502 会被登录墙掩盖。
