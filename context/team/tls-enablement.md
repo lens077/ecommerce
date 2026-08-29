@@ -1,7 +1,7 @@
 ---
 name: tls-enablement
 layer: team
-description: 给「已经在跑」的服务补 TLS 时的固定检查清单——先判云厂商 ICP 拦截（决定能不能就地上 TLS）、健康检查静默失效、证书挂载遮蔽、IP SAN 缺失、多处部署的续期同步；上 TLS 前必读
+description: 给「已经在跑」的服务补 TLS 时的固定检查清单——先判云厂商 ICP 拦截（决定能不能就地上 TLS）、健康检查静默失效、证书挂载遮蔽、IP SAN 缺失、多处部署的续期同步、自签证书遇隧道换域名要补 SAN；上 TLS 前必读
 ---
 
 # 给在跑的服务补 TLS（2026-08-19 MinIO 实付学费）
@@ -111,3 +111,41 @@ curl -s -m 10 -o /dev/null -w "%{http_code}\n" \
 > 附带的工具教训：`/dev/tcp/<host>/<port>` 探测端口在本机沙箱里会**对所有端口报 closed**，
 > 包括明明能通的。**任何探测法先用一个已知结果的对照组验证它自己**，否则会得出「全部端口不通」
 > 这种把人带偏的结论。curl 不受影响。
+
+## 6. 自签证书 + 隧道换域名 → SAN 必须跟着扩（2026-08-29 node3）
+
+§3 讲的是公共 CA 不签 IP。**自签 CA 有一个对称的坑**：证书按机器上的名字签
+（`redis.pigsty` / `node3` / `10.10.21.172`），但客户端经 Pangolin 隧道用的是
+`redis.apikv.com:30002`、`pg.apikv.com:30001`——名字对不上，严格校验必挂。
+
+**判别**（两者处置完全不同，不要混）：
+
+| 错误 | 含义 | 处置 |
+|---|---|---|
+| `x509: certificate is valid for redis.pigsty, node3, localhost, not redis.apikv.com` | 链已验过，卡主机名 | 补签 SAN |
+| `x509: certificate signed by unknown authority` | CA 配错或没配 | 换 CA，不要重签 |
+
+**两个容易误判的地方**：
+
+- **`verify-ca` 会掩盖它**。只验链不验名的模式下 SAN 缺名字照样连得上，问题一直潜伏到
+  有人把 `ssl_mode` 提到 `verify-full`。本次 PostgreSQL 就是这样「看起来正常」，
+  而 Redis 客户端只有「全验／全不验」两档、没有中间态，所以它先炸。
+- **`insecure_skip_verify: true` 不是修复**，Go 的这个开关会跳过全部校验（含链校验），
+  只适合临时定位。
+
+**做法**：用现有私钥重签、SAN 只加不减（少一个名字就会打断原先用它连接的组件，例如
+Redis 的 exporter 与主从复制走的是 `10.10.21.172`）。PostgreSQL 从 10 起支持 SIGHUP
+重载证书，`pg_reload_conf()` 即可生效，不必重启实例。
+
+完整步骤、安装前两道自检（私钥配对、CA 链验证）、验收命令与回滚，见 pigsty-deploy 仓的
+[`cert-san-resign.md`](../../../pigsty-deploy/cert-san-resign.md)——**那里是这条结论的 owner**，
+本节只保留判别法与踩坑，避免两份漂移。
+
+验收仍按 §5 的纪律执行，只是把第 ④ 条换成自签 CA 的版本：
+
+```bash
+echo | openssl s_client -connect <域名>:<port> -servername <域名> \
+  -CAfile <CA 路径> -verify_return_error 2>&1 | grep -E "Verification|Verify return code"
+```
+
+⚠️ **必须在客户端那台机器上验**。在目标机上连 `127.0.0.1` 走的是旧名字，测不出域名问题。
