@@ -3,13 +3,19 @@ name: Context knowledge-base gate
 # context/ 知识库结构门禁(参照 deepseek-harness 的 doc-sync 门禁族移植):
 # 链接可达性 / INDEX 覆盖(孤儿) / frontmatter / experience 格式(基线棘轮)
 # / evolution-log 四要素 / AGENTS.md 预算。
-# 与 freeze-check 同款触发:脚本毫秒级,每个 PR / 分支 push 全量跑,不做路径过滤
-# (路径过滤本身也是一处会漂移的手抄清单)。
+#
+# 触发(2026-08-29 起):**仅发布 tag**(裸 semver `X.Y.Z`,与 backend.yml 同一条纪律)。
+# 原为「每个 PR / 分支 push 全量跑」,已停——GitHub Actions 预算超支后平台会直接
+# 拒绝运行;把额度烧在每次 push 上,反而让真正需要证据的发版时刻跑不动。
+#
+# ⚠️ per-push 覆盖没有丢:`.gitlab-ci.yml` 的同名 context-gate job 仍挂在
+# `$CI_COMMIT_BRANCH` 与 MR 上,而 origin 就是 GitLab(github 是第二远端),
+# 日常 push 先到的是有门禁那一侧。本地 `scripts/verify-context.sh` 仍是提交前锚点。
 on:
-  pull_request:
   push:
-    branches:
-      - '**'
+    tags:
+      - "[0-9]+.[0-9]+.[0-9]+"
+  workflow_dispatch:
 
 jobs:
   verify-context:
