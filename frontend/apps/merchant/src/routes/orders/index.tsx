@@ -33,7 +33,7 @@ import { tokens } from "@/styles/theme";
 /** 表头。key 显式列出，不用下标拼。 */
 const COLUMNS = [
   "orders.table.orderNo",
-  "orders.table.customer",
+  "orders.table.consumer",
   "orders.table.items",
   "orders.table.amount",
   "orders.table.status",
@@ -53,7 +53,7 @@ function OrdersPage() {
   const orders = [
     {
       id: "ORD20240612001",
-      customer: "张先生",
+      consumer: "张先生",
       phone: "138****1234",
       items: "iPhone 15 Pro Max",
       quantity: 1,
@@ -63,7 +63,7 @@ function OrdersPage() {
     },
     {
       id: "ORD20240612002",
-      customer: "李女士",
+      consumer: "李女士",
       phone: "139****5678",
       items: "AirPods Pro 2",
       quantity: 2,
@@ -73,7 +73,7 @@ function OrdersPage() {
     },
     {
       id: "ORD20240611001",
-      customer: "王先生",
+      consumer: "王先生",
       phone: "136****9012",
       items: "MacBook Air M2",
       quantity: 1,
@@ -83,7 +83,7 @@ function OrdersPage() {
     },
     {
       id: "ORD20240611002",
-      customer: "赵女士",
+      consumer: "赵女士",
       phone: "137****3456",
       items: "iPad Pro 12.9",
       quantity: 1,
@@ -207,7 +207,7 @@ function OrdersPage() {
                     </TableCell>
                     <TableCell>
                       <Typography variant="body2" sx={{ color: "text.primary" }}>
-                        {order.customer}
+                        {order.consumer}
                       </Typography>
                       <Typography variant="caption" sx={{ color: "text.secondary" }}>
                         {order.phone}

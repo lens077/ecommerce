@@ -60,15 +60,15 @@ function DashboardPage() {
   const recentOrders: {
     id: string;
     merchant: string;
-    customer: string;
+    consumer: string;
     amount: number;
     status: OrderStatus;
   }[] = [
-    { id: "ORD001", merchant: "优品数码", customer: "张先生", amount: 2999, status: "pending" },
-    { id: "ORD002", merchant: "苹果旗舰店", customer: "李女士", amount: 9999, status: "shipped" },
-    { id: "ORD003", merchant: "数码专营店", customer: "王先生", amount: 599, status: "completed" },
-    { id: "ORD004", merchant: "优品数码", customer: "赵女士", amount: 1299, status: "pending" },
-    { id: "ORD005", merchant: "苹果旗舰店", customer: "刘先生", amount: 3799, status: "shipped" },
+    { id: "ORD001", merchant: "优品数码", consumer: "张先生", amount: 2999, status: "pending" },
+    { id: "ORD002", merchant: "苹果旗舰店", consumer: "李女士", amount: 9999, status: "shipped" },
+    { id: "ORD003", merchant: "数码专营店", consumer: "王先生", amount: 599, status: "completed" },
+    { id: "ORD004", merchant: "优品数码", consumer: "赵女士", amount: 1299, status: "pending" },
+    { id: "ORD005", merchant: "苹果旗舰店", consumer: "刘先生", amount: 3799, status: "shipped" },
   ];
 
   const pendingMerchants = [
@@ -80,7 +80,7 @@ function DashboardPage() {
   const orderColumns = [
     "dashboard.table.orderNo",
     "dashboard.table.merchant",
-    "dashboard.table.customer",
+    "dashboard.table.consumer",
     "dashboard.table.amount",
     "dashboard.table.status",
   ] as const;
@@ -212,7 +212,7 @@ function DashboardPage() {
                             {order.merchant}
                           </Box>
                           <Box component="td" sx={{ py: 1.5, px: 2, color: "text.secondary" }}>
-                            {order.customer}
+                            {order.consumer}
                           </Box>
                           <Box
                             component="td"

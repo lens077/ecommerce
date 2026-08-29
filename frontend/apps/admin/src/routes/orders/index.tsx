@@ -52,7 +52,7 @@ const TIME_RANGES = ["today", "last7d", "last30d", "all"] as const;
 const COLUMNS = [
   "orders.table.info",
   "orders.table.merchant",
-  "orders.table.customer",
+  "orders.table.consumer",
   "orders.table.amount",
   "orders.table.status",
   "orders.table.createTime",
@@ -69,7 +69,7 @@ function OrdersPage() {
     {
       id: "ORD001",
       merchant: "优品数码",
-      customer: "张先生",
+      consumer: "张先生",
       amount: 2999,
       status: "pending",
       createTime: "2024-06-12 10:30",
@@ -77,7 +77,7 @@ function OrdersPage() {
     {
       id: "ORD002",
       merchant: "苹果旗舰店",
-      customer: "李女士",
+      consumer: "李女士",
       amount: 9999,
       status: "paid",
       createTime: "2024-06-12 09:15",
@@ -85,7 +85,7 @@ function OrdersPage() {
     {
       id: "ORD003",
       merchant: "小米专营店",
-      customer: "王先生",
+      consumer: "王先生",
       amount: 599,
       status: "shipped",
       createTime: "2024-06-12 08:00",
@@ -93,7 +93,7 @@ function OrdersPage() {
     {
       id: "ORD004",
       merchant: "华为官方",
-      customer: "赵女士",
+      consumer: "赵女士",
       amount: 1299,
       status: "completed",
       createTime: "2024-06-11 16:45",
@@ -101,7 +101,7 @@ function OrdersPage() {
     {
       id: "ORD005",
       merchant: "优品数码",
-      customer: "刘先生",
+      consumer: "刘先生",
       amount: 3799,
       status: "refunding",
       createTime: "2024-06-11 14:20",
@@ -196,7 +196,7 @@ function OrdersPage() {
                       </TableCell>
                       <TableCell>
                         <Typography variant="body2" sx={{ color: "text.secondary" }}>
-                          {order.customer}
+                          {order.consumer}
                         </Typography>
                       </TableCell>
                       <TableCell>

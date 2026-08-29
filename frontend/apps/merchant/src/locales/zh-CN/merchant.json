@@ -22,13 +22,13 @@
       "todayOrders": "今日订单",
       "todaySales": "今日销售额",
       "pendingOrders": "待处理订单",
-      "customers": "客户总数"
+      "consumers": "客户总数"
     },
     "changeVsYesterday": "{{change}} 较昨日",
     "recentOrders": "近期订单",
     "table": {
       "orderNo": "订单号",
-      "customer": "客户",
+      "consumer": "客户",
       "amount": "金额",
       "status": "状态"
     }
@@ -41,7 +41,7 @@
     "moreFilters": "更多筛选",
     "table": {
       "orderNo": "订单号",
-      "customer": "客户信息",
+      "consumer": "客户信息",
       "items": "商品信息",
       "amount": "金额",
       "status": "状态",
