@@ -106,6 +106,8 @@ jobs:
       packages: write
       # reusable workflow 只能收窄调用方权限，Cosign keyless 需要调用方显式授予 OIDC。
       id-token: write
+      # 同理：service-ci.yml 的 Trivy SARIF 上传需要调用方先授予 security-events。
+      security-events: write
     strategy:
       fail-fast: false
       matrix:

@@ -42,6 +42,9 @@ permissions:
   packages: write
   # tag 发布时供 Cosign keyless 获取 GitHub Actions OIDC；非签名步骤不读取令牌。
   id-token: write
+  # Trivy 扫描结果以 SARIF 上传到 Code scanning。缺这条时 upload-sarif 报 403，
+  # 而扫描本身已经跑完——表现为「门禁生效但报告看不到」。
+  security-events: write
 
 env:
   REGISTRY: ccr.ccs.tencentyun.com
@@ -210,6 +213,41 @@ jobs:
             --arg arm64 "$ARM64_DIGEST" \
             '{service: $service, version: $version, image: $image, indexDigest: $digest, platformDigests: {"linux/amd64": $amd64, "linux/arm64": $arm64}}' \
             > "${OUT}/manifest.json"
+
+      # 签名前的漏洞门禁。顺序是刻意的:扫描必须在 Cosign 签名**之前**——
+      # 签名的语义是「我为这个制品背书」,先签后扫等于给未审查的东西背书,
+      # 且高危镜像已经带着有效签名躺在仓库里,Kyverno verifyImages 也拦不住它。
+      #
+      # 扫的是 build 步骤输出的**不可变 digest**,不是 tag —— tag 可被覆盖,
+      # 扫 tag 会出现「扫的是 A、签的是 B」的经典缺口。
+      #
+      # 阈值:CRITICAL 和 HIGH 阻断,且只算**有修复版本的**(ignore-unfixed)。
+      # 把无修复的漏洞算进阻断集会让流水线长期红着,最后被人加 continue-on-error 绕过
+      # —— 那比没有扫描更糟。无修复项仍会在 SARIF 里上报,只是不阻断。
+      - name: Scan image for vulnerabilities (pre-signature gate)
+        if: inputs.push-image && inputs.version != ''
+        uses: aquasecurity/trivy-action@0.28.0
+        with:
+          image-ref: ${{ env.GHCR_NAMESPACE }}/${{ inputs.service }}@${{ steps.build.outputs.digest }}
+          format: sarif
+          output: trivy-results.sarif
+          severity: CRITICAL,HIGH
+          ignore-unfixed: true
+          exit-code: "1"
+          vuln-type: os,library
+        env:
+          # Trivy 的漏洞库走 GHCR,命中 GitHub Actions 的匿名限流时会失败;
+          # 用本 job 已有的 token 提高配额。
+          TRIVY_USERNAME: ${{ github.actor }}
+          TRIVY_PASSWORD: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Upload Trivy SARIF
+        # 扫描失败时也要上报 —— 否则最需要看结果的那次反而拿不到报告。
+        if: always() && inputs.push-image && inputs.version != ''
+        uses: github/codeql-action/upload-sarif@v3
+        with:
+          sarif_file: trivy-results.sarif
+          category: trivy-image-${{ inputs.service }}
 
       - name: Keyless sign index and attest platform SBOMs
         if: inputs.push-image && inputs.version != ''
