@@ -6,6 +6,13 @@
 数据源 UID 取自实测的 Grafana 实例,可用环境变量覆盖(换实例/重建数据源时
 不必改代码):
     GRAFANA_DS_PROM / GRAFANA_DS_PG / GRAFANA_DS_LOKI
+
+⚠️ 后续决策覆盖(2026-08-29)——本文件的 `LOKI` 数据源与 `jaeger_link()` 是**历史产物**:
+按 docs/TECH.md §9.1,日志栈定稿为 Vector → 外置 OTel Collector → **VictoriaLogs**,
+链路存储定稿为 **VictoriaTraces**;集群内 Loki / fluent-bit / Jaeger 均已退役并实测确认不存在。
+保留这两处只为复现历史面板 JSON,**不要拿生成结果部署到现网**。
+重建现网面板时应改用 VictoriaLogs(LogsQL)数据源与 VictoriaTraces 跳转,
+对应待办见 docs/todo/统一可观测性体系.md。
 """
 import json
 import os
@@ -205,9 +212,10 @@ def rpc_quantile(q, by="service_name", extra="", window="$__rate_interval"):
     return f"histogram_quantile({q}, sum by (le, {by}) (rate({sel}[{window}])))"
 
 
-# Jaeger 跳转。jaeger-ui.dev.test 是本地内网域(与 pg-dev/dragonfly/es 同模式),
-# 浏览器直达,不需要 port-forward;换环境用环境变量覆盖。注意不带尾斜杠,
-# 下面拼 /search 时不会出现 //。
+# ⚠️ 历史产物(2026-08-29 标注):Jaeger 已退役,集群内实测不存在该实例,
+# jaeger-ui.dev.test 这个内网域也已不可解析。按 docs/TECH.md §9.1,
+# 链路存储为 VictoriaTraces——重建面板时本函数应替换为 VictoriaTraces 跳转。
+# 保留仅为复现历史面板 JSON;生成结果不得部署到现网。
 JAEGER_BASE = os.getenv("JAEGER_UI_BASE", "http://jaeger-ui.dev.test")
 
 

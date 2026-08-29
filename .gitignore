@@ -27,3 +27,9 @@ helper.sh
 
 # playwright-cli 的页面快照产物（带时间戳，每次运行都新增一份），不是项目产物
 frontend/.playwright-cli/
+
+# E2E 失败截图（frontend.yml 的 smoke-login 在 runner 上创建，本地跑也会落）
+e2e-artifacts/
+
+# TypeScript 增量编译缓存
+*.tsbuildinfo

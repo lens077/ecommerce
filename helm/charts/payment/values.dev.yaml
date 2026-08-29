@@ -22,7 +22,7 @@ secret:
 dbCaCert:
   enabled: true
   secretName: "pg-ca-cert"
-  mountPath: "/etc/ssl/certs"
+  mountPath: "/etc/postgresql/ca"
 resources:
   requests:
     cpu: "100m"

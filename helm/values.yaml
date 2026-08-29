@@ -86,7 +86,7 @@ user:
   dbCaCert:
     enabled: true
     secretName: "pg-ca-cert"
-    mountPath: "/etc/ssl/certs"
+    mountPath: "/etc/postgresql/ca"
     fileName: "pg_ca.crt"
   resources:
     requests:
@@ -157,7 +157,7 @@ search:
   dbCaCert:
     enabled: true
     secretName: "pg-ca-cert"
-    mountPath: "/etc/ssl/certs"
+    mountPath: "/etc/postgresql/ca"
     fileName: "pg_ca.crt"
   resources:
     requests:
@@ -228,7 +228,7 @@ product:
   dbCaCert:
     enabled: true
     secretName: "pg-ca-cert"
-    mountPath: "/etc/ssl/certs"
+    mountPath: "/etc/postgresql/ca"
     fileName: "pg_ca.crt"
   resources:
     requests:
@@ -299,7 +299,7 @@ order:
   dbCaCert:
     enabled: true
     secretName: "pg-ca-cert"
-    mountPath: "/etc/ssl/certs"
+    mountPath: "/etc/postgresql/ca"
     fileName: "pg_ca.crt"
   resources:
     requests:
@@ -370,7 +370,7 @@ inventory:
   dbCaCert:
     enabled: true
     secretName: "pg-ca-cert"
-    mountPath: "/etc/ssl/certs"
+    mountPath: "/etc/postgresql/ca"
     fileName: "pg_ca.crt"
   resources:
     requests:
@@ -441,7 +441,7 @@ cart:
   dbCaCert:
     enabled: true
     secretName: "pg-ca-cert"
-    mountPath: "/etc/ssl/certs"
+    mountPath: "/etc/postgresql/ca"
     fileName: "pg_ca.crt"
   resources:
     requests:
@@ -512,7 +512,7 @@ merchant:
   dbCaCert:
     enabled: true
     secretName: "pg-ca-cert"
-    mountPath: "/etc/ssl/certs"
+    mountPath: "/etc/postgresql/ca"
     fileName: "pg_ca.crt"
   resources:
     requests:
@@ -583,7 +583,7 @@ address:
   dbCaCert:
     enabled: true
     secretName: "pg-ca-cert"
-    mountPath: "/etc/ssl/certs"
+    mountPath: "/etc/postgresql/ca"
     fileName: "pg_ca.crt"
   resources:
     requests:
@@ -654,7 +654,7 @@ behavior:
   dbCaCert:
     enabled: true
     secretName: "pg-ca-cert"
-    mountPath: "/etc/ssl/certs"
+    mountPath: "/etc/postgresql/ca"
     fileName: "pg_ca.crt"
   resources:
     requests:
@@ -725,7 +725,7 @@ payment:
   dbCaCert:
     enabled: true
     secretName: "pg-ca-cert"
-    mountPath: "/etc/ssl/certs"
+    mountPath: "/etc/postgresql/ca"
     fileName: "pg_ca.crt"
   resources:
     requests:

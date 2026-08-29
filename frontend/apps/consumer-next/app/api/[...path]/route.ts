@@ -1,6 +1,8 @@
 import type { NextRequest } from "next/server";
 
-const DEFAULT_GATEWAY_URL = "http://192.168.3.131:8080";
+// 2026-08-29 订正：旧默认 http://192.168.3.131:8080 的 LB 已不存在。
+// 集群内由 deploy/dev.yaml 的 CONSUMER_NEXT_GATEWAY_URL 覆盖，本默认值只服务本地 dev。
+const DEFAULT_GATEWAY_URL = "https://gateway.dev.test";
 const REQUEST_HEADERS_TO_DROP = ["connection", "content-length", "host"];
 const RESPONSE_HEADERS_TO_DROP = ["connection", "content-length", "transfer-encoding"];
 

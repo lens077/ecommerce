@@ -66,9 +66,9 @@
 - 尚未实现：类目、品牌、价格区间和商品属性的组合筛选。
 - 尚未实现：销量、价格、新品和综合权重排序。
 - 尚未实现：搜索词补全、热门搜索和相关搜索推荐。
-- 已完成：dev 集群部署 3 节点 JetStream、R1 `ECOMMERCE_EVENTS`、单副本 relay 和单副本 indexer；
+- dev 集群现状：3 节点 JetStream、R1 `ECOMMERCE_EVENTS`、单副本 relay 和单副本 indexer；
   `MaxAckPending=1`，worker 镜像按 digest 固定。
-- 已完成：使用仓库幂等 seed 灌入 7 个 SPU、13 个 SKU 和 21 条销量明细；reindex 后
+- 数据集现状：使用仓库幂等 seed 灌入 7 个 SPU、13 个 SKU 和 21 条销量明细；reindex 后
   `products` 为 7 个文档。`降噪`、`咖啡`、`修护`、`无线鼠标`、`跑鞋`、`快速充电`、
   `iphone-15-pro` 和拼写容错 `Nespreso` 均将预期商品排在首位。
 - 已验证：暂停 relay 时 outbox 行保持未发布；恢复 relay 后事件发布、consumer pending 归零，
