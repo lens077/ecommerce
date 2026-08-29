@@ -44,6 +44,40 @@ description: harness 本身（硬规则/门禁/Agent 约束）每次改动的原
 
 ---
 
+### 2026-08-29 新增 [PROGRESS-SRC] 门禁：复选框只许长在 TODO 体系里
+
+- **改了什么**：`scripts/verify-context.sh` 从六项检查扩到七项，新增 `[PROGRESS-SRC]`：
+  统计每份 `.md` 里**围栏外**的 `- [ ]`/`- [x]`，只放行 `TODO.md`、`docs/todo/**`、
+  `docs/progress-archive/**`、`docs/reports/**`、`docs/技术栈选型对抗/**`、`.scratch/**`
+  与围栏代码块内。存量按**计数**冻结在新基线 `scripts/context-progress-baseline.txt`
+  （`docs/SCAFFOLD.md 34` / `docs/DEVOPS.md 21` / `capacity-balancing.md 12`），
+  只许减不许增；降了要改数字、清零要删行。canary 同步加 4 个探针。
+- **为什么**：`TODO.md` 是唯一进度真相源（AGENTS.md 反直觉约定），但这条纪律此前
+  只靠人读文档遵守。它被违反时不会报错，只会安静地长出第二套勾选视图然后漂移。
+  用**计数**而非存在性做棘轮，是因为存在性基线挡不住「已登记文件继续增加条目」。
+  围栏内放行是必要的：`SCAFFOLD.md` 的复选框是给新项目用的验收模板（§十 明写
+  「复制到新项目的 `TODO.md` 里逐条勾」），不是本仓进度，误杀它会逼人关掉门禁。
+- **触发事故**：`docs/TECH.md` §12 实施路线图自己长出 **19 个复选框并已漂移**——
+  P1 的 Next.js、P2 的 Tetragon 各被勾了 `[x]`，而 P0 九项全空，与 `TODO.md` 里
+  的真实进度不符。同期扫描还发现 `DEVOPS.md` 22 个（含一个 `[x]` 断言
+  「已落地 backend/tools/dbmigrate」）、`capacity-balancing.md` 12 个、
+  `SCAFFOLD.md` 36 个。一次人工审计才发现，且为判定 SCAFFOLD.md 的 36 个是否违规
+  重复审计了两轮——正是「靠人读文档遵守」的成本。
+- **怎么验证的**：canary 从 11 探针扩到 **15**，新增 `progress-src`（未登记文件长出
+  复选框 → 必红 `PROGRESS-SRC`）、`progress-grow`（已登记文件超基线 → 必红）、
+  `progress-ratchet`（基线文件清零 → 必红 `BASELINE`）、
+  `progress-fenced-ok`（**假阳性守卫**：`````markdown` 内嵌 ` ``` ` 的模板复选框
+  必须 **rc=0 不报**）。首跑当场抓到两个真缺陷：①`build_template` 未把新基线与
+  `docs/{DEVOPS,SCAFFOLD}.md` 拷进沙箱，导致 `pristine-green` 假红、且
+  `progress-grow` 在一个不存在的文件上「误报成功」——**探针为错误原因通过**；
+  ②`fail` 消息里 `$n` 紧跟全角「——」，bash 3.2 在 UTF-8 locale 下把多字节首字节
+  并进变量名，报 `n?: unbound variable`（正是本脚本第 145-147 行早已记过的坑，
+  已加注释并改用 `${n}`）。两处修完后 15 探针全过。
+  另注：现有 `_strip_fences` 用 `f=!f` 翻转，对**嵌套围栏**判断错误
+  （`````markdown` 内的 ` ``` ` 会提前关闭），本检查因此自带按长度配对的
+  `count_checkboxes`，不复用它；`_strip_fences` 只服务 DEAD-LINK 且其扫描集内
+  暂无嵌套围栏，未一并修改以免改动既有检查行为。
+
 ### 2026-08-29 重 workflow 收敛到 tag 触发；context-gate 保持 per-push（附一次前提证伪）
 
 - **改了什么**：三个**重**的 GitHub workflow 改为仅发布 tag / 手动触发——
