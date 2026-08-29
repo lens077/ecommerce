@@ -7,6 +7,10 @@
 > 不是被拆分的架构文档回魂，也不归本目录管。**分工不变**：本目录回答「为什么这么设计」；
 > 技术选型与基础设施真相源 → [../TECH.md](../TECH.md)；编码约束 → `STACK.md`；服务拓扑事实 → `.service-matrix.yaml`；
 > 实现进度 → `TODO.md`。文中「现状」类横幅描述的是拆分当日的实况，之后以 `TODO.md` 为准。
+>
+> 📖 **遇到不认识的业务名词先查 [../GLOSSARY.md](../GLOSSARY.md)**（189 个领域词条：
+> SPU/SKU/Listing/商品快照/拆单/履约/OrderGroup/MerchantOrder/Saga Manager/PaymentIntent/
+> StockLedger/Reservation…）。本目录的设计文档默认读者已掌握这些术语，不再逐篇解释。
 
 ## 目录
 

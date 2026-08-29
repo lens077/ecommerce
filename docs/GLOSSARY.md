@@ -307,7 +307,11 @@
 ### BFF
 
 - **含义**：Backend for Frontend，为特定前端形态提供聚合、裁剪和协议适配的后端层。
-- **本项目**：自建网关目前集中处理鉴权、路由和服务发现；转向 BFF 属架构演进规划，不应表述为已完成。
+- **本项目**：**已落地，不是规划**（2026-08-29 订正——本条此前写作「转向 BFF 属架构演进规划」，
+  与实况相反）。BFF session 由同级仓 control-tower 的 gateway 承载：会话经 Casdoor 建立、
+  存独立 Dragonfly Session Store，网关校验后向下游注入可信身份头。
+  见 [`docs/design/platform/rbac.md`](design/platform/rbac.md)（该文首行标「已落地」）与
+  [`docs/design/platform/production-scale-goal.md`](design/platform/production-scale-goal.md) §BFF session store。
 
 ### API 网关
 
