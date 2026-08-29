@@ -5,7 +5,7 @@
 # verify-agent-note-format / verify-doc-budgets)移植,落地方式沿用本仓惯例:
 # 能判定的约束变成脚本,存量漂移走基线棘轮(见 scripts/lint-baseline.sh 的设计)。
 #
-# 七项检查(任一违规 → 退出码 1):
+# 八项检查(任一违规 → 退出码 1):
 #   [DEAD-LINK]    AGENTS.md/README.md/STACK.md 与 context/**、docs/design/** 的
 #                  相对 markdown 链接必须可达(2026-08-26 扩:原只查 AGENTS+context,
 #                  当日 README/STACK/docs/design 三处死链全靠临时脚本抓到——
@@ -271,10 +271,46 @@ if [ -f "$progress_baseline" ]; then
   done < "$progress_baseline"
 fi
 
+# ── 8. 退役物必须带横幅 ──────────────────────────────────────
+# 不禁止提及退役组件——历史教训必须能写。要求的是:提到它时**同时说清它已退役**,
+# 否则读者(和 AI)会照着一份已死的链路去操作。
+# 2026-08-29 实测反例:context/.../web-vitals-reporting.md 的 SOP 写着
+# 「查 Loki: {service_name="behavior-service"}」,而 Loki 已 helm uninstall——
+# 照做查不到任何数据,且失败方式是「查不到」而非报错,极难归因。
+#
+# 退役依据(均为 2026-08-29 集群/节点实测):
+#   Loki / Jaeger / fluent-bit  集群内零 Deployment,已被 Vector→VictoriaLogs、
+#                               VictoriaTraces 取代(docs/TECH.md §9)
+#   192.168.3.131               旧网关 LB,已不存在(consumer/consumer-next 均已改指
+#                               gateway.dev.test)
+#   SeaweedFS                   对象存储目标已撤销,定稿为 Silo(docs/TECH.md §7.1)
+#
+# 判定:命中行的 ±2 行窗口内、或文件前 10 行(整篇免责横幅)内出现横幅词即放行。
+# 只扫**活跃**文档;docs/progress-archive/ 与 docs/reports/ 按定义就是历史,不扫。
+while IFS= read -r file; do
+  awk -v F="$file" '
+    BEGIN{
+      RET="Loki|Jaeger|fluent-bit|192\\.168\\.3\\.131|SeaweedFS"
+      BAN="存量|退役|历史|迁移期|覆盖|已删除|已停用|不再|已改|旧|撤销|uninstall|孤儿|已迁|不存在"
+    }
+    { n++; L[n]=$0; if (n<=10) head = head "\n" $0 }
+    END{
+      for (i=1;i<=n;i++) {
+        if (L[i] !~ RET) continue
+        win=""
+        lo=(i-2<1?1:i-2); hi=(i+2>n?n:i+2)
+        for (j=lo;j<=hi;j++) win = win "\n" L[j]
+        if (win !~ BAN && head !~ BAN) printf "%s:%d\n", F, i
+      }
+    }' "$file"
+done < <(find context docs/design docs/observability -name "*.md" -type f) | while IFS= read -r hit; do
+  fail "RETIRED" "${hit} 提到已退役组件却无「存量/已退役/历史」等横幅——读者会照着死链路操作"
+done
+
 # ── 汇总 ─────────────────────────────────────────────────────
 if [ -s "$violations" ]; then
   echo "verify-context: 发现 $(wc -l < "$violations" | tr -d ' ') 处违规"
   cat "$violations"
   exit 1
 fi
-echo "verify-context: OK(链接/INDEX 覆盖/frontmatter/experience 格式/evolution-log/预算/并行进度源 全部通过)"
+echo "verify-context: OK(链接/INDEX 覆盖/frontmatter/experience 格式/evolution-log/预算/并行进度源/退役物横幅 全部通过)"

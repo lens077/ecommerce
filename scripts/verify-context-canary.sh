@@ -159,6 +159,14 @@ mut_progress_ratchet() { # 基线文件已清零却没删行 → 反向棘轮
   f="$1/docs/design/platform/capacity-balancing.md"
   grep -v '^[[:space:]]*- \[[ x]\]' "$f" > "$f.new" && mv "$f.new" "$f"
 }
+mut_retired() { # 提到已退役组件却不说明它已退役 → 读者会照着死链路操作
+  printf '\n排查时查 Loki:`{service_name="behavior-service"}`,再对照 Jaeger 的调用链。\n' \
+    >> "$1/context/team/go-testing.md"
+}
+mut_retired_banner_ok() { # 带横幅的历史陈述**不得**误报(假阳性守卫)
+  printf '\n2026-08-24 那轮 helm uninstall 之后,Loki 与 Jaeger 均已退役,相关 HTTPRoute 是孤儿。\n' \
+    >> "$1/context/team/go-testing.md"
+}
 mut_progress_fenced_ok() { # 围栏内的复选框是模板占位符,**不得**误报(假阳性守卫)
   # 用 ````markdown 包一层,内部再嵌 ``` —— 正是 SCAFFOLD.md 的写法,
   # 简单的 f=!f 翻转会在这里把后半段误判成正文。
@@ -202,9 +210,12 @@ probe progress-grow       1 "PROGRESS-SRC" mut_progress_grow
 probe progress-ratchet    1 "BASELINE"     mut_progress_ratchet
 # 假阳性守卫:围栏内的模板占位符必须**不**触发,否则 SCAFFOLD.md 这类文件会被误杀
 probe progress-fenced-ok  0 ""             mut_progress_fenced_ok
+probe retired             1 "RETIRED"      mut_retired
+# 假阳性守卫:带横幅的历史陈述必须放行,否则会逼人删掉真实的踩坑记录
+probe retired-banner-ok   0 ""             mut_retired_banner_ok
 
 if [ "$fails" -gt 0 ]; then
   echo "verify-context-canary: $fails 个探针失败——门禁可能已静默失效,先修门禁再改内容"
   exit 1
 fi
-echo "verify-context-canary: OK（15 探针全过:干净沙箱绿 + 十三类注错被拦且 tag 正确 + 围栏假阳性守卫）"
+echo "verify-context-canary: OK（17 探针全过:干净沙箱绿 + 十四类注错被拦且 tag 正确 + 三道假阳性守卫）"

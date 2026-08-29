@@ -44,6 +44,34 @@ description: harness 本身（硬规则/门禁/Agent 约束）每次改动的原
 
 ---
 
+### 2026-08-29 新增 [RETIRED] 门禁：提到退役组件必须同时说明它已退役
+
+- **改了什么**：`verify-context.sh` 扩到八项，新增 `[RETIRED]`：在 `context/**`、
+  `docs/design/**`、`docs/observability/**` 里提到 `Loki`/`Jaeger`/`fluent-bit`/
+  `192.168.3.131`/`SeaweedFS` 时，命中行的 ±2 行窗口内、或文件前 10 行（整篇免责横幅）
+  内必须出现横幅词（存量/退役/历史/迁移期/覆盖/撤销/uninstall/孤儿/已迁/不存在…）。
+  canary 加 `retired`（必红）与 `retired-banner-ok`（**假阳性守卫**，带横幅必放行）。
+  不建基线——立门禁时全仓 8 处提及全部已带横幅，零违规。
+- **为什么**：不能禁止提及退役组件——踩坑记录、迁移背景、对比论证都需要提它。
+  真正要拦的是「提了但没说它已经死了」。用行级 ±2 窗口而非文件级判定，
+  是因为文件级几乎恒真（随便哪篇文档都含「旧」或「历史」），等于没检查。
+  保留文件头 10 行的整篇免责通道，是为了 `pre-environment.md` 这种「整篇是历史快照」
+  的文档不必逐行加横幅。
+- **触发事故**：`context/project/ecommerce/frontend-api/sop/web-vitals-reporting.md`
+  的可执行 SOP 写着「查 Loki：`{service_name="behavior-service"} |= "web_vital"`」，
+  而 Loki 已于 2026-08-24 `helm uninstall`，集群内零 Deployment。**照着这份 SOP 操作
+  会查不到任何数据，且失败方式是「查不到」而不是报错**，极难归因到「组件已不存在」。
+  同类还有 `grafana/common.py` 的 `LOKI` 数据源与 `jaeger_link()`——README 有免责但
+  脚本本身没有，照 README 第 53 行命令跑会生成指向已退役组件的面板 JSON。
+- **怎么验证的**：先用同规则全仓探测，命中 8 处、其中 2 处报「无横幅」——核对后确认
+  **两处都是我的横幅词表不全导致的误报**（`pangolin-tunnel.md:93` 写的是
+  「helm uninstall 之后…HTTPRoute 是孤儿」、`roadmap.md:32` 写的是「原 SeaweedFS
+  目标已撤销」），补入 `撤销`/`uninstall`/`孤儿`/`不存在` 后归零。
+  随后手工注错实测：往 `context/team/go-testing.md` 追加一行无横幅的 Loki 查询语句，
+  门禁 rc=1 并报 `[RETIRED] context/team/go-testing.md:80`；还原后复绿。
+  最后 canary 17 探针全过，其中 `retired-banner-ok` 证明带横幅的历史陈述不被误杀——
+  没有这道守卫，门禁会逼人删掉真实的踩坑记录。
+
 ### 2026-08-29 新增 [PROGRESS-SRC] 门禁：复选框只许长在 TODO 体系里
 
 - **改了什么**：`scripts/verify-context.sh` 从六项检查扩到七项，新增 `[PROGRESS-SRC]`：
