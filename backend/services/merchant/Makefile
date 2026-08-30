@@ -1,6 +1,6 @@
 # 默认值
 VERSION ?= dev
-GOIMAGE ?= golang:1.26-alpine3.24
+GOIMAGE ?= golang:1.27.0-alpine3.24
 GOOS ?= linux
 GOARCH ?= amd64
 CGOENABLED ?= 0

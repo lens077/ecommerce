@@ -23,7 +23,7 @@ dev:
     #   - golang 官方镜像把 GOPATH(/go) 设成 1777,uid 1000 能写 —— 满足 Pod 的 runAsUser 1000;
     #   - 用 Debian 变体而非 -alpine,因为下面 command 是 bash(alpine 只有 ash)。
     # 版本必须与 backend/go.mod 的 go 指令一致,否则 Go 会试图自动下载 toolchain。
-    image: golang:1.26.5
+    image: golang:1.27.0
     command: bash
     workdir: /workspace
 

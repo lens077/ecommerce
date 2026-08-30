@@ -1,4 +1,4 @@
-ARG GO_IMAGE=golang:1.26.5-alpine3.24
+ARG GO_IMAGE=golang:1.27.0-alpine3.24
 FROM --platform=$BUILDPLATFORM ${GO_IMAGE} AS compile
 
 ARG TARGETOS=linux
