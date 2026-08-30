@@ -158,9 +158,26 @@ scan_zizmor() {
   ratchet zizmor "$WORK_DIR/zizmor.txt" "$ROOT/.supply-chain-baseline/zizmor.txt"
 }
 
+# Trivy 的默认 checks/DB 源是 mirror.gcr.io，在部分网络（如国内直连）不可达。
+# 它不会报错,而是打一行 WARN 后**回退到内置规则集**——扫描照常返回绿,但用的是过期
+# 规则,于是「本地绿」不代表「CI 绿」。这种静默降级比直接失败更危险。
+#
+# --checks-bundle-repository 只接受单值、没有兜底,必须显式指定可达源。
+#
+# ⚠️ checks 与 DB 两种制品的分发**不一样**,不能用同一个 registry 变量套（2026-08-29 实测,
+# 每条都用「已知存在的制品」做过对照组,踩过一次「照抄 DB 的路径去拿 checks」的空）：
+#
+#   制品            ghcr.io   public.ecr.aws   备注
+#   trivy-checks:2    ✅          404          只有 ghcr 有;体积小,ghcr 拉得动
+#   trivy-db:2        ✅           ✅          ghcr 拉 110 MB 会 context deadline exceeded
+#
+# 所以 checks 固定走 ghcr。CI runner 能连 mirror.gcr.io 且更快,用变量覆盖即可。
+TRIVY_CHECKS_REPO=${TRIVY_CHECKS_REPO:-ghcr.io/aquasecurity/trivy-checks:2}
+
 scan_trivy() {
-  log "Trivy：扫描 HIGH/CRITICAL 配置误配（存量棘轮）"
+  log "Trivy：扫描 HIGH/CRITICAL 配置误配（存量棘轮，checks 源 $TRIVY_CHECKS_REPO）"
   "$BIN_DIR/trivy-$TRIVY_VERSION" fs "$ROOT" --scanners misconfig --severity HIGH,CRITICAL \
+    --checks-bundle-repository "$TRIVY_CHECKS_REPO" \
     --skip-files '**/*.dockerignore' --exit-code 0 --no-progress --format json --output "$WORK_DIR/trivy.json"
   normalize_trivy "$WORK_DIR/trivy.json" > "$WORK_DIR/trivy.txt"
   ratchet trivy "$WORK_DIR/trivy.txt" "$ROOT/.supply-chain-baseline/trivy.txt"
