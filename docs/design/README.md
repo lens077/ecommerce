@@ -22,8 +22,10 @@
 | [platform/error-handling.md](platform/error-handling.md) | biz→data→service 三层错误分层约定（**全服务通用规范**） | DESIGN.md §错误处理 |
 
 | [platform/rbac.md](platform/rbac.md) | Casdoor 三角色与 OpenFGA 对象关系授权（覆盖存量 Casbin RBAC） | DESIGN.md §RBAC |
+| [platform/anonymous-shopping.md](platform/anonymous-shopping.md) | 匿名（访客）购物链路：RPC 三级分类、网关签发访客令牌、IAM 过滤边界、登录合并购物车语义、六步落地（**设计草案**） | 2026-08-31 由「匿名逛首页被强制跳登录」缺陷反推 |
 | [platform/pre-environment.md](platform/pre-environment.md) | **历史快照，禁止作为当前配置源**：保留旧集群协议握手与迁移教训；当前实况看 matrix 与 infrastructure audit | 2026-08-08/24 集群实测 |
 | [platform/i18n-routing.md](platform/i18n-routing.md) | i18n URL 与语言路由策略：公开页子目录 `/:lang/` 决策、方案对比、hreflang、SSR 前置、API 本地化（**设计草案**） | 2026-08-08 设计草案 |
+| [platform/i18n-lessons.md](platform/i18n-lessons.md) | 对照调研：Fluent/ICU4X 作者的 i18n 经验对本项目的适用性；已核实现状（语义 ID/Intl 已达标）与三个缺口（复数、后端错误、业务数据多语言）（**调研文档**） | 2026-08-31 基于 zed#7409 评论 + 本仓代码核查 |
 | [platform/admin-roadmap.md](platform/admin-roadmap.md) | 管理员角色技术形态（角色×独立 admin-service×专属页面，含边界铁律）与能力取舍、竞品差距 | 2026-08-12 基于 merchant/store-settings.md 反推 |
 | [platform/gin-b2c-mall-comparison.md](platform/gin-b2c-mall-comparison.md) | 对照调研：Gin 单体 B2C 商城与本仓的定位/架构/工程化差异及三点启示（快照，含介绍原文附录） | 2026-08-19 外部项目介绍文本 |
 | [product/listing.md](product/listing.md) | ListProducts 无限滚动/游标分页（**设计已定待落地**） | DESIGN.md §商品列表 |
