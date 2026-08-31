@@ -93,10 +93,19 @@ seed-down:
 migrate-cnpg-up:
 	./tools/dbmigrate/cnpg-up.sh
 
+# backend/buf.yaml 的模块根是整个 backend；不限制路径会把 10 份同包名 conf.proto 和
+# 各服务遗留的 third_party 副本一起装入同一 image，导致重复符号。api 目标只生成公开契约。
+# TS 插件由 frontend 根 workspace 固定版本，避免依赖用户机器上的全局 npm 包。
+PROTOC_GEN_ES_DIR ?= $(abspath ../frontend/node_modules/.bin)
+
 .PHONY: api
 api:
-	buf generate --template buf.gen.yaml
-	buf generate --template buf.gen.ts.yaml
+	@test -x "$(PROTOC_GEN_ES_DIR)/protoc-gen-es" || { \
+		echo "缺少 protoc-gen-es；请先在 frontend/ 运行 pnpm install" >&2; \
+		exit 1; \
+	}
+	buf generate --template buf.gen.yaml --path api
+	PATH="$(PROTOC_GEN_ES_DIR):$$PATH" buf generate --template buf.gen.ts.yaml --path api
 
 .PHONY: generate
 generate:
