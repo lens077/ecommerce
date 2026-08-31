@@ -174,47 +174,55 @@ kubectl get cm -n opentelemetry -o yaml | grep -A2 'k8s_cluster'   # receiver �
 ssh node3 "curl -s http://127.0.0.1:8428/api/v1/query --data-urlencode 'query=sum by (receiver) (otelcol_receiver_accepted_metric_points)'"
 ```
 
-### 4.2 ⚠️ 指标名带点号
+### 4.2 ⚠️ 指标命名口径变过一次——写查询前必须现查
 
-VictoriaMetrics 的 OTLP 摄入**未开启 `usePrometheusNaming`**，因此指标与 label 都保留
-OTel 的点号命名：
-
-```
-k8s.container.restarts        ← 不是 k8s_container_restarts
-k8s.namespace.name            ← label 同样带点
-```
-
-**这是本章最大的坑**：按 `kube_*` 或 `k8s_*` 去搜会一无所获，很容易误判成「没有采集」。
-MetricsQL 必须用 `__name__` 匹配、label 名加引号：
+**当前是下划线**（`k8s_container_restarts`、label `k8s_namespace_name`）：
 
 ```promql
-sum by ("k8s.namespace.name","k8s.pod.name") (
-  increase({__name__="k8s.container.restarts"}[15m])
+sum by (k8s_namespace_name, k8s_pod_name) (
+  increase(k8s_container_restarts[15m])
 ) > 3
 ```
 
-可用指标共 26 个，覆盖 container / pod / deployment / daemonset / statefulset / job /
-replicaset / node / namespace 九类。〔实测 2026-08-29：10 秒新鲜度，取值与 `kubectl get pods`
-的 restart 计数逐条一致〕
+**但这个口径变过。** node3 的 VictoriaMetrics 启动参数带
+`-opentelemetry.usePrometheusNaming=true`〔实测 2026-09-01，VM 2.24.0〕，
+它把 OTel 的点号命名转成 Prometheus 下划线命名；该 flag 打开之前，
+指标与 label 保留 OTel 原生点号（`k8s.container.restarts`），必须写成
+`{__name__="k8s.container.restarts"}`、`by ("k8s.namespace.name")`。
 
-清单复验：
+**本章最大的坑不是「用哪种写法」，而是两种写错的方式都「查不到数据且不报错」。**
+按错误口径搜会一无所获，极易误判成「没有采集」——2026-09-01 就有一条 Gatus 检查
+因沿用旧口径而长期红，被当成「K8s 指标断流」排查，实际采集链路一直正常。
+
+所以纪律是：**写规则或探针前先跑一次清单查询确认当前口径**，不要凭记忆，也不要凭本文档：
 
 ```bash
 ssh node3 "curl -s http://127.0.0.1:8428/api/v1/label/__name__/values" \
-  | python3 -c "import json,sys; print([n for n in json.load(sys.stdin)['data'] if n.startswith('k8s.')])"
+  | python3 -c "import json,sys; v=json.load(sys.stdin)['data']; \
+      print('下划线:', len([n for n in v if n.startswith('k8s_')]), \
+            '点号:', len([n for n in v if n.startswith('k8s.')]))"
 ```
+
+〔实测 2026-09-01：下划线 27 个、点号 0 个。覆盖 container / pod / deployment /
+daemonset / statefulset / job / cronjob / replicaset / node / namespace〕
+
+改这个 flag 等于一次**静默的破坏性变更**：所有已有规则、仪表盘和探针会在不报任何错的
+情况下同时失效。要改就必须同一批把消费方全改掉，并逐条复验「先在 VM 查到 series 再改写」。
 
 ### 4.3 采集器是单点
 
 `k8s_cluster` 由集群内**单副本** Deployment `otel-opentelemetry-collector` 提供。它一挂，
-所有 `k8s.*` 指标停止上报，而**基于这些指标的告警会安静地变成「无数据」而不是「报警」**
+所有 K8s 指标停止上报，而**基于这些指标的告警会安静地变成「无数据」而不是「报警」**
 ——PromQL 里没有数据的表达式不会 firing。
 
 所以任何 K8s 规则集都必须配一条对称的存在性兜底（现有 `HubbleFlowTelemetryMissing` 是同类先例）：
 
 ```promql
-absent({__name__="k8s.container.restarts"}) == 1
+absent(k8s_container_restarts) == 1
 ```
+
+⚠️ 这条兜底本身也受 §4.2 的命名口径影响：口径改了而它没跟着改，它会**永远 firing**
+（因为按旧名字确实 absent），反而先把自己变成慢性红。
 
 ## 5. 容量与资源约束
 

@@ -72,7 +72,7 @@ Healthchecks 与被监控的 pgBackRest 同在 node3，只能发现任务未执�
 ssh node3 'docker logs --since 10m gatus 2>&1 | grep -E "k8s-(cluster-state|event)-ingestion.*success=true"'
 ```
 
-2026-08-27 验收：VM 有 27 个 `k8s.*` metric，`k8s.deployment.available` 有 49 条结果；collector 发送失败计数为 0。故障注入 Pod `otel-event-validation-*` 产生 `ErrImagePull`/`ImagePullBackOff`，VL 随后保存对应 `object.kind=Event` 记录；receiver accepted 与 VL 24 小时存量持续增长。两者分别是进程累计值和时间窗存量，不要求每次读取完全相等。Gatus 的 Event endpoint 直接查询 VL 中 `object.kind:=Event`，不再用 receiver counter 冒充落库成功。
+2026-08-27 验收：VM 有 27 个 `k8s.*` metric，`k8s.deployment.available` 有 49 条结果；collector 发送失败计数为 0。（⚠️ 这里的**点号写法是当时的口径快照**，不是现行口径——VM 后来开了 `-opentelemetry.usePrometheusNaming=true`，现为下划线 `k8s_deployment_available`〔实测 2026-09-01〕。照抄本段的写法会查不到数据且不报错，当前口径见 [`observability/alerting-notification.md`](observability/alerting-notification.md) §4.2。）故障注入 Pod `otel-event-validation-*` 产生 `ErrImagePull`/`ImagePullBackOff`，VL 随后保存对应 `object.kind=Event` 记录；receiver accepted 与 VL 24 小时存量持续增长。两者分别是进程累计值和时间窗存量，不要求每次读取完全相等。Gatus 的 Event endpoint 直接查询 VL 中 `object.kind:=Event`，不再用 receiver counter 冒充落库成功。
 
 对象状态、ready/restart、requests/limits 已有；容器实际 CPU/MEM、filesystem 和 network 仍需 kubeletstats/cAdvisor，不能用 request/limit 冒充。
 

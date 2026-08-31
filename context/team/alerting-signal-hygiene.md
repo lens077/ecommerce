@@ -127,9 +127,9 @@ absent({__name__="<关键指标>"}) == 1   for: 10m
 | 规则 | 表达式要点 | `for` | severity |
 |---|---|---|---|
 | `K8sPodRestartStorm` | 15 分钟重启增量 > 2（稳态 CrashLoop 退避上限 5 分钟≈3 次，正常发布为 1 次） | 5m | critical |
-| `K8sContainerNotReady` | `k8s.container.ready == 0` | 15m | warning |
-| `K8sDeploymentDegraded` | `available < on("k8s.deployment.uid") desired` | 10m | warning |
-| `K8sNodeNotReady` | `k8s.node.condition_ready == 0` | 5m | critical |
+| `K8sContainerNotReady` | `k8s_container_ready == 0` | 15m | warning |
+| `K8sDeploymentDegraded` | `available < on(k8s_deployment_uid) desired` | 10m | warning |
+| `K8sNodeNotReady` | `k8s_node_condition_ready == 0` | 5m | critical |
 | `K8sClusterMetricsMissing` | `absent(...)` 兜底 | 10m | critical |
 | `AlertFiringTooLong` | `(time() - ALERTS_FOR_STATE{alertname!="AlertFiringTooLong"}) > 4*3600` | 15m | warning |
 

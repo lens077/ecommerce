@@ -157,7 +157,17 @@ curl -sk -o /dev/null -w '%{http_code}\n' https://<name>.dev.test/  # 业务路�
   **表现是遥测静默丢失，不是服务挂掉**。集群回线后先确认 `otel-auth` 已 Synced，判据：
   `kubectl get secret otel-auth -n ecommerce -o jsonpath='{.data.OTEL_EXPORTER_OTLP_HEADERS}' | base64 -d | wc -c`
   应约 **87**，只有 23 说明 Helm 把 ESO 的 `{{ .k8s }}` 占位符提前吃掉了（要写成 ``{{ `"{{ .k8s }}"` }}`` 转义）。
-- ⚠️ **查询时标签名带点**：`service.name`、`k8s.container.*`，查 `k8s_*` 什么都查不到。
+- ⚠️ **命名口径三个存储各不相同，查之前先确认是哪一个**〔实测 2026-09-01〕：
+
+  | 存储 | 口径 | 例子 |
+  |---|---|---|
+  | VictoriaMetrics `:8428` | **下划线**（启动带 `-opentelemetry.usePrometheusNaming=true`） | `k8s_container_restarts`、label `service_name` |
+  | VictoriaLogs `:9428` | **保留 OTel 点号** | `service.name`、`kubernetes.container_name` |
+  | VictoriaTraces `:10428` | **保留点号且带前缀** | `resource_attr:service.name`、`span_attr:rpc.service` |
+
+  指标侧的口径**变过一次**（早期同为点号），两种写错的方式都「查不到数据且不报错」，
+  所以别凭记忆——查指标先跑 `/api/v1/label/__name__/values`，查日志/链路先跑
+  `/select/logsql/field_names`。详见 [`alerting-signal-hygiene.md`](alerting-signal-hygiene.md)。
 
 ## 会白排查半天的三个坑
 
