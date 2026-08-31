@@ -6,13 +6,15 @@
 # 能判定的约束变成脚本,存量漂移走基线棘轮(见 scripts/lint-baseline.sh 的设计)。
 #
 # 九项检查(任一违规 → 退出码 1):
-#   [DEAD-LINK]    AGENTS.md/README.md/STACK.md 与 context/**、docs/design/**、
-#                  docs/progress-archive/**、docs/reports/** 的相对 markdown 链接必须可达
+#   [DEAD-LINK]    AGENTS.md/README.md/STACK.md/TODO.md 与 context/**、docs/** 全树的
+#                  相对 markdown 链接必须可达
 #                  (2026-08-26 扩:原只查 AGENTS+context,当日 README/STACK/docs/design
 #                  三处死链全靠临时脚本抓到——宪法原则 I「引用不存在的文档即 CI 失败」
-#                  由此机械化。2026-08-31 再扩档案与报告:选型对抗目录删除后档案两处引用
-#                  无声断裂,复审判为盲区,用户裁决纳入;档案引用**被删**文件时改写为
-#                  tag/commit 历史指向,如 `git show '1.6.3:路径'`,不留裸死链。
+#                  由此机械化。2026-08-31 两轮扩围:先纳入档案/报告——选型对抗目录删除后
+#                  档案两处引用无声断裂,复审判为盲区;同日用户裁决 docs 顶层与 TODO.md
+#                  一并纳入,实测两轮新增范围的存量死链共 3 处且全为路径笔误,已修光。
+#                  档案引用**被删**文件时改写为 tag/commit 历史指向,
+#                  如 `git show '1.6.3:路径'`,不留裸死链。
 #                  跳过代码块、http(s)/mailto、纯锚点;带 #fragment 的只查文件部分)
 #   [ORPHAN]      context/ 下每个非 INDEX 文件必须被所属层的 INDEX.md 链接;
 #                  模块 INDEX 必须被 project/ecommerce/INDEX.md 链接
@@ -96,7 +98,7 @@ while IFS= read -r file; do
       fail "DEAD-LINK" "$file → $target(目标被 gitignore,不在提交树里)"
     fi
   done < <(_strip_fences "$file" | grep -oE '\]\([^)]+\)' | sed 's/^](//; s/)$//' || true)
-done < <(find AGENTS.md README.md STACK.md context docs/design docs/progress-archive docs/reports -name "*.md" -type f)
+done < <(find AGENTS.md README.md STACK.md TODO.md context docs -name "*.md" -type f)
 
 # ── 2. INDEX 覆盖性(孤儿检测)────────────────────────────────
 # 层入口: context/INDEX.md 必须链接三个层 INDEX

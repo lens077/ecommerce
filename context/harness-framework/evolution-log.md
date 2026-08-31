@@ -887,3 +887,18 @@ description: harness 本身（硬规则/门禁/Agent 约束）每次改动的原
   reports 0 处；修复 3 处后 `scripts/verify-context.sh` 全绿；
   `scripts/verify-context-canary.sh` 21 探针全过，两个新探针在沙箱档案/报告里注入死链
   均被 [DEAD-LINK] 拦截且 tag 正确。
+
+### 2026-08-31 死链门禁二次扩围：docs 全树与 TODO.md 纳入，盲区清零
+
+- **改了什么**：[DEAD-LINK] 扫描集收敛为「AGENTS/README/STACK/TODO.md + context/** +
+  docs/** 全树」（此前 docs 只扫 design/progress-archive/reports 三个子目录）；canary
+  沙箱改为整树复制 docs，新增 `dead-link-docs`/`dead-link-todo` 两个红探针（21→23）。
+- **为什么**：同日首轮扩围后，docs 顶层（TECH/DEVOPS/SCAFFOLD 等）与 TODO.md 是死链
+  检查最后的盲区；TODO.md 的分类索引是唯一进度真相源的骨架链接，断了比档案更疼。
+  扩围前同口径实测新增范围存量死链 **0 处**——纳入零成本，「常态红」在此范围同样不存在。
+- **触发事故**：无新事故，是同日复审盲区讨论的直接延伸，用户裁决「一并纳入」：
+  2026-08-26 与 2026-08-31 两次扩围都是「死链先散逸、被抓到才补扫」的模式，
+  第三次重演的成本高于一次收敛到全树。
+- **怎么验证的**：扩围前一次性同口径脚本实测新增范围 0 死链；扩围后
+  `scripts/verify-context.sh` 全绿；canary 23 探针全过，两个新探针分别在沙箱 docs
+  顶层与 TODO.md 注入死链，均被 [DEAD-LINK] 拦截且 tag 正确。

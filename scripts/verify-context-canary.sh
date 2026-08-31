@@ -32,18 +32,15 @@ _strip_fences() {
 # 搭模板沙箱：真身文件 + 仓外链接目标的桩（只建一次,探针各自克隆）
 build_template() { # build_template <dir>
   sb="$1"
-  mkdir -p "$sb/scripts" "$sb/docs"
+  mkdir -p "$sb/scripts"
   cp AGENTS.md TODO.md README.md STACK.md "$sb/"
   cp -R context "$sb/context"
-  cp -R docs/design "$sb/docs/design"   # 2026-08-26 门禁扩围至设计文档,沙箱同步
-  cp -R docs/progress-archive "$sb/docs/progress-archive"  # 2026-08-31 死链门禁扩围至档案/报告,
-  cp -R docs/reports "$sb/docs/reports"                    # 沙箱同步(否则 pristine 假绿)
+  cp -R docs "$sb/docs"   # 2026-08-31 死链门禁两轮扩围后覆盖 docs 全树,沙箱整树同步
   cp scripts/verify-context.sh "$sb/scripts/"
   [ -f scripts/context-format-baseline.txt ] && cp scripts/context-format-baseline.txt "$sb/scripts/"
   # [PROGRESS-SRC] 的基线与它登记的文件必须同时进沙箱,否则 pristine-green 会假红,
   # 且 progress-grow 会在一个不存在的文件上「误报成功」——2026-08-29 首跑实测到这两种。
   [ -f scripts/context-progress-baseline.txt ] && cp scripts/context-progress-baseline.txt "$sb/scripts/"
-  for f in docs/DEVOPS.md docs/SCAFFOLD.md; do [ -f "$f" ] && cp "$f" "$sb/docs/"; done
   [ -f .gitignore ] && cp .gitignore "$sb/"
   # 仓外链接目标放桩：门禁只查 [ -e ] 与 gitignore,不读内容。
   # 动态提取而非手抄清单——新增链接自动获得桩,漏了会被探针 0 当场暴露。
@@ -66,7 +63,7 @@ build_template() { # build_template <dir>
         : > "$stub"
       fi   # 真身里也不存在的目标不补桩——让沙箱里的门禁如实报 DEAD-LINK
     done < <(_strip_fences "$file" | grep -oE '\]\([^)]+\)' | sed 's/^](//; s/)$//' || true)
-  done < <(find AGENTS.md README.md STACK.md context docs/design docs/progress-archive docs/reports -name "*.md" -type f)
+  done < <(find AGENTS.md README.md STACK.md TODO.md context docs -name "*.md" -type f)
 }
 
 # 跑一个探针：克隆模板成新沙箱,执行注错函数,断言门禁退出码与违规 tag
@@ -108,6 +105,13 @@ mut_dead_link_archive() { # 档案死链——2026-08-31 扩围探针(复审抓�
 mut_dead_link_reports() { # 报告死链——与档案同类的带日期证据,一并纳入扫描
   printf '# canary\n\n[canary 报告死链](no-such-report-target.md)\n' \
     > "$1/docs/reports/tmp-canary-report.md"
+}
+mut_dead_link_docs() { # docs 顶层死链——2026-08-31 晚二次扩围探针(TECH/DEVOPS 一类此前是盲区)
+  printf '# canary\n\n[canary docs 死链](no-such-docs-target.md)\n' \
+    > "$1/docs/tmp-canary-docs.md"
+}
+mut_dead_link_todo() { # TODO.md 死链——唯一进度真相源的分类索引链接断裂必须被拦
+  printf '\n[canary TODO 死链](no-such-todo-target.md)\n' >> "$1/TODO.md"
 }
 mut_orphan() { # 合规 frontmatter 但没登记进层 INDEX
   cat > "$1/context/team/tmp-canary-orphan.md" <<'EOF'
@@ -218,6 +222,8 @@ probe dead-link-ignored   1 "DEAD-LINK"   mut_dead_link_ignored
 probe dead-link-design    1 "DEAD-LINK"   mut_dead_link_design
 probe dead-link-archive   1 "DEAD-LINK"   mut_dead_link_archive
 probe dead-link-reports   1 "DEAD-LINK"   mut_dead_link_reports
+probe dead-link-docs      1 "DEAD-LINK"   mut_dead_link_docs
+probe dead-link-todo      1 "DEAD-LINK"   mut_dead_link_todo
 probe orphan              1 "ORPHAN"      mut_orphan
 probe frontmatter         1 "FRONTMATTER" mut_frontmatter
 probe format              1 "FORMAT"      mut_format
@@ -241,4 +247,4 @@ if [ "$fails" -gt 0 ]; then
   echo "verify-context-canary: $fails 个探针失败——门禁可能已静默失效,先修门禁再改内容"
   exit 1
 fi
-echo "verify-context-canary: OK（21 探针全过:干净沙箱绿 + 十七类注错被拦且 tag 正确 + 四道假阳性守卫）"
+echo "verify-context-canary: OK（23 探针全过:干净沙箱绿 + 十九类注错被拦且 tag 正确 + 四道假阳性守卫）"
