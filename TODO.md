@@ -81,8 +81,9 @@ CES 巡检告警（CronJob 2m + vmalert firing 闭环）、可观测黑盒探活
 - **最近发布 tag：ecommerce `1.6.3`**（2026-08-30）。`1.6.0` 为买家实体 Customer 全仓重命名，
   `1.6.1`–`1.6.3` 为供应链门禁修复系列；签名前 Trivy 阻断与 SARIF→main 可见告警链在
   `1.6.2`/`1.6.3` 上完成真实验证（见 [供应链与交付流水线](docs/todo/供应链与交付流水线.md)）。
-  **1.6.x 未产生新的 helm 回写**——`helm/values.yaml` 仍是 `1.5.5`
-  〔实测 2026-08-31：GitHub main 与本地一致〕。
+  helm 回写：CI 的 `1.6.3` 回写已随 `ad1bb33`（chore(sync)）合并进 main，
+  `helm/values.yaml` 现为 `1.6.3`〔实测 2026-08-31 晚：github/gitlab/本地三方一致；
+  同日午间实测时 GitHub main 尚无该回写〕。该文件仍**不是**集群真相源（见 §1）。
 - **最近一次部署到 dev**〔实测 2026-08-29〕：control-tower `0.2.0`（config `sha-c30713c`）
   与 ecommerce `1.5.5`；dev 的 7 个相关服务滚到 `sha-0b9b9ad`，15/15 Deployment Ready、
   发布 Pod restart 均为 0。**1.6.x 尚未部署到 dev**，集群实跑 tag 见 §1「镜像 tag 口径」行。
