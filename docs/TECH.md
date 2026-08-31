@@ -643,6 +643,12 @@ type order
 | Session 登出/注销 | 直接删除 Dragonfly 中该 Session Key | 即刻失效 (0s 延迟) |
 | 第三方 API 对接 | 网关校验 HMAC 签名与 API Key → 映射为对应 Merchant 身份 | ALLOW (注入标头) |
 
+### 8.4 匿名（访客）身份边界
+
+消费者侧 RPC 按「匿名能不能做」分三级：**A 完全匿名**（搜索/商品详情/推荐，已在 `.service-matrix.yaml` 的 `anonymous_paths`）、**B 访客身份**（购物车五个 RPC，当前缺失）、**C 必须登录**（下单/支付/地址簿）。访客身份由**网关签发签名 cookie**（不进 Casdoor、不进 OpenFGA），注入 `x-md-global-user-id` 的同时注入 `x-md-global-anonymous=true`——下游服务判定 C 级请求时必须看这个标记，不能靠 UUID 形状猜。边界铁律：**访客只拥有购物车这一种资源**，下单一律升级为登录态。登录时经 `MergeGuestCart` 合并（同 SKU 数量累加，受 `UNIQUE (user_id, merchant_id, sku_id)` 约束）并清除访客 cookie。
+
+分级全表、三种身份方案的取舍、IAM 过滤规则、合并语义与六步落地顺序见 [`docs/design/platform/anonymous-shopping.md`](design/platform/anonymous-shopping.md)。**设计草案，未落地**——触发它的真实缺陷（匿名逛首页被强制拉去登录）已在前端侧止血，但匿名加购路径仍不存在。
+
 
 ## 9. 统一可观测性体系
 
