@@ -26,3 +26,14 @@ the Secret declaration at `0400`, and set `runAsUser`, `runAsGroup`, and
 `fsGroup` to `1000` plus `fsGroupChangePolicy: OnRootMismatch`. Kubelet then
 grants the runtime group read access without making the machine-token selector
 world-readable.
+
+The shared `ecommerce-config-source-{env}` Secret is only an operational bundle.
+Each service has an independent Machine Token scoped to its environment and
+namespace. Every Pod volume must use `secret.items` to project only
+`{service}.yaml`. Do not mount all ten selector files into every service Pod;
+a compromised Pod would otherwise be able to read the other services' tokens.
+
+If the projected key is missing, Kubernetes keeps the Pod in `ContainerCreating`;
+the application does not start and therefore cannot log the missing selector.
+Check `kubectl describe pod` for a `FailedMount` event, restore the exact
+`{service}.yaml` key in the Secret, and keep the single-key projection in place.
