@@ -22,8 +22,8 @@
 
 ## 一、全局优先级视图
 
-**未完成合计 158 项，其中 P0 共 18 项**（计数口径：各分类文件顶层 `- [ ]` 复选框实数；
-2026-08-31 更新：关闭 3 条 P0 与 1 条当日回归，新增 4 条本轮实测发现）。P0 的判据是**后果**不是紧迫感：
+**未完成合计 157 项，其中 P0 共 17 项**（计数口径：各分类文件顶层 `- [ ]` 复选框实数；
+2026-08-31 更新：阶段 0 收官关闭 4 条 P0 与 2 条当日项，新增 5 条实测发现）。P0 的判据是**后果**不是紧迫感：
 「调用会成功但结果是错的」「任何登录用户都能越权」一律 P0——它们不会在联调时暴露，
 只在上量后以超卖、丢单、数据泄露的形式爆发。
 
@@ -47,11 +47,11 @@
 | 14 | 免鉴权入口身份可伪造（`x-md-global-user-id` 未剥离） | [可观测](docs/todo/统一可观测性体系.md) |
 | 15 | 一致性底座：Product/Order 事务内 producer、NACK/DLQ、重放审计 | [事件](docs/todo/数据一致性与事件驱动.md) |
 | 16 | 领域事件落地（`OrderCreated`/`OrderPaid`/…） | [事件](docs/todo/数据一致性与事件驱动.md) |
-| 17 | 平台组件相对硬件严重超配（KEDA/Rollouts 零使用、Kyverno 仅 Audit 却常驻） | [基础设施](docs/todo/基础设施与部署模型.md) |
-| 18 | 轮换 Config Center 预览中暴露的搜索凭据（日志不可撤回） | [鉴权](docs/todo/零信任鉴权与Session.md) |
+| 17 | 轮换 Config Center 预览中暴露的搜索凭据（日志不可撤回） | [鉴权](docs/todo/零信任鉴权与Session.md) |
 
-〔2026-08-31 关闭三条 P0，证据见分类文件勾选记录：KCM 阈值（三处改 20 + 真实 GC/告警闭环验证）、
-CES 巡检告警（CronJob 2m + vmalert firing 闭环）、可观测黑盒探活（node3 ecommerce-gatus + canary 闭环）〕
+〔2026-08-31 关闭四条 P0，证据见分类文件勾选记录：KCM 阈值（三处改 20 + 真实 GC/告警闭环验证）、
+CES 巡检告警（CronJob 2m + vmalert firing 闭环）、可观测黑盒探活（node3 ecommerce-gatus + canary 闭环）、
+平台组件审计（用户裁决全保留 + 条件绑定）。**基础设施分类 P0 清零。**〕
 
 ### 分类索引
 
@@ -59,7 +59,7 @@ CES 巡检告警（CronJob 2m + vmalert firing 闭环）、可观测黑盒探活
 |---|---|---:|---:|
 | [统一可观测性体系](docs/todo/统一可观测性体系.md) | §9 | 25 | 2 |
 | [微服务与交易闭环](docs/todo/微服务与交易闭环.md) | §5 / §4.3 | 23 | 10 |
-| [基础设施与部署模型](docs/todo/基础设施与部署模型.md) | §7 | 22 | 1 |
+| [基础设施与部署模型](docs/todo/基础设施与部署模型.md) | §7 | 21 | 0 |
 | [文档与协作机制](docs/todo/文档与协作机制.md) | —（harness） | 18 | 0 |
 | [零信任鉴权与 Session](docs/todo/零信任鉴权与Session.md) | §8 | 16 | 3 |
 | [前端技术栈与工程化](docs/todo/前端技术栈与工程化.md) | §11 | 16 | 0 |
@@ -104,7 +104,7 @@ dev 的 7 个相关服务已滚到 `sha-0b9b9ad`，15/15 Deployment Ready、发�
 | 项目 | 状态 | 说明 |
 |---|---|---|
 | K8s 集群 | ✅ | node101(cp)/node102/node103，v1.36.4，Ubuntu 26.04 / 内核 7.0 / **arm64**；**ecommerce 15/15 Deployment Ready**（17 Pod） |
-| 节点容量 | 🟡 | 每节点 4 vCPU / **6.4 GB**（node102/103 扩容已完成，三节点对齐）；N+1 容量验证未做。2026-08-29 曾因 node101 内存耗尽（可用 140 MB）引发控制面雪崩 |
+| 节点容量 | 🟡 | 每节点 4 vCPU / **6.4 GB**（三节点对齐）；**N+1 非控制面演练已通过**〔实测 2026-08-31：交易面零级联 Pending，两节点稳态内存 67%/38%〕，但搜索域不成立（meilisearch 本地 PV）且结论取自近零流量。2026-08-29 曾因 node101 内存耗尽引发控制面雪崩 |
 | Pod 分布 | ✅ | **6/6/5（skew=1）**——2026-08-30 受控重平衡完成（原 14/2/1 为扩容重启遗留）；执行中引爆并修复了 CES 陈旧故障（见 §0 处置记录） |
 | 僵尸 Pod | ✅ | 存量已清零；KCM 阈值改 **20** 且三处一致（manifest/bootstrap/kubeadm-config），真实注入实测 GC 与 `K8sFailedPodsAccumulating` 告警闭环〔实测 2026-08-31〕 |
 | CES 巡检 | ✅ | `ces-audit` CronJob 每 2m 对账（只读 RBAC），`ces_stale_entries` 入 VM + vmalert 告警，假样本 firing 闭环已验〔实测 2026-08-31〕 |
@@ -117,7 +117,7 @@ dev 的 7 个相关服务已滚到 `sha-0b9b9ad`，15/15 Deployment Ready、发�
 | VPA | 🟡 | 只装 recommender（无 updater/webhook）；15 个 ecommerce VPA 全 `Off`/`RequestsOnly` 且 `RecommendationProvided=True`；推荐地板已调至 `10m/32Mi`。**config-center 的 2 个是 `InPlace`——死配置** |
 | PDB | 🟡 | 5 个 PDB：consumer-next/gateway/cilium-operator/nats `ALLOWED=1`，仅 consul-server 锁死为 0；**13 个单副本 Deployment 仍无 PDB、无法无损驱逐** |
 | Tetragon | 🟡 | chart 1.7.1，DaemonSet **3/3 Ready**；唯一策略 `ecommerce-service-account-token-access` 为 **audit-only 不阻断**；enforcement 待评估 |
-| 已装但基本零使用 | 🔴 | KEDA（0 ScaledObject）、Argo Rollouts（0 Rollout）、Kyverno（仅 2 条 **Audit** 策略无 Enforce）——控制器全 1/1 常驻，占内存与 etcd |
+| 装而未激活组件 | 🟡 | 审计已裁决〔2026-08-31〕**全保留**：KEDA（0 ScaledObject，绑定阶段 3 激活）、Rollouts（0 Rollout，绑定灰度前置）、Kyverno（2 条 Audit 在产出报告，绑定 `verifyImages`）；未按期激活则下轮审计降级卸载 |
 | 未安装 | — | Descheduler、OpenCost、Chaos Mesh（均为条件触发，见 TECH.md B 表） |
 
 ### 2. 事件与搜索（2026-08-29 实测，2026-08-30 复验 TCP 连通；**目标基础设施已存在，缺业务接线**）
@@ -200,8 +200,15 @@ dev 的 7 个相关服务已滚到 `sha-0b9b9ad`，15/15 Deployment Ready、发�
 4. ~~可观测栈黑盒探活~~ **已完成〔实测 2026-08-31〕**：node3 `ecommerce-gatus` 4 探针全绿
    （均带响应体校验）+ 采集器 Ready 两条 vmalert 规则，canary 实测告警闭环；
    资产 `infrastructure/gatus/`
-5. **N+1 单节点故障容量验证**（前提已成立〔实测 2026-08-30〕：三节点 6.4 GB、分布 6/6/5；烟雾报警器已就位）
-6. **平台组件必要性审计**（KEDA/Rollouts/Kyverno 去留裁决，判据：留下的组件有真实用途接线）
+5. ~~N+1 单节点故障容量验证~~ **已完成〔实测 2026-08-31〕**：drain node103 演练——
+   交易面零级联 Pending、黑盒 6/6 全程绿；搜索域不成立（meilisearch 本地 PV，新 P1）、
+   consul PDB 阻断合规排空实证。报告
+   [`2026-08-31-n-plus-1-drill.md`](docs/reports/2026-08-31-n-plus-1-drill.md)
+6. ~~平台组件必要性审计~~ **已完成〔裁决 2026-08-31〕**：用户拍板全保留——
+   KEDA/Rollouts 保留待各自触发阶段激活（未激活则下轮审计降级卸载），
+   Kyverno 保留绑定供应链 `verifyImages`；容量压力已因内存扩容缓解
+
+**阶段 0 六项全部完成（2026-08-31）**，集群止血收官；下一站阶段 1。
 
 ### 阶段 1 · 交易正确性与消费者闭环（P0 主体：微服务 10 + 鉴权 3 + 可观测 2 + 事件 2）
 
