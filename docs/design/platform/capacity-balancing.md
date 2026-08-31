@@ -20,6 +20,8 @@
 不触发迁移。同日已由一次受控 rollout 回平至 `6/6/5`。这是「节点重启不保证全局重平衡」（§4）
 的一次真实案例；执行时还引爆了潜伏的 CES 陈旧故障——**批量重启前先做 CEP/CES 对账**
 （脚本见 [`context/team/cilium-datapath-ops.md`](../../../context/team/cilium-datapath-ops.md) 第二节）。
+受控重平衡已固化为一键脚本 **`scripts/rebalance-spread.sh`**（内嵌 CES 预检 + skew 判断 +
+按序 rollout restart + 终态校验；`--check` 只读不动集群），不再依赖人工现场拼命令。
 复验：`kubectl get pods -n ecommerce -o jsonpath='{range .items[?(@.status.phase=="Running")]}{.spec.nodeName}{"\n"}{end}' | sort | uniq -c`。
 consumer-next 与 gateway 另使用 required pod anti-affinity，保证各自两个副本不落在同一节点。
 
