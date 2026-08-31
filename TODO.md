@@ -172,8 +172,9 @@ CES 巡检告警（CronJob 2m + vmalert firing 闭环）、可观测黑盒探活
 | 应用 | 状态 | 说明 |
 |---|---|---|
 | consumer-next | ✅ | 公开可收录页已转正上线 dev（App Router + 匿名 transport + ISR `revalidate=60`，2 副本 + PDB）；扩页受阻于 `ListProducts` |
-| consumer | 🟡 | 商品详情/购物车/个人中心/地址/登录回调已接真实 API；首页、分类、订单、支付结果待接。**新发现待查**：网关可达时匿名访问首页会被全局「401→重新登录」逻辑重定向到 `/api/auth/login`（404）——匿名逛商城被强制拉去登录〔2026-08-31 Lighthouse 审计时实测,根因未定位〕 |
+| consumer | 🟡 | 商品详情/购物车/个人中心/地址/登录回调已接真实 API；首页、分类、订单、支付结果待接。**匿名被强制拉去登录已修**〔2026-08-31 实测复现并修复〕：链路是顶栏 `GetCart` 匿名发出 → 网关 401 → `errorInterceptor` `emitAuthError` → AuthProvider **无条件** `startBffLogin`。根因是「401 = 会话失效」这个前提只在用户**曾经登录过**时成立；匿名用户的 401 只意味着「该接口需要登录」。已给跳转加登录态门（双向回归测试：匿名不跳 / 已登录仍跳）。**残留待办**：`useCart` 的 `getCart` 无 `enabled` 门，匿名仍会发一次注定 401 的请求——现在只是不再劫持导航，但仍是无谓请求与告警噪音 |
 | merchant / admin | ⬜ | 仅路由骨架，无 `api/` 目录、未接后端 |
+| 网关 BFF 端点 | 🔴 | **线上网关 `/auth/me` 与 `/auth/login` 均 404**〔实测 2026-08-31：直连 `https://gateway.dev.test` 与经 dev 代理均复现〕。control-tower 源码里 handler 存在且 `app.go` 有 `mux.Handle("/auth/", …)` 注册（另有提交 `daf2280 fix(gateway): /auth/me 与 /auth/logout 识别会话头`），据此**推断**为部署滞后——集群跑的镜像早于这些改动。影响：Web 端 BFF 登录链路当前不可用，冷启动身份查询恒 404。⚠️ **未核实集群实跑镜像 tag**，需现场确认后再决定重建或回滚 |
 | 状态管理 | ✅ | 2026-08-28 完成 valtio→**Zustand** 全量迁移，valtio 依赖已移除 |
 | 错误监控 | 🟡 | Bugsink 服务端已运行（node3，2.5.0）；**前端 SDK + Source Map 未接** |
 | 无障碍性 | 🟡 | 自动化三层已落地〔实测 2026-08-31〕：①jsx-a11y lint 全 workspace 生效（随 `vp check --fix` 进 pre-commit，红测过）②consumer 四个关键页 axe 断言（jsdom + 真路由 + 服务桩，13/13 绿）③Lighthouse 首页基线**桌面/移动双 100**、已同意态 color-contrast 0 违规。落地中修掉 3 处真实缺陷（隐私弹窗关闭按钮无可及名称、标题层级跳跃、`exhaustive-deps` 漏依赖）。**待办**：键盘/VoiceOver 手动走查（需人工）、购物车/结算页需登录态的 snapshot 审计、66 个渐变背景对比度节点手动抽查；merchant/admin 未纳入 axe 断言。手册 [`docs/frontend/accessibility.md`](docs/frontend/accessibility.md) |

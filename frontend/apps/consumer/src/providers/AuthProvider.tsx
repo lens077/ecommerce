@@ -44,6 +44,11 @@ export const AuthProvider: React.FC<{ children: React.ReactNode; router: any }> 
   const [roles, setRoles] = useState<string[]>([]);
   const [name, setName] = useState<string | null>(null);
 
+  // 「当前是否已登录」的实时快照，专供 onAuthError 回调读取。
+  // 用 ref 而不是把 isAuthenticated 放进那个 effect 的依赖数组：后者会让监听器
+  // 随每次登录态变化重订阅，而回调只需要读到最新值。
+  const isAuthenticatedRef = React.useRef(false);
+
   // 身份落地：组件状态 + 用户 store（顶栏读它）。
   // P4 起 store 不再由令牌订阅填充——浏览器已经没有令牌了。
   const applyIdentity = React.useCallback(
@@ -117,12 +122,26 @@ export const AuthProvider: React.FC<{ children: React.ReactNode; router: any }> 
     void fetchIdentity().then(applyIdentity);
   }, [applyIdentity]);
 
+  // 登录态变化时同步快照，供上面那个 ref 的读取方使用。
+  useEffect(() => {
+    isAuthenticatedRef.current = isAuthenticated;
+  }, [isAuthenticated]);
+
   // 📡 集中式拦截：监听来自 packages/api 的 401 信号。
   // 两端同一处理：续期是网关的事（它在请求链路上顺手做），这里收到 401 就意味着
   // 会话真的没了（过期/被撤销/被登出）。前端再"续"一次既做不到也没意义——
   // 直接重新登录。旧实现里"401 → 静默续期 → 与 callback 抢兑换"的竞态随之消失。
+  //
+  // ⚠️ 但「401 = 会话失效」这个前提**只在用户曾经登录过时成立**。匿名用户根本没有
+  // 会话，它收到的 401 只意味着「这个接口需要登录」——此时跳登录是错的：匿名逛
+  // 商城会被强制拉走（实测：首页顶栏的 GetCart 拿 401 → 整页跳 /auth/login）。
+  // 所以跳转前先看登录态快照；未登录时只静默复位，不劫持导航。
   useEffect(() => {
     const unsubscribe = onAuthError((err) => {
+      if (!isAuthenticatedRef.current) {
+        console.warn("[Auth] 匿名请求收到 401（接口需要登录），不跳转:", err);
+        return;
+      }
       console.warn("[Auth] 会话失效，重新登录:", err);
       clearSessionId();
       setIsAuthenticated(false);
