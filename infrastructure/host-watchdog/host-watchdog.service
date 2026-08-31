@@ -1,0 +1,14 @@
+[Unit]
+Description=主机侧巡检(容器/systemd 单元/本机 HTTP/隧道站点/磁盘)
+Documentation=https://github.com/lens077/ecommerce/blob/main/context/team/host-watchdog.md
+After=docker.service
+Wants=docker.service
+
+[Service]
+Type=oneshot
+ExecStart=/usr/local/bin/host-watchdog
+# 巡检发现问题时返回 1。那是「查出了问题」,不是「巡检本身坏了」——
+# 不声明的话 systemd 会把每次发现问题都记成 failed,掩盖真正的脚本故障。
+SuccessExitStatus=0 1
+TimeoutStartSec=120
+Nice=10

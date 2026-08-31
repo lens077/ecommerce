@@ -1,0 +1,12 @@
+[Unit]
+Description=每 5 分钟运行主机侧巡检
+
+[Timer]
+OnBootSec=3min
+OnUnitActiveSec=5min
+# 错开整分钟,避免与 Gatus 的整分探测撞在同一秒
+RandomizedDelaySec=30
+Persistent=true
+
+[Install]
+WantedBy=timers.target
