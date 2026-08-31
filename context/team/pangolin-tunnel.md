@@ -48,7 +48,7 @@ description: 公网暴露基础设施(Pangolin)的拓扑事实、面板 API 操�
 - ⚠️ **每个端口的规则是成对的(IPv4 + IPv6)**:`DescribeFirewallRules` 里 `CidrBlock` 为空的那条,
   其实是 `Ipv6CidrBlock: "::/0"`。**只删 IPv4 那条会留下 IPv6 半开**,删它要传 `Ipv6CidrBlock` 字段
 - 🔑 **`docker ps` 显示 `0.0.0.0:<port>` ≠ 公网可达——云防火墙才是真相**(2026-08-19 靠这条省掉一整轮改动):
-  node1 上 kaneo(5173)/casdoor(8000)/webhook(8082) 都绑着 `0.0.0.0`,看起来全在裸奔,
+  node1 上 casdoor(8000)/webhook(8082) 等都绑着 `0.0.0.0`,看起来全在裸奔,
   实测从公网**全部连不上**,因为 Lighthouse 根本没放行这些端口。给它们改端口/收紧绑定是零收益,
   却要冒同步 Pangolin target 和 OAuth 配置的风险。**判断暴露面要从外部实测,不要读 `docker ps`**;
   测的时候带一个已知放行的端口(443)当对照组,否则分不清"被拦"和"网络不通"
@@ -90,9 +90,10 @@ description: 公网暴露基础设施(Pangolin)的拓扑事实、面板 API 操�
   ⚠️ DSH 自带浏览器信任栅栏:Host 非回环且不在 trustedHosts 就 403,**外壳能开但工作区永远为空**;
   已在 `~/.dsh/profiles/web/cordis.patch.yml` 的 `connection` 条目补 `trustedHosts: ['dsh.apikv.com']`
   (热生效不用重启,**必须写纯 YAML 数组——`!!js` 表达式在用户补丁层实测不生效**)。
-  经隧道时 settings/credentials 等特权方法仍 403 属设计内**/ 另有 kaneo/ntfy/stream/cat 等,以 `traefik-config` 后门实查为准。
+  经隧道时 settings/credentials 等特权方法仍 403 属设计内**/ 另有 ntfy/stream/cat 等,以 `traefik-config` 后门实查为准。
   **已删:`dev.apikv.com`(前端 dev server 远程预览)——2026-08-29 随 dev 子域资源一并删除,实测返回 404;
   静态导航页(docker-deploy 仓 `homepage/site/index.html`)的对应卡片已同步移除**
+  **已删:`kaneo.apikv.com`(看板,rid 5)——2026-08-30 随 kaneo 整体下线删除(资源行 + target + 容器 + 数据卷),实测返回 404**
 - k8s newt:helm release `newt`(ns `pangolin`,chart `fossorial/newt`);凭据看 `helm get values newt -n pangolin`(inline,勿把 values 文件提交入库)
 - **k8s 站点(siteId 4)的资源全部指同一个 target `10.110.51.106:443 https`** —— 那是 `cilium-gateway` 的 ClusterIP,分流靠 HTTPRoute 的 hostname 而非不同 target。2026-08-27 新增四个(均 **SSO on**,控制面靠登录墙兜底):`argocd`(rid 31)/`consul`(rid 32)/`search`(rid 33)/`cart-api`(rid 34)。
   ⚠️ **302 只证明 Pangolin 拦住了,不证明后端活着**——验后端要在集群内直连 `curl -H "Host: xxx.apikv.com" https://10.110.51.106/`,否则 502 会被登录墙掩盖。
@@ -221,7 +222,7 @@ k8s 服务查 `kubectl -n <ns> get endpoints <svc>`(08-24 有四条指向已卸�
 建入口只会得到 502);主机服务直连实测协议与端口——**不要照抄同机其他服务**,
 `silo` 的 9001 是 `minio-1.pigsty` 而同机 9000 是 `sss.pigsty`,`tlsServerName` 照抄必失败。
 
-## local site(node3-local) 的 target 写法(2026-08-11 与 08-12 两次 kaneo 502 实付学费)
+## local site(node3-local) 的 target 写法(2026-08-11 与 08-12 两次 502 实付学费)
 
 **根源只有一条**:转发是从 **Traefik 容器**发起的,所以 target 必须写「Traefik 容器视角下能到达该服务的地址」,
 而不是「服务自己监听时用的地址」。**监听地址 ≠ 目的地址**——这两次都栽在把前者当后者填。
@@ -247,14 +248,14 @@ docker inspect -f '{{range $k,$v := .NetworkSettings.Networks}}{{$k}}={{$v.IPAdd
 #   不含               → 只能走宿主端口 + 10.1.0.8
 ```
 
-实测(2026-08-12):`blog`/`pangolin` 都在 `pangolin_frontend`,而 `kaneo-kaneo-1` 在
-`kaneo_default`(172.28.0.3)——**跨网络,Traefik 到不了它的容器 IP**,所以 kaneo 只能走宿主端口。
+实测(2026-08-12):`blog`/`pangolin` 都在 `pangolin_frontend`,而当时另一个 compose 起的服务在
+自己的 `<项目>_default` 网络里——**跨网络,Traefik 到不了它的容器 IP**,只能走宿主端口。
 (2026-08-13 casdoor 又踩同款:target 填了 `casdoor_default` 的容器 IP 172.18.0.2,改 `10.1.0.8:8000` 即通。)
 
 ⚠️ **`docker ps` 的 PORTS 列不能直接抄进 target**(2026-08-12 就是这么错的):
 
 ```
-kaneo-kaneo-1        0.0.0.0:5173->5173/tcp     ← 0.0.0.0 是【宿主的监听地址】
+webhook-webhook-1    0.0.0.0:8082->8082/tcp     ← 0.0.0.0 是【宿主的监听地址】
 mediamtx-mediamtx-1  10.1.0.8:8889->8889/tcp    ← 这种才只绑内网
 ```
 
