@@ -58,6 +58,7 @@ export function DesktopSettingsDialog() {
       <DialogContent>
         <DialogContentText sx={{ mb: 2 }}>{t("desktop.description")}</DialogContentText>
         <TextField
+          // oxlint-disable-next-line jsx-a11y/no-autofocus -- 对话框打开时聚焦首个输入符合 APG dialog 模式
           autoFocus
           fullWidth
           label={t("desktop.gatewayUrl")}

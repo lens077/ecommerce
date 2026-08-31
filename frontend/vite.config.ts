@@ -25,7 +25,25 @@ export default defineConfig({
   lint: {
     ignorePatterns: IGNORED,
     jsPlugins: [{ name: "vite-plus", specifier: "vite-plus/oxlint-plugin" }],
-    rules: { "vite-plus/prefer-vite-plus-imports": "error" },
+    // a11y 静态门禁（见 docs/frontend/accessibility.md §四.1，2026-08-31 红测通过）。
+    // ⚠️ oxlint 的 plugins 字段是「整体替换」语义：显式写它就会覆盖默认插件集
+    // （react/unicorn/typescript/oxc），只写 ["jsx-a11y"] 会静默关掉现有规则——
+    // 所以默认四项必须一并列出。验证方法：改动后 vp lint 的规则计数应上升而非下降。
+    plugins: ["react", "unicorn", "typescript", "oxc", "jsx-a11y"],
+    rules: {
+      "vite-plus/prefer-vite-plus-imports": "error",
+      // jsx-a11y 插件启用后 correctness 类规则自动生效；下列高价值规则显式钉成
+      // error，不随将来 categories 调整而漂移。
+      "jsx-a11y/alt-text": "error",
+      "jsx-a11y/aria-props": "error",
+      "jsx-a11y/aria-role": "error",
+      "jsx-a11y/role-has-required-aria-props": "error",
+      "jsx-a11y/anchor-has-content": "error",
+      "jsx-a11y/heading-has-content": "error",
+      // 内联 SVG（生成艺术/图标）用 role="img" + aria-label 是无障碍 SVG 的
+      // 推荐模式，无法替换成 <img>；该规则对这类用法系统性误报，关闭。
+      "jsx-a11y/prefer-tag-over-role": "off",
+    },
     options: { typeAware: true, typeCheck: true },
   },
 });

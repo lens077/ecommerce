@@ -172,10 +172,11 @@ CES 巡检告警（CronJob 2m + vmalert firing 闭环）、可观测黑盒探活
 | 应用 | 状态 | 说明 |
 |---|---|---|
 | consumer-next | ✅ | 公开可收录页已转正上线 dev（App Router + 匿名 transport + ISR `revalidate=60`，2 副本 + PDB）；扩页受阻于 `ListProducts` |
-| consumer | 🟡 | 商品详情/购物车/个人中心/地址/登录回调已接真实 API；首页、分类、订单、支付结果待接 |
+| consumer | 🟡 | 商品详情/购物车/个人中心/地址/登录回调已接真实 API；首页、分类、订单、支付结果待接。**新发现待查**：网关可达时匿名访问首页会被全局「401→重新登录」逻辑重定向到 `/api/auth/login`（404）——匿名逛商城被强制拉去登录〔2026-08-31 Lighthouse 审计时实测,根因未定位〕 |
 | merchant / admin | ⬜ | 仅路由骨架，无 `api/` 目录、未接后端 |
 | 状态管理 | ✅ | 2026-08-28 完成 valtio→**Zustand** 全量迁移，valtio 依赖已移除 |
 | 错误监控 | 🟡 | Bugsink 服务端已运行（node3，2.5.0）；**前端 SDK + Source Map 未接** |
+| 无障碍性 | 🟡 | 自动化三层已落地〔实测 2026-08-31〕：①jsx-a11y lint 全 workspace 生效（随 `vp check --fix` 进 pre-commit，红测过）②consumer 四个关键页 axe 断言（jsdom + 真路由 + 服务桩，13/13 绿）③Lighthouse 首页基线**桌面/移动双 100**、已同意态 color-contrast 0 违规。落地中修掉 3 处真实缺陷（隐私弹窗关闭按钮无可及名称、标题层级跳跃、`exhaustive-deps` 漏依赖）。**待办**：键盘/VoiceOver 手动走查（需人工）、购物车/结算页需登录态的 snapshot 审计、66 个渐变背景对比度节点手动抽查；merchant/admin 未纳入 axe 断言。手册 [`docs/frontend/accessibility.md`](docs/frontend/accessibility.md) |
 
 ### 6. 可观测性（2026-08-30 实测，2026-08-31 增补）
 
