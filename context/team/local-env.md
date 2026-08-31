@@ -193,14 +193,15 @@ AppProject 只有 `default`（2026-08-29 复测仍然如此）。集群实际由
 | 运行时安全 | `tetragon`（2026-08-28 装，事件经 vector 进 node3 日志） |
 | 弹性与发布 | `keda`、`argo-rollouts`、`argocd`（见坑 ③）、`vpa`（**只有 recommender**，无 updater/webhook；live 共 17 个 VPA，其中 ecommerce 15 个均为 `Off`） |
 | 网络与穿透 | Cilium Gateway API、`cilium-secrets`、`pangolin`(newt，2026-08-28 起集群内也有站点) |
-| 存储与镜像 | `openebs`、`cnpg-system`（cluster 已 hibernate）、`spegel` |
+| 存储与镜像 | `openebs`、`spegel`（`cnpg-system` 已整体移除——2026-08-30 实测 ns 与 CNPG CRD 均不存在，PG 数据面只剩 node3 Pigsty） |
 
 **OpenBao 自动解封**：`node101` 上 `openbao-auto-unseal.timer` 每 60 秒检查一次，sealed 时读
 `/var/lib/k8s-installer/creds/openbao-init` 解封。满足无人值守重启，但 unseal key 与集群管理权限
 同信任域——它**不能**替代外部 KMS 或 Transit auto-unseal，迁到独立信任根后应移除该 timer。
 
 **Pod 节点均衡**：业务 Deployment 统一带 `app.kubernetes.io/part-of: ecommerce` +
-namespace 内共享的硬 `topologySpreadConstraints`（`maxSkew: 1`、`DoNotSchedule`），当前分布 5/6/6〔实测 2026-08-29〕。
+namespace 内共享的硬 `topologySpreadConstraints`（`maxSkew: 1`、`DoNotSchedule`），健康态分布 5/6/6〔实测 2026-08-29〕；
+〔实测 2026-08-30〕扩容统一重启曾遗留 14/2/1 倾斜——spread 只约束调度不触发迁移，同日已受控 rollout 回平至 6/6/5（批量重启前先做 CEP/CES 对账，见 cilium-datapath-ops.md 第二节）。
 **不得用 `kubernetes.io/hostname: node103` 之类硬钉实现「稳定」**——那把节点故障升级成不可调度。
 
 **VPA recommendation-only 基线（2026-08-29）**：Helm revision 2 只运行 recommender `1.7.1`，

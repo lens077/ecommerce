@@ -1,13 +1,13 @@
 ---
 name: cilium-datapath-ops
 layer: team
-description: Cilium 数据面两条只能实测的事实——ipcache 身份失配会让写好的 CNP 放行规则静默失效（控制面 CEP/标签/Valid 全绿）；bpf-map-dynamic-size-ratio 按节点内存百分比预分配 conntrack/NAT 表，缩容后旧 map 被 cilium-envoy 持有成孤儿并从 Pod 指标里消失。排查 default-deny 丢包或核 cilium 内存前必读
+description: Cilium 数据面三条只能实测的事实——ipcache 身份失配会让写好的 CNP 放行规则静默失效（控制面 CEP/标签/Valid 全绿）；CES 在 Pod 换 IP 后不跟新（已两次引发全后端故障，批量重启前先做 CEP/CES 对账）；bpf-map-dynamic-size-ratio 按节点内存百分比预分配 conntrack/NAT 表，缩容后旧 map 被 cilium-envoy 持有成孤儿并从 Pod 指标里消失。排查 default-deny 丢包或核 cilium 内存前必读
 ---
 
 # Cilium 数据面：身份解析与 BPF map 容量
 
-**范围**：所有跑在本集群上的服务。这两条都**读代码读不出来**——控制面对象全是健康的，
-真相只在数据面（ipcache / BPF map）里。
+**范围**：所有跑在本集群上的服务。这三条都**读代码读不出来**——控制面对象全是健康的，
+真相只在数据面（ipcache / CES / BPF map）里。
 
 ---
 
@@ -103,7 +103,50 @@ kubectl get pods -n <ns> --no-headers | awk '$3=="CrashLoopBackOff"{print $1}' \
 
 ---
 
-## 二、BPF map 容量：`kubectl top` 看到的 cilium 内存，大部分不是进程
+## 二、CES 陈旧：Pod 换 IP 后 CiliumEndpointSlice 不跟新
+
+**症状**与一节同（CNP 放行却超时），但坏的层不同：不是 ipcache 的占位身份，
+而是 **CES（CEP 的聚合分发对象）里还挂着旧 IP**——agent 按 CES 学习「身份→IP」，
+新 IP 查无身份 → 判成 `world` → default-deny 丢包。CEP 本身是对的，只有 CES 错。
+
+**已两次引发真实故障**：
+
+- 2026-08-29 雪崩恢复期：dragonfly 换 IP 后 CES 卡旧 IP，CNP 静默拒绝（见该日故障链）。
+- 2026-08-30：三节点扩容统一重启后，config-center 与 dragonfly 的 CES 均滞留**重启前的旧 IP**
+  （潜伏，存量长跑 Pod 无感知）。后续一波容器重启把它引爆——业务服务**启动期必须读
+  Config Center**（`config.go:33` 拿不到 bootstrap 直接 Fx 退出），于是「重启一个崩一个」：
+  14 个 Pod CrashLoopBackOff、网关双副本齐崩，受控重平衡的 rollout restart 也全部卡死。
+
+**教训：批量重启（重平衡/升级/节点维护）之前，先花 5 秒做一次 CEP/CES 对账**——
+CES 陈旧在存量 Pod 上是潜伏的，批量重启会把它引爆成全后端不可用：
+
+```bash
+python3 - <<'EOF'
+import json,subprocess
+cep=json.loads(subprocess.check_output(['kubectl','get','cep','-A','-o','json']))
+ces=json.loads(subprocess.check_output(['kubectl','get','ciliumendpointslices','-o','json']))
+ip={e['metadata']['name']:(e.get('status',{}).get('networking',{}).get('addressing') or [{}])[0].get('ipv4') for e in cep['items']}
+bad=[(s['metadata']['name'],e['name'],a,ip.get(e['name'])) for s in ces['items'] for e in s.get('endpoints',[])
+     for a in [[x.get('ipv4') for x in e.get('networking',{}).get('addressing',[])]] if ip.get(e['name']) not in a]
+print(*bad,sep='\n') if bad else print('CES 全部一致')
+EOF
+```
+
+**修复**：删陈旧 CES 即可——operator 秒级从 CEP 重建，重建后内容立即正确：
+
+```bash
+kubectl delete ciliumendpointslice <stale-ces-name>
+```
+
+然后按第一节末尾的办法删 CrashLoopBackOff Pod 清退避计时器，不要靠等。
+复验：重跑上面的对账脚本 + 业务端到端（gateway `/healthz` + 一条真实 RPC）。
+
+**根治仍是开放项**：TODO P0「CiliumEndpointSlice 陈旧无自愈」——这类故障没有现成告警会报，
+需要把上面的对账做成巡检 + 告警。
+
+---
+
+## 三、BPF map 容量：`kubectl top` 看到的 cilium 内存，大部分不是进程
 
 **事实**
 
