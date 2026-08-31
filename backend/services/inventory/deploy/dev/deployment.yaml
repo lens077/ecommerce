@@ -112,4 +112,7 @@ spec:
           secret:
             secretName: ecommerce-config-source-dev
             defaultMode: 0400
+            items:
+              - key: inventory.yaml
+                path: inventory.yaml
       restartPolicy: Always

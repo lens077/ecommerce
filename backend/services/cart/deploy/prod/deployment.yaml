@@ -114,4 +114,7 @@ spec:
           secret:
             secretName: ecommerce-config-source-prod
             defaultMode: 0400
+            items:
+              - key: cart.yaml
+                path: cart.yaml
       restartPolicy: Always

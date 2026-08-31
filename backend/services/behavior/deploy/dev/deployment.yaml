@@ -118,4 +118,7 @@ spec:
           secret:
             secretName: ecommerce-config-source-dev
             defaultMode: 0400
+            items:
+              - key: behavior.yaml
+                path: behavior.yaml
       restartPolicy: Always

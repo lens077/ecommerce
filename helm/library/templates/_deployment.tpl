@@ -110,6 +110,10 @@ spec:
           secret:
             secretName: {{ .configSource.secretName }}
             defaultMode: 0400
+            # Secret 仅作为运维打包对象；每个 Pod 只投射自己的含 token selector。
+            items:
+              - key: {{ .serviceName }}.yaml
+                path: {{ .serviceName }}.yaml
         {{- end }}
       {{- end }}
 {{- end }}

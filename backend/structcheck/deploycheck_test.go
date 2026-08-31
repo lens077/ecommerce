@@ -12,6 +12,7 @@ package structcheck
 import (
 	"archive/tar"
 	"bufio"
+	"bytes"
 	"compress/gzip"
 	"fmt"
 	"io"
@@ -63,8 +64,9 @@ type coverageMatrix struct {
 	Services           map[string]yaml.Node `yaml:"services"`
 	DeploymentCoverage deploymentCoverage   `yaml:"deployment_coverage"`
 	Conventions        struct {
-		ConfigSourceSecret string                             `yaml:"config_source_secret"`
-		PodTopologySpread  deploymentTopologySpreadConvention `yaml:"pod_topology_spread"`
+		ConfigSourceSecret     string                             `yaml:"config_source_secret"`
+		ConfigSourceProjection string                             `yaml:"config_source_projection"`
+		PodTopologySpread      deploymentTopologySpreadConvention `yaml:"pod_topology_spread"`
 	} `yaml:"conventions"`
 }
 
@@ -84,6 +86,10 @@ type deploymentVolume struct {
 	Secret struct {
 		SecretName  string `yaml:"secretName"`
 		DefaultMode int    `yaml:"defaultMode"`
+		Items       []struct {
+			Key  string `yaml:"key"`
+			Path string `yaml:"path"`
+		} `yaml:"items"`
 	} `yaml:"secret"`
 }
 
@@ -418,7 +424,8 @@ func TestDeploymentsUseConfigCenterSelector(t *testing.T) {
 				assertSelectorEnv(t, path, container.Env, service)
 				assertSelectorSecurityContext(t, path, podSpec.SecurityContext)
 				assertSelectorMount(t, path, container.VolumeMounts, deployment.Spec.Template.Spec.Volumes,
-					strings.ReplaceAll(m.Conventions.ConfigSourceSecret, "{env}", environment))
+					strings.ReplaceAll(m.Conventions.ConfigSourceSecret, "{env}", environment),
+					strings.ReplaceAll(m.Conventions.ConfigSourceProjection, "{service}", service))
 			})
 		}
 	}
@@ -601,6 +608,11 @@ func TestWorkloadIdentityBaseline(t *testing.T) {
 
 func TestHelmLibraryArchivesUseEcommerceNodeSpread(t *testing.T) {
 	m := loadCoverageMatrix(t)
+	sourcePath := "../../helm/library/templates/_deployment.tpl"
+	source, err := os.ReadFile(sourcePath)
+	if err != nil {
+		t.Fatalf("read %s: %v", sourcePath, err)
+	}
 	services := make([]string, 0, len(m.Services))
 	for service := range m.Services {
 		services = append(services, service)
@@ -612,6 +624,9 @@ func TestHelmLibraryArchivesUseEcommerceNodeSpread(t *testing.T) {
 	for _, service := range services {
 		path := filepath.Join("../../helm/charts", service, "charts/library-0.1.0.tgz")
 		template := readTarGzEntry(t, path, entry)
+		if !bytes.Equal(template, source) {
+			t.Errorf("%s %s differs from %s; rebuild the vendored dependency", path, entry, sourcePath)
+		}
 		for _, required := range []string{
 			fmt.Sprintf("%s: %s", spread.LabelKey, spread.LabelValue),
 			"topologySpreadConstraints:",
@@ -620,6 +635,9 @@ func TestHelmLibraryArchivesUseEcommerceNodeSpread(t *testing.T) {
 			fmt.Sprintf("whenUnsatisfiable: %s", spread.WhenUnsatisfiable),
 			fmt.Sprintf("nodeAffinityPolicy: %s", spread.NodeAffinityPolicy),
 			fmt.Sprintf("nodeTaintsPolicy: %s", spread.NodeTaintsPolicy),
+			"items:",
+			"- key: {{ .serviceName }}.yaml",
+			"path: {{ .serviceName }}.yaml",
 		} {
 			if !strings.Contains(string(template), required) {
 				t.Errorf("%s %s missing %q", path, entry, required)
@@ -777,6 +795,7 @@ func assertSelectorMount(
 	mounts []deploymentVolumeMount,
 	volumes []deploymentVolume,
 	wantSecret string,
+	wantProjection string,
 ) {
 	t.Helper()
 	var foundMount bool
@@ -798,6 +817,11 @@ func assertSelectorMount(
 			foundVolume = true
 			if volume.Secret.SecretName != wantSecret || volume.Secret.DefaultMode != 0o400 {
 				t.Errorf("%s has invalid config-source Secret volume: %+v", source, volume.Secret)
+			}
+			if len(volume.Secret.Items) != 1 || volume.Secret.Items[0].Key != wantProjection ||
+				volume.Secret.Items[0].Path != wantProjection {
+				t.Errorf("%s must project only %q from config-source Secret: %+v",
+					source, wantProjection, volume.Secret.Items)
 			}
 		}
 	}

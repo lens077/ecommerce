@@ -31,6 +31,8 @@ conventions:
   # Config Center 是 10 个业务服务唯一的 Bootstrap 来源。
   config_center_key: "{service}/{env}/bootstrap.yaml"
   config_source_secret: "ecommerce-config-source-{env}"
+  # Secret 是运维打包对象；每个 Pod 只能通过 secret.items 投射自己的 selector。
+  config_source_projection: "{service}.yaml"
   consul_addr_local: "192.168.3.120:8500" # 见 context/team/local-env.md
   common_config_blocks: [server, data, observability, discovery, log]
   # 10 个单副本 API 必须跨服务共同计数；每个服务只看自己的 app 标签没有均衡作用。
