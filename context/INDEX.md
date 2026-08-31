@@ -41,6 +41,7 @@ context/
 | [delivery-efficiency.md](harness-framework/delivery-efficiency.md) | AI Coding 交付效率治理：可信状态、P50/P85 与长尾、日报证据和人机责任边界 |
 | [e3-execution.md](harness-framework/e3-execution.md) | E3 执行策略：动手前估计任务规模，走最小路径，验证失败才扩张；含护栏 hook 的验证方法 |
 | [subagent-dispatch.md](harness-framework/subagent-dispatch.md) | 子代理派发三条硬约定：只回结构化摘要、按角色裁剪能力、按角色分层模型 |
+| [multi-agent-concurrency.md](harness-framework/multi-agent-concurrency.md) | 多 Agent 并发改同一批文件时的四条纪律：状态用文件同步、引用要点名、置信度会凭空升高、宣布完成不终止复核 |
 | [cordis-evaluation.md](harness-framework/cordis-evaluation.md) | 已评估「底层改 Cordis 插件框架」：暂不采用的理由与重新评估条件 |
 | [flywheel-audit.md](harness-framework/flywheel-audit.md) | 对照《Agent 自进化飞轮》的评测结论 + 方向性审计约定；门禁元评测 canary 的由来 |
 | [portable-harness.md](harness-framework/portable-harness.md) | 跨项目共用能力清单与采纳步骤；lens077 根 symlink 登记处 |
