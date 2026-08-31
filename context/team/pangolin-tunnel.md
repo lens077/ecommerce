@@ -71,8 +71,6 @@ description: 公网暴露基础设施(Pangolin)的拓扑事实、面板 API 操�
   两条 HTTPRoute 都追加了 `.apikv.com` hostname(原先只有 `.app.com`)。
   实测:`config.apikv.com` 200 / `config-api.apikv.com` 401(自带鉴权)
 - 另一台公网机 node2(ssh 别名 **node2**,端口 34124,**阿里云**;与集群节点无关)跑 harbor/img/minio/gorse。**2026-08-19 已接入 Pangolin**(站点 `node2`, siteId 5),见下面「node2 站点」一节;`auth.apikv.com` 解析已指 node1(未建资源);casdoor 已由 `casdoor.apikv.com` 暴露(2026-08-13)
-- ⚠️ **阿里云 ICP 拦截(2026-08-19 实付学费;本条是该结论的唯一出处,
-  [tls-enablement.md](tls-enablement.md) 指回这里)**:`apikv.com` **未在阿里云备案**,任何经该域名访问 node2 的请求都被阿里云在网络层拦截——HTTP 返 403(`Server: Beaver`,body 是 `<title>Non-compliance ICP Filing</title>` + 跳 `aliyun.com/beian/beian-block`),HTTPS 在 SNI 后直接 reset。`harbor`/`img` 这两个早就存在的子域同样被拦。**所以给这台机的服务"配域名+证书直连"是死路,唯一解是走隧道让公网流量落到 node1(腾讯云,不拦)**。判别方法:纯 IP 访问通、带 Host/SNI 的域名访问 403/reset,就是它
 
 ## 面板与站点/资源现状
 
@@ -121,7 +119,7 @@ description: 公网暴露基础设施(Pangolin)的拓扑事实、面板 API 操�
   靠 Traefik 的 `insecureSkipVerify` 兼容证书域名不匹配)/ `gorse.apikv.com`(rid 17, **SSO off**,
   target `127.0.0.1:8088` http,改由 gorse 自带鉴权)/ `harbor.apikv.com`(rid 18, **SSO off**——
   `docker login` 过不了 SSO, target `127.0.0.1:49600` **https**;harbor 的 http 端口会 308 跳
-  `https://<hostname>:<https_port>`,用 http target 会把浏览器导回那个被 ICP 拦的地址)
+  `https://<hostname>:<https_port>`,用 http target 会把浏览器导出隧道、直接打到 node2 的公网地址)
 - **harbor 换证书要放两处**:`harbor.yml` 里 `certificate:` 指的路径(`prepare` 从这里取)与
   `data/secret/cert/server.{crt,key}`(实际生效的副本,属主 `10000:10000`)。只改前者不重跑 prepare 不生效,
   只改后者下次 prepare 会被覆盖回去。同理改端口要**同时**改 `harbor.yml` 和 `docker-compose.yml`

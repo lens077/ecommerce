@@ -19,9 +19,12 @@ description: 给「已经在跑」的服务补 TLS 时的固定检查清单—�
 ⚠️ 拦截系统对新解析的子域有识别延迟，**短窗口内的一次成功不能当验收通过**
 （MinIO 那次 `--resolve` 一度返回 200，几十分钟后同一条命令返回 000）。
 
-> 完整证据表、阿里云 `Server: Beaver` 特征与唯一解（走隧道落到未拦截的机器）
-> **只写在 [pangolin-tunnel.md](pangolin-tunnel.md)** —— 那里是这条结论的 owner，
-> 本节不再复制，避免两份漂移。
+> **阿里云的拦截特征**：HTTP 返 403（`Server: Beaver`，body 含
+> `<title>Non-compliance ICP Filing</title>` 并跳 `aliyun.com/beian/beian-block`），
+> HTTPS 在 SNI 后直接 reset。解法是走隧道，让公网流量落到未被拦截的机器再回源
+> （本仓 node2 走 node1 Pangolin 的隧道拓扑见 [pangolin-tunnel.md](pangolin-tunnel.md)）。
+>
+> 本节是**通用检查项**，不针对任何具体域名的备案状态——上 TLS 前照着判别法测一次即可。
 
 ## 1. 健康检查会静默失效（最容易漏）
 

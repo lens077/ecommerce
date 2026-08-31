@@ -69,5 +69,4 @@ Gateway API v1.6 的 TCPRoute 与 TLSRoute v1 CRD 均已安装。Dragonfly 使�
    创建并等待路由就绪。Kafka 9093 等其他原生 TLS 组件仍可按同一模式接入。
 4. **公网明文最优先**：casdoor（OAuth code/token）仍走公网 http，风险级别高于所有集群内明文。
    node2（node2）的 minio 与 gorse 已于 2026-08-19 全部收敛：改走 node1 的 Pangolin
-   隧道，本机端口全绑回环。**注意该机不能自行配域名证书**——`apikv.com` 未在阿里云备案，
-   域名直连必被 ICP 拦截（`Server: Beaver`），这是走隧道而非就地上 TLS 的根本原因。
+   隧道，本机端口全绑回环。
