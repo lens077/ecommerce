@@ -36,6 +36,8 @@ build_template() { # build_template <dir>
   cp AGENTS.md TODO.md README.md STACK.md "$sb/"
   cp -R context "$sb/context"
   cp -R docs/design "$sb/docs/design"   # 2026-08-26 门禁扩围至设计文档,沙箱同步
+  cp -R docs/progress-archive "$sb/docs/progress-archive"  # 2026-08-31 死链门禁扩围至档案/报告,
+  cp -R docs/reports "$sb/docs/reports"                    # 沙箱同步(否则 pristine 假绿)
   cp scripts/verify-context.sh "$sb/scripts/"
   [ -f scripts/context-format-baseline.txt ] && cp scripts/context-format-baseline.txt "$sb/scripts/"
   # [PROGRESS-SRC] 的基线与它登记的文件必须同时进沙箱,否则 pristine-green 会假红,
@@ -64,7 +66,7 @@ build_template() { # build_template <dir>
         : > "$stub"
       fi   # 真身里也不存在的目标不补桩——让沙箱里的门禁如实报 DEAD-LINK
     done < <(_strip_fences "$file" | grep -oE '\]\([^)]+\)' | sed 's/^](//; s/)$//' || true)
-  done < <(find AGENTS.md README.md STACK.md context docs/design -name "*.md" -type f)
+  done < <(find AGENTS.md README.md STACK.md context docs/design docs/progress-archive docs/reports -name "*.md" -type f)
 }
 
 # 跑一个探针：克隆模板成新沙箱,执行注错函数,断言门禁退出码与违规 tag
@@ -98,6 +100,14 @@ mut_dead_link_ignored() { # 目标存在但被 gitignore ——CI 真实抓到�
 }
 mut_dead_link_design() { # 设计文档死链——2026-08-26 门禁扩围后的新红探针
   printf '\n[canary 设计死链](no-such-design.md)\n' >> "$1/docs/design/README.md"
+}
+mut_dead_link_archive() { # 档案死链——2026-08-31 扩围探针(复审抓到删目录后档案引用无声断裂)
+  printf '# canary\n\n[canary 档案死链](no-such-archive-target.md)\n' \
+    > "$1/docs/progress-archive/tmp-canary-archive.md"
+}
+mut_dead_link_reports() { # 报告死链——与档案同类的带日期证据,一并纳入扫描
+  printf '# canary\n\n[canary 报告死链](no-such-report-target.md)\n' \
+    > "$1/docs/reports/tmp-canary-report.md"
 }
 mut_orphan() { # 合规 frontmatter 但没登记进层 INDEX
   cat > "$1/context/team/tmp-canary-orphan.md" <<'EOF'
@@ -206,6 +216,8 @@ probe pristine-green      0 ""            ""
 probe dead-link           1 "DEAD-LINK"   mut_dead_link
 probe dead-link-ignored   1 "DEAD-LINK"   mut_dead_link_ignored
 probe dead-link-design    1 "DEAD-LINK"   mut_dead_link_design
+probe dead-link-archive   1 "DEAD-LINK"   mut_dead_link_archive
+probe dead-link-reports   1 "DEAD-LINK"   mut_dead_link_reports
 probe orphan              1 "ORPHAN"      mut_orphan
 probe frontmatter         1 "FRONTMATTER" mut_frontmatter
 probe format              1 "FORMAT"      mut_format
@@ -229,4 +241,4 @@ if [ "$fails" -gt 0 ]; then
   echo "verify-context-canary: $fails 个探针失败——门禁可能已静默失效,先修门禁再改内容"
   exit 1
 fi
-echo "verify-context-canary: OK（19 探针全过:干净沙箱绿 + 十五类注错被拦且 tag 正确 + 四道假阳性守卫）"
+echo "verify-context-canary: OK（21 探针全过:干净沙箱绿 + 十七类注错被拦且 tag 正确 + 四道假阳性守卫）"
