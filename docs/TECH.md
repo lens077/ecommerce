@@ -44,6 +44,7 @@
 | 持续性能分析 | Pyroscope / Parca | 待触发（2026-08-28 调研收口） | 先用 Go 原生 `pprof`/trace/基准测试 + PGO，不常驻任何分析平台。触发（至少两项）：30 天内 ≥2 次靠指标/trace/一次性 pprof 定位不了的性能故障；需要跨版本连续对比 profile；CPU 常态 >60% 可分配容量。触发后**优先 Pyroscope Go SDK push**（v2.3.0，与现有 Grafana 契合；预算 250–500m / 512Mi–1Gi + 10–20Gi 存储，SDK 端约 <1% CPU 须实测）；**Parca 暂不选**——官方 issue 明确其新 eBPF profiler 对 arm64 支持尚不完整，且 Grafana 的 Parca datasource 已弃用（2027-01 结束支持）。注意 eBPF 全局采集不替代 Go heap/mutex/goroutine profile。证据：[技术调研](reports/2026-08-28-tech-research.md) §8 |
 | 服务网格 | Cilium Service Mesh | 暂不引入（2026-08-28 调研收口） | 维持 Cilium CNI + NetworkPolicy + Gateway API 覆盖。理由：Mutual Authentication 在 1.20.1 仍是 Beta 且官方自述安全模型不完整；官方也没有可直接套用于 3 节点 arm64 小集群的每节点 Envoy 内存基准（旧版大规模 agent 测试数据不可外推）。将来确需 workload mTLS + L7 授权时，评估对象是 Istio Ambient 而非本项。证据：[技术调研](reports/2026-08-28-tech-research.md) §6 |
 | 前端错误监控 | Bugsink（现役 2.5.x，node3） | 已确定（2026-08-28 复核维持） | 兼容 Sentry SDK 错误事件；单容器 + PostgreSQL 已稳定运行并接通 ntfy 告警。GlitchTip 改为条件采纳：出现 transaction/span 聚合、错误频率告警或统一 uptime/logs 需求时再评估迁移。接入手册与容量证据见 §11.3 |
+| 可观测一体化平台 | SigNoz | 观察项（2026-08-31 调研收口，未采纳） | 定位=OTel 原生一体机：trace/metric/log/异常/告警/看板收进单应用 + 单 ClickHouse 存储；GitLab O11y（Experiment）即其 fork。属于对现行「Victoria 家族 + Grafana + vmalert 组装栈」（§9）的**整体替换**候选，不是增补组件。当前不换：组装栈已调顺（三盘口径修正、告警链实测、PII 脱敏与 OTLP 鉴权均已沉淀），且一体机常驻 ClickHouse 的内存底座（其 fork 官方建议 8–16GiB）在 node3（总内存 7.25GiB，与 PG/观测数据面同机）放不下。作用场景、逐项栈比对、切换成本与触发重估条件见 [SigNoz 评估](reports/2026-08-31-signoz-evaluation.md) |
 
 ---
 
@@ -581,6 +582,15 @@ VPA 只以 recommendation 模式进入容量流程：当前组件只安装 recom
 
 VPA recommendation-only 的发布证据、经验、回滚与下一步操作见 [`docs/reports/2026-08-29-vpa-recommendation-only.md`](reports/2026-08-29-vpa-recommendation-only.md)；Descheduler 的替代方案与重评条件见 [`docs/reports/2026-08-29-descheduler-decision.md`](reports/2026-08-29-descheduler-decision.md)；容量校准、故障注入与持续告警清单见 [`docs/design/platform/capacity-balancing.md`](design/platform/capacity-balancing.md)。
 
+### 7.4 静态站点交付（文档站 / 落地页）
+
+面向文档站、落地页这类纯静态产物，除自建 Nginx + 反向代理外，GitHub Pages
+是零运维的备选通道，且对公开仓库不消耗 Actions 额度，适合做镜像入口。
+
+全流程命令行配置（`gh api` 启用 + Actions 部署工作流）、子路径 base 前缀这一
+最常见的翻车点、以及 action 版本与 Node 运行时的核对方法，见
+[`docs/reports/2026-08-31-github-pages-with-gh.md`](reports/2026-08-31-github-pages-with-gh.md)。
+
 ## 8. 零信任鉴权与统一 Session 架构
 
 ### 8.1 架构概览
@@ -751,6 +761,10 @@ cfg.GetServiceAddr("inventory-service") // 从 K8s DNS 解析
 
 **维持 Bugsink**（2026-08-28 复核，推翻此前 GlitchTip 替换定稿）：兼容 Sentry SDK 的错误事件（官方明确不处理 traces/metrics，推荐 `traces_sample_rate=0`），单容器 + PostgreSQL 部署在非 K8s 基础设施节点（node3），New Issue 告警已接通认证 ntfy。复核依据：GlitchTip「兼容 Sentry SDK、比 Sentry 轻」两条理由对 Bugsink 同样成立，且无基准证明 GlitchTip 更省内存；链路追踪已由 OTel + VictoriaTraces 承担，与 Bugsink 职责边界清晰。GlitchTip 转为条件采纳：确需 Sentry SDK 的 transaction/span 端点聚合、错误频率阈值告警或统一 uptime/logs 入口时再评估。**接入手册**（改动清单/验收门禁/回退）见 [`docs/observability/error-monitoring.md`](observability/error-monitoring.md)；**容量证据与调研结论**（node3 实测 55 MiB/0.02% CPU、官方 2 GiB/10 worker≈150 万事件/日容量参考、三阶段接入）见 [`docs/reports/2026-08-28-bugsink-integration-research.md`](reports/2026-08-28-bugsink-integration-research.md)。
 
+### 11.4 无障碍性（a11y）
+
+目标标准 **WCAG 2.2 AA**（国内合规锚点 GB/T 37668-2019 与工信部适老化及无障碍改造要求）。路线：组件层依托 MUI 内置的无障碍实现，业务侧职责是不破坏它（图标按钮 `aria-label` 走 i18n、装饰图 `aria-hidden`、不用裸 `div` 造可点元素）；静态检查开 oxlint 的 jsx-a11y 规则集（vp lint 承载，随 `vp check --fix` 进 pre-commit）；自动化验证走 vitest browser mode 的 axe 断言 + Lighthouse 审计基线分。SPA 特有风险点是 TanStack Router 换页后的焦点管理。自动化只能覆盖约三分之一到一半的问题，键盘走查与 VoiceOver 读屏实测不可省、但只盯关键旅程。实施原则、工具接入点、分层验证与带红测验收的落地顺序见接入手册 [`docs/frontend/accessibility.md`](frontend/accessibility.md)。
+
 
 ## 12. 实施路线图
 
@@ -794,7 +808,7 @@ Tetragon 运行时安全 enforcement（audit-only 已落地，enforcement 待独
 - **单一身份真相**：严格遵循 Casdoor 有状态 Session 模型，绝不允许同时维护 JWT 兼容逻辑或双重鉴权代码路径。
 - **严禁虚拟容量**：严禁在未经压测基线 (k6) 验证和恢复演练的前提下声称平台支持千万级容量。
 - **禁止复制粘贴**：配置、日志、OTel 初始化代码必须提取共享库，禁止复制到多个服务。
-- **禁止将 ArgoCD 作为摆设**：GitOps 断线等于没有部署真相源。
+- **禁止将 ArgoCD 作为摆设**：GitOps 断线等于没有部署真相源。断线的完整复盘（六层堆栈落位、断因链、重接前置）见 [GitOps 演变全景](reports/2026-08-31-gitops-evolution-overview.md)。
 
 # 架构文档规范出处对照表
 
