@@ -276,6 +276,7 @@ CES 巡检告警（CronJob 2m + vmalert firing 闭环）、可观测黑盒探活
 | [前端](docs/todo/前端技术栈与工程化.md)：Bugsink SDK + Source Map | 零（`frontend/`） | 服务端早就绪 |
 | [可观测](docs/todo/统一可观测性体系.md) P1 散件：dead-man、VM import 认证等 | 低（网关 5xx/采样归 control-tower 线） | |
 | [文档协作](docs/todo/文档与协作机制.md) / [服务发现](docs/todo/服务发现与配置中心.md) / TLS P2 | 零 | 无 P0，见缝插针 |
+| QQ 机器人接入（新增服务 `qqbot`） | 零（新服务，不动存量） | **仅立项，未排期**：[`.scratch/qqbot-integration/spec.md`](.scratch/qqbot-integration/spec.md) + 8 张单，全部 `needs-triage`/待人工。开工前需维护者裁决 5 项（出口 IP、备案主体、认证类型、提审归属、helm 门禁取舍），其中集群固定公网出口 IP **决定可行性**。P1 只读查询硬依赖全局 P0 #3/#4 修复 |
 
 > 阶段 2/3/4 **不建议提前抢跑**——地基是阶段 1；事件 outbox 底座（P0#15/16）已排在阶段 1 内。
 
