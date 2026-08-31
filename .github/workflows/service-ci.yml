@@ -248,11 +248,17 @@ jobs:
 
       - name: Upload Trivy SARIF
         # 扫描失败时也要上报 —— 否则最需要看结果的那次反而拿不到报告。
+        # CI 只由 tag 触发，但 GitHub 对 refs/tags/* 只保存 analysis，不创建可见 alert：
+        # 1.6.2 的 10 份 analysis 均 results_count=8，alerts API 却三种状态全空。
+        # 同一份最小 SARIF 实测：tag ref → 0 alert；main ref → 立即生成 alert。
+        # 发布 tag 按纪律只能指向 main 上的提交，因此把结果归到 main 是真实且可追溯的。
         if: always() && inputs.push-image && inputs.version != ''
         uses: github/codeql-action/upload-sarif@6f5948dfacef28e207b48d0905cf90c03365536d # v3
         with:
           sarif_file: trivy-results.sarif
           category: trivy-image-${{ inputs.service }}
+          ref: refs/heads/main
+          sha: ${{ github.sha }}
 
       - name: Keyless sign index and attest platform SBOMs
         if: inputs.push-image && inputs.version != ''
