@@ -6,10 +6,13 @@
 # 能判定的约束变成脚本,存量漂移走基线棘轮(见 scripts/lint-baseline.sh 的设计)。
 #
 # 九项检查(任一违规 → 退出码 1):
-#   [DEAD-LINK]    AGENTS.md/README.md/STACK.md 与 context/**、docs/design/** 的
-#                  相对 markdown 链接必须可达(2026-08-26 扩:原只查 AGENTS+context,
-#                  当日 README/STACK/docs/design 三处死链全靠临时脚本抓到——
-#                  宪法原则 I「引用不存在的文档即 CI 失败」由此机械化;
+#   [DEAD-LINK]    AGENTS.md/README.md/STACK.md 与 context/**、docs/design/**、
+#                  docs/progress-archive/**、docs/reports/** 的相对 markdown 链接必须可达
+#                  (2026-08-26 扩:原只查 AGENTS+context,当日 README/STACK/docs/design
+#                  三处死链全靠临时脚本抓到——宪法原则 I「引用不存在的文档即 CI 失败」
+#                  由此机械化。2026-08-31 再扩档案与报告:选型对抗目录删除后档案两处引用
+#                  无声断裂,复审判为盲区,用户裁决纳入;档案引用**被删**文件时改写为
+#                  tag/commit 历史指向,如 `git show '1.6.3:路径'`,不留裸死链。
 #                  跳过代码块、http(s)/mailto、纯锚点;带 #fragment 的只查文件部分)
 #   [ORPHAN]      context/ 下每个非 INDEX 文件必须被所属层的 INDEX.md 链接;
 #                  模块 INDEX 必须被 project/ecommerce/INDEX.md 链接
@@ -23,7 +26,7 @@
 #                  TODO.md ≤ 96000 字节 —— 每个提交回合都要读它,
 #                  超限把证据长文/会话记录按日期归档进 docs/progress-archive/
 #   [PROGRESS-SRC] 复选框(`- [ ]`/`- [x]`)只允许长在 TODO 体系与不可变归档里
-#                  (TODO.md / docs/todo/ / progress-archive/ / reports/ / 选型对抗/ /
+#                  (TODO.md / docs/todo/ / progress-archive/ / reports/ /
 #                   .scratch/ / 围栏代码块内);别处出现即第二套进度视图,
 #                  与 TODO.md 必然漂移。2026-08-29 立此门禁,见 evolution-log 同日条目
 #
@@ -93,7 +96,7 @@ while IFS= read -r file; do
       fail "DEAD-LINK" "$file → $target(目标被 gitignore,不在提交树里)"
     fi
   done < <(_strip_fences "$file" | grep -oE '\]\([^)]+\)' | sed 's/^](//; s/)$//' || true)
-done < <(find AGENTS.md README.md STACK.md context docs/design -name "*.md" -type f)
+done < <(find AGENTS.md README.md STACK.md context docs/design docs/progress-archive docs/reports -name "*.md" -type f)
 
 # ── 2. INDEX 覆盖性(孤儿检测)────────────────────────────────
 # 层入口: context/INDEX.md 必须链接三个层 INDEX
@@ -227,7 +230,6 @@ fi
 #   TODO.md / docs/todo/**            —— 进度真相源本体与其分类明细
 #   docs/progress-archive/**          —— 不可变历史,顶部自带失效声明
 #   docs/reports/**                   —— 带日期的一次性证据
-#   docs/技术栈选型对抗/**            —— 带日期的评审存档
 #   .scratch/**                       —— issue/spec 工作区(docs/agents/issue-tracker.md)
 #   围栏代码块内                       —— 给新项目用的模板占位符(SCAFFOLD.md 就是这种)
 progress_baseline="scripts/context-progress-baseline.txt"
@@ -255,7 +257,7 @@ count_checkboxes() {
 progress_allowed() { # 该路径是否豁免
   case "$1" in
     TODO.md|docs/todo/*|docs/progress-archive/*|docs/reports/*) return 0 ;;
-    docs/技术栈选型对抗/*|.scratch/*|.impeccable/*|*/.impeccable/*) return 0 ;;
+    .scratch/*|.impeccable/*|*/.impeccable/*) return 0 ;;
     */node_modules/*) return 0 ;;
   esac
   return 1
@@ -373,7 +375,7 @@ while IFS= read -r file; do
 #      live-facts.md 自身(它是**定义这条规则**的文档,必须引用 5/6/6、4/4 Running
 #      这些模式做示例——与 verify-context-canary.sh 故意内含坏样本同理)。
 done < <(find AGENTS.md README.md STACK.md TODO.md context docs -name "*.md" -type f \
-         | grep -vE 'docs/(progress-archive|reports|技术栈选型对抗)/|evolution-log\.md|TECH-RADAR\.md|/experience/|context/team/live-facts\.md') \
+         | grep -vE 'docs/(progress-archive|reports)/|evolution-log\.md|TECH-RADAR\.md|/experience/|context/team/live-facts\.md') \
 | while IFS='|' read -r loc kind; do
   fail "LIVE-FACT" "${loc} 的${kind}是某一刻的观测值却无实测日期——写法见 context/team/live-facts.md"
 done

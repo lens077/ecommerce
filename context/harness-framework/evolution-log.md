@@ -182,7 +182,7 @@ description: harness 本身（硬规则/门禁/Agent 约束）每次改动的原
 
 - **改了什么**：`scripts/verify-context.sh` 从六项检查扩到七项，新增 `[PROGRESS-SRC]`：
   统计每份 `.md` 里**围栏外**的 `- [ ]`/`- [x]`，只放行 `TODO.md`、`docs/todo/**`、
-  `docs/progress-archive/**`、`docs/reports/**`、`docs/技术栈选型对抗/**`、`.scratch/**`
+  `docs/progress-archive/**`、`docs/reports/**`、`.scratch/**`
   与围栏代码块内。存量按**计数**冻结在新基线 `scripts/context-progress-baseline.txt`
   （`docs/SCAFFOLD.md 34` / `docs/DEVOPS.md 21` / `capacity-balancing.md 12`），
   只许减不许增；降了要改数字、清零要删行。canary 同步加 4 个探针。
@@ -812,6 +812,21 @@ description: harness 本身（硬规则/门禁/Agent 约束）每次改动的原
 - **怎么验证的**：本地运行 `scripts/verify-context-canary.sh`，干净沙箱保持绿色，十类注错均被
   对应 tag 拦截；随后运行 `scripts/verify-context.sh` 复核真实仓库仍为绿色。
 
+### 2026-08-30 Trivy SARIF 从发布 tag 归档到 main ref
+
+- **改了什么**：`service-ci.yml` 的 `upload-sarif` 显式使用 `ref: refs/heads/main` 与
+  `sha: ${{ github.sha }}`；新增 structcheck，防止后续删掉这两个输入。签名前 Trivy 镜像
+  扫描的 TODO 状态同步改为已完成。选型对抗过程目录删除后，`verify-context.sh` 移除对该
+  路径的历史豁免，现行索引和引用改指仍存在的真相源。
+- **为什么**：GitHub 对 tag ref 接受并保存 SARIF analysis，但不在 Code Scanning alerts
+  中生成可见告警。发布 tag 按仓库纪律指向 main 上的提交，把同一 SHA 的结果归到 main
+  才能同时保留扫描阻断与告警可见性。
+- **触发事故**：`1.6.2` 的 10 份 Trivy analysis 均上传成功且各有 8 个结果，但 alerts API
+  在 open、fixed、dismissed 三种状态下全部为空；此前因此误判为 SARIF 未上传。
+- **怎么验证的**：同一份最小 SARIF 上传到 `refs/tags/1.6.3` 时 analysis 有 1 个结果但
+  alerts 为 0；上传到 `refs/heads/main` 后立即生成 open alert，再上传零结果后转为 fixed。
+  临时 probe 不留 open 告警。`go test -count=1 ./structcheck/...` 通过。
+
 ### 2026-08-30 看板(kaneo)整体下线，TODO.md 恢复为唯一进度载体
 
 - **改了什么**：①删除 `.claude/skills/kaneo-sync/`、`.claude/kaneo-mcp.json` 与
@@ -831,4 +846,44 @@ description: harness 本身（硬规则/门禁/Agent 约束）每次改动的原
   SQLite 级联删除后复查 `resources`/`targets`/`roleResources`/`resourceSessions` 四表
   对 rid 5 均为 0 行（改库前已 `cp` 全量备份 `db.sqlite.bak-kaneo-removal-20260830-181029`）；
   `docker ps -a`、`docker volume ls`、`docker images` 均无 kaneo 残留，宿主 5173 端口已释放；
-  仓库侧 `scripts/verify-context.sh` 全绿，全仓 `kaneo` 关键字归零。
+  仓库侧 `scripts/verify-context.sh` 全绿；**现行接线与运行资产归零**〔2026-08-31 修正：
+  原文写「全仓 `kaneo` 关键字归零」，字面不成立——`.claude/settings.local.json` 权限清单、
+  `context/team/pangolin-tunnel.md` 历史叙述、带日期的报告与 `.scratch/` 历史规划里仍有
+  该关键字，均为历史记录而非接线残留。验证结论只应主张验证过的范围〕。
+
+### 2026-08-30 `make api` 限定公开契约并固定 TS 插件入口
+
+- **改了什么**：根 `Makefile` 的两个 Buf 生成命令都增加 `--path api`；TypeScript 生成器
+  从 frontend 根 workspace 的 `node_modules/.bin` 解析，并在缺少依赖时给出明确安装提示。
+  frontend 根包固定 `@bufbuild/protoc-gen-es`；新增 structcheck，约束路径范围与插件入口。
+- **为什么**：`backend/buf.yaml` 的模块根是整个 `backend/`。不限定输入时，Buf 会把 10 份
+  同包名的服务 `conf.proto` 和五组遗留 `third_party` 副本装进同一 image，产生重复符号；
+  即使加了路径，TS 生成仍依赖未声明的全局 `protoc-gen-es`，新环境继续失败。
+- **触发事故**：根目录运行 `make api` 以 rc=2 失败，首个错误是 address `Bootstrap`
+  重复定义，随后出现大量 Google/validate 重复符号；收窄到 `--path api` 后 Go 生成成功，
+  TS 又报 `protoc-gen-es: executable file not found in $PATH`。服务 Makefile 早已限定 `api`，
+  只有根目标漏掉该边界。
+- **怎么验证的**：修复后根目录 `make api` 两段均返回 0；重复执行不再产生生成物差异；
+  `buf breaking --path api`、`go test -count=1 ./structcheck/...` 与 `scripts/verify-context.sh`
+  均通过。
+
+### 2026-08-31 死链门禁扩围至不可变档案（progress-archive/reports）
+
+- **改了什么**：`verify-context.sh` 的 [DEAD-LINK] 扫描集从 AGENTS/README/STACK/context/
+  docs/design 扩到 `docs/progress-archive/**` 与 `docs/reports/**`；修复扩围前实测到的
+  3 处存量死链（全部是「按仓库根写相对路径」的笔误，目标文件都健在）；canary 沙箱同步
+  复制两目录并新增 `dead-link-archive`/`dead-link-reports` 两个红探针（19→21）。
+  修法纪律同步写进脚本头注：档案引用**被删**文件时改写为 tag/commit 历史指向
+  （如 `git show '1.6.3:路径'`），不留裸死链。
+- **为什么**：档案的职责是保存证据，删除动作把档案链接无声打断等于证据链断裂。
+  「纳入会常态红」的担忧被实测证伪——存量死链仅 3 处且全为路径笔误，直接修光即可，
+  不需要基线棘轮；reports/ 与档案同类（带日期的一次性证据）且实测 0 死链，
+  纳入是零成本关掉同类盲区。
+- **触发事故**：2026-08-31 复审（6c9801f...HEAD + 工作区）发现选型对抗目录删除后
+  `docs/progress-archive/2026-08-21-todo-evidence.md` 两处引用无声断裂，而 [DEAD-LINK]
+  扫描集不含档案，门禁全绿——盲区让「不可变档案保存证据」的职责被静默破坏；
+  用户裁决纳入扫描。
+- **怎么验证的**：扩围前用与门禁同口径的一次性脚本实测：progress-archive 3 处死链、
+  reports 0 处；修复 3 处后 `scripts/verify-context.sh` 全绿；
+  `scripts/verify-context-canary.sh` 21 探针全过，两个新探针在沙箱档案/报告里注入死链
+  均被 [DEAD-LINK] 拦截且 tag 正确。
