@@ -22,8 +22,8 @@
 
 ## 一、全局优先级视图
 
-**未完成合计 157 项，其中 P0 共 21 项**（计数口径：各分类文件顶层 `- [ ]` 复选框实数；
-2026-08-30 全量重数，此前的 151 是 DevOps 条目迁入后未同步的漂移）。P0 的判据是**后果**不是紧迫感：
+**未完成合计 158 项，其中 P0 共 18 项**（计数口径：各分类文件顶层 `- [ ]` 复选框实数；
+2026-08-31 更新：关闭 3 条 P0 与 1 条当日回归，新增 4 条本轮实测发现）。P0 的判据是**后果**不是紧迫感：
 「调用会成功但结果是错的」「任何登录用户都能越权」一律 P0——它们不会在联调时暴露，
 只在上量后以超卖、丢单、数据泄露的形式爆发。
 
@@ -45,21 +45,21 @@
 | 12 | 移除 legacy bearer JWT 轨（与 §13 红线直接冲突，需定退役期限） | [鉴权](docs/todo/零信任鉴权与Session.md) |
 | 13 | PII 脱敏形同虚设（Lua 不支持 `{n}` 量词，等于空操作） | [可观测](docs/todo/统一可观测性体系.md) |
 | 14 | 免鉴权入口身份可伪造（`x-md-global-user-id` 未剥离） | [可观测](docs/todo/统一可观测性体系.md) |
-| 15 | 可观测栈自身无独立存活证明（故障时先挂） | [可观测](docs/todo/统一可观测性体系.md) |
-| 16 | 一致性底座：Product/Order 事务内 producer、NACK/DLQ、重放审计 | [事件](docs/todo/数据一致性与事件驱动.md) |
-| 17 | 领域事件落地（`OrderCreated`/`OrderPaid`/…） | [事件](docs/todo/数据一致性与事件驱动.md) |
-| 18 | `KCM_TERMINATED_POD_GC_THRESHOLD=100` 阈值缺陷（两次卡在阈值下永不 GC；存量僵尸已手清，阈值/告警未修） | [基础设施](docs/todo/基础设施与部署模型.md) |
-| 19 | 平台组件相对硬件严重超配（KEDA/Rollouts 零使用、Kyverno 仅 Audit 却常驻） | [基础设施](docs/todo/基础设施与部署模型.md) |
-| 20 | CiliumEndpointSlice 陈旧无自愈（**已两次发作**：08-29 / 08-30 引爆全后端 CrashLoop；均靠手工删 CES 恢复，巡检告警未落地） | [基础设施](docs/todo/基础设施与部署模型.md) |
-| 21 | 轮换 Config Center 预览中暴露的搜索凭据（日志不可撤回） | [鉴权](docs/todo/零信任鉴权与Session.md) |
+| 15 | 一致性底座：Product/Order 事务内 producer、NACK/DLQ、重放审计 | [事件](docs/todo/数据一致性与事件驱动.md) |
+| 16 | 领域事件落地（`OrderCreated`/`OrderPaid`/…） | [事件](docs/todo/数据一致性与事件驱动.md) |
+| 17 | 平台组件相对硬件严重超配（KEDA/Rollouts 零使用、Kyverno 仅 Audit 却常驻） | [基础设施](docs/todo/基础设施与部署模型.md) |
+| 18 | 轮换 Config Center 预览中暴露的搜索凭据（日志不可撤回） | [鉴权](docs/todo/零信任鉴权与Session.md) |
+
+〔2026-08-31 关闭三条 P0，证据见分类文件勾选记录：KCM 阈值（三处改 20 + 真实 GC/告警闭环验证）、
+CES 巡检告警（CronJob 2m + vmalert firing 闭环）、可观测黑盒探活（node3 ecommerce-gatus + canary 闭环）〕
 
 ### 分类索引
 
 | 分类 | 对应 TECH.md | 未完成 | P0 |
 |---|---|---:|---:|
-| [基础设施与部署模型](docs/todo/基础设施与部署模型.md) | §7 | 24 | 3 |
+| [统一可观测性体系](docs/todo/统一可观测性体系.md) | §9 | 25 | 2 |
 | [微服务与交易闭环](docs/todo/微服务与交易闭环.md) | §5 / §4.3 | 23 | 10 |
-| [统一可观测性体系](docs/todo/统一可观测性体系.md) | §9 | 22 | 3 |
+| [基础设施与部署模型](docs/todo/基础设施与部署模型.md) | §7 | 22 | 1 |
 | [文档与协作机制](docs/todo/文档与协作机制.md) | —（harness） | 18 | 0 |
 | [零信任鉴权与 Session](docs/todo/零信任鉴权与Session.md) | §8 | 16 | 3 |
 | [前端技术栈与工程化](docs/todo/前端技术栈与工程化.md) | §11 | 16 | 0 |
@@ -92,6 +92,12 @@ dev 的 7 个相关服务已滚到 `sha-0b9b9ad`，15/15 Deployment Ready、发�
 > 删陈旧 CES + 重建 Pod 恢复，端到端复验绿（healthz 200/56ms + 真实 RPC + SSR）。
 > 另：96 个僵尸 Pod 已手清、`victoriametrics`/`observability` 空置 ns 已删。
 > 病理沉淀见 [`context/team/cilium-datapath-ops.md`](context/team/cilium-datapath-ops.md) 第二节。
+>
+> 〔2026-08-31 阶段 0 三件套落地〕KCM 阈值 / CES 巡检告警 / 黑盒探活并行完成并逐项验收
+> （AgentTeams 三成员执行，队长故障注入独立复验）。**同日黑盒探活首捕一个回归并当日恢复**：
+> 网关改造（Service 改名 `ecommerce-gateway-service:8080`、镜像 0.2.5）中间态删掉了外部
+> HTTPRoute（API 入口 404），经裁决补建后本机与 node3 公网双向 healthz/RPC 均 200，
+> Gatus gateway 两探测启用，6/6 全绿。集群实跑网关镜像 `0.2.5`〔实测 2026-08-31〕。
 
 ### 1. 集群与基础设施（2026-08-30 实测）
 
@@ -100,7 +106,10 @@ dev 的 7 个相关服务已滚到 `sha-0b9b9ad`，15/15 Deployment Ready、发�
 | K8s 集群 | ✅ | node101(cp)/node102/node103，v1.36.4，Ubuntu 26.04 / 内核 7.0 / **arm64**；**ecommerce 15/15 Deployment Ready**（17 Pod） |
 | 节点容量 | 🟡 | 每节点 4 vCPU / **6.4 GB**（node102/103 扩容已完成，三节点对齐）；N+1 容量验证未做。2026-08-29 曾因 node101 内存耗尽（可用 140 MB）引发控制面雪崩 |
 | Pod 分布 | ✅ | **6/6/5（skew=1）**——2026-08-30 受控重平衡完成（原 14/2/1 为扩容重启遗留）；执行中引爆并修复了 CES 陈旧故障（见 §0 处置记录） |
-| 僵尸 Pod | 🟡 | kube-system 曾积压 96 个 `ContainerStatusUnknown`，2026-08-30 已手清为 0；**KCM 阈值缺陷与告警未修（P0#18 保持打开）** |
+| 僵尸 Pod | ✅ | 存量已清零；KCM 阈值改 **20** 且三处一致（manifest/bootstrap/kubeadm-config），真实注入实测 GC 与 `K8sFailedPodsAccumulating` 告警闭环〔实测 2026-08-31〕 |
+| CES 巡检 | ✅ | `ces-audit` CronJob 每 2m 对账（只读 RBAC），`ces_stale_entries` 入 VM + vmalert 告警，假样本 firing 闭环已验〔实测 2026-08-31〕 |
+| 黑盒探活 | ✅ | node3 `ecommerce-gatus` 独立于集群探测 shop/SSR/Pangolin/node1（带响应体校验）+ 采集器 Ready 告警，canary 闭环已验〔实测 2026-08-31〕 |
+| 网关外部路由 | ✅ | 改造中间态曾致 HTTPRoute 消失（外部 404），已按裁决补建并双向验证（本机 + node3 公网 healthz/RPC 均 200），Gatus gateway 两探测启用后 6/6 全绿〔实测 2026-08-31〕 |
 | Cilium / Gateway API | ✅ | v1.20.1，KPR 严格模式（无 kube-proxy DS）；**2 个** Gateway `PROGRAMMED=True`（`.132` pg-passthrough 已随 postgresql ns 清理） |
 | 集群内 PG | — | `postgresql`/`cnpg-system` ns 与 CNPG CRD **均已清理**；node3 Pigsty 是唯一数据面，**集群内回滚路径不再存在** |
 | GitOps（ArgoCD） | 🔴 | 零 Application / 零 ApplicationSet，AppProject 仅 `default`（ArgoCD 自身 6 Deployment 已全 1/1）；chart 与实况在资源名/标签/tag 三处不符，**禁止直接开 selfHeal** |
@@ -164,6 +173,8 @@ dev 的 7 个相关服务已滚到 `sha-0b9b9ad`，15/15 Deployment Ready、发�
 | 项目 | 状态 | 说明 |
 |---|---|---|
 | 采集层 | 🟡 | Vector **3/3**、集群内 OTel Collector **1/1**、**新增 otel-node hostmetrics DaemonSet 3/3**（节点级 CPU/内存直推 VictoriaMetrics）；**VMAgent 仍缺位**——与 otel-node 路线需二选一收敛（见分类文件）；Pod 级实际用量仍缺 kubeletstats |
+| 黑盒探活 | ✅ | node3 `ecommerce-gatus`（4 探针带响应体校验）+ `ces-audit`/采集器 Ready 三个新 vmalert 规则文件（均 Pigsty source+产物双写）〔实测 2026-08-31〕 |
+| 告警卫生 | 🔴 | **VM k8s 指标已转下划线命名，旧 `ecommerce-k8s.yml` 点号规则断供**（`K8sClusterMetricsMissing` 慢性 firing 佐证）；Alertmanager 另有多条慢性活跃告警待清（见分类文件 P1）〔实测 2026-08-31〕 |
 | 存储层 | ✅ | node3：VictoriaMetrics v1.149.0 / VictoriaLogs v1.52.0 / VictoriaTraces v0.10.0 |
 | 存量链 | ✅ | Loki / fluent-bit / Jaeger / 集群内 Grafana **均已退役且确认不存在** |
 | 告警 | 🟡 | node3 Alertmanager 0.33.1，`route.receiver=local-audit`；已加 `ecommerce-k8s.yml` 6 条 K8s 规则（数据来自 otel `k8s_cluster` receiver，不需要 kube-state-metrics）；**无企业微信、无飞书**（配置里全是注释） |
@@ -180,13 +191,16 @@ dev 的 7 个相关服务已滚到 `sha-0b9b9ad`，15/15 Deployment Ready、发�
 ### 阶段 0 · 集群止血（先于业务开发；全部 P0 基础设施/可观测项）
 
 1. ~~受控 rollout 重平衡 14/2/1 倾斜~~ **已完成〔实测 2026-08-30：终态 6/6/5，15/15 Ready〕**
-2. **修 KCM 阈值**（存量 96 个僵尸已于 2026-08-30 手清；改基于时间回收或下调阈值，
-   补「Failed Pod 数 > N」告警；判据：注入僵尸 Pod 后可被回收且有告警）
-3. **CES/CiliumEndpoint IP 一致性巡检告警**（已两次发作，优先级最高；对账脚本已沉淀在
-   [`cilium-datapath-ops.md`](context/team/cilium-datapath-ops.md) 第二节；
-   判据：人为制造陈旧 CES 能触发告警）
-4. **可观测栈黑盒探活**（node3 Gatus 探集群采集器 + 隧道；判据：停掉 Vector 能在集群外收到告警）
-5. **N+1 单节点故障容量验证**（前提已成立：三节点 6.4 GB；依赖第 1 条完成后演练）
+2. ~~修 KCM 阈值~~ **已完成〔实测 2026-08-31〕**：阈值 20 三处一致（live manifest / bootstrap 仓 /
+   kubeadm-config），25 个真实 Failed Pod 注入实测 GC 25→20，`K8sFailedPodsAccumulating`
+   走完 pending→firing→Alertmanager→清理后 inactive 闭环
+3. ~~CES/CiliumEndpoint IP 一致性巡检告警~~ **已完成〔实测 2026-08-31〕**：`ces-audit` CronJob
+   每 2m（最小只读 RBAC），`ces_stale_entries` 入 VM，假样本实测 firing 闭环；
+   资产 `infrastructure/ces-audit/`
+4. ~~可观测栈黑盒探活~~ **已完成〔实测 2026-08-31〕**：node3 `ecommerce-gatus` 4 探针全绿
+   （均带响应体校验）+ 采集器 Ready 两条 vmalert 规则，canary 实测告警闭环；
+   资产 `infrastructure/gatus/`
+5. **N+1 单节点故障容量验证**（前提已成立〔实测 2026-08-30〕：三节点 6.4 GB、分布 6/6/5；烟雾报警器已就位）
 6. **平台组件必要性审计**（KEDA/Rollouts/Kyverno 去留裁决，判据：留下的组件有真实用途接线）
 
 ### 阶段 1 · 交易正确性与消费者闭环（P0 主体：微服务 10 + 鉴权 3 + 可观测 2 + 事件 2）
