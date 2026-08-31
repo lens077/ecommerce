@@ -119,7 +119,7 @@ type GetMerchantAgreementResponse struct {
 	state         protoimpl.MessageState `protogen:"open.v1"`
 	Version       string                 `protobuf:"bytes,1,opt,name=version,proto3" json:"version,omitempty"`                                  // "v1.0"
 	EffectiveDate string                 `protobuf:"bytes,2,opt,name=effective_date,json=effectiveDate,proto3" json:"effective_date,omitempty"` // "2026-08-13"
-	ContentUrl    string                 `protobuf:"bytes,3,opt,name=content_url,json=contentUrl,proto3" json:"content_url,omitempty"`          // 协议文本地址（先指向仓库文档，前端页面后置）
+	ContentUrl    string                 `protobuf:"bytes,3,opt,name=content_url,json=contentUrl,proto3" json:"content_url,omitempty"`          // 协议文本地址
 	unknownFields protoimpl.UnknownFields
 	sizeCache     protoimpl.SizeCache
 }

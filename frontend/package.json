@@ -12,6 +12,7 @@
     "prepare": "vp config"
   },
   "devDependencies": {
+    "@bufbuild/protoc-gen-es": "catalog:",
     "@commitlint/cli": "^21.2.1",
     "@commitlint/config-conventional": "^21.2.0",
     "typescript": "catalog:",
