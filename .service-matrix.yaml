@@ -48,9 +48,9 @@ config_validation:
   #   behavior: Recommend recommend = 6 [(buf.validate.field).required = true];
   #   product:  Recommend recommend = 8 [(buf.validate.field).required = false];
   declared_in: "backend/services/{service}/internal/conf/v1/conf.proto → message Bootstrap"
-  # ✅ 2026-08-18 已接线：decodeConfig 开 ErrorUnused（未知键报错）、Init/热更新
-  # 在解码后调 protovalidate.Validate（validateBootstrap）。启动时校验失败 → 起不来；
-  # 热更新校验失败 → 保留当前配置只记 ERROR。每个服务的 config 包新增
+  # 机制：decodeConfig 开 ErrorUnused（未知键报错），Init/热更新在解码后调
+  # protovalidate.Validate（validateBootstrap）。启动时校验失败 → 起不来；
+  # 热更新校验失败 → 保留当前配置只记 ERROR。每个服务的 config 包有
   # TestRealConfigFiles_DecodeAndValidate,在有 configs/{dev,pre}.yml 的机器上
   # 验证真实配置过得了校验（文件 gitignore,CI 里自动 skip）。
   enforced_by: "backend/services/{service}/internal/pkg/config/config.go → validateBootstrap + ErrorUnused"
@@ -59,8 +59,6 @@ config_validation:
     的副本会让服务直接起不来。发布前先按本地 configs/{dev,pre}.yml 对齐配置中心内容
     （behavior 的副本曾有 conf.proto 未定义的 log.elasticsearch 块，本地已删，
     配置中心那份未核实）。
-  remaining:
-    - "CI 里按本文件的服务清单校验每个 {service}/dev/bootstrap.yaml 可解码且通过 validate（需 CI 能访问配置中心，暂缓）"
   see: "context/project/ecommerce/behavior/experience/consul-kv-missing-key-silent-disable.md"
 
 # 外部基础设施（不是本仓的服务）────────────────────────────────────
@@ -70,7 +68,7 @@ externals:
   consul: { host: "192.168.3.120:8500", note: "集群内工作负载使用 consul-server.consul.svc:8500；本地进程使用 LoadBalancer VIP。Consul 只承担注册发现，配置仍由 Config Center 提供" }
   kafka: { host: "node1:30004", used_by: [], note: "node3 已预建 Kafka SCRAM 用户与 ecommerce.events topic；本仓当前无客户端、producer、consumer 或业务接线（used_by 为空即事实）。选型方向见 docs/TECH.md" }
   nats: { host: "nats.nats.svc:4222", used_by: [], note: "dev 为 3-server JetStream，R1 ECOMMERCE_EVENTS 可重建。⚠️ search 服务本身不导入 nats（used_by 为空即事实）——导入方是 backend/tools/{search-indexer,outbox-relay}，不在 services 段。选型方向见 docs/TECH.md" }
-  casdoor: { host: "casdoor.apikv.com", note: "HTTPS 经 Pangolin（8000 明文口已关，2026-08-19 起）；JWT 公钥 kid=lens；2026-08-20 定稿收编进集群，迁移方案见 docs/技术栈选型对抗/对抗审阅表-第3轮.md R3-A" }
+  casdoor: { host: "casdoor.apikv.com", note: "HTTPS 经 Pangolin（8000 明文口已关，2026-08-19 起）；JWT 公钥 kid=lens；2026-08-20 定稿收编进集群，现行身份边界见 docs/TECH.md §8" }
   elasticsearch: { host: "node3 127.0.0.1:9200（容器 cdc-elasticsearch，仅回环，需 ssh 隧道；已开鉴权，匿名请求 401）", used_by: [], note: "集群内旧实例已退役；node3 现有 CDC 用 ES 容器（同机 cdc-connect 127.0.0.1:8083），本仓无服务连接它。⚠️ 容量事实：node3 总内存 7.25GiB、该容器 limit 2GiB，与观测数据面同机。选型方向见 docs/TECH.md" }
   meilisearch: { host: "meilisearch.search.svc:7700", used_by: [search], note: "v1.53 集群组件；search 使用服务端固定的 products 索引和仅限 search 动作的 API key。选型方向见 docs/TECH.md" }
   minio: { host: "minio.apikv.com", used_by: [cart], note: "现役镜像 pgsty/silo RELEASE.2026-08-06（pin digest、command 显式 --certs-dir、镜像 HOME=/tmp）。商品缩略图 URL；443 不带端口。机器是 node2（ssh 别名 node2:34124，阿里云，与 k8s 集群无关——k8s 节点是 node101/102/103 = 192.168.3.101-103），2026-08-19 起走 node1 的 Pangolin（Traefik 终止 TLS）经 newt 隧道回 node2，本机 9000/9001 已绑回环。⚠️ 不能直连该 IP 配域名：apikv.com 未在阿里云备案，域名直连必被 ICP 拦截。选型方向见 docs/TECH.md" }
@@ -266,15 +264,10 @@ known_gaps:
      （两者 used_by 均为空）。进度见 docs/todo/数据一致性与事件驱动.md"
   - "没有 logistics/warehouse 前端 app，也没有独立物流/仓储微服务；履约按设计并入 order，inventory 不是 WMS"
   - "10 个业务服务没有完整的默认拒绝 NetworkPolicy/CiliumNetworkPolicy；后端信任网关注入身份头的边界尚未由网络策略全面强制"
-  # 原第三条「Bootstrap 解码后仍未执行 protovalidate」与本文件 config_validation 段
-  # 直接矛盾（那里 2026-08-18 已标 ✅ 接线），2026-08-24 核对代码后删除：
-  # 十个服务的 internal/pkg/config/config.go 都开了 ErrorUnused 并在解码后跑 protovalidate。
-  - "GitOps 拓扑：ArgoCD 零 Application / 零 ApplicationSet，AppProject 只有 default。
-     helm/values.yaml **不是**集群真相源——集群由 backend/services/{service}/deploy/
-     的手工路径驱动。⚠️ 2026-08-29 实测：集群镜像 tag 有 5 种风格并存
-     （sha-0b9b9ad / health-b766301dfbd0 / sha-daf2280 / sha-bf8dae2 / dev-20260828-2），
-     **没有任何一个 :dev**（此前本条记的『集群实跑 :dev』已被实测推翻）。
-     进度见 docs/todo/基础设施与部署模型.md"
+  - "GitOps 拓扑断线：ArgoCD 没有本仓的 Application/ApplicationSet。helm/values.yaml
+     **不是**集群真相源——集群由 backend/services/{service}/deploy/ 的手工路径驱动，
+     集群实跑镜像 tag 与回写值不同源（带日期的运行时快照归 TODO.md「现状对照」§1，
+     本文件不承载观测值）。进度见 docs/todo/基础设施与部署模型.md"
   - "helm/ 不是完整的集群描述：control-tower-gateway、ecommerce-outbox-relay、
      ecommerce-search-indexer 三个在跑的工作负载都不在 chart 里；且 chart 渲染出的
      资源名/标签与实况不符，接回 GitOps 前先读 argocd-app.yml 顶部告警"

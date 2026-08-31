@@ -6,9 +6,8 @@ description: 数据库结构变更与种子数据的唯一路径——goose 版�
 
 # 数据库迁移与种子数据
 
-> 选型对抗与终裁：`docs/技术栈选型对抗/对抗审阅表-第4轮-迁移库与CDC.md`（2026-08-21，
-> goose v3 胜出）。操作手册：`backend/tools/dbmigrate/README.md`。本文只写**判定规则**与
-> 换个服务仍成立的坑。
+> 2026-08-21 终裁采用 goose v3；过程稿已删除。操作手册见
+> `backend/tools/dbmigrate/README.md`。本文只写**判定规则**与换个服务仍成立的坑。
 
 ## 规则
 
@@ -20,6 +19,13 @@ description: 数据库结构变更与种子数据的唯一路径——goose 版�
    order 的 merchant_id 类型欠账 int64→UUID，都是 2026-08-21 接管时才补上的）。
 2. **滚更兼容**：迁移必须按 expand→backfill→contract 拆（`docs/DEVOPS.md` 阶段②）——
    滚动更新期间新旧版本共存，一步到位的改列会打死旧副本。
+   **唯一例外——纯桩服务可一步改列**，四个条件**全部**成立才适用：①目标服务单副本；
+   ②data 层对该表零真实 SQL 读写（相关方法全是显式 `Unimplemented` 桩）；③无仓库外
+   SQL 消费者（CDC connector、报表、人工脚本）读写该表；④迁移文件头注明依据本条例外，
+   并写清前三点各自的核实位置。任一条件失效（桩恢复真实现、扩了副本、接了 CDC）后，
+   同表列变更必须回到三段式。先例：payment `00002_rename_consumer_to_customer.sql`
+   （2026-08-30 买家实体统一 Customer；2026-08-31 复审指出「豁免只在迁移文件里自证」
+   不合规，遂把例外条件正式化于此，而非默许各迁移自行授予豁免）。
 3. **种子数据必须幂等**：`internal/data/seeds/` 走 goose no-versioning 模式
    （`make seed` / `seed-down`），没有版本表兜底，重跑就是重放——
    `ON CONFLICT DO NOTHING/UPDATE` 或 `WHERE NOT EXISTS` 是硬要求；

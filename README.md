@@ -75,7 +75,7 @@ Golang + React 的 B2B2C 多商家电商实践项目：10 个后端微服务、c
 
 ## 先决条件
 
-1. Go >= 1.26（`backend/go.mod` 当前 1.26.5；网关在同级仓 control-tower）
+1. Go：版本以 `backend/go.mod` 的 `go` 指令为准（数字不在此复制，防漂移；网关在同级仓 control-tower）
 2. 前端：Node.js >= 22、pnpm 11
 3. 数据库：PostgreSQL 18（当前主库由 node3 Pigsty 承载）；Dragonfly 用于业务可丢缓存和 control-tower BFF session。领域锁、幂等键与库存真相必须锚定 PostgreSQL
 4. 注册/发现：Consul（**定稿退役 → K8s Service + CoreDNS，开发环境 Docker Compose 服务名**，见 [`docs/TECH.md`](docs/TECH.md) §10.2；四步迁移见 TODO；迁移完成前运行仍需）

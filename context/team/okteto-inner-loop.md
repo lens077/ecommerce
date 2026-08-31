@@ -64,7 +64,7 @@ uid 1000、Pod IP、集群 DNS）时才用它。其余场景本地更快。
 | # | 必须 | 不这么做会怎样 |
 |---|---|---|
 | 1 | `dev:` 下的 key **等于集群 Deployment 名**——`ecommerce-cart-deploy`，不是 `cart`。**动手前先跑 `kubectl get deploy -n ecommerce` 核对** | `okteto up` 报找不到目标。旧 11 份 manifest 栽在这（key 是 `connect-example-go`），本仓 2026-08-24 又以 `cart` 栽了一次 |
-| 2 | `image` 版本 **等于 `backend/go.mod` 的 go 指令**（当前 `golang:1.26.5`），且用 Debian 变体 | 版本不符会触发 toolchain 自动下载；alpine 没有 bash，`command: bash` 起不来 |
+| 2 | `image` 版本 **等于 `backend/go.mod` 的 go 指令**（动手前先读 go.mod 取当前值，不要凭记忆或抄文档快照），且用 Debian 变体 | 版本不符会触发 toolchain 自动下载；alpine 没有 bash，`command: bash` 起不来 |
 | 3 | `environment` 里有 `HOME=/go` + `GOCACHE=/go/.cache/go-build` | 默认 `HOME=/root`，uid 1000 写不进去 → 编译报 permission denied |
 | 4 | `environment` 里有 `SSL_CERT_DIR=/usr/share/ca-certificates/mozilla` | `db-ca-cert` 挂载替换了整个 `/etc/ssl/certs`，系统 CA 全没 → `go mod download` 全线 x509 失败 |
 | 5 | `securityContext` 同时有 `runAsUser: 1000` **和** `runAsNonRoot: false` | 只写前者：okteto 的 init 容器（硬编码 `runAsUser: 0`）被 kubelet 拒绝；只写后者：业务容器跑成 root，要验的权限问题被掩盖 |

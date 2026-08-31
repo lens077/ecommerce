@@ -22,8 +22,11 @@
 
 ## 一、全局优先级视图
 
-**未完成合计 157 项，其中 P0 共 17 项**（计数口径：各分类文件顶层 `- [ ]` 复选框实数；
-2026-08-31 更新：阶段 0 收官关闭 4 条 P0 与 2 条当日项，新增 5 条实测发现）。P0 的判据是**后果**不是紧迫感：
+**未完成合计 155 项，其中 P0 共 17 项**（计数口径：各分类文件顶层 `- [ ]` 复选框实数；
+2026-08-31 更新：阶段 0 收官关闭 4 条 P0 与 3 条当日项，新增 5 条实测发现；同日复审对齐：
+鉴权分类去掉「地址越权」重复登记、「搜索凭据」升入分类 P0 与全局 #17 对齐、供应链关闭
+Trivy 拦截项、matrix 的 CI 校验待办迁入服务发现；档案死链经用户裁决纳入 `[DEAD-LINK]`
+门禁扫描并当日落地）。P0 的判据是**后果**不是紧迫感：
 「调用会成功但结果是错的」「任何登录用户都能越权」一律 P0——它们不会在联调时暴露，
 只在上量后以超卖、丢单、数据泄露的形式爆发。
 
@@ -57,27 +60,32 @@ CES 巡检告警（CronJob 2m + vmalert firing 闭环）、可观测黑盒探活
 
 | 分类 | 对应 TECH.md | 未完成 | P0 |
 |---|---|---:|---:|
-| [统一可观测性体系](docs/todo/统一可观测性体系.md) | §9 | 25 | 2 |
+| [统一可观测性体系](docs/todo/统一可观测性体系.md) | §9 | 24 | 2 |
 | [微服务与交易闭环](docs/todo/微服务与交易闭环.md) | §5 / §4.3 | 23 | 10 |
 | [基础设施与部署模型](docs/todo/基础设施与部署模型.md) | §7 | 21 | 0 |
 | [文档与协作机制](docs/todo/文档与协作机制.md) | —（harness） | 18 | 0 |
-| [零信任鉴权与 Session](docs/todo/零信任鉴权与Session.md) | §8 | 16 | 3 |
 | [前端技术栈与工程化](docs/todo/前端技术栈与工程化.md) | §11 | 16 | 0 |
-| [供应链与交付流水线](docs/todo/供应链与交付流水线.md) | B 表 / §7.1 | 16 | 0 |
+| [供应链与交付流水线](docs/todo/供应链与交付流水线.md) | B 表 / §7.1 | 15 | 0 |
+| [零信任鉴权与 Session](docs/todo/零信任鉴权与Session.md) | §8 | 15 | 3 |
 | [数据一致性与事件驱动](docs/todo/数据一致性与事件驱动.md) | §3 / §4 | 14 | 2 |
-| [服务发现与配置中心](docs/todo/服务发现与配置中心.md) | §10 | 8 | 0 |
+| [服务发现与配置中心](docs/todo/服务发现与配置中心.md) | §10 | 9 | 0 |
 
-〔计数 2026-08-30 重核：`grep -c '^- \[ \]' docs/todo/*.md`，按未完成数降序〕
+〔计数 2026-08-31 重核：`grep -c '^- \[ \]' docs/todo/*.md`，按未完成数降序〕
 
 ---
 
 ## 二、现状对照
 
-### 0. 最近一次发布（2026-08-29 实测）
+### 0. 发布与部署（2026-08-31 对齐）
 
-已发布 **control-tower `0.2.0`**（config `sha-c30713c`）与 **ecommerce `1.5.5`**；
-dev 的 7 个相关服务已滚到 `sha-0b9b9ad`，15/15 Deployment Ready、发布 Pod restart 均为 0。
-`helm/values.yaml` 的镜像 tag 已由 CI 回写至 `1.5.5`。
+- **最近发布 tag：ecommerce `1.6.3`**（2026-08-30）。`1.6.0` 为买家实体 Customer 全仓重命名，
+  `1.6.1`–`1.6.3` 为供应链门禁修复系列；签名前 Trivy 阻断与 SARIF→main 可见告警链在
+  `1.6.2`/`1.6.3` 上完成真实验证（见 [供应链与交付流水线](docs/todo/供应链与交付流水线.md)）。
+  **1.6.x 未产生新的 helm 回写**——`helm/values.yaml` 仍是 `1.5.5`
+  〔实测 2026-08-31：GitHub main 与本地一致〕。
+- **最近一次部署到 dev**〔实测 2026-08-29〕：control-tower `0.2.0`（config `sha-c30713c`）
+  与 ecommerce `1.5.5`；dev 的 7 个相关服务滚到 `sha-0b9b9ad`，15/15 Deployment Ready、
+  发布 Pod restart 均为 0。**1.6.x 尚未部署到 dev**，集群实跑 tag 见 §1「镜像 tag 口径」行。
 
 > ⚠️ 同日稍晚集群曾因 node101 内存耗尽发生控制面雪崩（详见下表与
 > [基础设施与部署模型](docs/todo/基础设施与部署模型.md) P0 段），已恢复至 15/15；
@@ -168,16 +176,16 @@ dev 的 7 个相关服务已滚到 `sha-0b9b9ad`，15/15 Deployment Ready、发�
 | 状态管理 | ✅ | 2026-08-28 完成 valtio→**Zustand** 全量迁移，valtio 依赖已移除 |
 | 错误监控 | 🟡 | Bugsink 服务端已运行（node3，2.5.0）；**前端 SDK + Source Map 未接** |
 
-### 6. 可观测性（2026-08-30 实测）
+### 6. 可观测性（2026-08-30 实测，2026-08-31 增补）
 
 | 项目 | 状态 | 说明 |
 |---|---|---|
 | 采集层 | 🟡 | Vector **3/3**、集群内 OTel Collector **1/1**、**新增 otel-node hostmetrics DaemonSet 3/3**（节点级 CPU/内存直推 VictoriaMetrics）；**VMAgent 仍缺位**——与 otel-node 路线需二选一收敛（见分类文件）；Pod 级实际用量仍缺 kubeletstats |
 | 黑盒探活 | ✅ | node3 `ecommerce-gatus`（4 探针带响应体校验）+ `ces-audit`/采集器 Ready 三个新 vmalert 规则文件（均 Pigsty source+产物双写）〔实测 2026-08-31〕 |
-| 告警卫生 | 🔴 | **VM k8s 指标已转下划线命名，旧 `ecommerce-k8s.yml` 点号规则断供**（`K8sClusterMetricsMissing` 慢性 firing 佐证）；Alertmanager 另有多条慢性活跃告警待清（见分类文件 P1）〔实测 2026-08-31〕 |
+| 告警卫生 | 🟡 | **`ecommerce-k8s.yml` 点号→下划线迁移已完成并双向验收**〔实测 2026-08-31：6 条规则先在 VM 查到 series 再改写，双写 + dry-run + reload；兜底 `K8sClusterMetricsMissing` 由慢性 firing 回 inactive，条件规则复明后数分钟内当场捕获真实故障；另修 `K8sContainerNotReady` 的 Completed-Pod 误报类〕；**剩余噪音**：`PostgresReplicationLag`/`NodeMemSwapped`/`EcommerceNetworkPolicyDeniedBurst` 与若干 `AlertFiringTooLong` 慢性告警每小时推 ntfy 待清——已交接独立会话（见分类文件 P1） |
 | 存储层 | ✅ | node3：VictoriaMetrics v1.149.0 / VictoriaLogs v1.52.0 / VictoriaTraces v0.10.0 |
 | 存量链 | ✅ | Loki / fluent-bit / Jaeger / 集群内 Grafana **均已退役且确认不存在** |
-| 告警 | 🟡 | node3 Alertmanager 0.33.1，`route.receiver=local-audit`；已加 `ecommerce-k8s.yml` 6 条 K8s 规则（数据来自 otel `k8s_cluster` receiver，不需要 kube-state-metrics）；**无企业微信、无飞书**（配置里全是注释） |
+| 告警 | 🟡 | node3 Alertmanager 0.33.1；**ntfy 手机推送链路现役且端到端验收通过**〔实测 2026-08-31：`local-audit` 背后是 audit+ntfy 双职桥，canary P5 实测到达 topic〕；企业微信降为可选第二通道（规则信号质量与噪音清理见上「告警卫生」行，不在两行重复维护） |
 | 链路追踪 | 🟡 | 10 个服务 + 网关 OTel 已统一至 v1.45.0；网关采样口径与后端相反待修 |
 | Go 运行时指标 | 🔴 | 10 个电商服务 **全缺**（goroutine/堆/进程 CPU 内存） |
 
@@ -222,9 +230,9 @@ dev 的 7 个相关服务已滚到 `sha-0b9b9ad`，15/15 Deployment Ready、发�
 6. user：登录 token 不落日志（P0#7）；payment：恢复 repo 主体、实现 5 个桩 RPC
 7. **给上述全部路径补测试**（P0#10，判据：22 条发现路径纳入 `go test` 后仍全绿）
 8. 鉴权：补 `redis-tls-ca` Secret（P0#11）、legacy bearer JWT 定退役期限（P0#12）、
-   轮换已暴露搜索凭据（P0#22）
+   轮换已暴露搜索凭据（P0#17）
 9. 可观测安全：入站 `x-md-*` 剥离（P0#14）、PII 脱敏随 OTel Collector 管道收敛（P0#13）
-10. 事件正确性底座：Product/Order 事务内 producer、NACK/DLQ、领域事件落地（P0#16/#17）
+10. 事件正确性底座：Product/Order 事务内 producer、NACK/DLQ、领域事件落地（P0#15/#16）
 11. 前端闭环：consumer 首页/分类/订单/支付结果接线；`ListProducts` 实现后 consumer-next 扩页
 
 **完成判据**：固定集成测试 + 浏览器用例可重复验证
@@ -257,6 +265,18 @@ dev 的 7 个相关服务已滚到 `sha-0b9b9ad`，15/15 Deployment Ready、发�
 4. 依据证据决定 PG 分区/归档、Elasticsearch 拓扑、Kafka partition/保留、缓存容量与 Silo 策略
 5. 在 Consul 退役、Service 路由与观测指标可信后，验收 KEDA、Argo Rollouts、限流、熔断与灰度
    （或按阶段 0 审计结论卸载）
+
+### 阶段外并行线（与阶段 1 无文件冲突，可随时插队；2026-08-31 评估）
+
+| 并行线 | 与阶段 1 的冲突面 | 备注 |
+|---|---|---|
+| 慢性告警清理 | 零（PG 侧动手需窗口） | **已交接独立会话**：[`.scratch/chronic-alerts-cleanup/HANDOFF.md`](.scratch/chronic-alerts-cleanup/HANDOFF.md) |
+| [供应链](docs/todo/供应链与交付流水线.md)：Kyverno `verifyImages` 等 | 零（纯 CI/签名域） | 组件审计裁决的绑定条件，优先级最高的并行项 |
+| [前端](docs/todo/前端技术栈与工程化.md)：Bugsink SDK + Source Map | 零（`frontend/`） | 服务端早就绪 |
+| [可观测](docs/todo/统一可观测性体系.md) P1 散件：dead-man、VM import 认证等 | 低（网关 5xx/采样归 control-tower 线） | |
+| [文档协作](docs/todo/文档与协作机制.md) / [服务发现](docs/todo/服务发现与配置中心.md) / TLS P2 | 零 | 无 P0，见缝插针 |
+
+> 阶段 2/3/4 **不建议提前抢跑**——地基是阶段 1；事件 outbox 底座（P0#15/16）已排在阶段 1 内。
 
 ### 技术风险与应对
 

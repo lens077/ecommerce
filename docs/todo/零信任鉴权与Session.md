@@ -41,8 +41,16 @@ OpenFGA 关系授权的零信任体系。
       网关 legacy bearer 轨与撤销名单**暂留**，是最不可逆的一段，建议烘烤数日确认无 `JWT_*` 错误后再拆。
       ⚠️ 这条**必须有退役期限**——红线禁止双鉴权路径长期并存。
 
-- [ ] **地址服务全线越权**：详见
-      [`微服务与交易闭环.md`](微服务与交易闭环.md)（数据级授权缺失，此处只做交叉引用）。
+- [ ] **安全 · 轮换 Config Center 预览中暴露的搜索凭据**：2026-08-28 一次跨行正则预览越过目标段，
+      既有凭据进入会话工具日志；临时文件已删、仓库未落值，但**日志不可撤回，应按已暴露处理**。
+      管理窗口内同步轮换 Elasticsearch 与 Config Center，滚动受影响消费者并验收旧凭据失效。
+      固定手顺见
+      [`config-preview-allowlist.md`](../../context/project/ecommerce/config/experience/config-preview-allowlist.md)。
+      〔2026-08-31 复审对齐：本条即全局 P0 #17，原误放 P1 段〕
+
+> **地址服务全线越权**与鉴权域相关，但登记与计数归
+> [`微服务与交易闭环.md`](微服务与交易闭环.md)（全局 P0 #5）——此处只留指引不设复选框，
+> 双处登记会让「各分类复选框实数」的全局计数虚增（2026-08-31 复审去重）。
 
 ## P1
 
@@ -66,12 +74,6 @@ OpenFGA 关系授权的零信任体系。
       仍会泄露应用存在性与部分配置形态。评估是否在 Pangolin 侧限制。
 
 - [ ] **Casdoor 集成收尾**：第三方登录、账号治理和 OpenFGA 对象权限仍待端到端验收。
-
-- [ ] **安全 · 轮换 Config Center 预览中暴露的搜索凭据**：2026-08-28 一次跨行正则预览越过目标段，
-      既有凭据进入会话工具日志；临时文件已删、仓库未落值，但**日志不可撤回，应按已暴露处理**。
-      管理窗口内同步轮换 Elasticsearch 与 Config Center，滚动受影响消费者并验收旧凭据失效。
-      固定手顺见
-      [`config-preview-allowlist.md`](../../context/project/ecommerce/config/experience/config-preview-allowlist.md)。
 
 - [ ] **给 Config Center 灌 gorse 的 `api_key`**：`behavior/{dev,pre}.yml` 与 `product/pre.yml`
       的 `api_key` 按硬规则 4 保持空串，但 gorse 侧鉴权已开——**不填真值业务调用会全部 401**。
