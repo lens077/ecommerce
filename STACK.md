@@ -99,9 +99,9 @@ ecommerce/
 ## 二、技术栈（含实际锁定版本）
 
 > **选型真相源（2026-08-28 起）**：技术架构、技术选型与基础设施以 [`docs/TECH.md`](docs/TECH.md) 为准；
-> 2026-08-20 三轮对抗评审的定稿记录见 [`docs/TECH-RADAR.md`](docs/TECH-RADAR.md)，过程证据见
-> [`docs/技术栈选型对抗/`](docs/技术栈选型对抗/)，其中与 TECH.md 冲突的结论（搜索、链路存储、
-> 对象存储迁移方向、Casbin、Kafka 部署形态等）已被 TECH.md 覆盖。
+> 2026-08-20 三轮对抗评审的定稿记录见 [`docs/TECH-RADAR.md`](docs/TECH-RADAR.md)；
+> 过程稿已删除，不再作为并行知识源。其中与 TECH.md 冲突的历史结论（搜索、链路存储、
+> 对象存储迁移方向、Casbin、Kafka 部署形态等）均已由 TECH.md 覆盖。
 > 版本以当前 manifest 与 lockfile 为准；运行状态以 [`TODO.md`](TODO.md) 和
 > [`.service-matrix.yaml`](.service-matrix.yaml) 为准。下文统一使用「在用」「部分落地」
 > 「已选型」三种状态；**已选型不等于已部署，集群里存在对象也不等于业务已接线**。
@@ -110,8 +110,8 @@ ecommerce/
 
 | 类别 | 选型 | 锁定版本或状态 |
 |---|---|---|
-| 语言 | Go | **1.26.5**（backend 与 control-tower 同版） |
-| 构建镜像 | `golang:<ver>-alpine<ver>` | **`golang:1.26.5-alpine3.24`**（各服务 `Makefile` 的 `GOIMAGE`） |
+| 语言 | Go | 以 `backend/go.mod` 的 `go` 指令为准（backend 与 control-tower 同版）。版本号不再复制进本表——2026-08-30 `bab09e2` 起以机器可读文件为单一真相源 |
+| 构建镜像 | `golang:<ver>-alpine<ver>` | 以各服务 `Makefile` 的 `GOIMAGE`（= Dockerfile `ARG GO_IMAGE` 默认值）为准，与 `go.mod` 同步升级；CI 不传 `GO_IMAGE` build-arg，Dockerfile 默认值就是发布镜像的真实编译工具链 |
 | 运行基底 | Alpine（+ `libc6-compat`，非 root `appuser` uid/gid 1000） | **`alpine:3.24`**，10 个 Dockerfile 全部一致。⚠️ 2026-08-29 前是 `alpine:3.22`、比构建镜像落后两个小版本且**无人记录**；因签名前已接入 Trivy 门禁（只阻断**可修复** CVE），旧基底会直接抬高发版被拦的概率，故对齐并纳入本表 |
 | RPC 框架 | `connectrpc.com/connect` | v1.20.0 |
 | 传输 | Connect、gRPC、gRPC-Web 兼容；服务间与网关-后端统一 ConnectRPC over HTTP/2（H2C） | 按 [`docs/TECH.md`](docs/TECH.md) 红线**严禁降级 HTTP/1.1**；存量 h2c 端仍能受理 HTTP/1.1，仅限本地调试，不得作为服务间通道 |

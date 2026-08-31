@@ -610,7 +610,8 @@ sql:
 ### 服务 `Dockerfile`（多阶段 + 缓存挂载 + 非 root）
 
 ```dockerfile
-ARG GO_IMAGE=golang:1.26.5-alpine3.24
+# ⚠️ 快照值——生成新项目时改为源仓 backend/go.mod 当前的 Go 版本，勿照抄
+ARG GO_IMAGE=golang:1.27.0-alpine3.24
 FROM --platform=$BUILDPLATFORM ${GO_IMAGE} AS compile
 ARG TARGETOS=linux
 ARG TARGETARCH
@@ -761,7 +762,7 @@ type resource
 ```
 按 SCAFFOLD.md 生成 {{PROJECT}}（{{DOMAIN}}）的项目骨架，技术选型严格对齐 docs/TECH.md；STACK.md 仅用于核实现行工程事实。
 
-【后端】Go 1.26 单 go.mod 多服务（module {{GO_MODULE}}）；
+【后端】Go（版本取源仓 backend/go.mod 生成时的当前值）单 go.mod 多服务（module {{GO_MODULE}}）；
   ConnectRPC(connectrpc.com/connect) + Buf(protovalidate) + uber/fx 依赖注入
   + sqlc(pgx/v5) + goose + zap + OpenTelemetry 全链路；服务间及网关到后端统一
   ConnectRPC over HTTP/2（H2C），严禁降级 HTTP/1.1。四层架构 server/service/biz/data，

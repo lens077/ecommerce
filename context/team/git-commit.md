@@ -237,9 +237,12 @@ github   GitHub  (lens077/ecommerce)    ← CI 在这里，发布 tag 只推它
 
 ## 发布 tag 与 CI 触发（2026-08-20 起）
 
-**CI 只由发布 tag 触发**。push main 不再跑构建——发布节奏由打 tag 的人控制，
+**构建/发布 CI 只由发布 tag 触发**。push main 不再跑构建——发布节奏由打 tag 的人控制，
 文档推送不再引发全量构建，CI 机器人的 values 回写也不再与本地历史抢跑
 （触发事故见 evolution-log 同日条目）。`workflow_dispatch` 保留为显式手动例外。
+唯一的 per-push 例外是结构门禁 `context-gate.yml`（每 PR/分支 push 都跑）：它是分支保护的
+必需检查且本仓 Actions 零计费，**不要为「省额度」把它改回 tag 触发**——2026-08-29 曾这么改过
+一次，预算前提当日即被证伪（净额 $0.00），详见 evolution-log 同日条目与该 workflow 头注。
 
 **tag 格式**：裸 semver `X.Y.Z`（不带 v、不补零；GitHub 过滤模式
 `[0-9]+.[0-9]+.[0-9]+`）。旧 `v1.3.x` 系（带 v + 补零）已冻结，天然不匹配新模式，
