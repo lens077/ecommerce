@@ -40,6 +40,7 @@
     "icp": "ICP filing"
   },
   "privacy": {
+    "close": "Close privacy settings",
     "title": "Privacy policy",
     "intro": "We take your privacy seriously and are committed to protecting your personal information. Here is how we collect and use it:",
     "analytics": {

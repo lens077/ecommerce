@@ -1,0 +1,232 @@
+/**
+ * §四.2 关键页 axe 无障碍断言（docs/frontend/accessibility.md）。
+ *
+ * 形态：jsdom + 真路由（routeTree.gen + 内存 history）+ createRouterTransport
+ * 内存服务桩。整页渲染（含 __root 的 AppBar/Footer 全局镶边）后对 document.body
+ * 跑 axe-core，断言零违规——portal（Dialog/Snackbar）也在 body 上，一并覆盖。
+ *
+ * 刻意取舍：
+ *  - runOnly 限 WCAG A/AA 标签：landmark/region 这类 best-practice 规则不进门禁，
+ *    与手册目标（WCAG 2.2 AA）对齐，避免开局告警海；
+ *  - color-contrast 显式关闭：jsdom 无布局绘制，该规则测不了，对比度归
+ *    Lighthouse（§四.3）；
+ *  - 「axe 探测器自检」是常驻 canary：若断言链路静默失效（matcher 配错/axe 空跑），
+ *    已知违规样本会立刻暴露——同 Vector VRL 脱敏「故意未脱敏样本必须被拦截」的纪律。
+ *    canary 的违规 DOM 用 createElement 搭而不是 JSX，否则会撞上 §四.1 的
+ *    jsx-a11y 静态门禁（两层门禁互不拆台，恰好证明它们抓的是不同层）。
+ */
+import { afterEach, beforeAll, describe, expect, it, vi } from "vite-plus/test";
+import { cleanup, render, screen } from "@testing-library/react";
+import { axe } from "vitest-axe";
+import * as matchers from "vitest-axe/matchers";
+import { createRouterTransport, type Transport } from "@connectrpc/connect";
+import { TransportProvider } from "@connectrpc/connect-query";
+import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
+import { createMemoryHistory, createRouter, RouterProvider } from "@tanstack/react-router";
+import { initI18n } from "@ecommerce/i18n";
+
+import { AddressService, CartService, CartStatus, ProductService } from "@/gen/api";
+import { AuthProvider } from "@/providers/AuthProvider";
+import { routeTree } from "@/routeTree.gen";
+import consumerZh from "@/locales/zh-CN/consumer.json";
+import consumerEn from "@/locales/en/consumer.json";
+
+expect.extend(matchers);
+
+// vitest 4 起自定义 matcher 的类型通过 `Matchers` 接口合并（官方文档做法）；
+// vitest-axe 0.1.0 只增强旧版 Assertion 接口，类型跟不上运行时，这里本地补齐。
+// 运行时实现由上面的 expect.extend(matchers) 提供。
+declare module "vitest" {
+  // 类型参数必须与 vitest 自身的 `Matchers<T = any>` 完全一致（TS2428），
+  // 接口合并不允许缺省值不同。
+  // oxlint-disable-next-line typescript/no-explicit-any
+  interface Matchers<T = any> {
+    toHaveNoViolations(): T;
+  }
+}
+
+// —— 环境隔离 mock ——————————————————————————————————————————————
+// devtools 只该在浏览器 DEV 挂载；jsdom 里是轴外噪音，掐掉。
+vi.mock("@tanstack/react-devtools", () => ({ TanStackDevtools: () => null }));
+vi.mock("@tanstack/react-router-devtools", () => ({
+  TanStackRouterDevtoolsPanel: () => null,
+}));
+// AuthProvider 冷启动会 fetch /auth/me；jsdom 没有网关，直接判未登录。
+vi.mock("@ecommerce/configs", async (importOriginal) => ({
+  ...(await importOriginal<object>()),
+  fetchIdentity: async () => ({ authenticated: false }),
+}));
+// useProductDetail 显式走 getPublicTransport()（公开接口免鉴权），不经
+// TransportProvider——把两个出口都接到本文件的内存桩上。
+vi.mock("@ecommerce/api", async (importOriginal) => ({
+  ...(await importOriginal<object>()),
+  getPublicTransport: () => transport,
+  getSharedTransport: () => transport,
+}));
+// t3-oss env 在 import 时校验；测试进程没有 VITE_ 环境变量。
+vi.mock("@/env", () => ({ env: { VITE_GATEWAY_URL: "/api" } }));
+
+// —— 服务桩数据 ——————————————————————————————————————————————————
+const CART_ITEMS = [
+  {
+    cartItemId: 1n,
+    spuId: 10n,
+    skuId: 100n,
+    merchantId: "m-1",
+    shopName: "店铺一",
+    spuName: "商品一",
+    skuName: "规格一",
+    unitPriceCents: 199000n,
+    quantity: 2,
+    selected: true,
+    skuThumbnailUrl: "http://example.com/a.png",
+    status: CartStatus.ACTIVE,
+  },
+];
+
+const PRODUCT_DETAIL = {
+  productDetail: {
+    spuId: 10n,
+    spuCode: "SPU-1",
+    spuName: "纸灯一号",
+    skus: [
+      {
+        skuId: 100n,
+        merchantId: "m-1",
+        skuName: "标准款",
+        price: { units: 199n, nanos: 0 },
+        thumbnailUrl: "http://example.com/a.png",
+      },
+    ],
+  },
+};
+
+const ADDRESSES = {
+  addresses: [
+    {
+      addressId: "addr-1",
+      recipientName: "张三",
+      isDefault: true,
+      detail: { province: "广东省", city: "深圳市", district: "南山区", detail: "科技园 1 号" },
+    },
+  ],
+};
+
+let transport: Transport;
+
+function makeTransport() {
+  return createRouterTransport(({ service }) => {
+    service(CartService, { getCart: () => ({ items: CART_ITEMS }) });
+    service(ProductService, { getProductDetail: () => PRODUCT_DETAIL });
+    service(AddressService, { listAddresses: () => ADDRESSES });
+  });
+}
+
+// —— 脚手架 ————————————————————————————————————————————————————————
+/** 与手册目标对齐的扫描配置；color-contrast 关闭原因见文件头注释。 */
+function runAxe(node: Element) {
+  return axe(node, {
+    runOnly: {
+      type: "tag",
+      values: ["wcag2a", "wcag2aa", "wcag21a", "wcag21aa", "wcag22aa"],
+    },
+    rules: { "color-contrast": { enabled: false } },
+  });
+}
+
+/** 整页挂载：真 routeTree + 内存 history，provider 层次照抄 bootstrap.tsx。 */
+async function renderPage(path: string, ready: () => Promise<unknown>) {
+  transport = makeTransport();
+  // retry 关掉，失败立刻暴露而不是拖到超时
+  const client = new QueryClient({ defaultOptions: { queries: { retry: false } } });
+  const router = createRouter({
+    routeTree,
+    history: createMemoryHistory({ initialEntries: [path] }),
+    context: {
+      auth: {
+        isAuthenticated: false,
+        setIsAuthenticated: () => {},
+        login: () => {},
+        logout: () => {},
+      },
+    },
+    // jsdom 未实现 window.scrollTo，关掉滚动恢复防噪音
+    scrollRestoration: false,
+  });
+  render(
+    <TransportProvider transport={transport}>
+      <QueryClientProvider client={client}>
+        <AuthProvider router={router}>
+          <RouterProvider router={router} />
+        </AuthProvider>
+      </QueryClientProvider>
+    </TransportProvider>,
+  );
+  // 等页面主内容真的渲染出来（服务桩数据已回）再扫，避免扫到骨架屏
+  await ready();
+  return runAxe(document.body);
+}
+
+beforeAll(async () => {
+  await initI18n({ ns: "consumer", resources: { "zh-CN": consumerZh, en: consumerEn } });
+});
+
+afterEach(() => {
+  cleanup();
+  document.body.innerHTML = "";
+});
+
+// —— canary：axe 探测器自检 ————————————————————————————————————————
+describe("axe 探测器自检（常驻 canary）", () => {
+  it("已知违规样本必须被检出", async () => {
+    // 用 createElement 搭违规 DOM：无 alt 的 img + 无标签的 input。
+    // 不用 JSX 是为了不撞 jsx-a11y 静态门禁（见文件头注释）。
+    const host = document.createElement("div");
+    const input = document.createElement("input");
+    input.type = "text";
+    const img = document.createElement("img");
+    img.src = "http://example.com/x.png";
+    host.append(input, img);
+    document.body.append(host);
+
+    const results = await runAxe(host);
+    const ids = results.violations.map((v) => v.id);
+    expect(ids).toContain("image-alt");
+    expect(ids).toContain("label");
+  });
+});
+
+// —— 四个关键页 ————————————————————————————————————————————————————
+describe("关键页 axe 零违规（WCAG A/AA，jsdom）", () => {
+  it("首页 /", async () => {
+    // 语言无关的就绪信号：首页 h1（i18n 默认语言可能是 en）。
+    // hidden: true 必须给——PrivacyConsent 对话框默认打开，MUI Modal 会把应用
+    // 根容器标成 aria-hidden，role 查询默认会排除整棵树。
+    // 内层等待超时 < 用例超时：失败时 testing-library 会打印实际 DOM，可诊断。
+    const results = await renderPage("/", () =>
+      screen.findByRole("heading", { level: 1, hidden: true }, { timeout: 4000 }),
+    );
+    expect(results).toHaveNoViolations();
+  }, 15000);
+
+  it("商品详情 /product/$spuCode", async () => {
+    const results = await renderPage("/product/SPU-1", () =>
+      screen.findByText("纸灯一号", undefined, { timeout: 5000 }),
+    );
+    expect(results).toHaveNoViolations();
+  });
+
+  it("购物车 /cart", async () => {
+    const results = await renderPage("/cart", () =>
+      screen.findByText("店铺一", undefined, { timeout: 5000 }),
+    );
+    expect(results).toHaveNoViolations();
+  });
+
+  it("结算 /checkout", async () => {
+    const results = await renderPage("/checkout", () =>
+      screen.findByText("张三", undefined, { timeout: 5000 }),
+    );
+    expect(results).toHaveNoViolations();
+  });
+});

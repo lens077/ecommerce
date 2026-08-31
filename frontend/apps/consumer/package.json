@@ -63,6 +63,7 @@
     "vite": "catalog:",
     "vite-plus": "catalog:",
     "vitest": "catalog:",
+    "vitest-axe": "catalog:",
     "vitest-browser-react": "catalog:"
   }
 }

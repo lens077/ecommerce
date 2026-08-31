@@ -96,7 +96,11 @@ const PrivacyConsent: React.FC<PrivacyConsentProps> = ({ onConsent }) => {
     >
       <DialogTitle sx={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
         {t("privacy.title")}
-        <IconButton onClick={() => setOpen(false)} sx={{ padding: 0 }}>
+        <IconButton
+          onClick={() => setOpen(false)}
+          aria-label={t("privacy.close")}
+          sx={{ padding: 0 }}
+        >
           <Close />
         </IconButton>
       </DialogTitle>
@@ -106,7 +110,7 @@ const PrivacyConsent: React.FC<PrivacyConsentProps> = ({ onConsent }) => {
         </Typography>
 
         <Box sx={{ mb: 2 }}>
-          <Typography variant="subtitle1" sx={{ mb: 1 }}>
+          <Typography variant="subtitle1" component="h3" sx={{ mb: 1 }}>
             {t("privacy.analytics.title")}
           </Typography>
           <Typography variant="body2" color="text.secondary" sx={{ mb: 1 }}>
@@ -125,7 +129,7 @@ const PrivacyConsent: React.FC<PrivacyConsentProps> = ({ onConsent }) => {
         </Box>
 
         <Box sx={{ mb: 2 }}>
-          <Typography variant="subtitle1" sx={{ mb: 1 }}>
+          <Typography variant="subtitle1" component="h3" sx={{ mb: 1 }}>
             {t("privacy.location.title")}
           </Typography>
           <Typography variant="body2" color="text.secondary" sx={{ mb: 1 }}>
@@ -144,7 +148,7 @@ const PrivacyConsent: React.FC<PrivacyConsentProps> = ({ onConsent }) => {
         </Box>
 
         <Box sx={{ mb: 3 }}>
-          <Typography variant="subtitle1" sx={{ mb: 1 }}>
+          <Typography variant="subtitle1" component="h3" sx={{ mb: 1 }}>
             {t("privacy.marketing.title")}
           </Typography>
           <Typography variant="body2" color="text.secondary" sx={{ mb: 1 }}>

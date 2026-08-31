@@ -87,7 +87,9 @@ export const AuthProvider: React.FC<{ children: React.ReactNode; router: any }> 
     // Web 端：整页跳到网关，由它跑完 OAuth 再跳回来。
     // 回跳目标用相对路径，网关只接受相对路径或白名单来源（防开放重定向）。
     startBffLogin(router.state.location.href);
-  }, [router]);
+    // applyIdentity 是 deps=[] 的 useCallback，引用恒稳定；列入依赖只为满足
+    // exhaustive-deps，不会引起本回调重建。
+  }, [router, applyIdentity]);
 
   // 🔓 登出
   // 🔓 登出：两端同一条路径——一次 POST，网关删会话（即时生效）。

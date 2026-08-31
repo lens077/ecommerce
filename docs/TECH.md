@@ -765,7 +765,7 @@ cfg.GetServiceAddr("inventory-service") // 从 K8s DNS 解析
 
 ### 11.4 无障碍性（a11y）
 
-目标标准 **WCAG 2.2 AA**（国内合规锚点 GB/T 37668-2019 与工信部适老化及无障碍改造要求）。路线：组件层依托 MUI 内置的无障碍实现，业务侧职责是不破坏它（图标按钮 `aria-label` 走 i18n、装饰图 `aria-hidden`、不用裸 `div` 造可点元素）；静态检查开 oxlint 的 jsx-a11y 规则集（vp lint 承载，随 `vp check --fix` 进 pre-commit）；自动化验证走 vitest browser mode 的 axe 断言 + Lighthouse 审计基线分。SPA 特有风险点是 TanStack Router 换页后的焦点管理。自动化只能覆盖约三分之一到一半的问题，键盘走查与 VoiceOver 读屏实测不可省、但只盯关键旅程。实施原则、工具接入点、分层验证与带红测验收的落地顺序见接入手册 [`docs/frontend/accessibility.md`](frontend/accessibility.md)。
+目标标准 **WCAG 2.2 AA**（国内合规锚点 GB/T 37668-2019 与工信部适老化及无障碍改造要求）。路线：组件层依托 MUI 内置的无障碍实现，业务侧职责是不破坏它（图标按钮 `aria-label` 走 i18n、装饰图 `aria-hidden`、不用裸 `div` 造可点元素）；静态检查开 oxlint 的 jsx-a11y 规则集（vp lint 承载，随 `vp check --fix` 进 pre-commit）；自动化验证走 vitest（jsdom 环境）的 axe 断言 + Lighthouse 审计基线分。SPA 特有风险点是 TanStack Router 换页后的焦点管理。自动化只能覆盖约三分之一到一半的问题，键盘走查与 VoiceOver 读屏实测不可省、但只盯关键旅程。实施原则、工具接入点、分层验证与带红测验收的落地顺序见接入手册 [`docs/frontend/accessibility.md`](frontend/accessibility.md)。
 
 
 ## 12. 实施路线图
