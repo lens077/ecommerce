@@ -35,8 +35,8 @@
 
 ## 相关但不在这里的
 
-- MCP 服务端配置：全局在 `~/.claude.json`，本仓按需挂载的 kaneo 在 `.claude/kaneo-mcp.json`
-  （**刻意不常驻**，理由见 `.claude/skills/kaneo-sync/SKILL.md` 与 evolution-log）
+- MCP 服务端配置：全局在 `~/.claude.json`，本仓当前不挂载任何仓库级 MCP
+  （原看板 MCP 与其同步 skill 已于 2026-08-30 随该服务下线一并删除，见 evolution-log）
 - issue/spec 存放约定 → [issue-tracker.md](issue-tracker.md)
 - triage 标签 → [triage-labels.md](triage-labels.md)
 - 领域文档约定 → [domain.md](domain.md)

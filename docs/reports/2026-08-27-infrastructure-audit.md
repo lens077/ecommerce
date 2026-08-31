@@ -35,12 +35,14 @@ Kubernetes API、三个 node 和业务 Pod 已恢复，不代表公网隧道自�
 
 | 类型 | 入口 | 实测 | TLS |
 |---|---|---:|---|
-| HTTP | `apikv.com`、`blog.apikv.com`、`pangolin.apikv.com`、`kaneo.apikv.com`、`ntfy.apikv.com` | `200` | ZeroSSL wildcard |
+| HTTP | `apikv.com`、`blog.apikv.com`、`pangolin.apikv.com`、`ntfy.apikv.com` | `200` | ZeroSSL wildcard |
 | HTTP | `vault.apikv.com` | `307 /ui/` | ZeroSSL wildcard |
 | TCP | `node1:52288` PostgreSQL | 可连接 | **明文，无证书** |
 | TLS | `redis.apikv.com:61246` Redis | 握手成功 | ZeroSSL wildcard |
 
 node1 的 PostgreSQL 和 Redis 端口仍对公网监听。Redis 至少有 TLS；PostgreSQL 仍是明文入口，不能因为 Gatus 的 TCP connect 成功就视为安全或业务健康。
+
+> 后续变更（2026-08-30）：审计当日同为 `200` 的看板入口 `kaneo.apikv.com` 已随该服务整体下线删除，现返回 `404`，故本表不再列出。node1 其余入口不受影响。
 
 ### node2
 

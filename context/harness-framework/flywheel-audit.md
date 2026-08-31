@@ -91,4 +91,4 @@ transcript 里：`~/.claude/projects/<仓slug>/`、`~/.codex/sessions/`、`~/.ds
 | 2026-08-26 | 对照 Kun Chen《Your AGENTS.md is a Neural Net》，首轮 session 反传 | 近 14 天 341 条用户消息蒸馏出 246 条人话（最大噪音源 = 以 user 角色注入的 skill 全文）；抓到 1 条漏沉淀（登出自动登回教训只在代码注释与 TODO）+ 1 条陈旧权重（consumer INDEX「token 存 localStorage」）；2 条候选被批量门槛正确拒绝 | `consumer/experience/logout-auto-relogin.md`；INDEX 修剪；「Session 反传」节 + 清单 #6；backpass 工具评估为缓用 |
 | 2026-08-26 | 对照《Agent 自进化飞轮》评测（本文建立） | 门禁注错验证是一次性动作，TODO 预算门禁红路径从未被考；进化无周期兜底；agent-reach 指引与实测有出入 | canary + CI 接线；本审计约定；skills.md 复评备注 |
 | 2026-08-24 | （追认）环境漂移全面审计 | 两条照做即失败的命令；freeze 恒绿假门禁；影子服务切流风险 | 删 freeze 整套；规则与实况重对齐（见 evolution-log） |
-| 2026-08-21 | （追认）对照腾讯《Multi-Agent 降本》复盘 | TODO.md 膨胀至 199KB；kaneo 常驻；锚点串行噪音 | 六处 token 治理（见 evolution-log） |
+| 2026-08-21 | （追认）对照腾讯《Multi-Agent 降本》复盘 | TODO.md 膨胀至 199KB；看板 MCP 常驻；锚点串行噪音 | 六处 token 治理（见 evolution-log） |

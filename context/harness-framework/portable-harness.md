@@ -43,5 +43,5 @@ lens077 工作区的其他项目（mall / control-tower / …）可直接复用�
 5. 满一个迭代后跑首轮 `backpass-distill.sh <新仓>` 做 Session 反传。
 
 不搬的东西：`.service-matrix.yaml`/structcheck（业务拓扑强绑定）、TODO 预算数值（按各仓
-体量自定）、impeccable/kaneo 等项目绑定接线。判据同 [cordis-evaluation.md](cordis-evaluation.md)：
+体量自定）、impeccable 等项目绑定接线。判据同 [cordis-evaluation.md](cordis-evaluation.md)：
 收益不抵维护成本的不搬。

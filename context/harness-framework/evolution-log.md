@@ -751,17 +751,18 @@ description: harness 本身（硬规则/门禁/Agent 约束）每次改动的原
   ③新增 `scripts/verify-quick.sh`:后端链与 `pnpm ready` 并行跑、绿只打一行红只打失败段,
   接入 AGENTS.md 锚点区与 runbook §0.5;④runbook §0 的硬规则 #6 副本压成指针
   (全文只留 AGENTS.md 一处);⑤新增 `harness-framework/subagent-dispatch.md`
-  (子代理只回结构化摘要/按角色裁剪能力/按角色分层模型);⑥kaneo MCP 从 `~/.claude.json`
-  用户级常驻注册移除,收窄为按需挂载(仓库 `.claude/kaneo-mcp.json` + skill 前置说明);
+  (子代理只回结构化摘要/按角色裁剪能力/按角色分层模型);⑥看板 MCP 从 `~/.claude.json`
+  用户级常驻注册移除,收窄为按需挂载(仓库内配置 + skill 前置说明);
   impeccable PostToolUse 钩子加 `frontend/` 路径过滤包装(`.claude/hooks/`)。
+  ⚠️ 其中⑥的对象已于 2026-08-30 整体下线,见文末「看板整体下线」条。
 - **为什么**:主会话/每轮常驻的字节在后续所有轮次被重复计费。TODO.md 被硬规则 #3 绑进
-  每个提交回合,是单文件最大的重复计费源;kaneo Schema 与 impeccable 全路径触发是
+  每个提交回合,是单文件最大的重复计费源;该 MCP Schema 与 impeccable 全路径触发是
   「用不上也常驻」;锚点串行+全量输出是修复循环里的重复噪音。方法论对照
   腾讯技术工程《靠 10 个优化点把 Multi-Agent 工作流成本降 50%以上》(2026-08)的
   「只看到需要的/减少无关/减少重复」三原则。
 - **触发事故**:2026-08-21 对照该文复盘时量出 `TODO.md` 已膨胀到 199,057B、
   单行最长 3.8KB(验收证据长文与会话问答堆在进度真相源里),17 行超 2000 字符;
-  同时发现 kaneo MCP 在所有项目的每轮对话常驻 Schema 而仅 kaneo-sync 一个 skill 使用。
+  同时发现该看板 MCP 在所有项目的每轮对话常驻 Schema 而仅一个同步 skill 使用。
   无单次爆炸事故,属于「滚雪球到量变临界」的主动治理。
 - **怎么验证的**:瘦身脚本跑完后 `TODO.md` 92,103B、超长行清零,抽查表格行与归档原文
   完整性通过;`scripts/verify-context.sh` 全绿(含新门禁与新文件的 INDEX/frontmatter 检查);
@@ -810,3 +811,24 @@ description: harness 本身（硬规则/门禁/Agent 约束）每次改动的原
   CI 把健康的预算门禁误判为失效并阻塞合并。
 - **怎么验证的**：本地运行 `scripts/verify-context-canary.sh`，干净沙箱保持绿色，十类注错均被
   对应 tag 拦截；随后运行 `scripts/verify-context.sh` 复核真实仓库仍为绿色。
+
+### 2026-08-30 看板(kaneo)整体下线，TODO.md 恢复为唯一进度载体
+
+- **改了什么**：①删除 `.claude/skills/kaneo-sync/`、`.claude/kaneo-mcp.json` 与
+  `scripts/kaneo/extract_todo.py`（含 `scripts/kaneo/` 目录）；②清除 `docs/agents/skills.md`、
+  `docs/TECH-RADAR.md`、`portable-harness.md`、`flywheel-audit.md` 中的看板接线与建卡约定；
+  ③node1 上 `docker compose down -v` 删除 `kaneo` / `kaneo-postgres` 容器、`kaneo_postgres_data`
+  数据卷、`kaneo_default` 网络、部署目录 `/home/docker/kaneo/` 与本地镜像；
+  ④Pangolin 删除资源 `kaneo.apikv.com`（rid 5）及其 target/roleResources/session 级联行。
+- **为什么**：用户决定停用该看板。留着半截接线比删干净更糟——skill 和脚本会继续把
+  「同步到看板」写成现行约定，而后端已经不存在，下一个照做的 agent 只会撞上死链接。
+  2026-08-13 起 `TODO.md` 已是唯一进度真相源，看板本就只是执行态镜像，删除不损失真相源。
+- **触发事故**：无事故，是用户明确要求的下线。记这条是因为 2026-08-21 那次治理
+  （见上文「token 成本治理」⑥）把「按需挂载看板 MCP」写成了长期约定，
+  只删文件不写理由的话，半年后有人会照着那条旧记录把 MCP 配置加回来，然后连不上。
+- **怎么验证的**：删除前 `https://kaneo.apikv.com/` 返回 200，删资源后连续三次返回 404，
+  同时对照组 `https://blog.apikv.com/` 保持 200，证明只掉了目标路由而非整个 Traefik；
+  SQLite 级联删除后复查 `resources`/`targets`/`roleResources`/`resourceSessions` 四表
+  对 rid 5 均为 0 行（改库前已 `cp` 全量备份 `db.sqlite.bak-kaneo-removal-20260830-181029`）；
+  `docker ps -a`、`docker volume ls`、`docker images` 均无 kaneo 残留，宿主 5173 端口已释放；
+  仓库侧 `scripts/verify-context.sh` 全绿，全仓 `kaneo` 关键字归零。
