@@ -477,7 +477,7 @@
 ### Casdoor
 
 - **含义**：Go 编写的开源身份提供方（IdP），提供登录界面、用户目录、OAuth 2.0/OIDC 协议端点与 JWT 签发。
-- **本项目**：唯一 IdP（`casdoor.apikv.com`，RS256、`kid=lens`）；2026-08-20 定稿收编进集群，迁移方案与 JWKS diff==0 门禁见 [`docs/技术栈选型对抗/对抗审阅表-第3轮.md`](技术栈选型对抗/对抗审阅表-第3轮.md) R3-A。
+- **本项目**：唯一 IdP（`casdoor.apikv.com`，RS256、`kid=lens`）；2026-08-20 定稿收编进集群。现行身份与授权边界见 [`TECH.md`](TECH.md) §8。
 
 **后续决策覆盖（2026-08-28）**：本条已被 [`TECH.md`](TECH.md) 覆盖：Casdoor 作为 IAM 管理有状态 Session，Session 存储于独立的 Dragonfly Session Store；系统完全废弃 JWT 鉴权，不保留兼容路径。
 
