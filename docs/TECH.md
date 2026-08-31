@@ -577,7 +577,7 @@ VPA 只以 recommendation 模式进入容量流程：当前组件只安装 recom
 
 节点重启不保证全局重平衡。Pod 对象仍绑定原节点时，容器通常在原节点恢复；只有 Pod 被终止或驱逐后，新副本才会重新经过 scheduler。原节点恢复不会让已经迁走的 Pod 自动搬回，需要通过告警发现持续 skew，再执行受控 rollout。
 
-**当前定稿不安装 Descheduler**：现有 `5/6/6` 分布〔实测 2026-08-29〕无需修复，13 个单副本服务没有 PDB，requests 尚未校准，node101 的部分内存又来自不可迁移的 control-plane 与宿主机开销。VPA Off 校准后的 requests rollout 本身会触发一次重新调度；在当前三节点、17 个 Pod 的规模下，硬 spread + 可信 requests + skew 告警 + 节点恢复 Runbook 比常驻 eviction 控制器更可控。只有节点变化或 placement drift 反复出现，并且多副本、PDB、N+1 和告警均已验证时，才重新评估 `RemovePodsViolatingTopologySpreadConstraint`；`LowNodeUtilization` 仍需额外证明容量漂移无法由 requests 校准和正常 rollout 收敛。
+**当前定稿不安装 Descheduler**：健康态分布为 `5/6/6`〔实测 2026-08-29〕；三节点内存扩容统一重启后曾遗留 `14/2/1` 倾斜，已由一次性受控 rollout 回平至 `6/6/5`〔实测 2026-08-30〕——这恰是「受控 rollout 比常驻 eviction 控制器更可控」的用例，不改变本定稿。13 个单副本服务没有 PDB，requests 尚未校准，node101 的部分内存又来自不可迁移的 control-plane 与宿主机开销。VPA Off 校准后的 requests rollout 本身会触发一次重新调度；在当前三节点、17 个 Pod 的规模下，硬 spread + 可信 requests + skew 告警 + 节点恢复 Runbook 比常驻 eviction 控制器更可控。只有节点变化或 placement drift 反复出现，并且多副本、PDB、N+1 和告警均已验证时，才重新评估 `RemovePodsViolatingTopologySpreadConstraint`；`LowNodeUtilization` 仍需额外证明容量漂移无法由 requests 校准和正常 rollout 收敛。
 
 VPA recommendation-only 的发布证据、经验、回滚与下一步操作见 [`docs/reports/2026-08-29-vpa-recommendation-only.md`](reports/2026-08-29-vpa-recommendation-only.md)；Descheduler 的替代方案与重评条件见 [`docs/reports/2026-08-29-descheduler-decision.md`](reports/2026-08-29-descheduler-decision.md)；容量校准、故障注入与持续告警清单见 [`docs/design/platform/capacity-balancing.md`](design/platform/capacity-balancing.md)。
 

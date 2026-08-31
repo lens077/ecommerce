@@ -22,7 +22,8 @@
 
 ## 一、全局优先级视图
 
-**未完成合计 151 项，其中 P0 共 22 项。** P0 的判据是**后果**不是紧迫感：
+**未完成合计 157 项，其中 P0 共 21 项**（计数口径：各分类文件顶层 `- [ ]` 复选框实数；
+2026-08-30 全量重数，此前的 151 是 DevOps 条目迁入后未同步的漂移）。P0 的判据是**后果**不是紧迫感：
 「调用会成功但结果是错的」「任何登录用户都能越权」一律 P0——它们不会在联调时暴露，
 只在上量后以超卖、丢单、数据泄露的形式爆发。
 
@@ -47,25 +48,26 @@
 | 15 | 可观测栈自身无独立存活证明（故障时先挂） | [可观测](docs/todo/统一可观测性体系.md) |
 | 16 | 一致性底座：Product/Order 事务内 producer、NACK/DLQ、重放审计 | [事件](docs/todo/数据一致性与事件驱动.md) |
 | 17 | 领域事件落地（`OrderCreated`/`OrderPaid`/…） | [事件](docs/todo/数据一致性与事件驱动.md) |
-| 18 | `KCM_TERMINATED_POD_GC_THRESHOLD=100` 阈值缺陷（僵尸 Pod 卡 97 永不 GC） | [基础设施](docs/todo/基础设施与部署模型.md) |
-| 19 | node102/103 内存仍 3.3 GB，N+1 容量目标不成立 | [基础设施](docs/todo/基础设施与部署模型.md) |
-| 20 | 平台组件相对硬件严重超配（KEDA/Rollouts/Kyverno 零使用却常驻） | [基础设施](docs/todo/基础设施与部署模型.md) |
-| 21 | CiliumEndpointSlice 陈旧无自愈（策略放行却静默拒绝，无告警） | [基础设施](docs/todo/基础设施与部署模型.md) |
-| 22 | 轮换 Config Center 预览中暴露的搜索凭据（日志不可撤回） | [鉴权](docs/todo/零信任鉴权与Session.md) |
+| 18 | `KCM_TERMINATED_POD_GC_THRESHOLD=100` 阈值缺陷（两次卡在阈值下永不 GC；存量僵尸已手清，阈值/告警未修） | [基础设施](docs/todo/基础设施与部署模型.md) |
+| 19 | 平台组件相对硬件严重超配（KEDA/Rollouts 零使用、Kyverno 仅 Audit 却常驻） | [基础设施](docs/todo/基础设施与部署模型.md) |
+| 20 | CiliumEndpointSlice 陈旧无自愈（**已两次发作**：08-29 / 08-30 引爆全后端 CrashLoop；均靠手工删 CES 恢复，巡检告警未落地） | [基础设施](docs/todo/基础设施与部署模型.md) |
+| 21 | 轮换 Config Center 预览中暴露的搜索凭据（日志不可撤回） | [鉴权](docs/todo/零信任鉴权与Session.md) |
 
 ### 分类索引
 
 | 分类 | 对应 TECH.md | 未完成 | P0 |
 |---|---|---:|---:|
+| [基础设施与部署模型](docs/todo/基础设施与部署模型.md) | §7 | 24 | 3 |
 | [微服务与交易闭环](docs/todo/微服务与交易闭环.md) | §5 / §4.3 | 23 | 10 |
-| [基础设施与部署模型](docs/todo/基础设施与部署模型.md) | §7 | 30 | 4 |
-| [文档与协作机制](docs/todo/文档与协作机制.md) | —（harness） | 19 | 0 |
-| [统一可观测性体系](docs/todo/统一可观测性体系.md) | §9 | 17 | 3 |
+| [统一可观测性体系](docs/todo/统一可观测性体系.md) | §9 | 22 | 3 |
+| [文档与协作机制](docs/todo/文档与协作机制.md) | —（harness） | 18 | 0 |
 | [零信任鉴权与 Session](docs/todo/零信任鉴权与Session.md) | §8 | 16 | 3 |
 | [前端技术栈与工程化](docs/todo/前端技术栈与工程化.md) | §11 | 16 | 0 |
+| [供应链与交付流水线](docs/todo/供应链与交付流水线.md) | B 表 / §7.1 | 16 | 0 |
 | [数据一致性与事件驱动](docs/todo/数据一致性与事件驱动.md) | §3 / §4 | 14 | 2 |
 | [服务发现与配置中心](docs/todo/服务发现与配置中心.md) | §10 | 8 | 0 |
-| [供应链与交付流水线](docs/todo/供应链与交付流水线.md) | B 表 / §7.1 | 8 | 0 |
+
+〔计数 2026-08-30 重核：`grep -c '^- \[ \]' docs/todo/*.md`，按未完成数降序〕
 
 ---
 
@@ -80,23 +82,36 @@ dev 的 7 个相关服务已滚到 `sha-0b9b9ad`，15/15 Deployment Ready、发�
 > ⚠️ 同日稍晚集群曾因 node101 内存耗尽发生控制面雪崩（详见下表与
 > [基础设施与部署模型](docs/todo/基础设施与部署模型.md) P0 段），已恢复至 15/15；
 > **该故障与本次发布无关**，根因是节点容量而非镜像变更。
+>
+> 〔2026-08-30 实测新增〕发布之后集群又经历一次**全集群统一重启**（三节点内存扩容至 6.4 GB，
+> 所有 ns 的 Pod age 同为 ~16h）；control-tower-gateway 已滚到 `0.2.1`；
+> 新增 otel-node hostmetrics DaemonSet（节点级指标采集）。
+>
+> 〔2026-08-30 处置记录〕重启遗留的两笔债当日已清：①14/2/1 倾斜已受控重平衡回 **6/6/5**；
+> ②config-center/dragonfly 的 **CES 陈旧**被容器重启潮引爆（14 Pod CrashLoop + 网关双副本齐崩），
+> 删陈旧 CES + 重建 Pod 恢复，端到端复验绿（healthz 200/56ms + 真实 RPC + SSR）。
+> 另：96 个僵尸 Pod 已手清、`victoriametrics`/`observability` 空置 ns 已删。
+> 病理沉淀见 [`context/team/cilium-datapath-ops.md`](context/team/cilium-datapath-ops.md) 第二节。
 
-### 1. 集群与基础设施（2026-08-29 故障恢复后实测）
+### 1. 集群与基础设施（2026-08-30 实测）
 
 | 项目 | 状态 | 说明 |
 |---|---|---|
-| K8s 集群 | ✅ | node101(cp)/node102/node103，v1.36.4，Ubuntu 26.04 / 内核 7.0 / **arm64**；**ecommerce 15/15 Deployment Ready**，17 Pod 分布 **5/6/6**（skew=1，硬 spread 生效） |
-| 节点容量 | 🔴 | 每节点 4 vCPU；node101 已扩至 **6.4 GB**，node102/103 仍 3.3 GB。2026-08-29 曾因 node101 内存耗尽（可用 140 MB）引发控制面雪崩 |
-| Cilium / Gateway API | ✅ | v1.20.1，KPR 严格模式（无 kube-proxy DS）；3 个 Gateway 全 `PROGRAMMED=True` |
-| GitOps（ArgoCD） | 🔴 | 零 Application / 零 ApplicationSet，AppProject 仅 `default`；chart 与实况在资源名/标签/tag 三处不符，**禁止直接开 selfHeal** |
-| 镜像 tag 口径 | 🔴 | 集群实跑 5 种风格（`sha-*`/`health-*`/`dev-*`/两个 `@sha256`），**无一个 `:dev`**；`helm/values.yaml` 还钉 `1.4.0` |
+| K8s 集群 | ✅ | node101(cp)/node102/node103，v1.36.4，Ubuntu 26.04 / 内核 7.0 / **arm64**；**ecommerce 15/15 Deployment Ready**（17 Pod） |
+| 节点容量 | 🟡 | 每节点 4 vCPU / **6.4 GB**（node102/103 扩容已完成，三节点对齐）；N+1 容量验证未做。2026-08-29 曾因 node101 内存耗尽（可用 140 MB）引发控制面雪崩 |
+| Pod 分布 | ✅ | **6/6/5（skew=1）**——2026-08-30 受控重平衡完成（原 14/2/1 为扩容重启遗留）；执行中引爆并修复了 CES 陈旧故障（见 §0 处置记录） |
+| 僵尸 Pod | 🟡 | kube-system 曾积压 96 个 `ContainerStatusUnknown`，2026-08-30 已手清为 0；**KCM 阈值缺陷与告警未修（P0#18 保持打开）** |
+| Cilium / Gateway API | ✅ | v1.20.1，KPR 严格模式（无 kube-proxy DS）；**2 个** Gateway `PROGRAMMED=True`（`.132` pg-passthrough 已随 postgresql ns 清理） |
+| 集群内 PG | — | `postgresql`/`cnpg-system` ns 与 CNPG CRD **均已清理**；node3 Pigsty 是唯一数据面，**集群内回滚路径不再存在** |
+| GitOps（ArgoCD） | 🔴 | 零 Application / 零 ApplicationSet，AppProject 仅 `default`（ArgoCD 自身 6 Deployment 已全 1/1）；chart 与实况在资源名/标签/tag 三处不符，**禁止直接开 selfHeal** |
+| 镜像 tag 口径 | 🔴 | 集群实跑 **6 种风格**（`0.2.1`/`sha-*`×2种/`health-*`/`dev-*`/两个 `@sha256`），**无一个 `:dev`**；`helm/values.yaml` 已回写 `1.5.5` 但与实跑无一相符 |
 | VPA | 🟡 | 只装 recommender（无 updater/webhook）；15 个 ecommerce VPA 全 `Off`/`RequestsOnly` 且 `RecommendationProvided=True`；推荐地板已调至 `10m/32Mi`。**config-center 的 2 个是 `InPlace`——死配置** |
-| PDB | 🔴 | 6 个中 5 个 `ALLOWED DISRUPTIONS=0`，**当前无法安全排空任何节点** |
-| Tetragon | 🟡 | chart 1.7.1，三节点；唯一策略 `ecommerce-service-account-token-access` 为 **audit-only 不阻断**；enforcement 待评估 |
-| 已装但零使用 | 🔴 | KEDA（0 ScaledObject）、Argo Rollouts（0 Rollout）、Kyverno（0 生效策略）——占内存与 etcd 却无产出 |
+| PDB | 🟡 | 5 个 PDB：consumer-next/gateway/cilium-operator/nats `ALLOWED=1`，仅 consul-server 锁死为 0；**13 个单副本 Deployment 仍无 PDB、无法无损驱逐** |
+| Tetragon | 🟡 | chart 1.7.1，DaemonSet **3/3 Ready**；唯一策略 `ecommerce-service-account-token-access` 为 **audit-only 不阻断**；enforcement 待评估 |
+| 已装但基本零使用 | 🔴 | KEDA（0 ScaledObject）、Argo Rollouts（0 Rollout）、Kyverno（仅 2 条 **Audit** 策略无 Enforce）——控制器全 1/1 常驻，占内存与 etcd |
 | 未安装 | — | Descheduler、OpenCost、Chaos Mesh（均为条件触发，见 TECH.md B 表） |
 
-### 2. 事件与搜索（2026-08-29 实测；**目标基础设施已存在，缺业务接线**）
+### 2. 事件与搜索（2026-08-29 实测，2026-08-30 复验 TCP 连通；**目标基础设施已存在，缺业务接线**）
 
 | 组件 | 位置 | 状态 |
 |---|---|---|
@@ -144,11 +159,11 @@ dev 的 7 个相关服务已滚到 `sha-0b9b9ad`，15/15 Deployment Ready、发�
 | 状态管理 | ✅ | 2026-08-28 完成 valtio→**Zustand** 全量迁移，valtio 依赖已移除 |
 | 错误监控 | 🟡 | Bugsink 服务端已运行（node3，2.5.0）；**前端 SDK + Source Map 未接** |
 
-### 6. 可观测性
+### 6. 可观测性（2026-08-30 实测）
 
 | 项目 | 状态 | 说明 |
 |---|---|---|
-| 采集层 | 🟡 | Vector **3/3**、集群内 OTel Collector **1/1**；**VMAgent 缺位**（TECH.md §9 要求） |
+| 采集层 | 🟡 | Vector **3/3**、集群内 OTel Collector **1/1**、**新增 otel-node hostmetrics DaemonSet 3/3**（节点级 CPU/内存直推 VictoriaMetrics）；**VMAgent 仍缺位**——与 otel-node 路线需二选一收敛（见分类文件）；Pod 级实际用量仍缺 kubeletstats |
 | 存储层 | ✅ | node3：VictoriaMetrics v1.149.0 / VictoriaLogs v1.52.0 / VictoriaTraces v0.10.0 |
 | 存量链 | ✅ | Loki / fluent-bit / Jaeger / 集群内 Grafana **均已退役且确认不存在** |
 | 告警 | 🟡 | node3 Alertmanager 0.33.1，`route.receiver=local-audit`；已加 `ecommerce-k8s.yml` 6 条 K8s 规则（数据来自 otel `k8s_cluster` receiver，不需要 kube-state-metrics）；**无企业微信、无飞书**（配置里全是注释） |
@@ -157,35 +172,70 @@ dev 的 7 个相关服务已滚到 `sha-0b9b9ad`，15/15 Deployment Ready、发�
 
 ---
 
-## 三、实施路线
+## 三、阶段推进（2026-08-30 按优先级重排）
 
-> 阶段归属，不承载勾选状态；具体条目状态见上方分类索引。
+> 只写「做什么 + 完成判据」，不写预估时间。阶段是**依赖顺序**不是日历；
+> 条目勾选状态一律在分类文件里维护，此处只做安排。P0 全部落在阶段 0 与阶段 1。
 
-**第一阶段 · 交易正确性与消费者闭环**
-修复 order 假成功、inventory CAS/版本错误和 payment 未实现 RPC；以 PostgreSQL 事务、
-唯一约束、幂等键和状态机为正确性锚点（Dragonfly 不承载库存锁或业务真相）；
-打通商品→购物车→结算→库存预占→支付→订单状态→取消/退款的成功与失败路径；
-修复 address/user/merchant 数据归属校验，完成 BFF cookie 的 pre/prod 安全属性与 legacy bearer 收尾。
-**交付标准**：固定集成测试与浏览器用例可重复验证完整购物流程，不再出现假成功。
+### 阶段 0 · 集群止血（先于业务开发；全部 P0 基础设施/可观测项）
 
-**第二阶段 · 商家、管理与履约能力**
-完成 merchant/admin 的商品、订单、审核、售后、对账与审计页面及 API；
-履约并入 order 域（发货、物流单、轨迹、第三方 adapter），
-没有独立伸缩/故障域证据时不新建 fulfillment 服务；
-落实商家子账号与 `merchant_id` 数据隔离，对象级授权按 TECH.md §8 落 OpenFGA。
+1. ~~受控 rollout 重平衡 14/2/1 倾斜~~ **已完成〔实测 2026-08-30：终态 6/6/5，15/15 Ready〕**
+2. **修 KCM 阈值**（存量 96 个僵尸已于 2026-08-30 手清；改基于时间回收或下调阈值，
+   补「Failed Pod 数 > N」告警；判据：注入僵尸 Pod 后可被回收且有告警）
+3. **CES/CiliumEndpoint IP 一致性巡检告警**（已两次发作，优先级最高；对账脚本已沉淀在
+   [`cilium-datapath-ops.md`](context/team/cilium-datapath-ops.md) 第二节；
+   判据：人为制造陈旧 CES 能触发告警）
+4. **可观测栈黑盒探活**（node3 Gatus 探集群采集器 + 隧道；判据：停掉 Vector 能在集群外收到告警）
+5. **N+1 单节点故障容量验证**（前提已成立：三节点 6.4 GB；依赖第 1 条完成后演练）
+6. **平台组件必要性审计**（KEDA/Rollouts/Kyverno 去留裁决，判据：留下的组件有真实用途接线）
 
-**第三阶段 · 事件、交付与可靠性闭环**
-接入 Product/Order 事务内 outbox，完成 Kafka topic/partition、consumer Inbox、
-retry/DLQ、保留、重放、积压 SLO 与恢复验收；统一裸 manifest、Helm 与实际 workload
-后再重建 ArgoCD Application（未对齐前禁止 selfHeal）；完成 PostgreSQL/对象存储备份、
-PITR、RTO/RPO 与恢复演练；完成 Victoria 三件套的 SLO 看板与 Alertmanager 外部通知实测；
-收紧 Cilium/NetworkPolicy 与工作负载身份，使「只信任网关」可被强制执行。
+### 阶段 1 · 交易正确性与消费者闭环（P0 主体：微服务 10 + 鉴权 3 + 可观测 2 + 事件 2）
 
-**第四阶段 · 容量与弹性验收**
-明确用户、SPU/SKU、订单、库存流水、行为事件的总量、日增量与保留期，建立容量模型；
-用 k6 固化读写比、热点 SKU、峰值并发与固定数据集，记录 P50/P95/P99、错误率、饱和度与成本；
-根据证据决定 PG 分区/归档、Elasticsearch 拓扑、Kafka partition/保留、缓存容量与 Silo 策略；
-在 Consul 退役、Service 路由与观测指标可信后，再验收 KEDA、Argo Rollouts、限流、熔断与灰度。
+以 PostgreSQL 事务、唯一约束、幂等键和状态机为正确性锚点（Dragonfly 不承载库存锁或业务真相）：
+
+1. inventory：修 `Reserve` WHERE 版本号错误、实现 `ReleaseReserve`（P0#1/#2）
+2. order：修 `CreateOrder` 假成功、`CompleteOrder` 落库（P0#3/#4）
+3. cart：修 `AddProductToCart` INSERT 缺列（P0#8）；前端接线 Remove/UpdateQuantity
+4. address：全线补 user 归属校验（P0#5）
+5. merchant：审批 UPDATE 补 WHERE、实现 `RejectApplication`/`ActivateMerchant`（P0#6/#9）
+6. user：登录 token 不落日志（P0#7）；payment：恢复 repo 主体、实现 5 个桩 RPC
+7. **给上述全部路径补测试**（P0#10，判据：22 条发现路径纳入 `go test` 后仍全绿）
+8. 鉴权：补 `redis-tls-ca` Secret（P0#11）、legacy bearer JWT 定退役期限（P0#12）、
+   轮换已暴露搜索凭据（P0#22）
+9. 可观测安全：入站 `x-md-*` 剥离（P0#14）、PII 脱敏随 OTel Collector 管道收敛（P0#13）
+10. 事件正确性底座：Product/Order 事务内 producer、NACK/DLQ、领域事件落地（P0#16/#17）
+11. 前端闭环：consumer 首页/分类/订单/支付结果接线；`ListProducts` 实现后 consumer-next 扩页
+
+**完成判据**：固定集成测试 + 浏览器用例可重复验证
+商品→购物车→结算→库存预占→支付→订单状态→取消/退款的成功与失败路径，不再出现假成功。
+
+### 阶段 2 · 商家、管理与履约能力
+
+1. merchant/admin 前端：商品、订单、审核、售后、对账与审计页面及 API（当前仅路由骨架）
+2. 商家两段式入驻（已设计未实现）；商家子账号与 `merchant_id` 数据隔离
+3. 对象级授权按 TECH.md §8 落 OpenFGA（集群 2/2 Running〔实测 2026-08-30〕已就绪，缺业务接线）
+4. 履约并入 order 域（发货、物流单、轨迹、第三方 adapter）；
+   没有独立伸缩/故障域证据不新建 fulfillment 服务
+
+### 阶段 3 · 事件、交付与可靠性闭环
+
+1. Kafka 业务接线（node3 已运行、topic 已建，本仓零客户端）：topic/partition 规划、
+   consumer Inbox、retry/DLQ、保留、重放、积压 SLO 与恢复验收
+2. GitOps 接回：chart 对齐实况（资源名/标签/tag 三处）→ `helm template` 与集群 diff 为空
+   → 重建 Application（**未对齐前禁止 selfHeal**）；统一镜像 tag 口径是前置
+3. PostgreSQL/对象存储备份、PITR、RTO/RPO 与恢复演练（node3 已成唯一数据面，无集群内回滚路径）
+4. Victoria 三件套 SLO 看板 + Alertmanager 企业微信实测（含 CRIT 进/WARN 不进的路由验证）
+5. Cilium default-deny 补全与工作负载身份，使「只信任网关」可被强制执行
+6. 采集层收敛：VMAgent vs otel-node 二选一、kubeletstats 启用、Go 运行时指标铺 10 服务
+
+### 阶段 4 · 容量与弹性验收
+
+1. 容量模型：用户、SPU/SKU、订单、库存流水、行为事件的总量、日增量与保留期
+2. k6 基线：固定数据集、读写比、热点 SKU、峰值并发，记录 P50/P95/P99、错误率、饱和度
+3. VPA 推荐值（≥7 天观测 + k6 窗口）交叉验证后人工写回 requests
+4. 依据证据决定 PG 分区/归档、Elasticsearch 拓扑、Kafka partition/保留、缓存容量与 Silo 策略
+5. 在 Consul 退役、Service 路由与观测指标可信后，验收 KEDA、Argo Rollouts、限流、熔断与灰度
+   （或按阶段 0 审计结论卸载）
 
 ### 技术风险与应对
 
@@ -205,5 +255,4 @@ PITR、RTO/RPO 与恢复演练；完成 Victoria 三件套的 SLO 看板与 Aler
 
 - **验收证据长文与会话记录** → [`docs/progress-archive/`](docs/progress-archive/)（不可变历史）
 - **调研与评估报告** → [`docs/reports/`](docs/reports/)
-- **选型对抗过程存档** → [`docs/技术栈选型对抗/`](docs/技术栈选型对抗/)（结论一律以 `docs/TECH.md` 为准）
 - **harness 演进理由** → [`context/harness-framework/evolution-log.md`](context/harness-framework/evolution-log.md)
