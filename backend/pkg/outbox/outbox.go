@@ -1,6 +1,6 @@
 // Package outbox 实现事务性发件箱（transactional outbox）+ 自写 relay → NATS JetStream。
 //
-// 选型背景（2026-08-21 对抗终裁，docs/技术栈选型对抗/对抗审阅表-第4轮-迁移库与CDC.md）：
+// 选型背景（2026-08-21 终裁，判定规则见 context/team/db-migrations.md）：
 // 不用 Debezium/逻辑复制做主链——上游要的是**领域事件**而不是行变更，且 outbox 才是
 // 可重放的真相源；NATS JetStream 的 Nats-Msg-Id 只在去重窗口（默认 2 分钟）内有效，
 // 因此本包只承诺 at-least-once，**消费者必须幂等**。

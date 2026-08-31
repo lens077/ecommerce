@@ -10,7 +10,7 @@
 > 1. **评估方法与证据链**——2026-08-20 抓取 <https://landscape.cncf.io/> 全量 2409 条目，
 >    排除会员公司条目、纯托管服务、已归档项目；另做 GitHub API 实测（stars/推送/许可证/归档）
 >    与集群实地核验。经**三轮异构对抗评审**（claude 主稿 × codex(gpt-5.6-terra) × claude2 独立调研，
->    8 个分歧逐项裁决、5 个环境议题收敛）。过程见 [`技术栈选型对抗/`](技术栈选型对抗/)。
+>    8 个分歧逐项裁决、5 个环境议题收敛）。过程稿已删除，定稿结论保留在本文。
 > 2. **环境前提**（用户设定）——集群 = 3 台同宿主 Mac(M2 Max 32G) 的 PD 虚拟机
 >    （arm64 Ubuntu 26.04，各 4c/6.5G）：**quorum 可凑、物理故障域 = 1**，异地备份是硬前提；
 >    线上另有 2 台低可用 docker 机（4c4G 备份靶、2c2G 哨兵，均不载业务）。
@@ -55,7 +55,7 @@
 | §11 | 安全 / 供应链 | 🟡 Cosign、Syft、Kyverno、Trivy、Grype、Gitleaks、zizmor 分阶段采用；制品分工=TCR 主镜像仓库 + Harbor 存 Helm 制品 + GHCR 可选双存（CI 按网络决定）；✅ Tetragon 三节点 audit-only 观察与告警闭环已落地，enforcement 待评估 |
 | §12 | 应用架构 | ❌ Dapr；✅ OpenFeature（引擎=Config Center provider 首选）；Next.js 评估中，Temporal 待触发（P2），Kafka Streams/ksqlDB 评估中 |
 
-**快速导航**：执行顺序 → 见文末「优先级建议（定稿版）」；实施细化三稿（casdoor 迁移 / mirrord PoC / CI 供应链）→ [`技术栈选型对抗/对抗审阅表-第3轮.md`](技术栈选型对抗/对抗审阅表-第3轮.md)。
+**快速导航**：执行顺序见文末「优先级建议（定稿版）」；现行实施状态见 [`TODO.md`](../TODO.md)。
 
 ---
 
@@ -148,7 +148,7 @@ Kafka/Strimzi/Debezium/Kafka Connect 是 Java 例外；AutoMQ、RocketMQ、Pulsa
 | 4.10 | ✅ | SOPS | Go | sandbox | 采纳（与 4.9 组合）：SOPS+ksops 管 bootstrap 与少量 GitOps 静态密文，兼作 ESO/OpenBao 故障应急路径 |
 | 4.11 | ❌ | Teleport | Go | 收录 | 否决：许可已非 OSS，场景不足 |
 
-**附（casdoor 归属，对抗第 2/3 轮定稿）**：Casdoor **保持为 IdP 并收编进集群**——动机 = <50% 可用云箱上的 IdP、其 DB 与弱口令 PG 同箱、user-service 跨公网 RTT、纳入 CNPG PITR（「公网明文 OAuth」论据已被 08-19 整改消解，核验在案）。**迁移方案定稿**见 [`对抗审阅表-第3轮.md`](技术栈选型对抗/对抗审阅表-第3轮.md) R3-A：公网 origin 不变 ⇒ 前端零改动、存量 token 存活；kid=lens 证书随 DB 迁；JWKS diff==0 门禁；停机 ≤30min、回退分钟级；+3 补丁（dump 校验和、CSP/XFO 头 diff、NTP）。
+**附（casdoor 归属，对抗第 2/3 轮定稿）**：Casdoor **保持为 IdP 并收编进集群**——动机 = <50% 可用云箱上的 IdP、其 DB 与弱口令 PG 同箱、user-service 跨公网 RTT、纳入 CNPG PITR（「公网明文 OAuth」论据已被 08-19 整改消解，核验在案）。**迁移方案定稿**：公网 origin 不变 ⇒ 前端零改动、存量 token 存活；kid=lens 证书随 DB 迁；JWKS diff==0 门禁；停机 ≤30min、回退分钟级；+3 补丁（dump 校验和、CSP/XFO 头 diff、NTP）。
 
 ---
 
@@ -197,7 +197,7 @@ Kafka/Strimzi/Debezium/Kafka Connect 是 Java 例外；AutoMQ、RocketMQ、Pulsa
 | 7.6 | 🟡 | Goldilocks | Go | 收录 | 可选：已有 VPA，仅是建议可视化 |
 | 7.7 | ❌ | kube-green | Go | sandbox | 否决：无独立 dev 负载可休眠 |
 
-**附（T2 资源预算定稿）**：先杀残留回收 ≈1.4Gi（seata 613Mi 零引用领衔/strimzi/loki 切换后/cilium-test/集群内 minio/tempo/dragonfly/consul 退役后）；全栈 requests ≈12.9–13.3Gi/19.5Gi，**余量 22–34%（≥20% 达标）**；limits=1.5×requests（CH/网关 2×）；requests 按 VPA 实测校准（现状教训：requests 95% vs 实用 62%）。砍序：残留→Tetragon→Kyverno audit-only→Jaeger 采样→KEDA 缓→OpenFGA 2→1（CH 已于 2026-08-20 复审改触发式缓上，出列）。不可砍：CNPG×2、VL+Vector、VM、网关+服务、redis、cert-manager、ArgoCD、备份组件。全表见 [`对抗审阅表-第2轮.md`](技术栈选型对抗/对抗审阅表-第2轮.md) C'.1。
+**附（T2 资源预算定稿）**：先杀残留回收 ≈1.4Gi（seata 613Mi 零引用领衔/strimzi/loki 切换后/cilium-test/集群内 minio/tempo/dragonfly/consul 退役后）；全栈 requests ≈12.9–13.3Gi/19.5Gi，**余量 22–34%（≥20% 达标）**；limits=1.5×requests（CH/网关 2×）；requests 按 VPA 实测校准（现状教训：requests 95% vs 实用 62%）。砍序：残留→Tetragon→Kyverno audit-only→Jaeger 采样→KEDA 缓→OpenFGA 2→1（CH 已于 2026-08-20 复审改触发式缓上，出列）。不可砍：CNPG×2、VL+Vector、VM、网关+服务、redis、cert-manager、ArgoCD、备份组件。
 
 ---
 
@@ -207,7 +207,7 @@ Kafka/Strimzi/Debezium/Kafka Connect 是 Java 例外；AutoMQ、RocketMQ、Pulsa
 
 | # | 状态 | 工具 | 语言 | CNCF | 结论 |
 |---|---|---|---|---|---|
-| 8.1 | ✅ | **VictoriaLogs** | Go | 独立仓（Landscape 归 VM 条目） | **采纳（用户拍板替 Loki）**：2.2k⭐/Apache-2.0/v1.52，cluster 版随 v1.46（2026-02）GA；与 VM 同族运维、LogsQL 原生全文、OTLP 原生+兼容 Loki push API；对照 Loki AGPL + 本集群 OOMKill 前科。**切换程序（对抗第 1 轮 D2 合成）**：**≤72h 有界双写**（验收=PII 反例、3 个 logs 面板改写、查询等价抽查、丢/重检查——Loki 耦合面实测仅 6 处 datasource 引用+0 告警）→ 切主 → Loki 冻结只读至保留期满退役。**先单机版**，量级到了再切 cluster。完整论证见 [`claude2 稿`](技术栈选型对抗/claude2-日志栈拍板-VictoriaLogs+Vector.md) |
+| 8.1 | ✅ | **VictoriaLogs** | Go | 独立仓（Landscape 归 VM 条目） | **采纳（用户拍板替 Loki）**：2.2k⭐/Apache-2.0/v1.52，cluster 版随 v1.46（2026-02）GA；与 VM 同族运维、LogsQL 原生全文、OTLP 原生+兼容 Loki push API；对照 Loki AGPL + 本集群 OOMKill 前科。**切换程序（对抗第 1 轮 D2 合成）**：**≤72h 有界双写**（验收=PII 反例、3 个 logs 面板改写、查询等价抽查、丢/重检查——Loki 耦合面实测仅 6 处 datasource 引用+0 告警）→ 切主 → Loki 冻结只读至保留期满退役。**先单机版**，量级到了再切 cluster。 |
 | 8.2 | ❌ | Quickwit | Rust | 收录 | 否决：8.1 已拍板；节奏减分同 2.1 |
 | 8.3 | ❌ | OpenObserve | Rust | 收录 | 否决：8.1 已拍板；一体化单二进制与既有 VM/Jaeger 栈重叠 |
 | 8.4 | ❌ | Parseable / SigLens | Rust/Go | 收录 | 否决：更年轻无翻盘论据 |
@@ -282,7 +282,7 @@ Kafka/Strimzi/Debezium/Kafka Connect 是 Java 例外；AutoMQ、RocketMQ、Pulsa
 | 11.9 | 🟡 | Kubescape | Go | incubating | 观察：态势扫描可选，不进首批 |
 | 11.10 | ❌ | Copa / SlimToolkit / CoCo | Go | sandbox/incubating | 否决：无场景（ko 镜像本就极简） |
 
-**附（CI 全链路实施稿定稿）**：gitleaks → Syft SBOM → Trivy 门禁 → cosign 签名+attest → digest 回写（helm library 加 `image.digest`，update-manifests `crane digest`+`cosign verify` 后回写）→ Kyverno 准入验签；全部 GitHub Actions 按 40 位 commit SHA 固定 + renovate 更新链；`MANIFEST_PUSH_TOKEN` admin PAT 降细粒度并入；`dev` 可变 tag 与验签互斥限非验签环境；CI 时长 warm ≤+3min 硬/cold ≤+30% 目标。全文见 [`对抗审阅表-第3轮.md`](技术栈选型对抗/对抗审阅表-第3轮.md) R3-C（+6 补丁）。
+**附（CI 全链路实施稿定稿）**：gitleaks → Syft SBOM → Trivy 门禁 → cosign 签名+attest → digest 回写（helm library 加 `image.digest`，update-manifests `crane digest`+`cosign verify` 后回写）→ Kyverno 准入验签；全部 GitHub Actions 按 40 位 commit SHA 固定 + renovate 更新链；`MANIFEST_PUSH_TOKEN` admin PAT 降细粒度并入；`dev` 可变 tag 与验签互斥限非验签环境；CI 时长 warm ≤+3min 硬/cold ≤+30% 目标。
 
 ---
 
@@ -319,5 +319,5 @@ Kafka、Debezium、Kafka Connect 已成为事件平台的明确例外；Strimzi 
 ## 附录 — 与真相源的关系
 
 - 本文件**只做评估与结论登记**；✅ 采纳后：技术选型写进 `STACK.md` §二（已回填定稿指针与现状订正）、执行待办登记 `TODO.md`「技术选型定稿（2026-08-20）」小节、CI/交付类并入 `docs/DEVOPS.md` 对应阶段。
-- 对抗过程完整证据链：[`技术栈选型对抗/`](技术栈选型对抗/)——`claude-选型结论`、`codex的选型`、`claude2-日志栈拍板`（截断残卷，立场重建在第 2/3 轮任务 output）+ 三轮审阅表。
+- 对抗过程稿已删除；本文保留定稿历史，现行结论一律以 [`TECH.md`](TECH.md) 为准。
 - 已在用的相关事实（cert-manager 证书链、TLS 盘点、fluent-bit 脱敏失效）以 `TODO.md` 对应行为准，本文件不复制细节。

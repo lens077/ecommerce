@@ -112,10 +112,9 @@
 | `context/team/runbook.md:43` | 必读路由行把链接命名为「生产目标与 Kafka 路线」（目标文档已无 Kafka 路线），行标签以 Kafka 领头 | 低 |
 
 **对抗评审证据链站在撤回一侧**（子代理 C 核实）：
-`docs/技术栈选型对抗/对抗审阅表-第4轮-迁移库与CDC.md:15`「双方一致维持 outbox → 自写
-relay → NATS JetStream → search 消费者 → Meilisearch」、`:71`「Kafka/Debezium 刚整体退役，
-资源预算紧」；`对抗审阅表-第1轮.md:90` NATS 终裁。TECH-RADAR 的 08-27 覆盖没有留下
-等价的对抗/量化反证，属于未走完证据流程的翻案。
+已删除的 2026-08-21 过程稿原文为「双方一致维持 outbox → 自写 relay → NATS JetStream →
+search 消费者 → Meilisearch」「Kafka/Debezium 刚整体退役，资源预算紧」，首轮终裁也选择
+NATS。TECH-RADAR 的 08-27 覆盖没有留下等价的对抗/量化反证，属于未走完证据流程的翻案。
 
 **附带的事实层错误**（不止方向问题，陈述本身已不成立）：
 

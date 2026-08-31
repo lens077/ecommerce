@@ -1,7 +1,7 @@
 # dbmigrate — 微服务数据库迁移与种子
 
 goose v3 以**库形态**内嵌（`github.com/pressly/goose/v3`），不需要安装任何外部 CLI。
-选型对抗与终裁记录见 `docs/技术栈选型对抗/对抗审阅表-第4轮-迁移库与CDC.md`。
+迁移判定规则与实测陷阱见 `context/team/db-migrations.md`。
 
 ## 布局与约定
 

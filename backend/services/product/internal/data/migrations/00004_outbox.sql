@@ -1,5 +1,5 @@
 -- 商品服务：事务性 outbox 表（TODO ③「NATS JetStream 落地」的第一个生产者）。
--- 2026-08-21 新增。设计对抗与终裁见 docs/技术栈选型对抗/对抗审阅表-第4轮-迁移库与CDC.md。
+-- 2026-08-21 新增。迁移判定规则见 context/team/db-migrations.md。
 --
 -- 语义：业务写与 outbox 写在同一事务提交（杜绝双写丢事件）；独立 relay
 -- （backend/pkg/outbox + tools/outbox-relay）按 id 批扫未发布行，发到 NATS JetStream

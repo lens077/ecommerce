@@ -76,7 +76,7 @@ Pod 分布须满足 suite-wide hostname spread，`maxSkew=1`（docs/TECH.md §7.
 上例改成「迁入去向：…（阶段一、二、四）」后即放行，而且原文本来就更该这么写。
 
 **不扫的位置**（按定义就是带日期的历史）：`docs/reports/`、`docs/progress-archive/`、
-`docs/技术栈选型对抗/`、`evolution-log.md`（每条自带 `### 日期`）、
+`evolution-log.md`（每条自带 `### 日期`）、
 `docs/TECH-RADAR.md`（自述历史存档）、`context/**/experience/`（踩坑记录里的数字是
 症状举例，不是集群观测）。
 
