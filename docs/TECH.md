@@ -704,7 +704,9 @@ type order
 
 指标规则（vmalert）、黑盒探测（Gatus）与前端错误（Bugsink）三条链路的通知出口**统一收敛到 ntfy**。告警栈整体位于 node3，与业务集群故障域隔离——集群侧只有采集器，没有任何告警组件。三条链路共用同一个 topic，因此噪音会叠加。
 
-K8s 指标由集群内 OTel Collector 的 `k8s_cluster` receiver 直接产出，经 OTLP 落 VictoriaMetrics，**不需要 kube-state-metrics**。⚠️ 该路径保留 OTel 的**点号命名**（`k8s.container.restarts`，不是 `k8s_container_restarts`，label 同样带点），写 MetricsQL 必须用 `{__name__="..."}` 匹配——按下划线搜索会一无所获并误判成「没有采集」。
+K8s 指标由集群内 OTel Collector 的 `k8s_cluster` receiver 直接产出，经 OTLP 落 VictoriaMetrics，**不需要 kube-state-metrics**。⚠️ 指标名与 label 名当前是**下划线**（`k8s_container_restarts`、`k8s_namespace_name`）。**这个口径变过一次**——早期为 OTel 原生点号命名，实测 2026-08-31 已全部转为下划线（全库含点号的指标为 0 个）。写错口径会查不到数据**且不报错**，极易误判成「指标断流」，所以写 MetricsQL 前先用 `/api/v1/label/__name__/values` 确认当前口径。
+
+**黑盒探针探不到容器进程、systemd 单元、隧道站点在线状态与磁盘水位**——2026-09-01 实测一个容器崩溃循环 18238 次、持续两个月而全链路零告警。这一层由主机侧巡检补齐，判据与纪律见 [`context/team/host-watchdog.md`](../context/team/host-watchdog.md)，部署物在 [`infrastructure/host-watchdog/`](../infrastructure/host-watchdog/)。
 
 **关键工程约束：慢性 firing 的告警会掩盖急性事故。** 2026-08-29 一次持续 9 小时无人发现的故障，根因不是缺少告警，而是一条告警因慢性配置错误已连续红了一整天，真正的急性事故到来时它无法产生任何新信号。由此定两条规矩：每条规则都必须设 `for:`；必须**先修慢性问题再调阈值**，反过来做等于把真问题静音。
 

@@ -138,9 +138,16 @@ absent({__name__="<关键指标>"}) == 1   for: 10m
 
 写这类规则时的三个硬坑（都实测踩过）：
 
-1. **指标名与 label 名带点号**（VM 的 OTLP 摄入未开 `usePrometheusNaming`）。必须写
-   `{__name__="k8s.container.restarts"}`、`by ("k8s.namespace.name")`；写成
-   `k8s_container_restarts` **查不到数据且不报错**。
+1. **指标名与 label 名的口径变过一次，写之前必须现查。** 本条最初记录的是点号命名
+   （`{__name__="k8s.container.restarts"}`），那是 VM 的 OTLP 摄入未开
+   `usePrometheusNaming` 时的口径；**实测 2026-08-31 已全部转为下划线**
+   （`k8s_container_restarts`、`by (k8s_namespace_name)`，全库含点号的指标为 0 个），
+   规则文件 `/infra/rules/ecommerce-k8s.yml` 已同步。
+   **两种写法都会「查不到数据且不报错」**，所以真正的纪律不是记住某一种写法，
+   而是写规则或探针前先跑一次
+   `curl -s 'http://127.0.0.1:8428/api/v1/label/__name__/values'` 确认当前口径。
+   2026-09-01 就有一条 Gatus 检查因沿用旧口径而长期红，被误判成「K8s 指标断流」，
+   实际采集链路一直正常（下划线口径下 51 条 series、数据年龄 0 秒）。
 2. **以 `{` 开头的表达式必须加引号**，否则 YAML 把它解析成 flow mapping 直接报错。
 3. **`ALERTS_FOR_STATE` 没有 `alertstate` label**。加了该过滤条件会永远查不到，
    元规则静默失效。
