@@ -23,8 +23,9 @@ description: 本地开发机与集群连哪套基础设施：活地址、配置�
 | PostgreSQL（业务库 + config schema） | `node1:30001` | 同左 | node3 Pigsty，PG 18.6，`sslmode=verify-ca` |
 | Config Center | — | `config-center.config-center.svc:30010` | Web `https://config.app.com`，API `https://config-api.app.com`；跑的是 control-tower 镜像，ns 名是遗留标签 |
 | Casdoor | `https://casdoor.apikv.com` | 同左 | 集群外的外部服务 |
-| Meilisearch | `search.dev.test` | `meilisearch.search.svc` | 存量；目标是隐藏在 `SearchCatalog` 后的 ES 只读投影 |
-| NATS JetStream | — | `nats.nats.svc` | 存量，承载搜索链 |
+| Meilisearch | `search.dev.test` | `meilisearch.search.svc` | 存量运行端点；2026-09 仓库 search/indexer 代码已不再引用，不能拿它配置新代码 |
+| Elasticsearch | 经 SSH 隧道使用 `127.0.0.1:9200` | **当前不可达** | search 代码目标；node3 仅回环监听，Pod 通路未解决，未运行时切流 |
+| NATS JetStream | — | `nats.nats.svc` | 存量运行链和新 indexer 代码仍使用；目标 Kafka 尚未接线 |
 | Kafka（仅 PoC） | `node1:30004` | 同左 | SCRAM-SHA-512；有账号和 topic，**无业务 producer/consumer** |
 | node3 观测后端 | `https://node3-{metrics,logs,traces,vmalert,alerts}.apikv.com` | 同左 | 已挂 Pangolin SSO（浏览器访问返 302 跳登录；写入路径已放行） |
 | node3 OTLP 入口 | `node3-otlp.apikv.com:443` | 同左 | 需 Bearer token，无 token 返 401 |

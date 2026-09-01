@@ -35,7 +35,7 @@ Consul KV Bootstrap 已退役。正常启动必须设置 `CONFIG_SOURCE_FILE`，
 | `server` | 只打 WARN，不重新绑端口 |
 | `discovery` | 只打 WARN，不重新注册 |
 | `observability` | 只打 WARN，不重建 tracer |
-| `search.meilisearch`（search 服务） | 只打 WARN，不重建客户端；主机、API key 或索引变更后滚动重启 |
+| `search.catalog`（search 服务） | 只打 WARN，不重建客户端；Elasticsearch endpoint、凭据或 alias 变更后滚动重启 |
 
 这些段不热生效是权衡后的取舍（重新绑端口会切断 in-flight 连接、重注册要先摘节点、
 重建 tracer 会丢未导出的 span），滚动重启更可控。但**沉默是不可接受的**——
@@ -109,4 +109,4 @@ cd backend/services/user   && make dev          # 目标服务走配置中心
 - 三处副本谁是源：[`three-copies-of-one-config.md`](three-copies-of-one-config.md)
 - 模块总览与约定：[`../INDEX.md`](../INDEX.md)
 
-**后续决策覆盖（2026-08-28）**：本条结论已被 docs/TECH.md 覆盖：搜索目标为隐藏在 `SearchCatalog` 接口后的 Elasticsearch 只读投影；`search.meilisearch` 仅描述存量迁移期配置。
+**现状订正（2026-09）**：search 代码已删除 `search.meilisearch` 运行时字段，改用 `search.catalog`；`SearchCatalog` 返回项目 DTO，配置变化仍只告警并要求滚动重启。运行时尚未切到 Elasticsearch，旧部署的配置退役另走发布变更。

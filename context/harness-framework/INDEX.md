@@ -15,6 +15,7 @@
 | [flywheel-audit.md](flywheel-audit.md) | 对照《Agent 自进化飞轮》的四齿评测结论 + 方向性审计约定（触发/清单/记录）；门禁元评测 canary 的由来 |
 | [portable-harness.md](portable-harness.md) | 跨项目共用能力清单与新项目采纳步骤；lens077 根 symlink 登记处（HARNESS.md / backpass-distill.sh） |
 | [evolution-log.md](evolution-log.md) | harness 本身每次改动的原因与**触发它的具体事故**——改硬规则/门禁前后都要看一眼，防止把改对的东西改回去 |
+| [sgh-implementation-plan.md](sgh-implementation-plan.md) | SGH（Structured Graph Harness，arXiv:2604.11378v1）执行层实施草案：DSH 侧三个 package 设计、ecommerce-solo-v1 兼容 profile、conformance 测试与七阶段实施顺序。**设计草案，尚未实现** |
 
 ## 这一层为什么存在
 

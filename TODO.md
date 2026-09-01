@@ -157,6 +157,10 @@ CES 巡检告警（CronJob 2m + vmalert firing 闭环）、可观测黑盒探活
 | behavior | 🟡 | `Track`/`Recommend`/`SimilarItems` 已编译通过 |
 | 履约 | ⬜ | 不单独建服务，并入 order 域 |
 
+> **基础设施去重（2026-09-01 代码态）**：`env`/`meta`/`config`/`log`/`otel`/`registry` 六个模块的 10 份服务副本已上提到 `backend/pkg/`，各服务只留薄适配层（仅做 `confv1` → provider-neutral Options 映射与泛型实例化）。`services/*/internal/pkg` 生产 Go 由 15,106 行降至 4,012 行（−11,094，73.4%）；`homogeneity_baseline.txt` 棘轮由 10 条收敛到 3 条，余 `config/config_test.go`、`dbutil/handler.go`、`money/numeric.go`，后两者本轮范围外。order 的 3 处 `config.GetConfig()` 全局读取改为 Fx 注入，并补启动期顺序测试。
+>
+> 同批修掉一处长期静默失效：10 份 Dockerfile 注入 `-X main.Version`，而 10 个 `main` 包从未声明该符号，Go linker 静默忽略，构建版本注入从未生效。现改为共享 `backend/pkg/meta.Version`，`/healthz` 分别暴露 API 契约 `version` 与制品 `build`，并由 `structcheck/shared_infra_test.go` 守护符号、ldflags、`COPY pkg/` 与 10 份 Dockerfile 字节一致。理由见 `context/harness-framework/evolution-log.md`。
+
 ### 4. 网关与鉴权（2026-08-29 实测）
 
 | 项目 | 状态 | 说明 |

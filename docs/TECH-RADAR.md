@@ -6,6 +6,10 @@
 > **目标态一律以 [`docs/TECH.md`](TECH.md) 为准**；两者冲突时本文作废。
 > 它既不是进度真相源（那是 [`TODO.md`](../TODO.md)），也不再是选型真相源。
 >
+> **2026-09 实施订正**：仓库代码已完成 Meilisearch→Elasticsearch 替换，search 服务经
+> `SearchCatalog` 返回项目 DTO，`tools/search-indexer` 是策展投影唯一权威写入者。node3
+> Elasticsearch 仍只监听回环地址，Pod 无网络通路，尚未运行时切流；正文的 2026-08 评估过程继续按历史原貌保留。
+>
 > **仍然有效的三样东西**：
 > 1. **评估方法与证据链**——2026-08-20 抓取 <https://landscape.cncf.io/> 全量 2409 条目，
 >    排除会员公司条目、纯托管服务、已归档项目；另做 GitHub API 实测（stars/推送/许可证/归档）
@@ -43,7 +47,7 @@
 | 节 | 领域 | 定稿结论 |
 |---|---|---|
 | §1 | 消息 / 事件流 | ✅ Apache Kafka 为唯一领域事件主干，部署于非 K8s 独立集群；Outbox+Relay（`acks=all` 后标 `published`）+ Inbox 幂等 + 失败超 5 次转 DLQ；NATS 为存量迁移链路 |
-| §2 | 搜索 | ✅ Elasticsearch 只读 Projection，隐藏于 `SearchCatalog` 接口后并支持从 PG 全量重建；Meilisearch 为存量实现、迁移中 |
+| §2 | 搜索 | ✅ Elasticsearch 只读 Projection；仓库代码已通过单 provider `SearchCatalog` 接线并支持 PG 全量重建，运行时尚未切流，Meilisearch 仍是存量部署 |
 | §3 | 数据层 | ✅ PostgreSQL 外部 Pigsty（Patroni Failover + PgBouncer，UUIDv7 默认主键）；CNPG 仅为存量休眠资源；ClickHouse 🟡 触发式缓上（2026-08-20 拍板人复审改判，见 §3.2） |
 | §4 | 身份 / 授权 / 凭据 | ✅ Casdoor 有状态 Session（Dragonfly Session Store）+ OpenFGA 网关关系授权；粗粒度角色归 Casdoor，对象级授权归 OpenFGA；trust-manager + ESO+OpenBao + SOPS 保留 |
 | §5 | 网关与流量面 | ✅ 自研 control-tower + Cilium Gateway API（TLS 终止、eBPF KPR 严格模式）+ Pangolin 公网入口，不叠加 WireGuard/IPsec 隧道；Cilium Service Mesh 评估中 |
@@ -104,7 +108,7 @@ Kafka/Strimzi/Debezium/Kafka Connect 是 Java 例外；AutoMQ、RocketMQ、Pulsa
 | # | 状态 | 工具 | 语言 | 来源 | 结论 |
 |---|---|---|---|---|---|
 | 2.1 | ❌ | Quickwit | Rust | 收录 | 否决于 §2，转介 §8 备选：定位是 observability 检索，无 typo/facet/即时搜索；Datadog 收购后 AGPL→Apache-2.0 兑现、v0.9.0 仍活但节奏放缓计入减分 |
-| 2.2 | 🟡 | **Meilisearch** | Rust | ⚠️仓外 | 本行保留存量实现与历史评估。**后续决策覆盖（2026-08-28）**：本节结论已被 [docs/TECH.md](TECH.md) 覆盖：Elasticsearch 定稿为只读 Projection，隐藏于 `SearchCatalog` 接口后并支持从 PG 全量重建；Meilisearch 为存量实现，按目标态迁回 Elasticsearch。 |
+| 2.2 | 🟡 | **Meilisearch** | Rust | ⚠️仓外 | 本行保留存量实现与历史评估。**后续决策覆盖（2026-08-28）**：本节结论已被 [docs/TECH.md](TECH.md) 覆盖：Elasticsearch 定稿为只读 Projection，隐藏于 `SearchCatalog` 接口后并支持从 PG 全量重建。**实施订正（2026-09）**：仓库代码已移除 Meilisearch，存量运行部署须等 Elasticsearch 真正切流后再退役。 |
 | 2.3 | ❌ | Typesense | C++ | ⚠️仓外 | 否决（对抗第 1 轮 captain 自我改判定稿）：其 OSS raft HA 优势在「3 VM 同宿主 Mac」下无法兑现真容灾，且 2 节点起步组不成奇数仲裁；GPL-3.0；Meili 已部署为既成事实。**翻盘条件 = HA 成硬需求且有 ≥3 物理故障域** |
 | 2.4 | 🟡 | ParadeDB (pg_search) | Rust | ⚠️仓外 | 降权观察：AGPL-3.0；Pigsty 关机后「零成本装扩展」前提消失（CNPG 下需自定义镜像+preload+升级运维）。触发条件 = Meili 路线失败的回退位 |
 | 2.5 | ✅ | 向量：**pgvector 起步** + Qdrant 规模位 | — | 收录 | **定稿（对抗第 2 轮 D4 组合裁决）**：pgvector 为权威 embedding 存储——**CNPG 官方 standard 操作数镜像已内置 pgvector**（换 imageName + `CREATE EXTENSION`，零自定义镜像；落地时实证版本）；Meili hybrid（userProvided 向量）作召回展示层。**Qdrant 🟡 触发条件** = embedding 数百万级或 HNSW 挤压交易库（34k⭐/Apache-2.0/官方 Go client 同版发布）。Milvus/LanceDB ❌ 规模不符 |
@@ -310,11 +314,11 @@ Kafka/Strimzi/Debezium/Kafka Connect 是 Java 例外；AutoMQ、RocketMQ、Pulsa
 3. **Kafka 受控迁移**：在非 K8s 独立集群部署 Kafka，以 Protobuf + Buf Schema Registry 管理事件；落实 Outbox／Inbox／DLQ 契约，迁移完成后退役 NATS 业务流。
 4. **Victoria 三存储 + 轻量采集**：VictoriaLogs／VictoriaMetrics／VictoriaTraces；K8s 内仅 Vector + VMAgent + OTel SDK，外置 OTel Collector 处理尾采样、PII 脱敏与噪声清洗。
 5. **Consul 退役四步走 → KEDA Kafka Scaler → Argo Rollouts**：HPA 管在线服务，KEDA 管 Kafka 消费者，注意 Rollouts 硬依赖发现改造完成。
-6. **搜索迁回 Elasticsearch + OpenFGA + CI 供应链**：Meilisearch 保留为存量迁移实现；网关接 OpenFGA Check；制品按「TCR 主镜像 + Harbor Helm 制品 + GHCR 可选」分工，供应链工具按「部分评估／部分采用」分阶段实施。
+6. **完成 Elasticsearch 运行时切流 + OpenFGA + CI 供应链**：搜索代码替换已完成，剩余 Pod 网络入口、配置/部署发布、重建验收与旧 Meilisearch 退役；网关接 OpenFGA Check；制品按「TCR 主镜像 + Harbor Helm 制品 + GHCR 可选」分工，供应链工具按「部分评估／部分采用」分阶段实施。
 
 ## 附录 — Java 例外与仍未引进项
 
-Kafka、Debezium、Kafka Connect 已成为事件平台的明确例外；Strimzi 不采用，因为 Kafka 定稿部署于非 K8s 独立集群。当前仍未引进：Pulsar、RocketMQ、Flink、AutoMQ、EventMesh、OpenSearch、Keycloak、Nacos、Seata、ShardingSphere、Cassandra、Doris/StarRocks(FE)、SkyWalking、Zipkin、Pinpoint、Jenkins、Microcks；Elasticsearch 为目标态搜索存储，现状仍待从 Meilisearch 迁回；Backstage（TS/Node 但体量重）也未引进。
+Kafka、Debezium、Kafka Connect 已成为事件平台的明确例外；Strimzi 不采用，因为 Kafka 定稿部署于非 K8s 独立集群。当前仍未引进：Pulsar、RocketMQ、Flink、AutoMQ、EventMesh、OpenSearch、Keycloak、Nacos、Seata、ShardingSphere、Cassandra、Doris/StarRocks(FE)、SkyWalking、Zipkin、Pinpoint、Jenkins、Microcks；Elasticsearch 搜索代码已接线但运行时未切流，旧 Meilisearch 部署仍待退役；Backstage（TS/Node 但体量重）也未引进。
 
 ## 附录 — 与真相源的关系
 

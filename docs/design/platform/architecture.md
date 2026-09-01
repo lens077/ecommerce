@@ -2,7 +2,8 @@
 
 > 从根 `DESIGN.md` 拆出（2026-08-08）。本文包含目标态，阅读时遵守三条边界：
 > - 实际存在的 10 个服务及其注册名/依赖关系，一律以 [`.service-matrix.yaml`](../../../.service-matrix.yaml) 为准；它们是迁移起点。目标边界以 [TECH.md](../../TECH.md) §5 为准：user + merchant → Identity、product → Catalog，并独立建设 Fulfillment 与 Notification；search-projection、analytics 为编舞消费者。
-> - 领域事件表是目标态。当前已运行 NATS JetStream、outbox relay 与 search indexer，但业务事务生产者尚未完整接线；2026-08-27 已决策迁往 Kafka 主干，路线见 [生产目标与 Kafka 路线](production-scale-goal.md)。
+> - 领域事件表是目标态。当前已运行 NATS JetStream、outbox relay 与旧版 search indexer，但业务事务生产者尚未完整接线；2026-08-27 已决策迁往 Kafka 主干，路线见 [生产目标与 Kafka 路线](production-scale-goal.md)。
+> - 2026-09 已完成搜索的**代码级** Meilisearch→Elasticsearch 替换：search 服务经 `SearchCatalog` 读取项目 DTO，`tools/search-indexer` 是策展投影唯一权威写入者。Elasticsearch 仍只监听 node3 回环地址，Pod 无网络通路，尚未运行时切流；代码接线不等于部署完成。
 > - 登录、会话与授权入口已迁入同级仓 control-tower gateway。存量 Casbin/legacy JWT 仍可能运行，但目标完全废弃 JWT：Casdoor 有状态 Session 承担认证与粗粒度角色，OpenFGA 承担对象级关系授权；user 服务仍存在，但不再是浏览器 token 代理或 session owner。
 
 ### 前后端通信协议规范
@@ -25,7 +26,7 @@
 | 订单服务（Order Service）     | 	OrderGroup/MerchantOrder/OrderLine、订单状态机、内置 Saga Process Manager  | 	Go + PostgreSQL + Kafka（目标态；NATS 迁移中） | 	订单创建 / 取消 / 修改；同步编排 Catalog 价格快照、Inventory 预占与 PaymentIntent 创建，失败自动逆向补偿；阶段性终态经 Outbox 发布 Kafka 事件；`OrderReadyForFulfillment` 触发独立 Fulfillment 域 |
 | 支付服务（Payment Service）   | 	PaymentIntent/Attempt/Authorization/Capture/Refund 与 PaymentPort 渠道抽象       | 	Go + PostgreSQL + Redis    | 	支付宝、微信支付 SDK 适配与聚合；支付单创建、支付状态同步、退款申请与处理；平台与商家对账管理；支付流水记录留存                      |
 | 库存服务（Inventory Service） | 	库存全生命周期管理、库存操作原子化、库存预警   | 	Go + PostgreSQL + Kafka（目标态；NATS 迁移中）            | 	分布式库存状态机管控；库存预占、扣减、释放、调整；库存流水记录；库存不足预警事件推送（正确性锚定 PG 行锁/CAS，缓存仅可丢数据）                       |
-| 搜索投影（search-projection） | 商品全文检索、多维度筛选、排序推荐 | 目标 Elasticsearch；存量 Meilisearch 迁移中 | CQRS 只读投影隐藏于 `SearchCatalog` 接口后，由 Catalog 领域事件更新，支持从 PostgreSQL 全量重建              |
+| 搜索投影（search-projection） | 商品全文检索、多维度筛选、排序推荐 | Elasticsearch 代码已接线；存量 Meilisearch 仍承载运行时 | `SearchCatalog` 是单 provider 深度模块边界；`tools/search-indexer` 唯一写策展投影并支持从 PostgreSQL 全量重建。Pod→node3 Elasticsearch 通路未解决，未切流 |
 
 ### 支撑微服务
 

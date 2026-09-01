@@ -4,13 +4,17 @@
 
 PostgreSQL 事务发件箱、存量 NATS JetStream relay 与搜索 projection 链。
 
-> **目标态（2026-08-28）**：按 `docs/TECH.md`，事件主干为外部非 K8s Apache Kafka，并强制采用 Outbox/Relay/Inbox + DLQ；NATS JetStream 仅为退役完成前的存量迁移组件。搜索投影目标为隐藏在 `SearchCatalog` 接口后的 Elasticsearch 只读投影，Meilisearch 为存量待迁。
+> **目标态（2026-08-28）**：按 `docs/TECH.md`，事件主干为外部非 K8s Apache Kafka，并强制采用 Outbox/Relay/Inbox + DLQ；NATS JetStream 仅为退役完成前的存量迁移组件。
+>
+> **代码态订正（2026-09）**：search 服务与 `tools/search-indexer` 已从 Meilisearch 改为 Elasticsearch，策展投影隐藏在 `SearchCatalog` 项目契约后；Pod 到 node3 回环监听仍无网络通路，未运行时切流。
 
 ## 当前事实
 
-- 当前已部署链路是 PostgreSQL outbox → NATS JetStream → search indexer → Meilisearch。
+- **部署态**仍是 PostgreSQL outbox → NATS JetStream → 旧 search indexer → Meilisearch；deploy/Helm 在切流前保持这份运行时事实。
+- **仓库代码态**是 PostgreSQL outbox → NATS JetStream → `tools/search-indexer` → Elasticsearch 稳定 alias `ecommerce_catalog_products`。新 indexer 尚未发布到运行环境。
+- `tools/search-indexer` 是策展投影唯一权威写入者；node3 的 Debezium→Kafka→Elasticsearch CDC 演示链不拥有该投影。
 - `outbox.Relay` 直接依赖 JetStream，不存在 broker-neutral `EventSink`、Kafka Adapter 或 Kafka CLI 模式。
-- node3 Kafka 是独立实验资源，应用 `used_by=[]`；不属于当前事件链或已采用技术栈。
+- node3 Kafka 已有基础设施，但应用 `used_by=[]`；不属于当前领域事件链。
 - outbox payload 当前为 JSON；NATS subject 由 `events.` + 去掉 `ecommerce.` 前缀的 event type 生成。
 - relay 按 outbox 表抢 PostgreSQL session advisory lock，单表只运行一个 active 实例；`pg_notify` 只负责唤醒，轮询才是投递保证。
 - relay 收到 JetStream PubAck 后才写 `published_at`。PubAck 后、数据库 commit 前崩溃会重投；`Nats-Msg-Id` 只在 broker duplicate window 内去重，consumer 仍必须幂等。
