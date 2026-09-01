@@ -44,6 +44,7 @@ function NotFoundPage() {
       {/* 标题 */}
       <Typography
         variant="h4"
+        component="h1"
         sx={{
           fontWeight: 600,
           color: "text.primary",

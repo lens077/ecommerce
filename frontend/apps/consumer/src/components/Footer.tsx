@@ -47,8 +47,11 @@ const Footer: React.FC = () => {
                   <BrandMark size={24} />
                 </Box>
               </Box>
+              {/* 页脚品牌字样是装饰不是章节标题：component="p" 让它退出标题树，
+                  否则每页都会多出一个与内容无关的 h6 */}
               <Typography
                 variant="h6"
+                component="p"
                 sx={{
                   fontFamily: lantern.serif,
                   fontWeight: 900,
@@ -68,6 +71,7 @@ const Footer: React.FC = () => {
           <Box>
             <Typography
               variant="subtitle2"
+              component="h2"
               sx={{
                 fontFamily: lantern.serif,
                 fontWeight: 700,
@@ -127,6 +131,7 @@ const Footer: React.FC = () => {
           <Box>
             <Typography
               variant="subtitle2"
+              component="h2"
               sx={{
                 fontFamily: lantern.serif,
                 fontWeight: 700,
@@ -186,6 +191,7 @@ const Footer: React.FC = () => {
           <Box>
             <Typography
               variant="subtitle2"
+              component="h2"
               sx={{
                 fontFamily: lantern.serif,
                 fontWeight: 700,

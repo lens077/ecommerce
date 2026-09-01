@@ -97,7 +97,11 @@ function OrdersPage() {
           borderBottom: `1px solid ${tokens.colors.border.default}`,
         }}
       >
-        <Typography variant="h5" sx={{ fontWeight: 700, color: tokens.colors.text.primary }}>
+        <Typography
+          variant="h5"
+          component="h1"
+          sx={{ fontWeight: 700, color: tokens.colors.text.primary }}
+        >
           {t("orders.title")}
         </Typography>
       </Box>

@@ -112,6 +112,7 @@ function RouteComponent() {
           <Box sx={{ flex: 1, minWidth: 0 }}>
             <Typography
               variant="h5"
+              component="h1"
               sx={{ fontWeight: 700, color: tokens.colors.text.primary, mb: 0.5 }}
             >
               {userProfile.displayName || userProfile.name}

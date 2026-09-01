@@ -109,7 +109,12 @@ export function CartSummaryCard({
           <Typography variant="body1" sx={{ color: tokens.colors.text.primary, fontWeight: 500 }}>
             {t("cart.summary.total")}
           </Typography>
-          <Typography variant="h5" sx={{ color: tokens.colors.accent.red, fontWeight: 700 }}>
+          {/* 合计金额是数值不是标题：component="p" 让它退出标题树 */}
+          <Typography
+            variant="h5"
+            component="p"
+            sx={{ color: tokens.colors.accent.red, fontWeight: 700 }}
+          >
             {formatCurrencyCents(summary.selectedPriceCents)}
           </Typography>
         </Box>

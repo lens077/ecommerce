@@ -386,7 +386,12 @@ function CheckoutPage() {
           <Typography variant="caption" sx={{ color: tokens.colors.text.secondary }}>
             {t("checkout.amount.totalInline")}
           </Typography>
-          <Typography variant="h6" sx={{ fontWeight: 700, color: tokens.colors.accent.red }}>
+          {/* 金额是数值不是标题：component="p" 让它退出标题树（variant 仅保留字号） */}
+          <Typography
+            variant="h6"
+            component="p"
+            sx={{ fontWeight: 700, color: tokens.colors.accent.red }}
+          >
             {formatCurrencyCents(payAmountCents)}
           </Typography>
         </Box>
@@ -439,7 +444,11 @@ function CheckoutHeader() {
         borderBottom: `1px solid ${tokens.colors.border.default}`,
       }}
     >
-      <Typography variant="h6" sx={{ fontWeight: 700, color: tokens.colors.text.primary }}>
+      <Typography
+        variant="h6"
+        component="h1"
+        sx={{ fontWeight: 700, color: tokens.colors.text.primary }}
+      >
         {t("checkout.title")}
       </Typography>
     </Box>

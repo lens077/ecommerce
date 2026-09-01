@@ -103,7 +103,11 @@ function OrderDetailPage() {
           textAlign: "center",
         }}
       >
-        <Typography variant="h6" sx={{ fontWeight: 600, color: statusConfig.color, mb: 1 }}>
+        <Typography
+          variant="h6"
+          component="h1"
+          sx={{ fontWeight: 600, color: statusConfig.color, mb: 1 }}
+        >
           {t(STATUS_LABEL_KEY[orderStatus])}
         </Typography>
         <Typography variant="body2" sx={{ color: statusConfig.color, opacity: 0.8 }}>

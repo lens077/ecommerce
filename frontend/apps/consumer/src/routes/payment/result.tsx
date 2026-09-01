@@ -61,6 +61,7 @@ function PaymentResultPage() {
       {/* 标题 */}
       <Typography
         variant="h5"
+        component="h1"
         sx={{
           fontWeight: 700,
           color: tokens.colors.text.primary,
@@ -100,7 +101,12 @@ function PaymentResultPage() {
           <Typography variant="caption" sx={{ color: tokens.colors.text.secondary }}>
             {t("payment.amount")}
           </Typography>
-          <Typography variant="h4" sx={{ fontWeight: 700, color: tokens.colors.accent.red, mt: 1 }}>
+          {/* 支付金额是数值不是标题：component="p" 让它退出标题树 */}
+          <Typography
+            variant="h4"
+            component="p"
+            sx={{ fontWeight: 700, color: tokens.colors.accent.red, mt: 1 }}
+          >
             {formatCurrency(9999)}
           </Typography>
         </Box>

@@ -187,6 +187,7 @@ CES 巡检告警（CronJob 2m + vmalert firing 闭环）、可观测黑盒探活
 | 状态管理 | ✅ | 2026-08-28 完成 valtio→**Zustand** 全量迁移，valtio 依赖已移除 |
 | 错误监控 | 🟡 | Bugsink 服务端已运行（node3，2.5.0）；**前端 SDK + Source Map 未接** |
 | 无障碍性 | 🟡 | 自动化三层已落地〔实测 2026-08-31〕：①jsx-a11y lint 全 workspace 生效（随 `vp check --fix` 进 pre-commit，红测过）②consumer 四个关键页 axe 断言（jsdom + 真路由 + 服务桩，13/13 绿）③Lighthouse 首页基线**桌面/移动双 100**、已同意态 color-contrast 0 违规。落地中修掉 3 处真实缺陷（隐私弹窗关闭按钮无可及名称、标题层级跳跃、`exhaustive-deps` 漏依赖）。**待办**：键盘/VoiceOver 手动走查（需人工）、购物车/结算页需登录态的 snapshot 审计、66 个渐变背景对比度节点手动抽查；merchant/admin 未纳入 axe 断言。手册 [`docs/frontend/accessibility.md`](docs/frontend/accessibility.md) |
+| 语义化 HTML | 🟡 | 已调研定基线〔实测 2026-09〕：`div onClick` 反模式 **0 处**，consumer-next 手写标记语义合格（原生 `main`/`header`/`section`/`article` + `dl`）。**主要缺口**：consumer SPA 的 `Typography` 22 处 `variant="h*"` 中 **21 处未配 `component`**——只有视觉尺寸没有标题语义；两个应用均**无 JSON-LD**。**待办**：①补 `component` 并加「唯一 h1 + 层级不跳级」回归断言 ②consumer-next 商品详情页输出 `schema.org/Product`。**`speculationrules` 已评估：不引入**——consumer 是 SPA 无文档导航（等价物是 Router `preload`），consumer-next 仅一个业务页且站内链接零命中；触发重估＝`ListProducts` 落地后扩出「列表→详情」链路。手册 [`docs/frontend/semantic-html.md`](docs/frontend/semantic-html.md) |
 
 ### 6. 可观测性（2026-08-30 实测，2026-08-31 增补）
 

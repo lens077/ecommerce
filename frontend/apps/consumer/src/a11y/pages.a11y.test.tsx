@@ -94,6 +94,10 @@ const PRODUCT_DETAIL = {
         skuId: 100n,
         merchantId: "m-1",
         skuName: "标准款",
+        // attributes 必须给：详情页只有在 selectedAttrs 匹配到 SKU 时才渲染价格区
+        // （见 $spuCode.tsx 的 currentPrice），缺了它价格分支永远走不到，
+        // 这块区域会静默逃出 axe 与标题层级两道断言。
+        attributes: { 规格: "标准款" },
         price: { units: 199n, nanos: 0 },
         thumbnailUrl: "http://example.com/a.png",
       },
@@ -229,4 +233,56 @@ describe("关键页 axe 零违规（WCAG A/AA，jsdom）", () => {
     );
     expect(results).toHaveNoViolations();
   });
+});
+
+// —— 标题层级回归（docs/frontend/semantic-html.md §四.2）————————————————
+//
+// 为什么 axe 挡不住这个：`heading-order` 只查「相邻标题不跳级」，
+// `page-has-heading-one` 属 best-practice 标签、不在本文件的 WCAG A/AA
+// runOnly 范围内。而本轮修的两类真实缺陷恰好都能骗过 axe：
+//   ①价格用 variant="h3" 渲染成 <h3>——它紧跟 <h1> 且自身是数值不是标题，
+//     但因为 h1→h3 之间没有别的标题，axe 不判跳级；
+//   ②页脚品牌字样渲染成 <h6> 出现在每一页，是与内容无关的噪音标题。
+// 所以这里断言的是**大纲本身**（唯一 h1 + 不跳级），不是 axe 结果。
+function outline(): number[] {
+  return Array.from(document.querySelectorAll("h1,h2,h3,h4,h5,h6")).map((h) =>
+    Number(h.tagName[1]),
+  );
+}
+
+describe("标题层级（唯一 h1 + 不跳级）", () => {
+  it("canary：探测器能识破跳级与多 h1", () => {
+    // 与 axe canary 同理：断言链路自身必须先被证明有效。
+    document.body.innerHTML = "<h1>a</h1><h3>b</h3>";
+    const levels = outline();
+    expect(levels.filter((l) => l === 1)).toHaveLength(1);
+    // h1→h3 跳级必须被下面这条规则判出来
+    expect(levels.some((l, i) => i > 0 && l - levels[i - 1] > 1)).toBe(true);
+  });
+
+  const pages: Array<[string, string, () => Promise<unknown>]> = [
+    [
+      "首页",
+      "/",
+      () => screen.findByRole("heading", { level: 1, hidden: true }, { timeout: 4000 }),
+    ],
+    [
+      "商品详情",
+      "/product/SPU-1",
+      () => screen.findByText("纸灯一号", undefined, { timeout: 5000 }),
+    ],
+    ["购物车", "/cart", () => screen.findByText("店铺一", undefined, { timeout: 5000 })],
+    ["结算", "/checkout", () => screen.findByText("张三", undefined, { timeout: 5000 })],
+  ];
+
+  for (const [name, path, ready] of pages) {
+    it(`${name} 恰好一个 h1 且层级不跳级`, async () => {
+      await renderPage(path, ready);
+      const levels = outline();
+      console.log("###LEVELS " + name + " " + levels.join(","));
+      expect(levels.filter((level) => level === 1)).toHaveLength(1);
+      const jump = levels.findIndex((l, i) => i > 0 && l - levels[i - 1] > 1);
+      expect(jump, `层级跳跃于 index ${jump}：${levels.join("→")}`).toBe(-1);
+    }, 15000);
+  }
 });

@@ -519,7 +519,7 @@ export default function PrimarySearchAppBar() {
           }}
         >
           <Box sx={{ display: "flex", alignItems: "center", gap: 1, mb: 2 }}>
-            <Typography variant="h6" sx={{ fontWeight: 600 }}>
+            <Typography variant="h6" component="h2" sx={{ fontWeight: 600 }}>
               {t("appBar.searchResults")}
             </Typography>
             <Typography variant="body2" color="text.secondary">
@@ -568,8 +568,11 @@ export default function PrimarySearchAppBar() {
                         borderRadius: "6px",
                       }}
                     />
+                    {/* 搜索结果项的名称与价格都在链接内部，是列表内容而非章节标题：
+                        subtitle1/h6 默认都会渲染成 h6，显式降为 p 退出标题树 */}
                     <Typography
                       variant="subtitle1"
+                      component="p"
                       sx={{
                         textAlign: "center",
                         fontWeight: 500,
@@ -584,6 +587,7 @@ export default function PrimarySearchAppBar() {
                     </Typography>
                     <Typography
                       variant="h6"
+                      component="p"
                       sx={{
                         fontFamily: lantern.serif,
                         fontWeight: 700,

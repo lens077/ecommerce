@@ -276,6 +276,8 @@ const ProductPage = () => {
               >
                 {/* 价格区域 */}
                 <Box sx={{ mb: 3 }}>
+                  {/* 价格与选规格提示都是数值/提示语而非标题：component="p" 让它们退出
+                      标题树（此前渲染成 h3/h5，紧跟 h1 造成层级跳跃）。variant 只留字号。 */}
                   {currentPrice > 0 ? (
                     <Typography
                       variant="h3"
@@ -289,6 +291,7 @@ const ProductPage = () => {
                   ) : (
                     <Typography
                       variant="h5"
+                      component="p"
                       sx={{
                         fontWeight: 500,
                         color: tokens.colors.text.secondary,
@@ -320,6 +323,7 @@ const ProductPage = () => {
                 <Divider sx={{ mb: 3, borderColor: tokens.colors.border.default }} />
                 <Typography
                   variant="h6"
+                  component="h2"
                   sx={{ mb: 2, fontWeight: 600, color: tokens.colors.text.primary }}
                 >
                   {t("product.selectConfig")}
