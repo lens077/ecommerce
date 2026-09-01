@@ -967,6 +967,12 @@ PR 阶段已经落地 Gitleaks、zizmor、Trivy fs/config 三件套，并采用�
 | **HMAC API 认证** | [RFC 2104 (HMAC)](https://www.rfc-editor.org/rfc/rfc2104) | 第三方 API 签名认证 |
 | **mTLS** | [RFC 8446 (TLS 1.3)](https://www.rfc-editor.org/rfc/rfc8446) | 双向 TLS 认证（分阶段：先 WireGuard 节点级） |
 | **SPIFFE/SPIRE** | [SPIFFE Specification](https://spiffe.io/docs/latest/spiffe-about/overview/) | 工作负载身份标准（暂不引入） |
+| **fail2ban（边缘主机）** | [fail2ban Manual](https://github.com/fail2ban/fail2ban/wiki) | 集群外两台边缘主机的 SSH 暴力破解防护；配置、实测攻击量与验证记录见 [边缘主机加固](SECURITY-HARDENING.md) |
+
+> 上表是**集群内**的网络与身份策略。承载 postgres/kafka/gorse/MinIO/Harbor 等外部端点的
+> **两台边缘主机**（node1、node2，非 K8s 节点）属于另一条攻击面，见
+> [边缘主机加固：SSH 暴力破解与公网暴露面](SECURITY-HARDENING.md)——
+> 其中记录了 `postgres_gorse` 与 `redis_gorse` 两个仍对 `0.0.0.0/0` 开放的 P0 项。
 
 
 ## 10. 故障演练与混沌工程
