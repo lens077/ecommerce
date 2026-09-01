@@ -22,10 +22,14 @@ C 端主应用。React 19 + MUI 9 + Emotion + TanStack Router/Query + Connect-RP
 | 间距大得离谱，购物车每项高约 500px | [mui-spacing-tokens-8x.md](experience/mui-spacing-tokens-8x.md) |
 | 购物车页一次挂载打出 4 个 POST | [duplicate-cart-queries.md](experience/duplicate-cart-queries.md) |
 | 登出后过一会儿自己又登回去 | [logout-auto-relogin.md](experience/logout-auto-relogin.md) |
+| 读屏跳不到页面标题、整页没有 h1，但 axe 全绿 | [mui-typography-variant-decides-heading.md](experience/mui-typography-variant-decides-heading.md) |
 
 ## 已知注意事项
 
 - **没有 MUI `ThemeProvider`** —— 用的是 MUI 默认主题（spacing factor = 8）。这是上面那条坑的前提。
+  同样因为没有自定义 `variantMapping`，`Typography` 的 `variant` 会**直接决定渲染出的标题标签**
+  （`h1`–`h6` → 同名标签、`subtitle1/2` → `h6`），挑字号等于定文档大纲——非标题内容务必显式
+  `component="p"`，详见上表最后一条 experience。
 - 所有 `createConnectTransport` 的 `baseUrl` 走 `env.VITE_GATEWAY_URL ?? "http://localhost:8080"`。
 - 错误处理统一走 `@ecommerce/api` 的 `toAppError`，区分 `AUTH_REASONS`（退登）与
   `PERMISSION_REASONS`（仅提示，不退登）。**不要再写 `String((error as Error)?.message)` 兜底。**
