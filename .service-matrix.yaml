@@ -77,7 +77,7 @@ externals:
   config_center: { discovery: config-service, repository: "github.com/lens077/control-tower", note: "配置控制面，2026-08-23 起由合一仓 control-tower 的 config 服务承载（wire 冻结,旧 SDK v0.1.0 兼容已实测）；从本地 CONFIG_FILE 自举；SDK=github.com/lens077/control-tower/sdk/configsource" }
   gorse: { host: "gorse.apikv.com", used_by: [behavior, product], note: "推荐引擎；客户端在 backend/pkg/gorse/（发 X-API-Key）。与 minio 同在 node2，2026-08-19 起走 Pangolin，本机 8086/8088 已绑回环。鉴权是 gorse 自带的（[server] api_key + dashboard 表单登录），非 Pangolin SSO。⚠️ 仓库配置的 api_key 按硬规则 4 留空，真值要灌 Config Center，否则业务全 401。依赖 node1 的 rediss://redis.apikv.com:6379 与 pg:5432" }
   redis_gorse: { host: "redis.apikv.com:61246", used_by: [gorse], note: "gorse 专用 cache store，在 node1（≠ Pigsty 那台 192.168.3.210，也≠集群内 dragonfly）。2026-08-19 起 port 0 + 只收 rediss://，证书是 ZeroSSL *.apikv.com（2026-10-27 到期，无 IP SAN 故必须走域名）；宿主端口随机化为 61246（容器内仍 6379）。⚠️ 测试期对 0.0.0.0/0 开放，上线前收窄" }
-  postgres_gorse: { host: "node1:52288", used_by: [gorse], note: "gorse 的 data store，在 node1（≠ CNPG，≠ Pigsty）。宿主端口 2026-08-19 由 5432 随机化为 52288（容器内仍 5432）。⚠️ 仍是明文 + ***REMOVED-PASSWORD*** 弱口令 + 0.0.0.0/0，待上 TLS 与轮换" }
+  postgres_gorse: { host: "node1:52288", used_by: [gorse, casdoor], note: "**不只是 gorse 的库**（实测 2026-09-01 订正）：同实例上有 gorse 与 casdoor 两个库，Casdoor 是第二个消费者——当时 5 条连接中 4 条来自 casdoor。在 node1（≠ CNPG，≠ Pigsty）。宿主端口 2026-08-19 由 5432 随机化为 52288（容器内仍 5432）。收窄来源：Casdoor 原经 host=apikv.com **绕公网**连回本机（源地址呈现为 node1 公网 IP），**2026-09-01 已改为 host=172.18.0.1 走 Docker 网关**，PG 侧实测源地址转为 172.19.0.1、公网连接归零，故收窄 52288 时**只需放行 node2（gorse）**。⚠️ 仍是明文 + 弱口令 + 0.0.0.0/0，待上 TLS 与轮换；口令属 root 用户，轮换同时影响 gorse 与 casdoor 两个库" }
   alipay: { used_by: [payment], note: "pay.alipay.* 为空时支付网关能力禁用" }
 
   # node3 Pigsty —— PG 与可观测三支柱已接线；Kafka/Redis/Silo 的存在不代表业务采用。
