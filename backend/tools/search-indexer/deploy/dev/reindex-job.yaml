@@ -38,20 +38,22 @@ spec:
           imagePullPolicy: IfNotPresent
           args:
             - -mode=reindex
-            - -index=products
+            - -index=ecommerce_catalog_products
           env:
             - name: DB_URI
               valueFrom:
                 secretKeyRef:
                   name: ecommerce-cdc-postgres
                   key: DB_URI
-            - name: MEILI_HOST
-              value: http://meilisearch.search.svc:7700
-            - name: MEILI_API_KEY
+            # 同 deployment.yaml：ES 在集群外，经 node1 的 Pangolin 以 HTTPS 暴露。
+            # 全量重建需要建索引与切 alias，因此用的是可写的 indexer key。
+            - name: ELASTICSEARCH_URL
+              value: https://node3-es.apikv.com
+            - name: ELASTICSEARCH_API_KEY
               valueFrom:
                 secretKeyRef:
                   name: ecommerce-search-reindex
-                  key: MEILI_API_KEY
+                  key: ELASTICSEARCH_API_KEY
           securityContext:
             allowPrivilegeEscalation: false
             readOnlyRootFilesystem: true
@@ -105,9 +107,9 @@ spec:
               kubernetes.io/metadata.name: postgresql
       ports:
         - { protocol: TCP, port: 5432 }
+    # 同 deployment.yaml：ES 在集群外（node1 的 Pangolin 入口），必须用 ipBlock。
     - to:
-        - namespaceSelector:
-            matchLabels:
-              kubernetes.io/metadata.name: search
+        - ipBlock:
+            cidr: <node1-source-cidr>
       ports:
-        - { protocol: TCP, port: 7700 }
+        - { protocol: TCP, port: 443 }

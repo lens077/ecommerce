@@ -51,19 +51,21 @@ spec:
             - -stream=ECOMMERCE_EVENTS
             - -durable=search-indexer
             - -filter=events.product.>
-            - -index=products
+            - -index=ecommerce_catalog_products
             - -max-deliver=5
             - -max-ack-pending=1
           env:
             - name: NATS_URL
               value: nats://nats.nats.svc:4222
-            - name: MEILI_HOST
-              value: http://meilisearch.search.svc:7700
-            - name: MEILI_API_KEY
+            # Elasticsearch 在集群外的 node3，经 node1 的 Pangolin/Traefik 以 HTTPS
+            # 暴露（与 node3-grafana 等同一机制）。仓库只写主机名，凭据走 Secret。
+            - name: ELASTICSEARCH_URL
+              value: https://node3-es.apikv.com
+            - name: ELASTICSEARCH_API_KEY
               valueFrom:
                 secretKeyRef:
                   name: ecommerce-search-indexer
-                  key: MEILI_API_KEY
+                  key: ELASTICSEARCH_API_KEY
           securityContext:
             allowPrivilegeEscalation: false
             readOnlyRootFilesystem: true
@@ -105,9 +107,11 @@ spec:
               kubernetes.io/metadata.name: nats
       ports:
         - { protocol: TCP, port: 4222 }
+    # Elasticsearch 不在集群内：node3 的 ES 经 node1 的 Pangolin（node1）
+    # 以 HTTPS 暴露，因此这里必须是 ipBlock 而不是 namespaceSelector。
+    # 少了这条，默认拒绝的 egress 会把 indexer 挡死，且表现为连接超时而非鉴权失败。
     - to:
-        - namespaceSelector:
-            matchLabels:
-              kubernetes.io/metadata.name: search
+        - ipBlock:
+            cidr: <node1-source-cidr>
       ports:
-        - { protocol: TCP, port: 7700 }
+        - { protocol: TCP, port: 443 }

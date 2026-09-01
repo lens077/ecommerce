@@ -25,8 +25,20 @@ auth:
 
 search:
   catalog:
-    # 仅供本地进程配合 SSH 隧道使用；Kubernetes Pod 无法访问 node3 的回环监听。
-    endpoint: "http://127.0.0.1:9200"
+    # 两种 endpoint，按运行位置选一个：
+    #
+    #   集群内（Pod）——https://node3-es.apikv.com
+    #     ES 跑在集群外的 node3 且只监听 127.0.0.1:9200，Pod 到它的唯一通路是
+    #     node1 的 Pangolin/Traefik HTTP 资源，与 node3-grafana 等同一机制。
+    #     该资源必须显式关掉 SSO，否则程序调用拿到的是入口层的 401 而不是 ES
+    #     的响应（见 control-tower 的 docs/operations/service-interconnect.md）。
+    #
+    #   本地进程——http://127.0.0.1:9200，需自己开 SSH 隧道到 node3。
+    #
+    # api_key 用只读的 search-only key（仅对 ecommerce_catalog_products* 有
+    # read/view_index_metadata）；写入由 tools/search-indexer 用另一把可写 key。
+    # 真值只存在 Config Center 与 K8s Secret，不入库。
+    endpoint: "https://node3-es.apikv.com"
     api_key: "replace-with-search-only-api-key"
     index: ecommerce_catalog_products
 

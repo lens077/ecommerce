@@ -44,6 +44,7 @@
 | 持续性能分析 | Pyroscope / Parca | 待触发（2026-08-28 调研收口） | 先用 Go 原生 `pprof`/trace/基准测试 + PGO，不常驻任何分析平台。触发（至少两项）：30 天内 ≥2 次靠指标/trace/一次性 pprof 定位不了的性能故障；需要跨版本连续对比 profile；CPU 常态 >60% 可分配容量。触发后**优先 Pyroscope Go SDK push**（v2.3.0，与现有 Grafana 契合；预算 250–500m / 512Mi–1Gi + 10–20Gi 存储，SDK 端约 <1% CPU 须实测）；**Parca 暂不选**——官方 issue 明确其新 eBPF profiler 对 arm64 支持尚不完整，且 Grafana 的 Parca datasource 已弃用（2027-01 结束支持）。注意 eBPF 全局采集不替代 Go heap/mutex/goroutine profile。证据：[技术调研](reports/2026-08-28-tech-research.md) §8 |
 | 服务网格 | Cilium Service Mesh | 暂不引入（2026-08-28 调研收口） | 维持 Cilium CNI + NetworkPolicy + Gateway API 覆盖。理由：Mutual Authentication 在 1.20.1 仍是 Beta 且官方自述安全模型不完整；官方也没有可直接套用于 3 节点 arm64 小集群的每节点 Envoy 内存基准（旧版大规模 agent 测试数据不可外推）。将来确需 workload mTLS + L7 授权时，评估对象是 Istio Ambient 而非本项。证据：[技术调研](reports/2026-08-28-tech-research.md) §6 |
 | 前端错误监控 | Bugsink（现役 2.5.x，node3） | 已确定（2026-08-28 复核维持） | 兼容 Sentry SDK 错误事件；单容器 + PostgreSQL 已稳定运行并接通 ntfy 告警。GlitchTip 改为条件采纳：出现 transaction/span 聚合、错误频率告警或统一 uptime/logs 需求时再评估迁移。接入手册与容量证据见 §11.3 |
+| 应用层 WAF | CaddyGuard / coraza-caddy | 不引入（2026-09-01 选型收口） | **前端 Caddy 上加 WAF 是空转**：`frontend/apps/consumer` 的 Caddy 只发静态资源，业务请求由浏览器直连 `gateway.apikv.com`（`.env.production` 的 `VITE_GATEWAY_URL`），镜像里那条 `/api` 反代是未启用的备用路径——SQLi/XSS/越权/CC 全部不经过它。**候选本身也不合格**：`qist/caddyguard` 建仓于 2026-08-12，0 star / 0 fork / 单人贡献、自研规则引擎非 CRS，无外部审计与 CVE 响应通道；同名的 `Z3NTL3/caddyguard` 是依赖外部 InternetDB 的 IP 信誉插件，不是 WAF，且给公网入口引入同步外部依赖。WAF 要解析全部不可信输入，其自身解析缺陷即 RCE 入口，选型门槛必须高于普通依赖。**位置也与既定架构冲突**：§2.1 与 [production-scale-goal](design/platform/production-scale-goal.md) §5.7 已定「WAF、Bot 与大流量 DDoS 清洗放在云边缘，不由自研 Go gateway 承担」；且 WAF 必须缓冲请求体，与 §10.1「ConnectRPC over H2C、禁止降级 HTTP/1.1」的流式假设相斥，CRS v4 全量规则的内存开销在 node101（6.4GB 且扛控制面）上也不成立。**真要自建时评估对象是 `corazawaf/coraza-caddy`**（OWASP 项目、兼容 CRS v4），但官方状态标注为 "stable, needs a maintainer"，且应挂在 node1 Pangolin 的 Traefik v3.7（唯一同时覆盖 `shop` 与 `gateway` 两个域名的位置），不是集群内的静态站 Caddy。**触发重估**（任一）：云边缘 WAF 因成本或合规不可用；出现 WAF 能拦而 §5.7 逐 procedure 限流拦不住的真实攻击。**优先级更高的替代动作**：按用户/租户的限流归 control-tower（§5.7，只有那里拿得到 Casdoor session 与 OpenFGA 身份，Caddy 仅能按 IP 限、对 NAT 后攻击近乎无效），以及 `.service-matrix.yaml` 标记的 `postgres_gorse` 明文弱口令 + `0.0.0.0/0` 收敛——那条路径上 WAF 完全不在场 |
 | 可观测一体化平台 | SigNoz | 观察项（2026-08-31 调研收口，未采纳） | 定位=OTel 原生一体机：trace/metric/log/异常/告警/看板收进单应用 + 单 ClickHouse 存储；GitLab O11y（Experiment）即其 fork。属于对现行「Victoria 家族 + Grafana + vmalert 组装栈」（§9）的**整体替换**候选，不是增补组件。当前不换：组装栈已调顺（三盘口径修正、告警链实测、PII 脱敏与 OTLP 鉴权均已沉淀），且一体机常驻 ClickHouse 的内存底座（其 fork 官方建议 8–16GiB）在 node3（总内存 7.25GiB，与 PG/观测数据面同机）放不下。作用场景、逐项栈比对、切换成本与触发重估条件见 [SigNoz 评估](reports/2026-08-31-signoz-evaluation.md) |
 
 ---
@@ -772,6 +773,12 @@ cfg.GetServiceAddr("inventory-service") // 从 K8s DNS 解析
 ### 11.4 无障碍性（a11y）
 
 目标标准 **WCAG 2.2 AA**（国内合规锚点 GB/T 37668-2019 与工信部适老化及无障碍改造要求）。路线：组件层依托 MUI 内置的无障碍实现，业务侧职责是不破坏它（图标按钮 `aria-label` 走 i18n、装饰图 `aria-hidden`、不用裸 `div` 造可点元素）；静态检查开 oxlint 的 jsx-a11y 规则集（vp lint 承载，随 `vp check --fix` 进 pre-commit）；自动化验证走 vitest（jsdom 环境）的 axe 断言 + Lighthouse 审计基线分。SPA 特有风险点是 TanStack Router 换页后的焦点管理。自动化只能覆盖约三分之一到一半的问题，键盘走查与 VoiceOver 读屏实测不可省、但只盯关键旅程。实施原则、工具接入点、分层验证与带红测验收的落地顺序见接入手册 [`docs/frontend/accessibility.md`](frontend/accessibility.md)。
+
+### 11.5 语义化 HTML 与导航预测
+
+与 §11.4 分工：a11y 管读屏与键盘可达，本节管**文档结构语义与机器可读性**（标题层级、地标、结构化数据、SEO）。现状实测（2026-09）：`div onClick` 反模式**零命中**（§11.4 纪律的成果），consumer-next 手写标记语义合格；主要缺口是 consumer SPA 的 `Typography` **22 处 `variant="h*"` 中 21 处未配 `component`**——`variant` 只管视觉尺寸不产生标题语义，读屏的标题跳转与搜索引擎大纲提取都拿不到；两个应用均无 JSON-LD 结构化数据。原则：`variant` 管视觉、`component` 管语义，二者分开决定；每页唯一 `<h1>` 且层级不跳级；JSON-LD 只放 SSR 页（SPA 输出收益极低）。
+
+**`<script type="speculationrules">` 已评估：当前不引入**。它要求点击触发浏览器级文档导航，该前提两个应用都不成立——consumer 是 TanStack Router SPA，路由切换不发生文档导航（其等价物是 Router `preload` + Query `prefetchQuery`）；consumer-next 虽是 MPA 但当前仅一个业务页且站内链接**零命中**，没有可预渲染的目标。触发重估：`ListProducts` 实现后 consumer-next 扩出列表页、形成「列表→详情」真实跳转链路时；届时须先处理 prerender 执行 JS 导致的个性化请求提前发出（`document.prerendering`）与遥测 PV 虚高（`telemetry_pb.ts` 已含 `prerender` 导航类型）。实测计数、落地顺序与带红测的验收判据见 [`docs/frontend/semantic-html.md`](frontend/semantic-html.md)。
 
 
 ## 12. 实施路线图
