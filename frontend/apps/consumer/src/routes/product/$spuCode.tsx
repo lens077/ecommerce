@@ -281,6 +281,7 @@ const ProductPage = () => {
                   {currentPrice > 0 ? (
                     <Typography
                       variant="h3"
+                      component="p"
                       sx={{
                         fontWeight: 700,
                         color: tokens.colors.accent.red,

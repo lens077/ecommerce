@@ -17,6 +17,7 @@
  */
 import { afterEach, beforeAll, describe, expect, it, vi } from "vite-plus/test";
 import { cleanup, render, screen } from "@testing-library/react";
+import userEvent from "@testing-library/user-event";
 import { axe } from "vitest-axe";
 import * as matchers from "vitest-axe/matchers";
 import { createRouterTransport, type Transport } from "@connectrpc/connect";
@@ -279,10 +280,24 @@ describe("标题层级（唯一 h1 + 不跳级）", () => {
     it(`${name} 恰好一个 h1 且层级不跳级`, async () => {
       await renderPage(path, ready);
       const levels = outline();
-      console.log("###LEVELS " + name + " " + levels.join(","));
       expect(levels.filter((level) => level === 1)).toHaveLength(1);
       const jump = levels.findIndex((l, i) => i > 0 && l - levels[i - 1] > 1);
       expect(jump, `层级跳跃于 index ${jump}：${levels.join("→")}`).toBe(-1);
     }, 15000);
   }
+
+  // 价格区要选中规格后才渲染（selectedAttrs 初始为空），不点这一下就测不到——
+  // 价格此前是 variant="h3" 直接渲染成 <h3> 紧跟 <h1>，本轮红测正是靠它才变红。
+  it("商品详情选中规格后：价格不进入标题树", async () => {
+    await renderPage("/product/SPU-1", () =>
+      screen.findByText("纸灯一号", undefined, { timeout: 5000 }),
+    );
+    // 规格选择器是 MUI Chip（渲染成 div 而非 button），按文本点。
+    await userEvent.click(await screen.findByText("标准款"));
+    await screen.findByText(/199/);
+    const levels = outline();
+    expect(levels.filter((level) => level === 1)).toHaveLength(1);
+    const jump = levels.findIndex((l, i) => i > 0 && l - levels[i - 1] > 1);
+    expect(jump, `层级跳跃于 index ${jump}：${levels.join("→")}`).toBe(-1);
+  }, 15000);
 });
