@@ -11,7 +11,7 @@ import (
 	"github.com/jackc/pgx/v5"
 	"github.com/jackc/pgx/v5/pgconn"
 	"github.com/jackc/pgx/v5/pgxpool"
-	"github.com/lens077/ecommerce/backend/services/cart/constants"
+	"github.com/lens077/ecommerce/backend/constants"
 	conf "github.com/lens077/ecommerce/backend/services/cart/internal/conf/v1"
 	"github.com/lens077/ecommerce/backend/services/cart/internal/pkg/config"
 	"github.com/lens077/ecommerce/backend/services/cart/internal/pkg/dbutil"

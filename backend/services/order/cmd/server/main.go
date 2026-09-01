@@ -10,15 +10,15 @@ import (
 
 	"github.com/google/uuid"
 	"github.com/lens077/ecommerce/backend/constants"
+	"github.com/lens077/ecommerce/backend/pkg/env"
+	"github.com/lens077/ecommerce/backend/pkg/meta"
 	"github.com/lens077/ecommerce/backend/services/order/internal/biz"
 	"github.com/lens077/ecommerce/backend/services/order/internal/biz/domain/events"
 	confv1 "github.com/lens077/ecommerce/backend/services/order/internal/conf/v1"
 	"github.com/lens077/ecommerce/backend/services/order/internal/data"
 	"github.com/lens077/ecommerce/backend/services/order/internal/eventbus"
 	"github.com/lens077/ecommerce/backend/services/order/internal/pkg/config"
-	"github.com/lens077/ecommerce/backend/services/order/internal/pkg/env"
 	logger "github.com/lens077/ecommerce/backend/services/order/internal/pkg/log"
-	"github.com/lens077/ecommerce/backend/services/order/internal/pkg/meta"
 	"github.com/lens077/ecommerce/backend/services/order/internal/pkg/otel"
 	"github.com/lens077/ecommerce/backend/services/order/internal/pkg/registry"
 	"github.com/lens077/ecommerce/backend/services/order/internal/server"
@@ -68,6 +68,13 @@ func NewApp(serviceName, deploymentMode, serviceVersion string) *fx.App {
 }
 
 // appOptions 单独拆出来是为了能用 fx.ValidateApp 静态校验整张依赖图。
+func observabilityFromBootstrap(conf *confv1.Bootstrap) *confv1.Observability {
+	if conf.Observability == nil {
+		return &confv1.Observability{Enable: false}
+	}
+	return conf.Observability
+}
+
 func appOptions(serviceName, deploymentMode, serviceVersion string) []fx.Option {
 	host, err := meta.GetOutboundIP()
 	if err != nil {
@@ -90,13 +97,7 @@ func appOptions(serviceName, deploymentMode, serviceVersion string) []fx.Option 
 		registry.Module, // 服务注册/发现
 
 		// 可观测性 - 根据配置决定是否启用
-		fx.Provide(func() *confv1.Observability {
-			conf := config.GetConfig()
-			if conf.Observability == nil {
-				return &confv1.Observability{Enable: false}
-			}
-			return conf.Observability
-		}),
+		fx.Provide(observabilityFromBootstrap),
 		otel.Module,
 
 		// 注入业务模块（按依赖顺序）
@@ -123,9 +124,9 @@ func appOptions(serviceName, deploymentMode, serviceVersion string) []fx.Option 
 		// 配置验证和初始化
 		fx.Invoke(
 			// 打印本次启动实际生效的配置数据源,避免「改了配置没生效」时靠猜
-			func(_ *confv1.Bootstrap, logger *zap.Logger) {
+			func(live *config.Live, logger *zap.Logger) {
 				logger.Info("bootstrap config loaded",
-					zap.String("source", config.SourceName()),
+					zap.String("source", live.SourceName()),
 				)
 			},
 

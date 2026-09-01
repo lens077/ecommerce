@@ -631,7 +631,8 @@ COPY pkg/ ./pkg/
 RUN --mount=type=cache,target=/go/pkg/mod \
     --mount=type=cache,target=/root/.cache/go-build \
     GOOS=$TARGETOS GOARCH=$TARGETARCH CGO_ENABLED=$CGOENABLED \
-    go build -ldflags="-s -w -X main.Version=$VERSION" \
+    # -X 找不到符号时会静默忽略。此完整路径必须与 pkg/meta.Version 同步。
+    go build -ldflags="-s -w -X github.com/lens077/ecommerce/backend/pkg/meta.Version=$VERSION" \
     -o /app/service ./services/${SERVICE}/cmd/server && chmod +x /app/service
 
 FROM alpine:3.22 AS final

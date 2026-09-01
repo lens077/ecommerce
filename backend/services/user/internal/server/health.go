@@ -8,10 +8,12 @@ import (
 
 type HealthStatus struct {
 	Healthy bool              `json:"healthy"`
+	Version string            `json:"version"`
+	Build   string            `json:"build"`
 	Details map[string]string `json:"details,omitempty"`
 }
 
-func healthStatus(ctx context.Context, deps *data.Data) HealthStatus {
+func healthStatus(ctx context.Context, deps *data.Data, version, build string) HealthStatus {
 	details := make(map[string]string)
 	healthy := true
 
@@ -31,5 +33,5 @@ func healthStatus(ctx context.Context, deps *data.Data) HealthStatus {
 		details[name] = state
 	}
 
-	return HealthStatus{Healthy: healthy, Details: details}
+	return HealthStatus{Healthy: healthy, Version: version, Build: build, Details: details}
 }

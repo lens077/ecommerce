@@ -12,6 +12,7 @@ import (
 	"github.com/lens077/ecommerce/backend/api/payment/v1/paymentv1connect"
 	"github.com/lens077/ecommerce/backend/constants"
 	"github.com/lens077/ecommerce/backend/pkg/healthcheck"
+	"github.com/lens077/ecommerce/backend/pkg/meta"
 	conf "github.com/lens077/ecommerce/backend/services/payment/internal/conf/v1"
 	"github.com/lens077/ecommerce/backend/services/payment/internal/data"
 	"github.com/rs/cors"
@@ -35,6 +36,7 @@ func NewHTTPServer(
 	logger *zap.Logger,
 	connectOptions []connect.HandlerOption,
 	deps *data.Data, // 基础设施依赖
+	info meta.AppInfo,
 ) *http.Server {
 
 	mux := http.NewServeMux()
@@ -50,14 +52,14 @@ func NewHTTPServer(
 	mux.Handle(paymentv1connectPath, paymentv1connectHandler)
 
 	healthPath, healthHandler := healthcheck.NewGRPCHandler(
-		func(ctx context.Context) bool { return healthStatus(ctx, deps).Healthy },
+		func(ctx context.Context) bool { return healthStatus(ctx, deps, info.Version, meta.Version).Healthy },
 		paymentv1connect.PaymentServiceName,
 	)
 	mux.Handle(healthPath, healthHandler)
 
 	// 应用本身的健康检查
 	mux.HandleFunc("/healthz", func(w http.ResponseWriter, r *http.Request) {
-		status := healthStatus(r.Context(), deps)
+		status := healthStatus(r.Context(), deps, info.Version, meta.Version)
 		w.Header().Set("Content-Type", "application/json")
 		if !status.Healthy {
 			w.WriteHeader(http.StatusServiceUnavailable)

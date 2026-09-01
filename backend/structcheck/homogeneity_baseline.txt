@@ -12,12 +12,5 @@
 # 它们在 9 个服务里逐字节相同,是归一化的误报——`address` 既是服务名又是配置项键名,
 # 替换只在 address 自己的副本里生效。判定改为原文/归一化两把尺子任一一致即算同构。
 config/config_test.go
-config/live.go
 dbutil/handler.go
-log/log.go
-log/log_test.go
-meta/meta_test.go
 money/numeric.go
-otel/otel_test.go
-registry/consul.go
-registry/registry_test.go

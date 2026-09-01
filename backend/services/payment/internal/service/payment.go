@@ -10,7 +10,7 @@ import (
 	"github.com/lens077/ecommerce/backend/api/payment/v1/paymentv1connect"
 	"github.com/lens077/ecommerce/backend/constants"
 	"github.com/lens077/ecommerce/backend/services/payment/internal/biz"
-	"github.com/lens077/ecommerce/backend/services/payment/internal/pkg/meta"
+	"github.com/lens077/ecommerce/backend/services/payment/internal/pkg/reqctx"
 	"go.uber.org/zap"
 	"google.golang.org/grpc/codes"
 	"google.golang.org/grpc/status"
@@ -122,7 +122,7 @@ func (s *PaymentService) HandlePaymentNotify(ctx context.Context, c *connect.Req
 	s.log.Infof("service HandlePaymentNotify: %v", req)
 
 	// 1. 从 context 中获取原始的 HTTP 请求
-	httpReq := meta.GetHTTPRequest(ctx) // 或者你直接写获取逻辑
+	httpReq := reqctx.HTTPRequest(ctx) // 或者你直接写获取逻辑
 	values := make(url.Values)
 
 	if httpReq == nil {
@@ -194,7 +194,7 @@ func (s *PaymentService) HandlePaymentCallback(ctx context.Context, c *connect.R
 	s.log.Infof("service HandlePaymentCallback: %v", req)
 
 	// 1. 从 context 中获取原始的 HTTP 请求
-	httpReq := meta.GetHTTPRequest(ctx) // 或者你直接写获取逻辑
+	httpReq := reqctx.HTTPRequest(ctx) // 或者你直接写获取逻辑
 	values := make(url.Values)
 
 	if httpReq == nil {
