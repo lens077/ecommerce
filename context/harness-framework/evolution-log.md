@@ -44,6 +44,30 @@ description: harness 本身（硬规则/门禁/Agent 约束）每次改动的原
 
 ---
 
+### 2026-09-01 适配层「只做适配」纳入 structcheck（同构门禁的盲区）
+
+- **改了什么**：`backend/structcheck/shared_infra_test.go` 新增 `TestInfraAdaptersStayThin`。
+  10 个服务的 `internal/pkg/{config,log,otel,registry}` 必须 import 对应的
+  `backend/pkg/<module>`，且不得直接依赖该共享包独占的实现库
+  （config→viper/mapstructure/control-tower SDK，log→otel log bridge，
+  otel→otel SDK 与 go-redis instrumentation，registry→consul）。
+  `fx` 与 `zap` 不在禁列：适配层用它们装配和收参数是正当的。
+- **为什么**：`TestInfraHomogeneity` 比较的是**副本之间是否一致**，它有一个盲区——
+  如果有人把同一份实现同时抄回 10 个服务，副本仍然彼此相同，同构检查照样绿。
+  也就是说，那道门禁能防住「漂移」，防不住「集体回归」。刚刚消除的 11,094 行
+  可以在它眼皮底下原样长回来。新检查改为验证语义（是否委托给共享包），而不是验证一致性。
+- **触发事故**：2026-09-01 把 `config`/`log`/`otel`/`registry` 从 10 份服务副本上提到
+  `backend/pkg/` 后，发现既有的 `TestEnvAndMetaUseSharedPackages` 只覆盖 `env` 与 `meta`
+  这两个被整体删除的模块；另外四个因为要保留薄适配层而无法用「目录不得存在」来守，
+  于是处于**完全无门禁**状态。同一轮迁移中还发现 `payment` 与 `merchant` 的 `log/`
+  各带一份零引用的 `ZapESLogger`（32 行死代码）——两份内容一致，所以同构门禁满意，
+  但它们本不该存在。这两件事指向同一个盲区：一致性不等于正确性。
+  副本的根因分析见 `context/team/infra-duplication.md`。
+- **怎么验证的**：注错验证——往 `cart/internal/pkg/config/config.go` 临时加一行
+  `import _ "github.com/spf13/viper"`，测试如期变红并指名文件与依赖；还原后复验通过。
+  不做这一步就无法区分「门禁有效」和「门禁恒绿」，`verify-freeze.sh` 就是因为
+  从未放进真实冻结集而恒返回 rc=0，最终整套被删除。
+
 ### 2026-09-01 构建版本注入纳入 structcheck（一次全量静默失效）
 
 - **改了什么**：新增 `backend/structcheck/shared_infra_test.go`。门禁要求
@@ -927,3 +951,17 @@ description: harness 本身（硬规则/门禁/Agent 约束）每次改动的原
 - **怎么验证的**：扩围前一次性同口径脚本实测新增范围 0 死链；扩围后
   `scripts/verify-context.sh` 全绿；canary 23 探针全过，两个新探针分别在沙箱 docs
   顶层与 TODO.md 注入死链，均被 [DEAD-LINK] 拦截且 tag 正确。
+
+### 2026-09-01 硬规则 8：解决问题优先，禁止为堆工作量写测试
+
+- **改了什么**：AGENTS.md「硬规则」新增第 8 条，明确测试的唯一正当理由是「验证本次改动」
+  或「挡住 bug 复现」；列出四类禁止写的测试（覆盖率凑数、断言 getter/setter 与框架行为、
+  照抄实现的镜像测试、只换无关字段的表驱动样例），禁止「顺手给用户没要求的模块补测试」，
+  并要求优先复用「命令与验收锚点」里最便宜的既有验证。
+- **为什么**：E3 那节只约束「读多少代码」，没约束「产出多少测试」，留下一个绕过口子——
+  按最小路径改完代码后，用大批无效测试把工作量补回来，看起来勤奋，实际拉长验证时间、
+  增加维护面，还把「问题是否解决」这个真结论淹没在测试数量里。
+- **触发事故**：2026-09-01 用户直接指令：「不要为了堆工作量去做测试，解决问题优先，
+  把这条写入到项目的硬规则中。」即用户已经观察到这种堆量行为并要求固化为硬规则。
+- **怎么验证的**：`scripts/verify-context.sh` 全绿（本文件与 AGENTS.md 均在其扫描集内，
+  覆盖链接/INDEX/格式/预算门禁）。
