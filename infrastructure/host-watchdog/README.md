@@ -41,7 +41,7 @@ ssh <ntfy-creds-host> 'grep -E "^NTFY_" /path/to/ntfy.env' \
 | `HOST_LABEL` | 告警标题里的主机名 | `node1` |
 | `WATCH` | 容器名白名单，空格分隔 | `pangolin gerbil traefik` |
 | `SYSTEMD_UNITS` | systemd 单元 | `docker.service` |
-| `HTTP_CHECKS` | `名字=URL`，期望 2xx/3xx | `order=http://127.0.0.1:8080/healthz` |
+| `HTTP_CHECKS` | `名字=URL`，期望 2xx/3xx；另支持两个可选段，见下 | `order=http://127.0.0.1:8080/healthz` |
 | `PANGOLIN_DB` | 填了才检查隧道站点在线状态（只读打开） | `/home/docker/pangolin/config/db/db.sqlite` |
 | `DISK_PATHS` / `DISK_WARN_PCT` | 挂载点与阈值 | `/` / `85` |
 | `NTFY_URL` / `NTFY_TOPIC` / `NTFY_TOKEN` | 告警出口 | — |
@@ -49,6 +49,35 @@ ssh <ntfy-creds-host> 'grep -E "^NTFY_" /path/to/ntfy.env' \
 
 ⚠️ **`WATCH` 用显式白名单，不要图省事改成全量扫描**——理由见 context 文档，
 简短版：机器上停用的容器会变成常驻误报，而常驻误报会毁掉整个通知渠道的可信度。
+
+### `HTTP_CHECKS` 的三种写法
+
+```
+名字=URL                        普通探测，期望 2xx/3xx
+名字=URL|host:port:ip           带 --resolve
+名字=URL|host:port:ip|CODES     再指定期望状态码，逗号分隔
+```
+
+**`--resolve` 解决 TLS-only 端点的两难**（node2 的 Harbor/MinIO 实测）：
+直接探 `https://127.0.0.1:port` 会因证书 CN 不匹配返回 `000`（脚本刻意不带 `-k`），
+变成永久误报；改探公网域名又会绕出去经 Pangolin，就不再是「本机」探测。
+`--resolve` 让域名解析到本地 IP：**TLS 按域名校验，流量不出机器**。
+
+不加 `-k` 是有意的——跳过证书校验会连带放过「证书过期」这类真故障。
+
+**`CODES` 必须用逗号**（`200,403`）。整个 `HTTP_CHECKS` 按空格分词，
+写成 `200 403` 会被拆成两个 item，每轮多出两条「格式错误」误报——本次踩过。
+
+需要非 2xx/3xx 的场景比想象中多：要鉴权的端点返回 `401` 恰恰证明它活着
+（node3 的 Elasticsearch 用 `200,401`），比强行找一个匿名 200 端点更可靠。
+
+配置示例（node2）：
+
+```ini
+HTTP_CHECKS="gorse=http://127.0.0.1:8088/api/health/ready \
+harbor=https://harbor.apikv.com:49600/api/v2.0/health|harbor.apikv.com:49600:127.0.0.1 \
+minio=https://minio.apikv.com:9000/minio/health/live|minio.apikv.com:9000:127.0.0.1|200,403"
+```
 
 ## 验收
 
