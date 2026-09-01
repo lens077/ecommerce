@@ -16,6 +16,7 @@ context/
 |---|---|
 | [runbook.md](team/runbook.md) | **可执行入口**：§0.1 按改动类型的必读路由，以及提交前必跑的验收锚点 |
 | [capability-seams.md](team/capability-seams.md) | 能力接缝准入与验收：定义方、至少两个真实提供方、消费方缺一不可，接口签名不得暴露 vendor 类型 |
+| [infra-duplication.md](team/infra-duplication.md) | 基础设施副本的治理：同构门禁只能冻结漂移、不能消除副本，副本的根因在生成模板而不在服务 |
 | [db-migrations.md](team/db-migrations.md) | schema 变更与种子数据的唯一路径：goose + Pigsty 存量库基线接管 + sqlc 同步生成 |
 | [git-commit.md](team/git-commit.md) | Conventional Commits + 提交前必须先更新 TODO.md |
 | [proto-design.md](team/proto-design.md) | 写 proto 前先读设计文档，每个字段都要有 buf.validate 约束 |

@@ -59,3 +59,64 @@ func TestEnvAndMetaUseSharedPackages(t *testing.T) {
 		}
 	}
 }
+
+// adapterOwnedVendors 列出每个共享包独占的实现依赖。适配层出现其中任何一个，
+// 都说明实现正在从 backend/pkg 漏回服务内。
+//
+// fx 与 zap 不在此列：适配层用 fx.Provide 装配、用 *zap.Logger 收参数是正当的。
+var adapterOwnedVendors = map[string][]string{
+	"config":   {"github.com/spf13/viper", "github.com/mitchellh/mapstructure", "github.com/lens077/control-tower"},
+	"log":      {"go.opentelemetry.io/contrib/bridges", "go.opentelemetry.io/otel/log"},
+	"otel":     {"go.opentelemetry.io/otel", "go.opentelemetry.io/contrib/instrumentation", "github.com/redis/go-redis"},
+	"registry": {"github.com/hashicorp/consul"},
+}
+
+// TestInfraAdaptersStayThin 守住 config/log/otel/registry 四个模块「只做适配」的边界。
+//
+// 为什么单靠 TestInfraHomogeneity 不够：那道门禁比较的是副本之间是否一致。
+// 如果有人把同一份实现同时抄回 10 个服务，副本仍然彼此相同，同构检查照样绿，
+// 而 15,106 行重复会静默长回来。这里改为检查语义：适配层必须委托给共享包，
+// 且不得直接依赖共享包独占的实现库。
+//
+// 触发背景见 context/team/infra-duplication.md：副本的根因是生成模板，
+// 模板至今仍带着这七个模块，新服务会把它们原样带回来。
+func TestInfraAdaptersStayThin(t *testing.T) {
+	for service := range loadMatrix(t).Services {
+		for _, packageName := range []string{"config", "log", "otel", "registry"} {
+			dir := filepath.Join(servicesDir, service, "internal", "pkg", packageName)
+			entries, err := os.ReadDir(dir)
+			if err != nil {
+				t.Errorf("%s 缺少 internal/pkg/%s 适配层: %v", service, packageName, err)
+				continue
+			}
+
+			sharedImport := "github.com/lens077/ecommerce/backend/pkg/" + packageName
+			delegates := false
+			for _, entry := range entries {
+				if entry.IsDir() || !strings.HasSuffix(entry.Name(), ".go") ||
+					strings.HasSuffix(entry.Name(), "_test.go") {
+					continue
+				}
+				data, err := os.ReadFile(filepath.Join(dir, entry.Name()))
+				if err != nil {
+					t.Fatalf("读取 %s/%s: %v", dir, entry.Name(), err)
+				}
+				contents := string(data)
+				if strings.Contains(contents, sharedImport) {
+					delegates = true
+				}
+				for _, vendor := range adapterOwnedVendors[packageName] {
+					if strings.Contains(contents, `"`+vendor) {
+						t.Errorf("%s/internal/pkg/%s/%s 直接依赖 %s；该实现属于 backend/pkg/%s，"+
+							"适配层只应做 confv1→Options 映射与泛型实例化",
+							service, packageName, entry.Name(), vendor, packageName)
+					}
+				}
+			}
+			if !delegates {
+				t.Errorf("%s/internal/pkg/%s 没有 import %s；它不再是适配层，而是又一份副本",
+					service, packageName, sharedImport)
+			}
+		}
+	}
+}
