@@ -56,6 +56,8 @@ message Log {
 
   Framework framework = 1;
   Application application = 2;
+  reserved 3;
+  reserved "elasticsearch";
 }
 
 message Server {
