@@ -22,8 +22,8 @@
 
 ## 一、全局优先级视图
 
-**未完成合计 154 项，其中 P0 共 17 项**（计数口径：各分类文件顶层 `- [ ]` 复选框实数；
-2026-08-31 更新：阶段 0 收官关闭 4 条 P0 与 3 条当日项，新增 5 条实测发现；同日复审对齐：
+**未完成合计 153 项，其中 P0 共 17 项**（计数口径：各分类文件顶层 `- [ ]` 复选框实数；
+2026-09 搜索文档同步关闭 1 条文档冲突；此前 2026-08-31 更新：阶段 0 收官关闭 4 条 P0 与 3 条当日项，新增 5 条实测发现；同日复审对齐：
 鉴权分类去掉「地址越权」重复登记、「搜索凭据」升入分类 P0 与全局 #17 对齐、供应链关闭
 Trivy 拦截项、matrix 的 CI 校验待办迁入服务发现；档案死链经用户裁决纳入 `[DEAD-LINK]`
 门禁扫描并当日落地）。P0 的判据是**后果**不是紧迫感：
@@ -63,14 +63,14 @@ CES 巡检告警（CronJob 2m + vmalert firing 闭环）、可观测黑盒探活
 | [统一可观测性体系](docs/todo/统一可观测性体系.md) | §9 | 24 | 2 |
 | [微服务与交易闭环](docs/todo/微服务与交易闭环.md) | §5 / §4.3 | 23 | 10 |
 | [基础设施与部署模型](docs/todo/基础设施与部署模型.md) | §7 | 21 | 0 |
-| [文档与协作机制](docs/todo/文档与协作机制.md) | —（harness） | 18 | 0 |
+| [文档与协作机制](docs/todo/文档与协作机制.md) | —（harness） | 17 | 0 |
 | [前端技术栈与工程化](docs/todo/前端技术栈与工程化.md) | §11 | 16 | 0 |
 | [零信任鉴权与 Session](docs/todo/零信任鉴权与Session.md) | §8 | 15 | 3 |
 | [供应链与交付流水线](docs/todo/供应链与交付流水线.md) | B 表 / §7.1 | 14 | 0 |
 | [数据一致性与事件驱动](docs/todo/数据一致性与事件驱动.md) | §3 / §4 | 14 | 2 |
 | [服务发现与配置中心](docs/todo/服务发现与配置中心.md) | §10 | 9 | 0 |
 
-〔计数 2026-08-31 重核：`grep -c '^- \[ \]' docs/todo/*.md`，按未完成数降序〕
+〔计数 2026-09 随搜索文档同步：`grep -c '^- \[ \]' docs/todo/*.md`，按未完成数降序〕
 
 ---
 
@@ -121,7 +121,7 @@ CES 巡检告警（CronJob 2m + vmalert firing 闭环）、可观测黑盒探活
 | 网关外部路由 | ✅ | 改造中间态曾致 HTTPRoute 消失（外部 404），已按裁决补建并双向验证（本机 + node3 公网 healthz/RPC 均 200），Gatus gateway 两探测启用后 6/6 全绿〔实测 2026-08-31〕 |
 | Cilium / Gateway API | ✅ | v1.20.1，KPR 严格模式（无 kube-proxy DS）；**2 个** Gateway `PROGRAMMED=True`（`.132` pg-passthrough 已随 postgresql ns 清理） |
 | 集群内 PG | — | `postgresql`/`cnpg-system` ns 与 CNPG CRD **均已清理**；node3 Pigsty 是唯一数据面，**集群内回滚路径不再存在** |
-| GitOps（ArgoCD） | 🔴 | 零 Application / 零 ApplicationSet，AppProject 仅 `default`（ArgoCD 自身 6 Deployment 已全 1/1）；chart 与实况在资源名/标签/tag 三处不符，**禁止直接开 selfHeal** |
+| GitOps（ArgoCD） | 🔴 | 零 Application / 零 ApplicationSet，AppProject 仅 `default`（ArgoCD 自身 6 Deployment 已全 1/1）；chart 与实况在资源名/标签/tag 三处不符，**禁止直接开 selfHeal**。断因链与重接前置见 [GitOps 演变全景](docs/reports/2026-08-31-gitops-evolution-overview.md) |
 | 镜像 tag 口径 | 🔴 | 集群实跑 **6 种风格**（`0.2.1`/`sha-*`×2种/`health-*`/`dev-*`/两个 `@sha256`），**无一个 `:dev`**；`helm/values.yaml` 已回写 `1.5.5` 但与实跑无一相符 |
 | VPA | 🟡 | 只装 recommender（无 updater/webhook）；15 个 ecommerce VPA 全 `Off`/`RequestsOnly` 且 `RecommendationProvided=True`；推荐地板已调至 `10m/32Mi`。**config-center 的 2 个是 `InPlace`——死配置** |
 | PDB | 🟡 | 5 个 PDB：consumer-next/gateway/cilium-operator/nats `ALLOWED=1`，仅 consul-server 锁死为 0；**13 个单副本 Deployment 仍无 PDB、无法无损驱逐** |
@@ -129,17 +129,17 @@ CES 巡检告警（CronJob 2m + vmalert firing 闭环）、可观测黑盒探活
 | 装而未激活组件 | 🟡 | 审计已裁决〔2026-08-31〕**全保留**：KEDA（0 ScaledObject，绑定阶段 3 激活）、Rollouts（0 Rollout，绑定灰度前置）、Kyverno（2 条 Audit 在产出报告，绑定 `verifyImages`）；未按期激活则下轮审计降级卸载 |
 | 未安装 | — | Descheduler、OpenCost、Chaos Mesh（均为条件触发，见 TECH.md B 表） |
 
-### 2. 事件与搜索（2026-08-29 实测，2026-08-30 复验 TCP 连通；**目标基础设施已存在，缺业务接线**）
+### 2. 事件与搜索（运行时 2026-08-29 实测、2026-08-30 复验 TCP；代码态 2026-09 订正）
 
 | 组件 | 位置 | 状态 |
 |---|---|---|
 | **Kafka 4.3.1 (KRaft)** | node3，经 node1 隧道 `:30004` | **运行中**，已建 SCRAM 用户与 `ecommerce.events` topic；本仓 `used_by: []` |
-| **Elasticsearch 9.4.5 + IK** | node3 容器（回环 :9200，已开鉴权） | **运行中**；本仓无服务连接 |
-| Kafka Connect 4.3.0 | node3 | 2 connector RUNNING（Debezium 3.6.1 + ES sink），属独立 CDC 演示链 |
-| NATS JetStream | 集群 `nats` ns | 4/4 Running，`used_by: [search]` |
-| Meilisearch v1.53.1 | 集群 `search` ns | 1/1 Running，`used_by: [search]` |
+| **Elasticsearch 9.4.5 + IK** | node3 容器（回环 :9200，已开鉴权） | **运行中**；search 与 `tools/search-indexer` 代码已接入，但 Pod 无网络通路，未运行时切流 |
+| Kafka Connect 4.3.0 | node3 | 2 connector RUNNING（Debezium 3.6.1 + ES sink），属独立 CDC 演示链，不拥有策展搜索投影 |
+| NATS JetStream | 集群 `nats` ns | 4/4 Running；存量运行链和新 indexer 代码仍使用，目标 Kafka 尚未接线 |
+| Meilisearch v1.53.1 | 集群 `search` ns | 1/1 Running；仓库 search/indexer 代码已不再引用，仍承载旧运行部署 |
 
-> TECH.md 的目标（Kafka + Elasticsearch）**不是「待搭建」而是「待接线」**。
+> Kafka 仍是「已搭建、待业务接线」。Elasticsearch 已完成仓库代码接线，但 Pod→node3 回环监听的网络通路、配置与部署切换尚未完成；**代码接线不等于运行时切流**。
 
 ### 3. 后端服务
 
@@ -151,7 +151,7 @@ CES 巡检告警（CronJob 2m + vmalert firing 闭环）、可观测黑盒探活
 | order | 🔴 | `CreateOrder` 假成功、`CompleteOrder` 不落库 |
 | payment | 🟡 | 5 个 RPC 均为显式 `Unimplemented` 桩（**本仓正确示范**）；repo 主体待恢复。⚠️ 新增迁移 `00002_rename_consumer_to_customer`（买家列改名），**存量库需跑 `make migrate-up MIGRATE_SVC=payment`** |
 | inventory | 🔴 | `Reserve` 静默无操作、`ReleaseReserve` panic |
-| search | 🟡 | 查询路径已迁；商品事务生产者、聚合筛选、热门词待补 |
+| search | 🟡 | 代码已通过单 provider `SearchCatalog` 接入 Elasticsearch，`tools/search-indexer` 已改为唯一策展投影写入者；Pod 网络通路与运行时切流未完成，商品事务生产者、聚合筛选、热门词待补 |
 | address | 🔴 | 功能齐全**但全线越权** |
 | merchant | 🔴 | 仅 `Submit`/`Get` 可用；两段式入驻已设计未实现 |
 | behavior | 🟡 | `Track`/`Recommend`/`SimilarItems` 已编译通过 |
@@ -254,12 +254,14 @@ CES 巡检告警（CronJob 2m + vmalert firing 闭环）、可观测黑盒探活
 
 1. Kafka 业务接线（node3 已运行、topic 已建，本仓零客户端）：topic/partition 规划、
    consumer Inbox、retry/DLQ、保留、重放、积压 SLO 与恢复验收
-2. GitOps 接回：chart 对齐实况（资源名/标签/tag 三处）→ `helm template` 与集群 diff 为空
+2. Elasticsearch 运行时切流：建立 Pod 可达的受控网络入口，更新 `search.catalog` 与部署产物，
+   发布 search/indexer、全量重建并做查询差异与增量恢复验收；回滚窗口结束后再退役 Meilisearch
+3. GitOps 接回：chart 对齐实况（资源名/标签/tag 三处）→ `helm template` 与集群 diff 为空
    → 重建 Application（**未对齐前禁止 selfHeal**）；统一镜像 tag 口径是前置
-3. PostgreSQL/对象存储备份、PITR、RTO/RPO 与恢复演练（node3 已成唯一数据面，无集群内回滚路径）
-4. Victoria 三件套 SLO 看板 + Alertmanager 企业微信实测（含 CRIT 进/WARN 不进的路由验证）
-5. Cilium default-deny 补全与工作负载身份，使「只信任网关」可被强制执行
-6. 采集层收敛：VMAgent vs otel-node 二选一、kubeletstats 启用、Go 运行时指标铺 10 服务
+4. PostgreSQL/对象存储备份、PITR、RTO/RPO 与恢复演练（node3 已成唯一数据面，无集群内回滚路径）
+5. Victoria 三件套 SLO 看板 + Alertmanager 企业微信实测（含 CRIT 进/WARN 不进的路由验证）
+6. Cilium default-deny 补全与工作负载身份，使「只信任网关」可被强制执行
+7. 采集层收敛：VMAgent vs otel-node 二选一、kubeletstats 启用、Go 运行时指标铺 10 服务
 
 ### 阶段 4 · 容量与弹性验收
 
