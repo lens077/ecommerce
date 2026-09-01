@@ -128,6 +128,12 @@ gateway:
   rbac:
     model: "config_center://gateway/policies/model.conf"
     policies: "config_center://gateway/policies/policies.csv"
+  # 匿名能力分三级，设计见 docs/design/platform/anonymous-shopping.md：
+  #   A anonymous_paths —— 完全无身份，jwt + rbac 两处都排除
+  #   B guest_paths     —— 不验 JWT，但网关签发/识别访客 cookie 并注入
+  #                        x-md-global-user-id + x-md-global-anonymous=true
+  #   C 其余            —— 必须登录（下单/支付/地址簿）
+  # A 与 B 互斥：同一路径同时出现在两处，网关 Build 会直接报错。
   # 无需 JWT 的路径（jwt + rbac 两处都排除）
   anonymous_paths:
     - /search.v1.SearchService/Search
@@ -140,6 +146,12 @@ gateway:
     - /behavior.v1.BehaviorService/SimilarItems
     - /telemetry.v1.TelemetryService/CollectWebVitals
     - /address.v1.RegionService/ListRegions
+  # B 级：访客身份（当前只有购物车——访客唯一该拥有的资源）
+  guest_paths:
+    - /cart.v1.CartService/GetCart
+    - /cart.v1.CartService/AddProductToCart
+    - /cart.v1.CartService/RemoveCartItem
+    - /cart.v1.CartService/UpdateCartItemQuantity
 
 # 后端服务
 # discovery: Consul 注册名（≠ 目录名，网关 target 用它）

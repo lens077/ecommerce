@@ -315,6 +315,59 @@ func TestGatewayAnonymousMatchesMatrix(t *testing.T) {
 	}
 }
 
+// matrix 的 guest_paths 与路由模板的 guest 必须是同一个集合(匿名购物 B 级,
+// 单一真相源双向核对)。设计见 docs/design/platform/anonymous-shopping.md。
+func TestGatewayGuestMatchesMatrix(t *testing.T) {
+	data, err := os.ReadFile(matrixPath)
+	if err != nil {
+		t.Fatalf("读取 .service-matrix.yaml: %v", err)
+	}
+	var doc struct {
+		Gateway struct {
+			AnonymousPaths []string `yaml:"anonymous_paths"`
+			GuestPaths     []string `yaml:"guest_paths"`
+		} `yaml:"gateway"`
+	}
+	if err := yaml.Unmarshal(data, &doc); err != nil {
+		t.Fatalf("解析 .service-matrix.yaml: %v", err)
+	}
+	if len(doc.Gateway.GuestPaths) == 0 {
+		t.Fatal("matrix gateway.guest_paths 为空")
+	}
+
+	// A 与 B 语义互斥:同一路径同时出现两边,网关 Build 会报错,这里提前拦住。
+	anon := map[string]bool{}
+	for _, p := range doc.Gateway.AnonymousPaths {
+		anon[p] = true
+	}
+	want := map[string]bool{}
+	for _, p := range doc.Gateway.GuestPaths {
+		if anon[p] {
+			t.Errorf("%q 同时在 anonymous_paths 与 guest_paths —— 两者语义互斥", p)
+		}
+		want[p] = true
+	}
+
+	for _, env := range ctroutes.Envs() {
+		parsed, err := ctroutes.Parse(env)
+		if err != nil {
+			t.Fatal(err)
+		}
+		got := map[string]bool{}
+		for _, p := range parsed.Guest {
+			got[p] = true
+			if !want[p] {
+				t.Errorf("[%s] 路由模板访客项 %q 不在 matrix.guest_paths", env, p)
+			}
+		}
+		for p := range want {
+			if !got[p] {
+				t.Errorf("[%s] matrix.guest_paths 的 %q 不在路由模板", env, p)
+			}
+		}
+	}
+}
+
 // 各服务 internal/pkg 的同名文件必须是同一份代码的副本。
 //
 // 判定用两把尺子,任一把认为一致就算同构:
