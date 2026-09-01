@@ -6,6 +6,7 @@ import (
 
 	"github.com/jackc/pgx/v5"
 	"github.com/jackc/pgx/v5/pgconn"
+	"github.com/lib/pq/pqerror"
 )
 
 type Handler struct {
@@ -150,65 +151,66 @@ func (h *Handler) MustHandleError(err error, noRowsErr ...error) error {
 		return bizErr
 	}
 
-	fmt.Println("code:", code)
-	switch code {
-	case "23505":
+	switch pqerror.Code(code) {
+	case pqerror.UniqueViolation:
 		return fmt.Errorf("唯一约束冲突: %s", pgErr.Detail)
-	case "23503":
+	case pqerror.ForeignKeyViolation:
 		return fmt.Errorf("外键约束冲突: %s", pgErr.Detail)
-	case "23502":
+	case pqerror.NotNullViolation:
 		return fmt.Errorf("非空约束冲突: 列 %s 不能为空", pgErr.ColumnName)
-	case "23514":
+	case pqerror.CheckViolation:
 		return fmt.Errorf("检查约束冲突: %s", pgErr.ConstraintName)
-	case "23001":
+	case pqerror.RestrictViolation:
 		return fmt.Errorf("限制约束冲突: %s", pgErr.ConstraintName)
-	case "23P01":
+	case pqerror.ExclusionViolation:
 		return fmt.Errorf("排他约束冲突: %s", pgErr.ConstraintName)
-	case "23000", "IntegrityConstraintViolation":
+	case pqerror.IntegrityConstraintViolation:
 		return fmt.Errorf("完整性约束冲突: %s", pgErr.Detail)
-	case "40001":
+	case pqerror.TRDeadlockDetected:
 		return fmt.Errorf("检测到TR死锁，请重试")
-	case "55P03":
+	case pqerror.LockNotAvailable:
 		return fmt.Errorf("锁不可用，请重试")
-	case "54001":
+	case pqerror.StatementTooComplex:
 		return fmt.Errorf("语句太复杂，超过程序限制")
-	case "53300":
+	case pqerror.TooManyConnections:
 		return fmt.Errorf("连接数过多，请稍后重试")
-	case "53100":
+	case pqerror.DiskFull:
 		return fmt.Errorf("磁盘空间不足")
-	case "53200":
+	case pqerror.OutOfMemory:
 		return fmt.Errorf("内存不足")
-	case "57014":
+	case pqerror.QueryCanceled:
 		return fmt.Errorf("查询被取消")
-	case "40000":
+	case pqerror.TransactionRollback:
 		return fmt.Errorf("事务回滚: %s", pgErr.Message)
-	case "08000", "08003", "08006", "08001", "08004", "InvalidTransactionState":
+	case pqerror.InvalidTransactionState:
 		return fmt.Errorf("无效的事务状态: %s", pgErr.Message)
-	case "25006":
+	case pqerror.ReadOnlySQLTransaction:
 		return fmt.Errorf("只读事务中不能执行写操作")
-	case "0A000":
+	case pqerror.FeatureNotSupported:
 		return fmt.Errorf("功能不支持: %s", pgErr.Message)
-	case "42000", "SyntaxErrorOrAccessRuleViolation":
+	case pqerror.SyntaxErrorOrAccessRuleViolation:
 		return fmt.Errorf("语法错误或访问规则冲突: %s", pgErr.Message)
-	case "42P01":
+	case pqerror.UndefinedTable:
 		return fmt.Errorf("表不存在: %s", pgErr.TableName)
-	case "42703":
+	case pqerror.UndefinedColumn:
 		return fmt.Errorf("列不存在: %s", pgErr.ColumnName)
-	case "42883":
+	case pqerror.UndefinedFunction:
 		return fmt.Errorf("函数不存在: %s", pgErr.Message)
-	case "42P07":
+	case pqerror.DuplicateTable:
 		return fmt.Errorf("表已存在: %s", pgErr.TableName)
-	case "42701":
+	case pqerror.DuplicateColumn:
 		return fmt.Errorf("列已存在: %s", pgErr.ColumnName)
-	case "42723":
+	case pqerror.DuplicateFunction:
 		return fmt.Errorf("函数已存在: %s", pgErr.Message)
-	case "42710":
+	case pqerror.DuplicateObject:
 		return fmt.Errorf("对象已存在: %s", pgErr.Message)
-	case "24000":
+	case pqerror.InvalidCursorState:
 		return fmt.Errorf("无效的游标状态: %s", pgErr.Message)
-	case "3D000", "InvalidSchemaName", "InvalidCatalogName":
-		return fmt.Errorf("无效的 schema 或 catalog 名称: %s", pgErr.SchemaName)
-	case "22P02":
+	case pqerror.InvalidSchemaName:
+		return fmt.Errorf("无效的 schema 名称: %s", pgErr.SchemaName)
+	case pqerror.InvalidCatalogName:
+		return fmt.Errorf("无效的 catalog 名称: %s", pgErr.SchemaName)
+	case pqerror.InvalidTextRepresentation:
 		return fmt.Errorf("无效的文本表示: %s", pgErr.Message)
 	default:
 		return fmt.Errorf("数据库错误 [%s]: %s", code, pgErr.Message)
