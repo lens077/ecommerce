@@ -9,7 +9,7 @@ import (
 
 // StreamOptions 描述事件流的最小配置面。
 // 副本数分级（TODO ③ 定稿）：交易域 R3、埋点/可重建域 R1；搜索索引喂养属于
-// 可重建域（outbox 可重放 + Meili 可全量重建），本地/初期 R1 即可。
+// 可重建域（outbox 可重放 + Elasticsearch 投影可从 PostgreSQL 全量重建），本地/初期 R1 即可。
 type StreamOptions struct {
 	Name       string        // 流名，如 ECOMMERCE_EVENTS
 	Subjects   []string      // 如 ["events.>"]

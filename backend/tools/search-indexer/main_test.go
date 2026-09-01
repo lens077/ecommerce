@@ -2,19 +2,13 @@ package main
 
 import "testing"
 
-func TestResolveMeiliKey(t *testing.T) {
-	t.Setenv("MEILI_API_KEY", "scoped-key")
-	t.Setenv("MEILI_MASTER_KEY", "legacy-master-key")
+func TestResolveOptionPrefersFlagOverEnvironment(t *testing.T) {
+	t.Setenv("ELASTICSEARCH_API_KEY", "environment-key")
 
-	if got := resolveMeiliKey("flag-key"); got != "flag-key" {
-		t.Fatalf("explicit key = %q, want flag-key", got)
+	if got := resolveOption("flag-key", "ELASTICSEARCH_API_KEY"); got != "flag-key" {
+		t.Fatalf("explicit value = %q, want flag-key", got)
 	}
-	if got := resolveMeiliKey(""); got != "scoped-key" {
-		t.Fatalf("MEILI_API_KEY = %q, want scoped-key", got)
-	}
-
-	t.Setenv("MEILI_API_KEY", "")
-	if got := resolveMeiliKey(""); got != "legacy-master-key" {
-		t.Fatalf("legacy key = %q, want legacy-master-key", got)
+	if got := resolveOption("", "ELASTICSEARCH_API_KEY"); got != "environment-key" {
+		t.Fatalf("environment value = %q, want environment-key", got)
 	}
 }

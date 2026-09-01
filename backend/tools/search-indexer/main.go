@@ -1,10 +1,10 @@
-// Command search-indexer 是 CDC 链路的消费端进程：JetStream 商品事件 → Meilisearch。
+// Command search-indexer owns the curated product projection in Elasticsearch.
 //
-//	go run ./tools/search-indexer                 # 持续消费（durable pull）
-//	go run ./tools/search-indexer -mode reindex   # 全量重建（临时索引 + 原子 swap）
+//	go run ./tools/search-indexer                 # durable JetStream consumer
+//	go run ./tools/search-indexer -mode reindex   # rebuild and atomically move the alias
 //
-// 该二进制与 search 查询服务解耦：查询服务只读 Meilisearch，本进程独立消费事件并维护索引。
-// 逻辑集中在 backend/pkg/searchindex，供持续消费和一次性全量重建复用。
+// The query service reads the stable alias while this process applies complete
+// event-carried projection documents and PostgreSQL rebuilds.
 package main
 
 import (
@@ -15,9 +15,9 @@ import (
 	"os"
 	"os/signal"
 	"syscall"
+	"time"
 
 	"github.com/jackc/pgx/v5/pgxpool"
-	"github.com/meilisearch/meilisearch-go"
 	"github.com/nats-io/nats.go"
 	"github.com/nats-io/nats.go/jetstream"
 
@@ -31,9 +31,11 @@ func main() {
 		stream     = flag.String("stream", "ECOMMERCE_EVENTS", "JetStream 流名")
 		durable    = flag.String("durable", "search-indexer", "durable consumer 名")
 		filter     = flag.String("filter", "events.product.>", "订阅过滤 subject")
-		meiliHost  = flag.String("meili", "", "Meilisearch 地址（缺省 MEILI_HOST / http://127.0.0.1:17700）")
-		meiliKey   = flag.String("meili-key", "", "Meilisearch API key（缺省 MEILI_API_KEY，兼容 MEILI_MASTER_KEY）")
-		index      = flag.String("index", "products", "索引 uid")
+		esURL      = flag.String("elasticsearch-url", "", "Elasticsearch 地址（缺省 ELASTICSEARCH_URL；无默认值）")
+		esAPIKey   = flag.String("elasticsearch-api-key", "", "Elasticsearch API key（缺省 ELASTICSEARCH_API_KEY）")
+		esUsername = flag.String("elasticsearch-username", "", "Elasticsearch 用户名（缺省 ELASTICSEARCH_USERNAME）")
+		esPassword = flag.String("elasticsearch-password", "", "Elasticsearch 密码（缺省 ELASTICSEARCH_PASSWORD）")
+		index      = flag.String("index", "ecommerce_catalog_products", "稳定的 Elasticsearch alias")
 		maxDeliver = flag.Int("max-deliver", 5, "毒消息投递上限（TERM 前）")
 		maxAckPend = flag.Int("max-ack-pending", 1, "在途未 ACK 上限；1=串行保序（默认），调大自担重投乱序")
 		dsn        = flag.String("dsn", "", "PostgreSQL DSN（仅 reindex 用；缺省 DB_URI/DB_SOURCE/本地默认）")
@@ -44,17 +46,27 @@ func main() {
 	ctx, stop := signal.NotifyContext(context.Background(), syscall.SIGINT, syscall.SIGTERM)
 	defer stop()
 
-	key := resolveMeiliKey(*meiliKey)
-	host := *meiliHost
-	if host == "" {
-		if e := os.Getenv("MEILI_HOST"); e != "" {
-			host = e
-		} else {
-			host = "http://127.0.0.1:17700"
-		}
+	endpoint := resolveOption(*esURL, "ELASTICSEARCH_URL")
+	if endpoint == "" {
+		fatal(logger, "Elasticsearch 地址未配置", errorsRequired("-elasticsearch-url or ELASTICSEARCH_URL"))
 	}
-	sm := meilisearch.New(host, meilisearch.WithAPIKey(key))
-	defer sm.Close()
+	catalog, err := searchindex.NewClient(searchindex.ClientConfig{
+		Endpoint:       endpoint,
+		APIKey:         resolveOption(*esAPIKey, "ELASTICSEARCH_API_KEY"),
+		Username:       resolveOption(*esUsername, "ELASTICSEARCH_USERNAME"),
+		Password:       resolveOption(*esPassword, "ELASTICSEARCH_PASSWORD"),
+		RequestTimeout: 30 * time.Second,
+	})
+	if err != nil {
+		fatal(logger, "初始化 Elasticsearch 客户端失败", err)
+	}
+	defer func() {
+		closeCtx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
+		defer cancel()
+		if err := catalog.Close(closeCtx); err != nil {
+			logger.Warn("关闭 Elasticsearch 客户端失败", "err", err)
+		}
+	}()
 
 	switch *mode {
 	case "reindex":
@@ -63,7 +75,7 @@ func main() {
 			fatal(logger, "连接 PostgreSQL 失败", err)
 		}
 		defer pool.Close()
-		if err := searchindex.Reindex(ctx, pool, sm, *index, logger); err != nil {
+		if err := searchindex.Reindex(ctx, pool, catalog, *index, logger); err != nil {
 			fatal(logger, "全量重建失败", err)
 		}
 	case "run":
@@ -76,9 +88,9 @@ func main() {
 		if err != nil {
 			fatal(logger, "初始化 JetStream 失败", err)
 		}
-		c := &searchindex.Consumer{
+		consumer := &searchindex.Consumer{
 			JS:            js,
-			Meili:         sm,
+			Catalog:       catalog,
 			Stream:        *stream,
 			Durable:       *durable,
 			Filter:        *filter,
@@ -87,7 +99,7 @@ func main() {
 			MaxAckPending: *maxAckPend,
 			Logger:        logger,
 		}
-		if err := c.Run(ctx); err != nil && ctx.Err() == nil {
+		if err := consumer.Run(ctx); err != nil && ctx.Err() == nil {
 			fatal(logger, "消费退出", err)
 		}
 		logger.Info("search-indexer 正常退出")
@@ -96,14 +108,15 @@ func main() {
 	}
 }
 
-func resolveMeiliKey(v string) string {
-	if v != "" {
-		return v
+func resolveOption(value, environment string) string {
+	if value != "" {
+		return value
 	}
-	if e := os.Getenv("MEILI_API_KEY"); e != "" {
-		return e
-	}
-	return os.Getenv("MEILI_MASTER_KEY")
+	return os.Getenv(environment)
+}
+
+func errorsRequired(name string) error {
+	return fmt.Errorf("required configuration missing: %s", name)
 }
 
 func resolveDSN(v string) string {

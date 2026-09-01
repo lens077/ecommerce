@@ -1,13 +1,13 @@
 // Command cdc-demo 端到端验证 CDC 链路：
 //
-//	同事务(业务写 + outbox) → outbox-relay → NATS JetStream → search-indexer → Meilisearch
+//	同事务(业务写 + outbox) → outbox-relay → NATS JetStream → search-indexer → Elasticsearch
 //
-// 前置：postgres/nats/meilisearch 已起（compose.yaml）、迁移已跑、
-// outbox-relay 与 search-indexer 两个进程在运行（run.sh 一键编排）。
+// 前置：PostgreSQL、NATS 与 Elasticsearch 已起，迁移已跑，outbox-relay 与
+// search-indexer 两个进程在运行。
 //
 // 步骤：
 //  1. 在一个事务里 upsert 一条演示 SPU 并写 outbox(spu.upserted，payload=完整文档投影)；
-//  2. 轮询 Meilisearch 搜索，直到能搜到该文档（证明 upsert 贯通）；
+//  2. 轮询 Elasticsearch 搜索，直到能搜到该文档（证明 upsert 贯通）；
 //  3. 写 outbox(spu.deleted)；轮询直到文档消失（证明 tombstone 贯通）；
 //  4. 校验 outbox 里两条事件均已标记 published。
 //
@@ -23,7 +23,6 @@ import (
 	"time"
 
 	"github.com/jackc/pgx/v5/pgxpool"
-	"github.com/meilisearch/meilisearch-go"
 
 	"github.com/lens077/ecommerce/backend/pkg/outbox"
 	"github.com/lens077/ecommerce/backend/pkg/searchindex"
@@ -33,11 +32,13 @@ const demoSpuCode = "cdc-demo-luban-lamp"
 
 func main() {
 	var (
-		dsn       = flag.String("dsn", "", "PostgreSQL DSN（缺省 DB_URI/DB_SOURCE/本地默认）")
-		meiliHost = flag.String("meili", "http://127.0.0.1:17700", "Meilisearch 地址")
-		meiliKey  = flag.String("meili-key", "cdc-demo-master-key", "Meilisearch API key")
-		index     = flag.String("index", "products", "索引 uid")
-		timeout   = flag.Duration("timeout", 30*time.Second, "每步等待上限")
+		dsn      = flag.String("dsn", "", "PostgreSQL DSN（缺省 DB_URI/DB_SOURCE/本地默认）")
+		esURL    = flag.String("elasticsearch-url", "http://127.0.0.1:9200", "Elasticsearch 地址")
+		esAPIKey = flag.String("elasticsearch-api-key", "", "Elasticsearch API key")
+		esUser   = flag.String("elasticsearch-username", "", "Elasticsearch 用户名")
+		esPass   = flag.String("elasticsearch-password", "", "Elasticsearch 密码")
+		index    = flag.String("index", "ecommerce_catalog_products", "稳定的 Elasticsearch alias")
+		timeout  = flag.Duration("timeout", 30*time.Second, "每步等待上限")
 	)
 	flag.Parse()
 
@@ -49,8 +50,16 @@ func main() {
 		fail("连接 PostgreSQL", err)
 	}
 	defer pool.Close()
-	sm := meilisearch.New(*meiliHost, meilisearch.WithAPIKey(*meiliKey))
-	defer sm.Close()
+	catalog, err := searchindex.NewClient(searchindex.ClientConfig{
+		Endpoint: *esURL,
+		APIKey:   *esAPIKey,
+		Username: *esUser,
+		Password: *esPass,
+	})
+	if err != nil {
+		fail("连接 Elasticsearch", err)
+	}
+	defer catalog.Close(context.Background()) //nolint:errcheck
 
 	// ── 步骤 1：同事务写业务行 + outbox 事件 ────────────────────────────
 	start := time.Now()
@@ -62,23 +71,20 @@ func main() {
 
 	// ── 步骤 2：等待文档可搜 ───────────────────────────────────────────
 	if err := waitFor(ctx, *timeout, func() (bool, error) {
-		res, err := sm.Index(*index).SearchWithContext(ctx, "鲁班灯", &meilisearch.SearchRequest{Limit: 5})
+		docs, err := catalog.SearchProducts(ctx, *index, "鲁班灯", 5)
 		if err != nil {
-			return false, nil // 索引未建好前的 404 属预期，继续等
+			return false, nil // alias 尚未建好时继续等待 indexer 初始化
 		}
-		for _, hit := range res.Hits {
-			var idv int64
-			if raw, ok := hit["id"]; ok {
-				if json.Unmarshal(raw, &idv) == nil && idv == spuID {
-					return true, nil
-				}
+		for _, candidate := range docs {
+			if candidate.ID == spuID {
+				return true, nil
 			}
 		}
 		return false, nil
 	}); err != nil {
-		fail("等待 Meilisearch 可搜到文档", err)
+		fail("等待 Elasticsearch 可搜到文档", err)
 	}
-	fmt.Printf("② Meilisearch 已可搜到该文档（%.1fs）：%s\n", time.Since(start).Seconds(), doc.Name)
+	fmt.Printf("② Elasticsearch 已可搜到该文档（%.1fs）：%s\n", time.Since(start).Seconds(), doc.Name)
 
 	// ── 步骤 3：发 tombstone，等待文档消失 ─────────────────────────────
 	delStart := time.Now()
@@ -86,8 +92,16 @@ func main() {
 		fail("写入 spu.deleted 事件", err)
 	}
 	if err := waitFor(ctx, *timeout, func() (bool, error) {
-		err := sm.Index(*index).GetDocumentWithContext(ctx, fmt.Sprintf("%d", spuID), nil, new(map[string]any))
-		return err != nil, nil // 查不到 = 已删除
+		docs, err := catalog.SearchProducts(ctx, *index, "鲁班灯", 5)
+		if err != nil {
+			return false, nil
+		}
+		for _, candidate := range docs {
+			if candidate.ID == spuID {
+				return false, nil
+			}
+		}
+		return true, nil
 	}); err != nil {
 		fail("等待 tombstone 删除文档", err)
 	}
@@ -104,7 +118,7 @@ func main() {
 		fail("outbox 仍有未发布事件", fmt.Errorf("%d 条", unpublished))
 	}
 	fmt.Println("④ outbox 两条事件均已标记 published")
-	fmt.Println("PASS：PG(同事务 outbox) → relay → NATS JetStream → search-indexer → Meilisearch 全链贯通")
+	fmt.Println("PASS：PG(同事务 outbox) → relay → NATS JetStream → search-indexer → Elasticsearch 全链贯通")
 }
 
 // upsertDemoSpu 在一个事务里 upsert 演示 SPU 并写 outbox，payload 即索引文档投影。
