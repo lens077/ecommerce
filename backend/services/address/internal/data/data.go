@@ -12,7 +12,7 @@ import (
 	"github.com/jackc/pgx/v5"
 	"github.com/jackc/pgx/v5/pgconn"
 	"github.com/jackc/pgx/v5/pgxpool"
-	"github.com/lens077/ecommerce/backend/services/address/constants"
+	"github.com/lens077/ecommerce/backend/constants"
 	conf "github.com/lens077/ecommerce/backend/services/address/internal/conf/v1"
 	"github.com/lens077/ecommerce/backend/services/address/internal/data/models"
 	"github.com/lens077/ecommerce/backend/services/address/internal/pkg/config"

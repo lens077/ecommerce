@@ -44,6 +44,31 @@ description: harness 本身（硬规则/门禁/Agent 约束）每次改动的原
 
 ---
 
+### 2026-09-01 构建版本注入纳入 structcheck（一次全量静默失效）
+
+- **改了什么**：新增 `backend/structcheck/shared_infra_test.go`。门禁要求
+  `backend/pkg/meta.Version` 保持为可寻址的字符串变量；10 份服务 Dockerfile 必须逐字一致，
+  各自恰好包含一次完整的 `-X github.com/lens077/ecommerce/backend/pkg/meta.Version=$VERSION`
+  和一次 `COPY pkg/ ./pkg/`。同一文件还禁止服务重新创建 `internal/pkg/env` 或
+  `internal/pkg/meta`，避免已经上提的共享模块再次长出副本。
+- **为什么**：Go linker 对不存在的 `-X` 目标不报错，普通 build、test 和镜像构建都会绿，
+  注释只能提醒读到它的人，不能让错误产生信号。`meta.Version` 的包路径或变量名一旦改变，
+  必须同步 10 份 Dockerfile；把目标写全但不校验，仍然只是把静默失效点换了位置。
+  Dockerfile 字节一致也必须由门禁守住，因为跨 10 份副本传播关键行本身就是事故源。
+- **触发事故**：10 份 Dockerfile 长期都写着 `-X main.Version=$VERSION`，但 10 个
+  `main` 包从未声明 `Version` 变量。链接器静默忽略了全部注入，集群中的二进制因此无法
+  自报由哪个 tag 或 commit 构建。仓库已有同类前例：服务 Dockerfile 曾漏掉
+  `COPY pkg/ ./pkg/`，导致 behavior 服务从来没有成功产出镜像；正确性再次挂在
+  「每一份副本都记得同步」上。此次迁移还发现 `env` 与 app `meta` 各有 10 份逐字节相同
+  的副本，payment 又把 HTTP request context helper 塞进了宽泛的 `meta` 包，说明副本和
+  模糊包边界会继续吸附无关职责，不能只做一次性搬家。
+- **怎么验证的**：先用临时最小程序执行
+  `go run -ldflags='-X github.com/lens077/ecommerce/backend/pkg/meta.Version=probe-1.2.3'`，
+  实际输出 `probe-1.2.3`，证明目标不是只在代码审阅里「看起来正确」。随后运行
+  `go test -count=1 ./structcheck/... -run 'Test(BuildVersionInjection|EnvAndMetaUseSharedPackages)$'`
+  通过；`shasum -a 256 services/*/Dockerfile` 的 10 个哈希完全相同；删除服务内副本后，
+  定向 grep 确认旧 `internal/pkg/{env,meta}` import 为零。
+
 ### 2026-08-29 提交纪律由劝诫改为可执行动作（一条已存在的规则被违反）
 
 - **改了什么**：`context/team/git-commit.md` 的「提交分组」节加「暂存三步走」——

@@ -1,261 +1,42 @@
 package registry
 
+// This file is a service adapter. It may only map the service's confv1 Bootstrap to
+// backend/pkg/registry options and retain the existing registry type name.
+
 import (
-	"context"
-	"errors"
-	"net"
-	"net/http"
-	"os"
-	"strconv"
-	"time"
-
-	"github.com/lens077/ecommerce/backend/constants"
-	"github.com/lens077/ecommerce/backend/pkg/healthcheck"
-	"github.com/lens077/ecommerce/backend/services/user/internal/pkg/meta"
-
+	sharedregistry "github.com/lens077/ecommerce/backend/pkg/registry"
 	confv1 "github.com/lens077/ecommerce/backend/services/user/internal/conf/v1"
-
-	"github.com/hashicorp/consul/api"
 	"go.uber.org/fx"
-	"go.uber.org/zap"
 )
 
-// defaultTtlPingInterval 是 discovery.consul.check.ttl.ping_interval 缺失时的兜底心跳间隔
-const defaultTtlPingInterval = 10 * time.Second
+type ConsulRegistry = sharedregistry.ConsulRegistry
 
-type ConsulRegistry struct {
-	Addr   string
-	ID     string
-	Name   string
-	client *api.Client
-	logger *zap.Logger
-}
-
-type Option func(*options)
-type options struct {
-	logger  *zap.Logger
-	tlsConf *api.TLSConfig
-	scheme  string
-}
-
-// WithLogger 注入日志器
-func WithLogger(logger *zap.Logger) Option {
-	return func(o *options) {
-		o.logger = logger
-	}
-}
-
-// WithTLS Consul TLS配置
-func WithTLS(insecureSkipVerify bool, caPem string) Option {
-	return func(o *options) {
-		o.tlsConf = &api.TLSConfig{
-			CAPem:              []byte(caPem),
-			InsecureSkipVerify: insecureSkipVerify,
-		}
-	}
-}
-
-// Module 提供 Fx 模块
-var Module = fx.Module("registry",
-	fx.Provide(
-		// 提供 Consul 注册中心（支持优雅降级）
-		func(lc fx.Lifecycle, logger *zap.Logger, conf *confv1.Bootstrap, appInfo meta.AppInfo) (*ConsulRegistry, error) {
-			if os.Getenv(constants.EnvConsulEnabled) == "false" {
-				logger.Info("Consul disenable by environment variable EnvConsulEnabled=false")
-				return nil, nil
-			}
-
-			if conf.Discovery == nil || conf.Discovery.Consul == nil || conf.Discovery.Consul.Addr == "" {
-				logger.Info("Consul not configured, service discovery disabled")
-				return nil, nil
-			}
-			consulCfg := conf.Discovery.Consul
-
-			opts := []Option{
-				WithLogger(logger),
-			}
-			// 判空必须在解引用之前:配置里没写 tls 段时 Tls 为 nil,反过来写会直接 panic
-			if consulCfg.Tls != nil && consulCfg.Tls.Enable {
-				opts = append(opts, WithTLS(consulCfg.Tls.InsecureSkipVerify, consulCfg.Tls.CaPem))
-			}
-
-			reg, err := NewConsulRegistry(consulCfg.Addr, appInfo.ID, appInfo.Name, opts...)
-			if err != nil {
-				logger.Warn("failed to initialize Consul registry, service discovery disabled", zap.Error(err))
-				return nil, nil
-			}
-
-			// 使用生命周期钩子自动注册、启动心跳和注销
-			lc.Append(fx.Hook{
-				OnStart: func(ctx context.Context) error {
-					if err := reg.Register(conf, appInfo); err != nil {
-						logger.Warn("failed to register with Consul, service discovery disabled", zap.Error(err))
-						return nil // 允许应用继续运行
-					}
-
-					// 启动 TTL 心跳 Pinger
-					go reg.TtlCheckPinger(context.Background(), conf)
-					return nil
-				},
-				OnStop: func(ctx context.Context) error {
-					if reg != nil {
-						// Deregister() 也会停止心跳，但我们不需要显式停止 TtlCheckPinger，
-						// 因为 Deregister 是 OnStop 的一部分，当应用退出时，TtlCheckPinger 的 context 也会关闭。
-						if err := reg.Deregister(); err != nil {
-							logger.Warn("failed to deregister from Consul", zap.Error(err))
-						}
-					}
-					return nil
-				},
-			})
-			return reg, nil
-		},
-	),
+var Module = fx.Module("user-registry-adapter",
+	fx.Provide(optionsFromBootstrap),
+	sharedregistry.Module,
 )
 
-func NewConsulRegistry(addr, ID, Name string, opts ...Option) (*ConsulRegistry, error) {
-	o := &options{
-		scheme: constants.ConsulScheme,
-	}
-	for _, opt := range opts {
-		opt(o)
-	}
+func optionsFromBootstrap(conf *confv1.Bootstrap) sharedregistry.Options {
+	consul := conf.GetDiscovery().GetConsul()
+	check := consul.GetCheck()
+	ttl := check.GetTtl()
 
-	config := api.Config{
-		Address: addr,
-		Scheme:  o.scheme,
-		Transport: &http.Transport{
-			DialContext: (&net.Dialer{
-				Timeout: 5 * time.Second, // 建立连接超时
-			}).DialContext,
-			TLSHandshakeTimeout: 5 * time.Second, // TLS 握手超时
+	return sharedregistry.Options{
+		Enabled:       consul.GetAddr() != "",
+		Address:       consul.GetAddr(),
+		ServerAddress: conf.GetServer().GetAddr(),
+		TLS: sharedregistry.TLSOptions{
+			Enabled:            consul.GetTls().GetEnable(),
+			InsecureSkipVerify: consul.GetTls().GetInsecureSkipVerify(),
+			CAPEM:              consul.GetTls().GetCaPem(),
 		},
-		WaitTime: 10 * time.Second,
-	}
-
-	if o.tlsConf != nil {
-		config.Scheme = constants.ConsulTlsScheme
-		config.TLSConfig = *o.tlsConf
-	}
-
-	client, err := api.NewClient(&config)
-	if err != nil {
-		return nil, err
-	}
-
-	return &ConsulRegistry{
-		ID:     ID,
-		Name:   Name,
-		Addr:   addr,
-		client: client,
-		logger: o.logger,
-	}, nil
-}
-
-// Register 同时注册 TTL 存活检查与 gRPC 深度就绪检查
-func (r *ConsulRegistry) Register(conf *confv1.Bootstrap, info meta.AppInfo) error {
-	r.logger.Debug("registering service to Consul", zap.String("id", r.ID))
-	// 使用服务本身的地址和端口，而不是 Consul 的地址
-	host := info.Host
-	// 从服务配置中获取端口
-	_, portStr, err := net.SplitHostPort(conf.Server.Addr)
-	if err != nil {
-		return err
-	}
-	portNum, err := strconv.Atoi(portStr)
-	if err != nil {
-		return err
-	}
-
-	r.logger.Debug("registering service to Consul",
-		zap.String("id", r.ID),
-		zap.String("host", host),
-		zap.String("name", r.Name),
-		zap.Int("port", portNum),
-	)
-	// 与 Tls 同理:下面要连着解引用 Check.Ttl,配置里没写 check 段就是空指针。
-	// 这里返回错误而不是裸注册 —— 没有健康检查的实例会被 Consul 一直当健康的,
-	// 流量照打进来,比注册失败更难发现。
-	if conf.Discovery == nil || conf.Discovery.Consul == nil ||
-		conf.Discovery.Consul.Check == nil || conf.Discovery.Consul.Check.Ttl == nil {
-		return errors.New("consul check configuration is missing: discovery.consul.check.ttl")
-	}
-
-	reg := &api.AgentServiceRegistration{
-		ID:      r.ID,
-		Name:    r.Name,
-		Address: host,
-		Port:    portNum,
-		Tags: []string{
-			info.Version,
-			constants.ConsulTagFx,
-			constants.ConsulTagTtl,
-		},
-		Check: healthcheck.NewConsulTTLCheck(
-			r.ID,
-			conf.Discovery.Consul.Check.Ttl.Duration,
-			conf.Discovery.Consul.Check.DeregisterCriticalServiceAfter,
-		),
-		Checks: api.AgentServiceChecks{
-			healthcheck.NewConsulGRPCCheck(r.ID, host, portNum, conf.Discovery.Consul.Check.Ttl.PingInterval.AsDuration()),
+		Check: sharedregistry.CheckOptions{
+			TTL: sharedregistry.TTLCheckOptions{
+				Enabled:      ttl != nil,
+				Duration:     ttl.GetDuration(),
+				PingInterval: ttl.GetPingInterval().AsDuration(),
+			},
+			DeregisterCriticalServiceAfter: check.GetDeregisterCriticalServiceAfter(),
 		},
 	}
-
-	if err := r.client.Agent().ServiceRegister(reg); err != nil {
-		r.logger.Error("failed to register service with Consul", zap.Error(err))
-		return err
-	}
-
-	r.logger.Info("Service registered with Consul using TTL and gRPC readiness checks", zap.String("id", r.ID), zap.String("ttl", conf.Discovery.Consul.Check.Ttl.Duration))
-	return nil
-}
-
-// TtlCheckPinger 负责定期向 Consul Agent 发送心跳信号
-func (r *ConsulRegistry) TtlCheckPinger(ctx context.Context, conf *confv1.Bootstrap) {
-	// time.NewTicker 对 <=0 的间隔直接 panic,而这里跑在独立 goroutine 里,
-	// panic 会整个进程带走。配置缺失或写成 0 时回落到默认值。
-	ttlPingInterval := defaultTtlPingInterval
-	if conf.Discovery != nil && conf.Discovery.Consul != nil &&
-		conf.Discovery.Consul.Check != nil && conf.Discovery.Consul.Check.Ttl != nil &&
-		conf.Discovery.Consul.Check.Ttl.PingInterval.AsDuration() > 0 {
-		ttlPingInterval = conf.Discovery.Consul.Check.Ttl.PingInterval.AsDuration()
-	}
-
-	ticker := time.NewTicker(ttlPingInterval)
-	defer ticker.Stop()
-
-	// 注册与心跳必须共用显式 CheckID；多检查时不能依赖 Consul 的位置编号
-	checkID := healthcheck.ConsulTTLCheckID(r.ID)
-
-	// 发送 'pass' 状态的心跳
-	ping := func() {
-		if err := r.client.Agent().UpdateTTL(checkID, "ttl check passing", api.HealthPassing); err != nil {
-			// 记录错误，但不退出 Pinger，因为这可能是暂时的网络问题
-			// 如果长时间失败，Consul Agent 会将服务标记为 Critical
-			r.logger.Error("failed to update Consul TTL", zap.Error(err), zap.String("ID", r.ID))
-		}
-	}
-
-	r.logger.Info("starting ttl pinger", zap.Duration("interval", ttlPingInterval), zap.String("checkID", checkID))
-
-	// TTL 检查在 Register 之后的初始状态是 critical,而服务发现方(网关的 kratos
-	// consul registry)是用 passingOnly=true 查询的 —— 直接进 ticker 就意味着头一个
-	// ping_interval 内这个实例对外不可见,调用方只能拿到 503。所以注册完立刻补一次
-	// 心跳,把这段盲窗压到零。调用点保证 Register 已成功返回,checkID 一定存在。
-	ping()
-
-	for {
-		select {
-		case <-ctx.Done():
-			r.logger.Info("ttl pinger stopped gracefully")
-			return
-		case <-ticker.C:
-			ping()
-		}
-	}
-}
-
-func (r *ConsulRegistry) Deregister() error {
-	r.logger.Info("deregistering service from consul", zap.String("id", r.ID))
-	return r.client.Agent().ServiceDeregister(r.ID)
 }

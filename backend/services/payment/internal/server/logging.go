@@ -5,7 +5,7 @@ import (
 	"time"
 
 	"connectrpc.com/connect"
-	"github.com/lens077/ecommerce/backend/services/payment/internal/pkg/meta"
+	"github.com/lens077/ecommerce/backend/services/payment/internal/pkg/reqctx"
 	"go.opentelemetry.io/otel/attribute"
 	"go.opentelemetry.io/otel/trace"
 	"go.uber.org/zap"
@@ -51,7 +51,7 @@ func (l *LoggingInterceptor) WrapUnary(next connect.UnaryFunc) connect.UnaryFunc
 			zap.Int64("duration_ms", duration.Milliseconds()),
 		}
 
-		if httpReq := meta.GetHTTPRequest(ctx); httpReq != nil {
+		if httpReq := reqctx.HTTPRequest(ctx); httpReq != nil {
 			_ = httpReq.ParseForm()
 			if len(httpReq.PostForm) > 0 {
 				fields = append(fields, zap.Any("form_data", httpReq.PostForm))

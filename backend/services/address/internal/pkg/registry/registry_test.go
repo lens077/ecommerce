@@ -2,71 +2,48 @@ package registry
 
 import (
 	"testing"
+	"time"
 
+	confv1 "github.com/lens077/ecommerce/backend/services/address/internal/conf/v1"
 	"github.com/stretchr/testify/assert"
-	"github.com/stretchr/testify/suite"
-	"go.uber.org/zap"
+	"google.golang.org/protobuf/types/known/durationpb"
 )
 
-type RegistryTestSuite struct {
-	suite.Suite
-	testLogger *zap.Logger
+func TestOptionsFromBootstrap(t *testing.T) {
+	bootstrap := &confv1.Bootstrap{
+		Server: &confv1.Server{Addr: "0.0.0.0:30006"},
+		Discovery: &confv1.Discovery{Consul: &confv1.Discovery_Consul{
+			Addr: "consul:8500",
+			Tls: &confv1.Discovery_Consul_Tls{
+				Enable:             true,
+				InsecureSkipVerify: true,
+				CaPem:              "ca",
+			},
+			Check: &confv1.Discovery_Consul_Check{
+				Ttl: &confv1.Discovery_Consul_Check_TTL{
+					Duration:     "30s",
+					PingInterval: durationpb.New(10 * time.Second),
+				},
+				DeregisterCriticalServiceAfter: "1m",
+			},
+		}},
+	}
+
+	options := optionsFromBootstrap(bootstrap)
+	assert.True(t, options.Enabled)
+	assert.Equal(t, "consul:8500", options.Address)
+	assert.Equal(t, "0.0.0.0:30006", options.ServerAddress)
+	assert.True(t, options.TLS.Enabled)
+	assert.True(t, options.TLS.InsecureSkipVerify)
+	assert.Equal(t, "ca", options.TLS.CAPEM)
+	assert.True(t, options.Check.TTL.Enabled)
+	assert.Equal(t, "30s", options.Check.TTL.Duration)
+	assert.Equal(t, 10*time.Second, options.Check.TTL.PingInterval)
+	assert.Equal(t, "1m", options.Check.DeregisterCriticalServiceAfter)
 }
 
-func (suite *RegistryTestSuite) SetupTest() {
-	var err error
-	suite.testLogger, err = zap.NewDevelopment()
-	assert.NoError(suite.T(), err)
-}
-
-func (suite *RegistryTestSuite) TestNewConsulRegistry_WithValidAddr() {
-	reg, err := NewConsulRegistry("localhost:8500", "test-id", "test-service", WithLogger(suite.testLogger))
-	assert.NoError(suite.T(), err)
-	assert.NotNil(suite.T(), reg)
-	assert.Equal(suite.T(), "test-id", reg.ID)
-	assert.Equal(suite.T(), "test-service", reg.Name)
-	assert.Equal(suite.T(), "localhost:8500", reg.Addr)
-}
-
-func (suite *RegistryTestSuite) TestNewConsulRegistry_WithInvalidAddr() {
-	reg, err := NewConsulRegistry("invalid-addr", "test-id", "test-service", WithLogger(suite.testLogger))
-	assert.NoError(suite.T(), err)
-	assert.NotNil(suite.T(), reg)
-}
-
-func (suite *RegistryTestSuite) TestNewConsulRegistry_WithTLS() {
-	reg, err := NewConsulRegistry("localhost:8500", "test-id", "test-service", WithLogger(suite.testLogger), WithTLS(true, ""))
-	assert.NoError(suite.T(), err)
-	assert.NotNil(suite.T(), reg)
-}
-
-func (suite *RegistryTestSuite) TestWithLogger() {
-	opt := WithLogger(suite.testLogger)
-	o := &options{}
-	opt(o)
-	assert.Equal(suite.T(), suite.testLogger, o.logger)
-}
-
-func (suite *RegistryTestSuite) TestWithTLS() {
-	opt := WithTLS(true, "test-ca-pem")
-	o := &options{}
-	opt(o)
-	assert.NotNil(suite.T(), o.tlsConf)
-	assert.True(suite.T(), o.tlsConf.InsecureSkipVerify)
-}
-
-func (suite *RegistryTestSuite) TestModuleCreation() {
-	module := Module
-	assert.NotNil(suite.T(), module)
-	assert.Contains(suite.T(), module.String(), "registry")
-}
-
-func TestRegistryTestSuite(t *testing.T) {
-	suite.Run(t, new(RegistryTestSuite))
-}
-
-func TestNewConsulRegistry_PanicRecovery(t *testing.T) {
-	assert.NotPanics(t, func() {
-		_, _ = NewConsulRegistry("localhost:8500", "test-id", "test-name")
-	})
+func TestOptionsDisableUnconfiguredConsul(t *testing.T) {
+	options := optionsFromBootstrap(&confv1.Bootstrap{})
+	assert.False(t, options.Enabled)
+	assert.False(t, options.Check.TTL.Enabled)
 }

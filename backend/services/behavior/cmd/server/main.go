@@ -9,13 +9,13 @@ import (
 	"time"
 
 	"github.com/lens077/ecommerce/backend/constants"
+	"github.com/lens077/ecommerce/backend/pkg/env"
+	"github.com/lens077/ecommerce/backend/pkg/meta"
 	"github.com/lens077/ecommerce/backend/services/behavior/internal/biz"
 	confv1 "github.com/lens077/ecommerce/backend/services/behavior/internal/conf/v1"
 	"github.com/lens077/ecommerce/backend/services/behavior/internal/data"
 	"github.com/lens077/ecommerce/backend/services/behavior/internal/pkg/config"
-	"github.com/lens077/ecommerce/backend/services/behavior/internal/pkg/env"
 	logger "github.com/lens077/ecommerce/backend/services/behavior/internal/pkg/log"
-	"github.com/lens077/ecommerce/backend/services/behavior/internal/pkg/meta"
 	"github.com/lens077/ecommerce/backend/services/behavior/internal/pkg/otel"
 	"github.com/lens077/ecommerce/backend/services/behavior/internal/pkg/registry"
 	"github.com/lens077/ecommerce/backend/services/behavior/internal/server"
@@ -104,9 +104,9 @@ func appOptions(serviceName, deploymentMode, serviceVersion string) []fx.Option 
 
 		fx.Invoke(
 			// 打印本次启动实际生效的配置数据源,避免「改了配置没生效」时靠猜
-			func(_ *confv1.Bootstrap, logger *zap.Logger) {
+			func(live *config.Live, logger *zap.Logger) {
 				logger.Info("bootstrap config loaded",
-					zap.String("source", config.SourceName()),
+					zap.String("source", live.SourceName()),
 				)
 			},
 

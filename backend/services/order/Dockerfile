@@ -31,8 +31,9 @@ COPY pkg/ ./pkg/
 RUN --mount=type=cache,target=/go/pkg/mod \
     --mount=type=cache,target=/root/.cache/go-build \
     GOOS=$TARGETOS GOARCH=$TARGETARCH CGO_ENABLED=$CGOENABLED \
-    # 在根目录运行 build，但指向对应微服务的 main.go
-    go build -ldflags="-s -w -X main.Version=$VERSION" \
+    # Keep this full -X target in sync with pkg/meta.Version. The Go linker
+    # silently ignores a missing symbol, so a typo disables version injection.
+    go build -ldflags="-s -w -X github.com/lens077/ecommerce/backend/pkg/meta.Version=$VERSION" \
     -o /app/service ./services/${SERVICE}/cmd/server && \
     chmod +x /app/service
 
