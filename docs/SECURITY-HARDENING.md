@@ -15,7 +15,7 @@
 |---|---|---|---|
 | `postgres` 30001 / `kafka` 30004 | node1（TCP 入口，隧道回 node3） | 10 个业务服务 | 主库经此入口 |
 | `redis_gorse` 61246 | node1 | gorse | gorse 的 cache store |
-| `postgres_gorse` 52288 | node1 | gorse | gorse 的 data store |
+| `postgres_gorse` 52288 | node1 | gorse **+ Casdoor** | 同实例两个库；Casdoor 是 SSO，详见下节 |
 | `minio` | node2 | cart | 商品缩略图 |
 | `gorse` | node2 | behavior、product | 推荐引擎 |
 | Harbor | node2 | 全部镜像拉取 | 镜像仓库 |
@@ -202,13 +202,67 @@ Harbor nginx 配 `set_real_ip_from` / `real_ip_header`），**并且验证日志
 
 端口从 5432 随机化到 52288 只是隐藏，全端口扫描一遍就出来。**fail2ban 保护不了它**：
 等日志里看到爆破，弱口令可能已经被撞开。处置顺序：轮换凭据（真值只进 Config Center，
-按硬规则 4 不入仓）→ 安全组/nftables 白名单只放 node3 与运维出口 → 上 TLS。
+按硬规则 4 不入仓）→ 白名单收窄来源 → 上 TLS。
+
+#### ⚠️ 这台 PG 不只服务 gorse —— 收窄前必读（实测 2026-09-01）
+
+`.service-matrix.yaml` 原先记 `used_by: [gorse]`，**不完整**，已订正。实测当时 5 条连接：
+
+```
+postgres: root gorse   node2(...)   ← gorse，来自 node2
+postgres: root casdoor node1(...) ← Casdoor ×4
+```
+
+同一实例上有 `gorse` 与 `casdoor` 两个库。**4/5 的连接是 Casdoor**，而 Casdoor 是
+`docs/TECH.md` 选型表里的 IAM，挂掉等于 SSO 全断。
+
+两个后果：
+
+1. **收窄曾经不能只放 node2——该限制已于 2026-09-01 解除。** Casdoor 原配置是
+   `host=apikv.com ... port=52288 sslmode=disable`：它和 PG 同在 node1，却**绕公网**
+   解析回来（`apikv.com` 在容器内解析为 `node1`），源地址呈现为 node1 自己的
+   公网 IP，按「只放 node2」写规则会立刻断掉 SSO。**已改为 `host=172.18.0.1`**（见下节）。
+2. **轮换口令的影响面是两个库。** 弱口令属 `root` 用户，gorse 与 casdoor 共用，
+   不是「只动 gorse」。这条**仍然成立**。
+
+收窄前用下面这条复核真实客户端，**不要照抄任何文档里的清单**（含本文）：
+
+```bash
+ps -eo args --no-headers | grep "^postgres: root"
+```
+
+> 别用 `pgrep -f "postgres: root"` 配 `/proc/$p/cmdline`：`pgrep -f` 会匹配到你自己
+> 那条命令行，产生假阳性（本次排查即被它误导过一次）。
+
+### Casdoor 改走 Docker 网关（实测 2026-09-01）
+
+`/home/docker/casdoor/app.conf` 第 6 行：
+
+```diff
+- dataSourceName = "user=root password=*** host=apikv.com   port=52288 sslmode=disable dbname=casdoor"
++ dataSourceName = "user=root password=*** host=172.18.0.1 port=52288 sslmode=disable dbname=casdoor"
+```
+
+为什么是 `172.18.0.1` 而不是容器名：**两个容器不在同一 Docker 网络**
+（casdoor 在 `casdoor_default` 172.18，postgres 在 `postgres_default` 172.19），
+容器名解析不到，实测 `172.19.0.2:5432` 直连也不通。`172.18.0.1` 是 casdoor 所在网络的
+宿主网关，映射端口 52288 在其上可达（改前已用一次性容器验证过认证与选库）。
+
+变更后实测：PG 侧 casdoor 连接源地址变为 `172.19.0.1`，**公网源连接归零**；
+`/api/health` 200、`get-app-login` 200、公网 `https://casdoor.apikv.com/` 200；
+`docker compose up -d --force-recreate` 后复验仍为内网源——`dataSourceName` 不在
+compose 的 environment 里（只有注释掉的一行），`app.conf` 是唯一真相源，故变更持久。
+
+⚠️ 该容器 `restart: no`，宿主重启不会自动拉起，与本次变更无关但收窄端口时要一并留意。
+回滚：`app.conf.bak-20260901-230518` 同目录留存。
 
 ### P0：node1 `redis_gorse` 61246 —— 全网开放
 
-`.service-matrix.yaml` 标了「测试期对 0.0.0.0/0 开放，上线前收窄」。已是 `port 0` +
-只收 `rediss://`，比 pg 强，但 Redis 未授权访问是经典 getshell 路径（写 crontab /
-`authorized_keys`）。确认 `requirepass` 已设并同样收窄来源。
+`.service-matrix.yaml` 标了「测试期对 0.0.0.0/0 开放，上线前收窄」。实测确认配置为
+`port 0` + `tls-port 6379` + `requirepass` 已设，只收 `rediss://`，比 pg 强。
+
+**与 pg 不同，这个端口的 `used_by` 是准确的**：实测只有一条连接，来自 node2
+（`node2`）的 gorse。**可以直接收窄到只放 node2**，无 Casdoor 那类隐藏消费者。
 
 ### P1：两台 `ufw` 均 inactive
 
