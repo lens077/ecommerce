@@ -90,11 +90,53 @@ done
 
 # ---------- 3. 本机 HTTP 健康端点 ----------
 # 给跑在这台机器上的业务服务用：探本地回环，不经公网，能区分「服务死了」和「入口断了」。
+#
+# 三种写法（2026-09-01 起支持后两种，起因见下）：
+#   name=URL                     普通探测
+#   name=URL|host:port:ip        带 --resolve：用域名走 TLS（证书能校验），但连本地 IP
+#   name=URL|host:port:ip|CODES  再指定期望状态码，**逗号分隔**如 "200,403"
+#
+# ⚠️ CODES 必须用逗号而不是空格：整个 HTTP_CHECKS 是按空格分词的，
+# 写成 "200 403" 会被拆成两个 item，每轮多出两条「格式错误」误报（实测踩过）。
+#
+# 为什么需要 --resolve：node2 的 Harbor/MinIO 是 TLS-only，直接探
+# https://127.0.0.1:port 会因证书 CN 不匹配返回 000（curl 不带 -k），
+# 变成一条永久误报；改探公网域名又会绕出去经 Pangolin，就不再是「本机探测」。
+# --resolve 让域名解析到本地 IP：TLS 校验按域名过，流量不出机器，两个目标同时满足。
+# 不用 -k 是有意的——跳过证书校验会连带放过「证书过期」这类真故障。
 for item in $HTTP_CHECKS; do
     name="${item%%=*}"
-    url="${item#*=}"
+    rest="${item#*=}"
     [ "$name" = "$item" ] && { add "HTTP_CHECKS 格式错误(应为 名字=URL): $item"; continue; }
-    code=$(curl -s -o /dev/null -w '%{http_code}' --max-time 10 "$url" 2>/dev/null)
+
+    url="${rest%%|*}"
+    resolve=""
+    expect=""
+    if [ "$rest" != "$url" ]; then
+        tail_="${rest#*|}"
+        resolve="${tail_%%|*}"
+        [ "$tail_" != "$resolve" ] && expect="${tail_#*|}"
+    fi
+
+    if [ -n "$resolve" ]; then
+        code=$(curl -s -o /dev/null -w '%{http_code}' --max-time 10 --resolve "$resolve" "$url" 2>/dev/null)
+    else
+        code=$(curl -s -o /dev/null -w '%{http_code}' --max-time 10 "$url" 2>/dev/null)
+    fi
+
+    if [ -n "$expect" ]; then
+        ok=""
+        # 逗号分隔（见上方说明：不能用空格）
+        for want in $(printf '%s' "$expect" | tr ',' ' '); do
+            case "$code" in "$want"*) ok=1; break ;; esac
+        done
+        [ -n "$ok" ] || {
+            if [ "$code" = "000" ]; then add "HTTP 探测无响应: $name ($url)"
+            else add "HTTP 探测异常: $name ($url) → $code (期望 $expect)"; fi
+        }
+        continue
+    fi
+
     case "$code" in
         2??|3??) ;;
         000)     add "HTTP 探测无响应: $name ($url)" ;;

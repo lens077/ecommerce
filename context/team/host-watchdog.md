@@ -98,6 +98,27 @@ cd infrastructure/host-watchdog
 | 主机 | 覆盖 | 备注 |
 |---|---|---|
 | node1 | 14 个容器 + `docker.service` + 2 个本机 HTTP 端点 + Pangolin 隧道站点 + 磁盘 | 每 5 分钟；实测 2026-09-01 |
+| node2 | 11 个容器（Harbor 全家桶 + gorse + MinIO + nginx/redis）+ `docker.service`/`fail2ban.service` + 3 个本机 HTTP 端点 + 磁盘 | 每 5 分钟；实测 2026-09-02 |
+| node3 | 7 个容器（gatus/ecommerce-gatus/otelcol/CDC/bugsink/healthchecks）+ `docker.service` + 4 个本机 HTTP 端点 + 磁盘 | 每 5 分钟；实测 2026-09-02 |
+
+node3 的覆盖对象里有 `gatus`、`ecommerce-gatus` 与 `otelcol`——**探针与采集器本身**。
+它们挂掉的表现是「所有告警都安静了」，与「一切正常」在信号上完全一致，
+正是最需要由外部巡检盯住的一类。
+
+### 本机探 TLS-only 端点：用 `--resolve`，不要用 `-k`
+
+node2 的 Harbor 与 MinIO 是 TLS-only，实测出一个两难：直接探
+`https://127.0.0.1:port` 因证书 CN 不匹配返回 `000`（脚本刻意不带 `-k`）→ 永久误报；
+改探公网域名又会绕出去经 Pangolin → 不再是「本机」探测，探不出「入口通但服务死」。
+
+解法是 `curl --resolve host:port:127.0.0.1`：**TLS 按域名校验，流量不出机器**，
+两个目标同时满足。不加 `-k` 是有意的——跳过校验会连带放过「证书过期」这类真故障，
+而本项目的证书恰恰是手工拷贝、不会自动续期的（见 `docs/SECURITY-HARDENING.md`）。
+
+配套的期望状态码用**逗号**分隔（`200,401`）：`HTTP_CHECKS` 整体按空格分词，
+写成 `200 401` 会被拆成两个 item，每轮产生两条「格式错误」误报——本次踩过。
+要鉴权的端点返回 `401` 恰恰证明进程活着（node3 的 Elasticsearch 即用 `200,401`），
+比强行找一个匿名 200 端点更可靠。
 
 ## 相关
 
