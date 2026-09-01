@@ -437,8 +437,9 @@ func (x *Discovery) GetConsul() *Discovery_Consul {
 }
 
 type Search struct {
-	state         protoimpl.MessageState `protogen:"open.v1"`
-	Meilisearch   *Search_Meilisearch    `protobuf:"bytes,2,opt,name=meilisearch,proto3" json:"meilisearch,omitempty"`
+	state protoimpl.MessageState `protogen:"open.v1"`
+	// 新字段名避开已 reserved 的 elastic_search / elasticsearch；catalog 表达能力边界。
+	Catalog       *Search_ElasticsearchCatalog `protobuf:"bytes,3,opt,name=catalog,proto3" json:"catalog,omitempty"`
 	unknownFields protoimpl.UnknownFields
 	sizeCache     protoimpl.SizeCache
 }
@@ -473,9 +474,9 @@ func (*Search) Descriptor() ([]byte, []int) {
 	return file_services_search_internal_conf_v1_conf_proto_rawDescGZIP(), []int{7}
 }
 
-func (x *Search) GetMeilisearch() *Search_Meilisearch {
+func (x *Search) GetCatalog() *Search_ElasticsearchCatalog {
 	if x != nil {
-		return x.Meilisearch
+		return x.Catalog
 	}
 	return nil
 }
@@ -1767,11 +1768,11 @@ func (x *Discovery_Consul_Check_TTL) GetPingInterval() *durationpb.Duration {
 	return nil
 }
 
+// 仅保留类型 tombstone 供 buf breaking 识别；运行时字段已删除且永久 reserved。
+//
+// Deprecated: Marked as deprecated in services/search/internal/conf/v1/conf.proto.
 type Search_Meilisearch struct {
 	state         protoimpl.MessageState `protogen:"open.v1"`
-	Host          string                 `protobuf:"bytes,1,opt,name=host,proto3" json:"host,omitempty"`
-	ApiKey        string                 `protobuf:"bytes,2,opt,name=api_key,json=apiKey,proto3" json:"api_key,omitempty"`
-	Index         string                 `protobuf:"bytes,3,opt,name=index,proto3" json:"index,omitempty"`
 	unknownFields protoimpl.UnknownFields
 	sizeCache     protoimpl.SizeCache
 }
@@ -1806,21 +1807,76 @@ func (*Search_Meilisearch) Descriptor() ([]byte, []int) {
 	return file_services_search_internal_conf_v1_conf_proto_rawDescGZIP(), []int{7, 0}
 }
 
-func (x *Search_Meilisearch) GetHost() string {
+type Search_ElasticsearchCatalog struct {
+	state         protoimpl.MessageState `protogen:"open.v1"`
+	Endpoint      string                 `protobuf:"bytes,1,opt,name=endpoint,proto3" json:"endpoint,omitempty"`
+	Username      string                 `protobuf:"bytes,2,opt,name=username,proto3" json:"username,omitempty"`
+	Password      string                 `protobuf:"bytes,3,opt,name=password,proto3" json:"password,omitempty"`
+	ApiKey        string                 `protobuf:"bytes,4,opt,name=api_key,json=apiKey,proto3" json:"api_key,omitempty"`
+	Index         string                 `protobuf:"bytes,5,opt,name=index,proto3" json:"index,omitempty"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *Search_ElasticsearchCatalog) Reset() {
+	*x = Search_ElasticsearchCatalog{}
+	mi := &file_services_search_internal_conf_v1_conf_proto_msgTypes[29]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *Search_ElasticsearchCatalog) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*Search_ElasticsearchCatalog) ProtoMessage() {}
+
+func (x *Search_ElasticsearchCatalog) ProtoReflect() protoreflect.Message {
+	mi := &file_services_search_internal_conf_v1_conf_proto_msgTypes[29]
 	if x != nil {
-		return x.Host
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use Search_ElasticsearchCatalog.ProtoReflect.Descriptor instead.
+func (*Search_ElasticsearchCatalog) Descriptor() ([]byte, []int) {
+	return file_services_search_internal_conf_v1_conf_proto_rawDescGZIP(), []int{7, 1}
+}
+
+func (x *Search_ElasticsearchCatalog) GetEndpoint() string {
+	if x != nil {
+		return x.Endpoint
 	}
 	return ""
 }
 
-func (x *Search_Meilisearch) GetApiKey() string {
+func (x *Search_ElasticsearchCatalog) GetUsername() string {
+	if x != nil {
+		return x.Username
+	}
+	return ""
+}
+
+func (x *Search_ElasticsearchCatalog) GetPassword() string {
+	if x != nil {
+		return x.Password
+	}
+	return ""
+}
+
+func (x *Search_ElasticsearchCatalog) GetApiKey() string {
 	if x != nil {
 		return x.ApiKey
 	}
 	return ""
 }
 
-func (x *Search_Meilisearch) GetIndex() string {
+func (x *Search_ElasticsearchCatalog) GetIndex() string {
 	if x != nil {
 		return x.Index
 	}
@@ -1958,14 +2014,20 @@ const file_services_search_internal_conf_v1_conf_proto_rawDesc = "" +
 	"\x03TTL\x12\x1a\n" +
 	"\bduration\x18\x01 \x01(\tR\bduration\x12J\n" +
 	"\rping_interval\x18\x02 \x01(\v2\x19.google.protobuf.DurationB\n" +
-	"\xbaH\a\xaa\x01\x042\x02\b\x05R\fpingInterval\"\x97\x02\n" +
-	"\x06Search\x12E\n" +
-	"\vmeilisearch\x18\x02 \x01(\v2\x1b.conf.v1.Search.MeilisearchB\x06\xbaH\x03\xc8\x01\x01R\vmeilisearch\x1a\xaf\x01\n" +
-	"\vMeilisearch\x12A\n" +
-	"\x04host\x18\x01 \x01(\tB-\xbaH*r(\x92\x02\"http://meilisearch.search.svc:7700\x88\x01\x01R\x04host\x12#\n" +
-	"\aapi_key\x18\x02 \x01(\tB\n" +
-	"\xbaH\ar\x05\x10\x10\x18\x80\x04R\x06apiKey\x128\n" +
-	"\x05index\x18\x03 \x01(\tB\"\xbaH\x1fr\x1d\x10\x01\x18\xff\x012\x16^[a-z0-9][a-z0-9._-]*$R\x05indexJ\x04\b\x01\x10\x02R\x0eelastic_searchB\xa3\x01\n" +
+	"\xbaH\a\xaa\x01\x042\x02\b\x05R\fpingInterval\"\xf6\x04\n" +
+	"\x06Search\x12F\n" +
+	"\acatalog\x18\x03 \x01(\v2$.conf.v1.Search.ElasticsearchCatalogB\x06\xbaH\x03\xc8\x01\x01R\acatalog\x1a9\n" +
+	"\vMeilisearch:\x02\x18\x01J\x04\b\x01\x10\x02J\x04\b\x02\x10\x03J\x04\b\x03\x10\x04R\x04hostR\aapi_keyR\x05index\x1a\xbf\x03\n" +
+	"\x14ElasticsearchCatalog\x12M\n" +
+	"\bendpoint\x18\x01 \x01(\tB1\xbaH.r,\x10\x01\x18\x80\x102\n" +
+	"^https?://\x92\x02\x15http://127.0.0.1:9200\x88\x01\x01R\bendpoint\x12$\n" +
+	"\busername\x18\x02 \x01(\tB\b\xbaH\x05r\x03\x18\x80\x02R\busername\x12$\n" +
+	"\bpassword\x18\x03 \x01(\tB\b\xbaH\x05r\x03\x18\x80\bR\bpassword\x12!\n" +
+	"\aapi_key\x18\x04 \x01(\tB\b\xbaH\x05r\x03\x18\x80 R\x06apiKey\x128\n" +
+	"\x05index\x18\x05 \x01(\tB\"\xbaH\x1fr\x1d\x10\x01\x18\xff\x012\x16^[a-z0-9][a-z0-9._-]*$R\x05index:\xae\x01\xbaH\xaa\x01\x1a\x90\x01\n" +
+	")elasticsearch_catalog.basic_auth_password\x123password must be set if and only if username is set\x1a.(this.username == '') == (this.password == '')\"\x15\n" +
+	"\busername\n" +
+	"\aapi_key\x10\x01J\x04\b\x01\x10\x02J\x04\b\x02\x10\x03R\x0eelastic_searchR\vmeilisearchB\xa3\x01\n" +
 	"\vcom.conf.v1B\tConfProtoP\x01ZLgithub.com/lens077/ecommerce/backend/services/search/internal/conf/v1;confv1\xa2\x02\x03CXX\xaa\x02\aConf.V1\xca\x02\aConf\\V1\xe2\x02\x13Conf\\V1\\GPBMetadata\xea\x02\bConf::V1b\x06proto3"
 
 var (
@@ -1980,7 +2042,7 @@ func file_services_search_internal_conf_v1_conf_proto_rawDescGZIP() []byte {
 	return file_services_search_internal_conf_v1_conf_proto_rawDescData
 }
 
-var file_services_search_internal_conf_v1_conf_proto_msgTypes = make([]protoimpl.MessageInfo, 29)
+var file_services_search_internal_conf_v1_conf_proto_msgTypes = make([]protoimpl.MessageInfo, 30)
 var file_services_search_internal_conf_v1_conf_proto_goTypes = []any{
 	(*Bootstrap)(nil),                           // 0: conf.v1.Bootstrap
 	(*Log)(nil),                                 // 1: conf.v1.Log
@@ -2011,8 +2073,9 @@ var file_services_search_internal_conf_v1_conf_proto_goTypes = []any{
 	(*Discovery_Consul_Check)(nil),              // 26: conf.v1.Discovery.Consul.Check
 	(*Discovery_Consul_Check_TTL)(nil),          // 27: conf.v1.Discovery.Consul.Check.TTL
 	(*Search_Meilisearch)(nil),                  // 28: conf.v1.Search.Meilisearch
-	(*durationpb.Duration)(nil),                 // 29: google.protobuf.Duration
-	(*wrapperspb.DoubleValue)(nil),              // 30: google.protobuf.DoubleValue
+	(*Search_ElasticsearchCatalog)(nil),         // 29: conf.v1.Search.ElasticsearchCatalog
+	(*durationpb.Duration)(nil),                 // 30: google.protobuf.Duration
+	(*wrapperspb.DoubleValue)(nil),              // 31: google.protobuf.DoubleValue
 }
 var file_services_search_internal_conf_v1_conf_proto_depIdxs = []int32{
 	2,  // 0: conf.v1.Bootstrap.server:type_name -> conf.v1.Server
@@ -2033,30 +2096,30 @@ var file_services_search_internal_conf_v1_conf_proto_depIdxs = []int32{
 	21, // 15: conf.v1.Observability.metric:type_name -> conf.v1.Observability.Metric
 	22, // 16: conf.v1.Observability.log:type_name -> conf.v1.Observability.Logging
 	24, // 17: conf.v1.Discovery.consul:type_name -> conf.v1.Discovery.Consul
-	28, // 18: conf.v1.Search.meilisearch:type_name -> conf.v1.Search.Meilisearch
-	29, // 19: conf.v1.Server.HTTP.read_timeout:type_name -> google.protobuf.Duration
-	29, // 20: conf.v1.Server.HTTP.write_timeout:type_name -> google.protobuf.Duration
-	29, // 21: conf.v1.Server.HTTP.idle_timeout:type_name -> google.protobuf.Duration
+	29, // 18: conf.v1.Search.catalog:type_name -> conf.v1.Search.ElasticsearchCatalog
+	30, // 19: conf.v1.Server.HTTP.read_timeout:type_name -> google.protobuf.Duration
+	30, // 20: conf.v1.Server.HTTP.write_timeout:type_name -> google.protobuf.Duration
+	30, // 21: conf.v1.Server.HTTP.idle_timeout:type_name -> google.protobuf.Duration
 	14, // 22: conf.v1.Data.Database.postgres:type_name -> conf.v1.Data.Database.Postgres
 	17, // 23: conf.v1.Data.Cache.redis:type_name -> conf.v1.Data.Cache.Redis
 	15, // 24: conf.v1.Data.Database.Postgres.pool:type_name -> conf.v1.Data.Database.Postgres.DatabasePool
 	16, // 25: conf.v1.Data.Database.Postgres.tls:type_name -> conf.v1.Data.Database.Postgres.Tls
-	29, // 26: conf.v1.Data.Database.Postgres.DatabasePool.max_conn_lifetime:type_name -> google.protobuf.Duration
-	29, // 27: conf.v1.Data.Database.Postgres.DatabasePool.max_conn_idle_time:type_name -> google.protobuf.Duration
-	29, // 28: conf.v1.Data.Database.Postgres.DatabasePool.ping_timeout:type_name -> google.protobuf.Duration
-	29, // 29: conf.v1.Data.Cache.Redis.dial_timeout:type_name -> google.protobuf.Duration
-	29, // 30: conf.v1.Data.Cache.Redis.read_timeout:type_name -> google.protobuf.Duration
-	29, // 31: conf.v1.Data.Cache.Redis.write_timeout:type_name -> google.protobuf.Duration
+	30, // 26: conf.v1.Data.Database.Postgres.DatabasePool.max_conn_lifetime:type_name -> google.protobuf.Duration
+	30, // 27: conf.v1.Data.Database.Postgres.DatabasePool.max_conn_idle_time:type_name -> google.protobuf.Duration
+	30, // 28: conf.v1.Data.Database.Postgres.DatabasePool.ping_timeout:type_name -> google.protobuf.Duration
+	30, // 29: conf.v1.Data.Cache.Redis.dial_timeout:type_name -> google.protobuf.Duration
+	30, // 30: conf.v1.Data.Cache.Redis.read_timeout:type_name -> google.protobuf.Duration
+	30, // 31: conf.v1.Data.Cache.Redis.write_timeout:type_name -> google.protobuf.Duration
 	18, // 32: conf.v1.Data.Cache.Redis.tls:type_name -> conf.v1.Data.Cache.Redis.Tls
 	23, // 33: conf.v1.Observability.Trace.tls:type_name -> conf.v1.Observability.Tls
-	30, // 34: conf.v1.Observability.Trace.sample_ratio:type_name -> google.protobuf.DoubleValue
+	31, // 34: conf.v1.Observability.Trace.sample_ratio:type_name -> google.protobuf.DoubleValue
 	23, // 35: conf.v1.Observability.Metric.tls:type_name -> conf.v1.Observability.Tls
-	29, // 36: conf.v1.Observability.Metric.export_interval:type_name -> google.protobuf.Duration
+	30, // 36: conf.v1.Observability.Metric.export_interval:type_name -> google.protobuf.Duration
 	23, // 37: conf.v1.Observability.Logging.tls:type_name -> conf.v1.Observability.Tls
 	25, // 38: conf.v1.Discovery.Consul.tls:type_name -> conf.v1.Discovery.Consul.Tls
 	26, // 39: conf.v1.Discovery.Consul.check:type_name -> conf.v1.Discovery.Consul.Check
 	27, // 40: conf.v1.Discovery.Consul.Check.ttl:type_name -> conf.v1.Discovery.Consul.Check.TTL
-	29, // 41: conf.v1.Discovery.Consul.Check.TTL.ping_interval:type_name -> google.protobuf.Duration
+	30, // 41: conf.v1.Discovery.Consul.Check.TTL.ping_interval:type_name -> google.protobuf.Duration
 	42, // [42:42] is the sub-list for method output_type
 	42, // [42:42] is the sub-list for method input_type
 	42, // [42:42] is the sub-list for extension type_name
@@ -2075,7 +2138,7 @@ func file_services_search_internal_conf_v1_conf_proto_init() {
 			GoPackagePath: reflect.TypeOf(x{}).PkgPath(),
 			RawDescriptor: unsafe.Slice(unsafe.StringData(file_services_search_internal_conf_v1_conf_proto_rawDesc), len(file_services_search_internal_conf_v1_conf_proto_rawDesc)),
 			NumEnums:      0,
-			NumMessages:   29,
+			NumMessages:   30,
 			NumExtensions: 0,
 			NumServices:   0,
 		},

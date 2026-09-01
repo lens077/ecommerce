@@ -71,8 +71,8 @@ externals:
   kafka: { host: "node1:30004", used_by: [], note: "node3 已预建 Kafka SCRAM 用户与 ecommerce.events topic；本仓当前无客户端、producer、consumer 或业务接线（used_by 为空即事实）。选型方向见 docs/TECH.md" }
   nats: { host: "nats.nats.svc:4222", used_by: [], note: "dev 为 3-server JetStream，R1 ECOMMERCE_EVENTS 可重建。⚠️ search 服务本身不导入 nats（used_by 为空即事实）——导入方是 backend/tools/{search-indexer,outbox-relay}，不在 services 段。选型方向见 docs/TECH.md" }
   casdoor: { host: "casdoor.apikv.com", note: "HTTPS 经 Pangolin（8000 明文口已关，2026-08-19 起）；JWT 公钥 kid=lens；2026-08-20 定稿收编进集群，现行身份边界见 docs/TECH.md §8" }
-  elasticsearch: { host: "node3 127.0.0.1:9200（容器 cdc-elasticsearch，仅回环，需 ssh 隧道；已开鉴权，匿名请求 401）", used_by: [], note: "集群内旧实例已退役；node3 现有 CDC 用 ES 容器（同机 cdc-connect 127.0.0.1:8083），本仓无服务连接它。⚠️ 容量事实：node3 总内存 7.25GiB、该容器 limit 2GiB，与观测数据面同机。选型方向见 docs/TECH.md" }
-  meilisearch: { host: "meilisearch.search.svc:7700", used_by: [search], note: "v1.53 集群组件；search 使用服务端固定的 products 索引和仅限 search 动作的 API key。选型方向见 docs/TECH.md" }
+  elasticsearch: { host: "node3 127.0.0.1:9200（容器 cdc-elasticsearch，仅回环，需 ssh 隧道；已开鉴权，匿名请求 401）", used_by: [search], note: "search 代码通过 SearchCatalog 读取 ecommerce_catalog_products alias，独立 search-indexer 维护该策展投影；Pod 到 node3 回环监听的网络通路尚未解决，未完成运行时切流。⚠️ 容量事实：node3 总内存 7.25GiB、该容器 limit 2GiB，与观测数据面同机。选型方向见 docs/TECH.md" }
+  meilisearch: { host: "meilisearch.search.svc:7700", used_by: [], note: "存量 v1.53 集群组件；本仓 search 代码已不再引用，运行时退役另走部署变更。选型方向见 docs/TECH.md" }
   minio: { host: "minio.apikv.com", used_by: [cart], note: "现役镜像 pgsty/silo RELEASE.2026-08-06（pin digest、command 显式 --certs-dir、镜像 HOME=/tmp）。商品缩略图 URL；443 不带端口。机器是 node2（ssh 别名 node2:34124，阿里云，与 k8s 集群无关——k8s 节点是 node101/102/103 = 192.168.3.101-103），2026-08-19 起走 node1 的 Pangolin（Traefik 终止 TLS）经 newt 隧道回 node2，本机 9000/9001 已绑回环。选型方向见 docs/TECH.md" }
   config_center: { discovery: config-service, repository: "github.com/lens077/control-tower", note: "配置控制面，2026-08-23 起由合一仓 control-tower 的 config 服务承载（wire 冻结,旧 SDK v0.1.0 兼容已实测）；从本地 CONFIG_FILE 自举；SDK=github.com/lens077/control-tower/sdk/configsource" }
   gorse: { host: "gorse.apikv.com", used_by: [behavior, product], note: "推荐引擎；客户端在 backend/pkg/gorse/（发 X-API-Key）。与 minio 同在 node2，2026-08-19 起走 Pangolin，本机 8086/8088 已绑回环。鉴权是 gorse 自带的（[server] api_key + dashboard 表单登录），非 Pangolin SSO。⚠️ 仓库配置的 api_key 按硬规则 4 留空，真值要灌 Config Center，否则业务全 401。依赖 node1 的 rediss://redis.apikv.com:6379 与 pg:5432" }
@@ -159,8 +159,8 @@ services:
     gateway_prefix: /search*
     extra_config: [auth, search]
     depends_on: []
-    external: [meilisearch, config_center]
-    note: "查询进程只读服务端固定的 products 索引；独立 indexer 经 NATS 写入。Product Service 事务内 outbox 生产者尚未接线；SearchRequest.index 仅为旧客户端兼容而保留，服务端忽略"
+    external: [elasticsearch, config_center]
+    note: "查询进程通过 SearchCatalog 只读服务端固定的 ecommerce_catalog_products alias；独立 indexer 经 NATS 写入。Pod 到 Elasticsearch 的网络通路尚未解决，代码接线不等于运行时切流；Product Service 事务内 outbox 生产者尚未接线；SearchRequest.index 仅为旧客户端兼容而保留，服务端忽略"
 
   behavior:
     discovery: behavior-service
@@ -262,8 +262,8 @@ frontend:
 known_gaps:
   - "服务间调用几乎全未接线：10 个服务的 depends_on 当前均为空；order/payment 只有 depends_on_planned"
   - "事件链的拓扑边：Product/Order 未导入 outbox producer；无 consumer Inbox 表；
-     无 DLQ topic/stream。Kafka 与 Elasticsearch 在 node3 已运行但本仓零客户端
-     （两者 used_by 均为空）。进度见 docs/todo/数据一致性与事件驱动.md"
+     无 DLQ topic/stream。Kafka 在 node3 已运行但本仓仍无客户端；search 已接入
+     Elasticsearch 客户端，但 Pod 到仅回环监听的实例仍无网络通路。进度见 docs/todo/数据一致性与事件驱动.md"
   - "没有 logistics/warehouse 前端 app，也没有独立物流/仓储微服务；履约按设计并入 order，inventory 不是 WMS"
   - "10 个业务服务没有完整的默认拒绝 NetworkPolicy/CiliumNetworkPolicy；后端信任网关注入身份头的边界尚未由网络策略全面强制"
   - "GitOps 拓扑断线：ArgoCD 没有本仓的 Application/ApplicationSet。helm/values.yaml

@@ -1,14 +1,14 @@
-// Package searchindex 是 CDC 链路的消费端：JetStream 上的商品事件 → Meilisearch 索引。
+// Package searchindex maintains the curated product projection in Elasticsearch.
 //
-// 文档 schema 在此一次定稿（清掉 TODO「搜索引擎切换」记录的三笔历史债）：
-//   - id 顶层且为 spu_id（数值主键）；
-//   - price 是数值型（活跃 SKU 最低价的投影，真相仍是 PG 的 DECIMAL；索引值只用于
-//     展示与排序，不参与金额运算）；
-//   - sale_count 顶层数值（products.spu_total_sales 视图口径），可排序。
+// The document schema preserves three settled invariants:
+//   - id is the top-level numeric SPU primary key;
+//   - price is the minimum active-SKU price projection. PostgreSQL DECIMAL remains
+//     the money source of truth; the indexed value is only for display and sorting;
+//   - sale_count is the top-level numeric products.spu_total_sales projection.
 //
-// 事件契约：payload 即完整文档投影（event-carried state），消费者不回查 PG；
-// upserted → AddDocuments（整文档替换，天然幂等），deleted → DeleteDocument（tombstone）。
-// Meilisearch 写入是异步任务：**task succeeded 才 ACK**，enqueue(202) 不算完成。
+// Event payloads carry a complete projection document. Upserts overwrite a stable
+// Elasticsearch document ID and deletes use the same ID, so JetStream redelivery
+// remains idempotent without a read-back to PostgreSQL.
 package searchindex
 
 import (
@@ -17,93 +17,59 @@ import (
 	"errors"
 	"fmt"
 	"log/slog"
-	"strconv"
 	"strings"
 	"time"
 
 	"github.com/jackc/pgx/v5"
 	"github.com/jackc/pgx/v5/pgxpool"
-	"github.com/meilisearch/meilisearch-go"
 	"github.com/nats-io/nats.go"
 	"github.com/nats-io/nats.go/jetstream"
 )
 
-// Doc 是 products 索引里的一条文档。字段名就是索引 schema，改动=索引契约变更。
+// Doc is one curated product search document. Its JSON field names are the
+// projection contract; changing them requires an index schema migration.
 type Doc struct {
-	ID           int64   `json:"id"`             // spu id（主键）
-	SpuCode      string  `json:"spu_code"`       // 业务编码
-	Name         string  `json:"name"`           // 商品名（主搜索字段）
-	Description  string  `json:"description"`    // 描述
-	Status       string  `json:"status"`         // draft/online/offline/deleted（filterable）
-	MainMediaURL string  `json:"main_media_url"` // 主图
-	MerchantID   string  `json:"merchant_id"`    // 商家（filterable）
-	Price        float64 `json:"price"`          // 活跃 SKU 最低价（sortable，展示/排序投影）
-	SaleCount    int64   `json:"sale_count"`     // 总销量（sortable）
-	UpdatedAt    string  `json:"updated_at"`     // RFC3339（sortable，兜底排序/新鲜度）
+	ID           int64   `json:"id"`             // SPU primary key
+	SpuCode      string  `json:"spu_code"`       // business code
+	Name         string  `json:"name"`           // primary search field
+	Description  string  `json:"description"`    // IK-analyzed product description
+	Status       string  `json:"status"`         // draft/online/offline/deleted
+	MainMediaURL string  `json:"main_media_url"` // primary image
+	MerchantID   string  `json:"merchant_id"`    // merchant filter
+	Price        float64 `json:"price"`          // display/sort projection only
+	SaleCount    int64   `json:"sale_count"`     // total sales projection
+	UpdatedAt    string  `json:"updated_at"`     // RFC3339 freshness/sort fallback
 }
 
-// EventTypeUpserted / EventTypeDeleted 是本链路当前消费的两类 CloudEvents type。
 const (
 	EventTypeUpserted = "ecommerce.product.spu.upserted"
 	EventTypeDeleted  = "ecommerce.product.spu.deleted"
 )
 
-// EnsureIndex 幂等地创建索引并下发设置（filterable/sortable/searchable）。
-func EnsureIndex(ctx context.Context, sm meilisearch.ServiceManager, uid string) error {
-	if _, err := sm.GetIndexWithContext(ctx, uid); err != nil {
-		task, err := sm.CreateIndexWithContext(ctx, &meilisearch.IndexConfig{Uid: uid, PrimaryKey: "id"})
-		if err != nil {
-			return fmt.Errorf("searchindex: 创建索引 %s 失败: %w", uid, err)
-		}
-		if err := waitTask(ctx, sm, task.TaskUID); err != nil {
-			return err
-		}
-	}
-	task, err := sm.Index(uid).UpdateSettingsWithContext(ctx, indexSettings())
-	if err != nil {
-		return fmt.Errorf("searchindex: 下发索引设置失败: %w", err)
-	}
-	return waitTask(ctx, sm, task.TaskUID)
-}
-
-func indexSettings() *meilisearch.Settings {
-	return &meilisearch.Settings{
-		SearchableAttributes: []string{"name", "spu_code", "description"},
-		FilterableAttributes: []string{"status", "merchant_id"},
-		SortableAttributes:   []string{"price", "sale_count", "updated_at"},
-	}
-}
-
-func waitTask(ctx context.Context, sm meilisearch.ServiceManager, uid int64) error {
-	t, err := sm.WaitForTaskWithContext(ctx, uid, 50*time.Millisecond)
-	if err != nil {
-		return err
-	}
-	if t.Status != meilisearch.TaskStatusSucceeded {
-		return fmt.Errorf("searchindex: meilisearch task %d 状态 %s: %v", uid, t.Status, t.Error)
-	}
-	return nil
-}
-
-// Consumer 是 JetStream durable pull 消费者。
+// Consumer is the JetStream durable pull consumer that owns the curated search
+// projection writes.
 type Consumer struct {
-	JS         jetstream.JetStream
-	Meili      meilisearch.ServiceManager
-	Stream     string // 流名，如 ECOMMERCE_EVENTS
-	Durable    string // durable 名，如 search-indexer
-	Filter     string // 订阅过滤，如 events.product.>
-	Index      string // Meili 索引 uid，如 products
-	MaxDeliver int    // 毒消息上限（含首投），默认 5
-	BatchSize  int    // 每次 Fetch 条数，默认 50
-	// MaxAckPending 默认 1：JetStream 的重投不会插回原顺序，并发在途时晚到的
-	// 重投可能用旧投影覆盖新投影（对抗第4轮 codex t3-C4）。串行消费换顺序正确性，
-	// 搜索喂养的吞吐远低于串行上限；确有吞吐需求再调大并自担乱序（幂等只保收敛不保序）。
+	JS      jetstream.JetStream
+	Catalog *Client
+	Stream  string // stream name, for example ECOMMERCE_EVENTS
+	Durable string // durable name, for example search-indexer
+	Filter  string // subject filter, for example events.product.>
+	Index   string // stable Elasticsearch alias
+
+	MaxDeliver int // poison-message limit including the first delivery; default 5
+	BatchSize  int // fetch size; default 50
+	// MaxAckPending defaults to 1. JetStream redelivery is not inserted back into
+	// the original order, so concurrent in-flight messages could let an older
+	// projection overwrite a newer one. Serial consumption keeps event order.
 	MaxAckPending int
 	Logger        *slog.Logger
 }
 
-// Run 阻塞消费直到 ctx 结束。
+// Run consumes until ctx ends.
 func (c *Consumer) Run(ctx context.Context) error {
+	if c.Catalog == nil {
+		return errors.New("searchindex: catalog client is required")
+	}
 	if c.MaxDeliver <= 0 {
 		c.MaxDeliver = 5
 	}
@@ -113,10 +79,12 @@ func (c *Consumer) Run(ctx context.Context) error {
 	if c.Logger == nil {
 		c.Logger = slog.Default()
 	}
-	if err := EnsureIndex(ctx, c.Meili, c.Index); err != nil {
+	if err := c.Catalog.EnsureIndex(ctx, c.Index); err != nil {
 		return err
 	}
-	// 流由 relay（或运维）创建；消费端启动顺序不该决定成败，等到它出现为止。
+
+	// The relay or operations layer creates the stream. Waiting here keeps
+	// component start order from becoming a correctness requirement.
 	var stream jetstream.Stream
 	for {
 		var err error
@@ -137,7 +105,7 @@ func (c *Consumer) Run(ctx context.Context) error {
 	if c.MaxAckPending <= 0 {
 		c.MaxAckPending = 1
 	}
-	cons, err := stream.CreateOrUpdateConsumer(ctx, jetstream.ConsumerConfig{
+	consumer, err := stream.CreateOrUpdateConsumer(ctx, jetstream.ConsumerConfig{
 		Durable:       c.Durable,
 		FilterSubject: c.Filter,
 		AckPolicy:     jetstream.AckExplicitPolicy,
@@ -152,14 +120,12 @@ func (c *Consumer) Run(ctx context.Context) error {
 	c.Logger.Info("search indexer 开始消费", "stream", c.Stream, "durable", c.Durable, "filter", c.Filter)
 
 	for ctx.Err() == nil {
-		batch, err := cons.Fetch(c.BatchSize, jetstream.FetchMaxWait(2*time.Second))
+		batch, err := consumer.Fetch(c.BatchSize, jetstream.FetchMaxWait(2*time.Second))
 		if err != nil {
 			if errors.Is(err, context.Canceled) || ctx.Err() != nil {
 				return ctx.Err()
 			}
 			if errors.Is(err, nats.ErrConnectionClosed) {
-				// 连接已进入终态（重连次数用尽/主动关闭），原地重试只会刷日志，
-				// 退出交给进程管理器重启。
 				return fmt.Errorf("searchindex: NATS 连接已关闭: %w", err)
 			}
 			c.Logger.Error("fetch 失败，退避重试", "err", err)
@@ -184,21 +150,21 @@ func (c *Consumer) handle(ctx context.Context, msg jetstream.Msg) {
 	eventType := msg.Headers().Get("ce-type")
 	eventID := msg.Headers().Get("ce-id")
 
-	// 续租：Meili 任务积压时 WaitForTask 可能贴近 AckWait，先报 InProgress
-	// 重置计时，避免处理中被判超时重投（重投虽被幂等消化，但白做功）。
 	_ = msg.InProgress()
 	err := c.apply(ctx, eventType, msg.Data())
 	if err == nil {
+		// IndexDocument returns only after Elasticsearch acknowledges the primary
+		// write. The index pins translog durability=request, so this is the safe
+		// ACK boundary. A refresh is not required for durability; if this ACK is
+		// lost, the stable document ID makes the redelivery idempotent.
 		if ackErr := msg.Ack(); ackErr != nil {
-			c.Logger.Warn("ack 失败（消息会重投，靠幂等消化）", "event_id", eventID, "err", ackErr)
+			c.Logger.Warn("ack 失败（消息会重投，按稳定文档 ID 幂等收敛）", "event_id", eventID, "err", ackErr)
 		}
 		return
 	}
 
-	// 毒消息：达到 MaxDeliver 上限就 Term 出队并留痕，不再堵住后续消息。
-	// （比静默丢强：留有 event_id + 原因，可回放 outbox 补数据。）
-	if md, mdErr := msg.Metadata(); mdErr == nil && int(md.NumDelivered) >= c.MaxDeliver {
-		c.Logger.Error("毒消息出队（TERM），需人工回放", "event_id", eventID, "type", eventType, "deliveries", md.NumDelivered, "err", err)
+	if metadata, metadataErr := msg.Metadata(); metadataErr == nil && int(metadata.NumDelivered) >= c.MaxDeliver {
+		c.Logger.Error("毒消息出队（TERM），需人工回放", "event_id", eventID, "type", eventType, "deliveries", metadata.NumDelivered, "err", err)
 		_ = msg.Term()
 		return
 	}
@@ -206,46 +172,30 @@ func (c *Consumer) handle(ctx context.Context, msg jetstream.Msg) {
 	_ = msg.NakWithDelay(2 * time.Second)
 }
 
-// apply 把一条事件落到 Meilisearch，task succeeded 才算成功。
 func (c *Consumer) apply(ctx context.Context, eventType string, payload []byte) error {
-	idx := c.Meili.Index(c.Index)
 	switch eventType {
 	case EventTypeUpserted:
-		var d Doc
-		if err := json.Unmarshal(payload, &d); err != nil {
+		var doc Doc
+		if err := json.Unmarshal(payload, &doc); err != nil {
 			return fmt.Errorf("payload 解析失败: %w", err)
 		}
-		if d.ID == 0 {
-			return errors.New("payload 缺 id")
-		}
-		task, err := idx.AddDocumentsWithContext(ctx, []Doc{d}, nil)
-		if err != nil {
-			return err
-		}
-		return waitTask(ctx, c.Meili, task.TaskUID)
+		return c.Catalog.IndexDocument(ctx, c.Index, doc)
 	case EventTypeDeleted:
-		var d struct {
+		var tombstone struct {
 			ID int64 `json:"id"`
 		}
-		if err := json.Unmarshal(payload, &d); err != nil {
+		if err := json.Unmarshal(payload, &tombstone); err != nil {
 			return fmt.Errorf("payload 解析失败: %w", err)
 		}
-		if d.ID == 0 {
-			return errors.New("payload 缺 id")
-		}
-		task, err := idx.DeleteDocumentWithContext(ctx, strconv.FormatInt(d.ID, 10), nil)
-		if err != nil {
-			return err
-		}
-		return waitTask(ctx, c.Meili, task.TaskUID)
+		return c.Catalog.DeleteDocument(ctx, c.Index, tombstone.ID)
 	default:
-		// 未知类型直接 ACK 掉（前向兼容：新事件类型不应堵死老消费者）。
+		// Forward compatibility: a new event type must not block an old consumer.
 		return nil
 	}
 }
 
-// reindexSQL 从 PG 聚合出文档（与事件投影同一口径）。不过滤 deleted：
-// 调用方按 status 分流 upsert/delete（水位补偿需要看见删除侧）。
+// reindexSQL derives the curated projection from PostgreSQL. Deleted rows are
+// retained in the result so the post-swap watermark replay can apply tombstones.
 const reindexSQL = `
 SELECT s.id,
        s.spu_code,
@@ -261,7 +211,6 @@ FROM products.spus s
 WHERE s.updated_at >= $1
 ORDER BY s.id`
 
-// scanDocs 按水位捞文档，按状态分流。since=零值时取全量。
 func scanDocs(ctx context.Context, pool *pgxpool.Pool, since time.Time) (upserts []Doc, deletes []int64, err error) {
 	rows, err := pool.Query(ctx, reindexSQL, since)
 	if err != nil {
@@ -269,15 +218,15 @@ func scanDocs(ctx context.Context, pool *pgxpool.Pool, since time.Time) (upserts
 	}
 	defer rows.Close()
 	for rows.Next() {
-		var d Doc
-		if err := rows.Scan(&d.ID, &d.SpuCode, &d.Name, &d.Description, &d.Status, &d.MainMediaURL, &d.MerchantID, &d.Price, &d.SaleCount, &d.UpdatedAt); err != nil {
+		var doc Doc
+		if err := rows.Scan(&doc.ID, &doc.SpuCode, &doc.Name, &doc.Description, &doc.Status, &doc.MainMediaURL, &doc.MerchantID, &doc.Price, &doc.SaleCount, &doc.UpdatedAt); err != nil {
 			return nil, nil, err
 		}
-		if d.Status == "deleted" {
-			deletes = append(deletes, d.ID)
+		if doc.Status == "deleted" {
+			deletes = append(deletes, doc.ID)
 			continue
 		}
-		upserts = append(upserts, d)
+		upserts = append(upserts, doc)
 	}
 	return upserts, deletes, rows.Err()
 }
@@ -325,26 +274,14 @@ func acquireReindexLock(ctx context.Context, pool *pgxpool.Pool, index string, l
 	}, nil
 }
 
-func deleteIndexAndWait(ctx context.Context, sm meilisearch.ServiceManager, index string) error {
-	task, err := sm.DeleteIndexWithContext(ctx, index)
-	if err != nil {
-		return fmt.Errorf("searchindex: 删除索引 %s 失败: %w", index, err)
+// Reindex rebuilds a physical index, atomically moves the stable alias, deletes
+// the old index, then replays rows changed since the pre-scan PostgreSQL
+// watermark. The replay closes the snapshot-to-alias-swap race without moving a
+// broker cursor backward.
+func Reindex(ctx context.Context, pool *pgxpool.Pool, catalog *Client, index string, logger *slog.Logger) error {
+	if catalog == nil {
+		return errors.New("searchindex: catalog client is required")
 	}
-	if err := waitTask(ctx, sm, task.TaskUID); err != nil {
-		return fmt.Errorf("searchindex: 等待索引 %s 删除失败: %w", index, err)
-	}
-	return nil
-}
-
-// Reindex 全量重建：灌到 <index>_rebuild 临时索引，成功后原子 swap，再删临时索引，
-// 最后按**水位**做一次 delta 补偿。线上索引在整个过程中持续可查。
-//
-// 水位竞态（对抗第4轮 codex t3-C5）：快照扫描到 swap 之间发生的变更事件会被消费者
-// 应用到「旧内容」上，swap 后随旧内容一起被换出——单靠「全量=swap、增量=事件」会丢
-// 这个窗口。补偿：从 PostgreSQL 读取扫描前水位，swap 完成后把 updated_at >= 水位的行
-// （含转 deleted 的删除侧）重放到已上线的新索引；文档投影完全派生自 PG，重放即闭环，
-// 无需回拨流游标。
-func Reindex(ctx context.Context, pool *pgxpool.Pool, sm meilisearch.ServiceManager, index string, logger *slog.Logger) error {
 	if logger == nil {
 		logger = slog.Default()
 	}
@@ -353,9 +290,10 @@ func Reindex(ctx context.Context, pool *pgxpool.Pool, sm meilisearch.ServiceMana
 		return err
 	}
 	defer unlock()
+	if err := catalog.EnsureIndex(ctx, index); err != nil {
+		return err
+	}
 
-	tmp := index + "_rebuild"
-	// 水位来自 PostgreSQL 时钟并留 5s 余量，避免 worker 与数据库时钟偏差漏掉窗口写入。
 	watermark, err := databaseWatermark(ctx, pool.QueryRow)
 	if err != nil {
 		return err
@@ -364,71 +302,88 @@ func Reindex(ctx context.Context, pool *pgxpool.Pool, sm meilisearch.ServiceMana
 	if err != nil {
 		return err
 	}
-	logger.Info("全量重建开始", "docs", len(docs), "tmp", tmp)
 
-	// 临时索引：先删残留再建，保证从零开始。
-	if _, err := sm.GetIndexWithContext(ctx, tmp); err == nil {
-		if err := deleteIndexAndWait(ctx, sm, tmp); err != nil {
-			return err
-		}
+	tmp := physicalIndexName(index, "-rebuild-"+time.Now().UTC().Format("20060102t150405000000000"))
+	if err := validateIndexName(tmp); err != nil {
+		return fmt.Errorf("searchindex: build physical index name: %w", err)
 	}
-	if err := EnsureIndex(ctx, sm, tmp); err != nil {
+	logger.Info("全量重建开始", "docs", len(docs), "physical_index", tmp)
+	if err := catalog.createIndex(ctx, tmp, ""); err != nil {
 		return err
 	}
-	// 主索引也要存在，swap 才有对手方。
-	if err := EnsureIndex(ctx, sm, index); err != nil {
+	activated := false
+	defer func() {
+		if activated {
+			return
+		}
+		cleanupCtx, cancel := context.WithTimeout(context.Background(), defaultRequestTimeout)
+		defer cancel()
+		backing, probeErr := catalog.aliasIndices(cleanupCtx, index)
+		if probeErr != nil {
+			// A lost alias-update response is ambiguous. Preserve a possible active
+			// index rather than deleting the live projection during error cleanup.
+			logger.Error("无法确认重建索引是否已激活，保留索引供人工检查", "index", tmp, "err", probeErr)
+			return
+		}
+		for _, current := range backing {
+			if current == tmp {
+				logger.Error("别名已指向重建索引，跳过错误清理", "alias", index, "index", tmp)
+				return
+			}
+		}
+		if cleanupErr := catalog.deleteIndex(cleanupCtx, tmp, true); cleanupErr != nil {
+			logger.Error("清理失败的重建索引", "index", tmp, "err", cleanupErr)
+		}
+	}()
+
+	if err := catalog.bulkIndex(ctx, tmp, docs, false); err != nil {
 		return err
 	}
-	if len(docs) > 0 {
-		task, err := sm.Index(tmp).AddDocumentsWithContext(ctx, docs, nil)
-		if err != nil {
-			return err
-		}
-		if err := waitTask(ctx, sm, task.TaskUID); err != nil {
-			return err
-		}
+	if err := catalog.refreshIndex(ctx, tmp); err != nil {
+		return err
 	}
-	task, err := sm.SwapIndexesWithContext(ctx, []*meilisearch.SwapIndexesParams{{Indexes: []string{index, tmp}}})
+	previous, err := catalog.swapAlias(ctx, index, tmp)
 	if err != nil {
-		return fmt.Errorf("searchindex: swap 失败: %w", err)
-	}
-	if err := waitTask(ctx, sm, task.TaskUID); err != nil {
 		return err
 	}
-	if err := deleteIndexAndWait(ctx, sm, tmp); err != nil {
-		return err
-	}
+	activated = true
 
-	// 水位补偿：重放快照期间的变更到已上线的新索引，闭掉 swap 竞态窗口。
-	deltaUp, deltaDel, err := scanDocs(ctx, pool, watermark)
+	deltaUpserts, deltaDeletes, err := scanDocs(ctx, pool, watermark)
 	if err != nil {
 		return fmt.Errorf("searchindex: 水位补偿查询失败: %w", err)
 	}
-	live := sm.Index(index)
-	if len(deltaUp) > 0 {
-		task, err := live.AddDocumentsWithContext(ctx, deltaUp, nil)
-		if err != nil {
-			return err
-		}
-		if err := waitTask(ctx, sm, task.TaskUID); err != nil {
-			return err
+	if err := catalog.bulkIndex(ctx, index, deltaUpserts, true); err != nil {
+		return fmt.Errorf("searchindex: 水位补偿批量写入失败: %w", err)
+	}
+	for _, id := range deltaDeletes {
+		if err := catalog.DeleteDocument(ctx, index, id); err != nil {
+			return fmt.Errorf("searchindex: 水位补偿删除 %d 失败: %w", id, err)
 		}
 	}
-	for _, id := range deltaDel {
-		task, err := live.DeleteDocumentWithContext(ctx, strconv.FormatInt(id, 10), nil)
-		if err != nil {
-			return err
+	if err := catalog.refreshIndex(ctx, index); err != nil {
+		return err
+	}
+	// Keep the prior backing indices until the watermark delta is visible. If
+	// compensation fails, operators can still inspect or restore the old index.
+	for _, old := range previous {
+		if old == tmp {
+			continue
 		}
-		if err := waitTask(ctx, sm, task.TaskUID); err != nil {
-			return err
+		if err := catalog.deleteIndex(ctx, old, true); err != nil {
+			return fmt.Errorf("searchindex: delete previous index %s: %w", old, err)
 		}
 	}
-	logger.Info("全量重建完成（index swap 原子切换 + 水位补偿）",
-		"index", index, "docs", len(docs), "delta_upserts", len(deltaUp), "delta_deletes", len(deltaDel))
+	logger.Info("全量重建完成（alias 原子切换 + 水位补偿）",
+		"alias", index,
+		"physical_index", tmp,
+		"docs", len(docs),
+		"delta_upserts", len(deltaUpserts),
+		"delta_deletes", len(deltaDeletes),
+	)
 	return nil
 }
 
-// SubjectForType 与 relay 的映射保持一致（TypePrefix=ecommerce.，SubjectPrefix=events）。
+// SubjectForType mirrors the relay mapping (TypePrefix=ecommerce., SubjectPrefix=events).
 func SubjectForType(eventType string) string {
 	return "events." + strings.TrimPrefix(eventType, "ecommerce.")
 }

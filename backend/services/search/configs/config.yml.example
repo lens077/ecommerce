@@ -24,10 +24,11 @@ auth:
     endpoint: "https://casdoor.example.com"
 
 search:
-  meilisearch:
-    host: "http://127.0.0.1:7700"
+  catalog:
+    # 仅供本地进程配合 SSH 隧道使用；Kubernetes Pod 无法访问 node3 的回环监听。
+    endpoint: "http://127.0.0.1:9200"
     api_key: "replace-with-search-only-api-key"
-    index: products
+    index: ecommerce_catalog_products
 
 log:
   framework:

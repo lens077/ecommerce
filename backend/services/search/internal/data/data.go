@@ -5,7 +5,6 @@ import (
 	"crypto/tls"
 	"crypto/x509"
 	"fmt"
-	"net/http"
 	"time"
 
 	otelpkg "github.com/lens077/ecommerce/backend/services/search/internal/pkg/otel"
@@ -16,9 +15,7 @@ import (
 	"github.com/lens077/ecommerce/backend/constants"
 	conf "github.com/lens077/ecommerce/backend/services/search/internal/conf/v1"
 	"github.com/lens077/ecommerce/backend/services/search/internal/pkg/config"
-	"github.com/meilisearch/meilisearch-go"
 	"github.com/redis/go-redis/v9"
-	"go.opentelemetry.io/contrib/instrumentation/net/http/otelhttp"
 	"go.uber.org/fx"
 	"go.uber.org/zap"
 	"google.golang.org/protobuf/proto"
@@ -28,7 +25,7 @@ import (
 var Module = fx.Module("data",
 	fx.Provide(
 		NewData,
-		NewMeilisearchClient,
+		NewSearchCatalog,
 		NewSearchRepo,
 	),
 )
@@ -38,23 +35,29 @@ type contextTxKey struct{}
 
 // Data 包含搜索服务的运行时数据源。
 type Data struct {
-	search SearchEngine
+	catalog SearchCatalog
 }
 
-// SearchEngine isolates the repository from the concrete Meilisearch client.
-type SearchEngine interface {
-	Search(context.Context, string) (*meilisearch.SearchResponse, error)
+// CatalogProduct 是 SearchCatalog 返回给仓储层的项目内 DTO。
+type CatalogProduct struct {
+	ID           int64
+	Name         string
+	SpuCode      string
+	Price        float64
+	Status       string
+	MainMediaURL string
+	SaleCount    int64
+}
+
+// SearchCatalog 是搜索仓储使用的单实现深度模块边界。当前唯一 provider 是 esCatalog。
+type SearchCatalog interface {
+	SearchProducts(context.Context, string) ([]CatalogProduct, error)
 	Health(context.Context) error
 }
 
-type meilisearchEngine struct {
-	client meilisearch.ServiceManager
-	index  string
-}
-
 // NewData 是 Data 的构造函数。
-func NewData(search SearchEngine) *Data {
-	return &Data{search: search}
+func NewData(catalog SearchCatalog) *Data {
+	return &Data{catalog: catalog}
 }
 
 // NewPostgresPool 创建 pg 连接池,并订阅配置变更做热重建。
@@ -360,71 +363,15 @@ func NewCasdoorAuthClient(conf *conf.Bootstrap, logger *zap.Logger) *casdoorsdk.
 	return client
 }
 
-func NewMeilisearchClient(lc fx.Lifecycle, bootstrap *conf.Bootstrap, live *config.Live, logger *zap.Logger) SearchEngine {
-	cfg := bootstrap.Search.Meilisearch
-	baseTransport := http.DefaultTransport.(*http.Transport).Clone()
-	baseTransport.MaxIdleConnsPerHost = 20
-
-	client := meilisearch.New(
-		cfg.Host,
-		meilisearch.WithAPIKey(cfg.ApiKey),
-		meilisearch.WithCustomClient(&http.Client{
-			Transport: otelhttp.NewTransport(baseTransport),
-			Timeout:   10 * time.Second,
-		}),
-	)
-	unsub := live.Subscribe(func(old, cur *conf.Bootstrap) {
-		if !proto.Equal(old.GetSearch(), cur.GetSearch()) {
-			logger.Warn("该配置段已变更,但需要重启服务才会生效", zap.String("section", "search"))
-		}
-	})
-	lc.Append(fx.Hook{OnStop: func(context.Context) error {
-		unsub()
-		client.Close()
-		return nil
-	}})
-	logger.Info("meilisearch client initialized",
-		zap.String("host", cfg.Host),
-		zap.String("index", cfg.Index),
-	)
-	return &meilisearchEngine{client: client, index: cfg.Index}
-}
-
-func (m *meilisearchEngine) Search(ctx context.Context, query string) (*meilisearch.SearchResponse, error) {
-	return m.client.Index(m.index).SearchWithContext(ctx, query, &meilisearch.SearchRequest{
-		Filter:               "status = online",
-		AttributesToRetrieve: []string{"id", "spu_code", "name", "status", "main_media_url", "price", "sale_count"},
-	})
-}
-
-func (m *meilisearchEngine) Health(ctx context.Context) error {
-	health, err := m.client.HealthWithContext(ctx)
-	if err != nil {
-		return err
-	}
-	if health.Status != "available" {
-		return fmt.Errorf("unexpected status %q", health.Status)
-	}
-	_, err = m.client.Index(m.index).SearchWithContext(ctx, "", &meilisearch.SearchRequest{
-		Filter:               "status = online",
-		Limit:                1,
-		AttributesToRetrieve: []string{"id"},
-	})
-	if err != nil {
-		return fmt.Errorf("index readiness probe: %w", err)
-	}
-	return nil
-}
-
-// CheckSearch 检查 Meilisearch 连通性。
+// CheckSearch 检查搜索目录的查询就绪状态。
 func (d *Data) CheckSearch(ctx context.Context) error {
-	if d.search == nil {
-		return fmt.Errorf("meilisearch client not initialized")
+	if d.catalog == nil {
+		return fmt.Errorf("search catalog not initialized")
 	}
 	ctx, cancel := context.WithTimeout(ctx, 5*time.Second)
 	defer cancel()
-	if err := d.search.Health(ctx); err != nil {
-		return fmt.Errorf("meilisearch health check failed: %w", err)
+	if err := d.catalog.Health(ctx); err != nil {
+		return fmt.Errorf("search catalog health check failed: %w", err)
 	}
 	return nil
 }
