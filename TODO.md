@@ -297,7 +297,7 @@ CES 巡检告警（CronJob 2m + vmalert firing 闭环）、可观测黑盒探活
 | [可观测](docs/todo/统一可观测性体系.md) P1 散件：dead-man、VM import 认证等 | 低（网关 5xx/采样归 control-tower 线） | |
 | [文档协作](docs/todo/文档与协作机制.md) / [服务发现](docs/todo/服务发现与配置中心.md) / TLS P2 | 零 | 无 P0，见缝插针 |
 | [事件](docs/todo/数据一致性与事件驱动.md)：DuckDB 试点 D0–D3 | 零（跑批工具链，不动交易路径与 outbox） | **补排未开工**：TECH.md B 表 2026-08-28 采纳「试点待执行」，至今零执行、零待办登记。**门槛在 D0**——分析消费者为 0，触发条款未成立就不开工。**v2.0 预览版（quack 转正 + 稳定 C ABI）不改当前选型**，正式版（2026 秋）发布后按 D2 复核 |
-| QQ 机器人接入（新增服务 `qqbot`） | 零（新服务，不动存量） | **仅立项，未排期**。评估与取舍见 [`docs/reports/2026-09-01-qq-bot-evaluation.md`](docs/reports/2026-09-01-qq-bot-evaluation.md)，方案与 8 张实施单见 [`.scratch/qqbot-integration/`](.scratch/qqbot-integration/spec.md)（全部 `needs-triage`/待人工）。**建议只做内部运维通知**——沙箱即可验收；C 端查询与通知硬依赖全局 P0 #3/#4 修复。第一步是集群内实测出口 IP + 跑通沙箱，两步都不需要决策 |
+| QQ 机器人接入（**独立仓 `../qqbot`，不落本仓**） | 零（不动存量） | **2026-09-01 订正：已不是「仅立项」**。MVP（`/帮助` + `/搜商品`）**已实现并全门禁绿**（`go build`/`vet`/`gofmt`/`-race`/`-shuffle=on -count=25`），凭据已实测可用（Token 交换 200），集群到 QQ OpenAPI 出站实测可达。**当前唯一阻塞：公网 HTTPS 入站端点**——`gateway.apikv.com` 那条 HTTPRoute 是 `PathPrefix: /` 全量指向电商网关，**不能复用**，须新建 `qqbot.apikv.com` 独立 HTTPRoute。评估与最新状态见 [`docs/reports/2026-09-01-qq-bot-evaluation.md`](docs/reports/2026-09-01-qq-bot-evaluation.md)（含晚间订正表）。**范围裁剪的理由要记住**：`/查订单`/`/物流` 没做，因为 order 服务**没有任何查询 RPC**（只有 Create/Complete，`Order` 是空消息），不是偷懒。C 端查询仍硬依赖全局 P0 #3/#4 |
 
 > 阶段 2/3/4 **不建议提前抢跑**——地基是阶段 1；事件 outbox 底座（P0#15/16）已排在阶段 1 内。
 

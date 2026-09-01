@@ -308,14 +308,22 @@ address 30009 / behavior 30011，30010 被 Config Center 占用
    └─HTTPS 443─> node1  node1（腾讯云 Lighthouse，固定公网 IP）
                     Traefik 终止 TLS（*.apikv.com，ZeroSSL）
                     └─WireGuard 隧道─> k8s 站点 siteId 4
-                          └─> cilium-gateway ClusterIP 10.99.145.85:443
+                          └─> cilium-gateway ClusterIP <现查>:443   # 曾为 10.99.145.85，已失效
                                 └─HTTPRoute hostname 匹配─> qqbot Service
 ```
 
+> ⚠️ **2026-09-01 订正**：上图与下条里的 ClusterIP **`10.99.145.85` 已失效**，
+> 现值 `10.110.51.106`。**ClusterIP 会随 Service 重建而漂，不要抄任何历史值**，
+> 建资源时现查（命令与完整说明见 `context/team/pangolin-tunnel.md`
+> 的「cilium-gateway 的两个 IP」一节）。
+> 同节还记录了另一个易错点：**LB IP `192.168.3.121` 是钉死的**
+> （由 Service 注解 `io.cilium/lb-ipam-ips` 显式指定，不是碰巧没变），
+> 与会漂的 ClusterIP 是两回事，混用是 Pangolin 资源 503 的常见原因。
+
 - 端口满足 QQ 的 80/443/8443 限制：Pangolin 对外就是 **443**
   〔真相源 `pangolin-tunnel.md`:26-34, 164-165〕。
-- 操作是两步：HTTPRoute 追加 hostname + 面板建资源，target **必须 `10.99.145.85:443` 走 https**
-  〔真相源 `pangolin-tunnel.md`:160-171〕。
+- 操作是两步：HTTPRoute 追加 hostname + 面板建资源，target **必须走 https 的 443**
+  （ClusterIP 现查，见上方订正）〔真相源 `pangolin-tunnel.md`:160-171〕。
 - ⚠️ 三条已付学费的坑，直接抄：
   1. **target 走 80 必然 404**——本仓 HTTPRoute 的 `parentRef` 都带 `sectionName: https`，
      80 上没有任何路由〔真相源 `pangolin-tunnel.md`:167-170〕。

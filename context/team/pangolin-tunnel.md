@@ -62,12 +62,31 @@ description: 公网暴露基础设施(Pangolin)的拓扑事实、面板 API 操�
   `/home/docker/pangolin/config/traefik/certs/apikv.com.{crt,key}`,**续期要同步两处**
 - k8s:**集群已于 2026-08 重建**,现为 node101/node102/node103 = `192.168.3.101-103`
   (control-plane 是 node101),全 arm64。Cilium Gateway API,
-  `cilium-gateway`(ns default,LB **192.168.3.121**,ClusterIP **10.99.145.85**)。
+  `cilium-gateway`(ns default,LB **192.168.3.121**,ClusterIP **10.110.51.106**)。
   ⚠️ 下文「k8s HTTPRoute 暴露套路」里的 target `10.97.94.118:443` 是**旧集群的 ClusterIP,已失效**,
   要用上面的新值。
+  ⚠️ **2026-09-01 订正**:本行原写 ClusterIP `10.99.145.85`,与下方「面板与站点/资源现状」
+  里的 `10.110.51.106` 自相矛盾。实查确认现值是 **`10.110.51.106`**,已订正。
+  **两个值的稳定性完全不同,不要混为一谈**:
+
+  | 值 | 现值 | 稳定性 |
+  |---|---|---|
+  | LB / EXTERNAL-IP | `192.168.3.121` | **已钉死**,由 Cilium LB-IPAM 分配,详见下方专节 |
+  | ClusterIP | `10.110.51.106` | **会漂**,Service 重建即变;Pangolin target 用的是它 |
+
+  **Service 名是 `cilium-gateway-cilium-gateway`,不是 `cilium-gateway`**——
+  后者 `kubectl get svc cilium-gateway -n default` 返回 `NotFound`,这不表示网关没装。
+  该生成名不是永久契约,按 owning-gateway label 动态发现:
+
+  ```bash
+  kubectl -n default get svc -l io.cilium.gateway/owning-gateway=cilium-gateway -o wide
+  ```
   newt 由 **kubernetes 仓的 `components/newt/`** 管理(**manifest 安装,不是 helm**——
   上游 `https://fosrl.github.io/newt` 实测 404,没有可用 chart 仓库),凭据存
-  `creds/newt-{id,secret}` 不入库。资源 3/4(config/config-api)target 为 `10.99.145.85:443`,
+  `creds/newt-{id,secret}` 不入库。资源 3/4(config/config-api)当时记录的 target 是 `10.99.145.85:443`,
+  **该 ClusterIP 已失效**(现值 `10.110.51.106`);但 2026-09-01 复测 `config.apikv.com` 仍 200、
+  `config-api.apikv.com` 仍 401,说明**面板早已更新、只有本文档滞后**——
+  这正是「ClusterIP 不该写进文档当常量」的实例。
   两条 HTTPRoute 都追加了 `.apikv.com` hostname(原先只有 `.app.com`)。
   实测:`config.apikv.com` 200 / `config-api.apikv.com` 401(自带鉴权)
 - 另一台公网机 node2(ssh 别名 **node2**,端口 34124,**阿里云**;与集群节点无关)跑 harbor/img/minio/gorse。**2026-08-19 已接入 Pangolin**(站点 `node2`, siteId 5),见下面「node2 站点」一节;`auth.apikv.com` 解析已指 node1(未建资源);casdoor 已由 `casdoor.apikv.com` 暴露(2026-08-13)
@@ -96,6 +115,44 @@ description: 公网暴露基础设施(Pangolin)的拓扑事实、面板 API 操�
 - **k8s 站点(siteId 4)的资源全部指同一个 target `10.110.51.106:443 https`** —— 那是 `cilium-gateway` 的 ClusterIP,分流靠 HTTPRoute 的 hostname 而非不同 target。2026-08-27 新增四个(均 **SSO on**,控制面靠登录墙兜底):`argocd`(rid 31)/`consul`(rid 32)/`search`(rid 33)/`cart-api`(rid 34)。
   ⚠️ **302 只证明 Pangolin 拦住了,不证明后端活着**——验后端要在集群内直连 `curl -H "Host: xxx.apikv.com" https://10.110.51.106/`,否则 502 会被登录墙掩盖。
   ⚠️ 2026-08-24 那轮 helm uninstall 之后,`observability`/`victoriametrics`/`logging` 里 **Grafana/Jaeger/Loki/VictoriaMetrics 的 HTTPRoute 是孤儿**(命名空间里零 Deployment,`kubectl get endpoints` 无后端),给它们建公网入口只会得到 502。建资源前先查 endpoints。
+
+#### cilium-gateway 的两个 IP:一个钉死,一个会漂(2026-09-01 实查)
+
+**这两个值必须分开对待,混用是 Pangolin 资源 503 的常见原因。**
+
+| | 现值 | 是否稳定 | 谁在用 |
+|---|---|---|---|
+| **LB / EXTERNAL-IP** | **`192.168.3.121`** | ✅ **已钉死** | 内网直连、`/etc/hosts`、集群内验证 |
+| ClusterIP | `10.110.51.106` | ❌ **会漂** | **Pangolin target 用的是这个** |
+
+**LB IP 钉死的机制**——不是「碰巧一直没变」,是显式声明的:
+
+```bash
+$ kubectl -n default get svc cilium-gateway-cilium-gateway \
+    -o jsonpath='{.metadata.annotations}'
+{"io.cilium/lb-ipam-ips":"192.168.3.121"}
+```
+
+`CiliumLoadBalancerIPPool/default-pool` 的地址段是 `192.168.3.120-199`,
+但该 Service 带 **`io.cilium/lb-ipam-ips: 192.168.3.121`** 注解,
+LB-IPAM 会**优先满足这个指定值**而不是按顺序分配。
+因此 Service 重建、Gateway 重建、甚至集群内其他 LB 服务增减,
+`192.168.3.121` 都不会变——**只要这条注解还在**。
+
+> 反过来说:**删掉或改掉这条注解,IP 就会重新按池分配**。
+> 谁要动 Gateway 的 Service/Helm values,先看有没有带走这条注解。
+
+**ClusterIP 则相反,Service 一重建就变**。历史上已经变过两次:
+`10.97.94.118`(旧集群) → `10.99.145.85` → 现在的 `10.110.51.106`。
+所以本文档不把 ClusterIP 当常量用,建 Pangolin 资源时**现查**:
+
+```bash
+kubectl -n default get svc -l io.cilium.gateway/owning-gateway=cilium-gateway \
+  -o jsonpath='{.items[0].spec.clusterIP}'
+```
+
+⚠️ Service 名是 **`cilium-gateway-cilium-gateway`**(Cilium 为 Gateway 生成的名字),
+`kubectl get svc cilium-gateway -n default` 返回 `NotFound` 属正常,不表示网关没装。
 - Mac newt(2026-08-20 重建):二进制 `~/apps/newt/newt`(1.16.0, darwin-arm64),凭据
   `~/apps/newt/newt.env`(600,仓库外),launchd `~/Library/LaunchAgents/com.apikv.newt.plist`
   (600,含凭据,RunAtLoad+KeepAlive),日志 `/tmp/newt.log`,带 `--disable-clients`。
@@ -160,7 +217,10 @@ curl -s -c /tmp/pg.ck -X POST $U/auth/login -H "Content-Type: application/json" 
 1. HTTPRoute `hostnames` **追加** `xxx.apikv.com`(保留原 `*.dev.test`,增量可回退):
    `kubectl patch httproute <name> -n <ns> --type=json -p='[{"op":"add","path":"/spec/hostnames/-","value":"xxx.apikv.com"}]'`
 2. 面板建资源:subdomain `xxx`,site **`k8s-cluster`(siteId 4)**,target
-   **`10.99.145.85:443` 走 https**(cilium-gateway 的 ClusterIP;LB 侧是 `192.168.3.121`)
+   **`<现查 ClusterIP>:443` 走 https**(cilium-gateway 的 ClusterIP;LB 侧是 `192.168.3.121`)。
+   **ClusterIP 会漂,不要抄本文任何历史值**,现查:
+   `kubectl -n default get svc -l io.cilium.gateway/owning-gateway=cilium-gateway -o jsonpath='{.items[0].spec.clusterIP}'`
+   (2026-09-01 实查为 `10.110.51.106`;详见上方「cilium-gateway 的两个 IP」)
 
 **坑(2026-08 实付学费)**:本仓的 HTTPRoute parentRef 都带 `sectionName: https` → 路由只挂 443 listener,
 **80 上无任何路由,envoy 对一切 Host 返 404**。target 走 80 会 404;必须 443/https(Gateway 用自签
