@@ -41,8 +41,8 @@ control-tower 出了新版要用 `go get github.com/lens077/control-tower@v0.x.y
 | 配置中心三元组 | `namespace` = 服务目录名，`environment` = `dev`/`pre`，`key` = `bootstrap.yaml` |
 | 环境语义 | `environment` 只选择 Config Center 键；端点必须按实际运行位置配置。当前 `dev` 服务部署在集群内，因此使用 `*.svc`；TLS 是否开启由依赖本身决定 |
 | 段序 | `server → data → <服务专属段> → observability → discovery → log → auth`（只保留该服务实际消费的段） |
-| 服务专属段 | `store`(cart) / `pay`(payment) / `recommend`(behavior、product) / `search.meilisearch`(search)，以各服务 `conf.proto` 的 `Bootstrap` 字段为准；顶层 `search` 只属于 search 服务，其他服务已 `reserved 6` / `reserved "search"` |
-| 热生效边界 | `server` / `discovery` / `observability` 只打 WARN；search 服务的 `search.meilisearch` 也需重启；数据库、缓存和日志级别可立即生效 |
+| 服务专属段 | `store`(cart) / `pay`(payment) / `recommend`(behavior、product) / `search.catalog`(search)，以各服务 `conf.proto` 的 `Bootstrap` 字段为准；顶层 `search` 只属于 search 服务，其他服务已 `reserved 6` / `reserved "search"` |
+| 热生效边界 | `server` / `discovery` / `observability` 只打 WARN；search 服务的 `search.catalog` 也需重启；数据库、缓存和日志级别可立即生效 |
 
 ## IDE 配置校验（JSON Schema，2026-08-18）
 

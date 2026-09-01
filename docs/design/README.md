@@ -35,7 +35,7 @@
 | [order/consistency.md](order/consistency.md) | 跨服务一致性（Order Saga 编排 + Outbox/Inbox + Kafka 编舞） | 原 TODO.md §二 |
 | [order/schema.md](order/schema.md) | 订单表早期稿（被 checkout 终稿部分取代） | DESIGN.md §数据库设计 |
 | [payment/payment.md](payment/payment.md) | **已作废**（文首横幅）：单订单支付单+单轴状态模型被 checkout v2 按组支付、capture/refund 双轴取代；仅存渠道对接与对账素材 | DESIGN.md §支付系统 |
-| [search/search.md](search/search.md) | CQRS 读写分离、搜索投影索引契约（目标 Elasticsearch，见 docs/TECH.md）与查询边界 | DESIGN.md §搜索服务 |
+| [search/search.md](search/search.md) | CQRS 搜索投影：Elasticsearch 代码已接线、运行时未切流，含 `SearchCatalog` 边界、唯一写入者、alias/IK 契约与切流门禁 | DESIGN.md §搜索服务；2026-09 代码迁移重写 |
 | [merchant/store-settings.md](merchant/store-settings.md) | Shopline 商店设置 20 页竞品实录（含自研备注与服务映射） | 原 DESIGN-MERCHANT.md，2026-08-12 重写为实录调研 |
 | [merchant/roadmap.md](merchant/roadmap.md) | 商家角色功能取舍（引进/不引进）与 P0/P1/P2 路线图 | 2026-08-12 基于 store-settings.md 调研 |
 | [product/sales.md](product/sales.md) | 销量统计：PG 事实与预聚合 + Dragonfly 可丢加速层（**部分落地**，实况见文首横幅） | 原 product 服务 schema/design/ 目录，2026-08-13 移入 |

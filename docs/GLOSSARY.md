@@ -585,7 +585,7 @@
 ### 倒排索引（inverted index）
 
 - **含义**：保存「词项 → 文档列表」映射的检索结构，查询时无需逐篇扫描文档。
-- **本项目**：Elasticsearch 与 Meilisearch 的关键词检索都使用倒排索引族结构；项目通过 searchable、filterable 和 sortable 属性影响索引构建。
+- **本项目**：Elasticsearch 策展投影使用倒排索引；当前代码以 strict mapping 明确文本、keyword、数值与日期字段。Meilisearch 只保留为尚未退役的运行时存量。
 
 ### 全文检索
 
@@ -595,12 +595,12 @@
 ### 分词器（analyzer）
 
 - **含义**：把文本标准化并切分为可索引词项的组件，通常包含字符过滤、分词和词项过滤步骤。
-- **本项目**：存量搜索使用 Meilisearch；按 [`TECH.md`](TECH.md) 定稿迁回 Elasticsearch 后，中文分词行为以 Elasticsearch 索引配置和验收结果为准。
+- **本项目**：Elasticsearch 代码 mapping 对商品名和描述采用 `ik_max_word` 建索引、`ik_smart` 检索。该配置已有合约测试，但运行时尚未切流，中文相关性仍须用真实商品数据验收。
 
 ### Facet 过滤（faceted search）
 
 - **含义**：按类目、品牌、价格或属性等维度筛选，并同时返回各取值的命中计数。
-- **本项目**：商品搜索页的筛选栏依赖该能力；存量 Meilisearch 通过 `filterableAttributes` 与 facets 查询提供支持，目标 Elasticsearch 只读投影通过聚合查询提供支持。
+- **本项目**：商品搜索页的筛选栏依赖该能力。Elasticsearch mapping 已为 `status`、`merchant_id` 等字段保留 keyword 结构，但当前 `SearchCatalog` 尚未实现类目、品牌、价格区间或属性 Facet。
 
 ### typo 容错（typo tolerance）
 
@@ -615,7 +615,7 @@
 ### 混合搜索（hybrid search）
 
 - **含义**：融合关键词检索与向量语义检索的召回或排序方式。
-- **本项目**：存量 Meilisearch 作为召回展示层，向量由外部生成；按 [`TECH.md`](TECH.md) 定稿迁回 Elasticsearch 后，混合搜索隐藏于 `SearchCatalog` 接口后。该能力的实际启用状态以 `TODO.md` 为准。
+- **本项目**：关键词查询已在 Elasticsearch 代码路径落地，向量召回与混合排序尚未实现。未来若引入，仍必须隐藏在 `SearchCatalog` 的项目契约后；实际状态以 [`TODO.md`](../TODO.md) 为准。
 
 ### HNSW
 
@@ -892,17 +892,17 @@
 ### Meilisearch
 
 - **含义**：面向应用搜索的开源搜索引擎，提供 typo 容错、Facet、排序与可选向量检索能力。
-- **本项目**：Meilisearch 是仍在运行的存量搜索引擎，处于迁移期；目标按 [`TECH.md`](TECH.md) 迁回 Elasticsearch。实例与代码接线状态分别以 [`.service-matrix.yaml`](../.service-matrix.yaml) 和 [`TODO.md`](../TODO.md) 为准。
+- **本项目**：Meilisearch 是仍待运行时退役的存量搜索引擎；仓库 search/indexer 代码已不再引用。只有在 Elasticsearch 网络、配置、部署和真实流量切换完成后才能删除其运行资源，状态分别以 [`.service-matrix.yaml`](../.service-matrix.yaml) 和 [`TODO.md`](../TODO.md) 为准。
 
 ### Elasticsearch（ES）
 
 - **含义**：基于 Lucene 的分布式搜索与分析引擎，支持全文检索、聚合和水平扩展。
-- **本项目**：Elasticsearch 是目标搜索存储，作为隐藏于 `SearchCatalog` 接口后的只读投影，可从 PostgreSQL 全量重建；存量 Meilisearch 迁移完成前仍在运行。
+- **本项目**：search 服务代码已通过单 provider 的 `SearchCatalog` 深度模块边界读取 Elasticsearch 只读投影，`tools/search-indexer` 是策展投影唯一权威写入者，并支持从 PostgreSQL 全量重建。Pod 到 node3 回环监听尚无通路，因此这不是运行时切流完成声明。
 
 ### sortable（可排序字段）
 
 - **含义**：允许查询按指定字段排序的索引能力，通常需要额外索引结构。
-- **本项目**：商品列表可按价格、销量和上架时间排序；存量 Meilisearch 通过 `sortableAttributes` 声明，目标 Elasticsearch 只读投影通过排序字段映射提供该能力。
+- **本项目**：Elasticsearch mapping 已为价格、销量和更新时间使用可排序类型，但当前 Search RPC 没有排序参数。字段可排序不等于产品能力已经开放。
 
 ### 相关度（relevancy）
 

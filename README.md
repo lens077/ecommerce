@@ -18,7 +18,7 @@ Golang + React 的 B2B2C 多商家电商实践项目：10 个后端微服务、c
 | 后端 | Go、ConnectRPC Go、Protobuf/Buf、Protovalidate、Fx、pgx、sqlc、goose、OpenTelemetry |
 | 前端 | React、TypeScript、ConnectRPC/Protobuf-ES、pnpm workspace、vite-plus（vp）、Tauri |
 | 网关/配置 | [control-tower](https://github.com/lens077/control-tower)：Casdoor 有状态 Session（BFF）、Connect 直通（H2C）、Config Center；目标按 [`docs/TECH.md`](docs/TECH.md) 以 OpenFGA 关系授权取代存量 Casbin、移除 legacy JWT 兼容轨；默认无重试、无 BBR/熔断/HTTP/3 |
-| 数据 | node3 Pigsty PostgreSQL（Patroni HA + PgBouncer，UUIDv7 主键）、Dragonfly（分实例：Session/Cache/限流，业务可丢缓存 + BFF session）、Silo（基于 MinIO，定稿）；搜索定稿 Elasticsearch（`SearchCatalog` 只读投影），存量 Meilisearch 待迁；CNPG 仅存量休眠 |
+| 数据 | node3 Pigsty PostgreSQL（Patroni HA + PgBouncer，UUIDv7 主键）、Dragonfly（分实例：Session/Cache/限流，业务可丢缓存 + BFF session）、Silo（基于 MinIO，定稿）；search 代码已通过 `SearchCatalog` 接入 Elasticsearch 只读投影，但 Pod→node3 回环监听的网络通路未解决、尚未切流，存量 Meilisearch 仍在运行；CNPG 仅存量休眠 |
 | 事件 | PostgreSQL outbox + relay + Inbox 幂等 + DLQ；主干定稿 Apache Kafka（外部非 K8s 集群，见 [`docs/TECH.md`](docs/TECH.md)），存量 NATS JetStream + search indexer 迁移期维护、验收后退役 |
 | 注册/配置 | 服务发现定稿 K8s Service + CoreDNS；pre 半生产测试走 Docker Compose 服务名，开发内环（mirrord/Okteto）评估中；Consul 为存量迁移期组件；Config Center 是 10 个服务唯一 Bootstrap 来源 |
 | 边缘/安全 | Cilium CNI/KPR/LB/Gateway API、cert-manager、ESO + Vault；业务服务的默认拒绝 NetworkPolicy 和 east-west 身份仍不完整 |
@@ -95,8 +95,7 @@ docker compose -f backend/infrastructure/redis/compose.yaml up -d
 docker compose -f backend/infrastructure/consul/compose.yaml up -d
 ```
 
-基础设施地址（PG、Dragonfly、Meilisearch、NATS、Kafka、对象存储等）配置在 Config Center，不在仓库 YAML——
-要指向自己的中间件时改 Config Center 里对应服务的 Bootstrap 即可。
+业务服务使用的基础设施地址配置在 Config Center，不在仓库 YAML。search 服务读取 `search.catalog`；`tools/outbox-relay`、`tools/search-indexer` 等独立 worker 通过环境变量和 Secret 取 NATS、Elasticsearch 等端点与凭据。要指向自己的中间件时，按消费者修改对应 Bootstrap 或 worker 配置，不要假定所有进程共用一条配置路径。
 
 启动后端微服务（一把拉起全部服务可用 `backend/compose.yaml`）：
 

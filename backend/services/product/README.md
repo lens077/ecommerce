@@ -29,7 +29,7 @@
 
 | 功能   | 商品微服务 (Product)           | 搜索微服务 (Search)                                                   |
 |------|---------------------------|------------------------------------------------------------------|
-| 存储媒介 | 关系型数据库 (MySQL/PostgreSQL) | 搜索引擎 (Elasticsearch/Meilisearch)搜索引擎 （Elasticsearch/Meilisearch） |
+| 存储媒介 | PostgreSQL（商品事实源） | Elasticsearch 只读投影（仓库代码已接线，运行时尚未切流） |
 | 主要职责 | 数据准确性、事务控制、状态变更           | 检索效率、相关度评分、多维聚合                                                  |
 | 典型请求 | GetProductById(123)       | "Search(""iPhone 16"", filter: ""blue"")"                        |
 | 更新频率 | 低频（后台修改、库存变化）             | 高频同步（近实时同步）                                                      |

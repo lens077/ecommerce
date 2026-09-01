@@ -41,7 +41,7 @@
 
 1. **数据口径**：用户、SPU/SKU、订单、库存流水、行为事件分别是总量、日增量还是保留期内总量。
 2. **流量模型**：读写比、峰值 QPS/TPS、并发连接、热点 SKU、请求体大小和大促放大系数。
-3. **存储方案**：大表分区与归档、索引膨胀、备份/PITR、Elasticsearch 索引容量与全量重建策略（存量 Meilisearch 迁移期同口径），以及 Kafka topic/partition/保留/回放策略（存量 JetStream 迁移期同口径）。
+3. **存储方案**：大表分区与归档、索引膨胀、备份/PITR、Elasticsearch 索引容量与全量重建策略（代码已接线、运行时未切流，需与存量 Meilisearch 做切流对照），以及 Kafka topic/partition/保留/回放策略（存量 JetStream 迁移期同口径）。
 4. **可复现压测**：以 k6 脚本、固定数据集、固定资源配额和 P50/P95/P99/错误率/资源曲线为准，不以组件宣传值推断。
 5. **可靠性目标**：按核心链路定义 SLO、错误预算、RTO/RPO，并完成节点故障、依赖故障、恢复与积压重放演练。
 
@@ -122,7 +122,7 @@ ecommerce/
 | DB 驱动 | `jackc/pgx/v5` + `exaring/otelpgx` | v5.10.0 / v0.11.1 |
 | SQL 与迁移 | sqlc + goose | pgx/v5 driver / goose v3.27.3 |
 | Redis 协议客户端 | `redis/go-redis/v9` + `redisotel-native` | v9.22.0 / v9.21.0 |
-| 搜索客户端 | `meilisearch-go` | v0.36.3；存量。搜索存储按 [`docs/TECH.md`](docs/TECH.md) 定稿为 Elasticsearch（`SearchCatalog` 接口后的只读投影），客户端待迁 |
+| 搜索客户端 | `go-elasticsearch/v9` + `elastic-transport-go/v8` | v9.4.3 / v8.9.0；search 服务经单 provider 的 `SearchCatalog` 深度模块边界返回项目 DTO，`backend/go.mod` 已无 Meilisearch 客户端。该状态只表示代码接线，运行时尚未切流 |
 | 消息客户端 | `nats.go` | v1.53.1；存量迁移期。事件主干按 [`docs/TECH.md`](docs/TECH.md) 定稿为 Apache Kafka（外部非 K8s 集群），NATS 验收后退役 |
 | 注册发现 | `hashicorp/consul/api` | v1.34.4；存量。按 [`docs/TECH.md`](docs/TECH.md) §10.2 定稿：生产 K8s Service + CoreDNS、pre 半生产测试走 Docker Compose 服务名（开发内环评估中），配置层抽象 `ServiceRegistry` 接口 |
 | 配置 SDK | `github.com/lens077/control-tower/sdk/configsource` | control-tower v0.1.0 |
@@ -203,16 +203,16 @@ SSR：按 [`docs/TECH.md`](docs/TECH.md) §11.2，Consumer 端优先评估迁 Ne
 |---|---|---|
 | PostgreSQL / Pigsty | 10 个服务的核心数据，每服务一个 schema | 已切到 node3 Pigsty；客户端 TLS `verify-ca`。按 [`docs/TECH.md`](docs/TECH.md) 定稿：PostgreSQL 由外部 Pigsty 承载（Patroni 自动 Failover + PgBouncer 连接池，UUIDv7 为默认主键）；集群内 CNPG `pg-main` 已 hibernate，仅为存量资源，不再是回切候选 |
 | Dragonfly | 业务可丢缓存；control-tower BFF session | Redis 协议、TLS-only。业务域不得把库存真相、锁、幂等键或唯一正确性状态放进去；BFF session 是已接受的例外，丢失时 fail-closed 并要求重新登录。按 [`docs/TECH.md`](docs/TECH.md) 目标分实例强制隔离：Session 实例 `noeviction`+持久化 / 业务 Cache 实例 `allkeys-lru` / 限流实例独立，严禁混用 |
-| Meilisearch | 商品搜索投影（存量） | v1.53，读路径已迁移；CE 单节点无分片/HA。按 [`docs/TECH.md`](docs/TECH.md)，搜索存储定稿为 Elasticsearch（只读 Projection，隐藏于 `SearchCatalog` 接口后，支持从 PG 全量重建），Meilisearch 为迁移期实现 |
+| Meilisearch | 商品搜索投影（存量运行时） | v1.53；仓库 search/indexer 代码已不再引用，集群旧部署在 Elasticsearch 运行时切流和回滚窗口结束前继续存在。CE 单节点无分片/HA，仍是当前搜索域的运行时风险 |
 | S3 兼容对象存储 | cart 的商品图等对象 | 当前指向 Silo 的 MinIO-compatible API；不是「集群内 MinIO」。按 [`docs/TECH.md`](docs/TECH.md) 定稿对象存储即 Silo（基于 MinIO，开启 Versioning 与 Lifecycle，前端上传统一走后端签发的预签名 URL）；此前的 SeaweedFS 迁移方向已撤销 |
-| NATS JetStream | 存量领域事件链与商品搜索事件流（迁移期） | dev 3 server；可重建 `ECOMMERCE_EVENTS` 当前为 R1，relay/indexer 已运行。按 [`docs/TECH.md`](docs/TECH.md)，事件主干定稿为 Kafka，NATS 在 Kafka 链验收后退役，不再承接新领域事件 |
+| NATS JetStream | 存量领域事件链与商品搜索事件流（迁移期） | dev 3 server；可重建 `ECOMMERCE_EVENTS` 当前为 R1，旧 relay/indexer 已运行；仓库中的新 Elasticsearch indexer 仍沿用 NATS，但尚未发布。按 [`docs/TECH.md`](docs/TECH.md)，事件主干定稿为 Kafka，NATS 在 Kafka 链验收后退役，不再承接新领域事件 |
 | Apache Kafka | 定稿目标事件主干（[`docs/TECH.md`](docs/TECH.md)） | 部署于非 K8s 独立集群；Outbox+Relay（`acks=all` 后标 `published`）+ Inbox 幂等 + DLQ；Topic 按限界上下文划分、partition key=`aggregate_id`；事件用 Protobuf + Buf Schema Registry。当前本仓业务接线仍为零，迁移按 [生产目标路线](docs/design/platform/production-scale-goal.md) 推进 |
 | PostgreSQL outbox | 事务事件待发布表 | 业务写与 outbox 同 transaction，relay 收到 JetStream PubAck 后才标记 published；consumer 必须 Inbox 幂等 |
 | 分析 CDC | 需求触发的独立数据链 | 当前未接线；只在真实 ClickHouse/报表需求成立后评估逻辑复制/connector，不能替代领域事件 |
 | Consul | 服务注册发现（存量迁移期） | KV 配置已退役；仍在网关选点与服务注册热路径。按 [`docs/TECH.md`](docs/TECH.md) §10.2 定稿迁 K8s Service + CoreDNS（Cilium KPR），开发环境走 Docker Compose 服务名 |
 | Casdoor | OAuth2/OIDC 身份提供方 | control-tower 以机密客户端完成 code 交换；浏览器不再持有 token |
 | Gorse | 推荐引擎 | behavior/product 的外部依赖，使用独立 PostgreSQL/Redis；API key 配置仍有待办 |
-| Elasticsearch | 定稿搜索存储（[`docs/TECH.md`](docs/TECH.md)） | 2026-08-28 重新定稿：作为只读 Projection 隐藏于 `SearchCatalog` 接口后，由 Catalog 域事件驱动更新，支持从 PG 全量重建。回归理由：当年退役主因是节点内存预算不足（单节点 1.5Gi 堆 vs 6.5G 节点）而非能力不足，资源条件现已满足，且聚合分析缺口需要 ES 级能力。此前（2026-08-21）曾退役，当前无部署，待按新契约重建；存量查询路径仍在 Meilisearch |
+| Elasticsearch | 定稿搜索存储（[`docs/TECH.md`](docs/TECH.md)） | node3 运行 9.4.5 + IK；仓库代码已完成 `SearchCatalog` 读路径、`tools/search-indexer` 唯一权威写入路径、strict mapping、稳定 alias 与 PG 全量重建。Pod 到 node3 `127.0.0.1:9200` 尚无网络通路，**代码接线不等于运行时切流**；存量查询仍由旧 Meilisearch 部署承载 |
 
 具体端点见 [`.service-matrix.yaml`](.service-matrix.yaml) 的 `externals` 段。凭据只进入 Config Center、Vault 与 Kubernetes Secret，**不进入仓库**。
 
@@ -562,7 +562,7 @@ pnpm ready          # vp fmt && vp lint && vp run test -r && vp run build -r
 | **终端与领域覆盖** | merchant/admin 主要是壳；没有独立物流端、仓储端或 WMS。履约并入 order，但领域动作仍待实现 |
 | **服务间调用** | 10 个服务的 `depends_on` 当前全部为空；order→inventory/product/address、payment→order 等只存在于 `depends_on_planned` |
 | **领域事件** | 当前 JetStream、relay、indexer 和回灌已验证，但 Product 事务内 outbox 生产者未接，order/behavior 仍有进程内路径；Kafka producer Adapter 与 destination-aware relay 已有代码和测试场景，但 migration 未应用、PostgreSQL 容器场景未取得本轮运行证据，也没有业务 producer 或 consumer，仍处于 K1 迁移地基阶段 |
-| **容量与 HA** | 没有固定数据集与 k6 结果；Meilisearch CE 单节点、JetStream R1、Kafka 仅有代码 Adapter 且未部署，主库/对象存储/备份路径也未形成百万或千万级验收证据 |
+| **容量与 HA** | 没有固定数据集与 k6 结果；运行时仍受 Meilisearch CE 单节点本地 PV 限制，新 Elasticsearch mapping 也仍是 `replicas=0` 且未切流；JetStream R1、Kafka 仅有代码 Adapter 且未部署，主库/对象存储/备份路径同样没有百万或千万级验收证据 |
 | **安全边界** | gateway 已完成 BFF/JWT/Casbin 与身份头剥离，但业务服务没有统一 workload identity，10 个服务也没有完整默认拒绝 NetworkPolicy；数据级归属校验仍有缺口 |
 | **交付** | ArgoCD 当前零 Application/ApplicationSet；Helm 与运行实况不一致，自动同步、自愈和回滚未闭环 |
 | **可观测性告警** | VM/VL/VT/Grafana/vmalert/Alertmanager 在用，但外部通知与 resolved 演练未闭环 |
