@@ -159,7 +159,9 @@ CES 巡检告警（CronJob 2m + vmalert firing 闭环）、可观测黑盒探活
 | behavior | 🟡 | `Track`/`Recommend`/`SimilarItems` 已编译通过 |
 | 履约 | ⬜ | 不单独建服务，并入 order 域 |
 
-> **基础设施去重（2026-09-01 代码态）**：`env`/`meta`/`config`/`log`/`otel`/`registry` 六个模块的 10 份服务副本已上提到 `backend/pkg/`，各服务只留薄适配层（仅做 `confv1` → provider-neutral Options 映射与泛型实例化）。`services/*/internal/pkg` 生产 Go 由 15,106 行降至 4,012 行（−11,094，73.4%）；`homogeneity_baseline.txt` 棘轮由 10 条收敛到 3 条，余 `config/config_test.go`、`dbutil/handler.go`、`money/numeric.go`，后两者本轮范围外。order 的 3 处 `config.GetConfig()` 全局读取改为 Fx 注入，并补启动期顺序测试。
+> **基础设施去重（2026-09-01 代码态）**：`env`/`meta`/`config`/`log`/`otel`/`registry` 六个模块的 10 份服务副本已上提到 `backend/pkg/`，各服务只留薄适配层（仅做 `confv1` → provider-neutral Options 映射与泛型实例化）。`services/*/internal/pkg` 生产 Go 由 15,106 行降至 4,012 行（−11,094，73.4%）；`homogeneity_baseline.txt` 棘轮由 10 条收敛到 3 条。order 的 3 处 `config.GetConfig()` 全局读取改为 Fx 注入，并补启动期顺序测试。
+>
+> **续：dbutil 收敛与影子包清理（2026-09-01）**：棘轮再降至 2 条，余 `config/config_test.go`、`money/numeric.go`（均待随共享库迁移一并处理）。`dbutil/handler.go` 的两个阵营统一为 `pqerror` 具名常量版——裸错误码版含永不匹配的死分支（`code := pgErr.Code` 取 SQLSTATE，却写了 `case "23000", "IntegrityConstraintViolation"` 这类名字分支），且 `github.com/lib/pq` 本就是直接依赖；同批删掉 10 份副本里生产错误路径上的 `fmt.Println("code:", code)` 调试打印。另删除 `address`/`cart`/`merchant`/`inventory` 四个影子 `constants` 包（共 8 文件，删前实测零引用；其常量是 `backend/constants` 的严格子集，同名同值、零冲突、零独有），并给 behavior 的 `conf.proto` 补回 `reserved 3; reserved "elasticsearch"`——它删字段未保留字段号，与 `buf.yaml` 已启用的 `FIELD_NO_DELETE_UNLESS_NUMBER_RESERVED` 冲突。迁移方案见 `.scratch/shared-infra-kit/spec.md`。
 >
 > 同批修掉一处长期静默失效：10 份 Dockerfile 注入 `-X main.Version`，而 10 个 `main` 包从未声明该符号，Go linker 静默忽略，构建版本注入从未生效。现改为共享 `backend/pkg/meta.Version`，`/healthz` 分别暴露 API 契约 `version` 与制品 `build`，并由 `structcheck/shared_infra_test.go` 守护符号、ldflags、`COPY pkg/` 与 10 份 Dockerfile 字节一致。理由见 `context/harness-framework/evolution-log.md`。
 

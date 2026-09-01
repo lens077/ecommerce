@@ -151,7 +151,6 @@ func (h *Handler) MustHandleError(err error, noRowsErr ...error) error {
 		return bizErr
 	}
 
-	fmt.Println("code:", code)
 	switch pqerror.Code(code) {
 	case pqerror.UniqueViolation:
 		return fmt.Errorf("唯一约束冲突: %s", pgErr.Detail)
