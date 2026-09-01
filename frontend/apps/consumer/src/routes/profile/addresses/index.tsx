@@ -227,7 +227,7 @@ function RouteComponent() {
                 "linear-gradient(135deg, rgba(102, 126, 234, 0.03) 0%, rgba(118, 75, 162, 0.03) 100%)",
             }}
           >
-            <Typography variant="h6" sx={{ fontWeight: 600, color: "text.primary" }}>
+            <Typography variant="h6" component="h2" sx={{ fontWeight: 600, color: "text.primary" }}>
               {t("addresses.myAddresses")}
             </Typography>
             <Button

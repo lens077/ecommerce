@@ -88,6 +88,7 @@ function CartPage() {
           <Box>
             <Typography
               variant="h6"
+              component="h2"
               sx={{
                 fontWeight: 600,
                 mb: sp[4],
@@ -188,7 +189,11 @@ function CartHeader({
           >
             <ArrowLeft size={20} />
           </Box>
-          <Typography variant="h6" sx={{ fontWeight: 600, color: tokens.colors.text.primary }}>
+          <Typography
+            variant="h6"
+            component="h1"
+            sx={{ fontWeight: 600, color: tokens.colors.text.primary }}
+          >
             {t("cart.title")}
             {totalQuantity > 0 && (
               <Typography

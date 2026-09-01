@@ -45,6 +45,7 @@ export function EmptyCart({ onNavigateHome }: EmptyCartProps) {
 
       <Typography
         variant="h6"
+        component="h2"
         sx={{
           color: tokens.colors.text.primary,
           fontWeight: 600,
