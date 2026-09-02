@@ -22,7 +22,8 @@
 
 ## 一、全局优先级视图
 
-**未完成合计 155 项，其中 P0 共 17 项**（计数口径：各分类文件顶层 `- [ ]` 复选框实数；
+**未完成合计 156 项，其中 P0 共 18 项**（计数口径：各分类文件顶层 `- [ ]` 复选框实数；
+2026-09-02 新增 1 条鉴权 P0「轮换 public 仓 git 历史泄露的全部凭据」——commit 直接带口令推到了 public 的 GitHub，历史已 filter-repo 重写并强推两远端，同日补 gitleaks 门禁（pre-commit / verify-quick / 两远端 CI），见 evolution-log；
 2026-09-01 新增 1 条基础设施 P2「证书续期后手工同步 PG 与 Redis」——PG/Redis 用的是 Traefik 证书的**拷贝**而非软链，自动续期不传导，用户已决定不做钩子故必须人工执行；
 2026-09-01 关闭 1 条基础设施 P2「casdoor 8000 明文端点」——**复测判定为误报**：原证据只探了 `localhost`，从 node2/node3 两个外部位置实测 8000 超时、443 正常，公网一律经 Pangolin 终止 TLS；
 2026-09-01 关闭 1 条基础设施 P2「node1 PostgreSQL 加 TLS、轮换弱凭据」（复用 Pangolin 的 ZeroSSL 证书，`hostssl` 强制加密、明文实测被拒，root 口令已轮换，gorse 与 casdoor 均已切 `verify-full` 并验证健康）；
@@ -56,6 +57,7 @@ Trivy 拦截项、matrix 的 CI 校验待办迁入服务发现；档案死链经
 | 15 | 一致性底座：Product/Order 事务内 producer、NACK/DLQ、重放审计 | [事件](docs/todo/数据一致性与事件驱动.md) |
 | 16 | 领域事件落地（`OrderCreated`/`OrderPaid`/…） | [事件](docs/todo/数据一致性与事件驱动.md) |
 | 17 | 轮换 Config Center 预览中暴露的搜索凭据（日志不可撤回） | [鉴权](docs/todo/零信任鉴权与Session.md) |
+| 18 | 轮换 public 仓 git 历史泄露的全部凭据（Casdoor secret ×3 / 支付私钥 / Consul EC 私钥…；历史已重写强推、凭据 09-02 已轮换；剩 GitHub Support 清理悬空对象） | [鉴权](docs/todo/零信任鉴权与Session.md) |
 
 〔2026-08-31 关闭四条 P0，证据见分类文件勾选记录：KCM 阈值（三处改 20 + 真实 GC/告警闭环验证）、
 CES 巡检告警（CronJob 2m + vmalert firing 闭环）、可观测黑盒探活（node3 ecommerce-gatus + canary 闭环）、
@@ -70,7 +72,7 @@ CES 巡检告警（CronJob 2m + vmalert firing 闭环）、可观测黑盒探活
 | [基础设施与部署模型](docs/todo/基础设施与部署模型.md) | §7 | 19 | 0 |
 | [文档与协作机制](docs/todo/文档与协作机制.md) | —（harness） | 17 | 0 |
 | [前端技术栈与工程化](docs/todo/前端技术栈与工程化.md) | §11 | 16 | 0 |
-| [零信任鉴权与 Session](docs/todo/零信任鉴权与Session.md) | §8 | 15 | 3 |
+| [零信任鉴权与 Session](docs/todo/零信任鉴权与Session.md) | §8 | 16 | 4 |
 | [供应链与交付流水线](docs/todo/供应链与交付流水线.md) | B 表 / §7.1 | 14 | 0 |
 | [数据一致性与事件驱动](docs/todo/数据一致性与事件驱动.md) | §3 / §4 | 18 | 2 |
 | [服务发现与配置中心](docs/todo/服务发现与配置中心.md) | §10 | 9 | 0 |
@@ -282,15 +284,20 @@ CES 巡检告警（CronJob 2m + vmalert firing 闭环）、可观测黑盒探活
    `es.apikv.com`（rid 47，原名 node3-es 同日改名，site node3/siteId 7，target `127.0.0.1:9200` http，SSO off），
    三条验收全过——traefik servers 非空、公网/Pod 内匿名得 ES 自身 401、正确凭据 200 且
    错误凭据 401；`ecommerce_catalog_products` alias 尚不存在（404），属全量重建步骤）；
-   剩余：更新 `search.catalog` 与部署产物，发布 search/indexer、全量重建并做查询差异与
-   增量恢复验收；回滚窗口结束后再退役 Meilisearch。
-   ES API key 已建并验权（2026-09-02，`ecommerce-search-readonly` 只读 +
-   `ecommerce-search-indexer` 可写，`_has_privileges` 正反验证过；真值在用户密码库与
-   Config Center/Secret，不入仓）。⚠️ **写 `search.catalog` 的前置被实测挡住**：
-   Config Center（control-tower-config 0.2.8）内嵌 Schema 快照源 revision `7922c88`
-   早于本仓 `search.catalog` 契约提交 `50f7917`，PutKey 会按旧 `additionalProperties:false`
-   Schema 拒收；须先在 control-tower `make sync-ecommerce-schemas` 并发布 config 服务
-   （或临时 `CONFIG_SCHEMA_MODE=observe` 旁路），且 PutKey 仅限管理员 JWT
+   ~~ES API key~~（✅ 2026-09-02 已建并验权：`ecommerce-search-readonly` 只读 +
+   `ecommerce-search-indexer` 可写，`_has_privileges` 正反验证过；真值在用户密码库，
+   不入仓）。~~Config Center 写入~~（✅ 2026-09-02：曾被 Schema 快照落后实测挡住——
+   control-tower 内嵌快照 `7922c88` 早于本仓 catalog 契约 `50f7917`；已按跨仓顺序解除：
+   `make sync-ecommerce-schemas` 同步至 `151c941` + 修夹具（control-tower `01902ad`）→
+   发 tag `0.2.10`（0.2.9 已被占用）→ CI 出镜像 → 集群滚动 config 0.2.10 →
+   管理员 JWT PutKey `search/dev/bootstrap.yaml` **version 5**（search.catalog →
+   `https://es.apikv.com` + 只读 key），machine token 回读确认，热更新防线实测：
+   旧 search Pod 拒收新形态、保留旧配置、仍 Running）。
+   ⚠️ **旧 search Pod 现在重启即起不来**（配置已切新形态，旧镜像解不了），
+   尽快发布新 search/indexer 镜像收敛窗口。
+   剩余：发布 search/indexer（indexer 的 K8s Secret `ecommerce-search-indexer`/
+   `ecommerce-search-reindex` 需灌可写 key）、全量重建并做查询差异与增量恢复验收；
+   回滚窗口结束后再退役 Meilisearch
 3. GitOps 接回：chart 对齐实况（资源名/标签/tag 三处）→ `helm template` 与集群 diff 为空
    → 重建 Application（**未对齐前禁止 selfHeal**）；统一镜像 tag 口径是前置
 4. PostgreSQL/对象存储备份、PITR、RTO/RPO 与恢复演练（node3 已成唯一数据面，无集群内回滚路径）

@@ -991,3 +991,37 @@ description: harness 本身（硬规则/门禁/Agent 约束）每次改动的原
   `golang:1.27` 镜像在 Docker Hub 存在（2026-09-02 有推送记录）；
   `scripts/verify-context.sh` 全绿。**未验证**：gitlab.com 共享 runner 上的实际耗时与
   compute-minutes 消耗，等第一次 push 后看流水线页面。
+
+### 2026-09-02 凭据门禁：gitleaks 接进 pre-commit / verify-quick / 两远端 CI，历史重写强推
+
+- **改了什么**：新增仓库根 `.gitleaks.toml`（默认规则 + 两条自定义：`url-embedded-credential`
+  抓 `scheme://user:pass@host`，`config-password-assignment` 抓配置/文档里的短弱口令赋值——
+  默认 `generic-api-key` 靠熵值，`msd…`（6 位弱口令） 这种漏掉；allowlist 只放核实过的公开默认值/占位符/
+  合成样本，每条写明是什么）。三处接线：`frontend/.vite-hooks/pre-commit` 先跑
+  `gitleaks git --pre-commit --staged` 再跑 `vp staged`，**工具缺失直接红**，绕过口令
+  `SKIP_GITLEAKS=1`；`scripts/verify-quick.sh` 的 secrets 通道在 `verify-secrets.py`
+  之后追加全历史扫描；GitHub `context-gate.yml` 与 `.gitlab-ci.yml` 各加 `gitleaks` job
+  （`fetch-depth`/`GIT_DEPTH` 必须 0，浅克隆等于没扫）。
+- **为什么**：原有 `scripts/verify-secrets.py` 是「手动跑才执行」的软探针，且只扫配置后缀、
+  只认 `key: value` 形态——`TODO.md` 的散文、`sqlc.yaml` 的 `uri: postgresql://user:pass@`、
+  `req.http` 的 JWT、Consul KV 快照里 base64 的整份配置全在盲区。凭据泄露一旦 push 到 public
+  仓就不可撤回，这类风险只有 commit 路径上的硬门禁能兜，不能靠「记得跑 verify-quick」。
+- **触发事故**：2026-09-02 用户发现 commit 里直接带着密码。实查：`github.com/lens077/ecommerce`
+  是 **public**，历史 30 个提交含 PG root 口令 `msd…`（6 位弱口令）（`node1:52288`，
+  `0.0.0.0/0` 开放，承载 gorse + casdoor 库；实测本机 TCP 可达）、2 个 Casdoor `client_secret`、
+  2 个随机口令、支付 `private_key`（RSA 1588 字符）、Consul TLS EC 私钥、8 个过期 JWT、
+  6 份 base64 编码的 Consul KV 快照。处置：三轮 `git filter-repo`（字面替换为
+  `***REMOVED-*` → 补 gitleaks 找出的 RSA/EC 私钥与第三个 client_secret → 整个删除 KV 快照
+  路径），强推 github + gitlab 全部分支与 106 个 tag（GitHub `main` 分支保护临时开
+  `allow_force_pushes` 后立即关回）。**教训三条**：① `git log -S` 只看字面，base64 载体
+  （KV 导出、k8s Secret）要靠解码扫描；② `git -S` 扫的是 refs，gitleaks 也是，但两者规则
+  不同——重写后要**双工具交叉验证**；③ gitleaks 把同一组 allowlist regex 拼成一条，前面
+  的 `(?i)` 会漏到后面，`^[A-Z_]{6,}$` 这类靠大小写区分的条目必须显式 `(?-i)`，否则整条
+  弱口令规则被静默放行（canary 实测抓到）。
+- **怎么验证的**：`gitleaks git . -c .gitleaks.toml` 全历史 `no leaks found`；独立 Python
+  脚本对全部 5933 个历史 blob 做明文 + base64 解码扫描，9 个已知秘密串零命中；canary：
+  暂存 `password: <6 位弱口令>` + `postgresql://app:Sup3rS3cret@` 报 2 条红，暂存 `${DB_PASSWORD}`
+  / `postgres:postgres@localhost` 绿；`scripts/verify-context.sh` 全绿。**未验证**：
+  GitHub `gitleaks-action@v2` 与 GitLab `zricethezav/gitleaks` 镜像的首跑，等 push 后看。
+  **仍待用户完成**：轮换上述全部凭据（PG root / Casdoor secret / 支付私钥 / Consul TLS）；
+  向 GitHub Support 提交悬空对象清理（旧 SHA 页面实测仍 200）。

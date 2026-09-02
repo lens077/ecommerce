@@ -1,0 +1,96 @@
+# gitleaks 配置——凭据门禁的规则真相源。
+#
+# 触发事故(2026-09-02):仓库是 public,历史里 30 个提交带着 PG root 弱口令、Casdoor
+# client_secret、支付 RSA 私钥、Consul KV 快照(base64 里藏着整份配置)。原有的
+# scripts/verify-secrets.py 只在手动跑 verify-quick 时执行、只扫配置后缀,对
+# TODO.md / sqlc.yaml 的 `uri: postgresql://user:pass@` / req.http 里的 JWT 全盲。
+# 三处接线:frontend/.vite-hooks/pre-commit(暂存区)、scripts/verify-quick.sh(全历史)、
+# CI context-gate(全历史)。改规则先跑 `gitleaks git . -c .gitleaks.toml` 看全历史是否仍绿。
+#
+# 加 allowlist 的纪律:只准放「已核实不是凭据」的条目(公开默认值、占位符、合成样本),
+# 每条写清是什么;不准为了让门禁绿而放行一整个目录的真实配置。
+
+title = "ecommerce"
+
+[extend]
+useDefault = true
+
+# 连接串内嵌口令:postgresql://postgres:弱口令@host —— 默认规则按 key 名匹配,看不到这种形态。
+[[rules]]
+id = "url-embedded-credential"
+description = "URL 里内嵌的 user:password@host"
+regex = '''[a-zA-Z][a-zA-Z0-9+.-]*://[^\s:/@"'`]+:([^\s/@"'`]{3,})@[^\s/"'`]+'''
+secretGroup = 1
+keywords = ["://"]
+[[rules.allowlists]]
+regexTarget = "line"
+regexes = [
+  '''\$\{[^}]*\}''',            # ${DB_PASSWORD}
+  '''\$\([^)]*\)''',
+  '''<[^>]+>''',                # <密码> / <password>
+  '''\*\*\*REMOVED''',
+  '''(?i)://[^:@\s]+:(password|passwd|pass|secret|changeme|example|xxx+|kong|postgres|admin|user|guest|test|root|\*+)@''',
+]
+
+# 配置/文档里的弱口令赋值:password: 弱口令 —— 默认 generic-api-key 靠熵值,短弱口令漏掉。
+[[rules]]
+id = "config-password-assignment"
+description = "配置或文档里的明文 password 赋值"
+regex = '''(?i)(?:^|[\s"'`{,])(?:[a-z0-9_.-]*(?:password|passwd|pwd))["']?[ \t]*[:=][ \t]*["']?([^\s"'`,;}]{4,})'''
+secretGroup = 1
+keywords = ["password", "passwd", "pwd"]
+path = '''(?i)\.(ya?ml|toml|env|ini|json|properties|conf|md|http|sql|sh|txt)$'''
+[[rules.allowlists]]
+regexes = [
+  '''^\$\{''', '''^\$\(''', '''^\{\{''', '''^<''', '''^\*+$''', '''^\*\*\*REMOVED''',
+  '''(?i)^(password|passwd|pwd|changeme|change-me|example|placeholder|postgres|secret|string|xxx+|null|none|nil|true|false|redacted|required|optional|admin|root|user|guest|test|dummy|empty|kong|-|~)$''',
+  '''(?i)^(env|file|secret|vault|ref):''',
+  '''(?i)^(fixture|dummy|fake|sample|mock|example|test)[-_]''',       # fixture-password 之类的测试占位
+  '''(?i)^(secretkeyref|valuefrom|\$\w+)''',
+  '''(?i)^(bool|int|string|bytes|text|varchar)\b''',   # sqlc / proto / schema 里的类型声明
+  '''(?-i)^[A-Z][A-Z0-9_]{5,}$''',                       # DB_PASSWORD 这类环境变量名;(?-i) 必须:gitleaks 会把整组 regex 拼成一条,前面的 (?i) 会漏到这里
+  '''\p{Han}''',                                        # 中文文案:「密码: 见 Config Center」
+  '''^\d+$''',                                          # 纯数字(端口、长度)
+]
+
+# 全局误报:每条都是核实过的非凭据。
+[[allowlists]]
+description = "生成物、锁文件、依赖:哈希片段会误中 AK 前缀规则"
+paths = [
+  '''(^|/)\.next/''',
+  '''(^|/)node_modules/''',
+  '''(^|/)pnpm-lock\.yaml$''',
+  '''(^|/)go\.sum$''',
+  '''(^|/)src/gen/''',
+]
+
+[[allowlists]]
+description = "探针脚本自带的合成样本(self_test 用来证明自己还会红)"
+paths = ['''^scripts/verify-secrets\.py$''']
+
+[[allowlists]]
+description = "本地演示固定值:cdc-demo 的 Meilisearch master key,compose 里已注明非真实凭据"
+paths = ['''^backend/tools/cdc-demo/''']
+regexes = ['''cdc-demo-master-key''']
+
+[[allowlists]]
+description = "APISIX / Grafana 官方镜像的公开默认 key(历史 gateway 基准测试样例)"
+regexes = [
+  '''edd1c9f034335f136f87ad84b625c8f1''',
+  '''4054f7cf07e344346cd3f287985e76a2''',
+  '''SW2YcwTIb9zpOOhoPsMm''',
+]
+
+[[allowlists]]
+description = "占位符与已脱敏标记"
+regexes = [
+  '''\*\*\*REMOVED-[A-Z-]+\*\*\*''',
+  '''YOUR_JWT_TOKEN''',
+  '''0123456789abcdef''',           # search config_test 的 fixture api_key
+  '''(?i)x-csrf-protection''',      # Pangolin 的 CSRF 请求头名,不是 token
+]
+
+[[allowlists]]
+description = "ESO remoteRef 的 key 是 Vault 路径不是值"
+paths = ['''^helm/templates/.*externalsecret\.ya?ml$''']
+regexes = ['''observability/[a-z0-9/-]+''']
