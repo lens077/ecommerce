@@ -38,7 +38,7 @@ spec:
         fsGroupChangePolicy: OnRootMismatch
       containers:
         - name: ecommerce-search
-          image: ccr.ccs.tencentyun.com/sumery/search:meili-dev-3cf0771826fe
+          image: ccr.ccs.tencentyun.com/sumery/search:sha-c364128@sha256:0edecb9726f743da828a9692e5c4b79aa0377471db34cbe757435c2d1b29035b
           imagePullPolicy: Always
           env:
             # 关闭应用内的 Log 导出器，只保留 Trace 和 Metric。
@@ -64,9 +64,12 @@ spec:
             # Bootstrap 只从挂载的 Config Center selector 读取。
             - name: CONFIG_SOURCE_FILE
               value: "/etc/ecommerce/config-source/search.yaml"
-            # Consul 只用于服务注册发现。
+            # Consul 只用于服务注册发现。2026-09-03 起显式关闭:当前不需要服务发现,
+            # 保留接线以备将来启用。注册守护循环(重试/重注册)已在 backend/pkg/registry
+            # 修好并用 search 服务实测(重试 72 次后注册成功),开关翻回 "true" 即可生效——见
+            # context/project/ecommerce/registry/experience/consul-register-once-then-give-up.md
             - name: CONSUL_ENABLED
-              value: "true"
+              value: "false"
             - name: CONSUL_ADDR
               value: "consul-server.consul.svc:8500"
             - name: CONSUL_SCHEME
@@ -81,8 +84,8 @@ spec:
           ports:
             - containerPort: 30002
               protocol: TCP
-          # /healthz 深度验证 API key、索引和过滤设置；失败时由就绪探针摘流量。
-          # 存活探针只探端口，避免 Meilisearch 短暂抖动触发 Pod 连环重启。
+          # /healthz 深度验证 Elasticsearch 鉴权、9.x 版本、稳定 alias 与一条最小搜索；失败时由就绪探针摘流量。
+          # 存活探针只探端口，避免 Elasticsearch 短暂抖动触发 Pod 连环重启。
           readinessProbe:
             httpGet:
               path: /healthz

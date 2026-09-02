@@ -38,7 +38,7 @@ spec:
         fsGroupChangePolicy: OnRootMismatch
       containers:
         - name: ecommerce-address
-          image: ccr.ccs.tencentyun.com/sumery/address:meili-dev-c0d3f933eb8f
+          image: ccr.ccs.tencentyun.com/sumery/address:sha-c364128@sha256:4c4db8b08408fbab564bbbb0cba2927bc04533b78d7a1b79f5e225403c867f37
           imagePullPolicy: Always
           env:
             # 关闭应用内的 Log 导出器，只保留 Trace 和 Metric。
@@ -64,9 +64,12 @@ spec:
             # Bootstrap 只从挂载的 Config Center selector 读取。
             - name: CONFIG_SOURCE_FILE
               value: "/etc/ecommerce/config-source/address.yaml"
-            # Consul 只用于服务注册发现。
+            # Consul 只用于服务注册发现。2026-09-03 起显式关闭:当前不需要服务发现,
+            # 保留接线以备将来启用。注册守护循环(重试/重注册)已在 backend/pkg/registry
+            # 修好并用 search 服务实测(重试 72 次后注册成功),开关翻回 "true" 即可生效——见
+            # context/project/ecommerce/registry/experience/consul-register-once-then-give-up.md
             - name: CONSUL_ENABLED
-              value: "true"
+              value: "false"
             - name: CONSUL_ADDR
               value: "consul-server.consul.svc:8500"
             - name: CONSUL_SCHEME
