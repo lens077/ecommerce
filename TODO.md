@@ -92,6 +92,15 @@ CES 巡检告警（CronJob 2m + vmalert firing 闭环）、可观测黑盒探活
 - **最近一次部署到 dev**〔实测 2026-08-29〕：control-tower `0.2.0`（config `sha-c30713c`）
   与 ecommerce `1.5.5`；dev 的 7 个相关服务滚到 `sha-0b9b9ad`，15/15 Deployment Ready、
   发布 Pod restart 均为 0。**1.6.x 尚未部署到 dev**，集群实跑 tag 见 §1「镜像 tag 口径」行。
+- **两远端 CI 职责定稿（2026-09-02）**：GitLab（origin）= 每次 push/MR 的代码门禁
+  （`context-gate` + 新增 `backend-gate` / `frontend-gate`，即本地锚点搬进 CI），
+  GitHub = 仅发布 tag 的构建/签名/发布链；tag 在 GitLab 侧不建流水线。
+  见 [`context/team/git-commit.md`](context/team/git-commit.md)「两个远端的 CI 职责切分」。
+  **待办**（本轮未动 GitHub 侧）：①`backend.yml` 的 `update-manifests` 在 GitOps 断开期间是
+  假回写，且持有能推 main 的 admin PAT；②发布 tag 的四条纪律（指向 main / 递增 /
+  不可变）在 CI 里零校验；③镜像只扫签不启动，缺一次从 digest 拉起的冒烟；
+  ④pnpm 版本三处不一致（`packageManager` 11.22.0 / consumer Dockerfile 11.6.0 /
+  `frontend.yml` latest）；⑤前端镜像构建发布路径仍待重建（`frontend.yml` 头注四项前提未确认）。
 
 > ⚠️ 同日稍晚集群曾因 node101 内存耗尽发生控制面雪崩（详见下表与
 > [基础设施与部署模型](docs/todo/基础设施与部署模型.md) P0 段），已恢复至 15/15；
@@ -269,8 +278,19 @@ CES 巡检告警（CronJob 2m + vmalert firing 闭环）、可观测黑盒探活
 
 1. Kafka 业务接线（node3 已运行、topic 已建，本仓零客户端）：topic/partition 规划、
    consumer Inbox、retry/DLQ、保留、重放、积压 SLO 与恢复验收
-2. Elasticsearch 运行时切流：建立 Pod 可达的受控网络入口，更新 `search.catalog` 与部署产物，
-   发布 search/indexer、全量重建并做查询差异与增量恢复验收；回滚窗口结束后再退役 Meilisearch
+2. Elasticsearch 运行时切流：~~建立 Pod 可达的受控网络入口~~（✅ 2026-09-02：Pangolin 资源
+   `es.apikv.com`（rid 47，原名 node3-es 同日改名，site node3/siteId 7，target `127.0.0.1:9200` http，SSO off），
+   三条验收全过——traefik servers 非空、公网/Pod 内匿名得 ES 自身 401、正确凭据 200 且
+   错误凭据 401；`ecommerce_catalog_products` alias 尚不存在（404），属全量重建步骤）；
+   剩余：更新 `search.catalog` 与部署产物，发布 search/indexer、全量重建并做查询差异与
+   增量恢复验收；回滚窗口结束后再退役 Meilisearch。
+   ES API key 已建并验权（2026-09-02，`ecommerce-search-readonly` 只读 +
+   `ecommerce-search-indexer` 可写，`_has_privileges` 正反验证过；真值在用户密码库与
+   Config Center/Secret，不入仓）。⚠️ **写 `search.catalog` 的前置被实测挡住**：
+   Config Center（control-tower-config 0.2.8）内嵌 Schema 快照源 revision `7922c88`
+   早于本仓 `search.catalog` 契约提交 `50f7917`，PutKey 会按旧 `additionalProperties:false`
+   Schema 拒收；须先在 control-tower `make sync-ecommerce-schemas` 并发布 config 服务
+   （或临时 `CONFIG_SCHEMA_MODE=observe` 旁路），且 PutKey 仅限管理员 JWT
 3. GitOps 接回：chart 对齐实况（资源名/标签/tag 三处）→ `helm template` 与集群 diff 为空
    → 重建 Application（**未对齐前禁止 selfHeal**）；统一镜像 tag 口径是前置
 4. PostgreSQL/对象存储备份、PITR、RTO/RPO 与恢复演练（node3 已成唯一数据面，无集群内回滚路径）

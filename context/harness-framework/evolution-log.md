@@ -965,3 +965,29 @@ description: harness 本身（硬规则/门禁/Agent 约束）每次改动的原
   把这条写入到项目的硬规则中。」即用户已经观察到这种堆量行为并要求固化为硬规则。
 - **怎么验证的**：`scripts/verify-context.sh` 全绿（本文件与 AGENTS.md 均在其扫描集内，
   覆盖链接/INDEX/格式/预算门禁）。
+
+### 2026-09-02 GitLab 侧补代码门禁：backend-gate / frontend-gate，两远端 CI 职责定稿
+
+- **改了什么**：`.gitlab-ci.yml` 从「只有 context-gate」扩为三道门：新增 `backend-gate`
+  （`go build && go vet && go test -short ./...`，含 structcheck）与 `frontend-gate`
+  （`pnpm ready`），两者就是 AGENTS.md「命令与验收锚点」里的本地锚点原样搬进 CI，
+  按 `rules: changes` 路径触发；顶层加 `workflow: rules`（MR / 分支 push 建流水线，
+  已有 MR 的分支 push 不重复建，**tag 不建**）与 `default: interruptible: true`。
+  pnpm 版本从 `frontend/package.json` 的 `packageManager` 字段取，不再手抄。
+  `context/team/git-commit.md` 新增「两个远端的 CI 职责切分」小节，定稿
+  GitLab = 门禁 / GitHub = 发布，并写明「同一 tag 只允许一边写镜像仓」的硬约束。
+- **为什么**：GitHub 侧 2026-08-20 起只由发布 tag 触发，于是 MR / 分支 push 在两边都
+  没有任何代码门禁——只有知识库结构检查。前端更极端：`pnpm ready` 此前不在任何 CI 里。
+  把门禁放到日常 push 的去处（origin）、把需要凭据与签名身份的发布留在 GitHub，
+  两边职责不重叠，逻辑就不会双写漂移。写法参照 deepseek-harness 的 `.gitlab-ci.yml`
+  （顶层 `workflow: rules` 单点决定建不建流水线；版本号从 package.json 读而不手抄）。
+- **触发事故**：2026-09-02 对照 deepseek-harness `.gitlab-ci.yml` 复盘本仓 CI 时实测：
+  `frontend.yml` 只剩每周一次线上登录冒烟，`pnpm ready` 零 CI 覆盖；pnpm 版本三处不一致
+  （`packageManager: pnpm@11.22.0` / consumer Dockerfile `11.6.0` / `frontend.yml` `latest`）；
+  `.gitlab-ci.yml` 头注「GitLab 侧没有 Actions」把「按纪律不在这里发布」误写成
+  「这里不能跑 CI」。用户裁决「发布权留 GitHub，GitLab 做门禁」。
+- **怎么验证的**：`glab ci lint` 对 gitlab.com 校验 YAML 通过；`scripts/verify-quick.sh`
+  本地全绿（backend 41s / frontend 72s），即两道新门首跑不会因存量问题红；
+  `golang:1.27` 镜像在 Docker Hub 存在（2026-09-02 有推送记录）；
+  `scripts/verify-context.sh` 全绿。**未验证**：gitlab.com 共享 runner 上的实际耗时与
+  compute-minutes 消耗，等第一次 push 后看流水线页面。
