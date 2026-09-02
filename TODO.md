@@ -284,7 +284,11 @@ CES 巡检告警（CronJob 2m + vmalert firing 闭环）、可观测黑盒探活
 ### 阶段 3 · 事件、交付与可靠性闭环
 
 1. Kafka 业务接线（node3 已运行、topic 已建，本仓零客户端）：topic/partition 规划、
-   consumer Inbox、retry/DLQ、保留、重放、积压 SLO 与恢复验收
+   consumer Inbox、retry/DLQ、保留、重放、积压 SLO 与恢复验收。
+   **2026-09-03 定为「线 B」，刻意不预建**：触发条件（第一个跨服务副作用的业务写）、
+   已查清事实（node3 Debezium 3.6.1 自带 Outbox `EventRouter`）、四步施工清单与未决选择
+   固定在 [`docs/todo/数据一致性与事件驱动.md`](docs/todo/数据一致性与事件驱动.md)「线 B」节；
+   搬运层用 Debezium Outbox Router，不再自写 relay
 2. Elasticsearch 运行时切流：~~建立 Pod 可达的受控网络入口~~（✅ 2026-09-02：Pangolin 资源
    `es.apikv.com`（rid 47，原名 node3-es 同日改名，site node3/siteId 7，target `127.0.0.1:9200` http，SSO off），
    三条验收全过——traefik servers 非空、公网/Pod 内匿名得 ES 自身 401、正确凭据 200 且
