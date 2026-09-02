@@ -102,7 +102,10 @@ CES 巡检告警（CronJob 2m + vmalert firing 闭环）、可观测黑盒探活
 - **两远端 CI 职责定稿（2026-09-02）**：GitLab（origin）= 每次 push/MR 的代码门禁
   （`context-gate` + 新增 `backend-gate` / `frontend-gate`，即本地锚点搬进 CI），
   GitHub = 仅发布 tag 的构建/签名/发布链；tag 在 GitLab 侧不建流水线。
-  见 [`context/team/git-commit.md`](context/team/git-commit.md)「两个远端的 CI 职责切分」。
+  见 [`context/team/git-commit.md`](context/team/git-commit.md)「两个远端的 CI 职责切分」，
+  推理与证据见 [CI 复盘报告](docs/reports/2026-09-02-ci-two-remotes-dsh-reference.md)。
+  门禁首跑（pipeline #77）即抓到 `AuthProvider` 登录态快照落后 DOM 一个 tick 的缝隙，
+  已修（`19a7a93`，`useEffect` → `useLayoutEffect`）。
   **待办**（本轮未动 GitHub 侧）：①`backend.yml` 的 `update-manifests` 在 GitOps 断开期间是
   假回写，且持有能推 main 的 admin PAT；②发布 tag 的四条纪律（指向 main / 递增 /
   不可变）在 CI 里零校验；③镜像只扫签不启动，缺一次从 digest 拉起的冒烟；
@@ -186,6 +189,8 @@ CES 巡检告警（CronJob 2m + vmalert firing 闭环）、可观测黑盒探活
 > **续：dbutil 收敛与影子包清理（2026-09-01）**：棘轮再降至 2 条，余 `config/config_test.go`、`money/numeric.go`（均待随共享库迁移一并处理）。`dbutil/handler.go` 的两个阵营统一为 `pqerror` 具名常量版——裸错误码版含永不匹配的死分支（`code := pgErr.Code` 取 SQLSTATE，却写了 `case "23000", "IntegrityConstraintViolation"` 这类名字分支），且 `github.com/lib/pq` 本就是直接依赖；同批删掉 10 份副本里生产错误路径上的 `fmt.Println("code:", code)` 调试打印。另删除 `address`/`cart`/`merchant`/`inventory` 四个影子 `constants` 包（共 8 文件，删前实测零引用；其常量是 `backend/constants` 的严格子集，同名同值、零冲突、零独有），并给 behavior 的 `conf.proto` 补回 `reserved 3; reserved "elasticsearch"`——它删字段未保留字段号，与 `buf.yaml` 已启用的 `FIELD_NO_DELETE_UNLESS_NUMBER_RESERVED` 冲突。迁移方案见 `.scratch/shared-infra-kit/spec.md`。
 >
 > 同批修掉一处长期静默失效：10 份 Dockerfile 注入 `-X main.Version`，而 10 个 `main` 包从未声明该符号，Go linker 静默忽略，构建版本注入从未生效。现改为共享 `backend/pkg/meta.Version`，`/healthz` 分别暴露 API 契约 `version` 与制品 `build`，并由 `structcheck/shared_infra_test.go` 守护符号、ldflags、`COPY pkg/` 与 10 份 Dockerfile 字节一致。理由见 `context/harness-framework/evolution-log.md`。
+>
+> **续：Consul 注册改守护循环（2026-09-03 代码态，未部署）**：`backend/pkg/registry` 的「一次注册 + 独立心跳」换成 `Maintain`（失败指数退避 1s→30s 无限重试；心跳失败即重注册；配置错误 `ErrInvalidOptions` 不重试；未注册过则退出时跳过注销）。触发事故：2026-08-29 `payment` 单服务（已记 experience 标「遗留未改」）→ 2026-09-02 整机重启后 10 个服务全部一次注册超时、Consul 目录只剩自己、dev 网关 `readyz` 503 持续 ≥97min（探针失败 x1177）。cart 真实适配层打真实 Consul 实测：起得慢→第 6 次重试成功；外部注销→6s 内重注册；隧道断→恢复后 11s 重注册。模板仓 `go-connect-template` 同步。**未做**：发新镜像（集群仍旧逻辑，网关 503 即时解法仍是 `rollout restart`）；「注册数 < 预期」告警；其余 9 个服务 `CONSUL_ENABLED` 是否随 cart 翻 `"false"`（全关则网关 `readyz` 永久红，需先换 resolver）。复盘 [docs/reports/2026-09-03-consul-register-once-recurrence.md](docs/reports/2026-09-03-consul-register-once-recurrence.md)。
 
 ### 4. 网关与鉴权（2026-08-29 实测）
 
