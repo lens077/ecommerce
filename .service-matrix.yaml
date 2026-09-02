@@ -67,10 +67,10 @@ config_validation:
 externals:
   postgres: { host: "node1:30001", note: "10 个业务服务当前已切到 node3 Pigsty；客户端 sslmode=verify-ca，沿用 pg-main CA 兼容证书。集群内 CloudNativePG pg-main 处于 hibernate，不是当前主库；db=ecommerce，每服务独立 schema。选型方向见 docs/TECH.md" }
   redis: { host: "dragonfly.dragonfly.svc:6379", note: "集群内 Dragonfly 原生 TLS，6379 单口 TLS-only，明文被拒；宿主机走 Cilium Gateway 192.168.3.122:6380。业务服务只放可丢缓存，不得承载锁、幂等键或领域真相；control-tower gateway 的 BFF session 是已接受例外，依赖不可用时 fail-closed。旧 redis namespace 已删除，不存在回滚组件；Config Center 自身也是本项消费者（自举 Secret，不在 config.entry 里）" }
-  consul: { host: "192.168.3.120:8500", note: "集群内工作负载使用 consul-server.consul.svc:8500；本地进程使用 LoadBalancer VIP。Consul 只承担注册发现，配置仍由 Config Center 提供" }
+  consul: { host: "192.168.3.120:8500", note: "集群内工作负载使用 consul-server.consul.svc:8500；本地进程使用 LoadBalancer VIP。Consul 只承担注册发现，配置仍由 Config Center 提供。⚠️ 2026-09-03 起 10 个业务服务 deployment 均 CONSUL_ENABLED=false（当前不需要服务发现），网关 routes.yaml 的 target 全部改为 direct://<k8s Service>，启动时 discovery 目标为零即走 noResolver，readyz 不再依赖 Consul 目录；catalog 为空是预期状态。接线与注册守护循环（pkg/registry Maintain）保留，翻回 true + 路由改回 discovery:/// 即可重开。触发事故见 context/project/ecommerce/registry/experience/consul-register-once-then-give-up.md" }
   kafka: { host: "node1:30004", used_by: [], note: "node3 已预建 Kafka SCRAM 用户与 ecommerce.events topic；本仓当前无客户端、producer、consumer 或业务接线（used_by 为空即事实）。选型方向见 docs/TECH.md" }
   casdoor: { host: "casdoor.apikv.com", note: "HTTPS 经 Pangolin（8000 明文口已关，2026-08-19 起）；JWT 公钥 kid=lens；2026-08-20 定稿收编进集群，现行身份边界见 docs/TECH.md §8" }
-  elasticsearch: { host: "https://es.apikv.com（Pangolin rid 47 → node3 newt → 127.0.0.1:9200，容器 cdc-elasticsearch；SSO off，鉴权在 ES 自身，匿名/错误凭据 401；本机仍仅回环监听）", used_by: [search], note: "search 代码通过 SearchCatalog 只读 ecommerce_catalog_products alias；投影写入者定稿为 node3 的 Debezium→Kafka→Elasticsearch Sink CDC 链（同级仓 postgres-kafka-es-streaming-pipeline），tools/search-indexer 与 NATS 链已于 2026-09 退役，投影表 products.search_catalog 尚未建；网络通路已解决（实测 2026-09-02：Pod 内 curl 公网端点得 ES 401 响应 0.18s，正确凭据 200）；Config Center `search/dev/bootstrap.yaml` v5 已切 search.catalog（2026-09-02，最小权限只读 API key）。⚠️ 旧 search Pod 重启即起不来（旧镜像解不了新配置段），alias 尚未建（404）、新镜像未发布，运行时切流仍未完成。⚠️ 容量事实：node3 总内存 7.25GiB、该容器 limit 2GiB，与观测数据面同机。选型方向见 docs/TECH.md" }
+  elasticsearch: { host: "https://es.apikv.com（Pangolin rid 47 → node3 newt → 127.0.0.1:9200，容器 cdc-elasticsearch；SSO off，鉴权在 ES 自身，匿名/错误凭据 401；本机仍仅回环监听）", used_by: [search], note: "search 代码通过 SearchCatalog 只读 ecommerce_catalog_products alias；投影写入者定稿为 node3 的 Debezium→Kafka→Elasticsearch Sink CDC 链（同级仓 postgres-kafka-es-streaming-pipeline），tools/search-indexer 与 NATS 链已于 2026-09 退役。**运行时已切流（实测 2026-09-03）**：投影表 products.search_catalog + trigger 已建（product migration 00005）并进 publication ecommerce_cdc；Debezium include list / Kafka topic ecommerce_cdc.products.search_catalog / ES 索引模板 + ecommerce_catalog_products_v1 + alias / Sink 映射均已就位，sink lag 0，增量约 6s（改价/删除/还原三步实测）；search 新镜像已发布，readiness 走 alias 绿，经网关搜索命中正确。网络通路走 Pangolin（Pod 内匿名 401、正确凭据 200）；Config Center `search/dev/bootstrap.yaml` v5 已切 search.catalog（最小权限只读 API key）。⚠️ 同日修复了 Debezium source task 自 09-01 PG 重启后复制槽消失导致的 FAILED（connector 级 RUNNING 掩盖 task 级 FAILED，重置 offset 重快照），告警必须盯 slot 位点差 + task 状态 + sink lag。⚠️ 容量事实：node3 总内存 7.25GiB、该容器 limit 2GiB，与观测数据面同机。选型方向见 docs/TECH.md" }
   meilisearch: { host: "meilisearch.search.svc:7700", used_by: [], note: "存量 v1.53 集群组件；本仓 search 代码已不再引用，运行时退役另走部署变更。选型方向见 docs/TECH.md" }
   minio: { host: "minio.apikv.com", used_by: [cart], note: "现役镜像 pgsty/silo RELEASE.2026-08-06（pin digest、command 显式 --certs-dir、镜像 HOME=/tmp）。商品缩略图 URL；443 不带端口。机器是 node2（ssh 别名 node2:34124，阿里云，与 k8s 集群无关——k8s 节点是 node101/102/103 = 192.168.3.101-103），2026-08-19 起走 node1 的 Pangolin（Traefik 终止 TLS）经 newt 隧道回 node2，本机 9000/9001 已绑回环。选型方向见 docs/TECH.md" }
   config_center: { discovery: config-service, repository: "github.com/lens077/control-tower", note: "配置控制面，2026-08-23 起由合一仓 control-tower 的 config 服务承载（wire 冻结,旧 SDK v0.1.0 兼容已实测）；从本地 CONFIG_FILE 自举；SDK=github.com/lens077/control-tower/sdk/configsource" }
@@ -153,9 +153,11 @@ gateway:
     - /cart.v1.CartService/UpdateCartItemQuantity
 
 # 后端服务
-# discovery: Consul 注册名（≠ 目录名，网关 target 用它）
+# discovery: Consul 注册名（≠ 目录名）。2026-09-03 起注册已关（CONSUL_ENABLED=false），
+#   网关 target 改用 direct://ecommerce-<svc>-service.ecommerce.svc:<port>；此字段保留作重开时的名字，
+#   structcheck 仍以它核对路由模板的包名。
 # extra_config: 通用块之外、该服务实际消费的配置块
-# 10 个服务统一经 SDK selector 走 config_center；Consul 只负责注册发现。
+# 10 个服务统一经 SDK selector 走 config_center；Consul 接线保留但当前不注册。
 services:
   user:
     discovery: user-identity
@@ -171,7 +173,7 @@ services:
     extra_config: [auth, search]
     depends_on: []
     external: [elasticsearch, config_center]
-    note: "查询进程通过 SearchCatalog 只读服务端固定的 ecommerce_catalog_products alias；写入侧走 Debezium→Kafka→ES Sink（行投影线，不经 outbox）。网络通路已通、search.catalog 已切；alias 待 products.search_catalog 表 + Sink 映射建立后由 CDC 链产生，代码接线不等于运行时切流；SearchRequest.index 仅为旧客户端兼容而保留，服务端忽略"
+    note: "查询进程通过 SearchCatalog 只读服务端固定的 ecommerce_catalog_products alias；写入侧走 Debezium→Kafka→ES Sink（行投影线，不经 outbox）。运行时已切流（2026-09-03）：alias 由 products.search_catalog 表（trigger 维护）经 CDC 链产生，search 镜像 readiness 走 alias，经网关搜索实测命中；Meilisearch 运行资源待回滚窗口后退役；SearchRequest.index 仅为旧客户端兼容而保留，服务端忽略"
 
   behavior:
     discovery: behavior-service
