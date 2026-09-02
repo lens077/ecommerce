@@ -170,6 +170,20 @@ type ProductsSaleDetail struct {
 	CreatedAt   time.Time
 }
 
+// 搜索策展投影：spus/skus/sale_detail 的派生行，由 trigger 维护，经 CDC 同步到 Elasticsearch alias ecommerce_catalog_products
+type ProductsSearchCatalog struct {
+	ID           int64
+	SpuCode      string
+	Name         string
+	Description  string
+	Status       string
+	MainMediaUrl string
+	MerchantID   uuid.UUID
+	Price        pgtype.Numeric
+	SaleCount    int64
+	UpdatedAt    time.Time
+}
+
 // 销售实物表
 type ProductsSku struct {
 	ID            int64
