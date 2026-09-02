@@ -160,13 +160,13 @@ CES 巡检告警（CronJob 2m + vmalert firing 闭环）、可观测黑盒探活
 | 组件 | 位置 | 状态 |
 |---|---|---|
 | **Kafka 4.3.1 (KRaft)** | node3，经 node1 隧道 `:30004` | **运行中**；CDC 线在用（六张业务表 topic），领域事件线零业务接线 |
-| **Elasticsearch 9.4.5 + IK** | node3 容器，经 Pangolin `https://es.apikv.com` | **运行中**；Pod 内可达（匿名 401 / 正确 key 200）；alias `ecommerce_catalog_products` **不存在** |
+| **Elasticsearch 9.4.5 + IK** | node3 容器，经 Pangolin `https://es.apikv.com` | **运行中，已切流**〔实测 2026-09-03〕；alias `ecommerce_catalog_products` → `_v1` 索引 7 文档，由 Sink 写入，lag 0 |
 | **Kafka Connect 4.3.0** | node3 `cdc-connect` | Debezium 3.6.1 source + ES Sink 两 connector RUNNING；**定稿为两条线共用的生产搬运层**（不再称「演示链」），`EventRouter`/`CloudEventsConverter` 已在类路径 |
 | NATS JetStream | — | **已退役**（2026-09-03）：`nats` ns、indexer/relay Deployment 与代码同日删除 |
 | Meilisearch v1.53.1 | 集群 `search` ns | 1/1 Running，无写入者；回滚窗口后退役 |
-| search Pod | 集群 `ecommerce` ns | **0/1 CrashLoopBackOff**：旧 Meilisearch 镜像解不了 Config Center 已切换的 `search.catalog`（配置先于镜像切换）。搜索当前不可用 |
+| search Pod | 集群 `ecommerce` ns | **1/1 Ready**〔2026-09-03〕：新镜像 `search:dev-20260903-aa25aee`，`/healthz` 深检 ES 绿，经网关搜索命中正确 |
 
-> **2026-09-03 重新平衡**：搜索投影是 PG 行的派生物，按「没有这个事件业务语义是否丢失」判据归**行投影线（CDC）**，不再是领域事件平台的首个租户。落地为 `products.search_catalog` 表（trigger 维护，迁移 `00005_search_catalog.sql` 已写）→ Debezium → Kafka → Elasticsearch Sink；领域事件线（订单 Saga 副作用）改用 Debezium Outbox Event Router，自写 relay 不再重写成 Kafka 版。同日删除 `tools/search-indexer`、`tools/outbox-relay`、`tools/cdc-demo`、`pkg/outbox/{relay,stream}.go`，`go.mod` 去 `nats-io`。**恢复搜索的剩余步骤**：dev 库执行迁移 → publication + Debezium `table.include.list` 加表 → Sink 加 mapping 与 topic 映射 → pipeline 仓 reindex 建 alias → 发新 search 镜像。教训与判据：`context/project/ecommerce/events/experience/row-projection-vs-domain-event.md`；两条线施工清单：`docs/todo/数据一致性与事件驱动.md`。
+> **2026-09-03 重新平衡**：搜索投影是 PG 行的派生物，按「没有这个事件业务语义是否丢失」判据归**行投影线（CDC）**，不再是领域事件平台的首个租户。落地为 `products.search_catalog` 表（trigger 维护，迁移 `00005_search_catalog.sql` 已写）→ Debezium → Kafka → Elasticsearch Sink；领域事件线（订单 Saga 副作用）改用 Debezium Outbox Event Router，自写 relay 不再重写成 Kafka 版。同日删除 `tools/search-indexer`、`tools/outbox-relay`、`tools/cdc-demo`、`pkg/outbox/{relay,stream}.go`，`go.mod` 去 `nats-io`。**恢复搜索的全部步骤已于 2026-09-03 完成**：dev 库执行迁移（回填 7 行与旧 reindex SQL 逐行一致，trigger 改价/删除演练通过）→ publication + Debezium `table.include.list` 加表 → Kafka topic + ES 模板/索引/alias + Sink 映射（pipeline 仓 9 文件 + 合约测试）→ 重置 Debezium offset 重快照（顺手修掉 09-01 起 task FAILED 的复制槽丢失，connector 级 RUNNING 掩盖了它）→ 发新 search 镜像 → 增量实测 6s（改价/删除/还原）→ 经网关搜索命中。教训与判据：`context/project/ecommerce/events/experience/row-projection-vs-domain-event.md`；两条线施工清单：`docs/todo/数据一致性与事件驱动.md`。
 
 ### 3. 后端服务
 
@@ -178,7 +178,7 @@ CES 巡检告警（CronJob 2m + vmalert firing 闭环）、可观测黑盒探活
 | order | 🔴 | `CreateOrder` 假成功、`CompleteOrder` 不落库 |
 | payment | 🟡 | 5 个 RPC 均为显式 `Unimplemented` 桩（**本仓正确示范**）；repo 主体待恢复。⚠️ 新增迁移 `00002_rename_consumer_to_customer`（买家列改名），**存量库需跑 `make migrate-up MIGRATE_SVC=payment`** |
 | inventory | 🔴 | `Reserve` 静默无操作、`ReleaseReserve` panic |
-| search | 🔴 | 运行中 Pod CrashLoopBackOff（旧镜像 vs 新 `search.catalog` 配置）。代码经单 provider `SearchCatalog` 只读 ES alias；投影写入改走 `products.search_catalog` + Debezium + ES Sink（迁移已写，未执行、未接 Connect）；alias 未建、新镜像未发。聚合筛选、热门词待补；不再依赖商品事务生产者 |
+| search | 🟢 | **ES 运行时已切流**〔2026-09-03〕：Pod Ready、`/healthz` 深检绿、经网关命中。代码经单 provider `SearchCatalog` 只读 ES alias；投影由 `products.search_catalog`（trigger 维护）经 Debezium → Kafka → ES Sink 写入，增量约 6s；不依赖商品事务生产者。待办：Meilisearch 回滚窗口后退役；CDC 链告警（slot 位点差 / task 状态 / sink lag）；聚合筛选、热门词 |
 | address | 🔴 | 功能齐全**但全线越权** |
 | merchant | 🔴 | 仅 `Submit`/`Get` 可用；两段式入驻已设计未实现 |
 | behavior | 🟡 | `Track`/`Recommend`/`SimilarItems` 已编译通过 |
@@ -192,7 +192,7 @@ CES 巡检告警（CronJob 2m + vmalert firing 闭环）、可观测黑盒探活
 >
 > **续：根因闭环起步（2026-09-02）**：仓内上提只治存量，`go-connect-template` 仍带全部 7 个模块（实测 1,716 行，`env.go` 已与共享版分叉 4 行），新服务会把副本带回来。已建独立模块 [`go-connect-kit`](https://github.com/lens077/go-connect-kit) `v0.1.0`（PUBLIC；`go 1.26.0` 是天花板，取自 control-tower 1.26.5），首批只收逐字节一致的 `env`/`meta` 以验证发布链路。ecommerce 已切为消费方：删 `backend/pkg/{env,meta}`，30 个文件 import 改指 kit，10 份 Dockerfile 的 ldflags 目标改为 `go-connect-kit/meta.Version`，`shared_infra_test.go` 同步并注错验证；干净缓存 + `goproxy.cn` 模拟镜像构建（download + 带 ldflags 的 build）通过。**发版纪律**：kit 每发新版，首次拉取必须走 sumdb 可达的代理（本机 `goproxy.io`），`go.sum` 哈希入库后 `goproxy.cn` 才能构建——本机实测 `sum.golang.org` 与 `proxy.golang.org` 均不可达。待办：`config`/`log`/`otel`/`registry`/`dbutil` 迁入 kit；改模板依赖 kit；control-tower 切为消费方。
 >
-> **续：Consul 注册改守护循环（2026-09-03 代码态，未部署）**：`backend/pkg/registry` 的「一次注册 + 独立心跳」换成 `Maintain`（失败指数退避 1s→30s 无限重试；心跳失败即重注册；配置错误 `ErrInvalidOptions` 不重试；未注册过则退出时跳过注销）。触发事故：2026-08-29 `payment` 单服务（已记 experience 标「遗留未改」）→ 2026-09-02 整机重启后 10 个服务全部一次注册超时、Consul 目录只剩自己、dev 网关 `readyz` 503 持续 ≥97min（探针失败 x1177）。cart 真实适配层打真实 Consul 实测：起得慢→第 6 次重试成功；外部注销→6s 内重注册；隧道断→恢复后 11s 重注册。模板仓 `go-connect-template` 同步。**未做**：发新镜像（集群仍旧逻辑，网关 503 即时解法仍是 `rollout restart`）；「注册数 < 预期」告警；其余 9 个服务 `CONSUL_ENABLED` 是否随 cart 翻 `"false"`（全关则网关 `readyz` 永久红，需先换 resolver）。复盘 [docs/reports/2026-09-03-consul-register-once-recurrence.md](docs/reports/2026-09-03-consul-register-once-recurrence.md)。
+> **续：Consul 注册改守护循环（2026-09-03 代码态，未部署）**：`backend/pkg/registry` 的「一次注册 + 独立心跳」换成 `Maintain`（失败指数退避 1s→30s 无限重试；心跳失败即重注册；配置错误 `ErrInvalidOptions` 不重试；未注册过则退出时跳过注销）。触发事故：2026-08-29 `payment` 单服务（已记 experience 标「遗留未改」）→ 2026-09-02 整机重启后 10 个服务全部一次注册超时、Consul 目录只剩自己、dev 网关 `readyz` 503 持续 ≥97min（探针失败 x1177）。cart 真实适配层打真实 Consul 实测：起得慢→第 6 次重试成功；外部注销→6s 内重注册；隧道断→恢复后 11s 重注册。模板仓 `go-connect-template` 同步。**2026-09-03 已部署并全关**：10 个服务镜像 `dev-20260903-aa25aee`（含守护循环）已发布，deployment 全部 `CONSUL_ENABLED=false`（当前不需要服务发现），日志均「Consul disabled by environment variable」。网关侧：Config Center `gateway/dev/routes.yaml` 11 条 target 改 `direct://ecommerce-<svc>-service.ecommerce.svc:<port>`（control-tower `routes/dev.yaml` 同步），`rollout restart` 后新 Pod `discovery_services=[]` 走 `noResolver`，`readyz` 200 且不再依赖 Consul 目录——「全关则永久红」的前提已消除。同日还修了一个独立故障：Cilium ipcache 丢失 `consul-server-0` 条目（全集群 71 CEP 仅此一个，node101/102 无条目、node103 标 `reserved:unmanaged`），`cilium monitor` 抓到 `Policy denied ->unmanaged`，给 Pod 打 label 触发 CEP 更新即恢复。**仍未做**：「注册数 < 预期」告警（当前不注册，暂无意义）；Consul 重开时需同时翻开关 + 路由改回 `discovery:///`。复盘 [docs/reports/2026-09-03-consul-register-once-recurrence.md](docs/reports/2026-09-03-consul-register-once-recurrence.md)。
 
 ### 4. 网关与鉴权（2026-08-29 实测）
 
@@ -316,9 +316,11 @@ CES 巡检告警（CronJob 2m + vmalert firing 闭环）、可观测黑盒探活
    集群 `nats` ns、两个 Deployment、NetworkPolicy/SA/VPA 卸载；两个 K8s Secret
    `ecommerce-search-indexer`/`ecommerce-search-reindex` 保留，其 `ELASTICSEARCH_API_KEY`
    是可写 key，供切流前止血建 alias 用）。
-   剩余：`products.search_catalog` 迁移（表 + trigger + 回填，草稿 `00005_search_catalog.sql`）
-   → pipeline 仓加 publication/include list/mapping/Sink 映射 → 建 alias 并做查询差异验收
-   → 发布 search 镜像 → 增量验收；回滚窗口结束后再退役 Meilisearch
+   ~~`products.search_catalog` 迁移 → pipeline 仓接线 → 建 alias → 发布 search 镜像 → 增量验收~~
+   （✅ 2026-09-03 全部完成，证据见上方「2026-09-03 重新平衡」段与 `.service-matrix.yaml`
+   elasticsearch 行）。**剩余**：回滚窗口结束后退役 Meilisearch（`search` ns + 本地 PV）；
+   CDC 链告警（slot 位点差 / connector task 状态 / sink lag，而非容器健康）；固定查询集
+   作相关性基线
 3. GitOps 接回：chart 对齐实况（资源名/标签/tag 三处）→ `helm template` 与集群 diff 为空
    → 重建 Application（**未对齐前禁止 selfHeal**）；统一镜像 tag 口径是前置
 4. PostgreSQL/对象存储备份、PITR、RTO/RPO 与恢复演练（node3 已成唯一数据面，无集群内回滚路径）

@@ -249,28 +249,66 @@ func TestGatewayWiringMatchesMatrix(t *testing.T) {
 		if err != nil {
 			t.Fatalf("解析 control-tower 路由模板 %s: %v", env, err)
 		}
-		wired := map[string]string{} // package → discovery 名
+		// 路由 target 两种形态(2026-09-03 起 dev 关闭 Consul 注册,改用 direct://):
+		//   discovery:///<consul 注册名>            → 与 matrix 的 discovery 比对
+		//   direct://ecommerce-<svc>-service.<ns>.svc:<port> → 主机名反推服务名,与 matrix 的键比对
+		// 两种都不是的 target 直接报错,不给第三种形态留静默通过的口子。
+		wired := map[string]ctroutes.Entry{} // package → 条目
 		for _, e := range parsed.Routes {
-			wired[e.Package] = e.DiscoveryTarget()
+			wired[e.Package] = e
 		}
 
 		for name, svc := range m.Services {
 			pkg := strings.TrimSuffix(strings.TrimPrefix(svc.GatewayPrefix, "/"), "*")
-			target, ok := wired[pkg]
+			e, ok := wired[pkg]
 			if !ok {
 				t.Errorf("[%s] %s: matrix 前缀 %q(包名 %q)在路由模板中没有条目", env, name, svc.GatewayPrefix, pkg)
 				continue
 			}
-			if target != svc.Discovery {
-				t.Errorf("[%s] %s: 路由包 %q 指向 %q,matrix 声明 %q(接线漂移)", env, name, pkg, target, svc.Discovery)
+			switch {
+			case e.DiscoveryTarget() != "":
+				if e.DiscoveryTarget() != svc.Discovery {
+					t.Errorf("[%s] %s: 路由包 %q 指向 %q,matrix 声明 %q(接线漂移)", env, name, pkg, e.DiscoveryTarget(), svc.Discovery)
+				}
+			case e.DirectHost() != "":
+				if want := directHostFor(name); e.DirectHost() != want {
+					t.Errorf("[%s] %s: 路由包 %q 直连 %q,按服务名应为 %q(接线漂移)", env, name, pkg, e.DirectHost(), want)
+				}
+			default:
+				t.Errorf("[%s] %s: 路由包 %q 的 target %q 既非 discovery:/// 也非 direct://", env, name, pkg, e.Target)
 			}
 		}
-		for pkg, target := range wired {
-			if !knownDiscovery[target] {
-				t.Errorf("[%s] 路由包 %q 指向 discovery:///%s,但 matrix 里没有对应服务", env, pkg, target)
+		for pkg, e := range wired {
+			switch {
+			case e.DiscoveryTarget() != "":
+				if !knownDiscovery[e.DiscoveryTarget()] {
+					t.Errorf("[%s] 路由包 %q 指向 discovery:///%s,但 matrix 里没有对应服务", env, pkg, e.DiscoveryTarget())
+				}
+			case e.DirectHost() != "":
+				if _, ok := serviceFromDirectHost(e.DirectHost(), m); !ok {
+					t.Errorf("[%s] 路由包 %q 直连 %q,但 matrix 里没有对应服务", env, pkg, e.DirectHost())
+				}
 			}
 		}
 	}
+}
+
+// directHostFor 是 direct:// 形态的接线约定:matrix 服务名 <svc> 对应
+// k8s Service ecommerce-<svc>-service(见各 services/*/deploy/dev/service.yaml),
+// 网关 target 写 ecommerce-<svc>-service.ecommerce.svc:<port>,端口不在 matrix 里,不核。
+func directHostFor(service string) string {
+	return "ecommerce-" + service + "-service.ecommerce.svc"
+}
+
+// serviceFromDirectHost 是 directHostFor 的反向:主机名不符合约定或服务不在 matrix 时返回 false。
+func serviceFromDirectHost(host string, m serviceMatrix) (string, bool) {
+	const prefix, suffix = "ecommerce-", "-service.ecommerce.svc"
+	if !strings.HasPrefix(host, prefix) || !strings.HasSuffix(host, suffix) {
+		return "", false
+	}
+	name := strings.TrimSuffix(strings.TrimPrefix(host, prefix), suffix)
+	_, ok := m.Services[name]
+	return name, ok
 }
 
 // matrix 的 anonymous_paths 与路由模板的 anonymous 必须是同一个集合(单一真相源双向核对)。

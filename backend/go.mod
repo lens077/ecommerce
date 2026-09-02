@@ -18,7 +18,7 @@ require (
 	github.com/google/uuid v1.6.0
 	github.com/hashicorp/consul/api v1.34.4
 	github.com/jackc/pgx/v5 v5.10.0
-	github.com/lens077/control-tower v0.1.2
+	github.com/lens077/control-tower v0.1.3
 	github.com/lens077/go-connect-kit v0.1.0
 	github.com/lib/pq v1.12.3
 	github.com/mitchellh/mapstructure v1.5.0
