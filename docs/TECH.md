@@ -21,7 +21,7 @@
 | 安全 | Casdoor（IAM）、OpenFGA（关系授权）、Bugsink（错误监控） | 身份认证、对象级授权、前端异常监控 |
 | 可观测性 SDK | OpenTelemetry Go SDK + Protobuf-ES 内置追踪 | 日志、指标、链路埋点 |
 | 消息序列化 | Protobuf | RPC 与领域事件的统一序列化格式 |
-| 构建与 CI | Docker Buildx、GitHub Actions、Renovate | 多架构镜像构建、自动化流水线、依赖更新 |
+| 构建与 CI | Docker Buildx、GitHub Actions（发布）、GitLab CI（门禁）、Renovate | 多架构镜像构建、自动化流水线、依赖更新。**两远端职责切分（2026-09-02 定稿）**：GitLab（origin）跑每次 push / MR 的代码门禁（`context-gate` + `backend-gate` + `frontend-gate`，即本地锚点搬进 CI）；GitHub 只由发布 tag 触发构建、签名、发布链；同一 tag 只允许一边写镜像仓。规范见 [`context/team/git-commit.md`](../context/team/git-commit.md)「两个远端的 CI 职责切分」，对照 deepseek-harness 流水线的取舍、过时点清单与门禁首跑证据见 [CI 复盘报告](reports/2026-09-02-ci-two-remotes-dsh-reference.md) |
 | 开发内环 | mirrord（mirror）+ Okteto（2026-08-28 PoC 定稿分工） | **观察用 mirrord mirror**（本地 `go run` 按需获得集群 DNS/出站、镜像入站真实流量，只读零影响）；**接管用 Okteto**（`okteto up` 替换工作负载，本地代码真实接请求、复现 Pod 身份）。steal 在本集群不可用不启用（Cilium KPR/BPF host routing 绕过 netfilter）；日常默认仍是本地 `make dev`。证据与使用约定：`docs/reports/2026-08-28-mirrord-poc.md` |
 
 ### B. 正在研究和考虑中的技术栈与工具
