@@ -144,6 +144,7 @@ function RouteComponent() {
           <Box sx={{ p: sp[4], borderBottom: `1px solid ${tokens.colors.border.default}` }}>
             <Typography
               variant="subtitle1"
+              component="h2"
               sx={{ fontWeight: 600, color: tokens.colors.text.primary }}
             >
               {t("profile.account.title")}
@@ -187,6 +188,7 @@ function RouteComponent() {
           <Box sx={{ p: sp[4], borderBottom: `1px solid ${tokens.colors.border.default}` }}>
             <Typography
               variant="subtitle1"
+              component="h2"
               sx={{ fontWeight: 600, color: tokens.colors.text.primary }}
             >
               {t("profile.nav.title")}

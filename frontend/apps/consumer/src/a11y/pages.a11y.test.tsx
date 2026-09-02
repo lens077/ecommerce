@@ -26,7 +26,7 @@ import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { createMemoryHistory, createRouter, RouterProvider } from "@tanstack/react-router";
 import { initI18n } from "@ecommerce/i18n";
 
-import { AddressService, CartService, CartStatus, ProductService } from "@/gen/api";
+import { AddressService, CartService, CartStatus, ProductService, UserService } from "@/gen/api";
 import { AuthProvider } from "@/providers/AuthProvider";
 import { routeTree } from "@/routeTree.gen";
 import consumerZh from "@/locales/zh-CN/consumer.json";
@@ -52,10 +52,13 @@ vi.mock("@tanstack/react-devtools", () => ({ TanStackDevtools: () => null }));
 vi.mock("@tanstack/react-router-devtools", () => ({
   TanStackRouterDevtoolsPanel: () => null,
 }));
-// AuthProvider 冷启动会 fetch /auth/me；jsdom 没有网关，直接判未登录。
+// AuthProvider 冷启动会 fetch /auth/me；jsdom 没有网关。默认判未登录；
+// 个人中心/地址簿的 beforeLoad 靠它放行，那两页的用例把开关拨到 true。
+// vi.mock 会被提升到文件顶部，所以开关必须用 vi.hoisted 声明才能在工厂里引用。
+const authState = vi.hoisted(() => ({ authenticated: false }));
 vi.mock("@ecommerce/configs", async (importOriginal) => ({
   ...(await importOriginal<object>()),
-  fetchIdentity: async () => ({ authenticated: false }),
+  fetchIdentity: async () => ({ authenticated: authState.authenticated }),
 }));
 // useProductDetail 显式走 getPublicTransport()（公开接口免鉴权），不经
 // TransportProvider——把两个出口都接到本文件的内存桩上。
@@ -124,6 +127,10 @@ function makeTransport() {
     service(CartService, { getCart: () => ({ items: CART_ITEMS }) });
     service(ProductService, { getProductDetail: () => PRODUCT_DETAIL });
     service(AddressService, { listAddresses: () => ADDRESSES });
+    // 个人中心没有 UserProfile 就只渲染一个 CircularProgress，页面主体根本不出现。
+    service(UserService, {
+      userProfile: () => ({ user: { name: "zhangsan", displayName: "张三", email: "z@x.com" } }),
+    });
   });
 }
 
@@ -149,7 +156,7 @@ async function renderPage(path: string, ready: () => Promise<unknown>) {
     history: createMemoryHistory({ initialEntries: [path] }),
     context: {
       auth: {
-        isAuthenticated: false,
+        isAuthenticated: authState.authenticated,
         setIsAuthenticated: () => {},
         login: () => {},
         logout: () => {},
@@ -177,6 +184,7 @@ beforeAll(async () => {
 });
 
 afterEach(() => {
+  authState.authenticated = false;
   cleanup();
   document.body.innerHTML = "";
 });
@@ -279,10 +287,7 @@ describe("标题层级（唯一 h1 + 不跳级）", () => {
   for (const [name, path, ready] of pages) {
     it(`${name} 恰好一个 h1 且层级不跳级`, async () => {
       await renderPage(path, ready);
-      const levels = outline();
-      expect(levels.filter((level) => level === 1)).toHaveLength(1);
-      const jump = levels.findIndex((l, i) => i > 0 && l - levels[i - 1] > 1);
-      expect(jump, `层级跳跃于 index ${jump}：${levels.join("→")}`).toBe(-1);
+      expectSaneOutline();
     }, 15000);
   }
 
@@ -295,9 +300,34 @@ describe("标题层级（唯一 h1 + 不跳级）", () => {
     // 规格选择器是 MUI Chip（渲染成 div 而非 button），按文本点。
     await userEvent.click(await screen.findByText("标准款"));
     await screen.findByText(/199/);
-    const levels = outline();
-    expect(levels.filter((level) => level === 1)).toHaveLength(1);
-    const jump = levels.findIndex((l, i) => i > 0 && l - levels[i - 1] > 1);
-    expect(jump, `层级跳跃于 index ${jump}：${levels.join("→")}`).toBe(-1);
+    expectSaneOutline();
+  }, 15000);
+
+  // 登录态页面：beforeLoad 靠 fetchIdentity 放行，主体靠 UserService 桩渲染。
+  // 之前这两页没进断言，结果恰好是遗漏最多的地方——收件人姓名/电话曾渲染成 h6。
+  it("个人中心 /profile（登录态）恰好一个 h1 且层级不跳级", async () => {
+    authState.authenticated = true;
+    await renderPage("/profile", () => screen.findByText("张三", undefined, { timeout: 5000 }));
+    expectSaneOutline();
+  }, 15000);
+
+  it("地址簿 /profile/addresses（登录态）恰好一个 h1 且层级不跳级", async () => {
+    authState.authenticated = true;
+    await renderPage("/profile/addresses", () =>
+      screen.findByText("张三", undefined, { timeout: 5000 }),
+    );
+    expectSaneOutline();
+    // 收件人姓名是列表内容，不得出现在任何标题标签里
+    const headingTexts = Array.from(document.querySelectorAll("h1,h2,h3,h4,h5,h6")).map((h) =>
+      h.textContent?.trim(),
+    );
+    expect(headingTexts).not.toContain("张三");
   }, 15000);
 });
+
+function expectSaneOutline() {
+  const levels = outline();
+  expect(levels.filter((level) => level === 1)).toHaveLength(1);
+  const jump = levels.findIndex((l, i) => i > 0 && l - levels[i - 1] > 1);
+  expect(jump, `层级跳跃于 index ${jump}：${levels.join("→")}`).toBe(-1);
+}

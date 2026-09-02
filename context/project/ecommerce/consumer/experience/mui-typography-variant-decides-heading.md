@@ -27,7 +27,10 @@ description: Typography 不写 component 时语义由 variant 决定（h1-h6 映
 2. **axe 挡不住**。`heading-order` 只查**相邻**标题不跳级；「整页没有 `h1`」归
    `page-has-heading-one`，属 **best-practice 标签**，不在 `pages.a11y.test.tsx` 的
    WCAG A/AA `runOnly` 范围内。于是「无 h1」「噪音 h6」两类缺陷在门禁下全绿。
-   `subtitle1/2 → h6` 这条尤其隐蔽：grep `variant="h` 根本搜不到它们。
+   `subtitle1/2 → h6` 这条尤其隐蔽：grep `variant="h` 根本搜不到它们——**本轮修复自己就
+   栽在这里**：第一批按 `variant="h` 统计修了 19 处、宣布完成，第二批换成
+   `variant="(h[1-6]|subtitle[12])"` 才又抓出 4 处，且全落在第一批断言没覆盖的登录态页面。
+   统计与断言两边都要把 `subtitle` 算进去。
 
 3. **红测可能假绿**。给标题层级补断言后回退修复，测试**没有变红**——因为商品价格区要
    选中规格后才渲染（`selectedAttrs` 初始为空），而服务桩的 SKU 没有 `attributes` 字段，
