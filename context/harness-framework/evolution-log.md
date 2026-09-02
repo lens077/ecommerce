@@ -1021,7 +1021,12 @@ description: harness 本身（硬规则/门禁/Agent 约束）每次改动的原
 - **怎么验证的**：`gitleaks git . -c .gitleaks.toml` 全历史 `no leaks found`；独立 Python
   脚本对全部 5933 个历史 blob 做明文 + base64 解码扫描，9 个已知秘密串零命中；canary：
   暂存 `password: <6 位弱口令>` + `postgresql://app:Sup3rS3cret@` 报 2 条红，暂存 `${DB_PASSWORD}`
-  / `postgres:postgres@localhost` 绿；`scripts/verify-context.sh` 全绿。**未验证**：
-  GitHub `gitleaks-action@v2` 与 GitLab `zricethezav/gitleaks` 镜像的首跑，等 push 后看。
+  / `postgres:postgres@localhost` 绿；`scripts/verify-context.sh` 全绿。
+  **首跑复验（同日）**：GitHub run 33612585369 的 gitleaks job 7 秒绿——日志里是
+  `gitleaks detect --log-opts=-1` / `1 commits scanned`：`gitleaks-action@v2` 在 push 事件上
+  只扫本次推送的提交，`fetch-depth: 0` 白拉，又是一道恒绿的假门禁（第四条教训：**门禁首跑
+  必须读日志确认扫描范围，不能只看绿**）。已换成钉版本 + sha256 校验的二进制直跑，命令与
+  GitLab job 逐字相同，并追加断言 `N commits scanned` 必须 > 100；本地正向 705 提交通过、
+  `--depth 1` 克隆下断言按预期红。GitLab 首跑仍未看。
   **仍待用户完成**：轮换上述全部凭据（PG root / Casdoor secret / 支付私钥 / Consul TLS）；
   向 GitHub Support 提交悬空对象清理（旧 SHA 页面实测仍 200）。

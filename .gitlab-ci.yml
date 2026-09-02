@@ -59,7 +59,17 @@ gitleaks:
   variables:
     GIT_DEPTH: 0
   script:
-    - gitleaks git . -c .gitleaks.toml --no-banner --redact=80
+    - gitleaks version
+    # 与 GitHub context-gate.yml 的 gitleaks job 同一条命令 + 同一条「扫描数 > 100」断言:
+    # 浅克隆或增量模式下 `N commits scanned` 会是个位数,那就是假门禁,直接红。
+    - |
+      set +e
+      out=$(gitleaks git . -c .gitleaks.toml --no-banner --redact=80 2>&1); rc=$?
+      set -e
+      printf '%s\n' "$out"
+      [ "$rc" -eq 0 ] || exit "$rc"
+      n=$(printf '%s\n' "$out" | grep -oE '[0-9]+ commits scanned' | grep -oE '^[0-9]+' || true)
+      [ "${n:-0}" -gt 100 ] || { echo "gitleaks 只扫了 ${n:-0} 个提交:历史没拉全或命令被改成了增量,门禁失效" >&2; exit 1; }
 
 # 后端门禁 = 本地锚点 `go build && go vet && go test -short ./...` 原样搬进 CI。
 # `./...` 已含 structcheck(矩阵↔目录↔网关↔helm 四处对齐),不必单列。

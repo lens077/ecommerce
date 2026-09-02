@@ -47,18 +47,42 @@ jobs:
   # 支付 RSA 私钥 / base64 的 Consul KV 快照,已用 filter-repo 重写并强推。这条 job 是
   # 「历史保持干净」的持续证明;pre-commit 拦本机,这里拦绕过钩子(SKIP_GITLEAKS / --no-verify)的提交。
   # 注意 fetch-depth: 0——浅克隆只能扫最新提交,等于没扫。
+  #
+  # ⚠️ 不要换回 gitleaks/gitleaks-action:首跑(run 33612585369)实测它在 push 事件上拼的是
+  # `gitleaks detect --log-opts=-1`,只扫本次推送的提交(日志 `1 commits scanned`),fetch-depth: 0
+  # 白拉;而且它自带 8.24.3。直接跑二进制,命令与 .gitlab-ci.yml 的 gitleaks job 逐字相同,
+  # 两边才是同一道门。版本与 sha256 手动钉死,升级时两处一起改。
   gitleaks:
     runs-on: ubuntu-24.04
+    env:
+      GITLEAKS_VERSION: 8.30.1
+      GITLEAKS_SHA256: 551f6fc83ea457d62a0d98237cbad105af8d557003051f41f3e7ca7b3f2470eb
     steps:
       - name: Checkout repository (full history)
         uses: actions/checkout@v5
         with:
           fetch-depth: 0
 
+      - name: Install gitleaks (pinned, checksum-verified)
+        shell: bash
+        run: |
+          set -euo pipefail
+          curl -sSLo "$RUNNER_TEMP/gitleaks.tgz" \
+            "https://github.com/gitleaks/gitleaks/releases/download/v${GITLEAKS_VERSION}/gitleaks_${GITLEAKS_VERSION}_linux_x64.tar.gz"
+          echo "${GITLEAKS_SHA256}  $RUNNER_TEMP/gitleaks.tgz" | sha256sum -c -
+          mkdir -p "$RUNNER_TEMP/gitleaks" && tar xzf "$RUNNER_TEMP/gitleaks.tgz" -C "$RUNNER_TEMP/gitleaks" gitleaks
+          echo "$RUNNER_TEMP/gitleaks" >> "$GITHUB_PATH"
+
       - name: Scan full history for credentials
-        uses: gitleaks/gitleaks-action@v2
-        env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-          GITLEAKS_CONFIG: .gitleaks.toml
-          GITLEAKS_ENABLE_SUMMARY: "true"
-          GITLEAKS_ENABLE_UPLOAD_ARTIFACT: "false"
+        shell: bash
+        run: |
+          gitleaks version
+          set +e
+          out=$(gitleaks git . -c .gitleaks.toml --no-banner --redact=80 2>&1); rc=$?
+          set -e
+          printf '%s\n' "$out"
+          [ "$rc" -eq 0 ] || exit "$rc"
+          # 断言真的扫了全历史:gitleaks 会打 `N commits scanned`,N 远大于 1 才算扫过历史
+          # (仓库 2026-09-02 有 700+ 提交;浅克隆或增量模式下这里会是个位数)。
+          n=$(printf '%s\n' "$out" | grep -oE '[0-9]+ commits scanned' | grep -oE '^[0-9]+' || true)
+          [ "${n:-0}" -gt 100 ] || { echo "gitleaks 只扫了 ${n:-0} 个提交:历史没拉全或命令被改成了增量,门禁失效" >&2; exit 1; }
