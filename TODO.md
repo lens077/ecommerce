@@ -22,7 +22,11 @@
 
 ## 一、全局优先级视图
 
-**未完成合计 157 项，其中 P0 共 18 项**（计数口径：各分类文件顶层 `- [ ]` 复选框实数；
+**未完成合计 158 项，其中 P0 共 18 项**（计数口径：各分类文件顶层 `- [ ]` 复选框实数；
+2026-09-01 新增 1 条可观测 P2「容器级 CFS 限流指标完全缺采」——`nr_throttled`/`throttled_usec`
+是「CPU 利用率低但尾延迟高」的唯一判据，当前无任何组件在采（VMAgent 未部署，otel-node 只有
+`hostmetrics`、无 `kubeletstats`/cAdvisor）；且现有采集恰好只覆盖会骗人的节点级 CPU——
+实测容器 100% 周期被限流时节点仅 9%，同期沉淀 `context/team/cfs-quota-throttling.md`；
 2026-09-02 新增 1 条基础设施 P2「Harbor 爆破封禁挪到 node1」——node2 的 `harbor-auth` jail 检测与封禁动作均正确，但到达 node2 的连接源是 newt 隧道的 `127.0.0.1`，nft 规则永远匹配不到，当前只有审计价值；同日订正 SECURITY-HARDENING.md 里「Harbor 拿不到真实 IP」的错误结论（真实 IP 一直在 `core.log`，只是 nginx `proxy.log` 不记）；
 2026-09-02 新增 1 条鉴权 P0「轮换 public 仓 git 历史泄露的全部凭据」——commit 直接带口令推到了 public 的 GitHub，历史已 filter-repo 重写并强推两远端，同日补 gitleaks 门禁（pre-commit / verify-quick / 两远端 CI），见 evolution-log；
 2026-09-01 新增 1 条基础设施 P2「证书续期后手工同步 PG 与 Redis」——PG/Redis 用的是 Traefik 证书的**拷贝**而非软链，自动续期不传导，用户已决定不做钩子故必须人工执行；
@@ -68,7 +72,7 @@ CES 巡检告警（CronJob 2m + vmalert firing 闭环）、可观测黑盒探活
 
 | 分类 | 对应 TECH.md | 未完成 | P0 |
 |---|---|---:|---:|
-| [统一可观测性体系](docs/todo/统一可观测性体系.md) | §9 | 24 | 2 |
+| [统一可观测性体系](docs/todo/统一可观测性体系.md) | §9 | 25 | 2 |
 | [微服务与交易闭环](docs/todo/微服务与交易闭环.md) | §5 / §4.3 | 23 | 10 |
 | [基础设施与部署模型](docs/todo/基础设施与部署模型.md) | §7 | 20 | 0 |
 | [文档与协作机制](docs/todo/文档与协作机制.md) | —（harness） | 17 | 0 |

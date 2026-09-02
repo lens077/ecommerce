@@ -25,6 +25,7 @@
 | [alerting-signal-hygiene.md](alerting-signal-hygiene.md) | 告警的价值 = 它承载的新信息量：不允许存在「已知但不打算修」的 firing 告警；降噪优先级固定为「修根因 > 调 `repeat_interval` > 改阈值」；探针必须探「功能有没有推进」而不是「进程活着」 | 慢性红的告警把急性事故淹掉（实测：一场 9 小时的事故因此无人发现）/ 靠调阈值让数字变好看，把真问题永久藏起来 / 探针只探进程存活，组件完全不干活也全绿 |
 | [host-watchdog.md](host-watchdog.md) | 黑盒探针结构上探不到的三层（容器进程 / systemd 单元 / 隧道站点与磁盘）必须由主机侧巡检补齐；巡检对象用显式白名单而非全量扫描；告警通道必须跑通故障路径才算验收 | 容器崩溃循环两个月零告警（实测 18238 次）/ 容器 restart policy 是 `no`，退出后永不拉起也无人知 / 全量扫描把停用容器变成常驻误报，毁掉整个通知渠道的可信度 / 只跑正常路径就宣称「告警已接好」 |
 | [cilium-datapath-ops.md](cilium-datapath-ops.md) | Cilium 数据面三条只能实测的事实：ipcache 身份失配会让写好的放行规则静默失效；CES 在 Pod 换 IP 后不跟新（批量重启前先做 CEP/CES 对账）；`bpf-map-dynamic-size-ratio` 按节点内存百分比预分配，且缩容后旧 map 被 cilium-envoy 持有变成孤儿 | 控制面全绿（CEP/标签/CNP Valid）却查不出丢包原因，照应急建议删掉 default-deny 掩盖真因 / 以为 `kubectl top` 里 cilium 的内存是进程占用 / 改完 ratio 以为省下了，其实旧 map 被 reparent 到节点、从 Pod 指标里消失 |
+| [cfs-quota-throttling.md](cfs-quota-throttling.md) | 「CPU 不高但延迟高」的第一判据是 cgroup `cpu.stat` 的 `nr_throttled`/`throttled_usec`，不是 CPU 使用率：`limits.cpu` 是每 100ms 的预算，烧完即冻结到下个周期；容器里 `nproc` 返回宿主机核数，Go 1.25+ 虽自带容器感知但 `GOMAXPROCS` 下限为 2 | 拿「CPU 才 15%」否定 CPU 不足，方向从一开始就反（被限流时 CPU 必然低）/ 只看均值和 p99 漏掉只体现在 max 的整周期冻结 / 只数限流次数不看 `throttled_usec/nr_throttled`（实测 23 次限流累计冻结 1591ms）/ 按 `nproc` 开线程去烧 0.3 核的配额，每次冻得更久（实测 max 81ms→393ms） |
 
 ## 不属于这一层的
 
