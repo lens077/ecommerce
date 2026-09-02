@@ -8,7 +8,7 @@
 //             浏览器 cookie，所以整套 pkce/tokenStore 仍在为它服务。切换见 P3。
 //
 // 网关同时接受两种凭据（cookie ∥ bearer），所以两条路径可以长期并存、互不影响。
-import React, { createContext, useContext, useState, useEffect } from "react";
+import React, { createContext, useContext, useState, useEffect, useLayoutEffect } from "react";
 import {
   DESKTOP_REDIRECT_URI,
   bffLogout,
@@ -123,7 +123,11 @@ export const AuthProvider: React.FC<{ children: React.ReactNode; router: any }> 
   }, [applyIdentity]);
 
   // 登录态变化时同步快照，供上面那个 ref 的读取方使用。
-  useEffect(() => {
+  // 必须是 useLayoutEffect：它在 commit 阶段同步执行，快照与 DOM 同一时刻落地。
+  // 用 useEffect 时快照会落后 DOM 一个 passive-effect tick——GitLab 慢 runner 上实测
+  // （2026-09-02 pipeline #77）：DOM 已渲染 isAuthenticated=true，此时到达的 401 读到
+  // ref=false，被当成匿名请求吞掉，不跳登录。
+  useLayoutEffect(() => {
     isAuthenticatedRef.current = isAuthenticated;
   }, [isAuthenticated]);
 
