@@ -22,7 +22,8 @@
 
 ## 一、全局优先级视图
 
-**未完成合计 156 项，其中 P0 共 18 项**（计数口径：各分类文件顶层 `- [ ]` 复选框实数；
+**未完成合计 157 项，其中 P0 共 18 项**（计数口径：各分类文件顶层 `- [ ]` 复选框实数；
+2026-09-02 新增 1 条基础设施 P2「Harbor 爆破封禁挪到 node1」——node2 的 `harbor-auth` jail 检测与封禁动作均正确，但到达 node2 的连接源是 newt 隧道的 `127.0.0.1`，nft 规则永远匹配不到，当前只有审计价值；同日订正 SECURITY-HARDENING.md 里「Harbor 拿不到真实 IP」的错误结论（真实 IP 一直在 `core.log`，只是 nginx `proxy.log` 不记）；
 2026-09-02 新增 1 条鉴权 P0「轮换 public 仓 git 历史泄露的全部凭据」——commit 直接带口令推到了 public 的 GitHub，历史已 filter-repo 重写并强推两远端，同日补 gitleaks 门禁（pre-commit / verify-quick / 两远端 CI），见 evolution-log；
 2026-09-01 新增 1 条基础设施 P2「证书续期后手工同步 PG 与 Redis」——PG/Redis 用的是 Traefik 证书的**拷贝**而非软链，自动续期不传导，用户已决定不做钩子故必须人工执行；
 2026-09-01 关闭 1 条基础设施 P2「casdoor 8000 明文端点」——**复测判定为误报**：原证据只探了 `localhost`，从 node2/node3 两个外部位置实测 8000 超时、443 正常，公网一律经 Pangolin 终止 TLS；
@@ -69,7 +70,7 @@ CES 巡检告警（CronJob 2m + vmalert firing 闭环）、可观测黑盒探活
 |---|---|---:|---:|
 | [统一可观测性体系](docs/todo/统一可观测性体系.md) | §9 | 24 | 2 |
 | [微服务与交易闭环](docs/todo/微服务与交易闭环.md) | §5 / §4.3 | 23 | 10 |
-| [基础设施与部署模型](docs/todo/基础设施与部署模型.md) | §7 | 19 | 0 |
+| [基础设施与部署模型](docs/todo/基础设施与部署模型.md) | §7 | 20 | 0 |
 | [文档与协作机制](docs/todo/文档与协作机制.md) | —（harness） | 17 | 0 |
 | [前端技术栈与工程化](docs/todo/前端技术栈与工程化.md) | §11 | 16 | 0 |
 | [零信任鉴权与 Session](docs/todo/零信任鉴权与Session.md) | §8 | 16 | 4 |
