@@ -1,8 +1,30 @@
-# 暂存文件的格式化 + lint（规则在 frontend/vite.config.ts 的 staged 块）。
+# 1) 凭据门禁：gitleaks 扫暂存区，红了拒绝提交。
+#
+# 为什么放在这里而不是只在 verify-quick：2026-09-02 事故——public 仓库历史里 30 个提交带着
+# PG root 弱口令 / Casdoor client_secret / 支付 RSA 私钥，靠人和 agent「记得跑 verify-quick」
+# 拦不住，只有 commit 路径上的硬门禁能拦。规则与 allowlist 在仓库根 .gitleaks.toml。
+#
+# 工具缺失一律红，不降级：一道「没装就静默放行」的门禁等于没有（见 evolution-log 里
+# verify-freeze 的教训）。装法：brew install gitleaks / https://github.com/gitleaks/gitleaks#installing
+# 确有需要绕过时（例如提交的正是 allowlist 修正）用 `SKIP_GITLEAKS=1 git commit`，并在提交信息里说明。
+root=$(git rev-parse --show-toplevel)
+if [ "${SKIP_GITLEAKS-}" != "1" ]; then
+  if ! command -v gitleaks >/dev/null 2>&1; then
+    echo "pre-commit: 缺少 gitleaks，凭据门禁无法执行，拒绝提交（brew install gitleaks）" >&2
+    exit 1
+  fi
+  if ! gitleaks git "$root" -c "$root/.gitleaks.toml" --pre-commit --staged --no-banner --redact=80; then
+    echo "pre-commit: 暂存区疑似含凭据，提交被拒。真凭据 → 移到 Config Center / 本地 ignored 配置；" >&2
+    echo "            确认误报 → 在 .gitleaks.toml 加 allowlist 并写清理由，不要用 SKIP_GITLEAKS 混过去。" >&2
+    exit 1
+  fi
+fi
+
+# 2) 暂存文件的格式化 + lint（规则在 frontend/vite.config.ts 的 staged 块）。
 #
 # 必须先 cd frontend：_/h 不做 cd，钩子的 cwd 是仓库根，而 vp staged 只从
 # cwd 找 vite.config.ts，在仓库根找不到就直接报
 # 「No "staged" config found in vite.config.ts」并让整个提交失败。
 # cd 之后 lint-staged 只挑 frontend/ 下的暂存文件，后端 Go 的改动不会被它碰。
-cd frontend || exit 0
+cd "$root/frontend" || exit 0
 vp staged

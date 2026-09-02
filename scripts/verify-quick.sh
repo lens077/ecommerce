@@ -39,7 +39,12 @@ run_frontend() {
 }
 
 run_secrets() {
-  python3 scripts/verify-secrets.py
+  # 两层:verify-secrets.py 扫工作树(含未跟踪文件,提交前最后一眼);
+  # gitleaks 扫全部已提交历史(规则在 .gitleaks.toml,与 pre-commit / CI 同一份)。
+  # gitleaks 缺失直接红——2026-09-02 事故后不再允许「没装就跳过」的假门禁。
+  python3 scripts/verify-secrets.py || return 1
+  command -v gitleaks >/dev/null 2>&1 || { echo "verify-quick: 缺少 gitleaks(brew install gitleaks)" >&2; return 1; }
+  gitleaks git . -c .gitleaks.toml --no-banner --redact=80
 }
 
 be_pid="" fe_pid="" secrets_pid=""

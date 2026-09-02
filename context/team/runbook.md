@@ -24,6 +24,8 @@ description: 给所有 AI 编码工具(尤其 Codex)的可执行命令与验收�
 - **写/改 proto 前先读 `docs/design/` 对应服务目录**(入口 `docs/design/README.md`),为每个字段推断校验约束(见 `proto-design.md`)。
 - **凭据不入库**:密码/密钥只存在 **Config Center 和本地环境**(K8s 里经 Secret 挂载),
   仓库里只写主机名和端口。**Consul KV 已退役,不再存任何配置**(AGENTS.md 硬规则 #4)。
+  门禁:pre-commit 跑 `gitleaks --staged`(规则 `.gitleaks.toml`,缺工具即红),`verify-quick.sh` 与两远端 CI 扫全历史;
+  被拦时真凭据挪走、误报加 allowlist 并写理由,不要 `SKIP_GITLEAKS=1` 混过去(2026-09-02 事故见 evolution-log)。
 - **不可逆动作(commit/push/合入/deploy/仓外写删)**:授权判定的全文**只写在
   [AGENTS.md](../../AGENTS.md) 硬规则 #6 一处**,本文件不再保留副本(2026-08-21 消重,
   两处并存时已出现措辞漂移风险)。一句话版:用户明确要求 = 授权,直接执行不二次确认;

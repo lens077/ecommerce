@@ -30,6 +30,16 @@ OpenFGA 关系授权的零信任体系。
 
 ## P0
 
+- [ ] **轮换 public 仓 git 历史泄露的全部凭据（2026-09-02 发现）**：`github.com/lens077/ecommerce`
+      是 public，历史 30 个提交含 PG root 口令 `msd…`（6 位弱口令）（node1 `:52288`，已于 09-01 轮换——但
+      Casdoor 库同实例，确认新口令未复用）、Casdoor `client_secret` ×3（`baab…`/`5da8…`/`329d…`）、
+      两个随机口令（`XwjL…`/`oGub…`，对应服务待用户确认）、payment 的支付 RSA `private_key`
+      与 `secret`、Consul TLS EC 私钥（KV 快照内）、Debezium `debezium_user` 口令。历史已用
+      filter-repo 三轮重写并强推两远端（证据见 evolution-log 2026-09-02），**但 GitHub 悬空对象
+      经 SHA 仍可读，必须按已泄露处理**：全部轮换（**2026-09-02 用户确认已完成**）+ 向 GitHub Support 申请清理（未做）
+      （https://support.github.com/request → Remove sensitive data）。门禁已补
+      （`.gitleaks.toml` + pre-commit + 两远端 CI），防再犯不防已泄。
+
 - [ ] **网关部署补 `redis-tls-ca` Secret**：部署已挂载但标了 `optional: true`
       （缺了只退化成仅进程内缓存，不会让网关起不来）。
       **2026-08-29 全集群实测确认该 Secret 确实不存在**（含 `redis` 字样的 Secret 只有 `argocd/argocd-redis`）。

@@ -48,6 +48,19 @@ context-gate:
     # 门禁的元评测:注错断言门禁还会红,防恒绿失效(与 GitHub 侧同款)。
     - bash ./scripts/verify-context-canary.sh
 
+# 凭据门禁:gitleaks 扫全部历史,与 GitHub context-gate.yml 的 gitleaks job 等价。
+# 触发事故 2026-09-02(见 evolution-log):public 仓历史里有 PG root 弱口令等,已重写强推。
+# GIT_DEPTH: 0 必须——GitLab 默认浅克隆(20),浅历史扫描等于没扫。
+gitleaks:
+  stage: test
+  image:
+    name: zricethezav/gitleaks:v8.30.1
+    entrypoint: [""]
+  variables:
+    GIT_DEPTH: 0
+  script:
+    - gitleaks git . -c .gitleaks.toml --no-banner --redact=80
+
 # 后端门禁 = 本地锚点 `go build && go vet && go test -short ./...` 原样搬进 CI。
 # `./...` 已含 structcheck(矩阵↔目录↔网关↔helm 四处对齐),不必单列。
 # 不跑 buf breaking / lint-baseline:前者在 GitHub 发布链按 tag 区间比对,后者当前基线为空、
