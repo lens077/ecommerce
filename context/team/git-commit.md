@@ -267,3 +267,21 @@ git push github <X.Y.Z>      # ⚠️ 必须推 github 远端——Actions 在�
 四条纪律：**tag 不可变**（打错就打新号，不 move 不复用）；tag 指向的提交必须已在
 main 上；**agent 需要触发 CI 验证或部署时，一律走打 tag**，并按上表选择递增位；
 镜像会同时带 `X.Y.Z` 与 `sha-<7>` 双标，`helm/values.yaml` 回写用版本号。
+
+### 两个远端的 CI 职责切分（2026-09-02 起）
+
+| 远端 | 触发 | 跑什么 | 不跑什么 |
+|---|---|---|---|
+| origin（GitLab，`.gitlab-ci.yml`） | 每次分支 push / MR | `context-gate` + 本地锚点原样搬进去的 `backend-gate`（go build/vet/test -short）与 `frontend-gate`（`pnpm ready`） | 任何产制品、推镜像、回写清单的动作；**tag 不建流水线** |
+| github（GitHub Actions） | 仅发布 tag | 多架构镜像 → Trivy → Cosign → SBOM → 清单回写，外加 supply-chain / deploy-consistency | 分支 push 的代码门禁（`context-gate.yml` 是唯一 per-push 例外） |
+
+为什么不把发布链搬去 GitLab：Cosign keyless 的签名身份是 Fulcio 证书里的 GitHub
+workflow ref（`service-ci.yml` 的 `CERT_IDENTITY_RE` 硬编码了它）、Trivy SARIF 的上报目的地是
+GitHub Code scanning、buildx 缓存走 `type=gha`、public 仓在标准 runner 上零计费——这四样
+都绑在 GitHub，搬家是纯成本换不到新能力。反过来 GitLab 是日常 push 的去处，却曾只有
+`context-gate` 一道门，`pnpm ready` 在任何 CI 里都不跑；把不需要凭据的门禁放 GitLab、
+把需要凭据和身份的发布留 GitHub，两边没有重叠的逻辑，就不会漂移。
+
+**硬约束：同一个发布 tag 只允许一边写镜像仓与回写清单。** 要在 GitLab 侧加任何构建，
+必须保持「不推、不回写」（等价 GitHub 的 `push-image: false`），否则不可变 tag 会被写两次、
+Cosign 签两次、SBOM 记两个 digest。
