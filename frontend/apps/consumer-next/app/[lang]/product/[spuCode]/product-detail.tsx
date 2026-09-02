@@ -3,6 +3,7 @@
 import { useQuery } from "@connectrpc/connect-query";
 import { useEffect } from "react";
 import { ProductService } from "@/gen/api/product/v1/product_pb";
+import { formatMoney } from "@/lib/money";
 import { PRODUCT_QUERY_STALE_TIME_MS } from "@/lib/product-query";
 
 type Language = "zh" | "en";
@@ -94,15 +95,4 @@ export function ProductDetail({ lang, spuCode }: { lang: Language; spuCode: stri
       </section>
     </main>
   );
-}
-
-function formatMoney(
-  money: { currencyCode: string; units: bigint; nanos: number } | undefined,
-): string {
-  if (!money) {
-    return "—";
-  }
-
-  const fractional = Math.abs(money.nanos).toString().padStart(9, "0").replace(/0+$/, "");
-  return `${money.currencyCode} ${money.units.toString()}${fractional ? `.${fractional}` : ""}`;
 }

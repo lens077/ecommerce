@@ -6,7 +6,8 @@
   "scripts": {
     "dev": "vp dev --port 3003 --mode dev",
     "build": "vp build",
-    "preview": "vp preview"
+    "preview": "vp preview",
+    "test": "vp test --environment=jsdom --passWithNoTests"
   },
   "dependencies": {
     "@connectrpc/connect": "catalog:",
@@ -28,11 +29,15 @@
   },
   "devDependencies": {
     "@tanstack/router-plugin": "catalog:",
+    "@testing-library/react": "catalog:",
     "@types/react": "catalog:",
     "@types/react-dom": "catalog:",
     "@vitejs/plugin-react": "catalog:",
+    "jsdom": "catalog:",
     "typescript": "catalog:",
     "vite": "catalog:",
-    "vite-plus": "catalog:"
+    "vite-plus": "catalog:",
+    "vitest": "catalog:",
+    "vitest-axe": "catalog:"
   }
 }

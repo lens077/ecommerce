@@ -68,7 +68,11 @@ function DashboardPage() {
 
   return (
     <Box sx={{ maxWidth: 1400, mx: "auto" }}>
-      <Typography variant="h4" sx={{ fontWeight: 700, color: "text.primary", mb: s.lg }}>
+      <Typography
+        variant="h4"
+        component="h1"
+        sx={{ fontWeight: 700, color: "text.primary", mb: s.lg }}
+      >
         {t("dashboard.title")}
       </Typography>
 
@@ -93,6 +97,7 @@ function DashboardPage() {
                   </Typography>
                   <Typography
                     variant="h4"
+                    component="p"
                     sx={{ fontWeight: 700, color: "text.primary", mb: s.xs }}
                   >
                     {stat.value}
@@ -138,7 +143,11 @@ function DashboardPage() {
       {/* 近期订单 */}
       <Card>
         <CardContent sx={{ p: s.md }}>
-          <Typography variant="h6" sx={{ fontWeight: 600, color: "text.primary", mb: s.md }}>
+          <Typography
+            variant="h6"
+            component="h2"
+            sx={{ fontWeight: 600, color: "text.primary", mb: s.md }}
+          >
             {t("dashboard.recentOrders")}
           </Typography>
           <Box sx={{ overflowX: "auto" }}>

@@ -64,12 +64,16 @@ function ReportsPage() {
     <AdminLayout>
       <Box sx={{ maxWidth: 1400 }}>
         <Box sx={{ display: "flex", justifyContent: "space-between", alignItems: "center", mb: 4 }}>
-          <Typography variant="h4" sx={{ fontWeight: 700, color: "text.primary" }}>
+          <Typography variant="h4" component="h1" sx={{ fontWeight: 700, color: "text.primary" }}>
             {t("reports.title")}
           </Typography>
           <FormControl size="small" sx={{ minWidth: 150 }}>
-            <InputLabel>{t("timeRange.label")}</InputLabel>
-            <Select label={t("timeRange.label")} defaultValue="last7d">
+            <InputLabel id="reports-time-range-label">{t("timeRange.label")}</InputLabel>
+            <Select
+              labelId="reports-time-range-label"
+              label={t("timeRange.label")}
+              defaultValue="last7d"
+            >
               {TIME_RANGES.map((value) => (
                 <MenuItem key={value} value={value}>
                   {t(`timeRange.${value}`)}
@@ -113,7 +117,11 @@ function ReportsPage() {
                       </Typography>
                     </Box>
                   </Box>
-                  <Typography variant="h4" sx={{ fontWeight: 700, color: "text.primary", mb: 0.5 }}>
+                  <Typography
+                    variant="h4"
+                    component="p"
+                    sx={{ fontWeight: 700, color: "text.primary", mb: 0.5 }}
+                  >
                     {stat.value}
                   </Typography>
                   <Typography variant="body2" sx={{ color: "text.secondary" }}>
@@ -130,7 +138,11 @@ function ReportsPage() {
           <Grid size={{ xs: 12, lg: 8 }}>
             <Card sx={{ height: 400 }}>
               <CardContent sx={{ p: 3 }}>
-                <Typography variant="h6" sx={{ fontWeight: 600, color: "text.primary", mb: 2 }}>
+                <Typography
+                  variant="h6"
+                  component="h2"
+                  sx={{ fontWeight: 600, color: "text.primary", mb: 2 }}
+                >
                   {t("reports.salesTrend")}
                 </Typography>
                 <Box
@@ -153,7 +165,11 @@ function ReportsPage() {
           <Grid size={{ xs: 12, lg: 4 }}>
             <Card sx={{ height: 400 }}>
               <CardContent sx={{ p: 3 }}>
-                <Typography variant="h6" sx={{ fontWeight: 600, color: "text.primary", mb: 2 }}>
+                <Typography
+                  variant="h6"
+                  component="h2"
+                  sx={{ fontWeight: 600, color: "text.primary", mb: 2 }}
+                >
                   {t("reports.categoryShare")}
                 </Typography>
                 <Box

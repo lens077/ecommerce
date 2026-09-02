@@ -123,7 +123,7 @@ function OrdersPage() {
     <Box sx={{ maxWidth: 1400, mx: "auto" }}>
       {/* 页面标题 */}
       <Box sx={{ display: "flex", justifyContent: "space-between", alignItems: "center", mb: 3 }}>
-        <Typography variant="h4" sx={{ fontWeight: 700, color: "text.primary" }}>
+        <Typography variant="h4" component="h1" sx={{ fontWeight: 700, color: "text.primary" }}>
           {t("orders.title")}
         </Typography>
         <Button
@@ -157,6 +157,8 @@ function OrdersPage() {
               <Select
                 value={statusFilter}
                 onChange={(e) => setStatusFilter(e.target.value)}
+                // 无可见 label 的 Select 要给可及名称，否则读屏只念「组合框」
+                inputProps={{ "aria-label": t("a11y.statusFilter") }}
                 sx={{ borderRadius: 5 }}
               >
                 <MenuItem value="all">{t("orders.filterAll")}</MenuItem>
@@ -248,11 +250,11 @@ function OrdersPage() {
                     </TableCell>
                     <TableCell>
                       <Box sx={{ display: "flex", gap: 0.5 }}>
-                        <IconButton size="small">
+                        <IconButton size="small" aria-label={t("a11y.view")}>
                           <Eye size={16} />
                         </IconButton>
                         {order.status === "pending" && (
-                          <IconButton size="small" color="primary">
+                          <IconButton size="small" color="primary" aria-label={t("a11y.ship")}>
                             <Truck size={16} />
                           </IconButton>
                         )}

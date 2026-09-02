@@ -72,6 +72,7 @@ export function AdminSidebar() {
       >
         <Typography
           variant="h6"
+          component="p"
           sx={{
             fontWeight: 700,
             color: tokens.colors.text.primary,

@@ -56,6 +56,7 @@ export function MerchantHeader() {
         {/* 通知 */}
         <Box
           component="button"
+          aria-label={t("a11y.notifications")}
           sx={{
             position: "relative",
             display: "flex",

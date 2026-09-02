@@ -347,7 +347,7 @@ function ReportsPage() {
   return (
     <Box sx={{ maxWidth: 1400, mx: "auto" }}>
       <Box sx={{ display: "flex", justifyContent: "space-between", alignItems: "center", mb: 4 }}>
-        <Typography variant="h4" sx={{ fontWeight: 700, color: "text.primary" }}>
+        <Typography variant="h4" component="h1" sx={{ fontWeight: 700, color: "text.primary" }}>
           {t("reports.title")}
         </Typography>
         <FormControl size="small" sx={{ minWidth: 150 }}>
@@ -401,7 +401,11 @@ function ReportsPage() {
                   </Typography>
                 </Box>
               </Box>
-              <Typography variant="h4" sx={{ fontWeight: 700, color: "text.primary", mb: 0.5 }}>
+              <Typography
+                variant="h4"
+                component="p"
+                sx={{ fontWeight: 700, color: "text.primary", mb: 0.5 }}
+              >
                 {stat.value}
               </Typography>
               <Typography variant="body2" sx={{ color: "text.secondary" }}>
@@ -419,7 +423,11 @@ function ReportsPage() {
           {/* 销售趋势 */}
           <Card sx={{ height: 400 }}>
             <CardContent sx={{ p: 3, height: "100%", display: "flex", flexDirection: "column" }}>
-              <Typography variant="h6" sx={{ fontWeight: 600, color: "text.primary", mb: 2 }}>
+              <Typography
+                variant="h6"
+                component="h2"
+                sx={{ fontWeight: 600, color: "text.primary", mb: 2 }}
+              >
                 {t("reports.chart.salesTrend")}
               </Typography>
               <Box sx={{ flex: 1 }}>
@@ -431,7 +439,11 @@ function ReportsPage() {
           {/* 类目占比 */}
           <Card sx={{ height: 400 }}>
             <CardContent sx={{ p: 3, height: "100%", display: "flex", flexDirection: "column" }}>
-              <Typography variant="h6" sx={{ fontWeight: 600, color: "text.primary", mb: 2 }}>
+              <Typography
+                variant="h6"
+                component="h2"
+                sx={{ fontWeight: 600, color: "text.primary", mb: 2 }}
+              >
                 {t("reports.chart.categoryShare")}
               </Typography>
               <Box sx={{ flex: 1 }}>
@@ -444,7 +456,11 @@ function ReportsPage() {
         {/* 近7天订单 */}
         <Card sx={{ height: 350 }}>
           <CardContent sx={{ p: 3, height: "100%", display: "flex", flexDirection: "column" }}>
-            <Typography variant="h6" sx={{ fontWeight: 600, color: "text.primary", mb: 2 }}>
+            <Typography
+              variant="h6"
+              component="h2"
+              sx={{ fontWeight: 600, color: "text.primary", mb: 2 }}
+            >
               {t("reports.chart.weekOrders")}
             </Typography>
             <Box sx={{ flex: 1 }}>

@@ -113,7 +113,11 @@ function MerchantsPage() {
   return (
     <AdminLayout>
       <Box sx={{ maxWidth: 1400 }}>
-        <Typography variant="h4" sx={{ fontWeight: 700, color: "text.primary", mb: 4 }}>
+        <Typography
+          variant="h4"
+          component="h1"
+          sx={{ fontWeight: 700, color: "text.primary", mb: 4 }}
+        >
           {t("merchants.title")}
         </Typography>
 

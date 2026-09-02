@@ -1,6 +1,8 @@
 import type { Metadata } from "next";
 import { notFound } from "next/navigation";
 import { dehydrate, HydrationBoundary, QueryClient } from "@tanstack/react-query";
+import type { GetProductDetailResponse } from "@/gen/api/product/v1/product_pb";
+import { buildProductJsonLd, serializeJsonLd } from "@/lib/product-jsonld";
 import { productDetailQueryOptions } from "@/lib/product-query";
 import { createAnonymousServerTransport } from "@/lib/server-transport";
 import { PersonalizedPanel } from "./personalized-panel";
@@ -19,24 +21,29 @@ export function generateStaticParams() {
   return [];
 }
 
+/** canonical 与 JSON-LD 的 url 必须同源同算——搜索引擎会拿两者互相校验。 */
+function productUrl(lang: string, spuCode: string): string {
+  const publicOrigin = (process.env.CONSUMER_NEXT_PUBLIC_URL ?? "http://localhost:3004").replace(
+    /\/$/,
+    "",
+  );
+  return `${publicOrigin}/${lang}/product/${encodeURIComponent(spuCode)}`;
+}
+
 export async function generateMetadata({
   params,
 }: {
   params: Promise<PageParams>;
 }): Promise<Metadata> {
   const { lang, spuCode } = await params;
-  const publicOrigin = (process.env.CONSUMER_NEXT_PUBLIC_URL ?? "http://localhost:3004").replace(
-    /\/$/,
-    "",
-  );
 
   return {
     title: `${spuCode} (${lang})`,
     alternates: {
-      canonical: `${publicOrigin}/${lang}/product/${encodeURIComponent(spuCode)}`,
+      canonical: productUrl(lang, spuCode),
       languages: {
-        zh: `${publicOrigin}/zh/product/${encodeURIComponent(spuCode)}`,
-        en: `${publicOrigin}/en/product/${encodeURIComponent(spuCode)}`,
+        zh: productUrl("zh", spuCode),
+        en: productUrl("en", spuCode),
       },
     },
   };
@@ -68,8 +75,22 @@ export default async function ProductPage({ params }: { params: Promise<PagePara
     );
   }
 
+  // JSON-LD 在服务端从同一份查询数据生成：爬虫拿到的首屏 HTML 里就有，不依赖水合。
+  // 数据源与 ProductDetail 展示的完全同一份（dehydrate 的就是它），价格同源见 lib/money.ts。
+  const product = queryClient.getQueryData<GetProductDetailResponse>(
+    queryOptions.queryKey,
+  )?.productDetail;
+  const jsonLd = product ? buildProductJsonLd({ product, url: productUrl(lang, spuCode) }) : null;
+
   return (
     <HydrationBoundary state={dehydrate(queryClient)}>
+      {jsonLd && (
+        <script
+          type="application/ld+json"
+          // 已由 serializeJsonLd 转义 `<`，不会提前闭合 script
+          dangerouslySetInnerHTML={{ __html: serializeJsonLd(jsonLd) }}
+        />
+      )}
       <ProductDetail lang={lang} spuCode={spuCode} />
       <PersonalizedPanel lang={lang} spuCode={spuCode} />
     </HydrationBoundary>
