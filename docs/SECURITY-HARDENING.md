@@ -84,7 +84,7 @@ banaction_allports = nftables-allports
 allowipv6          = yes
 
 ignoreip = 127.0.0.1/8 ::1 10.0.0.0/8 172.16.0.0/12 192.168.0.0/16 \
-           <operator-egress-cidr> node1 node2 node3
+           <operator-egress-cidr> node1 node2 <node3-egress-cidr>
 
 bantime           = 1h
 findtime          = 10m
@@ -105,6 +105,13 @@ loglevel   = INFO
 - **`ignoreip` 含 `<operator-egress-cidr>`**：运维动态家宽段（从 node2 成功登录记录提取）。
   三台 node 互相加白，因为 node3 经 node1 的 Pangolin 隧道通信。
   `172.16.0.0/12` 是 Docker 网桥段，防止误封容器互访。
+- **node3 写 `<node3-egress-cidr>` 而不是单个 IP**〔2026-09-02 修正〕：node3 在 NAT 后
+  （内网 `10.10.21.172`），**SSH 入站是 `.229`，出站 egress 是 `.226`**，两个地址不同。
+  原来只白名单了 `.229`（`/etc/hosts` 里那个），结果 node3 作为客户端去连 Harbor 时
+  以 `.226` 出现，实测被 `harbor-auth` 封了——node3 上跑着 Gatus 探针与 CDC，
+  被封等于探针失明。`/29` 同时覆盖两者且只放 8 个地址。
+  **判据**：白名单一台 NAT 后的机器，要查它的 egress（`curl ifconfig.me`），
+  不能只抄 `/etc/hosts` 里的入站地址。
 - **`dbpurgeage = 10d` > 默认 1d**：递增封禁依赖持久化计数，默认值会把长期封禁记录清掉。
 
 ### `/etc/fail2ban/jail.d/10-sshd.local`（两台相同）
@@ -172,23 +179,121 @@ for ip in ['<operator-egress-ip-a>','<operator-egress-ip-b>','203.0.113.99']:
 > 本次验证时手工 `fail2ban-client set sshd banip <自己的 IP>` **确实成功封禁了自己**
 > （已立即解封，nft set 已清空）。自动路径安全，但手工封禁时务必先确认 IP。
 
-## 有意**不**部署的 jail —— 反向代理会导致全站自伤
+## Web 服务的 jail：哪些能做、哪些不能、为什么
 
-上一轮计划里的 Vaultwarden / Casdoor / Harbor jail **经实测后放弃**，理由是实测证据推翻了假设：
+上一轮计划里的 Vaultwarden / Casdoor / Harbor jail 经实测逐个判定。
+**Harbor 的结论在 2026-09-02 被复测推翻**（见下），其余维持。
 
-| 计划 jail | 实测发现（2026-09-01） | 结论 |
+| jail | 实测发现 | 结论 |
 |---|---|---|
-| `vaultwarden` | 全量日志中 `Username or password is incorrect` **0 条** | 它在 Pangolin SSO 之后，爆破打不到自己的登录表单，jail 封不到任何东西 |
-| `harbor-auth`（core.log） | 55 条认证失败中**只有 2 条带 `client IP`**，其余 53 条是不含 IP 的 `UserLogin` 形式 | 可封率 ~4%，收益极低 |
-| `harbor`（proxy.log） | 401/403 共 276 条，但源 IP 全是 **`172.18.0.1`**（Docker 网桥网关） | **绝对不能封**——会把反向代理自己封掉，Harbor 整体下线 |
-| Traefik 通用 jail | Traefik 未配置 `accessLog`，`logs/` 目录为空 | 无日志可读，需先开 accessLog 才谈得上 |
+| `vaultwarden` | 全量日志中 `Username or password is incorrect` **0 条**（2026-09-01） | 它在 Pangolin SSO 之后，爆破打不到自己的登录表单，jail 封不到任何东西。**不部署** |
+| `harbor`（读 nginx `proxy.log`） | 源 IP 全是 **`172.18.0.1`**（Docker 网桥网关） | **绝对不能按这份日志封**——会把反向代理自己封掉，Harbor 整体下线。**不部署** |
+| `harbor-auth`（读 `core.log`） | 真实 IP **一直都在**，且**不可伪造**（2026-09-02 复测） | **已部署**，见下节；但封禁在 node2 上**打不到人** |
+| Traefik 通用 jail | Traefik 只配了 `log`（自身日志），没配 `accessLog` | 无 per-request 日志可读 |
 
-这正是「反向代理后面拿不到真实 IP 就会自伤」的具体实例：**在 node2 上按 proxy.log 配
-jail，等于给自己写了一条 Harbor 下线开关。**
+### Harbor：真实 IP 透传本来就是通的，上一版结论看错了地方
 
-要让这些 jail 有意义，前置条件是先把真实 IP 透传打通（Traefik 开 `accessLog` +
-Harbor nginx 配 `set_real_ip_from` / `real_ip_header`），**并且验证日志里不再是 `172.18.x.x`**，
-然后才谈 filter。在那之前部署 = 制造事故。
+2026-09-01 那版写「Harbor 拿不到真实 IP，配 jail 等于自伤」，**是错的**。
+错因是只看了 nginx 的 `proxy.log`——它的 `log_format` 里确实没有 `$http_x_forwarded_for`
+字段，所以只记 `$remote_addr` = 网桥 IP。但链路本身是完整的：
+
+```
+Pangolin 设 X-Forwarded-For
+  → Harbor nginx 用 $proxy_add_x_forwarded_for 转发（配置里本来就有）
+    → harbor-core 解析并记进 core.log 的 client IP 字段
+```
+
+`core.log` 实测有两种形态，**第一个 IP 都是真实客户端**：
+
+```
+client IP="<direct-client-ip>"                 直连/单跳
+client IP="<node3-egress-ip>, 172.18.0.1"    经 Pangolin → nginx，网桥在后
+```
+
+**伪造测试过不了**：从外部发 `X-Forwarded-For: 192.0.2.9`，日志里 `192.0.2.9` 出现 **0 次**，
+记的仍是真实源。Pangolin 是**覆盖**而非追加 XFF——这是能拿第一个 IP 做封禁依据的前提。
+若将来 Harbor 不再经 Pangolin 直接暴露，这个前提失效，jail 必须停用。
+
+### `harbor-auth` 只覆盖 API 路径，不覆盖网页表单
+
+上一版写「55 条失败只有 2 条带 IP，可封率 4%」，数字对、解读错。两类日志来自**不同的认证入口**：
+
+| 来源 | 日志形态 | 带 IP？ |
+|---|---|---|
+| `basic_auth.go`——API / `docker login` / Helm | `client IP="..." ... failed to authenticate user` | **是** |
+| `base.go UserLogin`——网页登录表单 | `Error occurred in UserLogin: ...` | 否 |
+
+所以 jail 覆盖的是 **API 路径**，网页表单的失败它看不见。这不是缺陷：
+撞库脚本走的正是 API/basic auth，而网页表单在 Pangolin SSO 之后本就打不到。
+
+### 部署与验证（实测 2026-09-02）
+
+`/etc/fail2ban/filter.d/harbor-auth.local`：
+
+```ini
+[Definition]
+failregex = ^.*\[ERROR\].*client IP="<HOST>(?:,[^"]*)?".*failed to authenticate user
+ignoreregex =
+datepattern = ^%%b %%d %%H:%%M:%%S
+```
+
+`(?:,[^"]*)?` 吃掉逗号后的网桥 IP，`<HOST>` 只捕获第一个。
+
+`/etc/fail2ban/jail.d/20-harbor.local`：
+
+```ini
+[harbor-auth]
+backend  = polling
+enabled  = true
+filter   = harbor-auth
+logpath  = /var/log/harbor/core.log
+port     = 41311,49600,http,https
+maxretry = 5
+findtime = 10m
+bantime  = 24h
+```
+
+从 node3 打 6 次错误认证：jail 正确封禁 `<node3-egress-ip>`（node3 真实 IP），
+nft 里 `172.18.0.1` 出现 **0 次**，Harbor 对其他客户端全程 200。**没有封到反向代理自己。**
+
+#### ⚠️ 坑：`[DEFAULT]` 的 `backend = systemd` 会让 `logpath` 被静默忽略
+
+第一次上线时 jail 显示 `Total failed: 0`，看起来像 filter 没匹配。真因是 `00-defaults.local`
+里的 `backend = systemd` 被继承，jail 跑去读 journal，**完全忽略 `logpath`**。
+`fail2ban-client status` 一切正常，极易误判；唯一判据是：
+
+```bash
+fail2ban-client get harbor-auth logpath
+# 坏：No file is currently monitored
+# 好：Current monitored log file(s): /var/log/harbor/core.log
+```
+
+修法是在 jail 里显式写 `backend = polling`。**读文件的 jail 一律要显式覆盖 backend。**
+
+### ⚠️ 检测有效，但封禁在 node2 上打不到人
+
+这是必须如实写下的半成品状态。到达 node2 Harbor 端口的连接源地址是：
+
+```
+127.0.0.1:49600  ←  127.0.0.1:51954     newt 隧道
+```
+
+流量经 node1 的 Pangolin 隧道进来，node2 的防火墙看到的是 **`127.0.0.1`**，
+nft 里那条 `<node3-egress-ip>` 永远匹配不到——实测被封的 node3 仍拿到 **200**。
+
+**当前收益是审计**：`fail2ban-client status harbor-auth` 能给出真实攻击源清单，
+这在之前是完全不知道的。**要真正拦住，封禁必须放在流量终止的 node1**，三个方向：
+
+1. **Harbor 内建账号锁定**——`core.log` 里的 `failed_signin_limit` / `failed_signin_frozen_time`
+   字段说明它自带；按账号锁比按 IP 封更对症（分布式撞库换 IP 不换账号），且不受隧道影响。**优先查这条**
+2. Traefik 开 `accessLog`（当前只有 `log`），在 node1 跑 fail2ban 读它——通用，但要动 Pangolin 配置
+3. Badger 插件（`github.com/fosrl/badger` 已装）可能自带限流/封禁，查文档
+
+> **可复用的判据**：反向代理后面配 jail，要分开验三件事——
+> 日志里的 IP 是不是真实源（看应用日志，不要看代理的 access log）、
+> 能不能伪造（从外部塞一个假 XFF 看它进不进日志）、
+> **封了之后流量是不是真的从那个 IP 来的**（看 `ss` 的 peer address）。
+> 本次前两件过了，第三件没过——隧道把源地址换成了回环。
 
 ## 仍未关闭的高危项（fail2ban 解决不了）
 
