@@ -38,7 +38,7 @@ spec:
         fsGroupChangePolicy: OnRootMismatch
       containers:
         - name: ecommerce-payment
-          image: ccr.ccs.tencentyun.com/sumery/payment:dev
+          image: ccr.ccs.tencentyun.com/sumery/payment:sha-c364128@sha256:50b652ba2a715fa5bbffd6f05dab303f00949b9dabda79f07824116201be63df
           imagePullPolicy: Always
           env:
             # 关闭应用内的 Log 导出器，只保留 Trace 和 Metric。
@@ -64,9 +64,12 @@ spec:
             # Bootstrap 只从挂载的 Config Center selector 读取。
             - name: CONFIG_SOURCE_FILE
               value: "/etc/ecommerce/config-source/payment.yaml"
-            # Consul 只用于服务注册发现。
+            # Consul 只用于服务注册发现。2026-09-03 起显式关闭:当前不需要服务发现,
+            # 保留接线以备将来启用。注册守护循环(重试/重注册)已在 backend/pkg/registry
+            # 修好并用 search 服务实测(重试 72 次后注册成功),开关翻回 "true" 即可生效——见
+            # context/project/ecommerce/registry/experience/consul-register-once-then-give-up.md
             - name: CONSUL_ENABLED
-              value: "true"
+              value: "false"
             - name: CONSUL_ADDR
               value: "consul-server.consul.svc:8500"
             - name: CONSUL_SCHEME
