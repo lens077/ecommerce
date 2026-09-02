@@ -31,6 +31,7 @@ context/
 | [okteto-inner-loop.md](team/okteto-inner-loop.md) | 内环开发 `okteto up`：什么时候用、**必须先关 ArgoCD 自动同步**、不是测试环境 |
 | [tech-selection.md](team/tech-selection.md) | 「上游已死」类选型结论定稿前必查镜像谱系与社区延续分叉；查到分叉 ≠ 采用 |
 | [alerting-signal-hygiene.md](team/alerting-signal-hygiene.md) | 告警的价值 = 它承载的新信息量，慢性红等于没有告警；降噪优先级「修根因 > 调 `repeat_interval` > 改阈值」；探针要探「功能有没有推进」；含给告警本身加告警的元规则 |
+| [cfs-quota-throttling.md](team/cfs-quota-throttling.md) | 「CPU 才 15% 却延迟飙升」：容器被 CFS 配额按 100ms 周期强制冻结；判据是 `cpu.stat` 的 `nr_throttled`/`throttled_usec` 而非 CPU 使用率；含同机对照实验与 `GOMAXPROCS` 下限为 2 的实测 |
 | [cilium-datapath-ops.md](team/cilium-datapath-ops.md) | Cilium 数据面只能实测的三条：ipcache 身份失配让写好的放行规则静默失效（控制面全绿）；CES 在 Pod 换 IP 后不跟新，批量重启会把潜伏故障引爆；`bpf-map-dynamic-size-ratio` 按节点内存百分比预分配，缩容后旧 map 被 cilium-envoy 持有成孤儿并从 Pod 指标里消失 |
 
 ## 框架工程级 · [context/harness-framework/](harness-framework/INDEX.md)
