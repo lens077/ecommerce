@@ -147,22 +147,23 @@ CES 巡检告警（CronJob 2m + vmalert firing 闭环）、可观测黑盒探活
 | GitOps（ArgoCD） | 🔴 | 零 Application / 零 ApplicationSet，AppProject 仅 `default`（ArgoCD 自身 6 Deployment 已全 1/1）；chart 与实况在资源名/标签/tag 三处不符，**禁止直接开 selfHeal**。断因链与重接前置见 [GitOps 演变全景](docs/reports/2026-08-31-gitops-evolution-overview.md) |
 | 镜像 tag 口径 | 🔴 | 集群实跑 **6 种风格**（`0.2.1`/`sha-*`×2种/`health-*`/`dev-*`/两个 `@sha256`），**无一个 `:dev`**；`helm/values.yaml` 已回写 `1.5.5` 但与实跑无一相符 |
 | VPA | 🟡 | 只装 recommender（无 updater/webhook）；15 个 ecommerce VPA 全 `Off`/`RequestsOnly` 且 `RecommendationProvided=True`；推荐地板已调至 `10m/32Mi`。**config-center 的 2 个是 `InPlace`——死配置** |
-| PDB | 🟡 | 5 个 PDB：consumer-next/gateway/cilium-operator/nats `ALLOWED=1`，仅 consul-server 锁死为 0；**13 个单副本 Deployment 仍无 PDB、无法无损驱逐** |
+| PDB | 🟡 | 4 个 PDB：consumer-next/gateway/cilium-operator `ALLOWED=1`（nats 的 PDB 随 `nats` ns 于 2026-09-03 卸载），仅 consul-server 锁死为 0；**13 个单副本 Deployment 仍无 PDB、无法无损驱逐** |
 | Tetragon | 🟡 | chart 1.7.1，DaemonSet **3/3 Ready**；唯一策略 `ecommerce-service-account-token-access` 为 **audit-only 不阻断**；enforcement 待评估 |
 | 装而未激活组件 | 🟡 | 审计已裁决〔2026-08-31〕**全保留**：KEDA（0 ScaledObject，绑定阶段 3 激活）、Rollouts（0 Rollout，绑定灰度前置）、Kyverno（2 条 Audit 在产出报告，绑定 `verifyImages`）；未按期激活则下轮审计降级卸载 |
 | 未安装 | — | Descheduler、OpenCost、Chaos Mesh（均为条件触发，见 TECH.md B 表） |
 
-### 2. 事件与搜索（运行时 2026-08-29 实测、2026-08-30 复验 TCP；代码态 2026-09 订正）
+### 2. 事件与搜索（运行时 2026-09-03 实测；架构同日重新平衡）
 
 | 组件 | 位置 | 状态 |
 |---|---|---|
-| **Kafka 4.3.1 (KRaft)** | node3，经 node1 隧道 `:30004` | **运行中**，已建 SCRAM 用户与 `ecommerce.events` topic；本仓 `used_by: []` |
-| **Elasticsearch 9.4.5 + IK** | node3 容器（回环 :9200，已开鉴权） | **运行中**；search 与 `tools/search-indexer` 代码已接入，但 Pod 无网络通路，未运行时切流 |
-| Kafka Connect 4.3.0 | node3 | 2 connector RUNNING（Debezium 3.6.1 + ES sink），属独立 CDC 演示链，不拥有策展搜索投影 |
-| NATS JetStream | 集群 `nats` ns | 4/4 Running；存量运行链和新 indexer 代码仍使用，目标 Kafka 尚未接线 |
-| Meilisearch v1.53.1 | 集群 `search` ns | 1/1 Running；仓库 search/indexer 代码已不再引用，仍承载旧运行部署 |
+| **Kafka 4.3.1 (KRaft)** | node3，经 node1 隧道 `:30004` | **运行中**；CDC 线在用（六张业务表 topic），领域事件线零业务接线 |
+| **Elasticsearch 9.4.5 + IK** | node3 容器，经 Pangolin `https://es.apikv.com` | **运行中**；Pod 内可达（匿名 401 / 正确 key 200）；alias `ecommerce_catalog_products` **不存在** |
+| **Kafka Connect 4.3.0** | node3 `cdc-connect` | Debezium 3.6.1 source + ES Sink 两 connector RUNNING；**定稿为两条线共用的生产搬运层**（不再称「演示链」），`EventRouter`/`CloudEventsConverter` 已在类路径 |
+| NATS JetStream | — | **已退役**（2026-09-03）：`nats` ns、indexer/relay Deployment 与代码同日删除 |
+| Meilisearch v1.53.1 | 集群 `search` ns | 1/1 Running，无写入者；回滚窗口后退役 |
+| search Pod | 集群 `ecommerce` ns | **0/1 CrashLoopBackOff**：旧 Meilisearch 镜像解不了 Config Center 已切换的 `search.catalog`（配置先于镜像切换）。搜索当前不可用 |
 
-> Kafka 仍是「已搭建、待业务接线」。Elasticsearch 已完成仓库代码接线，但 Pod→node3 回环监听的网络通路、配置与部署切换尚未完成；**代码接线不等于运行时切流**。
+> **2026-09-03 重新平衡**：搜索投影是 PG 行的派生物，按「没有这个事件业务语义是否丢失」判据归**行投影线（CDC）**，不再是领域事件平台的首个租户。落地为 `products.search_catalog` 表（trigger 维护，迁移 `00005_search_catalog.sql` 已写）→ Debezium → Kafka → Elasticsearch Sink；领域事件线（订单 Saga 副作用）改用 Debezium Outbox Event Router，自写 relay 不再重写成 Kafka 版。同日删除 `tools/search-indexer`、`tools/outbox-relay`、`tools/cdc-demo`、`pkg/outbox/{relay,stream}.go`，`go.mod` 去 `nats-io`。**恢复搜索的剩余步骤**：dev 库执行迁移 → publication + Debezium `table.include.list` 加表 → Sink 加 mapping 与 topic 映射 → pipeline 仓 reindex 建 alias → 发新 search 镜像。教训与判据：`context/project/ecommerce/events/experience/row-projection-vs-domain-event.md`；两条线施工清单：`docs/todo/数据一致性与事件驱动.md`。
 
 ### 3. 后端服务
 
@@ -174,7 +175,7 @@ CES 巡检告警（CronJob 2m + vmalert firing 闭环）、可观测黑盒探活
 | order | 🔴 | `CreateOrder` 假成功、`CompleteOrder` 不落库 |
 | payment | 🟡 | 5 个 RPC 均为显式 `Unimplemented` 桩（**本仓正确示范**）；repo 主体待恢复。⚠️ 新增迁移 `00002_rename_consumer_to_customer`（买家列改名），**存量库需跑 `make migrate-up MIGRATE_SVC=payment`** |
 | inventory | 🔴 | `Reserve` 静默无操作、`ReleaseReserve` panic |
-| search | 🟡 | 代码已通过单 provider `SearchCatalog` 接入 Elasticsearch，`tools/search-indexer` 已改为唯一策展投影写入者；Pod 网络通路与运行时切流未完成，商品事务生产者、聚合筛选、热门词待补 |
+| search | 🔴 | 运行中 Pod CrashLoopBackOff（旧镜像 vs 新 `search.catalog` 配置）。代码经单 provider `SearchCatalog` 只读 ES alias；投影写入改走 `products.search_catalog` + Debezium + ES Sink（迁移已写，未执行、未接 Connect）；alias 未建、新镜像未发。聚合筛选、热门词待补；不再依赖商品事务生产者 |
 | address | 🔴 | 功能齐全**但全线越权** |
 | merchant | 🔴 | 仅 `Submit`/`Get` 可用；两段式入驻已设计未实现 |
 | behavior | 🟡 | `Track`/`Recommend`/`SimilarItems` 已编译通过 |
@@ -303,10 +304,14 @@ CES 巡检告警（CronJob 2m + vmalert firing 闭环）、可观测黑盒探活
    `https://es.apikv.com` + 只读 key），machine token 回读确认，热更新防线实测：
    旧 search Pod 拒收新形态、保留旧配置、仍 Running）。
    ⚠️ **旧 search Pod 现在重启即起不来**（配置已切新形态，旧镜像解不了），
-   尽快发布新 search/indexer 镜像收敛窗口。
-   剩余：发布 search/indexer（indexer 的 K8s Secret `ecommerce-search-indexer`/
-   `ecommerce-search-reindex` 需灌可写 key）、全量重建并做查询差异与增量恢复验收；
-   回滚窗口结束后再退役 Meilisearch
+   尽快收敛窗口。~~发布 indexer~~（✅ 2026-09-03 改判：NATS 链整体退役——
+   `tools/{search-indexer,outbox-relay,cdc-demo}` 与 `pkg/outbox/{relay,stream}.go` 删除，
+   集群 `nats` ns、两个 Deployment、NetworkPolicy/SA/VPA 卸载；两个 K8s Secret
+   `ecommerce-search-indexer`/`ecommerce-search-reindex` 保留，其 `ELASTICSEARCH_API_KEY`
+   是可写 key，供切流前止血建 alias 用）。
+   剩余：`products.search_catalog` 迁移（表 + trigger + 回填，草稿 `00005_search_catalog.sql`）
+   → pipeline 仓加 publication/include list/mapping/Sink 映射 → 建 alias 并做查询差异验收
+   → 发布 search 镜像 → 增量验收；回滚窗口结束后再退役 Meilisearch
 3. GitOps 接回：chart 对齐实况（资源名/标签/tag 三处）→ `helm template` 与集群 diff 为空
    → 重建 Application（**未对齐前禁止 selfHeal**）；统一镜像 tag 口径是前置
 4. PostgreSQL/对象存储备份、PITR、RTO/RPO 与恢复演练（node3 已成唯一数据面，无集群内回滚路径）

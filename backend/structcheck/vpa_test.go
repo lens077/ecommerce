@@ -53,11 +53,9 @@ var ecommerceVPATargets = map[string]vpaTarget{
 	"ecommerce-inventory-deploy": {VPAName: "ecommerce-inventory-vpa", ContainerName: "ecommerce-inventory"},
 	"ecommerce-merchant-deploy":  {VPAName: "ecommerce-merchant-vpa", ContainerName: "ecommerce-merchant"},
 	"ecommerce-order-deploy":     {VPAName: "ecommerce-order-vpa", ContainerName: "ecommerce-order"},
-	"ecommerce-outbox-relay":     {VPAName: "ecommerce-outbox-relay-vpa", ContainerName: "outbox-relay"},
 	"ecommerce-payment-deploy":   {VPAName: "ecommerce-payment-vpa", ContainerName: "ecommerce-payment"},
 	"ecommerce-product-deploy":   {VPAName: "ecommerce-product-vpa", ContainerName: "ecommerce-product"},
 	"ecommerce-search-deploy":    {VPAName: "ecommerce-search-vpa", ContainerName: "ecommerce-search"},
-	"ecommerce-search-indexer":   {VPAName: "ecommerce-search-indexer-vpa", ContainerName: "search-indexer"},
 	"ecommerce-user-deploy":      {VPAName: "ecommerce-user-vpa", ContainerName: "ecommerce-user"},
 }
 

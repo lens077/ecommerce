@@ -65,21 +65,21 @@
 
 ## §1 消息 / 事件流 — Kafka 目标态与 NATS 历史决策
 
-**当前事实**：NATS JetStream、relay 与 search indexer 在运行；node3 有 Kafka/SCRAM/topic，本仓已有未部署的 Kafka producer Adapter、destination delivery migration/relay 与持久增量 cursor，但业务 producer/consumer 仍为零。**目标态**：Kafka 成为持久领域事件主干，先迁可重建搜索投影，再迁交易事件，最后退役 NATS 业务流。
+**当前事实（2026-09-03）**：NATS JetStream、自写 relay 与 search indexer 的代码与集群资源已删除；node3 有 Kafka/SCRAM/topic，且 Kafka Connect + Debezium 3.6.1 + Elasticsearch Sink 作为 CDC 线**已运行并完成验收**（2026-08-28，六张业务表镜像进 Elasticsearch）；本仓业务 producer/consumer 仍为零。**目标态（2026-09-03 重新平衡）**：数据流分两条线——**行投影走 CDC 线**（PostgreSQL 表 → Debezium → Kafka → Elasticsearch Sink，搜索投影在此），**领域事实走 Outbox 线**（业务事务 + outbox → Debezium Outbox Event Router → Kafka → franz-go + Inbox 消费者，订单 Saga 副作用在此）。搜索投影不再是事件平台的首个租户。分类判据与决策经过见 [`context/project/ecommerce/events/experience/row-projection-vs-domain-event.md`](../context/project/ecommerce/events/experience/row-projection-vs-domain-event.md)。
 
 | # | 状态 | 工具 | 语言 | CNCF | 定位 | 结论 |
 |---|---|---|---|---|---|---|
 | 1.0 | ✅ | **Apache Kafka** | Java + Go client | — | 唯一领域事件主干 | **后续决策覆盖（2026-08-28）**：部署于非 K8s 独立集群，不采用 Strimzi；Topic 按限界上下文划分，Partition Key=`aggregate_id`，事件使用 Protobuf + Buf Schema Registry。Outbox Relay 仅在 `acks=all` 后标记 `published`，Inbox 以 `(consumer_group,event_id)` 唯一键幂等，连续失败超过 5 次转投 DLQ 并告警。NATS 仅为存量迁移链路。落地与迁移门禁见 [目标文档](design/platform/production-scale-goal.md) |
 | 1.1 | ❌ | Redpanda | C++ | 收录 | 对抗对照组 | **否决（对抗第 1 轮）**：BSL 源可用非开源；无存量 Kafka 消费者使「协议兼容」价值为零；Seastar 每节点 2GB+ 脚印不适配 6.5G 节点。翻盘三条件（行为数据必须走流式主干 + 需现成 Kafka 连接器生态 + 两年内大流量回放）经对抗验证均不成立 |
-| 1.2 | 🟡 | **NATS / JetStream** | Go | incubating | 迁移期当前实现 | 3-server/R1 ECOMMERCE_EVENTS、relay 和 search indexer 已运行；不再接新领域事件。Kafka 搜索链和交易链验收后目标退役，原主选型论证保留在下节作历史证据 |
+| 1.2 | ❌ | **NATS / JetStream** | Go | incubating | 已退役（2026-09-03） | 曾以 3-server/R1 `ECOMMERCE_EVENTS` 承载 outbox → relay → search indexer 一条链；它只服务过搜索投影，而搜索投影按分线判据属 CDC 线。代码（`go.mod` 的 `nats-io`、relay、indexer）与集群资源（`nats` ns、Deployment、PVC、VPA）已同日删除。原主选型论证保留在下节作历史证据 |
 | 1.3 | ❌ | Fluvio | Rust | 收录 | 前沿流平台 | 否决：无官方 Go 客户端（社区 fluvio-go 15⭐ 停更 2021）；v0.18.1 后一年无 release，母司转向商业产品 |
 | 1.4 | ❌ | Tremor | Rust | sandbox | 事件预处理 | 否决：项目实质死亡（52 周 0 commit，团队解散）；定位由 Vector 与 Numaflow 覆盖 |
 | 1.5 | 🟡 | Numaflow | Go | 收录 | K8s 原生流处理 | 观察：v1.8.3 活跃、JetStream source 同族；Intuit 单厂商 + CRD 控制面对单人过重。**触发条件 = 埋点实时加工（清洗/特征→gorse）需求落地** |
-| 1.6 | ✅ | **CloudEvents** | 规范 | graduated | 领域事件信封 | 采纳维持：binary mode + protobuf event format；事件定义为 proto 进 buf 作事件目录唯一真相源；outbox 表列按 CE 属性设计，幂等键 `(source,id)`，`traceparent` 接 OTel；`type` reverse-DNS 过去式、`id` UUIDv7；金额类型借事件契约一次定死。CDC 流不 CE 化（双轨纪律）。SDK 用官方 `nats_jetstream/v3` |
+| 1.6 | ✅ | **CloudEvents** | 规范 | graduated | 领域事件信封 | 采纳维持：binary mode + protobuf event format；事件定义为 proto 进 buf 作事件目录唯一真相源；outbox 表列按 CE 属性设计，幂等键 `(source,id)`，`traceparent` 接 OTel；`type` reverse-DNS 过去式、`id` UUIDv7；金额类型借事件契约一次定死。CDC 流不 CE 化（双轨纪律）。落地形态改为 Debezium Outbox Event Router 以 Kafka header 承载 CE 属性（binary mode），不再用 `nats_jetstream/v3` SDK |
 | 1.7 | ❌ | Drasi | Rust 为主 | sandbox | 变更即触发 | 否决：无场景且 sandbox 早期；需要「持续查询」场景时再评 |
-| 1.8 | ✅ | 搬运层：**outbox + 自写 relay** | — | ⚠️仓外 | 替 Debezium | 定稿：自写 relay（复用 Config Center pg_notify 全套经验，约 200 行零新组件）＞ pgstream 库嵌入（Apache-2.0 活跃，需 WAL 断点续传时升级）＞ Sequin（**停更实锤**：2026-02 起零推送，❌）。配置式管道如需要用 **Bento（MIT）** 而非许可证混杂的 Redpanda Connect |
+| 1.8 | ✅ | 搬运层：**Debezium（Kafka Connect）** | Java | — | outbox 与行投影的统一搬运层 | **重新平衡（2026-09-03）**：原定稿「outbox + 自写 relay 替 Debezium」的理由是「约 200 行零新组件」，其前提是 08-21 计划中「随后退役 Strimzi/Kafka/Debezium」；08-28 Kafka 定为主干、Kafka Connect + Debezium 成为 CDC 线生产组件后，前提不再成立——自写 relay 反而成了多出来的组件（约 750 行、advisory lock 单活、在 PG 事务与 `FOR UPDATE` 锁内发 broker、sequence id 不等于 commit 序）。改为：行投影用 Debezium 普通表捕获；领域事件用 **Debezium Outbox Event Router SMT**（`EventRouter` 与 `CloudEventsConverter` 已在 node3 部署的 3.6.1 类路径上实测存在），WAL 位点即游标、按提交序、无需 `published_at/attempts/last_error` 簿记。自写 relay 不再重写成 Kafka 版，退役。历史备选结论不变：pgstream 库嵌入、Sequin（停更）、Bento 均不采用。新集中风险：Connect 成为两条线共用的搬运层，告警必须盯 slot 位点差、connector task 状态与 consumer lag，见 [`debezium-idle-slot-wal-retention.md`](../context/project/ecommerce/events/experience/debezium-idle-slot-wal-retention.md) |
 
-Kafka/Strimzi/Debezium/Kafka Connect 是 Java 例外；AutoMQ、RocketMQ、Pulsar、EventMesh 仍未采用。
+Kafka/Debezium/Kafka Connect 是 Java 例外（Strimzi 不采用，Kafka 部署于非 K8s 集群）；AutoMQ、RocketMQ、Pulsar、EventMesh 仍未采用。
 
 ### §1 历史选型论证（2026-08-20 NATS 决策存档，已被 2026-08-27 目标覆盖）
 
@@ -318,7 +318,7 @@ Kafka/Strimzi/Debezium/Kafka Connect 是 Java 例外；AutoMQ、RocketMQ、Pulsa
 
 ## 附录 — Java 例外与仍未引进项
 
-Kafka、Debezium、Kafka Connect 已成为事件平台的明确例外；Strimzi 不采用，因为 Kafka 定稿部署于非 K8s 独立集群。当前仍未引进：Pulsar、RocketMQ、Flink、AutoMQ、EventMesh、OpenSearch、Keycloak、Nacos、Seata、ShardingSphere、Cassandra、Doris/StarRocks(FE)、SkyWalking、Zipkin、Pinpoint、Jenkins、Microcks；Elasticsearch 搜索代码已接线但运行时未切流，旧 Meilisearch 部署仍待退役；Backstage（TS/Node 但体量重）也未引进。
+Kafka、Debezium、Kafka Connect 已成为事件平台的明确例外；Strimzi 不采用，因为 Kafka 定稿部署于非 K8s 独立集群。当前仍未引进：Pulsar、RocketMQ、Flink、AutoMQ、EventMesh、OpenSearch、Keycloak、Nacos、Seata、ShardingSphere、Cassandra、Doris/StarRocks(FE)、SkyWalking、Zipkin、Pinpoint、Jenkins、Microcks；Elasticsearch 搜索代码已接线但运行时未切流，旧 Meilisearch 部署仍待退役，NATS 已退役；Backstage（TS/Node 但体量重）也未引进。
 
 ## 附录 — 与真相源的关系
 
