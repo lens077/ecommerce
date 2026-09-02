@@ -10,7 +10,7 @@ import (
 	"connectrpc.com/validate"
 	"github.com/lens077/ecommerce/backend/api/inventory/v1/inventoryv1connect"
 	"github.com/lens077/ecommerce/backend/pkg/healthcheck"
-	"github.com/lens077/ecommerce/backend/pkg/meta"
+	"github.com/lens077/go-connect-kit/meta"
 	conf "github.com/lens077/ecommerce/backend/services/inventory/internal/conf/v1"
 	"github.com/lens077/ecommerce/backend/services/inventory/internal/data"
 	"github.com/rs/cors"

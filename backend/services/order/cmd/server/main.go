@@ -10,8 +10,8 @@ import (
 
 	"github.com/google/uuid"
 	"github.com/lens077/ecommerce/backend/constants"
-	"github.com/lens077/ecommerce/backend/pkg/env"
-	"github.com/lens077/ecommerce/backend/pkg/meta"
+	"github.com/lens077/go-connect-kit/env"
+	"github.com/lens077/go-connect-kit/meta"
 	"github.com/lens077/ecommerce/backend/services/order/internal/biz"
 	"github.com/lens077/ecommerce/backend/services/order/internal/biz/domain/events"
 	confv1 "github.com/lens077/ecommerce/backend/services/order/internal/conf/v1"

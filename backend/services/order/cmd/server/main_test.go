@@ -6,7 +6,7 @@ import (
 	"testing"
 
 	"github.com/lens077/ecommerce/backend/constants"
-	"github.com/lens077/ecommerce/backend/pkg/meta"
+	"github.com/lens077/go-connect-kit/meta"
 	confv1 "github.com/lens077/ecommerce/backend/services/order/internal/conf/v1"
 	"github.com/lens077/ecommerce/backend/services/order/internal/pkg/config"
 	"github.com/lens077/ecommerce/backend/services/order/internal/pkg/registry"

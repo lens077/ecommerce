@@ -5,7 +5,7 @@ import (
 
 	"github.com/lens077/ecommerce/backend/constants"
 	"github.com/lens077/ecommerce/backend/pkg/config"
-	"github.com/lens077/ecommerce/backend/pkg/meta"
+	"github.com/lens077/go-connect-kit/meta"
 	"go.opentelemetry.io/contrib/bridges/otelzap"
 	"go.opentelemetry.io/otel/log/global"
 	"go.uber.org/fx"

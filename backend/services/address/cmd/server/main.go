@@ -8,8 +8,8 @@ import (
 	"os"
 	"time"
 
-	"github.com/lens077/ecommerce/backend/pkg/env"
-	"github.com/lens077/ecommerce/backend/pkg/meta"
+	"github.com/lens077/go-connect-kit/env"
+	"github.com/lens077/go-connect-kit/meta"
 	"github.com/lens077/ecommerce/backend/constants"
 	"github.com/lens077/ecommerce/backend/services/address/internal/biz"
 	confv1 "github.com/lens077/ecommerce/backend/services/address/internal/conf/v1"

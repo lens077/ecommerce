@@ -6,7 +6,7 @@ import (
 	"fmt"
 
 	"github.com/lens077/ecommerce/backend/constants"
-	"github.com/lens077/ecommerce/backend/pkg/env"
+	"github.com/lens077/go-connect-kit/env"
 	"github.com/spf13/viper"
 )
 
