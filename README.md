@@ -1,6 +1,6 @@
 # Ecommerce — Go 微服务电商
 
-[![License: CC BY-NC-SA 4.0](https://img.shields.io/badge/License-CC%20BY--NC--SA%204.0-blue.svg)](LICENSE) ![Go](https://img.shields.io/badge/Go-1.26-00ADD8?logo=go&logoColor=white) ![React](https://img.shields.io/badge/React-19-61DAFB?logo=react&logoColor=black) ![TypeScript](https://img.shields.io/badge/TypeScript-7.0-3178C6?logo=typescript&logoColor=white) ![Kubernetes](https://img.shields.io/badge/Kubernetes-Cilium%20Gateway%20API-326CE5?logo=kubernetes&logoColor=white) ![PRs Welcome](https://img.shields.io/badge/PRs-welcome-brightgreen.svg)
+[![License: CC BY-NC-SA 4.0](https://img.shields.io/badge/License-CC%20BY--NC--SA%204.0-blue.svg)](LICENSE) ![Go](https://img.shields.io/badge/Go-1.27-00ADD8?logo=go&logoColor=white) ![React](https://img.shields.io/badge/React-19-61DAFB?logo=react&logoColor=black) ![TypeScript](https://img.shields.io/badge/TypeScript-7.0-3178C6?logo=typescript&logoColor=white) ![Kubernetes](https://img.shields.io/badge/Kubernetes-Cilium%20Gateway%20API-326CE5?logo=kubernetes&logoColor=white) ![PRs Welcome](https://img.shields.io/badge/PRs-welcome-brightgreen.svg)
 
 Golang + React 的 B2B2C 多商家电商实践项目：10 个后端微服务、control-tower 平台控制面与 pnpm monorepo 前端。消费者端已有部分业务，商家端和管理端仍以骨架为主；当前没有独立物流端或仓储端，也没有百万/千万级容量验收结论。
 
