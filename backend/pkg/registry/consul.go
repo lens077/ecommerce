@@ -3,21 +3,36 @@ package registry
 import (
 	"context"
 	"errors"
+	"fmt"
 	"net"
 	"net/http"
 	"os"
 	"strconv"
+	"sync/atomic"
 	"time"
 
 	"github.com/hashicorp/consul/api"
 	"github.com/lens077/ecommerce/backend/constants"
 	"github.com/lens077/ecommerce/backend/pkg/healthcheck"
-	"github.com/lens077/ecommerce/backend/pkg/meta"
+	"github.com/lens077/go-connect-kit/meta"
 	"go.uber.org/fx"
 	"go.uber.org/zap"
 )
 
-const defaultTTLPingInterval = 10 * time.Second
+const (
+	defaultTTLPingInterval = 10 * time.Second
+
+	// Registration retry backoff. Starts small so a Consul that is merely slow
+	// to come up (cluster reboot, CNI policy still programming) is caught within
+	// seconds; caps at 30s so a Consul that is down for hours costs two log
+	// lines a minute, not a flood.
+	defaultRetryBase = time.Second
+	defaultRetryMax  = 30 * time.Second
+)
+
+// ErrInvalidOptions marks registration failures caused by configuration rather
+// than by Consul. They cannot heal on their own, so Maintain does not retry them.
+var ErrInvalidOptions = errors.New("registry: invalid options")
 
 // TLSOptions configures the Consul client transport.
 type TLSOptions struct {
@@ -48,7 +63,7 @@ type Options struct {
 	Check         CheckOptions
 }
 
-// ConsulRegistry owns one Consul registration and its TTL pinger.
+// ConsulRegistry owns one Consul registration and the loop that keeps it alive.
 type ConsulRegistry struct {
 	Addr       string
 	ID         string
@@ -56,6 +71,14 @@ type ConsulRegistry struct {
 	client     *api.Client
 	logger     *zap.Logger
 	cancelPing context.CancelFunc
+
+	// registered is true between a successful ServiceRegister and Deregister.
+	// Deregister skips the Consul call when nothing was ever registered, so a
+	// service that never reached Consul does not log a spurious failure on exit.
+	registered atomic.Bool
+
+	retryBase time.Duration
+	retryMax  time.Duration
 }
 
 type Option func(*clientOptions)
@@ -111,14 +134,16 @@ var Module = fx.Module("registry",
 		}
 
 		lc.Append(fx.Hook{
+			// Fail-open: the process serves whether or not Consul is reachable.
+			// Registration is owned by Maintain, which retries until it succeeds
+			// and re-registers if Consul later forgets us. It used to be a single
+			// synchronous attempt here; a Consul that was unreachable for the five
+			// seconds around a cluster reboot then silently dropped the service
+			// from discovery for the rest of the process lifetime.
 			OnStart: func(context.Context) error {
-				if err := registry.Register(options, appInfo); err != nil {
-					logger.Warn("failed to register with Consul, service discovery disabled", zap.Error(err))
-					return nil
-				}
-				pingCtx, cancel := context.WithCancel(context.Background())
+				ctx, cancel := context.WithCancel(context.Background())
 				registry.cancelPing = cancel
-				go registry.TTLCheckPinger(pingCtx, options)
+				go registry.Maintain(ctx, options, appInfo)
 				return nil
 			},
 			OnStop: func(context.Context) error {
@@ -161,28 +186,32 @@ func NewConsulRegistry(address, id, name string, opts ...Option) (*ConsulRegistr
 		return nil, err
 	}
 	return &ConsulRegistry{
-		Addr:   address,
-		ID:     id,
-		Name:   name,
-		client: client,
-		logger: options.logger,
+		Addr:      address,
+		ID:        id,
+		Name:      name,
+		client:    client,
+		logger:    options.logger,
+		retryBase: defaultRetryBase,
+		retryMax:  defaultRetryMax,
 	}, nil
 }
 
 // Register installs the TTL liveness and gRPC readiness checks.
+// Configuration problems are wrapped in ErrInvalidOptions; everything else is
+// a Consul/transport error and is worth retrying.
 func (r *ConsulRegistry) Register(options Options, info meta.AppInfo) error {
 	r.logger.Debug("registering service to Consul", zap.String("id", r.ID))
 
 	_, portText, err := net.SplitHostPort(options.ServerAddress)
 	if err != nil {
-		return err
+		return fmt.Errorf("%w: server address: %v", ErrInvalidOptions, err)
 	}
 	port, err := strconv.Atoi(portText)
 	if err != nil {
-		return err
+		return fmt.Errorf("%w: server port: %v", ErrInvalidOptions, err)
 	}
 	if !options.Check.TTL.Enabled {
-		return errors.New("consul check configuration is missing: discovery.consul.check.ttl")
+		return fmt.Errorf("%w: consul check configuration is missing: discovery.consul.check.ttl", ErrInvalidOptions)
 	}
 
 	registration := &api.AgentServiceRegistration{
@@ -201,17 +230,79 @@ func (r *ConsulRegistry) Register(options Options, info meta.AppInfo) error {
 		},
 	}
 	if err := r.client.Agent().ServiceRegister(registration); err != nil {
-		r.logger.Error("failed to register service with Consul", zap.Error(err))
 		return err
 	}
+	r.registered.Store(true)
 
 	r.logger.Info("Service registered with Consul using TTL and gRPC readiness checks",
 		zap.String("id", r.ID), zap.String("ttl", options.Check.TTL.Duration))
 	return nil
 }
 
-// TTLCheckPinger periodically marks the explicit TTL check as passing.
-func (r *ConsulRegistry) TTLCheckPinger(ctx context.Context, options Options) {
+// Maintain keeps the registration alive until ctx is cancelled.
+//
+// State machine: register (retry with exponential backoff on transport errors)
+// → heartbeat the TTL check → on any heartbeat failure, go back to register.
+// Re-registering is idempotent (same service ID overwrites), so treating every
+// heartbeat error as "Consul may have forgotten us" costs one extra PUT in the
+// worst case and recovers from a Consul restart in the common one.
+//
+// Returns early only when the options are invalid (ErrInvalidOptions): that is
+// a deploy bug, and retrying it forever would just hide the bug in log noise.
+func (r *ConsulRegistry) Maintain(ctx context.Context, options Options, info meta.AppInfo) {
+	base, maxDelay := r.retryBase, r.retryMax
+	if base <= 0 {
+		base = defaultRetryBase
+	}
+	if maxDelay < base {
+		maxDelay = base
+	}
+
+	attempt := 0
+	delay := base
+	for {
+		err := r.Register(options, info)
+		if err == nil {
+			if attempt > 0 {
+				r.logger.Info("registered with Consul after retries", zap.Int("attempts", attempt+1))
+			}
+			attempt, delay = 0, base
+
+			pingErr := r.TTLCheckPinger(ctx, options)
+			if pingErr == nil {
+				return // ctx cancelled: clean shutdown
+			}
+			r.logger.Warn("Consul TTL heartbeat failed; re-registering", zap.Error(pingErr))
+			err = pingErr
+		} else if errors.Is(err, ErrInvalidOptions) {
+			r.logger.Error("Consul registration options are invalid; not retrying", zap.Error(err))
+			return
+		}
+
+		attempt++
+		r.logger.Warn("Consul registration not established; will retry",
+			zap.Error(err), zap.Int("attempt", attempt), zap.Duration("retry_in", delay))
+		select {
+		case <-ctx.Done():
+			return
+		case <-time.After(delay):
+		}
+		if delay < maxDelay {
+			delay *= 2
+			if delay > maxDelay {
+				delay = maxDelay
+			}
+		}
+	}
+}
+
+// TTLCheckPinger marks the TTL check as passing on every interval.
+//
+// It returns nil when ctx is cancelled and the first heartbeat error otherwise.
+// A heartbeat error is the only signal a service gets that Consul no longer
+// holds its registration (Consul returns 404 for an unknown check ID after a
+// restart), so the caller must treat it as "register again", not "log and hope".
+func (r *ConsulRegistry) TTLCheckPinger(ctx context.Context, options Options) error {
 	interval := options.Check.TTL.PingInterval
 	if interval <= 0 {
 		interval = defaultTTLPingInterval
@@ -221,30 +312,40 @@ func (r *ConsulRegistry) TTLCheckPinger(ctx context.Context, options Options) {
 	defer ticker.Stop()
 	checkID := healthcheck.ConsulTTLCheckID(r.ID)
 
-	ping := func() {
-		if err := r.client.Agent().UpdateTTL(checkID, "ttl check passing", api.HealthPassing); err != nil {
-			r.logger.Error("failed to update Consul TTL", zap.Error(err), zap.String("ID", r.ID))
-		}
+	ping := func() error {
+		return r.client.Agent().UpdateTTL(checkID, "ttl check passing", api.HealthPassing)
 	}
 
 	r.logger.Info("starting ttl pinger", zap.Duration("interval", interval), zap.String("checkID", checkID))
-	ping()
+	if err := ping(); err != nil {
+		return err
+	}
 	for {
 		select {
 		case <-ctx.Done():
 			r.logger.Info("ttl pinger stopped gracefully")
-			return
+			return nil
 		case <-ticker.C:
-			ping()
+			if err := ping(); err != nil {
+				return err
+			}
 		}
 	}
 }
 
-// Deregister stops the pinger before removing the service registration.
+// Deregister stops the maintenance loop before removing the service registration.
 func (r *ConsulRegistry) Deregister() error {
-	r.logger.Info("deregistering service from consul", zap.String("id", r.ID))
 	if r.cancelPing != nil {
 		r.cancelPing()
 	}
-	return r.client.Agent().ServiceDeregister(r.ID)
+	if !r.registered.Load() {
+		r.logger.Info("skipping Consul deregistration; never registered", zap.String("id", r.ID))
+		return nil
+	}
+	r.logger.Info("deregistering service from consul", zap.String("id", r.ID))
+	if err := r.client.Agent().ServiceDeregister(r.ID); err != nil {
+		return err
+	}
+	r.registered.Store(false)
+	return nil
 }

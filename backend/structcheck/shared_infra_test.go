@@ -6,10 +6,13 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/lens077/ecommerce/backend/pkg/meta"
+	"github.com/lens077/go-connect-kit/meta"
 )
 
-const buildVersionLDFlag = "-X github.com/lens077/ecommerce/backend/pkg/meta.Version=$VERSION"
+// meta 自 2026-09-02 起来自独立模块 go-connect-kit，不再是本仓的 backend/pkg/meta。
+// 这个字符串与 10 份 Dockerfile 的 ldflags 必须逐字一致；模块路径变更时两边同步改，
+// 否则注入静默失效（linker 对不存在的 -X 目标不报错）。
+const buildVersionLDFlag = "-X github.com/lens077/go-connect-kit/meta.Version=$VERSION"
 
 // The Go linker silently ignores a missing -X target, so compilation alone
 // cannot prove that image version injection still works.
@@ -19,7 +22,7 @@ func TestBuildVersionInjection(t *testing.T) {
 	requireStringVariable := func(*string) {}
 	requireStringVariable(&meta.Version)
 	if meta.Version == "" {
-		t.Fatal("pkg/meta.Version must have a non-empty local-build fallback")
+		t.Fatal("go-connect-kit/meta.Version must have a non-empty local-build fallback")
 	}
 
 	baselinePath := filepath.Join(servicesDir, "cart", "Dockerfile")

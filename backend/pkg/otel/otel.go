@@ -11,7 +11,7 @@ import (
 	"sync"
 	"time"
 
-	"github.com/lens077/ecommerce/backend/pkg/meta"
+	"github.com/lens077/go-connect-kit/meta"
 	redisotel "github.com/redis/go-redis/extra/redisotel-native/v9"
 	otelruntime "go.opentelemetry.io/contrib/instrumentation/runtime"
 	"go.opentelemetry.io/otel"

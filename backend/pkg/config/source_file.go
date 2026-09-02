@@ -6,7 +6,7 @@ import (
 	"os"
 
 	"github.com/lens077/ecommerce/backend/constants"
-	"github.com/lens077/ecommerce/backend/pkg/env"
+	"github.com/lens077/go-connect-kit/env"
 )
 
 var _ Source = (*fileSource)(nil)

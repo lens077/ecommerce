@@ -13,7 +13,7 @@ import (
 
 	"github.com/hashicorp/consul/api"
 	"github.com/lens077/ecommerce/backend/constants"
-	"github.com/lens077/ecommerce/backend/pkg/meta"
+	"github.com/lens077/go-connect-kit/meta"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 	"go.uber.org/fx"
@@ -52,12 +52,33 @@ type fakeConsulAgent struct {
 	checkIDs     map[string]struct{}
 	ttlCheckIDs  []string
 	deregistered []string
+
+	// rejectRegistrations makes the next N register calls answer 503,
+	// simulating a Consul that is up but not yet serving (leader election,
+	// CNI policy not programmed) — the failure mode seen on cluster reboot.
+	rejectRegistrations int
+	registerCalls       int
 }
 
 func (agent *fakeConsulAgent) Registered() *api.AgentServiceRegistration {
 	agent.mu.Lock()
 	defer agent.mu.Unlock()
 	return agent.registered
+}
+
+func (agent *fakeConsulAgent) RegisterCalls() int {
+	agent.mu.Lock()
+	defer agent.mu.Unlock()
+	return agent.registerCalls
+}
+
+// Forget simulates a Consul restart that lost agent-local registrations:
+// the service and its checks vanish, so the next TTL update answers 404.
+func (agent *fakeConsulAgent) Forget() {
+	agent.mu.Lock()
+	defer agent.mu.Unlock()
+	agent.registered = nil
+	agent.checkIDs = nil
 }
 
 func (agent *fakeConsulAgent) TTLUpdates() []string {
@@ -78,6 +99,17 @@ func startFakeConsulAgent(t *testing.T) *fakeConsulAgent {
 	server := httptest.NewServer(http.HandlerFunc(func(writer http.ResponseWriter, request *http.Request) {
 		switch {
 		case request.URL.Path == "/v1/agent/service/register":
+			agent.mu.Lock()
+			agent.registerCalls++
+			reject := agent.rejectRegistrations > 0
+			if reject {
+				agent.rejectRegistrations--
+			}
+			agent.mu.Unlock()
+			if reject {
+				writer.WriteHeader(http.StatusServiceUnavailable)
+				return
+			}
 			registration := &api.AgentServiceRegistration{}
 			if err := json.NewDecoder(request.Body).Decode(registration); err != nil {
 				writer.WriteHeader(http.StatusBadRequest)
@@ -176,7 +208,9 @@ func TestModuleOwnsRegistrationLifecycle(t *testing.T) {
 	app := moduleApp(t, options, &registry)
 	app.RequireStart()
 	require.NotNil(t, registry)
-	assert.NotNil(t, agent.Registered())
+	// Registration is owned by a background loop now (fail-open), so it lands
+	// shortly after OnStart rather than inside it.
+	require.Eventually(t, func() bool { return agent.Registered() != nil }, time.Second, 5*time.Millisecond)
 	require.Eventually(t, func() bool { return len(agent.TTLUpdates()) > 0 }, time.Second, 5*time.Millisecond)
 	app.RequireStop()
 	assert.Equal(t, []string{testAppInfo.ID}, agent.Deregistered())
@@ -325,4 +359,84 @@ func TestDeregisterStopsPingerFirst(t *testing.T) {
 		t.Fatal("Deregister did not stop the TTL pinger")
 	}
 	assert.Equal(t, []string{testAppInfo.ID}, agent.Deregistered())
+}
+
+// fastRetry makes the backoff sub-millisecond so retry tests finish quickly
+// without changing the production defaults.
+func fastRetry(registry *ConsulRegistry) {
+	registry.retryBase = time.Millisecond
+	registry.retryMax = 4 * time.Millisecond
+}
+
+// Incident 2026-09-02: every service booted while Consul was unreachable for
+// ~5s after a cluster reboot, the single registration attempt timed out, and
+// all ten services stayed out of discovery for the rest of their lifetime.
+func TestMaintainRetriesUntilConsulAccepts(t *testing.T) {
+	agent := startFakeConsulAgent(t)
+	agent.rejectRegistrations = 3
+	registry := newRegistry(t, agent.address)
+	fastRetry(registry)
+	options := testOptions("0.0.0.0:30006", 5*time.Millisecond)
+
+	ctx, cancel := context.WithCancel(context.Background())
+	defer cancel()
+	go registry.Maintain(ctx, options, testAppInfo)
+
+	require.Eventually(t, func() bool { return agent.Registered() != nil }, 2*time.Second, time.Millisecond)
+	assert.GreaterOrEqual(t, agent.RegisterCalls(), 4, "three rejections must be followed by a successful retry")
+	require.Eventually(t, func() bool { return len(agent.TTLUpdates()) > 0 }, time.Second, time.Millisecond)
+}
+
+// A Consul restart drops agent-local registrations. The TTL heartbeat is the
+// only signal (404 on the check ID); it must trigger re-registration, not an
+// endless stream of "failed to update TTL" while the service stays invisible.
+func TestMaintainReRegistersAfterConsulForgets(t *testing.T) {
+	agent := startFakeConsulAgent(t)
+	registry := newRegistry(t, agent.address)
+	fastRetry(registry)
+	options := testOptions("0.0.0.0:30006", 5*time.Millisecond)
+
+	ctx, cancel := context.WithCancel(context.Background())
+	defer cancel()
+	go registry.Maintain(ctx, options, testAppInfo)
+	require.Eventually(t, func() bool { return len(agent.TTLUpdates()) > 0 }, time.Second, time.Millisecond)
+	callsBefore := agent.RegisterCalls()
+
+	agent.Forget()
+
+	require.Eventually(t, func() bool { return agent.Registered() != nil }, 2*time.Second, time.Millisecond)
+	assert.Greater(t, agent.RegisterCalls(), callsBefore, "heartbeat failure must lead to a new registration")
+	ttlBefore := len(agent.TTLUpdates())
+	require.Eventually(t, func() bool { return len(agent.TTLUpdates()) > ttlBefore }, time.Second, time.Millisecond,
+		"heartbeats must resume against the new registration")
+}
+
+// Invalid options are a deploy bug, not a Consul outage: retrying forever would
+// only bury the real error under backoff noise.
+func TestMaintainDoesNotRetryInvalidOptions(t *testing.T) {
+	agent := startFakeConsulAgent(t)
+	registry := newRegistry(t, agent.address)
+	fastRetry(registry)
+	options := testOptions("0.0.0.0", 5*time.Millisecond) // no port
+
+	done := make(chan struct{})
+	go func() {
+		defer close(done)
+		registry.Maintain(context.Background(), options, testAppInfo)
+	}()
+	select {
+	case <-done:
+	case <-time.After(time.Second):
+		t.Fatal("Maintain must return on invalid options instead of retrying")
+	}
+	assert.Equal(t, 0, agent.RegisterCalls())
+}
+
+// A process that never reached Consul must not fail its own shutdown trying to
+// deregister something that does not exist.
+func TestDeregisterIsNoopWhenNeverRegistered(t *testing.T) {
+	agent := startFakeConsulAgent(t)
+	registry := newRegistry(t, agent.address)
+	require.NoError(t, registry.Deregister())
+	assert.Empty(t, agent.Deregistered())
 }
