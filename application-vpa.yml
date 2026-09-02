@@ -242,48 +242,6 @@ spec:
 apiVersion: autoscaling.k8s.io/v1
 kind: VerticalPodAutoscaler
 metadata:
-  name: ecommerce-outbox-relay-vpa
-  namespace: ecommerce
-  labels:
-    app.kubernetes.io/part-of: ecommerce
-    app.kubernetes.io/component: capacity-recommendation
-spec:
-  targetRef:
-    apiVersion: apps/v1
-    kind: Deployment
-    name: ecommerce-outbox-relay
-  updatePolicy:
-    updateMode: "Off"
-  resourcePolicy:
-    containerPolicies:
-      - containerName: outbox-relay
-        controlledResources: [cpu, memory]
-        controlledValues: RequestsOnly
----
-apiVersion: autoscaling.k8s.io/v1
-kind: VerticalPodAutoscaler
-metadata:
-  name: ecommerce-search-indexer-vpa
-  namespace: ecommerce
-  labels:
-    app.kubernetes.io/part-of: ecommerce
-    app.kubernetes.io/component: capacity-recommendation
-spec:
-  targetRef:
-    apiVersion: apps/v1
-    kind: Deployment
-    name: ecommerce-search-indexer
-  updatePolicy:
-    updateMode: "Off"
-  resourcePolicy:
-    containerPolicies:
-      - containerName: search-indexer
-        controlledResources: [cpu, memory]
-        controlledValues: RequestsOnly
----
-apiVersion: autoscaling.k8s.io/v1
-kind: VerticalPodAutoscaler
-metadata:
   name: consumer-next-vpa
   namespace: ecommerce
   labels:

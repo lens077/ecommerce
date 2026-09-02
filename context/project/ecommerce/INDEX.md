@@ -10,7 +10,7 @@
 | [registry](registry/INDEX.md) | `backend/services/*/internal/pkg/registry/` | 存量 Consul TTL 注册与心跳；目标发现为生产 K8s Service DNS、开发 Docker Compose 服务名 |
 | [config](config/INDEX.md) | `backend/services/*/internal/pkg/config/` + `../control-tower/services/config` | 一份配置三个副本；热更新的生效边界 |
 | [behavior](behavior/INDEX.md) | `backend/services/behavior/` | 缺配置块导致 gorse 静默关闭 |
-| [events](events/INDEX.md) | `backend/pkg/outbox/` + `backend/tools/outbox-relay/` | 存量 NATS 链与目标 Kafka + Outbox/Relay/Inbox + DLQ 的迁移边界、幂等与恢复约束 |
+| [events](events/INDEX.md) | `backend/pkg/outbox/` + `backend/pkg/searchindex/` | 两条线：行投影走 Debezium CDC → Sink，领域事实走 Outbox → Debezium Event Router → Inbox；分线判据；自写 relay 与 NATS 退役；Debezium 空闲槽撑爆 WAL |
 | [consumer](consumer/INDEX.md) | `frontend/apps/consumer/` | MUI spacing ×8 踩坑；购物车重复请求 |
 | [merchant](merchant/INDEX.md) | `frontend/apps/merchant/` | ECharts 路由 chunk 的异步加载与拆分 |
 | [frontend-api](frontend-api/INDEX.md) | `frontend/packages/api/` + `apps/*/src/api/` | Connect Query 数据拉取 SOP；transport 单例约束 |

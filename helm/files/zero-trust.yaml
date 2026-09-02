@@ -84,20 +84,6 @@ metadata:
   namespace: ecommerce
 automountServiceAccountToken: false
 ---
-apiVersion: v1
-kind: ServiceAccount
-metadata:
-  name: ecommerce-outbox-relay
-  namespace: ecommerce
-automountServiceAccountToken: false
----
-apiVersion: v1
-kind: ServiceAccount
-metadata:
-  name: ecommerce-search-indexer
-  namespace: ecommerce
-automountServiceAccountToken: false
----
 # The API services trust x-md-* identity headers injected by control-tower.
 # Network policy is therefore part of the authentication boundary: only the
 # gateway workload may reach RPC ports. host/remote-node is limited to the same

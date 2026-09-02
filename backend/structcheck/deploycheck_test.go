@@ -473,9 +473,13 @@ func TestWorkloadIdentityBaseline(t *testing.T) {
 			t.Errorf("zero-trust manifest missing ServiceAccount %q", name)
 		}
 	}
-	for _, name := range []string{"ecommerce-frontend", "ecommerce-outbox-relay", "ecommerce-search-indexer"} {
-		if !serviceAccounts[name] {
-			t.Errorf("zero-trust manifest missing ServiceAccount %q", name)
+	if !serviceAccounts["ecommerce-frontend"] {
+		t.Errorf("zero-trust manifest missing ServiceAccount %q", "ecommerce-frontend")
+	}
+	// 2026-09 退役：outbox-relay / search-indexer 工作负载已删除，其 ServiceAccount 不得再出现。
+	for _, name := range []string{"ecommerce-outbox-relay", "ecommerce-search-indexer"} {
+		if serviceAccounts[name] {
+			t.Errorf("zero-trust manifest still declares retired ServiceAccount %q", name)
 		}
 	}
 	if cnpCount != 1 {
@@ -483,8 +487,6 @@ func TestWorkloadIdentityBaseline(t *testing.T) {
 	}
 
 	extraDeployments := map[string]string{
-		"../tools/outbox-relay/deploy/dev/deployment.yaml":        "ecommerce-outbox-relay",
-		"../tools/search-indexer/deploy/dev/deployment.yaml":      "ecommerce-search-indexer",
 		"../../frontend/apps/consumer/deploy/deployment.yaml":     "ecommerce-frontend",
 		"../../frontend/apps/consumer/deploy/pre/deployment.yaml": "ecommerce-frontend",
 	}
@@ -506,33 +508,6 @@ func TestWorkloadIdentityBaseline(t *testing.T) {
 			deployment.Spec.Selector.MatchLabels, deployment.Spec.Template.Metadata.Labels,
 			podSpec.TopologySpreadConstraints)
 	}
-
-	jobPath := "../tools/search-indexer/deploy/dev/reindex-job.yaml"
-	data, err := os.ReadFile(jobPath)
-	if err != nil {
-		t.Fatalf("read %s: %v", jobPath, err)
-	}
-	var job struct {
-		Kind string `yaml:"kind"`
-		Spec struct {
-			Template struct {
-				Spec struct {
-					ServiceAccountName           string `yaml:"serviceAccountName"`
-					AutomountServiceAccountToken *bool  `yaml:"automountServiceAccountToken"`
-					EnableServiceLinks           *bool  `yaml:"enableServiceLinks"`
-				} `yaml:"spec"`
-			} `yaml:"template"`
-		} `yaml:"spec"`
-	}
-	if err := yaml.Unmarshal(data, &job); err != nil {
-		t.Fatalf("parse %s: %v", jobPath, err)
-	}
-	if job.Kind != "Job" {
-		t.Fatalf("%s first document must be a Job", jobPath)
-	}
-	podSpec := job.Spec.Template.Spec
-	assertWorkloadIdentity(t, jobPath, "ecommerce-search-indexer", podSpec.ServiceAccountName,
-		podSpec.AutomountServiceAccountToken, podSpec.EnableServiceLinks)
 
 	nextPath := "../../frontend/apps/consumer-next/deploy/dev.yaml"
 	f, err = os.Open(nextPath)

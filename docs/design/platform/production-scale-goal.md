@@ -105,13 +105,14 @@
   ├── Dragonfly：Session / Cache / Ratelimit 分实例
   └── PostgreSQL Outbox / Inbox
 
-PostgreSQL Outbox → Apache Kafka（外部非 K8s 集群）
-  ├── Search projection → Elasticsearch
+PostgreSQL Outbox → Debezium Outbox Event Router → Apache Kafka（外部非 K8s 集群）   ← 领域事实线
   ├── Notification
   ├── Reconciliation
-  └── Analytics / 领域 consumer
+  └── Analytics / 领域 consumer（franz-go + Inbox）
 
-OLTP PostgreSQL → 独立分析 CDC → ClickHouse（需求成立后）
+OLTP PostgreSQL 表 → Debezium → Kafka → Kafka Connect Sink                          ← 行投影线（CDC）
+  ├── Search projection（products.search_catalog → Elasticsearch Sink → alias）
+  └── ClickHouse（需求成立后）
 对象存储 → CDN / 图片处理
 OTel / Vector / Hubble / Profiling → Victoria / Grafana / Alertmanager
 ```
@@ -146,16 +147,17 @@ OTel / Vector / Hubble / Profiling → Victoria / Grafana / Alertmanager
 
 ### 5.3 Apache Kafka 与事件治理
 
-目标事件主干是部署于非 K8s 独立集群的 Apache Kafka；存量 NATS JetStream 仅在迁移期间继续承载现有搜索链，不再作为新业务事件目标。生产化要求：
+目标事件主干是部署于非 K8s 独立集群的 Apache Kafka；存量 NATS JetStream 已于 2026-09-03 随搜索投影改走 CDC 线而退役（代码与集群资源均已删除）。生产化要求：
 
-- 业务事务与 Outbox insert 位于同一 PostgreSQL transaction；Relay 仅在收到 Kafka `acks=all` 后标记 `published`。
+- 业务事务与 Outbox insert 位于同一 PostgreSQL transaction；搬运由 Debezium Outbox Event Router 读 WAL 完成，Connect producer 配 `acks=all` 与幂等开关，WAL 位点即发布游标（不再依赖 `published_at` 簿记）。
 - consumer 使用主键为 `(consumer_group, event_id)` 的 Inbox 表，不追求虚假的端到端 exactly-once。
 - Topic 按限界上下文划分，以 `aggregate_id` 作为 partition key 保证同聚合事件顺序。
 - 事件 envelope 统一包含 `event_id`、`aggregate_id`、`tenant_id`、`trace_id`、`schema_version`、`occurred_at`。
 - payload 采用 Protobuf，由 Buf Schema Registry 管理兼容；CloudEvents 只可作为 envelope 参考，不替代领域事件设计。
 - 连续消费失败超过 5 次转投 DLQ Topic，并触发 Alertmanager 告警；同时治理 retention、最大积压、poison message、重放权限和审计。
 - KEDA 只能在幂等、backpressure 和下游容量得到证明后按 Kafka consumer lag 扩容。
-- 业务事件与分析 CDC 分离：Outbox 表达「业务发生了什么」，逻辑复制表达「数据库哪些行变了」。
+- 业务事件与行变更分离：Outbox 表达「业务发生了什么」，逻辑复制表达「数据库哪些行变了」。分类判据是「没有这个事件，业务语义是否丢失」——搜索投影的答案是否，因此归行投影线（2026-09-03 订正，此前架构图把它画在 Outbox 下是误分类）。
+- 两条线共用同一搬运层 Debezium：领域事件经 Outbox Event Router 分 topic，行投影经普通表捕获；自写 relay 退役，不再重写成 Kafka 版。
 
 ### 5.4 长流程与后台任务
 
@@ -178,6 +180,8 @@ SearchCatalog
 ```
 
 搜索必须是可重建的只读 Projection，PostgreSQL 才是真相源。Elasticsearch 实现隐藏于 `SearchCatalog` 后，必须支持从 PostgreSQL 全量重建；迁移期以 shadow index 与差异校验完成切流。
+
+投影写入走行投影线：策展文档由 PostgreSQL 表 `products.search_catalog` 定义（trigger 在 `spus`/`skus`/`sale_detail` 变更时重算该 SPU 一行），Debezium 捕获该表、Elasticsearch Sink 写入稳定 alias。search 服务只读 alias，不感知搬运层。这条路径不依赖 Product 服务的写 RPC 或 outbox 生产者——任何写入 PostgreSQL 的路径（seed、后台 SQL、未来 RPC）都自动进索引。
 
 ### 5.6 对象存储与 CDN
 

@@ -73,7 +73,6 @@ var externalRefPatterns = map[string][]string{
 	"minio":          {"minio", "silo"},
 	"gorse":          {"gorse"},
 	"alipay":         {"alipay"},
-	"nats":           {"nats"},
 	"kafka":          {"kafka", "franz-go"},
 	"elasticsearch":  {"elasticsearch", "opensearch"},
 	"casdoor":        {"casdoor"},

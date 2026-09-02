@@ -6,24 +6,21 @@
 //     the money source of truth; the indexed value is only for display and sorting;
 //   - sale_count is the top-level numeric products.spu_total_sales projection.
 //
-// Event payloads carry a complete projection document. Upserts overwrite a stable
-// Elasticsearch document ID and deletes use the same ID, so JetStream redelivery
-// remains idempotent without a read-back to PostgreSQL.
+// Upserts overwrite a stable Elasticsearch document ID and deletes use the same
+// ID, so any redelivery on the transport layer stays idempotent. The JetStream
+// consumer that once lived here was retired in 2026-09; the projection transport
+// is now Debezium → Kafka → Elasticsearch Sink (docs/design/search/search.md).
 package searchindex
 
 import (
 	"context"
-	"encoding/json"
 	"errors"
 	"fmt"
 	"log/slog"
-	"strings"
 	"time"
 
 	"github.com/jackc/pgx/v5"
 	"github.com/jackc/pgx/v5/pgxpool"
-	"github.com/nats-io/nats.go"
-	"github.com/nats-io/nats.go/jetstream"
 )
 
 // Doc is one curated product search document. Its JSON field names are the
@@ -39,159 +36,6 @@ type Doc struct {
 	Price        float64 `json:"price"`          // display/sort projection only
 	SaleCount    int64   `json:"sale_count"`     // total sales projection
 	UpdatedAt    string  `json:"updated_at"`     // RFC3339 freshness/sort fallback
-}
-
-const (
-	EventTypeUpserted = "ecommerce.product.spu.upserted"
-	EventTypeDeleted  = "ecommerce.product.spu.deleted"
-)
-
-// Consumer is the JetStream durable pull consumer that owns the curated search
-// projection writes.
-type Consumer struct {
-	JS      jetstream.JetStream
-	Catalog *Client
-	Stream  string // stream name, for example ECOMMERCE_EVENTS
-	Durable string // durable name, for example search-indexer
-	Filter  string // subject filter, for example events.product.>
-	Index   string // stable Elasticsearch alias
-
-	MaxDeliver int // poison-message limit including the first delivery; default 5
-	BatchSize  int // fetch size; default 50
-	// MaxAckPending defaults to 1. JetStream redelivery is not inserted back into
-	// the original order, so concurrent in-flight messages could let an older
-	// projection overwrite a newer one. Serial consumption keeps event order.
-	MaxAckPending int
-	Logger        *slog.Logger
-}
-
-// Run consumes until ctx ends.
-func (c *Consumer) Run(ctx context.Context) error {
-	if c.Catalog == nil {
-		return errors.New("searchindex: catalog client is required")
-	}
-	if c.MaxDeliver <= 0 {
-		c.MaxDeliver = 5
-	}
-	if c.BatchSize <= 0 {
-		c.BatchSize = 50
-	}
-	if c.Logger == nil {
-		c.Logger = slog.Default()
-	}
-	if err := c.Catalog.EnsureIndex(ctx, c.Index); err != nil {
-		return err
-	}
-
-	// The relay or operations layer creates the stream. Waiting here keeps
-	// component start order from becoming a correctness requirement.
-	var stream jetstream.Stream
-	for {
-		var err error
-		stream, err = c.JS.Stream(ctx, c.Stream)
-		if err == nil {
-			break
-		}
-		if ctx.Err() != nil {
-			return ctx.Err()
-		}
-		c.Logger.Info("流尚不存在，等待重试", "stream", c.Stream, "err", err)
-		select {
-		case <-time.After(time.Second):
-		case <-ctx.Done():
-			return ctx.Err()
-		}
-	}
-	if c.MaxAckPending <= 0 {
-		c.MaxAckPending = 1
-	}
-	consumer, err := stream.CreateOrUpdateConsumer(ctx, jetstream.ConsumerConfig{
-		Durable:       c.Durable,
-		FilterSubject: c.Filter,
-		AckPolicy:     jetstream.AckExplicitPolicy,
-		MaxDeliver:    c.MaxDeliver,
-		AckWait:       30 * time.Second,
-		MaxAckPending: c.MaxAckPending,
-		DeliverPolicy: jetstream.DeliverAllPolicy,
-	})
-	if err != nil {
-		return fmt.Errorf("searchindex: 建 durable consumer 失败: %w", err)
-	}
-	c.Logger.Info("search indexer 开始消费", "stream", c.Stream, "durable", c.Durable, "filter", c.Filter)
-
-	for ctx.Err() == nil {
-		batch, err := consumer.Fetch(c.BatchSize, jetstream.FetchMaxWait(2*time.Second))
-		if err != nil {
-			if errors.Is(err, context.Canceled) || ctx.Err() != nil {
-				return ctx.Err()
-			}
-			if errors.Is(err, nats.ErrConnectionClosed) {
-				return fmt.Errorf("searchindex: NATS 连接已关闭: %w", err)
-			}
-			c.Logger.Error("fetch 失败，退避重试", "err", err)
-			select {
-			case <-time.After(time.Second):
-			case <-ctx.Done():
-				return ctx.Err()
-			}
-			continue
-		}
-		for msg := range batch.Messages() {
-			c.handle(ctx, msg)
-		}
-		if err := batch.Error(); err != nil && !errors.Is(err, context.DeadlineExceeded) {
-			c.Logger.Warn("batch 结束时有错误", "err", err)
-		}
-	}
-	return ctx.Err()
-}
-
-func (c *Consumer) handle(ctx context.Context, msg jetstream.Msg) {
-	eventType := msg.Headers().Get("ce-type")
-	eventID := msg.Headers().Get("ce-id")
-
-	_ = msg.InProgress()
-	err := c.apply(ctx, eventType, msg.Data())
-	if err == nil {
-		// IndexDocument returns only after Elasticsearch acknowledges the primary
-		// write. The index pins translog durability=request, so this is the safe
-		// ACK boundary. A refresh is not required for durability; if this ACK is
-		// lost, the stable document ID makes the redelivery idempotent.
-		if ackErr := msg.Ack(); ackErr != nil {
-			c.Logger.Warn("ack 失败（消息会重投，按稳定文档 ID 幂等收敛）", "event_id", eventID, "err", ackErr)
-		}
-		return
-	}
-
-	if metadata, metadataErr := msg.Metadata(); metadataErr == nil && int(metadata.NumDelivered) >= c.MaxDeliver {
-		c.Logger.Error("毒消息出队（TERM），需人工回放", "event_id", eventID, "type", eventType, "deliveries", metadata.NumDelivered, "err", err)
-		_ = msg.Term()
-		return
-	}
-	c.Logger.Warn("处理失败，NAK 延迟重投", "event_id", eventID, "type", eventType, "err", err)
-	_ = msg.NakWithDelay(2 * time.Second)
-}
-
-func (c *Consumer) apply(ctx context.Context, eventType string, payload []byte) error {
-	switch eventType {
-	case EventTypeUpserted:
-		var doc Doc
-		if err := json.Unmarshal(payload, &doc); err != nil {
-			return fmt.Errorf("payload 解析失败: %w", err)
-		}
-		return c.Catalog.IndexDocument(ctx, c.Index, doc)
-	case EventTypeDeleted:
-		var tombstone struct {
-			ID int64 `json:"id"`
-		}
-		if err := json.Unmarshal(payload, &tombstone); err != nil {
-			return fmt.Errorf("payload 解析失败: %w", err)
-		}
-		return c.Catalog.DeleteDocument(ctx, c.Index, tombstone.ID)
-	default:
-		// Forward compatibility: a new event type must not block an old consumer.
-		return nil
-	}
 }
 
 // reindexSQL derives the curated projection from PostgreSQL. Deleted rows are
@@ -381,9 +225,4 @@ func Reindex(ctx context.Context, pool *pgxpool.Pool, catalog *Client, index str
 		"delta_deletes", len(deltaDeletes),
 	)
 	return nil
-}
-
-// SubjectForType mirrors the relay mapping (TypePrefix=ecommerce., SubjectPrefix=events).
-func SubjectForType(eventType string) string {
-	return "events." + strings.TrimPrefix(eventType, "ecommerce.")
 }
