@@ -119,6 +119,12 @@ pnpm ready            # vite-plus 聚合:lint(oxlint)+ fmt(oxfmt)+ 类型 + test
 **没有 husky/biome/eslint/prettier**。别把 git 钩子挪回 `.husky/`(会被 vp 静默接管,
 见 `git-commit.md`)。
 
+⚠️ **`pnpm ready` 的 test 段是 `vp run -r test`,没有 `test` script 的 app 会被静默跳过**——
+不报错、不列名,输出里只是少一行。新建 app 或给某个 app 首次加测试时,先看
+`pnpm ready` 输出里有没有 `~/apps/<name>$ vp test` 这一行;没有就是没跑。
+2026-09-01 实测:admin 从建立起就没有 `test` script,「前端测试全绿」对它一直是空话,
+直到补 a11y 脚手架才发现。已补 `"test": "vp test --environment=jsdom --passWithNoTests"`。
+
 ## 5. 本地异构双审(push 前,替代 CI 里的 AI 审查)
 
 核心改动 push 前对着 diff 跑 **`/adversarial-review`**(隔离 fresh Claude + Codex 独立审、

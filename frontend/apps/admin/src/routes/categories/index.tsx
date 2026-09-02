@@ -51,7 +51,7 @@ function CategoriesPage() {
     <AdminLayout>
       <Box sx={{ maxWidth: 1400 }}>
         <Box sx={{ display: "flex", justifyContent: "space-between", alignItems: "center", mb: 4 }}>
-          <Typography variant="h4" sx={{ fontWeight: 700, color: "text.primary" }}>
+          <Typography variant="h4" component="h1" sx={{ fontWeight: 700, color: "text.primary" }}>
             {t("categories.title")}
           </Typography>
           <Button variant="contained" startIcon={<Plus size={18} />}>
@@ -77,7 +77,9 @@ function CategoriesPage() {
                   <TableRow key={category.id} hover>
                     <TableCell>
                       <Box sx={{ display: "flex", alignItems: "center", gap: 2 }}>
-                        <Typography variant="h5">{category.icon}</Typography>
+                        <Typography variant="h5" component="span" aria-hidden="true">
+                          {category.icon}
+                        </Typography>
                         <Typography variant="body2" sx={{ fontWeight: 500, color: "text.primary" }}>
                           {category.name}
                         </Typography>

@@ -27,14 +27,22 @@ function SettingsPage() {
   return (
     <AdminLayout>
       <Box sx={{ maxWidth: 800 }}>
-        <Typography variant="h4" sx={{ fontWeight: 700, color: "text.primary", mb: 4 }}>
+        <Typography
+          variant="h4"
+          component="h1"
+          sx={{ fontWeight: 700, color: "text.primary", mb: 4 }}
+        >
           {t("settings.title")}
         </Typography>
 
         {/* 基本设置 */}
         <Card sx={{ mb: 3 }}>
           <CardContent sx={{ p: 3 }}>
-            <Typography variant="h6" sx={{ fontWeight: 600, color: "text.primary", mb: 3 }}>
+            <Typography
+              variant="h6"
+              component="h2"
+              sx={{ fontWeight: 600, color: "text.primary", mb: 3 }}
+            >
               {t("settings.basic.title")}
             </Typography>
             <Box sx={{ display: "flex", flexDirection: "column", gap: 3 }}>
@@ -64,12 +72,20 @@ function SettingsPage() {
         {/* 订单设置 */}
         <Card sx={{ mb: 3 }}>
           <CardContent sx={{ p: 3 }}>
-            <Typography variant="h6" sx={{ fontWeight: 600, color: "text.primary", mb: 3 }}>
+            <Typography
+              variant="h6"
+              component="h2"
+              sx={{ fontWeight: 600, color: "text.primary", mb: 3 }}
+            >
               {t("settings.order.title")}
             </Typography>
             <Box sx={{ display: "flex", flexDirection: "column", gap: 2 }}>
               <Box sx={{ display: "flex", alignItems: "center", gap: 2 }}>
-                <Typography variant="body2" sx={{ color: "text.primary", width: 150 }}>
+                <Typography
+                  id="settings-order-timeout-label"
+                  variant="body2"
+                  sx={{ color: "text.primary", width: 150 }}
+                >
                   {t("settings.order.timeout")}
                 </Typography>
                 <TextField
@@ -77,6 +93,7 @@ function SettingsPage() {
                   defaultValue="30"
                   sx={{ width: 120 }}
                   slotProps={{
+                    htmlInput: { "aria-labelledby": "settings-order-timeout-label" },
                     input: {
                       endAdornment: (
                         <Typography variant="body2" sx={{ color: "text.secondary" }}>
@@ -102,7 +119,11 @@ function SettingsPage() {
         {/* 安全设置 */}
         <Card sx={{ mb: 3 }}>
           <CardContent sx={{ p: 3 }}>
-            <Typography variant="h6" sx={{ fontWeight: 600, color: "text.primary", mb: 3 }}>
+            <Typography
+              variant="h6"
+              component="h2"
+              sx={{ fontWeight: 600, color: "text.primary", mb: 3 }}
+            >
               {t("settings.security.title")}
             </Typography>
             <Box sx={{ display: "flex", flexDirection: "column", gap: 2 }}>

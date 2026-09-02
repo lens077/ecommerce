@@ -88,7 +88,11 @@ function DashboardPage() {
   return (
     <AdminLayout>
       <Box sx={{ maxWidth: 1400 }}>
-        <Typography variant="h4" sx={{ fontWeight: 700, color: "text.primary", mb: 4 }}>
+        <Typography
+          variant="h4"
+          component="h1"
+          sx={{ fontWeight: 700, color: "text.primary", mb: 4 }}
+        >
           {t("dashboard.title")}
         </Typography>
 
@@ -126,7 +130,11 @@ function DashboardPage() {
                       </Typography>
                     </Box>
                   </Box>
-                  <Typography variant="h4" sx={{ fontWeight: 700, color: "text.primary", mb: 0.5 }}>
+                  <Typography
+                    variant="h4"
+                    component="p"
+                    sx={{ fontWeight: 700, color: "text.primary", mb: 0.5 }}
+                  >
                     {stat.value}
                   </Typography>
                   <Typography variant="body2" sx={{ color: "text.secondary" }}>
@@ -151,7 +159,11 @@ function DashboardPage() {
                     mb: 3,
                   }}
                 >
-                  <Typography variant="h6" sx={{ fontWeight: 600, color: "text.primary" }}>
+                  <Typography
+                    variant="h6"
+                    component="h2"
+                    sx={{ fontWeight: 600, color: "text.primary" }}
+                  >
                     {t("dashboard.recentOrders")}
                   </Typography>
                   <Typography
@@ -263,7 +275,11 @@ function DashboardPage() {
                     mb: 3,
                   }}
                 >
-                  <Typography variant="h6" sx={{ fontWeight: 600, color: "text.primary" }}>
+                  <Typography
+                    variant="h6"
+                    component="h2"
+                    sx={{ fontWeight: 600, color: "text.primary" }}
+                  >
                     {t("dashboard.pendingMerchants")}
                   </Typography>
                   <Typography

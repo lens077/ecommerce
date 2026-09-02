@@ -144,5 +144,14 @@
       "wearable": "Wearables",
       "other": "Other"
     }
+  },
+  "a11y": {
+    "notifications": "Notifications",
+    "view": "View",
+    "edit": "Edit",
+    "delete": "Delete",
+    "ship": "Ship",
+    "changeAvatar": "Change shop avatar",
+    "statusFilter": "Filter by status"
   }
 }

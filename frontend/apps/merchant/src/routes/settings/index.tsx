@@ -55,7 +55,11 @@ function SettingsPage() {
 
   return (
     <Box sx={{ maxWidth: 1200, mx: "auto" }}>
-      <Typography variant="h4" sx={{ fontWeight: 700, color: "text.primary", mb: 3 }}>
+      <Typography
+        variant="h4"
+        component="h1"
+        sx={{ fontWeight: 700, color: "text.primary", mb: 3 }}
+      >
         {t("settings.title")}
       </Typography>
 
@@ -63,18 +67,35 @@ function SettingsPage() {
         {/* 店铺信息 */}
         <Card>
           <CardContent sx={{ p: 3 }}>
-            <Typography variant="h6" sx={{ fontWeight: 600, color: "text.primary", mb: 3 }}>
+            <Typography
+              variant="h6"
+              component="h2"
+              sx={{ fontWeight: 600, color: "text.primary", mb: 3 }}
+            >
               {t("settings.basic.title")}
             </Typography>
             <Box sx={{ display: "flex", flexDirection: "column", gap: 2.5 }}>
               <Box>
-                <Typography variant="body2" sx={{ color: "text.secondary", mb: 1 }}>
+                <Typography
+                  id="settings-basic-name-label"
+                  variant="body2"
+                  sx={{ color: "text.secondary", mb: 1 }}
+                >
                   {t("settings.basic.name")}
                 </Typography>
-                <TextField fullWidth size="small" defaultValue={shopInfo.name} />
+                <TextField
+                  fullWidth
+                  size="small"
+                  defaultValue={shopInfo.name}
+                  slotProps={{ htmlInput: { "aria-labelledby": "settings-basic-name-label" } }}
+                />
               </Box>
               <Box>
-                <Typography variant="body2" sx={{ color: "text.secondary", mb: 1 }}>
+                <Typography
+                  id="settings-basic-description-label"
+                  variant="body2"
+                  sx={{ color: "text.secondary", mb: 1 }}
+                >
                   {t("settings.basic.description")}
                 </Typography>
                 <TextField
@@ -83,19 +104,40 @@ function SettingsPage() {
                   defaultValue={shopInfo.description}
                   multiline
                   rows={3}
+                  slotProps={{
+                    htmlInput: { "aria-labelledby": "settings-basic-description-label" },
+                  }}
                 />
               </Box>
               <Box>
-                <Typography variant="body2" sx={{ color: "text.secondary", mb: 1 }}>
+                <Typography
+                  id="settings-basic-phone-label"
+                  variant="body2"
+                  sx={{ color: "text.secondary", mb: 1 }}
+                >
                   {t("settings.basic.phone")}
                 </Typography>
-                <TextField fullWidth size="small" defaultValue={shopInfo.phone} />
+                <TextField
+                  fullWidth
+                  size="small"
+                  defaultValue={shopInfo.phone}
+                  slotProps={{ htmlInput: { "aria-labelledby": "settings-basic-phone-label" } }}
+                />
               </Box>
               <Box>
-                <Typography variant="body2" sx={{ color: "text.secondary", mb: 1 }}>
+                <Typography
+                  id="settings-basic-address-label"
+                  variant="body2"
+                  sx={{ color: "text.secondary", mb: 1 }}
+                >
                   {t("settings.basic.address")}
                 </Typography>
-                <TextField fullWidth size="small" defaultValue={shopInfo.address} />
+                <TextField
+                  fullWidth
+                  size="small"
+                  defaultValue={shopInfo.address}
+                  slotProps={{ htmlInput: { "aria-labelledby": "settings-basic-address-label" } }}
+                />
               </Box>
               <Divider sx={{ my: 1 }} />
               <Box sx={{ display: "flex", justifyContent: "flex-end" }}>
@@ -114,7 +156,11 @@ function SettingsPage() {
         {/* 店铺头像 */}
         <Card>
           <CardContent sx={{ p: 3 }}>
-            <Typography variant="h6" sx={{ fontWeight: 600, color: "text.primary", mb: 3 }}>
+            <Typography
+              variant="h6"
+              component="h2"
+              sx={{ fontWeight: 600, color: "text.primary", mb: 3 }}
+            >
               {t("settings.avatar.title")}
             </Typography>
             <Box sx={{ display: "flex", flexDirection: "column", alignItems: "center" }}>
@@ -126,6 +172,7 @@ function SettingsPage() {
                 </Avatar>
                 <Box
                   component="button"
+                  aria-label={t("a11y.changeAvatar")}
                   sx={{
                     position: "absolute",
                     bottom: 0,
@@ -158,7 +205,11 @@ function SettingsPage() {
         {/* 通知设置 */}
         <Card sx={{ gridColumn: "1 / -1" }}>
           <CardContent sx={{ p: 3 }}>
-            <Typography variant="h6" sx={{ fontWeight: 600, color: "text.primary", mb: 3 }}>
+            <Typography
+              variant="h6"
+              component="h2"
+              sx={{ fontWeight: 600, color: "text.primary", mb: 3 }}
+            >
               {t("settings.notify.title")}
             </Typography>
             <Box sx={{ display: "flex", flexDirection: "column", gap: 2 }}>

@@ -58,7 +58,7 @@ export function MerchantSidebar() {
           >
             <Store size={20} color="white" />
           </Box>
-          <Typography variant="h6" sx={{ fontWeight: 700, color: "text.primary" }}>
+          <Typography variant="h6" component="p" sx={{ fontWeight: 700, color: "text.primary" }}>
             {t("sidebar.brand")}
           </Typography>
         </Box>

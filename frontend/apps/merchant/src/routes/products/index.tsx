@@ -110,7 +110,7 @@ function ProductsPage() {
     <Box sx={{ maxWidth: 1400, mx: "auto" }}>
       {/* 页面标题 */}
       <Box sx={{ display: "flex", justifyContent: "space-between", alignItems: "center", mb: 3 }}>
-        <Typography variant="h4" sx={{ fontWeight: 700, color: "text.primary" }}>
+        <Typography variant="h4" component="h1" sx={{ fontWeight: 700, color: "text.primary" }}>
           {t("products.title")}
         </Typography>
         <Button variant="contained" startIcon={<Plus size={16} />} sx={{ bgcolor: "primary.main" }}>
@@ -147,7 +147,11 @@ function ProductsPage() {
               <Typography variant="body2" sx={{ color: "text.secondary", mb: 0.5 }}>
                 {t(stat.labelKey)}
               </Typography>
-              <Typography variant="h5" sx={{ fontWeight: 700, color: "text.primary" }}>
+              <Typography
+                variant="h5"
+                component="p"
+                sx={{ fontWeight: 700, color: "text.primary" }}
+              >
                 {stat.value}
               </Typography>
             </CardContent>
@@ -271,14 +275,15 @@ function ProductsPage() {
                     </TableCell>
                     <TableCell>
                       <Box sx={{ display: "flex", gap: 0.5 }}>
-                        <IconButton size="small">
+                        <IconButton size="small" aria-label={t("a11y.view")}>
                           <Eye size={16} />
                         </IconButton>
-                        <IconButton size="small">
+                        <IconButton size="small" aria-label={t("a11y.edit")}>
                           <Edit size={16} />
                         </IconButton>
                         <IconButton
                           size="small"
+                          aria-label={t("a11y.delete")}
                           sx={{ "&:hover": { color: tokens.colors.accent.red } }}
                         >
                           <Trash2 size={16} />

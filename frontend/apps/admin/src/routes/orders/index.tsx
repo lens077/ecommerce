@@ -111,7 +111,11 @@ function OrdersPage() {
   return (
     <AdminLayout>
       <Box sx={{ maxWidth: 1400 }}>
-        <Typography variant="h4" sx={{ fontWeight: 700, color: "text.primary", mb: 4 }}>
+        <Typography
+          variant="h4"
+          component="h1"
+          sx={{ fontWeight: 700, color: "text.primary", mb: 4 }}
+        >
           {t("orders.title")}
         </Typography>
 
@@ -136,8 +140,12 @@ function OrdersPage() {
               </Tabs>
               <Box sx={{ display: "flex", gap: 2 }}>
                 <FormControl size="small" sx={{ minWidth: 120 }}>
-                  <InputLabel>{t("timeRange.label")}</InputLabel>
-                  <Select label={t("timeRange.label")} defaultValue="last7d">
+                  <InputLabel id="orders-time-range-label">{t("timeRange.label")}</InputLabel>
+                  <Select
+                    labelId="orders-time-range-label"
+                    label={t("timeRange.label")}
+                    defaultValue="last7d"
+                  >
                     {TIME_RANGES.map((value) => (
                       <MenuItem key={value} value={value}>
                         {t(`timeRange.${value}`)}

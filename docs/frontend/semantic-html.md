@@ -14,7 +14,7 @@
 | 标题语义 | 修复前 23 处 `variant="h*"`/`subtitle*` 未配 `component`，实测大纲全页无 `h1`、噪音 `h6` 满屏；**已清零**（见 §四.1） | `<h1>` / `<h2>` 原生，层级连续 |
 | 描述性列表 | 未使用 | 价格/库存用 `<dl>/<dt>/<dd>` |
 | `div onClick` 反模式 | **0 处** | 0 处 |
-| 结构化数据（JSON-LD） | **无** | **无** |
+| 结构化数据（JSON-LD） | 无（刻意：SPA 输出收益极低） | `schema.org/Product`，服务端生成、与展示价格同源（§四.4） |
 | `<html lang>` | i18n 驱动 | `layout.tsx` 由 `[lang]` 段驱动 |
 
 两条结论：
@@ -94,8 +94,19 @@ App Router + ISR，技术前提成立。但该应用当前只有**一个业务�
    **为什么必须自己断言而不是靠 axe**：`heading-order` 只查相邻标题不跳级，`page-has-heading-one` 属 best-practice 标签、不在该文件的 WCAG A/AA `runOnly` 范围内——上面「整页无 h1」的四个页面在 axe 下**全绿**。
 
    **红测的一个坑**（值得记）：商品价格区要**选中规格后**才渲染（`selectedAttrs` 初始为空），且服务桩的 SKU 原本没有 `attributes` 字段，导致价格分支永远走不到——第一次红测「假绿」正是因此。修法是给桩 SKU 补 `attributes` 并在用例里点一次规格 Chip（MUI `Chip` 渲染成 `div` 不是 `button`，要按文本点）。补上后红测才真红：`层级跳跃于 index 1：1→3→2→…`，恢复 `component="p"` 后转绿。**结论：断言写完必须真的把修复回退一次看它变红**，否则测的可能是一条根本没渲染的分支。
-3. **consumer-next 商品详情页输出 `schema.org/Product` JSON-LD**。验收：用 Google Rich Results Test 与 Schema Markup Validator 校验通过，且 `offers.price` 与页面显示价格一致（防止两处漂移——价格来自同一个 `Money` 字段，不得手工格式化两次）。
-4. **speculation rules 不做**，按 §3.4 的触发条件重估。
+3. **merchant/admin 同类缺陷清零并建 a11y 脚手架**。✅ 2026-09-01 完成，35 处（merchant 16 / admin 19；此前按文件去重报的「30」是低估）。分类完全机械——按 `Typography` 内容判：`*.title` → `h1`，区块/图表标题 → `h2`，`stat.value`/侧栏品牌 → `p`，分类 emoji 图标 → `span aria-hidden`。**两个应用此前零 a11y 测试，admin 甚至没有 `test` script**——`pnpm ready` 的 `vp run -r test` 会静默跳过它，所以「测试全绿」对 admin 一直是空话。脚手架照抄 consumer 形态（axe canary + 大纲 canary + 逐页断言），两个应用红测都过（回退一处 `h1` → `toHaveLength(1)` 红）。
+
+   **脚手架一上线就抓出的真缺陷**（不是标题语义，是 axe WCAG A/AA 违规，此前无人知道）：merchant 表格里 18 个图标按钮无可及名称（查看/编辑/删除/发货）、顶栏通知铃、设置页头像相机按钮、订单状态 `Select` 无 label、设置页 4 个 `TextField` 的视觉标签是独立 `Typography` 未关联；admin 订单/报表的 `Select` 有 `InputLabel` 但没接 `labelId`、设置页超时字段同样未关联。修法：图标按钮 `aria-label` 走 i18n（新增 `a11y.*` 词条）、`InputLabel id` + `Select labelId`、分离标签用 `id` + `slotProps.htmlInput["aria-labelledby"]`。merchant `/reports` 因挂 ECharts（canvas）未纳入 jsdom 断言，交手动走查。
+
+4. **consumer-next 商品详情页输出 `schema.org/Product` JSON-LD**。✅ 2026-09-01 完成。
+
+   **形态**：`buildProductJsonLd()`（`src/lib/product-jsonld.ts`）在 `page.tsx` **服务端**从同一份 `queryClient` 数据生成，内联进首屏 HTML——这是它存在的意义，不依赖水合爬虫就能拿到。多 SKU 用 `AggregateOffer`（lowPrice/highPrice 按数值比较，不按字符串），单 SKU 退化成 `Offer`。`availability` 只看 `stockLocked`（proto 里唯一库存字段，且语义是「锁定」非「可售」，所以只敢分有/无）。**不写 `description`/`brand`**——proto 没这两个字段，编造会被判误导性标记。`<` 转义成 `\u003c` 防 `</script>` 提前闭合。
+
+   **漂移防线是结构性的，不是靠自觉**：`formatMoney`（页面展示）与 `moneyToDecimalString`（JSON-LD）都抽到 `src/lib/money.ts`，前者调后者——两处不可能算出不同数字。`canonical` 与 JSON-LD 的 `url` 也抽成同一个 `productUrl()`，搜索引擎会拿两者互相校验。
+
+   **验收走真 SSR**：`scripts/verify-runtime.mjs`（mock 网关 + `next dev`）从服务端 HTML 里正则出 JSON-LD，断言类型/sku/url/`Offer` 退化/`price === "99.5"`/币种/库存，并断言页面文本含同一个 `CNY 99.5`。红测：把 JSON-LD 的 price 改成丢 nanos 的 `units.toString()` → `'99' !== '99.5'` 红。Google Rich Results Test 需公网可达，dev 环境未跑，留待上线后补。
+
+5. **speculation rules 不做**，按 §3.4 的触发条件重估。
 
 ## 五、参考
 
