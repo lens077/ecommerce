@@ -276,11 +276,15 @@ function RouteComponent() {
                   <ListItemText
                     primary={
                       <Box sx={{ display: "flex", alignItems: "center", gap: 2, mb: 1 }}>
-                        <Typography variant="subtitle1" sx={{ fontWeight: 600 }}>
+                        {/* 收件人姓名/电话是列表项内容不是标题：subtitle1 默认渲染成 h6，
+                            读屏按标题导航会念出一串人名电话。ListItemText primary 已是
+                            <span>，这里用 span 而非 p 以免 p 嵌进 span 的非法嵌套 */}
+                        <Typography variant="subtitle1" component="span" sx={{ fontWeight: 600 }}>
                           {address.recipientName}
                         </Typography>
                         <Typography
                           variant="subtitle1"
+                          component="span"
                           sx={{ fontWeight: 600, color: "text.primary" }}
                         >
                           {address.recipientPhone}
