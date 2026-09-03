@@ -47,7 +47,7 @@ run_secrets() {
   gitleaks git . -c .gitleaks.toml --no-banner --redact=80
 }
 
-be_pid="" fe_pid="" secrets_pid=""
+be_pid="" fe_pid="" secrets_pid="" notices_pid=""
 start=$SECONDS
 if [ "$want" != "frontend" ]; then
   run_backend >"$logdir/backend.log" 2>&1 &
@@ -59,6 +59,9 @@ if [ "$want" != "backend" ]; then
 fi
 run_secrets >"$logdir/secrets.log" 2>&1 &
 secrets_pid=$!
+# 许可声明新鲜度:pre-commit 会在依赖变更时自动重生成,这里只兜住绕过钩子的提交。
+scripts/gen-third-party-notices.sh --check >"$logdir/notices.log" 2>&1 &
+notices_pid=$!
 
 report() { # report <名字> <rc> <log>
   local name=$1 rc=$2 log=$3
@@ -84,5 +87,8 @@ fi
 secrets_rc=0; wait "$secrets_pid" || secrets_rc=$?
 report "secrets(working-tree tripwire)" "$secrets_rc" "$logdir/secrets.log"
 [ "$secrets_rc" = 0 ] || overall=1
+notices_rc=0; wait "$notices_pid" || notices_rc=$?
+report "notices(THIRD_PARTY_NOTICES.md 新鲜度)" "$notices_rc" "$logdir/notices.log"
+[ "$notices_rc" = 0 ] || overall=1
 
 exit "$overall"

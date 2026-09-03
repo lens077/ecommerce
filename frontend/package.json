@@ -5,6 +5,7 @@
   "type": "module",
   "scripts": {
     "ready": "vp fmt && vp lint && vp run -r test && vp run -r build",
+    "hygiene": "knip && pnpm dedupe --check",
     "dev": "vp run consumer#dev",
     "dev:merchant": "vp run merchant#dev",
     "desktop": "pnpm --filter @ecommerce/desktop dev:consumer",
@@ -15,6 +16,7 @@
     "@bufbuild/protoc-gen-es": "catalog:",
     "@commitlint/cli": "^21.2.1",
     "@commitlint/config-conventional": "^21.2.0",
+    "knip": "catalog:",
     "typescript": "catalog:",
     "vite": "catalog:",
     "vite-plus": "catalog:"

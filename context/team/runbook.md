@@ -83,7 +83,11 @@ scripts/verify-quick.sh backend     # 只跑后端;frontend 同理
 cd backend
 go build ./...        # 必须 rc=0
 go vet ./...          # 必须 rc=0(会连带编译测试文件)
+cd .. && CHECKERS=revive-exported scripts/lint-baseline.sh check   # 新增导出符号必须有注释(存量 711 条已冻结,只拦新增)
 ```
+
+`revive-exported` 的规则集固定在 `backend/.golangci-exported.yml`(只开 revive `exported`,生成代码与测试排除),
+采集走 `golangci-lint`(brew install golangci-lint,与 CI 同版本 v2.13.1;缺工具时 check 直接红)。
 
 用 macOS 自带 shell 时注意:没有 `timeout`;取退出码用 `echo $?`(zsh 的 `PIPESTATUS`
 是 bash 语法)。
@@ -112,8 +116,14 @@ go test -short ./...   # CI(.github/workflows/backend.yml)用的就是 -short
 ```bash
 cd frontend
 pnpm ready            # vite-plus 聚合:lint(oxlint)+ fmt(oxfmt)+ 类型 + test,端到端
+pnpm hygiene          # knip(未用依赖/导出/重复导出/catalog 条目)+ pnpm dedupe --check
 # 单跑:vp lint / vp fmt / vp test
 ```
+
+`pnpm hygiene` 的 knip 段接进了基线棘轮(`CHECKERS=knip scripts/lint-baseline.sh check`,存量 38 条冻结
+在 `.lint-baseline/knip.txt`,GitLab frontend-gate 每次 push 跑);配置在 `frontend/knip.json`,
+生成代码 `src/gen/**` 与 buf/commitlint 的二进制依赖已排除。`hygiene` 本身是硬的(knip 一条即红),
+拿它看全貌,拿棘轮拦新增。
 
 前端工具链是 **vite-plus(`vp`)一个包**覆盖 dev/build/test/lint/fmt/任务/git 钩子,
 **没有 husky/biome/eslint/prettier**。别把 git 钩子挪回 `.husky/`(会被 vp 静默接管,

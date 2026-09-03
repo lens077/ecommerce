@@ -20,7 +20,21 @@ if [ "${SKIP_GITLEAKS-}" != "1" ]; then
   fi
 fi
 
-# 2) 暂存文件的格式化 + lint（规则在 frontend/vite.config.ts 的 staged 块）。
+# 2) 第三方许可声明：依赖清单进了暂存区就重新生成 THIRD_PARTY_NOTICES.md 并一起提交。
+#
+# 「regenerate rather than reject」（参照 deepseek-harness 的 lefthook 同名 job）：改依赖的人
+# 不会记得更新许可声明，让 CI 事后红只会多一轮往返；在 commit 路径上直接生成并 git add，
+# 提交里就自带一致的清单。verify-quick 的 --check 只在有人绕过钩子时兜底。
+# 生成失败（go list 挂掉）算红：宁可拒绝提交，不提交一份漏掉后端的清单。
+staged=$(git diff --cached --name-only --diff-filter=ACMR)
+case "$staged" in
+  *go.mod*|*go.sum*|*package.json*|*pnpm-lock.yaml*|*pnpm-workspace.yaml*|*gen-third-party-notices.sh*)
+    "$root/scripts/gen-third-party-notices.sh" || { echo "pre-commit: THIRD_PARTY_NOTICES.md 生成失败，拒绝提交" >&2; exit 1; }
+    git add "$root/THIRD_PARTY_NOTICES.md"
+    ;;
+esac
+
+# 3) 暂存文件的格式化 + lint（规则在 frontend/vite.config.ts 的 staged 块）。
 #
 # 必须先 cd frontend：_/h 不做 cd，钩子的 cwd 是仓库根，而 vp staged 只从
 # cwd 找 vite.config.ts，在仓库根找不到就直接报

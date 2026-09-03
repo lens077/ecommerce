@@ -123,7 +123,8 @@ Closes #123, #124
 frontend/commitlint.config.mjs   规则 + EMOJI_TYPES 白名单（唯一真相源）
 frontend/package.json            devDependencies 装 @commitlint/cli + config-conventional
 frontend/.vite-hooks/commit-msg  commitlint --config <$0 推导>/commitlint.config.mjs --edit "$1"
-frontend/.vite-hooks/pre-commit  cd frontend && vp staged
+frontend/.vite-hooks/pre-commit  gitleaks 暂存区扫描 → 依赖清单变更时重生成 THIRD_PARTY_NOTICES.md 并 git add → cd frontend && vp staged
+frontend/.vite-hooks/pre-push    scripts/verify-quick.sh（只推 tag / 删分支放行；SKIP_VERIFY=1 绕过）
 ```
 
 > 2026-08-26 起 commitlint 由 frontend workspace 承载：仓库根的

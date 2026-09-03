@@ -73,8 +73,11 @@ gitleaks:
 
 # 后端门禁 = 本地锚点 `go build && go vet && go test -short ./...` 原样搬进 CI。
 # `./...` 已含 structcheck(矩阵↔目录↔网关↔helm 四处对齐),不必单列。
-# 不跑 buf breaking / lint-baseline:前者在 GitHub 发布链按 tag 区间比对,后者当前基线为空、
-# 等价于 go vet,两边都跑是重复。
+# 不跑 buf breaking:在 GitHub 发布链按 tag 区间比对。
+# 跑 lint-baseline 的 revive-exported(导出符号必须有注释,规则集在 backend/.golangci-exported.yml,
+# 711 条存量已冻结,只拦新增):GitHub 侧只由 tag 触发,每次 push 的这道门只能在这里守。
+# go-vet 基线为空、等价于上面的 go vet,不重复跑。golangci-lint 用官方脚本装固定版本
+# (与本地 brew 版一致,采集结果才可复现),二进制落在 GOPATH/bin。
 backend-gate:
   stage: test
   image: golang:1.27
@@ -96,6 +99,9 @@ backend-gate:
     - go build ./...
     - go vet ./...
     - go test -short -count=1 ./...
+    - curl -sSfL https://raw.githubusercontent.com/golangci/golangci-lint/HEAD/install.sh | sh -s -- -b "$(go env GOPATH)/bin" v2.13.1
+    - export PATH="$(go env GOPATH)/bin:$PATH"
+    - cd "$CI_PROJECT_DIR" && CHECKERS=revive-exported bash scripts/lint-baseline.sh check
   rules:
     # structcheck 会比对 helm values 顶层键与 .service-matrix.yaml,所以 helm/ 也算后端输入。
     - changes:
@@ -128,6 +134,9 @@ frontend-gate:
     - pnpm install --frozen-lockfile
   script:
     - pnpm ready
+    # hygiene 棘轮:knip(未用依赖/导出/重复导出/catalog 条目)只拦新增,存量由
+    # .lint-baseline/knip.txt 冻结;vp-lint 基线为空、pnpm ready 已跑过 lint,故这里只跑 knip。
+    - cd "$CI_PROJECT_DIR" && CHECKERS=knip bash scripts/lint-baseline.sh check
   rules:
     - changes:
         - frontend/**/*
