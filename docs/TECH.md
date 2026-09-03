@@ -39,7 +39,7 @@
 | 供应链安全 | Cosign、Syft、Kyverno、Trivy、Grype、Gitleaks、zizmor | PR、Syft、GHCR keyless 与签名前 Trivy image 已全绿；TCR 单服务兼容实测通过 | PR 三件套已红测并全绿；`1.5.2` 完成 10 服务双架构 SPDX，`1.5.3` 完成 GHCR index keyless 签名与平台 attestation，`1.5.4` 在 TCR `user` 实际 digest 上成功写入并回读同类 Cosign 工件；签名前 Trivy image 已接线并经 `1.6.2`/`1.6.3` 真实发布验证（2026-08-30：构建后按不可变 digest 扫描、可修复 HIGH/CRITICAL 在签名前阻断、SARIF 归 main 生成可见 alert）。当前最大缺口是 Kyverno `verifyImages` 准入（已装但零生效策略）与 TCR 全服务扩展。进度、边界与剩余路线见 [供应链安全演变全景](reports/2026-08-28-supply-chain-evolution-overview.md)，命令与验收证据见 [详细验证报告](reports/2026-08-28-supply-chain-pr-validation.md) |
 | 成本治理 | OpenCost | P1 条件评估（2026-08-28 由「P1 引入」改判） | v1.121.1，CNCF Incubating。三项前置未完成前不常驻：①节点小时成本模型达成共识（Helm `customPricing`：硬件摊销+电力+存储+网络 ÷730h；仅异构节点才用 CSVProvider）②VictoriaMetrics 兼容 PoC（Prometheus API 足以起步，但无官方认证矩阵，须实测 7 天/30 天窗口查询不超时）③10 服务统一成本标签。**「每订单成本」不是 OpenCost 的原生模型**——它只给资源成本，业务分摊需自建（资源成本 ÷ 可归因订单数），且**禁止给 `order_id` 打 metric label**（基数爆炸）。预算 100–250m CPU / 256–512Mi（官方默认 request 10m/55Mi 是调度值非容量）。证据：[技术调研](reports/2026-08-28-tech-research.md) §8 |
 | 长流程编排 | Temporal | 待触发（P2，2026-08-28 触发信号已量化） | v1.31.0。**强信号（任一即评估）**：跨服务 >24h 的 durable workflow ≥3 条；单流程 ≥8 个持久步骤或 ≥4 个补偿分支；人工恢复每月 >4 次或 >8 工时；≥2 个服务各自实现 Saga/定时器/重试框架。**弱信号（三项连续两个迭代成立）**：PG 活跃未来任务 >10 万、到期定时器峰值 >1 万/分钟、单流程状态机迁移 >15 条边等。PG 任务表若要通用化，**下一步先看 River**（Go + PG 事务型队列，无新增控制面）而非直接上 Temporal。自托管可用 PostgreSQL（12+ 兼 Advanced Visibility，不必 ES）；生产 HA 需 3–6 CPU / 6–12Gi + DB，超出现集群承载，若触发应落外置基础设施。证据：[技术调研](reports/2026-08-28-tech-research.md) §8 |
-| 消息流式处理 | Kafka Streams / ksqlDB | 不引入（2026-08-28 调研收口） | 维持 **franz-go 自写消费者**（Inbox 幂等 + 状态写 PG + 投影可重建）：搜索投影、通知、对账、销量累计全是无窗口幂等 sink 或副作用工作流，不需要通用流引擎。Kafka Streams 是嵌入 JVM 应用的库，纯 Go 团队引入 = 长期维护 Java 服务孤岛（JDK/GC/RocksDB 状态/rebalance 全套）；ksqlDB 仍发版但 license 为 Confluent Community License（非 OSI），且 Confluent 新增战略投入已明显转向 Flink。触发（任两项：生产窗口聚合/流 join ≥3 条、≥2 个消费者重复实现 watermark/迟到修正/状态 TTL、报表新鲜度要求 P95 <30s、PG Cron 聚合开始影响 OLTP）后**先 POC RisingWave**（Apache-2.0、PG wire protocol、单机起点约 2c/8Gi）；只有乱序/watermark/多流 temporal join/大状态 checkpoint 成为业务正确性的一部分才评估 Flink。证据：[技术调研](reports/2026-08-28-tech-research.md) §4 |
+| 消息流式处理 | Kafka Streams / ksqlDB | 不引入（2026-08-28 调研收口） | 维持 **franz-go 自写消费者**（Inbox 幂等 + 状态写 PG + 投影可重建）：通知、对账、销量累计全是无窗口幂等 sink 或副作用工作流（搜索投影已归行投影线，由 Kafka Connect Sink 承载，见 §4.5），不需要通用流引擎。Kafka Streams 是嵌入 JVM 应用的库，纯 Go 团队引入 = 长期维护 Java 服务孤岛（JDK/GC/RocksDB 状态/rebalance 全套）；ksqlDB 仍发版但 license 为 Confluent Community License（非 OSI），且 Confluent 新增战略投入已明显转向 Flink。触发（任两项：生产窗口聚合/流 join ≥3 条、≥2 个消费者重复实现 watermark/迟到修正/状态 TTL、报表新鲜度要求 P95 <30s、PG Cron 聚合开始影响 OLTP）后**先 POC RisingWave**（Apache-2.0、PG wire protocol、单机起点约 2c/8Gi）；只有乱序/watermark/多流 temporal join/大状态 checkpoint 成为业务正确性的一部分才评估 Flink。证据：[技术调研](reports/2026-08-28-tech-research.md) §4 |
 | 嵌入式分析（OLAP 跑批） | DuckDB（v1.5.5，MIT） | 采纳（试点**已排期未开工**，2026-08-28 采纳 / 2026-09 补排 D0–D3 见 [待办](todo/数据一致性与事件驱动.md)） | 定位=**零常驻批分析/报表/对账引擎**：支付渠道账单对账、`behaviors.events` 增量导出 Parquet 落 Silo 后的分析卸载、经营报表 ad-hoc 维度。集成形态：**CLI 子进程跑批优先**——业务服务 `CGO_ENABLED=0` 一字不改（duckdb-go 预编译静态库仍需 cgo）；复杂化后建独立 analytics-runner 镜像（显式 CGO 例外）；不嵌业务服务、不做常驻任意 SQL 服务、不用 Quack（Beta）。红线：不替代 PG（OLTP 真相源）/搜索投影/Kafka/VictoriaMetrics/流处理（<30s 新鲜度归流处理触发项）。升级路径：多写者/快照/模式演进需求出现后启用 DuckLake 1.0（catalog 存 Pigsty PG + Parquet 落 Silo）。与 ClickHouse 关系：承接其触发条款①②的第一响应，CH 触发条件升级为服务化信号。**⚠️ v2.0 预览版「Cyanoptera」使两条前提待复核（2026-09 记，正式版计划 2026 秋）**：①quack 协议转正为原生 client/server，「不用 Quack」的理由从「Beta」降级为需重新论证的架构选择——但 daemon 形态与本行「零常驻」的采纳理由直接冲突，**不因转正而默认采用**；②版本化 C API + 稳定 ABI 可能改变 cgo 的成本账。**正式版发布前选型不变，预览版不进任何跑批产物**；复核判据见待办 D2。证据：`docs/reports/2026-08-28-duckdb-evaluation.md` |
 | 持续性能分析 | Pyroscope / Parca | 待触发（2026-08-28 调研收口） | 先用 Go 原生 `pprof`/trace/基准测试 + PGO，不常驻任何分析平台。触发（至少两项）：30 天内 ≥2 次靠指标/trace/一次性 pprof 定位不了的性能故障；需要跨版本连续对比 profile；CPU 常态 >60% 可分配容量。触发后**优先 Pyroscope Go SDK push**（v2.3.0，与现有 Grafana 契合；预算 250–500m / 512Mi–1Gi + 10–20Gi 存储，SDK 端约 <1% CPU 须实测）；**Parca 暂不选**——官方 issue 明确其新 eBPF profiler 对 arm64 支持尚不完整，且 Grafana 的 Parca datasource 已弃用（2027-01 结束支持）。注意 eBPF 全局采集不替代 Go heap/mutex/goroutine profile。证据：[技术调研](reports/2026-08-28-tech-research.md) §8 |
 | 服务网格 | Cilium Service Mesh | 暂不引入（2026-08-28 调研收口） | 维持 Cilium CNI + NetworkPolicy + Gateway API 覆盖。理由：Mutual Authentication 在 1.20.1 仍是 Beta 且官方自述安全模型不完整；官方也没有可直接套用于 3 节点 arm64 小集群的每节点 Envoy 内存基准（旧版大规模 agent 测试数据不可外推）。将来确需 workload mTLS + L7 授权时，评估对象是 Istio Ambient 而非本项。证据：[技术调研](reports/2026-08-28-tech-research.md) §6 |
@@ -90,11 +90,14 @@
 [control-tower 网关]  ← Session 校验 / OpenFGA 鉴权 / 租户路由 / ConnectRPC over H2C
         │
         ▼
-[业务微服务 Cell] ──(Outbox 事务)──► [Kafka 编舞事件总线]
-   ├── PostgreSQL (Pigsty)               ├── Search Projection (Elasticsearch)
-   ├── Dragonfly (故障域隔离)             ├── Notification / Analytics
-   └── Inbox (幂等消费)                   └── Reconciliation
+[业务微服务 Cell] ──(Outbox 事务)──► [Debezium Outbox Event Router] ──► [Kafka 领域事件总线]   ← 领域事实线
+   ├── PostgreSQL (Pigsty)                                                  ├── Notification / Analytics
+   ├── Dragonfly (故障域隔离)                                                └── Reconciliation
+   └── Inbox (幂等消费)
+[PostgreSQL 投影表 products.search_catalog] ──(Debezium CDC)──► [Kafka] ──► [Elasticsearch Sink]   ← 行投影线（搜索投影在此）
 ```
+
+两条数据线的分线判据与边界见 [§4.5](#45-两条数据线行投影走-cdc领域事实走-outbox)。
 
 ### 2.2 关键流量节点契约
 
@@ -142,16 +145,19 @@
          ┌──────────────────────────────────────────┼──────────────────────────────────────────┐
          ▼                                          ▼                                          ▼
 ┌─────────────────┐                        ┌─────────────────┐                        ┌─────────────────┐
-│SearchProjection │                        │ Notification Svc│                        │ Analytics Svc   │
+│ Reconciliation  │                        │ Notification Svc│                        │ Analytics Svc   │
 └─────────────────┘                        └─────────────────┘                        └─────────────────┘
 ```
+
+搜索投影不在这张图里：它是 PG 行的派生物，走行投影线（CDC → Elasticsearch Sink），不订阅领域事件，见 §4.5。
 
 ### 3.2 两种协同模式的分工与组合
 
 | 模式 | 适用场景 | 驱动机制 | 一致性要求 |
 |------|----------|----------|------------|
 | **中心化编排（Orchestration）** | 核心交易链路：Checkout → 价格快照 → 库存预占 → 支付意图创建 | Order Service 内置 Saga Process Manager 显式调度，管理状态迁移、超时定时器与逆向补偿路径 | 强一致性 |
-| **去中心化编舞（Choreography）** | 派生与副作用链路：搜索投影、通知、分析、对账 | 主流程在数据库事务中达成阶段性终态时，通过 Transactional Outbox 向 Kafka 投递领域事件，下游自行订阅消费 | 最终一致性 |
+| **去中心化编舞（Choreography）** | 副作用链路：通知、分析、对账 | 主流程在数据库事务中达成阶段性终态时，通过 Transactional Outbox 向 Kafka 投递领域事件，下游自行订阅消费 | 最终一致性 |
+| **行投影（CDC，非事件）** | 派生读模型：搜索投影 | PG 投影表由 trigger 维护，Debezium 捕获行变更经 Kafka Connect Sink 写入 Elasticsearch；不经 Outbox、不需要 Inbox | 最终一致性（可全量重建） |
 
 **组合机制**：
 - 编排流程的每一个关键阶段动作均可触发编舞事件（如库存预占成功 → `StockReserved`）。
@@ -161,9 +167,9 @@
 
 ## 4. 数据一致性与事件驱动体系
 
-### 4.1 Transactional Outbox + Relay
+### 4.1 Transactional Outbox + Debezium Outbox Event Router
 
-业务写操作与事件投递通过 Transactional Outbox + Relay 模型绑定在同一 PostgreSQL 本地事务中：
+业务写操作与事件投递通过 Transactional Outbox 绑定在同一 PostgreSQL 本地事务中；搬运层是 Kafka Connect 上的 Debezium Outbox Event Router（读 WAL），**不再自写 relay**（2026-09-03 定稿，原轮询 relay 已退役且不重写成 Kafka 版，理由见 [§4.5](#45-两条数据线行投影走-cdc领域事实走-outbox)）：
 
 ```text
 [ 业务操作请求 ]
@@ -175,13 +181,13 @@
 │  └── 2. 写入 Outbox 表 (Protobuf Payload + Trace Header)│
 └────────────────────────────────────────────────────────┘
        │
-       │ (异步轮询 / CDC 读取)
+       │ (逻辑复制槽读取 WAL，按提交序)
        ▼
-[ Relay 进程 ] ──( At-Least-Once 投递 )──► [ Kafka Topic (非 K8s 独立集群) ]
-                                                   │
-                                                   ▼
+[ Debezium Outbox Event Router ] ──( At-Least-Once 投递 )──► [ Kafka Topic (非 K8s 独立集群) ]
+                                                                    │
+                                                                    ▼
 ┌────────────────────────────────────────────────────────┐
-│ 消费者服务 (如 search-projection / payment-service)     │
+│ 消费者服务 (如 notification / payment-service)          │
 │  ├── 1. 检查 Inbox 表 (或 aggregate_id + event_id 唯一约束) │
 │  ├── 2. 未消费则执行领域逻辑                               │
 │  └── 3. 提交 Offset 并写入 Inbox 表                       │
@@ -192,7 +198,7 @@
 
 | 机制 | 约束 |
 |------|------|
-| **Outbox 保证** | Relay 仅在收到 Kafka Broker 的 `acks=all` 响应后，方可更新 Outbox 表状态为 `published` |
+| **Outbox 保证** | 搬运层只在收到 Kafka Broker 的 `acks=all` 响应后才推进复制槽位点（`confirmed_flush_lsn`）；WAL 位点即游标，outbox 表不维护 `published_at` / `attempts` 簿记，按提交序投递。告警必须盯复制槽位点差、connector task 状态与 consumer lag（见 [`debezium-idle-slot-wal-retention.md`](../context/project/ecommerce/events/experience/debezium-idle-slot-wal-retention.md)） |
 | **Inbox 幂等消费** | 消费端统一维护 `inbox_events` 记录表，主键为 `(consumer_group, event_id)`。重试导致重复消费时，利用唯一键冲突直接忽略 |
 | **DLQ 处置机制** | 连续失败超过 5 次的事件直接转投 DLQ Topic，同时触发 Alertmanager 警报，禁止无休止重试阻塞 Partition |
 | **Kafka Topic 规划** | 按限界上下文划分。以 `aggregate_id` 作为 Partition Key 保证同一聚合根的事件有序 |
@@ -212,22 +218,38 @@
 apiVersion: keda.sh/v1alpha1
 kind: ScaledObject
 metadata:
-  name: search-projection-scaler
+  name: notification-scaler
 spec:
   scaleTargetRef:
-    name: search-projection
+    name: notification
   triggers:
     - type: kafka
       metadata:
         bootstrapServers: kafka-cluster:9092
-        consumerGroup: search-projection-group
-        topic: catalog.events
+        consumerGroup: notification-group
+        topic: order.events
         lagThreshold: "50"
         activationLagThreshold: "10"
         offsetResetPolicy: latest
 ```
 
-**HPA 与 KEDA 分工**：HPA 负责在线请求服务（根据 CPU/内存/RPC QPS 伸缩），KEDA 负责 Kafka 消费者（根据 lag 伸缩）。两者不会控制同一资源。
+**HPA 与 KEDA 分工**：HPA 负责在线请求服务（根据 CPU/内存/RPC QPS 伸缩），KEDA 负责 Kafka 消费者（根据 lag 伸缩）。两者不会控制同一资源。KEDA 只管领域事实线的 franz-go 消费者；行投影线的 Elasticsearch Sink 是 Kafka Connect 任务，由 Connect 自身管理，不在 KEDA 范围。
+
+### 4.5 两条数据线：行投影走 CDC，领域事实走 Outbox
+
+2026-09-03 定稿（决策经过见 [`row-projection-vs-domain-event.md`](../context/project/ecommerce/events/experience/row-projection-vs-domain-event.md)）。给一条数据流分线只问一个问题：**没有这个事件，业务语义会不会丢失？**
+
+| 答案 | 归属 | 需要的拼图 | 搬运层 | 例子 |
+|---|---|---|---|---|
+| 会（行变更表达不了这个业务事实） | **领域事实线（Outbox）** | 原子性 Outbox + 搬运 + 传输 + 信封四块全要，消费端 Inbox 幂等 | Debezium Outbox Event Router → Kafka → franz-go + Inbox 消费者 | `OrderPaid`、`OrderReadyForFulfillment` |
+| 不会（PG 行的派生物，随时可重建） | **行投影线（CDC）** | 只要搬运与传输 | Debezium 普通表捕获 → Kafka → Kafka Connect Sink | 搜索投影 `products.search_catalog` → Elasticsearch |
+
+边界：
+
+- 搜索投影是 `spus` / `skus` / `sale_detail` 三表的纯函数，归行投影线；跨表聚合不是选 Outbox 线的理由——把聚合物化成 PG 侧 trigger 维护的投影表，CDC 线即可搬运。投影表与索引契约见 [`docs/design/search/search.md`](design/search/search.md)。
+- 两条线在 Debezium 侧互不混用：行投影表不进 Outbox Router connector，outbox 表不进 CDC 线的 publication（施工与验收清单见 [`docs/todo/数据一致性与事件驱动.md`](todo/数据一致性与事件驱动.md)「线 B」）。
+- 领域事实线当前零生产者、零消费者，刻意不预建；出现第一个需要跨服务副作用的业务写时再开工。
+- 「自写 X 替代 Y 因为零新组件」这类定稿必须写明前提「栈里没有 Y」；Kafka Connect 成为生产组件后，自写 relay 反而是多出来的组件，故退役。
 
 
 ## 5. 微服务设计纲领
@@ -280,7 +302,7 @@ spec:
 **边界澄清**：
 - 商品本体与售卖信息分离：`Product` 是商品本体（名称、描述、属性），`Listing` 是商家在某店铺的售卖信息（价格、库存引用、上下架状态）。一个 Product 可以有多个 Listing（不同商家卖同一商品）。
 - 库存不属于 Catalog：库存由 `inventory-service` 管理，Catalog 只存储 SKU 的标识和展示信息。
-- 搜索投影：Catalog 发布领域事件（`ProductCreated`、`ListingUpdated`）供搜索投影消费，更新 Elasticsearch。
+- 搜索投影不经领域事件：`products.search_catalog` 投影表由 PG trigger 在 `spus` / `skus` / `sale_detail` 变更时重算，经 Debezium CDC → Kafka → Elasticsearch Sink 搬运到 Elasticsearch（行投影线，见 §4.5）。Catalog 领域事件只服务通知、推荐、分析等副作用消费者。
 
 **领域模型**：
 - `Product`：商品本体（SPU 级别）。
@@ -298,11 +320,11 @@ spec:
 - `CreateProduct` / `UpdateProduct` / `GetProduct`
 - `CreateListing` / `UpdateListing` / `GetListing` / `ListListingsByStore`
 - `GetListingForCheckout`（供 Order Service 获取强一致的价格快照）
-- `SearchProducts`（内部调用，或由网关直接转发给 search-projection，业务侧不直接提供搜索 RPC）
+- 搜索查询不在 Catalog：由 search 服务经 `SearchCatalog` 深度模块读取 Elasticsearch 投影，Catalog 不提供搜索 RPC
 
 **交互方式**：
 - **同步 RPC**：Cart、Order 创建时需要获取 Listing 的价格快照（`GetListingForCheckout`）。
-- **异步事件**：`ListingPriceChanged`、`ProductUpdated` 等，供搜索投影、推荐、分析消费。
+- **异步事件**：`ListingPriceChanged`、`ProductUpdated` 等，供推荐、分析等副作用消费（搜索投影走行投影线，不订阅这些事件）。
 
 ### 5.4 Cart Service（购物车域）
 
@@ -700,11 +722,13 @@ type order
 [ order-service ] ──(写 DB Outbox, 存储 traceparent: 00-4bf92f3577b34da6a3ce929d0e0e4736-00f067aa0ba902b7-01)
        │
        ▼
-[ Relay 进程 ] ──(读取 Outbox，透传 Header `traceparent`)──► [ Kafka Topic ]
-                                                                   │
-                                                                   ▼
-[ search-projection ] ◄──(从 Header 提取 traceparent，开辟子 Span)──┘
+[ Debezium Outbox Event Router ] ──(读取 outbox 行，`traceparent` 列映射为 Kafka Header)──► [ Kafka Topic ]
+                                                                                               │
+                                                                                               ▼
+[ notification-service ] ◄──(从 Header 提取 traceparent，开辟子 Span)──────────────────────────┘
 ```
+
+行投影线（Debezium 普通表捕获 → Elasticsearch Sink）没有业务 span 可续接，链路观测只到 connector 与 sink lag 指标。
 
 
 ### 9.3 告警与通知链路
@@ -794,7 +818,7 @@ cfg.GetServiceAddr("inventory-service") // 从 K8s DNS 解析
 PostgreSQL HA（Pigsty）与 PITR 恢复演练；
 Dragonfly 分实例拆分（Session / Cache / Ratelimit）；
 Cilium Gateway API + Namespace default-deny 网络隔离；
-Outbox + Relay + Kafka（外部集群）+ Inbox 幂等保障；
+Outbox + Debezium Outbox Event Router + Kafka（外部集群）+ Inbox 幂等保障；行投影线（CDC → Elasticsearch Sink）已切流；
 Casdoor Stateful Session + OpenFGA 鉴权落地；
 Vector + VMAgent + OTel → 外部 OTel Collector → VictoriaStack 链路贯通；
 固定数据集、k6 基线、容量文档；核心服务 SLO、Runbook、手动故障演练。
