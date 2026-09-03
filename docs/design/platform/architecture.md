@@ -1,8 +1,8 @@
 # 微服务架构核心设计 — 服务边界与领域事件
 
 > 从根 `DESIGN.md` 拆出（2026-08-08）。本文包含目标态，阅读时遵守三条边界：
-> - 实际存在的 10 个服务及其注册名/依赖关系，一律以 [`.service-matrix.yaml`](../../../.service-matrix.yaml) 为准；它们是迁移起点。目标边界以 [TECH.md](../../TECH.md) §5 为准：user + merchant → Identity、product → Catalog，并独立建设 Fulfillment 与 Notification；search-projection、analytics 为编舞消费者。
-> - 领域事件表是目标态。当前已运行 NATS JetStream、outbox relay 与旧版 search indexer，但业务事务生产者尚未完整接线；2026-08-27 已决策迁往 Kafka 主干，路线见 [生产目标与 Kafka 路线](production-scale-goal.md)。
+> - 实际存在的 10 个服务及其注册名/依赖关系，一律以 [`.service-matrix.yaml`](../../../.service-matrix.yaml) 为准；它们是迁移起点。目标边界以 [TECH.md](../../TECH.md) §5 为准：user + merchant → Identity、product → Catalog，并独立建设 Fulfillment 与 Notification；analytics、reconciliation 为编舞消费者。搜索投影不是事件消费者：它走行投影线（`products.search_catalog` 投影表 → Debezium CDC → Elasticsearch Sink），见 TECH.md §4.5。
+> - 领域事件表是目标态。NATS JetStream、自写 outbox relay 与 search indexer 已于 2026-09-03 退役删除；领域事实线（outbox → Debezium Outbox Event Router → Kafka → franz-go + Inbox）当前零生产者、零消费者，刻意不预建，路线见 [生产目标与 Kafka 路线](production-scale-goal.md) 与 [数据一致性与事件驱动待办](../../todo/数据一致性与事件驱动.md)。
 > - 2026-09 已完成搜索的**代码级** Meilisearch→Elasticsearch 替换：search 服务经 `SearchCatalog` 读取项目 DTO，`tools/search-indexer` 是策展投影唯一权威写入者。Elasticsearch 仍只监听 node3 回环地址，Pod 无网络通路，尚未运行时切流；代码接线不等于部署完成。
 > - 登录、会话与授权入口已迁入同级仓 control-tower gateway。存量 Casbin/legacy JWT 仍可能运行，但目标完全废弃 JWT：Casdoor 有状态 Session 承担认证与粗粒度角色，OpenFGA 承担对象级关系授权；user 服务仍存在，但不再是浏览器 token 代理或 session owner。
 
@@ -22,11 +22,11 @@
 | 微服务名称                   | 	核心职责                     | 	技术栈                        | 	核心功能详情                                                                          |
 |-------------------------|---------------------------|-----------------------------|----------------------------------------------------------------------------------|
 | 身份与组织域（Identity，目标；user + merchant 迁移合并） | UserProfile、Merchant、Store、MerchantMember | Go + PostgreSQL；Casdoor + OpenFGA | Casdoor 管认证、Session 与 admin/merchant/customer 粗粒度角色；Identity 管业务身份和组织关系；OpenFGA 管 merchant/store/order 对象关系授权                          |
-| 商品目录域（Catalog，目标；product 迁移）   | 	Product（SPU）、SKU、Listing、Category | 	Go + PostgreSQL + Dragonfly（可丢缓存） | 	商品本体与店铺售卖信息分离；发布 Catalog 领域事件驱动 Elasticsearch 搜索投影，库存不属于 Catalog                         |
-| 订单服务（Order Service）     | 	OrderGroup/MerchantOrder/OrderLine、订单状态机、内置 Saga Process Manager  | 	Go + PostgreSQL + Kafka（目标态；NATS 迁移中） | 	订单创建 / 取消 / 修改；同步编排 Catalog 价格快照、Inventory 预占与 PaymentIntent 创建，失败自动逆向补偿；阶段性终态经 Outbox 发布 Kafka 事件；`OrderReadyForFulfillment` 触发独立 Fulfillment 域 |
+| 商品目录域（Catalog，目标；product 迁移）   | 	Product（SPU）、SKU、Listing、Category | 	Go + PostgreSQL + Dragonfly（可丢缓存） | 	商品本体与店铺售卖信息分离；搜索投影由 PG 侧 trigger 维护的 `products.search_catalog` 表经 CDC 搬到 Elasticsearch，不经 Catalog 领域事件；库存不属于 Catalog                         |
+| 订单服务（Order Service）     | 	OrderGroup/MerchantOrder/OrderLine、订单状态机、内置 Saga Process Manager  | 	Go + PostgreSQL + Kafka（目标态；领域事实线未接线） | 	订单创建 / 取消 / 修改；同步编排 Catalog 价格快照、Inventory 预占与 PaymentIntent 创建，失败自动逆向补偿；阶段性终态经 Outbox 发布 Kafka 事件；`OrderReadyForFulfillment` 触发独立 Fulfillment 域 |
 | 支付服务（Payment Service）   | 	PaymentIntent/Attempt/Authorization/Capture/Refund 与 PaymentPort 渠道抽象       | 	Go + PostgreSQL + Redis    | 	支付宝、微信支付 SDK 适配与聚合；支付单创建、支付状态同步、退款申请与处理；平台与商家对账管理；支付流水记录留存                      |
-| 库存服务（Inventory Service） | 	库存全生命周期管理、库存操作原子化、库存预警   | 	Go + PostgreSQL + Kafka（目标态；NATS 迁移中）            | 	分布式库存状态机管控；库存预占、扣减、释放、调整；库存流水记录；库存不足预警事件推送（正确性锚定 PG 行锁/CAS，缓存仅可丢数据）                       |
-| 搜索投影（search-projection） | 商品全文检索、多维度筛选、排序推荐 | Elasticsearch 代码已接线；存量 Meilisearch 仍承载运行时 | `SearchCatalog` 是单 provider 深度模块边界；`tools/search-indexer` 唯一写策展投影并支持从 PostgreSQL 全量重建。Pod→node3 Elasticsearch 通路未解决，未切流 |
+| 库存服务（Inventory Service） | 	库存全生命周期管理、库存操作原子化、库存预警   | 	Go + PostgreSQL + Kafka（目标态；领域事实线未接线）            | 	分布式库存状态机管控；库存预占、扣减、释放、调整；库存流水记录；库存不足预警事件推送（正确性锚定 PG 行锁/CAS，缓存仅可丢数据）                       |
+| 搜索投影（行投影线，非事件消费者） | 商品全文检索、多维度筛选、排序推荐 | Elasticsearch 9.4.5 + IK（node3）；运行时已切流（2026-09-03） | `SearchCatalog` 是单 provider 深度模块边界；策展投影唯一定义是 PG 表 `products.search_catalog`（trigger 维护），经 Debezium CDC → Kafka → Elasticsearch Sink 搬运，可从 PostgreSQL 全量重建；自写 indexer 已删除。存量 Meilisearch 部署待退役 |
 
 ### 支撑微服务
 
@@ -48,12 +48,12 @@
 
 ### 微服务通信边界与领域事件设计
 
-采用「Order 内置 Saga Process Manager 同步编排 + 持久事件主干去中心化编舞（经 PostgreSQL Outbox）」的混合模式，明确服务边界，避免强耦合。当前实现是 NATS JetStream，目标态是 Apache Kafka；迁移期间不得把两者同时当成唯一主干。
+采用「Order 内置 Saga Process Manager 同步编排 + 持久事件主干去中心化编舞（经 PostgreSQL Outbox）」的混合模式，明确服务边界，避免强耦合。事件主干是 Apache Kafka（外部非 K8s 集群），NATS 已退役删除；搬运层是 Debezium Outbox Event Router，不自写 relay。
 
 核心通信规则:
 
 - 同步 RPC 调用：仅用于需要立即响应、强一致性的场景，例如下单时查询商品信息、支付前查询订单状态、库存预占校验。
-- 异步事件通信：目标形态使用 PostgreSQL Outbox + Relay 发布 Kafka 领域事件：仅在 `acks=all` 后标记 `published`；消费者以 `(consumer_group, event_id)` 唯一键的 Inbox 幂等处理，连续失败超过 5 次转投 DLQ 并告警。Topic 按限界上下文划分，`aggregate_id` 为 partition key；Protobuf 事件 envelope 含 `event_id`、`aggregate_id`、`tenant_id`、`trace_id`、`schema_version`、`occurred_at`，由 Buf Schema Registry 管理。当前只有 NATS 商品索引 worker 与基础设施完成部署，Kafka 尚未接线，不能把下表其他事件视为已实现。
+- 异步事件通信：目标形态使用 PostgreSQL Outbox + Debezium Outbox Event Router 发布 Kafka 领域事件：Connect 在 `acks=all` 后才推进复制槽位点，outbox 表不维护 `published` 簿记；消费者以 `(consumer_group, event_id)` 唯一键的 Inbox 幂等处理，连续失败超过 5 次转投 DLQ 并告警。Topic 按限界上下文划分，`aggregate_id` 为 partition key；Protobuf 事件 envelope 含 `event_id`、`aggregate_id`、`tenant_id`、`trace_id`、`schema_version`、`occurred_at`，由 Buf Schema Registry 管理。当前领域事实线零生产者、零消费者（Kafka、Connect、Debezium 基础设施已就位并承载行投影线），不能把下表事件视为已实现。
 - 防腐层设计：每个微服务仅暴露对外 API 接口，内部领域模型不对外暴露，通过 DTO 完成数据转换，避免服务间模型耦合。
 
 核心领域事件定义
@@ -70,5 +70,5 @@
 | OrderReadyForFulfillment | 订单 ID、订单组号、库存确认凭据 | 订单服务（库存确认成功后） | Fulfillment Service | **履约的唯一触发门禁**（checkout v2 §履约门禁） |
 | OrderCancelledEvent   | 订单 ID、取消原因、取消时间              | 订单服务 | 库存服务、支付服务 | 触发库存释放、支付退款       |
 | InventoryChangedEvent | SKU_ID、仓库 ID、变更后可用库存、变更类型    | 库存服务 | 商品服务、订单服务 更新商品 | 可售状态、订单库存校验拦截          |
-| ProductChangedEvent   | SPU/SKU_ID、完整搜索投影、变更时间         | 商品服务 | search indexer           | 通过 outbox 同步商品投影；当前 NATS indexer 已部署、生产者未接，目标先迁 Kafka shadow index 再切流 |
+| ~~ProductChangedEvent~~ | — | — | — | 已取消（2026-09-03）：搜索投影是 PG 行的派生物，走行投影线（CDC），不经领域事件；商品变更如需通知推荐/分析再另立事件 |
 | PaymentRefundedEvent  | 订单 ID、退款单号、退款金额、退款状态         | 支付服务 | Order Service、Fulfillment Service      | 更新订单退款状态、履约/售后流程推进        |
