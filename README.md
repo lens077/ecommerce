@@ -45,7 +45,7 @@ Golang + React 的 B2B2C 多商家电商实践项目：10 个后端微服务、c
 | `context/` | AI/团队三层知识库（团队级 / 框架级 / 服务级），入口 [`context/INDEX.md`](context/INDEX.md) |
 | `helm/`、`argocd-*.yml` | 待修复的 Helm/GitOps 描述；当前部署实况以各服务 `deploy/` 为准 |
 | `docs/` | 技术真相源（`docs/TECH.md`）、架构与领域设计（`docs/design/`，按微服务分目录）、**待办明细**（`docs/todo/`，按 TECH.md 体系分类）、可观测性方法论与看板脚本（`docs/observability/`）、agents 配置（`docs/agents/`）、不可变历史归档（`docs/progress-archive/`）、调研报告（`docs/reports/`） |
-| `scripts/` | 验收锚点与门禁脚本（verify-quick / verify-context + canary / lint-baseline / harness-scars） |
+| `scripts/` | 验收锚点与门禁脚本（verify-quick / verify-context + canary / lint-baseline / harness-scars / gen-third-party-notices） |
 | `.scratch/` | 进行中的 spec / issue（本地 markdown 工作流） |
 
 > 网关与配置中心均由同级仓 control-tower 承载：本仓旧 `gateway/` 目录 2026-08-24 已删

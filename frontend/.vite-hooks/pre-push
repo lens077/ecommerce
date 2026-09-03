@@ -1,0 +1,34 @@
+# 推送前门禁：把「命令与验收锚点」的默认入口 scripts/verify-quick.sh 在每次 push 前跑一遍。
+#
+# 为什么放 pre-push 而不是 pre-commit：verify-quick 是后端 go build/vet/test -short 与前端
+# pnpm ready 的并行全量，分钟级；提交要快（pre-commit 只做 gitleaks + 暂存 lint），
+# 推送才是「离开本机、别人会看到」的边界，值得付这个成本。参照 deepseek-harness 的
+# lefthook pre-push（那边跑 pnpm run typecheck）。
+#
+# 钩子由 vite-plus 的 _/h 分发到这里（core.hooksPath=frontend/.vite-hooks/_，见 pre-commit 头注释），
+# cwd 是仓库顶层；git 从 stdin 传入要推送的 ref 列表：
+#   <local ref> <local sha> <remote ref> <remote sha>
+# 只删远端分支（local sha 全零）或只推 tag 时没有新代码进入远端，直接放行；
+# 其余情况一律跑门禁。确有需要绕过（例如推的正是修门禁的提交）用 `SKIP_VERIFY=1 git push`，
+# 并在 MR/提交信息里说明。
+root=$(git rev-parse --show-toplevel)
+zero=0000000000000000000000000000000000000000
+needs_check=0
+while read -r local_ref local_sha _remote_ref _remote_sha; do
+  [ -z "$local_ref" ] && continue
+  [ "$local_sha" = "$zero" ] && continue
+  case "$local_ref" in refs/tags/*) continue ;; esac
+  needs_check=1
+done
+[ "$needs_check" = 1 ] || exit 0
+
+if [ "${SKIP_VERIFY-}" = "1" ]; then
+  echo "pre-push: SKIP_VERIFY=1，跳过 verify-quick（请在提交信息里说明原因）" >&2
+  exit 0
+fi
+
+echo "pre-push: 运行 scripts/verify-quick.sh（绿只打一行；红打失败段；SKIP_VERIFY=1 可绕过）"
+"$root/scripts/verify-quick.sh" || {
+  echo "pre-push: verify-quick 红，推送被拒。修绿后再推，或 SKIP_VERIFY=1 git push 并说明。" >&2
+  exit 1
+}

@@ -108,12 +108,19 @@ jobs:
             ./structcheck/...
 
       # 基线对比棘轮:只拦「本次新增」的静态告警,存量由 .lint-baseline/ 冻结放行。
-      # 当前后端基线为空(go vet 干净),所以这一步实际等价于硬门禁;
-      # 将来接入 golangci-lint 时,先 snapshot 冻结存量即可立刻开门禁,不必先清债。
-      - name: Lint baseline (go-vet)
+      # go-vet 基线为空(等价硬门禁);revive-exported(导出符号必须有注释,规则集在
+      # backend/.golangci-exported.yml)于 2026-09-03 接入,711 条存量已冻结,新增导出
+      # 不写注释即红。golangci-lint 版本与本地 brew 装的一致,采集结果才可复现。
+      - name: Install golangci-lint (revive-exported ratchet)
+        uses: golangci/golangci-lint-action@v8
+        with:
+          version: v2.13.1
+          install-only: true
+
+      - name: Lint baseline (go-vet + revive-exported)
         working-directory: .
         env:
-          CHECKERS: go-vet
+          CHECKERS: go-vet revive-exported
         run: scripts/lint-baseline.sh check
 
   build:

@@ -1,0 +1,41 @@
+# knip 基线(棘轮:只许变少)。由 scripts/lint-baseline.sh snapshot 生成,勿手工编辑。
+# 每行 = 一条被冻结的存量告警(已去掉行号列号,便于在无关改动后保持稳定)。
+# 新增告警会被 check 阻断;基线条目被修好后 check 会要求刷新本文件。
+knip	Duplicate exports	frontend/packages/tauri/src/DesktopSettingsDialog.tsx	DesktopSettingsDialog
+knip	Duplicate exports	frontend/packages/tauri/src/DesktopSettingsDialog.tsx	default
+knip	Unused catalog entries	frontend/pnpm-workspace.yaml	conventional-changelog
+knip	Unused catalog entries	frontend/pnpm-workspace.yaml	jsonc-parser
+knip	Unused catalog entries	frontend/pnpm-workspace.yaml	smol-toml
+knip	Unused catalog entries	frontend/pnpm-workspace.yaml	yaml (default)
+knip	Unused dependencies	frontend/apps/admin/package.json	@ecommerce/configs
+knip	Unused dependencies	frontend/apps/admin/package.json	@ecommerce/constants
+knip	Unused dependencies	frontend/apps/admin/package.json	@ecommerce/utils
+knip	Unused dependencies	frontend/apps/consumer/package.json	@connectrpc/connect-web
+knip	Unused dependencies	frontend/apps/consumer/package.json	@ecommerce/constants
+knip	Unused dependencies	frontend/apps/consumer/package.json	@mui/utils
+knip	Unused dependencies	frontend/apps/consumer/package.json	casdoor-js-sdk
+knip	Unused dependencies	frontend/apps/consumer/package.json	casdoor-react-sdk
+knip	Unused dependencies	frontend/apps/merchant/package.json	@ecommerce/configs
+knip	Unused dependencies	frontend/apps/merchant/package.json	@ecommerce/constants
+knip	Unused dependencies	frontend/apps/merchant/package.json	@ecommerce/utils
+knip	Unused dependencies	frontend/apps/merchant/package.json	@fontsource/roboto
+knip	Unused dependencies	frontend/apps/merchant/package.json	@mui/icons-material
+knip	Unused dependencies	frontend/apps/merchant/package.json	echarts-for-react
+knip	Unused dependencies	frontend/apps/merchant/package.json	zod
+knip	Unused dependencies	frontend/packages/configs/package.json	casdoor-js-sdk
+knip	Unused dependencies	frontend/packages/tauri/package.json	@tauri-apps/plugin-notification
+knip	Unused dependencies	frontend/packages/tauri/package.json	@tauri-apps/plugin-opener
+knip	Unused devDependencies	frontend/apps/admin/package.json	@vitejs/plugin-react
+knip	Unused devDependencies	frontend/apps/consumer/package.json	vitest-browser-react
+knip	Unused devDependencies	frontend/apps/merchant/package.json	@vitejs/plugin-react
+knip	Unused devDependencies	frontend/package.json	vite
+knip	Unused exported types	frontend/apps/consumer/src/api/users/types.ts	Permission
+knip	Unused exported types	frontend/apps/consumer/src/api/users/types.ts	Role
+knip	Unused exported types	frontend/apps/consumer/src/styles/tokens.ts	Lantern
+knip	Unused exported types	frontend/apps/consumer/src/styles/tokens.ts	Tokens
+knip	Unused exported types	frontend/packages/tracker/src/tracker.ts	EventType
+knip	Unused exports	frontend/apps/consumer-next/src/lib/server-transport.ts	createServerTransport
+knip	Unused exports	frontend/apps/consumer/src/styles/tokens.ts	radius
+knip	Unused exports	frontend/apps/consumer/src/styles/tokens.ts	space
+knip	Unused exports	frontend/apps/merchant/src/styles/theme.ts	radius
+knip	Unused exports	frontend/apps/merchant/src/styles/theme.ts	space

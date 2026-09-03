@@ -44,6 +44,46 @@ description: harness 本身（硬规则/门禁/Agent 约束）每次改动的原
 
 ---
 
+### 2026-09-03 lint 棘轮加两个采集器：Go 导出符号注释（revive-exported）与前端 hygiene（knip）
+
+- **改了什么**：`scripts/lint-baseline.sh` 的 `CHECKERS` 从 `go-vet vp-lint` → `go-vet revive-exported vp-lint knip`。
+  `revive-exported`：`golangci-lint` 只开 revive `exported` 规则（规则集固定在 `backend/.golangci-exported.yml`，
+  生成代码/测试/`api/`/`third_party/` 排除；`--max-issues-per-linter=0 --max-same-issues=0` 解除默认 50 条上限，
+  否则采集不全、基线随机缺项），存量 711 条冻结在 `.lint-baseline/revive-exported.txt`，工具缺失产出 `TOOL-MISSING`
+  哨兵行变红。`knip`：配置 `frontend/knip.json`（排除 `src/gen/**` 与 buf/commitlint 二进制依赖），一条 finding =
+  分类 + 路径 + 单个符号，带与 vp-lint 同款的失聪自检，存量 38 条冻结在 `.lint-baseline/knip.txt`。
+  接线：GitLab `backend-gate` 装固定版 golangci-lint v2.13.1 后跑 `CHECKERS=revive-exported`，`frontend-gate`
+  跑 `CHECKERS=knip`；GitHub `service-ci.yml` 同步（那边只 tag 触发）。前端另加 `pnpm hygiene`
+  （`knip && pnpm dedupe --check`）作为看全貌的硬入口，lockfile 已 `pnpm dedupe`。决策与替代方案见
+  `context/decisions/implemented/2026-08-08-lint-baseline-ratchet.md`（决策层随其首批提交落地）。
+- **为什么**：对照 deepseek-harness 的 `verify-export-jsdoc`（每个导出名必须有文档）与 `pnpm run hygiene`
+  （knip + publint）复盘本仓：后端静态检查只有 `go vet`，导出符号注释无人守；前端没有任何未用依赖/导出检查。
+  两者都有大量存量，只能走棘轮而不是硬门禁——正是 08-08 那条决策预留的路径（"将来接入 golangci-lint 时先 snapshot 冻结存量即可"）。
+- **触发事故**：knip 首跑就抓到真问题：`apps/admin`、`apps/merchant` 声明了从未 import 的 `@ecommerce/configs`
+  / `@ecommerce/constants` / `@ecommerce/utils`，`apps/consumer` 装了未用的 `casdoor-js-sdk` / `@connectrpc/connect-web`，
+  `packages/tauri/DesktopSettingsDialog.tsx` 命名与默认双导出；`revive-exported` 首跑 711 条——
+  `registry/consul.go` 这种刚修过健壮性的核心类型也没有一行注释。
+- **怎么验证的**：注错复测——新增无注释导出函数 `backend/constants/zz_canary.go` → check 红（1 条新增），
+  新增未引用文件 `frontend/packages/utils/src/zz-canary.ts` → check 红（1 条新增），还原 → 四 checker 全绿；
+  `harness-scars.sh` 面板显示 749 条放行伤疤；`scripts/verify-context.sh` 全绿。
+
+### 2026-09-03 THIRD_PARTY_NOTICES.md 自动生成：依赖清单进暂存区时 pre-commit 重生成并 git add
+
+- **改了什么**：新增 `scripts/gen-third-party-notices.sh`（后端 `go list -deps ./...` 实际链接的 102 个模块 +
+  模块缓存 LICENSE 归类；前端 `pnpm licenses list --json` 410 个包，平台专属二进制归一为 `<platform>`；
+  `--check` 比对新鲜度）。`frontend/.vite-hooks/pre-commit` 第 2 步：`go.mod`/`go.sum`/`package.json`/
+  `pnpm-lock.yaml`/`pnpm-workspace.yaml` 进暂存区就重生成并 `git add`；`verify-quick.sh` 加第四条并行 lane `--check`。
+  决策见 `context/decisions/implemented/2026-09-03-third-party-notices-regenerate.md`（决策层随其首批提交落地）。
+- **为什么**：deepseek-harness lefthook 的「regenerate rather than reject」——改依赖的人不会记得更新许可声明，
+  CI 事后红只多一轮往返；生成是确定性的，就该在 commit 路径上做。`go-licenses` 按包重建全仓 10 分钟跑不完，
+  `go list -deps` 0.5 s。
+- **触发事故**：首次生成暴露两件从没人知道的事：自有库 `github.com/lens077/control-tower`、`go-connect-kit`
+  没有 LICENSE 文件（UNKNOWN）；`@img/sharp-libvips` 是 LGPL-3.0-or-later。公开仓库里这两件都该有人看过一眼。
+- **怎么验证的**：暂存 `pnpm-workspace.yaml` 经 `_/pre-commit` 分发器跑钩子 → NOTICES 自动进暂存区（rc=0）；
+  向 NOTICES 追加一行 → `--check` rc=1，重生成 → rc=0；`verify-quick.sh backend` 四路绿。
+  第一版脚本在 macOS bash 3.2 下 `$attention——` 报 unbound variable——多字节字符被吞进变量名，
+  与 `verify-context.sh` 头注记的同一陷阱，已改 `${attention}`。
+
 ### 2026-09-01 适配层「只做适配」纳入 structcheck（同构门禁的盲区）
 
 - **改了什么**：`backend/structcheck/shared_infra_test.go` 新增 `TestInfraAdaptersStayThin`。

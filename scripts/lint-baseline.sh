@@ -40,7 +40,7 @@ cd "$root"
 
 BASELINE_DIR=".lint-baseline"
 # macOS bash 3.2:用空格分隔字符串而不是数组,避免 set -u 下空数组展开直接退出
-CHECKERS=${CHECKERS:-"go-vet vp-lint"}
+CHECKERS=${CHECKERS:-"go-vet revive-exported vp-lint knip"}
 mode=${1:-check}
 
 # 数非空行数,永远退出 0(见文件头陷阱 2)
@@ -58,6 +58,27 @@ run_go-vet() {
     | sed -E 's/^([^:]+):[0-9]+:[0-9]+:[[:space:]]*/\1	/' \
     | grep -v '^[[:space:]]*$' \
     | sed 's|^|go-vet	|' ; } || true
+}
+
+# 导出符号注释(revive exported,规则集固定在 backend/.golangci-exported.yml):
+# 对应 deepseek-harness 的 verify-export-jsdoc。711 条存量(2026-09-03)由基线冻结,
+# 新增导出而不写注释才阻断。工具缺失产出哨兵行让 check 变红,不静默放行
+# (brew install golangci-lint / https://golangci-lint.run/docs/welcome/install/)。
+# --max-*=0 解除 golangci 默认的 50 条/linter 与 3 条同类上限,否则采集不全、
+# 基线随机缺项,一次无关改动就会把「早就存在」的告警报成新增。
+run_revive-exported() {
+  if ! command -v golangci-lint >/dev/null 2>&1; then
+    echo "lint-baseline: 缺少 golangci-lint,revive-exported 无法采集(brew install golangci-lint)" >&2
+    printf 'revive-exported\t__collector__\tTOOL-MISSING: golangci-lint 未安装,导出注释门禁未执行\n'
+    return 0
+  fi
+  { ( cd backend && golangci-lint run --config .golangci-exported.yml \
+        --max-issues-per-linter=0 --max-same-issues=0 \
+        --output.text.path=stdout --output.text.print-issued-lines=false --output.text.colors=false \
+        ./... 2>/dev/null || true ) \
+    | grep -E '^[^:]+\.go:[0-9]+:[0-9]+: ' \
+    | sed -E 's/^([^:]+):[0-9]+:[0-9]+:[[:space:]]*/backend\/\1	/' \
+    | sed 's|^|revive-exported	|' ; } || true
 }
 
 run_vp-lint() {
@@ -91,6 +112,38 @@ run_vp-lint() {
       echo "lint-baseline: vp lint 报告 $total 条但采集为 0——采集器与输出格式脱钩,先修 run_vp-lint" >&2
       printf 'vp-lint\t__collector__\tPARSE-FAILURE: 上游报 %s 条而解析为 0,采集器失聪\n' "$total"
     fi
+  fi
+  [ -n "$rows" ] && printf '%s\n' "$rows"
+  return 0
+}
+
+# 前端 hygiene(knip:未用依赖/导出/类型/重复导出/catalog 条目;配置在 frontend/knip.json,
+# 生成代码 src/gen/** 已排除):对应 deepseek-harness 的 `pnpm run hygiene`(knip+publint)。
+# compact 输出的格式:
+#     Unused dependencies (5)          ← 分类头,括号内为该类条数
+#     apps/admin/package.json: a, b    ← 条目:路径 + 逗号分隔的符号
+# 一条 finding = 分类 + 路径 + 单个符号,这样修掉一个符号只动一行基线。
+# 与 run_vp-lint 同样带失聪自检:分类头合计 >0 而解析为 0 → PARSE-FAILURE 哨兵。
+run_knip() {
+  if [ ! -x frontend/node_modules/.bin/knip ]; then
+    echo "lint-baseline: 前端依赖未安装,跳过 knip(先 cd frontend && pnpm install)" >&2
+    return 0
+  fi
+  out=$( ( cd frontend && ./node_modules/.bin/knip --no-progress --reporter compact 2>/dev/null ) || true )
+  rows=$(printf '%s\n' "$out" | awk '
+    /^[A-Z][A-Za-z ]+ \([0-9]+\)$/ { cat=$0; sub(/ \([0-9]+\)$/, "", cat); next }
+    cat != "" && match($0, /^[^ ]+: /) {
+      path=substr($0, 1, RLENGTH-2); rest=substr($0, RLENGTH+1)
+      n=split(rest, syms, /, /)
+      for (i=1; i<=n; i++) printf "knip\t%s\tfrontend/%s\t%s\n", cat, path, syms[i]
+      next
+    }
+    cat != "" && /^[^ ]+$/ { printf "knip\t%s\tfrontend/%s\t-\n", cat, $0 }')
+  reported=$(printf '%s\n' "$out" | sed -n -E 's/^[A-Z][A-Za-z ]+ \(([0-9]+)\)$/\1/p' | awk '{s+=$1} END{print s+0}')
+  parsed=$(printf '%s' "$rows" | awk 'NF{n++} END{print n+0}')
+  if [ "$reported" -gt 0 ] && [ "$parsed" -eq 0 ]; then
+    echo "lint-baseline: knip 报告 $reported 条但采集为 0——采集器与输出格式脱钩,先修 run_knip" >&2
+    printf 'knip\t__collector__\tPARSE-FAILURE: 上游报 %s 条而解析为 0,采集器失聪\n' "$reported"
   fi
   [ -n "$rows" ] && printf '%s\n' "$rows"
   return 0
