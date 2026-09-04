@@ -6,6 +6,7 @@ import (
 
 	confv1 "github.com/lens077/ecommerce/backend/services/cart/internal/conf/v1"
 	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
 	"google.golang.org/protobuf/types/known/durationpb"
 )
 
@@ -40,6 +41,8 @@ func TestOptionsFromBootstrap(t *testing.T) {
 	assert.Equal(t, "30s", options.Check.TTL.Duration)
 	assert.Equal(t, 10*time.Second, options.Check.TTL.PingInterval)
 	assert.Equal(t, "1m", options.Check.DeregisterCriticalServiceAfter)
+	require.NotNil(t, options.Check.GRPC)
+	assert.Equal(t, 10*time.Second, options.Check.GRPC.Interval)
 }
 
 func TestOptionsDisableUnconfiguredConsul(t *testing.T) {

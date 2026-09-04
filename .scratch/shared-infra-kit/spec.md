@@ -1,9 +1,13 @@
 # 共享基础设施库 go-connect-kit：方案与迁移计划
 
-Status: ready-for-human
+Status: implemented
 
 把 10 个微服务各存一份的 7 个基础设施模块收敛到一个独立仓库，消除复制粘贴漂移。
-本文只做方案论证，不含已执行的代码改动。
+本文保留早期方案推演作为历史记录；实际实现以「Go Options + 消费方薄 adapter」为准。
+
+> **实施勘误（2026-09-03）**：没有使用 BSR。BSR 与这件事无关，它分发 proto，
+> 不分发 Go 实现。最终也没有把消费方 proto 移入 kit：kit 接收 provider-neutral Go Options，
+> 消费方保留 protobuf-to-options adapter，Config Center source 由 control-tower SDK 适配 kit 接缝。
 
 ## 摘要
 
@@ -11,8 +15,8 @@ Status: ready-for-human
 - 根因是**生成方式没有更新通道**：`co-cli` 从 `go-connect-template` 一次性生成骨架，之后模板演进不会回流到已生成的服务。
 - 抽取共享库**可行**，且比预期便宜：`Server` / `Data` / `Auth` / `Observability` / `Discovery` 五个 proto 消息在 10 个服务里逐字节相同。
 - 7 个模块按耦合性质分三类，**成本差一个数量级**，不应当作一件事推进。
-- 推荐分层混合方案：类 1 直接搬、类 2 用泛型、类 3 用共享 proto，分三期落地。
-- 类 3 的 proto 分发方式**已定为 BSR 发布**。需注意本仓当前零 BSR 依赖、全部 proto 走 vendored，此选择会新增一类构建期网络依赖（§3.1）。
+- 最终采用分层混合方案：类 1 直接搬、`config` 用泛型、`log` / `otel` / `registry` 用 provider-neutral Go Options。
+- proto 继续归消费方所有；不引入 BSR 或新的 proto 分发链路。
 
 ## 一、实测证据
 
@@ -192,16 +196,19 @@ search 的 `Search`、payment 的 `Pay`）。
 **代价与风险**
 
 - **关键陷阱**：如果每个服务各自从同一份 `.proto` 生成 Go 代码，得到的是**不同的 Go 类型**（包路径不同），共享模块无法接收。必须保证共享消息的生成产物只存在于 kit 模块中，服务侧把它当作依赖而非生成输入。实现上需要 kit 的 `.proto` 声明 `option go_package` 指向 kit 模块，并在服务侧的 `buf.gen.yaml` 里排除该路径。这是本方案唯一真正困难的部分。
-- 跨仓 proto 依赖的分发方式**已定为 BSR 发布**，具体接线与前置条件见 §3.1。
+- 早期曾考虑通过 BSR 分发跨仓 proto；实施时否决，见 §3.1 勘误。
 - 10 个服务的 `conf.proto` 都要改并重新 `buf generate`，属于仓库级改动。
 - kit 的 proto 改动会同时影响 10 个服务，等于把 10 个独立的破坏面合并成一个。收益是一致性，代价是爆炸半径。
 - 仓库选定为 public，proto 定义将公开。已确认其中不含凭据，仅有主机名与端口字段名。
 
 **适用判断**：这是唯一能真正解决类 3 的方案，也是收益最大的方案。困难集中在 buf 接线，属于一次性成本。
 
-#### 3.1 BSR 落地细节（已选定）
+#### 3.1 已否决：通过 BSR 分发共享 proto
 
-分发方式选定为 BSR 发布。以下是实测得到的现状与接线步骤。
+本节是早期探索记录，未实施。最终方案不共享消费方 proto，也不使用 BSR；
+BSR 只能分发 proto，不能承担本任务所需的 Go 实现分发。
+
+以下内容仅保留为被否决方案的历史证据。
 
 **现状：本仓当前没有任何 BSR 依赖**
 
@@ -380,34 +387,31 @@ kit 模块照抄这个写法即可，这正是 §3 所述「关键陷阱」的�
 
 | 风险 | 影响 | 缓解 |
 |---|---|---|
-| 类 3 的 buf 生成接线失败 | 第 3 期阻塞 | 先在单服务打通再推广；失败则类 3 退回原地，前两期成果不受影响 |
-| BSR 不可达导致构建失败 | `buf generate` 与 CI 红 | 本仓当前所有 proto 都 vendored，构建自足；改用 BSR 后新增网络依赖。退路是把 kit 的 `.proto` 也 vendored，`go_package` 保持指向 kit，Go 侧结构不受影响（§3.1 末段） |
-| BSR 账号或计费未就绪 | 第 3 期无法启动 | 公开模块免费，仓库已定为 public；账号与 `buf registry login` 是人工前置，需在第 3 期前完成 |
+| provider-neutral Options 漏映射字段 | 服务行为漂移 | 每个消费方保留聚焦的 adapter 测试，并由构建矩阵覆盖所有服务 |
+| Config Center source adapter 断线 | 停留在最后已知正常配置 | adapter 负责指数退避重连，kit 负责拒绝删除、解码失败和校验失败的更新 |
 | kit 的破坏性改动波及 10 服务 | 全线构建红 | kit 走 semver，服务侧按版本升级而非 `latest`；kit 仓开 CI |
 | public 仓暴露内部结构 | 信息披露 | 已确认 7 个模块内不含凭据；迁移前再逐文件复核一次 |
 | 第 0 期与后续期次冲突 | 返工 | 第 0 期先合入，让基线唯一后再开始迁移 |
 
 各期相互独立且顺序可停：任一期完成后停下都是自洽状态，不存在「改到一半必须继续」的中间态。
 
-## 七、待决事项
+## 七、实施决议
 
-1. ~~**类 3 的 proto 分发方式**~~ —— **已定：BSR 发布**，接线与前置条件见 §3.1
+1. ~~**类 3 的 proto 分发方式**~~ —— **已否决共享 proto 与 BSR**。实现采用 provider-neutral Go Options，见 §3.1。
 2. ~~**`dbutil/handler.go` 阵营取舍**~~ —— **已定：A 阵营（`pqerror` 具名常量）**。
    依据：B 阵营含永不匹配的死分支（`code := pgErr.Code` 取的是 SQLSTATE，
    而 B 写了 `case "23000", "IntegrityConstraintViolation"` 这类名字分支）；
    `github.com/lib/pq` 已是 `go.mod` 直接依赖，选 A 不新增依赖。
-3. ~~**`log/es.go` 归属**~~ —— **已定：`+co:elasticsearch` 可选能力进入 kit**。
-   依据：`es.go` 对 Elasticsearch 零 import（仅 `net/http`/`time`/`conf`/`zap`），
-   靠结构化接口满足 `elastic-transport` 的 `Logger`；kit 拥有含 optional
-   `ElasticSearch` 子消息的 `Log` 后，该消息的 3 个变体自动收敛为 1，
-   behavior 缺失 `reserved` 的隐患一并消除。
+3. ~~**`log/es.go` 归属**~~ —— **留在 Elasticsearch adapter 旁**。
+   它依赖消费方的 `confv1.Log_Search`，不是通用日志实现；模板已把它移动到
+   `internal/data/search_elasticsearch_log.go`，未启用 Elasticsearch 时整文件裁掉。
 4. ~~**是否为 `co` 增加 `upgrade` 能力**~~ —— **已定：做**。这是漂移的根因项，
    不做则本次清理完成后漂移仍会重现。纳入第 4 期。
 
-### 人工前置事项：已完成
+### 发布结果
 
-BSR 账号与 `buf registry login` **已完成**（`buf registry whoami` 返回 `Logged in as sumery`）。
-第 3 期的硬前置条件已解除。
+已按依赖顺序发布 kit `v0.3.0` 与带 `sdk/configsource.NewKitSource` 的 control-tower
+`v0.1.4`。消费方已脱离临时 `go.work` 解析公开版本；仓库内没有本地 `replace`。
 
 ## Comments
 

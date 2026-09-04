@@ -7,7 +7,6 @@ import (
 	"github.com/lens077/ecommerce/backend/services/cart/internal/data/models"
 	"github.com/lens077/ecommerce/backend/services/cart/internal/pkg"
 	"github.com/lens077/ecommerce/backend/services/cart/internal/pkg/config"
-	"github.com/lens077/ecommerce/backend/services/cart/internal/pkg/dbutil"
 	"github.com/lens077/ecommerce/backend/services/cart/internal/pkg/money"
 
 	"context"
@@ -99,7 +98,7 @@ func (c cartRepo) GetCart(ctx context.Context, req biz.GetCartRequest) (*biz.Get
 
 		// 每次请求都读当前配置:改完对象存储域名下一个请求就用新的,不必重启
 		skuThumbnailUrl := pkg.FormatObjectURL(string(constants.BucketEcommerce), row.SkuThumbnailUrl, c.live.Get().GetStore())
-		statusEnum := dbutil.ToCartStatusEnum(row.Status)
+		statusEnum := toCartStatusEnum(row.Status)
 		items = append(items, &biz.CartItem{
 			ID:              row.ID,
 			MerchantId:      row.MerchantID,

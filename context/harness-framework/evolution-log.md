@@ -4,6 +4,22 @@ layer: harness-framework
 description: harness 本身（硬规则/门禁/Agent 约束）每次改动的原因与触发它的具体事故，防止后人把改对的东西改回去
 ---
 
+### 2026-09-03 基础设施门禁从「副本同构」切到「kit adapter 边界」
+
+- **改了什么**：`TestInfraHomogeneity` 不再比较 `config`、`log`、`otel`、`registry` adapter；
+  `TestSharedImplementationsDoNotReturnToConsumers` 直接禁止服务级 `env`、`meta`、`dbutil` 和仓内
+  `backend/pkg/{config,configschema,dbutil,env,log,meta,otel,registry}` 实现副本，
+  `TestInfraAdaptersStayThin` 要求四类 adapter 导入
+  `go-connect-kit` 且不得直接依赖实现库。删除已失效的 config 基线与文件集断言。实施范围见
+  [shared-infra-kit spec](../../.scratch/shared-infra-kit/spec.md)。
+- **为什么**：共享实现迁出仓库后，adapter 的职责是映射各服务 protobuf，字段不同是合法差异；继续要求
+  字节同构会把正确边界报成漂移。反过来，只比较哈希仍无法发现同一份实现被同时抄回 10 个服务。
+- **触发事故**：go-connect-kit 迁移完成后，旧门禁同时把 10 份服务专属 `config_test.go` 和 cart 的
+  注释差异报成「新漂移」，却无法表达「实现必须只存在于 kit」这个真正约束。
+- **怎么验证的**：运行 `cd backend && go test -count=1 ./structcheck/...`；再由
+  `scripts/verify-context-canary.sh` 验证门禁注错路径仍能变红。
+
+
 # Harness 演进日志
 
 ## 这份日志解决什么

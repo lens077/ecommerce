@@ -1,7 +1,7 @@
 # Third-party notices
 
 由 `scripts/gen-third-party-notices.sh` 生成,勿手工编辑;依赖变更进暂存区时 pre-commit 会自动重新生成。
-后端列出 `go list -deps ./...` 实际链接进制品的 102 个模块;前端列出 `pnpm licenses list` 解析到的 410 个包(含 dev 依赖)。
+后端列出 `go list -deps ./...` 实际链接进制品的 101 个模块;前端列出 `pnpm licenses list` 解析到的 410 个包(含 dev 依赖)。
 
 ## 需要人看一眼
 
@@ -12,7 +12,7 @@
 | 许可证 | 条目数 |
 |---|---|
 | MIT | 363 |
-| Apache-2.0 | 66 |
+| Apache-2.0 | 65 |
 | ISC | 23 |
 | BSD-3-Clause | 21 |
 | MPL-2.0 | 11 |
@@ -31,13 +31,13 @@
 | BlueOak-1.0.0 | 1 |
 | (Apache-2.0 AND BSD-3-Clause) | 1 |
 
-## 后端(Go 模块,102)
+## 后端(Go 模块,101)
 
 | 模块 | 版本 | 许可证 | 来源文件 |
 |---|---|---|---|
-| `buf.build/gen/go/bufbuild/protovalidate/protocolbuffers/go` | v1.36.12-20260709200747-435963d16310.1 | Apache-2.0 | LICENSE |
+| `buf.build/gen/go/bufbuild/protovalidate/protocolbuffers/go` | v1.36.12-20260825204119-511051f7f437.1 | Apache-2.0 | LICENSE |
 | `buf.build/go/protovalidate` | v1.3.0 | Apache-2.0 | LICENSE |
-| `cel.dev/expr` | v0.25.2 | Apache-2.0 | LICENSE |
+| `cel.dev/expr` | v0.25.3 | Apache-2.0 | LICENSE |
 | `connectrpc.com/connect` | v1.20.0 | Apache-2.0 | LICENSE |
 | `connectrpc.com/cors` | v0.1.0 | Apache-2.0 | LICENSE |
 | `connectrpc.com/grpchealth` | v1.5.0 | Apache-2.0 | LICENSE |
@@ -61,7 +61,7 @@
 | `github.com/golang-jwt/jwt/v4` | v4.5.2 | MIT | LICENSE |
 | `github.com/google/cel-go` | v0.30.0 | Apache-2.0 | LICENSE |
 | `github.com/google/uuid` | v1.6.0 | BSD-3-Clause | LICENSE |
-| `github.com/grpc-ecosystem/grpc-gateway/v2` | v2.29.0 | BSD-3-Clause | LICENSE |
+| `github.com/grpc-ecosystem/grpc-gateway/v2` | v2.30.0 | BSD-3-Clause | LICENSE |
 | `github.com/hashicorp/consul/api` | v1.34.4 | MPL-2.0 | LICENSE |
 | `github.com/hashicorp/errwrap` | v1.1.0 | MPL-2.0 | LICENSE |
 | `github.com/hashicorp/go-cleanhttp` | v0.5.2 | MPL-2.0 | LICENSE |
@@ -76,8 +76,8 @@
 | `github.com/jackc/pgservicefile` | v0.0.0-20240606120523-5a60cdf6a761 | MIT | LICENSE |
 | `github.com/jackc/pgx/v5` | v5.10.0 | MIT | LICENSE |
 | `github.com/jackc/puddle/v2` | v2.2.2 | MIT | LICENSE |
-| `github.com/lens077/control-tower` | v0.1.3 | UNKNOWN | (no license file) |
-| `github.com/lens077/go-connect-kit` | v0.1.0 | UNKNOWN | (no license file) |
+| `github.com/lens077/control-tower` | v0.1.4 | UNKNOWN | (no license file) |
+| `github.com/lens077/go-connect-kit` | v0.3.0 | UNKNOWN | (no license file) |
 | `github.com/lib/pq` | v1.12.3 | MIT | LICENSE |
 | `github.com/mattn/go-colorable` | v0.1.15 | MIT | LICENSE |
 | `github.com/mattn/go-isatty` | v0.0.23 | MIT | LICENSE |
@@ -90,7 +90,6 @@
 | `github.com/redis/go-redis/v9` | v9.22.0 | BSD-2-Clause | LICENSE |
 | `github.com/rs/cors` | v1.11.1 | MIT | LICENSE |
 | `github.com/sagikazarmark/locafero` | v0.11.0 | MIT | LICENSE |
-| `github.com/santhosh-tekuri/jsonschema/v5` | v5.3.1 | Apache-2.0 | LICENSE |
 | `github.com/sethvargo/go-retry` | v0.4.0 | Apache-2.0 | LICENSE |
 | `github.com/shopspring/decimal` | v1.4.0 | MIT | LICENSE |
 | `github.com/smartwalle/alipay/v3` | v3.2.29 | MIT | LICENSE |
@@ -107,34 +106,34 @@
 | `go.opentelemetry.io/contrib/bridges/otelzap` | v0.20.0 | Apache-2.0 | LICENSE |
 | `go.opentelemetry.io/contrib/instrumentation/net/http/otelhttp` | v0.70.0 | Apache-2.0 | LICENSE |
 | `go.opentelemetry.io/contrib/instrumentation/runtime` | v0.70.0 | Apache-2.0 | LICENSE |
-| `go.opentelemetry.io/otel` | v1.45.0 | Apache-2.0 | LICENSE |
+| `go.opentelemetry.io/otel` | v1.46.0 | Apache-2.0 | LICENSE |
 | `go.opentelemetry.io/otel/exporters/otlp/otlplog/otlploghttp` | v0.21.0 | Apache-2.0 | LICENSE |
 | `go.opentelemetry.io/otel/exporters/otlp/otlpmetric/otlpmetrichttp` | v1.45.0 | Apache-2.0 | LICENSE |
-| `go.opentelemetry.io/otel/exporters/otlp/otlptrace` | v1.45.0 | Apache-2.0 | LICENSE |
+| `go.opentelemetry.io/otel/exporters/otlp/otlptrace` | v1.46.0 | Apache-2.0 | LICENSE |
 | `go.opentelemetry.io/otel/exporters/otlp/otlptrace/otlptracehttp` | v1.45.0 | Apache-2.0 | LICENSE |
 | `go.opentelemetry.io/otel/log` | v0.21.0 | Apache-2.0 | LICENSE |
-| `go.opentelemetry.io/otel/metric` | v1.45.0 | Apache-2.0 | LICENSE |
-| `go.opentelemetry.io/otel/sdk` | v1.45.0 | Apache-2.0 | LICENSE |
+| `go.opentelemetry.io/otel/metric` | v1.46.0 | Apache-2.0 | LICENSE |
+| `go.opentelemetry.io/otel/sdk` | v1.46.0 | Apache-2.0 | LICENSE |
 | `go.opentelemetry.io/otel/sdk/log` | v0.21.0 | Apache-2.0 | LICENSE |
-| `go.opentelemetry.io/otel/sdk/metric` | v1.45.0 | Apache-2.0 | LICENSE |
-| `go.opentelemetry.io/otel/trace` | v1.45.0 | Apache-2.0 | LICENSE |
+| `go.opentelemetry.io/otel/sdk/metric` | v1.46.0 | Apache-2.0 | LICENSE |
+| `go.opentelemetry.io/otel/trace` | v1.46.0 | Apache-2.0 | LICENSE |
 | `go.opentelemetry.io/proto/otlp` | v1.11.0 | Apache-2.0 | LICENSE |
 | `go.uber.org/atomic` | v1.11.0 | MIT | LICENSE.txt |
 | `go.uber.org/dig` | v1.19.0 | MIT | LICENSE |
 | `go.uber.org/fx` | v1.24.0 | MIT | LICENSE |
 | `go.uber.org/multierr` | v1.11.0 | MIT | LICENSE.txt |
 | `go.uber.org/zap` | v1.28.0 | MIT | LICENSE |
-| `go.yaml.in/yaml/v3` | v3.0.4 | Apache-2.0 | LICENSE |
-| `golang.org/x/exp` | v0.0.0-20260718201538-764159d718ef | BSD-3-Clause | LICENSE |
+| `go.yaml.in/yaml/v3` | v3.0.5 | Apache-2.0 | LICENSE |
+| `golang.org/x/exp` | v0.0.0-20260820142414-ca536658362e | BSD-3-Clause | LICENSE |
 | `golang.org/x/net` | v0.58.0 | BSD-3-Clause | LICENSE |
 | `golang.org/x/oauth2` | v0.36.0 | BSD-3-Clause | LICENSE |
 | `golang.org/x/sync` | v0.22.0 | BSD-3-Clause | LICENSE |
 | `golang.org/x/sys` | v0.47.0 | BSD-3-Clause | LICENSE |
 | `golang.org/x/text` | v0.41.0 | BSD-3-Clause | LICENSE |
 | `google.golang.org/genproto` | v0.0.0-20260427160629-7cedc36a6bc4 | Apache-2.0 | LICENSE |
-| `google.golang.org/genproto/googleapis/api` | v0.0.0-20260803160001-6ac0973c030d | Apache-2.0 | LICENSE |
+| `google.golang.org/genproto/googleapis/api` | v0.0.0-20260819154853-08b0e4226688 | Apache-2.0 | LICENSE |
 | `google.golang.org/genproto/googleapis/rpc` | v0.0.0-20260819154853-08b0e4226688 | Apache-2.0 | LICENSE |
-| `google.golang.org/grpc` | v1.83.0 | Apache-2.0 | LICENSE |
+| `google.golang.org/grpc` | v1.83.1 | Apache-2.0 | LICENSE |
 | `google.golang.org/protobuf` | v1.36.12 | BSD-3-Clause | LICENSE |
 | `gopkg.in/yaml.v3` | v3.0.1 | Apache-2.0 | LICENSE |
 

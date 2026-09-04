@@ -6,10 +6,11 @@ import (
 	"testing"
 
 	"github.com/lens077/ecommerce/backend/constants"
-	"github.com/lens077/go-connect-kit/meta"
 	confv1 "github.com/lens077/ecommerce/backend/services/order/internal/conf/v1"
 	"github.com/lens077/ecommerce/backend/services/order/internal/pkg/config"
 	"github.com/lens077/ecommerce/backend/services/order/internal/pkg/registry"
+	"github.com/lens077/go-connect-kit/meta"
+	kitregistry "github.com/lens077/go-connect-kit/registry"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 	"go.uber.org/fx"
@@ -74,7 +75,7 @@ log:
 
 	var live *config.Live
 	var observability *confv1.Observability
-	var consulRegistry *registry.ConsulRegistry
+	var consulRegistry *kitregistry.ConsulRegistry
 	app := fx.New(
 		fx.NopLogger,
 		config.Module,

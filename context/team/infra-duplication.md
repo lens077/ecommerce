@@ -27,8 +27,8 @@ description: 基础设施副本的治理：同构门禁只能冻结漂移、不�
 
 服务骨架由 [`go-connect-template-cli`](https://github.com/lens077/go-connect-template-cli)
 从 [`go-connect-template`](https://github.com/lens077/go-connect-template) 一次性生成。
-模板的 `internal/pkg/` 至今仍包含全部七个模块（2026-09-01 实测：`config`、`dbutil`、`env`、
-`log`、`meta`、`otel`、`registry`）。
+模板曾在 `internal/pkg/` 包含全部七个模块（2026-09-01 实测：`config`、`dbutil`、`env`、
+`log`、`meta`、`otel`、`registry`）；这批实现现已迁入 `go-connect-kit`。
 
 生成之后没有回流通道：模板改了，已生成的服务不会跟着变；服务改了，要靠人手工同步回模板
 （模板最近一次提交是 `feat(template): sync cart production standards`）。
@@ -58,17 +58,16 @@ description: 基础设施副本的治理：同构门禁只能冻结漂移、不�
 通常意味着有服务专属职责正在寄生——`payment` 曾把一个 HTTP request context 辅助函数
 塞进宽泛的 `meta` 包，就是这个模式。
 
-## 现状（2026-09-01）
+## 现状（2026-09-03）
 
-| 项目 | 迁移前 | 迁移后 |
-|---|---:|---:|
-| `services/*/internal/pkg` 生产 Go | 15,106 行 | 4,014 行 |
-| `homogeneity_baseline.txt` 条目 | 10 | 2 |
+`go-connect-kit` 已承载七个共享模块。ecommerce 与 control-tower 改为消费 kit；
+`go-connect-template` 不再生成实现副本，只保留配置、日志、OTel、registry 的 protobuf-to-options
+adapter。`dbutil`、`env`、`meta` 直接导入 kit。Config Center 的具体来源由
+`control-tower/sdk/configsource` 适配 `config.Source` / `config.Watcher`。
 
-剩余 2 条基线是 `config/config_test.go` 与 `money/numeric.go`。`dbutil/handler.go`
-原本划在本次范围外，随后由 `8dfebbb`（统一 dbutil 错误映射并删除影子 constants 包）
-收敛，棘轮据此又前进一格——这正是规则 1 说的判据：条目在减少，说明门禁确实在收敛。
+`homogeneity_baseline.txt` 中与 config 实现副本相关的条目应删除；`money/numeric.go` 属于独立的
+服务级同构问题，不在本次基础设施迁移范围内。
 
-**未闭环**：`go-connect-template` 仍然包含全部七个模块，新生成的服务会再次引入副本。
-按规则 3，闭环需要把共享实现发布为独立模块后，让模板改为依赖它。方案论证见
-`.scratch/shared-infra-kit/spec.md`。
+这条闭环不使用 BSR。BSR 只分发 proto，不能分发 Go 实现；共享实现通过普通 Go module
+版本发布。删除 kit 后，配置热更新、日志、遥测、Consul 自恢复和数据库错误映射会重新散回
+各消费方，说明模块通过删除测试并提供了实际 leverage。

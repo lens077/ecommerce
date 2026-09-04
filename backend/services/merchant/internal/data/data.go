@@ -7,8 +7,8 @@ import (
 	"fmt"
 	"time"
 
-	"github.com/lens077/ecommerce/backend/services/merchant/internal/pkg/dbutil"
-	otelpkg "github.com/lens077/ecommerce/backend/services/merchant/internal/pkg/otel"
+	"github.com/lens077/go-connect-kit/dbutil"
+	otelpkg "github.com/lens077/go-connect-kit/otel"
 
 	"github.com/casdoor/casdoor-go-sdk/casdoorsdk"
 	"github.com/exaring/otelpgx"

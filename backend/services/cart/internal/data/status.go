@@ -1,11 +1,11 @@
-package dbutil
+package data
 
 import (
 	"github.com/lens077/ecommerce/backend/constants"
 	"github.com/lens077/ecommerce/backend/services/cart/internal/data/models"
 )
 
-func ToCartStatusEnum(status models.CartCartType) constants.CartStatusEnum {
+func toCartStatusEnum(status models.CartCartType) constants.CartStatusEnum {
 	switch status {
 	case models.CartCartTypeActive:
 		return constants.CartStatusActive

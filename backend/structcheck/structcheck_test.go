@@ -4,8 +4,8 @@
 //  1. .service-matrix.yaml 与 backend/services/、control-tower 网关路由模板
 //     (github.com/lens077/control-tower/routes,go:embed 导出)的一致性
 //     —— matrix 自称「服务拓扑真相源」,真相源与实际接线漂移时必须在 CI 里报警。
-//  2. 各服务 internal/pkg 基础设施副本的同构性 —— 同名文件原文或归一化服务名后
-//     必须字节一致;存量漂移记录在 homogeneity_baseline.txt,只许收敛不许新增(棘轮)。
+//  2. 各服务仍留在 internal/pkg 的本仓共享代码同构性 —— kit adapter 单独守薄层边界，
+//     其余同名文件原文或归一化服务名后必须一致；基线只许收敛不许新增。
 package structcheck
 
 import (
@@ -405,7 +405,8 @@ func TestGatewayGuestMatchesMatrix(t *testing.T) {
 	}
 }
 
-// 各服务 internal/pkg 的同名文件必须是同一份代码的副本。
+// 各服务 internal/pkg 中仍由本仓维护的同名文件必须保持同构。
+// config/log/otel/registry 是面向服务 proto 的 kit adapter，允许映射不同字段，不参与副本比较。
 //
 // 判定用两把尺子,任一把认为一致就算同构:
 //   - 原文哈希 —— 文件里根本没出现服务名时(逐字节相同)直接过;
@@ -419,6 +420,9 @@ func TestGatewayGuestMatchesMatrix(t *testing.T) {
 func TestInfraHomogeneity(t *testing.T) {
 	m := loadMatrix(t)
 	baseline := loadBaseline(t)
+	adapterDirs := map[string]bool{
+		"config": true, "log": true, "otel": true, "registry": true,
+	}
 
 	// relpath → hash → 持有的服务列表(raw 为原文,norm 为归一化服务名后)
 	byPathRaw := map[string]map[string][]string{}
@@ -430,8 +434,14 @@ func TestInfraHomogeneity(t *testing.T) {
 		}
 		namePat := regexp.MustCompile(`\b` + regexp.QuoteMeta(name) + `\b`)
 		err := filepath.WalkDir(pkgRoot, func(path string, d os.DirEntry, err error) error {
-			if err != nil || d.IsDir() {
+			if err != nil {
 				return err
+			}
+			if d.IsDir() {
+				if path != pkgRoot && adapterDirs[d.Name()] {
+					return filepath.SkipDir
+				}
+				return nil
 			}
 			rel, _ := filepath.Rel(pkgRoot, path)
 			rel = filepath.ToSlash(rel)
@@ -486,52 +496,6 @@ func TestInfraHomogeneity(t *testing.T) {
 			t.Errorf("基线条目已收敛(或文件已不存在): %s —— 请从 %s 删除该行,让棘轮前进", rel, baselinePath)
 		}
 	}
-}
-
-// Cart is the configuration glue baseline. Every service must carry the same
-// production files; the general homogeneity check intentionally ignores files
-// that exist in only one service, so it cannot catch a newly omitted copy.
-func TestConfigGlueFileSet(t *testing.T) {
-	m := loadMatrix(t)
-	expected := configProductionFiles(t, "cart")
-
-	for name := range m.Services {
-		actual := configProductionFiles(t, name)
-		var missing, extra []string
-		for file := range expected {
-			if !actual[file] {
-				missing = append(missing, file)
-			}
-		}
-		for file := range actual {
-			if !expected[file] {
-				extra = append(extra, file)
-			}
-		}
-		sort.Strings(missing)
-		sort.Strings(extra)
-		if len(missing) > 0 || len(extra) > 0 {
-			t.Errorf("%s: internal/pkg/config production file set differs from cart; missing=%v extra=%v",
-				name, missing, extra)
-		}
-	}
-}
-
-func configProductionFiles(t *testing.T, service string) map[string]bool {
-	t.Helper()
-	dir := filepath.Join(servicesDir, service, "internal", "pkg", "config")
-	entries, err := os.ReadDir(dir)
-	if err != nil {
-		t.Fatalf("read %s: %v", dir, err)
-	}
-	files := map[string]bool{}
-	for _, entry := range entries {
-		name := entry.Name()
-		if !entry.IsDir() && strings.HasSuffix(name, ".go") && !strings.HasSuffix(name, "_test.go") {
-			files[name] = true
-		}
-	}
-	return files
 }
 
 func loadBaseline(t *testing.T) map[string]bool {

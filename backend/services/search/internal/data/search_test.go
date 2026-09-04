@@ -11,10 +11,10 @@ import (
 	"strings"
 	"testing"
 
-	sharedconfig "github.com/lens077/ecommerce/backend/pkg/config"
 	"github.com/lens077/ecommerce/backend/pkg/searchindex"
 	"github.com/lens077/ecommerce/backend/services/search/internal/biz"
 	confv1 "github.com/lens077/ecommerce/backend/services/search/internal/conf/v1"
+	sharedconfig "github.com/lens077/go-connect-kit/config"
 	"github.com/stretchr/testify/require"
 	"go.uber.org/fx/fxtest"
 	"go.uber.org/zap"

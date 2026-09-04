@@ -60,8 +60,8 @@
 │   ├── buf.yaml · buf.gen.yaml · buf.gen.ts.yaml · sqlc.yaml · Makefile · Dockerfile
 │   ├── api/{service}/v1/*.proto
 │   ├── constants/                   # 跨服务共享枚举与元数据键
-│   ├── pkg/                         # ★ 跨服务共享库（本项目的教训：第一天就抽出来）
-│   │   ├── gorse/  product/  types/    # 注意：config/log/otel/dbutil 等 8 个包在本项目实际住在各服务 internal/pkg/（10 份同构复制），并未做到「第一天抽到 pkg/」——新项目应真的抽出来
+│   ├── pkg/                         # 项目专属的跨服务共享库
+│   │   ├── gorse/  product/  types/    # config/log/otel/registry/env/meta/dbutil 等通用实现统一依赖 go-connect-kit
 │   └── services/{service}/
 │       ├── cmd/server/main.go
 │       ├── constants/
@@ -90,16 +90,18 @@
 
 **验收**：`buf lint` 通过（哪怕还没有 proto）；`pnpm i` 成功；`context/INDEX.md` 三层入口齐全。
 
-### 阶段 ② 共享层（这一步做扎实，后面每个服务都是复制粘贴）
+### 阶段 ② 共享层（这一步做扎实，后面每个服务只保留薄适配）
 
 产出：
-- `backend/pkg/{config,log,otel,registry,env,meta,dbutil,types}`
+- `go.mod` 固定依赖 `github.com/lens077/go-connect-kit`；`env`、`meta`、`dbutil` 直接导入 kit
+- 各服务 `internal/pkg/{config,log,otel,registry}` 只保留 protobuf-to-options 适配
+- `backend/pkg/{types,...}` 只承载项目专属的跨服务实现，不能复制 kit 已有模块
 - `backend/constants/`
 - `frontend/packages/{api,configs,constants,utils,ui}`
 
-其中 `pkg/config` 必须包含：`Source` 接口 + Config Center SDK selector（`type=config_center`）+ `Live`（`atomic.Pointer` + 订阅）+ **解码后调用 `protovalidate.Validate`** + `mapstructure` 开 `ErrorUnused`；`pkg/registry` 暴露 `ServiceRegistry`，生产使用 K8s Service + CoreDNS，本地使用 Docker Compose 服务名。
+`go-connect-kit/config` 必须负责 `Source` 接缝、`Live`（`atomic.Pointer` + 订阅）、严格解码和 **`protovalidate.Validate`**；`mapstructure` 开 `ErrorUnused`。服务内 `config` 包只实例化本服务的 `Bootstrap` 并映射 Options，不能重新实现加载逻辑。
 
-**验收**：`go build ./...` 通过；`pkg/config` 有单测覆盖「缺必填块 → 启动失败」这一条（这是本项目最贵的教训，见 `STACK.md` 第十节）。
+**验收**：`go build ./...` 通过；`go-connect-kit/config` 与消费方 adapter 的测试覆盖「缺必填块 → 启动失败」这一条（这是本项目最贵的教训，见 `STACK.md` 第十节）。
 
 ### 阶段 ③ 第一个竖切服务（选依赖最少的，如 user 或 cart）
 
@@ -234,7 +236,7 @@ conventions:
 
 config_validation:
   declared_in: "backend/services/{service}/internal/conf/v1/conf.proto → message Bootstrap"
-  enforced_by: "backend/pkg/config 解码后调用 protovalidate.Validate(bootstrap)"
+  enforced_by: "go-connect-kit/config 严格解码后调用 protovalidate.Validate；服务 config 包只实例化 Bootstrap"
   # ↑ 新项目必须真的实现这一行。只声明不执行的话，KV 缺块会让功能被静默关掉
   #   而不是启动失败 —— 这是最难查的一类故障。
   decoder: "mapstructure，必须开启 ErrorUnused（多余键要报错）"
@@ -809,8 +811,8 @@ type resource
 6. 不把凭据写进仓库，只写主机名和端口。
 7. fx 装配必须把 appOptions() 拆成独立函数以便 fx.ValidateApp 静态校验；
    OnStart 先做 DB/Cache 健康检查再监听；OnStop 7s 内完成 Shutdown/OTel flush。
-8. 共享工具（config/log/otel/registry/env/meta/dbutil）从第一天就放 backend/pkg/，
-   不要在每个服务里复制。
+8. 共享基础设施实现（config/log/otel/registry/env/meta/dbutil）从第一天就依赖 `go-connect-kit`；
+   服务内只保留必要的 protobuf-to-options 适配，不保存转发包或实现副本。
 9. 事件写入采用 Transactional Outbox，Relay 收到 Kafka `acks=all` 后才标记 published；
    消费端使用 Inbox 幂等，失败进入 DLQ，同一聚合以 aggregate_id 分区。
 10. 测试必须包含 k6 容量基线、Playwright E2E、gopter 属性测试和状态机测试；

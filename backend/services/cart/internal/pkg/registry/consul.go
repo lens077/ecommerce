@@ -1,21 +1,20 @@
 package registry
 
 // This file is a service adapter. It may only map the service's confv1 Bootstrap to
-// backend/pkg/registry options and retain the existing registry type name.
+// go-connect-kit/registry options.
 
 import (
-	sharedregistry "github.com/lens077/ecommerce/backend/pkg/registry"
 	confv1 "github.com/lens077/ecommerce/backend/services/cart/internal/conf/v1"
+	sharedregistry "github.com/lens077/go-connect-kit/registry"
 	"go.uber.org/fx"
 )
-
-type ConsulRegistry = sharedregistry.ConsulRegistry
 
 var Module = fx.Module("cart-registry-adapter",
 	fx.Provide(optionsFromBootstrap),
 	sharedregistry.Module,
 )
 
+// optionsFromBootstrap maps the cart service configuration to shared registry options.
 func optionsFromBootstrap(conf *confv1.Bootstrap) sharedregistry.Options {
 	consul := conf.GetDiscovery().GetConsul()
 	check := consul.GetCheck()
@@ -35,6 +34,9 @@ func optionsFromBootstrap(conf *confv1.Bootstrap) sharedregistry.Options {
 				Enabled:      ttl != nil,
 				Duration:     ttl.GetDuration(),
 				PingInterval: ttl.GetPingInterval().AsDuration(),
+			},
+			GRPC: &sharedregistry.GRPCCheckOptions{
+				Interval: ttl.GetPingInterval().AsDuration(),
 			},
 			DeregisterCriticalServiceAfter: check.GetDeregisterCriticalServiceAfter(),
 		},

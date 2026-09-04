@@ -36,14 +36,13 @@ description: 能力接缝的准入与验收：定义方、至少两个可用提�
 
 ## 正例：配置源
 
-[`backend/pkg/config/source.go`](../../backend/pkg/config/source.go) 中的 `Source` 是能力接缝，`Watcher` 是按需发现的可选能力。2026-09，这套配置能力从 10 个服务副本上提为唯一共享实现；泛型 `New[T proto.Message]` 接收 `Source`，并与 `Live[T]` 复用同一接缝，三个角色和硬判据没有改变。
+[`backend/pkg/configsource/source.go`](../../backend/pkg/configsource/source.go) 是本仓的配置源装配入口。`Source`、文件 provider、Live 配置与解码逻辑已上提到 `github.com/lens077/go-connect-kit/config`；Config Center provider 位于 `github.com/lens077/control-tower/sdk/configsource`。本仓只用 `configsource.New` 固定 provider 选择策略。
 
-- `Source.Load` 的数据边界是 `map[string]any`；`Source` 与 `Watcher` 的签名只使用标准库类型和项目拥有的 `WatchEvent`，没有暴露 Viper 或 Config Center SDK 类型。Viper 只参与实现内部的 YAML 解析。
-- [`NewSDKSource`](../../backend/pkg/config/source_sdk.go) 与 [`NewFileSource`](../../backend/pkg/config/source_file.go) 提供两个真实实现，`NewSource` 按环境变量选择启动时使用的 provider。
-- Config Center provider 额外实现 `Watcher`，文件 provider 不实现。[`startWatch`](../../backend/pkg/config/config.go) 通过 `live.source.(Watcher)` 的运行时类型断言发现可选能力，没有迫使所有 `Source` 都支持热更新。
-- 推送内容解析、解码或校验失败，以及配置项被删除时，代码都不会调用 `Live.Set`，因此继续使用 last-known-good（最后一份已知可用配置）。provider 的坏输入不会破坏 Consumer 当前持有的有效状态。
+- `go-connect-kit/config.Source` 的数据边界不暴露 Viper 或 Config Center SDK 类型。
+- `kitconfig.FromEnvironment(controlsource.NewKitSource)` 在文件 provider 与 Config Center provider 之间选择；两种实现位于共享模块，不再复制进 10 个服务。
+- Watch、last-known-good、解码和校验由共享配置模块管理。Consumer 只读取项目拥有的 Bootstrap 契约。
 
-这个设计满足深度模块化原则：Consumer 读取项目拥有的数据契约，具体配置 SDK、文件读取和 Viper 解析都留在 provider 内部。
+这个设计满足深度模块化原则：Consumer 不感知具体配置 SDK、文件读取或 Viper 解析。共享模块的 provider 数量与可选能力仍须按本节硬判据核对，不能只因代码移出本仓就宣称可替换。
 
 ## 历史反例：搜索引擎壳（2026-09 已修复）
 

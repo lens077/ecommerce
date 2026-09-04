@@ -1,11 +1,11 @@
 package log
 
 // This file is a service adapter. It may only map the service's confv1 Bootstrap to
-// the provider-neutral options consumed by backend/pkg/log.
+// the provider-neutral options consumed by go-connect-kit/log.
 
 import (
-	sharedlog "github.com/lens077/ecommerce/backend/pkg/log"
 	confv1 "github.com/lens077/ecommerce/backend/services/search/internal/conf/v1"
+	sharedlog "github.com/lens077/go-connect-kit/log"
 	"go.uber.org/fx"
 )
 

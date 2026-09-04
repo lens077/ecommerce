@@ -18,9 +18,10 @@ description: 给所有 AI 编码工具(尤其 Codex)的可执行命令与验收�
 - **查服务拓扑不要现搜**:注册名、网关前缀、依赖、Config Center 键 → 一律查
   [`.service-matrix.yaml`](../../.service-matrix.yaml)。区分 `depends_on`(已接线)与
   `depends_on_planned`(设计要求但未接线),别把后者当已实现。
-- **后端 10 个业务服务是同构副本**:`backend/services/*/internal/pkg/` 下的基础设施代码
-  (otel/log/registry/config 等)一份逻辑铺 10 份,**改一处 = 改全部对应文件**,由
-  structcheck 的同构检查兜底(见 §2)。整个后端只有一个 `go.mod`。
+- **后端 10 个业务服务共享同一套基础设施实现**：`config`、`log`、`otel`、`registry`、
+  `dbutil`、`env`、`meta` 由 `go-connect-kit` 提供。服务目录只保留 `confv1.Bootstrap` 到
+  provider-neutral Options 的薄 adapter；修改实现只改 kit，修改映射时才需要核对 10 个服务。
+  整个后端只有一个 `go.mod`。
 - **写/改 proto 前先读 `docs/design/` 对应服务目录**(入口 `docs/design/README.md`),为每个字段推断校验约束(见 `proto-design.md`)。
 - **凭据不入库**:密码/密钥只存在 **Config Center 和本地环境**(K8s 里经 Secret 挂载),
   仓库里只写主机名和端口。**Consul KV 已退役,不再存任何配置**(AGENTS.md 硬规则 #4)。
