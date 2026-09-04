@@ -1,6 +1,9 @@
-# registry（服务注册与发现，后端共享模块）
+# registry（服务注册与发现，go-connect-kit 共享模块）
 
-**代码路径**：`backend/services/*/internal/pkg/registry/`（10 份，同一套代码）
+**代码路径**：`github.com/lens077/go-connect-kit/registry` 是唯一实现，包含注册守护循环
+`Maintain`（失败退避重试、心跳失败重注册）。`backend/services/*/internal/pkg/registry/` 只做
+Bootstrap→Options 映射，由 `structcheck` 的 `TestInfraAdaptersStayThin` 守住不再长回实现。
+模板仓也只保留同类 adapter。
 
 > **迁移期定位（2026-08-28）**：按 `docs/TECH.md`，生产注册发现目标为 Kubernetes Service + CoreDNS，pre 半生产测试使用 Docker Compose 服务名（开发内环评估中）；本文记录 Consul 退役完成前的活系统行为与操作约束。
 
@@ -25,7 +28,7 @@ Consul 目录 Watch（blocking query），**只取所有检查均为 `passing` �
 
 | 事项 | 值 |
 |---|---|
-| TTL CheckID | 显式指定为 `service:<实例 ID>`，注册与 pinger 共用 `healthcheck.ConsulTTLCheckID` |
+| TTL CheckID | kit 显式指定为 `service:<实例 ID>`，注册与 pinger 共用同一构造规则 |
 | gRPC readiness CheckID | 显式指定为 `service:<实例 ID>:grpc-readiness` |
 | 检查周期来源 | Config Center `<svc>/<env>/bootstrap.yaml` 的 `discovery.consul.check.ttl.ping_interval`（Consul KV 已退役） |
 | gRPC readiness 阈值 | timeout 12s；连续 3 次失败转 critical；1 次成功转 passing |
@@ -37,7 +40,7 @@ Consul 目录 Watch（blocking query），**只取所有检查均为 `passing` �
 | 症状 | 文件 |
 |---|---|
 | 服务日志干净，前端却要刷好几次才出数据 | [consul-ttl-first-ping-blind-window.md](experience/consul-ttl-first-ping-blind-window.md) |
-| 服务 `1/1 Running` 零重启，网关却说它不存在 | [consul-register-once-then-give-up.md](experience/consul-register-once-then-give-up.md) |
+| 服务 `1/1 Running` 零重启，网关却说它不存在（已修：注册守护循环；症状识别仍有效） | [consul-register-once-then-give-up.md](experience/consul-register-once-then-give-up.md) |
 | 复验 10 个服务的双检查与可逆依赖故障 | [consul-dual-check-runbook.md](consul-dual-check-runbook.md) |
 
 ## 2026-08-27 dev 验证
@@ -62,6 +65,5 @@ Consul 目录 Watch（blocking query），**只取所有检查均为 `passing` �
 - **`deregister_critical_service_after` 有 1 分钟硬下限**，写更小的值会被 Consul 静默钳制。
 - 心跳 goroutine 里 **panic 会带走整个进程**。`ping_interval` 缺失或为 0 时
   `time.NewTicker` 会 panic，现已回落 10s 默认值。
-- registry 接线在 10 个服务里仍是复制关系。改一处要么全改，要么在提交里写清为什么只改一处。
-  gRPC handler 与 Consul readiness check 的协议细节集中在 `backend/pkg/healthcheck/`；各服务只传入
-  自己的 `healthStatus` 和监听地址。当前 pinger 块 10 份完全一致，fx hook 块已漂移出 5 个变体。
+- 10 个服务只复制 protobuf-to-options 映射，守护循环、CheckID、重试和生命周期都在 kit 中维护。
+  gRPC health handler 仍由 `backend/pkg/healthcheck/` 提供；Consul readiness check 的构造归 kit。

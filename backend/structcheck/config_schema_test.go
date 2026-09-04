@@ -7,7 +7,7 @@ import (
 	"sort"
 	"testing"
 
-	"github.com/lens077/ecommerce/backend/pkg/configschema"
+	"github.com/lens077/go-connect-kit/configschema"
 )
 
 const bootstrapDefinition = "conf.v1.Bootstrap.schema.json"

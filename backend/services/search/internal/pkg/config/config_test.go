@@ -8,8 +8,8 @@ import (
 
 	"buf.build/go/protovalidate"
 	"github.com/lens077/ecommerce/backend/constants"
-	sharedconfig "github.com/lens077/ecommerce/backend/pkg/config"
 	confv1 "github.com/lens077/ecommerce/backend/services/search/internal/conf/v1"
+	sharedconfig "github.com/lens077/go-connect-kit/config"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 )
@@ -54,7 +54,7 @@ log:
 func loadPath(t *testing.T, path string) (*sharedconfig.Live[*confv1.Bootstrap], error) {
 	t.Helper()
 	t.Setenv(constants.EnvConfigFile, path)
-	source, err := sharedconfig.NewFileSource()
+	source, err := sharedconfig.NewFileSource(path)
 	require.NoError(t, err)
 	return sharedconfig.New[*confv1.Bootstrap](source)
 }

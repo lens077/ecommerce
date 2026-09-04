@@ -7,8 +7,8 @@ import (
 	"time"
 
 	"github.com/lens077/ecommerce/backend/constants"
-	sharedconfig "github.com/lens077/ecommerce/backend/pkg/config"
 	confv1 "github.com/lens077/ecommerce/backend/services/behavior/internal/conf/v1"
+	sharedconfig "github.com/lens077/go-connect-kit/config"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 )
@@ -49,7 +49,7 @@ func loadFromFile(t *testing.T, contents string) (*sharedconfig.Live[*confv1.Boo
 	path := filepath.Join(t.TempDir(), "bootstrap.yaml")
 	require.NoError(t, os.WriteFile(path, []byte(contents), 0o600))
 	t.Setenv(constants.EnvConfigFile, path)
-	source, err := sharedconfig.NewFileSource()
+	source, err := sharedconfig.NewFileSource(path)
 	require.NoError(t, err)
 	return sharedconfig.New[*confv1.Bootstrap](source)
 }

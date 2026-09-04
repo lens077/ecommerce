@@ -27,7 +27,9 @@ func TestOptionsFromBootstrap(t *testing.T) {
 	}}
 
 	options := optionsFromBootstrap(bootstrap)
-	assert.True(t, options.Enabled)
+	require.NotNil(t, options.Trace)
+	require.NotNil(t, options.Metric)
+	require.NotNil(t, options.Logging)
 	assert.Equal(t, "trace:4318", options.Trace.Endpoint)
 	require.NotNil(t, options.Trace.SampleRatio)
 	assert.Equal(t, 0.25, *options.Trace.SampleRatio)
@@ -35,15 +37,13 @@ func TestOptionsFromBootstrap(t *testing.T) {
 	assert.Equal(t, "trace-ca", options.Trace.TLS.CAPEM)
 	assert.Equal(t, 45*time.Second, options.Metric.ExportInterval)
 	assert.Equal(t, "log:4318", options.Logging.Endpoint)
+	assert.True(t, options.RuntimeMetrics)
 }
 
 func TestOptionsPreserveUnsetSampleRatio(t *testing.T) {
 	options := optionsFromBootstrap(&confv1.Bootstrap{})
-	assert.False(t, options.Enabled)
-	assert.Nil(t, options.Trace.SampleRatio)
-}
-
-func TestCompatibilityAliases(t *testing.T) {
-	assert.Equal(t, "GetThing", SQLSpanName("-- name: GetThing :one\nSELECT 1"))
-	assert.NotNil(t, EnsureRedisInstrumentation)
+	assert.Nil(t, options.Trace)
+	assert.Nil(t, options.Metric)
+	assert.Nil(t, options.Logging)
+	assert.False(t, options.RuntimeMetrics)
 }

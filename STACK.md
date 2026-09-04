@@ -118,19 +118,19 @@ ecommerce/
 | IDL | Protobuf 3 + Buf CLI | `google.golang.org/protobuf` v1.36.12 |
 | 参数校验 | Protovalidate + `connectrpc.com/validate` 拦截器 | v1.3.0 / v0.6.0 |
 | 依赖注入 | `go.uber.org/fx` | v1.24.0 |
-| 日志 | `go.uber.org/zap` + `otelzap` bridge | v1.28.0 / v0.20.0 |
+| 日志 | `go-connect-kit/log` + `go.uber.org/zap` | kit v0.3.0 / zap v1.28.0；OTel bridge 由 kit 封装 |
 | DB 驱动 | `jackc/pgx/v5` + `exaring/otelpgx` | v5.10.0 / v0.11.1 |
 | SQL 与迁移 | sqlc + goose | pgx/v5 driver / goose v3.27.3 |
-| Redis 协议客户端 | `redis/go-redis/v9` + `redisotel-native` | v9.22.0 / v9.21.0 |
+| Redis 协议客户端 | `redis/go-redis/v9` + `go-connect-kit/otel` | go-redis v9.22.0；redisotel 初始化由 kit 封装 |
 | 搜索客户端 | `go-elasticsearch/v9` + `elastic-transport-go/v8` | v9.4.3 / v8.9.0；search 服务经单 provider 的 `SearchCatalog` 深度模块边界返回项目 DTO，`backend/go.mod` 已无 Meilisearch 客户端。该状态只表示代码接线，运行时尚未切流 |
 | 消息客户端 | `nats.go` | v1.53.1；存量迁移期。事件主干按 [`docs/TECH.md`](docs/TECH.md) 定稿为 Apache Kafka（外部非 K8s 集群），NATS 验收后退役 |
-| 注册发现 | `hashicorp/consul/api` | v1.34.4；存量。按 [`docs/TECH.md`](docs/TECH.md) §10.2 定稿：生产 K8s Service + CoreDNS、pre 半生产测试走 Docker Compose 服务名（开发内环评估中），配置层抽象 `ServiceRegistry` 接口 |
-| 配置 SDK | `github.com/lens077/control-tower/sdk/configsource` | control-tower v0.1.0 |
+| 注册发现 | `go-connect-kit/registry` | kit v0.3.0，封装 Consul API v1.34.4；存量注册能力，运行时当前由 `CONSUL_ENABLED=false` 关闭 |
+| 配置 | `go-connect-kit/config` + `control-tower/sdk/configsource` | kit v0.3.0 / control-tower v0.1.4；服务只保留 Bootstrap adapter |
 | 支付 | `smartwalle/alipay/v3` | v3.2.29 |
 | 金额 | `shopspring/decimal` | v1.4.0；新 proto 优先 `int64` 分或 decimal 字符串 |
-| 配置解析 | Viper + mapstructure | v1.21.0 / v1.5.0；未知字段拒绝 + 解码后校验 |
-| 可观测性 | OpenTelemetry SDK，trace/metric/log 走 OTLP-HTTP | SDK v1.45.0，log v0.21.0 |
-| 测试 | `stretchr/testify` | v1.11.1 |
+| 配置解析 | `go-connect-kit/config` | kit 内封装 Viper + mapstructure；默认拒绝未知字段并执行 Protovalidate |
+| 可观测性 | `go-connect-kit/otel`，trace/metric/log 走 OTLP-HTTP | kit v0.3.0 / OTel SDK v1.46.0，log v0.21.0 |
+| 测试 | `stretchr/testify` | v1.12.1 |
 | CORS | `rs/cors` + `connectrpc.com/cors` | v1.11.1 / v0.1.0 |
 | 推荐引擎 | Gorse，自写 `backend/pkg/gorse` client | 外部服务，非进程内库 |
 | 进程内事件 | `Protocol-Lattice/GoEventBus` | v0.2.5；仅 order 存量路径，不是跨服务消息总线 |
@@ -301,9 +301,11 @@ internal/
 │   ├── schema/*.sql        建表 DDL（sqlc 输入）
 │   ├── queries/*.sql       业务 SQL（sqlc 输入）
 │   └── models/             sqlc 生成物（禁止手改）
-└── pkg/                    服务内工具：config · log · otel · registry · env · meta · dbutil · money
+└── pkg/                    薄适配与领域工具：config · log · otel · registry（委托 kit）· money 等
 constants/                  服务级常量（环境变量键等）
 ```
+
+`env`、`meta`、`dbutil` 直接导入 `github.com/lens077/go-connect-kit`；服务内不保留转发包或实现副本。
 
 ### 依赖方向铁律
 
@@ -356,7 +358,7 @@ logger.Module → config.Module → logger.FxLogger() → registry.Module
 biz 定义领域错误（`[模块]` 前缀）→ data 用 `%w` 双包装保证 `errors.Is` 可穿透 → service
 `switch errors.Is` 映射 connect 错误码。**代码样例与逐层规范见
 [`docs/design/platform/error-handling.md`](docs/design/platform/error-handling.md)（全服务通用规范，此前本节整段抄录已删）**；
-工具层的 PG 错误码映射用法见 `backend/services/inventory/internal/pkg/dbutil/README.md`。
+PG 错误码映射由 `github.com/lens077/go-connect-kit/dbutil` 提供，调用示例见各服务的 `internal/data/data.go`。
 
 **网关侧还有一层**：404 / 405 / 无可用节点 / 超时等**非业务错误也按 Connect 规范**返回 `{code, message, details[]}` + `X-Error-Reason` 头 + `Access-Control-Expose-Headers`（跨域下前端才读得到该头）。实现在 `../control-tower/internal/gwerrors/`。
 
@@ -398,7 +400,7 @@ buf 的 lint/breaking/生成配置**直读 `backend/buf.yaml` 与 `buf.gen*.yaml
 - **跨服务只存 ID + 快照字段**，不做跨库 JOIN、不建跨 schema 外键
 - 查询用命名参数 `@user_id`，配合 `-- name: XxxYyy :one|:many|:exec`
 - Upsert 走 `ON CONFLICT ... DO UPDATE`（配合上面的 UNIQUE 约束）
-- PG 错误码映射交给 `internal/pkg/dbutil.Handler`（`23505` 唯一冲突、`23503` 外键）
+- PG 错误码映射交给 `go-connect-kit/dbutil.Handler`（`23505` 唯一冲突、`23503` 外键）
 - 领域枚举在 `backend/constants/` 定义为 Go string 常量，与 PG enum 字面量**一一对应**
 - 列表分页用**游标（keyset）**，不用 `OFFSET` + `COUNT`：省 count，且翻页期间不会重复/漏项（见 `docs/design/product/listing.md`）
 

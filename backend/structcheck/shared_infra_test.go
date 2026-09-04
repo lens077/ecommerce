@@ -50,25 +50,34 @@ func TestBuildVersionInjection(t *testing.T) {
 	}
 }
 
-func TestEnvAndMetaUseSharedPackages(t *testing.T) {
+func TestSharedImplementationsDoNotReturnToConsumers(t *testing.T) {
 	for service := range loadMatrix(t).Services {
-		for _, packageName := range []string{"env", "meta"} {
+		for _, packageName := range []string{"env", "meta", "dbutil"} {
 			path := filepath.Join(servicesDir, service, "internal", "pkg", packageName)
 			if _, err := os.Stat(path); err == nil {
-				t.Errorf("%s still has duplicated internal/pkg/%s; use backend/pkg/%s", service, packageName, packageName)
+				t.Errorf("%s still has duplicated internal/pkg/%s; import go-connect-kit/%s", service, packageName, packageName)
 			} else if !os.IsNotExist(err) {
 				t.Fatalf("stat %s: %v", path, err)
 			}
 		}
 	}
+
+	for _, packageName := range []string{"config", "configschema", "dbutil", "env", "log", "meta", "otel", "registry"} {
+		path := filepath.Join("..", "pkg", packageName)
+		if _, err := os.Stat(path); err == nil {
+			t.Errorf("backend/pkg/%s is an implementation copy; import go-connect-kit/%s", packageName, packageName)
+		} else if !os.IsNotExist(err) {
+			t.Fatalf("stat %s: %v", path, err)
+		}
+	}
 }
 
-// adapterOwnedVendors 列出每个共享包独占的实现依赖。适配层出现其中任何一个，
-// 都说明实现正在从 backend/pkg 漏回服务内。
+// adapterOwnedVendors 列出每个 kit 包独占的实现依赖。适配层出现其中任何一个，
+// 都说明实现正在从 go-connect-kit 漏回服务内。
 //
 // fx 与 zap 不在此列：适配层用 fx.Provide 装配、用 *zap.Logger 收参数是正当的。
 var adapterOwnedVendors = map[string][]string{
-	"config":   {"github.com/spf13/viper", "github.com/mitchellh/mapstructure", "github.com/lens077/control-tower"},
+	"config":   {"github.com/spf13/viper", "github.com/mitchellh/mapstructure"},
 	"log":      {"go.opentelemetry.io/contrib/bridges", "go.opentelemetry.io/otel/log"},
 	"otel":     {"go.opentelemetry.io/otel", "go.opentelemetry.io/contrib/instrumentation", "github.com/redis/go-redis"},
 	"registry": {"github.com/hashicorp/consul"},
@@ -81,8 +90,8 @@ var adapterOwnedVendors = map[string][]string{
 // 而 15,106 行重复会静默长回来。这里改为检查语义：适配层必须委托给共享包，
 // 且不得直接依赖共享包独占的实现库。
 //
-// 触发背景见 context/team/infra-duplication.md：副本的根因是生成模板，
-// 模板至今仍带着这七个模块，新服务会把它们原样带回来。
+// 触发背景见 context/team/infra-duplication.md：副本的根因是生成模板。
+// 模板现已改为依赖 kit，这道门禁防止后续把实现复制回来。
 func TestInfraAdaptersStayThin(t *testing.T) {
 	for service := range loadMatrix(t).Services {
 		for _, packageName := range []string{"config", "log", "otel", "registry"} {
@@ -93,7 +102,7 @@ func TestInfraAdaptersStayThin(t *testing.T) {
 				continue
 			}
 
-			sharedImport := "github.com/lens077/ecommerce/backend/pkg/" + packageName
+			sharedImport := "github.com/lens077/go-connect-kit/" + packageName
 			delegates := false
 			for _, entry := range entries {
 				if entry.IsDir() || !strings.HasSuffix(entry.Name(), ".go") ||
@@ -110,7 +119,7 @@ func TestInfraAdaptersStayThin(t *testing.T) {
 				}
 				for _, vendor := range adapterOwnedVendors[packageName] {
 					if strings.Contains(contents, `"`+vendor) {
-						t.Errorf("%s/internal/pkg/%s/%s 直接依赖 %s；该实现属于 backend/pkg/%s，"+
+						t.Errorf("%s/internal/pkg/%s/%s 直接依赖 %s；该实现属于 go-connect-kit/%s，"+
 							"适配层只应做 confv1→Options 映射与泛型实例化",
 							service, packageName, entry.Name(), vendor, packageName)
 					}

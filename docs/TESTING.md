@@ -31,7 +31,7 @@ sqlc 项目里 **SQL 不是手写逻辑，是生成物的输入**。会出错的
 1. `ON CONFLICT (user_id, merchant_id, sku_id) DO UPDATE` 是否真的命中 UNIQUE 约束；
 2. `constants/cart.go` 的 Go 字面量（`active`/`expired`/`deleted`）与 PG enum `cart.cart_type` 是否一一对应
    —— 错一个字面量 mock 测试全绿，线上 insert 直接炸；
-3. `dbutil.Handler` 的 `23505`/`23503` 映射 —— mock 只能手造 `&pgconn.PgError{Code:"23505"}`，
+3. `go-connect-kit/dbutil.Handler` 的 `23505`/`23503` 映射 —— mock 只能手造 `&pgconn.PgError{Code:"23505"}`，
    等于测试在验证自己的假设；
 4. 游标（keyset）分页的排序稳定性与边界；
 5. `DECIMAL(10,2)` / `TIMESTAMPTZ` / `JSONB` 到 Go 类型的往返精度；
@@ -212,7 +212,7 @@ services/cart/internal/data/
 |---|---|---|
 | 1 | `AddProductToCart` 同一 `(user_id, merchant_id, sku_id)` 连续两次 | 只有一行；第二次 `selected`/`status` 被 EXCLUDED 覆盖；`cart_item_quantity` 计数正确 |
 | 2 | 遍历 `constants.CartStatus{Active,Expired,Deleted}` 逐个 insert | 全部成功。任一失败即证明 Go 字面量与 PG enum 漂移 |
-| 3 | 绕过 upsert 直接 `INSERT` 撞 UNIQUE | 拿到 `*pgconn.PgError` 且 `Code == "23505"`；经 `dbutil.Handler` 后是预期的 biz 错误 |
+| 3 | 绕过 upsert 直接 `INSERT` 撞 UNIQUE | 拿到 `*pgconn.PgError` 且 `Code == "23505"`；经 `go-connect-kit/dbutil.Handler` 后是预期的 biz 错误 |
 | 4 | `GetCart` 翻页（造 N 条，按游标翻到底） | 并集 = 全集，无重复、无遗漏；翻页中途插入新行不影响已翻过的页 |
 | 5 | `price` 写 `123.45` / `0.01` / `99999999.99` 读回 | `decimal` 值逐位相等，无浮点漂移；超 `DECIMAL(10,2)` 范围时报错而非静默截断 |
 | 6 | `sku_attributes` 写 JSONB 读回 | 结构与键序无关地相等；空对象默认值 `{}` 生效 |

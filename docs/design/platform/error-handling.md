@@ -1,6 +1,6 @@
 # 错误处理分层约定
 
-> PG 错误码映射的工具层用法见 `backend/services/inventory/internal/pkg/dbutil/README.md`（10 服务同构复制的包，README 只在 inventory）。
+> PG 错误码映射统一使用 `github.com/lens077/go-connect-kit/dbutil`；服务内不保留实现副本，调用示例见各服务的 `internal/data/data.go`。
 
 > 从根 `DESIGN.md` 拆出（2026-08-08）。三层分工：biz 定义错误 → data 包装 → service 映射
 > RPC 错误码。此约定已在 user 等服务落地，是全服务通用规范；

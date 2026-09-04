@@ -7,7 +7,7 @@ import (
 	"fmt"
 	"time"
 
-	otelpkg "github.com/lens077/ecommerce/backend/services/search/internal/pkg/otel"
+	otelpkg "github.com/lens077/go-connect-kit/otel"
 
 	"github.com/casdoor/casdoor-go-sdk/casdoorsdk"
 	"github.com/exaring/otelpgx"

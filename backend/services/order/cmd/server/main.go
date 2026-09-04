@@ -10,8 +10,6 @@ import (
 
 	"github.com/google/uuid"
 	"github.com/lens077/ecommerce/backend/constants"
-	"github.com/lens077/go-connect-kit/env"
-	"github.com/lens077/go-connect-kit/meta"
 	"github.com/lens077/ecommerce/backend/services/order/internal/biz"
 	"github.com/lens077/ecommerce/backend/services/order/internal/biz/domain/events"
 	confv1 "github.com/lens077/ecommerce/backend/services/order/internal/conf/v1"
@@ -23,6 +21,9 @@ import (
 	"github.com/lens077/ecommerce/backend/services/order/internal/pkg/registry"
 	"github.com/lens077/ecommerce/backend/services/order/internal/server"
 	"github.com/lens077/ecommerce/backend/services/order/internal/service"
+	"github.com/lens077/go-connect-kit/env"
+	"github.com/lens077/go-connect-kit/meta"
+	kitregistry "github.com/lens077/go-connect-kit/registry"
 	"go.uber.org/fx"
 	"go.uber.org/zap"
 )
@@ -131,7 +132,7 @@ func appOptions(serviceName, deploymentMode, serviceVersion string) []fx.Option 
 			},
 
 			// 启动之前初始化 Consul 注册中心
-			func(reg *registry.ConsulRegistry, logger *zap.Logger) {
+			func(reg *kitregistry.ConsulRegistry, logger *zap.Logger) {
 				if reg != nil {
 					logger.Info("consul service discovery component lifecycle successfully initialized")
 				}
