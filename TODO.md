@@ -22,7 +22,7 @@
 
 ## 一、全局优先级视图
 
-**未完成合计 158 项，其中 P0 共 18 项**（计数口径：各分类文件顶层 `- [ ]` 复选框实数；
+**未完成合计 154 项，其中 P0 共 18 项**（计数口径：各分类文件顶层 `- [ ]` 复选框实数；
 2026-09-01 新增 1 条可观测 P2「容器级 CFS 限流指标完全缺采」——`nr_throttled`/`throttled_usec`
 是「CPU 利用率低但尾延迟高」的唯一判据，当前无任何组件在采（VMAgent 未部署，otel-node 只有
 `hostmetrics`、无 `kubeletstats`/cAdvisor）；且现有采集恰好只覆盖会骗人的节点级 CPU——
@@ -34,6 +34,9 @@
 2026-09-01 关闭 1 条基础设施 P2「node1 PostgreSQL 加 TLS、轮换弱凭据」（复用 Pangolin 的 ZeroSSL 证书，`hostssl` 强制加密、明文实测被拒，root 口令已轮换，gorse 与 casdoor 均已切 `verify-full` 并验证健康）；
 2026-09-01 关闭 1 条基础设施 P2「收窄 node1 公网数据端口」（Redis 61246 / PG 52288 已按来源收窄并双向验证）；
 2026-09 DuckDB 试点补排 4 条 P2（TECH.md B 表 2026-08-28 已采纳但从未进过待办文件）；
+2026-09-03 关闭事件分类 1 条「完成搜索运行时接线」，并在 pipeline 仓固化 `search_catalog` 重建、source offset 恢复、两段积压、Sink fail-stop/原 offset 重放、alias 回退与契约检查手顺；node3 故障注入仍归 E3 未完成项；同步关闭文档分类 3 条已消失的旧栈冲突；
+2026-09-04 关闭基础设施分类 1 条「Meilisearch 本地 PV 单点」：回滚窗口结束后完整删除运行资源、Secret、路由、PVC/PV 与 namespace；
+2026-09-06 基础设施分类 +1（node3 Redis 单元缺网络就绪顺序，重启演练实测）、关闭 1 条 `.172` 地址复验（历史待办已 [x]）；事件分类 E3 更新为「有序重启 + 告警已完成，破坏性故障注入待做」；
 2026-09 搜索文档同步关闭 1 条文档冲突；此前 2026-08-31 更新：阶段 0 收官关闭 4 条 P0 与 3 条当日项，新增 5 条实测发现；同日复审对齐：
 鉴权分类去掉「地址越权」重复登记、「搜索凭据」升入分类 P0 与全局 #17 对齐、供应链关闭
 Trivy 拦截项、matrix 的 CI 校验待办迁入服务发现；档案死链经用户裁决纳入 `[DEAD-LINK]`
@@ -59,7 +62,7 @@ Trivy 拦截项、matrix 的 CI 校验待办迁入服务发现；档案死链经
 | 12 | 移除 legacy bearer JWT 轨（与 §13 红线直接冲突，需定退役期限） | [鉴权](docs/todo/零信任鉴权与Session.md) |
 | 13 | PII 脱敏形同虚设（Lua 不支持 `{n}` 量词，等于空操作） | [可观测](docs/todo/统一可观测性体系.md) |
 | 14 | 免鉴权入口身份可伪造（`x-md-global-user-id` 未剥离） | [可观测](docs/todo/统一可观测性体系.md) |
-| 15 | 一致性底座：Product/Order 事务内 producer、NACK/DLQ、重放审计 | [事件](docs/todo/数据一致性与事件驱动.md) |
+| 15 | 一致性底座：Product/Order 事务内 producer、重试/退避、fail-stop、DLQ 与重放审计 | [事件](docs/todo/数据一致性与事件驱动.md) |
 | 16 | 领域事件落地（`OrderCreated`/`OrderPaid`/…） | [事件](docs/todo/数据一致性与事件驱动.md) |
 | 17 | 轮换 Config Center 预览中暴露的搜索凭据（日志不可撤回） | [鉴权](docs/todo/零信任鉴权与Session.md) |
 | 18 | 轮换 public 仓 git 历史泄露的全部凭据（Casdoor secret ×3 / 支付私钥 / Consul EC 私钥…；历史已重写强推、凭据 09-02 已轮换；剩 GitHub Support 清理悬空对象） | [鉴权](docs/todo/零信任鉴权与Session.md) |
@@ -75,11 +78,11 @@ CES 巡检告警（CronJob 2m + vmalert firing 闭环）、可观测黑盒探活
 | [统一可观测性体系](docs/todo/统一可观测性体系.md) | §9 | 25 | 2 |
 | [微服务与交易闭环](docs/todo/微服务与交易闭环.md) | §5 / §4.3 | 23 | 10 |
 | [基础设施与部署模型](docs/todo/基础设施与部署模型.md) | §7 | 20 | 0 |
-| [文档与协作机制](docs/todo/文档与协作机制.md) | —（harness） | 17 | 0 |
+| [文档与协作机制](docs/todo/文档与协作机制.md) | —（harness） | 14 | 0 |
 | [前端技术栈与工程化](docs/todo/前端技术栈与工程化.md) | §11 | 16 | 0 |
 | [零信任鉴权与 Session](docs/todo/零信任鉴权与Session.md) | §8 | 16 | 4 |
 | [供应链与交付流水线](docs/todo/供应链与交付流水线.md) | B 表 / §7.1 | 14 | 0 |
-| [数据一致性与事件驱动](docs/todo/数据一致性与事件驱动.md) | §3 / §4 | 18 | 2 |
+| [数据一致性与事件驱动](docs/todo/数据一致性与事件驱动.md) | §3 / §4 | 17 | 2 |
 | [服务发现与配置中心](docs/todo/服务发现与配置中心.md) | §10 | 9 | 0 |
 
 〔计数 2026-09 随搜索文档同步：`grep -c '^- \[ \]' docs/todo/*.md`，按未完成数降序〕
@@ -137,7 +140,7 @@ CES 巡检告警（CronJob 2m + vmalert firing 闭环）、可观测黑盒探活
 | 项目 | 状态 | 说明 |
 |---|---|---|
 | K8s 集群 | ✅ | node101(cp)/node102/node103，v1.36.4，Ubuntu 26.04 / 内核 7.0 / **arm64**；**ecommerce 15/15 Deployment Ready**（17 Pod） |
-| 节点容量 | 🟡 | 每节点 4 vCPU / **6.4 GB**（三节点对齐）；**N+1 非控制面演练已通过**〔实测 2026-08-31：交易面零级联 Pending，两节点稳态内存 67%/38%〕，但搜索域不成立（meilisearch 本地 PV）且结论取自近零流量。2026-08-29 曾因 node101 内存耗尽引发控制面雪崩 |
+| 节点容量 | 🟡 | 每节点 4 vCPU / **6.4 GB**（三节点对齐）；**N+1 非控制面演练已通过**〔实测 2026-08-31：交易面零级联 Pending，两节点稳态内存 67%/38%〕；演练时搜索域被 Meilisearch 本地 PV 阻断，该阻断已随 2026-09-04 退役关闭，但容量结论仍只取自近零流量。2026-08-29 曾因 node101 内存耗尽引发控制面雪崩 |
 | Pod 分布 | ✅ | **6/6/5（skew=1）**——2026-08-30 受控重平衡完成（原 14/2/1 为扩容重启遗留）；执行中引爆并修复了 CES 陈旧故障（见 §0 处置记录） |
 | 僵尸 Pod | ✅ | 存量已清零；KCM 阈值改 **20** 且三处一致（manifest/bootstrap/kubeadm-config），真实注入实测 GC 与 `K8sFailedPodsAccumulating` 告警闭环〔实测 2026-08-31〕 |
 | CES 巡检 | ✅ | `ces-audit` CronJob 每 2m 对账（只读 RBAC），`ces_stale_entries` 入 VM + vmalert 告警，假样本 firing 闭环已验〔实测 2026-08-31〕 |
@@ -155,17 +158,21 @@ CES 巡检告警（CronJob 2m + vmalert firing 闭环）、可观测黑盒探活
 | 装而未激活组件 | 🟡 | 审计已裁决〔2026-08-31〕**全保留**：KEDA（0 ScaledObject，绑定阶段 3 激活）、Rollouts（0 Rollout，绑定灰度前置）、Kyverno（2 条 Audit 在产出报告，绑定 `verifyImages`）；未按期激活则下轮审计降级卸载 |
 | 未安装 | — | Descheduler、OpenCost、Chaos Mesh（均为条件触发，见 TECH.md B 表） |
 
-### 2. 事件与搜索（运行时 2026-09-03 实测；架构同日重新平衡）
+### 2. 事件与搜索（运行时 2026-09-04 复验；架构于 2026-09-03 重新平衡）
 
 | 组件 | 位置 | 状态 |
 |---|---|---|
-| **Kafka 4.3.1 (KRaft)** | node3，经 node1 隧道 `:30004` | **运行中**；CDC 线在用（六张业务表 topic），领域事件线零业务接线 |
+| **Kafka 4.3.1 (KRaft)** | node3，经 node1 隧道 `:30004` | **运行中**；CDC 线在用（七张表 topic，其中 `products.search_catalog` 是搜索策展投影），领域事件线零业务接线 |
 | **Elasticsearch 9.4.5 + IK** | node3 容器，经 Pangolin `https://es.apikv.com` | **运行中，已切流**〔实测 2026-09-03〕；alias `ecommerce_catalog_products` → `_v1` 索引 7 文档，由 Sink 写入，lag 0 |
 | **Kafka Connect 4.3.0** | node3 `cdc-connect` | Debezium 3.6.1 source + ES Sink 两 connector RUNNING；**定稿为两条线共用的生产搬运层**（不再称「演示链」），`EventRouter`/`CloudEventsConverter` 已在类路径 |
 | NATS JetStream | — | **已退役**（2026-09-03）：`nats` ns、indexer/relay Deployment 与代码同日删除 |
-| Meilisearch v1.53.1 | 集群 `search` ns | 1/1 Running，无写入者；回滚窗口后退役 |
+| Meilisearch v1.53.1 | — | **已退役**〔实测 2026-09-04〕：Helm release、运行资源、Secret、路由、PVC/PV 与 `search` namespace 均已删除 |
 | search Pod | 集群 `ecommerce` ns | **1/1 Ready**〔2026-09-03〕：新镜像 `search:sha-c364128`，`/healthz` 深检 ES 绿，经网关搜索命中正确 |
 
+> **2026-09-06 复验与告警落地**：①受控重启 node3 验证 `.172` 持久化——开机即双地址，PG 在 SSH 恢复后 27s 可写，集群侧 Config Center 与 10 个服务 +93s 自愈、search +156s，无人介入；②演练前发现 Debezium source task 静默 FAILED（connector 级仍 RUNNING）——根因是 **Patroni 删除未在 DCS `slots:` 声明的逻辑槽**（09-01/09-03/09-04 三次复发），已声明为永久逻辑槽并按 RUNBOOK §6.3 重快照恢复，重启后槽存活、增量 2.4s；③CDC 链告警上线（node3 `/infra/rules/ecommerce-cdc.yml`，12 条：task 状态 / 复制槽 / Sink lag，新增 `cdc-connect-exporter`），暂停 Source 触发测试 ~3 分钟 firing 到 Alertmanager。报告 [`2026-09-06-node3-reboot-drill.md`](docs/reports/2026-09-06-node3-reboot-drill.md)，教训 [`patroni-drops-unmanaged-logical-slot.md`](context/project/ecommerce/events/experience/patroni-drops-unmanaged-logical-slot.md)。
+>
+> **2026-09-04 恢复与退役记录**：node3 重启后只恢复管理地址 `10.10.21.163/24`，Pigsty 仍绑定的服务地址 `10.10.21.172/24` 不在网卡上，导致 etcd/Patroni 无法拉起 PostgreSQL、两个 Redis 实例启动即因 bind 失败退出，继而 Config Center 与全部 ecommerce 服务不可用。恢复动作是把 `.172` 作为 secondary address 同时写入运行时与 `/etc/netplan/01-netcfg.yaml`，等待 Patroni 恢复、按主从顺序启动 Redis，再重建 Config Center 和下游 CrashLoop Pod；全集群 Deployment 恢复 Available。随后按已结束的回滚窗口完整退役 Meilisearch，并把 search Cilium egress 从 `7700` 改为显式 `es.apikv.com:443`；重建 search Pod 后深健康与真实查询均通过。
+>
 > **2026-09-03 重新平衡**：搜索投影是 PG 行的派生物，按「没有这个事件业务语义是否丢失」判据归**行投影线（CDC）**，不再是领域事件平台的首个租户。落地为 `products.search_catalog` 表（trigger 维护，迁移 `00005_search_catalog.sql` 已写）→ Debezium → Kafka → Elasticsearch Sink；领域事件线（订单 Saga 副作用）改用 Debezium Outbox Event Router，自写 relay 不再重写成 Kafka 版。同日删除 `tools/search-indexer`、`tools/outbox-relay`、`tools/cdc-demo`、`pkg/outbox/{relay,stream}.go`，`go.mod` 去 `nats-io`。**恢复搜索的全部步骤已于 2026-09-03 完成**：dev 库执行迁移（回填 7 行与旧 reindex SQL 逐行一致，trigger 改价/删除演练通过）→ publication + Debezium `table.include.list` 加表 → Kafka topic + ES 模板/索引/alias + Sink 映射（pipeline 仓 9 文件 + 合约测试）→ 重置 Debezium offset 重快照（顺手修掉 09-01 起 task FAILED 的复制槽丢失，connector 级 RUNNING 掩盖了它）→ 发新 search 镜像 → 增量实测 6s（改价/删除/还原）→ 经网关搜索命中。教训与判据：`context/project/ecommerce/events/experience/row-projection-vs-domain-event.md`；两条线施工清单：`docs/todo/数据一致性与事件驱动.md`。**真相源回写（2026-09-03 晚）**：`docs/TECH.md` §2.1 架构图、§3 协同模型、§4.1/§4.2 搬运层（Relay → Debezium Outbox Event Router）、§4.4 KEDA 示例、§5.3 Catalog 边界、§9.2 链路示例、§12 P0 路线与新增 §4.5「两条数据线」已对齐本决议；`docs/design/platform/architecture.md` 的 Catalog/搜索投影行、事件通信规则与 `ProductChangedEvent` 行同步（该事件取消）。此前 TECH.md 仍写「Catalog 发布领域事件供搜索投影消费」，与本决议冲突。
 
 ### 3. 后端服务
@@ -178,7 +185,7 @@ CES 巡检告警（CronJob 2m + vmalert firing 闭环）、可观测黑盒探活
 | order | 🔴 | `CreateOrder` 假成功、`CompleteOrder` 不落库 |
 | payment | 🟡 | 5 个 RPC 均为显式 `Unimplemented` 桩（**本仓正确示范**）；repo 主体待恢复。⚠️ 新增迁移 `00002_rename_consumer_to_customer`（买家列改名），**存量库需跑 `make migrate-up MIGRATE_SVC=payment`** |
 | inventory | 🔴 | `Reserve` 静默无操作、`ReleaseReserve` panic |
-| search | 🟢 | **ES 运行时已切流**〔2026-09-03〕：Pod Ready、`/healthz` 深检绿、经网关命中。代码经单 provider `SearchCatalog` 只读 ES alias；投影由 `products.search_catalog`（trigger 维护）经 Debezium → Kafka → ES Sink 写入，增量约 6s；不依赖商品事务生产者。待办：Meilisearch 回滚窗口后退役；CDC 链告警（slot 位点差 / task 状态 / sink lag）；聚合筛选、热门词 |
+| search | 🟢 | **ES 运行时已切流**〔2026-09-04 复验〕：重建 Pod 后 `/healthz` 深检绿，真实 ConnectRPC 查询成功。代码经单 provider `SearchCatalog` 只读 ES alias；投影由 `products.search_catalog`（trigger 维护）经 Debezium → Kafka → ES Sink 写入，增量实测 1.3–2.4s〔2026-09-06〕；Meilisearch 已完整退役。CDC 链告警已上线〔2026-09-06：task 状态 / 复制槽 / sink lag 12 条，触发测试通过〕；复制槽已声明为 Patroni 永久槽并经 node3 重启演练验证。待办：聚合筛选、热门词 |
 | address | 🔴 | 功能齐全**但全线越权** |
 | merchant | 🔴 | 仅 `Submit`/`Get` 可用；两段式入驻已设计未实现 |
 | behavior | 🟡 | `Track`/`Recommend`/`SimilarItems` 已编译通过 |
@@ -277,7 +284,7 @@ CES 巡检告警（CronJob 2m + vmalert firing 闭环）、可观测黑盒探活
 8. 鉴权：补 `redis-tls-ca` Secret（P0#11）、legacy bearer JWT 定退役期限（P0#12）、
    轮换已暴露搜索凭据（P0#17）
 9. 可观测安全：入站 `x-md-*` 剥离（P0#14）、PII 脱敏随 OTel Collector 管道收敛（P0#13）
-10. 事件正确性底座：Product/Order 事务内 producer、NACK/DLQ、领域事件落地（P0#15/#16）
+10. 事件正确性底座：Product/Order 事务内 producer、重试/退避、fail-stop、DLQ、重放审计与领域事件落地（P0#15/#16）
 11. 前端闭环：consumer 首页/分类/订单/支付结果接线；`ListProducts` 实现后 consumer-next 扩页
 
 **完成判据**：固定集成测试 + 浏览器用例可重复验证
@@ -312,17 +319,17 @@ CES 巡检告警（CronJob 2m + vmalert firing 闭环）、可观测黑盒探活
    管理员 JWT PutKey `search/dev/bootstrap.yaml` **version 5**（search.catalog →
    `https://es.apikv.com` + 只读 key），machine token 回读确认，热更新防线实测：
    旧 search Pod 拒收新形态、保留旧配置、仍 Running）。
-   ⚠️ **旧 search Pod 现在重启即起不来**（配置已切新形态，旧镜像解不了），
-   尽快收敛窗口。~~发布 indexer~~（✅ 2026-09-03 改判：NATS 链整体退役——
+   ⚠️ **旧 search 镜像已无直接回滚路径**：配置已切新形态，Meilisearch Secret、PVC 与运行资源也已删除；紧急回退必须显式重装退役组件、重建索引并恢复匹配的版本化 Bootstrap。~~发布 indexer~~（✅ 2026-09-03 改判：NATS 链整体退役——
    `tools/{search-indexer,outbox-relay,cdc-demo}` 与 `pkg/outbox/{relay,stream}.go` 删除，
    集群 `nats` ns、两个 Deployment、NetworkPolicy/SA/VPA 卸载；两个 K8s Secret
    `ecommerce-search-indexer`/`ecommerce-search-reindex` 保留，其 `ELASTICSEARCH_API_KEY`
    是可写 key，供切流前止血建 alias 用）。
    ~~`products.search_catalog` 迁移 → pipeline 仓接线 → 建 alias → 发布 search 镜像 → 增量验收~~
    （✅ 2026-09-03 全部完成，证据见上方「2026-09-03 重新平衡」段与 `.service-matrix.yaml`
-   elasticsearch 行）。**剩余**：回滚窗口结束后退役 Meilisearch（`search` ns + 本地 PV）；
-   CDC 链告警（slot 位点差 / connector task 状态 / sink lag，而非容器健康）；固定查询集
-   作相关性基线
+   elasticsearch 行）。~~回滚窗口结束后退役 Meilisearch（`search` ns + 本地 PV）~~（✅ 2026-09-04 完整删除）；
+   ~~CDC 链告警（slot 位点差 / connector task 状态 / sink lag，而非容器健康）~~（✅ 2026-09-06：
+   node3 `ecommerce-cdc.yml` 12 条 + `cdc-connect-exporter`，触发测试通过，源在 pipeline 仓
+   `deploy/docker-node3/monitoring/`）；**剩余**：固定查询集作相关性基线
 3. GitOps 接回：chart 对齐实况（资源名/标签/tag 三处）→ `helm template` 与集群 diff 为空
    → 重建 Application（**未对齐前禁止 selfHeal**）；统一镜像 tag 口径是前置
 4. PostgreSQL/对象存储备份、PITR、RTO/RPO 与恢复演练（node3 已成唯一数据面，无集群内回滚路径）

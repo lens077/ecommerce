@@ -46,11 +46,13 @@ type serviceEntry struct {
 	GatewayPrefix    string   `yaml:"gateway_prefix"`
 	DependsOn        []string `yaml:"depends_on"`
 	DependsOnPlanned []string `yaml:"depends_on_planned"`
+	External         []string `yaml:"external"`
 }
 
 type serviceMatrix struct {
-	Services  map[string]serviceEntry  `yaml:"services"`
-	Externals map[string]externalEntry `yaml:"externals"`
+	Services         map[string]serviceEntry  `yaml:"services"`
+	Externals        map[string]externalEntry `yaml:"externals"`
+	RetiredExternals map[string]externalEntry `yaml:"retired_externals"`
 }
 
 // externalEntry 只取 used_by —— 其余字段(host/note)是自由文本,不参与结构断言。
@@ -69,7 +71,6 @@ type externalEntry struct {
 // nats **零引用** —— 真正的导入方是 backend/tools/{search-indexer,outbox-relay}。
 // 查拓扑的人会据此把 search 误判成 NATS 消费者。
 var externalRefPatterns = map[string][]string{
-	"meilisearch":    {"meilisearch"},
 	"minio":          {"minio", "silo"},
 	"gorse":          {"gorse"},
 	"alipay":         {"alipay"},
@@ -203,11 +204,17 @@ func TestServiceDirsMatchMatrix(t *testing.T) {
 	}
 }
 
-// matrix 自身:discovery / gateway_prefix 非空且唯一,依赖只指向已知服务。
+// matrix 自身:discovery / gateway_prefix 非空且唯一,依赖只指向已知服务;
+// 退役外部依赖(retired_externals)不得重新出现在现役拓扑中。
 func TestMatrixInternalConsistency(t *testing.T) {
 	m := loadMatrix(t)
 	seenDiscovery := map[string]string{}
 	seenPrefix := map[string]string{}
+	for retired := range m.RetiredExternals {
+		if _, active := m.Externals[retired]; active {
+			t.Errorf("外部依赖 %q 同时出现在 externals 与 retired_externals", retired)
+		}
+	}
 	for name, svc := range m.Services {
 		if svc.Discovery == "" {
 			t.Errorf("%s: discovery 为空", name)
@@ -226,6 +233,15 @@ func TestMatrixInternalConsistency(t *testing.T) {
 		for _, dep := range append(append([]string{}, svc.DependsOn...), svc.DependsOnPlanned...) {
 			if _, ok := m.Services[dep]; !ok {
 				t.Errorf("%s 依赖了未知服务 %q", name, dep)
+			}
+		}
+		for _, ext := range svc.External {
+			if _, retired := m.RetiredExternals[ext]; retired {
+				t.Errorf("%s 引用了已退役外部依赖 %q", name, ext)
+				continue
+			}
+			if _, active := m.Externals[ext]; !active {
+				t.Errorf("%s 引用了未知外部依赖 %q", name, ext)
 			}
 		}
 	}
