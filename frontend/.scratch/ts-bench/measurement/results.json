@@ -1,0 +1,737 @@
+{
+  "date": "2026-09-05T12:03:31+0800",
+  "platform": "macOS-26.6.2-arm64-arm-64bit-Mach-O",
+  "node": "v24.20.0",
+  "rounds": 6,
+  "compilers": {
+    "stable": {
+      "entry": "/Users/sumery/lens077/ecommerce/frontend/node_modules/.pnpm/typescript@7.0.2/node_modules/typescript/bin/tsc",
+      "version": "7.0.2",
+      "gitHead": "2bd066d87f5bafd315be9f40889d0a60b9e58e0b",
+      "version_rc": 0,
+      "version_output": "Version 7.0.2",
+      "invalid_option_rc": 1,
+      "invalid_option_output": "error TS5023: Unknown compiler option '--ecommerce-invalid-option'."
+    },
+    "nightly": {
+      "entry": "/private/var/folders/t9/sygc562567z089s5_1wz654w0000gn/T/ecommerce-frontend-upgrade-j6yc84c4/isolated/typescript-nightly/node_modules/.pnpm/typescript@7.1.0-dev.20260904.1/node_modules/typescript/bin/tsc",
+      "version": "7.1.0-dev.20260904.1",
+      "gitHead": "e73c923cb58e9ea8cd75ba41c51b8d8886af3076",
+      "version_rc": 0,
+      "version_output": "Version 7.1.0-dev.20260904.1",
+      "invalid_option_rc": 1,
+      "invalid_option_output": "error TS5023: Unknown compiler option '--ecommerce-invalid-option'."
+    }
+  },
+  "runs": [
+    {
+      "id": "warmup-0-stable-consumer",
+      "phase": "warmup",
+      "round": 0,
+      "compiler": "stable",
+      "app": "consumer",
+      "command": [
+        "/Users/sumery/.vite-plus/bin/node",
+        "/Users/sumery/lens077/ecommerce/frontend/node_modules/.pnpm/typescript@7.0.2/node_modules/typescript/bin/tsc",
+        "--project",
+        "/Users/sumery/lens077/ecommerce/frontend/apps/consumer/tsconfig.json",
+        "--noEmit",
+        "--incremental",
+        "false",
+        "--pretty",
+        "false"
+      ],
+      "rc": 0,
+      "wall_seconds": 0.6765761249998832,
+      "max_rss_bytes": 596492288,
+      "diagnostics_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "diagnostics": ""
+    },
+    {
+      "id": "warmup-0-stable-merchant",
+      "phase": "warmup",
+      "round": 0,
+      "compiler": "stable",
+      "app": "merchant",
+      "command": [
+        "/Users/sumery/.vite-plus/bin/node",
+        "/Users/sumery/lens077/ecommerce/frontend/node_modules/.pnpm/typescript@7.0.2/node_modules/typescript/bin/tsc",
+        "--project",
+        "/Users/sumery/lens077/ecommerce/frontend/apps/merchant/tsconfig.json",
+        "--noEmit",
+        "--incremental",
+        "false",
+        "--pretty",
+        "false"
+      ],
+      "rc": 0,
+      "wall_seconds": 0.4015314580001359,
+      "max_rss_bytes": 420626432,
+      "diagnostics_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "diagnostics": ""
+    },
+    {
+      "id": "warmup-0-nightly-consumer",
+      "phase": "warmup",
+      "round": 0,
+      "compiler": "nightly",
+      "app": "consumer",
+      "command": [
+        "/Users/sumery/.vite-plus/bin/node",
+        "/private/var/folders/t9/sygc562567z089s5_1wz654w0000gn/T/ecommerce-frontend-upgrade-j6yc84c4/isolated/typescript-nightly/node_modules/.pnpm/typescript@7.1.0-dev.20260904.1/node_modules/typescript/bin/tsc",
+        "--project",
+        "/Users/sumery/lens077/ecommerce/frontend/apps/consumer/tsconfig.json",
+        "--noEmit",
+        "--incremental",
+        "false",
+        "--pretty",
+        "false"
+      ],
+      "rc": 0,
+      "wall_seconds": 0.5856374579998374,
+      "max_rss_bytes": 491962368,
+      "diagnostics_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "diagnostics": ""
+    },
+    {
+      "id": "warmup-0-nightly-merchant",
+      "phase": "warmup",
+      "round": 0,
+      "compiler": "nightly",
+      "app": "merchant",
+      "command": [
+        "/Users/sumery/.vite-plus/bin/node",
+        "/private/var/folders/t9/sygc562567z089s5_1wz654w0000gn/T/ecommerce-frontend-upgrade-j6yc84c4/isolated/typescript-nightly/node_modules/.pnpm/typescript@7.1.0-dev.20260904.1/node_modules/typescript/bin/tsc",
+        "--project",
+        "/Users/sumery/lens077/ecommerce/frontend/apps/merchant/tsconfig.json",
+        "--noEmit",
+        "--incremental",
+        "false",
+        "--pretty",
+        "false"
+      ],
+      "rc": 0,
+      "wall_seconds": 0.40406033399995067,
+      "max_rss_bytes": 342622208,
+      "diagnostics_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "diagnostics": ""
+    },
+    {
+      "id": "measured-1-stable-consumer",
+      "phase": "measured",
+      "round": 1,
+      "compiler": "stable",
+      "app": "consumer",
+      "command": [
+        "/Users/sumery/.vite-plus/bin/node",
+        "/Users/sumery/lens077/ecommerce/frontend/node_modules/.pnpm/typescript@7.0.2/node_modules/typescript/bin/tsc",
+        "--project",
+        "/Users/sumery/lens077/ecommerce/frontend/apps/consumer/tsconfig.json",
+        "--noEmit",
+        "--incremental",
+        "false",
+        "--pretty",
+        "false"
+      ],
+      "rc": 0,
+      "wall_seconds": 0.5875669999995807,
+      "max_rss_bytes": 582893568,
+      "diagnostics_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "diagnostics": ""
+    },
+    {
+      "id": "measured-1-stable-merchant",
+      "phase": "measured",
+      "round": 1,
+      "compiler": "stable",
+      "app": "merchant",
+      "command": [
+        "/Users/sumery/.vite-plus/bin/node",
+        "/Users/sumery/lens077/ecommerce/frontend/node_modules/.pnpm/typescript@7.0.2/node_modules/typescript/bin/tsc",
+        "--project",
+        "/Users/sumery/lens077/ecommerce/frontend/apps/merchant/tsconfig.json",
+        "--noEmit",
+        "--incremental",
+        "false",
+        "--pretty",
+        "false"
+      ],
+      "rc": 0,
+      "wall_seconds": 0.40011808300005214,
+      "max_rss_bytes": 434667520,
+      "diagnostics_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "diagnostics": ""
+    },
+    {
+      "id": "measured-1-nightly-consumer",
+      "phase": "measured",
+      "round": 1,
+      "compiler": "nightly",
+      "app": "consumer",
+      "command": [
+        "/Users/sumery/.vite-plus/bin/node",
+        "/private/var/folders/t9/sygc562567z089s5_1wz654w0000gn/T/ecommerce-frontend-upgrade-j6yc84c4/isolated/typescript-nightly/node_modules/.pnpm/typescript@7.1.0-dev.20260904.1/node_modules/typescript/bin/tsc",
+        "--project",
+        "/Users/sumery/lens077/ecommerce/frontend/apps/consumer/tsconfig.json",
+        "--noEmit",
+        "--incremental",
+        "false",
+        "--pretty",
+        "false"
+      ],
+      "rc": 0,
+      "wall_seconds": 0.577919207999912,
+      "max_rss_bytes": 460800000,
+      "diagnostics_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "diagnostics": ""
+    },
+    {
+      "id": "measured-1-nightly-merchant",
+      "phase": "measured",
+      "round": 1,
+      "compiler": "nightly",
+      "app": "merchant",
+      "command": [
+        "/Users/sumery/.vite-plus/bin/node",
+        "/private/var/folders/t9/sygc562567z089s5_1wz654w0000gn/T/ecommerce-frontend-upgrade-j6yc84c4/isolated/typescript-nightly/node_modules/.pnpm/typescript@7.1.0-dev.20260904.1/node_modules/typescript/bin/tsc",
+        "--project",
+        "/Users/sumery/lens077/ecommerce/frontend/apps/merchant/tsconfig.json",
+        "--noEmit",
+        "--incremental",
+        "false",
+        "--pretty",
+        "false"
+      ],
+      "rc": 0,
+      "wall_seconds": 0.40631704200040986,
+      "max_rss_bytes": 348258304,
+      "diagnostics_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "diagnostics": ""
+    },
+    {
+      "id": "measured-2-nightly-consumer",
+      "phase": "measured",
+      "round": 2,
+      "compiler": "nightly",
+      "app": "consumer",
+      "command": [
+        "/Users/sumery/.vite-plus/bin/node",
+        "/private/var/folders/t9/sygc562567z089s5_1wz654w0000gn/T/ecommerce-frontend-upgrade-j6yc84c4/isolated/typescript-nightly/node_modules/.pnpm/typescript@7.1.0-dev.20260904.1/node_modules/typescript/bin/tsc",
+        "--project",
+        "/Users/sumery/lens077/ecommerce/frontend/apps/consumer/tsconfig.json",
+        "--noEmit",
+        "--incremental",
+        "false",
+        "--pretty",
+        "false"
+      ],
+      "rc": 0,
+      "wall_seconds": 0.5748612079996747,
+      "max_rss_bytes": 459505664,
+      "diagnostics_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "diagnostics": ""
+    },
+    {
+      "id": "measured-2-nightly-merchant",
+      "phase": "measured",
+      "round": 2,
+      "compiler": "nightly",
+      "app": "merchant",
+      "command": [
+        "/Users/sumery/.vite-plus/bin/node",
+        "/private/var/folders/t9/sygc562567z089s5_1wz654w0000gn/T/ecommerce-frontend-upgrade-j6yc84c4/isolated/typescript-nightly/node_modules/.pnpm/typescript@7.1.0-dev.20260904.1/node_modules/typescript/bin/tsc",
+        "--project",
+        "/Users/sumery/lens077/ecommerce/frontend/apps/merchant/tsconfig.json",
+        "--noEmit",
+        "--incremental",
+        "false",
+        "--pretty",
+        "false"
+      ],
+      "rc": 0,
+      "wall_seconds": 0.40530316600052174,
+      "max_rss_bytes": 364068864,
+      "diagnostics_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "diagnostics": ""
+    },
+    {
+      "id": "measured-2-stable-consumer",
+      "phase": "measured",
+      "round": 2,
+      "compiler": "stable",
+      "app": "consumer",
+      "command": [
+        "/Users/sumery/.vite-plus/bin/node",
+        "/Users/sumery/lens077/ecommerce/frontend/node_modules/.pnpm/typescript@7.0.2/node_modules/typescript/bin/tsc",
+        "--project",
+        "/Users/sumery/lens077/ecommerce/frontend/apps/consumer/tsconfig.json",
+        "--noEmit",
+        "--incremental",
+        "false",
+        "--pretty",
+        "false"
+      ],
+      "rc": 0,
+      "wall_seconds": 0.5786591659998521,
+      "max_rss_bytes": 580337664,
+      "diagnostics_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "diagnostics": ""
+    },
+    {
+      "id": "measured-2-stable-merchant",
+      "phase": "measured",
+      "round": 2,
+      "compiler": "stable",
+      "app": "merchant",
+      "command": [
+        "/Users/sumery/.vite-plus/bin/node",
+        "/Users/sumery/lens077/ecommerce/frontend/node_modules/.pnpm/typescript@7.0.2/node_modules/typescript/bin/tsc",
+        "--project",
+        "/Users/sumery/lens077/ecommerce/frontend/apps/merchant/tsconfig.json",
+        "--noEmit",
+        "--incremental",
+        "false",
+        "--pretty",
+        "false"
+      ],
+      "rc": 0,
+      "wall_seconds": 0.4005889999998544,
+      "max_rss_bytes": 412008448,
+      "diagnostics_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "diagnostics": ""
+    },
+    {
+      "id": "measured-3-stable-consumer",
+      "phase": "measured",
+      "round": 3,
+      "compiler": "stable",
+      "app": "consumer",
+      "command": [
+        "/Users/sumery/.vite-plus/bin/node",
+        "/Users/sumery/lens077/ecommerce/frontend/node_modules/.pnpm/typescript@7.0.2/node_modules/typescript/bin/tsc",
+        "--project",
+        "/Users/sumery/lens077/ecommerce/frontend/apps/consumer/tsconfig.json",
+        "--noEmit",
+        "--incremental",
+        "false",
+        "--pretty",
+        "false"
+      ],
+      "rc": 0,
+      "wall_seconds": 0.5656735410002511,
+      "max_rss_bytes": 587038720,
+      "diagnostics_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "diagnostics": ""
+    },
+    {
+      "id": "measured-3-stable-merchant",
+      "phase": "measured",
+      "round": 3,
+      "compiler": "stable",
+      "app": "merchant",
+      "command": [
+        "/Users/sumery/.vite-plus/bin/node",
+        "/Users/sumery/lens077/ecommerce/frontend/node_modules/.pnpm/typescript@7.0.2/node_modules/typescript/bin/tsc",
+        "--project",
+        "/Users/sumery/lens077/ecommerce/frontend/apps/merchant/tsconfig.json",
+        "--noEmit",
+        "--incremental",
+        "false",
+        "--pretty",
+        "false"
+      ],
+      "rc": 0,
+      "wall_seconds": 0.3960716669998874,
+      "max_rss_bytes": 424050688,
+      "diagnostics_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "diagnostics": ""
+    },
+    {
+      "id": "measured-3-nightly-consumer",
+      "phase": "measured",
+      "round": 3,
+      "compiler": "nightly",
+      "app": "consumer",
+      "command": [
+        "/Users/sumery/.vite-plus/bin/node",
+        "/private/var/folders/t9/sygc562567z089s5_1wz654w0000gn/T/ecommerce-frontend-upgrade-j6yc84c4/isolated/typescript-nightly/node_modules/.pnpm/typescript@7.1.0-dev.20260904.1/node_modules/typescript/bin/tsc",
+        "--project",
+        "/Users/sumery/lens077/ecommerce/frontend/apps/consumer/tsconfig.json",
+        "--noEmit",
+        "--incremental",
+        "false",
+        "--pretty",
+        "false"
+      ],
+      "rc": 0,
+      "wall_seconds": 0.5751887079995868,
+      "max_rss_bytes": 464076800,
+      "diagnostics_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "diagnostics": ""
+    },
+    {
+      "id": "measured-3-nightly-merchant",
+      "phase": "measured",
+      "round": 3,
+      "compiler": "nightly",
+      "app": "merchant",
+      "command": [
+        "/Users/sumery/.vite-plus/bin/node",
+        "/private/var/folders/t9/sygc562567z089s5_1wz654w0000gn/T/ecommerce-frontend-upgrade-j6yc84c4/isolated/typescript-nightly/node_modules/.pnpm/typescript@7.1.0-dev.20260904.1/node_modules/typescript/bin/tsc",
+        "--project",
+        "/Users/sumery/lens077/ecommerce/frontend/apps/merchant/tsconfig.json",
+        "--noEmit",
+        "--incremental",
+        "false",
+        "--pretty",
+        "false"
+      ],
+      "rc": 0,
+      "wall_seconds": 0.40086083299956954,
+      "max_rss_bytes": 333217792,
+      "diagnostics_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "diagnostics": ""
+    },
+    {
+      "id": "measured-4-nightly-consumer",
+      "phase": "measured",
+      "round": 4,
+      "compiler": "nightly",
+      "app": "consumer",
+      "command": [
+        "/Users/sumery/.vite-plus/bin/node",
+        "/private/var/folders/t9/sygc562567z089s5_1wz654w0000gn/T/ecommerce-frontend-upgrade-j6yc84c4/isolated/typescript-nightly/node_modules/.pnpm/typescript@7.1.0-dev.20260904.1/node_modules/typescript/bin/tsc",
+        "--project",
+        "/Users/sumery/lens077/ecommerce/frontend/apps/consumer/tsconfig.json",
+        "--noEmit",
+        "--incremental",
+        "false",
+        "--pretty",
+        "false"
+      ],
+      "rc": 0,
+      "wall_seconds": 0.5678616670002157,
+      "max_rss_bytes": 463667200,
+      "diagnostics_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "diagnostics": ""
+    },
+    {
+      "id": "measured-4-nightly-merchant",
+      "phase": "measured",
+      "round": 4,
+      "compiler": "nightly",
+      "app": "merchant",
+      "command": [
+        "/Users/sumery/.vite-plus/bin/node",
+        "/private/var/folders/t9/sygc562567z089s5_1wz654w0000gn/T/ecommerce-frontend-upgrade-j6yc84c4/isolated/typescript-nightly/node_modules/.pnpm/typescript@7.1.0-dev.20260904.1/node_modules/typescript/bin/tsc",
+        "--project",
+        "/Users/sumery/lens077/ecommerce/frontend/apps/merchant/tsconfig.json",
+        "--noEmit",
+        "--incremental",
+        "false",
+        "--pretty",
+        "false"
+      ],
+      "rc": 0,
+      "wall_seconds": 0.41214758300066023,
+      "max_rss_bytes": 337182720,
+      "diagnostics_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "diagnostics": ""
+    },
+    {
+      "id": "measured-4-stable-consumer",
+      "phase": "measured",
+      "round": 4,
+      "compiler": "stable",
+      "app": "consumer",
+      "command": [
+        "/Users/sumery/.vite-plus/bin/node",
+        "/Users/sumery/lens077/ecommerce/frontend/node_modules/.pnpm/typescript@7.0.2/node_modules/typescript/bin/tsc",
+        "--project",
+        "/Users/sumery/lens077/ecommerce/frontend/apps/consumer/tsconfig.json",
+        "--noEmit",
+        "--incremental",
+        "false",
+        "--pretty",
+        "false"
+      ],
+      "rc": 0,
+      "wall_seconds": 0.581952167000054,
+      "max_rss_bytes": 583155712,
+      "diagnostics_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "diagnostics": ""
+    },
+    {
+      "id": "measured-4-stable-merchant",
+      "phase": "measured",
+      "round": 4,
+      "compiler": "stable",
+      "app": "merchant",
+      "command": [
+        "/Users/sumery/.vite-plus/bin/node",
+        "/Users/sumery/lens077/ecommerce/frontend/node_modules/.pnpm/typescript@7.0.2/node_modules/typescript/bin/tsc",
+        "--project",
+        "/Users/sumery/lens077/ecommerce/frontend/apps/merchant/tsconfig.json",
+        "--noEmit",
+        "--incremental",
+        "false",
+        "--pretty",
+        "false"
+      ],
+      "rc": 0,
+      "wall_seconds": 0.40391762499984907,
+      "max_rss_bytes": 408141824,
+      "diagnostics_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "diagnostics": ""
+    },
+    {
+      "id": "measured-5-stable-consumer",
+      "phase": "measured",
+      "round": 5,
+      "compiler": "stable",
+      "app": "consumer",
+      "command": [
+        "/Users/sumery/.vite-plus/bin/node",
+        "/Users/sumery/lens077/ecommerce/frontend/node_modules/.pnpm/typescript@7.0.2/node_modules/typescript/bin/tsc",
+        "--project",
+        "/Users/sumery/lens077/ecommerce/frontend/apps/consumer/tsconfig.json",
+        "--noEmit",
+        "--incremental",
+        "false",
+        "--pretty",
+        "false"
+      ],
+      "rc": 0,
+      "wall_seconds": 0.5870879579997563,
+      "max_rss_bytes": 581615616,
+      "diagnostics_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "diagnostics": ""
+    },
+    {
+      "id": "measured-5-stable-merchant",
+      "phase": "measured",
+      "round": 5,
+      "compiler": "stable",
+      "app": "merchant",
+      "command": [
+        "/Users/sumery/.vite-plus/bin/node",
+        "/Users/sumery/lens077/ecommerce/frontend/node_modules/.pnpm/typescript@7.0.2/node_modules/typescript/bin/tsc",
+        "--project",
+        "/Users/sumery/lens077/ecommerce/frontend/apps/merchant/tsconfig.json",
+        "--noEmit",
+        "--incremental",
+        "false",
+        "--pretty",
+        "false"
+      ],
+      "rc": 0,
+      "wall_seconds": 0.4054225830004725,
+      "max_rss_bytes": 422019072,
+      "diagnostics_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "diagnostics": ""
+    },
+    {
+      "id": "measured-5-nightly-consumer",
+      "phase": "measured",
+      "round": 5,
+      "compiler": "nightly",
+      "app": "consumer",
+      "command": [
+        "/Users/sumery/.vite-plus/bin/node",
+        "/private/var/folders/t9/sygc562567z089s5_1wz654w0000gn/T/ecommerce-frontend-upgrade-j6yc84c4/isolated/typescript-nightly/node_modules/.pnpm/typescript@7.1.0-dev.20260904.1/node_modules/typescript/bin/tsc",
+        "--project",
+        "/Users/sumery/lens077/ecommerce/frontend/apps/consumer/tsconfig.json",
+        "--noEmit",
+        "--incremental",
+        "false",
+        "--pretty",
+        "false"
+      ],
+      "rc": 0,
+      "wall_seconds": 0.5760654169998816,
+      "max_rss_bytes": 495386624,
+      "diagnostics_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "diagnostics": ""
+    },
+    {
+      "id": "measured-5-nightly-merchant",
+      "phase": "measured",
+      "round": 5,
+      "compiler": "nightly",
+      "app": "merchant",
+      "command": [
+        "/Users/sumery/.vite-plus/bin/node",
+        "/private/var/folders/t9/sygc562567z089s5_1wz654w0000gn/T/ecommerce-frontend-upgrade-j6yc84c4/isolated/typescript-nightly/node_modules/.pnpm/typescript@7.1.0-dev.20260904.1/node_modules/typescript/bin/tsc",
+        "--project",
+        "/Users/sumery/lens077/ecommerce/frontend/apps/merchant/tsconfig.json",
+        "--noEmit",
+        "--incremental",
+        "false",
+        "--pretty",
+        "false"
+      ],
+      "rc": 0,
+      "wall_seconds": 0.41625583299992286,
+      "max_rss_bytes": 350617600,
+      "diagnostics_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "diagnostics": ""
+    },
+    {
+      "id": "measured-6-nightly-consumer",
+      "phase": "measured",
+      "round": 6,
+      "compiler": "nightly",
+      "app": "consumer",
+      "command": [
+        "/Users/sumery/.vite-plus/bin/node",
+        "/private/var/folders/t9/sygc562567z089s5_1wz654w0000gn/T/ecommerce-frontend-upgrade-j6yc84c4/isolated/typescript-nightly/node_modules/.pnpm/typescript@7.1.0-dev.20260904.1/node_modules/typescript/bin/tsc",
+        "--project",
+        "/Users/sumery/lens077/ecommerce/frontend/apps/consumer/tsconfig.json",
+        "--noEmit",
+        "--incremental",
+        "false",
+        "--pretty",
+        "false"
+      ],
+      "rc": 0,
+      "wall_seconds": 0.578777749999972,
+      "max_rss_bytes": 481099776,
+      "diagnostics_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "diagnostics": ""
+    },
+    {
+      "id": "measured-6-nightly-merchant",
+      "phase": "measured",
+      "round": 6,
+      "compiler": "nightly",
+      "app": "merchant",
+      "command": [
+        "/Users/sumery/.vite-plus/bin/node",
+        "/private/var/folders/t9/sygc562567z089s5_1wz654w0000gn/T/ecommerce-frontend-upgrade-j6yc84c4/isolated/typescript-nightly/node_modules/.pnpm/typescript@7.1.0-dev.20260904.1/node_modules/typescript/bin/tsc",
+        "--project",
+        "/Users/sumery/lens077/ecommerce/frontend/apps/merchant/tsconfig.json",
+        "--noEmit",
+        "--incremental",
+        "false",
+        "--pretty",
+        "false"
+      ],
+      "rc": 0,
+      "wall_seconds": 0.40953787499984173,
+      "max_rss_bytes": 339509248,
+      "diagnostics_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "diagnostics": ""
+    },
+    {
+      "id": "measured-6-stable-consumer",
+      "phase": "measured",
+      "round": 6,
+      "compiler": "stable",
+      "app": "consumer",
+      "command": [
+        "/Users/sumery/.vite-plus/bin/node",
+        "/Users/sumery/lens077/ecommerce/frontend/node_modules/.pnpm/typescript@7.0.2/node_modules/typescript/bin/tsc",
+        "--project",
+        "/Users/sumery/lens077/ecommerce/frontend/apps/consumer/tsconfig.json",
+        "--noEmit",
+        "--incremental",
+        "false",
+        "--pretty",
+        "false"
+      ],
+      "rc": 0,
+      "wall_seconds": 0.5750415409993366,
+      "max_rss_bytes": 572538880,
+      "diagnostics_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "diagnostics": ""
+    },
+    {
+      "id": "measured-6-stable-merchant",
+      "phase": "measured",
+      "round": 6,
+      "compiler": "stable",
+      "app": "merchant",
+      "command": [
+        "/Users/sumery/.vite-plus/bin/node",
+        "/Users/sumery/lens077/ecommerce/frontend/node_modules/.pnpm/typescript@7.0.2/node_modules/typescript/bin/tsc",
+        "--project",
+        "/Users/sumery/lens077/ecommerce/frontend/apps/merchant/tsconfig.json",
+        "--noEmit",
+        "--incremental",
+        "false",
+        "--pretty",
+        "false"
+      ],
+      "rc": 0,
+      "wall_seconds": 0.40204766699935135,
+      "max_rss_bytes": 410583040,
+      "diagnostics_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "diagnostics": ""
+    }
+  ],
+  "source_unchanged": true,
+  "diagnostics_identical": true,
+  "summary": {
+    "consumer": {
+      "stable": {
+        "wall_seconds": {
+          "median": 0.5803056664999531,
+          "min": 0.5656735410002511,
+          "max": 0.5875669999995807,
+          "stdev": 0.00824923768658666
+        },
+        "rss_mib": {
+          "median": 555.28125,
+          "min": 546.015625,
+          "max": 559.84375,
+          "stdev": 4.607163134558782
+        }
+      },
+      "nightly": {
+        "wall_seconds": {
+          "median": 0.5756270624997342,
+          "min": 0.5678616670002157,
+          "max": 0.578777749999972,
+          "stdev": 0.0038694509302007484
+        },
+        "rss_mib": {
+          "median": 442.3828125,
+          "min": 438.21875,
+          "max": 472.4375,
+          "stdev": 13.71578721803516
+        }
+      }
+    },
+    "merchant": {
+      "stable": {
+        "wall_seconds": {
+          "median": 0.4013183334996029,
+          "min": 0.3960716669998874,
+          "max": 0.4054225830004725,
+          "stdev": 0.0032748181512120386
+        },
+        "rss_mib": {
+          "median": 397.6953125,
+          "min": 389.234375,
+          "max": 414.53125,
+          "stdev": 9.694286937095992
+        }
+      },
+      "nightly": {
+        "wall_seconds": {
+          "median": 0.4079274585001258,
+          "min": 0.40086083299956954,
+          "max": 0.41625583299992286,
+          "stdev": 0.005437302654328324
+        },
+        "rss_mib": {
+          "median": 327.953125,
+          "min": 317.78125,
+          "max": 347.203125,
+          "stdev": 10.743268316839348
+        }
+      }
+    }
+  },
+  "source_snapshot_file_count": 161
+}

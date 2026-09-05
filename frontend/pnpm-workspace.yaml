@@ -5,8 +5,8 @@ allowBuilds:
   "@bufbuild/buf": true
 catalog:
   "@bufbuild/buf": ^1.72.0
-  "@bufbuild/protobuf": ^2.14.0
-  "@bufbuild/protoc-gen-es": ^2.14.0
+  "@bufbuild/protobuf": ^2.14.1
+  "@bufbuild/protoc-gen-es": ^2.14.1
   "@connectrpc/connect": ^2.1.2
   "@connectrpc/connect-node": ^2.1.2
   "@connectrpc/connect-query": ^2.3.1
@@ -15,66 +15,68 @@ catalog:
   "@emotion/styled": ^11.14.1
   "@fontsource/noto-serif-sc": ^5.3.0
   "@fontsource/roboto": ^5.3.0
-  "@mui/icons-material": ^9.3.1
-  "@mui/material": ^9.3.1
-  "@mui/utils": ^9.3.0
+  "@mui/icons-material": ^9.4.0
+  "@mui/material": ^9.4.0
+  "@mui/utils": ^9.4.0
   "@t3-oss/env-core": ^0.13.11
-  "@tanstack/react-devtools": ^0.10.10
-  "@tanstack/react-query": ^5.101.4
-  "@tanstack/react-query-devtools": ^5.101.4
-  "@tanstack/react-router": ^1.170.30
+  "@tanstack/react-devtools": ^0.10.12
+  "@tanstack/react-query": ^5.102.8
+  "@tanstack/react-query-devtools": ^5.102.8
+  "@tanstack/react-router": ^1.170.32
   "@tanstack/react-router-devtools": ^1.167.1
-  "@tanstack/router-plugin": ^1.168.33
+  "@tanstack/router-plugin": ^1.168.35
   "@tauri-apps/api": ^2.11.1
   "@tauri-apps/cli": ^2.11.4
-  "@tauri-apps/plugin-http": ^2.5.9
-  "@tauri-apps/plugin-notification": ^2.3.3
-  "@tauri-apps/plugin-opener": ^2.5.4
+  "@tauri-apps/plugin-http": ^2.6.0
+  "@tauri-apps/plugin-notification": ^2.4.0
+  "@tauri-apps/plugin-opener": ^2.5.5
   "@tauri-apps/plugin-store": ^2.4.4
-  "@testing-library/react": ^16.3.2
-  "@testing-library/user-event": ^14.6.5
-  "@types/node": ^26.2.0
+  "@testing-library/react": ^16.3.3
+  "@testing-library/user-event": ^14.6.7
+  "@types/node": ^26.4.1
   "@types/react": ^19.2.18
-  "@types/react-dom": ^19.2.4
-  "@vitejs/plugin-react": ^6.0.5
-  "@vitest/browser-playwright": 4.1.10
-  casdoor-js-sdk: ^0.20.0
-  casdoor-react-sdk: ^1.2.0
+  "@types/react-dom": ^19.2.7
+  "@vitejs/plugin-react": ^6.1.1
+  "@vitest/browser-playwright": 4.1.11
   conventional-changelog: latest
   echarts: ^6.1.0
   echarts-for-react: ^3.0.6
-  i18next: ^26.3.6
-  jsdom: ^29.1.1
+  i18next: ^26.4.2
+  jsdom: ^30.0.1
   jsonc-parser: ^3.3.1
   knip: ^6.34.0
-  lucide-react: ^1.32.0
-  next: ^16.3.3
+  lucide-react: ^1.41.0
+  # 16.4 canary 在本仓 6 轮 A/B 中缩短 cold/warm build 并减小缓存；
+  # 精确锁定已通过 SSR 与真实浏览器验证的构建。
+  next: 16.4.0-canary.18
   oxc-transform-react: 0.145.0
-  playwright: ^1.62.1
+  playwright: ^1.63.0
   react: ^19.2.8
   react-dom: ^19.2.8
-  react-i18next: ^17.0.11
-  smol-toml: ^1.7.1
-  typescript: ^7.0.2
+  react-i18next: ^17.0.13
+  smol-toml: ^1.8.0
+  # 7.1 nightly 的 checker 分配优化在本仓 6 轮 A/B 中将峰值 RSS 降低 17%~20%；
+  # 精确锁定已验证构建，避免 nightly 标签漂移。
+  typescript: 7.1.0-dev.20260904.1
   # Vite+ 与 core 必须锁死同一版本，避免插件解析出两份 Vite 类型。
   # pnpm 的 overrides 不创建依赖边：声明 vite-plus 的 package 还要直接声明 vite: catalog:，
   # 否则 Vitest 的 peer 解析会静默补装一份上游 Vite，旧的 vite build 脚本会误用它。
   # Vitest 也要与 Vite+ 内置版本一致；consumer 的浏览器测试需要直接依赖它。
-  vite: npm:@voidzero-dev/vite-plus-core@0.2.9
-  vite-plus: 0.2.9
-  vitest: 4.1.10
+  vite: npm:@voidzero-dev/vite-plus-core@0.3.0
+  vite-plus: 0.3.0
+  vitest: 4.1.11
   # a11y 门禁：axe-core 的 vitest 封装（docs/frontend/accessibility.md §四.2）
   "vitest-axe": ^0.1.0
-  "vitest-browser-react": ^2.2.0
-  web-vitals: ^6.1.1
+  "vitest-browser-react": ^2.3.0
+  web-vitals: ^6.2.1
   yaml: ^2.9.0
-  zod: ^4.4.3
+  zod: ^4.5.4
   zustand: ^5.0.15
 
-# React Compiler 试点隔离用——试点结论出来后处置：全量启用则把默认 catalog 升 ^6.1.x 并删除本段；搁置则整段删除并把 consumer 声明改回 catalog:。
+# React Compiler 试点固定版本；仅 consumer 在 REACT_COMPILER=1 时启用。
 catalogs:
   react-compiler-pilot:
-    "@vitejs/plugin-react": 6.1.0
+    "@vitejs/plugin-react": 6.1.1
 
 catalogMode: prefer
 
@@ -90,3 +92,26 @@ peerDependencyRules:
     - vite
   allowedVersions:
     vite: "*"
+minimumReleaseAgeExclude:
+  - lucide-react@1.41.0
+  - playwright-core@1.63.0
+  - playwright@1.63.0
+  - vitest-browser-react@2.3.0
+  - "@typescript/typescript-darwin-arm64@7.1.0-dev.20260904.1"
+  - "@typescript/typescript-darwin-x64@7.1.0-dev.20260904.1"
+  - "@typescript/typescript-linux-arm64@7.1.0-dev.20260904.1"
+  - "@typescript/typescript-linux-arm@7.1.0-dev.20260904.1"
+  - "@typescript/typescript-linux-x64@7.1.0-dev.20260904.1"
+  - "@typescript/typescript-win32-arm64@7.1.0-dev.20260904.1"
+  - "@typescript/typescript-win32-x64@7.1.0-dev.20260904.1"
+  - typescript@7.1.0-dev.20260904.1
+  - "@next/env@16.4.0-canary.18"
+  - "@next/swc-darwin-arm64@16.4.0-canary.18"
+  - "@next/swc-darwin-x64@16.4.0-canary.18"
+  - "@next/swc-linux-arm64-gnu@16.4.0-canary.18"
+  - "@next/swc-linux-arm64-musl@16.4.0-canary.18"
+  - "@next/swc-linux-x64-gnu@16.4.0-canary.18"
+  - "@next/swc-linux-x64-musl@16.4.0-canary.18"
+  - "@next/swc-win32-arm64-msvc@16.4.0-canary.18"
+  - "@next/swc-win32-x64-msvc@16.4.0-canary.18"
+  - next@16.4.0-canary.18

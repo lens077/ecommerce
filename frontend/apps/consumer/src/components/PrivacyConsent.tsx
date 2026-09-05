@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import { useState } from "react";
 import {
   Box,
   Button,
@@ -27,21 +27,12 @@ interface PrivacyConsentProps {
 
 const PrivacyConsent: React.FC<PrivacyConsentProps> = ({ onConsent }) => {
   const { t } = useTranslation();
-  const [open, setOpen] = useState(false);
+  const [open, setOpen] = useState(() => !localStorage.getItem("privacyConsent"));
   const [settings, setSettings] = useState<PrivacySettings>({
     analytics: false,
     location: false,
     marketing: false,
   });
-
-  useEffect(() => {
-    // 检查用户是否已经做出过隐私同意
-    const hasConsented = localStorage.getItem("privacyConsent");
-    if (!hasConsented) {
-      // 首次访问，显示隐私同意弹窗
-      setOpen(true);
-    }
-  }, []);
 
   const handleAcceptAll = () => {
     const newSettings: PrivacySettings = {

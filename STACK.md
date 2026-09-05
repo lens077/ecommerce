@@ -175,24 +175,24 @@ Client
 
 | 类别 | 选型 | 版本 |
 |---|---|---|
-| 包管理 | pnpm workspace + **catalog**（版本集中管理） | pnpm **11.22.0** |
-| Node | — | **^22.18.0 \|\| >=24.11.0** |
-| 工具链 | **vite-plus (`vp`)** — 一体化 fmt / lint(oxlint) / test / build / dev | 0.2.9 |
+| 包管理 | pnpm workspace + **catalog**（版本集中管理） | pnpm **12.3.4** |
+| Node | — | **^22.22.2 \|\| ^24.15.0 \|\| >=26.0.0** |
+| 工具链 | **vite-plus (`vp`)** — 一体化 fmt / lint(oxlint) / test / build / dev | 0.3.0（配套 Vitest 4.1.11） |
 | UI 框架 | React | 19.2.8 |
-| 语言 | TypeScript | 7.0.2 |
-| 组件库 | MUI + emotion | @mui/material 9.3.1 |
-| 路由 | TanStack Router（文件路由 + autoCodeSplitting） | 1.170.30 |
-| 服务端状态 | TanStack Query | 5.101.4 |
+| 语言 | TypeScript | 7.1.0-dev.20260904.1（本仓 A/B 峰值 RSS 降低 17%～20%，精确锁定） |
+| 组件库 | MUI + emotion | @mui/material 9.4.0 |
+| 路由 | TanStack Router（文件路由 + autoCodeSplitting） | 1.170.32 |
+| 服务端状态 | TanStack Query | 5.102.8 |
 | 客户端状态 | **Zustand**（现用） | 本地 UI 状态定稿 Zustand；2026-08-28 完成 valtio→zustand 全量迁移（3 个 store 改为 vanilla store + 模块级 action，valtio 依赖已移除）。见 [`docs/TECH.md`](docs/TECH.md) §11.1 |
 | RPC 客户端 | `@connectrpc/connect` + `connect-web` | 2.1.2 |
-| 代码生成 | `@bufbuild/buf` + `protoc-gen-es` → `src/gen` | 1.72.0 / 2.14.0 |
-| 环境变量 | `@t3-oss/env-core` + **zod 4** 运行时校验 | @t3-oss/env-core 0.13.11 / zod 4.4.3 |
-| 登录 | control-tower BFF：Web 用 httpOnly cookie，Tauri 用 session header，`/auth/me` 为登录态真相源；Casdoor SDK 仍有迁移残留 | — |
+| 代码生成 | `@bufbuild/buf` + `protoc-gen-es` → `src/gen` | 1.72.0 / 2.14.1（protobuf runtime 同版） |
+| 环境变量 | `@t3-oss/env-core` + **zod 4** 运行时校验 | @t3-oss/env-core 0.13.11 / zod 4.5.4 |
+| 登录 | control-tower BFF：Web 用 httpOnly cookie，Tauri 用 session header，`/auth/me` 为登录态真相源；浏览器侧 Casdoor SDK 残留已删除 | — |
 | 桌面壳 | Tauri + Rust（edition 2021）+ opener/http/store/notification plugins | Tauri 2 |
 | 测试 | vitest（vite-plus test）+ Playwright browser mode + testing-library | — |
 | 其他 | lucide-react · @fontsource/roboto · web-vitals · jsonc-parser · yaml · smol-toml | — |
 
-SSR：按 [`docs/TECH.md`](docs/TECH.md) §11.2，Consumer 端优先评估迁 Next.js（首屏与 SEO），Merchant/Admin 保持 Vite SPA，两者共享 API 契约。
+SSR：`consumer-next` 使用 Next.js 16.4.0-canary.18（本仓 A/B 后精确锁定）；Merchant/Admin 保持 Vite SPA，两者共享 API 契约。
 
 **Apps**：`consumer:3000` · `merchant:3002` · `admin:3003` · `desktop`（Tauri 壳，套 consumer/merchant）
 **Packages**（9 个）：`api`（拦截器 + 统一错误模型）· `configs` · `constants` · `i18n` · `perf`（Web Vitals 上报）· `tauri` · `tracker`（埋点 SDK）· `ui` · `utils`

@@ -1,0 +1,96 @@
+{
+  "consumer": {
+    "stable": {
+      "command": [
+        "node",
+        "/Users/sumery/lens077/ecommerce/frontend/node_modules/typescript/bin/tsc",
+        "--project",
+        "/Users/sumery/lens077/ecommerce/frontend/apps/consumer/tsconfig.json",
+        "--noEmit",
+        "--incremental",
+        "false",
+        "--pretty",
+        "false",
+        "--listFilesOnly"
+      ],
+      "rc": 0,
+      "file_count": 1514,
+      "non_builtin_file_count": 1425,
+      "non_builtin_sha256": "d4f81e8703e458ebff390fe8a82ec9a09ca48b3d747f1a6377f4734ef8157fb8",
+      "builtin_examples": [
+        "/Users/sumery/lens077/ecommerce/frontend/node_modules/.pnpm/@typescript+typescript-darwin-arm64@7.0.2/node_modules/@typescript/typescript-darwin-arm64/lib/lib.es5.d.ts",
+        "/Users/sumery/lens077/ecommerce/frontend/node_modules/.pnpm/@typescript+typescript-darwin-arm64@7.0.2/node_modules/@typescript/typescript-darwin-arm64/lib/lib.es2015.d.ts"
+      ]
+    },
+    "nightly": {
+      "command": [
+        "node",
+        "/var/folders/t9/sygc562567z089s5_1wz654w0000gn/T/ecommerce-frontend-upgrade-j6yc84c4/isolated/typescript-nightly/node_modules/typescript/bin/tsc",
+        "--project",
+        "/Users/sumery/lens077/ecommerce/frontend/apps/consumer/tsconfig.json",
+        "--noEmit",
+        "--incremental",
+        "false",
+        "--pretty",
+        "false",
+        "--listFilesOnly"
+      ],
+      "rc": 0,
+      "file_count": 1514,
+      "non_builtin_file_count": 1425,
+      "non_builtin_sha256": "d4f81e8703e458ebff390fe8a82ec9a09ca48b3d747f1a6377f4734ef8157fb8",
+      "builtin_examples": [
+        "/private/var/folders/t9/sygc562567z089s5_1wz654w0000gn/T/ecommerce-frontend-upgrade-j6yc84c4/isolated/typescript-nightly/node_modules/.pnpm/@typescript+typescript-darwin-arm64@7.1.0-dev.20260904.1/node_modules/@typescript/typescript-darwin-arm64/lib/lib.es5.d.ts",
+        "/private/var/folders/t9/sygc562567z089s5_1wz654w0000gn/T/ecommerce-frontend-upgrade-j6yc84c4/isolated/typescript-nightly/node_modules/.pnpm/@typescript+typescript-darwin-arm64@7.1.0-dev.20260904.1/node_modules/@typescript/typescript-darwin-arm64/lib/lib.es2015.d.ts"
+      ]
+    },
+    "same_non_builtin_files": true
+  },
+  "merchant": {
+    "stable": {
+      "command": [
+        "node",
+        "/Users/sumery/lens077/ecommerce/frontend/node_modules/typescript/bin/tsc",
+        "--project",
+        "/Users/sumery/lens077/ecommerce/frontend/apps/merchant/tsconfig.json",
+        "--noEmit",
+        "--incremental",
+        "false",
+        "--pretty",
+        "false",
+        "--listFilesOnly"
+      ],
+      "rc": 0,
+      "file_count": 1203,
+      "non_builtin_file_count": 1114,
+      "non_builtin_sha256": "d48c27182512c580305648ac14571aa6a387b875b501e4637600c39014372004",
+      "builtin_examples": [
+        "/Users/sumery/lens077/ecommerce/frontend/node_modules/.pnpm/@typescript+typescript-darwin-arm64@7.0.2/node_modules/@typescript/typescript-darwin-arm64/lib/lib.es5.d.ts",
+        "/Users/sumery/lens077/ecommerce/frontend/node_modules/.pnpm/@typescript+typescript-darwin-arm64@7.0.2/node_modules/@typescript/typescript-darwin-arm64/lib/lib.es2015.d.ts"
+      ]
+    },
+    "nightly": {
+      "command": [
+        "node",
+        "/var/folders/t9/sygc562567z089s5_1wz654w0000gn/T/ecommerce-frontend-upgrade-j6yc84c4/isolated/typescript-nightly/node_modules/typescript/bin/tsc",
+        "--project",
+        "/Users/sumery/lens077/ecommerce/frontend/apps/merchant/tsconfig.json",
+        "--noEmit",
+        "--incremental",
+        "false",
+        "--pretty",
+        "false",
+        "--listFilesOnly"
+      ],
+      "rc": 0,
+      "file_count": 1203,
+      "non_builtin_file_count": 1114,
+      "non_builtin_sha256": "d48c27182512c580305648ac14571aa6a387b875b501e4637600c39014372004",
+      "builtin_examples": [
+        "/private/var/folders/t9/sygc562567z089s5_1wz654w0000gn/T/ecommerce-frontend-upgrade-j6yc84c4/isolated/typescript-nightly/node_modules/.pnpm/@typescript+typescript-darwin-arm64@7.1.0-dev.20260904.1/node_modules/@typescript/typescript-darwin-arm64/lib/lib.es5.d.ts",
+        "/private/var/folders/t9/sygc562567z089s5_1wz654w0000gn/T/ecommerce-frontend-upgrade-j6yc84c4/isolated/typescript-nightly/node_modules/.pnpm/@typescript+typescript-darwin-arm64@7.1.0-dev.20260904.1/node_modules/@typescript/typescript-darwin-arm64/lib/lib.es2015.d.ts"
+      ]
+    },
+    "same_non_builtin_files": true
+  }
+}
