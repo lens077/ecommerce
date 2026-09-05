@@ -1,12 +1,92 @@
 # 基础设施恢复与可观测性运维手册
 
-> 更新日期：2026-08-27。本文记录已部署实况、验收判据和回滚入口。拓扑真相仍以 `.service-matrix.yaml` 与 `context/team/pangolin-tunnel.md` 为准；凭据值、DSN、ping UUID、topic、token 和私钥不写入本文。
+> 更新日期：2026-09-05。本文记录已部署实况、验收判据和回滚入口。拓扑真相仍以 `.service-matrix.yaml` 与 `context/team/pangolin-tunnel.md` 为准；凭据值、DSN、ping UUID、topic、token、私钥和公网地址不写入本文。
 
 ## 1. 快速入口
 
 仓库根的 `helper.sh` 是**命令备忘**（2026-08-28 起改为纯备忘：打开阅读、按小节逐条复制执行，不要整体运行；文件顶部有 `exit 0` 防呆，误执行零副作用）。分节：一、状态检查（只读）；二、恢复与演练（有副作用）；三、本地开发域名（`/etc/hosts`）；四、Pangolin；五、根域导航页；六、OTLP 鉴权；七、工具速查。
 
 有副作用的只有第二节三组命令：newt 重启、告警链路测试、强制证书续期。其余状态检查小节均只读。强制续期会执行真实 DNS-01 并短暂重启 Traefik、Redis 和 Silo，不要当普通健康检查反复运行。
+
+## 2. 公网地址注入与重建
+
+仓库使用 `node0`、`node1`、`node2`、`node3` 等 SSH inventory alias 描述主机。
+alias 的 `HostName` 只存在于维护者的 `~/.ssh/config`。Kubernetes、容器和远端 systemd
+不会解析 SSH alias；这些运行面必须在部署时注入真实地址。
+
+| 运行面 | 仓库中的表示 | 运行时来源 | 缺失时行为 |
+|---|---|---|---|
+| Cilium 到外部 PostgreSQL 的 `toCIDR` | `global.postgresEgressCIDR` | `POSTGRES_EGRESS_CIDR`，或从 `POSTGRES_SSH_ALIAS`（默认 `node1`）解析 | 渲染失败，不产生清单 |
+| ArgoCD Helm 参数 | `__POSTGRES_EGRESS_CIDR__` | `scripts/deploy-k8s.sh` 在 apply 前注入 | 禁止直接 apply `argocd-app.yml` |
+| node1 Docker 端口来源白名单 | `NODE2_SOURCE_CIDR`、`OPERATOR_SOURCE_CIDR` | node1 的 `/etc/docker-port-guard.env` | 脚本在清空现有规则前失败 |
+| Config Center 的数据库入口 | 文档只写 `node1:<port>` | `<service>/<env>/bootstrap.yaml` 的 `data.database.postgres.host` 与 `port` | 服务启动或热重建连接池失败 |
+| fail2ban 的 `ignoreip` | 文档只写 alias 或占位名 | 每台主机的 `/etc/fail2ban/jail.d/*.local` | 不自动补值，必须按主机配置 |
+
+### Kubernetes 与 Helm
+
+`scripts/resolve-ssh-alias-cidr.sh` 通过 `ssh -G` 读取 alias，不建立 SSH 连接。
+`scripts/deploy-k8s.sh` 和 `backend/Makefile` 都先渲染 `helm/files/zero-trust.yaml`，不再把该文件
+直接交给 `kubectl`。
+
+```bash
+# 默认从 ~/.ssh/config 的 node1 解析；只渲染，不修改集群。
+scripts/render-zero-trust.sh > /tmp/ecommerce-zero-trust.yaml
+
+# 常规部署入口同样自动解析。
+DRY_RUN=1 POSTGRES_SSH_ALIAS=node1 scripts/deploy-k8s.sh
+
+# 没有 SSH inventory 的 CI 或恢复机必须显式注入。
+POSTGRES_EGRESS_CIDR="<single-host-ipv4-cidr>" scripts/render-zero-trust.sh
+```
+
+`POSTGRES_EGRESS_CIDR` 只接受 IPv4 `/32`。直接运行 `helm template` 时，必须传
+`--set-string global.postgresEgressCIDR=<single-host-ipv4-cidr>`。ArgoCD 入口只能通过
+`DEPLOY_MODE=argocd scripts/deploy-k8s.sh` 注入；仓库中的占位符不能直接 apply。
+
+Config Center 重建时，从 `ssh -G node1` 取得 `HostName`，写入 10 个业务服务和 Config Center
+自身的 PostgreSQL `host`，端口与 TLS 模式按 `.service-matrix.yaml` 和现有 Bootstrap 保持一致。
+SSH alias 不能原样写入 Config Center，因为 Pod 不读取维护者的 SSH 配置。
+
+### node1 Docker 端口白名单
+
+仓库提供脚本、systemd 单元和空值示例；真实来源网段只写到 node1：
+
+```bash
+node2_source_cidr="$(scripts/resolve-ssh-alias-cidr.sh node2)"
+set -a
+. ~/.config/apikv/runtime-addresses.env   # 只定义 OPERATOR_SOURCE_CIDR，文件权限 0600
+set +a
+
+{
+  printf 'NODE2_SOURCE_CIDR=%s\n' "$node2_source_cidr"
+  printf 'OPERATOR_SOURCE_CIDR=%s\n' "$OPERATOR_SOURCE_CIDR"
+} | ssh node1 'umask 077; cat > /etc/docker-port-guard.env'
+
+scp infrastructure/host-watchdog/docker-port-guard.sh node1:/tmp/
+scp infrastructure/host-watchdog/docker-port-guard.service node1:/tmp/
+ssh node1 'install -m 0755 /tmp/docker-port-guard.sh /usr/local/sbin/docker-port-guard.sh &&
+  install -m 0644 /tmp/docker-port-guard.service /etc/systemd/system/docker-port-guard.service &&
+  rm -f /tmp/docker-port-guard.sh /tmp/docker-port-guard.service &&
+  systemctl daemon-reload && systemctl enable --now docker-port-guard.service'
+```
+
+运行脚本前，脚本先校验两个变量。`NODE2_SOURCE_CIDR` 必须是 IPv4 `/32`；
+`OPERATOR_SOURCE_CIDR` 必须是合法 IPv4 CIDR。校验完成后才清空并重建 `DOCKER-USER`，
+因此空值或错误值不会删除现有保护规则。
+
+重建后检查规则计数，并分别从白名单内和白名单外建立连接。只有「允许来源能连、其他来源被拦、
+DROP 计数增长」三项同时成立，才算恢复完成。
+
+### 清理门禁
+
+```bash
+scripts/verify-public-ips.py             # 当前 tracked/unignored 文件
+scripts/verify-public-ips.py --staged    # pre-commit 使用
+scripts/verify-public-ips.py --history   # 所有本地可达 Git 对象
+```
+
+扫描器拒绝全球可路由的 IPv4 和 IPv6 字面量，只报告文件、行号与地址族，不把地址重新打印到日志。
+RFC 5737/RFC 3849 文档地址、私网地址和四段式产品版本不报错。
 
 ## ntfy 告警闭环
 

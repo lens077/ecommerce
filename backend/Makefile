@@ -241,6 +241,8 @@ scars:
 #
 # 先 dry-run 看一眼会动什么: make k8s-dev-all KUBECTL_ARGS=--dry-run=server
 KUBECTL_ARGS ?=
+POSTGRES_EGRESS_CIDR ?=
+POSTGRES_SSH_ALIAS ?= node1
 
 .PHONY: k8s-dev-all
 k8s-dev-all:
@@ -254,8 +256,12 @@ k8s-prod-all:
 # 都不中断循环 —— 一个服务坏掉不该让后面的服务全部漏掉
 .PHONY: k8s-apply-all
 k8s-apply-all:
-	@echo "===== kubectl apply shared zero-trust baseline ====="; \
-	kubectl apply $(KUBECTL_ARGS) -f ../helm/files/zero-trust.yaml || exit 1; \
+	@tmp=$$(mktemp "$${TMPDIR:-/tmp}/ecommerce-zero-trust.XXXXXX"); \
+	trap 'rm -f "$$tmp"' EXIT; \
+	echo "===== render and apply shared zero-trust baseline ====="; \
+	POSTGRES_EGRESS_CIDR="$(POSTGRES_EGRESS_CIDR)" POSTGRES_SSH_ALIAS="$(POSTGRES_SSH_ALIAS)" \
+	  ../scripts/render-zero-trust.sh > "$$tmp" || exit 1; \
+	kubectl apply $(KUBECTL_ARGS) -f "$$tmp" || exit 1; \
 	fail=""; missing=""; \
 	for s in $(SERVICES); do \
 	  if [ ! -d services/$$s/deploy/$(K8S_ENV) ]; then missing="$$missing $$s"; continue; fi; \

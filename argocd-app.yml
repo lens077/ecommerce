@@ -79,6 +79,10 @@ spec:
         helm:
           valueFiles: # 指定 values 文件列表
             - values.yaml                              # 从仓库根目录下的 helm/values.yaml 读取
+          parameters:
+            # scripts/deploy-k8s.sh 在 apply 前注入；仓库不保存公网地址。
+            - name: global.postgresEgressCIDR
+              value: __POSTGRES_EGRESS_CIDR__
 
       # 部署目标集群和命名空间（使用生成器参数动态填充）
       destination:

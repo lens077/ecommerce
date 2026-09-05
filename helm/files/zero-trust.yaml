@@ -1,8 +1,8 @@
 # Canonical ecommerce workload identity and network baseline.
 #
-# This file is intentionally plain Kubernetes YAML (not a Helm template):
-# - helm/templates/zero-trust.yaml includes it verbatim;
-# - backend/Makefile applies the same file before emergency raw manifests.
+# This file is the canonical Kubernetes YAML body rendered through Helm tpl:
+# - helm/templates/zero-trust.yaml supplies the runtime-only PostgreSQL CIDR;
+# - backend/Makefile renders this template before emergency raw manifests.
 # Keeping one source prevents Helm and raw-deploy security rules from drifting.
 #
 # None of these workloads calls the Kubernetes API. Each therefore gets a
@@ -153,7 +153,7 @@ specs:
           - ports: [{ port: "443", protocol: TCP }]
       - &postgres
         toCIDR:
-          - <node1-source-cidr>
+          - '{{ required "global.postgresEgressCIDR is required" .Values.global.postgresEgressCIDR }}'
         toPorts:
           - ports: [{ port: "30001", protocol: TCP }]
       - &casdoor

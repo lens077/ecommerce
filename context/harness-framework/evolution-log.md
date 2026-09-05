@@ -1102,3 +1102,25 @@ description: harness 本身（硬规则/门禁/Agent 约束）每次改动的原
   `eslint(no-debugger)`；删除故意错误后复跑恢复 rc=0。`scripts/verify-context.sh` 已执行，
   本条的 EVOLOG/DECISION/链接等检查通过；整条命令只被用户已有的未跟踪演示文件
   `.scratch/doc-embed-demo/README.md` 的 [EMBED] 漂移阻断。
+
+### 2026-09-05 公网 IP 字面量退出仓库，运行地址改为部署时注入
+
+- **改了什么**：用 `git filter-repo` 重写全部本地可达历史与 stash，文档和 matrix 中的主机
+  改用 `node0`/`node1`/`node2`/`node3` SSH inventory alias；Cilium PostgreSQL CIDR 改由
+  `global.postgresEgressCIDR` 注入，node1 `docker-port-guard` 改从 root-only 环境文件读取来源
+  CIDR。新增 `scripts/verify-public-ips.py`，接入 pre-commit、`verify-quick`、GitHub 和 GitLab CI，
+  同时扫描暂存区、工作树与可达 Git 历史。运行参数与重建步骤写入
+  `docs/INFRASTRUCTURE-OPERATIONS.md` §2。
+- **为什么**：仓库是 public；公网地址虽不是登录凭据，仍会直接暴露基础设施拓扑、来源白名单
+  与维护者出口。只改 HEAD 仍可从旧 commit 取回；把数字机械替换成 SSH alias 又会破坏 Cilium
+  CIDR 和远端 systemd，因为它们不读取维护机的 `~/.ssh/config`。
+- **触发事故**：2026-09-05 用户要求检查 node0 接入后项目是否仍有公网 IP 明文，并明确要求
+  清除 Git 历史。扫描发现当前文档、Cilium 清单、主机防火墙脚本与历史 commit 仍保存 node1、
+  node2、node3、维护者出口和第三方样本地址；第一次历史替换也把 Cilium CIDR 变成不可运行的
+  alias 占位符，证明「全局搜索替换」必须配套运行值注入和重建记录。
+- **怎么验证的**：隔离 mirror 先演练 750 个 commit，再正式重写；
+  `scripts/verify-public-ips.py` 对工作树与可达历史均为零命中。暂存合成公网地址返回 rc=1 且
+  不回显值，RFC 文档地址与四段式版本返回 rc=0。错误 PostgreSQL CIDR、缺失 Docker 来源参数
+  均在写操作前失败；有效 `/32` 经 Helm `tpl` 只渲染一处。`helm lint`、三条部署入口的隔离
+  mock、`go test -count=1 ./structcheck/...`、`scripts/verify-context.sh`、Action workflow lint 与
+  GitLab YAML 解析均通过。

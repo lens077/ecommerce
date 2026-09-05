@@ -1,2 +1,2 @@
-{{- /* Canonical plain YAML is shared with the emergency raw-manifest path. */ -}}
-{{- .Files.Get "files/zero-trust.yaml" -}}
+{{- /* Canonical YAML body is shared with the emergency rendered-manifest path. */ -}}
+{{- tpl (.Files.Get "files/zero-trust.yaml") . -}}

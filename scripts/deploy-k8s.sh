@@ -35,6 +35,7 @@ registry="${TCR_REGISTRY:-ccr.ccs.tencentyun.com}"
 pg_ca_file="${PG_CA_FILE:-${repo_root}/backend/services/cart/pg_ca_pem.crt}"
 dry_run="${DRY_RUN:-}"
 services="${SERVICES:-}"
+postgres_egress_cidr=""
 
 case "${deploy_mode}" in
   helm | argocd) ;;
@@ -78,10 +79,12 @@ need() {
 }
 need kubectl
 [[ "${deploy_mode}" == "helm" ]] && need helm
+postgres_egress_cidr="$("${script_dir}/resolve-postgres-egress-cidr.sh")"
 
 if [[ "${deploy_action}" == "delete" ]]; then
   echo "== helm 渲染并删除全部微服务（保留 namespace 与前置 Secret）"
-  helm template ecommerce "${repo_root}/helm" --namespace "${namespace}" |
+  helm template ecommerce "${repo_root}/helm" --namespace "${namespace}" \
+    --set-string "global.postgresEgressCIDR=${postgres_egress_cidr}" |
     "${kubectl_cmd[@]}" "${kubectl_delete_cmd[@]}" --ignore-not-found=true \
       --namespace "${namespace}" -f -
   if [[ -z "${dry_run}" ]]; then
@@ -139,15 +142,21 @@ fi
 # 交付
 if [[ "${deploy_mode}" == "argocd" ]]; then
   echo "== apply ArgoCD 清单（AppProject / repo / ApplicationSet）"
-  for f in argocd-proj.yml argocd-repo.yml argocd-app.yml; do
+  for f in argocd-proj.yml argocd-repo.yml; do
     "${kubectl_cmd[@]}" "${kubectl_apply_cmd[@]}" -f "${repo_root}/${f}"
   done
+  rendered_app="$(mktemp "${TMPDIR:-/tmp}/ecommerce-argocd-app.XXXXXX")"
+  trap 'rm -f "${rendered_app}"' EXIT
+  sed "s|__POSTGRES_EGRESS_CIDR__|${postgres_egress_cidr}|g" \
+    "${repo_root}/argocd-app.yml" > "${rendered_app}"
+  "${kubectl_cmd[@]}" "${kubectl_apply_cmd[@]}" -f "${rendered_app}"
   echo "✅ 已交给 ArgoCD。看状态：kubectl get application -n argocd"
   exit 0
 fi
 
 echo "== helm 渲染并 apply（与 ArgoCD 同一份 helm/values.yaml）"
-helm_args=(template ecommerce "${repo_root}/helm" --namespace "${namespace}")
+helm_args=(template ecommerce "${repo_root}/helm" --namespace "${namespace}"
+  --set-string "global.postgresEgressCIDR=${postgres_egress_cidr}")
 if [[ -n "${services}" ]]; then
   # 只开指定的几个：先把全部关掉，再逐个打开
   for s in $(yq -r 'keys | .[] | select(. != "global")' "${repo_root}/helm/values.yaml"); do

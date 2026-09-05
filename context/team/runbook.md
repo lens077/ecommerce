@@ -27,6 +27,9 @@ description: 给所有 AI 编码工具(尤其 Codex)的可执行命令与验收�
   仓库里只写主机名和端口。**Consul KV 已退役,不再存任何配置**(AGENTS.md 硬规则 #4)。
   门禁:pre-commit 跑 `gitleaks --staged`(规则 `.gitleaks.toml`,缺工具即红),`verify-quick.sh` 与两远端 CI 扫全历史;
   被拦时真凭据挪走、误报加 allowlist 并写理由,不要 `SKIP_GITLEAKS=1` 混过去(2026-09-02 事故见 evolution-log)。
+- **公网地址不入库**:文档使用 `~/.ssh/config` 的 inventory alias，Kubernetes CIDR、
+  主机防火墙来源和 Config Center endpoint 在部署时注入。`scripts/verify-public-ips.py`
+  同时守暂存区、工作树和可达 Git 历史；重建步骤见 `docs/INFRASTRUCTURE-OPERATIONS.md` §2。
 - **不可逆动作(commit/push/合入/deploy/仓外写删)**:授权判定的全文**只写在
   [AGENTS.md](../../AGENTS.md) 硬规则 #6 一处**,本文件不再保留副本(2026-08-21 消重,
   两处并存时已出现措辞漂移风险)。一句话版:用户明确要求 = 授权,直接执行不二次确认;
@@ -49,6 +52,7 @@ description: 给所有 AI 编码工具(尤其 Codex)的可执行命令与验收�
 | CI/CD、部署策略、镜像 | [`docs/DEVOPS.md`](../../docs/DEVOPS.md) | 镜像用 latest;单副本下滚更/金丝雀静默失效 |
 | 数据库表结构 / 迁移 / 种子数据 | [db-migrations.md](db-migrations.md) + [`docs/DEVOPS.md`](../../docs/DEVOPS.md) | 迁移里写 SET search_path 版本表解析失败;sqlc 生成物落后 schema;种子不幂等重跑翻倍;不按 expand-contract 滚更炸旧副本 |
 | Shell / Make recipe | [shell-scripting.md](shell-scripting.md) | macOS Bash 3.2 + `set -u` 下空数组展开直接退出 |
+| 公网 IP / 防火墙来源 / 外部数据库 CIDR | [`docs/INFRASTRUCTURE-OPERATIONS.md`](../../docs/INFRASTRUCTURE-OPERATIONS.md) §2 | SSH alias 被误当成 Pod DNS；重建时缺运行值；CIDR 硬编码重新进入 Git 历史 |
 | 本地起服务连不上基础设施 | [local-env.md](local-env.md) | `dev.yml` 里的集群内 svc 域名在 Mac 上解析不了；`pg-main-rw`/`192.168.3.132` 指向已 hibernate 的 CNPG（TCP 通但握不了手）；Consul 不带 token 时读返 200 但结果被 ACL 过滤成空；配置缺子块导致功能被静默关掉 |
 | Kubernetes 节点关机/重启、终态 Pod 累积 | [node-graceful-shutdown.md](node-graceful-shutdown.md) | 把正常的 90 秒等待当卡死后强断电;把 `Succeeded/Failed` 历史误判成运行副本;只改 kubelet 不改 logind 导致提前关机 |
 | 对外公开服务 / 内网穿透 / `*.apikv.com` | [pangolin-tunnel.md](pangolin-tunnel.md) | k8s target 走 80 得 envoy 404;改完配置不等 Traefik 5s 轮询就当故障排查 |
@@ -69,6 +73,7 @@ description: 给所有 AI 编码工具(尤其 Codex)的可执行命令与验收�
 ```bash
 scripts/verify-quick.sh             # 后端(§1+§3)与前端(§4)并行跑;每侧绿了只打一行,红了只打日志尾部
 scripts/verify-quick.sh backend     # 只跑后端;frontend 同理
+scripts/verify-public-ips.py --history # 公网 IP 字面量历史门禁
 ```
 
 后端链与 `pnpm ready` **无数据依赖,不要串行等待**;全量输出在修复循环里反复进上下文,

@@ -1,0 +1,13 @@
+[Unit]
+Description=Restrict source addresses for published Docker ports
+After=docker.service
+Requires=docker.service
+
+[Service]
+Type=oneshot
+RemainAfterExit=yes
+EnvironmentFile=/etc/docker-port-guard.env
+ExecStart=/usr/local/sbin/docker-port-guard.sh
+
+[Install]
+WantedBy=multi-user.target

@@ -16,6 +16,31 @@
 # 因此这里用 python 解析 JSON——实测是唯一稳定的取法。
 set -uo pipefail
 
+node2_source_cidr="${NODE2_SOURCE_CIDR:-}"
+operator_source_cidr="${OPERATOR_SOURCE_CIDR:-}"
+
+python3 - "${node2_source_cidr}" "${operator_source_cidr}" <<'PY'
+import ipaddress
+import sys
+
+names = ("NODE2_SOURCE_CIDR", "OPERATOR_SOURCE_CIDR")
+for name, value in zip(names, sys.argv[1:]):
+    if not value:
+        raise SystemExit(f"{name} 未设置；拒绝清空现有 DOCKER-USER 规则")
+    try:
+        network = ipaddress.ip_network(value, strict=True)
+    except ValueError as error:
+        raise SystemExit(f"{name} 无效：{error}")
+    if network.version != 4:
+        raise SystemExit(f"{name} 必须是 IPv4 CIDR")
+if ipaddress.ip_network(sys.argv[1]).prefixlen != 32:
+    raise SystemExit("NODE2_SOURCE_CIDR 必须是单主机 /32 CIDR")
+PY
+validation_rc=$?
+if [ "${validation_rc}" -ne 0 ]; then
+  exit "${validation_rc}"
+fi
+
 container_ip() {
   docker inspect "$1" 2>/dev/null | python3 -c '
 import sys, json
@@ -39,15 +64,15 @@ guard() {  # guard <容器名> <容器内端口> <允许来源...>
     iptables -A DOCKER-USER -p tcp -d "$ip" --dport "$cport" -s "$src" -j RETURN
   done
   iptables -A DOCKER-USER -p tcp -d "$ip" --dport "$cport" -j DROP
-  echo "guarded ${name} (${ip}:${cport}) <- $*"
+  echo "guarded ${name} (${ip}:${cport}) with $# injected source ranges"
 }
 
 # 每次全量重建，避免重复叠加
 iptables -F DOCKER-USER 2>/dev/null || true
 
 # 允许来源说明：
-#   node2    node2 —— gorse 所在机器（两个库的真实消费者）
-#   <operator-egress-cidr> 运维出口段
+#   NODE2_SOURCE_CIDR    node2 —— gorse 所在机器（两个库的真实消费者）
+#   OPERATOR_SOURCE_CIDR 运维出口段
 #   172.16.0.0/12    Docker 网桥段 —— Casdoor 经 172.18.0.1 连 PG 走的就是这条
 #
 # 历史（已解除）：Casdoor 曾配 host=apikv.com **绕公网**连回本机，源地址呈现为 node1
@@ -55,7 +80,7 @@ iptables -F DOCKER-USER 2>/dev/null || true
 # 2026-09-01 已改为 host=172.18.0.1，该放行项随之去掉。
 
 # redis_gorse 61246 -> 容器 6379。实测消费者只有 node2 的 gorse。
-guard redis 6379 node2 <operator-egress-cidr> 172.16.0.0/12
+guard redis 6379 "${node2_source_cidr}" "${operator_source_cidr}" 172.16.0.0/12
 
 # postgres_gorse 52288 -> 容器 5432。消费者是 gorse(node2) + Casdoor(经 172.18.0.1)。
-guard postgres 5432 node2 <operator-egress-cidr> 172.16.0.0/12
+guard postgres 5432 "${node2_source_cidr}" "${operator_source_cidr}" 172.16.0.0/12

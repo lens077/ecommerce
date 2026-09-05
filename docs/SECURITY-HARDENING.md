@@ -76,6 +76,10 @@ fail2ban 版本：node1 `1.0.2`（Ubuntu 24.04）、node2 `1.1.0`（Ubuntu 26.04
 
 ### `/etc/fail2ban/jail.d/00-defaults.local`（两台相同）
 
+下面是脱敏模板。`node1`、`node2` 是维护机的 SSH alias，远端 fail2ban 不读取
+`~/.ssh/config`；安装时必须注入对应地址。参数来源与重建步骤见
+[基础设施恢复与可观测性运维手册](INFRASTRUCTURE-OPERATIONS.md#2-公网地址注入与重建)。
+
 ```ini
 [DEFAULT]
 backend            = systemd
@@ -106,9 +110,9 @@ loglevel   = INFO
   三台 node 互相加白，因为 node3 经 node1 的 Pangolin 隧道通信。
   `172.16.0.0/12` 是 Docker 网桥段，防止误封容器互访。
 - **node3 写 `<node3-egress-cidr>` 而不是单个 IP**〔2026-09-02 修正〕：node3 在 NAT 后
-  （内网 `10.10.21.172`），**SSH 入站是 `.229`，出站 egress 是 `.226`**，两个地址不同。
-  原来只白名单了 `.229`（`/etc/hosts` 里那个），结果 node3 作为客户端去连 Harbor 时
-  以 `.226` 出现，实测被 `harbor-auth` 封了——node3 上跑着 Gatus 探针与 CDC，
+  （内网 `10.10.21.172`），SSH 入站地址与出站 egress 地址不同。
+  原来只白名单了 SSH 入站地址，结果 node3 作为客户端去连 Harbor 时
+  以另一个 egress 地址出现，实测被 `harbor-auth` 封了——node3 上跑着 Gatus 探针与 CDC，
   被封等于探针失明。`/29` 同时覆盖两者且只放 8 个地址。
   **判据**：白名单一台 NAT 后的机器，要查它的 egress（`curl ifconfig.me`），
   不能只抄 `/etc/hosts` 里的入站地址。
@@ -430,7 +434,7 @@ compose 的 environment 里（只有注释掉的一行），`app.conf` 是唯一
 
 在 Casdoor 改走 Docker 网关之后，两个端口都已收窄，**不再对 `0.0.0.0/0` 开放**：
 
-放行来源 = node2 `node2`（gorse）+ 运维段 `<operator-egress-cidr>`
+放行来源 = `node2`（gorse）+ 运维段 `<operator-egress-cidr>`
 + Docker 网桥 `172.16.0.0/12`（Casdoor 经 `172.18.0.1` 走这条），其余 DROP。
 
 落地在 node1 的 `docker-port-guard.service`（脚本入库副本

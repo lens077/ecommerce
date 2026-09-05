@@ -31,10 +31,18 @@ jobs:
     steps:
       - name: Checkout repository
         uses: actions/checkout@v5
+        with:
+          fetch-depth: 0
 
       - name: Verify context knowledge base structure
         shell: bash
         run: ./scripts/verify-context.sh
+
+      - name: Reject public IP literals
+        shell: bash
+        run: |
+          python3 scripts/verify-public-ips.py
+          python3 scripts/verify-public-ips.py --history
 
       # 门禁的元评测:注入九类已知坏样本,断言门禁还会红(防 commitlint/freeze 式恒绿失效)。
       # 每次 push 都跑 = 把「它红过吗」从一次性手工验证变成持续证明。约 1 分钟。

@@ -15,7 +15,7 @@
 # 注意:这是「最便宜的适用验证」入口,不替代按需锚点——
 #   改了 .service-matrix.yaml 仍要单独跑 backend/structcheck(已含在 -short 全量里),
 #   改了 context/ 或 AGENTS.md 要跑 scripts/verify-context.sh。
-# 凭据扫描与前后端并行执行,只打印 path:line:key,绝不把疑似值带进日志。
+# 敏感数据扫描与前后端并行执行，只打印 path:line:kind，不把疑似值带进日志。
 set -uo pipefail
 
 root=$(git rev-parse --show-toplevel) || { echo "verify-quick: 不在 git 仓库内" >&2; exit 2; }
@@ -39,10 +39,11 @@ run_frontend() {
 }
 
 run_secrets() {
-  # 两层:verify-secrets.py 扫工作树(含未跟踪文件,提交前最后一眼);
-  # gitleaks 扫全部已提交历史(规则在 .gitleaks.toml,与 pre-commit / CI 同一份)。
+  # 工作树与历史分别扫描凭据和公网 IP 字面量；历史扫描防止只改 HEAD 留下旧值。
   # gitleaks 缺失直接红——2026-09-02 事故后不再允许「没装就跳过」的假门禁。
   python3 scripts/verify-secrets.py || return 1
+  python3 scripts/verify-public-ips.py || return 1
+  python3 scripts/verify-public-ips.py --history || return 1
   command -v gitleaks >/dev/null 2>&1 || { echo "verify-quick: 缺少 gitleaks(brew install gitleaks)" >&2; return 1; }
   gitleaks git . -c .gitleaks.toml --no-banner --redact=80
 }
@@ -85,7 +86,7 @@ if [ -n "$fe_pid" ]; then
   [ "$fe_rc" = 0 ] || overall=1
 fi
 secrets_rc=0; wait "$secrets_pid" || secrets_rc=$?
-report "secrets(working-tree tripwire)" "$secrets_rc" "$logdir/secrets.log"
+report "sensitive-data(worktree + history)" "$secrets_rc" "$logdir/secrets.log"
 [ "$secrets_rc" = 0 ] || overall=1
 notices_rc=0; wait "$notices_pid" || notices_rc=$?
 report "notices(THIRD_PARTY_NOTICES.md 新鲜度)" "$notices_rc" "$logdir/notices.log"
