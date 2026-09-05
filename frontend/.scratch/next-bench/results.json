@@ -1,0 +1,247 @@
+{
+  "rounds": 6,
+  "runs": [
+    {
+      "kind": "stable",
+      "phase": "cold",
+      "round": 1,
+      "rc": 0,
+      "wall_seconds": 6.451665792000313
+    },
+    {
+      "kind": "stable",
+      "phase": "warm",
+      "round": 1,
+      "rc": 0,
+      "wall_seconds": 1.3428532500001893
+    },
+    {
+      "kind": "canary",
+      "phase": "cold",
+      "round": 1,
+      "rc": 0,
+      "wall_seconds": 4.71015533300033
+    },
+    {
+      "kind": "canary",
+      "phase": "warm",
+      "round": 1,
+      "rc": 0,
+      "wall_seconds": 1.263715042000058
+    },
+    {
+      "kind": "canary",
+      "phase": "cold",
+      "round": 2,
+      "rc": 0,
+      "wall_seconds": 2.533351749999838
+    },
+    {
+      "kind": "canary",
+      "phase": "warm",
+      "round": 2,
+      "rc": 0,
+      "wall_seconds": 1.2488750419997814
+    },
+    {
+      "kind": "stable",
+      "phase": "cold",
+      "round": 2,
+      "rc": 0,
+      "wall_seconds": 2.966382000000067
+    },
+    {
+      "kind": "stable",
+      "phase": "warm",
+      "round": 2,
+      "rc": 0,
+      "wall_seconds": 1.2806517499998336
+    },
+    {
+      "kind": "stable",
+      "phase": "cold",
+      "round": 3,
+      "rc": 0,
+      "wall_seconds": 3.0815566670003136
+    },
+    {
+      "kind": "stable",
+      "phase": "warm",
+      "round": 3,
+      "rc": 0,
+      "wall_seconds": 1.3065558749999582
+    },
+    {
+      "kind": "canary",
+      "phase": "cold",
+      "round": 3,
+      "rc": 0,
+      "wall_seconds": 2.1891990419999274
+    },
+    {
+      "kind": "canary",
+      "phase": "warm",
+      "round": 3,
+      "rc": 0,
+      "wall_seconds": 1.1709212920000027
+    },
+    {
+      "kind": "canary",
+      "phase": "cold",
+      "round": 4,
+      "rc": 0,
+      "wall_seconds": 2.205077125000116
+    },
+    {
+      "kind": "canary",
+      "phase": "warm",
+      "round": 4,
+      "rc": 0,
+      "wall_seconds": 1.172949250000329
+    },
+    {
+      "kind": "stable",
+      "phase": "cold",
+      "round": 4,
+      "rc": 0,
+      "wall_seconds": 2.938671875000182
+    },
+    {
+      "kind": "stable",
+      "phase": "warm",
+      "round": 4,
+      "rc": 0,
+      "wall_seconds": 1.3129723750002995
+    },
+    {
+      "kind": "stable",
+      "phase": "cold",
+      "round": 5,
+      "rc": 0,
+      "wall_seconds": 2.9431337500000154
+    },
+    {
+      "kind": "stable",
+      "phase": "warm",
+      "round": 5,
+      "rc": 0,
+      "wall_seconds": 1.5246618329997546
+    },
+    {
+      "kind": "canary",
+      "phase": "cold",
+      "round": 5,
+      "rc": 0,
+      "wall_seconds": 2.659762000000228
+    },
+    {
+      "kind": "canary",
+      "phase": "warm",
+      "round": 5,
+      "rc": 0,
+      "wall_seconds": 1.2184716249998928
+    },
+    {
+      "kind": "canary",
+      "phase": "cold",
+      "round": 6,
+      "rc": 0,
+      "wall_seconds": 2.360846541999763
+    },
+    {
+      "kind": "canary",
+      "phase": "warm",
+      "round": 6,
+      "rc": 0,
+      "wall_seconds": 1.2307376669996302
+    },
+    {
+      "kind": "stable",
+      "phase": "cold",
+      "round": 6,
+      "rc": 0,
+      "wall_seconds": 3.1989312919999975
+    },
+    {
+      "kind": "stable",
+      "phase": "warm",
+      "round": 6,
+      "rc": 0,
+      "wall_seconds": 1.3425505000000157
+    }
+  ],
+  "summary": {
+    "stable": {
+      "cold": {
+        "wall_seconds": [
+          6.451665792000313, 2.966382000000067, 3.0815566670003136, 2.938671875000182,
+          2.9431337500000154, 3.1989312919999975
+        ],
+        "wall_median": 3.0239693335001903
+      },
+      "warm": {
+        "wall_seconds": [
+          1.3428532500001893, 1.2806517499998336, 1.3065558749999582, 1.3129723750002995,
+          1.5246618329997546, 1.3425505000000157
+        ],
+        "wall_median": 1.3277614375001576
+      },
+      "artifacts": {
+        "client_js_raw_bytes": 806943,
+        "client_js_gzip_bytes": 235632,
+        "client_js_files": 9,
+        "cache_bytes": 48962370,
+        "standalone_bytes": 36428835,
+        "total_next_bytes": 93551764
+      }
+    },
+    "canary": {
+      "cold": {
+        "wall_seconds": [
+          4.71015533300033, 2.533351749999838, 2.1891990419999274, 2.205077125000116,
+          2.659762000000228, 2.360846541999763
+        ],
+        "wall_median": 2.4470991459998004
+      },
+      "warm": {
+        "wall_seconds": [
+          1.263715042000058, 1.2488750419997814, 1.1709212920000027, 1.172949250000329,
+          1.2184716249998928, 1.2307376669996302
+        ],
+        "wall_median": 1.2246046459997615
+      },
+      "artifacts": {
+        "client_js_raw_bytes": 799995,
+        "client_js_gzip_bytes": 234558,
+        "client_js_files": 9,
+        "cache_bytes": 32005783,
+        "standalone_bytes": 36291791,
+        "total_next_bytes": 76400732
+      }
+    }
+  },
+  "environment": {
+    "node": "v24.20.0",
+    "pnpm": "12.3.4",
+    "rounds": 6
+  },
+  "versions": {
+    "stable": "16.3.4",
+    "canary": "16.4.0-canary.18",
+    "typescript": "7.1.0-dev.20260904.1"
+  },
+  "verification": {
+    "stable": {
+      "build": "pass",
+      "runtime": "pass",
+      "edgeHydration": "pass",
+      "pageErrors": 0
+    },
+    "canary": {
+      "build": "pass",
+      "runtime": "pass",
+      "edgeHydration": "pass",
+      "pageErrors": 0
+    }
+  }
+}

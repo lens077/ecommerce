@@ -86,13 +86,21 @@ run_vp-lint() {
     echo "lint-baseline: 前端依赖未安装,跳过 vp-lint(先 cd frontend && pnpm install)" >&2
     return 0
   fi
-  # vp lint(oxlint)现输出 miette 画框格式(2026-08-26 从旧单行格式适配,见陷阱 4):
+  # vp lint(oxlint)可能输出 miette 画框或单行诊断。0.3.0 的非 TTY 输出是:
+  #     apps/consumer/src/main.tsx:35:1: warning eslint(no-debugger): ...
+  # 旧版 miette 格式是:
   #     ! eslint(no-debugger): `debugger` statement is not allowed
   #       ,-[apps/consumer/src/main.tsx:35:1]
-  # 消息行(!/x 前缀)与其后最近的 ,-[path:line:col] 定位行配对成一条 finding;
-  # 行号列号照旧丢弃(见「归一化」)。路径补 frontend/ 前缀,与仓库根相对路径一致。
+  # 两种格式都归一化为一条 finding;行号列号照旧丢弃(见「归一化」)。
+  # 路径补 frontend/ 前缀,与仓库根相对路径一致。
   out=$( ( cd frontend && ./node_modules/.bin/vp lint 2>&1 ) || true )
   rows=$(printf '%s\n' "$out" | awk '
+    /^[^:]+:[0-9]+:[0-9]+: (warning|error) / {
+      loc=$0; sub(/:[0-9]+:[0-9]+: .*/, "", loc)
+      msg=$0; sub(/^[^:]+:[0-9]+:[0-9]+: /, "", msg)
+      printf "vp-lint\tfrontend/%s\t%s\n", loc, msg
+      next
+    }
     /^[[:space:]]*[!x][[:space:]]/ { msg=$0; sub(/^[[:space:]]*/,"",msg); next }
     match($0, /,-\[[^]]+:[0-9]+:[0-9]+\]/) && msg != "" {
       loc=substr($0, RSTART+3, RLENGTH-4)
@@ -105,6 +113,11 @@ run_vp-lint() {
   # 用哨兵行强制 check 变红,决不静默换绿(见陷阱 4)。
   reported=$(printf '%s\n' "$out" \
     | sed -n -E 's/^Found ([0-9]+) warnings? and ([0-9]+) errors?.*$/\1 \2/p' | head -1)
+  if [ -z "$reported" ]; then
+    # 单行模式没有汇总行，直接数诊断行；非零时仍能校验解析器没有失聪。
+    compact=$(printf '%s\n' "$out" | grep -Ec '^[^:]+:[0-9]+:[0-9]+: (warning|error) ' || true)
+    reported="$compact 0"
+  fi
   if [ -n "$reported" ]; then
     total=$(( $(echo "$reported" | cut -d' ' -f1) + $(echo "$reported" | cut -d' ' -f2) ))
     parsed=$(printf '%s' "$rows" | awk 'NF{n++} END{print n+0}')

@@ -206,6 +206,8 @@ CES 巡检告警（CronJob 2m + vmalert firing 闭环）、可观测黑盒探活
 
 ### 5. 前端
 
+> **依赖与工具链升级（2026-09-05）**：pnpm 固定到 12.3.4，Vite+ 升至 0.3.0 并对齐内置 Vitest 4.1.11；其余直接依赖升级到最新稳定版。基于 6 轮本仓 A/B，精确锁定 Next.js 16.4.0-canary.18（cold/warm build 中位数 -19.1%/-7.8%，cache -34.6%）和 TypeScript 7.1.0-dev.20260904.1（typecheck 峰值 RSS -17.5%～-20.3%）；SSR、真实 Edge hydration、`pnpm ready`、peer/dedupe/frozen-lockfile 均通过。证据见 [`frontend/.scratch/2026-09-05-prerelease-evaluation.md`](frontend/.scratch/2026-09-05-prerelease-evaluation.md)。
+
 | 应用 | 状态 | 说明 |
 |---|---|---|
 | consumer-next | ✅ | 公开可收录页已转正上线 dev（App Router + 匿名 transport + ISR `revalidate=60`，2 副本 + PDB）；扩页受阻于 `ListProducts` |

@@ -40,8 +40,6 @@
     "@tanstack/react-router-devtools": "catalog:",
     "@testing-library/react": "catalog:",
     "@testing-library/user-event": "catalog:",
-    "casdoor-js-sdk": "catalog:",
-    "casdoor-react-sdk": "catalog:",
     "lucide-react": "catalog:",
     "react": "catalog:",
     "react-dom": "catalog:",

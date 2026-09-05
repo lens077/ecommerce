@@ -6,8 +6,9 @@ FROM ${BASE_IMAGE} AS base
 
 ENV PNPM_HOME=/pnpm
 ENV PATH=$PNPM_HOME:$PATH
-RUN corepack enable && corepack prepare pnpm@11.22.0 --activate
 WORKDIR /workspace
+COPY package.json ./
+RUN npm install -g "$(node -p 'require("./package.json").packageManager')"
 
 FROM base AS dependencies
 COPY package.json pnpm-lock.yaml pnpm-workspace.yaml ./

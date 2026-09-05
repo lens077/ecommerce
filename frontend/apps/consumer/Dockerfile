@@ -1,13 +1,13 @@
 # syntax=docker/dockerfile:1
 
 ARG NODE_VERSION=24
-ARG PNPM_VERSION=11.6.0
 
 # 基础层：安装 pnpm
 FROM node:${NODE_VERSION}-alpine AS base
 WORKDIR /usr/src/app
+COPY package.json ./
 RUN --mount=type=cache,target=/root/.npm \
-    npm install -g pnpm@${PNPM_VERSION}
+    npm install -g "$(node -p 'require("./package.json").packageManager')"
 
 # 依赖层：利用 Docker 层缓存，仅复制包管理文件
 FROM base AS deps

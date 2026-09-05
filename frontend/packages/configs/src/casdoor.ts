@@ -1,4 +1,3 @@
-import SDK from "casdoor-js-sdk";
 export const CASDOOR_CONF = {
   // Casdoor 服务端地址。
   // ⚠️ 曾经写的是 `http://node1:8000` —— 明文 HTTP + 裸 IP，而且那个端口
@@ -17,9 +16,6 @@ export const CASDOOR_CONF = {
   // 重新向到哪个路由, 需要在casdoor的 应用中配置
   redirectPath: "/callback",
 };
-
-// 读取配置
-export const CASDOOR_SDK = new SDK(CASDOOR_CONF);
 
 /**
  * 判断是否登录。**当前全仓无人调用，保留只为兼容外部引用。**
@@ -42,11 +38,6 @@ export const CASDOOR_SDK = new SDK(CASDOOR_CONF);
 export const goToLink = (link: string) => {
   window.location.href = link;
 };
-// 获取登录接口的URL
-export const getSigninUrl = () => {
-  return CASDOOR_SDK.getSigninUrl();
-};
-
 /**
  * 各 app 桌面端登录使用的回调地址。
  *

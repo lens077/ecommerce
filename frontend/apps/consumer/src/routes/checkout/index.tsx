@@ -29,7 +29,7 @@ import {
   Typography,
 } from "@mui/material";
 import { Check, MapPin, Plus, X } from "lucide-react";
-import { useEffect, useMemo, useState } from "react";
+import { useMemo, useState } from "react";
 import { useFormat, useTranslation } from "@ecommerce/i18n";
 import { useMutation } from "@connectrpc/connect-query";
 import { toAppError } from "@ecommerce/api";
@@ -82,15 +82,13 @@ function CheckoutPage() {
     return Array.from(map.values());
   }, [selectedItems]);
 
-  // 默认选中默认地址（无默认则取第一个）
-  useEffect(() => {
-    if (!selectedAddressId && addresses && addresses.length > 0) {
-      const def = addresses.find((a) => a.isDefault) ?? addresses[0];
-      setSelectedAddressId(def.addressId);
-    }
-  }, [addresses, selectedAddressId]);
-
-  const selectedAddress = addresses?.find((a) => a.addressId === selectedAddressId) ?? null;
+  // 用户尚未手选时直接派生默认地址，避免为同步状态额外触发一次渲染。
+  const activeAddressId =
+    selectedAddressId ??
+    addresses?.find((address) => address.isDefault)?.addressId ??
+    addresses?.[0]?.addressId ??
+    null;
+  const selectedAddress = addresses?.find((a) => a.addressId === activeAddressId) ?? null;
 
   const totalAmountCents = useMemo(
     () =>
@@ -100,10 +98,10 @@ function CheckoutPage() {
   const freightCents = 0n;
   const payAmountCents = totalAmountCents + freightCents;
 
-  const canSubmit = !submitting && !!selectedAddressId && selectedItems.length > 0;
+  const canSubmit = !submitting && !!activeAddressId && selectedItems.length > 0;
 
   const handleSubmit = async () => {
-    if (!canSubmit || !selectedAddressId) return;
+    if (!canSubmit || !activeAddressId) return;
     setSubmitError(null);
     try {
       // TODO 防重令牌：proto 的 CreateOrderRequest 还没有 requestId 字段，
@@ -115,7 +113,7 @@ function CheckoutPage() {
           .map((i) => i.cartItemId)
           .filter((id) => /^\d+$/.test(id))
           .map((id) => BigInt(id)),
-        addressId: selectedAddressId,
+        addressId: activeAddressId,
         remark,
       });
       // 后端响应暂无 orderNo，先跳固定支付页占位
@@ -418,7 +416,7 @@ function CheckoutPage() {
         open={addressDialogOpen}
         addresses={addresses ?? []}
         loading={addrLoading}
-        selectedAddressId={selectedAddressId}
+        selectedAddressId={activeAddressId}
         onClose={() => setAddressDialogOpen(false)}
         onSelect={(id) => {
           setSelectedAddressId(id);

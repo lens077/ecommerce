@@ -109,15 +109,11 @@ export function useDebouncedCallback<T extends unknown[]>(
  */
 export function useDebounceWithPending<T>(value: T, delay: number): UseDebounceReturn<T> {
   const [debouncedValue, setDebouncedValue] = useState<T>(value);
-  const [isPending, setIsPending] = useState(false);
   const timerRef = useRef<ReturnType<typeof setTimeout> | undefined>(undefined);
 
   useEffect(() => {
-    setIsPending(true);
-
     timerRef.current = setTimeout(() => {
       setDebouncedValue(value);
-      setIsPending(false);
     }, delay);
 
     return () => {
@@ -127,5 +123,6 @@ export function useDebounceWithPending<T>(value: T, delay: number): UseDebounceR
     };
   }, [value, delay]);
 
+  const isPending = !Object.is(debouncedValue, value);
   return { debouncedValue, isPending };
 }

@@ -14,15 +14,15 @@
   },
   "devDependencies": {
     "@bufbuild/protoc-gen-es": "catalog:",
-    "@commitlint/cli": "^21.2.1",
-    "@commitlint/config-conventional": "^21.2.0",
+    "@commitlint/cli": "^21.2.2",
+    "@commitlint/config-conventional": "^21.2.2",
     "knip": "catalog:",
     "typescript": "catalog:",
-    "vite": "catalog:",
+    "vite": "npm:@voidzero-dev/vite-plus-core@0.3.0",
     "vite-plus": "catalog:"
   },
   "engines": {
-    "node": "^22.18.0 || >=24.11.0"
+    "node": "^22.22.2 || ^24.15.0 || >=26.0.0"
   },
-  "packageManager": "pnpm@11.22.0"
+  "packageManager": "pnpm@12.3.4"
 }

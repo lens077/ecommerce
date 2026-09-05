@@ -1086,3 +1086,19 @@ description: harness 本身（硬规则/门禁/Agent 约束）每次改动的原
   `--depth 1` 克隆下断言按预期红。GitLab 首跑仍未看。
   **仍待用户完成**：轮换上述全部凭据（PG root / Casdoor secret / 支付私钥 / Consul TLS）；
   向 GitHub Support 提交悬空对象清理（旧 SHA 页面实测仍 200）。
+
+### 2026-09-05 Vite+ 0.3 lint 单行输出重新接入基线棘轮
+
+- **改了什么**：`scripts/lint-baseline.sh` 的 `run_vp-lint` 同时解析 miette 画框与
+  `path:line:column: warning ...` 单行诊断；单行模式没有汇总行时，直接统计诊断行并与
+  解析结果核对。
+- **为什么**：Vite+ 0.3.0 升级了 Oxlint，非 TTY 输出重新变成单行且不再打印 `Found N`
+  汇总。只解析旧 miette 格式会把真实告警采成空集合，让新增 lint 问题静默通过 CI。
+- **触发事故**：升级 Vite+ `0.2.9` → `0.3.0` 后，`vp lint` 明确报告 3 条
+  `react(set-state-in-effect)`，但 `CHECKERS=vp-lint scripts/lint-baseline.sh check`
+  返回 rc=0 并声称「基线为空」。这是 2026-08-26 同类失聪事故在第二种输出格式上的复现。
+- **怎么验证的**：先修掉 3 条真实告警，正常输入下 `vp lint` 与基线 check 均 rc=0；
+  再临时新增含 `debugger` 的 TypeScript 文件，基线 check 返回 rc=1 并准确列出该文件与
+  `eslint(no-debugger)`；删除故意错误后复跑恢复 rc=0。`scripts/verify-context.sh` 已执行，
+  本条的 EVOLOG/DECISION/链接等检查通过；整条命令只被用户已有的未跟踪演示文件
+  `.scratch/doc-embed-demo/README.md` 的 [EMBED] 漂移阻断。
