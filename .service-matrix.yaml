@@ -9,7 +9,8 @@
 #   3. 必需配置键**不在本文件重复** —— 已由各服务 internal/conf/v1/conf.proto 的
 #      (buf.validate.field).required 声明，重复会漂移。见 config_validation 段
 #   4. 不写凭据
-#   5. **选型决策不进本表**（真相源是 docs/TECH.md）。note 只写「现在是什么、接没接线、
+#   5. retired_externals 只留退役边界；services.*.external 只能引用 externals，禁止引用退役项
+#   6. **选型决策不进本表**（真相源是 docs/TECH.md）。note 只写「现在是什么、接没接线、
 #      有什么坑」，不写「为什么选它、将来换成谁、什么条件才重估」。
 #      2026-08-28 教训：kafka 的 note 里留着「只有 NATS 不满足才重估 Kafka」这句已被
 #      docs/TECH.md 推翻的决策——本表是 AI 查拓扑的第一站，混进过期决策比文档过期更误导。
@@ -70,8 +71,7 @@ externals:
   consul: { host: "192.168.3.120:8500", note: "集群内工作负载使用 consul-server.consul.svc:8500；本地进程使用 LoadBalancer VIP。Consul 只承担注册发现，配置仍由 Config Center 提供。⚠️ 2026-09-03 起 10 个业务服务 deployment 均 CONSUL_ENABLED=false（当前不需要服务发现），网关 routes.yaml 的 target 全部改为 direct://<k8s Service>，启动时 discovery 目标为零即走 noResolver，readyz 不再依赖 Consul 目录；catalog 为空是预期状态。接线与注册守护循环（go-connect-kit/registry Maintain）保留，翻回 true + 路由改回 discovery:/// 即可重开。触发事故见 context/project/ecommerce/registry/experience/consul-register-once-then-give-up.md" }
   kafka: { host: "node1:30004", used_by: [], note: "node3 已预建 Kafka SCRAM 用户与 ecommerce.events topic；本仓当前无客户端、producer、consumer 或业务接线（used_by 为空即事实）。选型方向见 docs/TECH.md" }
   casdoor: { host: "casdoor.apikv.com", note: "HTTPS 经 Pangolin（8000 明文口已关，2026-08-19 起）；JWT 公钥 kid=lens；2026-08-20 定稿收编进集群，现行身份边界见 docs/TECH.md §8" }
-  elasticsearch: { host: "https://es.apikv.com（Pangolin rid 47 → node3 newt → 127.0.0.1:9200，容器 cdc-elasticsearch；SSO off，鉴权在 ES 自身，匿名/错误凭据 401；本机仍仅回环监听）", used_by: [search], note: "search 代码通过 SearchCatalog 只读 ecommerce_catalog_products alias；投影写入者定稿为 node3 的 Debezium→Kafka→Elasticsearch Sink CDC 链（同级仓 postgres-kafka-es-streaming-pipeline），tools/search-indexer 与 NATS 链已于 2026-09 退役。**运行时已切流（实测 2026-09-03）**：投影表 products.search_catalog + trigger 已建（product migration 00005）并进 publication ecommerce_cdc；Debezium include list / Kafka topic ecommerce_cdc.products.search_catalog / ES 索引模板 + ecommerce_catalog_products_v1 + alias / Sink 映射均已就位，sink lag 0，增量约 6s（改价/删除/还原三步实测）；search 新镜像已发布，readiness 走 alias 绿，经网关搜索命中正确。网络通路走 Pangolin（Pod 内匿名 401、正确凭据 200）；Config Center `search/dev/bootstrap.yaml` v5 已切 search.catalog（最小权限只读 API key）。⚠️ 同日修复了 Debezium source task 自 09-01 PG 重启后复制槽消失导致的 FAILED（connector 级 RUNNING 掩盖 task 级 FAILED，重置 offset 重快照），告警必须盯 slot 位点差 + task 状态 + sink lag。⚠️ 容量事实：node3 总内存 7.25GiB、该容器 limit 2GiB，与观测数据面同机。选型方向见 docs/TECH.md" }
-  meilisearch: { host: "meilisearch.search.svc:7700", used_by: [], note: "存量 v1.53 集群组件；本仓 search 代码已不再引用，运行时退役另走部署变更。选型方向见 docs/TECH.md" }
+  elasticsearch: { host: "https://es.apikv.com（Pangolin rid 47 → node3 newt → 127.0.0.1:9200，容器 cdc-elasticsearch；SSO off，鉴权在 ES 自身，匿名/错误凭据 401；本机仍仅回环监听）", used_by: [search], note: "search 代码通过 SearchCatalog 只读 ecommerce_catalog_products alias；投影写入者定稿为 node3 的 Debezium→Kafka→Elasticsearch Sink CDC 链（同级仓 postgres-kafka-es-streaming-pipeline），tools/search-indexer 与 NATS 链已于 2026-09 退役。**运行时已切流（实测 2026-09-03）**：投影表 products.search_catalog + trigger 已建（product migration 00005）并进 publication ecommerce_cdc；Debezium include list / Kafka topic ecommerce_cdc.products.search_catalog / ES 索引模板 + ecommerce_catalog_products_v1 + alias / Sink 映射均已就位，sink lag 0，增量约 6s（改价/删除/还原三步实测）；search 新镜像已发布，readiness 走 alias 绿，经网关搜索命中正确。网络通路走 Pangolin（Pod 内匿名 401、正确凭据 200）；Config Center `search/dev/bootstrap.yaml` v5 已切 search.catalog（最小权限只读 API key）。⚠️ 同日修复了 Debezium source task 自 09-01 PG 重启后复制槽消失导致的 FAILED（connector 级 RUNNING 掩盖 task 级 FAILED，重置 offset 重快照），告警必须盯 slot 位点差 + task 状态 + sink lag（2026-09-06 已落地 node3 ecommerce-cdc.yml 12 条 + cdc-connect-exporter）。⚠️ 复制槽曾三次被 Patroni 当作未声明槽删除（09-01/09-03/09-04），现已在 DCS slots 声明为永久逻辑槽并经重启演练验证。⚠️ 容量事实：node3 总内存 7.25GiB、该容器 limit 2GiB，与观测数据面同机。选型方向见 docs/TECH.md" }
   minio: { host: "minio.apikv.com", used_by: [cart], note: "现役镜像 pgsty/silo RELEASE.2026-08-06（pin digest、command 显式 --certs-dir、镜像 HOME=/tmp）。商品缩略图 URL；443 不带端口。机器使用 SSH alias node2（端口 34124，阿里云，与 k8s 集群无关——k8s 节点是 node101/102/103 = 192.168.3.101-103），2026-08-19 起走 node1 的 Pangolin（Traefik 终止 TLS）经 newt 隧道回 node2，本机 9000/9001 已绑回环。选型方向见 docs/TECH.md" }
   config_center: { discovery: config-service, repository: "github.com/lens077/control-tower", note: "配置控制面，2026-08-23 起由合一仓 control-tower 的 config 服务承载（wire 冻结,旧 SDK v0.1.0 兼容已实测）；从本地 CONFIG_FILE 自举；SDK=github.com/lens077/control-tower/sdk/configsource" }
   gorse: { host: "gorse.apikv.com", used_by: [behavior, product], note: "推荐引擎；客户端在 backend/pkg/gorse/（发 X-API-Key）。与 minio 同在 node2，2026-08-19 起走 Pangolin，本机 8086/8088 已绑回环。鉴权是 gorse 自带的（[server] api_key + dashboard 表单登录），非 Pangolin SSO。⚠️ 仓库配置的 api_key 按硬规则 4 留空，真值要灌 Config Center，否则业务全 401。依赖 node1 的 rediss://redis.apikv.com:6379 与 pg:5432" }
@@ -94,8 +94,9 @@ externals:
       容器日志经 vector DaemonSet——两条通路不同，必须分别切）；Redis 已上 TLS
       （stunnel 终止在 127.0.0.1:6379；Pigsty redis 角色本身没有任何 TLS 变量）；
       PG 数据已从 CNPG 全量迁入（32 表行数逐表一致、抽样内容 md5 相同）。
-      **PG 全量切流**（2026-08-24）：10 个业务服务 + outbox-relay + Config Center 自身
-      全部指向 node1:30001，ssl_mode=verify-ca（经隧道以 IP 连接，证书主机名对不上）。
+      **PG 全量切流**（2026-08-24）：当日为 10 个业务服务 + outbox-relay + Config Center 自身；
+      outbox-relay 已于 2026-09-03 退役，当前不得视为运行工作负载。其余组件指向
+      node1:30001，ssl_mode=verify-ca（经隧道以 IP 连接，证书主机名对不上）。
       **集群内 CNPG 已 hibernate**（数据保留，pod 归零）。
       **Silo 入口已建**：https://node3-minio.apikv.com（Pangolin resourceId 29，
       tlsServerName=sss.pigsty，sso 关闭）。
@@ -105,7 +106,14 @@ externals:
       （Pangolin resourceId 30 → node3 上 docker 跑的 otelcol:4318，再分发到本机三个
       Victoria 后端）。容器日志不走 collector——vector 推的是 jsonline 不是 OTLP。
       ⚠️ 集群外依赖已成硬依赖：node3 或 Pangolin 隧道故障 = 数据面连不上库、观测全断。
-      Kafka 当前仅为未接应用的实验资源；采用门禁见 docs/design/platform/production-scale-goal.md。
+      Kafka 当前已承载搜索 CDC 行投影；领域事件 producer/consumer 仍未接线。领域事件采用门禁见 docs/design/platform/production-scale-goal.md。
+
+# 已退役外部依赖（只保留历史边界，不得被 services[].external 引用）────────
+retired_externals:
+  meilisearch:
+    former_host: "meilisearch.search.svc:7700"
+    retired_at: "2026-09-04"
+    note: "Elasticsearch 搜索链切流并结束回滚窗口后完整退役：Helm release、StatefulSet、Service、ServiceAccount、ConfigMap、master-key Secret、HTTPRoute、10 GiB PVC/PV 与 search namespace 均已删除；保留本记录防止旧依赖被重新接线。"
 
 # 网关
 gateway:
@@ -173,7 +181,7 @@ services:
     extra_config: [auth, search]
     depends_on: []
     external: [elasticsearch, config_center]
-    note: "查询进程通过 SearchCatalog 只读服务端固定的 ecommerce_catalog_products alias；写入侧走 Debezium→Kafka→ES Sink（行投影线，不经 outbox）。运行时已切流（2026-09-03）：alias 由 products.search_catalog 表（trigger 维护）经 CDC 链产生，search 镜像 readiness 走 alias，经网关搜索实测命中；Meilisearch 运行资源待回滚窗口后退役；SearchRequest.index 仅为旧客户端兼容而保留，服务端忽略"
+    note: "查询进程通过 SearchCatalog 只读服务端固定的 ecommerce_catalog_products alias；写入侧走 Debezium→Kafka→ES Sink（行投影线，不经 outbox）。运行时已切流（2026-09-03）：alias 由 products.search_catalog 表（trigger 维护）经 CDC 链产生，search 镜像 readiness 走 alias，经网关搜索实测命中；Meilisearch 运行资源已于 2026-09-04 完整退役；SearchRequest.index 仅为旧客户端兼容而保留，服务端忽略"
 
   behavior:
     discovery: behavior-service

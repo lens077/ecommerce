@@ -4,6 +4,13 @@ layer: harness-framework
 description: harness 本身（硬规则/门禁/Agent 约束）每次改动的原因与触发它的具体事故，防止后人把改对的东西改回去
 ---
 
+### 2026-09-04 退役外部依赖不再允许回接现役服务
+
+- **改了什么**：`.service-matrix.yaml` 新增 `retired_externals`；`structcheck` 解析 `services.*.external`，禁止现役与退役集合重名，也禁止服务引用已退役或未知的外部依赖。
+- **为什么**：退役记录需要保留历史端点和删除证据，但不能继续拥有现役拓扑语义。只把条目移出 `externals`，无法阻止旧依赖名被服务静默接回。
+- **触发事故**：2026-09-04 删除 Meilisearch 运行资源后，既有门禁仍保留它的代码匹配模式，却从不核对服务声明引用的外部依赖是否现役；矩阵可以同时写「已退役」和「仍被服务引用」而测试保持绿色。
+- **怎么验证的**：运行 `cd backend && go test -count=1 ./structcheck/...`；新矩阵通过，临时把 `search.external` 改回 `meilisearch` 时测试按预期报告「引用了已退役外部依赖」。
+
 ### 2026-09-03 基础设施门禁从「副本同构」切到「kit adapter 边界」
 
 - **改了什么**：`TestInfraHomogeneity` 不再比较 `config`、`log`、`otel`、`registry` adapter；

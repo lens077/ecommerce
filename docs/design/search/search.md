@@ -1,6 +1,6 @@
 # 搜索服务设计（CQRS 架构）
 
-> **状态边界（2026-09-03 复核）**：search 服务的仓库代码已从 Meilisearch 改为 Elasticsearch，`backend/go.mod` 不再依赖 Meilisearch 与 NATS。node3 的 Elasticsearch 9.4.5 + IK 本机只监听 `127.0.0.1:9200`，2026-09-02 起经 Pangolin 暴露 `https://es.apikv.com`（SSO off，鉴权在 ES 自身）；实测集群内匿名 401、错误 key 401、正确 key 200。Config Center 已写入 `search.catalog`，但运行中的仍是旧 Meilisearch 镜像，因 Bootstrap 不兼容而 CrashLoopBackOff；alias `ecommerce_catalog_products` 尚不存在。**投影写入路径同日重新平衡**：改为 PostgreSQL 表 `products.search_catalog` → Debezium → Kafka → Elasticsearch Sink（见「投影写入」）；`tools/search-indexer`、`tools/outbox-relay`、`tools/cdc-demo` 与 `pkg/outbox/{relay,stream}.go` 已从仓库删除，迁移 `00005_search_catalog.sql` 已写。NATS 与 indexer/relay 的集群资源已同日卸载；存量 Meilisearch 运行资源在切流和回滚窗口结束前继续存在，代码删除不等于运行退役。拓扑看 [`.service-matrix.yaml`](../../../.service-matrix.yaml)，进度看 [`TODO.md`](../../../TODO.md)，分线判据看 [`row-projection-vs-domain-event.md`](../../../context/project/ecommerce/events/experience/row-projection-vs-domain-event.md)。
+> **状态边界（2026-09-04 复验）**：search 服务已切到 Elasticsearch。`products.search_catalog` 的表、trigger、publication、Debezium table include、Kafka topic、Sink 映射、strict mapping 和稳定 alias 均已运行；search Pod 通过 `ecommerce_catalog_products` 查询，增量改价/删除/还原与网关查询已经验收。NATS JetStream、自写 relay 和 `tools/search-indexer` 已从代码与集群退役，不再承担搜索写入。Meilisearch 运行资源已于 2026-09-04 完整退役。重建、offset 恢复、积压判断、Sink fail-stop/原 offset 重放与 alias 回退的唯一操作入口是 pipeline 仓 `deploy/docker-node3/RUNBOOK.md`。拓扑看 [`.service-matrix.yaml`](../../../.service-matrix.yaml)，进度看 [`TODO.md`](../../../TODO.md)，分线判据看 [`row-projection-vs-domain-event.md`](../../../context/project/ecommerce/events/experience/row-projection-vs-domain-event.md)。
 
 搜索服务采用 CQRS。PostgreSQL 保存商品真相，Elasticsearch 只保存可从 PostgreSQL 重建的只读投影。搜索不可成为价格、库存或交易状态的事实来源。
 
@@ -49,11 +49,11 @@ Search RPC
 
 ### 已删除的存量链（2026-09-03）
 
-`products.outbox → outbox relay → NATS JetStream → tools/search-indexer → alias` 这条链已从仓库删除。它的生产者从未存在（Product 没有商品写 RPC，也没有调用 `outbox.Insert`），增量部分一直空转；它验证过的 alias 原子切换与水位补偿设计保留在 `pkg/searchindex.Reindex` 与本文「全量重建」一节。
+`products.outbox → outbox relay → NATS JetStream → tools/search-indexer → alias` 这条链已从仓库删除。它的生产者从未存在（Product 没有商品写 RPC，也没有调用 `outbox.Insert`），增量部分一直空转。旧 worker 的 ACK/NACK、`MaxDeliver` 与应用层水位语义只属于历史，不再维护；当前 alias 原子切换、回退和重建由 pipeline 手顺定义。
 
 ### 运行态
 
-search Pod 跑的是 Meilisearch 时代的旧镜像，读到 Config Center 的新 `search.catalog` 后严格解码失败（`'search' has invalid keys: catalog`），CrashLoopBackOff。这是「发布与回滚」一节警告的 Bootstrap 不兼容：配置先于镜像切换，且未走版本化配置或协调窗口。恢复顺序见「运行时切流完成条件」。
+2026-09-03 已完成运行时切流：search Pod 使用 Elasticsearch provider，readiness 深检稳定 alias，经网关查询命中；`products.search_catalog` 回填 7 行，改价、删除、还原的 trigger 与 CDC 增量链均通过实测。切流前曾因新配置先于新镜像发布而 CrashLoopBackOff；该事故保留为「发布与回滚」的顺序约束，不再作为当前状态。
 
 ## 投影写入
 
@@ -61,7 +61,7 @@ search Pod 跑的是 Meilisearch 时代的旧镜像，读到 Config Center 的�
 
 一行一个策展文档，列与 [商品索引契约](#商品索引契约) 的字段一一对应，主键 `id` = SPU id。维护方式：
 
-- `AFTER INSERT/UPDATE/DELETE` trigger 挂在 `products.spus`、`products.skus`、`products.sale_detail` 上，按受影响的 `spu_id` 重算单行；重算 SQL 与 `pkg/searchindex` 的 reindex SQL 同源。
+- `AFTER INSERT/UPDATE/DELETE` trigger 挂在 `products.spus`、`products.skus`、`products.sale_detail` 上，按受影响的 `spu_id` 重算单行；重算 SQL 只存在于 `products.search_catalog_refresh`，pipeline reindex 直接扫描投影表，不再重复定义聚合逻辑。
 - `spus.status = 'deleted'` 或 SPU 行删除时删除投影行，Debezium 发 tombstone，Sink 删除文档。
 - 不用物化视图：`REFRESH` 是全量重写，Debezium 也不捕获物化视图。
 - `products.spu_total_sales` 是 VIEW，Debezium 抓不到；投影表正好绕开它。
@@ -77,7 +77,7 @@ search Pod 跑的是 Meilisearch 时代的旧镜像，读到 Config Center 的�
 
 ## 商品索引契约
 
-策展投影文档的真相源是 `products.search_catalog` 的列（[`00005_search_catalog.sql`](../../../backend/services/product/internal/data/migrations/00005_search_catalog.sql)）；Elasticsearch mapping 的真相源是 pipeline 仓 `deploy/docker-node3/index-mappings.json`；`backend/pkg/searchindex.Doc` 是 search 服务读路径对同一文档的 Go 表示，三者字段必须一一对应：
+策展投影文档的真相源是 `products.search_catalog` 的列（[`00005_search_catalog.sql`](../../../backend/services/product/internal/data/migrations/00005_search_catalog.sql)）；Elasticsearch mapping 的真相源是 pipeline 仓 `deploy/docker-node3/index-mappings.json`；`backend/pkg/searchindex.Doc` 是 search 服务读路径对同一文档的 Go 表示，三者字段必须一一对应。静态 Go 测试核对 DTO 与本仓读模型，pipeline 的 `verify-search-contract.sh` 核对 live PG、trigger、Connector、mapping 与 alias：
 
 ```json
 {
@@ -107,7 +107,7 @@ search Pod 跑的是 Meilisearch 时代的旧镜像，读到 Config Center 的�
 | `merchant_id` | `keyword` | 商家过滤预留 |
 | `price` | `scaled_float`，`scaling_factor=100` | 最低有效 SKU 价格投影；不得用于交易计算 |
 | `sale_count` | `long` | `products.sale_detail` 按 SPU 求和的展示/排序投影（与 `spu_total_sales` 视图同义，视图本身进不了逻辑复制） |
-| `updated_at` | `date`，`strict_date_time` | 投影刷新时刻，表示索引新鲜度，不是商品业务时间 |
+| `updated_at` | `date`，`strict_date_optional_time_nanos||epoch_millis` | 投影刷新时刻，表示索引新鲜度，不是商品业务时间 |
 
 mapping 使用 `dynamic: strict`，未知字段会被拒绝。`number_of_replicas: 0` 是单实例开发形态，不构成生产 HA 结论。
 
@@ -128,23 +128,14 @@ mapping 使用 `dynamic: strict`，未知字段会被拒绝。`number_of_replica
 - WAL 位点即游标：Connect 提交 offset 后才推进 `confirmed_flush_lsn`；崩溃后从上次位点重放，表现为至少一次。
 - 文档 `_id` = 行主键（`extractKey` SMT 取 `id`），重复投递收敛为覆盖写；Kafka offset 作 external version，过期或乱序事件不会覆盖新状态。
 - 投影行删除 → Debezium tombstone → `behavior.on.null.values=DELETE` 删除文档。
-- `behavior.on.malformed.documents=fail`：坏文档使 task 失败并保留 offset，不静默丢弃；DLQ topic `ecommerce_cdc.elasticsearch.dlq` 只用于诊断。
+- `behavior.on.malformed.documents=fail` 与 `errors.tolerance=none` 保证 task fail-stop，原 topic offset 不前进。task trace 与原 topic/partition/offset 是恢复真相源；DLQ 只作诊断出口，固定 Sink 版本完成 malformed fault injection 前，不保证每类失败都会生成副本。修复后由 Sink 从原 offset 重放；DLQ 不是消费游标。
 - 「全绿但死了」是这条链已实测过的故障形态：容器 healthy、task RUNNING、位点不推进。告警看 `pg_wal_lsn_diff(pg_current_wal_lsn(), confirmed_flush_lsn)` 与 sink consumer lag，不看容器健康。
 
 ## 全量重建与 alias 切换
 
-由 pipeline 仓的 reindex Job 承接（版本化索引 + `switch-aliases.sh` 原子切换），并且必须与实时 Sink 分开执行：暂停 Sink → 重建到新版本索引 → 计数与抽样校验 → 切 alias → 恢复 Sink → 等待 lag 归零。不要在切 alias 前恢复 Sink，否则扫描期间的变更只写进旧索引。
+由 pipeline 仓的 reindex Job 承接。只重建 ES 搜索索引时执行 `REINDEX_SCOPE=search-catalog ./reindex.sh`；PG 投影表自身不一致时，先实际隔离商品写入，再执行 `PRODUCT_WRITES_DISABLED=true REBUILD_SEARCH_CATALOG=true REINDEX_SCOPE=search-catalog ./reindex.sh`。PG+ES 流程分两个数据库事务：第一阶段锁表重算并提交 PG 投影；第二阶段重新建立 PostgreSQL `SHARE` 写屏障，等待 Source slot/committed offset 越过屏障并让旧 alias 的 Sink lag 归零，再暂停 Sink、全量写新物理索引、校验 mapping/计数/逐文档内容、独占保存旧 topology、原子切换 alias、恢复 Sink 并复验，最后释放写屏障。外部商品写入隔离必须覆盖两个事务之间的交接。失败时默认保持 Sink 为 `PAUSED`；执行前已暂停的 Sink 在成功后也默认恢复为 `PAUSED`。恢复旧 alias 不会回退 Sink offset；如果 offset 已推进，不能直接在旧 alias 上 resume，必须再建 fresh index。alias/backing/mapping 损坏且 Sink 无法在旧 alias 追平时，需先实际隔离搜索读取，再使用 `SEARCH_READS_DISABLED=true REINDEX_RECOVERY_MODE=true`。完整步骤见 pipeline 仓 `deploy/docker-node3/RUNBOOK.md`。
 
-`pkg/searchindex.Reindex` 保留了带水位补偿的重建路径（不经 broker），可作切流前止血建 alias 用；它的 CLI 已随 `tools/search-indexer` 删除，需要时以一次性 Job 调用库函数：
-
-1. 以 alias 名获取 PostgreSQL session advisory lock，拒绝同一投影并发重建。
-2. 从 PostgreSQL 时钟读取扫描前水位，并向前留 5 秒补偿窗口。
-3. 从 PostgreSQL 全量生成策展文档，创建 strict mapping 的临时物理索引并批量写入。
-4. refresh 临时索引后，在一次 `_aliases` 请求中移除旧指向并添加新写索引。
-5. 重放水位后的 upsert 与 delete，再次 refresh。
-6. 水位补偿可见后删除旧物理索引；删除失败使任务失败，不静默报告成功。
-
-alias 更新响应丢失时，清理逻辑会先反查 alias；无法确认临时索引是否已激活时保留现场，避免误删正在承载查询的索引。
+`pkg/searchindex.Reindex` 是切流前的遗留止血实现，没有 CLI，也不是当前操作入口。当前不得为它恢复常驻 worker、broker consumer 或应用层 ACK 语义；全量重建和 alias 回退只维护 pipeline 仓手顺。
 
 ## 配置、安全与网络
 
@@ -156,40 +147,40 @@ search 服务使用 `search.catalog`：
 - 凭据只进入 Config Center、Secret 或本地环境，不进入仓库。
 - `search.catalog` 变化只告警、不热建客户端；修改端点、凭据或 alias 后需要滚动重启。
 
-网络拓扑阻断已于 2026-09-02 解除：Elasticsearch 本机仍只监听 node3 回环地址，Pod 经受控隧道端点 `https://es.apikv.com`（Pangolin rid 47 → node3 newt → `127.0.0.1:9200`，TLS 在 node1 Traefik 终止，SSO off）访问，正反凭据与 Pod 内可达性均已实测（2026-09-03）。search 服务的 key 实测为 `read + view_index_metadata`，`write`/`manage`/`monitor` 均为否，够 readiness 用；Sink 侧写 key 由 pipeline 仓管理。剩余前置：健康检查与超时验收。
+网络拓扑阻断已于 2026-09-02 解除：Elasticsearch 本机仍只监听 node3 回环地址，Pod 经受控隧道端点 `https://es.apikv.com`（Pangolin rid 47 → node3 newt → `127.0.0.1:9200`，TLS 在 node1 Traefik 终止，SSO off）访问，正反凭据与 Pod 内可达性均已实测（2026-09-03）。search 服务的 key 实测为 `read + view_index_metadata`，`write`/`manage`/`monitor` 均为否，够 readiness 用；Sink 侧写 key 由 pipeline 仓管理。2026-09-04 重建 search Pod 后，`/healthz` 深检与真实 ConnectRPC 查询均通过。
 
 ## 能力状态
 
 | 能力 | 代码状态 | 运行状态或缺口 |
 |---|---|---|
 | `SearchCatalog` provider-neutral 查询边界 | 已实现并有 vendor-type 门禁 | 只有 `esCatalog` 一个 provider，不是 capability seam |
-| Elasticsearch 读路径 | 已实现 | 通路已建；新镜像未发布，alias 未建 |
-| `products.search_catalog` 表 + trigger | 迁移已写（`00005_search_catalog.sql`） | 未在 dev 库执行；未加入 publication 与 Debezium `table.include.list` |
-| Debezium + Elasticsearch Sink 搬运 | pipeline 仓已实现并验收（六表） | 待加投影表、mapping 与 topic 映射 |
-| strict mapping、IK 分词与稳定 alias | 已实现并有 HTTP 合约测试 | 未完成真实商品大样本相关性验收 |
-| 全量重建、alias 原子切换 | pipeline 仓 reindex Job；本仓 `pkg/searchindex.Reindex` 库函数 | 目标态收敛到 pipeline 仓；本仓库函数无 CLI，仅止血用 |
+| Elasticsearch 读路径 | 已实现 | 2026-09-03 已切流；新镜像、readiness、稳定 alias 与网关查询实测通过 |
+| `products.search_catalog` 表 + trigger | 已实现 | dev 库已执行并回填；三类 trigger 的改价、删除与还原实测通过 |
+| Debezium + Elasticsearch Sink 搬运 | 已实现 | publication、table include、topic、mapping 和 Sink 映射已接线，增量约 6 秒 |
+| strict mapping、IK 分词与稳定 alias | 已实现并有合约检查 | 基础查询已验收；真实商品大样本相关性仍待验证 |
+| PG 投影重算、ES 全量重建、alias 原子切换与回退 | pipeline 仓 reindex Job + 状态文件 | `REBUILD_SEARCH_CATALOG`/`REINDEX_SCOPE=search-catalog`、失败保持 Sink 暂停、完整 partition lag 与逐文档门禁已固化 |
 | 存量 NATS 增量 indexer 与 relay | 已删除（2026-09-03） | 集群侧 `nats` ns、`ecommerce-search-indexer`/`ecommerce-outbox-relay` Deployment 已卸载（实测 2026-09-03：ns NotFound、Deployment 不存在） |
 | Product 事务内 outbox producer | 未实现 | 搜索不再依赖它；留给订单域事件 |
 | 类目、品牌、价格区间、属性 Facet | 未实现 | 需先扩展 RPC 契约、投影表列、mapping 与查询语义 |
 | 价格、销量、新品等显式排序 | 未实现 | RPC 当前无排序参数 |
 | 补全、热门词、同义词、拼音与 typo 策略 | 未实现 | IK 不能单独解决「苹果手机→Apple iPhone」等归一化问题 |
-| Connect 链路告警（slot 位点差、task 状态、sink lag） | 未实现 | Connect 成为搜索新鲜度的生产依赖后必须有 |
-| 生产容量与 HA | 未验收 | `replicas=0`、node3 单机同时承载 PG/ES/Kafka/Connect/观测，无故障恢复证据 |
+| Connect 链路告警（slot 位点差、task 状态、sink lag） | 已上线〔实测 2026-09-06〕 | node3 vmalert `ecommerce-cdc.yml` 12 条 + `cdc-connect-exporter`（按 task 暴露 REST 状态）；暂停 Source 触发测试 ~3 分钟到达 Alertmanager。源：pipeline 仓 `deploy/docker-node3/monitoring/` |
+| 生产容量与 HA | 未验收 | `replicas=0`、node3 单机同时承载 PG/ES/Kafka/Connect/观测；node3 有序重启演练已通过（[报告](../../reports/2026-09-06-node3-reboot-drill.md)），断电/崩溃恢复与容量仍无证据 |
 
-## 运行时切流完成条件
+## 运行时切流证据
 
-运行时切流必须按顺序给出证据：
+2026-09-03 已完成以下验收：
 
-1. 建立 Pod 可达、受控且可观测的 Elasticsearch 网络入口，验证正确凭据可用、错误凭据被拒绝。〔已完成，实测 2026-09-03〕
-2. 用版本化配置或协调窗口更新 Config Center 的 `search.catalog`，同步更新 search 的部署产物。〔配置已写入，但先于镜像切换，旧镜像因此崩溃——违反了本条的「同步」要求〕
-3. 建立投影：执行 `00005_search_catalog.sql`（表 + trigger + 回填）→ 加入 publication 与 Debezium `table.include.list` → Sink 加 mapping 与 topic 映射 → 由 pipeline 仓 reindex Job 建版本化索引并切 alias。核对文档数量、关键字段、`online` 过滤和固定查询集结果。
-4. 发布新 search 镜像，确认 readiness 走稳定 alias，而不是只探 TCP。
-5. 验证增量：改 `spus`/`skus`/`sale_detail` 任一表，确认投影行重算、Sink 写入、删除 tombstone、Connect 重启恢复、malformed 文档进 DLQ 且 task 状态可见。
-6. 切真实查询流量并观察错误率、延迟、索引新鲜度、slot 位点差与 sink consumer lag。
-7. 回滚窗口结束后再退役 Meilisearch 运行资源（`search` ns 的 StatefulSet，实测 2026-09-03 仍 1/1 Running 但已无写入者）、旧 Secret 和旧配置；NATS 与 indexer/relay 的集群资源已于 2026-09-03 随代码一并卸载。代码移除不能代替运行退役这一步。
+1. Pod 经受控入口访问 Elasticsearch；正确凭据返回 200，匿名和错误凭据返回 401。
+2. Config Center 与新 search 镜像已同步；Pod 为 `Ready`，`/healthz` 深检稳定 alias。
+3. `00005_search_catalog.sql` 已执行并回填 7 行；publication、Debezium、Kafka topic、Sink mapping 与 alias 均已接线。
+4. 改价、删除、还原触发投影重算并在约 6 秒内到达 Elasticsearch；经网关查询命中。
+5. NATS、indexer、relay 与 Meilisearch 的代码或运行资源均已退役；Meilisearch 的 Secret、路由、PVC/PV 与 namespace 于 2026-09-04 同步删除。
+
+尚未完成的是生产容量/HA 证据与灾备手顺的破坏性故障注入（断电、WAL 损坏、ES 分片恢复）；链路告警与有序重启演练已于 2026-09-06 完成。这些缺口不能反写为「搜索尚未切流」。
 
 ## 发布与回滚
 
-新代码只接受 `search.catalog`，旧 Meilisearch 镜像依赖旧配置。不能让新旧镜像共用一份互不兼容的 Bootstrap；需要并行验证时使用版本化 selector/key，或在协调窗口同时切配置与工作负载。
+新代码只接受 `search.catalog`。2026-09-04 回滚窗口结束后，旧 Meilisearch 运行资源、Secret 与索引数据均已删除，不再存在可直接切回的旧路径；紧急回退必须显式启用安装器中的退役组件、重建索引，并恢复与旧镜像匹配的版本化 Bootstrap。
 
-回滚旧镜像时必须同时恢复与之匹配的旧 Bootstrap。Elasticsearch reindex 在 alias 原子切换前不会影响读路径；切换后的水位补偿失败会保留旧物理索引供检查，但成功流程会删除旧物理索引，因此不能把它当成无限期自动回滚机制。
+回滚旧镜像时必须同时恢复与之匹配的旧 Bootstrap。Elasticsearch reindex 在 alias 原子切换前不会影响读路径；切换成功或失败都不会自动删除旧物理索引，状态文件可用于原子恢复旧 alias 拓扑。旧索引只保留到验收和回滚窗口结束，过期清理由独立、显式且已核对索引名的操作完成。
