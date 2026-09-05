@@ -1,4 +1,9 @@
-# 1) 凭据门禁：gitleaks 扫暂存区，红了拒绝提交。
+root=$(git rev-parse --show-toplevel)
+
+# 1) 公网 IP 门禁：只扫暂存内容，地址不回显。
+python3 "$root/scripts/verify-public-ips.py" --staged || exit 1
+
+# 2) 凭据门禁：gitleaks 扫暂存区，红了拒绝提交。
 #
 # 为什么放在这里而不是只在 verify-quick：2026-09-02 事故——public 仓库历史里 30 个提交带着
 # PG root 弱口令 / Casdoor client_secret / 支付 RSA 私钥，靠人和 agent「记得跑 verify-quick」
@@ -7,7 +12,6 @@
 # 工具缺失一律红，不降级：一道「没装就静默放行」的门禁等于没有（见 evolution-log 里
 # verify-freeze 的教训）。装法：brew install gitleaks / https://github.com/gitleaks/gitleaks#installing
 # 确有需要绕过时（例如提交的正是 allowlist 修正）用 `SKIP_GITLEAKS=1 git commit`，并在提交信息里说明。
-root=$(git rev-parse --show-toplevel)
 if [ "${SKIP_GITLEAKS-}" != "1" ]; then
   if ! command -v gitleaks >/dev/null 2>&1; then
     echo "pre-commit: 缺少 gitleaks，凭据门禁无法执行，拒绝提交（brew install gitleaks）" >&2
@@ -20,7 +24,7 @@ if [ "${SKIP_GITLEAKS-}" != "1" ]; then
   fi
 fi
 
-# 2) 第三方许可声明：依赖清单进了暂存区就重新生成 THIRD_PARTY_NOTICES.md 并一起提交。
+# 3) 第三方许可声明：依赖清单进了暂存区就重新生成 THIRD_PARTY_NOTICES.md 并一起提交。
 #
 # 「regenerate rather than reject」（参照 deepseek-harness 的 lefthook 同名 job）：改依赖的人
 # 不会记得更新许可声明，让 CI 事后红只会多一轮往返；在 commit 路径上直接生成并 git add，
@@ -34,7 +38,7 @@ case "$staged" in
     ;;
 esac
 
-# 3) 暂存文件的格式化 + lint（规则在 frontend/vite.config.ts 的 staged 块）。
+# 4) 暂存文件的格式化 + lint（规则在 frontend/vite.config.ts 的 staged 块）。
 #
 # 必须先 cd frontend：_/h 不做 cd，钩子的 cwd 是仓库根，而 vp staged 只从
 # cwd 找 vite.config.ts，在仓库根找不到就直接报

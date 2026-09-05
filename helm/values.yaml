@@ -15,6 +15,9 @@
 # 必须挂在 global 下：subchart 只看得见自己那一层加上 global，
 # 写成顶层 imagePullSecrets 的话渲染出来一个都没有（实测过）。
 global:
+  # Runtime-only value. scripts/deploy-k8s.sh resolves node1 from ~/.ssh/config,
+  # or callers pass POSTGRES_EGRESS_CIDR / --set-string explicitly.
+  postgresEgressCIDR: ""
   imagePullSecrets:
     - name: tcr-pull-secret
   configSource:
