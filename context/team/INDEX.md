@@ -10,7 +10,7 @@
 | [infra-duplication.md](infra-duplication.md) | 治理跨服务的基础设施副本，或评估一道同构门禁是否真的在收敛 | 只在业务仓去重而不改生成模板，新服务把副本原样带回来 |
 | [git-commit.md](git-commit.md) | 提交信息格式、分支策略、提交前必须更新 TODO.md | 文档与实现脱节 |
 | [proto-design.md](proto-design.md) | proto 字段的设计依据与校验约束 | 脏数据穿透到 biz 层 / 契约破坏炸前后端 |
-| [local-env.md](local-env.md) | 本地跑服务时连哪套基础设施 | 连不上、超时、白排查半天 |
+| [local-env.md](local-env.md) | 本地跑服务时连哪套基础设施；`*.dev.test` 的 TLS 信任——**集群重建根 CA 就换，本机钥匙串要同步换** | 连不上、超时、白排查半天 / 浏览器 `SEC_ERROR_BAD_SIGNATURE`（同名旧 CA 验新签名）当成集群证书坏了去查 cert-manager |
 | [node-graceful-shutdown.md](node-graceful-shutdown.md) | Kubernetes 节点关机/重启的 90/30 秒优雅退出、systemd inhibitor、终态 Pod 与清理边界 | 把正常的 90 秒等待误判成卡死而强断电 / 把终态历史误判成运行副本 / 只改 kubelet 不改 logind 导致提前关机 |
 | [shell-scripting.md](shell-scripting.md) | 仓库脚本对 macOS Bash 3.2 的兼容边界 | `set -u` 下空数组展开导致入口在第一条命令前退出 |
 | [go-redis.md](go-redis.md) | go-redis v9 的客户端生命周期、cache-aside、连接池、Key/TTL、Pipeline、重试、锁与消息边界 | 抓到已 Close 的旧客户端 / 缓存一致性失控 / 连接池饱和 / 非幂等命令被重复执行 |

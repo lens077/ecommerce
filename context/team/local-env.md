@@ -13,7 +13,7 @@ description: 本地开发机与集群连哪套基础设施：活地址、配置�
 > **地址会漂。** 下面每张表都标了核对日期；超过日期就按「§ 自助核对」重跑一遍命令，
 > 不要直接相信本文。核对完请顺手更新日期。
 
-## 活地址（2026-08-29 逐项实测）
+## 活地址（2026-09-03 实测）
 
 | 组件 | 从本机连 | 从 Pod 连 | 备注 |
 |---|---|---|---|
@@ -23,16 +23,14 @@ description: 本地开发机与集群连哪套基础设施：活地址、配置�
 | PostgreSQL（业务库 + config schema） | `node1:30001` | 同左 | node3 Pigsty，PG 18.6，`sslmode=verify-ca` |
 | Config Center | — | `config-center.config-center.svc:30010` | Web `https://config.app.com`，API `https://config-api.app.com`；跑的是 control-tower 镜像，ns 名是遗留标签 |
 | Casdoor | `https://casdoor.apikv.com` | 同左 | 集群外的外部服务 |
-| Meilisearch | `search.dev.test` | `meilisearch.search.svc` | 存量运行端点；2026-09 仓库 search/indexer 代码已不再引用，不能拿它配置新代码 |
-| Elasticsearch | 经 SSH 隧道使用 `127.0.0.1:9200` | **当前不可达** | search 代码目标；node3 仅回环监听，Pod 通路未解决，未运行时切流 |
-| NATS JetStream | — | `nats.nats.svc` | 存量运行链和新 indexer 代码仍使用；目标 Kafka 尚未接线 |
-| Kafka（仅 PoC） | `node1:30004` | 同左 | SCRAM-SHA-512；有账号和 topic，**无业务 producer/consumer** |
+| Meilisearch | — | — | 2026-09-04 已完整退役；旧域名和 `search` namespace 不得作为可用端点 |
+| Elasticsearch | 经 SSH 隧道使用 `127.0.0.1:9200` | `https://es.apikv.com` | search 当前读路径；Pod 端使用 ES 自身凭据，经 Pangolin 到 node3 回环端点 |
+| NATS JetStream | — | — | 2026-09-03 已删除 namespace 和工作负载 |
+| Kafka | `node1:30004` | 同左 | SCRAM-SHA-512；搜索行投影已使用，领域事件 producer/consumer 仍为零 |
 | node3 观测后端 | `https://node3-{metrics,logs,traces,vmalert,alerts}.apikv.com` | 同左 | 已挂 Pangolin SSO（浏览器访问返 302 跳登录；写入路径已放行） |
 | node3 OTLP 入口 | `node3-otlp.apikv.com:443` | 同左 | 需 Bearer token，无 token 返 401 |
 
-⚠️ **`192.168.3.132:5432`（pg.dev.test / CNPG `pg-main`）已是空壳**：CNPG 自 2026-08-24 起
-`cnpg.io/hibernation=on`，postgresql 命名空间零 Pod。LB 和 HTTPRoute 还在，所以 **TCP 连得上、
-PG 协议握不了手**——`nc` 探测会骗你。它只是回切候选，取消 hibernate 并回灌数据前不得当成可用地址。
+⚠️ **`192.168.3.132:5432` 不再是 PostgreSQL 端点**：`postgresql`/`cnpg-system` namespace 与 CNPG CRD 已清理，集群内回切路径不存在。不得根据旧文档把 `pg.dev.test` 或 `pg-main` 当作候选数据库。
 
 ### 基础设施主机
 
@@ -106,6 +104,44 @@ kubectl get secret global-root-ca-secret -n cert-manager -o jsonpath='{.data.ca\
 sudo security add-trusted-cert -d -r trustRoot -k /Library/Keychains/System.keychain /tmp/global-root-ca.crt
 ```
 
+### ⚠️ 集群重建 → 根 CA 会换 → 本机信任库要同步换
+
+根 CA 是 cert-manager 在集群里生成的（`cert-manager/global-root-ca-secret`），**集群重建就是一张新 CA**，
+但 Subject 还叫 `my-global-root-ca`。本机钥匙串里那张旧的不会自己失效，浏览器按 issuer 名字找到它、
+拿旧公钥去验新签名，于是：
+
+- **判据**：Firefox `SEC_ERROR_BAD_SIGNATURE`（「对等端的证书有一个无效的签名」）；Safari/Chrome 表现为
+  「证书不受信任」。`curl` 报 `unable to get local issuer certificate` 或直接 OK（取决于它读哪份 bundle），
+  所以**别用 curl 通不通来判断浏览器会不会红**。
+- **确认**：比对 SKI / 指纹，同名不同 SKI 就是它——
+
+```bash
+# 集群现行根 CA 的 SKI 与指纹
+kubectl get cm global-root-ca -n ecommerce -o jsonpath='{.data.ca\.crt}' > /tmp/cluster-ca.pem
+openssl x509 -in /tmp/cluster-ca.pem -noout -dates -fingerprint -sha256 -ext subjectKeyIdentifier
+# 本机钥匙串里那张
+security find-certificate -c my-global-root-ca -p /Library/Keychains/System.keychain \
+  | openssl x509 -noout -dates -fingerprint -sha256 -ext subjectKeyIdentifier
+# 网关叶证书的 AKI 应等于集群根 CA 的 SKI；用集群 CA 验叶证书应 OK——OK 就说明问题只在本机
+echo | openssl s_client -connect 192.168.3.121:443 -servername shop.dev.test 2>/dev/null \
+  | openssl x509 -noout -ext authorityKeyIdentifier
+```
+
+- **修法**：按 SHA-1 精确删旧的再装新的（同名证书不止一张时 `delete-certificate -c` 会删错）：
+
+```bash
+OLD_SHA1=$(security find-certificate -c my-global-root-ca -Z /Library/Keychains/System.keychain | awk '/SHA-1/{print $NF}')
+sudo security delete-certificate -Z "$OLD_SHA1" /Library/Keychains/System.keychain
+sudo security add-trusted-cert -d -r trustRoot -k /Library/Keychains/System.keychain /tmp/cluster-ca.pem
+```
+
+  Firefox 若 `security.enterprise_roots.enabled=true`（macOS 默认）重启即生效；若当初手动导入过
+  Firefox 自己的证书库，要在「设置 → 证书 → 证书颁发机构」删旧导新。
+
+- **实付学费（2026-09-06）**：集群 08-16 重建、CA 08-21 重生成，钥匙串里仍是 08-17 那张（SKI `B0:99…` vs
+  集群 `BD:AE…`）。之前没暴露是因为 `http://shop.dev.test` 直接 404 没人走到 https；补上 80→443 跳转
+  后第一次打开就红。**重建集群的 checklist 要含「换本机根 CA」这一步**，不要等浏览器报错才想起来。
+
 ### 新增一个 `*.dev.test` 域名
 
 1. 建 HTTPRoute（hostnames 写新域名，`parentRefs` 挂 `default/cilium-gateway` 的 `sectionName: https`）；
@@ -170,7 +206,7 @@ curl -sk -o /dev/null -w '%{http_code}\n' https://<name>.dev.test/  # 业务路�
   所以别凭记忆——查指标先跑 `/api/v1/label/__name__/values`，查日志/链路先跑
   `/select/logsql/field_names`。详见 [`alerting-signal-hygiene.md`](alerting-signal-hygiene.md)。
 
-## 会白排查半天的三个坑
+## 会白排查半天的两个坑
 
 **① 集群拉镜像依赖这台 Mac 上的代理。** 节点 containerd 配了 `http-proxy = 192.168.3.220:7890`，
 而 `.220` 就是这台开发机（FlClash 混合端口）。**Mac 关机或代理没开 → 全集群拉不了新镜像**，
@@ -180,13 +216,7 @@ curl -sk -o /dev/null -w '%{http_code}\n' https://<name>.dev.test/  # 业务路�
 `ccr.ccs.tencentyun.com` 已加进 `NO_PROXY`（源在 `../kubernetes/bootstrap/config.env`），其余仓库仍走代理。
 这是个真实单点：笔记本合盖 = 集群失去发布能力。集群装了 `spegel` 做 P2P 分发能缓解重复拉取，但首拉仍要出网。
 
-**② 库搬到集群外后，带 NetworkPolicy 的 tool 会被自己的 egress 白名单挡住。**
-只有 `outbox-relay` / `search-indexer` / `product-seed` / `search-reindex` 有 NetworkPolicy，
-原先只放行 postgresql 命名空间的 5432。症状是 **`connect: connection timed out`（不是拒绝）**，
-十个业务服务全好、唯独 relay 起不来，很容易误判成隧道不稳。egress 需补
-`ipBlock: <node1-source-cidr>` + `port 30001`（已在 `backend/tools/outbox-relay/deploy/dev/deployment.yaml` 补好）。
-
-**③ GitOps 当前是断的。** ArgoCD 装着且在跑，但**零 Application、零 ApplicationSet**，
+**② GitOps 当前是断的。** ArgoCD 装着且在跑，但**零 Application、零 ApplicationSet**，
 AppProject 只有 `default`（2026-08-29 复测仍然如此）。集群实际由 `backend/services/*/deploy/`
 的手工路径驱动，`helm/values.yaml` **不是**集群真相源。因此内环开发那条「先关 ArgoCD 自动同步」
 当前不适用（`scripts/argocd-devwindow.sh` 已改为诚实空转）。接回 GitOps 前先读 `argocd-app.yml`
