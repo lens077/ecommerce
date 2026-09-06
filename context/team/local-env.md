@@ -142,6 +142,36 @@ sudo security add-trusted-cert -d -r trustRoot -k /Library/Keychains/System.keyc
   集群 `BD:AE…`）。之前没暴露是因为 `http://shop.dev.test` 直接 404 没人走到 https；补上 80→443 跳转
   后第一次打开就红。**重建集群的 checklist 要含「换本机根 CA」这一步**，不要等浏览器报错才想起来。
 
+### 后端服务局域网直连（2026-09-06 起）
+
+每个后端服务目录 `backend/services/<svc>/deploy/dev/` 里**成对**的两个文件（helm 侧由
+`global.directAccess.enabled` 一起开关）：
+
+| 文件 | 对象 | 作用 |
+|---|---|---|
+| `httproute.yaml` | HTTPRoute `ecommerce-<svc>-direct` | `<svc>-api.dev.test` 经 Cilium Gateway 443 → 该服务 Service |
+| `cnp-direct.yaml` | CiliumNetworkPolicy `ecommerce-<svc>-direct` | 放行 Cilium `ingress` 实体到该服务 RPC 口。共享的 zero-trust CNP 仍是「只放网关」，Cilium 策略取并集，这份只追加 |
+
+**不经 control-tower 网关**。加/删就是这两个文件一起 apply/delete，共享 `helm/files/zero-trust.yaml` 不用动
+（canary 实测：删掉 cart 的 `cnp-direct.yaml` 立刻 503，apply 回来 200）。`/etc/hosts` 追加一行：
+
+```
+192.168.3.121  user-api.dev.test search-api.dev.test product-api.dev.test order-api.dev.test inventory-api.dev.test cart-api.dev.test merchant-api.dev.test address-api.dev.test behavior-api.dev.test payment-api.dev.test
+```
+
+```bash
+curl https://cart-api.dev.test/healthz                                   # 200 + 依赖健康 JSON
+curl -X POST https://cart-api.dev.test/cart.v1.CartService/GetCart \
+  -H 'Content-Type: application/json' -H "x-md-global-user-id: $(uuidgen | tr A-Z a-z)" -d '{}'
+```
+
+- **身份头自己带**：网关不在链路上，`x-md-global-user-id` 等 `x-md-*` 头由你填，服务照信。不带时
+  需要用户身份的 RPC 会报 `invalid UUID length: 0` 之类——那不是路由坏了。
+- **这是鉴权边界上开的口**：`cnp-direct.yaml` 放行了 Cilium `ingress` 实体（Hubble 实测不放行时
+  envoy → Pod SYN `Policy denied DROPPED`，curl 503/5s）。任何能到 `192.168.3.121:443` 的局域网客户端
+  都能伪造身份调后端。只给开发用；撤掉时两个文件一起删（helm 侧 `global.directAccess.enabled=false`）。
+- 公网**不**开这条路：hostnames 只有 `dev.test`，要公网走 Pangolin + SSO。
+
 ### 新增一个 `*.dev.test` 域名
 
 1. 建 HTTPRoute（hostnames 写新域名，`parentRefs` 挂 `default/cilium-gateway` 的 `sectionName: https`）；

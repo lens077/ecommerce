@@ -1,0 +1,22 @@
+# 局域网直连的网络策略,与同目录 httproute.yaml(ecommerce-inventory-direct)成对:同开同关。
+# 共享的 helm/files/zero-trust.yaml 对本服务 default-deny、只放行 control-tower 网关;Cilium 策略
+# 取并集,这份只追加一条:允许 Cilium Gateway 的 envoy(ingress 实体)打本服务 RPC 口。
+# ⚠️ 不经网关鉴权,x-md-* 身份头由调用方自填;只给开发用。撤掉直连时把这两个文件一起删,
+#    共享 CNP 不用动。
+apiVersion: cilium.io/v2
+kind: CiliumNetworkPolicy
+metadata:
+  name: ecommerce-inventory-direct
+  namespace: ecommerce
+  labels:
+    app.kubernetes.io/part-of: ecommerce
+    app.kubernetes.io/component: dev-direct-access
+spec:
+  description: "inventory: LAN direct access via Cilium Gateway (dev only, no gateway auth)"
+  endpointSelector:
+    matchLabels:
+      io.cilium.k8s.policy.serviceaccount: ecommerce-inventory
+  ingress:
+    - fromEntities: [ingress]
+      toPorts:
+        - ports: [{ port: "30005", protocol: TCP }]

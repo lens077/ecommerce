@@ -197,3 +197,64 @@ spec:
         controlledResources: [cpu, memory]
         controlledValues: RequestsOnly
 {{- end -}}
+
+{{- define "ecommerce.httproute" -}}
+{{- $svc := .svc -}}
+{{- $v := .values -}}
+{{- $g := .global -}}
+{{- if $g.directAccess.enabled }}
+# 本地直连入口(绕过 control-tower 网关):https://{{ $svc }}-api.{{ $g.directAccess.domain }} → 本服务 Service。
+# 只挂 {{ $g.directAccess.domain }},不挂公网域名——公网暴露要走 Pangolin + SSO,不在这里。
+# ⚠️ 这条路不经网关鉴权:x-md-* 身份头由调用方自填,服务会照信。只给局域网开发用,
+#    global.directAccess.enabled=false 可整体关掉(裸 manifest 侧删各服务的 httproute.yaml)。
+apiVersion: gateway.networking.k8s.io/v1
+kind: HTTPRoute
+metadata:
+  name: ecommerce-{{ $svc }}-direct
+  namespace: {{ .ns }}
+spec:
+  parentRefs:
+    - name: cilium-gateway
+      namespace: default
+      sectionName: https
+  hostnames:
+    - "{{ $svc }}-api.{{ $g.directAccess.domain }}"
+  rules:
+    - matches:
+        - path:
+            type: PathPrefix
+            value: /
+      backendRefs:
+        - name: ecommerce-{{ $svc }}-service
+          port: {{ $v.port }}
+{{- end }}
+{{- end -}}
+
+{{- define "ecommerce.cnpDirect" -}}
+{{- $svc := .svc -}}
+{{- $v := .values -}}
+{{- $g := .global -}}
+{{- if $g.directAccess.enabled }}
+# 局域网直连的网络策略,与 HTTPRoute ecommerce-{{ $svc }}-direct 成对(同开同关)。
+# 共享的 zero-trust CNP 对本服务 default-deny、只放行 control-tower 网关;Cilium 策略取并集,
+# 这份只追加一条:允许 Cilium Gateway 的 envoy(ingress 实体)打本服务 RPC 口。
+# ⚠️ 不经网关鉴权,x-md-* 身份头由调用方自填;只给开发用。
+apiVersion: cilium.io/v2
+kind: CiliumNetworkPolicy
+metadata:
+  name: ecommerce-{{ $svc }}-direct
+  namespace: {{ .ns }}
+  labels:
+    app.kubernetes.io/part-of: ecommerce
+    app.kubernetes.io/component: dev-direct-access
+spec:
+  description: "{{ $svc }}: LAN direct access via Cilium Gateway (dev only, no gateway auth)"
+  endpointSelector:
+    matchLabels:
+      io.cilium.k8s.policy.serviceaccount: ecommerce-{{ $svc }}
+  ingress:
+    - fromEntities: [ingress]
+      toPorts:
+        - ports: [{ port: {{ $v.port | quote }}, protocol: TCP }]
+{{- end }}
+{{- end -}}

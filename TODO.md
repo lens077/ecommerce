@@ -112,6 +112,9 @@ CES 巡检告警（CronJob 2m + vmalert firing 闭环）、可观测黑盒探活
   `redirect-to-https`）承担，实测 307；局域网新增 HTTPRoute `ecommerce-frontend-redirect`
   挂 `sectionName: http`，实测 `http://shop.dev.test` 301 → https。`frontend/apps/consumer/Dockerfile`
   的 Caddy 端口由误改的 `:30080` 改回 `:80`。前端镜像 tag 目前没有 CI 回写（`frontend.yml` 不写 manifest）。
+  **后端局域网直连**〔实测 2026-09-06〕：10 条 HTTPRoute `ecommerce-<svc>-direct`（`<svc>-api.dev.test`）
+  + 同目录成对的 `cnp-direct.yaml`（放行 `ingress` 实体，共享 zero-trust CNP 保持只放网关）已部署，宿主机 `curl https://<svc>-api.dev.test/healthz` 10/10 200；
+  不经网关鉴权，只给开发用（见 `context/team/local-env.md`「后端服务局域网直连」）。
 - **最近一次部署到 dev**〔实测 2026-08-29〕：control-tower `0.2.0`（config `sha-c30713c`）
   与 ecommerce `1.5.5`；dev 的 7 个相关服务滚到 `sha-0b9b9ad`，15/15 Deployment Ready、
   发布 Pod restart 均为 0。**1.6.x 尚未部署到 dev**，集群实跑 tag 见 §1「镜像 tag 口径」行。

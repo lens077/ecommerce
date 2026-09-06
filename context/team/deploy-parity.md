@@ -41,6 +41,7 @@ scripts/verify-deploy-parity.sh      # 绿:同一套 N 个对象;红:打印 - �
 | 给某服务加 env | helm:`helm/templates/_ecommerce.tpl` 的 env 段(全体)或 `helm/values.yaml` 的 `<svc>.extraEnv`(单个);裸:该服务 `deploy/dev/deployment.yaml` 同位置同顺序 |
 | 改端口 | `helm/values.yaml` 的 `<svc>.port`;裸:`deployment.yaml` 的 containerPort / 两个探针 + `service.yaml` 的 `port`(targetPort 是名字 `http`,不用动) |
 | 加一个新后端服务 | `.service-matrix.yaml` services 段 → `helm/Chart.yaml` dependencies + `helm/charts/<svc>/`(抄一个现成的,只有 Chart.yaml/values.yaml/三个 include 模板) + `helm/values.yaml` 顶层段 → 裸 `deploy/dev/{deployment,service}.yaml` + `application-vpa.yml` 一条 + `helm/files/zero-trust.yaml` 的 SA 与 CNP 段 → `backend/Makefile` SERVICES → structcheck 与 parity 都绿 |
+| 开/关某服务的局域网直连 | helm:`global.directAccess.enabled`(整体)或删该子 chart 的 `httproute.yaml` + `cnp-direct.yaml`;裸:增删 `deploy/dev/` 下同名的**两个文件**(HTTPRoute 与放行 `ingress` 实体的 CNP 成对,缺 CNP 就 503/5s)。共享 zero-trust CNP 不动(见 local-env.md) |
 | 加一个非后端工作负载 | 子 chart(参考 `helm/charts/frontend/`)+ 裸文件 + `backend/Makefile` 的 `K8S_EXTRA_MANIFESTS` + parity 脚本 `raw_sources` + structcheck `helmNonServiceKeys` |
 
 ## 四、验证

@@ -21,6 +21,11 @@ global:
   # or callers pass POSTGRES_EGRESS_CIDR / --set-string explicitly.
   postgresEgressCIDR: ""
   deploymentMode: dev
+  # 局域网直连入口:每个服务一条 HTTPRoute https://<svc>-api.<domain> 直达 Service,绕过网关鉴权。
+  # 只给开发用;关掉这里等价于裸 manifest 侧删掉各服务的 deploy/dev/httproute.yaml。
+  directAccess:
+    enabled: true
+    domain: dev.test
   configSource:
     enabled: true
     secretName: ecommerce-config-source-dev
