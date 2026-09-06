@@ -1,739 +1,150 @@
-# ArgoCD GitOps 的集群权威真相源：helm/ 下的 subchart 由 ArgoCD ApplicationSet
-# （argocd-app.yml）渲染，镜像 tag 由 CI 的 update-manifests job 回写。
+# ecommerce umbrella chart 的 values —— 与 backend/services/<svc>/deploy/dev/ 裸 manifest
+# 是**同一套集群对象的两种写法**,由 scripts/verify-deploy-parity.sh 强制逐字段等价:
+# 这里改了值、裸 manifest 没跟上(或反过来),本地锚点和 CI 的 deploy-consistency 都会红。
+# 两份都是真相源,面向不同的使用者:helm 给 ArgoCD / helm 用户,裸 manifest 给 kubectl 用户。
 #
-# 本文件的三条口径，改之前先读：
-# 1. SERVICE_NAME 必须与 .service-matrix.yaml 的 discovery 逐字相同 —— 它是注册进
-#    Consul 的名字，网关按 `discovery:///<name>` 找服务。带 `-v1` 后缀的历史写法
-#    会注册成另一个名字，服务活得好好的但网关永远路由不到（cart 踩过这个）。
-# 2. 端口取各服务 Config Center pre Bootstrap 的 server.addr。
-# 3. Bootstrap selector 来自不入库的 ecommerce-config-source-pre Secret；Consul
-#    环境变量只负责服务注册发现。
+# 三条口径,改之前先读:
+# 1. serviceName 必须与 .service-matrix.yaml 的 discovery 逐字相同 —— 它是注册进 Consul
+#    的名字(user 是 user-identity、search 是 search-product,≠ 目录名)。带 `-v1` 后缀的
+#    历史写法会注册成另一个名字,服务活得好好的但网关永远路由不到(cart 踩过这个)。
+# 2. port 取各服务 Config Center dev Bootstrap 的 server.addr。
+# 3. Bootstrap selector 来自不入库的 ecommerce-config-source-dev Secret;Consul 环境变量
+#    只负责服务注册发现,2026-09-03 起 CONSUL_ENABLED=false。
 #
-# 镜像走 TCR 而不是 GHCR：两处 CI 都推，但集群在 LAN 内，拉 ghcr.io 要过代理，
-# 而 TCR 是同区直连。GHCR 那份是给外部/公网消费的。
+# 镜像:CI(.github/workflows/backend.yml update-manifests)发版后把 image.tag 同时回写到
+# 这里和裸 manifest。tag 用发布版本号 X.Y.Z(当前值是 CI 切换前的最后一次手工 digest 钉法,
+# 下次发版起统一为版本号)。走 TCR 而不是 GHCR:集群在 LAN 内,拉 ghcr.io 要过代理。
 
-# 必须挂在 global 下：subchart 只看得见自己那一层加上 global，
-# 写成顶层 imagePullSecrets 的话渲染出来一个都没有（实测过）。
+# global 是 Helm 唯一能跨子 chart 传值的键。
 global:
   # Runtime-only value. scripts/deploy-k8s.sh resolves node1 from ~/.ssh/config,
   # or callers pass POSTGRES_EGRESS_CIDR / --set-string explicitly.
   postgresEgressCIDR: ""
-  imagePullSecrets:
-    - name: tcr-pull-secret
+  deploymentMode: dev
   configSource:
     enabled: true
-    secretName: ecommerce-config-source-pre
+    secretName: ecommerce-config-source-dev
     mountPath: /etc/ecommerce/config-source
     runAsUser: 1000
     runAsGroup: 1000
     fsGroup: 1000
+  consul:
+    enabled: "false"
+    addr: consul-server.consul.svc:8500
+    scheme: http
+    insecureSkipVerify: "false"
+    # Consul 自 2026-08-18 起开了 ACL(default_policy=deny),不带 token 的失败是**静默的**。
+    # 变量名必须是 CONSUL_HTTP_TOKEN,registry 靠 consul/api 自己兜底读它。
+    tokenSecret: consul-ecommerce-token
+  # 10 个服务当前同一档;VPA(updateMode Off)在采推荐值,采够再按服务分档。
+  resources:
+    requests:
+      cpu: 100m
+      memory: 128Mi
+    limits:
+      cpu: "1"
+      memory: 512Mi
+
 user:
   enabled: true
   replicaCount: 1
+  serviceName: user-identity
+  port: 30001
   image:
-    repository: "ccr.ccs.tencentyun.com/sumery/user"
-    tag: 1.6.3
-    pullPolicy: Always
-  service:
-    type: LoadBalancer
-    ports:
-      http:
-        enabled: true
-        port: 30001
-        targetPort: 30001
-      grpc:
-        enabled: false
-        port: 30001
-        targetPort: 30001
-  env:
-    - name: SERVICE_NAME
-      value: "user-identity"
-    - name: SERVICE_VERSION
-      value: "v1"
-    - name: DEPLOYMENT_MODE
-      value: "pre"
-    - name: CONFIG_SOURCE_FILE
-      value: "/etc/ecommerce/config-source/user.yaml"
-    - name: OTEL_LOGS_EXPORTER
-      value: "none"
-    # OTLP 鉴权头(Vault → ExternalSecret otel-auth)。optional=true：
-    # Secret 未就绪时按匿名发送而不是 CrashLoop —— 过渡期两种都收。
-    - name: OTEL_EXPORTER_OTLP_HEADERS
-      valueFrom:
-        secretKeyRef:
-          name: otel-auth
-          key: OTEL_EXPORTER_OTLP_HEADERS
-          optional: true
-    - name: CONSUL_ENABLED
-      value: "true"
-    - name: CONSUL_ADDR
-      value: consul-expose-servers.consul.svc:8500
-    - name: CONSUL_SCHEME
-      value: "http"
-    - name: CONSUL_INSECURE_SKIP_VERIFY
-      value: "true"
-    # Consul 自 2026-08-18 起开了 ACL(default_policy=deny)，不带 token 的失败是**静默的**：
-    # 注册看似成功、读操作返回 200，但结果被 ACL 过滤成空 —— 表现为「服务活得好好的，
-    # 网关就是路由不到」(/v1/catalog/services 返回 {"consul":[]})。
-    # 变量名必须是 CONSUL_HTTP_TOKEN：backend/constants 里那个 CONSUL_TOKEN 没有任何代码读，
-    # registry 靠 consul/api 自己兜底读 CONSUL_HTTP_TOKEN。
-    - name: CONSUL_HTTP_TOKEN
-      valueFrom:
-        secretKeyRef:
-          name: consul-ecommerce-token
-          key: CONSUL_HTTP_TOKEN
-  # 这个历史 Secret 只有无人读取的 DB_SOURCE；Bootstrap 凭据来自 Config Center。
-  # 保持关闭，避免重复铺设明文口令。
-  secret:
-    enabled: false
-  dbCaCert:
-    enabled: true
-    secretName: "pg-ca-cert"
-    mountPath: "/etc/postgresql/ca"
-    fileName: "pg_ca.crt"
-  resources:
-    requests:
-      cpu: "100m"
-      memory: "128Mi"
-    limits:
-      cpu: "1"
-      memory: "256Mi"
+    repository: ccr.ccs.tencentyun.com/sumery/user
+    tag: sha-c364128@sha256:b3acffdd9f2eb4cff737cf21e1f4c77ea02f24e1f172af09f2a22232bd666841
 search:
   enabled: true
   replicaCount: 1
+  serviceName: search-product
+  port: 30002
   image:
-    repository: "ccr.ccs.tencentyun.com/sumery/search"
-    tag: 1.6.3
-    pullPolicy: Always
-  service:
-    type: LoadBalancer
-    ports:
-      http:
-        enabled: true
-        port: 30002
-        targetPort: 30002
-      grpc:
-        enabled: false
-        port: 30002
-        targetPort: 30002
-  env:
-    - name: SERVICE_NAME
-      value: "search-product"
-    - name: SERVICE_VERSION
-      value: "v1"
-    - name: DEPLOYMENT_MODE
-      value: "pre"
-    - name: CONFIG_SOURCE_FILE
-      value: "/etc/ecommerce/config-source/search.yaml"
-    - name: OTEL_LOGS_EXPORTER
-      value: "none"
-    # OTLP 鉴权头(Vault → ExternalSecret otel-auth)。optional=true：
-    # Secret 未就绪时按匿名发送而不是 CrashLoop —— 过渡期两种都收。
-    - name: OTEL_EXPORTER_OTLP_HEADERS
-      valueFrom:
-        secretKeyRef:
-          name: otel-auth
-          key: OTEL_EXPORTER_OTLP_HEADERS
-          optional: true
-    - name: CONSUL_ENABLED
-      value: "true"
-    - name: CONSUL_ADDR
-      value: consul-expose-servers.consul.svc:8500
-    - name: CONSUL_SCHEME
-      value: "http"
-    - name: CONSUL_INSECURE_SKIP_VERIFY
-      value: "true"
-    # Consul 自 2026-08-18 起开了 ACL(default_policy=deny)，不带 token 的失败是**静默的**：
-    # 注册看似成功、读操作返回 200，但结果被 ACL 过滤成空 —— 表现为「服务活得好好的，
-    # 网关就是路由不到」(/v1/catalog/services 返回 {"consul":[]})。
-    # 变量名必须是 CONSUL_HTTP_TOKEN：backend/constants 里那个 CONSUL_TOKEN 没有任何代码读，
-    # registry 靠 consul/api 自己兜底读 CONSUL_HTTP_TOKEN。
-    - name: CONSUL_HTTP_TOKEN
-      valueFrom:
-        secretKeyRef:
-          name: consul-ecommerce-token
-          key: CONSUL_HTTP_TOKEN
-  # 这个历史 Secret 只有无人读取的 DB_SOURCE；Bootstrap 凭据来自 Config Center。
-  # 保持关闭，避免重复铺设明文口令。
-  secret:
-    enabled: false
-  dbCaCert:
-    enabled: true
-    secretName: "pg-ca-cert"
-    mountPath: "/etc/postgresql/ca"
-    fileName: "pg_ca.crt"
-  resources:
-    requests:
-      cpu: "100m"
-      memory: "128Mi"
-    limits:
-      cpu: "1"
-      memory: "256Mi"
+    repository: ccr.ccs.tencentyun.com/sumery/search
+    tag: sha-c364128@sha256:0edecb9726f743da828a9692e5c4b79aa0377471db34cbe757435c2d1b29035b
 product:
   enabled: true
   replicaCount: 1
+  serviceName: product-service
+  port: 30003
   image:
-    repository: "ccr.ccs.tencentyun.com/sumery/product"
-    tag: 1.6.3
-    pullPolicy: Always
-  service:
-    type: LoadBalancer
-    ports:
-      http:
-        enabled: true
-        port: 30003
-        targetPort: 30003
-      grpc:
-        enabled: false
-        port: 30003
-        targetPort: 30003
-  env:
-    - name: SERVICE_NAME
-      value: "product-service"
-    - name: SERVICE_VERSION
-      value: "v1"
-    - name: DEPLOYMENT_MODE
-      value: "pre"
-    - name: CONFIG_SOURCE_FILE
-      value: "/etc/ecommerce/config-source/product.yaml"
-    - name: OTEL_LOGS_EXPORTER
-      value: "none"
-    # OTLP 鉴权头(Vault → ExternalSecret otel-auth)。optional=true：
-    # Secret 未就绪时按匿名发送而不是 CrashLoop —— 过渡期两种都收。
-    - name: OTEL_EXPORTER_OTLP_HEADERS
-      valueFrom:
-        secretKeyRef:
-          name: otel-auth
-          key: OTEL_EXPORTER_OTLP_HEADERS
-          optional: true
-    - name: CONSUL_ENABLED
-      value: "true"
-    - name: CONSUL_ADDR
-      value: consul-expose-servers.consul.svc:8500
-    - name: CONSUL_SCHEME
-      value: "http"
-    - name: CONSUL_INSECURE_SKIP_VERIFY
-      value: "true"
-    # Consul 自 2026-08-18 起开了 ACL(default_policy=deny)，不带 token 的失败是**静默的**：
-    # 注册看似成功、读操作返回 200，但结果被 ACL 过滤成空 —— 表现为「服务活得好好的，
-    # 网关就是路由不到」(/v1/catalog/services 返回 {"consul":[]})。
-    # 变量名必须是 CONSUL_HTTP_TOKEN：backend/constants 里那个 CONSUL_TOKEN 没有任何代码读，
-    # registry 靠 consul/api 自己兜底读 CONSUL_HTTP_TOKEN。
-    - name: CONSUL_HTTP_TOKEN
-      valueFrom:
-        secretKeyRef:
-          name: consul-ecommerce-token
-          key: CONSUL_HTTP_TOKEN
-  # 这个历史 Secret 只有无人读取的 DB_SOURCE；Bootstrap 凭据来自 Config Center。
-  # 保持关闭，避免重复铺设明文口令。
-  secret:
-    enabled: false
-  dbCaCert:
-    enabled: true
-    secretName: "pg-ca-cert"
-    mountPath: "/etc/postgresql/ca"
-    fileName: "pg_ca.crt"
-  resources:
-    requests:
-      cpu: "100m"
-      memory: "128Mi"
-    limits:
-      cpu: "1"
-      memory: "256Mi"
+    repository: ccr.ccs.tencentyun.com/sumery/product
+    tag: sha-c364128@sha256:90bcf98b9aa67872c7eca95cf61182fcfcebc81eb091113c868417a32178e0e5
 order:
   enabled: true
   replicaCount: 1
+  serviceName: order-service
+  port: 30004
   image:
-    repository: "ccr.ccs.tencentyun.com/sumery/order"
-    tag: 1.6.3
-    pullPolicy: Always
-  service:
-    type: LoadBalancer
-    ports:
-      http:
-        enabled: true
-        port: 30004
-        targetPort: 30004
-      grpc:
-        enabled: false
-        port: 30004
-        targetPort: 30004
-  env:
-    - name: SERVICE_NAME
-      value: "order-service"
-    - name: SERVICE_VERSION
-      value: "v1"
-    - name: DEPLOYMENT_MODE
-      value: "pre"
-    - name: CONFIG_SOURCE_FILE
-      value: "/etc/ecommerce/config-source/order.yaml"
-    - name: OTEL_LOGS_EXPORTER
-      value: "none"
-    # OTLP 鉴权头(Vault → ExternalSecret otel-auth)。optional=true：
-    # Secret 未就绪时按匿名发送而不是 CrashLoop —— 过渡期两种都收。
-    - name: OTEL_EXPORTER_OTLP_HEADERS
-      valueFrom:
-        secretKeyRef:
-          name: otel-auth
-          key: OTEL_EXPORTER_OTLP_HEADERS
-          optional: true
-    - name: CONSUL_ENABLED
-      value: "true"
-    - name: CONSUL_ADDR
-      value: consul-expose-servers.consul.svc:8500
-    - name: CONSUL_SCHEME
-      value: "http"
-    - name: CONSUL_INSECURE_SKIP_VERIFY
-      value: "true"
-    # Consul 自 2026-08-18 起开了 ACL(default_policy=deny)，不带 token 的失败是**静默的**：
-    # 注册看似成功、读操作返回 200，但结果被 ACL 过滤成空 —— 表现为「服务活得好好的，
-    # 网关就是路由不到」(/v1/catalog/services 返回 {"consul":[]})。
-    # 变量名必须是 CONSUL_HTTP_TOKEN：backend/constants 里那个 CONSUL_TOKEN 没有任何代码读，
-    # registry 靠 consul/api 自己兜底读 CONSUL_HTTP_TOKEN。
-    - name: CONSUL_HTTP_TOKEN
-      valueFrom:
-        secretKeyRef:
-          name: consul-ecommerce-token
-          key: CONSUL_HTTP_TOKEN
-  # 这个历史 Secret 只有无人读取的 DB_SOURCE；Bootstrap 凭据来自 Config Center。
-  # 保持关闭，避免重复铺设明文口令。
-  secret:
-    enabled: false
-  dbCaCert:
-    enabled: true
-    secretName: "pg-ca-cert"
-    mountPath: "/etc/postgresql/ca"
-    fileName: "pg_ca.crt"
-  resources:
-    requests:
-      cpu: "100m"
-      memory: "128Mi"
-    limits:
-      cpu: "1"
-      memory: "256Mi"
+    repository: ccr.ccs.tencentyun.com/sumery/order
+    tag: sha-c364128@sha256:680b0d4ff7a1ec82bd3b1ad7199c4c9189219b928cc3e89d98bbd5b7c47363b0
 inventory:
   enabled: true
   replicaCount: 1
+  serviceName: inventory-service
+  port: 30005
   image:
-    repository: "ccr.ccs.tencentyun.com/sumery/inventory"
-    tag: 1.6.3
-    pullPolicy: Always
-  service:
-    type: LoadBalancer
-    ports:
-      http:
-        enabled: true
-        port: 30005
-        targetPort: 30005
-      grpc:
-        enabled: false
-        port: 30005
-        targetPort: 30005
-  env:
-    - name: SERVICE_NAME
-      value: "inventory-service"
-    - name: SERVICE_VERSION
-      value: "v1"
-    - name: DEPLOYMENT_MODE
-      value: "pre"
-    - name: CONFIG_SOURCE_FILE
-      value: "/etc/ecommerce/config-source/inventory.yaml"
-    - name: OTEL_LOGS_EXPORTER
-      value: "none"
-    # OTLP 鉴权头(Vault → ExternalSecret otel-auth)。optional=true：
-    # Secret 未就绪时按匿名发送而不是 CrashLoop —— 过渡期两种都收。
-    - name: OTEL_EXPORTER_OTLP_HEADERS
-      valueFrom:
-        secretKeyRef:
-          name: otel-auth
-          key: OTEL_EXPORTER_OTLP_HEADERS
-          optional: true
-    - name: CONSUL_ENABLED
-      value: "true"
-    - name: CONSUL_ADDR
-      value: consul-expose-servers.consul.svc:8500
-    - name: CONSUL_SCHEME
-      value: "http"
-    - name: CONSUL_INSECURE_SKIP_VERIFY
-      value: "true"
-    # Consul 自 2026-08-18 起开了 ACL(default_policy=deny)，不带 token 的失败是**静默的**：
-    # 注册看似成功、读操作返回 200，但结果被 ACL 过滤成空 —— 表现为「服务活得好好的，
-    # 网关就是路由不到」(/v1/catalog/services 返回 {"consul":[]})。
-    # 变量名必须是 CONSUL_HTTP_TOKEN：backend/constants 里那个 CONSUL_TOKEN 没有任何代码读，
-    # registry 靠 consul/api 自己兜底读 CONSUL_HTTP_TOKEN。
-    - name: CONSUL_HTTP_TOKEN
-      valueFrom:
-        secretKeyRef:
-          name: consul-ecommerce-token
-          key: CONSUL_HTTP_TOKEN
-  # 这个历史 Secret 只有无人读取的 DB_SOURCE；Bootstrap 凭据来自 Config Center。
-  # 保持关闭，避免重复铺设明文口令。
-  secret:
-    enabled: false
-  dbCaCert:
-    enabled: true
-    secretName: "pg-ca-cert"
-    mountPath: "/etc/postgresql/ca"
-    fileName: "pg_ca.crt"
-  resources:
-    requests:
-      cpu: "100m"
-      memory: "128Mi"
-    limits:
-      cpu: "1"
-      memory: "256Mi"
+    repository: ccr.ccs.tencentyun.com/sumery/inventory
+    tag: sha-c364128@sha256:3b0d8e74700184b5c018df80c6ca7b3330cce05a517461f211422845b011259a
 cart:
   enabled: true
   replicaCount: 1
+  serviceName: cart-service
+  port: 30006
   image:
-    repository: "ccr.ccs.tencentyun.com/sumery/cart"
-    tag: 1.6.3
-    pullPolicy: Always
-  service:
-    type: LoadBalancer
-    ports:
-      http:
-        enabled: true
-        port: 30006
-        targetPort: 30006
-      grpc:
-        enabled: false
-        port: 30006
-        targetPort: 30006
-  env:
-    - name: SERVICE_NAME
-      value: "cart-service"
-    - name: SERVICE_VERSION
-      value: "v1"
-    - name: DEPLOYMENT_MODE
-      value: "pre"
-    - name: CONFIG_SOURCE_FILE
-      value: "/etc/ecommerce/config-source/cart.yaml"
-    - name: OTEL_LOGS_EXPORTER
-      value: "none"
-    # OTLP 鉴权头(Vault → ExternalSecret otel-auth)。optional=true：
-    # Secret 未就绪时按匿名发送而不是 CrashLoop —— 过渡期两种都收。
-    - name: OTEL_EXPORTER_OTLP_HEADERS
-      valueFrom:
-        secretKeyRef:
-          name: otel-auth
-          key: OTEL_EXPORTER_OTLP_HEADERS
-          optional: true
-    - name: CONSUL_ENABLED
-      value: "true"
-    - name: CONSUL_ADDR
-      value: consul-expose-servers.consul.svc:8500
-    - name: CONSUL_SCHEME
-      value: "http"
-    - name: CONSUL_INSECURE_SKIP_VERIFY
-      value: "true"
-    # Consul 自 2026-08-18 起开了 ACL(default_policy=deny)，不带 token 的失败是**静默的**：
-    # 注册看似成功、读操作返回 200，但结果被 ACL 过滤成空 —— 表现为「服务活得好好的，
-    # 网关就是路由不到」(/v1/catalog/services 返回 {"consul":[]})。
-    # 变量名必须是 CONSUL_HTTP_TOKEN：backend/constants 里那个 CONSUL_TOKEN 没有任何代码读，
-    # registry 靠 consul/api 自己兜底读 CONSUL_HTTP_TOKEN。
-    - name: CONSUL_HTTP_TOKEN
-      valueFrom:
-        secretKeyRef:
-          name: consul-ecommerce-token
-          key: CONSUL_HTTP_TOKEN
-  # 这个历史 Secret 只有无人读取的 DB_SOURCE；Bootstrap 凭据来自 Config Center。
-  # 保持关闭，避免重复铺设明文口令。
-  secret:
-    enabled: false
-  dbCaCert:
-    enabled: true
-    secretName: "pg-ca-cert"
-    mountPath: "/etc/postgresql/ca"
-    fileName: "pg_ca.crt"
-  resources:
-    requests:
-      cpu: "100m"
-      memory: "128Mi"
-    limits:
-      cpu: "1"
-      memory: "256Mi"
+    repository: ccr.ccs.tencentyun.com/sumery/cart
+    tag: sha-c364128@sha256:c9d97aaeedb947173b392531de024bbc6cd6988297d1b6bb1653e074af20b9c2
 merchant:
   enabled: true
   replicaCount: 1
+  serviceName: merchant-service
+  port: 30007
   image:
-    repository: "ccr.ccs.tencentyun.com/sumery/merchant"
-    tag: 1.6.3
-    pullPolicy: Always
-  service:
-    type: LoadBalancer
-    ports:
-      http:
-        enabled: true
-        port: 30007
-        targetPort: 30007
-      grpc:
-        enabled: false
-        port: 30007
-        targetPort: 30007
-  env:
-    - name: SERVICE_NAME
-      value: "merchant-service"
-    - name: SERVICE_VERSION
-      value: "v1"
-    - name: DEPLOYMENT_MODE
-      value: "pre"
-    - name: CONFIG_SOURCE_FILE
-      value: "/etc/ecommerce/config-source/merchant.yaml"
-    - name: OTEL_LOGS_EXPORTER
-      value: "none"
-    # OTLP 鉴权头(Vault → ExternalSecret otel-auth)。optional=true：
-    # Secret 未就绪时按匿名发送而不是 CrashLoop —— 过渡期两种都收。
-    - name: OTEL_EXPORTER_OTLP_HEADERS
-      valueFrom:
-        secretKeyRef:
-          name: otel-auth
-          key: OTEL_EXPORTER_OTLP_HEADERS
-          optional: true
-    - name: CONSUL_ENABLED
-      value: "true"
-    - name: CONSUL_ADDR
-      value: consul-expose-servers.consul.svc:8500
-    - name: CONSUL_SCHEME
-      value: "http"
-    - name: CONSUL_INSECURE_SKIP_VERIFY
-      value: "true"
-    # Consul 自 2026-08-18 起开了 ACL(default_policy=deny)，不带 token 的失败是**静默的**：
-    # 注册看似成功、读操作返回 200，但结果被 ACL 过滤成空 —— 表现为「服务活得好好的，
-    # 网关就是路由不到」(/v1/catalog/services 返回 {"consul":[]})。
-    # 变量名必须是 CONSUL_HTTP_TOKEN：backend/constants 里那个 CONSUL_TOKEN 没有任何代码读，
-    # registry 靠 consul/api 自己兜底读 CONSUL_HTTP_TOKEN。
-    - name: CONSUL_HTTP_TOKEN
-      valueFrom:
-        secretKeyRef:
-          name: consul-ecommerce-token
-          key: CONSUL_HTTP_TOKEN
-  # 这个历史 Secret 只有无人读取的 DB_SOURCE；Bootstrap 凭据来自 Config Center。
-  # 保持关闭，避免重复铺设明文口令。
-  secret:
-    enabled: false
-  dbCaCert:
-    enabled: true
-    secretName: "pg-ca-cert"
-    mountPath: "/etc/postgresql/ca"
-    fileName: "pg_ca.crt"
-  resources:
-    requests:
-      cpu: "100m"
-      memory: "128Mi"
-    limits:
-      cpu: "1"
-      memory: "256Mi"
-address:
-  enabled: true
-  replicaCount: 1
-  image:
-    repository: "ccr.ccs.tencentyun.com/sumery/address"
-    tag: 1.6.3
-    pullPolicy: Always
-  service:
-    type: LoadBalancer
-    ports:
-      http:
-        enabled: true
-        port: 30009
-        targetPort: 30009
-      grpc:
-        enabled: false
-        port: 30009
-        targetPort: 30009
-  env:
-    - name: SERVICE_NAME
-      value: "address-service"
-    - name: SERVICE_VERSION
-      value: "v1"
-    - name: DEPLOYMENT_MODE
-      value: "pre"
-    - name: CONFIG_SOURCE_FILE
-      value: "/etc/ecommerce/config-source/address.yaml"
-    - name: OTEL_LOGS_EXPORTER
-      value: "none"
-    # OTLP 鉴权头(Vault → ExternalSecret otel-auth)。optional=true：
-    # Secret 未就绪时按匿名发送而不是 CrashLoop —— 过渡期两种都收。
-    - name: OTEL_EXPORTER_OTLP_HEADERS
-      valueFrom:
-        secretKeyRef:
-          name: otel-auth
-          key: OTEL_EXPORTER_OTLP_HEADERS
-          optional: true
-    - name: CONSUL_ENABLED
-      value: "true"
-    - name: CONSUL_ADDR
-      value: consul-expose-servers.consul.svc:8500
-    - name: CONSUL_SCHEME
-      value: "http"
-    - name: CONSUL_INSECURE_SKIP_VERIFY
-      value: "true"
-    # Consul 自 2026-08-18 起开了 ACL(default_policy=deny)，不带 token 的失败是**静默的**：
-    # 注册看似成功、读操作返回 200，但结果被 ACL 过滤成空 —— 表现为「服务活得好好的，
-    # 网关就是路由不到」(/v1/catalog/services 返回 {"consul":[]})。
-    # 变量名必须是 CONSUL_HTTP_TOKEN：backend/constants 里那个 CONSUL_TOKEN 没有任何代码读，
-    # registry 靠 consul/api 自己兜底读 CONSUL_HTTP_TOKEN。
-    - name: CONSUL_HTTP_TOKEN
-      valueFrom:
-        secretKeyRef:
-          name: consul-ecommerce-token
-          key: CONSUL_HTTP_TOKEN
-  # 这个历史 Secret 只有无人读取的 DB_SOURCE；Bootstrap 凭据来自 Config Center。
-  # 保持关闭，避免重复铺设明文口令。
-  secret:
-    enabled: false
-  dbCaCert:
-    enabled: true
-    secretName: "pg-ca-cert"
-    mountPath: "/etc/postgresql/ca"
-    fileName: "pg_ca.crt"
-  resources:
-    requests:
-      cpu: "100m"
-      memory: "128Mi"
-    limits:
-      cpu: "1"
-      memory: "256Mi"
-behavior:
-  enabled: true
-  replicaCount: 1
-  image:
-    repository: "ccr.ccs.tencentyun.com/sumery/behavior"
-    tag: 1.6.3
-    pullPolicy: Always
-  service:
-    type: LoadBalancer
-    ports:
-      http:
-        enabled: true
-        port: 30011
-        targetPort: 30011
-      grpc:
-        enabled: false
-        port: 30011
-        targetPort: 30011
-  env:
-    - name: SERVICE_NAME
-      value: "behavior-service"
-    - name: SERVICE_VERSION
-      value: "v1"
-    - name: DEPLOYMENT_MODE
-      value: "pre"
-    - name: CONFIG_SOURCE_FILE
-      value: "/etc/ecommerce/config-source/behavior.yaml"
-    - name: OTEL_LOGS_EXPORTER
-      value: "none"
-    # OTLP 鉴权头(Vault → ExternalSecret otel-auth)。optional=true：
-    # Secret 未就绪时按匿名发送而不是 CrashLoop —— 过渡期两种都收。
-    - name: OTEL_EXPORTER_OTLP_HEADERS
-      valueFrom:
-        secretKeyRef:
-          name: otel-auth
-          key: OTEL_EXPORTER_OTLP_HEADERS
-          optional: true
-    - name: CONSUL_ENABLED
-      value: "true"
-    - name: CONSUL_ADDR
-      value: consul-expose-servers.consul.svc:8500
-    - name: CONSUL_SCHEME
-      value: "http"
-    - name: CONSUL_INSECURE_SKIP_VERIFY
-      value: "true"
-    # Consul 自 2026-08-18 起开了 ACL(default_policy=deny)，不带 token 的失败是**静默的**：
-    # 注册看似成功、读操作返回 200，但结果被 ACL 过滤成空 —— 表现为「服务活得好好的，
-    # 网关就是路由不到」(/v1/catalog/services 返回 {"consul":[]})。
-    # 变量名必须是 CONSUL_HTTP_TOKEN：backend/constants 里那个 CONSUL_TOKEN 没有任何代码读，
-    # registry 靠 consul/api 自己兜底读 CONSUL_HTTP_TOKEN。
-    - name: CONSUL_HTTP_TOKEN
-      valueFrom:
-        secretKeyRef:
-          name: consul-ecommerce-token
-          key: CONSUL_HTTP_TOKEN
-  # 这个历史 Secret 只有无人读取的 DB_SOURCE；Bootstrap 凭据来自 Config Center。
-  # 保持关闭，避免重复铺设明文口令。
-  secret:
-    enabled: false
-  dbCaCert:
-    enabled: true
-    secretName: "pg-ca-cert"
-    mountPath: "/etc/postgresql/ca"
-    fileName: "pg_ca.crt"
-  resources:
-    requests:
-      cpu: "100m"
-      memory: "128Mi"
-    limits:
-      cpu: "1"
-      memory: "256Mi"
+    repository: ccr.ccs.tencentyun.com/sumery/merchant
+    tag: sha-c364128@sha256:81031f3c7f0e41dbbeffb8fc2e8c4f57a26523eb4d9ad3c02a1dd671c345bc80
 payment:
   enabled: true
   replicaCount: 1
+  serviceName: payment-service
+  port: 30008
   image:
-    repository: "ccr.ccs.tencentyun.com/sumery/payment"
-    tag: 1.6.3
-    pullPolicy: Always
-  service:
-    type: LoadBalancer
-    ports:
-      http:
-        enabled: true
-        port: 30008
-        targetPort: 30008
-      grpc:
-        enabled: false
-        port: 30008
-        targetPort: 30008
-  env:
-    - name: SERVICE_NAME
-      value: "payment-service"
-    - name: SERVICE_VERSION
-      value: "v1"
-    - name: DEPLOYMENT_MODE
-      value: "pre"
-    - name: CONFIG_SOURCE_FILE
-      value: "/etc/ecommerce/config-source/payment.yaml"
-    - name: OTEL_LOGS_EXPORTER
-      value: "none"
-    # OTLP 鉴权头(Vault → ExternalSecret otel-auth)。optional=true：
-    # Secret 未就绪时按匿名发送而不是 CrashLoop —— 过渡期两种都收。
-    - name: OTEL_EXPORTER_OTLP_HEADERS
-      valueFrom:
-        secretKeyRef:
-          name: otel-auth
-          key: OTEL_EXPORTER_OTLP_HEADERS
-          optional: true
-    - name: CONSUL_ENABLED
-      value: "true"
-    - name: CONSUL_ADDR
-      value: consul-expose-servers.consul.svc:8500
-    - name: CONSUL_SCHEME
-      value: "http"
-    - name: CONSUL_INSECURE_SKIP_VERIFY
-      value: "true"
-    # Consul 自 2026-08-18 起开了 ACL(default_policy=deny)，不带 token 的失败是**静默的**：
-    # 注册看似成功、读操作返回 200，但结果被 ACL 过滤成空 —— 表现为「服务活得好好的，
-    # 网关就是路由不到」(/v1/catalog/services 返回 {"consul":[]})。
-    # 变量名必须是 CONSUL_HTTP_TOKEN：backend/constants 里那个 CONSUL_TOKEN 没有任何代码读，
-    # registry 靠 consul/api 自己兜底读 CONSUL_HTTP_TOKEN。
-    - name: CONSUL_HTTP_TOKEN
-      valueFrom:
-        secretKeyRef:
-          name: consul-ecommerce-token
-          key: CONSUL_HTTP_TOKEN
-  # 这个历史 Secret 只有无人读取的 DB_SOURCE；Bootstrap 凭据来自 Config Center。
-  # 保持关闭，避免重复铺设明文口令。
-  secret:
-    enabled: false
-  dbCaCert:
-    enabled: true
-    secretName: "pg-ca-cert"
-    mountPath: "/etc/postgresql/ca"
-    fileName: "pg_ca.crt"
-  resources:
-    requests:
-      cpu: "100m"
-      memory: "128Mi"
-    limits:
-      cpu: "1"
-      memory: "256Mi"
+    repository: ccr.ccs.tencentyun.com/sumery/payment
+    tag: sha-c364128@sha256:50b652ba2a715fa5bbffd6f05dab303f00949b9dabda79f07824116201be63df
+address:
+  enabled: true
+  replicaCount: 1
+  serviceName: address-service
+  port: 30009
+  image:
+    repository: ccr.ccs.tencentyun.com/sumery/address
+    tag: sha-c364128@sha256:4c4db8b08408fbab564bbbb0cba2927bc04533b78d7a1b79f5e225403c867f37
+behavior:
+  enabled: true
+  replicaCount: 1
+  serviceName: behavior-service
+  port: 30011
+  image:
+    repository: ccr.ccs.tencentyun.com/sumery/behavior
+    tag: sha-c364128@sha256:d076319e47f9a51ef3295d2543ea25ff6724e9bc54551aba3ea8a56c559e5b96
+
+# 前端两个工作负载。裸 manifest 在 frontend/apps/consumer/deploy/pre/ 与
+# frontend/apps/consumer-next/deploy/dev.yaml,同样受 parity 门禁约束。
+frontend:
+  enabled: true
+  replicaCount: 1
+  image:
+    repository: ccr.ccs.tencentyun.com/sumery/ecommerce-frontend
+    tag: sha-bf8dae2
+  # Caddy 监听端口。⚠️ 仓库 Dockerfile 现写 :30080,而线上镜像 sha-bf8dae2 实测监听 :80;
+  # 下次重建镜像前必须先把两者对齐,否则 Service 的 targetPort 会指向一个没人听的口。
+  containerPort: 80
+  servicePort: 30080
+  gatewayURL: http://ecommerce-gateway-service:8080
+consumer-next:
+  enabled: true
+  replicaCount: 2
+  image:
+    repository: ccr.ccs.tencentyun.com/sumery/consumer-next
+    tag: dev-20260828-2
+  port: 3004
+  gatewayURL: http://ecommerce-gateway-service.ecommerce.svc.cluster.local:8080
+  publicURL: https://shop.dev.test

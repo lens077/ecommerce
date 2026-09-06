@@ -4,35 +4,16 @@ layer: harness-framework
 description: harness 本身（硬规则/门禁/Agent 约束）每次改动的原因与触发它的具体事故，防止后人把改对的东西改回去
 ---
 
-### 2026-09-04 退役外部依赖不再允许回接现役服务
-
-- **改了什么**：`.service-matrix.yaml` 新增 `retired_externals`；`structcheck` 解析 `services.*.external`，禁止现役与退役集合重名，也禁止服务引用已退役或未知的外部依赖。
-- **为什么**：退役记录需要保留历史端点和删除证据，但不能继续拥有现役拓扑语义。只把条目移出 `externals`，无法阻止旧依赖名被服务静默接回。
-- **触发事故**：2026-09-04 删除 Meilisearch 运行资源后，既有门禁仍保留它的代码匹配模式，却从不核对服务声明引用的外部依赖是否现役；矩阵可以同时写「已退役」和「仍被服务引用」而测试保持绿色。
-- **怎么验证的**：运行 `cd backend && go test -count=1 ./structcheck/...`；新矩阵通过，临时把 `search.external` 改回 `meilisearch` 时测试按预期报告「引用了已退役外部依赖」。
-
-### 2026-09-03 基础设施门禁从「副本同构」切到「kit adapter 边界」
-
-- **改了什么**：`TestInfraHomogeneity` 不再比较 `config`、`log`、`otel`、`registry` adapter；
-  `TestSharedImplementationsDoNotReturnToConsumers` 直接禁止服务级 `env`、`meta`、`dbutil` 和仓内
-  `backend/pkg/{config,configschema,dbutil,env,log,meta,otel,registry}` 实现副本，
-  `TestInfraAdaptersStayThin` 要求四类 adapter 导入
-  `go-connect-kit` 且不得直接依赖实现库。删除已失效的 config 基线与文件集断言。实施范围见
-  [shared-infra-kit spec](../../.scratch/shared-infra-kit/spec.md)。
-- **为什么**：共享实现迁出仓库后，adapter 的职责是映射各服务 protobuf，字段不同是合法差异；继续要求
-  字节同构会把正确边界报成漂移。反过来，只比较哈希仍无法发现同一份实现被同时抄回 10 个服务。
-- **触发事故**：go-connect-kit 迁移完成后，旧门禁同时把 10 份服务专属 `config_test.go` 和 cart 的
-  注释差异报成「新漂移」，却无法表达「实现必须只存在于 kit」这个真正约束。
-- **怎么验证的**：运行 `cd backend && go test -count=1 ./structcheck/...`；再由
-  `scripts/verify-context-canary.sh` 验证门禁注错路径仍能变红。
-
-
 # Harness 演进日志
 
 ## 这份日志解决什么
 
 `context/` 记录**规则是什么**，`TODO.md` 记录**做了什么与完成度**（`PROGRESS.md`
 已于 2026-08-13 废止归档）。两者都不记录**「这条规则为什么是现在这个样子」**。
+
+> 2026-09-03 起分工：本日志是**编年史**——按日期追加、永不改写，记「触发事故 + 怎么验证的」；
+> 一个决策**现在是什么、打败了谁**写在 [context/decisions/](../decisions/INDEX.md)，随交付事实同步改写。
+> 改硬规则/门禁时两处都写并互链；旧条目按需迁入决策层（再被质疑或改动时先建决策文件）。
 
 缺了这一层的后果很具体：一条规则被改对之后，半年后另一个人（或另一个 AI 会话）
 看到它觉得"太松了"或"太啰嗦"，凭直觉改回去，于是当初那次事故会原样重演一遍。
@@ -67,6 +48,28 @@ description: harness 本身（硬规则/门禁/Agent 约束）每次改动的原
 
 ---
 
+### 2026-09-04 退役外部依赖不再允许回接现役服务
+
+- **改了什么**：`.service-matrix.yaml` 新增 `retired_externals`；`structcheck` 解析 `services.*.external`，禁止现役与退役集合重名，也禁止服务引用已退役或未知的外部依赖。
+- **为什么**：退役记录需要保留历史端点和删除证据，但不能继续拥有现役拓扑语义。只把条目移出 `externals`，无法阻止旧依赖名被服务静默接回。
+- **触发事故**：2026-09-04 删除 Meilisearch 运行资源后，既有门禁仍保留它的代码匹配模式，却从不核对服务声明引用的外部依赖是否现役；矩阵可以同时写「已退役」和「仍被服务引用」而测试保持绿色。
+- **怎么验证的**：运行 `cd backend && go test -count=1 ./structcheck/...`；新矩阵通过，临时把 `search.external` 改回 `meilisearch` 时测试按预期报告「引用了已退役外部依赖」。
+
+### 2026-09-03 基础设施门禁从「副本同构」切到「kit adapter 边界」
+
+- **改了什么**：`TestInfraHomogeneity` 不再比较 `config`、`log`、`otel`、`registry` adapter；
+  `TestSharedImplementationsDoNotReturnToConsumers` 直接禁止服务级 `env`、`meta`、`dbutil` 和仓内
+  `backend/pkg/{config,configschema,dbutil,env,log,meta,otel,registry}` 实现副本，
+  `TestInfraAdaptersStayThin` 要求四类 adapter 导入
+  `go-connect-kit` 且不得直接依赖实现库。删除已失效的 config 基线与文件集断言。当前决策见
+  [2026-09-03-shared-infra-kit-boundary.md](../decisions/implemented/2026-09-03-shared-infra-kit-boundary.md)。
+- **为什么**：共享实现迁出仓库后，adapter 的职责是映射各服务 protobuf，字段不同是合法差异；继续要求
+  字节同构会把正确边界报成漂移。反过来，只比较哈希仍无法发现同一份实现被同时抄回 10 个服务。
+- **触发事故**：go-connect-kit 迁移完成后，旧门禁同时把 10 份服务专属 `config_test.go` 和 cart 的
+  注释差异报成「新漂移」，却无法表达「实现必须只存在于 kit」这个真正约束。
+- **怎么验证的**：运行 `cd backend && go test -count=1 ./structcheck/...`；再由
+  `scripts/verify-context-canary.sh` 验证门禁注错路径仍能变红。
+
 ### 2026-09-03 lint 棘轮加两个采集器：Go 导出符号注释（revive-exported）与前端 hygiene（knip）
 
 - **改了什么**：`scripts/lint-baseline.sh` 的 `CHECKERS` 从 `go-vet vp-lint` → `go-vet revive-exported vp-lint knip`。
@@ -78,7 +81,7 @@ description: harness 本身（硬规则/门禁/Agent 约束）每次改动的原
   接线：GitLab `backend-gate` 装固定版 golangci-lint v2.13.1 后跑 `CHECKERS=revive-exported`，`frontend-gate`
   跑 `CHECKERS=knip`；GitHub `service-ci.yml` 同步（那边只 tag 触发）。前端另加 `pnpm hygiene`
   （`knip && pnpm dedupe --check`）作为看全貌的硬入口，lockfile 已 `pnpm dedupe`。决策与替代方案见
-  `context/decisions/implemented/2026-08-08-lint-baseline-ratchet.md`（决策层随其首批提交落地）。
+  [2026-08-08-lint-baseline-ratchet.md](../decisions/implemented/2026-08-08-lint-baseline-ratchet.md)。
 - **为什么**：对照 deepseek-harness 的 `verify-export-jsdoc`（每个导出名必须有文档）与 `pnpm run hygiene`
   （knip + publint）复盘本仓：后端静态检查只有 `go vet`，导出符号注释无人守；前端没有任何未用依赖/导出检查。
   两者都有大量存量，只能走棘轮而不是硬门禁——正是 08-08 那条决策预留的路径（"将来接入 golangci-lint 时先 snapshot 冻结存量即可"）。
@@ -96,7 +99,7 @@ description: harness 本身（硬规则/门禁/Agent 约束）每次改动的原
   模块缓存 LICENSE 归类；前端 `pnpm licenses list --json` 410 个包，平台专属二进制归一为 `<platform>`；
   `--check` 比对新鲜度）。`frontend/.vite-hooks/pre-commit` 第 2 步：`go.mod`/`go.sum`/`package.json`/
   `pnpm-lock.yaml`/`pnpm-workspace.yaml` 进暂存区就重生成并 `git add`；`verify-quick.sh` 加第四条并行 lane `--check`。
-  决策见 `context/decisions/implemented/2026-09-03-third-party-notices-regenerate.md`（决策层随其首批提交落地）。
+  决策见 [2026-09-03-third-party-notices-regenerate.md](../decisions/implemented/2026-09-03-third-party-notices-regenerate.md)。
 - **为什么**：deepseek-harness lefthook 的「regenerate rather than reject」——改依赖的人不会记得更新许可声明，
   CI 事后红只多一轮往返；生成是确定性的，就该在 commit 路径上做。`go-licenses` 按包重建全仓 10 分钟跑不完，
   `go list -deps` 0.5 s。
@@ -106,6 +109,29 @@ description: harness 本身（硬规则/门禁/Agent 约束）每次改动的原
   向 NOTICES 追加一行 → `--check` rc=1，重生成 → rc=0；`verify-quick.sh backend` 四路绿。
   第一版脚本在 macOS bash 3.2 下 `$attention——` 报 unbound variable——多字节字符被吞进变量名，
   与 `verify-context.sh` 头注记的同一陷阱，已改 `${attention}`。
+
+### 2026-09-03 决策理由从编年史分离为 `context/decisions/` 当前状态文档，`[DECISION]` 门禁上线
+
+- **改了什么**：新增知识层 `context/decisions/{implemented,proposed,rejected}/`（路径即状态，
+  文件名 `YYYY-MM-DD-slug`），`scripts/verify-context.sh` 加第十项 `[DECISION]`（status 与目录一致、
+  按状态要求的小节、「考虑过的替代方案」非空、implemented 不得残留提案期标题），`[ORPHAN]`/`[FRONTMATTER]`
+  纳入新层；`verify-context-canary.sh` 加五个红探针 + 一道放行守卫。首批迁入六条决策
+  （决策层本身、pre-push 门禁、gitleaks 硬门禁、两远端 CI 职责、TODO.md 唯一进度源、lint 基线棘轮）；
+  `AGENTS.md` 知识索引加一行，「进度真相源」一条的历史叙述改为指向决策层（预算内）。
+  同日另加 `frontend/.vite-hooks/pre-push`（push 前跑 `verify-quick`），决策见
+  [2026-09-03-pre-push-verify-quick.md](../decisions/implemented/2026-09-03-pre-push-verify-quick.md)。
+- **为什么**：本日志单位是"一次改动"，决策单位是"一个主题"，同一主题改三次就散成三条；
+  日志永不改写又与"随事实同步"冲突；且没有一条要求写下被否决的替代方案。理由与替代方案见
+  [2026-09-03-decision-records-current-state.md](../decisions/implemented/2026-09-03-decision-records-current-state.md)。
+- **触发事故**：对照 deepseek-harness 的 Agent Notes（`proposed/implemented/rejected` 生命周期 +
+  强制 `## Alternatives considered` + `verify-agent-note-format`）复盘本仓：`.service-matrix.yaml` 头注记着
+  kafka 的 note 留着一句已被 `docs/TECH.md` 推翻的旧决策、被 AI 当成现行结论（2026-08-28）；
+  "进度真相源"的现行状态要从 08-13、08-21、08-30 三条日志里拼——都是"决策没有当前状态文档"的症状。
+- **怎么验证的**：`scripts/verify-context.sh` 全绿（含六个新文件）；`verify-context-canary.sh` 29 探针全过：
+  `decision-no-alternatives` / `decision-status-mismatch` / `decision-spec-speak` / `decision-stray` /
+  `decision-marker-too-new` 五个注错分别被拦且 tag 为 `DECISION`（首跑 canary 即抓到门禁自身一处
+  bash 3.2 多字节变量名 bug——`「$spec」` 需写成 `「${spec}」`，与本脚本头注记载的同一陷阱），`decision-legacy-marker-ok`（2026-09-03 之前日期的迁入文件用
+  `alternatives-not-recorded` 标记）放行；`AGENTS.md` 13937 B < 14000 B。
 
 ### 2026-09-01 适配层「只做适配」纳入 structcheck（同构门禁的盲区）
 
@@ -1131,3 +1157,30 @@ description: harness 本身（硬规则/门禁/Agent 约束）每次改动的原
   均在写操作前失败；有效 `/32` 经 Helm `tpl` 只渲染一处。`helm lint`、三条部署入口的隔离
   mock、`go test -count=1 ./structcheck/...`、`scripts/verify-context.sh`、Action workflow lint 与
   GitLab YAML 解析均通过。
+
+### 2026-09-06 部署清单双真相源:helm/ 与裸 manifest 强制逐字段等价
+
+- **改了什么**:新增 `scripts/verify-deploy-parity.sh`(两侧渲染 → 去注释 → 按 kind/ns/name 索引
+  → JSON diff,任一侧多/少/异即红),接进 `verify-quick.sh`、CI `deploy-consistency.yml` 与
+  structcheck。`helm/` 整体重写到裸 manifest 的形状(资源名 `ecommerce-<svc>-deploy`、显式 ns、
+  `app:` 标签、探针、`dev` 模式、ClusterIP、digest 镜像),补齐 VPA / cart Certificate / 两个前端
+  子 chart;共用模板从打包的 `helm/library` tgz 改为 umbrella `templates/_ecommerce.tpl` 全局 define;
+  `otel-auth` ExternalSecret 挪到 `helm/files/` 经 `.Files.Get` 输出并由 `render-zero-trust.sh`
+  一并渲染给裸路径。删 10 个 `deploy/prod/`、3 个 per-service `vpa.yml`、6 个 `values.dev.yaml`、
+  `control-tower-gateway-vpa`;8 个服务的裸 manifest 统一命名端口;CI `update-manifests` 改为
+  同时回写 helm 与裸 manifest 并在提交前跑 parity。structcheck:`{dev,prod}` 覆盖收成 `dev`、
+  helm 检查改核 `serviceName`=matrix `discovery` 与浮动 tag、tgz 比对测试换成「`helm/library`
+  不得存在」+ parity 调用。
+- **为什么**:用户明确两份都要保留(helm 给 ArgoCD 使用者,裸给 kubectl 使用者)。两份并存而不等价
+  的后果不是「多一份文档」,而是集群会同时存在两套同 SERVICE_NAME 的工作负载去抢网关流量
+  (`argocd-app.yml` 2026-08-24 告警),以及回写与部署两条线永不相交。
+- **触发事故**:核对集群与 `deploy/` 漂移时发现裸 manifest 与集群零漂移,但 `helm/` 渲染出的
+  Deployment 叫 `cart`、落 default ns、`LoadBalancer`、`pre` 模式、tag `1.6.3`,集群里一个都
+  不存在;CI 每次发版只回写 `helm/values.yaml`,集群只 apply 裸 manifest——**发版 tag 从未到达
+  集群**,而 `backend/Makefile` 注释、`argocd-app.yml`、`.service-matrix.yaml` 对「谁是真相源」
+  各说各话。附带发现:frontend Service `targetPort: 80` 正确、集群 Deployment `containerPort`
+  被手改成 30080、仓库 Dockerfile 又改成监听 `:30080`——三处三个值。
+- **怎么验证的**:`scripts/verify-deploy-parity.sh` 绿(55 个对象);两次故意注错(helm 侧改
+  replicas、裸侧删 cart Certificate)均红并指出对象;`helm template … | kubectl diff -f -` 对集群
+  只剩三类预期差异(8 个服务的端口命名、frontend containerPort、占位 CIDR);
+  `go test -count=1 ./structcheck/...` 绿;`scripts/verify-context.sh` 绿。

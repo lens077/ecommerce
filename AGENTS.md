@@ -58,6 +58,7 @@
 scripts/verify-quick.sh                              # 默认入口:后端链+前端并行,绿只打一行、红只打失败段
 cd backend && go build ./... && go vet ./...        # ↑ 的分解动作:后端编译 + 静态检查(rc=0)
 cd backend && go test -count=1 ./structcheck/...     # 改 .service-matrix.yaml/加删服务后必跑
+scripts/verify-deploy-parity.sh                      # 改 helm/ 或任一裸 manifest 后必跑:两份部署真相源必须渲染出同一套对象
 cd backend && go test -short ./...                   # 后端测试(CI 用 -short)
 cd frontend && pnpm ready                            # 前端 lint+fmt+类型+test
 scripts/verify-context.sh                            # 改 context//docs/design/README/STACK 或本文件后必跑:链接/INDEX/格式/预算门禁
@@ -76,6 +77,7 @@ scripts/verify-context-canary.sh                     # 改 ↑ 门禁脚本本�
 |---|---|---|
 | 团队级 | `context/team/` | 所有工作都要遵循（最稳定） |
 | 框架工程级 | `context/harness-framework/` | AI 协作机制本身（中频更新） |
+| 决策记录 | `context/decisions/` | 现行决策与被否决的替代方案；改硬规则/门禁前先读 |
 | 服务级 | `context/project/ecommerce/{module}/` | 特定模块（高频演进、量最大） |
 
 完整导航见 **[context/INDEX.md](context/INDEX.md)**；可执行命令汇总见 **[context/team/runbook.md](context/team/runbook.md)**。
@@ -89,11 +91,12 @@ scripts/verify-context-canary.sh                     # 改 ↑ 门禁脚本本�
 > 技术栈、目录结构、服务拓扑不在这里复述——读代码与 `.service-matrix.yaml` 自明。
 
 - 工程化：前端用 vite-plus（`vp`）一个包覆盖 dev/build/test/lint/fmt/任务运行/git 钩子，没有 husky/biome/eslint/prettier；commitlint 也由 frontend workspace 承载（2026-08-26 自仓库根迁入，根目录不再有 Node workspace）
-- 进度真相源：`TODO.md`（**唯一**——`docs/PROGRESS.md` 及双文档纪律已于 2026-08-13 废止，见 `context/harness-framework/evolution-log.md`）；架构真相源：`docs/design/`（按微服务分目录，入口 `docs/design/README.md`）。**网关与配置面的设计不在本仓**——在同级仓 `../control-tower/docs/design/`
+- 进度真相源：`TODO.md`（**唯一**，理由见 `context/decisions/`）；架构真相源：`docs/design/`（按微服务分目录，入口 `docs/design/README.md`）。**网关与配置面的设计不在本仓**——在同级仓 `../control-tower/docs/design/`
 - **往文档写集群数字前先读 [context/team/live-facts.md](context/team/live-facts.md)**：运行时观测值（Pod 分布/就绪计数/镜像 tag）必须带「实测 YYYY-MM-DD」，否则 `[LIVE-FACT]` 门禁红；且**集群异常时不要采数**，故障态会被固化成「现状」
 - **网关和配置中心都不在本仓**：2026-08-23 起由同级仓 **control-tower**（`services/gateway` + `services/config`）承载，两个服务均已切流上线。集群里 `config-center` 这个 ns/Deployment 名只是没改的遗留标签，跑的镜像是 `control-tower-config`。本仓的旧 `gateway/` 目录已于 2026-08-24 删除（历史在 tag `backup/pre-control-tower-20260823`）；`backend/structcheck` 直接 import `github.com/lens077/control-tower/routes` 核对路由，**改路由模板必须同 PR 升级本仓对 control-tower 的依赖版本**
 - **CI 仅由发布 tag 触发**（裸 semver `X.Y.Z`，`X`=破坏性/大版本；push main 不构建，2026-08-20 起）。需要 CI 验证或部署时**打 tag 并推到 `github` 远端**（origin 是 GitLab 无 Actions），版本随迭代递增；语义、手顺与四条纪律见 [context/team/git-commit.md](context/team/git-commit.md)「发布 tag 与 CI 触发」
-- **GitOps 当前是断的**（2026-08-24 实测，2026-08-30 复验仍零 Application）：ArgoCD 零 Application、零 ApplicationSet，AppProject 只有 `default`（其自身组件曾 0/1，2026-08-30 已全 1/1）——集群实际由 `backend/services/*/deploy/` 的手工路径驱动，`helm/values.yaml` **不是**集群真相源（集群 tag 多种风格并存——实测 2026-08-30 为 6 种，**无一个 `:dev`**）。由此，内环开发（`okteto up`）那条「必须先 `scripts/argocd-devwindow.sh off`、完事 `on`」**当前不适用**（该脚本已改为诚实空转）。接回 GitOps 前先读 `argocd-app.yml` 顶部告警：chart 与实况在资源名/标签/tag 三处不符，直接开 selfHeal 会起一整套影子服务并经 Consul 抢走网关流量。判定与 manifest 检查清单见 [context/team/okteto-inner-loop.md](context/team/okteto-inner-loop.md)，操作手册见 [docs/OKTETO.md](docs/OKTETO.md)
+- **部署清单两份真相源必须逐字段等价**（2026-09-06 起）：`helm/` 与裸 manifest（`backend/services/*/deploy/dev/`、`application-vpa.yml`、`frontend/apps/*/deploy/`）渲染同一套对象，`scripts/verify-deploy-parity.sh` 强制；改一边必改另一边，共享 SA/CNP/ExternalSecret 只在 `helm/files/`。见 [context/team/deploy-parity.md](context/team/deploy-parity.md)
+- **GitOps 当前是断的**（2026-08-24 实测）：ArgoCD 零 Application，集群由 `make k8s-dev-all` / `make deploy` 手工驱动，故 `okteto up` 那条「先 `scripts/argocd-devwindow.sh off`」**当前不适用**。接回 ArgoCD 只差 `argocd-app.yml` 顶部两件事；放开 automated 时同步改本条。见 [context/team/okteto-inner-loop.md](context/team/okteto-inner-loop.md)、[docs/OKTETO.md](docs/OKTETO.md)
 
 ## 中文文案约定
 

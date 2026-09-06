@@ -44,8 +44,9 @@ type vpaTarget struct {
 }
 
 var ecommerceVPATargets = map[string]vpaTarget{
+	// control-tower-gateway 的 VPA 不在本仓:那是 control-tower 仓的工作负载,本仓曾多放一份并与
+	// 它们已 apply 的版本打架(containerName / min-max 都不同),2026-09-06 移除。
 	"consumer-next":              {VPAName: "consumer-next-vpa", ContainerName: "consumer-next"},
-	"control-tower-gateway":      {VPAName: "control-tower-gateway-vpa", ContainerName: "gateway"},
 	"ecommerce-address-deploy":   {VPAName: "ecommerce-address-vpa", ContainerName: "ecommerce-address"},
 	"ecommerce-behavior-deploy":  {VPAName: "ecommerce-behavior-vpa", ContainerName: "ecommerce-behavior"},
 	"ecommerce-cart-deploy":      {VPAName: "ecommerce-cart-vpa", ContainerName: "ecommerce-cart"},
@@ -96,37 +97,15 @@ func TestEcommerceVPARecommendationsCoverManagedDeployments(t *testing.T) {
 	}
 }
 
-func TestServiceDirectoryVPAsStayRecommendationOnly(t *testing.T) {
-	paths, err := filepath.Glob("../services/*/deploy/*/vpa.yml")
+// 各服务目录下曾各有一份 vpa.yml(只 cart/behavior/order 三个,与 application-vpa.yml 同名条目
+// 逐字段重复)。2026-09-06 起只保留 application-vpa.yml 一份,这里断言它们不会再长回来。
+func TestNoServiceDirectoryVPAs(t *testing.T) {
+	paths, err := filepath.Glob("../services/*/deploy/*/vpa.y*ml")
 	if err != nil {
 		t.Fatalf("glob service VPA files: %v", err)
 	}
-	if len(paths) == 0 {
-		t.Fatal("expected at least one service-local VPA manifest")
-	}
-
 	for _, path := range paths {
-		documents := readVPADocuments(t, path)
-		if len(documents) != 1 {
-			t.Errorf("%s must contain exactly one VPA, got %d", path, len(documents))
-			continue
-		}
-		document := documents[0]
-		assertRecommendationOnlyVPA(t, path, document)
-		targetName := document.Spec.TargetRef.Name
-		expected, ok := ecommerceVPATargets[targetName]
-		if !ok {
-			t.Errorf("%s contains unexpected VPA target %q", path, targetName)
-			continue
-		}
-		if document.Metadata.Name != expected.VPAName {
-			t.Errorf("%s VPA name = %q, want %q", path, document.Metadata.Name, expected.VPAName)
-		}
-		if len(document.Spec.ResourcePolicy.ContainerPolicies) == 1 &&
-			document.Spec.ResourcePolicy.ContainerPolicies[0].ContainerName != expected.ContainerName {
-			t.Errorf("%s container = %q, want %q", path,
-				document.Spec.ResourcePolicy.ContainerPolicies[0].ContainerName, expected.ContainerName)
-		}
+		t.Errorf("%s: VPA 只在 application-vpa.yml(裸侧)与 helm 子 chart 的 vpa 模板里各一份,不要在服务目录再放一份", path)
 	}
 }
 

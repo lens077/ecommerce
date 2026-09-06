@@ -1,17 +1,3 @@
-{{- $params := dict
-  "enabled" .Values.enabled
-  "serviceName" .Chart.Name
-  "replicaCount" .Values.replicaCount
-  "repository" .Values.image.repository
-  "image" (dict
-    "tag" .Values.image.tag
-    "pullPolicy" .Values.image.pullPolicy
-  )
-  "service" .Values.service
-  "resources" .Values.resources
-  "env" .Values.env
-  "dbCaCert" .Values.dbCaCert
-  "configSource" (.Values.global | default dict).configSource
-  "imagePullSecrets" (.Values.global | default dict).imagePullSecrets
--}}
-{{- include "library.deployment" $params -}}
+{{- if .Values.enabled }}
+{{- include "ecommerce.deployment" (dict "svc" .Chart.Name "values" .Values "global" .Values.global "ns" .Release.Namespace) }}
+{{- end }}

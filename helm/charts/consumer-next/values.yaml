@@ -1,0 +1,9 @@
+# 占位默认值;实际值来自 umbrella helm/values.yaml 的 consumer-next: 段。
+enabled: true
+replicaCount: 2
+image:
+  repository: ""
+  tag: ""
+port: 3004
+gatewayURL: ""
+publicURL: ""

@@ -7,6 +7,7 @@
 context/
 ├── team/                       团队级（最稳定）—— 所有工作必须遵循
 ├── harness-framework/          框架工程级（中频）—— AI 协作机制本身
+├── decisions/                  决策记录 —— 每个决策一个文件：现在是什么、打败了谁、付出了什么
 └── project/ecommerce/          服务级（高频、量最大）—— 各模块的架构与踩坑
 ```
 
@@ -28,6 +29,7 @@ context/
 | [pangolin-tunnel.md](team/pangolin-tunnel.md) | 对外公开内网服务走 Pangolin(node1 VPS)：拓扑与凭据位置、面板 API、k8s HTTPRoute 必须走 Gateway 443(80 无路由) |
 | [tls-enablement.md](team/tls-enablement.md) | 给在跑的服务补 TLS：**先判云厂商 ICP 拦截**（未备案机器上配域名证书是白做，纯 IP 通、带域名 403/reset）、健康检查硬编码 http 会静默失效、证书整卷挂载遮蔽目录、公共 CA 不签 IP 故必须走域名、换镜像后 HOME 漂移致证书静默不加载、**自签证书遇隧道换域名要补 SAN（`verify-ca` 会掩盖问题）**、验收必须有「故意错的输入」+ 不带 `-k` 的严格校验 |
 | [go-testing.md](team/go-testing.md) | 测试分层判定：biz 层 mock、data 层真库（testcontainers）、Redis 用 miniredis；`-short` 是唯一开关；禁用 go-sqlmock/pgxmock |
+| [deploy-parity.md](team/deploy-parity.md) | 部署清单双真相源:helm/ ≡ 裸 manifest,逐字段等价由 `scripts/verify-deploy-parity.sh` 守;共享对象只在 `helm/files/`;镜像 tag 两边同写;只有 dev 环境目录 |
 | [okteto-inner-loop.md](team/okteto-inner-loop.md) | 内环开发 `okteto up`：什么时候用、**必须先关 ArgoCD 自动同步**、不是测试环境 |
 | [tech-selection.md](team/tech-selection.md) | 「上游已死」类选型结论定稿前必查镜像谱系与社区延续分叉；查到分叉 ≠ 采用 |
 | [alerting-signal-hygiene.md](team/alerting-signal-hygiene.md) | 告警的价值 = 它承载的新信息量，慢性红等于没有告警；降噪优先级「修根因 > 调 `repeat_interval` > 改阈值」；探针要探「功能有没有推进」；含给告警本身加告警的元规则 |
@@ -43,12 +45,20 @@ context/
 | [graph-engineering.md](harness-framework/graph-engineering.md) | 多闭环 AI 工作流方法论存档：锚点命令、Loop 0~4 分工；其中的冻结节点机制已于 2026-08-24 整套删除，文内留有「不要重建」的说明 |
 | [delivery-efficiency.md](harness-framework/delivery-efficiency.md) | AI Coding 交付效率治理：可信状态、P50/P85 与长尾、日报证据和人机责任边界 |
 | [e3-execution.md](harness-framework/e3-execution.md) | E3 执行策略：动手前估计任务规模，走最小路径，验证失败才扩张；含护栏 hook 的验证方法 |
+| [dsh-model-onboarding.md](harness-framework/dsh-model-onboarding.md) | **新增、升级或切换 DSH 模型前必读**：模型目录声明、GPT 长上下文、自动压缩阈值换算与在线验收 |
 | [subagent-dispatch.md](harness-framework/subagent-dispatch.md) | 子代理派发三条硬约定：只回结构化摘要、按角色裁剪能力、按角色分层模型 |
 | [multi-agent-concurrency.md](harness-framework/multi-agent-concurrency.md) | 多 Agent 并发改同一批文件时的四条纪律：状态用文件同步、引用要点名、置信度会凭空升高、宣布完成不终止复核 |
 | [cordis-evaluation.md](harness-framework/cordis-evaluation.md) | 已评估「底层改 Cordis 插件框架」：暂不采用的理由与重新评估条件 |
 | [flywheel-audit.md](harness-framework/flywheel-audit.md) | 对照《Agent 自进化飞轮》的评测结论 + 方向性审计约定；门禁元评测 canary 的由来 |
 | [portable-harness.md](harness-framework/portable-harness.md) | 跨项目共用能力清单与采纳步骤；lens077 根 symlink 登记处 |
 | [evolution-log.md](harness-framework/evolution-log.md) | harness 每次改动的原因与触发它的事故——**改硬规则/门禁前必读**，防止把改对的东西改回去 |
+
+## 决策记录 · [context/decisions/](decisions/INDEX.md)
+
+一个决策一个文件，**路径即状态**（`proposed/` `implemented/` `rejected/`），`implemented/` 随交付事实同步改写，
+每条必须写「考虑过的替代方案」。与 [evolution-log.md](harness-framework/evolution-log.md) 分工：日志按日期追加记
+**事故与验证**，这里记**决策与替代方案**。逐条清单只维护在 [decisions/INDEX.md](decisions/INDEX.md) 一处。
+改硬规则 / 门禁 / CI 职责 / 真相源归属之前，先读对应决策；没有就先建一条。
 
 ## 服务级 · [context/project/ecommerce/](project/ecommerce/INDEX.md)
 
@@ -95,7 +105,7 @@ matrix 与 `backend/services/`、网关实际接线的一致性,以及各服务 
 - 找模块知识时路径是 `context/project/ecommerce/{module}/`，`{module}` 用**代码目录名**（`gateway` / `behavior` / `consumer`），不是服务的中文名。
 - 找不到对应知识 ≠ 没有约束。先读 `docs/design/`（入口 `docs/design/README.md`）/ `TODO.md`，读完把结论沉淀回来（见 self-refinement）。
 - 本目录自身的结构由门禁守着：链接可达性、INDEX 覆盖（不许有孤儿文件）、frontmatter、
-  experience 格式、evolution-log 四要素、AGENTS.md 预算，改完跑 `scripts/verify-context.sh`
+  experience 格式、evolution-log 四要素、决策记录格式、AGENTS.md 预算，改完跑 `scripts/verify-context.sh`
   （CI 两侧都接了：`context-gate`）。存量豁免见 `scripts/context-format-baseline.txt`（反向棘轮）。
 
 ## 与 `~/.claude` memory 的关系

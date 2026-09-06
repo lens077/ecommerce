@@ -10,13 +10,11 @@
 package structcheck
 
 import (
-	"archive/tar"
 	"bufio"
-	"bytes"
-	"compress/gzip"
 	"fmt"
 	"io"
 	"os"
+	"os/exec"
 	"path/filepath"
 	"regexp"
 	"sort"
@@ -36,10 +34,13 @@ const (
 )
 
 // helm/values.yaml 顶层允许出现的非服务键。
-// global 是 Helm 的标准跨 subchart 传参键;其余非服务键应当显式加进来,
+// global 是 Helm 的标准跨 subchart 传参键;frontend / consumer-next 是两个前端工作负载的
+// 子 chart(不在 matrix 的 services 段,那里只列后端);其余非服务键应当显式加进来,
 // 而不是放宽比对 —— 多一个不认识的顶层键本身就值得看一眼。
 var helmNonServiceKeys = map[string]bool{
-	"global": true,
+	"global":        true,
+	"frontend":      true,
+	"consumer-next": true,
 }
 
 // .service-matrix.yaml 的 deployment_coverage 段。
@@ -235,8 +236,9 @@ func readHelmServices(t *testing.T) []string {
 	return names
 }
 
-// 同时具备 deploy/dev 与 deploy/prod 才算被裸 manifest 覆盖 ——
-// 只有一半会在另一个环境静默漏掉这个服务。
+// 具备 deploy/dev 才算被裸 manifest 覆盖。
+// 曾要求 dev+prod 都有;prod 目录从未 apply 过、用浮动 tag :prod、且已与 dev 结构性漂移,
+// 2026-09-06 随「两份真相源 parity」一并删除,只剩 dev 一个环境。
 func readDeployCoveredServices(t *testing.T) []string {
 	t.Helper()
 	entries, err := os.ReadDir(servicesDir)
@@ -248,15 +250,8 @@ func readDeployCoveredServices(t *testing.T) []string {
 		if !e.IsDir() {
 			continue
 		}
-		hasAll := true
-		for _, env := range []string{"dev", "prod"} {
-			info, err := os.Stat(filepath.Join(servicesDir, e.Name(), "deploy", env))
-			if err != nil || !info.IsDir() {
-				hasAll = false
-				break
-			}
-		}
-		if hasAll {
+		info, err := os.Stat(filepath.Join(servicesDir, e.Name(), "deploy", "dev"))
+		if err == nil && info.IsDir() {
 			covered = append(covered, e.Name())
 		}
 	}
@@ -275,7 +270,7 @@ func TestDeploymentListsMatchMatrix(t *testing.T) {
 		{"makefile", "backend/Makefile 的 SERVICES", readMakefileServices(t)},
 		{"compose", "backend/compose.yaml 的 services 段", readComposeServices(t)},
 		{"helm", "helm/values.yaml 的顶层键", readHelmServices(t)},
-		{"deploy", "backend/services/{svc}/deploy/{dev,prod}", readDeployCoveredServices(t)},
+		{"deploy", "backend/services/{svc}/deploy/dev", readDeployCoveredServices(t)},
 	}
 
 	for _, l := range lists {
@@ -367,7 +362,7 @@ func TestDeploymentsUseConfigCenterSelector(t *testing.T) {
 		if !values.Global.ConfigSource.Enabled {
 			t.Error("helm global.configSource.enabled must be true")
 		}
-		wantSecret := strings.ReplaceAll(m.Conventions.ConfigSourceSecret, "{env}", "pre")
+		wantSecret := strings.ReplaceAll(m.Conventions.ConfigSourceSecret, "{env}", "dev")
 		if values.Global.ConfigSource.SecretName != wantSecret {
 			t.Errorf("helm selector Secret = %q, want %q", values.Global.ConfigSource.SecretName, wantSecret)
 		}
@@ -380,6 +375,8 @@ func TestDeploymentsUseConfigCenterSelector(t *testing.T) {
 			t.Errorf("helm selector security IDs must all be 1000: %+v", values.Global.ConfigSource)
 		}
 
+		// env(含 CONFIG_SOURCE_FILE)由 helm/templates/_ecommerce.tpl 从这些值生成,渲染结果
+		// 由 scripts/verify-deploy-parity.sh 与裸 manifest 逐字段比对;这里只核 values 本身的契约。
 		for service := range m.Services {
 			node, ok := values.Services[service]
 			if !ok {
@@ -387,19 +384,44 @@ func TestDeploymentsUseConfigCenterSelector(t *testing.T) {
 				continue
 			}
 			var serviceValues struct {
-				Env []deploymentEnv `yaml:"env"`
+				ServiceName string `yaml:"serviceName"`
+				Port        int    `yaml:"port"`
+				Image       struct {
+					Repository string `yaml:"repository"`
+					Tag        string `yaml:"tag"`
+				} `yaml:"image"`
 			}
 			if err := node.Decode(&serviceValues); err != nil {
 				t.Errorf("decode helm values for %s: %v", service, err)
 				continue
 			}
-			assertSelectorEnv(t, "helm "+service, serviceValues.Env, service)
+			var svc struct {
+				Discovery string `yaml:"discovery"`
+			}
+			matrixNode := m.Services[service]
+			if err := matrixNode.Decode(&svc); err != nil {
+				t.Errorf("decode matrix entry for %s: %v", service, err)
+				continue
+			}
+			if serviceValues.ServiceName != svc.Discovery {
+				t.Errorf("helm %s serviceName = %q, want matrix discovery %q", service, serviceValues.ServiceName, svc.Discovery)
+			}
+			if serviceValues.Port <= 0 {
+				t.Errorf("helm %s port must be set", service)
+			}
+			if serviceValues.Image.Repository == "" || serviceValues.Image.Tag == "" {
+				t.Errorf("helm %s image.repository/tag must be set", service)
+			}
+			if strings.HasSuffix(serviceValues.Image.Tag, ":latest") || serviceValues.Image.Tag == "latest" ||
+				serviceValues.Image.Tag == "dev" || serviceValues.Image.Tag == "pre" || serviceValues.Image.Tag == "prod" {
+				t.Errorf("helm %s image.tag = %q is a floating tag; pin a release version or sha", service, serviceValues.Image.Tag)
+			}
 		}
 	})
 
 	for service := range m.Services {
 		service := service
-		for _, environment := range []string{"dev", "prod"} {
+		for _, environment := range []string{"dev"} {
 			environment := environment
 			t.Run("manifest/"+service+"/"+environment, func(t *testing.T) {
 				path := filepath.Join(servicesDir, service, "deploy", environment, "deployment.yaml")
@@ -487,7 +509,6 @@ func TestWorkloadIdentityBaseline(t *testing.T) {
 	}
 
 	extraDeployments := map[string]string{
-		"../../frontend/apps/consumer/deploy/deployment.yaml":     "ecommerce-frontend",
 		"../../frontend/apps/consumer/deploy/pre/deployment.yaml": "ecommerce-frontend",
 	}
 	for path, wantSA := range extraDeployments {
@@ -581,80 +602,56 @@ func TestWorkloadIdentityBaseline(t *testing.T) {
 	}
 }
 
-func TestHelmLibraryArchivesUseEcommerceNodeSpread(t *testing.T) {
+// helm 侧共用模板(原 library subchart 打成 tgz 塞进各子 chart,源码改了 tgz 没重打就静默用旧的,
+// 2026-09-06 改为 umbrella templates/ 里的全局 define,不再有打包副本)。
+// 这里只核对约定的关键字段仍在模板里;渲染结果是否与裸 manifest 一致由
+// TestHelmAndRawManifestsRenderIdentically / scripts/verify-deploy-parity.sh 负责。
+func TestHelmSharedTemplateUsesEcommerceNodeSpread(t *testing.T) {
 	m := loadCoverageMatrix(t)
-	sourcePath := "../../helm/library/templates/_deployment.tpl"
+	sourcePath := "../../helm/templates/_ecommerce.tpl"
 	source, err := os.ReadFile(sourcePath)
 	if err != nil {
 		t.Fatalf("read %s: %v", sourcePath, err)
 	}
-	services := make([]string, 0, len(m.Services))
-	for service := range m.Services {
-		services = append(services, service)
+	if _, err := os.Stat("../../helm/library"); err == nil {
+		t.Errorf("helm/library 又出现了:共用模板放 helm/templates/_ecommerce.tpl,不要再走打包 library 的路")
 	}
-	sort.Strings(services)
-
 	spread := m.Conventions.PodTopologySpread
-	const entry = "library/templates/_deployment.tpl"
-	for _, service := range services {
-		path := filepath.Join("../../helm/charts", service, "charts/library-0.1.0.tgz")
-		template := readTarGzEntry(t, path, entry)
-		if !bytes.Equal(template, source) {
-			t.Errorf("%s %s differs from %s; rebuild the vendored dependency", path, entry, sourcePath)
-		}
-		for _, required := range []string{
-			fmt.Sprintf("%s: %s", spread.LabelKey, spread.LabelValue),
-			"topologySpreadConstraints:",
-			fmt.Sprintf("maxSkew: %d", spread.MaxSkew),
-			fmt.Sprintf("topologyKey: %s", spread.TopologyKey),
-			fmt.Sprintf("whenUnsatisfiable: %s", spread.WhenUnsatisfiable),
-			fmt.Sprintf("nodeAffinityPolicy: %s", spread.NodeAffinityPolicy),
-			fmt.Sprintf("nodeTaintsPolicy: %s", spread.NodeTaintsPolicy),
-			"items:",
-			"- key: {{ .serviceName }}.yaml",
-			"path: {{ .serviceName }}.yaml",
-		} {
-			if !strings.Contains(string(template), required) {
-				t.Errorf("%s %s missing %q", path, entry, required)
-			}
+	for _, required := range []string{
+		fmt.Sprintf("%s: %s", spread.LabelKey, spread.LabelValue),
+		"topologySpreadConstraints:",
+		fmt.Sprintf("maxSkew: %d", spread.MaxSkew),
+		fmt.Sprintf("topologyKey: %s", spread.TopologyKey),
+		fmt.Sprintf("whenUnsatisfiable: %s", spread.WhenUnsatisfiable),
+		fmt.Sprintf("nodeAffinityPolicy: %s", spread.NodeAffinityPolicy),
+		fmt.Sprintf("nodeTaintsPolicy: %s", spread.NodeTaintsPolicy),
+		"items:",
+		"- key: {{ $svc }}.yaml",
+		"path: {{ $svc }}.yaml",
+		"automountServiceAccountToken: false",
+		"enableServiceLinks: false",
+	} {
+		if !strings.Contains(string(source), required) {
+			t.Errorf("%s missing %q", sourcePath, required)
 		}
 	}
 }
 
-func readTarGzEntry(t *testing.T, path, entry string) []byte {
-	t.Helper()
-	file, err := os.Open(path)
+// 两份部署真相源(helm/ 与裸 manifest)必须渲染出同一套集群对象。
+// 门禁本体是 scripts/verify-deploy-parity.sh(verify-quick.sh 与 CI deploy-consistency 都直接跑它,
+// 缺 helm/yq 会红);这里包一层是为了 go test ./... 也能看见。本机没装 helm/yq 时跳过——
+// 跳过只是本测试的,脚本那道硬门禁不跳。
+func TestHelmAndRawManifestsRenderIdentically(t *testing.T) {
+	for _, tool := range []string{"helm", "yq", "python3"} {
+		if _, err := exec.LookPath(tool); err != nil {
+			t.Skipf("缺少 %s,跳过(scripts/verify-deploy-parity.sh 在 verify-quick 与 CI 里仍会硬性执行)", tool)
+		}
+	}
+	cmd := exec.Command(filepath.Join(repoRoot, "scripts", "verify-deploy-parity.sh"))
+	out, err := cmd.CombinedOutput()
 	if err != nil {
-		t.Fatalf("open %s: %v", path, err)
+		t.Fatalf("helm 与裸 manifest 渲染不一致:\n%s", out)
 	}
-	defer file.Close()
-
-	gz, err := gzip.NewReader(file)
-	if err != nil {
-		t.Fatalf("read gzip %s: %v", path, err)
-	}
-	defer gz.Close()
-
-	archive := tar.NewReader(gz)
-	for {
-		header, err := archive.Next()
-		if err == io.EOF {
-			break
-		}
-		if err != nil {
-			t.Fatalf("read tar %s: %v", path, err)
-		}
-		if header.Name != entry {
-			continue
-		}
-		data, err := io.ReadAll(archive)
-		if err != nil {
-			t.Fatalf("read %s from %s: %v", entry, path, err)
-		}
-		return data
-	}
-	t.Fatalf("%s missing %s", path, entry)
-	return nil
 }
 
 func assertWorkloadIdentity(

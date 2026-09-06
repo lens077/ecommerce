@@ -30,3 +30,31 @@ spec:
       backendRefs:
         - name: ecommerce-frontend-service
           port: 30080
+---
+# 80 → 443 跳转(局域网直连 Cilium Gateway 时)。公网那段由 Pangolin/Traefik 的
+# redirect-to-https 中间件负责(node1 traefik-config 实查 15-shop-router-redirect,2026-09-06),
+# 80 不会到达集群;这条只补局域网 http://shop.dev.test 的缺口,与 argocd/consul 的 *-redirect 同款。
+apiVersion: gateway.networking.k8s.io/v1
+kind: HTTPRoute
+metadata:
+  name: ecommerce-frontend-redirect
+  namespace: ecommerce
+spec:
+  parentRefs:
+    - name: cilium-gateway
+      namespace: default
+      sectionName: http
+  hostnames:
+    - "shop.dev.test"
+    - "shop.apikv.com"
+  rules:
+    - matches:
+        - path:
+            type: PathPrefix
+            value: /
+      filters:
+        - type: RequestRedirect
+          requestRedirect:
+            scheme: https
+            port: 443
+            statusCode: 301

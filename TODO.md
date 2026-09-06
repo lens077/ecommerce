@@ -97,8 +97,21 @@ CES 巡检告警（CronJob 2m + vmalert firing 闭环）、可观测黑盒探活
   `1.6.1`–`1.6.3` 为供应链门禁修复系列；签名前 Trivy 阻断与 SARIF→main 可见告警链在
   `1.6.2`/`1.6.3` 上完成真实验证（见 [供应链与交付流水线](docs/todo/供应链与交付流水线.md)）。
   helm 回写：CI 的 `1.6.3` 回写已随 `ad1bb33`（chore(sync)）合并进 main，
-  `helm/values.yaml` 现为 `1.6.3`〔实测 2026-08-31 晚：github/gitlab/本地三方一致；
-  同日午间实测时 GitHub main 尚无该回写〕。该文件仍**不是**集群真相源（见 §1）。
+  `helm/values.yaml` 曾为 `1.6.3`〔实测 2026-08-31 晚〕——但那次回写从未到达集群（见下条）。
+- **部署清单双真相源对齐（2026-09-06）**：核对集群 vs `backend/services/*/deploy/dev/` 十服务
+  `kubectl diff` 全零漂移；但 `helm/` 渲染出的是另一套不存在的对象（`cart`/default ns/LoadBalancer/
+  `pre`/tag 1.6.3），CI 只回写 helm、集群只 apply 裸 manifest。已重写 `helm/` 与裸 manifest 逐字段等价
+  （55 个对象，含 VPA / Certificate / frontend / consumer-next 的 Deployment·Service·ConfigMap·
+  HTTPRoute·PDB），新增 `scripts/verify-deploy-parity.sh` 门禁（verify-quick + CI + structcheck），
+  CI `update-manifests` 改为两边同写；删 `deploy/prod/`×10、per-service `vpa.yml`×3、
+  `values.dev.yaml`×6、`control-tower-gateway-vpa`。规则见
+  [`context/team/deploy-parity.md`](context/team/deploy-parity.md)。**仓库→集群已收敛**〔实测 2026-09-06〕：`make k8s-dev-all` 后裸侧与 helm 侧对集群
+  `kubectl diff` 均 rc=0；8 个服务补端口名 `http` 滚动重启全部 1/1、端点 ready；
+  `ecommerce-frontend-deploy` containerPort 收敛为 80（镜像 `sha-bf8dae2`〔实测 2026-09-06〕监听 :80）。
+  **80→443**：公网由 Pangolin 资源 rid 15 的 `15-shop-router-redirect`（Traefik `web` 入口 +
+  `redirect-to-https`）承担，实测 307；局域网新增 HTTPRoute `ecommerce-frontend-redirect`
+  挂 `sectionName: http`，实测 `http://shop.dev.test` 301 → https。`frontend/apps/consumer/Dockerfile`
+  的 Caddy 端口由误改的 `:30080` 改回 `:80`。前端镜像 tag 目前没有 CI 回写（`frontend.yml` 不写 manifest）。
 - **最近一次部署到 dev**〔实测 2026-08-29〕：control-tower `0.2.0`（config `sha-c30713c`）
   与 ecommerce `1.5.5`；dev 的 7 个相关服务滚到 `sha-0b9b9ad`，15/15 Deployment Ready、
   发布 Pod restart 均为 0。**1.6.x 尚未部署到 dev**，集群实跑 tag 见 §1「镜像 tag 口径」行。
@@ -109,8 +122,9 @@ CES 巡检告警（CronJob 2m + vmalert firing 闭环）、可观测黑盒探活
   推理与证据见 [CI 复盘报告](docs/reports/2026-09-02-ci-two-remotes-dsh-reference.md)。
   门禁首跑（pipeline #77）即抓到 `AuthProvider` 登录态快照落后 DOM 一个 tick 的缝隙，
   已修（`19a7a93`，`useEffect` → `useLayoutEffect`）。
-  **待办**（本轮未动 GitHub 侧）：①`backend.yml` 的 `update-manifests` 在 GitOps 断开期间是
-  假回写，且持有能推 main 的 admin PAT；②发布 tag 的四条纪律（指向 main / 递增 /
+  **待办**（本轮未动 GitHub 侧）：①~~`backend.yml` 的 `update-manifests` 在 GitOps 断开期间是
+  假回写~~（2026-09-06 改为同时回写 helm 与裸 manifest，下次发版起 tag 可经 `make k8s-dev-all`
+  到达集群），但仍持有能推 main 的 admin PAT；②发布 tag 的四条纪律（指向 main / 递增 /
   不可变）在 CI 里零校验；③镜像只扫签不启动，缺一次从 digest 拉起的冒烟；
   ④pnpm 版本三处不一致（`packageManager` 11.22.0 / consumer Dockerfile 11.6.0 /
   `frontend.yml` latest）；⑤前端镜像构建发布路径仍待重建（`frontend.yml` 头注四项前提未确认）。
@@ -198,6 +212,8 @@ CES 巡检告警（CronJob 2m + vmalert firing 闭环）、可观测黑盒探活
 > 同批修掉一处长期静默失效：10 份 Dockerfile 注入 `-X main.Version`，而 10 个 `main` 包从未声明该符号，Go linker 静默忽略，构建版本注入从未生效。现改为共享 `meta.Version`，`/healthz` 分别暴露 API 契约 `version` 与制品 `build`，并由 `structcheck/shared_infra_test.go` 守护符号、ldflags、`COPY pkg/` 与 10 份 Dockerfile 字节一致。理由见 `context/harness-framework/evolution-log.md`。
 >
 > **续：根因闭环（2026-09-04 已发布、独立验证）**：`go-connect-kit` 已补齐 `config`/`log`/`otel`/`registry`/`dbutil`，接口只使用 provider-neutral Go Options 与泛型 `Live[T]`，不导入消费方 proto。ecommerce 删除 `backend/pkg/{config,log,otel,registry}` 与 10 份 `dbutil` 实现，10 个服务仅保留 protobuf-to-options adapter；control-tower 同步消费 kit，并由 `sdk/configsource` 适配 Config Center；模板删除七类实现副本并改为 kit 依赖，CLI 断言同步。**没有使用 BSR**：BSR 分发 proto，不分发 Go 实现。已按顺序发布 kit `v0.3.0`（`409bd9d`）与带 source adapter 的 control-tower `v0.1.4`（`c438851`）；消费方已用 `GOWORK=off` 解析公开版本并更新 `go.sum`，仓内无 `replace`。
+>
+> **续：kit 生命周期加固（2026-09-06 代码态，未部署）**：对迁移结果做两轮异构复核后，修正 OTel 日志旁路动态级别、SDK 错误回灌同一 OTLP 日志管道、Fx 构造失败泄漏 worker、并发关闭提前返回，以及 Consul 关闭竞态、旧检查残留、心跳周期无约束和无界请求。最终发布 `go-connect-kit v0.4.2`（`70289a8`；取代复核过程中的 v0.4.0/v0.4.1），ecommerce 与 control-tower 均已升级且无 `replace`。kit 的 Fx 模块现自行注册 OnStart/OnStop；两仓 main 删除仅用于强制构造和手工关闭的接线，control-tower 网关的直连 Setup 路径也会在生命周期接管前的装配失败时关闭 SDK；merchant/payment 中两份零引用的 `ZapESLogger` 已删除。`CONSUL_ENABLED` 仍是仓内部署策略：ecommerce 由 `backend/pkg/registryconfig` 统一映射，control-tower 由 config registry adapter 映射，不再由 kit 读取，因此现有 `false` 不会因升级而重新开启注册。
 >
 > **续：Consul 注册改守护循环（2026-09-03 代码态，未部署）**：共享实现现位于 `go-connect-kit/registry`，其「一次注册 + 独立心跳」换成 `Maintain`（失败指数退避 1s→30s 无限重试；心跳失败即重注册；配置错误 `ErrInvalidOptions` 不重试；未注册过则退出时跳过注销）。触发事故：2026-08-29 `payment` 单服务（已记 experience 标「遗留未改」）→ 2026-09-02 整机重启后 10 个服务全部一次注册超时、Consul 目录只剩自己、dev 网关 `readyz` 503 持续 ≥97min（探针失败 x1177）。cart 真实适配层打真实 Consul 实测：起得慢→第 6 次重试成功；外部注销→6s 内重注册；隧道断→恢复后 11s 重注册。模板仓 `go-connect-template` 同步。**2026-09-03 已部署并全关**：10 个服务镜像先以工作树 `dev-20260903-aa25aee` 止血、随后按提交 SHA 重打为 `sha-c364128`（digest 固定进各 deploy/dev/deployment.yaml，消除了仓库 `:dev`/`meili-dev-*` 与集群 `sha-0b9b9ad`/`health-*` 的长期漂移；含守护循环）已发布，deployment 全部 `CONSUL_ENABLED=false`（当前不需要服务发现），日志均「Consul disabled by environment variable」。网关侧：Config Center `gateway/dev/routes.yaml` 11 条 target 改 `direct://ecommerce-<svc>-service.ecommerce.svc:<port>`（control-tower `routes/dev.yaml` 同步），`rollout restart` 后新 Pod `discovery_services=[]` 走 `noResolver`，`readyz` 200 且不再依赖 Consul 目录——「全关则永久红」的前提已消除。同日还修了一个独立故障：Cilium ipcache 丢失 `consul-server-0` 条目（全集群 71 CEP 仅此一个，node101/102 无条目、node103 标 `reserved:unmanaged`），`cilium monitor` 抓到 `Policy denied ->unmanaged`，给 Pod 打 label 触发 CEP 更新即恢复。**仍未做**：「注册数 < 预期」告警（当前不注册，暂无意义）；Consul 重开时需同时翻开关 + 路由改回 `discovery:///`。复盘 [docs/reports/2026-09-03-consul-register-once-recurrence.md](docs/reports/2026-09-03-consul-register-once-recurrence.md)。
 

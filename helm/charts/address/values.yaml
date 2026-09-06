@@ -1,35 +1,11 @@
-replicaCount: 1
+# 子 chart 自身的默认值只是占位;实际值全部来自 umbrella 的 helm/values.yaml 顶层 address: 段
+# (Helm 的父 chart 覆盖子 chart)。改值改那里,不要改这里。
 enabled: true
-
-global:
-  configSource:
-    enabled: true
-    secretName: ecommerce-config-source-pre
-    mountPath: /etc/ecommerce/config-source
-
+replicaCount: 1
+serviceName: ""
+port: 0
 image:
-  repository: "ccr.ccs.tencentyun.com/sumery/address"
-  tag: latest
-  pullPolicy: Always
-
-service:
-  type: ClusterIP
-  ports:
-    http:
-      enabled: true
-      port: 30003
-      targetPort: 30003
-    grpc:
-      enabled: false
-      port: 30004
-      targetPort: 30004
-
-env: []
-
-resources:
-  limits:
-    cpu: 100m
-    memory: 256Mi
-  requests:
-    cpu: 50m
-    memory: 128Mi
+  repository: ""
+  tag: ""
+resources: {}
+extraEnv: []

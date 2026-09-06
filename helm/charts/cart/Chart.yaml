@@ -1,9 +1,5 @@
 apiVersion: v2
-appVersion: "1.16.0"
-version: 0.1.0
 name: cart
-
-dependencies:
-  - name: library
-    version: 0.1.0
-    repository: "file://../../library"
+description: ecommerce cart 服务。模板在父 chart helm/templates/_ecommerce.tpl,本 chart 只负责把 values 喂进去
+type: application
+version: 0.2.0

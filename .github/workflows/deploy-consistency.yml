@@ -10,6 +10,7 @@
 #
 # 这里只补 backend.yml 覆盖不到的路径,不重复:
 #   - helm/**            backend.yml 的 paths 里根本没有(防回写自触发)
+#   - scripts/verify-deploy-parity.sh  两份部署真相源的等价门禁(2026-09-06 起)
 #   - backend/Makefile   在 backend/** 里会触发 backend.yml,但 detect 算不出受影响服务
 #     backend/compose.yaml  —— 两者既不匹配 SHARED_PATTERN,也不在 backend/services/<svc>/ 下,
 #                          于是 services='[]',ci job 被 if 跳过,structcheck 一次都不跑
@@ -53,6 +54,13 @@ jobs:
       # Makefile SERVICES / compose services / helm values 顶层键 / deploy 目录
       - name: Structcheck
         run: go test -count=1 ./structcheck/...
+
+      # 两份部署真相源(helm/ 与 backend/services/*/deploy/dev 裸 manifest)必须渲染出同一套对象。
+      # structcheck 里有同名 Go 测试,但它在缺 helm/yq 时会跳过;这一步是硬门禁。
+      # ubuntu-24.04 runner 自带 helm 与 yq。
+      - name: Deploy parity (helm ≡ raw manifests)
+        working-directory: .
+        run: scripts/verify-deploy-parity.sh
 
       # 软门禁伤疤:被基线/例外放行的存量问题不阻断流程,但必须在 CI 日志里显形。
       # 「不阻断」不等于「什么都不做」——放行之后没人看见,基线就会退化成永久免罪符。

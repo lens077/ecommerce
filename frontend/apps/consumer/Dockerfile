@@ -77,9 +77,13 @@ RUN pnpm build
 # 运行层：Caddy 提供静态文件服务
 FROM caddy:alpine AS final
 
-# 配置 Caddy（可根据需求调整，以下为示例）
+# 配置 Caddy。这里是明文 :80——TLS 在两级入口终止（公网 Pangolin/Traefik 443，局域网 Cilium Gateway 443，
+# 80 都由入口 301/307 跳 https），容器不承担 TLS 也不做跳转。端口必须与 deploy/pre/deployment.yaml 的
+# containerPort、service.yaml 的 targetPort、helm/values.yaml 的 frontend.containerPort、zero-trust CNP
+# 放行端口一致（都是 80）。2026-09-06 前这里曾被误改成 :30080（那是 Service 的 port），线上镜像
+# sha-bf8dae2 仍监听 :80 才没出事；照 :30080 重建镜像会让 Service 指向一个没人听的口。
 RUN cat > /etc/caddy/Caddyfile <<'EOF'
-:30080 {
+:80 {
     root * /usr/share/caddy
     encode gzip
 

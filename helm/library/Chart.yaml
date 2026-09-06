@@ -1,5 +1,0 @@
-apiVersion: v2
-name: library
-type: library
-description: Shared templates for ecommerce micrservices
-version: 0.1.0

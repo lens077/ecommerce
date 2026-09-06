@@ -1,0 +1,146 @@
+{{- if .Values.enabled }}
+{{- $ns := .Release.Namespace }}
+# ecommerce-frontend:Vite SPA,Caddy 静态托管。与 frontend/apps/consumer/deploy/pre/ 逐字段等价。
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: ecommerce-frontend-config
+  namespace: {{ $ns }}
+data:
+  GATEWAY_URL: {{ .Values.gatewayURL | quote }}
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: ecommerce-frontend-deploy
+  namespace: {{ $ns }}
+  labels:
+    app: ecommerce-frontend
+    app.kubernetes.io/part-of: ecommerce
+spec:
+  replicas: {{ .Values.replicaCount }}
+  selector:
+    matchLabels:
+      app: ecommerce-frontend
+  template:
+    metadata:
+      name: ecommerce-frontend
+      labels:
+        app: ecommerce-frontend
+        app.kubernetes.io/part-of: ecommerce
+    spec:
+      topologySpreadConstraints:
+        - maxSkew: 1
+          topologyKey: kubernetes.io/hostname
+          whenUnsatisfiable: DoNotSchedule
+          nodeAffinityPolicy: Honor
+          nodeTaintsPolicy: Honor
+          labelSelector:
+            matchLabels:
+              app.kubernetes.io/part-of: ecommerce
+      serviceAccountName: ecommerce-frontend
+      automountServiceAccountToken: false
+      enableServiceLinks: false
+      containers:
+        - name: ecommerce-frontend
+          # 钉不可变 tag,不用 :dev —— latest/dev 这类浮动 tag 让"线上跑的到底是哪份代码"无从回答。
+          image: {{ .Values.image.repository }}:{{ .Values.image.tag }}
+          imagePullPolicy: Always
+          ports:
+            - containerPort: {{ .Values.containerPort }}
+              protocol: TCP
+          envFrom:
+            - configMapRef:
+                name: ecommerce-frontend-config
+      restartPolicy: Always
+      imagePullSecrets:
+        - name: tcr-pull-secret
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: ecommerce-frontend-service
+  namespace: {{ $ns }}
+spec:
+  selector:
+    app: ecommerce-frontend
+  ports:
+    - protocol: TCP
+      port: {{ .Values.servicePort }}
+      targetPort: {{ .Values.containerPort }}
+  # 对外只经共享网关的 HTTPRoute(shop.apikv.com / shop.dev.test),不再单独占一个 LoadBalancer IP。
+  type: ClusterIP
+---
+# 前端静态站点的对外入口。shop.dev.test 局域网直连;shop.apikv.com 公网,经 Pangolin 隧道。
+# ⚠️ parentRef 必须带 sectionName: https —— 本仓 HTTPRoute 都只挂 443 listener。
+# shop.* 下按最长 PathPrefix 分流:/zh、/en、/_next 归 consumer-next,其余归这里。
+apiVersion: gateway.networking.k8s.io/v1
+kind: HTTPRoute
+metadata:
+  name: ecommerce-frontend
+  namespace: {{ $ns }}
+spec:
+  parentRefs:
+    - name: cilium-gateway
+      namespace: default
+      sectionName: https
+  hostnames:
+    - "shop.dev.test"
+    - "shop.apikv.com"
+  rules:
+    - matches:
+        - path:
+            type: PathPrefix
+            value: /
+      backendRefs:
+        - name: ecommerce-frontend-service
+          port: {{ .Values.servicePort }}
+---
+# 80 → 443 跳转(局域网直连 Cilium Gateway 时)。公网那段由 Pangolin/Traefik 的 redirect-to-https
+# 中间件负责,80 不会到达集群;这条只补局域网 http://shop.dev.test 的缺口,与 argocd/consul 的 *-redirect 同款。
+apiVersion: gateway.networking.k8s.io/v1
+kind: HTTPRoute
+metadata:
+  name: ecommerce-frontend-redirect
+  namespace: {{ $ns }}
+spec:
+  parentRefs:
+    - name: cilium-gateway
+      namespace: default
+      sectionName: http
+  hostnames:
+    - "shop.dev.test"
+    - "shop.apikv.com"
+  rules:
+    - matches:
+        - path:
+            type: PathPrefix
+            value: /
+      filters:
+        - type: RequestRedirect
+          requestRedirect:
+            scheme: https
+            port: 443
+            statusCode: 301
+---
+apiVersion: autoscaling.k8s.io/v1
+kind: VerticalPodAutoscaler
+metadata:
+  name: ecommerce-frontend-vpa
+  namespace: {{ $ns }}
+  labels:
+    app.kubernetes.io/part-of: ecommerce
+    app.kubernetes.io/component: capacity-recommendation
+spec:
+  targetRef:
+    apiVersion: apps/v1
+    kind: Deployment
+    name: ecommerce-frontend-deploy
+  updatePolicy:
+    updateMode: "Off"
+  resourcePolicy:
+    containerPolicies:
+      - containerName: ecommerce-frontend
+        controlledResources: [cpu, memory]
+        controlledValues: RequestsOnly
+{{- end }}

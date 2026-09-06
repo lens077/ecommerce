@@ -15,6 +15,7 @@
 # 注意:这是「最便宜的适用验证」入口,不替代按需锚点——
 #   改了 .service-matrix.yaml 仍要单独跑 backend/structcheck(已含在 -short 全量里),
 #   改了 context/ 或 AGENTS.md 要跑 scripts/verify-context.sh。
+# 部署清单 parity(helm/ 与裸 manifest 渲染同一套对象)也在这里并行跑:缺 helm/yq 直接红,不跳过。
 # 敏感数据扫描与前后端并行执行，只打印 path:line:kind，不把疑似值带进日志。
 set -uo pipefail
 
@@ -38,6 +39,10 @@ run_frontend() {
   cd frontend && pnpm ready
 }
 
+run_parity() {
+  scripts/verify-deploy-parity.sh
+}
+
 run_secrets() {
   # 工作树与历史分别扫描凭据和公网 IP 字面量；历史扫描防止只改 HEAD 留下旧值。
   # gitleaks 缺失直接红——2026-09-02 事故后不再允许「没装就跳过」的假门禁。
@@ -48,7 +53,7 @@ run_secrets() {
   gitleaks git . -c .gitleaks.toml --no-banner --redact=80
 }
 
-be_pid="" fe_pid="" secrets_pid="" notices_pid=""
+be_pid="" fe_pid="" secrets_pid="" notices_pid="" parity_pid=""
 start=$SECONDS
 if [ "$want" != "frontend" ]; then
   run_backend >"$logdir/backend.log" 2>&1 &
@@ -60,6 +65,8 @@ if [ "$want" != "backend" ]; then
 fi
 run_secrets >"$logdir/secrets.log" 2>&1 &
 secrets_pid=$!
+run_parity >"$logdir/parity.log" 2>&1 &
+parity_pid=$!
 # 许可声明新鲜度:pre-commit 会在依赖变更时自动重生成,这里只兜住绕过钩子的提交。
 scripts/gen-third-party-notices.sh --check >"$logdir/notices.log" 2>&1 &
 notices_pid=$!
@@ -91,5 +98,8 @@ report "sensitive-data(worktree + history)" "$secrets_rc" "$logdir/secrets.log"
 notices_rc=0; wait "$notices_pid" || notices_rc=$?
 report "notices(THIRD_PARTY_NOTICES.md 新鲜度)" "$notices_rc" "$logdir/notices.log"
 [ "$notices_rc" = 0 ] || overall=1
+parity_rc=0; wait "$parity_pid" || parity_rc=$?
+report "deploy-parity(helm ≡ 裸 manifest)" "$parity_rc" "$logdir/parity.log"
+[ "$parity_rc" = 0 ] || overall=1
 
 exit "$overall"

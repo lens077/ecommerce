@@ -1,20 +1,24 @@
 #!/usr/bin/env bash
-# 一条命令把后端交付到集群。形状参照 config-center 的 scripts/deploy-k8s.sh：
-# 先把「集群里那些不在 Git 的前置状态」补齐，再交给权威路径去 apply。
+# 一条命令把全部工作负载(10 个后端 + 2 个前端)交付到集群。形状参照 config-center 的
+# scripts/deploy-k8s.sh：先把「集群里那些不在 Git 的前置状态」补齐，再 apply。
+#
+# helm/ 与 backend/services/*/deploy/dev 裸 manifest 是同一套对象的两种写法
+# (scripts/verify-deploy-parity.sh 强制等价)；本脚本走 helm 那份，`make k8s-dev-all` 走裸那份，
+# 两条路径收敛到同一状态。
 #
 # 两种模式（DEPLOY_MODE）：
-#   helm   默认。渲染 helm/ 并 apply —— 与 ArgoCD 同一份真相源，
+#   helm   默认。渲染 helm/ 并 apply —— 与 ArgoCD 同一份 chart，
 #          用于 ArgoCD 不可用、或想在本机先看 diff 时。
 #   argocd 只补前置状态，apply argocd-{proj,repo,app}.yml，剩下交给 ArgoCD 拉。
-# DEPLOY_ACTION=delete 时，按 helm/ 渲染结果删除全部微服务资源；namespace、
+# DEPLOY_ACTION=delete 时，按 helm/ 渲染结果删除全部工作负载；namespace、
 # tcr-pull-secret 与 pg-ca-cert 仍保留。
 #
 # 前置状态指这些（此前全靠手敲 kubectl，不在 Git 里，换个集群就丢）：
 #   - ecommerce 命名空间
 #   - tcr-pull-secret：TCR 是私有仓库，没有它所有 Pod 都 ImagePullBackOff
 #   - pg-ca-cert：Postgres 走 verify-ca，缺了连不上库
-#   - ecommerce-config-source-pre：含机器 token 的 10 份 Config Center selector，
-#     必须由操作者在集群创建，不落盘、不进 Git
+#   - ecommerce-config-source-dev：含机器 token 的 10 份 Config Center selector，
+#     必须由操作者在集群创建，不落盘、不进 Git（与 helm/values.yaml global.configSource.secretName 一致）
 #
 # 用法：
 #   scripts/deploy-k8s.sh                      # helm 模式，渲染并 apply
@@ -78,6 +82,7 @@ need() {
   }
 }
 need kubectl
+need yq
 [[ "${deploy_mode}" == "helm" ]] && need helm
 postgres_egress_cidr="$("${script_dir}/resolve-postgres-egress-cidr.sh")"
 
@@ -134,8 +139,9 @@ fi
 
 # Config Center selector 含机器 token，不能由仓库内容生成。部署入口只校验它存在，
 # 避免先滚掉健康 Pod，才发现新 Pod 因缺 selector 无法启动。
-if ! "${kubectl_cmd[@]}" get secret ecommerce-config-source-pre -n "${namespace}" >/dev/null 2>&1; then
-  echo "缺少 ${namespace}/ecommerce-config-source-pre；请先创建不入库的 Config Center selector Secret" >&2
+config_source_secret="$(yq -r '.global.configSource.secretName' "${repo_root}/helm/values.yaml")"
+if ! "${kubectl_cmd[@]}" get secret "${config_source_secret}" -n "${namespace}" >/dev/null 2>&1; then
+  echo "缺少 ${namespace}/${config_source_secret}；请先创建不入库的 Config Center selector Secret" >&2
   exit 1
 fi
 
@@ -154,11 +160,11 @@ if [[ "${deploy_mode}" == "argocd" ]]; then
   exit 0
 fi
 
-echo "== helm 渲染并 apply（与 ArgoCD 同一份 helm/values.yaml）"
+echo "== helm 渲染并 apply（与 ArgoCD 同一份 helm/values.yaml；与 make k8s-dev-all 的裸 manifest 等价）"
 helm_args=(template ecommerce "${repo_root}/helm" --namespace "${namespace}"
   --set-string "global.postgresEgressCIDR=${postgres_egress_cidr}")
 if [[ -n "${services}" ]]; then
-  # 只开指定的几个：先把全部关掉，再逐个打开
+  # 只开指定的几个：先把全部（含 frontend / consumer-next 两个前端子 chart）关掉，再逐个打开
   for s in $(yq -r 'keys | .[] | select(. != "global")' "${repo_root}/helm/values.yaml"); do
     helm_args+=(--set "${s}.enabled=false")
   done

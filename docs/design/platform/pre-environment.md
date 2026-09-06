@@ -55,8 +55,9 @@ Gateway API v1.6 的 TCPRoute 与 TLSRoute v1 CRD 均已安装。Dragonfly 使�
 
 ## 已知幽灵配置（写 pre/prod 配置时别照抄）
 
-1. `backend/services/*/deploy/prod/` 的 `CONSUL_ADDR=consul-server.consul.svc:8501` + `CONSUL_SCHEME=https`
-   —— consul 根本没开 8501/TLS，prod 清单照这个起不来。
+1. ~~`backend/services/*/deploy/prod/` 的 `CONSUL_ADDR=consul-server.consul.svc:8501` + `CONSUL_SCHEME=https`
+   —— consul 根本没开 8501/TLS，prod 清单照这个起不来。~~ prod 目录已于 2026-09-06 删除
+   （从未 apply、浮动 tag `:prod`、已与 dev 结构性漂移）；需要 prod 时从 dev 复制再改，别照抄旧值。
 2. cart `pre.yml` 的三个 OTel exporter `tls.insecure_skip_verify` 不一致（false/true/false），
    而端点是集群内明文 4318——需统一并核对 exporter 实际行为。
 

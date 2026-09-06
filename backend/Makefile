@@ -191,15 +191,19 @@ compose-down:
 compose-logs:
 	docker compose logs -f --tail=100
 
-# ── 便捷部署（推荐入口）─────────────────────────────────────────────
+# ── 部署入口 ────────────────────────────────────────────────────────
+# 两条路径、同一套集群对象(2026-09-06 起,由仓库根 scripts/verify-deploy-parity.sh 强制等价):
+#   make deploy        渲染 helm/ 并 apply —— 给 helm / ArgoCD 使用者
+#   make k8s-dev-all   逐服务 apply backend/services/<svc>/deploy/dev/ —— 给 kubectl 使用者
+# 两者建的是同名同 ns 的资源,先后跑、混着跑都收敛到一样的状态,不会再出现两套并存。
+# 共享的 SA / CiliumNetworkPolicy / ExternalSecret 只在 helm/files/ 有一份,裸路径经
+# scripts/render-zero-trust.sh 从同一处渲染。
 # 底层是仓库根的 scripts/deploy-k8s.sh:先补齐集群里那些不在 Git 的前置状态
-# (namespace / tcr-pull-secret / pg-ca-cert),再走权威路径交付。
-# 与下面 k8s-*-all 的区别:这里用 helm/ 那份真相源(和 ArgoCD 同一份),
-# 下面那两个用各服务的裸 manifest,是应急路径。
+# (namespace / tcr-pull-secret / pg-ca-cert),再交付。
 DEPLOY_SCRIPT = ../scripts/deploy-k8s.sh
 
 .PHONY: deploy
-# 渲染 helm/ 并 apply 全部服务。先看会动什么: make deploy DRY_RUN=1
+# 渲染 helm/ 并 apply 全部工作负载。先看会动什么: make deploy DRY_RUN=1
 # 只部分服务: make deploy SERVICES="cart order"
 deploy:
 	@cd .. && scripts/harness-scars.sh --quiet
@@ -207,9 +211,9 @@ deploy:
 	  $(DEPLOY_SCRIPT)
 
 .PHONY: un-deploy
-# 按 deploy 使用的同一份 helm 清单卸载全部微服务；保留 namespace 与前置 Secret。
+# 按 deploy 使用的同一份 helm 清单卸载全部工作负载;保留 namespace 与前置 Secret。
 # 先看会删什么: make un-deploy DRY_RUN=1
-# KUBE_CONTEXT=ecommerce: 指的是 kubeconfig 中名为 ecommerce 的集群上下文，并不是 Kubernetes namespace。
+# KUBE_CONTEXT=ecommerce: 指的是 kubeconfig 中名为 ecommerce 的集群上下文,并不是 Kubernetes namespace。
 # 只有 kubectl config get-contexts 中确实存在该名称时才需要传它
 un-deploy:
 	@DEPLOY_ACTION=delete DRY_RUN="$(DRY_RUN)" SERVICES="" KUBE_CONTEXT="$(KUBE_CONTEXT)" \
@@ -220,6 +224,11 @@ un-deploy:
 deploy-argocd:
 	@DEPLOY_MODE=argocd DRY_RUN="$(DRY_RUN)" KUBE_CONTEXT="$(KUBE_CONTEXT)" \
 	  $(DEPLOY_SCRIPT)
+
+.PHONY: deploy-parity
+# 两份真相源是否仍等价(改了 helm/ 或 deploy/dev 任一侧后必跑)
+deploy-parity:
+	@cd .. && scripts/verify-deploy-parity.sh
 
 .PHONY: deploy-status
 deploy-status:
@@ -234,23 +243,21 @@ deploy-status:
 scars:
 	@cd .. && scripts/harness-scars.sh
 
-# ⚠️ 这两个目标与 ArgoCD 互斥。裸 manifest 建的是 ecommerce-<svc>-deploy,
-# ArgoCD 从 helm/ 建的是 <svc>,两套名字不冲突所以会**同时活着**,而且都用同一个
-# SERVICE_NAME 注册进 Consul —— 网关会把流量轮询到两份不同镜像的实例上。
-# 集群的权威路径是 helm/ + ArgoCD;这两个目标只在 ArgoCD 不可用时应急手工用。
+# 裸 manifest 路径。与 make deploy 建的是同一套资源(见上),ArgoCD 若在自动同步,
+# 它会把这里 apply 的内容按 helm/ 再同步一遍——因为两边等价,结果是 no-op。
+# 只有 dev 一个环境:prod 目录从未 apply 过且已漂移,2026-09-06 删除。
 #
 # 先 dry-run 看一眼会动什么: make k8s-dev-all KUBECTL_ARGS=--dry-run=server
 KUBECTL_ARGS ?=
 POSTGRES_EGRESS_CIDR ?=
 POSTGRES_SSH_ALIAS ?= node1
+# 后端服务之外、同属这套集群对象的裸 manifest(VPA 与两个前端)。
+# 这份清单与 scripts/verify-deploy-parity.sh 的 raw_sources 一致,少一条那边就会多出「只有 helm 有」。
+K8S_EXTRA_MANIFESTS ?= ../application-vpa.yml ../frontend/apps/consumer/deploy/pre ../frontend/apps/consumer-next/deploy/dev.yaml
 
 .PHONY: k8s-dev-all
 k8s-dev-all:
 	@$(MAKE) k8s-apply-all K8S_ENV=dev
-
-.PHONY: k8s-prod-all
-k8s-prod-all:
-	@$(MAKE) k8s-apply-all K8S_ENV=prod
 
 # 内部目标:按 K8S_ENV 扇出。缺目录与 apply 失败分开统计,
 # 都不中断循环 —— 一个服务坏掉不该让后面的服务全部漏掉
@@ -258,7 +265,7 @@ k8s-prod-all:
 k8s-apply-all:
 	@tmp=$$(mktemp "$${TMPDIR:-/tmp}/ecommerce-zero-trust.XXXXXX"); \
 	trap 'rm -f "$$tmp"' EXIT; \
-	echo "===== render and apply shared zero-trust baseline ====="; \
+	echo "===== render and apply shared zero-trust + otel-auth (helm/files) ====="; \
 	POSTGRES_EGRESS_CIDR="$(POSTGRES_EGRESS_CIDR)" POSTGRES_SSH_ALIAS="$(POSTGRES_SSH_ALIAS)" \
 	  ../scripts/render-zero-trust.sh > "$$tmp" || exit 1; \
 	kubectl apply $(KUBECTL_ARGS) -f "$$tmp" || exit 1; \
@@ -267,6 +274,10 @@ k8s-apply-all:
 	  if [ ! -d services/$$s/deploy/$(K8S_ENV) ]; then missing="$$missing $$s"; continue; fi; \
 	  echo "===== kubectl apply $$s ($(K8S_ENV)) ====="; \
 	  kubectl apply $(KUBECTL_ARGS) -f services/$$s/deploy/$(K8S_ENV) || fail="$$fail $$s"; \
+	done; \
+	for extra in $(K8S_EXTRA_MANIFESTS); do \
+	  echo "===== kubectl apply $$extra ====="; \
+	  kubectl apply $(KUBECTL_ARGS) -f "$$extra" || fail="$$fail $$extra"; \
 	done; \
 	rc=0; \
 	if [ -n "$$missing" ]; then echo "❌ 缺 deploy/$(K8S_ENV) 目录:$$missing"; rc=1; fi; \

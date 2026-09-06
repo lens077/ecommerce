@@ -258,10 +258,10 @@ deployment_coverage:
   paths:
     makefile: "backend/Makefile 的 SERVICES 变量 —— docker-*-all / k8s-*-all 的扇出清单"
     compose: "backend/compose.yaml 的 services 段 —— 本地一把拉起(键名去掉 ecommerce- 前缀)"
-    # ⚠️ 2026-08-24 更正：这两条的角色实际上是**反的**。
-    helm: "helm/values.yaml 的顶层键 —— 曾被当作 GitOps 真相源，但 ArgoCD 现在零 Application，
-      且 chart 的资源名/标签/tag 与集群实况均不符。当前只是一份待重建的部署描述，不是真相源"
-    deploy: "backend/services/{service}/deploy/{dev,prod} —— **当前实际在用的部署路径**（集群就是这么来的）"
+    # 2026-09-06 起两条是**同一套集群对象的两种写法**，由 scripts/verify-deploy-parity.sh 强制逐字段等价：
+    # helm 给 helm/ArgoCD 使用者，裸 manifest 给 kubectl 使用者，两份都是真相源，改一边必须改另一边。
+    helm: "helm/values.yaml 的顶层键（frontend / consumer-next 两个前端子 chart 不在 services 段，由 structcheck 显式放行）"
+    deploy: "backend/services/{service}/deploy/dev —— 裸 manifest（prod 目录已删；共享的 SA/CNP/ExternalSecret 在 helm/files/ 只有一份，经 scripts/render-zero-trust.sh 渲染）"
   # 例外必须写原因。不写例外 = 要求全覆盖。
   # 2026-08-07:behavior/product 的 chart 已补齐,四条入口现已 10/10 全覆盖,
   # 例外清空。
@@ -288,9 +288,7 @@ known_gaps:
      进度见 docs/todo/数据一致性与事件驱动.md"
   - "没有 logistics/warehouse 前端 app，也没有独立物流/仓储微服务；履约按设计并入 order，inventory 不是 WMS"
   - "10 个业务服务没有完整的默认拒绝 NetworkPolicy/CiliumNetworkPolicy；后端信任网关注入身份头的边界尚未由网络策略全面强制"
-  - "GitOps 拓扑断线：ArgoCD 没有本仓的 Application/ApplicationSet。helm/values.yaml
-     **不是**集群真相源——集群由 backend/services/{service}/deploy/ 的手工路径驱动，
-     集群实跑镜像 tag 与回写值不同源（带日期的运行时快照归 TODO.md「现状对照」§1，
-     本文件不承载观测值）。进度见 docs/todo/基础设施与部署模型.md"
-  - "helm/ 不是完整的集群描述：control-tower-gateway 这个在跑的工作负载不在 chart 里；且 chart 渲染出的
-     资源名/标签与实况不符，接回 GitOps 前先读 argocd-app.yml 顶部告警"
+  - "GitOps 拓扑断线：ArgoCD 没有本仓的 Application/ApplicationSet，集群由 make k8s-dev-all /
+     make deploy 的手工路径驱动。2026-09-06 起 helm/ 与裸 manifest 已逐字段等价且 CI 回写两边，
+     接回 ArgoCD 只差 argocd-app.yml 顶部列的两件事。进度见 docs/todo/基础设施与部署模型.md"
+  - "helm/ 只描述本仓工作负载：control-tower-gateway 在跑但属 control-tower 仓，不在 chart 里也不该在"

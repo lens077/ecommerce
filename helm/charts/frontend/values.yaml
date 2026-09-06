@@ -1,0 +1,9 @@
+# 占位默认值;实际值来自 umbrella helm/values.yaml 的 frontend: 段。
+enabled: true
+replicaCount: 1
+image:
+  repository: ""
+  tag: ""
+containerPort: 80
+servicePort: 30080
+gatewayURL: ""

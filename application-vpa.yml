@@ -1,4 +1,6 @@
-# ecommerce 容量校准的 VPA 真相源。
+# ecommerce 容量校准的 VPA(裸 manifest 侧)。helm 侧由各子 chart 的 vpa 模板渲染同名对象,
+# 两份由 scripts/verify-deploy-parity.sh 强制等价。control-tower-gateway 的 VPA 不在本仓——
+# 那是 control-tower 仓的工作负载,曾在这里多放一份并与它们已 apply 的版本打架(2026-09-06 移除)。
 #
 # 当前集群只安装 recommender，没有 updater 或 admission-controller。本文件统一使用
 # updateMode: Off，只收集推荐值，不修改、驱逐或重建 Pod。推荐值至少覆盖 7 天、一次
@@ -257,26 +259,5 @@ spec:
   resourcePolicy:
     containerPolicies:
       - containerName: consumer-next
-        controlledResources: [cpu, memory]
-        controlledValues: RequestsOnly
----
-apiVersion: autoscaling.k8s.io/v1
-kind: VerticalPodAutoscaler
-metadata:
-  name: control-tower-gateway-vpa
-  namespace: ecommerce
-  labels:
-    app.kubernetes.io/part-of: ecommerce
-    app.kubernetes.io/component: capacity-recommendation
-spec:
-  targetRef:
-    apiVersion: apps/v1
-    kind: Deployment
-    name: control-tower-gateway
-  updatePolicy:
-    updateMode: "Off"
-  resourcePolicy:
-    containerPolicies:
-      - containerName: gateway
         controlledResources: [cpu, memory]
         controlledValues: RequestsOnly

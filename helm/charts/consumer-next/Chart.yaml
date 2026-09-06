@@ -1,0 +1,5 @@
+apiVersion: v2
+name: consumer-next
+description: consumer-next(Next.js App Router 公开页)。裸 manifest 在 frontend/apps/consumer-next/deploy/dev.yaml,两份由 parity 门禁对齐
+type: application
+version: 0.1.0

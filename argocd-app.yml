@@ -1,30 +1,21 @@
-# ⚠️⚠️ apply 之前必读（2026-08-24 实测）⚠️⚠️
+# ⚠️ apply 之前必读（2026-09-06 更新）⚠️
 #
-# 本文件当前**不可直接 apply**。集群零 Application、零 ApplicationSet，
-# 而 `helm/` 那套 chart 从来没跟真实部署对齐过 —— 三处都对不上：
+# 2026-08-24 时本文件不可 apply：`helm/` 渲染出的资源名(user/cart…)、标签方案
+# (app.kubernetes.io/name)、镜像 tag(1.4.0)三处都与集群实况(ecommerce-user-deploy /
+# app: ecommerce-user / digest 钉死)对不上,接回 selfHeal 会起一整套影子服务并经 Consul
+# 抢走网关流量。那段历史保留在 git log 与 context/harness-framework/evolution-log.md。
 #
-#   | 项目        | chart 渲染出的                | 集群实际跑的
-#   |------------|------------------------------|---------------------------
-#   | Deployment | user / cart / …              | ecommerce-user-deploy / …
-#   | 标签方案    | app.kubernetes.io/name: user | app: ecommerce-user
-#   | 镜像 tag    | 1.4.0                        | :dev / meili-dev-* / cdc-dev-*
+# 2026-09-06 起 helm/ 与 backend/services/*/deploy/dev 裸 manifest **逐字段等价**
+# (scripts/verify-deploy-parity.sh 强制;`helm template` 对集群 `kubectl diff` 为空),
+# 上面第 1、2 步已完成。但仍有两件事没做,所以 syncPolicy.automated 仍保持注释:
+#   1. 集群里 CiliumNetworkPolicy 的 Postgres 出站 CIDR 是运行时注入
+#      (scripts/resolve-postgres-egress-cidr.sh),ArgoCD 侧要通过 helm parameters
+#      传 global.postgresEgressCIDR(见下方 __POSTGRES_EGRESS_CIDR__ 占位),否则渲染即失败。
+#   2. 集群零 Application 的现状要先用「只观察不动」的手动 sync 跑一段时间,确认 diff 为空后
+#      再放开 automated。放开的那次改动要同时更新 AGENTS.md「GitOps 当前是断的」一段。
 #
-# 后果不是「同步一下就对齐」，而是**起一整套平行的影子服务**：
-#   - 资源名与标签都不重叠 → 不会覆盖现有工作负载，而是并排新建 10 个 Deployment
-#   - Service selector 也不重叠 → HTTP 流量不会串
-#   - **但 chart 里 CONSUL_ENABLED=true** —— 影子 pod 会用相同的 discovery 名注册进
-#     Consul，而 control-tower 网关正是走 Consul discovery:/// 解析后端。
-#     结果：网关把真实流量负载均衡到 1.4.0 的影子 pod 上。这是线上事故。
-#
-# 另外 chart 里**根本没有** control-tower-gateway / outbox-relay / search-indexer
-# 这三个已在跑的工作负载，所以它也不是一份完整的集群描述。
-#
-# 接回 GitOps 的正确顺序：
-#   1. 改 helm/ 让它描述真实拓扑（资源名、标签、真实 tag，并补上述三个工作负载）
-#   2. `helm template` 与 `kubectl get -o yaml` 逐项比对，diff 为空
-#   3. 再把下面的 syncPolicy.automated 放开
-# 在第 2 步通过之前，syncPolicy 保持手动（automated 已注释掉），
-# 这样即使有人 apply 了本文件，ArgoCD 也只观察和报告漂移，不动集群。
+# control-tower-gateway 属于同级 control-tower 仓;outbox-relay 与 search-indexer 已于
+# 2026-09-03 退役。helm/ 不得补回这三个工作负载。
 #
 # ---------------------------------------------------------------------------
 # 作用：通过 ApplicationSet 的 list 生成器，为 ecommerce 项目部署一个

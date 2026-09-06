@@ -235,7 +235,7 @@ specs:
               - { port: "30008", protocol: TCP }
               - { port: "30009", protocol: TCP }
               - { port: "30011", protocol: TCP }
-  - description: "search: gateway-only ingress; Meilisearch projection query path"
+  - description: "search: gateway-only ingress; Elasticsearch projection query path"
     endpointSelector:
       matchLabels:
         io.cilium.k8s.policy.serviceaccount: ecommerce-search
@@ -255,14 +255,10 @@ specs:
       - *config_center
       - *consul
       - *otlp
-      - &meilisearch
-        toEndpoints:
-          - matchLabels:
-              k8s:io.kubernetes.pod.namespace: search
-              app.kubernetes.io/instance: meilisearch
-              app.kubernetes.io/name: meilisearch
+      - toFQDNs:
+          - matchName: es.apikv.com
         toPorts:
-          - ports: [{ port: "7700", protocol: TCP }]
+          - ports: [{ port: "443", protocol: TCP }]
   - description: "product: gateway-only ingress; Postgres, Dragonfly and Gorse dependencies"
     endpointSelector:
       matchLabels:
