@@ -672,6 +672,45 @@ type order
 
 分级全表、三种身份方案的取舍、IAM 过滤规则、合并语义与六步落地顺序见 [`docs/design/platform/anonymous-shopping.md`](design/platform/anonymous-shopping.md)。**设计草案，未落地**——触发它的真实缺陷（匿名逛首页被强制拉去登录）已在前端侧止血，但匿名加购路径仍不存在。
 
+### 8.5 服务端访问控制准则
+
+8.1–8.4 定义了鉴权**在哪里做、由谁做**；本节定义每个接口**必须做到什么**。这些准则是硬约束，新增或修改任何 RPC 前逐条核对。
+
+**原则一：默认拒绝，而不是默认开放。** 路由表未显式登记为 A 级（匿名）或 B 级（访客）的 procedure，一律按 C 级（必须登录）处理；网关和服务的缺省分支都是拒绝。前端没有入口不等于接口不可达——任何能被网络到达的接口，都按「攻击者直接构造请求」来设计。响应约定：未认证 `401`，已认证但无权 `403`，资源不存在或无权访问可统一 `404` 以避免泄露存在性。
+
+**原则二：关键函数必须做资源归属检查，不是只查存在性。** 以下写法是越权漏洞的标准形态，禁止出现：
+
+```go
+// ❌ 只回答了「订单存在吗」，没回答「当前用户能删它吗」
+order, err := orders.Get(ctx, req.Msg.OrderId)
+if err != nil { return notFound() }
+return orders.Delete(ctx, order.ID)
+```
+
+必须同时覆盖主体、动作、资源归属、状态四项，主体来自服务端会话而非请求体：
+
+```go
+subject, err := identity.RequireUser(ctx.Header())     // C 级：显式拒绝访客
+if err != nil { return unauthenticated() }
+order, err := orders.Get(ctx, req.Msg.OrderId)
+if err != nil { return notFound() }
+if !fga.Check(subject, "can_cancel", "order:"+order.ID) { return forbidden() }  // 8.2 的关系模型
+if !order.CanCancel() { return failedPrecondition() }
+return orders.Cancel(ctx, order.ID)
+```
+
+**原则三：每个暴露的方法独立授权。** `GET`/`POST`/`PATCH`/`PUT`/`DELETE`（Connect 下即每个 procedure）分别检查，读接口做过归属检查不代表同一资源的删接口也安全。权限粒度到「动作 + 范围」，用 OpenFGA 关系（`can_view`、`can_cancel`、`can_edit`）表达，不用 `admin` 布尔值包打天下。
+
+**原则四：任何客户端传来的数据都不参与权限决策。** Cookie、Authorization、自定义头、URL、请求体、隐藏字段、前端算出的 `isAdmin`/`role`/`owner_id`/`tenant_id`/`confirmed`/`step`，全部不可信。请求里的对象 ID 只用于**定位候选资源**，不能证明「它属于当前用户」；归属关系必须由服务端从会话主体与数据库记录重新建立。网关在鉴权前无条件剥离 `x-md-*` 入站头，是这条原则在边缘的落实（control-tower `identity.Strip`）。
+
+**原则五：多步骤操作两件事都要做。** 预览→确认、确认→删除、上传→确认、创建订单→支付、登录→OAuth 回调，第 2 步都是可被独立到达的接口。（a）第 2 步独立认证授权，不因第 1 步通过而免检；（b）第 1 步的结果存服务端并签发一次性状态（绑定主体、动作、目标资源摘要、过期、nonce、单次消费），第 2 步只消费状态、不重新接受客户端提交的关键语义。只做 (a) 会留下「第 1 步确认订单 A、第 2 步改成订单 B」的口子。
+
+**原则六：集中 IAM，但网关不是唯一防线。** 外部请求全部经 control-tower：验证会话、剥离伪造头、按路由表做粗粒度放行、注入可信身份。但订单、支付、地址、配置、用户数据服务仍在自己边界内做资源级 OpenFGA Check——后端可能被内部调用、被任务队列调用、因误配被绕过网关到达。网络策略（7.2 的 CNP）解决「谁能到达」，本节解决「到达后能做什么」，互不替代。
+
+**原则七：最小权限覆盖四个维度。** 主体（消费者/商家 staff/商家 admin/平台运营/服务账号分开）、动作（读/建/改/删/导出/回滚分开）、资源（限定到 user/store/merchant/环境）、时间（高危权限短时授予，机器令牌带有效期、可撤销、记最后使用时间）。默认没有权限；拒绝也记日志（主体、资源、动作、来源、原因），但日志不落完整 token 或敏感业务数据。
+
+**验收标准**：每个受保护 procedure 至少用管理员、用户 A、用户 B、游客四种身份各测一遍；第 2 步接口额外测「不带第 1 步状态直调」「换对象 ID」「重放已消费令牌」；拒绝请求后核对数据库、文件、队列、支付状态**没有副作用**。每个历史越权漏洞留一条能复现它的回归测试。
+
 
 ## 9. 统一可观测性体系
 
