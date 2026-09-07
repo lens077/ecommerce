@@ -1184,3 +1184,22 @@ description: harness 本身（硬规则/门禁/Agent 约束）每次改动的原
   replicas、裸侧删 cart Certificate)均红并指出对象;`helm template … | kubectl diff -f -` 对集群
   只剩三类预期差异(8 个服务的端口命名、frontend containerPort、占位 CIDR);
   `go test -count=1 ./structcheck/...` 绿;`scripts/verify-context.sh` 绿。
+
+### 2026-09-08 pre-commit 钩子：vp 改用绝对路径，修 `cd frontend` 后 PATH 失效
+
+- **改了什么**：`frontend/.vite-hooks/pre-commit` 第 4 步由 `vp staged` 改为
+  `PATH="$root/frontend/node_modules/.bin:$PATH" vp staged`。不动 `_/h`——它是 `vp config` 生成物，
+  下次 `prepare` 会覆盖。
+- **为什么**：`_/h` 注入 PATH 的是 `$d/node_modules/.bin`，`$d` 由 `$0` 推出；git 以相对 hooksPath
+  调钩子时 `$0` 是相对的，PATH 里躺着的就是相对的 `frontend/node_modules/.bin`。pre-commit 为了让
+  `vp staged` 找到 `vite.config.ts` 必须先 `cd "$root/frontend"`，cd 之后那个相对条目指向不存在的
+  `frontend/frontend/node_modules/.bin`，`vp` 退出 127。commit-msg 不 cd，所以 commitlint 一直正常，
+  这让问题只在「提交任何东西」时暴露、又不出现在 commit-msg 的报错里，容易被误判成依赖没装。
+- **触发事故**：2026-09-08 提交一条纯 docs 改动（`docs/TECH.md` §8.5）。gitleaks 绿之后钩子挂在
+  `vp: command not found`，末尾 `PATH=frontend/node_modules/.bin:...` 一行是唯一线索。
+  `./node_modules/.bin/vp --version` 直接跑正常，排除了「依赖没装」。当次用绝对路径 PATH 包住
+  `git commit` 让钩子跑完，事后修钩子本身。
+- **怎么验证的**：修后 `git commit` 走完全部四步（verify-public-ips / gitleaks / notices / lint-staged），
+  lint-staged 打出「could not find any staged files matching configured tasks」即到达了 vp。
+  钩子退出 127 的语义在 commit-msg 注释里写着「= frontend 依赖未装」——这条现在只对 commit-msg 成立，
+  pre-commit 的 127 已由本次修掉。

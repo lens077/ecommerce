@@ -44,5 +44,12 @@ esac
 # cwd 找 vite.config.ts，在仓库根找不到就直接报
 # 「No "staged" config found in vite.config.ts」并让整个提交失败。
 # cd 之后 lint-staged 只挑 frontend/ 下的暂存文件，后端 Go 的改动不会被它碰。
+#
+# vp 必须用绝对路径找：_/h 注入 PATH 的是 `$d/node_modules/.bin`，而 $d 由 $0 推出，
+# git 以相对 hooksPath 调钩子时 $0 是相对的，于是 PATH 里躺着的是相对的
+# `frontend/node_modules/.bin`——上一行 cd 进 frontend 后它就指向不存在的
+# `frontend/frontend/node_modules/.bin`，vp 报 127「command not found」，提交被拒
+# （2026-09-08 实测：gitleaks 绿、lint 都没跑到就挂）。commit-msg 不 cd 所以不受影响。
+# 不改 _/h：那是 vp config 生成物，下次 prepare 会被覆盖。
 cd "$root/frontend" || exit 0
-vp staged
+PATH="$root/frontend/node_modules/.bin:$PATH" vp staged
