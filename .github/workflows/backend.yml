@@ -4,7 +4,7 @@
 #   - 服务清单不在这里手抄，从 .service-matrix.yaml 查表（真相源）
 #   - 单服务改动只触发该服务；共享代码（api/pkg/constants/go.mod）改动触发全量
 #   - 构建完成后由唯一的 update-manifests job 一次性回写镜像 tag —— **两份都写**：
-#     helm/values.yaml 与 backend/services/<svc>/deploy/dev/deployment.yaml
+#     helm/values.yaml 与 backend/services/<svc>/deploy/base/deployment.yaml（=dev；pre 在 overlays/pre 显式钉）
 #     （2026-09-06 前只写 helm，而集群 apply 的是裸 manifest，发版 tag 从未到达集群），
 #     避免矩阵并发推 main 冲突
 #
@@ -122,7 +122,7 @@ jobs:
     secrets: inherit
 
   # 镜像 tag 回写：两份部署真相源（helm/values.yaml 顶层键的 image.tag，与
-  # backend/services/<svc>/deploy/dev/deployment.yaml 的 image:）必须同步写，
+  # backend/services/<svc>/deploy/base/deployment.yaml 的 image:）必须同步写，
   # 写完先跑 scripts/verify-deploy-parity.sh 证明两边仍等价再提交。
   # 回写提交带 [skip ci]，本 workflow 只由 tag 触发，回写不会再触发自己。
   update-manifests:
@@ -150,8 +150,8 @@ jobs:
             repo="$(yq -r ".${svc}.image.repository" helm/values.yaml)"
             # 裸 manifest 用 sed 而不是 yq -i：yq 会重排注释与缩进，把一份手写文档变成机器输出
             sed -i -E "s#^( +image: )${repo}:.*\$#\1${repo}:${TAG}#" \
-              "backend/services/${svc}/deploy/dev/deployment.yaml"
-            grep -q "image: ${repo}:${TAG}\$" "backend/services/${svc}/deploy/dev/deployment.yaml" \
+              "backend/services/${svc}/deploy/base/deployment.yaml"
+            grep -q "image: ${repo}:${TAG}\$" "backend/services/${svc}/deploy/base/deployment.yaml" \
               || { echo "裸 manifest 回写失败：${svc}" >&2; exit 1; }
           done
           git diff --stat
@@ -170,7 +170,7 @@ jobs:
           SVC_LIST=$(jq -r 'join(",")' <<<"$SERVICES")
           git config user.name "github-actions[bot]"
           git config user.email "github-actions[bot]@users.noreply.github.com"
-          git add helm/values.yaml backend/services/*/deploy/dev/deployment.yaml
+          git add helm/values.yaml backend/services/*/deploy/base/deployment.yaml
           git diff --cached --quiet && { echo "无变化，跳过提交"; exit 0; }
           git commit -m "ci: 更新 ${SVC_LIST} 镜像 tag 至 ${TAG} [skip ci]"
           # 与后续 push 竞争时 rebase 重试；本文件只会追加改动，冲突概率极低

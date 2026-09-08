@@ -142,7 +142,7 @@ spec:
         - name: config-source
           secret:
             secretName: {{ $g.configSource.secretName }}
-            defaultMode: 0400
+            defaultMode: 256   # = 0400 八进制。写十进制是因为 0400 在 YAML 1.1/1.2 下解析不同(256 vs 400),kustomize 与 yq 会各读各的
             # Secret 是运维打包对象;每个 Pod 只投射自己的含 token selector。
             items:
               - key: {{ $svc }}.yaml
@@ -203,7 +203,7 @@ spec:
 {{- $v := .values -}}
 {{- $g := .global -}}
 {{- if $g.directAccess.enabled }}
-# 本地直连入口(绕过 control-tower 网关):https://{{ $svc }}-api.{{ $g.directAccess.domain }} → 本服务 Service。
+# 本地直连入口(绕过 control-tower 网关):https://{{ $svc }}.{{ $g.directAccess.domain }} → 本服务 Service。
 # 只挂 {{ $g.directAccess.domain }},不挂公网域名——公网暴露要走 Pangolin + SSO,不在这里。
 # ⚠️ 这条路不经网关鉴权:x-md-* 身份头由调用方自填,服务会照信。只给局域网开发用,
 #    global.directAccess.enabled=false 可整体关掉(裸 manifest 侧删各服务的 httproute.yaml)。
@@ -218,7 +218,7 @@ spec:
       namespace: default
       sectionName: https
   hostnames:
-    - "{{ $svc }}-api.{{ $g.directAccess.domain }}"
+    - "{{ $svc }}.{{ $g.directAccess.domain }}"
   rules:
     - matches:
         - path:

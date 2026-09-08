@@ -261,7 +261,7 @@ deployment_coverage:
     # 2026-09-06 起两条是**同一套集群对象的两种写法**，由 scripts/verify-deploy-parity.sh 强制逐字段等价：
     # helm 给 helm/ArgoCD 使用者，裸 manifest 给 kubectl 使用者，两份都是真相源，改一边必须改另一边。
     helm: "helm/values.yaml 的顶层键（frontend / consumer-next 两个前端子 chart 不在 services 段，由 structcheck 显式放行）"
-    deploy: "backend/services/{service}/deploy/dev —— 裸 manifest（prod 目录已删；共享的 SA/CNP/ExternalSecret 在 helm/files/ 只有一份，经 scripts/render-zero-trust.sh 渲染）"
+    deploy: "backend/services/{service}/deploy/{base,overlays/dev,overlays/pre} —— kustomize 裸 manifest（环境差异只在 overlay；共享的 SA/CNP/ExternalSecret 在 helm/files/ 只有一份，经 scripts/render-zero-trust.sh 渲染）"
   # 例外必须写原因。不写例外 = 要求全覆盖。
   # 2026-08-07:behavior/product 的 chart 已补齐,四条入口现已 10/10 全覆盖,
   # 例外清空。

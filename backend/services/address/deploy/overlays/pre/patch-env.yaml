@@ -1,0 +1,11 @@
+# JSON6902 而不是 strategic merge:后者会把补丁过的 env 项挪到列表最前,顺序变了就是新的 pod template。
+# env/4 = DEPLOYMENT_MODE(base 里第 5 项);在它前面插 env 会让这里替换错项——parity 门禁会立刻红。
+- op: test
+  path: /spec/template/spec/containers/0/env/4/name
+  value: DEPLOYMENT_MODE
+- op: replace
+  path: /spec/template/spec/containers/0/env/4/value
+  value: "pre"
+- op: replace
+  path: /spec/template/spec/volumes/0/secret/secretName
+  value: ecommerce-config-source-pre

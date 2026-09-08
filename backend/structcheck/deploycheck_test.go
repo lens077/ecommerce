@@ -236,9 +236,9 @@ func readHelmServices(t *testing.T) []string {
 	return names
 }
 
-// 具备 deploy/dev 才算被裸 manifest 覆盖。
-// 曾要求 dev+prod 都有;prod 目录从未 apply 过、用浮动 tag :prod、且已与 dev 结构性漂移,
-// 2026-09-06 随「两份真相源 parity」一并删除,只剩 dev 一个环境。
+// 具备 deploy/base + deploy/overlays/{dev,pre} 三处 kustomization 才算被裸 manifest 覆盖。
+// 曾是 deploy/{dev,prod} 两份整抄的目录;prod 从未 apply 且漂移,2026-09-06 删除,同日改为
+// kustomize base+overlays:共同部分只有一份,环境差异只在 overlay 里,parity 门禁按环境逐个比。
 func readDeployCoveredServices(t *testing.T) []string {
 	t.Helper()
 	entries, err := os.ReadDir(servicesDir)
@@ -250,8 +250,14 @@ func readDeployCoveredServices(t *testing.T) []string {
 		if !e.IsDir() {
 			continue
 		}
-		info, err := os.Stat(filepath.Join(servicesDir, e.Name(), "deploy", "dev"))
-		if err == nil && info.IsDir() {
+		hasAll := true
+		for _, rel := range []string{"base", "overlays/dev", "overlays/pre"} {
+			if _, err := os.Stat(filepath.Join(servicesDir, e.Name(), "deploy", rel, "kustomization.yaml")); err != nil {
+				hasAll = false
+				break
+			}
+		}
+		if hasAll {
 			covered = append(covered, e.Name())
 		}
 	}
@@ -270,7 +276,7 @@ func TestDeploymentListsMatchMatrix(t *testing.T) {
 		{"makefile", "backend/Makefile 的 SERVICES", readMakefileServices(t)},
 		{"compose", "backend/compose.yaml 的 services 段", readComposeServices(t)},
 		{"helm", "helm/values.yaml 的顶层键", readHelmServices(t)},
-		{"deploy", "backend/services/{svc}/deploy/dev", readDeployCoveredServices(t)},
+		{"deploy", "backend/services/{svc}/deploy/{base,overlays/dev,overlays/pre}", readDeployCoveredServices(t)},
 	}
 
 	for _, l := range lists {
@@ -421,10 +427,11 @@ func TestDeploymentsUseConfigCenterSelector(t *testing.T) {
 
 	for service := range m.Services {
 		service := service
+		// base 里的值以 dev 为准;pre 等环境经 overlay 补丁,其结果由 parity 门禁对 helm 侧核对。
 		for _, environment := range []string{"dev"} {
 			environment := environment
 			t.Run("manifest/"+service+"/"+environment, func(t *testing.T) {
-				path := filepath.Join(servicesDir, service, "deploy", environment, "deployment.yaml")
+				path := filepath.Join(servicesDir, service, "deploy", "base", "deployment.yaml")
 				data, err := os.ReadFile(path)
 				if err != nil {
 					t.Fatalf("read %s: %v", path, err)

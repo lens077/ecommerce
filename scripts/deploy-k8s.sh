@@ -6,6 +6,9 @@
 # (scripts/verify-deploy-parity.sh 强制等价)；本脚本走 helm 那份，`make k8s-dev-all` 走裸那份，
 # 两条路径收敛到同一状态。
 #
+# 环境（DEPLOY_ENV，默认 dev）：dev 用 helm/values.yaml；其它环境再叠 helm/values-<env>.yaml
+# （只写差异；dev 独有的本地直连在那里被关掉）。裸侧对应 backend/services/*/deploy/overlays/<env>。
+#
 # 两种模式（DEPLOY_MODE）：
 #   helm   默认。渲染 helm/ 并 apply —— 与 ArgoCD 同一份 chart，
 #          用于 ArgoCD 不可用、或想在本机先看 diff 时。
@@ -26,12 +29,19 @@
 #   DEPLOY_MODE=argocd scripts/deploy-k8s.sh   # 交给 ArgoCD
 #   DEPLOY_ACTION=delete scripts/deploy-k8s.sh # 卸载全部微服务
 #   SERVICES="cart order" scripts/deploy-k8s.sh  # 只部分服务（helm 模式）
+#   DEPLOY_ENV=pre scripts/deploy-k8s.sh         # pre 环境（values.yaml + values-pre.yaml）
 set -Eeuo pipefail
 
 script_dir="$(cd -- "$(dirname -- "${BASH_SOURCE[0]}")" && pwd)"
 repo_root="$(cd -- "${script_dir}/.." && pwd)"
 
 deploy_mode="${DEPLOY_MODE:-helm}"
+deploy_env="${DEPLOY_ENV:-dev}"
+values_args=(-f "${repo_root}/helm/values.yaml")
+if [[ "${deploy_env}" != "dev" ]]; then
+  [[ -f "${repo_root}/helm/values-${deploy_env}.yaml" ]] || { echo "缺少 helm/values-${deploy_env}.yaml" >&2; exit 1; }
+  values_args+=(-f "${repo_root}/helm/values-${deploy_env}.yaml")
+fi
 deploy_action="${DEPLOY_ACTION:-apply}"
 namespace="${NAMESPACE:-ecommerce}"
 kube_context="${KUBE_CONTEXT:-}"
@@ -88,7 +98,7 @@ postgres_egress_cidr="$("${script_dir}/resolve-postgres-egress-cidr.sh")"
 
 if [[ "${deploy_action}" == "delete" ]]; then
   echo "== helm 渲染并删除全部微服务（保留 namespace 与前置 Secret）"
-  helm template ecommerce "${repo_root}/helm" --namespace "${namespace}" \
+  helm template ecommerce "${repo_root}/helm" --namespace "${namespace}" "${values_args[@]}" \
     --set-string "global.postgresEgressCIDR=${postgres_egress_cidr}" |
     "${kubectl_cmd[@]}" "${kubectl_delete_cmd[@]}" --ignore-not-found=true \
       --namespace "${namespace}" -f -
@@ -139,7 +149,8 @@ fi
 
 # Config Center selector 含机器 token，不能由仓库内容生成。部署入口只校验它存在，
 # 避免先滚掉健康 Pod，才发现新 Pod 因缺 selector 无法启动。
-config_source_secret="$(yq -r '.global.configSource.secretName' "${repo_root}/helm/values.yaml")"
+config_source_secret="$(helm template ecommerce "${repo_root}/helm" "${values_args[@]}" --set-string global.postgresEgressCIDR=203.0.113.1/32 \
+  --show-only charts/cart/templates/deployment.yaml | yq -r '.spec.template.spec.volumes[] | select(.name=="config-source") | .secret.secretName')"
 if ! "${kubectl_cmd[@]}" get secret "${config_source_secret}" -n "${namespace}" >/dev/null 2>&1; then
   echo "缺少 ${namespace}/${config_source_secret}；请先创建不入库的 Config Center selector Secret" >&2
   exit 1
@@ -160,8 +171,8 @@ if [[ "${deploy_mode}" == "argocd" ]]; then
   exit 0
 fi
 
-echo "== helm 渲染并 apply（与 ArgoCD 同一份 helm/values.yaml；与 make k8s-dev-all 的裸 manifest 等价）"
-helm_args=(template ecommerce "${repo_root}/helm" --namespace "${namespace}"
+echo "== helm 渲染并 apply（env=${deploy_env}；与 make k8s-${deploy_env}-all 的裸 manifest 等价）"
+helm_args=(template ecommerce "${repo_root}/helm" --namespace "${namespace}" "${values_args[@]}"
   --set-string "global.postgresEgressCIDR=${postgres_egress_cidr}")
 if [[ -n "${services}" ]]; then
   # 只开指定的几个：先把全部（含 frontend / consumer-next 两个前端子 chart）关掉，再逐个打开

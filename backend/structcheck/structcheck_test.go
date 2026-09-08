@@ -310,7 +310,7 @@ func TestGatewayWiringMatchesMatrix(t *testing.T) {
 }
 
 // directHostFor 是 direct:// 形态的接线约定:matrix 服务名 <svc> 对应
-// k8s Service ecommerce-<svc>-service(见各 services/*/deploy/dev/service.yaml),
+// k8s Service ecommerce-<svc>-service(见各 services/*/deploy/base/service.yaml),
 // 网关 target 写 ecommerce-<svc>-service.ecommerce.svc:<port>,端口不在 matrix 里,不核。
 func directHostFor(service string) string {
 	return "ecommerce-" + service + "-service.ecommerce.svc"

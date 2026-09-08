@@ -5,7 +5,7 @@
 # app: ecommerce-user / digest 钉死)对不上,接回 selfHeal 会起一整套影子服务并经 Consul
 # 抢走网关流量。那段历史保留在 git log 与 context/harness-framework/evolution-log.md。
 #
-# 2026-09-06 起 helm/ 与 backend/services/*/deploy/dev 裸 manifest **逐字段等价**
+# 2026-09-06 起 helm/ 与 backend/services/*/deploy(kustomize base+overlays)裸 manifest **按环境逐字段等价**
 # (scripts/verify-deploy-parity.sh 强制;`helm template` 对集群 `kubectl diff` 为空),
 # 上面第 1、2 步已完成。但仍有两件事没做,所以 syncPolicy.automated 仍保持注释:
 #   1. 集群里 CiliumNetworkPolicy 的 Postgres 出站 CIDR 是运行时注入

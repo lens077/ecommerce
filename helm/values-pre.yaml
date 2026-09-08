@@ -1,0 +1,25 @@
+# pre 环境相对 values.yaml(=dev)的差异。用法:helm template/upgrade … -f values.yaml -f values-pre.yaml
+# 与裸侧 backend/services/<svc>/deploy/overlays/pre/ 逐字段等价(scripts/verify-deploy-parity.sh pre)。
+#
+# 只写差异,不要把整份 values 抄一遍——抄了就又是一份会漂移的副本。三处差异:
+#   1. deploymentMode         运行模式
+#   2. configSource.secretName Config Center selector Secret(不入库,由操作者在集群创建)
+#   3. directAccess.enabled   本地直连(HTTPRoute + 放行 Cilium ingress 实体的 CNP)**只属于 dev**。
+#      它绕过 control-tower 网关鉴权,x-md-* 身份头由调用方自填;pre/prod 绝不能带。
+#   4. 各服务 image.tag        pre 用哪个发布版本在这里显式钉;晋级就是改这里(裸侧改 overlays/pre 的 newTag)
+global:
+  deploymentMode: pre
+  configSource:
+    secretName: ecommerce-config-source-pre
+  directAccess:
+    enabled: false
+user:      { image: { tag: "1.6.3" } }
+search:    { image: { tag: "1.6.3" } }
+product:   { image: { tag: "1.6.3" } }
+order:     { image: { tag: "1.6.3" } }
+inventory: { image: { tag: "1.6.3" } }
+cart:      { image: { tag: "1.6.3" } }
+merchant:  { image: { tag: "1.6.3" } }
+payment:   { image: { tag: "1.6.3" } }
+address:   { image: { tag: "1.6.3" } }
+behavior:  { image: { tag: "1.6.3" } }

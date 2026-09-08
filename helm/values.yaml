@@ -1,4 +1,4 @@
-# ecommerce umbrella chart 的 values —— 与 backend/services/<svc>/deploy/dev/ 裸 manifest
+# ecommerce umbrella chart 的 values —— 与 backend/services/<svc>/deploy/(base+overlays) 裸 manifest
 # 是**同一套集群对象的两种写法**,由 scripts/verify-deploy-parity.sh 强制逐字段等价:
 # 这里改了值、裸 manifest 没跟上(或反过来),本地锚点和 CI 的 deploy-consistency 都会红。
 # 两份都是真相源,面向不同的使用者:helm 给 ArgoCD / helm 用户,裸 manifest 给 kubectl 用户。
@@ -21,8 +21,8 @@ global:
   # or callers pass POSTGRES_EGRESS_CIDR / --set-string explicitly.
   postgresEgressCIDR: ""
   deploymentMode: dev
-  # 局域网直连入口:每个服务一条 HTTPRoute https://<svc>-api.<domain> 直达 Service,绕过网关鉴权。
-  # 只给开发用;关掉这里等价于裸 manifest 侧删掉各服务的 deploy/dev/httproute.yaml。
+  # 局域网直连入口:每个服务一条 HTTPRoute https://<svc>.<domain> 直达 Service,绕过网关鉴权。
+  # 只给开发用;values-pre.yaml 里为 false。裸侧对应 overlays/dev 独有的 httproute.yaml + cnp-direct.yaml。
   directAccess:
     enabled: true
     domain: dev.test

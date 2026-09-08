@@ -1,0 +1,14 @@
+# pre = base + 三处环境差异(运行模式 / Config Center selector Secret / 镜像 tag)。没有本地直连。
+# 镜像:base 的 tag 由 CI 发版回写(=dev);pre 用哪个版本在这里显式钉,晋级就是改 newTag。
+apiVersion: kustomize.config.k8s.io/v1beta1
+kind: Kustomization
+resources:
+  - ../../base
+patches:
+  - path: patch-env.yaml
+    target:
+      kind: Deployment
+      name: ecommerce-behavior-deploy
+images:
+  - name: ccr.ccs.tencentyun.com/sumery/behavior
+    newTag: "1.6.3"

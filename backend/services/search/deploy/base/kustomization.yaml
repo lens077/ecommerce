@@ -1,0 +1,8 @@
+# 环境无关的部分。base 里的值以 dev 为准(镜像由 CI 回写到这里);其它环境在 overlays/<env>/ 打补丁。
+# 不要直接 apply base —— 用 kubectl apply -k deploy/overlays/<env>。
+apiVersion: kustomize.config.k8s.io/v1beta1
+kind: Kustomization
+resources:
+  - deployment.yaml
+  - service.yaml
+

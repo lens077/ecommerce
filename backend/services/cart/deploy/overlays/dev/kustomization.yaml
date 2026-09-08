@@ -1,0 +1,8 @@
+# dev = base + 本地直连(httproute + cnp-direct,成对)。
+# 直连绕过 control-tower 网关鉴权,只属于 dev;pre/prod 的 overlay 不得引用这两个文件。
+apiVersion: kustomize.config.k8s.io/v1beta1
+kind: Kustomization
+resources:
+  - ../../base
+  - httproute.yaml
+  - cnp-direct.yaml

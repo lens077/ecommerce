@@ -1,0 +1,25 @@
+# 本地直连入口(绕过 control-tower 网关):https://order.dev.test → 本服务 Service。
+# 只挂 dev.test,不挂公网域名——公网暴露要走 Pangolin + SSO,不在这里。
+# ⚠️ 这条路不经网关鉴权:x-md-* 身份头由调用方自填,服务会照信。只给局域网开发用,
+#    与同目录 cnp-direct.yaml 成对(那份放行 Cilium ingress 实体,否则 503);撤掉时两个文件一起删
+#    (helm 侧对应 global.directAccess.enabled=false)。
+apiVersion: gateway.networking.k8s.io/v1
+kind: HTTPRoute
+metadata:
+  name: ecommerce-order-direct
+  namespace: ecommerce
+spec:
+  parentRefs:
+    - name: cilium-gateway
+      namespace: default
+      sectionName: https
+  hostnames:
+    - "order.dev.test"
+  rules:
+    - matches:
+        - path:
+            type: PathPrefix
+            value: /
+      backendRefs:
+        - name: ecommerce-order-service
+          port: 30004

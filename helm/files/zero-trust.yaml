@@ -87,7 +87,7 @@ automountServiceAccountToken: false
 # The API services trust x-md-* identity headers injected by control-tower.
 # Network policy is therefore part of the authentication boundary: only the
 # gateway workload may reach RPC ports. The LAN-development direct path
-# (per-service *-direct HTTPRoute + cnp-direct.yaml in each deploy/dev/) adds
+# (per-service *-direct HTTPRoute + cnp-direct.yaml in each deploy/overlays/dev/) adds
 # its own allow rule in a separate CiliumNetworkPolicy; policies are unioned,
 # so this file stays gateway-only and that unit can be added/removed as a whole. host/remote-node is limited to the same
 # port for kubelet readiness/liveness probes; a compromised node remains a

@@ -55,7 +55,7 @@ jobs:
       - name: Structcheck
         run: go test -count=1 ./structcheck/...
 
-      # 两份部署真相源(helm/ 与 backend/services/*/deploy/dev 裸 manifest)必须渲染出同一套对象。
+      # 两份部署真相源(helm/ 与 backend/services/*/deploy 的 kustomize 裸 manifest)必须按 dev/pre 逐环境渲染出同一套对象。
       # structcheck 里有同名 Go 测试,但它在缺 helm/yq 时会跳过;这一步是硬门禁。
       # ubuntu-24.04 runner 自带 helm 与 yq。
       - name: Deploy parity (helm ≡ raw manifests)
