@@ -701,7 +701,7 @@ return orders.Cancel(ctx, order.ID)
 
 **原则三：每个暴露的方法独立授权。** `GET`/`POST`/`PATCH`/`PUT`/`DELETE`（Connect 下即每个 procedure）分别检查，读接口做过归属检查不代表同一资源的删接口也安全。权限粒度到「动作 + 范围」，用 OpenFGA 关系（`can_view`、`can_cancel`、`can_edit`）表达，不用 `admin` 布尔值包打天下。
 
-**原则四：任何客户端传来的数据都不参与权限决策。** Cookie、Authorization、自定义头、URL、请求体、隐藏字段、前端算出的 `isAdmin`/`role`/`owner_id`/`tenant_id`/`confirmed`/`step`，全部不可信。请求里的对象 ID 只用于**定位候选资源**，不能证明「它属于当前用户」；归属关系必须由服务端从会话主体与数据库记录重新建立。网关在鉴权前无条件剥离 `x-md-*` 入站头，是这条原则在边缘的落实（control-tower `identity.Strip`）。
+**原则四：任何客户端传来的数据都不参与权限决策。** Cookie、Authorization、自定义头、URL、请求体、隐藏字段、前端算出的 `isAdmin`/`role`/`owner_id`/`tenant_id`/`confirmed`/`step`，全部不可信。请求里的对象 ID 只用于**定位候选资源**，不能证明「它属于当前用户」；归属关系必须由服务端从会话主体与数据库记录重新建立。网关在鉴权前无条件剥离 `x-md-*` 入站头，是这条原则在边缘的落实（control-tower `identity.Strip`）。**文件路径是同一原则最典型的实例**：文件名、模板名、日志名一律不由客户端提供，用 ID 由服务端查路径；必须接受路径时用 `os.Root` 关进基目录——攻击变体、`filepath.Join` 为何不够、Nginx `alias` 陷阱与新增接口自查清单见 [`docs/SECURITY-FILE-ACCESS.md`](SECURITY-FILE-ACCESS.md)。
 
 **原则五：多步骤操作两件事都要做。** 预览→确认、确认→删除、上传→确认、创建订单→支付、登录→OAuth 回调，第 2 步都是可被独立到达的接口。（a）第 2 步独立认证授权，不因第 1 步通过而免检；（b）第 1 步的结果存服务端并签发一次性状态（绑定主体、动作、目标资源摘要、过期、nonce、单次消费），第 2 步只消费状态、不重新接受客户端提交的关键语义。只做 (a) 会留下「第 1 步确认订单 A、第 2 步改成订单 B」的口子。
 
