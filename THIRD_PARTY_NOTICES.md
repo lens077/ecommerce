@@ -77,7 +77,7 @@
 | `github.com/jackc/pgx/v5` | v5.10.0 | MIT | LICENSE |
 | `github.com/jackc/puddle/v2` | v2.2.2 | MIT | LICENSE |
 | `github.com/lens077/control-tower` | v0.1.4 | UNKNOWN | (no license file) |
-| `github.com/lens077/go-connect-kit` | v0.3.0 | UNKNOWN | (no license file) |
+| `github.com/lens077/go-connect-kit` | v0.4.2 | UNKNOWN | (no license file) |
 | `github.com/lib/pq` | v1.12.3 | MIT | LICENSE |
 | `github.com/mattn/go-colorable` | v0.1.15 | MIT | LICENSE |
 | `github.com/mattn/go-isatty` | v0.0.23 | MIT | LICENSE |

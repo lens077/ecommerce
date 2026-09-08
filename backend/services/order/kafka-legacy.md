@@ -2,7 +2,7 @@
 
 > ⚠️ **不要照本文实施。** 它记录的是一版早期 Kafka 接入设计，已被
 > [`docs/design/order/consistency.md`](../../../docs/design/order/consistency.md)（2026-08-08 定稿）的
-> **Transactional Outbox + Relay** 取代。保留它只为回答「当初试过什么、为什么不用」，
+> **Transactional Outbox + Debezium Outbox Event Router** 取代。保留它只为回答「当初试过什么、为什么不用」，
 > 不作为任何实现的参考。
 >
 > 2026-08-29 由 457 行教程修剪为本记录，同时从 `README-Kafka.md` 改名——
@@ -18,7 +18,7 @@
 
 **① 双写会丢事件。** 落库与发消息是两个独立操作，两步之间进程崩溃就会出现
 「订单已存在、事件永远不来」。这正是 `consistency.md` 要根除的问题——Outbox 模型把
-事件写入放进**同一个 PostgreSQL 事务**，投递交给独立 relay，崩溃后 relay 重启继续投。
+事件写入放进**同一个 PostgreSQL 事务**，由 Debezium Outbox Event Router 从 WAL 搬运到 Kafka；不再维护自写 relay。
 
 **② 客户端库选型也已改变。** [`docs/TECH.md`](../../../docs/TECH.md) §4 定稿为 **franz-go**
 （自写消费者 + Inbox 幂等），不是 `segmentio/kafka-go`。所以连原文「配置结构、FX 装配可参考」

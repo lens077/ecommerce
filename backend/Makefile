@@ -194,7 +194,9 @@ compose-logs:
 # ── 部署入口 ────────────────────────────────────────────────────────
 # 两条路径、同一套集群对象(2026-09-06 起,由仓库根 scripts/verify-deploy-parity.sh 强制等价):
 #   make deploy        渲染 helm/ 并 apply —— 给 helm / ArgoCD 使用者
-#   make k8s-dev-all   逐服务 apply backend/services/<svc>/deploy/dev/ —— 给 kubectl 使用者
+#   make k8s-dev-all   逐服务 kubectl apply -k backend/services/<svc>/deploy/overlays/dev —— 给 kubectl 使用者
+#   make k8s-pre-all   同上,overlays/pre(没有本地直连;DEPLOYMENT_MODE=pre、config-source-pre、显式钉 tag)
+#   环境差异只在 overlays/<env>(裸侧)与 helm/values-<env>.yaml(helm 侧),base / values.yaml 是共同部分
 # 两者建的是同名同 ns 的资源,先后跑、混着跑都收敛到一样的状态,不会再出现两套并存。
 # 共享的 SA / CiliumNetworkPolicy / ExternalSecret 只在 helm/files/ 有一份,裸路径经
 # scripts/render-zero-trust.sh 从同一处渲染。
@@ -226,7 +228,7 @@ deploy-argocd:
 	  $(DEPLOY_SCRIPT)
 
 .PHONY: deploy-parity
-# 两份真相源是否仍等价(改了 helm/ 或 deploy/dev 任一侧后必跑)
+# 两份真相源是否仍等价(改了 helm/ 或 deploy/ 任一侧后必跑;按 dev / pre 逐环境比)
 deploy-parity:
 	@cd .. && scripts/verify-deploy-parity.sh
 
@@ -243,9 +245,10 @@ deploy-status:
 scars:
 	@cd .. && scripts/harness-scars.sh
 
-# 裸 manifest 路径。与 make deploy 建的是同一套资源(见上),ArgoCD 若在自动同步,
-# 它会把这里 apply 的内容按 helm/ 再同步一遍——因为两边等价,结果是 no-op。
-# 只有 dev 一个环境:prod 目录从未 apply 过且已漂移,2026-09-06 删除。
+# 裸 manifest 路径(kustomize:deploy/base + deploy/overlays/<env>)。与 make deploy 建的是同一套资源,
+# ArgoCD 若在自动同步,它会把这里 apply 的内容按 helm/ 再同步一遍——因为两边等价,结果是 no-op。
+# 环境:dev(含本地直连 httproute + cnp-direct)、pre(不含)。要 prod 时从 overlays/pre 复制再改,
+# 别再造一份没人 apply 的目录(2026-09-06 删掉的旧 deploy/prod 就是这么烂掉的)。
 #
 # 先 dry-run 看一眼会动什么: make k8s-dev-all KUBECTL_ARGS=--dry-run=server
 KUBECTL_ARGS ?=
@@ -259,6 +262,10 @@ K8S_EXTRA_MANIFESTS ?= ../application-vpa.yml ../frontend/apps/consumer/deploy/p
 k8s-dev-all:
 	@$(MAKE) k8s-apply-all K8S_ENV=dev
 
+.PHONY: k8s-pre-all
+k8s-pre-all:
+	@$(MAKE) k8s-apply-all K8S_ENV=pre
+
 # 内部目标:按 K8S_ENV 扇出。缺目录与 apply 失败分开统计,
 # 都不中断循环 —— 一个服务坏掉不该让后面的服务全部漏掉
 .PHONY: k8s-apply-all
@@ -271,16 +278,16 @@ k8s-apply-all:
 	kubectl apply $(KUBECTL_ARGS) -f "$$tmp" || exit 1; \
 	fail=""; missing=""; \
 	for s in $(SERVICES); do \
-	  if [ ! -d services/$$s/deploy/$(K8S_ENV) ]; then missing="$$missing $$s"; continue; fi; \
-	  echo "===== kubectl apply $$s ($(K8S_ENV)) ====="; \
-	  kubectl apply $(KUBECTL_ARGS) -f services/$$s/deploy/$(K8S_ENV) || fail="$$fail $$s"; \
+	  if [ ! -f services/$$s/deploy/overlays/$(K8S_ENV)/kustomization.yaml ]; then missing="$$missing $$s"; continue; fi; \
+	  echo "===== kubectl apply -k $$s (overlays/$(K8S_ENV)) ====="; \
+	  kubectl apply $(KUBECTL_ARGS) -k services/$$s/deploy/overlays/$(K8S_ENV) || fail="$$fail $$s"; \
 	done; \
 	for extra in $(K8S_EXTRA_MANIFESTS); do \
 	  echo "===== kubectl apply $$extra ====="; \
 	  kubectl apply $(KUBECTL_ARGS) -f "$$extra" || fail="$$fail $$extra"; \
 	done; \
 	rc=0; \
-	if [ -n "$$missing" ]; then echo "❌ 缺 deploy/$(K8S_ENV) 目录:$$missing"; rc=1; fi; \
+	if [ -n "$$missing" ]; then echo "❌ 缺 deploy/overlays/$(K8S_ENV)/kustomization.yaml:$$missing"; rc=1; fi; \
 	if [ -n "$$fail" ]; then echo "❌ apply 失败:$$fail"; rc=1; fi; \
 	if [ $$rc -eq 0 ]; then echo "✅ 全部 $(words $(SERVICES)) 个服务已 apply 到 $(K8S_ENV)"; fi; \
 	exit $$rc

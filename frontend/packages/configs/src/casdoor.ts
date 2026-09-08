@@ -8,7 +8,7 @@ export const CASDOOR_CONF = {
   // 真要调还会拼出打向 Casdoor 主机的错误 URL。换 token 现在走 PKCE 直连
   // （见 ./auth/pkce.ts），不再经网关调 user 服务。
   // 客户端ID, 在第三方或自有的Casdoor服务端生成
-  clientId: "a36e6718e392099b7915",
+  clientId: "baxf6718e392099b7915",
   // 组织名, 在第三方或自有的Casdoor服务端生成
   organizationName: "lens",
   // 应用名, 在第三方或自有的Casdoor服务端生成

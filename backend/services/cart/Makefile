@@ -23,7 +23,7 @@ CART_SOURCE_CONFIG ?= configs/source.dev.yaml
 
 .PHONY: k8s-dev
 k8s-dev:
-	kubectl apply -f deploy/dev
+	kubectl apply -k deploy/overlays/dev
 
 .PHONY: k8s-prod
 k8s-prod:

@@ -20,7 +20,6 @@ import (
 	"github.com/lens077/ecommerce/backend/services/behavior/internal/service"
 	"github.com/lens077/go-connect-kit/env"
 	"github.com/lens077/go-connect-kit/meta"
-	kitregistry "github.com/lens077/go-connect-kit/registry"
 
 	"github.com/google/uuid"
 	"go.uber.org/fx"
@@ -83,8 +82,6 @@ func appOptions(serviceName, deploymentMode, serviceVersion string) []fx.Option 
 		config.Module,     // 配置
 		logger.FxLogger(), // Fx框架本身的日志控制器
 
-		registry.Module, // 服务注册/发现
-
 		// 可观测性 - 根据配置决定是否启用
 		fx.Provide(func(conf *confv1.Bootstrap) *confv1.Observability {
 			if conf.Observability == nil {
@@ -93,6 +90,7 @@ func appOptions(serviceName, deploymentMode, serviceVersion string) []fx.Option 
 			return conf.Observability
 		}),
 		otel.Module,
+		registry.Module, // 服务注册/发现
 
 		// 注入业务模块（按依赖顺序）
 		data.Module,
@@ -111,17 +109,11 @@ func appOptions(serviceName, deploymentMode, serviceVersion string) []fx.Option 
 				)
 			},
 
-			func(reg *kitregistry.ConsulRegistry, logger *zap.Logger) {
-				if reg != nil {
-					logger.Info("consul service discovery component lifecycle successfully initialized")
-				}
-			},
-
 			// 强制实例化 UseCase:采集队列的 worker 挂在它的生命周期钩子上,
 			// 不显式引用的话 fx 只会在有人依赖时才构造它。
 			func(uc *biz.BehaviorUseCase) {},
 
-			func(lc fx.Lifecycle, conf *confv1.Bootstrap, d *data.Data, logger *zap.Logger, srv *http.Server, otelShutdown func(context.Context) error) {
+			func(lc fx.Lifecycle, conf *confv1.Bootstrap, d *data.Data, logger *zap.Logger, srv *http.Server) {
 				lc.Append(fx.Hook{
 					OnStart: func(ctx context.Context) error {
 						logger.Info("performing startup health checks...")
@@ -157,10 +149,6 @@ func appOptions(serviceName, deploymentMode, serviceVersion string) []fx.Option 
 
 						if t, ok := http.DefaultTransport.(*http.Transport); ok {
 							t.CloseIdleConnections()
-						}
-
-						if otelShutdown != nil {
-							return otelShutdown(ctx)
 						}
 						return nil
 					},

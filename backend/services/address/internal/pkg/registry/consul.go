@@ -4,6 +4,7 @@ package registry
 // go-connect-kit/registry options.
 
 import (
+	"github.com/lens077/ecommerce/backend/pkg/registryconfig"
 	confv1 "github.com/lens077/ecommerce/backend/services/address/internal/conf/v1"
 	sharedregistry "github.com/lens077/go-connect-kit/registry"
 	"go.uber.org/fx"
@@ -20,7 +21,7 @@ func optionsFromBootstrap(conf *confv1.Bootstrap) sharedregistry.Options {
 	ttl := check.GetTtl()
 
 	return sharedregistry.Options{
-		Enabled:       consul.GetAddr() != "",
+		Enabled:       registryconfig.Enabled(consul.GetAddr()),
 		Address:       consul.GetAddr(),
 		ServerAddress: conf.GetServer().GetAddr(),
 		TLS: sharedregistry.TLSOptions{

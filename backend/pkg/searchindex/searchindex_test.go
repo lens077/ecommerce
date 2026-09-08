@@ -7,6 +7,7 @@ import (
 	"io"
 	"net/http"
 	"net/http/httptest"
+	"reflect"
 	"strings"
 	"testing"
 	"time"
@@ -26,6 +27,32 @@ func (r stubRow) Scan(dest ...any) error {
 	}
 	*(dest[0].(*time.Time)) = r.value
 	return nil
+}
+
+func TestDocumentJSONContractMatchesIndexMapping(t *testing.T) {
+	definition := indexDefinition("")
+	mappings := definition["mappings"].(map[string]any)
+	properties := mappings["properties"].(map[string]any)
+
+	docType := reflect.TypeOf(Doc{})
+	jsonFields := make([]string, 0, docType.NumField())
+	for i := 0; i < docType.NumField(); i++ {
+		jsonFields = append(jsonFields, strings.Split(docType.Field(i).Tag.Get("json"), ",")[0])
+	}
+	mappingFields := make([]string, 0, len(properties))
+	for field := range properties {
+		mappingFields = append(mappingFields, field)
+	}
+	require.ElementsMatch(t, jsonFields, mappingFields)
+	require.Len(t, properties, 10)
+
+	require.Equal(t, map[string]any{"type": "long"}, properties["id"])
+	require.Equal(t, map[string]any{"type": "keyword"}, properties["merchant_id"])
+	require.Equal(t, map[string]any{"type": "scaled_float", "scaling_factor": 100}, properties["price"])
+	require.Equal(t, map[string]any{"type": "long"}, properties["sale_count"])
+	require.Equal(t, map[string]any{
+		"type": "date", "format": "strict_date_optional_time_nanos||epoch_millis",
+	}, properties["updated_at"])
 }
 
 func TestDatabaseWatermarkUsesPostgreSQLClock(t *testing.T) {

@@ -185,7 +185,7 @@ func TestIntegrationEnsureIndexMappingContract(t *testing.T) {
 		m, _ := v.(map[string]any)
 		idx, _ := dig(m, "settings", "index").(map[string]any)
 		if got := dig(idx, "translog", "durability"); got != "request" {
-			t.Errorf("translog.durability = %v，期望 request —— ACK 的持久性依赖它", got)
+			t.Errorf("translog.durability = %v，期望 request —— 每次写入必须同步持久化 translog", got)
 		}
 		if got := idx["number_of_replicas"]; got != "0" {
 			t.Errorf("number_of_replicas = %v，期望 \"0\" —— 单节点否则永远 yellow", got)
@@ -207,7 +207,7 @@ func TestIntegrationStrictMappingRejectsUnknownField(t *testing.T) {
 	}
 }
 
-// 写入幂等、检索可达、删除幂等 —— 覆盖 ACK 语义依赖的三个前提。
+// 验证写入幂等、检索可达和删除幂等。
 func TestIntegrationIndexSearchDeleteIdempotency(t *testing.T) {
 	env := newITEnv(t)
 	ctx := context.Background()

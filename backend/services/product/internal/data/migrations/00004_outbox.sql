@@ -1,32 +1,34 @@
--- 商品服务：事务性 outbox 表（TODO ③「NATS JetStream 落地」的第一个生产者）。
--- 2026-08-21 新增。迁移判定规则见 context/team/db-migrations.md。
+-- 商品服务：事务性 outbox 表的 2026-08-21 初始结构。
+-- 迁移判定规则见 context/team/db-migrations.md。
 --
--- 语义：业务写与 outbox 写在同一事务提交（杜绝双写丢事件）；独立 relay
--- （backend/pkg/outbox + tools/outbox-relay）按 id 批扫未发布行，发到 NATS JetStream
--- （Nats-Msg-Id = event_id 做窗口去重），PubAck 后标记 published_at。
--- 列按 CloudEvents 1.0 属性对齐：event_id=id, source, type, subject, occurred_at=time。
--- 消费者必须幂等：JetStream 去重窗口默认 2 分钟，relay 停摆超窗后重投是设计内行为。
+-- 当前语义：业务写与 outbox 写在同一事务提交；目标搬运层是 Debezium Outbox
+-- Event Router → Kafka。自写 relay 与 NATS JetStream 已退役，不得再使用 PubAck、
+-- destination ACK 或应用层发布游标解释本表。
+--
+-- published_at、attempts、last_error 及两个发布簿记索引是初始结构遗留，等待后续
+-- goose 迁移删除。它们不表示当前发布进度；当前进度由 replication slot 与 Connect
+-- offset 表示。列按 CloudEvents 1.0 属性对齐：event_id=id, source, type, subject,
+-- occurred_at=time。消费者仍必须按 event_id 幂等。
 
 -- +goose Up
 CREATE TABLE products.outbox
 (
-    id            BIGSERIAL PRIMARY KEY,                          -- relay 扫描游标（近似提交序）
-    event_id      UUID         NOT NULL DEFAULT gen_random_uuid() UNIQUE, -- CloudEvents id；发布时作 Nats-Msg-Id
+    id            BIGSERIAL PRIMARY KEY,                          -- 初始结构的单调行 ID；不是当前发布游标
+    event_id      UUID         NOT NULL DEFAULT gen_random_uuid() UNIQUE, -- CloudEvents id 与消费幂等键
     source        VARCHAR(128) NOT NULL,                          -- CloudEvents source，如 /service/product
     type          VARCHAR(128) NOT NULL,                          -- CloudEvents type，如 ecommerce.product.spu.upserted
     subject       VARCHAR(128) NOT NULL,                          -- CloudEvents subject：聚合标识，如 spu:42
-    partition_key VARCHAR(128) NOT NULL,                          -- 保序键；relay 对同键按 id 串行发布
-    payload       JSONB        NOT NULL,                          -- CloudEvents data（事件携带完整投影，消费者不回查库）
+    partition_key VARCHAR(128) NOT NULL,                          -- Kafka partition key，保证同聚合根有序
+    payload       JSONB        NOT NULL,                          -- CloudEvents data
     occurred_at   TIMESTAMPTZ  NOT NULL DEFAULT now(),            -- CloudEvents time
-    published_at  TIMESTAMPTZ,                                    -- NULL = 待发布
-    attempts      INT          NOT NULL DEFAULT 0,                -- 发布尝试次数
-    last_error    TEXT                                            -- 最近一次发布失败原因
+    published_at  TIMESTAMPTZ,                                    -- 遗留簿记列，待后续迁移删除
+    attempts      INT          NOT NULL DEFAULT 0,                -- 遗留簿记列，待后续迁移删除
+    last_error    TEXT                                            -- 遗留簿记列，待后续迁移删除
 );
-COMMENT ON TABLE products.outbox IS '事务性发件箱：与业务写同事务落库，由 relay 异步发布到 NATS JetStream';
+COMMENT ON TABLE products.outbox IS '事务性发件箱：与业务写同事务落库；目标搬运层为 Debezium Outbox Event Router 到 Kafka；发布进度由 WAL 与 Connect offset 表示';
 
--- relay 唯一扫描路径；部分索引不随已发布历史膨胀
+-- 以下两个索引服务于初始 relay 簿记结构；后续迁移与遗留列一并删除。
 CREATE INDEX idx_products_outbox_unpublished ON products.outbox (id) WHERE published_at IS NULL;
--- 清理路径（按发布时间保留窗口删除）
 CREATE INDEX idx_products_outbox_published_at ON products.outbox (published_at) WHERE published_at IS NOT NULL;
 
 -- +goose Down

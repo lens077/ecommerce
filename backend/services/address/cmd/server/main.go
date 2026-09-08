@@ -20,7 +20,6 @@ import (
 	"github.com/lens077/ecommerce/backend/services/address/internal/service"
 	"github.com/lens077/go-connect-kit/env"
 	"github.com/lens077/go-connect-kit/meta"
-	kitregistry "github.com/lens077/go-connect-kit/registry"
 
 	"github.com/google/uuid"
 	"go.uber.org/fx"
@@ -87,8 +86,6 @@ func appOptions(serviceName, deploymentMode, serviceVersion string) []fx.Option 
 		config.Module,     // 配置
 		logger.FxLogger(), // Fx框架本身的日志控制器
 
-		registry.Module, // 服务注册/发现
-
 		// 可观测性 - 根据配置决定是否启用
 		fx.Provide(func(conf *confv1.Bootstrap) *confv1.Observability {
 			if conf.Observability == nil {
@@ -97,6 +94,7 @@ func appOptions(serviceName, deploymentMode, serviceVersion string) []fx.Option 
 			return conf.Observability
 		}),
 		otel.Module,
+		registry.Module, // 服务注册/发现
 
 		// 注入业务模块（按依赖顺序）
 		data.Module,
@@ -117,15 +115,8 @@ func appOptions(serviceName, deploymentMode, serviceVersion string) []fx.Option 
 				)
 			},
 
-			// 启动之前初始化 Consul 注册中心
-			func(reg *kitregistry.ConsulRegistry, logger *zap.Logger) {
-				if reg != nil {
-					logger.Info("consul service discovery component lifecycle successfully initialized")
-				}
-			},
-
 			// 初始化并启动核心应用逻辑
-			func(lc fx.Lifecycle, conf *confv1.Bootstrap, d *data.Data, logger *zap.Logger, srv *http.Server, otelShutdown func(context.Context) error) {
+			func(lc fx.Lifecycle, conf *confv1.Bootstrap, d *data.Data, logger *zap.Logger, srv *http.Server) {
 				lc.Append(fx.Hook{
 					// 启动服务时的操作
 					OnStart: func(ctx context.Context) error {
@@ -161,14 +152,6 @@ func appOptions(serviceName, deploymentMode, serviceVersion string) []fx.Option 
 						// 关闭transport 维护的空闲 TCP 连接
 						if t, ok := http.DefaultTransport.(*http.Transport); ok {
 							t.CloseIdleConnections()
-						}
-
-						// 关闭otel
-						// 1. trace: 强制将内存中还没发出的 Span（链路数据）通过 HTTP 刷给 Collector
-						// 2. metric: 它会触发最后一次指标收集，并确保数据推送到后端
-						// 3. logging: 确保内存中的日志数据全部持久化
-						if otelShutdown != nil {
-							return otelShutdown(ctx) // 执行聚合后的停止逻辑
 						}
 						return nil
 					},

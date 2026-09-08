@@ -3,7 +3,7 @@ POST http://localhost:30002/healthz
 Content-Type: application/json
 
 ### healthz
-POST http://192.168.3.115:30002/healthz
+POST http://search.dev.test/search.v1.SearchService/Search
 Content-Type: application/json
 
 ### 网关

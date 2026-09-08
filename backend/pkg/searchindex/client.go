@@ -324,7 +324,7 @@ func indexDefinition(alias string) map[string]any {
 				// only a two-decimal display/sort projection and is never used in transactions.
 				"price":      map[string]any{"type": "scaled_float", "scaling_factor": 100},
 				"sale_count": map[string]any{"type": "long"},
-				"updated_at": map[string]any{"type": "date", "format": "strict_date_time"},
+				"updated_at": map[string]any{"type": "date", "format": "strict_date_optional_time_nanos||epoch_millis"},
 			},
 		},
 	}
@@ -337,10 +337,8 @@ func indexDefinition(alias string) map[string]any {
 }
 
 // IndexDocument uses the stable alias and explicit document ID. A successful
-// response means the primary-shard write was acknowledged. The index definition
-// pins translog durability to request, so the worker may ACK JetStream at that
-// point; refresh only controls search visibility. Redelivery overwrites the same
-// ID and remains idempotent.
+// response means the primary shard accepted the write; refresh only controls
+// search visibility. Rewriting the same ID remains idempotent.
 func (c *Client) IndexDocument(ctx context.Context, alias string, doc Doc) error {
 	if err := validateIndexName(alias); err != nil {
 		return err
@@ -375,7 +373,7 @@ func (c *Client) IndexDocument(ctx context.Context, alias string, doc Doc) error
 }
 
 // DeleteDocument treats a repeated delete of an already missing document as
-// success, but still rejects a missing alias so a topology mistake cannot be ACKed.
+// success, but rejects a missing alias so topology mistakes remain visible.
 func (c *Client) DeleteDocument(ctx context.Context, alias string, id int64) error {
 	if err := validateIndexName(alias); err != nil {
 		return err

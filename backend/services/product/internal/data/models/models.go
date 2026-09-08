@@ -138,7 +138,7 @@ func AllProductsSpusStatusEnumValues() []ProductsSpusStatusEnum {
 	}
 }
 
-// 事务性发件箱：与业务写同事务落库，由 relay 异步发布到 NATS JetStream
+// 事务性发件箱：与业务写同事务落库；目标搬运层为 Debezium Outbox Event Router 到 Kafka；发布进度由 WAL 与 Connect offset 表示
 type ProductsOutbox struct {
 	ID           int64
 	EventID      uuid.UUID

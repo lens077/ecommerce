@@ -6,8 +6,8 @@
 > 先 `SaveOrder()` 再 `Publish()` 的**双写**：两步之间进程崩溃，事件就永久丢失，
 > 而订单已经落库。
 >
-> [`docs/TECH.md`](../../../docs/TECH.md) §4.1 定稿的是 **Transactional Outbox + Relay**：
-> 业务写和事件写进同一个 PostgreSQL 事务，由独立 relay 投递。
+> [`docs/TECH.md`](../../../docs/TECH.md) §4.1 定稿的是 **Transactional Outbox + Debezium Outbox Event Router**：
+> 业务写和事件写进同一个 PostgreSQL 事务，由 Debezium 从 WAL 搬运到 Kafka；不再维护自写 relay。
 > 设计细节见 [`docs/design/order/consistency.md`](../../../docs/design/order/consistency.md)。
 > **新代码不要照本文的模式接线**；改造进度见
 > [`docs/todo/数据一致性与事件驱动.md`](../../../docs/todo/数据一致性与事件驱动.md)。
@@ -46,7 +46,7 @@ Handler              events/handles.go 注册的处理器（进程内同步/异�
 ```
 
 **第 3 步和第 4 步不在同一个事务里**——这正是目标态要用 Outbox 消除的。
-Outbox 模型下，第 4 步变成「往同一事务的 outbox 表插一行」，投递交给独立 relay。
+Outbox 模型下，第 4 步变成「往同一事务的 outbox 表插一行」，Debezium Outbox Event Router 从 WAL 搬运事件。
 
 ## 为什么当初选进程内 EventBus
 
@@ -68,6 +68,6 @@ Outbox 模型下，第 4 步变成「往同一事务的 outbox 表插一行」�
 ## 相关文档
 
 - [`kafka-legacy.md`](kafka-legacy.md) — Kafka 方案存档，**同样已被 Outbox 取代**，仅配置结构与 fx 装配可参考
-- [`docs/design/order/consistency.md`](../../../docs/design/order/consistency.md) — Outbox + Relay 的权威设计
+- [`docs/design/order/consistency.md`](../../../docs/design/order/consistency.md) — Outbox + Debezium Outbox Event Router 的权威设计
 - [`docs/design/order/checkout.md`](../../../docs/design/order/checkout.md) §9 — 下单链路里的事件时序
 - [`docs/TECH.md`](../../../docs/TECH.md) §4.1 — 技术定稿

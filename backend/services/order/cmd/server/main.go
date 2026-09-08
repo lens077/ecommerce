@@ -23,7 +23,6 @@ import (
 	"github.com/lens077/ecommerce/backend/services/order/internal/service"
 	"github.com/lens077/go-connect-kit/env"
 	"github.com/lens077/go-connect-kit/meta"
-	kitregistry "github.com/lens077/go-connect-kit/registry"
 	"go.uber.org/fx"
 	"go.uber.org/zap"
 )
@@ -95,11 +94,10 @@ func appOptions(serviceName, deploymentMode, serviceVersion string) []fx.Option 
 		config.Module,     // 配置
 		logger.FxLogger(), // Fx框架本身的日志控制器
 
-		registry.Module, // 服务注册/发现
-
 		// 可观测性 - 根据配置决定是否启用
 		fx.Provide(observabilityFromBootstrap),
 		otel.Module,
+		registry.Module, // 服务注册/发现
 
 		// 注入业务模块（按依赖顺序）
 		data.Module,
@@ -131,15 +129,8 @@ func appOptions(serviceName, deploymentMode, serviceVersion string) []fx.Option 
 				)
 			},
 
-			// 启动之前初始化 Consul 注册中心
-			func(reg *kitregistry.ConsulRegistry, logger *zap.Logger) {
-				if reg != nil {
-					logger.Info("consul service discovery component lifecycle successfully initialized")
-				}
-			},
-
 			// 初始化并启动核心应用逻辑
-			func(lc fx.Lifecycle, logger *zap.Logger, srv *http.Server, otelShutdown func(context.Context) error) {
+			func(lc fx.Lifecycle, logger *zap.Logger, srv *http.Server) {
 				lc.Append(fx.Hook{
 					// 启动服务时的操作
 					// 这里仅需要启动全局的服务, 例如HTTP, 对于模块, 在实现它们的地方添加OnStart即可
@@ -162,12 +153,6 @@ func appOptions(serviceName, deploymentMode, serviceVersion string) []fx.Option 
 						// 优雅关闭服务器
 						if err := srv.Shutdown(ctx); err != nil {
 							logger.Error("failed to shutdown server gracefully", zap.Error(err))
-						}
-						// 关闭 Otel
-						if otelShutdown != nil {
-							if err := otelShutdown(ctx); err != nil {
-								logger.Error("failed to shutdown otel observability", zap.Error(err))
-							}
 						}
 						return nil
 					},

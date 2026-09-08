@@ -18,7 +18,7 @@ require (
 	github.com/google/uuid v1.6.0
 	github.com/jackc/pgx/v5 v5.10.0
 	github.com/lens077/control-tower v0.1.4
-	github.com/lens077/go-connect-kit v0.3.0
+	github.com/lens077/go-connect-kit v0.4.2
 	github.com/pressly/goose/v3 v3.27.3
 	github.com/redis/go-redis/v9 v9.22.0
 	github.com/rs/cors v1.11.1

@@ -7,9 +7,8 @@
 //   - sale_count is the top-level numeric products.spu_total_sales projection.
 //
 // Upserts overwrite a stable Elasticsearch document ID and deletes use the same
-// ID, so any redelivery on the transport layer stays idempotent. The JetStream
-// consumer that once lived here was retired in 2026-09; the projection transport
-// is now Debezium → Kafka → Elasticsearch Sink (docs/design/search/search.md).
+// ID, so Kafka redelivery remains idempotent. The production projection transport
+// is Debezium -> Kafka -> Elasticsearch Sink (docs/design/search/search.md).
 package searchindex
 
 import (
