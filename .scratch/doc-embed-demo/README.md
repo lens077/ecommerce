@@ -11,7 +11,7 @@ func optionsFromBootstrap(conf *confv1.Bootstrap) sharedregistry.Options {
 	ttl := check.GetTtl()
 
 	return sharedregistry.Options{
-		Enabled:       consul.GetAddr() != "",
+		Enabled:       registryconfig.Enabled(consul.GetAddr()),
 		Address:       consul.GetAddr(),
 		ServerAddress: conf.GetServer().GetAddr(),
 		TLS: sharedregistry.TLSOptions{

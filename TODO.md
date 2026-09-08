@@ -30,6 +30,7 @@ todo-spec: 1
 是「CPU 利用率低但尾延迟高」的唯一判据，当前无任何组件在采（VMAgent 未部署，otel-node 只有
 `hostmetrics`、无 `kubeletstats`/cAdvisor）；且现有采集恰好只覆盖会骗人的节点级 CPU——
 实测容器 100% 周期被限流时节点仅 9%，同期沉淀 `context/team/cfs-quota-throttling.md`；
+2026-09-08 新增 `docs/SECURITY-FILE-ACCESS.md`（目录遍历防护：ID 查路径 / os.Root / 白名单 / 纵深，含审计现状「当前无请求参数流入文件路径」）并从 TECH.md §8.5 原则四链接；`doc-embed.py` 拒绝未知参数（见 evolution-log）；修复 [EMBED] 漂移后 `verify-context.sh` 首次全绿；
 2026-09-08 依赖升 control-tower v0.1.5（访客 cookie HMAC 签名、OAuth 回调复验重定向、补 LICENSE）与 go-connect-kit v0.4.3（补 LICENSE）；notices 生成器加三条：binding 子包继承主包许可证、CC BY-NC-SA 识别并进关注名单、`accepted_copyleft` 显式接受清单（两个第一方模块 + sharp/libvips），关注项 5 → 0；
 2026-09-08 consumer vitest 加 `execArgv: ["--no-experimental-webstorage"]`——Node 25+ 把 `globalThis.localStorage` 做成恒 undefined 的实验 getter，jsdom 覆盖不掉，本机 Node 26 实测 `users.test.ts` 3 红 + a11y 11 红连带；CI 是 22 所以从未暴露，engines 允许 >=26 故必须修在配置里；同日发现 `apps/consumer/src/gen` 17 文件被工作树误删（已从 HEAD 恢复，非提交项）；
 2026-09-08 TECH.md §8 新增 8.5「服务端访问控制准则」（默认拒绝 / 资源归属检查 / 逐方法授权 / 客户端数据不参与授权 / 多步骤两件事 / 网关非唯一防线 / 最小权限四维度 + 验收标准），不新增待办，作为新增或修改 RPC 时的硬约束核对表；

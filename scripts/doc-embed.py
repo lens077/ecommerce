@@ -220,7 +220,27 @@ def render(md: Path, root: Path) -> tuple[list[str], list[str]]:
     return out, seen
 
 
+KNOWN_FLAGS = {'--check', '--list'}
+
+
+def usage(out=sys.stderr) -> None:
+    print('用法: scripts/doc-embed.py [--check] [--list]', file=out)
+    print('  （无参数）  重写所有受管代码块', file=out)
+    print('  --check     只比对不改写；有漂移退出码 1', file=out)
+    print('  --list      列出所有指令及其解析结果', file=out)
+
+
 def main(argv: list[str]) -> int:
+    # 未知参数一律拒绝：这是一个会改文件的脚本，把 --help 或拼错的 flag 当成
+    # 「无参数=重写」静默执行过一次（2026-09-08 实测），必须报错退出。
+    if any(a in ('-h', '--help') for a in argv):
+        usage(sys.stdout)
+        return 0
+    unknown = [a for a in argv if a not in KNOWN_FLAGS]
+    if unknown:
+        print(f'doc-embed: 未知参数 {unknown}', file=sys.stderr)
+        usage()
+        return 2
     check = '--check' in argv
     listing = '--list' in argv
     root = repo_root()

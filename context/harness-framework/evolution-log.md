@@ -1237,3 +1237,16 @@ description: harness 本身（硬规则/门禁/Agent 约束）每次改动的原
   lint-staged 打出「could not find any staged files matching configured tasks」即到达了 vp。
   钩子退出 127 的语义在 commit-msg 注释里写着「= frontend 依赖未装」——这条现在只对 commit-msg 成立，
   pre-commit 的 127 已由本次修掉。
+
+### 2026-09-08 doc-embed.py 拒绝未知参数
+
+- **改了什么**：`scripts/doc-embed.py` 增加参数校验——`-h/--help` 打印用法退出 0，
+  `--check`/`--list` 之外的任何参数报「未知参数」退出 2，不再落入默认的重写分支。
+- **为什么**：它是一个会改文件的脚本，默认动作是重写所有受管代码块。此前 `--help` 或拼错的
+  flag 都会被静默当成「无参数」执行重写。
+- **触发事故**：2026-09-08 为查用法跑了 `scripts/doc-embed.py --help`，脚本直接重写了
+  `.scratch/doc-embed-demo/README.md`。这次恰好就是要修的 [EMBED] 漂移（`consul.go` 的
+  `Enabled` 改为 `registryconfig.Enabled` 后投影没重生成），歪打正着；但换成别的场景就是
+  一次未经意图的写操作。
+- **怎么验证的**：`--help` rc=0 打印用法；`--chek` rc=2 报未知参数并打印用法；`--check` rc=0
+  行为不变；`verify-context.sh` 全绿。
