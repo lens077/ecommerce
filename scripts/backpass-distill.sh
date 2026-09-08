@@ -10,14 +10,17 @@
 # 数据源:
 #   ~/.claude/projects/<slug>*/*.jsonl        Claude Code
 #   ~/.codex/sessions/**/*.jsonl              Codex（按 cwd 关联仓库）
-#   ~/.dsh/sessions/<slug>/*/session.jsonl.zstd  DSH（zstd 流,尽力解析——
-#       schema 未公开,取 type 含 user 的事件里的长文本字段,宁缺勿错）
+#   ${DSH_HOME:-~/.dsh}/sessions/<project>/<session>/session[.vN].jsonl[.zstd]
+#       DSH v0-v2：只选最高格式代，读取 direct-user 来源并排除 fork seed。
+#       压缩使用 Node 内置 zstd 或 zstd CLI；错误写 stderr，不修改原始记录。
 #
 # 用法: scripts/backpass-distill.sh [仓库路径=当前 git 根] [天数=14] [输出目录=/tmp/backpass-<name>]
 # shellcheck 的 SC2044（for-over-find）已知且接受:三个存储的路径由槽位规则生成,
 # 不含空白字符;换 while-read 徒增嵌套。
 # 产出: <出目录>/human.tsv（源:会话 \t 消息≤500 字）与 markers.txt（纠偏标记命中行）
 set -euo pipefail
+# Extracted conversation history must not be world-readable.
+umask 077
 
 repo=${1:-$(git rev-parse --show-toplevel 2>/dev/null || pwd)}
 days=${2:-14}
@@ -27,7 +30,7 @@ mkdir -p "$out"
 : > "$out/msgs.tsv"
 
 cc_slug=$(printf '%s' "$repo" | tr '/' '-')          # /a/b/c → -a-b-c
-dsh_slug="-$(printf '%s' "$repo" | tr '/' '-')-"      # DSH 槽位形如 --a-b-c--
+# DSH uses its authoritative header cwd, not lossy directory-name matching.
 
 # ── ① Claude Code ────────────────────────────────────────────
 for f in $(find "$HOME/.claude/projects" -maxdepth 2 -path "*${cc_slug}*" -name "*.jsonl" -mtime -"$days" 2>/dev/null); do
@@ -46,42 +49,15 @@ for f in $(grep -rl --include="*.jsonl" "$repo" "$HOME/.codex/sessions" 2>/dev/n
     | select(length>0) | [$sid, (gsub("[\\n\\t]";" ⏎ ") | .[0:500])] | @tsv' "$f" 2>/dev/null >> "$out/msgs.tsv" || true
 done
 
-# ── ③ DSH（zstd 流,尽力解析）─────────────────────────────────
-if command -v zstd >/dev/null; then
-  for f in $(find "$HOME/.dsh/sessions" -maxdepth 3 -path "*${dsh_slug}*" -name "session.jsonl.zstd" -mtime -"$days" 2>/dev/null); do
-    sid=$(basename "$(dirname "$f")" | tail -c 9)
-    zstd -dcq "$f" 2>/dev/null | python3 -c '
-import sys, json
-sid = sys.argv[1]
-for line in sys.stdin:
-    line = line.strip()
-    if not line: continue
-    try: d = json.loads(line)
-    except Exception: continue
-    t = str(d.get("type", ""))
-    if "user" not in t or "chunk" in t: continue
-    def texts(o):
-        if isinstance(o, str): yield o
-        elif isinstance(o, dict):
-            for k, v in o.items():
-                if k in ("text", "content", "message", "input") or isinstance(v, (dict, list)):
-                    yield from texts(v)
-        elif isinstance(o, list):
-            for v in o: yield from texts(v)
-    for s in texts(d.get("data", d)):
-        s = s.strip()
-        if 0 < len(s):
-            s = s.replace("\t", " ⏎ ").replace("\n", " ⏎ ")[:500]
-            print(f"DSH:{sid}\t{s}")
-            break   # 每事件取首个文本,宁缺勿滥
-' "$sid" >> "$out/msgs.tsv" || true
-  done
-fi
+# ── ③ DSH：读取最高格式代，按明确来源排除注入与 fork 前缀 ──────
+# Resolve the physical script so the shared backpass-distill.sh symlink works.
+script_dir=$(python3 -c 'import pathlib,sys; print(pathlib.Path(sys.argv[1]).resolve().parent)' "${BASH_SOURCE[0]}")
+python3 "$script_dir/backpass-dsh.py" "$repo" "$days" >> "$out/msgs.tsv"
 
 # ── 剔噪:先去同会话重复(DSH 事件会重放同一消息),再剔跨会话注入文档 ──
 LC_ALL=C sort -u "$out/msgs.tsv" -o "$out/msgs.tsv"
 awk -F'\t' '{ cnt[$2]++ } END { for (m in cnt) if (cnt[m]>=3) print m }' "$out/msgs.tsv" > "$out/injected.txt"
-awk -F'\t' 'NR==FNR { inj[$0]=1; next } !($2 in inj) && $2 !~ /^(<|Caveat|\[Request)/ { print }' \
+awk -F'\t' 'FILENAME==ARGV[1] { inj[$0]=1; next } !($2 in inj) && $2 !~ /^(<|Caveat|\[Request)/ { print }' \
   "$out/injected.txt" "$out/msgs.tsv" > "$out/human.tsv"
 
 grep -E '不对|不是这|不要|别再|错了|错的|不行|你怎么|为什么没|怎么没|漏了|又忘|还是没|重新|回滚|其实' \

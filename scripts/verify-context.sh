@@ -5,7 +5,7 @@
 # verify-agent-note-format / verify-doc-budgets)移植,落地方式沿用本仓惯例:
 # 能判定的约束变成脚本,存量漂移走基线棘轮(见 scripts/lint-baseline.sh 的设计)。
 #
-# 九项检查(任一违规 → 退出码 1):
+# 十项检查(任一违规 → 退出码 1):
 #   [DEAD-LINK]    AGENTS.md/README.md/STACK.md/TODO.md 与 context/**、docs/** 全树的
 #                  相对 markdown 链接必须可达
 #                  (2026-08-26 扩:原只查 AGENTS+context,当日 README/STACK/docs/design
@@ -23,6 +23,12 @@
 #   [FORMAT]      experience/*.md 必须含「症状」与「关键陷阱/陷阱」小节
 #                  (格式定义见 context/harness-framework/knowledge-layering.md)
 #   [EVOLOG]      evolution-log.md 每条必须四要素齐全(改了什么/为什么/触发事故/怎么验证的)
+#   [DECISION]    context/decisions/ 决策记录:路径即状态(implemented/proposed/rejected),
+#                  文件名 YYYY-MM-DD-slug,frontmatter status 与目录一致;按状态要求的
+#                  小节齐全(格式见 context/decisions/INDEX.md);「考虑过的替代方案」必须
+#                  非空;implemented 里不得残留提案期标题(提案/计划/迁移计划/验收标准/风险)
+#                  ——那是没改写的 spec-speak。2026-09-03 立此门禁(参照 deepseek-harness
+#                  的 verify-agent-note-format),见 decisions/implemented 同日条目
 #   [BUDGET]      AGENTS.md ≤ 14000 字节 —— 它每轮整份注入所有 AI 工具的上下文,
 #                  超限先把内容搬进 context/ 对应层,不要先提额度;
 #                  TODO.md ≤ 96000 字节 —— 每个提交回合都要读它,
@@ -31,6 +37,12 @@
 #                  (TODO.md / docs/todo/ / progress-archive/ / reports/ /
 #                   .scratch/ / 围栏代码块内);别处出现即第二套进度视图,
 #                  与 TODO.md 必然漂移。2026-08-29 立此门禁,见 evolution-log 同日条目
+#   [EMBED]       文档里标了 `<!-- embed: 源路径 选择器 -->` 的代码块必须与源码一致
+#                  (scripts/doc-embed.py --check;写法见该脚本头注释)。代码块是源码的
+#                  投影,真相源是源码:改了迁移/proto/Go 声明后跑 scripts/doc-embed.py
+#                  重写投影,手改投影会被下次重写覆盖。参照 deepseek-harness 的
+#                  gen-config-catalog --check。2026-09-03 立此门禁——同日清点 523 个
+#                  文档代码块,docs/design 下 5 个域的 DDL/proto 摘录名字都已对不上源码
 #
 # 基线棘轮(两份):
 #   scripts/context-format-baseline.txt   —— [FORMAT] 的存量违规冻结放行
@@ -101,13 +113,14 @@ while IFS= read -r file; do
 done < <(find AGENTS.md README.md STACK.md TODO.md context docs -name "*.md" -type f)
 
 # ── 2. INDEX 覆盖性(孤儿检测)────────────────────────────────
-# 层入口: context/INDEX.md 必须链接三个层 INDEX
-for layer_index in team/INDEX.md harness-framework/INDEX.md project/ecommerce/INDEX.md; do
+# 层入口: context/INDEX.md 必须链接四个层 INDEX
+for layer_index in team/INDEX.md harness-framework/INDEX.md decisions/INDEX.md project/ecommerce/INDEX.md; do
   grep -qF "$layer_index" context/INDEX.md || fail "ORPHAN" "context/INDEX.md 未链接 $layer_index"
 done
 
-# team / harness-framework: 每个文件都要出现在本层 INDEX 里
-for layer in team harness-framework; do
+# team / harness-framework / decisions: 每个文件都要出现在本层 INDEX 里
+# (decisions 的文件在 implemented/ 等子目录里,find 递归,登记仍按文件名)
+for layer in team harness-framework decisions; do
   while IFS= read -r file; do
     base=$(basename "$file")
     grep -qF "$base" "context/$layer/INDEX.md" || \
@@ -149,6 +162,7 @@ while IFS= read -r file; do
   case "$file" in
     context/team/*)              expect_layer="team" ;;
     context/harness-framework/*) expect_layer="harness-framework" ;;
+    context/decisions/*)         expect_layer="decisions" ;;
     context/project/ecommerce/*)
       rel="${file#context/project/ecommerce/}"
       expect_layer="project/ecommerce/${rel%%/*}" ;;
@@ -204,6 +218,77 @@ while IFS= read -r title; do
       fail "EVOLOG" "「${title#\#\#\# }」缺 **$req**(四要素缺一不可)"
   done
 done < <(grep '^### ' "$evolog")
+
+# ── 5.5 决策记录格式 ─────────────────────────────────────────
+# evolution-log 是**编年史**(改了什么/触发事故/怎么验证的,按日期追加,永不改写);
+# decisions/ 是**当前状态**:每个决策一个文件,路径就是生命周期,内容随交付事实同步改写。
+# 三条硬规则来自 deepseek-harness 的 Agent Note 格式门禁,理由各一句:
+#   ① 「考虑过的替代方案」必须非空——没写打败了谁的决定会被反复重新争论
+#     (.service-matrix.yaml 头注里 kafka/NATS 那条 2026-08-28 的教训就是这种);
+#   ② implemented 不得残留提案期标题——提案原文不改写,读者永远分不清「打算」和「已是」;
+#   ③ status 与目录一致——状态只有一处真相(路径),frontmatter 只是它的可 grep 投影。
+# 迁自 evolution-log 且原文没记替代方案的旧决策,允许用标记注释代替(只对格式立规
+# 之日 2026-09-03 之前的日期放行;替代方案只能记录,不能事后编造)。
+decisions_dir="context/decisions"
+if [ -d "$decisions_dir" ]; then
+  # 顶层只允许 INDEX.md:决策必须落在生命周期目录里
+  while IFS= read -r stray; do
+    fail "DECISION" "$stray 不在生命周期目录里(implemented/ | proposed/ | rejected/)"
+  done < <(find "$decisions_dir" -maxdepth 1 -name "*.md" ! -name "INDEX.md" -type f)
+
+  _has_h2() { grep -qE "^## $2([[:space:]]|$)" "$1"; }
+  _section_nonempty() { # _section_nonempty <file> <## 标题>: 该小节内是否有「- **」或「### 」开头的条目
+    awk -v h="## $2" '
+      $0 == h {on=1; next}
+      /^## / {if (on) exit}
+      on && (/^- \*\*/ || /^### /) {found=1; exit}
+      END {exit found ? 0 : 1}' "$1"
+  }
+  while IFS= read -r file; do
+    rel="${file#$decisions_dir/}"
+    lifecycle="${rel%%/*}"
+    stem=$(basename "$file" .md)
+    case "$lifecycle" in
+      implemented|proposed|rejected) ;;
+      *) fail "DECISION" "$file 所在目录 $lifecycle 不是生命周期(implemented/proposed/rejected)"; continue ;;
+    esac
+    printf '%s\n' "$stem" | grep -qE '^[0-9]{4}-[0-9]{2}-[0-9]{2}-[a-z0-9]+(-[a-z0-9]+)*$' || \
+      fail "DECISION" "$file 文件名须为 YYYY-MM-DD-slug(首次提出日期 + 小写 slug)"
+    fm=$(awk 'NR==1{next} /^---$/{exit} {print}' "$file")
+    status=$(printf '%s\n' "$fm" | sed -n 's/^status:[[:space:]]*//p' | head -1)
+    if [ "$status" != "$lifecycle" ]; then
+      fail "DECISION" "$file frontmatter status: ${status:-<缺>} ≠ 目录 $lifecycle(路径是状态的唯一真相)"
+    fi
+    _has_h2 "$file" "问题" || fail "DECISION" "$file 缺 ## 问题(动机要能脱离方案独立成立)"
+    case "$lifecycle" in
+      implemented)
+        _has_h2 "$file" "决策" || fail "DECISION" "$file 缺 ## 决策(用现在时描述已交付的事实)"
+        _has_h2 "$file" "后果" || fail "DECISION" "$file 缺 ## 后果(付出了什么、换来了什么)"
+        while IFS= read -r spec; do
+          fail "DECISION" "$file 残留提案期标题「${spec}」——implemented 须改写为决策/后果,不能留 spec-speak"
+        done < <(grep -oE '^## (提案|计划|迁移计划|验收标准|风险)([[:space:]]|$)' "$file" | sed 's/^## //; s/[[:space:]]*$//')
+        ;;
+      proposed)
+        for h in 提案 验收标准 风险; do
+          _has_h2 "$file" "$h" || fail "DECISION" "$file 缺 ## $h(proposed 三段:提案/验收标准/风险)"
+        done
+        ;;
+      rejected)
+        _has_h2 "$file" "提案" || fail "DECISION" "$file 缺 ## 提案(被否决的原提案原样冻结)"
+        _has_h2 "$file" "否决理由" || fail "DECISION" "$file 缺 ## 否决理由"
+        ;;
+    esac
+    if _has_h2 "$file" "考虑过的替代方案"; then
+      _section_nonempty "$file" "考虑过的替代方案" || \
+        fail "DECISION" "$file 的「考虑过的替代方案」为空——每个替代方案一条「- **名称** — 为什么输」"
+    elif grep -qF '<!-- decision-format: alternatives-not-recorded -->' "$file"; then
+      [ "${stem:0:10}" \< "2026-09-03" ] || \
+        fail "DECISION" "$file 用了 alternatives-not-recorded 标记,但该标记只放行 2026-09-03 之前迁入的旧决策"
+    else
+      fail "DECISION" "$file 缺 ## 考虑过的替代方案(没记录打败了谁的决定会被反复重新争论)"
+    fi
+  done < <(find "$decisions_dir" -mindepth 2 -name "*.md" -type f)
+fi
 
 # ── 6. AGENTS.md 预算 ────────────────────────────────────────
 budget=14000
@@ -382,10 +467,23 @@ done < <(find AGENTS.md README.md STACK.md TODO.md context docs -name "*.md" -ty
   fail "LIVE-FACT" "${loc} 的${kind}是某一刻的观测值却无实测日期——写法见 context/team/live-facts.md"
 done
 
+# ── [EMBED] 受管代码块与源码一致 ─────────────────────────────
+# 脚本自己按 git ls-files 找指令、解析、比对;这里只把它的 stderr 逐行转成违规。
+# 脚本缺失或 python3 缺失也要红:一道「没装就静默放行」的门禁等于没有。
+if [ ! -f scripts/doc-embed.py ]; then
+  fail "EMBED" "scripts/doc-embed.py 不存在,受管代码块无法核对"
+elif ! command -v python3 >/dev/null 2>&1; then
+  fail "EMBED" "缺少 python3,无法运行 scripts/doc-embed.py --check"
+else
+  while IFS= read -r line; do
+    [ -n "$line" ] && fail "EMBED" "${line#doc-embed: \[EMBED\] }"
+  done < <(python3 scripts/doc-embed.py --check 2>&1 >/dev/null | grep '\[EMBED\]' || true)
+fi
+
 # ── 汇总 ─────────────────────────────────────────────────────
 if [ -s "$violations" ]; then
   echo "verify-context: 发现 $(wc -l < "$violations" | tr -d ' ') 处违规"
   cat "$violations"
   exit 1
 fi
-echo "verify-context: OK(链接/INDEX 覆盖/frontmatter/experience 格式/evolution-log/预算/并行进度源/退役物横幅/实测日期 全部通过)"
+echo "verify-context: OK(链接/INDEX 覆盖/frontmatter/experience 格式/evolution-log/决策记录/预算/并行进度源/退役物横幅/实测日期/受管代码块 全部通过)"

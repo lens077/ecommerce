@@ -37,6 +37,15 @@ build_template() { # build_template <dir>
   cp -R context "$sb/context"
   cp -R docs "$sb/docs"   # 2026-08-31 死链门禁两轮扩围后覆盖 docs 全树,沙箱整树同步
   cp scripts/verify-context.sh "$sb/scripts/"
+  # [EMBED]:门禁调 scripts/doc-embed.py,它又要读指令指向的源文件(backend/…sql 等,
+  # 不在沙箱树里)。源清单动态从指令里提取,不手抄——新指令自动带进沙箱,漏了探针 0 当场红。
+  cp scripts/doc-embed.py "$sb/scripts/"
+  grep -rhoE '<!-- embed: *[^ ]+' docs context AGENTS.md README.md STACK.md TODO.md 2>/dev/null \
+    | sed -E 's/<!-- embed: *//' | sort -u | while IFS= read -r src; do
+      [ -f "$src" ] || continue
+      mkdir -p "$sb/$(dirname "$src")"
+      cp "$src" "$sb/$src"
+    done
   [ -f scripts/context-format-baseline.txt ] && cp scripts/context-format-baseline.txt "$sb/scripts/"
   # [PROGRESS-SRC] 的基线与它登记的文件必须同时进沙箱,否则 pristine-green 会假红,
   # 且 progress-grow 会在一个不存在的文件上「误报成功」——2026-08-29 首跑实测到这两种。
@@ -149,6 +158,94 @@ mut_evolog() { # 抹掉全部「触发事故」要素
   f="$1/context/harness-framework/evolution-log.md"
   grep -v '\*\*触发事故\*\*' "$f" > "$f.new" && mv "$f.new" "$f"
 }
+mut_decision_no_alternatives() { # 已登记、frontmatter 合规,只缺「考虑过的替代方案」的条目
+  cat > "$1/context/decisions/implemented/2026-09-03-tmp-canary-noalt.md" <<'EOF'
+---
+name: 2026-09-03-tmp-canary-noalt
+layer: decisions
+status: implemented
+description: canary 注错样本——没有替代方案的决策
+---
+# 决策：canary
+
+## 问题
+x
+
+## 决策
+x
+
+## 考虑过的替代方案
+
+## 后果
+x
+EOF
+  printf '\n| [2026-09-03-tmp-canary-noalt.md](implemented/2026-09-03-tmp-canary-noalt.md) | canary |\n' >> "$1/context/decisions/INDEX.md"
+}
+mut_decision_status_mismatch() { # 真身文件的 status 与目录不一致(路径是状态的唯一真相)
+  f="$1/context/decisions/implemented/2026-09-03-pre-push-verify-quick.md"
+  awk '{ sub(/^status: implemented$/, "status: proposed"); print }' "$f" > "$f.new" && mv "$f.new" "$f"
+}
+mut_decision_spec_speak() { # implemented 里残留提案期标题
+  printf '\n## 验收标准\n\n- 门禁应当变红\n' >> "$1/context/decisions/implemented/2026-09-03-pre-push-verify-quick.md"
+}
+mut_decision_stray() { # 决策文件没落在生命周期目录里
+  cat > "$1/context/decisions/2026-09-03-tmp-canary-stray.md" <<'EOF'
+---
+name: 2026-09-03-tmp-canary-stray
+layer: decisions
+status: implemented
+description: canary 注错样本——放错目录的决策
+---
+# 决策：canary
+EOF
+  printf '\n| [2026-09-03-tmp-canary-stray.md](2026-09-03-tmp-canary-stray.md) | canary |\n' >> "$1/context/decisions/INDEX.md"
+}
+mut_decision_marker_too_new() { # 立规之后的新决策不得用标记逃避替代方案
+  cat > "$1/context/decisions/implemented/2026-09-03-tmp-canary-marker.md" <<'EOF'
+---
+name: 2026-09-03-tmp-canary-marker
+layer: decisions
+status: implemented
+description: canary 注错样本——新决策用标记代替替代方案
+---
+# 决策：canary
+
+## 问题
+x
+
+## 决策
+x
+
+<!-- decision-format: alternatives-not-recorded -->
+
+## 后果
+x
+EOF
+  printf '\n| [2026-09-03-tmp-canary-marker.md](implemented/2026-09-03-tmp-canary-marker.md) | canary |\n' >> "$1/context/decisions/INDEX.md"
+}
+mut_decision_legacy_marker_ok() { # 假阳性守卫:立规之前迁入、原文没记替代方案的旧决策,用标记放行
+  cat > "$1/context/decisions/implemented/2026-08-01-tmp-canary-legacy.md" <<'EOF'
+---
+name: 2026-08-01-tmp-canary-legacy
+layer: decisions
+status: implemented
+description: canary 放行样本——迁自日志、用 alternatives-not-recorded 标记的旧决策
+---
+# 决策：canary
+
+## 问题
+x
+
+## 决策
+x
+
+<!-- decision-format: alternatives-not-recorded -->
+
+## 后果
+x
+EOF
+  printf '\n| [2026-08-01-tmp-canary-legacy.md](implemented/2026-08-01-tmp-canary-legacy.md) | canary |\n' >> "$1/context/decisions/INDEX.md"
+}
 mut_budget_agents() {
   head -c 4000 /dev/zero | tr '\0' 'x' >> "$1/AGENTS.md"
 }
@@ -161,6 +258,15 @@ mut_budget_todo() { # 无论 TODO 当前多瘦，都精确推过 96KB 门槛
 mut_live_fact() { # 运行时观测值不带实测日期 → 读者分不清「结构事实」与「某一刻快照」
   printf '\n当前 ecommerce 分布为 5/6/6，15/15 Running，镜像 sha-0b9b9ad。\n' \
     >> "$1/context/team/local-env.md"
+}
+mut_embed_stale() { # 受管代码块被手改(或源改了没重跑 doc-embed)→ 投影与源不一致
+  sed -i.bak 's/^    -- 订单状态枚举$/    -- 订单状态枚举（canary 手改）/' "$1/docs/design/order/schema.md"
+  rm -f "$1/docs/design/order/schema.md.bak"
+  grep -q 'canary 手改' "$1/docs/design/order/schema.md" || { echo "mut_embed_stale: 注错没落到文件上" >&2; exit 2; }
+}
+mut_embed_missing_symbol() { # 指令指向源里已不存在的符号(表被改名/删除)→ 必须红而不是静默留旧块
+  sed -i.bak 's/sql:table orders.order_log/sql:table orders.no_such_table/' "$1/docs/design/order/schema.md"
+  rm -f "$1/docs/design/order/schema.md.bak"
 }
 mut_live_fact_dated_ok() { # 带实测日期的快照**不得**误报(假阳性守卫)
   printf '\n当前 ecommerce 分布为 5/6/6，15/15 Running〔实测 2026-08-29〕。\n' \
@@ -229,6 +335,13 @@ probe frontmatter         1 "FRONTMATTER" mut_frontmatter
 probe format              1 "FORMAT"      mut_format
 probe baseline-ratchet    1 "BASELINE"    mut_baseline
 probe evolog              1 "EVOLOG"      mut_evolog
+probe decision-no-alternatives   1 "DECISION" mut_decision_no_alternatives
+probe decision-status-mismatch   1 "DECISION" mut_decision_status_mismatch
+probe decision-spec-speak        1 "DECISION" mut_decision_spec_speak
+probe decision-stray             1 "DECISION" mut_decision_stray
+probe decision-marker-too-new    1 "DECISION" mut_decision_marker_too_new
+# 假阳性守卫:立规之前迁入的旧决策允许用 alternatives-not-recorded 标记,否则旧条目只能编造替代方案
+probe decision-legacy-marker-ok  0 ""         mut_decision_legacy_marker_ok
 probe budget-agents       1 "BUDGET"      mut_budget_agents
 probe budget-todo         1 "BUDGET"      mut_budget_todo
 probe progress-src        1 "PROGRESS-SRC" mut_progress_src
@@ -242,9 +355,11 @@ probe retired-banner-ok   0 ""             mut_retired_banner_ok
 probe live-fact           1 "LIVE-FACT"    mut_live_fact
 # 假阳性守卫:带实测日期的快照必须放行,否则这条规矩本身没法遵守
 probe live-fact-dated-ok  0 ""             mut_live_fact_dated_ok
+probe embed-stale         1 "EMBED"        mut_embed_stale
+probe embed-missing-symbol 1 "EMBED"       mut_embed_missing_symbol
 
 if [ "$fails" -gt 0 ]; then
   echo "verify-context-canary: $fails 个探针失败——门禁可能已静默失效,先修门禁再改内容"
   exit 1
 fi
-echo "verify-context-canary: OK（23 探针全过:干净沙箱绿 + 十九类注错被拦且 tag 正确 + 四道假阳性守卫）"
+echo "verify-context-canary: OK（31 探针全过:干净沙箱绿 + 二十六类注错被拦且 tag 正确 + 五道假阳性守卫）"

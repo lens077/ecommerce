@@ -7,7 +7,7 @@
 # Stop 钩子的全量深检不经过本包装,兜底不受影响。
 set -u
 input=$(cat)
-hook="/Users/sumery/.claude/skills/impeccable/scripts/hook.mjs"
+hook="/Users/lens/.claude/skills/impeccable/scripts/hook.mjs"
 [ -f "$hook" ] || exit 0
 case "$input" in
   *'/frontend/'*) printf '%s' "$input" | node "$hook" ;;
