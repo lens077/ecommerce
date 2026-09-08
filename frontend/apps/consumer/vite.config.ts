@@ -21,6 +21,12 @@ export default defineConfig(({ mode }) => {
   // 基础测试配置（所有环境共享）
   const baseTestConfig = {
     environment: "jsdom",
+    // Node 25+ 默认开启实验性 Web Storage：globalThis.localStorage 变成 Node 自己的
+    // getter，未给 --localstorage-file 时恒返回 undefined，jsdom 环境覆盖不掉它，
+    // 于是 users.test.ts 的 localStorage.clear() 报「reading 'clear' of undefined」。
+    // engines 允许 >=26（CI 是 22 所以没红），本机 Node 26 实测 2026-09-08。
+    // 关掉这个实验特性让 jsdom 的 localStorage 重新生效；22/24 上该 flag 是 no-op。
+    execArgv: ["--no-experimental-webstorage"],
   };
 
   // 开发环境特有的浏览器测试配置
