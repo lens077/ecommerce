@@ -5,7 +5,13 @@
 
 ## 需要人看一眼
 
-识别不出(UNKNOWN)或 copyleft 的条目:LGPL-3.0-or-later×1 UNKNOWN×4 ——是否允许见 docs/TECH.md 的选型纪律;UNKNOWN 通常是许可证文件名不在识别列表里,先人工核对再决定要不要扩识别规则。
+无待处理条目:其余全部识别为宽松许可证。
+
+已核对接受的 copyleft 条目(理由见脚本 `accepted_copyleft`,改依赖后重新判断):
+
+- `github.com/lens077/control-tower` CC-BY-NC-SA-4.0——第一方模块,与本仓同一版权人、同一许可证;非商用与相同方式共享的约束对自己不构成额外限制
+- `github.com/lens077/go-connect-kit` CC-BY-NC-SA-4.0——同上
+- `@img/sharp-libvips-<platform>` LGPL-3.0-or-later——libvips 本身即 LGPL;sharp 动态链接、不修改它,运行时依赖不触发传染。仅被 consumer-next(Next.js PoC)经 next→sharp 引入,PoC 不采用即自然消失
 
 ## 按许可证统计
 
@@ -16,15 +22,17 @@
 | ISC | 23 |
 | BSD-3-Clause | 21 |
 | MPL-2.0 | 11 |
-| UNKNOWN | 4 |
 | MIT OR Apache-2.0 | 4 |
 | BSD-2-Clause | 4 |
 | Apache-2.0 OR MIT | 3 |
 | OFL-1.1 | 2 |
 | MIT-0 | 2 |
+| CC-BY-NC-SA-4.0 | 2 |
 | 0BSD | 2 |
 | Unlicense | 1 |
 | Python-2.0 | 1 |
+| MIT (继承自 yuku-parser) | 1 |
+| MIT (继承自 yuku-codegen) | 1 |
 | LGPL-3.0-or-later | 1 |
 | CC0-1.0 | 1 |
 | CC-BY-4.0 | 1 |
@@ -76,8 +84,8 @@
 | `github.com/jackc/pgservicefile` | v0.0.0-20240606120523-5a60cdf6a761 | MIT | LICENSE |
 | `github.com/jackc/pgx/v5` | v5.10.0 | MIT | LICENSE |
 | `github.com/jackc/puddle/v2` | v2.2.2 | MIT | LICENSE |
-| `github.com/lens077/control-tower` | v0.1.4 | UNKNOWN | (no license file) |
-| `github.com/lens077/go-connect-kit` | v0.4.2 | UNKNOWN | (no license file) |
+| `github.com/lens077/control-tower` | v0.1.5 | CC-BY-NC-SA-4.0 | LICENSE |
+| `github.com/lens077/go-connect-kit` | v0.4.3 | CC-BY-NC-SA-4.0 | LICENSE |
 | `github.com/lib/pq` | v1.12.3 | MIT | LICENSE |
 | `github.com/mattn/go-colorable` | v0.1.15 | MIT | LICENSE |
 | `github.com/mattn/go-isatty` | v0.0.23 | MIT | LICENSE |
@@ -313,8 +321,8 @@
 | `@vitest/utils` | 4.1.11 | MIT | <https://github.com/vitest-dev/vitest/tree/main/packages/utils> |
 | `@voidzero-dev/vite-plus-<platform>` | 0.3.0 | MIT | <https://viteplus.dev/guide> |
 | `@voidzero-dev/vite-plus-core` | 0.3.0 | MIT | <https://viteplus.dev/guide> |
-| `@yuku-codegen/binding-<platform>` | 0.5.48 | UNKNOWN | <https://github.com/yuku-toolchain/yuku#readme> |
-| `@yuku-parser/binding-<platform>` | 0.5.48 | UNKNOWN | <https://github.com/yuku-toolchain/yuku#readme> |
+| `@yuku-codegen/binding-<platform>` | 0.5.48 | MIT (继承自 yuku-codegen) | <https://github.com/yuku-toolchain/yuku#readme> |
+| `@yuku-parser/binding-<platform>` | 0.5.48 | MIT (继承自 yuku-parser) | <https://github.com/yuku-toolchain/yuku#readme> |
 | `@yuku-toolchain/types` | 0.5.43 | MIT | <https://github.com/yuku-toolchain/yuku#readme> |
 | `ajv` | 8.20.0 | MIT | <https://ajv.js.org> |
 | `ansi-regex` | 5.0.1 | MIT | <https://github.com/chalk/ansi-regex#readme> |

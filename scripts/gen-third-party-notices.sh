@@ -44,6 +44,7 @@ classify() { # classify <license file> → SPDX-ish id
       esac ;;
     *"Boost Software License"*) echo "BSL-1.0" ;;
     *"Creative Commons"*"Zero"*|*"CC0"*) echo "CC0-1.0" ;;
+    *"CC-BY-NC-SA-4.0"*|*"Attribution-NonCommercial-ShareAlike 4.0"*) echo "CC-BY-NC-SA-4.0" ;;
     *) echo "UNKNOWN" ;;
   esac
 }
@@ -91,14 +92,28 @@ const data = JSON.parse(fs.readFileSync(process.argv[2], 'utf8'))
 const platform = /-(darwin|linux|win32|android|freebsd|openbsd|sunos|aix)(-[a-z0-9]+)*$/
 const seen = new Set()
 const rows = []
+// 先建「包名 → 许可证」索引,给下面的 binding 子包继承用。
+const byName = new Map()
+for (const [license, pkgs] of Object.entries(data)) for (const p of pkgs) byName.set(p.name, license)
+// native 绑定子包(@yuku-parser/binding-darwin-arm64 …)是主包按平台拆出的产物,
+// 打包方常漏填子包 package.json 的 license 字段,pnpm 便报 Unknown。它们的许可证
+// 就是主包的:scope 去掉 @ 即主包名(@yuku-parser → yuku-parser)。主包也查不到才保留 UNKNOWN。
+const inherit = (name, license) => {
+  if (license !== 'Unknown') return license
+  const m = /^@([^/]+)\/binding(-|$)/.exec(name)
+  if (!m) return license
+  const parent = byName.get(m[1])
+  return parent && parent !== 'Unknown' ? `${parent} (继承自 ${m[1]})` : license
+}
 for (const [license, pkgs] of Object.entries(data)) {
   for (const p of pkgs) {
     const name = p.name.replace(platform, '-<platform>')
+    const lic = inherit(p.name, license)
     for (const v of p.versions) {
       const key = `${name}@${v}`
       if (seen.has(key)) continue
       seen.add(key)
-      rows.push([name, v, license === 'Unknown' ? 'UNKNOWN' : license, p.homepage ?? ''])
+      rows.push([name, v, lic === 'Unknown' ? 'UNKNOWN' : lic, p.homepage ?? ''])
     }
   }
 }
@@ -115,7 +130,21 @@ fi
 # ── 汇总 ───────────────────────────────────────────────────────────
 go_n=$(awk 'NF{n++} END{print n+0}' "$tmp/go.rows")
 fe_n=$(awk 'NF{n++} END{print n+0}' "$tmp/fe.rows")
-attention=$(grep -E '^(UNKNOWN|GPL|LGPL|AGPL|SSPL)' "$tmp/all.lic" | LC_ALL=C sort | uniq -c | awk '{printf "%s×%s ", $2, $1}')
+# 已人工核对并接受的 copyleft 条目:不再进「需要人看一眼」,单列「已核对接受」并写明理由。
+# 加条目 = 做过判断;理由写清「为什么不传染」,半年后才不会被人凭直觉删掉。
+# 格式:包名(平台段已归一为 <platform>)|许可证|理由
+accepted_copyleft='
+github.com/lens077/control-tower|CC-BY-NC-SA-4.0|第一方模块,与本仓同一版权人、同一许可证;非商用与相同方式共享的约束对自己不构成额外限制
+github.com/lens077/go-connect-kit|CC-BY-NC-SA-4.0|同上
+@img/sharp-libvips-<platform>|LGPL-3.0-or-later|libvips 本身即 LGPL;sharp 动态链接、不修改它,运行时依赖不触发传染。仅被 consumer-next(Next.js PoC)经 next→sharp 引入,PoC 不采用即自然消失
+'
+# 用 ; 拼接:macOS awk 对 -v 值里的换行会告警「newline in string」
+accepted_names=$(printf '%s\n' "$accepted_copyleft" | awk -F'|' 'NF{printf "%s;", $1}')
+# attention 只统计未被接受的:从行表里先剔掉已接受包名,再取许可证列
+attention=$( { cat "$tmp/go.rows"; cat "$tmp/fe.rows"; } \
+  | awk -F'|' -v acc="$accepted_names" 'BEGIN{n=split(acc,a,";"); for(i=1;i<=n;i++) if(a[i]!="") skip["`" a[i] "`"]=1}
+      { name=$2; gsub(/^ +| +$/, "", name); if (name in skip) next; lic=$4; gsub(/^ +| +$/, "", lic); print lic }' \
+  | grep -E '^(UNKNOWN|GPL|LGPL|AGPL|SSPL|CC-BY-NC)' | LC_ALL=C sort | uniq -c | awk '{printf "%s×%s ", $2, $1}')
 
 {
   echo "# Third-party notices"
@@ -129,7 +158,13 @@ attention=$(grep -E '^(UNKNOWN|GPL|LGPL|AGPL|SSPL)' "$tmp/all.lic" | LC_ALL=C so
   if [ -n "$attention" ]; then
     echo "识别不出(UNKNOWN)或 copyleft 的条目:${attention}——是否允许见 docs/TECH.md 的选型纪律;UNKNOWN 通常是许可证文件名不在识别列表里,先人工核对再决定要不要扩识别规则。"
   else
-    echo "无:所有条目都识别为宽松许可证。"
+    echo "无待处理条目:其余全部识别为宽松许可证。"
+  fi
+  if [ -n "$(printf '%s' "$accepted_copyleft" | tr -d '[:space:]')" ]; then
+    echo
+    echo "已核对接受的 copyleft 条目(理由见脚本 \`accepted_copyleft\`,改依赖后重新判断):"
+    echo
+    printf '%s\n' "$accepted_copyleft" | awk -F'|' 'NF{printf "- `%s` %s——%s\n", $1, $2, $3}'
   fi
   echo
   echo "## 按许可证统计"
