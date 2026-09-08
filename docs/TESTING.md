@@ -107,7 +107,7 @@ require.NoError(t, goose.Up(db, migrationDir))
 
 helper **不使用 `WithInitScripts` 直接执行 migration 文件**：goose SQL 同时包含 Up/Down，交给 PostgreSQL 当普通脚本会把刚建的对象在 Down 段删掉。调用方必须使用 goose 按版本应用真实 migration，这也让测试覆盖生产迁移路径。
 
-当前首个用例是 `pkg/outbox.TestRelayTracksAckPerDestination`，覆盖纯 expand migration、producer transaction trigger、sequence 晚提交防跳过、relay 有界历史 backfill、双 destination ack、顺序阻塞退避、dead-letter/requeue 和清理门禁。本地 Docker 不可用时 testcontainers 会明确跳过；`CI` 环境不允许用缺少 Docker 作为跳过理由，容器启动会直接失败。CI 仍需把不带 `-short` 的集成测试设为必需检查。一个包扩展到多个数据库用例后，再引入包级容器复用与 snapshot/restore，避免提前加入未被验证的共享状态机制。
+旧 `pkg/outbox.TestRelayTracksAckPerDestination` 已随自写 relay 删除，不能再用 JetStream ACK、双 destination 或 `published_at` 说明当前语义。搜索 CDC 的 trigger、Connector、mapping、alias 与重建契约由同级 pipeline 仓测试和 `verify-search-contract.sh` 验证。领域事件链落地后，再为 Outbox Event Router、Inbox 和业务幂等补集成测试。
 
 #### 3.1.1 逃生舱：用内网真实 PG 代替容器
 

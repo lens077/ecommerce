@@ -10,6 +10,7 @@
 | [registry](registry/INDEX.md) | `backend/services/*/internal/pkg/registry/` | 存量 Consul TTL 注册与心跳；目标发现为生产 K8s Service DNS、开发 Docker Compose 服务名 |
 | [config](config/INDEX.md) | `backend/services/*/internal/pkg/config/` + `../control-tower/services/config` | 一份配置三个副本；热更新的生效边界 |
 | [behavior](behavior/INDEX.md) | `backend/services/behavior/` | 缺配置块导致 gorse 静默关闭 |
+| [cart](cart/INDEX.md) | `backend/services/cart/` | 匿名加购端到端：网关访客轨已通，落库被 `cart_item.shop_name NOT NULL` 挡住（登录用户同样从未加购成功），待修 |
 | [events](events/INDEX.md) | `backend/pkg/outbox/` + `backend/pkg/searchindex/` | 两条线：行投影走 Debezium CDC → Sink，领域事实走 Outbox → Debezium Event Router → Inbox；分线判据；自写 relay 与 NATS 退役；Debezium 空闲槽撑爆 WAL |
 | [consumer](consumer/INDEX.md) | `frontend/apps/consumer/` | MUI spacing ×8 踩坑；购物车重复请求 |
 | [merchant](merchant/INDEX.md) | `frontend/apps/merchant/` | ECharts 路由 chunk 的异步加载与拆分 |
@@ -20,7 +21,7 @@
 以下模块目前没有沉淀（不代表没有约束，只是还没踩到坑或还没写）。
 读它们的代码前先看 `docs/design/` 对应服务目录和 `TODO.md` 的状态列。
 
-**后端**：`user` `product` `cart` `order` `payment` `inventory` `search` `address` `merchant`
+**后端**：`user` `product` `order` `payment` `inventory` `search` `address` `merchant`
 **前端**：`admin`、`desktop`（Tauri 壳）。配置中心前端已随 config 服务迁进 control-tower，本仓不再有 `config` app。
 
 ## 目录约定

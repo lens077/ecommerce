@@ -111,6 +111,7 @@ description: 公网暴露基础设施(Pangolin)的拓扑事实、面板 API 操�
   **已删:`dev.apikv.com`(前端 dev server 远程预览)——2026-08-29 随 dev 子域资源一并删除,实测返回 404;
   静态导航页(docker-deploy 仓 `homepage/site/index.html`)的对应卡片已同步移除**
   **已删:`kaneo.apikv.com`(看板,rid 5)——2026-08-30 随 kaneo 整体下线删除(资源行 + target + 容器 + 数据卷),实测返回 404**
+- **`es.apikv.com`(rid 47, 2026-09-02 建,同日由 `node3-es` 改名——⚠️ API 只发 `subdomain` 不会重算 `fullDomain`,必须连 `domainId` 一起发,否则 Traefik 仍按旧域名路由、新域名 404(实测); site `node3`=siteId 7, target `127.0.0.1:9200` http, **SSO off**)——Elasticsearch 9.4.5(容器 `cdc-elasticsearch`),机器客户端过不了 SSO,鉴权落在 ES 自身(匿名/错误凭据 401 实测);2026-09-03 已供集群内 search Pod 读取稳定 alias,写入方是 node3 Elasticsearch Sink**
 - k8s newt:helm release `newt`(ns `pangolin`,chart `fossorial/newt`);凭据看 `helm get values newt -n pangolin`(inline,勿把 values 文件提交入库)
 - **k8s 站点(siteId 4)的资源全部指同一个 target `10.110.51.106:443 https`** —— 那是 `cilium-gateway` 的 ClusterIP,分流靠 HTTPRoute 的 hostname 而非不同 target。2026-08-27 新增四个(均 **SSO on**,控制面靠登录墙兜底):`argocd`(rid 31)/`consul`(rid 32)/`search`(rid 33)/`cart-api`(rid 34)。
   ⚠️ **302 只证明 Pangolin 拦住了,不证明后端活着**——验后端要在集群内直连 `curl -H "Host: xxx.apikv.com" https://10.110.51.106/`,否则 502 会被登录墙掩盖。

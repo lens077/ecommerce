@@ -95,7 +95,7 @@ scripts/verify-context-canary.sh                     # 改 ↑ 门禁脚本本�
 - **往文档写集群数字前先读 [context/team/live-facts.md](context/team/live-facts.md)**：运行时观测值（Pod 分布/就绪计数/镜像 tag）必须带「实测 YYYY-MM-DD」，否则 `[LIVE-FACT]` 门禁红；且**集群异常时不要采数**，故障态会被固化成「现状」
 - **网关和配置中心都不在本仓**：2026-08-23 起由同级仓 **control-tower**（`services/gateway` + `services/config`）承载，两个服务均已切流上线。集群里 `config-center` 这个 ns/Deployment 名只是没改的遗留标签，跑的镜像是 `control-tower-config`。本仓的旧 `gateway/` 目录已于 2026-08-24 删除（历史在 tag `backup/pre-control-tower-20260823`）；`backend/structcheck` 直接 import `github.com/lens077/control-tower/routes` 核对路由，**改路由模板必须同 PR 升级本仓对 control-tower 的依赖版本**
 - **CI 仅由发布 tag 触发**（裸 semver `X.Y.Z`，`X`=破坏性/大版本；push main 不构建，2026-08-20 起）。需要 CI 验证或部署时**打 tag 并推到 `github` 远端**（origin 是 GitLab 无 Actions），版本随迭代递增；语义、手顺与四条纪律见 [context/team/git-commit.md](context/team/git-commit.md)「发布 tag 与 CI 触发」
-- **部署清单两份真相源必须逐字段等价**（2026-09-06 起）：`helm/` 与裸 manifest（`backend/services/*/deploy/dev/`、`application-vpa.yml`、`frontend/apps/*/deploy/`）渲染同一套对象，`scripts/verify-deploy-parity.sh` 强制；改一边必改另一边，共享 SA/CNP/ExternalSecret 只在 `helm/files/`。见 [context/team/deploy-parity.md](context/team/deploy-parity.md)
+- **部署清单两份真相源必须逐字段等价**（2026-09-06 起）：`helm/`（`values.yaml` + `values-<env>.yaml`）与 kustomize 裸 manifest（`backend/services/*/deploy/{base,overlays/<env>}` 等）按环境渲染同一套对象，`scripts/verify-deploy-parity.sh` 强制；改一边必改另一边。见 [context/team/deploy-parity.md](context/team/deploy-parity.md)
 - **GitOps 当前是断的**（2026-08-24 实测）：ArgoCD 零 Application，集群由 `make k8s-dev-all` / `make deploy` 手工驱动，故 `okteto up` 那条「先 `scripts/argocd-devwindow.sh off`」**当前不适用**。接回 ArgoCD 只差 `argocd-app.yml` 顶部两件事；放开 automated 时同步改本条。见 [context/team/okteto-inner-loop.md](context/team/okteto-inner-loop.md)、[docs/OKTETO.md](docs/OKTETO.md)
 
 ## 中文文案约定

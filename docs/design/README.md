@@ -11,6 +11,12 @@
 > 📖 **遇到不认识的业务名词先查 [../GLOSSARY.md](../GLOSSARY.md)**（189 个领域词条：
 > SPU/SKU/Listing/商品快照/拆单/履约/OrderGroup/MerchantOrder/Saga Manager/PaymentIntent/
 > StockLedger/Reservation…）。本目录的设计文档默认读者已掌握这些术语，不再逐篇解释。
+>
+> 🔁 **DDL / proto / Go 声明不要手抄进设计文档**：用 `<!-- embed: <源路径> <选择器> -->` 指令标出来，
+> 由 [`scripts/doc-embed.py`](../../scripts/doc-embed.py) 从迁移/proto/Go 源重写代码块（写法见脚本头注释，
+> 样例见 [order/schema.md](order/schema.md)）；`verify-context.sh` 的 [EMBED] 门禁比对投影与源，
+> 改了源就重跑脚本。2026-09-03 清点 523 个文档代码块，product/order/payment/inventory/cart
+> 五个域的 DDL/proto 摘录名字都已对不上源码，清单在 `.scratch/doc-code-block-inventory-2026-09-03.md`。
 
 ## 目录
 
@@ -35,7 +41,7 @@
 | [order/consistency.md](order/consistency.md) | 跨服务一致性（Order Saga 编排 + Outbox/Inbox + Kafka 编舞） | 原 TODO.md §二 |
 | [order/schema.md](order/schema.md) | 订单表早期稿（被 checkout 终稿部分取代） | DESIGN.md §数据库设计 |
 | [payment/payment.md](payment/payment.md) | **已作废**（文首横幅）：单订单支付单+单轴状态模型被 checkout v2 按组支付、capture/refund 双轴取代；仅存渠道对接与对账素材 | DESIGN.md §支付系统 |
-| [search/search.md](search/search.md) | CQRS 搜索投影：Elasticsearch 代码已接线、运行时未切流，含 `SearchCatalog` 边界、唯一写入者、alias/IK 契约与切流门禁 | DESIGN.md §搜索服务；2026-09 代码迁移重写 |
+| [search/search.md](search/search.md) | CQRS 搜索投影：`products.search_catalog` → Debezium → Kafka → Elasticsearch Sink 已切流，含 `SearchCatalog` 边界、字段契约、全量重建、alias/IK 与灾备入口 | DESIGN.md §搜索服务；2026-09 运行时切流与手顺固化 |
 | [merchant/store-settings.md](merchant/store-settings.md) | Shopline 商店设置 20 页竞品实录（含自研备注与服务映射） | 原 DESIGN-MERCHANT.md，2026-08-12 重写为实录调研 |
 | [merchant/roadmap.md](merchant/roadmap.md) | 商家角色功能取舍（引进/不引进）与 P0/P1/P2 路线图 | 2026-08-12 基于 store-settings.md 调研 |
 | [product/sales.md](product/sales.md) | 销量统计：PG 事实与预聚合 + Dragonfly 可丢加速层（**部分落地**，实况见文首横幅） | 原 product 服务 schema/design/ 目录，2026-08-13 移入 |

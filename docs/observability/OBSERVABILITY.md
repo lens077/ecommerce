@@ -71,8 +71,8 @@ Prometheus 与 OpenTelemetry 不是竞争关系：本仓用 OTel 统一应用侧
 |------|-------------|
 | **pgx 连接池**:active / idle / **wait count** | 「很多故障不是数据库挂了,是连接池耗尽」——wait 出现即预警,查慢查询占坑或池子配小 |
 | Redis:连接数、**命中率**、响应时间、错误数 | 经典联动:**Redis Hit ↓ + DB QPS ↑ = 缓存失效击穿**,两条曲线必须放同一张看板 |
-| Kafka **consumer lag / lag growth / rebalance / commit latency**；迁移期同时看 NATS pending/redelivery | 持续增加 = 消费能力不足、rebalance 抖动或 poison message；扩消费者前先查幂等、retry/DLQ 与下游慢逻辑。首个 Kafka consumer 必须同时带指标与告警 |
-| Elasticsearch / S3-compatible / Consul 客户端错误数；迁移期同时看 Meilisearch | 依赖不可用通常先于业务错误率上升，需与 gateway 无节点、搜索投影 lag 联看；目标搜索依赖是隐藏在 `SearchCatalog` 接口后的 Elasticsearch 只读投影 |
+| Kafka **consumer lag / lag growth / rebalance / commit latency** | 持续增加 = 消费能力不足、rebalance 抖动或 poison message；扩消费者前先查幂等、retry/DLQ 与下游慢逻辑。首个业务 Kafka consumer 必须同时带指标与告警；搜索 Sink 另看 Connect task 与 sink lag |
+| Elasticsearch / S3-compatible / Consul 客户端错误数 | 依赖不可用通常先于业务错误率上升，需与 gateway 无节点、搜索投影 lag 联看；搜索依赖是隐藏在 `SearchCatalog` 接口后的 Elasticsearch 只读投影 |
 
 ### 3.4 资源层(USE,节点与容器)
 
@@ -124,7 +124,7 @@ ntfy 不是单一兼容 webhook：Gatus 用 `custom` provider 直接 POST ntfy �
 4. **控制基数**:label 里禁止放无界值(port、uuid、user_id);新增 label 先回答基数上限是多少;
 5. **验收看实测行为不看配置**:看板/告警上线后要用注入故障(杀 Pod、断依赖)验证真的会响——
    「配置在骗人」在本仓已出现两次(VPA min-replicas、consul deregister 钳制);
-6. **监控随功能同行**：新依赖（如 Kafka consumer、Elasticsearch 搜索投影）接入的同一个 PR 里必须带上对应指标与告警；存量 NATS consumer、Meilisearch indexer 在迁移期继续保留对应监控，
+6. **监控随功能同行**：新依赖（如 Kafka consumer、Elasticsearch 搜索投影）接入的同一个 PR 里必须带上对应指标与告警；已退役的 NATS consumer、Meilisearch 路径不得继续占用现役告警口径，
    不接受「先上线后补监控」。
 
 ---

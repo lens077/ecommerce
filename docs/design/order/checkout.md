@@ -13,7 +13,7 @@
 - **v1 全成全败**：任一商家/SKU 不满足 → 整单失败，不落任何业务订单；部分成交是 v2 产品需求（需结算页显式勾选授权）。
 - 库存交互**全组原子**：`ReserveGroup` / `ConfirmReservationGroup` / `ReleaseGroup`，一次请求一个库存事务，消灭跨商家补偿窗口与混合库存态。
 - 支付把**资金事实**（payment_attempt，只增不改）与**订单接受**（order_group.accepted_pay_no，CAS 唯一）分开；订单取消后到达的成功支付一律自动退款，不复活订单。
-- 跨服务副作用两条腿：同步链 = RPC + 持久化补偿任务；异步链 = **Outbox + 持久事件主干 + Inbox 幂等消费**。存量 broker 是 NATS JetStream；目标是外部非 K8s Kafka。正确性依赖 outbox/inbox，不依赖某个 broker 宣称的 exactly-once。
+- 跨服务副作用两条腿：同步链 = RPC + 持久化补偿任务；异步链 = **Outbox + Kafka 持久事件主干 + Inbox 幂等消费**。外部非 K8s Kafka 已是基础设施边界，但领域 producer/consumer 尚未接线；NATS JetStream 与自写 relay 已退役。正确性依赖 outbox/inbox，不依赖某个 broker 宣称的 exactly-once。
 - 履约门禁：只有 **OrderReadyForFulfillment**（库存确认成功后发出）可触发独立 Fulfillment Service；OrderPaid 不再直接触发履约（[platform/architecture.md](../platform/architecture.md) 领域事件表已于 2026-08-26 随本决议修订，闭环）。
 - 库存状态机对齐 [inventory/inventory.md](../inventory/inventory.md) §3.2：支付确认 = 预占 → **locked**；发货完成才 locked → deducted。
 
@@ -74,7 +74,7 @@
 
 **`order_group` 加列**：`status`（pending_payment/paid/cancelled，预留 partial_cancelled 不启用）、`pay_deadline`、`currency`、`client_token UNIQUE`（第二道防线）、`accepted_pay_no`、`inventory_status`（pending/confirmed/failed）。
 
-**新表**：`outbox`（event_id、event_type、partition_key=group_no、payload、published_at）、`processed_event`（inbox，UNIQUE(consumer, event_id)）、`compensation_task`（挂 order_request 的 release_required 任务：reservation_id、状态、重试计数）、`job_run`（定时任务执行历史）。
+**新表**：`outbox`（event_id、aggregate_type、event_type、partition_key=group_no、payload、occurred_at，不设 published 簿记）、`processed_event`（inbox，UNIQUE(consumer, event_id)）、`compensation_task`（挂 order_request 的 release_required 任务：reservation_id、状态、重试计数）、`job_run`（定时任务执行历史）。
 
 ### 3.2 inventory 库（breaking migration）
 
@@ -239,10 +239,10 @@ OrderPaid 不再被履约订阅（platform/architecture.md 领域事件表已于
 
 ## 9. Outbox / Inbox 硬性契约
 
-- 事件带全局 event_id；Kafka partition key = group_no，保证同订单组事件进入同一 partition。relay 收到 Kafka `acks=all` 才标记对应 destination delivery 为 `published`；ack 后、落库前崩溃允许重复投递。迁移期如需双 broker，两个 ack 必须独立记录。
+- 事件带全局 `event_id`；Kafka partition key = `group_no`，保证同订单组事件进入同一 partition。Debezium Outbox Event Router 从 WAL 搬运事件；Kafka 写入成功、Connect offset 提交前崩溃时允许重复投递，不维护 `published` 或 destination ACK 簿记。
 - 每个消费者：`processed_event` 唯一约束（`consumer_group`, `event_id`）+ 业务更新 + 下游 outbox **三者同一本地事务**——幂等消费是表结构不是口号。
 - 语义边界：**允许重复，不允许已确认事件不可追踪地丢失**。报价（Redis）是全系统唯一允许真丢的数据。
-- 监控：outbox 未发布滞留年龄、消费 lag、死信告警；连续消费失败超过 5 次必须转投 DLQ 并触发告警。
+- 监控：Debezium task、replication slot 保留量、Connect offset、新旧消费 lag 与 DLQ 告警；消费重试上限由各消费者的失败分类与业务恢复目标定义，不复用 JetStream `MaxDeliver` 语义。
 
 ## 10. 正确性论证
 
@@ -296,7 +296,7 @@ OrderPaid 不再被履约订阅（platform/architecture.md 领域事件表已于
 
 - proto：order（CreateQuote 新增、CreateOrderRequest/Response 重定义、GetOrderRequestState 内部 RPC）、inventory（三个 Group RPC + 查询）、payment（CreatePayment 契约重做）、cart/product/merchant（前置项）。
 - DB migration：orders（order_request、group 加列、outbox、processed_event、compensation_task、job_run）、inventory（§3.2）、payment（§3.3 + refund_task）。
-- 基础设施：Kafka relay、消费者（order/inventory/payment 各自的 Inbox 消费）、两个 cron（超时取消、库存对账）、退款 worker；NATS 仅为迁移期现有搜索链，不作为新交易事件目标。
+- 基础设施：Debezium Outbox Event Router、Kafka 消费者（order/inventory/payment 各自的 Inbox 消费）、两个 cron（超时取消、库存对账）、退款 worker；NATS 与自写 relay 已退役，不作为交易事件或搜索链组件。
 - 网关：三条消费者路由 + Casdoor Session/OpenFGA、回调放行、x-md-global-* 剥离。
 - 文档修订：~~platform/architecture.md 事件订阅拓扑（履约改挂 OrderReadyForFulfillment）、inventory/inventory.md 库存公式注释~~（两处均已于 2026-08-26 修订完成）。
 - 配置 seed、deploy 清单、`.service-matrix.yaml`、监控指标与告警（§6.3/§8/§9 所列）。
@@ -313,7 +313,7 @@ OrderPaid 不再被履约订阅（platform/architecture.md 领域事件表已于
 8. 取消后晚到成功回调 → 不复活订单，PaymentRefundRequested 可靠产生
 9. Confirm 遇 RESERVATION_EXPIRED → 补占一次成功续链；再失败 → 退款 + 告警
 10. 多实例定时任务并跑 → 无重复取消、无重复释放
-11. outbox relay 在 Kafka ack 后、记录 delivery 前崩溃 → 事件重复投递，消费者 Inbox 去重
+11. Debezium 在 Kafka 写入成功、Connect offset 提交前崩溃 → 事件重复投递，消费者 Inbox 去重
 12. Redis 报价全丢 → 已成单 token 重放仍返回原结果；未成单强制重新报价；无重复下单
 13. 越权：他人 token / 他人 cartItemId / 他人 addressId → 全部 PERMISSION_DENIED 且不泄露内容
 14. 库存不变量：任意操作序列后 available + reserved + locked == on_hand 恒成立（属性测试）

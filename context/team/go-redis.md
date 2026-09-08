@@ -213,7 +213,7 @@ rdb := redis.NewClusterClient(&redis.ClusterOptions{
 ## 十、Redis 不是消息队列的替代品
 
 Stream / Pub-Sub 能做消息,但适用面是**轻量事件通知、实时推送、短生命周期任务**。
-大吞吐、长期留存、消费者组治理与重放应交给持久事件主干。当前搜索链仍使用存量 **NATS JetStream**（`nats` ns，nats-0/1/2）；目标主干按 `docs/TECH.md` 为外部非 K8s **Apache Kafka** + Outbox/Relay/Inbox + DLQ。不要用 Redis Stream/Pub/Sub 绕过事件可靠性与迁移门禁。
+大吞吐、长期留存、消费者组治理与重放应交给持久事件主干。当前搜索行投影由 **Debezium → Kafka → Elasticsearch Sink** 搬运；领域事件目标链为外部非 K8s **Apache Kafka** + Outbox Event Router + Inbox + DLQ。不要用 Redis Stream/Pub/Sub 绕过事件可靠性门禁。
 
 Pub/Sub 是 at-most-once 的即时投递：订阅者离线、断线或处理失败时，消息不会补发。`Publish()` 返回的
 订阅者数量只表示当时匹配的订阅者，不是业务处理 ACK。长驻订阅还会持有专用连接；订阅循环必须在
@@ -222,7 +222,7 @@ Pub/Sub 是 at-most-once 的即时投递：订阅者离线、断线或处理失�
 
 本仓的现状是:订单的 EventBus 还是**进程内总线**(见 `TODO.md`),
 所以「用 Redis 顶一下」看起来很诱人。**不要这么做**——事件是跨服务契约,
-换掉传输层的代价远大于接入既定的 **outbox/inbox + 事件主干**。当前 `ecommerce-outbox-relay` 和 `ecommerce-search-indexer` 仍走 NATS；新领域事件不得继续扩大 NATS 面，按 K0–K6 路线接 Kafka。任何临时传输都必须在 TODO 写明退出条件。
+换掉传输层的代价远大于接入既定的 **Outbox Event Router + Kafka + Inbox**。NATS、`ecommerce-outbox-relay` 和 `ecommerce-search-indexer` 已退役；不得为新领域事件恢复这些组件。任何临时传输都必须在 TODO 写明退出条件。
 
 ## 十一、Key、TTL 与批量维护
 

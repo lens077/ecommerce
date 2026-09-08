@@ -18,8 +18,8 @@ Golang + React 的 B2B2C 多商家电商实践项目：10 个后端微服务、c
 | 后端 | Go、ConnectRPC Go、Protobuf/Buf、Protovalidate、Fx、pgx、sqlc、goose、OpenTelemetry |
 | 前端 | React、TypeScript、ConnectRPC/Protobuf-ES、pnpm workspace、vite-plus（vp）、Tauri |
 | 网关/配置 | [control-tower](https://github.com/lens077/control-tower)：Casdoor 有状态 Session（BFF）、Connect 直通（H2C）、Config Center；目标按 [`docs/TECH.md`](docs/TECH.md) 以 OpenFGA 关系授权取代存量 Casbin、移除 legacy JWT 兼容轨；默认无重试、无 BBR/熔断/HTTP/3 |
-| 数据 | node3 Pigsty PostgreSQL（Patroni HA + PgBouncer，UUIDv7 主键）、Dragonfly（分实例：Session/Cache/限流，业务可丢缓存 + BFF session）、Silo（基于 MinIO，定稿）；search 代码已通过 `SearchCatalog` 接入 Elasticsearch 只读投影，但 Pod→node3 回环监听的网络通路未解决、尚未切流，存量 Meilisearch 仍在运行；CNPG 仅存量休眠 |
-| 事件 | PostgreSQL outbox + relay + Inbox 幂等 + DLQ；主干定稿 Apache Kafka（外部非 K8s 集群，见 [`docs/TECH.md`](docs/TECH.md)），存量 NATS JetStream + search indexer 迁移期维护、验收后退役 |
+| 数据 | node3 Pigsty PostgreSQL（Patroni HA + PgBouncer，UUIDv7 主键）、Dragonfly（分实例：Session/Cache/限流，业务可丢缓存 + BFF session）、Silo（基于 MinIO，定稿）；search 已通过 `SearchCatalog` 读取 Elasticsearch 稳定 alias，策展投影由 `products.search_catalog` 经 Debezium → Kafka → Elasticsearch Sink 搬运；Meilisearch 运行资源已于 2026-09-04 完整退役，CNPG 已清理 |
+| 事件 | 主干定稿为外部非 K8s Apache Kafka；领域事件目标链为 PostgreSQL Outbox → Debezium Outbox Event Router → Kafka → Inbox 幂等 + DLQ，当前零业务生产者/消费者；NATS JetStream、自写 relay 与 search indexer 已退役 |
 | 注册/配置 | 服务发现定稿 K8s Service + CoreDNS；pre 半生产测试走 Docker Compose 服务名，开发内环（mirrord/Okteto）评估中；Consul 为存量迁移期组件；Config Center 是 10 个服务唯一 Bootstrap 来源 |
 | 边缘/安全 | Cilium CNI/KPR/LB/Gateway API、cert-manager、ESO + Vault；业务服务的默认拒绝 NetworkPolicy 和 east-west 身份仍不完整 |
 | 制品/交付 | Docker Buildx、GitHub Actions、Renovate；制品分工（[`docs/TECH.md`](docs/TECH.md) §7.1）：TCR 为主镜像仓库（集群直连拉取）、Harbor 存 Helm 制品（OCI）、GHCR 可选双存（镜像+Helm，是否推送由 CI 按网络决定）；Kubernetes manifest、Helm；ArgoCD 当前断线 |
@@ -95,7 +95,7 @@ docker compose -f backend/infrastructure/redis/compose.yaml up -d
 docker compose -f backend/infrastructure/consul/compose.yaml up -d
 ```
 
-业务服务使用的基础设施地址配置在 Config Center，不在仓库 YAML。search 服务读取 `search.catalog`；`tools/outbox-relay`、`tools/search-indexer` 等独立 worker 通过环境变量和 Secret 取 NATS、Elasticsearch 等端点与凭据。要指向自己的中间件时，按消费者修改对应 Bootstrap 或 worker 配置，不要假定所有进程共用一条配置路径。
+业务服务使用的基础设施地址配置在 Config Center，不在仓库 YAML。search 服务读取 `search.catalog`，只访问稳定 alias。CDC Connector、Elasticsearch mapping、全量重建与灾备手顺由同级仓 `postgres-kafka-es-streaming-pipeline` 维护；不要在本仓恢复已退役的 relay 或 indexer worker。
 
 启动后端微服务（一把拉起全部服务可用 `backend/compose.yaml`）：
 

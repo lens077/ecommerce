@@ -8,7 +8,7 @@ web
 
 ## Users
 
-三类角色,三端并重(设计投入不设主次,2026-08-11 用户确认):
+三类角色,三端并重(设计投入不设主次,2026-08-11 确认):
 
 - **消费者(consumer app)**:在综合商城浏览、搜索、比价、下单的普通购物者;移动与桌面浏览器都是真实场景。
 - **商家(merchant app + desktop/Tauri 壳)**:入驻商家的运营者,日常做商品上架、SKU/库存维护、订单处理;高频、任务型使用。
@@ -20,7 +20,7 @@ web
 
 ## Positioning
 
-综合商城形态(非内容/短视频带货、非垂类精品)。平台机制:多商家入驻(B2B2C),平台统一提供搜索(search 代码已通过 `SearchCatalog` 接入 Elasticsearch 只读投影,但运行时尚未切流,存量 Meilisearch 继续承载旧部署)、推荐(Gorse)、交易、履约支撑;三端共享同一套账号体系,目标鉴权为 Casdoor 有状态 Session(Dragonfly Session Store,登出即删 Session 即刻失效)+OpenFGA 关系授权;存量 Casbin 处于迁移期,完全废弃 JWT,不保留 JWT 兼容或双重鉴权路径。
+综合商城形态(非内容/短视频带货、非垂类精品)。平台机制:多商家入驻(B2B2C),平台统一提供搜索(`SearchCatalog` 已读取 Elasticsearch 稳定 alias;`products.search_catalog` 经 Debezium→Kafka→Elasticsearch Sink 增量搬运)、推荐(Gorse)、交易、履约支撑;三端共享同一套账号体系,目标鉴权为 Casdoor 有状态 Session(Dragonfly Session Store,登出即删 Session 即刻失效)+OpenFGA 关系授权;存量 Casbin 处于迁移期,完全废弃 JWT,不保留 JWT 兼容或双重鉴权路径。
 
 ## Operating Context
 
@@ -30,7 +30,7 @@ web
 
 ## Capabilities and Constraints
 
-- 已有功能域(10 个后端微服务):用户、商品(含 SKU)、购物车、订单、支付、库存、搜索、地址、商家、行为(埋点/推荐信号);推荐由 Gorse 提供。2026-09 已完成搜索的代码级 Meilisearch→Elasticsearch 替换:`SearchCatalog` 返回项目 DTO,`tools/search-indexer` 是策展投影唯一权威写入者,索引可从 PostgreSQL 全量重建。node3 Elasticsearch 只监听回环地址,Pod 无网络通路,所以**尚未运行时切流**;旧 Meilisearch 部署仍是存量运行路径。JetStream 也仅在迁移期保留,目标事件体系为外部非 K8s Apache Kafka 集群+Outbox/Relay/Inbox+DLQ。Product Service 尚无商品写 RPC,也未在业务事务中写 outbox,因此当前不能宣称商品变更已自动同步。目标限界上下文为 identity/catalog/cart/order/payment/inventory/fulfillment/notification,另有 search-projection、analytics 编舞消费者;Order 内置 Saga Manager 编排核心链路,Kafka 事件驱动派生与副作用链路,防超卖由数据库单条原子语句与状态机不变量保证。拓扑真相源 `.service-matrix.yaml`,进度以 `TODO.md` 为准——**设计不得假定未接线的能力已存在**(区分 `depends_on` 与 `depends_on_planned`)。
+- 已有功能域(10 个后端微服务):用户、商品(含 SKU)、购物车、订单、支付、库存、搜索、地址、商家、行为(埋点/推荐信号);推荐由 Gorse 提供。2026-09-03 已完成搜索运行时切流:`SearchCatalog` 返回项目 DTO,策展投影唯一定义是 PostgreSQL 表 `products.search_catalog`,由 trigger 维护并经 Debezium→Kafka→Elasticsearch Sink 搬运;版本化全量重建和灾备由 pipeline 仓负责。NATS JetStream、自写 relay 与 search indexer 已退役。领域事件目标链为外部 Kafka+Outbox Event Router+Inbox+DLQ,但 Product/Order 事务内 producer 与业务 consumer 仍未接线。目标限界上下文为 identity/catalog/cart/order/payment/inventory/fulfillment/notification,另有 search-projection、analytics 编舞消费者;Order 内置 Saga Manager 编排核心链路,Kafka 事件驱动派生与副作用链路,防超卖由数据库单条原子语句与状态机不变量保证。拓扑真相源 `.service-matrix.yaml`,进度以 `TODO.md` 为准——**设计不得假定未接线的能力已存在**(区分 `depends_on` 与 `depends_on_planned`)。
 - API 契约先行(protobuf + buf.validate),前端类型由契约生成;界面字段与校验受 proto 约束。
 - 桌面壳是 Tauri 包 web 技术,设计语言仍为 web,不做平台原生化。
 - 未定(显式延后):支付渠道的真实品牌露出、多语言/国际化范围。

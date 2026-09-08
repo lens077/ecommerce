@@ -144,24 +144,28 @@ sudo security add-trusted-cert -d -r trustRoot -k /Library/Keychains/System.keyc
 
 ### 后端服务局域网直连（2026-09-06 起）
 
-每个后端服务目录 `backend/services/<svc>/deploy/dev/` 里**成对**的两个文件（helm 侧由
-`global.directAccess.enabled` 一起开关）：
+每个后端服务 **`deploy/overlays/dev/`** 里**成对**的两个文件（只有 dev overlay 引用它们；helm 侧
+`global.directAccess.enabled`，`values-pre.yaml` 里为 `false`）：
 
 | 文件 | 对象 | 作用 |
 |---|---|---|
-| `httproute.yaml` | HTTPRoute `ecommerce-<svc>-direct` | `<svc>-api.dev.test` 经 Cilium Gateway 443 → 该服务 Service |
+| `httproute.yaml` | HTTPRoute `ecommerce-<svc>-direct` | **`<svc>.dev.test`** 经 Cilium Gateway 443 → 该服务 Service |
 | `cnp-direct.yaml` | CiliumNetworkPolicy `ecommerce-<svc>-direct` | 放行 Cilium `ingress` 实体到该服务 RPC 口。共享的 zero-trust CNP 仍是「只放网关」，Cilium 策略取并集，这份只追加 |
 
 **不经 control-tower 网关**。加/删就是这两个文件一起 apply/delete，共享 `helm/files/zero-trust.yaml` 不用动
-（canary 实测：删掉 cart 的 `cnp-direct.yaml` 立刻 503，apply 回来 200）。`/etc/hosts` 追加一行：
+（canary 实测：删掉 cart 的 `cnp-direct.yaml` 立刻 503，apply 回来 200）。
+
+**这是本地开发专用的绕过，pre / prod 不得包含**：`overlays/pre/kustomization.yaml` 不引用这两个文件，
+`helm/values-pre.yaml` 关掉 `directAccess`；parity 门禁按环境比对，把它混进 pre 会红。要 prod 时从
+`overlays/pre` 复制，同样不带。`/etc/hosts` 追加一行：
 
 ```
-192.168.3.121  user-api.dev.test search-api.dev.test product-api.dev.test order-api.dev.test inventory-api.dev.test cart-api.dev.test merchant-api.dev.test address-api.dev.test behavior-api.dev.test payment-api.dev.test
+192.168.3.121  dev.test argocd.dev.test consul.dev.test gateway.dev.test shop.dev.test user.dev.test search.dev.test product.dev.test order.dev.test inventory.dev.test cart.dev.test merchant.dev.test address.dev.test behavior.dev.test payment.dev.test
 ```
 
 ```bash
-curl https://cart-api.dev.test/healthz                                   # 200 + 依赖健康 JSON
-curl -X POST https://cart-api.dev.test/cart.v1.CartService/GetCart \
+curl https://cart.dev.test/healthz                                       # 200 + 依赖健康 JSON
+curl -X POST https://cart.dev.test/cart.v1.CartService/GetCart \
   -H 'Content-Type: application/json' -H "x-md-global-user-id: $(uuidgen | tr A-Z a-z)" -d '{}'
 ```
 
@@ -171,6 +175,8 @@ curl -X POST https://cart-api.dev.test/cart.v1.CartService/GetCart \
   envoy → Pod SYN `Policy denied DROPPED`，curl 503/5s）。任何能到 `192.168.3.121:443` 的局域网客户端
   都能伪造身份调后端。只给开发用；撤掉时两个文件一起删（helm 侧 `global.directAccess.enabled=false`）。
 - 公网**不**开这条路：hostnames 只有 `dev.test`，要公网走 Pangolin + SSO。
+- 域名就是服务目录名 `<svc>.dev.test`（2026-09-06 由 `<svc>-api.dev.test` 改来）。`gateway.dev.test` 是
+  control-tower 网关、`shop.dev.test` 是前端，与这 10 个不冲突。
 
 ### 新增一个 `*.dev.test` 域名
 

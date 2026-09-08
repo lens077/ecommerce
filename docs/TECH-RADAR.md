@@ -6,9 +6,7 @@
 > **目标态一律以 [`docs/TECH.md`](TECH.md) 为准**；两者冲突时本文作废。
 > 它既不是进度真相源（那是 [`TODO.md`](../TODO.md)），也不再是选型真相源。
 >
-> **2026-09 实施订正**：仓库代码已完成 Meilisearch→Elasticsearch 替换，search 服务经
-> `SearchCatalog` 返回项目 DTO，`tools/search-indexer` 是策展投影唯一权威写入者。node3
-> Elasticsearch 仍只监听回环地址，Pod 无网络通路，尚未运行时切流；正文的 2026-08 评估过程继续按历史原貌保留。
+> **2026-09-03 实施订正**：搜索已完成运行时切流。策展投影由 `products.search_catalog` 定义，经 Debezium → Kafka → Elasticsearch Sink 搬运；search 服务通过 `SearchCatalog` 读取稳定 alias。NATS、自写 relay 与 `tools/search-indexer` 已退役；正文的 2026-08 评估过程继续按历史原貌保留。
 >
 > **仍然有效的三样东西**：
 > 1. **评估方法与证据链**——2026-08-20 抓取 <https://landscape.cncf.io/> 全量 2409 条目，
@@ -24,7 +22,7 @@
 >
 > | 本文原结论 | 现行定稿 | 推翻时间与原因 |
 > |---|---|---|
-> | NATS 为事件主干 | **Apache Kafka**（KRaft，部署于**非 K8s 独立集群**；客户端 franz-go） | 2026-08-27：转向百万/千万级生产目标。NATS 仅留迁移期搜索链，完成后退役 |
+> | NATS 为事件主干 | **Apache Kafka**（KRaft，部署于**非 K8s 独立集群**；客户端 franz-go） | 2026-08-27：转向百万/千万级生产目标；NATS 已于 2026-09-03 退役 |
 > | Meilisearch（§2 定稿） | **Elasticsearch** | 2026-08-28：当年 ES 退役主因是节点内存不足，资源条件已满足，聚合分析缺口一并解决 |
 > | Jaeger | **VictoriaTraces** | 2026-08-28 |
 > | SeaweedFS | **Silo**（MinIO 分叉线） | 2026-08-28 |
@@ -46,8 +44,8 @@
 
 | 节 | 领域 | 定稿结论 |
 |---|---|---|
-| §1 | 消息 / 事件流 | ✅ Apache Kafka 为唯一领域事件主干，部署于非 K8s 独立集群；Outbox+Relay（`acks=all` 后标 `published`）+ Inbox 幂等 + 失败超 5 次转 DLQ；NATS 为存量迁移链路 |
-| §2 | 搜索 | ✅ Elasticsearch 只读 Projection；仓库代码已通过单 provider `SearchCatalog` 接线并支持 PG 全量重建，运行时尚未切流，Meilisearch 仍是存量部署 |
+| §1 | 消息 / 事件流 | ✅ Apache Kafka 为唯一领域事件主干，部署于非 K8s 独立集群；目标链为 Outbox + Debezium Outbox Event Router + Inbox 幂等 + DLQ；NATS 已退役 |
+| §2 | 搜索 | ✅ Elasticsearch 只读 Projection 已切流；`products.search_catalog` 经 Debezium/Kafka/Sink 搬运，search 服务读取稳定 alias |
 | §3 | 数据层 | ✅ PostgreSQL 外部 Pigsty（Patroni Failover + PgBouncer，UUIDv7 默认主键）；CNPG 仅为存量休眠资源；ClickHouse 🟡 触发式缓上（2026-08-20 拍板人复审改判，见 §3.2） |
 | §4 | 身份 / 授权 / 凭据 | ✅ Casdoor 有状态 Session（Dragonfly Session Store）+ OpenFGA 网关关系授权；粗粒度角色归 Casdoor，对象级授权归 OpenFGA；trust-manager + ESO+OpenBao + SOPS 保留 |
 | §5 | 网关与流量面 | ✅ 自研 control-tower + Cilium Gateway API（TLS 终止、eBPF KPR 严格模式）+ Pangolin 公网入口，不叠加 WireGuard/IPsec 隧道；Cilium Service Mesh 评估中 |
@@ -65,11 +63,11 @@
 
 ## §1 消息 / 事件流 — Kafka 目标态与 NATS 历史决策
 
-**当前事实（2026-09-03）**：NATS JetStream、自写 relay 与 search indexer 的代码与集群资源已删除；node3 有 Kafka/SCRAM/topic，且 Kafka Connect + Debezium 3.6.1 + Elasticsearch Sink 作为 CDC 线**已运行并完成验收**（2026-08-28，六张业务表镜像进 Elasticsearch）；本仓业务 producer/consumer 仍为零。**目标态（2026-09-03 重新平衡）**：数据流分两条线——**行投影走 CDC 线**（PostgreSQL 表 → Debezium → Kafka → Elasticsearch Sink，搜索投影在此），**领域事实走 Outbox 线**（业务事务 + outbox → Debezium Outbox Event Router → Kafka → franz-go + Inbox 消费者，订单 Saga 副作用在此）。搜索投影不再是事件平台的首个租户。分类判据与决策经过见 [`context/project/ecommerce/events/experience/row-projection-vs-domain-event.md`](../context/project/ecommerce/events/experience/row-projection-vs-domain-event.md)。
+**当前事实（2026-09-03）**：NATS JetStream、自写 relay 与 search indexer 的代码与集群资源已删除；node3 有 Kafka/SCRAM/topic，且 Kafka Connect + Debezium 3.6.1 + Elasticsearch Sink 作为 CDC 线**已运行并完成验收**（七张表镜像进 Elasticsearch，其中 `products.search_catalog` 是搜索策展投影）；本仓领域事件 producer/consumer 仍为零。**目标态（2026-09-03 重新平衡）**：数据流分两条线——**行投影走 CDC 线**（PostgreSQL 表 → Debezium → Kafka → Elasticsearch Sink，搜索投影在此），**领域事实走 Outbox 线**（业务事务 + outbox → Debezium Outbox Event Router → Kafka → franz-go + Inbox 消费者，订单 Saga 副作用在此）。搜索投影不再是事件平台的首个租户。分类判据与决策经过见 [`context/project/ecommerce/events/experience/row-projection-vs-domain-event.md`](../context/project/ecommerce/events/experience/row-projection-vs-domain-event.md)。
 
 | # | 状态 | 工具 | 语言 | CNCF | 定位 | 结论 |
 |---|---|---|---|---|---|---|
-| 1.0 | ✅ | **Apache Kafka** | Java + Go client | — | 唯一领域事件主干 | **后续决策覆盖（2026-08-28）**：部署于非 K8s 独立集群，不采用 Strimzi；Topic 按限界上下文划分，Partition Key=`aggregate_id`，事件使用 Protobuf + Buf Schema Registry。Outbox Relay 仅在 `acks=all` 后标记 `published`，Inbox 以 `(consumer_group,event_id)` 唯一键幂等，连续失败超过 5 次转投 DLQ 并告警。NATS 仅为存量迁移链路。落地与迁移门禁见 [目标文档](design/platform/production-scale-goal.md) |
+| 1.0 | ✅ | **Apache Kafka** | Java + Go client | — | 行投影在用；唯一领域事件主干 | 部署于非 K8s 独立集群，不采用 Strimzi；搜索行投影已接线。领域事件 Topic 按限界上下文划分，Partition Key=`aggregate_id`，事件使用 Protobuf + Buf Schema Registry；搬运层为 Debezium Outbox Event Router，Inbox 以 `(consumer_group,event_id)` 唯一键幂等。NATS 已退役。落地门禁见 [目标文档](design/platform/production-scale-goal.md) |
 | 1.1 | ❌ | Redpanda | C++ | 收录 | 对抗对照组 | **否决（对抗第 1 轮）**：BSL 源可用非开源；无存量 Kafka 消费者使「协议兼容」价值为零；Seastar 每节点 2GB+ 脚印不适配 6.5G 节点。翻盘三条件（行为数据必须走流式主干 + 需现成 Kafka 连接器生态 + 两年内大流量回放）经对抗验证均不成立 |
 | 1.2 | ❌ | **NATS / JetStream** | Go | incubating | 已退役（2026-09-03） | 曾以 3-server/R1 `ECOMMERCE_EVENTS` 承载 outbox → relay → search indexer 一条链；它只服务过搜索投影，而搜索投影按分线判据属 CDC 线。代码（`go.mod` 的 `nats-io`、relay、indexer）与集群资源（`nats` ns、Deployment、PVC、VPA）已同日删除。原主选型论证保留在下节作历史证据 |
 | 1.3 | ❌ | Fluvio | Rust | 收录 | 前沿流平台 | 否决：无官方 Go 客户端（社区 fluvio-go 15⭐ 停更 2021）；v0.18.1 后一年无 release，母司转向商业产品 |
@@ -81,9 +79,11 @@
 
 Kafka/Debezium/Kafka Connect 是 Java 例外（Strimzi 不采用，Kafka 部署于非 K8s 集群）；AutoMQ、RocketMQ、Pulsar、EventMesh 仍未采用。
 
-### §1 历史选型论证（2026-08-20 NATS 决策存档，已被 2026-08-27 目标覆盖）
+### §1 历史选型论证（2026-08-20 NATS 决策存档，已被后续决策覆盖）
 
-> **定稿附记**：本节为初选论证存档。对抗评审结论——四条主论据全部成立；自认弱点 1（CDC 出口窄）确认不成立（自写 relay 定稿）；弱点 2（非数据主干）由「分析线 NATS 表引擎/批量直入 ClickHouse，不过消息层」化解；弱点 3（subject 顺序）落 `consistency.md` 显式设计；出题清单余项（fsync 表现、LTS 选线、KV 边界腐蚀）转为落地验收项进 TODO。**KEDA 不等 NATS**（cron/prometheus scaler 先行即有价值，第 2 轮裁决）。
+> **非操作性历史**：从这里到 §2 表格中的后续覆盖说明，只记录 2026-08-20 至 2026-08-21 的当时判断。NATS、自写 relay、search indexer 和 Meilisearch 均已退役；不得把本段命令、ACK/NACK、`MaxDeliver` 或 `published_at` 语义用于当前设计与恢复。
+>
+> **当时的定稿附记**：本节为初选论证存档。对抗评审结论——四条主论据全部成立；自认弱点 1（CDC 出口窄）确认不成立（自写 relay 定稿）；弱点 2（非数据主干）由「分析线 NATS 表引擎/批量直入 ClickHouse，不过消息层」化解；弱点 3（subject 顺序）落 `consistency.md` 显式设计；出题清单余项（fsync 表现、LTS 选线、KV 边界腐蚀）转为落地验收项进 TODO。**KEDA 不等 NATS**（cron/prometheus scaler 先行即有价值，第 2 轮裁决）。
 
 **四块拼图**（完整事件架构 = MQ 只是其中一块）：
 
@@ -103,12 +103,12 @@ Kafka/Debezium/Kafka Connect 是 Java 例外（Strimzi 不采用，Kafka 部署�
 
 ## §2 搜索 — 替换 Elasticsearch(Java)
 
-**现状订正（2026-08-21）**：ES 已退役；search 查询端已迁移到 **Meilisearch v1.53**（`search/meilisearch:7700`），address 已清理无效 ES 依赖，两项服务均恢复 Ready。dev 集群已部署 3 节点 JetStream、R1 `ECOMMERCE_EVENTS`、relay 和 indexer，并完成 7 个示例 SPU 回灌与 outbox 重放验证。Product Service 尚无商品写 RPC，事务内 outbox 生产者、NATS TLS/客户端认证和 NACK CRD 仍待落地。
+**2026-08-21 实施快照（已失效）**：ES 已退役；search 查询端已迁移到 **Meilisearch v1.53**（`search/meilisearch:7700`），address 已清理无效 ES 依赖，两项服务均恢复 Ready。dev 集群已部署 3 节点 JetStream、R1 `ECOMMERCE_EVENTS`、relay 和 indexer，并完成 7 个示例 SPU 回灌与 outbox 重放验证。Product Service 尚无商品写 RPC，事务内 outbox 生产者、NATS TLS/客户端认证和 NACK CRD 仍待落地。
 
 | # | 状态 | 工具 | 语言 | 来源 | 结论 |
 |---|---|---|---|---|---|
 | 2.1 | ❌ | Quickwit | Rust | 收录 | 否决于 §2，转介 §8 备选：定位是 observability 检索，无 typo/facet/即时搜索；Datadog 收购后 AGPL→Apache-2.0 兑现、v0.9.0 仍活但节奏放缓计入减分 |
-| 2.2 | 🟡 | **Meilisearch** | Rust | ⚠️仓外 | 本行保留存量实现与历史评估。**后续决策覆盖（2026-08-28）**：本节结论已被 [docs/TECH.md](TECH.md) 覆盖：Elasticsearch 定稿为只读 Projection，隐藏于 `SearchCatalog` 接口后并支持从 PG 全量重建。**实施订正（2026-09）**：仓库代码已移除 Meilisearch，存量运行部署须等 Elasticsearch 真正切流后再退役。 |
+| 2.2 | 🟡 | **Meilisearch** | Rust | ⚠️仓外 | 本行保留存量实现与历史评估。**后续决策覆盖（2026-08-28）**：本节结论已被 [docs/TECH.md](TECH.md) 覆盖：Elasticsearch 定稿为只读 Projection，隐藏于 `SearchCatalog` 接口后并支持从 PG 全量重建。**实施订正（2026-09-04）**：Elasticsearch 已完成运行时切流，Meilisearch 的 Helm release、运行资源、Secret、路由、PVC/PV 与 namespace 已完整退役。 |
 | 2.3 | ❌ | Typesense | C++ | ⚠️仓外 | 否决（对抗第 1 轮 captain 自我改判定稿）：其 OSS raft HA 优势在「3 VM 同宿主 Mac」下无法兑现真容灾，且 2 节点起步组不成奇数仲裁；GPL-3.0；Meili 已部署为既成事实。**翻盘条件 = HA 成硬需求且有 ≥3 物理故障域** |
 | 2.4 | 🟡 | ParadeDB (pg_search) | Rust | ⚠️仓外 | 降权观察：AGPL-3.0；Pigsty 关机后「零成本装扩展」前提消失（CNPG 下需自定义镜像+preload+升级运维）。触发条件 = Meili 路线失败的回退位 |
 | 2.5 | ✅ | 向量：**pgvector 起步** + Qdrant 规模位 | — | 收录 | **定稿（对抗第 2 轮 D4 组合裁决）**：pgvector 为权威 embedding 存储——**CNPG 官方 standard 操作数镜像已内置 pgvector**（换 imageName + `CREATE EXTENSION`，零自定义镜像；落地时实证版本）；Meili hybrid（userProvided 向量）作召回展示层。**Qdrant 🟡 触发条件** = embedding 数百万级或 HNSW 挤压交易库（34k⭐/Apache-2.0/官方 Go client 同版发布）。Milvus/LanceDB ❌ 规模不符 |
@@ -314,11 +314,11 @@ Kafka/Debezium/Kafka Connect 是 Java 例外（Strimzi 不采用，Kafka 部署�
 3. **Kafka 受控迁移**：在非 K8s 独立集群部署 Kafka，以 Protobuf + Buf Schema Registry 管理事件；落实 Outbox／Inbox／DLQ 契约，迁移完成后退役 NATS 业务流。
 4. **Victoria 三存储 + 轻量采集**：VictoriaLogs／VictoriaMetrics／VictoriaTraces；K8s 内仅 Vector + VMAgent + OTel SDK，外置 OTel Collector 处理尾采样、PII 脱敏与噪声清洗。
 5. **Consul 退役四步走 → KEDA Kafka Scaler → Argo Rollouts**：HPA 管在线服务，KEDA 管 Kafka 消费者，注意 Rollouts 硬依赖发现改造完成。
-6. **完成 Elasticsearch 运行时切流 + OpenFGA + CI 供应链**：搜索代码替换已完成，剩余 Pod 网络入口、配置/部署发布、重建验收与旧 Meilisearch 退役；网关接 OpenFGA Check；制品按「TCR 主镜像 + Harbor Helm 制品 + GHCR 可选」分工，供应链工具按「部分评估／部分采用」分阶段实施。
+6. **完成搜索灾备演练 + OpenFGA + CI 供应链**：Elasticsearch 已切流且 Meilisearch 已退役，剩余 node3 故障注入与链路告警；网关接 OpenFGA Check；制品按「TCR 主镜像 + Harbor Helm 制品 + GHCR 可选」分工，供应链工具按「部分评估／部分采用」分阶段实施。
 
 ## 附录 — Java 例外与仍未引进项
 
-Kafka、Debezium、Kafka Connect 已成为事件平台的明确例外；Strimzi 不采用，因为 Kafka 定稿部署于非 K8s 独立集群。当前仍未引进：Pulsar、RocketMQ、Flink、AutoMQ、EventMesh、OpenSearch、Keycloak、Nacos、Seata、ShardingSphere、Cassandra、Doris/StarRocks(FE)、SkyWalking、Zipkin、Pinpoint、Jenkins、Microcks；Elasticsearch 搜索代码已接线但运行时未切流，旧 Meilisearch 部署仍待退役，NATS 已退役；Backstage（TS/Node 但体量重）也未引进。
+Kafka、Debezium、Kafka Connect 已成为事件平台的明确例外；Strimzi 不采用，因为 Kafka 定稿部署于非 K8s 独立集群。当前仍未引进：Pulsar、RocketMQ、Flink、AutoMQ、EventMesh、OpenSearch、Keycloak、Nacos、Seata、ShardingSphere、Cassandra、Doris/StarRocks(FE)、SkyWalking、Zipkin、Pinpoint、Jenkins、Microcks；Elasticsearch 已完成搜索切流，Meilisearch 与 NATS 均已退役；Backstage（TS/Node 但体量重）也未引进。
 
 ## 附录 — 与真相源的关系
 

@@ -7,7 +7,7 @@ description: 给「已经在跑」的服务补 TLS 时的固定检查清单—�
 # 给在跑的服务补 TLS（2026-08-19 MinIO 实付学费）
 
 > 适用范围：TODO.md「基础设施 TLS 收敛」段里所有待办（gorse / casdoor / Consul）。
-> 搜索的仓库代码已接 Elasticsearch，运行时仍是 Meilisearch 存量链：node3 Elasticsearch 只监听回环地址，Pod 通路未解决，不能写成已切流。为 Elasticsearch 网络入口、Kafka/Schema Registry 补 TLS 时同样执行本文检查，并以 `docs/TECH.md` 的最小权限与私网要求为准。
+> 搜索已于 2026-09-03 切到 node3 Elasticsearch；search Pod 通过 Pangolin 私网路径访问，Meilisearch 已于 2026-09-04 完整退役。Elasticsearch 和 Kafka 当前仍有 TLS 收敛待办；调整其网络入口、证书或 Schema Registry 时同样执行本文检查，并以 `docs/TECH.md` 的最小权限与私网要求为准。
 > 下面六节不是理论风险，是给 MinIO 上 TLS 时逐条撞到的。
 
 ## 0. 先决条件：这台机到底能不能用域名

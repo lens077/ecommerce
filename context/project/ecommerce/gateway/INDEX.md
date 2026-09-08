@@ -3,7 +3,7 @@
 > 旧网关（本仓原 `gateway/`，go-kratos/gateway 分叉）已于 2026-08-23 退役，
 > 目录已在 2026-08-24 删除；历史见 tag `backup/pre-control-tower-20260823`。
 
-**代码路径**：`/Users/sumery/lens077/control-tower/services/gateway`（合一仓 control-tower，
+**代码路径**：`/Users/lens/lens077/control-tower/services/gateway`（合一仓 control-tower，
 Connect 原生重写，零 kratos 代码）。集群里跑的是 `control-tower-gateway`（ecommerce ns）。
 
 请求链：`recover → otel → accesslog → cors → auth → proxy`。按 `docs/TECH.md`，现行鉴权规范是

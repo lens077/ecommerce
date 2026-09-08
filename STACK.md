@@ -41,7 +41,7 @@
 
 1. **数据口径**：用户、SPU/SKU、订单、库存流水、行为事件分别是总量、日增量还是保留期内总量。
 2. **流量模型**：读写比、峰值 QPS/TPS、并发连接、热点 SKU、请求体大小和大促放大系数。
-3. **存储方案**：大表分区与归档、索引膨胀、备份/PITR、Elasticsearch 索引容量与全量重建策略（代码已接线、运行时未切流，需与存量 Meilisearch 做切流对照），以及 Kafka topic/partition/保留/回放策略（存量 JetStream 迁移期同口径）。
+3. **存储方案**：大表分区与归档、索引膨胀、备份/PITR、Elasticsearch 索引容量与全量重建策略（运行时已切流，仍需真实数据容量与灾备验收），以及 Kafka topic/partition/保留/回放策略。
 4. **可复现压测**：以 k6 脚本、固定数据集、固定资源配额和 P50/P95/P99/错误率/资源曲线为准，不以组件宣传值推断。
 5. **可靠性目标**：按核心链路定义 SLO、错误预算、RTO/RPO，并完成节点故障、依赖故障、恢复与积压重放演练。
 
@@ -73,7 +73,7 @@ ecommerce/
 ├── docs/design/               # 业务与平台设计
 ├── backend/
 │   ├── api/{service}/v1/*.proto     # API 契约，生成 Go 与 TypeScript
-│   ├── pkg/ · constants/ · tools/  # 共享库、常量、relay/indexer/migration 工具
+│   ├── pkg/ · constants/ · tools/  # 共享库、常量与保留的 migration/运维工具；relay/indexer 已删除
 │   ├── services/{service}/          # 10 个独立 fx 应用
 │   └── go.mod                       # 10 个服务共享一个 Go module
 ├── frontend/                  # pnpm workspace：4 app + 9 package
@@ -118,18 +118,18 @@ ecommerce/
 | IDL | Protobuf 3 + Buf CLI | `google.golang.org/protobuf` v1.36.12 |
 | 参数校验 | Protovalidate + `connectrpc.com/validate` 拦截器 | v1.3.0 / v0.6.0 |
 | 依赖注入 | `go.uber.org/fx` | v1.24.0 |
-| 日志 | `go-connect-kit/log` + `go.uber.org/zap` | kit v0.3.0 / zap v1.28.0；OTel bridge 由 kit 封装 |
+| 日志 | `go-connect-kit/log` + `go.uber.org/zap` | kit v0.4.2 / zap v1.28.0；OTel bridge 由 kit 封装 |
 | DB 驱动 | `jackc/pgx/v5` + `exaring/otelpgx` | v5.10.0 / v0.11.1 |
 | SQL 与迁移 | sqlc + goose | pgx/v5 driver / goose v3.27.3 |
 | Redis 协议客户端 | `redis/go-redis/v9` + `go-connect-kit/otel` | go-redis v9.22.0；redisotel 初始化由 kit 封装 |
-| 搜索客户端 | `go-elasticsearch/v9` + `elastic-transport-go/v8` | v9.4.3 / v8.9.0；search 服务经单 provider 的 `SearchCatalog` 深度模块边界返回项目 DTO，`backend/go.mod` 已无 Meilisearch 客户端。该状态只表示代码接线，运行时尚未切流 |
-| 消息客户端 | `nats.go` | v1.53.1；存量迁移期。事件主干按 [`docs/TECH.md`](docs/TECH.md) 定稿为 Apache Kafka（外部非 K8s 集群），NATS 验收后退役 |
-| 注册发现 | `go-connect-kit/registry` | kit v0.3.0，封装 Consul API v1.34.4；存量注册能力，运行时当前由 `CONSUL_ENABLED=false` 关闭 |
-| 配置 | `go-connect-kit/config` + `control-tower/sdk/configsource` | kit v0.3.0 / control-tower v0.1.4；服务只保留 Bootstrap adapter |
+| 搜索客户端 | `go-elasticsearch/v9` + `elastic-transport-go/v8` | v9.4.3 / v8.9.0；search 服务经单 provider 的 `SearchCatalog` 深度模块边界返回项目 DTO，`backend/go.mod` 已无 Meilisearch 客户端；2026-09-03 已完成运行时切流 |
+| 消息客户端 | 领域事件客户端尚未接入 | `backend/go.mod` 已无 `nats.go`。领域事件主干定稿为外部 Kafka，未来消费者使用 `franz-go`；搜索行投影由 Kafka Connect 搬运，不进入业务服务进程 |
+| 注册发现 | `go-connect-kit/registry` | kit v0.4.2，封装 Consul API v1.34.4；`backend/pkg/registryconfig` 把仓内部署开关映射到 kit Options，运行时当前由 `CONSUL_ENABLED=false` 关闭 |
+| 配置 | `go-connect-kit/config` + `control-tower/sdk/configsource` | kit v0.4.2 / control-tower v0.1.4；服务只保留 Bootstrap adapter |
 | 支付 | `smartwalle/alipay/v3` | v3.2.29 |
 | 金额 | `shopspring/decimal` | v1.4.0；新 proto 优先 `int64` 分或 decimal 字符串 |
 | 配置解析 | `go-connect-kit/config` | kit 内封装 Viper + mapstructure；默认拒绝未知字段并执行 Protovalidate |
-| 可观测性 | `go-connect-kit/otel`，trace/metric/log 走 OTLP-HTTP | kit v0.3.0 / OTel SDK v1.46.0，log v0.21.0 |
+| 可观测性 | `go-connect-kit/otel`，trace/metric/log 走 OTLP-HTTP | kit v0.4.2 / OTel SDK v1.46.0，log v0.21.0 |
 | 测试 | `stretchr/testify` | v1.12.1 |
 | CORS | `rs/cors` + `connectrpc.com/cors` | v1.11.1 / v0.1.0 |
 | 推荐引擎 | Gorse，自写 `backend/pkg/gorse` client | 外部服务，非进程内库 |
@@ -201,18 +201,18 @@ SSR：`consumer-next` 使用 Next.js 16.4.0-canary.18（本仓 A/B 后精确锁�
 
 | 组件 | 当前用途 | 状态与边界 |
 |---|---|---|
-| PostgreSQL / Pigsty | 10 个服务的核心数据，每服务一个 schema | 已切到 node3 Pigsty；客户端 TLS `verify-ca`。按 [`docs/TECH.md`](docs/TECH.md) 定稿：PostgreSQL 由外部 Pigsty 承载（Patroni 自动 Failover + PgBouncer 连接池，UUIDv7 为默认主键）；集群内 CNPG `pg-main` 已 hibernate，仅为存量资源，不再是回切候选 |
+| PostgreSQL / Pigsty | 10 个服务的核心数据，每服务一个 schema | 已切到 node3 Pigsty；客户端 TLS `verify-ca`。按 [`docs/TECH.md`](docs/TECH.md) 定稿：PostgreSQL 由外部 Pigsty 承载（Patroni 自动 Failover + PgBouncer 连接池，UUIDv7 为默认主键）；集群内 `postgresql`/`cnpg-system` namespace 与 CNPG CRD 已清理 |
 | Dragonfly | 业务可丢缓存；control-tower BFF session | Redis 协议、TLS-only。业务域不得把库存真相、锁、幂等键或唯一正确性状态放进去；BFF session 是已接受的例外，丢失时 fail-closed 并要求重新登录。按 [`docs/TECH.md`](docs/TECH.md) 目标分实例强制隔离：Session 实例 `noeviction`+持久化 / 业务 Cache 实例 `allkeys-lru` / 限流实例独立，严禁混用 |
-| Meilisearch | 商品搜索投影（存量运行时） | v1.53；仓库 search/indexer 代码已不再引用，集群旧部署在 Elasticsearch 运行时切流和回滚窗口结束前继续存在。CE 单节点无分片/HA，仍是当前搜索域的运行时风险 |
+| Meilisearch | 已退役搜索组件 | v1.53；2026-09-04 已删除 Helm release、运行资源、Secret、路由、PVC/PV 与 namespace，仅在 `.service-matrix.yaml` 保留退役记录 |
 | S3 兼容对象存储 | cart 的商品图等对象 | 当前指向 Silo 的 MinIO-compatible API；不是「集群内 MinIO」。按 [`docs/TECH.md`](docs/TECH.md) 定稿对象存储即 Silo（基于 MinIO，开启 Versioning 与 Lifecycle，前端上传统一走后端签发的预签名 URL）；此前的 SeaweedFS 迁移方向已撤销 |
-| NATS JetStream | 存量领域事件链与商品搜索事件流（迁移期） | dev 3 server；可重建 `ECOMMERCE_EVENTS` 当前为 R1，旧 relay/indexer 已运行；仓库中的新 Elasticsearch indexer 仍沿用 NATS，但尚未发布。按 [`docs/TECH.md`](docs/TECH.md)，事件主干定稿为 Kafka，NATS 在 Kafka 链验收后退役，不再承接新领域事件 |
-| Apache Kafka | 定稿目标事件主干（[`docs/TECH.md`](docs/TECH.md)） | 部署于非 K8s 独立集群；Outbox+Relay（`acks=all` 后标 `published`）+ Inbox 幂等 + DLQ；Topic 按限界上下文划分、partition key=`aggregate_id`；事件用 Protobuf + Buf Schema Registry。当前本仓业务接线仍为零，迁移按 [生产目标路线](docs/design/platform/production-scale-goal.md) 推进 |
-| PostgreSQL outbox | 事务事件待发布表 | 业务写与 outbox 同 transaction，relay 收到 JetStream PubAck 后才标记 published；consumer 必须 Inbox 幂等 |
+| NATS JetStream | 已退役 | 2026-09-03 已删除 namespace、relay/indexer Deployment 和代码。当前操作与恢复流程不得再使用 JetStream ACK/NACK/`MaxDeliver` 语义 |
+| Apache Kafka | 行投影在用；领域事件主干定稿（[`docs/TECH.md`](docs/TECH.md)） | 部署于非 K8s 独立集群。`products.search_catalog` 已由 Debezium → Kafka → Elasticsearch Sink 搬运；领域事件目标链使用 Debezium Outbox Event Router + Inbox + DLQ，当前业务 producer/consumer 仍为零 |
+| PostgreSQL outbox | 领域事件的事务发布意图 | 业务写与 outbox insert 同 transaction；Debezium Outbox Event Router 从 WAL 搬运，不回写 `published`。consumer 必须使用 Inbox 与业务幂等规则 |
 | 分析 CDC | 需求触发的独立数据链 | 当前未接线；只在真实 ClickHouse/报表需求成立后评估逻辑复制/connector，不能替代领域事件 |
 | Consul | 服务注册发现（存量迁移期） | KV 配置已退役；仍在网关选点与服务注册热路径。按 [`docs/TECH.md`](docs/TECH.md) §10.2 定稿迁 K8s Service + CoreDNS（Cilium KPR），开发环境走 Docker Compose 服务名 |
 | Casdoor | OAuth2/OIDC 身份提供方 | control-tower 以机密客户端完成 code 交换；浏览器不再持有 token |
 | Gorse | 推荐引擎 | behavior/product 的外部依赖，使用独立 PostgreSQL/Redis；API key 配置仍有待办 |
-| Elasticsearch | 定稿搜索存储（[`docs/TECH.md`](docs/TECH.md)） | node3 运行 9.4.5 + IK；仓库代码已完成 `SearchCatalog` 读路径、`tools/search-indexer` 唯一权威写入路径、strict mapping、稳定 alias 与 PG 全量重建。Pod 到 node3 `127.0.0.1:9200` 尚无网络通路，**代码接线不等于运行时切流**；存量查询仍由旧 Meilisearch 部署承载 |
+| Elasticsearch | 当前搜索存储（[`docs/TECH.md`](docs/TECH.md)） | node3 运行 9.4.5 + IK；search Pod 经受控入口读取 `ecommerce_catalog_products`，`products.search_catalog` 经 Debezium/Kafka/Sink 写入。mapping、版本化重建、alias 切换/回退与灾备手顺由 pipeline 仓维护 |
 
 具体端点见 [`.service-matrix.yaml`](.service-matrix.yaml) 的 `externals` 段。凭据只进入 Config Center、Vault 与 Kubernetes Secret，**不进入仓库**。
 
@@ -237,7 +237,7 @@ SSR：`consumer-next` 使用 Next.js 16.4.0-canary.18（本仓 A/B 后精确锁�
 | 制品仓库 | TCR（主，镜像）+ Harbor（Helm 制品）+ GHCR（可选双存） | 按 [`docs/TECH.md`](docs/TECH.md) §7.1：TCR 为主镜像仓库（集群同区直连拉取），Harbor 存储 Helm 制品（OCI），GHCR 可同时存镜像与 Helm 制品、是否推送由 CI 按网络情况决定；现状 GitHub Actions 双推 TCR/GHCR，`X.Y.Z` 与 `sha-<7>` 双 tag，禁用 `latest`，与定稿一致 |
 | Helm Chart OCI | Helm + Harbor | `helm/helper.sh` 可登录并推送 `oci://harbor.apikv.com/sumery`；Harbor 即定稿的 Helm 制品仓库，纳入 CI 发布链待办 |
 | Kubernetes 清单 | `backend/services/*/deploy/` + `application-vpa.yml` | 当前运行部署路径；根清单已覆盖 15 个 ecommerce VPA，全部为 `Off`/`RequestsOnly` recommendation-only |
-| Helm | umbrella chart + service/library chart | 描述不完整且版本落后，缺 control-tower gateway、outbox relay、search indexer，不是现网真相源 |
+| Helm | umbrella chart + service/library chart | 描述不完整且版本落后，缺 control-tower gateway；已退役的 outbox relay/search indexer 不得补回，不是现网真相源 |
 | ArgoCD | GitOps 控制器 | 控制器在运行，但当前零 Application/ApplicationSet；没有自动同步、自愈或 prune |
 | 弹性与发布策略 | VPA recommender `1.7.1` + KEDA/Argo Rollouts 控制器 | VPA 已发布但仍在至少 7 天观测和 k6 校准期；无 live ScaledObject 或 canary。证据与下一步见 [`docs/reports/2026-08-29-vpa-recommendation-only.md`](docs/reports/2026-08-29-vpa-recommendation-only.md) |
 | CI | GitHub Actions + GitLab context gate | 质量门禁按 PR/push 运行；镜像发布由裸 semver tag `X.Y.Z` 触发，push main 不构建发布制品 |
@@ -269,7 +269,7 @@ vmalert --> Alertmanager
 |---|---|---|
 | Workspace 与前端任务 | pnpm workspace/catalog + vite-plus（`vp`） | 在用；`vp` 统一 dev/build/test/lint/fmt/staged，不使用 Husky/Biome/ESLint/Prettier |
 | API 契约与代码生成 | Protobuf 3、Buf CLI、`protoc-gen-go`、`protoc-gen-connect-go`、Protobuf-ES | 在用；同一 proto 生成 Go 与 TypeScript，`buf breaking` 已进 CI |
-| 事件工程 | PostgreSQL outbox、Apache Kafka（定稿主干，[`docs/TECH.md`](docs/TECH.md)）、Protobuf/Buf、CloudEvents、Toxiproxy；存量 NATS JetStream + nats bench（迁移期） | outbox relay 与搜索 indexer 已在 NATS 链运行；Kafka 业务接线为零。Product/Order 事务内 producer、consumer Inbox、DLQ、重放审计、积压 SLO 和故障演练仍未闭环 |
+| 事件工程 | PostgreSQL outbox、Debezium Outbox Event Router、Apache Kafka（定稿主干，[`docs/TECH.md`](docs/TECH.md)）、Protobuf/Buf、CloudEvents、Toxiproxy | 搜索行投影已使用 Kafka/Connect；领域事件业务接线为零。Product/Order 事务内 producer、consumer Inbox、DLQ、重放审计、积压 SLO 和故障演练仍未闭环 |
 | 输入校验 | buf.validate + Protovalidate | 在用；API 字段约束、Bootstrap 解码校验与未知字段拒绝均已接线 |
 | 数据访问 | sqlc + pgx | 在用；手写 SQL，生成类型安全模型与查询 |
 | Schema 迁移 | goose + `backend/tools/dbmigrate` | 在用；按服务 schema 管理版本，不由服务启动时偷偷迁移 |
@@ -328,8 +328,8 @@ var Module = fx.Module("biz", fx.Provide(NewCartUseCase))
 `main.go` 的固定装配顺序：
 
 ```
-logger.Module → config.Module → logger.FxLogger() → registry.Module
-→ otel.Module → data.Module → biz.Module → service.Module
+logger.Module → config.Module → logger.FxLogger() → otel.Module
+→ registry.Module → data.Module → biz.Module → service.Module
 → server.MiddlewareModule → server.Module
 → fx.Supply(appInfo) → fx.Invoke(启动钩子)
 ```
@@ -338,7 +338,7 @@ logger.Module → config.Module → logger.FxLogger() → registry.Module
 
 1. `appOptions()` 必须单独拆出函数 —— 为了能用 `fx.ValidateApp` **静态校验整张依赖图**。装配错误（少 provide 了一个类型）只在 `Start` 时才炸，那时已经要连数据库了。
 2. `OnStart` 里先跑 `d.CheckDatabase(ctx)` / `d.CheckCache(ctx)`，通过后才 `ListenAndServe`。
-3. `OnStop` 超时 **7 秒**，顺序：Consul 注销 → `srv.Shutdown` → 关闭空闲 TCP → **OTel flush**（不 flush 会丢未导出的 span / 未落盘的日志）。
+3. `OnStop` 超时 **7 秒**，按 Fx 钩子逆序执行：先 `srv.Shutdown` 和业务资源清理，再注销 Consul，最后 **OTel flush**（否则会丢未导出的 span 或日志）。
 4. 启动日志必须打印**本次实际生效的配置数据源**（`config.SourceName()`）—— 否则"改了配置没生效"只能靠猜。
 
 ### 拦截器链
@@ -563,19 +563,19 @@ pnpm ready          # vp fmt && vp lint && vp run test -r && vp run build -r
 | **交易闭环** | order 仍有假成功路径，payment 多个 RPC 未实现，inventory 无可用核心 RPC；不能把消费者端称为可上线商城 |
 | **终端与领域覆盖** | merchant/admin 主要是壳；没有独立物流端、仓储端或 WMS。履约并入 order，但领域动作仍待实现 |
 | **服务间调用** | 10 个服务的 `depends_on` 当前全部为空；order→inventory/product/address、payment→order 等只存在于 `depends_on_planned` |
-| **领域事件** | 当前 JetStream、relay、indexer 和回灌已验证，但 Product 事务内 outbox 生产者未接，order/behavior 仍有进程内路径；Kafka producer Adapter 与 destination-aware relay 已有代码和测试场景，但 migration 未应用、PostgreSQL 容器场景未取得本轮运行证据，也没有业务 producer 或 consumer，仍处于 K1 迁移地基阶段 |
-| **容量与 HA** | 没有固定数据集与 k6 结果；运行时仍受 Meilisearch CE 单节点本地 PV 限制，新 Elasticsearch mapping 也仍是 `replicas=0` 且未切流；JetStream R1、Kafka 仅有代码 Adapter 且未部署，主库/对象存储/备份路径同样没有百万或千万级验收证据 |
+| **领域事件** | NATS、relay 和 search indexer 已退役；Product/Order 事务内 outbox producer、Debezium Outbox Event Router 路由、franz-go consumer 与 Inbox 尚未接线，order/behavior 仍有进程内路径。Kafka 已承载搜索行投影，但这不等于领域事件已经落地 |
+| **容量与 HA** | 没有固定数据集与 k6 结果；Elasticsearch 已切流，但 mapping 仍为单节点 `replicas=0`。Kafka/Connect 与 PostgreSQL/ES 同处 node3 故障域，搜索灾备手顺尚缺远端故障注入证据；主库、对象存储和备份路径也没有百万或千万级验收结论 |
 | **安全边界** | gateway 已完成 BFF/JWT/Casbin 与身份头剥离，但业务服务没有统一 workload identity，10 个服务也没有完整默认拒绝 NetworkPolicy；数据级归属校验仍有缺口 |
 | **交付** | ArgoCD 当前零 Application/ApplicationSet；Helm 与运行实况不一致，自动同步、自愈和回滚未闭环 |
 | **可观测性告警** | VM/VL/VT/Grafana/vmalert/Alertmanager 在用，但外部通知与 resolved 演练未闭环 |
 | **前端质量** | `pnpm ready` 已覆盖 lint/fmt/type/test/build，浏览器与端到端用例仍不足，merchant/admin 业务覆盖尤其薄弱 |
-| **重复基础代码** | `internal/pkg/{config,log,otel,registry,...}` 仍在 10 个服务中复制，修复需要同构回填并由 structcheck 防漂移 |
+| **基础设施边界** | `config/log/otel/registry` 的共享实现已迁入 `go-connect-kit`；10 个服务只保留 protobuf、配置源和部署策略适配层，跨服务修复不再同构回填 |
 
 ### 继续补齐的优先顺序
 
 1. 先完成下单、库存、支付、幂等、对账与补偿；正确性以 PostgreSQL 约束和事务为锚点。
 2. 收紧直连入口，补默认拒绝 NetworkPolicy、服务工作负载身份和商家/用户数据归属校验。
-3. 按 [生产目标与 Kafka 路线](docs/design/platform/production-scale-goal.md) 先完成 Kafka 学习沙箱和 ProductChanged 搜索影子链，再迁 Order/Inventory/Payment；定义 topic、partition key、幂等、retry/DLQ、保留与重放边界。
+3. 按 [生产目标与 Kafka 路线](docs/design/platform/production-scale-goal.md) 先完成 Kafka 学习沙箱，再接 Product/Order 事务内 outbox、Debezium Outbox Event Router 与 Inbox consumer；定义 topic、partition key、幂等、retry/DLQ、保留与重放边界。搜索继续走既有 `products.search_catalog` CDC 行投影线，不消费 `ProductChanged`。
 4. 以明确数据口径建立容量模型与 k6 基线，再决定 PG 分区、搜索（Elasticsearch）拓扑、Kafka partition/副本和缓存策略。
 5. 对齐裸 manifest、Helm 与运行资源后再重建 ArgoCD Application；未对齐前禁止直接开启 selfHeal。
 6. 完成备份/PITR、RTO/RPO、外部告警通知及 failure/resolved/依赖故障演练。

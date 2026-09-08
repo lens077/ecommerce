@@ -21,7 +21,7 @@ description: 基础设施副本的治理：同构门禁只能冻结漂移、不�
 
 - 改一处基础设施要改 10 处，再更新一次基线。一次性技术债变成每次改动都要交的复发税。
 - 迁移过程中发现 `payment` 与 `merchant` 的 `log/` 各带一份 32 行的 `ZapESLogger`，全仓零引用。
-  两份内容一致，所以门禁满意；但它们是死代码，且这两个服务并不依赖 Elasticsearch。
+  两份内容一致，所以门禁满意；但它们是死代码，且这两个服务并不依赖 Elasticsearch。迁移收尾时已删除。
 
 ## 根因：服务由模板生成，模板演进不回流
 
@@ -47,6 +47,11 @@ description: 基础设施副本的治理：同构门禁只能冻结漂移、不�
    `internal` 或仓内 `pkg`。这决定了根因的闭环需要一个独立可发布的模块，而不只是仓内上提。
 4. **不要在共享包里接收具体配置类型。** 共享层只接收 provider-neutral 的纯 Go Options 或
    泛型参数；把 protobuf 配置结构体映射成 Options 的适配代码留在各服务内。
+5. **迁走实现时一并迁走生命周期。** 共享 Fx 模块自行注册 OnStart/OnStop，并在 OnStart 才创建
+   worker 或连接；使用 Module 的消费方不要靠注入实现类型来强制构造，也不要重复手工关闭。装配时先放 OTel，
+   再放 registry 和业务模块，保证启动期先安装 provider，停止期最后刷新遥测。
+6. **环境变量属于部署策略，不属于共享实现。** 各仓在 protobuf-to-options adapter 处把
+   `CONSUL_ENABLED` 等约定映射成 Options；kit 只认 Options，不读取消费方的环境变量。
 
 ## 边界：什么该留在服务里
 

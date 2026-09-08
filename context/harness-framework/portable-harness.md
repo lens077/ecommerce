@@ -8,7 +8,7 @@ description: 可跨项目复用的 harness 能力清单与新项目采纳步骤�
 
 lens077 工作区的其他项目（mall / control-tower / …）可直接复用本仓沉淀的协作机制。
 **分发模式**：正文永远住在本仓（可 diff、受 `verify-context.sh` 门禁、重装不丢），
-工作区根 `/Users/sumery/lens077/` 只放**相对 symlink**——根外裸副本在 2026-08-14 机器
+工作区根 `/Users/lens/lens077/` 只放**相对 symlink**——根外裸副本在 2026-08-14 机器
 重装时整个丢失 4 天无人察觉，此后定型为 symlink 模式（见 evolution-log 2026-08-18 条）。
 
 ## 根目录 symlink 登记（新增/删除链接必须同步本表）
@@ -23,7 +23,7 @@ lens077 工作区的其他项目（mall / control-tower / …）可直接复用�
 
 | 能力 | 载体 | 复用方式 |
 |---|---|---|
-| E3 执行策略（估计→最小执行→失败才扩张） | [e3-execution.md](e3-execution.md) + AGENTS.md 常驻节 | 新仓 AGENTS.md 抄常驻节，护栏 hook 是用户级已全局生效 |
+| E3 执行策略（估计→最小执行→失败才扩张） | [e3-execution.md](e3-execution.md) + AGENTS.md 常驻节 | 新仓 AGENTS.md 抄常驻节；本机用户级 Claude 护栏已恢复，其他主机仍需单独接线 |
 | 纠错沉淀闭环（在线反传） | [self-refinement.md](self-refinement.md) | 方法论直接引用；experience 四段格式随之 |
 | 知识分层判定 | [knowledge-layering.md](knowledge-layering.md) | 新仓建 `context/{team,harness-framework,project/<名>}` 同构三层 |
 | 方向性审计 + Session 反传（离线反传） | [flywheel-audit.md](flywheel-audit.md) | 审计清单六项照用；审计记录表各仓自建 |
@@ -32,7 +32,9 @@ lens077 工作区的其他项目（mall / control-tower / …）可直接复用�
 | 基线棘轮（存量冻结只拦新增 + 反向棘轮） | `scripts/lint-baseline.sh` | 采集函数按新仓工具链重写，棘轮骨架照搬；采集器必须带失聪自检 |
 | 子代理派发三约定 | [subagent-dispatch.md](subagent-dispatch.md) | 直接引用 |
 | harness 演进日志（四要素） | [evolution-log.md](evolution-log.md) 的「写法」节 | 新仓自建日志文件，抄四要素模板；「没有事故就别改规则」 |
-| 中文文档风格 | `tech-doc-style-chinese` skill（用户级） | 已全局；项目覆盖条款进各仓 AGENTS.md |
+| 中文文档风格 | `tech-doc-style-chinese` skill（用户级） | 重装后需恢复；项目覆盖条款仍进各仓 AGENTS.md |
+
+实测 2026-09-08：上述三个共享 symlink 仍可达；E3 护栏已重建为仓内源码并通过用户 symlink 接入 Claude，backpass 已适配 DSH v0-v2 多帧压缩格式。通过共享入口实际抽取 ecommerce 近 14 天记录，得到 161 条去重消息、158 条过滤后消息和 18 条纠偏命中，无诊断错误。中文 Skill 仍未安装；zstd CLI 未找到，但现有 Node 可承担新版解码。逐项安装与接线状态见 [工具清单](../../docs/agents/skills.md)，不能以共享链接存在推断其依赖已安装。
 
 ## 新项目采纳步骤（最小集，约半小时）
 

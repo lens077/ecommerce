@@ -1,3 +1,6 @@
+---
+todo-spec: 1
+---
 # 零信任鉴权与统一 Session · 待办
 
 > 对应 [`docs/TECH.md`](../TECH.md) §8「零信任鉴权与统一 Session 架构」。

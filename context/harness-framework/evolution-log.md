@@ -48,6 +48,20 @@ description: harness 本身（硬规则/门禁/Agent 约束）每次改动的原
 
 ---
 
+### 2026-09-08 重建 E3 护栏并恢复当前 DSH 历史抽取
+
+- **改了什么**：按现有规范重建 [E3 脚本](../../scripts/e3-overread-guard.py)，用户目录只放 symlink；备份后向全局 Claude 设置增加 PreToolUse，不改原有模型/通知配置。用 `git worktree repair` 修复已找到实体的 ecommerce-meili-retirement 关联，不 prune 缺失的临时 worktree。backpass 新增 [DSH 读取器](../../scripts/backpass-dsh.py)，识别最高 v0-v2 格式代、直接用户来源、fork seed 和明确的重装路径别名，输出采用私有权限。
+- **为什么**：规则在仓库不等于运行机制已接线；重装恢复必须分别验证文件、配置和实际行为。DSH append-only 压缩日志包含多个独立帧，不能把成功解压首帧等同于读完会话；最高代损坏时也不能回退读旧代伪造完整历史。
+- **触发事故**：原 E3 脚本在已检查备份中缺失，worktree 两端仍指向旧用户目录，backpass 只识别旧文件名。初次适配的单帧 fixture 虽通过，但独立构造 header+event 双帧后发现 Node zstdDecompressSync 只返回 header；另发现 injected.txt 为空时 awk 的 NR==FNR 会把所有用户消息误吞。
+- **怎么验证的**：E3 9 个回归测试通过，实际配置命令的隔离 session 退出码为 `0,0,0,0,0,2,0`；配置结构对比确认原设置未改。backpass 13 个测试覆盖多代、多帧、坏尾帧、来源/fork 过滤、空注入表和私有权限。共享 symlink 入口读取本机 ecommerce 近 14 天历史：161 条去重消息、158 条过滤后消息、18 条纠偏命中，无诊断错误，文件权限 0600；只展示计数，不打印正文。worktree 可解析正确根目录与 common-dir，HEAD/分支及已有差异保留。文档门禁仍需区分既有 `.scratch/doc-embed-demo/README.md` EMBED 问题；未启动付费模型、提交、推送或修改原始 session。
+
+### 2026-09-08 重装后修正本机路径并重新核验 harness 依赖
+
+- **改了什么**：当前 Claude 设置、frontend-only Hook 和现行知识入口改用新用户目录；[工具清单](../../docs/agents/skills.md) 用本机实测替换旧「已装」结论，区分 Skill 本体、MCP 接线、CLI 与运行时验证。E3/portable harness 不再声称缺失的用户级依赖已生效。
+- **为什么**：项目规则文件可随仓库迁移，用户目录里的工具与认证不会随之自动恢复；仅改路径不能恢复 Hook。保留历史记录和 Git worktree 元数据，不做全仓无差别替换。
+- **触发事故**：用户重装系统后，项目 Hook 仍指向旧机器用户目录，实际缺少 Impeccable、中文写作与双审 Skill、E3 护栏脚本；文档却仍写已安装和全局启用。DSH 的 Exa/Kitesurf 实际仍可用，不能反向误报全部 MCP 缺失。
+- **怎么验证的**：JSON 解析、Shell 语法、定向 diff 空白检查、七个修正文件的旧路径断言和共享 symlink 检查通过；Exa 搜索与 Kitesurf list_pages 调用成功。修改前文档门禁已因 `.scratch/doc-embed-demo/README.md` 的 EMBED 不一致失败，本轮不覆盖该既有改动。未安装工具，未验证缺失 Hook 的正向检测、模型认证或远程基础设施。
+
 ### 2026-09-04 退役外部依赖不再允许回接现役服务
 
 - **改了什么**：`.service-matrix.yaml` 新增 `retired_externals`；`structcheck` 解析 `services.*.external`，禁止现役与退役集合重名，也禁止服务引用已退役或未知的外部依赖。
@@ -1184,6 +1198,26 @@ description: harness 本身（硬规则/门禁/Agent 约束）每次改动的原
   replicas、裸侧删 cart Certificate)均红并指出对象;`helm template … | kubectl diff -f -` 对集群
   只剩三类预期差异(8 个服务的端口命名、frontend containerPort、占位 CIDR);
   `go test -count=1 ./structcheck/...` 绿;`scripts/verify-context.sh` 绿。
+
+### 2026-09-06 parity 门禁改为按环境比对;裸侧改 kustomize base+overlays
+
+- **改了什么**:`backend/services/<svc>/deploy/{dev}` 改为 `base/` + `overlays/{dev,pre}/`(kustomize,
+  `kubectl -k` 内置无新工具);helm 侧新增 `values-pre.yaml` 只写差异。`scripts/verify-deploy-parity.sh`
+  接受环境参数、默认依次比 dev 与 pre,裸侧用 `kubectl kustomize` 渲染。本地直连(HTTPRoute + cnp-direct)
+  只在 `overlays/dev` 与 `values.yaml`,pre 两边都关。structcheck 的 deploy 覆盖检查改为三处
+  kustomization 齐全;CI 回写路径改为 `deploy/base/deployment.yaml`。域名 `<svc>-api.dev.test` → `<svc>.dev.test`。
+- **为什么**:用户要求「本地开发的绕过不得进生产」并要一个维护多环境差异的办法。整目录复制(旧
+  `deploy/prod`)已证明会烂掉;两侧各自的原生分层让共同部分只有一份、差异只写差异,而 parity 按环境比对
+  把「直连只在 dev」从自觉变成门禁。
+- **触发事故**:上一轮为了直连把 10 段 `fromEntities: [ingress]` 塞进共享 zero-trust CNP——那份文件
+  在任何环境都会 apply,等于把绕过鉴权的口子带进 pre/prod。改成成对的 `cnp-direct.yaml` 只在 dev overlay,
+  共享 CNP 回滚为只放网关。
+- **门禁首跑抓到两个真实问题**:① `defaultMode: 0400` 被 kustomize(YAML 1.1)读成 256、被 yq(1.2)读成
+  400,同一段文本两个值——两侧改写十进制 256;② kustomize 的 strategic merge 把补丁过的 env 项挪到列表
+  最前,顺序变了就是新 pod template——pre 改用 JSON6902 按下标 `replace` 并前置 `op: test` 核对 name。
+- **怎么验证的**:parity dev 76 / pre 56 对象均绿;`make k8s-dev-all` server dry-run 只动 10 条路由
+  hostname 与 cart 证书 SAN,apply 后两侧对集群 `kubectl diff` rc=0;宿主机 `curl https://<svc>.dev.test/healthz`
+  10/10 200,旧名 404;structcheck 绿;`helm lint -f values-pre.yaml` 绿。
 
 ### 2026-09-08 pre-commit 钩子：vp 改用绝对路径，修 `cd frontend` 后 PATH 失效
 

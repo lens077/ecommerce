@@ -6,8 +6,7 @@
 >   `products.sale_detail`（单数，`product/internal/data/migrations/00003_sale_detail.sql`），
 >   且实际多建了文档没有的 `products.spu_total_sales` 视图——表结构以 SQL 为准；
 > - **预聚合表（sales_daily）未落地**，「商家历史销量分析」整章仍是目标态；
-> - 「Kafka → 统计服务（Statistics Service）」链路**当前不存在**：只有通用 Kafka producer Adapter，
->   没有业务 producer、consumer 或 statistics 服务。必须先完成 Outbox/Kafka 迁移与 product 域内 consumer，不因已有 Adapter 就把链路写成已落地。
+> - 「Kafka → 统计服务（Statistics Service）」链路**当前不存在**：没有领域事件 producer、consumer 或 statistics 服务。必须先完成 Outbox Event Router 与 product 域内 consumer，不因 Kafka 已承载搜索 CDC 就把领域链写成已落地。
 
 方案为「PostgreSQL 销量明细事实 + Dragonfly 可丢缓存 + PostgreSQL 预聚合分析」，技术栈统一且维护成本低，后续数据量上来后可平滑迁移至 ClickHouse。
 一、核心方案架构（PostgreSQL 版）
@@ -19,7 +18,7 @@
 销量数据持久化与回溯	PostgreSQL 销量明细表	数据可靠存储、支持异常修复
 1.2 数据流转链路
 ```plaintext
-订单支付成功 → Kafka 发布「销量变更事件」（经 Outbox；当前 NATS 迁移中）→ Catalog 域统计消费者以 Inbox 幂等消费
+订单支付成功 → Outbox Event Router 发布 Kafka「销量变更事件」（目标态，尚未接线）→ Catalog 域统计消费者以 Inbox 幂等消费
                                                               ↓
                                                    写入 PostgreSQL 销量明细事实
                                                               ↓

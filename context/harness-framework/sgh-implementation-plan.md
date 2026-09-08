@@ -38,13 +38,13 @@ SGH core subset based on arXiv:2604.11378v1
 SGH runtime 主体建议建在：
 
 ```text
-/Users/sumery/lens077/deepseek-harness
+/Users/lens/lens077/deepseek-harness
 ```
 
 项目图模板和项目级契约建议放在：
 
 ```text
-/Users/sumery/lens077/ecommerce
+/Users/lens/lens077/ecommerce
 ```
 
 两个仓库的职责如下：
@@ -72,10 +72,10 @@ DeepSeek Harness Structured Graph plugin
 
 DeepSeek Harness 已经是 Cordis plugin 架构：
 
-- `/Users/sumery/lens077/deepseek-harness/docs/architecture.zh.md:11` 说明模型适配器、工具、会话日志和 agent loop 都是可替换 plugin。
-- `/Users/sumery/lens077/deepseek-harness/docs/architecture.zh.md:17` 说明运行中的 DSH 是一棵 plugin tree。
-- `/Users/sumery/lens077/deepseek-harness/docs/architecture.zh.md:59` 说明 Session Event 是可在重新加载后保留的持久事实。
-- `/Users/sumery/lens077/deepseek-harness/docs/architecture.zh.md:102` 定义了 capability seam 的 Service Definition、Service Provider 和 Consumer 三种角色。
+- `/Users/lens/lens077/deepseek-harness/docs/architecture.zh.md:11` 说明模型适配器、工具、会话日志和 agent loop 都是可替换 plugin。
+- `/Users/lens/lens077/deepseek-harness/docs/architecture.zh.md:17` 说明运行中的 DSH 是一棵 plugin tree。
+- `/Users/lens/lens077/deepseek-harness/docs/architecture.zh.md:59` 说明 Session Event 是可在重新加载后保留的持久事实。
+- `/Users/lens/lens077/deepseek-harness/docs/architecture.zh.md:102` 定义了 capability seam 的 Service Definition、Service Provider 和 Consumer 三种角色。
 
 DSH 也已经有动态 workflow：
 
@@ -108,7 +108,7 @@ ctx.structuredGraphEngine
 复用现有 `packages/workflow/` 分组，不新建无必要的顶层分组：
 
 ```text
-/Users/sumery/lens077/deepseek-harness/packages/workflow/
+/Users/lens/lens077/deepseek-harness/packages/workflow/
 ├── structured-graph/              # Service Definition、公共类型和共享不变量
 ├── structured-graph-local/        # 本地执行 Provider
 └── tool-structured-graph/         # 面向模型的 Consumer
@@ -117,7 +117,7 @@ ctx.structuredGraphEngine
 为了不默认改变官方 `base` 组合，可以再增加一个显式启用的 bundle：
 
 ```text
-/Users/sumery/lens077/deepseek-harness/packages/bundle/sgh/
+/Users/lens/lens077/deepseek-harness/packages/bundle/sgh/
 ├── package.json
 └── cordis.patch.yml
 ```
@@ -332,7 +332,7 @@ export interface StructuredGraphPlan {
 DSH 已有可复用的 `ObjectJsonSchema` 和 runtime validator：
 
 ```text
-/Users/sumery/lens077/deepseek-harness/packages/core/tools/src/json-schema.ts
+/Users/lens/lens077/deepseek-harness/packages/core/tools/src/json-schema.ts
 ```
 
 SGH plugin 应复用这套 JSON Schema 子集，不要重新发明另一套不兼容的 contract 方言。
@@ -412,7 +412,7 @@ skipped
 建议由 SGH plugin 建立一个新的项目约定，例如：
 
 ```text
-/Users/sumery/lens077/ecommerce/.dsh/graphs/
+/Users/lens/lens077/ecommerce/.dsh/graphs/
 ├── research-review.graph.yaml
 ├── code-change.graph.yaml
 └── verification.graph.yaml

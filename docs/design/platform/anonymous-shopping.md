@@ -1,9 +1,18 @@
 # 匿名（访客）购物链路设计
 
-> 状态：**设计草案，未落地**。触发它的是一个真实缺陷：匿名访问首页时顶栏发出 `GetCart`
+> 状态（2026-09-03 实测两仓）：**代码侧步骤 1–3 已完成，运行时刚部署、尚未验通；步骤 4–6 未开始。**
+> 逐步状态见第六节表格。旧状态行「设计草案，未落地」写于 2026-08-31，此后 control-tower 在
+> 2026-09-01 落了访客轨四个提交（`fdf0e82`→`dae4d86`，含于 tag 0.2.9+），dev 网关镜像
+> 2026-09-03 由 0.2.5 升到 0.2.10 后访客轨日志确认启用（`匿名购物访客轨已启用 cookie=ct_guest`）。
+> **两个未验事实**：Config Center 线上键 `gateway/dev/routes.yaml` 是否含 `guest:` 段（仓库
+> `routes/dev.yaml` 只是模板，不是生效值）；dev 网关当时因 Consul 目录为空而 `readyz` 503、
+> 整体不接流量（另案，见 `context/project/ecommerce/registry/experience/consul-register-once-then-give-up.md`），
+> 所以匿名加购端到端还没跑过。
+>
+> 触发本设计的是一个真实缺陷：匿名访问首页时顶栏发出 `GetCart`
 > → 网关 401 → 前端全局重登逻辑把人整页拉去登录页（2026-08-31 实测复现并已在前端侧修掉跳转，
-> 见 `AuthProvider.test.tsx`）。但那只是止血——**匿名用户至今没有一条能加购物车的路径**，
-> 这是架构层面的缺口，本文回答「该怎么补」。
+> 见 `AuthProvider.test.tsx`）。但那只是止血——**匿名用户在运行时至今没有一条验通的加购路径**，
+> 本文回答「该怎么补」。
 >
 > 命名说明：本文不叫「用户体验文档」。它要定的是**匿名身份的 RPC 契约与鉴权边界**
 > （哪些 RPC 匿名可达、访客身份从哪来、登录后怎么合并），是架构设计而非交互设计；
@@ -80,16 +89,24 @@
 
 需要新增 RPC：`cart.v1.CartService/MergeGuestCart`，仅允许网关内部调用（不进公开路由）。
 
+补注（2026-09-03，落地前必须定的两条）：
+
+- **并发**：合并进行中用户在另一标签页加购同一 SKU。累加要么事务内 `SELECT … FOR UPDATE`，
+  要么 `INSERT … ON CONFLICT (user_id, merchant_id, sku_id) DO UPDATE SET quantity = cart_item.quantity + EXCLUDED.quantity`——
+  后者更简单且天然原子，建议用它。
+- **幂等**：「失败保留待重试」意味着会重试，重试不能二次累加。以「访客条目合并后即删」为完成标记，
+  访客车为空即视为已合并，天然幂等。
+
 ## 六、落地步骤（建议顺序，每步可独立验收）
 
-| # | 动作 | 验收 |
-|---|---|---|
-| 1 | 网关签发/校验访客 cookie，注入两个身份头 | 匿名请求带上 `x-md-global-user-id` + `x-md-global-anonymous=true`，重复请求 UUID 稳定 |
-| 2 | `.service-matrix.yaml` 匿名清单改分级，同步 structcheck | 门禁绿；C 级 RPC 带访客标记时返回 401 |
-| 3 | cart 服务接受访客身份（`uuid.Parse` 失败路径改造） | 匿名 `AddProductToCart` 成功落库，`GetCart` 读回 |
-| 4 | `MergeGuestCart` 实现 + 登录链路调用 | 访客 3 件 + 用户 2 件 → 登录后 5 件；同 SKU 数量累加 |
-| 5 | 前端移除 `useCart` 的匿名兜底，恢复正常查询 | 匿名首页不再出现 401（当前是「不跳转但仍报错」的状态） |
-| 6 | 访客数据清理策略（30 天未活跃的访客购物车） | 定时任务；与 `cart_type='expired'` 状态复用 |
+| # | 动作 | 验收 | 状态（2026-09-03 实测） |
+|---|---|---|---|
+| 1 | 网关签发/校验访客 cookie，注入两个身份头 | 匿名请求带上 `x-md-global-user-id` + `x-md-global-anonymous=true`，重复请求 UUID 稳定 | ✅ 代码：`control-tower/services/gateway/internal/guest/`、`identity.InjectGuest`，`proxy.go` 已接线；`GUEST_ENABLED` 默认开、无处覆盖。运行时：dev 镜像 0.2.10 日志确认启用 |
+| 2 | `.service-matrix.yaml` 匿名清单改分级，同步 structcheck | 门禁绿；C 级 RPC 带访客标记时返回 401 | ✅ 代码：`routes/dev.yaml` 与 `.service-matrix.yaml` 的 `guest_paths` 各 4 条一致，structcheck 绿。C 级隔离由控制流保证（访客分支 `return`，`WithGuestID` 唯一调用点在该分支），不靠读头。⚠️ 线上键 `gateway/dev/routes.yaml` 是否含 `guest:` 未核 |
+| 3 | cart 服务接受访客身份（`uuid.Parse` 失败路径改造） | 匿名 `AddProductToCart` 成功落库，`GetCart` 读回 | ✅ **零改动即满足**：访客 ID 刻意生成为 UUID v4，cart 四处 `uuid.Parse` 天然通过，`cart_item.user_id` 无外键。端到端未验（网关当时不接流量） |
+| 4 | `MergeGuestCart` 实现 + 登录链路调用 | 访客 3 件 + 用户 2 件 → 登录后 5 件；同 SKU 数量累加 | ❌ 两仓 grep 零命中。并发与幂等两条约束见第五节补注 |
+| 5 | 前端移除 `useCart` 的匿名兜底，恢复正常查询 | 匿名首页不再出现 401 | ❌ `useCart.ts:71` 的 `useQuery` 仍无门。**前置**：第 2 步的线上键核对 + 第 3 步端到端验通，否则删兜底即让 401 复发 |
+| 6 | 访客数据清理策略（30 天未活跃的访客购物车） | 定时任务；与 `cart_type='expired'` 状态复用 | ❌ 未开始 |
 
 ## 七、与现有缺陷的关系
 

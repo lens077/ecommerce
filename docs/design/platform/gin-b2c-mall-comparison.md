@@ -1,11 +1,12 @@
 # 对照调研：Gin 单体 B2C 商城 vs 本仓
 
-> 2026-08-19 对照快照。对照项目的信息**仅来自一段项目介绍文本**（照录于附录，未见代码与线上系统），
-> 涉及其能力的表述一律以「据其介绍」为限。本仓侧事实取自当日的
-> [`README.md`](../../../README.md)、[`STACK.md`](../../../STACK.md)、
-> [`.service-matrix.yaml`](../../../.service-matrix.yaml)、[`PRODUCT.md`](../../../PRODUCT.md)，
-> 实况会随时间漂移，以 [`TODO.md`](../../../TODO.md) 为准。
-> 本文回答「两套做法差在哪、对本仓有什么启示」，是调研记录，不是设计决定。
+> **非操作性历史快照（2026-08-19）**：正文按当日状态保留，不随当前拓扑更新。不得把正文中的 Meilisearch、NATS、ACK、`MaxDeliver`、自写 relay、search indexer 或 `published_at` 语义用于当前设计、施工或恢复。
+>
+> 对照项目的信息**仅来自一段项目介绍文本**（照录于附录，未见代码与线上系统），涉及其能力的表述一律以「据其介绍」为限。本仓侧事实取自当日的 [`README.md`](../../../README.md)、[`STACK.md`](../../../STACK.md)、[`.service-matrix.yaml`](../../../.service-matrix.yaml)、[`PRODUCT.md`](../../../PRODUCT.md)。
+>
+> **当前订正（2026-09-04）**：搜索写链是 `products.search_catalog` → Debezium → Kafka → Elasticsearch Sink；NATS、Meilisearch 与自写 search indexer 已退役。未来领域事件线使用 Debezium Outbox Event Router，不重写自写 relay。当前事实以 [`TODO.md`](../../../TODO.md) 和 [`context/project/ecommerce/events/INDEX.md`](../../../context/project/ecommerce/events/INDEX.md) 为准。
+>
+> 本文回答「两套做法差在哪、对本仓有什么启示」，是历史调研记录，不是设计决定。
 
 ## 对照项目是什么
 

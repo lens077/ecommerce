@@ -57,18 +57,15 @@ Reasoning and Execution》（Yin & Feng，2026-07，代码已开源）。论文�
 
 ## 过度阅读护栏 hook（仅 Claude Code）
 
-指令会被忘，护栏不会。用户级配置，对所有仓库生效：
+实测 2026-09-08：原脚本未在已检查的 Claude 目录、备份和相关 Git 历史中找到，已按本文记载的行为重建并接入 Claude 全局配置，不宣称恢复了原件。源码保存在仓库，用户目录只保留 symlink，避免重装后再次丢失。完整依赖状态见 [工具清单](../../docs/agents/skills.md)。
 
-- **脚本**：`~/.claude/hooks/e3-overread-guard.py`
-- **接线**：`~/.claude/settings.json` → `hooks.PreToolUse`，matcher
-  `Read|Edit|Write|MultiEdit|NotebookEdit`
-- **行为**：同一会话在**首次编辑发生前**，完整 Read 第 6 个不同文件时拦下该次
-  Read（exit 2），把提醒喂回模型；重发同一 Read 即可继续。每会话最多提醒一次；
-  一旦发生过任何编辑即永久静默。状态存 `$TMPDIR/e3-guard-<session_id>.json`
-  （脚本用 `tempfile.gettempdir()`，macOS 上不是 `/tmp`）。
-- **已知局限**：统计包含子代理的读取——Explore 子代理大量读文件属正常，提醒文案
-  已写明此时可忽略；纯调研会话（只读不改）会吃到一次提醒，代价是一次重发；
-  Codex 没有 hook 体系，那边只靠 AGENTS.md 指令自觉。
+- **源码**：[scripts/e3-overread-guard.py](../../scripts/e3-overread-guard.py)；`~/.claude/hooks/e3-overread-guard.py` 链接到它。
+- **接线**：`~/.claude/settings.json` → `hooks.PreToolUse`，matcher `Read|Edit|Write|MultiEdit|NotebookEdit`；命令为 `/usr/bin/python3 /Users/lens/.claude/hooks/e3-overread-guard.py`，timeout 为 5 秒。原有模型配置、插件和 TokenTracker Hook 保留；接线前已在 `~/.claude/backups/` 备份设置。
+- **行为**：同一会话在首次编辑调用前，完整 Read 第 6 个不同文件时拦下该次 Read（exit 2），重发即放行，每会话最多提醒一次。带 limit 或非首页 offset 的读取不计数，相对路径按 Hook cwd 规范化去重。
+- **编辑边界**：PreToolUse 只能看到编辑意图，不能确认修改成功；任一匹配的编辑调用到达护栏后，本会话后续不再提醒。它不代替审批、沙箱或项目必读规范。
+- **状态与故障**：状态位于 Python `tempfile.gettempdir()` 下的 `e3-guard-<SHA256(session_id)>.json`，权限 0600；文件锁保护并发读写，不跟随符号链接。输入损坏、状态损坏或不可写时在 stderr 报诊断并放行，不把辅助提醒变成永久阻塞。
+- **适用范围**：同一 session_id 的读取共享计数；不同 session_id 隔离。纯研究和子代理探索可能合理地需要更多上下文，提醒明确允许重试。这次只接入 Claude，未向 DSH 或 Codex 注册此 Hook；两者仍可读取 AGENTS.md 的 E3 文本规则。
+- **验证**：9 个独立回归测试通过，覆盖阈值、重试、局部读取、四种编辑工具、会话隔离、并发、坏输入/状态和符号链接。通过全局配置中的真实命令，用隔离的临时 session 得到退出码 `0,0,0,0,0,2,0`；没有启动付费模型会话。新建 Claude 会话后再确认 Hook 生效。
 - **再验证方法**（改完 hook 必须重跑，见「静默失效要实测」的教训）：
   ```bash
   SID="test-$$"

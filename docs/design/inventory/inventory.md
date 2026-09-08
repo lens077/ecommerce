@@ -56,7 +56,7 @@
 4. 预占生命周期与库存预警（目标态）
     - 预占与释放必须成对且总量平衡；预占到期由后台任务或延迟事件自动释放。
     - 库存预警机制
-    - 库存事务写 broker-neutral outbox，目标经 relay 发布到 Kafka；消费者通过 Inbox 幂等处理低库存事件，再调用通知适配器。当前生产者、Kafka consumer、通知服务与商家渠道均未接线。
+    - 库存事务写 broker-neutral outbox，目标由 Debezium Outbox Event Router 搬运到 Kafka；消费者通过 Inbox 幂等处理低库存事件，再调用通知适配器。当前生产者、Kafka consumer、通知服务与商家渠道均未接线，不再新增自写 relay。
 
 ## 库存表（早期设计稿）
 

@@ -147,9 +147,7 @@ B=10.10.21.172:9092; CC=/etc/kafka/admin.properties   # pigsty-admin，SASL_SSL
   另加一条真正有意义的「逻辑槽滞留 > 2 GB」告警。
 - `restart_lsn` 侧的 240 MB 滞留要等 checkpoint 回收，不会立刻归零；判断是否修好看
   `confirmed` 差值是否为 0，不看 `retained`。
-- **现状订正（2026-09）**：events/INDEX.md 已区分部署态、仓库代码态与独立 CDC 演示链，并写明
-  `tools/search-indexer` 才是策展投影唯一权威写入者。事故当时「两条链并存但文档只写一条」的症状保留在此，
-  用于提醒盘点时同时核对领域事件链与 CDC 链。
+- **现状订正（2026-09-03）**：策展投影唯一定义是 `products.search_catalog`，由 Debezium → Kafka → Elasticsearch Sink 搬运；`tools/search-indexer` 已删除。事故当时「两条链并存但文档只写一条」的症状保留在此，用于提醒盘点时分别核对领域事件链与 CDC 行投影链。
 
 **排查捷径**
 

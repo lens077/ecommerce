@@ -4,13 +4,13 @@
 > 当前运行事实以 `.service-matrix.yaml` 和 `STACK.md` 为准；技术选型与基础设施目标以 [TECH.md](../../TECH.md) 为准。
 > 本文定义「要证明什么、按什么证据验收、什么条件下才增加组件」，不把规划写成现状。
 >
-> **后续决策覆盖（2026-08-28）**：本文原有「NATS 继续作为目标主干、Kafka 仅证据触发」「Meilisearch 继续作为目标搜索引擎」「Pangolin 不进入生产主路径」「Casbin 为目标 RBAC、OpenFGA 后置」等结论已被 [TECH.md](../../TECH.md) 覆盖：目标采用外部非 K8s Kafka、Elasticsearch、CDN/WAF → Pangolin → Cilium Gateway API → control-tower，以及 Casdoor 有状态 Session + OpenFGA。存量 NATS、Meilisearch、Casbin 与 legacy JWT 仍按迁移现状记录，不改写为已删除。
+> **后续决策覆盖（2026-09-03）**：本文原有「NATS 继续作为目标主干、Kafka 仅证据触发」「Meilisearch 继续作为目标搜索引擎」「Pangolin 不进入生产主路径」「Casbin 为目标 RBAC、OpenFGA 后置」等结论已被 [TECH.md](../../TECH.md) 覆盖。现行目标采用外部非 K8s Kafka、Elasticsearch、CDN/WAF → Pangolin → Cilium Gateway API → control-tower，以及 Casdoor 有状态 Session + OpenFGA。NATS 已退役；Elasticsearch 已切流；Meilisearch 运行资源已于 2026-09-04 完整退役。
 
 ## 一、北极星目标
 
 将 ecommerce 演进为一个正确性可证明、容量可复现、故障可隔离、数据可恢复、变更可回滚、责任可定位、成本可解释的 B2B2C 多商家生产系统。
 
-「百万/千万级」不是采购某种中间件，也不是单张表达到某个行数。设计合理、索引正确的 PostgreSQL 表保存几千万行并不罕见。**新增**组件必须由真实需求、容量瓶颈或故障证据触发——但这条门槛约束的是「往栈里加东西」，不适用于 [TECH.md](../../TECH.md) 已直接定稿的目标形态：事件主干为外部非 K8s **Kafka**、搜索存储为 **Elasticsearch**，存量 NATS JetStream 与 Meilisearch 属迁移期实现，其替换**不需要**再单独提供数据量证据。
+「百万/千万级」不是采购某种中间件，也不是单张表达到某个行数。设计合理、索引正确的 PostgreSQL 表保存几千万行并不罕见。**新增**组件必须由真实需求、容量瓶颈或故障证据触发。该门槛约束「往栈里加东西」，不反向否定 [TECH.md](../../TECH.md) 已定稿并落地的 Kafka 行投影与 Elasticsearch 搜索链。
 
 当前优先级固定为：
 
@@ -22,7 +22,7 @@
 6. 单订单、百万请求和数据保留成本；
 7. 证据证明现有技术达到边界后，再评估新增基础设施。
 
-禁止以「中大型项目都在用」或个人学习目标作为业务基础设施接线理由。node3 已存在的 Kafka 在本文写作时只视为独立实验资源，当前应用 `used_by=[]`；该现状不等于目标已接线。目标按 [TECH.md](../../TECH.md) 将事件主干迁往外部非 K8s Apache Kafka 集群。
+禁止以「中大型项目都在用」或个人学习目标作为业务基础设施接线理由。node3 Kafka 已承载搜索行投影，但领域事件 producer/consumer 仍为零；不得用行投影接线代替领域事件验收。
 
 ## 二、规模必须拆成可测维度
 
@@ -44,7 +44,7 @@
 ### 2.1 必备计算模型
 
 - 峰值并发约等于「峰值到达率 × P95 响应时间」（Little’s Law）。
-- Kafka 最大积压约等于「峰值事件速率 × 最长恢复时间 × P95 事件大小」，还要计入副本、保留期与存储余量；存量 JetStream 迁移容量另行核算。
+- Kafka 最大积压约等于「峰值事件速率 × 最长恢复时间 × P95 事件大小」，还要计入副本、保留期与存储余量。
 - session 内存包括并发 session、序列化、索引、TTL、复制和 allocator 开销。
 - PostgreSQL 容量必须同时计算 heap、索引、WAL、膨胀、临时空间、备份和恢复工作空间。
 - 搜索容量必须使用真实商品文档与查询分布压测，不能从原始 JSON 大小线性外推。
@@ -67,8 +67,8 @@
 
 - 10 个 Go + ConnectRPC 业务服务，以及独立仓库中的 control-tower gateway/config/BFF；
 - node3 Pigsty PostgreSQL 作为当前业务主库；集群内 CNPG 已 hibernate，仅是回切候选；
-- Dragonfly、Meilisearch、S3-compatible 对象存储；
-- 3 server NATS JetStream、PostgreSQL outbox relay 和 search indexer；
+- Dragonfly、Elasticsearch 9.4.5 + IK、Silo S3-compatible 对象存储；
+- node3 Kafka + Debezium + Elasticsearch Sink 搜索行投影；
 - Cilium CNI/KPR/LB/Gateway API；
 - VictoriaMetrics/Logs/Traces、Vector、Grafana、vmalert 和 Alertmanager；
 - Buf、Protovalidate、sqlc、goose、vite-plus、Vitest、Playwright 和 structcheck。
@@ -77,8 +77,8 @@
 
 1. order 仍有假成功路径，inventory/payment 核心能力和跨服务交易链未闭环；
 2. 订单防重、状态机、库存预占、支付确认、退款与补偿不变量缺少组合验证；
-3. Product/Order 的事务内 outbox、consumer Inbox、NACK/DLQ 和重放治理未完成；
-4. NATS 当前搜索流为可重建 R1，尚无跨故障域 R3 与容量/恢复成本证据；
+3. Product/Order 的事务内 outbox、consumer Inbox、retry/DLQ 和重放治理未完成；
+4. 搜索 CDC 链集中在 node3，虽已固化恢复手顺，但尚无跨故障域 HA、容量与故障注入证据；
 5. PostgreSQL 和 Victoria 数据面集中在 node3，并经外部入口访问，存在耦合故障域；
 6. 业务服务缺少完整 default-deny、gateway-only、依赖白名单和 workload identity；
 7. BFF session 与业务 cache 共用 Dragonfly 故障域，驱逐策略和容量必须分离；
@@ -154,7 +154,7 @@ OTel / Vector / Hubble / Profiling → Victoria / Grafana / Alertmanager
 - Topic 按限界上下文划分，以 `aggregate_id` 作为 partition key 保证同聚合事件顺序。
 - 事件 envelope 统一包含 `event_id`、`aggregate_id`、`tenant_id`、`trace_id`、`schema_version`、`occurred_at`。
 - payload 采用 Protobuf，由 Buf Schema Registry 管理兼容；CloudEvents 只可作为 envelope 参考，不替代领域事件设计。
-- 连续消费失败超过 5 次转投 DLQ Topic，并触发 Alertmanager 告警；同时治理 retention、最大积压、poison message、重放权限和审计。
+- 每个 consumer 按失败类别和恢复目标显式定义 retry/backoff 与尝试预算；永久失败或预算耗尽时，完成 DLQ/审计写入再推进原 offset，并触发 Alertmanager；同时治理 retention、最大积压、poison message、重放权限和审计。
 - KEDA 只能在幂等、backpressure 和下游容量得到证明后按 Kafka consumer lag 扩容。
 - 业务事件与行变更分离：Outbox 表达「业务发生了什么」，逻辑复制表达「数据库哪些行变了」。分类判据是「没有这个事件，业务语义是否丢失」——搜索投影的答案是否，因此归行投影线（2026-09-03 订正，此前架构图把它画在 Outbox 下是误分类）。
 - 两条线共用同一搬运层 Debezium：领域事件经 Outbox Event Router 分 topic，行投影经普通表捕获；自写 relay 退役，不再重写成 Kafka 版。
@@ -168,18 +168,15 @@ OTel / Vector / Hubble / Profiling → Victoria / Grafana / Alertmanager
 
 ### 5.5 搜索
 
-目标搜索存储定稿为 Elasticsearch，并收敛到 Deep Module；存量 Meilisearch 在迁移期继续运行，不能写成已删除：
+搜索存储为 Elasticsearch。search 服务的 Deep Module 边界只暴露查询与健康检查；投影写入、重建和 alias 切换属于 pipeline，不进入业务服务接口：
 
 ```text
 SearchCatalog
 - SearchProducts
-- UpsertProjection
-- DeleteProjection
-- RebuildIndex
-- SwapIndex
+- Health
 ```
 
-搜索必须是可重建的只读 Projection，PostgreSQL 才是真相源。Elasticsearch 实现隐藏于 `SearchCatalog` 后，必须支持从 PostgreSQL 全量重建；迁移期以 shadow index 与差异校验完成切流。
+搜索是可重建的只读 Projection，PostgreSQL 是事实源。Elasticsearch 查询实现隐藏于 `SearchCatalog` 后；pipeline 从 `products.search_catalog` 重建版本化索引，并用稳定 alias 原子切换。
 
 投影写入走行投影线：策展文档由 PostgreSQL 表 `products.search_catalog` 定义（trigger 在 `spus`/`skus`/`sale_detail` 变更时重算该 SPU 一行），Debezium 捕获该表、Elasticsearch Sink 写入稳定 alias。search 服务只读 alias，不感知搬运层。这条路径不依赖 Product 服务的写 RPC 或 outbox 生产者——任何写入 PostgreSQL 的路径（seed、后台 SQL、未来 RPC）都自动进索引。
 
@@ -204,7 +201,7 @@ SearchCatalog
 
 - namespace 级 default-deny ingress/egress。
 - 只允许 Cilium Gateway/control-tower 进入业务服务。
-- egress 只开放 `.service-matrix.yaml` 声明的依赖；目标包括外部 Pigsty PostgreSQL、分实例 Dragonfly、外部 Kafka 与 Elasticsearch，迁移期同时保留已登记的 NATS、Meilisearch 通路。
+- egress 只开放 `.service-matrix.yaml` 声明的现役依赖；包括外部 Pigsty PostgreSQL、分实例 Dragonfly、外部 Kafka 与 Elasticsearch。已退役的 Meilisearch 与 NATS 通路不得恢复。
 - 用 Hubble 观察真实流量后逐步收紧，并为 deny 提供可查询证据。
 - ServiceAccount 是 workload identity 基础；需要强 east-west 身份时再评估 SPIFFE/SPIRE。
 - 不使用 service mesh 时，ConnectRPC client/server 必须明确 mTLS、轮换和身份映射。
@@ -224,7 +221,7 @@ SearchCatalog
 ### 5.10 Kubernetes 与交付
 
 - 先统一 `deploy/`、Helm 与集群资源名、标签和 image digest，再接回 ArgoCD。
-- Gateway、relay、indexer 进入同一交付描述；启用 prune/selfHeal 前先排除影子服务风险。
+- 本仓微服务、同级 control-tower 的 Gateway、pipeline 仓的 CDC 组件分别由各自仓库维护交付描述；不得把已退役的自写 relay 或 search indexer 补回 Helm。启用 prune/selfHeal 前先排除影子服务风险。
 - HPA 管在线服务；KEDA 管队列 consumer；VPA 先 recommendation，不能同时无规则修改同一 workload。
 - 使用 PDB、topology spread、anti-affinity、PriorityClass 和 N+1 容量。
 - OpenTofu/Terraform + Ansible 管基础设施，Kubernetes 应用由 GitOps 管理。
@@ -236,7 +233,7 @@ SearchCatalog
 - OTel Collector tail-based sampling 保留错误和慢链路，并限制高基数。
 - Pyroscope/Parca 补 CPU、heap、锁和 goroutine 持续 profiling。
 - Hubble 提供网络流与 policy deny 证据。
-- k6 负责业务场景；pgbench、Kafka benchmark 和真实 Elasticsearch 数据集负责目标组件基线；迁移期继续保留 NATS/Meilisearch 基线用于切流对照。
+- k6 负责业务场景；pgbench、Kafka benchmark 和真实 Elasticsearch 数据集负责组件基线。Meilisearch 已退役，不再新增基线。
 - Toxiproxy 注入延迟、断连、丢包和半开；Chaos Mesh/Litmus 演练 Pod、网络、节点和依赖故障。
 - 外部探针运行在业务故障域之外。
 - 每条 critical 告警必须声明 owner、影响、Runbook、Silence 条件和恢复验证。
@@ -303,7 +300,7 @@ SearchCatalog
 6. GitOps 真相源统一；
 7. 外部告警、resolved 通知和值班闭环；
 8. 固定数据集、capacity profile、k6 基线和成本报告；
-9. 外部 Kafka、Outbox/Inbox、DLQ、重放与积压恢复；存量 NATS 搜索链在切流验证前保留；
+9. 外部 Kafka、Outbox Event Router、Inbox、DLQ、重放与积压恢复；搜索行投影按现行 CDC 手顺演练；
 10. 核心旅程 SLO、Runbook 和故障演练。
 
 ### P1：业务增长后

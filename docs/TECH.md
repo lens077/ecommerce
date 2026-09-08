@@ -188,9 +188,9 @@
                                                                     ▼
 ┌────────────────────────────────────────────────────────┐
 │ 消费者服务 (如 notification / payment-service)          │
-│  ├── 1. 检查 Inbox 表 (或 aggregate_id + event_id 唯一约束) │
-│  ├── 2. 未消费则执行领域逻辑                               │
-│  └── 3. 提交 Offset 并写入 Inbox 表                       │
+│  ├── 1. 以 (consumer_group, event_id) 检查 Inbox 唯一键     │
+│  ├── 2. 领域更新与 Inbox 写入在同一本地事务提交              │
+│  └── 3. 本地事务成功后再提交 Kafka Offset                   │
 └────────────────────────────────────────────────────────┘
 ```
 
@@ -200,7 +200,7 @@
 |------|------|
 | **Outbox 保证** | 搬运层只在收到 Kafka Broker 的 `acks=all` 响应后才推进复制槽位点（`confirmed_flush_lsn`）；WAL 位点即游标，outbox 表不维护 `published_at` / `attempts` 簿记，按提交序投递。告警必须盯复制槽位点差、connector task 状态与 consumer lag（见 [`debezium-idle-slot-wal-retention.md`](../context/project/ecommerce/events/experience/debezium-idle-slot-wal-retention.md)） |
 | **Inbox 幂等消费** | 消费端统一维护 `inbox_events` 记录表，主键为 `(consumer_group, event_id)`。重试导致重复消费时，利用唯一键冲突直接忽略 |
-| **DLQ 处置机制** | 连续失败超过 5 次的事件直接转投 DLQ Topic，同时触发 Alertmanager 警报，禁止无休止重试阻塞 Partition |
+| **DLQ 处置机制** | 消费者必须区分可重试与永久失败，并按业务恢复目标显式定义退避、重试上限和 DLQ Topic；停滞与死信触发 Alertmanager。Kafka 线不沿用 JetStream `MaxDeliver` 的全局次数语义 |
 | **Kafka Topic 规划** | 按限界上下文划分。以 `aggregate_id` 作为 Partition Key 保证同一聚合根的事件有序 |
 | **事件 Schema** | 使用 Protobuf 定义事件，通过 Buf Schema Registry 管理兼容性。事件 envelope 包含 `event_id`、`aggregate_id`、`tenant_id`、`trace_id`、`schema_version`、`occurred_at` |
 

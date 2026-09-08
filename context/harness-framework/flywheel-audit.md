@@ -56,6 +56,21 @@ transcript 里：`~/.claude/projects/<仓slug>/`、`~/.codex/sessions/`、`~/.ds
 - **落点分层**：按 [knowledge-layering.md](knowledge-layering.md) 判层，不往 AGENTS.md 堆规则本体；
 - **人工裁决后才落笔**。
 
+### 本仓蒸馏脚本
+
+入口是 [scripts/backpass-distill.sh](../../scripts/backpass-distill.sh)，DSH 格式读取由 [scripts/backpass-dsh.py](../../scripts/backpass-dsh.py) 负责。源码与项目一起保存，共享 symlink 入口也可调用；不依赖另装 backpass 产品。
+
+```bash
+bash scripts/backpass-distill.sh /Users/lens/lens077/ecommerce 14 /tmp/backpass-ecommerce-review
+PYTHONDONTWRITEBYTECODE=1 python3 scripts/test-backpass-dsh.py
+```
+
+DSH 读取 `${DSH_HOME:-~/.dsh}/sessions`，支持 v0-v2 的 `session[.vN].jsonl[.zstd]`。只选最高格式代，不回退到旧代；压缩文件需要提供 zstd API 的 Node 或 zstd CLI。按 header cwd 精确关联仓库，仅为本次 ecommerce 重装保留明确的旧路径别名，不按 basename 混入其他仓库。只采集 `user/message` 中 `source={kind:user}` 的文本，排除注入上下文和 fork 的继承前缀。
+
+格式不支持、压缩损坏、双重编码或读取失败会在 stderr 报诊断并跳过，不能把空输出当作没有历史。未结束的明文尾行不参与采集，完整前缀保留并告警；压缩损坏不声称可恢复前缀。旧 Claude/Codex 路径匹配和注入启发式仍保留，本轮没有宣称它们已经全面适配新客户端。
+
+输出目录含 `human.tsv`、`markers.txt`、`injected.txt` 和中间 `msgs.tsv`，每条人类消息最多 500 字符，不是完整会话备份或语义记忆库。脚本只读原始历史，创建输出时采用私有权限；同一输出目录会覆盖上一次产物，人工复盘应使用新目录。没有原始记录可作来源的合成测试只验证解析行为，不能作为真实工程决策依据。
+
 ## 评估过、刻意不建的（重新评估条件写明，别凭直觉补齐）
 
 | 文章机制 | 不建的理由 | 重新评估条件 |

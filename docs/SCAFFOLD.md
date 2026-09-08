@@ -676,7 +676,7 @@ api:
 
 .PHONY: k8s-dev
 k8s-dev:
-	kubectl apply -f deploy/dev
+	kubectl apply -k deploy/overlays/dev
 ```
 
 ### 根 `Makefile`（对所有服务扇出）
@@ -785,7 +785,7 @@ type resource
   + Dragonfly 分实例（Session noeviction / Cache allkeys-lru / 限流独立）
   + Elasticsearch 只读投影（隐藏于 SearchCatalog 接口）
   + Silo（基于 MinIO，S3 兼容，使用预签名 URL）。
-【事件】Apache Kafka 外部非 K8s 集群 + Transactional Outbox / Relay / Inbox + DLQ；
+【事件】Apache Kafka 外部非 K8s 集群 + Transactional Outbox / Debezium Outbox Event Router / Inbox + DLQ；
   partition key=aggregate_id，事件使用 Protobuf。
 【配置】proto 定义 Bootstrap schema；CONFIG_SOURCE_FILE 指向 Config Center SDK selector
   （type=config_center），key 为 `{service}/{env}/bootstrap.yaml`；解码后必须调用
@@ -813,8 +813,8 @@ type resource
    OnStart 先做 DB/Cache 健康检查再监听；OnStop 7s 内完成 Shutdown/OTel flush。
 8. 共享基础设施实现（config/log/otel/registry/env/meta/dbutil）从第一天就依赖 `go-connect-kit`；
    服务内只保留必要的 protobuf-to-options 适配，不保存转发包或实现副本。
-9. 事件写入采用 Transactional Outbox，Relay 收到 Kafka `acks=all` 后才标记 published；
-   消费端使用 Inbox 幂等，失败进入 DLQ，同一聚合以 aggregate_id 分区。
+9. 事件写入采用 Transactional Outbox，由 Debezium Outbox Event Router 从 WAL 搬运；
+   发布进度使用 Connector offset，不维护 published 簿记。消费端使用 Inbox 幂等，失败进入 DLQ，同一聚合以 aggregate_id 分区。
 10. 测试必须包含 k6 容量基线、Playwright E2E、gopter 属性测试和状态机测试；
     后端保留 go build / go vet / go test 门禁。
 

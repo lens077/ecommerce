@@ -257,12 +257,12 @@
 ### Inbox / Outbox
 
 - **含义**：基于数据库事务的消息收发记录表，用于保证事件至少一次投递和幂等消费。
-- **本项目**：Outbox 与业务变更写入同一 PostgreSQL 本地事务，由 Relay 投递到外部非 K8s Kafka 集群；Inbox 以 `(consumer_group, event_id)` 唯一约束识别重复事件，并与本地业务更新放在同一事务中。
+- **本项目**：Outbox 与业务变更写入同一 PostgreSQL 本地事务，由 Debezium Outbox Event Router 从 WAL 投递到外部非 K8s Kafka 集群；Inbox 以 `(consumer_group, event_id)` 唯一约束识别重复事件，并与本地业务更新放在同一事务中。该领域事件链尚未接入业务。
 
 ### Outbox
 
 - **含义**：在业务数据库中保存待发布事件的表。业务变更与事件写入同一本地事务，再由 relay 异步投递。
-- **本项目**：Outbox 解决「业务落库成功但消息未发送」的双写问题；Kafka Broker 返回 `acks=all` 后才标记 `published_at`。
+- **本项目**：Outbox 解决「业务落库成功但消息未发送」的双写问题。目标搬运层是 Debezium Outbox Event Router；发布进度由 WAL 与 Kafka Connect offset 表示，不回写 `published_at`。
 
 ### Inbox
 
@@ -272,22 +272,22 @@
 ### Relay
 
 - **含义**：扫描 Outbox、发布事件并回写发布状态的独立进程或任务。
-- **本项目**：Relay 收到 Kafka Broker 的 `acks=all` 确认后再标记事件已发布；确认后、标记前崩溃会导致重复投递，因此消费者必须通过 Inbox 保证幂等。连续失败超过规定次数的事件转入 DLQ 并触发告警。
+- **本项目**：自写 Relay 已退役，不再作为目标组件。领域事件计划由 Debezium Outbox Event Router 搬运；consumer 仍必须通过 Inbox 保证幂等。
 
 ### 至少一次投递（at-least-once delivery）
 
 - **含义**：已确认事件不会无声丢失，但同一事件可能被投递多次。
-- **本项目**：Outbox 与 relay 采用该语义，重复消息由 Inbox 和业务幂等规则吸收。
+- **本项目**：Debezium、Kafka Connect Sink 和未来领域事件 consumer 都按至少一次重放设计；重复记录由稳定文档 ID、Inbox 或业务幂等规则吸收。
 
 ### 消费滞后（consumer lag）
 
 - **含义**：消费者当前处理位置落后于消息生产位置的程度，可用消息数或时间表示。
-- **本项目**：消费 lag、Outbox 未发布事件的最老年龄和死信数量都应纳入告警。
+- **本项目**：Kafka consumer lag、Debezium replication slot 位点差和死信数量都应纳入告警。搜索链必须检查配置中的 7 个 topic 全部 partition，不能把缺失 partition 当作 lag 为零。
 
 ### 死信（dead letter）
 
 - **含义**：消息经过规定次数重试仍无法成功处理后，被转移到独立存储或队列，等待人工或专门任务处理。
-- **本项目**：死信用于暴露无法自动恢复的事件，不能作为静默丢弃消息的出口。
+- **本项目**：死信用于暴露无法自动恢复的记录，不能作为静默丢弃出口。搜索 Sink 的硬保证是 malformed document 使 task fail-stop 且原 topic offset 不前进；task trace 是恢复真相源，DLQ 副本只作辅助诊断且不保证每类失败都生成，修复后从原 topic 重放。
 
 ## 架构与服务边界
 
@@ -585,7 +585,7 @@
 ### 倒排索引（inverted index）
 
 - **含义**：保存「词项 → 文档列表」映射的检索结构，查询时无需逐篇扫描文档。
-- **本项目**：Elasticsearch 策展投影使用倒排索引；当前代码以 strict mapping 明确文本、keyword、数值与日期字段。Meilisearch 只保留为尚未退役的运行时存量。
+- **本项目**：Elasticsearch 策展投影使用倒排索引；strict mapping 明确文本、keyword、数值与日期字段。Meilisearch 运行资源已于 2026-09-04 完整退役。
 
 ### 全文检索
 
@@ -595,7 +595,7 @@
 ### 分词器（analyzer）
 
 - **含义**：把文本标准化并切分为可索引词项的组件，通常包含字符过滤、分词和词项过滤步骤。
-- **本项目**：Elasticsearch 代码 mapping 对商品名和描述采用 `ik_max_word` 建索引、`ik_smart` 检索。该配置已有合约测试，但运行时尚未切流，中文相关性仍须用真实商品数据验收。
+- **本项目**：Elasticsearch mapping 对商品名和描述采用 `ik_max_word` 建索引、`ik_smart` 检索。该配置已切流并有合约检查；中文相关性仍须用真实商品数据验收。
 
 ### Facet 过滤（faceted search）
 
@@ -892,12 +892,12 @@
 ### Meilisearch
 
 - **含义**：面向应用搜索的开源搜索引擎，提供 typo 容错、Facet、排序与可选向量检索能力。
-- **本项目**：Meilisearch 是仍待运行时退役的存量搜索引擎；仓库 search/indexer 代码已不再引用。只有在 Elasticsearch 网络、配置、部署和真实流量切换完成后才能删除其运行资源，状态分别以 [`.service-matrix.yaml`](../.service-matrix.yaml) 和 [`TODO.md`](../TODO.md) 为准。
+- **本项目**：Elasticsearch 已于 2026-09-03 完成运行时切流；Meilisearch 运行资源于 2026-09-04 完整退役，只在 [`.service-matrix.yaml`](../.service-matrix.yaml) 保留退役记录。
 
 ### Elasticsearch（ES）
 
 - **含义**：基于 Lucene 的分布式搜索与分析引擎，支持全文检索、聚合和水平扩展。
-- **本项目**：search 服务代码已通过单 provider 的 `SearchCatalog` 深度模块边界读取 Elasticsearch 只读投影，`tools/search-indexer` 是策展投影唯一权威写入者，并支持从 PostgreSQL 全量重建。Pod 到 node3 回环监听尚无通路，因此这不是运行时切流完成声明。
+- **本项目**：search 服务通过单 provider 的 `SearchCatalog` 读取 Elasticsearch 稳定 alias。策展投影唯一定义是 PostgreSQL 表 `products.search_catalog`，经 Debezium → Kafka → Elasticsearch Sink 写入；全量重建与灾备由 pipeline 仓负责。
 
 ### sortable（可排序字段）
 
