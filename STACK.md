@@ -178,7 +178,7 @@ Client
 | 包管理 | pnpm workspace + **catalog**（版本集中管理） | pnpm **12.3.4** |
 | Node | — | **^22.22.2 \|\| ^24.15.0 \|\| >=26.0.0** |
 | 工具链 | **vite-plus (`vp`)** — 一体化 fmt / lint(oxlint) / test / build / dev | 0.3.0（配套 Vitest 4.1.11） |
-| UI 框架 | React | 19.2.8 |
+| UI 框架 | React | 19.3.0 |
 | 语言 | TypeScript | 7.1.0-dev.20260904.1（本仓 A/B 峰值 RSS 降低 17%～20%，精确锁定） |
 | 组件库 | MUI + emotion | @mui/material 9.4.0 |
 | 路由 | TanStack Router（文件路由 + autoCodeSplitting） | 1.170.32 |

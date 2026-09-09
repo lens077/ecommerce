@@ -2,6 +2,7 @@
 
 import { useQuery } from "@connectrpc/connect-query";
 import { useEffect } from "react";
+import { ViewTransition } from "react";
 import { ProductService } from "@/gen/api/product/v1/product_pb";
 import { formatMoney } from "@/lib/money";
 import { PRODUCT_QUERY_STALE_TIME_MS } from "@/lib/product-query";
@@ -77,20 +78,22 @@ export function ProductDetail({ lang, spuCode }: { lang: Language; spuCode: stri
 
       <section className="skuGrid" aria-label={copy.sku}>
         {product.skus.map((sku) => (
-          <article className="skuCard" key={sku.skuCode}>
-            <p className="skuLabel">{copy.sku}</p>
-            <h2>{sku.skuName}</h2>
-            <dl>
-              <div>
-                <dt>{copy.price}</dt>
-                <dd>{formatMoney(sku.price)}</dd>
-              </div>
-              <div>
-                <dt>{copy.stock}</dt>
-                <dd>{sku.stockLocked.toString()}</dd>
-              </div>
-            </dl>
-          </article>
+          <ViewTransition key={sku.skuCode}>
+            <article className="skuCard">
+              <p className="skuLabel">{copy.sku}</p>
+              <h2>{sku.skuName}</h2>
+              <dl>
+                <div>
+                  <dt>{copy.price}</dt>
+                  <dd>{formatMoney(sku.price)}</dd>
+                </div>
+                <div>
+                  <dt>{copy.stock}</dt>
+                  <dd>{sku.stockLocked.toString()}</dd>
+                </div>
+              </dl>
+            </article>
+          </ViewTransition>
         ))}
       </section>
     </main>

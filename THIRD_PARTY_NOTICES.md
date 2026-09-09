@@ -1,7 +1,7 @@
 # Third-party notices
 
 由 `scripts/gen-third-party-notices.sh` 生成,勿手工编辑;依赖变更进暂存区时 pre-commit 会自动重新生成。
-后端列出 `go list -deps ./...` 实际链接进制品的 101 个模块;前端列出 `pnpm licenses list` 解析到的 403 个包(含 dev 依赖)。
+后端列出 `go list -deps ./...` 实际链接进制品的 101 个模块;前端列出 `pnpm licenses list` 解析到的 407 个包(含 dev 依赖)。
 
 ## 需要人看一眼
 
@@ -17,7 +17,7 @@
 
 | 许可证 | 条目数 |
 |---|---|
-| MIT | 357 |
+| MIT | 361 |
 | Apache-2.0 | 64 |
 | ISC | 23 |
 | BSD-3-Clause | 21 |
@@ -145,7 +145,7 @@
 | `google.golang.org/protobuf` | v1.36.12 | BSD-3-Clause | LICENSE |
 | `gopkg.in/yaml.v3` | v3.0.1 | Apache-2.0 | LICENSE |
 
-## 前端(npm 包,403)
+## 前端(npm 包,407)
 
 | 包 | 版本 | 许可证 | 主页 |
 |---|---|---|---|
@@ -303,9 +303,10 @@
 | `@types/node` | 26.4.1 | MIT | <https://github.com/DefinitelyTyped/DefinitelyTyped/tree/master/types/node> |
 | `@types/parse-json` | 4.0.2 | MIT | <https://github.com/DefinitelyTyped/DefinitelyTyped/tree/master/types/parse-json> |
 | `@types/prop-types` | 15.7.15 | MIT | <https://github.com/DefinitelyTyped/DefinitelyTyped/tree/master/types/prop-types> |
-| `@types/react-dom` | 19.2.7 | MIT | <https://github.com/DefinitelyTyped/DefinitelyTyped/tree/master/types/react-dom> |
+| `@types/react-dom` | 19.3.0 | MIT | <https://github.com/DefinitelyTyped/DefinitelyTyped/tree/master/types/react-dom> |
 | `@types/react-transition-group` | 4.4.12 | MIT | <https://github.com/DefinitelyTyped/DefinitelyTyped/tree/master/types/react-transition-group> |
 | `@types/react` | 19.2.18 | MIT | <https://github.com/DefinitelyTyped/DefinitelyTyped/tree/master/types/react> |
+| `@types/react` | 19.3.0 | MIT | <https://github.com/DefinitelyTyped/DefinitelyTyped/tree/master/types/react> |
 | `@typescript/typescript-<platform>` | 7.1.0-dev.20260904.1 | Apache-2.0 | <https://www.typescriptlang.org/> |
 | `@typescript/vfs` | 1.6.4 | MIT | <https://github.com/microsoft/TypeScript-Website> |
 | `@vitejs/plugin-react` | 6.1.1 | MIT | <https://github.com/vitejs/vite-plugin-react/tree/main/packages/plugin-react#readme> |
@@ -464,12 +465,14 @@
 | `prop-types` | 15.8.1 | MIT | <https://facebook.github.io/react/> |
 | `punycode` | 2.3.1 | MIT | <https://mths.be/punycode> |
 | `react-dom` | 19.2.8 | MIT | <https://react.dev/> |
+| `react-dom` | 19.3.0 | MIT | <https://react.dev/> |
 | `react-i18next` | 17.0.13 | MIT | <https://github.com/i18next/react-i18next> |
 | `react-is` | 16.13.1 | MIT | <https://react.dev/> |
 | `react-is` | 17.0.2 | MIT | <https://react.dev/> |
 | `react-is` | 19.2.8 | MIT | <https://react.dev/> |
 | `react-transition-group` | 4.4.5 | BSD-3-Clause | <https://github.com/reactjs/react-transition-group#readme> |
 | `react` | 19.2.8 | MIT | <https://react.dev/> |
+| `react` | 19.3.0 | MIT | <https://react.dev/> |
 | `readdirp` | 5.1.1 | MIT | <https://github.com/paulmillr/readdirp> |
 | `redent` | 3.0.0 | MIT | <https://github.com/sindresorhus/redent#readme> |
 | `require-from-string` | 2.0.2 | MIT | <https://github.com/floatdrop/require-from-string#readme> |
@@ -479,6 +482,7 @@
 | `resolve` | 1.22.12 | MIT | <https://github.com/browserify/resolve#readme> |
 | `saxes` | 6.0.0 | ISC | <https://github.com/lddubeau/saxes#readme> |
 | `scheduler` | 0.27.0 | MIT | <https://react.dev/> |
+| `scheduler` | 0.28.0 | MIT | <https://react.dev/> |
 | `semver` | 6.3.1 | ISC | <https://github.com/npm/node-semver#readme> |
 | `semver` | 7.8.5 | ISC | <https://github.com/npm/node-semver#readme> |
 | `seroval-plugins` | 1.5.6 | MIT | <https://github.com/lxsmnsyc/seroval/tree/main/packages/plugins> |

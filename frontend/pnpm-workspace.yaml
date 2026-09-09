@@ -34,8 +34,8 @@ catalog:
   "@testing-library/react": ^16.3.3
   "@testing-library/user-event": ^14.6.7
   "@types/node": ^26.4.1
-  "@types/react": ^19.2.18
-  "@types/react-dom": ^19.2.7
+  "@types/react": ^19.3.0
+  "@types/react-dom": ^19.3.0
   "@vitejs/plugin-react": ^6.1.1
   "@vitest/browser-playwright": 4.1.11
   conventional-changelog: latest
@@ -51,8 +51,8 @@ catalog:
   next: 16.4.0-canary.18
   oxc-transform-react: 0.145.0
   playwright: ^1.63.0
-  react: ^19.2.8
-  react-dom: ^19.2.8
+  react: ^19.3.0
+  react-dom: ^19.3.0
   react-i18next: ^17.0.13
   smol-toml: ^1.8.0
   # 7.1 nightly 的 checker 分配优化在本仓 6 轮 A/B 中将峰值 RSS 降低 17%~20%；
@@ -115,3 +115,8 @@ minimumReleaseAgeExclude:
   - "@next/swc-win32-arm64-msvc@16.4.0-canary.18"
   - "@next/swc-win32-x64-msvc@16.4.0-canary.18"
   - next@16.4.0-canary.18
+  - "@types/react-dom@19.3.0"
+  - "@types/react@19.3.0"
+  - react-dom@19.3.0
+  - react@19.3.0
+  - scheduler@0.28.0
