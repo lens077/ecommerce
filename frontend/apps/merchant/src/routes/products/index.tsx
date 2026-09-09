@@ -22,7 +22,7 @@ import {
   TextField,
   InputAdornment,
 } from "@mui/material";
-import { Search, Plus, Edit, Trash2, Eye, Image as ImageIcon } from "lucide-react";
+import { Search, Plus, Edit, Trash2, Eye, Image as ImageIcon } from "@ecommerce/icons";
 import { useState } from "react";
 import { useFormat, useTranslation } from "@ecommerce/i18n";
 import { tokens } from "@/styles/theme";

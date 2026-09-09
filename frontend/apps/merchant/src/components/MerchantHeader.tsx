@@ -5,7 +5,7 @@
  */
 
 import { Box, Typography, Avatar } from "@mui/material";
-import { Bell, Search } from "lucide-react";
+import { Bell, Search } from "@ecommerce/icons";
 import { useTranslation } from "@ecommerce/i18n";
 import { LocaleSwitcher } from "@ecommerce/ui";
 

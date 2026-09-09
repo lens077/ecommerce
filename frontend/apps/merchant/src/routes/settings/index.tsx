@@ -17,7 +17,7 @@ import {
   Switch,
   FormControlLabel,
 } from "@mui/material";
-import { Camera, Save } from "lucide-react";
+import { Camera, Save } from "@ecommerce/icons";
 import { useTranslation } from "@ecommerce/i18n";
 
 /** 通知开关。文案 key 显式列出，不用字段名拼。 */

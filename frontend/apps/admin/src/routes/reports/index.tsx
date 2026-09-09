@@ -14,7 +14,7 @@ import {
   FormControl,
   InputLabel,
 } from "@mui/material";
-import { TrendingUp, ShoppingBag, Users, DollarSign, Store } from "lucide-react";
+import { TrendingUp, ShoppingBag, Users, DollarSign, Store } from "@ecommerce/icons";
 import { useFormat, useTranslation } from "@ecommerce/i18n";
 import { AdminLayout } from "@/components/AdminLayout";
 import { tokens } from "@/styles/tokens";

@@ -25,7 +25,7 @@ import {
   TextField,
   InputAdornment,
 } from "@mui/material";
-import { Search, Eye, Truck, Download, Filter } from "lucide-react";
+import { Search, Eye, Truck, Download, Filter } from "@ecommerce/icons";
 import { useState } from "react";
 import { useFormat, useTranslation } from "@ecommerce/i18n";
 import { tokens } from "@/styles/theme";

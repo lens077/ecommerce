@@ -16,7 +16,7 @@ import {
   TableRow,
   IconButton,
 } from "@mui/material";
-import { Plus, Edit2, Trash2, ChevronRight } from "lucide-react";
+import { Plus, Edit2, Trash2, ChevronRight } from "@ecommerce/icons";
 import { useFormat, useTranslation } from "@ecommerce/i18n";
 import { AdminLayout } from "@/components/AdminLayout";
 import { tokens } from "@/styles/tokens";

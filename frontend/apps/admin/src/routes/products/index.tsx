@@ -23,7 +23,7 @@ import {
   Avatar,
 } from "@mui/material";
 import { useState } from "react";
-import { Search, Eye, Check, X, Image as ImageIcon } from "lucide-react";
+import { Search, Eye, Check, X, Image as ImageIcon } from "@ecommerce/icons";
 import { useFormat, useTranslation } from "@ecommerce/i18n";
 import { AdminLayout } from "@/components/AdminLayout";
 import { tokens } from "@/styles/tokens";

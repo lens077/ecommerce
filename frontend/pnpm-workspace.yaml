@@ -46,6 +46,8 @@ catalog:
   jsonc-parser: ^3.3.1
   knip: ^6.34.0
   lucide-react: ^1.41.0
+  lucide: ^1.43.0
+  morphicons: ^1.7.1
   # 16.4 canary 在本仓 6 轮 A/B 中缩短 cold/warm build 并减小缓存；
   # 精确锁定已通过 SSR 与真实浏览器验证的构建。
   next: 16.4.0-canary.18
@@ -72,6 +74,7 @@ catalog:
   yaml: ^2.9.0
   zod: ^4.5.4
   zustand: ^5.0.15
+  "@ecommerce/icons": workspace:*
 
 # React Compiler 试点固定版本；仅 consumer 在 REACT_COMPILER=1 时启用。
 catalogs:

@@ -4,7 +4,14 @@
 
 import { createFileRoute } from "@tanstack/react-router";
 import { Box, Card, CardContent, Typography } from "@mui/material";
-import { ShoppingBag, DollarSign, Users, Package, TrendingUp, TrendingDown } from "lucide-react";
+import {
+  ShoppingBag,
+  DollarSign,
+  Users,
+  Package,
+  TrendingUp,
+  TrendingDown,
+} from "@ecommerce/icons";
 import { useFormat, useTranslation } from "@ecommerce/i18n";
 import { tokens } from "@/styles/theme";
 

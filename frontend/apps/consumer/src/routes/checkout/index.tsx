@@ -28,7 +28,7 @@ import {
   TextField,
   Typography,
 } from "@mui/material";
-import { Check, MapPin, Plus, X } from "lucide-react";
+import { Check, MapPin, Plus, X } from "@ecommerce/icons";
 import { useMemo, useState } from "react";
 import { useFormat, useTranslation } from "@ecommerce/i18n";
 import { useMutation } from "@connectrpc/connect-query";

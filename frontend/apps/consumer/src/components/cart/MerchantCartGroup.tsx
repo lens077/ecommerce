@@ -1,5 +1,5 @@
 import { Box, Checkbox, Typography } from "@mui/material";
-import { Store } from "lucide-react";
+import { Store } from "@ecommerce/icons";
 
 import { useTranslation } from "@ecommerce/i18n";
 import { CartItemCard } from "./CartItemCard";

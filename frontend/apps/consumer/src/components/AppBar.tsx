@@ -1,7 +1,7 @@
-import AccountCircle from "@mui/icons-material/AccountCircle";
-import MoreVertIcon from "@mui/icons-material/MoreVert";
-import SearchIcon from "@mui/icons-material/Search";
-import ShoppingCartIcon from "@mui/icons-material/ShoppingCart";
+import { AccountCircle } from "@ecommerce/icons";
+import { MoreVertIcon } from "@ecommerce/icons";
+import { SearchIcon } from "@ecommerce/icons";
+import { ShoppingCartIcon } from "@ecommerce/icons";
 import AppBar from "@mui/material/AppBar";
 import Avatar from "@mui/material/Avatar";
 import Badge from "@mui/material/Badge";

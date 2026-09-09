@@ -22,7 +22,7 @@ import {
   Tab,
 } from "@mui/material";
 import { useState } from "react";
-import { Search, Eye, Check, X } from "lucide-react";
+import { Search, Eye, Check, X } from "@ecommerce/icons";
 import { useTranslation } from "@ecommerce/i18n";
 import { AdminLayout } from "@/components/AdminLayout";
 import { tokens } from "@/styles/tokens";

@@ -13,7 +13,7 @@ import {
   FormControl,
   InputLabel,
 } from "@mui/material";
-import { TrendingUp, ShoppingBag, DollarSign, Package } from "lucide-react";
+import { TrendingUp, ShoppingBag, DollarSign, Package } from "@ecommerce/icons";
 import { useFormat, useTranslation } from "@ecommerce/i18n";
 import { LazyECharts } from "@/components/LazyECharts";
 import { tokens } from "@/styles/tokens";

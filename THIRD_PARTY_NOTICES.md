@@ -230,7 +230,6 @@
 | `@jridgewell/sourcemap-codec` | 1.6.0 | MIT | <https://github.com/jridgewell/sourcemaps/tree/main/packages/sourcemap-codec> |
 | `@jridgewell/trace-mapping` | 0.3.31 | MIT | <https://github.com/jridgewell/sourcemaps/tree/main/packages/trace-mapping> |
 | `@mui/core-downloads-tracker` | 9.4.0 | MIT | <https://mui.com/> |
-| `@mui/icons-material` | 9.4.0 | MIT | <https://mui.com/material-ui/material-icons/> |
 | `@mui/material` | 9.4.0 | MIT | <https://mui.com/material-ui/> |
 | `@mui/private-theming` | 9.4.0 | MIT | <https://github.com/mui/material-ui/tree/master/packages/mui-private-theming> |
 | `@mui/styled-engine` | 9.4.0 | MIT | <https://mui.com/system/styled/> |
@@ -428,11 +427,12 @@
 | `loose-envify` | 1.4.0 | MIT | <https://github.com/zertosh/loose-envify> |
 | `lru-cache` | 11.5.2 | BlueOak-1.0.0 | <https://github.com/isaacs/node-lru-cache#readme> |
 | `lru-cache` | 5.1.1 | ISC | <https://github.com/isaacs/node-lru-cache#readme> |
-| `lucide-react` | 1.41.0 | ISC | <https://lucide.dev> |
+| `lucide` | 1.43.0 | ISC | <https://lucide.dev> |
 | `lz-string` | 1.5.0 | MIT | <http://pieroxy.net/blog/pages/lz-string/index.html> |
 | `magic-string` | 0.30.21 | MIT | <https://github.com/Rich-Harris/magic-string#readme> |
 | `mdn-data` | 2.27.1 | CC0-1.0 | <https://developer.mozilla.org> |
 | `min-indent` | 1.0.1 | MIT | <https://github.com/thejameskyle/min-indent#readme> |
+| `morphicons` | 1.7.1 | MIT | <https://www.morphicons.com> |
 | `mrmime` | 2.0.1 | MIT | <https://github.com/lukeed/mrmime#readme> |
 | `ms` | 2.1.3 | MIT | <https://github.com/vercel/ms#readme> |
 | `nanoid` | 3.3.18 | MIT | <https://github.com/ai/nanoid#readme> |

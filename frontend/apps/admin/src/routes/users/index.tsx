@@ -20,7 +20,7 @@ import {
   Avatar,
 } from "@mui/material";
 import { useState } from "react";
-import { Search } from "lucide-react";
+import { Search } from "@ecommerce/icons";
 import { useFormat, useTranslation } from "@ecommerce/i18n";
 import { AdminLayout } from "@/components/AdminLayout";
 import { tokens } from "@/styles/tokens";

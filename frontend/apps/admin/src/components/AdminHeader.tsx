@@ -3,7 +3,7 @@
  */
 
 import { Box, Avatar, IconButton, Tooltip } from "@mui/material";
-import { Bell, Search, Settings } from "lucide-react";
+import { Bell, Search, Settings } from "@ecommerce/icons";
 import { useTranslation } from "@ecommerce/i18n";
 import { LocaleSwitcher } from "@ecommerce/ui";
 import { tokens } from "@/styles/tokens";

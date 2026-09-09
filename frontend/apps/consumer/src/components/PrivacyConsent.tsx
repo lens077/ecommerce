@@ -10,7 +10,7 @@ import {
   Divider,
   IconButton,
 } from "@mui/material";
-import { Close } from "@mui/icons-material";
+import { Close } from "@ecommerce/icons";
 import { useTranslation } from "@ecommerce/i18n";
 
 // 隐私设置类型

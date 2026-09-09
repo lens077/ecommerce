@@ -4,7 +4,7 @@
 
 import { createFileRoute } from "@tanstack/react-router";
 import { Box, Card, CardContent, Typography, Grid } from "@mui/material";
-import { ShoppingBag, DollarSign, Users, Store, TrendingUp, ArrowUpRight } from "lucide-react";
+import { ShoppingBag, DollarSign, Users, Store, TrendingUp, ArrowUpRight } from "@ecommerce/icons";
 import { useFormat, useTranslation } from "@ecommerce/i18n";
 import { AdminLayout } from "@/components/AdminLayout";
 import { tokens } from "@/styles/tokens";

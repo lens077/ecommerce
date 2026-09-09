@@ -4,7 +4,7 @@
 
 import { createFileRoute, Link } from "@tanstack/react-router";
 import { Box, Button, Typography } from "@mui/material";
-import { CheckCircle, XCircle } from "lucide-react";
+import { CheckCircle, XCircle } from "@ecommerce/icons";
 import { z } from "zod";
 import { useFormat, useTranslation } from "@ecommerce/i18n";
 import { tokens } from "@/styles/tokens";

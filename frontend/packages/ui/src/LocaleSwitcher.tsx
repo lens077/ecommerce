@@ -5,7 +5,7 @@
  * 订阅了 useTranslation 的组件会自动重渲染，不需要刷新页面。
  */
 
-import LanguageIcon from "@mui/icons-material/Language";
+import { LanguageIcon } from "@ecommerce/icons";
 import { IconButton, ListItemText, Menu, MenuItem, Tooltip } from "@mui/material";
 import { SUPPORTED_LOCALES, useLocale, useTranslation, type Locale } from "@ecommerce/i18n";
 import { useState } from "react";

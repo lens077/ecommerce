@@ -15,14 +15,7 @@ import {
   Paper,
   Typography,
 } from "@mui/material";
-import {
-  LocationOn,
-  ChevronRight,
-  Person,
-  Email,
-  Badge as BadgeIcon,
-  Tag,
-} from "@mui/icons-material";
+import { LocationOn, ChevronRight, Person, Email, Badge as BadgeIcon, Tag } from "@ecommerce/icons";
 import { i18next, useTranslation } from "@ecommerce/i18n";
 import { fetchIdentity } from "@ecommerce/configs";
 import { addNotification } from "@ecommerce/utils";

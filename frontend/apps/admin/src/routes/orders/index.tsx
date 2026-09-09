@@ -26,7 +26,7 @@ import {
   InputLabel,
 } from "@mui/material";
 import { useState } from "react";
-import { Search, Eye, MessageSquare } from "lucide-react";
+import { Search, Eye, MessageSquare } from "@ecommerce/icons";
 import { useFormat, useTranslation } from "@ecommerce/i18n";
 import { AdminLayout } from "@/components/AdminLayout";
 import { tokens } from "@/styles/tokens";

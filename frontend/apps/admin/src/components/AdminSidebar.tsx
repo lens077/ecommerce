@@ -21,7 +21,7 @@ import {
   Tag,
   Settings,
   BarChart3,
-} from "lucide-react";
+} from "@ecommerce/icons";
 import { useTranslation } from "@ecommerce/i18n";
 import { tokens } from "@/styles/tokens";
 

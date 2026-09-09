@@ -14,8 +14,8 @@ import {
   Snackbar,
   Alert,
 } from "@mui/material";
-import ShoppingCartIcon from "@mui/icons-material/ShoppingCart";
-import FlashOnIcon from "@mui/icons-material/FlashOn";
+import { ShoppingCartIcon } from "@ecommerce/icons";
+import { FlashOnIcon } from "@ecommerce/icons";
 import { styled } from "@mui/material/styles";
 import { useFormat, useTranslation } from "@ecommerce/i18n";
 import { toAppError } from "@ecommerce/api";

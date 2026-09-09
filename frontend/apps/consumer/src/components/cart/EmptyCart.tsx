@@ -5,7 +5,7 @@
  */
 
 import { Box, Button, Typography } from "@mui/material";
-import { ShoppingCart } from "lucide-react";
+import { ShoppingCart } from "@ecommerce/icons";
 import { useTranslation } from "@ecommerce/i18n";
 import { sp, tokens } from "@/styles/tokens";
 

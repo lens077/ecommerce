@@ -1,5 +1,5 @@
 import { Box, Checkbox, Typography } from "@mui/material";
-import { Minus, Plus, Trash2 } from "lucide-react";
+import { Minus, Plus, Trash2 } from "@ecommerce/icons";
 import { useFormat, useTranslation } from "@ecommerce/i18n";
 import type { CartItem } from "@/store/cart";
 import { sp, tokens } from "@/styles/tokens";

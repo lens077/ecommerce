@@ -1,7 +1,7 @@
 import { createFileRoute, useNavigate } from "@tanstack/react-router";
 
 import { Box, CircularProgress, Container, Typography } from "@mui/material";
-import { ArrowLeft } from "lucide-react";
+import { ArrowLeft } from "@ecommerce/icons";
 import { useTranslation } from "@ecommerce/i18n";
 import { useCart } from "@/hooks/useCart";
 import { EmptyCart } from "@/components/cart/EmptyCart";

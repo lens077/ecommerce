@@ -4,7 +4,7 @@
 
 import { createFileRoute } from "@tanstack/react-router";
 import { Box, Button, Typography } from "@mui/material";
-import { Home, ArrowLeft } from "lucide-react";
+import { Home, ArrowLeft } from "@ecommerce/icons";
 import { useNavigate } from "@tanstack/react-router";
 import { useTranslation } from "@ecommerce/i18n";
 

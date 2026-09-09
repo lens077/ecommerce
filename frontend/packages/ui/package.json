@@ -13,9 +13,9 @@
     "@ecommerce/api": "workspace:*",
     "@ecommerce/configs": "workspace:*",
     "@ecommerce/i18n": "workspace:*",
+    "@ecommerce/icons": "workspace:*",
     "@emotion/react": "catalog:",
     "@emotion/styled": "catalog:",
-    "@mui/icons-material": "catalog:",
     "@mui/material": "catalog:",
     "react": "catalog:"
   },
