@@ -1,0 +1,91 @@
+{
+  "schema_version": 1,
+  "diagram_type": "dataflow",
+  "meta": {
+    "title": "搜索 CDC 重建与灾备全景",
+    "output": ".scratch/cdc-recovery-panorama.html",
+    "viewBox": [1280, 900],
+    "animation": "none",
+    "quality_profile": "showcase",
+    "views": [
+      {
+        "id": "primary-line",
+        "label": "最初主线",
+        "focus": ["sourceTables", "catalogProjection", "debeziumSource", "kafkaTopics", "elasticSink", "physicalIndex", "stableAlias", "searchService"],
+        "note": "权威数据线：PG trigger → products.search_catalog → Debezium → Kafka → Elasticsearch Sink。"
+      },
+      {
+        "id": "rebuild-line",
+        "label": "重建与切流",
+        "focus": ["rebuildRunbook", "catalogProjection", "reindexJob", "physicalIndex", "stableAlias"],
+        "note": "PG 投影重算、静止边界、版本化索引与 alias 原子切换组成恢复控制面。"
+      },
+      {
+        "id": "risk-line",
+        "label": "未解风险",
+        "focus": ["debeziumSource", "kafkaTopics", "elasticSink", "stableAlias"],
+        "note": "Source 重快照与旧 backlog、空索引混合切流、损坏 alias、ES8 回档仍未闭环。"
+      }
+    ]
+  },
+  "stages": [
+    { "label": "PostgreSQL 事实源" },
+    { "label": "捕获与重建控制" },
+    { "label": "Kafka 缓冲" },
+    { "label": "投影写入" },
+    { "label": "索引与读取" }
+  ],
+  "nodes": [
+    { "id": "sourceTables", "type": "database", "label": "商品源表", "sublabel": "spus / skus / sale_detail", "stage": 0, "row": 0, "tag": "事实源" },
+    { "id": "catalogProjection", "type": "database", "label": "products.search_catalog", "sublabel": "trigger 维护的一行一文档投影", "stage": 0, "row": 2, "tag": "可重建", "width": 152 },
+    { "id": "rebuildRunbook", "type": "backend", "label": "重建与灾备手顺", "sublabel": "锁、LSN、offset、停止条件", "stage": 1, "row": 4, "tag": "控制面" },
+    { "id": "debeziumSource", "type": "backend", "label": "Debezium Source", "sublabel": "slot ecommerce_cdc + Connect offset", "stage": 1, "row": 1, "tag": "七表", "width": 168 },
+    { "id": "kafkaTopics", "type": "messagebus", "label": "Kafka", "sublabel": "7 topics × 3 partitions", "stage": 2, "row": 1, "tag": "backlog" },
+    { "id": "reindexJob", "type": "backend", "label": "全量 Reindex", "sublabel": "静止 PG 扫描与逐文档校验", "stage": 3, "row": 4, "tag": "bulk" },
+    { "id": "elasticSink", "type": "backend", "label": "Elasticsearch Sink", "sublabel": "原 offset 重放；失败即停", "stage": 3, "row": 1, "tag": "_id=id" },
+    { "id": "physicalIndex", "type": "database", "label": "版本化物理索引", "sublabel": "ecommerce_catalog_products_v*", "stage": 4, "row": 3, "tag": "strict mapping", "width": 152 },
+    { "id": "stableAlias", "type": "cloud", "label": "稳定 alias", "sublabel": "ecommerce_catalog_products", "stage": 4, "row": 1, "tag": "原子切换" },
+    { "id": "searchService", "type": "frontend", "label": "Search Service", "sublabel": "只读 alias；面向业务查询", "stage": 4, "row": 0, "tag": "读取端" }
+  ],
+  "flows": [
+    { "id": "triggerRefresh", "from": "sourceTables", "to": "catalogProjection", "label": "AFTER trigger 重算", "classification": "事务内派生", "variant": "emphasis" },
+    { "id": "walCapture", "from": "catalogProjection", "to": "debeziumSource", "label": "WAL 行变更", "classification": "逻辑复制", "variant": "emphasis" },
+    { "id": "topicPublish", "from": "debeziumSource", "to": "kafkaTopics", "label": "提交到 topic", "classification": "Source offset", "variant": "emphasis" },
+    { "id": "sinkConsume", "from": "kafkaTopics", "to": "elasticSink", "label": "原 offset 消费", "classification": "可重放 backlog", "variant": "emphasis" },
+    { "id": "sinkWrite", "from": "elasticSink", "to": "stableAlias", "label": "Sink 写入/删除", "classification": "external version", "variant": "emphasis", "labelAt": [853, 314] },
+    { "id": "aliasBacking", "from": "stableAlias", "to": "physicalIndex", "label": "唯一 write index", "classification": "alias topology", "variant": "default" },
+    { "id": "searchRead", "from": "stableAlias", "to": "searchService", "label": "只读检索", "classification": "应用读取", "variant": "default" },
+    { "id": "pgRebuild", "from": "rebuildRunbook", "to": "catalogProjection", "label": "锁表后完整重算", "classification": "无 TRUNCATE", "variant": "dashed" },
+    { "id": "controlReindex", "from": "rebuildRunbook", "to": "reindexJob", "label": "建立静止边界", "classification": "LSN + lag", "variant": "dashed" },
+    { "id": "bulkLoad", "from": "reindexJob", "to": "physicalIndex", "label": "bulk + PG↔ES 校验", "classification": "fresh index", "variant": "dashed" }
+  ],
+  "cards": [
+    {
+      "dot": "emerald",
+      "title": "已经固化",
+      "items": [
+        "七表 CDC 契约、PG 重建、版本化索引与 alias 状态文件已经写入仓库",
+        "Patroni 永久逻辑槽、真实 source 重快照与 CDC 告警已有 2026-09-06 证据",
+        "旧 JetStream ACK / NACK / MaxDeliver 语义已退出当前主线"
+      ]
+    },
+    {
+      "dot": "rose",
+      "title": "仍阻断上线",
+      "items": [
+        "并发 trigger 聚合、Source 重快照叠加旧 backlog 尚无正确性闭环",
+        "全量重建的空索引混合集、损坏 alias 与 ES8 应用回档仍会失败",
+        "六表升级七表的 Connector 更新和历史 backfill 路径仍不安全"
+      ]
+    },
+    {
+      "dot": "amber",
+      "title": "重装后新增的不确定性",
+      "items": [
+        "本机 kubeconfig、Docker、shellcheck、PyYAML 缺失",
+        "node3 SSH 入口拒绝连接，当前 Source / Sink / slot / lag 无法重新读取",
+        "公网 Elasticsearch 返回 401，但 gateway 与 shop 从本机访问超时"
+      ]
+    }
+  ]
+}

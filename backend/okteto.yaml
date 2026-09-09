@@ -39,7 +39,7 @@ dev:
       # 保留 uid 1000 正是为了让「Secret 0400 读不到」这类问题当场暴露。
       - HOME=/go
       - GOCACHE=/go/.cache/go-build
-      - GOPROXY=https://goproxy.cn,direct
+      - GOPROXY=https://goproxy.io,direct
       # 原 Deployment 把 db-ca-cert 挂到 /etc/ssl/certs，**整个目录被替换**,
       # 里面只剩 pg_ca.crt —— 系统 CA 包被遮蔽,`go mod download` 会报
       #   tls: failed to verify certificate: x509: certificate signed by unknown authority

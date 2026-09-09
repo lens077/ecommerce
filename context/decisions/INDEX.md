@@ -34,7 +34,9 @@ context/decisions/
 
 ## 提案中 · `proposed/`
 
-暂无。
+| 决策 | 一句话 |
+|---|---|
+| [2026-09-08-object-authz-check-placement.md](proposed/2026-09-08-object-authz-check-placement.md) | 对象级授权 Check 放服务侧 use case 层而非网关；OpenFGA 只存组织图、对象归属用服务归属列。**待拍板**：TECH.md §8.1 与 control-tower 裁决互相矛盾 |
 
 ## 怎么写
 

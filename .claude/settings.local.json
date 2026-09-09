@@ -1,0 +1,37 @@
+{
+  "permissions": {
+    "allow": [
+      "Read(//Users/lens/**)",
+      "Read(//tmp/**)",
+      "Read(//private/etc/**)"
+    ]
+  },
+  "hooks": {
+    "PostToolUse": [
+      {
+        "matcher": "Edit|Write|MultiEdit",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "bash \"/Users/lens/lens077/ecommerce/.claude/hooks/impeccable-frontend-only.sh\"",
+            "timeout": 5,
+            "statusMessage": "Checking UI changes"
+          }
+        ]
+      }
+    ],
+    "Stop": [
+      {
+        "hooks": [
+          {
+            "type": "command",
+            "command": "[ ! -f \"/Users/lens/.claude/skills/impeccable/scripts/hook.mjs\" ] || node \"/Users/lens/.claude/skills/impeccable/scripts/hook.mjs\"",
+            "timeout": 30,
+            "statusMessage": "Design deep pass"
+          }
+        ]
+      }
+    ]
+  },
+  "description": "Impeccable design detector: immediate-tier checks after Edit/Write/MultiEdit on UI files, full-rule deep pass on Stop. 权限白名单 2026-08-24 由 20 条清到 8 条：删掉的全是已完成任务的一次性残留——~/.agent-reach-venv 与 /private/tmp/ar-src 均已不存在、一次性 ping/dscacheutil 探测、路径写错永不匹配的 cp services/user/...、裸 Bash(cat)、以及两条从 ~/Downloads 递归拷贝到 ~/.claude 的长期授权（风险不对称，用时临时授权即可）。2026-08-30 再清 5 条 mcp__kaneo__* —— 该看板已整体下线，剩 3 条。"
+}

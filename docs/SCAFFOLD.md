@@ -619,7 +619,7 @@ ARG TARGETOS=linux
 ARG TARGETARCH
 ARG SERVICE
 ARG VERSION=dev
-ARG GOPROXY=https://goproxy.cn,direct
+ARG GOPROXY=https://goproxy.io,direct
 ARG CGOENABLED=0
 WORKDIR /build
 COPY go.mod go.sum ./
