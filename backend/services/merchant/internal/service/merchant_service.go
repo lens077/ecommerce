@@ -2,17 +2,38 @@ package service
 
 import (
 	"context"
+	"errors"
+	"net/http"
 
 	"connectrpc.com/connect"
 	v1 "github.com/lens077/ecommerce/backend/api/merchant/v1"
 	merchantconnect "github.com/lens077/ecommerce/backend/api/merchant/v1/merchantv1connect"
 	"github.com/lens077/ecommerce/backend/constants"
+	"github.com/lens077/ecommerce/backend/pkg/identity"
 	"github.com/lens077/ecommerce/backend/services/merchant/internal/biz"
 	"google.golang.org/protobuf/types/known/timestamppb"
 )
 
 type MerchantService struct {
 	uc *biz.MerchantUseCase
+}
+
+// requireAdmin 是审批类 RPC 的 handler 内授权：判「主体能不能审批」，不判 HTTP 方法。
+//
+// 网关 Casbin 的 `p, admin, /merchant.v1.MerchantService/ApproveApplication, POST, allow`
+// 是粗粒度放行（谁能碰这条路）；真正的判定在这里——策略被改宽、请求绕过网关（东西向
+// 调用、误配）或换传输层方法，都逃不掉这一行。见 TECH.md §8.5 原则六。
+// OpenFGA 接线后把这里换成关系检查（can_review_application），角色判定退为兜底。
+func requireAdmin(h http.Header) error {
+	_, err := identity.RequireRole(h, identity.RoleAdmin)
+	switch {
+	case err == nil:
+		return nil
+	case errors.Is(err, identity.ErrRoleNotAllowed):
+		return connect.NewError(connect.CodePermissionDenied, err)
+	default:
+		return connect.NewError(connect.CodeUnauthenticated, err)
+	}
 }
 
 func (s *MerchantService) GetMerchantAgreement(ctx context.Context, _ *connect.Request[v1.GetMerchantAgreementRequest]) (*connect.Response[v1.GetMerchantAgreementResponse], error) {
@@ -61,6 +82,9 @@ func (s *MerchantService) SubmitApplication(ctx context.Context, c *connect.Requ
 }
 
 func (s *MerchantService) ApproveApplication(ctx context.Context, c *connect.Request[v1.ApproveApplicationRequest]) (*connect.Response[v1.ApproveApplicationResponse], error) {
+	if err := requireAdmin(c.Header()); err != nil {
+		return nil, err
+	}
 	req := c.Msg
 	_, err := s.uc.ApproveApplication(ctx, &biz.ApproveApplicationRequest{
 		AuditComment:  req.AuditComment,
@@ -76,6 +100,10 @@ func (s *MerchantService) ApproveApplication(ctx context.Context, c *connect.Req
 }
 
 func (s *MerchantService) RejectApplication(ctx context.Context, c *connect.Request[v1.RejectApplicationRequest]) (*connect.Response[v1.RejectApplicationResponse], error) {
+	// 授权先于实现：桩子被填成真实逻辑时这行已经在了，不靠实现者记得补。
+	if err := requireAdmin(c.Header()); err != nil {
+		return nil, err
+	}
 	// TODO implement me
 	panic("implement me")
 }
@@ -117,6 +145,9 @@ func (s *MerchantService) GetApplication(ctx context.Context, c *connect.Request
 }
 
 func (s *MerchantService) ActivateMerchant(ctx context.Context, c *connect.Request[v1.ActivateMerchantRequest]) (*connect.Response[v1.ActivateMerchantResponse], error) {
+	if err := requireAdmin(c.Header()); err != nil {
+		return nil, err
+	}
 	// TODO implement me
 	panic("implement me")
 }
