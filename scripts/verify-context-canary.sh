@@ -46,6 +46,27 @@ build_template() { # build_template <dir>
       mkdir -p "$sb/$(dirname "$src")"
       cp "$src" "$sb/$src"
     done
+  # [AFFECTS]:frontmatter affects: 指向的代码路径(backend/… helm/…)不在沙箱树里,按真身
+  # 存在性放桩(目录→mkdir、文件→空文件);真身也不存在的不补,让沙箱如实报 AFFECTS。
+  # 动态提取不手抄——新登记的路径自动获得桩,漏了探针 0 当场红。
+  find context docs/design -name "*.md" ! -name "INDEX.md" -type f 2>/dev/null | while IFS= read -r f; do
+    [ "$(head -1 "$f")" = "---" ] || continue
+    awk 'NR==1{next} /^---$/{exit} {print}' "$f" | awk '
+      /^affects:[[:space:]]*$/ { on=1; next }
+      on && /^[[:space:]]+-[[:space:]]+/ { sub(/^[[:space:]]+-[[:space:]]+/, ""); gsub(/[[:space:]]+$/, ""); print; next }
+      on { on=0 }' | while IFS= read -r p; do
+        [ -z "$p" ] && continue
+        [ -e "$sb/$p" ] && continue
+        if [ -d "$p" ]; then mkdir -p "$sb/$p"
+        elif [ -e "$p" ]; then mkdir -p "$sb/$(dirname "$p")"; : > "$sb/$p"
+        fi
+      done
+  done
+  # [SELFCHECK]:只带门禁扫描的 .scratch/*/issues/*.md(.scratch 里有 645KB 的 html、go module
+  # 和带 embed 指令的 demo,整目录复制会把 [EMBED] 的源文件依赖也拖进来)
+  find .scratch -path '*/issues/*.md' -type f 2>/dev/null | while IFS= read -r f; do
+    mkdir -p "$sb/$(dirname "$f")"; cp "$f" "$sb/$f"
+  done
   [ -f scripts/context-format-baseline.txt ] && cp scripts/context-format-baseline.txt "$sb/scripts/"
   # [PROGRESS-SRC] 的基线与它登记的文件必须同时进沙箱,否则 pristine-green 会假红,
   # 且 progress-grow 会在一个不存在的文件上「误报成功」——2026-08-29 首跑实测到这两种。
@@ -316,6 +337,37 @@ echo "嵌套围栏"
 EOF
 }
 
+mut_affects_dead() { # affects: 指向已删路径 → 反向索引失真
+  f="$1/context/team/proto-design.md"
+  awk '{ sub(/^  - backend\/api$/, "  - backend/api-renamed-canary"); print }' "$f" > "$f.new" && mv "$f.new" "$f"
+  grep -q 'api-renamed-canary' "$f" || { echo "mut_affects_dead: 注错没落到文件上" >&2; exit 2; }
+}
+mut_affects_glob() { # affects: 写了 glob → 存在性没法判定,直接拒
+  f="$1/context/team/proto-design.md"
+  awk '{ sub(/^  - backend\/api$/, "  - backend/api/**/*.proto"); print }' "$f" > "$f.new" && mv "$f.new" "$f"
+}
+mut_selfcheck_missing() { # 实现单标 done 却没有完成自检
+  mkdir -p "$1/.scratch/canary-feature/issues"
+  printf '# canary 单\n\nStatus: done\n\n## 验收标准\n\n1. 略\n' > "$1/.scratch/canary-feature/issues/01-canary.md"
+}
+mut_selfcheck_no_evidence() { # 有小节但条目没带 —— 证据
+  mkdir -p "$1/.scratch/canary-feature/issues"
+  printf '# canary 单\n\nStatus: done\n\n## 完成自检\n\n- [x] 验收标准全部通过\n' > "$1/.scratch/canary-feature/issues/01-canary.md"
+}
+mut_selfcheck_ok() { # 合规的完成自检**不得**误报(假阳性守卫):未勾选项带原因也放行
+  mkdir -p "$1/.scratch/canary-feature/issues"
+  cat > "$1/.scratch/canary-feature/issues/01-canary.md" <<'EOF'
+# canary 单
+
+Status: done
+
+## 完成自检
+
+- [x] 验收标准 1–3 逐条通过 —— `go test -short ./services/order/...` rc=0
+- [ ] 索引命中未验证 —— 本地无 5000 条样本,线上 EXPLAIN 待人工
+EOF
+}
+
 # ── 执行 ─────────────────────────────────────────────────────
 # ${workdir} 必须带花括号:后面紧跟全角「）」时,bash 3.2 在 UTF-8 locale 下会把
 # 多字节字符的首字节并进变量名,报 workdir? unbound(2026-08-26 实测:LC_ALL=C 绿、
@@ -357,9 +409,15 @@ probe live-fact           1 "LIVE-FACT"    mut_live_fact
 probe live-fact-dated-ok  0 ""             mut_live_fact_dated_ok
 probe embed-stale         1 "EMBED"        mut_embed_stale
 probe embed-missing-symbol 1 "EMBED"       mut_embed_missing_symbol
+probe affects-dead        1 "AFFECTS"     mut_affects_dead
+probe affects-glob        1 "AFFECTS"     mut_affects_glob
+probe selfcheck-missing   1 "SELFCHECK"   mut_selfcheck_missing
+probe selfcheck-no-evidence 1 "SELFCHECK" mut_selfcheck_no_evidence
+# 假阳性守卫:合规自检(含带原因的未勾选项)必须放行,否则没人敢如实写「未验证」
+probe selfcheck-ok        0 ""            mut_selfcheck_ok
 
 if [ "$fails" -gt 0 ]; then
   echo "verify-context-canary: $fails 个探针失败——门禁可能已静默失效,先修门禁再改内容"
   exit 1
 fi
-echo "verify-context-canary: OK（31 探针全过:干净沙箱绿 + 二十六类注错被拦且 tag 正确 + 五道假阳性守卫）"
+echo "verify-context-canary: OK（36 探针全过:干净沙箱绿 + 三十类注错被拦且 tag 正确 + 六道假阳性守卫）"
