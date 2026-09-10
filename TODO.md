@@ -25,7 +25,9 @@ todo-spec: 1
 
 ## 一、全局优先级视图
 
-**未完成合计 154 项，其中 P0 共 18 项**（计数口径：各分类文件顶层 `- [ ]` 复选框实数；
+**未完成合计 155 项，其中 P0 共 18 项**（计数口径：各分类文件顶层 `- [ ]` 复选框实数；
+2026-09-10 新增 1 条前端 P2「全链路体素沙盘 S1–S3」——设计、状态契约、健康聚合器与视觉提示词见
+[`docs/design/platform/voxel-construction-site.md`](docs/design/platform/voxel-construction-site.md)，S0 单文件设计稿已在本机浏览器实测可运行；
 2026-09-01 新增 1 条可观测 P2「容器级 CFS 限流指标完全缺采」——`nr_throttled`/`throttled_usec`
 是「CPU 利用率低但尾延迟高」的唯一判据，当前无任何组件在采（VMAgent 未部署，otel-node 只有
 `hostmetrics`、无 `kubeletstats`/cAdvisor）；且现有采集恰好只覆盖会骗人的节点级 CPU——
@@ -83,10 +85,10 @@ CES 巡检告警（CronJob 2m + vmalert firing 闭环）、可观测黑盒探活
 | 分类 | 对应 TECH.md | 未完成 | P0 |
 |---|---|---:|---:|
 | [统一可观测性体系](docs/todo/统一可观测性体系.md) | §9 | 25 | 2 |
-| [微服务与交易闭环](docs/todo/微服务与交易闭环.md) | §5 / §4.3 | 23 | 10 |
+| [微服务与交易闭环](docs/todo/微服务与交易闭环.md) | §5 / §4.3 | 25 | 10 |
 | [基础设施与部署模型](docs/todo/基础设施与部署模型.md) | §7 | 20 | 0 |
 | [文档与协作机制](docs/todo/文档与协作机制.md) | —（harness） | 14 | 0 |
-| [前端技术栈与工程化](docs/todo/前端技术栈与工程化.md) | §11 | 16 | 0 |
+| [前端技术栈与工程化](docs/todo/前端技术栈与工程化.md) | §11 | 17 | 0 |
 | [零信任鉴权与 Session](docs/todo/零信任鉴权与Session.md) | §8 | 16 | 4 |
 | [供应链与交付流水线](docs/todo/供应链与交付流水线.md) | B 表 / §7.1 | 14 | 0 |
 | [数据一致性与事件驱动](docs/todo/数据一致性与事件驱动.md) | §3 / §4 | 17 | 2 |
@@ -237,12 +239,14 @@ CES 巡检告警（CronJob 2m + vmalert firing 闭环）、可观测黑盒探活
 | control-tower 网关/config 合一 | ✅ | gateway、config、config-web 均已切流；本仓旧 `gateway/` 已删除 |
 | BFF 会话（Web + 桌面） | ✅ | Web 用 httpOnly cookie、Tauri 用 session header，`/auth/me` 为登录态真相源；浏览器侧令牌机制全部退场 |
 | legacy bearer JWT 轨 | 🔴 | **仍在网关**，与 TECH.md §13 红线冲突，需定退役期限 |
-| RBAC | 🟡 | order/payment/merchant/inventory 已按 RPC 粒度授权；其余服务整段放行待细化 |
+| RBAC | 🟡 | order/payment/merchant/inventory 已按 RPC 粒度授权；其余服务整段放行待细化。**方法层绕过核查〔2026-09-11〕**：14 份 proto 零 `NO_SIDE_EFFECTS`、后端无裸 `HandleFunc`、Casbin 无匹配即拒，方法改写不可利用；补三道门禁——control-tower `authz` p 行 act 列只认字面 `POST`（通配拒载）、structcheck `TestNoSideEffectsRPCsAreAllowlisted`、merchant 审批 RPC handler 内 `identity.RequireRole(admin)`。**未核**：线上 `policies.csv` 第四列（Config Center 连不上 PG），带门禁的网关上线前必须先核，否则启动即 `AUTHZ_NOT_READY` |
 | OpenFGA | 🟡 | 集群 2/2 Running，**业务未接线**；对象级授权仍是 Casbin |
 
 ### 5. 前端
 
 2026-09-10：页内智能助手 `@ecommerce/copilot` 在分支 `feat/copilot-ui-mode` 落地（待验收后合并）：固定句式 → 页面动作，朱红渐变蒙层 + 大指针在页内替用户操作；三条链路（用户搜商品 / 商家筛待发货 / 管理员开新建的 `/monitor` 页）由 `pnpm e2e:copilot` 6 条 Playwright 用例覆盖。缺口：`/monitor` 健康数据源未接（卡片显示「未接入」）、merchant 订单页仍是 mock。设计与落地差异见 [`docs/design/copilot/copilot.md`](docs/design/copilot/copilot.md)。
+
+2026-09-10：前端统一升级到 React 19.3.0；consumer-next 商品详情 SKU 卡片采用稳定的 `ViewTransition`，保持数据与 DOM 语义不变。
 
 > **依赖与工具链升级（2026-09-05）**：pnpm 固定到 12.3.4，Vite+ 升至 0.3.0 并对齐内置 Vitest 4.1.11；其余直接依赖升级到最新稳定版。基于 6 轮本仓 A/B，精确锁定 Next.js 16.4.0-canary.18（cold/warm build 中位数 -19.1%/-7.8%，cache -34.6%）和 TypeScript 7.1.0-dev.20260904.1（typecheck 峰值 RSS -17.5%～-20.3%）；SSR、真实 Edge hydration、`pnpm ready`、peer/dedupe/frozen-lockfile 均通过。证据见 [`frontend/.scratch/2026-09-05-prerelease-evaluation.md`](frontend/.scratch/2026-09-05-prerelease-evaluation.md)。
 
@@ -328,6 +332,9 @@ CES 巡检告警（CronJob 2m + vmalert firing 闭环）、可观测黑盒探活
 3. 对象级授权按 TECH.md §8 落 OpenFGA（集群 2/2 Running〔实测 2026-08-30〕已就绪，缺业务接线）
 4. 履约并入 order 域（发货、物流单、轨迹、第三方 adapter）；
    没有独立伸缩/故障域证据不新建 fulfillment 服务
+5. 通知与客服两个新服务（设计已定 2026-09-09：[notification](docs/design/notification/notification.md) 系统发信 →
+   [support](docs/design/support/support.md) 客服收件）；新增 Casdoor `support` 角色，客服复用 admin app；
+   工单是 OpenFGA 首个接线试点（与第 3 项合流）。细目见分类文件 P2
 
 ### 阶段 3 · 事件、交付与可靠性闭环
 

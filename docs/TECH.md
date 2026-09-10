@@ -21,7 +21,7 @@
 | 安全 | Casdoor（IAM）、OpenFGA（关系授权）、Bugsink（错误监控） | 身份认证、对象级授权、前端异常监控 |
 | 可观测性 SDK | OpenTelemetry Go SDK + Protobuf-ES 内置追踪 | 日志、指标、链路埋点 |
 | 消息序列化 | Protobuf | RPC 与领域事件的统一序列化格式 |
-| 构建与 CI | Docker Buildx、GitHub Actions（发布）、GitLab CI（门禁）、Renovate | 多架构镜像构建、自动化流水线、依赖更新。**两远端职责切分（2026-09-02 定稿）**：GitLab（origin）跑每次 push / MR 的代码门禁（`context-gate` + `backend-gate` + `frontend-gate`，即本地锚点搬进 CI）；GitHub 只由发布 tag 触发构建、签名、发布链；同一 tag 只允许一边写镜像仓。规范见 [`context/team/git-commit.md`](../context/team/git-commit.md)「两个远端的 CI 职责切分」，对照 deepseek-harness 流水线的取舍、过时点清单与门禁首跑证据见 [CI 复盘报告](reports/2026-09-02-ci-two-remotes-dsh-reference.md) |
+| 构建与 CI | Docker Buildx、GitHub Actions（发布）、GitLab CI（门禁）、Renovate | 多架构镜像构建、自动化流水线、依赖更新。**两远端职责切分（2026-09-02 定稿）**：GitLab（origin）跑每次 push / MR 的代码门禁（`context-gate` + `backend-gate` + `frontend-gate`，即本地锚点搬进 CI）；GitHub 只由发布 tag 触发构建、签名、发布链；同一 tag 只允许一边写镜像仓。规范见 [`context/team/git-commit.md`](../context/team/git-commit.md)「两个远端的 CI 职责切分」，对照 deepseek-harness 流水线的取舍、过时点清单与门禁首跑证据见 [CI 复盘报告](reports/2026-09-02-ci-two-remotes-dsh-reference.md)。**crane（参考项，2026-09-09）**：无 daemon 的镜像仓库操作工具，不替代 Buildx 构建（最终层含 `RUN`），定位为发布链仓库侧的 tag 存在性断言、清点断言、跨仓复制与同 digest 晋级；适用边界与命令见 [crane 参考](reports/2026-09-09-crane-reference.md) |
 | 开发内环 | mirrord（mirror）+ Okteto（2026-08-28 PoC 定稿分工） | **观察用 mirrord mirror**（本地 `go run` 按需获得集群 DNS/出站、镜像入站真实流量，只读零影响）；**接管用 Okteto**（`okteto up` 替换工作负载，本地代码真实接请求、复现 Pod 身份）。steal 在本集群不可用不启用（Cilium KPR/BPF host routing 绕过 netfilter）；日常默认仍是本地 `make dev`。证据与使用约定：`docs/reports/2026-08-28-mirrord-poc.md` |
 
 ### B. 正在研究和考虑中的技术栈与工具
@@ -69,6 +69,8 @@
 ## 2. 总体架构与流量拓扑
 
 ### 2.1 全局流量路径
+
+体素微缩工地沙盘将本节请求链路映射为可交互的离线 WebGL 演示；场景、性能预算、碰撞约束和 Cilium→control-tower→Go 微服务治理边界见 [`docs/design/platform/voxel-construction-site.md`](design/platform/voxel-construction-site.md)。
 
 ```text
 客户端 (Web / Next.js / Tauri / Mobile)
@@ -699,7 +701,7 @@ if !order.CanCancel() { return failedPrecondition() }
 return orders.Cancel(ctx, order.ID)
 ```
 
-**原则三：每个暴露的方法独立授权。** `GET`/`POST`/`PATCH`/`PUT`/`DELETE`（Connect 下即每个 procedure）分别检查，读接口做过归属检查不代表同一资源的删接口也安全。权限粒度到「动作 + 范围」，用 OpenFGA 关系（`can_view`、`can_cancel`、`can_edit`）表达，不用 `admin` 布尔值包打天下。
+**原则三：每个暴露的方法独立授权，权限绑在动作上而不是 HTTP 方法上。** `GET`/`POST`/`PATCH`/`PUT`/`DELETE`（Connect 下即每个 procedure）分别检查，读接口做过归属检查不代表同一资源的删接口也安全。权限粒度到「动作 + 范围」，用 OpenFGA 关系（`can_view`、`can_cancel`、`can_edit`）表达，不用 `admin` 布尔值包打天下。「按请求方法绕过访问控制」的病因是授权层按 `(path, method)` 判、执行层却不看 method——攻击者把 `POST` 换成 `GET`/`HEAD`/`PUT` 或加 `X-HTTP-Method-Override`，授权层没匹配到规则，handler 照样执行。本栈的分工：**HTTP 方法只由协议层校验**（Connect 生成代码对非 `POST` 返 405，业务代码里不写 `if r.Method == ...`），**网关 Casbin 的 act 列只认字面 `POST`**（control-tower `authz.validatePolicyRow`，通配整表拒载、保留 last-known-good），**handler 内判「主体能不能做这个动作」**（`identity.RequireRole` / OpenFGA Check），三层各管一件事，到了 handler 请求是什么方法已经无关。唯一能让 GET 到达 handler 的是 proto 的 `NO_SIDE_EFFECTS`，它同时解除网关的 CSRF 校验，评审规则与门禁见 [`context/team/proto-design.md`](../context/team/proto-design.md)「方法与副作用」。
 
 **原则四：任何客户端传来的数据都不参与权限决策。** Cookie、Authorization、自定义头、URL、请求体、隐藏字段、前端算出的 `isAdmin`/`role`/`owner_id`/`tenant_id`/`confirmed`/`step`，全部不可信。请求里的对象 ID 只用于**定位候选资源**，不能证明「它属于当前用户」；归属关系必须由服务端从会话主体与数据库记录重新建立。网关在鉴权前无条件剥离 `x-md-*` 入站头，是这条原则在边缘的落实（control-tower `identity.Strip`）。**文件路径是同一原则最典型的实例**：文件名、模板名、日志名一律不由客户端提供，用 ID 由服务端查路径；必须接受路径时用 `os.Root` 关进基目录——攻击变体、`filepath.Join` 为何不够、Nginx `alias` 陷阱与新增接口自查清单见 [`docs/SECURITY-FILE-ACCESS.md`](SECURITY-FILE-ACCESS.md)。
 
@@ -1001,6 +1003,7 @@ PR 阶段已经落地 Gitleaks、zizmor、Trivy fs/config 三件套，并采用�
 | **Gitleaks** | [Gitleaks Documentation](https://github.com/gitleaks/gitleaks) | 密钥泄露检测 |
 | **zizmor** | [zizmor Documentation](https://woodruffw.github.io/zizmor/) | CI/CD 安全检查 |
 | **Renovate** | [Renovate Documentation](https://docs.renovatebot.com/) | 依赖自动更新 |
+| **crane** | [go-containerregistry](https://github.com/google/go-containerregistry/blob/main/cmd/crane/doc/crane.md) | 无 daemon 的镜像仓库操作（digest 断言、跨仓复制、按 digest 打 tag）；参考项，见 [crane 参考](reports/2026-09-09-crane-reference.md) |
 
 
 ## 8. 前端与客户端
@@ -1031,6 +1034,7 @@ PR 阶段已经落地 Gitleaks、zizmor、Trivy fs/config 三件套，并采用�
 | **mTLS** | [RFC 8446 (TLS 1.3)](https://www.rfc-editor.org/rfc/rfc8446) | 双向 TLS 认证（分阶段：先 WireGuard 节点级） |
 | **SPIFFE/SPIRE** | [SPIFFE Specification](https://spiffe.io/docs/latest/spiffe-about/overview/) | 工作负载身份标准（暂不引入） |
 | **fail2ban（边缘主机）** | [fail2ban Manual](https://github.com/fail2ban/fail2ban/wiki) | 集群外两台边缘主机的 SSH 暴力破解防护；配置、实测攻击量与验证记录见 [边缘主机加固](SECURITY-HARDENING.md) |
+| **Santa File Access Authorization** | [Santa FAA 配置指南](security/macos-santa-protect-developer-credentials.md) | macOS 开发机上的进程级凭证访问控制；保护 SSH、Docker、Kubernetes、Claude、Codex 与 GitHub CLI 文件，按审计后阻断上线 |
 
 > 上表是**集群内**的网络与身份策略。承载 postgres/kafka/gorse/MinIO/Harbor 等外部端点的
 > **两台边缘主机**（node1、node2，非 K8s 节点）属于另一条攻击面，见

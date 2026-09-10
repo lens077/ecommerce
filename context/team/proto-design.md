@@ -2,6 +2,9 @@
 name: proto-design
 layer: team
 description: 设计/编写 proto 时必须先参考设计文档，并为每个字段推断出合理的校验值范围写成 buf.validate 约束
+affects:
+  - backend/api
+  - backend/structcheck/rpc_method_test.go
 ---
 
 # Proto 契约设计规范
@@ -140,6 +143,29 @@ message CartItem {
 - 权限：谁能改这个字段 —— 那是网关 RBAC 的事
 
 不要因为「加了 validate」就省掉 biz 层的校验。
+
+## 方法与副作用：`NO_SIDE_EFFECTS` 是安全开关，不是缓存开关
+
+Connect procedure 默认只接受 `POST`，`GET` 一律 405。唯一例外是 proto 里显式标了
+`option idempotency_level = NO_SIDE_EFFECTS;` 的方法——Connect 会对它放开 `GET`。
+本仓当前**零方法**带这个标记，`backend/structcheck` 的 `TestNoSideEffectsRPCsAreAllowlisted`
+把这条守成门禁：任何 proto 出现该选项而 procedure 不在 `getEnabledRPCs` 白名单，测试红。
+
+为什么它是安全开关：网关对 `GET/HEAD/OPTIONS` 跳过 cookie 轨的 CSRF Origin 校验
+（control-tower `httpmw.safeMethod`），前提是「没有任何 GET 会改状态」。一个有副作用的
+RPC 被标成无副作用，它就同时获得了 GET 入口和 CSRF 豁免——这是本栈「按请求方法绕过访问
+控制」最现实的入口：不是攻击者改方法，是开发者为了让 CDN 缓存把方法标错了。
+
+给一个方法加 `NO_SIDE_EFFECTS` 前逐条核对：
+
+1. **真的无副作用**：不写库、不发事件、不扣库存、不改会话、不记「最后访问」之类的状态；
+   「读多写少」不算，「只写日志」算。
+2. **参数进 URL 可接受**：GET 的请求体走 query string，会进访问日志、浏览器历史、Referer。
+   带 PII 或令牌的请求不能标。
+3. **同 PR 三处同步**：proto 加选项 → `structcheck` 白名单加 procedure →
+   control-tower `authz.allowedAct` 放开该 procedure 的 `GET`（当前 `policies.csv` 的 act 列只认
+   字面 `POST`，通配整表拒载）。少任何一处，要么门禁红，要么标了也到不了 handler。
+4. **CSRF 豁免只对它成立**：写进方法注释，说明它为何无副作用，评审时对着注释核。
 
 ## 反例
 
