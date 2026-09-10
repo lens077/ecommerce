@@ -48,6 +48,27 @@ description: harness 本身（硬规则/门禁/Agent 约束）每次改动的原
 
 ---
 
+### 2026-09-09 AGENTS.md 新增「消费边界」节：消费授权与执行授权并列
+
+- **改了什么**：`AGENTS.md` 在 E3 节之后新增「消费边界：用户给的是目标，不是空白支票」，
+  五条 agent 侧约定（事前说出 subagent 数量与理由、扩张动作不静默、四种异常信号即停即报、
+  用户说停就停且不为收尾再起调用、结束按 usage 报小票）；完整六环节（事前控制 / 提前感知 /
+  过程可见 / 主动告警 / 随时可控 / 账单可解释）的产品侧与 agent 侧说明写进
+  [e3-execution.md](e3-execution.md)「消费边界」节。为给新节腾预算，压缩了 AGENTS.md 多处
+  叙述性措辞（硬规则 6/7/8 的理由句、verify-freeze 历史、网关迁移历史、skills 迁移历史），
+  不删事实与链接；改后 13991 B，门禁 14000 B。
+- **为什么**：此前 AGENTS.md 只管执行授权（硬规则 6/7）和「读多少」（E3），没有任何一条约束
+  「花多少」。E3 的「L1/L2 不派子代理」是侧面约束，没有覆盖派发数量、扩张披露、异常信号、
+  停止语义和事后报告。Agent 一旦获得自主执行能力，就同时获得了消费用户预算的能力，
+  这层授权要和执行授权一样成为一等公民。
+- **触发事故**：产品同学体验 DSH 时让 Agent 分析「如何做一个 DSH 插件」，输入几十 token，
+  模型 GPT-5.6 Sol，不到 5 分钟花掉 1000 元。执行链路：输入约 1964 万 token、输出约 13 万，
+  12 个 subagent，重复检索、上下文反复整份携带，usage 里 `cacheReadTokens` 每次为 0，
+  用户全程无感知、无机会再次确认。
+- **怎么验证的**：`scripts/verify-context.sh` 全绿（链接 / INDEX 覆盖 / frontmatter /
+  evolution-log 四要素 / AGENTS.md 预算）。agent 侧五条约定是行为规则，没有可执行的
+  验证器；产品侧六环节 DSH 尚未实现，本条只沉淀设计输入，不宣称成本问题已解决。
+
 ### 2026-09-08 重建 E3 护栏并恢复当前 DSH 历史抽取
 
 - **改了什么**：按现有规范重建 [E3 脚本](../../scripts/e3-overread-guard.py)，用户目录只放 symlink；备份后向全局 Claude 设置增加 PreToolUse，不改原有模型/通知配置。用 `git worktree repair` 修复已找到实体的 ecommerce-meili-retirement 关联，不 prune 缺失的临时 worktree。backpass 新增 [DSH 读取器](../../scripts/backpass-dsh.py)，识别最高 v0-v2 格式代、直接用户来源、fork seed 和明确的重装路径别名，输出采用私有权限。
@@ -1250,3 +1271,27 @@ description: harness 本身（硬规则/门禁/Agent 约束）每次改动的原
   一次未经意图的写操作。
 - **怎么验证的**：`--help` rc=0 打印用法；`--chek` rc=2 报未知参数并打印用法；`--check` rc=0
   行为不变；`verify-context.sh` 全绿。
+
+### 2026-09-11 structcheck 新增 `TestNoSideEffectsRPCsAreAllowlisted`：proto 标 `NO_SIDE_EFFECTS` 须过白名单
+
+- **改了什么**：`backend/structcheck/rpc_method_test.go` 遍历 `backend/api/**/*.proto`，任何
+  `option idempotency_level = NO_SIDE_EFFECTS` 的 RPC 若不在 `getEnabledRPCs` 白名单即红（当前白名单为空）。
+  同批：control-tower `authz.loadCSV` 对 p 行加列值校验（act 列只认字面 `POST`，通配/交替整表拒载、
+  保留 last-known-good）；`pkg/identity` 增 `RequireRole`，merchant 三条审批 RPC handler 内判 admin；
+  评审规则写入 `context/team/proto-design.md`「方法与副作用」，TECH.md §8.5 原则三补三层分工。
+- **为什么**：「按请求方法绕过访问控制」的病因是授权层按 `(path, method)` 判、执行层不看 method。
+  本栈方法层本来靠两件「凑巧」挡住：Connect 对非 POST 返 405、Casbin 无匹配即拒。两者各有一个开关能
+  把防线拆掉——proto 的 `NO_SIDE_EFFECTS` 让 Connect 放 GET 且网关对 GET 免 CSRF 校验；`policies.csv`
+  第四列写 `.*` 让 regexMatch 对任何方法放行。两个开关都是「图省事」就会拨的，且都不会有编译或测试报错。
+- **触发事故**：2026-09-11 按外部安全分析核查本仓。方法层未发现可利用路径，但核查过程暴露三件事：
+  ① 线上 `policies.csv` 第四列**无人核过**（tech-drift-audit 2026-09-06 REPORT §8.7 已记「未核」），
+  这次 Config Center 连不上 PG 又没核成——防线不能依赖一份没人看得见的文件；② 14 份 proto 无一标
+  `NO_SIDE_EFFECTS`，但也没有任何东西阻止下一个人为了 CDN 缓存给有副作用的方法标上；
+  ③ `merchant.ApproveApplication` handler 内零授权，完全依赖网关那一行策略（admin-roadmap.md 已登记为
+  既有缺陷）——正是「授权判据和执行逻辑不在同一处」。
+- **怎么验证的**：structcheck 真树绿；金丝雀往 `product.proto` 注入 `NO_SIDE_EFFECTS` 后红并指到
+  `/product.v1.ProductService/GetProductDetail`，还原后绿。control-tower `authz` 新增
+  `TestActColumnMustBeLiteralPOST`（7 种坏写法拒载 + 旧表仍生效 + 字面 POST 对 GET 仍拒），
+  `authz`/`loader`/`tests` 三包绿。merchant `TestApproveApplication_RequiresAdminBeforeUseCase`
+  用 nil use case 证明授权先于业务。**未验证**：线上 `policies.csv` 实际内容——网关升级到带门禁的
+  版本前必须先核，若线上已有通配行，新网关启动即 `AUTHZ_NOT_READY`（fail-close，没有旧表可退）。
