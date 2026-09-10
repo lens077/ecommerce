@@ -15,14 +15,29 @@ package identity
 
 import (
 	"errors"
+	"fmt"
 	"net/http"
+	"strings"
 )
 
 // 头名与网关注入端逐字一致（.service-matrix.yaml 与 control-tower 共同契约）。
 const (
 	HeaderUserID    = "x-md-global-user-id"
 	HeaderAnonymous = "x-md-global-anonymous"
+	// HeaderRole 是网关按已验签 claims 注入的角色列表，多角色逗号拼接。
+	// 角色名与 Casdoor 原值一致（control-tower docs/design/auth.md）：admin / merchant / customer。
+	HeaderRole = "x-md-global-role"
 )
+
+// 粗粒度角色名。这里只列 handler 内做「动作级」判定时用到的；
+// 对象级授权目标由 OpenFGA 承担（TECH.md §8.2），接线前先用角色收口。
+const (
+	RoleAdmin = "admin"
+)
+
+// ErrRoleNotAllowed 表示登录用户没有该操作要求的角色。
+// 调用方应转换成 connect.CodePermissionDenied 返回。
+var ErrRoleNotAllowed = errors.New("identity: 当前用户没有执行该操作的角色")
 
 // ErrAnonymousNotAllowed 表示该接口要求登录用户，而来访者是访客。
 // 调用方应转换成 connect.CodeUnauthenticated 返回。
@@ -56,6 +71,41 @@ func RequireUser(h http.Header) (string, error) {
 		return "", ErrAnonymousNotAllowed
 	}
 	return id, nil
+}
+
+// Roles 返回网关注入的角色列表（去空白、去空项）。访客与无角色用户返回空切片。
+func Roles(h http.Header) []string {
+	raw := h.Get(HeaderRole)
+	if raw == "" {
+		return nil
+	}
+	parts := strings.Split(raw, ",")
+	out := parts[:0]
+	for _, p := range parts {
+		if p = strings.TrimSpace(p); p != "" {
+			out = append(out, p)
+		}
+	}
+	return out
+}
+
+// RequireRole 返回**登录用户**的 ID，并要求其持有 role。
+//
+// 这是 TECH.md §8.5 原则六「网关不是唯一防线」在 handler 内的落点：网关 Casbin 按
+// (procedure, method) 粗粒度放行，handler 自己再判「这个主体能不能做这个动作」。
+// 到了这一层，请求是什么 HTTP 方法已经无关——攻击者改传输层逃不掉这一行。
+// 访客、无身份、角色不含 role 分别返回 ErrAnonymousNotAllowed / ErrNoIdentity / ErrRoleNotAllowed。
+func RequireRole(h http.Header, role string) (string, error) {
+	id, err := RequireUser(h)
+	if err != nil {
+		return "", err
+	}
+	for _, r := range Roles(h) {
+		if r == role {
+			return id, nil
+		}
+	}
+	return "", fmt.Errorf("%w: 需要 %q", ErrRoleNotAllowed, role)
 }
 
 // RequireAny 返回身份 ID，允许访客。

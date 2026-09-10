@@ -81,3 +81,40 @@ func TestIsAnonymous_OnlyExactTrue(t *testing.T) {
 		t.Error(`"true" 应判为匿名`)
 	}
 }
+
+func hdrRole(userID, roles string) http.Header {
+	h := hdr(userID, "")
+	if roles != "" {
+		h.Set(HeaderRole, roles)
+	}
+	return h
+}
+
+// handler 内角色判定与网关 Casbin 互为冗余：网关策略被改宽（或被绕过）时，
+// 这里仍要把非 admin 挡在审批动作之外。
+func TestRequireRole(t *testing.T) {
+	if _, err := RequireRole(hdrRole(realUser, "admin"), RoleAdmin); err != nil {
+		t.Fatalf("单角色 admin 应放行: %v", err)
+	}
+	if _, err := RequireRole(hdrRole(realUser, "merchant, admin"), RoleAdmin); err != nil {
+		t.Fatalf("多角色含 admin 应放行: %v", err)
+	}
+	if _, err := RequireRole(hdrRole(realUser, "merchant"), RoleAdmin); !errors.Is(err, ErrRoleNotAllowed) {
+		t.Errorf("非 admin 应返回 ErrRoleNotAllowed，得到 %v", err)
+	}
+	if _, err := RequireRole(hdrRole(realUser, "administrator"), RoleAdmin); !errors.Is(err, ErrRoleNotAllowed) {
+		t.Errorf("角色名必须整体相等，前缀匹配不算，得到 %v", err)
+	}
+	if _, err := RequireRole(hdrRole(realUser, ""), RoleAdmin); !errors.Is(err, ErrRoleNotAllowed) {
+		t.Errorf("无角色应返回 ErrRoleNotAllowed，得到 %v", err)
+	}
+	// 访客即便伪造不了角色头，也不能靠「有 user-id」进入。
+	g := hdr(guestID, "true")
+	g.Set(HeaderRole, "admin")
+	if _, err := RequireRole(g, RoleAdmin); !errors.Is(err, ErrAnonymousNotAllowed) {
+		t.Errorf("访客应返回 ErrAnonymousNotAllowed，得到 %v", err)
+	}
+	if _, err := RequireRole(hdrRole("", "admin"), RoleAdmin); !errors.Is(err, ErrNoIdentity) {
+		t.Errorf("无身份应返回 ErrNoIdentity，得到 %v", err)
+	}
+}
