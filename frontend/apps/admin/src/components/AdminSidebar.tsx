@@ -21,6 +21,7 @@ import {
   Tag,
   Settings,
   BarChart3,
+  Activity,
 } from "@ecommerce/icons";
 import { useTranslation } from "@ecommerce/i18n";
 import { tokens } from "@/styles/tokens";
@@ -34,6 +35,7 @@ const menuItems = [
   { labelKey: "sidebar.nav.users", icon: Users, path: "/users" },
   { labelKey: "sidebar.nav.categories", icon: Tag, path: "/categories" },
   { labelKey: "sidebar.nav.reports", icon: BarChart3, path: "/reports" },
+  { labelKey: "sidebar.nav.monitor", icon: Activity, path: "/monitor" },
   { labelKey: "sidebar.nav.settings", icon: Settings, path: "/settings" },
 ] as const;
 

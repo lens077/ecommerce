@@ -1,7 +1,7 @@
 # Third-party notices
 
 由 `scripts/gen-third-party-notices.sh` 生成,勿手工编辑;依赖变更进暂存区时 pre-commit 会自动重新生成。
-后端列出 `go list -deps ./...` 实际链接进制品的 101 个模块;前端列出 `pnpm licenses list` 解析到的 407 个包(含 dev 依赖)。
+后端列出 `go list -deps ./...` 实际链接进制品的 101 个模块;前端列出 `pnpm licenses list` 解析到的 408 个包(含 dev 依赖)。
 
 ## 需要人看一眼
 
@@ -18,7 +18,7 @@
 | 许可证 | 条目数 |
 |---|---|
 | MIT | 361 |
-| Apache-2.0 | 64 |
+| Apache-2.0 | 65 |
 | ISC | 23 |
 | BSD-3-Clause | 21 |
 | MPL-2.0 | 11 |
@@ -145,7 +145,7 @@
 | `google.golang.org/protobuf` | v1.36.12 | BSD-3-Clause | LICENSE |
 | `gopkg.in/yaml.v3` | v3.0.1 | Apache-2.0 | LICENSE |
 
-## 前端(npm 包,407)
+## 前端(npm 包,408)
 
 | 包 | 版本 | 许可证 | 主页 |
 |---|---|---|---|
@@ -250,6 +250,7 @@
 | `@oxlint-tsgolint/darwin-arm64` | 7.0.2001 | MIT | <https://github.com/oxc-project/tsgolint#readme> |
 | `@oxlint/binding-<platform>` | 1.79.0 | MIT | <https://oxc.rs/docs/guide/usage/linter> |
 | `@oxlint/plugins` | 1.79.0 | MIT | <https://oxc.rs/docs/guide/usage/linter/js-plugins> |
+| `@playwright/test` | 1.63.0 | Apache-2.0 | <https://playwright.dev> |
 | `@polka/url` | 1.0.0-next.29 | MIT | <https://github.com/lukeed/polka#readme> |
 | `@popperjs/core` | 2.11.8 | MIT | <https://github.com/popperjs/popper-core#readme> |
 | `@rolldown/pluginutils` | 1.0.1 | MIT | <https://github.com/rolldown/plugins/tree/main/packages/pluginutils#readme> |

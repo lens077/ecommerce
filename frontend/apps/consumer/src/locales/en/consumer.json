@@ -265,5 +265,17 @@
     "loginFailed": "Sign-in failed, please try again",
     "successRedirect": "Signed in, redirecting...",
     "errorRedirect": "Sign-in failed, redirecting to home..."
+  },
+  "copilot": {
+    "examples": {
+      "search1": "Find a thermos for me",
+      "search2": "Search thermos products",
+      "search3": "Look up thermos"
+    },
+    "typeKeyword": "Type “{{keyword}}” in the search box",
+    "resultsHighlight": "These are the matching products",
+    "found": "Found {{count}} products: {{names}}",
+    "foundMore": "Found {{count}} products, the first few are: {{names}}",
+    "none": "No products match “{{keyword}}”. Try another word."
   }
 }

@@ -153,5 +153,15 @@
     "ship": "发货",
     "changeAvatar": "更换店铺头像",
     "statusFilter": "按状态筛选"
+  },
+  "copilot": {
+    "examples": {
+      "unshipped1": "帮我查看没有发货的订单",
+      "unshipped2": "看看未发货订单",
+      "unshipped3": "找待发货的订单"
+    },
+    "switchFilter": "切换状态筛选",
+    "tableHighlight": "这些是{{status}}订单",
+    "count": "共 {{count}} 笔{{status}}订单。"
   }
 }

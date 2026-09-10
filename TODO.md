@@ -242,6 +242,8 @@ CES 巡检告警（CronJob 2m + vmalert firing 闭环）、可观测黑盒探活
 
 ### 5. 前端
 
+2026-09-10：页内智能助手 `@ecommerce/copilot` 在分支 `feat/copilot-ui-mode` 落地（待验收后合并）：固定句式 → 页面动作，朱红渐变蒙层 + 大指针在页内替用户操作；三条链路（用户搜商品 / 商家筛待发货 / 管理员开新建的 `/monitor` 页）由 `pnpm e2e:copilot` 6 条 Playwright 用例覆盖。缺口：`/monitor` 健康数据源未接（卡片显示「未接入」）、merchant 订单页仍是 mock。设计与落地差异见 [`docs/design/copilot/copilot.md`](docs/design/copilot/copilot.md)。
+
 > **依赖与工具链升级（2026-09-05）**：pnpm 固定到 12.3.4，Vite+ 升至 0.3.0 并对齐内置 Vitest 4.1.11；其余直接依赖升级到最新稳定版。基于 6 轮本仓 A/B，精确锁定 Next.js 16.4.0-canary.18（cold/warm build 中位数 -19.1%/-7.8%，cache -34.6%）和 TypeScript 7.1.0-dev.20260904.1（typecheck 峰值 RSS -17.5%～-20.3%）；SSR、真实 Edge hydration、`pnpm ready`、peer/dedupe/frozen-lockfile 均通过。证据见 [`frontend/.scratch/2026-09-05-prerelease-evaluation.md`](frontend/.scratch/2026-09-05-prerelease-evaluation.md)。
 
 | 应用 | 状态 | 说明 |

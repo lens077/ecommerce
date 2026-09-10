@@ -159,12 +159,25 @@ function OrdersPage() {
                 onChange={(e) => setStatusFilter(e.target.value)}
                 // 无可见 label 的 Select 要给可及名称，否则读屏只念「组合框」
                 inputProps={{ "aria-label": t("a11y.statusFilter") }}
+                // data-copilot：智能助手锚点（src/copilot/actions.ts）。标在 combobox 上而不是
+                // 隐藏 input 上，助手要对它派发 mousedown 才能打开菜单
+                SelectDisplayProps={
+                  { "data-copilot": "orders.status-filter" } as React.HTMLAttributes<HTMLDivElement>
+                }
                 sx={{ borderRadius: 5 }}
               >
-                <MenuItem value="all">{t("orders.filterAll")}</MenuItem>
-                <MenuItem value="pending">{t("common:orderStatus.pending_shipment")}</MenuItem>
-                <MenuItem value="shipped">{t("common:orderStatus.shipped")}</MenuItem>
-                <MenuItem value="completed">{t("common:orderStatus.completed")}</MenuItem>
+                <MenuItem value="all" data-copilot="orders.status-option-all">
+                  {t("orders.filterAll")}
+                </MenuItem>
+                <MenuItem value="pending" data-copilot="orders.status-option-pending">
+                  {t("common:orderStatus.pending_shipment")}
+                </MenuItem>
+                <MenuItem value="shipped" data-copilot="orders.status-option-shipped">
+                  {t("common:orderStatus.shipped")}
+                </MenuItem>
+                <MenuItem value="completed" data-copilot="orders.status-option-completed">
+                  {t("common:orderStatus.completed")}
+                </MenuItem>
               </Select>
             </FormControl>
             <Button
@@ -179,7 +192,7 @@ function OrdersPage() {
       </Card>
 
       {/* 订单列表 */}
-      <Card>
+      <Card data-copilot="orders.table">
         <TableContainer>
           <Table>
             <TableHead>
@@ -197,6 +210,7 @@ function OrdersPage() {
                 return (
                   <TableRow
                     key={order.id}
+                    data-copilot="orders.row"
                     sx={{
                       "&:last-child td": { borderBottom: 0 },
                       "&:hover": { bgcolor: "action.hover" },

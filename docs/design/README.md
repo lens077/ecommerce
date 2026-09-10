@@ -45,6 +45,7 @@
 | [merchant/store-settings.md](merchant/store-settings.md) | Shopline 商店设置 20 页竞品实录（含自研备注与服务映射） | 原 DESIGN-MERCHANT.md，2026-08-12 重写为实录调研 |
 | [merchant/roadmap.md](merchant/roadmap.md) | 商家角色功能取舍（引进/不引进）与 P0/P1/P2 路线图 | 2026-08-12 基于 store-settings.md 调研 |
 | [product/sales.md](product/sales.md) | 销量统计：PG 事实与预聚合 + Dragonfly 可丢加速层（**部分落地**，实况见文首横幅） | 原 product 服务 schema/design/ 目录，2026-08-13 移入 |
+| [copilot/copilot.md](copilot/copilot.md) | **页内智能助手设计草案（纯前端，无 LLM、无后端）**：对标腾讯云 KiKi「界面模式」的调研结论（未开源，只有零件）、`@ecommerce/copilot` 包（动作契约、正则意图匹配与未命中交互、执行器原语与 React/MUI 事件派发坑位、蒙层/渐变描边/大指针视觉规格、安全边界）、三条演示链路（用户搜商品 / 商家筛待发货 / 管理员开监控页）与分期验收 | 2026-09-10 用户需求，KiKi 界面模式截图对照 |
 | [cart/api-decisions.md](cart/api-decisions.md) | 购物车接口设计因果论证（**历史记录**）。2026-08-26 裁决：`cart_item_id` 为唯一条目标识（checkout v2 依赖此语义），proto 现行并行数组属未记录的翻转，迁移列 P1 | 原 backend/api/cart/v1/README.md，2026-08-13 移入 |
 
 尚无设计文档的服务：user / behavior（behavior 的推荐链路知识在

@@ -12,7 +12,8 @@
       "users": "用户管理",
       "categories": "类目管理",
       "reports": "运营报表",
-      "settings": "系统设置"
+      "settings": "系统设置",
+      "monitor": "监控"
     },
     "version": "平台版本 v{{version}}"
   },
@@ -212,5 +213,24 @@
       "sensitiveOpVerify": "敏感操作需二次验证"
     },
     "save": "保存设置"
+  },
+  "monitor": {
+    "title": "服务监控",
+    "subtitle": "各业务服务的健康状态。数据源尚未接入，卡片显示占位状态。",
+    "gatewayPrefix": "网关前缀 {{prefix}}",
+    "status": {
+      "unknown": "未接入"
+    },
+    "gridLabel": "服务健康状态"
+  },
+  "copilot": {
+    "examples": {
+      "monitor1": "帮我查看监控",
+      "monitor2": "打开监控页",
+      "monitor3": "看看服务监控"
+    },
+    "goto": "带你去监控页",
+    "gridHighlight": "这里是各服务的健康状态",
+    "arrived": "已打开监控页，共 {{count}} 个服务。"
   }
 }

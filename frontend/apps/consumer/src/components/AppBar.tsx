@@ -369,7 +369,8 @@ export default function PrimarySearchAppBar() {
             >
               <StyledInputBase
                 placeholder={t("appBar.searchPlaceholder")}
-                inputProps={{ "aria-label": "search" }}
+                // data-copilot：智能助手的锚点（packages/copilot），改名要同步 src/copilot/actions.ts
+                inputProps={{ "aria-label": "search", "data-copilot": "appbar.search-input" }}
                 value={searchInput}
                 onChange={handleSearchInputChange}
                 onKeyDown={(e) => {
@@ -513,6 +514,7 @@ export default function PrimarySearchAppBar() {
       </StyledAppBar>
       {showSearchResults && (
         <SearchResults
+          data-copilot="appbar.search-results"
           sx={{
             maxHeight: "70vh",
             overflowY: "auto",
@@ -541,6 +543,7 @@ export default function PrimarySearchAppBar() {
               {searchResults.map((product) => (
                 <Box
                   key={product.id}
+                  data-copilot="appbar.search-result-item"
                   sx={{
                     border: `1px solid ${lantern.bamboo}`,
                     borderRadius: "10px",
@@ -573,6 +576,7 @@ export default function PrimarySearchAppBar() {
                     <Typography
                       variant="subtitle1"
                       component="p"
+                      data-copilot="appbar.search-result-name"
                       sx={{
                         textAlign: "center",
                         fontWeight: 500,

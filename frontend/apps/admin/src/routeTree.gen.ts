@@ -12,6 +12,7 @@ import { Route as rootRouteImport } from './routes/__root'
 import { Route as IndexRouteImport } from './routes/index'
 import { Route as CategoriesIndexRouteImport } from './routes/categories/index'
 import { Route as MerchantsIndexRouteImport } from './routes/merchants/index'
+import { Route as MonitorIndexRouteImport } from './routes/monitor/index'
 import { Route as OrdersIndexRouteImport } from './routes/orders/index'
 import { Route as ProductsIndexRouteImport } from './routes/products/index'
 import { Route as ReportsIndexRouteImport } from './routes/reports/index'
@@ -31,6 +32,11 @@ const CategoriesIndexRoute = CategoriesIndexRouteImport.update({
 const MerchantsIndexRoute = MerchantsIndexRouteImport.update({
   id: '/merchants/',
   path: '/merchants/',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const MonitorIndexRoute = MonitorIndexRouteImport.update({
+  id: '/monitor/',
+  path: '/monitor/',
   getParentRoute: () => rootRouteImport,
 } as any)
 const OrdersIndexRoute = OrdersIndexRouteImport.update({
@@ -63,6 +69,7 @@ export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
   '/categories/': typeof CategoriesIndexRoute
   '/merchants/': typeof MerchantsIndexRoute
+  '/monitor/': typeof MonitorIndexRoute
   '/orders/': typeof OrdersIndexRoute
   '/products/': typeof ProductsIndexRoute
   '/reports/': typeof ReportsIndexRoute
@@ -73,6 +80,7 @@ export interface FileRoutesByTo {
   '/': typeof IndexRoute
   '/categories': typeof CategoriesIndexRoute
   '/merchants': typeof MerchantsIndexRoute
+  '/monitor': typeof MonitorIndexRoute
   '/orders': typeof OrdersIndexRoute
   '/products': typeof ProductsIndexRoute
   '/reports': typeof ReportsIndexRoute
@@ -84,6 +92,7 @@ export interface FileRoutesById {
   '/': typeof IndexRoute
   '/categories/': typeof CategoriesIndexRoute
   '/merchants/': typeof MerchantsIndexRoute
+  '/monitor/': typeof MonitorIndexRoute
   '/orders/': typeof OrdersIndexRoute
   '/products/': typeof ProductsIndexRoute
   '/reports/': typeof ReportsIndexRoute
@@ -96,6 +105,7 @@ export interface FileRouteTypes {
     | '/'
     | '/categories/'
     | '/merchants/'
+    | '/monitor/'
     | '/orders/'
     | '/products/'
     | '/reports/'
@@ -106,6 +116,7 @@ export interface FileRouteTypes {
     | '/'
     | '/categories'
     | '/merchants'
+    | '/monitor'
     | '/orders'
     | '/products'
     | '/reports'
@@ -116,6 +127,7 @@ export interface FileRouteTypes {
     | '/'
     | '/categories/'
     | '/merchants/'
+    | '/monitor/'
     | '/orders/'
     | '/products/'
     | '/reports/'
@@ -127,6 +139,7 @@ export interface RootRouteChildren {
   IndexRoute: typeof IndexRoute
   CategoriesIndexRoute: typeof CategoriesIndexRoute
   MerchantsIndexRoute: typeof MerchantsIndexRoute
+  MonitorIndexRoute: typeof MonitorIndexRoute
   OrdersIndexRoute: typeof OrdersIndexRoute
   ProductsIndexRoute: typeof ProductsIndexRoute
   ReportsIndexRoute: typeof ReportsIndexRoute
@@ -155,6 +168,13 @@ declare module '@tanstack/react-router' {
       path: '/merchants'
       fullPath: '/merchants/'
       preLoaderRoute: typeof MerchantsIndexRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/monitor/': {
+      id: '/monitor/'
+      path: '/monitor'
+      fullPath: '/monitor/'
+      preLoaderRoute: typeof MonitorIndexRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/orders/': {
@@ -199,6 +219,7 @@ const rootRouteChildren: RootRouteChildren = {
   IndexRoute: IndexRoute,
   CategoriesIndexRoute: CategoriesIndexRoute,
   MerchantsIndexRoute: MerchantsIndexRoute,
+  MonitorIndexRoute: MonitorIndexRoute,
   OrdersIndexRoute: OrdersIndexRoute,
   ProductsIndexRoute: ProductsIndexRoute,
   ReportsIndexRoute: ReportsIndexRoute,

@@ -265,5 +265,17 @@
     "loginFailed": "登录失败，请重试",
     "successRedirect": "登录成功，正在跳转...",
     "errorRedirect": "登录失败，正在跳转到首页..."
+  },
+  "copilot": {
+    "examples": {
+      "search1": "帮我查保温杯",
+      "search2": "搜一下保温杯商品",
+      "search3": "找保温杯"
+    },
+    "typeKeyword": "在搜索框输入「{{keyword}}」",
+    "resultsHighlight": "这些是搜索到的商品",
+    "found": "找到 {{count}} 件商品：{{names}}",
+    "foundMore": "找到 {{count}} 件商品，前几件是：{{names}}",
+    "none": "没有找到与「{{keyword}}」相关的商品，换个词试试。"
   }
 }
