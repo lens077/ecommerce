@@ -4,7 +4,7 @@
 
 | 文件 | 约束什么 |
 |---|---|
-| [knowledge-layering.md](knowledge-layering.md) | 一条知识该写进哪一层的判定规则 |
+| [knowledge-layering.md](knowledge-layering.md) | 一条知识该写进哪一层的判定规则；frontmatter `affects:` 反向索引与 `scripts/spec-impact.sh` |
 | [self-refinement.md](self-refinement.md) | 纠错 → 判断模式性 → 沉淀 → 下次复用的闭环 |
 | [graph-engineering.md](graph-engineering.md) | 多闭环 AI 工作流方法论**存档**：Loop 0~4 分工与三个陷阱；可执行入口在 team/runbook.md，冻结节点部分已作废 |
 | [delivery-efficiency.md](delivery-efficiency.md) | AI Coding 交付效率治理：可信状态、P50/P85 与长尾、日报证据和人机责任边界 |

@@ -26,6 +26,7 @@ todo-spec: 1
 ## 一、全局优先级视图
 
 **未完成合计 155 项，其中 P0 共 18 项**（计数口径：各分类文件顶层 `- [ ]` 复选框实数；
+2026-09-11 harness 补三处 Spec Coding 缺口（不新增待办）：规范文档 frontmatter `affects:` 反向索引 + `scripts/spec-impact.sh` 双向查影响（`[AFFECTS]` 守存在性，首批登记 4 份）；实现单终态 `done` 必带可验证「完成自检」（`[SELFCHECK]`）；验收标准限五种可判定形态——决策与替代方案见 [`context/decisions/implemented/2026-09-11-spec-reverse-index-and-selfcheck.md`](context/decisions/implemented/2026-09-11-spec-reverse-index-and-selfcheck.md)，事故（`git checkout --` 抹掉另一会话未提交产出、靠会话记录恢复）见 evolution-log；
 2026-09-10 新增 1 条前端 P2「全链路体素沙盘 S1–S3」——设计、状态契约、健康聚合器与视觉提示词见
 [`docs/design/platform/voxel-construction-site.md`](docs/design/platform/voxel-construction-site.md)，S0 单文件设计稿已在本机浏览器实测可运行；
 2026-09-01 新增 1 条可观测 P2「容器级 CFS 限流指标完全缺采」——`nr_throttled`/`throttled_usec`

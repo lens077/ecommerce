@@ -1295,3 +1295,30 @@ description: harness 本身（硬规则/门禁/Agent 约束）每次改动的原
   `authz`/`loader`/`tests` 三包绿。merchant `TestApproveApplication_RequiresAdminBeforeUseCase`
   用 nil use case 证明授权先于业务。**未验证**：线上 `policies.csv` 实际内容——网关升级到带门禁的
   版本前必须先核，若线上已有通配行，新网关启动即 `AUTHZ_NOT_READY`（fail-close，没有旧表可退）。
+
+### 2026-09-11 规范↔实现反向索引 `affects:`、实现单「完成自检」、验收标准五形态
+
+- **改了什么**：① `context/**`、`docs/design/**` 的 frontmatter 新增可选 `affects:` 块列表，登记「实现或受本文约束」的
+  代码路径；`scripts/verify-context.sh` 新增 `[AFFECTS]`（每项必须存在、不含 glob、不许空列表）；新增只读工具
+  `scripts/spec-impact.sh`，按 git diff 双向查「改了文档→核对哪些实现、跑哪条命令」与「改了代码→哪些文档声明依赖它」。
+  首批登记 proto-design / deploy-parity / db-migrations / git-commit 四份。② `.scratch/*/issues/*.md` 实现单新增终态
+  `Status: done`；`verify-context.sh` 新增 `[SELFCHECK]`：标 `done` 必须有 `## 完成自检`，每条 `- [x]`/`- [ ]` 带 `——`
+  后的证据或原因。③ `docs/agents/issue-tracker.md` 新增「验收标准：每条都要能验」（五种形态 + 禁用词改写示例）与
+  「完成自检」模板；`triage-labels.md` 登记 `done`；runbook §0.1 两行路由、§6 第 1 步接线；knowledge-layering.md 写约定；
+  决策文件 [2026-09-11-spec-reverse-index-and-selfcheck.md](../decisions/implemented/2026-09-11-spec-reverse-index-and-selfcheck.md)。
+- **为什么**：runbook §0.1 只有正向路由（动代码前读文档），规范改了没有任何机制让人回头看按旧规范写的实现；
+  「已完成」在本仓只有硬规则 8 的一句要求、没有格式，AI 写完代码即宣布完成是最常见的假成功；
+  验收标准写成「保证安全」「性能好」时，AI 会拿自己写的测试通过来替代验收。三条对照
+  JavaGuide《Spec Coding 规范驱动编程实战》梳出：文章其余做法本仓已有，缺的正是这三处。
+- **触发事故**：2026-09-11 落地过程中自己踩了一个同类坑——给四份团队文档种 `affects:` 时 awk 首次出错，随手
+  `git checkout --` 四个文件「还原」，把上一会话（同日 authz 核查）尚未提交的 `proto-design.md`「方法与副作用」整节
+  抹掉了；靠 `~/.dsh/sessions` 的会话记录里那条 edit 调用的 `new_string` 原样恢复。教训是**对任何文件做 checkout/restore
+  前先 `git status --porcelain <file>`**，工作树里可能躺着别的会话的未提交产出——这正是「实现与规范静默漂移」的
+  微观版本：改动没进任何索引，靠运气才被看见。另：本回合另一并行会话于 02:08 提交了该文件，把已种下的 `affects:`
+  三行一并带进 `6df4b6a`，故该文件的登记先于门禁进了 HEAD，无害。
+- **怎么验证的**：`verify-context.sh` 真树绿；`verify-context-canary.sh` 新增五探针——`affects-dead`（路径改成不存在的
+  `backend/api-renamed-canary`）、`affects-glob`（写 `backend/api/**/*.proto`）、`selfcheck-missing`（标 done 无小节）、
+  `selfcheck-no-evidence`（条目无 `——`）四个红且 tag 正确，`selfcheck-ok`（含带原因的未勾选项）绿；沙箱按真身存在性给
+  `affects:` 目标放桩、只复制 `.scratch/*/issues/*.md`（首跑整目录复制把 doc-embed-demo 的 embed 源依赖拖进沙箱致探针 0
+  假红，已收窄）。`spec-impact.sh` 对当前工作树实测：三份改动文档各列出登记路径与验证命令，`--help` 可用。
+  **未验证**：验收标准五形态只有约定没有门禁，误报权衡见决策文件。

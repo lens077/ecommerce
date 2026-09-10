@@ -2,6 +2,9 @@
 name: deploy-parity
 layer: team
 description: 部署清单的两份真相源(helm/ 与裸 manifest)必须渲染出同一套集群对象;门禁是 scripts/verify-deploy-parity.sh。改 helm/、backend/services/*/deploy/、application-vpa.yml、frontend/apps/*/deploy/ 任一处前必读
+affects:
+  - helm
+  - scripts/verify-deploy-parity.sh
 ---
 
 # 部署清单双真相源:helm ≡ 裸 manifest

@@ -2,6 +2,9 @@
 name: git-commit
 layer: team
 description: Conventional Commits 规范、emoji↔type 白名单、commitlint 校验，以及提交前必须先更新 TODO.md 的工作流
+affects:
+  - frontend/.vite-hooks
+  - frontend/commitlint.config.mjs
 ---
 
 # Git 提交规范与工作流

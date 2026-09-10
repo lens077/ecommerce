@@ -40,7 +40,7 @@ context/
 
 | 文件 | 一句话 |
 |---|---|
-| [knowledge-layering.md](harness-framework/knowledge-layering.md) | 一条知识该写进哪一层的判定规则 |
+| [knowledge-layering.md](harness-framework/knowledge-layering.md) | 一条知识该写进哪一层的判定规则；frontmatter `affects:` 反向索引（改了规范要回头核对哪些实现，查询用 `scripts/spec-impact.sh`） |
 | [self-refinement.md](harness-framework/self-refinement.md) | 纠错 → 判断模式性 → 沉淀 → 下次复用的闭环 |
 | [graph-engineering.md](harness-framework/graph-engineering.md) | 多闭环 AI 工作流方法论存档：锚点命令、Loop 0~4 分工；其中的冻结节点机制已于 2026-08-24 整套删除，文内留有「不要重建」的说明 |
 | [delivery-efficiency.md](harness-framework/delivery-efficiency.md) | AI Coding 交付效率治理：可信状态、P50/P85 与长尾、日报证据和人机责任边界 |
@@ -105,7 +105,8 @@ matrix 与 `backend/services/`、网关实际接线的一致性,以及各服务 
 - 找模块知识时路径是 `context/project/ecommerce/{module}/`，`{module}` 用**代码目录名**（`gateway` / `behavior` / `consumer`），不是服务的中文名。
 - 找不到对应知识 ≠ 没有约束。先读 `docs/design/`（入口 `docs/design/README.md`）/ `TODO.md`，读完把结论沉淀回来（见 self-refinement）。
 - 本目录自身的结构由门禁守着：链接可达性、INDEX 覆盖（不许有孤儿文件）、frontmatter、
-  experience 格式、evolution-log 四要素、决策记录格式、AGENTS.md 预算，改完跑 `scripts/verify-context.sh`
+  experience 格式、evolution-log 四要素、决策记录格式、AGENTS.md 预算、`affects:` 路径存在性、
+  实现单 `done` 必带完成自检，改完跑 `scripts/verify-context.sh`
   （CI 两侧都接了：`context-gate`）。存量豁免见 `scripts/context-format-baseline.txt`（反向棘轮）。
 
 ## 与 `~/.claude` memory 的关系
