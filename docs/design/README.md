@@ -23,10 +23,10 @@
 | 目录 | 内容 | 来源 |
 |---|---|---|
 | [platform/architecture.md](platform/architecture.md) | 服务边界、核心/支撑服务规划、领域事件、通信协议 | DESIGN.md §微服务架构核心设计 |
+| [platform/voxel-construction-site.md](platform/voxel-construction-site.md) | 离线 Three.js r160 等轴测体素沙盘：客户端到 Cilium、control-tower 和 Go 微服务的请求治理可视化设计，含物理块清单、四态灯、状态契约、健康聚合器、场景脉冲与视觉提示词；设计稿 `voxel-construction-site-demo.html` | 2026-09-10 WebGL 演示与项目真实链路对照设计 |
 | [platform/production-scale-goal.md](platform/production-scale-goal.md) | 百万/千万级生产化目标、容量模型、现有技术栈边界、证据门禁、P0/P1/P2 与完成定义 | 2026-08-27 用户目标，后续按证据驱动方向修订 |
 | [platform/capacity-balancing.md](platform/capacity-balancing.md) | VPA recommendation、可信 requests、节点重启、Descheduler 准入、容量/故障演练与持续告警 | 2026-08-29 三节点调度审计与 [VPA recommendation-only 发布报告](../reports/2026-08-29-vpa-recommendation-only.md) |
 | [platform/error-handling.md](platform/error-handling.md) | biz→data→service 三层错误分层约定（**全服务通用规范**） | DESIGN.md §错误处理 |
-
 | [platform/rbac.md](platform/rbac.md) | Casdoor 三角色与 OpenFGA 对象关系授权（覆盖存量 Casbin RBAC） | DESIGN.md §RBAC |
 | [platform/anonymous-shopping.md](platform/anonymous-shopping.md) | 匿名（访客）购物链路：RPC 三级分类、网关签发访客令牌、IAM 过滤边界、登录合并购物车语义、六步落地（**设计草案**） | 2026-08-31 由「匿名逛首页被强制跳登录」缺陷反推 |
 | [platform/pre-environment.md](platform/pre-environment.md) | **历史快照，禁止作为当前配置源**：保留旧集群协议握手与迁移教训；当前实况看 matrix 与 infrastructure audit | 2026-08-08/24 集群实测 |
@@ -45,6 +45,9 @@
 | [merchant/store-settings.md](merchant/store-settings.md) | Shopline 商店设置 20 页竞品实录（含自研备注与服务映射） | 原 DESIGN-MERCHANT.md，2026-08-12 重写为实录调研 |
 | [merchant/roadmap.md](merchant/roadmap.md) | 商家角色功能取舍（引进/不引进）与 P0/P1/P2 路线图 | 2026-08-12 基于 store-settings.md 调研 |
 | [product/sales.md](product/sales.md) | 销量统计：PG 事实与预聚合 + Dragonfly 可丢加速层（**部分落地**，实况见文首横幅） | 原 product 服务 schema/design/ 目录，2026-08-13 移入 |
+| [notification/notification.md](notification/notification.md) | **通知服务设计草案**：模板/消息/投递三层模型、IN_APP + Resend EMAIL 渠道、混合发送、dedup_key 幂等、投递状态机与重试、`support` 角色与 Casbin 策略、Config Center 键、落地登记与分期（承接 TECH.md §5.9） | 2026-09-09 发件微服务与客服后台立项 |
+| [support/support.md](support/support.md) | **客服服务设计草案**：Resend 收件 webhook → 工单串线规则、工单/往来/事件模型、客服面与用户面接口、回复经 notification 发出、状态机、repository 归属条件与 OpenFGA 首个接线试点模型 | 2026-09-09 与 notification 同批 |
+| [copilot/copilot.md](copilot/copilot.md) | **页内智能助手设计草案（纯前端，无 LLM、无后端）**：对标腾讯云 KiKi「界面模式」的调研结论（未开源，只有零件）、`@ecommerce/copilot` 包（动作契约、正则意图匹配与未命中交互、执行器原语与 React/MUI 事件派发坑位、蒙层/渐变描边/大指针视觉规格、安全边界）、三条演示链路（用户搜商品 / 商家筛待发货 / 管理员开监控页）与分期验收 | 2026-09-10 用户需求，KiKi 界面模式截图对照 |
 | [cart/api-decisions.md](cart/api-decisions.md) | 购物车接口设计因果论证（**历史记录**）。2026-08-26 裁决：`cart_item_id` 为唯一条目标识（checkout v2 依赖此语义），proto 现行并行数组属未记录的翻转，迁移列 P1 | 原 backend/api/cart/v1/README.md，2026-08-13 移入 |
 
 尚无设计文档的服务：user / behavior（behavior 的推荐链路知识在
@@ -72,7 +75,6 @@ archify 生成的系统地图，自包含 HTML（深浅主题 / 搜索 / 路径�
 
 | 原文档/章节 | 为什么删 | 现在看哪里 |
 |---|---|---|
-| `platform/performance.md`（整篇，2026-08-26 删） | 主张已被定稿逐项击穿：ES→Meilisearch、业务分布式锁→PostgreSQL 正确性锚点、浏览器鉴权→control-tower BFF session（Dragonfly 为已接受例外）、网关实现→control-tower、「sqlc 自动读写路由」系虚构能力；100 万 DAU/5 万 QPS 目标未绑定压测环境 | 并发正确性 → [order/checkout.md](order/checkout.md)；选型定稿 → [`STACK.md`](../../STACK.md)；性能目标须绑定压测脚本后重立 |
 | `config-center/design.md`（2026-08-26 删） | 配置面与网关已随代码迁至同级仓 control-tower（2026-08-23 切流），本仓副本只会漂移 | `../control-tower/docs/design/` |
 | §技术栈集成架构设计 | 与技术栈真相源重复，且无版本信息 | [`STACK.md`](../../STACK.md) |
 | §可观测性体系设计 | 已被更具体的方法论+指标基线文档取代 | [`observability/OBSERVABILITY.md`](../observability/OBSERVABILITY.md) |

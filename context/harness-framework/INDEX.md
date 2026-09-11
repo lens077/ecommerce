@@ -4,11 +4,11 @@
 
 | 文件 | 约束什么 |
 |---|---|
-| [knowledge-layering.md](knowledge-layering.md) | 一条知识该写进哪一层的判定规则 |
+| [knowledge-layering.md](knowledge-layering.md) | 一条知识该写进哪一层的判定规则；frontmatter `affects:` 反向索引与 `scripts/spec-impact.sh` |
 | [self-refinement.md](self-refinement.md) | 纠错 → 判断模式性 → 沉淀 → 下次复用的闭环 |
 | [graph-engineering.md](graph-engineering.md) | 多闭环 AI 工作流方法论**存档**：Loop 0~4 分工与三个陷阱；可执行入口在 team/runbook.md，冻结节点部分已作废 |
 | [delivery-efficiency.md](delivery-efficiency.md) | AI Coding 交付效率治理：可信状态、P50/P85 与长尾、日报证据和人机责任边界 |
-| [e3-execution.md](e3-execution.md) | E3 执行策略（先估计→最小执行→失败才扩张）：出处、按规模路由、过度阅读护栏 hook 的配置与再验证 |
+| [e3-execution.md](e3-execution.md) | E3 执行策略（先估计→最小执行→失败才扩张）：出处、按规模路由、过度阅读护栏 hook 的配置与再验证；消费边界（token 成本治理六环节：事前控制/提前感知/过程可见/主动告警/随时可控/账单可解释） |
 | [dsh-model-onboarding.md](dsh-model-onboarding.md) | **新增、升级或切换 DSH 模型前必读**：模型目录声明、GPT 长上下文、自动压缩阈值换算、默认切换与在线验收 |
 | [subagent-dispatch.md](subagent-dispatch.md) | 子代理派发三条硬约定：只回结构化摘要、按角色裁剪能力、按角色分层模型（何时拆分看 e3-execution） |
 | [multi-agent-concurrency.md](multi-agent-concurrency.md) | 多 Agent **并发改同一批文件**时的四条纪律：状态用文件同步不用消息、引用点名不点位置、置信度会凭空升高的三种机制、宣布完成不终止复核 |

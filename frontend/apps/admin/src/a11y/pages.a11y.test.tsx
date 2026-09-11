@@ -123,6 +123,7 @@ const PAGES: Array<[string, string]> = [
   ["用户", "/users"],
   ["分类", "/categories"],
   ["报表", "/reports"],
+  ["监控", "/monitor"],
   ["设置", "/settings"],
 ];
 

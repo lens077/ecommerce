@@ -1,0 +1,469 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>全链路体素沙盘 · Three.js r160</title>
+<style>
+  * { box-sizing: border-box; }
+  html, body { margin: 0; height: 100%; overflow: hidden; background: #0d1118; color: #d9e1ec; font: 13px/1.5 -apple-system, "PingFang SC", "Noto Sans CJK SC", sans-serif; }
+  #app { position: relative; height: 100%; }
+  canvas { display: block; }
+  .label { color: #cfd8e6; font-size: 11px; text-shadow: 0 1px 2px #000, 0 0 6px #000; white-space: nowrap; pointer-events: none; }
+  .label.tier { font-size: 12px; font-weight: 700; color: #ffcf7a; letter-spacing: .14em; }
+  .label.small { font-size: 10px; color: #9fb0c8; }
+  .hud { position: absolute; left: 16px; top: 16px; width: 296px; max-height: calc(100% - 32px); overflow: auto; padding: 14px 16px; background: #0f141cdd; border: 1px solid #2a3547; border-radius: 8px; backdrop-filter: blur(6px); }
+  .hud h1 { margin: 0 0 4px; font-size: 16px; letter-spacing: .06em; color: #f2f5fa; }
+  .hud .sub { color: #7f8ea6; font-size: 11px; margin-bottom: 10px; }
+  .hud h2 { margin: 12px 0 6px; font-size: 11px; color: #ffcf7a; letter-spacing: .12em; text-transform: uppercase; }
+  .row { display: flex; flex-wrap: wrap; gap: 6px; }
+  button { background: #1b2434; color: #d9e1ec; border: 1px solid #2f3d55; border-radius: 5px; padding: 5px 9px; font-size: 12px; cursor: pointer; }
+  button:hover { background: #24304a; }
+  button.on { background: #b8763f; border-color: #e0a061; color: #fff; }
+  button.warn { border-color: #b8552d; }
+  .legend { display: grid; grid-template-columns: 14px 1fr; gap: 4px 8px; align-items: center; font-size: 12px; }
+  .dot { width: 12px; height: 12px; border-radius: 2px; }
+  #detail { min-height: 64px; font-size: 12px; color: #c4cede; }
+  #detail b { color: #fff; }
+  #trace { font-size: 12px; }
+  #trace .hop { padding: 3px 0; border-bottom: 1px dashed #27334a; }
+  #trace .hop.fail { color: #ff7a6e; }
+  #trace .hop.stop { color: #ffc46b; }
+  .toggle { display: flex; gap: 6px; align-items: center; }
+  .badge { position: absolute; right: 16px; top: 16px; padding: 6px 10px; background: #1b2434cc; border: 1px solid #2f3d55; border-radius: 6px; font-size: 11px; color: #9fb0c8; letter-spacing: .08em; }
+  .hint { position: absolute; left: 16px; bottom: 14px; color: #7f8ea6; font-size: 11px; }
+  .fps { position: absolute; right: 16px; bottom: 14px; color: #7f8ea6; font-size: 11px; }
+  .faults { max-height: 150px; overflow: auto; border: 1px solid #27334a; border-radius: 5px; padding: 6px; }
+  .faults label { display: flex; gap: 6px; align-items: center; font-size: 11px; padding: 2px 0; }
+  .faults select { background: #0f141d; color: #d9e1ec; border: 1px solid #2f3d55; border-radius: 4px; font-size: 11px; }
+</style>
+<script type="importmap">
+{ "imports": {
+  "three": "https://unpkg.com/three@0.160.0/build/three.module.js",
+  "three/addons/": "https://unpkg.com/three@0.160.0/examples/jsm/"
+} }
+</script>
+</head>
+<body>
+<div id="app">
+  <div class="hud">
+    <h1>全链路体素沙盘</h1>
+    <div class="sub">客户端 → 边缘 → Cilium → control-tower → Go ConnectRPC → 数据与观测</div>
+    <div class="toggle"><span>数据源</span><button id="modeMock" class="on">模拟</button><button id="modeLive">真实</button><span id="modeNote" style="color:#7f8ea6;font-size:11px"></span></div>
+    <h2>场景追踪</h2>
+    <div class="row" id="scenarios"></div>
+    <div class="toggle" style="margin-top:6px"><label><input type="checkbox" id="loggedIn" checked> 已登录（C 级场景）</label></div>
+    <div id="trace"></div>
+    <h2>故障剧本</h2>
+    <div class="row" id="presets"></div>
+    <h2>逐块故障开关</h2>
+    <div class="faults" id="faults"></div>
+    <h2>选中块</h2>
+    <div id="detail">点击任意组件查看状态、来源与说明。</div>
+    <h2>图例</h2>
+    <div class="legend">
+      <div class="dot" style="background:#3ddc84"></div><div>up · 健康，稳定发光</div>
+      <div class="dot" style="background:#ffb547"></div><div>degraded · 降级，慢闪</div>
+      <div class="dot" style="background:#ff4d3d"></div><div>down · 离线/错误，快闪，组件变暗</div>
+      <div class="dot" style="background:#3a4150"></div><div>unknown · 无来源或样本过期，灭灯变暗</div>
+      <div class="dot" style="background:#c98a4b"></div><div>铜色走线 · 脊线 / 母线 / 支线</div>
+      <div class="dot" style="background:repeating-linear-gradient(90deg,#c98a4b 0 3px,transparent 3px 6px)"></div><div>虚线 · depends_on_planned，未接线</div>
+    </div>
+  </div>
+  <div class="badge">Three.js r160 · 等轴测 · 设计稿 S1/S2 · 模拟数据</div>
+  <div class="hint">拖拽平移 · 滚轮缩放 · 右键微转 · 0 复位视角 · 1–4 聚焦各层 · 空格暂停脉冲 · P 暂停全部</div>
+  <div class="fps" id="fps"></div>
+</div>
+
+<script type="module">
+import * as THREE from 'three';
+import { OrbitControls } from 'three/addons/controls/OrbitControls.js';
+import { EffectComposer } from 'three/addons/postprocessing/EffectComposer.js';
+import { RenderPass } from 'three/addons/postprocessing/RenderPass.js';
+import { UnrealBloomPass } from 'three/addons/postprocessing/UnrealBloomPass.js';
+import { OutputPass } from 'three/addons/postprocessing/OutputPass.js';
+import { CSS2DRenderer, CSS2DObject } from 'three/addons/renderers/CSS2DRenderer.js';
+import * as BufferGeometryUtils from 'three/addons/utils/BufferGeometryUtils.js';
+
+// ═══════════════════════ 台阶式布局（自后向前四级：客户端 → 边缘 → 集群 → 数据） ═══════════════════════
+// 每级：y 台面高度，z 范围，bus 母线所在 z。脊线沿 x=0 从最高级一路下到最低级。
+const TIERS = {
+  client:  { y: 24, z0: -50, z1: -34, bus: -37, label: 'L1 客户端' },
+  edge:    { y: 16, z0: -34, z1: -18, bus: -21, label: 'L2 边缘' },
+  cluster: { y: 8,  z0: -18, z1: 16,  bus: 4,   label: 'L3–L5 Kubernetes · 网关 · 微服务' },
+  data:    { y: 0,  z0: 16,  z1: 42,  bus: 20,  label: 'L6 数据与观测' },
+};
+const HALF_W = 52;
+
+// icon：组件造型；onSpine：坐在脊线上（x=0）；node：落在哪块机架；ext：集群外
+const BLOCKS = [
+  { id: 'client.consumer',      label: 'consumer SPA',   tier: 'client', x: -30, z: -44, icon: 'monitor', source: 'browser' },
+  { id: 'client.consumer-next', label: 'consumer-next',  tier: 'client', x: -15, z: -44, icon: 'monitor', source: 'gatus' },
+  { id: 'client.merchant',      label: 'merchant',       tier: 'client', x: 0,   z: -44, icon: 'monitor', source: 'none' },
+  { id: 'client.admin',         label: 'admin',          tier: 'client', x: 15,  z: -44, icon: 'monitor', source: 'none' },
+  { id: 'client.desktop',       label: 'Tauri 桌面端',   tier: 'client', x: 30,  z: -44, icon: 'desktop', source: 'none' },
+
+  { id: 'edge.cdn',             label: 'CDN / 云 WAF（规划）', tier: 'edge', x: -18, z: -28, icon: 'shield', source: 'none', ghost: true, ext: true },
+  { id: 'edge.node1.pangolin',  label: 'node1 · Pangolin 入口', tier: 'edge', x: 0, z: -27, icon: 'tunnel', source: 'gatus', ext: true, onSpine: true },
+  { id: 'gw.casdoor',           label: 'Casdoor',        tier: 'edge', x: 18,  z: -28, icon: 'door', source: 'gatus', ext: true },
+  { id: 'edge.node2',           label: 'node2 · 边缘主机', tier: 'edge', x: 36, z: -28, icon: 'host', source: 'gatus', ext: true },
+
+  { id: 'k8s.node101', label: 'node101 · 控制面', tier: 'cluster', x: -32, z: 2, icon: 'rack', isNode: true, source: 'vm' },
+  { id: 'k8s.node102', label: 'node102',          tier: 'cluster', x: 0,   z: 2, icon: 'rack', isNode: true, source: 'vm' },
+  { id: 'k8s.node103', label: 'node103',          tier: 'cluster', x: 32,  z: 2, icon: 'rack', isNode: true, source: 'vm' },
+  { id: 'k8s.cilium-gateway',   label: 'Cilium Gateway API', tier: 'cluster', x: 0, z: -12, icon: 'hex', source: 'gatus', onSpine: true },
+  { id: 'k8s.hubble',           label: 'Hubble',          tier: 'cluster', x: -40, z: -12, icon: 'dish', source: 'vm' },
+
+  { id: 'gw.control-tower',     label: 'control-tower ×2', tier: 'cluster', x: 0,  z: -4, icon: 'tower', node: 'k8s.node102', source: 'readyz', onSpine: true },
+  { id: 'gw.openfga',           label: 'OpenFGA',          tier: 'cluster', x: 11, z: -4, icon: 'lock', node: 'k8s.node102', source: 'vm', gwbus: true },
+  { id: 'gw.dragonfly-session', label: 'Dragonfly Session', tier: 'cluster', x: 24, z: -4, icon: 'wings', node: 'k8s.node103', source: 'readyz', inferred: true, gwbus: true },
+
+  ...['user','search','behavior'].map((s, i) => ({ id: `svc.${s}`, label: s, tier: 'cluster', x: -42 + i * 10, z: 10, icon: 'crate', node: 'k8s.node101', source: 'healthz' })),
+  ...['product','cart','address'].map((s, i) => ({ id: `svc.${s}`, label: s, tier: 'cluster', x: -10 + i * 10, z: 10, icon: 'crate', node: 'k8s.node102', source: 'healthz' })),
+  ...['order','inventory','merchant','payment'].map((s, i) => ({ id: `svc.${s}`, label: s, tier: 'cluster', x: 19 + i * 9, z: 10, icon: 'crate', node: 'k8s.node103', source: 'healthz' })),
+
+  { id: 'data.postgres',        label: 'PostgreSQL · node3 Pigsty', tier: 'data', x: -44, z: 27, icon: 'db', source: 'healthz', ext: true },
+  { id: 'data.elasticsearch',   label: 'Elasticsearch',    tier: 'data', x: -33, z: 27, icon: 'es', source: 'healthz', ext: true },
+  { id: 'data.kafka',           label: 'Kafka · CDC',      tier: 'data', x: -22, z: 27, icon: 'pipes', source: 'cdc-exporter', ext: true },
+  { id: 'data.dragonfly-cache', label: 'Dragonfly Cache',  tier: 'data', x: -11, z: 27, icon: 'wings', source: 'healthz' },
+  { id: 'data.gorse',           label: 'Gorse · node2',    tier: 'data', x: -38, z: 36, icon: 'star', source: 'gatus', ext: true },
+  { id: 'data.minio',           label: 'MinIO / Silo · node2', tier: 'data', x: -27, z: 36, icon: 'bucket', source: 'gatus', ext: true },
+
+  { id: 'obs.otel-collector',   label: 'OTel Collector',   tier: 'data', x: 12, z: 27, icon: 'funnel', source: 'vm', ext: true, obs: true },
+  { id: 'obs.vm',               label: 'VictoriaMetrics',  tier: 'data', x: 24, z: 27, icon: 'vtower', source: 'health', ext: true, obs: true },
+  { id: 'obs.vl',               label: 'VictoriaLogs',     tier: 'data', x: 33, z: 27, icon: 'vtower', source: 'health', ext: true, obs: true },
+  { id: 'obs.vt',               label: 'VictoriaTraces',   tier: 'data', x: 42, z: 27, icon: 'vtower', source: 'health', ext: true, obs: true },
+  { id: 'obs.gatus',            label: 'Gatus',            tier: 'data', x: 22, z: 36, icon: 'radar', source: 'self', ext: true, obs: true },
+  { id: 'obs.aggregator',       label: 'topology-health 聚合器', tier: 'data', x: 34, z: 36, icon: 'beacon', source: 'self', obs: true },
+];
+const byId = Object.fromEntries(BLOCKS.map(b => [b.id, b]));
+const SVC = ['user','search','behavior','product','cart','address','order','inventory','merchant','payment'];
+const PLANNED = [['svc.order','svc.inventory'], ['svc.order','svc.product'], ['svc.order','svc.address'], ['svc.payment','svc.order']];
+
+// ═══════════════════════ 状态（§四 契约） ═══════════════════════
+const STATES = ['up','degraded','down','unknown'];
+const mockState = {};
+for (const b of BLOCKS) mockState[b.id] = (b.ghost || b.source === 'none') ? 'unknown' : 'up';
+let rawState = { ...mockState }, effState = {}, mode = 'mock';
+function computeEffective() {
+  effState = { ...rawState };
+  for (const b of BLOCKS) if (b.node && effState[b.node] !== 'up') effState[b.id] = 'unknown';
+  if (effState['gw.dragonfly-session'] !== 'up' && effState['gw.control-tower'] === 'up') effState['gw.control-tower'] = 'down';
+  if (effState['obs.gatus'] !== 'up') for (const b of BLOCKS) if (b.source === 'gatus') effState[b.id] = 'unknown';
+  if (mode === 'live' && effState['obs.aggregator'] !== 'up') for (const b of BLOCKS) if (b.source !== 'browser') effState[b.id] = 'unknown';
+}
+const passable = s => s === 'up' || s === 'degraded';
+
+// ═══════════════════════ 渲染器 / 等轴测相机 ═══════════════════════
+const app = document.getElementById('app');
+const renderer = new THREE.WebGLRenderer({ antialias: true });
+renderer.setPixelRatio(Math.min(devicePixelRatio, 2));
+renderer.setSize(innerWidth, innerHeight);
+renderer.shadowMap.enabled = true; renderer.shadowMap.type = THREE.PCFSoftShadowMap;
+renderer.toneMapping = THREE.ACESFilmicToneMapping; renderer.toneMappingExposure = 1.0;
+app.prepend(renderer.domElement);
+const labelRenderer = new CSS2DRenderer();
+labelRenderer.setSize(innerWidth, innerHeight);
+Object.assign(labelRenderer.domElement.style, { position: 'absolute', top: 0, left: 0, pointerEvents: 'none' });
+app.appendChild(labelRenderer.domElement);
+
+const scene = new THREE.Scene();
+scene.background = new THREE.Color(0x0d1118);
+let VIEW_H = 46;
+const camera = new THREE.OrthographicCamera(-1, 1, 1, -1, 1, 600);
+const ISO_DIR = new THREE.Vector3(1, 1, 1).normalize();
+const target0 = new THREE.Vector3(0, 8, -4);
+function fitCamera() { const a = innerWidth / innerHeight; camera.left = -VIEW_H * a; camera.right = VIEW_H * a; camera.top = VIEW_H; camera.bottom = -VIEW_H; camera.updateProjectionMatrix(); }
+fitCamera();
+camera.position.copy(target0).addScaledVector(ISO_DIR, 220);
+const controls = new OrbitControls(camera, renderer.domElement);
+controls.target.copy(target0);
+controls.enableDamping = true;
+controls.mouseButtons = { LEFT: THREE.MOUSE.PAN, MIDDLE: THREE.MOUSE.DOLLY, RIGHT: THREE.MOUSE.ROTATE };
+controls.minPolarAngle = Math.PI * 0.2; controls.maxPolarAngle = Math.PI * 0.42;
+controls.minAzimuthAngle = Math.PI * 0.1; controls.maxAzimuthAngle = Math.PI * 0.4;
+
+scene.add(new THREE.HemisphereLight(0xbfd4ff, 0x2a2018, 0.75));
+const sun = new THREE.DirectionalLight(0xfff3dc, 2.0);
+sun.position.set(-60, 110, 50); sun.castShadow = true; sun.shadow.mapSize.set(2048, 2048); sun.shadow.bias = -0.0004;
+Object.assign(sun.shadow.camera, { left: -110, right: 110, top: 110, bottom: -110, near: 10, far: 300 }); sun.shadow.camera.updateProjectionMatrix();
+scene.add(sun);
+
+// ═══════════════════════ 几何工具：带顶点色的零件，最终合并成一个 Mesh ═══════════════════════
+const _c = new THREE.Color();
+function tint(geo, color) { if (geo.index) geo = geo.toNonIndexed(); const n = geo.attributes.position.count; const arr = new Float32Array(n * 3); _c.set(color); for (let i = 0; i < n; i++) { arr[i*3] = _c.r; arr[i*3+1] = _c.g; arr[i*3+2] = _c.b; } geo.setAttribute('color', new THREE.BufferAttribute(arr, 3)); return geo; }
+function box(w, h, d, color, x = 0, y = 0, z = 0) { const g = new THREE.BoxGeometry(w, h, d); g.translate(x, y + h / 2, z); return tint(g, color); }
+function cyl(r, h, color, x = 0, y = 0, z = 0, seg = 8, rt = r) { const g = new THREE.CylinderGeometry(rt, r, h, seg); g.translate(x, y + h / 2, z); return tint(g, color); }
+function cone(r, h, color, x = 0, y = 0, z = 0, seg = 8) { const g = new THREE.ConeGeometry(r, h, seg); g.translate(x, y + h / 2, z); return tint(g, color); }
+function torus(r, t, color, x, y, z, arc = Math.PI * 2, rx = 0) { const g = new THREE.TorusGeometry(r, t, 6, 16, arc); g.rotateX(rx); g.translate(x, y, z); return tint(g, color); }
+function hcyl(r, len, color, x, y, z) { const g = new THREE.CylinderGeometry(r, r, len, 8); g.rotateZ(Math.PI / 2); g.translate(x, y, z); return tint(g, color); }
+
+// ═══════════════════════ 组件造型（参考各组件图标） ═══════════════════════
+const C = {
+  client: 0x4f7fd9, screen: 0x9fd3ff, dark: 0x1a2130, edge: 0xc9894a, tunnel: 0x3d2f24, shield: 0x33415a,
+  cilium: 0xf2c14e, k8s: 0x3b6fd8, rack: 0x2a3446, rackLine: 0x3f4d66, tower: 0xe9e6dc, towerBand: 0xd14b3a, glass: 0x7fc2ff,
+  door: 0x7f5fd0, doorFrame: 0x4a3a80, dragonfly: 0x2fb7a8, lock: 0x8b97ab, lockShackle: 0xc7ced9,
+  crate: 0x38a6d8, crateLid: 0x256f92, pg: 0x3b7bd1, es: 0xe6b422, kafka: 0x35404f, cache: 0xf08a3c, gorse: 0xf2a541, minio: 0xd24a43,
+  obs: 0x5cb08a, obsDark: 0x2f5a46, victoria: 0x6e5fd8, host: 0x6f5a48,
+};
+const ICONS = {
+  monitor: () => [box(4.2, .5, 2.6, C.dark), box(.9, 1.4, .9, C.dark, 0, .5), box(5.2, 3.4, .6, C.client, 0, 1.9), box(4.4, 2.6, .25, C.screen, 0, 2.3, .45)],
+  desktop: () => [box(4.6, 3.2, 3, C.client), box(3.6, 1.8, .25, C.screen, 0, .9, 1.55), box(2.2, .5, 1.2, C.dark, 0, 3.2)],
+  shield:  () => [tint(new THREE.ConeGeometry(2.3, 1.8, 4).rotateX(Math.PI).translate(0, .9, 0), C.shield), box(4.6, 4, 1.2, C.shield, 0, 1.6), box(1.2, 2.4, 1.3, C.cilium, 0, 2.2)],
+  tunnel:  () => [box(9, 1.2, 6, C.edge), box(1.6, 4.5, 6, C.tunnel, -3.2, 1.2), box(1.6, 4.5, 6, C.tunnel, 3.2, 1.2), box(2, 1.2, 6, C.tunnel, -1.6, 5.7), box(2, 1.2, 6, C.tunnel, 1.6, 5.7), box(9, 1.6, 6, C.edge, 0, 6.9), box(4.8, 4.5, 5.6, C.dark, 0, 1.2)],
+  door:    () => [box(5, .6, 3, C.doorFrame), box(4.4, 6, 1, C.doorFrame, 0, .6), box(3.2, 5.2, .8, C.door, 0, .8, .3), box(.5, .5, .5, C.cilium, 1, 3.2, .8)],
+  host:    () => [box(5, 6, 4, C.host), box(3.8, .5, .4, C.dark, 0, 1.2, 2), box(3.8, .5, .4, C.dark, 0, 2.4, 2), box(3.8, .5, .4, C.dark, 0, 3.6, 2)],
+  rack:    () => [box(30, .2, 24, C.rack), box(30, .3, .6, C.rackLine, 0, .2, -11.5), box(30, .3, .6, C.rackLine, 0, .2, 11.5), box(.6, .3, 24, C.rackLine, -14.7, .2), box(.6, .3, 24, C.rackLine, 14.7, .2)],
+  hex:     () => [cyl(4.2, 1.6, C.cilium, 0, 0, 0, 6), cyl(3.2, .8, C.dark, 0, 1.6, 0, 6), cyl(1.4, 1.2, C.cilium, 0, 2.4, 0, 6)],
+  dish:    () => [box(2.4, 1, 2.4, C.rack), cyl(.4, 2.4, C.rackLine, 0, 1), tint(new THREE.CylinderGeometry(2.2, .8, 1, 10).rotateX(-0.9).translate(0, 4.2, .6), C.k8s)],
+  tower:   () => [box(6, 1.2, 6, C.rack), cyl(1.4, 8, C.tower, 0, 1.2), cyl(2.9, 1, C.towerBand, 0, 9, 0, 8, 2.2), cyl(3.2, 2.2, C.glass, 0, 10, 0, 8), cyl(2.6, .8, C.tower, 0, 12.2, 0, 8), cyl(.15, 2.5, C.towerBand, 0, 13)],
+  lock:    () => [box(4, 3.2, 2, C.lock, 0, 0), torus(1.4, .35, C.lockShackle, 0, 3.6, 0, Math.PI), box(.6, 1, .5, C.dark, 0, .8, 1.05)],
+  wings:   () => [box(3.2, 1.2, 4.4, C.dragonfly), box(2.6, 1.4, 1, C.dragonfly, 0, 1.2, -1.2), box(4.2, .25, 1.2, C.screen, -2.6, 1.4, -.6), box(4.2, .25, 1.2, C.screen, 2.6, 1.4, -.6), box(3.4, .25, 1, C.screen, -2.2, 1.4, .8), box(3.4, .25, 1, C.screen, 2.2, 1.4, .8)],
+  crate:   () => [box(4.4, 3.2, 4.4, C.crate), box(4.6, .5, 4.6, C.crateLid, 0, 3.2), box(.7, 3.2, 4.5, C.crateLid, 0, 0), box(4.5, 3.2, .7, C.crateLid, 0, 0)],
+  db:      () => [cyl(2.6, 1.3, C.pg, 0, 0, 0, 12), cyl(2.6, 1.3, C.pg, 0, 1.7, 0, 12), cyl(2.6, 1.3, C.pg, 0, 3.4, 0, 12), cyl(2.7, .3, C.screen, 0, 1.3, 0, 12), cyl(2.7, .3, C.screen, 0, 3.0, 0, 12)],
+  es:      () => [cyl(2.4, 1.2, C.es, 0, 0, 0, 12), cyl(2.4, 1.2, C.es, 0, 1.5, 0, 12), cyl(2.4, 1.2, C.es, 0, 3, 0, 12), torus(1.3, .3, C.dark, 0, 5.4, 0), box(.5, .5, 2, C.dark, 1.4, 4.2, 1)],
+  pipes:   () => [box(6, .6, 5, C.rack), hcyl(.9, 6, C.kafka, 0, 1.5, -1.5), hcyl(.9, 6, C.kafka, 0, 1.5, 1.5), hcyl(.9, 6, C.kafka, 0, 3.1, 0), box(.5, 3.6, 5.2, C.rackLine, -2.6, .6), box(.5, 3.6, 5.2, C.rackLine, 2.6, .6)],
+  star:    () => [box(3, .6, 3, C.rack), tint(new THREE.OctahedronGeometry(2.2).translate(0, 3.2, 0), C.gorse)],
+  bucket:  () => [cyl(1.9, 4, C.minio, 0, 0, 0, 12, 2.4), torus(2.4, .3, C.screen, 0, 4, 0, Math.PI * 2, Math.PI / 2), cyl(1.6, .4, C.dark, 0, 3.7, 0, 12)],
+  funnel:  () => [box(3, .6, 3, C.obsDark), cyl(.7, 1.6, C.obs, 0, .6, 0, 8), tint(new THREE.CylinderGeometry(2.8, .7, 2.6, 10).translate(0, 3.5, 0), C.obs)],
+  vtower:  () => [box(3.6, .6, 3.6, C.obsDark), box(2.6, 5, 2.6, C.victoria, 0, .6), box(2.8, .5, 2.8, C.screen, 0, 5.6), box(.4, 1.6, .4, C.screen, 0, 6.1)],
+  radar:   () => [box(3, .6, 3, C.obsDark), cyl(.4, 2, C.obs, 0, .6), tint(new THREE.CylinderGeometry(2.2, 1, .6, 10).rotateX(-0.7).translate(0, 3.1, .4), C.obs)],
+  beacon:  () => [box(3.2, 2.2, 3.2, C.obs), box(.4, 3, .4, C.screen, 0, 2.2), tint(new THREE.OctahedronGeometry(.9).translate(0, 5.6, 0), C.cilium)],
+};
+const ICON_H = { monitor: 5.4, desktop: 3.8, shield: 5.8, tunnel: 9.7, door: 6.6, host: 6, rack: 1.9, hex: 3.6, dish: 4.6, tower: 15.5, lock: 5.2, wings: 2.8, crate: 3.7, db: 4.7, es: 5.6, pipes: 4.2, star: 5.4, bucket: 4.4, funnel: 4.9, vtower: 7.7, radar: 3.6, beacon: 6.5 };
+
+// 所有组件合并成一个 Mesh；记录每块的顶点范围，用于变暗与拾取
+const blockGeos = [], ranges = [], baseColors = [];
+const blockY = {}; // 组件底面高度
+let vOff = 0;
+for (const b of BLOCKS) {
+  const t = TIERS[b.tier];
+  const y = t.y + (b.node ? 0.2 : 0);
+  blockY[b.id] = y;
+  const parts = ICONS[b.icon]().map(g => g.translate(b.x, y, b.z));
+  const merged = BufferGeometryUtils.mergeGeometries(parts, false);
+  if (b.ghost) { const col = merged.attributes.color.array; for (let i = 0; i < col.length; i++) col[i] *= 0.45; }
+  const n = merged.attributes.position.count;
+  ranges.push([vOff, n]); vOff += n;
+  baseColors.push(merged.attributes.color.array.slice());
+  blockGeos.push(merged);
+}
+const blocksGeo = BufferGeometryUtils.mergeGeometries(blockGeos, false);
+const blocksMesh = new THREE.Mesh(blocksGeo, new THREE.MeshStandardMaterial({ vertexColors: true, roughness: 0.8, metalness: 0.05 }));
+blocksMesh.castShadow = true; blocksMesh.receiveShadow = true;
+scene.add(blocksMesh);
+const DIM = { up: 1, degraded: 0.85, down: 0.45, unknown: 0.28 };
+function paintBlocks() {
+  const col = blocksGeo.attributes.color.array;
+  BLOCKS.forEach((b, i) => { const [o, n] = ranges[i]; const k = DIM[effState[b.id]]; const base = baseColors[i]; for (let j = 0; j < n * 3; j++) col[o * 3 + j] = base[j] * k; });
+  blocksGeo.attributes.color.needsUpdate = true;
+}
+
+// 灯：每块一盏，InstancedMesh + 基础材质（不受光，bloom 只挑它们）
+const lampMesh = new THREE.InstancedMesh(new THREE.BoxGeometry(1.1, 1.1, 1.1), new THREE.MeshBasicMaterial(), BLOCKS.length);
+const lampPos = {};
+{ const m = new THREE.Matrix4();
+  BLOCKS.forEach((b, i) => { const p = b.isNode ? new THREE.Vector3(b.x - 13.5, blockY[b.id] + 1.2, b.z + 10.5) : new THREE.Vector3(b.x + 2.8, blockY[b.id] + ICON_H[b.icon] * 0.55 + 0.6, b.z + 2.8); lampPos[b.id] = p; m.makeTranslation(p.x, p.y, p.z); lampMesh.setMatrixAt(i, m); });
+  lampMesh.instanceMatrix.needsUpdate = true; }
+scene.add(lampMesh);
+const LAMP = { up: new THREE.Color(0x3ddc84).multiplyScalar(2.4), degraded: new THREE.Color(0xffb547).multiplyScalar(2.2), down: new THREE.Color(0xff4d3d).multiplyScalar(2.6), unknown: new THREE.Color(0x141923) };
+const tmpC = new THREE.Color();
+function paintLamps(t) {
+  BLOCKS.forEach((b, i) => { const s = effState[b.id]; let k = 1; if (s === 'degraded') k = 0.6 + 0.4 * Math.sin(t * 2.5); if (s === 'down') k = Math.sin(t * 9) > 0 ? 1 : 0.2; tmpC.copy(LAMP[s]).multiplyScalar(k); lampMesh.setColorAt(i, tmpC); });
+  lampMesh.instanceColor.needsUpdate = true;
+}
+
+// ═══════════════════════ 台阶主体（一整块） ═══════════════════════
+{
+  const body = [];
+  const top = 0x223047, face = 0x162032, rim = 0x2f4262;
+  for (const k of Object.keys(TIERS)) {
+    const t = TIERS[k]; const d = t.z1 - t.z0;
+    body.push(box(HALF_W * 2, t.y + 6, d, face, 0, -6, (t.z0 + t.z1) / 2));
+    body.push(box(HALF_W * 2, .6, d, top, 0, t.y - .6, (t.z0 + t.z1) / 2));
+    body.push(box(HALF_W * 2, .5, .8, rim, 0, t.y - .5, t.z1 - .4));
+  }
+  body.push(box(HALF_W * 2 + 16, 2, 110, 0x0f1520, 0, -8, -4));
+  const g = BufferGeometryUtils.mergeGeometries(body, false);
+  const m = new THREE.Mesh(g, new THREE.MeshStandardMaterial({ vertexColors: true, roughness: .95 }));
+  m.receiveShadow = true; m.castShadow = true; scene.add(m);
+  for (const k of Object.keys(TIERS)) { const t = TIERS[k]; const l = mkLabel(t.label, 'label tier'); l.position.set(-HALF_W + 2, t.y + 1.2, t.z0 + 3); scene.add(l); }
+}
+// CiliumNetworkPolicy 默认拒绝墙：集群台阶后缘，只在脊线处开门
+{
+  const wall = [];
+  for (const [x0, x1] of [[-HALF_W + 1, -4.5], [4.5, HALF_W - 1]]) wall.push(box(x1 - x0, 4, 1.2, 0x4a6fa5, (x0 + x1) / 2, TIERS.cluster.y, -16.5));
+  for (let x = -HALF_W + 3; x < HALF_W - 1; x += 6) if (Math.abs(x) > 6) wall.push(box(2.2, .5, 1.4, 0x2b4470, x, TIERS.cluster.y + 4, -16.5));
+  wall.push(box(1.2, 5.5, 1.6, 0xf2c14e, -4.5, TIERS.cluster.y, -16.5), box(1.2, 5.5, 1.6, 0xf2c14e, 4.5, TIERS.cluster.y, -16.5));
+  const m = new THREE.Mesh(BufferGeometryUtils.mergeGeometries(wall, false), new THREE.MeshStandardMaterial({ vertexColors: true, roughness: .7 }));
+  m.castShadow = true; m.receiveShadow = true; scene.add(m);
+  const l = mkLabel('CiliumNetworkPolicy · default-deny · 只放行 Gateway → control-tower', 'label small'); l.position.set(14, TIERS.cluster.y + 5.5, -16.5); scene.add(l);
+}
+
+// ═══════════════════════ 走线网络（曼哈顿布线：支线 → 母线 → 脊线） ═══════════════════════
+// 脊线：x=0，从客户端母线一路下台阶到数据母线
+const SPINE = [];
+{ const order = ['client','edge','cluster','data'];
+  for (let i = 0; i < order.length; i++) { const t = TIERS[order[i]]; if (i === 0) SPINE.push([0, t.y, t.bus]); else { const prev = TIERS[order[i-1]]; SPINE.push([0, prev.y, t.z0], [0, t.y, t.z0]); } SPINE.push([0, t.y, t.bus]); } }
+const P = a => new THREE.Vector3(a[0], a[1], a[2]);
+function spineSlice(zA, zB) { const pts = SPINE.map(P); const [lo, hi] = zA < zB ? [zA, zB] : [zB, zA]; const seg = pts.filter(p => p.z >= lo - 1e-6 && p.z <= hi + 1e-6); return zA < zB ? seg : seg.reverse(); }
+function port(b) { const t = TIERS[b.tier]; if (b.onSpine) return new THREE.Vector3(0, t.y, b.z); return new THREE.Vector3(b.x, t.y, b.z); }
+function busZ(b) { return b.gwbus ? -4 : TIERS[b.tier].bus; }
+// A → B 的走线：A 支线 → A 母线 → 脊线 → B 母线 → B 支线（脊线上的块直接经过）
+function route(aId, bId) {
+  const A = byId[aId], B = byId[bId]; const pa = port(A), pb = port(B); const pts = [pa];
+  const push = v => { const l = pts[pts.length - 1]; if (!l.equals(v)) pts.push(v); };
+  if (!A.onSpine) { push(new THREE.Vector3(A.x, pa.y, busZ(A))); push(new THREE.Vector3(0, pa.y, busZ(A))); }
+  const zA = A.onSpine ? pa.z : busZ(A), zB = B.onSpine ? pb.z : busZ(B);
+  for (const p of spineSlice(zA, zB)) push(p);
+  if (!B.onSpine) { push(new THREE.Vector3(0, pb.y, busZ(B))); push(new THREE.Vector3(B.x, pb.y, busZ(B))); }
+  push(pb);
+  return pts;
+}
+// 静态走线几何：母线 + 支线 + 脊线（一次性画出网络，不按边重复画）
+const trackGeos = [], trackRanges = {};
+const TRACK = 0xc98a4b, TRACK_DIM = 0x4a3a2c;
+function seg(a, b, w, color, key) { const d = new THREE.Vector3().subVectors(b, a); const len = d.length(); if (len < 1e-3) return; let g = new THREE.BoxGeometry(Math.abs(d.x) > 1e-6 ? len : w, Math.abs(d.y) > 1e-6 ? len : .28, Math.abs(d.z) > 1e-6 ? len : w); g.translate((a.x + b.x) / 2, (a.y + b.y) / 2 + (Math.abs(d.y) > 1e-6 ? 0 : .42), (a.z + b.z) / 2); g = tint(g, color); if (key) { (trackRanges[key] ||= []).push(g); } trackGeos.push(g); }
+function dashed(a, b, w, color, key) { const d = new THREE.Vector3().subVectors(b, a); const len = d.length(); const n = Math.floor(len / 1.6); for (let i = 0; i < n; i += 2) { const p = a.clone().addScaledVector(d, i / n), q = a.clone().addScaledVector(d, Math.min(1, (i + 1) / n)); seg(p, q, w, color, key); } }
+{
+  const sp = SPINE.map(P); for (let i = 0; i < sp.length - 1; i++) seg(sp[i], sp[i+1], 1.1, TRACK, 'spine');
+  for (const k of ['client','edge','cluster','data']) { const t = TIERS[k]; const xs = BLOCKS.filter(b => b.tier === k && !b.onSpine && !b.gwbus && !b.isNode).map(b => b.x); const x0 = Math.min(0, ...xs), x1 = Math.max(0, ...xs); const y = t.y; if (k === 'data') { seg(new THREE.Vector3(x0, y, t.bus), new THREE.Vector3(0, y, t.bus), .7, TRACK, 'bus'); dashed(new THREE.Vector3(0, y, t.bus), new THREE.Vector3(x1, y, t.bus), .5, TRACK_DIM, 'obsbus'); } else seg(new THREE.Vector3(x0, y, t.bus), new THREE.Vector3(x1, y, t.bus), .7, TRACK, 'bus'); }
+  seg(new THREE.Vector3(0, TIERS.cluster.y, -4), new THREE.Vector3(24, TIERS.cluster.y, -4), .7, TRACK, 'bus');
+  for (const b of BLOCKS) { if (b.onSpine || b.isNode) continue; const p = port(b); const q = new THREE.Vector3(b.x, p.y, busZ(b)); if (b.ghost) dashed(p, q, .5, TRACK_DIM, 'stub:' + b.id); else seg(p, q, .55, TRACK, 'stub:' + b.id); }
+  for (const [a, b] of PLANNED) { const A = byId[a], B = byId[b]; const y = TIERS.cluster.y; const z = 14.5; dashed(new THREE.Vector3(A.x, y, A.z), new THREE.Vector3(A.x, y, z), .45, TRACK_DIM, 'planned'); dashed(new THREE.Vector3(A.x, y, z), new THREE.Vector3(B.x, y, z), .45, TRACK_DIM, 'planned'); dashed(new THREE.Vector3(B.x, y, z), new THREE.Vector3(B.x, y, B.z), .45, TRACK_DIM, 'planned'); }
+}
+const tracksGeo = BufferGeometryUtils.mergeGeometries(trackGeos, false);
+const tracksMesh = new THREE.Mesh(tracksGeo, new THREE.MeshStandardMaterial({ vertexColors: true, roughness: .35, metalness: .6, emissive: 0x2a1a0a, emissiveIntensity: .5 }));
+tracksMesh.receiveShadow = true; scene.add(tracksMesh);
+// 支线按块状态变色：记录每段几何在合并后的偏移
+const trackOffsets = new Map(); { let off = 0; for (const g of trackGeos) { trackOffsets.set(g, off); off += g.attributes.position.count; } }
+const TRACK_STATE = { up: new THREE.Color(TRACK), degraded: new THREE.Color(0xd9a44a), down: new THREE.Color(0xb23a2e), unknown: new THREE.Color(TRACK_DIM) };
+function paintTracks() {
+  const col = tracksGeo.attributes.color.array;
+  for (const b of BLOCKS) { const gs = trackRanges['stub:' + b.id]; if (!gs) continue; const c = b.ghost ? TRACK_STATE.unknown : TRACK_STATE[effState[b.id]]; for (const g of gs) { const o = trackOffsets.get(g), n = g.attributes.position.count; for (let i = 0; i < n; i++) { col[(o + i) * 3] = c.r; col[(o + i) * 3 + 1] = c.g; col[(o + i) * 3 + 2] = c.b; } } }
+  tracksGeo.attributes.color.needsUpdate = true;
+}
+
+// ═══════════════════════ 脉冲（沿折线走，遇非 up 块中断） ═══════════════════════
+const MAXP = 200;
+const pulseMesh = new THREE.InstancedMesh(new THREE.SphereGeometry(.6, 8, 8), new THREE.MeshBasicMaterial(), MAXP);
+pulseMesh.count = 0; scene.add(pulseMesh);
+const pulses = []; let pulsesPaused = false, allPaused = false;
+const routeCache = new Map();
+function hopPath(a, b) { const k = a + '>' + b; if (!routeCache.has(k)) { const pts = route(a, b); const cum = [0]; for (let i = 1; i < pts.length; i++) cum.push(cum[i-1] + pts[i].distanceTo(pts[i-1])); routeCache.set(k, { pts, cum, len: cum[cum.length - 1] }); } return routeCache.get(k); }
+const tmpV = new THREE.Vector3(), tmpM = new THREE.Matrix4();
+function pointAt(h, d, out) { const { pts, cum } = h; let i = 1; while (i < cum.length - 1 && cum[i] < d) i++; const t = (d - cum[i-1]) / Math.max(1e-6, cum[i] - cum[i-1]); return out.lerpVectors(pts[i-1], pts[i], THREE.MathUtils.clamp(t, 0, 1)); }
+function spawn(ids, opt = {}) { if (pulses.length >= MAXP) return; pulses.push({ ids, i: 0, d: 0, speed: opt.speed || 26, color: opt.color || new THREE.Color(0x9fd0ff).multiplyScalar(2.2), hero: !!opt.hero, onHop: opt.onHop, onStop: opt.onStop, stopped: 0, planned: opt.planned || [] }); }
+const ANON = [['client.consumer','edge.node1.pangolin','k8s.cilium-gateway','gw.control-tower','svc.search','data.elasticsearch'],
+              ['client.consumer-next','edge.node1.pangolin','k8s.cilium-gateway','gw.control-tower','svc.product','data.postgres'],
+              ['client.consumer','edge.node1.pangolin','k8s.cilium-gateway','gw.control-tower','svc.behavior','data.gorse'],
+              ['client.desktop','edge.node1.pangolin','k8s.cilium-gateway','gw.control-tower','svc.address','data.postgres']];
+let spawnAcc = 0;
+function stepPulses(dt) {
+  if (!pulsesPaused) { spawnAcc += dt; if (spawnAcc > 0.9) { spawnAcc = 0; spawn(ANON[Math.floor(Math.random() * ANON.length)]); } }
+  let n = 0;
+  for (let k = pulses.length - 1; k >= 0; k--) {
+    const p = pulses[k];
+    const a = p.ids[p.i], b = p.ids[p.i + 1];
+    if (p.stopped > 0) { p.stopped -= dt; if (p.stopped <= 0) { pulses.splice(k, 1); continue; } }
+    else if (!pulsesPaused) {
+      if (p.d === 0) { const isPlanned = p.planned.some(([x, y]) => x === a && y === b); const s = effState[b]; if (isPlanned || !passable(s)) { p.stopped = 1.8; p.color = new THREE.Color(0xff4d3d).multiplyScalar(2.6); p.onStop && p.onStop(p.i, isPlanned ? 'planned' : s); } }
+      if (p.stopped === 0) { const h = hopPath(a, b); p.d += dt * p.speed * (p.hero ? 1.25 : 1); if (p.d >= h.len) { p.d = 0; p.i++; p.onHop && p.onHop(p.i); if (p.i >= p.ids.length - 1) { pulses.splice(k, 1); continue; } } }
+    }
+    const h = hopPath(p.ids[p.i], p.ids[p.i + 1]);
+    pointAt(h, p.stopped > 0 ? 0 : p.d, tmpV); tmpV.y += .55;
+    const sc = p.hero ? 1.7 : 1; tmpM.makeScale(sc, sc, sc); tmpM.setPosition(tmpV);
+    pulseMesh.setMatrixAt(n, tmpM); pulseMesh.setColorAt(n, p.color); n++;
+  }
+  pulseMesh.count = n; pulseMesh.instanceMatrix.needsUpdate = true; if (pulseMesh.instanceColor) pulseMesh.instanceColor.needsUpdate = true;
+}
+
+// ═══════════════════════ 场景（§6.2 / §6.3） ═══════════════════════
+const GW_STEPS = ['剥离入站 x-md-* 头', '解析 Casdoor Session', 'Dragonfly 读会话', '取用户/租户/粗粒度角色', 'OpenFGA Check', '注入可信身份头', 'H2C 转发'];
+const SCENARIOS = [
+  { name: '搜索 (A)', level: 'A', ids: ['client.consumer','edge.node1.pangolin','k8s.cilium-gateway','gw.control-tower','svc.search','data.elasticsearch'], gw: [0], note: 'anonymous_paths 放行，不查 Session' },
+  { name: '商品详情 (A)', level: 'A', ids: ['client.consumer-next','edge.node1.pangolin','k8s.cilium-gateway','gw.control-tower','svc.product','data.gorse'], gw: [0], note: 'SSR 匿名取数；product → PG + Gorse' },
+  { name: '加购 (B)', level: 'B', ids: ['client.consumer','edge.node1.pangolin','k8s.cilium-gateway','gw.control-tower','svc.cart','data.minio'], gw: [0, 5], note: '签发/识别访客 cookie，注入 x-md-global-anonymous=true（设计草案）' },
+  { name: '登录', level: '-', ids: ['client.consumer','edge.node1.pangolin','k8s.cilium-gateway','gw.control-tower','gw.casdoor'], gw: [], note: 'BFF /auth/ 本地路由，Casdoor code exchange，会话写 Dragonfly' },
+  { name: '下单 (C)', level: 'C', ids: ['client.consumer','edge.node1.pangolin','k8s.cilium-gateway','gw.control-tower','svc.order','svc.inventory'], gw: [0,1,2,3,4,5,6], note: 'order → inventory 为 depends_on_planned，脉冲在 order 停止', planned: [['svc.order','svc.inventory']] },
+  { name: '支付回调 (A)', level: 'A', ids: ['edge.node1.pangolin','k8s.cilium-gateway','gw.control-tower','svc.payment','data.postgres'], gw: [0], note: '匿名清单放行，签名校验在 payment 服务内' },
+];
+const traceEl = document.getElementById('trace');
+function runScenario(sc) {
+  const loggedIn = document.getElementById('loggedIn').checked;
+  traceEl.innerHTML = `<div class="hop"><b>${sc.name}</b> · ${sc.note}</div>`;
+  const hop = (text, cls = '') => { const el = document.createElement('div'); el.className = 'hop ' + cls; el.textContent = text; traceEl.appendChild(el); return el; };
+  spawn(sc.ids, { hero: true, planned: sc.planned || [], color: new THREE.Color(0xfff0a0).multiplyScalar(2.6),
+    onHop: (i) => {
+      const b = sc.ids[i];
+      if (b === 'gw.control-tower') {
+        hop(`→ ${byId[b].label} · ${sc.gw.map(k => GW_STEPS[k]).join(' → ') || 'BFF 本地路由'}`);
+        if (sc.level === 'C' && !loggedIn) { const p = pulses.find(x => x.hero); if (p) { p.stopped = 2.2; p.color = new THREE.Color(0xff4d3d).multiplyScalar(2.6); } hop('✕ 网关 fail-closed：UNAUTHENTICATED（未登录访问 C 级）', 'fail'); }
+      } else hop(i >= sc.ids.length - 1 ? `✓ 到达 ${byId[b].label}` : `→ ${byId[b].label}`);
+    },
+    onStop: (i, s) => {
+      const a = sc.ids[i], b = sc.ids[i + 1];
+      if (s === 'planned') hop(`■ 停在 ${byId[a].label}：${byId[b].label} 为 depends_on_planned，未接线`, 'stop');
+      else { const code = b === 'gw.control-tower' && effState['gw.dragonfly-session'] !== 'up' ? 'UNAVAILABLE（网关 readyz 失败，已摘流量）' : 'UNAVAILABLE'; hop(`✕ ${byId[b].label} 状态 ${s}：${code}`, 'fail'); }
+    } });
+}
+const scBox = document.getElementById('scenarios');
+for (const sc of SCENARIOS) { const b = document.createElement('button'); b.textContent = sc.name; b.onclick = () => runScenario(sc); scBox.appendChild(b); }
+
+// ═══════════════════════ 故障剧本 / 逐块开关 / 数据源 ═══════════════════════
+const PRESETS = [
+  { name: '全部恢复', apply: () => { rawState = { ...mockState }; } },
+  { name: 'node103 离线', apply: () => { rawState['k8s.node103'] = 'down'; } },
+  { name: 'Dragonfly Session 不可达', apply: () => { rawState['gw.dragonfly-session'] = 'down'; } },
+  { name: 'node3 隧道断开', apply: () => { for (const id of ['data.postgres','data.kafka','data.elasticsearch','obs.otel-collector','obs.vm','obs.vl','obs.vt','obs.gatus']) rawState[id] = 'down'; } },
+  { name: 'cart 依赖降级', apply: () => { rawState['svc.cart'] = 'degraded'; rawState['data.minio'] = 'down'; } },
+];
+const prBox = document.getElementById('presets');
+for (const p of PRESETS) { const b = document.createElement('button'); b.textContent = p.name; if (p.name !== '全部恢复') b.className = 'warn'; b.onclick = () => { p.apply(); refresh(); }; prBox.appendChild(b); }
+const fBox = document.getElementById('faults'); const selects = {};
+for (const b of BLOCKS) { const l = document.createElement('label'); const s = document.createElement('select'); for (const st of STATES) { const o = document.createElement('option'); o.value = st; o.textContent = st; s.appendChild(o); } s.onchange = () => { rawState[b.id] = s.value; refresh(); }; selects[b.id] = s; l.appendChild(s); l.appendChild(document.createTextNode(b.label)); fBox.appendChild(l); }
+let selected = null;
+function refresh() { computeEffective(); paintBlocks(); paintTracks(); for (const b of BLOCKS) { selects[b.id].value = rawState[b.id]; selects[b.id].disabled = mode === 'live'; } if (selected) showDetail(selected); }
+
+let liveTimer = null, liveFails = 0; const modeNote = document.getElementById('modeNote');
+document.getElementById('modeMock').onclick = () => setMode('mock'); document.getElementById('modeLive').onclick = () => setMode('live');
+function setMode(m) { mode = m; document.getElementById('modeMock').classList.toggle('on', m === 'mock'); document.getElementById('modeLive').classList.toggle('on', m === 'live'); clearInterval(liveTimer); modeNote.textContent = ''; if (m === 'live') { liveFails = 0; pollLive(); liveTimer = setInterval(pollLive, 10000); } else { rawState = { ...mockState }; refresh(); } }
+async function pollLive() {
+  try { const r = await fetch('/topology/state', { credentials: 'include' }); if (!r.ok) throw new Error(r.status); const j = await r.json(); const stale = (Date.now() - Date.parse(j.generated_at)) > 3 * (j.interval_seconds || 30) * 1000; for (const b of BLOCKS) rawState[b.id] = stale ? 'unknown' : (j.blocks?.[b.id]?.state || 'unknown'); rawState['obs.aggregator'] = stale ? 'unknown' : 'up'; liveFails = 0; modeNote.textContent = stale ? '样本过期' : '实时'; }
+  catch (e) { liveFails++; modeNote.textContent = `拉取失败 ${liveFails}/3`; for (const b of BLOCKS) if (b.source !== 'browser') rawState[b.id] = 'unknown'; if (liveFails >= 3) { setMode('mock'); modeNote.textContent = '真实源不可达，已退回模拟'; return; } }
+  refresh();
+}
+
+// ═══════════════════════ 拾取 / 标签 / HUD ═══════════════════════
+const ray = new THREE.Raycaster(), mouse = new THREE.Vector2();
+renderer.domElement.addEventListener('pointerdown', ev => { mouse.set((ev.clientX / innerWidth) * 2 - 1, -(ev.clientY / innerHeight) * 2 + 1); ray.setFromCamera(mouse, camera); const h = ray.intersectObject(blocksMesh)[0]; if (!h) return; const v = blocksGeo.index ? blocksGeo.index.getX(h.faceIndex * 3) : h.faceIndex * 3; const i = ranges.findIndex(([o, n]) => v >= o && v < o + n); if (i >= 0) { selected = BLOCKS[i]; showDetail(selected); } });
+function showDetail(b) { const s = effState[b.id], raw = rawState[b.id]; document.getElementById('detail').innerHTML = `<b>${b.label}</b> <span style="color:#7f8ea6">${b.id}</span><br>状态：<b>${s}</b>${s !== raw ? `（自身 ${raw}，受联动影响）` : ''} ${b.inferred ? '（推断态 ~）' : ''}<br>来源：${b.source}${b.node ? ` · 节点：${b.node}` : ''}${b.ext ? ' · 集群外依赖' : ''}<br>${b.ghost ? 'TECH.md §2.2 定义但未落地的规划位' : ''}`; }
+function mkLabel(text, cls) { const d = document.createElement('div'); d.className = cls; d.textContent = text; return new CSS2DObject(d); }
+for (const b of BLOCKS) { const l = mkLabel(b.label, 'label'); const p = b.isNode ? new THREE.Vector3(b.x, blockY[b.id] + 2.2, b.z - 9.5) : new THREE.Vector3(b.x, blockY[b.id] + ICON_H[b.icon] + 1.6, b.z); l.position.copy(p); scene.add(l); }
+
+// ═══════════════════════ 后处理 / 交互 / 主循环 ═══════════════════════
+const composer = new EffectComposer(renderer);
+composer.addPass(new RenderPass(scene, camera));
+const bloom = new UnrealBloomPass(new THREE.Vector2(innerWidth, innerHeight), 0.55, 0.35, 0.92);
+composer.addPass(bloom); composer.addPass(new OutputPass());
+const FOCUS = { 1: [[0, 24, -42], 26], 2: [[0, 16, -26], 26], 3: [[0, 8, 0], 32], 4: [[0, 0, 29], 30], 0: [[0, 8, -4], 46] };
+function focus(k) { const [t, h] = FOCUS[k]; controls.target.set(...t); camera.position.set(...t).addScaledVector(ISO_DIR, 220); VIEW_H = h; camera.zoom = 1; fitCamera(); }
+addEventListener('keydown', ev => { if (ev.code === 'Space') { pulsesPaused = !pulsesPaused; ev.preventDefault(); } if (ev.key === 'p' || ev.key === 'P') allPaused = !allPaused; if (FOCUS[ev.key]) focus(ev.key); });
+addEventListener('resize', () => { fitCamera(); renderer.setSize(innerWidth, innerHeight); composer.setSize(innerWidth, innerHeight); labelRenderer.setSize(innerWidth, innerHeight); });
+
+refresh();
+const clock = new THREE.Clock(); let fpsAcc = 0, fpsN = 0, lowSince = 0;
+function loop() {
+  requestAnimationFrame(loop);
+  const dt = Math.min(clock.getDelta(), 0.05), t = clock.elapsedTime;
+  controls.update();
+  if (!allPaused) { paintLamps(t); stepPulses(dt); }
+  composer.render(); labelRenderer.render(scene, camera);
+  fpsAcc += dt; fpsN++;
+  if (fpsAcc > 0.5) { const fps = fpsN / fpsAcc; document.getElementById('fps').textContent = `${fps.toFixed(0)} fps · 脉冲 ${pulses.length} · bloom ${bloom.enabled ? 'on' : 'off'}`; lowSince = fps < 45 ? lowSince + fpsAcc : 0; if (lowSince > 2 && bloom.enabled) bloom.enabled = false; fpsAcc = 0; fpsN = 0; }
+}
+loop();
+window.__voxel = { refresh, rawState, runScenario, SCENARIOS, PRESETS, focus };
+</script>
+</body>
+</html>

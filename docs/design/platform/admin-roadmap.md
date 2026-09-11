@@ -70,6 +70,13 @@ admin 微服务**承载（2026-08-12 决定，替代此前「按域下沉 `<域>
 的敏感内部 RPC 依赖调用方可信，而当前东西向没有 mTLS/服务身份（order→inventory
 已是同样处境的既有短板），admin-service 落地时需一并给内部 RPC 做调用方校验。
 
+**已登记的偏离（2026-09-09）**：通知与客服两个服务先于 admin-service 立项
+（[notification/notification.md](../notification/notification.md)、[support/support.md](../support/support.md)），
+admin app 在 admin-service 落地前**直接调 `notification.v1` 管理面与 `support.v1` 客服面**，入口由网关按
+Casdoor 角色约束（新增 `support` 角色，`admin ⊃ support`，不继承 merchant）。这两个面本身有独立 owner
+和自有状态，不违反上面的边界铁律；admin-service 落地时再决定是否把它们收成聚合读。客服不新建前端 app，
+复用 admin 并按角色隐藏路由。
+
 ## 三、现状 vs 市面 B2B2C 标配的差距
 
 | 竞品标配模块 | 本项目现状 |

@@ -77,6 +77,38 @@ Config Center 由 sibling 仓 control-tower 提供（SDK 为
 标题任一形式均可，允许 `**关键陷阱：具体标题**` 带副标题）；不是坑体裁的存量文件
 冻结在 `scripts/context-format-baseline.txt`，新文件必须合规。
 
+## frontmatter 与 `affects:` 反向索引
+
+每个非 INDEX 文件都有 frontmatter：`name`（= 文件名）、`description` 必填，`layer` / `module`
+可选但写了必须与路径一致（`[FRONTMATTER]` 门禁）。
+
+`affects:` 是可选的**反向依赖索引**：列出「实现或受本文约束」的代码路径。
+runbook §0.1 解决的是正向问题——动某类代码前读哪份文档；`affects:` 解决反向问题——
+**改了这份文档的约束后，要回头核对哪些实现**。没有它，规范改了、两周前按旧规范写的代码没人回头看，
+文档与实现就静默跑偏（典型：错误格式后来加了 `trace_id`，早期接口没跟）。
+
+```yaml
+---
+name: proto-design
+layer: team
+description: …
+affects:
+  - backend/api
+  - backend/structcheck/rpc_method_test.go
+---
+```
+
+规则：
+
+- 值是仓库相对路径，**文件或目录皆可，不支持 glob**；目录表示「其下全部」。
+- 每个路径必须真实存在，`scripts/verify-context.sh` 的 `[AFFECTS]` 检查兜底——索引一旦指向已删路径就是错的索引，比没有更糟。
+- 只登记**确定**的实现点。宁少勿滥：一份文档挂十几个泛目录（`backend/services`）等于没挂。
+- 登记时机是写规则 / experience 时顺手写；**不要为了「补全」一次性扫全仓**——那是形式主义，且会写出大量泛路径。
+- `docs/design/` 下的文件若带 frontmatter，同样可用 `affects:`。
+
+查询工具：`scripts/spec-impact.sh [git-diff 范围]`。它按改动文件双向查——改了文档 → 列出受影响路径并给出
+对应的验证命令；改了代码 → 列出声明依赖它的文档，提醒回写。默认比对工作树+暂存区相对 `HEAD`。
+
 ## 反模式
 
 - ❌ **同一条约束写两处** —— 口径会漂移。只写一处，另一处用链接指过去

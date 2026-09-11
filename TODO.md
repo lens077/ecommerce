@@ -25,7 +25,10 @@ todo-spec: 1
 
 ## 一、全局优先级视图
 
-**未完成合计 154 项，其中 P0 共 18 项**（计数口径：各分类文件顶层 `- [ ]` 复选框实数；
+**未完成合计 155 项，其中 P0 共 18 项**（计数口径：各分类文件顶层 `- [ ]` 复选框实数；
+2026-09-11 harness 补三处 Spec Coding 缺口（不新增待办）：规范文档 frontmatter `affects:` 反向索引 + `scripts/spec-impact.sh` 双向查影响（`[AFFECTS]` 守存在性，首批登记 4 份）；实现单终态 `done` 必带可验证「完成自检」（`[SELFCHECK]`）；验收标准限五种可判定形态——决策与替代方案见 [`context/decisions/implemented/2026-09-11-spec-reverse-index-and-selfcheck.md`](context/decisions/implemented/2026-09-11-spec-reverse-index-and-selfcheck.md)，事故（`git checkout --` 抹掉另一会话未提交产出、靠会话记录恢复）见 evolution-log；
+2026-09-10 新增 1 条前端 P2「全链路体素沙盘 S1–S3」——设计、状态契约、健康聚合器与视觉提示词见
+[`docs/design/platform/voxel-construction-site.md`](docs/design/platform/voxel-construction-site.md)，S0 单文件设计稿已在本机浏览器实测可运行；
 2026-09-01 新增 1 条可观测 P2「容器级 CFS 限流指标完全缺采」——`nr_throttled`/`throttled_usec`
 是「CPU 利用率低但尾延迟高」的唯一判据，当前无任何组件在采（VMAgent 未部署，otel-node 只有
 `hostmetrics`、无 `kubeletstats`/cAdvisor）；且现有采集恰好只覆盖会骗人的节点级 CPU——
@@ -83,10 +86,10 @@ CES 巡检告警（CronJob 2m + vmalert firing 闭环）、可观测黑盒探活
 | 分类 | 对应 TECH.md | 未完成 | P0 |
 |---|---|---:|---:|
 | [统一可观测性体系](docs/todo/统一可观测性体系.md) | §9 | 25 | 2 |
-| [微服务与交易闭环](docs/todo/微服务与交易闭环.md) | §5 / §4.3 | 23 | 10 |
+| [微服务与交易闭环](docs/todo/微服务与交易闭环.md) | §5 / §4.3 | 25 | 10 |
 | [基础设施与部署模型](docs/todo/基础设施与部署模型.md) | §7 | 20 | 0 |
 | [文档与协作机制](docs/todo/文档与协作机制.md) | —（harness） | 14 | 0 |
-| [前端技术栈与工程化](docs/todo/前端技术栈与工程化.md) | §11 | 16 | 0 |
+| [前端技术栈与工程化](docs/todo/前端技术栈与工程化.md) | §11 | 17 | 0 |
 | [零信任鉴权与 Session](docs/todo/零信任鉴权与Session.md) | §8 | 16 | 4 |
 | [供应链与交付流水线](docs/todo/供应链与交付流水线.md) | B 表 / §7.1 | 14 | 0 |
 | [数据一致性与事件驱动](docs/todo/数据一致性与事件驱动.md) | §3 / §4 | 17 | 2 |
@@ -228,6 +231,8 @@ CES 巡检告警（CronJob 2m + vmalert firing 闭环）、可观测黑盒探活
 >
 > **续：kit 生命周期加固（2026-09-06 代码态，未部署）**：对迁移结果做两轮异构复核后，修正 OTel 日志旁路动态级别、SDK 错误回灌同一 OTLP 日志管道、Fx 构造失败泄漏 worker、并发关闭提前返回，以及 Consul 关闭竞态、旧检查残留、心跳周期无约束和无界请求。最终发布 `go-connect-kit v0.4.2`（`70289a8`；取代复核过程中的 v0.4.0/v0.4.1），ecommerce 与 control-tower 均已升级且无 `replace`。kit 的 Fx 模块现自行注册 OnStart/OnStop；两仓 main 删除仅用于强制构造和手工关闭的接线，control-tower 网关的直连 Setup 路径也会在生命周期接管前的装配失败时关闭 SDK；merchant/payment 中两份零引用的 `ZapESLogger` 已删除。`CONSUL_ENABLED` 仍是仓内部署策略：ecommerce 由 `backend/pkg/registryconfig` 统一映射，control-tower 由 config registry adapter 映射，不再由 kit 读取，因此现有 `false` 不会因升级而重新开启注册。
 >
+> **续：模板链版本闭合与 `co upgrade`（2026-09-12 代码态）**：`control-tower v0.1.5` 仍 pin `go-connect-kit v0.3.0`，与本仓的 v0.4.3 打架；已发 `control-tower v0.1.6`（仅升 kit）、`go-connect-template v0.2.0`（manifest v3，kit v0.4.3 / control-tower v0.1.6）、`go-connect-template-cli v0.2.0`（`co upgrade`），本仓升到 control-tower v0.1.6。manifest v3 `root_packages: [constants]` 让 monorepo 生成物直接 import `backend/constants`，本仓补齐模板期望的 `DefaultDBPingTimeout` / `DefaultHealthCheckTimeout`。**对本仓 10 个存量服务 `co upgrade` 的边界**：它们生成于锚点机制之前，biz/data/server/service 四个接线文件报 `blocked`（含同包耦合的 `health.go`/`middleware.go`/拆出的 `cache_redis.go`/`db_postgres.go`），任何 `--write` 策略都不碰；默认 `--write`（只写 added）后 `go build` 绿。要吃到模板演进得先按模板同名文件位置手工补 `+co:anchor`，cart 上试过：补锚点 + `--write-modified` 后接线全部保住，剩 `cart.go` 用旧 `*LiveRedis` 一处业务适配。未对任何存量服务真实执行 `--write`。
+>
 > **续：Consul 注册改守护循环（2026-09-03 代码态，未部署）**：共享实现现位于 `go-connect-kit/registry`，其「一次注册 + 独立心跳」换成 `Maintain`（失败指数退避 1s→30s 无限重试；心跳失败即重注册；配置错误 `ErrInvalidOptions` 不重试；未注册过则退出时跳过注销）。触发事故：2026-08-29 `payment` 单服务（已记 experience 标「遗留未改」）→ 2026-09-02 整机重启后 10 个服务全部一次注册超时、Consul 目录只剩自己、dev 网关 `readyz` 503 持续 ≥97min（探针失败 x1177）。cart 真实适配层打真实 Consul 实测：起得慢→第 6 次重试成功；外部注销→6s 内重注册；隧道断→恢复后 11s 重注册。模板仓 `go-connect-template` 同步。**2026-09-03 已部署并全关**：10 个服务镜像先以工作树 `dev-20260903-aa25aee` 止血、随后按提交 SHA 重打为 `sha-c364128`（digest 固定进各 deploy/dev/deployment.yaml，消除了仓库 `:dev`/`meili-dev-*` 与集群 `sha-0b9b9ad`/`health-*` 的长期漂移；含守护循环）已发布，deployment 全部 `CONSUL_ENABLED=false`（当前不需要服务发现），日志均「Consul disabled by environment variable」。网关侧：Config Center `gateway/dev/routes.yaml` 11 条 target 改 `direct://ecommerce-<svc>-service.ecommerce.svc:<port>`（control-tower `routes/dev.yaml` 同步），`rollout restart` 后新 Pod `discovery_services=[]` 走 `noResolver`，`readyz` 200 且不再依赖 Consul 目录——「全关则永久红」的前提已消除。同日还修了一个独立故障：Cilium ipcache 丢失 `consul-server-0` 条目（全集群 71 CEP 仅此一个，node101/102 无条目、node103 标 `reserved:unmanaged`），`cilium monitor` 抓到 `Policy denied ->unmanaged`，给 Pod 打 label 触发 CEP 更新即恢复。**仍未做**：「注册数 < 预期」告警（当前不注册，暂无意义）；Consul 重开时需同时翻开关 + 路由改回 `discovery:///`。复盘 [docs/reports/2026-09-03-consul-register-once-recurrence.md](docs/reports/2026-09-03-consul-register-once-recurrence.md)。
 
 ### 4. 网关与鉴权（2026-08-29 实测）
@@ -237,10 +242,14 @@ CES 巡检告警（CronJob 2m + vmalert firing 闭环）、可观测黑盒探活
 | control-tower 网关/config 合一 | ✅ | gateway、config、config-web 均已切流；本仓旧 `gateway/` 已删除 |
 | BFF 会话（Web + 桌面） | ✅ | Web 用 httpOnly cookie、Tauri 用 session header，`/auth/me` 为登录态真相源；浏览器侧令牌机制全部退场 |
 | legacy bearer JWT 轨 | 🔴 | **仍在网关**，与 TECH.md §13 红线冲突，需定退役期限 |
-| RBAC | 🟡 | order/payment/merchant/inventory 已按 RPC 粒度授权；其余服务整段放行待细化 |
+| RBAC | 🟡 | order/payment/merchant/inventory 已按 RPC 粒度授权；其余服务整段放行待细化。**方法层绕过核查〔2026-09-11〕**：14 份 proto 零 `NO_SIDE_EFFECTS`、后端无裸 `HandleFunc`、Casbin 无匹配即拒，方法改写不可利用；补三道门禁——control-tower `authz` p 行 act 列只认字面 `POST`（通配拒载）、structcheck `TestNoSideEffectsRPCsAreAllowlisted`、merchant 审批 RPC handler 内 `identity.RequireRole(admin)`。**未核**：线上 `policies.csv` 第四列（Config Center 连不上 PG），带门禁的网关上线前必须先核，否则启动即 `AUTHZ_NOT_READY` |
 | OpenFGA | 🟡 | 集群 2/2 Running，**业务未接线**；对象级授权仍是 Casbin |
 
 ### 5. 前端
+
+2026-09-10：页内智能助手 `@ecommerce/copilot` 在分支 `feat/copilot-ui-mode` 落地（待验收后合并）：固定句式 → 页面动作，朱红渐变蒙层 + 大指针在页内替用户操作；三条链路（用户搜商品 / 商家筛待发货 / 管理员开新建的 `/monitor` 页）由 `pnpm e2e:copilot` 6 条 Playwright 用例覆盖。缺口：`/monitor` 健康数据源未接（卡片显示「未接入」）、merchant 订单页仍是 mock。设计与落地差异见 [`docs/design/copilot/copilot.md`](docs/design/copilot/copilot.md)。
+
+2026-09-10：前端统一升级到 React 19.3.0；consumer-next 商品详情 SKU 卡片采用稳定的 `ViewTransition`，保持数据与 DOM 语义不变。
 
 > **依赖与工具链升级（2026-09-05）**：pnpm 固定到 12.3.4，Vite+ 升至 0.3.0 并对齐内置 Vitest 4.1.11；其余直接依赖升级到最新稳定版。基于 6 轮本仓 A/B，精确锁定 Next.js 16.4.0-canary.18（cold/warm build 中位数 -19.1%/-7.8%，cache -34.6%）和 TypeScript 7.1.0-dev.20260904.1（typecheck 峰值 RSS -17.5%～-20.3%）；SSR、真实 Edge hydration、`pnpm ready`、peer/dedupe/frozen-lockfile 均通过。证据见 [`frontend/.scratch/2026-09-05-prerelease-evaluation.md`](frontend/.scratch/2026-09-05-prerelease-evaluation.md)。
 
@@ -326,6 +335,9 @@ CES 巡检告警（CronJob 2m + vmalert firing 闭环）、可观测黑盒探活
 3. 对象级授权按 TECH.md §8 落 OpenFGA（集群 2/2 Running〔实测 2026-08-30〕已就绪，缺业务接线）
 4. 履约并入 order 域（发货、物流单、轨迹、第三方 adapter）；
    没有独立伸缩/故障域证据不新建 fulfillment 服务
+5. 通知与客服两个新服务（设计已定 2026-09-09：[notification](docs/design/notification/notification.md) 系统发信 →
+   [support](docs/design/support/support.md) 客服收件）；新增 Casdoor `support` 角色，客服复用 admin app；
+   工单是 OpenFGA 首个接线试点（与第 3 项合流）。细目见分类文件 P2
 
 ### 阶段 3 · 事件、交付与可靠性闭环
 

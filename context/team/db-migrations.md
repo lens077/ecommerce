@@ -2,6 +2,9 @@
 name: db-migrations
 layer: team
 description: 数据库结构变更与种子数据的唯一路径——goose 版本化迁移（tools/dbmigrate）、baseline 接管存量库、幂等种子、与 sqlc 的单一真相源关系，以及三处实测踩过的坑
+affects:
+  - backend/tools/dbmigrate
+  - backend/sqlc.yaml
 ---
 
 # 数据库迁移与种子数据

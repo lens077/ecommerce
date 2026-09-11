@@ -112,9 +112,11 @@ if (rootElement && !rootElement.innerHTML) {
                 <DesktopSettingsDialog />
               </Suspense>
             )}
+            {/* 右下角留给智能助手的悬浮按钮（@ecommerce/copilot）；devtools 触发钮挪去左下，
+                否则两个 fixed 元素叠在一起，devtools 的会截住助手按钮的点击（Playwright 实测） */}
             <ReactQueryDevtools
               initialIsOpen={false}
-              buttonPosition="bottom-right"
+              buttonPosition="bottom-left"
               position="bottom"
             />
           </QueryClientProvider>

@@ -5,7 +5,7 @@
 # verify-agent-note-format / verify-doc-budgets)移植,落地方式沿用本仓惯例:
 # 能判定的约束变成脚本,存量漂移走基线棘轮(见 scripts/lint-baseline.sh 的设计)。
 #
-# 十项检查(任一违规 → 退出码 1):
+# 十一项检查(任一违规 → 退出码 1;RETIRED、LIVE-FACT 两项在正文各自注释处说明):
 #   [DEAD-LINK]    AGENTS.md/README.md/STACK.md/TODO.md 与 context/**、docs/** 全树的
 #                  相对 markdown 链接必须可达
 #                  (2026-08-26 扩:原只查 AGENTS+context,当日 README/STACK/docs/design
@@ -43,6 +43,12 @@
 #                  重写投影,手改投影会被下次重写覆盖。参照 deepseek-harness 的
 #                  gen-config-catalog --check。2026-09-03 立此门禁——同日清点 523 个
 #                  文档代码块,docs/design 下 5 个域的 DDL/proto 摘录名字都已对不上源码
+#   [AFFECTS]     context/**、docs/design/** 的 frontmatter `affects:`(反向依赖索引:改本文约束后
+#                  要回头核对的代码路径)每一项必须真实存在、不含 glob。指向已删路径的索引会让人
+#                  以为核对过了。查询工具 scripts/spec-impact.sh。2026-09-11 立,见 evolution-log
+#   [SELFCHECK]   .scratch/*/issues/*.md 标 `Status: done` 的实现单必须有「## 完成自检」,且每条
+#                  `- [x]`/`- [ ]` 带 `——` 后的证据或原因——「代码写完 = 完成」是最常见的假成功。
+#                  2026-09-11 立,见 evolution-log
 #
 # 基线棘轮(两份):
 #   scripts/context-format-baseline.txt   —— [FORMAT] 的存量违规冻结放行
@@ -480,10 +486,65 @@ else
   done < <(python3 scripts/doc-embed.py --check 2>&1 >/dev/null | grep '\[EMBED\]' || true)
 fi
 
+# ── [AFFECTS] frontmatter affects: 反向索引指向的路径必须存在 ──────
+# affects: 登记「实现或受本文约束」的代码路径,供 scripts/spec-impact.sh 在改动文档时反查
+# 该回头核对哪些实现(约定见 context/harness-framework/knowledge-layering.md)。
+# 指向已删路径的索引比没有更糟——它会让人以为核对过了。块列表写法:
+#   affects:
+#     - backend/api
+#     - backend/structcheck/rpc_method_test.go
+# 2026-09-11 立此检查,见 evolution-log 同日条目。
+while IFS= read -r file; do
+  [ "$(head -1 "$file")" = "---" ] || continue
+  fm=$(awk 'NR==1{next} /^---$/{exit} {print}' "$file")
+  printf '%s\n' "$fm" | grep -q '^affects:' || continue
+  entries=$(printf '%s\n' "$fm" | awk '
+    /^affects:[[:space:]]*$/ { on=1; next }
+    on && /^[[:space:]]+-[[:space:]]+/ { sub(/^[[:space:]]+-[[:space:]]+/, ""); gsub(/[[:space:]]+$/, ""); print; next }
+    on { on=0 }')
+  if [ -z "$entries" ]; then
+    fail "AFFECTS" "$file 的 affects: 为空——要么删掉这个键,要么用块列表写路径(不支持 affects: [a, b] 行内写法)"
+    continue
+  fi
+  while IFS= read -r p; do
+    [ -z "$p" ] && continue
+    case "$p" in
+      /*|*'*'*|*'?'*) fail "AFFECTS" "$file affects: '$p' 必须是仓库相对路径且不含 glob"; continue ;;
+    esac
+    [ -e "$p" ] || fail "AFFECTS" "$file affects: '$p' 不存在——路径已删/已搬,索引要跟着改"
+  done <<< "$entries"
+done < <(find context docs/design -name "*.md" ! -name "INDEX.md" -type f 2>/dev/null)
+
+# ── [SELFCHECK] 实现单标 done 必须带「完成自检」 ─────────────────
+# .scratch/<feature>/issues/NN-*.md 的 Status: 改成 done 时,文件里必须有 `## 完成自检` 小节,
+# 且其下每条 `- [x]` / `- [ ]` 都要带 `——` 后的证据或原因(格式见 docs/agents/issue-tracker.md)。
+# 「写完代码 = 任务完成」是 AI 交付最常见的假成功;自检行没有证据等于没自检。
+# wayfinder 的研究类子单(Type: research/prototype/grilling,用 resolved 关单)不在此列。
+# 2026-09-11 立此检查,见 evolution-log 同日条目。
+while IFS= read -r file; do
+  grep -qE '^Status:[[:space:]]*done[[:space:]]*$' "$file" || continue
+  if ! grep -qE '^## 完成自检' "$file"; then
+    fail "SELFCHECK" "$file 标了 Status: done 却没有「## 完成自检」小节——模板见 docs/agents/issue-tracker.md"
+    continue
+  fi
+  items=$(awk '/^## 完成自检/{on=1; next} on && /^## /{on=0} on && /^- \[[ x]\] /{print}' "$file")
+  if [ -z "$items" ]; then
+    fail "SELFCHECK" "$file 的「完成自检」下没有任何 \`- [x]\` / \`- [ ]\` 条目"
+    continue
+  fi
+  while IFS= read -r it; do
+    [ -z "$it" ] && continue
+    tail_part="${it#*——}"
+    if [ "$tail_part" = "$it" ] || [ -z "$(printf '%s' "$tail_part" | tr -d '[:space:]')" ]; then
+      fail "SELFCHECK" "$file 自检条目缺 \`——\` 后的证据/原因:${it}"
+    fi
+  done <<< "$items"
+done < <(find .scratch -path '*/issues/*.md' -type f 2>/dev/null)
+
 # ── 汇总 ─────────────────────────────────────────────────────
 if [ -s "$violations" ]; then
   echo "verify-context: 发现 $(wc -l < "$violations" | tr -d ' ') 处违规"
   cat "$violations"
   exit 1
 fi
-echo "verify-context: OK(链接/INDEX 覆盖/frontmatter/experience 格式/evolution-log/决策记录/预算/并行进度源/退役物横幅/实测日期/受管代码块 全部通过)"
+echo "verify-context: OK(链接/INDEX 覆盖/frontmatter/experience 格式/evolution-log/决策记录/预算/并行进度源/退役物横幅/实测日期/受管代码块/affects 索引/完成自检 全部通过)"

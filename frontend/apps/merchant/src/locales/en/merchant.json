@@ -153,5 +153,15 @@
     "ship": "Ship",
     "changeAvatar": "Change shop avatar",
     "statusFilter": "Filter by status"
+  },
+  "copilot": {
+    "examples": {
+      "unshipped1": "Show me the unshipped orders",
+      "unshipped2": "Look at orders not yet shipped",
+      "unshipped3": "Find orders pending shipment"
+    },
+    "switchFilter": "Switch the status filter",
+    "tableHighlight": "These are the {{status}} orders",
+    "count": "{{count}} {{status}} orders in total."
   }
 }

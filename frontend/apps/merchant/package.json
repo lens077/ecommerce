@@ -16,6 +16,7 @@
     "@ecommerce/api": "workspace:*",
     "@ecommerce/configs": "workspace:*",
     "@ecommerce/constants": "workspace:*",
+    "@ecommerce/copilot": "workspace:*",
     "@ecommerce/i18n": "workspace:*",
     "@ecommerce/icons": "workspace:*",
     "@ecommerce/tauri": "workspace:*",

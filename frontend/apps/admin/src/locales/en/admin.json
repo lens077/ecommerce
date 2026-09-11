@@ -12,7 +12,8 @@
       "users": "Users",
       "categories": "Categories",
       "reports": "Reports",
-      "settings": "Settings"
+      "settings": "Settings",
+      "monitor": "Monitoring"
     },
     "version": "Platform v{{version}}"
   },
@@ -213,5 +214,24 @@
       "sensitiveOpVerify": "Require re-verification for sensitive actions"
     },
     "save": "Save settings"
+  },
+  "monitor": {
+    "title": "Service monitoring",
+    "subtitle": "Health of each business service. No data source is wired yet; cards show a placeholder state.",
+    "gatewayPrefix": "Gateway prefix {{prefix}}",
+    "status": {
+      "unknown": "Not connected"
+    },
+    "gridLabel": "Service health"
+  },
+  "copilot": {
+    "examples": {
+      "monitor1": "Show me the monitoring",
+      "monitor2": "Open the monitoring page",
+      "monitor3": "Check service monitoring"
+    },
+    "goto": "Taking you to the monitoring page",
+    "gridHighlight": "Here is the health of each service",
+    "arrived": "Monitoring page opened, {{count}} services listed."
   }
 }

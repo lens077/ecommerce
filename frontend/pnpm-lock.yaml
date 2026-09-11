@@ -146,6 +146,9 @@ catalogs:
     '@mui/utils':
       specifier: ^9.4.0
       version: 9.4.0
+    '@playwright/test':
+      specifier: ^1.63.0
+      version: 1.63.0
     '@t3-oss/env-core':
       specifier: ^0.13.11
       version: 0.13.11
@@ -288,6 +291,9 @@ importers:
       '@commitlint/config-conventional':
         specifier: ^21.2.2
         version: 21.2.2
+      '@playwright/test':
+        specifier: 'catalog:'
+        version: 1.63.0
       knip:
         specifier: 'catalog:'
         version: 6.34.0
@@ -318,6 +324,9 @@ importers:
       '@ecommerce/constants':
         specifier: workspace:*
         version: link:../../packages/constants
+      '@ecommerce/copilot':
+        specifier: workspace:*
+        version: link:../../packages/copilot
       '@ecommerce/i18n':
         specifier: workspace:*
         version: link:../../packages/i18n
@@ -409,6 +418,9 @@ importers:
       '@ecommerce/constants':
         specifier: workspace:*
         version: link:../../packages/constants
+      '@ecommerce/copilot':
+        specifier: workspace:*
+        version: link:../../packages/copilot
       '@ecommerce/i18n':
         specifier: workspace:*
         version: link:../../packages/i18n
@@ -553,7 +565,7 @@ importers:
         version: 5.102.8(react@19.3.0)
       next:
         specifier: 'catalog:'
-        version: 16.4.0-canary.18(@babel/core@7.29.7)(@types/node@26.4.1)(babel-plugin-macros@3.1.0)(react-dom@19.3.0(react@19.3.0))(react@19.3.0)
+        version: 16.4.0-canary.18(@babel/core@7.29.7)(@playwright/test@1.63.0)(@types/node@26.4.1)(babel-plugin-macros@3.1.0)(react-dom@19.3.0(react@19.3.0))(react@19.3.0)
       react:
         specifier: 'catalog:'
         version: 19.3.0
@@ -603,6 +615,9 @@ importers:
       '@ecommerce/constants':
         specifier: workspace:*
         version: link:../../packages/constants
+      '@ecommerce/copilot':
+        specifier: workspace:*
+        version: link:../../packages/copilot
       '@ecommerce/i18n':
         specifier: workspace:*
         version: link:../../packages/i18n
@@ -721,6 +736,58 @@ importers:
         version: link:../utils
 
   packages/constants: {}
+
+  packages/copilot:
+    dependencies:
+      '@ecommerce/i18n':
+        specifier: workspace:*
+        version: link:../i18n
+      '@ecommerce/icons':
+        specifier: workspace:*
+        version: link:../icons
+      '@emotion/react':
+        specifier: 'catalog:'
+        version: 11.14.0(@types/react@19.3.0)(react@19.3.0)
+      '@emotion/styled':
+        specifier: 'catalog:'
+        version: 11.14.1(@emotion/react@11.14.0(@types/react@19.3.0)(react@19.3.0))(@types/react@19.3.0)(react@19.3.0)
+      '@mui/material':
+        specifier: 'catalog:'
+        version: 9.4.0(@emotion/react@11.14.0(@types/react@19.3.0)(react@19.3.0))(@emotion/styled@11.14.1(@emotion/react@11.14.0(@types/react@19.3.0)(react@19.3.0))(@types/react@19.3.0)(react@19.3.0))(@types/react@19.3.0)(react-dom@19.3.0(react@19.3.0))(react@19.3.0)
+      react:
+        specifier: 'catalog:'
+        version: 19.3.0
+      react-dom:
+        specifier: 'catalog:'
+        version: 19.3.0(react@19.3.0)
+      zustand:
+        specifier: 'catalog:'
+        version: 5.0.15(@types/react@19.3.0)(react@19.3.0)(use-sync-external-store@1.6.0(react@19.3.0))
+    devDependencies:
+      '@testing-library/react':
+        specifier: 'catalog:'
+        version: 16.3.3(@testing-library/dom@10.4.1)(@types/react-dom@19.3.0(@types/react@19.3.0))(@types/react@19.3.0)(react-dom@19.3.0(react@19.3.0))(react@19.3.0)
+      '@types/react':
+        specifier: 'catalog:'
+        version: 19.3.0
+      '@types/react-dom':
+        specifier: 'catalog:'
+        version: 19.3.0(@types/react@19.3.0)
+      jsdom:
+        specifier: 'catalog:'
+        version: 30.0.1
+      typescript:
+        specifier: 'catalog:'
+        version: 7.1.0-dev.20260904.1
+      vite:
+        specifier: npm:@voidzero-dev/vite-plus-core@0.3.0
+        version: '@voidzero-dev/vite-plus-core@0.3.0(@types/node@26.4.1)(jiti@2.7.0)(typescript@7.1.0-dev.20260904.1)(yaml@2.9.0)'
+      vite-plus:
+        specifier: 'catalog:'
+        version: 0.3.0(@types/node@26.4.1)(@vitest/browser-playwright@4.1.11)(@voidzero-dev/vite-plus-core@0.3.0(@types/node@26.4.1)(jiti@2.7.0)(typescript@7.1.0-dev.20260904.1)(yaml@2.9.0))(jiti@2.7.0)(jsdom@30.0.1)(typescript@7.1.0-dev.20260904.1)(yaml@2.9.0)
+      vitest:
+        specifier: 4.1.11
+        version: 4.1.11(@types/node@26.4.1)(@vitest/browser-playwright@4.1.11)(@vitest/browser-preview@4.1.11)(@voidzero-dev/vite-plus-core@0.3.0(@types/node@26.4.1)(jiti@2.7.0)(typescript@7.1.0-dev.20260904.1)(yaml@2.9.0))(jsdom@30.0.1)
 
   packages/i18n:
     dependencies:
@@ -2205,6 +2272,11 @@ packages:
   '@oxlint/plugins@1.79.0':
     resolution: {integrity: sha512-S0uyoxakDINJ4DPgqxGlEEvrdSMeQb7Z2lKVjxoY2gwsbZbfg2Xr8Klfeo5ZeraHmmdBCELFUHkSe6KEmBpMvg==}
     engines: {node: ^12.22.0 || ^14.17.0 || >=16.0.0}
+
+  '@playwright/test@1.63.0':
+    resolution: {integrity: sha512-oxMK4vllB9RK5NQ2l1pq1IfOf2AvnEuj/vYGDj0H2nMtmtZpKtCwt/l00GEO6xjGfpBNAvjovvYdCm50dRQkpQ==}
+    engines: {node: '>=20'}
+    hasBin: true
 
   '@polka/url@1.0.0-next.29':
     resolution: {integrity: sha512-wwQAWhWSuHaag8c4q/KN/vCoeOJYshAIvMQwD4GpSb3OiZklFfvAgmj0VCBBImRpuF/aFgIRzllXlVX93Jevww==}
@@ -5087,6 +5159,10 @@ snapshots:
 
   '@oxlint/plugins@1.79.0': {}
 
+  '@playwright/test@1.63.0':
+    dependencies:
+      playwright: 1.63.0
+
   '@polka/url@1.0.0-next.29': {}
 
   '@popperjs/core@2.11.8': {}
@@ -6102,7 +6178,7 @@ snapshots:
 
   nanoid@3.3.18: {}
 
-  next@16.4.0-canary.18(@babel/core@7.29.7)(@types/node@26.4.1)(babel-plugin-macros@3.1.0)(react-dom@19.3.0(react@19.3.0))(react@19.3.0):
+  next@16.4.0-canary.18(@babel/core@7.29.7)(@playwright/test@1.63.0)(@types/node@26.4.1)(babel-plugin-macros@3.1.0)(react-dom@19.3.0(react@19.3.0))(react@19.3.0):
     dependencies:
       '@next/env': 16.4.0-canary.18
       '@swc/helpers': 0.5.23
@@ -6121,6 +6197,7 @@ snapshots:
       '@next/swc-linux-x64-musl': 16.4.0-canary.18
       '@next/swc-win32-arm64-msvc': 16.4.0-canary.18
       '@next/swc-win32-x64-msvc': 16.4.0-canary.18
+      '@playwright/test': 1.63.0
       sharp: 0.35.4(@types/node@26.4.1)
     transitivePeerDependencies:
       - '@babel/core'

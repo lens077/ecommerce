@@ -13,6 +13,14 @@
 
 沿用默认值，两列一致。
 
+本仓额外增加一个**终态**，不在 mattpocock 的五角色里，skill 不会主动写它：
+
+| 本仓库使用的字符串 | 含义 |
+| ------------------ | ---- |
+| `done`             | 实现单已完成并填了「完成自检」（格式见 `issue-tracker.md`；`verify-context.sh` 的 `[SELFCHECK]` 强制） |
+
+wayfinder 的研究类子单另有 `claimed` / `resolved`，见 `issue-tracker.md`「Wayfinding operations」。
+
 ## 本仓库的承载方式
 
 本仓库用的是**本地 markdown** tracker（见 `docs/agents/issue-tracker.md`），没有 tracker 侧的

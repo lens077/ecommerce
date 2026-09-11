@@ -17,7 +17,7 @@ require (
 	github.com/exaring/otelpgx v0.11.1
 	github.com/google/uuid v1.6.0
 	github.com/jackc/pgx/v5 v5.10.0
-	github.com/lens077/control-tower v0.1.5
+	github.com/lens077/control-tower v0.1.6
 	github.com/lens077/go-connect-kit v0.4.3
 	github.com/pressly/goose/v3 v3.27.3
 	github.com/redis/go-redis/v9 v9.22.0

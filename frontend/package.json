@@ -10,12 +10,14 @@
     "dev:merchant": "vp run merchant#dev",
     "desktop": "pnpm --filter @ecommerce/desktop dev:consumer",
     "desktop:merchant": "pnpm --filter @ecommerce/desktop dev:merchant",
-    "prepare": "vp config"
+    "prepare": "vp config",
+    "e2e:copilot": "playwright test -c e2e/playwright.config.ts"
   },
   "devDependencies": {
     "@bufbuild/protoc-gen-es": "catalog:",
     "@commitlint/cli": "^21.2.2",
     "@commitlint/config-conventional": "^21.2.2",
+    "@playwright/test": "catalog:",
     "knip": "catalog:",
     "typescript": "catalog:",
     "vite": "npm:@voidzero-dev/vite-plus-core@0.3.0",

@@ -70,6 +70,10 @@ const names = [
   "Tag",
   "Badge",
   "Mail",
+  "Sparkles",
+  "Send",
+  "Square",
+  "Activity",
 ] as const;
 
 export const iconsByName = Object.fromEntries(
@@ -114,6 +118,10 @@ export const {
   X,
   XCircle,
   BarChart3,
+  Sparkles,
+  Send,
+  Square,
+  Activity,
 } = iconsByName;
 
 export const AccountCircle = iconsByName.CircleUserRound;
