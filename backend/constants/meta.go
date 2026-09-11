@@ -1,8 +1,24 @@
 package constants
 
+import "time"
+
 const (
 	Host = "localhost"
 	Port = "8080"
+)
+
+// 基础设施超时兜底值。配置里没写对应字段时用这些,
+// 不能留零值:context.WithTimeout(0) 会立刻超时,连接本身没问题也起不来。
+//
+// 与 go-connect-template/constants 对齐:monorepo 下模板生成的服务不再各带一份
+// constants 副本(manifest v3 root_packages),直接 import 本包,这两个名字必须在。
+const (
+	// DefaultDBPingTimeout 建池后的首次探活超时
+	DefaultDBPingTimeout = 5 * time.Second
+
+	// DefaultHealthCheckTimeout /healthz 里每个依赖的单项检查超时。
+	// 要明显小于 Consul 的 check.ttl,否则健康检查还没返回就被判 critical。
+	DefaultHealthCheckTimeout = 2 * time.Second
 )
 
 // RPC metadata

@@ -84,7 +84,7 @@
 | `github.com/jackc/pgservicefile` | v0.0.0-20240606120523-5a60cdf6a761 | MIT | LICENSE |
 | `github.com/jackc/pgx/v5` | v5.10.0 | MIT | LICENSE |
 | `github.com/jackc/puddle/v2` | v2.2.2 | MIT | LICENSE |
-| `github.com/lens077/control-tower` | v0.1.5 | CC-BY-NC-SA-4.0 | LICENSE |
+| `github.com/lens077/control-tower` | v0.1.6 | CC-BY-NC-SA-4.0 | LICENSE |
 | `github.com/lens077/go-connect-kit` | v0.4.3 | CC-BY-NC-SA-4.0 | LICENSE |
 | `github.com/lib/pq` | v1.12.3 | MIT | LICENSE |
 | `github.com/mattn/go-colorable` | v0.1.15 | MIT | LICENSE |
