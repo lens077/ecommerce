@@ -1,93 +1,95 @@
-# Ecommerce — Go 微服务电商
+**English** | [简体中文](README.zh-CN.md)
+
+# Ecommerce — Go Microservices E-commerce
 
 [![License: CC BY-NC-SA 4.0](https://img.shields.io/badge/License-CC%20BY--NC--SA%204.0-blue.svg)](LICENSE) ![Go](https://img.shields.io/badge/Go-1.27-00ADD8?logo=go&logoColor=white) ![React](https://img.shields.io/badge/React-19-61DAFB?logo=react&logoColor=black) ![TypeScript](https://img.shields.io/badge/TypeScript-7.0-3178C6?logo=typescript&logoColor=white) ![Kubernetes](https://img.shields.io/badge/Kubernetes-Cilium%20Gateway%20API-326CE5?logo=kubernetes&logoColor=white) ![PRs Welcome](https://img.shields.io/badge/PRs-welcome-brightgreen.svg)
 
-Golang + React 的 B2B2C 多商家电商实践项目：10 个后端微服务、control-tower 平台控制面与 pnpm monorepo 前端。消费者端已有部分业务，商家端和管理端仍以骨架为主；当前没有独立物流端或仓储端，也没有百万/千万级容量验收结论。
+A B2B2C multi-vendor e-commerce project built with Go and React: 10 backend microservices, the control-tower platform control plane, and a pnpm monorepo frontend. The consumer app already carries part of the business flow; the merchant and admin apps are still mostly scaffolding. There is no standalone logistics or warehouse app yet, and no validated conclusion about million/ten-million-scale capacity.
 
-本项目的组成使用(或部分使用)了本人其他的仓库：
+This project uses (in whole or in part) my other repositories:
 
-1. 网关与配置控制面: https://github.com/lens077/control-tower （同级仓，gateway/config 已切流）
-2. 云原生基础设施部署: https://github.com/lens077/cloud-native-deploy
-3. 微服务开发脚手架: https://github.com/lens077/go-connect-template-cli
-4. 微服务项目模板: https://github.com/lens077/go-connect-template
+1. Gateway and config control plane: https://github.com/lens077/control-tower (sibling repo; gateway/config traffic already switched over)
+2. Cloud-native infrastructure deployment: https://github.com/lens077/cloud-native-deploy
+3. Microservice scaffolding CLI: https://github.com/lens077/go-connect-template-cli
+4. Microservice project template: https://github.com/lens077/go-connect-template
 
-## 技术栈
+## Tech stack
 
-| 领域 | 选型 |
+| Area | Choice |
 |---|---|
-| 后端 | Go、ConnectRPC Go、Protobuf/Buf、Protovalidate、Fx、pgx、sqlc、goose、OpenTelemetry |
-| 前端 | React、TypeScript、ConnectRPC/Protobuf-ES、pnpm workspace、vite-plus（vp）、Tauri |
-| 网关/配置 | [control-tower](https://github.com/lens077/control-tower)：Casdoor 有状态 Session（BFF）、Connect 直通（H2C）、Config Center；目标按 [`docs/TECH.md`](docs/TECH.md) 以 OpenFGA 关系授权取代存量 Casbin、移除 legacy JWT 兼容轨；默认无重试、无 BBR/熔断/HTTP/3 |
-| 数据 | node3 Pigsty PostgreSQL（Patroni HA + PgBouncer，UUIDv7 主键）、Dragonfly（分实例：Session/Cache/限流，业务可丢缓存 + BFF session）、Silo（基于 MinIO，定稿）；search 已通过 `SearchCatalog` 读取 Elasticsearch 稳定 alias，策展投影由 `products.search_catalog` 经 Debezium → Kafka → Elasticsearch Sink 搬运；Meilisearch 运行资源已于 2026-09-04 完整退役，CNPG 已清理 |
-| 事件 | 主干定稿为外部非 K8s Apache Kafka；领域事件目标链为 PostgreSQL Outbox → Debezium Outbox Event Router → Kafka → Inbox 幂等 + DLQ，当前零业务生产者/消费者；NATS JetStream、自写 relay 与 search indexer 已退役 |
-| 注册/配置 | 服务发现定稿 K8s Service + CoreDNS；pre 半生产测试走 Docker Compose 服务名，开发内环（mirrord/Okteto）评估中；Consul 为存量迁移期组件；Config Center 是 10 个服务唯一 Bootstrap 来源 |
-| 边缘/安全 | Cilium CNI/KPR/LB/Gateway API、cert-manager、ESO + Vault；业务服务的默认拒绝 NetworkPolicy 和 east-west 身份仍不完整 |
-| 制品/交付 | Docker Buildx、GitHub Actions、Renovate；制品分工（[`docs/TECH.md`](docs/TECH.md) §7.1）：TCR 为主镜像仓库（集群直连拉取）、Harbor 存 Helm 制品（OCI）、GHCR 可选双存（镜像+Helm，是否推送由 CI 按网络决定）；Kubernetes manifest、Helm；ArgoCD 当前断线 |
-| 可观测性 | OpenTelemetry、Vector、VictoriaMetrics/Logs/Traces、Grafana、vmalert、Alertmanager；外部告警通知仍未闭环 |
-| 工程工具 | vite-plus、oxlint/oxfmt、Vitest/Playwright、Buf breaking、structcheck、verify-context/canary、commitlint |
+| Backend | Go, ConnectRPC Go, Protobuf/Buf, Protovalidate, Fx, pgx, sqlc, goose, OpenTelemetry |
+| Frontend | React, TypeScript, ConnectRPC/Protobuf-ES, pnpm workspace, vite-plus (`vp`), Tauri |
+| Gateway / config | [control-tower](https://github.com/lens077/control-tower): Casdoor stateful session (BFF), Connect pass-through (H2C), Config Center; per [`docs/TECH.md`](docs/TECH.md) the target is OpenFGA relationship-based authorization replacing the legacy Casbin and removing the legacy JWT compatibility track; no retries, BBR/circuit breaking, or HTTP/3 by default |
+| Data | node3 Pigsty PostgreSQL (Patroni HA + PgBouncer, UUIDv7 primary keys), Dragonfly (separate instances for session / cache / rate limiting; business-side lossy cache + BFF session), Silo (MinIO-based, finalized); search reads the stable Elasticsearch alias through `SearchCatalog`, with the curated projection moved from `products.search_catalog` via Debezium → Kafka → Elasticsearch Sink; Meilisearch runtime resources were fully retired on 2026-09-04 and CNPG has been cleaned up |
+| Events | Backbone finalized as external, non-K8s Apache Kafka; the target domain-event chain is PostgreSQL Outbox → Debezium Outbox Event Router → Kafka → idempotent Inbox + DLQ, currently with zero business producers/consumers; NATS JetStream, the hand-written relay, and the search indexer have been retired |
+| Registry / config | Service discovery finalized as K8s Service + CoreDNS; the pre (semi-production) environment uses Docker Compose service names, and the dev inner loop (mirrord/Okteto) is under evaluation; Consul is a legacy migration-period component; Config Center is the sole Bootstrap source for all 10 services |
+| Edge / security | Cilium CNI/KPR/LB/Gateway API, cert-manager, ESO + Vault; default-deny NetworkPolicy and east-west identity for business services are still incomplete |
+| Artifacts / delivery | Docker Buildx, GitHub Actions, Renovate; artifact split ([`docs/TECH.md`](docs/TECH.md) §7.1): TCR is the primary image registry (pulled directly by the cluster), Harbor stores Helm artifacts (OCI), GHCR is an optional mirror (images + Helm, pushed by CI depending on network); Kubernetes manifests, Helm; ArgoCD is currently disconnected |
+| Observability | OpenTelemetry, Vector, VictoriaMetrics/Logs/Traces, Grafana, vmalert, Alertmanager; external alert notification is not yet closed-loop |
+| Engineering tooling | vite-plus, oxlint/oxfmt, Vitest/Playwright, Buf breaking, structcheck, verify-context/canary, commitlint |
 
-架构要点（技术架构/选型/基础设施真相源为 [`docs/TECH.md`](docs/TECH.md)，业务设计详见 [`docs/design/`](docs/design/README.md)，工程约束见 [`STACK.md`](STACK.md)）：
+Architecture highlights (the source of truth for technical architecture / technology choices / infrastructure is [`docs/TECH.md`](docs/TECH.md); business design lives in [`docs/design/`](docs/design/README.md); engineering constraints are in [`STACK.md`](STACK.md)):
 
-- **API 契约先行**：google protobuf 定义前后端交互，`@bufbuild/buf` 生成代码，每个字段带 `buf.validate` 约束
-- **后端分层**参考 go-kratos：biz（领域结构体）→ data（DB/cache/search/event/object）→ service（proto 转换）→ server（fx 装配与注册发现）
-- **入口能力集中**：Casdoor 有状态 Session 校验、授权（目标 OpenFGA，存量 Casbin/legacy JWT 待移除）、路由、超时与可信身份头由 control-tower gateway 处理；服务仍负责数据归属与领域权限
-- **配置源与业务配置分离**：服务先读一份很小的 selector，再从 Config Center 取完整 `Bootstrap`；不存在 Consul KV 回退
-- **交付实况**：GitHub Actions 按 semver tag 构建并双推 TCR/GHCR，再回写 Helm tag；ArgoCD 当前没有 Application，部署仍走 `backend/services/*/deploy/`
-- **可观测性**：Vector 采容器日志，应用经 OTel SDK 输出三支柱；node3 的 VictoriaMetrics/Logs/Traces 与 Grafana 汇总查询
-- **容量边界**：规模必须以固定数据集、k6 脚本、资源配额、延迟/错误率结果和故障恢复证据验收，当前未建立百万/千万级承诺
+- **API contract first**: Google Protobuf defines the frontend/backend contract, `@bufbuild/buf` generates code, and every field carries `buf.validate` constraints
+- **Backend layering** modeled on go-kratos: biz (domain structs) → data (DB/cache/search/event/object) → service (proto conversion) → server (fx wiring and registration/discovery)
+- **Entry capabilities centralized**: Casdoor stateful session validation, authorization (target OpenFGA; legacy Casbin / legacy JWT pending removal), routing, timeouts, and trusted identity headers are handled by the control-tower gateway; services remain responsible for data ownership and domain permissions
+- **Config source separated from business config**: each service first reads a tiny selector, then fetches the full `Bootstrap` from Config Center; there is no Consul KV fallback
+- **Delivery status**: GitHub Actions builds on semver tags, pushes to both TCR and GHCR, then writes the Helm tag back; ArgoCD currently has no Application, so deployment still goes through `backend/services/*/deploy/`
+- **Observability**: Vector collects container logs; applications emit the three pillars through the OTel SDK; VictoriaMetrics/Logs/Traces and Grafana on node3 aggregate the queries
+- **Capacity boundary**: scale must be accepted with fixed datasets, k6 scripts, resource quotas, latency/error-rate results, and failure-recovery evidence; no million/ten-million-scale commitment has been established yet
 
-## 仓库结构
+## Repository layout
 
-| 目录 | 内容 |
+| Directory | Contents |
 |---|---|
-| `backend/` | 10 个微服务（user / product / cart / order / payment / inventory / search / address / merchant / behavior），`api/` 放 proto 契约，`structcheck/` 是结构性 CI 门禁 |
-| `frontend/` | pnpm monorepo：4 app（consumer / merchant / admin / desktop）+ 9 共享包，见 [`frontend/README.md`](frontend/README.md) |
-| `context/` | AI/团队三层知识库（团队级 / 框架级 / 服务级），入口 [`context/INDEX.md`](context/INDEX.md) |
-| `helm/`、`argocd-*.yml` | 待修复的 Helm/GitOps 描述；当前部署实况以各服务 `deploy/` 为准 |
-| `docs/` | 技术真相源（`docs/TECH.md`）、架构与领域设计（`docs/design/`，按微服务分目录）、**待办明细**（`docs/todo/`，按 TECH.md 体系分类）、可观测性方法论与看板脚本（`docs/observability/`）、agents 配置（`docs/agents/`）、不可变历史归档（`docs/progress-archive/`）、调研报告（`docs/reports/`） |
-| `scripts/` | 验收锚点与门禁脚本（verify-quick / verify-context + canary / lint-baseline / harness-scars / gen-third-party-notices） |
-| `.scratch/` | 进行中的 spec / issue（本地 markdown 工作流） |
+| `backend/` | 10 microservices (user / product / cart / order / payment / inventory / search / address / merchant / behavior); `api/` holds proto contracts, `structcheck/` is the structural CI gate |
+| `frontend/` | pnpm monorepo: 4 apps (consumer / merchant / admin / desktop) + 9 shared packages, see [`frontend/README.md`](frontend/README.md) |
+| `context/` | Three-layer AI/team knowledge base (team / framework / service level), entry point [`context/INDEX.md`](context/INDEX.md) |
+| `helm/`, `argocd-*.yml` | Helm/GitOps descriptions pending repair; the actual deployment state is defined by each service's `deploy/` |
+| `docs/` | Technical source of truth (`docs/TECH.md`), architecture and domain design (`docs/design/`, one directory per microservice), **TODO details** (`docs/todo/`, categorized by the TECH.md structure), observability methodology and dashboard scripts (`docs/observability/`), agent configuration (`docs/agents/`), immutable history archive (`docs/progress-archive/`), research reports (`docs/reports/`) |
+| `scripts/` | Acceptance anchors and gate scripts (verify-quick / verify-context + canary / lint-baseline / harness-scars / gen-third-party-notices) |
+| `.scratch/` | In-progress specs / issues (local markdown workflow) |
 
-> 网关与配置中心均由同级仓 control-tower 承载：本仓旧 `gateway/` 目录 2026-08-24 已删
-> （历史在 tag `backup/pre-control-tower-20260823`），原 `backend/services/config/` 目录已删除。
-> `.freeze/` 冻结验收集机制已于 2026-08-24 整套移除（恒绿假门禁，见 evolution-log）。
+> The gateway and config center are both hosted by the sibling repo control-tower: this repo's old `gateway/` directory was deleted on 2026-08-24
+> (history preserved at tag `backup/pre-control-tower-20260823`), and the former `backend/services/config/` directory has been removed.
+> The `.freeze/` frozen acceptance-set mechanism was removed entirely on 2026-08-24 (an always-green fake gate, see evolution-log).
 
-## 文档导航
+## Documentation map
 
-| 文档 | 定位 |
+| Document | Purpose |
 |---|---|
-| [`AGENTS.md`](AGENTS.md) | AI 协作入口：硬规则 + 验收锚点命令（**改代码前先读**） |
-| [`docs/TECH.md`](docs/TECH.md) | **技术架构、技术选型与基础设施真相源**（2026-08-28 定稿）：选型总览、流量拓扑、协同模型、微服务纲领、鉴权与可观测性体系、实施路线图与工程红线；其他文档与之冲突处以它为准 |
-| [`docs/design/`](docs/design/README.md) | 业务与领域设计真相源：按微服务分目录（platform/product/order/…），含拆分与删章记录 |
-| [`production-scale-goal.md`](docs/design/platform/production-scale-goal.md) | 百万/千万级生产化目标、现有技术栈边界、证据门禁、分阶段路线和完成定义 |
-| [`STACK.md`](STACK.md) | 工程约束与现状边界：版本锁定、分层铁律、proto/sqlc 规则；选型冲突以 `docs/TECH.md` 为准 |
-| [`.service-matrix.yaml`](.service-matrix.yaml) | 服务拓扑事实表：注册名、网关前缀、依赖、Config Center 键（CI 强制对齐） |
-| [`TODO.md`](TODO.md) | **进度与待办的唯一真相源**：全局优先级视图 + 分类索引；任何待办变更都要落到它 |
-| [`docs/todo/`](docs/todo/README.md) | 待办明细，按 `docs/TECH.md` 的体系分类（可观测性/事件驱动/鉴权/基础设施…）；由 `TODO.md` 索引 |
-| [`docs/GLOSSARY.md`](docs/GLOSSARY.md) | **领域术语表**：189 个 B2B2C 电商与平台词条（SPU/SKU/商品快照/拆单/履约/OrderGroup/Saga Manager/PaymentIntent/StockLedger…）。读设计文档或写 proto 前遇到不认识的业务名词先查这里 |
-| [`docs/TECH-RADAR.md`](docs/TECH-RADAR.md) | CNCF Landscape 选型评估；新增基础设施必须由量化需求、容量或故障证据触发 |
-| [`PRODUCT.md`](PRODUCT.md) / [`DESIGN.md`](DESIGN.md) | 产品定义与「灯市」视觉设计系统（配色/字体/间距 token），前端设计工作流（impeccable）的真相源——与已拆分的旧架构 DESIGN.md 同名不同物 |
-| [`docs/DEVOPS.md`](docs/DEVOPS.md) / [`observability/OBSERVABILITY.md`](docs/observability/OBSERVABILITY.md) | DevOps 与可观测性的**目标态**设计 |
-| [`docs/design/merchant/store-settings.md`](docs/design/merchant/store-settings.md) | Shopline 商店设置竞品调研；取舍与商家 MVP 路线见同目录 [`roadmap.md`](docs/design/merchant/roadmap.md) |
-| 网关与配置面设计 | 已随代码迁至同级仓 control-tower（`../control-tower/docs/design/`），本仓不再保留副本 |
-| [`docs/SCAFFOLD.md`](docs/SCAFFOLD.md) | 换领域复用本仓工程体系的新项目生成规范 |
-| [`context/harness-framework/graph-engineering.md`](context/harness-framework/graph-engineering.md) | 多闭环 AI 工作流方法论（冻结节点 + 锚点命令） |
+| [`AGENTS.md`](AGENTS.md) | AI collaboration entry point: hard rules + acceptance anchor commands (**read before changing code**) |
+| [`docs/TECH.md`](docs/TECH.md) | **Source of truth for technical architecture, technology choices, and infrastructure** (finalized 2026-08-28): selection overview, traffic topology, collaboration model, microservice principles, auth and observability systems, implementation roadmap, and engineering red lines; where other documents conflict, this one wins |
+| [`docs/design/`](docs/design/README.md) | Source of truth for business and domain design: one directory per microservice (platform/product/order/…), including split and chapter-removal records |
+| [`production-scale-goal.md`](docs/design/platform/production-scale-goal.md) | Million/ten-million-scale production goals, current stack boundaries, evidence gates, phased roadmap, and definition of done |
+| [`STACK.md`](STACK.md) | Engineering constraints and current boundaries: version pinning, layering rules, proto/sqlc rules; `docs/TECH.md` wins on technology-choice conflicts |
+| [`.service-matrix.yaml`](.service-matrix.yaml) | Service topology fact table: registration names, gateway prefixes, dependencies, Config Center keys (enforced by CI) |
+| [`TODO.md`](TODO.md) | **The single source of truth for progress and TODOs**: global priority view + categorized index; every TODO change must land here |
+| [`docs/todo/`](docs/todo/README.md) | TODO details categorized by the `docs/TECH.md` structure (observability / event-driven / auth / infrastructure…); indexed by `TODO.md` |
+| [`docs/GLOSSARY.md`](docs/GLOSSARY.md) | **Domain glossary**: 189 B2B2C e-commerce and platform terms (SPU/SKU/product snapshot/order splitting/fulfillment/OrderGroup/Saga Manager/PaymentIntent/StockLedger…). Look here first when you meet an unfamiliar business term while reading design docs or writing proto |
+| [`docs/TECH-RADAR.md`](docs/TECH-RADAR.md) | CNCF Landscape evaluation; any new infrastructure must be triggered by quantified requirements, capacity, or failure evidence |
+| [`PRODUCT.md`](PRODUCT.md) / [`DESIGN.md`](DESIGN.md) | Product definition and the "Lantern Market" visual design system (color/typography/spacing tokens), the source of truth for the frontend design workflow (impeccable) — same name as the old, since-split architecture DESIGN.md, but a different document |
+| [`docs/DEVOPS.md`](docs/DEVOPS.md) / [`observability/OBSERVABILITY.md`](docs/observability/OBSERVABILITY.md) | **Target-state** design for DevOps and observability |
+| [`docs/design/merchant/store-settings.md`](docs/design/merchant/store-settings.md) | Competitive research on Shopline store settings; trade-offs and the merchant MVP route are in [`roadmap.md`](docs/design/merchant/roadmap.md) in the same directory |
+| Gateway and config-plane design | Moved with the code to the sibling repo control-tower (`../control-tower/docs/design/`); no copy is kept in this repo |
+| [`docs/SCAFFOLD.md`](docs/SCAFFOLD.md) | Spec for generating a new project that reuses this repo's engineering system in a different domain |
+| [`context/harness-framework/graph-engineering.md`](context/harness-framework/graph-engineering.md) | Multi-loop AI workflow methodology (frozen nodes + anchor commands) |
 
-## 先决条件
+## Prerequisites
 
-1. Go：版本以 `backend/go.mod` 的 `go` 指令为准（数字不在此复制，防漂移；网关在同级仓 control-tower）
-2. 前端：Node.js >= 22、pnpm 11
-3. 数据库：PostgreSQL 18（当前主库由 node3 Pigsty 承载）；Dragonfly 用于业务可丢缓存和 control-tower BFF session。领域锁、幂等键与库存真相必须锚定 PostgreSQL
-4. 注册/发现：Consul（**定稿退役 → K8s Service + CoreDNS，开发环境 Docker Compose 服务名**，见 [`docs/TECH.md`](docs/TECH.md) §10.2；四步迁移见 TODO；迁移完成前运行仍需）
+1. Go: the version is defined by the `go` directive in `backend/go.mod` (not duplicated here to avoid drift; the gateway lives in the sibling repo control-tower)
+2. Frontend: Node.js >= 22, pnpm 11
+3. Database: PostgreSQL 18 (the primary is currently hosted by node3 Pigsty); Dragonfly serves lossy business cache and the control-tower BFF session. Domain locks, idempotency keys, and inventory truth must be anchored in PostgreSQL
+4. Registry / discovery: Consul (**finalized for retirement → K8s Service + CoreDNS, Docker Compose service names in dev**, see [`docs/TECH.md`](docs/TECH.md) §10.2; the four-step migration is in TODO; still required at runtime until the migration completes)
 
-配置中心（同级仓 [control-tower](https://github.com/lens077/control-tower) 的 config 服务）是
-10 个业务服务的**必需启动依赖**。Consul 只负责服务注册发现，不再存储 Bootstrap。
+Config Center (the config service of the sibling repo [control-tower](https://github.com/lens077/control-tower)) is a
+**required startup dependency** for all 10 business services. Consul only handles service registration/discovery and no longer stores Bootstrap.
 
-如果要体验完整环境，还需 Docker、Kubernetes、Cilium Gateway API、cert-manager、ESO/Vault，以及外置的 OpenTelemetry Collector、VictoriaMetrics、VictoriaLogs、VictoriaTraces、Vector、Grafana、vmalert 与 Alertmanager。ArgoCD 虽已安装，但当前没有 Application，不能作为部署前提。
+For the full environment you also need Docker, Kubernetes, Cilium Gateway API, cert-manager, ESO/Vault, plus external OpenTelemetry Collector, VictoriaMetrics, VictoriaLogs, VictoriaTraces, Vector, Grafana, vmalert, and Alertmanager. ArgoCD is installed but currently has no Application, so it cannot be treated as a deployment prerequisite.
 
-## 运行
+## Running
 
-### 后端
+### Backend
 
 ```bash
 docker compose -f backend/infrastructure/postgres/compose.yaml up -d
@@ -95,72 +97,72 @@ docker compose -f backend/infrastructure/redis/compose.yaml up -d
 docker compose -f backend/infrastructure/consul/compose.yaml up -d
 ```
 
-业务服务使用的基础设施地址配置在 Config Center，不在仓库 YAML。search 服务读取 `search.catalog`，只访问稳定 alias。CDC Connector、Elasticsearch mapping、全量重建与灾备手顺由同级仓 `postgres-kafka-es-streaming-pipeline` 维护；不要在本仓恢复已退役的 relay 或 indexer worker。
+Infrastructure addresses used by business services are configured in Config Center, not in repo YAML. The search service reads `search.catalog` and only touches the stable alias. The CDC connector, Elasticsearch mapping, full rebuild, and disaster-recovery procedures are maintained in the sibling repo `postgres-kafka-es-streaming-pipeline`; do not resurrect the retired relay or indexer worker in this repo.
 
-启动后端微服务（一把拉起全部服务可用 `backend/compose.yaml`）：
+Start the backend microservices (`backend/compose.yaml` brings all of them up at once):
 
 ```bash
 cd backend/services/<service>
-make dev        # 读取被 gitignore 的 configs/source.dev.yaml，再从 Config Center 拉 Bootstrap
+make dev        # reads the gitignored configs/source.dev.yaml, then pulls Bootstrap from Config Center
 ```
 
-所有服务都由 `CONFIG_SOURCE_FILE` 指向 SDK selector，且 selector 的 `type` 必须是
-`config_center`。selector 缺失、token 无效或远端 key 不存在时直接启动失败，不回退到
-Consul KV。本地单测可显式使用 `CONFIG_SOURCE=file`。
+Every service is pointed at the SDK selector through `CONFIG_SOURCE_FILE`, and the selector's `type` must be
+`config_center`. A missing selector, an invalid token, or a missing remote key fails startup immediately with no
+fallback to Consul KV. Local unit tests may explicitly use `CONFIG_SOURCE=file`.
 >
-> 配置 SDK 随 control-tower module 发布。升级使用 `go get github.com/lens077/control-tower@v0.x.y`；
-> **`go mod tidy` 只增删依赖，不会主动升级已钉版本。**
+> The config SDK ships with the control-tower module. Upgrade with `go get github.com/lens077/control-tower@v0.x.y`;
+> **`go mod tidy` only adds/removes dependencies and never upgrades a pinned version on its own.**
 
-### 配置中心（必需基础设施）
+### Config Center (required infrastructure)
 
-配置中心现由同级仓 [control-tower](https://github.com/lens077/control-tower) 的 `services/config` 承载；旧独立 config-center 仓已退役。集群 namespace 与 Deployment 仍保留 `config-center` 名称，但镜像已经是 `control-tower-config` / `control-tower-config-web`。
+Config Center is now hosted by `services/config` in the sibling repo [control-tower](https://github.com/lens077/control-tower); the old standalone config-center repo is retired. The cluster namespace and Deployment keep the `config-center` name, but the images are already `control-tower-config` / `control-tower-config-web`.
 
 ```bash
 cd ../control-tower
-scripts/dev-local.sh config   # 从集群 Secret 生成 0600 临时配置，退出即删除
+scripts/dev-local.sh config   # generates a 0600 temporary config from the cluster Secret, deleted on exit
 make verify                   # build + buf lint + go vet + test -race
 ```
 
-config 服务必须从本地文件或 Kubernetes Secret 自举，不能把自己的唯一启动配置放进自己。历史 Consul KV 已删除；`backend/tools/config-seed` 只保留为迁移/审计工具。
+The config service must bootstrap from a local file or a Kubernetes Secret; it cannot store its own sole startup config inside itself. The historical Consul KV has been deleted; `backend/tools/config-seed` is kept only as a migration/audit tool.
 
-### 网关
+### Gateway
 
-网关代码也在 `../control-tower`。本地 gateway 使用 file resolver 和端口转发，避免 Consul 返回 Mac 无法路由的 Pod IP：
+The gateway code is also in `../control-tower`. The local gateway uses the file resolver and port forwarding to avoid Consul returning Pod IPs that a Mac cannot route to:
 
 ```bash
 cd ../control-tower
 scripts/dev-local.sh gateway
 ```
 
-Web 登录经 `/auth/login → Casdoor → /auth/callback` 建立 httpOnly cookie session；Tauri 使用 session header；legacy 客户端迁移期仍可使用 bearer JWT。后端验证应优先经过 gateway，直连只用于明确的内部调试，不能用来证明生产安全边界。
+Web login establishes an httpOnly cookie session via `/auth/login → Casdoor → /auth/callback`; Tauri uses a session header; legacy clients may still use a bearer JWT during the migration period. Backend verification should go through the gateway first; direct connections are only for explicit internal debugging and cannot be used to prove the production security boundary.
 
-### 前端
+### Frontend
 
-`frontend/` 是一个 pnpm workspace monorepo，4 个 app + 9 个共享包。
-结构、分包原则、四层目录职责和工具链细节见 [`frontend/README.md`](frontend/README.md)。
+`frontend/` is a pnpm workspace monorepo with 4 apps + 9 shared packages.
+Structure, package-splitting principles, the four-layer directory responsibilities, and toolchain details are in [`frontend/README.md`](frontend/README.md).
 
-| app        | 端口 | 说明                                     | 启动                |
-| ---------- | ---- | ---------------------------------------- | ------------------- |
-| `consumer` | 3000 | 商品/购物车/地址部分可用；下单/支付/库存闭环未完成 | `pnpm dev` |
-| `merchant` | 3002 | 商家端路由与登录壳，业务 API 接线很少 | `pnpm dev:merchant` |
-| `admin` | 3003 | 管理端路由与登录壳，业务 API 接线很少 | `vp run admin#dev` |
-| `desktop` | — | Tauri 2 壳，可套 consumer 或 merchant | `pnpm desktop` / `pnpm desktop:merchant` |
+| app        | Port | Notes                                     | Start                |
+| ---------- | ---- | ----------------------------------------- | -------------------- |
+| `consumer` | 3000 | Products / cart / address partially usable; the order / payment / inventory loop is not complete | `pnpm dev` |
+| `merchant` | 3002 | Merchant routes and login shell; very little business API wiring | `pnpm dev:merchant` |
+| `admin` | 3003 | Admin routes and login shell; very little business API wiring | `vp run admin#dev` |
+| `desktop` | — | Tauri 2 shell that can wrap consumer or merchant | `pnpm desktop` / `pnpm desktop:merchant` |
 
-共享包：`api`（Connect 传输层与拦截器）、`configs`、`constants`、`i18n`、
-`perf`（Web Vitals 性能监控）、`tauri`（桌面端胶水）、`tracker`（行为埋点）、`ui`、`utils`。
+Shared packages: `api` (Connect transport and interceptors), `configs`, `constants`, `i18n`,
+`perf` (Web Vitals performance monitoring), `tauri` (desktop glue), `tracker` (behavior tracking), `ui`, `utils`.
 
 ```bash
 cd frontend
-pnpm i        # prepare 会跑 vp config 装 git 钩子（core.hooksPath 指向 frontend/.vite-hooks/_）
-pnpm dev      # consumer，端口 3000
-pnpm ready    # vp fmt && vp lint && vp run -r test && vp run -r build，提 PR 前跑它
+pnpm i        # prepare runs vp config to install git hooks (core.hooksPath points to frontend/.vite-hooks/_)
+pnpm dev      # consumer, port 3000
+pnpm ready    # vp fmt && vp lint && vp run -r test && vp run -r build; run it before opening a PR
 ```
 
-工具链说明：vite-plus（`vp`）一个包同时提供 dev server、构建、测试(vitest)、lint(oxlint)、
-格式化(oxfmt)、任务运行器和 git 钩子，所以没有 husky / biome / eslint / prettier；
-提交信息由 frontend workspace 的 commitlint 校验，配置在 `frontend/commitlint.config.mjs`。
+Toolchain note: vite-plus (`vp`) is a single package that provides the dev server, build, test (vitest), lint (oxlint),
+formatting (oxfmt), task runner, and git hooks, so there is no husky / biome / eslint / prettier;
+commit messages are validated by commitlint in the frontend workspace, configured in `frontend/commitlint.config.mjs`.
 
-## 效果截图
+## Screenshots
 
 - CI:
   ![img_3.png](images/img_3.png)
@@ -175,31 +177,31 @@ pnpm ready    # vp fmt && vp lint && vp run -r test && vp run -r build，提 PR 
 - Metrics:
   ![img_5.png](images/img_5.png)
 
-## 开发工作流
+## Development workflow
 
-- **提交规范**：Conventional Commits + 可选 gitmoji，commitlint + vite-plus 钩子强制；
-  提交前按改动类型更新对应真相源（进度 → `TODO.md`）。见 `context/team/git-commit.md`
-- **提交前验收锚点**（详见 [`AGENTS.md`](AGENTS.md)）：默认先跑 `scripts/verify-quick.sh`；修改服务矩阵再跑 `cd backend && go test -count=1 ./structcheck/...`；修改 context、设计索引或 STACK 再跑 `scripts/verify-context.sh`
-- **跨仓变更**：网关/config 代码在 `../control-tower` 独立提交；路由模板与本仓 structcheck 契约必须同版本升级
+- **Commit convention**: Conventional Commits + optional gitmoji, enforced by commitlint + vite-plus hooks;
+  before committing, update the source of truth that matches the change type (progress → `TODO.md`). See `context/team/git-commit.md`
+- **Pre-commit acceptance anchors** (details in [`AGENTS.md`](AGENTS.md)): run `scripts/verify-quick.sh` first by default; if the service matrix changed, also run `cd backend && go test -count=1 ./structcheck/...`; if context, the design index, or STACK changed, also run `scripts/verify-context.sh`
+- **Cross-repo changes**: gateway/config code is committed separately in `../control-tower`; route templates and this repo's structcheck contract must be upgraded in the same version
 
-## 贡献
+## Contributing
 
-欢迎通过 issue 反馈问题、通过 Pull Request 参与改进。
+Issues and pull requests are welcome.
 
-- **动手前先读 [`AGENTS.md`](AGENTS.md)**：硬规则 + 验收锚点，是本仓协作的地基。
-- **改动流程**：fork → 建分支 → 修改 → 按改动类型跑通 `AGENTS.md` 的验收锚点 → 提 PR；默认入口是 `scripts/verify-quick.sh`。
-- **改动前查真相源，别凭记忆**：技术栈与分层约束看 [`STACK.md`](STACK.md)、服务拓扑看
-  [`.service-matrix.yaml`](.service-matrix.yaml)、架构设计看 [`docs/design/`](docs/design/README.md)；
-  按改动类型更新对应真相源（进度 → `TODO.md`，拓扑 → matrix，设计 → `docs/design/`）。
-- **提交信息**：遵循 Conventional Commits，gitmoji 可选但带了就必须与 type 相符，
-  由 commitlint 强制（细则见 `context/team/git-commit.md`）。
-- **文档与门禁变更**：修改 `context/`、`docs/design/README.md`、`STACK.md` 或门禁脚本后，运行 `scripts/verify-context.sh`；修改门禁本身再运行 canary。
+- **Read [`AGENTS.md`](AGENTS.md) before you start**: hard rules + acceptance anchors are the foundation of collaboration in this repo.
+- **Change flow**: fork → branch → change → run the acceptance anchors from `AGENTS.md` that match your change type → open a PR; the default entry point is `scripts/verify-quick.sh`.
+- **Check the source of truth before changing, don't rely on memory**: tech stack and layering constraints in [`STACK.md`](STACK.md), service topology in
+  [`.service-matrix.yaml`](.service-matrix.yaml), architecture design in [`docs/design/`](docs/design/README.md);
+  update the matching source of truth for your change type (progress → `TODO.md`, topology → matrix, design → `docs/design/`).
+- **Commit messages**: follow Conventional Commits; gitmoji is optional but, when present, must match the type,
+  enforced by commitlint (details in `context/team/git-commit.md`).
+- **Docs and gate changes**: after modifying `context/`, `docs/design/README.md`, `STACK.md`, or the gate scripts, run `scripts/verify-context.sh`; if you changed the gate itself, also run the canary.
 
-## 许可
+## License
 
-本项目采用 **[CC BY-NC-SA 4.0](https://creativecommons.org/licenses/by-nc-sa/4.0/)**
-（署名—非商业性使用—相同方式共享）授权，详见 [`LICENSE`](LICENSE)：
+This project is licensed under **[CC BY-NC-SA 4.0](https://creativecommons.org/licenses/by-nc-sa/4.0/)**
+(Attribution-NonCommercial-ShareAlike); see [`LICENSE`](LICENSE):
 
-- 可用于个人学习、技术交流与非营利研究；衍生作品须以相同或更严格的协议开源，并注明出处。
-- **任何商业使用**（直接售卖、SaaS 集成、含付费内容或广告的平台等）须事先获得书面授权。
-- 商业授权或闭源例外请联系版权方：<https://github.com/lens077>
+- Personal learning, technical exchange, and non-profit research are permitted; derivative works must be released under the same or a stricter license, with attribution.
+- **Any commercial use** (direct sale, SaaS integration, platforms with paid content or advertising, etc.) requires prior written permission.
+- For commercial licensing or closed-source exceptions, contact the copyright holder: <https://github.com/lens077>
