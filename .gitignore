@@ -33,3 +33,7 @@ e2e-artifacts/
 
 # TypeScript 增量编译缓存
 *.tsbuildinfo
+
+# Pangolin newt 隧道客户端二进制,本机工具,不进仓库
+newt_linux_amd64
+newt_*

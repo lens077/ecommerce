@@ -44,7 +44,7 @@ context/
 | [self-refinement.md](harness-framework/self-refinement.md) | 纠错 → 判断模式性 → 沉淀 → 下次复用的闭环 |
 | [graph-engineering.md](harness-framework/graph-engineering.md) | 多闭环 AI 工作流方法论存档：锚点命令、Loop 0~4 分工；其中的冻结节点机制已于 2026-08-24 整套删除，文内留有「不要重建」的说明 |
 | [delivery-efficiency.md](harness-framework/delivery-efficiency.md) | AI Coding 交付效率治理：可信状态、P50/P85 与长尾、日报证据和人机责任边界 |
-| [e3-execution.md](harness-framework/e3-execution.md) | E3 执行策略：动手前估计任务规模，走最小路径，验证失败才扩张；含护栏 hook 的验证方法 |
+| [e3-execution.md](harness-framework/e3-execution.md) | E3 执行策略：动手前估计任务规模，走最小路径，验证失败才扩张；含护栏 hook 的验证方法；消费边界——Agent token 成本治理六环节 |
 | [dsh-model-onboarding.md](harness-framework/dsh-model-onboarding.md) | **新增、升级或切换 DSH 模型前必读**：模型目录声明、GPT 长上下文、自动压缩阈值换算与在线验收 |
 | [subagent-dispatch.md](harness-framework/subagent-dispatch.md) | 子代理派发三条硬约定：只回结构化摘要、按角色裁剪能力、按角色分层模型 |
 | [multi-agent-concurrency.md](harness-framework/multi-agent-concurrency.md) | 多 Agent 并发改同一批文件时的四条纪律：状态用文件同步、引用要点名、置信度会凭空升高、宣布完成不终止复核 |

@@ -3,7 +3,8 @@
     "allow": [
       "Read(//Users/lens/**)",
       "Read(//tmp/**)",
-      "Read(//private/etc/**)"
+      "Read(//private/etc/**)",
+      "Bash(scripts/verify-context.sh)"
     ]
   },
   "hooks": {
