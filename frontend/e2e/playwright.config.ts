@@ -30,11 +30,8 @@ export default defineConfig({
   reporter: process.env.CI ? [["list"], ["html", { open: "never" }]] : [["list"]],
   outputDir: path.join(root, "e2e", ".artifacts"),
   use: {
-    ...devices["Desktop Chrome"],
-    // 下载不到与 Playwright 版本配套的 Chromium 时，用 E2E_CHROMIUM 指到本机已有的可执行文件
-    ...(process.env.E2E_CHROMIUM
-      ? { launchOptions: { executablePath: process.env.E2E_CHROMIUM } }
-      : {}),
+    ...devices["Desktop Firefox"],
+    // 若 CI 没有 Firefox，先执行 `pnpm exec playwright install firefox`
     locale: "zh-CN",
     trace: "retain-on-failure",
     video: process.env.E2E_VIDEO ? "on" : "off",
