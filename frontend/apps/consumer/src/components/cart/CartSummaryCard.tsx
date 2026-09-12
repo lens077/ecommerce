@@ -57,6 +57,7 @@ export function CartSummaryCard({
           <Checkbox
             checked={allSelected}
             indeterminate={summary.selectedQuantity > 0 && !allSelected}
+            slotProps={{ input: { "aria-label": t("cart.selectAll") } }}
             sx={{
               p: 0,
               color: tokens.colors.border.default,
@@ -179,6 +180,7 @@ export function CartSummaryCard({
           <Checkbox
             checked={allSelected}
             indeterminate={summary.selectedQuantity > 0 && !allSelected}
+            slotProps={{ input: { "aria-label": t("cart.selectAll") } }}
             sx={{
               p: 0,
               color: tokens.colors.border.default,

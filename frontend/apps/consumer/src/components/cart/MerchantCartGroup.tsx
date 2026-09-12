@@ -54,6 +54,7 @@ export function MerchantCartGroup({
           indeterminate={indeterminate}
           onChange={() => onSelectByMerchant(group.merchantId, !allSelected)}
           size="small"
+          slotProps={{ input: { "aria-label": `${t("cart.selectAll")} ${shopName}` } }}
           sx={{
             p: 0,
             color: tokens.colors.border.default,
