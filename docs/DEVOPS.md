@@ -110,7 +110,7 @@
 - 网关层:认证鉴权继续集中在网关(共享组件即「铺装路」,不让 10 个服务各接一套);
   完全移除 JWT 兼容路径,采用 Casdoor 有状态 Session(Dragonfly Session Store)+OpenFGA;
   策略从整段前缀放行收敛到 RPC 粒度(order/payment/merchant/inventory 已做,其余待办),Casbin 作为存量迁移退役。
-- 密钥:External Secrets Operator + 后端(Vault 或云 KMS),密钥不进 Git 与 Consul KV 明文。
+- 密钥:External Secrets Operator + OpenBao(定稿 TECH-RADAR §4.9;集群内,路径按集群分),密钥不进 Git 与 Consul KV 明文;VPS Vault 仅作可选集群外副本。
 
 ## 7. 度量与持续学习
 

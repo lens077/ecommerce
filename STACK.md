@@ -214,7 +214,7 @@ SSR：`consumer-next` 使用 Next.js 16.4.0-canary.18（本仓 A/B 后精确锁�
 | Gorse | 推荐引擎 | behavior/product 的外部依赖，使用独立 PostgreSQL/Redis；API key 配置仍有待办 |
 | Elasticsearch | 当前搜索存储（[`docs/TECH.md`](docs/TECH.md)） | node3 运行 9.4.5 + IK；search Pod 经受控入口读取 `ecommerce_catalog_products`，`products.search_catalog` 经 Debezium/Kafka/Sink 写入。mapping、版本化重建、alias 切换/回退与灾备手顺由 pipeline 仓维护 |
 
-具体端点见 [`.service-matrix.yaml`](.service-matrix.yaml) 的 `externals` 段。凭据只进入 Config Center、Vault 与 Kubernetes Secret，**不进入仓库**。
+具体端点见 [`.service-matrix.yaml`](.service-matrix.yaml) 的 `externals` 段。凭据只进入 Config Center、OpenBao 与 Kubernetes Secret，**不进入仓库**。
 
 ### 2.5 边缘网络与安全边界
 
@@ -223,7 +223,7 @@ SSR：`consumer-next` 使用 Next.js 16.4.0-canary.18（本仓 A/B 后精确锁�
 | Cilium | CNI、kube-proxy replacement、LoadBalancer/IPAM、Gateway API 数据面 | 本仓没有覆盖 10 个业务服务的 CiliumNetworkPolicy；只有少量工具 workload 的标准 NetworkPolicy，不能宣称已完成默认拒绝 |
 | Gateway API | Cilium `Gateway`、`HTTPRoute`/`TLSRoute`，部分 listener 终止 TLS | 公网资源可能先经过 Pangolin/Traefik/newt；仍有 HTTP 路由迁移项，所以「所有 TLS 都只在 Cilium 终止」不准确 |
 | 证书 | cert-manager 签发服务证书；CA 分发逐步使用 trust-manager | 覆盖面仍需按 workload 验收，不能只看 Certificate Ready |
-| Secret | Config Center selector Secret；ESO 从 Vault 下发 OTLP 等 Secret | OpenBao/SOPS 是选型方向，不应把文档定稿写成现网事实 |
+| Secret | Config Center selector Secret；ESO 从**集群内 OpenBao**（`k8s/<集群>/<组件>`）物化组件凭据与集群外依赖（node3 PG/Redis/ES、Casdoor）的凭据；业务服务的依赖配置由 kubernetes 仓 harvest 按组件契约写进 Config Center（2026-09-11） | OpenBao 数据随集群亡，重装后从现网反向重建；VPS Vault 已退为可选集群外副本（死接线 09-11 删除）；SOPS 应急路径未落地 |
 | 业务服务身份 | 网关剥离伪造头后注入 `x-md-global-*`，后端据此识别用户 | 后端不验 session/JWT，也没有完整 east-west mTLS/workload identity；网络隔离不完整时「只信任网关」只是设计假设 |
 | 授权 | gateway Casbin 做 RPC 粒度 RBAC（存量） | 商家数据级 `merchant_id` 隔离、子账号和对象级权限未完成。按 [`docs/TECH.md`](docs/TECH.md) §8 定稿：OpenFGA 关系授权（网关 Check API，merchant/store/order 关系模型），Casbin 为待替换存量 |
 | 服务网格 | 不使用 | 限流、熔断、重试和灰度没有由网格兜底，必须在 gateway、应用或 K8s 层显式设计 |

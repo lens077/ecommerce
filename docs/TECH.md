@@ -19,6 +19,7 @@
 | 桌面端 | Tauri | 桌面客户端壳 |
 | 测试 | k6（负载/容量）、Playwright（E2E）、property-based testing（如 gopter）、状态机测试 | 验证容量基线、关键业务旅程、领域不变量 |
 | 安全 | Casdoor（IAM）、OpenFGA（关系授权）、Bugsink（错误监控） | 身份认证、对象级授权、前端异常监控 |
+| 凭据管理 | External Secrets Operator + OpenBao（+ SOPS 应急） | 凭据真相源与分发。**定稿 [TECH-RADAR §4.9](TECH-RADAR.md)，2026-09-11 复审维持**：OpenBao 是 Vault 的 MPL-2.0 分叉（Linux Foundation 治理），API/引擎与 Vault 相同，本项目用到的 KV v2 + token auth 两边无差别，选型差别只在许可（Vault 为 BUSL-1.1、IBM 单厂商）。现网：集群内 `openbao`（kubernetes 仓 `components/openbao`），路径 `k8s/<集群>/<组件>`，ESO 物化为 K8s Secret；VPS 上早期接的 HashiCorp Vault 已退为「可选集群外副本」（无 AppRole 凭据时不建接线，死接线已于 09-11 删除）。**已知取舍**：OpenBao 在集群内、数据随集群亡，重装后由 kubernetes 仓 `tools/openbao-seed.sh` 从现网反向重建（集群内组件密码会换一次，消费方由 harvest 自动跟上）；这同时触发了 TECH-RADAR §10.3 Velero 条款③，集群外副本待做。凭据进入业务服务的路径不是 K8s Secret 而是 Config Center，组件契约与自动填充见 kubernetes 仓 `tools/config-center/README.md` |
 | 可观测性 SDK | OpenTelemetry Go SDK + Protobuf-ES 内置追踪 | 日志、指标、链路埋点 |
 | 消息序列化 | Protobuf | RPC 与领域事件的统一序列化格式 |
 | 构建与 CI | Docker Buildx、GitHub Actions（发布）、GitLab CI（门禁）、Renovate | 多架构镜像构建、自动化流水线、依赖更新。**两远端职责切分（2026-09-02 定稿）**：GitLab（origin）跑每次 push / MR 的代码门禁（`context-gate` + `backend-gate` + `frontend-gate`，即本地锚点搬进 CI）；GitHub 只由发布 tag 触发构建、签名、发布链；同一 tag 只允许一边写镜像仓。规范见 [`context/team/git-commit.md`](../context/team/git-commit.md)「两个远端的 CI 职责切分」，对照 deepseek-harness 流水线的取舍、过时点清单与门禁首跑证据见 [CI 复盘报告](reports/2026-09-02-ci-two-remotes-dsh-reference.md)。**crane（参考项，2026-09-09）**：无 daemon 的镜像仓库操作工具，不替代 Buildx 构建（最终层含 `RUN`），定位为发布链仓库侧的 tag 存在性断言、清点断言、跨仓复制与同 digest 晋级；适用边界与命令见 [crane 参考](reports/2026-09-09-crane-reference.md) |
@@ -46,6 +47,7 @@
 | 前端错误监控 | Bugsink（现役 2.5.x，node3） | 已确定（2026-08-28 复核维持） | 兼容 Sentry SDK 错误事件；单容器 + PostgreSQL 已稳定运行并接通 ntfy 告警。GlitchTip 改为条件采纳：出现 transaction/span 聚合、错误频率告警或统一 uptime/logs 需求时再评估迁移。接入手册与容量证据见 §11.3 |
 | 应用层 WAF | CaddyGuard / coraza-caddy | 不引入（2026-09-01 选型收口） | **前端 Caddy 上加 WAF 是空转**：`frontend/apps/consumer` 的 Caddy 只发静态资源，业务请求由浏览器直连 `gateway.apikv.com`（`.env.production` 的 `VITE_GATEWAY_URL`），镜像里那条 `/api` 反代是未启用的备用路径——SQLi/XSS/越权/CC 全部不经过它。**候选本身也不合格**：`qist/caddyguard` 建仓于 2026-08-12，0 star / 0 fork / 单人贡献、自研规则引擎非 CRS，无外部审计与 CVE 响应通道；同名的 `Z3NTL3/caddyguard` 是依赖外部 InternetDB 的 IP 信誉插件，不是 WAF，且给公网入口引入同步外部依赖。WAF 要解析全部不可信输入，其自身解析缺陷即 RCE 入口，选型门槛必须高于普通依赖。**位置也与既定架构冲突**：§2.1 与 [production-scale-goal](design/platform/production-scale-goal.md) §5.7 已定「WAF、Bot 与大流量 DDoS 清洗放在云边缘，不由自研 Go gateway 承担」；且 WAF 必须缓冲请求体，与 §10.1「ConnectRPC over H2C、禁止降级 HTTP/1.1」的流式假设相斥，CRS v4 全量规则的内存开销在 node101（6.4GB 且扛控制面）上也不成立。**真要自建时评估对象是 `corazawaf/coraza-caddy`**（OWASP 项目、兼容 CRS v4），但官方状态标注为 "stable, needs a maintainer"，且应挂在 node1 Pangolin 的 Traefik v3.7（唯一同时覆盖 `shop` 与 `gateway` 两个域名的位置），不是集群内的静态站 Caddy。**触发重估**（任一）：云边缘 WAF 因成本或合规不可用；出现 WAF 能拦而 §5.7 逐 procedure 限流拦不住的真实攻击。**优先级更高的替代动作**：按用户/租户的限流归 control-tower（§5.7，只有那里拿得到 Casdoor session 与 OpenFGA 身份，Caddy 仅能按 IP 限、对 NAT 后攻击近乎无效），以及 `.service-matrix.yaml` 标记的 `postgres_gorse` 明文弱口令 + `0.0.0.0/0` 收敛——那条路径上 WAF 完全不在场 |
 | 可观测一体化平台 | SigNoz | 观察项（2026-08-31 调研收口，未采纳） | 定位=OTel 原生一体机：trace/metric/log/异常/告警/看板收进单应用 + 单 ClickHouse 存储；GitLab O11y（Experiment）即其 fork。属于对现行「Victoria 家族 + Grafana + vmalert 组装栈」（§9）的**整体替换**候选，不是增补组件。当前不换：组装栈已调顺（三盘口径修正、告警链实测、PII 脱敏与 OTLP 鉴权均已沉淀），且一体机常驻 ClickHouse 的内存底座（其 fork 官方建议 8–16GiB）在 node3（总内存 7.25GiB，与 PG/观测数据面同机）放不下。作用场景、逐项栈比对、切换成本与触发重估条件见 [SigNoz 评估](reports/2026-08-31-signoz-evaluation.md) |
+| 凭据变更传播 | Reloader（stakater） | 条件采纳：部署资产就位、默认关（2026-09-11） | 定位=ESO 链路的第三段：Secret 变了自动滚动**带注解**的工作负载，把「Vault 改值后 Secret 变了、进程还是旧密码」这一环自动化。**它管不到本项目最要紧的第四段**：10 个业务服务的凭据在 Config Center 里、不是 K8s Secret，Dragonfly 密码变了 Reloader 能滚 Dragonfly，不知道 cart/order 在 Config Center 里还记着旧值——那段归 kubernetes 仓 `tools/config-center-harvest.sh`。只装它不跑 harvest 等于把「密码不一致」从提供方挪到消费方。**触发打开**（任一）：凭据后端配了脚本之外的自动轮换；多人操作凭据后端；harvest 已能被 Secret 变更事件触发。纪律：只用点名注解不开 `autoReloadAll`（证书续期不该滚业务 Pod）、`ignoreJobs/CronJobs`、控制面 ns 排除、`annotations` 策略。部署资产在 `~/lens077/kubernetes/components/reloader/`（`ADDON_RELOADER`）。四段链路、边界与验证见 [Reloader 参考](reports/2026-09-11-reloader-reference.md) |
 
 ---
 
@@ -926,6 +928,7 @@ Tetragon 运行时安全 enforcement（audit-only 已落地，enforcement 待独
 | **Pod Anti-Affinity** | [Kubernetes Affinity/Anti-Affinity](https://kubernetes.io/docs/concepts/scheduling-eviction/assign-pod-node/) | K8s 官方：调度约束 |
 | **ArgoCD** | [ArgoCD Documentation](https://argo-cd.readthedocs.io/) | GitOps 声明式交付标准工具 |
 | **Argo Rollouts** | [Argo Rollouts Documentation](https://argoproj.github.io/rollouts/) | Canary/Blue-Green 发布策略 |
+| **Reloader** | [stakater/Reloader](https://github.com/stakater/Reloader) | Secret/ConfigMap 变更后按注解滚动工作负载；条件采纳、默认关，边界与验证见 [Reloader 参考](reports/2026-09-11-reloader-reference.md) |
 
 
 ## 3. 数据一致性与事件驱动
@@ -1030,6 +1033,8 @@ PR 阶段已经落地 Gitleaks、zizmor、Trivy fs/config 三件套，并采用�
 | **Cilium Network Policy** | [Cilium Network Policy Docs](https://docs.cilium.io/en/stable/security/policy/) | L3/L4/L7 网络策略 |
 | **Kubernetes NetworkPolicy** | [K8s NetworkPolicy Documentation](https://kubernetes.io/docs/concepts/services-networking/network-policies/) | K8s 原生网络策略 |
 | **Zero Trust Architecture** | [NIST SP 800-207](https://csrc.nist.gov/pubs/sp/800/207/final) | 零信任架构标准 |
+| **External Secrets Operator** | [ESO Documentation](https://external-secrets.io/) | 凭据后端 → K8s Secret 的搬运工；`ClusterSecretStore` + `ExternalSecret`/`PushSecret` |
+| **OpenBao** | [OpenBao Documentation](https://openbao.org/docs/) | 凭据真相源（Vault 的 MPL-2.0 分叉，LF 治理）；定稿见 [TECH-RADAR §4.9](TECH-RADAR.md) |
 | **HMAC API 认证** | [RFC 2104 (HMAC)](https://www.rfc-editor.org/rfc/rfc2104) | 第三方 API 签名认证 |
 | **mTLS** | [RFC 8446 (TLS 1.3)](https://www.rfc-editor.org/rfc/rfc8446) | 双向 TLS 认证（分阶段：先 WireGuard 节点级） |
 | **SPIFFE/SPIRE** | [SPIFFE Specification](https://spiffe.io/docs/latest/spiffe-about/overview/) | 工作负载身份标准（暂不引入） |

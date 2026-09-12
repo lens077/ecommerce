@@ -152,6 +152,8 @@ Kafka/Debezium/Kafka Connect 是 Java 例外（Strimzi 不采用，Kafka 部署�
 | 4.10 | ✅ | SOPS | Go | sandbox | 采纳（与 4.9 组合）：SOPS+ksops 管 bootstrap 与少量 GitOps 静态密文，兼作 ESO/OpenBao 故障应急路径 |
 | 4.11 | ❌ | Teleport | Go | 收录 | 否决：许可已非 OSS，场景不足 |
 
+**复审附记 — OpenBao vs Vault（2026-09-11，落地当日复审；来源：[OpenBao 2.6.0 release notes](https://openbao.org/community/release-notes/2-6-0/)、[OpenBao vs Vault 2026 对比](https://wetheflywheel.com/en/comparisons/openbao-vs-hashicorp-vault/)）**：①产品层两者是同一套引擎（OpenBao 为 Vault 的分叉，API/CLI/secrets engine/auth method 相同，ESO 的 provider 仍写 `vault:`），本项目用到的 KV v2 + token auth 无差别；差别只在许可（MPL-2.0 vs BUSL-1.1）与治理（LF vs IBM 单厂商）——4.9 定稿维持。OpenBao 免费含 Namespaces、水平读扩展（2.5）、Auto-Unseal 插件化（2.6，现网即此版）；缺原生 DR 复制与一线商业支持，本项目规模用不到。②**真正的差别在部署位置而非产品**：现网 OpenBao 在集群内（本地 PVC，随集群亡）、VPS Vault 在集群外。集群内单源的代价是「重装即轮换」，可接受的前提是集群内组件密码可再生、外部依赖真相本就在外部系统、消费方由 kubernetes 仓 harvest 自动跟上。③VPS Vault 的 `ClusterSecretStore vault` 自 09-06 重装起因缺 AppRole 凭据一直 `InvalidProviderConfig`、零引用，09-11 删除；install.sh 改为「有凭据才建」，保留为可选集群外副本。④OpenBao 成为正式凭据后端 ⇒ **10.3 Velero 触发条款③已命中**，集群外副本（VPS Vault 作 PushSecret 目的地，或 VPS 换 OpenBao）列为待做，触发以 10.3 为准。
+
 **附（casdoor 归属，对抗第 2/3 轮定稿）**：Casdoor **保持为 IdP 并收编进集群**——动机 = <50% 可用云箱上的 IdP、其 DB 与弱口令 PG 同箱、user-service 跨公网 RTT、纳入 CNPG PITR（「公网明文 OAuth」论据已被 08-19 整改消解，核验在案）。**迁移方案定稿**：公网 origin 不变 ⇒ 前端零改动、存量 token 存活；kid=lens 证书随 DB 迁；JWKS diff==0 门禁；停机 ≤30min、回退分钟级；+3 补丁（dump 校验和、CSP/XFO 头 diff、NTP）。
 
 ---
