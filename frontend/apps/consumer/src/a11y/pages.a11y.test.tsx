@@ -213,8 +213,8 @@ describe("axe 探测器自检（常驻 canary）", () => {
 describe("关键页 axe 零违规（WCAG A/AA，jsdom）", () => {
   it("首页 /", async () => {
     // 语言无关的就绪信号：首页 h1（i18n 默认语言可能是 en）。
-    // hidden: true 必须给——PrivacyConsent 对话框默认打开，MUI Modal 会把应用
-    // 根容器标成 aria-hidden，role 查询默认会排除整棵树。
+    // hidden: true 保留：PrivacyConsent 已从 MUI Modal 改成右下角非阻塞卡片，不再把
+    // 根容器标成 aria-hidden；留着对查询无害，将来若再引入 Modal 也不会误红。
     // 内层等待超时 < 用例超时：失败时 testing-library 会打印实际 DOM，可诊断。
     const results = await renderPage("/", () =>
       screen.findByRole("heading", { level: 1, hidden: true }, { timeout: 4000 }),

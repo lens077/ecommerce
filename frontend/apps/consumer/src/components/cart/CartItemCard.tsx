@@ -46,6 +46,7 @@ export function CartItemCard({
       <Checkbox
         checked={item.selected}
         onChange={() => onToggleSelect(item.cartItemId)}
+        slotProps={{ input: { "aria-label": `${t("cart.select")} ${item.spuName}` } }}
         sx={{
           p: 0,
           color: tokens.colors.border.default,

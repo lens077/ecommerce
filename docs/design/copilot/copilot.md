@@ -213,7 +213,7 @@ interface CopilotAction {
 | S1 共享包 | `@ecommerce/copilot`：Provider / Panel / 注册表 / IntentMatcher / 执行器 / 视觉层 | `cd frontend && pnpm ready`；包内 vitest：每个动作的 `examples` 全命中且不误命中同角色其他动作；受控 input 赋值后 React `onChange` 被调用；MUI `Select` 经 `mousedown` 打开并选中；`prefers-reduced-motion` 分支；`Esc` 中断 |
 | S2 三 app 接线 | 各 app 挂 Provider、标锚点、注册动作；admin `/monitor` 页与侧栏入口 | 三个 app 各一条 vitest：注册动作 → 输入 example → 执行器跑完 → 锚点被点击 / 输入框值正确；现有 a11y 测试不退化 |
 | 演示 | dev 环境三条链路人工走通 | 各录一段屏幕录像归 `docs/progress-archive/` |
-| 目标态 | 写动作与 `confirm`；健康卡片接真实聚合数据；若固定句式不够用再评估意图解析升级，届时另立设计 | 各自立项时补验收 |
+| 目标态 | 写动作与 `confirm`；固定句式扩充；健康卡片接真实聚合数据；若固定句式仍不够用再评估意图解析升级 | 各自立项时补验收 |
 
 设计稿阶段不改 `TODO.md`；S1 立项时按 TODO 纪律登记到 `docs/todo/` 前端分类并回填计数。
 
@@ -223,7 +223,105 @@ interface CopilotAction {
 
 待确认：`/monitor` 健康数据来源——网关是否已有可用的聚合端点；核实前卡片显示「未接入」。
 
-## 八、风险
+## 八、后续能力设计：写动作、确认与固定句式扩充
+
+### 8.1 写动作与 `confirm`
+
+写动作不能因为助手能点击按钮就默认执行。动作契约增加以下约束：
+
+```ts
+interface WriteAction extends CopilotAction {
+  sensitive: true;
+  impact: "irreversible" | "financial" | "external_side_effect";
+  confirmation: {
+    summary: string;       // 明确对象、动作、影响
+    requireTypedValue?: string; // 高风险操作可要求用户输入确认词
+  };
+}
+```
+
+执行流程固定为：
+
+1. 规则匹配只生成**预览计划**，不调用业务写接口，也不点击写按钮。
+2. 面板显示对象、当前值、目标值和影响范围，例如「将订单 `ORD20240612001` 标记为已发货」。
+3. 用户点击「继续」后，执行器才运行 `confirm` 后面的页面动作；取消、`Esc`、页面路由变化都会使确认失效。
+4. 写动作执行完成后重新读取页面状态，只有页面状态已变更才显示成功；超时或页面状态未变更显示失败，不把 click 当成成功证据。
+5. 每个写动作必须有独立的服务端权限检查；copilot 前端的角色过滤只负责体验，不能构成授权。
+
+首批候选及风险等级：
+
+| 动作 | 角色 | 风险 | 确认内容 |
+|---|---|---|---|
+| `ship_order` | merchant | external_side_effect | 订单号、收件信息摘要、发货后不可撤销提示 |
+| `cancel_order` | customer / merchant | irreversible | 订单号、退款/库存影响、输入「确认取消」 |
+| `change_product_price` | merchant | financial | 商品、旧价、新价、影响渠道 |
+| `toggle_product_online` | merchant | external_side_effect | 商品、当前状态、目标状态 |
+| `approve_product` | admin | external_side_effect | 商品、审核结论、发布范围 |
+
+第一期只允许「页面已有按钮 + 页面已有表单」的动作；不允许助手拼接 API 请求绕过页面授权、校验或二次确认。
+
+### 8.2 固定句式扩充
+
+不引入分词或 LLM，采用「动作词典 + 槽位提取 + 同义词表 + 冲突优先级」：
+
+- **动作词典**：每个动作声明 `patterns`、`examples`、`roles`、`slots`；pattern 只负责识别语法，slot parser 负责提取订单号、商品名、状态和数字。
+- **同义词表**：按领域维护，例如 `查看 / 看看 / 打开 / 进入` → `open`，`没有发货 / 未发货 / 待发货` → `pending`，词表值统一映射到业务枚举。
+- **槽位边界**：商品名使用「直到句末」或成对引号，订单号使用 `ORD[A-Z0-9-]{6,32}`；金额必须匹配 `^[0-9]+(?:\\.[0-9]{1,2})?$`，不接受带单位的模糊数字。
+- **复合句策略**：第一期拒绝「先 A 再 B」；第二期可用连接词切分为多个计划，但每个计划都要独立确认。
+- **冲突优先级**：先按角色过滤，再按动作危险等级降序（写动作不会被读动作抢走），最后按 pattern specificity（固定词越多优先）。
+- **未命中**：不猜参数、不执行；显示当前角色的可用示例，并把用户原句仅保留在当前内存消息中，不写日志。
+
+建议扩充顺序：
+
+| 阶段 | 新增固定句式 | 新增槽位 | 验收 |
+|---|---|---|---|
+| P1 | 商品搜索的「按价格/分类/库存」 | `keyword`、`category`、`maxPrice` | 每条 example 唯一命中，参数边界单测 |
+| P2 | 订单的「查看 / 筛选 / 导出 / 查看详情」 | `status`、`orderId`、`dateRange` | merchant 真实数据上 e2e，读动作不改变页面数据 |
+| P3 | 商品管理的「上架 / 下架 / 改价」 | `spuCode`、`price`、`online` | 必须经过 `confirm`，服务端权限与页面状态双重验收 |
+| P4 | 管理员的「查看用户 / 审核商品 / 服务健康」 | `userId`、`spuCode`、`service` | admin 角色隔离、越权输入拒绝 |
+
+每新增一个 pattern 必须同步 `examples`、中文/英文 locale、角色交叉误命中测试和 Firefox e2e 至少一条用户旅程。
+
+## 九、真实健康数据设计（需要 control-tower 配合）
+
+### 9.1 为什么不能直接从前端请求 10 个 `/healthz`
+
+业务服务的 `/healthz` 是 Kubernetes 探针级 HTTP 端点，绑定在内网 Service；浏览器直连会暴露内部拓扑，
+也无法稳定处理跨源、认证和 Cilium 网络策略。control-tower 当前 `/readyz` 只代表网关自身、路由快照与会话存储，不能作为业务服务状态。
+
+### 9.2 聚合端点契约
+
+在同级仓 `control-tower/services/gateway` 增加受保护的 `GET /admin/health/services`（名称待 control-tower 评审）：
+
+```json
+{
+  "checked_at": "2026-09-10T00:00:00Z",
+  "services": [
+    {"name":"order", "status":"healthy", "latency_ms":12, "checked_at":"..."},
+    {"name":"payment", "status":"degraded", "latency_ms":200, "checked_at":"..."}
+  ]
+}
+```
+
+设计约束：
+
+- 网关服务端按 `.service-matrix.yaml` / control-tower 配置的白名单访问各 Service `/healthz`，不接受浏览器传入目标地址。
+- 并发检查，单服务超时与总超时分开；一个服务失败不阻塞其余服务，状态至少有 `healthy / degraded / unavailable / unknown`。
+- 仅 admin 角色可访问；前端不显示内部 host/port，只显示服务名、状态、耗时和统一的检查时间。
+- 不把健康检查写入业务数据库；结构化日志记录聚合耗时与失败服务名。
+- `/monitor` 使用 `AbortController`、10 秒轮询和「上次成功数据 + 当前失败提示」；首次无数据显示「加载失败」，不能显示「健康」。
+- control-tower 需要为该端点增加单元测试、网关集成测试、路由授权测试和 Cilium egress/ingress 策略；本仓 admin 增加真实响应 fixture 与 Firefox e2e。
+
+### 9.3 本仓落地顺序
+
+1. control-tower 先实现并部署聚合端点，确认响应契约与角色策略。
+2. 本仓 admin 新增 `getServiceHealth()` API adapter，映射状态并保留未知字段兼容性。
+3. `/monitor` 把「未接入」替换为实时状态；请求失败显示「加载失败」并保留最近一次成功结果。
+4. e2e 不假装真实网络：用固定 fixture 覆盖全健康、部分不可用、聚合端点 401/403/503 三种情况；dev 环境手测一次真实链路。
+
+**当前阻塞**：control-tower 尚未提供这个聚合端点，所以本仓不能诚实地声称已接入真实健康数据；当前卡片仍保持「未接入」。
+
+## 十、风险
 
 - **句式覆盖不足**：用户换个说法就未命中。缓解：未命中时列出可点的 `examples`；正则表随反馈追加，每加一条补 example 断言。
 - **DOM 漂移**：页面改版忘了带上 `data-copilot` 会让链路静默失败。S2 的 vitest 断言锚点存在，并在 `pnpm ready` 里跑。
@@ -237,4 +335,4 @@ interface CopilotAction {
 - **锚点矩形跟随**：用 `useSyncExternalStore` 订阅 scroll/resize/ResizeObserver，快照是一串数字；不在 effect 里 setState（oxlint `react/set-state-in-effect`）。
 - **右下角冲突**：dev 模式下 TanStack devtools 的悬浮钮也是 fixed 右下角，z-index 到 100000，会截住助手按钮的点击（Playwright 实测）。不跟它比 z-index，把 consumer 的两个 devtools 触发钮挪到左下。
 - **e2e 桩网关的坑**：Playwright 路由 glob 若写成「双星 api 双星」，会连 vite 给 `@ecommerce/api` 源码的 URL 也拦掉，应用直接白屏；改用 `url.pathname.startsWith("/api/") || url.port === "8080"` 的函数匹配。
-- **e2e 运行方式**：`frontend/e2e/playwright.config.ts` 自起三个 dev server（已在跑则复用），网关代理指到必然拒绝的端口，搜索 RPC 用 `page.route` 桩掉；不需要后端。`@playwright/test` 进 catalog；下载不到配套 Chromium 时用 `E2E_CHROMIUM` 指本机可执行文件。
+- **e2e 运行方式**：`frontend/e2e/playwright.config.ts` 自起三个 dev server（已在跑则复用），浏览器已切换为 Firefox；网关代理指到必然拒绝的端口，搜索 RPC 用 `page.route` 桩掉；不需要后端。`@playwright/test` 进 catalog；CI 需执行 `pnpm exec playwright install --with-deps firefox`。
