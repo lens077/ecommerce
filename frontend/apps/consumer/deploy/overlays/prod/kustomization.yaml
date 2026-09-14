@@ -4,5 +4,5 @@ resources:
   - ../../pre
 images:
   - name: ccr.ccs.tencentyun.com/sumery/ecommerce-frontend
-    newTag: "1.7.2"
-    digest: sha256:10369609e36368588e5ba252e034f7fa8be8bfadb744e3271cad1a2e441d6216
+    newTag: "1.7.3"
+    digest: sha256:890d2729f738d7f453b8d0990defeecf54c989c7e2b6e49f8bae17a01e22cf83

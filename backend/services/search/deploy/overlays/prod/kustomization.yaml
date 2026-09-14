@@ -5,5 +5,5 @@ resources:
   - ../pre
 images:
   - name: ccr.ccs.tencentyun.com/sumery/search
-    newTag: "1.7.2"
-    digest: sha256:236b38709a6fd722047af38b2da9da7d490e87526c432522d287cca312af164f
+    newTag: "1.7.3"
+    digest: sha256:014ea837088a4be6f57288922ec9fd04f08081583fa9c2ae33981bdb4a3ef9dc
