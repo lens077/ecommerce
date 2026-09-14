@@ -1,0 +1,25 @@
+# Production baseline: observed 2026-09-12; emergency images remain immutable.
+# Keep the existing Config Center environment until its migration is approved.
+global:
+  deploymentMode: pre
+  configSource:
+    secretName: ecommerce-config-source-pre
+  directAccess:
+    enabled: false
+user: { image: { tag: "1.6.3" } }
+search: { image: { tag: "sha-98ba5d1@sha256:3039b708910eebaa2d1f9c288575ed5de0a353750c06616b2d8d8074443825ed" } }
+behavior: { image: { tag: "1.6.3" } }
+product: { image: { tag: "1.6.3" } }
+cart: { image: { tag: "1.6.3" } }
+address: { image: { tag: "1.6.3" } }
+order: { image: { tag: "1.6.3" } }
+inventory: { image: { tag: "1.6.3" } }
+merchant: { image: { tag: "1.6.3" } }
+payment: { image: { tag: "1.6.3" } }
+frontend:
+  image:
+    tag: "sha-98ba5d1@sha256:30878568aac0fc2718fafe30f8bf14403333f3e062f045a1d17a2e124c214a27"
+consumer-next:
+  image:
+    tag: "sha-98ba5d1@sha256:eb305eb5f0e97e2c77309c4338fca787926bdcb45eabb9bac99ff33ede6ccd87"
+  publicURL: https://shop.apikv.com

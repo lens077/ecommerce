@@ -16,12 +16,12 @@ affects:
 | 使用者 | 用哪份 | 入口 |
 |---|---|---|
 | helm / ArgoCD | `helm/`(umbrella + 12 个子 chart) | `make deploy`、`argocd-app.yml` |
-| kubectl | `backend/services/<svc>/deploy/{base,overlays/<env>}`（kustomize，`kubectl -k` 内置）+ `application-vpa.yml` + `frontend/apps/consumer/deploy/pre/` + `frontend/apps/consumer-next/deploy/dev.yaml` | `make k8s-dev-all` / `make k8s-pre-all` |
+| kubectl | `backend/services/<svc>/deploy/{base,overlays/<env>}`（kustomize，`kubectl -k` 内置）+ `application-vpa.yml` + `frontend/apps/consumer/deploy/pre/` + `frontend/apps/consumer-next/deploy/base/dev.yaml` | `make k8s-dev-all` / `make k8s-pre-all` |
 
 **两份不是主从,是等价**:`helm template` 出来的每一个对象,都必须与裸 manifest 里同 kind/namespace/name 的对象逐字段相同;任一侧多一个、少一个对象也不行。门禁:
 
 ```bash
-scripts/verify-deploy-parity.sh      # 按 dev、pre 逐环境比;绿:同一套 N 个对象;红:打印 - 裸 / + helm 的 JSON diff
+scripts/verify-deploy-parity.sh      # 按 dev、pre、prod 逐环境比;绿:同一套 N 个对象;红:打印 - 裸 / + helm 的 JSON diff
 scripts/verify-deploy-parity.sh pre  # 只比一个环境
 ```
 
@@ -36,9 +36,11 @@ scripts/verify-deploy-parity.sh pre  # 只比一个环境
 | helm | `values.yaml`(=dev) | `values-<env>.yaml` 只写差异(`deploymentMode`、`configSource.secretName`、`directAccess.enabled=false`、各服务 `image.tag`) | `helm template -f values.yaml -f values-<env>.yaml` |
 
 parity 对每个环境各比一次,所以「本地直连只在 dev」不是靠自觉,是门禁:它出现在 pre 任一侧都会红。
-现只有 dev / pre 两个环境;要 prod 时**从 pre 复制**(overlay + values 文件各一份),不要预先造一个没人 apply 的。
-⚠️ 两个 overlay 建的是**同名同 ns** 的对象——在同一个集群上 apply pre 会覆盖 dev。pre 要么另一个集群,
-要么在 overlay 加 `namespace:` + helm `-n` 隔开,这一步还没做。
+现有 dev / pre / prod 三个环境。prod 后端 overlay 继承 pre 的运行配置，但独立固定镜像；
+两个前端的 prod overlay 固定镜像，consumer-next 同时设置公网 publicURL。环境名不代表镜像架构。
+⚠️ 各环境建的是**同名同 ns** 的对象，在同一集群 apply 会相互覆盖。生产入口必须显式指定
+`KUBE_CONTEXT`，不能依赖本机默认 context。prod 暂沿用 `pre` 的运行模式及 selector Secret，
+不凭目录名切换 Config Center。完整手顺见 [PRODUCTION-RELEASE.md](../../docs/PRODUCTION-RELEASE.md)。
 
 三个实付的坑,改模板前先读:
 - `defaultMode: 0400` 这种八进制字面量两侧要写成十进制 `256`:kustomize 按 YAML 1.1 读成 256,yq 按 1.2 读成 400,同一段文本两个解析器两个值。
@@ -53,7 +55,7 @@ parity 对每个环境各比一次,所以「本地直连只在 dev」不是靠�
 2. **共享的对象只有一份来源:`helm/files/`。** ServiceAccount ×11、CiliumNetworkPolicy、ExternalSecret `otel-auth` 放在 `helm/files/zero-trust.yaml` 与 `helm/files/otel-auth-externalsecret.yaml`,helm 经 `templates/*.yaml` 的 `.Files.Get`/`tpl` 输出,裸路径经 `scripts/render-zero-trust.sh` 用**同一条 helm 命令**渲染。不要在 `deploy/` 下再复制一份 SA。
 3. **`otel-auth-externalsecret.yaml` 必须留在 `helm/files/` 并用 `.Files.Get` 输出,不能挪回 `templates/` 走模板引擎。** 里面的 `{{ .k8s }}` 是 ESO 的占位符,Helm 会把它吃成空串,Secret 照样 SecretSynced 但 token 为空,所有 OTLP 请求 401 静默丢弃(2026-08-27 实测)。
 4. **helm 共用模板放 `helm/templates/_ecommerce.tpl`,不再有 `helm/library/` 与打包 tgz。** Helm 的命名模板是全局的,子 chart 直接 `include` 父 chart 的 define。原来的 library subchart 要 `helm dependency build` 打成 tgz 提交到每个子 chart 里,源码改了 tgz 没重打就静默渲染旧模板——structcheck 曾专门写测试去比对 tgz 内容,那是给错误设计打的补丁。structcheck 现在断言 `helm/library` 不存在。
-5. **镜像 tag 两边同写。** CI `backend.yml` 的 `update-manifests` 发版后同时改 `helm/values.yaml` 的 `<svc>.image.tag` 与 `deploy/base/deployment.yaml` 的 `image:`(=dev;pre 的版本在 `overlays/pre` 的 `images.newTag` 与 `values-pre.yaml` 里显式钉,晋级时手改两处)(sed,不用 yq -i——yq 会重排手写文档的注释与缩进),然后跑 parity 再提交。手工改 tag 也照此办。tag 用发布版本号 `X.Y.Z`,不用 `latest`/`dev`/`pre`/`prod` 浮动 tag(structcheck 拦)。
+5. **版本与 digest 两边同写。** 发布 tag 构建十个后端及两个前端，全部成功后 `backend.yml` 调用 `scripts/promote-release.py --environment dev`，校验十二个 index 均含 amd64/arm64，再同时更新公共 values 与裸清单并跑 parity。prod 使用同一脚本的 `--environment prod` 显式晋级，不随发布自动切换。脚本保留手写 YAML 格式；任何单架构镜像均不能晋级。tag 用发布版本 `X.Y.Z`，并固定 index digest，不用 `latest`/`dev`/`pre`/`prod` 浮动 tag。初始 prod 的应急 digest 只作为接管基线保留，不回写 dev。
 6. **环境用分层不用复制。** 旧 `deploy/prod/` 于 2026-09-06 删除:从未 apply、`:prod` 浮动 tag、Consul 指向不存在的 8501/https、且已与 dev 结构性漂移。现在是 `base` + `overlays/<env>`(裸)与 `values.yaml` + `values-<env>.yaml`(helm),见上「多环境」。
 7. **VPA 只在 `application-vpa.yml`(裸侧)与各子 chart 的 `vpa.yaml`(helm 侧)。** 服务目录下不再放 `vpa.yml`;`control-tower-gateway-vpa` 归 control-tower 仓,本仓不持有(本仓那份曾与他们 apply 的版本在 containerName / min-max 上打架)。
 8. **Postgres 出站 CIDR 是运行时注入值。** 两条路径都经 `scripts/resolve-postgres-egress-cidr.sh` 取;parity 脚本两侧统一喂 RFC 5737 占位地址,不需要 ssh 到集群。
@@ -72,7 +74,7 @@ parity 对每个环境各比一次,所以「本地直连只在 dev」不是靠�
 ## 四、验证
 
 ```bash
-scripts/verify-deploy-parity.sh                                   # 两份等价(dev + pre)
+scripts/verify-deploy-parity.sh                                   # 两份等价(dev + pre + prod)
 helm template ecommerce helm -n ecommerce \
   --set-string global.postgresEgressCIDR=203.0.113.1/32 | kubectl diff -f -   # 与集群实况的差异(只该剩 CIDR)
 cd backend && go test -count=1 ./structcheck/...

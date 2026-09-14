@@ -15,7 +15,12 @@ command -v helm >/dev/null 2>&1 || {
   exit 1
 }
 
-helm template ecommerce "${repo_root}/helm" \
+values=(-f "${repo_root}/helm/values.yaml")
+deploy_env="${DEPLOY_ENV:-dev}"
+if [[ "${deploy_env}" != dev ]]; then
+  values+=(-f "${repo_root}/helm/values-${deploy_env}.yaml")
+fi
+helm template ecommerce "${repo_root}/helm" "${values[@]}" \
   --namespace "${namespace}" \
   --show-only templates/zero-trust.yaml \
   --show-only templates/otel-auth-externalsecret.yaml \

@@ -256,7 +256,15 @@ POSTGRES_EGRESS_CIDR ?=
 POSTGRES_SSH_ALIAS ?= node1
 # 后端服务之外、同属这套集群对象的裸 manifest(VPA 与两个前端)。
 # 这份清单与 scripts/verify-deploy-parity.sh 的 raw_sources 一致,少一条那边就会多出「只有 helm 有」。
-K8S_EXTRA_MANIFESTS ?= ../application-vpa.yml ../frontend/apps/consumer/deploy/pre ../frontend/apps/consumer-next/deploy/dev.yaml
+K8S_EXTRA_MANIFESTS ?= ../application-vpa.yml
+K8S_FRONTEND_OVERLAYS ?= $(if $(filter prod,$(K8S_ENV)),../frontend/apps/consumer/deploy/overlays/prod ../frontend/apps/consumer-next/deploy/overlays/prod,../frontend/apps/consumer/deploy/pre ../frontend/apps/consumer-next/deploy/base)
+KUBE_CONTEXT ?=
+KUBECTL = kubectl $(if $(KUBE_CONTEXT),--context $(KUBE_CONTEXT),)
+
+.PHONY: k8s-prod-all
+k8s-prod-all:
+	@test -n "$(KUBE_CONTEXT)" || { echo "prod requires explicit KUBE_CONTEXT" >&2; exit 1; }
+	@$(MAKE) k8s-apply-all K8S_ENV=prod K8S_FRONTEND_OVERLAYS="../frontend/apps/consumer/deploy/overlays/prod ../frontend/apps/consumer-next/deploy/overlays/prod"
 
 .PHONY: k8s-dev-all
 k8s-dev-all:
@@ -270,21 +278,25 @@ k8s-pre-all:
 # 都不中断循环 —— 一个服务坏掉不该让后面的服务全部漏掉
 .PHONY: k8s-apply-all
 k8s-apply-all:
+	@if [ "$(K8S_ENV)" = prod ] && [ -z "$(KUBE_CONTEXT)" ]; then echo "prod requires explicit KUBE_CONTEXT" >&2; exit 1; fi
 	@tmp=$$(mktemp "$${TMPDIR:-/tmp}/ecommerce-zero-trust.XXXXXX"); \
 	trap 'rm -f "$$tmp"' EXIT; \
 	echo "===== render and apply shared zero-trust + otel-auth (helm/files) ====="; \
 	POSTGRES_EGRESS_CIDR="$(POSTGRES_EGRESS_CIDR)" POSTGRES_SSH_ALIAS="$(POSTGRES_SSH_ALIAS)" \
-	  ../scripts/render-zero-trust.sh > "$$tmp" || exit 1; \
-	kubectl apply $(KUBECTL_ARGS) -f "$$tmp" || exit 1; \
+	  DEPLOY_ENV="$(K8S_ENV)" ../scripts/render-zero-trust.sh > "$$tmp" || exit 1; \
+	$(KUBECTL) apply $(KUBECTL_ARGS) -f "$$tmp" || exit 1; \
 	fail=""; missing=""; \
 	for s in $(SERVICES); do \
 	  if [ ! -f services/$$s/deploy/overlays/$(K8S_ENV)/kustomization.yaml ]; then missing="$$missing $$s"; continue; fi; \
 	  echo "===== kubectl apply -k $$s (overlays/$(K8S_ENV)) ====="; \
-	  kubectl apply $(KUBECTL_ARGS) -k services/$$s/deploy/overlays/$(K8S_ENV) || fail="$$fail $$s"; \
+	  $(KUBECTL) apply $(KUBECTL_ARGS) -k services/$$s/deploy/overlays/$(K8S_ENV) || fail="$$fail $$s"; \
 	done; \
 	for extra in $(K8S_EXTRA_MANIFESTS); do \
 	  echo "===== kubectl apply $$extra ====="; \
-	  kubectl apply $(KUBECTL_ARGS) -f "$$extra" || fail="$$fail $$extra"; \
+	  $(KUBECTL) apply $(KUBECTL_ARGS) -f "$$extra" || fail="$$fail $$extra"; \
+	done; \
+	for overlay in $(K8S_FRONTEND_OVERLAYS); do \
+	  $(KUBECTL) apply $(KUBECTL_ARGS) -k "$$overlay" || fail="$$fail $$overlay"; \
 	done; \
 	rc=0; \
 	if [ -n "$$missing" ]; then echo "❌ 缺 deploy/overlays/$(K8S_ENV)/kustomization.yaml:$$missing"; rc=1; fi; \

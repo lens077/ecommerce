@@ -72,6 +72,11 @@ if [[ "${deploy_action}" == "delete" && "${deploy_mode}" != "helm" ]]; then
   exit 1
 fi
 
+if [[ "${deploy_env}" == "prod" ]]; then
+  [[ -n "${kube_context}" ]] || { echo "prod requires explicit KUBE_CONTEXT" >&2; exit 1; }
+  [[ "${deploy_mode}" == "helm" ]] || { echo "prod ArgoCD application is not configured" >&2; exit 1; }
+fi
+
 kubectl_cmd=(kubectl)
 if [[ -n "${kube_context}" ]]; then
   kubectl_cmd+=(--context "${kube_context}")

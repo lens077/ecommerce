@@ -30,7 +30,7 @@ on:
 
 # 串行化同分支的运行：manifest 回写按提交顺序进行，避免旧 run 覆盖新 tag
 concurrency:
-  group: backend-ci-${{ github.ref }}
+  group: ecommerce-release
   cancel-in-progress: false
 
 jobs:
@@ -45,11 +45,17 @@ jobs:
         with:
           fetch-depth: 0
 
+      - name: Release regression checks
+        run: |
+          python3 scripts/test-promote-release.py
+          python3 scripts/test-frontend-release.py
+
       - name: Detect
         id: detect
         env:
           EVENT_NAME: ${{ github.event_name }}
           CURRENT_TAG: ${{ github.ref_name }}
+          REF_TYPE: ${{ github.ref_type }}
           DISPATCH_SERVICES: ${{ inputs.services }}
         run: |
           set -euo pipefail
@@ -57,6 +63,7 @@ jobs:
           ALL_SERVICES=$(yq -r '.services | keys | .[]' .service-matrix.yaml)
 
           if [[ "$EVENT_NAME" == "workflow_dispatch" ]]; then
+            [[ "$REF_TYPE" != tag ]] || { echo "Dispatch only on a branch; release tags use push events" >&2; exit 1; }
             if [[ -n "$DISPATCH_SERVICES" ]]; then
               SELECTED=$(tr ',' '\n' <<<"$DISPATCH_SERVICES" | sed 's/ //g' | grep -v '^$')
               # 手输的服务名必须在真相源里，防手滑
@@ -66,31 +73,13 @@ jobs:
             else
               SELECTED="$ALL_SERVICES"
             fi
+          elif [[ "$CURRENT_TAG" =~ ^(0|[1-9][0-9]*)\.(0|[1-9][0-9]*)\.(0|[1-9][0-9]*)$ ]]; then
+            # A release is a complete promotable set, including search even without a path diff.
+            SELECTED="$ALL_SERVICES"
           else
-            # tag 事件：与上一个 semver tag 之间 diff 出改动文件。
-            # 首个 tag（找不到前驱）退化为全量；旧 v1.3.x 系不算前驱。
-            PREV_TAG=$(git tag --list '[0-9]*.[0-9]*.[0-9]*' \
-              | grep -E '^[0-9]+\.[0-9]+\.[0-9]+$' | grep -vx "$CURRENT_TAG" \
-              | sort -V | tail -1 || true)
-            if [[ -z "$PREV_TAG" ]]; then
-              CHANGED=""
-              FULL_RUN=1
-              echo "无前驱 semver tag，全量构建"
-            else
-              CHANGED=$(git diff --name-only "$PREV_TAG" "$GITHUB_SHA")
-              FULL_RUN=0
-              echo "diff 基线: $PREV_TAG"
-            fi
+            echo "Release tag must be canonical X.Y.Z" >&2
+            exit 1
 
-            # 共享路径 → 全量（单 go.mod 单模块，共享代码影响所有服务）
-            SHARED_PATTERN='^backend/(api|constants|pkg|third_party)/|^backend/go\.(mod|sum)$|^\.github/workflows/(backend|service-ci)\.yml$|^\.service-matrix\.yaml$'
-            if [[ "$FULL_RUN" == 1 ]] || grep -qE "$SHARED_PATTERN" <<<"$CHANGED"; then
-              SELECTED="$ALL_SERVICES"
-            else
-              SELECTED=$(while read -r svc; do
-                grep -qE "^backend/services/${svc}/" <<<"$CHANGED" && echo "$svc" || true
-              done <<<"$ALL_SERVICES")
-            fi
           fi
 
           SERVICES_JSON=$(grep -v '^$' <<<"$SELECTED" | jq -R . | jq -cs .)
@@ -125,10 +114,21 @@ jobs:
   # backend/services/<svc>/deploy/base/deployment.yaml 的 image:）必须同步写，
   # 写完先跑 scripts/verify-deploy-parity.sh 证明两边仍等价再提交。
   # 回写提交带 [skip ci]，本 workflow 只由 tag 触发，回写不会再触发自己。
+  frontend:
+    if: github.ref_type == 'tag'
+    needs: detect
+    uses: ./.github/workflows/frontend-release.yml
+    with:
+      version: ${{ github.ref_name }}
+    secrets: inherit
+
   update-manifests:
     name: update deploy manifests (helm + raw)
-    needs: [detect, ci]
-    if: needs.detect.outputs.services != '[]'
+    needs: [detect, ci, frontend]
+    if: >-
+      always() && needs.ci.result == 'success' &&
+      (needs.frontend.result == 'success' || needs.frontend.result == 'skipped') &&
+      needs.detect.outputs.services != '[]'
     runs-on: ubuntu-24.04
     steps:
       - name: Checkout with push token
@@ -137,14 +137,28 @@ jobs:
           ref: main
           token: ${{ secrets.MANIFEST_PUSH_TOKEN }}
 
+      - name: Set up Buildx
+        uses: docker/setup-buildx-action@v3
+
+      - name: Login to TCR for release verification
+        uses: docker/login-action@v3
+        with:
+          registry: ccr.ccs.tencentyun.com
+          username: ${{ secrets.TCR_USERNAME }}
+          password: ${{ secrets.TCR_PASSWORD }}
+
       - name: Bump image tags (helm + raw manifests)
         env:
           SERVICES: ${{ needs.detect.outputs.services }}
           VERSION: ${{ github.ref_type == 'tag' && github.ref_name || '' }}
         run: |
           set -euo pipefail
-          # tag 触发用版本号（不可变，语义可读）；dispatch 退回 sha
-          TAG="${VERSION:-sha-${GITHUB_SHA::7}}"
+          if [[ -n "$VERSION" ]]; then
+            python3 scripts/promote-release.py --environment dev --version "$VERSION"
+            exit 0
+          fi
+          # Manual backend-only builds do not promote production.
+          TAG="sha-${GITHUB_SHA::7}"
           for svc in $(jq -r '.[]' <<<"$SERVICES"); do
             yq -i ".${svc}.image.tag = \"${TAG}\"" helm/values.yaml
             repo="$(yq -r ".${svc}.image.repository" helm/values.yaml)"
@@ -170,7 +184,12 @@ jobs:
           SVC_LIST=$(jq -r 'join(",")' <<<"$SERVICES")
           git config user.name "github-actions[bot]"
           git config user.email "github-actions[bot]@users.noreply.github.com"
-          git add helm/values.yaml backend/services/*/deploy/base/deployment.yaml
+          if [[ -n "$VERSION" ]]; then
+            printf '\n- CI release `%s`: verified all backend and frontend linux/amd64 + linux/arm64 indexes; updated dev manifests only. Production promotion remains explicit.\n' "$VERSION" >> TODO.md
+          fi
+          git add helm/values.yaml backend/services/*/deploy/base/deployment.yaml \
+            frontend/apps/consumer/deploy/pre/deployment.yaml \
+            frontend/apps/consumer-next/deploy/base/dev.yaml TODO.md
           git diff --cached --quiet && { echo "无变化，跳过提交"; exit 0; }
           git commit -m "ci: 更新 ${SVC_LIST} 镜像 tag 至 ${TAG} [skip ci]"
           # 与后续 push 竞争时 rebase 重试；本文件只会追加改动，冲突概率极低

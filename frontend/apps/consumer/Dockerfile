@@ -24,11 +24,16 @@ COPY pnpm-lock.yaml pnpm-workspace.yaml package.json ./
 #    ⚠️ 还要算上**传递**的 workspace 依赖：consumer 自己不依赖 tracker，
 #    但 perf 依赖它（perf → @ecommerce/tracker）。只看 consumer 的 package.json
 #    会漏掉这一层，症状与直接漏拷一模一样，极难往"传递依赖"上想。
+#    2026-09-12 又漏一轮：copilot（consumer 直接依赖）与 icons（copilot/ui 的传递依赖），
+#    这次 rolldown 直接报 `failed to resolve import "@ecommerce/copilot"`。
+#    加新 workspace 包时把下面两段 COPY 一起改，不要只改一处。
 COPY apps/consumer/package.json apps/consumer/
 COPY packages/api/package.json packages/api/
 COPY packages/configs/package.json packages/configs/
 COPY packages/constants/package.json packages/constants/
+COPY packages/copilot/package.json packages/copilot/
 COPY packages/i18n/package.json packages/i18n/
+COPY packages/icons/package.json packages/icons/
 COPY packages/perf/package.json packages/perf/
 COPY packages/tauri/package.json packages/tauri/
 COPY packages/tracker/package.json packages/tracker/
@@ -60,7 +65,9 @@ COPY apps/consumer/ apps/consumer/
 COPY packages/api/ packages/api/
 COPY packages/configs/ packages/configs/
 COPY packages/constants/ packages/constants/
+COPY packages/copilot/ packages/copilot/
 COPY packages/i18n/ packages/i18n/
+COPY packages/icons/ packages/icons/
 COPY packages/perf/ packages/perf/
 COPY packages/tauri/ packages/tauri/
 COPY packages/tracker/ packages/tracker/

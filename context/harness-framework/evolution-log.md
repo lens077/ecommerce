@@ -1322,3 +1322,11 @@ description: harness 本身（硬规则/门禁/Agent 约束）每次改动的原
   `affects:` 目标放桩、只复制 `.scratch/*/issues/*.md`（首跑整目录复制把 doc-embed-demo 的 embed 源依赖拖进沙箱致探针 0
   假红，已收窄）。`spec-impact.sh` 对当前工作树实测：三份改动文档各列出登记路径与验证命令，`--help` 可用。
   **未验证**：验收标准五形态只有约定没有门禁，误报权衡见决策文件。
+
+### 2026-09-12 生产清单与原生多架构发布门禁
+
+- **触发事故**：node3~node5 线上集群缺少两个前端的 amd64 镜像，search 旧版本不支持现用配置，三个工作负载被缩到零。手工构建恢复后，生产状态仍无独立清单；Next.js 在 QEMU 构建 worker 阶段两次 SIGSEGV。进一步复核发现仅有 actionlint 不能证明发布 shell 正确：曾出现重复循环结尾、正则双重转义、错误的 Buildx JSON 字段及 digest 模板字段。
+- **为什么**：目录存在、YAML 可解析或 actionlint 通过，都不能证明目标架构可运行或发布脚本能正确处理注册表响应。把 prod 独立成对渲染、原生平台构建及实际 shell 回归接入门禁，防止继续靠单次手工发布维持线上。
+- **改了什么**：parity 默认覆盖 dev/pre/prod；prod 独立镜像基线不覆盖 dev；生产入口必须显式指定 context。前端使用原生 amd64/arm64 runner，先校验平台再合并 index，拒绝覆盖指向不同 digest 的最终标签。发布 tag 构建完整十服务及两个前端；晋级脚本校验全部镜像双架构后成对更新版本和 digest，prod 不自动部署。
+- **怎么验证的**：三个环境 parity、structcheck、晋级脚本离线回归、直接执行 workflow shell 的假注册表用例，以及假 kubectl 对生产 context/dry-run 路径的验证。用真实 TCR 镜像只读确认 Buildx `.Image` JSON 使用 `os`/`architecture`，index digest 位于 `.Manifest.Digest`。
+- **未验证**：GitHub 的首次真实双架构构建、制品推送和生产版本晋级尚未执行，需单独发布授权；不把本地门禁通过记成线上发布成功。决策见 [2026-09-12-prod-release-baseline.md](../decisions/implemented/2026-09-12-prod-release-baseline.md)。

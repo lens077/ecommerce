@@ -12,7 +12,7 @@
 #   helm 侧:helm template umbrella chart,-f values.yaml [-f values-<env>.yaml]
 #   裸侧:  kubectl kustomize backend/services/*/deploy/overlays/<env>(base + 该环境的补丁/附加资源)
 #           + application-vpa.yml
-#           + frontend/apps/consumer/deploy/pre/*.yaml + frontend/apps/consumer-next/deploy/dev.yaml(环境无关)
+#           + frontend/apps/consumer/deploy/pre/*.yaml + frontend/apps/consumer-next/deploy/base/dev.yaml(环境无关)
 #           + helm/files/ 里两条路径共用的 zero-trust / otel-auth(经同一条 helm 命令渲染,
 #             用来保证「共享清单确实在 helm 里被渲染出来」)
 # 任一侧多一个对象、少一个对象、任何字段不同 → 红。dev 独有的本地直连(HTTPRoute + cnp-direct)
@@ -36,7 +36,7 @@ done
 
 namespace="${NAMESPACE:-ecommerce}"
 placeholder_cidr="203.0.113.1/32"
-envs=("$@"); [[ ${#envs[@]} -eq 0 ]] && envs=(dev pre)
+envs=("$@"); [[ ${#envs[@]} -eq 0 ]] && envs=(dev pre prod)
 workdir="$(mktemp -d "${TMPDIR:-/tmp}/deploy-parity.XXXXXX")"
 if [[ -z "${KEEP:-}" ]]; then trap 'rm -rf "${workdir}"' EXIT; else echo "临时目录:${workdir}"; fi
 
@@ -51,8 +51,11 @@ helm_render() { # helm_render <env> [extra helm args...]
 # 环境无关的裸 manifest(VPA 与两个前端);后端服务走各自的 kustomize overlay
 raw_common=(
   application-vpa.yml
-  frontend/apps/consumer/deploy/pre/*.yaml
-  frontend/apps/consumer-next/deploy/dev.yaml
+  frontend/apps/consumer/deploy/pre/configMap.yaml
+  frontend/apps/consumer/deploy/pre/deployment.yaml
+  frontend/apps/consumer/deploy/pre/service.yaml
+  frontend/apps/consumer/deploy/pre/httproute.yaml
+  frontend/apps/consumer-next/deploy/base/dev.yaml
 )
 
 render_env() { # render_env <env>  → ${workdir}/<env>/{helm,raw}.yaml
@@ -66,7 +69,16 @@ render_env() { # render_env <env>  → ${workdir}/<env>/{helm,raw}.yaml
       kubectl kustomize "$d"
       printf '\n'
     done
+    if [[ "${env}" == "prod" ]]; then
+      printf -- '---\n'
+      cat application-vpa.yml
+      for app in consumer consumer-next; do
+        printf -- '\n---\n'
+        kubectl kustomize "frontend/apps/${app}/deploy/overlays/prod"
+      done
+    fi
     for f in "${raw_common[@]}"; do
+      [[ "${env}" == "prod" ]] && continue
       [[ -f "$f" ]] || { echo "verify-deploy-parity: 裸 manifest 不存在:$f" >&2; exit 2; }
       printf -- '---\n# source: %s\n' "$f"
       cat "$f"

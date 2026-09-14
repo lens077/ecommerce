@@ -1,0 +1,19 @@
+apiVersion: kustomize.config.k8s.io/v1beta1
+kind: Kustomization
+resources:
+  - ../../base
+images:
+  - name: ccr.ccs.tencentyun.com/sumery/consumer-next
+    newTag: sha-98ba5d1
+    digest: sha256:eb305eb5f0e97e2c77309c4338fca787926bdcb45eabb9bac99ff33ede6ccd87
+patches:
+  - target:
+      kind: Deployment
+      name: consumer-next
+    patch: |-
+      - op: test
+        path: /spec/template/spec/containers/0/env/1/name
+        value: CONSUMER_NEXT_PUBLIC_URL
+      - op: replace
+        path: /spec/template/spec/containers/0/env/1/value
+        value: https://shop.apikv.com

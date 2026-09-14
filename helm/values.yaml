@@ -132,7 +132,7 @@ behavior:
     tag: sha-c364128@sha256:d076319e47f9a51ef3295d2543ea25ff6724e9bc54551aba3ea8a56c559e5b96
 
 # 前端两个工作负载。裸 manifest 在 frontend/apps/consumer/deploy/pre/ 与
-# frontend/apps/consumer-next/deploy/dev.yaml,同样受 parity 门禁约束。
+# frontend/apps/consumer-next/deploy/base/dev.yaml,同样受 parity 门禁约束。
 frontend:
   enabled: true
   replicaCount: 1

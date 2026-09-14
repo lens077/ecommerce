@@ -1,0 +1,165 @@
+name: Frontend release
+
+on:
+  workflow_call:
+    inputs:
+      version:
+        description: Bare semver release version (X.Y.Z)
+        required: true
+        type: string
+    secrets:
+      TCR_USERNAME:
+        required: true
+      TCR_PASSWORD:
+        required: true
+
+permissions:
+  contents: read
+
+env:
+  REGISTRY: ccr.ccs.tencentyun.com
+  NAMESPACE: sumery
+
+jobs:
+  build:
+    name: Build ${{ matrix.app }} (${{ matrix.arch }})
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - app: consumer
+            image: ecommerce-frontend
+            arch: amd64
+            runner: ubuntu-24.04
+          - app: consumer
+            image: ecommerce-frontend
+            arch: arm64
+            runner: ubuntu-24.04-arm
+          - app: consumer-next
+            image: consumer-next
+            arch: amd64
+            runner: ubuntu-24.04
+          - app: consumer-next
+            image: consumer-next
+            arch: arm64
+            runner: ubuntu-24.04-arm
+    runs-on: ${{ matrix.runner }}
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v5
+
+      - name: Validate canonical semver
+        env:
+          VERSION: ${{ inputs.version }}
+        run: |
+          set -euo pipefail
+          [[ "$VERSION" =~ ^(0|[1-9][0-9]*)\.(0|[1-9][0-9]*)\.(0|[1-9][0-9]*)$ ]]
+
+      - name: Set up Buildx
+        uses: docker/setup-buildx-action@v3
+
+      - name: Login to TCR
+        uses: docker/login-action@v3
+        with:
+          registry: ${{ env.REGISTRY }}
+          username: ${{ secrets.TCR_USERNAME }}
+          password: ${{ secrets.TCR_PASSWORD }}
+
+      - name: Build and push platform digest
+        id: build
+        uses: docker/build-push-action@v6
+        with:
+          context: frontend
+          file: frontend/apps/${{ matrix.app }}/Dockerfile
+          platforms: linux/${{ matrix.arch }}
+          push: true
+          provenance: false
+          outputs: type=image,name=${{ env.REGISTRY }}/${{ env.NAMESPACE }}/${{ matrix.image }},push-by-digest=true,name-canonical=true,push=true
+          cache-from: type=gha,scope=frontend-${{ matrix.app }}-${{ matrix.arch }}
+          cache-to: type=gha,scope=frontend-${{ matrix.app }}-${{ matrix.arch }},mode=max
+
+      - name: Verify platform digest and write artifact
+        env:
+          IMAGE: ${{ env.REGISTRY }}/${{ env.NAMESPACE }}/${{ matrix.image }}
+          DIGEST: ${{ steps.build.outputs.digest }}
+          ARCH: ${{ matrix.arch }}
+          APP: ${{ matrix.app }}
+          VERSION: ${{ inputs.version }}
+        run: |
+          set -euo pipefail
+          test -n "$DIGEST"
+          platform=$(docker buildx imagetools inspect "${IMAGE}@${DIGEST}" --format '{{json .Image}}' | jq -er '[.os,.architecture] | join("/")')
+          test "$platform" = "linux/$ARCH"
+          mkdir -p "digests/$APP"
+          printf '%s\n' "$DIGEST" > "digests/$APP/$ARCH.digest"
+
+      - name: Upload digest artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: frontend-digest-${{ matrix.app }}-${{ matrix.arch }}
+          path: digests/${{ matrix.app }}/${{ matrix.arch }}.digest
+          if-no-files-found: error
+          retention-days: 1
+
+  merge:
+    name: Merge frontend manifests
+    needs: build
+    runs-on: ubuntu-24.04
+    steps:
+      - name: Download digest artifacts
+        uses: actions/download-artifact@v4
+        with:
+          pattern: frontend-digest-*
+          path: digests
+          merge-multiple: false
+
+      - name: Validate canonical semver
+        env:
+          VERSION: ${{ inputs.version }}
+        run: |
+          set -euo pipefail
+          [[ "$VERSION" =~ ^(0|[1-9][0-9]*)\.(0|[1-9][0-9]*)\.(0|[1-9][0-9]*)$ ]]
+
+      - name: Set up Buildx
+        uses: docker/setup-buildx-action@v3
+
+      - name: Login to TCR
+        uses: docker/login-action@v3
+        with:
+          registry: ${{ env.REGISTRY }}
+          username: ${{ secrets.TCR_USERNAME }}
+          password: ${{ secrets.TCR_PASSWORD }}
+
+      - name: Verify and publish immutable tags
+        env:
+          VERSION: ${{ inputs.version }}
+          SHA: ${{ github.sha }}
+        run: |
+          set -euo pipefail
+          short_sha="sha-${SHA:0:7}"
+          for spec in "consumer ecommerce-frontend" "consumer-next consumer-next"; do
+            read -r app image <<<"$spec"
+            amd=$(cat "digests/frontend-digest-${app}-amd64/amd64.digest")
+            arm=$(cat "digests/frontend-digest-${app}-arm64/arm64.digest")
+            test "$amd" != "$arm"
+            ref="${REGISTRY}/${NAMESPACE}/${image}"
+            for digest in "$amd" "$arm"; do
+              arch=$(docker buildx imagetools inspect "${ref}@${digest}" --format '{{json .Image}}' | jq -er '[.os,.architecture] | join("/")')
+              expected=amd64; test "$digest" = "$arm" && expected=arm64
+              test "$arch" = "linux/$expected"
+            done
+            provisional="${ref}:release-${VERSION}-${GITHUB_RUN_ID}-${GITHUB_RUN_ATTEMPT}-${app}"
+            docker buildx imagetools create --tag "$provisional" "${ref}@${amd}" "${ref}@${arm}"
+            docker buildx imagetools inspect "$provisional" --raw | jq -e '[.manifests[] | [.platform.os,.platform.architecture] | join("/")] | sort == ["linux/amd64","linux/arm64"]' >/dev/null
+            proposed=$(docker buildx imagetools inspect "$provisional" --format '{{.Manifest.Digest}}')
+            for tag in "$VERSION" "$short_sha"; do
+              target="${ref}:${tag}"
+              if existing=$(docker buildx imagetools inspect "$target" --format '{{.Manifest.Digest}}' 2>&1); then
+                test "$(printf '%s' "$existing" | tail -1)" = "$proposed" || { echo "immutable tag collision: $target" >&2; exit 1; }
+              elif ! grep -q 'MANIFEST_UNKNOWN' <<<"$existing"; then
+                echo "cannot inspect existing tag $target: $existing" >&2; exit 1
+              else
+                docker buildx imagetools create --tag "$target" "$provisional"
+              fi
+            done
+          done

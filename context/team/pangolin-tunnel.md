@@ -60,7 +60,10 @@ description: 公网暴露基础设施(Pangolin)的拓扑事实、面板 API 操�
 - 泛域名证书 ZeroSSL `*.apikv.com`(acme.sh dns_dp 签),**2026-11-25 到期**(2026-08-27 已手工续期,详见文首横幅);
   部署在两处:`/home/docker/blog/ssl/`(原件)与 node1
   `/home/docker/pangolin/config/traefik/certs/apikv.com.{crt,key}`,**续期要同步两处**
-- k8s:**集群已于 2026-08 重建**,现为 node101/node102/node103 = `192.168.3.101-103`
+- ⚠️ **2026-09-12 起有两套 k8s**:本条及下文「k8s HTTPRoute 暴露套路」说的是**局域网 dev 集群**
+  (node101-103,arm64,newt 站点 `k8s-cluster` siteId 4——**该站点已离线**,公网资源已全部迁走)。
+  **公网 `*.apikv.com` 现由线上集群 node3~node5 承载**,见下方专节「线上集群 node3~node5」。
+- k8s(dev,局域网):**集群已于 2026-08 重建**,现为 node101/node102/node103 = `192.168.3.101-103`
   (control-plane 是 node101),全 arm64。Cilium Gateway API,
   `cilium-gateway`(ns default,LB **192.168.3.121**,ClusterIP **10.110.51.106**)。
   ⚠️ 下文「k8s HTTPRoute 暴露套路」里的 target `10.97.94.118:443` 是**旧集群的 ClusterIP,已失效**,
@@ -188,6 +191,62 @@ kubectl -n default get svc -l io.cilium.gateway/owning-gateway=cilium-gateway \
 - **SSO 与应用自带鉴权二选一**:业务是服务端 HTTP 调用,过不了 SSO 的浏览器登录流程,所以
   凡是要被后端调用的资源都只能关 SSO + 依赖应用自身鉴权(同 `config-api.apikv.com` 的模式)。
   没有自带鉴权的应用,别急着关 SSO——先给它配上
+
+## 线上集群 node3~node5(2026-09-12 接入,公网入口现役)
+
+**结构事实**:ssh 别名 `node3`/`node4`/`node5` 是同一公网 IP 后的三台 NAT 主机(端口 44163/44161/44162),
+**amd64**,Ubuntu 26.04,K8s v1.36.4。`node4` 是 control-plane,`node3`/`node5` 是 worker;
+`node3` 同时还是 Pigsty 数据面那台机(PG/ES/观测栈都在它身上,内存长期 80%+,**不要再往它身上压隧道流量**)。
+kubeconfig 只在 `node4:/etc/kubernetes/admin.conf`(本机 `~/.kube/config` 指的是 dev 集群,**别拿它对线上做事**)。
+
+| 不变量 | 查法 | 快照(实测 2026-09-12) |
+|---|---|---|
+| cilium-gateway 的 LB IP 由 LB-IPAM 分配 | `ssh node4 kubectl -n default get svc -l io.cilium.gateway/owning-gateway=cilium-gateway` | `10.10.31.240`(443 → NodePort 30402) |
+| 三台宿主机都能直连该 LB IP | `curl -sk -H 'Host: gateway.apikv.com' https://10.10.31.240/healthz` | 三台均 200 |
+| newt 站点 | DB `sites` 表 | `node3`=siteId 7 / `node5`=siteId 9 / `node4`=siteId 10(另有 `node0`=siteId 8,与集群无关) |
+| newt 部署形态 | `systemctl cat newt` | node4/node5:`/usr/local/bin/newt` + `/etc/newt/newt.env`(600);node3:`/opt/newt/newt --config-file /opt/newt/config.json --disable-clients` |
+
+**target 写法**:newt 跑在宿主机(systemd),所以 k8s 资源的 target 是 **`10.10.31.240:443 https`**——
+LB IP 从宿主机网络栈可达,**不是** dev 集群那套「ClusterIP + 会漂」的规则;LB IP 由 LB-IPAM 分配、
+Service 重建不变(与 dev 集群 `192.168.3.121` 同理)。协议必须 https/443:HTTPRoute 只挂 `sectionName: https`,80 上 envoy 对一切 Host 返 404,与 dev 集群同坑。
+
+**9 个 k8s 资源已双 target(2026-09-12)**:`config`(rid 3)/`config-api`(4)/`gateway`(14)/`shop`(15)/
+`search`(38)/`cart-api`(39)/`argocd`(40)/`consul`(41)/`qqbot`(46),每个都有
+site `node4`(tid 3/4/15/16/39/40/41/42/47)+ site `node5`(tid 52-60)两条 target,同指 `10.10.31.240:443`。
+`node3` 刻意不加(见上)。
+
+### 多 target 的真实语义(`server/lib/traefik/loadBalancer.ts` 源码 + 实测)
+
+- 同一资源的多个 target 变成 Traefik 同一 service 的多个 `servers`,**默认轮询**、无健康检查
+  (`hcEnabled` 全 0,这里的健康检查坑见「新增资源」一节)。
+- **站点离线 = 该站点的 target 被整体剔除**(`anySitesOnline && !target.site.online`),这是故障转移的全部机制。
+  **实测 2026-09-12**:`systemctl stop newt` on node5 后 **≤5s** `traefik-config` 的 servers 只剩 node4,
+  期间公网 `gateway.apikv.com/healthz` 48/48 全 200;`start` 后约 10s 两条 target 自动回来。
+  推论:**newt 进程死 = 站点离线 → 秒级切走;但宿主机网络半死(newt 还在 ping、后端到不了)不会被剔除**,
+  那种要靠 target 健康检查,当前没开。
+- **加 target 必须走 API**:`PUT /resource/:rid/target` body `{siteId,ip,port,method,enabled,priority}`,
+  服务端生成 `internalPort`,响应 201 即带回;`priority` 默认 100,大者优先排序但轮询不看它。
+  加完立即验 `traefik-config`(不用等站点侧,newt 收到 ws 下发几秒内 `Started tcp proxy to ...`)。
+- Pangolin **1.22.2**(2026-09-12 实查,较本文早期的 1.21.1 已升级):SSO on 的资源对匿名 curl 返 **401** 而非 302,
+  「302 = 登录墙」那条判据在此版本要改读成 401;后端活着仍要在集群内带 Host 直连 LB 验证。
+
+### 三个镜像的架构坑(2026-09-12 实付,与 Pangolin 无关但卡了整次上线)
+
+线上集群是 **amd64**,而前端镜像此前只在 Mac 上出过 arm64、`search` 1.6.3 amd64 又缺 `search.catalog`。
+`ecommerce-frontend`/`consumer-next`/`search` 三个 Deployment 在集群里被以注解 `kubernetes.lens077/scaled-down`
+缩到 0 副本近一周,`shop.apikv.com` 一直 503。教训按现象记:
+
+| 现象 | 根因 | 处置 |
+|---|---|---|
+| buildx `docker-container` builder `dial tcp <docker-auth-ip>:443: i/o timeout` | 本机 DNS 对 `auth.docker.io` 被污染,builder 容器不走 Desktop 的 registry-mirrors 也不吃 `env.HTTP_PROXY` driver-opt | builder 用 `--config` 写 `[registry."docker.io"] mirrors=["docker.m.daocloud.io","docker.1ms.run"]` |
+| consumer `pnpm build`: `failed to resolve import "@ecommerce/copilot"` | Dockerfile 逐包 COPY 漏了新 workspace 包(copilot 及其传递依赖 icons)——Dockerfile 注释里已经警告过一次的同款 | 已补两段 COPY;加 workspace 包时对照 `jq` 查直接+传递依赖 |
+| consumer-next `next build` 在 `Collecting page data` 阶段 `qemu: uncaught target signal 11` | Docker Desktop 的 amd64 模拟(QEMU,不是 Rosetta)跑不了 Next.js 的多进程 worker,`desktop-linux` 与 `docker-container` 两种 driver 都炸 | **在 amd64 机器上原生构建**:`docker buildx create --driver docker-container ssh://node0 --config <mirror toml>`,源码从本机送、TCR 凭据留本机,node0 只出算力,整包 4 分钟 |
+
+产物 `ccr.ccs.tencentyun.com/sumery/{search,ecommerce-frontend,consumer-next}:sha-98ba5d1`〔实测 2026-09-12,线上三 Deployment 现跑此 tag〕**都是 amd64-only**,
+**不要写回公共 `helm/values.yaml` 或 backend base 的镜像默认值**，否则 arm64 使用者会拉不起。
+2026-09-12 已新增独立 `values-prod.yaml` / `overlays/prod`，以 digest 固定这三个应急镜像作为生产基线。
+环境目录本身不决定架构；前端 CI 使用原生 amd64/arm64 runner，后续版本通过显式晋级替换应急基线。
+首次真实发布和线上晋级仍待执行，手顺见 [PRODUCTION-RELEASE.md](../../docs/PRODUCTION-RELEASE.md)。
 
 ## 面板 API 操作模式(无需浏览器)
 

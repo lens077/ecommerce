@@ -29,7 +29,7 @@ context/
 | [pangolin-tunnel.md](team/pangolin-tunnel.md) | 对外公开内网服务走 Pangolin(node1 VPS)：拓扑与凭据位置、面板 API、k8s HTTPRoute 必须走 Gateway 443(80 无路由) |
 | [tls-enablement.md](team/tls-enablement.md) | 给在跑的服务补 TLS：**先判云厂商 ICP 拦截**（未备案机器上配域名证书是白做，纯 IP 通、带域名 403/reset）、健康检查硬编码 http 会静默失效、证书整卷挂载遮蔽目录、公共 CA 不签 IP 故必须走域名、换镜像后 HOME 漂移致证书静默不加载、**自签证书遇隧道换域名要补 SAN（`verify-ca` 会掩盖问题）**、验收必须有「故意错的输入」+ 不带 `-k` 的严格校验 |
 | [go-testing.md](team/go-testing.md) | 测试分层判定：biz 层 mock、data 层真库（testcontainers）、Redis 用 miniredis；`-short` 是唯一开关；禁用 go-sqlmock/pgxmock |
-| [deploy-parity.md](team/deploy-parity.md) | 部署清单双真相源:helm/ ≡ 裸 manifest,逐字段等价由 `scripts/verify-deploy-parity.sh` 守;共享对象只在 `helm/files/`;镜像 tag 两边同写;只有 dev 环境目录 |
+| [deploy-parity.md](team/deploy-parity.md) | 部署清单双真相源:helm/ ≡ 裸 manifest,逐字段等价由 `scripts/verify-deploy-parity.sh` 守;共享对象只在 `helm/files/`;版本与 digest 两边同写;dev/pre/prod 分层覆盖 |
 | [okteto-inner-loop.md](team/okteto-inner-loop.md) | 内环开发 `okteto up`：什么时候用、**必须先关 ArgoCD 自动同步**、不是测试环境 |
 | [tech-selection.md](team/tech-selection.md) | 「上游已死」类选型结论定稿前必查镜像谱系与社区延续分叉；查到分叉 ≠ 采用 |
 | [alerting-signal-hygiene.md](team/alerting-signal-hygiene.md) | 告警的价值 = 它承载的新信息量，慢性红等于没有告警；降噪优先级「修根因 > 调 `repeat_interval` > 改阈值」；探针要探「功能有没有推进」；含给告警本身加告警的元规则 |

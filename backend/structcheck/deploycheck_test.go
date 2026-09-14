@@ -537,7 +537,7 @@ func TestWorkloadIdentityBaseline(t *testing.T) {
 			podSpec.TopologySpreadConstraints)
 	}
 
-	nextPath := "../../frontend/apps/consumer-next/deploy/dev.yaml"
+	nextPath := "../../frontend/apps/consumer-next/deploy/base/dev.yaml"
 	f, err = os.Open(nextPath)
 	if err != nil {
 		t.Fatalf("open %s: %v", nextPath, err)
