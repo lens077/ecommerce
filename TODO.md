@@ -429,3 +429,5 @@ CES 巡检告警（CronJob 2m + vmalert firing 闭环）、可观测黑盒探活
 - CI release `1.6.8`: verified all backend and frontend linux/amd64 + linux/arm64 indexes; updated dev manifests only. Production promotion remains explicit.
 
 - CI release `1.7.1`: verified all backend and frontend linux/amd64 + linux/arm64 indexes; updated dev manifests only. Production promotion remains explicit.
+
+- CI release `1.7.2`: verified all backend and frontend linux/amd64 + linux/arm64 indexes; updated dev manifests only. Production promotion remains explicit.

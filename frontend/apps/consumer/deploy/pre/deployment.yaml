@@ -34,7 +34,7 @@ spec:
         - name: ecommerce-frontend
           # Harbor 在本集群未部署（ARM64 卡在官方 v2.16 之前），改用 TCR。
           # 钉不可变 tag，不用 :dev —— latest/dev 这类浮动 tag 让"线上跑的到底是哪份代码"无从回答。
-          image: ccr.ccs.tencentyun.com/sumery/ecommerce-frontend:1.7.1@sha256:3f9f45236bc6d3cce69cf31715441b17dc90133910ed5673962490aeb3529869
+          image: ccr.ccs.tencentyun.com/sumery/ecommerce-frontend:1.7.2@sha256:10369609e36368588e5ba252e034f7fa8be8bfadb744e3271cad1a2e441d6216
           imagePullPolicy: Always
           ports:
             - containerPort: 80
