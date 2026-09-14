@@ -23,6 +23,8 @@ FROM base AS builder
 ENV NEXT_TELEMETRY_DISABLED=1
 COPY --from=dependencies /workspace/node_modules ./node_modules
 COPY --from=dependencies /workspace/apps/consumer-next/node_modules ./apps/consumer-next/node_modules
+# workspace 包各自的 node_modules(react/@types 符号链接)也要带上,否则 tsc 在 packages/lantern 下找不到 react。1.7.0 CI 实测。
+COPY --from=dependencies /workspace/packages/lantern/node_modules ./packages/lantern/node_modules
 COPY package.json pnpm-lock.yaml pnpm-workspace.yaml ./
 COPY apps/consumer-next apps/consumer-next
 COPY packages/lantern packages/lantern
