@@ -78,6 +78,14 @@ make -C backend k8s-prod-all KUBE_CONTEXT="$KUBE_CONTEXT"
 
 两条路径都需要现成的 selector Secret、镜像拉取凭据及相关基础设施。prod 入口拒绝空 context；目前没有生产 ArgoCD Application，因此 prod 的 `DEPLOY_MODE=argocd` 被拒绝。
 
+## 部署前检查（2026-09-14 首次发布的教训）
+
+apply 之前先做三件事，每件都是这次真实踩到的：
+
+1. `kubectl -n ecommerce get deploy` 的 READY 列不能有空值。网关 `control-tower-gateway` 当时 READY 为空（readyz 连续 503 两天），表格里一眼可见却被忽略；发布不会修它，只会让「新版本上线了」和「公网 503」同时成立。
+2. 看 node3 负载：`ssh node3 cat /proc/loadavg`，5 分钟平均 > 20 就不要开始滚动——新 Pod 的 PG ping 与 search 的 ES 深检都有 4–10 秒期限，风暴期必超时；老 Pod 靠已建连接池能撑，新 Pod 起不来。等 load 回到个位数再 apply。
+3. 滚动策略保证不断服（1 副本 + `maxSurge 25%` → 新 Pod 就绪前旧 Pod 不下线），所以 CrashLoop 不等于事故；但 `rollout status` 会一直等，用 `get pods` 看具体 Pod 与 `--previous` 日志判断是启动期限还是真错。
+
 ## 验收与回退
 
 - 等待十二个本仓 Deployment 的 rollout，检查实际 `imageID` 和 readiness，不把零副本的 Available 当作上线成功。
