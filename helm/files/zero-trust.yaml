@@ -84,6 +84,10 @@ metadata:
   namespace: ecommerce
 automountServiceAccountToken: false
 ---
+# {{- if .Values.global.networkPolicy.enabled }}
+# 上一行是 Helm 模板动作藏在 YAML 注释里:本文件既经 tpl 渲染,也被 structcheck 当裸 YAML 解析,
+# 裸的模板动作行会让后者解析失败(注释里也不能出现字面双花括号——模板引擎照样执行它)。global.networkPolicy.enabled=false(values-prod.yaml,2026-09-14)
+# 时整段 CNP 不渲染——线上首次接管只发版,默认拒绝策略另开窗口验证后再放开。
 # The API services trust x-md-* identity headers injected by control-tower.
 # Network policy is therefore part of the authentication boundary: only the
 # gateway workload may reach RPC ports. The LAN-development direct path
@@ -448,3 +452,4 @@ specs:
         toPorts:
           - ports: [{ port: "80", protocol: TCP }]
     egress: []
+# {{- end }}

@@ -6,6 +6,14 @@ global:
     secretName: ecommerce-config-source-pre
   directAccess:
     enabled: false
+  # 2026-09-14 首次接管只发版,不把两件事叠进同一窗口(用户裁决):
+  #   networkPolicy —— 线上全集群零 CNP,默认拒绝的出站规则从未在这个集群验过,先走审计模式再放开;
+  #   otelAuthExternalSecret —— 它引用 ClusterSecretStore/vault,线上只有 openbao,apply 即永久 SyncError;
+  #                             线上 otel-auth 现为静态 Secret,可用。两条各有 TODO。
+  networkPolicy:
+    enabled: false
+  otelAuthExternalSecret:
+    enabled: false
 user: { image: { tag: "1.6.3" } }
 search: { image: { tag: "sha-98ba5d1@sha256:3039b708910eebaa2d1f9c288575ed5de0a353750c06616b2d8d8074443825ed" } }
 behavior: { image: { tag: "1.6.3" } }

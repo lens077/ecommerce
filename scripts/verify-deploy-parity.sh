@@ -48,6 +48,12 @@ helm_render() { # helm_render <env> [extra helm args...]
     --set-string "global.postgresEgressCIDR=${placeholder_cidr}" "$@"
 }
 
+helm_value() { # helm_value <env> <yq-path> → 合并 values.yaml + values-<env>.yaml 后的值
+  local env="$1" path="$2" files=("${repo_root}/helm/values.yaml")
+  [[ "${env}" != "dev" ]] && files+=("${repo_root}/helm/values-${env}.yaml")
+  yq eval-all ". as \$item ireduce ({}; . * \$item) | ${path}" "${files[@]}"
+}
+
 # 环境无关的裸 manifest(VPA 与两个前端);后端服务走各自的 kustomize overlay
 raw_common=(
   application-vpa.yml
@@ -84,9 +90,15 @@ render_env() { # render_env <env>  → ${workdir}/<env>/{helm,raw}.yaml
       cat "$f"
       printf '\n'
     done
-    # 两条路径共用的清单:与 scripts/render-zero-trust.sh 同一条命令
+    # 两条路径共用的清单:与 scripts/render-zero-trust.sh 同一条命令。
+    # otel-auth ExternalSecret 由 global.otelAuthExternalSecret.enabled 门控(prod 关):模板渲染为空时
+    # --show-only 会报 "could not find template",所以先按合并后的 values 判断再决定要不要 show-only。
     printf -- '---\n'
-    helm_render "${env}" --show-only templates/zero-trust.yaml --show-only templates/otel-auth-externalsecret.yaml
+    helm_render "${env}" --show-only templates/zero-trust.yaml
+    if [[ "$(helm_value "${env}" .global.otelAuthExternalSecret.enabled)" == "true" ]]; then
+      printf -- '\n---\n'
+      helm_render "${env}" --show-only templates/otel-auth-externalsecret.yaml
+    fi
   } >"${out}/raw.yaml"
 }
 

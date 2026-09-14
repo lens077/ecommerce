@@ -26,6 +26,12 @@ global:
   directAccess:
     enabled: true
     domain: dev.test
+  # 零信任 CNP(helm/files/zero-trust.yaml 里的 ecommerce-api-default-deny)与 otel-auth ExternalSecret
+  # 是否随本 chart 渲染。dev 一直是 true;prod 首次接管(2026-09-14)只发版不接管策略,在 values-prod.yaml 关掉。
+  networkPolicy:
+    enabled: true
+  otelAuthExternalSecret:
+    enabled: true
   configSource:
     enabled: true
     secretName: ecommerce-config-source-dev

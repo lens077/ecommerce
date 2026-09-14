@@ -15,13 +15,19 @@ command -v helm >/dev/null 2>&1 || {
   exit 1
 }
 
-values=(-f "${repo_root}/helm/values.yaml")
 deploy_env="${DEPLOY_ENV:-dev}"
+value_files=("${repo_root}/helm/values.yaml")
 if [[ "${deploy_env}" != dev ]]; then
-  values+=(-f "${repo_root}/helm/values-${deploy_env}.yaml")
+  value_files+=("${repo_root}/helm/values-${deploy_env}.yaml")
+fi
+values=()
+for f in "${value_files[@]}"; do values+=(-f "$f"); done
+show_only=(--show-only templates/zero-trust.yaml)
+# otel-auth ExternalSecret 由 global.otelAuthExternalSecret.enabled 门控(prod 关);渲染为空时 --show-only 会报错,先查开关
+if [[ "$(yq eval-all '. as $item ireduce ({}; . * $item) | .global.otelAuthExternalSecret.enabled' "${value_files[@]}")" == "true" ]]; then
+  show_only+=(--show-only templates/otel-auth-externalsecret.yaml)
 fi
 helm template ecommerce "${repo_root}/helm" "${values[@]}" \
   --namespace "${namespace}" \
-  --show-only templates/zero-trust.yaml \
-  --show-only templates/otel-auth-externalsecret.yaml \
+  "${show_only[@]}" \
   --set-string "global.postgresEgressCIDR=${postgres_egress_cidr}"

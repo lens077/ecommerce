@@ -17,6 +17,8 @@ prod 是部署目标，不代表 Config Center 已存在 `prod` 配置。不要�
 
 初始 prod 基线保留九个后端的 `1.6.3` 镜像；search 和两个前端固定 `sha-98ba5d1` 的 digest〔实测 2026-09-12〕。这三个应急镜像仍是 amd64-only，只在 prod 基线中引用，不覆盖公共 dev 值。后续晋级会统一替换为发布版本与多架构 index digest。
 
+prod 首次接管（2026-09-14）只发版，不接管两类对象，由 `values-prod.yaml` 的两个开关控制（两条部署路径与 parity 一起认）：`global.networkPolicy.enabled=false` 跳过零信任 CNP（线上零 CNP、规则未在该集群验证，待办要求先走审计模式）；`global.otelAuthExternalSecret.enabled=false` 跳过 `otel-auth` ExternalSecret（引用的 `vault` store 线上不存在，现有静态 Secret 可用）。开关默认在 `values.yaml` 为 true，dev/pre 不受影响。
+
 prod 清单不是现网全量快照：不会包含 live 注解、手工直连路由或其他仓库对象。首次接管必须审阅 diff，尤其是安全策略、Secret 引用和已退役对象。普通 apply 不会删除历史孤儿路由；不要用 `--prune` 或删除 namespace 处理差异。`search.apikv.com`、`cart-api.apikv.com` 的历史直连入口是否保留，需要单独处理，不因新清单默认无直连而声称它们已关闭。
 
 ## 发布流程
