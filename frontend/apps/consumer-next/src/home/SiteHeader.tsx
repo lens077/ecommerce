@@ -29,6 +29,7 @@ export function SiteHeader({ lang, copy }: { lang: Language; copy: HomeCopy }) {
             className="header-link"
             href={copy.nav.languageHref}
             hrefLang={lang === "zh" ? "en" : "zh"}
+            aria-label={copy.nav.language}
           >
             <svg viewBox="0 0 24 24" width="20" height="20" aria-hidden="true">
               <g fill="none" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round">
