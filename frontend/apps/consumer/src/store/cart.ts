@@ -32,7 +32,10 @@ export interface CartSummary {
   selectedPriceCents: bigint;
 }
 
-// Storage
+export interface CartSnapshot extends CartState {
+  summary: CartSummary;
+  merchantGroups: MerchantGroup[];
+}
 
 const STORAGE_KEY = "ecommerce_cart";
 
@@ -42,9 +45,11 @@ function loadFromStorage(): CartState {
     if (stored) {
       const parsed = JSON.parse(stored) as {
         items?: Array<
-          Omit<CartItem, "unitPriceCents" | "costPriceCents"> & {
+          Omit<CartItem, "unitPriceCents" | "costPriceCents" | "createdAt" | "updatedAt"> & {
             unitPriceCents: string;
             costPriceCents: string;
+            createdAt: string;
+            updatedAt: string;
           }
         >;
         totalQuantity?: number;
@@ -54,6 +59,8 @@ function loadFromStorage(): CartState {
           ...item,
           unitPriceCents: BigInt(item.unitPriceCents),
           costPriceCents: BigInt(item.costPriceCents),
+          createdAt: new Date(item.createdAt),
+          updatedAt: new Date(item.updatedAt),
         })),
         totalQuantity: parsed.totalQuantity || 0,
       };
@@ -64,11 +71,11 @@ function loadFromStorage(): CartState {
   return { items: [], totalQuantity: 0 };
 }
 
-function saveToStorage(state: CartState): void {
+function saveToStorage({ items, totalQuantity }: CartState): void {
   try {
     localStorage.setItem(
       STORAGE_KEY,
-      JSON.stringify(state, (_key, value) =>
+      JSON.stringify({ items, totalQuantity }, (_key, value) =>
         typeof value === "bigint" ? value.toString() : value,
       ),
     );
@@ -77,28 +84,53 @@ function saveToStorage(state: CartState): void {
   }
 }
 
-// Event System
-
 const UPDATE_EVENT = "cart-updated";
 
-function emitUpdate(): void {
-  window.dispatchEvent(new CustomEvent(UPDATE_EVENT));
-}
-
 export function subscribe(callback: () => void): () => void {
-  const handler = () => callback();
-  window.addEventListener(UPDATE_EVENT, handler);
-  return () => window.removeEventListener(UPDATE_EVENT, handler);
+  window.addEventListener(UPDATE_EVENT, callback);
+  return () => window.removeEventListener(UPDATE_EVENT, callback);
 }
 
-// Cart Store
+function createSnapshot(items: CartItem[]): CartSnapshot {
+  const snapshotItems = items.map((item) => Object.freeze({ ...item }) as CartItem);
+  const summary: CartSummary = {
+    totalQuantity: 0,
+    totalPriceCents: 0n,
+    selectedQuantity: 0,
+    selectedPriceCents: 0n,
+  };
+  const groups = new Map<string, MerchantGroup>();
+  for (const item of snapshotItems) {
+    const price = item.unitPriceCents * BigInt(item.quantity);
+    summary.totalQuantity += item.quantity;
+    summary.totalPriceCents += price;
+    if (item.selected) {
+      summary.selectedQuantity += item.quantity;
+      summary.selectedPriceCents += price;
+    }
+    let group = groups.get(item.merchantId);
+    if (!group) {
+      group = { merchantId: item.merchantId, items: [] };
+      groups.set(item.merchantId, group);
+    }
+    group.items.push(item);
+  }
+  const merchantGroups = [...groups.values()].map((group) =>
+    Object.freeze({ ...group, items: Object.freeze(group.items) }),
+  );
+  return Object.freeze({
+    items: Object.freeze(snapshotItems),
+    totalQuantity: summary.totalQuantity,
+    summary: Object.freeze(summary),
+    merchantGroups: Object.freeze(merchantGroups),
+  }) as CartSnapshot;
+}
 
 class CartStore {
-  private state: CartState;
+  private state = createSnapshot(loadFromStorage().items);
 
-  constructor() {
-    this.state = loadFromStorage();
-  }
+  // React 要求未变更时返回同一快照；提交后不能再原地修改旧快照及其条目。
+  getSnapshot = (): CartSnapshot => this.state;
 
   get items(): CartItem[] {
     return this.state.items;
@@ -108,153 +140,110 @@ class CartStore {
     return this.state.totalQuantity;
   }
 
-  private recalculateTotal(): void {
-    this.state.totalQuantity = this.state.items.reduce((sum, item) => sum + item.quantity, 0);
+  private commit(items: CartItem[]): void {
+    const next = createSnapshot(items);
+    this.state = next;
+    saveToStorage(next);
+    window.dispatchEvent(new CustomEvent(UPDATE_EVENT));
   }
 
-  private persist(): void {
-    saveToStorage(this.state);
-    emitUpdate();
-  }
-
-  /**
-   * 添加商品到购物车
-   */
-  addItem(item: Omit<CartItem, "createdAt" | "updatedAt">): void {
-    const existingIndex = this.state.items.findIndex(
-      (i) => i.skuId === item.skuId && i.merchantId === item.merchantId,
+  /** 后端快照是替换，不是逐项加购；构造完成后才发布一次。 */
+  replaceAll(items: readonly Omit<CartItem, "createdAt" | "updatedAt">[]): void {
+    const previousById = new Map(this.state.items.map((item) => [item.cartItemId, item]));
+    const now = new Date();
+    this.commit(
+      items.map((item) => {
+        const previous = previousById.get(item.cartItemId);
+        return {
+          ...item,
+          // 当前只有本地选择命令，远端刷新不能把已选择状态覆盖回旧值。
+          selected: previous?.selected ?? item.selected,
+          createdAt: previous?.createdAt ?? now,
+          updatedAt: now,
+        };
+      }),
     );
-
-    if (existingIndex >= 0) {
-      // 已存在，增加数量
-      this.state.items[existingIndex].quantity += item.quantity;
-      this.state.items[existingIndex].updatedAt = new Date();
-    } else {
-      // 新增：cartItemId 来自后端（GetCart 返回的真实 cart_item_id），不再本地伪造
-      const now = new Date();
-      this.state.items.push({
-        ...item,
-        createdAt: now,
-        updatedAt: now,
-      });
-    }
-
-    this.recalculateTotal();
-    this.persist();
   }
 
-  /**
-   * 从购物车移除商品
-   */
+  addItem(item: Omit<CartItem, "createdAt" | "updatedAt">): void {
+    const existing = this.state.items.find(
+      (current) => current.skuId === item.skuId && current.merchantId === item.merchantId,
+    );
+    const now = new Date();
+    this.commit(
+      existing
+        ? this.state.items.map((current) =>
+            current === existing
+              ? { ...current, quantity: current.quantity + item.quantity, updatedAt: now }
+              : current,
+          )
+        : [...this.state.items, { ...item, createdAt: now, updatedAt: now }],
+    );
+  }
+
   removeItem(cartItemId: string): void {
-    const index = this.state.items.findIndex((i) => i.cartItemId === cartItemId);
-    if (index >= 0) {
-      this.state.items.splice(index, 1);
-      this.recalculateTotal();
-      this.persist();
-    }
+    const items = this.state.items.filter((item) => item.cartItemId !== cartItemId);
+    if (items.length !== this.state.items.length) this.commit(items);
   }
 
-  /**
-   * 更新商品数量
-   */
   updateQuantity(cartItemId: string, quantity: number): void {
-    const item = this.state.items.find((i) => i.cartItemId === cartItemId);
-    if (item && quantity > 0) {
-      item.quantity = quantity;
-      item.updatedAt = new Date();
-      this.recalculateTotal();
-      this.persist();
+    if (
+      !Number.isInteger(quantity) ||
+      quantity <= 0 ||
+      !this.state.items.some((item) => item.cartItemId === cartItemId)
+    ) {
+      return;
     }
+    this.commit(
+      this.state.items.map((item) =>
+        item.cartItemId === cartItemId ? { ...item, quantity, updatedAt: new Date() } : item,
+      ),
+    );
   }
 
-  /**
-   * 切换选中状态
-   */
   toggleSelect(cartItemId: string): void {
-    const item = this.state.items.find((i) => i.cartItemId === cartItemId);
-    if (item) {
-      item.selected = !item.selected;
-      emitUpdate();
-    }
+    if (!this.state.items.some((item) => item.cartItemId === cartItemId)) return;
+    this.commit(
+      this.state.items.map((item) =>
+        item.cartItemId === cartItemId ? { ...item, selected: !item.selected } : item,
+      ),
+    );
   }
 
-  /**
-   * 全选/取消全选
-   */
   selectAll(selected: boolean): void {
-    this.state.items.forEach((item) => {
-      item.selected = selected;
-    });
-    emitUpdate();
+    if (this.state.items.every((item) => item.selected === selected)) return;
+    this.commit(this.state.items.map((item) => ({ ...item, selected })));
   }
 
-  /**
-   * 按商家全选/取消全选
-   */
   selectByMerchant(merchantId: string, selected: boolean): void {
-    this.state.items.forEach((item) => {
-      if (item.merchantId === merchantId) {
-        item.selected = selected;
-      }
-    });
-    emitUpdate();
+    if (
+      !this.state.items.some((item) => item.merchantId === merchantId && item.selected !== selected)
+    ) {
+      return;
+    }
+    this.commit(
+      this.state.items.map((item) =>
+        item.merchantId === merchantId ? { ...item, selected } : item,
+      ),
+    );
   }
 
-  /**
-   * 清空购物车
-   */
   clear(): void {
-    this.state.items = [];
-    this.state.totalQuantity = 0;
-    this.persist();
+    if (this.state.items.length === 0) return;
+    this.commit([]);
   }
 
-  /**
-   * 获取选中的商品
-   */
   getSelectedItems(): CartItem[] {
     return this.state.items.filter((item) => item.selected);
   }
 
-  /**
-   * 获取按商家分组的购物车
-   */
   getMerchantGroups(): MerchantGroup[] {
-    const groups = new Map<string, MerchantGroup>();
-
-    this.state.items.forEach((item) => {
-      if (!groups.has(item.merchantId)) {
-        groups.set(item.merchantId, {
-          merchantId: item.merchantId,
-          items: [],
-        });
-      }
-      groups.get(item.merchantId)!.items.push(item);
-    });
-
-    return Array.from(groups.values());
+    return this.state.merchantGroups;
   }
 
-  /**
-   * 获取购物车汇总
-   */
   getSummary(): CartSummary {
-    const selectedItems = this.state.items.filter((item) => item.selected);
-    return {
-      totalQuantity: this.state.totalQuantity,
-      totalPriceCents: this.state.items.reduce(
-        (sum, item) => sum + item.unitPriceCents * BigInt(item.quantity),
-        0n,
-      ),
-      selectedQuantity: selectedItems.reduce((sum, item) => sum + item.quantity, 0),
-      selectedPriceCents: selectedItems.reduce(
-        (sum, item) => sum + item.unitPriceCents * BigInt(item.quantity),
-        0n,
-      ),
-    };
+    return this.state.summary;
   }
 }
 
-// 单例导出
 export const cartStore = new CartStore();

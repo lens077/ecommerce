@@ -8,17 +8,11 @@
 
 import { i18next } from "@ecommerce/i18n";
 import { toAppError } from "@ecommerce/api";
-import { useCallback, useEffect, useState } from "react";
+import { useCallback, useEffect, useState, useSyncExternalStore } from "react";
 import { createConnectQueryKey, useMutation, useQuery } from "@connectrpc/connect-query";
 import { useQueryClient } from "@tanstack/react-query";
 import { CartService, CartStatus, type GetCartResponse } from "@/gen/api";
-import {
-  cartStore,
-  subscribe,
-  type CartItem,
-  type CartSummary,
-  type MerchantGroup,
-} from "@/store/cart";
+import { cartStore, subscribe, type CartItem } from "@/store/cart";
 
 /** 灌进 store 的条目形状。createdAt/updatedAt 由 store 自己盖时间戳。 */
 type StoreCartInput = Omit<CartItem, "createdAt" | "updatedAt">;
@@ -79,6 +73,15 @@ function useCartItemsKey() {
   });
 }
 
+function useAddProductToCartMutation() {
+  const queryClient = useQueryClient();
+  const cartItemsKey = useCartItemsKey();
+  return useMutation(CartService.method.addProductToCart, {
+    // 完成失效与刷新后由共享查询发布快照，不能再把同一次加购累加到本地。
+    onSuccess: () => queryClient.invalidateQueries({ queryKey: cartItemsKey }),
+  });
+}
+
 /** 加购请求。字段与 AddProductToCart 对齐，但 ID 用 string，BigInt 转换收在 hook 里。 */
 export interface AddToCartRequest {
   spuId: string;
@@ -133,38 +136,17 @@ export function useCartBadge(): number {
  * @returns 购物车状态和操作方法
  */
 export function useCart() {
-  const [items, setItems] = useState<CartItem[]>(() => cartStore.items);
-  const [summary, setSummary] = useState<CartSummary>(() => cartStore.getSummary());
-  const [merchantGroups, setMerchantGroups] = useState<MerchantGroup[]>(() =>
-    cartStore.getMerchantGroups(),
-  );
+  const { items, summary, merchantGroups } = useSyncExternalStore(subscribe, cartStore.getSnapshot);
   const [error, setError] = useState<string | null>(null);
-
-  const queryClient = useQueryClient();
-  const cartItemsKey = useCartItemsKey();
   const { data: backendItems, isPending: isInitializing, error: loadError } = useCartItemsQuery();
-
-  const addProductToCart = useMutation(CartService.method.addProductToCart, {
-    // 服务端已经变了，让共享查询失效，AppBar 的徽标才会跟着刷新
-    onSuccess: () => queryClient.invalidateQueries({ queryKey: cartItemsKey }),
-  });
-
-  // 订阅状态变化
-  useEffect(() => {
-    return subscribe(() => {
-      setItems([...cartStore.items]);
-      setSummary(cartStore.getSummary());
-      setMerchantGroups(cartStore.getMerchantGroups());
-    });
-  }, []);
+  const addProductToCart = useAddProductToCartMutation();
 
   // 把后端数据灌进 store。映射本身在 toStoreItems 里（模块级 select，结果引用稳定），
   // 这里只负责写 store —— 依赖只在真的拉到新数据时才变，StrictMode 下重复执行也不会多发请求。
   useEffect(() => {
     if (!backendItems) return;
 
-    cartStore.clear();
-    backendItems.forEach((item) => cartStore.addItem(item));
+    cartStore.replaceAll(backendItems);
   }, [backendItems]);
 
   useEffect(() => {
@@ -181,13 +163,7 @@ export function useCart() {
       setError(null);
 
       try {
-        const res = await addProductToCart.mutateAsync(toAddProductInput(request));
-
-        // 更新本地状态（cartItemId 取后端返回值）
-        cartStore.addItem({
-          ...request,
-          cartItemId: res.cartItemId.toString(),
-        });
+        await addProductToCart.mutateAsync(toAddProductInput(request));
       } catch (err) {
         const message = toAppError(err).message || i18next.t("consumer:cart.addFailed");
         setError(message);
@@ -280,29 +256,16 @@ export function useAddToCart(initialQuantity: number = 1) {
   const [isSuccess, setIsSuccess] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
-  const queryClient = useQueryClient();
-  const cartItemsKey = useCartItemsKey();
-
-  const addProductToCart = useMutation(CartService.method.addProductToCart, {
-    // 商详页加购之后 AppBar 徽标要立刻变，否则要等 staleTime 到期
-    onSuccess: () => queryClient.invalidateQueries({ queryKey: cartItemsKey }),
-  });
+  const addProductToCart = useAddProductToCartMutation();
 
   const addToCart = useCallback(
     async (request: Omit<AddToCartRequest, "quantity">): Promise<void> => {
       setError(null);
 
       try {
-        const res = await addProductToCart.mutateAsync(
+        await addProductToCart.mutateAsync(
           toAddProductInput({ ...request, quantity, selected: true }),
         );
-
-        cartStore.addItem({
-          ...request,
-          quantity,
-          selected: true,
-          cartItemId: res.cartItemId.toString(),
-        });
 
         setIsSuccess(true);
         setTimeout(() => setIsSuccess(false), 2000);

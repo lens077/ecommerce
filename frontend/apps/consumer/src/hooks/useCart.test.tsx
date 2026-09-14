@@ -1,25 +1,13 @@
-/**
- * 锁住 useCart「后端数据 → store」这条同步路径只跑一次。
- *
- * 这是个**只在运行时才暴露**的不变量:effect 写 store → store 订阅回调 setState →
- * 再渲染,本身就是个反馈环。只要查询结果的引用在同一份 data 下不稳定,这个环就闭合成
- * 死循环 —— 页面表现为 store 被反复 clear/重灌、CPU 打满。tsc 和 lint 一个字都不会说。
- *
- * ⚠️ 这几条用例**拦不住把 select 改成内联箭头函数**:实测下来默认的结构共享
- * (`replaceEqualDeep`)会把新算出的数组换回旧引用,所以内联写法在当前配置下也是绿的。
- * 真正会炸的组合是「内联 select + `structuralSharing: false`」,那时测试进程根本跑不完。
- * 把 select 提到模块作用域是为了不依赖结构共享兜底,理由写在 useCart.ts 的注释里。
- */
-import { afterEach, beforeEach, describe, expect, it, vi } from "vite-plus/test";
+import { afterEach, beforeEach, describe, expect, it, vi, type MockInstance } from "vite-plus/test";
 import { StrictMode, type ReactNode } from "react";
-import { act, cleanup, render, waitFor } from "@testing-library/react";
-import { createRouterTransport } from "@connectrpc/connect";
+import { act, cleanup, renderHook, waitFor } from "@testing-library/react";
+import { Code, ConnectError, createRouterTransport } from "@connectrpc/connect";
 import { TransportProvider } from "@connectrpc/connect-query";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 
 import { CartService, CartStatus } from "@/gen/api";
-import { cartStore } from "@/store/cart";
-import { useCart } from "./useCart";
+import { cartStore, subscribe } from "@/store/cart";
+import { useAddToCart, useCart, useCartBadge } from "./useCart";
 
 const ITEMS = [
   {
@@ -36,87 +24,205 @@ const ITEMS = [
     skuThumbnailUrl: "http://example.com/a.png",
     status: CartStatus.ACTIVE,
   },
+  {
+    cartItemId: 2n,
+    spuId: 20n,
+    skuId: 200n,
+    merchantId: "m-2",
+    shopName: "店铺二",
+    spuName: "商品二",
+    skuName: "规格二",
+    unitPriceCents: 100n,
+    quantity: 1,
+    selected: false,
+    skuThumbnailUrl: "http://example.com/b.png",
+    status: CartStatus.ACTIVE,
+  },
 ];
 
-/**
- * providers 必须在一次测试内保持同一个实例 —— 每次 rerender 都新建 QueryClient
- * 等于换了一套缓存,数据会重新拉,那就测不出「同一份 data 下 effect 跑了几次」。
- */
-function makeWrapper() {
-  const transport = createRouterTransport(({ service }) => {
-    service(CartService, { getCart: () => ({ items: ITEMS }) });
-  });
-  // retry 关掉:失败重试会让请求次数这类断言变得不可判
-  const client = new QueryClient({ defaultOptions: { queries: { retry: false } } });
+const REQUEST = {
+  spuId: "10",
+  skuId: "100",
+  merchantId: "m-1",
+  quantity: 1,
+  selected: true,
+  spuName: "商品一",
+  skuName: "规格一",
+  unitPriceCents: 199000n,
+  costPriceCents: 199000n,
+  skuThumbnailUrl: "http://example.com/a.png",
+};
 
-  return function Wrapper({ children }: { children: ReactNode }) {
+const clients: QueryClient[] = [];
+
+function makeHarness(addError?: ConnectError) {
+  let backendItems = ITEMS;
+  const getCart = vi.fn(() => ({ items: backendItems }));
+  const transport = createRouterTransport(({ service }) => {
+    service(CartService, {
+      getCart,
+      addProductToCart: (request) => {
+        if (addError) throw addError;
+        backendItems = backendItems.map((item) =>
+          item.cartItemId === 1n ? { ...item, quantity: item.quantity + request.quantity } : item,
+        );
+        return { cartItemId: 1n, cartItemQuantity: backendItems.length };
+      },
+    });
+  });
+  const client = new QueryClient({ defaultOptions: { queries: { retry: false } } });
+  clients.push(client);
+
+  function Wrapper({ children }: { children: ReactNode }) {
     return (
       <TransportProvider transport={transport}>
         <QueryClientProvider client={client}>{children}</QueryClientProvider>
       </TransportProvider>
     );
+  }
+
+  return {
+    Wrapper,
+    client,
+    getCart,
+    setBackendItems: (items: typeof ITEMS) => {
+      backendItems = items;
+    },
   };
 }
 
-function Probe() {
-  const { items } = useCart();
-  return <div data-testid="count">{items.length}</div>;
-}
-
-/** useCart 每次把后端数据灌进 store 前都会先 clear,数它被调了几次即可 */
-let clearSpy: ReturnType<typeof vi.spyOn>;
+let observations: number[][];
+let unsubscribe: () => void;
+let storageSpy: MockInstance<Storage["setItem"]>;
 
 beforeEach(() => {
   cartStore.clear();
-  clearSpy = vi.spyOn(cartStore, "clear");
+  observations = [];
+  unsubscribe = subscribe(() => {
+    observations.push(cartStore.items.map((item) => item.quantity));
+  });
+  storageSpy = vi.spyOn(Storage.prototype, "setItem");
 });
 
 afterEach(() => {
-  cleanup(); // vitest 没开 globals,自动清理不会注册,必须手动清
-  clearSpy.mockRestore();
+  cleanup();
+  unsubscribe();
+  clients.splice(0).forEach((client) => client.clear());
+  vi.restoreAllMocks();
 });
 
-describe("useCart 的后端数据同步", () => {
-  it("拉到数据后只灌一次 store,重渲染不会重复触发", async () => {
-    const Wrapper = makeWrapper();
-    const { rerender, getByTestId } = render(
-      <Wrapper>
-        <Probe />
-      </Wrapper>,
-    );
+function cartWrites() {
+  return storageSpy.mock.calls.filter(([key]) => key === "ecommerce_cart");
+}
 
-    await waitFor(() => expect(getByTestId("count").textContent).toBe("1"));
-    expect(clearSpy.mock.calls.length).toBe(1);
+describe("useCart 的原子同步", () => {
+  it("灌入完整快照时只持久化并通知一次，重渲染不重复灌入", async () => {
+    const { Wrapper } = makeHarness();
+    const { result, rerender } = renderHook(() => useCart(), { wrapper: Wrapper });
 
-    // 再强制渲染几次:data 没变,查询结果的引用就该保持不变,同步 effect 不该再跑。
-    // 引用一旦不稳,这个数字会一路涨上去(见文件头那段说明)。
-    for (let i = 0; i < 5; i++) {
-      rerender(
-        <Wrapper>
-          <Probe />
-        </Wrapper>,
-      );
-    }
+    await waitFor(() => expect(result.current.items).toHaveLength(2));
+    expect(observations).toEqual([[2, 1]]);
+    expect(cartWrites()).toHaveLength(1);
+
+    for (let i = 0; i < 5; i++) rerender();
     await act(async () => {});
-
-    expect(clearSpy.mock.calls.length).toBe(1);
+    expect(observations).toEqual([[2, 1]]);
+    expect(cartWrites()).toHaveLength(1);
   });
 
-  it("StrictMode 下也不会反复重灌", async () => {
-    const Wrapper = makeWrapper();
-    const { getByTestId } = render(
-      <Wrapper>
-        <StrictMode>
-          <Probe />
-        </StrictMode>
-      </Wrapper>,
+  it("StrictMode 中不会暴露空或部分条目，也不会无限重灌", async () => {
+    const { Wrapper } = makeHarness();
+    const { result } = renderHook(() => useCart(), {
+      wrapper: ({ children }) => (
+        <Wrapper>
+          <StrictMode>{children}</StrictMode>
+        </Wrapper>
+      ),
+    });
+
+    await waitFor(() => expect(result.current.items).toHaveLength(2));
+    expect(observations.length).toBeGreaterThan(0);
+    expect(observations.length).toBeLessThanOrEqual(2);
+    expect(observations.every((items) => items.length === 2)).toBe(true);
+  });
+
+  it("多个订阅者都读取完整且一致的快照", async () => {
+    const { Wrapper, getCart } = makeHarness();
+    const { result } = renderHook(() => ({ page: useCart(), checkout: useCart() }), {
+      wrapper: Wrapper,
+    });
+
+    await waitFor(() => expect(result.current.checkout.items).toHaveLength(2));
+    expect(result.current.page.items).toEqual(result.current.checkout.items);
+    expect(result.current.page.summary.totalQuantity).toBe(3);
+    expect(observations.every((items) => items.length === 2)).toBe(true);
+    expect(getCart).toHaveBeenCalledTimes(1);
+  });
+
+  it("本地选择状态不会被同一条目的远端刷新覆盖", async () => {
+    const { Wrapper, client, setBackendItems } = makeHarness();
+    const { result } = renderHook(() => useCart(), { wrapper: Wrapper });
+    await waitFor(() => expect(result.current.items).toHaveLength(2));
+
+    act(() => result.current.toggleSelect("2"));
+    expect(result.current.items[1].selected).toBe(true);
+
+    setBackendItems(ITEMS.map((item) => ({ ...item, selected: false })));
+    await act(async () => {
+      await client.invalidateQueries();
+    });
+    await waitFor(() => expect(result.current.items[1].selected).toBe(true));
+  });
+
+  it("后端返回空购物车时用一次替换移除旧条目", async () => {
+    const { Wrapper, client, setBackendItems } = makeHarness();
+    const { result } = renderHook(() => useCart(), { wrapper: Wrapper });
+    await waitFor(() => expect(result.current.items).toHaveLength(2));
+    observations.length = 0;
+    storageSpy.mockClear();
+
+    setBackendItems([]);
+    await act(async () => {
+      await client.invalidateQueries();
+    });
+    await waitFor(() => expect(result.current.items).toHaveLength(0));
+    expect(result.current.summary.totalQuantity).toBe(0);
+    expect(observations).toEqual([[]]);
+    expect(cartWrites()).toHaveLength(1);
+  });
+
+  it.each(["cart", "product"] as const)("%s 加购后以共享查询为准，不再重复累加", async (source) => {
+    const { Wrapper } = makeHarness();
+    const { result } = renderHook(
+      () => ({ cart: useCart(), product: useAddToCart(), badge: useCartBadge() }),
+      { wrapper: Wrapper },
     );
+    await waitFor(() => expect(result.current.cart.items).toHaveLength(2));
+    observations.length = 0;
 
-    await waitFor(() => expect(getByTestId("count").textContent).toBe("1"));
-    await act(async () => {});
+    await act(async () => {
+      if (source === "cart") await result.current.cart.addItem(REQUEST);
+      else await result.current.product.addToCart(REQUEST);
+    });
+    await waitFor(() => expect(result.current.cart.items[0].quantity).toBe(3));
+    expect(result.current.cart.summary.totalQuantity).toBe(4);
+    expect(result.current.badge).toBe(2);
+    expect(observations).toEqual([[3, 1]]);
+  });
 
-    // StrictMode 把 effect 跑两遍(挂载→卸载→再挂载),所以上限放到 2;
-    // 无限触发的写法会远远超过这个数。
-    expect(clearSpy.mock.calls.length).toBeLessThanOrEqual(2);
+  it("加购失败保留 ConnectError 语义，不修改已加载的购物车", async () => {
+    const { Wrapper } = makeHarness(new ConnectError("offline", Code.Unavailable));
+    const { result } = renderHook(() => useCart(), { wrapper: Wrapper });
+    await waitFor(() => expect(result.current.items).toHaveLength(2));
+    observations.length = 0;
+
+    await act(async () => {
+      await expect(result.current.addItem(REQUEST)).rejects.toMatchObject({
+        code: Code.Unavailable,
+      });
+    });
+    expect(result.current.error).toBeTruthy();
+    expect(result.current.items[0].quantity).toBe(2);
+    expect(observations).toEqual([]);
   });
 });
