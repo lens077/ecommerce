@@ -39,7 +39,7 @@ const menuItems = [
   { labelKey: "sidebar.nav.settings", icon: Settings, path: "/settings" },
 ] as const;
 
-export function AdminSidebar() {
+export function AdminSidebar({ onNavigate }: { onNavigate?: () => void }) {
   const { t } = useTranslation();
   const navigate = useNavigate();
   const location = useLocation();
@@ -92,7 +92,10 @@ export function AdminSidebar() {
           return (
             <ListItem key={item.path} disablePadding sx={{ px: 1.5, mb: 0.5 }}>
               <ListItemButton
-                onClick={() => navigate({ to: item.path })}
+                onClick={() => {
+                  onNavigate?.();
+                  void navigate({ to: item.path });
+                }}
                 sx={{
                   borderRadius: 1.5,
                   py: 1.25,

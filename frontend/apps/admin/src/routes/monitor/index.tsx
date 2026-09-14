@@ -1,58 +1,131 @@
-/**
- * 服务监控页（第一期只放健康卡片，设计 docs/design/copilot/copilot.md §5.3）。
- *
- * 服务清单照抄 .service-matrix.yaml 的 10 个业务服务（拓扑真相源在那边，这里不能 import yaml，
- * 加删服务时同步改 SERVICES）。状态数据源尚未接入：网关是否向前端暴露各服务的 readyz 聚合
- * 还没核实，核实前一律显示「未接入」，不显示假数据。
- */
-
 import { createFileRoute } from "@tanstack/react-router";
-import { Box, Card, CardContent, Chip, Typography } from "@mui/material";
+import {
+  Alert,
+  Box,
+  Button,
+  Card,
+  CardContent,
+  Chip,
+  CircularProgress,
+  Typography,
+} from "@mui/material";
 import { Activity } from "@ecommerce/icons";
-import { useTranslation } from "@ecommerce/i18n";
+import { useFormat, useTranslation } from "@ecommerce/i18n";
 import { AdminLayout } from "@/components/AdminLayout";
+import { isServiceHealthAccessError, useServiceHealth } from "@/hooks/useServiceHealth";
+import type { ServiceHealth, ServiceHealthStatus } from "@/api/monitor";
 import { tokens } from "@/styles/tokens";
 
 export const Route = createFileRoute("/monitor/")({
   component: MonitorPage,
 });
 
-/** 与 .service-matrix.yaml `services.<name>.gateway_prefix` 一致 */
-const SERVICES = [
-  { name: "user", prefix: "/user*" },
-  { name: "search", prefix: "/search*" },
-  { name: "behavior", prefix: "/behavior*" },
-  { name: "product", prefix: "/product*" },
-  { name: "cart", prefix: "/cart*" },
-  { name: "address", prefix: "/address*" },
-  { name: "order", prefix: "/order*" },
-  { name: "inventory", prefix: "/inventory*" },
-  { name: "merchant", prefix: "/merchant*" },
-  { name: "payment", prefix: "/payment*" },
-] as const;
+const STATUS_COLORS: Record<ServiceHealthStatus, "success" | "warning" | "error" | "default"> = {
+  healthy: "success",
+  degraded: "warning",
+  unavailable: "error",
+  unknown: "default",
+};
 
 function MonitorPage() {
   const { t } = useTranslation();
+  const { formatDate, formatNumber } = useFormat();
+  const { data, error, isLoading, isRefreshing, isStale, lastSuccessAt, refresh } =
+    useServiceHealth();
+  const accessError = isServiceHealthAccessError(error) ? error : undefined;
+  const operationalError = error && !accessError ? error : undefined;
+  const services = data?.services ?? [];
+  const hasSnapshot = data !== undefined;
+  const hasOperationalError = Boolean(operationalError);
+  const showInitialLoading = isLoading && !hasSnapshot && !error;
+  const showEmpty =
+    !showInitialLoading && !accessError && !hasOperationalError && services.length === 0;
 
   return (
     <AdminLayout>
       <Box sx={{ maxWidth: 1200 }}>
-        <Typography
-          variant="h4"
-          component="h1"
-          sx={{ fontWeight: 700, color: "text.primary", mb: 1 }}
+        <Box
+          sx={{
+            display: "flex",
+            alignItems: { xs: "flex-start", sm: "center" },
+            justifyContent: "space-between",
+            gap: 2,
+            mb: 1,
+            flexDirection: { xs: "column", sm: "row" },
+          }}
         >
-          {t("monitor.title")}
-        </Typography>
-        <Typography variant="body2" sx={{ color: "text.secondary", mb: 3 }}>
+          <Typography variant="h4" component="h1" sx={{ fontWeight: 700, color: "text.primary" }}>
+            {t("monitor.title")}
+          </Typography>
+          <Button
+            variant="outlined"
+            onClick={() => void refresh()}
+            disabled={isRefreshing}
+            data-monitor="refresh"
+            aria-label={t("monitor.refresh")}
+            aria-busy={isRefreshing}
+          >
+            {isRefreshing ? t("monitor.refreshing") : t("monitor.refresh")}
+          </Button>
+        </Box>
+        <Typography variant="body2" sx={{ color: "text.secondary", mb: 3, maxWidth: "70ch" }}>
           {t("monitor.subtitle")}
         </Typography>
+
+        {showInitialLoading && (
+          <Box
+            role="status"
+            aria-live="polite"
+            data-monitor="loading"
+            sx={{ display: "flex", alignItems: "center", gap: 1, mb: 2, color: "text.secondary" }}
+          >
+            <CircularProgress size={18} aria-hidden="true" />
+            <Typography variant="body2">{t("monitor.loading")}</Typography>
+          </Box>
+        )}
+
+        {accessError && (
+          <Alert
+            severity={accessError.kind === "forbidden" ? "warning" : "info"}
+            data-monitor="permission"
+          >
+            {t(`monitor.error.${accessError.kind}`)}
+          </Alert>
+        )}
+
+        {operationalError && !hasSnapshot && (
+          <Alert severity="error" data-monitor="error" sx={{ mb: 2 }}>
+            <Box sx={{ display: "flex", alignItems: "center", gap: 2, flexWrap: "wrap" }}>
+              <span>{t(`monitor.error.${operationalError.kind}`)}</span>
+              <Button size="small" color="inherit" onClick={() => void refresh()}>
+                {t("monitor.retry")}
+              </Button>
+            </Box>
+          </Alert>
+        )}
+
+        {isStale && (
+          <Alert severity="warning" data-monitor="stale" sx={{ mb: 2 }}>
+            {t("monitor.stale", {
+              time: lastSuccessAt
+                ? formatDate(lastSuccessAt, "datetime")
+                : t("monitor.unknownTime"),
+            })}
+          </Alert>
+        )}
+
+        {hasOperationalError && hasSnapshot && (
+          <Alert severity="error" data-monitor="error" sx={{ mb: 2 }}>
+            {t("monitor.error.refreshFailed")}
+          </Alert>
+        )}
 
         <Box
           component="ul"
           aria-label={t("monitor.gridLabel")}
           // data-copilot：智能助手锚点（src/copilot/actions.ts）
           data-copilot="monitor.health-grid"
+          data-monitor="health-grid"
           sx={{
             listStyle: "none",
             p: 0,
@@ -62,33 +135,112 @@ function MonitorPage() {
             gap: 2,
           }}
         >
-          {SERVICES.map((svc) => (
-            <Card component="li" key={svc.name} data-copilot="monitor.health-card">
-              <CardContent sx={{ p: 2.5, "&:last-child": { pb: 2.5 } }}>
-                <Box sx={{ display: "flex", alignItems: "center", gap: 1.5, mb: 1 }}>
-                  <Box sx={{ color: tokens.colors.text.secondary, display: "flex" }}>
-                    <Activity size={18} />
-                  </Box>
-                  <Typography variant="subtitle1" component="h2" sx={{ fontWeight: 600, flex: 1 }}>
-                    {svc.name}
-                  </Typography>
-                  <Chip
-                    size="small"
-                    label={t("monitor.status.unknown")}
-                    sx={{
-                      bgcolor: tokens.colors.background.primary,
-                      color: tokens.colors.text.secondary,
-                    }}
-                  />
-                </Box>
-                <Typography variant="body2" sx={{ color: "text.secondary" }}>
-                  {t("monitor.gatewayPrefix", { prefix: svc.prefix })}
-                </Typography>
-              </CardContent>
-            </Card>
+          {services.map((service) => (
+            <HealthCard
+              key={`${service.name}-${service.checked_at}`}
+              service={service}
+              formatDate={formatDate}
+              formatNumber={formatNumber}
+              t={t}
+            />
           ))}
         </Box>
+
+        {showEmpty && (
+          <Box
+            data-monitor="empty"
+            sx={{
+              border: `1px dashed ${tokens.colors.border.default}`,
+              borderRadius: 2,
+              px: 3,
+              py: 4,
+              mt: 2,
+              textAlign: "center",
+            }}
+          >
+            <Typography variant="subtitle1" component="h2" sx={{ fontWeight: 600, mb: 0.5 }}>
+              {t("monitor.empty.title")}
+            </Typography>
+            <Typography variant="body2" color="text.secondary">
+              {t("monitor.empty.description")}
+            </Typography>
+          </Box>
+        )}
+
+        <Typography
+          component="p"
+          variant="caption"
+          data-monitor="sampling-note"
+          sx={{ display: "block", color: "text.secondary", mt: 3 }}
+        >
+          {t("monitor.samplingNote")}
+        </Typography>
       </Box>
     </AdminLayout>
+  );
+}
+
+interface HealthCardProps {
+  service: ServiceHealth;
+  formatDate: (
+    value: Date | number | string | null | undefined,
+    style?: "date" | "datetime" | "time",
+  ) => string;
+  formatNumber: (value: number, options?: Intl.NumberFormatOptions) => string;
+  t: (key: string, options?: Record<string, unknown>) => string;
+}
+
+function HealthCard({ service, formatDate, formatNumber, t }: HealthCardProps) {
+  const statusLabel = t(`monitor.status.${service.status}`);
+  return (
+    <Card
+      component="li"
+      data-copilot="monitor.health-card"
+      data-monitor="health-card"
+      aria-label={t("monitor.cardLabel", { name: service.name, status: statusLabel })}
+    >
+      <CardContent sx={{ p: 2.5, "&:last-child": { pb: 2.5 } }}>
+        <Box sx={{ display: "flex", alignItems: "center", gap: 1.5, mb: 1 }}>
+          <Box sx={{ color: tokens.colors.text.secondary, display: "flex" }}>
+            <Activity size={18} aria-hidden="true" />
+          </Box>
+          <Typography
+            variant="subtitle1"
+            component="h2"
+            sx={{ fontWeight: 600, flex: 1, minWidth: 0, overflowWrap: "anywhere" }}
+          >
+            {service.name}
+          </Typography>
+          <Chip
+            size="small"
+            color={STATUS_COLORS[service.status]}
+            label={statusLabel}
+            data-monitor="status"
+            aria-label={statusLabel}
+          />
+        </Box>
+        <Typography variant="body2" sx={{ color: "text.secondary" }}>
+          {service.latency_ms === null
+            ? t("monitor.latencyUnavailable")
+            : t("monitor.latency", { ms: formatNumber(service.latency_ms) })}
+        </Typography>
+        {service.reason && (
+          <Typography
+            variant="body2"
+            data-monitor="reason"
+            sx={{ color: "text.secondary", mt: 0.5 }}
+          >
+            {t(`monitor.reason.${service.reason}`)}
+          </Typography>
+        )}
+        <Typography
+          variant="caption"
+          data-monitor="checked-at"
+          sx={{ display: "block", mt: 1.5, color: "text.secondary" }}
+        >
+          {t("monitor.checkedAt", { time: formatDate(service.checked_at, "datetime") })}
+        </Typography>
+      </CardContent>
+    </Card>
   );
 }

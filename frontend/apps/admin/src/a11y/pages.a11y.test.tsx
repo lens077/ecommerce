@@ -12,7 +12,7 @@
  *
  * admin 的 /reports 没挂 ECharts（与 merchant 不同），可以一并纳入。
  */
-import { afterEach, beforeAll, describe, expect, it, vi } from "vite-plus/test";
+import { afterEach, beforeAll, beforeEach, describe, expect, it, vi } from "vite-plus/test";
 import { cleanup, render, screen } from "@testing-library/react";
 import { axe } from "vitest-axe";
 import * as matchers from "vitest-axe/matchers";
@@ -44,6 +44,36 @@ vi.mock("@ecommerce/configs", async (importOriginal) => ({
 vi.mock("@/env", () => ({ env: { VITE_GATEWAY_URL: "/api" } }));
 
 const transport: Transport = createRouterTransport(() => {});
+const MONITOR_HEALTH_FIXTURE = {
+  checked_at: "2026-09-12T10:00:00Z",
+  services: [
+    {
+      name: "user",
+      status: "healthy",
+      latency_ms: 18,
+      checked_at: "2026-09-12T10:00:00Z",
+    },
+  ],
+};
+
+beforeEach(() => {
+  // Monitor is a real HTTP adapter rather than Connect RPC; keep the a11y render deterministic.
+  vi.stubGlobal(
+    "fetch",
+    vi.fn(async (input: RequestInfo | URL) => {
+      const inputUrl =
+        typeof input === "string" ? input : input instanceof URL ? input.href : input.url;
+      if (inputUrl.endsWith("/admin/health/services")) {
+        return {
+          ok: true,
+          status: 200,
+          json: async () => MONITOR_HEALTH_FIXTURE,
+        } as Response;
+      }
+      return { ok: false, status: 503, json: async () => ({}) } as Response;
+    }),
+  );
+});
 
 function runAxe(node: Element) {
   return axe(node, {
@@ -92,6 +122,7 @@ beforeAll(async () => {
 afterEach(() => {
   cleanup();
   document.body.innerHTML = "";
+  vi.unstubAllGlobals();
 });
 
 describe("探测器自检（常驻 canary）", () => {

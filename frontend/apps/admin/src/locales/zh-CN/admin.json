@@ -3,6 +3,8 @@
     "title": "电商平台 - 管理后台"
   },
   "sidebar": {
+    "open": "打开导航",
+    "close": "关闭导航",
     "brand": "电商管理后台",
     "nav": {
       "dashboard": "数据看板",
@@ -216,12 +218,47 @@
   },
   "monitor": {
     "title": "服务监控",
-    "subtitle": "各业务服务的健康状态。数据源尚未接入，卡片显示占位状态。",
-    "gatewayPrefix": "网关前缀 {{prefix}}",
+    "subtitle": "网关当前路由的实时采样。每次采样只覆盖一个实例路径，不代表所有副本。",
     "status": {
-      "unknown": "未接入"
+      "healthy": "健康",
+      "degraded": "降级",
+      "unavailable": "不可用",
+      "unknown": "未知"
     },
-    "gridLabel": "服务健康状态"
+    "reason": {
+      "dependency_unhealthy": "依赖服务不健康",
+      "timeout": "探测超时",
+      "no_instance": "没有可用实例",
+      "probe_failed": "探测失败",
+      "invalid_response": "探测响应无效",
+      "not_configured": "尚未配置健康探测"
+    },
+    "gridLabel": "服务健康状态",
+    "refresh": "刷新健康状态",
+    "refreshing": "刷新中…",
+    "loading": "正在加载服务健康状态…",
+    "retry": "重试",
+    "latency": "延迟 {{ms}} 毫秒",
+    "latencyUnavailable": "延迟不可用",
+    "checkedAt": "检查时间：{{time}}",
+    "cardLabel": "{{name}}，{{status}}",
+    "unknownTime": "未知时间",
+    "stale": "显示最近一次成功采样（{{time}}）。本次刷新失败。",
+    "samplingNote": "每张卡片是网关当前路由的一次采样，不代表所有副本。",
+    "empty": {
+      "title": "没有返回服务",
+      "description": "网关返回了空的健康采样，请刷新后重试。"
+    },
+    "error": {
+      "unauthenticated": "登录后才能查看服务健康状态。",
+      "forbidden": "当前账号无权查看服务健康状态。",
+      "not_found": "当前网关尚未提供健康端点。",
+      "unavailable": "健康状态聚合暂时不可用，请稍后重试。",
+      "request_failed": "暂时无法读取服务健康状态。",
+      "timeout": "读取健康状态超时，请重试。",
+      "invalid_response": "网关返回的健康响应无效。",
+      "refreshFailed": "刷新失败，当前显示最近一次成功采样。"
+    }
   },
   "copilot": {
     "examples": {

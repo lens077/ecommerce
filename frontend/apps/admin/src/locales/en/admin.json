@@ -3,6 +3,8 @@
     "title": "Marketplace - Admin Console"
   },
   "sidebar": {
+    "open": "Open navigation",
+    "close": "Close navigation",
     "brand": "Admin Console",
     "nav": {
       "dashboard": "Dashboard",
@@ -217,12 +219,47 @@
   },
   "monitor": {
     "title": "Service monitoring",
-    "subtitle": "Health of each business service. No data source is wired yet; cards show a placeholder state.",
-    "gatewayPrefix": "Gateway prefix {{prefix}}",
+    "subtitle": "Live samples from the gateway's selected route. A sample covers one instance path, not every replica.",
     "status": {
-      "unknown": "Not connected"
+      "healthy": "Healthy",
+      "degraded": "Degraded",
+      "unavailable": "Unavailable",
+      "unknown": "Unknown"
     },
-    "gridLabel": "Service health"
+    "reason": {
+      "dependency_unhealthy": "Dependency is unhealthy",
+      "timeout": "Probe timed out",
+      "no_instance": "No instance available",
+      "probe_failed": "Probe failed",
+      "invalid_response": "Invalid probe response",
+      "not_configured": "Health probe is not configured"
+    },
+    "gridLabel": "Service health",
+    "refresh": "Refresh health",
+    "refreshing": "Refreshing...",
+    "loading": "Loading service health...",
+    "retry": "Try again",
+    "latency": "Latency {{ms}} ms",
+    "latencyUnavailable": "Latency unavailable",
+    "checkedAt": "Checked {{time}}",
+    "cardLabel": "{{name}}, {{status}}",
+    "unknownTime": "an unknown time",
+    "stale": "Showing the last successful sample from {{time}}. Refresh failed.",
+    "samplingNote": "Each card is a single gateway route sample and does not represent every replica.",
+    "empty": {
+      "title": "No services returned",
+      "description": "The gateway returned an empty health sample. Refresh to check again."
+    },
+    "error": {
+      "unauthenticated": "Sign in to view service health.",
+      "forbidden": "This account cannot view service health.",
+      "not_found": "This gateway does not provide the health endpoint yet.",
+      "unavailable": "The health aggregate is temporarily unavailable.",
+      "request_failed": "Service health could not be loaded.",
+      "timeout": "The health request timed out. Please retry.",
+      "invalid_response": "The gateway returned an invalid health response.",
+      "refreshFailed": "Refresh failed; showing the last successful sample."
+    }
   },
   "copilot": {
     "examples": {

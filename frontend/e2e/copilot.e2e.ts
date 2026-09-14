@@ -3,6 +3,7 @@
  * 断言的是用户能看到的东西：输入框里的字、筛选器上的文案、URL、卡片数量、面板回复。
  */
 import { expect, test, type Page, type Route } from "@playwright/test";
+import { COPILOT_HEALTH_FIXTURE, stubMonitorHealth } from "./fixtures/monitor";
 
 const CONSUMER = "http://localhost:3000";
 const MERCHANT = "http://localhost:3002";
@@ -140,6 +141,8 @@ test.describe("商家：帮我查看没有发货的订单", () => {
 test.describe("管理员：帮我查看监控", () => {
   test("跳到监控页并聚焦健康卡片", async ({ page }) => {
     await stubGateway(page);
+    // Copilot 场景固定健康端点契约；不把 503 占位渲染误当成线上健康数据。
+    await stubMonitorHealth(page, { status: 200, body: COPILOT_HEALTH_FIXTURE });
     await page.goto(ADMIN);
     await ask(page, "帮我查看监控");
 

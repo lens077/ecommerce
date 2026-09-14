@@ -4,6 +4,8 @@ import { resolve } from "node:path";
 
 const host = process.env.HOST || "0.0.0.0";
 const port = parseInt(process.env.PORT || "3003", 10);
+// dev 默认走 control-tower 的同源代理；测试或本地联调可用环境变量覆盖。
+const gatewayTarget = process.env.GATEWAY_PROXY_TARGET ?? "https://gateway.dev.test";
 
 export default defineConfig(() => {
   return {
@@ -25,6 +27,19 @@ export default defineConfig(() => {
     server: {
       host,
       port,
+      proxy: {
+        "/auth": {
+          target: gatewayTarget,
+          changeOrigin: true,
+          secure: false,
+        },
+        "/api": {
+          target: gatewayTarget,
+          changeOrigin: true,
+          secure: false,
+          rewrite: (path: string) => path.replace(/^\/api/, ""),
+        },
+      },
     },
   };
 });

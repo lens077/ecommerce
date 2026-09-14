@@ -3,12 +3,18 @@
  */
 
 import { Box, Avatar, IconButton, Tooltip } from "@mui/material";
-import { Bell, Search, Settings } from "@ecommerce/icons";
+import { Bell, Search, Settings, MoreVertIcon } from "@ecommerce/icons";
 import { useTranslation } from "@ecommerce/i18n";
 import { LocaleSwitcher } from "@ecommerce/ui";
 import { tokens } from "@/styles/tokens";
 
-export function AdminHeader() {
+export function AdminHeader({
+  onOpenNavigation,
+  navigationOpen = false,
+}: {
+  onOpenNavigation?: () => void;
+  navigationOpen?: boolean;
+}) {
   const { t } = useTranslation();
 
   return (
@@ -20,14 +26,24 @@ export function AdminHeader() {
         display: "flex",
         alignItems: "center",
         justifyContent: "space-between",
-        px: 4,
+        px: { xs: 2, md: 4 },
+        gap: 1,
       }}
     >
+      <IconButton
+        aria-label={t("sidebar.open")}
+        aria-expanded={navigationOpen}
+        onClick={onOpenNavigation}
+        sx={{ display: { xs: "inline-flex", md: "none" } }}
+      >
+        <MoreVertIcon size={22} />
+      </IconButton>
       {/* 搜索框 */}
       <Box
         sx={{
-          display: "flex",
+          display: { xs: "none", md: "flex" },
           alignItems: "center",
+          minWidth: 0,
           gap: 1.5,
           bgcolor: tokens.colors.background.primary,
           borderRadius: 1.5,
@@ -47,6 +63,7 @@ export function AdminHeader() {
             outline: "none",
             bgcolor: "transparent",
             flex: 1,
+            minWidth: 0,
             fontSize: "0.875rem",
             color: tokens.colors.text.primary,
             "&::placeholder": {
