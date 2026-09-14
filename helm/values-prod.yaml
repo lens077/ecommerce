@@ -14,20 +14,20 @@ global:
     enabled: false
   otelAuthExternalSecret:
     enabled: false
-user: { image: { tag: "1.7.1@sha256:45f88a0698f4d48e667742bb62182d38cf7013b35cbddac9ee89a9901cf5de8d" } }
-search: { image: { tag: "1.7.1@sha256:a4b5a770c7d1348353bf49ff8bf894926a7a95d1882dcdcf8bd09e439bc70887" } }
-behavior: { image: { tag: "1.7.1@sha256:6dba5d7de9c3ebc3223dde8752025fc21f5a8bab6cd3ae0bc4c02f15dacd04cf" } }
-product: { image: { tag: "1.7.1@sha256:59b6c4cec2ae7964bf0ec725cedc557899c78c7febbf912a50bca2a7a5d5069e" } }
-cart: { image: { tag: "1.7.1@sha256:89bbbd66dc0fa1ecb2c35480fbe8baeec4dc5516abbb241109095be9a4c67d59" } }
-address: { image: { tag: "1.7.1@sha256:ccc9262c37a1cdfbbc414653df7adc59ac59297509c0973fd032d2e4fea20e57" } }
-order: { image: { tag: "1.7.1@sha256:310f7a8413419730bdff735f625107067cb4c6c7aa0edc4a685c6f83791e3952" } }
-inventory: { image: { tag: "1.7.1@sha256:d523fdc210cd0299b835c24a2e8dd0faec08b4697f4a75509c68a9e0acf64e75" } }
-merchant: { image: { tag: "1.7.1@sha256:eb64c3d33defd7973d0c5f0d01ee459a074289b34f9b2ec5b3d32c81ffca1677" } }
-payment: { image: { tag: "1.7.1@sha256:00e3dc963d042c24f8ebcd2b4023fb023c4f9c15ac1b84c310801fed4da8c24c" } }
+user: { image: { tag: "1.7.2@sha256:fa12e5997f57c0034c3bbaee838e8e052e4181705691f1ed2a2640bfe633094f" } }
+search: { image: { tag: "1.7.2@sha256:236b38709a6fd722047af38b2da9da7d490e87526c432522d287cca312af164f" } }
+behavior: { image: { tag: "1.7.2@sha256:cf08a3dffaaf74d8f23975b5b177725a792144ccb7e4ff4a890b65726049e03d" } }
+product: { image: { tag: "1.7.2@sha256:b2543345663398ca793e49118f29ef88715779e81f92233c9dccd6573ee9c2df" } }
+cart: { image: { tag: "1.7.2@sha256:13d6243b319ad8b7b6c56f7e84f0b0792e51c6574744e9141162ac6f09f61924" } }
+address: { image: { tag: "1.7.2@sha256:5575479e7b00e684e04474515a2fb8d619359da8e1635f429b808b5f792bb7b1" } }
+order: { image: { tag: "1.7.2@sha256:a6b045bca4f00ab7331b63c2c64f76077da1d48d607fedac5e333eea74fc54e8" } }
+inventory: { image: { tag: "1.7.2@sha256:89e008107e79fcaae03a6740c5a9b446180ff9907eead41d983c47fe3ad8fbf7" } }
+merchant: { image: { tag: "1.7.2@sha256:47d00a61493bf56ddd37a6c6de50e1b2069bbce07a8d5e340521e288266f70d3" } }
+payment: { image: { tag: "1.7.2@sha256:42734db144a007cf5bbbf85cae4a6fe583b24802b6d05f92e36c0a044bcafb04" } }
 frontend:
   image:
-    tag: "1.7.1@sha256:3f9f45236bc6d3cce69cf31715441b17dc90133910ed5673962490aeb3529869"
+    tag: "1.7.2@sha256:10369609e36368588e5ba252e034f7fa8be8bfadb744e3271cad1a2e441d6216"
 consumer-next:
   image:
-    tag: "1.7.1@sha256:63868eb4b3bab0eca5cd18f639f5adaf49750ec68fd19040d339ae1c36f0ec6c"
+    tag: "1.7.2@sha256:6844676eb2b59e61eb9eedec9b898da6dd2c727fa4ac30a2a69511337e42dd97"
   publicURL: https://shop.apikv.com
