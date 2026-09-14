@@ -5,5 +5,5 @@ resources:
   - ../pre
 images:
   - name: ccr.ccs.tencentyun.com/sumery/merchant
-    newTag: "1.7.4"
-    digest: sha256:e1bc7e8d1d275424b762c3deaec92aff1824c8b4280d6552bad56efd035abf27
+    newTag: "1.7.5"
+    digest: sha256:ab4830abcd99ee75004093917d16aaf44d77ab5beedff94b6ef0d6b5ae9d272b
