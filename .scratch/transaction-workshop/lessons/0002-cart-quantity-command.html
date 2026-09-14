@@ -1,0 +1,62 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>第 2 课：购物车数量命令的深 module</title>
+  <link rel="stylesheet" href="../assets/lesson.css">
+</head>
+<body>
+  <a class="skip" href="#main">跳到正文</a>
+  <nav aria-label="课程导航"><a href="./0001-inventory-atomicity.html">第 1 课：库存</a><a aria-current="page" href="./0002-cart-quantity-command.html">第 2 课：购物车</a><a href="../reference/transaction-cheatsheet.html">交易速查</a></nav>
+  <main id="main">
+    <header><h1>购物车：让数量命令拥有完整语义</h1><p class="lead">这一课练习另一种错误：写入条件没有满足，但后面的统计查询成功返回，于是调用方误以为更新成功。</p></header>
+    <div class="reading"><article>
+      <p class="notice">项目现行分层是 <code>service → biz ← data</code>。本课不修改 proto；已批准的 <code>cart_item_id</code> 契约迁移是独立的兼容性任务。</p>
+      <h2>1. 从「参数搬运」升级为命令</h2>
+      <pre><code>// service：proto 与身份 → 领域命令
+UpdateQuantityCommand{
+  UserID, CartItemID, Quantity
+}
+
+// biz：检查业务规则
+Quantity ∈ [0, 999]
+Quantity == 0  → Remove
+Quantity &gt; 0   → SetQuantity
+
+// data：认证用户 + 条目 ID → 命中结果
+UpdateOwnedItem(ctx, userID, itemID, quantity) (MutationResult, error)</code></pre>
+      <p>当前实现的危险点不是「少了一个 helper」。<code>use case</code> 几乎原样转发，service 把 proto 变成请求，data 层又把 <code>Quantity</code> 遗漏到 sqlc 参数之外。接口越宽，调用者越容易把这类关联字段传错。</p>
+      <h2>2. 写入结果必须先于统计结果</h2>
+      <pre><code>UPDATE cart.cart_item
+SET quantity = @quantity
+WHERE user_id = @user_id
+  AND id = @cart_item_id
+  AND @quantity &gt; 0
+RETURNING id;
+
+-- Go：
+changed, err := q.UpdateOwnedItem(...)
+if err != nil { return err }
+if changed == 0 { return ErrCartItemNotFound }
+
+-- 需要总数时，再在同一事务内查询
+count, err := q.CountCartItems(ctx, userID)
+if err != nil { return err }
+return MutationResult{CartItemQuantity: count}</code></pre>
+      <p>统计值回答「现在有多少」，不回答「刚才那次写入是否命中」。若 <code>quantity == 0</code> 的契约是删除，就显式走删除命令，或者在一个明确的 SQL 命令中统一返回变更结果；不要靠「UPDATE 没命中但 COUNT 成功」推断。</p>
+      <h2>3. 归属检查不是网关的替代品</h2>
+      <p>service 可以从身份头解析 <code>UserID</code>，但 data 的条件仍必须包含 <code>user_id = authenticated_user</code>。网关的 RBAC 只回答「能否调用这个 RPC」，Repository 还必须回答「这条 cart item 是否属于当前用户」。</p>
+      <div class="quiz"><form data-quiz data-answer="command" data-correct="正确。命中结果和统计结果是两个不同事实；先检查命中，再决定是否返回成功。" data-incorrect="再想一步：统计查询成功，只说明 SELECT 成功，不说明前面的 UPDATE 命中。"><fieldset><legend>下列哪句最可靠？</legend><label class="choice"><input required type="radio" name="answer" value="count"> COUNT 返回了，所以更新一定成功</label><label class="choice"><input required type="radio" name="answer" value="command"> 必须先验证写入命中，再返回统计</label><label class="choice"><input required type="radio" name="answer" value="nil"> Repo 返回 nil error，所以业务成功</label><button type="submit">检查答案</button><output aria-live="polite"></output></fieldset></form></div>
+      <div class="lab"><h2>4. 小实验：选择一条实现路径</h2><form data-lab="cart"><fieldset><legend>请模拟更新一个购物车条目</legend><label for="implementation">实现形状</label><select id="implementation" name="implementation"><option value="command">窄命令：用户 + cart_item_id + quantity</option><option value="passthrough">四组字段透传，数量由 data 自己猜</option></select><label for="owner">条目归属</label><select id="owner" name="owner"><option value="self">当前用户拥有</option><option value="other">其他用户拥有</option></select><label for="quantity">目标数量（0 表示删除）</label><input id="quantity" name="quantity" type="number" min="0" max="999" value="3"><button type="submit">运行模拟</button><output aria-live="polite"></output></fieldset></form></div>
+      <h2>5. 最小实现顺序</h2>
+      <ol><li>先在 biz 定义命令、范围和领域错误。</li><li>再让 service 只做身份与 proto 转换。</li><li>修改 SQL，使更新返回明确的命中事实；0 行不能默认为成功。</li><li>数量为 0 的删除语义单独测试。</li><li>把 SQL 与归属、统计一致性放到真实 PostgreSQL 测试；不要使用 sqlmock 或 pgxmock。</li></ol>
+      <details><summary>查看项目中的直接线索</summary><p><code>backend/services/cart/internal/service/cart.go</code> 已读取 <code>quantity</code>，但 <code>backend/services/cart/internal/data/cart.go</code> 的更新参数没有传入它。<code>backend/services/cart/internal/data/queries/cart.sql</code> 还把 <code>UPDATE</code> 包在 CTE 里，却只返回后续 <code>COUNT</code>。这正是「写入事实」与「统计事实」混淆。</p></details>
+      <p class="source">主资料：<a href="../../../STACK.md#三后端分层架构">本仓分层约束</a>、<a href="../../../context/team/go-testing.md">本仓测试判定</a>、<a href="../../../docs/design/cart/api-decisions.md">购物车契约决策</a>。</p>
+      <div class="next"><strong>学完后：</strong>把两课中的失败路径用自己的话回答给老师：①为什么同一 <code>ctx</code> 仍可能出现事务外写入？②为什么 <code>COUNT</code> 不能证明 <code>UPDATE</code> 命中？有答案后再创建学习记录。</div>
+    </article><aside><section><h2>本课记住</h2><p>接口应表达命令，不是字段搬运。</p><p>写入命中和统计数量是两个事实。</p><p>归属检查必须落到数据条件。</p></section><section><h2>参考页</h2><a href="../reference/transaction-cheatsheet.html">交易代码检查速查</a></section></aside></div>
+  </main>
+  <footer>课程材料位于 `.scratch/transaction-workshop/`。本课模拟不连接数据库，也不修改后端实现。</footer>
+  <script src="../assets/lesson.js"></script>
+</body>
+</html>

@@ -1,0 +1,37 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>交易代码检查速查</title>
+  <link rel="stylesheet" href="../assets/lesson.css">
+</head>
+<body>
+  <a class="skip" href="#main">跳到正文</a>
+  <nav aria-label="课程导航"><a href="../lessons/0001-inventory-atomicity.html">库存原子性</a><a href="../lessons/0002-cart-quantity-command.html">购物车命令</a><a aria-current="page" href="./transaction-cheatsheet.html">速查</a></nav>
+  <main id="main">
+    <header><h1>交易代码检查速查</h1><p class="lead">先问不变量，再看事务；先看写入命中，再看响应。不要被「函数返回 nil」或「COUNT 查询成功」误导。</p></header>
+    <div class="reading"><article>
+      <h2>库存预占</h2>
+      <div class="table-wrap"><table><caption>一个 ReserveGroup 的最小正确性清单</caption><thead><tr><th>问题</th><th>必须看到</th><th>红旗</th></tr></thead><tbody>
+        <tr><td>整组原子性</td><td>一个 transaction 包住所有条目、流水和状态</td><td>循环外没有事务，或部分写入直接用 pool</td></tr>
+        <tr><td>防超卖</td><td>单条条件更新含 <code>available &gt;= quantity</code>，检查影响行数</td><td>先 SELECT 再普通 UPDATE，或忽略 0 行</td></tr>
+        <tr><td>锁顺序</td><td>跨多 SKU 按统一键排序后锁定</td><td>按请求顺序拿锁</td></tr>
+        <tr><td>幂等</td><td><code>reservation_id</code> 唯一，重放同 payload 返回首次结果</td><td>只用订单号；重放再次扣库存</td></tr>
+        <tr><td>失败</td><td>任一条失败，整组回滚；错误可重试性明确</td><td>基础设施自动重试非幂等 Reserve</td></tr>
+      </tbody></table></div>
+      <h2>购物车数量</h2>
+      <div class="table-wrap"><table><caption>数量命令的接口与验证</caption><thead><tr><th>层</th><th>职责</th><th>不应承担</th></tr></thead><tbody>
+        <tr><td>service</td><td>proto → 领域命令、身份提取、错误码映射</td><td>决定数据库是否更新成功</td></tr>
+        <tr><td>biz</td><td>数量范围、0 的语义、条目标识和用户归属规则</td><td>导入 proto 或 pgx/sqlc 类型</td></tr>
+        <tr><td>data</td><td>用认证用户 + <code>cart_item_id</code> 条件更新，返回命中结果</td><td>把 0 行当成功</td></tr>
+        <tr><td>transaction</td><td>更新与返回统计属于同一一致性读取</td><td>把后续查询当成更新成功证明</td></tr>
+      </tbody></table></div>
+      <h2>测试分层</h2>
+      <ul><li><strong>biz：</strong>fake Repo 测数量、0、错误语义。</li><li><strong>data：</strong>真实 PostgreSQL 测 SQL、owner 条件、唯一约束、事务回滚。</li><li><strong>并发：</strong>至少两事务竞争同一 SKU，证明不会超卖；多 SKU 按同一顺序锁定。</li><li><strong>前端：</strong>外部 store 快照测试一次替换、一次通知、选择持久化。</li></ul>
+      <div class="notice">项目约束：后端测试不要使用 go-sqlmock 或 pgxmock；数据库语义用真实 PostgreSQL。具体规则见 <a href="../../../context/team/go-testing.md">go-testing.md</a>。</div>
+    </article><aside><section><h2>项目真相源</h2><a href="../../../docs/design/order/checkout.md">checkout v2</a><br><a href="../../../docs/design/inventory/inventory.md">库存状态机</a><br><a href="../../../docs/design/cart/api-decisions.md">购物车契约决策</a></section><section><h2>官方资料</h2><a href="https://react.dev/reference/react/useSyncExternalStore">React external store</a><br><a href="https://docs.sqlc.dev/en/v1.31.1/howto/transactions.html">sqlc transactions</a><br><a href="https://www.postgresql.org/docs/18/explicit-locking.html#LOCKING-ROWS">PostgreSQL row locks</a></section></aside></div>
+  </main>
+  <footer>本页是课程速查，不是新的架构真相源。改实现前仍以仓库的 context、docs/design 和 TODO.md 为准。</footer>
+</body>
+</html>

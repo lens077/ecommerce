@@ -1,0 +1,58 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>第 1 课：库存预占的整组原子性</title>
+  <link rel="stylesheet" href="../assets/lesson.css">
+</head>
+<body>
+  <a class="skip" href="#main">跳到正文</a>
+  <nav aria-label="课程导航"><a aria-current="page" href="./0001-inventory-atomicity.html">第 1 课：库存</a><a href="./0002-cart-quantity-command.html">第 2 课：购物车</a><a href="../reference/transaction-cheatsheet.html">交易速查</a></nav>
+  <main id="main">
+    <header><h1>库存预占：先保证整组，再谈重试</h1><p class="lead">这一课只解决一个问题：一个订单包含多个 SKU 时，为什么「其中一项失败」必须让前面已经写入的项一起回滚。</p></header>
+    <div class="reading"><article>
+      <p class="notice">本课对照项目的目标态 <code>ReserveGroup</code>。现有 <code>inventory/internal/data/inventory.go</code> 仍是未完成实现；课程中的伪代码不是可直接合入的补丁。</p>
+      <h2>1. 先写不变量</h2>
+      <ul><li><code>available = on_hand - reserved - locked</code> 始终成立。</li><li>一组预占要么全部成功，要么一个也不改变。</li><li>同一个 <code>reservation_id</code> 重放不能重复扣减。</li><li>多个 SKU 要按统一顺序拿行锁，降低死锁概率。</li></ul>
+      <p>事务只解决第一条业务边界的「一起提交或一起回滚」。它不会自动解决幂等、授权、死锁重试，也不会替你检查更新是否命中。</p>
+      <h2>2. 正确的 module 形状</h2>
+      <pre><code>service  -- 只做 proto / 身份 / 错误码映射
+   |
+biz      -- ReserveGroup 命令与领域错误
+   |
+data     -- 一个 tx：查 reservation → 锁 SKU → 条件更新 → 写流水
+
+外部 interface：
+ReserveGroup(ctx, reservationID, payloadHash, items) (Result, error)</code></pre>
+      <p>这是一个深 module：调用方只知道「提交一组预占」，不用记住事务、锁序、行数检查和流水写入的顺序。内部可以使用 sqlc 的 <code>Queries.WithTx(tx)</code>，但不能把这个内部规则泄露给调用方。</p>
+      <h2>3. 一个失败路径</h2>
+      <pre><code>BEGIN
+  读取 reservation_id
+  若已是 reserved 且 payload_hash 相同：返回首次结果
+  若 payload_hash 不同：返回 INVALID_ARGUMENT
+
+  按 sku_id 升序锁住全部 stock 行
+  对每行执行：
+    UPDATE stock
+       SET available = available - $quantity,
+           reserved  = reserved + $quantity
+     WHERE sku_id = $sku
+       AND warehouse_id = $warehouse
+       AND available &gt;= $quantity
+  检查 rows_affected == 1
+  写 reservation_item 与 change_log
+COMMIT</code></pre>
+      <p>任意一项的条件更新影响 0 行，都返回缺货或冲突错误。不要先提交 A，再处理 B；也不要用 Redis 锁代替 PostgreSQL 的正确性锚点。</p>
+      <div class="lab"><h2>4. 小实验：你来判断事务边界</h2><form data-lab="inventory" data-answer="transaction"><fieldset><legend>订单要预占 A=2 件、B=2 件。A 可用 5，B 可用 1。哪种执行者符合「整组原子」？</legend><label class="choice"><input required type="radio" name="executor" value="transaction"> 一个事务包住 A、B、流水和 reservation 状态</label><label class="choice"><input required type="radio" name="executor" value="per-item"> 每个 SKU 单独提交，失败后再尝试补偿</label><button type="submit">检查答案</button><output aria-live="polite"></output></fieldset></form></div>
+      <h2>5. 回到本仓代码</h2>
+      <ol><li>先修 `Reserve` 的版本参数和 0 行检查。</li><li>把所有读写统一到同一个事务 Queries。</li><li>把请求从单 SKU <code>Reserve</code> 收敛为目标态的 <code>ReserveGroup</code>。</li><li>用真实 PostgreSQL 验证第二项失败时第一项没有留下变化。</li></ol>
+      <details><summary>查看实现检查提示</summary><p>sqlc 的 <code>WithTx</code> 只会让绑定后的 Queries 使用事务；如果某个写入仍调用 pool 上的旧 Queries，它就不属于这次事务。PostgreSQL 的 <code>FOR UPDATE</code> 行锁通常持有到事务结束；多个对象必须统一锁序。</p></details>
+      <p class="source">主资料：<a href="https://www.postgresql.org/docs/18/explicit-locking.html#LOCKING-ROWS">PostgreSQL 行级锁</a>、<a href="https://docs.sqlc.dev/en/v1.31.1/howto/transactions.html">sqlc transactions</a>。项目设计：<a href="../../../docs/design/order/checkout.md#6-库存契约">checkout v2 §6</a>。</p>
+      <div class="next"><strong>下一步：</strong>打开 <a href="./0002-cart-quantity-command.html">第 2 课：购物车数量命令</a>。如果某一步不清楚，直接向老师追问；下一轮会根据作答调整难度。</div>
+    </article><aside><section><h2>本课记住</h2><p>事务是原子性，不是幂等性。</p><p>0 行更新不是成功。</p><p>锁序是接口的隐含约束，应藏在 module 内。</p></section><section><h2>项目位置</h2><a href="../../../backend/services/inventory/internal/data/inventory.go">inventory data</a><br><a href="../../../backend/services/inventory/internal/data/queries/query.sql">inventory SQL</a></section></aside></div>
+  </main>
+  <footer>课程材料位于 `.scratch/transaction-workshop/`。不连接数据库，不上传答案，不写生产配置。</footer>
+  <script src="../assets/lesson.js"></script>
+</body>
+</html>
