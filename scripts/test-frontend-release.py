@@ -30,7 +30,8 @@ elif args[-1] == '{{.Manifest.Digest}}':
     elif scenario == 'collision':
         print('sha256:' + 'd' * 64)
     else:
-        print('MANIFEST_UNKNOWN' if scenario == 'missing' else '401 Unauthorized', file=sys.stderr)
+        # Real TCR wording observed 2026-09-14: "ERROR: <ref>: not found"
+        print(f'ERROR: {ref}: not found' if scenario == 'missing' else '401 Unauthorized', file=sys.stderr)
         sys.exit(1)
 else:
     print('unsupported Buildx format', file=sys.stderr)

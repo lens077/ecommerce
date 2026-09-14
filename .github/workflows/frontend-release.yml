@@ -156,7 +156,8 @@ jobs:
               target="${ref}:${tag}"
               if existing=$(docker buildx imagetools inspect "$target" --format '{{.Manifest.Digest}}' 2>&1); then
                 test "$(printf '%s' "$existing" | tail -1)" = "$proposed" || { echo "immutable tag collision: $target" >&2; exit 1; }
-              elif ! grep -q 'MANIFEST_UNKNOWN' <<<"$existing"; then
+              elif ! grep -qE 'MANIFEST_UNKNOWN|: not found$' <<<"$existing"; then
+                # TCR 对不存在的 tag 回 "ERROR: <ref>: not found"（2026-09-14 1.6.5 实测），不是 MANIFEST_UNKNOWN
                 echo "cannot inspect existing tag $target: $existing" >&2; exit 1
               else
                 docker buildx imagetools create --tag "$target" "$provisional"

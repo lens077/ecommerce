@@ -111,11 +111,22 @@ jobs:
       # go-vet 基线为空(等价硬门禁);revive-exported(导出符号必须有注释,规则集在
       # backend/.golangci-exported.yml)于 2026-09-03 接入,711 条存量已冻结,新增导出
       # 不写注释即红。golangci-lint 版本与本地 brew 装的一致,采集结果才可复现。
+      # 2026-09-14：golangci-lint-action v8 已删除 install-only 输入，action 会直接在仓库根
+      # `golangci-lint run`（根目录无 go.mod → exit 7），该步骤自 09-03 接入起在 GitHub 上从未绿过
+      # （中间没打过 tag 所以没人看见）。改为官方发布包 + checksums 校验直装，只装不跑。
       - name: Install golangci-lint (revive-exported ratchet)
-        uses: golangci/golangci-lint-action@4afd733a84b1f43292c63897423277bb7f4313a9 # v8
-        with:
-          version: v2.13.1
-          install-only: true
+        env:
+          GOLANGCI_LINT_VERSION: 2.13.1
+        run: |
+          set -euo pipefail
+          base="https://github.com/golangci/golangci-lint/releases/download/v${GOLANGCI_LINT_VERSION}"
+          asset="golangci-lint-${GOLANGCI_LINT_VERSION}-linux-amd64.tar.gz"
+          curl -fsSL -o "/tmp/${asset}" "${base}/${asset}"
+          curl -fsSL -o /tmp/golangci-checksums.txt "${base}/golangci-lint-${GOLANGCI_LINT_VERSION}-checksums.txt"
+          (cd /tmp && grep " ${asset}\$" golangci-checksums.txt | sha256sum -c -)
+          tar -xzf "/tmp/${asset}" -C /tmp
+          sudo install "/tmp/golangci-lint-${GOLANGCI_LINT_VERSION}-linux-amd64/golangci-lint" /usr/local/bin/golangci-lint
+          golangci-lint version
 
       - name: Lint baseline (go-vet + revive-exported)
         working-directory: .
