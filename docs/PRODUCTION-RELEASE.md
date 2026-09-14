@@ -44,7 +44,7 @@ python3 scripts/promote-release.py --environment prod --version X.Y.Z
 
 将 `X.Y.Z` 替换为实际版本。脚本会先核验全部十二个制品，任何缺失、权限错误或单架构镜像都会中断，尚不写文件。全部检查通过后，成对写入版本与 index digest；parity 失败时恢复脚本修改前的清单内容。脚本不提交、不推送，也不调用集群 API。
 
-审阅 `git diff`，更新 TODO 后按提交规范提交。正式部署前准备并检查线上 kubeconfig；本机默认 kubeconfig 不能被假定为生产。
+审阅 `git diff`，更新 TODO 后按提交规范提交。正式部署前用 `kubectl config view --minify -o jsonpath='{.clusters[0].cluster.server}'` 确认 context 指向线上集群（2026-09-09 起本机默认 context `kubernetes-admin@kubernetes` 即线上；`KUBE_CONTEXT` 仍必须显式写出）。
 
 ## 渲染、差异检查与部署
 

@@ -197,7 +197,7 @@ kubectl -n default get svc -l io.cilium.gateway/owning-gateway=cilium-gateway \
 **结构事实**:ssh 别名 `node3`/`node4`/`node5` 是同一公网 IP 后的三台 NAT 主机(端口 44163/44161/44162),
 **amd64**,Ubuntu 26.04,K8s v1.36.4。`node4` 是 control-plane,`node3`/`node5` 是 worker;
 `node3` 同时还是 Pigsty 数据面那台机(PG/ES/观测栈都在它身上,内存长期 80%+,**不要再往它身上压隧道流量**)。
-kubeconfig 只在 `node4:/etc/kubernetes/admin.conf`(本机 `~/.kube/config` 指的是 dev 集群,**别拿它对线上做事**)。
+**本机 `~/.kube/config`(2026-09-09 起)默认 context `kubernetes-admin@kubernetes` 就是这套线上集群**(server 是它的公网地址,直连不用隧道);dev 集群 node101-103 的 kubeconfig 不在默认文件里。生产脚本仍要求显式 `KUBE_CONTEXT=kubernetes-admin@kubernetes`,防的是「默认 context 将来被换掉」而不是「默认 context 现在指向谁」。⚠️ 2026-09-14 首次发布时我误以为默认 kubeconfig 是 dev,多走了一条 SSH 隧道——`kubectl config view` 看一眼 server 只要三秒。
 
 | 不变量 | 查法 | 快照(实测 2026-09-12) |
 |---|---|---|
