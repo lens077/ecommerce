@@ -23,6 +23,7 @@ C 端主应用。React 19 + MUI 9 + Emotion + TanStack Router/Query + Connect-RP
 | 购物车页一次挂载打出 4 个 POST | [duplicate-cart-queries.md](experience/duplicate-cart-queries.md) |
 | 登出后过一会儿自己又登回去 | [logout-auto-relogin.md](experience/logout-auto-relogin.md) |
 | 读屏跳不到页面标题、整页没有 h1，但 axe 全绿 | [mui-typography-variant-decides-heading.md](experience/mui-typography-variant-decides-heading.md) |
+| PageSpeed 移动端比桌面低 20 分，TBT/CLS 却满分 | [mobile-pagespeed-gap-is-bytes-not-js.md](experience/mobile-pagespeed-gap-is-bytes-not-js.md) |
 
 ## 已知注意事项
 
