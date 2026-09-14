@@ -38,7 +38,7 @@ spec:
         fsGroupChangePolicy: OnRootMismatch
       containers:
         - name: ecommerce-inventory
-          image: ccr.ccs.tencentyun.com/sumery/inventory:1.6.8@sha256:dfe2acc069ee352d357c367b450cc429b2f4a9d36a36967490c31ccd7df67c07
+          image: ccr.ccs.tencentyun.com/sumery/inventory:1.7.1@sha256:d523fdc210cd0299b835c24a2e8dd0faec08b4697f4a75509c68a9e0acf64e75
           imagePullPolicy: Always
           env:
             # 关闭应用内的 Log 导出器，只保留 Trace 和 Metric。
