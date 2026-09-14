@@ -28,6 +28,7 @@ import { LitGrid } from "@/home/LitGrid";
 import { lanternSerif } from "@/home/fonts";
 import { SiteFooter } from "@/home/SiteFooter";
 import { SiteHeader } from "@/home/SiteHeader";
+import { homeUrl } from "@/home/site";
 import "@/home/home.css";
 
 export const dynamic = "force-static";
@@ -45,10 +46,20 @@ export async function generateMetadata({
 }): Promise<Metadata> {
   const { lang } = await params;
   const copy = homeCopy[isLanguage(lang) ? lang : "zh"];
+  const current = isLanguage(lang) ? lang : "zh";
   return {
     title: { absolute: copy.title },
     description: copy.description,
     applicationName: copy.title,
+    // Lighthouse SEO 要求 canonical / hreflang 是绝对 URL;域名来源见 src/home/site.ts
+    alternates: {
+      canonical: homeUrl(current),
+      languages: {
+        "zh-CN": homeUrl("zh"),
+        en: homeUrl("en"),
+        "x-default": homeUrl("zh"),
+      },
+    },
   };
 }
 
@@ -58,10 +69,6 @@ export default async function HomePage({ params }: { params: Promise<PageParams>
   const copy = homeCopy[lang];
   return (
     <>
-      <link rel="canonical" href={lang === "zh" ? "/" : "/en"} />
-      <link rel="alternate" hrefLang="zh-CN" href="/" />
-      <link rel="alternate" hrefLang="en" href="/en" />
-      <link rel="alternate" hrefLang="x-default" href="/" />
       <div className={`lantern-page ${lanternSerif.variable}`}>
         <SiteHeader lang={lang} copy={copy} />
         <main className="container lantern-main">

@@ -34,7 +34,7 @@ export function HeaderAccount({ signIn, account }: Props) {
 
   if (authenticated) {
     return (
-      <a className="header-link" href="/profile">
+      <a className="header-link" href="/profile" aria-label={account}>
         <AccountGlyph />
         <span>{account}</span>
       </a>

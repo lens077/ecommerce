@@ -21,6 +21,9 @@ RUN pnpm install --frozen-lockfile --ignore-scripts --filter @ecommerce/consumer
 
 FROM base AS builder
 ENV NEXT_TELEMETRY_DISABLED=1
+# 首页 canonical / hreflang 的站点域名(构建期定死,见 src/home/site.ts);默认线上域名,一般不用传
+ARG NEXT_PUBLIC_SITE_URL=https://shop.apikv.com
+ENV NEXT_PUBLIC_SITE_URL=$NEXT_PUBLIC_SITE_URL
 COPY --from=dependencies /workspace/node_modules ./node_modules
 COPY --from=dependencies /workspace/apps/consumer-next/node_modules ./apps/consumer-next/node_modules
 # workspace 包各自的 node_modules(react/@types 符号链接)也要带上,否则 tsc 在 packages/lantern 下找不到 react。1.7.0 CI 实测。

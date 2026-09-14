@@ -37,7 +37,7 @@ export function SiteHeader({ lang, copy }: { lang: Language; copy: HomeCopy }) {
             </svg>
             <span>{copy.nav.language}</span>
           </a>
-          <a className="header-link" href="/cart">
+          <a className="header-link" href="/cart" aria-label={copy.nav.cart}>
             <svg viewBox="0 0 24 24" width="20" height="20" aria-hidden="true">
               <g
                 fill="none"
