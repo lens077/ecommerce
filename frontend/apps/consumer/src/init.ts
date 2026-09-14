@@ -1,15 +1,17 @@
 /**
- * 应用入口。
+ * 启动前置:在任何业务模块被 import 之前把传输层配置注入 `@ecommerce/api`。
  *
- * 这里只做一件事：在任何业务模块被 import 之前把传输层配置注入 `@ecommerce/api`。
- * `createConnectTransport` 在创建时就固化了 baseUrl 和 fetch，而桌面端的网关地址
- * 要等读完本地设置才知道 —— 所以真正的启动逻辑放在 bootstrap.tsx，用动态 import
- * 保证顺序确定，不依赖路由的 code splitting 恰好把 api 模块延后加载。
+ * `createConnectTransport` 在创建时就固化了 baseUrl 和 fetch,而桌面端的网关地址
+ * 要等读完本地设置才知道,所以这里的初始化必须先于 bootstrap 里的一切。
+ *
+ * 顺序由 ES 模块求值规则保证:bootstrap.tsx 的**第一个** import 是本文件,
+ * 模块按 import 顺序求值、顶层 await 会被等待,于是下面四个 await 跑完之前
+ * bootstrap 的其余 import(MUI、路由、AuthProvider…)不会开始求值。
+ * 2026-09-15 之前这里是 main.tsx + `await import("./bootstrap")`:动态 import 让 Vite
+ * 无法把第二波 45 个 chunk 写进 HTML 的 modulepreload,移动端白白多一个 RTT 波次。
+ *
+ * ⚠️ 不要把 `import "./init"` 从 bootstrap.tsx 的第一行挪走。
  */
-// 「灯市」世界的自托管宋体(按 unicode-range 切片,浏览器只拉用到的字形片)
-import "@fontsource/noto-serif-sc/400.css";
-import "@fontsource/noto-serif-sc/700.css";
-import "@fontsource/noto-serif-sc/900.css";
 import { setErrorMessageResolver } from "@ecommerce/api";
 import { createErrorMessageResolver, initI18n } from "@ecommerce/i18n";
 import { initLocaleStorage, initTransport } from "@ecommerce/tauri";
@@ -29,5 +31,3 @@ await initI18n({
 });
 // 让网关错误在英文界面下也是英文，而不是把中文 message 漏到界面上
 setErrorMessageResolver(createErrorMessageResolver());
-
-await import("./bootstrap");

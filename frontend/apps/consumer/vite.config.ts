@@ -94,6 +94,10 @@ export default defineConfig(({ mode }) => {
         },
       },
     },
+    build: {
+      // 字体切片不内联:@fontsource 的小切片(<4KB)默认会被 base64 进 CSS,实测占了 63KB
+      assetsInlineLimit: (filePath: string) => (/\.woff2?$/.test(filePath) ? false : undefined),
+    },
     resolve: {
       alias: {
         "@": resolve(__dirname, "./src"),

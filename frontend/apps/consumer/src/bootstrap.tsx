@@ -1,3 +1,6 @@
+// ⚠️ 必须是第一个 import:init.ts 用顶层 await 注入 transport / i18n,ES 模块按 import 顺序求值,
+// 它排在 MUI/路由/AuthProvider 之前才能保证后者求值时 transport 已就绪。详见 init.ts 头注。
+import "./init";
 import { createTheme, ThemeProvider } from "@mui/material/styles";
 import { enUS, zhCN } from "@mui/material/locale";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
@@ -10,10 +13,6 @@ import { isTauri } from "@ecommerce/tauri";
 import { getGatewayBaseUrl } from "@ecommerce/api";
 import { initPerf } from "@ecommerce/perf";
 import { routeTree } from "./routeTree.gen";
-import "@fontsource/roboto/300.css";
-import "@fontsource/roboto/400.css";
-import "@fontsource/roboto/500.css";
-import "@fontsource/roboto/700.css";
 import { Code, ConnectError } from "@connectrpc/connect";
 import { TransportProvider } from "@connectrpc/connect-query";
 import { getSharedTransport } from "@ecommerce/api";
@@ -96,6 +95,9 @@ function InnerApp() {
 const rootElement = document.getElementById("app");
 if (rootElement && !rootElement.innerHTML) {
   const root = ReactDOM.createRoot(rootElement);
+
+  // 字体在首帧之后再加载(见 fonts.ts):不让 162KB 的 @font-face 声明挡在首屏前面
+  void import("./fonts");
 
   root.render(
     <StrictMode>

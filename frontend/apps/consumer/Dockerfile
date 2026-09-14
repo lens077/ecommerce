@@ -94,7 +94,9 @@ FROM caddy:alpine AS final
 RUN cat > /etc/caddy/Caddyfile <<'EOF'
 :80 {
     root * /usr/share/caddy
-    encode gzip
+    # zstd 排前面:Chrome/Firefox 都支持,比 gzip 小 10–20%;不支持的客户端自动落到 gzip
+    encode zstd gzip
+
 
     handle /api/* {
         uri strip_prefix /api
@@ -105,7 +107,16 @@ RUN cat > /etc/caddy/Caddyfile <<'EOF'
         }
     }
 
+    # 带内容 hash 的构建产物永不变化,让浏览器一年内不回源
+    handle /assets/* {
+        header Cache-Control "public, max-age=31536000, immutable"
+        file_server
+    }
+
+    # 其余(index.html 及 SPA 兜底、robots/llms.txt、favicon)每次协商。之前全都没有 Cache-Control,
+    # 浏览器按启发式缓存 index.html,发新版后可能拿旧 HTML 去请求已不存在的 hash 文件(2026-09-15 补)
     handle {
+        header Cache-Control "no-cache"
         try_files {path} /index.html
         file_server
     }
