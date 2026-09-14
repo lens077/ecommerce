@@ -13,6 +13,8 @@ RUN npm install -g "$(node -p 'require("./package.json").packageManager')"
 FROM base AS dependencies
 COPY package.json pnpm-lock.yaml pnpm-workspace.yaml ./
 COPY apps/consumer-next/package.json apps/consumer-next/package.json
+# 首页共用的灯市 token / 演示数据(workspace 包,TS 源码形式,由 next.config transpilePackages 转译)
+COPY packages/lantern/package.json packages/lantern/package.json
 # --ignore-scripts 是硬要求：workspace 根 prepare(vp config) 要装 git 钩子，slim 镜像无 git 必炸；
 # 本 app 构建不依赖任何 postinstall（buf 生成物随源码 COPY）。2026-08-28 实测教训。
 RUN pnpm install --frozen-lockfile --ignore-scripts --filter @ecommerce/consumer-next...
@@ -23,6 +25,7 @@ COPY --from=dependencies /workspace/node_modules ./node_modules
 COPY --from=dependencies /workspace/apps/consumer-next/node_modules ./apps/consumer-next/node_modules
 COPY package.json pnpm-lock.yaml pnpm-workspace.yaml ./
 COPY apps/consumer-next apps/consumer-next
+COPY packages/lantern packages/lantern
 RUN pnpm --filter @ecommerce/consumer-next build
 
 FROM ${BASE_IMAGE} AS runner

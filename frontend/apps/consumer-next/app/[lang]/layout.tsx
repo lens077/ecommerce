@@ -1,17 +1,18 @@
 import type { Metadata } from "next";
 import type { ReactNode } from "react";
-import { Providers } from "../providers";
-import "../styles.css";
 
 const SUPPORTED_LANGUAGES = ["zh", "en"] as const;
 
 export const metadata: Metadata = {
   title: {
-    default: "Consumer Next POC",
-    template: "%s | Consumer Next POC",
+    default: "灯市",
+    template: "%s | 灯市",
   },
-  description: "Throwaway Next.js product detail vertical-slice POC",
+  description: "灯市——每件好物是一盏灯。数码、服饰、食百的综合商城。",
 };
+
+// 路径段 zh → 页面声明 zh-CN(与 SPA 的 <html lang> 一致,搜索引擎按 BCP 47 识别)
+const HTML_LANG: Record<string, string> = { zh: "zh-CN", en: "en" };
 
 export function generateStaticParams() {
   return SUPPORTED_LANGUAGES.map((lang) => ({ lang }));
@@ -27,10 +28,8 @@ export default async function LanguageLayout({
   const { lang } = await params;
 
   return (
-    <html lang={lang}>
-      <body>
-        <Providers>{children}</Providers>
-      </body>
+    <html lang={HTML_LANG[lang] ?? lang}>
+      <body>{children}</body>
     </html>
   );
 }

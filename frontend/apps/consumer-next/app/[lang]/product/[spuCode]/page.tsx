@@ -6,7 +6,10 @@ import { buildProductJsonLd, serializeJsonLd } from "@/lib/product-jsonld";
 import { productDetailQueryOptions } from "@/lib/product-query";
 import { createAnonymousServerTransport } from "@/lib/server-transport";
 import { PersonalizedPanel } from "./personalized-panel";
+import { Providers } from "../../../providers";
 import { ProductDetail } from "./product-detail";
+// POC 样式只服务商品页;首页有自己的 home.css,两者不共用 body/h1 规则
+import "../../../styles.css";
 
 const LANGUAGES = ["zh", "en"] as const;
 type Language = (typeof LANGUAGES)[number];
@@ -83,17 +86,21 @@ export default async function ProductPage({ params }: { params: Promise<PagePara
   const jsonLd = product ? buildProductJsonLd({ product, url: productUrl(lang, spuCode) }) : null;
 
   return (
-    <HydrationBoundary state={dehydrate(queryClient)}>
-      {jsonLd && (
-        <script
-          type="application/ld+json"
-          // 已由 serializeJsonLd 转义 `<`，不会提前闭合 script
-          dangerouslySetInnerHTML={{ __html: serializeJsonLd(jsonLd) }}
-        />
-      )}
-      <ProductDetail lang={lang} spuCode={spuCode} />
-      <PersonalizedPanel lang={lang} spuCode={spuCode} />
-    </HydrationBoundary>
+    // Providers(transport + react-query)只包商品页:首页是静态 HTML + 三个小岛,
+    // 放在 layout 里会把 connect/react-query 运行时塞进首页首屏 JS。
+    <Providers>
+      <HydrationBoundary state={dehydrate(queryClient)}>
+        {jsonLd && (
+          <script
+            type="application/ld+json"
+            // 已由 serializeJsonLd 转义 `<`，不会提前闭合 script
+            dangerouslySetInnerHTML={{ __html: serializeJsonLd(jsonLd) }}
+          />
+        )}
+        <ProductDetail lang={lang} spuCode={spuCode} />
+        <PersonalizedPanel lang={lang} spuCode={spuCode} />
+      </HydrationBoundary>
+    </Providers>
   );
 }
 
