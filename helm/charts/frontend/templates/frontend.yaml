@@ -73,7 +73,7 @@ spec:
 ---
 # 前端静态站点的对外入口。shop.dev.test 局域网直连;shop.apikv.com 公网,经 Pangolin 隧道。
 # ⚠️ parentRef 必须带 sectionName: https —— 本仓 HTTPRoute 都只挂 443 listener。
-# shop.* 下按最长 PathPrefix 分流:/zh、/en、/_next 归 consumer-next,其余归这里。
+# shop.* 下分流:首页 `/`(Exact)与 /zh、/en、/_next(PathPrefix)归 consumer-next,其余归这里。
 apiVersion: gateway.networking.k8s.io/v1
 kind: HTTPRoute
 metadata:

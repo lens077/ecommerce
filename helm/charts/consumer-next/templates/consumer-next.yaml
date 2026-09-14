@@ -2,8 +2,9 @@
 {{- $ns := .Release.Namespace }}
 {{- $port := .Values.port }}
 # consumer-next(公开可收录页:Next.js App Router)。与 frontend/apps/consumer-next/deploy/base/dev.yaml 逐字段等价。
-# 架构:shop.* 域名下按最长 PathPrefix 分流——/zh、/en、/_next → consumer-next;
-#       其余(含 /、/cart、/checkout、/account…)继续由 ecommerce-frontend(Vite SPA)承载。
+# 架构:shop.* 域名下分流——首页 `/`(Exact,2026-09-14 起 SSR)与 /zh、/en、/_next(PathPrefix)→ consumer-next;
+#       其余(/cart、/checkout、/profile、/assets…)继续由 ecommerce-frontend(Vite SPA)承载。
+#       Gateway API 规定 Exact 优先于 PathPrefix,所以 `/` Exact 能从 frontend 的 PathPrefix `/` 里抢走根路径。
 # 缓存一致性拍板:短 TTL(页面 revalidate=60s,各 Pod 独立 ISR 缓存的最大不一致窗口 60s);
 #       需要严格一致时升级共享 cacheHandler(见 docs/reports/2026-08-28-nextjs-poc.md)。
 apiVersion: v1
@@ -163,6 +164,9 @@ spec:
       sectionName: https
   rules:
     - matches:
+        - path:
+            type: Exact
+            value: /
         - path:
             type: PathPrefix
             value: /zh
