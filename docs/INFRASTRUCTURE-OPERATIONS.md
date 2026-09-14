@@ -110,27 +110,21 @@ bridge 日志只记录来源、状态和标题，不记录 ntfy token、topic �
 
 ## 4. Healthchecks
 
-Healthchecks v4.3 运行在 node3，仅监听 `127.0.0.1:8000`。界面通过 SSH tunnel 访问：
-
-```bash
-ssh -L 8000:127.0.0.1:8000 node3
-# 浏览器打开 http://127.0.0.1:8000
-```
+> 2026-09-15 起 Healthchecks 运行在线上 k8s 集群 `ops` 命名空间（同级仓 `../kubernetes/components/healthchecks/`，sqlite on openebs-lvm），node3 上的 docker 副本已停止（容器保留，作为回滚项）。公网入口 `https://hc.apikv.com`（Pangolin rid 56，site node4+node5 双 target → `10.10.31.240:443`）：界面挂 Pangolin SSO；`/ping/*` 与 `/api/v3/status/` 两条路径在资源规则里放行，ping 不需要登录。
 
 当前唯一 check：
 
-- 名称：`pgBackRest full backup`。
-- 周期：24 小时，grace 2 小时。
-- ping URL：node3 `/etc/healthchecks/pgbackrest.url`，包含私有 UUID。
-- wrapper：node3 `/etc/healthchecks/pg-backup-heartbeat.sh`。
-- 通知：附加一个启用状态的原生 `ntfy` Channel。
+- 名称：`pgBackRest full backup`，cron 型 `0 1 * * *`（Asia/Shanghai），grace 2 小时。
+- ping URL：node3 `/etc/healthchecks/pgbackrest.url`（`root:postgres` 0440，含私有 UUID；旧 node3 实例的 URL 备份在同目录 `.bak-node3-20260915`）。
+- wrapper：node3 `/usr/local/sbin/pg-backup-healthchecked`（postgres 用户 crontab `00 01 * * *`），`/start` → `pg-backup full` → success 或 `/fail`；curl 2s 连接 / 5s 总超时 / 重试 2 次。
+- 通知：原生 `ntfy` Channel（从 node3 实例迁入，token 不入库）。
 
 ```bash
-# 状态检查见 helper.sh 第一节「node3：Healthchecks 与 Gatus」（只读）
-ssh node3 'curl -fsS http://127.0.0.1:8000/api/v3/status/'
+curl -fsS https://hc.apikv.com/api/v3/status/          # 实例活着（放行路径，无需登录）
+ssh node3 'sudo -u postgres curl -fsS "$(</etc/healthchecks/pgbackrest.url)/start"'   # 只验路径通，不伪造成功
 ```
 
-Healthchecks 与被监控的 pgBackRest 同在 node3，只能发现任务未执行、超时或失败，不能在 node3 整机失联时主动告警。异机或托管 dead-man switch 仍是残余项。
+心跳路径现在是 node3 → 公网 → node1 Pangolin → newt(node4/node5) → 集群：Pangolin 或隧道故障会表现为「备份没打心跳」。换来的是 **node3 整机失联终于能被发现**（心跳停 → 宽限期后 ntfy），这是 2026-08-27 起一直挂着的残余项。迁移当天只验证了 `/start` 到达，首个真实 success 心跳以 2026-09-16 01:00 那次备份为准〔待确认〕。
 
 ## 5. Kubernetes 状态与 Event 采集
 
@@ -160,15 +154,12 @@ ssh node3 'docker logs --since 10m gatus 2>&1 | grep -E "k8s-(cluster-state|even
 
 > **决策更新（2026-08-28 复核）**：错误监控定稿**维持 Bugsink**，本节从「存量待替换」恢复为目标态运行事实；GlitchTip 转为条件采纳（触发条件见 [TECH.md](TECH.md) §11.3）。
 
-Bugsink 2.5.0 当前仍运行在 node3，容器只发布 `127.0.0.1:8010`。公网资源 `bugsink.apikv.com` 是 Pangolin rid 35，siteId 7，target `127.0.0.1:8010 http`，SSO off。SDK 无法通过交互式 SSO，访问控制由 Bugsink 登录、项目成员和 DSN 承担。
+> 2026-09-15 起 Bugsink 运行在线上 k8s 集群 `ops` 命名空间（同级仓 `../kubernetes/components/bugsink/`，sqlite on openebs-lvm 5Gi，告警 webhook 白名单指向集群内 `alert-bridge.observability.svc`）。公网资源 `bugsink.apikv.com` 仍是 Pangolin rid 35，target 已从 node3 `127.0.0.1:8010` 改为 site node4+node5 → `10.10.31.240:443`，SSO off。node3 的 docker 副本（PostgreSQL 后端，1 个项目 / 2 条验证事件）已停止，容器与 PG 库 `bugsink` 保留作回滚项；前端/后端 SDK 均未接入，故无 DSN 需要迁移。
 
 ```bash
-# 状态检查见 helper.sh 第一节「node3：Bugsink」（只读）
 curl -fsS https://bugsink.apikv.com/health/ready
-ssh node3 'cd /data/bugsink && docker compose ps'
+kubectl -n ops get deploy bugsink
 ```
-
-已创建 `infrastructure-validation` 项目。Python Sentry SDK 提交 2 个同栈异常后，保存 2 个 Event 并聚合成 1 个 Issue，release 为 `infrastructure-validation@2026.08.27`；New Issue 实际触发 authenticated ntfy。DSN 和管理员凭据只在 Bugsink UI/node3 secret 中，不写入文档。
 
 详细部署、升级、桥接和备份说明见同级仓 `../../docker-deploy/bugsink/README.md`；本仓前端 SDK 接入手册见 [docs/observability/error-monitoring.md](observability/error-monitoring.md)，容量实测与调研结论见 [docs/reports/2026-08-28-bugsink-integration-research.md](reports/2026-08-28-bugsink-integration-research.md)。
 

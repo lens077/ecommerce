@@ -99,7 +99,7 @@ cd infrastructure/host-watchdog
 |---|---|---|
 | node1 | 14 个容器 + `docker.service` + 2 个本机 HTTP 端点 + Pangolin 隧道站点 + 磁盘 | 每 5 分钟；实测 2026-09-01 |
 | node2 | 11 个容器（Harbor 全家桶 + gorse + MinIO + nginx/redis）+ `docker.service`/`fail2ban.service` + 3 个本机 HTTP 端点 + 磁盘 | 每 5 分钟；实测 2026-09-02 |
-| node3 | 7 个容器（gatus/ecommerce-gatus/otelcol/CDC/bugsink/healthchecks）+ `docker.service` + 4 个本机 HTTP 端点 + 磁盘 | 每 5 分钟；实测 2026-09-02 |
+| node3 | 5 个容器（gatus/ecommerce-gatus/otelcol/cdc-connect/cdc-elasticsearch）+ `docker.service` + 2 个本机 HTTP 端点 + 磁盘 | 每 5 分钟；实测 2026-09-15（bugsink/healthchecks 同日迁入 k8s，名单已同步删掉，旧 env 备份 `watchdog.env.bak-20260915`） |
 
 node3 的覆盖对象里有 `gatus`、`ecommerce-gatus` 与 `otelcol`——**探针与采集器本身**。
 它们挂掉的表现是「所有告警都安静了」，与「一切正常」在信号上完全一致，

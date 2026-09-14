@@ -214,6 +214,11 @@ Service 重建不变(与 dev 集群 `192.168.3.121` 同理)。协议必须 https
 `search`(38)/`cart-api`(39)/`argocd`(40)/`consul`(41)/`qqbot`(46),每个都有
 site `node4`(tid 3/4/15/16/39/40/41/42/47)+ site `node5`(tid 52-60)两条 target,同指 `10.10.31.240:443`。
 `node3` 刻意不加(见上)。
+**2026-09-15 又切了两个到集群**(node3 内存止血 B 组,详见 [INFRASTRUCTURE-OPERATIONS.md](../../docs/INFRASTRUCTURE-OPERATIONS.md) §4/§6):
+`bugsink.apikv.com`(rid 35,target 由 node3 `127.0.0.1:8010` 改为 node4/node5 双 target,SSO off 不变)、
+**新建 `hc.apikv.com`(rid 56,Healthchecks,node4/node5 双 target,SSO on + 资源规则放行 `/ping/*` 与 `/api/v3/status/`)**——
+规则用 API 建:`PUT /resource/:rid/rule {action:"ACCEPT",match:"PATH",value:"/ping/*",priority,enabled}` 再 `POST /resource/:rid {applyRules:true}`,
+不用再走 DB 后门;验收判据是「UI 401、放行路径回应用自己的 404/200」。
 
 ### 多 target 的真实语义(`server/lib/traefik/loadBalancer.ts` 源码 + 实测)
 

@@ -199,9 +199,9 @@ Healthchecks 只做 dead-man switch：任务按预期时间发送 `/start`、成
 - Healthchecks 与任务同机时只能发现任务失败、未执行和超时，无法在整机失联期间自行告警；
   要覆盖主机故障，观察端必须放到独立故障域。
 
-2026-08-27 实况：node3 运行 Healthchecks v4.3，只监听 `127.0.0.1:8000`。当前唯一 check 是 `pgBackRest full backup`（24 小时周期 + 2 小时 grace），wrapper 为 `/etc/healthchecks/pg-backup-heartbeat.sh`，ping URL 位于 `/etc/healthchecks/pgbackrest.url`。通知使用 v4.3 原生 `ntfy` Channel 和 bearer token，不使用 generic webhook。start/success/fail 与 ntfy 都已实测；Healthchecks、任务和 ntfy bridge 仍同在 node3，整机失联风险未消除。
+2026-09-15 实况：Healthchecks v4.3 运行在线上 k8s `ops` 命名空间（2026-08-27 至 09-15 曾在 node3 docker，只监听回环）。当前唯一 check 是 `pgBackRest full backup`（cron `0 1 * * *` Asia/Shanghai + 2 小时 grace），wrapper 为 node3 `/usr/local/sbin/pg-backup-healthchecked`，ping URL 位于 node3 `/etc/healthchecks/pgbackrest.url`，经公网 `https://hc.apikv.com/ping/<uuid>`（Pangolin rid 56，`/ping/*` 放行、界面挂 SSO）到达。通知使用 v4.3 原生 `ntfy` Channel 和 bearer token。迁移当天实测 `/start` 到达与 ntfy 测试通知发出；心跳链路多了 Pangolin/newt 一跳，换来 node3 整机失联可被发现。
 
-ZeroSSL 续期在 node1 `apikv-cert-renew.timer`，失败/成功直接发 ntfy，过期兜底由 Gatus 检查。Healthchecks 只监听 node3 loopback，因此不要为 node1 timer 创建一个无法发送的占位 check。
+ZeroSSL 续期在 node1 `apikv-cert-renew.timer`，失败/成功直接发 ntfy，过期兜底由 Gatus 检查。Healthchecks 现已有公网 ping 入口（`hc.apikv.com/ping/*`），node1 timer 若要接心跳可以建 check；此前「只监听 node3 loopback、别建占位 check」的约束已随迁移解除。
 
 ## 九、选型
 

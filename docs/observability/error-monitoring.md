@@ -2,7 +2,7 @@
 
 > 定稿：错误监控**维持 Bugsink**（[TECH.md](../TECH.md) §11.3，2026-08-28 复核）。
 > 本文是**可执行接入手册**：边界、前置、改动清单、验收门禁与回退。
-> 容量证据、官方一手来源与方案论证见调研报告 [`../reports/2026-08-28-bugsink-integration-research.md`](../reports/2026-08-28-bugsink-integration-research.md)；服务端部署与运维（node3）见 [`../INFRASTRUCTURE-OPERATIONS.md`](../INFRASTRUCTURE-OPERATIONS.md) §6。
+> 容量证据、官方一手来源与方案论证见调研报告 [`../reports/2026-08-28-bugsink-integration-research.md`](../reports/2026-08-28-bugsink-integration-research.md)；服务端部署与运维（2026-09-15 起在 k8s `ops` ns）见 [`../INFRASTRUCTURE-OPERATIONS.md`](../INFRASTRUCTURE-OPERATIONS.md) §6。
 
 ## 1. 边界（先读，防止接歪）
 
@@ -54,6 +54,6 @@ P3 完成即核销 `TODO.md`「错误监控 Source Map」与 `INFRASTRUCTURE-OPE
 
 - `setUser` 最多 `{id}`，不放 email/昵称；面包屑关闭 fetch body 采集（对齐 [`../PRIVACY.md`](../PRIVACY.md)）。
 - 事件风暴双层兜底：SDK `sampleRate`（初期 1.0，风暴后降）+ 服务端限流/保留期。
-- node3 单点是既有残余风险：Bugsink 不可达时 SDK 静默丢弃，不影响业务页面；靠异机探针发现，不为错误监控做 HA。
+- Bugsink 单副本（openebs-lvm 节点本地盘）是既有残余风险：不可达时 SDK 静默丢弃，不影响业务页面；靠 node3 上的异机探针发现，不为错误监控做 HA。
 - 广告拦截器会拦截部分上报——错误监控是抽样视角，不是全量审计。
 - **回退**：删 `initErrorMonitoring()` 调用即完全退场，服务端零变更。
