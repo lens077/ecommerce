@@ -63,7 +63,7 @@ user:
   port: 30001
   image:
     repository: ccr.ccs.tencentyun.com/sumery/user
-    tag: 1.7.3@sha256:97cf243aa71c99ba99b431288bcf9f18a179aa48f2c08403c75335732b6f25ca
+    tag: 1.7.4@sha256:6d5075d8cc9a495dfb557987222308ef36ca22c55df6cbef5febe60a202bbfe4
 search:
   enabled: true
   replicaCount: 1
@@ -71,7 +71,7 @@ search:
   port: 30002
   image:
     repository: ccr.ccs.tencentyun.com/sumery/search
-    tag: 1.7.3@sha256:014ea837088a4be6f57288922ec9fd04f08081583fa9c2ae33981bdb4a3ef9dc
+    tag: 1.7.4@sha256:7e33cda964cf63eae2ad771a29dcdb9b8f6b8a632d8bf31c30045a36bc308a3b
 product:
   enabled: true
   replicaCount: 1
@@ -79,7 +79,7 @@ product:
   port: 30003
   image:
     repository: ccr.ccs.tencentyun.com/sumery/product
-    tag: 1.7.3@sha256:7447526afd082434127049562df1b0d04f56af221e3e47d9c463d536c87a6dbb
+    tag: 1.7.4@sha256:2811d92bfc6f7c44009008278f27ee0db43bacfc850ca56479493f073f3628e4
 order:
   enabled: true
   replicaCount: 1
@@ -87,7 +87,7 @@ order:
   port: 30004
   image:
     repository: ccr.ccs.tencentyun.com/sumery/order
-    tag: 1.7.3@sha256:34dae302b61ee12d9f46e0d92b618777551c6a8c9ae9a4ee1347c58c5c84428c
+    tag: 1.7.4@sha256:50363e7f085dadd6cf611131d3808c84e6bc34b42daefdbfd461c18e9e084d6a
 inventory:
   enabled: true
   replicaCount: 1
@@ -95,7 +95,7 @@ inventory:
   port: 30005
   image:
     repository: ccr.ccs.tencentyun.com/sumery/inventory
-    tag: 1.7.3@sha256:8273af4e5f4fe60d619dcdab1c8de2b454d814e01a10679b3c6a8e1a1e2c423f
+    tag: 1.7.4@sha256:d7fe7ce2353ef9201f9172b3eeef7a0a385d3cc9325d48a77e0086f1ef1a48d8
 cart:
   enabled: true
   replicaCount: 1
@@ -103,7 +103,7 @@ cart:
   port: 30006
   image:
     repository: ccr.ccs.tencentyun.com/sumery/cart
-    tag: 1.7.3@sha256:3d4eabf86f67a268644694ee15564d5a287e37d3aa9a1643bbf9baf391922549
+    tag: 1.7.4@sha256:ea201d4a20c37c698d96f45634828a06658739de9de0e5c3f1032e18eed052be
 merchant:
   enabled: true
   replicaCount: 1
@@ -111,7 +111,7 @@ merchant:
   port: 30007
   image:
     repository: ccr.ccs.tencentyun.com/sumery/merchant
-    tag: 1.7.3@sha256:d1ff4bb5853eee7c20dcb5297da2a3f2d2c21f980c26a47c4f0d161cba657685
+    tag: 1.7.4@sha256:e1bc7e8d1d275424b762c3deaec92aff1824c8b4280d6552bad56efd035abf27
 payment:
   enabled: true
   replicaCount: 1
@@ -119,7 +119,7 @@ payment:
   port: 30008
   image:
     repository: ccr.ccs.tencentyun.com/sumery/payment
-    tag: 1.7.3@sha256:419b93ae7e3d0aa20a78a4a32f113597e1ff2adcc42dc3714c629f22b69f6405
+    tag: 1.7.4@sha256:419229280b3f0facb946cfcf716ec697b873c39dc97a45759085af6a337500d1
 address:
   enabled: true
   replicaCount: 1
@@ -127,7 +127,7 @@ address:
   port: 30009
   image:
     repository: ccr.ccs.tencentyun.com/sumery/address
-    tag: 1.7.3@sha256:3df4fe07444b7fcc81de61a617eeccf307bc3e844aa12e24161e7efe1cae40c1
+    tag: 1.7.4@sha256:2827d29b28d6a2c57c50a7adee48c5b39a8c20df04c1c81385a5461fe0b59cc3
 behavior:
   enabled: true
   replicaCount: 1
@@ -135,7 +135,7 @@ behavior:
   port: 30011
   image:
     repository: ccr.ccs.tencentyun.com/sumery/behavior
-    tag: 1.7.3@sha256:26d48f4969f20de25a7116c97051783797ae28065b091d0e9f4ca12d4bf4eff1
+    tag: 1.7.4@sha256:aa8740290efb94964debd2af0ea4ba593b937fab05e748398e666135ddbc2815
 
 # 前端两个工作负载。裸 manifest 在 frontend/apps/consumer/deploy/pre/ 与
 # frontend/apps/consumer-next/deploy/base/dev.yaml,同样受 parity 门禁约束。
@@ -144,7 +144,7 @@ frontend:
   replicaCount: 1
   image:
     repository: ccr.ccs.tencentyun.com/sumery/ecommerce-frontend
-    tag: 1.7.3@sha256:890d2729f738d7f453b8d0990defeecf54c989c7e2b6e49f8bae17a01e22cf83
+    tag: 1.7.4@sha256:91709d1c2a147bc6d54adc0a3922e9a522cbb9410e8a85b3e8758a26ef1ac731
   # Caddy 监听端口。⚠️ 仓库 Dockerfile 现写 :30080,而线上镜像 sha-bf8dae2 实测监听 :80;
   # 下次重建镜像前必须先把两者对齐,否则 Service 的 targetPort 会指向一个没人听的口。
   containerPort: 80
@@ -155,7 +155,7 @@ consumer-next:
   replicaCount: 2
   image:
     repository: ccr.ccs.tencentyun.com/sumery/consumer-next
-    tag: 1.7.3@sha256:6f1c0fff4a3e0e4f5dca894a7171b382ff3028bb4ac0c1f65f50bd6c549fd6d2
+    tag: 1.7.4@sha256:48ce09474198ccd4ab52fe72673a5de873b6f137d0b0435e23662546641586af
   port: 3004
   gatewayURL: http://ecommerce-gateway-service.ecommerce.svc.cluster.local:8080
   publicURL: https://shop.dev.test
