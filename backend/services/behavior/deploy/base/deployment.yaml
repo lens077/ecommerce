@@ -39,7 +39,7 @@ spec:
         fsGroupChangePolicy: OnRootMismatch
       containers:
         - name: ecommerce-behavior
-          image: ccr.ccs.tencentyun.com/sumery/behavior:sha-c364128@sha256:d076319e47f9a51ef3295d2543ea25ff6724e9bc54551aba3ea8a56c559e5b96
+          image: ccr.ccs.tencentyun.com/sumery/behavior:1.6.8@sha256:5b2c45f04598cdea8df20654669b5c2c52bdae1b678fde6bccd5f22eeb080484
           imagePullPolicy: Always
           env:
             # 关闭应用内的 Log 导出器，只保留 Trace 和 Metric。

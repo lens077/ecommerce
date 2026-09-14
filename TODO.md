@@ -423,3 +423,5 @@ CES 巡检告警（CronJob 2m + vmalert firing 闭环）、可观测黑盒探活
 - **验收证据长文与会话记录** → [`docs/progress-archive/`](docs/progress-archive/)（不可变历史）
 - **调研与评估报告** → [`docs/reports/`](docs/reports/)
 - **harness 演进理由** → [`context/harness-framework/evolution-log.md`](context/harness-framework/evolution-log.md)
+
+- CI release `1.6.8`: verified all backend and frontend linux/amd64 + linux/arm64 indexes; updated dev manifests only. Production promotion remains explicit.

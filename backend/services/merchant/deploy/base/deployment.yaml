@@ -38,7 +38,7 @@ spec:
         fsGroupChangePolicy: OnRootMismatch
       containers:
         - name: ecommerce-merchant
-          image: ccr.ccs.tencentyun.com/sumery/merchant:sha-c364128@sha256:81031f3c7f0e41dbbeffb8fc2e8c4f57a26523eb4d9ad3c02a1dd671c345bc80
+          image: ccr.ccs.tencentyun.com/sumery/merchant:1.6.8@sha256:03c38f5535f60619c68eb166a410d511fdee0427f44b29ca7ff4900b6788ebba
           imagePullPolicy: Always
           env:
             # 关闭应用内的 Log 导出器，只保留 Trace 和 Metric。

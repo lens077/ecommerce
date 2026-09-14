@@ -66,7 +66,7 @@ spec:
               app.kubernetes.io/part-of: ecommerce
       containers:
         - name: consumer-next
-          image: ccr.ccs.tencentyun.com/sumery/consumer-next:dev-20260828-2
+          image: ccr.ccs.tencentyun.com/sumery/consumer-next:1.6.8@sha256:5722fff562a00d9d8138318502d65dac8a13ce35282d7d92b3cdba40971e49c0
           securityContext:
             allowPrivilegeEscalation: false
             readOnlyRootFilesystem: true
