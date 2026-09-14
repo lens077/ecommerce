@@ -269,7 +269,7 @@ AppProject 只有 `default`（2026-08-29 复测仍然如此）。集群实际由
 | 策略与授权 | `openfga`、`kyverno` |
 | 运行时安全 | `tetragon`（2026-08-28 装，事件经 vector 进 node3 日志） |
 | 弹性与发布 | `keda`、`argo-rollouts`、`argocd`（见坑 ③）、`vpa`（**只有 recommender**，无 updater/webhook；live 共 17 个 VPA，其中 ecommerce 15 个均为 `Off`） |
-| 网络与穿透 | Cilium Gateway API、`cilium-secrets`、`pangolin`(newt，2026-08-28 起集群内也有站点) |
+| 网络与穿透 | Cilium Gateway API（LAN `gateway` 策略）、Pangolin + newt（Mac `remote-dev` 策略）、`cilium-secrets` | Mac 不在机房 LAN 时走 `consul-dev.apikv.com` / `redis-dev.apikv.com:30005`，不依赖 `10.10.31.x` 直连 |
 | 存储与镜像 | `openebs`、`spegel`（`cnpg-system` 已整体移除——2026-08-30 实测 ns 与 CNPG CRD 均不存在，PG 数据面只剩 node3 Pigsty） |
 
 **OpenBao 自动解封**：`node101` 上 `openbao-auto-unseal.timer` 每 60 秒检查一次，sealed 时读
@@ -322,3 +322,18 @@ done
 - Consul TTL 首次心跳盲窗：[`consul-ttl-first-ping-blind-window.md`](../project/ecommerce/registry/experience/consul-ttl-first-ping-blind-window.md)
 - 一次性搭建/迁移实录（node3、Silo、Redis TLS、PG 切流、可观测外移）：
   [`docs/progress-archive/node3-migration-20260824.md`](../../docs/progress-archive/node3-migration-20260824.md)
+
+### 远程开发地址策略（remote-dev）
+
+本机 Mac 不在机房 LAN 时，不使用 `10.10.31.x` Gateway VIP，也不需要 `/etc/resolver/dev.test` split DNS。开发流量走：
+
+```text
+Mac → Pangolin resource → node4/node5 newt → K8s Gateway 或 node service
+```
+
+- Consul：`https://consul-dev.apikv.com` → `10.10.31.240:443`，HTTP resource 关闭 SSO，Host/TLS Server Name 保留 `consul.dev.test`。
+- Dragonfly：`redis-dev.apikv.com:30005` → `10.10.31.243:6380`，raw TCP/TLS 直通。
+- 配置生成：`bash tools/config-center-harvest.sh --env dev --strategy remote-dev`；`dev` 默认即 `remote-dev`。
+- 机房 LAN 开发机才使用 `--strategy gateway` 与 `*.dev.test`。
+
+本地服务默认不注册 Consul；需要注册时在对应服务目录运行 `make dev-consul`，并提供 `CONSUL_HTTP_TOKEN`。

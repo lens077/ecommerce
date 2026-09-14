@@ -42,6 +42,16 @@ dev:
 	CONSUL_SCHEME=http \
 	CONSUL_INSECURE_SKIP_VERIFY=true \
 	go run cmd/server/main.go
+.PHONY: dev-consul
+dev-consul:
+	SERVICE_NAME="address-service" \
+	CONSUL_ENABLED=true \
+	CONFIG_SOURCE_FILE=$(ADDRESS_SOURCE_CONFIG) \
+	CONSUL_ADDR=$(CONSUL_ADDR_LOCAL) \
+	CONSUL_SCHEME=http \
+	CONSUL_INSECURE_SKIP_VERIFY=true \
+	CONSUL_HTTP_TOKEN="$(CONSUL_HTTP_TOKEN)" \
+	go run cmd/server/main.go
 
 .PHONY: dev-file
 dev-file:

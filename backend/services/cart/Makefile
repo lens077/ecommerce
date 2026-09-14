@@ -30,7 +30,7 @@ k8s-prod:
 	kubectl apply -f deploy/prod
 
 # Cart 通过独立 config-center SDK 读取本地 selector，只允许 config_center；
-# Consul 仅用于本服务注册发现。
+# Consul 仅用于本服务注册发现。默认 `dev` 不注册；需要注册时使用 `make dev-consul`。
 
 .PHONY: dev
 dev:
@@ -40,6 +40,16 @@ dev:
 	CONSUL_ADDR=$(CONSUL_ADDR_LOCAL) \
 	CONSUL_SCHEME=http \
 	CONSUL_INSECURE_SKIP_VERIFY=true \
+	go run cmd/server/main.go
+.PHONY: dev-consul
+dev-consul:
+	SERVICE_NAME="cart-service" \
+	CONSUL_ENABLED=true \
+	CONFIG_SOURCE_FILE=$(CART_SOURCE_CONFIG) \
+	CONSUL_ADDR=$(CONSUL_ADDR_LOCAL) \
+	CONSUL_SCHEME=http \
+	CONSUL_INSECURE_SKIP_VERIFY=true \
+	CONSUL_HTTP_TOKEN="$(CONSUL_HTTP_TOKEN)" \
 	go run cmd/server/main.go
 
 .PHONY: dev-file
