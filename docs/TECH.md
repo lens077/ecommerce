@@ -847,6 +847,8 @@ cfg.GetServiceAddr("inventory-service") // 从 K8s DNS 解析
 
 **`<script type="speculationrules">` 已评估：当前不引入**。它要求点击触发浏览器级文档导航，该前提两个应用都不成立——consumer 是 TanStack Router SPA，路由切换不发生文档导航（其等价物是 Router `preload` + Query `prefetchQuery`）；consumer-next 虽是 MPA 但当前仅一个业务页且站内链接**零命中**，没有可预渲染的目标。触发重估：`ListProducts` 实现后 consumer-next 扩出列表页、形成「列表→详情」真实跳转链路时；届时须先处理 prerender 执行 JS 导致的个性化请求提前发出（`document.prerendering`）与遥测 PV 虚高（`telemetry_pb.ts` 已含 `prerender` 导航类型）。实测计数、落地顺序与带红测的验收判据见 [`docs/frontend/semantic-html.md`](frontend/semantic-html.md)。
 
+针对公开页的内容相关性、主题聚焦、技术 SEO 与内部链接，另有一份基于哥飞 X 原帖和当前代码证据的映射报告：[`Google 搜索排名因素：原帖摘要与本项目映射`](reports/2026-09-10-google-ranking-factors.md)。
+
 
 ## 12. 实施路线图
 
