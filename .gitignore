@@ -37,3 +37,10 @@ e2e-artifacts/
 # Pangolin newt 隧道客户端二进制,本机工具,不进仓库
 newt_linux_amd64
 newt_*
+
+# graphify 生成的知识图谱（23MB，可由 skill 重建），不入库
+graphify-out/
+# Python 字节码缓存（scripts/ 下的运维脚本）
+__pycache__/
+# vitest/playwright 运行产物
+frontend/test-results/
