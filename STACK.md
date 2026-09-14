@@ -280,7 +280,7 @@ vmalert --> Alertmanager
 | 结构门禁 | `backend/structcheck` | 在用；核对服务矩阵、目录、部署清单、网关路由和 Config Center 契约 |
 | 文档门禁 | `scripts/verify-context.sh` + canary | 在用；校验链接、索引、格式、文档预算与门禁自测 |
 | 快速验收 | `scripts/verify-quick.sh` | 在用；并行后端 build/vet 与前端 ready，成功只输出摘要 |
-| 本地/集群开发 | Make、mirrord（mirror）、Okteto、Docker Compose | 在用；按 [`docs/TECH.md`](docs/TECH.md) §10.2 定稿分工（2026-08-28 PoC）：日常默认 `make dev` 直连；**观察用 mirrord mirror**（集群 DNS/出站/入站镜像，steal 在本集群不可用不启用）；**接管用 Okteto**；Docker Compose 定位为 pre 半生产环境测试。多人按请求接管为待触发评估（Telepresence personal intercept / mirrord Teams，见 TECH.md B 表）。证据：`docs/reports/2026-08-28-mirrord-poc.md` |
+| 本地/集群开发 | Make、mirrord（mirror）、Okteto、Docker Compose | 在用；日常默认 `make dev`。当前 Mac 不在机房 LAN 时使用 Config Center `dev` + Pangolin `remote-dev`（Pangolin resource → newt → K8s Gateway/node service）；机房 LAN 开发机才使用 `gateway` 策略。需要本地注册发现时显式运行服务目录的 `make dev-consul`，默认 `make dev` 不注册共享 Consul。**观察用 mirrord mirror**（集群 DNS/出站/入站镜像，steal 在本集群不可用不启用）；**接管用 Okteto**；Docker Compose 定位为 pre 半生产环境测试。多人按请求接管为待触发评估（Telepresence personal intercept / mirrord Teams，见 TECH.md B 表）。证据：`docs/reports/2026-08-28-mirrord-poc.md` |
 | 容量与故障验证 | k6、故障演练脚本 | 目标工具；当前没有可复现的百万/千万级容量验收报告 |
 | 供应链加固 | Trivy、Cosign/Syft、Gitleaks、Kyverno | 规划或局部评估，不能写成已完成发布门禁 |
 

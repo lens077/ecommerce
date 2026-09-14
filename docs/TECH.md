@@ -23,7 +23,7 @@
 | 可观测性 SDK | OpenTelemetry Go SDK + Protobuf-ES 内置追踪 | 日志、指标、链路埋点 |
 | 消息序列化 | Protobuf | RPC 与领域事件的统一序列化格式 |
 | 构建与 CI | Docker Buildx、GitHub Actions（发布）、GitLab CI（门禁）、Renovate | 多架构镜像构建、自动化流水线、依赖更新。**两远端职责切分（2026-09-02 定稿）**：GitLab（origin）跑每次 push / MR 的代码门禁（`context-gate` + `backend-gate` + `frontend-gate`，即本地锚点搬进 CI）；GitHub 只由发布 tag 触发构建、签名、发布链；同一 tag 只允许一边写镜像仓。规范见 [`context/team/git-commit.md`](../context/team/git-commit.md)「两个远端的 CI 职责切分」，对照 deepseek-harness 流水线的取舍、过时点清单与门禁首跑证据见 [CI 复盘报告](reports/2026-09-02-ci-two-remotes-dsh-reference.md)。**crane（参考项，2026-09-09）**：无 daemon 的镜像仓库操作工具，不替代 Buildx 构建（最终层含 `RUN`），定位为发布链仓库侧的 tag 存在性断言、清点断言、跨仓复制与同 digest 晋级；适用边界与命令见 [crane 参考](reports/2026-09-09-crane-reference.md) |
-| 开发内环 | mirrord（mirror）+ Okteto（2026-08-28 PoC 定稿分工） | **观察用 mirrord mirror**（本地 `go run` 按需获得集群 DNS/出站、镜像入站真实流量，只读零影响）；**接管用 Okteto**（`okteto up` 替换工作负载，本地代码真实接请求、复现 Pod 身份）。steal 在本集群不可用不启用（Cilium KPR/BPF host routing 绕过 netfilter）；日常默认仍是本地 `make dev`。证据与使用约定：`docs/reports/2026-08-28-mirrord-poc.md` |
+| 开发内环 | mirrord（mirror）+ Okteto（2026-08-28 PoC 定稿分工） | **观察用 mirrord mirror**（本地 `go run` 按需获得集群 DNS/出站、镜像入站真实流量，只读零影响）；**接管用 Okteto**（`okteto up` 替换工作负载，本地代码真实接请求、复现 Pod 身份）。steal 在本集群不可用不启用（Cilium KPR/BPF host routing 绕过 netfilter）；日常默认仍是本地 `make dev`。当前 Mac 不在机房 LAN 时，配置中心 `dev` 使用 `remote-dev`：Mac → Pangolin resource → newt → K8s Gateway/node service；机房 LAN 开发机才使用 `gateway`（`.dev.test`）。本地 Consul 注册不随 `make dev` 默认开启，需要时运行服务目录的 `make dev-consul`。证据与使用约定：`docs/reports/2026-08-28-mirrord-poc.md` |
 
 ### B. 正在研究和考虑中的技术栈与工具
 
@@ -800,7 +800,7 @@ K8s 指标由集群内 OTel Collector 的 `k8s_cluster` receiver 直接产出，
 |------|------|
 | **生产（K8s）** | Kubernetes Service + CoreDNS，DNS 名格式 `<service>.<namespace>.svc.cluster.local` |
 | **pre 半生产测试** | Docker Compose 编排，通过 Compose 服务名作为 DNS 名互访 |
-| **Mac 开发内环** | 已定分工（2026-08-28 PoC）：日常默认本地 `make dev` 直连；**观察用 mirrord mirror**（按需集群 DNS/出站/入站镜像）；**接管用 Okteto**（`okteto up` 整体替换，复现 Pod 身份）；steal 不可用不启用。多人按请求接管属待触发评估（见 B 表） |
+| **Mac 开发内环** | 已定分工：日常默认本地 `make dev`；当前 Mac 经 Pangolin 资源使用 `remote-dev`（Consul `consul-dev.apikv.com`、Dragonfly `redis-dev.apikv.com:30005`），不直连 `10.10.31.x`，不需要 `dev.test` split DNS；机房 LAN 开发机才使用 `gateway`。需要本地注册时运行服务目录的 `make dev-consul`；观察用 mirrord mirror，接管用 Okteto，steal 不启用。 |
 
 **统一抽象**：在配置层抽象一个 `ServiceRegistry` 接口，业务代码不感知具体发现机制：
 
