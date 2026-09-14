@@ -250,7 +250,7 @@ CES 巡检告警（CronJob 2m + vmalert firing 闭环）、可观测黑盒探活
 
 ### 5. 前端
 
-2026-09-10：页内智能助手 `@ecommerce/copilot` 在分支 `feat/copilot-ui-mode` 落地（待验收后合并）：固定句式 → 页面动作，朱红渐变蒙层 + 大指针在页内替用户操作；三条链路（用户搜商品 / 商家筛待发货 / 管理员开新建的 `/monitor` 页）由 `pnpm e2e:copilot` 6 条 Playwright 用例覆盖。缺口：`/monitor` 健康数据源未接（卡片显示「未接入」）、merchant 订单页仍是 mock。设计与落地差异见 [`docs/design/copilot/copilot.md`](docs/design/copilot/copilot.md)。
+2026-09-12：页内智能助手 `@ecommerce/copilot` 功能分支已按用户授权合入 `main`（`e3dde0d`），本地旧分支已删除。`/monitor` 代码接通 control-tower 的 admin 专属 `GET /admin/health/services`：动态卡片、单次路由采样、状态/耗时/检查时间、刷新失败过期提示与失权清除；网关有有界 h2c 探测、短缓存与会话鉴权。Firefox 固定响应测试之外，跨仓真实「Firefox → 同源代理 → BFF 网关 → h2c 后端」契约联调已通过。**未发布**：本轮不推送、不部署，线上生效仍需升级网关及前端；merchant 订单页仍是 mock，写动作/确认与句式扩充仍仅为设计。实现边界及复测命令见 [`docs/design/copilot/copilot.md`](docs/design/copilot/copilot.md) §九。
 
 2026-09-10：前端统一升级到 React 19.3.0；consumer-next 商品详情 SKU 卡片采用稳定的 `ViewTransition`，保持数据与 DOM 语义不变。
 

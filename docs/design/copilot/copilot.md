@@ -3,11 +3,11 @@
 > 2026-09-10 设计草案。目标是把腾讯云 KiKi「界面模式」的交互形态搬进本仓三个前端 app：
 > 用户在聊天面板提问，助手把固定句式匹配成页面动作，在**当前页面内**带着用户做完，过程可视、可中断。
 > **不引入 LLM，不新增后端服务**：第一期只需要固定行为，意图解析用前端正则完成，整个方案是一个前端共享包。
-> **落地状态（2026-09-10）**：S1/S2 已在分支 `feat/copilot-ui-mode` 实现——`frontend/packages/copilot`、三个 app 的接线、
-> admin `/monitor` 页，以及 `frontend/e2e/copilot.e2e.ts`（`pnpm e2e:copilot`，6 条全绿）。本文与实现的差异见 §九。
+> **落地状态**：S1/S2 已实现，原功能分支于 2026-09-12 合入 `main`；健康卡片真实取数的代码与发布边界见 §九。
+> Firefox 测试覆盖三个 app，初期实现差异保留在 §十一；写动作与句式扩充（§八）尚未实施。
 >
-> **现状事实（2026-09-10）**：三个 app（consumer / merchant / admin）没有聊天或 AI 相关代码；admin 没有监控路由；
-> consumer 的搜索框在 `frontend/apps/consumer/src/components/AppBar.tsx`，输入即出下拉结果，没有独立搜索结果页；
+> **实施前基线（非当前状态）**：三个 app（consumer / merchant / admin）原先没有聊天代码，admin 没有监控路由；
+> consumer 的搜索框在 `frontend/apps/consumer/src/components/AppBar.tsx`，回车或点击搜索后显示结果，没有独立搜索结果页；
 > merchant 的 `routes/orders/index.tsx` 用本地 mock 数据做状态筛选（`pending / shipped / completed`），
 > `backend/api/order/v1/order.proto` 没有状态字段。
 > 本文凡写「现在」指第一期实现，凡写「目标」指依赖尚未落地的部分，不得把目标写成能力。
@@ -16,11 +16,9 @@
 
 ## 一、调研结论：没有现成实现，只有零件
 
-KiKi 是腾讯云 2026-03-20 上线的官网内置 Agent，基于腾讯内部 Helix 平台，**未开源**。
-`gh search repos` 在 Tencent / TencentCloud / TencentCloudADP 组织及全站检索「kiki」「helix」均无命中；
-腾讯云文档中心 `product/871` 是同名小程序，与界面模式无关。
+初次调研使用 `gh search repos` 检索了 KiKi/Helix 与同类项目，**未找到可核验的 KiKi 界面模式开源仓库**；这不等于证明它未开源，也不能排除未被检索到的同类方案。腾讯云文档中心 `product/871` 介绍的是同名小程序，不是本需求的界面模式。
 
-GitHub 上没有项目同时具备「聊天面板 + 意图匹配 + 页面内带光标高亮地替用户操作」。可复用的零件：
+在已检查的候选中，没有核实到可直接满足本项目「聊天面板 + 固定意图匹配 + 页内光标高亮操作」的整套方案；相关组件包括：
 
 | 层 | 项目 | 许可 | 借什么 | 不借什么 |
 |---|---|---|---|---|
@@ -203,7 +201,7 @@ interface CopilotAction {
 - 正则：`/^(?:帮我|请)?(?:查看|打开|看看|看|进入|去)(?:一下|下)?(?:系统|服务)?监控(?:页|页面|面板)?$/`
 - `examples`：「帮我查看监控」「打开监控页」「看看服务监控」
 - 步骤：`say("带你去监控页")` → `navigate("/monitor")` → `waitFor(monitor.health-grid)` → `highlight(monitor.health-grid, "这里是各服务的健康状态")`
-- 新建路由 `frontend/apps/admin/src/routes/monitor/index.tsx`：**第一期只放服务健康卡片**——按 `.service-matrix.yaml` 的 10 个业务服务各一张卡片，显示服务名、网关前缀、状态。状态数据源待确认：网关当前是否向前端暴露各服务的 `readyz` 聚合尚未核实；核实前卡片显示「未接入」态，不显示假数据。可复用 [platform/voxel-construction-site.md](../platform/voxel-construction-site.md) 定义的健康聚合器契约
+- 路由 `frontend/apps/admin/src/routes/monitor/index.tsx` 接网关 `GET /admin/health/services`，按响应动态生成服务卡片，不再维护固定的 10 项占位表。数据表示本次网关路由采样，不代表所有副本健康。无身份/无权限、网关尚未升级、首次加载失败与旧快照失效分别展示；契约见 §九。
 - 侧栏导航同步加「监控」入口，否则用户不通过助手到不了这页
 
 ## 六、分期与验收
@@ -213,7 +211,8 @@ interface CopilotAction {
 | S1 共享包 | `@ecommerce/copilot`：Provider / Panel / 注册表 / IntentMatcher / 执行器 / 视觉层 | `cd frontend && pnpm ready`；包内 vitest：每个动作的 `examples` 全命中且不误命中同角色其他动作；受控 input 赋值后 React `onChange` 被调用；MUI `Select` 经 `mousedown` 打开并选中；`prefers-reduced-motion` 分支；`Esc` 中断 |
 | S2 三 app 接线 | 各 app 挂 Provider、标锚点、注册动作；admin `/monitor` 页与侧栏入口 | 三个 app 各一条 vitest：注册动作 → 输入 example → 执行器跑完 → 锚点被点击 / 输入框值正确；现有 a11y 测试不退化 |
 | 演示 | dev 环境三条链路人工走通 | 各录一段屏幕录像归 `docs/progress-archive/` |
-| 目标态 | 写动作与 `confirm`；固定句式扩充；健康卡片接真实聚合数据；若固定句式仍不够用再评估意图解析升级 | 各自立项时补验收 |
+| S3 健康卡片 | control-tower 管理员健康快照 + admin 实时取数（代码接线，未部署） | 网关 HTTP/h2c 测试、Firefox 页面用例、§9.4 跨仓契约联调 |
+| 目标态 | 写动作与 `confirm`；固定句式扩充；若固定句式仍不够用再评估意图解析升级 | 各自立项时补验收 |
 
 设计稿阶段不改 `TODO.md`；S1 立项时按 TODO 纪律登记到 `docs/todo/` 前端分类并回填计数。
 
@@ -221,7 +220,7 @@ interface CopilotAction {
 
 已定（2026-09-10 用户裁决）：蒙层与描边用灯市朱红渐变；consumer 对匿名访客也显示面板，角色固定为 `customer`。
 
-待确认：`/monitor` 健康数据来源——网关是否已有可用的聚合端点；核实前卡片显示「未接入」。
+健康数据来源已确定为 control-tower 的固定管理员诊断端点（§九）。代码接线与本地契约验证不等于上线：部署环境需要同时升级网关和前端；旧网关返回 404 时显示「网关尚未提供健康端点」，不伪造卡片。
 
 ## 八、后续能力设计：写动作、确认与固定句式扩充
 
@@ -282,44 +281,53 @@ interface WriteAction extends CopilotAction {
 
 每新增一个 pattern 必须同步 `examples`、中文/英文 locale、角色交叉误命中测试和 Firefox e2e 至少一条用户旅程。
 
-## 九、真实健康数据设计（需要 control-tower 配合）
+## 九、真实健康数据接线
 
-### 9.1 为什么不能直接从前端请求 10 个 `/healthz`
+### 9.1 探测口径
 
-业务服务的 `/healthz` 是 Kubernetes 探针级 HTTP 端点，绑定在内网 Service；浏览器直连会暴露内部拓扑，
-也无法稳定处理跨源、认证和 Cilium 网络策略。control-tower 当前 `/readyz` 只代表网关自身、路由快照与会话存储，不能作为业务服务状态。
+浏览器只请求网关 `GET /admin/health/services`，不直连内网。网关从已加载的路由快照确定 `direct://` 目标或通过现有 Resolver 选出一个 `discovery:///` 实例，再以 h2c 请求 `/healthz`。`telemetry` 与 `behavior` 共用目标时不重复展示。
 
-### 9.2 聚合端点契约
+这是「当前网关沿现有路由的一次健康采样」，不是所有 Pod 的健康聚合，也不是业务流程成功率；页面明确展示这个限制。网关 `/readyz` 仍只负责自身就绪。
 
-在同级仓 `control-tower/services/gateway` 增加受保护的 `GET /admin/health/services`（名称待 control-tower 评审）：
+### 9.2 契约与安全边界
 
-```json
-{
-  "checked_at": "2026-09-10T00:00:00Z",
-  "services": [
-    {"name":"order", "status":"healthy", "latency_ms":12, "checked_at":"..."},
-    {"name":"payment", "status":"degraded", "latency_ms":200, "checked_at":"..."}
-  ]
-}
+权威契约在 sibling control-tower `docs/design/service-health.md`；本仓通过 `fetchServiceHealth()` adapter 消费，不新增业务 RPC 或 LLM 服务。
+
+| 字段/结果 | 语义 |
+|---|---|
+| `checked_at` | UTC RFC3339 快照完成时间；缓存命中不改写时间 |
+| `services` | 动态服务列表，最多 64 项，不再前端硬编码 10 项 |
+| `services[].name` | 一级包名，不含地址 |
+| `services[].status` | `healthy / degraded / unavailable / unknown` |
+| `services[].latency_ms` | 非负整数；尚未发出探测为 null，不显示成 0 ms |
+| `services[].checked_at` | 单项观察完成时间 |
+| `services[].reason` | 可选固定原因码，不显示原始网络或依赖错误 |
+| HTTP 200 | 快照成功；允许其中部分服务失败 |
+| HTTP 401 / 403 | 无有效身份 / 非 admin；页面移除已有敏感快照 |
+| HTTP 404 / 503 | 网关未提供该端点 / 聚合暂不可用；不当作业务服务不健康 |
+
+`healthy` 需 HTTP 200 且 JSON 明确 `healthy: true`；依赖返回 `healthy: false` 为 `degraded`；连接失败/超时为 `unavailable`；缺失或非法 JSON 为 `unknown`。
+
+网关复用现有 BFF 优先认证，单独固定要求 `admin`，不放宽业务 Casbin 的 POST-only 规则。拒绝任意目标参数、重定向及超过 64 KiB 的探针响应；不透传 cookie、Authorization、身份头。并发最多 4，每项 2 秒，整轮 5 秒；每进程合并在途请求并将完整快照缓存 5 秒，路由更新使缓存失效。
+
+### 9.3 前端行为与发布
+
+- `@ecommerce/api` 的运行时网关地址和 fetch 实现复用到这条本地 HTTP 诊断接口；admin 入口注入网关地址，dev 下 `/api` 同源代理到 `GATEWAY_PROXY_TARGET`。
+- TanStack Query 管理快照、10 秒刷新、手动刷新与取消；首次失败、无配置、旧数据失效分别展示。
+- 暂时网络失败可以保留最近快照，但显式标成过期并保留原检查时间；401/403 清除旧快照，不因接口报错自动把用户跳出当前页面。
+- 现有 `helm/files/zero-trust.yaml` 已按 gateway 身份放行业务端口（L4），本次不新增网络权限；未修改 control-tower 路由模板，因此无 Go 模块依赖升级。
+- 部署时先升级网关再发布前端，确认部署环境的策略和同源代理覆盖此路径。本轮不推送、不部署；未升级的环境仍会显示端点不可用。
+
+### 9.4 验收方式
+
+Firefox 固定响应 e2e 验证动态卡片、部分失败、刷新恢复、过期和权限状态。另有可重复的跨仓契约测试：
+
+```bash
+# 在 control-tower 根目录执行；两个仓库已安装现有依赖和 Playwright Firefox。
+E2E_ECOMMERCE_DIR=../ecommerce go test ./services/gateway/tests -run '^TestServiceHealthFirefoxContract$' -count=1 -v
 ```
 
-设计约束：
-
-- 网关服务端按 `.service-matrix.yaml` / control-tower 配置的白名单访问各 Service `/healthz`，不接受浏览器传入目标地址。
-- 并发检查，单服务超时与总超时分开；一个服务失败不阻塞其余服务，状态至少有 `healthy / degraded / unavailable / unknown`。
-- 仅 admin 角色可访问；前端不显示内部 host/port，只显示服务名、状态、耗时和统一的检查时间。
-- 不把健康检查写入业务数据库；结构化日志记录聚合耗时与失败服务名。
-- `/monitor` 使用 `AbortController`、10 秒轮询和「上次成功数据 + 当前失败提示」；首次无数据显示「加载失败」，不能显示「健康」。
-- control-tower 需要为该端点增加单元测试、网关集成测试、路由授权测试和 Cilium egress/ingress 策略；本仓 admin 增加真实响应 fixture 与 Firefox e2e。
-
-### 9.3 本仓落地顺序
-
-1. control-tower 先实现并部署聚合端点，确认响应契约与角色策略。
-2. 本仓 admin 新增 `getServiceHealth()` API adapter，映射状态并保留未知字段兼容性。
-3. `/monitor` 把「未接入」替换为实时状态；请求失败显示「加载失败」并保留最近一次成功结果。
-4. e2e 不假装真实网络：用固定 fixture 覆盖全健康、部分不可用、聚合端点 401/403/503 三种情况；dev 环境手测一次真实链路。
-
-**当前阻塞**：control-tower 尚未提供这个聚合端点，所以本仓不能诚实地声称已接入真实健康数据；当前卡片仍保持「未接入」。
+该测试创建本地网关、测试 BFF 会话与 h2c 后端，调用本仓 `frontend/e2e/monitor.gateway.mjs` 拉起独立端口的 admin Vite；Firefox 真正经过 `/api` 代理取数，不桩健康响应。测试结束销毁测试资源，不使用线上凭据。普通 Go 验证默认跳过这条跨仓 Node/浏览器测试；本地真实协议测试仍不等价线上部署验收。
 
 ## 十、风险
 
@@ -328,7 +336,7 @@ interface WriteAction extends CopilotAction {
 - **事件派发脆弱**：MUI 升级可能改变 `Select` 的触发事件。S1 的单测用真实 MUI 组件而不是 mock，升级即暴露。
 - **z-index 冲突**：蒙层要高于 MUI Modal / Popover，但下拉结果（`appbar.search-results`）又要在蒙层之上可见。做法：蒙层用挖洞而不是遮盖，需要可见的区域一律进挖洞矩形。
 
-## 九、实现与本文的差异（2026-09-10 落地记录）
+## 十一、实现与本文的差异（2026-09-10 落地记录）
 
 - **角色来源**：设计写「来自各 app 用户 store」，实现为 app 固定值（consumer=customer / merchant=merchant / admin=admin），因为三个 app 本身就是按角色分的独立 SPA；Provider 的 prop 叫 `copilotRole` 而不是 `role`——jsx-a11y 的 `aria-role` 规则会把自定义组件上的 `role=` 当 ARIA 属性报错。
 - **蒙层实现**：没用 `clip-path: polygon`，用挖洞元素的 `box-shadow: 0 0 0 200vmax` 当蒙层，圆角天然跟着洞走，浏览器兼容更省心。
