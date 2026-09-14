@@ -175,7 +175,7 @@ scan_zizmor() {
 TRIVY_CHECKS_REPO=${TRIVY_CHECKS_REPO:-ghcr.io/aquasecurity/trivy-checks:2}
 
 scan_trivy() {
-  log "Trivy：扫描 HIGH/CRITICAL 配置误配（存量棘轮，checks 源 $TRIVY_CHECKS_REPO）"
+  log "Trivy：扫描 HIGH/CRITICAL 配置误配（存量棘轮，checks 源 ${TRIVY_CHECKS_REPO}）"
   "$BIN_DIR/trivy-$TRIVY_VERSION" fs "$ROOT" --scanners misconfig --severity HIGH,CRITICAL \
     --checks-bundle-repository "$TRIVY_CHECKS_REPO" \
     --skip-files '**/*.dockerignore' --exit-code 0 --no-progress --format json --output "$WORK_DIR/trivy.json"

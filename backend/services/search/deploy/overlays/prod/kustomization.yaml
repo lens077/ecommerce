@@ -1,0 +1,9 @@
+# Preserve pre runtime configuration; prod owns its image selection.
+apiVersion: kustomize.config.k8s.io/v1beta1
+kind: Kustomization
+resources:
+  - ../pre
+images:
+  - name: ccr.ccs.tencentyun.com/sumery/search
+    newTag: "sha-98ba5d1"
+    digest: sha256:3039b708910eebaa2d1f9c288575ed5de0a353750c06616b2d8d8074443825ed

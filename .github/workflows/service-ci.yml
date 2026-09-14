@@ -112,7 +112,7 @@ jobs:
       # backend/.golangci-exported.yml)于 2026-09-03 接入,711 条存量已冻结,新增导出
       # 不写注释即红。golangci-lint 版本与本地 brew 装的一致,采集结果才可复现。
       - name: Install golangci-lint (revive-exported ratchet)
-        uses: golangci/golangci-lint-action@v8
+        uses: golangci/golangci-lint-action@4afd733a84b1f43292c63897423277bb7f4313a9 # v8
         with:
           version: v2.13.1
           install-only: true

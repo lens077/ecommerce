@@ -41,7 +41,7 @@ jobs:
       services: ${{ steps.detect.outputs.services }}
     steps:
       - name: Checkout
-        uses: actions/checkout@v5
+        uses: actions/checkout@fbc6f3992d24b796d5a048ff273f7fcc4a7b6c09 # v5
         with:
           fetch-depth: 0
 
@@ -110,18 +110,24 @@ jobs:
       version: ${{ github.ref_type == 'tag' && github.ref_name || '' }}
     secrets: inherit
 
+  # 两个前端随同一发布 tag 在 amd64/arm64 原生 runner 上构建（frontend-release.yml），
+  # 只需要 TCR 凭据，显式传递而不 inherit——zizmor 的 secrets-inherit / excessive-permissions 两条都因此不触发。
+  frontend:
+    if: github.ref_type == 'tag'
+    needs: detect
+    permissions:
+      contents: read
+    uses: ./.github/workflows/frontend-release.yml
+    with:
+      version: ${{ github.ref_name }}
+    secrets:
+      TCR_USERNAME: ${{ secrets.TCR_USERNAME }}
+      TCR_PASSWORD: ${{ secrets.TCR_PASSWORD }}
+
   # 镜像 tag 回写：两份部署真相源（helm/values.yaml 顶层键的 image.tag，与
   # backend/services/<svc>/deploy/base/deployment.yaml 的 image:）必须同步写，
   # 写完先跑 scripts/verify-deploy-parity.sh 证明两边仍等价再提交。
   # 回写提交带 [skip ci]，本 workflow 只由 tag 触发，回写不会再触发自己。
-  frontend:
-    if: github.ref_type == 'tag'
-    needs: detect
-    uses: ./.github/workflows/frontend-release.yml
-    with:
-      version: ${{ github.ref_name }}
-    secrets: inherit
-
   update-manifests:
     name: update deploy manifests (helm + raw)
     needs: [detect, ci, frontend]
@@ -132,16 +138,16 @@ jobs:
     runs-on: ubuntu-24.04
     steps:
       - name: Checkout with push token
-        uses: actions/checkout@v5
+        uses: actions/checkout@fbc6f3992d24b796d5a048ff273f7fcc4a7b6c09 # v5
         with:
           ref: main
           token: ${{ secrets.MANIFEST_PUSH_TOKEN }}
 
       - name: Set up Buildx
-        uses: docker/setup-buildx-action@v3
+        uses: docker/setup-buildx-action@8d2750c68a42422c14e847fe6c8ac0403b4cbd6f # v3
 
       - name: Login to TCR for release verification
-        uses: docker/login-action@v3
+        uses: docker/login-action@c94ce9fb468520275223c153574b00df6fe4bcc9 # v3
         with:
           registry: ccr.ccs.tencentyun.com
           username: ${{ secrets.TCR_USERNAME }}

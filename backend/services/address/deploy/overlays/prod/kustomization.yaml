@@ -1,0 +1,8 @@
+# Preserve pre runtime configuration; prod owns its image selection.
+apiVersion: kustomize.config.k8s.io/v1beta1
+kind: Kustomization
+resources:
+  - ../pre
+images:
+  - name: ccr.ccs.tencentyun.com/sumery/address
+    newTag: "1.6.3"
