@@ -1,4 +1,5 @@
 import { createFileRoute, useNavigate } from "@tanstack/react-router";
+import { goHome } from "@/lib/home";
 
 import { Box, CircularProgress, Container, Typography } from "@mui/material";
 import { ArrowLeft } from "@ecommerce/icons";
@@ -32,7 +33,7 @@ function CartPage() {
   };
 
   const handleNavigateHome = () => {
-    void navigate({ to: "/" });
+    goHome(navigate);
   };
 
   if (isInitializing) {

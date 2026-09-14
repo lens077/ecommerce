@@ -6,7 +6,8 @@
  * 真实商品图(ListProduct)接通后,这套插画退役为兜底占位。
  */
 
-import { lantern } from "@/styles/tokens";
+import type { ReactNode } from "react";
+import { lantern } from "./tokens";
 
 export type ArtKind =
   | "humidifier"
@@ -61,7 +62,7 @@ export function ProductArt({ kind, title }: { kind: ArtKind; title?: string }) {
   );
 }
 
-const ART: Record<ArtKind, React.ReactNode> = {
+const ART: Record<ArtKind, ReactNode> = {
   humidifier: (
     <g {...strokeProps}>
       <ellipse cx="48" cy="76" rx="20" ry="5" fill={ASH} stroke="none" />
@@ -245,7 +246,7 @@ export function CategoryIcon({ kind }: { kind: CategoryKind }) {
   );
 }
 
-const CATS: Record<CategoryKind, React.ReactNode> = {
+const CATS: Record<CategoryKind, ReactNode> = {
   digital: (
     <g {...catStroke}>
       <path d="M6 15 C5 10 8 6 12 6 C16 6 19 10 18 15" />

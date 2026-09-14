@@ -9,6 +9,7 @@
 //
 // 网关同时接受两种凭据（cookie ∥ bearer），所以两条路径可以长期并存、互不影响。
 import React, { createContext, useContext, useState, useEffect, useLayoutEffect } from "react";
+import { goHome } from "@/lib/home";
 import {
   DESKTOP_REDIRECT_URI,
   bffLogout,
@@ -108,7 +109,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode; router: any }> 
       setName(null);
       if (isTauri()) {
         // 桌面端不能整页跳转（源是 tauri://localhost），走路由回首页。
-        void router.navigate({ to: "/" });
+        goHome(router.navigate);
         return;
       }
       window.location.assign("/");

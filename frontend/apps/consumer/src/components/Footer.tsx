@@ -1,7 +1,7 @@
 import { Box, Container, Typography, Link } from "@mui/material";
 import { useTranslation } from "@ecommerce/i18n";
 import { lantern } from "@/styles/tokens";
-import { BrandMark } from "@/components/home/DemoArt";
+import { BrandMark } from "@ecommerce/lantern";
 
 const Footer: React.FC = () => {
   const { t } = useTranslation();

@@ -23,6 +23,7 @@
     "@ecommerce/copilot": "workspace:*",
     "@ecommerce/i18n": "workspace:*",
     "@ecommerce/icons": "catalog:",
+    "@ecommerce/lantern": "workspace:*",
     "@ecommerce/perf": "workspace:*",
     "@ecommerce/tauri": "workspace:*",
     "@ecommerce/ui": "workspace:*",

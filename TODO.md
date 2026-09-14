@@ -250,6 +250,8 @@ CES 巡检告警（CronJob 2m + vmalert firing 闭环）、可观测黑盒探活
 
 ### 5. 前端
 
+2026-09-14：**首页 `/` 迁到 consumer-next 服务端渲染**（PageSpeed 移动端 61 / 桌面 88 的根因：SPA 首屏前要下 ~650KB、三波串行——162KB gzip 的阻塞 CSS 全是 Noto Serif SC 303 条 `@font-face`，`await import("./bootstrap")` 第二波 45 个 chunk，其中 `@ecommerce/icons` 因 `import * as icons from "lucide"` 把整套 lucide 打进首屏；字体本体 674KB）。做法：灯市 token / 演示数据 / 墨线插画抽成 `@ecommerce/lantern` 两 app 共用；consumer-next 新增 `app/[lang]/page.tsx` 整页静态（构建期预渲染 /zh、/en，`next.config` rewrite `/`→`/zh` 不走 redirect），三个小岛（灯阵入视点亮、顶栏搜索 RPC 按需加载、`/auth/me` 登录态），首页字体改 `scripts/subset-home-fonts.sh` 生成的 700/900 子集（各 64KB）经 `next/font/local` 自托管 + preload；`Providers`/POC 样式收进商品页不再进 layout。路由：helm 与裸 manifest 的 consumer-next HTTPRoute 加 `/` Exact（Exact 优先于 frontend 的 PathPrefix `/`），parity 三环境绿。SPA 侧 `lib/home.ts` 的 `goHome()` 在生产 web 整页跳转（dev / Tauri 仍走 SPA 首页路由）。本地 Lighthouse 移动端：59 → **97**（FCP 4.9s→0.8s、LCP 6.7s→2.6s、SI 7.5s→1.9s，14 请求 279KB）。已知边界：首页不能设 `revalidate`（线上 `.next/server/app` 只读、只挂了 `app/zh`、`app/en` 两个可写卷，首页产物 `app/zh.html` 不在其中），ListProduct 接通改 ISR 时要同时改卷挂载；SPA 内 `routes/index.tsx` 保留给 dev / 桌面端。SPA 自身的阻塞 CSS / 启动瀑布 / icons tree-shaking 三项未动，对 `/cart` 等 SPA 页仍有效，另立待办。
+
 2026-09-12：页内智能助手 `@ecommerce/copilot` 功能分支已按用户授权合入 `main`（`e3dde0d`），本地旧分支已删除。`/monitor` 代码接通 control-tower 的 admin 专属 `GET /admin/health/services`：动态卡片、单次路由采样、状态/耗时/检查时间、刷新失败过期提示与失权清除；网关有有界 h2c 探测、短缓存与会话鉴权。Firefox 固定响应测试之外，跨仓真实「Firefox → 同源代理 → BFF 网关 → h2c 后端」契约联调已通过。**未发布**：本轮不推送、不部署，线上生效仍需升级网关及前端；merchant 订单页仍是 mock，写动作/确认与句式扩充仍仅为设计。实现边界及复测命令见 [`docs/design/copilot/copilot.md`](docs/design/copilot/copilot.md) §九。
 
 2026-09-10：前端统一升级到 React 19.3.0；consumer-next 商品详情 SKU 卡片采用稳定的 `ViewTransition`，保持数据与 DOM 语义不变。

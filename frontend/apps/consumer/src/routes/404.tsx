@@ -3,6 +3,7 @@
  */
 
 import { createFileRoute } from "@tanstack/react-router";
+import { goHome } from "@/lib/home";
 import { Box, Button, Typography } from "@mui/material";
 import { Home, ArrowLeft } from "@ecommerce/icons";
 import { useNavigate } from "@tanstack/react-router";
@@ -73,7 +74,7 @@ function NotFoundPage() {
         <Button
           variant="outlined"
           startIcon={<ArrowLeft size={18} />}
-          onClick={() => navigate({ to: "/" })}
+          onClick={() => goHome(navigate)}
           sx={{
             borderColor: "divider",
             color: "text.secondary",
@@ -88,7 +89,7 @@ function NotFoundPage() {
         <Button
           variant="contained"
           startIcon={<Home size={18} />}
-          onClick={() => navigate({ to: "/" })}
+          onClick={() => goHome(navigate)}
           sx={{
             bgcolor: "primary.main",
             "&:hover": {

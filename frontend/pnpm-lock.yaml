@@ -427,6 +427,9 @@ importers:
       '@ecommerce/icons':
         specifier: 'catalog:'
         version: link:../../packages/icons
+      '@ecommerce/lantern':
+        specifier: workspace:*
+        version: link:../../packages/lantern
       '@ecommerce/perf':
         specifier: workspace:*
         version: link:../../packages/perf
@@ -560,6 +563,9 @@ importers:
       '@connectrpc/connect-web':
         specifier: 'catalog:'
         version: 2.1.2(@bufbuild/protobuf@2.14.1)(@connectrpc/connect@2.1.2(@bufbuild/protobuf@2.14.1))
+      '@ecommerce/lantern':
+        specifier: workspace:*
+        version: link:../../packages/lantern
       '@tanstack/react-query':
         specifier: 'catalog:'
         version: 5.102.8(react@19.3.0)
@@ -814,6 +820,15 @@ importers:
         version: 19.3.0
     devDependencies:
       '@types/react':
+        specifier: 'catalog:'
+        version: 19.3.0
+
+  packages/lantern:
+    devDependencies:
+      '@types/react':
+        specifier: 'catalog:'
+        version: 19.3.0
+      react:
         specifier: 'catalog:'
         version: 19.3.0
 

@@ -1,0 +1,19 @@
+{
+  "name": "@ecommerce/lantern",
+  "version": "0.0.0",
+  "private": true,
+  "type": "module",
+  "exports": {
+    ".": "./src/index.ts",
+    "./tokens": "./src/tokens.ts",
+    "./demo": "./src/demoProducts.ts",
+    "./art": "./src/DemoArt.tsx"
+  },
+  "devDependencies": {
+    "@types/react": "catalog:",
+    "react": "catalog:"
+  },
+  "peerDependencies": {
+    "react": "catalog:"
+  }
+}

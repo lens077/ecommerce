@@ -24,13 +24,14 @@ import { useEffect, useRef, useState } from "react";
 import { Box, Container, Typography } from "@mui/material";
 import { useTranslation } from "@ecommerce/i18n";
 import { lantern, sp } from "@/styles/tokens";
-import { CategoryIcon, ProductArt } from "@/components/home/DemoArt";
 import {
+  CategoryIcon,
   demoCategories,
   demoProducts,
   heroProduct,
+  ProductArt,
   type DemoProduct,
-} from "@/components/home/demoProducts";
+} from "@ecommerce/lantern";
 import "./index.css";
 
 export const Route = createFileRoute("/")({

@@ -28,7 +28,8 @@ import { useAuthActions, useAuthState } from "@/providers/AuthProvider";
 import type { Product } from "@/gen/api";
 import { useCartBadge } from "@/hooks/useCart";
 import { lantern } from "@/styles/tokens";
-import { BrandMark } from "@/components/home/DemoArt";
+import { goHome } from "@/lib/home";
+import { BrandMark } from "@ecommerce/lantern";
 import { useUserStore } from "@/store/users";
 import { addNotification } from "@ecommerce/utils";
 
@@ -305,7 +306,7 @@ export default function PrimarySearchAppBar() {
         >
           {/* 品牌 Logo */}
           <Box
-            onClick={() => navigate({ to: "/" })}
+            onClick={() => goHome(navigate)}
             sx={{
               display: "flex",
               alignItems: "center",

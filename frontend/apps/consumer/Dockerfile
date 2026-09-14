@@ -34,6 +34,7 @@ COPY packages/constants/package.json packages/constants/
 COPY packages/copilot/package.json packages/copilot/
 COPY packages/i18n/package.json packages/i18n/
 COPY packages/icons/package.json packages/icons/
+COPY packages/lantern/package.json packages/lantern/
 COPY packages/perf/package.json packages/perf/
 COPY packages/tauri/package.json packages/tauri/
 COPY packages/tracker/package.json packages/tracker/
@@ -68,6 +69,7 @@ COPY packages/constants/ packages/constants/
 COPY packages/copilot/ packages/copilot/
 COPY packages/i18n/ packages/i18n/
 COPY packages/icons/ packages/icons/
+COPY packages/lantern/ packages/lantern/
 COPY packages/perf/ packages/perf/
 COPY packages/tauri/ packages/tauri/
 COPY packages/tracker/ packages/tracker/

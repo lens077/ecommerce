@@ -129,8 +129,9 @@ function PaymentResultPage() {
         </Button>
         <Button
           variant="outlined"
-          component={Link}
-          to="/"
+          // 首页在 consumer-next(线上)——整页跳转;dev 下多一次加载无妨
+          component="a"
+          href="/"
           sx={{
             borderColor: tokens.colors.border.default,
             color: tokens.colors.text.primary,
