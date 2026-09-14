@@ -1,0 +1,25 @@
+# 灯市 (Lantern Market)
+
+> 灯市是一个综合商城：每件好物是一盏灯。数码、服饰、食百，从街头逛到亮为止。
+> Lantern Market is a full-category online mall — every good find is a lit lantern.
+
+网站分两部分：公开可收录页由服务端渲染（首页、商品详情），购物流程（购物车、结算、订单、个人中心）是需要登录的单页应用。
+商品数据经 Connect RPC 网关提供，目前首页展示的是演示商品，商品目录服务接通后会替换为真实货架。
+
+## 页面
+
+- [首页（中文）](https://shop.apikv.com/): 灯市街巷类目、本日主灯与今日亮灯商品阵列
+- [Home (English)](https://shop.apikv.com/en): English edition of the homepage
+- [商品详情](https://shop.apikv.com/zh/product/DEMO-HUMIDIFIER): 路径模式 `/zh/product/{spuCode}`，含 JSON-LD 结构化数据；英文版为 `/en/product/{spuCode}`
+- [购物车](https://shop.apikv.com/cart): 需要登录
+- [个人中心](https://shop.apikv.com/profile): 需要登录
+
+## 抓取与使用
+
+- [robots.txt](https://shop.apikv.com/robots.txt): 允许所有 User-agent 抓取
+- 登录经网关 `https://gateway.apikv.com/auth/login` 完成，会话为 httpOnly Cookie；接口不接受匿名下单
+- 页面文案为中文，`/en` 前缀提供英文版；`<link rel="alternate" hreflang>` 已声明语言对应关系
+
+## Optional
+
+- [项目源码](https://github.com/lens077/ecommerce): Golang + React 的 B2B2C 多商家电商实践项目
