@@ -5,5 +5,5 @@ resources:
   - ../pre
 images:
   - name: ccr.ccs.tencentyun.com/sumery/behavior
-    newTag: "1.7.3"
-    digest: sha256:26d48f4969f20de25a7116c97051783797ae28065b091d0e9f4ca12d4bf4eff1
+    newTag: "1.7.4"
+    digest: sha256:aa8740290efb94964debd2af0ea4ba593b937fab05e748398e666135ddbc2815
