@@ -5,4 +5,5 @@ resources:
   - ../pre
 images:
   - name: ccr.ccs.tencentyun.com/sumery/order
-    newTag: "1.6.3"
+    newTag: "1.6.8"
+    digest: sha256:b7812146da8e3d93fc47441ad7deb26dafc4fc5ad2698e9c448ed77836a873d9

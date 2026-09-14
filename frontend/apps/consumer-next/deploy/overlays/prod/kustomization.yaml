@@ -4,8 +4,8 @@ resources:
   - ../../base
 images:
   - name: ccr.ccs.tencentyun.com/sumery/consumer-next
-    newTag: sha-98ba5d1
-    digest: sha256:eb305eb5f0e97e2c77309c4338fca787926bdcb45eabb9bac99ff33ede6ccd87
+    newTag: "1.6.8"
+    digest: sha256:5722fff562a00d9d8138318502d65dac8a13ce35282d7d92b3cdba40971e49c0
 patches:
   - target:
       kind: Deployment
