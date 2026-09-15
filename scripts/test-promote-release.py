@@ -4,6 +4,7 @@ import importlib.util
 import shutil
 import subprocess
 import tempfile
+import re
 import unittest
 from pathlib import Path
 
@@ -66,6 +67,17 @@ class ReleaseTests(unittest.TestCase):
                                     capture_output=True, text=True)
             self.assertEqual(result.returncode, 1, result.stdout + result.stderr)
             self.assertIn('replicas', result.stdout)
+
+    def test_every_image_line_of_a_manifest_moves_together(self):
+        """consumer-next 的 init 容器与主容器共用同一镜像(2026-09-15 起两处 image:),
+        dev 回写必须把每一处都换成同一个 version@digest;1.7.6 CI 曾因 replace_once 只认一处而红。"""
+        services = promote.inventory()
+        digests = {chart: 'sha256:' + 'b' * 64 for chart in [*services, 'frontend', 'consumer-next']}
+        changes = promote.plan_changes(promote.ROOT, services, 'dev', '1.6.4', digests)
+        text = next(text for path, text in changes.items() if path.name == 'dev.yaml')
+        image_lines = re.findall(r'^\s+image: ccr\.ccs\.tencentyun\.com/sumery/consumer-next:(.+)$', text, flags=re.M)
+        self.assertGreaterEqual(len(image_lines), 2)
+        self.assertEqual(set(image_lines), {'1.6.4@sha256:' + 'b' * 64})
 
     def test_missing_or_duplicate_match_aborts_plan(self):
         for text in ('', 'tag: x\ntag: y\n'):

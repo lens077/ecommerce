@@ -20,6 +20,16 @@ def replace_once(text, pattern, replacement):
     return result
 
 
+def replace_all_at_least_once(text, pattern, replacement):
+    """Same image may legitimately appear more than once in one manifest (e.g. an init container
+    that seeds a volume from the app image, consumer-next since 2026-09-15); every occurrence
+    must move to the same version@digest together."""
+    result, count = re.subn(pattern, lambda m: replacement(m), text, flags=re.MULTILINE)
+    if count < 1:
+        raise ValueError(f"expected at least one match, got 0: {pattern}")
+    return result
+
+
 def require_platforms(index):
     platforms = {(m.get('platform', {}).get('os'), m.get('platform', {}).get('architecture'))
                  for m in index.get('manifests', [])}
@@ -68,8 +78,8 @@ def plan_changes(root, services, environment, version, digests):
                 path = root / 'frontend/apps/consumer/deploy/pre/deployment.yaml'
             else:
                 path = root / 'frontend/apps/consumer-next/deploy/base/dev.yaml'
-            text = replace_once(path.read_text(), rf'^(\s+image: ){re.escape(image)}:[^\n]+',
-                                lambda m: m[1] + image + ':' + pin)
+            text = replace_all_at_least_once(path.read_text(), rf'^(\s+image: ){re.escape(image)}:[^\n]+',
+                                             lambda m: m[1] + image + ':' + pin)
         changes[path] = text
     changes[values_path] = values
     return changes
