@@ -80,7 +80,9 @@ spec:
       initContainers:
         - name: seed-next-app
           image: {{ .Values.image.repository }}:{{ .Values.image.tag }}
-          command: ["sh", "-c", "cp -a /app/apps/consumer-next/.next/server/app/. /seed/"]
+          # 用 cp -R 不用 -a:emptyDir 挂载点属 root,uid 1001 无权改它的 mtime,-a 保留时间戳会在根目录上失败
+          # (1.7.7 线上 CrashLoop 实测:`cp: preserving times for '/seed/.': Operation not permitted`)
+          command: ["sh", "-c", "cp -R /app/apps/consumer-next/.next/server/app/. /seed/"]
           securityContext:
             allowPrivilegeEscalation: false
             readOnlyRootFilesystem: true

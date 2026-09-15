@@ -77,7 +77,9 @@ spec:
       initContainers:
         - name: seed-next-app
           image: ccr.ccs.tencentyun.com/sumery/consumer-next:1.7.7@sha256:b3d610d55e89f0c06f1ff6e13f6d0796e6931a4a3e484a41548b0e580f14fcc1
-          command: ["sh", "-c", "cp -a /app/apps/consumer-next/.next/server/app/. /seed/"]
+          # 用 cp -R 不用 -a:emptyDir 挂载点属 root,uid 1001 无权改它的 mtime,-a 保留时间戳会在根目录上失败
+          # (1.7.7 线上 CrashLoop 实测:`cp: preserving times for '/seed/.': Operation not permitted`)
+          command: ["sh", "-c", "cp -R /app/apps/consumer-next/.next/server/app/. /seed/"]
           securityContext:
             allowPrivilegeEscalation: false
             readOnlyRootFilesystem: true
