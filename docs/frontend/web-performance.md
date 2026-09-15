@@ -56,7 +56,7 @@ TBT 与 CLS 合计 55 分已拿满，丢分全在「多久能看到东西」。�
 | 字体 | `scripts/subset-home-fonts.sh` 按 `scripts/home-font-text.ts` 列出的**真正以宋体渲染的槽位**生成 700 / 900 子集（合计 19 KB），经 `next/font/local` 自托管 + preload；缺字落系统宋体 | 首页文案是构建期常量，字形集合可枚举 |
 | 路由 | helm 与裸 manifest 的 consumer-next HTTPRoute 加 `/` **Exact**；Gateway API 规定 Exact 优先于 frontend 的 PathPrefix `/` | 两份真相源受 `verify-deploy-parity.sh` 约束 |
 | SPA 侧 | `src/lib/home.ts` 的 `goHome()`：生产 web 整页跳转，dev / Tauri 仍走 SPA 首页路由 | 客户端路由到 `/` 只会得到 SPA 自己那份旧首页 |
-| SEO | canonical / hreflang 用 Metadata API 输出绝对 URL，域名取构建期 `NEXT_PUBLIC_SITE_URL`（Dockerfile ARG，默认线上域名） | 静态页无法在请求期读 Host；dev 的 canonical 指向线上是对的 |
+| SEO | canonical / hreflang 用 Metadata API 输出绝对 URL，域名取构建期 `NEXT_PUBLIC_SITE_URL`（Dockerfile ARG，默认线上域名） | 静态页无法在请求期读 Host；经局域网别名 `shop.dev.test` 访问时 canonical 仍指向线上，正是想要的 |
 | 智能体浏览 | `consumer/public/llms.txt`（H1 + 摘要 + 链接）；图标链接补 `aria-label` | `/llms.txt` 之前落到 Caddy 的 SPA 兜底返回 `index.html` |
 
 ## 五、踩过的坑
