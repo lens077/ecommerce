@@ -5,5 +5,5 @@ resources:
   - ../pre
 images:
   - name: ccr.ccs.tencentyun.com/sumery/payment
-    newTag: "1.7.5"
-    digest: sha256:58b90d9054e86cba5fd5851be1407ea71649f8d58108e491f3b975938391d5a0
+    newTag: "1.7.7"
+    digest: sha256:f68bd8b42f8581a7edbb5a02b7eba5e0fe4e4b34a1a6b78464e8d7fdad7e29d2
