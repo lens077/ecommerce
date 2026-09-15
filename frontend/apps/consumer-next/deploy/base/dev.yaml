@@ -24,8 +24,8 @@ spec:
   strategy:
     type: RollingUpdate
     rollingUpdate:
-      # 硬 topology spread + pod anti-affinity 下，surge Pod 可能没有合法节点。
-      # 先缩一个旧副本再补新副本，滚动期间仍保留 1 个 Ready Pod。
+      # suite-wide 硬 spread 下 surge Pod 可能没有合法节点。
+      # 先缩一个旧副本再补新副本,滚动期间仍保留 1 个 Ready Pod。
       maxUnavailable: 1
       maxSurge: 0
   selector:
@@ -49,13 +49,19 @@ spec:
           type: RuntimeDefault
       imagePullSecrets:
         - name: tcr-pull
+      # 反亲和改软约束(2026-09-15):此前 required 反亲和 + suite-wide 硬 spread + node3 污点三者叠加,
+      # 滚动时新 Pod 无节点可去(node4 被旧副本占,node5 偏差超 1),只能删旧 Pod 让位、`/` 断约 10s。
+      # suite-wide spread 是全仓约定(structcheck 门禁),不动;反亲和降为 preferred:有得选时两副本仍分开,
+      # 节点紧张时允许暂时同节点,由 scripts/rebalance-spread.sh 事后回平。
       affinity:
         podAntiAffinity:
-          requiredDuringSchedulingIgnoredDuringExecution:
-            - labelSelector:
-                matchLabels:
-                  app: consumer-next
-              topologyKey: kubernetes.io/hostname
+          preferredDuringSchedulingIgnoredDuringExecution:
+            - weight: 100
+              podAffinityTerm:
+                labelSelector:
+                  matchLabels:
+                    app: consumer-next
+                topologyKey: kubernetes.io/hostname
       topologySpreadConstraints:
         - maxSkew: 1
           topologyKey: kubernetes.io/hostname
@@ -65,6 +71,29 @@ spec:
           labelSelector:
             matchLabels:
               app.kubernetes.io/part-of: ecommerce
+      # `.next/server/app` 整目录改为可写(2026-09-15):ISR 会把再验证后的页面写回这里。此前只挂了
+      # app/zh、app/en 两个子目录,首页产物 app/zh.html 不在其中,首页一设 revalidate 就写失败。
+      # 镜像里的预渲染产物由 init 容器先拷进 emptyDir,再挂到同一路径,读写都在卷上。
+      initContainers:
+        - name: seed-next-app
+          image: ccr.ccs.tencentyun.com/sumery/consumer-next:1.7.5@sha256:0ae8b393397731bb83b3ee8734a7bc219393f93ce7bfc05eda840a36dd176c36
+          command: ["sh", "-c", "cp -a /app/apps/consumer-next/.next/server/app/. /seed/"]
+          securityContext:
+            allowPrivilegeEscalation: false
+            readOnlyRootFilesystem: true
+            capabilities:
+              drop:
+                - ALL
+          volumeMounts:
+            - name: next-app
+              mountPath: /seed
+          resources:
+            requests:
+              cpu: 10m
+              memory: 32Mi
+            limits:
+              cpu: 200m
+              memory: 128Mi
       containers:
         - name: consumer-next
           image: ccr.ccs.tencentyun.com/sumery/consumer-next:1.7.5@sha256:0ae8b393397731bb83b3ee8734a7bc219393f93ce7bfc05eda840a36dd176c36
@@ -84,10 +113,8 @@ spec:
           volumeMounts:
             - name: next-cache
               mountPath: /app/apps/consumer-next/.next/cache
-            - name: next-isr-zh
-              mountPath: /app/apps/consumer-next/.next/server/app/zh
-            - name: next-isr-en
-              mountPath: /app/apps/consumer-next/.next/server/app/en
+            - name: next-app
+              mountPath: /app/apps/consumer-next/.next/server/app
             - name: tmp
               mountPath: /tmp
           resources:
@@ -112,9 +139,7 @@ spec:
       volumes:
         - name: next-cache
           emptyDir: {}
-        - name: next-isr-zh
-          emptyDir: {}
-        - name: next-isr-en
+        - name: next-app
           emptyDir: {}
         - name: tmp
           emptyDir: {}

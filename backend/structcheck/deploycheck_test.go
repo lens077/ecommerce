@@ -128,6 +128,11 @@ type deploymentPodAntiAffinityTerm struct {
 	} `yaml:"labelSelector"`
 }
 
+type deploymentWeightedPodAntiAffinityTerm struct {
+	Weight          int                           `yaml:"weight"`
+	PodAffinityTerm deploymentPodAntiAffinityTerm `yaml:"podAffinityTerm"`
+}
+
 type deploymentDocument struct {
 	Kind string `yaml:"kind"`
 	Spec struct {
@@ -564,7 +569,8 @@ func TestWorkloadIdentityBaseline(t *testing.T) {
 					Spec struct {
 						Affinity struct {
 							PodAntiAffinity struct {
-								Required []deploymentPodAntiAffinityTerm `yaml:"requiredDuringSchedulingIgnoredDuringExecution"`
+								Required  []deploymentPodAntiAffinityTerm         `yaml:"requiredDuringSchedulingIgnoredDuringExecution"`
+								Preferred []deploymentWeightedPodAntiAffinityTerm `yaml:"preferredDuringSchedulingIgnoredDuringExecution"`
 							} `yaml:"podAntiAffinity"`
 						} `yaml:"affinity"`
 						ServiceAccountName           string                               `yaml:"serviceAccountName"`
@@ -598,8 +604,10 @@ func TestWorkloadIdentityBaseline(t *testing.T) {
 				assertEcommerceNodeSpread(t, nextPath, m.Conventions.PodTopologySpread,
 					doc.Spec.Selector.MatchLabels, doc.Spec.Template.Metadata.Labels,
 					podSpec.TopologySpreadConstraints)
-				assertRequiredPodAntiAffinity(t, nextPath, podSpec.Affinity.PodAntiAffinity.Required,
-					"app", "consumer-next")
+				// 2026-09-15 起 consumer-next 的反亲和是 preferred 而不是 required:required 反亲和 + suite-wide
+				// 硬 spread + 节点污点(只剩两个可调度节点)三者叠加会让滚动时新 Pod 无节点可去(evolution-log 同日条目)。
+				assertPreferredPodAntiAffinity(t, nextPath, podSpec.Affinity.PodAntiAffinity.Required,
+					podSpec.Affinity.PodAntiAffinity.Preferred, "app", "consumer-next")
 				assertNoSurgeReplicatedRollout(t, nextPath, doc.Spec.Strategy)
 			}
 		}
@@ -726,21 +734,30 @@ func assertNoSurgeReplicatedRollout(t *testing.T, source string, strategy deploy
 	}
 }
 
-func assertRequiredPodAntiAffinity(
+// assertPreferredPodAntiAffinity 要求双副本应用用 preferred(软)反亲和分散副本,并且不能同时保留
+// required(硬)反亲和——硬反亲和与 suite-wide 硬 spread 在只剩两个可调度节点时会叠成调度死锁。
+func assertPreferredPodAntiAffinity(
 	t *testing.T,
 	source string,
-	terms []deploymentPodAntiAffinityTerm,
+	required []deploymentPodAntiAffinityTerm,
+	preferred []deploymentWeightedPodAntiAffinityTerm,
 	labelKey string,
 	labelValue string,
 ) {
 	t.Helper()
-	for _, term := range terms {
+	for _, term := range required {
 		if term.TopologyKey == "kubernetes.io/hostname" &&
 			term.LabelSelector.MatchLabels[labelKey] == labelValue {
+			t.Errorf("%s must not use required pod anti-affinity for %s=%s: with the suite-wide hard spread it deadlocks rollouts when only two nodes are schedulable", source, labelKey, labelValue)
+		}
+	}
+	for _, term := range preferred {
+		if term.Weight > 0 && term.PodAffinityTerm.TopologyKey == "kubernetes.io/hostname" &&
+			term.PodAffinityTerm.LabelSelector.MatchLabels[labelKey] == labelValue {
 			return
 		}
 	}
-	t.Errorf("%s must require pod anti-affinity for %s=%s on kubernetes.io/hostname", source, labelKey, labelValue)
+	t.Errorf("%s must prefer pod anti-affinity for %s=%s on kubernetes.io/hostname", source, labelKey, labelValue)
 }
 
 func assertSelectorSecurityContext(t *testing.T, source string, security deploymentSecurityContext) {

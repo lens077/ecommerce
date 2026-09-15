@@ -23,7 +23,7 @@
 受控重平衡已固化为一键脚本 **`scripts/rebalance-spread.sh`**（内嵌 CES 预检 + skew 判断 +
 按序 rollout restart + 终态校验；`--check` 只读不动集群），不再依赖人工现场拼命令。
 复验：`kubectl get pods -n ecommerce -o jsonpath='{range .items[?(@.status.phase=="Running")]}{.spec.nodeName}{"\n"}{end}' | sort | uniq -c`。
-consumer-next 与 gateway 另使用 required pod anti-affinity，保证各自两个副本不落在同一节点。
+gateway 另使用 required pod anti-affinity，保证两个副本不落在同一节点；consumer-next 的反亲和自 2026-09-15 起降为 preferred——required 反亲和 + 硬 spread + 节点污点曾叠加成滚动死锁（新 Pod 无节点可去，靠删旧 Pod 让位），现在节点紧张时允许两副本暂时同节点，事后由 `scripts/rebalance-spread.sh` 回平。
 
 硬 spread 只限制参与计数的 Pod 数量。它不理解某个 Pod 是高负载 API 还是低负载 relay，也不会按实际 CPU、内存或节点宿主机开销加权。
 
