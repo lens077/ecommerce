@@ -10,7 +10,7 @@ VERSION ?= dev
 # 漂移由 backend/structcheck 的 TestDeploymentListsMatchMatrix 在 CI 里拦住。
 #
 # 历史教训:config 曾留在这份清单里(它已随配置中心拆去独立仓库、deploy/ 目录已删),
-# 而扇出循环写的是 `|| exit 1` —— 于是 make k8s-dev-all 每次都在 config 处中断,
+# 而扇出循环写的是 `|| exit 1` —— 于是 make k8s-pre-all 每次都在 config 处中断,
 # 排在它后面的 payment 永远 apply 不到,报错还长得像普通的 kubectl 报错。
 # 现在清单已修正,扇出也改成「收集失败再汇总退出」,见下面各 *-all 目标。
 SERVICES ?= user search product order inventory cart merchant address behavior payment
@@ -194,9 +194,9 @@ compose-logs:
 # ── 部署入口 ────────────────────────────────────────────────────────
 # 两条路径、同一套集群对象(2026-09-06 起,由仓库根 scripts/verify-deploy-parity.sh 强制等价):
 #   make deploy        渲染 helm/ 并 apply —— 给 helm / ArgoCD 使用者
-#   make k8s-dev-all   逐服务 kubectl apply -k backend/services/<svc>/deploy/overlays/dev —— 给 kubectl 使用者
-#   make k8s-pre-all   同上,overlays/pre(没有本地直连;DEPLOYMENT_MODE=pre、config-source-pre、显式钉 tag)
-#   环境差异只在 overlays/<env>(裸侧)与 helm/values-<env>.yaml(helm 侧),base / values.yaml 是共同部分
+#   make k8s-pre-all   逐服务 kubectl apply -k backend/services/<svc>/deploy/base —— 给 kubectl 使用者
+#   make k8s-prod-all  同上,overlays/prod(只钉 prod 镜像),需显式 KUBE_CONTEXT
+#   环境差异只在 overlays/prod(裸侧)与 helm/values-prod.yaml(helm 侧),base / values.yaml 即 pre 基线
 # 两者建的是同名同 ns 的资源,先后跑、混着跑都收敛到一样的状态,不会再出现两套并存。
 # 共享的 SA / CiliumNetworkPolicy / ExternalSecret 只在 helm/files/ 有一份,裸路径经
 # scripts/render-zero-trust.sh 从同一处渲染。
@@ -245,12 +245,12 @@ deploy-status:
 scars:
 	@cd .. && scripts/harness-scars.sh
 
-# 裸 manifest 路径(kustomize:deploy/base + deploy/overlays/<env>)。与 make deploy 建的是同一套资源,
+# 裸 manifest 路径(kustomize:pre = deploy/base,prod = deploy/overlays/prod)。与 make deploy 建的是同一套资源,
 # ArgoCD 若在自动同步,它会把这里 apply 的内容按 helm/ 再同步一遍——因为两边等价,结果是 no-op。
-# 环境:dev(含本地直连 httproute + cnp-direct)、pre(不含)。要 prod 时从 overlays/pre 复制再改,
+# 环境只有 pre / prod(2026-09-15 起;dev 集群已删除,dev 层与局域网直连一并移除)。
 # 别再造一份没人 apply 的目录(2026-09-06 删掉的旧 deploy/prod 就是这么烂掉的)。
 #
-# 先 dry-run 看一眼会动什么: make k8s-dev-all KUBECTL_ARGS=--dry-run=server
+# 先 dry-run 看一眼会动什么: make k8s-pre-all KUBECTL_ARGS=--dry-run=server
 KUBECTL_ARGS ?=
 POSTGRES_EGRESS_CIDR ?=
 POSTGRES_SSH_ALIAS ?= node1
@@ -258,6 +258,8 @@ POSTGRES_SSH_ALIAS ?= node1
 # 这份清单与 scripts/verify-deploy-parity.sh 的 raw_sources 一致,少一条那边就会多出「只有 helm 有」。
 K8S_EXTRA_MANIFESTS ?= ../application-vpa.yml
 K8S_FRONTEND_OVERLAYS ?= $(if $(filter prod,$(K8S_ENV)),../frontend/apps/consumer/deploy/overlays/prod ../frontend/apps/consumer-next/deploy/overlays/prod,../frontend/apps/consumer/deploy/pre ../frontend/apps/consumer-next/deploy/base)
+# pre 直接 apply base;prod 走 overlays/prod
+K8S_DIR = $(if $(filter prod,$(K8S_ENV)),overlays/prod,base)
 KUBE_CONTEXT ?=
 KUBECTL = kubectl $(if $(KUBE_CONTEXT),--context $(KUBE_CONTEXT),)
 
@@ -265,10 +267,6 @@ KUBECTL = kubectl $(if $(KUBE_CONTEXT),--context $(KUBE_CONTEXT),)
 k8s-prod-all:
 	@test -n "$(KUBE_CONTEXT)" || { echo "prod requires explicit KUBE_CONTEXT" >&2; exit 1; }
 	@$(MAKE) k8s-apply-all K8S_ENV=prod K8S_FRONTEND_OVERLAYS="../frontend/apps/consumer/deploy/overlays/prod ../frontend/apps/consumer-next/deploy/overlays/prod"
-
-.PHONY: k8s-dev-all
-k8s-dev-all:
-	@$(MAKE) k8s-apply-all K8S_ENV=dev
 
 .PHONY: k8s-pre-all
 k8s-pre-all:
@@ -287,9 +285,10 @@ k8s-apply-all:
 	$(KUBECTL) apply $(KUBECTL_ARGS) -f "$$tmp" || exit 1; \
 	fail=""; missing=""; \
 	for s in $(SERVICES); do \
-	  if [ ! -f services/$$s/deploy/overlays/$(K8S_ENV)/kustomization.yaml ]; then missing="$$missing $$s"; continue; fi; \
-	  echo "===== kubectl apply -k $$s (overlays/$(K8S_ENV)) ====="; \
-	  $(KUBECTL) apply $(KUBECTL_ARGS) -k services/$$s/deploy/overlays/$(K8S_ENV) || fail="$$fail $$s"; \
+	  dir=services/$$s/deploy/$(K8S_DIR); \
+	  if [ ! -f $$dir/kustomization.yaml ]; then missing="$$missing $$s"; continue; fi; \
+	  echo "===== kubectl apply -k $$s ($(K8S_DIR)) ====="; \
+	  $(KUBECTL) apply $(KUBECTL_ARGS) -k $$dir || fail="$$fail $$s"; \
 	done; \
 	for extra in $(K8S_EXTRA_MANIFESTS); do \
 	  echo "===== kubectl apply $$extra ====="; \
@@ -299,7 +298,7 @@ k8s-apply-all:
 	  $(KUBECTL) apply $(KUBECTL_ARGS) -k "$$overlay" || fail="$$fail $$overlay"; \
 	done; \
 	rc=0; \
-	if [ -n "$$missing" ]; then echo "❌ 缺 deploy/overlays/$(K8S_ENV)/kustomization.yaml:$$missing"; rc=1; fi; \
+	if [ -n "$$missing" ]; then echo "❌ 缺 deploy/$(K8S_DIR)/kustomization.yaml:$$missing"; rc=1; fi; \
 	if [ -n "$$fail" ]; then echo "❌ apply 失败:$$fail"; rc=1; fi; \
 	if [ $$rc -eq 0 ]; then echo "✅ 全部 $(words $(SERVICES)) 个服务已 apply 到 $(K8S_ENV)"; fi; \
 	exit $$rc

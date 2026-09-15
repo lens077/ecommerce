@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# 渲染裸 manifest 路径(make k8s-dev-all)与 helm 路径**共用**的那几份清单:
+# 渲染裸 manifest 路径(make k8s-pre-all)与 helm 路径**共用**的那几份清单:
 #   - helm/files/zero-trust.yaml               ServiceAccount ×11 + CiliumNetworkPolicy(含运行时注入的 Postgres CIDR)
 #   - helm/files/otel-auth-externalsecret.yaml ExternalSecret otel-auth(Vault → Secret)
 # 它们只有一份来源(helm/files/),两条部署路径都从这里拿,所以不需要 parity 门禁去比对。
@@ -15,9 +15,9 @@ command -v helm >/dev/null 2>&1 || {
   exit 1
 }
 
-deploy_env="${DEPLOY_ENV:-dev}"
+deploy_env="${DEPLOY_ENV:-pre}"
 value_files=("${repo_root}/helm/values.yaml")
-if [[ "${deploy_env}" != dev ]]; then
+if [[ "${deploy_env}" != pre ]]; then
   value_files+=("${repo_root}/helm/values-${deploy_env}.yaml")
 fi
 values=()

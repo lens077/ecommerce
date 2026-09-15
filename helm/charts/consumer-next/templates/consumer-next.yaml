@@ -1,7 +1,7 @@
 {{- if .Values.enabled }}
 {{- $ns := .Release.Namespace }}
 {{- $port := .Values.port }}
-# consumer-next(公开可收录页:Next.js App Router)。与 frontend/apps/consumer-next/deploy/base/dev.yaml 逐字段等价。
+# consumer-next(公开可收录页:Next.js App Router)。与 frontend/apps/consumer-next/deploy/base/consumer-next.yaml 逐字段等价。
 # 架构:shop.* 域名下分流——首页 `/`(Exact,2026-09-14 起 SSR)与 /zh、/en、/_next(PathPrefix)→ consumer-next;
 #       其余(/cart、/checkout、/profile、/assets…)继续由 ecommerce-frontend(Vite SPA)承载。
 #       Gateway API 规定 Exact 优先于 PathPrefix,所以 `/` Exact 能从 frontend 的 PathPrefix `/` 里抢走根路径。

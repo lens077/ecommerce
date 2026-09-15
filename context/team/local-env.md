@@ -13,35 +13,40 @@ description: 本地开发机与集群连哪套基础设施：活地址、配置�
 > **地址会漂。** 下面每张表都标了核对日期；超过日期就按「§ 自助核对」重跑一遍命令，
 > 不要直接相信本文。核对完请顺手更新日期。
 
-## 活地址（2026-09-03 实测）
+## 活地址（2026-09-15 实测）
 
-| 组件 | 从本机连 | 从 Pod 连 | 备注 |
-|---|---|---|---|
-| 共享网关 | `192.168.3.121:80/443` | 同左 | Cilium Gateway；HTTPRoute 按 hostname 接入 |
-| Consul（**仅注册发现**） | `192.168.3.120:8500` | `consul-server.consul.svc:8500` | 已开 ACL，必须带 token，见下 |
-| Dragonfly | `192.168.3.122:6380` | `dragonfly.dragonfly.svc:6379` | TLS-only + AUTH，明文被拒；CA 在 Secret `dragonfly-tls` |
-| PostgreSQL（业务库 + config schema） | `node1:30001` | 同左 | node3 Pigsty，PG 18.6，`sslmode=verify-ca` |
-| Config Center | — | `config-center.config-center.svc:30010` | Web `https://config.app.com`，API `https://config-api.app.com`；跑的是 control-tower 镜像，ns 名是遗留标签 |
-| Casdoor | `https://casdoor.apikv.com` | 同左 | 集群外的外部服务 |
-| Meilisearch | — | — | 2026-09-04 已完整退役；旧域名和 `search` namespace 不得作为可用端点 |
-| Elasticsearch | 经 SSH 隧道使用 `127.0.0.1:9200` | `https://es.apikv.com` | search 当前读路径；Pod 端使用 ES 自身凭据，经 Pangolin 到 node3 回环端点 |
-| NATS JetStream | — | — | 2026-09-03 已删除 namespace 和工作负载 |
-| Kafka | `node1:30004` | 同左 | SCRAM-SHA-512；搜索行投影已使用，领域事件 producer/consumer 仍为零 |
-| node3 观测后端 | `https://node3-{metrics,logs,traces,vmalert,alerts}.apikv.com` | 同左 | 已挂 Pangolin SSO（浏览器访问返 302 跳登录；写入路径已放行） |
-| node3 OTLP 入口 | `node3-otlp.apikv.com:443` | 同左 | 需 Bearer token，无 token 返 401 |
+集群只有一套：node3 / node4 / node5（全部 amd64、Ubuntu 26.04），Cilium Gateway VIP 在 `10.10.31.0/24`。
+原 `192.168.3.x` 那套 dev 集群已于 2026-09-15 前删除，本文不再记录它。
 
-⚠️ **`192.168.3.132:5432` 不再是 PostgreSQL 端点**：`postgresql`/`cnpg-system` namespace 与 CNPG CRD 已清理，集群内回切路径不存在。不得根据旧文档把 `pg.dev.test` 或 `pg-main` 当作候选数据库。
+**本机 Mac 不在机房 LAN 时走 remote-dev**（Pangolin resource → node4/node5 newt → K8s Gateway 或 node service）；
+机房 LAN 开发机才直连 VIP 并用 `*.dev.test`。
+
+| 组件 | remote-dev（Mac 默认） | 机房 LAN | 从 Pod 连 | 备注 |
+|---|---|---|---|---|
+| 共享网关 | 经 Pangolin 公网域名（`shop.apikv.com` / `gateway.apikv.com` …） | `10.10.31.240:80/443` | 同左 | Cilium Gateway；HTTPRoute 按 hostname 接入，`*.dev.test` 与 `*.apikv.com` 挂在同一条路由上 |
+| Consul（**仅注册发现**） | `https://consul-dev.apikv.com`（SSO 关闭，Host/SNI 保留 `consul.dev.test`） | `10.10.31.241:8500` | `consul-server.consul.svc:8500` | 已开 ACL，必须带 token，见下 |
+| Dragonfly | `redis-dev.apikv.com:30005`（raw TCP/TLS 直通） | `10.10.31.243:6380` | `dragonfly.dragonfly.svc:6379` | TLS-only + AUTH，明文被拒；CA 在 Secret `dragonfly-tls` |
+| PostgreSQL（业务库 + config schema） | `node1:30001` | 同左 | 同左 | node3 Pigsty，PG 18.6，`sslmode=verify-ca` |
+| Config Center | — | — | `config-center.config-center.svc:30010` | Web `https://config.apikv.com`，API `https://config-api.apikv.com`；跑的是 control-tower 镜像，ns 名是遗留标签 |
+| Casdoor | `https://casdoor.apikv.com` | 同左 | 同左 | 集群外的外部服务 |
+| Elasticsearch | 经 SSH 隧道使用 `127.0.0.1:9200` | 同左 | `https://es.apikv.com` | search 当前读路径；Pod 端使用 ES 自身凭据 |
+| Kafka | `node1:30004` | 同左 | 同左 | SCRAM-SHA-512；搜索行投影已使用，领域事件 producer/consumer 仍为零 |
+| node3 观测后端 | `https://node3-{metrics,logs,traces,vmalert,alerts}.apikv.com` | 同左 | 同左 | 已挂 Pangolin SSO（浏览器访问返 302 跳登录；写入路径已放行） |
+| node3 OTLP 入口 | `node3-otlp.apikv.com:443` | 同左 | 同左 | 需 Bearer token，无 token 返 401 |
+
+配置生成：`bash tools/config-center-harvest.sh --env dev --strategy remote-dev`（`dev` 默认即 `remote-dev`；LAN 机器用 `--strategy gateway`）。
+本地服务默认不注册 Consul；需要注册时在对应服务目录运行 `make dev-consul`，并提供 `CONSUL_HTTP_TOKEN`。
 
 ### 基础设施主机
 
-3 个节点，全部 arm64 / Ubuntu 26.04 LTS，都允许调度：control plane `node101`（`192.168.3.101`）、
-worker `node102`（`.102`）、`node103`（`.103`）。节点 `shutdown now` 有最多 90 秒优雅退出窗口，
-机制见 [node-graceful-shutdown.md](node-graceful-shutdown.md)。
+| 节点 | 角色 | 内网 IP | 备注 |
+|---|---|---|---|
+| node4 | control-plane | `10.10.21.161` | |
+| node5 | worker | `10.10.21.162` | |
+| node3 | worker | `10.10.21.163` | 带 `workload` 污点〔实测 2026-09-15〕，业务 Pod 不落这里；同名主机还跑 Pigsty PG 与观测后端 |
 
-**node3 是另一台机器，不在内网**：NAT 后的云主机（ssh 别名 `node3`，内网 `10.10.21.172/24`，
-与 `192.168.3.0/24` **不互通**，x86_64），跑 Pigsty v4.5 全 systemd 原生服务。
-**所有访问都经 node1 `node1` 的 Pangolin 隧道**——直接探 `node3:5432`
-永远是 filtered，会让人误判「没通路」。隧道机制见 [pangolin-tunnel.md](pangolin-tunnel.md)。
+**node3 的 Pigsty / 观测后端不在 Pod 网络里**：ssh 别名 `node3`，所有外部访问都经 node1 的 Pangolin 隧道——直接探
+`node3:5432` 永远是 filtered，会让人误判「没通路」。隧道机制见 [pangolin-tunnel.md](pangolin-tunnel.md)。
 凭据只在 `node3:/root/pigsty-deploy/.credentials-extra`（0600）与 `pigsty.yml`，不入库。
 
 ## 配置加载：Config Center 是唯一来源
@@ -51,10 +56,9 @@ worker `node102`（`.102`）、`node103`（`.103`）。节点 `shutdown now` 有
 没有 KV 回退（Consul KV 已退役，见
 [`consul-kv-retired.md`](../project/ecommerce/config/experience/consul-kv-retired.md)）。
 
-⚠️ **只有 `dev` 一个环境，集群跑的也是 `dev`**（2026-08-29 实测：`config.entry` 共 15 个 key，
-`environment` 唯一取值 `dev`；集群 Secret `ecommerce-config-source-dev` 里 10 个服务全写
-`environment: dev`）。历史上写过「dev 只能开发机跑、k8s 必须用 pre」——**那条约定已不成立**，
-`pre` 分支从未建过。要恢复环境隔离，得先在 Config Center 里真的建出 `pre` 再改这里。
+Config Center 现有两个环境：`dev` 给本机 `make dev`（remote-dev），`pre` 给集群（selector Secret
+`ecommerce-config-source-pre`，10 个服务，`DEPLOYMENT_MODE=pre`）〔实测 2026-09-15〕。部署清单只有 pre / prod 两层，
+prod 暂沿用 pre 的 Config Center 环境（见 `docs/PRODUCTION-RELEASE.md`）。
 
 ⚠️ **配置缺子块不会报错，功能会被静默关掉**：mapstructure 没开 `ErrorUnused`，多余键不报错，
 缺失键生成 nil-safe getter。判据与复盘见
@@ -83,13 +87,13 @@ worker `node102`（`.102`）、`node103`（`.103`）。节点 `shutdown now` 有
 `dragonfly.dragonfly.svc`、`otel-opentelemetry-collector.opentelemetry.svc:4318`），Mac 上解析不了；
 而且 `pg-main-rw` 指向的 CNPG **已经 hibernate**，即使解析得了也连不上。两条出路：
 
-1. 用上表的活地址覆盖（PG `node1:30001`、Dragonfly `192.168.3.122:6380`、Consul `192.168.3.120:8500`）；
+1. 用上表 remote-dev 那列的地址覆盖（PG `node1:30001`、Dragonfly `redis-dev.apikv.com:30005`、Consul `consul-dev.apikv.com`）——`tools/config-center-harvest.sh --strategy remote-dev` 就是干这个的；
 2. 走内环开发，在集群身份下跑代码 —— [okteto-inner-loop.md](okteto-inner-loop.md)。
 
 
 ## `*.dev.test` 解析与 TLS 信任
 
-**不跑任何 DNS 服务**，Mac 的 `/etc/hosts` 直接写死到集群 LoadBalancer IP。判据是规模：
+**只有机房 LAN 开发机需要**；remote-dev 走公网域名，不需要 `/etc/hosts` 和 split DNS。LAN 机器**不跑任何 DNS 服务**，`/etc/hosts` 直接写死到集群 LoadBalancer IP。判据是规模：
 域名个位数且多为常驻基础设施名，通配收益抵不过多养一个 DNS 服务的故障面（2026-08-28 复盘结论）。
 代价是不支持通配、每台开发机各配一次；换来零依赖、集群 DNS 故障不影响解析、不被浏览器 DoH 绕过。
 
@@ -123,7 +127,7 @@ openssl x509 -in /tmp/cluster-ca.pem -noout -dates -fingerprint -sha256 -ext sub
 security find-certificate -c my-global-root-ca -p /Library/Keychains/System.keychain \
   | openssl x509 -noout -dates -fingerprint -sha256 -ext subjectKeyIdentifier
 # 网关叶证书的 AKI 应等于集群根 CA 的 SKI；用集群 CA 验叶证书应 OK——OK 就说明问题只在本机
-echo | openssl s_client -connect 192.168.3.121:443 -servername shop.dev.test 2>/dev/null \
+echo | openssl s_client -connect 10.10.31.240:443 -servername shop.dev.test 2>/dev/null \
   | openssl x509 -noout -ext authorityKeyIdentifier
 ```
 
@@ -142,41 +146,12 @@ sudo security add-trusted-cert -d -r trustRoot -k /Library/Keychains/System.keyc
   集群 `BD:AE…`）。之前没暴露是因为 `http://shop.dev.test` 直接 404 没人走到 https；补上 80→443 跳转
   后第一次打开就红。**重建集群的 checklist 要含「换本机根 CA」这一步**，不要等浏览器报错才想起来。
 
-### 后端服务局域网直连（2026-09-06 起）
+### 局域网直连已移除（2026-09-15）
 
-每个后端服务 **`deploy/overlays/dev/`** 里**成对**的两个文件（只有 dev overlay 引用它们；helm 侧
-`global.directAccess.enabled`，`values-pre.yaml` 里为 `false`）：
-
-| 文件 | 对象 | 作用 |
-|---|---|---|
-| `httproute.yaml` | HTTPRoute `ecommerce-<svc>-direct` | **`<svc>.dev.test`** 经 Cilium Gateway 443 → 该服务 Service |
-| `cnp-direct.yaml` | CiliumNetworkPolicy `ecommerce-<svc>-direct` | 放行 Cilium `ingress` 实体到该服务 RPC 口。共享的 zero-trust CNP 仍是「只放网关」，Cilium 策略取并集，这份只追加 |
-
-**不经 control-tower 网关**。加/删就是这两个文件一起 apply/delete，共享 `helm/files/zero-trust.yaml` 不用动
-（canary 实测：删掉 cart 的 `cnp-direct.yaml` 立刻 503，apply 回来 200）。
-
-**这是本地开发专用的绕过，pre / prod 不得包含**：`overlays/pre/kustomization.yaml` 不引用这两个文件，
-`helm/values-pre.yaml` 关掉 `directAccess`；parity 门禁按环境比对，把它混进 pre 会红。要 prod 时从
-`overlays/pre` 复制，同样不带。`/etc/hosts` 追加一行：
-
-```
-192.168.3.121  dev.test argocd.dev.test consul.dev.test gateway.dev.test shop.dev.test user.dev.test search.dev.test product.dev.test order.dev.test inventory.dev.test cart.dev.test merchant.dev.test address.dev.test behavior.dev.test payment.dev.test
-```
-
-```bash
-curl https://cart.dev.test/healthz                                       # 200 + 依赖健康 JSON
-curl -X POST https://cart.dev.test/cart.v1.CartService/GetCart \
-  -H 'Content-Type: application/json' -H "x-md-global-user-id: $(uuidgen | tr A-Z a-z)" -d '{}'
-```
-
-- **身份头自己带**：网关不在链路上，`x-md-global-user-id` 等 `x-md-*` 头由你填，服务照信。不带时
-  需要用户身份的 RPC 会报 `invalid UUID length: 0` 之类——那不是路由坏了。
-- **这是鉴权边界上开的口**：`cnp-direct.yaml` 放行了 Cilium `ingress` 实体（Hubble 实测不放行时
-  envoy → Pod SYN `Policy denied DROPPED`，curl 503/5s）。任何能到 `192.168.3.121:443` 的局域网客户端
-  都能伪造身份调后端。只给开发用；撤掉时两个文件一起删（helm 侧 `global.directAccess.enabled=false`）。
-- 公网**不**开这条路：hostnames 只有 `dev.test`，要公网走 Pangolin + SSO。
-- 域名就是服务目录名 `<svc>.dev.test`（2026-09-06 由 `<svc>-api.dev.test` 改来）。`gateway.dev.test` 是
-  control-tower 网关、`shop.dev.test` 是前端，与这 10 个不冲突。
+原来每个后端服务 `deploy/overlays/dev/` 里的 `httproute.yaml` + `cnp-direct.yaml`（`<svc>.dev.test` 绕过 control-tower 网关直达 Service）
+随 dev 层一并从清单删除，helm 侧 `directAccess` 模板也删了。调后端一律经网关：`https://gateway.apikv.com`（LAN：`gateway.dev.test`）。
+〔实测 2026-09-15〕集群里仍残留 10 条 `ecommerce-<svc>-direct` HTTPRoute 与同名 CNP（apply 不带 prune），其中 cart / search 两条还挂着
+`cart-api.apikv.com` / `search.apikv.com`；待确认无人使用后整体删除。
 
 ### 新增一个 `*.dev.test` 域名
 
@@ -184,21 +159,19 @@ curl -X POST https://cart.dev.test/cart.v1.CartService/GetCart \
 2. 在 `/etc/hosts` 对应 IP 那行追加域名，然后：
 
 ```bash
-sudo sh -c 'echo "192.168.3.121  <name>.dev.test" >> /etc/hosts'   # 或编辑已有行
+sudo sh -c 'echo "10.10.31.240  <name>.dev.test" >> /etc/hosts'   # 机房 LAN 开发机；remote-dev 不需要
 sudo dscacheutil -flushcache && sudo killall -HUP mDNSResponder
 curl -sk -o /dev/null -w '%{http_code}\n' https://<name>.dev.test/  # 业务路由只挂 443
 ```
 
-### 地址分段
+### Cilium LB VIP〔实测 2026-09-15〕
 
-| 段 | 范围 | 用途 |
-|---|---|---|
-| DHCP | `192.168.3.2-20` | 路由器动态分配 |
-| Cilium LB 池 | `192.168.3.100-199` | `CiliumLoadBalancerIPPool/default-pool` |
-| 静态 | `.101` `.102` `.103` `.220` | node101 / node102 / node103 / Mac |
-
-**新增静态地址前先确认不落在上面两段内。** 2026-08-18 前 DHCP 段覆盖了整个 LB 池，
-`192.168.3.100` 被局域网设备（随机化 MAC）抢占过，表现为 ping 通但延迟数百毫秒、80/443 全闭。
+| VIP | 对象 |
+|---|---|
+| `10.10.31.240` | `default/cilium-gateway-cilium-gateway`（80/443，所有 HTTPRoute） |
+| `10.10.31.241` | `consul/consul-expose-servers`（8500/8301/8300/8502） |
+| `10.10.31.242` | `postgresql/cilium-gateway-pg-passthrough-gateway`（5432） |
+| `10.10.31.243` | `dragonfly/cilium-gateway-dragonfly-gateway`（6380） |
 
 ## 可观测：数据往哪流（2026-08-29 核对）
 
@@ -242,17 +215,9 @@ curl -sk -o /dev/null -w '%{http_code}\n' https://<name>.dev.test/  # 业务路�
   所以别凭记忆——查指标先跑 `/api/v1/label/__name__/values`，查日志/链路先跑
   `/select/logsql/field_names`。详见 [`alerting-signal-hygiene.md`](alerting-signal-hygiene.md)。
 
-## 会白排查半天的两个坑
+## 会白排查半天的坑
 
-**① 集群拉镜像依赖这台 Mac 上的代理。** 节点 containerd 配了 `http-proxy = 192.168.3.220:7890`，
-而 `.220` 就是这台开发机（FlClash 混合端口）。**Mac 关机或代理没开 → 全集群拉不了新镜像**，
-症状是 `ImagePullBackOff` + `proxyconnect tcp: dial tcp 192.168.3.220:7890: connect: connection refused`，
-极易误判成「私有仓凭据不对」（2026-08-19 实付学费，当时 TCR 凭据完全正常）。
-**判据：报错里出现 `proxyconnect` 就是代理问题，与 registry 凭据无关**；已在跑的 Pod 不受影响。
-`ccr.ccs.tencentyun.com` 已加进 `NO_PROXY`（源在 `../kubernetes/bootstrap/config.env`），其余仓库仍走代理。
-这是个真实单点：笔记本合盖 = 集群失去发布能力。集群装了 `spegel` 做 P2P 分发能缓解重复拉取，但首拉仍要出网。
-
-**② GitOps 当前是断的。** ArgoCD 装着且在跑，但**零 Application、零 ApplicationSet**，
+**GitOps 当前是断的。** ArgoCD 装着且在跑，但**零 Application、零 ApplicationSet**，
 AppProject 只有 `default`（2026-08-29 复测仍然如此）。集群实际由 `backend/services/*/deploy/`
 的手工路径驱动，`helm/values.yaml` **不是**集群真相源。因此内环开发那条「先关 ArgoCD 自动同步」
 当前不适用（`scripts/argocd-devwindow.sh` 已改为诚实空转）。接回 GitOps 前先读 `argocd-app.yml`
@@ -269,23 +234,14 @@ AppProject 只有 `default`（2026-08-29 复测仍然如此）。集群实际由
 | 策略与授权 | `openfga`、`kyverno` |
 | 运行时安全 | `tetragon`（2026-08-28 装，事件经 vector 进 node3 日志） |
 | 弹性与发布 | `keda`、`argo-rollouts`、`argocd`（见坑 ③）、`vpa`（**只有 recommender**，无 updater/webhook；live 共 17 个 VPA，其中 ecommerce 15 个均为 `Off`） |
-| 网络与穿透 | Cilium Gateway API（LAN `gateway` 策略）、Pangolin + newt（Mac `remote-dev` 策略）、`cilium-secrets` | Mac 不在机房 LAN 时走 `consul-dev.apikv.com` / `redis-dev.apikv.com:30005`，不依赖 `10.10.31.x` 直连 |
+| 网络与穿透 | Cilium Gateway API（LAN `gateway` 策略）、Pangolin + newt（Mac `remote-dev` 策略）、`cilium-secrets` |
 | 存储与镜像 | `openebs`、`spegel`（`cnpg-system` 已整体移除——2026-08-30 实测 ns 与 CNPG CRD 均不存在，PG 数据面只剩 node3 Pigsty） |
 
-**OpenBao 自动解封**：`node101` 上 `openbao-auto-unseal.timer` 每 60 秒检查一次，sealed 时读
-`/var/lib/k8s-installer/creds/openbao-init` 解封。满足无人值守重启，但 unseal key 与集群管理权限
-同信任域——它**不能**替代外部 KMS 或 Transit auto-unseal，迁到独立信任根后应移除该 timer。
-
 **Pod 节点均衡**：业务 Deployment 统一带 `app.kubernetes.io/part-of: ecommerce` +
-namespace 内共享的硬 `topologySpreadConstraints`（`maxSkew: 1`、`DoNotSchedule`），健康态分布 5/6/6〔实测 2026-08-29〕；
-〔实测 2026-08-30〕扩容统一重启曾遗留 14/2/1 倾斜——spread 只约束调度不触发迁移，同日已受控 rollout 回平至 6/6/5（批量重启前先做 CEP/CES 对账，见 cilium-datapath-ops.md 第二节）。
-**不得用 `kubernetes.io/hostname: node103` 之类硬钉实现「稳定」**——那把节点故障升级成不可调度。
-
-**VPA recommendation-only 基线（2026-08-29）**：Helm revision 2 只运行 recommender `1.7.1`，
-推荐地板为 `10m/32Mi`。ecommerce 的 15 个 VPA 全部是 `Off`/`RequestsOnly`，且
-`RecommendationProvided=True`；发布前后 17 个 active Pod 身份未变化。初始推荐仅用于确认采集链，
-至少观察 7 天并覆盖 k6/启动窗口后才能写回 requests。config-center 的两个历史 VPA 仍为
-`InPlace`，但当前没有 updater/webhook，不会修改 Pod；未来启用自动组件前必须先复查它们。
+namespace 内共享的硬 `topologySpreadConstraints`（`maxSkew: 1`、`DoNotSchedule`）；spread 只约束调度不触发迁移，
+倾斜后用 `scripts/rebalance-spread.sh` 受控回平（批量重启前先做 CEP/CES 对账，见 cilium-datapath-ops.md 第二节）。
+consumer-next 的反亲和是 preferred（2026-09-15 起，required 反亲和 + 硬 spread + 节点污点曾叠成滚动死锁）。
+**不得用 `kubernetes.io/hostname: node5` 之类硬钉实现「稳定」**——那把节点故障升级成不可调度。
 
 VPA 发布证据、经验与下一步见
 [`docs/reports/2026-08-29-vpa-recommendation-only.md`](../../docs/reports/2026-08-29-vpa-recommendation-only.md)；
@@ -304,10 +260,8 @@ kubectl get svc -A --field-selector spec.type=LoadBalancer \
   -o custom-columns='NS:.metadata.namespace,N:.metadata.name,IP:.status.loadBalancer.ingress[0].ip,PORTS:.spec.ports[*].port'
 # 集群到底跑着什么
 kubectl get ns && helm list -A
-# CNPG 是否还 hibernate
-kubectl get cluster pg-main -n postgresql -o jsonpath='{.metadata.annotations.cnpg\.io/hibernation}'
 # 服务从哪个环境读配置
-kubectl get secret ecommerce-config-source-dev -n ecommerce -o json | jq -r '.data[]' | base64 -d | grep environment | sort -u
+kubectl get secret ecommerce-config-source-pre -n ecommerce -o json | jq -r '.data[]' | base64 -d | grep environment | sort -u
 # node3 入口活没活（302/401/403 都算活，000 才是断）
 for h in node3-metrics node3-logs node3-traces node3-otlp; do
   printf '%s -> ' $h; curl -sk -o /dev/null -w '%{http_code}\n' --max-time 8 https://$h.apikv.com/
@@ -323,7 +277,7 @@ done
 - 一次性搭建/迁移实录（node3、Silo、Redis TLS、PG 切流、可观测外移）：
   [`docs/progress-archive/node3-migration-20260824.md`](../../docs/progress-archive/node3-migration-20260824.md)
 
-### 远程开发地址策略（remote-dev）
+
 
 本机 Mac 不在机房 LAN 时，不使用 `10.10.31.x` Gateway VIP，也不需要 `/etc/resolver/dev.test` split DNS。开发流量走：
 

@@ -248,7 +248,7 @@ services:
 # 上面的 services 段是「有哪些服务」的真相源;这一段声明每条聚合部署入口
 # 各自覆盖了其中哪些。四处清单历史上是各抄一份、互相漂移的:
 #   - config 已随配置中心拆去独立仓库,却还留在 Makefile 的 SERVICES 里,
-#     而扇出写的是 `|| exit 1` —— k8s-dev-all 每次在它那儿中断,payment 永远轮不到
+#     而扇出写的是 `|| exit 1` —— k8s-pre-all 每次在它那儿中断,payment 永远轮不到
 #   - behavior 在 Makefile / compose / deploy / helm 四处皆无,等于没有部署路径
 #   - product 至今没有 helm chart,GitOps 那条路径根本部署不了它
 # 现在由 backend/structcheck 的 TestDeploymentListsMatchMatrix 强制对齐:
@@ -261,7 +261,7 @@ deployment_coverage:
     # 2026-09-06 起两条是**同一套集群对象的两种写法**，由 scripts/verify-deploy-parity.sh 强制逐字段等价：
     # helm 给 helm/ArgoCD 使用者，裸 manifest 给 kubectl 使用者，两份都是真相源，改一边必须改另一边。
     helm: "helm/values.yaml 的顶层键（frontend / consumer-next 两个前端子 chart 不在 services 段，由 structcheck 显式放行）"
-    deploy: "backend/services/{service}/deploy/{base,overlays/dev,overlays/pre} —— kustomize 裸 manifest（环境差异只在 overlay；共享的 SA/CNP/ExternalSecret 在 helm/files/ 只有一份，经 scripts/render-zero-trust.sh 渲染）"
+    deploy: "backend/services/{service}/deploy/{base,overlays/prod} —— kustomize 裸 manifest（base 即 pre 基线，prod 差异在 overlay；共享的 SA/CNP/ExternalSecret 在 helm/files/ 只有一份，经 scripts/render-zero-trust.sh 渲染）"
   # 例外必须写原因。不写例外 = 要求全覆盖。
   # 2026-08-07:behavior/product 的 chart 已补齐,四条入口现已 10/10 全覆盖,
   # 例外清空。
@@ -288,7 +288,7 @@ known_gaps:
      进度见 docs/todo/数据一致性与事件驱动.md"
   - "没有 logistics/warehouse 前端 app，也没有独立物流/仓储微服务；履约按设计并入 order，inventory 不是 WMS"
   - "10 个业务服务没有完整的默认拒绝 NetworkPolicy/CiliumNetworkPolicy；后端信任网关注入身份头的边界尚未由网络策略全面强制"
-  - "GitOps 拓扑断线：ArgoCD 没有本仓的 Application/ApplicationSet，集群由 make k8s-dev-all /
+  - "GitOps 拓扑断线：ArgoCD 没有本仓的 Application/ApplicationSet，集群由 make k8s-pre-all /
      make deploy 的手工路径驱动。2026-09-06 起 helm/ 与裸 manifest 已逐字段等价且 CI 回写两边，
      接回 ArgoCD 只差 argocd-app.yml 顶部列的两件事。进度见 docs/todo/基础设施与部署模型.md"
   - "helm/ 只描述本仓工作负载：control-tower-gateway 在跑但属 control-tower 仓，不在 chart 里也不该在"

@@ -1,3 +1,0 @@
-{{- if .Values.enabled }}
-{{- include "ecommerce.httproute" (dict "svc" .Chart.Name "values" .Values "global" .Values.global "ns" .Release.Namespace) }}
-{{- end }}

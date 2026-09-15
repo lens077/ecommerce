@@ -4,7 +4,7 @@
 #   - 服务清单不在这里手抄，从 .service-matrix.yaml 查表（真相源）
 #   - 单服务改动只触发该服务；共享代码（api/pkg/constants/go.mod）改动触发全量
 #   - 构建完成后由唯一的 update-manifests job 一次性回写镜像 tag —— **两份都写**：
-#     helm/values.yaml 与 backend/services/<svc>/deploy/base/deployment.yaml（=dev；pre 在 overlays/pre 显式钉）
+#     helm/values.yaml 与 backend/services/<svc>/deploy/base/deployment.yaml（=pre；prod 在 overlays/prod 显式钉）
 #     （2026-09-06 前只写 helm，而集群 apply 的是裸 manifest，发版 tag 从未到达集群），
 #     避免矩阵并发推 main 冲突
 #
@@ -160,7 +160,7 @@ jobs:
         run: |
           set -euo pipefail
           if [[ -n "$VERSION" ]]; then
-            python3 scripts/promote-release.py --environment dev --version "$VERSION"
+            python3 scripts/promote-release.py --environment pre --version "$VERSION"
             exit 0
           fi
           # Manual backend-only builds do not promote production.
@@ -191,11 +191,11 @@ jobs:
           git config user.name "github-actions[bot]"
           git config user.email "github-actions[bot]@users.noreply.github.com"
           if [[ -n "$VERSION" ]]; then
-            printf '\n- CI release `%s`: verified all backend and frontend linux/amd64 + linux/arm64 indexes; updated dev manifests only. Production promotion remains explicit.\n' "$VERSION" >> TODO.md
+            printf '\n- CI release `%s`: verified all backend and frontend linux/amd64 + linux/arm64 indexes; updated pre manifests only. Production promotion remains explicit.\n' "$VERSION" >> TODO.md
           fi
           git add helm/values.yaml backend/services/*/deploy/base/deployment.yaml \
             frontend/apps/consumer/deploy/pre/deployment.yaml \
-            frontend/apps/consumer-next/deploy/base/dev.yaml TODO.md
+            frontend/apps/consumer-next/deploy/base/consumer-next.yaml TODO.md
           git diff --cached --quiet && { echo "无变化，跳过提交"; exit 0; }
           git commit -m "ci: 更新 ${SVC_LIST} 镜像 tag 至 ${TAG} [skip ci]"
           # 与后续 push 竞争时 rebase 重试；本文件只会追加改动，冲突概率极低

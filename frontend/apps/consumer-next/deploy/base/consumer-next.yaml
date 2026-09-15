@@ -1,4 +1,4 @@
-# consumer-next dev 部署（公开可收录页：Next.js App Router）
+# consumer-next 部署（公开可收录页：Next.js App Router）。base 即 pre 基线，prod 差异在 overlays/prod。
 # 架构：shop.* 域名下分流——首页 `/`（Exact，2026-09-14 起 SSR）与 /zh、/en、/_next（PathPrefix）→ consumer-next；
 #       其余（/cart、/checkout、/profile、/assets…）继续由 ecommerce-frontend（Vite SPA）承载。
 #       Gateway API 规定 Exact 优先于 PathPrefix，所以 `/` Exact 能从 frontend 的 PathPrefix `/` 里抢走根路径。

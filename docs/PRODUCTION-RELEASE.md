@@ -4,18 +4,19 @@
 
 ## 环境与接管边界
 
-| 内容 | dev | pre | prod |
-|---|---|---|---|
-| Helm 差异 | `helm/values.yaml` | 追加 `values-pre.yaml` | 追加 `values-prod.yaml` |
-| 后端裸清单 | `deploy/overlays/dev` | `deploy/overlays/pre` | `deploy/overlays/prod` |
-| 前端裸清单 | consumer 的 `deploy/pre`、consumer-next 的 `deploy/base` | 同 dev | 两个 app 的 `deploy/overlays/prod` |
-| 后端运行模式 | `dev` | `pre` | 暂沿用现网 `pre` |
-| selector Secret | `ecommerce-config-source-dev` | `ecommerce-config-source-pre` | 暂沿用现网 `ecommerce-config-source-pre` |
-| 服务直连路由 | 有，仅用于开发 | 无 | 无 |
+| 内容 | pre | prod |
+|---|---|---|
+| Helm 差异 | `helm/values.yaml` | 追加 `values-prod.yaml` |
+| 后端裸清单 | `deploy/base` | `deploy/overlays/prod` |
+| 前端裸清单 | consumer 的 `deploy/pre`、consumer-next 的 `deploy/base` | 两个 app 的 `deploy/overlays/prod` |
+| 后端运行模式 | `pre` | 暂沿用现网 `pre` |
+| selector Secret | `ecommerce-config-source-pre` | 暂沿用现网 `ecommerce-config-source-pre` |
+
+2026-09-15 起没有 dev 层：原 dev 集群已删除，开发改走 remote-dev（见 `context/team/local-env.md`），`values.yaml` / `deploy/base` 即 pre 基线，局域网直连路由随 dev 一并移除。
 
 prod 是部署目标，不代表 Config Center 已存在 `prod` 配置。不要仅通过改环境变量切换配置或数据库。Config Center 环境迁移需要独立准备 selector、权限和 Bootstrap，并验证后再更新两侧清单。
 
-初始 prod 基线保留九个后端的 `1.6.3` 镜像；search 和两个前端固定 `sha-98ba5d1` 的 digest〔实测 2026-09-12〕。这三个应急镜像仍是 amd64-only，只在 prod 基线中引用，不覆盖公共 dev 值。后续晋级会统一替换为发布版本与多架构 index digest。
+初始 prod 基线保留九个后端的 `1.6.3` 镜像；search 和两个前端固定 `sha-98ba5d1` 的 digest〔实测 2026-09-12〕。这三个应急镜像仍是 amd64-only，只在 prod 基线中引用，不覆盖公共 pre 值。后续晋级会统一替换为发布版本与多架构 index digest。
 
 prod 首次接管（2026-09-14）只发版，不接管两类对象，由 `values-prod.yaml` 的两个开关控制（两条部署路径与 parity 一起认）：`global.networkPolicy.enabled=false` 跳过零信任 CNP（线上零 CNP、规则未在该集群验证，待办要求先走审计模式）；`global.otelAuthExternalSecret.enabled=false` 跳过 `otel-auth` ExternalSecret（引用的 `vault` store 线上不存在，现有静态 Secret 可用）。开关默认在 `values.yaml` 为 true，dev/pre 不受影响。
 
@@ -29,7 +30,7 @@ prod 清单不是现网全量快照：不会包含 live 注解、手工直连路
 2. `backend.yml` 对发布 tag 构建全部十个后端，包含 search，不因路径差异跳过服务。手动 dispatch 保留后端按服务构建能力。
 3. 同一入口调用 `frontend-release.yml`：consumer 与 consumer-next 分别在 `ubuntu-24.04` 和 `ubuntu-24.04-arm` 原生构建，不安装 QEMU。
 4. 各前端平台制品以 digest 推送；检查镜像配置中的 Linux 架构，合并后检查 index 同时含 amd64、arm64。已有版本或 SHA 标签指向不同 digest 时，拒绝覆盖。
-5. 全部构建成功后，CI 校验十二个镜像的双架构 index，并将版本与 digest 同时回写 dev 的 Helm 和裸清单，运行三个环境的 parity。prod 不随发布自动升级。
+5. 全部构建成功后，CI 校验十二个镜像的双架构 index，并将版本与 digest 同时回写 pre 的 Helm 和裸清单，运行两个环境的 parity。prod 不随发布自动升级。
 
 `frontend.yml` 仍是定时登录 smoke，与镜像发布分工独立。前端流程本次补齐的是构建、平台校验和清单接线，不代表它已经具有后端的全部 Trivy/Cosign/SBOM 供应链步骤。GitHub 实际构建、TCR 发布和线上新版本验收必须在首次发布后记录；本地 actionlint 不能替代这些验收。
 

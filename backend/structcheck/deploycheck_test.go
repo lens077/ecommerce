@@ -3,7 +3,7 @@
 // 背景:仓库有三条聚合部署入口(Makefile 扇出 / compose / helm+ArgoCD),
 // 外加各服务的 deploy 裸 manifest,每一处都手抄了一份服务清单。手抄就会漂移,
 // 而且漂移是静默的 —— config 拆仓后仍留在 Makefile 的 SERVICES 里,配合
-// `|| exit 1` 让 make k8s-dev-all 每次在它那儿中断,排在后面的 payment
+// `|| exit 1` 让 make k8s-pre-all 每次在它那儿中断,排在后面的 payment
 // 永远 apply 不到,报错还长得像普通的 kubectl 报错,谁都不会多看一眼。
 //
 // 真相源是 .service-matrix.yaml 的 services 段;本文件让四处副本与它对齐。
@@ -256,7 +256,7 @@ func readDeployCoveredServices(t *testing.T) []string {
 			continue
 		}
 		hasAll := true
-		for _, rel := range []string{"base", "overlays/dev", "overlays/pre"} {
+		for _, rel := range []string{"base", "overlays/prod"} {
 			if _, err := os.Stat(filepath.Join(servicesDir, e.Name(), "deploy", rel, "kustomization.yaml")); err != nil {
 				hasAll = false
 				break
@@ -281,7 +281,7 @@ func TestDeploymentListsMatchMatrix(t *testing.T) {
 		{"makefile", "backend/Makefile 的 SERVICES", readMakefileServices(t)},
 		{"compose", "backend/compose.yaml 的 services 段", readComposeServices(t)},
 		{"helm", "helm/values.yaml 的顶层键", readHelmServices(t)},
-		{"deploy", "backend/services/{svc}/deploy/{base,overlays/dev,overlays/pre}", readDeployCoveredServices(t)},
+		{"deploy", "backend/services/{svc}/deploy/{base,overlays/prod}", readDeployCoveredServices(t)},
 	}
 
 	for _, l := range lists {
@@ -373,7 +373,7 @@ func TestDeploymentsUseConfigCenterSelector(t *testing.T) {
 		if !values.Global.ConfigSource.Enabled {
 			t.Error("helm global.configSource.enabled must be true")
 		}
-		wantSecret := strings.ReplaceAll(m.Conventions.ConfigSourceSecret, "{env}", "dev")
+		wantSecret := strings.ReplaceAll(m.Conventions.ConfigSourceSecret, "{env}", "pre")
 		if values.Global.ConfigSource.SecretName != wantSecret {
 			t.Errorf("helm selector Secret = %q, want %q", values.Global.ConfigSource.SecretName, wantSecret)
 		}
@@ -432,8 +432,8 @@ func TestDeploymentsUseConfigCenterSelector(t *testing.T) {
 
 	for service := range m.Services {
 		service := service
-		// base 里的值以 dev 为准;pre 等环境经 overlay 补丁,其结果由 parity 门禁对 helm 侧核对。
-		for _, environment := range []string{"dev"} {
+		// base 即 pre 基线;prod 经 overlay 补丁,其结果由 parity 门禁对 helm 侧核对。
+		for _, environment := range []string{"pre"} {
 			environment := environment
 			t.Run("manifest/"+service+"/"+environment, func(t *testing.T) {
 				path := filepath.Join(servicesDir, service, "deploy", "base", "deployment.yaml")
@@ -542,7 +542,7 @@ func TestWorkloadIdentityBaseline(t *testing.T) {
 			podSpec.TopologySpreadConstraints)
 	}
 
-	nextPath := "../../frontend/apps/consumer-next/deploy/base/dev.yaml"
+	nextPath := "../../frontend/apps/consumer-next/deploy/base/consumer-next.yaml"
 	f, err = os.Open(nextPath)
 	if err != nil {
 		t.Fatalf("open %s: %v", nextPath, err)

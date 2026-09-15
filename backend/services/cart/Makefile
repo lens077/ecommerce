@@ -21,9 +21,9 @@ CART_SOURCE_CONFIG ?= configs/source.dev.yaml
 # 缺文件时静默跳过 —— CI 与他人 clone 不受影响, 只是不带鉴权头。
 -include $(HOME)/.config/apikv/otel.mk
 
-.PHONY: k8s-dev
-k8s-dev:
-	kubectl apply -k deploy/overlays/dev
+.PHONY: k8s-pre
+k8s-pre:
+	kubectl apply -k deploy/base
 
 .PHONY: k8s-prod
 k8s-prod:

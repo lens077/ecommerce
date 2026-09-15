@@ -30,7 +30,7 @@ class ReleaseTests(unittest.TestCase):
         services = promote.inventory()
         charts = [*services, 'frontend', 'consumer-next']
         digests = {chart: 'sha256:' + 'a' * 64 for chart in charts}
-        for environment in ('dev', 'prod'):
+        for environment in ('pre', 'prod'):
             with self.subTest(environment=environment):
                 changes = promote.plan_changes(promote.ROOT, services, environment, '1.6.4', digests)
                 self.assertEqual(len(changes), 13)
@@ -55,7 +55,7 @@ class ReleaseTests(unittest.TestCase):
             shutil.copy2(promote.ROOT / 'scripts/verify-deploy-parity.sh', root / 'scripts/verify-deploy-parity.sh')
             shutil.copy2(promote.ROOT / 'application-vpa.yml', root / 'application-vpa.yml')
             digests = {s: 'sha256:' + 'a' * 64 for s in [*services, 'frontend', 'consumer-next']}
-            for env in ('dev', 'prod'):
+            for env in ('pre', 'prod'):
                 for path, text in promote.plan_changes(root, services, env, '1.6.4', digests).items():
                     path.write_text(text)
             result = subprocess.run(['bash', 'scripts/verify-deploy-parity.sh'], cwd=root,
@@ -70,11 +70,11 @@ class ReleaseTests(unittest.TestCase):
 
     def test_every_image_line_of_a_manifest_moves_together(self):
         """consumer-next 的 init 容器与主容器共用同一镜像(2026-09-15 起两处 image:),
-        dev 回写必须把每一处都换成同一个 version@digest;1.7.6 CI 曾因 replace_once 只认一处而红。"""
+        pre 回写必须把每一处都换成同一个 version@digest;1.7.6 CI 曾因 replace_once 只认一处而红。"""
         services = promote.inventory()
         digests = {chart: 'sha256:' + 'b' * 64 for chart in [*services, 'frontend', 'consumer-next']}
-        changes = promote.plan_changes(promote.ROOT, services, 'dev', '1.6.4', digests)
-        text = next(text for path, text in changes.items() if path.name == 'dev.yaml')
+        changes = promote.plan_changes(promote.ROOT, services, 'pre', '1.6.4', digests)
+        text = next(text for path, text in changes.items() if path.name == 'consumer-next.yaml')
         image_lines = re.findall(r'^\s+image: ccr\.ccs\.tencentyun\.com/sumery/consumer-next:(.+)$', text, flags=re.M)
         self.assertGreaterEqual(len(image_lines), 2)
         self.assertEqual(set(image_lines), {'1.6.4@sha256:' + 'b' * 64})

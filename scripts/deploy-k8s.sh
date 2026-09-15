@@ -2,12 +2,12 @@
 # 一条命令把全部工作负载(10 个后端 + 2 个前端)交付到集群。形状参照 config-center 的
 # scripts/deploy-k8s.sh：先把「集群里那些不在 Git 的前置状态」补齐，再 apply。
 #
-# helm/ 与 backend/services/*/deploy/dev 裸 manifest 是同一套对象的两种写法
-# (scripts/verify-deploy-parity.sh 强制等价)；本脚本走 helm 那份，`make k8s-dev-all` 走裸那份，
+# helm/ 与 backend/services/*/deploy/{base,overlays/prod} 裸 manifest 是同一套对象的两种写法
+# (scripts/verify-deploy-parity.sh 强制等价)；本脚本走 helm 那份，`make k8s-pre-all` 走裸那份，
 # 两条路径收敛到同一状态。
 #
-# 环境（DEPLOY_ENV，默认 dev）：dev 用 helm/values.yaml；其它环境再叠 helm/values-<env>.yaml
-# （只写差异；dev 独有的本地直连在那里被关掉）。裸侧对应 backend/services/*/deploy/overlays/<env>。
+# 环境（DEPLOY_ENV，默认 pre）：pre 用 helm/values.yaml；prod 再叠 helm/values-prod.yaml（只写差异）。
+# 裸侧对应 backend/services/*/deploy/base（pre）与 deploy/overlays/prod。2026-09-15 起没有 dev 层。
 #
 # 两种模式（DEPLOY_MODE）：
 #   helm   默认。渲染 helm/ 并 apply —— 与 ArgoCD 同一份 chart，
@@ -20,7 +20,7 @@
 #   - ecommerce 命名空间
 #   - tcr-pull-secret：TCR 是私有仓库，没有它所有 Pod 都 ImagePullBackOff
 #   - pg-ca-cert：Postgres 走 verify-ca，缺了连不上库
-#   - ecommerce-config-source-dev：含机器 token 的 10 份 Config Center selector，
+#   - ecommerce-config-source-pre：含机器 token 的 10 份 Config Center selector，
 #     必须由操作者在集群创建，不落盘、不进 Git（与 helm/values.yaml global.configSource.secretName 一致）
 #
 # 用法：
@@ -29,16 +29,16 @@
 #   DEPLOY_MODE=argocd scripts/deploy-k8s.sh   # 交给 ArgoCD
 #   DEPLOY_ACTION=delete scripts/deploy-k8s.sh # 卸载全部微服务
 #   SERVICES="cart order" scripts/deploy-k8s.sh  # 只部分服务（helm 模式）
-#   DEPLOY_ENV=pre scripts/deploy-k8s.sh         # pre 环境（values.yaml + values-pre.yaml）
+#   DEPLOY_ENV=prod KUBE_CONTEXT=… scripts/deploy-k8s.sh  # prod（values.yaml + values-prod.yaml）
 set -Eeuo pipefail
 
 script_dir="$(cd -- "$(dirname -- "${BASH_SOURCE[0]}")" && pwd)"
 repo_root="$(cd -- "${script_dir}/.." && pwd)"
 
 deploy_mode="${DEPLOY_MODE:-helm}"
-deploy_env="${DEPLOY_ENV:-dev}"
+deploy_env="${DEPLOY_ENV:-pre}"
 values_args=(-f "${repo_root}/helm/values.yaml")
-if [[ "${deploy_env}" != "dev" ]]; then
+if [[ "${deploy_env}" != "pre" ]]; then
   [[ -f "${repo_root}/helm/values-${deploy_env}.yaml" ]] || { echo "缺少 helm/values-${deploy_env}.yaml" >&2; exit 1; }
   values_args+=(-f "${repo_root}/helm/values-${deploy_env}.yaml")
 fi

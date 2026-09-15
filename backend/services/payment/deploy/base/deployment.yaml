@@ -60,7 +60,7 @@ spec:
             - name: SERVICE_VERSION
               value: "v1"
             - name: DEPLOYMENT_MODE
-              value: "dev"
+              value: "pre"
             # Bootstrap 只从挂载的 Config Center selector 读取。
             - name: CONFIG_SOURCE_FILE
               value: "/etc/ecommerce/config-source/payment.yaml"
@@ -115,7 +115,7 @@ spec:
       volumes:
         - name: config-source
           secret:
-            secretName: ecommerce-config-source-dev
+            secretName: ecommerce-config-source-pre
             defaultMode: 256   # = 0400 八进制。写十进制是因为 0400 在 YAML 1.1/1.2 下解析不同(256 vs 400),kustomize 与 yq 会各读各的
             items:
               - key: payment.yaml

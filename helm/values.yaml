@@ -7,8 +7,8 @@
 # 1. serviceName 必须与 .service-matrix.yaml 的 discovery 逐字相同 —— 它是注册进 Consul
 #    的名字(user 是 user-identity、search 是 search-product,≠ 目录名)。带 `-v1` 后缀的
 #    历史写法会注册成另一个名字,服务活得好好的但网关永远路由不到(cart 踩过这个)。
-# 2. port 取各服务 Config Center dev Bootstrap 的 server.addr。
-# 3. Bootstrap selector 来自不入库的 ecommerce-config-source-dev Secret;Consul 环境变量
+# 2. port 取各服务 Config Center Bootstrap 的 server.addr。
+# 3. Bootstrap selector 来自不入库的 ecommerce-config-source-pre Secret;Consul 环境变量
 #    只负责服务注册发现,2026-09-03 起 CONSUL_ENABLED=false。
 #
 # 镜像:CI(.github/workflows/backend.yml update-manifests)发版后把 image.tag 同时回写到
@@ -20,21 +20,18 @@ global:
   # Runtime-only value. scripts/deploy-k8s.sh resolves node1 from ~/.ssh/config,
   # or callers pass POSTGRES_EGRESS_CIDR / --set-string explicitly.
   postgresEgressCIDR: ""
-  deploymentMode: dev
-  # 局域网直连入口:每个服务一条 HTTPRoute https://<svc>.<domain> 直达 Service,绕过网关鉴权。
-  # 只给开发用;values-pre.yaml 里为 false。裸侧对应 overlays/dev 独有的 httproute.yaml + cnp-direct.yaml。
-  directAccess:
-    enabled: true
-    domain: dev.test
+  # 2026-09-15 起环境只有 pre / prod:本文件即 pre 基线,prod 差异在 values-prod.yaml。
+  # 原 dev 集群(192.168.3.x)已删除,dev 层与随之而来的局域网直连(directAccess)一并移除。
+  deploymentMode: pre
   # 零信任 CNP(helm/files/zero-trust.yaml 里的 ecommerce-api-default-deny)与 otel-auth ExternalSecret
-  # 是否随本 chart 渲染。dev 一直是 true;prod 首次接管(2026-09-14)只发版不接管策略,在 values-prod.yaml 关掉。
+  # 是否随本 chart 渲染。pre 为 true;prod 首次接管(2026-09-14)只发版不接管策略,在 values-prod.yaml 关掉。
   networkPolicy:
     enabled: true
   otelAuthExternalSecret:
     enabled: true
   configSource:
     enabled: true
-    secretName: ecommerce-config-source-dev
+    secretName: ecommerce-config-source-pre
     mountPath: /etc/ecommerce/config-source
     runAsUser: 1000
     runAsGroup: 1000
@@ -138,7 +135,7 @@ behavior:
     tag: 1.7.7@sha256:bbd3752f5bc5c4bbfd432e9c423cabee1ab1c3f18b706d2f1230026d6786324d
 
 # 前端两个工作负载。裸 manifest 在 frontend/apps/consumer/deploy/pre/ 与
-# frontend/apps/consumer-next/deploy/base/dev.yaml,同样受 parity 门禁约束。
+# frontend/apps/consumer-next/deploy/base/consumer-next.yaml,同样受 parity 门禁约束。
 frontend:
   enabled: true
   replicaCount: 1

@@ -45,7 +45,7 @@ def inventory():
 def plan_changes(root, services, environment, version, digests):
     """Plan all changes before writing, preserving hand-written YAML formatting."""
     changes = {}
-    values_path = root / 'helm' / ('values.yaml' if environment == 'dev' else 'values-prod.yaml')
+    values_path = root / 'helm' / ('values.yaml' if environment == 'pre' else 'values-prod.yaml')
     values = values_path.read_text()
     for chart in [*services, 'frontend', 'consumer-next']:
         repo = 'ecommerce-frontend' if chart == 'frontend' else chart
@@ -56,7 +56,7 @@ def plan_changes(root, services, environment, version, digests):
                                   lambda m: m[1] + pin + m[2])
         else:
             values = replace_once(values, rf'(^\s+repository: {re.escape(image)}\n\s+tag: )[^\n]+',
-                                  lambda m: m[1] + pin) if environment == 'dev' else replace_once(
+                                  lambda m: m[1] + pin) if environment == 'pre' else replace_once(
                 values, r'(^' + re.escape(chart) + r':\n  image:\n    tag: ")[^"]+(".*)$',
                 lambda m: m[1] + pin + m[2])
         if environment == 'prod':
@@ -77,7 +77,7 @@ def plan_changes(root, services, environment, version, digests):
             elif chart == 'frontend':
                 path = root / 'frontend/apps/consumer/deploy/pre/deployment.yaml'
             else:
-                path = root / 'frontend/apps/consumer-next/deploy/base/dev.yaml'
+                path = root / 'frontend/apps/consumer-next/deploy/base/consumer-next.yaml'
             text = replace_all_at_least_once(path.read_text(), rf'^(\s+image: ){re.escape(image)}:[^\n]+',
                                              lambda m: m[1] + image + ':' + pin)
         changes[path] = text
@@ -87,7 +87,7 @@ def plan_changes(root, services, environment, version, digests):
 
 def main():
     parser = argparse.ArgumentParser(description=__doc__)
-    parser.add_argument('--environment', choices=['dev', 'prod'], required=True)
+    parser.add_argument('--environment', choices=['pre', 'prod'], required=True)
     parser.add_argument('--version', required=True)
     parser.add_argument('--check', action='store_true', help='verify registry and edit plan without writing')
     args = parser.parse_args()

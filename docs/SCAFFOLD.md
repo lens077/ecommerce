@@ -674,9 +674,9 @@ api:
 	buf generate --template buf.gen.yaml
 	buf generate --template buf.gen.ts.yaml
 
-.PHONY: k8s-dev
-k8s-dev:
-	kubectl apply -k deploy/overlays/dev
+.PHONY: k8s-pre
+k8s-pre:
+	kubectl apply -k deploy/base
 ```
 
 ### 根 `Makefile`（对所有服务扇出）

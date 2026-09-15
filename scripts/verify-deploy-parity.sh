@@ -8,20 +8,21 @@
 # 两份都要保留(面向 helm/ArgoCD 与 kubectl 两类使用者),那就必须让它们逐字段等价。
 #
 # 做法:两侧都渲染成 K8s 对象,去注释、按键排序、按 kind/namespace/name 建索引,逐对象 diff。
-# **按环境逐个比**(2026-09-06 起 dev / pre):
-#   helm 侧:helm template umbrella chart,-f values.yaml [-f values-<env>.yaml]
-#   裸侧:  kubectl kustomize backend/services/*/deploy/overlays/<env>(base + 该环境的补丁/附加资源)
-#           + application-vpa.yml
-#           + frontend/apps/consumer/deploy/pre/*.yaml + frontend/apps/consumer-next/deploy/base/dev.yaml(环境无关)
+# **按环境逐个比**(2026-09-15 起只有 pre / prod;dev 集群已删除,dev 层与局域网直连一并移除):
+#   helm 侧:helm template umbrella chart,-f values.yaml(=pre 基线)[-f values-prod.yaml]
+#   裸侧:  pre  = kubectl kustomize backend/services/*/deploy/base
+#                 + application-vpa.yml + frontend/apps/consumer/deploy/pre/*.yaml
+#                 + frontend/apps/consumer-next/deploy/base
+#           prod = kubectl kustomize backend/services/*/deploy/overlays/prod
+#                 + application-vpa.yml + frontend/apps/{consumer,consumer-next}/deploy/overlays/prod
 #           + helm/files/ 里两条路径共用的 zero-trust / otel-auth(经同一条 helm 命令渲染,
 #             用来保证「共享清单确实在 helm 里被渲染出来」)
-# 任一侧多一个对象、少一个对象、任何字段不同 → 红。dev 独有的本地直连(HTTPRoute + cnp-direct)
-# 只会出现在 dev 那次比对里;它若混进 pre,pre 那次会以「只有裸侧有 / 只有 helm 有」报出来。
+# 任一侧多一个对象、少一个对象、任何字段不同 → 红。
 #
 # Postgres CIDR 是运行时注入值(scripts/resolve-postgres-egress-cidr.sh),两侧统一喂一个
 # 文档用途的占位地址(RFC 5737),不需要 ssh 到集群。
 #
-# 用法:scripts/verify-deploy-parity.sh              # 依次比 dev 与 pre;任一红即 rc=1
+# 用法:scripts/verify-deploy-parity.sh              # 依次比 pre 与 prod;任一红即 rc=1
 #       scripts/verify-deploy-parity.sh pre          # 只比一个环境
 #       KEEP=1 scripts/verify-deploy-parity.sh       # 保留临时目录便于人工看
 set -euo pipefail
@@ -36,21 +37,21 @@ done
 
 namespace="${NAMESPACE:-ecommerce}"
 placeholder_cidr="203.0.113.1/32"
-envs=("$@"); [[ ${#envs[@]} -eq 0 ]] && envs=(dev pre prod)
+envs=("$@"); [[ ${#envs[@]} -eq 0 ]] && envs=(pre prod)
 workdir="$(mktemp -d "${TMPDIR:-/tmp}/deploy-parity.XXXXXX")"
 if [[ -z "${KEEP:-}" ]]; then trap 'rm -rf "${workdir}"' EXIT; else echo "临时目录:${workdir}"; fi
 
 helm_render() { # helm_render <env> [extra helm args...]
   local env="$1"; shift
   local values=(-f "${repo_root}/helm/values.yaml")
-  [[ "${env}" != "dev" ]] && values+=(-f "${repo_root}/helm/values-${env}.yaml")
+  [[ "${env}" != "pre" ]] && values+=(-f "${repo_root}/helm/values-${env}.yaml")
   helm template ecommerce "${repo_root}/helm" --namespace "${namespace}" "${values[@]}" \
     --set-string "global.postgresEgressCIDR=${placeholder_cidr}" "$@"
 }
 
 helm_value() { # helm_value <env> <yq-path> → 合并 values.yaml + values-<env>.yaml 后的值
   local env="$1" path="$2" files=("${repo_root}/helm/values.yaml")
-  [[ "${env}" != "dev" ]] && files+=("${repo_root}/helm/values-${env}.yaml")
+  [[ "${env}" != "pre" ]] && files+=("${repo_root}/helm/values-${env}.yaml")
   yq eval-all ". as \$item ireduce ({}; . * \$item) | ${path}" "${files[@]}"
 }
 
@@ -61,7 +62,7 @@ raw_common=(
   frontend/apps/consumer/deploy/pre/deployment.yaml
   frontend/apps/consumer/deploy/pre/service.yaml
   frontend/apps/consumer/deploy/pre/httproute.yaml
-  frontend/apps/consumer-next/deploy/base/dev.yaml
+  frontend/apps/consumer-next/deploy/base/consumer-next.yaml
 )
 
 render_env() { # render_env <env>  → ${workdir}/<env>/{helm,raw}.yaml
@@ -69,8 +70,9 @@ render_env() { # render_env <env>  → ${workdir}/<env>/{helm,raw}.yaml
   mkdir -p "${out}/helm" "${out}/raw"
   helm_render "${env}" >"${out}/helm.yaml"
   {
-    for d in backend/services/*/deploy/overlays/"${env}"; do
-      [[ -f "$d/kustomization.yaml" ]] || { echo "verify-deploy-parity: 缺 overlay:$d" >&2; exit 2; }
+    for svc in backend/services/*/; do
+      d="${svc}deploy/base"; [[ "${env}" == "prod" ]] && d="${svc}deploy/overlays/prod"
+      [[ -f "$d/kustomization.yaml" ]] || { echo "verify-deploy-parity: 缺 kustomization:$d" >&2; exit 2; }
       printf -- '---\n# source: %s\n' "$d"
       kubectl kustomize "$d"
       printf '\n'
@@ -149,6 +151,5 @@ for env in "${envs[@]}"; do
 done
 if [[ $rc -ne 0 ]]; then
   echo "修法:哪边是你有意改的,就把另一边改成一样;两份都是真相源,不能只改一份。"
-  echo "     dev 独有的本地直连(httproute + cnp-direct)只能在 overlays/dev 与 values.yaml(directAccess.enabled=true);pre 两边都不能有。"
 fi
 exit $rc

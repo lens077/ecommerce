@@ -1340,3 +1340,11 @@ description: harness 本身（硬规则/门禁/Agent 约束）每次改动的原
 - **怎么验证的**：`go test ./structcheck/...` 绿；把 dev.yaml 的反亲和临时改回 required 再跑，门禁按新规则红（`must not use required pod anti-affinity`）；`verify-deploy-parity.sh` 三环境绿；init 容器的拷贝用 `docker run --user 1001 --read-only --tmpfs /seed` 模拟通过。
 - **未验证**：线上下一次滚动是否真的不再卡——要等下一个 tag 部署时看 `rollout status`；两副本同节点后 `rebalance-spread.sh` 能否把 consumer-next 分开（脚本是按 spread 计数回平，不看反亲和）。
 - **同日追记（1.7.7 部署）**：滚动本身不再卡——新 Pod 直接落到 node5，旧副本在 node4 保持 Ready。但 init 容器 CrashLoop：`cp: preserving times for '/seed/.': Operation not permitted`——emptyDir 挂载点属 root，uid 1001 无权改它的 mtime，`cp -a` 保留时间戳在根目录上失败。本地用 `--tmpfs /seed:uid=1001` 模拟时根目录属 1001 所以没暴露；改用 `uid=0,gid=1001,mode=2775` 才复现。修为 `cp -R`。教训：**模拟卷挂载时，挂载点的属主要和集群一致（root），不能图省事设成运行用户**。
+
+### 2026-09-15 部署环境收敛为 pre / prod（dev 层删除，门禁同步）
+
+- **触发事故**：用户告知 `192.168.3.x` 那套 dev 集群已删除、开发改走 remote-dev；但仓库里 dev 仍是三层环境之首——`values.yaml`=dev、`overlays/dev` 带局域网直连、CI 回写 `--environment dev`、structcheck 要求 `overlays/{dev,pre}` 齐全、`local-env.md` 活地址表全是被删集群的 IP。一个不存在的环境继续占着默认值，下一个人会照着它 apply 到唯一的集群上（线上现在就残留着 10 条 dev 时代的 `*-direct` HTTPRoute）。
+- **为什么**：环境层数应等于真实部署目标数。只剩一套集群时，「pre 基线 + prod 差异」两层就够；dev 独有的局域网直连绕过网关鉴权，随 dev 一起删而不是留个 `directAccess.enabled=false` 的死开关——开关留着就有人打开。
+- **改了什么**：`helm/values.yaml` 改为 pre 基线（`deploymentMode: pre`、selector Secret pre、删 `directAccess`），删 `values-pre.yaml` 与 10 个子 chart 的 `httproute.yaml`/`cnp-direct.yaml` 及 `_ecommerce.tpl` 两段模板；裸侧 `deploy/base` 即 pre（`DEPLOYMENT_MODE=pre`），删 `overlays/{dev,pre}`，`overlays/prod` 改继承 `base`；consumer-next 的 `base/dev.yaml` 改名 `consumer-next.yaml`。门禁与脚本：`verify-deploy-parity.sh` 只比 pre/prod（pre 用 base）；`promote-release.py --environment pre|prod`；`deploy-k8s.sh` / `render-zero-trust.sh` 默认 pre；`backend/Makefile` 删 `k8s-dev-all`，`k8s-pre-all` apply base；structcheck 覆盖清单改为 `{base,overlays/prod}`、selector Secret 期望 `pre`；`.github/workflows/backend.yml` 回写 pre；`.service-matrix.yaml` deployment_coverage 同步；`local-env.md` 按 2026-09-15 实测重写活地址（VIP `10.10.31.240–243`、node3/4/5）。
+- **怎么验证的**：parity pre 56 / prod 54 个对象绿；structcheck 绿；`test-promote-release.py` 6 项绿；`verify-context.sh` 绿；`helm template` 与 `kubectl kustomize deploy/base` 均可渲染。
+- **未验证**：线上残留的 `ecommerce-*-direct` HTTPRoute / CNP 尚未删除（其中 cart / search 挂公网域名，需确认无人使用）；`ecommerce-config-source-dev` Secret 仍在集群里。
