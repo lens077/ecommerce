@@ -90,7 +90,13 @@ jobs:
             echo "无可用 protobuf breaking 基线，跳过"
             exit 0
           fi
-          buf breaking --path api --against "../.git#ref=${BASE_REF},subdir=backend"
+          # buf 会克隆本地 .git 取基线,runner 上偶发 `stat .git/objects/maintenance.lock: file does not exist`
+          # (1.7.5 实测,git 后台维护的瞬时状态),重试 3 次
+          for i in 1 2 3; do
+            buf breaking --path api --against "../.git#ref=${BASE_REF},subdir=backend" && exit 0
+            echo "buf breaking 第 $i 次失败,5s 后重试"; sleep 5
+          done
+          exit 1
 
       # structcheck 是全仓结构门禁（矩阵↔目录↔网关对齐、internal/pkg 同构棘轮），
       # 任何服务的改动都必须过它；api 是共享契约，跟着服务一起验
@@ -121,8 +127,9 @@ jobs:
           set -euo pipefail
           base="https://github.com/golangci/golangci-lint/releases/download/v${GOLANGCI_LINT_VERSION}"
           asset="golangci-lint-${GOLANGCI_LINT_VERSION}-linux-amd64.tar.gz"
-          curl -fsSL -o "/tmp/${asset}" "${base}/${asset}"
-          curl -fsSL -o /tmp/golangci-checksums.txt "${base}/golangci-lint-${GOLANGCI_LINT_VERSION}-checksums.txt"
+          # GitHub release 下载偶发 504(1.7.0 实测),重试 5 次、任何错误都重试
+          curl -fsSL --retry 5 --retry-all-errors --retry-delay 3 -o "/tmp/${asset}" "${base}/${asset}"
+          curl -fsSL --retry 5 --retry-all-errors --retry-delay 3 -o /tmp/golangci-checksums.txt "${base}/golangci-lint-${GOLANGCI_LINT_VERSION}-checksums.txt"
           (cd /tmp && grep " ${asset}\$" golangci-checksums.txt | sha256sum -c -)
           tar -xzf "/tmp/${asset}" -C /tmp
           sudo install "/tmp/golangci-lint-${GOLANGCI_LINT_VERSION}-linux-amd64/golangci-lint" /usr/local/bin/golangci-lint
@@ -198,7 +205,7 @@ jobs:
           build-args: |
             SERVICE=${{ inputs.service }}
             VERSION=${{ inputs.version != '' && inputs.version || steps.meta.outputs.tag }}
-            GOPROXY=https://proxy.golang.org,direct
+            GOPROXY=https://proxy.golang.org|https://goproxy.io,direct
           tags: ${{ steps.meta.outputs.tags }}
 
       # tag 发布阶段：Buildx 输出多架构 OCI index digest；分别解析 amd64/arm64，

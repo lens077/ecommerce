@@ -12,9 +12,12 @@ WORKDIR /build
 
 # 挂载依赖缓存
 COPY go.mod go.sum ./
+# 模块下载重试 3 次:CI 上 proxy.golang.org 偶发 stream error / 5xx(2026-09-14/15 三次 tag 因此红),
+# 配合 GOPROXY 用 `|` 分隔的备用源(`|` 表示任何错误都换下一个,`,` 只在 404/410 时换)。
 RUN --mount=type=cache,target=/go/pkg/mod \
     --mount=type=cache,target=/root/.cache/go-build \
-    go mod download -x
+    for i in 1 2 3; do go mod download -x && break || { echo "go mod download 第 $i 次失败,5s 后重试"; sleep 5; }; done \
+    && go mod verify
 
 # 微服务代码
 COPY services/${SERVICE}/ ./services/${SERVICE}/
