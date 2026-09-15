@@ -97,6 +97,24 @@ export default defineConfig(({ mode }) => {
     build: {
       // 字体切片不内联:@fontsource 的小切片(<4KB)默认会被 base64 进 CSS,实测占了 63KB
       assetsInlineLimit: (filePath: string) => (/\.woff2?$/.test(filePath) ? false : undefined),
+      rollupOptions: {
+        output: {
+          // 合并小 chunk:默认分包把 MUI 拆成 40 多个 0–2KB 的组件 chunk,首绘前 46 个请求,
+          // 150ms RTT 下队头开销比字节本身贵(2026-09-15 实测 /categories 移动端)。
+          // 三组:react 运行时 / 路由与查询 / MUI+emotion;业务代码仍按路由懒加载。
+          codeSplitting: {
+            groups: [
+              {
+                name: "react",
+                test: /node_modules[\\/](react|react-dom|scheduler)[\\/]/,
+                priority: 30,
+              },
+              { name: "tanstack", test: /node_modules[\\/]@tanstack[\\/]/, priority: 20 },
+              { name: "mui", test: /node_modules[\\/](@mui|@emotion)[\\/]/, priority: 20 },
+            ],
+          },
+        },
+      },
     },
     resolve: {
       alias: {
