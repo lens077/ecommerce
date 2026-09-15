@@ -76,7 +76,7 @@ spec:
       # 镜像里的预渲染产物由 init 容器先拷进 emptyDir,再挂到同一路径,读写都在卷上。
       initContainers:
         - name: seed-next-app
-          image: ccr.ccs.tencentyun.com/sumery/consumer-next:1.7.5@sha256:0ae8b393397731bb83b3ee8734a7bc219393f93ce7bfc05eda840a36dd176c36
+          image: ccr.ccs.tencentyun.com/sumery/consumer-next:1.7.7@sha256:b3d610d55e89f0c06f1ff6e13f6d0796e6931a4a3e484a41548b0e580f14fcc1
           command: ["sh", "-c", "cp -a /app/apps/consumer-next/.next/server/app/. /seed/"]
           securityContext:
             allowPrivilegeEscalation: false
@@ -96,7 +96,7 @@ spec:
               memory: 128Mi
       containers:
         - name: consumer-next
-          image: ccr.ccs.tencentyun.com/sumery/consumer-next:1.7.5@sha256:0ae8b393397731bb83b3ee8734a7bc219393f93ce7bfc05eda840a36dd176c36
+          image: ccr.ccs.tencentyun.com/sumery/consumer-next:1.7.7@sha256:b3d610d55e89f0c06f1ff6e13f6d0796e6931a4a3e484a41548b0e580f14fcc1
           securityContext:
             allowPrivilegeEscalation: false
             readOnlyRootFilesystem: true

@@ -38,7 +38,7 @@ spec:
         fsGroupChangePolicy: OnRootMismatch
       containers:
         - name: ecommerce-payment
-          image: ccr.ccs.tencentyun.com/sumery/payment:1.7.5@sha256:58b90d9054e86cba5fd5851be1407ea71649f8d58108e491f3b975938391d5a0
+          image: ccr.ccs.tencentyun.com/sumery/payment:1.7.7@sha256:f68bd8b42f8581a7edbb5a02b7eba5e0fe4e4b34a1a6b78464e8d7fdad7e29d2
           imagePullPolicy: Always
           env:
             # 关闭应用内的 Log 导出器，只保留 Trace 和 Metric。
