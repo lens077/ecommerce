@@ -19,7 +19,15 @@ description: 本地开发机与集群连哪套基础设施：活地址、配置�
 原 `192.168.3.x` 那套 dev 集群已于 2026-09-15 前删除，本文不再记录它。
 
 **本机 Mac 不在机房 LAN 时走 remote-dev**（Pangolin resource → node4/node5 newt → K8s Gateway 或 node service）；
-机房 LAN 开发机才直连 VIP 并用 `*.dev.test`。
+机房 LAN 开发机才直连 VIP 并用 `*.dev.test`。两条路解决的是不同问题，别混：
+
+| 路 | 解决什么 | 在哪生效 | 实测 2026-09-15 |
+|---|---|---|---|
+| remote-dev（Pangolin 资源） | **L3 可达**：Mac 到不了 `10.10.31.x` VIP，把 HTTP 与 raw TCP（Consul、Dragonfly、PG、Kafka）经公网域名穿出来 | 任何能上公网的机器 | consul-dev 200、redis-dev:30005 TLS 握手、node1:30001 / 30004 TCP 全通 |
+| `*.dev.test` split DNS（`/etc/resolver/dev.test → 10.0.0.1` dnsmasq） | **通配解析**：`/etc/hosts` 不支持 `*.dev.test`，dnsmasq 应答整个后缀到 VIP | 只有机房 LAN（`10.0.0.1` 与 VIP 都在那边） | 本机 `10.0.0.1` 不可达，`shop.dev.test` 解析为空——这条路在机房外是死的，属预期 |
+
+Mac 上 launchd 跑的 `newt`（`net.pangolin.newt`）是 **Pangolin 站点连接器**，把本机 `127.0.0.1` 的服务暴露给 Pangolin 用，
+不给 Mac 增加任何到 `10.10.x` 的路由；它连不上集群是正常的，不要拿它排查 remote-dev。
 
 | 组件 | remote-dev（Mac 默认） | 机房 LAN | 从 Pod 连 | 备注 |
 |---|---|---|---|---|
@@ -150,8 +158,9 @@ sudo security add-trusted-cert -d -r trustRoot -k /Library/Keychains/System.keyc
 
 原来每个后端服务 `deploy/overlays/dev/` 里的 `httproute.yaml` + `cnp-direct.yaml`（`<svc>.dev.test` 绕过 control-tower 网关直达 Service）
 随 dev 层一并从清单删除，helm 侧 `directAccess` 模板也删了。调后端一律经网关：`https://gateway.apikv.com`（LAN：`gateway.dev.test`）。
-〔实测 2026-09-15〕集群里仍残留 10 条 `ecommerce-<svc>-direct` HTTPRoute 与同名 CNP（apply 不带 prune），其中 cart / search 两条还挂着
-`cart-api.apikv.com` / `search.apikv.com`；待确认无人使用后整体删除。
+线上残留的 10 条 `ecommerce-<svc>-direct` HTTPRoute 已于 2026-09-15 删除（`ecommerce` ns 从未有过 CNP，prod 的 zero-trust 是关着的）；
+`cart-api.apikv.com` / `search.apikv.com` 这两个 Pangolin 资源在网关侧已无路由，代码零引用，可在 Pangolin 里一并删掉。
+删除后 `helm template … -f values-prod.yaml | kubectl diff` 零输出，仓库 prod 渲染与线上无漂移〔实测 2026-09-15〕。
 
 ### 新增一个 `*.dev.test` 域名
 
