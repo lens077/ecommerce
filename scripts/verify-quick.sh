@@ -15,7 +15,7 @@
 # 注意:这是「最便宜的适用验证」入口,不替代按需锚点——
 #   改了 .service-matrix.yaml 仍要单独跑 backend/structcheck(已含在 -short 全量里),
 #   改了 context/ 或 AGENTS.md 要跑 scripts/verify-context.sh。
-# 部署清单 parity(helm/ 与裸 manifest 渲染同一套对象)也在这里并行跑:缺 helm/yq 直接红,不跳过。
+# 部署清单 parity(helm/ 与裸 manifest 渲染同一套对象)与晋级脚本回归也在这里并行跑:缺 helm/yq 直接红,不跳过。
 # 敏感数据扫描与前后端并行执行，只打印 path:line:kind，不把疑似值带进日志。
 set -uo pipefail
 
@@ -41,6 +41,9 @@ run_frontend() {
 
 run_parity() {
   scripts/verify-deploy-parity.sh
+  # 晋级脚本对真实清单跑一遍 plan(不写文件):parity 绿不代表 CI 回写能过——1.7.6 因清单里
+  # 同镜像出现两处而在 detect 阶段红,本地 parity 全绿,唯一能拦住它的就是这个 2s 的回归。
+  python3 scripts/test-promote-release.py
 }
 
 run_secrets() {
@@ -99,7 +102,7 @@ notices_rc=0; wait "$notices_pid" || notices_rc=$?
 report "notices(THIRD_PARTY_NOTICES.md 新鲜度)" "$notices_rc" "$logdir/notices.log"
 [ "$notices_rc" = 0 ] || overall=1
 parity_rc=0; wait "$parity_pid" || parity_rc=$?
-report "deploy-parity(helm ≡ 裸 manifest)" "$parity_rc" "$logdir/parity.log"
+report "deploy-parity(helm ≡ 裸 manifest + promote 回归)" "$parity_rc" "$logdir/parity.log"
 [ "$parity_rc" = 0 ] || overall=1
 
 exit "$overall"

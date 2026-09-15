@@ -272,6 +272,19 @@ git push github <X.Y.Z>      # ⚠️ 必须推 github 远端——Actions 在�
 main 上；**agent 需要触发 CI 验证或部署时，一律走打 tag**，并按上表选择递增位；
 镜像会同时带 `X.Y.Z` 与 `sha-<7>` 双标，`helm/values.yaml` 回写用版本号。
 
+**打 tag 前必跑（2026-09-15 起）**——一轮 CI 12–40 分钟，tag 又不可移动，本地能拦的先拦：
+
+```bash
+scripts/verify-quick.sh            # 含 parity + 晋级脚本回归(test-promote-release.py):清单改动会不会让 CI 回写红
+scripts/verify-release-local.sh    # 按 tag 以来的改动,用 CI 同样的 Dockerfile/context 真 docker build 一次
+```
+
+三次真实返工各对应一条（1.7.0 / 1.7.6 / 1.7.7，见 evolution-log 2026-09-15）：
+
+1. **改了任一 Dockerfile 或它的输入（workspace 包、go.mod、api/pkg）→ 本地 docker build**。`pnpm build` / `go build` 绿不算数——它们跑在本地目录上，`node_modules` 本来就在，只有 COPY 才会暴露漏拷。
+2. **改了部署清单 → 跑 verify-quick**，不要只跑 parity。parity 证明两份清单等价，不证明 CI 的回写脚本认得它。
+3. **加了 init 容器 / 卷 → 模拟时挂载点属主与集群一致**：`docker run --user 1001:1001 --read-only --tmpfs /mnt:uid=0,gid=1001,mode=2775 …`。emptyDir 挂载点属 root，`uid=1001` 的 tmpfs 会把 `cp -a`/`chown` 这类只在根目录上失败的错误藏起来。
+
 ### 两个远端的 CI 职责切分（2026-09-02 起）
 
 | 远端 | 触发 | 跑什么 | 不跑什么 |
