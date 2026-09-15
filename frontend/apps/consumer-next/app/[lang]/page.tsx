@@ -6,9 +6,9 @@
  * 视觉 token 与演示数据共用 @ecommerce/lantern;样式在 src/home/home.css。
  *
  * 渲染策略:demo 数据是构建期常量,页面整页静态(构建时预渲染 /zh 与 /en,
- * 根路径 / 由 next.config 的 rewrite 落到 /zh)。不能设 revalidate——线上 Pod 的
- * `.next/server/app` 只读,只有 app/zh、app/en 两个子目录挂了可写卷;首页产物
- * `app/zh.html` 不在其中。ListProduct 接通后改 ISR 时要同时改卷挂载。
+ * 根路径 / 由 next.config 的 rewrite 落到 /zh)。ListProduct 接通后可直接加 `revalidate`:
+ * 自 2026-09-15 起线上 `.next/server/app` 整目录是 init 容器拷贝后的可写卷(此前只挂
+ * app/zh、app/en 两个子目录,首页产物 app/zh.html 写不进去)。
  *
  * 客户端 JS 只有三个岛:灯阵入视点亮、顶栏搜索(RPC 客户端按需加载)、登录态。
  */

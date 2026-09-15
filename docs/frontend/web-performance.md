@@ -64,8 +64,8 @@ TBT 与 CLS 合计 55 分已拿满，丢分全在「多久能看到东西」。�
 1. **workspace 包的 `node_modules` 要单独 COPY**：consumer-next Dockerfile 只拷了 `/workspace/node_modules` 与 `apps/consumer-next/node_modules`，`packages/lantern/node_modules`（react 符号链接）没带，CI 里 tsc 报 `Cannot find module 'react'`。本地能过是因为目录本来就在。
 2. **静态页里的 `<link rel="preload">` 会被丢掉**：在服务端组件手写 `<link>`、以及在客户端组件里调 `ReactDOM.preload()`，最终 HTML 都没有；`next/font/local` 才会正确输出 preload 并生成 size-adjust 回退。
 3. **字体子集不要按「文件里出现过的字符」采集**：第一版把两种语言全部文案塞进 700 字重，单个子集 65 KB，线上 LCP 3.5 s；按渲染槽位列出后 19 KB，LCP 1.4 s。
-4. **首页不能设 `revalidate`**：线上 Pod 的 `.next/server/app` 只读，只有 `app/zh`、`app/en` 两个子目录挂了可写卷，首页产物 `app/zh.html` 不在其中。ListProduct 接通改 ISR 时要同时改卷挂载。
-5. **调度死锁**：node3 带 `workload` 污点 + pod 反亲和 + 拓扑偏差 `maxSkew: 1` 叠加，consumer-next 新 Pod 无节点可去；靠删旧 Pod 让位，`/` 中断约 10 s。只要 node3 再被污点，consumer-next 就只能跑 1 副本。
+4. **首页当时不能设 `revalidate`**：线上 Pod 的 `.next/server/app` 只读，只有 `app/zh`、`app/en` 两个子目录挂了可写卷，首页产物 `app/zh.html` 不在其中。2026-09-15 已改为 init 容器把镜像里的 `.next/server/app` 拷进 emptyDir 再挂回同一路径，整目录可写，ISR 不再受限。
+5. **调度死锁**：node3 带 `workload` 污点 + required pod 反亲和 + suite-wide 硬 spread 叠加，consumer-next 新 Pod 无节点可去；靠删旧 Pod 让位，`/` 中断约 10 s。2026-09-15 起反亲和降为 preferred（structcheck 门禁同步，见 evolution-log 同日条目），硬 spread 不动。
 6. **Lighthouse 本机测线上有抖动**：Chrome for Testing 偶发把观测首绘拖到 ~2.3 s（性能 91–94），真实 Chromium 五次 236–332 ms。判断站点是否退化以 Playwright 真实浏览器读 `performance` 条目为准，不以单次 Lighthouse 为准。
 7. **发布 tag 不可移动**：三次 CI 红都不是代码（GitHub 下载 504、proxy.golang.org 流错误），处理方式是 `gh run rerun --failed`；只有 Dockerfile 那次才切新号。
 

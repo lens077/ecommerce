@@ -852,7 +852,7 @@ cfg.GetServiceAddr("inventory-service") // 从 K8s DNS 解析
 
 ### 11.6 首页性能与 SSR 迁移
 
-首页 `/` 于 2026-09-14 从 consumer SPA 迁到 consumer-next 整页静态渲染（`/zh`、`/en` 构建期预渲染，`/` 经 rewrite 落到 `/zh`；HTTPRoute 以 `/` Exact 抢过 frontend 的 PathPrefix）。动因是 PageSpeed 移动端 61 / 桌面 88：丢分全在 FCP / LCP / Speed Index，TBT 与 CLS 满分——瓶颈是首屏字节量（162 KB gzip 的阻塞 CSS 全是 `@fontsource` 的 303 条 `@font-face`、`await import("./bootstrap")` 造成的第二波 45 个 chunk、`import * as icons` 带进整套 lucide），不是 JS 执行。迁移后线上移动端性能 / SEO / 最佳做法 / 无障碍 100、智能体浏览 3/3〔实测 2026-09-15〕。**首页字体是按渲染槽位枚举的 19 KB 子集**（`scripts/subset-home-fonts.sh`），不再走 unicode-range 切片；**首页不能设 `revalidate`**（线上 `.next/server/app` 只读、只挂 `app/zh`、`app/en` 两个可写卷）。根因表、路线 A/B 取舍、实现要点、七个坑与 SPA 页仍待做的四项见 [`docs/frontend/web-performance.md`](frontend/web-performance.md)。
+首页 `/` 于 2026-09-14 从 consumer SPA 迁到 consumer-next 整页静态渲染（`/zh`、`/en` 构建期预渲染，`/` 经 rewrite 落到 `/zh`；HTTPRoute 以 `/` Exact 抢过 frontend 的 PathPrefix）。动因是 PageSpeed 移动端 61 / 桌面 88：丢分全在 FCP / LCP / Speed Index，TBT 与 CLS 满分——瓶颈是首屏字节量（162 KB gzip 的阻塞 CSS 全是 `@fontsource` 的 303 条 `@font-face`、`await import("./bootstrap")` 造成的第二波 45 个 chunk、`import * as icons` 带进整套 lucide），不是 JS 执行。迁移后线上移动端性能 / SEO / 最佳做法 / 无障碍 100、智能体浏览 3/3〔实测 2026-09-15〕。**首页字体是按渲染槽位枚举的 19 KB 子集**（`scripts/subset-home-fonts.sh`），不再走 unicode-range 切片；首页目前整页静态；`.next/server/app` 自 2026-09-15 起经 init 容器拷贝为可写卷，ListProduct 接通后可直接加 `revalidate`。根因表、路线 A/B 取舍、实现要点、七个坑与 SPA 页仍待做的四项见 [`docs/frontend/web-performance.md`](frontend/web-performance.md)。
 
 ## 12. 实施路线图
 

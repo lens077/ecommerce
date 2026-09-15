@@ -1,7 +1,10 @@
 import { BrandMark } from "@ecommerce/lantern";
 import type { HomeCopy } from "./copy";
 
-/** 页脚(服务端渲染)。链接目标与 SPA Footer 一致:目前均为占位 `#`。 */
+/**
+ * 页脚(服务端渲染)。栏目条目目前没有落地页,渲染成纯文本而不是 `href="#"`——
+ * 假链接对爬虫和读屏都是噪音;等页面存在时再换成 <a>。只有 robots / llms.txt 是真实目标。
+ */
 export function SiteFooter({ copy }: { copy: HomeCopy }) {
   const year = new Date().getFullYear();
   const cols = [
@@ -36,9 +39,7 @@ export function SiteFooter({ copy }: { copy: HomeCopy }) {
               <h3>{col.title}</h3>
               <ul>
                 {col.items.map((item) => (
-                  <li key={item}>
-                    <a href="#">{item}</a>
-                  </li>
+                  <li key={item}>{item}</li>
                 ))}
               </ul>
             </div>
@@ -47,7 +48,8 @@ export function SiteFooter({ copy }: { copy: HomeCopy }) {
         <div className="footer-bottom">
           <p>{copy.footer.copyright(year)}</p>
           <p>
-            <a href="#">{copy.footer.sitemap}</a> · <a href="#">{copy.footer.icp}</a>
+            <a href="/robots.txt">robots.txt</a> · <a href="/llms.txt">llms.txt</a> ·{" "}
+            {copy.footer.icp}
           </p>
         </div>
       </div>
