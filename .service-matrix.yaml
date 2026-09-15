@@ -98,7 +98,7 @@ externals:
       outbox-relay 已于 2026-09-03 退役，当前不得视为运行工作负载。其余组件指向
       node1:30001，ssl_mode=verify-ca（经隧道以 IP 连接，证书主机名对不上）。
       **集群内 CNPG 已 hibernate**（数据保留，pod 归零）。
-      **Silo 入口已建**：https://node3-minio.apikv.com（Pangolin resourceId 29，
+      **Silo 入口已建**：https://silo-api.apikv.com（Pangolin resourceId 29，
       tlsServerName=sss.pigsty，sso 关闭）。
       **集群内可观测已整体删除**（含 Helm release 与 PVC，回收约 23Gi）：
       grafana/jaeger/loki/vl-victoria-logs/vm-single/fluent-bit/otel-collector 全删，
