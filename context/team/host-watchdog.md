@@ -99,7 +99,7 @@ cd infrastructure/host-watchdog
 |---|---|---|
 | node1 | 14 个容器 + `docker.service` + 2 个本机 HTTP 端点 + Pangolin 隧道站点 + 磁盘 | 每 5 分钟；实测 2026-09-01 |
 | node2 | 11 个容器（Harbor 全家桶 + gorse + MinIO + nginx/redis）+ `docker.service`/`fail2ban.service` + 3 个本机 HTTP 端点 + 磁盘 | 每 5 分钟；实测 2026-09-02 |
-| node3 | 5 个容器（gatus/ecommerce-gatus/otelcol/cdc-connect/cdc-elasticsearch）+ `docker.service` + 2 个本机 HTTP 端点 + 磁盘 | 每 5 分钟；实测 2026-09-15（bugsink/healthchecks 同日迁入 k8s，名单已同步删掉，旧 env 备份 `watchdog.env.bak-20260915`） |
+| node3 | 3 个容器（gatus/ecommerce-gatus/otelcol）+ `docker.service` + 磁盘；`HTTP_CHECKS` 已清空 | 每 5 分钟；实测 2026-09-15（bugsink/healthchecks 同日迁入 k8s，cdc-connect/cdc-elasticsearch 同日删除，名单已同步；无 env 备份） |
 
 node3 的覆盖对象里有 `gatus`、`ecommerce-gatus` 与 `otelcol`——**探针与采集器本身**。
 它们挂掉的表现是「所有告警都安静了」，与「一切正常」在信号上完全一致，
@@ -117,7 +117,7 @@ node2 的 Harbor 与 MinIO 是 TLS-only，实测出一个两难：直接探
 
 配套的期望状态码用**逗号**分隔（`200,401`）：`HTTP_CHECKS` 整体按空格分词，
 写成 `200 401` 会被拆成两个 item，每轮产生两条「格式错误」误报——本次踩过。
-要鉴权的端点返回 `401` 恰恰证明进程活着（node3 的 Elasticsearch 即用 `200,401`），
+要鉴权的端点返回 `401` 恰恰证明进程活着（node3 时代的 Elasticsearch 即用 `200,401`，现在 k8s 侧 ops/gatus 的 `elasticsearch` 探针沿用同一判据），
 比强行找一个匿名 200 端点更可靠。
 
 ## 相关

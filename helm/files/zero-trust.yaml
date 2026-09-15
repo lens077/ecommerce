@@ -260,10 +260,13 @@ specs:
       - *config_center
       - *consul
       - *otlp
-      - toFQDNs:
-          - matchName: es.apikv.com
+      # 2026-09-15 起 ES 在集群内 elasticsearch 命名空间(StatefulSet elasticsearch),不再经 Pangolin es.apikv.com
+      - toEndpoints:
+          - matchLabels:
+              k8s:io.kubernetes.pod.namespace: elasticsearch
+              app: elasticsearch
         toPorts:
-          - ports: [{ port: "443", protocol: TCP }]
+          - ports: [{ port: "9200", protocol: TCP }]
   - description: "product: gateway-only ingress; Postgres, Dragonfly and Gorse dependencies"
     endpointSelector:
       matchLabels:

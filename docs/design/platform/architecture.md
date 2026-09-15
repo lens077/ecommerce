@@ -26,7 +26,7 @@
 | 订单服务（Order Service）     | 	OrderGroup/MerchantOrder/OrderLine、订单状态机、内置 Saga Process Manager  | 	Go + PostgreSQL + Kafka（目标态；领域事实线未接线） | 	订单创建 / 取消 / 修改；同步编排 Catalog 价格快照、Inventory 预占与 PaymentIntent 创建，失败自动逆向补偿；阶段性终态经 Outbox 发布 Kafka 事件；`OrderReadyForFulfillment` 触发独立 Fulfillment 域 |
 | 支付服务（Payment Service）   | 	PaymentIntent/Attempt/Authorization/Capture/Refund 与 PaymentPort 渠道抽象       | 	Go + PostgreSQL + Redis    | 	支付宝、微信支付 SDK 适配与聚合；支付单创建、支付状态同步、退款申请与处理；平台与商家对账管理；支付流水记录留存                      |
 | 库存服务（Inventory Service） | 	库存全生命周期管理、库存操作原子化、库存预警   | 	Go + PostgreSQL + Kafka（目标态；领域事实线未接线）            | 	分布式库存状态机管控；库存预占、扣减、释放、调整；库存流水记录；库存不足预警事件推送（正确性锚定 PG 行锁/CAS，缓存仅可丢数据）                       |
-| 搜索投影（行投影线，非事件消费者） | 商品全文检索、多维度筛选、排序推荐 | Elasticsearch 9.4.5 + IK（node3）；运行时已切流（2026-09-03） | `SearchCatalog` 是单 provider 深度模块边界；策展投影唯一定义是 PG 表 `products.search_catalog`（trigger 维护），经 Debezium CDC → Kafka → Elasticsearch Sink 搬运，可从 PostgreSQL 全量重建；自写 indexer 已删除，Meilisearch 运行资源已于 2026-09-04 完整退役 |
+| 搜索投影（行投影线，非事件消费者） | 商品全文检索、多维度筛选、排序推荐 | Elasticsearch 9.4.5 + IK（k8s `elasticsearch` 命名空间，2026-09-15 自 node3 迁入）；运行时已切流（2026-09-03） | `SearchCatalog` 是单 provider 深度模块边界；策展投影唯一定义是 PG 表 `products.search_catalog`（trigger 维护），经 Debezium CDC → Kafka → Elasticsearch Sink 搬运，可从 PostgreSQL 全量重建；自写 indexer 已删除，Meilisearch 运行资源已于 2026-09-04 完整退役 |
 
 ### 支撑微服务
 

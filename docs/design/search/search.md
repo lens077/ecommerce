@@ -1,6 +1,6 @@
 # 搜索服务设计（CQRS 架构）
 
-> **状态边界（2026-09-04 复验）**：search 服务已切到 Elasticsearch。`products.search_catalog` 的表、trigger、publication、Debezium table include、Kafka topic、Sink 映射、strict mapping 和稳定 alias 均已运行；search Pod 通过 `ecommerce_catalog_products` 查询，增量改价/删除/还原与网关查询已经验收。NATS JetStream、自写 relay 和 `tools/search-indexer` 已从代码与集群退役，不再承担搜索写入。Meilisearch 运行资源已于 2026-09-04 完整退役。重建、offset 恢复、积压判断、Sink fail-stop/原 offset 重放与 alias 回退的唯一操作入口是 pipeline 仓 `deploy/docker-node3/RUNBOOK.md`。拓扑看 [`.service-matrix.yaml`](../../../.service-matrix.yaml)，进度看 [`TODO.md`](../../../TODO.md)，分线判据看 [`row-projection-vs-domain-event.md`](../../../context/project/ecommerce/events/experience/row-projection-vs-domain-event.md)。
+> **状态边界（2026-09-15 复验）**：search 服务已切到 Elasticsearch，且 2026-09-15 起 Elasticsearch / Kafka / Kafka Connect 全部运行在 k8s 集群内（`elasticsearch` / `kafka` 命名空间，清单在 kubernetes 仓 `components/elasticsearch`、`components/kafka/cdc`），node3 的 Docker/Pigsty 副本与 Pangolin `es.apikv.com` 已删除；search 经 Config Center `search.catalog.endpoint = http://elasticsearch.elasticsearch.svc.cluster.local:9200` 直连。`products.search_catalog` 的表、trigger、publication、Debezium table include、Kafka topic、Sink 映射、strict mapping 和稳定 alias 均已运行；search Pod 通过 `ecommerce_catalog_products` 查询，增量改价/删除/还原与网关查询已经验收。NATS JetStream、自写 relay 和 `tools/search-indexer` 已从代码与集群退役，不再承担搜索写入。Meilisearch 运行资源已于 2026-09-04 完整退役。重建、offset 恢复、积压判断、Sink fail-stop/原 offset 重放与 alias 回退的唯一操作入口是 pipeline 仓 `deploy/docker-node3/RUNBOOK.md`。拓扑看 [`.service-matrix.yaml`](../../../.service-matrix.yaml)，进度看 [`TODO.md`](../../../TODO.md)，分线判据看 [`row-projection-vs-domain-event.md`](../../../context/project/ecommerce/events/experience/row-projection-vs-domain-event.md)。
 
 搜索服务采用 CQRS。PostgreSQL 保存商品真相，Elasticsearch 只保存可从 PostgreSQL 重建的只读投影。搜索不可成为价格、库存或交易状态的事实来源。
 
@@ -20,7 +20,7 @@
 | 查询 provider | [`esCatalog`](../../../backend/services/search/internal/data/catalog.go) | 当前唯一生产 provider；这是单实现 deep-module boundary，不是 capability seam |
 | Elasticsearch 适配层 | [`backend/pkg/searchindex`](../../../backend/pkg/searchindex/) | 拥有 SDK、HTTP 请求、mapping、alias 与读路径细节；保留 `Reindex` 库函数作切流前止血用 |
 | 策展投影定义 | `products.search_catalog` 表（[`00005_search_catalog.sql`](../../../backend/services/product/internal/data/migrations/00005_search_catalog.sql)） | 投影 = PG 行的函数；trigger 维护，任何写入 PG 的路径自动覆盖 |
-| 策展投影搬运 | Debezium → Kafka → Elasticsearch Sink（同级仓 `postgres-kafka-es-streaming-pipeline`，node3 运行中） | 只搬运不定义；幂等由 `_id` 覆盖写 + offset external version 承担 |
+| 策展投影搬运 | Debezium → Strimzi Kafka → Elasticsearch Sink（集群内 `kafka` 命名空间；connector 配置与同级仓 `postgres-kafka-es-streaming-pipeline` 逐字段对齐） | 只搬运不定义；幂等由 `_id` 覆盖写 + offset external version 承担 |
 | 全量重建 | pipeline 仓 reindex Job（版本化索引 + alias 原子切换） | 与实时 Sink 分开执行：暂停 Sink → 重建 → 校验 → 切 alias → 恢复 Sink → lag 归零 |
 | 已删除（2026-09-03） | `tools/search-indexer`、`tools/outbox-relay`、`tools/cdc-demo`、`pkg/outbox/{relay,stream}.go` | 只承载过搜索投影；`pkg/outbox` 只保留 `Insert`，留给订单域事件；relay 不重写成 Kafka 版 |
 | 查询入口 | Search RPC → repository → `SearchCatalog` | 请求路径只读稳定 alias，不回查 PostgreSQL，不感知搬运层 |
@@ -147,7 +147,7 @@ search 服务使用 `search.catalog`：
 - 凭据只进入 Config Center、Secret 或本地环境，不进入仓库。
 - `search.catalog` 变化只告警、不热建客户端；修改端点、凭据或 alias 后需要滚动重启。
 
-网络拓扑阻断已于 2026-09-02 解除：Elasticsearch 本机仍只监听 node3 回环地址，Pod 经受控隧道端点 `https://es.apikv.com`（Pangolin rid 47 → node3 newt → `127.0.0.1:9200`，TLS 在 node1 Traefik 终止，SSO off）访问，正反凭据与 Pod 内可达性均已实测（2026-09-03）。search 服务的 key 实测为 `read + view_index_metadata`，`write`/`manage`/`monitor` 均为否，够 readiness 用；Sink 侧写 key 由 pipeline 仓管理。2026-09-04 重建 search Pod 后，`/healthz` 深检与真实 ConnectRPC 查询均通过。
+2026-09-15 起 search Pod 直连集群内 `elasticsearch.elasticsearch.svc.cluster.local:9200`（仅 ClusterIP，CiliumNetworkPolicy 只放行该 egress；此前 2026-09-02～09-14 经 Pangolin `https://es.apikv.com` 回 node3，已退役）。search 的 API key（Secret `ecommerce/search-k8s-api-key`）权限为 catalog 索引 `read + view_index_metadata` + cluster `monitor`——**`monitor` 不能省**：search 启动时先打 `GET /` 做集群信息深检，缺它就 403 起不来（2026-09-15 实测）；Sink 侧用户 `ecommerce_cdc_sink` 由 kubernetes 仓 `components/elasticsearch` README 记录。Sink 侧写 key 由 pipeline 仓管理。2026-09-04 重建 search Pod 后，`/healthz` 深检与真实 ConnectRPC 查询均通过。
 
 ## 能力状态
 
@@ -164,8 +164,8 @@ search 服务使用 `search.catalog`：
 | 类目、品牌、价格区间、属性 Facet | 未实现 | 需先扩展 RPC 契约、投影表列、mapping 与查询语义 |
 | 价格、销量、新品等显式排序 | 未实现 | RPC 当前无排序参数 |
 | 补全、热门词、同义词、拼音与 typo 策略 | 未实现 | IK 不能单独解决「苹果手机→Apple iPhone」等归一化问题 |
-| Connect 链路告警（slot 位点差、task 状态、sink lag） | 已上线〔实测 2026-09-06〕 | node3 vmalert `ecommerce-cdc.yml` 12 条 + `cdc-connect-exporter`（按 task 暴露 REST 状态）；暂停 Source 触发测试 ~3 分钟到达 Alertmanager。源：pipeline 仓 `deploy/docker-node3/monitoring/` |
-| 生产容量与 HA | 未验收 | `replicas=0`、node3 单机同时承载 PG/ES/Kafka/Connect/观测；node3 有序重启演练已通过（[报告](../../reports/2026-09-06-node3-reboot-drill.md)），断电/崩溃恢复与容量仍无证据 |
+| Connect 链路告警（slot 位点差、task 状态、sink lag） | 部分〔2026-09-15 迁移后重排〕 | 复制槽 5 条仍在 node3 vmalert `ecommerce-cdc.yml`（pg_exporter 数据源未变）；Connect task 级状态改由 k8s `ops/gatus` 的 `cdc-source-task` / `cdc-sink-task` 探针（同时看 connector 与 task 两级，ntfy 告警）承担；**sink lag 告警暂缺**（node3 kafka_exporter 随 kf-main 删除，Strimzi 侧尚未接 kafka-exporter → node3 VM），登记在 TODO |
+| 生产容量与 HA | 未验收 | ES/Kafka/Connect 均为 k8s 单副本、`replicas=0`、openebs-lvm 本地盘（Pod 钉死在一个节点，节点没了数据要重快照）；node3 只剩 PG。node3 有序重启演练（[报告](../../reports/2026-09-06-node3-reboot-drill.md)）的 CDC 段已改为验 k8s connector 重新接槽，尚未重跑 |
 
 ## 运行时切流证据
 

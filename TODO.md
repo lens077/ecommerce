@@ -25,6 +25,7 @@ todo-spec: 1
 
 ## 一、全局优先级视图
 
+2026-09-15 **CDC 链切流并删 node3 副本**：search 的 Config Center `search/pre/bootstrap.yaml` v7 改指集群内 ES（`elasticsearch.elasticsearch.svc:9200` + 只读 API key，index 仍 `ecommerce_catalog_products`）；k8s connector 按 pipeline 契约重建为 `ecommerce-postgres-source`/`ecommerce-elasticsearch-sink`（slot/topic 前缀/索引名统一 `ecommerce_cdc`/`ecommerce_*`，7 topic + DLQ，`_k8s` 全部去掉），重快照 7/13/7/21 与旧 ES 一致，插入/改价/删除 8s 内到达，Connect 重启后 RUNNING 且槽 active。node3：Pigsty `kafka-rm.yml`/`minio-rm.yml` 删 kf-main 与 Silo（含数据、包），`docker rm -v` 删 cdc-connect/cdc-elasticsearch/bugsink/healthchecks 及全部 volume/镜像，`bugsink` 库与角色 drop；watchdog/Gatus/vmalert 规则同步（Connect/sink-lag 告警随 exporter 删除，槽告警保留）。k8s：VM/VL/VT/Alertmanager Helm release + PVC 删除，`ops/gatus` 改探 node3 Pigsty 入库 + 新增 `cdc` 组（task 级）。node3 可用内存 686 → 4376 MB〔实测〕。Pangolin `es.apikv.com`(rid 47) 与 Kafka raw 30004 资源待管理员登录删除。
 2026-09-15 阶段 C 并行 CDC：Strimzi Kafka/KafkaConnect（含 Debezium + ES Sink）与 k8s ES 已 Ready；独立 slot/source/sink RUNNING，四个业务 alias count 13/7/21/7，旧 node3 pipeline 未停。详见 [k8s CDC 迁移阶段记录](docs/reports/2026-09-15-k8s-cdc-migration-stage.md)。
 2026-09-15 阶段 A 观测收缩与 Silo 并行迁移：k8s OTel/Vector 已切 node3 Pigsty，VM/VL/VT/Alertmanager scale 0 且PVC保留；k8s MinIO 1/1、Pangolin rid 29/37 双target，node3 Silo stop/disable，数据目录保留；新增 Silo 凭据治理、ES+Kafka/Connect 迁移两条待办。
 **未完成合计 160 项，其中 P0 共 18 项**（计数口径：各分类文件顶层 `- [ ]` 复选框实数；
@@ -198,9 +199,9 @@ CES 巡检告警（CronJob 2m + vmalert firing 闭环）、可观测黑盒探活
 
 | 组件 | 位置 | 状态 |
 |---|---|---|
-| **Kafka 4.3.1 (KRaft)** | node3，经 node1 隧道 `:30004` | **运行中**；CDC 线在用（七张表 topic，其中 `products.search_catalog` 是搜索策展投影），领域事件线零业务接线 |
-| **Elasticsearch 9.4.5 + IK** | node3 容器，经 Pangolin `https://es.apikv.com` | **运行中，已切流**〔实测 2026-09-03〕；alias `ecommerce_catalog_products` → `_v1` 索引 7 文档，由 Sink 写入，lag 0 |
-| **Kafka Connect 4.3.0** | node3 `cdc-connect` | Debezium 3.6.1 source + ES Sink 两 connector RUNNING；**定稿为两条线共用的生产搬运层**（不再称「演示链」），`EventRouter`/`CloudEventsConverter` 已在类路径 |
+| **Kafka 4.3.0 (KRaft)** | k8s `kafka` ns，Strimzi 单节点，仅内部 listener〔2026-09-15 自 node3 迁入〕 | **运行中**；CDC 线在用（七张表 topic，其中 `products.search_catalog` 是搜索策展投影），领域事件线零业务接线 |
+| **Elasticsearch 9.4.5 + IK** | k8s `elasticsearch` ns，仅 ClusterIP〔2026-09-15 自 node3 迁入，`es.apikv.com` 退役〕 | **运行中，已切流**〔实测 2026-09-15〕；alias `ecommerce_catalog_products` → `_v1` 索引 7 文档，由 Sink 写入，插入/改价/删除 8s 内到达 |
+| **Kafka Connect 4.3.0** | k8s `kafka` ns `my-connect-cluster`（清单 kubernetes 仓 `components/kafka/cdc`） | Debezium 3.6.1 source + ES Sink 两 connector RUNNING；**定稿为两条线共用的生产搬运层**（不再称「演示链」），`EventRouter`/`CloudEventsConverter` 已在类路径 |
 | NATS JetStream | — | **已退役**（2026-09-03）：`nats` ns、indexer/relay Deployment 与代码同日删除 |
 | Meilisearch v1.53.1 | — | **已退役**〔实测 2026-09-04〕：Helm release、运行资源、Secret、路由、PVC/PV 与 `search` namespace 均已删除 |
 | search Pod | 集群 `ecommerce` ns | **1/1 Ready**〔2026-09-03〕：新镜像 `search:sha-c364128`，`/healthz` 深检 ES 绿，经网关搜索命中正确 |

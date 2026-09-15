@@ -212,7 +212,7 @@ SSR：`consumer-next` 使用 Next.js 16.4.0-canary.18（本仓 A/B 后精确锁�
 | Consul | 服务注册发现（存量迁移期） | KV 配置已退役；仍在网关选点与服务注册热路径。按 [`docs/TECH.md`](docs/TECH.md) §10.2 定稿迁 K8s Service + CoreDNS（Cilium KPR），开发环境走 Docker Compose 服务名 |
 | Casdoor | OAuth2/OIDC 身份提供方 | control-tower 以机密客户端完成 code 交换；浏览器不再持有 token |
 | Gorse | 推荐引擎 | behavior/product 的外部依赖，使用独立 PostgreSQL/Redis；API key 配置仍有待办 |
-| Elasticsearch | 当前搜索存储（[`docs/TECH.md`](docs/TECH.md)） | node3 运行 9.4.5 + IK；search Pod 经受控入口读取 `ecommerce_catalog_products`，`products.search_catalog` 经 Debezium/Kafka/Sink 写入。mapping、版本化重建、alias 切换/回退与灾备手顺由 pipeline 仓维护 |
+| Elasticsearch | 当前搜索存储（[`docs/TECH.md`](docs/TECH.md)） | k8s 集群内运行 9.4.5 + IK（2026-09-15 自 node3 迁入，仅 ClusterIP）；search Pod 直连读取 `ecommerce_catalog_products`，`products.search_catalog` 经 Debezium/Kafka/Sink 写入。mapping、版本化重建、alias 切换/回退与灾备手顺由 pipeline 仓维护 |
 
 具体端点见 [`.service-matrix.yaml`](.service-matrix.yaml) 的 `externals` 段。凭据只进入 Config Center、OpenBao 与 Kubernetes Secret，**不进入仓库**。
 
@@ -564,7 +564,7 @@ pnpm ready          # vp fmt && vp lint && vp run test -r && vp run build -r
 | **终端与领域覆盖** | merchant/admin 主要是壳；没有独立物流端、仓储端或 WMS。履约并入 order，但领域动作仍待实现 |
 | **服务间调用** | 10 个服务的 `depends_on` 当前全部为空；order→inventory/product/address、payment→order 等只存在于 `depends_on_planned` |
 | **领域事件** | NATS、relay 和 search indexer 已退役；Product/Order 事务内 outbox producer、Debezium Outbox Event Router 路由、franz-go consumer 与 Inbox 尚未接线，order/behavior 仍有进程内路径。Kafka 已承载搜索行投影，但这不等于领域事件已经落地 |
-| **容量与 HA** | 没有固定数据集与 k6 结果；Elasticsearch 已切流，但 mapping 仍为单节点 `replicas=0`。Kafka/Connect 与 PostgreSQL/ES 同处 node3 故障域，搜索灾备手顺尚缺远端故障注入证据；主库、对象存储和备份路径也没有百万或千万级验收结论 |
+| **容量与 HA** | 没有固定数据集与 k6 结果；Elasticsearch 已切流，但 mapping 仍为单节点 `replicas=0`。Kafka/Connect/ES 已迁入 k8s 但都是单副本本地盘，PostgreSQL 仍在 node3 单机，搜索灾备手顺尚缺远端故障注入证据；主库、对象存储和备份路径也没有百万或千万级验收结论 |
 | **安全边界** | gateway 已完成 BFF/JWT/Casbin 与身份头剥离，但业务服务没有统一 workload identity，10 个服务也没有完整默认拒绝 NetworkPolicy；数据级归属校验仍有缺口 |
 | **交付** | ArgoCD 当前零 Application/ApplicationSet；Helm 与运行实况不一致，自动同步、自愈和回滚未闭环 |
 | **可观测性告警** | VM/VL/VT/Grafana/vmalert/Alertmanager 在用，但外部通知与 resolved 演练未闭环 |

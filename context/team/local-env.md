@@ -37,8 +37,8 @@ Mac 上 launchd 跑的 `newt`（`net.pangolin.newt`）是 **Pangolin 站点连�
 | PostgreSQL（业务库 + config schema） | `node1:30001` | 同左 | 同左 | node3 Pigsty，PG 18.6，`sslmode=verify-ca` |
 | Config Center | — | — | `config-center.config-center.svc:30010` | Web `https://config.apikv.com`，API `https://config-api.apikv.com`；跑的是 control-tower 镜像，ns 名是遗留标签 |
 | Casdoor | `https://casdoor.apikv.com` | 同左 | 同左 | 集群外的外部服务 |
-| Elasticsearch | 经 SSH 隧道使用 `127.0.0.1:9200` | 同左 | `https://es.apikv.com` | search 当前读路径；Pod 端使用 ES 自身凭据 |
-| Kafka | `node1:30004` | 同左 | 同左 | SCRAM-SHA-512；搜索行投影已使用，领域事件 producer/consumer 仍为零 |
+| Elasticsearch | `kubectl -n elasticsearch port-forward svc/elasticsearch 9200:9200` | 同左 | `elasticsearch.elasticsearch.svc.cluster.local:9200` | 2026-09-15 起在集群内，仅 ClusterIP；search 只读 alias `ecommerce_catalog_products`，API key 存 `ecommerce/search-k8s-api-key` |
+| Kafka | `kubectl -n kafka port-forward svc/my-cluster-kafka-bootstrap 9092:9092` | 同左 | `my-cluster-kafka-bootstrap.kafka.svc:9092` | 集群内 Strimzi 单节点，仅内部 listener；只跑 CDC topic，领域事件 producer/consumer 仍为零 |
 | node3 观测后端 | `https://node3-{metrics,logs,traces,vmalert,alerts}.apikv.com` | 同左 | 同左 | 已挂 Pangolin SSO（浏览器访问返 302 跳登录；写入路径已放行） |
 | node3 OTLP 入口 | `node3-otlp.apikv.com:443` | 同左 | 同左 | 需 Bearer token，无 token 返 401 |
 

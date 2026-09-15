@@ -21,7 +21,7 @@ log "addresses: $(rs 'ip -4 -o addr show dev ens160 | awk "{print \$4}" | tr "\n
 
 # 2. 逐组件等待 active
 wait_unit() { local u=$1 max=${2:-60}; for _ in $(seq 1 "$max"); do s=$(rs "systemctl is-active $u"); [ "$s" = active ] && { log "unit $u active"; return 0; }; sleep 5; done; log "unit $u NOT active ($s) after $((max*5))s"; return 1; }
-for u in patroni redis-ms-1-6379 redis-ms-1-6380 kafka docker vmetrics vmalert alertmanager cdc-connect-exporter kafka_exporter; do wait_unit "$u" 60; done
+for u in patroni redis-ms-1-6379 redis-ms-1-6380 docker vmetrics vmalert alertmanager; do wait_unit "$u" 60; done  # kafka/cdc-connect-exporter/kafka_exporter 2026-09-15 已随 CDC 链迁入 k8s 删除
 
 # 3. Patroni leader + PG 可写
 for _ in $(seq 1 60); do r=$(rs 'sudo patronictl -c /etc/patroni/patroni.yml list 2>/dev/null | grep -E "Leader" | grep -c running'); [ "$r" = 1 ] && break; sleep 5; done; log "patroni leader running: $r"
@@ -31,13 +31,9 @@ log "slot after reboot: $(rs 'sudo -u postgres psql -d ecommerce -At -F"|" -c "S
 # 4. Redis
 log "redis ping: $(rs 'redis-cli -p 6379 -a "$(sudo grep -m1 -oE "^requirepass .*" /etc/redis/redis-ms-1-6379.conf 2>/dev/null | cut -d" " -f2)" --no-auth-warning ping 2>/dev/null || echo n/a')"
 
-# 5. containers + connect
-for _ in $(seq 1 60); do r=$(rs 'docker ps --format "{{.Names}} {{.Status}}" | grep -c "cdc-.*healthy"'); [ "$r" = 2 ] && break; sleep 5; done; log "cdc containers healthy: $r/2"
-for _ in $(seq 1 60); do r=$(rs 'curl -fsS "http://127.0.0.1:8083/connectors?expand=status" 2>/dev/null | python3 -c "import json,sys; d=json.load(sys.stdin); print(all(d[k][\"status\"][\"connector\"][\"state\"]==\"RUNNING\" and all(t[\"state\"]==\"RUNNING\" for t in d[k][\"status\"][\"tasks\"]) for k in d) and len(d)==2)" 2>/dev/null'); [ "$r" = True ] && break; sleep 5; done
-log "connectors all RUNNING: $r"
-rs 'curl -fsS "http://127.0.0.1:8083/connectors?expand=status" | python3 -c "import json,sys; d=json.load(sys.stdin); [print(\"   \", k, d[k][\"status\"][\"connector\"][\"state\"], [t[\"state\"] for t in d[k][\"status\"][\"tasks\"]]) for k in d]"'
-for _ in $(seq 1 30); do r=$(rs 'sudo -u postgres psql -d ecommerce -At -c "SELECT active FROM pg_replication_slots WHERE slot_name='"'"'ecommerce_cdc'"'"';" 2>/dev/null | head -n1'); [ "$r" = t ] && break; sleep 5; done; log "slot ecommerce_cdc active: $r"
-for _ in $(seq 1 30); do r=$(rs 'curl -s localhost:9308/metrics | grep -E "^kafka_consumergroup_lag\{consumergroup=\"connect-ecommerce-elasticsearch-sink\"" | awk "{s+=\$2} END {print s+0}"'); [ "$r" = 0 ] && break; sleep 5; done; log "sink lag total: $r"
+# 5. CDC 链（2026-09-15 起 Connect/Kafka/ES 在 k8s；node3 重启后只需确认复制槽被 k8s Debezium 重新接上）
+for _ in $(seq 1 30); do r=$(rs 'sudo -u postgres psql -d ecommerce -At -c "SELECT active FROM pg_replication_slots WHERE slot_name='"'"'ecommerce_cdc'"'"';" 2>/dev/null | head -n1'); [ "$r" = t ] && break; sleep 5; done; log "slot ecommerce_cdc active: ${r:-missing}"
+for _ in $(seq 1 30); do r=$(kubectl -n kafka get kafkaconnector -o jsonpath='{range .items[*]}{.status.connectorStatus.connector.state}/{.status.connectorStatus.tasks[0].state} {end}' 2>/dev/null); [ "$r" = "RUNNING/RUNNING RUNNING/RUNNING " ] && break; sleep 5; done; log "k8s connectors (source, sink): ${r:-n/a}"
 
 # 6. alerts seen during outage
 log "alertmanager cdc alerts now: $(rs 'curl -fsS "http://127.0.0.1:9059/api/v2/alerts?filter=category%3D%22cdc%22" | python3 -c "import json,sys; print([(a[\"labels\"][\"alertname\"],a[\"status\"][\"state\"]) for a in json.load(sys.stdin)])"')"
