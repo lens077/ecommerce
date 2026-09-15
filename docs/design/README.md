@@ -23,7 +23,6 @@
 | 目录 | 内容 | 来源 |
 |---|---|---|
 | [platform/architecture.md](platform/architecture.md) | 服务边界、核心/支撑服务规划、领域事件、通信协议 | DESIGN.md §微服务架构核心设计 |
-| [platform/voxel-construction-site.md](platform/voxel-construction-site.md) | 离线 Three.js r160 等轴测体素沙盘：客户端到 Cilium、control-tower 和 Go 微服务的请求治理可视化设计，含物理块清单、四态灯、状态契约、健康聚合器、场景脉冲与视觉提示词；设计稿 `voxel-construction-site-demo.html` | 2026-09-10 WebGL 演示与项目真实链路对照设计 |
 | [platform/production-scale-goal.md](platform/production-scale-goal.md) | 百万/千万级生产化目标、容量模型、现有技术栈边界、证据门禁、P0/P1/P2 与完成定义 | 2026-08-27 用户目标，后续按证据驱动方向修订 |
 | [platform/capacity-balancing.md](platform/capacity-balancing.md) | VPA recommendation、可信 requests、节点重启、Descheduler 准入、容量/故障演练与持续告警 | 2026-08-29 三节点调度审计与 [VPA recommendation-only 发布报告](../reports/2026-08-29-vpa-recommendation-only.md) |
 | [platform/error-handling.md](platform/error-handling.md) | biz→data→service 三层错误分层约定（**全服务通用规范**） | DESIGN.md §错误处理 |

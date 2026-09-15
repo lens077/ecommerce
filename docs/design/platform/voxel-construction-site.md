@@ -1,6 +1,6 @@
 # 电商项目网站全链路 WebGL 设计：体素沙盘与请求导体
 
-> 状态：**设计方案 + 可运行设计稿**（2026-09-10）。设计稿见同目录 [`voxel-construction-site-demo.html`](voxel-construction-site-demo.html)，单文件、Three.js r160、模拟数据。
+> 状态：**设计方案**。
 > 对照的真实链路以 [`docs/TECH.md`](../../TECH.md) §2 与 [`.service-matrix.yaml`](../../../.service-matrix.yaml) 为准。
 > 本文只定「画什么、状态从哪来、请求怎么走、用什么画、长什么样」；组件当前实况不在本文核实，凡依赖实况的条目标「待核实」。进度见 [`docs/todo/前端技术栈与工程化.md`](../../todo/前端技术栈与工程化.md)。
 
@@ -209,7 +209,7 @@ HUD 提供场景按钮，每个场景按真实路由走一条**高亮追踪**脉
 
 ### 7.1 交付形态
 
-- 单页离线文件 `voxel-construction-site-demo.html`，Three.js r160 通过 import map 引入，路径固定为 `three` 与 `three/addons/`。设计稿阶段指向 unpkg 固定版本；S1 把 r160 的 `three.module.js` 与用到的 addons 拷到 `voxel/vendor/`，离线运行不依赖网络。
+- 未完成
 - 不进 `frontend/` pnpm workspace。理由：它是设计文档的配套演示，不参与前端构建与门禁。将来若要嵌入 admin 后台，只需把 `voxel/` 作为模块引入并把数据源指向 `/topology/state`。
 
 ### 7.2 组件造型：按各组件的图标取形
@@ -278,22 +278,6 @@ Scene
 | 目标帧率 | 60 fps；降级线 45 fps |
 | 首屏资源 | Three.js r160 本体 + addons 不超过 1.2 MB 未压缩，无纹理贴图 |
 
-### 7.6 文件清单（S1 拆分目标）
-
-| 文件 | 内容 |
-|---|---|
-| `voxel-construction-site-demo.html` | 页面壳、import map、HUD 骨架；设计稿阶段全部逻辑内联在此 |
-| `voxel/main.js` | 初始化渲染器、composer、控制器、主循环 |
-| `voxel/topology.json` | 台阶、块、机架归属、脊线与母线定义、planned 边；人维护 |
-| `voxel/state.mock.json` | 模拟状态，与真实源同结构 |
-| `voxel/state-source.js` | 数据源抽象：`mock` 与 `live` 两个实现，统一输出 §四 结构，负责过期判定 |
-| `voxel/icons.js` | §7.2 的造型函数表 |
-| `voxel/scene-massif.js` | 阶梯实体、机架、城墙 |
-| `voxel/scene-tracks.js` | 曼哈顿路由、走线几何、支线变色 |
-| `voxel/pulses.js` | 背景脉冲与场景追踪脉冲的调度、中断动画 |
-| `voxel/scenarios.js` | §6.2 场景表与 §6.3 fail-closed 规则 |
-| `voxel/hud.js` | 面板、故障开关、剧本、逐跳说明 |
-| `voxel/vendor/` | Three.js r160 本体与 addons 的离线拷贝 |
 
 ## 八、请求治理设计（真实链路对照）
 
