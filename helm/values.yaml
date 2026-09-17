@@ -1,3 +1,4 @@
+---
 # ecommerce umbrella chart 的 values —— 与 backend/services/<svc>/deploy/(base+overlays) 裸 manifest
 # 是**同一套集群对象的两种写法**,由 scripts/verify-deploy-parity.sh 强制逐字段等价:
 # 这里改了值、裸 manifest 没跟上(或反过来),本地锚点和 CI 的 deploy-consistency 都会红。
@@ -14,143 +15,179 @@
 # 镜像:CI(.github/workflows/backend.yml update-manifests)发版后把 image.tag 同时回写到
 # 这里和裸 manifest。tag 用发布版本号 X.Y.Z(当前值是 CI 切换前的最后一次手工 digest 钉法,
 # 下次发版起统一为版本号)。走 TCR 而不是 GHCR:集群在 LAN 内,拉 ghcr.io 要过代理。
-
-# global 是 Helm 唯一能跨子 chart 传值的键。
-global:
-  # Runtime-only value. scripts/deploy-k8s.sh resolves node1 from ~/.ssh/config,
-  # or callers pass POSTGRES_EGRESS_CIDR / --set-string explicitly.
-  postgresEgressCIDR: ""
-  # 2026-09-15 起环境只有 pre / prod:本文件即 pre 基线,prod 差异在 values-prod.yaml。
-  # 原 dev 集群(192.168.3.x)已删除,dev 层与随之而来的局域网直连(directAccess)一并移除。
-  deploymentMode: pre
-  # 零信任 CNP(helm/files/zero-trust.yaml 里的 ecommerce-api-default-deny)与 otel-auth ExternalSecret
-  # 是否随本 chart 渲染。pre 为 true;prod 首次接管(2026-09-14)只发版不接管策略,在 values-prod.yaml 关掉。
-  networkPolicy:
-    enabled: true
-  otelAuthExternalSecret:
-    enabled: true
-  configSource:
-    enabled: true
-    secretName: ecommerce-config-source-pre
-    mountPath: /etc/ecommerce/config-source
-    runAsUser: 1000
-    runAsGroup: 1000
-    fsGroup: 1000
-  consul:
-    enabled: "false"
-    addr: consul-server.consul.svc:8500
-    scheme: http
-    insecureSkipVerify: "false"
-    # Consul 自 2026-08-18 起开了 ACL(default_policy=deny),不带 token 的失败是**静默的**。
-    # 变量名必须是 CONSUL_HTTP_TOKEN,registry 靠 consul/api 自己兜底读它。
-    tokenSecret: consul-ecommerce-token
-  # 10 个服务当前同一档;VPA(updateMode Off)在采推荐值,采够再按服务分档。
-  resources:
-    requests:
-      cpu: 100m
-      memory: 128Mi
-    limits:
-      cpu: "1"
-      memory: 512Mi
-user:
-  enabled: true
-  replicaCount: 1
-  serviceName: user-identity
-  port: 30001
-  image:
-    repository: ccr.ccs.tencentyun.com/sumery/user
-    tag: 1.7.7@sha256:2eef28b8593045235ec461436903e8ab8cea67fd955601d550a0cfc500f4b028
-search:
-  enabled: true
-  replicaCount: 1
-  serviceName: search-product
-  port: 30002
-  image:
-    repository: ccr.ccs.tencentyun.com/sumery/search
-    tag: 1.7.7@sha256:2e649117a9ca055a6d501035954f334606a052bfe772de7e8c6cf8ae45eda36b
-product:
-  enabled: true
-  replicaCount: 1
-  serviceName: product-service
-  port: 30003
-  image:
-    repository: ccr.ccs.tencentyun.com/sumery/product
-    tag: 1.7.7@sha256:f48d32073078de4d22e73c11386b2e9c2ced0d759a7de737a2ed0a3f7162955b
-order:
-  enabled: true
-  replicaCount: 1
-  serviceName: order-service
-  port: 30004
-  image:
-    repository: ccr.ccs.tencentyun.com/sumery/order
-    tag: 1.7.7@sha256:5051e8e9ad4d718e145055216b8f1c9aa80c46d06a6f62d7e3ad86ffcbff4905
-inventory:
-  enabled: true
-  replicaCount: 1
-  serviceName: inventory-service
-  port: 30005
-  image:
-    repository: ccr.ccs.tencentyun.com/sumery/inventory
-    tag: 1.7.7@sha256:7e34cb24b6414161bf8b5afa7258e5c1e3f403fe4b885428aa6bfdc0132857d9
-cart:
-  enabled: true
-  replicaCount: 1
-  serviceName: cart-service
-  port: 30006
-  image:
-    repository: ccr.ccs.tencentyun.com/sumery/cart
-    tag: sha-4b4afd3
-merchant:
-  enabled: true
-  replicaCount: 1
-  serviceName: merchant-service
-  port: 30007
-  image:
-    repository: ccr.ccs.tencentyun.com/sumery/merchant
-    tag: 1.7.7@sha256:56bdbc75606866a078439f724da406af81252707a284f19a858cd12fcd27c82f
-payment:
-  enabled: true
-  replicaCount: 1
-  serviceName: payment-service
-  port: 30008
-  image:
-    repository: ccr.ccs.tencentyun.com/sumery/payment
-    tag: 1.7.7@sha256:f68bd8b42f8581a7edbb5a02b7eba5e0fe4e4b34a1a6b78464e8d7fdad7e29d2
-address:
-  enabled: true
-  replicaCount: 1
-  serviceName: address-service
-  port: 30009
-  image:
-    repository: ccr.ccs.tencentyun.com/sumery/address
-    tag: 1.7.7@sha256:30c4c93fbb9c6ebd15b93b376832edec2e2236befdf96a44d599479db74f98a8
-behavior:
-  enabled: true
-  replicaCount: 1
-  serviceName: behavior-service
-  port: 30011
-  image:
-    repository: ccr.ccs.tencentyun.com/sumery/behavior
-    tag: 1.7.7@sha256:bbd3752f5bc5c4bbfd432e9c423cabee1ab1c3f18b706d2f1230026d6786324d
-# 前端两个工作负载。裸 manifest 在 frontend/apps/consumer/deploy/pre/ 与
-# frontend/apps/consumer-next/deploy/base/consumer-next.yaml,同样受 parity 门禁约束。
-frontend:
-  enabled: true
-  replicaCount: 1
-  image:
-    repository: ccr.ccs.tencentyun.com/sumery/ecommerce-frontend
-    tag: 1.7.7@sha256:02dea7eb72bf67344c659bb241c9d846d3b2803a14a2b1ec8ebd039e52e6581a
-  # Caddy 监听端口。⚠️ 仓库 Dockerfile 现写 :30080,而线上镜像 sha-bf8dae2 实测监听 :80;
-  # 下次重建镜像前必须先把两者对齐,否则 Service 的 targetPort 会指向一个没人听的口。
-  containerPort: 80
-  servicePort: 30080
-  gatewayURL: http://ecommerce-gateway-service:8080
-consumer-next:
-  enabled: true
-  replicaCount: 2
-  image:
-    repository: ccr.ccs.tencentyun.com/sumery/consumer-next
-    tag: 1.7.7@sha256:b3d610d55e89f0c06f1ff6e13f6d0796e6931a4a3e484a41548b0e580f14fcc1
-  port: 3004
-  gatewayURL: http://ecommerce-gateway-service.ecommerce.svc.cluster.local:8080
-  publicURL: https://shop.dev.test
+{
+  # global 是 Helm 唯一能跨子 chart 传值的键。
+  global: {
+    # Runtime-only value. scripts/deploy-k8s.sh resolves node1 from ~/.ssh/config,
+    # or callers pass POSTGRES_EGRESS_CIDR / --set-string explicitly.
+    postgresEgressCIDR: "",
+    # 2026-09-15 起环境只有 pre / prod:本文件即 pre 基线,prod 差异在 values-prod.yaml。
+    # 原 dev 集群(192.168.3.x)已删除,dev 层与随之而来的局域网直连(directAccess)一并移除。
+    deploymentMode: "pre",
+    # 零信任 CNP(helm/files/zero-trust.yaml 里的 ecommerce-api-default-deny)与 otel-auth ExternalSecret
+    # 是否随本 chart 渲染。pre 为 true;prod 首次接管(2026-09-14)只发版不接管策略,在 values-prod.yaml 关掉。
+    networkPolicy: {
+      enabled: true,
+    },
+    otelAuthExternalSecret: {
+      enabled: true,
+    },
+    configSource: {
+      enabled: true,
+      secretName: "ecommerce-config-source-pre",
+      mountPath: "/etc/ecommerce/config-source",
+      runAsUser: 1000,
+      runAsGroup: 1000,
+      fsGroup: 1000,
+    },
+    consul: {
+      # 布尔而非字符串 "false":模板用 `| quote` 注入 env(K8s 要求字符串),两种写法渲染结果
+      # 都是 "false";但写成字符串时 `{{ if $g.consul.enabled }}` 会恒真——Go 模板只看空/非空,
+      # 非空字符串 "false" 为真。留成字符串等于埋一个「将来有人加条件渲染就静默走错分支」的雷。
+      enabled: false,
+      addr: "consul-server.consul.svc:8500",
+      scheme: "http",
+      insecureSkipVerify: false,
+      # Consul 自 2026-08-18 起开了 ACL(default_policy=deny),不带 token 的失败是**静默的**。
+      # 变量名必须是 CONSUL_HTTP_TOKEN,registry 靠 consul/api 自己兜底读它。
+      tokenSecret: "consul-ecommerce-token",
+    },
+    # 10 个服务当前同一档;VPA(updateMode Off)在采推荐值,采够再按服务分档。
+    resources: {
+      requests: {
+        cpu: "100m",
+        memory: "128Mi",
+      },
+      limits: {
+        cpu: "1",
+        memory: "512Mi",
+      },
+    },
+  },
+  user: {
+    enabled: true,
+    replicaCount: 1,
+    serviceName: "user-identity",
+    port: 30001,
+    image: {
+      repository: "ccr.ccs.tencentyun.com/sumery/user",
+      tag: "1.7.7@sha256:2eef28b8593045235ec461436903e8ab8cea67fd955601d550a0cfc500f4b028",
+    },
+  },
+  search: {
+    enabled: true,
+    replicaCount: 1,
+    serviceName: "search-product",
+    port: 30002,
+    image: {
+      repository: "ccr.ccs.tencentyun.com/sumery/search",
+      tag: "1.7.7@sha256:2e649117a9ca055a6d501035954f334606a052bfe772de7e8c6cf8ae45eda36b",
+    },
+  },
+  product: {
+    enabled: true,
+    replicaCount: 1,
+    serviceName: "product-service",
+    port: 30003,
+    image: {
+      repository: "ccr.ccs.tencentyun.com/sumery/product",
+      tag: "1.7.7@sha256:f48d32073078de4d22e73c11386b2e9c2ced0d759a7de737a2ed0a3f7162955b",
+    },
+  },
+  order: {
+    enabled: true,
+    replicaCount: 1,
+    serviceName: "order-service",
+    port: 30004,
+    image: {
+      repository: "ccr.ccs.tencentyun.com/sumery/order",
+      tag: "1.7.7@sha256:5051e8e9ad4d718e145055216b8f1c9aa80c46d06a6f62d7e3ad86ffcbff4905",
+    },
+  },
+  inventory: {
+    enabled: true,
+    replicaCount: 1,
+    serviceName: "inventory-service",
+    port: 30005,
+    image: {
+      repository: "ccr.ccs.tencentyun.com/sumery/inventory",
+      tag: "1.7.7@sha256:7e34cb24b6414161bf8b5afa7258e5c1e3f403fe4b885428aa6bfdc0132857d9",
+    },
+  },
+  cart: {
+    enabled: true,
+    replicaCount: 1,
+    serviceName: "cart-service",
+    port: 30006,
+    image: {
+      repository: "ccr.ccs.tencentyun.com/sumery/cart",
+      tag: "sha-4b4afd3",
+    },
+  },
+  merchant: {
+    enabled: true,
+    replicaCount: 1,
+    serviceName: "merchant-service",
+    port: 30007,
+    image: {
+      repository: "ccr.ccs.tencentyun.com/sumery/merchant",
+      tag: "1.7.7@sha256:56bdbc75606866a078439f724da406af81252707a284f19a858cd12fcd27c82f",
+    },
+  },
+  payment: {
+    enabled: true,
+    replicaCount: 1,
+    serviceName: "payment-service",
+    port: 30008,
+    image: {
+      repository: "ccr.ccs.tencentyun.com/sumery/payment",
+      tag: "1.7.7@sha256:f68bd8b42f8581a7edbb5a02b7eba5e0fe4e4b34a1a6b78464e8d7fdad7e29d2",
+    },
+  },
+  address: {
+    enabled: true,
+    replicaCount: 1,
+    serviceName: "address-service",
+    port: 30009,
+    image: {
+      repository: "ccr.ccs.tencentyun.com/sumery/address",
+      tag: "1.7.7@sha256:30c4c93fbb9c6ebd15b93b376832edec2e2236befdf96a44d599479db74f98a8",
+    },
+  },
+  behavior: {
+    enabled: true,
+    replicaCount: 1,
+    serviceName: "behavior-service",
+    port: 30011,
+    image: {
+      repository: "ccr.ccs.tencentyun.com/sumery/behavior",
+      tag: "1.7.7@sha256:bbd3752f5bc5c4bbfd432e9c423cabee1ab1c3f18b706d2f1230026d6786324d",
+    },
+  },
+  # 前端两个工作负载。裸 manifest 在 frontend/apps/consumer/deploy/pre/ 与
+  # frontend/apps/consumer-next/deploy/base/consumer-next.yaml,同样受 parity 门禁约束。
+  frontend: {
+    enabled: true,
+    replicaCount: 1,
+    image: {
+      repository: "ccr.ccs.tencentyun.com/sumery/ecommerce-frontend",
+      tag: "1.7.7@sha256:02dea7eb72bf67344c659bb241c9d846d3b2803a14a2b1ec8ebd039e52e6581a",
+    },
+    # Caddy 监听端口。⚠️ 仓库 Dockerfile 现写 :30080,而线上镜像 sha-bf8dae2 实测监听 :80;
+    # 下次重建镜像前必须先把两者对齐,否则 Service 的 targetPort 会指向一个没人听的口。
+    containerPort: 80,
+    servicePort: 30080,
+    gatewayURL: "http://ecommerce-gateway-service:8080",
+  },
+  consumer-next: {
+    enabled: true,
+    replicaCount: 2,
+    image: {
+      repository: "ccr.ccs.tencentyun.com/sumery/consumer-next",
+      tag: "1.7.7@sha256:b3d610d55e89f0c06f1ff6e13f6d0796e6931a4a3e484a41548b0e580f14fcc1",
+    },
+    port: 3004,
+    gatewayURL: "http://ecommerce-gateway-service.ecommerce.svc.cluster.local:8080",
+    publicURL: "https://shop.dev.test",
+  },
+}
