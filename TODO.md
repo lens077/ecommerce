@@ -90,7 +90,7 @@ P0 的判据是**后果**不是紧迫感：「调用会成功但结果是错的�
 | 项目 | 状态 | 缺口 / 明细 |
 |---|---|---|
 | 发布链（tag → CI → 晋级 → 部署） | ✅ | 入口 [PRODUCTION-RELEASE.md](docs/PRODUCTION-RELEASE.md)；打 tag 前本地拦截 `scripts/verify-release-local.sh` |
-| 部署清单双真相源（helm ≡ 裸 manifest） | ✅ | `scripts/verify-deploy-parity.sh` 守 pre/prod 两环境；规则 [deploy-parity.md](context/team/deploy-parity.md) |
+| 部署清单双真相源（helm ≡ 裸 manifest） | ✅ | 语义由 `scripts/verify-deploy-parity.sh` 守 pre/prod 两环境（[deploy-parity.md](context/team/deploy-parity.md)）；格式由 `scripts/verify-kyaml.sh` 守 KYAML，`helm/files/zero-trust.yaml` 豁免（[kyaml-manifests.md](context/team/kyaml-manifests.md)） |
 | 部署环境 | ✅ | 只剩 pre / prod 两层（dev 集群已删，开发走 remote-dev，见 [local-env.md](context/team/local-env.md)） |
 | 两远端 CI 职责 | ✅ | GitLab = 每次 push 的代码门禁；GitHub = 仅发布 tag 的构建/签名/发布链。见 [git-commit.md](context/team/git-commit.md) |
 | CI 遗留缺口 | 🟡 | `update-manifests` 持有能推 main 的 admin PAT；发布 tag 四条纪律在 CI 零校验；镜像缺一次从 digest 拉起的冒烟。见 [供应链](docs/todo/供应链与交付流水线.md) |

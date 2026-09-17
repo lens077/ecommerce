@@ -41,8 +41,11 @@ scripts/verify-deploy-parity.sh pre  # 只比一个环境
 `KUBE_CONTEXT`，不能依赖本机默认 context。prod 暂沿用 `pre` 的运行模式及 selector Secret，
 不凭目录名切换 Config Center。完整手顺见 [PRODUCTION-RELEASE.md](../../docs/PRODUCTION-RELEASE.md)。
 
+两份清单都写 **KYAML**(2026-09-18 起,`scripts/verify-kyaml.sh` 阻断,含一份不可转换的豁免清单)——
+格式规范与豁免理由见 [kyaml-manifests.md](kyaml-manifests.md),本篇只管「两份是否等价」。
+
 三个实付的坑,改模板前先读:
-- `defaultMode: 0400` 这种八进制字面量两侧要写成十进制 `256`:kustomize 按 YAML 1.1 读成 256,yq 按 1.2 读成 400,同一段文本两个解析器两个值。
+- `defaultMode: 0400` 这种八进制字面量两侧要写成十进制 `256`:kustomize 按 YAML 1.1 读成 256,yq 按 1.2 读成 400,同一段文本两个解析器两个值。KYAML 管引号不管进制,这条在 KYAML 下依然成立。
 - 改 env 用 JSON6902 按下标 `replace`(前面加一条 `op: test` 核对 name),**不要用 strategic merge**:kustomize 的 SMP 会把补丁过的项挪到列表最前,env 顺序进 pod template hash,顺序变了就是一次无意义的 rollout,parity 也会红。
 - kustomize 渲染会丢注释;注释只活在源文件里,这正是裸侧保留手写文件的价值,别拿渲染结果回写源文件。
 

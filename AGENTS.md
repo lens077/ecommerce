@@ -1,44 +1,45 @@
 # AGENTS.md — AI 协作入口
 
-> 本文件是所有 AI 编码工具（Claude Code / Codex / Cursor …）的**共同行为基线**。
-> 规范本体在 `context/`，本文件只做索引和硬规则。改规范请改 `context/`，不要改这里的副本。
-> 本文件只写**结构事实与规则**；带日期的运行态（GitOps 通没通、集群实跑什么）看 `TODO.md`「领域状态表」，写在这里会静默过期。
+> 所有 AI 编码工具（Claude Code / Codex / Cursor …）的**共同行为基线**。规范本体在 `context/`，
+> 本文件只做索引和硬规则——改规范请改 `context/`，不要改这里的副本。
+> 这里只写**结构事实与规则**；带日期的运行态（GitOps 通没通、集群实跑什么）看 `TODO.md`「领域状态表」，写在这里会静默过期。
 
 ## 硬规则（不可跳过）
 
-1. **规范与拓扑以真相源为准**：规范的真相源是 `context/`（入口 `context/INDEX.md`），服务拓扑的真相源是 `.service-matrix.yaml`。现搜、推测或记忆与之冲突时以真相源为准；找不到对应知识 ≠ 没有约束，先读 `docs/design/`（入口 docs/design/README.md）/ `TODO.md`，结论沉淀回 `context/`。
+1. **以真相源为准**：规范看 `context/`（入口 `context/INDEX.md`），服务拓扑看 `.service-matrix.yaml`。
+   现搜、推测、记忆与之冲突时以真相源为准；**找不到对应知识 ≠ 没有约束**，先读 `docs/design/`（入口 `docs/design/README.md`）与 `TODO.md`，结论沉淀回 `context/`。
 2. **写/改 proto 前必须先读设计文档**，并为每个字段推断出校验约束。见 `context/team/proto-design.md`。
-3. **提交前先问：这次改动涉及哪个 TODO 项？** 涉及就先更新 `TODO.md`（完成/部分完成/改目标/删除），
-   不涉及就不动它——它只记 TODO 项与状态，做了什么与证据进 `docs/progress-archive/`。
-   提交信息走 Conventional Commits `<type>(<scope>): [:emoji:] <subject>`，commitlint 钩子强制校验
-   （type 限十一类，emoji 须与 type 相符，subject 末尾不加标点）。见 `context/team/git-commit.md`。
-4. **不要把凭据写进仓库**。密码/密钥只存在 Config Center 和本地环境（K8s 里经 Secret 挂载），仓库里只写主机名和端口。Consul KV 已退役不再存配置，Consul 只做注册发现（见 `context/project/ecommerce/config/experience/consul-kv-retired.md`）。
-5. **踩到坑要沉淀**：判断是「模式性教训」还是「一次性 diff」，前者写进 `context/`。见 `context/harness-framework/self-refinement.md`。
-   改动 harness 本身（本文件的硬规则、门禁脚本、structcheck 检查项、CI 门禁）时，
-   还要在 `context/harness-framework/evolution-log/` 当月卷追加一条，**必须写清触发它的具体事故**——
+3. **提交前先问：这次改动涉及哪个 TODO 项？** 涉及就先更新 `TODO.md`（完成/部分完成/改目标/删除），不涉及就不动它——
+   它只记 TODO 项与状态，做了什么与证据进 `docs/progress-archive/`。提交信息走 Conventional Commits
+   `<type>(<scope>): [:emoji:] <subject>`，commitlint 钩子强制校验（type 限十一类，emoji 须与 type 相符，subject 末尾不加标点）。见 `context/team/git-commit.md`。
+4. **不要把凭据写进仓库**。密码/密钥只存在 Config Center 和本地环境（K8s 里经 Secret 挂载），仓库里只写主机名和端口。
+   Consul KV 已退役不再存配置，Consul 只做注册发现（见 `context/project/ecommerce/config/experience/consul-kv-retired.md`）。
+5. **踩到坑要沉淀**：区分「模式性教训」与「一次性 diff」，前者写进 `context/`。见 `context/harness-framework/self-refinement.md`。
+   改动 harness 本身（本文件的硬规则、门禁脚本、structcheck 检查项、CI 门禁）时，还要在
+   `context/harness-framework/evolution-log/` 当月卷追加一条，**必须写清触发它的具体事故**——
    规则能从代码读出来，理由不能，没理由的规则半年后会被凭直觉改回去。
-6. **不可逆动作需要用户授权——但授权一旦给出就直接执行，不要二次确认**。两半缺一都错：只拦不放工具没法用，只放不拦误伤线上。
-   - **哪些算不可逆动作**：`git commit`、`git push`、分支/MR 合入、deploy（`kubectl apply/delete`、`helm` 装卸）、发布制品（`docker push`）、workspace 之外的写入与删除。
-   - **什么算授权 → 算了就动手**：用户这轮明确要求做这件事（「提交」「推上去」「部署到 dev」「执行它」），或明确放宽了后续同类动作（「以后不用问」「直接提交」）。**此时直接做**，不要复述一遍风险再问「确认吗」——重复确认拖慢工作，还让用户对提示麻木，削弱真正该拦的那次。做完如实报结果。
-   - **什么不算授权**：「帮我实现 X」「修好这个 bug」「看看能不能跑通」不构成上述任何一项的授权；授权也**不跨范围升级**——授权 apply 到 dev ≠ 授权 apply 到 prod，授权 commit ≠ 授权 push。
-   - **仍需先说明再做的例外**：用户没要求、且会丢数据或影响线上的动作（删 PV/namespace、`git push --force`、改 prod 的鉴权与网络策略、轮换/撤销凭据）。说清影响，拿到确认再做——**这类才值得打断**。
+6. **不可逆动作需要用户授权——但授权一旦给出就直接执行，不要二次确认**。只拦不放工具没法用，只放不拦误伤线上，两半缺一都错。
+   - **哪些算**：`git commit`、`git push`、分支/MR 合入、deploy（`kubectl apply/delete`、`helm` 装卸）、发布制品（`docker push`）、workspace 之外的写入与删除。
+   - **什么算授权 → 算了就动手**：用户这轮明确要求做这件事（「提交」「推上去」「部署到 dev」「执行它」），或明确放宽后续同类动作（「以后不用问」「直接提交」）。
+     **此时直接做**，不要复述风险再问「确认吗」——重复确认拖慢工作，还让用户对提示麻木，削弱真正该拦的那次。做完如实报结果。
+   - **什么不算**：「帮我实现 X」「修好这个 bug」「看看能不能跑通」都不构成授权；授权也**不跨范围升级**——apply 到 dev ≠ apply 到 prod，commit ≠ push。
+   - **仍需先说明再做的例外**：用户没要求、且会丢数据或影响线上的动作（删 PV/namespace、`git push --force`、改 prod 的鉴权与网络策略、轮换/撤销凭据）。说清影响再做——**这类才值得打断**。
    - subagent 永久不得执行其中任何一项：它拿不到用户的授权上下文。
-7. **全自动模式不询问权限，但仍询问实质性选择**：当环境或会话明确标记为 `Full Auto` /「全自动」时，不用权限确认打断用户，用已提供的能力和审批机制直接执行。
-   - 若动作仍被硬性安全边界或不可用能力阻止，不得绕过，也不得把权限请求伪装成业务选择；直接报告阻塞。
-   - 多个都合理、会实质改变结果的互斥选项需要用户判断时，仍用交互式选择对话框；只用于决策，不用于权限确认。
-8. **解决问题优先，不要为了堆工作量去写测试**。测试的唯一理由是「能验证这次改动」或「能挡住这个 bug 复现」，不是「看起来干了很多活」。
+7. **全自动模式不询问权限，但仍询问实质性选择**：环境或会话标记为 `Full Auto` /「全自动」时，用已有能力和审批机制直接执行，不拿权限确认打断用户。
+   - 若被硬性安全边界或不可用能力阻止，不得绕过，也不得把权限请求伪装成业务选择；直接报告阻塞。
+   - 多个都合理、会实质改变结果的互斥选项仍用交互式选择对话框；只用于决策，不用于权限确认。
+8. **解决问题优先，不要为了堆工作量去写测试**。唯一正当理由是「能验证这次改动」或「能挡住这个 bug 复现」。
    - **该写的照写**：修 bug 补一条能复现它的回归测试；改核心逻辑或边界条件补断言。
-   - **不要写的**：为覆盖率凑数、断言 getter/setter 或框架行为、照抄实现的「镜像测试」、只换无关字段的批量表驱动样例；也**不要顺手扩张**——用户要求修 A，不顺带给 B、C 补测试。
+   - **不要写的**：覆盖率凑数、断言 getter/setter 或框架行为、照抄实现的镜像测试、只换无关字段的表驱动样例；也**不要顺手扩张**——要求修 A 就别给 B、C 补测试。
    - **优先跑既有验证**；交付时如实说明测了什么、没测什么，不用测试数量替代「问题是否解决」。
 
 ## 知识索引
 
-规范本体在 `context/`，**四层分别是什么、何时进哪层**见 [context/INDEX.md](context/INDEX.md)（它是路由；
-逐篇清单只在各层自己的 `INDEX.md` 里）。改硬规则 / 门禁 / 真相源归属之前，先读 `context/decisions/`。
+规范本体在 `context/`，**四层分别是什么、何时进哪层**见 [context/INDEX.md](context/INDEX.md)（它是路由，逐篇清单在各层自己的 `INDEX.md` 里）。
+改硬规则 / 门禁 / 真相源归属之前，先读 `context/decisions/`。
 
-**查服务拓扑不要现搜**：服务注册名、网关前缀、依赖关系、外部依赖、Config Center 键，
-一律查 **[.service-matrix.yaml](.service-matrix.yaml)**。里面区分了 `depends_on`（已接线）
-和 `depends_on_planned`（设计要求但未接线），不要把后者当成已实现。
+**查服务拓扑不要现搜**：服务注册名、网关前缀、依赖关系、外部依赖、Config Center 键一律查
+**[.service-matrix.yaml](.service-matrix.yaml)**；其中 `depends_on` 是已接线，`depends_on_planned` 是设计要求但未接线，别混。
 
 ## 反直觉约定（读代码不易发现的）
 
@@ -49,7 +50,7 @@
 - **往文档写集群数字前先读 [context/team/live-facts.md](context/team/live-facts.md)**：运行时观测值（Pod 分布/就绪计数/镜像 tag）必须带「实测 YYYY-MM-DD」，否则 `[LIVE-FACT]` 门禁红；且**集群异常时不要采数**，故障态会被固化成「现状」
 - **网关和配置中心都不在本仓**：由同级仓 **control-tower**（`services/gateway` + `services/config`）承载，设计在 `../control-tower/docs/design/`；集群里 `config-center` ns/Deployment 名是遗留标签，镜像实为 `control-tower-config`。`backend/structcheck` import `github.com/lens077/control-tower/routes` 核对路由，**改路由模板必须同 PR 升级本仓对 control-tower 的依赖版本**。迁移历史见 [context/project/ecommerce/gateway/INDEX.md](context/project/ecommerce/gateway/INDEX.md)
 - **CI 仅由发布 tag 触发**（裸 semver `X.Y.Z`，`X`=破坏性/大版本；push main 不构建）。需要 CI 验证或部署时**打 tag 并推到 `github` 远端**（origin 是 GitLab 无 Actions）；语义、手顺与四条纪律见 [context/team/git-commit.md](context/team/git-commit.md)「发布 tag 与 CI 触发」
-- **部署清单两份真相源必须逐字段等价**：`helm/`（`values.yaml`=pre 基线 + `values-prod.yaml`）与 kustomize 裸 manifest（`deploy/{base,overlays/prod}`）渲染同一套对象，`scripts/verify-deploy-parity.sh` 强制；改一边必改另一边。见 [context/team/deploy-parity.md](context/team/deploy-parity.md)
+- **部署清单两份真相源必须逐字段等价**：`helm/`（`values.yaml`=pre 基线 + `values-prod.yaml`）与 kustomize 裸 manifest（`deploy/{base,overlays/prod}`）渲染同一套对象，`scripts/verify-deploy-parity.sh` 强制；改一边必改另一边。见 [deploy-parity.md](context/team/deploy-parity.md)。两份都写 **KYAML**（值一律双引号、结构靠 `{}` `[]` 不靠缩进），`scripts/verify-kyaml.sh` 阻断，`helm/files/zero-trust.yaml` 永久豁免——见 [kyaml-manifests.md](context/team/kyaml-manifests.md)
 - **`okteto up` 前先看 ArgoCD 是否纳管本仓**：纳管时必须先关自动同步，否则开发容器被无声干掉；当前是否纳管看 `TODO.md`「领域状态表」GitOps 行。见 [context/team/okteto-inner-loop.md](context/team/okteto-inner-loop.md)
 
 ## 中文文案约定
@@ -98,7 +99,7 @@ E3 出处（arXiv:2607.13034）、路由表、护栏 hook 验证方法与消费�
 scripts/verify-quick.sh                          # 默认入口:后端链+前端并行,绿只打一行、红只打失败段
 cd backend && go build ./... && go vet ./...    # ↑ 的分解动作:编译 + 静态检查
 cd backend && go test -count=1 ./structcheck/... # 改 .service-matrix.yaml/加删服务后必跑
-scripts/verify-deploy-parity.sh                  # 改 helm/ 或任一裸 manifest 后必跑
+scripts/verify-kyaml.sh && scripts/verify-deploy-parity.sh  # 改部署清单后必跑:格式 + 两份等价
 cd backend && go test -short ./...               # 后端测试(CI 用 -short)
 cd frontend && pnpm ready                        # 前端 lint+fmt+类型+test
 scripts/verify-context.sh                        # 改 context/、docs/design、README/STACK 或本文件后必跑

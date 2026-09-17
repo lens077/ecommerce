@@ -60,6 +60,7 @@ description: 给所有 AI 编码工具(尤其 Codex)的可执行命令与验收�
 | 写测试 / 补测试 / 防回归 | [go-testing.md](go-testing.md) + [`docs/TESTING.md`](../../docs/TESTING.md) | 用 mock 测 sqlc 的 SQL 等于没测;引入 go-sqlmock 才发现接不上 pgx |
 | **往文档里写集群/运行时数字**(Pod 分布、就绪计数、镜像 tag、节点内存) | [live-facts.md](live-facts.md) | 把某一刻的快照写成永久事实;**在集群故障期采数,把故障态固化成「现状」**;`[LIVE-FACT]` 门禁会红 |
 | 在集群身份下改代码(okteto) | [okteto-inner-loop.md](okteto-inner-loop.md) + [`docs/OKTETO.md`](../../docs/OKTETO.md) | 没关 ArgoCD 自动同步 → 开发容器被无声干掉;开发完忘了恢复 → GitOps 静默失效 |
+| **K8s 部署清单**(`*/deploy/**`、`application-vpa.yml`、`helm/`) | [kyaml-manifests.md](kyaml-manifests.md)(格式与豁免) + [deploy-parity.md](deploy-parity.md)(两份必须等价) | 写成块式 YAML → `scripts/verify-kyaml.sh` 阻断;转了经 `tpl` 的 `helm/files/zero-trust.yaml` → helm 渲染直接失败;只改一边 → parity 红 |
 | 提交信息 / 分支 / 分组 | [git-commit.md](git-commit.md) + 本文 §6 | type 自造、`perf` 滥用、`git add -A` 混提 |
 | 踩到坑之后 | [`harness-framework/self-refinement.md`](../harness-framework/self-refinement.md) | 同一个坑下个会话再踩一次 |
 | **改 `context/` 或 `docs/design/` 里的约束本身** | 改完跑 `scripts/spec-impact.sh`,把命中的实现点核对一遍(`affects:` 约定见 [`knowledge-layering.md`](../harness-framework/knowledge-layering.md)) | 规范改了、两周前按旧规范写的代码没人回头看,文档与实现静默跑偏 |
