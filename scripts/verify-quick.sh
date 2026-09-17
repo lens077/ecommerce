@@ -40,6 +40,10 @@ run_frontend() {
 }
 
 run_parity() {
+  # 先查格式再查语义:KYAML 门禁能指出「哪个文件写法不对」,parity 只会说「哪个字段不一样」。
+  # 格式坏掉时两者都会红,先报格式那条更接近病根(2026-09-18:一次 `pnpm ready` 把 9 个
+  # frontend 清单重排掉,parity 仍绿而 promote 回写正则全数失配,只有 KYAML 门禁指得准)。
+  scripts/verify-kyaml.sh
   scripts/verify-deploy-parity.sh
   # 晋级脚本对真实清单跑一遍 plan(不写文件):parity 绿不代表 CI 回写能过——1.7.6 因清单里
   # 同镜像出现两处而在 detect 阶段红,本地 parity 全绿,唯一能拦住它的就是这个 2s 的回归。
@@ -102,7 +106,7 @@ notices_rc=0; wait "$notices_pid" || notices_rc=$?
 report "notices(THIRD_PARTY_NOTICES.md 新鲜度)" "$notices_rc" "$logdir/notices.log"
 [ "$notices_rc" = 0 ] || overall=1
 parity_rc=0; wait "$parity_pid" || parity_rc=$?
-report "deploy-parity(helm ≡ 裸 manifest + promote 回归)" "$parity_rc" "$logdir/parity.log"
+report "deploy-manifests(KYAML + helm ≡ 裸 manifest + promote 回归)" "$parity_rc" "$logdir/parity.log"
 [ "$parity_rc" = 0 ] || overall=1
 
 exit "$overall"
