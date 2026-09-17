@@ -26,6 +26,7 @@ on:
 
 permissions:
   contents: read
+  packages: write   # 首轮漏了这条,GHCR 对照臂四次全 FAIL(2026-09-17)
 
 jobs:
   bench:
