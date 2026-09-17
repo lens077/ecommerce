@@ -304,7 +304,7 @@ if [ "$size" -gt "$budget" ]; then
 fi
 
 # ── 6.5 TODO.md 预算 ─────────────────────────────────────────
-# 硬规则 #3 要求每次提交前先更新 TODO.md,它因此在每个提交回合都被读入/回写。
+# 硬规则 #3 要求涉及 TODO 项的提交先更新 TODO.md,它因此在多数提交回合都被读入/回写。
 # 2026-08-21 它膨胀到 199KB(验收证据长文+会话记录堆积),瘦身后立此门禁。
 # 超限的处理不是提额度,而是把非活跃内容(已完成项的证据长文、会话记录)
 # 按日期归档到 docs/progress-archive/(不可变历史,非并行真相源),TODO.md 留链接。
@@ -313,6 +313,25 @@ todo_size=$(wc -c < TODO.md | tr -d ' ')
 if [ "$todo_size" -gt "$todo_budget" ]; then
   fail "BUDGET" "TODO.md ${todo_size}B > ${todo_budget}B——每个提交回合都要读它,把证据长文/会话记录归档进 docs/progress-archive/,别先提额度"
 fi
+
+# ── 6.6 TODO.md 干净度 ───────────────────────────────────────
+# 字节预算只能拦「太大」,拦不住「装错东西」:2026-09-16 实测 TODO.md 82KB 仍在预算内,
+# 但「全局优先级视图」堆了 25 条 `2026-xx-xx 做了什么` 的流水账,「现状对照」单个表格
+# 单元格长到 2000+ 字节的处置记录——它们是 changelog 和证据,不是 TODO 项。
+# TODO.md 只记 TODO 项及其状态;做了什么、实测数字、处置过程进 docs/progress-archive/。
+# 两条机械判据(围栏外):
+#   ① 行首是日期(允许前置 `> `/`- `/`**`)——流水账的形态
+#   ② 单行 > 600 字节——证据长文的形态(表格行也算,一行就是一个单元格的容器)
+_strip_fences TODO.md | awk '
+  { n++ }
+  /^[ \t]*(>[ \t]*)?(-[ \t]+)?(\*\*)?20[0-9][0-9]-[0-9][0-9]-[0-9][0-9]/ { printf "%d|dated\n", n; next }
+  length($0) > 600 { printf "%d|long\n", n }
+' | while IFS='|' read -r ln kind; do
+  case "$kind" in
+    dated) fail "TODO-CLEAN" "TODO.md:${ln} 以日期开头——流水账不进 TODO.md,写进 docs/progress-archive/YYYY-MM-progress-log.md" ;;
+    long)  fail "TODO-CLEAN" "TODO.md:${ln} 单行超过 600 字节——证据/处置记录不进 TODO.md,留一句缺口 + 链接,原文归档" ;;
+  esac
+done
 
 # ── 7. 并行进度源(复选框只允许长在 TODO 体系里)───────────────
 # AGENTS.md 反直觉约定:进度真相源是 TODO.md(唯一)。任何别处的 `- [ ]`/`- [x]`

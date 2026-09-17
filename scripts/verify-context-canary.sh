@@ -276,6 +276,15 @@ mut_budget_todo() { # 无论 TODO 当前多瘦，都精确推过 96KB 门槛
   [ "$grow" -gt 0 ] || grow=1
   head -c "$grow" /dev/zero | tr '\0' 'x' >> "$1/TODO.md"
 }
+mut_todo_dated() { # 以日期开头的流水账回流 TODO.md → 它只记 TODO 项,changelog 进 progress-archive
+  printf '\n2026-09-16 canary 做了一件事并把过程写在这里。\n' >> "$1/TODO.md"
+}
+mut_todo_long() { # 单行 > 600 字节的处置记录塞进表格单元格 → 证据长文的形态
+  { printf '\n| canary | 🟡 | '; head -c 650 /dev/zero | tr '\0' 'x'; printf ' |\n'; } >> "$1/TODO.md"
+}
+mut_todo_fenced_ok() { # 围栏内的日期行与长行必须放行(假阳性守卫),否则示例块无法写
+  { printf '\n```text\n2026-09-16 围栏内示例\n'; head -c 650 /dev/zero | tr '\0' 'x'; printf '\n```\n'; } >> "$1/TODO.md"
+}
 mut_live_fact() { # 运行时观测值不带实测日期 → 读者分不清「结构事实」与「某一刻快照」
   printf '\n当前 ecommerce 分布为 5/6/6，15/15 Running，镜像 sha-0b9b9ad。\n' \
     >> "$1/context/team/local-env.md"
@@ -396,6 +405,10 @@ probe decision-marker-too-new    1 "DECISION" mut_decision_marker_too_new
 probe decision-legacy-marker-ok  0 ""         mut_decision_legacy_marker_ok
 probe budget-agents       1 "BUDGET"      mut_budget_agents
 probe budget-todo         1 "BUDGET"      mut_budget_todo
+probe todo-dated          1 "TODO-CLEAN"  mut_todo_dated
+probe todo-long           1 "TODO-CLEAN"  mut_todo_long
+# 假阳性守卫:围栏内的日期行/长行必须放行
+probe todo-fenced-ok      0 ""            mut_todo_fenced_ok
 probe progress-src        1 "PROGRESS-SRC" mut_progress_src
 probe progress-grow       1 "PROGRESS-SRC" mut_progress_grow
 probe progress-ratchet    1 "BASELINE"     mut_progress_ratchet

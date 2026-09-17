@@ -7,11 +7,10 @@
 
 1. **规范与拓扑以真相源为准**：规范的真相源是 `context/`（入口 `context/INDEX.md`），服务拓扑的真相源是 `.service-matrix.yaml`。现搜、推测或记忆与之冲突时以真相源为准；找不到对应知识 ≠ 没有约束，先读 `docs/design/`（入口 docs/design/README.md）/ `TODO.md`，结论沉淀回 `context/`。
 2. **写/改 proto 前必须先读设计文档**，并为每个字段推断出校验约束。见 `context/team/proto-design.md`。
-3. **提交前先更新 `TODO.md`**，再 `git commit`。提交信息走 Conventional Commits
-   `<type>(<scope>): [:emoji:] <subject>`，由 `frontend/.vite-hooks/commit-msg` +
-   `frontend/commitlint.config.mjs` 强制校验：type 限十一类，emoji 可选但必须与 type 相符，
-   subject 末尾不加标点。钩子由 vite-plus 安装（`core.hooksPath` → `frontend/.vite-hooks/_`），后端 Go 提交同样受管。
-   见 `context/team/git-commit.md`。
+3. **提交前先问：这次改动涉及哪个 TODO 项？** 涉及就先更新 `TODO.md`（完成/部分完成/改目标/删除），
+   不涉及就不动它——它只记 TODO 项与状态，做了什么与证据进 `docs/progress-archive/`。
+   提交信息走 Conventional Commits `<type>(<scope>): [:emoji:] <subject>`，commitlint 钩子强制校验
+   （type 限十一类，emoji 须与 type 相符，subject 末尾不加标点）。见 `context/team/git-commit.md`。
 4. **不要把凭据写进仓库**。密码/密钥只存在 Config Center 和本地环境（K8s 里经 Secret 挂载），仓库里只写主机名和端口。Consul KV 已退役不再存配置，Consul 只做注册发现（见 `context/project/ecommerce/config/experience/consul-kv-retired.md`）。
 5. **踩到坑要沉淀**：判断是「模式性教训」还是「一次性 diff」，前者写进 `context/`。见 `context/harness-framework/self-refinement.md`。
    改动 harness 本身（本文件的硬规则、门禁脚本、structcheck 检查项、CI 门禁）时，

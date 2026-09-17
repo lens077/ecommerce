@@ -190,12 +190,13 @@ jobs:
           SVC_LIST=$(jq -r 'join(",")' <<<"$SERVICES")
           git config user.name "github-actions[bot]"
           git config user.email "github-actions[bot]@users.noreply.github.com"
+          # 发版记录不进 TODO.md(它只记 TODO 项,2026-09-16 起),写进不可变归档
           if [[ -n "$VERSION" ]]; then
-            printf '\n- CI release `%s`: verified all backend and frontend linux/amd64 + linux/arm64 indexes; updated pre manifests only. Production promotion remains explicit.\n' "$VERSION" >> TODO.md
+            printf '\n- CI release `%s`: verified all backend and frontend linux/amd64 + linux/arm64 indexes; updated pre manifests only. Production promotion remains explicit.\n' "$VERSION" >> docs/progress-archive/ci-releases.md
           fi
           git add helm/values.yaml backend/services/*/deploy/base/deployment.yaml \
             frontend/apps/consumer/deploy/pre/deployment.yaml \
-            frontend/apps/consumer-next/deploy/base/consumer-next.yaml TODO.md
+            frontend/apps/consumer-next/deploy/base/consumer-next.yaml docs/progress-archive/ci-releases.md
           git diff --cached --quiet && { echo "无变化，跳过提交"; exit 0; }
           git commit -m "ci: 更新 ${SVC_LIST} 镜像 tag 至 ${TAG} [skip ci]"
           # 与后续 push 竞争时 rebase 重试；本文件只会追加改动，冲突概率极低

@@ -1,7 +1,7 @@
 ---
 name: git-commit
 layer: team
-description: Conventional Commits 规范、emoji↔type 白名单、commitlint 校验，以及提交前必须先更新 TODO.md 的工作流
+description: Conventional Commits 规范、emoji↔type 白名单、commitlint 校验，以及提交前先判断改动是否涉及 TODO 项的工作流
 affects:
   - frontend/.vite-hooks
   - frontend/commitlint.config.mjs
@@ -9,16 +9,20 @@ affects:
 
 # Git 提交规范与工作流
 
-## 硬规则：提交前先更新 TODO.md
+## 硬规则：提交前先判断改动是否涉及 TODO 项
 
-每次修改代码后、执行 `git commit` **之前**，必须先更新 `TODO.md`（勾选/调整对应条目的实现进度），然后才提交。
+执行 `git commit` **之前**，先问一句：这次改动涉及哪个 TODO 项？
 
-**Why**：`TODO.md` 是本项目的进度真相源。不同步就会出现「代码已实现但文档还标 ⬜」或反过来，下一轮（尤其是新 AI 会话）会基于错误的进度做判断。
+- **涉及** → 先更新 `TODO.md`：完成就勾选/改状态，部分完成就改状态并写一句缺口，目标变了就改写该项，不再需要就删除；再提交。
+- **不涉及** → 不动 `TODO.md`。
 
-**How to apply**：
-1. 完成一处代码改动
-2. 编辑 `TODO.md` —— 更新「实现进度对照」表的 ✅ / 🟡 / ⬜ 状态，或勾选「近期待办」条目
-3. 再 `git commit`
+**Why**：`TODO.md` 是 TODO 项的唯一真相源，它只记「有哪些待办、优先级、状态、明细在哪」。
+不同步就会出现「代码已实现但文档还标 ⬜」或反过来，下一轮（尤其是新 AI 会话）会基于错误的进度做判断。
+反过来，把「做了什么」「实测数字」「处置过程」写进去，它就变成 changelog——2026-09-16 实测它
+82 KB 里堆了 25 条日期流水账和 2000+ 字节的单元格，每个提交回合都要整份读进上下文。
+这类内容进 `docs/progress-archive/YYYY-MM-progress-log.md`（按月追加，不可变），
+CI 发版行由流水线写进 `docs/progress-archive/ci-releases.md`；`scripts/verify-context.sh`
+的 `[TODO-CLEAN]` 拦以日期开头的行与超过 600 字节的单行。
 
 TODO 更新可以和代码改动放**同一个提交**，也可以紧跟一个 `docs: 更新 TODO 进度` 提交。
 

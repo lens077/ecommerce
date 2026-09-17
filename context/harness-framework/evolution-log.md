@@ -48,6 +48,32 @@ description: harness 本身（硬规则/门禁/Agent 约束）每次改动的原
 
 ---
 
+### 2026-09-16 TODO.md 重定义为「只记 TODO 项」：流水账与证据归档，新增 `[TODO-CLEAN]` 门禁
+
+- **改了什么**：①硬规则 3 从「提交前先更新 TODO.md」改为「提交前先判断改动是否涉及 TODO 项，
+  涉及才更新（完成 / 部分完成 / 改目标 / 删除），不涉及不动」，`git-commit.md`、runbook §6 同步；
+  ②`TODO.md` 82 KB → 约 27 KB：「全局优先级视图」的 25 条日期流水账、「现状对照」七个领域的
+  实测证据与处置记录、「阶段推进」已完成项证据、CI 发版行，整体逐字归档进
+  `docs/progress-archive/2026-09-16-todo-status-snapshot.md`；现状对照压成「状态 + 一句缺口 + 链接」
+  的领域状态表；③`backend.yml` 的发版记录行改写进 `docs/progress-archive/ci-releases.md`，不再碰
+  `TODO.md`；④`verify-context.sh` 新增 `[TODO-CLEAN]`：围栏外以日期开头的行、单行 > 600 字节即红；
+  canary 加 `todo-dated` / `todo-long` 两个红探针与 `todo-fenced-ok` 假阳性守卫。96000 B 预算保留为兜底。
+- **为什么**：字节预算只拦「太大」，拦不住「装错东西」。TODO.md 的价值是每个提交回合都被读，
+  所以它每一行都该是「待办 + 状态」；日期流水账和 2000 字节的处置单元格是 changelog 与证据，
+  放进去等于每回合把整个月的操作记录重新读一遍（Context Engineering 的反模式：把 Structured
+  Note-Taking 变回信息堆砌）。同一份「做了什么」信息在 evolution-log / reports / 分类文件里
+  本来就各有落点，TODO.md 里的那份是第四份副本。
+- **触发事故**：2026-09-16 对照腾讯技术工程《别再只卷 Prompt 了，真正拉开 Agent 差距的是
+  Context Engineering》审计本仓 harness，量到 TODO.md 82 KB（预算 96 KB 内、门禁绿）里：
+  「一、全局优先级视图」15.9 KB 含 25 条 `2026-xx-xx 做了什么` 行，首段单行 1441 字节；
+  「二、现状对照」50.6 KB、67 条带日期证据行、最长单元格 2000+ 字节（PG 证书 EKU 事故全过程、
+  告警未唤起人的取证）。TODO.md 自己的纪律 3 写着「证据长文归档」，但没有门禁，没执行。
+  另发现 `backend.yml` 每次发版往 TODO.md 末尾追加 `CI release x.y.z` 行——CI 也在把它当 changelog。
+- **怎么验证的**：`scripts/verify-context.sh` 全绿（含新 `[TODO-CLEAN]`，归档文件的相对链接
+  经 `../../` 改写后 `[DEAD-LINK]` 绿）；写重构版 TODO.md 时门禁先抓到一行引用块内以
+  `2026-09-16 前的原文` 起头的句子，证明判据对真实文本生效；`scripts/verify-context-canary.sh`
+  三个新探针（两红一绿）通过。
+
 ### 2026-09-09 AGENTS.md 新增「消费边界」节：消费授权与执行授权并列
 
 - **改了什么**：`AGENTS.md` 在 E3 节之后新增「消费边界：用户给的是目标，不是空白支票」，

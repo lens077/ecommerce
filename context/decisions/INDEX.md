@@ -18,6 +18,7 @@ context/decisions/
 
 | 决策 | 一句话 |
 |---|---|
+| [2026-09-16-todo-md-items-only.md](implemented/2026-09-16-todo-md-items-only.md) | TODO.md 只记 TODO 项与状态；硬规则 3 改为「先判断是否涉及 TODO 项」；`[TODO-CLEAN]` 拦行首日期与超长行，字节预算只做兜底 |
 | [2026-09-12-prod-release-baseline.md](implemented/2026-09-12-prod-release-baseline.md) | prod 独立覆盖层保留现网配置；前端原生双架构构建；发布更新 dev，生产显式晋级 |
 | [2026-09-11-spec-reverse-index-and-selfcheck.md](implemented/2026-09-11-spec-reverse-index-and-selfcheck.md) | 规范文档 frontmatter `affects:` 登记反向依赖、`spec-impact.sh` 双向查影响（`[AFFECTS]` 守存在性）；实现单 `done` 必带可验证「完成自检」（`[SELFCHECK]`）；验收标准限五种可判定形态 |
 | [2026-09-03-shared-infra-kit-boundary.md](implemented/2026-09-03-shared-infra-kit-boundary.md) | 共享基础设施实现只存在于 go-connect-kit；消费方只保留 provider-neutral Options adapter，不使用 BSR |

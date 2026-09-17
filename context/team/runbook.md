@@ -155,8 +155,8 @@ pnpm hygiene          # knip(未用依赖/导出/重复导出/catalog 条目)+ p
 
 顺序不能乱:
 
-1. **先更新文档**:`TODO.md`(唯一进度真相源,RPC 粒度 + `file:line`;`PROGRESS.md`
-   已于 2026-08-13 废止归档,不再双写)。
+1. **先判断改动是否涉及 TODO 项**:涉及才更新 `TODO.md`(完成/部分完成/改目标/删除),不涉及不动它;
+   它只记 TODO 项与状态,做了什么与实测证据进 `docs/progress-archive/`(`[TODO-CLEAN]` 门禁守)。
    声称「已完成」前**先回扫代码**——返回假成功或 panic 的方法按**未实现**计。
    本次改动若动了 `context/` 或 `docs/design/` 的约束,跑 `scripts/spec-impact.sh` 看登记的实现点;
    若对应 `.scratch/<feature>/issues/` 里有实现单,关单前填「完成自检」再标 `done`
