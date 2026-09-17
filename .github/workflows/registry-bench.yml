@@ -1,0 +1,103 @@
+# 一次性基准：同一台 runner、同一份随机字节，分别推 TCR 与 GHCR，量吞吐。
+#
+# 存在理由（2026-09-17）：cart 的 image job 26 分钟里有 1405s 花在
+# `pushing layers` → ccr.ccs.tencentyun.com，而同一份 digest 推 ghcr.io 只要 4.4s。
+# 实际推送体积经 GHCR manifest 核对是 ~18.7 MiB/平台（不是日志里那个 71MB——那是拉基础镜像）。
+# 37 MiB 推 1405s ≈ 27 KB/s，且推送窗口内零重试零错误。27 KB/s 不像跨境带宽不足
+# （那通常是几百 KB/s 到几 MB/s），更像单连接限速或 TCR 个人版的配额节流。
+#
+# 这个 workflow 把「像」变成「是」或「不是」：
+#   - 两种体积（4 MiB / 32 MiB）分离「每次请求的固定开销」与「吞吐上限」；
+#   - 同一目标重复两次，看是否稳定（稳定 = 限速；抖动 = 拥塞）；
+#   - 同 runner 同时打 GHCR 做对照，排除 runner 本身出网慢。
+# 随机字节保证不可压缩、且每次 digest 不同，不会命中任何一侧的去重。
+#
+# 结论出来后按 evolution-log 的记录删掉本文件——它是一次性证据采集，不是长期门禁。
+name: Registry bench
+
+on:
+  workflow_dispatch:
+    inputs:
+      repeats:
+        description: "每个组合重复几次"
+        required: false
+        default: "2"
+        type: string
+
+permissions:
+  contents: read
+
+jobs:
+  bench:
+    name: push throughput (TCR vs GHCR)
+    runs-on: ubuntu-24.04
+    timeout-minutes: 60
+    steps:
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v3
+
+      - name: Login to TCR
+        uses: docker/login-action@v3
+        with:
+          registry: ccr.ccs.tencentyun.com
+          username: ${{ secrets.TCR_USERNAME }}
+          password: ${{ secrets.TCR_PASSWORD }}
+
+      - name: Login to GHCR
+        uses: docker/login-action@v3
+        with:
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Probe network baseline (排除 runner 本身出网慢)
+        run: |
+          set -uo pipefail
+          for host in ccr.ccs.tencentyun.com ghcr.io; do
+            echo "--- $host"
+            # 只量 TLS 握手与首字节,不量吞吐:分离「链路远」与「被限速」
+            curl -s -o /dev/null -w "  connect=%{time_connect}s tls=%{time_appconnect}s ttfb=%{time_starttransfer}s\n" \
+              "https://$host/v2/" || echo "  (curl 失败,不阻断)"
+          done
+
+      - name: Bench
+        env:
+          REPEATS: ${{ inputs.repeats }}
+        run: |
+          set -uo pipefail
+          work=$(mktemp -d); cd "$work"
+          summary="$GITHUB_STEP_SUMMARY"
+          printf '| 目标 | 体积 | 轮次 | 耗时(s) | 吞吐 |\n|---|---:|---:|---:|---:|\n' >> "$summary"
+
+          # TCR 个人版可能不允许推新仓库名,先探一次,不行就退回已存在的 cart 仓
+          tcr_repo="ccr.ccs.tencentyun.com/sumery/bench"
+          printf 'FROM scratch\nCOPY probe /probe\n' > Dockerfile
+          head -c 1024 /dev/urandom > probe
+          if ! docker buildx build --platform linux/amd64 -t "$tcr_repo:probe" --push . >/dev/null 2>&1; then
+            echo "::notice::TCR 不接受新仓库 sumery/bench,退回 sumery/cart 的临时 tag"
+            tcr_repo="ccr.ccs.tencentyun.com/sumery/cart"
+          fi
+
+          run_one() { # run_one <名字> <完整镜像引用> <MiB>
+            local name="$1" ref="$2" mib="$3" t0 t1 sec
+            head -c "$((mib * 1024 * 1024))" /dev/urandom > blob
+            printf 'FROM scratch\nCOPY blob /blob\n' > Dockerfile
+            t0=$(date +%s%3N)
+            if docker buildx build --platform linux/amd64 -t "$ref" --push --provenance=false . >/dev/null 2>&1; then
+              t1=$(date +%s%3N)
+              sec=$(python3 -c "print(f'{($t1-$t0)/1000:.1f}')")
+              thr=$(python3 -c "s=($t1-$t0)/1000; print(f'{$mib/s:.2f} MiB/s' if s>0 else 'n/a')")
+            else
+              sec="FAIL"; thr="-"
+            fi
+            printf '| %s | %s MiB | %s | %s | %s |\n' "$name" "$mib" "$R" "$sec" "$thr" >> "$summary"
+            echo "  $name ${mib}MiB 轮次$R: ${sec}s  $thr"
+          }
+
+          for R in $(seq 1 "${REPEATS:-2}"); do
+            for mib in 4 32; do
+              stamp="$(date +%s)-$R-$mib"
+              run_one "TCR"  "$tcr_repo:bench-$stamp"                    "$mib"
+              run_one "GHCR" "ghcr.io/${{ github.repository_owner }}/bench:bench-$stamp" "$mib"
+            done
+          done
