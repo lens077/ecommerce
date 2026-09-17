@@ -48,6 +48,32 @@ description: harness 本身（硬规则/门禁/Agent 约束）每次改动的原
 
 ---
 
+### 2026-09-16 AGENTS.md 摘掉运行态陈述、按首因/近因重排章节，预算 14000 → 13000
+
+- **改了什么**：①「反直觉约定」里带日期的运行态陈述摘掉——「GitOps 当前是断的（2026-08-24 实测）……」
+  整条改为「`okteto up` 前先看 ArgoCD 是否纳管本仓，当前是否纳管看 `TODO.md` 领域状态表」；
+  control-tower 迁移历史（2026-08-23 起、`backup/pre-control-tower-20260823` tag、旧 `gateway/` 已删）
+  压成结构事实 + 指向 `context/project/ecommerce/gateway/INDEX.md`；「2026-08-20 起」「2026-09-06 起」
+  「2026-08-26 起」这类生效日期删除；deploy-parity 那条的环境描述同步为 09-15 之后的 `values.yaml`=pre +
+  `values-prod.yaml` / `deploy/{base,overlays/prod}`（原文仍写 `values-<env>` / `overlays/<env>`，已过期）。
+  文件头加一句「本文件只写结构事实与规则；带日期的运行态看 TODO.md 领域状态表」。
+  ②章节顺序改为：硬规则 → 知识索引 → 反直觉约定 → 中文文案 → Agent skills → E3 → 消费边界 →
+  命令与验收锚点。硬规则仍在首位（首因），「命令与验收锚点」挪到末尾作为动手前最后一屏（近因），
+  原来占着尾部的中文文案 / skills 索引挪到中段。硬规则**不重新编号**：43 处交叉引用「硬规则 #N」，
+  改编号是 L3 级连锁。③压缩 skills 三条指针、E3 尾部两条、命令块注释、消费边界的事故叙述
+  （事故全文在 e3-execution.md）；13991 B → 12968 B。④`[BUDGET]` 14000 → 13000，反向棘轮只降不升。
+- **为什么**：AGENTS.md 每轮整份注入，是本仓「宪法」。宪法里写「当前是断的」这类 State，
+  过期后没人删——它没有日期门禁（`[LIVE-FACT]` 只认三类数字模式），也没有归属的复验命令。
+  运行态的正式落点已经存在（TODO.md 领域状态表、okteto-inner-loop.md 的状态注记），这里的一份是副本。
+  释放的空间不回填而是降预算，否则下一条运行态又会填进来。
+- **触发事故**：2026-09-16 对照 Context Engineering 文章审计：AGENTS.md 13991/14000 B 顶到上限，
+  「反直觉约定」2.58 KB 里约一半是带日期的运行态；deploy-parity 那条在 09-15 删 dev 层后已经写错
+  （`values-<env>` 已不存在）却无人发现——正是「State 混进 Instructions 后静默过期」的实例。
+  同时 Lost-in-the-Middle 的位置规则：最后一屏被低风险的中文文案 / skills 索引占着。
+- **怎么验证的**：`scripts/verify-context.sh` 全绿（`[BUDGET]` 按 13000 判、`[DEAD-LINK]` 新增的
+  gateway/INDEX.md 与 okteto 链接可达）；canary 的 `budget-agents` 探针（+4000 B）在新阈值下仍红。
+  章节重排是位置假设，没有可执行验证器，不宣称效果已证实。
+
 ### 2026-09-16 TODO.md 重定义为「只记 TODO 项」：流水账与证据归档，新增 `[TODO-CLEAN]` 门禁
 
 - **改了什么**：①硬规则 3 从「提交前先更新 TODO.md」改为「提交前先判断改动是否涉及 TODO 项，

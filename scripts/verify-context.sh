@@ -29,7 +29,7 @@
 #                  非空;implemented 里不得残留提案期标题(提案/计划/迁移计划/验收标准/风险)
 #                  ——那是没改写的 spec-speak。2026-09-03 立此门禁(参照 deepseek-harness
 #                  的 verify-agent-note-format),见 decisions/implemented 同日条目
-#   [BUDGET]      AGENTS.md ≤ 14000 字节 —— 它每轮整份注入所有 AI 工具的上下文,
+#   [BUDGET]      AGENTS.md ≤ 13000 字节 —— 它每轮整份注入所有 AI 工具的上下文,
 #                  超限先把内容搬进 context/ 对应层,不要先提额度;
 #                  TODO.md ≤ 96000 字节 —— 每个提交回合都要读它,
 #                  超限把证据长文/会话记录按日期归档进 docs/progress-archive/
@@ -297,7 +297,8 @@ if [ -d "$decisions_dir" ]; then
 fi
 
 # ── 6. AGENTS.md 预算 ────────────────────────────────────────
-budget=14000
+# 反向棘轮:只降不升。14000 → 13000(2026-09-16,摘掉带日期的运行态陈述后释放的空间不回填)。
+budget=13000
 size=$(wc -c < AGENTS.md | tr -d ' ')
 if [ "$size" -gt "$budget" ]; then
   fail "BUDGET" "AGENTS.md ${size}B > ${budget}B——它每轮整份注入,先把内容搬进 context/,别先提额度"

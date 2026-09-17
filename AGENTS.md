@@ -2,6 +2,7 @@
 
 > 本文件是所有 AI 编码工具（Claude Code / Codex / Cursor …）的**共同行为基线**。
 > 规范本体在 `context/`，本文件只做索引和硬规则。改规范请改 `context/`，不要改这里的副本。
+> 本文件只写**结构事实与规则**；带日期的运行态（GitOps 通没通、集群实跑什么）看 `TODO.md`「领域状态表」，写在这里会静默过期。
 
 ## 硬规则（不可跳过）
 
@@ -26,55 +27,9 @@
    - 若动作仍被硬性安全边界或不可用能力阻止，不得绕过，也不得把权限请求伪装成业务选择；直接报告阻塞。
    - 多个都合理、会实质改变结果的互斥选项需要用户判断时，仍用交互式选择对话框；只用于决策，不用于权限确认。
 8. **解决问题优先，不要为了堆工作量去写测试**。测试的唯一理由是「能验证这次改动」或「能挡住这个 bug 复现」，不是「看起来干了很多活」。
-   - **该写的照写**：修 bug 时补一条能复现该 bug 的回归测试；改动核心逻辑或边界条件时补断言。
-   - **不要写的**：为覆盖率凑数、断言 getter/setter 或框架行为、照抄实现的「镜像测试」、只换无关字段的批量表驱动样例。
-   - **不要顺手扩张**：用户要求修 A，不要顺带给 B、C 补测试；想扩张先说明理由并征得同意。
-   - **优先跑既有验证**：先跑「命令与验收锚点」里最便宜的适用命令；已有测试能覆盖就不新增。
-   - 交付时如实说明测了什么、没测什么，不要用测试数量替代「问题是否解决」的结论。
-
-## 执行策略：E3（先估计 → 最小执行 → 失败才扩张）
-
-动手前先估计任务规模并说出来，最多一次廉价探测（查一次 `.service-matrix.yaml` 或一条 grep）：
-
-- **L1** 单文件局部修改 · **L2** 少数文件跨文件修改 · **L3** 仓库级重构（警惕 re-export/别名/网关接线/Config Center 键这类 grep 看不到的间接引用点）
-- 按估计走最小路径：只读预计要改的文件，不为局部修改通读代码库；改完立即跑下面锚点里**最便宜的适用验证**
-- 只有验证变红才扩大范围，一次扩一级（再 grep → 追依赖 → 读下一个最相关文件），复用已有发现，不推倒重来
-- 措辞像局部但探测命中多处时，降置信、按高一级处理
-- 规模驱动开销：L1/L2 不开 plan mode、不派子代理、低 reasoning effort；L3 才值得 plan mode / Explore 子代理 / 高 effort
-- 正确性和可靠性是硬约束：便宜失败不算效率；没有可信验证器或风险较高时，初始估计保守一级
-- E3 **不豁免**硬规则：runbook §0.1 的必读路由、proto 前读设计文档属于最小路径的一部分；也**不要**反向加码写「先通读代码库 / be thorough」——实测这类指令又慢又更容易失败
-
-## 消费边界：用户给的是目标，不是空白支票
-
-执行授权 ≠ 消费授权。几十 token 的输入可以在后台变成几百次付费决策，用户看不见也拦不住（事故：产品同学用 GPT-5.6 Sol 让 Agent 分析怎么做 DSH 插件，5 分钟内 1000 元——12 个 subagent、输入约 1964 万 token、`cacheReadTokens` 恒为 0）。E3 管「读多少」，本节管「花多少」：
-
-- **事前**：派 subagent 前先说出数量和理由；单轮超过 3 个或子代理再派子代理，先问用户
-- **过程**：每次扩张（新 subagent、检索由目录扩到全仓、切更贵模型、第 2 次重试）回复里说一句，不静默
-- **告警**：以下任一出现即停下报告，不自行继续：请求数超同类经验上限（只读调研 >20 次仍未汇总）、能看到 usage 时连续两轮 `cacheReadTokens=0` 而输入有大段稳定前缀、同一检索重复执行、上下文整份重复携带
-- **可控**：用户说停就停，包括已派出的 subagent；停后不为「收尾」再起新调用
-- **小票**：任务结束按 usage 报请求数、总/缓存 token、subagent 数、超预期原因、完成与未完成
-
-E3 出处（arXiv:2607.13034）、路由表、护栏 hook 验证方法与消费边界六环节的完整说明见 [context/harness-framework/e3-execution.md](context/harness-framework/e3-execution.md)。
-
-## 命令与验收锚点（可执行）
-
-> **[context/team/runbook.md](context/team/runbook.md)** 是可执行入口:§0.1 是**按改动类型的
-> 必读路由**（动 Redis / 定时任务 / proto / 指标告警 / CI-CD 前各该先读哪份）。以下是提交前必跑的锚点：
-
-```bash
-scripts/verify-quick.sh                              # 默认入口:后端链+前端并行,绿只打一行、红只打失败段
-cd backend && go build ./... && go vet ./...        # ↑ 的分解动作:后端编译 + 静态检查(rc=0)
-cd backend && go test -count=1 ./structcheck/...     # 改 .service-matrix.yaml/加删服务后必跑
-scripts/verify-deploy-parity.sh                      # 改 helm/ 或任一裸 manifest 后必跑:两份部署真相源须渲染等价
-cd backend && go test -short ./...                   # 后端测试(CI 用 -short)
-cd frontend && pnpm ready                            # 前端 lint+fmt+类型+test
-scripts/verify-context.sh                            # 改 context//docs/design/README/STACK 或本文件后必跑:链接/INDEX/格式/预算门禁
-scripts/verify-context-canary.sh                     # 改 ↑ 门禁脚本本身后必跑:注错断言门禁还会红(CI 每 push 也跑)
-```
-
-`verify-context.sh` 是 **main 上唯一必需的 CI 检查**（GitHub `context-gate` + GitLab 同名 job）；`verify-freeze.sh` 已作假门禁删除，见 evolution-log。
-
-放行以「命令真绿」为准,不以模型自报为准。核心改动 push 前跑 `/adversarial-review` 做异构双审。
+   - **该写的照写**：修 bug 补一条能复现它的回归测试；改核心逻辑或边界条件补断言。
+   - **不要写的**：为覆盖率凑数、断言 getter/setter 或框架行为、照抄实现的「镜像测试」、只换无关字段的批量表驱动样例；也**不要顺手扩张**——用户要求修 A，不顺带给 B、C 补测试。
+   - **优先跑既有验证**；交付时如实说明测了什么、没测什么，不用测试数量替代「问题是否解决」。
 
 ## 知识索引
 
@@ -95,40 +50,67 @@ scripts/verify-context-canary.sh                     # 改 ↑ 门禁脚本本�
 
 > 技术栈、目录结构、服务拓扑不在这里复述——读代码与 `.service-matrix.yaml` 自明。
 
-- 工程化：前端用 vite-plus（`vp`）一个包覆盖 dev/build/test/lint/fmt/任务运行/git 钩子，没有 husky/biome/eslint/prettier；commitlint 也由 frontend workspace 承载（根目录无 Node workspace，2026-08-26 起）
+- 工程化：前端用 vite-plus（`vp`）一个包覆盖 dev/build/test/lint/fmt/任务运行/git 钩子，没有 husky/biome/eslint/prettier；commitlint 也由 frontend workspace 承载（根目录无 Node workspace）
 - 进度真相源：`TODO.md`（**唯一**，理由见 `context/decisions/`）；架构真相源：`docs/design/`（按微服务分目录，入口 `docs/design/README.md`）
 - **往文档写集群数字前先读 [context/team/live-facts.md](context/team/live-facts.md)**：运行时观测值（Pod 分布/就绪计数/镜像 tag）必须带「实测 YYYY-MM-DD」，否则 `[LIVE-FACT]` 门禁红；且**集群异常时不要采数**，故障态会被固化成「现状」
-- **网关和配置中心都不在本仓**：2026-08-23 起由同级仓 **control-tower**（`services/gateway` + `services/config`）承载，设计在 `../control-tower/docs/design/`。集群里 `config-center` ns/Deployment 名是遗留标签，镜像实为 `control-tower-config`。旧 `gateway/` 目录 2026-08-24 已删（历史在 tag `backup/pre-control-tower-20260823`）；`backend/structcheck` import `github.com/lens077/control-tower/routes` 核对路由，**改路由模板必须同 PR 升级本仓对 control-tower 的依赖版本**
-- **CI 仅由发布 tag 触发**（裸 semver `X.Y.Z`，`X`=破坏性/大版本；push main 不构建，2026-08-20 起）。需要 CI 验证或部署时**打 tag 并推到 `github` 远端**（origin 是 GitLab 无 Actions）；语义、手顺与四条纪律见 [context/team/git-commit.md](context/team/git-commit.md)「发布 tag 与 CI 触发」
-- **部署清单两份真相源必须逐字段等价**（2026-09-06 起）：`helm/`（`values.yaml` + `values-<env>.yaml`）与 kustomize 裸 manifest（`backend/services/*/deploy/{base,overlays/<env>}` 等）按环境渲染同一套对象，`scripts/verify-deploy-parity.sh` 强制；改一边必改另一边。见 [context/team/deploy-parity.md](context/team/deploy-parity.md)
-- **GitOps 当前是断的**（2026-08-24 实测）：ArgoCD 零 Application，集群由 `make k8s-pre-all` / `make deploy` 手工驱动，故 `okteto up` 那条「先 `scripts/argocd-devwindow.sh off`」**当前不适用**。接回 ArgoCD 只差 `argocd-app.yml` 顶部两件事；放开 automated 时同步改本条。见 [context/team/okteto-inner-loop.md](context/team/okteto-inner-loop.md)、[docs/OKTETO.md](docs/OKTETO.md)
+- **网关和配置中心都不在本仓**：由同级仓 **control-tower**（`services/gateway` + `services/config`）承载，设计在 `../control-tower/docs/design/`；集群里 `config-center` ns/Deployment 名是遗留标签，镜像实为 `control-tower-config`。`backend/structcheck` import `github.com/lens077/control-tower/routes` 核对路由，**改路由模板必须同 PR 升级本仓对 control-tower 的依赖版本**。迁移历史见 [context/project/ecommerce/gateway/INDEX.md](context/project/ecommerce/gateway/INDEX.md)
+- **CI 仅由发布 tag 触发**（裸 semver `X.Y.Z`，`X`=破坏性/大版本；push main 不构建）。需要 CI 验证或部署时**打 tag 并推到 `github` 远端**（origin 是 GitLab 无 Actions）；语义、手顺与四条纪律见 [context/team/git-commit.md](context/team/git-commit.md)「发布 tag 与 CI 触发」
+- **部署清单两份真相源必须逐字段等价**：`helm/`（`values.yaml`=pre 基线 + `values-prod.yaml`）与 kustomize 裸 manifest（`deploy/{base,overlays/prod}`）渲染同一套对象，`scripts/verify-deploy-parity.sh` 强制；改一边必改另一边。见 [context/team/deploy-parity.md](context/team/deploy-parity.md)
+- **`okteto up` 前先看 ArgoCD 是否纳管本仓**：纳管时必须先关自动同步，否则开发容器被无声干掉；当前是否纳管看 `TODO.md`「领域状态表」GitOps 行。见 [context/team/okteto-inner-loop.md](context/team/okteto-inner-loop.md)
 
 ## 中文文案约定
 
-写中文文档、界面文案和注释时走 `tech-doc-style-chinese` skill。该 skill **保持上游默认，不做本地改动**；本节只固化两条：
-
-- **中文引号用直角引号 `「」`**——与 skill 默认一致。
-- **允许第二人称「你」**——skill 默认不直接称呼读者，本项目覆盖这条（skill 允许项目覆盖）。读者是你自己和协作的 agent，说「你」比「开发者」省事。
+写中文文档、界面文案和注释时走 `tech-doc-style-chinese` skill（保持上游默认，不做本地改动）。本项目固化两条：
+中文引号用直角引号 `「」`；**允许第二人称「你」**（skill 默认不直接称呼读者，本项目覆盖——读者是你自己和协作的 agent）。
 
 ## Agent skills
 
 > 配置全部在 `docs/agents/`，改那里，不改这里的索引。
-> **本项目用到哪些 skill、装没装**见 [docs/agents/skills.md](docs/agents/skills.md)（唯一位置，2026-08-24 起）。
-> 以下三份供 mattpocock 系列 skill（`/to-tickets` `/triage` `/to-spec` `/wayfinder` `/domain-modeling` 等）读取。
+> **本项目用到哪些 skill、装没装**见 [docs/agents/skills.md](docs/agents/skills.md)（唯一位置）。
+> 供 mattpocock 系列 skill（`/to-tickets` `/triage` `/to-spec` `/wayfinder` 等）读取的三份：
+> [issue-tracker.md](docs/agents/issue-tracker.md)（issue/spec 存 `.scratch/<feature-slug>/`，入库，不走 GitHub/GitLab）、
+> [triage-labels.md](docs/agents/triage-labels.md)（五个标准角色由 issue 的 `Status:` 行承载）、
+> [domain.md](docs/agents/domain.md)（multi-context，**不新建 `CONTEXT-MAP.md` / `CONTEXT.md` / `docs/adr/`**，复用 `context/` 与 `.service-matrix.yaml`）。
 
-### Issue tracker
+## 执行策略：E3（先估计 → 最小执行 → 失败才扩张）
 
-本地 markdown：issue 与 spec 存放在 `.scratch/<feature-slug>/`，入库，不走 GitHub/GitLab。
-见 [docs/agents/issue-tracker.md](docs/agents/issue-tracker.md)。
+动手前先估计任务规模并说出来，最多一次廉价探测（查一次 `.service-matrix.yaml` 或一条 grep）：
 
-### Triage labels
+- **L1** 单文件局部修改 · **L2** 少数文件跨文件修改 · **L3** 仓库级重构（警惕 re-export/别名/网关接线/Config Center 键这类 grep 看不到的间接引用点）
+- 按估计走最小路径：只读预计要改的文件，不为局部修改通读代码库；改完立即跑下面锚点里**最便宜的适用验证**
+- 只有验证变红才扩大范围，一次扩一级（再 grep → 追依赖 → 读下一个最相关文件），复用已有发现，不推倒重来
+- 措辞像局部但探测命中多处时，降置信、按高一级处理
+- 规模驱动开销：L1/L2 不开 plan mode、不派子代理、低 reasoning effort；L3 才值得。正确性是硬约束：便宜失败不算效率，没有可信验证器时初始估计保守一级
+- E3 **不豁免**硬规则：runbook §0.1 必读路由、proto 前读设计文档属于最小路径；也**不要**反向加码写「先通读代码库 / be thorough」——实测又慢又更易失败
 
-沿用五个标准角色（`needs-triage` / `needs-info` / `ready-for-agent` / `ready-for-human` /
-`wontfix`），由 issue 文件里的 `Status:` 行承载。
-见 [docs/agents/triage-labels.md](docs/agents/triage-labels.md)。
+## 消费边界：用户给的是目标，不是空白支票
 
-### Domain docs
+执行授权 ≠ 消费授权。几十 token 的输入可以在后台变成几百次付费决策，用户看不见也拦不住（事故：一次 5 分钟 1000 元的 12 个 subagent 失控，见 e3-execution.md）。E3 管「读多少」，本节管「花多少」：
 
-multi-context，但**不新建 `CONTEXT-MAP.md` / `CONTEXT.md` / `docs/adr/`**——复用既有
-`context/` 三层知识库与 `.service-matrix.yaml`。
-见 [docs/agents/domain.md](docs/agents/domain.md)。
+- **事前**：派 subagent 前先说出数量和理由；单轮超过 3 个或子代理再派子代理，先问用户
+- **过程**：每次扩张（新 subagent、检索由目录扩到全仓、切更贵模型、第 2 次重试）回复里说一句，不静默
+- **告警**：以下任一出现即停下报告，不自行继续：请求数超同类经验上限（只读调研 >20 次仍未汇总）、能看到 usage 时连续两轮 `cacheReadTokens=0` 而输入有大段稳定前缀、同一检索重复执行、上下文整份重复携带
+- **可控**：用户说停就停，包括已派出的 subagent；停后不为「收尾」再起新调用
+- **小票**：任务结束按 usage 报请求数、总/缓存 token、subagent 数、超预期原因、完成与未完成
+
+E3 出处（arXiv:2607.13034）、路由表、护栏 hook 验证方法与消费边界六环节的完整说明见 [context/harness-framework/e3-execution.md](context/harness-framework/e3-execution.md)。
+
+## 命令与验收锚点（动手前最后核对）
+
+> **[context/team/runbook.md](context/team/runbook.md)** 是可执行入口:§0.1 是**按改动类型的
+> 必读路由**（动 Redis / 定时任务 / proto / 指标告警 / CI-CD 前各该先读哪份）。以下是提交前必跑的锚点：
+
+```bash
+scripts/verify-quick.sh                          # 默认入口:后端链+前端并行,绿只打一行、红只打失败段
+cd backend && go build ./... && go vet ./...    # ↑ 的分解动作:编译 + 静态检查
+cd backend && go test -count=1 ./structcheck/... # 改 .service-matrix.yaml/加删服务后必跑
+scripts/verify-deploy-parity.sh                  # 改 helm/ 或任一裸 manifest 后必跑
+cd backend && go test -short ./...               # 后端测试(CI 用 -short)
+cd frontend && pnpm ready                        # 前端 lint+fmt+类型+test
+scripts/verify-context.sh                        # 改 context/、docs/design、README/STACK 或本文件后必跑
+scripts/verify-context-canary.sh                 # 改 ↑ 门禁脚本本身后必跑:注错断言门禁还会红
+```
+
+`verify-context.sh` 是 **main 上唯一必需的 CI 检查**（GitHub `context-gate` + GitLab 同名 job）。
+
+放行以「命令真绿」为准,不以模型自报为准。核心改动 push 前跑 `/adversarial-review` 做异构双审。
