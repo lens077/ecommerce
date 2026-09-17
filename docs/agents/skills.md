@@ -4,13 +4,14 @@
 
 ## Skills
 
-检查范围：`~/.claude/skills`、`~/.agents/skills` 均不存在；`~/.codex/skills` 只有 `.system`；`~/.dsh/skills` 有 Sepia 系列、novel-writer、qimao-novel-scraper。当前 DSH 会话还提供 archify。项目 `.claude`、`.codex`、`.cursor` 中未发现下列缺失 Skill 的本体。
+检查范围〔实测 2026-09-16〕：`~/.agents/skills` 与 `~/.claude/skills` 各 30+ 个（mattpocock 系列、`tech-doc-style-chinese`、`impeccable`、`handoff` 等）；`~/.dsh/skills` 有 `impeccable`、Sepia 系列、novel-writer 等；`~/.codex/skills` 只有 `holo-card-studio`、`kimi-webbridge`。2026-09-08 那轮「均不存在」的记录已过期。
 
 | Skill | 本机状态 | 用途与恢复入口 |
 |---|---|---|
-| `tech-doc-style-chinese` | 缺失 | 项目中文技术文档规则；上游 [Fenng/tech-doc-style-chinese](https://github.com/Fenng/tech-doc-style-chinese)。保持上游原文，项目覆盖仍写在 AGENTS.md |
-| `impeccable` | 缺失 | 前端设计与检查；上游 [pbakaus/impeccable](https://github.com/pbakaus/impeccable)。已有 PRODUCT.md、DESIGN.md 和 `.impeccable/` 项目资产，不要重新初始化覆盖 |
-| `adversarial-review` | 缺失，原安装来源未确认 | runbook 要求隔离 fresh Claude + Codex 双审；优先从旧备份恢复。网上有多个同名实现，不能据名称认定为原版 |
+| `tech-doc-style-chinese` | 已装〔实测 2026-09-16：`~/.agents/skills`、`~/.claude/skills`，含 references/〕 | 项目中文技术文档规则；上游 [Fenng/tech-doc-style-chinese](https://github.com/Fenng/tech-doc-style-chinese)。保持上游原文，项目覆盖仍写在 AGENTS.md |
+| `impeccable` | 已装〔实测 2026-09-16：`~/.agents/skills`、`~/.claude/skills`、`~/.dsh/skills`〕 | 前端设计与检查；上游 [pbakaus/impeccable](https://github.com/pbakaus/impeccable)。已有 PRODUCT.md、DESIGN.md 和 `.impeccable/` 项目资产，不要重新初始化覆盖 |
+| `adversarial-review` | **不采用外部 skill**（2026-09-16 裁决） | runbook §5 的「异构双审」用本仓 subagent 实现：两个只读子代理分别走 Claude / Codex 路由审同一份 diff，主会话合并。候选的 [localSummer/skills](https://github.com/localSummer/skills) 同名实现是 Bug-finder / Defender / Referee 三角色对抗审 `target_path`，与「异构双模型审 diff」语义不同，未采用。`[SKILL-REF]` 门禁：入口文件不得要求执行本表标「缺失」的 skill |
+| mattpocock 系列（`to-tickets` `triage` `to-spec` `wayfinder` `domain-modeling` `handoff` 等） | 已装〔实测 2026-09-16：`~/.agents/skills`、`~/.claude/skills`〕 | 读取 `docs/agents/{issue-tracker,triage-labels,domain}.md`；交接内容契约见 `context/harness-framework/handoff-format.md` |
 | `archify` | 当前 DSH Skill 目录已可见 | 无需为当前 DSH 重复安装；Claude/Codex 是否要独立安装按使用场景决定，上游 [tt-a1i/archify](https://github.com/tt-a1i/archify) |
 
 DSH 默认扫描项目 `.dsh/skills`、`.agents/skills` 和用户 `~/.dsh/skills`、`~/.agents/skills` 等来源；不要假设只装到 `~/.claude/skills` 就一定能被 DSH 发现。安装后新建会话，确认 Skill 目录出现且能加载，再更新本页状态。

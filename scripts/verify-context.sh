@@ -5,7 +5,7 @@
 # verify-agent-note-format / verify-doc-budgets)移植,落地方式沿用本仓惯例:
 # 能判定的约束变成脚本,存量漂移走基线棘轮(见 scripts/lint-baseline.sh 的设计)。
 #
-# 十二项检查(任一违规 → 退出码 1;RETIRED、LIVE-FACT 两项在正文各自注释处说明):
+# 十三项检查(任一违规 → 退出码 1;RETIRED、LIVE-FACT 两项在正文各自注释处说明):
 #   [DEAD-LINK]    AGENTS.md/README.md/STACK.md/TODO.md 与 context/**、docs/** 全树的
 #                  相对 markdown 链接必须可达
 #                  (2026-08-26 扩:原只查 AGENTS+context,当日 README/STACK/docs/design
@@ -22,6 +22,7 @@
 #                  name 与文件名一致;layer:/module: 若存在必须与路径一致
 #   [FORMAT]      experience/*.md 必须含「症状」与「关键陷阱/陷阱」小节
 #                  (格式定义见 context/harness-framework/knowledge-layering.md)
+#   [SKILL-REF]   AGENTS.md/runbook 不得要求执行 docs/agents/skills.md 登记为「缺失」的 skill
 #   [EVOLOG]      evolution-log/YYYY-MM.md 每条必须四要素齐全(改了什么/为什么/触发事故/怎么验证的);
 #                  evolution-log.md 的索引段必须与卷标题一致(脚本生成,不许手写)
 #   [DECISION]    context/decisions/ 决策记录:路径即状态(implemented/proposed/rejected),
@@ -332,6 +333,23 @@ if [ -d "$decisions_dir" ]; then
       fail "DECISION" "$file 缺 ## 考虑过的替代方案(没记录打败了谁的决定会被反复重新争论)"
     fi
   done < <(find "$decisions_dir" -mindepth 2 -name "*.md" -type f)
+fi
+
+# ── 5.8 入口文件不得要求执行登记为「缺失」的 skill ─────────────
+# docs/agents/skills.md 是 skill 装没装的唯一登记处。2026-09-16 实测 AGENTS.md 与 runbook §5 要求
+# 「push 前跑 /adversarial-review」,而登记表标它「缺失,原安装来源未确认」——指向不存在的程序记忆
+# 比没有更糟,模型会花轮次去找。判据:登记表中「本机状态」列含「缺失」的行,其第一列反引号里的名字
+# 不得以 `/名字` 出现在 AGENTS.md 或 context/team/runbook.md(围栏外)。
+skills_reg="docs/agents/skills.md"
+if [ -f "$skills_reg" ]; then
+  while IFS= read -r skill; do
+    [ -z "$skill" ] && continue
+    for entry in AGENTS.md context/team/runbook.md; do
+      if _strip_fences "$entry" | grep -qF "\`/$skill\`"; then
+        fail "SKILL-REF" "$entry 要求执行 /$skill,但 $skills_reg 登记它「缺失」——装上并改登记,或改用本仓能力"
+      fi
+    done
+  done < <(awk -F'|' '/^\| `/ && $3 ~ /缺失/ { if (match($2, /`[^`]+`/)) print substr($2, RSTART+1, RLENGTH-2) }' "$skills_reg")
 fi
 
 # ── 6. AGENTS.md 预算 ────────────────────────────────────────

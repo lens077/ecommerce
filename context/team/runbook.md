@@ -145,9 +145,19 @@ pnpm hygiene          # knip(未用依赖/导出/重复导出/catalog 条目)+ p
 
 ## 5. 本地异构双审(push 前,替代 CI 里的 AI 审查)
 
-核心改动 push 前对着 diff 跑 **`/adversarial-review`**(隔离 fresh Claude + Codex 独立审、
-逐条核实合并);小改动可跳。这是「异构监督」防线,放行仍以 §1–§3 的执行事实(build/test 真绿)
-为锚点,不以任何模型自报为准。
+核心改动 push 前做**异构双审**;小改动可跳。这是「异构监督」防线,放行仍以 §1–§3 的执行事实
+(build/test 真绿)为锚点,不以任何模型自报为准。**不依赖外部 skill**(2026-09-16 起,原 `/adversarial-review`
+名字停用——本机没有那个 skill,候选的同名实现语义也不同,见 `docs/agents/skills.md`),用本仓 subagent 实现:
+
+1. 取 diff:`git diff <base>...HEAD > /tmp/review.diff`(base 是 main 或上一个 tag)。
+2. **同一轮**并行派两个**只读**子代理(subagent-dispatch 约定二),一个走 Claude 路由、一个走 Codex/GPT 路由
+   (`list_subagent_models` 选;两个必须是不同模型族——同族双审等于单审)。prompt 相同:
+   「只审 `/tmp/review.diff`,不改文件、不跑不可逆命令。按 severity(high/medium/low)列出发现,
+   每条给 `file:line`、一句主张、一条能复现或证伪它的命令;没有发现就说没有」。
+3. 主会话合并:两家都报的 → 高置信,直接修;只有一家报的 → 逐条用它给的命令核实,核实不过就丢。
+   不接受任何一条没有 `file:line` + 验证命令的发现。
+4. 子代理只回结构化清单,不回 diff 原文(subagent-dispatch 约定一;回报格式见
+   [handoff-format.md](../harness-framework/handoff-format.md)「子代理回报」行)。
 
 ---
 
