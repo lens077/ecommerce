@@ -69,7 +69,7 @@ wayfinder 的研究类子单（`Type: research / prototype / grilling`）用 `re
 
 `.scratch/` **入库**（不在 `.gitignore` 里）。这些文件走正常的 commit 流程，
 因此同样受 `context/team/git-commit.md` 的提交规范约束：只改 `.scratch/` 的提交用
-`docs` 类型，且提交前先更新 `TODO.md`（AGENTS.md 硬规则 3）。
+`docs` 类型；若这次改动涉及某个 TODO 项，同时更新 `TODO.md`（AGENTS.md 硬规则 3）。
 
 ## 当某个 skill 说「publish to the issue tracker」
 

@@ -7,14 +7,14 @@ todo-spec: 1
 > 待办明细按 [`docs/TECH.md`](docs/TECH.md) 的章节体系拆分到 [`docs/todo/`](docs/todo/README.md)；
 > 本文件承担**全局优先级视图 + 分类索引 + 领域状态表**。
 >
-> 图例：✅ 已完成　🟡 部分完成（有核心能力，仍有缺口）　🔴 有阻断性缺陷　⬜ 未开始
+> 图例：✅ 已完成　🟡 部分完成（有核心能力，仍有缺口）　🔴 有阻断性缺陷　⬜ 未开始　— 不适用/已退役
 
 ## 纪律（改待办前先读）
 
 1. **只在改动涉及 TODO 项时才回写本文件**：完成 → 勾选/改状态；部分完成 → 改状态与缺口一句话；
    目标变了 → 改写该项；不再需要 → 删除。与任何 TODO 项无关的改动**不进本文件**。
 2. 本文件**不记流水账、不存证据**。「某天做了什么」「实测数字与处置过程」「会话记录」按月追加到
-   [`docs/progress-archive/YYYY-MM-progress-log.md`](docs/progress-archive/)（不可变历史）；
+   [`docs/progress-archive/`](docs/progress-archive/) 的 `YYYY-MM-progress-log.md`（不可变历史，没有当月文件就新建）；
    调研报告归 [`docs/reports/`](docs/reports/)；CI 发版行由流水线写进
    [`docs/progress-archive/ci-releases.md`](docs/progress-archive/ci-releases.md)。
    `scripts/verify-context.sh` 的 `[TODO-CLEAN]` 拦两种形态：以日期开头的行、超过 600 字节的单行。
@@ -31,7 +31,7 @@ todo-spec: 1
 
 ## 一、全局优先级视图
 
-**未完成合计 160 项，其中 P0 共 18 项**（计数口径：各分类文件顶层 `- [ ]` 复选框实数，
+**未完成合计 161 项，其中 P0 共 18 项**（计数口径：各分类文件顶层 `- [ ]` 复选框实数，
 `grep -c '^- \[ \]' docs/todo/*.md`，按未完成数降序）。
 
 P0 的判据是**后果**不是紧迫感：「调用会成功但结果是错的」「任何登录用户都能越权」一律 P0——
@@ -66,7 +66,7 @@ P0 的判据是**后果**不是紧迫感：「调用会成功但结果是错的�
 |---|---|---:|---:|
 | [统一可观测性体系](docs/todo/统一可观测性体系.md) | §9 | 25 | 2 |
 | [微服务与交易闭环](docs/todo/微服务与交易闭环.md) | §5 / §4.3 | 25 | 10 |
-| [基础设施与部署模型](docs/todo/基础设施与部署模型.md) | §7 | 25 | 0 |
+| [基础设施与部署模型](docs/todo/基础设施与部署模型.md) | §7 | 24 | 0 |
 | [文档与协作机制](docs/todo/文档与协作机制.md) | —（harness） | 14 | 0 |
 | [前端技术栈与工程化](docs/todo/前端技术栈与工程化.md) | §11 | 17 | 0 |
 | [零信任鉴权与 Session](docs/todo/零信任鉴权与Session.md) | §8 | 16 | 4 |
@@ -78,9 +78,12 @@ P0 的判据是**后果**不是紧迫感：「调用会成功但结果是错的�
 
 ## 二、领域状态表
 
-> 每行只写「状态 + 一句缺口 + 明细在哪」。实测数字、处置过程、证据链一律不在这里——
-> 重构前的原文见 [快照](docs/progress-archive/2026-09-16-todo-status-snapshot.md)「二」，
-> 之后的按月进 `docs/progress-archive/`。
+> 每行只写「状态 + 一句缺口 + 明细在哪」。**处置过程与证据链**不在这里——重构前的原文见
+> [快照](docs/progress-archive/2026-09-16-todo-status-snapshot.md)「二」，之后的按月进 `docs/progress-archive/`。
+>
+> ⚠️ 下表的运行态断言（GitOps 通没通、某组件在不在跑）**沿用快照里最后一次实测，本轮未重测**。
+> 拿它做判断前，按 [live-facts.md](context/team/live-facts.md) 的复验命令核一遍；
+> 谁重测了就在对应行补 `〔实测 YYYY-MM-DD〕`。
 
 ### 0. 发布与部署
 
@@ -130,7 +133,7 @@ P0 的判据是**后果**不是紧迫感：「调用会成功但结果是错的�
 | order | 🔴 | `CreateOrder` 假成功、`CompleteOrder` 不落库（P0 #3/#4） |
 | payment | 🟡 | 5 个 RPC 均为显式 `Unimplemented` 桩；repo 主体待恢复。存量库需跑 `make migrate-up MIGRATE_SVC=payment` |
 | inventory | 🔴 | `Reserve` 静默无操作、`ReleaseReserve` panic（P0 #1/#2） |
-| search | 🟢 | ES 运行时已切流；待办：聚合筛选、热门词 |
+| search | 🟡 | ES 运行时已切流；待办：聚合筛选、热门词 |
 | address | 🔴 | 功能齐全**但全线越权**（P0 #5） |
 | merchant | 🔴 | 仅 `Submit`/`Get` 可用；两段式入驻已设计未实现（P0 #6/#9） |
 | behavior | 🟡 | `Track`/`Recommend`/`SimilarItems` 已编译通过 |

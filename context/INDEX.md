@@ -11,48 +11,24 @@ context/
 └── project/ecommerce/          服务级（高频、量最大）—— 各模块的架构与踩坑
 ```
 
-## 团队级 · [context/team/](team/INDEX.md)
+## 四层分别是什么、何时进哪层
 
-| 文件 | 一句话 |
-|---|---|
-| [runbook.md](team/runbook.md) | **可执行入口**：§0.1 按改动类型的必读路由，以及提交前必跑的验收锚点 |
-| [capability-seams.md](team/capability-seams.md) | 能力接缝的准入判据：定义方 + 至少两个真实提供方 + 消费方缺一不可，签名不暴露 vendor 类型 |
-| [infra-duplication.md](team/infra-duplication.md) | 基础设施副本的治理：同构门禁只能冻结漂移、不能消除副本，根因在生成模板不在服务 |
-| [db-migrations.md](team/db-migrations.md) | schema 变更与种子数据的唯一路径：goose + Pigsty 存量库基线接管 + sqlc 同步生成 |
-| [git-commit.md](team/git-commit.md) | Conventional Commits + 提交前必须先更新 TODO.md |
-| [proto-design.md](team/proto-design.md) | 写 proto 前先读设计文档，每个字段都要有 buf.validate 约束 |
-| [local-env.md](team/local-env.md) | 本地跑服务时往哪连：活地址表、`*.dev.test` 解析与 TLS 信任、镜像代理单点等几个白排查半天的坑 |
-| [node-graceful-shutdown.md](team/node-graceful-shutdown.md) | Kubernetes 节点关机/重启的 90/30 秒优雅退出、systemd inhibitor、终态 Pod 与清理边界 |
-| [shell-scripting.md](team/shell-scripting.md) | macOS Bash 3.2：`set -u` 下不能无条件展开空数组 |
-| [go-redis.md](team/go-redis.md) | go-redis v9：热重建客户端、cache-aside、连接池、Key/TTL、Pipeline、重试、锁与 Pub/Sub 边界 |
-| [cron-jobs.md](team/cron-jobs.md) | 定时任务的执行边界：扩副本即重复执行、Ticker 首次触发盲窗、重叠/panic/超时/时区/优雅停止 |
-| [pangolin-tunnel.md](team/pangolin-tunnel.md) | 对外公开内网服务走 Pangolin：拓扑与凭据位置、面板 API、k8s HTTPRoute 必须走 Gateway 443 |
-| [tls-enablement.md](team/tls-enablement.md) | 给在跑的服务补 TLS 的检查清单：**先判云厂商 ICP 拦截**；健康检查 / 挂载 / SAN / HOME 四类静默失效；验收必须有故意错的输入 |
-| [go-testing.md](team/go-testing.md) | 测试分层判定：biz 层 mock、data 层真库、Redis 用 miniredis；`-short` 是唯一开关；禁用 go-sqlmock/pgxmock |
-| [deploy-parity.md](team/deploy-parity.md) | 部署清单双真相源 helm/ ≡ 裸 manifest，`scripts/verify-deploy-parity.sh` 守逐字段等价；共享对象只在 `helm/files/` |
-| [okteto-inner-loop.md](team/okteto-inner-loop.md) | 内环开发 `okteto up`：什么时候用、**必须先关 ArgoCD 自动同步**、不是测试环境 |
-| [tech-selection.md](team/tech-selection.md) | 「上游已死」类选型结论定稿前必查镜像谱系与社区延续分叉；查到分叉 ≠ 采用 |
-| [alerting-signal-hygiene.md](team/alerting-signal-hygiene.md) | 告警的价值 = 新信息量，慢性红等于没有告警；降噪顺序「修根因 > 调 `repeat_interval` > 改阈值」；探针探功能推进 |
-| [cfs-quota-throttling.md](team/cfs-quota-throttling.md) | 「CPU 才 15% 却延迟飙升」：CFS 配额按 100ms 周期冻结容器，判据是 `cpu.stat` 的 `nr_throttled`/`throttled_usec` |
-| [cilium-datapath-ops.md](team/cilium-datapath-ops.md) | Cilium 数据面三条只能实测的事实：ipcache 失配让放行规则静默失效、CES 换 IP 不跟新、bpf map 缩容后成孤儿 |
+> **逐篇清单只维护在各层自己的 `INDEX.md` 里**（2026-09-16 起，与 project 层原有做法一致）。
+> 本文件是路由，不是目录：它回答「该进哪一层」，进层之后由那层的 INDEX 回答「读哪一篇」。
+> 之前根与层各维护一份清单，两份措辞已经分叉，且 `host-watchdog.md`、`live-facts.md`、
+> `sgh-implementation-plan.md` 三份只在层 INDEX 里有、在这里是隐形的。
 
-## 框架工程级 · [context/harness-framework/](harness-framework/INDEX.md)
+| 层 | 入口 | 什么时候进来 | 这一层的 INDEX 额外回答什么 |
+|---|---|---|---|
+| 团队级 | [team/INDEX.md](team/INDEX.md) | 动代码前查约束：Redis / 定时任务 / proto / 迁移 / 测试 / 部署 / TLS / 告警 / 本地环境 | 每条约束**违反后会怎样**（三列表） |
+| 框架工程级 | [harness-framework/INDEX.md](harness-framework/INDEX.md) | 改 AI 协作机制本身：知识分层、E3、子代理、交接格式、演进日志 | 每份文档**约束什么** |
+| 决策记录 | [decisions/INDEX.md](decisions/INDEX.md) | 改硬规则 / 门禁 / CI 职责 / 真相源归属之前 | 现行决策、**打败了谁**、付出了什么 |
+| 服务级 | [project/ecommerce/INDEX.md](project/ecommerce/INDEX.md) | 查某个模块的架构与踩坑 | 按模块分目录，`experience/` 一坑一文件 |
 
-| 文件 | 一句话 |
-|---|---|
-| [knowledge-layering.md](harness-framework/knowledge-layering.md) | 一条知识该写进哪一层的判定规则；frontmatter `affects:` 反向索引与 `scripts/spec-impact.sh` 查询 |
-| [self-refinement.md](harness-framework/self-refinement.md) | 纠错 → 判断模式性 → 沉淀 → 下次复用的闭环 |
-| [graph-engineering.md](harness-framework/graph-engineering.md) | 多闭环 AI 工作流方法论存档：锚点命令、Loop 0~4 分工；冻结节点机制已整套删除，文内有「不要重建」说明 |
-| [delivery-efficiency.md](harness-framework/delivery-efficiency.md) | AI Coding 交付效率治理：可信状态、P50/P85 与长尾、日报证据和人机责任边界 |
-| [e3-execution.md](harness-framework/e3-execution.md) | E3 执行策略：先估计、最小执行、失败才扩张；护栏 hook 验证方法；消费边界（token 成本治理六环节） |
-| [dsh-model-onboarding.md](harness-framework/dsh-model-onboarding.md) | **新增、升级或切换 DSH 模型前必读**：模型目录声明、长上下文、自动压缩阈值换算与在线验收 |
-| [handoff-format.md](harness-framework/handoff-format.md) | 压缩 / 会话交接 / 子代理回报共用的八段内容契约：保留什么、丢什么、≤600 token |
-| [subagent-dispatch.md](harness-framework/subagent-dispatch.md) | 子代理派发三条硬约定：只回结构化摘要、按角色裁剪能力、按角色分层模型 |
-| [multi-agent-concurrency.md](harness-framework/multi-agent-concurrency.md) | 多 Agent 并发改同一批文件的四条纪律：状态用文件同步、引用点名、置信度会凭空升高、宣布完成不终止复核 |
-| [cordis-evaluation.md](harness-framework/cordis-evaluation.md) | 已评估「底层改 Cordis 插件框架」：暂不采用的理由与重新评估条件 |
-| [flywheel-audit.md](harness-framework/flywheel-audit.md) | 对照《Agent 自进化飞轮》的评测结论 + 方向性审计约定；门禁元评测 canary 的由来 |
-| [portable-harness.md](harness-framework/portable-harness.md) | 跨项目共用能力清单与采纳步骤；lens077 根 symlink 登记处 |
-| [evolution-log.md](harness-framework/evolution-log.md) | harness 每次改动的原因与触发事故——**改硬规则/门禁前必读**，防止把改对的东西改回去 |
+**最常用的两个入口**（其余一律走上表，不在这里列第二份清单）：
+
+- [team/runbook.md](team/runbook.md) —— 可执行入口，§0.1 是按改动类型的必读路由，§1–§6 是提交前必跑的锚点。
+- [harness-framework/evolution-log.md](harness-framework/evolution-log.md) —— 演进日志索引，改硬规则 / 门禁前先扫它。
 
 ## 决策记录 · [context/decisions/](decisions/INDEX.md)
 

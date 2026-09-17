@@ -165,7 +165,7 @@ buf.gen.yaml → src/gen → env.ts(zod) → api/{domain} → routes → compone
 
 1. **改代码前先读对应知识**：按 `context/INDEX.md` 的路径逐层缩小范围，不要全仓 grep 猜。
 2. **写/改 proto 前必须先读设计文档**，并为每个字段推断出校验约束。见 `context/team/proto-design.md`。
-3. **提交前先更新 `TODO.md`**，再 `git commit`。见 `context/team/git-commit.md`。
+3. **提交前先判断改动是否涉及 TODO 项**，涉及才更新 `TODO.md`，再 `git commit`。见 `context/team/git-commit.md`。
 4. **不要把凭据写进仓库**。密码/密钥只存在配置中心和本地环境，仓库里只写主机名和端口。
 5. **踩到坑要沉淀**：判断是「模式性教训」还是「一次性 diff」，前者写进 `context/`。见 `context/harness-framework/self-refinement.md`。
 
@@ -325,7 +325,7 @@ context/
 
 | 文件 | 一句话 |
 |---|---|
-| git-commit.md | Conventional Commits + 提交前必须先更新 TODO.md |
+| git-commit.md | Conventional Commits + 提交前先判断改动是否涉及 TODO 项 |
 | proto-design.md | 写 proto 前先读设计文档，每个字段都要有 buf.validate 约束 |
 | local-env.md | 本地集群地址约定（只写主机名端口，不写凭据） |
 
@@ -465,7 +465,7 @@ LLM 没有跨会话记忆。但**每一次用户纠正，都是一个信号**：
 
 ### `context/team/` 三份
 
-- `git-commit.md` — Conventional Commits + **提交前先更新 TODO.md** + 分组提交 + 分支策略
+- `git-commit.md` — Conventional Commits + **提交前先判断改动是否涉及 TODO 项** + 分组提交 + 分支策略
 - `proto-design.md` — 两条铁律 + 按类型的约束清单 + 兼容性红线 + validate 边界（内容见 `STACK.md` 第四节，展开写成规范）
 - `local-env.md` — 本地集群主机名端口 + 「配置源是启动前置条件」+ **不写凭据**
 

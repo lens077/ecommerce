@@ -290,9 +290,17 @@ mut_index_root_long() { # 根 INDEX 的「一句话」长成一段话 → 第一
 mut_index_layer_ok() { # 各层 INDEX 允许到 200 字(第二跳可列举陷阱),150 字必须放行(假阳性守卫)
   printf '\n| [runbook.md](runbook.md) | %s | 后果 |\n' "$(printf '长%.0s' $(seq 1 150))" >> "$1/context/team/INDEX.md"
 }
-mut_skill_ref_missing() { # 入口文件要求跑一个登记为「缺失」的 skill → 指向不存在的程序记忆
-  printf '\n| `canary-skill` | 缺失 | canary 注错样本 |\n' >> "$1/docs/agents/skills.md"
+mut_skill_ref_missing() { # 入口文件要求跑一个登记为不可用的 skill → 指向不存在的程序记忆
+  # 必须插进「## Skills」表内:判据只扫那一张表(首版扫全文,把 CLI 表里的 gitleaks 当成了 skill)
+  awk '/^\| `archify`/ { print "| `canary-skill` | 缺失 | canary 注错样本 |" } { print }' \
+    "$1/docs/agents/skills.md" > "$1/docs/agents/skills.md.new" && mv "$1/docs/agents/skills.md.new" "$1/docs/agents/skills.md"
   printf '\n核心改动前跑 `/canary-skill`。\n' >> "$1/context/team/runbook.md"
+}
+mut_skill_ref_cli_ok() { # 假阳性守卫:「开发与验证 CLI」表里标缺失的工具名不是 skill,提到它不该红
+  printf '\n装不上 `gitleaks` 时先看 `/gitleaks` 的安装说明。\n' >> "$1/context/team/runbook.md"
+}
+mut_todo_dated_star() { # 放宽后的日期形态:`* `、`### ` 也要被抓(首版只认 `- `)
+  printf '\n### 2026-09-16 canary 整节流水账\n\n* 2026-09-16 又做了一件事\n' >> "$1/TODO.md"
 }
 mut_todo_dated() { # 以日期开头的流水账回流 TODO.md → 它只记 TODO 项,changelog 进 progress-archive
   printf '\n2026-09-16 canary 做了一件事并把过程写在这里。\n' >> "$1/TODO.md"
@@ -428,6 +436,9 @@ probe index-root-long     1 "INDEX-LINE"  mut_index_root_long
 # 假阳性守卫:各层 INDEX 的 200 字阈值下 150 字必须放行
 probe index-layer-ok      0 ""            mut_index_layer_ok
 probe skill-ref-missing   1 "SKILL-REF"   mut_skill_ref_missing
+# 假阳性守卫:CLI 表里标「缺失」的工具名不是 skill,入口文件提到它不该红
+probe skill-ref-cli-ok    0 ""            mut_skill_ref_cli_ok
+probe todo-dated-star     1 "TODO-CLEAN"  mut_todo_dated_star
 probe todo-dated          1 "TODO-CLEAN"  mut_todo_dated
 probe todo-long           1 "TODO-CLEAN"  mut_todo_long
 # 假阳性守卫:围栏内的日期行/长行必须放行

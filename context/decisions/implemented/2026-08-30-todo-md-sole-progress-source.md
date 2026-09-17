@@ -16,7 +16,8 @@ description: TODO.md 是唯一进度真相源；PROGRESS.md 双文档（08-13）
 
 ## 决策
 
-`TODO.md` 是**唯一**进度真相源，硬规则 #3 要求每次提交前先更新它，因此它有独立的强制时机。
+`TODO.md` 是**唯一**进度真相源，硬规则 #3 要求提交前先判断改动是否涉及 TODO 项、涉及才更新
+（2026-09-16 收窄，见 [2026-09-16-todo-md-items-only.md](2026-09-16-todo-md-items-only.md)），因此它有独立的强制时机。
 待办明细按 `docs/TECH.md` 体系分类在 `docs/todo/`，属于同一体系的细分而非第二份视图。
 
 不再存在的东西：`docs/PROGRESS.md`（归档为带废止横幅的 `docs/progress-archive/PROGRESS_ARCHIVE_20260813.md`，

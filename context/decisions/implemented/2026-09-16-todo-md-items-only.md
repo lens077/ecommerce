@@ -43,14 +43,15 @@ canary 加 `todo-dated` / `todo-long` 两个红探针与 `todo-fenced-ok` 假阳
   改为拦「行首日期」与「超长行」两种形态，与 LIVE-FACT 正交。
 - **把「现状对照」整节搬到独立的 `docs/STATUS.md` 活维护** — 多一个真相源；且它一旦活维护就会重新长出证据。
   选择压成状态表留在 TODO.md（状态本来就是待办的一部分），证据归档不可变。
-- **让 CI 继续往 TODO.md 追加发版行** — 发版不是 TODO 项；追加行会被 `[TODO-CLEAN]` 拦（以 `- CI release` 起头
-  虽不触发日期判据，但它是流水账），改写进 `ci-releases.md`。
+- **让 CI 继续往 TODO.md 追加发版行** — 发版不是 TODO 项，它是 changelog。注意 `[TODO-CLEAN]` **拦不住它**：
+  那行不以日期开头、157 字节也不超长——机械判据只覆盖两种最常见的形态，覆盖不了「什么算 TODO 项」这个语义。
+  所以改写进 `ci-releases.md` 是靠改写入方，不是靠门禁兜底。
 - **只改纪律不加门禁** — 纪律 3 已经写了三周没执行，证明没有门禁的纪律在这份文件上不成立。
 
 ## 后果
 
 - 提交前多一个判断、少一次无意义的写：与 TODO 项无关的提交不再碰 TODO.md。
-- `TODO.md` 从 82 KB 降到约 27 KB，每个涉及待办的提交回合读它的成本降约三分之二。
+- `TODO.md` 从 82074 B 降到 24303 B〔2026-09-16 实测〕，每个涉及待办的提交回合读它的成本降约七成。
 - 写「做了什么」的人要另开 `docs/progress-archive/YYYY-MM-progress-log.md`；写错地方立即被 `[TODO-CLEAN]` 拦。
 - 600 字节的行上限对表格行是紧约束：一行装不下说明该行在堆证据，拆成「一句缺口 + 链接」。
 - 事故与验证过程见 [evolution-log.md](../../harness-framework/evolution-log.md) 2026-09-16 条目。

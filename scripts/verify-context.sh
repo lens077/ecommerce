@@ -156,15 +156,22 @@ done < <(find context/project/ecommerce -mindepth 2 -name "*.md" -type f)
 # 四个 INDEX 共 43 个单元格超 120 字——第一跳变成内容层,读索引的成本逼近读正文。
 # 阈值:根 context/INDEX.md ≤ 120 字(第一跳);各层 INDEX ≤ 200 字(第二跳允许列举陷阱)。
 # 按 Unicode 字符计,不按字节(macOS awk 的 length 按字节,CJK 会被算成 3 倍),故用 python3。
-# 只量表格行(`| [` 开头)的非链接列;结论压不进阈值就搬进文件的 description/正文。
+# 量 context/ 下**每个** INDEX.md 的表格行(含 `| **[x](y)**` 这类加粗写法)的非链接列;
+# 结论压不进阈值就搬进文件的 description/正文。
 _index_line_check() {
 python3 - <<'PYEOF'
 import glob
 files=[('context/INDEX.md',120)]+[(f,200) for f in sorted(glob.glob('context/**/INDEX.md',recursive=True)) if f!='context/INDEX.md']
 for f,lim in files:
+    fence=False
     for i,l in enumerate(open(f,encoding='utf-8'),1):
-        if not l.startswith('| ['): continue
-        cells=[c.strip() for c in l.rstrip('\n').strip('|').split('|')]
+        if l.lstrip().startswith('```'):      # 围栏内是示例表格,不是真索引行
+            fence = not fence; continue
+        if fence: continue
+        t=l.rstrip('\n')
+        # `| [x](y) | …` 与 `| **[x](y)** | …` 都算索引行;分隔行 `|---|` 不算
+        if not t.startswith('|') or '](' not in t: continue
+        cells=[c.strip() for c in t.strip('|').split('|')]
         for c in cells[1:]:
             if len(c)>lim: print(f"{f}:{i}|{len(c)}|{lim}")
 PYEOF
@@ -335,21 +342,35 @@ if [ -d "$decisions_dir" ]; then
   done < <(find "$decisions_dir" -mindepth 2 -name "*.md" -type f)
 fi
 
-# ── 5.8 入口文件不得要求执行登记为「缺失」的 skill ─────────────
-# docs/agents/skills.md 是 skill 装没装的唯一登记处。2026-09-16 实测 AGENTS.md 与 runbook §5 要求
-# 「push 前跑 /adversarial-review」,而登记表标它「缺失,原安装来源未确认」——指向不存在的程序记忆
-# 比没有更糟,模型会花轮次去找。判据:登记表中「本机状态」列含「缺失」的行,其第一列反引号里的名字
-# 不得以 `/名字` 出现在 AGENTS.md 或 context/team/runbook.md(围栏外)。
+# ── 5.8 入口文件不得要求执行「本机没有」的 skill ───────────────
+# docs/agents/skills.md 的「## Skills」表是 skill 装没装的唯一登记处。2026-09-16 实测 AGENTS.md
+# 与 runbook §5 要求「push 前跑 /adversarial-review」,而登记表标它不可用——指向不存在的程序记忆
+# 比没有更糟,模型会花轮次去找。判据:Skills 表中状态列命中 缺失|不采用|未装 的行,其名字不得以
+# `/名字` 出现在 AGENTS.md 或 context/team/runbook.md(围栏外)。
+#
+# 三个已踩过的坑,改判据前先看:
+#   ① 只扫「## Skills」一张表。首版扫全文,把「开发与验证 CLI」表里的 gitleaks/buf/sqlc 也当成 skill
+#      提取出来(它们确实标「缺失」),而真正要挡的 adversarial-review 因为状态写的是「不采用外部 skill」
+#      一条也没提取到——门禁看着绿,挡的却不是 skill。
+#   ② 状态词必须是词表而不是单个「缺失」,否则换个说法就绕过去了。
+#   ③ 不要用 `_strip_fences x | grep -qF`:set -o pipefail 下 grep -q 命中即退出,
+#      左侧吃 SIGPIPE 让管道退出码变 141,if 判假,违规静默漏报(实测 rc=141)。用 case 做字符串匹配。
 skills_reg="docs/agents/skills.md"
 if [ -f "$skills_reg" ]; then
-  while IFS= read -r skill; do
-    [ -z "$skill" ] && continue
-    for entry in AGENTS.md context/team/runbook.md; do
-      if _strip_fences "$entry" | grep -qF "\`/$skill\`"; then
-        fail "SKILL-REF" "$entry 要求执行 /$skill,但 $skills_reg 登记它「缺失」——装上并改登记,或改用本仓能力"
-      fi
-    done
-  done < <(awk -F'|' '/^\| `/ && $3 ~ /缺失/ { if (match($2, /`[^`]+`/)) print substr($2, RSTART+1, RLENGTH-2) }' "$skills_reg")
+  for entry in AGENTS.md context/team/runbook.md; do
+    entry_text=$(_strip_fences "$entry")
+    while IFS= read -r skill; do
+      [ -z "$skill" ] && continue
+      case "$entry_text" in
+        *"\`/$skill\`"*)
+          fail "SKILL-REF" "$entry 要求执行 /$skill,但 $skills_reg 登记它不可用——装上并改登记,或改用本仓能力" ;;
+      esac
+    done < <(awk -F'|' '
+      /^## / { inskills = ($0 ~ /^## Skills/) }
+      inskills && /^\| `/ && $3 ~ /缺失|不采用|未装/ {
+        if (match($2, /`[^`]+`/)) print substr($2, RSTART+1, RLENGTH-2)
+      }' "$skills_reg")
+  done
 fi
 
 # ── 6. AGENTS.md 预算 ────────────────────────────────────────
@@ -376,16 +397,23 @@ fi
 # 但「全局优先级视图」堆了 25 条 `2026-xx-xx 做了什么` 的流水账,「现状对照」单个表格
 # 单元格长到 2000+ 字节的处置记录——它们是 changelog 和证据,不是 TODO 项。
 # TODO.md 只记 TODO 项及其状态;做了什么、实测数字、处置过程进 docs/progress-archive/。
-# 两条机械判据(围栏外):
-#   ① 行首是日期(允许前置 `> `/`- `/`**`)——流水账的形态
-#   ② 单行 > 600 字节——证据长文的形态(表格行也算,一行就是一个单元格的容器)
-_strip_fences TODO.md | awk '
-  { n++ }
-  /^[ \t]*(>[ \t]*)?(-[ \t]+)?(\*\*)?20[0-9][0-9]-[0-9][0-9]-[0-9][0-9]/ { printf "%d|dated\n", n; next }
-  length($0) > 600 { printf "%d|long\n", n }
-' | while IFS='|' read -r ln kind; do
+# 两条机械判据(围栏外):① 行首是日期——流水账的形态;② 单行 > 600 字节——证据长文的形态
+# (表格行也算,一行就是一个单元格的容器)。
+# 围栏由 awk 自己跟踪:用 _strip_fences 会让行号按剥离后的流计数,TODO.md 一旦出现代码块
+# 提示的行号就与原文错位。日期形态放宽到 markdown 的各种项目符号与标题,首版只认 `- `,
+# 实测 `* 2026-…`、`1. 2026-…`、`### 2026-09-16 …`(整节流水账最典型的形态)全部放行。
+# LC_ALL=C 锁死字节口径:macOS awk 的 length 按字节,CI 的 gawk 在 UTF-8 locale 下按字符——
+# 同一条 600 的阈值在两边差 3 倍(中文)。判据必须两边同义,否则本地绿 CI 绿但拦的不是一回事。
+LC_ALL=C awk '
+  /^[ \t]*```/ { fence = !fence; next }
+  fence { next }
+  /^[ \t]*(\|[ \t]*|[-*+][ \t]+|\[[ x]\][ \t]*|[0-9]+[.)][ \t]+|#{1,6}[ \t]+|>[ \t]*)*(\*\*)?20[0-9][0-9]-[0-9][0-9]-[0-9][0-9]/ {
+    printf "%d|dated\n", NR; next
+  }
+  length($0) > 600 { printf "%d|long\n", NR }
+' TODO.md | while IFS='|' read -r ln kind; do
   case "$kind" in
-    dated) fail "TODO-CLEAN" "TODO.md:${ln} 以日期开头——流水账不进 TODO.md,写进 docs/progress-archive/YYYY-MM-progress-log.md" ;;
+    dated) fail "TODO-CLEAN" "TODO.md:${ln} 以日期开头——流水账不进 TODO.md,写进 docs/progress-archive/ 当月 progress-log" ;;
     long)  fail "TODO-CLEAN" "TODO.md:${ln} 单行超过 600 字节——证据/处置记录不进 TODO.md,留一句缺口 + 链接,原文归档" ;;
   esac
 done

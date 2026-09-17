@@ -23,16 +23,22 @@ END = "<!-- evolog-index:end -->"
 HEADING = re.compile(r"^### (20\d\d-\d\d-\d\d)\s*(.+?)\s*$")  # 日期后可无空格(存量有一条「2026-08-23（补记）」)
 
 
-def slug(title: str) -> str:
-    """GitHub 风格的标题锚点：小写、去标点、空格转连字符；CJK 原样保留。"""
-    s = title.strip().lower()
-    s = re.sub(r"[^\w\s\-\u4e00-\u9fff]", "", s)
-    s = re.sub(r"\s+", "-", s)
+def slug(heading_text: str) -> str:
+    """GitHub 风格的标题锚点：小写、去标点、**逐个**空格转连字符；CJK 由 \\w 覆盖，原样保留。
+
+    两处必须与 github-slugger 一致，否则锚点静默失效（[DEAD-LINK] 只查文件不查锚点）：
+    ① 先删标点再换空格——删掉「（）」后留下的两个空格在 GitHub 上是 `--`，不能折叠成一个；
+    ② 传进来的必须是标题原文，不能用 f"{date} {title}" 重拼——存量有一条
+       「### 2026-08-23（补记）…」日期后没有空格，重拼会凭空插一个。
+    """
+    s = heading_text.strip().lower()
+    s = re.sub(r"[^\w\s\-]", "", s)
+    s = s.replace(" ", "-")
     return s
 
 
 def entries() -> list[tuple[str, str, str, str]]:
-    """返回 (date, title, volume_relpath, error) 列表；error 非空表示条目放错卷。"""
+    """返回 (date, title, volume_relpath, error, raw_heading) 列表；error 非空表示条目放错卷。"""
     out = []
     for vol in sorted(VOLUMES.glob("*.md")):
         month = vol.stem
@@ -41,16 +47,17 @@ def entries() -> list[tuple[str, str, str, str]]:
             if not m:
                 continue
             date, title = m.group(1), m.group(2)
+            raw = line[4:].strip()          # 标题原文，供 slug 用
             err = "" if date.startswith(month) else f"条目 {date} 放在 {vol.name} 卷里(应在 {date[:7]}.md)"
-            out.append((date, title, f"evolution-log/{vol.name}", err))
+            out.append((date, title, f"evolution-log/{vol.name}", err, raw))
     out.sort(key=lambda e: e[0], reverse=True)
     return out
 
 
 def render(es) -> str:
     lines = [START, ""]
-    for date, title, rel, _ in es:
-        lines.append(f"- {date} [{title}]({rel}#{slug(f'{date} {title}')})")
+    for date, title, rel, _, raw in es:
+        lines.append(f"- {date} [{title}]({rel}#{slug(raw)})")
     lines += ["", END]
     return "\n".join(lines)
 
@@ -77,7 +84,9 @@ def main() -> int:
             print(f"evolution-log-index: 已重写索引({len(es)} 条)")
         else:
             print(f"evolution-log-index: 索引已是最新({len(es)} 条)")
-        return 1 if bad else 0
+        # 写成功就是 0：放错卷只是告警，由 --check（门禁那一侧）拦。
+        # 首版这里返回 1，`--write && …` 的链会在写入成功时断掉。
+        return 0
     if mode == "--check":
         if new_text != text:
             print("evolution-log-index: 索引段与卷标题不一致——跑 scripts/evolution-log-index.py --write", file=sys.stderr)

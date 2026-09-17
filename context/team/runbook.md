@@ -146,8 +146,8 @@ pnpm hygiene          # knip(未用依赖/导出/重复导出/catalog 条目)+ p
 ## 5. 本地异构双审(push 前,替代 CI 里的 AI 审查)
 
 核心改动 push 前做**异构双审**;小改动可跳。这是「异构监督」防线,放行仍以 §1–§3 的执行事实
-(build/test 真绿)为锚点,不以任何模型自报为准。**不依赖外部 skill**(2026-09-16 起,原 `/adversarial-review`
-名字停用——本机没有那个 skill,候选的同名实现语义也不同,见 `docs/agents/skills.md`),用本仓 subagent 实现:
+(build/test 真绿)为锚点,不以任何模型自报为准。**不依赖外部 skill**(2026-09-16 起:原先依赖的那个同名外部 skill 本机没有,
+候选实现的语义也不同,登记与理由见 `docs/agents/skills.md`),用本仓 subagent 实现:
 
 1. 取 diff:`git diff <base>...HEAD > /tmp/review.diff`(base 是 main 或上一个 tag)。
 2. **同一轮**并行派两个**只读**子代理(subagent-dispatch 约定二),一个走 Claude 路由、一个走 Codex/GPT 路由

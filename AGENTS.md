@@ -33,14 +33,8 @@
 
 ## 知识索引
 
-| 层 | 路径 | 范围 |
-|---|---|---|
-| 团队级 | `context/team/` | 所有工作都要遵循（最稳定） |
-| 框架工程级 | `context/harness-framework/` | AI 协作机制本身（中频更新） |
-| 决策记录 | `context/decisions/` | 现行决策与被否决的替代方案；改硬规则/门禁前先读 |
-| 服务级 | `context/project/ecommerce/{module}/` | 特定模块（高频演进、量最大） |
-
-完整导航见 **[context/INDEX.md](context/INDEX.md)**。
+规范本体在 `context/`，**四层分别是什么、何时进哪层**见 [context/INDEX.md](context/INDEX.md)（它是路由；
+逐篇清单只在各层自己的 `INDEX.md` 里）。改硬规则 / 门禁 / 真相源归属之前，先读 `context/decisions/`。
 
 **查服务拓扑不要现搜**：服务注册名、网关前缀、依赖关系、外部依赖、Config Center 键，
 一律查 **[.service-matrix.yaml](.service-matrix.yaml)**。里面区分了 `depends_on`（已接线）
