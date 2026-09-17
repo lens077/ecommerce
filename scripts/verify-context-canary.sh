@@ -276,6 +276,12 @@ mut_budget_todo() { # 无论 TODO 当前多瘦，都精确推过 96KB 门槛
   [ "$grow" -gt 0 ] || grow=1
   head -c "$grow" /dev/zero | tr '\0' 'x' >> "$1/TODO.md"
 }
+mut_index_root_long() { # 根 INDEX 的「一句话」长成一段话 → 第一跳变内容层(链接指向真实文件,避免误触 DEAD-LINK)
+  printf '\n| [runbook.md](team/runbook.md) | %s |\n' "$(printf '长%.0s' $(seq 1 130))" >> "$1/context/INDEX.md"
+}
+mut_index_layer_ok() { # 各层 INDEX 允许到 200 字(第二跳可列举陷阱),150 字必须放行(假阳性守卫)
+  printf '\n| [runbook.md](runbook.md) | %s | 后果 |\n' "$(printf '长%.0s' $(seq 1 150))" >> "$1/context/team/INDEX.md"
+}
 mut_todo_dated() { # 以日期开头的流水账回流 TODO.md → 它只记 TODO 项,changelog 进 progress-archive
   printf '\n2026-09-16 canary 做了一件事并把过程写在这里。\n' >> "$1/TODO.md"
 }
@@ -405,6 +411,9 @@ probe decision-marker-too-new    1 "DECISION" mut_decision_marker_too_new
 probe decision-legacy-marker-ok  0 ""         mut_decision_legacy_marker_ok
 probe budget-agents       1 "BUDGET"      mut_budget_agents
 probe budget-todo         1 "BUDGET"      mut_budget_todo
+probe index-root-long     1 "INDEX-LINE"  mut_index_root_long
+# 假阳性守卫:各层 INDEX 的 200 字阈值下 150 字必须放行
+probe index-layer-ok      0 ""            mut_index_layer_ok
 probe todo-dated          1 "TODO-CLEAN"  mut_todo_dated
 probe todo-long           1 "TODO-CLEAN"  mut_todo_long
 # 假阳性守卫:围栏内的日期行/长行必须放行

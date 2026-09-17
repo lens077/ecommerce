@@ -48,6 +48,25 @@ description: harness 本身（硬规则/门禁/Agent 约束）每次改动的原
 
 ---
 
+### 2026-09-16 INDEX 单元格限长：根 ≤120 字、各层 ≤200 字，新增 `[INDEX-LINE]`
+
+- **改了什么**：`context/INDEX.md`、`team/INDEX.md`、`harness-framework/INDEX.md`、`decisions/INDEX.md`
+  共 36 个超长单元格压回阈值内（只删列举与括号补充，不改所指文件；tls-enablement 那行从列举七个坑改为
+  「先判 ICP 拦截；健康检查 / 挂载 / SAN / HOME 四类静默失效；验收必须有故意错的输入」）。
+  `verify-context.sh` 新增 `[INDEX-LINE]`：只量 `| [` 开头表格行的非链接列，按 Unicode 字符计（python3，
+  不用 awk——macOS awk 的 `length` 按字节，CJK 被算成 3 倍）。canary 加 `index-root-long`（红）与
+  `index-layer-ok`（150 字放行）。`context/INDEX.md`「检索约定」补一条规则说明。
+- **为什么**：INDEX 是渐进式披露的第一跳，价值在「便宜」——读 115 行索引决定读哪个文件。
+  当一行索引把文内七个坑全列出来，它就成了内容的副本：一份在正文、一份在索引，两处漂移；
+  且读索引的成本逼近读正文，第一跳失去意义。压长度的动作本身也是在逼索引回答
+  「管什么、何时读」而不是「结论是什么」。
+- **触发事故**：2026-09-16 对照 Context Engineering 文章审计，量到四个 INDEX 共 43 个单元格超 120 字，
+  最长 `context/INDEX.md` tls-enablement 行 150+ 字（按字节 464）、`team/INDEX.md` 同行「违反的后果」列
+  190 字（按字节 566）。另发现 team/harness 两层的「一句话」在根 INDEX 与层 INDEX 各有一份、措辞已不同——
+  project 层已注明「逐篇清单只维护一处」，team/harness 没做到；本条不合并，先记下待决。
+- **怎么验证的**：`scripts/verify-context.sh` 全绿；往根 INDEX 追加 130 字单元格实测 `[INDEX-LINE]` 红、
+  还原后绿；`scripts/verify-context-canary.sh` 新增两探针通过。
+
 ### 2026-09-16 AGENTS.md 摘掉运行态陈述、按首因/近因重排章节，预算 14000 → 13000
 
 - **改了什么**：①「反直觉约定」里带日期的运行态陈述摘掉——「GitOps 当前是断的（2026-08-24 实测）……」

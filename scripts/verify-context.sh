@@ -5,7 +5,7 @@
 # verify-agent-note-format / verify-doc-budgets)移植,落地方式沿用本仓惯例:
 # 能判定的约束变成脚本,存量漂移走基线棘轮(见 scripts/lint-baseline.sh 的设计)。
 #
-# 十一项检查(任一违规 → 退出码 1;RETIRED、LIVE-FACT 两项在正文各自注释处说明):
+# 十二项检查(任一违规 → 退出码 1;RETIRED、LIVE-FACT 两项在正文各自注释处说明):
 #   [DEAD-LINK]    AGENTS.md/README.md/STACK.md/TODO.md 与 context/**、docs/** 全树的
 #                  相对 markdown 链接必须可达
 #                  (2026-08-26 扩:原只查 AGENTS+context,当日 README/STACK/docs/design
@@ -147,6 +147,29 @@ while IFS= read -r file; do
       fail "ORPHAN" "$file 未登记进 $module/INDEX.md"
   fi
 done < <(find context/project/ecommerce -mindepth 2 -name "*.md" -type f)
+
+# ── 2.5 INDEX 单元格长度(渐进式披露的第一跳必须便宜)─────────
+# INDEX 行的职责是「这份文档管什么、什么时候读」,不是「结论是什么」。2026-09-16 实测
+# context/INDEX.md 的「一句话」已长成一段话(tls-enablement 那行 150+ 字,把文内七个坑全列了),
+# 四个 INDEX 共 43 个单元格超 120 字——第一跳变成内容层,读索引的成本逼近读正文。
+# 阈值:根 context/INDEX.md ≤ 120 字(第一跳);各层 INDEX ≤ 200 字(第二跳允许列举陷阱)。
+# 按 Unicode 字符计,不按字节(macOS awk 的 length 按字节,CJK 会被算成 3 倍),故用 python3。
+# 只量表格行(`| [` 开头)的非链接列;结论压不进阈值就搬进文件的 description/正文。
+_index_line_check() {
+python3 - <<'PYEOF'
+import glob
+files=[('context/INDEX.md',120)]+[(f,200) for f in sorted(glob.glob('context/**/INDEX.md',recursive=True)) if f!='context/INDEX.md']
+for f,lim in files:
+    for i,l in enumerate(open(f,encoding='utf-8'),1):
+        if not l.startswith('| ['): continue
+        cells=[c.strip() for c in l.rstrip('\n').strip('|').split('|')]
+        for c in cells[1:]:
+            if len(c)>lim: print(f"{f}:{i}|{len(c)}|{lim}")
+PYEOF
+}
+_index_line_check | while IFS='|' read -r loc n lim; do
+  fail "INDEX-LINE" "${loc} 单元格 ${n} 字 > ${lim}——INDEX 只写「管什么、何时读」,结论搬进文件正文"
+done
 
 # ── 3. frontmatter ───────────────────────────────────────────
 while IFS= read -r file; do

@@ -8,7 +8,7 @@
 | [self-refinement.md](self-refinement.md) | 纠错 → 判断模式性 → 沉淀 → 下次复用的闭环 |
 | [graph-engineering.md](graph-engineering.md) | 多闭环 AI 工作流方法论**存档**：Loop 0~4 分工与三个陷阱；可执行入口在 team/runbook.md，冻结节点部分已作废 |
 | [delivery-efficiency.md](delivery-efficiency.md) | AI Coding 交付效率治理：可信状态、P50/P85 与长尾、日报证据和人机责任边界 |
-| [e3-execution.md](e3-execution.md) | E3 执行策略（先估计→最小执行→失败才扩张）：出处、按规模路由、过度阅读护栏 hook 的配置与再验证；消费边界（token 成本治理六环节：事前控制/提前感知/过程可见/主动告警/随时可控/账单可解释） |
+| [e3-execution.md](e3-execution.md) | E3 执行策略（先估计→最小执行→失败才扩张）：出处、按规模路由、过度阅读护栏 hook 的配置与再验证；消费边界（token 成本治理六环节） |
 | [dsh-model-onboarding.md](dsh-model-onboarding.md) | **新增、升级或切换 DSH 模型前必读**：模型目录声明、GPT 长上下文、自动压缩阈值换算、默认切换与在线验收 |
 | [subagent-dispatch.md](subagent-dispatch.md) | 子代理派发三条硬约定：只回结构化摘要、按角色裁剪能力、按角色分层模型（何时拆分看 e3-execution） |
 | [multi-agent-concurrency.md](multi-agent-concurrency.md) | 多 Agent **并发改同一批文件**时的四条纪律：状态用文件同步不用消息、引用点名不点位置、置信度会凭空升高的三种机制、宣布完成不终止复核 |
@@ -16,7 +16,7 @@
 | [flywheel-audit.md](flywheel-audit.md) | 对照《Agent 自进化飞轮》的四齿评测结论 + 方向性审计约定（触发/清单/记录）；门禁元评测 canary 的由来 |
 | [portable-harness.md](portable-harness.md) | 跨项目共用能力清单与新项目采纳步骤；lens077 根 symlink 登记处（HARNESS.md / backpass-distill.sh） |
 | [evolution-log.md](evolution-log.md) | harness 本身每次改动的原因与**触发它的具体事故**——改硬规则/门禁前后都要看一眼，防止把改对的东西改回去 |
-| [sgh-implementation-plan.md](sgh-implementation-plan.md) | SGH（Structured Graph Harness，arXiv:2604.11378v1）执行层实施草案：DSH 侧三个 package 设计、ecommerce-solo-v1 兼容 profile、conformance 测试与七阶段实施顺序。**设计草案，尚未实现** |
+| [sgh-implementation-plan.md](sgh-implementation-plan.md) | SGH（arXiv:2604.11378v1）执行层实施草案：DSH 侧三个 package、ecommerce-solo-v1 兼容 profile、conformance 测试与七阶段顺序。**设计草案，尚未实现** |
 
 ## 这一层为什么存在
 

@@ -20,7 +20,7 @@ context/decisions/
 |---|---|
 | [2026-09-16-todo-md-items-only.md](implemented/2026-09-16-todo-md-items-only.md) | TODO.md 只记 TODO 项与状态；硬规则 3 改为「先判断是否涉及 TODO 项」；`[TODO-CLEAN]` 拦行首日期与超长行，字节预算只做兜底 |
 | [2026-09-12-prod-release-baseline.md](implemented/2026-09-12-prod-release-baseline.md) | prod 独立覆盖层保留现网配置；前端原生双架构构建；发布更新 dev，生产显式晋级 |
-| [2026-09-11-spec-reverse-index-and-selfcheck.md](implemented/2026-09-11-spec-reverse-index-and-selfcheck.md) | 规范文档 frontmatter `affects:` 登记反向依赖、`spec-impact.sh` 双向查影响（`[AFFECTS]` 守存在性）；实现单 `done` 必带可验证「完成自检」（`[SELFCHECK]`）；验收标准限五种可判定形态 |
+| [2026-09-11-spec-reverse-index-and-selfcheck.md](implemented/2026-09-11-spec-reverse-index-and-selfcheck.md) | 规范文档 frontmatter `affects:` 反向索引 + `spec-impact.sh` 双向查（`[AFFECTS]`）；实现单 `done` 必带完成自检（`[SELFCHECK]`）；验收标准限五种可判定形态 |
 | [2026-09-03-shared-infra-kit-boundary.md](implemented/2026-09-03-shared-infra-kit-boundary.md) | 共享基础设施实现只存在于 go-connect-kit；消费方只保留 provider-neutral Options adapter，不使用 BSR |
 | [2026-09-03-decision-records-current-state.md](implemented/2026-09-03-decision-records-current-state.md) | 本目录为什么存在：决策理由从 evolution-log 编年史分离为当前状态文档，三条硬规则由 `[DECISION]` 门禁守着 |
 | [2026-09-03-third-party-notices-regenerate.md](implemented/2026-09-03-third-party-notices-regenerate.md) | `THIRD_PARTY_NOTICES.md` 由脚本从真的编进制品的依赖生成；依赖清单进暂存区时 pre-commit 重生成并 git add，copyleft/UNKNOWN 只显形不阻断 |
