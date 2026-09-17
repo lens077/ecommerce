@@ -72,6 +72,7 @@ model_auto_compact_token_limit = 300000
 - `model_context_window` 对应模型的 `contextWindow`。
 - `model_auto_compact_token_limit` 不对应 `maxTokens`。`maxTokens` 是单次模型输出上限。
 - `compaction-basic` 使用 `floor(contextWindow × thresholdRatio)` 作为自动压缩阈值。
+- 阈值只决定**何时**压缩；压缩摘要**保留什么、丢什么**按 [handoff-format.md](handoff-format.md)。
 
 换算公式：
 

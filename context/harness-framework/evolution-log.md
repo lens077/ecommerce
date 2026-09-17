@@ -52,6 +52,7 @@ description: harness 本身（硬规则/门禁/Agent 约束）每次改动的原
 
 <!-- evolog-index:start -->
 
+- 2026-09-16 [新增 handoff-format.md：压缩 / 交接 / 子代理回报共用一份内容契约](evolution-log/2026-09.md#2026-09-16-新增-handoff-formatmd压缩-交接-子代理回报共用一份内容契约)
 - 2026-09-16 [evolution-log 按月分卷，索引由脚本生成并受门禁比对](evolution-log/2026-09.md#2026-09-16-evolution-log-按月分卷索引由脚本生成并受门禁比对)
 - 2026-09-16 [INDEX 单元格限长：根 ≤120 字、各层 ≤200 字，新增 `[INDEX-LINE]`](evolution-log/2026-09.md#2026-09-16-index-单元格限长根-120-字各层-200-字新增-index-line)
 - 2026-09-16 [AGENTS.md 摘掉运行态陈述、按首因/近因重排章节，预算 14000 → 13000](evolution-log/2026-09.md#2026-09-16-agentsmd-摘掉运行态陈述按首因近因重排章节预算-14000-13000)

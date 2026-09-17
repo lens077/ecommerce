@@ -46,6 +46,7 @@ context/
 | [delivery-efficiency.md](harness-framework/delivery-efficiency.md) | AI Coding 交付效率治理：可信状态、P50/P85 与长尾、日报证据和人机责任边界 |
 | [e3-execution.md](harness-framework/e3-execution.md) | E3 执行策略：先估计、最小执行、失败才扩张；护栏 hook 验证方法；消费边界（token 成本治理六环节） |
 | [dsh-model-onboarding.md](harness-framework/dsh-model-onboarding.md) | **新增、升级或切换 DSH 模型前必读**：模型目录声明、长上下文、自动压缩阈值换算与在线验收 |
+| [handoff-format.md](harness-framework/handoff-format.md) | 压缩 / 会话交接 / 子代理回报共用的八段内容契约：保留什么、丢什么、≤600 token |
 | [subagent-dispatch.md](harness-framework/subagent-dispatch.md) | 子代理派发三条硬约定：只回结构化摘要、按角色裁剪能力、按角色分层模型 |
 | [multi-agent-concurrency.md](harness-framework/multi-agent-concurrency.md) | 多 Agent 并发改同一批文件的四条纪律：状态用文件同步、引用点名、置信度会凭空升高、宣布完成不终止复核 |
 | [cordis-evaluation.md](harness-framework/cordis-evaluation.md) | 已评估「底层改 Cordis 插件框架」：暂不采用的理由与重新评估条件 |
