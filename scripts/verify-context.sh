@@ -22,7 +22,8 @@
 #                  name 与文件名一致;layer:/module: 若存在必须与路径一致
 #   [FORMAT]      experience/*.md 必须含「症状」与「关键陷阱/陷阱」小节
 #                  (格式定义见 context/harness-framework/knowledge-layering.md)
-#   [EVOLOG]      evolution-log.md 每条必须四要素齐全(改了什么/为什么/触发事故/怎么验证的)
+#   [EVOLOG]      evolution-log/YYYY-MM.md 每条必须四要素齐全(改了什么/为什么/触发事故/怎么验证的);
+#                  evolution-log.md 的索引段必须与卷标题一致(脚本生成,不许手写)
 #   [DECISION]    context/decisions/ 决策记录:路径即状态(implemented/proposed/rejected),
 #                  文件名 YYYY-MM-DD-slug,frontmatter status 与目录一致;按状态要求的
 #                  小节齐全(格式见 context/decisions/INDEX.md);「考虑过的替代方案」必须
@@ -235,18 +236,32 @@ if [ -f "$baseline_file" ]; then
   done < "$baseline_file"
 fi
 
-# ── 5. evolution-log 四要素 ──────────────────────────────────
-evolog="context/harness-framework/evolution-log.md"
-while IFS= read -r title; do
-  block=$(awk -v t="$title" '
-    $0 == t {on=1; next}
-    /^### / {if (on) exit}
-    on {print}' "$evolog")
-  for req in "改了什么" "为什么" "触发事故" "怎么验证的"; do
-    printf '%s\n' "$block" | grep -q "\*\*$req\*\*" || \
-      fail "EVOLOG" "「${title#\#\#\# }」缺 **$req**(四要素缺一不可)"
+# ── 5. evolution-log 四要素 + 索引一致 ───────────────────────
+# 2026-09-16 起按月分卷:条目在 context/harness-framework/evolution-log/YYYY-MM.md,
+# evolution-log.md 只剩「解决什么/写法」+ 脚本生成的索引。四要素逐卷查;索引手写必漂移,
+# 故只比对不放行:与卷标题不一致、或条目放错卷 → 红,修法是跑 scripts/evolution-log-index.py --write。
+evolog_dir="context/harness-framework/evolution-log"
+[ -d "$evolog_dir" ] || fail "EVOLOG" "$evolog_dir 不存在——分卷目录被删?"
+while IFS= read -r vol; do
+  while IFS= read -r title; do
+    block=$(awk -v t="$title" '
+      $0 == t {on=1; next}
+      /^### / {if (on) exit}
+      on {print}' "$vol")
+    for req in "改了什么" "为什么" "触发事故" "怎么验证的"; do
+      printf '%s\n' "$block" | grep -q "\*\*$req\*\*" || \
+        fail "EVOLOG" "$(basename "$vol")「${title#\#\#\# }」缺 **$req**(四要素缺一不可)"
+    done
+  done < <(grep '^### ' "$vol")
+done < <(find "$evolog_dir" -name "*.md" -type f | sort)
+if [ -f scripts/evolution-log-index.py ]; then
+  # 退出码只用输出承载:set -e -o pipefail 下 --check 的 rc=1 会让整条管道提前中止,违规还没打印就退出
+  { python3 scripts/evolution-log-index.py --check 2>&1 || true; } | while IFS= read -r line; do
+    fail "EVOLOG" "$line"
   done
-done < <(grep '^### ' "$evolog")
+else
+  fail "EVOLOG" "scripts/evolution-log-index.py 不存在,索引无法核对"
+fi
 
 # ── 5.5 决策记录格式 ─────────────────────────────────────────
 # evolution-log 是**编年史**(改了什么/触发事故/怎么验证的,按日期追加,永不改写);
@@ -511,7 +526,7 @@ while IFS= read -r file; do
 #      live-facts.md 自身(它是**定义这条规则**的文档,必须引用 5/6/6、4/4 Running
 #      这些模式做示例——与 verify-context-canary.sh 故意内含坏样本同理)。
 done < <(find AGENTS.md README.md STACK.md TODO.md context docs -name "*.md" -type f \
-         | grep -vE 'docs/(progress-archive|reports)/|evolution-log\.md|TECH-RADAR\.md|/experience/|context/team/live-facts\.md') \
+         | grep -vE 'docs/(progress-archive|reports)/|evolution-log(\.md|/)|TECH-RADAR\.md|/experience/|context/team/live-facts\.md') \
 | while IFS='|' read -r loc kind; do
   fail "LIVE-FACT" "${loc} 的${kind}是某一刻的观测值却无实测日期——写法见 context/team/live-facts.md"
 done

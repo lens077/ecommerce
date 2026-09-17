@@ -23,6 +23,7 @@ cd "$root"
 workdir=$(mktemp -d "${TMPDIR:-/tmp}/ctx-canary.XXXXXX")
 trap 'rm -rf "$workdir"' EXIT
 fails=0
+probes=0
 
 # 剥掉 ``` 围栏代码块（与门禁同款,避免把示例链接当真链接）
 _strip_fences() {
@@ -40,6 +41,7 @@ build_template() { # build_template <dir>
   # [EMBED]:门禁调 scripts/doc-embed.py,它又要读指令指向的源文件(backend/…sql 等,
   # 不在沙箱树里)。源清单动态从指令里提取,不手抄——新指令自动带进沙箱,漏了探针 0 当场红。
   cp scripts/doc-embed.py "$sb/scripts/"
+  cp scripts/evolution-log-index.py "$sb/scripts/"   # [EVOLOG] 索引一致性靠它比对
   grep -rhoE '<!-- embed: *[^ ]+' docs context AGENTS.md README.md STACK.md TODO.md 2>/dev/null \
     | sed -E 's/<!-- embed: *//' | sort -u | while IFS= read -r src; do
       [ -f "$src" ] || continue
@@ -99,6 +101,7 @@ build_template() { # build_template <dir>
 # 跑一个探针：克隆模板成新沙箱,执行注错函数,断言门禁退出码与违规 tag
 probe() { # probe <名称> <期望rc:0|1> <期望tag(rc=1时)> <注错函数(空=不注错)>
   name="$1"; want_rc="$2"; want_tag="$3"; mutate="${4:-}"
+  probes=$((probes + 1))
   sb="$workdir/$name"
   cp -R "$workdir/template" "$sb"
   git -C "$sb" init -q
@@ -175,9 +178,14 @@ mut_baseline() { # 已合规文件塞回基线 → 反向棘轮必须报删行
   printf 'context/project/ecommerce/gateway/experience/jwt-nbf-clock-skew-loop.md\n' \
     >> "$1/scripts/context-format-baseline.txt"
 }
-mut_evolog() { # 抹掉全部「触发事故」要素
-  f="$1/context/harness-framework/evolution-log.md"
-  grep -v '\*\*触发事故\*\*' "$f" > "$f.new" && mv "$f.new" "$f"
+mut_evolog() { # 抹掉全部「触发事故」要素(条目在按月分卷里)
+  for f in "$1"/context/harness-framework/evolution-log/*.md; do
+    grep -v '\*\*触发事故\*\*' "$f" > "$f.new" && mv "$f.new" "$f"
+  done
+}
+mut_evolog_index_drift() { # 往卷里加条目但不重生成索引 → 索引与卷标题不一致
+  f="$1/context/harness-framework/evolution-log/2026-09.md"
+  printf '\n### 2026-09-30 canary 未入索引的条目\n\n- **改了什么**：x\n- **为什么**：x\n- **触发事故**：x\n- **怎么验证的**：x\n' >> "$f"
 }
 mut_decision_no_alternatives() { # 已登记、frontmatter 合规,只缺「考虑过的替代方案」的条目
   cat > "$1/context/decisions/implemented/2026-09-03-tmp-canary-noalt.md" <<'EOF'
@@ -402,6 +410,7 @@ probe frontmatter         1 "FRONTMATTER" mut_frontmatter
 probe format              1 "FORMAT"      mut_format
 probe baseline-ratchet    1 "BASELINE"    mut_baseline
 probe evolog              1 "EVOLOG"      mut_evolog
+probe evolog-index-drift  1 "EVOLOG"      mut_evolog_index_drift
 probe decision-no-alternatives   1 "DECISION" mut_decision_no_alternatives
 probe decision-status-mismatch   1 "DECISION" mut_decision_status_mismatch
 probe decision-spec-speak        1 "DECISION" mut_decision_spec_speak
@@ -442,4 +451,4 @@ if [ "$fails" -gt 0 ]; then
   echo "verify-context-canary: $fails 个探针失败——门禁可能已静默失效,先修门禁再改内容"
   exit 1
 fi
-echo "verify-context-canary: OK（36 探针全过:干净沙箱绿 + 三十类注错被拦且 tag 正确 + 六道假阳性守卫）"
+echo "verify-context-canary: OK（${probes} 探针全过:干净沙箱绿 + 各类注错被拦且 tag 正确 + 假阳性守卫放行）"

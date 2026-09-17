@@ -15,7 +15,7 @@
 4. **不要把凭据写进仓库**。密码/密钥只存在 Config Center 和本地环境（K8s 里经 Secret 挂载），仓库里只写主机名和端口。Consul KV 已退役不再存配置，Consul 只做注册发现（见 `context/project/ecommerce/config/experience/consul-kv-retired.md`）。
 5. **踩到坑要沉淀**：判断是「模式性教训」还是「一次性 diff」，前者写进 `context/`。见 `context/harness-framework/self-refinement.md`。
    改动 harness 本身（本文件的硬规则、门禁脚本、structcheck 检查项、CI 门禁）时，
-   还要在 `context/harness-framework/evolution-log.md` 追加一条，**必须写清触发它的具体事故**——
+   还要在 `context/harness-framework/evolution-log/` 当月卷追加一条，**必须写清触发它的具体事故**——
    规则能从代码读出来，理由不能，没理由的规则半年后会被凭直觉改回去。
 6. **不可逆动作需要用户授权——但授权一旦给出就直接执行，不要二次确认**。两半缺一都错：只拦不放工具没法用，只放不拦误伤线上。
    - **哪些算不可逆动作**：`git commit`、`git push`、分支/MR 合入、deploy（`kubectl apply/delete`、`helm` 装卸）、发布制品（`docker push`）、workspace 之外的写入与删除。

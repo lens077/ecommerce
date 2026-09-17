@@ -76,7 +76,7 @@ LLM 没有跨会话记忆。但**每一次用户纠正，都是一个信号**：
 （那条只扫 `*/experience/*.md`）。
 
 改的是 harness 硬规则、门禁脚本或 CI 门禁本身时，除了在这里存档，
-还要按 AGENTS.md 硬规则 #5 往 `evolution-log.md` 追加一条带具体事故的记录。
+还要按 AGENTS.md 硬规则 #5 往 `evolution-log/` 当月卷追加一条带具体事故的记录（索引由脚本生成）。
 
 ### 案例：commitlint 钩子曾经九个月一次都没生效
 
