@@ -1,47 +1,67 @@
-apiVersion: apps/v1
-kind: Deployment
-metadata:
-  name: ecommerce-frontend-deploy
-  namespace: ecommerce
-  labels:
-    app: ecommerce-frontend
-    app.kubernetes.io/part-of: ecommerce
-spec:
-  replicas: 1
-  selector:
-    matchLabels:
-      app: ecommerce-frontend
-  template:
-    metadata:
-      name: ecommerce-frontend
-      labels:
-        app: ecommerce-frontend
-        app.kubernetes.io/part-of: ecommerce
-    spec:
-      topologySpreadConstraints:
-        - maxSkew: 1
-          topologyKey: kubernetes.io/hostname
-          whenUnsatisfiable: DoNotSchedule
-          nodeAffinityPolicy: Honor
-          nodeTaintsPolicy: Honor
-          labelSelector:
-            matchLabels:
-              app.kubernetes.io/part-of: ecommerce
-      serviceAccountName: ecommerce-frontend
-      automountServiceAccountToken: false
-      enableServiceLinks: false
-      containers:
-        - name: ecommerce-frontend
+---
+{
+  apiVersion: "apps/v1",
+  kind: "Deployment",
+  metadata: {
+    name: "ecommerce-frontend-deploy",
+    namespace: "ecommerce",
+    labels: {
+      app: "ecommerce-frontend",
+      app.kubernetes.io/part-of: "ecommerce",
+    },
+  },
+  spec: {
+    replicas: 1,
+    selector: {
+      matchLabels: {
+        app: "ecommerce-frontend",
+      },
+    },
+    template: {
+      metadata: {
+        name: "ecommerce-frontend",
+        labels: {
+          app: "ecommerce-frontend",
+          app.kubernetes.io/part-of: "ecommerce",
+        },
+      },
+      spec: {
+        topologySpreadConstraints: [{
+          maxSkew: 1,
+          topologyKey: "kubernetes.io/hostname",
+          whenUnsatisfiable: "DoNotSchedule",
+          nodeAffinityPolicy: "Honor",
+          nodeTaintsPolicy: "Honor",
+          labelSelector: {
+            matchLabels: {
+              app.kubernetes.io/part-of: "ecommerce",
+            },
+          },
+        }],
+        serviceAccountName: "ecommerce-frontend",
+        automountServiceAccountToken: false,
+        enableServiceLinks: false,
+        containers: [{
+          name: "ecommerce-frontend",
           # Harbor 在本集群未部署（ARM64 卡在官方 v2.16 之前），改用 TCR。
           # 钉不可变 tag，不用 :dev —— latest/dev 这类浮动 tag 让"线上跑的到底是哪份代码"无从回答。
-          image: ccr.ccs.tencentyun.com/sumery/ecommerce-frontend:1.7.7@sha256:02dea7eb72bf67344c659bb241c9d846d3b2803a14a2b1ec8ebd039e52e6581a
-          imagePullPolicy: Always
-          ports:
-            - containerPort: 80
-              protocol: TCP
-          envFrom:
-            - configMapRef:
-                name: ecommerce-frontend-config
-      restartPolicy: Always
-      imagePullSecrets:
-        - name: tcr-pull-secret
+          image: "ccr.ccs.tencentyun.com/sumery/ecommerce-frontend:1.7.7@sha256:02dea7eb72bf67344c659bb241c9d846d3b2803a14a2b1ec8ebd039e52e6581a",
+          imagePullPolicy: "Always",
+          ports: [{
+            containerPort: 80,
+            protocol: "TCP",
+          }],
+          envFrom: [{
+            configMapRef: {
+              name: "ecommerce-frontend-config",
+            },
+          }],
+        }],
+        restartPolicy: "Always",
+        imagePullSecrets: [{
+          name: "tcr-pull-secret",
+        }],
+      },
+    },
+  },
+}

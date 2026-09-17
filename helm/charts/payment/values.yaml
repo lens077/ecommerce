@@ -1,11 +1,15 @@
-# 子 chart 自身的默认值只是占位;实际值全部来自 umbrella 的 helm/values.yaml 顶层 payment: 段
-# (Helm 的父 chart 覆盖子 chart)。改值改那里,不要改这里。
-enabled: true
-replicaCount: 1
-serviceName: ""
-port: 0
-image:
-  repository: ""
-  tag: ""
-resources: {}
-extraEnv: []
+---
+{
+  # 子 chart 自身的默认值只是占位;实际值全部来自 umbrella 的 helm/values.yaml 顶层 payment: 段
+  # (Helm 的父 chart 覆盖子 chart)。改值改那里,不要改这里。
+  enabled: true,
+  replicaCount: 1,
+  serviceName: "",
+  port: 0,
+  image: {
+    repository: "",
+    tag: "",
+  },
+  resources: {},
+  extraEnv: [],
+}

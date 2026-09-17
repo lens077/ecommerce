@@ -14,13 +14,22 @@ import { defineConfig } from "vite-plus";
 // （旧前端 biome.json 的 files.includes 里本来就排除了这两项，这条意图在迁移时丢了。）
 const IGNORED = ["**/src/gen/**", "**/routeTree.gen.ts", "**/dist/**", "**/src-tauri/target/**"];
 
+// K8s 部署清单是 KYAML（scripts/verify-kyaml.sh 强制），由 `yamlfmt -o=kyaml` 排版，
+// 不能再经 vp fmt 的 YAML 格式化器——两个 formatter 会互相推翻：vp fmt 把 KYAML 的
+// `images: [{ … }]` 拆成换行、缩进改 8 格，并重排多行字符串，于是 verify-kyaml 红、
+// scripts/promote-release.py 的 `^    newTag: "…",` 回写正则同时失配。
+// 2026-09-18 实测：一次 `pnpm ready` 就让 frontend/ 下 9 个部署清单一起坏掉，
+// 而 backend/ 下的同类文件毫发无损——因为 vp 只管 frontend workspace。
+// 这些文件不进 lint（oxlint 不看 YAML），所以只加到 fmt 的忽略清单。
+const DEPLOY_MANIFESTS = ["**/deploy/**/*.yaml", "**/deploy/**/*.yml"];
+
 export default defineConfig({
   // pre-commit 钩子：对暂存文件跑格式化 + lint 并自动修复
   staged: {
     "*": "vp check --fix",
   },
   fmt: {
-    ignorePatterns: IGNORED,
+    ignorePatterns: [...IGNORED, ...DEPLOY_MANIFESTS],
   },
   lint: {
     ignorePatterns: IGNORED,

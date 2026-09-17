@@ -1,9 +1,14 @@
-# base 即 pre 基线(运行模式 pre、selector Secret pre);prod 只钉自己的镜像 version@digest。
-apiVersion: kustomize.config.k8s.io/v1beta1
-kind: Kustomization
-resources:
-  - ../../base
-images:
-  - name: ccr.ccs.tencentyun.com/sumery/behavior
-    newTag: "1.7.7"
-    digest: sha256:bbd3752f5bc5c4bbfd432e9c423cabee1ab1c3f18b706d2f1230026d6786324d
+---
+{
+  # base 即 pre 基线(运行模式 pre、selector Secret pre);prod 只钉自己的镜像 version@digest。
+  apiVersion: "kustomize.config.k8s.io/v1beta1",
+  kind: "Kustomization",
+  resources: [
+    "../../base",
+  ],
+  images: [{
+    name: "ccr.ccs.tencentyun.com/sumery/behavior",
+    newTag: "1.7.7",
+    digest: "sha256:bbd3752f5bc5c4bbfd432e9c423cabee1ab1c3f18b706d2f1230026d6786324d",
+  }],
+}

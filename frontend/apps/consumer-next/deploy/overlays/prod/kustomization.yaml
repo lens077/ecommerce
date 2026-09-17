@@ -1,19 +1,27 @@
-apiVersion: kustomize.config.k8s.io/v1beta1
-kind: Kustomization
-resources:
-  - ../../base
-images:
-  - name: ccr.ccs.tencentyun.com/sumery/consumer-next
-    newTag: "1.7.7"
-    digest: sha256:b3d610d55e89f0c06f1ff6e13f6d0796e6931a4a3e484a41548b0e580f14fcc1
-patches:
-  - target:
-      kind: Deployment
-      name: consumer-next
-    patch: |-
-      - op: test
-        path: /spec/template/spec/containers/0/env/1/name
-        value: CONSUMER_NEXT_PUBLIC_URL
-      - op: replace
-        path: /spec/template/spec/containers/0/env/1/value
-        value: https://shop.apikv.com
+---
+{
+  apiVersion: "kustomize.config.k8s.io/v1beta1",
+  kind: "Kustomization",
+  resources: [
+    "../../base",
+  ],
+  images: [{
+    name: "ccr.ccs.tencentyun.com/sumery/consumer-next",
+    newTag: "1.7.7",
+    digest: "sha256:b3d610d55e89f0c06f1ff6e13f6d0796e6931a4a3e484a41548b0e580f14fcc1",
+  }],
+  patches: [{
+    target: {
+      kind: "Deployment",
+      name: "consumer-next",
+    },
+    patch: "\
+       - op: test\n\
+      \  path: /spec/template/spec/containers/0/env/1/name\n\
+      \  value: CONSUMER_NEXT_PUBLIC_URL\n\
+       - op: replace\n\
+      \  path: /spec/template/spec/containers/0/env/1/value\n\
+      \  value: https://shop.apikv.com\
+      ",
+  }],
+}

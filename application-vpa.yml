@@ -1,3 +1,4 @@
+---
 # ecommerce 容量校准的 VPA(裸 manifest 侧)。helm 侧由各子 chart 的 vpa 模板渲染同名对象,
 # 两份由 scripts/verify-deploy-parity.sh 强制等价。control-tower-gateway 的 VPA 不在本仓——
 # 那是 control-tower 仓的工作负载,曾在这里多放一份并与它们已 apply 的版本打架(2026-09-06 移除)。
@@ -9,255 +10,398 @@
 # 不在这里写 minAllowed/maxAllowed：观测阶段必须同时看到 Target 与 Uncapped Target，
 # 避免人为边界把拍脑袋值伪装成测量结果。未来即使启用其他 VPA 组件，也只允许控制
 # requests；limits 仍由压测、OOM 证据和故障预算决定。
-
-apiVersion: autoscaling.k8s.io/v1
-kind: VerticalPodAutoscaler
-metadata:
-  name: ecommerce-address-vpa
-  namespace: ecommerce
-  labels:
-    app.kubernetes.io/part-of: ecommerce
-    app.kubernetes.io/component: capacity-recommendation
-spec:
-  targetRef:
-    apiVersion: apps/v1
-    kind: Deployment
-    name: ecommerce-address-deploy
-  updatePolicy:
-    updateMode: "Off"
-  resourcePolicy:
-    containerPolicies:
-      - containerName: ecommerce-address
-        controlledResources: [cpu, memory]
-        controlledValues: RequestsOnly
+{
+  apiVersion: "autoscaling.k8s.io/v1",
+  kind: "VerticalPodAutoscaler",
+  metadata: {
+    name: "ecommerce-address-vpa",
+    namespace: "ecommerce",
+    labels: {
+      app.kubernetes.io/part-of: "ecommerce",
+      app.kubernetes.io/component: "capacity-recommendation",
+    },
+  },
+  spec: {
+    targetRef: {
+      apiVersion: "apps/v1",
+      kind: "Deployment",
+      name: "ecommerce-address-deploy",
+    },
+    updatePolicy: {
+      updateMode: "Off",
+    },
+    resourcePolicy: {
+      containerPolicies: [{
+        containerName: "ecommerce-address",
+        controlledResources: [
+          "cpu",
+          "memory",
+        ],
+        controlledValues: "RequestsOnly",
+      }],
+    },
+  },
+}
 ---
-apiVersion: autoscaling.k8s.io/v1
-kind: VerticalPodAutoscaler
-metadata:
-  name: ecommerce-behavior-vpa
-  namespace: ecommerce
-  labels:
-    app.kubernetes.io/part-of: ecommerce
-    app.kubernetes.io/component: capacity-recommendation
-spec:
-  targetRef:
-    apiVersion: apps/v1
-    kind: Deployment
-    name: ecommerce-behavior-deploy
-  updatePolicy:
-    updateMode: "Off"
-  resourcePolicy:
-    containerPolicies:
-      - containerName: ecommerce-behavior
-        controlledResources: [cpu, memory]
-        controlledValues: RequestsOnly
+{
+  apiVersion: "autoscaling.k8s.io/v1",
+  kind: "VerticalPodAutoscaler",
+  metadata: {
+    name: "ecommerce-behavior-vpa",
+    namespace: "ecommerce",
+    labels: {
+      app.kubernetes.io/part-of: "ecommerce",
+      app.kubernetes.io/component: "capacity-recommendation",
+    },
+  },
+  spec: {
+    targetRef: {
+      apiVersion: "apps/v1",
+      kind: "Deployment",
+      name: "ecommerce-behavior-deploy",
+    },
+    updatePolicy: {
+      updateMode: "Off",
+    },
+    resourcePolicy: {
+      containerPolicies: [{
+        containerName: "ecommerce-behavior",
+        controlledResources: [
+          "cpu",
+          "memory",
+        ],
+        controlledValues: "RequestsOnly",
+      }],
+    },
+  },
+}
 ---
-apiVersion: autoscaling.k8s.io/v1
-kind: VerticalPodAutoscaler
-metadata:
-  name: ecommerce-cart-vpa
-  namespace: ecommerce
-  labels:
-    app.kubernetes.io/part-of: ecommerce
-    app.kubernetes.io/component: capacity-recommendation
-spec:
-  targetRef:
-    apiVersion: apps/v1
-    kind: Deployment
-    name: ecommerce-cart-deploy
-  updatePolicy:
-    updateMode: "Off"
-  resourcePolicy:
-    containerPolicies:
-      - containerName: ecommerce-cart
-        controlledResources: [cpu, memory]
-        controlledValues: RequestsOnly
+{
+  apiVersion: "autoscaling.k8s.io/v1",
+  kind: "VerticalPodAutoscaler",
+  metadata: {
+    name: "ecommerce-cart-vpa",
+    namespace: "ecommerce",
+    labels: {
+      app.kubernetes.io/part-of: "ecommerce",
+      app.kubernetes.io/component: "capacity-recommendation",
+    },
+  },
+  spec: {
+    targetRef: {
+      apiVersion: "apps/v1",
+      kind: "Deployment",
+      name: "ecommerce-cart-deploy",
+    },
+    updatePolicy: {
+      updateMode: "Off",
+    },
+    resourcePolicy: {
+      containerPolicies: [{
+        containerName: "ecommerce-cart",
+        controlledResources: [
+          "cpu",
+          "memory",
+        ],
+        controlledValues: "RequestsOnly",
+      }],
+    },
+  },
+}
 ---
-apiVersion: autoscaling.k8s.io/v1
-kind: VerticalPodAutoscaler
-metadata:
-  name: ecommerce-inventory-vpa
-  namespace: ecommerce
-  labels:
-    app.kubernetes.io/part-of: ecommerce
-    app.kubernetes.io/component: capacity-recommendation
-spec:
-  targetRef:
-    apiVersion: apps/v1
-    kind: Deployment
-    name: ecommerce-inventory-deploy
-  updatePolicy:
-    updateMode: "Off"
-  resourcePolicy:
-    containerPolicies:
-      - containerName: ecommerce-inventory
-        controlledResources: [cpu, memory]
-        controlledValues: RequestsOnly
+{
+  apiVersion: "autoscaling.k8s.io/v1",
+  kind: "VerticalPodAutoscaler",
+  metadata: {
+    name: "ecommerce-inventory-vpa",
+    namespace: "ecommerce",
+    labels: {
+      app.kubernetes.io/part-of: "ecommerce",
+      app.kubernetes.io/component: "capacity-recommendation",
+    },
+  },
+  spec: {
+    targetRef: {
+      apiVersion: "apps/v1",
+      kind: "Deployment",
+      name: "ecommerce-inventory-deploy",
+    },
+    updatePolicy: {
+      updateMode: "Off",
+    },
+    resourcePolicy: {
+      containerPolicies: [{
+        containerName: "ecommerce-inventory",
+        controlledResources: [
+          "cpu",
+          "memory",
+        ],
+        controlledValues: "RequestsOnly",
+      }],
+    },
+  },
+}
 ---
-apiVersion: autoscaling.k8s.io/v1
-kind: VerticalPodAutoscaler
-metadata:
-  name: ecommerce-merchant-vpa
-  namespace: ecommerce
-  labels:
-    app.kubernetes.io/part-of: ecommerce
-    app.kubernetes.io/component: capacity-recommendation
-spec:
-  targetRef:
-    apiVersion: apps/v1
-    kind: Deployment
-    name: ecommerce-merchant-deploy
-  updatePolicy:
-    updateMode: "Off"
-  resourcePolicy:
-    containerPolicies:
-      - containerName: ecommerce-merchant
-        controlledResources: [cpu, memory]
-        controlledValues: RequestsOnly
+{
+  apiVersion: "autoscaling.k8s.io/v1",
+  kind: "VerticalPodAutoscaler",
+  metadata: {
+    name: "ecommerce-merchant-vpa",
+    namespace: "ecommerce",
+    labels: {
+      app.kubernetes.io/part-of: "ecommerce",
+      app.kubernetes.io/component: "capacity-recommendation",
+    },
+  },
+  spec: {
+    targetRef: {
+      apiVersion: "apps/v1",
+      kind: "Deployment",
+      name: "ecommerce-merchant-deploy",
+    },
+    updatePolicy: {
+      updateMode: "Off",
+    },
+    resourcePolicy: {
+      containerPolicies: [{
+        containerName: "ecommerce-merchant",
+        controlledResources: [
+          "cpu",
+          "memory",
+        ],
+        controlledValues: "RequestsOnly",
+      }],
+    },
+  },
+}
 ---
-apiVersion: autoscaling.k8s.io/v1
-kind: VerticalPodAutoscaler
-metadata:
-  name: ecommerce-order-vpa
-  namespace: ecommerce
-  labels:
-    app.kubernetes.io/part-of: ecommerce
-    app.kubernetes.io/component: capacity-recommendation
-spec:
-  targetRef:
-    apiVersion: apps/v1
-    kind: Deployment
-    name: ecommerce-order-deploy
-  updatePolicy:
-    updateMode: "Off"
-  resourcePolicy:
-    containerPolicies:
-      - containerName: ecommerce-order
-        controlledResources: [cpu, memory]
-        controlledValues: RequestsOnly
+{
+  apiVersion: "autoscaling.k8s.io/v1",
+  kind: "VerticalPodAutoscaler",
+  metadata: {
+    name: "ecommerce-order-vpa",
+    namespace: "ecommerce",
+    labels: {
+      app.kubernetes.io/part-of: "ecommerce",
+      app.kubernetes.io/component: "capacity-recommendation",
+    },
+  },
+  spec: {
+    targetRef: {
+      apiVersion: "apps/v1",
+      kind: "Deployment",
+      name: "ecommerce-order-deploy",
+    },
+    updatePolicy: {
+      updateMode: "Off",
+    },
+    resourcePolicy: {
+      containerPolicies: [{
+        containerName: "ecommerce-order",
+        controlledResources: [
+          "cpu",
+          "memory",
+        ],
+        controlledValues: "RequestsOnly",
+      }],
+    },
+  },
+}
 ---
-apiVersion: autoscaling.k8s.io/v1
-kind: VerticalPodAutoscaler
-metadata:
-  name: ecommerce-payment-vpa
-  namespace: ecommerce
-  labels:
-    app.kubernetes.io/part-of: ecommerce
-    app.kubernetes.io/component: capacity-recommendation
-spec:
-  targetRef:
-    apiVersion: apps/v1
-    kind: Deployment
-    name: ecommerce-payment-deploy
-  updatePolicy:
-    updateMode: "Off"
-  resourcePolicy:
-    containerPolicies:
-      - containerName: ecommerce-payment
-        controlledResources: [cpu, memory]
-        controlledValues: RequestsOnly
+{
+  apiVersion: "autoscaling.k8s.io/v1",
+  kind: "VerticalPodAutoscaler",
+  metadata: {
+    name: "ecommerce-payment-vpa",
+    namespace: "ecommerce",
+    labels: {
+      app.kubernetes.io/part-of: "ecommerce",
+      app.kubernetes.io/component: "capacity-recommendation",
+    },
+  },
+  spec: {
+    targetRef: {
+      apiVersion: "apps/v1",
+      kind: "Deployment",
+      name: "ecommerce-payment-deploy",
+    },
+    updatePolicy: {
+      updateMode: "Off",
+    },
+    resourcePolicy: {
+      containerPolicies: [{
+        containerName: "ecommerce-payment",
+        controlledResources: [
+          "cpu",
+          "memory",
+        ],
+        controlledValues: "RequestsOnly",
+      }],
+    },
+  },
+}
 ---
-apiVersion: autoscaling.k8s.io/v1
-kind: VerticalPodAutoscaler
-metadata:
-  name: ecommerce-product-vpa
-  namespace: ecommerce
-  labels:
-    app.kubernetes.io/part-of: ecommerce
-    app.kubernetes.io/component: capacity-recommendation
-spec:
-  targetRef:
-    apiVersion: apps/v1
-    kind: Deployment
-    name: ecommerce-product-deploy
-  updatePolicy:
-    updateMode: "Off"
-  resourcePolicy:
-    containerPolicies:
-      - containerName: ecommerce-product
-        controlledResources: [cpu, memory]
-        controlledValues: RequestsOnly
+{
+  apiVersion: "autoscaling.k8s.io/v1",
+  kind: "VerticalPodAutoscaler",
+  metadata: {
+    name: "ecommerce-product-vpa",
+    namespace: "ecommerce",
+    labels: {
+      app.kubernetes.io/part-of: "ecommerce",
+      app.kubernetes.io/component: "capacity-recommendation",
+    },
+  },
+  spec: {
+    targetRef: {
+      apiVersion: "apps/v1",
+      kind: "Deployment",
+      name: "ecommerce-product-deploy",
+    },
+    updatePolicy: {
+      updateMode: "Off",
+    },
+    resourcePolicy: {
+      containerPolicies: [{
+        containerName: "ecommerce-product",
+        controlledResources: [
+          "cpu",
+          "memory",
+        ],
+        controlledValues: "RequestsOnly",
+      }],
+    },
+  },
+}
 ---
-apiVersion: autoscaling.k8s.io/v1
-kind: VerticalPodAutoscaler
-metadata:
-  name: ecommerce-search-vpa
-  namespace: ecommerce
-  labels:
-    app.kubernetes.io/part-of: ecommerce
-    app.kubernetes.io/component: capacity-recommendation
-spec:
-  targetRef:
-    apiVersion: apps/v1
-    kind: Deployment
-    name: ecommerce-search-deploy
-  updatePolicy:
-    updateMode: "Off"
-  resourcePolicy:
-    containerPolicies:
-      - containerName: ecommerce-search
-        controlledResources: [cpu, memory]
-        controlledValues: RequestsOnly
+{
+  apiVersion: "autoscaling.k8s.io/v1",
+  kind: "VerticalPodAutoscaler",
+  metadata: {
+    name: "ecommerce-search-vpa",
+    namespace: "ecommerce",
+    labels: {
+      app.kubernetes.io/part-of: "ecommerce",
+      app.kubernetes.io/component: "capacity-recommendation",
+    },
+  },
+  spec: {
+    targetRef: {
+      apiVersion: "apps/v1",
+      kind: "Deployment",
+      name: "ecommerce-search-deploy",
+    },
+    updatePolicy: {
+      updateMode: "Off",
+    },
+    resourcePolicy: {
+      containerPolicies: [{
+        containerName: "ecommerce-search",
+        controlledResources: [
+          "cpu",
+          "memory",
+        ],
+        controlledValues: "RequestsOnly",
+      }],
+    },
+  },
+}
 ---
-apiVersion: autoscaling.k8s.io/v1
-kind: VerticalPodAutoscaler
-metadata:
-  name: ecommerce-user-vpa
-  namespace: ecommerce
-  labels:
-    app.kubernetes.io/part-of: ecommerce
-    app.kubernetes.io/component: capacity-recommendation
-spec:
-  targetRef:
-    apiVersion: apps/v1
-    kind: Deployment
-    name: ecommerce-user-deploy
-  updatePolicy:
-    updateMode: "Off"
-  resourcePolicy:
-    containerPolicies:
-      - containerName: ecommerce-user
-        controlledResources: [cpu, memory]
-        controlledValues: RequestsOnly
+{
+  apiVersion: "autoscaling.k8s.io/v1",
+  kind: "VerticalPodAutoscaler",
+  metadata: {
+    name: "ecommerce-user-vpa",
+    namespace: "ecommerce",
+    labels: {
+      app.kubernetes.io/part-of: "ecommerce",
+      app.kubernetes.io/component: "capacity-recommendation",
+    },
+  },
+  spec: {
+    targetRef: {
+      apiVersion: "apps/v1",
+      kind: "Deployment",
+      name: "ecommerce-user-deploy",
+    },
+    updatePolicy: {
+      updateMode: "Off",
+    },
+    resourcePolicy: {
+      containerPolicies: [{
+        containerName: "ecommerce-user",
+        controlledResources: [
+          "cpu",
+          "memory",
+        ],
+        controlledValues: "RequestsOnly",
+      }],
+    },
+  },
+}
 ---
-apiVersion: autoscaling.k8s.io/v1
-kind: VerticalPodAutoscaler
-metadata:
-  name: ecommerce-frontend-vpa
-  namespace: ecommerce
-  labels:
-    app.kubernetes.io/part-of: ecommerce
-    app.kubernetes.io/component: capacity-recommendation
-spec:
-  targetRef:
-    apiVersion: apps/v1
-    kind: Deployment
-    name: ecommerce-frontend-deploy
-  updatePolicy:
-    updateMode: "Off"
-  resourcePolicy:
-    containerPolicies:
-      - containerName: ecommerce-frontend
-        controlledResources: [cpu, memory]
-        controlledValues: RequestsOnly
+{
+  apiVersion: "autoscaling.k8s.io/v1",
+  kind: "VerticalPodAutoscaler",
+  metadata: {
+    name: "ecommerce-frontend-vpa",
+    namespace: "ecommerce",
+    labels: {
+      app.kubernetes.io/part-of: "ecommerce",
+      app.kubernetes.io/component: "capacity-recommendation",
+    },
+  },
+  spec: {
+    targetRef: {
+      apiVersion: "apps/v1",
+      kind: "Deployment",
+      name: "ecommerce-frontend-deploy",
+    },
+    updatePolicy: {
+      updateMode: "Off",
+    },
+    resourcePolicy: {
+      containerPolicies: [{
+        containerName: "ecommerce-frontend",
+        controlledResources: [
+          "cpu",
+          "memory",
+        ],
+        controlledValues: "RequestsOnly",
+      }],
+    },
+  },
+}
 ---
-apiVersion: autoscaling.k8s.io/v1
-kind: VerticalPodAutoscaler
-metadata:
-  name: consumer-next-vpa
-  namespace: ecommerce
-  labels:
-    app.kubernetes.io/part-of: ecommerce
-    app.kubernetes.io/component: capacity-recommendation
-spec:
-  targetRef:
-    apiVersion: apps/v1
-    kind: Deployment
-    name: consumer-next
-  updatePolicy:
-    updateMode: "Off"
-  resourcePolicy:
-    containerPolicies:
-      - containerName: consumer-next
-        controlledResources: [cpu, memory]
-        controlledValues: RequestsOnly
+{
+  apiVersion: "autoscaling.k8s.io/v1",
+  kind: "VerticalPodAutoscaler",
+  metadata: {
+    name: "consumer-next-vpa",
+    namespace: "ecommerce",
+    labels: {
+      app.kubernetes.io/part-of: "ecommerce",
+      app.kubernetes.io/component: "capacity-recommendation",
+    },
+  },
+  spec: {
+    targetRef: {
+      apiVersion: "apps/v1",
+      kind: "Deployment",
+      name: "consumer-next",
+    },
+    updatePolicy: {
+      updateMode: "Off",
+    },
+    resourcePolicy: {
+      containerPolicies: [{
+        containerName: "consumer-next",
+        controlledResources: [
+          "cpu",
+          "memory",
+        ],
+        controlledValues: "RequestsOnly",
+      }],
+    },
+  },
+}

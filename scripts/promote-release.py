@@ -43,7 +43,14 @@ def inventory():
 
 
 def plan_changes(root, services, environment, version, digests):
-    """Plan all changes before writing, preserving hand-written YAML formatting."""
+    """Plan all changes before writing, preserving hand-written KYAML formatting.
+
+    两份部署真相源都是 KYAML(scripts/verify-kyaml.sh 强制),所以下面每条正则都锚定
+    `键: "值",` 这个形状——值一律双引号、行尾一律逗号。块式 YAML 时代的裸值锚点
+    (`tag: 1.7.7` / `newTag: 1.7.7`)在 KYAML 下一个都不匹配,改格式必须同步改这里。
+    KYAML 顺带消掉了一处分支:prod 的 10 个服务与两个前端此前形状不同(单行 flow vs 多行块),
+    要两套正则;现在统一成 `<chart>: { image: { tag: "…", }, },`,一套就够。
+    """
     changes = {}
     values_path = root / 'helm' / ('values.yaml' if environment == 'pre' else 'values-prod.yaml')
     values = values_path.read_text()
@@ -51,13 +58,14 @@ def plan_changes(root, services, environment, version, digests):
         repo = 'ecommerce-frontend' if chart == 'frontend' else chart
         image = f'ccr.ccs.tencentyun.com/sumery/{repo}'
         pin = version + '@' + digests[chart]
-        if environment == 'prod' and chart in services:
-            values = replace_once(values, rf'^({re.escape(chart)}:.*?tag: ")[^"]+(".*)$',
-                                  lambda m: m[1] + pin + m[2])
+        if environment == 'pre':
+            # repository 与 tag 是相邻两行,用 repository 锚定这是哪个服务。
+            values = replace_once(
+                values, rf'(^\s+repository: "{re.escape(image)}",\n\s+tag: ")[^"]+(",)$',
+                lambda m: m[1] + pin + m[2])
         else:
-            values = replace_once(values, rf'(^\s+repository: {re.escape(image)}\n\s+tag: )[^\n]+',
-                                  lambda m: m[1] + pin) if environment == 'pre' else replace_once(
-                values, r'(^' + re.escape(chart) + r':\n  image:\n    tag: ")[^"]+(".*)$',
+            values = replace_once(
+                values, rf'(^\s+{re.escape(chart)}: \{{\n\s+image: \{{\n\s+tag: ")[^"]+(",)$',
                 lambda m: m[1] + pin + m[2])
         if environment == 'prod':
             if chart in services:
@@ -66,11 +74,14 @@ def plan_changes(root, services, environment, version, digests):
                 app = 'consumer' if chart == 'frontend' else 'consumer-next'
                 path = root / f'frontend/apps/{app}/deploy/overlays/prod/kustomization.yaml'
             text = path.read_text()
-            text = replace_once(text, r'^(    newTag: ).+$', lambda m: m[1] + json.dumps(version))
+            text = replace_once(text, r'^(    newTag: )"[^"]*",$',
+                                lambda m: m[1] + json.dumps(version) + ',')
             if re.search(r'^    digest:', text, flags=re.MULTILINE):
-                text = replace_once(text, r'^(    digest: ).+$', lambda m: m[1] + digests[chart])
+                text = replace_once(text, r'^(    digest: )"[^"]*",$',
+                                    lambda m: m[1] + json.dumps(digests[chart]) + ',')
             else:
-                text = replace_once(text, r'^(    newTag: .+)$', lambda m: m[1] + '\n    digest: ' + digests[chart])
+                text = replace_once(text, r'^(    newTag: "[^"]*",)$',
+                                    lambda m: m[1] + '\n    digest: ' + json.dumps(digests[chart]) + ',')
         else:
             if chart in services:
                 path = root / f'backend/services/{chart}/deploy/base/deployment.yaml'
@@ -78,8 +89,9 @@ def plan_changes(root, services, environment, version, digests):
                 path = root / 'frontend/apps/consumer/deploy/pre/deployment.yaml'
             else:
                 path = root / 'frontend/apps/consumer-next/deploy/base/consumer-next.yaml'
-            text = replace_all_at_least_once(path.read_text(), rf'^(\s+image: ){re.escape(image)}:[^\n]+',
-                                             lambda m: m[1] + image + ':' + pin)
+            text = replace_all_at_least_once(
+                path.read_text(), rf'^(\s+image: "){re.escape(image)}:[^"]+(",)$',
+                lambda m: m[1] + image + ':' + pin + m[2])
         changes[path] = text
     changes[values_path] = values
     return changes

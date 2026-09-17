@@ -62,7 +62,9 @@ class ReleaseTests(unittest.TestCase):
                                     capture_output=True, text=True)
             self.assertEqual(result.returncode, 0, result.stdout + result.stderr)
             path = root / 'helm/values-prod.yaml'
-            path.write_text(path.read_text().replace('frontend:\n', 'frontend:\n  replicaCount: 7\n'))
+            # values 是 KYAML:注入漂移要按 `  frontend: {` 这个形状,块式的 `frontend:\n` 已不存在
+            path.write_text(path.read_text().replace(
+                '  frontend: {\n', '  frontend: {\n    replicaCount: 7,\n'))
             result = subprocess.run(['bash', 'scripts/verify-deploy-parity.sh', 'prod'], cwd=root,
                                     capture_output=True, text=True)
             self.assertEqual(result.returncode, 1, result.stdout + result.stderr)
@@ -75,7 +77,9 @@ class ReleaseTests(unittest.TestCase):
         digests = {chart: 'sha256:' + 'b' * 64 for chart in [*services, 'frontend', 'consumer-next']}
         changes = promote.plan_changes(promote.ROOT, services, 'pre', '1.6.4', digests)
         text = next(text for path, text in changes.items() if path.name == 'consumer-next.yaml')
-        image_lines = re.findall(r'^\s+image: ccr\.ccs\.tencentyun\.com/sumery/consumer-next:(.+)$', text, flags=re.M)
+        # KYAML:image 的值带双引号、行尾带逗号
+        image_lines = re.findall(
+            r'^\s+image: "ccr\.ccs\.tencentyun\.com/sumery/consumer-next:([^"]+)",$', text, flags=re.M)
         self.assertGreaterEqual(len(image_lines), 2)
         self.assertEqual(set(image_lines), {'1.6.4@sha256:' + 'b' * 64})
 

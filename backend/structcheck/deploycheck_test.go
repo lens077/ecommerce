@@ -631,23 +631,30 @@ func TestHelmSharedTemplateUsesEcommerceNodeSpread(t *testing.T) {
 	if _, err := os.Stat("../../helm/library"); err == nil {
 		t.Errorf("helm/library 又出现了:共用模板放 helm/templates/_ecommerce.tpl,不要再走打包 library 的路")
 	}
+	// 断言对「块式 YAML / KYAML」两种写法都成立。模板 2026-09-18 改成 KYAML 后值带了双引号、
+	// 行尾带了逗号、列表项不再有前导 `- `,原来的字面子串断言全数失配。但这个测试要守的是
+	// 「共用模板有没有套上全仓 spread 约定」,跟引号无关——所以按「键: 值」匹配,引号可有可无,
+	// 将来再换写法也不用回来改这里。
 	spread := m.Conventions.PodTopologySpread
-	for _, required := range []string{
-		fmt.Sprintf("%s: %s", spread.LabelKey, spread.LabelValue),
-		"topologySpreadConstraints:",
-		fmt.Sprintf("maxSkew: %d", spread.MaxSkew),
-		fmt.Sprintf("topologyKey: %s", spread.TopologyKey),
-		fmt.Sprintf("whenUnsatisfiable: %s", spread.WhenUnsatisfiable),
-		fmt.Sprintf("nodeAffinityPolicy: %s", spread.NodeAffinityPolicy),
-		fmt.Sprintf("nodeTaintsPolicy: %s", spread.NodeTaintsPolicy),
-		"items:",
-		"- key: {{ $svc }}.yaml",
-		"path: {{ $svc }}.yaml",
-		"automountServiceAccountToken: false",
-		"enableServiceLinks: false",
+	keyValue := func(key, value string) *regexp.Regexp {
+		return regexp.MustCompile(regexp.QuoteMeta(key) + `:\s*"?` + regexp.QuoteMeta(value) + `"?`)
+	}
+	for _, required := range []*regexp.Regexp{
+		keyValue(spread.LabelKey, spread.LabelValue),
+		regexp.MustCompile(`topologySpreadConstraints:`),
+		keyValue("maxSkew", fmt.Sprint(spread.MaxSkew)),
+		keyValue("topologyKey", spread.TopologyKey),
+		keyValue("whenUnsatisfiable", spread.WhenUnsatisfiable),
+		keyValue("nodeAffinityPolicy", spread.NodeAffinityPolicy),
+		keyValue("nodeTaintsPolicy", spread.NodeTaintsPolicy),
+		regexp.MustCompile(`items:`),
+		keyValue("key", "{{ $svc }}.yaml"),
+		keyValue("path", "{{ $svc }}.yaml"),
+		keyValue("automountServiceAccountToken", "false"),
+		keyValue("enableServiceLinks", "false"),
 	} {
-		if !strings.Contains(string(source), required) {
-			t.Errorf("%s missing %q", sourcePath, required)
+		if !required.MatchString(string(source)) {
+			t.Errorf("%s missing %q", sourcePath, required.String())
 		}
 	}
 }

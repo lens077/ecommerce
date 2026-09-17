@@ -1,5 +1,8 @@
-apiVersion: v2
-name: payment
-description: ecommerce payment 服务。模板在父 chart helm/templates/_ecommerce.tpl,本 chart 只负责把 values 喂进去
-type: application
-version: 0.2.0
+---
+{
+  apiVersion: "v2",
+  name: "payment",
+  description: "ecommerce payment 服务。模板在父 chart helm/templates/_ecommerce.tpl,本 chart 只负责把 values 喂进去",
+  type: "application",
+  version: "0.2.0",
+}
