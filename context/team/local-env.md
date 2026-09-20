@@ -7,7 +7,7 @@ description: 本地开发机与集群连哪套基础设施：活地址、配置�
 # 本地开发环境约定
 
 > **本文只回答「现在往哪连」**，不记建设过程。凭据一律不入库（只写主机名和端口）。
-> 一次性的搭建/迁移实录见 [`docs/progress-archive/node3-migration-20260824.md`](../../docs/progress-archive/node3-migration-20260824.md)，
+> 一次性的搭建/迁移实录见 docs/progress-archive/node3-migration-20260824.md，
 > 别把它搬回来。
 >
 > **地址会漂。** 下面每张表都标了核对日期；超过日期就按「§ 自助核对」重跑一遍命令，
@@ -253,7 +253,7 @@ consumer-next 的反亲和是 preferred（2026-09-15 起，required 反亲和 + 
 **不得用 `kubernetes.io/hostname: node5` 之类硬钉实现「稳定」**——那把节点故障升级成不可调度。
 
 VPA 发布证据、经验与下一步见
-[`docs/reports/2026-08-29-vpa-recommendation-only.md`](../../docs/reports/2026-08-29-vpa-recommendation-only.md)；
+docs/reports/2026-08-29-vpa-recommendation-only.md；
 约束全文、rollout 死锁处理与 VPA/Descheduler 路线见
 [`docs/design/platform/capacity-balancing.md`](../../docs/design/platform/capacity-balancing.md)。
 
@@ -284,7 +284,7 @@ done
 - 网关 JWT 与 Casdoor 时钟偏移：[`jwt-nbf-clock-skew-loop.md`](../project/ecommerce/gateway/experience/jwt-nbf-clock-skew-loop.md)
 - Consul TTL 首次心跳盲窗：[`consul-ttl-first-ping-blind-window.md`](../project/ecommerce/registry/experience/consul-ttl-first-ping-blind-window.md)
 - 一次性搭建/迁移实录（node3、Silo、Redis TLS、PG 切流、可观测外移）：
-  [`docs/progress-archive/node3-migration-20260824.md`](../../docs/progress-archive/node3-migration-20260824.md)
+  docs/progress-archive/node3-migration-20260824.md
 
 
 

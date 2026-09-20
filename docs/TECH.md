@@ -1,6 +1,6 @@
 # B2B2C 电商平台：生产级架构蓝图与实施纲领（最终修订版）
 
-> Tetragon 三节点 audit-only 闭环之后仍未完成的权限、长期基线、事件完整性、配置残留与 enforcement 门禁，统一见 [Tetragon 后续工作与已知缺口](reports/2026-08-28-tetragon-follow-ups.md)。
+> Tetragon 三节点 audit-only 闭环之后仍未完成的权限、长期基线、事件完整性、配置残留与 enforcement 门禁，统一见 Tetragon 后续工作与已知缺口。
 
 ## 技术选型总览与研究中项目
 
@@ -22,32 +22,32 @@
 | 凭据管理 | External Secrets Operator + OpenBao（+ SOPS 应急） | 凭据真相源与分发。**定稿 [TECH-RADAR §4.9](TECH-RADAR.md)，2026-09-11 复审维持**：OpenBao 是 Vault 的 MPL-2.0 分叉（Linux Foundation 治理），API/引擎与 Vault 相同，本项目用到的 KV v2 + token auth 两边无差别，选型差别只在许可（Vault 为 BUSL-1.1、IBM 单厂商）。现网：集群内 `openbao`（kubernetes 仓 `components/openbao`），路径 `k8s/<集群>/<组件>`，ESO 物化为 K8s Secret；VPS 上早期接的 HashiCorp Vault 已退为「可选集群外副本」（无 AppRole 凭据时不建接线，死接线已于 09-11 删除）。**已知取舍**：OpenBao 在集群内、数据随集群亡，重装后由 kubernetes 仓 `tools/openbao-seed.sh` 从现网反向重建（集群内组件密码会换一次，消费方由 harvest 自动跟上）；这同时触发了 TECH-RADAR §10.3 Velero 条款③，集群外副本待做。凭据进入业务服务的路径不是 K8s Secret 而是 Config Center，组件契约与自动填充见 kubernetes 仓 `tools/config-center/README.md` |
 | 可观测性 SDK | OpenTelemetry Go SDK + Protobuf-ES 内置追踪 | 日志、指标、链路埋点 |
 | 消息序列化 | Protobuf | RPC 与领域事件的统一序列化格式 |
-| 构建与 CI | Docker Buildx、GitHub Actions（发布）、GitLab CI（门禁）、Renovate | 多架构镜像构建、自动化流水线、依赖更新。**两远端职责切分（2026-09-02 定稿）**：GitLab（origin）跑每次 push / MR 的代码门禁（`context-gate` + `backend-gate` + `frontend-gate`，即本地锚点搬进 CI）；GitHub 只由发布 tag 触发构建、签名、发布链；同一 tag 只允许一边写镜像仓。规范见 [`context/team/git-commit.md`](../context/team/git-commit.md)「两个远端的 CI 职责切分」，对照 deepseek-harness 流水线的取舍、过时点清单与门禁首跑证据见 [CI 复盘报告](reports/2026-09-02-ci-two-remotes-dsh-reference.md)。**crane（参考项，2026-09-09）**：无 daemon 的镜像仓库操作工具，不替代 Buildx 构建（最终层含 `RUN`），定位为发布链仓库侧的 tag 存在性断言、清点断言、跨仓复制与同 digest 晋级；适用边界与命令见 [crane 参考](reports/2026-09-09-crane-reference.md) |
+| 构建与 CI | Docker Buildx、GitHub Actions（发布）、GitLab CI（门禁）、Renovate | 多架构镜像构建、自动化流水线、依赖更新。**两远端职责切分（2026-09-02 定稿）**：GitLab（origin）跑每次 push / MR 的代码门禁（`context-gate` + `backend-gate` + `frontend-gate`，即本地锚点搬进 CI）；GitHub 只由发布 tag 触发构建、签名、发布链；同一 tag 只允许一边写镜像仓。规范见 [`context/team/git-commit.md`](../context/team/git-commit.md)「两个远端的 CI 职责切分」，对照 deepseek-harness 流水线的取舍、过时点清单与门禁首跑证据见 CI 复盘报告。**crane（参考项，2026-09-09）**：无 daemon 的镜像仓库操作工具，不替代 Buildx 构建（最终层含 `RUN`），定位为发布链仓库侧的 tag 存在性断言、清点断言、跨仓复制与同 digest 晋级；适用边界与命令见 crane 参考 |
 | 开发内环 | mirrord（mirror）+ Okteto（2026-08-28 PoC 定稿分工） | **观察用 mirrord mirror**（本地 `go run` 按需获得集群 DNS/出站、镜像入站真实流量，只读零影响）；**接管用 Okteto**（`okteto up` 替换工作负载，本地代码真实接请求、复现 Pod 身份）。steal 在本集群不可用不启用（Cilium KPR/BPF host routing 绕过 netfilter）；日常默认仍是本地 `make dev`。当前 Mac 不在机房 LAN 时，配置中心 `dev` 使用 `remote-dev`：Mac → Pangolin resource → newt → K8s Gateway/node service；机房 LAN 开发机才使用 `gateway`（`.dev.test`）。本地 Consul 注册不随 `make dev` 默认开启，需要时运行服务目录的 `make dev-consul`。证据与使用约定：`docs/reports/2026-08-28-mirrord-poc.md` |
 
 ### B. 正在研究和考虑中的技术栈与工具
 
 | 领域 | 技术/工具 | 状态 | 说明 |
 |------|-----------|------|------|
-| 前端 SSR | Next.js | 已确定：局部迁（2026-08-28 POC 判 go 并转正） | 公开可收录页归 `consumer-next`（App Router，匿名 transport + ISR `revalidate=60`，2 副本 + PDB，`/zh` `/en` `/_next` 前缀分流）；登录后交易页与 Merchant/Admin/Tauri 留 vite-plus SPA。架构规则：公开 ISR 页服务端取数必须匿名，per-request Cookie transport 只用于显式 dynamic 路由。证据：[Next.js POC](reports/2026-08-28-nextjs-poc.md) |
+| 前端 SSR | Next.js | 已确定：局部迁（2026-08-28 POC 判 go 并转正） | 公开可收录页归 `consumer-next`（App Router，匿名 transport + ISR `revalidate=60`，2 副本 + PDB，`/zh` `/en` `/_next` 前缀分流）；登录后交易页与 Merchant/Admin/Tauri 留 vite-plus SPA。架构规则：公开 ISR 页服务端取数必须匿名，per-request Cookie transport 只用于显式 dynamic 路由。证据：Next.js POC |
 | 前端本地状态 | Zustand | 已确定（2026-08-28 迁移完成） | valtio→zustand 全量迁移收口：3 个 store 重写为 vanilla store + 模块级 action，valtio 依赖移除，顺带修复 `AppBar` 直读 proxy 不订阅的刷新 bug；服务端状态仍归 TanStack Query |
-| 前端编译优化 | React Compiler（Oxc 原生） | 已评估：搁置（2026-08-28 试点） | consumer 单应用试点通过（构建/测试/冒烟绿，Zustand 组件零诊断），但原生实现仍实验性、生产构建 2 处显式 bailout、全量 JS gzip +7.97%，运行时收益未证实可抵消体积增长。保持默认关闭，环境变量可复跑同一试点。证据：[试点报告](reports/2026-08-28-react-compiler-pilot.md) |
+| 前端编译优化 | React Compiler（Oxc 原生） | 已评估：搁置（2026-08-28 试点） | consumer 单应用试点通过（构建/测试/冒烟绿，Zustand 组件零诊断），但原生实现仍实验性、生产构建 2 处显式 bailout、全量 JS gzip +7.97%，运行时收益未证实可抵消体积增长。保持默认关闭，环境变量可复跑同一试点。证据：试点报告 |
 | 按请求接管（多人个人金丝雀） | Telepresence personal intercept / mirrord Teams | 待触发 | 「多人同时对同一服务做按请求接管」（filter 式个人金丝雀）是 steal 真正不可替代、当前给不了的能力——Okteto 接管是排他的整体替换。触发信号（任一）：出现第二个长期后端贡献者共享 dev 联调；发生「一人的 okteto up/调试会话打断另一人联调」的真实冲突；前端/QA 需同时验证两个未合入后端分支；每人独立环境的资源账算不过来。触发后先验 Telepresence personal intercept（开源，但须复测本集群 Cilium KPR 兼容——mirrord steal 的教训），对照 mirrord Teams（约 $50/人/月）；两者都不行才考虑「基线+泳道」自建染色路由。此前不为此花任何成本。开发内环现行分工见 A 表；mirror 推广门禁：cart 及一个下游完成 K8s DNS 调用 |
-| 东西向身份 | SPIFFE/SPIRE | 暂不引入（2026-08-28 调研收口） | 先做低成本高确定性动作：CiliumNetworkPolicy default-deny 补全、每服务独立 ServiceAccount + 最小 RBAC、关闭无用 token automount、审计 projected SA token 与「只信任网关头」边界。需要 workload 级身份时首选评估 Istio Ambient，不单独引入 SPIRE（`csi-driver-spiffe` v0.15.0 活跃，但须禁用 cert-manager 默认 approver 以防审批竞速绕过策略）。证据：[技术调研](reports/2026-08-28-tech-research.md) §6 |
-| 传输层安全 | mTLS | 分阶段：先节点级加密（2026-08-28 调研收口） | 优先级排序：①**Cilium WireGuard 节点间透明加密**（零应用改造，非 workload 级）——首选，小范围实测后再全集群启用；②真需要 workload mTLS + 授权时首选评估 Istio Ambient；③**Cilium Mutual Authentication 1.20.1 仍 Beta 且官方自述安全模型不完整，不得当作 workload mTLS**；④Linkerd OSS 自 2024 起不再发 semver stable 工件，不选。ConnectRPC 从 H2C 切 mTLS 的代码改动相对集中，真实成本在身份注册、授权矩阵、证书轮换与探针——这正是它留在 P2 的原因。证据：[技术调研](reports/2026-08-28-tech-research.md) §6 |
-| 运行时安全 | Tetragon | 三节点观察与告警闭环已落地（2026-08-28） | chart 1.7.1 在 node101/102/103 `3/3` Ready，ARM64 内核 7.0 BTF 已实测；仅导出 `ecommerce` 的 `PROCESS_EXEC/EXIT/KPROBE`，开启 credential/namespace 上下文。唯一策略 `ecommerce-service-account-token-access` 为 namespaced audit-only，不阻断；原始事件已入 VictoriaLogs，token-access/可疑 exec 指标已入 VictoriaMetrics，vmalert→Alertmanager→通知审计桥已真实注入验收。部署资产在 `~/lens077/kubernetes/components/tetragon/`，策略真相源在 `infrastructure/tetragon/`；enforcement 仍待独立评估 |
-| 混沌工程 | Chaos Mesh | P1 条件触发（2026-08-28 由「必引入」改判） | v2.8.4，CNCF Incubating，官方构建链含 arm64。最小形态：**仅 staging**、不装 Dashboard、只启用 `PodChaos`/`NetworkChaos`，禁 StressChaos 与内核/IO/DNS 类。前置门槛（全满足才引入）：staging 副本/PDB/告警与生产一致、手工演练 ≥2 轮、每类实验有稳态指标与中止条件、承诺每季度至少跑一次（否则撤掉控制面）。常驻预算约 0.2–0.35 CPU / 448–640Mi。对照 Litmus：月更更快但 ChaosCenter+MongoDB 控制面更重，单集群场景无收益。证据：[技术调研](reports/2026-08-28-tech-research.md) §8 |
-| 供应链安全 | Cosign、Syft、Kyverno、Trivy、Grype、Gitleaks、zizmor | PR、Syft、GHCR keyless 与签名前 Trivy image 已全绿；TCR 单服务兼容实测通过 | PR 三件套已红测并全绿；`1.5.2` 完成 10 服务双架构 SPDX，`1.5.3` 完成 GHCR index keyless 签名与平台 attestation，`1.5.4` 在 TCR `user` 实际 digest 上成功写入并回读同类 Cosign 工件；签名前 Trivy image 已接线并经 `1.6.2`/`1.6.3` 真实发布验证（2026-08-30：构建后按不可变 digest 扫描、可修复 HIGH/CRITICAL 在签名前阻断、SARIF 归 main 生成可见 alert）。当前最大缺口是 Kyverno `verifyImages` 准入（已装但零生效策略）与 TCR 全服务扩展。进度、边界与剩余路线见 [供应链安全演变全景](reports/2026-08-28-supply-chain-evolution-overview.md)，命令与验收证据见 [详细验证报告](reports/2026-08-28-supply-chain-pr-validation.md) |
-| 成本治理 | OpenCost | P1 条件评估（2026-08-28 由「P1 引入」改判） | v1.121.1，CNCF Incubating。三项前置未完成前不常驻：①节点小时成本模型达成共识（Helm `customPricing`：硬件摊销+电力+存储+网络 ÷730h；仅异构节点才用 CSVProvider）②VictoriaMetrics 兼容 PoC（Prometheus API 足以起步，但无官方认证矩阵，须实测 7 天/30 天窗口查询不超时）③10 服务统一成本标签。**「每订单成本」不是 OpenCost 的原生模型**——它只给资源成本，业务分摊需自建（资源成本 ÷ 可归因订单数），且**禁止给 `order_id` 打 metric label**（基数爆炸）。预算 100–250m CPU / 256–512Mi（官方默认 request 10m/55Mi 是调度值非容量）。证据：[技术调研](reports/2026-08-28-tech-research.md) §8 |
-| 长流程编排 | Temporal | 待触发（P2，2026-08-28 触发信号已量化） | v1.31.0。**强信号（任一即评估）**：跨服务 >24h 的 durable workflow ≥3 条；单流程 ≥8 个持久步骤或 ≥4 个补偿分支；人工恢复每月 >4 次或 >8 工时；≥2 个服务各自实现 Saga/定时器/重试框架。**弱信号（三项连续两个迭代成立）**：PG 活跃未来任务 >10 万、到期定时器峰值 >1 万/分钟、单流程状态机迁移 >15 条边等。PG 任务表若要通用化，**下一步先看 River**（Go + PG 事务型队列，无新增控制面）而非直接上 Temporal。自托管可用 PostgreSQL（12+ 兼 Advanced Visibility，不必 ES）；生产 HA 需 3–6 CPU / 6–12Gi + DB，超出现集群承载，若触发应落外置基础设施。证据：[技术调研](reports/2026-08-28-tech-research.md) §8 |
-| 消息流式处理 | Kafka Streams / ksqlDB | 不引入（2026-08-28 调研收口） | 维持 **franz-go 自写消费者**（Inbox 幂等 + 状态写 PG + 投影可重建）：通知、对账、销量累计全是无窗口幂等 sink 或副作用工作流（搜索投影已归行投影线，由 Kafka Connect Sink 承载，见 §4.5），不需要通用流引擎。Kafka Streams 是嵌入 JVM 应用的库，纯 Go 团队引入 = 长期维护 Java 服务孤岛（JDK/GC/RocksDB 状态/rebalance 全套）；ksqlDB 仍发版但 license 为 Confluent Community License（非 OSI），且 Confluent 新增战略投入已明显转向 Flink。触发（任两项：生产窗口聚合/流 join ≥3 条、≥2 个消费者重复实现 watermark/迟到修正/状态 TTL、报表新鲜度要求 P95 <30s、PG Cron 聚合开始影响 OLTP）后**先 POC RisingWave**（Apache-2.0、PG wire protocol、单机起点约 2c/8Gi）；只有乱序/watermark/多流 temporal join/大状态 checkpoint 成为业务正确性的一部分才评估 Flink。证据：[技术调研](reports/2026-08-28-tech-research.md) §4 |
-| 嵌入式分析（OLAP 跑批） | DuckDB（v1.5.5，MIT） | 采纳（试点**已排期未开工**，2026-08-28 采纳 / 2026-09 补排 D0–D3 见 [待办](todo/数据一致性与事件驱动.md)） | 定位=**零常驻批分析/报表/对账引擎**：支付渠道账单对账、`behaviors.events` 增量导出 Parquet 落 Silo 后的分析卸载、经营报表 ad-hoc 维度。集成形态：**CLI 子进程跑批优先**——业务服务 `CGO_ENABLED=0` 一字不改（duckdb-go 预编译静态库仍需 cgo）；复杂化后建独立 analytics-runner 镜像（显式 CGO 例外）；不嵌业务服务、不做常驻任意 SQL 服务、不用 Quack（Beta）。红线：不替代 PG（OLTP 真相源）/搜索投影/Kafka/VictoriaMetrics/流处理（<30s 新鲜度归流处理触发项）。升级路径：多写者/快照/模式演进需求出现后启用 DuckLake 1.0（catalog 存 Pigsty PG + Parquet 落 Silo）。与 ClickHouse 关系：承接其触发条款①②的第一响应，CH 触发条件升级为服务化信号。**⚠️ v2.0 预览版「Cyanoptera」使两条前提待复核（2026-09 记，正式版计划 2026 秋）**：①quack 协议转正为原生 client/server，「不用 Quack」的理由从「Beta」降级为需重新论证的架构选择——但 daemon 形态与本行「零常驻」的采纳理由直接冲突，**不因转正而默认采用**；②版本化 C API + 稳定 ABI 可能改变 cgo 的成本账。**正式版发布前选型不变，预览版不进任何跑批产物**；复核判据见待办 D2。证据：`docs/reports/2026-08-28-duckdb-evaluation.md` |
-| 持续性能分析 | Pyroscope / Parca | 待触发（2026-08-28 调研收口） | 先用 Go 原生 `pprof`/trace/基准测试 + PGO，不常驻任何分析平台。触发（至少两项）：30 天内 ≥2 次靠指标/trace/一次性 pprof 定位不了的性能故障；需要跨版本连续对比 profile；CPU 常态 >60% 可分配容量。触发后**优先 Pyroscope Go SDK push**（v2.3.0，与现有 Grafana 契合；预算 250–500m / 512Mi–1Gi + 10–20Gi 存储，SDK 端约 <1% CPU 须实测）；**Parca 暂不选**——官方 issue 明确其新 eBPF profiler 对 arm64 支持尚不完整，且 Grafana 的 Parca datasource 已弃用（2027-01 结束支持）。注意 eBPF 全局采集不替代 Go heap/mutex/goroutine profile。证据：[技术调研](reports/2026-08-28-tech-research.md) §8 |
-| 服务网格 | Cilium Service Mesh | 暂不引入（2026-08-28 调研收口） | 维持 Cilium CNI + NetworkPolicy + Gateway API 覆盖。理由：Mutual Authentication 在 1.20.1 仍是 Beta 且官方自述安全模型不完整；官方也没有可直接套用于 3 节点 arm64 小集群的每节点 Envoy 内存基准（旧版大规模 agent 测试数据不可外推）。将来确需 workload mTLS + L7 授权时，评估对象是 Istio Ambient 而非本项。证据：[技术调研](reports/2026-08-28-tech-research.md) §6 |
-| 前端错误监控 | Bugsink（现役 2.5.x，node3） | 已确定（2026-08-28 复核维持） | 兼容 Sentry SDK 错误事件；单容器 + PostgreSQL 已稳定运行并接通 ntfy 告警。GlitchTip 改为条件采纳：出现 transaction/span 聚合、错误频率告警或统一 uptime/logs 需求时再评估迁移。接入手册与容量证据见 §11.3 |
-| 应用层 WAF | CaddyGuard / coraza-caddy | 不引入（2026-09-01 选型收口） | **前端 Caddy 上加 WAF 是空转**：`frontend/apps/consumer` 的 Caddy 只发静态资源，业务请求由浏览器直连 `gateway.apikv.com`（`.env.production` 的 `VITE_GATEWAY_URL`），镜像里那条 `/api` 反代是未启用的备用路径——SQLi/XSS/越权/CC 全部不经过它。**候选本身也不合格**：`qist/caddyguard` 建仓于 2026-08-12，0 star / 0 fork / 单人贡献、自研规则引擎非 CRS，无外部审计与 CVE 响应通道；同名的 `Z3NTL3/caddyguard` 是依赖外部 InternetDB 的 IP 信誉插件，不是 WAF，且给公网入口引入同步外部依赖。WAF 要解析全部不可信输入，其自身解析缺陷即 RCE 入口，选型门槛必须高于普通依赖。**位置也与既定架构冲突**：§2.1 与 [production-scale-goal](design/platform/production-scale-goal.md) §5.7 已定「WAF、Bot 与大流量 DDoS 清洗放在云边缘，不由自研 Go gateway 承担」；且 WAF 必须缓冲请求体，与 §10.1「ConnectRPC over H2C、禁止降级 HTTP/1.1」的流式假设相斥，CRS v4 全量规则的内存开销在 node101（6.4GB 且扛控制面）上也不成立。**真要自建时评估对象是 `corazawaf/coraza-caddy`**（OWASP 项目、兼容 CRS v4），但官方状态标注为 "stable, needs a maintainer"，且应挂在 node1 Pangolin 的 Traefik v3.7（唯一同时覆盖 `shop` 与 `gateway` 两个域名的位置），不是集群内的静态站 Caddy。**触发重估**（任一）：云边缘 WAF 因成本或合规不可用；出现 WAF 能拦而 §5.7 逐 procedure 限流拦不住的真实攻击。**优先级更高的替代动作**：按用户/租户的限流归 control-tower（§5.7，只有那里拿得到 Casdoor session 与 OpenFGA 身份，Caddy 仅能按 IP 限、对 NAT 后攻击近乎无效），以及 `.service-matrix.yaml` 标记的 `postgres_gorse` 明文弱口令 + `0.0.0.0/0` 收敛——那条路径上 WAF 完全不在场 |
-| 可观测一体化平台 | SigNoz | 观察项（2026-08-31 调研收口，未采纳） | 定位=OTel 原生一体机：trace/metric/log/异常/告警/看板收进单应用 + 单 ClickHouse 存储；GitLab O11y（Experiment）即其 fork。属于对现行「Victoria 家族 + Grafana + vmalert 组装栈」（§9）的**整体替换**候选，不是增补组件。当前不换：组装栈已调顺（三盘口径修正、告警链实测、PII 脱敏与 OTLP 鉴权均已沉淀），且一体机常驻 ClickHouse 的内存底座（其 fork 官方建议 8–16GiB）在 node3（总内存 7.25GiB，与 PG/观测数据面同机）放不下。作用场景、逐项栈比对、切换成本与触发重估条件见 [SigNoz 评估](reports/2026-08-31-signoz-evaluation.md) |
-| 凭据变更传播 | Reloader（stakater） | 条件采纳：部署资产就位、默认关（2026-09-11） | 定位=ESO 链路的第三段：Secret 变了自动滚动**带注解**的工作负载，把「Vault 改值后 Secret 变了、进程还是旧密码」这一环自动化。**它管不到本项目最要紧的第四段**：10 个业务服务的凭据在 Config Center 里、不是 K8s Secret，Dragonfly 密码变了 Reloader 能滚 Dragonfly，不知道 cart/order 在 Config Center 里还记着旧值——那段归 kubernetes 仓 `tools/config-center-harvest.sh`。只装它不跑 harvest 等于把「密码不一致」从提供方挪到消费方。**触发打开**（任一）：凭据后端配了脚本之外的自动轮换；多人操作凭据后端；harvest 已能被 Secret 变更事件触发。纪律：只用点名注解不开 `autoReloadAll`（证书续期不该滚业务 Pod）、`ignoreJobs/CronJobs`、控制面 ns 排除、`annotations` 策略。部署资产在 `~/lens077/kubernetes/components/reloader/`（`ADDON_RELOADER`）。四段链路、边界与验证见 [Reloader 参考](reports/2026-09-11-reloader-reference.md) |
+| 东西向身份 | SPIFFE/SPIRE | 暂不引入（2026-08-28 调研收口） | 先做低成本高确定性动作：CiliumNetworkPolicy default-deny 补全、每服务独立 ServiceAccount + 最小 RBAC、关闭无用 token automount、审计 projected SA token 与「只信任网关头」边界。需要 workload 级身份时首选评估 Istio Ambient，不单独引入 SPIRE（`csi-driver-spiffe` v0.15.0 活跃，但须禁用 cert-manager 默认 approver 以防审批竞速绕过策略）。证据：技术调研 §6 |
+| 传输层安全 | mTLS | 分阶段：先节点级加密（2026-08-28 调研收口） | 优先级排序：①**Cilium WireGuard 节点间透明加密**（零应用改造，非 workload 级）——首选，先评估节点级加密，再决定是否全集群启用；②真需要 workload mTLS + 授权时首选评估 Istio Ambient；③**Cilium Mutual Authentication 1.20.1 仍 Beta 且官方自述安全模型不完整，不得当作 workload mTLS**；④Linkerd OSS 自 2024 起不再发 semver stable 工件，不选。ConnectRPC 从 H2C 切 mTLS 的代码改动相对集中，真实成本在身份注册、授权矩阵、证书轮换与探针——这正是它留在 P2 的原因。证据：技术调研 §6 |
+| 运行时安全 | Tetragon | 观察与告警闭环已部署；enforcement 仍待独立评估 | 仅导出 `ecommerce` 的 `PROCESS_EXEC/EXIT/KPROBE`，开启 credential/namespace 上下文；策略 `ecommerce-service-account-token-access` 保持 namespaced audit-only，不阻断。部署资产在 Kubernetes 仓，策略真相源在 `infrastructure/tetragon/` |
+| 混沌工程 | Chaos Mesh | P1 条件触发（2026-08-28 由「必引入」改判） | v2.8.4，CNCF Incubating，官方构建链含 arm64。最小形态：**仅 staging**、不装 Dashboard、只启用 `PodChaos`/`NetworkChaos`，禁 StressChaos 与内核/IO/DNS 类。前置门槛（全满足才引入）：staging 副本/PDB/告警与生产一致、手工演练 ≥2 轮、每类实验有稳态指标与中止条件、承诺每季度至少跑一次（否则撤掉控制面）。常驻预算约 0.2–0.35 CPU / 448–640Mi。对照 Litmus：月更更快但 ChaosCenter+MongoDB 控制面更重，单集群场景无收益。证据：技术调研 §8 |
+| 供应链安全 | Cosign、Syft、Kyverno、Trivy、Grype、Gitleaks、zizmor | PR、Syft、GHCR keyless 与签名前 Trivy image 已全绿；TCR 单服务兼容验证通过 | PR 三件套已红测并全绿；`1.5.2` 完成 10 服务双架构 SPDX，`1.5.3` 完成 GHCR index keyless 签名与平台 attestation，`1.5.4` 在 TCR `user` 实际 digest 上成功写入并回读同类 Cosign 工件；签名前 Trivy image 已接线并经 `1.6.2`/`1.6.3` 真实发布验证（2026-08-30：构建后按不可变 digest 扫描、可修复 HIGH/CRITICAL 在签名前阻断、SARIF 归 main 生成可见 alert）。当前最大缺口是 Kyverno `verifyImages` 准入（已装但零生效策略）与 TCR 全服务扩展。进度、边界与剩余路线见 供应链安全演变全景，命令与验收证据见 详细验证报告 |
+| 成本治理 | OpenCost | P1 条件评估（2026-08-28 由「P1 引入」改判） | v1.121.1，CNCF Incubating。三项前置未完成前不常驻：①节点小时成本模型达成共识（Helm `customPricing`：硬件摊销+电力+存储+网络 ÷730h；仅异构节点才用 CSVProvider）②VictoriaMetrics 兼容性（Prometheus API 足以起步，但无官方认证矩阵，依赖查询窗口设计）③10 服务统一成本标签。**「每订单成本」不是 OpenCost 的原生模型**——它只给资源成本，业务分摊需自建（资源成本 ÷ 可归因订单数），且**禁止给 `order_id` 打 metric label**（基数爆炸）。预算 100–250m CPU / 256–512Mi（官方默认 request 10m/55Mi 是调度值非容量）。证据：技术调研 §8 |
+| 长流程编排 | Temporal | 待触发（P2，2026-08-28 触发信号已量化） | v1.31.0。**强信号（任一即评估）**：跨服务 >24h 的 durable workflow ≥3 条；单流程 ≥8 个持久步骤或 ≥4 个补偿分支；人工恢复每月 >4 次或 >8 工时；≥2 个服务各自实现 Saga/定时器/重试框架。**弱信号（三项连续两个迭代成立）**：PG 活跃未来任务 >10 万、到期定时器峰值 >1 万/分钟、单流程状态机迁移 >15 条边等。PG 任务表若要通用化，**下一步先看 River**（Go + PG 事务型队列，无新增控制面）而非直接上 Temporal。自托管可用 PostgreSQL（12+ 兼 Advanced Visibility，不必 ES）；生产 HA 需 3–6 CPU / 6–12Gi + DB，超出现集群承载，若触发应落外置基础设施。证据：技术调研 §8 |
+| 消息流式处理 | Kafka Streams / ksqlDB | 不引入（2026-08-28 调研收口） | 维持 **franz-go 自写消费者**（Inbox 幂等 + 状态写 PG + 投影可重建）：通知、对账、销量累计全是无窗口幂等 sink 或副作用工作流（搜索投影已归行投影线，由 Kafka Connect Sink 承载，见 §4.5），不需要通用流引擎。Kafka Streams 是嵌入 JVM 应用的库，纯 Go 团队引入 = 长期维护 Java 服务孤岛（JDK/GC/RocksDB 状态/rebalance 全套）；ksqlDB 仍发版但 license 为 Confluent Community License（非 OSI），且 Confluent 新增战略投入已明显转向 Flink。触发（任两项：生产窗口聚合/流 join ≥3 条、≥2 个消费者重复实现 watermark/迟到修正/状态 TTL、报表新鲜度要求 P95 <30s、PG Cron 聚合开始影响 OLTP）后**先 POC RisingWave**（Apache-2.0、PG wire protocol、单机起点约 2c/8Gi）；只有乱序/watermark/多流 temporal join/大状态 checkpoint 成为业务正确性的一部分才评估 Flink。证据：技术调研 §4 |
+| 嵌入式分析（OLAP 跑批） | DuckDB（v1.5.5，MIT） | 采纳（试点**已排期未开工**，2026-08-28 采纳 / 2026-09 补排 D0–D3 见 [待办](../TODO.md#数据一致性与事件驱动)） | 定位=**零常驻批分析/报表/对账引擎**：支付渠道账单对账、`behaviors.events` 增量导出 Parquet 落 Silo 后的分析卸载、经营报表 ad-hoc 维度。集成形态：**CLI 子进程跑批优先**——业务服务 `CGO_ENABLED=0` 一字不改（duckdb-go 预编译静态库仍需 cgo）；复杂化后建独立 analytics-runner 镜像（显式 CGO 例外）；不嵌业务服务、不做常驻任意 SQL 服务、不用 Quack（Beta）。红线：不替代 PG（OLTP 真相源）/搜索投影/Kafka/VictoriaMetrics/流处理（<30s 新鲜度归流处理触发项）。升级路径：多写者/快照/模式演进需求出现后启用 DuckLake 1.0（catalog 存 Pigsty PG + Parquet 落 Silo）。与 ClickHouse 关系：承接其触发条款①②的第一响应，CH 触发条件升级为服务化信号。**⚠️ v2.0 预览版「Cyanoptera」使两条前提待复核（2026-09 记，正式版计划 2026 秋）**：①quack 协议转正为原生 client/server，「不用 Quack」的理由从「Beta」降级为需重新论证的架构选择——但 daemon 形态与本行「零常驻」的采纳理由直接冲突，**不因转正而默认采用**；②版本化 C API + 稳定 ABI 可能改变 cgo 的成本账。**正式版发布前选型不变，预览版不进任何跑批产物**；复核判据见待办 D2。证据：`docs/reports/2026-08-28-duckdb-evaluation.md` |
+| 持续性能分析 | Pyroscope / Parca | 待触发（2026-08-28 调研收口） | 先用 Go 原生 `pprof`/trace/基准测试 + PGO，不常驻任何分析平台。触发（至少两项）：30 天内 ≥2 次靠指标/trace/一次性 pprof 定位不了的性能故障；需要跨版本连续对比 profile；CPU 常态 >60% 可分配容量。触发后**优先 Pyroscope Go SDK push**（v2.3.0，与现有 Grafana 契合；预算 250–500m / 512Mi–1Gi + 10–20Gi 存储，SDK 端约 <1% CPU）；**Parca 暂不选**——官方 issue 明确其新 eBPF profiler 对 arm64 支持尚不完整，且 Grafana 的 Parca datasource 已弃用（2027-01 结束支持）。注意 eBPF 全局采集不替代 Go heap/mutex/goroutine profile。证据：技术调研 §8 |
+| 服务网格 | Cilium Service Mesh | 暂不引入（2026-08-28 调研收口） | 维持 Cilium CNI + NetworkPolicy + Gateway API 覆盖。理由：Mutual Authentication 在 1.20.1 仍是 Beta 且官方自述安全模型不完整；官方也没有可直接套用于 3 节点 arm64 小集群的每节点 Envoy 内存基准（旧版大规模 agent 测试数据不可外推）。将来确需 workload mTLS + L7 授权时，评估对象是 Istio Ambient 而非本项。证据：技术调研 §6 |
+| 前端错误监控 | Bugsink | 已确定 | 兼容 Sentry SDK 错误事件；平台部署与前端 SDK 接入分开验收，不能把部署视为前端错误链路已完成。GlitchTip 改为条件采纳：出现 transaction/span 聚合、错误频率告警或统一 uptime/logs 需求时再评估迁移。接入手册见 §11.3 |
+| 应用层 WAF | CaddyGuard / coraza-caddy | 不引入（2026-09-01 选型收口） | **前端 Caddy 上加 WAF 是空转**：`frontend/apps/consumer` 的 Caddy 只发静态资源，业务请求由浏览器直连 `gateway.apikv.com`（`.env.production` 的 `VITE_GATEWAY_URL`），镜像里那条 `/api` 反代是未启用的备用路径——SQLi/XSS/越权/CC 全部不经过它。**候选本身也不合格**：`qist/caddyguard` 建仓于 2026-08-12，0 star / 0 fork / 单人贡献、自研规则引擎非 CRS，无外部审计与 CVE 响应通道；同名的 `Z3NTL3/caddyguard` 是依赖外部 InternetDB 的 IP 信誉插件，不是 WAF，且给公网入口引入同步外部依赖。WAF 要解析全部不可信输入，其自身解析缺陷即 RCE 入口，选型门槛必须高于普通依赖。**位置也与既定架构冲突**：§2.1 与 [production-scale-goal](design/platform/production-scale-goal.md) §5.7 已定「WAF、Bot 与大流量 DDoS 清洗放在云边缘，不由自研 Go gateway 承担」；且 WAF 必须缓冲请求体，与 §10.1「ConnectRPC over H2C、禁止降级 HTTP/1.1」的流式假设相斥，CRS v4 全量规则的内存开销不符合当前小型集群的资源约束。**真要自建时评估对象是 `corazawaf/coraza-caddy`**（OWASP 项目、兼容 CRS v4），但官方状态标注为 "stable, needs a maintainer"，且应挂在 node1 Pangolin 的 Traefik v3.7（唯一同时覆盖 `shop` 与 `gateway` 两个域名的位置），不是集群内的静态站 Caddy。**触发重估**（任一）：云边缘 WAF 因成本或合规不可用；出现 WAF 能拦而 §5.7 逐 procedure 限流拦不住的真实攻击。**优先级更高的替代动作**：按用户/租户的限流归 control-tower（§5.7，只有那里拿得到 Casdoor session 与 OpenFGA 身份，Caddy 仅能按 IP 限、对 NAT 后攻击近乎无效），以及 `.service-matrix.yaml` 标记的 `postgres_gorse` 明文弱口令 + `0.0.0.0/0` 收敛——那条路径上 WAF 完全不在场 |
+| 可观测一体化平台 | SigNoz | 观察项（2026-08-31 调研收口，未采纳） | 定位=OTel 原生一体机：trace/metric/log/异常/告警/看板收进单应用 + 单 ClickHouse 存储；GitLab O11y（Experiment）即其 fork。属于对现行「Victoria 家族 + Grafana + vmalert 组装栈」（§9）的**整体替换**候选，不是增补组件。当前不换：组装栈已调顺（三盘口径修正、告警链、PII 脱敏与 OTLP 鉴权均已有设计记录），且一体机常驻 ClickHouse 的内存底座（其 fork 官方建议 8–16GiB）不符合小型集群的资源约束。作用场景、逐项栈比对、切换成本与触发重估条件见 SigNoz 评估 |
+| 凭据变更传播 | Reloader（stakater） | 条件采纳：部署资产就位、默认关（2026-09-11） | 定位=ESO 链路的第三段：Secret 变了自动滚动**带注解**的工作负载，把「Vault 改值后 Secret 变了、进程还是旧密码」这一环自动化。**它管不到本项目最要紧的第四段**：10 个业务服务的凭据在 Config Center 里、不是 K8s Secret，Dragonfly 密码变了 Reloader 能滚 Dragonfly，不知道 cart/order 在 Config Center 里还记着旧值——那段归 kubernetes 仓 `tools/config-center-harvest.sh`。只装它不跑 harvest 等于把「密码不一致」从提供方挪到消费方。**触发打开**（任一）：凭据后端配了脚本之外的自动轮换；多人操作凭据后端；harvest 已能被 Secret 变更事件触发。纪律：只用点名注解不开 `autoReloadAll`（证书续期不该滚业务 Pod）、`ignoreJobs/CronJobs`、控制面 ns 排除、`annotations` 策略。部署资产在 `~/lens077/kubernetes/components/reloader/`（`ADDON_RELOADER`）。四段链路、边界与验证见 Reloader 参考 |
 
 ---
 
@@ -187,7 +187,7 @@
        │
        │ (逻辑复制槽读取 WAL，按提交序)
        ▼
-[ Debezium Outbox Event Router ] ──( At-Least-Once 投递 )──► [ Kafka Topic (非 K8s 独立集群) ]
+[ Debezium Outbox Event Router ] ──( At-Least-Once 投递 )──► [ Kafka Topic (K8s 内 Strimzi 集群) ]
                                                                     │
                                                                     ▼
 ┌────────────────────────────────────────────────────────┐
@@ -251,7 +251,7 @@ spec:
 边界：
 
 - 搜索投影是 `spus` / `skus` / `sale_detail` 三表的纯函数，归行投影线；跨表聚合不是选 Outbox 线的理由——把聚合物化成 PG 侧 trigger 维护的投影表，CDC 线即可搬运。投影表与索引契约见 [`docs/design/search/search.md`](design/search/search.md)。
-- 两条线在 Debezium 侧互不混用：行投影表不进 Outbox Router connector，outbox 表不进 CDC 线的 publication（施工与验收清单见 [`docs/todo/数据一致性与事件驱动.md`](todo/数据一致性与事件驱动.md)「线 B」）。
+- 两条线在 Debezium 侧互不混用：行投影表不进 Outbox Router connector，outbox 表不进 CDC 线的 publication（施工与验收清单见 [`docs/todo/数据一致性与事件驱动.md`](../TODO.md#数据一致性与事件驱动)「线 B」）。
 - 领域事实线当前零生产者、零消费者，刻意不预建；出现第一个需要跨服务副作用的业务写时再开工。
 - 「自写 X 替代 Y 因为零新组件」这类定稿必须写明前提「栈里没有 Y」；Kafka Connect 成为生产组件后，自写 relay 反而是多出来的组件，故退役。
 
@@ -541,21 +541,21 @@ spec:
 为保障故障隔离，计算集群 (K8s) 与核心数据/观测存储实施物理/集群级解耦：
 
 ```text
-[ K8s 业务计算集群 ]                    [ 非 K8s 专用基础设施/数据集群 ]
+[ K8s 业务计算集群 ]                    [ 集群外数据/观测基础设施 ]
 ├── Control-Tower 网关                   ├── PostgreSQL (Pigsty / Patroni HA)
-├── 微服务 Pod Cells                     ├── Apache Kafka 集群 + Schema Registry
-├── Dragonfly (分实例部署)               ├── Elasticsearch 集群
-├── Vector / VMAgent (仅采集器) ──────┐  └── VictoriaMetrics / VictoriaLogs 栈
-└─────────────────────────────────┼─────────────────────────────────────
-                                  └─► (日志/指标/链路 数据远端写入)
+├── 微服务 Pod Cells                     ├── VictoriaMetrics / VictoriaLogs 栈
+├── Dragonfly (分实例部署)               └── 其他外部依赖
+├── Strimzi Kafka + Kafka Connect
+├── Elasticsearch
+└── Vector / OTel Collector 采集与转发
 ```
 
 | 组件 | 技术选型 | 部署与故障隔离策略 |
 |---|---|---|
 | OLTP 数据库 | PostgreSQL (Pigsty) | 外部物理机/VM 部署，Patroni 自动 Failover，PgBouncer 连接池治理，UUIDv7 为默认主键 |
 | 分布式缓存 | Dragonfly | 严禁混用实例：Session 实例启用 `noeviction` + 持久化；业务 Cache 实例启用 `allkeys-lru`；限流实例独立 |
-| 事件总线 | Apache Kafka | 部署于非 K8s 物理集群；按限界上下文规划 Topic，以 `aggregate_id` 作为 Partition Key 保证顺序 |
-| 搜索存储 | Elasticsearch | 作为只读 Projection，隐藏于 `SearchCatalog` 接口后；支持从 PG 全量重建索引 |
+| 事件总线 | Apache Kafka | 当前部署于 K8s 内的 Strimzi 集群，Kafka Connect 承载搜索 CDC；领域事件 Topic 按限界上下文规划，以 `aggregate_id` 作为 Partition Key 保证顺序，业务 producer/consumer 尚未接线 |
+| 搜索存储 | Elasticsearch | 当前部署于 K8s 内，仅作为只读 Projection，隐藏于 `SearchCatalog` 接口后；支持从 PG 全量重建索引 |
 | 对象存储 | Silo (基于 MinIO) | S3 兼容，开启 Versioning 与 Lifecycle。前端上传统一使用 Backend 签发的预签名 URL |
 | 制品仓库 | TCR（主）+ Harbor（Helm）+ GHCR（可选） | TCR 为主仓库，主要存储业务镜像（集群同区直连拉取）；Harbor 存储 Helm 制品（OCI）；GHCR 可选，可同时存储镜像与 Helm 制品，因网络差异是否推送由 CI 决定 |
 
@@ -601,13 +601,17 @@ Cilium Gateway API ──► control-tower 网关 ──► 业务服务 Pod Cel
 | 调度容量均衡 | scheduler 认为各节点还剩多少 CPU/内存 | 所有容器必须提供经过验证的 `resources.requests`；缺失或虚高都会让调度评分失真 |
 | 实际利用率均衡 | 节点和容器真实消耗是否接近 | 结合长期指标、VPA 推荐、k6 容量窗口和节点宿主机开销判断，不能用 Pod 数或一次 `kubectl top` 代替 |
 
-VPA 只以 recommendation 模式进入容量流程：当前组件只安装 recommender，业务 VPA 必须使用 `updateMode: Off` 和 `controlledValues: RequestsOnly`。推荐值至少观察 7 天，并覆盖正常发布启动和固定数据集的 k6 容量窗口；Target 只是 requests 候选值，必须与 Uncapped Target、实际峰值、OOM/GC、延迟和 N+1 预算交叉验证。未经这组证据，不启用 updater、admission-controller 或自动 `InPlaceOrRecreate`。
+VPA 只以 recommendation 模式进入容量流程：业务 VPA 使用 `updateMode: Off` 和 `controlledValues: RequestsOnly`，不得自动改写工作负载资源。
+
+当前状态：KEDA 与 Argo Rollouts 控制器已安装，但 ecommerce namespace 尚无 HPA、KEDA `ScaledObject` 或 Rollout 业务对象；发布仍使用普通 Deployment 滚动更新。ArgoCD 控制器已安装，但当前没有本仓 Application/ApplicationSet，GitOps 尚未接管。HPA、KEDA ScaledObject、Argo Rollouts 和 ArgoCD Application 均属于待验收能力，不得写成已启用。
+
+目标状态：在可信指标、多副本、PDB、容量窗口和回滚演练完成后，再分别接入 HPA/KEDA 和 Argo Rollouts；完成 live diff、资源归属与回滚核对后，才创建 ArgoCD Application 并启用自动同步。
 
 节点重启不保证全局重平衡。Pod 对象仍绑定原节点时，容器通常在原节点恢复；只有 Pod 被终止或驱逐后，新副本才会重新经过 scheduler。原节点恢复不会让已经迁走的 Pod 自动搬回，需要通过告警发现持续 skew，再执行受控 rollout。
 
-**当前定稿不安装 Descheduler**：健康态分布为 `5/6/6`〔实测 2026-08-29〕；三节点内存扩容统一重启后曾遗留 `14/2/1` 倾斜，已由一次性受控 rollout 回平至 `6/6/5`〔实测 2026-08-30〕——这恰是「受控 rollout 比常驻 eviction 控制器更可控」的用例，不改变本定稿。13 个单副本服务没有 PDB，requests 尚未校准，node101 的部分内存又来自不可迁移的 control-plane 与宿主机开销。VPA Off 校准后的 requests rollout 本身会触发一次重新调度；在当前三节点、17 个 Pod 的规模下，硬 spread + 可信 requests + skew 告警 + 节点恢复 Runbook 比常驻 eviction 控制器更可控。只有节点变化或 placement drift 反复出现，并且多副本、PDB、N+1 和告警均已验证时，才重新评估 `RemovePodsViolatingTopologySpreadConstraint`；`LowNodeUtilization` 仍需额外证明容量漂移无法由 requests 校准和正常 rollout 收敛。
+**当前定稿不安装 Descheduler**：先通过可信 requests、硬性拓扑分布、skew 告警和受控 rollout 管理调度；只有节点变化或 placement drift 反复出现，并且多副本、PDB、N+1 和告警均已验证时，才重新评估 `RemovePodsViolatingTopologySpreadConstraint`。`LowNodeUtilization` 还需证明容量漂移无法由 requests 校准和正常 rollout 收敛。
 
-VPA recommendation-only 的发布证据、经验、回滚与下一步操作见 [`docs/reports/2026-08-29-vpa-recommendation-only.md`](reports/2026-08-29-vpa-recommendation-only.md)；Descheduler 的替代方案与重评条件见 [`docs/reports/2026-08-29-descheduler-decision.md`](reports/2026-08-29-descheduler-decision.md)；容量校准、故障注入与持续告警清单见 [`docs/design/platform/capacity-balancing.md`](design/platform/capacity-balancing.md)。
+VPA recommendation-only 的发布证据、经验、回滚与下一步操作见 docs/reports/2026-08-29-vpa-recommendation-only.md；Descheduler 的替代方案与重评条件见 docs/reports/2026-08-29-descheduler-decision.md；容量校准、故障注入与持续告警清单见 [`docs/design/platform/capacity-balancing.md`](design/platform/capacity-balancing.md)。
 
 ### 7.4 静态站点交付（文档站 / 落地页）
 
@@ -616,13 +620,13 @@ VPA recommendation-only 的发布证据、经验、回滚与下一步操作见 [
 
 全流程命令行配置（`gh api` 启用 + Actions 部署工作流）、子路径 base 前缀这一
 最常见的翻车点、以及 action 版本与 Node 运行时的核对方法，见
-[`docs/reports/2026-08-31-github-pages-with-gh.md`](reports/2026-08-31-github-pages-with-gh.md)。
+docs/reports/2026-08-31-github-pages-with-gh.md。
 
 ## 8. 零信任鉴权与统一 Session 架构
 
 ### 8.1 架构概览
 
-系统完全废弃 JWT 架构，全面采用以 **Casdoor 为 IAM 相位点 + Dragonfly 持久化 Session Store + OpenFGA 关系授权** 的零信任体系：
+目标架构废弃 JWT 兼容轨，采用 **Casdoor 为 IAM 相位点 + Dragonfly 持久化 Session Store + OpenFGA 关系授权** 的零信任体系。当前 BFF/Session 已有实现，OpenFGA 已部署但业务授权尚未接线，网关仍保留 Casbin 存量路径：
 
 ```text
 客户端 ──(Session Token)──► control-tower ──(验证)──► Dragonfly Session Store
@@ -703,7 +707,7 @@ if !order.CanCancel() { return failedPrecondition() }
 return orders.Cancel(ctx, order.ID)
 ```
 
-**原则三：每个暴露的方法独立授权，权限绑在动作上而不是 HTTP 方法上。** `GET`/`POST`/`PATCH`/`PUT`/`DELETE`（Connect 下即每个 procedure）分别检查，读接口做过归属检查不代表同一资源的删接口也安全。权限粒度到「动作 + 范围」，用 OpenFGA 关系（`can_view`、`can_cancel`、`can_edit`）表达，不用 `admin` 布尔值包打天下。「按请求方法绕过访问控制」的病因是授权层按 `(path, method)` 判、执行层却不看 method——攻击者把 `POST` 换成 `GET`/`HEAD`/`PUT` 或加 `X-HTTP-Method-Override`，授权层没匹配到规则，handler 照样执行。本栈的分工：**HTTP 方法只由协议层校验**（Connect 生成代码对非 `POST` 返 405，业务代码里不写 `if r.Method == ...`），**网关 Casbin 的 act 列只认字面 `POST`**（control-tower `authz.validatePolicyRow`，通配整表拒载、保留 last-known-good），**handler 内判「主体能不能做这个动作」**（`identity.RequireRole` / OpenFGA Check），三层各管一件事，到了 handler 请求是什么方法已经无关。唯一能让 GET 到达 handler 的是 proto 的 `NO_SIDE_EFFECTS`，它同时解除网关的 CSRF 校验，评审规则与门禁见 [`context/team/proto-design.md`](../context/team/proto-design.md)「方法与副作用」。
+**原则三：每个暴露的方法独立授权，权限绑在动作上而不是 HTTP 方法上。** `GET`/`POST`/`PATCH`/`PUT`/`DELETE`（Connect 下即每个 procedure）分别检查，读接口做过归属检查不代表同一资源的删接口也安全。目标权限模型按「动作 + 范围」使用 OpenFGA 关系（`can_view`、`can_cancel`、`can_edit`），当前存量由网关 Casbin 和 handler 内角色校验共同承担。正式接入 OpenFGA 前，不能把关系授权描述为已生效。「按请求方法绕过访问控制」的病因是授权层按 `(path, method)` 判、执行层却不看 method——攻击者把 `POST` 换成 `GET`/`HEAD`/`PUT` 或加 `X-HTTP-Method-Override`，授权层没匹配到规则，handler 照样执行。本栈的分工：**HTTP 方法只由协议层校验**（Connect 生成代码对非 `POST` 返 405，业务代码里不写 `if r.Method == ...`），**网关 Casbin 的 act 列只认字面 `POST`**（control-tower `authz.validatePolicyRow`，通配整表拒载、保留 last-known-good），**handler 内判「主体能不能做这个动作」**（当前为 `identity.RequireRole`，目标为 OpenFGA Check），三层各管一件事。唯一能让 GET 到达 handler 的是 proto 的 `NO_SIDE_EFFECTS`，它同时解除网关的 CSRF 校验，评审规则与门禁见 [`context/team/proto-design.md`](../context/team/proto-design.md)「方法与副作用」。
 
 **原则四：任何客户端传来的数据都不参与权限决策。** Cookie、Authorization、自定义头、URL、请求体、隐藏字段、前端算出的 `isAdmin`/`role`/`owner_id`/`tenant_id`/`confirmed`/`step`，全部不可信。请求里的对象 ID 只用于**定位候选资源**，不能证明「它属于当前用户」；归属关系必须由服务端从会话主体与数据库记录重新建立。网关在鉴权前无条件剥离 `x-md-*` 入站头，是这条原则在边缘的落实（control-tower `identity.Strip`）。**文件路径是同一原则最典型的实例**：文件名、模板名、日志名一律不由客户端提供，用 ID 由服务端查路径；必须接受路径时用 `os.Root` 关进基目录——攻击变体、`filepath.Join` 为何不够、Nginx `alias` 陷阱与新增接口自查清单见 [`docs/SECURITY-FILE-ACCESS.md`](SECURITY-FILE-ACCESS.md)。
 
@@ -720,32 +724,32 @@ return orders.Cancel(ctx, order.ID)
 
 ### 9.1 部署模式：采集与存储解耦（外置 OTel Collector 中继处理）
 
-计算集群仅部署轻量级采集器，所有日志、指标与链路数据统一通过**外置的 OpenTelemetry (OTel) Collector** 进行中继处理，再分流转投至对应的存储后端。这种模式实现了业务故障域与观测基础设施的绝对隔离，并显著降低业务 K8s 集群的计算资源消耗。
+当前态与目标态分开描述：当前 K8s 集群同时运行 Vector、OTel node agent 与 OTel gateway collector；服务端点通过 OTLP 导出，容器日志由 Vector 采集。目标态是统一由 OTel Collector 完成尾部采样、PII 脱敏、噪声清洗和指标重标记，再写入 Victoria 后端；目标态不等于已完成的运行态。
 
 ```text
-[ K8s 业务集群 Pods ]
-   ├── Vector (DaemonSet)  ───(日志数据)───┐
-   ├── VMAgent (DaemonSet) ───(指标数据)───┼──► [ 外部集群 OTel Collector 管道 ]
-   └── OTel SDK / Agent   ───(链路数据)───┘           │
-                                                       ├── 1. PII 敏感信息脱敏 (红化)
-                                                       ├── 2. 噪声过滤 (健康检查/无用日志)
-                                                       ├── 3. Tail-based Trace 采样
-                                                       └── 4. 动态批处理与指标重打标
-                                                               │
-                                       ┌───────────────────────┼───────────────────────┐
-                                       ▼                       ▼                       ▼
-                               VictoriaLogs            VictoriaMetrics          VictoriaTraces
+当前：
+[ K8s Pods ] ──► Vector / OTel node agent ──► K8s 内 OTel gateway collector
+                                                    └──► 外部 Victoria 后端或其他存储
+
+目标：
+[ K8s Pods ] ──► 采集器 ──► OTel Collector Pipeline
+                              ├── PII 脱敏
+                              ├── 噪声过滤
+                              ├── Tail-based Trace 采样
+                              └── 动态批处理与指标重标记
+                                      ├──► VictoriaLogs
+                                      ├──► VictoriaMetrics
+                                      └──► VictoriaTraces
 ```
 
-| 层 | 工具 | 职责 |
-|----|------|------|
-| 采集层（K8s 集群内） | Vector (DaemonSet) | 节点日志收集，不做复杂过滤 |
-| | VMAgent | Metrics 抓取 |
-| | OTel SDK / Agent | 通过 OTLP 协议导出 Trace |
-| 处理与过滤层（外置 OTel Gateway Pipeline） | OTel Collector | 集中执行尾部采样、PII 脱敏、噪声清洗、动态批处理与指标重打标 |
-| 存储层（外置集群） | VictoriaLogs / VictoriaMetrics / VictoriaTraces | 分流转投存储 |
+| 层 | 当前态 | 目标态 |
+|----|--------|--------|
+| 日志采集 | Vector DaemonSet | 保留 Vector，统一接入处理管道 |
+| 指标与节点信号 | OTel node agent；不存在业务 HPA/KEDA 指标对象 | 统一采集与标签规范，补齐资源与 CFS 指标 |
+| OTLP 处理 | K8s 内 OTel gateway collector | 按统一管道执行尾采样、PII 脱敏、噪声清洗与批处理 |
+| 存储 | 由 Collector/采集器配置决定 | VictoriaLogs / VictoriaMetrics / VictoriaTraces |
 
-**外置 OTel Collector 管道核心逻辑**：
+**目标 OTel Collector Pipeline 的核心逻辑**：
 
 | 功能 | 描述 |
 |------|------|
@@ -765,7 +769,7 @@ return orders.Cancel(ctx, order.ID)
 [ order-service ] ──(写 DB Outbox, 存储 traceparent: 00-4bf92f3577b34da6a3ce929d0e0e4736-00f067aa0ba902b7-01)
        │
        ▼
-[ Debezium Outbox Event Router ] ──(读取 outbox 行，`traceparent` 列映射为 Kafka Header)──► [ Kafka Topic ]
+[ Debezium Outbox Event Router ] ──(读取 outbox 行，`traceparent` 列映射为 Kafka Header)──► [ K8s 内 Strimzi Kafka Topic ]
                                                                                                │
                                                                                                ▼
 [ notification-service ] ◄──(从 Header 提取 traceparent，开辟子 Span)──────────────────────────┘
@@ -776,11 +780,11 @@ return orders.Cancel(ctx, order.ID)
 
 ### 9.3 告警与通知链路
 
-指标规则（vmalert）、黑盒探测（Gatus）与前端错误（Bugsink）三条链路的通知出口**统一收敛到 ntfy**。告警栈整体位于 node3，与业务集群故障域隔离——集群侧只有采集器，没有任何告警组件。三条链路共用同一个 topic，因此噪音会叠加。
+指标规则（vmalert）、黑盒探测（Gatus）与前端错误（Bugsink）应统一规划通知出口，但当前告警接线和外部通知闭环仍以运行配置为准。告警组件不应被描述为已完成的生产闭环。
 
-K8s 指标由集群内 OTel Collector 的 `k8s_cluster` receiver 直接产出，经 OTLP 落 VictoriaMetrics，**不需要 kube-state-metrics**。⚠️ 指标名与 label 名当前是**下划线**（`k8s_container_restarts`、`k8s_namespace_name`）。**这个口径变过一次**——早期为 OTel 原生点号命名，实测 2026-08-31 已全部转为下划线（全库含点号的指标为 0 个）。写错口径会查不到数据**且不报错**，极易误判成「指标断流」，所以写 MetricsQL 前先用 `/api/v1/label/__name__/values` 确认当前口径。
+K8s 指标由 OTel Collector 管道采集和转发；当前不存在 HPA、KEDA `ScaledObject` 或 Argo Rollouts 业务对象。指标命名和标签以采集配置为准，文档不再固化未经持续维护的观测快照。
 
-**黑盒探针探不到容器进程、systemd 单元、隧道站点在线状态与磁盘水位**——2026-09-01 实测一个容器崩溃循环 18238 次、持续两个月而全链路零告警。这一层由主机侧巡检补齐，判据与纪律见 [`context/team/host-watchdog.md`](../context/team/host-watchdog.md)，部署物在 [`infrastructure/host-watchdog/`](../infrastructure/host-watchdog/)。
+黑盒探测无法覆盖所有容器进程、systemd 单元、隧道站点和磁盘状态；主机侧巡检用于补充这些边界，判据与纪律见 [`context/team/host-watchdog.md`](../context/team/host-watchdog.md)，部署物在 [`infrastructure/host-watchdog/`](../infrastructure/host-watchdog/)。
 
 **关键工程约束：慢性 firing 的告警会掩盖急性事故。** 2026-08-29 一次持续 9 小时无人发现的故障，根因不是缺少告警，而是一条告警因慢性配置错误已连续红了一整天，真正的急性事故到来时它无法产生任何新信号。由此定两条规矩：每条规则都必须设 `for:`；必须**先修慢性问题再调阈值**，反过来做等于把真问题静音。
 
@@ -831,35 +835,35 @@ cfg.GetServiceAddr("inventory-service") // 从 K8s DNS 解析
 | ConnectRPC 集成 | Connect Query ES 原生支持 | 需配置 SSR 场景下的数据获取 |
 | 适用场景 | Merchant/Admin 后台 | Consumer 端 |
 
-**结论**（2026-08-28 定稿并转正）：Consumer 端**局部迁**——公开可收录页（商品详情起步）归 `consumer-next`（App Router + Connect Query 注水 + ISR 短 TTL `revalidate=60` 缓解多 Pod 缓存不一致），登录后交易页与 Merchant/Admin/Tauri 留 vite-plus SPA，两者共享 API 契约。POC 判定、架构规则（公开 ISR 页匿名取数 / Cookie transport 仅 dynamic 路由）与转正部署证据见 [`docs/reports/2026-08-28-nextjs-poc.md`](reports/2026-08-28-nextjs-poc.md)。
+**结论**（2026-08-28 定稿并转正）：Consumer 端**局部迁**——公开可收录页（商品详情起步）归 `consumer-next`（App Router + Connect Query 注水 + ISR 短 TTL `revalidate=60` 缓解多 Pod 缓存不一致），登录后交易页与 Merchant/Admin/Tauri 留 vite-plus SPA，两者共享 API 契约。POC 判定、架构规则（公开 ISR 页匿名取数 / Cookie transport 仅 dynamic 路由）与转正部署证据见 docs/reports/2026-08-28-nextjs-poc.md。
 
 ### 11.3 错误监控
 
-**维持 Bugsink**（2026-08-28 复核，推翻此前 GlitchTip 替换定稿）：兼容 Sentry SDK 的错误事件（官方明确不处理 traces/metrics，推荐 `traces_sample_rate=0`），单容器 + PostgreSQL 部署在非 K8s 基础设施节点（node3），New Issue 告警已接通认证 ntfy。复核依据：GlitchTip「兼容 Sentry SDK、比 Sentry 轻」两条理由对 Bugsink 同样成立，且无基准证明 GlitchTip 更省内存；链路追踪已由 OTel + VictoriaTraces 承担，与 Bugsink 职责边界清晰。GlitchTip 转为条件采纳：确需 Sentry SDK 的 transaction/span 端点聚合、错误频率阈值告警或统一 uptime/logs 入口时再评估。**接入手册**（改动清单/验收门禁/回退）见 [`docs/observability/error-monitoring.md`](observability/error-monitoring.md)；**容量证据与调研结论**（node3 实测 55 MiB/0.02% CPU、官方 2 GiB/10 worker≈150 万事件/日容量参考、三阶段接入）见 [`docs/reports/2026-08-28-bugsink-integration-research.md`](reports/2026-08-28-bugsink-integration-research.md)。
+**维持 Bugsink**：兼容 Sentry SDK 的错误事件，不承担 traces/metrics；链路追踪由 OTel 与 VictoriaTraces 负责。Bugsink 平台部署、前端 SDK、Source Map 和告警通知分别验收，当前不得把平台存在描述为前端错误监控已闭环。GlitchTip 转为条件采纳：确需 Sentry SDK 的 transaction/span 端点聚合、错误频率阈值告警或统一 uptime/logs 入口时再评估。**接入手册**见 [`docs/observability/error-monitoring.md`](observability/error-monitoring.md)。
 
 ### 11.4 无障碍性（a11y）
 
-目标标准 **WCAG 2.2 AA**（国内合规锚点 GB/T 37668-2019 与工信部适老化及无障碍改造要求）。路线：组件层依托 MUI 内置的无障碍实现，业务侧职责是不破坏它（图标按钮 `aria-label` 走 i18n、装饰图 `aria-hidden`、不用裸 `div` 造可点元素）；静态检查开 oxlint 的 jsx-a11y 规则集（vp lint 承载，随 `vp check --fix` 进 pre-commit）；自动化验证走 vitest（jsdom 环境）的 axe 断言 + Lighthouse 审计基线分。SPA 特有风险点是 TanStack Router 换页后的焦点管理。自动化只能覆盖约三分之一到一半的问题，键盘走查与 VoiceOver 读屏实测不可省、但只盯关键旅程。实施原则、工具接入点、分层验证与带红测验收的落地顺序见接入手册 [`docs/frontend/accessibility.md`](frontend/accessibility.md)。
+目标标准 **WCAG 2.2 AA**（国内合规锚点 GB/T 37668-2019 与工信部适老化及无障碍改造要求）。路线：组件层依托 MUI 内置的无障碍实现，业务侧职责是不破坏它（图标按钮 `aria-label` 走 i18n、装饰图 `aria-hidden`、不用裸 `div` 造可点元素）；静态检查开 oxlint 的 jsx-a11y 规则集（vp lint 承载，随 `vp check --fix` 进 pre-commit）；自动化验证走 vitest（jsdom 环境）的 axe 断言 + Lighthouse 审计基线分。SPA 特有风险点是 TanStack Router 换页后的焦点管理。自动化只能覆盖约三分之一到一半的问题，键盘走查与 VoiceOver 读屏检查不可省、但只盯关键旅程。实施原则、工具接入点、分层验证与带红测验收的落地顺序见接入手册 [`docs/frontend/accessibility.md`](frontend/accessibility.md)。
 
 ### 11.5 语义化 HTML 与导航预测
 
-与 §11.4 分工：a11y 管读屏与键盘可达，本节管**文档结构语义与机器可读性**（标题层级、地标、结构化数据、SEO）。现状（2026-09-01）：`div onClick` 反模式**零命中**（§11.4 纪律的成果），consumer-next 手写标记语义合格。**MUI 的反直觉点**：`Typography` 不写 `component` 时语义由 `variant` 决定——`h1`–`h6` 映射同名标题标签、`subtitle1/2` 也映射 `h6`，于是「按字号挑 variant」等于在无意中决定文档大纲。实测后果（已清零，23 处）：购物车/结算/订单/支付/404/个人中心 **整页无 `h1`**，商品价格用 `variant="h3"` 渲染成 `<h3>` 紧跟 `<h1>` 造成跳级，页脚品牌与栏目标题每页多出 4 个噪音 `h6`，地址簿把收件人姓名电话渲染成 `h6`——**这些在 axe 下全绿**（`heading-order` 只查相邻跳级，`page-has-heading-one` 不在 WCAG A/AA runOnly 内），故已在 `pages.a11y.test.tsx` 补「唯一 h1 + 不跳级」断言并完成红测。merchant/admin 同类 35 处同日清零，并首次建起 a11y 脚手架（admin 此前连 `test` script 都没有，`vp run -r test` 静默跳过）；脚手架一上线即抓出此前无人知晓的 axe 真违规（图标按钮无可及名称、`Select`/`TextField` 无关联 label），已修。**结构化数据**：consumer-next 商品详情页输出 `schema.org/Product` JSON-LD，服务端从同一份 query 生成内联首屏 HTML；展示价格与 `offers.price` 同源于 `lib/money.ts`（结构上不可能漂移），`verify:runtime` 从真 SSR HTML 断言并完成红测。原则：`variant` 管视觉、`component` 管语义，二者分开决定；非标题内容（价格、金额、品牌字样）显式降为 `p`；JSON-LD 只放 SSR 页（SPA 输出收益极低），字段宁缺毋滥、不编造 proto 没有的 `description`/`brand`。
+与 §11.4 分工：a11y 管读屏与键盘可达，本节管**文档结构语义与机器可读性**（标题层级、地标、结构化数据、SEO）。代码约束包括：避免用 `div onClick` 代替语义元素，明确标题层级，使用 MUI 时分离 `variant`（视觉）与 `component`（语义），并为表单控件提供关联 label。consumer-next 商品详情页输出 `schema.org/Product` JSON-LD，服务端从同一份 query 生成内联首屏 HTML；展示价格与 `offers.price` 同源于 `lib/money.ts`。JSON-LD 只放 SSR 页，字段宁缺毋滥，不编造 proto 没有的 `description`/`brand`。
 
-**`<script type="speculationrules">` 已评估：当前不引入**。它要求点击触发浏览器级文档导航，该前提两个应用都不成立——consumer 是 TanStack Router SPA，路由切换不发生文档导航（其等价物是 Router `preload` + Query `prefetchQuery`）；consumer-next 虽是 MPA 但当前仅一个业务页且站内链接**零命中**，没有可预渲染的目标。触发重估：`ListProducts` 实现后 consumer-next 扩出列表页、形成「列表→详情」真实跳转链路时；届时须先处理 prerender 执行 JS 导致的个性化请求提前发出（`document.prerendering`）与遥测 PV 虚高（`telemetry_pb.ts` 已含 `prerender` 导航类型）。实测计数、落地顺序与带红测的验收判据见 [`docs/frontend/semantic-html.md`](frontend/semantic-html.md)。
+**`<script type="speculationrules">` 已评估：当前不引入**。它要求点击触发浏览器级文档导航，该前提两个应用都不成立——consumer 是 TanStack Router SPA，路由切换不发生文档导航（其等价物是 Router `preload` + Query `prefetchQuery`）；consumer-next 虽是 MPA 但当前仅一个业务页且站内链接**零命中**，没有可预渲染的目标。触发重估：`ListProducts` 实现后 consumer-next 扩出列表页、形成「列表→详情」真实跳转链路时；届时须先处理 prerender 执行 JS 导致的个性化请求提前发出（`document.prerendering`）与遥测 PV 虚高（`telemetry_pb.ts` 已含 `prerender` 导航类型）。计数、落地顺序与带红测的验收判据见 [`docs/frontend/semantic-html.md`](frontend/semantic-html.md)。
 
-针对公开页的内容相关性、主题聚焦、技术 SEO 与内部链接，另有一份基于哥飞 X 原帖和当前代码证据的映射报告：[`Google 搜索排名因素：原帖摘要与本项目映射`](reports/2026-09-10-google-ranking-factors.md)。
+针对公开页的内容相关性、主题聚焦、技术 SEO 与内部链接，另有一份基于哥飞 X 原帖和当前代码证据的映射报告：Google 搜索排名因素：原帖摘要与本项目映射。
 
 
 ### 11.6 首页性能与 SSR 迁移
 
-首页 `/` 于 2026-09-14 从 consumer SPA 迁到 consumer-next 整页静态渲染（`/zh`、`/en` 构建期预渲染，`/` 经 rewrite 落到 `/zh`；HTTPRoute 以 `/` Exact 抢过 frontend 的 PathPrefix）。动因是 PageSpeed 移动端 61 / 桌面 88：丢分全在 FCP / LCP / Speed Index，TBT 与 CLS 满分——瓶颈是首屏字节量（162 KB gzip 的阻塞 CSS 全是 `@fontsource` 的 303 条 `@font-face`、`await import("./bootstrap")` 造成的第二波 45 个 chunk、`import * as icons` 带进整套 lucide），不是 JS 执行。迁移后线上移动端性能 / SEO / 最佳做法 / 无障碍 100、智能体浏览 3/3〔实测 2026-09-15〕。**首页字体是按渲染槽位枚举的 19 KB 子集**（`scripts/subset-home-fonts.sh`），不再走 unicode-range 切片；首页目前整页静态；`.next/server/app` 自 2026-09-15 起经 init 容器拷贝为可写卷，ListProduct 接通后可直接加 `revalidate`。根因表、路线 A/B 取舍、实现要点、七个坑与 SPA 页仍待做的四项见 [`docs/frontend/web-performance.md`](frontend/web-performance.md)。
+首页 `/` 已从 consumer SPA 迁到 consumer-next 整页静态渲染（`/zh`、`/en` 构建期预渲染，`/` 经 rewrite 落到 `/zh`；HTTPRoute 以 `/` Exact 抢过 frontend 的 PathPrefix）。首页字体使用按渲染槽位裁剪的子集，避免加载整套字体与图标资源；`.next/server/app` 通过 init 容器拷贝到可写卷。首页保持静态渲染，待 `ListProducts` 接通后再按需要引入 `revalidate`。根因表、路线取舍、实现要点与 SPA 页待办见 [`docs/frontend/web-performance.md`](frontend/web-performance.md)。
 
 ## 12. 实施路线图
 
 > **本节只声明「哪件事属于哪个阶段」，不承载完成状态。**
-> 进度与待办的唯一真相源是 [`TODO.md`](../TODO.md)，分类明细在 [`docs/todo/`](todo/README.md)。
+> 进度与待办的唯一真相源是 [`TODO.md`](../TODO.md)，分类明细在 [`docs/todo/`](../TODO.md#四分类明细)。
 > 2026-08-29 起本节刻意去掉复选框：目标文档一旦长出第二套勾选视图，必然与 `TODO.md` 漂移
-> （当时已实测到漂移——P1/P2 各有一项被勾选，而 P0 九项全空，与真实进度不符）。
+> （进度状态统一维护在 `TODO.md`，本文件不复制勾选状态）。
 
 **P0 阶段 · 生产发布基线**
 
@@ -868,7 +872,7 @@ PostgreSQL HA（Pigsty）与 PITR 恢复演练；
 Dragonfly 分实例拆分（Session / Cache / Ratelimit）；
 Cilium Gateway API + Namespace default-deny 网络隔离；
 Outbox + Debezium Outbox Event Router + Kafka（外部集群）+ Inbox 幂等保障；行投影线（CDC → Elasticsearch Sink）已切流；
-Casdoor Stateful Session + OpenFGA 鉴权落地；
+Casdoor Stateful Session；OpenFGA 已部署，业务授权接线与 Casbin 迁移待完成；
 Vector + VMAgent + OTel → 外部 OTel Collector → VictoriaStack 链路贯通；
 固定数据集、k6 基线、容量文档；核心服务 SLO、Runbook、手动故障演练。
 
@@ -896,7 +900,7 @@ Tetragon 运行时安全 enforcement（audit-only 已落地，enforcement 待独
 - **单一身份真相**：严格遵循 Casdoor 有状态 Session 模型，绝不允许同时维护 JWT 兼容逻辑或双重鉴权代码路径。
 - **严禁虚拟容量**：严禁在未经压测基线 (k6) 验证和恢复演练的前提下声称平台支持千万级容量。
 - **禁止复制粘贴**：配置、日志、OTel 初始化代码必须提取共享库，禁止复制到多个服务。
-- **禁止将 ArgoCD 作为摆设**：GitOps 断线等于没有部署真相源。断线的完整复盘（六层堆栈落位、断因链、重接前置）见 [GitOps 演变全景](reports/2026-08-31-gitops-evolution-overview.md)。
+- **禁止将 ArgoCD 作为摆设**：GitOps 断线等于没有部署真相源。断线的完整复盘（六层堆栈落位、断因链、重接前置）见 GitOps 演变全景。
 
 # 架构文档规范出处对照表
 
@@ -934,7 +938,7 @@ Tetragon 运行时安全 enforcement（audit-only 已落地，enforcement 待独
 | **Pod Anti-Affinity** | [Kubernetes Affinity/Anti-Affinity](https://kubernetes.io/docs/concepts/scheduling-eviction/assign-pod-node/) | K8s 官方：调度约束 |
 | **ArgoCD** | [ArgoCD Documentation](https://argo-cd.readthedocs.io/) | GitOps 声明式交付标准工具 |
 | **Argo Rollouts** | [Argo Rollouts Documentation](https://argoproj.github.io/rollouts/) | Canary/Blue-Green 发布策略 |
-| **Reloader** | [stakater/Reloader](https://github.com/stakater/Reloader) | Secret/ConfigMap 变更后按注解滚动工作负载；条件采纳、默认关，边界与验证见 [Reloader 参考](reports/2026-09-11-reloader-reference.md) |
+| **Reloader** | [stakater/Reloader](https://github.com/stakater/Reloader) | Secret/ConfigMap 变更后按注解滚动工作负载；条件采纳、默认关，边界与验证见 Reloader 参考 |
 
 
 ## 3. 数据一致性与事件驱动
@@ -999,7 +1003,7 @@ Tetragon 运行时安全 enforcement（audit-only 已落地，enforcement 待独
 
 ## 7. 供应链安全
 
-PR 阶段已经落地 Gitleaks、zizmor、Trivy fs/config 三件套，并采用「Gitleaks 扫提交范围，zizmor/Trivy 只阻断基线外新增项」的棘轮门禁。tag `1.5.2` 已验收 10 服务双架构 SPDX；`1.5.3` 已验收 GHCR Cosign 3.1.3 keyless index 签名与平台 SBOM attestation；`1.5.4` 已在 TCR `user` 实际 digest 上完成同类工件写入和回读。TCR 结论是有边界的兼容实测，不是腾讯云官方承诺。签名前 Trivy image 已接线并经 `1.6.2`/`1.6.3` 真实发布验证（2026-08-30：构建后按不可变 digest 扫描，可修复 HIGH/CRITICAL 在签名前阻断，SARIF 归档到 main ref 以生成可见 alert）。当前最大缺口为 Kyverno `verifyImages` 准入策略；TCR 全服务扩展和 Harbor Helm 签名尚未完成。目标、演变、已做/未做、遗漏与剩余路线见 [供应链安全演变全景](reports/2026-08-28-supply-chain-evolution-overview.md)，详细命令与验收证据见 [供应链验证报告](reports/2026-08-28-supply-chain-pr-validation.md)。
+PR 阶段已经落地 Gitleaks、zizmor、Trivy fs/config 三件套，并采用「Gitleaks 扫提交范围，zizmor/Trivy 只阻断基线外新增项」的棘轮门禁。tag `1.5.2` 已验收 10 服务双架构 SPDX；`1.5.3` 已验收 GHCR Cosign 3.1.3 keyless index 签名与平台 SBOM attestation；`1.5.4` 已在 TCR `user` 实际 digest 上完成同类工件写入和回读。TCR 结论是有边界的兼容验证，不是腾讯云官方承诺。签名前 Trivy image 已接线并经 `1.6.2`/`1.6.3` 真实发布验证（2026-08-30：构建后按不可变 digest 扫描，可修复 HIGH/CRITICAL 在签名前阻断，SARIF 归档到 main ref 以生成可见 alert）。当前最大缺口为 Kyverno `verifyImages` 准入策略；TCR 全服务扩展和 Harbor Helm 签名尚未完成。目标、演变、已做/未做、遗漏与剩余路线见 供应链安全演变全景，详细命令与验收证据见 供应链验证报告。
 
 | 技术/标准 | 规范/标准出处 | 说明 |
 |---|---|---|
@@ -1012,7 +1016,7 @@ PR 阶段已经落地 Gitleaks、zizmor、Trivy fs/config 三件套，并采用�
 | **Gitleaks** | [Gitleaks Documentation](https://github.com/gitleaks/gitleaks) | 密钥泄露检测 |
 | **zizmor** | [zizmor Documentation](https://woodruffw.github.io/zizmor/) | CI/CD 安全检查 |
 | **Renovate** | [Renovate Documentation](https://docs.renovatebot.com/) | 依赖自动更新 |
-| **crane** | [go-containerregistry](https://github.com/google/go-containerregistry/blob/main/cmd/crane/doc/crane.md) | 无 daemon 的镜像仓库操作（digest 断言、跨仓复制、按 digest 打 tag）；参考项，见 [crane 参考](reports/2026-09-09-crane-reference.md) |
+| **crane** | [go-containerregistry](https://github.com/google/go-containerregistry/blob/main/cmd/crane/doc/crane.md) | 无 daemon 的镜像仓库操作（digest 断言、跨仓复制、按 digest 打 tag）；参考项，见 crane 参考 |
 
 
 ## 8. 前端与客户端
@@ -1044,7 +1048,7 @@ PR 阶段已经落地 Gitleaks、zizmor、Trivy fs/config 三件套，并采用�
 | **HMAC API 认证** | [RFC 2104 (HMAC)](https://www.rfc-editor.org/rfc/rfc2104) | 第三方 API 签名认证 |
 | **mTLS** | [RFC 8446 (TLS 1.3)](https://www.rfc-editor.org/rfc/rfc8446) | 双向 TLS 认证（分阶段：先 WireGuard 节点级） |
 | **SPIFFE/SPIRE** | [SPIFFE Specification](https://spiffe.io/docs/latest/spiffe-about/overview/) | 工作负载身份标准（暂不引入） |
-| **fail2ban（边缘主机）** | [fail2ban Manual](https://github.com/fail2ban/fail2ban/wiki) | 集群外两台边缘主机的 SSH 暴力破解防护；配置、实测攻击量与验证记录见 [边缘主机加固](SECURITY-HARDENING.md) |
+| **fail2ban（边缘主机）** | [fail2ban Manual](https://github.com/fail2ban/fail2ban/wiki) | 集群外两台边缘主机的 SSH 暴力破解防护；配置与验证记录见 [边缘主机加固](SECURITY-HARDENING.md) |
 | **Santa File Access Authorization** | [Santa FAA 配置指南](security/macos-santa-protect-developer-credentials.md) | macOS 开发机上的进程级凭证访问控制；保护 SSH、Docker、Kubernetes、Claude、Codex 与 GitHub CLI 文件，按审计后阻断上线 |
 
 > 上表是**集群内**的网络与身份策略。承载 postgres/kafka/gorse/MinIO/Harbor 等外部端点的

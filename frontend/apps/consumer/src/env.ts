@@ -24,6 +24,11 @@ export const env = createEnv({
     VITE_BFF_BASE_URL: z
       .union([z.url(), z.string().regex(/^\/[^/]/, "同源前缀须以单个 / 开头")])
       .optional(),
+    // Umami 网站分析。两个都给齐才注入 tracker，缺任一即完全不加载（见 analytics.ts）。
+    // websiteId 是 umami 面板建站点后生成的 UUID；script URL 形如
+    // https://umami.apikv.com/s.js（文件名由组件的 TRACKER_SCRIPT_NAME 决定，不是 script.js）。
+    VITE_UMAMI_SCRIPT_URL: z.url().optional(),
+    VITE_UMAMI_WEBSITE_ID: z.uuid().optional(),
   },
 
   /**

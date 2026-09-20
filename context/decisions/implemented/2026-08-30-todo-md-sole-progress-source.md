@@ -12,7 +12,7 @@ description: TODO.md 是唯一进度真相源；PROGRESS.md 双文档（08-13）
 本仓两次验证了这一点：`docs/PROGRESS.md` 与 `TODO.md` 双写，"每次改动两份都要更新"的硬性要求在没有验证器兜底下
 5 天内断裂（08-08 后无实质更新，服务数修正漏掉 3 处，可观测性描述整体落后一轮）；kaneo 看板作为执行态镜像，
 留着半截的同步 skill 与脚本，下一个照做的 agent 只会撞上已经不存在的后端。两次事故的经过见
-[evolution-log 2026-08-13](../../harness-framework/evolution-log.md) 与 2026-08-30 条。
+evolution-log 2026-08-13 与 2026-08-30 条。
 
 ## 决策
 

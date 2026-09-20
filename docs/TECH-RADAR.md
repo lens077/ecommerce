@@ -191,7 +191,7 @@ Kafka/Debezium/Kafka Connect 是 Java 例外（Strimzi 不采用，Kafka 部署�
 
 ## §7 弹性 / 调度 / 成本
 
-**现状**：VPA recommendation-only 已发布，15 个 ecommerce VPA 均为 `Off`/`RequestsOnly`；当前没有 HPA、KEDA ScaledObject 或 Descheduler，发布仍走 Deployment 滚动重建。发布证据与校准计划见 [`2026-08-29-vpa-recommendation-only.md`](reports/2026-08-29-vpa-recommendation-only.md)。
+**现状**：VPA recommendation-only 已发布，15 个 ecommerce VPA 均为 `Off`/`RequestsOnly`；当前没有 HPA、KEDA ScaledObject 或 Descheduler，发布仍走 Deployment 滚动重建。发布证据与校准计划见 2026-08-29-vpa-recommendation-only.md。
 
 | # | 状态 | 工具 | 语言 | CNCF | 结论 |
 |---|---|---|---|---|---|
@@ -277,7 +277,7 @@ Kafka/Debezium/Kafka Connect 是 Java 例外（Strimzi 不采用，Kafka 部署�
 
 | # | 状态 | 工具 | 语言 | CNCF | 结论 |
 |---|---|---|---|---|---|
-| 11.1 | ✅/🟡 | Tetragon | Go+eBPF | Cilium 家族 | **基础观察已采纳、enforcement 仍观察**：chart 1.7.1 在 ARM64/Linux 7.0 三节点 `3/3` Ready，BTF、`PROCESS_EXEC/EXIT/KPROBE`、projected-token audit policy、VictoriaLogs 原始事件和 vmalert 告警均已真实注入验收；每 agent 当前约 75–89Mi/1–2m。保持 audit-only，后续需完成长期事件完整性、日志权限/保留、策略写权限与阻断误报/回滚评估。证据：[零信任与运行时安全验证](reports/2026-08-28-zero-trust-runtime-security.md) |
+| 11.1 | ✅/🟡 | Tetragon | Go+eBPF | Cilium 家族 | **基础观察已采纳、enforcement 仍观察**：chart 1.7.1 在 ARM64/Linux 7.0 三节点 `3/3` Ready，BTF、`PROCESS_EXEC/EXIT/KPROBE`、projected-token audit policy、VictoriaLogs 原始事件和 vmalert 告警均已真实注入验收；每 agent 当前约 75–89Mi/1–2m。保持 audit-only，后续需完成长期事件完整性、日志权限/保留、策略写权限与阻断误报/回滚评估。证据：零信任与运行时安全验证 |
 | 11.2 | ❌ | Falco | C++ | graduated | 否决为备选：规则生态最大，合规/SIEM 需求优先时替代 11.1 |
 | 11.3 | ✅ | **Kyverno** | Go | graduated | 采纳：YAML 策略门槛低。**audit 14 天零误报 → enforce**（对抗第 3 轮 C2 补丁：节点重启史支持保守）；enforce 前必须处理**签名纪元**（对存量运行 digest 补签 + 删 pod 强制重建演练——C1 最高危补丁）；`PolicyException` 带 ns+digest+事故号+到期 |
 | 11.4 | ❌ | OPA / Gatekeeper | Go | graduated | 否决：健康无虞但 Rego 成本对单人不值 |

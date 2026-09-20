@@ -2,7 +2,7 @@
 
 > 从根 `DESIGN.md` 拆出（2026-08-08）。本文包含目标态，阅读时遵守三条边界：
 > - 实际存在的 10 个服务及其注册名/依赖关系，一律以 [`.service-matrix.yaml`](../../../.service-matrix.yaml) 为准；它们是迁移起点。目标边界以 [TECH.md](../../TECH.md) §5 为准：user + merchant → Identity、product → Catalog，并独立建设 Fulfillment 与 Notification；analytics、reconciliation 为编舞消费者。搜索投影不是事件消费者：它走行投影线（`products.search_catalog` 投影表 → Debezium CDC → Elasticsearch Sink），见 TECH.md §4.5。
-> - 领域事件表是目标态。NATS JetStream、自写 outbox relay 与 search indexer 已于 2026-09-03 退役删除；领域事实线（outbox → Debezium Outbox Event Router → Kafka → franz-go + Inbox）当前零生产者、零消费者，刻意不预建，路线见 [生产目标与 Kafka 路线](production-scale-goal.md) 与 [数据一致性与事件驱动待办](../../todo/数据一致性与事件驱动.md)。
+> - 领域事件表是目标态。NATS JetStream、自写 outbox relay 与 search indexer 已于 2026-09-03 退役删除；领域事实线（outbox → Debezium Outbox Event Router → Kafka → franz-go + Inbox）当前零生产者、零消费者，刻意不预建，路线见 [生产目标与 Kafka 路线](production-scale-goal.md) 与 [数据一致性与事件驱动待办](../../../TODO.md#数据一致性与事件驱动)。
 > - 2026-09-03 已完成搜索运行时切流：search 服务经 `SearchCatalog` 读取 Elasticsearch 稳定 alias；策展投影由 `products.search_catalog` 的 trigger 定义，经 Debezium → Kafka → Elasticsearch Sink 搬运。`tools/search-indexer` 已删除，重建与灾备由 pipeline 仓维护。
 > - 登录、会话与授权入口已迁入同级仓 control-tower gateway。存量 Casbin/legacy JWT 仍可能运行，但目标完全废弃 JWT：Casdoor 有状态 Session 承担认证与粗粒度角色，OpenFGA 承担对象级关系授权；user 服务仍存在，但不再是浏览器 token 代理或 session owner。
 

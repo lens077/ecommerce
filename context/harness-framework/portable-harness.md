@@ -31,7 +31,7 @@ lens077 工作区的其他项目（mall / control-tower / …）可直接复用�
 | 结构门禁 + 元评测模式 | `scripts/verify-context.sh` + `scripts/verify-context-canary.sh` | 模板级复制后按新仓路径改造；**canary 的「注错断言会红」模式必须一起搬**——恒绿门禁三次事故的教训 |
 | 基线棘轮（存量冻结只拦新增 + 反向棘轮） | `scripts/lint-baseline.sh` | 采集函数按新仓工具链重写，棘轮骨架照搬；采集器必须带失聪自检 |
 | 子代理派发三约定 | [subagent-dispatch.md](subagent-dispatch.md) | 直接引用 |
-| harness 演进日志（四要素） | [evolution-log.md](evolution-log.md) 的「写法」节 | 新仓自建日志文件，抄四要素模板；「没有事故就别改规则」 |
+| harness 演进日志（四要素） | evolution-log.md 的「写法」节 | 新仓自建日志文件，抄四要素模板；「没有事故就别改规则」 |
 | 中文文档风格 | `tech-doc-style-chinese` skill（用户级） | 重装后需恢复；项目覆盖条款仍进各仓 AGENTS.md |
 
 实测 2026-09-08：上述三个共享 symlink 仍可达；E3 护栏已重建为仓内源码并通过用户 symlink 接入 Claude，backpass 已适配 DSH v0-v2 多帧压缩格式。通过共享入口实际抽取 ecommerce 近 14 天记录，得到 161 条去重消息、158 条过滤后消息和 18 条纠偏命中，无诊断错误。中文 Skill 仍未安装；zstd CLI 未找到，但现有 Node 可承担新版解码。逐项安装与接线状态见 [工具清单](../../docs/agents/skills.md)，不能以共享链接存在推断其依赖已安装。

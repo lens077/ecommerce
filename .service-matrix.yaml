@@ -66,7 +66,7 @@ config_validation:
 
 # 外部基础设施（不是本仓的服务）────────────────────────────────────
 externals:
-  postgres: { host: "node1:30001", note: "node1 是 SSH inventory alias，Pod 运行值由 Config Center 注入；10 个业务服务当前已切到 node3 Pigsty，客户端 sslmode=verify-ca，沿用 pg-main CA 兼容证书。集群内 CloudNativePG pg-main 处于 hibernate，不是当前主库；db=ecommerce，每服务独立 schema。选型方向见 docs/TECH.md" }
+  postgres: { host: "node1:30001", note: "node1 是 SSH inventory alias，Pod 运行值由 Config Center 注入；10 个业务服务当前已切到 node3 Pigsty，客户端 sslmode=verify-ca，沿用 pg-main CA 兼容证书。集群内 CloudNativePG 已于 2026-09-17 整体删除（算子/实例/PVC/CRD 全清），不存在回滚目标；db=ecommerce，每服务独立 schema。选型方向见 docs/TECH.md" }
   redis: { host: "dragonfly.dragonfly.svc:6379", note: "集群内 Dragonfly 原生 TLS，6379 单口 TLS-only，明文被拒；宿主机走 Cilium Gateway 192.168.3.122:6380。业务服务只放可丢缓存，不得承载锁、幂等键或领域真相；control-tower gateway 的 BFF session 是已接受例外，依赖不可用时 fail-closed。旧 redis namespace 已删除，不存在回滚组件；Config Center 自身也是本项消费者（自举 Secret，不在 config.entry 里）" }
   consul: { host: "192.168.3.120:8500", note: "集群内工作负载使用 consul-server.consul.svc:8500；本地进程使用 LoadBalancer VIP。Consul 只承担注册发现，配置仍由 Config Center 提供。⚠️ 2026-09-03 起 10 个业务服务 deployment 均 CONSUL_ENABLED=false（当前不需要服务发现），网关 routes.yaml 的 target 全部改为 direct://<k8s Service>，启动时 discovery 目标为零即走 noResolver，readyz 不再依赖 Consul 目录；catalog 为空是预期状态。接线与注册守护循环（go-connect-kit/registry Maintain）保留，翻回 true + 路由改回 discovery:/// 即可重开。触发事故见 context/project/ecommerce/registry/experience/consul-register-once-then-give-up.md" }
   kafka: { host: "my-cluster-kafka-bootstrap.kafka.svc:9092", used_by: [], note: "2026-09-15 起是集群内 Strimzi 单节点 KRaft（kubernetes 仓 components/kafka/cdc），只承载搜索 CDC 链的 Debezium topic（ecommerce_cdc.*）；node3 Pigsty kf-main 已用 kafka-rm.yml 删除，Pangolin raw 30004 入口随之作废。本仓仍无 producer/consumer 业务接线（used_by 为空即事实），领域事件底座定稿仍是 Debezium Outbox Event Router，见 docs/TECH.md" }
@@ -97,7 +97,7 @@ externals:
       **PG 全量切流**（2026-08-24）：当日为 10 个业务服务 + outbox-relay + Config Center 自身；
       outbox-relay 已于 2026-09-03 退役，当前不得视为运行工作负载。其余组件指向
       node1:30001，ssl_mode=verify-ca（经隧道以 IP 连接，证书主机名对不上）。
-      **集群内 CNPG 已 hibernate**（数据保留，pod 归零）。
+      **集群内 CNPG 已于 2026-09-17 整体删除**（算子、pg-main 实例、PVC 与 LVM 卷、postgresql/cnpg-system 命名空间、11 个 CRD 全部清除；kubernetes 仓 components/postgres 目录一并删除）。删除前核对数据已在 Pigsty；openfga 的 store 同日从 pg-main 迁到 Pigsty 的 openfga 库。
       **Silo 入口已建**：https://silo-api.apikv.com（Pangolin resourceId 29，
       tlsServerName=sss.pigsty，sso 关闭）。
       **集群内可观测已整体删除**（含 Helm release 与 PVC，回收约 23Gi）：

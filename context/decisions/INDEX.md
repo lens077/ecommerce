@@ -1,7 +1,7 @@
 # context/decisions/ — 决策记录（当前状态，不是编年史）
 
 **范围**：一个决策一个文件，写的是**它现在是什么、打败了谁、付出了什么**。与
-[evolution-log.md](../harness-framework/evolution-log.md) 分工明确：日志按日期追加、永不改写，
+evolution-log.md 分工明确：日志按日期追加、永不改写，
 记「触发事故 + 怎么验证的」；这里的 `implemented/` 随交付事实**同步改写**，读者不必从
 几十条日志里自己拼出"现在是什么"。
 

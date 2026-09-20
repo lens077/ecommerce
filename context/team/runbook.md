@@ -56,7 +56,7 @@ description: 给所有 AI 编码工具(尤其 Codex)的可执行命令与验收�
 | 本地起服务连不上基础设施 | [local-env.md](local-env.md) | `dev.yml` 里的集群内 svc 域名在 Mac 上解析不了；`pg-main-rw`/`192.168.3.132` 指向已 hibernate 的 CNPG（TCP 通但握不了手）；Consul 不带 token 时读返 200 但结果被 ACL 过滤成空；配置缺子块导致功能被静默关掉 |
 | Kubernetes 节点关机/重启、终态 Pod 累积 | [node-graceful-shutdown.md](node-graceful-shutdown.md) | 把正常的 90 秒等待当卡死后强断电;把 `Succeeded/Failed` 历史误判成运行副本;只改 kubelet 不改 logind 导致提前关机 |
 | 对外公开服务 / 内网穿透 / `*.apikv.com` | [pangolin-tunnel.md](pangolin-tunnel.md) | k8s target 走 80 得 envoy 404;改完配置不等 Traefik 5s 轮询就当故障排查 |
-| 改 SSH 端口 / SSH 突然连不上 | 已归档至 [`docs/progress-archive/ssh-port-migration-20260811.md`](../../docs/progress-archive/ssh-port-migration-20260811.md)(一次性主机运维实录,前提为 Ubuntu 24.04,与当前 26.04 不同,仅供参考) | 改 sshd_config 的 Port 在 socket activation 下无效;ListenStream 纯端口号 IPv4 全断把自己锁外面 |
+| 改 SSH 端口 / SSH 突然连不上 | 已归档至 docs/progress-archive/ssh-port-migration-20260811.md(一次性主机运维实录,前提为 Ubuntu 24.04,与当前 26.04 不同,仅供参考) | 改 sshd_config 的 Port 在 socket activation 下无效;ListenStream 纯端口号 IPv4 全断把自己锁外面 |
 | 写测试 / 补测试 / 防回归 | [go-testing.md](go-testing.md) + [`docs/TESTING.md`](../../docs/TESTING.md) | 用 mock 测 sqlc 的 SQL 等于没测;引入 go-sqlmock 才发现接不上 pgx |
 | **往文档里写集群/运行时数字**(Pod 分布、就绪计数、镜像 tag、节点内存) | [live-facts.md](live-facts.md) | 把某一刻的快照写成永久事实;**在集群故障期采数,把故障态固化成「现状」**;`[LIVE-FACT]` 门禁会红 |
 | 在集群身份下改代码(okteto) | [okteto-inner-loop.md](okteto-inner-loop.md) + [`docs/OKTETO.md`](../../docs/OKTETO.md) | 没关 ArgoCD 自动同步 → 开发容器被无声干掉;开发完忘了恢复 → GitOps 静默失效 |

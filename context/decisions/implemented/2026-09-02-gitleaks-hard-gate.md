@@ -11,7 +11,7 @@ description: 凭据门禁是 commit 路径上的硬门禁：gitleaks 接进 pre-
 `github.com/lens077/ecommerce` 是 public 仓。原有的 `scripts/verify-secrets.py` 是"手动跑才执行"的软探针，只扫配置后缀、
 只认 `key: value` 形态；`TODO.md` 里的散文、`sqlc.yaml` 的 `uri: postgresql://user:pass@`、`req.http` 里的 JWT、
 Consul KV 快照里 base64 的整份配置全在盲区。凭据一旦 push 到 public 仓就不可撤回，靠"记得跑 verify-quick"拦不住。
-事故经过与三轮历史重写见 [evolution-log 2026-09-02](../../harness-framework/evolution-log.md)。
+事故经过与三轮历史重写见 evolution-log 2026-09-02。
 
 ## 决策
 

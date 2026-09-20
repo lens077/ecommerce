@@ -79,14 +79,14 @@ gateway 另使用 required pod anti-affinity，保证两个副本不落在同一
 
 2026-08-29，VPA Helm 已升级至 revision 2，并应用完整清单。live 仍只运行 recommender `1.7.1`，没有 updater 或 admission webhook；15 个 ecommerce VPA 均为 `Off`，且全部满足 `RecommendationProvided=True`。发布前后的 15 个 Deployment 与 17 个 active Pod 在 UID、镜像、revision、落点和 restart 上完全一致，证明本次发布没有触发业务 rollout 或 eviction。
 
-初始推荐已经产出，但只代表部署时的短观测窗口。CPU Target 当前集中在约 `11m`，内存 Target 约为 `32–75Mi`；这些值不是最终 requests，必须完成阶段 B 后再评审。完整发布证据、经验、回滚和日常检查命令见 [`docs/reports/2026-08-29-vpa-recommendation-only.md`](../../reports/2026-08-29-vpa-recommendation-only.md)。
+初始推荐已经产出，但只代表部署时的短观测窗口。CPU Target 当前集中在约 `11m`，内存 Target 约为 `32–75Mi`；这些值不是最终 requests，必须完成阶段 B 后再评审。完整发布证据、经验、回滚和日常检查命令见 docs/reports/2026-08-29-vpa-recommendation-only.md。
 
 ## 3. requests 校准流程
 
 ### 阶段 A：发布 recommendation-only VPA
 
 本阶段的发布内容如下（**完成状态不在本文承载**——见 [`TODO.md`](../../../TODO.md)
-与 [`docs/todo/基础设施与部署模型.md`](../../todo/基础设施与部署模型.md)）：
+与 [`docs/todo/基础设施与部署模型.md`](../../../TODO.md#基础设施与部署模型)）：
 
 1. 确认 live Deployment 的 targetRef、container 名称和源码一致。
 2. 将现有 behavior/cart/order VPA 从 `InPlace` 改为 `Off`。

@@ -1,0 +1,70 @@
+# ArgoCD CLI/API 入口。Web UI 仍在 argocd.apikv.com，由 gateway/http-route.yml 承载。
+#
+# 为什么是两条路由，而不是一条 GRPCRoute：
+#
+# Cilium 生成的 Envoy cluster 使用 useDownstreamProtocolConfig，即**上游协议镜像下游协议**。
+# 本集群 cilium-config 里 enable-gateway-api-alpn=false，HTTPS 监听器不宣告 h2 ALPN，
+# 客户端只能协商到 HTTP/1.1；enable-gateway-api-app-protocol=false 又让 Service 上的
+# appProtocol: kubernetes.io/h2c 被完全忽略。两者叠加的后果：
+#
+#   - 经 443 的原生 gRPC 不可能成立（拿不到 h2）；
+#   - 经 443 的 gRPC-Web 会被 Envoy 的 HTTP/1.1 转发破坏，argocd 返回 404 page not found。
+#
+# argocd-server 在 server.insecure=true 下用 cmux 按协议分流：HTTP/1.1 走 HTTP handler，
+# HTTP/2 走 gRPC 监听器。因此客户端用 h2c 明文直连 80 时，Envoy 镜像出 h2c 上游，
+# 请求正确落到 gRPC 监听器，原生 gRPC 成立。
+#
+# 结论：REST/token 自动化走 443，CLI 原生 gRPC 走 80 明文 h2c。
+# 明文链路必须由 Pangolin 侧的来源限制兜住，见 infrastructure/argocd/README.md。
+#
+# 若日后打开 enable-gateway-api-alpn 与 enable-gateway-api-app-protocol，
+# 才可以退回「GRPCRoute + appProtocol h2c」的标准形态，并废弃下面的 80 端口路由。
+apiVersion: gateway.networking.k8s.io/v1
+kind: HTTPRoute
+metadata:
+  name: argocd-api
+  namespace: argocd
+  labels:
+    app.kubernetes.io/part-of: argocd
+    app.kubernetes.io/component: server
+    app.kubernetes.io/managed-by: git
+spec:
+  parentRefs:
+    - name: cilium-gateway
+      namespace: default
+      sectionName: https
+  hostnames:
+    - argocd-api.apikv.com
+  rules:
+    - matches:
+        - path:
+            type: PathPrefix
+            value: /
+      backendRefs:
+        - name: argocd-server
+          port: 80
+---
+apiVersion: gateway.networking.k8s.io/v1
+kind: HTTPRoute
+metadata:
+  name: argocd-api-http
+  namespace: argocd
+  labels:
+    app.kubernetes.io/part-of: argocd
+    app.kubernetes.io/component: server
+    app.kubernetes.io/managed-by: git
+spec:
+  parentRefs:
+    - name: cilium-gateway
+      namespace: default
+      sectionName: http
+  hostnames:
+    - argocd-api.apikv.com
+  rules:
+    - matches:
+        - path:
+            type: PathPrefix
+            value: /
+      backendRefs:
+        - name: argocd-server
+          port: 80

@@ -46,4 +46,4 @@ kit 的运行时接口只接收 provider-neutral Go Options 与泛型
 `TestSharedImplementationsDoNotReturnToConsumers` 守住删除结果，`TestInfraAdaptersStayThin` 守住
 adapter 的依赖边界；`TestInfraHomogeneity` 只比较仍由本仓维护的同构代码，不再比较允许按服务
 protobuf 分化的 adapter。触发事故与注错验证记录在
-[evolution-log.md](../../harness-framework/evolution-log.md)。
+evolution-log.md。

@@ -239,7 +239,7 @@ SSR：`consumer-next` 使用 Next.js 16.4.0-canary.18（本仓 A/B 后精确锁�
 | Kubernetes 清单 | `backend/services/*/deploy/` + `application-vpa.yml` | 当前运行部署路径；根清单已覆盖 15 个 ecommerce VPA，全部为 `Off`/`RequestsOnly` recommendation-only |
 | Helm | umbrella chart + service/library chart | 描述不完整且版本落后，缺 control-tower gateway；已退役的 outbox relay/search indexer 不得补回，不是现网真相源 |
 | ArgoCD | GitOps 控制器 | 控制器在运行，但当前零 Application/ApplicationSet；没有自动同步、自愈或 prune |
-| 弹性与发布策略 | VPA recommender `1.7.1` + KEDA/Argo Rollouts 控制器 | VPA 已发布但仍在至少 7 天观测和 k6 校准期；无 live ScaledObject 或 canary。证据与下一步见 [`docs/reports/2026-08-29-vpa-recommendation-only.md`](docs/reports/2026-08-29-vpa-recommendation-only.md) |
+| 弹性与发布策略 | VPA recommender `1.7.1` + KEDA/Argo Rollouts 控制器 | VPA 已发布但仍在至少 7 天观测和 k6 校准期；无 live ScaledObject 或 canary。证据与下一步见 docs/reports/2026-08-29-vpa-recommendation-only.md |
 | CI | GitHub Actions + GitLab context gate | 质量门禁按 PR/push 运行；镜像发布由裸 semver tag `X.Y.Z` 触发，push main 不构建发布制品 |
 
 ### 2.7 可观测性与告警

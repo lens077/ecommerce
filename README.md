@@ -65,7 +65,7 @@ Architecture highlights (the source of truth for technical architecture / techno
 | [`STACK.md`](STACK.md) | Engineering constraints and current boundaries: version pinning, layering rules, proto/sqlc rules; `docs/TECH.md` wins on technology-choice conflicts |
 | [`.service-matrix.yaml`](.service-matrix.yaml) | Service topology fact table: registration names, gateway prefixes, dependencies, Config Center keys (enforced by CI) |
 | [`TODO.md`](TODO.md) | **The single source of truth for progress and TODOs**: global priority view + categorized index; every TODO change must land here |
-| [`docs/todo/`](docs/todo/README.md) | TODO details categorized by the `docs/TECH.md` structure (observability / event-driven / auth / infrastructure…); indexed by `TODO.md` |
+| [`docs/todo/`](TODO.md#四分类明细) | TODO details categorized by the `docs/TECH.md` structure (observability / event-driven / auth / infrastructure…); indexed by `TODO.md` |
 | [`docs/GLOSSARY.md`](docs/GLOSSARY.md) | **Domain glossary**: 189 B2B2C e-commerce and platform terms (SPU/SKU/product snapshot/order splitting/fulfillment/OrderGroup/Saga Manager/PaymentIntent/StockLedger…). Look here first when you meet an unfamiliar business term while reading design docs or writing proto |
 | [`docs/TECH-RADAR.md`](docs/TECH-RADAR.md) | CNCF Landscape evaluation; any new infrastructure must be triggered by quantified requirements, capacity, or failure evidence |
 | [`PRODUCT.md`](PRODUCT.md) / [`DESIGN.md`](DESIGN.md) | Product definition and the "Lantern Market" visual design system (color/typography/spacing tokens), the source of truth for the frontend design workflow (impeccable) — same name as the old, since-split architecture DESIGN.md, but a different document |

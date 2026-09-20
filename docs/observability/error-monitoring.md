@@ -2,7 +2,7 @@
 
 > 定稿：错误监控**维持 Bugsink**（[TECH.md](../TECH.md) §11.3，2026-08-28 复核）。
 > 本文是**可执行接入手册**：边界、前置、改动清单、验收门禁与回退。
-> 容量证据、官方一手来源与方案论证见调研报告 [`../reports/2026-08-28-bugsink-integration-research.md`](../reports/2026-08-28-bugsink-integration-research.md)；服务端部署与运维（2026-09-15 起在 k8s `ops` ns）见 [`../INFRASTRUCTURE-OPERATIONS.md`](../INFRASTRUCTURE-OPERATIONS.md) §6。
+> 容量证据、官方一手来源与方案论证见调研报告 ../reports/2026-08-28-bugsink-integration-research.md；服务端部署与运维（2026-09-15 起在 k8s `ops` ns）见 [`../INFRASTRUCTURE-OPERATIONS.md`](../INFRASTRUCTURE-OPERATIONS.md) §6。
 
 ## 1. 边界（先读，防止接歪）
 

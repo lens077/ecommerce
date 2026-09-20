@@ -161,7 +161,7 @@ kubectl cp /tmp/gmp <ns>/<pod>:/tmp/gmp && kubectl exec -n <ns> <pod> -- /tmp/gm
 - 结论：这类故障**在本仓当前测不出来**。它不改变 CPU 曲线，只推高尾延迟，
   没有对应指标就只能等人肉复现。补采方式是给 otel-node 加 `kubeletstats` receiver
   或部署 VMAgent 抓 kubelet/cAdvisor 端点（待办已登记在
-  [`docs/todo/统一可观测性体系.md`](../../docs/todo/统一可观测性体系.md) P2）。
+  [`docs/todo/统一可观测性体系.md`](../../TODO.md#统一可观测性体系) P2）。
 
 补观测时的取值口径见 [`alerting-signal-hygiene.md`](alerting-signal-hygiene.md)：
 **告警要探「限流率 + 平均冻结时长」两个量，不要只探 CPU 使用率**——

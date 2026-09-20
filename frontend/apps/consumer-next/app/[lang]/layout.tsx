@@ -1,5 +1,6 @@
 import type { Metadata } from "next";
 import type { ReactNode } from "react";
+import { UmamiAnalytics } from "@/analytics/umami";
 
 const SUPPORTED_LANGUAGES = ["zh", "en"] as const;
 
@@ -29,7 +30,12 @@ export default async function LanguageLayout({
 
   return (
     <html lang={HTML_LANG[lang] ?? lang}>
-      <body>{children}</body>
+      <body>
+        {children}
+        {/* 两个 NEXT_PUBLIC_UMAMI_* 缺任一即不渲染。放 root layout 里,
+            Next 保证跨路由只加载一次(见 next/dist/docs 01-app/02-guides/scripts.md)。 */}
+        <UmamiAnalytics />
+      </body>
     </html>
   );
 }

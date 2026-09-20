@@ -1,7 +1,7 @@
 # 边缘主机加固：SSH 暴力破解与公网暴露面
 
 > 范围是**本仓 K8s 集群之外的两台边缘主机** node1（node1）与 node2（node2）。
-> 集群内的零信任、CNP、Tetragon 见 [2026-08-28 零信任与运行时安全验证](reports/2026-08-28-zero-trust-runtime-security.md)，两者不重叠：
+> 集群内的零信任、CNP、Tetragon 见 2026-08-28 零信任与运行时安全验证，两者不重叠：
 > 那份管 Pod 与 East-West，这份管**宿主机与 North-South 的公网入口**。
 >
 > node1 与 node2 不是 K8s 节点（K8s 是 node101/102/103 = 192.168.3.101-103），

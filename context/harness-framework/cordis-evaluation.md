@@ -8,7 +8,7 @@ description: 已评估「参照 deepseek-harness 把 harness 底层改成 Cordis
 
 - **评估日期**：2026-08-19
 - **提议**：参照 deepseek-harness（DSH，`deepseek-ai/deepseek-harness`）「Everything is a Plugin」的架构，把本仓 harness 的底层改成 [Cordis](https://github.com/cordiverse/cordis) 插件框架。
-- **结论**：暂不采用。继续借鉴 DSH 的仓库工程实践（已在做，见 [evolution-log.md](evolution-log.md) 2026-08-18 的两条）；本条否决的只是「引入 Cordis 作为运行时底座」这一件事。
+- **结论**：暂不采用。继续借鉴 DSH 的仓库工程实践（已在做，见 evolution-log.md 2026-08-18 的两条）；本条否决的只是「引入 Cordis 作为运行时底座」这一件事。
 
 ## 前提：两个 harness 不在同一层面
 

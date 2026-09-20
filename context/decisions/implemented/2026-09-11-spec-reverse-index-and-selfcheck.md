@@ -57,4 +57,4 @@ description: 规范文档用 frontmatter `affects:` 登记反向依赖、`spec-i
 - 实现单多一个 `done` 状态与一个必填小节；研究类子单不受影响。
 - 钉住行为的验证：`verify-context-canary.sh` 新增五个探针——`affects-dead`、`affects-glob`、`selfcheck-missing`、
   `selfcheck-no-evidence` 四个红探针，`selfcheck-ok`（含带原因的未勾选项）一个假阳性守卫。
-- 事故与验证过程见 [evolution-log.md](../../harness-framework/evolution-log.md) 2026-09-11 条目。
+- 事故与验证过程见 evolution-log.md 2026-09-11 条目。

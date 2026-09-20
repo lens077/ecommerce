@@ -28,12 +28,12 @@ context/
 **最常用的两个入口**（其余一律走上表，不在这里列第二份清单）：
 
 - [team/runbook.md](team/runbook.md) —— 可执行入口，§0.1 是按改动类型的必读路由，§1–§6 是提交前必跑的锚点。
-- [harness-framework/evolution-log.md](harness-framework/evolution-log.md) —— 演进日志索引，改硬规则 / 门禁前先扫它。
+- harness-framework/evolution-log.md —— 演进日志索引，改硬规则 / 门禁前先扫它。
 
 ## 决策记录 · [context/decisions/](decisions/INDEX.md)
 
 一个决策一个文件，**路径即状态**（`proposed/` `implemented/` `rejected/`），`implemented/` 随交付事实同步改写，
-每条必须写「考虑过的替代方案」。与 [evolution-log.md](harness-framework/evolution-log.md) 分工：日志按日期追加记
+每条必须写「考虑过的替代方案」。与 evolution-log.md 分工：日志按日期追加记
 **事故与验证**，这里记**决策与替代方案**。逐条清单只维护在 [decisions/INDEX.md](decisions/INDEX.md) 一处。
 改硬规则 / 门禁 / CI 职责 / 真相源归属之前，先读对应决策；没有就先建一条。
 
@@ -70,9 +70,9 @@ matrix 与 `backend/services/`、网关实际接线的一致性,以及各服务 
 | control-tower `docs/design/` | 网关与配置中心的架构、鉴权、砍掉清单、切流手顺 —— 在**同级仓** `../control-tower/`，不在本仓 | 动网关或配置面之前 |
 
 ⚠️ 以上都是**目标态**，状态是「等待实现」。当前实况以 `TODO.md` 为准，
-待办明细按 `docs/TECH.md` 体系分类在 [`docs/todo/`](../docs/todo/README.md)；
-可观测性的已确认缺陷见 [`统一可观测性体系.md`](../docs/todo/统一可观测性体系.md)，
-原始评审报告归档在 [`docs/progress-archive/`](../docs/progress-archive/)
+待办明细按 `docs/TECH.md` 体系分类在 [`docs/todo/`](../TODO.md#四分类明细)；
+可观测性的已确认缺陷见 [`统一可观测性体系.md`](../TODO.md#统一可观测性体系)，
+原始评审报告归档在 [`docs/progress-archive/`]()
 （2026-08-29 起 `docs/reviews/` 已并入该目录，消除两个归档位置）。
 
 ## 检索约定

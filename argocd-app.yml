@@ -1,92 +1,62 @@
-# ⚠️ apply 之前必读（2026-09-06 更新）⚠️
+# ApplicationSet for the ecommerce production workload.
 #
-# 2026-08-24 时本文件不可 apply：`helm/` 渲染出的资源名(user/cart…)、标签方案
-# (app.kubernetes.io/name)、镜像 tag(1.4.0)三处都与集群实况(ecommerce-user-deploy /
-# app: ecommerce-user / digest 钉死)对不上,接回 selfHeal 会起一整套影子服务并经 Consul
-# 抢走网关流量。那段历史保留在 git log 与 context/harness-framework/evolution-log.md。
-#
-# 2026-09-06 起 helm/ 与 backend/services/*/deploy(kustomize base+overlays)裸 manifest **按环境逐字段等价**
-# (scripts/verify-deploy-parity.sh 强制;`helm template` 对集群 `kubectl diff` 为空),
-# 上面第 1、2 步已完成。但仍有两件事没做,所以 syncPolicy.automated 仍保持注释:
-#   1. 集群里 CiliumNetworkPolicy 的 Postgres 出站 CIDR 是运行时注入
-#      (scripts/resolve-postgres-egress-cidr.sh),ArgoCD 侧要通过 helm parameters
-#      传 global.postgresEgressCIDR(见下方 __POSTGRES_EGRESS_CIDR__ 占位),否则渲染即失败。
-#   2. 集群零 Application 的现状要先用「只观察不动」的手动 sync 跑一段时间,确认 diff 为空后
-#      再放开 automated。放开的那次改动要同时更新 AGENTS.md「GitOps 当前是断的」一段。
-#
-# control-tower-gateway 属于同级 control-tower 仓;outbox-relay 与 search-indexer 已于
-# 2026-09-03 退役。helm/ 不得补回这三个工作负载。
-#
-# ---------------------------------------------------------------------------
-# 作用：通过 ApplicationSet 的 list 生成器，为 ecommerce 项目部署一个
-# 包含所有微服务的 Helm 父 Chart（Umbrella Chart）。
-# 此配置使用 list 生成器，目前仅定义了一个环境（集群和命名空间），
-# 但可以轻松扩展多个环境（如 dev、staging、prod），通过添加更多
-# 元素实现多环境管理。生成的 Application 将引用仓库根目录下的
-# 父 Chart 目录（helm/），并通过 Helm 的 valueFiles 加载
-# 统一的 values.yaml 文件。
-
+# The source of truth is the GitLab repository. This file deliberately keeps
+# automated sync disabled until the first `argocd app diff` is reviewed against
+# the existing ecommerce namespace. Enabling self-heal before that takeover
+# review could delete or recreate live resources unexpectedly.
 apiVersion: argoproj.io/v1alpha1
 kind: ApplicationSet
 metadata:
-  name: ecommerce-appset                       # ApplicationSet 名称
-  namespace: argocd                       # 部署在 argocd 命名空间
+  name: ecommerce
+  namespace: argocd
+  labels:
+    app.kubernetes.io/part-of: ecommerce
+    app.kubernetes.io/managed-by: git
 spec:
-  # 模板引擎配置
-  # 启用 Go 模板语法，使模板支持更丰富的函数和点操作，确保变量正确渲染
   goTemplate: true
-  # Go 模板选项：missingkey=error 表示模板中引用的 key 不存在时直接报错，
-  # 有助于快速发现模板编写错误
-  goTemplateOptions: [ "missingkey=error" ]
-
-  # 生成器配置
+  goTemplateOptions:
+    - missingkey=error
   generators:
-    - list: # list 生成器：根据固定的元素列表生成 Application
-        elements: # 元素列表，每个元素包含一组键值对，供模板使用
-          - cluster: https://kubernetes.default.svc   # 目标集群 API Server 地址
-            namespace: ecommerce                      # 目标命名空间
-            # 可在此处扩展其他环境参数，例如：
-            # - cluster: https://staging.k8s.local
-            #   namespace: staging
-            # 添加更多元素即可为不同环境生成对应的 Application
-
-  # Application 模板
+    - list:
+        elements:
+          - name: prod
+            server: https://kubernetes.default.svc
+            namespace: ecommerce
   template:
     metadata:
-      # Application 名称，此处固定为 "my-platform"（单应用场景）
-      name: ecommerce
+      name: ecommerce-{{ .name }}
+      labels:
+        app.kubernetes.io/part-of: ecommerce
+        app.kubernetes.io/managed-by: argocd
+        app.kubernetes.io/environment: "{{ .name }}"
     spec:
-      # 所属项目，需与已创建的 AppProject 名称匹配
       project: ecommerce
-
-      # 应用来源配置（Git 仓库及路径）
-      # 指向 GitHub 而非 GitLab origin：GitHub Actions 的 update-manifests job
-      # 会把新镜像 tag 回写到 GitHub main 的 helm/values.yaml，ArgoCD 必须
-      # 监听同一份仓库闭环才成立（仓库 public，拉取无需凭据）
       source:
-        repoURL: https://github.com/lens077/ecommerce.git
-        targetRevision: main                           # 跟踪 main 分支
-        path: helm                                     # 指向父 Chart 目录（包含 Chart.yaml）
+        repoURL: https://gitlab.com/sumery/ecommerce.git
+        targetRevision: main
+        path: helm
         helm:
-          valueFiles: # 指定 values 文件列表
-            - values.yaml                              # 从仓库根目录下的 helm/values.yaml 读取
-          parameters:
-            # scripts/deploy-k8s.sh 在 apply 前注入；仓库不保存公网地址。
-            - name: global.postgresEgressCIDR
-              value: __POSTGRES_EGRESS_CIDR__
-
-      # 部署目标集群和命名空间（使用生成器参数动态填充）
+          releaseName: ecommerce
+          valueFiles:
+            - "values.yaml"
+            - "values-prod.yaml"
       destination:
-        server: '{{.cluster}}'                         # 从 list 元素中获取 cluster
-        namespace: '{{.namespace}}'                    # 从 list 元素中获取 namespace
-
-      # 同步策略
-      #
-      # ⚠️ automated 已于 2026-08-24 注释掉 —— 理由见文件顶部告警：
-      # chart 与集群实况三处不符，开自动同步会起一套影子服务并经 Consul 抢走网关流量。
-      # 等 helm/ 对齐、`helm template` 与集群 diff 为空之后，再放开下面四行。
-      syncPolicy: {}
-      #   automated:          # 自动同步
-      #     prune: true       # 自动删除不再需要的资源
-      #     selfHeal: true    # 自动修复集群状态漂移
-      # 注意：此处未设置 syncOptions，如果需要可添加，例如 CreateNamespace=true
+        server: "{{ .server }}"
+        namespace: "{{ .namespace }}"
+      syncPolicy:
+        automated:
+          enabled: false
+          prune: true
+          selfHeal: true
+        syncOptions:
+          - ApplyOutOfSyncOnly=true
+          - CreateNamespace=false
+          - FailOnSharedResource=true
+          - PruneLast=true
+          - RespectIgnoreDifferences=true
+      revisionHistoryLimit: 10
+      info:
+        - name: source
+          value: gitlab.com/sumery/ecommerce
+        - name: environment
+          value: "{{ .name }}"

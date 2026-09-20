@@ -17,6 +17,7 @@ import { Code, ConnectError } from "@connectrpc/connect";
 import { TransportProvider } from "@connectrpc/connect-query";
 import { getSharedTransport } from "@ecommerce/api";
 import { AuthProvider, useAuthState, useAuthActions } from "@/providers/AuthProvider";
+import { initAnalytics } from "./analytics";
 
 // 桌面端设置面板（Cmd/Ctrl + , 唤起）。懒加载，web 构建里这个 chunk 不会被请求。
 const DesktopSettingsDialog = lazy(() => import("@ecommerce/tauri/dialog"));
@@ -140,3 +141,9 @@ initPerf({
     return last?.routeId ?? window.location.pathname;
   },
 });
+
+// Umami 网站分析。桌面端(Tauri)不注入:它跑在 tauri:// 下,面板按域名归集数据,
+// 打点会落到一个无意义的来源上。两个 VITE_UMAMI_* 缺任一时本身也不加载。
+if (!isTauri()) {
+  initAnalytics();
+}

@@ -10,13 +10,12 @@
    现搜、推测、记忆与之冲突时以真相源为准；**找不到对应知识 ≠ 没有约束**，先读 `docs/design/`（入口 `docs/design/README.md`）与 `TODO.md`，结论沉淀回 `context/`。
 2. **写/改 proto 前必须先读设计文档**，并为每个字段推断出校验约束。见 `context/team/proto-design.md`。
 3. **提交前先问：这次改动涉及哪个 TODO 项？** 涉及就先更新 `TODO.md`（完成/部分完成/改目标/删除），不涉及就不动它——
-   它只记 TODO 项与状态，做了什么与证据进 `docs/progress-archive/`。提交信息走 Conventional Commits
+   它只记 TODO 项与状态；已完成项的过程记录直接删掉，不另设归档目录。提交信息走 Conventional Commits
    `<type>(<scope>): [:emoji:] <subject>`，commitlint 钩子强制校验（type 限十一类，emoji 须与 type 相符，subject 末尾不加标点）。见 `context/team/git-commit.md`。
 4. **不要把凭据写进仓库**。密码/密钥只存在 Config Center 和本地环境（K8s 里经 Secret 挂载），仓库里只写主机名和端口。
    Consul KV 已退役不再存配置，Consul 只做注册发现（见 `context/project/ecommerce/config/experience/consul-kv-retired.md`）。
 5. **踩到坑要沉淀**：区分「模式性教训」与「一次性 diff」，前者写进 `context/`。见 `context/harness-framework/self-refinement.md`。
-   改动 harness 本身（本文件的硬规则、门禁脚本、structcheck 检查项、CI 门禁）时，还要在
-   `context/harness-framework/evolution-log/` 当月卷追加一条，**必须写清触发它的具体事故**——
+   改动 harness 本身（本文件的硬规则、门禁脚本、structcheck 检查项、CI 门禁）时，**在改动处写清触发它的具体事故**——
    规则能从代码读出来，理由不能，没理由的规则半年后会被凭直觉改回去。
 6. **不可逆动作需要用户授权——但授权一旦给出就直接执行，不要二次确认**。只拦不放工具没法用，只放不拦误伤线上，两半缺一都错。
    - **哪些算**：`git commit`、`git push`、分支/MR 合入、deploy（`kubectl apply/delete`、`helm` 装卸）、发布制品（`docker push`）、workspace 之外的写入与删除。
@@ -47,7 +46,7 @@
 
 - 工程化：前端用 vite-plus（`vp`）一个包覆盖 dev/build/test/lint/fmt/任务运行/git 钩子，没有 husky/biome/eslint/prettier；commitlint 也由 frontend workspace 承载（根目录无 Node workspace）
 - 进度真相源：`TODO.md`（**唯一**，理由见 `context/decisions/`）；架构真相源：`docs/design/`（按微服务分目录，入口 `docs/design/README.md`）
-- **往文档写集群数字前先读 [context/team/live-facts.md](context/team/live-facts.md)**：运行时观测值（Pod 分布/就绪计数/镜像 tag）必须带「实测 YYYY-MM-DD」，否则 `[LIVE-FACT]` 门禁红；且**集群异常时不要采数**，故障态会被固化成「现状」
+- **集群数字尽量别写进文档**：Pod 分布、就绪计数、镜像 tag 这类运行时观测值一写就过期，需要时现查 `kubectl`。确实要写就标实测日期（`[LIVE-FACT]` 门禁已于 2026-09-17 删除，改为口头约定）；且**集群异常时不要采数**，故障态会被固化成「现状」。见 [context/team/live-facts.md](context/team/live-facts.md)
 - **网关和配置中心都不在本仓**：由同级仓 **control-tower**（`services/gateway` + `services/config`）承载，设计在 `../control-tower/docs/design/`；集群里 `config-center` ns/Deployment 名是遗留标签，镜像实为 `control-tower-config`。`backend/structcheck` import `github.com/lens077/control-tower/routes` 核对路由，**改路由模板必须同 PR 升级本仓对 control-tower 的依赖版本**。迁移历史见 [context/project/ecommerce/gateway/INDEX.md](context/project/ecommerce/gateway/INDEX.md)
 - **CI 仅由发布 tag 触发**（裸 semver `X.Y.Z`，`X`=破坏性/大版本；push main 不构建）。需要 CI 验证或部署时**打 tag 并推到 `github` 远端**（origin 是 GitLab 无 Actions）；语义、手顺与四条纪律见 [context/team/git-commit.md](context/team/git-commit.md)「发布 tag 与 CI 触发」
 - **部署清单两份真相源必须逐字段等价**：`helm/`（`values.yaml`=pre 基线 + `values-prod.yaml`）与 kustomize 裸 manifest（`deploy/{base,overlays/prod}`）渲染同一套对象，`scripts/verify-deploy-parity.sh` 强制；改一边必改另一边。见 [deploy-parity.md](context/team/deploy-parity.md)。两份都写 **KYAML**（值一律双引号、结构靠 `{}` `[]` 不靠缩进），`scripts/verify-kyaml.sh` 阻断，`helm/files/zero-trust.yaml` 永久豁免——见 [kyaml-manifests.md](context/team/kyaml-manifests.md)

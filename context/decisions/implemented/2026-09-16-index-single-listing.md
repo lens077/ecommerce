@@ -43,4 +43,4 @@ project 层从一开始就写明「逐篇清单只维护在 `project/ecommerce/I
 - 根 `context/INDEX.md` 12575 B → 7840 B，表格行 37 → 4；第一跳成本降约六成。
 - 浏览 team 文档多一跳。按改动类型找文档的主路径是 runbook §0.1，不经过这里，所以主路径不受影响。
 - 新增文档只需登记一处，`ORPHAN` 门禁已经强制那一处，不需要新门禁。
-- 事故与验证见 [evolution-log.md](../../harness-framework/evolution-log.md) 2026-09-16 条目。
+- 事故与验证见 evolution-log.md 2026-09-16 条目。

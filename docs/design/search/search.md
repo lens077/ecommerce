@@ -165,7 +165,7 @@ search 服务使用 `search.catalog`：
 | 价格、销量、新品等显式排序 | 未实现 | RPC 当前无排序参数 |
 | 补全、热门词、同义词、拼音与 typo 策略 | 未实现 | IK 不能单独解决「苹果手机→Apple iPhone」等归一化问题 |
 | Connect 链路告警（slot 位点差、task 状态、sink lag） | 部分〔2026-09-15 迁移后重排〕 | 复制槽 5 条仍在 node3 vmalert `ecommerce-cdc.yml`（pg_exporter 数据源未变）；Connect task 级状态改由 k8s `ops/gatus` 的 `cdc-source-task` / `cdc-sink-task` 探针（同时看 connector 与 task 两级，ntfy 告警）承担；**sink lag 告警暂缺**（node3 kafka_exporter 随 kf-main 删除，Strimzi 侧尚未接 kafka-exporter → node3 VM），登记在 TODO |
-| 生产容量与 HA | 未验收 | ES/Kafka/Connect 均为 k8s 单副本、`replicas=0`、openebs-lvm 本地盘（Pod 钉死在一个节点，节点没了数据要重快照）；node3 只剩 PG。node3 有序重启演练（[报告](../../reports/2026-09-06-node3-reboot-drill.md)）的 CDC 段已改为验 k8s connector 重新接槽，尚未重跑 |
+| 生产容量与 HA | 未验收 | ES/Kafka/Connect 均为 k8s 单副本、`replicas=0`、openebs-lvm 本地盘（Pod 钉死在一个节点，节点没了数据要重快照）；node3 只剩 PG。node3 有序重启演练（报告）的 CDC 段已改为验 k8s connector 重新接槽，尚未重跑 |
 
 ## 运行时切流证据
 

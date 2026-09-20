@@ -54,4 +54,4 @@ canary 加 `todo-dated` / `todo-long` 两个红探针与 `todo-fenced-ok` 假阳
 - `TODO.md` 从 82074 B 降到 24303 B〔2026-09-16 实测〕，每个涉及待办的提交回合读它的成本降约七成。
 - 写「做了什么」的人要另开 `docs/progress-archive/YYYY-MM-progress-log.md`；写错地方立即被 `[TODO-CLEAN]` 拦。
 - 600 字节的行上限对表格行是紧约束：一行装不下说明该行在堆证据，拆成「一句缺口 + 链接」。
-- 事故与验证过程见 [evolution-log.md](../../harness-framework/evolution-log.md) 2026-09-16 条目。
+- 事故与验证过程见 evolution-log.md 2026-09-16 条目。

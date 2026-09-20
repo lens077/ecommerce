@@ -161,7 +161,7 @@ curl -fsS https://bugsink.apikv.com/health/ready
 kubectl -n ops get deploy bugsink
 ```
 
-详细部署、升级、桥接和备份说明见同级仓 `../../docker-deploy/bugsink/README.md`；本仓前端 SDK 接入手册见 [docs/observability/error-monitoring.md](observability/error-monitoring.md)，容量实测与调研结论见 [docs/reports/2026-08-28-bugsink-integration-research.md](reports/2026-08-28-bugsink-integration-research.md)。
+详细部署、升级、桥接和备份说明见同级仓 `../../docker-deploy/bugsink/README.md`；本仓前端 SDK 接入手册见 [docs/observability/error-monitoring.md](observability/error-monitoring.md)，容量实测与调研结论见 docs/reports/2026-08-28-bugsink-integration-research.md。
 
 ## 7. ZeroSSL wildcard 证书结论
 
