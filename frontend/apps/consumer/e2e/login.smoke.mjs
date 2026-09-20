@@ -15,9 +15,11 @@
 //   SHOP_URL / CASDOOR_URL 可覆盖目标环境。
 //
 // ⚠️ 判据一律用 **origin** 比较，不要拿正则去匹配整个 URL。
-//    授权 URL 里带 `redirect_uri=https%3A%2F%2Fshop.apikv.com%2Fcallback`，
-//    `waitForURL(/shop\.apikv\.com/)` 会被这个查询参数骗过去，于是"还停在 Casdoor"
-//    被误报成"已回跳成功"，后面所有断言跟着变成假绿（第一版实测踩过）。
+//    第一版实测踩过：当时授权 URL 里带 `redirect_uri=https%3A%2F%2Fshop.apikv.com%2Fcallback`，
+//    `waitForURL(/shop\.apikv\.com/)` 被这个查询参数骗过去，于是"还停在 Casdoor"
+//    被误报成"已回跳成功"，后面所有断言跟着变成假绿。
+//    BFF 迁移后 redirect_uri 改指网关，这个具体例子不再成立，但结论不变——
+//    URL 的查询参数里可以出现任何域名，只有 origin 是位置本身。
 import { chromium } from "playwright";
 
 const USER = process.env.CASDOOR_USER;
@@ -89,7 +91,7 @@ page.on("response", async (r) => {
 });
 page.on("request", (r) => {
   const u = r.url();
-  if (u.startsWith(CASDOOR) || u.includes("gateway.apikv.com")) {
+  if (u.startsWith(CASDOOR) || u.startsWith(GATEWAY)) {
     netCalls.push(`${r.method()} ${u.replace(/\?.*/, "")}`);
   }
 });

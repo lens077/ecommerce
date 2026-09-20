@@ -59,6 +59,25 @@ export const fetchIdentity = async (): Promise<BffIdentity> => {
   }
 };
 
+/** 把任意 redirect 输入收敛成**本源**的绝对地址，可疑输入一律回落首页。
+ *
+ *  ⚠️ 不要退回「拼 origin + parsed.pathname」那种写法：`new URL()` 对 opaque scheme
+ *  （`javascript:` `data:` 以及任意 `x:`）不做相对解析，pathname 不带前导斜杠，拼出来
+ *  就是主机注入——`javascript:@evil.com/x` → `https://shop.apikv.com@evil.com/x`，
+ *  浏览器解析出的 host 是 evil.com。异构双审两侧独立命中同一条，Node 实测复现。
+ *  按 origin 比对能一次盖住三类：opaque scheme（origin 为 "null"）、协议相对
+ *  `//evil.com`、以及完整外站地址。 */
+const sameOriginTarget = (redirectTo: string): string => {
+  const home = `${window.location.origin}/`;
+  let parsed: URL;
+  try {
+    parsed = new URL(redirectTo, window.location.origin);
+  } catch {
+    return home;
+  }
+  return parsed.origin === window.location.origin ? parsed.href : home;
+};
+
 /** 发起登录。必须整页跳转——OAuth 是 302 链，fetch 跟不了。
  *
  *  ⚠️ redirect 必须是**绝对地址**，不能传相对路径。网关的 redirectAllowed() 放行
@@ -67,13 +86,16 @@ export const fetchIdentity = async (): Promise<BffIdentity> => {
  *  gateway.apikv.com，传 `/cart` 登完就落到 `gateway.apikv.com/cart`（404）。
  *  dev 里两者靠 vite proxy 同源，所以这个坑在本地永远不显形。
  *
- *  只取 pathname/search/hash 再拼回本站源：调用方传进来什么都跳不出本源，
- *  客户端这一侧的开放重定向面一并关死（网关侧仍有白名单复验，两层都留着）。 */
+ *  归一化按**源比对**，不按字符串拼接（见 sameOriginTarget）：调用方传什么都跳不出本源，
+ *  客户端这一侧的开放重定向面一并关死（网关侧仍有白名单复验，两层都留着）。
+ *
+ *  ⚠️ 前端的源必须在网关 BFF_ALLOWED_REDIRECTS 里。改成绝对地址之后，不在白名单的
+ *  前端源（127.0.0.1:3000、局域网 IP、预览域名）会被网关**静默**换成 defaultRedirect——
+ *  不报错，表现为登完跳去别处。本地开发请用 localhost:3000，或把新源加进白名单。 */
 export const startBffLogin = (
   redirectTo: string = window.location.pathname + window.location.search,
 ): void => {
-  const parsed = new URL(redirectTo, window.location.origin);
-  const target = `${window.location.origin}${parsed.pathname}${parsed.search}${parsed.hash}`;
+  const target = sameOriginTarget(redirectTo);
   window.location.assign(`${bffBase()}/auth/login?redirect=${encodeURIComponent(target)}`);
 };
 
