@@ -37,5 +37,3 @@ export const searchProductsAction: CopilotAction = {
       : t("found", { count, names: shown });
   },
 };
-
-export const consumerCopilotActions: CopilotAction[] = [searchProductsAction];

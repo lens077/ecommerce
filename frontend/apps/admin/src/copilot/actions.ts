@@ -28,5 +28,3 @@ export const openMonitorAction: CopilotAction = {
   ],
   summarize: (_params, ctx) => t("arrived", { count: ctx.count("monitor.health-card") }),
 };
-
-export const adminCopilotActions: CopilotAction[] = [openMonitorAction];

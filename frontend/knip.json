@@ -2,5 +2,10 @@
   "$schema": "https://unpkg.com/knip@6/schema.json",
   "ignore": ["**/src/gen/**"],
   "ignoreDependencies": ["@bufbuild/buf", "@bufbuild/protoc-gen-es", "@commitlint/cli"],
-  "ignoreExportsUsedInFile": true
+  "ignoreExportsUsedInFile": true,
+  "playwright": {
+    "config": ["e2e/playwright.config.ts"],
+    "entry": ["e2e/**/*.e2e.ts"]
+  },
+  "entry": ["e2e/monitor.gateway.mjs"]
 }

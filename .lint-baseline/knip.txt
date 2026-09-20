@@ -17,7 +17,6 @@ knip	Unused dependencies	frontend/apps/merchant/package.json	@ecommerce/configs
 knip	Unused dependencies	frontend/apps/merchant/package.json	@ecommerce/constants
 knip	Unused dependencies	frontend/apps/merchant/package.json	@ecommerce/utils
 knip	Unused dependencies	frontend/apps/merchant/package.json	@fontsource/roboto
-knip	Unused dependencies	frontend/apps/merchant/package.json	@mui/icons-material
 knip	Unused dependencies	frontend/apps/merchant/package.json	echarts-for-react
 knip	Unused dependencies	frontend/apps/merchant/package.json	zod
 knip	Unused dependencies	frontend/packages/tauri/package.json	@tauri-apps/plugin-notification

@@ -8,6 +8,7 @@
     "start": "next start -p 3004",
     "test": "node -e \"console.log('consumer-next: runtime POC checks are documented in the report')\"",
     "generate": "buf generate ../../../backend --template buf.gen.yaml --path ../../../backend/api/product/v1/product.proto --path ../../../backend/api/search/v1/search.proto",
+    "font:text": "node --experimental-strip-types scripts/home-font-text.ts",
     "mock:gateway": "node scripts/mock-gateway.mjs",
     "verify:runtime": "node scripts/verify-runtime.mjs",
     "verify:browser": "pnpm build && node scripts/verify-browser.mjs"

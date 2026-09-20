@@ -15,7 +15,6 @@ catalog:
   "@emotion/styled": ^11.14.1
   "@fontsource/noto-serif-sc": ^5.3.0
   "@fontsource/roboto": ^5.3.0
-  "@mui/icons-material": ^9.4.0
   "@mui/material": ^9.4.0
   "@mui/utils": ^9.4.0
   "@t3-oss/env-core": ^0.13.11
@@ -45,7 +44,6 @@ catalog:
   jsdom: ^30.0.1
   jsonc-parser: ^3.3.1
   knip: ^6.34.0
-  lucide-react: ^1.41.0
   lucide: ^1.43.0
   morphicons: ^1.7.1
   # 16.4 canary 在本仓 6 轮 A/B 中缩短 cold/warm build 并减小缓存；
@@ -97,7 +95,6 @@ peerDependencyRules:
   allowedVersions:
     vite: "*"
 minimumReleaseAgeExclude:
-  - lucide-react@1.41.0
   - playwright-core@1.63.0
   - playwright@1.63.0
   - vitest-browser-react@2.3.0

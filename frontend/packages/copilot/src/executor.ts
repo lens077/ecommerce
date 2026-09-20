@@ -7,7 +7,6 @@ import {
   centerOf,
   clickElement,
   ensureInViewport,
-  findAnchor,
   openMuiSelect,
   pressKey,
   resolveInput,
@@ -241,9 +240,4 @@ function throwIfAborted(signal: AbortSignal): void {
 
 function isAbort(e: unknown): boolean {
   return (e instanceof DOMException && e.name === "AbortError") || e instanceof CopilotAbortError;
-}
-
-/** 给 summarize 用的只读页面上下文 */
-export function readAnchor(anchor: string): HTMLElement | null {
-  return findAnchor(anchor);
 }

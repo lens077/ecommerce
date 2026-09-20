@@ -84,5 +84,3 @@ export const filterOrdersAction: CopilotAction = {
     return t("count", { count: ctx.count("orders.row"), status: label });
   },
 };
-
-export const merchantCopilotActions: CopilotAction[] = [filterOrdersAction];
