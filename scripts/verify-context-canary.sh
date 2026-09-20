@@ -41,7 +41,6 @@ build_template() { # build_template <dir>
   # [EMBED]:门禁调 scripts/doc-embed.py,它又要读指令指向的源文件(backend/…sql 等,
   # 不在沙箱树里)。源清单动态从指令里提取,不手抄——新指令自动带进沙箱,漏了探针 0 当场红。
   cp scripts/doc-embed.py "$sb/scripts/"
-  cp scripts/evolution-log-index.py "$sb/scripts/"   # [EVOLOG] 索引一致性靠它比对
   grep -rhoE '<!-- embed: *[^ ]+' docs context AGENTS.md README.md STACK.md TODO.md 2>/dev/null \
     | sed -E 's/<!-- embed: *//' | sort -u | while IFS= read -r src; do
       [ -f "$src" ] || continue
@@ -131,14 +130,6 @@ mut_dead_link_ignored() { # 目标存在但被 gitignore ——CI 真实抓到�
 mut_dead_link_design() { # 设计文档死链——2026-08-26 门禁扩围后的新红探针
   printf '\n[canary 设计死链](no-such-design.md)\n' >> "$1/docs/design/README.md"
 }
-mut_dead_link_archive() { # 档案死链——2026-08-31 扩围探针(复审抓到删目录后档案引用无声断裂)
-  printf '# canary\n\n[canary 档案死链](no-such-archive-target.md)\n' \
-    > "$1/docs/progress-archive/tmp-canary-archive.md"
-}
-mut_dead_link_reports() { # 报告死链——与档案同类的带日期证据,一并纳入扫描
-  printf '# canary\n\n[canary 报告死链](no-such-report-target.md)\n' \
-    > "$1/docs/reports/tmp-canary-report.md"
-}
 mut_dead_link_docs() { # docs 顶层死链——2026-08-31 晚二次扩围探针(TECH/DEVOPS 一类此前是盲区)
   printf '# canary\n\n[canary docs 死链](no-such-docs-target.md)\n' \
     > "$1/docs/tmp-canary-docs.md"
@@ -177,15 +168,6 @@ EOF
 mut_baseline() { # 已合规文件塞回基线 → 反向棘轮必须报删行
   printf 'context/project/ecommerce/gateway/experience/jwt-nbf-clock-skew-loop.md\n' \
     >> "$1/scripts/context-format-baseline.txt"
-}
-mut_evolog() { # 抹掉全部「触发事故」要素(条目在按月分卷里)
-  for f in "$1"/context/harness-framework/evolution-log/*.md; do
-    grep -v '\*\*触发事故\*\*' "$f" > "$f.new" && mv "$f.new" "$f"
-  done
-}
-mut_evolog_index_drift() { # 往卷里加条目但不重生成索引 → 索引与卷标题不一致
-  f="$1/context/harness-framework/evolution-log/2026-09.md"
-  printf '\n### 2026-09-30 canary 未入索引的条目\n\n- **改了什么**：x\n- **为什么**：x\n- **触发事故**：x\n- **怎么验证的**：x\n' >> "$f"
 }
 mut_decision_no_alternatives() { # 已登记、frontmatter 合规,只缺「考虑过的替代方案」的条目
   cat > "$1/context/decisions/implemented/2026-09-03-tmp-canary-noalt.md" <<'EOF'
@@ -278,9 +260,12 @@ EOF
 mut_budget_agents() {
   head -c 4000 /dev/zero | tr '\0' 'x' >> "$1/AGENTS.md"
 }
-mut_budget_todo() { # 无论 TODO 当前多瘦，都精确推过 96KB 门槛
+mut_budget_todo() { # 精确推过门槛。阈值从 verify-context.sh 读,别写死——
+                    # 2026-09-17 写死的 96001 在阈值调到 160000 后让本探针静默失效(canary 抓到)。
+  budget=$(sed -n 's/^todo_budget=\([0-9]*\).*/\1/p' scripts/verify-context.sh | head -1)
+  : "${budget:=160000}"
   current=$(wc -c < "$1/TODO.md" | tr -d ' ')
-  grow=$((96001 - current))
+  grow=$((budget + 1 - current))
   [ "$grow" -gt 0 ] || grow=1
   head -c "$grow" /dev/zero | tr '\0' 'x' >> "$1/TODO.md"
 }
@@ -299,21 +284,8 @@ mut_skill_ref_missing() { # 入口文件要求跑一个登记为不可用的 ski
 mut_skill_ref_cli_ok() { # 假阳性守卫:「开发与验证 CLI」表里标缺失的工具名不是 skill,提到它不该红
   printf '\n装不上 `gitleaks` 时先看 `/gitleaks` 的安装说明。\n' >> "$1/context/team/runbook.md"
 }
-mut_todo_dated_star() { # 放宽后的日期形态:`* `、`### ` 也要被抓(首版只认 `- `)
-  printf '\n### 2026-09-16 canary 整节流水账\n\n* 2026-09-16 又做了一件事\n' >> "$1/TODO.md"
-}
-mut_todo_dated() { # 以日期开头的流水账回流 TODO.md → 它只记 TODO 项,changelog 进 progress-archive
-  printf '\n2026-09-16 canary 做了一件事并把过程写在这里。\n' >> "$1/TODO.md"
-}
-mut_todo_long() { # 单行 > 600 字节的处置记录塞进表格单元格 → 证据长文的形态
-  { printf '\n| canary | 🟡 | '; head -c 650 /dev/zero | tr '\0' 'x'; printf ' |\n'; } >> "$1/TODO.md"
-}
 mut_todo_fenced_ok() { # 围栏内的日期行与长行必须放行(假阳性守卫),否则示例块无法写
   { printf '\n```text\n2026-09-16 围栏内示例\n'; head -c 650 /dev/zero | tr '\0' 'x'; printf '\n```\n'; } >> "$1/TODO.md"
-}
-mut_live_fact() { # 运行时观测值不带实测日期 → 读者分不清「结构事实」与「某一刻快照」
-  printf '\n当前 ecommerce 分布为 5/6/6，15/15 Running，镜像 sha-0b9b9ad。\n' \
-    >> "$1/context/team/local-env.md"
 }
 mut_embed_stale() { # 受管代码块被手改(或源改了没重跑 doc-embed)→ 投影与源不一致
   sed -i.bak 's/^    -- 订单状态枚举$/    -- 订单状态枚举（canary 手改）/' "$1/docs/design/order/schema.md"
@@ -413,16 +385,12 @@ probe pristine-green      0 ""            ""
 probe dead-link           1 "DEAD-LINK"   mut_dead_link
 probe dead-link-ignored   1 "DEAD-LINK"   mut_dead_link_ignored
 probe dead-link-design    1 "DEAD-LINK"   mut_dead_link_design
-probe dead-link-archive   1 "DEAD-LINK"   mut_dead_link_archive
-probe dead-link-reports   1 "DEAD-LINK"   mut_dead_link_reports
 probe dead-link-docs      1 "DEAD-LINK"   mut_dead_link_docs
 probe dead-link-todo      1 "DEAD-LINK"   mut_dead_link_todo
 probe orphan              1 "ORPHAN"      mut_orphan
 probe frontmatter         1 "FRONTMATTER" mut_frontmatter
 probe format              1 "FORMAT"      mut_format
 probe baseline-ratchet    1 "BASELINE"    mut_baseline
-probe evolog              1 "EVOLOG"      mut_evolog
-probe evolog-index-drift  1 "EVOLOG"      mut_evolog_index_drift
 probe decision-no-alternatives   1 "DECISION" mut_decision_no_alternatives
 probe decision-status-mismatch   1 "DECISION" mut_decision_status_mismatch
 probe decision-spec-speak        1 "DECISION" mut_decision_spec_speak
@@ -438,9 +406,6 @@ probe index-layer-ok      0 ""            mut_index_layer_ok
 probe skill-ref-missing   1 "SKILL-REF"   mut_skill_ref_missing
 # 假阳性守卫:CLI 表里标「缺失」的工具名不是 skill,入口文件提到它不该红
 probe skill-ref-cli-ok    0 ""            mut_skill_ref_cli_ok
-probe todo-dated-star     1 "TODO-CLEAN"  mut_todo_dated_star
-probe todo-dated          1 "TODO-CLEAN"  mut_todo_dated
-probe todo-long           1 "TODO-CLEAN"  mut_todo_long
 # 假阳性守卫:围栏内的日期行/长行必须放行
 probe todo-fenced-ok      0 ""            mut_todo_fenced_ok
 probe progress-src        1 "PROGRESS-SRC" mut_progress_src
@@ -451,7 +416,6 @@ probe progress-fenced-ok  0 ""             mut_progress_fenced_ok
 probe retired             1 "RETIRED"      mut_retired
 # 假阳性守卫:带横幅的历史陈述必须放行,否则会逼人删掉真实的踩坑记录
 probe retired-banner-ok   0 ""             mut_retired_banner_ok
-probe live-fact           1 "LIVE-FACT"    mut_live_fact
 # 假阳性守卫:带实测日期的快照必须放行,否则这条规矩本身没法遵守
 probe live-fact-dated-ok  0 ""             mut_live_fact_dated_ok
 probe embed-stale         1 "EMBED"        mut_embed_stale

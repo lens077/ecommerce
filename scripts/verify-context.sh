@@ -5,7 +5,9 @@
 # verify-agent-note-format / verify-doc-budgets)移植,落地方式沿用本仓惯例:
 # 能判定的约束变成脚本,存量漂移走基线棘轮(见 scripts/lint-baseline.sh 的设计)。
 #
-# 十三项检查(任一违规 → 退出码 1;RETIRED、LIVE-FACT 两项在正文各自注释处说明):
+# 十项检查(任一违规 → 退出码 1;RETIRED 在正文注释处说明)。
+# 2026-09-17 删掉三项:[EVOLOG](编年史目录已删)、[TODO-CLEAN](日期行外迁)、
+# [LIVE-FACT](实测日期强制)——三者都在把内容往新文件里推,是文档只增不减的机制来源。
 #   [DEAD-LINK]    AGENTS.md/README.md/STACK.md/TODO.md 与 context/**、docs/** 全树的
 #                  相对 markdown 链接必须可达
 #                  (2026-08-26 扩:原只查 AGENTS+context,当日 README/STACK/docs/design
@@ -23,8 +25,6 @@
 #   [FORMAT]      experience/*.md 必须含「症状」与「关键陷阱/陷阱」小节
 #                  (格式定义见 context/harness-framework/knowledge-layering.md)
 #   [SKILL-REF]   AGENTS.md/runbook 不得要求执行 docs/agents/skills.md 登记为「缺失」的 skill
-#   [EVOLOG]      evolution-log/YYYY-MM.md 每条必须四要素齐全(改了什么/为什么/触发事故/怎么验证的);
-#                  evolution-log.md 的索引段必须与卷标题一致(脚本生成,不许手写)
 #   [DECISION]    context/decisions/ 决策记录:路径即状态(implemented/proposed/rejected),
 #                  文件名 YYYY-MM-DD-slug,frontmatter status 与目录一致;按状态要求的
 #                  小节齐全(格式见 context/decisions/INDEX.md);「考虑过的替代方案」必须
@@ -34,11 +34,11 @@
 #   [BUDGET]      AGENTS.md ≤ 13000 字节 —— 它每轮整份注入所有 AI 工具的上下文,
 #                  超限先把内容搬进 context/ 对应层,不要先提额度;
 #                  TODO.md ≤ 96000 字节 —— 每个提交回合都要读它,
-#                  超限把证据长文/会话记录按日期归档进 docs/progress-archive/
+#                  超限就删掉已完成项的过程记录(不再设归档目录)
 #   [PROGRESS-SRC] 复选框(`- [ ]`/`- [x]`)只允许长在 TODO 体系与不可变归档里
-#                  (TODO.md / docs/todo/ / progress-archive/ / reports/ /
+#                  (TODO.md /
 #                   .scratch/ / 围栏代码块内);别处出现即第二套进度视图,
-#                  与 TODO.md 必然漂移。2026-08-29 立此门禁,见 evolution-log 同日条目
+#                  与 TODO.md 必然漂移。2026-08-29 立此门禁
 #   [EMBED]       文档里标了 `<!-- embed: 源路径 选择器 -->` 的代码块必须与源码一致
 #                  (scripts/doc-embed.py --check;写法见该脚本头注释)。代码块是源码的
 #                  投影,真相源是源码:改了迁移/proto/Go 声明后跑 scripts/doc-embed.py
@@ -47,10 +47,10 @@
 #                  文档代码块,docs/design 下 5 个域的 DDL/proto 摘录名字都已对不上源码
 #   [AFFECTS]     context/**、docs/design/** 的 frontmatter `affects:`(反向依赖索引:改本文约束后
 #                  要回头核对的代码路径)每一项必须真实存在、不含 glob。指向已删路径的索引会让人
-#                  以为核对过了。查询工具 scripts/spec-impact.sh。2026-09-11 立,见 evolution-log
+#                  以为核对过了。查询工具 scripts/spec-impact.sh。2026-09-11 立
 #   [SELFCHECK]   .scratch/*/issues/*.md 标 `Status: done` 的实现单必须有「## 完成自检」,且每条
 #                  `- [x]`/`- [ ]` 带 `——` 后的证据或原因——「代码写完 = 完成」是最常见的假成功。
-#                  2026-09-11 立,见 evolution-log
+#                  2026-09-11 立
 #
 # 基线棘轮(两份):
 #   scripts/context-format-baseline.txt   —— [FORMAT] 的存量违规冻结放行
@@ -244,32 +244,7 @@ if [ -f "$baseline_file" ]; then
   done < "$baseline_file"
 fi
 
-# ── 5. evolution-log 四要素 + 索引一致 ───────────────────────
-# 2026-09-16 起按月分卷:条目在 context/harness-framework/evolution-log/YYYY-MM.md,
-# evolution-log.md 只剩「解决什么/写法」+ 脚本生成的索引。四要素逐卷查;索引手写必漂移,
-# 故只比对不放行:与卷标题不一致、或条目放错卷 → 红,修法是跑 scripts/evolution-log-index.py --write。
-evolog_dir="context/harness-framework/evolution-log"
-[ -d "$evolog_dir" ] || fail "EVOLOG" "$evolog_dir 不存在——分卷目录被删?"
-while IFS= read -r vol; do
-  while IFS= read -r title; do
-    block=$(awk -v t="$title" '
-      $0 == t {on=1; next}
-      /^### / {if (on) exit}
-      on {print}' "$vol")
-    for req in "改了什么" "为什么" "触发事故" "怎么验证的"; do
-      printf '%s\n' "$block" | grep -q "\*\*$req\*\*" || \
-        fail "EVOLOG" "$(basename "$vol")「${title#\#\#\# }」缺 **$req**(四要素缺一不可)"
-    done
-  done < <(grep '^### ' "$vol")
-done < <(find "$evolog_dir" -name "*.md" -type f | sort)
-if [ -f scripts/evolution-log-index.py ]; then
-  # 退出码只用输出承载:set -e -o pipefail 下 --check 的 rc=1 会让整条管道提前中止,违规还没打印就退出
-  { python3 scripts/evolution-log-index.py --check 2>&1 || true; } | while IFS= read -r line; do
-    fail "EVOLOG" "$line"
-  done
-else
-  fail "EVOLOG" "scripts/evolution-log-index.py 不存在,索引无法核对"
-fi
+# ── 5. (已删除) evolution-log 四要素 —— 2026-09-17 随编年史目录一并移除
 
 # ── 5.5 决策记录格式 ─────────────────────────────────────────
 # evolution-log 是**编年史**(改了什么/触发事故/怎么验证的,按日期追加,永不改写);
@@ -384,39 +359,17 @@ fi
 # ── 6.5 TODO.md 预算 ─────────────────────────────────────────
 # 硬规则 #3 要求涉及 TODO 项的提交先更新 TODO.md,它因此在多数提交回合都被读入/回写。
 # 2026-08-21 它膨胀到 199KB(验收证据长文+会话记录堆积),瘦身后立此门禁。
-# 超限的处理不是提额度,而是把非活跃内容(已完成项的证据长文、会话记录)
-# 按日期归档到 docs/progress-archive/(不可变历史,非并行真相源),TODO.md 留链接。
-todo_budget=96000
+# 2026-09-17 docs/todo/ 九份明细合并进来(+117KB),额度相应上调到 160KB。
+# 超限的处理是**删掉**已完成项的过程记录,不是再开一个归档目录——
+# docs/progress-archive/ 已于 2026-09-17 删除,不要重建。
+todo_budget=160000
 todo_size=$(wc -c < TODO.md | tr -d ' ')
 if [ "$todo_size" -gt "$todo_budget" ]; then
-  fail "BUDGET" "TODO.md ${todo_size}B > ${todo_budget}B——每个提交回合都要读它,把证据长文/会话记录归档进 docs/progress-archive/,别先提额度"
+  fail "BUDGET" "TODO.md ${todo_size}B > ${todo_budget}B——每个提交回合都要读它,删掉已完成项的过程记录,别先提额度"
 fi
 
-# ── 6.6 TODO.md 干净度 ───────────────────────────────────────
-# 字节预算只能拦「太大」,拦不住「装错东西」:2026-09-16 实测 TODO.md 82KB 仍在预算内,
-# 但「全局优先级视图」堆了 25 条 `2026-xx-xx 做了什么` 的流水账,「现状对照」单个表格
-# 单元格长到 2000+ 字节的处置记录——它们是 changelog 和证据,不是 TODO 项。
-# TODO.md 只记 TODO 项及其状态;做了什么、实测数字、处置过程进 docs/progress-archive/。
-# 两条机械判据(围栏外):① 行首是日期——流水账的形态;② 单行 > 600 字节——证据长文的形态
-# (表格行也算,一行就是一个单元格的容器)。
-# 围栏由 awk 自己跟踪:用 _strip_fences 会让行号按剥离后的流计数,TODO.md 一旦出现代码块
-# 提示的行号就与原文错位。日期形态放宽到 markdown 的各种项目符号与标题,首版只认 `- `,
-# 实测 `* 2026-…`、`1. 2026-…`、`### 2026-09-16 …`(整节流水账最典型的形态)全部放行。
-# LC_ALL=C 锁死字节口径:macOS awk 的 length 按字节,CI 的 gawk 在 UTF-8 locale 下按字符——
-# 同一条 600 的阈值在两边差 3 倍(中文)。判据必须两边同义,否则本地绿 CI 绿但拦的不是一回事。
-LC_ALL=C awk '
-  /^[ \t]*```/ { fence = !fence; next }
-  fence { next }
-  /^[ \t]*(\|[ \t]*|[-*+][ \t]+|\[[ x]\][ \t]*|[0-9]+[.)][ \t]+|#{1,6}[ \t]+|>[ \t]*)*(\*\*)?20[0-9][0-9]-[0-9][0-9]-[0-9][0-9]/ {
-    printf "%d|dated\n", NR; next
-  }
-  length($0) > 600 { printf "%d|long\n", NR }
-' TODO.md | while IFS='|' read -r ln kind; do
-  case "$kind" in
-    dated) fail "TODO-CLEAN" "TODO.md:${ln} 以日期开头——流水账不进 TODO.md,写进 docs/progress-archive/ 当月 progress-log" ;;
-    long)  fail "TODO-CLEAN" "TODO.md:${ln} 单行超过 600 字节——证据/处置记录不进 TODO.md,留一句缺口 + 链接,原文归档" ;;
-  esac
-done
+# ── 6.6 (已删除) TODO.md 干净度 —— 2026-09-17 取消「日期行/长行必须外迁」,
+#        它把过程记录挤进 docs/progress-archive/,是文档只增不减的主要来源之一。
 
 # ── 7. 并行进度源(复选框只允许长在 TODO 体系里)───────────────
 # AGENTS.md 反直觉约定:进度真相源是 TODO.md(唯一)。任何别处的 `- [ ]`/`- [x]`
@@ -424,9 +377,7 @@ done
 # 自己长出 19 个复选框且已漂移(P1/P2 各勾一项,P0 九项全空,与真实进度不符)。
 #
 # 放行的位置各有理由:
-#   TODO.md / docs/todo/**            —— 进度真相源本体与其分类明细
-#   docs/progress-archive/**          —— 不可变历史,顶部自带失效声明
-#   docs/reports/**                   —— 带日期的一次性证据
+#   TODO.md                           —— 进度真相源本体(含分类明细)
 #   .scratch/**                       —— issue/spec 工作区(docs/agents/issue-tracker.md)
 #   围栏代码块内                       —— 给新项目用的模板占位符(SCAFFOLD.md 就是这种)
 progress_baseline="scripts/context-progress-baseline.txt"
@@ -453,7 +404,7 @@ count_checkboxes() {
 
 progress_allowed() { # 该路径是否豁免
   case "$1" in
-    TODO.md|docs/todo/*|docs/progress-archive/*|docs/reports/*) return 0 ;;
+    TODO.md) return 0 ;;
     .scratch/*|.impeccable/*|*/.impeccable/*) return 0 ;;
     */node_modules/*) return 0 ;;
   esac
@@ -467,7 +418,7 @@ while IFS= read -r file; do
   base=$(awk -v p="$rel" '$1==p {print $2; exit}' "$progress_baseline" 2>/dev/null || true)
   if [ -z "$base" ]; then
     [ "$n" -gt 0 ] && fail "PROGRESS-SRC" \
-      "$rel 有 ${n} 个复选框——进度真相源只有 TODO.md,明细写进 docs/todo/(存量请登记 ${progress_baseline})"
+      "$rel 有 ${n} 个复选框——进度真相源只有 TODO.md(存量请登记 ${progress_baseline})"
   elif [ "$n" -gt "$base" ]; then
     # ${n} 必须带花括号:后面紧跟全角「——」时,bash 3.2 在 UTF-8 locale 下会把
     # 多字节首字节并进变量名,报 `n?: unbound variable`(canary 首跑当场抓到)。
@@ -503,7 +454,7 @@ fi
 #   SeaweedFS                   对象存储目标已撤销,定稿为 Silo(docs/TECH.md §7.1)
 #
 # 判定:命中行的 ±2 行窗口内、或文件前 10 行(整篇免责横幅)内出现横幅词即放行。
-# 只扫**活跃**文档;docs/progress-archive/ 与 docs/reports/ 按定义就是历史,不扫。
+# 只扫活跃文档(归档目录已于 2026-09-17 删除)。
 while IFS= read -r file; do
   awk -v F="$file" '
     BEGIN{
@@ -524,58 +475,10 @@ done < <(find context docs/design docs/observability -name "*.md" -type f) | whi
   fail "RETIRED" "${hit} 提到已退役组件却无「存量/已退役/历史」等横幅——读者会照着死链路操作"
 done
 
-# ── 9. 运行时观测值必须带实测日期 ────────────────────────────
-# 集群数字写进文档的那一刻都是对的,然后安静地变错——读者无法区分
-# 「结构事实」与「某一刻的快照」。2026-08-29 实测到三种坏法同时存在:
-#   写错  —— AGENTS.md 说「集群实跑 :dev」,实际 5 种 tag 并存、无一个 :dev
-#   过期  —— 文档记的 8/4/5,健康态其实是 5/6/6
-#   故障态被当稳态 —— 8/4/5 是 scheduler 崩溃期间的快照,不是文档过期
-#
-# 对策不是删掉数字(它们解释了很多决策,且删了挡不住下一个 agent 重新写回),
-# 而是**强制标注观测时点**:耐久内容是「不变量 + 查法」,数字降级为带日期的注解。
-# 写法与三层分类见 context/team/live-facts.md。
-#
-# 只认三类低歧义的观测值,宁可漏报不可误报(误报会让人关掉门禁):
-#   分布      5/6/6 且同行有集群语境词(排除 node101/102/103 这类节点名列表)
-#   就绪计数  4/4 Running(排除 1/1 —— 那几乎总是「单副本健康」的通用示例)
-#   镜像 tag  sha-xxxxxxx
-# 放行:同行/±2 行、或最近的上级标题里出现「实测|实况|快照|观测」+ YYYY-MM-DD。
-# 不扫:reports/ progress-archive/ 选型对抗/(按定义就是带日期的历史)、
-#      evolution-log(每条自带 ### 日期)、TECH-RADAR(自述历史存档)、
-#      experience/(踩坑记录里的数字是症状举例,不是集群观测)。
-while IFS= read -r file; do
-  awk -v F="$file" '
-    BEGIN{
-      V1="(^|[^0-9/])[0-9]{1,2}/[0-9]{1,2}/[0-9]{1,2}([^0-9/]|$)"
-      CTX1="分布|skew|node10|Pod|副本"
-      V2="([2-9][0-9]*|[0-9]{2,})/[0-9]+ *(Ready|Running)"
-      V3="sha-[0-9a-f]{7}"
-      DATE="20[0-9][0-9]-[0-9][0-9]-[0-9][0-9]"
-      WORD="实测|实况|快照|观测"
-    }
-    { n++; L[n]=$0; if ($0 ~ /^#{1,6} /) H[n]=1 }
-    function dated(s){ return (s ~ DATE && s ~ WORD) }
-    END{
-      for(i=1;i<=n;i++){
-        l=L[i]; hit=""
-        if (l ~ V1 && l ~ CTX1) hit="分布"
-        else if (l ~ V2) hit="就绪计数"
-        else if (l ~ V3) hit="镜像tag"
-        if (hit=="") continue
-        ok=0
-        lo=(i-2<1?1:i-2); hi=(i+2>n?n:i+2)
-        for(j=lo;j<=hi;j++) if (dated(L[j])) ok=1
-        if (!ok) for(k=i;k>=1;k--) if (H[k]) { if (dated(L[k])) ok=1; break }
-        if (!ok) printf "%s:%d|%s\n", F, i, hit
-      }
-    }' "$file"
-#      live-facts.md 自身(它是**定义这条规则**的文档,必须引用 5/6/6、4/4 Running
-#      这些模式做示例——与 verify-context-canary.sh 故意内含坏样本同理)。
-done < <(find AGENTS.md README.md STACK.md TODO.md context docs -name "*.md" -type f \
-         | grep -vE 'docs/(progress-archive|reports)/|evolution-log(\.md|/)|TECH-RADAR\.md|/experience/|context/team/live-facts\.md') \
-| while IFS='|' read -r loc kind; do
-  fail "LIVE-FACT" "${loc} 的${kind}是某一刻的观测值却无实测日期——写法见 context/team/live-facts.md"
-done
+# ── 9. (已删除) 运行时观测值必须带实测日期 —— 2026-09-17 取消。
+#        它要求每个集群数字都拖一个「实测 YYYY-MM-DD」,数字一写就过期、
+#        只能再补新的,是日期文档的直接来源。代价:集群数字会静默过期,
+#        改为在 live-facts.md 用口头约定而非 CI 阻断。
 
 # ── [EMBED] 受管代码块与源码一致 ─────────────────────────────
 # 脚本自己按 git ls-files 找指令、解析、比对;这里只把它的 stderr 逐行转成违规。
@@ -597,7 +500,7 @@ fi
 #   affects:
 #     - backend/api
 #     - backend/structcheck/rpc_method_test.go
-# 2026-09-11 立此检查,见 evolution-log 同日条目。
+# 2026-09-11 立此检查
 while IFS= read -r file; do
   [ "$(head -1 "$file")" = "---" ] || continue
   fm=$(awk 'NR==1{next} /^---$/{exit} {print}' "$file")
@@ -624,7 +527,7 @@ done < <(find context docs/design -name "*.md" ! -name "INDEX.md" -type f 2>/dev
 # 且其下每条 `- [x]` / `- [ ]` 都要带 `——` 后的证据或原因(格式见 docs/agents/issue-tracker.md)。
 # 「写完代码 = 任务完成」是 AI 交付最常见的假成功;自检行没有证据等于没自检。
 # wayfinder 的研究类子单(Type: research/prototype/grilling,用 resolved 关单)不在此列。
-# 2026-09-11 立此检查,见 evolution-log 同日条目。
+# 2026-09-11 立此检查
 while IFS= read -r file; do
   grep -qE '^Status:[[:space:]]*done[[:space:]]*$' "$file" || continue
   if ! grep -qE '^## 完成自检' "$file"; then
@@ -651,4 +554,4 @@ if [ -s "$violations" ]; then
   cat "$violations"
   exit 1
 fi
-echo "verify-context: OK(链接/INDEX 覆盖/frontmatter/experience 格式/evolution-log/决策记录/预算/并行进度源/退役物横幅/实测日期/受管代码块/affects 索引/完成自检 全部通过)"
+echo "verify-context: OK(链接/INDEX 覆盖/frontmatter/experience 格式/决策记录/预算/并行进度源/退役物横幅/受管代码块/affects 索引/完成自检 全部通过)"
