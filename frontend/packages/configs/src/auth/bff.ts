@@ -59,11 +59,22 @@ export const fetchIdentity = async (): Promise<BffIdentity> => {
   }
 };
 
-/** 发起登录。必须整页跳转——OAuth 是 302 链，fetch 跟不了。 */
+/** 发起登录。必须整页跳转——OAuth 是 302 链，fetch 跟不了。
+ *
+ *  ⚠️ redirect 必须是**绝对地址**，不能传相对路径。网关的 redirectAllowed() 放行
+ *  任何以 `/` 开头的目标，回调末尾又直接 `http.Redirect(w, r, sp.Redirect)` ——
+ *  相对路径会按**网关自己的源**解析。生产上前端在 shop.apikv.com、网关在
+ *  gateway.apikv.com，传 `/cart` 登完就落到 `gateway.apikv.com/cart`（404）。
+ *  dev 里两者靠 vite proxy 同源，所以这个坑在本地永远不显形。
+ *
+ *  只取 pathname/search/hash 再拼回本站源：调用方传进来什么都跳不出本源，
+ *  客户端这一侧的开放重定向面一并关死（网关侧仍有白名单复验，两层都留着）。 */
 export const startBffLogin = (
   redirectTo: string = window.location.pathname + window.location.search,
 ): void => {
-  window.location.assign(`${bffBase()}/auth/login?redirect=${encodeURIComponent(redirectTo)}`);
+  const parsed = new URL(redirectTo, window.location.origin);
+  const target = `${window.location.origin}${parsed.pathname}${parsed.search}${parsed.hash}`;
+  window.location.assign(`${bffBase()}/auth/login?redirect=${encodeURIComponent(target)}`);
 };
 
 /** 桌面端（Tauri）登录地址：native 模式让网关把会话 id 经**回环回调**交回原生层，

@@ -25,6 +25,8 @@ const PASS = process.env.CASDOOR_PASS;
 const HEADED = process.argv.includes("--headed");
 const SHOP = (process.env.SHOP_URL || "https://shop.apikv.com").replace(/\/$/, "");
 const CASDOOR = (process.env.CASDOOR_URL || "https://casdoor.apikv.com").replace(/\/$/, "");
+// 网关源。BFF 迁移后 OAuth 由网关发起，redirect_uri 指向它而不是前端（见第 3 步）。
+const GATEWAY = (process.env.GATEWAY_URL || "https://gateway.apikv.com").replace(/\/$/, "");
 const ARTIFACT_DIR = process.env.E2E_ARTIFACT_DIR || "/tmp";
 
 if (!USER || !PASS) {
@@ -106,22 +108,32 @@ try {
   await page.waitForFunction((c) => location.origin === c, CASDOOR, { timeout: 30000 });
   ok("点登录后跳到了 Casdoor");
 
-  // 3) PKCE 参数断言
+  // 3) 授权参数断言。
+  //
+  // ⚠️ BFF 迁移（control-tower ADR-0002）之后，授权 URL 由**网关**拼，不再是前端的
+  //    PKCE 公开客户端 —— 原先那条 `code_challenge_method === "S256"` 已经不成立：
+  //    网关是机密客户端，用 client_secret 在服务端换令牌，授权 URL 里本就没有 PKCE 参数。
+  //
+  // redirect_uri 必须指向**网关**的 /auth/callback。它来自网关的 BFF_PUBLIC_BASE_URL，
+  // 配错就是整条登录断掉，而且只在真实部署上显形：2026-09-20 实测线上是
+  // `http://localhost:3000/auth/callback`（集群里跑的是 dev 值），Casdoor 回跳直接
+  // 把用户送去本机 3000 端口。本断言原先写的是 `${SHOP}/callback`（迁移前的前端回调），
+  // 恰好也对不上真相 —— 两处都错，于是这个坑没有任何一层拦得住。
   const q = new URL(page.url()).searchParams;
   assert(
-    q.get("code_challenge_method") === "S256",
-    `PKCE: S256 + ${(q.get("code_challenge") || "").slice(0, 10)}…`,
-    `code_challenge_method=${q.get("code_challenge_method")}，期望 S256`,
+    q.get("redirect_uri") === `${GATEWAY}/auth/callback`,
+    `redirect_uri = ${q.get("redirect_uri")}`,
+    `redirect_uri = ${q.get("redirect_uri")}，期望 ${GATEWAY}/auth/callback`,
   );
   assert(
     !q.get("client_secret"),
     "授权 URL 无 client_secret",
-    "授权 URL 里出现 client_secret（公开客户端绝不该有）",
+    "授权 URL 里出现 client_secret（浏览器可见的 URL 绝不该有）",
   );
   assert(
-    (q.get("redirect_uri") || "").startsWith(`${SHOP}/callback`),
-    `redirect_uri = ${q.get("redirect_uri")}`,
-    `redirect_uri = ${q.get("redirect_uri")}`,
+    (q.get("state") || "").length >= 16,
+    `state 长度 ${(q.get("state") || "").length}（随机、非固定值）`,
+    `state = ${q.get("state")}，太短或缺失 —— CSRF 防护形同虚设`,
   );
 
   // 4) 填表登录。Casdoor 的表单是 antd 渲染的，用 id 最稳。
