@@ -52,6 +52,23 @@ context-gate:
     # 门禁的元评测:注错断言门禁还会红,防恒绿失效(与 GitHub 侧同款)。
     - bash ./scripts/verify-context-canary.sh
 
+# Repowise 只读索引 + 文档漂移棘轮。独立 job 使用 glibc Python，避免 Alpine
+# 上 tree-sitter / LanceDB 二进制 wheel 退回本地编译；配置与 GitHub 侧一致。
+repowise-gate:
+  stage: test
+  image: python:3.13-slim
+  variables:
+    GIT_DEPTH: 0
+  before_script:
+    - apt-get update
+    - apt-get install -y --no-install-recommends git ca-certificates
+    - rm -rf /var/lib/apt/lists/*
+    - python -m pip install --disable-pip-version-check "uv==0.12.17"
+    - uv sync --project tools/repowise --locked
+  script:
+    - export PATH="$CI_PROJECT_DIR/tools/repowise/.venv/bin:$PATH"
+    - DO_NOT_TRACK=1 REPOWISE_TELEMETRY_DISABLED=1 REPOWISE_SKIP_EDITOR_SETUP=1 REPOWISE_NO_SAVE_KEY=1 bash scripts/verify-repowise.sh
+
 # 凭据门禁:gitleaks 扫全部历史,与 GitHub context-gate.yml 的 gitleaks job 等价。
 # 触发事故 2026-09-02(见 evolution-log):public 仓历史里有 PG root 弱口令等,已重写强推。
 # GIT_DEPTH: 0 必须——GitLab 默认浅克隆(20),浅历史扫描等于没扫。

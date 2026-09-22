@@ -40,5 +40,8 @@ newt_*
 
 # Python 字节码缓存（scripts/ 下的运维脚本）
 __pycache__/
+# Repowise 本地索引与隔离工具环境，不是仓库事实
+.repowise/
+tools/repowise/.venv/
 # vitest/playwright 运行产物
 frontend/test-results/

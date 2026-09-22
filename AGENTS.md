@@ -102,6 +102,7 @@ scripts/verify-kyaml.sh && scripts/verify-deploy-parity.sh  # 改部署清单后
 cd backend && go test -short ./...               # 后端测试(CI 用 -short)
 cd frontend && pnpm ready                        # 前端 lint+fmt+类型+test
 scripts/verify-context.sh                        # 改 context/、docs/design、README/STACK 或本文件后必跑
+scripts/verify-repowise.sh                        # 代码图可解析的文档引用漂移棘轮（固定版本、无 LLM）
 scripts/verify-context-canary.sh                 # 改 ↑ 门禁脚本本身后必跑:注错断言门禁还会红
 ```
 
