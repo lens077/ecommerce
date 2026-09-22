@@ -20,7 +20,7 @@ Golang + React 的 B2B2C 多商家电商实践项目：10 个后端微服务、c
 | 后端      | Go、ConnectRPC Go、Protobuf/Buf、Protovalidate、Fx、pgx、sqlc、goose、OpenTelemetry                                                                                                                                                                                                                      |
 | 前端      | React、TypeScript、ConnectRPC/Protobuf-ES、pnpm workspace、vite-plus（vp）、Tauri                                                                                                                                                                                                                        |
 | 网关/配置 | [control-tower](https://github.com/lens077/control-tower)：Casdoor 有状态 Session（BFF）、Connect 直通（H2C）、Config Center；目标按 [`docs/TECH.md`](docs/TECH.md) 以 OpenFGA 关系授权取代存量 Casbin、移除 legacy JWT 兼容轨；默认无重试、无 BBR/熔断/HTTP/3                                           |
-| 数据      | node3 Pigsty PostgreSQL（Patroni HA + PgBouncer，UUIDv7 主键）、Dragonfly（分实例：Session/Cache/限流，业务可丢缓存 + BFF session）、Silo（基于 MinIO）；search 已通过 `SearchCatalog` 读取 Elasticsearch 稳定 alias，策展投影由 `products.search_catalog` 经 Debezium → Kafka → Elasticsearch Sink 搬运 |
+| 数据      | 集群内 CloudNativePG PostgreSQL（`postgresql` ns 的 `Cluster/pg-main`，Operator 在 `cnpg-system`；UUIDv7 主键；node3 Pigsty 已于 2026-09-22 退役）、Dragonfly（分实例：Session/Cache/限流，业务可丢缓存 + BFF session）、Silo（基于 MinIO）；search 已通过 `SearchCatalog` 读取 Elasticsearch 稳定 alias，策展投影由 `products.search_catalog` 经 Debezium → Kafka → Elasticsearch Sink 搬运 |
 | 事件      | 主干定稿为外部非 K8s Apache Kafka；领域事件目标链为 PostgreSQL Outbox → Debezium Outbox Event Router → Kafka → Inbox 幂等 + DLQ，当前零业务生产者/消费者                                                                                                                                                 |
 | 注册/配置 | 服务发现定稿 K8s Service + CoreDNS；pre 半生产测试走 Docker Compose 服务名，开发内环（mirrord/Okteto）评估中；Consul 为存量迁移期组件；Config Center 是 10 个服务唯一 Bootstrap 来源                                                                                                                     |
 | 边缘/安全 | Cilium CNI/KPR/LB/Gateway API、cert-manager、OpenBao；业务服务的默认拒绝 NetworkPolicy 和 east-west 身份仍不完整                                                                                                                                                                                         |
@@ -79,7 +79,7 @@ Golang + React 的 B2B2C 多商家电商实践项目：10 个后端微服务、c
 
 1. Go：版本以 `backend/go.mod` 的 `go` 指令为准（数字不在此复制，防漂移；网关在同级仓 control-tower）
 2. 前端：Node.js >= 22、pnpm 11
-3. 数据库：PostgreSQL 18（当前主库由 node3 Pigsty 承载）；Dragonfly 用于业务可丢缓存和 control-tower BFF session。领域锁、幂等键与库存真相必须锚定 PostgreSQL
+3. 数据库：PostgreSQL 18，集群内 CloudNativePG 承载（`pg-main-rw.postgresql.svc:5432`，拓扑见 [`docs/TECH.md`](docs/TECH.md) §7.1）；Dragonfly 用于业务可丢缓存和 control-tower BFF session。领域锁、幂等键与库存真相必须锚定 PostgreSQL
 4. 注册/发现：Consul（**定稿退役 → K8s Service + CoreDNS，开发环境 Docker Compose 服务名**，见 [`docs/TECH.md`](docs/TECH.md) §10.2；四步迁移见 TODO；迁移完成前运行仍需）
 
 配置中心（同级仓 [control-tower](https://github.com/lens077/control-tower) 的 config 服务）是
