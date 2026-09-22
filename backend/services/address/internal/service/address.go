@@ -24,10 +24,15 @@ func NewAddressService(uc *biz.AddressUseCase) addressv1connect.AddressServiceHa
 }
 
 func (s *AddressService) CreateAddress(ctx context.Context, c *connect.Request[v1.CreateAddressRequest]) (*connect.Response[v1.CreateAddressResponse], error) {
+	userID, err := uuid.Parse(c.Header().Get(constants.UserIdMetadataKey))
+	if err != nil {
+		return nil, connect.NewError(connect.CodeUnauthenticated, fmt.Errorf("invalid authenticated user id"))
+	}
+
 	result, err := s.uc.CreateAddress(ctx, biz.CreateAddressRequest{
 		RecipientName:  c.Msg.RecipientName,
 		RecipientPhone: c.Msg.RecipientPhone,
-		UserID:         c.Msg.UserId,
+		UserID:         userID.String(),
 		Detail: &biz.AddressDetail{
 			Province:   c.Msg.Detail.Province,
 			City:       c.Msg.Detail.City,

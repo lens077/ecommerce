@@ -103,8 +103,8 @@ func (c cartRepo) GetCart(ctx context.Context, req biz.GetCartRequest) (*biz.Get
 			ID:              row.ID,
 			MerchantId:      row.MerchantID,
 			ShopName:        row.ShopName,
-			SpuId:           uint64(row.SpuID),
-			SkuId:           uint64(row.SkuID),
+			SpuId:           row.SpuID,
+			SkuId:           row.SkuID,
 			Quantity:        uint32(row.Quantity),
 			Selected:        row.Selected,
 			SpuName:         row.SpuName,
@@ -156,7 +156,7 @@ func (c cartRepo) AddProductToCart(ctx context.Context, req biz.AddProductToCart
 
 	return &biz.AddProductToCartResponse{
 		CartItemQuantity: int32(row.CartItemQuantity),
-		CartItemId:       uint64(row.CartItemID),
+		CartItemId:       row.CartItemID,
 	}, nil
 }
 

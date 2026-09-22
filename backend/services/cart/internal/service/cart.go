@@ -155,7 +155,7 @@ func (cs *CartService) GetCart(ctx context.Context, c *connect.Request[v1.GetCar
 			}
 		}
 		items = append(items, &v1.CartItem{
-			CartItemId:      uint64(item.ID),
+			CartItemId:      item.ID,
 			SpuId:           item.SpuId,
 			SkuId:           item.SkuId,
 			MerchantId:      item.MerchantId.String(),

@@ -15,8 +15,8 @@ type (
 	AddProductToCartRequest struct {
 		CustomerId      uuid.UUID
 		MerchantId      uuid.UUID
-		SpuID           uint64
-		SkuID           uint64
+		SpuID           int64
+		SkuID           int64
 		Quantity        uint32
 		Selected        bool
 		SpuName         string
@@ -29,7 +29,7 @@ type (
 
 	AddProductToCartResponse struct {
 		CartItemQuantity int32
-		CartItemId       uint64 // 新增/更新的购物车项ID（前端下单需要真实ID）
+		CartItemId       int64 // 新增/更新的购物车项ID（前端下单需要真实ID）
 	}
 )
 type (
@@ -52,8 +52,8 @@ type (
 	UpdateCartItemQuantityRequest struct {
 		CustomerId uuid.UUID
 		MerchantId uuid.UUID
-		SpuId      uint64
-		SkuId      uint64
+		SpuId      int64
+		SkuId      int64
 		Quantity   uint32
 		Status     constants.CartStatusEnum
 	}
@@ -66,8 +66,8 @@ type CartItem struct {
 	ID              int64
 	MerchantId      uuid.UUID
 	ShopName        string
-	SpuId           uint64
-	SkuId           uint64
+	SpuId           int64
+	SkuId           int64
 	Quantity        uint32
 	Selected        bool
 	SpuName         string
