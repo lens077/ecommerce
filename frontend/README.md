@@ -16,16 +16,18 @@ frontend/
 
 ### apps
 
-| app        | 端口 | 说明                                                  | 启动                |
-| ---------- | ---- | ----------------------------------------------------- | ------------------- |
-| `consumer` | 3000 | 消费者端：商品、购物车、下单、地址、订单              | `pnpm dev`          |
-| `merchant` | 3002 | 商家端：店铺、商品、订单、报表                        | `pnpm dev:merchant` |
-| `admin`    | 3003 | 管理端：用户、商家、品类、报表                        | `vp run admin#dev`  |
-| `desktop`  | —    | Tauri 壳，按配置文件套在 consumer / merchant 之一外面 | `pnpm desktop`      |
+| app             | 端口 | 说明                                                  | 启动                                         |
+| --------------- | ---- | ----------------------------------------------------- | -------------------------------------------- |
+| `consumer`      | 3000 | 消费者端：商品、购物车、下单、地址、订单              | `pnpm dev`                                   |
+| `merchant`      | 3002 | 商家端：店铺、商品、订单、报表                        | `pnpm dev:merchant`                          |
+| `admin`         | 3003 | 管理端：用户、商家、品类、报表                        | `vp run admin#dev`                           |
+| `consumer-next` | 3004 | Next.js 消费者端；独立于 Vite consumer app            | `pnpm --filter @ecommerce/consumer-next dev` |
+| `desktop`       | —    | Tauri 壳，按配置文件套在 consumer / merchant 之一外面 | `pnpm desktop`                               |
 
-`desktop` 不是第五个前端，它只是 Rust 侧的窗口 + 系统能力，页面仍然来自
+workspace 当前有 5 个 app。`desktop` 不是独立的页面应用，而是 Rust 侧的窗口 + 系统能力，页面仍然来自
 `consumer` / `merchant` 的 dev server（config app 已随配置中心迁出）。所以这两个 app 的
 `server.strictPort` 必须是 `true`：端口被占时要报错，不能静默换号，否则壳会连到一个空窗口。
+`consumer-next` 使用 Next.js 独立构建和运行，不参与 Vite consumer app 的 dev server。
 
 ### packages
 
@@ -34,7 +36,10 @@ frontend/
 | `api`       | Connect 传输层：transport、拦截器（认证/日志）、错误归一化          |
 | `configs`   | 跨端共享的静态配置（Casdoor 等）                                    |
 | `constants` | 跨端共享的枚举与常量（订单状态、搜索字段）                          |
+| `copilot`   | 页内智能助手：固定句式转页面动作，并在页面内引导操作                |
 | `i18n`      | i18next 实例、语言探测、格式化、共享 locales                        |
+| `icons`     | 跨端共享的 React 图标组件                                           |
+| `lantern`   | 商品展示和设计演示所需的共享模型、token 与素材                      |
 | `perf`      | Web Vitals / 长任务 / 接口耗时采集，经网关 `telemetry.v1` 上报      |
 | `tauri`     | 桌面端专属胶水：环境探测、Rust 侧 fetch、本地设置、OAuth 子窗口桥接 |
 | `tracker`   | 浏览行为埋点，上报给 behavior 服务喂给 gorse                        |
@@ -46,7 +51,7 @@ frontend/
 
 ## app 内部的四层
 
-这张表是从旧单体前端沿用下来的，四个 app 都按它组织：
+这张表是从旧单体前端沿用下来的，适用于 `consumer`、`merchant` 和 `admin`：`desktop` 是 Rust 壳，不适用这套目录；`consumer-next` 使用 Next.js 的 `app/` 目录。
 
 | 目录        | 职责                                | 存活周期                           | 能否持有状态？                                    |
 | ----------- | ----------------------------------- | ---------------------------------- | ------------------------------------------------- |
@@ -64,10 +69,15 @@ frontend/
 ## 命令
 
 ```bash
-pnpm i           # 安装；prepare 会跑 vp config 装 git 钩子
-pnpm dev         # consumer
-pnpm ready       # vp fmt && vp lint && vp run -r test && vp run -r build，提 PR 前跑它
+pnpm i             # 安装；prepare 会跑 vp config 装 git 钩子
+pnpm dev           # consumer，端口 3000
+vp run -r build    # 构建 admin、consumer、consumer-next、merchant；desktop 需单独构建
+pnpm ready         # vp fmt && vp lint && vp run -r test && vp run -r build，提 PR 前跑它
 ```
+
+根目录没有 `build` script，因此不要在 `frontend/` 直接运行 `pnpm build`；全仓 Web 构建使用 `vp run -r build`。
+`desktop` 不参与这个递归任务，按目标平台单独运行 `pnpm --filter @ecommerce/desktop build:consumer` 或
+`pnpm --filter @ecommerce/desktop build:merchant`。
 
 单独跑某个包的任务用 `vp run <包名>#<任务>`，全仓递归用 `vp run -r <任务>`。
 注意 `-r` 要放在任务名**前面**，`vp run test -r` 会报 `Task "test" not found`。

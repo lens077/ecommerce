@@ -138,24 +138,27 @@ Web login establishes an httpOnly cookie session via `/auth/login → Casdoor �
 
 ### Frontend
 
-`frontend/` is a pnpm workspace monorepo with 4 apps + 9 shared packages.
-Structure, package-splitting principles, the four-layer directory responsibilities, and toolchain details are in [`frontend/README.md`](frontend/README.md).
+`frontend/` is a pnpm workspace monorepo with 5 apps + 12 shared packages.
+Structure, package-splitting principles, the app directory responsibilities, and toolchain details are in [`frontend/README.md`](frontend/README.md).
 
 | app        | Port | Notes                                     | Start                |
 | ---------- | ---- | ----------------------------------------- | -------------------- |
 | `consumer` | 3000 | Products / cart / address partially usable; the order / payment / inventory loop is not complete | `pnpm dev` |
 | `merchant` | 3002 | Merchant routes and login shell; very little business API wiring | `pnpm dev:merchant` |
 | `admin` | 3003 | Admin routes and login shell; very little business API wiring | `vp run admin#dev` |
+| `consumer-next` | 3004 | Next.js consumer app; runtime verification is separate from the Vite consumer app | `pnpm --filter @ecommerce/consumer-next dev` |
 | `desktop` | — | Tauri 2 shell that can wrap consumer or merchant | `pnpm desktop` / `pnpm desktop:merchant` |
 
-Shared packages: `api` (Connect transport and interceptors), `configs`, `constants`, `i18n`,
-`perf` (Web Vitals performance monitoring), `tauri` (desktop glue), `tracker` (behavior tracking), `ui`, `utils`.
+Shared packages: `api` (Connect transport and interceptors), `configs`, `constants`, `copilot`,
+`i18n`, `icons`, `lantern`, `perf` (Web Vitals performance monitoring), `tauri` (desktop glue),
+`tracker` (behavior tracking), `ui`, `utils`. The full package table is in [`frontend/README.md`](frontend/README.md).
 
 ```bash
 cd frontend
 pnpm i        # prepare runs vp config to install git hooks (core.hooksPath points to frontend/.vite-hooks/_)
-pnpm dev      # consumer, port 3000
-pnpm ready    # vp fmt && vp lint && vp run -r test && vp run -r build; run it before opening a PR
+pnpm dev             # consumer, port 3000
+vp run -r build      # build admin, consumer, consumer-next, and merchant; desktop is separate
+pnpm ready           # vp fmt && vp lint && vp run -r test && vp run -r build; run it before opening a PR
 ```
 
 Toolchain note: vite-plus (`vp`) is a single package that provides the dev server, build, test (vitest), lint (oxlint),
