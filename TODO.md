@@ -22,7 +22,7 @@ todo-spec: 1
 |---|---|---|
 | 交易 | 有服务骨架，但库存预占、订单持久化、地址归属与商家审批仍有已核实缺陷 | [微服务](#微服务与交易闭环) |
 | 事件与搜索 | 搜索 CDC 已切流；领域事件仍待首个真实业务生产者触发，不预建空链路 | [事件](#数据一致性与事件驱动) |
-| 基础设施 | PG 与观测存储在 node3；近期交接确认 Kafka/ES/Connect/Silo 已迁入 K8s，目标拓扑尚需对齐 | [基础设施](#基础设施与部署模型) |
+| 基础设施 | PG 已迁集群内 CNPG `pg-main`（node3 Pigsty 退役）；观测存储位置待复验；近期交接确认 Kafka/ES/Connect/Silo 已迁入 K8s，目标拓扑尚需对齐 | [基础设施](#基础设施与部署模型) |
 | GitOps | ArgoCD 已纳管本仓：`AppProject ecommerce` + `ApplicationSet ecommerce` 生成 `ecommerce-prod`（GitLab `main`/`helm`）。**自动同步仍关闭**（`Sync Policy: Manual`），首次 live diff 54 个对象只差 ArgoCD 自身 `tracking-id` 注解、无字段漂移、无孤儿资源。`okteto up` 前仍需确认此行 | [基础设施](#基础设施与部署模型) |
 | 鉴权 | BFF 已有实现；legacy bearer 仍在源码，OpenFGA、访客购物与服务端资源授权尚未闭环 | [鉴权](#零信任鉴权与session) |
 | 前端 | 公开首页与商品详情 SSR 已有实现；交易页接线不完整，merchant/admin 未形成业务闭环 | [前端](#前端技术栈与工程化) |

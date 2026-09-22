@@ -41,7 +41,7 @@
 | 成本治理 | OpenCost | P1 条件评估（2026-08-28 由「P1 引入」改判） | v1.121.1，CNCF Incubating。三项前置未完成前不常驻：①节点小时成本模型达成共识（Helm `customPricing`：硬件摊销+电力+存储+网络 ÷730h；仅异构节点才用 CSVProvider）②VictoriaMetrics 兼容性（Prometheus API 足以起步，但无官方认证矩阵，依赖查询窗口设计）③10 服务统一成本标签。**「每订单成本」不是 OpenCost 的原生模型**——它只给资源成本，业务分摊需自建（资源成本 ÷ 可归因订单数），且**禁止给 `order_id` 打 metric label**（基数爆炸）。预算 100–250m CPU / 256–512Mi（官方默认 request 10m/55Mi 是调度值非容量）。证据：技术调研 §8 |
 | 长流程编排 | Temporal | 待触发（P2，2026-08-28 触发信号已量化） | v1.31.0。**强信号（任一即评估）**：跨服务 >24h 的 durable workflow ≥3 条；单流程 ≥8 个持久步骤或 ≥4 个补偿分支；人工恢复每月 >4 次或 >8 工时；≥2 个服务各自实现 Saga/定时器/重试框架。**弱信号（三项连续两个迭代成立）**：PG 活跃未来任务 >10 万、到期定时器峰值 >1 万/分钟、单流程状态机迁移 >15 条边等。PG 任务表若要通用化，**下一步先看 River**（Go + PG 事务型队列，无新增控制面）而非直接上 Temporal。自托管可用 PostgreSQL（12+ 兼 Advanced Visibility，不必 ES）；生产 HA 需 3–6 CPU / 6–12Gi + DB，超出现集群承载，若触发应落外置基础设施。证据：技术调研 §8 |
 | 消息流式处理 | Kafka Streams / ksqlDB | 不引入（2026-08-28 调研收口） | 维持 **franz-go 自写消费者**（Inbox 幂等 + 状态写 PG + 投影可重建）：通知、对账、销量累计全是无窗口幂等 sink 或副作用工作流（搜索投影已归行投影线，由 Kafka Connect Sink 承载，见 §4.5），不需要通用流引擎。Kafka Streams 是嵌入 JVM 应用的库，纯 Go 团队引入 = 长期维护 Java 服务孤岛（JDK/GC/RocksDB 状态/rebalance 全套）；ksqlDB 仍发版但 license 为 Confluent Community License（非 OSI），且 Confluent 新增战略投入已明显转向 Flink。触发（任两项：生产窗口聚合/流 join ≥3 条、≥2 个消费者重复实现 watermark/迟到修正/状态 TTL、报表新鲜度要求 P95 <30s、PG Cron 聚合开始影响 OLTP）后**先 POC RisingWave**（Apache-2.0、PG wire protocol、单机起点约 2c/8Gi）；只有乱序/watermark/多流 temporal join/大状态 checkpoint 成为业务正确性的一部分才评估 Flink。证据：技术调研 §4 |
-| 嵌入式分析（OLAP 跑批） | DuckDB（v1.5.5，MIT） | 采纳（试点**已排期未开工**，2026-08-28 采纳 / 2026-09 补排 D0–D3 见 [待办](../TODO.md#数据一致性与事件驱动)） | 定位=**零常驻批分析/报表/对账引擎**：支付渠道账单对账、`behaviors.events` 增量导出 Parquet 落 Silo 后的分析卸载、经营报表 ad-hoc 维度。集成形态：**CLI 子进程跑批优先**——业务服务 `CGO_ENABLED=0` 一字不改（duckdb-go 预编译静态库仍需 cgo）；复杂化后建独立 analytics-runner 镜像（显式 CGO 例外）；不嵌业务服务、不做常驻任意 SQL 服务、不用 Quack（Beta）。红线：不替代 PG（OLTP 真相源）/搜索投影/Kafka/VictoriaMetrics/流处理（<30s 新鲜度归流处理触发项）。升级路径：多写者/快照/模式演进需求出现后启用 DuckLake 1.0（catalog 存 Pigsty PG + Parquet 落 Silo）。与 ClickHouse 关系：承接其触发条款①②的第一响应，CH 触发条件升级为服务化信号。**⚠️ v2.0 预览版「Cyanoptera」使两条前提待复核（2026-09 记，正式版计划 2026 秋）**：①quack 协议转正为原生 client/server，「不用 Quack」的理由从「Beta」降级为需重新论证的架构选择——但 daemon 形态与本行「零常驻」的采纳理由直接冲突，**不因转正而默认采用**；②版本化 C API + 稳定 ABI 可能改变 cgo 的成本账。**正式版发布前选型不变，预览版不进任何跑批产物**；复核判据见待办 D2。证据：`docs/reports/2026-08-28-duckdb-evaluation.md` |
+| 嵌入式分析（OLAP 跑批） | DuckDB（v1.5.5，MIT） | 采纳（试点**已排期未开工**，2026-08-28 采纳 / 2026-09 补排 D0–D3 见 [待办](../TODO.md#数据一致性与事件驱动)） | 定位=**零常驻批分析/报表/对账引擎**：支付渠道账单对账、`behaviors.events` 增量导出 Parquet 落 Silo 后的分析卸载、经营报表 ad-hoc 维度。集成形态：**CLI 子进程跑批优先**——业务服务 `CGO_ENABLED=0` 一字不改（duckdb-go 预编译静态库仍需 cgo）；复杂化后建独立 analytics-runner 镜像（显式 CGO 例外）；不嵌业务服务、不做常驻任意 SQL 服务、不用 Quack（Beta）。红线：不替代 PG（OLTP 真相源）/搜索投影/Kafka/VictoriaMetrics/流处理（<30s 新鲜度归流处理触发项）。升级路径：多写者/快照/模式演进需求出现后启用 DuckLake 1.0（catalog 存 CNPG PG + Parquet 落 Silo）。与 ClickHouse 关系：承接其触发条款①②的第一响应，CH 触发条件升级为服务化信号。**⚠️ v2.0 预览版「Cyanoptera」使两条前提待复核（2026-09 记，正式版计划 2026 秋）**：①quack 协议转正为原生 client/server，「不用 Quack」的理由从「Beta」降级为需重新论证的架构选择——但 daemon 形态与本行「零常驻」的采纳理由直接冲突，**不因转正而默认采用**；②版本化 C API + 稳定 ABI 可能改变 cgo 的成本账。**正式版发布前选型不变，预览版不进任何跑批产物**；复核判据见待办 D2。证据：`docs/reports/2026-08-28-duckdb-evaluation.md` |
 | 持续性能分析 | Pyroscope / Parca | 待触发（2026-08-28 调研收口） | 先用 Go 原生 `pprof`/trace/基准测试 + PGO，不常驻任何分析平台。触发（至少两项）：30 天内 ≥2 次靠指标/trace/一次性 pprof 定位不了的性能故障；需要跨版本连续对比 profile；CPU 常态 >60% 可分配容量。触发后**优先 Pyroscope Go SDK push**（v2.3.0，与现有 Grafana 契合；预算 250–500m / 512Mi–1Gi + 10–20Gi 存储，SDK 端约 <1% CPU）；**Parca 暂不选**——官方 issue 明确其新 eBPF profiler 对 arm64 支持尚不完整，且 Grafana 的 Parca datasource 已弃用（2027-01 结束支持）。注意 eBPF 全局采集不替代 Go heap/mutex/goroutine profile。证据：技术调研 §8 |
 | 服务网格 | Cilium Service Mesh | 暂不引入（2026-08-28 调研收口） | 维持 Cilium CNI + NetworkPolicy + Gateway API 覆盖。理由：Mutual Authentication 在 1.20.1 仍是 Beta 且官方自述安全模型不完整；官方也没有可直接套用于 3 节点 arm64 小集群的每节点 Envoy 内存基准（旧版大规模 agent 测试数据不可外推）。将来确需 workload mTLS + L7 授权时，评估对象是 Istio Ambient 而非本项。证据：技术调研 §6 |
 | 前端错误监控 | Bugsink | 已确定 | 兼容 Sentry SDK 错误事件；平台部署与前端 SDK 接入分开验收，不能把部署视为前端错误链路已完成。GlitchTip 改为条件采纳：出现 transaction/span 聚合、错误频率告警或统一 uptime/logs 需求时再评估迁移。接入手册见 §11.3 |
@@ -95,7 +95,7 @@
         │
         ▼
 [业务微服务 Cell] ──(Outbox 事务)──► [Debezium Outbox Event Router] ──► [Kafka 领域事件总线]   ← 领域事实线
-   ├── PostgreSQL (Pigsty)                                                  ├── Notification / Analytics
+   ├── PostgreSQL (CNPG pg-main)                                            ├── Notification / Analytics
    ├── Dragonfly (故障域隔离)                                                └── Reconciliation
    └── Inbox (幂等消费)
 [PostgreSQL 投影表 products.search_catalog] ──(Debezium CDC)──► [Kafka] ──► [Elasticsearch Sink]   ← 行投影线（搜索投影在此）
@@ -538,13 +538,15 @@ spec:
 
 ### 7.1 核心中间件部署拓扑
 
-为保障故障隔离，计算集群 (K8s) 与核心数据/观测存储实施物理/集群级解耦：
+计算集群 (K8s) 与观测存储实施集群级解耦；OLTP 数据库自 2026-09-22 起改为集群内 CloudNativePG 承载（原外部 Pigsty 已退役），
+数据随集群亡的取舍由 CNPG Barman 备份 + PITR 演练兜底（[TECH-RADAR §10.3](TECH-RADAR.md)）：
 
 ```text
-[ K8s 业务计算集群 ]                    [ 集群外数据/观测基础设施 ]
-├── Control-Tower 网关                   ├── PostgreSQL (Pigsty / Patroni HA)
-├── 微服务 Pod Cells                     ├── VictoriaMetrics / VictoriaLogs 栈
-├── Dragonfly (分实例部署)               └── 其他外部依赖
+[ K8s 业务计算集群 ]                    [ 集群外观测基础设施 ]
+├── Control-Tower 网关                   ├── VictoriaMetrics / VictoriaLogs 栈
+├── 微服务 Pod Cells                     └── 其他外部依赖
+├── PostgreSQL (CNPG pg-main)
+├── Dragonfly (分实例部署)
 ├── Strimzi Kafka + Kafka Connect
 ├── Elasticsearch
 └── Vector / OTel Collector 采集与转发
@@ -552,7 +554,7 @@ spec:
 
 | 组件 | 技术选型 | 部署与故障隔离策略 |
 |---|---|---|
-| OLTP 数据库 | PostgreSQL (Pigsty) | 外部物理机/VM 部署，Patroni 自动 Failover，PgBouncer 连接池治理，UUIDv7 为默认主键 |
+| OLTP 数据库 | PostgreSQL (CloudNativePG) | Operator 在 `cnpg-system`（`cnpg-webhook-service` 是 webhook 不是库入口），`Cluster/pg-main` 在 `postgresql`：业务连 `pg-main-rw.postgresql.svc:5432`，只读走 `-r`/`-ro`，集群外经 `pg-passthrough-gateway` 的 TLSRoute（SNI 路由，拿 IP 连会被拒）；HA 靠 CNPG 实例副本与自动切主，PITR 靠 Barman；PgBouncer 不再是独立组件，连接池由客户端 pgxpool 承担（CNPG Pooler 未部署，查 `kubectl get pooler -A`）；UUIDv7 为默认主键。核实：`kubectl get cluster -A` |
 | 分布式缓存 | Dragonfly | 严禁混用实例：Session 实例启用 `noeviction` + 持久化；业务 Cache 实例启用 `allkeys-lru`；限流实例独立 |
 | 事件总线 | Apache Kafka | 当前部署于 K8s 内的 Strimzi 集群，Kafka Connect 承载搜索 CDC；领域事件 Topic 按限界上下文规划，以 `aggregate_id` 作为 Partition Key 保证顺序，业务 producer/consumer 尚未接线 |
 | 搜索存储 | Elasticsearch | 当前部署于 K8s 内，仅作为只读 Projection，隐藏于 `SearchCatalog` 接口后；支持从 PG 全量重建索引 |
@@ -568,7 +570,7 @@ Cilium Gateway API ──► control-tower 网关 ──► 业务服务 Pod Cel
                                                     │
                      ┌──────────────────────────────┼──────────────────────────────┐
                      ▼                              ▼                              ▼
-           PostgreSQL (Pigsty)              Dragonfly (Cache)                Kafka Brokers
+           PostgreSQL (CNPG)                Dragonfly (Cache)                Kafka Brokers
 ```
 
 **Cilium 启用的核心特性**：
@@ -868,7 +870,7 @@ cfg.GetServiceAddr("inventory-service") // 从 K8s DNS 解析
 **P0 阶段 · 生产发布基线**
 
 核心交易闭环（Cart → Checkout → Order → Payment → Inventory）；
-PostgreSQL HA（Pigsty）与 PITR 恢复演练；
+PostgreSQL HA（CNPG 多实例）与 PITR 恢复演练（Barman）；
 Dragonfly 分实例拆分（Session / Cache / Ratelimit）；
 Cilium Gateway API + Namespace default-deny 网络隔离；
 Outbox + Debezium Outbox Event Router + Kafka（外部集群）+ Inbox 幂等保障；行投影线（CDC → Elasticsearch Sink）已切流；
@@ -990,9 +992,7 @@ Tetragon 运行时安全 enforcement（audit-only 已落地，enforcement 待独
 | 技术/模式 | 规范/标准出处 | 说明 |
 |---|---|---|
 | **PostgreSQL** | [PostgreSQL Documentation](https://www.postgresql.org/docs/) | 官方文档：事务、约束、索引、分区 |
-| **Pigsty** | [Pigsty Documentation](https://pigsty.io/docs/) | 开源 PostgreSQL HA 发行版 |
-| **Patroni** | [Patroni Documentation](https://patroni.readthedocs.io/) | PostgreSQL 自动故障转移 |
-| **PgBouncer** | [PgBouncer Documentation](https://www.pgbouncer.org/) | 连接池治理 |
+| **CloudNativePG** | [CloudNativePG Documentation](https://cloudnative-pg.io/documentation/) | K8s 内 PostgreSQL Operator：实例副本、自动切主、Barman 备份/PITR、Pooler |
 | **pgx** | [pgx Documentation](https://github.com/jackc/pgx) | Go PostgreSQL 驱动 |
 | **sqlc** | [sqlc Documentation](https://docs.sqlc.dev/) | 类型安全 SQL 代码生成 |
 | **goose** | [goose Documentation](https://pressly.github.io/goose/) | 数据库迁移 |
