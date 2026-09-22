@@ -20,11 +20,11 @@
     "@playwright/test": "catalog:",
     "knip": "catalog:",
     "typescript": "catalog:",
-    "vite": "npm:@voidzero-dev/vite-plus-core@0.3.0",
+    "vite": "npm:@voidzero-dev/vite-plus-core@0.3.3",
     "vite-plus": "catalog:"
   },
   "engines": {
     "node": "^22.22.2 || ^24.15.0 || >=26.0.0"
   },
-  "packageManager": "pnpm@12.3.4"
+  "packageManager": "pnpm@12.5.1"
 }

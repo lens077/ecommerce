@@ -1,7 +1,7 @@
 # Third-party notices
 
 由 `scripts/gen-third-party-notices.sh` 生成,勿手工编辑;依赖变更进暂存区时 pre-commit 会自动重新生成。
-后端列出 `go list -deps ./...` 实际链接进制品的 101 个模块;前端列出 `pnpm licenses list` 解析到的 408 个包(含 dev 依赖)。
+后端列出 `go list -deps ./...` 实际链接进制品的 101 个模块;前端列出 `pnpm licenses list` 解析到的 409 个包(含 dev 依赖)。
 
 ## 需要人看一眼
 
@@ -17,7 +17,7 @@
 
 | 许可证 | 条目数 |
 |---|---|
-| MIT | 361 |
+| MIT | 364 |
 | Apache-2.0 | 65 |
 | ISC | 23 |
 | BSD-3-Clause | 21 |
@@ -31,8 +31,6 @@
 | 0BSD | 2 |
 | Unlicense | 1 |
 | Python-2.0 | 1 |
-| MIT (继承自 yuku-parser) | 1 |
-| MIT (继承自 yuku-codegen) | 1 |
 | LGPL-3.0-or-later | 1 |
 | CC0-1.0 | 1 |
 | CC-BY-4.0 | 1 |
@@ -145,7 +143,7 @@
 | `google.golang.org/protobuf` | v1.36.12 | BSD-3-Clause | LICENSE |
 | `gopkg.in/yaml.v3` | v3.0.1 | Apache-2.0 | LICENSE |
 
-## 前端(npm 包,408)
+## 前端(npm 包,409)
 
 | 包 | 版本 | 许可证 | 主页 |
 |---|---|---|---|
@@ -241,14 +239,14 @@
 | `@next/env` | 16.4.0-canary.18 | MIT | <https://github.com/vercel/next.js#readme> |
 | `@next/swc-<platform>` | 16.4.0-canary.18 | MIT | <https://github.com/vercel/next.js#readme> |
 | `@oxc-parser/binding-<platform>` | 0.147.0 | MIT | <https://oxc.rs/docs/guide/usage/parser> |
-| `@oxc-project/runtime` | 0.146.0 | MIT | <https://oxc.rs> |
-| `@oxc-project/types` | 0.146.0 | MIT | <https://oxc.rs> |
+| `@oxc-project/runtime` | 0.150.0 | MIT | <https://oxc.rs> |
 | `@oxc-project/types` | 0.147.0 | MIT | <https://oxc.rs> |
+| `@oxc-project/types` | 0.150.0 | MIT | <https://oxc.rs> |
 | `@oxc-resolver/binding-<platform>` | 11.24.2 | MIT | <https://oxc.rs> |
 | `@oxc-transform-react/binding-<platform>` | 0.145.0 | MIT | <https://oxc.rs> |
-| `@oxfmt/binding-<platform>` | 0.64.0 | MIT | <https://oxc.rs/docs/guide/usage/formatter> |
+| `@oxfmt/binding-<platform>` | 0.68.0 | MIT | <https://oxc.rs/docs/guide/usage/formatter> |
 | `@oxlint-tsgolint/darwin-arm64` | 7.0.2001 | MIT | <https://github.com/oxc-project/tsgolint#readme> |
-| `@oxlint/binding-<platform>` | 1.79.0 | MIT | <https://oxc.rs/docs/guide/usage/linter> |
+| `@oxlint/binding-<platform>` | 1.83.0 | MIT | <https://oxc.rs/docs/guide/usage/linter> |
 | `@oxlint/plugins` | 1.79.0 | MIT | <https://oxc.rs/docs/guide/usage/linter/js-plugins> |
 | `@playwright/test` | 1.63.0 | Apache-2.0 | <https://playwright.dev> |
 | `@polka/url` | 1.0.0-next.29 | MIT | <https://github.com/lukeed/polka#readme> |
@@ -320,11 +318,11 @@
 | `@vitest/snapshot` | 4.1.11 | MIT | <https://vitest.dev/guide/snapshot> |
 | `@vitest/spy` | 4.1.11 | MIT | <https://vitest.dev/api/mock> |
 | `@vitest/utils` | 4.1.11 | MIT | <https://github.com/vitest-dev/vitest/tree/main/packages/utils> |
-| `@voidzero-dev/vite-plus-<platform>` | 0.3.0 | MIT | <https://viteplus.dev/guide> |
-| `@voidzero-dev/vite-plus-core` | 0.3.0 | MIT | <https://viteplus.dev/guide> |
-| `@yuku-codegen/binding-<platform>` | 0.5.48 | MIT (继承自 yuku-codegen) | <https://github.com/yuku-toolchain/yuku#readme> |
-| `@yuku-parser/binding-<platform>` | 0.5.48 | MIT (继承自 yuku-parser) | <https://github.com/yuku-toolchain/yuku#readme> |
-| `@yuku-toolchain/types` | 0.5.43 | MIT | <https://github.com/yuku-toolchain/yuku#readme> |
+| `@voidzero-dev/vite-plus-<platform>` | 0.3.3 | MIT | <https://viteplus.dev/guide> |
+| `@voidzero-dev/vite-plus-core` | 0.3.3 | MIT | <https://viteplus.dev/guide> |
+| `@yuku-codegen/binding-<platform>` | 0.9.5 | MIT | <https://github.com/yuku-toolchain/yuku#readme> |
+| `@yuku-parser/binding-<platform>` | 0.9.5 | MIT | <https://github.com/yuku-toolchain/yuku#readme> |
+| `@yuku-toolchain/types` | 0.9.5 | MIT | <https://github.com/yuku-toolchain/yuku#readme> |
 | `ajv` | 8.20.0 | MIT | <https://ajv.js.org> |
 | `ansi-regex` | 5.0.1 | MIT | <https://github.com/chalk/ansi-regex#readme> |
 | `ansi-regex` | 6.3.0 | MIT | <https://github.com/chalk/ansi-regex#readme> |
@@ -444,9 +442,9 @@
 | `oxc-parser` | 0.147.0 | MIT | <https://oxc.rs/docs/guide/usage/parser> |
 | `oxc-resolver` | 11.24.2 | MIT | <https://oxc.rs> |
 | `oxc-transform-react` | 0.145.0 | MIT | <https://oxc.rs> |
-| `oxfmt` | 0.64.0 | MIT | <https://oxc.rs/docs/guide/usage/formatter> |
+| `oxfmt` | 0.68.0 | MIT | <https://oxc.rs/docs/guide/usage/formatter> |
 | `oxlint-tsgolint` | 7.0.2001 | MIT | <https://github.com/oxc-project/tsgolint#readme> |
-| `oxlint` | 1.79.0 | MIT | <https://oxc.rs/docs/guide/usage/linter> |
+| `oxlint` | 1.83.0 | MIT | <https://oxc.rs/docs/guide/usage/linter> |
 | `package-manager-detector` | 1.8.0 | MIT | <https://github.com/antfu-collective/package-manager-detector#readme> |
 | `parent-module` | 1.0.1 | MIT | <https://github.com/sindresorhus/parent-module#readme> |
 | `parse-json` | 5.2.0 | MIT | <https://github.com/sindresorhus/parse-json#readme> |
@@ -512,7 +510,7 @@
 | `tinybench` | 2.9.0 | MIT | <https://github.com/tinylibs/tinybench#readme> |
 | `tinyexec` | 1.3.1 | MIT | <https://github.com/tinylibs/tinyexec#readme> |
 | `tinyglobby` | 0.2.17 | MIT | <https://superchupu.dev/tinyglobby> |
-| `tinypool` | 2.1.0 | MIT | <https://github.com/tinylibs/tinypool#readme> |
+| `tinypool` | 2.1.2 | MIT | <https://github.com/tinylibs/tinypool#readme> |
 | `tinyrainbow` | 3.1.1 | MIT | <https://github.com/tinylibs/tinyrainbow#readme> |
 | `tldts-core` | 7.4.11 | MIT | <https://github.com/remusao/tldts#readme> |
 | `tldts` | 7.4.11 | MIT | <https://github.com/remusao/tldts#readme> |
@@ -529,7 +527,7 @@
 | `unplugin` | 3.3.0 | MIT | <https://unplugin.unjs.io> |
 | `update-browserslist-db` | 1.3.2 | MIT | <https://github.com/browserslist/update-db#readme> |
 | `use-sync-external-store` | 1.6.0 | MIT | <https://github.com/facebook/react#readme> |
-| `vite-plus` | 0.3.0 | MIT | <https://viteplus.dev/guide> |
+| `vite-plus` | 0.3.3 | MIT | <https://viteplus.dev/guide> |
 | `vitest-axe` | 0.1.0 | MIT | <https://github.com/chaance/vitest-axe#readme> |
 | `vitest-browser-react` | 2.3.0 | MIT | <https://github.com/vitest-community/vitest-browser-react#readme> |
 | `vitest` | 4.1.11 | MIT | <https://vitest.dev> |
@@ -552,8 +550,9 @@
 | `yaml` | 2.9.0 | ISC | <https://eemeli.org/yaml/> |
 | `yargs-parser` | 22.0.0 | ISC | <https://github.com/yargs/yargs-parser#readme> |
 | `yargs` | 18.1.0 | MIT | <https://yargs.js.org/> |
-| `yuku-codegen` | 0.5.48 | MIT | <https://github.com/yuku-toolchain/yuku#readme> |
-| `yuku-parser` | 0.5.48 | MIT | <https://github.com/yuku-toolchain/yuku#readme> |
+| `yuku-ast` | 0.9.5 | MIT | <https://github.com/yuku-toolchain/yuku#readme> |
+| `yuku-codegen` | 0.9.5 | MIT | <https://github.com/yuku-toolchain/yuku#readme> |
+| `yuku-parser` | 0.9.5 | MIT | <https://github.com/yuku-toolchain/yuku#readme> |
 | `zod` | 4.5.4 | MIT | <https://zod.dev> |
 | `zrender` | 6.1.0 | BSD-3-Clause | <https://github.com/ecomfe/zrender#readme> |
 | `zustand` | 5.0.15 | MIT | <https://github.com/pmndrs/zustand> |

@@ -63,8 +63,8 @@ catalog:
   # pnpm 的 overrides 不创建依赖边：声明 vite-plus 的 package 还要直接声明 vite: catalog:，
   # 否则 Vitest 的 peer 解析会静默补装一份上游 Vite，旧的 vite build 脚本会误用它。
   # Vitest 也要与 Vite+ 内置版本一致；consumer 的浏览器测试需要直接依赖它。
-  vite: npm:@voidzero-dev/vite-plus-core@0.3.0
-  vite-plus: 0.3.0
+  vite: npm:@voidzero-dev/vite-plus-core@0.3.3
+  vite-plus: 0.3.3
   vitest: 4.1.11
   # a11y 门禁：axe-core 的 vitest 封装（docs/frontend/accessibility.md §四.2）
   "vitest-axe": ^0.1.0
