@@ -242,7 +242,8 @@ AppProject 只有 `default`（2026-08-29 复测仍然如此）。集群实际由
 | 运行时安全 | `tetragon`（2026-08-28 装，事件经 vector 进 node3 日志） |
 | 弹性与发布 | `keda`、`argo-rollouts`、`argocd`（见坑 ③）、`vpa`（**只有 recommender**，无 updater/webhook；live 共 17 个 VPA，其中 ecommerce 15 个均为 `Off`） |
 | 网络与穿透 | Cilium Gateway API（LAN `gateway` 策略）、Pangolin + newt（Mac `remote-dev` 策略）、`cilium-secrets` |
-| 存储与镜像 | `openebs`、`spegel`（`cnpg-system` 已整体移除——2026-08-30 实测 ns 与 CNPG CRD 均不存在，PG 数据面只剩 node3 Pigsty） |
+| 存储与镜像 | `openebs`、`spegel` |
+| 数据库 | CNPG：Operator 在 `cnpg-system`（`cnpg-cloudnative-pg-*`，其 `cnpg-webhook-service` 是 webhook 不是库入口），`Cluster/pg-main` 在 `postgresql`（`pg-main-rw`/`-r`/`-ro` Service + `TLSRoute/pg-main`）。2026-09-22 重建后接管业务库，node3 Pigsty 退役；核实用 `kubectl get cluster -A` |
 
 **Pod 节点均衡**：业务 Deployment 统一带 `app.kubernetes.io/part-of: ecommerce` +
 namespace 内共享的硬 `topologySpreadConstraints`（`maxSkew: 1`、`DoNotSchedule`）；spread 只约束调度不触发迁移，

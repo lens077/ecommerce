@@ -201,7 +201,7 @@ SSR：`consumer-next` 使用 Next.js 16.4.0-canary.18（本仓 A/B 后精确锁�
 
 | 组件 | 当前用途 | 状态与边界 |
 |---|---|---|
-| PostgreSQL / Pigsty | 10 个服务的核心数据，每服务一个 schema | 已切到 node3 Pigsty；客户端 TLS `verify-ca`。按 [`docs/TECH.md`](docs/TECH.md) 定稿：PostgreSQL 由外部 Pigsty 承载（Patroni 自动 Failover + PgBouncer 连接池，UUIDv7 为默认主键）；集群内 `postgresql`/`cnpg-system` namespace 与 CNPG CRD 已清理 |
+| PostgreSQL / CNPG | 10 个服务的核心数据，每服务一个 schema | 集群内 CloudNativePG（2026-09-22 起）：Operator 在 `cnpg-system`（`cnpg-cloudnative-pg-*` + webhook Service），数据面 `Cluster/pg-main` 在 `postgresql`，业务连 `pg-main-rw.postgresql.svc:5432`，外部经 `pg-passthrough-gateway` 的 TLSRoute（SNI 路由，拿 IP 连会被拒）；核实用 `kubectl get cluster -A`。UUIDv7 为默认主键。node3 Pigsty 已退役；[`docs/TECH.md`](docs/TECH.md) 「外部 Pigsty 承载」的目标态描述待与此现状对齐 |
 | Dragonfly | 业务可丢缓存；control-tower BFF session | Redis 协议、TLS-only。业务域不得把库存真相、锁、幂等键或唯一正确性状态放进去；BFF session 是已接受的例外，丢失时 fail-closed 并要求重新登录。按 [`docs/TECH.md`](docs/TECH.md) 目标分实例强制隔离：Session 实例 `noeviction`+持久化 / 业务 Cache 实例 `allkeys-lru` / 限流实例独立，严禁混用 |
 | Meilisearch | 已退役搜索组件 | v1.53；2026-09-04 已删除 Helm release、运行资源、Secret、路由、PVC/PV 与 namespace，仅在 `.service-matrix.yaml` 保留退役记录 |
 | S3 兼容对象存储 | cart 的商品图等对象 | 当前指向 Silo 的 MinIO-compatible API；不是「集群内 MinIO」。按 [`docs/TECH.md`](docs/TECH.md) 定稿对象存储即 Silo（基于 MinIO，开启 Versioning 与 Lifecycle，前端上传统一走后端签发的预签名 URL）；此前的 SeaweedFS 迁移方向已撤销 |
