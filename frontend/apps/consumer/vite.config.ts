@@ -97,7 +97,7 @@ export default defineConfig(({ mode }) => {
     build: {
       // 字体切片不内联:@fontsource 的小切片(<4KB)默认会被 base64 进 CSS,实测占了 63KB
       assetsInlineLimit: (filePath: string) => (/\.woff2?$/.test(filePath) ? false : undefined),
-      rollupOptions: {
+      rolldownOptions: {
         // 本 app 是纯客户端 SPA，没有 RSC 边界，第三方包（MUI / tanstack router
         // 与 react-query）里的 "use client" 没有任何消费者，rolldown 却会为每个
         // 带指令的模块各报一条 MODULE_LEVEL_DIRECTIVE——一次 build 近 300 条，
