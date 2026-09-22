@@ -9,7 +9,7 @@ spec:
       namespace: default
       sectionName: https # TLS terminates at the Cilium Gateway
   hostnames:
-    - "argocd.apikv.com"
+    - "argocd.dev.test"
   rules:
     - matches:
         - path:

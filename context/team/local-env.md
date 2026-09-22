@@ -18,12 +18,12 @@ description: 本地开发机与集群连哪套基础设施：活地址、配置�
 集群只有一套：node3 / node4 / node5（全部 amd64、Ubuntu 26.04），Cilium Gateway VIP 在 `10.10.31.0/24`。
 原 `192.168.3.x` 那套 dev 集群已于 2026-09-15 前删除，本文不再记录它。
 
-**本机 Mac 不在机房 LAN 时走 remote-dev**（Pangolin resource → node4/node5 newt → K8s Gateway 或 node service）；
+**本机 Mac 不在机房 LAN 时走 remote-dev**（Pangolin resource → 新建的集群 newt site → K8s Gateway 或 L4 service）；
 机房 LAN 开发机才直连 VIP 并用 `*.dev.test`。两条路解决的是不同问题，别混：
 
 | 路 | 解决什么 | 在哪生效 | 实测 2026-09-15 |
 |---|---|---|---|
-| remote-dev（Pangolin 资源） | **L3 可达**：Mac 到不了 `10.10.31.x` VIP，把 HTTP 与 raw TCP（Consul、Dragonfly、PG、Kafka）经公网域名穿出来 | 任何能上公网的机器 | consul-dev 200、redis-dev:30005 TLS 握手、node1:30001 / 30004 TCP 全通 |
+| remote-dev（Pangolin 资源） | **L3 可达**：Mac 到不了 `10.10.31.x` VIP，把 HTTP 与 raw TCP（Dragonfly、PG、Kafka）经公网域名穿出来 | 任何能上公网的机器 | 旧 `redis-dev:30005` 资源待迁移；新 Dragonfly TCPRoute 为 `10.10.31.242:6379`，需先在 Pangolin 建资源后再做 TLS 握手验证 |
 | `*.dev.test` split DNS（`/etc/resolver/dev.test → 10.0.0.1` dnsmasq） | **通配解析**：`/etc/hosts` 不支持 `*.dev.test`，dnsmasq 应答整个后缀到 VIP | 只有机房 LAN（`10.0.0.1` 与 VIP 都在那边） | 本机 `10.0.0.1` 不可达，`shop.dev.test` 解析为空——这条路在机房外是死的，属预期 |
 
 Mac 上 launchd 跑的 `newt`（`net.pangolin.newt`）是 **Pangolin 站点连接器**，把本机 `127.0.0.1` 的服务暴露给 Pangolin 用，
@@ -33,14 +33,14 @@ Mac 上 launchd 跑的 `newt`（`net.pangolin.newt`）是 **Pangolin 站点连�
 |---|---|---|---|---|
 | 共享网关 | 经 Pangolin 公网域名（`shop.apikv.com` / `gateway.apikv.com` …） | `10.10.31.240:80/443` | 同左 | Cilium Gateway；HTTPRoute 按 hostname 接入，`*.dev.test` 与 `*.apikv.com` 挂在同一条路由上 |
 | Consul（**仅注册发现**） | `https://consul-dev.apikv.com`（SSO 关闭，Host/SNI 保留 `consul.dev.test`） | `10.10.31.241:8500` | `consul-server.consul.svc:8500` | 已开 ACL，必须带 token，见下 |
-| Dragonfly | `redis-dev.apikv.com:30005`（raw TCP/TLS 直通） | `10.10.31.243:6380` | `dragonfly.dragonfly.svc:6379` | TLS-only + AUTH，明文被拒；CA 在 Secret `dragonfly-tls` |
-| PostgreSQL（业务库 + config schema） | `node1:30001` | 同左 | 同左 | node3 Pigsty，PG 18.6，`sslmode=verify-ca` |
+| Dragonfly | 新 Pangolin resource 待建（后端 `10.10.31.242:6379`，TCPRoute，TLS-only + AUTH） | `10.10.31.242:6379` | `dragonfly.dragonfly.svc:6379` | TLS-only + AUTH；CA 在 Secret `dragonfly-tls` |
+| PostgreSQL（业务库 + config schema） | 新 Pangolin resource 待建（后端 `10.10.31.241:5432`，TLSRoute，SNI `pg.dev.test`） | `10.10.31.241:5432` | `pg-main-rw.postgresql.svc:5432` | CNPG `pg-main`，TLS passthrough，`sslmode=verify-ca`/`verify-full` 按证书配置 |
 | Config Center | — | — | `config-center.config-center.svc:30010` | Web `https://config.apikv.com`，API `https://config-api.apikv.com`；跑的是 control-tower 镜像，ns 名是遗留标签 |
 | Casdoor | `https://casdoor.apikv.com` | 同左 | 同左 | 集群外的外部服务 |
 | Elasticsearch | `kubectl -n elasticsearch port-forward svc/elasticsearch 9200:9200` | 同左 | `elasticsearch.elasticsearch.svc.cluster.local:9200` | 2026-09-15 起在集群内，仅 ClusterIP；search 只读 alias `ecommerce_catalog_products`，API key 存 `ecommerce/search-k8s-api-key` |
-| Kafka | `kubectl -n kafka port-forward svc/my-cluster-kafka-bootstrap 9092:9092` | 同左 | `my-cluster-kafka-bootstrap.kafka.svc:9092` | 集群内 Strimzi 单节点，仅内部 listener；只跑 CDC topic，领域事件 producer/consumer 仍为零 |
-| node3 观测后端 | `https://node3-{metrics,logs,traces,vmalert,alerts}.apikv.com` | 同左 | 同左 | 已挂 Pangolin SSO（浏览器访问返 302 跳登录；写入路径已放行） |
-| node3 OTLP 入口 | `node3-otlp.apikv.com:443` | 同左 | 同左 | 需 Bearer token，无 token 返 401 |
+| Kafka | `kubectl -n kafka port-forward svc/my-cluster-kafka-bootstrap 9092:9092` | 同左 | `my-cluster-kafka-bootstrap.kafka.svc:9092` | 集群内 Strimzi 单节点，仅内部 listener；Pangolin TCP resource 尚未建立，领域事件 producer/consumer 仍为零 |
+| 观测后端 | `https://metrics.dev.test` 等新集群 HTTPRoute（Pangolin resource 待迁移） | `10.10.31.240` | 对应集群 ClusterIP | VM/VL/VT/vmalert/Alertmanager/Grafana 已回集群内，旧 node3 域名退役 |
+| OTLP 入口 | 集群内 `otel-opentelemetry-collector.opentelemetry.svc:4317/4318` | 同左 | 同左 | 公网 OTLP 入口未接线，不要复用旧 node3 endpoint |
 
 配置生成：`bash tools/config-center-harvest.sh --env dev --strategy remote-dev`（`dev` 默认即 `remote-dev`；LAN 机器用 `--strategy gateway`）。
 本地服务默认不注册 Consul；需要注册时在对应服务目录运行 `make dev-consul`，并提供 `CONSUL_HTTP_TOKEN`。
@@ -49,13 +49,13 @@ Mac 上 launchd 跑的 `newt`（`net.pangolin.newt`）是 **Pangolin 站点连�
 
 | 节点 | 角色 | 内网 IP | 备注 |
 |---|---|---|---|
-| node4 | control-plane | `10.10.21.161` | |
-| node5 | worker | `10.10.21.162` | |
-| node3 | worker | `10.10.21.163` | 带 `workload` 污点〔实测 2026-09-15〕，业务 Pod 不落这里；同名主机还跑 Pigsty PG 与观测后端 |
+| k1 | control-plane + workload | `10.10.21.161` | 旧 node4，control-plane 污点已摘除 |
+| k2 | worker | `10.10.21.162` | 旧 node5 |
+| k3 | worker | `10.10.21.163` | 旧 node3；Pigsty PG 与观测后端已随重装退役 |
 
-**node3 的 Pigsty / 观测后端不在 Pod 网络里**：ssh 别名 `node3`，所有外部访问都经 node1 的 Pangolin 隧道——直接探
-`node3:5432` 永远是 filtered，会让人误判「没通路」。隧道机制见 [pangolin-tunnel.md](pangolin-tunnel.md)。
-凭据只在 `node3:/root/pigsty-deploy/.credentials-extra`（0600）与 `pigsty.yml`，不入库。
+**旧 node3 的 Pigsty / 观测后端已退役**：旧主机已重装为 `k3`，不要再探 `node3:5432`、
+`10.10.21.172` 或 `node3-*.apikv.com`。当前 PostgreSQL/CNPG 与观测后端均在集群内；公网访问统一经过
+Pangolin 新建的集群 site 和 HTTP/TLS/TCPRoute。凭据不入库。
 
 ## 配置加载：Config Center 是唯一来源
 
@@ -93,9 +93,9 @@ prod 暂沿用 pre 的 Config Center 环境（见 `docs/PRODUCTION-RELEASE.md`�
 
 `backend/services/*/configs/dev.yml` 里写的是集群内 svc 域名（`pg-main-rw.postgresql.svc`、
 `dragonfly.dragonfly.svc`、`otel-opentelemetry-collector.opentelemetry.svc:4318`），Mac 上解析不了；
-而且 `pg-main-rw` 指向的 CNPG **已经 hibernate**，即使解析得了也连不上。两条出路：
+Mac 应通过 `remote-dev` 的 Pangolin 资源获取公网地址，不要把集群 Service DNS 写进本机配置。两条出路：
 
-1. 用上表 remote-dev 那列的地址覆盖（PG `node1:30001`、Dragonfly `redis-dev.apikv.com:30005`、Consul `consul-dev.apikv.com`）——`tools/config-center-harvest.sh --strategy remote-dev` 就是干这个的；
+1. 用上表 remote-dev 那列的地址覆盖（PG/Dragonfly/Kafka 的 Pangolin 资源域名；当前 Dragonfly/PG/Kafka 资源待建立）——`tools/config-center-harvest.sh --strategy remote-dev` 就是干这个的；
 2. 走内环开发，在集群身份下跑代码 —— [okteto-inner-loop.md](okteto-inner-loop.md)。
 
 
@@ -179,26 +179,24 @@ curl -sk -o /dev/null -w '%{http_code}\n' https://<name>.dev.test/  # 业务路�
 |---|---|
 | `10.10.31.240` | `default/cilium-gateway-cilium-gateway`（80/443，所有 HTTPRoute） |
 | `10.10.31.241` | `consul/consul-expose-servers`（8500/8301/8300/8502） |
-| `10.10.31.242` | `postgresql/cilium-gateway-pg-passthrough-gateway`（5432） |
-| `10.10.31.243` | `dragonfly/cilium-gateway-dragonfly-gateway`（6380） |
+| `10.10.31.241` | `postgresql/cilium-gateway-pg-passthrough-gateway`（5432） |
+| `10.10.31.242` | `dragonfly/cilium-gateway-dragonfly-gateway`（6379） |
 
-## 可观测：数据往哪流（2026-08-29 核对）
+## 可观测：数据往哪流（2026-09-22 核对）
 
-集群内**没有任何观测存储**（`victoriametrics` / `observability` 两个 ns 是空的，只剩标签），
-后端全在 node3。两条腿互相独立，改一条不影响另一条：
+观测存储已回到集群内：VM/VL/VT/vmalert/Alertmanager/Grafana/OTel/Vector 均由 k1/k2/k3 承载。
+旧 node3 Pigsty 和 `node3-*` OTLP/观测入口已退役；公网 UI 通过 Pangolin `k8s-cluster` site 访问。
 
 | 来源 | 通路 | 配置在哪 |
 |---|---|---|
-| 10 个业务服务 + 网关的 trace/metric/log | **直连** `node3-otlp.apikv.com:443` → node3 上 docker 跑的 otelcol → 本机三个 Victoria | Config Center 各服务 `observability.{trace,metric,log}.endpoint` |
-| 集群自身指标与事件（`k8s_cluster` / `k8sobjects` / cilium / hubble / vector） | 集群内 otel collector → 直发 node3 Victoria 端点 | kubernetes 仓 `components/opentelemetry/` |
-| 容器日志 + tetragon 安全事件 | vector DaemonSet → `node3-logs.apikv.com/insert/jsonline` | kubernetes 仓 `components/vector/values.yaml` |
+| 业务服务 + 网关的 trace/metric/log | 集群内 `otel-opentelemetry-collector.opentelemetry.svc:4317/4318` → VM/VL/VT | Config Center 各服务 `observability.{trace,metric,log}.endpoint` |
+| 集群自身指标与事件 | OTel Collector → 集群内 VictoriaMetrics | kubernetes `components/opentelemetry/` |
+| 容器日志 | Vector DaemonSet → 集群内 VictoriaLogs | kubernetes `components/vector/values.yaml` |
 
-**集群内那个 collector 不在业务链路上**（2026-08-28 重装，角色变了）：业务服务是直连 node3 的。
-想让业务遥测改道，只能改 Config Center，改 collector 没用。
+应用 OTLP 不再经 Pangolin 写入，公网 OTLP 入口未接线；不要把旧 `node3-otlp.apikv.com` 写回 Config Center。
 
-**OTLP 已强制鉴权**（2026-08-27 起，匿名写入关闭）：`node3-otlp` 挂不了 Pangolin SSO（机器客户端
-过不了浏览器登录墙），鉴权落在 collector 的 `bearertokenauth` 上。无 token / 错 token 一律 401。
-三个身份的 token 真相源在 Vault `secret/observability/otlp`：
+**OTLP 鉴权边界**：集群内 Collector 只接受集群网络路径；公网写入必须另做 Bearer 鉴权和 Pangolin 受限 resource，当前不开放。
+三个身份的 token 真相源在 Vault/OpenBao 体系，当前 OpenBao 尚未作为恢复前置启用：
 
 | 身份 | 谁在用 | 怎么拿到 |
 |---|---|---|
@@ -271,9 +269,9 @@ kubectl get svc -A --field-selector spec.type=LoadBalancer \
 kubectl get ns && helm list -A
 # 服务从哪个环境读配置
 kubectl get secret ecommerce-config-source-pre -n ecommerce -o json | jq -r '.data[]' | base64 -d | grep environment | sort -u
-# node3 入口活没活（302/401/403 都算活，000 才是断）
-for h in node3-metrics node3-logs node3-traces node3-otlp; do
-  printf '%s -> ' $h; curl -sk -o /dev/null -w '%{http_code}\n' --max-time 8 https://$h.apikv.com/
+# 新 Pangolin 观测入口活没活（302/401/403 都算边缘活，000 才是断）
+for h in grafana metrics traces vmalert alerts; do
+  printf '%s -> ' "$h"; curl -sk -o /dev/null -w '%{http_code}\n' --max-time 8 "https://$h.apikv.com/"
 done
 ```
 

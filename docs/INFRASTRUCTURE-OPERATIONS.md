@@ -130,20 +130,20 @@ ssh node3 'sudo -u postgres curl -fsS "$(</etc/healthchecks/pgbackrest.url)/star
 
 启用项：
 
-- `clusterMetrics` → `k8s_cluster` receiver → node3 VictoriaMetrics。
-- `kubernetesEvents` → `k8sobjects` receiver → node3 VictoriaLogs。
-- remote exporter 使用 protobuf + gzip、15 秒 timeout、retry 和 sending queue。
+- `clusterMetrics` → `k8s_cluster` receiver → 集群内 VictoriaMetrics。
+- `kubernetesEvents` → `k8sobjects` receiver → 集群内 VictoriaLogs。
+- exporter 使用 protobuf + gzip、15 秒 timeout、retry 和 sending queue。
 - metrics pipeline 在 batch 前使用 `delta_to_cumulative`。
 
-公开的是经过 Pangolin policy 明确放行的 write-only path，不是查询面：
+2026-09-22 起应用/集群 OTLP 不再写旧 node3 入口；集群内写入路径是：
 
-- `https://node3-metrics.apikv.com/opentelemetry/v1/metrics`
-- `https://node3-logs.apikv.com/insert/opentelemetry/v1/logs`
-- `https://node3-traces.apikv.com/insert/opentelemetry/v1/traces`
+- metrics：`http://vm-single-victoria-metrics-single-server.victoriametrics.svc:8428/opentelemetry/v1/metrics`
+- logs：`http://vl-victoria-logs-single-server.logging.svc:9428/insert/opentelemetry/v1/logs`
+- traces：`http://victoria-traces.observability.svc:10428/insert/opentelemetry/v1/traces`
 
 ```bash
-# 摄入链路检查见 helper.sh 第一节「node3：K8s 状态/Event 摄入链路」（只读）
-ssh node3 'docker logs --since 10m gatus 2>&1 | grep -E "k8s-(cluster-state|event)-ingestion.*success=true"'
+# 集群内摄入链路检查
+ssh k1 'export KUBECONFIG=/etc/kubernetes/admin.conf; kubectl -n observability logs deploy/otel-opentelemetry-collector --since=10m | grep -Ei "error|drop|failed"'
 ```
 
 2026-08-27 验收：VM 有 27 个 `k8s.*` metric，`k8s.deployment.available` 有 49 条结果；collector 发送失败计数为 0。（⚠️ 这里的**点号写法是当时的口径快照**，不是现行口径——VM 后来开了 `-opentelemetry.usePrometheusNaming=true`，现为下划线 `k8s_deployment_available`〔实测 2026-09-01〕。照抄本段的写法会查不到数据且不报错，当前口径见 [`observability/alerting-notification.md`](observability/alerting-notification.md) §4.2。）故障注入 Pod `otel-event-validation-*` 产生 `ErrImagePull`/`ImagePullBackOff`，VL 随后保存对应 `object.kind=Event` 记录；receiver accepted 与 VL 24 小时存量持续增长。两者分别是进程累计值和时间窗存量，不要求每次读取完全相等。Gatus 的 Event endpoint 直接查询 VL 中 `object.kind:=Event`，不再用 receiver counter 冒充落库成功。

@@ -32,12 +32,12 @@ HTTP/1.1 交给 HTTP handler，HTTP/2 交给 gRPC 监听器。下面的入口设
 
 ## 受限 API/CLI 入口
 
-Web UI 使用 `argocd.apikv.com`；CLI/API 使用独立的 `argocd-api.apikv.com`，且**分两个端口**：
+Web UI 在集群内使用 `argocd.dev.test`，经 Pangolin 公网化时再创建对应 HTTP resource；CLI/API 不与 Web UI 共用一个 HTTPS HTTPRoute，且**分两个协议入口**：
 
 | 端口 | 用途 | 能不能跑原生 gRPC |
 |---|---|---|
-| `443` HTTPS | REST / token 自动化（`/api/...`） | 不能 |
-| `80` 明文 h2c | `argocd` CLI 原生 gRPC | 能 |
+| `443` HTTPS | Web UI / REST / token 自动化（`/api/...`） | 当前 HTTPRoute 只承载 Web UI 和 REST |
+| `80` 明文 h2c | `argocd` CLI 原生 gRPC | 能，但只能在受限管理通道使用 |
 
 ### 为什么 CLI 必须走明文 80
 
