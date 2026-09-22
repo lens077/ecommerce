@@ -98,6 +98,12 @@ export default defineConfig(({ mode }) => {
       // 字体切片不内联:@fontsource 的小切片(<4KB)默认会被 base64 进 CSS,实测占了 63KB
       assetsInlineLimit: (filePath: string) => (/\.woff2?$/.test(filePath) ? false : undefined),
       rollupOptions: {
+        // 本 app 是纯客户端 SPA，没有 RSC 边界，第三方包（MUI / tanstack router
+        // 与 react-query）里的 "use client" 没有任何消费者，rolldown 却会为每个
+        // 带指令的模块各报一条 MODULE_LEVEL_DIRECTIVE——一次 build 近 300 条，
+        // 把真正该看的告警淹掉。这里关的只是「use strict 之外的模块级指令」这一类。
+        // 注意 apps/consumer-next 走 next build，不受此处影响，它的 RSC 指令照常保留。
+        checks: { moduleLevelDirective: false },
         output: {
           // 合并小 chunk:默认分包把 MUI 拆成 40 多个 0–2KB 的组件 chunk,首绘前 46 个请求,
           // 150ms RTT 下队头开销比字节本身贵(2026-09-15 实测 /categories 移动端)。

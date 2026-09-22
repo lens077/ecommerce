@@ -24,6 +24,16 @@ export default defineConfig(() => {
         "@": resolve(__dirname, "./src"),
       },
     },
+    build: {
+      rolldownOptions: {
+        // 本 app 是纯客户端 SPA，没有 RSC 边界，第三方包（MUI / tanstack router
+        // 与 react-query）里的 "use client" 没有任何消费者，rolldown 却会为每个
+        // 带指令的模块各报一条 MODULE_LEVEL_DIRECTIVE——一次 build 近 300 条，
+        // 把真正该看的告警淹掉。这里关的只是「use strict 之外的模块级指令」这一类。
+        // 注意 apps/consumer-next 走 next build，不受此处影响，它的 RSC 指令照常保留。
+        checks: { moduleLevelDirective: false },
+      },
+    },
     server: {
       host,
       port,
