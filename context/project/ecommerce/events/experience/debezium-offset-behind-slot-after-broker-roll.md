@@ -61,5 +61,7 @@ ES sink 是 `write.method=INSERT` + `key.ignore=false`（external version = offs
   `initial`，并按 README 手顺人工处理——把这条写在 CR 注释里，别让下一个人以为它是默认值。
 - 触发条件不只是「改 listener」：任何让 broker 或 Connect 重启的操作（升版本、改 resources、节点排空）都可能踩到。
   改完 Kafka/Connect 后**必看 task 列**，不看 Ready。
-- Gatus `cdc-source-task` 探针（`[BODY].tasks[0].state == RUNNING`）这次是**唯一**先红的信号，
-  vmalert 侧仍缺「restart_lsn − connect offset」差值告警（同 [debezium-idle-slot-wal-retention.md](debezium-idle-slot-wal-retention.md) 末尾待办）。
+- 告警时序（实测）：Gatus `cdc-source-task`（`[BODY].tasks[0].state == RUNNING`）约 1 分钟先红；vmalert `CDCSlotInactive`
+  （`cnpg_pg_replication_slots_active == 0`，`for: 10m`）在 +10 分钟 firing。现有规则**已覆盖**这类「task 死 → 槽失活」，
+  「restart_lsn − Connect offset」差值告警只对「task 活着但位点分叉」有增量价值，且要先给 Connect CR 配 `metricsConfig`
+  暴露 Debezium JMX 指标，暂不做。

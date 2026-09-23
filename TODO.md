@@ -166,7 +166,7 @@ todo-spec: 1
 
 #### P2
 
-- [ ] **待复验 · 观测链自身健康**：CES 巡检、Gatus 和采集器补/核验 dead-man 新鲜度告警；2026-09-23 broker 滚动致 Debezium task FAILED（connector 仍 RUNNING）时 Gatus `cdc-source-task` 是唯一先红的信号，vmalert 侧仍缺「slot restart_lsn − Connect offset」差值告警（`context/project/ecommerce/events/experience/debezium-offset-behind-slot-after-broker-roll.md`）；CDC 槽位点/task/lag 已有恢复记录，不重复列「全部缺失」，但迁移后持续覆盖仍需核对。
+- [ ] **待复验 · 观测链自身健康**：CES 巡检、Gatus 和采集器补/核验 dead-man 新鲜度告警；2026-09-23 broker 滚动致 Debezium task FAILED（connector 仍 RUNNING）：Gatus `cdc-source-task` 约 1 分钟先红，vmalert `CDCSlotInactive`（`for: 10m`）在 +10 分钟 firing——现有规则已覆盖这类「task 死、槽失活」；原设想的「slot restart_lsn − Connect offset」差值告警只对「task 活着但位点分叉」有增量价值，且需要 Debezium JMX 指标（Connect CR 未配 `metricsConfig`），暂不做（`context/project/ecommerce/events/experience/debezium-offset-behind-slot-after-broker-roll.md`）；CDC 槽位点/task/lag 已有恢复记录，不重复列「全部缺失」，但迁移后持续覆盖仍需核对。
 - [ ] **待复验 · 日志出口与配置**：核对 SDK `/v1/logs` 的旧 401 是否仍存在；统一 endpoint/header/TLS 与 exporter 开关，删除无代码消费的环境变量，确认 stdout/Vector 与应用 OTLP 各自入库。
 - [ ] **未完成 · 部署关联与观测恢复**：采集部署 marker/变更维度；按 TECH.md 外置观测目标验证存储备份/恢复及单点风险，不将 node3 进程外置等同于物理故障域隔离。
 
