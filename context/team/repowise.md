@@ -49,6 +49,7 @@ PATH="$PWD/tools/repowise/.venv/bin:$PATH" bash scripts/verify-repowise.sh
 脚本固定执行以下策略：
 
 - `--mode fast`：图、Git、死代码、健康和漂移分析；不生成模型 prose；
+- `--no-seed`：禁止在 linked git worktree 里用主仓库的 `.repowise` 做种子。否则结果会混入主工作树里未提交的修改：2026-09-23 同一个提交先后报出 4、1、0 条漂移。在 worktree 里自己重建 baseline 时也必须带上这个参数；
 - `--provider mock --embedder mock`：不调用外部 LLM 或 embedding provider；
 - `DO_NOT_TRACK=1`、`REPOWISE_TELEMETRY_DISABLED=1`：关闭遥测；
 - `--no-editor-setup --no-hook --no-claude-md --no-agents --no-codex --no-distill-hook`：不写 agent/editor 配置、不安装 hook；

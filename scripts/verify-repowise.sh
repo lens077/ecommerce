@@ -48,8 +48,14 @@ if ! git ls-files --cached --others --exclude-standard -- '*.cbl' '*.cob' '*.cob
   export PYTHONPATH="$workdir/python-shims${PYTHONPATH:+:$PYTHONPATH}"
 fi
 
+# --no-seed: inside a linked git worktree, Repowise auto-seeds from the base
+# checkout's .repowise and only re-indexes files it believes changed. On
+# 2026-09-23 that made the same commit report 4, then 1, then 0 drift findings,
+# because the base checkout carried another session's uncommitted edits. The
+# gate must judge only the checked-out content, so always index from scratch.
 "$repo_bin" init \
   --mode "$mode" \
+  --no-seed \
   --no-prose \
   --provider mock \
   --embedder mock \
