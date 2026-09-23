@@ -4,6 +4,7 @@ import (
 	"context"
 	"encoding/json"
 	"errors"
+	"fmt"
 	"math"
 	"net/http"
 	"net/http/httptest"
@@ -87,6 +88,20 @@ func TestSearchRepoReturnsCatalogError(t *testing.T) {
 
 	_, err := repo.Search(context.Background(), biz.SearchRequest{Name: "lamp"})
 	require.ErrorIs(t, err, want)
+	require.ErrorIs(t, err, biz.ErrSearchUnavailable)
+}
+
+// 调用方取消、超时不是搜索后端故障，不能包装成 ErrSearchUnavailable。
+func TestSearchRepoKeepsContextErrorsDistinct(t *testing.T) {
+	for _, want := range []error{context.Canceled, context.DeadlineExceeded} {
+		repo := searchRepo{
+			data: &Data{catalog: &fakeSearchCatalog{searchErr: fmt.Errorf("search request: %w", want)}},
+			log:  zap.NewNop(),
+		}
+		_, err := repo.Search(context.Background(), biz.SearchRequest{Name: "lamp"})
+		require.ErrorIs(t, err, want)
+		require.NotErrorIs(t, err, biz.ErrSearchUnavailable)
+	}
 }
 
 func TestCheckSearch(t *testing.T) {

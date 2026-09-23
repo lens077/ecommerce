@@ -2,6 +2,7 @@ package data
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"math"
 
@@ -26,8 +27,12 @@ func NewSearchRepo(data *Data, logger *zap.Logger) biz.SearchRepo {
 func (u searchRepo) Search(ctx context.Context, req biz.SearchRequest) (*biz.SearchResponse, error) {
 	result, err := u.data.catalog.SearchProducts(ctx, req.Name)
 	if err != nil {
-		u.log.Error("failed to search product catalog", zap.Error(err))
-		return nil, fmt.Errorf("search products: %w", err)
+		// 调用方取消或超时原样返回，由 service 层映射为 canceled / deadline_exceeded；
+		// 其余都是搜索后端故障，包装为 ErrSearchUnavailable。日志由 RPC 拦截器按错误码分级记录。
+		if errors.Is(err, context.Canceled) || errors.Is(err, context.DeadlineExceeded) {
+			return nil, fmt.Errorf("search products: %w", err)
+		}
+		return nil, fmt.Errorf("%w: %w", biz.ErrSearchUnavailable, err)
 	}
 
 	products := make([]biz.Product, 0, len(result))

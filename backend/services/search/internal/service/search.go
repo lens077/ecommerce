@@ -2,6 +2,7 @@ package service
 
 import (
 	"context"
+	"errors"
 
 	"connectrpc.com/connect"
 	v1 "github.com/lens077/ecommerce/backend/api/search/v1"
@@ -25,7 +26,7 @@ func (s *SearchService) Search(ctx context.Context, c *connect.Request[v1.Search
 		Name: c.Msg.Name,
 	})
 	if err != nil {
-		return nil, err
+		return nil, searchError(err)
 	}
 
 	// 2. 转换结果集
@@ -38,6 +39,22 @@ func (s *SearchService) Search(ctx context.Context, c *connect.Request[v1.Search
 	return connect.NewResponse(&v1.SearchResponse{
 		Products: v1Products,
 	}), nil
+}
+
+// searchError 把 biz 哨兵错误映射为 RPC 错误码（docs/design/platform/error-handling.md 第 3 条）。
+// 2026-09-23 修正前一律原样返回，Elasticsearch 抖动和客户端取消都被记成 unknown、按 ERROR 上报。
+// unavailable 表示依赖故障、可重试，拦截器按 WARN 记录。
+func searchError(err error) error {
+	switch {
+	case errors.Is(err, biz.ErrSearchUnavailable):
+		return connect.NewError(connect.CodeUnavailable, err)
+	case errors.Is(err, context.Canceled):
+		return connect.NewError(connect.CodeCanceled, err)
+	case errors.Is(err, context.DeadlineExceeded):
+		return connect.NewError(connect.CodeDeadlineExceeded, err)
+	default:
+		return connect.NewError(connect.CodeUnknown, err)
+	}
 }
 
 // 转换逻辑封装
