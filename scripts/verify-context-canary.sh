@@ -63,6 +63,22 @@ build_template() { # build_template <dir>
         fi
       done
   done
+  # [PATH-REF]:判定只认「仓库根下真实存在的顶层目录」开头的路径,并用 .gitignore 放行本机文件。
+  # 所以沙箱要有同名顶层目录(否则基线条目在沙箱里「不再违规」,探针 0 假红)、
+  # 各层 .gitignore(backend/.gitignore 管着 configs/dev.yml 这类)、以及被引用且真实存在的
+  # 路径的桩。候选清单由 path-refs.py list 动态给出,不手抄。
+  cp scripts/path-refs.py "$sb/scripts/"
+  for d in */ .github/; do [ -d "$d" ] && mkdir -p "$sb/$d"; done
+  git ls-files '*.gitignore' | while IFS= read -r gi; do
+    mkdir -p "$sb/$(dirname "$gi")"; cp "$gi" "$sb/$gi"
+  done
+  python3 scripts/path-refs.py list | while IFS= read -r p; do
+    [ -e "$sb/$p" ] && continue
+    if [ -d "$p" ]; then mkdir -p "$sb/$p"
+    elif [ -e "$p" ]; then mkdir -p "$sb/$(dirname "$p")"; : > "$sb/$p"
+    fi
+  done
+  [ -f scripts/context-pathref-baseline.txt ] && cp scripts/context-pathref-baseline.txt "$sb/scripts/"
   # [SELFCHECK]:只带门禁扫描的 .scratch/*/issues/*.md(.scratch 里有 645KB 的 html、go module
   # 和带 embed 指令的 demo,整目录复制会把 [EMBED] 的源文件依赖也拖进来)
   find .scratch -path '*/issues/*.md' -type f 2>/dev/null | while IFS= read -r f; do
@@ -375,6 +391,19 @@ Status: done
 EOF
 }
 
+mut_path_ref() { # 正文反引号里写了不存在的仓库路径 —— 2026-09-22 Repowise 扫出的 47 条就是这种
+  printf '\n排查时改 `scripts/no-such-canary-script.sh` 的超时。\n' >> "$1/context/team/local-env.md"
+}
+mut_path_ref_history_ok() { # 假阳性守卫:同一行写明已删除的历史陈述必须放行
+  printf '\n`scripts/no-such-canary-script.sh` 已于 2026-09-24 删除。\n' >> "$1/context/team/local-env.md"
+}
+mut_path_ref_ignored_ok() { # 假阳性守卫:gitignore 覆盖的本机文件在 fresh clone 里本就不存在,提到它必须放行
+  printf '\n本地产物在 `frontend/test-results/canary.json`。\n' >> "$1/context/team/local-env.md"
+}
+mut_path_ref_baseline() { # 基线里登记一条根本不违规的行 → 反向棘轮必须报删行
+  printf 'context/team/local-env.md\tscripts/verify-context.sh\n' >> "$1/scripts/context-pathref-baseline.txt"
+}
+
 # ── 执行 ─────────────────────────────────────────────────────
 # ${workdir} 必须带花括号:后面紧跟全角「）」时,bash 3.2 在 UTF-8 locale 下会把
 # 多字节字符的首字节并进变量名,报 workdir? unbound(2026-08-26 实测:LC_ALL=C 绿、
@@ -426,6 +455,11 @@ probe selfcheck-missing   1 "SELFCHECK"   mut_selfcheck_missing
 probe selfcheck-no-evidence 1 "SELFCHECK" mut_selfcheck_no_evidence
 # 假阳性守卫:合规自检(含带原因的未勾选项)必须放行,否则没人敢如实写「未验证」
 probe selfcheck-ok        0 ""            mut_selfcheck_ok
+probe path-ref            1 "PATH-REF"    mut_path_ref
+# 假阳性守卫:历史陈述与 gitignore 的本机文件必须放行,否则会逼人删掉真实记录
+probe path-ref-history-ok 0 ""            mut_path_ref_history_ok
+probe path-ref-ignored-ok 0 ""            mut_path_ref_ignored_ok
+probe path-ref-baseline   1 "BASELINE"    mut_path_ref_baseline
 
 if [ "$fails" -gt 0 ]; then
   echo "verify-context-canary: $fails 个探针失败——门禁可能已静默失效,先修门禁再改内容"

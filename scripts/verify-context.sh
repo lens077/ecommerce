@@ -51,10 +51,14 @@
 #   [SELFCHECK]   .scratch/*/issues/*.md 标 `Status: done` 的实现单必须有「## 完成自检」,且每条
 #                  `- [x]`/`- [ ]` 带 `——` 后的证据或原因——「代码写完 = 完成」是最常见的假成功。
 #                  2026-09-11 立
+#   [PATH-REF]    正文里反引号写的仓库路径必须存在(判定在 scripts/path-refs.py)。[DEAD-LINK]
+#                  只查 Markdown 链接;2026-09-22 Repowise 扫出的 50 条失效引用有 47 条是这一类。
+#                  2026-09-24 立
 #
-# 基线棘轮(两份):
+# 基线棘轮(三份):
 #   scripts/context-format-baseline.txt   —— [FORMAT] 的存量违规冻结放行
 #   scripts/context-progress-baseline.txt —— [PROGRESS-SRC] 的存量,**按计数**冻结
+#   scripts/context-pathref-baseline.txt  —— [PATH-REF] 的存量,每行 `<文件>\t<路径>`
 #   共同规则:新增必须合规;基线条目已合规/数字降了/文件消失 → [BASELINE] 报错要求
 #   改行或删行(反向棘轮,防止基线变成永久免罪符)。
 #
@@ -522,6 +526,30 @@ while IFS= read -r file; do
   done <<< "$entries"
 done < <(find context docs/design -name "*.md" ! -name "INDEX.md" -type f 2>/dev/null)
 
+# ── [PATH-REF] 正文里反引号写的仓库路径必须存在 ─────────────────
+# [DEAD-LINK] 只查 `[x](y)`,查不到正文里的 `backend/pkg/types/decimal.go` 写法。
+# 触发事故(2026-09-22):Repowise 首轮扫出 50 条失效引用,47 条是这一类——文件早删了,
+# 文档还在教人去改它,而本门禁全程是绿的。判定规则与豁免(gitignore 的本机文件、
+# 同行写明已删除/退役的历史陈述、「X 仓」同级仓路径)全在 scripts/path-refs.py 里。
+# 存量冻结在 pathref_baseline(每行 `<文件>\t<路径>`),反向棘轮:修好必须删行。
+# 2026-09-24 立此检查
+pathref_baseline="scripts/context-pathref-baseline.txt"
+pathref_hits=$(python3 scripts/path-refs.py check)
+while IFS= read -r hit; do
+  [ -z "$hit" ] && continue
+  if [ -f "$pathref_baseline" ] && grep -qxF "$hit" "$pathref_baseline"; then
+    continue
+  fi
+  fail "PATH-REF" "${hit%%	*} → \`${hit#*	}\` 不存在(路径已删/已搬就改文档;确属历史陈述就在同一行写明已删除/已退役)"
+done <<< "$pathref_hits"
+if [ -f "$pathref_baseline" ]; then
+  while IFS= read -r line; do
+    case "$line" in ""|\#*) continue ;; esac
+    printf '%s\n' "$pathref_hits" | grep -qxF "$line" || \
+      fail "BASELINE" "$pathref_baseline 的「${line}」已不再违规,请删除该行(反向棘轮)"
+  done < "$pathref_baseline"
+fi
+
 # ── [SELFCHECK] 实现单标 done 必须带「完成自检」 ─────────────────
 # .scratch/<feature>/issues/NN-*.md 的 Status: 改成 done 时,文件里必须有 `## 完成自检` 小节,
 # 且其下每条 `- [x]` / `- [ ]` 都要带 `——` 后的证据或原因(格式见 docs/agents/issue-tracker.md)。
@@ -554,4 +582,4 @@ if [ -s "$violations" ]; then
   cat "$violations"
   exit 1
 fi
-echo "verify-context: OK(链接/INDEX 覆盖/frontmatter/experience 格式/决策记录/预算/并行进度源/退役物横幅/受管代码块/affects 索引/完成自检 全部通过)"
+echo "verify-context: OK(链接/正文路径/INDEX 覆盖/frontmatter/experience 格式/决策记录/预算/并行进度源/退役物横幅/受管代码块/affects 索引/完成自检 全部通过)"

@@ -1,0 +1,32 @@
+# [PATH-REF] 存量冻结(2026-09-24 立规时的现状)。每行 `<文件>\t<路径>`,由 scripts/path-refs.py check 产出。
+# 只许删不许加:修好一条就删一行,verify-context.sh 会要求删掉已不再违规的行。
+README.md	docs/progress-archive
+README.md	docs/reports
+README.md	docs/todo
+TODO.md	docs/design/bff-migration.md
+context/INDEX.md	docs/todo
+context/decisions/implemented/2026-08-30-todo-md-sole-progress-source.md	docs/progress-archive
+context/decisions/implemented/2026-08-30-todo-md-sole-progress-source.md	docs/reports
+context/decisions/implemented/2026-08-30-todo-md-sole-progress-source.md	docs/todo
+context/decisions/implemented/2026-09-03-decision-records-current-state.md	docs/reports
+context/harness-framework/self-refinement.md	frontend/.husky/_
+context/project/ecommerce/events/experience/patroni-drops-unmanaged-logical-slot.md	docs/reports
+context/team/go-testing.md	backend/pkg/testutil
+context/team/live-facts.md	docs/progress-archive
+context/team/live-facts.md	docs/reports
+context/team/runbook.md	docs/progress-archive
+docs/DEVOPS.md	docs/progress-archive
+docs/DEVOPS.md	docs/todo
+docs/SCAFFOLD.md	docs/todo
+docs/SECURITY-HARDENING.md	docs/todo
+docs/TECH.md	docs/todo
+docs/TESTING.md	backend/pkg/testutil
+docs/agents/domain.md	docs/adr
+docs/design/copilot/copilot.md	docs/progress-archive
+docs/design/copilot/copilot.md	docs/todo
+docs/design/platform/admin-roadmap.md	backend/api/admin/v1
+docs/design/platform/voxel-construction-site.md	tools/topology-health
+docs/frontend/semantic-html.md	scripts/verify-runtime.mjs
+docs/frontend/web-performance.md	scripts/home-font-text.ts
+docs/frontend/web-performance.md	scripts/subset-home-fonts.sh
+docs/observability/error-monitoring.md	frontend/packages/errors

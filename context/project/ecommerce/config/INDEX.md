@@ -79,6 +79,20 @@ control-tower 执行 `make sync-ecommerce-schemas` 并先发布 config 服务 �
 的顺序推进，不能让旧控制面 Schema 阻断新字段。紧急旁路与错误脱敏见
 `../control-tower/docs/design/config-schema.md`。
 
+## 漂移审计（Config Center ↔ matrix）
+
+```bash
+cd backend && go run ./tools/config-seed -drift -environment dev
+```
+
+用每个服务**自己的** selector（`services/<svc>/configs/source.<env>.yaml`，令牌只能读本命名空间）
+读取 Bootstrap，只核对 matrix `services.<svc>.external` 里已声明的依赖：PostgreSQL、Redis、gorse、
+Elasticsearch、Casdoor 的端点必须等于 `externals.<x>.host` 或 `remote_dev`；启用的 gorse 必须有
+`api_key`。报出的类型有 `IP_LITERAL`、`NOT_IN_MATRIX`、`RETIRED`、`EMPTY_SECRET`、`UNPARSABLE`。
+只输出路径、主机与判定，IP 打码，不输出任何配置值；有服务没审计到（缺 selector 或读失败）也算失败。
+改 Pangolin 入口或 Config Center 端点后跑一次；CI 还没有读配置的权限，暂不是门禁。
+触发事故与取舍见 [2026-09-24 决策](../../../decisions/implemented/2026-09-24-path-refs-in-verify-context.md)。
+
 ## experience
 
 | 症状 | 文件 |

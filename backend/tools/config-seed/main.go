@@ -64,7 +64,17 @@ func main() {
 	snapshot := flag.String("snapshot", "", "optional local Consul JSON export used as migration input")
 	write := flag.Bool("write", false, "write cropped snapshot entries to Config Center")
 	timeout := flag.Duration("timeout", 30*time.Second, "overall timeout")
+	drift := flag.Bool("drift", false, "compare each service's configured endpoints with .service-matrix.yaml (read-only)")
+	matrixPath := flag.String("matrix", "../.service-matrix.yaml", "service matrix used by -drift")
+	selectorPattern := flag.String("selector-pattern", "services/{service}/configs/source.{env}.yaml",
+		"per-service selector used by -drift; each service token can only read its own namespace")
 	flag.Parse()
+
+	if *drift {
+		ctx, cancel := context.WithTimeout(context.Background(), *timeout)
+		defer cancel()
+		os.Exit(runDrift(ctx, *matrixPath, *selectorPattern, *environment))
+	}
 
 	cfg, err := configsource.LoadSourceConfig(*selector)
 	if err != nil {
@@ -106,6 +116,56 @@ func auditRemote(ctx context.Context, client configv1connect.ConfigServiceClient
 		}
 		printAudit("REMOTE", a)
 	}
+}
+
+// runDrift 逐个服务用它自己的 selector 读 Bootstrap 并比对。返回进程退出码:
+// 0 = 全部审计且无漂移;1 = 有漂移,或有服务没审计到(不完整的审计不能显示成绿)。
+func runDrift(ctx context.Context, matrixPath, selectorPattern, environment string) int {
+	raw, err := os.ReadFile(matrixPath)
+	if err != nil {
+		fail("read matrix: %v", err)
+	}
+	var m driftMatrix
+	if err := yaml.Unmarshal(raw, &m); err != nil {
+		fail("parse matrix: %v", err)
+	}
+
+	rc, audited, drifted := 0, 0, 0
+	for _, service := range services {
+		selector := strings.NewReplacer("{service}", service, "{env}", environment).Replace(selectorPattern)
+		cfg, err := configsource.LoadSourceConfig(selector)
+		if err != nil || cfg.Type != configsource.TypeConfigCenter || cfg.ConfigCenter.ServiceToken == "" {
+			fmt.Printf("SKIP    %-10s selector %s 不可用(缺文件、不是 config_center 或没有 token)\n", service, selector)
+			rc = 1
+			continue
+		}
+		client := configv1connect.NewConfigServiceClient(http.DefaultClient, cfg.ConfigCenter.Address)
+		a, err := getAudit(ctx, client, cfg.ConfigCenter.ServiceToken, service, environment)
+		if err != nil {
+			fmt.Printf("SKIP    %-10s 读取 %s/%s/%s 失败: %v\n", service, service, environment, configKey, connect.CodeOf(err))
+			rc = 1
+			continue
+		}
+		var doc map[string]any
+		if err := yaml.Unmarshal(a.contents, &doc); err != nil {
+			fmt.Printf("SKIP    %-10s Bootstrap 不是合法 YAML\n", service)
+			rc = 1
+			continue
+		}
+		findings, checked := auditDrift(service, doc, m)
+		audited++
+		for _, f := range findings {
+			fmt.Println(f.String())
+		}
+		if len(findings) > 0 {
+			drifted++
+			rc = 1
+		} else {
+			fmt.Printf("OK      %-10s v%-4d %d 个端点/凭据检查通过\n", service, a.version, checked)
+		}
+	}
+	fmt.Printf("drift: 审计 %d/%d 个服务,%d 个有漂移(environment=%s)\n", audited, len(services), drifted, environment)
+	return rc
 }
 
 func dryRunSnapshot(path, environment string) {

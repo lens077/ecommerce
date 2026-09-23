@@ -35,3 +35,4 @@ Repowise 只提供引用漂移和代码导航证据，不成为真相源，不�
 - `.repowise/` 是可删除重建的本地缓存，不进 Git；`tools/repowise/.venv/` 也不进 Git。
 - 仍需维护 Repowise 的锁文件和版本升级验证；grammar 下载或索引失败必须使门禁失败，不能静默放行。当前仓库没有 COBOL 文件，脚本只屏蔽未使用的 COBOL grammar 下载；一旦加入 `.cbl` / `.cob` / `.cobol` / `.cpy`，真实 grammar 加载失败会直接阻断。
 - 该门禁不能证明运行态、Config Center、Secret、Kubernetes 对象或所有自然语言架构结论正确；这些继续由本仓已有真相源和专门门禁负责。
+- **2026-09-24 已被取代**：CI 接线撤下，Repowise 降为按需审计，「正文路径必须存在」搬进 `verify-context.sh` 的 `[PATH-REF]`。理由见 [2026-09-24-path-refs-in-verify-context.md](2026-09-24-path-refs-in-verify-context.md)。本文的「决策」一节保留当时原文，不再是现状。

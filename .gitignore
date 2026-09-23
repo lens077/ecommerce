@@ -28,6 +28,10 @@ helper.sh
 # playwright-cli 的页面快照产物（带时间戳，每次运行都新增一份），不是项目产物
 frontend/.playwright-cli/
 
+# vite-plus 安装钩子时生成的分发器目录（`vp config` 写入，fresh clone 里不存在）。
+# 显式忽略后 [PATH-REF] 才能在本机与 CI 上给出同一结论（2026-09-24）
+frontend/.vite-hooks/_
+
 # E2E 失败截图（frontend.yml 的 smoke-login 在 runner 上创建，本地跑也会落）
 e2e-artifacts/
 

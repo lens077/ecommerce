@@ -64,7 +64,8 @@ description: 给所有 AI 编码工具(尤其 Codex)的可执行命令与验收�
 | 提交信息 / 分支 / 分组 | [git-commit.md](git-commit.md) + 本文 §6 | type 自造、`perf` 滥用、`git add -A` 混提 |
 | 踩到坑之后 | [`harness-framework/self-refinement.md`](../harness-framework/self-refinement.md) | 同一个坑下个会话再踩一次 |
 | **改 `context/` 或 `docs/design/` 里的约束本身** | 改完跑 `scripts/spec-impact.sh`,把命中的实现点核对一遍(`affects:` 约定见 [`knowledge-layering.md`](../harness-framework/knowledge-layering.md)) | 规范改了、两周前按旧规范写的代码没人回头看,文档与实现静默跑偏 |
-| **代码/文档引用漂移** | 固定环境下跑 [`repowise.md`](repowise.md) 的 `scripts/verify-repowise.sh` | 文档声称存在的路径/符号逐渐失效；裸 `repowise init` 还可能写入 agent 配置或 hook |
+| **改 Config Center 里的端点或 key、排查「配置改了没生效」** | `cd backend && go run ./tools/config-seed -drift -environment dev`(规则见 [config/INDEX.md](../project/ecommerce/config/INDEX.md)「漂移审计」) | 地址还指着已退役入口、key 为空,服务起得来但业务全 401/连接被拒(2026-09-23 product 与 behavior 实付) |
+| 清理死代码、评估影响面 | [`repowise.md`](repowise.md)(按需审计,不是门禁) | 把 Repowise 的「不可达」当定论删掉还在用的文件;裸 `repowise init` 写入 agent 配置或 hook |
 | 写 spec / 拆实现单 / 关单 | [`docs/agents/issue-tracker.md`](../../docs/agents/issue-tracker.md)「验收标准」「完成自检」 | 验收写成「保证安全」没法验;标 `done` 没证据被 `[SELFCHECK]` 拦 |
 
 ⚠️ **目标态**文档（`DEVOPS.md` / `OBSERVABILITY.md` / `design/platform/production-scale-goal.md`）描述的是尚未实现的体系,
@@ -78,7 +79,6 @@ description: 给所有 AI 编码工具(尤其 Codex)的可执行命令与验收�
 scripts/verify-quick.sh             # 后端(§1+§3)与前端(§4)并行跑;每侧绿了只打一行,红了只打日志尾部
 scripts/verify-quick.sh backend     # 只跑后端;frontend 同理
 scripts/verify-public-ips.py --history # 公网 IP 字面量历史门禁
-scripts/verify-repowise.sh              # 独立的代码图/文档漂移门禁，首次索引较慢
 ```
 
 后端链与 `pnpm ready` **无数据依赖,不要串行等待**;全量输出在修复循环里反复进上下文,

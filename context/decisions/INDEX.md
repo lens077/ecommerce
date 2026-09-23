@@ -18,7 +18,8 @@ context/decisions/
 
 | 决策 | 一句话 |
 |---|---|
-| [2026-09-22-repowise-gate.md](implemented/2026-09-22-repowise-gate.md) | Repowise 以固定版本、无 LLM 的只读索引接入双远端文档漂移门禁，不替代现有真相源和结构门禁 |
+| [2026-09-24-path-refs-in-verify-context.md](implemented/2026-09-24-path-refs-in-verify-context.md) | 正文路径检查进 verify-context（`[PATH-REF]`）；Repowise 撤出 CI 改按需审计；`config-seed -drift` 对照 matrix 查运行时配置漂移 |
+| [2026-09-22-repowise-gate.md](implemented/2026-09-22-repowise-gate.md) | （已被上一条取代）Repowise 曾以固定版本、无 LLM 的只读索引接入双远端 per-push 门禁 |
 | [2026-09-16-index-single-listing.md](implemented/2026-09-16-index-single-listing.md) | 逐篇清单只维护在各层 INDEX；根 `context/INDEX.md` 降为「该进哪一层」的路由，AGENTS.md 层表改指针 |
 | [2026-09-16-todo-md-items-only.md](implemented/2026-09-16-todo-md-items-only.md) | TODO.md 只记 TODO 项与状态；硬规则 3 改为「先判断是否涉及 TODO 项」；`[TODO-CLEAN]` 拦行首日期与超长行，字节预算只做兜底 |
 | [2026-09-12-prod-release-baseline.md](implemented/2026-09-12-prod-release-baseline.md) | prod 独立覆盖层保留现网配置；前端原生双架构构建；发布更新 dev，生产显式晋级 |
