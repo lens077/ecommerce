@@ -159,18 +159,20 @@ todo-spec: 1
 - [ ] **待复验 · 告警信号卫生**：复核慢性 PG lag、swap、网络拒绝等旧告警是否仍在；先修根因，再做 critical/warning 分流与窗口失败率判定，避免重启风暴被连续成功探针掩盖。既有交接见 [告警清理](.scratch/chronic-alerts-cleanup/HANDOFF.md)。
 - [ ] **待复验 · 指标写入口认证**：确认 VM import 与 OTLP metrics 入口拒绝未授权写入，推送方认证同步配置；旧公网可写断言未重测。
 - [ ] **部分完成 · 指标采集层对齐**：当前有 OTel agent，TECH.md 仍要求 VMAgent。按目标收敛职责、避免重复采集；补 Pod/容器用量与 CFS throttling，校验 kubelet/cAdvisor 实际可用指标，不能假定 kubeletstats 覆盖全部限流指标。
-- [ ] **部分完成 · Go runtime/进程指标验收**：十服务 adapter 均已设 `RuntimeMetrics: true`，删除「全部未实现」判断；剩发布版本与 goroutine/heap/CPU/内存实际 series、导出失败可见性验收，缺项在 go-connect-kit 补齐。
-- [ ] **未完成 · 日志限流**：共享日志模块统一实现采样与压制计数；stdout/OTLP 同时受控，FATAL/PANIC 不限，阈值经故障场景验证。不再复制修改十份初始化代码。
+- [ ] **部分完成 · Go runtime/进程指标验收**：十服务 adapter 均已设 `RuntimeMetrics: true`，删除「全部未实现」判断；剩 goroutine/heap/CPU/内存实际 series、导出失败可见性验收，缺项在 go-connect-kit 补齐；发布版本归下文「部署关联与观测恢复」。
+- [ ] **未完成 · 日志限流**：共享日志模块统一实现采样与压制计数；stdout/OTLP 同时受控，FATAL/PANIC 不限，阈值经故障场景验证。不再复制修改十份初始化代码——RPC 日志拦截器（`services/*/internal/server/logging.go`）同样下沉 go-connect-kit：2026-09-24 修「业务异常分支漏记 `err` 本体」要改十份副本。
+- [ ] **未完成 · 业务错误 reason**：service 层映射后只剩 connect 的 14 个 code，`failed_precondition` 分不清购物车为空还是库存不足；给 `connect.Error` 附 `google.rpc.ErrorInfo{Reason, Domain}`（reason = 哨兵名，如 `ORDER_CART_EMPTY`；全仓 grep 无任何 `ErrorDetail` 用法），同一值写进 span attribute `error.reason`、日志字段和一个有界 label；错误码定义表从各 `domain/errors.go` 生成。与上文「错误码与空表反馈」（`unknown`→`not_found`）同批做。
+- [ ] **未完成 · 抛错点定位**：zap 开了 `AddCaller`，但日志由拦截器统一打，caller 永远是 `server/logging.go:NN`（`docs/design/platform/error-handling.md` 示例日志自证），无法 blame。kit 提供 data 层 `%w` 时附 caller frame 的包装，拦截器对 internal/unknown/data_loss 取最内层 frame 写 `error.origin`；不用全局 `AddStacktrace`（栈仍从拦截器起）。
 - [ ] **待复验 · 网关遥测**：源码已用 kit 的 ParentBased 采样，旧 AlwaysSample 修复项删除；验证真实 5xx 的 span/log 状态、网关上游时延与尾采样效果，不沿用已删除旧网关的行号结论。
 - [ ] **未完成 · 前端 RUM 与后端关联**：consumer 已接 `initPerf`，补 `traceparent`/Server-Timing 关联与 merchant/admin 的适用接入；Umami 不替代性能追踪。
-- [ ] **部分完成 · 看板和标签**：DB 错误率分母已修；剩节点覆盖阈值按当前采集对象校准、网关时延图、`service.namespace`/实例标签及 `rpc.code` 回归，按上下文组织四黄金信号。
-- [ ] **未完成 · SLO 与定位验收**：落 gateway/user/order/cart SLO 和错误预算；授权演练中验证告警至 Grafana/trace 定位不超过 5 分钟。P50/P95/P99 基线并入容量压测，不把一次冷请求当结论。
+- [ ] **部分完成 · 看板和标签**：DB 错误率分母已修；剩节点覆盖阈值按当前采集对象校准、网关时延图、`service.namespace`/实例标签及 `rpc.code` 回归，按上下文组织四黄金信号；R3 错误分析盘单列兜底码 `unknown` 占服务侧错误的比例（10 个服务 `default: connect.CodeUnknown` 兜底），加一条 warning「持续 1h > 阈值」——这是未映射错误路径的代码债信号，不是事故信号，阈值要避开慢性红。
+- [ ] **未完成 · SLO 与定位验收**：落 gateway/user/order/cart SLO 和错误预算；授权演练中验证告警至 Grafana/trace 定位不超过 5 分钟——前提是告警载荷带回查参数：`service`、`rpc_method`、firing 时间窗和一条 VictoriaLogs/VictoriaTraces 查询链接（`alerting-notification.md` 目前无 dashboard/trace 深链约定）。P50/P95/P99 基线并入容量压测，不把一次冷请求当结论。
 
 #### P2
 
 - [ ] **待复验 · 观测链自身健康**：CES 巡检、Gatus 和采集器补/核验 dead-man 新鲜度告警；2026-09-23 broker 滚动致 Debezium task FAILED（connector 仍 RUNNING）：Gatus `cdc-source-task` 约 1 分钟先红，vmalert `CDCSlotInactive`（`for: 10m`）在 +10 分钟 firing——现有规则已覆盖这类「task 死、槽失活」；同日晚已给 Connect CR 配 `metricsConfig`（kubernetes 仓 `components/kafka/cdc/connect-metrics-configmap.yaml`），新增 `CDCConnectTaskNotRunning`(2m)/`CDCDebeziumDisconnected`(3m)/`CDCDebeziumLagHigh` 直接看 task 状态与 Debezium 连接，比槽失活快 8 分钟；但这三条**不是**「offset 落后槽」的等价物（该状态下全绿）；同日晚查明根因是 `connector_and_driver` 让槽结构性领先 offset、任何重启都出事，已改 `offset.mismatch.strategy=trust_greater_lsn` + `snapshot.mode=initial`（重启实测不重快照不 FAILED），差值转为预期非零、不做告警；对账已落地（`CDCReconcileMismatch`，7 表差值 0）并以 800 更新 + 3 次重启压测不丢不重（`context/project/ecommerce/events/experience/debezium-offset-behind-slot-after-broker-roll.md`）；CDC 槽位点/task/lag 已有恢复记录，不重复列「全部缺失」，但迁移后持续覆盖仍需核对。
 - [ ] **待复验 · 日志出口与配置**：核对 SDK `/v1/logs` 的旧 401 是否仍存在；统一 endpoint/header/TLS 与 exporter 开关，删除无代码消费的环境变量，确认 stdout/Vector 与应用 OTLP 各自入库。
-- [ ] **未完成 · 部署关联与观测恢复**：采集部署 marker/变更维度；按 TECH.md 外置观测目标验证存储备份/恢复及单点风险，不将 node3 进程外置等同于物理故障域隔离。
+- [ ] **未完成 · 部署关联与观测恢复**：采集部署 marker/变更维度——`SERVICE_VERSION` 现默认固定 `"v1"`（`constants/env.go`、各 `cmd/server/main.go`），`service.version` 等于没有；CI 由 semver tag 触发，构建期注入 `<tag>+<short-sha>` 并在 Grafana 加发布 annotation，错误率突增才能对到具体变更；按 TECH.md 外置观测目标验证存储备份/恢复及单点风险，不将 node3 进程外置等同于物理故障域隔离。
 
 ### 前端技术栈与工程化
 

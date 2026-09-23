@@ -86,7 +86,9 @@ func (l *LoggingInterceptor) WrapUnary(next connect.UnaryFunc) connect.UnaryFunc
 				span.AddEvent("rpc_business_exception", trace.WithAttributes(
 					attribute.String("message", err.Error()),
 				))
-				l.logger.Info("rpc business exception", fields...)
+				// 业务异常也要带 err 本体：只记 rpc.code 时 failed_precondition 分不清是哪个哨兵错误
+				// （购物车为空 / 库存不足 / 订单状态不对），排障只能回头翻代码猜（2026-09-24）。
+				l.logger.Info("rpc business exception", append(fields, zap.Error(err))...)
 			}
 		} else {
 			span.AddEvent("rpc_completed", trace.WithAttributes(
