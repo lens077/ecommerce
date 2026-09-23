@@ -239,7 +239,7 @@ spec:
 
 **HPA 与 KEDA 分工**：HPA 负责在线请求服务（根据 CPU/内存/RPC QPS 伸缩），KEDA 负责 Kafka 消费者（根据 lag 伸缩）。两者不会控制同一资源。KEDA 只管领域事实线的 franz-go 消费者；行投影线的 Elasticsearch Sink 是 Kafka Connect 任务，由 Connect 自身管理，不在 KEDA 范围。
 
-**本项目当前状态与接入边界（2026-09-23）**：kubernetes 仓已安装 KEDA 2.20.2，并用隔离的 Cron `ScaledObject` 验收了 `Deployment 0→2` 与 HPA 生成；这证明控制器能力已就绪，不等于业务已经启用 KEDA。当前 ecommerce namespace 没有生产 `ScaledObject`，因为尚未有经过确认的业务 Kafka consumer Deployment、consumer group、topic 分区容量、PDB 与 lag 阈值。第一个真实消费者出现后，优先按「领域事实线」创建 `ScaledObject`：`minReplicaCount`、`maxReplicaCount`、`lagThreshold`、失败/死信处理、缩容安全性和容量预算必须一起验收。不要把 KEDA 直接用于 Debezium source 或 Kafka Connect Elasticsearch sink；它们是 Connect task，由 Connect 自己管理。KEDA 的可复跑验证、当前未接业务的原因和触发条件见 [`kubernetes/components/keda/examples/cron-demo.yaml`](../../kubernetes/components/keda/examples/cron-demo.yaml) 与 `kubernetes` 仓组件文档。
+**本项目当前状态与接入边界（2026-09-23）**：kubernetes 仓已安装 KEDA 2.20.2，并用隔离的 Cron `ScaledObject` 验收了 `Deployment 0→2` 与 HPA 生成；这证明控制器能力已就绪，不等于业务已经启用 KEDA。当前 ecommerce namespace 没有生产 `ScaledObject`，因为尚未有经过确认的业务 Kafka consumer Deployment、consumer group、topic 分区容量、PDB 与 lag 阈值。第一个真实消费者出现后，优先按「领域事实线」创建 `ScaledObject`：`minReplicaCount`、`maxReplicaCount`、`lagThreshold`、失败/死信处理、缩容安全性和容量预算必须一起验收。不要把 KEDA 直接用于 Debezium source 或 Kafka Connect Elasticsearch sink；它们是 Connect task，由 Connect 自己管理。KEDA 的可复跑验证、当前未接业务的原因和触发条件见 kubernetes 仓 `components/keda/examples/cron-demo.yaml` 与该仓组件文档（同级仓路径不写成 Markdown 链接：CI 只检出本仓，链接必判为死链）。
 
 ### 4.5 两条数据线：行投影走 CDC，领域事实走 Outbox
 
