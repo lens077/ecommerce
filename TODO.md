@@ -109,7 +109,7 @@ todo-spec: 1
 - [ ] **部分完成 · VPA 与 requests 校准**：按 Off/RequestsOnly 收敛，包括复核 config-center 旧 InPlace 配置；至少 7 天指标覆盖发布与 k6 窗口，再人工回写 requests。
 - [ ] **部分完成 · 多副本、PDB 与 N+1**：重核当前拓扑的副本/PDB；旧低流量、旧节点演练不代表现在达标。验证节点故障、扩缩容、批量滚更、资源耗尽与调度失败告警，满足后才启用自动灰度/重调度。
 - [ ] **待复验 · HTTPRoute/TLS 收敛**：同 hostname 不等于冲突，按 Exact/PathPrefix 优先级验证 SSR、SPA 与 `/_next`；盘点当前仍存活的基础设施路由和 certificateRef，不按旧组件列表批量迁移。
-- [ ] **部分完成 · 数据恢复与重装**：2026-09-23 已用真实 dump（`backs/node3/pigsty-node3-2026-09-03/raw/_data/ecommerce.pgdump`）在 CNPG 隔离库比对：业务表与 live 一致（同一套 Go seed，订单/用户在备份里为 0 行），只有 Config Center 的 `config` schema 是 live 缺的，已 additive 合入 `pg-main/ecommerce`；CDC 用真实 SKU 可逆改价验证 PG→Debezium→Kafka→ES 全链路。剩：CNPG PITR/对象存储备份、RTO/RPO 演练；OpenBao 集群外备份/副本；重装手顺以 CNPG + OpenBao/ESO + Config Center 为准（Pigsty 已随 node3 退役）。
+- [ ] **部分完成 · 数据恢复与重装**：2026-09-23 已用真实 dump（`backs/node3/pigsty-node3-2026-09-03/raw/_data/ecommerce.pgdump`）在 CNPG 隔离库比对：业务表与 live 一致（同一套 Go seed，订单/用户在备份里为 0 行），只有 Config Center 的 `config` schema 是 live 缺的，已 additive 合入 `pg-main/ecommerce`；CDC 用真实 SKU 可逆改价验证 PG→Debezium→Kafka→ES 全链路。剩：CNPG PITR/对象存储备份、RTO/RPO 演练；OpenBao 集群外备份/副本；重装手顺以 CNPG + OpenBao/ESO + Config Center 为准（Pigsty 已随 node3 退役）。OpenBao 当前明确选择 **C：保持 Shamir 手动解封**，不做 static seal migration，也不接 VPS Vault transit；Pod 重启后的恢复动作是 `bash kubernetes/components/openbao/examples/unseal.sh`，Gatus `openbao-unsealed` 负责告警。
 - [ ] **待对齐 · 数据面故障域**：近期 Kafka/ES/Connect/Silo 迁入 K8s，与 TECH.md §7 的外置数据面目标有差距；登记迁移后容量与恢复证据，再按目标规划收敛，不能把部署完成当成目标已满足。
 - [ ] **待复验 · Dragonfly 实例隔离**：按 TECH.md §7/§12 验收 Session 的 noeviction/持久化、Cache 淘汰策略与 Ratelimit 故障域；共用实例不能标为生产基线完成。
 
