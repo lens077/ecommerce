@@ -6,7 +6,10 @@ import (
 	"github.com/lens077/ecommerce/backend/services/inventory/internal/data/models"
 
 	"context"
+	"errors"
+	"fmt"
 
+	"github.com/jackc/pgx/v5"
 	"go.uber.org/zap"
 )
 
@@ -42,11 +45,16 @@ func (u *inventoryRepo) Reserve(ctx context.Context, req biz.ReserveRequest) (*b
 			SkuID:      item.SkuID,
 		})
 		if err != nil {
-			return nil, u.data.dbErrHandler.MustHandleError(err, biz.ErrOrderItemsSkuIdNotFound)
+			// 带上调用方传入的 sku_id，排障时能直接定位是哪一行没有库存记录。
+			if errors.Is(err, pgx.ErrNoRows) {
+				return nil, fmt.Errorf("%w: sku_id=%d", biz.ErrOrderItemsSkuIdNotFound, item.SkuID)
+			}
+			return nil, u.data.dbErrHandler.MustHandleError(err)
 		}
 		// 3. 校验 available >= req.Quantity，否则返回库存不足
 		if stock.Available < item.Quantity {
-			return nil, biz.ErrInsufficientStock
+			// 只带 sku_id：接口经网关对外，不把可用库存数量回给调用方。
+			return nil, fmt.Errorf("%w: sku_id=%d", biz.ErrInsufficientStock, item.SkuID)
 		}
 		// 4. 执行 Reserve 更新（available = available - quantity, version = version + 1）
 		_, reserveErr := u.data.db.Reserve(ctx, models.ReserveParams{
@@ -57,7 +65,9 @@ func (u *inventoryRepo) Reserve(ctx context.Context, req biz.ReserveRequest) (*b
 			Version:     stock.Version + 1,
 		})
 		if reserveErr != nil {
-			return nil, u.data.dbErrHandler.MustHandleError(err, biz.ErrOrderItemsSkuIdNotFound)
+			// 必须处理 reserveErr 本身：这里的外层 err 恒为 nil，传它会返回 (nil, nil)，
+			// service 层随后解引用空响应直接 panic。
+			return nil, u.data.dbErrHandler.MustHandleError(reserveErr)
 		}
 		// 5. 插入日志（幂等）
 		insertChangeLogErr := u.data.db.InsertChangeLog(ctx, models.InsertChangeLogParams{
@@ -76,7 +86,8 @@ func (u *inventoryRepo) Reserve(ctx context.Context, req biz.ReserveRequest) (*b
 			ToStatus:        models.Stockstatus(constants.StockStatusReserved),
 		})
 		if insertChangeLogErr != nil {
-			return nil, u.data.dbErrHandler.MustHandleError(err, biz.ErrOrderNotFound)
+			// 同上，外层 err 恒为 nil。order_no 重复由 NewData 注册的 23505 映射为 ErrOrderAlreadyExists。
+			return nil, u.data.dbErrHandler.MustHandleError(insertChangeLogErr)
 		}
 	}
 

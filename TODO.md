@@ -44,7 +44,7 @@ todo-spec: 1
 
 #### P0
 
-- [ ] **未完成 · 库存预占正确性**：`inventory/internal/data/inventory.go` 仍传未来版本号、忽略更新行数、传错扣减量与错误变量，且未组成完整事务。修复原子条件更新、流水及幂等，并验证并发不足库存不会成功。
+- [ ] **未完成 · 库存预占正确性**：`inventory/internal/data/inventory.go` 仍传未来版本号、忽略更新行数、传错扣减量，且未组成完整事务（错误变量与 RPC 错误码映射已修）。修复原子条件更新、流水及幂等，并验证并发不足库存不会成功。
 - [ ] **未完成 · 库存释放**：data 层 `ReleaseReserve` 仍为 panic，但 service 层根本没调它——直接返回 `{status:false}` 200（2026-09-23 http-client 实测，属假成功）；实现幂等释放，未实现前显式返回 Unimplemented。另：`inventory.stock` 没有 seed，`Reserve` 对 seed SKU 一律 `sku_id is not found`，这是设计（库存由业务流入），测试文件已注明，不造假数据。
 - [ ] **未完成 · 订单假成功与不落库**：`order/internal/service/order.go` 忽略建单输入，`internal/data/order.go` 的 `SaveOrderGroup`/`SaveOrder` 只记日志返回 nil。先显式阻断假成功，再实现持久化；提交成功前不得发布完成事件。
 - [ ] **未完成 · 地址归属校验**：`address/internal/service/address.go` 创建地址仍信任请求体 `UserId`，读改删和设默认未传会话主体。主体取可信身份，数据访问绑定归属；覆盖用户 A/B、游客和管理员的无副作用拒绝测试。
