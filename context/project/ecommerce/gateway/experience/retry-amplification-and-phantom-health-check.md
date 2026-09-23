@@ -58,5 +58,4 @@ description: 服务发现每推送一次就把 failureCount 清零，让健康�
 
 **相关**
 
-- 本轮真凶其实在服务注册侧：[`registry/experience/consul-ttl-first-ping-blind-window.md`](../../registry/experience/consul-ttl-first-ping-blind-window.md)
 - 前端侧的重复请求：[`consumer/experience/duplicate-cart-queries.md`](../../consumer/experience/duplicate-cart-queries.md)

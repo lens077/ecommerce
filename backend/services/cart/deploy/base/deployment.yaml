@@ -96,8 +96,7 @@
             },
             # Consul 只用于服务注册发现。2026-09-03 起显式关闭:当前不需要服务发现,
             # 保留接线以备将来启用。注册守护循环(重试/重注册)已在 backend/pkg/registry
-            # 修好并用本服务实测,开关翻回 "true" 即可生效——见
-            # context/project/ecommerce/registry/experience/consul-register-once-then-give-up.md
+            # 修好并用本服务实测,开关翻回 "true" 即可生效。
             {
               name: "CONSUL_ENABLED",
               value: "false",

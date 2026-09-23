@@ -8,8 +8,8 @@ description: TODO.md 是唯一进度真相源；PROGRESS.md 双文档（08-13）
 
 ## 问题
 
-进度视图只要有两处就会漂移，而漂移的那一份带着"最后更新：今天"的头部提供过期数字，比没有更糟。
-本仓两次验证了这一点：`docs/PROGRESS.md` 与 `TODO.md` 双写，"每次改动两份都要更新"的硬性要求在没有验证器兜底下
+进度视图只要有两处就会漂移，而漂移的那一份带着「最后更新：今天」的头部提供过期数字，比没有更糟。
+本仓两次验证了这一点：旧进度文档与 `TODO.md` 双写，"每次改动两份都要更新"的硬性要求在没有验证器兜底下
 5 天内断裂（08-08 后无实质更新，服务数修正漏掉 3 处，可观测性描述整体落后一轮）；kaneo 看板作为执行态镜像，
 留着半截的同步 skill 与脚本，下一个照做的 agent 只会撞上已经不存在的后端。两次事故的经过见
 evolution-log 2026-08-13 与 2026-08-30 条。
@@ -20,9 +20,7 @@ evolution-log 2026-08-13 与 2026-08-30 条。
 （2026-09-16 收窄，见 [2026-09-16-todo-md-items-only.md](2026-09-16-todo-md-items-only.md)），因此它有独立的强制时机。
 待办明细按 `docs/TECH.md` 体系分类在 `docs/todo/`，属于同一体系的细分而非第二份视图。
 
-不再存在的东西：`docs/PROGRESS.md`（归档为带废止横幅的 `docs/progress-archive/PROGRESS_ARCHIVE_20260813.md`，
-制度文件 `progress-and-todo.md` 已删）；kaneo 看板（`.claude/skills/kaneo-sync/`、`.claude/kaneo-mcp.json`、
-`scripts/kaneo/`、node1 上的容器 / 数据卷 / 网络、Pangolin 资源 `kaneo.apikv.com` 全部删除）。
+不再存在的旧进度文档、制度文件和 kaneo 看板均已删除；相关历史只保留在本决策和 Git 历史中，不再列出已删除路径。
 **不要重建"按需挂载看板 MCP"**——2026-08-21 token 治理曾把它写成长期约定，那条约定已随看板一起作废。
 
 机械守卫是 `scripts/verify-context.sh` 的 `[PROGRESS-SRC]`：复选框（`- [ ]` / `- [x]`）只允许出现在

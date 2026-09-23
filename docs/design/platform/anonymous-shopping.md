@@ -6,7 +6,7 @@
 > 2026-09-03 由 0.2.5 升到 0.2.10 后访客轨日志确认启用（`匿名购物访客轨已启用 cookie=ct_guest`）。
 > **两个未验事实**：Config Center 线上键 `gateway/dev/routes.yaml` 是否含 `guest:` 段（仓库
 > `routes/dev.yaml` 只是模板，不是生效值）；dev 网关当时因 Consul 目录为空而 `readyz` 503、
-> 整体不接流量（另案，见 `context/project/ecommerce/registry/experience/consul-register-once-then-give-up.md`），
+> 整体不接流量（另案），
 > 所以匿名加购端到端还没跑过。
 >
 > 触发本设计的是一个真实缺陷：匿名访问首页时顶栏发出 `GetCart`

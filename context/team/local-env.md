@@ -288,7 +288,6 @@ done
 - 公网暴露与隧道操作：[pangolin-tunnel.md](pangolin-tunnel.md)
 - 内环开发：[okteto-inner-loop.md](okteto-inner-loop.md)
 - 网关 JWT 与 Casdoor 时钟偏移：[`jwt-nbf-clock-skew-loop.md`](../project/ecommerce/gateway/experience/jwt-nbf-clock-skew-loop.md)
-- Consul TTL 首次心跳盲窗：[`consul-ttl-first-ping-blind-window.md`](../project/ecommerce/registry/experience/consul-ttl-first-ping-blind-window.md)
 - 一次性搭建/迁移实录（node3、Silo、Redis TLS、PG 切流、可观测外移）：
   docs/progress-archive/node3-migration-20260824.md
 

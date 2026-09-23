@@ -31,7 +31,7 @@ description: Cilium 数据面三条只能实测的事实——ipcache 身份失�
 **能想到要查的东西全是绿的。** CEP 正常、标签匹配、策略 Valid——于是排查方向很自然地跑去
 「是不是 TLS 握手不对」「是不是 Dragonfly 自己有问题」「是不是 DNS」。
 
-第二层伪装：`docs/reports/2026-08-28-zero-trust-runtime-security.md` 的应急建议是
+第二层伪装：旧 zero-trust 运行时审计报告中的应急建议是
 **「业务网络异常：先删除 `ecommerce-api-default-deny`」**。这条会「修好」症状——
 删掉 default-deny 流量确实通了——但身份仍然是坏的，你什么也没学到，
 下次加回策略照样复发。**先删策略之前，务必先看一眼 ipcache。**

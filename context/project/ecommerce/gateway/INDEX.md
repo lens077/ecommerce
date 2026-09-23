@@ -42,4 +42,4 @@ Casdoor 有状态 Session（Dragonfly Session Store）+ OpenFGA；**完全废弃
   前端表现为「未知错误」。网关自身错误一律走 `internal/gwerrors`：Connect 规范错误体
   + 非空 detail + `X-Error-Reason` 头。这条契约前端已依赖，不能改。
 - 网关「拿不到节点」时不一定是网关的错。服务注册侧也会造成节点对外不可见，
-  见 [`registry/experience/consul-ttl-first-ping-blind-window.md`](../registry/experience/consul-ttl-first-ping-blind-window.md)。
+  见 [`registry/INDEX.md`](../registry/INDEX.md)。

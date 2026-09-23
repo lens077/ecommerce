@@ -27,7 +27,7 @@ npx skills add https://github.com/Fenng/tech-doc-style-chinese -a claude-code -g
 
 若安装器未将其放到 DSH 扫描目录，需要另行把完整 Skill 目录接入 `~/.dsh/skills/tech-doc-style-chinese` 或共享的 `~/.agents/skills`，不能只复制 SKILL.md 而漏掉 references。
 
-Impeccable 上游当前推荐从项目根运行 `npx impeccable install` 并选择所需 provider；也提供 `dist/dsh/.dsh/skills/` 的 DSH 构建。先核对安装器版本与变更，保留项目既有产品和设计资产。当前上游 Hook 已使用 `scripts/impeccable hook` launcher，而本项目遗留 Hook 使用 `scripts/hook.mjs`：安装新版后必须核对生成配置和 frontend-only 过滤，不能把「路径已修正」当作 Hook 已恢复。
+Impeccable 上游当前推荐从项目根运行 `npx impeccable install` 并选择所需 provider；也提供 `dist/dsh/.dsh/skills/` 的 DSH 构建。先核对安装器版本与变更，保留项目既有产品和设计资产。当前上游 Hook 已使用 `scripts/impeccable hook` launcher，而本项目遗留 Hook 使用 前端 vite-plus hooks：安装新版后必须核对生成配置和 frontend-only 过滤，不能把「路径已修正」当作 Hook 已恢复。
 
 ## MCP 与搜索能力
 

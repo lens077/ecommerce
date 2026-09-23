@@ -19,7 +19,7 @@ PostgreSQL 事务发件箱与搜索 projection 链。
 - node3 的 Debezium 3.6.1 → Kafka → Elasticsearch Sink 链**已运行并验收**（同级仓 `postgres-kafka-es-streaming-pipeline`）：七张表进入 ES，其中 `products.search_catalog` 是搜索策展投影；它是生产搬运层，不再称「演示链」。`EventRouter` 与 `CloudEventsConverter` 已在其类路径上（2026-09-03 实测）。
 - `pkg/outbox` 只有 `Insert`（同事务写一行，不再 `pg_notify`）。没有 broker-neutral `EventSink`、Kafka Adapter 或 Kafka CLI 模式，目标态也不需要——搬运由 Debezium Outbox Event Router 承担。
 - node3 Kafka 已有基础设施，CDC 线在用；领域事件线仍零业务接线。
-- outbox payload 当前为 JSON。`products.outbox` 表仍带 `published_at/attempts/last_error` 三列——那是自写 relay 的记账本，换 Debezium 后「是否已发布」由 WAL 位点回答，这三列待随线 B 迁移删除（见 `docs/todo/数据一致性与事件驱动.md`）。
+- outbox payload 当前为 JSON。`products.outbox` 表仍带 `published_at/attempts/last_error` 三列——那是自写 relay 的记账本，换 Debezium 后「是否已发布」由 WAL 位点回答，这三列待随线 B 迁移删除（见 `TODO.md`「数据一致性与事件驱动」）。
 - PostgreSQL sequence ID 不代表并发 producer 的 commit 顺序；Debezium 按 WAL 提交序投递，但领域顺序仍必须由 aggregate version 和 consumer fence 约束。
 - outbox 表尚无清理策略；在 Inbox、DLQ、重放窗口和恢复证据完成前，不能把任何 cleanup 当成生产安全策略。
 

@@ -41,7 +41,7 @@ TBT 与 CLS 合计 55 分已拿满，丢分全在「多久能看到东西」。�
 | emotion SSR、hydration 边界 | 要在 Vite 侧从零踩 | 商品页已踩过 |
 | 登录态 / 语言 / Tauri 差异 | 全部要挪进 effect，否则 hydration mismatch | 首页只有三个小岛 |
 
-选 B。理由：`docs/reports/2026-08-28-nextjs-poc.md` 已定「公开可收录页归 consumer-next」，首页本来就在这条轨道上；A 会让仓库多一种渲染模式且坑要重踩。
+选 B。理由：Next.js POC 记录 已定「公开可收录页归 consumer-next」，首页本来就在这条轨道上；A 会让仓库多一种渲染模式且坑要重踩。
 
 ## 四、实现要点
 

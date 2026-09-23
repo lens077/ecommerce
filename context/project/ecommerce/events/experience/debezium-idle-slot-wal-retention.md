@@ -184,6 +184,5 @@ B=10.10.21.172:9092; CC=/etc/kafka/admin.properties   # pigsty-admin，SASL_SSL
 **相关**
 
 - 本修法的必配项 `offset.mismatch.strategy=trust_greater_lsn`（否则重启必出事）：[debezium-offset-behind-slot-after-broker-roll.md](debezium-offset-behind-slot-after-broker-roll.md)
-- 同类「健康绿、功能死」：[`registry/experience/consul-register-once-then-give-up.md`](../../registry/experience/consul-register-once-then-give-up.md)
 - 告警为什么没被看见：[`context/team/alerting-signal-hygiene.md`](../../../../team/alerting-signal-hygiene.md)
 - 外部依赖地址与端口：[`.service-matrix.yaml`](../../../../../.service-matrix.yaml) 的 `pigsty_node3`

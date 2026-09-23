@@ -235,7 +235,7 @@ SSR：`consumer-next` 使用 Next.js 16.4.0-canary.18（本仓 A/B 后精确锁�
 | 容器构建 | Docker 多阶段构建 + BuildKit cache | Go 服务 `CGO_ENABLED=0`，非 root 运行 |
 | 多架构 | Docker Buildx + QEMU | 发布 `linux/amd64,linux/arm64` |
 | 制品仓库 | TCR（主，镜像）+ Harbor（Helm 制品）+ GHCR（可选双存） | 按 [`docs/TECH.md`](docs/TECH.md) §7.1：TCR 为主镜像仓库（集群同区直连拉取），Harbor 存储 Helm 制品（OCI），GHCR 可同时存镜像与 Helm 制品、是否推送由 CI 按网络情况决定；现状 GitHub Actions 双推 TCR/GHCR，`X.Y.Z` 与 `sha-<7>` 双 tag，禁用 `latest`，与定稿一致 |
-| Helm Chart OCI | Helm + Harbor | `helm/helper.sh` 可登录并推送 `oci://harbor.apikv.com/sumery`；Harbor 即定稿的 Helm 制品仓库，纳入 CI 发布链待办 |
+| Helm Chart OCI | Helm + Harbor | Helm 可登录并推送 `oci://harbor.apikv.com/sumery`；Harbor 即定稿的 Helm 制品仓库，纳入 CI 发布链待办 |
 | Kubernetes 清单 | `backend/services/*/deploy/` + `application-vpa.yml` | 当前运行部署路径；根清单已覆盖 15 个 ecommerce VPA，全部为 `Off`/`RequestsOnly` recommendation-only |
 | Helm | umbrella chart + service/library chart | 描述不完整且版本落后，缺 control-tower gateway；已退役的 outbox relay/search indexer 不得补回，不是现网真相源 |
 | ArgoCD | GitOps 控制器 | 控制器在运行，但当前零 Application/ApplicationSet；没有自动同步、自愈或 prune |
@@ -280,7 +280,7 @@ vmalert --> Alertmanager
 | 结构门禁 | `backend/structcheck` | 在用；核对服务矩阵、目录、部署清单、网关路由和 Config Center 契约 |
 | 文档门禁 | `scripts/verify-context.sh` + canary | 在用；校验链接、索引、格式、文档预算与门禁自测 |
 | 快速验收 | `scripts/verify-quick.sh` | 在用；并行后端 build/vet 与前端 ready，成功只输出摘要 |
-| 本地/集群开发 | Make、mirrord（mirror）、Okteto、Docker Compose | 在用；日常默认 `make dev`。当前 Mac 不在机房 LAN 时使用 Config Center `dev` + Pangolin `remote-dev`（Pangolin resource → newt → K8s Gateway/node service）；机房 LAN 开发机才使用 `gateway` 策略。需要本地注册发现时显式运行服务目录的 `make dev-consul`，默认 `make dev` 不注册共享 Consul。**观察用 mirrord mirror**（集群 DNS/出站/入站镜像，steal 在本集群不可用不启用）；**接管用 Okteto**；Docker Compose 定位为 pre 半生产环境测试。多人按请求接管为待触发评估（Telepresence personal intercept / mirrord Teams，见 TECH.md B 表）。证据：`docs/reports/2026-08-28-mirrord-poc.md` |
+| 本地/集群开发 | Make、mirrord（mirror）、Okteto、Docker Compose | 在用；日常默认 `make dev`。当前 Mac 不在机房 LAN 时使用 Config Center `dev` + Pangolin `remote-dev`（Pangolin resource → newt → K8s Gateway/node service）；机房 LAN 开发机才使用 `gateway` 策略。需要本地注册发现时显式运行服务目录的 `make dev-consul`，默认 `make dev` 不注册共享 Consul。**观察用 mirrord mirror**（集群 DNS/出站/入站镜像，steal 在本集群不可用不启用）；**接管用 Okteto**；Docker Compose 定位为 pre 半生产环境测试。多人按请求接管为待触发评估（Telepresence personal intercept / mirrord Teams，见 TECH.md B 表）。证据：现行分工见 `docs/TECH.md` B 表与 `context/team/okteto-inner-loop.md`。 |
 | 容量与故障验证 | k6、故障演练脚本 | 目标工具；当前没有可复现的百万/千万级容量验收报告 |
 | 供应链加固 | Trivy、Cosign/Syft、Gitleaks、Kyverno | 规划或局部评估，不能写成已完成发布门禁 |
 

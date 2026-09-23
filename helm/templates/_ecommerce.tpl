@@ -114,8 +114,7 @@ structcheck 曾专门写一个测试去对比 tgz 里的模板和源码,那是�
             value: {{ printf "%s/%s.yaml" $g.configSource.mountPath $svc | quote }},
           }, {
             # Consul 只用于服务注册发现。2026-09-03 起显式关闭:当前不需要服务发现,
-            # 保留接线以备将来启用——见
-            # context/project/ecommerce/registry/experience/consul-register-once-then-give-up.md
+            # 保留接线以备将来启用。
             name: "CONSUL_ENABLED",
             value: {{ $g.consul.enabled | quote }},
           }, {

@@ -26,4 +26,4 @@ uc.eventBus.Publish()    发布事件 ─┘ 两步不在同一事务，中间�
 
 目标态是 `consistency.md` 的 **Outbox + Debezium Outbox Event Router**：事件写入与业务写入进入同一个
 PostgreSQL 事务，Debezium 从 WAL 搬运到 Kafka；不再维护自写 relay。**新代码不要按 `eventbus.md` 的模式接线**；
-迁移进度见 [`docs/todo/数据一致性与事件驱动.md`](../../../TODO.md#数据一致性与事件驱动)。
+迁移进度见 [`TODO.md`](../../../TODO.md#数据一致性与事件驱动)。

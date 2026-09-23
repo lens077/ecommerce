@@ -35,12 +35,10 @@ Consul 目录 Watch（blocking query），**只取所有检查均为 `passing` �
 | 注册地址 | `AppInfo.Host` + 自身 `server.addr` 的端口（**不是** Consul 的地址） |
 | 服务名 | 必须与网关 `discovery:///<name>` 一致，不带 `-v1` 后缀 |
 
-## experience
+## 操作手册
 
-| 症状 | 文件 |
+| 场景 | 文件 |
 |---|---|
-| 服务日志干净，前端却要刷好几次才出数据 | [consul-ttl-first-ping-blind-window.md](experience/consul-ttl-first-ping-blind-window.md) |
-| 服务 `1/1 Running` 零重启，网关却说它不存在（已修：注册守护循环；症状识别仍有效） | [consul-register-once-then-give-up.md](experience/consul-register-once-then-give-up.md) |
 | 复验 10 个服务的双检查与可逆依赖故障 | [consul-dual-check-runbook.md](consul-dual-check-runbook.md) |
 
 ## 2026-08-27 dev 验证

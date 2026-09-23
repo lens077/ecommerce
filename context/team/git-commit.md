@@ -20,8 +20,7 @@ affects:
 不同步就会出现「代码已实现但文档还标 ⬜」或反过来，下一轮（尤其是新 AI 会话）会基于错误的进度做判断。
 反过来，把「做了什么」「实测数字」「处置过程」写进去，它就变成 changelog——2026-09-16 实测它
 82 KB 里堆了 25 条日期流水账和 2000+ 字节的单元格，每个提交回合都要整份读进上下文。
-这类内容进 `docs/progress-archive/YYYY-MM-progress-log.md`（按月追加，不可变），
-CI 发版行由流水线写进 `docs/progress-archive/ci-releases.md`；`scripts/verify-context.sh`
+这类内容进按月追加的进度归档；CI 发版行由流水线单独维护；`scripts/verify-context.sh`
 的 `[TODO-CLEAN]` 拦以日期开头的行与超过 600 字节的单行。
 
 TODO 更新可以和代码改动放**同一个提交**，也可以紧跟一个 `docs: 更新 TODO 进度` 提交。
@@ -232,7 +231,7 @@ git tag backup/mixed-commit-<date> <混合提交>          # 先留退路
 - 前端工具链与钩子安装见 [`frontend/README.md`](../../frontend/README.md)
 - 完整 emoji 语义见 [gitmoji.dev](https://gitmoji.dev/)
 
-（本文件已合并原 `frontend/git-commit-conventional.md`。同一件事不要两个真相源——那份文档最后那行 `npx husky add .husky/commit-msg '...'` 正是上面第 1 层故障的来源。）
+（本文件已合并旧的前端提交规范。提交规范只保留一个真相源，避免两处漂移。）
 
 ## 远端：只有 origin 和 github 两个
 

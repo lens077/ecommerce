@@ -1,6 +1,6 @@
 # 商品销量统计设计（PostgreSQL 事实 + Dragonfly 加速 + PostgreSQL 预聚合）
 
-> 原 `backend/services/product/internal/data/schema/design/销量设计.md`，2026-08-13 移入本目录。
+> 原 商品销量设计，2026-08-13 移入本目录。
 > **落地现状（2026-08-13 核对）**：
 > - 明细表已落地但**改了名**：文档写 `products.sales_detail`，实际是
 >   `products.sale_detail`（单数，`product/internal/data/migrations/00003_sale_detail.sql`），

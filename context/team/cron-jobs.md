@@ -53,8 +53,7 @@ description: 定时/周期任务的执行边界——重叠、panic、超时、�
 真实事故：Consul TTL check 注册后初始状态是 **critical**，而心跳 goroutine 进循环前
 先等满一个 `ping_interval`(当时 25s) 才发第一次 `UpdateTTL(pass)`——于是每次后端启动都有
 **25 秒「已注册但对外不可见」**，网关拿到空节点列表直接 503，表现为「刷几次才出数据」。
-修法是**注册后立即补一次心跳**再进循环。详见
-[`registry/experience/consul-ttl-first-ping-blind-window.md`](../project/ecommerce/registry/experience/consul-ttl-first-ping-blind-window.md)。
+修法是**注册后立即补一次心跳**再进循环。
 
 **约定**：写周期任务时显式决定「第一次要不要立刻执行」，并把决定写进注释。
 `robfig/cron` 同理——`0 2 * * *` 注册完不会马上跑，需要冷启动数据的任务要自己补一次。
@@ -223,4 +222,3 @@ ZeroSSL 续期在 node1 `apikv-cert-renew.timer`，失败/成功直接发 ntfy�
 - 分布式锁的落地要求：[go-redis.md](go-redis.md)
 - 副本数与部署策略：[`docs/DEVOPS.md`](../../docs/DEVOPS.md)（阶段 2）
 - 任务的指标与告警口径：[`observability/OBSERVABILITY.md`](../../docs/observability/OBSERVABILITY.md)
-- 首次触发盲窗的完整复盘：[`registry/experience/consul-ttl-first-ping-blind-window.md`](../project/ecommerce/registry/experience/consul-ttl-first-ping-blind-window.md)

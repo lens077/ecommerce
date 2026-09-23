@@ -317,7 +317,6 @@ Alertmanager 同理（`/etc/alertmanager.yml.bak-*`），改完 `systemctl reloa
   也一样。Tetragon 的做法可以参照：部署资产在 `~/lens077/kubernetes/`，策略真相源在仓库的
   `infrastructure/` 下（[TECH.md](../TECH.md) B 表运行时安全行）。
 - **服务注册数没有告警**。Consul 注册数少于 `.service-matrix.yaml` 声明的服务数时无人知晓；
-  2026-08-29 有服务因启动瞬间 DNS 失败而永久未注册，K8s 侧一切正常，靠人工比对才发现
-  （见 [`../../context/project/ecommerce/registry/experience/consul-register-once-then-give-up.md`](../../context/project/ecommerce/registry/experience/consul-register-once-then-give-up.md)）。
+  2026-08-29 有服务因启动瞬间 DNS 失败而永久未注册，K8s 侧一切正常，靠人工比对才发现。
 - **告警未分级路由**。所有 severity 共用一个 topic，手机端无法把 critical 与 warning 分开
   处理。拆 topic 需要 Alertmanager 加 sub-route + 桥支持按 severity 选 topic。

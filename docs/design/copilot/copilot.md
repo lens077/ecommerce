@@ -291,7 +291,7 @@ interface WriteAction extends CopilotAction {
 
 ### 9.2 契约与安全边界
 
-权威契约在 sibling control-tower `docs/design/service-health.md`；本仓通过 `fetchServiceHealth()` adapter 消费，不新增业务 RPC 或 LLM 服务。
+权威契约在 sibling control-tower 服务健康设计文档；本仓通过 `fetchServiceHealth()` adapter 消费，不新增业务 RPC 或 LLM 服务。
 
 | 字段/结果 | 语义 |
 |---|---|

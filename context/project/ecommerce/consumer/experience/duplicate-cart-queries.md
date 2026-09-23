@@ -91,4 +91,3 @@ proto3 无法对 rpc 名做 `reserved`，所以在 `cart.proto` 的 service 块�
 **相关**
 
 - 网关侧的重试放大：[`gateway/experience/retry-amplification-and-phantom-health-check.md`](../../gateway/experience/retry-amplification-and-phantom-health-check.md)
-- 本轮 503 的真凶在服务注册侧：[`registry/experience/consul-ttl-first-ping-blind-window.md`](../../registry/experience/consul-ttl-first-ping-blind-window.md)

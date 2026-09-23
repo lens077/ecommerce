@@ -77,4 +77,3 @@ key；含 token 的 `configs/source.dev.yaml` 必须被 gitignore，集群用 Ku
 
 - 哪些段改了会立刻生效：[`config-hot-reload-boundaries.md`](config-hot-reload-boundaries.md)
 - 缺块导致 gorse 静默关闭的原始记录：[`../../behavior/experience/consul-kv-missing-key-silent-disable.md`](../../behavior/experience/consul-kv-missing-key-silent-disable.md)
-- 心跳参数本身的坑：[`../../registry/experience/consul-ttl-first-ping-blind-window.md`](../../registry/experience/consul-ttl-first-ping-blind-window.md)

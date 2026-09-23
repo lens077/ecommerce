@@ -10,7 +10,7 @@
 > 业务写和事件写进同一个 PostgreSQL 事务，由 Debezium 从 WAL 搬运到 Kafka；不再维护自写 relay。
 > 设计细节见 [`docs/design/order/consistency.md`](../../../docs/design/order/consistency.md)。
 > **新代码不要照本文的模式接线**；改造进度见
-> [`docs/todo/数据一致性与事件驱动.md`](../../../TODO.md#数据一致性与事件驱动)。
+> [`TODO.md`](../../../TODO.md#数据一致性与事件驱动)。
 
 ## 实际接线（2026-08-29 核对代码）
 

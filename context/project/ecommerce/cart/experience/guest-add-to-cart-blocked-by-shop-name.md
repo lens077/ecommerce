@@ -77,4 +77,3 @@ dev 网关 `SESSION_COOKIE_INSECURE=true`，cookie 名是 `ct_guest`（生产是
 **相关**
 
 - 访客轨代码：`../control-tower/services/gateway/internal/guest/`、`routes/dev.yaml` 的 `guest:` 段
-- 同类「健康检查绿、功能已死」案例：[registry/consul-register-once-then-give-up.md](../../registry/experience/consul-register-once-then-give-up.md)

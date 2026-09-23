@@ -94,7 +94,7 @@ psql "$DB_URI" -tAc 'show server_version'
 **放共享包，不进任何服务的 `internal/`。** 直接吸取 [`STACK.md`](../STACK.md) 第十节
 "配置逻辑 10 份复制"的教训——测试基建一旦复制 10 份，改一次 PG 版本要改 10 个地方。
 
-### 3.1 `backend/pkg/testutil/postgres.go`
+### 3.1 真实 PostgreSQL 测试辅助
 
 当前已实现 `StartPostgres(t) *testutil.Postgres`，返回 `DSN` 与 `*pgxpool.Pool`。入口第一行检查 `testing.Short()`；默认使用 testcontainers-go v0.44 的 `postgres.Run`、`BasicWaitStrategies` 和 `postgres:18-alpine`，`t.Cleanup` 先关连接池，再在有界时间内终止容器。
 
@@ -134,7 +134,7 @@ locale/排序规则，以及「确认 SQL 在当前 node3 PostgreSQL 18.6 上跑
 > 凭据不进仓库（[`AGENTS.md`](../AGENTS.md) 硬规则）。`TEST_DB_URI` 只在本机 shell 里给，
 > 别写进 Makefile、`.env` 或任何提交物。
 
-### 3.2 `backend/pkg/testutil/redis.go`
+### 3.2 Redis 测试辅助
 
 ```go
 // StartRedis 返回一个连到进程内 miniredis 的 go-redis 客户端。
@@ -146,7 +146,7 @@ func StartRedis(t *testing.T) *redis.Client
 - **已知边界**：miniredis 对 Lua 脚本、过期时序、集群命令支持不全。分布式锁这类
   依赖原子性与时序的关键路径，后续用 Dragonfly 镜像的 generic container 替换（见步骤 6）。
 
-### 3.3 `backend/pkg/testutil/seed.go`（可选，铺开时再加）
+### 3.3 测试 seed 辅助（可选，铺开时再加）
 
 跨服务复用的造数助手（UUID、金额、时间）。**别在这里塞业务语义**——
 每个服务的领域数据放各自的测试文件里，共享包只放"任何服务都用得上"的东西。
@@ -269,7 +269,7 @@ func TestCartUpsert_HitsUniqueConstraint(t *testing.T) {
 
 ### 5.1 配置
 
-`backend/.mockery.yaml`：
+mockery 配置：
 
 ```yaml
 with-expecter: true          # 生成 EXPECT() 链式 API,比字符串方法名安全

@@ -10,11 +10,10 @@ description: 多闭环 AI 工作流方法论存档——Loop 0~4 分工的由来
 > 落地现状：
 > - **异构双审已落地** —— 设计者与审查者用隔离的 fresh 会话、跨模型族互查，
 >   现在的形态是异构双审，见 runbook §5。
-> - **冻结节点（Frozen Node）已作废** —— `.freeze/`、`scripts/freeze.sh`、
->   `scripts/verify-freeze.sh`、`freeze-check.yml` 这套机制已整体删除。
+> - **冻结节点（Frozen Node）已作废** —— 这套机制已整体删除。
 >   本文保留它只为解释「为什么当初要有一道机器判定的验收门」，
 >   **不要照着重建**。
-> - **`scripts/anchor.sh` 从未创建** —— 锚点命令直接内联在 `AGENTS.md`
+> - **锚点脚本从未创建** —— 锚点命令直接内联在 `AGENTS.md`
 >   与 runbook 里，见「命令与验收锚点」。hcom 编排也未落地。
 
 ## 核心心智

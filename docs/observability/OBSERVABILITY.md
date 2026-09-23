@@ -2,7 +2,7 @@
 
 > 创建:2026-08-07。定位:**方法论 + 本仓指标基线清单**(应采什么、为什么、异常了该做什么)。
 > 与其他文档的关系:落地阶段与验收标准见 `DEVOPS.md` §5/阶段3;
-> 当前实况与缺陷以 `.service-matrix.yaml`、`docs/reports/2026-08-27-infrastructure-audit.md` 和 `TODO.md` 为准；旧 review 只作历史证据;
+> 当前实况与缺陷以 `.service-matrix.yaml`、基础设施审计记录 和 `TODO.md` 为准；旧 review 只作历史证据;
 > 看板生成脚本在 `grafana/`（本目录下）；[`面板设计.md`](面板设计.md) 保留指标口径与信息架构，但其中 VictoriaTraces/VictoriaLogs/vmalert 目标态配置尚未全部落地，不能作为现网部署真相源。
 > 核心取向(消化自 2026-08 一篇 Prometheus 方法论文章,结合本仓教训):
 > **上线前关注功能对不对,上线后要回答的是「服务现在健康吗」**。没有指标,出问题只能
@@ -131,6 +131,6 @@ ntfy 不是单一兼容 webhook：Gatus 用 `custom` provider 直接 POST ntfy �
 
 *来源:三支柱分工、RED/USE、Go 指标清单与「可行动性」判据消化自 2026-08 一篇
 Prometheus 方法论文章;所有「本仓教训」条目的证据见
-`docs/progress-archive/OBSERVABILITY_REVIEW_20260806.md`、
-`docs/progress-archive/ADVERSARIAL_REVIEW_20260806.md`；未完成项见
-`docs/todo/统一可观测性体系.md`，状态以 `TODO.md` 为准。*
+可观测性评审记录、
+对抗评审记录；未完成项见
+`TODO.md`「统一可观测性体系」，状态以 `TODO.md` 为准。*

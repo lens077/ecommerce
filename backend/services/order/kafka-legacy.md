@@ -35,4 +35,4 @@ franz-go 没有对应概念，照抄会得到一份对不上的配置 schema。
 | 下单链路里的事件时序 | [`docs/design/order/checkout.md`](../../../docs/design/order/checkout.md) §9 |
 | 技术定稿（Kafka / franz-go / 部署形态） | [`docs/TECH.md`](../../../docs/TECH.md) §4 |
 | **当前**真正在跑的机制 | [`eventbus.md`](eventbus.md)（进程内 EventBus，同样是过渡态） |
-| 迁移进度 | [`docs/todo/数据一致性与事件驱动.md`](../../../TODO.md#数据一致性与事件驱动) |
+| 迁移进度 | [`TODO.md`](../../../TODO.md#数据一致性与事件驱动) |

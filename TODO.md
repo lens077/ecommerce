@@ -68,8 +68,8 @@ todo-spec: 1
 
 - [ ] **未完成 · 商家两段式入驻与组织隔离**：落地商家/店铺/子账号与 `merchant_id` 数据隔离；前端接线统一登记在前端节。
 - [ ] **未完成 · 履约能力**：先并入 order 域，补发货、物流单、轨迹与第三方 adapter；没有独立伸缩或故障域证据不拆新服务。
-- [ ] **未完成 · notification**：按 [设计草案](docs/design/notification/notification.md) 落模板/消息/投递、站内信与 Resend、状态 webhook、压制名单及 consumer/admin 页面；登记 matrix、路由、策略与角色。streaming 与事件消费留后续阶段。
-- [ ] **待前置 · support**：notification 基础完成后，按 [设计草案](docs/design/support/support.md) 接收件 webhook、工单串线、回复与 admin 客服页；作为 OpenFGA 首个业务接线试点。
+- [ ] **待触发 · notification**：原设计草案已删除；单独重新设计后再拆实现项。
+- [ ] **待触发 · support**：原设计草案已删除；单独重新设计后再拆实现项。
 - [ ] **未完成 · 搜索体验**：补聚合筛选、热门词与固定查询集相关性基线；搜索只读 PG 派生投影，不恢复业务服务直写索引。
 
 ### 数据一致性与事件驱动

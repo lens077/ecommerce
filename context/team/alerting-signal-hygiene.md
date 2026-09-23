@@ -170,6 +170,5 @@ absent({__name__="<关键指标>"}) == 1   for: 10m
 ## 相关
 
 - 慢性告警背后的那个真问题：[`project/ecommerce/events/experience/debezium-idle-slot-wal-retention.md`](../project/ecommerce/events/experience/debezium-idle-slot-wal-retention.md)
-- 「健康绿、功能死」之一：[`project/ecommerce/registry/experience/consul-register-once-then-give-up.md`](../project/ecommerce/registry/experience/consul-register-once-then-give-up.md)
 - 事故当天的网络侧根因：[`cilium-datapath-ops.md`](cilium-datapath-ops.md)
 - 写集群数字的纪律：[`live-facts.md`](live-facts.md)
