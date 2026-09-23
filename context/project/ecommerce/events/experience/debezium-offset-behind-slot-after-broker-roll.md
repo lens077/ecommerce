@@ -1,68 +1,67 @@
 ---
 name: debezium-offset-behind-slot-after-broker-roll
 module: events
-description: Kafka broker 滚动（给 Strimzi 加 listener 也算）→ Connect rebalance 重启 Debezium task → 它拿 Connect offsets 里的 LSN 续流，但复制槽 restart_lsn 已经推进到更靠后（位点向 PG 确认了、对 Kafka 的 offset 提交却没落地），PG 无法从旧位点解码 → task FAILED、connector 仍 RUNNING、增量静默丢失；snapshot.mode=initial 只能人工删 offsets 重建，when_needed 让 Debezium 自己重快照恢复，小库首选——2026-09-23 k1/k2/k3 实测
+description: Debezium PG 用 lsn.flush.mode=connector_and_driver 治 WAL 滞留后，Kafka offset 结构性落后于复制槽，**任何** task 重启都触发「Last recorded offset is no longer available」——snapshot.mode=initial 时 task FAILED 而 connector 仍 RUNNING（2026-09-23 broker 滚动那次），when_needed 时每次重启静默全量重快照（同日晚复现）；正解是 Debezium ≥3.4 的 offset.mismatch.strategy=trust_greater_lsn，配 initial，重启不重快照不 FAILED；Connected/MilliSecondsBehindSource/task status 三条指标看不见这个落后，不是差值告警的等价物
 ---
 
-# broker 一滚，CDC 就静默断流
+# 任何一次重启，CDC 都会重快照或断流
 
 **症状**
 
-给 Strimzi Kafka 加了一个 external listener（`kubectl patch kafka ... listeners`），broker 按预期滚动一次，
-`kubectl get kafkaconnector` 两个都 `Ready=True`，`connector.state=RUNNING`。随后改一行 `products.spus`，
-Kafka topic 末端 offset 不动，ES 文档不变。
+给 Strimzi Kafka 加了一个 external listener，broker 滚动一次，`kubectl get kafkaconnector` 两个都 `Ready=True`、
+`connector.state=RUNNING`。随后改一行 `products.spus`，topic 末端 offset 不动，ES 文档不变。
+
+同日晚二次复现：什么都没坏，`Connected=1`、`MilliSecondsBehindSource=-1`、task `running`，只是
+`strimzi.io/restart-task=0` 重启一次 task——Debezium 打 `Last recorded offset is no longer available on the server`，
+`when_needed` 模式下全量重快照（spus topic +7）。
 
 **关键陷阱**
 
 - `kubectl get kafkaconnector` 的 `Ready=True` 与 `connector.state=RUNNING` **都不看 task**。唯一真相是
-  `.status.connectorStatus.tasks[0].state`；Gatus `cdc-source-task` 探针断言的就是它，也是这次唯一先红的信号。
+  `.status.connectorStatus.tasks[0].state`；Gatus `cdc-source-task` 断言的就是它。
 - 复制槽 `active=f` 但 `pg_replication_slots` 一行不少、publication 也在——**槽没坏**，别按「槽丢了」的手顺去删重建。
-- 触发条件是任何让 broker/Connect 重启的操作（加 listener、升版本、改 resources、排空节点），不只是本例的 patch。
+- **broker 滚动只是触发器，不是根因。** 白天第一次排查把它记成「offset 提交被滚动卡住」，是错的；`when_needed` 只是
+  把 FAILED 换成了每次重启重快照，表大了是灾难。
+- `Connected`、`MilliSecondsBehindSource`、`kafka_connect_connector_task_status` 三条指标在这个状态下**全绿**，
+  它们不是「offset 落后槽」的等价替代——只能事后发现 task 死了，看不见「下次重启必出事」。
 
 **根因**
 
-broker 重启 → Connect worker rebalance → Debezium source task 重启。重启时它从 Connect 的 offsets topic
-取回上次提交的位点 `LSN{0/1E001108}` 去续流，但 PG 里复制槽 `ecommerce_cdc` 的 `restart_lsn=0/21000130`、
-`confirmed_flush_lsn=0/21000168`——**槽已经跑到前面去了**。Debezium 每处理一批事件就向 PG 确认位点
-（`lsn.flush.mode=connector_and_driver`），而向 Kafka 提交 offset 是另一条周期性路径；broker 滚动把后者
-卡在中间，于是「PG 认为已消费到 0/2100…」和「Kafka 记着 0/1E00…」分叉。PG 逻辑解码只能从
-`restart_lsn` 之后开始，旧位点的 WAL 已回收，Debezium 报
-`The connector is trying to read change stream starting at PostgresOffsetContext[... lsn=LSN{0/1E001108} ...],
-but this is no longer available on the server. Reconfigure the connector to use a snapshot when needed if you
-want to recover.` 然后 task 进 FAILED——**connector 级状态照样 RUNNING**。
+`lsn.flush.mode=connector_and_driver`（治 WAL 滞留，见 [debezium-idle-slot-wal-retention.md](debezium-idle-slot-wal-retention.md)）
+允许 pgjdbc 的 keepalive 线程把槽 `confirmed_flush_lsn` 推过与监控表无关的 WAL（vacuum、checkpoint、其它库）。
+Kafka Connect 的 offsets topic 只在有事件提交时前进，于是**结构性地落后于槽**（实测空闲十几分钟差 16MB）。
+task 重启时 Debezium 拿 offsets 里的 LSN 去续流，发现 `offset_lsn < slot_lsn`：`initial` 模式认为可能丢数据 → FAILED；
+`when_needed` → 重快照填补。Debezium 与 Zalando 的说明在
+[官方文档 offset.mismatch.strategy](https://debezium.io/documentation/reference/stable/connectors/postgresql.html#postgresql-property-offset-mismatch-strategy)
+与 [Contributing to Debezium: Fixing Logical Replication at Scale](https://engineering.zalando.com/posts/2025/12/contributing-to-debezium.html)。
 
-判据（三处同时看，缺一个都会误判）：
+判据（三处同时看）：
 
 ```bash
-kubectl -n kafka get kafkaconnector -o custom-columns=NAME:.metadata.name,\
-STATE:.status.connectorStatus.connector.state,TASK:.status.connectorStatus.tasks[0].state
-# task 列是 FAILED 才是真相；.status.conditions Ready=True 与 connector.state 都不看 task
+kubectl -n kafka exec my-connect-cluster-connect-0 -- curl -s http://localhost:8083/connectors/ecommerce-postgres-source/offsets
+# offset.lsn 是十进制, printf '%x' 转十六进制后与下面比
 kubectl -n postgresql exec pg-main-1 -c postgres -- psql -U postgres -d ecommerce -At -F'|' -c \
-  "select slot_name, active, restart_lsn, confirmed_flush_lsn from pg_replication_slots"
-# active=f + restart_lsn 大于 task trace 里的 lsn = 就是本文这个坑
-kubectl -n kafka exec my-cluster-dual-role-0 -- bin/kafka-get-offsets.sh --bootstrap-server localhost:9092 \
-  --topic ecommerce_cdc.products.spus   # 写一行后末端 offset 不 +1 = 增量没进 Kafka
+  "select active, restart_lsn, confirmed_flush_lsn from pg_replication_slots where slot_name='ecommerce_cdc'"
+kubectl -n kafka get kafkaconnector -o custom-columns=NAME:.metadata.name,TASK:.status.connectorStatus.tasks[0].state
 ```
 
 **修法**
 
-`components/kafka/cdc/ecommerce-postgres-source.yaml` 把 `snapshot.mode: initial` 改成 `when_needed`
-（Debezium 文档：无 offset、或记录的位点在服务器上不可用时自动重做快照）。apply 后 task 自己从 FAILED
-转 RUNNING，重快照把每张表的当前行按 `op=r` 再发一遍（spus topic 7→14），然后从槽的新位点接着 streaming。
-ES sink 是 `write.method=INSERT` + `key.ignore=false`（external version = offset），重快照只是用更高 version
-覆盖同 key 文档，不产生脏数据；`search_catalog` 的 trigger 投影也跟着走完（topic 43→51，ES 文档 v50）。
+`components/kafka/cdc/ecommerce-postgres-source.yaml`（kubernetes 仓）：
 
-不要走 README 里「删 CR → 删 slot → 删 topic → 清索引 → 重建」那条——那是 slot 本身坏了或 schema 变了才用的
-重手术；这里 slot 完好，只是 offset 落后。
+```yaml
+lsn.flush.mode: connector_and_driver        # 保留, 治 WAL 滞留
+snapshot.mode: initial                      # 从 when_needed 改回, 不再每次重启重快照
+offset.mismatch.strategy: trust_greater_lsn # Debezium ≥3.4; 启动取 max(offset, slot), 双向同步, 自愈
+```
+
+验证：重启前 offset `0x32000130` < 槽 `0x33000130`，重启后 task RUNNING、spus topic 36→36（没重快照），
+随后两次真实改行 36→37→38、ES 文档跟着还原。
 
 **代价与边界**
 
-- `when_needed` 意味着**以后任何 offsets 丢失都会静默重快照一遍**。种子级数据无所谓；表上百万行时改回
-  `initial`，并按 README 手顺人工处理——把这条写在 CR 注释里，别让下一个人以为它是默认值。
-- 触发条件不只是「改 listener」：任何让 broker 或 Connect 重启的操作（升版本、改 resources、节点排空）都可能踩到。
-  改完 Kafka/Connect 后**必看 task 列**，不看 Ready。
-- 告警时序（实测）：Gatus `cdc-source-task`（`[BODY].tasks[0].state == RUNNING`）约 1 分钟先红；vmalert `CDCSlotInactive`
-  （`cnpg_pg_replication_slots_active == 0`，`for: 10m`）在 +10 分钟 firing。现有规则**已覆盖**这类「task 死 → 槽失活」，
-  同日晚已给 Connect CR 配 `metricsConfig` 暴露 JMX：`kafka_connect_connector_task_status`、`debezium_metrics_connected`、
-  `debezium_metrics_millisecondsbehindsource`，对应 vmalert `CDCConnectTaskNotRunning`(2m)/`CDCDebeziumDisconnected`(3m)/`CDCDebeziumLagHigh`。
-  「restart_lsn − Connect offset」差值本身没有指标可算（Connect offset 不在 JMX 里），用上面三条替代。
+- `trust_greater_lsn` 跳过 offset 与槽之间那段 WAL。按机制那段只含无关 WAL（driver 只在没有待提交事件时 flush），
+  但这是「信任槽」——主从切换时槽不持久就可能丢；CNPG 单实例当前没有这个问题，上了副本要先确认槽复制。
+- 差值本身现在是**预期非零**，拿它做阈值告警只会是噪音。真正的完整性守卫是 task 级告警
+  （`CDCConnectTaskNotRunning`/`CDCDebeziumDisconnected`）加定期对账（PG 行数 vs ES 文档数），后者还没做。
+- 改 Kafka/Connect 后必看 `tasks[0].state`。
