@@ -3,6 +3,7 @@ package service
 import (
 	"context"
 	"errors"
+	"fmt"
 	"net/http"
 
 	"connectrpc.com/connect"
@@ -53,8 +54,9 @@ func (s *MerchantService) GetMerchantAgreement(ctx context.Context, _ *connect.R
 }
 
 func (s *MerchantService) CreateMerchant(ctx context.Context, c *connect.Request[v1.CreateMerchantRequest]) (*connect.Response[v1.CreateMerchantResponse], error) {
-	// TODO implement me
-	panic("implement me")
+	// 未实现: 返回 Unimplemented 而不是 panic。panic 会让 net/http 直接断开连接, 客户端只看到
+	// "Empty reply from server", 分不清是崩了还是没做(2026-09-23 http-client 测试踩到)。
+	return nil, errUnimplemented("CreateMerchant")
 }
 
 func (s *MerchantService) SubmitApplication(ctx context.Context, c *connect.Request[v1.SubmitApplicationRequest]) (*connect.Response[v1.SubmitApplicationResponse], error) {
@@ -104,8 +106,9 @@ func (s *MerchantService) RejectApplication(ctx context.Context, c *connect.Requ
 	if err := requireAdmin(c.Header()); err != nil {
 		return nil, err
 	}
-	// TODO implement me
-	panic("implement me")
+	// 未实现: 返回 Unimplemented 而不是 panic。panic 会让 net/http 直接断开连接, 客户端只看到
+	// "Empty reply from server", 分不清是崩了还是没做(2026-09-23 http-client 测试踩到)。
+	return nil, errUnimplemented("RejectApplication")
 }
 
 func (s *MerchantService) GetApplication(ctx context.Context, c *connect.Request[v1.GetApplicationRequest]) (*connect.Response[v1.GetApplicationResponse], error) {
@@ -148,12 +151,21 @@ func (s *MerchantService) ActivateMerchant(ctx context.Context, c *connect.Reque
 	if err := requireAdmin(c.Header()); err != nil {
 		return nil, err
 	}
-	// TODO implement me
-	panic("implement me")
+	// 未实现: 返回 Unimplemented 而不是 panic。panic 会让 net/http 直接断开连接, 客户端只看到
+	// "Empty reply from server", 分不清是崩了还是没做(2026-09-23 http-client 测试踩到)。
+	return nil, errUnimplemented("ActivateMerchant")
 }
 
 var _ merchantconnect.MerchantServiceHandler = (*MerchantService)(nil)
 
 func NewMerchantService(uc *biz.MerchantUseCase) merchantconnect.MerchantServiceHandler {
 	return &MerchantService{uc: uc}
+}
+
+// errUnimplemented 统一的未实现错误, code = 12(Unimplemented); 与 payment 服务同一写法。
+func errUnimplemented(method string) error {
+	return connect.NewError(
+		connect.CodeUnimplemented,
+		fmt.Errorf("merchant.v1.MerchantService/%s is not implemented yet", method),
+	)
 }

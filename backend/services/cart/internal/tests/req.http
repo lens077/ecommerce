@@ -1,68 +1,61 @@
-@cart_base_url = http://127.0.0.1:30006
-@customer_id = 00000000-0000-4000-8000-000000000001
-@merchant_id = 8966c1f2-fcc2-44bc-84f5-9de615ff235f
-@spu_id = 5
-@sku_id = 9
+# 约定(2026-09-23 重写, 对齐 api/cart/v1 的 proto):
+#   直连 = http://{host}:{port}, 身份由 x-md-global-user-id 头模拟网关注入;
+#   网关 = {gateway_scheme}://{gateway_host}(LAN) 或 https://{public_gateway_host}(公网), 带 Authorization: Bearer {token}。
+#   变量在 http-client.env.json(dev)。host 用 [::1]: 127.0.0.1:30001/30002/30003 被 GoLand/WebStorm/JCEF 占着。
 
-### Local health check
-GET {{cart_base_url}}/healthz
+### healthz
+GET http://{{host}}:{{port}}/healthz
 
-### Read the full cart for the test customer
-POST {{cart_base_url}}/cart.v1.CartService/GetCart
+### GetCart(空购物车的用户 → isCartEmpty)
+POST http://{{host}}:{{port}}/cart.v1.CartService/GetCart
 Content-Type: application/json
-x-md-global-user-id: {{customer_id}}
+x-md-global-user-id: 00000000-0000-4000-8000-000000000001
 
 {}
 
-### Read only the cart badge count for the test customer
-POST {{cart_base_url}}/cart.v1.CartService/GetCartSummary
+### GetCart(seed 用户, 应有 2 项)
+POST http://{{host}}:{{port}}/cart.v1.CartService/GetCart
 Content-Type: application/json
-x-md-global-user-id: {{customer_id}}
+x-md-global-user-id: {{user_id}}
 
 {}
 
-### Add one item (mutates the development cart; run intentionally)
-POST {{cart_base_url}}/cart.v1.CartService/AddProductToCart
+### AddProductToCart(会写 dev 库; unitPriceCents 必填 >0)
+POST http://{{host}}:{{port}}/cart.v1.CartService/AddProductToCart
 Content-Type: application/json
-x-md-global-user-id: {{customer_id}}
+x-md-global-user-id: 00000000-0000-4000-8000-000000000001
 
 {
   "spuId": {{spu_id}},
   "skuId": {{sku_id}},
-  "merchantId": "{{merchant_id}}",
+  "merchantId": "{{cart_merchant_id}}",
   "quantity": 1,
   "selected": true,
-  "spuName": "Cart SDK smoke-test product",
-  "skuName": "Cart SDK smoke-test SKU",
-  "price": 22.2,
-  "skuAttributes": {
-    "color": "test",
-    "source": "ide-http-client"
-  },
-  "skuThumbnailUrl": "https://cdn.example.com/cart-sdk-smoke-test.jpg",
+  "spuName": "http-client 测试商品",
+  "skuName": "默认",
+  "unitPriceCents": 100,
+  "skuAttributes": {"color": "black"},
+  "skuThumbnailUrl": "https://cdn.example.com/iphone15pro/main.jpg",
   "status": "CART_STATUS_ACTIVE"
 }
 
-### Change the test item quantity (mutates the development cart)
-POST {{cart_base_url}}/cart.v1.CartService/UpdateCartItemQuantity
+### UpdateCartItemQuantity
+POST http://{{host}}:{{port}}/cart.v1.CartService/UpdateCartItemQuantity
 Content-Type: application/json
-x-md-global-user-id: {{customer_id}}
+x-md-global-user-id: 00000000-0000-4000-8000-000000000001
 
-{
-  "spuId": {{spu_id}},
-  "skuId": {{sku_id}},
-  "merchantId": "{{merchant_id}}",
-  "quantity": 2
-}
+{"spuId": {{spu_id}}, "skuId": {{sku_id}}, "merchantId": "{{cart_merchant_id}}", "quantity": 2}
 
-### Remove the test item (mutates the development cart)
-POST {{cart_base_url}}/cart.v1.CartService/RemoveCartItem
+### RemoveCartItem(2026-09-23 前直连会 500: pgx 没注册 cart.cart_type[] —— data.go AfterConnect 已修)
+POST http://{{host}}:{{port}}/cart.v1.CartService/RemoveCartItem
 Content-Type: application/json
-x-md-global-user-id: {{customer_id}}
+x-md-global-user-id: 00000000-0000-4000-8000-000000000001
 
-{
-  "spuIds": [{{spu_id}}],
-  "skuIds": [{{sku_id}}],
-  "merchantIds": ["{{merchant_id}}"],
-  "status": ["CART_STATUS_ACTIVE"]
-}
+{"spuIds": [{{spu_id}}], "skuIds": [{{sku_id}}], "merchantIds": ["{{cart_merchant_id}}"], "status": ["CART_STATUS_ACTIVE"]}
+
+### GetCart(LAN 网关)
+POST {{gateway_scheme}}://{{gateway_host}}/cart.v1.CartService/GetCart
+Content-Type: application/json
+Authorization: Bearer {{token}}
+
+{}

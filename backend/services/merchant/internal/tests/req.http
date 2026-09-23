@@ -1,64 +1,80 @@
+# 约定(2026-09-23 重写, 对齐 api/merchant/v1 的 proto):
+#   直连 = http://{host}:{port}, 身份由 x-md-global-user-id 头模拟网关注入;
+#   网关 = {gateway_scheme}://{gateway_host}(LAN) 或 https://{public_gateway_host}(公网), 带 Authorization: Bearer {token}。
+#   变量在 http-client.env.json(dev)。host 用 [::1]: 127.0.0.1:30001/30002/30003 被 GoLand/WebStorm/JCEF 占着。
+
 ### healthz
 POST http://{{host}}:{{port}}/healthz
 Content-Type: application/json
 
-### k8s svc healthz
-POST http://{{k8s_host}}:{{port}}/healthz
+### GetMerchantAgreement(当前生效协议)
+POST http://{{host}}:{{port}}/merchant.v1.MerchantService/GetMerchantAgreement
 Content-Type: application/json
 
-### 网关
-POST http://{{gateway_host}}:{{gateway_port}}/search/search.v1.SearchService/Search
-Content-Type: application/json
+{}
 
-{"index": "ecommerce_products_spus", "name": "iphone"}
-
-### k8s网关
-POST http://{{k8s_gateway_host}}:{{k8s_gateway_port}}/search/search.v1.SearchService/Search
-Content-Type: application/json
-
-{"index": "ecommerce_products_spus", "name": "iphone"}
-
-### SubmitApplication
+### SubmitApplication(写 dev 库; 响应里的 applicationId 存进 client.global 供下面用)
 POST http://{{host}}:{{port}}/merchant.v1.MerchantService/SubmitApplication
 Content-Type: application/json
+x-md-global-user-id: {{user_id}}
 
 {
-  "company_name": "示例科技有限公司",
-  "credit_code": "91110108MA01XXXXXX",
-  "legal_person": "张三",
-  "legal_person_id": "11010119900307663X",
-  "contact_phone": "13812345678",
-  "business_license_url": "https://example.com/images/license.jpg",
-  "legal_person_id_front_url": "https://example.com/images/id_front.jpg",
-  "legal_person_id_back_url": "https://example.com/images/id_back.jpg",
-  "category_ids": [1001, 1002, 1003],
-  "remark": "加急处理"
+  "companyName": "http-client 测试公司",
+  "creditCode": "91110000MA01ABCD2X",
+  "legalPerson": "测试",
+  "legalPersonId": "110101199001011234",
+  "contactPhone": "13800000000",
+  "businessLicenseUrl": "https://example.com/license.png",
+  "legalPersonIdFrontUrl": "https://example.com/id-front.png",
+  "legalPersonIdBackUrl": "https://example.com/id-back.png",
+  "categoryIds": [1001],
+  "remark": "http-client"
 }
 
-### GetApplication
+> {% client.global.set("application_id", response.body.applicationId); %}
+
+### GetApplication(用上一步的 id)
 POST http://{{host}}:{{port}}/merchant.v1.MerchantService/GetApplication
 Content-Type: application/json
+x-md-global-user-id: {{user_id}}
 
-{
-  "applicationId": "019e7819-634d-791f-b823-c2374003d3a3"
-}
+{"applicationId": "{{application_id}}"}
 
-### ApproveApplication
+### ApproveApplication(需要管理员身份头; 直连用 x-md-global-role 模拟)
 POST http://{{host}}:{{port}}/merchant.v1.MerchantService/ApproveApplication
 Content-Type: application/json
-Authorization: Bearer ***REMOVED-JWT***
+x-md-global-user-id: {{user_id}}
+x-md-global-role: admin
 
-{
-  "applicationId": "019e7819-634d-791f-b823-c2374003d3a3",
-  "auditComment": "Approve"
-}
+{"applicationId": "{{application_id}}", "auditComment": "http-client 通过"}
 
-### Gateway ApproveApplication
-POST http://{{gateway_host}}:{{gateway_port}}/merchant/merchant.v1.MerchantService/ApproveApplication
+### RejectApplication
+POST http://{{host}}:{{port}}/merchant.v1.MerchantService/RejectApplication
 Content-Type: application/json
-Authorization: Bearer ***REMOVED-JWT***
+x-md-global-user-id: {{user_id}}
+x-md-global-role: admin
 
-{
-  "applicationId": "019e7819-634d-791f-b823-c2374003d3a3",
-  "auditComment": "Approve"
-}
+{"applicationId": "{{application_id}}", "reason": "http-client 驳回"}
+
+### CreateMerchant
+POST http://{{host}}:{{port}}/merchant.v1.MerchantService/CreateMerchant
+Content-Type: application/json
+x-md-global-user-id: {{user_id}}
+
+{"phone": "13800000000", "mail": "test@example.com", "agreementVersion": "v1"}
+
+> {% if (response.body.merchantId) client.global.set("new_merchant_id", response.body.merchantId); %}
+
+### ActivateMerchant
+POST http://{{host}}:{{port}}/merchant.v1.MerchantService/ActivateMerchant
+Content-Type: application/json
+x-md-global-user-id: {{user_id}}
+
+{"merchantId": "{{new_merchant_id}}", "shopName": "http-client 测试店", "shopLogoUrl": ""}
+
+### ApproveApplication(LAN 网关, 需管理员 JWT)
+POST {{gateway_scheme}}://{{gateway_host}}/merchant.v1.MerchantService/ApproveApplication
+Content-Type: application/json
+Authorization: Bearer {{token}}
+
+{"applicationId": "{{application_id}}", "auditComment": "gateway 通过"}

@@ -1,0 +1,35 @@
+# 约定(2026-09-23 重写, 对齐 api/behavior/v1 的 proto):
+#   直连 = http://{host}:{port}, 身份由 x-md-global-user-id 头模拟网关注入;
+#   网关 = {gateway_scheme}://{gateway_host}(LAN) 或 https://{public_gateway_host}(公网), 带 Authorization: Bearer {token}。
+#   变量在 http-client.env.json(dev)。host 用 [::1]: 127.0.0.1:30001/30002/30003 被 GoLand/WebStorm/JCEF 占着。
+
+### healthz(details.gorse 必须 ok —— Gorse 在 node2, 经公网)
+POST http://{{host}}:{{port}}/healthz
+Content-Type: application/json
+
+### Track(匿名会话; itemId 用 spu_code, 与 gorse ItemId 一致)
+POST http://{{host}}:{{port}}/behavior.v1.BehaviorService/Track
+Content-Type: application/json
+x-md-global-anonymous: true
+
+{
+  "anonId": "anon-http-client-1",
+  "sessionId": "sess-http-client-1",
+  "events": [
+    {"type": "EVENT_TYPE_IMPRESSION", "itemId": "{{spu_code}}"},
+    {"type": "EVENT_TYPE_READ", "itemId": "{{spu_code}}"}
+  ]
+}
+
+### Recommend(匿名)
+POST http://{{host}}:{{port}}/behavior.v1.BehaviorService/Recommend
+Content-Type: application/json
+x-md-global-anonymous: true
+
+{"anonId": "anon-http-client-1", "n": 5, "offset": 0}
+
+### SimilarItems
+POST http://{{host}}:{{port}}/behavior.v1.BehaviorService/SimilarItems
+Content-Type: application/json
+
+{"itemId": "{{spu_code}}", "n": 5}

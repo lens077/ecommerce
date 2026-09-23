@@ -271,6 +271,19 @@ func buildPgPool(cfg *conf.Bootstrap, logger *zap.Logger) (*pgxpool.Pool, error)
 		otelpgx.WithSpanNameFunc(otelpkg.SQLSpanName),
 	)
 
+	// 注册 cart.cart_type 枚举及其数组类型。pgx 只认识内置 OID,自定义枚举的数组参数
+	// (RemoveCartItem 的 @statuses::cart.cart_type[]) 不注册就会在编码时报
+	// "unable to encode []models.CartCartType ... for unknown type (OID xxxxx)"(2026-09-23 实测)。
+	// 标量枚举能过是因为 pgx 走文本回退;数组没有这条回退。每个新连接都要注册,所以放 AfterConnect。
+	pgConf.AfterConnect = func(ctx context.Context, conn *pgx.Conn) error {
+		types, err := conn.LoadTypes(ctx, []string{"cart.cart_type", "cart._cart_type"})
+		if err != nil {
+			return fmt.Errorf("load cart enum types: %w", err)
+		}
+		conn.TypeMap().RegisterTypes(types)
+		return nil
+	}
+
 	pool, err := pgxpool.NewWithConfig(context.Background(), pgConf)
 	if err != nil {
 		return nil, fmt.Errorf("connect to database failed: %v", err)

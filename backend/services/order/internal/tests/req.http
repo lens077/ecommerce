@@ -1,62 +1,40 @@
-### local
-POST http://localhost:30004/order.v1.orderService/CreateOrder
+# 约定(2026-09-23 重写, 对齐 api/order/v1 的 proto):
+#   直连 = http://{host}:{port}, 身份由 x-md-global-user-id 头模拟网关注入;
+#   网关 = {gateway_scheme}://{gateway_host}(LAN) 或 https://{public_gateway_host}(公网), 带 Authorization: Bearer {token}。
+#   变量在 http-client.env.json(dev)。host 用 [::1]: 127.0.0.1:30001/30002/30003 被 GoLand/WebStorm/JCEF 占着。
+
+### healthz
+POST http://{{host}}:{{port}}/healthz
 Content-Type: application/json
+
+### CreateOrder(直连; proto 字段名就是 PascalCase 的 CartItemIds(JSON 键同名), 值是 cart.cart_item.id, seed 里 1/2 属于 user_id)
+POST http://{{host}}:{{port}}/order.v1.orderService/CreateOrder
+Content-Type: application/json
+x-md-global-user-id: {{user_id}}
 
 {
-  "orderNo": "ORDER202602240001"
+  "CartItemIds": [1],
+  "addressId": "{{address_id}}",
+  "remark": "http-client 测试单"
 }
 
-
-### local CompleteOrder
-POST http://localhost:30004/order.v1.orderService/CompleteOrder
+### CreateOrder 参数校验(空 cartItemIds → 400 invalid_argument)
+POST http://{{host}}:{{port}}/order.v1.orderService/CreateOrder
 Content-Type: application/json
+x-md-global-user-id: {{user_id}}
 
-{
-  "orderNo": "ORDER202602240001"
-}
+{"CartItemIds": [], "addressId": ""}
 
-### local
-POST http://localhost:30004/healthz
+### CompleteOrder(seed 订单)
+POST http://{{host}}:{{port}}/order.v1.orderService/CompleteOrder
 Content-Type: application/json
+x-md-global-user-id: {{user_id}}
 
-### pre
-#  --header 'Content-Type: application/json'
-#  --data-raw '{}'
-POST http://192.168.3.124:30004/healthz
+{"orderNo": "{{order_no}}"}
+
+### CreateOrder(LAN 网关)
+POST {{gateway_scheme}}://{{gateway_host}}/order.v1.orderService/CreateOrder
 Content-Type: application/json
+Authorization: Bearer {{token}}
 
-### curl -v -X POST http://my.dev.test/check.v1.CheckService/Ready
-#  --header 'Content-Type: application/json'
-#  --data-raw '{}'
-POST http://localhost:30004/user.v1.UserService/SignIn
-Content-Type: application/json
-
-{
-  "code": "1231",
-  "state": "12313"
-}
-
-### Gateway GetUserProfile
-# curl -v -X POST http://localhost:8080/user.v1.UserService/UserProfile \
-# --header 'Content-Type: application/json' \ \
-# --header 'Authorization: Bearer ***REMOVED-JWT***' \
-# --data-raw '{}'
-
-POST http://localhost:8080/user/v1.UserService/UserProfile
-Content-Type: application/json
-Authorization: Bearer ***REMOVED-JWT***
-
-{}
-
-### GetUserProfile
-# curl -v -X POST http://localhost:30004/v1.UserService/UserProfile
-#--header 'Content-Type: application/json'
-#--header 'x-md-global-name: test'
-#--data-raw '{}'
-POST http://localhost:30004/v1.UserService/UserProfile
-x-md-global-name: test
-Content-Type: application/json
-
-{}
-
-###
+{"CartItemIds": [1], "addressId": "{{address_id}}"}
