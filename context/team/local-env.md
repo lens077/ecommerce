@@ -96,7 +96,7 @@ prod 暂沿用 pre 的 Config Center 环境（见 `docs/PRODUCTION-RELEASE.md`�
 `dragonfly.dragonfly.svc`、`otel-opentelemetry-collector.opentelemetry.svc:4318`），Mac 上解析不了；
 Mac 应通过 `remote-dev` 的 Pangolin 资源获取公网地址，不要把集群 Service DNS 写进本机配置。两条出路：
 
-1. 用上表 remote-dev 那列的地址覆盖（PG/Dragonfly/Kafka 的 Pangolin 资源域名，2026-09-23 起三条都已建好并实测）——`tools/config-center-harvest.sh --strategy remote-dev` 就是干这个的；2026-09-23 已跑完：operator token 已签、`harvest --env dev` 已把 10 个服务的 PG/Redis 切到 `pg-dev:30001`/`redis-dev:30005`、search 的 ES 切到 `es-dev.apikv.com`（只读 API key）；OTLP 与 Consul 块保持原值（前者是决策 `REMOTE_POLICY=keep`，后者没提供方），本机跑会每 30s 一条 OTLP warning，不阻断；
+1. 用上表 remote-dev 那列的地址覆盖（PG/Dragonfly/Kafka 的 Pangolin 资源域名，2026-09-23 起三条都已建好并实测）——`tools/config-center-harvest.sh --strategy remote-dev` 就是干这个的；2026-09-23 已跑完：operator token 已签、`harvest --env dev` 已把 10 个服务的 PG/Redis 切到 `pg-dev:30001`/`redis-dev:30005`、search 的 ES 切到 `es-dev.apikv.com`（只读 API key）；OTLP 同日晚也切到公网鉴权入口 `otlp-dev.apikv.com:443`（三条信号，Bearer 在 `~/.config/apikv/otel.mk`，已写好；缺文件时 SDK 匿名上报会被 401 静默丢弃）；只剩 Consul 块保持原值（没提供方）；
 2. 走内环开发，在集群身份下跑代码 —— [okteto-inner-loop.md](okteto-inner-loop.md)。
 
 
@@ -194,9 +194,9 @@ curl -sk -o /dev/null -w '%{http_code}\n' https://<name>.dev.test/  # 业务路�
 | 集群自身指标与事件 | OTel Collector → 集群内 VictoriaMetrics | kubernetes `components/opentelemetry/` |
 | 容器日志 | Vector DaemonSet → 集群内 VictoriaLogs | kubernetes `components/vector/values.yaml` |
 
-应用 OTLP 不再经 Pangolin 写入，公网 OTLP 入口未接线；不要把旧 `node3-otlp.apikv.com` 写回 Config Center。
+公网 OTLP 入口 2026-09-23 接线：`otlp-dev.apikv.com:443`（Pangolin rid 65，SSO 关）→ HTTPRoute `otlp.dev.test` → collector `:4319`（`otlp/public` receiver，`bearertokenauth`）；集群内 4317/4318 仍匿名，鉴权边界只在公网。不要把旧 `node3-otlp.apikv.com` 写回 Config Center。
 
-**OTLP 鉴权边界**：集群内 Collector 只接受集群网络路径；公网写入必须另做 Bearer 鉴权和 Pangolin 受限 resource，当前不开放。
+**OTLP 鉴权**：公网匿名/错 token 一律 401（SDK 侧表现是遥测静默丢失，不是服务挂掉）。token 真相源 k1 `creds/otlp-public-token` = Secret `opentelemetry/otlp-public-auth`；Mac 放 `~/.config/apikv/otel.mk`，各服务 Makefile `-include`。
 三个身份的 token 真相源在 Vault/OpenBao 体系，当前 OpenBao 尚未作为恢复前置启用：
 
 | 身份 | 谁在用 | 怎么拿到 |
