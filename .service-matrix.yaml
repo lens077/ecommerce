@@ -135,12 +135,14 @@ gateway:
   rbac:
     model: "config_center://gateway/policies/model.conf"
     policies: "config_center://gateway/policies/policies.csv"
-  # 匿名能力分三级，设计见 docs/design/platform/anonymous-shopping.md：
-  #   A anonymous_paths —— 完全无身份，jwt + rbac 两处都排除
-  #   B guest_paths     —— 不验 JWT，但网关签发/识别访客 cookie 并注入
-  #                        x-md-global-user-id + x-md-global-anonymous=true
-  #   C 其余            —— 必须登录（下单/支付/地址簿）
-  # A 与 B 互斥：同一路径同时出现在两处，网关 Build 会直接报错。
+  # 匿名能力分四类，设计见 docs/design/platform/anonymous-shopping.md：
+  #   A anonymous_paths     —— 完全无身份，jwt + rbac 两处都排除
+  #   B guest_paths         —— 不验 JWT，但网关签发/识别访客 cookie 并注入
+  #                            x-md-global-user-id + x-md-global-anonymous=true
+  #   O optional_auth_paths —— 对所有人开放；有效会话注入用户身份，认不出按匿名放行，不进 RBAC。
+  #                            这里的 user-id 只能用于归属，不能据此放行需要登录的操作
+  #   C 其余                —— 必须登录（下单/支付/地址簿）
+  # A、B、O 两两互斥：同一路径出现在两处，网关 Build 会直接报错。
   # 无需 JWT 的路径（jwt + rbac 两处都排除）
   anonymous_paths:
     - /search.v1.SearchService/Search
@@ -148,9 +150,6 @@ gateway:
     - /user.v1.UserService/SignIn
     - /payment.v1.PaymentService/HandlePaymentNotify
     - /payment.v1.PaymentService/HandlePaymentCallback
-    - /behavior.v1.BehaviorService/Track
-    - /behavior.v1.BehaviorService/Recommend
-    - /behavior.v1.BehaviorService/SimilarItems
     - /telemetry.v1.TelemetryService/CollectWebVitals
     - /address.v1.RegionService/ListRegions
   # B 级：访客身份（当前只有购物车——访客唯一该拥有的资源）
@@ -159,6 +158,12 @@ gateway:
     - /cart.v1.CartService/AddProductToCart
     - /cart.v1.CartService/RemoveCartItem
     - /cart.v1.CartService/UpdateCartItemQuantity
+  # O 级：可选认证。behavior 靠它区分登录用户与匿名访客，把登录前的匿名行为并到真实用户。
+  # 放在 anonymous_paths 时网关会剥身份头，登录用户也只能记成 anon:（2026-09-23 改）。
+  optional_auth_paths:
+    - /behavior.v1.BehaviorService/Track
+    - /behavior.v1.BehaviorService/Recommend
+    - /behavior.v1.BehaviorService/SimilarItems
 
 # 后端服务
 # discovery: Consul 注册名（≠ 目录名）。2026-09-03 起注册已关（CONSUL_ENABLED=false），

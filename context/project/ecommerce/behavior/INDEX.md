@@ -39,7 +39,7 @@ gorse 侧语义与 product 目录同步已实测。共享客户端在 `backend/p
 - **登录用户拿不到真实身份**：`service/behavior.go` 的 `identity()` 按「网关注入的
   `x-md-global-user-id` 优先」写，但三个 RPC 在网关 `anonymous_paths` 里，网关对匿名路径
   先剥身份头、再跳过认证，所以这个头永远不会出现，登录用户也记成 `anon:<id>`。
-  修法：control-tower 新增 `optional_auth` 路由类别（已随 `v0.1.7` 发版；本仓 `backend/go.mod` 尚未升级），上线步骤见
+  修法：control-tower 新增 `optional_auth` 路由类别（网关镜像 `0.2.17`、routes 模块 `v0.1.7` 已发版，本仓已升级；新集群尚未部署网关），上线步骤见
   `TODO.md`「网关可选认证路由」。上线后这个头只保证「有值时可信」，本服务只能用它做归属，
   不能据此放行需要登录的操作。匿名→登录的关联回填见 `TODO.md`「推荐登录身份关联」；
   gorse 没有合并用户的 API，关联只能在本服务做

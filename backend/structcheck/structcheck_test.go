@@ -421,6 +421,64 @@ func TestGatewayGuestMatchesMatrix(t *testing.T) {
 	}
 }
 
+// matrix 的 optional_auth_paths 与路由模板的 optional_auth 必须是同一个集合,
+// 且与 anonymous_paths、guest_paths 两两互斥(网关 Build 会拒绝重叠,这里提前拦住)。
+// 引入原因(2026-09-23):behavior 的三个 RPC 在 anonymous 里时网关剥掉身份头,
+// 登录用户的行为也只能按 anon_id 记;挪进可选认证后,这条核对防止两边再次走散。
+func TestGatewayOptionalAuthMatchesMatrix(t *testing.T) {
+	data, err := os.ReadFile(matrixPath)
+	if err != nil {
+		t.Fatalf("读取 .service-matrix.yaml: %v", err)
+	}
+	var doc struct {
+		Gateway struct {
+			AnonymousPaths    []string `yaml:"anonymous_paths"`
+			GuestPaths        []string `yaml:"guest_paths"`
+			OptionalAuthPaths []string `yaml:"optional_auth_paths"`
+		} `yaml:"gateway"`
+	}
+	if err := yaml.Unmarshal(data, &doc); err != nil {
+		t.Fatalf("解析 .service-matrix.yaml: %v", err)
+	}
+	if len(doc.Gateway.OptionalAuthPaths) == 0 {
+		t.Fatal("matrix gateway.optional_auth_paths 为空")
+	}
+
+	other := map[string]string{}
+	for _, p := range doc.Gateway.AnonymousPaths {
+		other[p] = "anonymous_paths"
+	}
+	for _, p := range doc.Gateway.GuestPaths {
+		other[p] = "guest_paths"
+	}
+	want := map[string]bool{}
+	for _, p := range doc.Gateway.OptionalAuthPaths {
+		if list, dup := other[p]; dup {
+			t.Errorf("%q 同时在 %s 与 optional_auth_paths —— 两者语义互斥", p, list)
+		}
+		want[p] = true
+	}
+
+	for _, env := range ctroutes.Envs() {
+		parsed, err := ctroutes.Parse(env)
+		if err != nil {
+			t.Fatal(err)
+		}
+		got := map[string]bool{}
+		for _, p := range parsed.OptionalAuth {
+			got[p] = true
+			if !want[p] {
+				t.Errorf("[%s] 路由模板可选认证项 %q 不在 matrix.optional_auth_paths", env, p)
+			}
+		}
+		for p := range want {
+			if !got[p] {
+				t.Errorf("[%s] matrix.optional_auth_paths 的 %q 不在路由模板", env, p)
+			}
+		}
+	}
+}
+
 // 各服务 internal/pkg 中仍由本仓维护的同名文件必须保持同构。
 // config/log/otel/registry 是面向服务 proto 的 kit adapter，允许映射不同字段，不参与副本比较。
 //

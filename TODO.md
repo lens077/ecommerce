@@ -183,6 +183,7 @@ todo-spec: 1
 - [ ] **未完成 · 消费者交易页**：订单列表/详情、结算和支付结果接真实 API，随后端正式幂等/响应契约联调；补成功、失败、取消与重复提交用例，去掉对应 mock 和固定支付跳转。
 - [ ] **未完成 · 商品列表/类目接线**：公开目录由 consumer-next 承载，SPA 只保留其职责所需入口，不重复建设两套首页。
 - [ ] **未完成 · 推荐行为埋点**：consumer 尚无 `initTracker` 调用；接商品曝光/浏览、加购/收藏/购买事件，与 behavior/gorse 端到端验证，不以 Umami 代替。
+- [ ] **部分完成 · 网关可选认证路由**（control-tower）：新增第四类路由 `optional_auth`（有效会话注入用户 ID；无会话、会话无效或 cookie 会话 Origin 不可信都按匿名放行、不注入身份、不做 RBAC），behavior 三个 RPC 从 `anonymous` 挪入。control-tower 已发版（网关镜像 `0.2.17`、routes 模块 `v0.1.7`），本仓已升级依赖，matrix 的 `optional_auth_paths` 与 structcheck 双向核对已同步。剩部署：2026-09-23 集群重建后网关与 behavior 均未在新集群部署，无可滚动对象。部署网关时镜像必须 ≥ `0.2.17`（control-tower `deploy/*/gateway` 清单仍钉 `0.2.10`，要先改），**先让新网关就绪、再写** Config Center `gateway/<env>/routes.yaml`（旧网关拒绝未知字段，启动时没有可回退的旧配置会一直 not ready）；随后用有效会话、无会话、过期会话、非白名单 Origin 四种请求调 `Track` 验收。
 - [ ] **未完成 · Bugsink SDK 与 Source Map**：服务端已有部署记录；接 SDK、debug ID 与真实错误还原验收。手顺见 [错误监控](docs/observability/error-monitoring.md)。
 - [ ] **部分完成 · Umami 发布接线**：服务部署和两个 consumer 埋点代码已完成；`frontend-release.yml` 未传四个构建期变量。补 Docker 构建链路，发布后验证真实 PV/路由变化；更换面板默认管理员凭据并复验。见 [网站分析](docs/observability/web-analytics.md)。
 
