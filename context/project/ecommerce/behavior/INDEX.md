@@ -34,9 +34,15 @@ gorse 侧语义与 product 目录同步已实测。共享客户端在 `backend/p
   `gorse client initialized {"endpoint": "https://gorse.apikv.com"}`，可证该段已配齐。
 - ⚠️ 但 `api_key` 按硬规则 4 在仓库里留空，真值必须灌进 Config Center，
   否则业务调用全 401（见 TODO.md）。这是「配置存在」与「配置可用」的差别。
-- gorse 里还有 `smoke-a/b/c` 测试数据待清理
 - 用户画像（`/api/users` labels）尚未投喂
 - consumer 前端尚未接入 tracker
+- **登录用户拿不到真实身份**：`service/behavior.go` 的 `identity()` 按「网关注入的
+  `x-md-global-user-id` 优先」写，但三个 RPC 在网关 `anonymous_paths` 里，网关对匿名路径
+  先剥身份头、再跳过认证，所以这个头永远不会出现，登录用户也记成 `anon:<id>`。
+  修法：control-tower 新增 `optional_auth` 路由类别（已随 `v0.1.7` 发版；本仓 `backend/go.mod` 尚未升级），上线步骤见
+  `TODO.md`「网关可选认证路由」。上线后这个头只保证「有值时可信」，本服务只能用它做归属，
+  不能据此放行需要登录的操作。匿名→登录的关联回填见 `TODO.md`「推荐登录身份关联」；
+  gorse 没有合并用户的 API，关联只能在本服务做
 
 ## 相关
 
