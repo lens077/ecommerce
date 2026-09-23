@@ -2,10 +2,8 @@ package application
 
 import (
 	"context"
-	"errors"
 	"fmt"
 
-	"connectrpc.com/connect"
 	"github.com/lens077/ecommerce/backend/services/order/internal/biz/domain"
 	"github.com/lens077/ecommerce/backend/services/order/internal/eventbus"
 	"go.uber.org/zap"
@@ -81,28 +79,18 @@ func (uc *OrderCommandUseCase) ShipOrder(ctx context.Context, orderNo string, co
 	return nil
 }
 
+// CompleteOrder 只返回领域错误；RPC 错误码统一由 service 层映射
+// （docs/design/platform/error-handling.md：biz 定义 → data 包装 → service 映射）。
 func (uc *OrderCommandUseCase) CompleteOrder(ctx context.Context, orderNo string) error {
 	// 通过命令仓储加载聚合根
 	order, err := uc.repo.GetOrderByNo(ctx, orderNo)
 	if err != nil {
-		switch {
-		case errors.Is(err, domain.ErrOrderNotFound):
-			return connect.NewError(connect.CodeNotFound, err)
-		default:
-			// 可以在这里包装一个具体的 Unknown 描述，或者直接返回
-			return connect.NewError(connect.CodeUnknown, err)
-		}
+		return fmt.Errorf("load order: %w", err)
 	}
 
 	// 调用聚合根的业务方法
 	if err := order.Complete(); err != nil {
-		switch {
-		case errors.Is(err, domain.ErrOrderNotFound):
-			return connect.NewError(connect.CodeNotFound, err)
-		default:
-			// 可以在这里包装一个具体的 Unknown 描述，或者直接返回
-			return connect.NewError(connect.CodeUnknown, err)
-		}
+		return err
 	}
 
 	// 持久化
