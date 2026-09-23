@@ -45,12 +45,12 @@ todo-spec: 1
 #### P0
 
 - [ ] **未完成 · 库存预占正确性**：`inventory/internal/data/inventory.go` 仍传未来版本号、忽略更新行数、传错扣减量与错误变量，且未组成完整事务。修复原子条件更新、流水及幂等，并验证并发不足库存不会成功。
-- [ ] **未完成 · 库存释放**：同文件 `ReleaseReserve` 仍为 panic；实现幂等释放，未实现前显式拒绝，不得崩溃或假成功。
+- [ ] **未完成 · 库存释放**：data 层 `ReleaseReserve` 仍为 panic，但 service 层根本没调它——直接返回 `{status:false}` 200（2026-09-23 http-client 实测，属假成功）；实现幂等释放，未实现前显式返回 Unimplemented。另：`inventory.stock` 没有 seed，`Reserve` 对 seed SKU 一律 `sku_id is not found`，这是设计（库存由业务流入），测试文件已注明，不造假数据。
 - [ ] **未完成 · 订单假成功与不落库**：`order/internal/service/order.go` 忽略建单输入，`internal/data/order.go` 的 `SaveOrderGroup`/`SaveOrder` 只记日志返回 nil。先显式阻断假成功，再实现持久化；提交成功前不得发布完成事件。
 - [ ] **未完成 · 地址归属校验**：`address/internal/service/address.go` 创建地址仍信任请求体 `UserId`，读改删和设默认未传会话主体。主体取可信身份，数据访问绑定归属；覆盖用户 A/B、游客和管理员的无副作用拒绝测试。
-- [ ] **未完成 · 商家审批与桩方法**：`merchant/internal/data/queries/merchant.sql` 的审批 UPDATE 仍无 WHERE；`merchant_service.go` 仍有 panic。限定申请 ID 与操作者权限，实现拒绝/激活等方法或显式返回未实现。
+- [ ] **部分完成 · 商家审批与桩方法**：2026-09-23 `merchant_service.go` 的 CreateMerchant/RejectApplication/ActivateMerchant 已从 panic 改为显式 `CodeUnimplemented`（panic 会让 net/http 断连，客户端只见 Empty reply）；`GetMerchantAgreement` 在 `merchants.agreement` 空表时返回零值 `effectiveDate=0001-01-01` 而不是明确错误。剩：审批 UPDATE 加 WHERE 限定申请 ID 与操作者权限，实现拒绝/激活，空协议表显式反馈。
 - [ ] **未完成 · 登录 token 落日志**：`user/internal/data/user.go` 仍执行 `u.l.Debug(token.AccessToken)`。删除敏感日志，并随 BFF 收敛清理遗留登录职责。
-- [ ] **未完成 · 加购 INSERT 缺列**：`cart/internal/data/queries/cart.sql` 未写 `shop_name`，迁移定义为 NOT NULL 且无默认值。先确定店铺快照契约再贯通 API/业务/SQL，验证新增与重复加购。
+- [ ] **未完成 · 加购 INSERT 缺列**：`cart/internal/data/queries/cart.sql` 未写 `shop_name`，迁移定义为 NOT NULL 且无默认值——2026-09-23 实测任何新加购都 500 `null value in column "shop_name"`，seed 行有值所以此前没暴露；前端 `MerchantCartGroup` 空值回退到默认店名。二选一：请求加 `shop_name` 客户端快照（与 spu_name/sku_name 同风格，改 proto + 前端重生成）或服务端查 merchant 填；先定契约再贯通，验证新增与重复加购。同日已修另一处：pgx 未注册 `cart.cart_type[]` 导致 `RemoveCartItem` 500（`data.go` AfterConnect LoadTypes）。
 
 上述修复各自带真实 SQL/权限/状态机回归测试，不再另列泛化的「补齐所有单测」任务。
 
@@ -58,7 +58,7 @@ todo-spec: 1
 
 - [ ] **未完成 · 建单与库存、支付联动**：按 checkout v2 实现报价/快照、组原子预占、按商家拆单、事务落库、支付意图、成功后清理购物车与失败补偿；不照旧 CartItemIds 草稿直接接线。
 - [ ] **未完成 · 订单查询与状态机**：补用户/商家订单查询、取消、状态守卫、订单日志、支付确认和超时恢复；现有 repo 仍有多处 panic。完成状态要求满足履约前置条件。
-- [ ] **未完成 · 支付闭环**：恢复 repo 主体与显式 Unimplemented 的 RPC；补回调验签、幂等、主动查询、退款与对账，按 checkout v2 的按组支付和 capture/refund 模型实现。
+- [ ] **未完成 · 支付闭环**：2026-09-23 实测 `CreatePayment`/`HandlePaymentNotify`/`HandlePaymentCallback` 直连均为 501 Unimplemented，只有 `GetPaymentStatus` 有实现；恢复 repo 主体与显式 Unimplemented 的 RPC；补回调验签、幂等、主动查询、退款与对账，按 checkout v2 的按组支付和 capture/refund 模型实现。
 - [ ] **未完成 · 商品列表与管理能力**：`product.proto` 当前仅有 `GetProductDetail`；按 [listing.md](docs/design/product/listing.md) 实现游标分页，再补上下架、类目/品牌及商家操作权限。
 - [ ] **未完成 · 下单幂等契约**：前后端必须使用真实 proto 字段与数据库唯一约束；清理靠类型断言发送、运行时被丢弃的 `requestId`，重复提交只能生成一组订单。
 - [ ] **部分完成 · 购物车条目标识**：前端 store 已用 `cartItemId`，后端删除/改数量 SQL 仍按组合键及并行数组。统一迁到 `cart_item_id`，同时校验归属。
@@ -70,6 +70,7 @@ todo-spec: 1
 - [ ] **未完成 · 履约能力**：先并入 order 域，补发货、物流单、轨迹与第三方 adapter；没有独立伸缩或故障域证据不拆新服务。
 - [ ] **待触发 · notification**：原设计草案已删除；单独重新设计后再拆实现项。
 - [ ] **待触发 · support**：原设计草案已删除；单独重新设计后再拆实现项。
+- [ ] **未完成 · 错误码与空表反馈**：`product.GetProductDetail` 对不存在的 spuCode 返回 `unknown`（应 `not_found`）；`user.UserProfile` 在 `public.users` 空表时 404 `user not found`——没人 SignIn 过属预期，但需与「未登录」区分；`merchant.GetMerchantAgreement` 空表零值见上。按 connect 错误码约定统一：找不到 → `not_found`，未实现 → `unimplemented`，不用 `unknown`/零值兜底（2026-09-23 http-client 逐服务实测）。
 - [ ] **未完成 · 搜索体验**：补聚合筛选、热门词与固定查询集相关性基线；搜索只读 PG 派生投影，不恢复业务服务直写索引。
 
 ### 数据一致性与事件驱动
@@ -215,8 +216,8 @@ todo-spec: 1
 #### P1
 
 - [ ] **部分完成 · 原生 DNS 收敛**：生产已关闭十服务 Consul 注册、网关 direct Service 路由已接；清理生产遗留 Consul 配置与就绪依赖，pre 按 Compose 目标补齐。保留开发按需注册不等于生产继续依赖 Consul；卸载需另行授权。
-- [ ] **部分完成 · Config Center 环境与 token 收尾**：Config Center 已于 2026-09-23 部署到 k1/k2/k3（ns `config-center`，接 CNPG/Dragonfly/集群内 VM，`config` schema 数据完好，Pangolin `config(-api).apikv.com` 已建），operator token 已签、`harvest --env dev` 已写 10 服务 bootstrap（PG/Redis/ES 指向 Pangolin 入口），Mac 经 `config-api.apikv.com` 实测可拉，且 Mac 上 `psql`（verify-ca，TLSv1.3，错密码拒绝）与 `redis-cli`（CA+SNI，`PONG`，错密码 WRONGPASS，无 CA 握手失败）按 bootstrap 里的值直连通过——remote-dev 闭环；三条 L4 入口（`pg-dev:30001`/`redis-dev:30005`/`kafka-dev:30004`）与 `argocd.apikv.com` 已于 2026-09-23 建好并协议级实测，部署后跑 `config-center-harvest.sh --env dev --strategy remote-dev` 即闭环；单源 selector 和独立 Machine Token 已接；核对实际 pre/prod 环境，legacy token 命中连续 7 天为零后删除回退，结合 GitOps 验收，不能沿用旧「全读 dev」快照。
-- [ ] **部分完成 · 推荐链路**：建表与 item 同步已有记录；核对 Config Center 中 product/behavior 的现行 endpoint/API key，真实跑通 Track/Recommend/SimilarItems。密钥通过管理入口写入，不绕过只读 Machine Token 直写数据库。
+- [ ] **部分完成 · Config Center 环境与 token 收尾**：Config Center 已于 2026-09-23 部署到 k1/k2/k3（ns `config-center`，接 CNPG/Dragonfly/集群内 VM，`config` schema 数据完好，Pangolin `config(-api).apikv.com` 已建），operator token 已签、`harvest --env dev` 已写 10 服务 bootstrap（PG/Redis/ES 指向 Pangolin 入口），Mac 经 `config-api.apikv.com` 实测可拉，且 Mac 上 `psql`（verify-ca，TLSv1.3，错密码拒绝）与 `redis-cli`（CA+SNI，`PONG`，错密码 WRONGPASS，无 CA 握手失败）按 bootstrap 里的值直连通过——remote-dev 闭环；同日发现恢复进来的 dev bootstrap 里 Casdoor `client_id/secret` 是旧值（user `SignIn` → `invalid_client`），已用当前 secret 重播 OpenBao → ESO → harvest 写回 10 服务（`baxf…`），user 重启后复验；三条 L4 入口（`pg-dev:30001`/`redis-dev:30005`/`kafka-dev:30004`）与 `argocd.apikv.com` 已于 2026-09-23 建好并协议级实测，部署后跑 `config-center-harvest.sh --env dev --strategy remote-dev` 即闭环；单源 selector 和独立 Machine Token 已接；核对实际 pre/prod 环境，legacy token 命中连续 7 天为零后删除回退，结合 GitOps 验收，不能沿用旧「全读 dev」快照。
+- [ ] **部分完成 · 推荐链路**：建表与 item 同步已有记录；2026-09-23 发现 behavior/dev bootstrap 的 gorse `api_key` 为空（`SimilarItems` 401），已从 node2 `config.toml` 经 operator token `PutKey` 写入（v7，未直写库），`Track`/`Recommend` 直连通过，`SimilarItems` 待 behavior 重启后复验；Gorse 尚无 `_external` 契约与 `mapping.yaml` 能力，harvest 重跑不会覆盖但也不会维护它，要补契约。
 - [ ] **部分完成 · OpenFGA 部署依赖残留**：2026-09-22 已在新集群按 `DEPENDS_ON=postgres`（CNPG `pg-main` 独立库 `openfga`）重装，`examples/smoke.sh` store→model→tuple→check 通过；旧 `openfga.pgdump` 为空无需恢复。剩：`ADDON_OPENFGA` 在 `config.hosting.env` 已开，重装路径整体演练待做。
 
 #### P2

@@ -225,6 +225,8 @@ curl -sk -o /dev/null -w '%{http_code}\n' https://<name>.dev.test/  # 业务路�
 
 ## 会白排查半天的坑
 
+**`localhost:30001/30002/30003` 打到的是 IDE，不是服务。** GoLand、WebStorm、JCEF 各占着 `127.0.0.1:30001/30002/30003`；Go 服务监听 `*:3000x`，macOS 上 127.0.0.1 的连接优先给 IDE 的监听（2026-09-23 实测 `127.0.0.1→000 / [::1]→200`）。本机调 user/search/product 用 `[::1]` 或 LAN IP；`internal/tests/http-client.env.json` 的 `host` 已统一为 `[::1]`。
+
 **`argocd.dev.test` 在 Mac 上是 502。** 不是 ArgoCD 坏了：`*.dev.test` 只在机房 LAN 可解析，Mac 的
 `/etc/resolver/dev.test → 10.0.0.1` 不可达，Firefox 走系统代理，代理解析不了就回 `502 Bad Gateway`。
 Mac 用 `https://argocd.apikv.com`（Pangolin rid 60 → VIP:443，Host `argocd.dev.test`，Pangolin SSO 关、
