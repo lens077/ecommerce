@@ -42,7 +42,7 @@ func (s *MerchantService) GetMerchantAgreement(ctx context.Context, _ *connect.R
 
 	result, err := s.uc.GetMerchantAgreement(ctx, &biz.GetMerchantAgreementRequest{})
 	if err != nil {
-		return nil, err
+		return nil, merchantError(err)
 	}
 	response := &v1.GetMerchantAgreementResponse{
 		Version:       result.Version,
@@ -74,7 +74,7 @@ func (s *MerchantService) SubmitApplication(ctx context.Context, c *connect.Requ
 		Remark:                req.Remark,
 	})
 	if err != nil {
-		return nil, err
+		return nil, merchantError(err)
 	}
 	response := &v1.SubmitApplicationResponse{
 		ApplicationId: result.ApplicationId,
@@ -93,7 +93,7 @@ func (s *MerchantService) ApproveApplication(ctx context.Context, c *connect.Req
 		ApplicationId: req.ApplicationId,
 	})
 	if err != nil {
-		return nil, err
+		return nil, merchantError(err)
 	}
 
 	response := &v1.ApproveApplicationResponse{}
@@ -117,7 +117,7 @@ func (s *MerchantService) GetApplication(ctx context.Context, c *connect.Request
 		ApplicationId: req.ApplicationId,
 	})
 	if err != nil {
-		return nil, err
+		return nil, merchantError(err)
 	}
 
 	protoStatus := v1.ApplicationStatus_APPLICATION_STATUS_UNSPECIFIED
@@ -160,6 +160,17 @@ var _ merchantconnect.MerchantServiceHandler = (*MerchantService)(nil)
 
 func NewMerchantService(uc *biz.MerchantUseCase) merchantconnect.MerchantServiceHandler {
 	return &MerchantService{uc: uc}
+}
+
+// merchantError 把 biz 哨兵错误映射为 RPC 错误码（docs/design/platform/error-handling.md 第 3 条）。
+// 未映射时 connect 记成 unknown，日志拦截器按「rpc system error」报 ERROR（2026-09-23 修正）。
+func merchantError(err error) error {
+	switch {
+	case errors.Is(err, biz.ErrApplicationIdNotFound):
+		return connect.NewError(connect.CodeNotFound, err)
+	default:
+		return connect.NewError(connect.CodeUnknown, err)
+	}
 }
 
 // errUnimplemented 统一的未实现错误, code = 12(Unimplemented); 与 payment 服务同一写法。
