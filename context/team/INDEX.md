@@ -28,6 +28,7 @@
 | [alerting-signal-hygiene.md](alerting-signal-hygiene.md) | 告警的价值 = 它承载的新信息量：不允许「已知但不打算修」的 firing 告警；降噪顺序「修根因 > 调 `repeat_interval` > 改阈值」；探针探「功能有没有推进」 | 慢性红把急性事故淹掉（实测一场 9 小时事故无人发现）/ 调阈值让数字好看，真问题永久藏起来 / 探针只探进程存活，组件不干活也全绿 |
 | [host-watchdog.md](host-watchdog.md) | 黑盒探针探不到的三层（容器进程 / systemd 单元 / 隧道站点与磁盘）由主机侧巡检补齐；巡检对象用显式白名单；告警通道跑通故障路径才算验收 | 容器崩溃循环两个月零告警（实测 18238 次）/ restart policy 是 `no`，退出后永不拉起也无人知 / 全量扫描把停用容器变成常驻误报 / 只跑正常路径就宣称告警已接好 |
 | [cilium-datapath-ops.md](cilium-datapath-ops.md) | Cilium 数据面三条只能实测的事实：ipcache 身份失配让放行规则静默失效；CES 在 Pod 换 IP 后不跟新（批量重启前先对账）；`bpf-map-dynamic-size-ratio` 缩容后旧 map 成孤儿 | 控制面全绿却查不出丢包，照应急建议删 default-deny 掩盖真因 / 以为 `kubectl top` 里 cilium 内存是进程占用 / 改完 ratio 以为省下了，旧 map 被 reparent 到节点后从 Pod 指标消失 |
+| [image-supply-chain.md](image-supply-chain.md) | 镜像搬运与验签两条边界：Mac(arm64)→TCR→amd64 节点每条命令都带 `--platform linux/amd64`；cosign 3.x 默认 sigstore bundle 格式，Kyverno `verifyImages` 必须 `type: SigstoreBundle`；验签验收必须正反向 | 推上去的是 arm64 层，五个控制器 `exec format error` CrashLoop（2026-09-22 实付）/ 已签名镜像也报 `no signatures found`，Audit 报表全 fail 变噪音，Enforce 会拒掉所有合法发布 |
 | [cfs-quota-throttling.md](cfs-quota-throttling.md) | 「CPU 不高但延迟高」的第一判据是 cgroup `cpu.stat` 的 `nr_throttled`/`throttled_usec`：`limits.cpu` 是每 100ms 的预算，烧完即冻结；容器里 `nproc` 返回宿主机核数，`GOMAXPROCS` 下限为 2 | 拿「CPU 才 15%」否定 CPU 不足，方向一开始就反 / 只看均值和 p99 漏掉整周期冻结 / 只数限流次数不看 `throttled_usec`（实测 23 次累计冻结 1591ms）/ 按 `nproc` 开线程烧 0.3 核配额，每次冻得更久 |
 
 ## 不属于这一层的

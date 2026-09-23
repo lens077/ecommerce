@@ -23,7 +23,7 @@ todo-spec: 1
 | 交易 | 有服务骨架，但库存预占、订单持久化、地址归属与商家审批仍有已核实缺陷 | [微服务](#微服务与交易闭环) |
 | 事件与搜索 | 搜索 CDC 已切流；领域事件仍待首个真实业务生产者触发，不预建空链路 | [事件](#数据一致性与事件驱动) |
 | 基础设施 | PG 已迁集群内 CNPG `pg-main`（node3 Pigsty 退役）；观测存储位置待复验；近期交接确认 Kafka/ES/Connect/Silo 已迁入 K8s，目标拓扑尚需对齐 | [基础设施](#基础设施与部署模型) |
-| GitOps | ArgoCD 已纳管本仓：`AppProject ecommerce` + `ApplicationSet ecommerce` 生成 `ecommerce-prod`（GitLab `main`/`helm`）。**自动同步仍关闭**（`Sync Policy: Manual`），首次 live diff 54 个对象只差 ArgoCD 自身 `tracking-id` 注解、无字段漂移、无孤儿资源。`okteto up` 前仍需确认此行 | [基础设施](#基础设施与部署模型) |
+| GitOps | 集群 2026-09-22 重建为 k1/k2/k3 后 ArgoCD 重装：`AppProject ecommerce` + repository Secret 已重新 apply，新增 `Application/ecommerce-kyverno`（`infrastructure/kyverno/`，自动同步）作为首个真正走 GitOps 的对象。**业务工作负载 `ApplicationSet ecommerce` 尚未在新集群重新 apply**（`ecommerce` 命名空间当前没有工作负载，旧集群「54 个对象只差 tracking-id」的 diff 结论已失效，需重做）。`okteto up` 前仍需确认此行 | [基础设施](#基础设施与部署模型) |
 | 鉴权 | BFF 已有实现；legacy bearer 仍在源码，OpenFGA、访客购物与服务端资源授权尚未闭环 | [鉴权](#零信任鉴权与session) |
 | 前端 | 公开首页与商品详情 SSR 已有实现；交易页接线不完整，merchant/admin 未形成业务闭环 | [前端](#前端技术栈与工程化) |
 | 可观测性 | 采集与通知链已有基础；指标覆盖、告警有效性、脱敏及故障定位仍需验收 | [可观测性](#统一可观测性体系) |
@@ -109,7 +109,7 @@ todo-spec: 1
 - [ ] **部分完成 · VPA 与 requests 校准**：按 Off/RequestsOnly 收敛，包括复核 config-center 旧 InPlace 配置；至少 7 天指标覆盖发布与 k6 窗口，再人工回写 requests。
 - [ ] **部分完成 · 多副本、PDB 与 N+1**：重核当前拓扑的副本/PDB；旧低流量、旧节点演练不代表现在达标。验证节点故障、扩缩容、批量滚更、资源耗尽与调度失败告警，满足后才启用自动灰度/重调度。
 - [ ] **待复验 · HTTPRoute/TLS 收敛**：同 hostname 不等于冲突，按 Exact/PathPrefix 优先级验证 SSR、SPA 与 `/_next`；盘点当前仍存活的基础设施路由和 certificateRef，不按旧组件列表批量迁移。
-- [ ] **未完成 · 数据恢复与重装**：补 Pigsty PG HA/PITR、对象存储版本/生命周期、备份及 RTO/RPO 演练；重装手顺以现行 Pigsty + OpenBao/ESO + Config Center 为准，不恢复已删除的数据面。OpenBao 集群外备份/副本仍需落实。
+- [ ] **部分完成 · 数据恢复与重装**：2026-09-23 已用真实 dump（`backs/node3/pigsty-node3-2026-09-03/raw/_data/ecommerce.pgdump`）在 CNPG 隔离库比对：业务表与 live 一致（同一套 Go seed，订单/用户在备份里为 0 行），只有 Config Center 的 `config` schema 是 live 缺的，已 additive 合入 `pg-main/ecommerce`；CDC 用真实 SKU 可逆改价验证 PG→Debezium→Kafka→ES 全链路。剩：CNPG PITR/对象存储备份、RTO/RPO 演练；OpenBao 集群外备份/副本；重装手顺以 CNPG + OpenBao/ESO + Config Center 为准（Pigsty 已随 node3 退役）。
 - [ ] **待对齐 · 数据面故障域**：近期 Kafka/ES/Connect/Silo 迁入 K8s，与 TECH.md §7 的外置数据面目标有差距；登记迁移后容量与恢复证据，再按目标规划收敛，不能把部署完成当成目标已满足。
 - [ ] **待复验 · Dragonfly 实例隔离**：按 TECH.md §7/§12 验收 Session 的 noeviction/持久化、Cache 淘汰策略与 Ratelimit 故障域；共用实例不能标为生产基线完成。
 
@@ -118,7 +118,7 @@ todo-spec: 1
 - [ ] **待复验 · PG/Redis 证书续期传播**：旧记录到期日为 2026-11-25；先查实际下发证书，再人工同步副本并 reload/restart，复验 verify-full 客户端。旧 `cert-san-resign.md` 已不可定位，恢复手顺需覆盖 PG `serverAuth,clientAuth` 与 Patroni 重启要求。
 - [ ] **部分完成 · Harbor 爆破防护**：旧 jail 能检测但隧道后端按真实 IP 封禁无效；核对现行入口，优先验证账号锁定，必要时在实际公网终止点限流/封禁。验收必须证明攻击流量被拦。
 - [ ] **待复验 · 遗留运行配置**：核对 node3 Redis 网络就绪顺序、重复拉取凭据、node1 gorse 僵尸副本、cart 的 Silo endpoint 与 OTel TLS 配置；仅处理仍存在的对象，不照旧主机/端口表操作。
-- [ ] **待触发 · KEDA/Rollouts**：消费者 lag、可信指标、多副本/PDB 和恢复验证齐备后分别验收扩缩容与灰度；未激活时按组件必要性审计决定是否保留。
+- [ ] **部分完成 · KEDA/Rollouts**：控制器已装并做了行为验收（KEDA cron ScaledObject 0→2 + 生成 HPA；Rollouts 金丝雀 setWeight 50→pause→100，stableRS 切换）。业务接线仍待触发：Kafka 消费者 lag 出现真实消费者后再建 ScaledObject；灰度要先有 ≥2 副本 + PDB 的无状态服务。
 
 ### 零信任鉴权与Session
 
@@ -141,7 +141,7 @@ todo-spec: 1
 #### P2
 
 - [ ] **待前置 · 传输层身份**：先验证 Cilium WireGuard 节点间加密；确有 workload mTLS/授权需求再评估 Istio Ambient，不提前引入 SPIRE 或把 Cilium Mutual Authentication 当完整 mTLS。
-- [ ] **部分完成 · Tetragon 治理**：audit-only 已有记录；权限最小化、长期基线、事件完整性与 enforcement 需单独验收，不能因旧报告已删就视作完成。
+- [ ] **部分完成 · Tetragon 治理**：2026-09-22 新集群 k1/k2/k3 重装（1.7.1），`ecommerce-service-account-token-access` audit-only 策略已应用，kubernetes 仓 `components/tetragon/verify.sh` + `examples/cnp-smoke.sh`（CNP 正反向 + Hubble `Policy denied` 证据）可复跑。剩：权限最小化、长期基线、事件完整性与 enforcement 单独验收。
 - [ ] **部分完成 · 登录回归保护**：2026-09-20 线上冒烟实跑 10 过 2 挂，断言已按 BFF 现状改正（redirect_uri 断网关 `/auth/callback`，删掉迁移前的 PKCE 断言——它俩都对不上真相，于是线上 redirect_uri 配错时没有任何一层拦得住）。剩复核 callback 与会话恢复竞态修复是否有测试、冒烟处理隐私弹窗、验证真实会话恢复/退出，不以脚本存在代替跑通。
 
 ### 统一可观测性体系
@@ -199,7 +199,7 @@ todo-spec: 1
 #### P1
 
 - [ ] **部分完成 · TCR 签名验收**：多服务流水线已有 Cosign/SBOM；补逐服务 digest 的签名/attestation 回读验证，不沿用「只有 user 接线」也不把构建成功当验签完成。
-- [ ] **未完成 · Harbor Helm 签名与 Kyverno 准入**：chart 纳入签名链；核对控制器健康后落 `verifyImages`，以未签名/错误身份镜像的拒绝测试验收。
+- [ ] **部分完成 · Harbor Helm 签名与 Kyverno 准入**：`verifyImages` 已落地为 ecommerce 命名空间级 Audit 策略（`infrastructure/kyverno/`，keyless + `type: SigstoreBundle`，只覆盖已完成 TCR 探测的 `user`），`smoke.sh` 验收「签名 digest pass / 未签名 fail / 两者放行」；ArgoCD `Application/ecommerce-kyverno` 已建，等 GitLab `main` 含该路径即 Synced。剩：CI 对全部服务在 TCR 签名后把 `imageReferences` 扩到 `sumery/*`；14 天零误报后转 Enforce 并以拒绝测试验收；chart 纳入签名链；`kyverno.io/v1 Policy` 迁 `NamespacedImageValidatingPolicy`（CEL）。
 - [ ] **未完成 · 发布权限与约束**：收敛 `MANIFEST_PUSH_TOKEN` 绕过分支保护的权限；把发布 tag 四条纪律落实为可执行检查，避免只靠操作约定。
 - [ ] **部分完成 · 制品启动与回滚**：pre/prod 同 digest 晋级已有脚本与 prod 清单；剩从 digest 拉起的冒烟、拉取预检、保留策略核验和真实回滚演练；GitOps 接管后验证发布/回滚无需手工 kubectl。
 - [ ] **部分完成 · 契约与竞态门禁**：GitHub 发布模板已有 `buf breaking` 和 `go test -race`，GitLab 有 lint 棘轮。剩 MR 阶段兼容性保护与破坏性变更红测；事件 schema 随线 B 纳入，不再重复要求从零接入。
@@ -217,7 +217,7 @@ todo-spec: 1
 - [ ] **部分完成 · 原生 DNS 收敛**：生产已关闭十服务 Consul 注册、网关 direct Service 路由已接；清理生产遗留 Consul 配置与就绪依赖，pre 按 Compose 目标补齐。保留开发按需注册不等于生产继续依赖 Consul；卸载需另行授权。
 - [ ] **部分完成 · Config Center 环境与 token 收尾**：单源 selector 和独立 Machine Token 已接；核对实际 pre/prod 环境，legacy token 命中连续 7 天为零后删除回退，结合 GitOps 验收，不能沿用旧「全读 dev」快照。
 - [ ] **部分完成 · 推荐链路**：建表与 item 同步已有记录；核对 Config Center 中 product/behavior 的现行 endpoint/API key，真实跑通 Track/Recommend/SimilarItems。密钥通过管理入口写入，不绕过只读 Machine Token 直写数据库。
-- [ ] **未完成 · OpenFGA 部署依赖残留**：交接指出 kubernetes 仓 `components/openfga/component.env` 仍依赖已删组件；按实际 Pigsty 数据源修复部署依赖并验收重装路径。
+- [ ] **部分完成 · OpenFGA 部署依赖残留**：2026-09-22 已在新集群按 `DEPENDS_ON=postgres`（CNPG `pg-main` 独立库 `openfga`）重装，`examples/smoke.sh` store→model→tuple→check 通过；旧 `openfga.pgdump` 为空无需恢复。剩：`ADDON_OPENFGA` 在 `config.hosting.env` 已开，重装路径整体演练待做。
 
 #### P2
 
