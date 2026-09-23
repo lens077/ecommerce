@@ -2,6 +2,7 @@ package service
 
 import (
 	"context"
+	"errors"
 	"fmt"
 
 	"connectrpc.com/connect"
@@ -44,7 +45,7 @@ func (s *AddressService) CreateAddress(ctx context.Context, c *connect.Request[v
 		IsDefault: c.Msg.IsDefault,
 	})
 	if err != nil {
-		return nil, err
+		return nil, addressError(err)
 	}
 
 	return connect.NewResponse(&v1.CreateAddressResponse{
@@ -80,7 +81,7 @@ func (s *AddressService) UpdateAddress(ctx context.Context, c *connect.Request[v
 		Detail:         detail,
 	})
 	if err != nil {
-		return nil, err
+		return nil, addressError(err)
 	}
 
 	return connect.NewResponse(&v1.UpdateAddressResponse{}), nil
@@ -91,7 +92,7 @@ func (s *AddressService) DeleteAddress(ctx context.Context, c *connect.Request[v
 		AddressID: c.Msg.AddressId,
 	})
 	if err != nil {
-		return nil, err
+		return nil, addressError(err)
 	}
 
 	return connect.NewResponse(&v1.DeleteAddressResponse{}), nil
@@ -102,7 +103,7 @@ func (s *AddressService) GetAddress(ctx context.Context, c *connect.Request[v1.G
 		AddressID: c.Msg.AddressId,
 	})
 	if err != nil {
-		return nil, err
+		return nil, addressError(err)
 	}
 
 	if result == nil {
@@ -132,14 +133,14 @@ func (s *AddressService) ListAddresses(ctx context.Context, c *connect.Request[v
 	userIdStr := c.Header().Get(constants.UserIdMetadataKey)
 	customerId, err := uuid.Parse(userIdStr)
 	if err != nil {
-		return nil, err
+		return nil, connect.NewError(connect.CodeUnauthenticated, fmt.Errorf("invalid authenticated user id"))
 	}
 
 	result, err := s.uc.ListAddresses(ctx, biz.ListAddressesRequest{
 		UserID: customerId,
 	})
 	if err != nil {
-		return nil, err
+		return nil, addressError(err)
 	}
 
 	var addresses []*v1.GetAddressResponse
@@ -173,8 +174,22 @@ func (s *AddressService) SetDefaultAddress(ctx context.Context, c *connect.Reque
 		AddressID: c.Msg.AddressId,
 	})
 	if err != nil {
-		return nil, err
+		return nil, addressError(err)
 	}
 
 	return connect.NewResponse(&v1.SetDefaultAddressResponse{}), nil
+}
+
+// addressError 把 biz 哨兵错误映射为 RPC 错误码（docs/design/platform/error-handling.md 第 3 条）。
+// 未映射时 connect 记成 unknown，日志拦截器按「rpc system error」报 ERROR；
+// 地址不存在、地址 ID 非法都是调用方可预期的结果，不能和系统故障混在一起。
+func addressError(err error) error {
+	switch {
+	case errors.Is(err, biz.ErrAddressNotFound):
+		return connect.NewError(connect.CodeNotFound, err)
+	case errors.Is(err, biz.ErrInvalidAddressID):
+		return connect.NewError(connect.CodeInvalidArgument, err)
+	default:
+		return connect.NewError(connect.CodeUnknown, err)
+	}
 }

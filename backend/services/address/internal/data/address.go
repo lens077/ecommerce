@@ -2,7 +2,8 @@ package data
 
 import (
 	"context"
-	"database/sql"
+	"errors"
+	"fmt"
 
 	"github.com/google/uuid"
 	"github.com/jackc/pgx/v5"
@@ -74,16 +75,15 @@ func (r *addressRepo) CreateAddress(ctx context.Context, req biz.CreateAddressRe
 }
 
 func (r *addressRepo) UpdateAddress(ctx context.Context, req biz.UpdateAddressRequest) (*biz.UpdateAddressResponse, error) {
-	addressUUID, err := uuid.Parse(req.AddressID)
+	addressUUID, err := parseAddressID(req.AddressID)
 	if err != nil {
-		r.log.Error("Invalid address ID", zap.Error(err))
 		return nil, err
 	}
 
 	address, err := r.data.queries.GetAddressByID(ctx, addressUUID)
 	if err != nil {
-		if err == sql.ErrNoRows {
-			return nil, err
+		if isNoRows(err) {
+			return nil, fmt.Errorf("%w: %w", biz.ErrAddressNotFound, err)
 		}
 		r.log.Error("GetAddressByID failed", zap.Error(err))
 		return nil, err
@@ -137,9 +137,8 @@ func (r *addressRepo) UpdateAddress(ctx context.Context, req biz.UpdateAddressRe
 }
 
 func (r *addressRepo) DeleteAddress(ctx context.Context, req biz.DeleteAddressRequest) (*biz.DeleteAddressResponse, error) {
-	addressUUID, err := uuid.Parse(req.AddressID)
+	addressUUID, err := parseAddressID(req.AddressID)
 	if err != nil {
-		r.log.Error("Invalid address ID", zap.Error(err))
 		return nil, err
 	}
 
@@ -153,16 +152,15 @@ func (r *addressRepo) DeleteAddress(ctx context.Context, req biz.DeleteAddressRe
 }
 
 func (r *addressRepo) GetAddress(ctx context.Context, req biz.GetAddressRequest) (*biz.GetAddressResponse, error) {
-	addressUUID, err := uuid.Parse(req.AddressID)
+	addressUUID, err := parseAddressID(req.AddressID)
 	if err != nil {
-		r.log.Error("Invalid address ID", zap.Error(err))
 		return nil, err
 	}
 
 	address, err := r.data.queries.GetAddressByID(ctx, addressUUID)
 	if err != nil {
-		if err == sql.ErrNoRows {
-			return nil, err
+		if isNoRows(err) {
+			return nil, fmt.Errorf("%w: %w", biz.ErrAddressNotFound, err)
 		}
 		r.log.Error("GetAddress failed", zap.Error(err))
 		return nil, err
@@ -220,9 +218,8 @@ func (r *addressRepo) ListAddresses(ctx context.Context, req biz.ListAddressesRe
 }
 
 func (r *addressRepo) SetDefaultAddress(ctx context.Context, req biz.SetDefaultAddressRequest) (*biz.SetDefaultAddressResponse, error) {
-	addressUUID, err := uuid.Parse(req.AddressID)
+	addressUUID, err := parseAddressID(req.AddressID)
 	if err != nil {
-		r.log.Error("Invalid address ID", zap.Error(err))
 		return nil, err
 	}
 
@@ -241,14 +238,31 @@ func (r *addressRepo) SetDefaultAddress(ctx context.Context, req biz.SetDefaultA
 		return q.SetDefaultAddress(txCtx, addressUUID)
 	})
 	if err != nil {
-		if err == sql.ErrNoRows {
-			return nil, err
+		if isNoRows(err) {
+			return nil, fmt.Errorf("%w: %w", biz.ErrAddressNotFound, err)
 		}
 		r.log.Error("SetDefaultAddress failed", zap.Error(err))
 		return nil, err
 	}
 
 	return &biz.SetDefaultAddressResponse{}, nil
+}
+
+// isNoRows 判断「查不到」。sqlc 生成的查询走 pgx，返回的是 pgx.ErrNoRows；
+// 旧代码用 `err == sql.ErrNoRows` 比较，这个条件永远不成立——地址不存在时先打
+// ERROR 日志，再以 rpc.code=unknown 返回（2026-09-23 修正）。
+func isNoRows(err error) bool {
+	return errors.Is(err, pgx.ErrNoRows)
+}
+
+// parseAddressID 把非法 ID 包装成 biz.ErrInvalidAddressID：这是调用方的输入错误，
+// 不是服务故障，不打 ERROR 日志，由 service 层映射为 invalid_argument。
+func parseAddressID(id string) (uuid.UUID, error) {
+	addressUUID, err := uuid.Parse(id)
+	if err != nil {
+		return uuid.Nil, fmt.Errorf("%w: %w", biz.ErrInvalidAddressID, err)
+	}
+	return addressUUID, nil
 }
 
 func txFromCtx(ctx context.Context) pgx.Tx {
