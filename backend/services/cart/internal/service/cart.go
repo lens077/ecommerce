@@ -3,6 +3,8 @@ package service
 import (
 	"context"
 	"encoding/json"
+	"errors"
+	"fmt"
 
 	"connectrpc.com/connect"
 	"github.com/google/uuid"
@@ -22,17 +24,19 @@ type CartService struct {
 
 func (cs *CartService) AddProductToCart(ctx context.Context, c *connect.Request[v1.AddProductToCartRequest]) (*connect.Response[v1.AddProductToCartResponse], error) {
 	req := c.Msg
-	userIdStr := c.Header().Get(constants.UserIdMetadataKey)
-	customerId, err := uuid.Parse(userIdStr)
+	customerId, err := customerID(c.Header().Get(constants.UserIdMetadataKey))
 	if err != nil {
 		return nil, err
 	}
 
 	merchantId, err := uuid.Parse(req.MerchantId)
 	if err != nil {
-		return nil, err
+		return nil, connect.NewError(connect.CodeInvalidArgument, fmt.Errorf("invalid merchant id: %w", err))
 	}
 	skuAttributesExtra, err := json.Marshal(req.SkuAttributes.AsMap())
+	if err != nil {
+		return nil, connect.NewError(connect.CodeInvalidArgument, fmt.Errorf("invalid sku attributes: %w", err))
+	}
 	cart, err := cs.uc.AddProductToCart(ctx, biz.AddProductToCartRequest{
 		CustomerId:      customerId,
 		MerchantId:      merchantId,
@@ -48,7 +52,7 @@ func (cs *CartService) AddProductToCart(ctx context.Context, c *connect.Request[
 		Status:          constants.CartStatusEnum(req.Status),
 	})
 	if err != nil {
-		return nil, err
+		return nil, cartError(err)
 	}
 
 	response := connect.NewResponse(&v1.AddProductToCartResponse{
@@ -60,8 +64,7 @@ func (cs *CartService) AddProductToCart(ctx context.Context, c *connect.Request[
 
 func (cs *CartService) RemoveCartItem(ctx context.Context, c *connect.Request[v1.RemoveCartItemRequest]) (*connect.Response[v1.RemoveCartItemResponse], error) {
 	req := c.Msg
-	userIdStr := c.Header().Get(constants.UserIdMetadataKey)
-	customerId, err := uuid.Parse(userIdStr)
+	customerId, err := customerID(c.Header().Get(constants.UserIdMetadataKey))
 	if err != nil {
 		return nil, err
 	}
@@ -70,7 +73,7 @@ func (cs *CartService) RemoveCartItem(ctx context.Context, c *connect.Request[v1
 	for _, id := range req.MerchantIds {
 		ids, err := uuid.Parse(id)
 		if err != nil {
-			return nil, err
+			return nil, connect.NewError(connect.CodeInvalidArgument, fmt.Errorf("invalid merchant id: %w", err))
 		}
 		merchantIds = append(merchantIds, ids)
 	}
@@ -92,7 +95,7 @@ func (cs *CartService) RemoveCartItem(ctx context.Context, c *connect.Request[v1
 		Statuses:    statuses,
 	})
 	if err != nil {
-		return nil, err
+		return nil, cartError(err)
 	}
 	response := connect.NewResponse(&v1.RemoveCartItemResponse{
 		CartItemQuantity: cart.CartItemQuantity,
@@ -104,14 +107,13 @@ func (cs *CartService) RemoveCartItem(ctx context.Context, c *connect.Request[v1
 
 func (cs *CartService) UpdateCartItemQuantity(ctx context.Context, c *connect.Request[v1.UpdateCartItemQuantityRequest]) (*connect.Response[v1.UpdateCartItemQuantityResponse], error) {
 	req := c.Msg
-	userIdStr := c.Header().Get(constants.UserIdMetadataKey)
-	customerId, err := uuid.Parse(userIdStr)
+	customerId, err := customerID(c.Header().Get(constants.UserIdMetadataKey))
 	if err != nil {
 		return nil, err
 	}
 	merchantId, err := uuid.Parse(req.MerchantId)
 	if err != nil {
-		return nil, err
+		return nil, connect.NewError(connect.CodeInvalidArgument, fmt.Errorf("invalid merchant id: %w", err))
 	}
 	cart, err := cs.uc.UpdateCartItemQuantity(ctx, biz.UpdateCartItemQuantityRequest{
 		CustomerId: customerId,
@@ -122,7 +124,7 @@ func (cs *CartService) UpdateCartItemQuantity(ctx context.Context, c *connect.Re
 		Status:     constants.CartStatusActive,
 	})
 	if err != nil {
-		return nil, err
+		return nil, cartError(err)
 	}
 	response := connect.NewResponse(&v1.UpdateCartItemQuantityResponse{
 		CartItemQuantity: cart.CartItemQuantity,
@@ -132,9 +134,7 @@ func (cs *CartService) UpdateCartItemQuantity(ctx context.Context, c *connect.Re
 }
 
 func (cs *CartService) GetCart(ctx context.Context, c *connect.Request[v1.GetCartRequest]) (*connect.Response[v1.GetCartResponse], error) {
-	userIdStr := c.Header().Get(constants.UserIdMetadataKey)
-
-	customerId, err := uuid.Parse(userIdStr)
+	customerId, err := customerID(c.Header().Get(constants.UserIdMetadataKey))
 	if err != nil {
 		return nil, err
 	}
@@ -143,7 +143,7 @@ func (cs *CartService) GetCart(ctx context.Context, c *connect.Request[v1.GetCar
 		Status:     constants.CartStatusActive,
 	})
 	if err != nil {
-		return nil, err
+		return nil, cartError(err)
 	}
 
 	var items []*v1.CartItem
@@ -184,6 +184,27 @@ var _ cartv1connect.CartServiceHandler = (*CartService)(nil)
 
 func NewCartService(uc *biz.CartUseCase, log *zap.Logger) cartv1connect.CartServiceHandler {
 	return &CartService{uc: uc, log: log}
+}
+
+// customerID 解析网关注入的用户身份头。缺失或非法说明请求没经过网关鉴权，
+// 是 unauthenticated，而不是服务故障。
+func customerID(header string) (uuid.UUID, error) {
+	id, err := uuid.Parse(header)
+	if err != nil {
+		return uuid.Nil, connect.NewError(connect.CodeUnauthenticated, fmt.Errorf("invalid authenticated user id"))
+	}
+	return id, nil
+}
+
+// cartError 把 biz 哨兵错误映射为 RPC 错误码（docs/design/platform/error-handling.md 第 3 条）。
+// 未映射时 connect 记成 unknown，日志拦截器按「rpc system error」报 ERROR（2026-09-23 修正）。
+func cartError(err error) error {
+	switch {
+	case errors.Is(err, biz.ErrInvalidCartStatus):
+		return connect.NewError(connect.CodeInvalidArgument, err)
+	default:
+		return connect.NewError(connect.CodeUnknown, err)
+	}
 }
 
 // CartStatusFromProto 将 protobuf 枚举转为字符串枚举
