@@ -141,6 +141,14 @@ func (d *Data) CheckDatabase(ctx context.Context) error {
 	return nil
 }
 
+// StaleConfig 返回已推送但没能生效的连接配置（键与健康检查项同名，nil 表示已生效）。
+// 重建失败时旧连接仍在服务，所以它只进健康响应的 warnings，不让健康检查失败。
+func (d *Data) StaleConfig() map[string]error {
+	return map[string]error{
+		"postgres": d.db.Stale(),
+	}
+}
+
 // postgresOptions maps this service's database configuration to go-connect-kit/pgpool.
 func postgresOptions(c *conf.Bootstrap) pgpool.Options {
 	postgres := c.GetData().GetDatabase().GetPostgres()

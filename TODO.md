@@ -160,6 +160,7 @@ todo-spec: 1
 - [ ] **待复验 · 指标写入口认证**：确认 VM import 与 OTLP metrics 入口拒绝未授权写入，推送方认证同步配置；旧公网可写断言未重测。
 - [ ] **部分完成 · 指标采集层对齐**：当前有 OTel agent，TECH.md 仍要求 VMAgent。按目标收敛职责、避免重复采集；补 Pod/容器用量与 CFS throttling，校验 kubelet/cAdvisor 实际可用指标，不能假定 kubeletstats 覆盖全部限流指标。
 - [ ] **部分完成 · Go runtime/进程指标验收**：十服务 adapter 均已设 `RuntimeMetrics: true`，删除「全部未实现」判断；剩 goroutine/heap/CPU/内存实际 series、导出失败可见性验收，缺项在 go-connect-kit 补齐；发布版本归下文「部署关联与观测恢复」。
+- [ ] **未完成 · 配置未生效告警**：kit v0.6.0 已导出 `connectkit_config_stale{component}`（热重建失败、旧连接仍在服务时为 1），`/healthz` 同步给出 `warnings`；缺 vmalert 规则（持续数分钟为 1 即告警）与告警演练。不要改成让健康检查失败，理由见 [热更新边界](context/project/ecommerce/config/experience/config-hot-reload-boundaries.md)。
 - [ ] **未完成 · 日志限流**：共享日志模块统一实现采样与压制计数；stdout/OTLP 同时受控，FATAL/PANIC 不限，阈值经故障场景验证。不再复制修改十份初始化代码——RPC 日志拦截器（`services/*/internal/server/logging.go`）同样下沉 go-connect-kit：2026-09-24 修「业务异常分支漏记 `err` 本体」要改十份副本。
 - [ ] **未完成 · 业务错误 reason**：service 层映射后只剩 connect 的 14 个 code，`failed_precondition` 分不清购物车为空还是库存不足；给 `connect.Error` 附 `google.rpc.ErrorInfo{Reason, Domain}`（reason = 哨兵名，如 `ORDER_CART_EMPTY`；全仓 grep 无任何 `ErrorDetail` 用法），同一值写进 span attribute `error.reason`、日志字段和一个有界 label；错误码定义表从各 `domain/errors.go` 生成。与上文「错误码与空表反馈」（`unknown`→`not_found`）同批做。
 - [ ] **未完成 · 抛错点定位**：zap 开了 `AddCaller`，但日志由拦截器统一打，caller 永远是 `server/logging.go:NN`（`docs/design/platform/error-handling.md` 示例日志自证），无法 blame。kit 提供 data 层 `%w` 时附 caller frame 的包装，拦截器对 internal/unknown/data_loss 取最内层 frame 写 `error.origin`；不用全局 `AddStacktrace`（栈仍从拦截器起）。

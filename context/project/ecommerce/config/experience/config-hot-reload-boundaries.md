@@ -73,11 +73,20 @@ redis 一律 `.Client()`。9 个服务里每个只有 1~7 处，编译器会全�
 ERROR  rebuild database pool failed, keeping the current one  error=...no such host
 ```
 
-这是有意的——一次配置手滑不该让在跑的流量全挂。但它的含义是**改错了不会有任何外部表现**：
-服务照常 healthy、请求照常成功，只有那一行 ERROR 说明新配置没被采纳。
+这是有意的——一次配置手滑不该让在跑的流量全挂。代价是服务照常 healthy、请求照常成功，
+配置源却显示新版本，坏配置要到下次重启才暴露，那时离改动可能已经很久。
 
-所以：**改完配置要去看日志确认那三行之一出现了**，别看 `/healthz`。
-`healthy` 恰恰是配置没生效时的表现。
+2026-09-24 起这个状态对外可见（go-connect-kit v0.6.0）：
+
+- `/healthz` 的 `warnings` 字段写明哪一项没生效、为什么，`healthy` **仍为 true**；
+- 指标 `connectkit_config_stale{component="pgpool|redisclient"}` 变为 1，可配告警；
+- 重建成功或把配置改回在用的值后，两者自动清除。
+
+**不要把它改成让健康检查失败**：所有副本收到同一份推送、同样失败，readiness 失败会同时摘掉
+全部副本（旧连接明明能用），liveness 失败会把它们重启进那份坏配置、起不来。
+
+所以：**改完配置看 `/healthz` 有没有 `warnings`，或看日志里是 `pool rebuilt` 还是 `rebuild ... failed`**。
+`healthy: true` 本身不说明新配置已生效。
 
 同理，换池是 **Ping 通过之后才 Swap**，旧池延迟 30s 才 Close（立刻 Close 会掐断
 还在执行的查询）。任何时刻对外可见的都是一个能用的池。
