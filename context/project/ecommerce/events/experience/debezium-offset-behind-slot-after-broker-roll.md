@@ -63,5 +63,8 @@ offset.mismatch.strategy: trust_greater_lsn # Debezium ≥3.4; 启动取 max(off
 - `trust_greater_lsn` 跳过 offset 与槽之间那段 WAL。按机制那段只含无关 WAL（driver 只在没有待提交事件时 flush），
   但这是「信任槽」——主从切换时槽不持久就可能丢；CNPG 单实例当前没有这个问题，上了副本要先确认槽复制。
 - 差值本身现在是**预期非零**，拿它做阈值告警只会是噪音。真正的完整性守卫是 task 级告警
-  （`CDCConnectTaskNotRunning`/`CDCDebeziumDisconnected`）加定期对账（PG 行数 vs ES 文档数），后者还没做。
+  （`CDCConnectTaskNotRunning`/`CDCDebeziumDisconnected`）加对账：`CDCReconcileMismatch`（PG `cnpg_cdc_rows_count` vs
+  ES `cdc_es_docs_count`，kubernetes 仓 `components/kafka/cdc/reconcile/`）。
+- **压力实验**（同日）：800 条独立事务 UPDATE 期间重启 task 三次——两个 topic 各 +800，不丢不重，最终态 PG = ES。
+  「跳过的区间只含无关 WAL」这一假设在单实例 CNPG 上成立；上副本后重跑。
 - 改 Kafka/Connect 后必看 `tasks[0].state`。
