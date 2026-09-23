@@ -103,7 +103,7 @@ cpu / memory / disk / network 都已开,所以基础设施盘才做得起来。
 1. **Go runtime(`go_*`)** —— backend `otel.go` 基线已加 runtime instrumentation
    (2026-08-12,10 服务分发),随下次发版生效 → APM 盘 R4;
 2. **Redis(`db_client_*{db_system_name="redis"}` / `redis_client_errors_total`)**
-   —— 9 个 `buildRedis` 已装配 redisotel-native → APM 盘 R6;
+   —— go-connect-kit `redisclient` 建客户端前装配 redisotel-native → APM 盘 R6;
 3. **网关(`http_server_request_duration_seconds_*`)** —— 网关此前有 otelhttp
    handler 但没有 MeterProvider(指标挂在 noop 上),`middleware/tracing` 已补
    → APM 盘 R7;

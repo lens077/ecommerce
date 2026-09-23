@@ -233,7 +233,7 @@ todo-spec: 1
 - [ ] **部分完成 · 清除过期引用与平行状态表**：归档目录已删，但 TECH.md、context 索引、DEVOPS 等仍有裸路径/空链接和旧现状叙述；Repowise 已接入只读引用漂移棘轮，新增可解析漂移会阻断，存量基线仍待逐项清债；删失效引用，设计只留目标与验收标准，状态归本文件。
 - [ ] **待核对 · SCAFFOLD 模板与容量清单**：区分新项目验收模板和本仓进度；修正内嵌旧 AGENTS 规则及不再适用的状态列，容量实施状态合并到对应任务，不复制第二套勾选表。
 - [ ] **待复验 · 术语与结构性文档债**：按当前设计纠正 GLOSSARY、STACK、README、TECH-RADAR 中的事实冲突；不再按旧行数目标机械压缩，不把仍有现行决策的 TECH-RADAR 整体降为历史档案。
-- [ ] **部分完成 · 共享 kit 演进**：基础设施抽取已完成；剩同构棘轮与存量服务 anchor/真实 `co upgrade --write` 试点。
+- [ ] **部分完成 · 共享 kit 演进**：基础设施抽取已完成；data 层连接池与 Redis 构建已迁入 kit `pgpool`/`redisclient` 并由 ecommerce 采用，control-tower 与模板待跟进；剩同构棘轮与存量服务 anchor/真实 `co upgrade --write` 试点。
 
 ## 五、不再按原目标推进
 

@@ -72,6 +72,47 @@ func TestSharedImplementationsDoNotReturnToConsumers(t *testing.T) {
 	}
 }
 
+// connectionBuilders 是只允许出现在 go-connect-kit/pgpool 与 go-connect-kit/redisclient 里的调用。
+//
+// 触发事故（2026-09-24）：Repowise 死代码/健康扫描发现 10 个服务的 internal/data/data.go 各存一份
+// buildPgPool（118 行）与 buildRedis（74 行），合计约 1,700 行，已开始分叉——cart 修了自定义
+// 枚举数组的类型注册，其余 8 份没有；search 的一整套从未接进 fx。副本全部落在 internal/data/，
+// 而 TestInfraHomogeneity 只扫 internal/pkg/，所以没有任何门禁看见它们。这里按「调用了什么」
+// 判定，不按目录判定：副本挪到哪个目录都会被拦下。
+var connectionBuilders = []string{
+	"pgxpool.New(",
+	"pgxpool.NewWithConfig(",
+	"pgxpool.ParseConfig(",
+	"otelpgx.NewTracer(",
+	"otelpgx.RecordStats(",
+	"redis.NewClient(",
+}
+
+func TestConnectionBuildersLiveInKit(t *testing.T) {
+	for service := range loadMatrix(t).Services {
+		root := filepath.Join(servicesDir, service, "internal")
+		err := filepath.WalkDir(root, func(path string, d os.DirEntry, err error) error {
+			if err != nil || d.IsDir() || !strings.HasSuffix(path, ".go") || strings.HasSuffix(path, "_test.go") {
+				return err
+			}
+			data, err := os.ReadFile(path)
+			if err != nil {
+				return err
+			}
+			for _, call := range connectionBuilders {
+				if strings.Contains(string(data), call) {
+					t.Errorf("%s 调用了 %s；连接池与 Redis 客户端的构建属于 go-connect-kit/pgpool、"+
+						"go-connect-kit/redisclient，服务里只保留 confv1 到 Options 的映射", path, call)
+				}
+			}
+			return nil
+		})
+		if err != nil && !os.IsNotExist(err) {
+			t.Fatalf("扫描 %s: %v", root, err)
+		}
+	}
+}
+
 // adapterOwnedVendors 列出每个 kit 包独占的实现依赖。适配层出现其中任何一个，
 // 都说明实现正在从 go-connect-kit 漏回服务内。
 //

@@ -7,6 +7,7 @@ import (
 
 	"github.com/casdoor/casdoor-go-sdk/casdoorsdk"
 	"github.com/lens077/ecommerce/backend/services/user/internal/biz"
+	"github.com/lens077/go-connect-kit/redisclient"
 	"go.uber.org/zap"
 )
 
@@ -14,7 +15,7 @@ var _ biz.UserRepo = (*userRepo)(nil)
 
 type userRepo struct {
 	// data *Data
-	rdb  *LiveRedis
+	rdb  *redisclient.Live
 	auth *casdoorsdk.Client
 	l    *zap.SugaredLogger
 }

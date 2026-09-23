@@ -51,11 +51,14 @@ WARN  该配置段已变更,但需要重启服务才会生效  section=server
 推送多少次都跟它们无关。所以：
 
 - `config.Live`：`atomic.Pointer` + 订阅，Get 在热路径上所以不用 RWMutex
-- `data.PgPool`：**实现 `models.DBTX`**，于是 `models.New(pool)` 之后底层池被换掉
+- `pgpool.Live`（go-connect-kit）：**实现 `models.DBTX`**，于是 `models.New(pool)` 之后底层池被换掉
   `*Queries` 依然有效，data 层所有 `queries.*` 调用点一行都不用改；同时实现
   `otelpgx.PoolStats`，指标注册在壳上，换池后一直有效（otelpgx 没有反注册接口，
   每次换池都注册会重复上报）
-- `data.LiveRedis`：**不要把 `Client()` 的返回值存进结构体字段**，那样又变回「启动时抓一次」
+- `redisclient.Live`（go-connect-kit）：**不要把 `Client()` 的返回值存进结构体字段**，那样又变回「启动时抓一次」
+
+两个外壳与重建逻辑都在 go-connect-kit 的 `pgpool` / `redisclient`，服务 `internal/data/data.go`
+只保留 `postgresOptions` / `redisOptions` 两个映射函数。
 - `pkg/log`：必须是 `zap.AtomicLevel`。core 一旦建好就无法替换级别，
   只有把这个开关留在外面后续才改得动
 
@@ -94,7 +97,7 @@ cd backend/services/user   && make dev          # 目标服务走配置中心
 不可达的要看到 ERROR + 保留旧池 + 服务仍 healthy，改回去要看到重建成功。
 
 单测层面对应 `pkg/log` 的 `TestModule_LogLevelHotReload`（先对「不订阅」的写法跑红过）
-与 `internal/data/live_test.go` 的 `TestPgPool_SwapRedirectsQueries`。
+与 go-connect-kit `pgpool` 的 `TestLiveSwapRedirectsQueries`。
 
 ## 陷阱
 

@@ -73,6 +73,23 @@ adapter。`dbutil`、`env`、`meta` 直接导入 kit。Config Center 的具体�
 `homogeneity_baseline.txt` 中与 config 实现副本相关的条目应删除；`money/numeric.go` 属于独立的
 服务级同构问题，不在本次基础设施迁移范围内。
 
+## 第二批：data 层连接构建（2026-09-24）
+
+> **触发事故**：Repowise 死代码/健康扫描发现 10 个服务的 `internal/data/data.go` 各存一份
+> `buildPgPool`（118 行）、`buildRedis`（74 行），`internal/data/live.go` 各存一份热替换外壳，
+> 合计约 1,700 行。副本已经分叉：只有 cart 修了自定义枚举数组的类型注册；search 的整套代码
+> 从未接进 fx。`TestInfraHomogeneity` 只扫 `internal/pkg/`，这批副本一直在门禁视野之外。
+
+处置与第一批相同：实现迁入 go-connect-kit 的 `pgpool` / `redisclient`，服务只保留
+`postgresOptions` / `redisOptions` 两个映射函数；cart 的类型注册变成 `pgpool.Options.TypeNames`。
+迁移时顺带修掉副本共有的缺陷：以 `pgxpool.ParseConfig("")` 为模板却没清掉它生成的 `Fallbacks`，
+主连接失败会改连默认主机（localhost 或本机 socket）的明文连接；`ssl_mode` 也只有带 CA 的
+`verify-ca` / `verify-full` 真正生效。
+
+教训是规则 1 的补充：**同构门禁的扫描范围本身会漏**。新门禁 `TestConnectionBuildersLiveInKit`
+改按「调用了什么」判定（`pgxpool.NewWithConfig(`、`redis.NewClient(` 等），不按目录判定，
+副本挪到服务 `internal/` 的哪个目录都会被拦。
+
 这条闭环不使用 BSR。BSR 只分发 proto，不能分发 Go 实现；共享实现通过普通 Go module
 版本发布。删除 kit 后，配置热更新、日志、遥测、Consul 自恢复和数据库错误映射会重新散回
 各消费方，说明模块通过删除测试并提供了实际 leverage。

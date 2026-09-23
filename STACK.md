@@ -456,8 +456,8 @@ WatchKeys server-stream RPC（先订阅再发快照，反过来会漏掉两步�
 **读取路径必须同步改造**（只推不改等于没改 —— 原先所有消费者都在构造期拿走了 `*Bootstrap` 快照）：
 
 - `config.Live` = `atomic.Pointer[Bootstrap]` + 订阅
-- `data.PgPool` 实现 `models.DBTX` 与 `otelpgx.PoolStats` 的**壳** —— 指标注册在壳上，换池后一直有效，`Queries` 与全部调用点零改动
-- `data.LiveRedis` 同理；`pkg/log` 改用 `zap.AtomicLevel`
+- go-connect-kit `pgpool.Live` 实现 `models.DBTX` 与 `otelpgx.PoolStats` 的**壳** —— 指标注册在壳上，换池后一直有效，`Queries` 与全部调用点零改动
+- go-connect-kit `redisclient.Live` 同理；`pkg/log` 改用 `zap.AtomicLevel`
 
 换池策略：**Ping 通过才换池** → 旧池**延迟 30s 关闭**（立刻 Close 会掐断 in-flight 查询）→ 建池失败记 ERROR 并保留旧池。
 

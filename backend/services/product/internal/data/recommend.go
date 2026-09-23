@@ -11,6 +11,7 @@ import (
 	"github.com/lens077/ecommerce/backend/pkg/gorse"
 	"github.com/lens077/ecommerce/backend/services/product/internal/biz"
 	conf "github.com/lens077/ecommerce/backend/services/product/internal/conf/v1"
+	"github.com/lens077/go-connect-kit/redisclient"
 	"github.com/redis/go-redis/v9"
 	"go.uber.org/zap"
 )
@@ -141,11 +142,11 @@ var _ biz.ItemSyncRepo = (*itemSyncRepo)(nil)
 
 type itemSyncRepo struct {
 	client *gorse.Client
-	rdb    *LiveRedis
+	rdb    *redisclient.Live
 	log    *zap.Logger
 }
 
-func NewItemSyncRepo(client *gorse.Client, rdb *LiveRedis, logger *zap.Logger) biz.ItemSyncRepo {
+func NewItemSyncRepo(client *gorse.Client, rdb *redisclient.Live, logger *zap.Logger) biz.ItemSyncRepo {
 	return &itemSyncRepo{client: client, rdb: rdb, log: logger}
 }
 

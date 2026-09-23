@@ -7,8 +7,9 @@ description: go-redis v9 在本仓的用法约定——客户端热重建、cach
 # go-redis 使用约定
 
 依赖:`github.com/redis/go-redis/v9 v9.22.0`(`backend/go.mod:25`)。
-各业务服务的客户端装配是同构副本(`internal/data/data.go` 的 `NewRedisClient` + `buildRedis`,
-`internal/data/live.go` 的 `LiveRedis`),由 `backend/structcheck` 在 CI 强制,**改一个必须同步全部**。
+客户端构建、TLS、指标装配与热重建外壳只有一份:go-connect-kit 的 `redisclient`。各服务
+`internal/data/data.go` 只保留 `redisOptions`(confv1 → `redisclient.Options` 的映射),
+`backend/structcheck` 的 `TestConnectionBuildersLiveInKit` 拦住服务里再出现 `redis.NewClient(`。
 
 > **后端使用 Dragonfly**。按 `docs/TECH.md`，必须按故障域分实例：Session 实例启用 `noeviction` + 持久化，业务 Cache 实例启用 `allkeys-lru`，限流实例独立，严禁混用。当前仍有单实例存量，迁移完成前不得把它描述为已隔离。
 > 当前存量地址为 `dragonfly` ns、集群内 `dragonfly.dragonfly.svc:6379`、LAN `192.168.3.122:6380`。**TLS-only，明文连接会被拒**，客户端必须配 TLS + AUTH。
@@ -22,7 +23,7 @@ description: go-redis v9 在本仓的用法约定——客户端热重建、cach
 ## 一、客户端生命周期:本仓比「启动时建一次」更严
 
 通用建议是「不要每次请求 `redis.NewClient`,启动时建一次靠依赖注入传下去」。本仓做到了这一步
-(fx 提供 `NewRedisClient`,注入进 `Data`),但**多了一条约束**:客户端支持配置热重建,
+(`redisclient.Module` 提供 `*redisclient.Live`,注入进 `Data`),但**多了一条约束**:客户端支持配置热重建,
 会被整体换掉。
 
 ```go
@@ -34,8 +35,8 @@ pipe := r.data.rdb.Client().Pipeline()
 type repo struct{ rdb *redis.Client }   // 配置一变就抓着一个已被 Close 的旧客户端
 ```
 
-`LiveRedis` 之所以不转发方法而只暴露 `Client()`,就是为了让「取一次」这个动作显式发生在调用点
-(`internal/data/live.go` 的注释写了这条)。旧客户端在换池后有宽限期再 `Close`,
+`redisclient.Live` 之所以不转发方法而只暴露 `Client()`,就是为了让「取一次」这个动作显式发生在调用点
+(go-connect-kit `redisclient` 的类型注释写了这条)。旧客户端在换池后有宽限期再 `Close`,
 但**存下来的引用最终一定会失效**。
 
 配置项由 `internal/conf/v1/conf.proto` 的 `Data.Cache.Redis` 定义（host/port/db、三个 timeout、
@@ -208,7 +209,7 @@ rdb := redis.NewClusterClient(&redis.ClusterOptions{
 - **Cluster 下没有多 DB**(`db` 只能是 0),本仓配置里的 `db` 字段在迁移时要归零。
 
 另外:Dragonfly 的 Cluster 支持**需先验证**,不要假定与 Redis OSS 的拓扑行为一致。
-真要改,改的是同构的 `buildRedis`——10 份一起改,并让 `LiveRedis` 的持有类型跟着变。
+真要改,改的是 go-connect-kit 的 `redisclient`,并让 `redisclient.Live` 的持有类型跟着变。
 
 ## 十、Redis 不是消息队列的替代品
 
@@ -217,7 +218,7 @@ Stream / Pub-Sub 能做消息,但适用面是**轻量事件通知、实时推送
 
 Pub/Sub 是 at-most-once 的即时投递：订阅者离线、断线或处理失败时，消息不会补发。`Publish()` 返回的
 订阅者数量只表示当时匹配的订阅者，不是业务处理 ACK。长驻订阅还会持有专用连接；订阅循环必须在
-连接关闭后从 `LiveRedis.Client()` 重新取得当前 Client、重建订阅并确认成功，不能永久抓住旧
+连接关闭后从 `redisclient.Live.Client()` 重新取得当前 Client、重建订阅并确认成功，不能永久抓住旧
 `*redis.Client`。
 
 本仓的现状是:订单的 EventBus 还是**进程内总线**(见 `TODO.md`),

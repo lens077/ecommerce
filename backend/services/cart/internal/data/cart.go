@@ -11,6 +11,7 @@ import (
 
 	"context"
 	"fmt"
+	"github.com/lens077/go-connect-kit/redisclient"
 
 	"go.uber.org/zap"
 )
@@ -19,7 +20,7 @@ var _ biz.CartRepo = (*cartRepo)(nil)
 
 type cartRepo struct {
 	queries *models.Queries
-	rdb     *LiveRedis
+	rdb     *redisclient.Live
 	log     *zap.Logger
 	// live 当前配置。存 *Live 而不是 *conf.Bootstrap:后者是构造那一刻的快照,
 	// 存下来就等于把这个 repo 永久钉死在启动时的配置上,热更新对它无效。
@@ -162,7 +163,7 @@ func (c cartRepo) AddProductToCart(ctx context.Context, req biz.AddProductToCart
 
 func NewCartRepo(data *Data, logger *zap.Logger, live *config.Live) biz.CartRepo {
 	return &cartRepo{
-		// 传入 *PgPool 这个壳而非某个具体的池,连接池热重建后 queries 依旧有效
+		// 传入 *pgpool.Live 这个壳而非某个具体的池,连接池热重建后 queries 依旧有效
 		queries: models.New(data.db),
 		rdb:     data.rdb,
 		log:     logger,

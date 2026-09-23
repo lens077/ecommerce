@@ -10,7 +10,8 @@ description: 共享基础设施实现只存在于 go-connect-kit，消费方只�
 ## 问题
 
 10 个业务服务和生成模板曾各自保存 `config`、`log`、`otel`、`registry`、`dbutil`、`env`、
-`meta` 实现。哈希同构门禁只能冻结副本之间的漂移，无法阻止同一份实现被同时复制回所有服务；
+`meta` 实现，以及 `internal/data/` 下的 PostgreSQL 连接池与 Redis 客户端构建。哈希同构门禁只能
+冻结副本之间的漂移，无法阻止同一份实现被同时复制回所有服务，而且只扫 `internal/pkg/`；
 仓内 `backend/pkg` 上提也不能阻止模板生成第 11 份副本。
 
 ## 决策
@@ -25,6 +26,8 @@ kit 的运行时接口只接收 provider-neutral Go Options 与泛型
 
 `env`、`meta`、`dbutil` 由消费方直接导入。`config`、`log`、`otel`、`registry` 的薄 adapter
 不得直接依赖 Viper、mapstructure、OTel exporter、Consul API 等实现库。
+`pgpool`、`redisclient` 由各服务 data 模块调用泛型 `Module` 并传入映射函数来装配，服务只保留
+`postgresOptions` / `redisOptions` 两个映射函数。
 
 这条依赖链不使用 BSR。BSR 分发 proto，不分发 Go 实现；kit 按普通 Go module 版本发布。
 
@@ -44,6 +47,7 @@ kit 的运行时接口只接收 provider-neutral Go Options 与泛型
 `[DECISION]` 门禁只校验路径、`status` 与必需章节，管不了内容是否新鲜。
 
 `TestSharedImplementationsDoNotReturnToConsumers` 守住删除结果，`TestInfraAdaptersStayThin` 守住
-adapter 的依赖边界；`TestInfraHomogeneity` 只比较仍由本仓维护的同构代码，不再比较允许按服务
-protobuf 分化的 adapter。触发事故与注错验证记录在
-evolution-log.md。
+adapter 的依赖边界，`TestConnectionBuildersLiveInKit` 按调用（`pgxpool.NewWithConfig(`、
+`redis.NewClient(` 等）拦住服务 `internal/` 任意位置的连接构建副本；`TestInfraHomogeneity`
+只比较仍由本仓维护的同构代码，不再比较允许按服务 protobuf 分化的 adapter。
+data 层这批的触发事故见 [infra-duplication.md](../../team/infra-duplication.md)「第二批」。
