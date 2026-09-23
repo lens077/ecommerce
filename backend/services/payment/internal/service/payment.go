@@ -31,11 +31,6 @@ func (s *PaymentService) CreatePayment(ctx context.Context, c *connect.Request[v
 
 	s.log.Debugf("customerId%v", customerId)
 
-	// merchantId, err := uuid.Parse(req.MerchantId)
-	// if err != nil {
-	// 	return nil, status.Error(codes.InvalidArgument, "无效的商家ID")
-	// }
-
 	// 从上下文或请求获取订单ID
 	var orderID int64
 	if req.OrderId != 0 {
@@ -45,11 +40,9 @@ func (s *PaymentService) CreatePayment(ctx context.Context, c *connect.Request[v
 	}
 
 	// 创建支付请求
-	// merchanVersions := make([]int64, 0, len(req.MerchanVersion))
 	createReq := &biz.CreatePaymentReq{
-		OrderID:    orderID,
-		CustomerID: customerId,
-		// MerchantID:      merchantId,
+		OrderID:         orderID,
+		CustomerID:      customerId,
 		Amount:          req.Amount,
 		Currency:        req.Currency,
 		Subject:         req.Subject,
@@ -140,22 +133,7 @@ func (s *PaymentService) HandlePaymentNotify(ctx context.Context, c *connect.Req
 			s.log.Infof("received form data: %v", values)
 		}
 	}
-	// ProtoToUrlValues(values)
 	s.log.Infof("service HandlePaymentNotify values: %v", values)
-	// 转换请求
-	// notifyReq := &constants.PaymentNotifyReq{
-	// 	AppID:       req.AppId,
-	// 	AuthAppId:   req.AuthAppId,
-	// 	TradeNo:     req.TradeNo,
-	// 	Charset:     req.Charset,
-	// 	Method:      req.Method,
-	// 	Sign:        req.Sign,
-	// 	SignType:    req.SignType,
-	// 	OutTradeNo:  req.OutTradeNo,
-	// 	TotalAmount: req.TotalAmount,
-	// 	SellerId:    req.SellerId,
-	// 	Params:      values,
-	// }
 
 	// 调用业务逻辑
 	resp, err := s.uc.HandlePaymentNotify(ctx, values)
@@ -170,16 +148,6 @@ func (s *PaymentService) HandlePaymentNotify(ctx context.Context, c *connect.Req
 		Message: resp.Message,
 	}
 	return connect.NewResponse(response), nil
-}
-
-func ProtoToUrlValues(protoData *v1.UrlValues) url.Values {
-	values := url.Values{}
-	for _, pair := range protoData.Pairs {
-		for _, v := range pair.Values {
-			values.Add(pair.Key, v)
-		}
-	}
-	return values
 }
 
 func copyValues(dst, src url.Values) {

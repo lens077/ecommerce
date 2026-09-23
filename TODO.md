@@ -58,7 +58,7 @@ todo-spec: 1
 
 - [ ] **未完成 · 建单与库存、支付联动**：按 checkout v2 实现报价/快照、组原子预占、按商家拆单、事务落库、支付意图、成功后清理购物车与失败补偿；不照旧 CartItemIds 草稿直接接线。
 - [ ] **未完成 · 订单查询与状态机**：补用户/商家订单查询、取消、状态守卫、订单日志、支付确认和超时恢复；现有 repo 仍有多处 panic。完成状态要求满足履约前置条件。
-- [ ] **未完成 · 支付闭环**：2026-09-23 实测 `CreatePayment`/`HandlePaymentNotify`/`HandlePaymentCallback` 直连均为 501 Unimplemented，只有 `GetPaymentStatus` 有实现；恢复 repo 主体与显式 Unimplemented 的 RPC；补回调验签、幂等、主动查询、退款与对账，按 checkout v2 的按组支付和 capture/refund 模型实现。
+- [ ] **未完成 · 支付闭环（用户亲自实现，agent 不代做）**：payment 不通，repo 5 个方法全部返回 Unimplemented；旧注释实现已删除，不作恢复依据。按 checkout v2 的按组支付和 capture/refund 模型从零实现创建、查询、回调验签、幂等、主动查询、退款与对账。
 - [ ] **未完成 · 商品列表与管理能力**：`product.proto` 当前仅有 `GetProductDetail`；按 [listing.md](docs/design/product/listing.md) 实现游标分页，再补上下架、类目/品牌及商家操作权限。
 - [ ] **未完成 · 下单幂等契约**：前后端必须使用真实 proto 字段与数据库唯一约束；清理靠类型断言发送、运行时被丢弃的 `requestId`，重复提交只能生成一组订单。
 - [ ] **部分完成 · 购物车条目标识**：前端 store 已用 `cartItemId`，后端删除/改数量 SQL 仍按组合键及并行数组。统一迁到 `cart_item_id`，同时校验归属。
@@ -233,7 +233,7 @@ todo-spec: 1
 - [ ] **部分完成 · 清除过期引用与平行状态表**：归档目录已删，但 TECH.md、context 索引、DEVOPS 等仍有裸路径/空链接和旧现状叙述；Repowise 已接入只读引用漂移棘轮，新增可解析漂移会阻断，存量基线仍待逐项清债；删失效引用，设计只留目标与验收标准，状态归本文件。
 - [ ] **待核对 · SCAFFOLD 模板与容量清单**：区分新项目验收模板和本仓进度；修正内嵌旧 AGENTS 规则及不再适用的状态列，容量实施状态合并到对应任务，不复制第二套勾选表。
 - [ ] **待复验 · 术语与结构性文档债**：按当前设计纠正 GLOSSARY、STACK、README、TECH-RADAR 中的事实冲突；不再按旧行数目标机械压缩，不把仍有现行决策的 TECH-RADAR 整体降为历史档案。
-- [ ] **部分完成 · 共享 kit 演进**：基础设施抽取已完成；剩同构棘轮与存量服务 anchor/真实 `co upgrade --write` 试点，见 [shared-infra-kit spec](.scratch/shared-infra-kit/spec.md)。
+- [ ] **部分完成 · 共享 kit 演进**：基础设施抽取已完成；剩同构棘轮与存量服务 anchor/真实 `co upgrade --write` 试点。
 
 ## 五、不再按原目标推进
 

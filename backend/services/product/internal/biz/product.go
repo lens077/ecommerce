@@ -2,7 +2,6 @@ package biz
 
 import (
 	"context"
-	"encoding/json"
 
 	"github.com/lens077/ecommerce/backend/constants"
 	"github.com/shopspring/decimal"
@@ -21,22 +20,6 @@ type ProductSpuDetail struct {
 	SpuCode     string
 	CommonSpecs map[string]any
 	Skus        []ProductSku
-}
-
-// ProductSpu 商品
-type ProductSpu struct {
-	Id            int64
-	Code          string
-	Name          string
-	Specs         json.RawMessage
-	SpecTemplate  []string // 有序规格key列表：["颜色","容量","版本"]
-	Description   string
-	CategoryId    int64
-	MerchantId    uuid.UUID
-	BrandId       int64
-	Status        constants.ProductSpuStatus
-	MainMediaUrl  string
-	ImagesGallery map[string]struct{}
 }
 
 // ProductSku 代表具体的规格项

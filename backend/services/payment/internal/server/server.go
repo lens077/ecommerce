@@ -68,7 +68,6 @@ func NewHTTPServer(
 	})
 
 	// 构建处理器链
-	// handlerChain := withCORS(mux, cfg.Server.Cors.AllowedOrigins)
 	handlerChain := requestInjectorMiddleware(withCORS(mux, cfg.Server.Cors.AllowedOrigins))
 
 	// 配置 HTTP/2 (H2C - 明文 HTTP/2)

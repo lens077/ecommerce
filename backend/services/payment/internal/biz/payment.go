@@ -9,22 +9,6 @@ import (
 	"github.com/lens077/ecommerce/backend/constants"
 )
 
-type (
-	AliPayCallbackReq struct {
-		Charset     string
-		OutTradeNo  string
-		Method      string
-		TotalAmount string
-		Sign        string
-		TradeNo     int64
-		SellerId    string
-		AuthAppId   string
-		AppId       string
-		SignType    string
-		Timestamp   string
-	}
-)
-
 // Payment 支付记录
 type Payment struct {
 	ID         int64
@@ -43,9 +27,8 @@ type Payment struct {
 
 // CreatePaymentReq 创建支付请求
 type CreatePaymentReq struct {
-	OrderID    int64
-	CustomerID uuid.UUID
-	// MerchantID      uuid.UUID
+	OrderID         int64
+	CustomerID      uuid.UUID
 	Amount          string
 	Currency        string
 	Subject         string
@@ -159,16 +142,6 @@ type GetPaymentByOrderIDRequest struct {
 	TotalAmount string
 }
 
-type (
-	UpdatePaymentStatusRequest struct {
-		PaymentId int64
-		OrderId   int64
-		TradeNo   string
-		Status    constants.PaymentStatus
-	}
-	UpdatePaymentStatusResponse struct{}
-)
-
 // PaymentRepo 支付仓储接口
 type PaymentRepo interface {
 	// CreatePayment 创建支付记录
@@ -206,41 +179,6 @@ func (uc *PaymentUseCase) GetPaymentStatus(ctx context.Context, req *GetPaymentS
 // HandlePaymentNotify 处理支付通知
 func (uc *PaymentUseCase) HandlePaymentNotify(ctx context.Context, req url.Values) (*PaymentNotifyResp, error) {
 	return uc.repo.HandlePaymentNotify(ctx, req)
-	//
-	// // 处理支付宝通知
-	// resp, err := uc.repo.HandlePaymentNotify(ctx, req)
-	// if err != nil {
-	// 	uc.log.WithContext(ctx).Errorf("Failed to handle payment notify: %v", err)
-	// 	return nil, err
-	// }
-	//
-	// // 检查支付状态是否为成功
-	// if req.TradeStatus == "TRADE_SUCCESS" || req.TradeStatus == "TRADE_FINISHED" {
-	// 	// 更新支付状态
-	// 	err = uc.repo.UpdatePaymentStatus(ctx, "", req.OutTradeNo, req.TradeNo, PaymentStatusSuccess)
-	// 	if err != nil {
-	// 		uc.log.WithContext(ctx).Errorf("Failed to update payment status: %v", err)
-	// 		return nil, fmt.Errorf("更新支付状态失败: %w", err)
-	// 	}
-	//
-	// 	// 查询支付记录
-	// 	payment, err := uc.repo.GetPaymentByOrderID(ctx, models.&GetPaymentByOrderIDRequest)
-	// 	if err != nil {
-	// 		uc.log.WithContext(ctx).Errorf("Failed to get payment by order ID: %v", err)
-	// 		return nil, fmt.Errorf("查询支付记录失败: %w", err)
-	// 	}
-	//
-	// 	// 标记订单为已支付
-	// 	err = uc.ordersvc.MarkOrderPaid(ctx, req.OutTradeNo, payment.UserID)
-	// 	if err != nil {
-	// 		uc.log.WithContext(ctx).Errorf("Failed to mark order as paid: %v", err)
-	// 		return nil, fmt.Errorf("标记订单为已支付失败: %w", err)
-	// 	}
-	//
-	// 	uc.log.WithContext(ctx).Debugf("Payment for order %s is successful", req.OutTradeNo)
-	// }
-	//
-	// return resp, nil
 }
 
 // HandlePaymentCallback 处理支付回调

@@ -6,13 +6,6 @@ import (
 	"google.golang.org/genproto/googleapis/type/money"
 )
 
-// MoneyToDecimal 将 Google Money 转化为 decimal.Decimal
-func MoneyToDecimal(m *money.Money) decimal.Decimal {
-	units := decimal.NewFromInt(m.GetUnits())
-	nanos := decimal.NewFromInt(int64(m.GetNanos())).Div(decimal.NewFromInt(1e9))
-	return units.Add(nanos)
-}
-
 // DecimalToCNYMoney 将 decimal.Decimal 转换为 google.type.Money
 func DecimalToCNYMoney(d decimal.Decimal) *money.Money {
 	// 获取整数部分

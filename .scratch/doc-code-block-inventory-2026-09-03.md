@@ -16,7 +16,6 @@
 - [.scratch/qqbot-integration/wiring.md](#scratch-qqbot-integration-wiring-md) (7)
 - [.scratch/rewrite-v2/request-path.md](#scratch-rewrite-v2-request-path-md) (4)
 - [.scratch/rewrite-v2/rewrite-baseline.md](#scratch-rewrite-v2-rewrite-baseline-md) (2)
-- [.scratch/shared-infra-kit/spec.md](#scratch-shared-infra-kit-spec-md) (2)
 - [AGENTS.md](#agents-md) (1)
 - [README.md](#readme-md) (5)
 - [STACK.md](#stack-md) (13)
@@ -188,13 +187,6 @@
 |---|---|---|---|---|---|---|
 | 24 | 106–130 | text | 23 | 文本/示意 | `用户` |  |
 | 25 | 203–205 | text | 1 | 文本/示意 | `SearchCatalog: SearchProducts / UpsertProjection / DeleteProjection / RebuildIndex / SwapI` |  |
-
-## .scratch/shared-infra-kit/spec.md
-
-| # | 行 | 语言 | 行数 | 类别 | 首行 | 核对提示 |
-|---|---|---|---|---|---|---|
-| 26 | 62–68 | (none) | 5 | 文本/示意 | `log/log.go   主流(behavior)  = f445a4a9` |  |
-| 27 | 222–230 | yaml | 7 | 源码摘录 | `managed:` | 无可核对标识 |
 
 ## AGENTS.md
 

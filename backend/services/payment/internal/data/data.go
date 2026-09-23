@@ -49,8 +49,6 @@ func NewData(db *PgPool, alipay *alipay.Client, logger *zap.Logger) *Data {
 		alipay: alipay,
 		log:    logger,
 		dbErrHandler: dbutil.NewHandler(
-			// dbutil.WithErrorMapping("23505", biz.ErrAlreadyExists),
-			// dbutil.WithErrorMapping("23503", biz.ErrNotFound),
 			dbutil.WithLogging(true),
 			dbutil.WithLogger(func(err error, pgErr *pgconn.PgError) {
 				if pgErr != nil {
@@ -64,18 +62,6 @@ func NewData(db *PgPool, alipay *alipay.Client, logger *zap.Logger) *Data {
 		),
 	}
 }
-
-// DB 从上下文中获取事务或返回默认DB
-// 通过 data.DB(ctx) 自动获取事务或普通连接
-// example: db := p.data.DB(ctx)
-// func (d *Data) DB(ctx context.Context) *models.Queries {
-// 	if tx, ok := ctx.Value(contextTxKey{}).(pgx.Tx); ok {
-// 		// 如果上下文中有事务，使用事务版 Queries
-// 		return models.New(tx)
-// 	}
-// 	// 无事务时使用普通连接
-// 	return d.db
-// }
 
 // WithTx 将事务存入上下文
 func (d *Data) WithTx(ctx context.Context, tx pgx.Tx) context.Context {
@@ -287,41 +273,17 @@ func buildPgPool(cfg *conf.Bootstrap, logger *zap.Logger) (*pgxpool.Pool, error)
 	return pool, nil
 }
 
-// NewAlipay 支付宝
-//
-// 没配 pay.alipay(或 app_id 为空)时返回 nil 而不是 panic:支付宝的应用私钥/证书
-// 是真实凭据,不可能放进仓库或本地环境的 KV 里,而 fx 的 provider 一 panic 整个
-// 进程就起不来 —— 服务注册不进 Consul,网关的 /payment* 永远没有节点。
-// 当前 paymentRepo 是桩实现,不会解引用这个 client;真实实现恢复时,拿到 nil
-// 应当直接返回错误,而不是继续往下走。
+// NewAlipay 支付宝客户端。未配置 pay.alipay.app_id 时返回 nil，调用方拿到 nil 必须返回错误。
 func NewAlipay(c *conf.Pay, logger *zap.Logger) *alipay.Client {
 	if c == nil || c.Alipay == nil || c.Alipay.AppId == "" {
 		logger.Warn("alipay is not configured (pay.alipay.app_id is empty), payment gateway calls will be unavailable")
 		return nil
 	}
 
-	// log.Debugf("config Pay: %+v", c)
 	client, err := alipay.New(c.Alipay.AppId, c.Alipay.PrivateKey, false)
 	if err != nil {
 		panic(fmt.Errorf("new alipay client failed: %v", err))
 	}
-
-	// 证书方式
-	// 加载应用公钥证书
-	// if err := client.LoadAppCertPublicKeyFromFile("/app/appPublicCert.crt"); err != nil {
-	// if err := client.LoadAppCertPublicKeyFromFile("./appPublicCert.crt"); err != nil {
-	// 	panic(fmt.Errorf("load app public cert failed: %v", err))
-	// }
-	// // 加载支付宝根证书
-	// // if err := client.LoadAliPayRootCertFromFile("/app/alipayRootCert.crt"); err != nil {
-	// if err := client.LoadAliPayRootCertFromFile("./alipayRootCert.crt"); err != nil {
-	// 	panic(fmt.Errorf("load alipay root cert failed: %v", err))
-	// }
-	// // 加载支付宝公钥证书
-	// // if err := client.LoadAlipayCertPublicKeyFromFile("/app/alipayPublicCert.crt"); err != nil {
-	// if err := client.LoadAlipayCertPublicKeyFromFile("./alipayPublicCert.crt"); err != nil {
-	// 	// 	panic(fmt.Errorf("load alipay public cert failed: %v", err))
-	// }
 
 	// 加载应用公钥证书
 	if err := client.LoadAppCertPublicKey(c.Alipay.AppPublicCert); err != nil {

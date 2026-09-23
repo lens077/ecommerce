@@ -17,10 +17,6 @@ var (
 	ErrAuthFailed        = errors.New("[user] authentication failed")
 )
 
-// UserInfo 业务层用户模型
-type UserInfo struct {
-}
-
 type (
 	SignInRequest struct {
 		Code  string

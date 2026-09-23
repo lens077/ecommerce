@@ -114,10 +114,6 @@ def pg_t(sql, refid="A"):
     return {"refId": refid, "datasource": PG, "rawSql": sql, "format": "time_series"}
 
 
-def loki_t(expr, refid="A"):
-    return {"refId": refid, "datasource": LOKI, "expr": expr}
-
-
 def logs(title, expr, x, y, w=12, h=8, desc=""):
     return {
         "id": nid(), "type": "logs", "title": title, "description": desc,

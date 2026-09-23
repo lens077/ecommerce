@@ -13,10 +13,6 @@ var ErrOrderAlreadyExists = errors.New("[Stock] order_no is exists")
 var ErrOrderNotFound = errors.New("[Stock] order_no is not found")
 var ErrOrderItemsSkuIdNotFound = errors.New("[Stock] items sku_id is not found")
 
-// InventoryInfo 业务层库存模型
-type InventoryInfo struct {
-}
-
 type (
 	ReserveRequest struct {
 		MerchantID   uuid.UUID

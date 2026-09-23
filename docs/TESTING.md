@@ -21,7 +21,7 @@
 | `data` | SQL 真的能跑、schema 契约 | **真实 PostgreSQL 容器**（testcontainers） | Docker | `make test-integration` |
 | `data`（Redis 部分） | 键结构、过期、序列化 | miniredis（进程内） | 无 | 每次 `make test` |
 | `service` | proto ⇄ biz 转换、错误码映射 | mock `biz` 或直接构造 UseCase | 无 | 每次 `make test` |
-| 纯函数 / 结构门禁 | — | 现状已有（`structcheck`、`pkg/product`） | 无 | 每次 `make test` |
+| 纯函数 / 结构门禁 | — | 现状已有（`structcheck`） | 无 | 每次 `make test` |
 
 ### 为什么 data 层必须用真库
 
@@ -161,7 +161,7 @@ cart 的实际接线是：
 
 ```go
 // services/cart/internal/data/cart.go
-type cartRepo struct { queries *models.Queries; rdb *LiveRedis; log *zap.Logger; live *config.Live }
+type cartRepo struct { queries *models.Queries; rdb *redisclient.Live; log *zap.Logger; live *config.Live }
 func NewCartRepo(data *Data, logger *zap.Logger, live *config.Live) biz.CartRepo
 ```
 
@@ -170,7 +170,7 @@ func NewCartRepo(data *Data, logger *zap.Logger, live *config.Live) biz.CartRepo
 **A. 直接测 sqlc 生成的 `models.Queries`（推荐起步）**
 
 `models.DBTX` 只需要 `Exec` / `Query` / `QueryRow` 三个方法，`*pgxpool.Pool` 天然满足，
-所以一行就能拿到 Queries，不需要 `Data`/`LiveRedis`/`config.Live` 那套装配：
+所以一行就能拿到 Queries，不需要 `Data`/`redisclient.Live`/`config.Live` 那套装配：
 
 ```go
 postgres := testutil.StartPostgres(t)
@@ -186,7 +186,7 @@ q := models.New(postgres.Pool)
 要走 `NewCartRepo`，就得把 `*Data` 装出来：
 
 ```go
-d := NewData(NewPgPool(postgres.Pool), NewLiveRedis(testutil.StartRedis(t)), zap.NewNop())
+d := NewData(pgpool.NewLive(postgres.Pool), redisclient.NewLive(testutil.StartRedis(t)), zap.NewNop())
 repo := NewCartRepo(d, zap.NewNop(), config.NewLive(&confv1.Bootstrap{ /* 最小可用配置 */ }))
 ```
 

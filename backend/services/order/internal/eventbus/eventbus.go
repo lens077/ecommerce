@@ -29,11 +29,6 @@ func NewEventBus(handlers GoEventBus.Dispatcher) *EventBus {
 	return bus
 }
 
-// GetBus 返回已初始化的 EventBus（需先调用 NewEventBus）。
-func GetBus() *EventBus {
-	return bus
-}
-
 // Publish 异步发布事件，将事件放入缓冲区并立即返回。
 func (eb *EventBus) Publish(projection interface{}, data any) error {
 	return eb.store.Subscribe(context.Background(), GoEventBus.Event{
