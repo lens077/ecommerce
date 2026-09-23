@@ -1,0 +1,56 @@
+# ecommerce 镜像来源审计（Audit，不阻断）。
+#
+# 只覆盖 TCR 上的 user 镜像：发布链只在 user 上完成过 TCR Cosign 兼容探测
+# （.github/workflows/service-ci.yml「Probe TCR Cosign compatibility」），
+# 其余服务尚未在 TCR 侧签名——把它们纳入只会制造一整页无法行动的 fail。
+# 扩到全服务的前置条件：CI 对全部服务在 TCR 上签名并回读通过。
+#
+# 转 Enforce 的前置条件（kubernetes 仓 components/kyverno/README.md「签名纪元」）：
+# 14 天零误报 + 存量运行 digest 补签 + 删 pod 强制重建演练。
+apiVersion: kyverno.io/v1
+kind: Policy
+metadata:
+  name: ecommerce-image-provenance
+  namespace: ecommerce
+  labels:
+    app.kubernetes.io/part-of: ecommerce
+    app.kubernetes.io/managed-by: argocd
+  annotations:
+    policies.kyverno.io/title: ecommerce image provenance (audit)
+    policies.kyverno.io/description: >-
+      Audit that ccr.ccs.tencentyun.com/sumery/user images carry a Cosign keyless
+      signature issued to this repository's release workflows.
+spec:
+  # 主链路是 admission 时验证；background 让 reports-controller 也扫存量 Pod，
+  # 这样「签名纪元」前的老 Pod 会以 fail 出现在 PolicyReport，而不是被静默放过。
+  background: true
+  webhookConfiguration:
+    failurePolicy: Ignore
+    timeoutSeconds: 15
+  rules:
+    - name: user-image-keyless-signature
+      match:
+        any:
+          - resources:
+              kinds:
+                - Pod
+      verifyImages:
+        - imageReferences:
+            - "ccr.ccs.tencentyun.com/sumery/user*"
+          # 发布链用 cosign 3.x 签名，默认落 sigstore bundle（OCI referrers / `sha256-<digest>` 回退 tag），
+          # 默认的 type: Cosign 只找 legacy `.sig` tag，对签名镜像也报 no signatures found（2026-09-22 实测）。
+          type: SigstoreBundle
+          failureAction: Audit
+          # Audit 阶段不改工作负载：不把 tag 改写成 digest
+          mutateDigest: false
+          verifyDigest: false
+          required: true
+          attestors:
+            - count: 1
+              entries:
+                - keyless:
+                    # 与 service-ci.yml 的 CERT_IDENTITY_RE / CERT_ISSUER 逐字一致
+                    subjectRegExp: "^https://github\\.com/lens077/ecommerce/\\.github/workflows/(backend|service-ci)\\.yml@refs/tags/[0-9]+\\.[0-9]+\\.[0-9]+$"
+                    issuer: "https://token.actions.githubusercontent.com"
+                    rekor:
+                      url: "https://rekor.sigstore.dev"

@@ -1,0 +1,43 @@
+# Kyverno 业务准入策略走 GitOps：合入 main 即部署，回滚 = revert。
+#
+# 与 argocd-app.yml（业务工作负载 ApplicationSet）刻意分开：
+# - 策略是护栏，应先于工作负载存在，所以这里 CreateNamespace=true；
+# - 策略只有 Audit 语义、没有数据面风险，所以这里直接开自动同步 + prune + selfHeal，
+#   不受工作负载那边「先做 live diff 再开」的约束。
+# 集群级 ClusterPolicy 归 kubernetes 仓 components/kyverno/（平台职责），本 App 只管
+# ecommerce 命名空间的 Policy（AppProject 白名单已限定）。
+apiVersion: argoproj.io/v1alpha1
+kind: Application
+metadata:
+  name: ecommerce-kyverno
+  namespace: argocd
+  labels:
+    app.kubernetes.io/part-of: ecommerce
+    app.kubernetes.io/managed-by: git
+  finalizers:
+    - resources-finalizer.argocd.argoproj.io
+spec:
+  project: ecommerce
+  source:
+    repoURL: https://gitlab.com/sumery/ecommerce.git
+    targetRevision: main
+    path: infrastructure/kyverno/policies
+    directory:
+      recurse: false
+  destination:
+    server: https://kubernetes.default.svc
+    namespace: ecommerce
+  syncPolicy:
+    automated:
+      prune: true
+      selfHeal: true
+    syncOptions:
+      - CreateNamespace=true
+      - ApplyOutOfSyncOnly=true
+      - FailOnSharedResource=true
+  revisionHistoryLimit: 10
+  info:
+    - name: source
+      value: gitlab.com/sumery/ecommerce
+    - name: scope
+      value: ecommerce-namespaced Kyverno Policy (audit)

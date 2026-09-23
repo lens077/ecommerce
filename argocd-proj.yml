@@ -36,6 +36,10 @@ spec:
       kind: ExternalSecret
     - group: gateway.networking.k8s.io
       kind: HTTPRoute
+    # ecommerce 命名空间级 Kyverno 策略（infrastructure/kyverno/，独立 Application）。
+    # 只放 Policy 不放 ClusterPolicy：集群级策略归 kubernetes 仓 components/kyverno/。
+    - group: kyverno.io
+      kind: Policy
     - group: policy
       kind: PodDisruptionBudget
   roles:
