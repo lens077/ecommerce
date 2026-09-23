@@ -30,7 +30,7 @@ description: 前端数据拉取的唯一写法——connect-query 直接吃 prot
 | 报错 | `toAppError(error)` + `ErrorHandler` | [4](#4-错误一律过-toapperror) |
 | `src/gen/` | **只读**，改 proto 再重新生成 | [5](#5-srcgen-是生成物不许手改) |
 | 免鉴权接口 | 单独 transport，`options.transport` 传入 | [6](#6-免鉴权接口走独立-transport) |
-| `int64` 字段 | 传 `BigInt(...)`，读要 `.toString()` | [7](#7-int64--messageinitshape) |
+| `int64` 字段 | 传 `BigInt(...)`，读要 `.toString()` | [7](#7-int64-与-messageinitshape) |
 
 ---
 

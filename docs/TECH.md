@@ -239,6 +239,8 @@ spec:
 
 **HPA 与 KEDA 分工**：HPA 负责在线请求服务（根据 CPU/内存/RPC QPS 伸缩），KEDA 负责 Kafka 消费者（根据 lag 伸缩）。两者不会控制同一资源。KEDA 只管领域事实线的 franz-go 消费者；行投影线的 Elasticsearch Sink 是 Kafka Connect 任务，由 Connect 自身管理，不在 KEDA 范围。
 
+**本项目当前状态与接入边界（2026-09-23）**：kubernetes 仓已安装 KEDA 2.20.2，并用隔离的 Cron `ScaledObject` 验收了 `Deployment 0→2` 与 HPA 生成；这证明控制器能力已就绪，不等于业务已经启用 KEDA。当前 ecommerce namespace 没有生产 `ScaledObject`，因为尚未有经过确认的业务 Kafka consumer Deployment、consumer group、topic 分区容量、PDB 与 lag 阈值。第一个真实消费者出现后，优先按「领域事实线」创建 `ScaledObject`：`minReplicaCount`、`maxReplicaCount`、`lagThreshold`、失败/死信处理、缩容安全性和容量预算必须一起验收。不要把 KEDA 直接用于 Debezium source 或 Kafka Connect Elasticsearch sink；它们是 Connect task，由 Connect 自己管理。KEDA 的可复跑验证、当前未接业务的原因和触发条件见 [`kubernetes/components/keda/examples/cron-demo.yaml`](../../kubernetes/components/keda/examples/cron-demo.yaml) 与 `kubernetes` 仓组件文档。
+
 ### 4.5 两条数据线：行投影走 CDC，领域事实走 Outbox
 
 2026-09-03 定稿（决策经过见 [`row-projection-vs-domain-event.md`](../context/project/ecommerce/events/experience/row-projection-vs-domain-event.md)）。给一条数据流分线只问一个问题：**没有这个事件，业务语义会不会丢失？**
@@ -605,9 +607,9 @@ Cilium Gateway API ──► control-tower 网关 ──► 业务服务 Pod Cel
 
 VPA 只以 recommendation 模式进入容量流程：业务 VPA 使用 `updateMode: Off` 和 `controlledValues: RequestsOnly`，不得自动改写工作负载资源。
 
-当前状态：KEDA 与 Argo Rollouts 控制器已安装，但 ecommerce namespace 尚无 HPA、KEDA `ScaledObject` 或 Rollout 业务对象；发布仍使用普通 Deployment 滚动更新。ArgoCD 控制器已安装，但当前没有本仓 Application/ApplicationSet，GitOps 尚未接管。HPA、KEDA ScaledObject、Argo Rollouts 和 ArgoCD Application 均属于待验收能力，不得写成已启用。
+当前状态：KEDA 与 Argo Rollouts 控制器已安装并完成行为验收，但 ecommerce namespace 尚无生产 HPA、KEDA `ScaledObject` 或 Rollout 业务对象；发布仍使用普通 Deployment 滚动更新。KEDA 已用隔离 Cron 示例验收，不能把该示例写成业务扩缩容已启用。ArgoCD 已有 `ecommerce-kyverno` Application 并完成 GitOps 接管；业务工作负载仍需单独做 live diff。HPA、业务 KEDA ScaledObject、业务 Argo Rollout 仍属于待接入能力。
 
-目标状态：在可信指标、多副本、PDB、容量窗口和回滚演练完成后，再分别接入 HPA/KEDA 和 Argo Rollouts；完成 live diff、资源归属与回滚核对后，才创建 ArgoCD Application 并启用自动同步。
+目标状态：在可信指标、多副本、PDB、容量窗口和回滚演练完成后，再分别接入 HPA/KEDA 和 Argo Rollouts；KEDA 的第一个正式接入对象应是独立的 Kafka 领域事实消费者，而不是 Debezium 或 Kafka Connect sink。完成 live diff、资源归属与回滚核对后，才为业务 Application 启用自动同步。
 
 节点重启不保证全局重平衡。Pod 对象仍绑定原节点时，容器通常在原节点恢复；只有 Pod 被终止或驱逐后，新副本才会重新经过 scheduler。原节点恢复不会让已经迁走的 Pod 自动搬回，需要通过告警发现持续 skew，再执行受控 rollout。
 

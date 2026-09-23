@@ -3,12 +3,5 @@
   "excluded_prefixes": [
     ".scratch/"
   ],
-  "findings": [
-    {
-      "file_path": "context/project/ecommerce/frontend-api/sop/connect-query.md",
-      "kind": "anchor",
-      "target": "context/project/ecommerce/frontend-api/sop/connect-query.md#7-int64--messageinitshape",
-      "count": 1
-    }
-  ]
+  "findings": []
 }
