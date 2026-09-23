@@ -36,6 +36,7 @@ Consul KV Bootstrap 已退役。正常启动必须设置 `CONFIG_SOURCE_FILE`，
 | `discovery` | 只打 WARN，不重新注册 |
 | `observability` | 只打 WARN，不重建 tracer |
 | `search.catalog`（search 服务） | 只打 WARN，不重建客户端；Elasticsearch endpoint、凭据或 alias 变更后滚动重启 |
+| `recommend.gorse`（behavior、product） | **不生效，也不打 WARN**。gorse 客户端只在启动时由 `NewGorseClient` 创建一次，热更新只会打出通用的 `config updated`；改 `endpoint`、`api_key` 或 `enable` 后必须重启服务 |
 
 这些段不热生效是权衡后的取舍（重新绑端口会切断 in-flight 连接、重注册要先摘节点、
 重建 tracer 会丢未导出的 span），滚动重启更可控。但**沉默是不可接受的**——
@@ -115,6 +116,11 @@ cd backend/services/user   && make dev          # 目标服务走配置中心
   已由 `withoutWriteTimeout` 只对流式路由清写截止时间。
 - 配置中心不可达时服务**直接启动失败**，不会偷偷回落到 Consul。错误信息里带着
   namespace/env/key 和地址，照着看就行。
+- **gorse 客户端不跟热更新**（2026-09-23 实付）：`behavior/dev` 写入 gorse `api_key` 后，
+  写入前启动的 behavior 仍拿着空 key，持续报 `POST /api/feedback: unexpected status 401`；
+  同日 `product/dev` 仍是 gorse 旧公网直连地址（node2 的 8088 已只绑回环），报
+  `connection refused`。两者都在改完 Config Center 并重启后恢复。`make dev-file` 读本地
+  `configs/dev.yml`，它是独立副本，Config Center 改了不会同步过来。
 
 ## 相关
 
