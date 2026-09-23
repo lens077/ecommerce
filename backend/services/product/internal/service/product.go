@@ -2,6 +2,8 @@ package service
 
 import (
 	"context"
+	"errors"
+	"fmt"
 
 	"github.com/lens077/ecommerce/backend/constants"
 	"github.com/lens077/ecommerce/backend/services/product/internal/biz"
@@ -36,12 +38,12 @@ func (s *ProductService) GetProductDetail(ctx context.Context, c *connect.Reques
 		},
 	)
 	if err != nil {
-		return nil, err
+		return nil, productError(err)
 	}
 
 	result, err := ToProtoDetail(res.ProductDetail)
 	if err != nil {
-		return nil, err
+		return nil, connect.NewError(connect.CodeInternal, fmt.Errorf("convert product detail: %w", err))
 	}
 
 	response := &v1.GetProductDetailResponse{
@@ -49,6 +51,19 @@ func (s *ProductService) GetProductDetail(ctx context.Context, c *connect.Reques
 	}
 
 	return connect.NewResponse(response), nil
+}
+
+// productError 把 biz 哨兵错误映射为 RPC 错误码（docs/design/platform/error-handling.md 第 3 条）。
+// 2026-09-23 线上日志：商品不存在时 GetProductDetail 原样返回错误，connect 把它记成
+// rpc.code=unknown，日志拦截器按「rpc system error」报 ERROR。商品不存在是匿名入口上的
+// 正常业务结果，必须是 not_found，否则会淹没真正的系统故障。
+func productError(err error) error {
+	switch {
+	case errors.Is(err, biz.ErrProductNotFound):
+		return connect.NewError(connect.CodeNotFound, err)
+	default:
+		return connect.NewError(connect.CodeUnknown, err)
+	}
 }
 
 func ToProtoDetail(bizDetail biz.ProductSpuDetail) (*v1.ProductSpuDetail, error) {
