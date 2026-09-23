@@ -2,6 +2,7 @@ package service
 
 import (
 	"context"
+	"errors"
 	"net/url"
 
 	"connectrpc.com/connect"
@@ -12,8 +13,6 @@ import (
 	"github.com/lens077/ecommerce/backend/services/payment/internal/biz"
 	"github.com/lens077/ecommerce/backend/services/payment/internal/pkg/reqctx"
 	"go.uber.org/zap"
-	"google.golang.org/grpc/codes"
-	"google.golang.org/grpc/status"
 )
 
 type PaymentService struct {
@@ -26,7 +25,7 @@ func (s *PaymentService) CreatePayment(ctx context.Context, c *connect.Request[v
 	req := c.Msg
 	customerId, err := uuid.Parse(req.CustomerId)
 	if err != nil {
-		return nil, status.Error(codes.InvalidArgument, "无效的用户ID")
+		return nil, connect.NewError(connect.CodeInvalidArgument, errors.New("无效的用户ID"))
 	}
 
 	s.log.Debugf("customerId%v", customerId)
@@ -36,7 +35,7 @@ func (s *PaymentService) CreatePayment(ctx context.Context, c *connect.Request[v
 	if req.OrderId != 0 {
 		orderID = req.OrderId
 	} else {
-		return nil, status.Error(codes.InvalidArgument, "订单ID不能为空")
+		return nil, connect.NewError(connect.CodeInvalidArgument, errors.New("订单ID不能为空"))
 	}
 
 	// 创建支付请求
@@ -55,8 +54,7 @@ func (s *PaymentService) CreatePayment(ctx context.Context, c *connect.Request[v
 	// 调用业务逻辑
 	result, err := s.uc.CreatePayment(ctx, createReq)
 	if err != nil {
-		s.log.Errorf("Failed to create payment: %v", err)
-		return nil, err
+		return nil, paymentError(err)
 	}
 
 	response := &v1.CreatePaymentResponse{
@@ -78,8 +76,7 @@ func (s *PaymentService) GetPaymentStatus(ctx context.Context, c *connect.Reques
 	// 调用业务逻辑
 	resp, err := s.uc.GetPaymentStatus(ctx, getReq)
 	if err != nil {
-		s.log.Errorf("Failed to get payment status: %v", err)
-		return nil, err
+		return nil, paymentError(err)
 	}
 
 	// 转换支付状态
@@ -138,8 +135,7 @@ func (s *PaymentService) HandlePaymentNotify(ctx context.Context, c *connect.Req
 	// 调用业务逻辑
 	resp, err := s.uc.HandlePaymentNotify(ctx, values)
 	if err != nil {
-		s.log.Errorf("Failed to handle payment notify: %v", err)
-		return nil, err
+		return nil, paymentError(err)
 	}
 
 	// 返回结果
@@ -195,8 +191,7 @@ func (s *PaymentService) HandlePaymentCallback(ctx context.Context, c *connect.R
 	// 调用业务逻辑
 	resp, err := s.uc.HandlePaymentCallback(ctx, callbackReq)
 	if err != nil {
-		s.log.Errorf("Failed to handle payment callback: %v", err)
-		return nil, err
+		return nil, paymentError(err)
 	}
 
 	// 返回结果
@@ -205,6 +200,18 @@ func (s *PaymentService) HandlePaymentCallback(ctx context.Context, c *connect.R
 		Message: resp.Message,
 	}
 	return connect.NewResponse(response), nil
+}
+
+// paymentError 把用例层错误映射为 RPC 错误码（docs/design/platform/error-handling.md 第 3 条）。
+// data 层目前 5 个方法都直接返回 connect 错误（Unimplemented），必须原样透传：
+// 再包一层 connect.NewError 会让外层错误码覆盖内层，unimplemented 变成 unknown。
+// 其余错误显式标为 unknown。日志由 RPC 拦截器按错误码分级记录一次，这里不再重复打 ERROR。
+func paymentError(err error) error {
+	var connectErr *connect.Error
+	if errors.As(err, &connectErr) {
+		return err
+	}
+	return connect.NewError(connect.CodeUnknown, err)
 }
 
 var _ paymentv1connect.PaymentServiceHandler = (*PaymentService)(nil)
