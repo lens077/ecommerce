@@ -1,7 +1,7 @@
 ---
 name: debezium-idle-slot-wal-retention
 module: events
-description: 被监控表长期无写入时 Debezium 默认的「按事件处理刷 LSN」不会推进位点，逻辑复制槽 WAL 无限滞留（Pigsty 上 43 天后作废槽被迫重快照；CNPG 上 max_slot_wal_keep_size=-1 会涨到盘满）；正解是 lsn.flush.mode=connector_and_driver + 显式 heartbeat.interval.ms（3.6.1 起前者会自动开 10 分钟心跳），加心跳前若 Kafka 有 ACL 须先放行 topic；集群重建后这两个键必须跟着连接器定义走，且要有 restart_lsn 差的告警——2026-09-23 在新集群零告警回归过
+description: 被监控表长期无写入时 Debezium 默认的「按事件处理刷 LSN」不会推进位点，逻辑复制槽 WAL 无限滞留（Pigsty 上 43 天后作废槽被迫重快照；CNPG 上 max_slot_wal_keep_size=-1 会涨到盘满）；正解是 lsn.flush.mode=connector_and_driver + 显式 heartbeat.interval.ms（3.6.1 起前者会自动开 10 分钟心跳），加心跳前若 Kafka 有 ACL 须先放行 topic；集群重建后这两个键必须跟着连接器定义走，且 connector_and_driver 必须配 offset.mismatch.strategy=trust_greater_lsn（见 debezium-offset-behind-slot-after-broker-roll）——2026-09-23 在新集群零告警回归过
 ---
 
 # CDC 一切正常，却在悄悄撑爆 WAL
@@ -68,6 +68,10 @@ max_slot_wal_keep_size = 12288 MB
 ```
 
 **修复：`lsn.flush.mode=connector_and_driver`（2026-08-29 实测有效）**
+
+> ⚠️ 2026-09-23 补充：这个模式让槽结构性领先 Kafka offset，**必须配 `offset.mismatch.strategy=trust_greater_lsn`**，
+> 否则任何一次 task 重启都会 FAILED（`initial`）或全量重快照（`when_needed`）。机制与验证见
+> [debezium-offset-behind-slot-after-broker-roll.md](debezium-offset-behind-slot-after-broker-roll.md)。
 
 Debezium 3.6 为这个场景做了专门的选项，**不需要心跳表**：
 
@@ -179,6 +183,7 @@ B=10.10.21.172:9092; CC=/etc/kafka/admin.properties   # pigsty-admin，SASL_SSL
 
 **相关**
 
+- 本修法的必配项 `offset.mismatch.strategy=trust_greater_lsn`（否则重启必出事）：[debezium-offset-behind-slot-after-broker-roll.md](debezium-offset-behind-slot-after-broker-roll.md)
 - 同类「健康绿、功能死」：[`registry/experience/consul-register-once-then-give-up.md`](../../registry/experience/consul-register-once-then-give-up.md)
 - 告警为什么没被看见：[`context/team/alerting-signal-hygiene.md`](../../../../team/alerting-signal-hygiene.md)
 - 外部依赖地址与端口：[`.service-matrix.yaml`](../../../../../.service-matrix.yaml) 的 `pigsty_node3`
