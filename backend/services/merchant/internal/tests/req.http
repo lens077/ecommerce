@@ -65,10 +65,11 @@ x-md-global-user-id: {{user_id}}
 
 > {% if (response.body.merchantId) client.global.set("new_merchant_id", response.body.merchantId); %}
 
-### ActivateMerchant
+### ActivateMerchant(需要管理员)
 POST http://{{host}}:{{port}}/merchant.v1.MerchantService/ActivateMerchant
 Content-Type: application/json
 x-md-global-user-id: {{user_id}}
+x-md-global-role: admin
 
 {"merchantId": "{{new_merchant_id}}", "shopName": "http-client 测试店", "shopLogoUrl": ""}
 
