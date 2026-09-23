@@ -106,7 +106,7 @@ todo-spec: 1
 - [ ] **未完成 · OTLP Secret 接入 OpenBao/ESO**：prod 仍关闭 `otelAuthExternalSecret`。修正/参数化 SecretStore，确认实际键可同步后启用，不能沿用不存在的 store。
 - [ ] **部分完成 · Dragonfly 凭据传播**：旧 WRONGPASS 曾手工修复；仍需同源派生消费方 Secret/Config Center 配置、轮换后验证全部消费者，补 `/readyz` 而非仅 `/healthz` 告警，并避免认证命令里的密码进入日志。
 - [ ] **待复验 · 当前集群容量与稳定性**：旧 node3 风暴已做组件迁移，不能继续按迁移前内存表下结论。交接仍报 node5 抖动、metrics-server 不可用；先恢复可信观测，再评估 requests 与可调度节点容量，不以重平衡脚本替代容量治理。
-- [ ] **部分完成 · VPA 与 requests 校准**：按 Off/RequestsOnly 收敛，包括复核 config-center 旧 InPlace 配置；至少 7 天指标覆盖发布与 k6 窗口，再人工回写 requests。
+- [ ] **部分完成 · VPA 与 requests 校准**：2026-09-23 拍板 recommender 开 / updater 关 / webhook 不作自动调节（kubernetes 仓 `components/vpa/values.yaml`），`observability/grafana` VPA `Off` 已出 Target≈11m/523Mi 作为样板；按 Off/RequestsOnly 收敛，包括复核 config-center 旧 InPlace 配置；至少 7 天指标覆盖发布与 k6 窗口，再人工回写 requests。
 - [ ] **部分完成 · 多副本、PDB 与 N+1**：重核当前拓扑的副本/PDB；旧低流量、旧节点演练不代表现在达标。验证节点故障、扩缩容、批量滚更、资源耗尽与调度失败告警，满足后才启用自动灰度/重调度。
 - [ ] **待复验 · HTTPRoute/TLS 收敛**：同 hostname 不等于冲突，按 Exact/PathPrefix 优先级验证 SSR、SPA 与 `/_next`；盘点当前仍存活的基础设施路由和 certificateRef，不按旧组件列表批量迁移。
 - [ ] **部分完成 · 数据恢复与重装**：2026-09-23 已用真实 dump（`backs/node3/pigsty-node3-2026-09-03/raw/_data/ecommerce.pgdump`）在 CNPG 隔离库比对：业务表与 live 一致（同一套 Go seed，订单/用户在备份里为 0 行），只有 Config Center 的 `config` schema 是 live 缺的，已 additive 合入 `pg-main/ecommerce`；CDC 用真实 SKU 可逆改价验证 PG→Debezium→Kafka→ES 全链路。剩：CNPG PITR/对象存储备份、RTO/RPO 演练；OpenBao 集群外备份/副本；重装手顺以 CNPG + OpenBao/ESO + Config Center 为准（Pigsty 已随 node3 退役）。OpenBao 当前明确选择 **C：保持 Shamir 手动解封**，不做 static seal migration，也不接 VPS Vault transit；Pod 重启后的恢复动作是 `bash kubernetes/components/openbao/examples/unseal.sh`，Gatus `openbao-unsealed` 负责告警。
@@ -166,7 +166,7 @@ todo-spec: 1
 
 #### P2
 
-- [ ] **待复验 · 观测链自身健康**：CES 巡检、Gatus 和采集器补/核验 dead-man 新鲜度告警；CDC 槽位点/task/lag 已有恢复记录，不重复列「全部缺失」，但迁移后持续覆盖仍需核对。
+- [ ] **待复验 · 观测链自身健康**：CES 巡检、Gatus 和采集器补/核验 dead-man 新鲜度告警；2026-09-23 broker 滚动致 Debezium task FAILED（connector 仍 RUNNING）时 Gatus `cdc-source-task` 是唯一先红的信号，vmalert 侧仍缺「slot restart_lsn − Connect offset」差值告警（`context/project/ecommerce/events/experience/debezium-offset-behind-slot-after-broker-roll.md`）；CDC 槽位点/task/lag 已有恢复记录，不重复列「全部缺失」，但迁移后持续覆盖仍需核对。
 - [ ] **待复验 · 日志出口与配置**：核对 SDK `/v1/logs` 的旧 401 是否仍存在；统一 endpoint/header/TLS 与 exporter 开关，删除无代码消费的环境变量，确认 stdout/Vector 与应用 OTLP 各自入库。
 - [ ] **未完成 · 部署关联与观测恢复**：采集部署 marker/变更维度；按 TECH.md 外置观测目标验证存储备份/恢复及单点风险，不将 node3 进程外置等同于物理故障域隔离。
 
@@ -215,7 +215,7 @@ todo-spec: 1
 #### P1
 
 - [ ] **部分完成 · 原生 DNS 收敛**：生产已关闭十服务 Consul 注册、网关 direct Service 路由已接；清理生产遗留 Consul 配置与就绪依赖，pre 按 Compose 目标补齐。保留开发按需注册不等于生产继续依赖 Consul；卸载需另行授权。
-- [ ] **部分完成 · Config Center 环境与 token 收尾**：单源 selector 和独立 Machine Token 已接；核对实际 pre/prod 环境，legacy token 命中连续 7 天为零后删除回退，结合 GitOps 验收，不能沿用旧「全读 dev」快照。
+- [ ] **部分完成 · Config Center 环境与 token 收尾**：Config Center 已于 2026-09-23 部署到 k1/k2/k3（ns `config-center`，接 CNPG/Dragonfly/集群内 VM，`config` schema 数据完好，Pangolin `config(-api).apikv.com` 已建），operator token 已签、`harvest --env dev` 已写 10 服务 bootstrap（PG/Redis/ES 指向 Pangolin 入口），Mac 经 `config-api.apikv.com` 实测可拉——remote-dev 闭环；三条 L4 入口（`pg-dev:30001`/`redis-dev:30005`/`kafka-dev:30004`）与 `argocd.apikv.com` 已于 2026-09-23 建好并协议级实测，部署后跑 `config-center-harvest.sh --env dev --strategy remote-dev` 即闭环；单源 selector 和独立 Machine Token 已接；核对实际 pre/prod 环境，legacy token 命中连续 7 天为零后删除回退，结合 GitOps 验收，不能沿用旧「全读 dev」快照。
 - [ ] **部分完成 · 推荐链路**：建表与 item 同步已有记录；核对 Config Center 中 product/behavior 的现行 endpoint/API key，真实跑通 Track/Recommend/SimilarItems。密钥通过管理入口写入，不绕过只读 Machine Token 直写数据库。
 - [ ] **部分完成 · OpenFGA 部署依赖残留**：2026-09-22 已在新集群按 `DEPENDS_ON=postgres`（CNPG `pg-main` 独立库 `openfga`）重装，`examples/smoke.sh` store→model→tuple→check 通过；旧 `openfga.pgdump` 为空无需恢复。剩：`ADDON_OPENFGA` 在 `config.hosting.env` 已开，重装路径整体演练待做。
 

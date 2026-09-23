@@ -32,7 +32,7 @@ HTTP/1.1 交给 HTTP handler，HTTP/2 交给 gRPC 监听器。下面的入口设
 
 ## 受限 API/CLI 入口
 
-Web UI 在集群内使用 `argocd.dev.test`，经 Pangolin 公网化时再创建对应 HTTP resource；CLI/API 不与 Web UI 共用一个 HTTPS HTTPRoute，且**分两个协议入口**：
+Web UI 集群内是 `argocd.dev.test`（HTTPRoute），公网是 `https://argocd.apikv.com`（Pangolin rid 60，site `k8s-cluster` → `10.10.31.240:443`，Host/`tlsServerName`=`argocd.dev.test`，Pangolin SSO 关；2026-09-23 admin 登录、`/api/v1/applications`、`/api/v1/clusters` 经公网实测）。**Mac 上直接开 `argocd.dev.test` 会得到代理的 502**——LAN 专用域名，见 `context/team/local-env.md`。CLI/API 不与 Web UI 共用一个 HTTPS HTTPRoute，且**分两个协议入口**（原生 gRPC 公网入口暂缓，先用 `--core` / `--port-forward`）：
 
 | 端口 | 用途 | 能不能跑原生 gRPC |
 |---|---|---|
@@ -57,16 +57,25 @@ Cilium 生成的 Envoy cluster 使用 `useDownstreamProtocolConfig`，**上游�
 
 ### Pangolin 侧要求
 
-必须通过面板或 API 创建资源，不能直接改数据库：
+必须通过面板或 API 创建资源，不能直接改数据库。`argocd-api.apikv.com` 建成 **HTTP resource**，字段如下：
 
-- REST 资源 target 指向 Cilium Gateway 的 `443`；CLI 资源 target 指向 `80`。地址以运行时查询结果为准，不写死 ClusterIP。
-- 资源关闭交互式 SSO/登录跳转，由 ArgoCD 自己处理 admin/token 认证。
-- 只允许管理网段或 VPN 出口来源；公网普通来源必须在 Pangolin policy 层拒绝。
+| 字段 | 值 | 说明 |
+|---|---|---|
+| 站点 | 集群内 newt 所在 site | 与 `grafana`/`hc` 等 k8s 资源同一站点 |
+| target method | **`h2c`** | 不是 `https`：443 上 Cilium 不宣告 h2 ALPN，原生 gRPC 只能落在 80 |
+| target 地址 | `<cilium-gateway LB IP>:80` | 以 `kubectl -n default get gateway cilium-gateway` 现查，不写死 |
+| 自定义 Host | 不填 | 集群路由直接匹配 `argocd-api.apikv.com`，不走 `*.dev.test` 改写 |
+| 认证（SSO） | 关 | 由 ArgoCD 自己处理 admin/token 认证 |
+| 访问规则 | 管理网段 / VPN 出口 CIDR `ACCEPT`，其余拒绝 | 公网普通来源必须在 policy 层拒绝 |
+| 健康检查 | 不勾 | 勾了又不配对 `hcPort/hcPath` 会被判 unhealthy → 503 |
+
+链路：CLI ──TLS──▶ Pangolin Traefik ──h2c（WireGuard 隧道内）──▶ Cilium Gateway `:80` ──h2c──▶ argocd-server gRPC。
+公网段有 Pangolin 的证书，隧道段有 WireGuard；「80 明文」只在**直连 LAN** 的场景才是真正的明文，
+那种场景不应暴露给任意来源。
+
 - 不要对 CLI/API 请求返回 Pangolin 登录页或 `302`；应原样转发 ArgoCD 的 `401`、gRPC 状态和响应头。
-- 创建资源后等待 Pangolin 动态配置刷新，再验证两个端口。
-
-**明文链路的安全边界**：80 端口传输不加密，admin 密码与 session token 以明文过链路。这条路径只允许
-在受源地址限制的通道内使用，禁止暴露给任意公网来源。若无法保证来源限制，改用下面的 K8s API 通道。
+- 创建资源后等待 Traefik 动态配置刷新（约 5s），再验证。
+- 验收判据：`argocd version --server argocd-api.apikv.com` 能打印出 `argocd-server: vX.Y.Z`。
 
 Kubernetes 侧部署：
 
@@ -74,14 +83,15 @@ Kubernetes 侧部署：
 kubectl apply -f infrastructure/argocd/server/helm/argocd-api-routes.yml
 ```
 
-CLI 验证（明文 h2c，不加 `--grpc-web`）：
+CLI 验证（经 Pangolin，TLS 到 Pangolin，不加 `--grpc-web` / `--plaintext`）：
 
 ```bash
 argocd login argocd-api.apikv.com \
   --username admin \
-  --password "$ARGOCD_PASSWORD" \
-  --plaintext
+  --password "$ARGOCD_PASSWORD"
 ```
+
+集群内或 LAN 直连 Gateway 时才用明文：`argocd login <LB IP>:80 --plaintext`（需 Host 解析为 `argocd-api.apikv.com`）。
 
 ### 不经任何入口的通道
 

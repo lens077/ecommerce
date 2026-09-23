@@ -23,7 +23,7 @@ description: 本地开发机与集群连哪套基础设施：活地址、配置�
 
 | 路 | 解决什么 | 在哪生效 | 实测 2026-09-15 |
 |---|---|---|---|
-| remote-dev（Pangolin 资源） | **L3 可达**：Mac 到不了 `10.10.31.x` VIP，把 HTTP 与 raw TCP（Dragonfly、PG、Kafka）经公网域名穿出来 | 任何能上公网的机器 | 旧 `redis-dev:30005` 资源待迁移；新 Dragonfly TCPRoute 为 `10.10.31.242:6379`，需先在 Pangolin 建资源后再做 TLS 握手验证 |
+| remote-dev（Pangolin 资源） | **L3 可达**：Mac 到不了 `10.10.31.x` VIP，把 HTTP 与 raw TCP（Dragonfly、PG、Kafka）经公网域名穿出来 | 任何能上公网的机器 | 2026-09-23 协议级实测：PG `30001` TLS 登录 + 查询、Dragonfly `30005` CA/SNI + AUTH/PING、Kafka `30004` SASL_SSL produce→consume；三条都经 site `k8s-cluster` |
 | `*.dev.test` split DNS（`/etc/resolver/dev.test → 10.0.0.1` dnsmasq） | **通配解析**：`/etc/hosts` 不支持 `*.dev.test`，dnsmasq 应答整个后缀到 VIP | 只有机房 LAN（`10.0.0.1` 与 VIP 都在那边） | 本机 `10.0.0.1` 不可达，`shop.dev.test` 解析为空——这条路在机房外是死的，属预期 |
 
 Mac 上 launchd 跑的 `newt`（`net.pangolin.newt`）是 **Pangolin 站点连接器**，把本机 `127.0.0.1` 的服务暴露给 Pangolin 用，
@@ -33,12 +33,13 @@ Mac 上 launchd 跑的 `newt`（`net.pangolin.newt`）是 **Pangolin 站点连�
 |---|---|---|---|---|
 | 共享网关 | 经 Pangolin 公网域名（`shop.apikv.com` / `gateway.apikv.com` …） | `10.10.31.240:80/443` | 同左 | Cilium Gateway；HTTPRoute 按 hostname 接入，`*.dev.test` 与 `*.apikv.com` 挂在同一条路由上 |
 | Consul（**仅注册发现**） | `https://consul-dev.apikv.com`（SSO 关闭，Host/SNI 保留 `consul.dev.test`） | `10.10.31.241:8500` | `consul-server.consul.svc:8500` | 已开 ACL，必须带 token，见下 |
-| Dragonfly | 新 Pangolin resource 待建（后端 `10.10.31.242:6379`，TCPRoute，TLS-only + AUTH） | `10.10.31.242:6379` | `dragonfly.dragonfly.svc:6379` | TLS-only + AUTH；CA 在 Secret `dragonfly-tls` |
-| PostgreSQL（业务库 + config schema） | 新 Pangolin resource 待建（后端 `10.10.31.241:5432`，TLSRoute，SNI `pg.dev.test`） | `10.10.31.241:5432` | `pg-main-rw.postgresql.svc:5432` | CNPG `pg-main`，TLS passthrough，`sslmode=verify-ca`/`verify-full` 按证书配置 |
-| Config Center | — | — | `config-center.config-center.svc:30010` | Web `https://config.apikv.com`，API `https://config-api.apikv.com`；跑的是 control-tower 镜像，ns 名是遗留标签 |
+| Dragonfly | `redis-dev.apikv.com:30005`（Pangolin raw rid 59 → `10.10.31.242:6379`，TLS 直通） | `10.10.31.242:6379` | `dragonfly.dragonfly.svc:6379` | TLS-only + AUTH；CA = `global-root-ca`（Secret `dragonfly-tls`），SNI `redis-dev.apikv.com`；密码 Secret `dragonfly/dragonfly-auth` |
+| PostgreSQL（业务库 + config schema） | `pg-dev.apikv.com:30001`（Pangolin raw rid 26 → `pg-main-rw` ClusterIP:5432，**不是** TLSRoute VIP：PG 先发明文 SSLRequest，Passthrough 监听器会回 400） | `10.10.31.241:5432`（TLSRoute，SNI `pg.dev.test`） | `pg-main-rw.postgresql.svc:5432` | CNPG `pg-main`；CA Secret `postgresql/pg-main-ca`，`sslmode=verify-ca` |
+| Config Center | Web `https://config.apikv.com`（rid 62），API `https://config-api.apikv.com`（rid 63） | `10.10.31.240:443` Host `config(-api).dev.test` | `config-center.config-center.svc:30010` | 2026-09-23 部署到新集群（`control-tower-config:0.2.11`，接 CNPG + Dragonfly）；operator token 已签（Secret `config-center/config-center-operator-dev`），10 个服务 `dev/bootstrap.yaml` 已 harvest 成 remote-dev 地址，Mac 用 service token 实测可拉 |
 | Casdoor | `https://casdoor.apikv.com` | 同左 | 同左 | 集群外的外部服务 |
 | Elasticsearch | `kubectl -n elasticsearch port-forward svc/elasticsearch 9200:9200` | 同左 | `elasticsearch.elasticsearch.svc.cluster.local:9200` | 2026-09-15 起在集群内，仅 ClusterIP；search 只读 alias `ecommerce_catalog_products`，API key 存 `ecommerce/search-k8s-api-key` |
-| Kafka | `kubectl -n kafka port-forward svc/my-cluster-kafka-bootstrap 9092:9092` | 同左 | `my-cluster-kafka-bootstrap.kafka.svc:9092` | 集群内 Strimzi 单节点，仅内部 listener；Pangolin TCP resource 尚未建立，领域事件 producer/consumer 仍为零 |
+| Elasticsearch（search 只读） | `es-dev.apikv.com`（Pangolin rid 64）→ VIP:443 Host `es.dev.test`，`Authorization: ApiKey`（Secret `elasticsearch/search-api-key`，角色 `ecommerce-search-read`） | `es.dev.test`（HTTPRoute） | `elasticsearch.elasticsearch.svc:9200` | 公网只放只读 key：读 alias 200 / 写 403 / 匿名 401（2026-09-23 实测）；CDC sink 走集群内 |
+| Kafka | `kafka-dev.apikv.com:30004`（Pangolin raw rid 61 → `10.10.31.243:9094` → Strimzi external listener，SASL_SSL/SCRAM-SHA-512，用户 `remote-dev`） | `10.10.31.243:9094` | `my-cluster-kafka-bootstrap.kafka.svc:9092`（plain，Connect 在用） | advertised = 公网地址，客户端第二跳才连得上；truststore = Secret `kafka/my-cluster-cluster-ca-cert`；密码 Secret `kafka/remote-dev`；领域事件 producer/consumer 仍为零 |
 | 观测后端 | `https://metrics.dev.test` 等新集群 HTTPRoute（Pangolin resource 待迁移） | `10.10.31.240` | 对应集群 ClusterIP | VM/VL/VT/vmalert/Alertmanager/Grafana 已回集群内，旧 node3 域名退役 |
 | OTLP 入口 | 集群内 `otel-opentelemetry-collector.opentelemetry.svc:4317/4318` | 同左 | 同左 | 公网 OTLP 入口未接线，不要复用旧 node3 endpoint |
 
@@ -95,7 +96,7 @@ prod 暂沿用 pre 的 Config Center 环境（见 `docs/PRODUCTION-RELEASE.md`�
 `dragonfly.dragonfly.svc`、`otel-opentelemetry-collector.opentelemetry.svc:4318`），Mac 上解析不了；
 Mac 应通过 `remote-dev` 的 Pangolin 资源获取公网地址，不要把集群 Service DNS 写进本机配置。两条出路：
 
-1. 用上表 remote-dev 那列的地址覆盖（PG/Dragonfly/Kafka 的 Pangolin 资源域名；当前 Dragonfly/PG/Kafka 资源待建立）——`tools/config-center-harvest.sh --strategy remote-dev` 就是干这个的；
+1. 用上表 remote-dev 那列的地址覆盖（PG/Dragonfly/Kafka 的 Pangolin 资源域名，2026-09-23 起三条都已建好并实测）——`tools/config-center-harvest.sh --strategy remote-dev` 就是干这个的；2026-09-23 已跑完：operator token 已签、`harvest --env dev` 已把 10 个服务的 PG/Redis 切到 `pg-dev:30001`/`redis-dev:30005`、search 的 ES 切到 `es-dev.apikv.com`（只读 API key）；OTLP 与 Consul 块保持原值（前者是决策 `REMOTE_POLICY=keep`，后者没提供方），本机跑会每 30s 一条 OTLP warning，不阻断；
 2. 走内环开发，在集群身份下跑代码 —— [okteto-inner-loop.md](okteto-inner-loop.md)。
 
 
@@ -224,6 +225,12 @@ curl -sk -o /dev/null -w '%{http_code}\n' https://<name>.dev.test/  # 业务路�
 
 ## 会白排查半天的坑
 
+**`argocd.dev.test` 在 Mac 上是 502。** 不是 ArgoCD 坏了：`*.dev.test` 只在机房 LAN 可解析，Mac 的
+`/etc/resolver/dev.test → 10.0.0.1` 不可达，Firefox 走系统代理，代理解析不了就回 `502 Bad Gateway`。
+Mac 用 `https://argocd.apikv.com`（Pangolin rid 60 → VIP:443，Host `argocd.dev.test`，Pangolin SSO 关、
+由 ArgoCD 自己认证；2026-09-23 admin 登录 + `/api/v1/applications` 实测）。CLI 暂走 `--core` / `--port-forward`，
+公网原生 gRPC 入口另议（`infrastructure/argocd/README.md`）。
+
 **GitOps 当前是断的。** ArgoCD 装着且在跑，但**零 Application、零 ApplicationSet**，
 AppProject 只有 `default`（2026-08-29 复测仍然如此）。集群实际由 `backend/services/*/deploy/`
 的手工路径驱动，`helm/values.yaml` **不是**集群真相源。因此内环开发那条「先关 ArgoCD 自动同步」
@@ -294,7 +301,7 @@ Mac → Pangolin resource → node4/node5 newt → K8s Gateway 或 node service
 ```
 
 - Consul：`https://consul-dev.apikv.com` → `10.10.31.240:443`，HTTP resource 关闭 SSO，Host/TLS Server Name 保留 `consul.dev.test`。
-- Dragonfly：`redis-dev.apikv.com:30005` → `10.10.31.243:6380`，raw TCP/TLS 直通。
+- Dragonfly：`redis-dev.apikv.com:30005` → `10.10.31.242:6379`，raw TCP/TLS 直通。
 - 配置生成：`bash tools/config-center-harvest.sh --env dev --strategy remote-dev`；`dev` 默认即 `remote-dev`。
 - 机房 LAN 开发机才使用 `--strategy gateway` 与 `*.dev.test`。
 

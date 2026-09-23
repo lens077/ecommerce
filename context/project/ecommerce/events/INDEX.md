@@ -62,6 +62,8 @@ PostgreSQL 事务发件箱与搜索 projection 链。
 | CDC 全绿（容器 healthy / 连接器 RUNNING / 无报错）却在悄悄撑爆 WAL | [debezium-idle-slot-wal-retention.md](experience/debezium-idle-slot-wal-retention.md) |
 | 两仓平行做「PG → ES」：搜索投影被误归领域事件线，自写 relay 的「零新组件」前提在 Connect 进栈后失效 | [row-projection-vs-domain-event.md](experience/row-projection-vs-domain-event.md) |
 | PG 每次重启 CDC 复制槽就消失、task FAILED 而 connector 仍 RUNNING：Patroni 删除未声明的逻辑槽 | [patroni-drops-unmanaged-logical-slot.md](experience/patroni-drops-unmanaged-logical-slot.md) |
+| Kafka broker 一滚（加 listener 也算）CDC 就静默断流：Connect offset 落后于复制槽 restart_lsn，task FAILED、connector 仍 RUNNING；`snapshot.mode=when_needed` 自愈 | [debezium-offset-behind-slot-after-broker-roll.md](experience/debezium-offset-behind-slot-after-broker-roll.md) |
+| 控制器已安装不等于业务自动扩缩已接线；KEDA 只给领域事实 Kafka 消费者按 lag 扩缩，不直接控制 Debezium/Connect sink | [keda-consumer-scaling-boundary.md](experience/keda-consumer-scaling-boundary.md) |
 
 ## 相关
 
