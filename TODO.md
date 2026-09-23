@@ -87,7 +87,7 @@ todo-spec: 1
 
 #### P1 · 线 A：搜索恢复
 
-- [ ] **部分完成 · 搜索灾备验收**：CDC 切流、复制槽保留、重快照与 lag 告警已有验收记录；仍需在当前部署拓扑上用固定商品集验证故障恢复、alias 切换/回退、checksum/query diff、retention 边界与恢复时长。破坏性注入须单独授权。
+- [ ] **部分完成 · 搜索灾备验收**：2026-09-23 在新集群做了一次真实 alias 切换（7 个索引 `_v1`→`_v2`，重灌 sink，文档数逐表对齐 PG，ES 转 green）并补了复制槽保留告警（kubernetes 仓 `vmalert/rules/ecommerce-cdc.yml`）；发现并修掉「集群重建后 ES 索引由 sink 自动建、mapping 不是契约」和「source 丢了 `lsn.flush.mode`」两处回归。仍需：固定商品集的 checksum/query diff、alias 回退演练、retention 边界与恢复时长；破坏性注入须单独授权。搜索语义边界待产品决定：`ik_smart` 把「精华液」当整词，文档只有「精华」就搜不到。
 
 #### P2 · DuckDB 试点 D0–D3
 

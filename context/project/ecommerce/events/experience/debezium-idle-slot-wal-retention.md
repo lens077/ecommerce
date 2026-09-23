@@ -1,7 +1,7 @@
 ---
 name: debezium-idle-slot-wal-retention
 module: events
-description: 被监控表长期无写入时 Debezium 默认的「按事件处理刷 LSN」不会推进位点，逻辑复制槽 WAL 无限滞留，最终触发 max_slot_wal_keep_size 作废槽并被迫全量重快照；正解是 lsn.flush.mode=connector_and_driver（不需要心跳表），而 heartbeat.interval.ms 单独无效且加它之前必须先开 Kafka topic ACL 否则 task 直接 FAILED
+description: 被监控表长期无写入时 Debezium 默认的「按事件处理刷 LSN」不会推进位点，逻辑复制槽 WAL 无限滞留（Pigsty 上 43 天后作废槽被迫重快照；CNPG 上 max_slot_wal_keep_size=-1 会涨到盘满）；正解是 lsn.flush.mode=connector_and_driver + 显式 heartbeat.interval.ms（3.6.1 起前者会自动开 10 分钟心跳），加心跳前若 Kafka 有 ACL 须先放行 topic；集群重建后这两个键必须跟着连接器定义走，且要有 restart_lsn 差的告警——2026-09-23 在新集群零告警回归过
 ---
 
 # CDC 一切正常，却在悄悄撑爆 WAL
@@ -148,6 +148,20 @@ B=10.10.21.172:9092; CC=/etc/kafka/admin.properties   # pigsty-admin，SASL_SSL
 - `restart_lsn` 侧的 240 MB 滞留要等 checkpoint 回收，不会立刻归零；判断是否修好看
   `confirmed` 差值是否为 0，不看 `retained`。
 - **现状订正（2026-09-03）**：策展投影唯一定义是 `products.search_catalog`，由 Debezium → Kafka → Elasticsearch Sink 搬运；`tools/search-indexer` 已删除。事故当时「两条链并存但文档只写一条」的症状保留在此，用于提醒盘点时分别核对领域事件链与 CDC 行投影链。
+
+**2026-09-23 在新集群（CNPG）上回归了一次，三点新发现**
+
+- **配置没有跟着迁移。** 集群重建后连接器定义搬到 kubernetes 仓 `components/kafka/cdc/ecommerce-postgres-source.yaml`，
+  `lsn.flush.mode` 没带过去；CNPG 默认 `max_slot_wal_keep_size=-1`（无上限），所以不会像 Pigsty 那样 43 天后作废槽，
+  而是**一直涨到 10Gi 盘满**。发现时 `restart` 差 167 MB、6h 峰值 335 MB、`pg_wal` 433 MB，且**零告警**——
+  上次是 Pigsty 的类别错误规则误打误撞抓到的，CNPG 上没有对应规则。现已加 vmalert `ecommerce-cdc.yml`：
+  `cnpg_pg_replication_slots_pg_wal_lsn_diff > 256MB for 30m`（CNPG 内置 collector 算的是 `restart_lsn` 差，
+  正是 WAL 真被钉住的量）+ 槽 inactive + 指标缺失三条。
+- **Debezium 3.6.1 起 `connector_and_driver` 会自动把 heartbeat 设成 10 分钟**（dbz#1605，启动日志有 WARN
+  `heartbeat.interval.ms was internally set to 600000`）。位点只在心跳触发 offset commit 后推进，所以改完
+  4 分钟内看不到变化不是没生效。显式 `heartbeat.interval.ms=60000` 让它 1 分钟内可观测。
+- **`restart_lsn` 不会立刻跟 `confirmed_flush_lsn` 走**：confirmed 归 0 后 restart 还停在旧位置，
+  手动 `CHECKPOINT` 或等自然 checkpoint 后才追上（实测 167 MB → 56 字节）。判修好看 confirmed；判告警看 restart。
 
 **排查捷径**
 
