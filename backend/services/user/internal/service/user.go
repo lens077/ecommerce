@@ -36,18 +36,8 @@ func (s *UserService) SignIn(ctx context.Context, c *connect.Request[v1.SignInRe
 			State: c.Msg.State,
 		},
 	)
-	if err != nil { // 根据业务错误类型映射状态码
-		switch {
-		case errors.Is(err, biz.ErrUserAlreadyExists):
-			return nil, connect.NewError(connect.CodeAlreadyExists, err)
-		case errors.Is(err, biz.ErrAuthFailed):
-			return nil, connect.NewError(connect.CodeInternal, err)
-		case errors.Is(err, biz.ErrUserNotFound):
-			return nil, connect.NewError(connect.CodeNotFound, err)
-		default:
-			// 可以在这里包装一个具体的 Unknown 描述，或者直接返回
-			return nil, connect.NewError(connect.CodeUnknown, err)
-		}
+	if err != nil {
+		return nil, userError(err)
 	}
 
 	response := &v1.SignInResponse{
@@ -67,11 +57,7 @@ func (s *UserService) UserProfile(ctx context.Context, req *connect.Request[v1.U
 		biz.GetUserProfileRequest{Name: userName},
 	)
 	if err != nil {
-		// // 映射为 404 Not Found
-		if errors.Is(err, biz.ErrUserNotFound) {
-			return nil, connect.NewError(connect.CodeNotFound, err)
-		}
-		return nil, err
+		return nil, userError(err)
 	}
 
 	response := &v1.UserProfileResponse{
@@ -174,4 +160,21 @@ func (s *UserService) UserProfile(ctx context.Context, req *connect.Request[v1.U
 	}
 
 	return connect.NewResponse(response), nil
+}
+
+// userError 把 biz 哨兵错误映射为 RPC 错误码（docs/design/platform/error-handling.md 第 3 条），
+// SignIn 与 UserProfile 共用一处。2026-09-23 修正前：ErrAuthFailed（Casdoor invalid_grant，即授权码
+// 无效或过期）被映射成 internal，调用方的错误输入按「rpc system error」报 ERROR；
+// UserProfile 除 not_found 外原样返回，记成 unknown。
+func userError(err error) error {
+	switch {
+	case errors.Is(err, biz.ErrUserNotFound):
+		return connect.NewError(connect.CodeNotFound, err)
+	case errors.Is(err, biz.ErrUserAlreadyExists):
+		return connect.NewError(connect.CodeAlreadyExists, err)
+	case errors.Is(err, biz.ErrAuthFailed):
+		return connect.NewError(connect.CodeUnauthenticated, err)
+	default:
+		return connect.NewError(connect.CodeUnknown, err)
+	}
 }

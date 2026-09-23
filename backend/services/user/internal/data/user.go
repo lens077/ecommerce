@@ -4,6 +4,7 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"net"
 
 	"github.com/casdoor/casdoor-go-sdk/casdoorsdk"
 	"github.com/lens077/ecommerce/backend/services/user/internal/biz"
@@ -35,6 +36,11 @@ func (u userRepo) SignIn(_ context.Context, req biz.SignInRequest) (*biz.SignInR
 	}
 	token, err := u.auth.GetOAuthToken(req.Code, req.State)
 	if err != nil {
+		// 连不上 Casdoor 是依赖故障，不能包成 ErrAuthFailed：那会被映射成 unauthenticated，
+		// 把 Casdoor 宕机伪装成「用户授权码无效」。只有 Casdoor 回了响应、明确拒绝时才算认证失败。
+		if isTransportError(err) {
+			return nil, fmt.Errorf("casdoor get oauth token: %w", err)
+		}
 		return nil, fmt.Errorf("%w: casdoor get oauth token err: %w", biz.ErrAuthFailed, err)
 	}
 	u.l.Debug(token.AccessToken)
@@ -157,4 +163,14 @@ func (u userRepo) GetUserProfile(ctx context.Context, req biz.GetUserProfileRequ
 			// 其他字段
 		},
 	}, nil
+}
+
+// isTransportError 判断错误是否发生在与 Casdoor 的通信层（网络不可达、超时、取消）。
+// oauth2 把 HTTP 4xx 的拒绝（invalid_grant 等）以 *oauth2.RetrieveError 返回，它不是 net.Error；
+// 这里不直接依赖 oauth2 的类型，只识别「没有拿到 Casdoor 的响应」这一类。
+func isTransportError(err error) bool {
+	var netErr net.Error
+	return errors.As(err, &netErr) ||
+		errors.Is(err, context.DeadlineExceeded) ||
+		errors.Is(err, context.Canceled)
 }
