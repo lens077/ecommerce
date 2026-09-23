@@ -16,13 +16,13 @@ frontend/
 
 ### apps
 
-| app             | 端口 | 说明                                                  | 启动                                         |
-| --------------- | ---- | ----------------------------------------------------- | -------------------------------------------- |
-| `consumer`      | 3000 | 消费者端：商品、购物车、下单、地址、订单              | `pnpm dev`                                   |
-| `merchant`      | 3002 | 商家端：店铺、商品、订单、报表                        | `pnpm dev:merchant`                          |
-| `admin`         | 3003 | 管理端：用户、商家、品类、报表                        | `vp run admin#dev`                           |
-| `consumer-next` | 3004 | Next.js 消费者端；独立于 Vite consumer app            | `pnpm --filter @ecommerce/consumer-next dev` |
-| `desktop`       | —    | Tauri 壳，按配置文件套在 consumer / merchant 之一外面 | `pnpm desktop`                               |
+| app             | 端口 | 说明                                                  | 启动                                        |
+| --------------- | ---- | ----------------------------------------------------- | ------------------------------------------- |
+| `consumer`      | 3000 | 消费者端：商品、购物车、下单、地址、订单              | `vp run -F consumer dev`                    |
+| `merchant`      | 3002 | 商家端：店铺、商品、订单、报表                        | `vp run -F merchant dev`                    |
+| `admin`         | 3003 | 管理端：用户、商家、品类、报表                        | `vp run -F admin dev`                       |
+| `consumer-next` | 3004 | Next.js 消费者端；独立于 Vite consumer app            | `vp run -F @ecommerce/consumer-next dev`    |
+| `desktop`       | —    | Tauri 壳，按配置文件套在 consumer / merchant 之一外面 | `vp run -F @ecommerce/desktop dev:consumer` |
 
 workspace 当前有 5 个 app。`desktop` 不是独立的页面应用，而是 Rust 侧的窗口 + 系统能力，页面仍然来自
 `consumer` / `merchant` 的 dev server（config app 已随配置中心迁出）。所以这两个 app 的
@@ -69,18 +69,19 @@ workspace 当前有 5 个 app。`desktop` 不是独立的页面应用，而是 R
 ## 命令
 
 ```bash
-pnpm i             # 安装；prepare 会跑 vp config 装 git 钩子
-pnpm dev           # consumer，端口 3000
-vp run -r build    # 构建 admin、consumer、consumer-next、merchant；desktop 需单独构建
-pnpm ready         # vp fmt && vp lint && vp run -r test && vp run -r build，提 PR 前跑它
+vp install              # 安装；prepare 会跑 vp config 装 git 钩子
+vp run -F consumer dev   # consumer，端口 3000
+vp run -r build          # 构建 admin、consumer、consumer-next、merchant；desktop 需单独构建
+vp run -F @ecommerce/desktop dev:merchant  # desktop merchant，端口由 Tauri 配置决定
+vp run -w ready          # vp fmt && vp lint && vp run -r test && vp run -r build，提 PR 前跑它
 ```
 
 根目录没有 `build` script，因此不要在 `frontend/` 直接运行 `pnpm build`；全仓 Web 构建使用 `vp run -r build`。
-`desktop` 不参与这个递归任务，按目标平台单独运行 `pnpm --filter @ecommerce/desktop build:consumer` 或
-`pnpm --filter @ecommerce/desktop build:merchant`。
+`desktop` 不参与这个递归任务，按目标平台单独运行 `vp run -F @ecommerce/desktop build:consumer`（consumer）或
+`vp run -F @ecommerce/desktop build:merchant`（merchant）。
 
-单独跑某个包的任务用 `vp run <包名>#<任务>`，全仓递归用 `vp run -r <任务>`。
-注意 `-r` 要放在任务名**前面**，`vp run test -r` 会报 `Task "test" not found`。
+单独跑某个包的任务用 `vp run -F <包名> <任务>`，全仓递归用 `vp run -r <任务>`。
+`-F` 用于筛选 workspace package；`-r` 要放在任务名**前面**，`vp run test -r` 会报 `Task "test" not found`。
 
 ## 工具链
 

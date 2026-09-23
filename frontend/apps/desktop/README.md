@@ -5,10 +5,10 @@ consumer / merchant 两个前端应用共用的 Tauri 2 桌面外壳。
 这里**不放前端代码** —— 窗口加载的是 `apps/{consumer,merchant}` 的 dev server 或 `dist` 产物。
 一份 Rust crate（`src-tauri/`）+ 两份配置覆盖层，产出两个独立的桌面 App：
 
-| 命令                                   | 加载的应用            | dev 端口 | bundle identifier        |
-| -------------------------------------- | --------------------- | -------- | ------------------------ |
-| `pnpm dev:consumer` / `build:consumer` | `@ecommerce/consumer` | 3000     | `com.ecommerce.consumer` |
-| `pnpm dev:merchant` / `build:merchant` | `@ecommerce/merchant` | 3002     | `com.ecommerce.merchant` |
+| 命令                                                           | 加载的应用            | dev 端口 | bundle identifier        |
+| -------------------------------------------------------------- | --------------------- | -------- | ------------------------ |
+| `vp run -F @ecommerce/desktop dev:consumer` / `build:consumer` | `@ecommerce/consumer` | 3000     | `com.ecommerce.consumer` |
+| `vp run -F @ecommerce/desktop dev:merchant` / `build:merchant` | `@ecommerce/merchant` | 3002     | `com.ecommerce.merchant` |
 
 `src-tauri/tauri.conf.json` 是公共层，`tauri.<product>.conf.json` 只覆盖
 `productName / identifier / build / 窗口`。
@@ -24,14 +24,20 @@ source "$HOME/.cargo/env"
 ## 常用操作
 
 ```bash
-# 起桌面端（会自动拉起对应 app 的 vite dev server）
-pnpm --filter @ecommerce/desktop dev:consumer
+# 起 consumer 桌面端（会自动拉起对应 app 的 vite dev server）
+vp run -F @ecommerce/desktop dev:consumer
 
-# 出包，产物在 src-tauri/target/release/bundle/
-pnpm --filter @ecommerce/desktop build:consumer
+# 起 merchant 桌面端
+vp run -F @ecommerce/desktop dev:merchant
+
+# 出 consumer 包，产物在 src-tauri/target/release/bundle/
+vp run -F @ecommerce/desktop build:consumer
+
+# 出 merchant 包
+vp run -F @ecommerce/desktop build:merchant
 
 # 按项目 logo 重新生成整套图标
-pnpm --filter @ecommerce/desktop icon path/to/logo.png
+vp run -F @ecommerce/desktop icon -- path/to/logo.png
 ```
 
 ## 桌面端特有行为

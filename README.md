@@ -143,11 +143,11 @@ Structure, package-splitting principles, the app directory responsibilities, and
 
 | app        | Port | Notes                                     | Start                |
 | ---------- | ---- | ----------------------------------------- | -------------------- |
-| `consumer` | 3000 | Products / cart / address partially usable; the order / payment / inventory loop is not complete | `pnpm dev` |
-| `merchant` | 3002 | Merchant routes and login shell; very little business API wiring | `pnpm dev:merchant` |
-| `admin` | 3003 | Admin routes and login shell; very little business API wiring | `vp run admin#dev` |
-| `consumer-next` | 3004 | Next.js consumer app; runtime verification is separate from the Vite consumer app | `pnpm --filter @ecommerce/consumer-next dev` |
-| `desktop` | — | Tauri 2 shell that can wrap consumer or merchant | `pnpm desktop` / `pnpm desktop:merchant` |
+| `consumer` | 3000 | Products / cart / address partially usable; the order / payment / inventory loop is not complete | `vp run -F consumer dev` |
+| `merchant` | 3002 | Merchant routes and login shell; very little business API wiring | `vp run -F merchant dev` |
+| `admin` | 3003 | Admin routes and login shell; very little business API wiring | `vp run -F admin dev` |
+| `consumer-next` | 3004 | Next.js consumer app; runtime verification is separate from the Vite consumer app | `vp run -F @ecommerce/consumer-next dev` |
+| `desktop` | — | Tauri 2 shell that can wrap consumer or merchant | `vp run -F @ecommerce/desktop dev:consumer` / `dev:merchant` |
 
 Shared packages: `api` (Connect transport and interceptors), `configs`, `constants`, `copilot`,
 `i18n`, `icons`, `lantern`, `perf` (Web Vitals performance monitoring), `tauri` (desktop glue),
@@ -155,10 +155,13 @@ Shared packages: `api` (Connect transport and interceptors), `configs`, `constan
 
 ```bash
 cd frontend
-pnpm i        # prepare runs vp config to install git hooks (core.hooksPath points to frontend/.vite-hooks/_)
-pnpm dev             # consumer, port 3000
-vp run -r build      # build admin, consumer, consumer-next, and merchant; desktop is separate
-pnpm ready           # vp fmt && vp lint && vp run -r test && vp run -r build; run it before opening a PR
+vp install   # prepare runs vp config to install git hooks (core.hooksPath points to frontend/.vite-hooks/_)
+vp run -F consumer dev                 # consumer, port 3000
+vp run -F merchant dev                 # merchant, port 3002
+vp run -F admin dev                    # admin, port 3003
+vp run -F @ecommerce/consumer-next dev # consumer-next, port 3004
+vp run -r build                        # build admin, consumer, consumer-next, and merchant; desktop is separate
+vp run -w ready                        # vp fmt && vp lint && vp run -r test && vp run -r build; run it before opening a PR
 ```
 
 Toolchain note: vite-plus (`vp`) is a single package that provides the dev server, build, test (vitest), lint (oxlint),
