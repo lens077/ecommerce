@@ -166,7 +166,7 @@ todo-spec: 1
 
 #### P2
 
-- [ ] **待复验 · 观测链自身健康**：CES 巡检、Gatus 和采集器补/核验 dead-man 新鲜度告警；2026-09-23 broker 滚动致 Debezium task FAILED（connector 仍 RUNNING）：Gatus `cdc-source-task` 约 1 分钟先红，vmalert `CDCSlotInactive`（`for: 10m`）在 +10 分钟 firing——现有规则已覆盖这类「task 死、槽失活」；原设想的「slot restart_lsn − Connect offset」差值告警只对「task 活着但位点分叉」有增量价值，且需要 Debezium JMX 指标（Connect CR 未配 `metricsConfig`），暂不做（`context/project/ecommerce/events/experience/debezium-offset-behind-slot-after-broker-roll.md`）；CDC 槽位点/task/lag 已有恢复记录，不重复列「全部缺失」，但迁移后持续覆盖仍需核对。
+- [ ] **待复验 · 观测链自身健康**：CES 巡检、Gatus 和采集器补/核验 dead-man 新鲜度告警；2026-09-23 broker 滚动致 Debezium task FAILED（connector 仍 RUNNING）：Gatus `cdc-source-task` 约 1 分钟先红，vmalert `CDCSlotInactive`（`for: 10m`）在 +10 分钟 firing——现有规则已覆盖这类「task 死、槽失活」；同日晚已给 Connect CR 配 `metricsConfig`（kubernetes 仓 `components/kafka/cdc/connect-metrics-configmap.yaml`），新增 `CDCConnectTaskNotRunning`(2m)/`CDCDebeziumDisconnected`(3m)/`CDCDebeziumLagHigh` 直接看 task 状态与 Debezium 连接，比槽失活快 8 分钟；「restart_lsn − Connect offset」差值本身仍没有指标可算（Connect offset 不在 JMX 里），用 `Connected` + `MilliSecondsBehindSource` 替代（`context/project/ecommerce/events/experience/debezium-offset-behind-slot-after-broker-roll.md`）；CDC 槽位点/task/lag 已有恢复记录，不重复列「全部缺失」，但迁移后持续覆盖仍需核对。
 - [ ] **待复验 · 日志出口与配置**：核对 SDK `/v1/logs` 的旧 401 是否仍存在；统一 endpoint/header/TLS 与 exporter 开关，删除无代码消费的环境变量，确认 stdout/Vector 与应用 OTLP 各自入库。
 - [ ] **未完成 · 部署关联与观测恢复**：采集部署 marker/变更维度；按 TECH.md 外置观测目标验证存储备份/恢复及单点风险，不将 node3 进程外置等同于物理故障域隔离。
 
@@ -215,7 +215,7 @@ todo-spec: 1
 #### P1
 
 - [ ] **部分完成 · 原生 DNS 收敛**：生产已关闭十服务 Consul 注册、网关 direct Service 路由已接；清理生产遗留 Consul 配置与就绪依赖，pre 按 Compose 目标补齐。保留开发按需注册不等于生产继续依赖 Consul；卸载需另行授权。
-- [ ] **部分完成 · Config Center 环境与 token 收尾**：Config Center 已于 2026-09-23 部署到 k1/k2/k3（ns `config-center`，接 CNPG/Dragonfly/集群内 VM，`config` schema 数据完好，Pangolin `config(-api).apikv.com` 已建），operator token 已签、`harvest --env dev` 已写 10 服务 bootstrap（PG/Redis/ES 指向 Pangolin 入口），Mac 经 `config-api.apikv.com` 实测可拉——remote-dev 闭环；三条 L4 入口（`pg-dev:30001`/`redis-dev:30005`/`kafka-dev:30004`）与 `argocd.apikv.com` 已于 2026-09-23 建好并协议级实测，部署后跑 `config-center-harvest.sh --env dev --strategy remote-dev` 即闭环；单源 selector 和独立 Machine Token 已接；核对实际 pre/prod 环境，legacy token 命中连续 7 天为零后删除回退，结合 GitOps 验收，不能沿用旧「全读 dev」快照。
+- [ ] **部分完成 · Config Center 环境与 token 收尾**：Config Center 已于 2026-09-23 部署到 k1/k2/k3（ns `config-center`，接 CNPG/Dragonfly/集群内 VM，`config` schema 数据完好，Pangolin `config(-api).apikv.com` 已建），operator token 已签、`harvest --env dev` 已写 10 服务 bootstrap（PG/Redis/ES 指向 Pangolin 入口），Mac 经 `config-api.apikv.com` 实测可拉，且 Mac 上 `psql`（verify-ca，TLSv1.3，错密码拒绝）与 `redis-cli`（CA+SNI，`PONG`，错密码 WRONGPASS，无 CA 握手失败）按 bootstrap 里的值直连通过——remote-dev 闭环；三条 L4 入口（`pg-dev:30001`/`redis-dev:30005`/`kafka-dev:30004`）与 `argocd.apikv.com` 已于 2026-09-23 建好并协议级实测，部署后跑 `config-center-harvest.sh --env dev --strategy remote-dev` 即闭环；单源 selector 和独立 Machine Token 已接；核对实际 pre/prod 环境，legacy token 命中连续 7 天为零后删除回退，结合 GitOps 验收，不能沿用旧「全读 dev」快照。
 - [ ] **部分完成 · 推荐链路**：建表与 item 同步已有记录；核对 Config Center 中 product/behavior 的现行 endpoint/API key，真实跑通 Track/Recommend/SimilarItems。密钥通过管理入口写入，不绕过只读 Machine Token 直写数据库。
 - [ ] **部分完成 · OpenFGA 部署依赖残留**：2026-09-22 已在新集群按 `DEPENDS_ON=postgres`（CNPG `pg-main` 独立库 `openfga`）重装，`examples/smoke.sh` store→model→tuple→check 通过；旧 `openfga.pgdump` 为空无需恢复。剩：`ADDON_OPENFGA` 在 `config.hosting.env` 已开，重装路径整体演练待做。
 

@@ -63,5 +63,6 @@ ES sink 是 `write.method=INSERT` + `key.ignore=false`（external version = offs
   改完 Kafka/Connect 后**必看 task 列**，不看 Ready。
 - 告警时序（实测）：Gatus `cdc-source-task`（`[BODY].tasks[0].state == RUNNING`）约 1 分钟先红；vmalert `CDCSlotInactive`
   （`cnpg_pg_replication_slots_active == 0`，`for: 10m`）在 +10 分钟 firing。现有规则**已覆盖**这类「task 死 → 槽失活」，
-  「restart_lsn − Connect offset」差值告警只对「task 活着但位点分叉」有增量价值，且要先给 Connect CR 配 `metricsConfig`
-  暴露 Debezium JMX 指标，暂不做。
+  同日晚已给 Connect CR 配 `metricsConfig` 暴露 JMX：`kafka_connect_connector_task_status`、`debezium_metrics_connected`、
+  `debezium_metrics_millisecondsbehindsource`，对应 vmalert `CDCConnectTaskNotRunning`(2m)/`CDCDebeziumDisconnected`(3m)/`CDCDebeziumLagHigh`。
+  「restart_lsn − Connect offset」差值本身没有指标可算（Connect offset 不在 JMX 里），用上面三条替代。
