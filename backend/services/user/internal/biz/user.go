@@ -2,7 +2,7 @@ package biz
 
 import (
 	"context"
-	"errors"
+	"github.com/lens077/go-connect-kit/errinfo"
 
 	"github.com/casdoor/casdoor-go-sdk/casdoorsdk"
 
@@ -12,9 +12,9 @@ import (
 )
 
 var (
-	ErrUserAlreadyExists = errors.New("[user] user already exists")
-	ErrUserNotFound      = errors.New("[user] user not found")
-	ErrAuthFailed        = errors.New("[user] authentication failed")
+	ErrUserAlreadyExists = errinfo.New("USER_ALREADY_EXISTS", "[user] user already exists")
+	ErrUserNotFound      = errinfo.New("USER_NOT_FOUND", "[user] user not found")
+	ErrAuthFailed        = errinfo.New("AUTH_FAILED", "[user] authentication failed")
 )
 
 type (

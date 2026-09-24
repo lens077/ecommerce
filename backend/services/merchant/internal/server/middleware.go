@@ -4,6 +4,7 @@ import (
 	"connectrpc.com/connect"
 	"connectrpc.com/otelconnect"
 	confv1 "github.com/lens077/ecommerce/backend/services/merchant/internal/conf/v1"
+	"github.com/lens077/go-connect-kit/rpcobs"
 	"go.uber.org/fx"
 	"go.uber.org/zap"
 )
@@ -20,7 +21,7 @@ var MiddlewareModule = fx.Module("server.middleware",
 
 func NewConnectOptions(
 	logger *zap.Logger,
-	logging *LoggingInterceptor,
+	logging *rpcobs.Interceptor,
 	observability *confv1.Observability,
 ) []connect.HandlerOption {
 	var interceptors []connect.Interceptor

@@ -56,6 +56,8 @@ Prometheus 与 OpenTelemetry 不是竞争关系：本仓用 OTel 统一应用侧
 | p50/p95/p99 延迟 | p99 单独恶化 → 查慢查询/GC/锁;整体抬升 → 查依赖服务,用 trace 下钻 |
 | 错误率(`rpc.code` 维度) | 突升即告警。⚠️ 口径注意:成功记 `"ok"` 的修复**只落在日志侧,metrics 实况并非如此**(实测见 `面板设计.md` §实测口径)——面板与告警一律按 `面板设计.md` 的实测口径写,不要按本行早期说法 |
 | 状态码/错误码分布 | 区分是客户端错(4xx/invalid_argument)还是服务端错(5xx/internal),定位责任边界 |
+| 业务 reason 分布(`rpc.server.errors{error.reason}`,kit `rpcobs`) | 错误码只有 14 个;reason 告诉你是哪条业务规则拦下的。某个 reason 突增 → 查对应规则的上游输入;服务侧错误 reason 多为 `UNSPECIFIED`,改看日志 `error.origin` 找抛错行 |
+| 兜底码 `unknown` 占比 | 代码债信号而非事故:占比高 = 有错误路径没被 service 层映射,补 `errors.Is` 分支或 errinfo reason |
 
 ### 3.2 Go 运行时(RED 之下第一层怀疑对象)
 

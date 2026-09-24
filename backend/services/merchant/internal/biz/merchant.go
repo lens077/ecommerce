@@ -2,14 +2,14 @@ package biz
 
 import (
 	"context"
-	"errors"
+	"github.com/lens077/go-connect-kit/errinfo"
 	"time"
 
 	"github.com/lens077/ecommerce/backend/constants"
 )
 
 var (
-	ErrApplicationIdNotFound = errors.New("[Merchant] application_id not found")
+	ErrApplicationIdNotFound = errinfo.New("APPLICATION_ID_NOT_FOUND", "[Merchant] application_id not found")
 )
 
 type (

@@ -3,13 +3,13 @@ package biz
 import (
 	"context"
 	"encoding/json"
-	"errors"
+	"github.com/lens077/go-connect-kit/errinfo"
 
 	"github.com/google/uuid"
 	"github.com/lens077/ecommerce/backend/constants"
 )
 
-var ErrInvalidCartStatus = errors.New("invalid cart status")
+var ErrInvalidCartStatus = errinfo.New("INVALID_CART_STATUS", "invalid cart status")
 
 type (
 	AddProductToCartRequest struct {

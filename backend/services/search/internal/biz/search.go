@@ -2,13 +2,13 @@ package biz
 
 import (
 	"context"
-	"errors"
+	"github.com/lens077/go-connect-kit/errinfo"
 )
 
 var (
-	ErrNotFound = errors.New("[Search] product not found")
+	ErrNotFound = errinfo.New("NOT_FOUND", "[Search] product not found")
 	// ErrSearchUnavailable 搜索后端（Elasticsearch）不可用。搜不到结果不是错误，返回空列表。
-	ErrSearchUnavailable = errors.New("[Search] search backend unavailable")
+	ErrSearchUnavailable = errinfo.New("SEARCH_UNAVAILABLE", "[Search] search backend unavailable")
 )
 
 type Product struct {

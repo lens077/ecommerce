@@ -2,7 +2,7 @@ package domain
 
 import (
 	"context"
-	"errors"
+	"github.com/lens077/go-connect-kit/errinfo"
 	"time"
 
 	"github.com/google/uuid"
@@ -13,16 +13,16 @@ import (
 
 // 业务错误定义
 var (
-	ErrOrderAlreadyExists = errors.New("[Order] 订单已存在")
-	ErrOrderNotFound      = errors.New("[Order] 订单不存在")
-	ErrNotOrderStatusPaid = errors.New("[Order] 只能完成已付款订单")
-	ErrOrderGroupNotFound = errors.New("[Order] 订单组不存在")
-	ErrAuthFailed         = errors.New("[Order] 身份认证失败")
-	ErrInsufficientStock  = errors.New("[Order] 库存不足")
-	ErrProductOffline     = errors.New("[Order] 商品已下架")
-	ErrAddressNotFound    = errors.New("[Order] 收货地址不存在")
-	ErrCartEmpty          = errors.New("[Order] 购物车为空")
-	ErrMerchantMismatch   = errors.New("[Order] 商家不匹配")
+	ErrOrderAlreadyExists = errinfo.New("ORDER_ALREADY_EXISTS", "[Order] 订单已存在")
+	ErrOrderNotFound      = errinfo.New("ORDER_NOT_FOUND", "[Order] 订单不存在")
+	ErrNotOrderStatusPaid = errinfo.New("NOT_ORDER_STATUS_PAID", "[Order] 只能完成已付款订单")
+	ErrOrderGroupNotFound = errinfo.New("ORDER_GROUP_NOT_FOUND", "[Order] 订单组不存在")
+	ErrAuthFailed         = errinfo.New("AUTH_FAILED", "[Order] 身份认证失败")
+	ErrInsufficientStock  = errinfo.New("INSUFFICIENT_STOCK", "[Order] 库存不足")
+	ErrProductOffline     = errinfo.New("PRODUCT_OFFLINE", "[Order] 商品已下架")
+	ErrAddressNotFound    = errinfo.New("ADDRESS_NOT_FOUND", "[Order] 收货地址不存在")
+	ErrCartEmpty          = errinfo.New("CART_EMPTY", "[Order] 购物车为空")
+	ErrMerchantMismatch   = errinfo.New("MERCHANT_MISMATCH", "[Order] 商家不匹配")
 )
 
 // 领域模型

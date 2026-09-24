@@ -1,7 +1,7 @@
 package biz
 
-import "errors"
+import "github.com/lens077/go-connect-kit/errinfo"
 
 var (
-	ErrProductNotFound = errors.New("[Product] 商品不存在")
+	ErrProductNotFound = errinfo.New("PRODUCT_NOT_FOUND", "[Product] 商品不存在")
 )

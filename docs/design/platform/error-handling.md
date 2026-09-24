@@ -6,14 +6,19 @@
 > RPC 错误码。此约定已在 user 等服务落地，是全服务通用规范；
 > service 层把下层错误码重包（如 CodeNotFound → CodeInternal）即违反本约定。
 
-1. 由biz领域模型层定义错误
+1. 由biz领域模型层定义错误，用 `errinfo.New` 同时声明稳定的业务 reason（2026-09-24 起）
 ```go
 var (
-	ErrUserAlreadyExists = errors.New("[user] user already exists")
-	ErrUserNotFound      = errors.New("[user] user not found")
-	ErrAuthFailed        = errors.New("[user] authentication failed")
+	ErrUserAlreadyExists = errinfo.New("USER_ALREADY_EXISTS", "[user] user already exists")
+	ErrUserNotFound      = errinfo.New("USER_NOT_FOUND", "[user] user not found")
+	ErrAuthFailed        = errinfo.New("AUTH_FAILED", "[user] authentication failed")
 )
 ```
+   reason 是 UPPER_SNAKE、服务内唯一、声明后不改（前端和看板按它区分）。用法与 `errors.New` 相同，
+   `errors.Is` 照常工作，service 层的映射代码不需要改：RPC 拦截器（kit `rpcobs`）沿错误链自动找到 reason，
+   写进日志与 span 的 `error.reason`、指标 `rpc.server.errors`，并以 `google.rpc.ErrorInfo` 返回客户端。
+   为什么：映射到 connect 的 14 个错误码后，`failed_precondition` 分不清是「购物车为空」还是「库存不足」。
+   未经 dbutil 的系统错误想留下抛错点，在数据层用 `errinfo.Here(err)`；dbutil 的入口已自动记录。
 2. 基础设施层（data）一律用 `%w` 包装——**业务哨兵错误与底层错误都必须保持 `errors.Is` 可穿透**，service 层全靠 `errors.Is` 做错误码映射，用 `%v` 会切断整条映射链。（2026-08-26 修正：本条旧文写「业务错误用 %v」，与下方示例代码及 `STACK.md` 相反，按示例与 STACK 的 `%w` 收敛为唯一规则。）
 ```go
 func (u userRepo) SignIn(_ context.Context, req biz.SignInRequest) (*biz.SignInResponse, error) {

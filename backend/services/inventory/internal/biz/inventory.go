@@ -2,16 +2,16 @@ package biz
 
 import (
 	"context"
-	"errors"
+	"github.com/lens077/go-connect-kit/errinfo"
 
 	"github.com/google/uuid"
 	"go.uber.org/zap"
 )
 
-var ErrInsufficientStock = errors.New("[Stock] insufficient stock")
-var ErrOrderAlreadyExists = errors.New("[Stock] order_no is exists")
-var ErrOrderNotFound = errors.New("[Stock] order_no is not found")
-var ErrOrderItemsSkuIdNotFound = errors.New("[Stock] items sku_id is not found")
+var ErrInsufficientStock = errinfo.New("INSUFFICIENT_STOCK", "[Stock] insufficient stock")
+var ErrOrderAlreadyExists = errinfo.New("ORDER_ALREADY_EXISTS", "[Stock] order_no is exists")
+var ErrOrderNotFound = errinfo.New("ORDER_NOT_FOUND", "[Stock] order_no is not found")
+var ErrOrderItemsSkuIdNotFound = errinfo.New("ORDER_ITEMS_SKU_ID_NOT_FOUND", "[Stock] items sku_id is not found")
 
 type (
 	ReserveRequest struct {
