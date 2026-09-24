@@ -20,6 +20,18 @@ export function sessionId(): string {
   return persistentId(safeStorage("session"), SESSION_KEY);
 }
 
+/**
+ * 丢弃当前的匿名标识和会话标识，下次取值时重新生成。
+ *
+ * 登出时必须调用：服务端会把「登录请求里带的 anonId」之前的匿名行为并进该用户的画像。
+ * 不换掉 anonId 的话，共享设备上下一个登录的人会沿用同一个 anonId，
+ * 前一个人登出后的浏览记录就会被并进后一个人的画像里。
+ */
+export function clearIdentity(): void {
+  safeStorage("local")?.removeItem(ANON_KEY);
+  safeStorage("session")?.removeItem(SESSION_KEY);
+}
+
 function persistentId(store: Storage | null, key: string): string {
   if (!store) return randomId();
   const existing = store.getItem(key);

@@ -86,6 +86,13 @@ useQuery({ queryKey: ["similar", spuCode], queryFn: () => similarItems(spuCode, 
 - `sessionId` 存 sessionStorage，关标签页即失效，服务端拿它给曝光去重。
 - 登录后网关会注入 `x-md-global-user-id`，服务端优先用它 —— 请求体里的 `anonId`
   是客户端可伪造的，不能覆盖网关的判断。
+  ⚠️ 现状：线上 behavior 的三个 RPC 仍在网关的 `anonymous_paths` 里，网关会剥掉身份头，
+  所以登录用户目前也只按 `anonId` 记录。control-tower 的「可选认证」路由已实现、待发版，
+  进度见 `TODO.md`「网关可选认证路由」。
+- **登出时必须调用 `tracker().resetIdentity()`**：先用旧身份发出积压事件，再换新的
+  `anonId` / `sessionId`。服务端会把登录请求带的 `anonId` 之前的匿名行为并进该用户画像，
+  不换的话共享设备上的下一个人会继承上一个人登出后的浏览记录。consumer 已在
+  `AuthProvider` 的 `logout` 里调用；新接入的应用也要在各自的登出流程里调用。
 
 Safari 隐私模式下 storage 会抛异常，此时降级成一次性 id：埋点照发，只是串不起来。
 

@@ -493,6 +493,9 @@ importers:
       '@ecommerce/tauri':
         specifier: workspace:*
         version: link:../../packages/tauri
+      '@ecommerce/tracker':
+        specifier: workspace:*
+        version: link:../../packages/tracker
       '@ecommerce/ui':
         specifier: workspace:*
         version: link:../../packages/ui

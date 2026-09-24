@@ -26,6 +26,7 @@
     "@ecommerce/lantern": "workspace:*",
     "@ecommerce/perf": "workspace:*",
     "@ecommerce/tauri": "workspace:*",
+    "@ecommerce/tracker": "workspace:*",
     "@ecommerce/ui": "workspace:*",
     "@ecommerce/utils": "workspace:*",
     "@emotion/react": "catalog:",

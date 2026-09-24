@@ -19,6 +19,7 @@ import {
 } from "@ecommerce/configs";
 import { onAuthError } from "@ecommerce/api";
 import { isTauri } from "@ecommerce/tauri";
+import { tracker } from "@ecommerce/tracker";
 import { clearSessionId, setSessionId } from "@ecommerce/utils";
 import { clearAccount, setAccount } from "@/store/users";
 
@@ -101,6 +102,10 @@ export const AuthProvider: React.FC<{ children: React.ReactNode; router: any }> 
   // 🔓 登出：两端同一条路径——一次 POST，网关删会话（即时生效）。
   // 桌面端额外清掉内存里的会话 id；Web 端的 cookie 由网关下发的 Max-Age=0 清掉。
   const logout = React.useCallback(() => {
+    // 换掉埋点的匿名身份，防止共享设备上下一个登录的人继承本人登出后的浏览记录
+    // （behavior 会把登录请求里带的 anonId 之前的匿名行为并进该用户画像）。
+    // 必须在 bffLogout 之前：积压事件此刻发出，会话 cookie 还在，仍归属当前用户。
+    tracker().resetIdentity();
     void bffLogout().finally(() => {
       clearSessionId();
       clearAccount();

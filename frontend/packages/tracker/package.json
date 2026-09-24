@@ -17,6 +17,9 @@
       "import": "./src/react.ts"
     }
   },
+  "scripts": {
+    "test": "vp test --environment=jsdom --browser.enabled=false --passWithNoTests"
+  },
   "devDependencies": {
     "@types/react": "catalog:",
     "react": "catalog:",

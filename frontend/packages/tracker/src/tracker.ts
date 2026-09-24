@@ -1,4 +1,4 @@
-import { anonId, sessionId } from "./identity";
+import { anonId, clearIdentity, sessionId } from "./identity";
 import { beaconTrack, postRecommend, postSimilarItems, postTrack } from "./transport";
 import type { EventType, RecommendResult, TrackedEvent, TrackerOptions, WireEvent } from "./types";
 import { toWire } from "./types";
@@ -208,6 +208,19 @@ export class Tracker {
     } catch {
       // 埋点是旁路，失败就算了。重新排队反而会在后端故障时越堆越多。
     }
+  }
+
+  /**
+   * 登出时调用：先把队列里属于当前身份的事件发出去，再换一套新的匿名标识。
+   *
+   * 顺序不能反。flush 在发请求之前同步读取 anonId/sessionId，
+   * 先清存储就会把登出前的行为记到新身份头上。
+   * 埋点被禁用时队列为空、不会发请求，但存储里可能还留着以前的标识，照样要清。
+   */
+  resetIdentity(): void {
+    void this.flush();
+    this.seenImpressions.clear();
+    clearIdentity();
   }
 
   /** 解绑所有监听，用于热重载或单元测试收尾。 */
