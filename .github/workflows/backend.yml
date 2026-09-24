@@ -191,7 +191,7 @@ jobs:
           git config user.name "github-actions[bot]"
           git config user.email "github-actions[bot]@users.noreply.github.com"
           git add helm/values.yaml backend/services/*/deploy/base/deployment.yaml \
-            frontend/apps/consumer/deploy/pre/deployment.yaml \
+            frontend/apps/consumer/deploy/pre/rollout.yaml \
             frontend/apps/consumer-next/deploy/base/consumer-next.yaml
           # 发版记录不进 TODO.md(它只记 TODO 项,2026-09-16 起),写进不可变归档。
           # 只在真的写过时才 add:dispatch 触发 VERSION 为空、不碰这个文件,此时把它列进 add
@@ -204,7 +204,27 @@ jobs:
           git commit -m "ci: 更新 ${SVC_LIST} 镜像 tag 至 ${TAG} [skip ci]"
           # 与后续 push 竞争时 rebase 重试；本文件只会追加改动，冲突概率极低
           for i in 1 2 3; do
-            git push && exit 0
+            git push && break
+            [[ $i -eq 3 ]] && { echo "push 重试 3 次失败" >&2; exit 1; }
             git pull --rebase
           done
-          echo "push 重试 3 次失败" && exit 1
+
+      # ArgoCD 的 source 是 GitLab main（argocd-app.yml），而本 job 回写的是 GitHub main；
+      # GitLab 免费版没有 pull mirror，不推过去 ArgoCD 永远看不到新 tag（2026-09-24 查实）。
+      # 只做 fast-forward：GitLab 若领先说明有人只推了 GitLab，让 job 红比静默分叉好。
+      # 需要 GitLab Project Access Token（scope 仅 write_repository）存为 secret GITLAB_PUSH_TOKEN。
+      - name: Push manifests to GitLab (ArgoCD source)
+        env:
+          GITLAB_PUSH_TOKEN: ${{ secrets.GITLAB_PUSH_TOKEN }}
+        run: |
+          set -euo pipefail
+          # token 未配前（TODO.md「GitOps 接管」）只告警不红：镜像与 GitHub main 已就位，缺的只是 GitLab 同步。
+          [[ -n "$GITLAB_PUSH_TOKEN" ]] || { echo "::warning title=GitLab 未同步::缺 secret GITLAB_PUSH_TOKEN，GitLab main 未更新，ArgoCD 看不到本次 tag；手动 git push origin main 对齐"; exit 0; }
+          git remote add gitlab "https://oauth2:${GITLAB_PUSH_TOKEN}@gitlab.com/sumery/ecommerce.git"
+          git fetch -q gitlab main
+          if ! git merge-base --is-ancestor gitlab/main HEAD; then
+            echo "GitLab main 有 GitHub 没有的提交，拒绝推送；先把两边手动对齐" >&2
+            git log --oneline HEAD..gitlab/main | head -20 >&2
+            exit 1
+          fi
+          git push gitlab HEAD:main

@@ -64,9 +64,10 @@ def plan_changes(root, services, environment, version, digests):
                 values, rf'(^\s+repository: "{re.escape(image)}",\n\s+tag: ")[^"]+(",)$',
                 lambda m: m[1] + pin + m[2])
         else:
-            values = replace_once(
-                values, rf'(^\s+{re.escape(chart)}: \{{\n\s+image: \{{\n\s+tag: ")[^"]+(",)$',
-                lambda m: m[1] + pin + m[2])
+            # frontend 在 image 前还有 rollouts/replicaCount；其余 chart 的 image 紧邻服务键。
+            # 以当前服务块到下一个同级服务键为边界，不能跨块误改另一个 tag。
+            block = rf'(^  {re.escape(chart)}: \{{\n(?s:(?:(?!^  [a-z][a-z-]*: \{{).)*?)^    image: \{{\n^      tag: ")[^"]+(",)$'
+            values = replace_once(values, block, lambda m: m[1] + pin + m[2])
         if environment == 'prod':
             if chart in services:
                 path = root / f'backend/services/{chart}/deploy/overlays/prod/kustomization.yaml'
@@ -86,7 +87,8 @@ def plan_changes(root, services, environment, version, digests):
             if chart in services:
                 path = root / f'backend/services/{chart}/deploy/base/deployment.yaml'
             elif chart == 'frontend':
-                path = root / 'frontend/apps/consumer/deploy/pre/deployment.yaml'
+                # 2026-09-24 起 pre 的 frontend 是 Argo Rollout（Blue-Green），Deployment 只在 overlays/prod。
+                path = root / 'frontend/apps/consumer/deploy/pre/rollout.yaml'
             else:
                 path = root / 'frontend/apps/consumer-next/deploy/base/consumer-next.yaml'
             text = replace_all_at_least_once(

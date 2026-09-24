@@ -62,9 +62,9 @@ class ReleaseTests(unittest.TestCase):
                                     capture_output=True, text=True)
             self.assertEqual(result.returncode, 0, result.stdout + result.stderr)
             path = root / 'helm/values-prod.yaml'
-            # values 是 KYAML:注入漂移要按 `  frontend: {` 这个形状,块式的 `frontend:\n` 已不存在
+            # values 是 KYAML；frontend 已有 replicaCount，直接改值才能制造可观察的渲染漂移。
             path.write_text(path.read_text().replace(
-                '  frontend: {\n', '  frontend: {\n    replicaCount: 7,\n'))
+                '    replicaCount: 1,\n', '    replicaCount: 7,\n', 1))
             result = subprocess.run(['bash', 'scripts/verify-deploy-parity.sh', 'prod'], cwd=root,
                                     capture_output=True, text=True)
             self.assertEqual(result.returncode, 1, result.stdout + result.stderr)
