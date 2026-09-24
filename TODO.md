@@ -153,6 +153,7 @@ todo-spec: 1
 
 #### P0
 
+- [ ] **未完成 · 告警送不到人**：2026-09-24 实测集群重建后 Secret `observability/alert-bridge-ntfy` 的 `NTFY_URL` 为空，alert-bridge `/healthz` 报 `ntfy:false`，24h 内所有告警只写桥日志（`ntfy not configured`）不推手机——包括正在 firing 的 critical `CNPGBackupStale`（pg-main 从未有可用备份，见「数据恢复与重装」）。补 ntfy 凭据：本机 `~/.local/state/k8s-installer/creds/` 下没有 `ntfy.env` 与 `bugsink-bridge-token`，**不要在本机直接跑 `components/alert-bridge/install.sh`**——它会用空值覆盖 Secret 并轮换 Bugsink webhook token；补上凭据后注入测试告警，验证手机收到且点通知能打开 Grafana（`Click` 路径目前走不到）。
 - [ ] **待复验 · 敏感日志端到端脱敏**：旧 Lua 缺陷所属采集器已退役，不再修旧管道。对当前 stdout/Vector 与 SDK OTLP 两条链路注入合成手机号、邮件、token、支付表单样本，确认原文字段不旁路入库；按 TECH.md 收敛到外置 Collector。
 
 #### P1
@@ -168,7 +169,7 @@ todo-spec: 1
 - [ ] **待复验 · 网关遥测**：源码已用 kit 的 ParentBased 采样，旧 AlwaysSample 修复项删除；验证真实 5xx 的 span/log 状态、网关上游时延与尾采样效果，不沿用已删除旧网关的行号结论。
 - [ ] **未完成 · 前端 RUM 与后端关联**：consumer 已接 `initPerf`，补 `traceparent`/Server-Timing 关联与 merchant/admin 的适用接入；Umami 不替代性能追踪。
 - [ ] **部分完成 · 看板和标签**：DB 错误率分母已修；剩节点覆盖阈值按当前采集对象校准、网关时延图、`service.namespace`/实例标签及 `rpc.code` 回归，按上下文组织四黄金信号；兜底码 `unknown` 占比面板与 warning（kubernetes 仓 `EcommerceUnknownErrorShareHigh`）已上线；dev 数据回放显示 address/cart/inventory/product 的服务侧错误 100% 是 unknown，该补映射。看板尚未区分环境：dev 与 pre 指标同在一个 VM，APM 盘要加 `$env` 变量（按 `deployment_environment_name`）。
-- [ ] **未完成 · SLO 与定位验收**：落 gateway/user/order/cart SLO 和错误预算；授权演练中验证告警至 Grafana/trace 定位不超过 5 分钟——2026-09-24 核实：vmalert 原有 39 条规则**没有一条应用层错误率告警**（面板设计.md A1 迁移时丢失）。已在 kubernetes 仓补 `ecommerce-app.yml`（错误率 A1、unknown 占比、RPC 指标缺失兜底），每条带 `dashboard`/`logs_query` annotation，alert-bridge 把 `dashboard` 转成 ntfy `Click`；vmalert `-dryRun` 与 LogsQL 已在现网校验；规则排除 `deployment_environment_name="dev"`——本地开发机经公网 OTLP 入口写进同一个 VM，不排除时 24h 回放里 7 个 dev 服务会触发 critical。剩：注入故障演练。P50/P95/P99 基线并入容量压测，不把一次冷请求当结论。
+- [ ] **未完成 · SLO 与定位验收**：落 gateway/user/order/cart SLO 和错误预算；授权演练中验证告警至 Grafana/trace 定位不超过 5 分钟——2026-09-24 核实：vmalert 原有 39 条规则**没有一条应用层错误率告警**（面板设计.md A1 迁移时丢失）。已在 kubernetes 仓补 `ecommerce-app.yml`（错误率 A1、unknown 占比、RPC 指标缺失兜底），每条带 `dashboard`/`logs_query` annotation，alert-bridge 把 `dashboard` 转成 ntfy `Click`（指向公网 Grafana Explore 并预填该服务的错误查询——三张看板在重建后的 Grafana 里不存在，且生成的 JSON 仍含退役数据源，重建看板后可改回看板链接）；vmalert `-dryRun` 与 LogsQL 已在现网校验；规则排除 `deployment_environment_name="dev"`——本地开发机经公网 OTLP 入口写进同一个 VM，不排除时 24h 回放里 7 个 dev 服务会触发 critical。已部署（vmalert 42 条规则 health 全 ok）。剩：注入故障演练（先修上面的「告警送不到人」）。P50/P95/P99 基线并入容量压测，不把一次冷请求当结论。
 
 #### P2
 
