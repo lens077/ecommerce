@@ -15,8 +15,7 @@
 > 🔁 **DDL / proto / Go 声明不要手抄进设计文档**：用 `<!-- embed: <源路径> <选择器> -->` 指令标出来，
 > 由 [`scripts/doc-embed.py`](../../scripts/doc-embed.py) 从迁移/proto/Go 源重写代码块（写法见脚本头注释，
 > 样例见 [order/schema.md](order/schema.md)）；`verify-context.sh` 的 [EMBED] 门禁比对投影与源，
-> 改了源就重跑脚本。2026-09-03 清点 523 个文档代码块，product/order/payment/inventory/cart
-> 五个域的 DDL/proto 摘录名字都已对不上源码，清单在 `.scratch/doc-code-block-inventory-2026-09-03.md`。
+> 改了源就重跑脚本。
 
 ## 目录
 

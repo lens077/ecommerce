@@ -27,7 +27,7 @@ description: 前端数据拉取的唯一写法——connect-query 直接吃 prot
 | 写操作 | `useMutation(Service.method.xxx)` | [1](#1-数据拉取一律走-connect-query) |
 | transport | 全 app **一个实例**，由 `TransportProvider` 下发 | [2](#2-transport-必须唯一) |
 | 写完刷新 | `createConnectQueryKey({ schema, cardinality: "finite" })` | [3](#3-失效用-createconnectquerykey手写字符串-key-一律不收) |
-| 报错 | `toAppError(error)` + `ErrorHandler` | [4](#4-错误一律过-toapperror) |
+| 报错 | `toAppError(error).message` 就地展示 | [4](#4-错误一律过-toapperror) |
 | `src/gen/` | **只读**，改 proto 再重新生成 | [5](#5-srcgen-是生成物不许手改) |
 | 免鉴权接口 | 单独 transport，`options.transport` 传入 | [6](#6-免鉴权接口走独立-transport) |
 | `int64` 字段 | 传 `BigInt(...)`，读要 `.toString()` | [7](#7-int64-与-messageinitshape) |
@@ -296,28 +296,29 @@ const update = useMutation(CartService.method.updateCartItemQuantity, {
 **影响：HIGH**
 
 本仓库**没有** `formatToastErrorMessage`（那是 Redpanda 的东西），也没有全局 toast。
-统一入口是 `@ecommerce/api` 的 `toAppError()`，展示层是 `@ecommerce/ui` 的 `ErrorHandler`。
+统一入口是 `@ecommerce/api` 的 `toAppError()`，没有共享的错误展示组件：页面各自就地渲染 `toAppError(error).message`。
+
+query 失败直接在页面里渲染（`consumer/src/routes/product/$spuCode.tsx`）：
 
 ```tsx
-import { toAppError, isUnauthenticated } from "@ecommerce/api";
-import { ErrorHandler } from "@ecommerce/ui";
+import { toAppError } from "@ecommerce/api";
 
-const { data, isPending, error } = useQuery(ProductService.method.getProductDetail, { spuCode });
-
-return (
-  <ErrorHandler loading={isPending} error={error} onBack={() => router.history.back()}>
-    <ProductDetail data={data} />
-  </ErrorHandler>
-);
+if (isLoading) return <ProductSkeleton />;
+if (isError)
+  return (
+    <Typography color="error">
+      {t("product.loadFailed", { message: toAppError(error).message })}
+    </Typography>
+  );
 ```
 
-mutation 的局部报错用 `<Alert>` 就地渲染：
+mutation 的局部报错存进状态，用 `<Alert>` 就地渲染（`consumer/src/routes/checkout/index.tsx`）：
 
 ```ts
-const create = useMutation(AddressService.method.createAddress, {
-  onError: (err) => setMessage(toAppError(err).message),  // message 保证非空中文
-});
+setSubmitError(toAppError(err).message || t("checkout.submitFailed"));
 ```
+
+`message` 保证非空，但不保证是中文：服务端原始消息会原样透出，接了国际化解析器的 app 按当前语言返回。
 
 **红线**：
 
