@@ -28,7 +28,7 @@ class ReleaseTests(unittest.TestCase):
 
     def test_proto_breaking_baseline_uses_last_promoted_release(self):
         workflow = (promote.ROOT / '.github/workflows/service-ci.yml').read_text()
-        self.assertIn("yq -r '.cart.image.tag | split(\"@\")[0]' helm/values-prod.yaml", workflow)
+        self.assertIn("yq -r '.cart.image.tag | split(\"@\")[0]' ../helm/values-prod.yaml", workflow)
         self.assertNotIn("grep -vx \"${GITHUB_REF_NAME}\"", workflow)
 
     def test_both_environments_plan_all_twelve_images_without_writing(self):

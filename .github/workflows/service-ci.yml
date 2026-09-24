@@ -84,7 +84,7 @@ jobs:
           if [[ "${GITHUB_REF_TYPE}" == "tag" ]]; then
             # 只认已晋级进 prod 清单的最后成功发布。不能取“上一枚 tag”：失败的 tag 也存在，
             # 1.7.8 曾在 buf breaking 阶段失败，1.7.9 若以它为基线会把恢复兼容误判成 breaking。
-            BASE_REF=$(yq -r '.cart.image.tag | split("@")[0]' helm/values-prod.yaml)
+            BASE_REF=$(yq -r '.cart.image.tag | split("@")[0]' ../helm/values-prod.yaml)
             [[ "$BASE_REF" =~ ^[0-9]+\.[0-9]+\.[0-9]+$ ]] || {
               echo "prod 清单没有规范 semver protobuf 基线：$BASE_REF" >&2
               exit 1
