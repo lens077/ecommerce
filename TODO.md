@@ -104,6 +104,7 @@ todo-spec: 1
 #### P1
 
 - [ ] **部分完成 · GitOps 接管**：Helm/裸清单 parity、版本/digest 晋级已有实现；GitLab 来源的 `AppProject`/`ApplicationSet`/repository Secret 已 apply，`ecommerce-prod` 已生成并完成首次 live diff——54 个对象全部 `OutOfSync`，但差异**只有** ArgoCD 自身注入的 `argocd.argoproj.io/tracking-id` 注解，无字段级漂移、无需新建对象、`--orphaned` 为空，说明 GitLab `main` 的 chart 渲染与线上完全等价。剩余：执行首次 `argocd app sync`（写入 tracking-id，使状态转 `Synced`），再把 `syncPolicy.automated.enabled` 打开启用 prune/selfHeal；网关归 control-tower，不把它重复塞回本仓 chart。
+  ArgoCD CLI 走明文入口 `argocd-api.apikv.com:80 --plaintext`（Pangolin rid 66，2026-09-24 实测通），但**该资源尚未配来源访问规则**，admin 密码与 token 明文过公网——补上 remote-dev/VPN 出口 CIDR 的 ACCEPT 规则前不应长期保持开放。
 - [ ] **未完成 · 生产 default-deny**：`helm/values-prod.yaml` 仍关闭 NetworkPolicy。先核对当前内网 PG/ES/对象存储、Casdoor/gorse、DNS 与探针通路，审计模式验证后再启用；Helm 与裸清单同步。
 - [ ] **未完成 · OTLP Secret 接入 OpenBao/ESO**：prod 仍关闭 `otelAuthExternalSecret`。修正/参数化 SecretStore，确认实际键可同步后启用，不能沿用不存在的 store。
 - [ ] **部分完成 · Dragonfly 凭据传播**：旧 WRONGPASS 曾手工修复；仍需同源派生消费方 Secret/Config Center 配置、轮换后验证全部消费者，补 `/readyz` 而非仅 `/healthz` 告警，并避免认证命令里的密码进入日志。
@@ -120,7 +121,7 @@ todo-spec: 1
 - [ ] **待复验 · PG/Redis 证书续期传播**：旧记录到期日为 2026-11-25；先查实际下发证书，再人工同步副本并 reload/restart，复验 verify-full 客户端。旧 `cert-san-resign.md` 已不可定位，恢复手顺需覆盖 PG `serverAuth,clientAuth` 与 Patroni 重启要求。
 - [ ] **部分完成 · Harbor 爆破防护**：旧 jail 能检测但隧道后端按真实 IP 封禁无效；核对现行入口，优先验证账号锁定，必要时在实际公网终止点限流/封禁。验收必须证明攻击流量被拦。
 - [ ] **待复验 · 遗留运行配置**：核对 node3 Redis 网络就绪顺序、重复拉取凭据、node1 gorse 僵尸副本、cart 的 Silo endpoint 与 OTel TLS 配置；仅处理仍存在的对象，不照旧主机/端口表操作。
-- [ ] **部分完成 · KEDA/Rollouts**：控制器已装并做了行为验收（KEDA cron ScaledObject 0→2 + 生成 HPA；Rollouts 金丝雀 setWeight 50→pause→100，stableRS 切换）。业务接线仍待触发：Kafka 消费者 lag 出现真实消费者后再建 ScaledObject；灰度要先有 ≥2 副本 + PDB 的无状态服务。
+- [ ] **部分完成 · KEDA/Rollouts**：控制器已装并做了行为验收（KEDA cron ScaledObject 0→2 + 生成 HPA；Rollouts 金丝雀 setWeight 50→pause→100，stableRS 切换）。业务接线：frontend 的 pre 已切 Blue-Green Rollout（prod 仍 Deployment，Helm/裸清单等价已过门禁），待 ApplicationSet 在新集群 apply 后首次手动 sync + promote；Kafka 消费者 lag 出现真实消费者后再建 ScaledObject；后端灰度要先有 ≥2 副本 + PDB 的无状态服务。
 
 ### 零信任鉴权与Session
 
@@ -230,14 +231,14 @@ todo-spec: 1
 #### P2
 
 - [ ] **待复验 · 配置平台后续能力**：control-tower 侧重新核对审批、灰度、密钥加密和审计缺口，以及控制台构建/CRUD/回滚；不把本仓旧「尚未开始」当其当前状态。
-- [ ] **待前置 · CI 校验远端 Bootstrap**：本地已有解码/校验测试；CI 获得受限配置读取能力后，按 matrix 验证各环境配置，不向日志输出内容。
+- [ ] **待前置 · CI 校验远端 Bootstrap**：本地已有解码/校验测试与 `backend/tools/config-seed -drift`（端点对照 matrix、启用的 gorse key 非空，只输出路径与判定）；CI 获得受限配置读取能力后把它接进流水线，不向日志输出内容。
 - [ ] **待触发 · 多人开发接管**：按 TECH.md B 表的多人冲突信号评估 personal intercept；此前仅补 mirrord mirror 的 cart + 下游 DNS 验收，不自建泳道。
 
 ### 文档与协作机制
 
 仅保留影响使用与正确性的文档债，不以字数、页数或对称性制造任务。
 
-- [ ] **部分完成 · 清除过期引用与平行状态表**：归档目录已删，但 TECH.md、context 索引、DEVOPS 等仍有裸路径/空链接和旧现状叙述；Repowise 已接入只读引用漂移棘轮，新增可解析漂移会阻断，存量基线仍待逐项清债；删失效引用，设计只留目标与验收标准，状态归本文件。
+- [ ] **部分完成 · 清除过期引用与平行状态表**：归档目录已删，但 TECH.md、context 索引、DEVOPS 等仍有裸路径/空链接和旧现状叙述；`verify-context.sh` 的 `[PATH-REF]` 已拦新增的正文失效路径，存量 30 条冻结在 `scripts/context-pathref-baseline.txt` 待逐项清债（大头是已删的 `docs/todo/`、`docs/reports/`、`docs/progress-archive/` 与不存在的 `backend/pkg/testutil`）；删失效引用，设计只留目标与验收标准，状态归本文件。
 - [ ] **待核对 · SCAFFOLD 模板与容量清单**：区分新项目验收模板和本仓进度；修正内嵌旧 AGENTS 规则及不再适用的状态列，容量实施状态合并到对应任务，不复制第二套勾选表。
 - [ ] **待复验 · 术语与结构性文档债**：按当前设计纠正 GLOSSARY、STACK、README、TECH-RADAR 中的事实冲突；不再按旧行数目标机械压缩，不把仍有现行决策的 TECH-RADAR 整体降为历史档案。
 - [ ] **部分完成 · 共享 kit 演进**：基础设施抽取已完成；data 层连接池与 Redis 构建已迁入 kit `pgpool`/`redisclient` 并由 ecommerce 采用，control-tower 与模板待跟进；剩同构棘轮与存量服务 anchor/真实 `co upgrade --write` 试点。
