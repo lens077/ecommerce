@@ -51,7 +51,7 @@
         },
         containers: [{
           name: "ecommerce-behavior",
-          image: "ccr.ccs.tencentyun.com/sumery/behavior:1.7.7@sha256:bbd3752f5bc5c4bbfd432e9c423cabee1ab1c3f18b706d2f1230026d6786324d",
+          image: "ccr.ccs.tencentyun.com/sumery/behavior:1.7.13@sha256:0448867a37b22093cc7d45620b3d63a22719665bd7fa5066577bcea5b7cc411a",
           imagePullPolicy: "Always",
           env: [
             # 关闭应用内的 Log 导出器，只保留 Trace 和 Metric。

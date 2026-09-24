@@ -71,7 +71,7 @@
     port: 30001,
     image: {
       repository: "ccr.ccs.tencentyun.com/sumery/user",
-      tag: "1.7.7@sha256:2eef28b8593045235ec461436903e8ab8cea67fd955601d550a0cfc500f4b028",
+      tag: "1.7.13@sha256:c0b14a7375b0e8a0ed01112724a157e783a886db3ee265dae00b5fdced162737",
     },
   },
   search: {
@@ -81,7 +81,7 @@
     port: 30002,
     image: {
       repository: "ccr.ccs.tencentyun.com/sumery/search",
-      tag: "1.7.7@sha256:2e649117a9ca055a6d501035954f334606a052bfe772de7e8c6cf8ae45eda36b",
+      tag: "1.7.13@sha256:b9dd6676a046e4d51b0e7fe50bfafadaa35d1955d1c6581c7181871d572a6517",
     },
   },
   product: {
@@ -91,7 +91,7 @@
     port: 30003,
     image: {
       repository: "ccr.ccs.tencentyun.com/sumery/product",
-      tag: "1.7.7@sha256:f48d32073078de4d22e73c11386b2e9c2ced0d759a7de737a2ed0a3f7162955b",
+      tag: "1.7.13@sha256:b16bcc480e02b7d17e3f6ef558299ce792bb0c5d0b53dfb0b7c6cd959f57e512",
     },
   },
   order: {
@@ -101,7 +101,7 @@
     port: 30004,
     image: {
       repository: "ccr.ccs.tencentyun.com/sumery/order",
-      tag: "1.7.7@sha256:5051e8e9ad4d718e145055216b8f1c9aa80c46d06a6f62d7e3ad86ffcbff4905",
+      tag: "1.7.13@sha256:44153bf8807e3df8041a120b3ee39e18f8ddbea0ff3cf715664442300f698b55",
     },
   },
   inventory: {
@@ -111,7 +111,7 @@
     port: 30005,
     image: {
       repository: "ccr.ccs.tencentyun.com/sumery/inventory",
-      tag: "1.7.7@sha256:7e34cb24b6414161bf8b5afa7258e5c1e3f403fe4b885428aa6bfdc0132857d9",
+      tag: "1.7.13@sha256:af672c027128ad5c2f979992f4dd4f8dd4b17748a5a613350fbd1355d040a02d",
     },
   },
   cart: {
@@ -121,7 +121,7 @@
     port: 30006,
     image: {
       repository: "ccr.ccs.tencentyun.com/sumery/cart",
-      tag: "sha-4b4afd3",
+      tag: "1.7.13@sha256:189a83d3efbb95cf2858941369cc127e73e674b92094edd43021a21b8bc8f72c",
     },
   },
   merchant: {
@@ -131,7 +131,7 @@
     port: 30007,
     image: {
       repository: "ccr.ccs.tencentyun.com/sumery/merchant",
-      tag: "1.7.7@sha256:56bdbc75606866a078439f724da406af81252707a284f19a858cd12fcd27c82f",
+      tag: "1.7.13@sha256:9606be27dd0a89a04a929dfd52da77cd2b7c76ff93a410b80016dce129f44fd5",
     },
   },
   payment: {
@@ -141,7 +141,7 @@
     port: 30008,
     image: {
       repository: "ccr.ccs.tencentyun.com/sumery/payment",
-      tag: "1.7.7@sha256:f68bd8b42f8581a7edbb5a02b7eba5e0fe4e4b34a1a6b78464e8d7fdad7e29d2",
+      tag: "1.7.13@sha256:27dfb285a775f00dba6b61486201ce01d6c6b080e7250cf5a91f3b01d81a6341",
     },
   },
   address: {
@@ -151,7 +151,7 @@
     port: 30009,
     image: {
       repository: "ccr.ccs.tencentyun.com/sumery/address",
-      tag: "1.7.7@sha256:30c4c93fbb9c6ebd15b93b376832edec2e2236befdf96a44d599479db74f98a8",
+      tag: "1.7.13@sha256:80cc84fbe4a23f7e975fb9dfe0b8dacea86e5eb4519a7cbed2034d6f65df3848",
     },
   },
   behavior: {
@@ -161,7 +161,7 @@
     port: 30011,
     image: {
       repository: "ccr.ccs.tencentyun.com/sumery/behavior",
-      tag: "1.7.7@sha256:bbd3752f5bc5c4bbfd432e9c423cabee1ab1c3f18b706d2f1230026d6786324d",
+      tag: "1.7.13@sha256:0448867a37b22093cc7d45620b3d63a22719665bd7fa5066577bcea5b7cc411a",
     },
   },
   # 前端两个工作负载。裸 manifest 在 frontend/apps/consumer/deploy/pre/ 与
@@ -171,7 +171,7 @@
     replicaCount: 1,
     image: {
       repository: "ccr.ccs.tencentyun.com/sumery/ecommerce-frontend",
-      tag: "1.7.7@sha256:02dea7eb72bf67344c659bb241c9d846d3b2803a14a2b1ec8ebd039e52e6581a",
+      tag: "1.7.13@sha256:1fdd641b892c04c40c06778222d099a4b44e11eb963a2f01f0cae68d829ca487",
     },
     # Caddy 监听端口。⚠️ 仓库 Dockerfile 现写 :30080,而线上镜像 sha-bf8dae2 实测监听 :80;
     # 下次重建镜像前必须先把两者对齐,否则 Service 的 targetPort 会指向一个没人听的口。
@@ -192,7 +192,7 @@
     replicaCount: 2,
     image: {
       repository: "ccr.ccs.tencentyun.com/sumery/consumer-next",
-      tag: "1.7.7@sha256:b3d610d55e89f0c06f1ff6e13f6d0796e6931a4a3e484a41548b0e580f14fcc1",
+      tag: "1.7.13@sha256:a792ff5092c334e1f8d057363c5103cfb083c4fcff0c1e8cef6cc5523068958c",
     },
     port: 3004,
     gatewayURL: "http://ecommerce-gateway-service.ecommerce.svc.cluster.local:8080",
