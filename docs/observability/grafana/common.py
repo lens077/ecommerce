@@ -202,6 +202,20 @@ def svc_error_ratio(extra="", by="service_name", window="$__rate_interval"):
     return f"{zero_filled(err, total)} / {total}"
 
 
+# kit rpcobs 的错误计数器(带 error_reason);OTel 名 rpc.server.errors,单位 {error} 在转换时丢弃。
+RPC_ERRORS = "rpc_server_errors_total"
+
+
+def unknown_share(extra="", by="service_name", window="$__rate_interval"):
+    """兜底码 unknown 占服务侧错误的比例。分母为 0(没有服务侧错误)时无数据而非 0/0。
+
+    unknown 来自 service 层错误映射的 default 分支,占比高 = 有错误路径没被归类,是代码债信号。
+    """
+    unknown = f"sum by ({by}) (rate({_sel(RPC_COUNT, 'rpc_connect_rpc_error_code=\"unknown\"', ECOMMERCE, extra)}[{window}]))"
+    server = f"sum by ({by}) (rate({_sel(RPC_COUNT, f'rpc_connect_rpc_error_code=~\"{SERVER_FAULT_CODES}\"', ECOMMERCE, extra)}[{window}]))"
+    return f"{zero_filled(unknown, server)} / ({server} > 0)"
+
+
 def rpc_quantile(q, by="service_name", extra="", window="$__rate_interval"):
     """RPC 延迟分位数。「慢」的唯一口径 —— 没有「慢调用次数」这种东西(§1.2)。"""
     sel = _sel(RPC_BUCKET, ECOMMERCE, extra)
@@ -295,6 +309,38 @@ def pool_saturation(extra=""):
             f' / {_sel("pgxpool_max_connections", extra)}')
 
 
+# 发布标记:某个 (服务, 构建版本) 组合在 10 分钟前还不存在、现在出现了,就是一次发布。
+# 构建版本来自 kit 的 meta.Version(CI 用 ldflags 注入发布 tag),以资源属性 app.build_id
+# 挂在每条指标上;service.version 是 API 契约版本(恒为 v1),不能拿来判发布。
+# 锚点选 Go 运行时 goroutine 指标,进程在就有,不依赖流量;按版本分组,所以同版本 Pod 重启不打标记
+# (停机超过 10 分钟后再上线会再打一次,这也值得看见)。锚点必须同时匹配两代 runtime 埋点的名字:
+# ecommerce 服务报 go_goroutine_count,config-service(control-tower)报旧名 process_runtime_go_goroutines。
+# 2026-09-24 第一版只用了旧名,只拿 config-service 验证就上了,ecommerce 十个服务的标记永远不会出现;
+# 修正后在现网 VM 回放 48h:config-service 0.2.11 与十个 ecommerce 服务的 dev 启动均能抓到。
+# 动机:错误率突增时要能一眼对到是不是刚发过版(腾讯错误码治理文章里的「最近变更」证据)。
+_GOROUTINES = '{__name__=~"go_goroutine_count|process_runtime_go_goroutines"}'
+DEPLOY_MARKER_EXPR = (
+    f"group by (service_name, app_build_id) ({_GOROUTINES})"
+    " unless on (service_name, app_build_id)"
+    f" group by (service_name, app_build_id) ({_GOROUTINES} offset 10m)"
+)
+
+
+def deploy_annotation():
+    return {
+        "name": "发布",
+        "datasource": PROM,
+        "enable": True,
+        "iconColor": "purple",
+        "expr": DEPLOY_MARKER_EXPR,
+        "step": "1m",
+        "titleFormat": "发布 {{service_name}}",
+        "textFormat": "{{app_build_id}}",
+        "tagKeys": "service_name,app_build_id",
+        "useValueForTime": False,
+    }
+
+
 def dump(uid, title, panels, links=None, templating=None, time_from="now-6h",
          refresh="1m", tags=None, message=""):
     """输出 Grafana /api/dashboards/db 接受的请求体。"""
@@ -307,6 +353,7 @@ def dump(uid, title, panels, links=None, templating=None, time_from="now-6h",
             "time": {"from": time_from, "to": "now"},
             "refresh": refresh,
             "links": links or [],
+            "annotations": {"list": [deploy_annotation()]},
             "templating": {"list": templating or []},
             "panels": panels,
             "schemaVersion": 39,

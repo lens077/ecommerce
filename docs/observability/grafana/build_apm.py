@@ -13,10 +13,10 @@
                    R7 网关(http_server_*,gateway 本次补 meter)
   P1 指标名按对应版本源码预写,部署后必须按 面板设计.md §7 清单逐族核对。
 """
-from common import (CLIENT_FAULT_CODES, ECOMMERCE, PROM, RPC_BUCKET, RPC_COUNT,
+from common import (CLIENT_FAULT_CODES, ECOMMERCE, PROM, RPC_BUCKET, RPC_COUNT, RPC_ERRORS,
                     SERVER_FAULT_CODES, dash_link, dump, jaeger_link, prom_t,
                     reset_ids, row, rpc_quantile, steps, svc_error_ratio, table,
-                    ts, zero_filled)
+                    ts, unknown_share, zero_filled)
 
 reset_ids()
 panels = []
@@ -94,6 +94,24 @@ panels.append(ts("客户端异常 by 错误码(不进 SLO)", [
 ], 16, y, w=8, unit="reqps",
     desc="invalid_argument 突增 = 前端契约破坏或恶意流量;unauthenticated 突增 = 鉴权链路问题。\n"
          "都不算服务的错,但值得看见"))
+y += 8
+
+# 业务 reason 与兜底码(2026-09-24):错误码只有 14 个,failed_precondition 分不清购物车为空还是库存不足。
+# reason 来自 kit rpcobs 的 rpc.server.errors 计数器(otelconnect 不能加属性,所以单独一个指标),
+# 值是领域层 errinfo.New 声明的 UPPER_SNAKE 名;没声明的错误记 UNSPECIFIED。
+_err_reason = (f'sum by (rpc_method, rpc_connect_rpc_error_code, error_reason) '
+               f'(rate({RPC_ERRORS}{{{SVC}}}[$__rate_interval]))')
+panels.append(ts("错误 by 业务 reason", [
+    prom_t(_err_reason, "{{rpc_method}} {{rpc_connect_rpc_error_code}} {{error_reason}}"),
+], 0, y, w=12, unit="reqps",
+    desc="客户端异常看 reason 就知道是哪条业务规则拦下的;服务侧错误的 reason 通常是 UNSPECIFIED,\n"
+         "此时去日志按 error.origin 找抛错的数据层那一行。"))
+panels.append(ts("兜底码 unknown 占服务侧错误比例", [
+    prom_t(unknown_share(extra=SVC), "unknown 占比"),
+], 12, y, w=12, unit="percentunit", percent=True,
+    thresholds=steps(("green", None), ("orange", 0.5)),
+    desc="unknown 来自 service 层错误映射的 default 分支 = 没被归类的错误路径。\n"
+         "这是代码债信号不是事故信号:占比高说明该补 errors.Is 映射或 errinfo reason,别拿它当故障告警。"))
 y += 8
 
 # ───── Row 4 $service Go runtime(P1:backend 埋点部署后有数) ─────

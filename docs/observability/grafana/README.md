@@ -16,6 +16,10 @@
 点进 APM / 基础设施还停在同一个时间窗。排障动线:业务盘红绿灯 → APM 锁定服务与
 层级 → 通过 Grafana 查询 VictoriaTraces。
 
+三张盘都带一条「发布」annotation（`common.py` 的 `DEPLOY_MARKER_EXPR`）：某个服务的
+`app_build_id`（CI 注入的发布 tag）在 10 分钟前还不存在、现在出现了，就在时间轴上打一个紫色标记。
+错误率或延迟突变时先看它和发布标记是否对齐。**不要改用 `service_version`**：它是 API 契约版本，恒为 `v1`。
+
 **后续决策覆盖（2026-08-28）**：本条已被 [`docs/TECH.md`](../../TECH.md) 覆盖：现行链路存储为 VictoriaTraces，统一经 Grafana 查询；脚本中的 `JAEGER_UI_BASE` 和既有 JSON 属于历史机器可读内容，本次不改。
 
 ## 生成与导入
@@ -46,8 +50,11 @@ kubectl -n observability apply -f alerts/ecommerce-alerts-configmap.json
 
 **后续决策覆盖（2026-08-28）**：本条已被 [`docs/TECH.md`](../../TECH.md) 覆盖：现行告警链为 vmalert → Alertmanager；历史 Grafana unified alerting 配置不再作为部署指引。
 
-数据源 UID 硬编码在 `common.py`,与 2026-08 的实例一致;换实例或重建数据源时用
-环境变量覆盖,不必改代码:
+数据源 UID 硬编码在 `common.py`。Prometheus 的默认值 `P4169E866C3094E38` 是 Grafana 按数据源名
+`VictoriaMetrics` 哈希出的 UID（kubernetes 仓 provisioning 没给它写 `uid`），**名字不变则重建集群后也不变**，
+2026-09-24 已对现网 `/api/datasources` 核对。三张盘必须用同一个 UID 生成：此前 apm/business-overview
+带着旧实例的 `cfqdfyp4nyq68f`、infrastructure 用默认值，导入现网时前两张盘会报数据源不存在。
+换实例或重建数据源时用环境变量覆盖，三个脚本一起跑，不必改代码:
 
 ```bash
 GRAFANA_DS_PROM=xxx GRAFANA_DS_PG=yyy GRAFANA_DS_LOKI=zzz python3 build_infrastructure.py
