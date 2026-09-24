@@ -153,7 +153,7 @@ todo-spec: 1
 
 #### P0
 
-- [ ] **未完成 · 告警送不到人**：2026-09-24 实测集群重建后 Secret `observability/alert-bridge-ntfy` 的 `NTFY_URL` 为空，alert-bridge `/healthz` 报 `ntfy:false`，24h 内所有告警只写桥日志（`ntfy not configured`）不推手机——包括正在 firing 的 critical `CNPGBackupStale`（pg-main 从未有可用备份，见「数据恢复与重装」）。补 ntfy 凭据：本机 `~/.local/state/k8s-installer/creds/` 下没有 `ntfy.env` 与 `bugsink-bridge-token`，**不要在本机直接跑 `components/alert-bridge/install.sh`**——它会用空值覆盖 Secret 并轮换 Bugsink webhook token；补上凭据后注入测试告警，验证手机收到且点通知能打开 Grafana（`Click` 路径目前走不到）。
+- [ ] **待复验 · 告警送不到人**：2026-09-24 集群重建后 alert-bridge 与 gatus 的 ntfy Secret 全空，告警只写桥日志不推手机。已从 node1 自托管 ntfy 取回 `infra-publisher` 的 token（找回步骤见 kubernetes 仓 `components/alert-bridge/README.md`），写回本机 creds 并重装两组件：bridge `/healthz` 为 `ntfy:true`，gatus 19 个端点挂上告警，测试告警经 Alertmanager→桥→ntfy 无错送达。剩：确认手机收到「告警通知链路验证」且点开能跳到 Grafana Explore（`Click`）。
 - [ ] **待复验 · 敏感日志端到端脱敏**：旧 Lua 缺陷所属采集器已退役，不再修旧管道。对当前 stdout/Vector 与 SDK OTLP 两条链路注入合成手机号、邮件、token、支付表单样本，确认原文字段不旁路入库；按 TECH.md 收敛到外置 Collector。
 
 #### P1
