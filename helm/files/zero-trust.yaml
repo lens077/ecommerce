@@ -152,10 +152,12 @@ specs:
               - { port: "8500", protocol: TCP }
               - { port: "8501", protocol: TCP }
       - &otlp
-        toFQDNs:
-          - matchName: node3-otlp.apikv.com
+        toServices:
+          - k8sService:
+              namespace: opentelemetry
+              serviceName: otel-opentelemetry-collector
         toPorts:
-          - ports: [{ port: "443", protocol: TCP }]
+          - ports: [{ port: "4318", protocol: TCP }]
       - &postgres
         toServices:
           - k8sService:
