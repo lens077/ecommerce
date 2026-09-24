@@ -30,68 +30,71 @@ kubectl get csv -n operators
 应用 API/CLI 路由前，先确认 `argocd-server` 使用 `server.insecure: "true"`。它在该模式下用 cmux 按协议分流：
 HTTP/1.1 交给 HTTP handler，HTTP/2 交给 gRPC 监听器。下面的入口设计完全建立在这个行为上。
 
-## 受限 API/CLI 入口
+## 入口拆分：Web UI 走 TLS，CLI/API 走 HTTP 明文
 
-Web UI 集群内是 `argocd.dev.test`（HTTPRoute），公网是 `https://argocd.apikv.com`（Pangolin rid 60，site `k8s-cluster` → `10.10.31.240:443`，Host/`tlsServerName`=`argocd.dev.test`，Pangolin SSO 关；2026-09-23 admin 登录、`/api/v1/applications`、`/api/v1/clusters` 经公网实测）。**Mac 上直接开 `argocd.dev.test` 会得到代理的 502**——LAN 专用域名，见 `context/team/local-env.md`。CLI/API 不与 Web UI 共用一个 HTTPS HTTPRoute，且**分两个协议入口**（原生 gRPC 公网入口暂缓，先用 `--core` / `--port-forward`）：
+| 用途 | 集群内 Host | 公网 / remote-dev | Gateway 监听器 | 协议 |
+|---|---|---|---|---|
+| Web UI + REST/token 自动化 | `argocd.dev.test` | `https://argocd.apikv.com`（Pangolin rid 60） | `https` 443 | TLS |
+| `argocd` CLI（原生 gRPC） | `argocd-api.dev.test` | `http://argocd-api.apikv.com`（Pangolin rid 66） | `http` 80 | **明文 h2c** |
 
-| 端口 | 用途 | 能不能跑原生 gRPC |
-|---|---|---|
-| `443` HTTPS | Web UI / REST / token 自动化（`/api/...`） | 当前 HTTPRoute 只承载 Web UI 和 REST |
-| `80` 明文 h2c | `argocd` CLI 原生 gRPC | 能，但只能在受限管理通道使用 |
+- Web UI 路由：`server/helm/gateway/http-route.yml`（只挂 443）。
+- CLI 路由：`server/helm/argocd-api-routes.yml`（只挂 80，同时匹配 `argocd-api.dev.test` 与 `argocd-api.apikv.com`）。
+- 两个主机名互不串用：API 主机名在 443 返 404，UI 主机名在 80 返 404。
 
-### 为什么 CLI 必须走明文 80
+**明文风险已由用户于 2026-09-24 明确接受**：80 不加密，admin 密码与 session token 以明文过链路。
+因此 `argocd-api` 只允许 remote-dev / VPN 来源，Pangolin 资源必须配访问规则拒绝其余来源。
 
-Cilium 生成的 Envoy cluster 使用 `useDownstreamProtocolConfig`，**上游协议镜像下游协议**。本集群
-`cilium-config` 里两个开关都是关的：
+### 为什么 CLI 不走 443
 
-- `enable-gateway-api-alpn: false` → HTTPS 监听器不宣告 h2 ALPN，客户端只能协商到 HTTP/1.1；
-- `enable-gateway-api-app-protocol: false` → Service 上的 `appProtocol: kubernetes.io/h2c` 被完全忽略。
+`cilium-config` 的 `enable-gateway-api-alpn: false`，HTTPS 监听器不宣告 h2 ALPN，原生 gRPC 拿不到 HTTP/2；
+gRPC-Web 经 Envoy 的 HTTP/1.1 转发后 ArgoCD 返回 `404 page not found`（CLI 表现为 `code = Unimplemented`）。
+Cilium Envoy 上游协议镜像下游协议：客户端以 h2c 连 80 时上游也是 h2c，`argocd-server`（`server.insecure=true`）
+用 cmux 把 HTTP/2 分给 gRPC 监听器。2026-09-23/24 集群内实测只有「原生 gRPC → 80 h2c」成功。
 
-叠加后果：经 443 的原生 gRPC 拿不到 h2、不可能成立；经 443 的 gRPC-Web 会被 Envoy 的 HTTP/1.1
-转发破坏，ArgoCD 返回 `404 page not found`（外层表现为 `code = Unimplemented`）。而客户端用 h2c
-明文直连 80 时，Envoy 镜像出 h2c 上游，请求正确落到 gRPC 监听器。
+打开 `enable-gateway-api-alpn` 与 `enable-gateway-api-app-protocol` 需要重启 `cilium-operator` 与 `cilium-envoy`，
+属于全站 L7 入口中断，须排维护窗口；打开后才可退回 443 上的「GRPCRoute + `appProtocol` h2c」标准形态。
 
-打开这两个开关需要重启 `cilium-operator` 与 `cilium-envoy`（3 节点 DaemonSet，承载全部 Gateway 路由），
-属于全站 L7 入口中断，须排维护窗口。开关打开后才可以退回「GRPCRoute + `appProtocol` h2c」的标准形态，
-并废弃 80 端口路由。
+### Pangolin 资源 `argocd-api.apikv.com`
 
-### Pangolin 侧要求
-
-必须通过面板或 API 创建资源，不能直接改数据库。`argocd-api.apikv.com` 建成 **HTTP resource**，字段如下：
+必须通过面板或 API 创建，不能直接改数据库：
 
 | 字段 | 值 | 说明 |
 |---|---|---|
-| 站点 | 集群内 newt 所在 site | 与 `grafana`/`hc` 等 k8s 资源同一站点 |
-| target method | **`h2c`** | 不是 `https`：443 上 Cilium 不宣告 h2 ALPN，原生 gRPC 只能落在 80 |
-| target 地址 | `<cilium-gateway LB IP>:80` | 以 `kubectl -n default get gateway cilium-gateway` 现查，不写死 |
-| 自定义 Host | 不填 | 集群路由直接匹配 `argocd-api.apikv.com`，不走 `*.dev.test` 改写 |
+| 类型 | HTTP resource | |
+| SSL / HTTPS | **关** | 公网侧即明文 HTTP 80，不生成 `redirect-to-https` |
+| 站点 | `k8s-cluster`（集群内 newt） | 与 rid 60 同一站点 |
+| target method | **`h2c`** | 用 `http` 会把 gRPC 降成 HTTP/1.1，ArgoCD 不接 |
+| target 地址 | `<cilium-gateway LB IP>:80` | `kubectl -n default get gateway cilium-gateway` 现查，当前 `10.10.31.240` |
+| 自定义 Host | 不填 | 路由已匹配 `argocd-api.apikv.com` |
 | 认证（SSO） | 关 | 由 ArgoCD 自己处理 admin/token 认证 |
-| 访问规则 | 管理网段 / VPN 出口 CIDR `ACCEPT`，其余拒绝 | 公网普通来源必须在 policy 层拒绝 |
+| 访问规则 | remote-dev / VPN 出口 CIDR `ACCEPT`，其余拒绝 | 明文入口不得对任意公网来源开放 |
 | 健康检查 | 不勾 | 勾了又不配对 `hcPort/hcPath` 会被判 unhealthy → 503 |
 
-链路：CLI ──TLS──▶ Pangolin Traefik ──h2c（WireGuard 隧道内）──▶ Cilium Gateway `:80` ──h2c──▶ argocd-server gRPC。
-公网段有 Pangolin 的证书，隧道段有 WireGuard；「80 明文」只在**直连 LAN** 的场景才是真正的明文，
-那种场景不应暴露给任意来源。
+`argocd-api` 只承载 CLI。REST/token 自动化继续走 `https://argocd.apikv.com/api/...`：target 为 `h2c` 时，
+HTTP/1.1 的 REST 请求会被 Traefik 以 HTTP/2 转发，ArgoCD cmux 不会把非 gRPC 的 HTTP/2 交给 REST 处理器。
 
-- 不要对 CLI/API 请求返回 Pangolin 登录页或 `302`；应原样转发 ArgoCD 的 `401`、gRPC 状态和响应头。
-- 创建资源后等待 Traefik 动态配置刷新（约 5s），再验证。
-- 验收判据：`argocd version --server argocd-api.apikv.com` 能打印出 `argocd-server: vX.Y.Z`。
-
-Kubernetes 侧部署：
+### 部署与验证
 
 ```bash
 kubectl apply -f infrastructure/argocd/server/helm/argocd-api-routes.yml
 ```
 
-CLI 验证（经 Pangolin，TLS 到 Pangolin，不加 `--grpc-web` / `--plaintext`）：
+LAN 直连 Gateway（`argocd-api.dev.test` 解析到 Gateway VIP）：
 
 ```bash
-argocd login argocd-api.apikv.com \
-  --username admin \
-  --password "$ARGOCD_PASSWORD"
+argocd login argocd-api.dev.test:80 --username admin --password "$ARGOCD_PASSWORD" --plaintext
 ```
 
-集群内或 LAN 直连 Gateway 时才用明文：`argocd login <LB IP>:80 --plaintext`（需 Host 解析为 `argocd-api.apikv.com`）。
+remote-dev 经 Pangolin（资源建好后）：
+
+```bash
+argocd login argocd-api.apikv.com:80 --username admin --password "$ARGOCD_PASSWORD" --plaintext
+argocd version   # 验收：打印出 argocd-server: vX.Y.Z
+```
+
+不要加 `--grpc-web`，也不要去掉 `:80` 和 `--plaintext`。2026-09-24 从 Mac 经 rid 66 实测 `argocd version` 返回 `argocd-server: v3.5.3`。
+
+**不要用 curl 验收这个入口**：`curl http://argocd-api.apikv.com/api/version` 返回 `503 upstream connect error ... connection termination` 属于预期——target 是 `h2c`，HTTP/1.1 的 REST 请求被转成 HTTP/2，ArgoCD cmux 只把带 `content-type: application/grpc` 的 HTTP/2 交给 gRPC 监听器，其余连接直接关闭。`argocd-api.dev.test` 只在机房 LAN 可解析，Mac 上 `Could not resolve host` 同样是预期。
 
 ### 不经任何入口的通道
 

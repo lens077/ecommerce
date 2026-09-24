@@ -24,10 +24,10 @@ description: 本地开发机与集群连哪套基础设施：活地址、配置�
 | 路 | 解决什么 | 在哪生效 | 实测 2026-09-15 |
 |---|---|---|---|
 | remote-dev（Pangolin 资源） | **L3 可达**：Mac 到不了 `10.10.31.x` VIP，把 HTTP 与 raw TCP（Dragonfly、PG、Kafka）经公网域名穿出来 | 任何能上公网的机器 | 2026-09-23 协议级实测：PG `30001` TLS 登录 + 查询、Dragonfly `30005` CA/SNI + AUTH/PING、Kafka `30004` SASL_SSL produce→consume；三条都经 site `k8s-cluster` |
-| `*.dev.test` split DNS（`/etc/resolver/dev.test → 10.0.0.1` dnsmasq） | **通配解析**：`/etc/hosts` 不支持 `*.dev.test`，dnsmasq 应答整个后缀到 VIP | 只有机房 LAN（`10.0.0.1` 与 VIP 都在那边） | 本机 `10.0.0.1` 不可达，`shop.dev.test` 解析为空——这条路在机房外是死的，属预期 |
+| `*.dev.test` + SSH 隧道到 k1（**不用 Pangolin 客户端**） | **L3 可达 + 解析**：Mac 能直连 `ssh k1`（公网 sshd），`sshuttle -r k1 10.10.31.0/24 10.10.21.0/24` 把两个网段经 SSH 打通；解析用 `/etc/hosts`（少量域名）或本机 dnsmasq（通配）。这是旧集群时代 `/etc/hosts → VIP` 方案在机房外的延续 | 任何能 `ssh k1` 的机器 | **尚未实测**。旧写法「split DNS 在机房、`10.0.0.1` 是机房 DNS」是错的：`10.0.0.1` 是本机 `lo0` 别名，重启即丢，dnsmasq 随之起不来，VIP 映射也已过期（2026-09-24 查实）。Pangolin 私有资源 + 官方客户端是另一条路，未采用 |
 
 Mac 上 launchd 跑的 `newt`（`net.pangolin.newt`）是 **Pangolin 站点连接器**，把本机 `127.0.0.1` 的服务暴露给 Pangolin 用，
-不给 Mac 增加任何到 `10.10.x` 的路由；它连不上集群是正常的，不要拿它排查 remote-dev。
+不给 Mac 增加任何到 `10.10.x` 的路由；它连不上集群是正常的，不要拿它排查 remote-dev。到 `10.10.x` 的路由由 sshuttle（经 `ssh k1`）提供，不是 newt。
 
 | 组件 | remote-dev（Mac 默认） | 机房 LAN | 从 Pod 连 | 备注 |
 |---|---|---|---|---|
@@ -227,14 +227,14 @@ curl -sk -o /dev/null -w '%{http_code}\n' https://<name>.dev.test/  # 业务路�
 
 **`localhost:30001/30002/30003` 打到的是 IDE，不是服务。** GoLand、WebStorm、JCEF 各占着 `127.0.0.1:30001/30002/30003`；Go 服务监听 `*:3000x`，macOS 上 127.0.0.1 的连接优先给 IDE 的监听（2026-09-23 实测 `127.0.0.1→000 / [::1]→200`）。本机调 user/search/product 用 `[::1]` 或 LAN IP；`internal/tests/http-client.env.json` 的 `host` 已统一为 `[::1]`。
 
-**`argocd.dev.test` 在 Mac 上是 502。** 不是 ArgoCD 坏了：`*.dev.test` 只在机房 LAN 可解析，Mac 的
-`/etc/resolver/dev.test → 10.0.0.1` 不可达，Firefox 走系统代理，代理解析不了就回 `502 Bad Gateway`。
+**`argocd.dev.test` 在 Mac 上是 502。** 不是 ArgoCD 坏了：本机 dnsmasq 未运行时 `*.dev.test` 解析不到，Firefox 走系统代理，代理解析不了就回 `502 Bad Gateway`。起 sshuttle 到 k1 并写好 `/etc/hosts`/dnsmasq 后 Mac 可直接用 `*.dev.test`。
 Mac 用 `https://argocd.apikv.com`（Pangolin rid 60 → VIP:443，Host `argocd.dev.test`，Pangolin SSO 关、
-由 ArgoCD 自己认证；2026-09-23 admin 登录 + `/api/v1/applications` 实测）。CLI 暂走 `--core` / `--port-forward`，
-公网原生 gRPC 入口另议（`infrastructure/argocd/README.md`）。
+由 ArgoCD 自己认证；2026-09-23 admin 登录 + `/api/v1/applications` 实测）。CLI 走独立的**明文**入口
+`argocd-api.apikv.com:80 --plaintext`（Pangolin rid 66 → Gateway 80 h2c，用户已接受明文风险；2026-09-24 实测通）。
+该入口只给 CLI：curl 测 REST 会得到 503，属预期。两个主机名不串用，字段与验收见 `infrastructure/argocd/README.md`。
 
-**GitOps 当前是断的。** ArgoCD 装着且在跑，但**零 Application、零 ApplicationSet**，
-AppProject 只有 `default`（2026-08-29 复测仍然如此）。集群实际由 `backend/services/*/deploy/`
+**业务 GitOps 当前是断的。** 2026-09-22 重建后 ArgoCD 只纳管 `Application/ecommerce-kyverno`，
+业务 `ApplicationSet ecommerce` 尚未在新集群 apply（现状以 `TODO.md` 领域状态表 GitOps 行为准）。集群业务由 `backend/services/*/deploy/`
 的手工路径驱动，`helm/values.yaml` **不是**集群真相源。因此内环开发那条「先关 ArgoCD 自动同步」
 当前不适用（`scripts/argocd-devwindow.sh` 已改为诚实空转）。接回 GitOps 前先读 `argocd-app.yml`
 顶部告警：chart 与实况在资源名/标签/tag 三处不符，直接开 selfHeal 会起一整套影子服务并经 Consul 抢走网关流量。
