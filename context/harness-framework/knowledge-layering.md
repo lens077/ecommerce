@@ -77,6 +77,27 @@ Config Center 由 sibling 仓 control-tower 提供（SDK 为
 标题任一形式均可，允许 `**关键陷阱：具体标题**` 带副标题）；不是坑体裁的存量文件
 冻结在 `scripts/context-format-baseline.txt`，新文件必须合规。
 
+**由线上或集群事故沉淀的 experience，再加一段「证据」**：每条一行，以来源标签开头；
+能复跑的写出查询本身，而不是「查了日志发现……」：
+
+```markdown
+**证据**
+
+- [alert] vmalert `<告警名>` 在 <时刻> firing（for: <窗口>）
+- [metric] `<PromQL>` → <观察到的值与时间点>
+- [log] VictoriaLogs `service.name:="<服务>" rpc.code:="unknown"` → <条数>，error.origin 集中在 <文件:行>
+- [kubectl] `kubectl get <对象> -o jsonpath='<路径>'` → <值>
+```
+
+标签取值：`log` `trace` `metric` `alert` `kubectl` `code` `blame` `db` `repro`。
+
+为什么要这段：事后复盘最容易丢的是「当时凭什么下的结论」。没有来源和查询，下次同类故障只能从零查起，
+也没法回头统计「哪类故障靠哪种证据定位」（2026-09-24 对照腾讯错误码治理实践：诊断材料要可回放、可统计）。
+反向证据不另起一段，写进「关键陷阱」——排除掉的假设本来就是那段的内容。
+
+门禁只管格式：**写了「证据」段，每条都必须带标签**。要不要写这段由作者按「是不是事故」判断，
+不强制——设计类 experience 硬加只会逼出凑数内容。
+
 ## frontmatter 与 `affects:` 反向索引
 
 每个非 INDEX 文件都有 frontmatter：`name`（= 文件名）、`description` 必填，`layer` / `module`

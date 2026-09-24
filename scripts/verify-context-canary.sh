@@ -181,6 +181,40 @@ EOF
   printf -- '- [tmp-canary-trapless.md](experience/tmp-canary-trapless.md)\n' \
     >> "$1/context/project/ecommerce/gateway/INDEX.md"
 }
+_evidence_doc() { # _evidence_doc <sandbox> <slug> <证据段正文>:四段齐全、已登记,只有证据段可变
+  cat > "$1/context/project/ecommerce/gateway/experience/$2.md" <<EOF
+---
+name: $2
+module: gateway
+description: canary 样本——证据段格式
+---
+# canary
+
+**症状**：告警响了。
+
+**关键陷阱**：看起来像 A,其实是 B。
+
+**证据**
+
+$3
+
+**根因**：B。
+EOF
+  printf -- '- [%s.md](experience/%s.md)\n' "$2" "$2" >> "$1/context/project/ecommerce/gateway/INDEX.md"
+}
+mut_evidence_untagged() { # 证据段里一条没带来源标签
+  _evidence_doc "$1" tmp-canary-evidence "- [metric] \`up\` → 0
+- 查了日志发现连接被拒"
+}
+mut_evidence_ok() { # 假阳性守卫:标签齐全;围栏内的 "- " 行与证据段之后的列表都不该被当成证据条目
+  _evidence_doc "$1" tmp-canary-evidence-ok "- [log] \`service.name:=\"x\"\` → 3 条
+- [kubectl] \`kubectl get pod\` → CrashLoopBackOff
+
+\`\`\`text
+- 围栏里的普通列表
+\`\`\`"
+  printf -- '\n- 根因之后的普通列表\n' >> "$1/context/project/ecommerce/gateway/experience/tmp-canary-evidence-ok.md"
+}
 mut_baseline() { # 已合规文件塞回基线 → 反向棘轮必须报删行
   printf 'context/project/ecommerce/gateway/experience/jwt-nbf-clock-skew-loop.md\n' \
     >> "$1/scripts/context-format-baseline.txt"
@@ -419,6 +453,9 @@ probe dead-link-todo      1 "DEAD-LINK"   mut_dead_link_todo
 probe orphan              1 "ORPHAN"      mut_orphan
 probe frontmatter         1 "FRONTMATTER" mut_frontmatter
 probe format              1 "FORMAT"      mut_format
+probe evidence-untagged   1 "EVIDENCE"    mut_evidence_untagged
+# 假阳性守卫:标签齐全、围栏内与段外的普通列表必须放行
+probe evidence-ok         0 ""            mut_evidence_ok
 probe baseline-ratchet    1 "BASELINE"    mut_baseline
 probe decision-no-alternatives   1 "DECISION" mut_decision_no_alternatives
 probe decision-status-mismatch   1 "DECISION" mut_decision_status_mismatch

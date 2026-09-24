@@ -24,6 +24,7 @@
 #                  name 与文件名一致;layer:/module: 若存在必须与路径一致
 #   [FORMAT]      experience/*.md 必须含「症状」与「关键陷阱/陷阱」小节
 #                  (格式定义见 context/harness-framework/knowledge-layering.md)
+#   [EVIDENCE]    experience/*.md 若有「证据」段,每条列表项必须以来源标签开头([log]/[metric]/…)
 #   [SKILL-REF]   AGENTS.md/runbook 不得要求执行 docs/agents/skills.md 登记为「缺失」的 skill
 #   [DECISION]    context/decisions/ 决策记录:路径即状态(implemented/proposed/rejected),
 #                  文件名 YYYY-MM-DD-slug,frontmatter status 与目录一致;按状态要求的
@@ -236,6 +237,20 @@ while IFS= read -r file; do
     if in_baseline "$file"; then
       fail "BASELINE" "$file 已合规,请从 $baseline_file 删除该行(反向棘轮)"
     fi
+  fi
+  # 「证据」段可选,但写了就每条带来源标签(2026-09-24 加)。
+  # 触发它的问题:事故类 experience 只写「查了日志发现 X」,半个月后既不知道查的是哪条日志、
+  # 也没法复跑,更没法统计哪类故障靠哪种证据定位——对照腾讯错误码治理实践,诊断材料要可回放。
+  # 只管「写了就合规」不管「必须写」:设计类 experience 硬加证据段只会凑数。标签表见 knowledge-layering.md。
+  untagged=$(awk '
+    /^```/ { fence = !fence; next }
+    fence { next }
+    /^(\*\*证据([：:][^*]*)?\*\*|#{2,3} 证据)/ { sec = 1; next }
+    sec && (/^\*\*[^*]+\*\*/ || /^#{1,3} /) { sec = 0 }
+    sec && /^[-*] / && !/^[-*] \[(log|trace|metric|alert|kubectl|code|blame|db|repro)\] / { print NR }
+  ' "$file" | head -3 | tr '\n' ' ')
+  if [ -n "$untagged" ]; then
+    fail "EVIDENCE" "$file「证据」段第 ${untagged}行缺来源标签([log]/[trace]/[metric]/…,见 knowledge-layering.md)"
   fi
 done < <(find context -path "*/experience/*.md" -type f)
 
