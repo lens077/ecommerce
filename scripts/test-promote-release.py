@@ -26,6 +26,11 @@ class ReleaseTests(unittest.TestCase):
         for version in ('sha-98ba5d1', '1.06.4', 'v1.6.4', '1.6.4\n', 'latest'):
             self.assertFalse(promote.SEMVER.fullmatch(version))
 
+    def test_proto_breaking_baseline_uses_last_promoted_release(self):
+        workflow = (promote.ROOT / '.github/workflows/service-ci.yml').read_text()
+        self.assertIn("yq -r '.cart.image.tag | split(\"@\")[0]' helm/values-prod.yaml", workflow)
+        self.assertNotIn("grep -vx \"${GITHUB_REF_NAME}\"", workflow)
+
     def test_both_environments_plan_all_twelve_images_without_writing(self):
         services = promote.inventory()
         charts = [*services, 'frontend', 'consumer-next']

@@ -82,13 +82,17 @@ jobs:
         run: |
           BASE_REF=main
           if [[ "${GITHUB_REF_TYPE}" == "tag" ]]; then
-            BASE_REF=$(git tag --list '[0-9]*.[0-9]*.[0-9]*' \
-              | grep -E '^[0-9]+\.[0-9]+\.[0-9]+$' | grep -vx "${GITHUB_REF_NAME}" \
-              | sort -V | tail -1 || true)
-          fi
-          if [[ -z "$BASE_REF" ]]; then
-            echo "无可用 protobuf breaking 基线，跳过"
-            exit 0
+            # 只认已晋级进 prod 清单的最后成功发布。不能取“上一枚 tag”：失败的 tag 也存在，
+            # 1.7.8 曾在 buf breaking 阶段失败，1.7.9 若以它为基线会把恢复兼容误判成 breaking。
+            BASE_REF=$(yq -r '.cart.image.tag | split("@")[0]' helm/values-prod.yaml)
+            [[ "$BASE_REF" =~ ^[0-9]+\.[0-9]+\.[0-9]+$ ]] || {
+              echo "prod 清单没有规范 semver protobuf 基线：$BASE_REF" >&2
+              exit 1
+            }
+            git rev-parse --verify "refs/tags/$BASE_REF" >/dev/null || {
+              echo "prod protobuf 基线 tag 不存在：$BASE_REF" >&2
+              exit 1
+            }
           fi
           # buf 会克隆本地 .git 取基线,runner 上偶发 `stat .git/objects/maintenance.lock: file does not exist`
           # (1.7.5 实测,git 后台维护的瞬时状态),重试 3 次
