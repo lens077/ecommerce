@@ -13,17 +13,6 @@ export function createAnonymousServerTransport(): Transport {
   return createNodeTransport([scopeInterceptor("public-ssr")]);
 }
 
-export function createServerTransport(cookieHeader: string): Transport {
-  const forwardCookie: Interceptor = (next) => async (request) => {
-    if (cookieHeader) {
-      request.header.set("cookie", cookieHeader);
-    }
-    return next(request);
-  };
-
-  return createNodeTransport([scopeInterceptor("cookie-ssr"), forwardCookie]);
-}
-
 function createNodeTransport(interceptors: Interceptor[]): Transport {
   const transport = createConnectTransport({
     baseUrl: process.env.CONSUMER_NEXT_GATEWAY_URL ?? DEFAULT_GATEWAY_URL,
