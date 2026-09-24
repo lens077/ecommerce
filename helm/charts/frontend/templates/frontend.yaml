@@ -100,7 +100,6 @@
     },
     template: {
       metadata: {
-        name: "ecommerce-frontend",
         labels: {
           app: "ecommerce-frontend",
           app.kubernetes.io/part-of: "ecommerce",
