@@ -8,7 +8,7 @@
   ],
   images: [{
     name: "ccr.ccs.tencentyun.com/sumery/address",
-    newTag: "1.7.7",
-    digest: "sha256:30c4c93fbb9c6ebd15b93b376832edec2e2236befdf96a44d599479db74f98a8",
+    newTag: "1.7.13",
+    digest: "sha256:80cc84fbe4a23f7e975fb9dfe0b8dacea86e5eb4519a7cbed2034d6f65df3848",
   }],
 }

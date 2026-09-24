@@ -16,52 +16,52 @@
   },
   user: {
     image: {
-      tag: "1.7.7@sha256:2eef28b8593045235ec461436903e8ab8cea67fd955601d550a0cfc500f4b028",
+      tag: "1.7.13@sha256:c0b14a7375b0e8a0ed01112724a157e783a886db3ee265dae00b5fdced162737",
     },
   },
   search: {
     image: {
-      tag: "1.7.7@sha256:2e649117a9ca055a6d501035954f334606a052bfe772de7e8c6cf8ae45eda36b",
+      tag: "1.7.13@sha256:b9dd6676a046e4d51b0e7fe50bfafadaa35d1955d1c6581c7181871d572a6517",
     },
   },
   behavior: {
     image: {
-      tag: "1.7.7@sha256:bbd3752f5bc5c4bbfd432e9c423cabee1ab1c3f18b706d2f1230026d6786324d",
+      tag: "1.7.13@sha256:0448867a37b22093cc7d45620b3d63a22719665bd7fa5066577bcea5b7cc411a",
     },
   },
   product: {
     image: {
-      tag: "1.7.7@sha256:f48d32073078de4d22e73c11386b2e9c2ced0d759a7de737a2ed0a3f7162955b",
+      tag: "1.7.13@sha256:b16bcc480e02b7d17e3f6ef558299ce792bb0c5d0b53dfb0b7c6cd959f57e512",
     },
   },
   cart: {
     image: {
-      tag: "1.7.7@sha256:f63a9e31a8d7fafa061f8028460434c8720cb0e47d64dff746bbefae6289ba00",
+      tag: "1.7.13@sha256:189a83d3efbb95cf2858941369cc127e73e674b92094edd43021a21b8bc8f72c",
     },
   },
   address: {
     image: {
-      tag: "1.7.7@sha256:30c4c93fbb9c6ebd15b93b376832edec2e2236befdf96a44d599479db74f98a8",
+      tag: "1.7.13@sha256:80cc84fbe4a23f7e975fb9dfe0b8dacea86e5eb4519a7cbed2034d6f65df3848",
     },
   },
   order: {
     image: {
-      tag: "1.7.7@sha256:5051e8e9ad4d718e145055216b8f1c9aa80c46d06a6f62d7e3ad86ffcbff4905",
+      tag: "1.7.13@sha256:44153bf8807e3df8041a120b3ee39e18f8ddbea0ff3cf715664442300f698b55",
     },
   },
   inventory: {
     image: {
-      tag: "1.7.7@sha256:7e34cb24b6414161bf8b5afa7258e5c1e3f403fe4b885428aa6bfdc0132857d9",
+      tag: "1.7.13@sha256:af672c027128ad5c2f979992f4dd4f8dd4b17748a5a613350fbd1355d040a02d",
     },
   },
   merchant: {
     image: {
-      tag: "1.7.7@sha256:56bdbc75606866a078439f724da406af81252707a284f19a858cd12fcd27c82f",
+      tag: "1.7.13@sha256:9606be27dd0a89a04a929dfd52da77cd2b7c76ff93a410b80016dce129f44fd5",
     },
   },
   payment: {
     image: {
-      tag: "1.7.7@sha256:f68bd8b42f8581a7edbb5a02b7eba5e0fe4e4b34a1a6b78464e8d7fdad7e29d2",
+      tag: "1.7.13@sha256:27dfb285a775f00dba6b61486201ce01d6c6b080e7250cf5a91f3b01d81a6341",
     },
   },
   frontend: {
@@ -72,12 +72,12 @@
     },
     replicaCount: 1,
     image: {
-      tag: "1.7.7@sha256:02dea7eb72bf67344c659bb241c9d846d3b2803a14a2b1ec8ebd039e52e6581a",
+      tag: "1.7.13@sha256:1fdd641b892c04c40c06778222d099a4b44e11eb963a2f01f0cae68d829ca487",
     },
   },
   consumer-next: {
     image: {
-      tag: "1.7.7@sha256:b3d610d55e89f0c06f1ff6e13f6d0796e6931a4a3e484a41548b0e580f14fcc1",
+      tag: "1.7.13@sha256:a792ff5092c334e1f8d057363c5103cfb083c4fcff0c1e8cef6cc5523068958c",
     },
     publicURL: "https://shop.apikv.com",
   },
