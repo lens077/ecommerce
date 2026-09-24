@@ -1,0 +1,20 @@
+---
+{
+  apiVersion: "v1",
+  kind: "Service",
+  metadata: {
+    name: "ecommerce-frontend-preview-service",
+    namespace: "ecommerce",
+  },
+  spec: {
+    selector: {
+      app: "ecommerce-frontend",
+    },
+    ports: [{
+      protocol: "TCP",
+      port: 30080,
+      targetPort: 80,
+    }],
+    type: "ClusterIP",
+  },
+}

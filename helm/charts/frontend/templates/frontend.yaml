@@ -13,6 +13,7 @@
   },
 }
 ---
+{{- if not .Values.rollouts.enabled }}
 {
   apiVersion: "apps/v1",
   kind: "Deployment",
@@ -78,6 +79,80 @@
     },
   },
 }
+{{- else }}
+{
+  apiVersion: "argoproj.io/v1alpha1",
+  kind: "Rollout",
+  metadata: {
+    name: "ecommerce-frontend-deploy",
+    namespace: {{ $ns | quote }},
+    labels: {
+      app: "ecommerce-frontend",
+      app.kubernetes.io/part-of: "ecommerce",
+    },
+  },
+  spec: {
+    replicas: {{ .Values.replicaCount }},
+    selector: {
+      matchLabels: {
+        app: "ecommerce-frontend",
+      },
+    },
+    template: {
+      metadata: {
+        name: "ecommerce-frontend",
+        labels: {
+          app: "ecommerce-frontend",
+          app.kubernetes.io/part-of: "ecommerce",
+        },
+      },
+      spec: {
+        topologySpreadConstraints: [{
+          maxSkew: 1,
+          topologyKey: "kubernetes.io/hostname",
+          whenUnsatisfiable: "DoNotSchedule",
+          nodeAffinityPolicy: "Honor",
+          nodeTaintsPolicy: "Honor",
+          labelSelector: {
+            matchLabels: {
+              app.kubernetes.io/part-of: "ecommerce",
+            },
+          },
+        }],
+        serviceAccountName: "ecommerce-frontend",
+        automountServiceAccountToken: false,
+        enableServiceLinks: false,
+        containers: [{
+          name: "ecommerce-frontend",
+          image: "{{ .Values.image.repository }}:{{ .Values.image.tag }}",
+          imagePullPolicy: "Always",
+          ports: [{
+            containerPort: {{ .Values.containerPort }},
+            protocol: "TCP",
+          }],
+          envFrom: [{
+            configMapRef: {
+              name: "ecommerce-frontend-config",
+            },
+          }],
+        }],
+        restartPolicy: "Always",
+        imagePullSecrets: [{
+          name: "tcr-pull-secret",
+        }],
+      },
+    },
+    strategy: {
+      blueGreen: {
+        activeService: "ecommerce-frontend-service",
+        previewService: "ecommerce-frontend-preview-service",
+        autoPromotionEnabled: {{ .Values.rollouts.autoPromotionEnabled }},
+        scaleDownDelaySeconds: 30,
+      },
+    },
+  },
+}
+{{- end }}
 ---
 {
   apiVersion: "v1",
@@ -99,6 +174,28 @@
     type: "ClusterIP",
   },
 }
+{{- if .Values.rollouts.enabled }}
+---
+{
+  apiVersion: "v1",
+  kind: "Service",
+  metadata: {
+    name: "ecommerce-frontend-preview-service",
+    namespace: {{ $ns | quote }},
+  },
+  spec: {
+    selector: {
+      app: "ecommerce-frontend",
+    },
+    ports: [{
+      protocol: "TCP",
+      port: {{ .Values.servicePort }},
+      targetPort: {{ .Values.containerPort }},
+    }],
+    type: "ClusterIP",
+  },
+}
+{{- end }}
 ---
 {
   # 前端静态站点的对外入口。shop.dev.test 局域网直连;shop.apikv.com 公网,经 Pangolin 隧道。
@@ -172,6 +269,7 @@
     }],
   },
 }
+{{- if .Values.rollouts.vpaEnabled }}
 ---
 {
   apiVersion: "autoscaling.k8s.io/v1",
@@ -186,8 +284,8 @@
   },
   spec: {
     targetRef: {
-      apiVersion: "apps/v1",
-      kind: "Deployment",
+      apiVersion: {{ if .Values.rollouts.enabled }}"argoproj.io/v1alpha1"{{ else }}"apps/v1"{{ end }},
+      kind: {{ if .Values.rollouts.enabled }}"Rollout"{{ else }}"Deployment"{{ end }},
       name: "ecommerce-frontend-deploy",
     },
     updatePolicy: {
@@ -205,4 +303,5 @@
     },
   },
 }
+{{- end }}
 {{- end }}

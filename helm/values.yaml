@@ -178,6 +178,14 @@
     containerPort: 80,
     servicePort: 30080,
     gatewayURL: "http://ecommerce-gateway-service:8080",
+    # pre 已切到 Argo Rollouts Blue-Green（prod 仍是 Deployment，见 values-prod.yaml）。
+    # 与 frontend/apps/consumer/deploy/pre 的裸清单逐字段等价（verify-deploy-parity.sh）；
+    # VPA 对 Rollout target 的支持未验证前关闭 frontend VPA。手动 promote，不自动晋级。
+    rollouts: {
+      enabled: true,
+      autoPromotionEnabled: false,
+      vpaEnabled: false,
+    },
   },
   consumer-next: {
     enabled: true,

@@ -65,6 +65,12 @@
     },
   },
   frontend: {
+    rollouts: {
+      enabled: false,
+      autoPromotionEnabled: false,
+      vpaEnabled: true,
+    },
+    replicaCount: 1,
     image: {
       tag: "1.7.7@sha256:02dea7eb72bf67344c659bb241c9d846d3b2803a14a2b1ec8ebd039e52e6581a",
     },

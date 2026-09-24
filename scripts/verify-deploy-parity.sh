@@ -58,10 +58,9 @@ helm_value() { # helm_value <env> <yq-path> → 合并 values.yaml + values-<env
 # 环境无关的裸 manifest(VPA 与两个前端);后端服务走各自的 kustomize overlay
 raw_common=(
   application-vpa.yml
-  frontend/apps/consumer/deploy/pre/configMap.yaml
-  frontend/apps/consumer/deploy/pre/deployment.yaml
-  frontend/apps/consumer/deploy/pre/service.yaml
-  frontend/apps/consumer/deploy/pre/httproute.yaml
+  frontend/apps/consumer/deploy/base/configMap.yaml
+  frontend/apps/consumer/deploy/base/service.yaml
+  frontend/apps/consumer/deploy/base/httproute.yaml
   frontend/apps/consumer-next/deploy/base/consumer-next.yaml
 )
 
@@ -84,9 +83,19 @@ render_env() { # render_env <env>  → ${workdir}/<env>/{helm,raw}.yaml
         printf -- '\n---\n'
         kubectl kustomize "frontend/apps/${app}/deploy/overlays/prod"
       done
+    else
+      printf -- '---\n'
+      kubectl kustomize frontend/apps/consumer/deploy/pre
+      printf '\n---\n'
+      # Pre frontend Rollout disables its VPA until controller compatibility is verified.
+      yq eval-all 'select(.metadata.name != "ecommerce-frontend-vpa")' application-vpa.yml
     fi
     for f in "${raw_common[@]}"; do
       [[ "${env}" == "prod" ]] && continue
+      [[ "$f" == application-vpa.yml ]] && continue
+      # 2026-09-24 consumer 拆成 base/pre/overlays: pre 的 kustomization 已引用 ../base, 上面整体渲染过,
+      # 这里再 cat 一遍 base 会让同名对象出现两次、parity 永远红。base 仍留在 raw_common 里作为清单索引。
+      [[ "$f" == frontend/apps/consumer/deploy/base/* ]] && continue
       [[ -f "$f" ]] || { echo "verify-deploy-parity: 裸 manifest 不存在:$f" >&2; exit 2; }
       printf -- '---\n# source: %s\n' "$f"
       cat "$f"

@@ -26,6 +26,12 @@ spec:
       kind: ServiceAccount
     - group: apps
       kind: Deployment
+    - group: argoproj.io
+      kind: Rollout
+    - group: argoproj.io
+      kind: AnalysisTemplate
+    - group: argoproj.io
+      kind: AnalysisRun
     - group: autoscaling.k8s.io
       kind: VerticalPodAutoscaler
     - group: cert-manager.io

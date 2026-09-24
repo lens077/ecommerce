@@ -10,4 +10,11 @@
   containerPort: 80,
   servicePort: 30080,
   gatewayURL: "",
+  # Disabled until Helm, bare manifests, VPA target and rollback procedure
+  # migrate together. Enabling this alone would break deploy parity.
+  rollouts: {
+    enabled: false,
+    autoPromotionEnabled: false,
+    vpaEnabled: true,
+  },
 }

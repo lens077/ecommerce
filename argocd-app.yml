@@ -43,6 +43,11 @@ spec:
       destination:
         server: "{{ .server }}"
         namespace: "{{ .namespace }}"
+      ignoreDifferences:
+        - group: ""
+          kind: Service
+          jqPathExpressions:
+            - .spec.selector["rollouts-pod-template-hash"]
       syncPolicy:
         automated:
           enabled: false
