@@ -31,6 +31,11 @@ class ReleaseTests(unittest.TestCase):
         self.assertIn("yq -r '.cart.image.tag | split(\"@\")[0]' ../helm/values-prod.yaml", workflow)
         self.assertNotIn("grep -vx \"${GITHUB_REF_NAME}\"", workflow)
 
+    def test_release_workflow_does_not_recreate_deleted_progress_archive(self):
+        workflow = (promote.ROOT / '.github/workflows/backend.yml').read_text()
+        self.assertNotIn('>> docs/progress-archive/', workflow)
+        self.assertNotIn('git add docs/progress-archive/', workflow)
+
     def test_both_environments_plan_all_twelve_images_without_writing(self):
         services = promote.inventory()
         charts = [*services, 'frontend', 'consumer-next']
