@@ -25,7 +25,6 @@ const (
 	defaultRequestTimeout = 10 * time.Second
 	defaultSearchLimit    = 20
 	maxSearchLimit        = 100
-	bulkChunkSize         = 500
 )
 
 var indexNamePattern = regexp.MustCompile(`^[a-z0-9][a-z0-9._-]{0,254}$`)
@@ -411,76 +410,6 @@ func (c *Client) DeleteDocument(ctx context.Context, alias string, id int64) err
 	return responseError("delete document "+strconv.FormatInt(id, 10), response)
 }
 
-func (c *Client) bulkIndex(ctx context.Context, index string, docs []Doc, requireAlias bool) error {
-	if err := validateIndexName(index); err != nil {
-		return err
-	}
-	for start := 0; start < len(docs); start += bulkChunkSize {
-		end := min(start+bulkChunkSize, len(docs))
-		var body bytes.Buffer
-		encoder := json.NewEncoder(&body)
-		for _, doc := range docs[start:end] {
-			if doc.ID <= 0 {
-				return errors.New("searchindex: document id must be positive")
-			}
-			if err := encoder.Encode(map[string]any{"index": map[string]any{"_id": strconv.FormatInt(doc.ID, 10)}}); err != nil {
-				return fmt.Errorf("searchindex: encode bulk metadata: %w", err)
-			}
-			if err := encoder.Encode(doc); err != nil {
-				return fmt.Errorf("searchindex: encode bulk document: %w", err)
-			}
-		}
-
-		requestCtx, cancel := c.withTimeout(ctx)
-		response, err := c.api.Bulk(
-			&body,
-			c.api.Bulk.WithContext(requestCtx),
-			c.api.Bulk.WithIndex(index),
-			c.api.Bulk.WithRequireAlias(requireAlias),
-			c.api.Bulk.WithRefresh("false"),
-			c.api.Bulk.WithWaitForActiveShards("1"),
-		)
-		if err != nil {
-			cancel()
-			return fmt.Errorf("searchindex: bulk index documents: %w", err)
-		}
-		decodeErr := decodeBulkResponse(response)
-		cancel()
-		if decodeErr != nil {
-			return decodeErr
-		}
-	}
-	return nil
-}
-
-func decodeBulkResponse(response *esapi.Response) error {
-	defer response.Body.Close()
-	if response.IsError() {
-		return responseError("bulk index documents", response)
-	}
-	var payload struct {
-		Errors bool `json:"errors"`
-		Items  []map[string]struct {
-			Status int             `json:"status"`
-			Error  json.RawMessage `json:"error"`
-		} `json:"items"`
-	}
-	if err := json.NewDecoder(response.Body).Decode(&payload); err != nil {
-		return fmt.Errorf("searchindex: decode bulk response: %w", err)
-	}
-	if !payload.Errors {
-		return nil
-	}
-	for _, item := range payload.Items {
-		for operation, result := range item {
-			if result.Status >= 300 {
-				return fmt.Errorf("searchindex: bulk %s failed with status %d: %s", operation, result.Status, strings.TrimSpace(string(result.Error)))
-			}
-		}
-	}
-	return errors.New("searchindex: bulk response reported errors without a failed item")
-}
-
 func (c *Client) aliasIndices(ctx context.Context, alias string) ([]string, error) {
 	if err := validateIndexName(alias); err != nil {
 		return nil, err
@@ -511,90 +440,6 @@ func (c *Client) aliasIndices(ctx context.Context, alias string) ([]string, erro
 		return nil, fmt.Errorf("searchindex: alias %s has no backing index", alias)
 	}
 	return indices, nil
-}
-
-func (c *Client) swapAlias(ctx context.Context, alias, next string) ([]string, error) {
-	current, err := c.aliasIndices(ctx, alias)
-	if err != nil {
-		return nil, err
-	}
-	actions := make([]any, 0, len(current)+1)
-	for _, index := range current {
-		actions = append(actions, map[string]any{
-			// Omitting must_exist keeps a transport-level retry idempotent if the
-			// first atomic update succeeded but its response was lost.
-			"remove": map[string]any{"index": index, "alias": alias},
-		})
-	}
-	actions = append(actions, map[string]any{
-		"add": map[string]any{"index": next, "alias": alias, "is_write_index": true},
-	})
-	body, err := json.Marshal(map[string]any{"actions": actions})
-	if err != nil {
-		return nil, fmt.Errorf("searchindex: encode alias swap: %w", err)
-	}
-	requestCtx, cancel := c.withTimeout(ctx)
-	defer cancel()
-	response, err := c.api.Indices.UpdateAliases(
-		bytes.NewReader(body),
-		c.api.Indices.UpdateAliases.WithContext(requestCtx),
-	)
-	if err != nil {
-		if c.aliasPointsOnlyTo(ctx, alias, next) {
-			return current, nil
-		}
-		return nil, fmt.Errorf("searchindex: swap alias %s: %w", alias, err)
-	}
-	if err := decodeAcknowledged("swap alias "+alias, response); err != nil {
-		if c.aliasPointsOnlyTo(ctx, alias, next) {
-			return current, nil
-		}
-		return nil, err
-	}
-	return current, nil
-}
-
-func (c *Client) aliasPointsOnlyTo(ctx context.Context, alias, index string) bool {
-	indices, err := c.aliasIndices(ctx, alias)
-	return err == nil && len(indices) == 1 && indices[0] == index
-}
-
-func (c *Client) deleteIndex(ctx context.Context, index string, missingOK bool) error {
-	if err := validateIndexName(index); err != nil {
-		return err
-	}
-	requestCtx, cancel := c.withTimeout(ctx)
-	defer cancel()
-	response, err := c.api.Indices.Delete(
-		[]string{index},
-		c.api.Indices.Delete.WithContext(requestCtx),
-	)
-	if err != nil {
-		return fmt.Errorf("searchindex: delete index %s: %w", index, err)
-	}
-	if missingOK && response.StatusCode == http.StatusNotFound {
-		drainAndClose(response.Body)
-		return nil
-	}
-	return decodeAcknowledged("delete index "+index, response)
-}
-
-func (c *Client) refreshIndex(ctx context.Context, index string) error {
-	requestCtx, cancel := c.withTimeout(ctx)
-	defer cancel()
-	response, err := c.api.Indices.Refresh(
-		c.api.Indices.Refresh.WithContext(requestCtx),
-		c.api.Indices.Refresh.WithIndex(index),
-	)
-	if err != nil {
-		return fmt.Errorf("searchindex: refresh index %s: %w", index, err)
-	}
-	defer response.Body.Close()
-	if response.IsError() {
-		return responseError("refresh index "+index, response)
-	}
-	_, _ = io.Copy(io.Discard, response.Body)
-	return nil
 }
 
 func physicalIndexName(alias, suffix string) string {

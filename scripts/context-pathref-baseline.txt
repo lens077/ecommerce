@@ -3,7 +3,6 @@
 README.md	docs/progress-archive
 README.md	docs/reports
 README.md	docs/todo
-TODO.md	docs/design/bff-migration.md
 context/INDEX.md	docs/todo
 context/decisions/implemented/2026-08-30-todo-md-sole-progress-source.md	docs/progress-archive
 context/decisions/implemented/2026-08-30-todo-md-sole-progress-source.md	docs/reports

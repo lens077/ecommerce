@@ -290,8 +290,8 @@ known_gaps:
   - "服务间调用几乎全未接线：10 个服务的 depends_on 当前均为空；order/payment 只有 depends_on_planned"
   - "事件链的拓扑边：Product/Order 未导入 outbox producer；无 consumer Inbox 表；
      无 DLQ topic。Kafka（集群内 Strimzi）只跑 CDC topic，本仓仍无客户端；领域事件搬运层定稿为
-     Debezium Outbox Event Router（自写 relay 与 NATS 已于 2026-09 退役，pkg/outbox 只剩 Insert）。
-     进度见 docs/todo/数据一致性与事件驱动.md"
+     Debezium Outbox Event Router（自写 relay 与 NATS 已于 2026-09 退役，pkg/outbox 已于 2026-09-24 删除）。
+     进度见 TODO.md「数据一致性与事件驱动」"
   - "没有 logistics/warehouse 前端 app，也没有独立物流/仓储微服务；履约按设计并入 order，inventory 不是 WMS"
   - "10 个业务服务没有完整的默认拒绝 NetworkPolicy/CiliumNetworkPolicy；后端信任网关注入身份头的边界尚未由网络策略全面强制"
   - "GitOps 拓扑断线：ArgoCD 没有本仓的 Application/ApplicationSet，集群由 make k8s-pre-all /

@@ -1,6 +1,6 @@
 # events
 
-**代码路径**：`backend/pkg/outbox/`（只剩同事务 `Insert`）、`backend/pkg/searchindex/`（Search Service 的只读 ES 客户端与投影 DTO）；CDC Connector、mapping、alias 与全量重建在同级仓 `postgres-kafka-es-streaming-pipeline`
+**代码路径**：`backend/pkg/searchindex/`（Search Service 的只读 ES 客户端与投影 DTO）；领域事件生产者尚无代码；CDC Connector、mapping、alias 与全量重建在同级仓 `postgres-kafka-es-streaming-pipeline`
 
 PostgreSQL 事务发件箱与搜索 projection 链。
 
@@ -17,7 +17,7 @@ PostgreSQL 事务发件箱与搜索 projection 链。
 - **部署态**：2026-09-03 完成 search → Elasticsearch 切流；2026-09-04 已删除 Meilisearch Helm release、运行资源、Secret、路由、PVC/PV 与 namespace。稳定 alias 是 `ecommerce_catalog_products`；具体当前 backing index 必须查实时 alias，不能把 `_v1` 当作长期固定值。
 - **仓库代码态**：策展投影由 `products.search_catalog` 定义，Debezium + Elasticsearch Sink 增量搬运；版本化全量重建、alias 原子切换/回退、offset 恢复和 DLQ 手顺由 pipeline 仓维护。本仓不再维护搜索投影 worker。
 - node3 的 Debezium 3.6.1 → Kafka → Elasticsearch Sink 链**已运行并验收**（同级仓 `postgres-kafka-es-streaming-pipeline`）：七张表进入 ES，其中 `products.search_catalog` 是搜索策展投影；它是生产搬运层，不再称「演示链」。`EventRouter` 与 `CloudEventsConverter` 已在其类路径上（2026-09-03 实测）。
-- `pkg/outbox` 只有 `Insert`（同事务写一行，不再 `pg_notify`）。没有 broker-neutral `EventSink`、Kafka Adapter 或 Kafka CLI 模式，目标态也不需要——搬运由 Debezium Outbox Event Router 承担。
+- 本仓没有 outbox 生产者代码：原 `pkg/outbox.Insert` 零调用方，按「不预建空链路」于 2026-09-24 删除，线 B 开工时随首个真实事件契约重写同事务写入。目标态也不需要 broker-neutral `EventSink`、Kafka Adapter 或 Kafka CLI 模式——搬运由 Debezium Outbox Event Router 承担。
 - node3 Kafka 已有基础设施，CDC 线在用；领域事件线仍零业务接线。
 - outbox payload 当前为 JSON。`products.outbox` 表仍带 `published_at/attempts/last_error` 三列——那是自写 relay 的记账本，换 Debezium 后「是否已发布」由 WAL 位点回答，这三列待随线 B 迁移删除（见 `TODO.md`「数据一致性与事件驱动」）。
 - PostgreSQL sequence ID 不代表并发 producer 的 commit 顺序；Debezium 按 WAL 提交序投递，但领域顺序仍必须由 aggregate version 和 consumer fence 约束。
@@ -47,7 +47,7 @@ PostgreSQL 事务发件箱与搜索 projection 链。
 ## 验证入口
 
 ```bash
-(cd backend && go test -count=1 ./pkg/outbox ./pkg/searchindex)
+(cd backend && go test -count=1 ./pkg/searchindex)
 (cd backend && go test -count=1 ./structcheck/...)   # 门禁：retired ServiceAccount/VPA 不得复活，matrix 无 nats
 
 (cd ../postgres-kafka-es-streaming-pipeline && go test ./...)

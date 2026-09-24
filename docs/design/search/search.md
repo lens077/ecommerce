@@ -18,11 +18,12 @@
 |---|---|---|
 | 查询契约 | [`SearchCatalog`](../../../backend/services/search/internal/data/data.go) | 返回项目自有 `CatalogProduct`，不暴露 Elasticsearch SDK 类型 |
 | 查询 provider | [`esCatalog`](../../../backend/services/search/internal/data/catalog.go) | 当前唯一生产 provider；这是单实现 deep-module boundary，不是 capability seam |
-| Elasticsearch 适配层 | [`backend/pkg/searchindex`](../../../backend/pkg/searchindex/) | 拥有 SDK、HTTP 请求、mapping、alias 与读路径细节；保留 `Reindex` 库函数作切流前止血用 |
+| Elasticsearch 适配层 | [`backend/pkg/searchindex`](../../../backend/pkg/searchindex/) | 拥有 SDK、HTTP 请求、mapping、alias 与读路径细节；不再承担全量重建 |
 | 策展投影定义 | `products.search_catalog` 表（[`00005_search_catalog.sql`](../../../backend/services/product/internal/data/migrations/00005_search_catalog.sql)） | 投影 = PG 行的函数；trigger 维护，任何写入 PG 的路径自动覆盖 |
 | 策展投影搬运 | Debezium → Strimzi Kafka → Elasticsearch Sink（集群内 `kafka` 命名空间；connector 配置与同级仓 `postgres-kafka-es-streaming-pipeline` 逐字段对齐） | 只搬运不定义；幂等由 `_id` 覆盖写 + offset external version 承担 |
 | 全量重建 | pipeline 仓 reindex Job（版本化索引 + alias 原子切换） | 与实时 Sink 分开执行：暂停 Sink → 重建 → 校验 → 切 alias → 恢复 Sink → lag 归零 |
-| 已删除（2026-09-03） | `tools/search-indexer`、`tools/outbox-relay`、`tools/cdc-demo`、`pkg/outbox/{relay,stream}.go` | 只承载过搜索投影；`pkg/outbox` 只保留 `Insert`，留给订单域事件；relay 不重写成 Kafka 版 |
+| 已删除（2026-09-03） | `tools/search-indexer`、`tools/outbox-relay`、`tools/cdc-demo`、`pkg/outbox/{relay,stream}.go` | 只承载过搜索投影；relay 不重写成 Kafka 版 |
+| 已删除（2026-09-24） | `pkg/outbox`（仅剩的 `Insert`）、`pkg/searchindex.Reindex` 及其 bulk/alias 切换/水位辅助函数 | 两者都没有调用方：领域事件按「不预建空链路」随首个真实生产者一起落地；全量重建与 alias 回退只走 pipeline 仓手顺 |
 | 查询入口 | Search RPC → repository → `SearchCatalog` | 请求路径只读稳定 alias，不回查 PostgreSQL，不感知搬运层 |
 
 `SearchCatalog` 的签名由反射测试递归检查：任何 `github.com/elastic/*` 或 `github.com/meilisearch/*` 类型进入参数、返回值或嵌套类型都会令测试失败。判据见 [`context/team/capability-seams.md`](../../../context/team/capability-seams.md)。
@@ -111,7 +112,7 @@ Search RPC
 
 mapping 使用 `dynamic: strict`，未知字段会被拒绝。`number_of_replicas: 0` 是单实例开发形态，不构成生产 HA 结论。
 
-稳定 alias 固定为 `ecommerce_catalog_products`。读写双方只使用 alias；物理索引由 pipeline 仓 reindex Job 按 `ecommerce_catalog_products_v<UTC 时间戳>` 版本化命名，`pkg/searchindex.Reindex` 的止血路径则使用 `-000001` 或 `-rebuild-*` 名称。
+稳定 alias 固定为 `ecommerce_catalog_products`。读写双方只使用 alias；物理索引由 pipeline 仓 reindex Job 按 `ecommerce_catalog_products_v<UTC 时间戳>` 版本化命名；`EnsureIndex` 首次建索引时使用 `-000001`。
 
 ## 查询契约
 
@@ -135,7 +136,7 @@ mapping 使用 `dynamic: strict`，未知字段会被拒绝。`number_of_replica
 
 由 pipeline 仓的 reindex Job 承接。只重建 ES 搜索索引时执行 `REINDEX_SCOPE=search-catalog ./reindex.sh`；PG 投影表自身不一致时，先实际隔离商品写入，再执行 `PRODUCT_WRITES_DISABLED=true REBUILD_SEARCH_CATALOG=true REINDEX_SCOPE=search-catalog ./reindex.sh`。PG+ES 流程分两个数据库事务：第一阶段锁表重算并提交 PG 投影；第二阶段重新建立 PostgreSQL `SHARE` 写屏障，等待 Source slot/committed offset 越过屏障并让旧 alias 的 Sink lag 归零，再暂停 Sink、全量写新物理索引、校验 mapping/计数/逐文档内容、独占保存旧 topology、原子切换 alias、恢复 Sink 并复验，最后释放写屏障。外部商品写入隔离必须覆盖两个事务之间的交接。失败时默认保持 Sink 为 `PAUSED`；执行前已暂停的 Sink 在成功后也默认恢复为 `PAUSED`。恢复旧 alias 不会回退 Sink offset；如果 offset 已推进，不能直接在旧 alias 上 resume，必须再建 fresh index。alias/backing/mapping 损坏且 Sink 无法在旧 alias 追平时，需先实际隔离搜索读取，再使用 `SEARCH_READS_DISABLED=true REINDEX_RECOVERY_MODE=true`。完整步骤见 pipeline 仓 `deploy/docker-node3/RUNBOOK.md`。
 
-`pkg/searchindex.Reindex` 是切流前的遗留止血实现，没有 CLI，也不是当前操作入口。当前不得为它恢复常驻 worker、broker consumer 或应用层 ACK 语义；全量重建和 alias 回退只维护 pipeline 仓手顺。
+本仓不保留任何全量重建代码：切流前的 `Reindex` 止血实现没有 CLI、没有调用方，已于 2026-09-24 删除。不得为它恢复常驻 worker、broker consumer 或应用层 ACK 语义；全量重建和 alias 回退只维护 pipeline 仓手顺。
 
 ## 配置、安全与网络
 

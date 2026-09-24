@@ -11,7 +11,7 @@
 | [config](config/INDEX.md) | `backend/services/*/internal/pkg/config/` + `../control-tower/services/config` | 一份配置三个副本；热更新的生效边界 |
 | [behavior](behavior/INDEX.md) | `backend/services/behavior/` | 缺配置块导致 gorse 静默关闭 |
 | [cart](cart/INDEX.md) | `backend/services/cart/` | 匿名加购端到端：网关访客轨已通，落库被 `cart_item.shop_name NOT NULL` 挡住（登录用户同样从未加购成功），待修 |
-| [events](events/INDEX.md) | `backend/pkg/outbox/` + `backend/pkg/searchindex/` | 两条线：行投影走 Debezium CDC → Sink，领域事实走 Outbox → Debezium Event Router → Inbox；分线判据；自写 relay 与 NATS 退役；Debezium 空闲槽撑爆 WAL |
+| [events](events/INDEX.md) | `backend/pkg/searchindex/` | 两条线：行投影走 Debezium CDC → Sink，领域事实走 Outbox → Debezium Event Router → Inbox；分线判据；自写 relay 与 NATS 退役；Debezium 空闲槽撑爆 WAL |
 | [consumer](consumer/INDEX.md) | `frontend/apps/consumer/` | MUI spacing ×8 踩坑；购物车重复请求 |
 | [merchant](merchant/INDEX.md) | `frontend/apps/merchant/` | ECharts 路由 chunk 的异步加载与拆分 |
 | [frontend-api](frontend-api/INDEX.md) | `frontend/packages/api/` + `apps/*/src/api/` | Connect Query 数据拉取 SOP；transport 单例约束 |

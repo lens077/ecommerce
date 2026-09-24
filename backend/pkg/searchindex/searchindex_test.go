@@ -3,7 +3,6 @@ package searchindex
 import (
 	"context"
 	"encoding/json"
-	"errors"
 	"io"
 	"net/http"
 	"net/http/httptest"
@@ -12,7 +11,6 @@ import (
 	"testing"
 	"time"
 
-	"github.com/jackc/pgx/v5"
 	"github.com/stretchr/testify/require"
 )
 
@@ -53,26 +51,6 @@ func TestDocumentJSONContractMatchesIndexMapping(t *testing.T) {
 	require.Equal(t, map[string]any{
 		"type": "date", "format": "strict_date_optional_time_nanos||epoch_millis",
 	}, properties["updated_at"])
-}
-
-func TestDatabaseWatermarkUsesPostgreSQLClock(t *testing.T) {
-	want := time.Date(2026, 8, 21, 10, 0, 0, 0, time.UTC)
-	var query string
-	got, err := databaseWatermark(context.Background(), func(_ context.Context, sql string, _ ...any) pgx.Row {
-		query = sql
-		return stubRow{value: want}
-	})
-	require.NoError(t, err)
-	require.Equal(t, want, got)
-	require.Contains(t, query, "clock_timestamp()")
-}
-
-func TestDatabaseWatermarkWrapsQueryError(t *testing.T) {
-	wantErr := errors.New("database unavailable")
-	_, err := databaseWatermark(context.Background(), func(context.Context, string, ...any) pgx.Row {
-		return stubRow{err: wantErr}
-	})
-	require.ErrorIs(t, err, wantErr)
 }
 
 func TestEnsureIndexCreatesStrictIKMappingAndStableAlias(t *testing.T) {
@@ -165,53 +143,6 @@ func TestDeleteDocumentRejectsMissingAlias(t *testing.T) {
 	err := client.DeleteDocument(context.Background(), "ecommerce_catalog_products", 42)
 	require.Error(t, err)
 	require.Contains(t, err.Error(), "alias or index not found")
-}
-
-func TestSwapAliasRemovesOldAndAddsNewInOneRequest(t *testing.T) {
-	var updated bool
-	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		w.Header().Set("Content-Type", "application/json")
-		switch {
-		case r.Method == http.MethodGet && r.URL.Path == "/_alias/ecommerce_catalog_products":
-			_, _ = w.Write([]byte(`{"ecommerce_catalog_products-000001":{"aliases":{"ecommerce_catalog_products":{"is_write_index":true}}}}`))
-		case r.Method == http.MethodPost && r.URL.Path == "/_aliases":
-			updated = true
-			var body struct {
-				Actions []map[string]map[string]any `json:"actions"`
-			}
-			require.NoError(t, json.NewDecoder(r.Body).Decode(&body))
-			require.Len(t, body.Actions, 2)
-			require.Equal(t, "ecommerce_catalog_products-000001", body.Actions[0]["remove"]["index"])
-			require.Equal(t, "ecommerce_catalog_products-rebuild", body.Actions[1]["add"]["index"])
-			require.Equal(t, true, body.Actions[1]["add"]["is_write_index"])
-			_, _ = w.Write([]byte(`{"acknowledged":true}`))
-		default:
-			t.Fatalf("unexpected request: %s %s", r.Method, r.URL.Path)
-		}
-	}))
-	defer server.Close()
-	client := newTestClient(t, server)
-
-	previous, err := client.swapAlias(context.Background(), "ecommerce_catalog_products", "ecommerce_catalog_products-rebuild")
-	require.NoError(t, err)
-	require.Equal(t, []string{"ecommerce_catalog_products-000001"}, previous)
-	require.True(t, updated)
-}
-
-func TestDeleteIndexPropagatesFailure(t *testing.T) {
-	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		require.Equal(t, http.MethodDelete, r.Method)
-		require.Equal(t, "/ecommerce_catalog_products-rebuild", r.URL.Path)
-		w.Header().Set("Content-Type", "application/json")
-		w.WriteHeader(http.StatusInternalServerError)
-		_, _ = w.Write([]byte(`{"error":{"reason":"delete failed"}}`))
-	}))
-	defer server.Close()
-	client := newTestClient(t, server)
-
-	err := client.deleteIndex(context.Background(), "ecommerce_catalog_products-rebuild", false)
-	require.Error(t, err)
-	require.Contains(t, err.Error(), "delete index ecommerce_catalog_products-rebuild")
 }
 
 func TestPhysicalIndexNameBoundsLongAlias(t *testing.T) {
