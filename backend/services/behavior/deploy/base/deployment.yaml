@@ -118,6 +118,7 @@
                 secretKeyRef: {
                   name: "consul-ecommerce-token",
                   key: "CONSUL_HTTP_TOKEN",
+                  optional: true,
                 },
               },
             },
