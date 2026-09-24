@@ -520,8 +520,12 @@ func TestWorkloadIdentityBaseline(t *testing.T) {
 		t.Errorf("zero-trust manifest has %d CiliumNetworkPolicy resources, want 1 canonical multi-rule policy", cnpCount)
 	}
 
+	// e28296e2 把 consumer 拆成 base/pre/prod：pre 改为 Argo Rollout（Blue-Green），prod 仍是 Deployment。
+	// 两者的 spec.selector / spec.template 结构相同，用同一个解码结构校验；只查旧的 pre/deployment.yaml
+	// 会在文件删除后让本测试读文件失败（2026-09-24 main 因此变红）。
 	extraDeployments := map[string]string{
-		"../../frontend/apps/consumer/deploy/pre/deployment.yaml": "ecommerce-frontend",
+		"../../frontend/apps/consumer/deploy/pre/rollout.yaml":              "ecommerce-frontend",
+		"../../frontend/apps/consumer/deploy/overlays/prod/deployment.yaml": "ecommerce-frontend",
 	}
 	for path, wantSA := range extraDeployments {
 		data, err := os.ReadFile(path)
