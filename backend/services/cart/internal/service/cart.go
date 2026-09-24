@@ -40,8 +40,8 @@ func (cs *CartService) AddProductToCart(ctx context.Context, c *connect.Request[
 	cart, err := cs.uc.AddProductToCart(ctx, biz.AddProductToCartRequest{
 		CustomerId:      customerId,
 		MerchantId:      merchantId,
-		SpuID:           req.SpuId,
-		SkuID:           req.SkuId,
+		SpuID:           int64(req.SpuId),
+		SkuID:           int64(req.SkuId),
 		Quantity:        req.Quantity,
 		Selected:        req.Selected,
 		SpuName:         req.SpuName,
@@ -57,7 +57,7 @@ func (cs *CartService) AddProductToCart(ctx context.Context, c *connect.Request[
 
 	response := connect.NewResponse(&v1.AddProductToCartResponse{
 		CartItemQuantity: uint32(cart.CartItemQuantity),
-		CartItemId:       cart.CartItemId,
+		CartItemId:       uint64(cart.CartItemId),
 	})
 	return response, nil
 }
@@ -118,8 +118,8 @@ func (cs *CartService) UpdateCartItemQuantity(ctx context.Context, c *connect.Re
 	cart, err := cs.uc.UpdateCartItemQuantity(ctx, biz.UpdateCartItemQuantityRequest{
 		CustomerId: customerId,
 		MerchantId: merchantId,
-		SpuId:      req.SpuId,
-		SkuId:      req.SkuId,
+		SpuId:      int64(req.SpuId),
+		SkuId:      int64(req.SkuId),
 		Quantity:   req.Quantity,
 		Status:     constants.CartStatusActive,
 	})
@@ -155,9 +155,9 @@ func (cs *CartService) GetCart(ctx context.Context, c *connect.Request[v1.GetCar
 			}
 		}
 		items = append(items, &v1.CartItem{
-			CartItemId:      item.ID,
-			SpuId:           item.SpuId,
-			SkuId:           item.SkuId,
+			CartItemId:      uint64(item.ID),
+			SpuId:           uint64(item.SpuId),
+			SkuId:           uint64(item.SkuId),
 			MerchantId:      item.MerchantId.String(),
 			ShopName:        item.ShopName,
 			Quantity:        item.Quantity,

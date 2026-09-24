@@ -30,8 +30,14 @@ enum CartStatus {
 }
 
 message AddProductToCartRequest {
-  int64 spu_id = 1 [(buf.validate.field).int64.gt = 0];
-  int64 sku_id = 2 [(buf.validate.field).int64.gt = 0];
+  uint64 spu_id = 1 [(buf.validate.field).uint64 = {
+    gte: 1
+    lte: 9223372036854775807
+  }];
+  uint64 sku_id = 2 [(buf.validate.field).uint64 = {
+    gte: 1
+    lte: 9223372036854775807
+  }];
   string merchant_id = 3 [(buf.validate.field).string.uuid = true];
   uint32 quantity = 4 [(buf.validate.field).uint32 = {
     gte: 1
@@ -63,7 +69,10 @@ message AddProductToCartRequest {
 
 message AddProductToCartResponse {
   uint32 cart_item_quantity = 1 [(buf.validate.field).uint32.lte = 10000]; // 购物车商品总数量
-  int64 cart_item_id = 2 [(buf.validate.field).int64.gt = 0]; // 新增/更新的购物车项ID（前端下单等场景需要真实ID）
+  uint64 cart_item_id = 2 [(buf.validate.field).uint64 = {
+    gte: 1
+    lte: 9223372036854775807
+  }]; // 新增/更新的购物车项ID（前端下单等场景需要真实ID）
 }
 
 message RemoveCartItemRequest {
@@ -112,8 +121,14 @@ message RemoveCartItemResponse {
 }
 
 message UpdateCartItemQuantityRequest {
-  int64 spu_id = 1 [(buf.validate.field).int64.gt = 0];
-  int64 sku_id = 2 [(buf.validate.field).int64.gt = 0];
+  uint64 spu_id = 1 [(buf.validate.field).uint64 = {
+    gte: 1
+    lte: 9223372036854775807
+  }];
+  uint64 sku_id = 2 [(buf.validate.field).uint64 = {
+    gte: 1
+    lte: 9223372036854775807
+  }];
   string merchant_id = 3 [(buf.validate.field).string.uuid = true];
   uint32 quantity = 4 [(buf.validate.field).uint32.lte = 999]; // 目标数量，如果为0则删除该商品项
 }
@@ -128,9 +143,18 @@ message CartItem {
   reserved 9;
   reserved "price";
 
-  int64 cart_item_id = 1 [(buf.validate.field).int64.gt = 0]; // 购物车商品记录ID
-  int64 spu_id = 2 [(buf.validate.field).int64.gt = 0];
-  int64 sku_id = 3 [(buf.validate.field).int64.gt = 0];
+  uint64 cart_item_id = 1 [(buf.validate.field).uint64 = {
+    gte: 1
+    lte: 9223372036854775807
+  }]; // 购物车商品记录ID
+  uint64 spu_id = 2 [(buf.validate.field).uint64 = {
+    gte: 1
+    lte: 9223372036854775807
+  }];
+  uint64 sku_id = 3 [(buf.validate.field).uint64 = {
+    gte: 1
+    lte: 9223372036854775807
+  }];
   string merchant_id = 4 [(buf.validate.field).string.uuid = true];
   string shop_name = 13 [(buf.validate.field).string = {
     min_len: 1
