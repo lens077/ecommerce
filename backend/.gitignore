@@ -17,3 +17,6 @@ services/*/configs/source.dev.yaml
 services/*/configs/dev.yml
 services/*/configs/pre.yml
 services/*/configs/prod.yml
+
+# backend/tools/config-seed 的 go build 产物(2026-09-24 曾以 21MB 二进制出现在工作树)
+/config-seed
