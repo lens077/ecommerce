@@ -1,0 +1,73 @@
+# GitLab Runner（Kubernetes executor）—— 本项目 GitLab CI 的唯一 runner。
+#
+# 为什么自建（2026-09-24）：gitlab.com 共享 runner 分钟用完，项目已关闭共享 runner。
+# 曾先在 node2（2C/1.6G）用 Docker runner，`go build ./...` 在 1 GiB job 上限下重度换页、38 分钟未编完，
+# 已整体撤掉；所有 job 改在集群节点（4C/7.3G）上跑。
+#
+# 安装：
+#   helm repo add gitlab https://charts.gitlab.io
+#   helm upgrade --install gitlab-runner gitlab/gitlab-runner --version 0.93.0 \
+#     -n gitlab-runner --create-namespace -f infrastructure/gitlab-runner/values.yaml
+# runner token 不入库：Secret gitlab-runner-token（键 runner-token / runner-registration-token），
+# 由 `glab api user/runners` 创建 runner 后经管道写入，见 infrastructure/gitlab-runner/README.md。
+
+gitlabUrl: https://gitlab.com/
+# 单并发：2026-09-24 CI 运行期间曾发生 control-plane SSH/API 不可达，未取得 OOM 证据，根因未确认。
+# 为降低 CI 对控制面的影响，限制并发并排除 control-plane；不要把该防护措施当作 OOM 根因证明。
+concurrent: 1
+checkInterval: 3
+
+rbac:
+  create: true
+serviceAccount:
+  create: true
+
+# manager 同样避开 control-plane：它在 k1 上时，k1 一挂连取消 job 的信号都收不到（2026-09-24 实测）。
+affinity:
+  nodeAffinity:
+    requiredDuringSchedulingIgnoredDuringExecution:
+      nodeSelectorTerms:
+        - matchExpressions:
+            - key: node-role.kubernetes.io/control-plane
+              operator: DoesNotExist
+
+# manager Pod 本身很轻
+resources:
+  requests:
+    cpu: 50m
+    memory: 128Mi
+  limits:
+    memory: 256Mi
+
+runners:
+  secret: gitlab-runner-token
+  config: |
+    [[runners]]
+      [runners.kubernetes]
+        namespace = "gitlab-runner"
+        image = "alpine:3.20"
+        # 新版默认从 registry.gitlab.com 拉 helper，集群只给 docker.io 配了 Spegel + 镜像站。
+        helper_image = "gitlab/gitlab-runner-helper:x86_64-v19.4.0"
+        pull_policy = ["if-not-present"]
+        # 3Gi 是初始预算，不是单个 job 的实测峰值；宿主机 swap 不能归算到某个容器。
+        # request == limit：按 build 容器的内存上限调度；仍需给 helper、系统和其它工作负载留余量。
+        cpu_request = "1"
+        cpu_limit = "2"
+        memory_request = "3Gi"
+        memory_limit = "3Gi"
+        # context-gate 曾因统一 3Gi request 无法调度；允许 CI 为轻任务同时下调 request/limit。
+        # 默认仍为 3Gi，旧 CI 或未声明资源的构建任务不会自动降为轻任务；覆盖值不能超过 3Gi。
+        memory_request_overwrite_max_allowed = "3Gi"
+        memory_limit_overwrite_max_allowed = "3Gi"
+        helper_cpu_request = "50m"
+        helper_memory_request = "64Mi"
+        helper_memory_limit = "512Mi"
+        poll_timeout = 600
+      # 不让 CI job 上 control-plane：k1 承载 apiserver/etcd，被 job 挤爆会让整个集群 API 失联。
+      [runners.kubernetes.affinity]
+        [runners.kubernetes.affinity.node_affinity]
+          [runners.kubernetes.affinity.node_affinity.required_during_scheduling_ignored_during_execution]
+            [[runners.kubernetes.affinity.node_affinity.required_during_scheduling_ignored_during_execution.node_selector_terms]]
+              [[runners.kubernetes.affinity.node_affinity.required_during_scheduling_ignored_during_execution.node_selector_terms.match_expressions]]
+                key = "node-role.kubernetes.io/control-plane"
+                operator = "DoesNotExist"
