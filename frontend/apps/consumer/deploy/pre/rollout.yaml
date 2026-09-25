@@ -40,10 +40,46 @@
         serviceAccountName: "ecommerce-frontend",
         automountServiceAccountToken: false,
         enableServiceLinks: false,
+        securityContext: {
+          runAsNonRoot: true,
+          runAsUser: 1000,
+          runAsGroup: 1000,
+          fsGroup: 1000,
+        },
+        volumes: [{
+          name: "caddy-config",
+          emptyDir: {
+            sizeLimit: "16Mi",
+          },
+        }, {
+          name: "caddy-data",
+          emptyDir: {
+            sizeLimit: "16Mi",
+          },
+        }],
         containers: [{
           name: "ecommerce-frontend",
           image: "ccr.ccs.tencentyun.com/sumery/ecommerce-frontend:1.7.13@sha256:1fdd641b892c04c40c06778222d099a4b44e11eb963a2f01f0cae68d829ca487",
           imagePullPolicy: "Always",
+          securityContext: {
+            readOnlyRootFilesystem: true,
+            allowPrivilegeEscalation: false,
+            capabilities: {
+              drop: [
+                "ALL",
+              ],
+              add: [
+                "NET_BIND_SERVICE",
+              ],
+            },
+          },
+          volumeMounts: [{
+            name: "caddy-config",
+            mountPath: "/config",
+          }, {
+            name: "caddy-data",
+            mountPath: "/data",
+          }],
           ports: [{
             containerPort: 80,
             protocol: "TCP",

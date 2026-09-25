@@ -211,7 +211,7 @@ todo-spec: 1
 - [ ] **部分完成 · TCR 签名验收**：多服务流水线已有 Cosign/SBOM；补逐服务 digest 的签名/attestation 回读验证，不沿用「只有 user 接线」也不把构建成功当验签完成。
 - [ ] **部分完成 · Harbor Helm 签名与 Kyverno 准入**：`verifyImages` 已落地为 ecommerce 命名空间级 Audit 策略（`infrastructure/kyverno/`，keyless + `type: SigstoreBundle`，只覆盖已完成 TCR 探测的 `user`），`smoke.sh` 验收「签名 digest pass / 未签名 fail / 两者放行」；ArgoCD `Application/ecommerce-kyverno` 已建，等 GitLab `main` 含该路径即 Synced。剩：CI 对全部服务在 TCR 签名后把 `imageReferences` 扩到 `sumery/*`；14 天零误报后转 Enforce 并以拒绝测试验收；chart 纳入签名链；`kyverno.io/v1 Policy` 迁 `NamespacedImageValidatingPolicy`（CEL）。
 - [ ] **未完成 · 发布权限与约束**：收敛 `MANIFEST_PUSH_TOKEN` 绕过分支保护的权限；把发布 tag 四条纪律落实为可执行检查，避免只靠操作约定。
-- [ ] **部分完成 · 制品启动、迁移与回滚**：迁移 Job 已接入两条部署入口及 Helm/Argo hook，失败阻断工作负载；迁移镜像随发布扫描、签名并固定 digest，种子不自动执行。剩正式发布制品实跑、prod 专属数据库/迁移 Secret 验收、长期 Job 日志归档、制品保留策略和真实应用回滚演练；GitOps 接管后验证发布/回滚无需手工 kubectl。
+- [ ] **部分完成 · 制品启动、迁移与回滚**：迁移 Job 已接入两条部署入口及 Helm/Argo hook，失败阻断工作负载；迁移镜像随发布扫描、签名并固定 digest，种子不自动执行；供应链门禁命中的浮动 Action 与只读根文件系统缺项已修正，未扩大存量基线。剩正式发布制品实跑、prod 专属数据库/迁移 Secret 验收、长期 Job 日志归档、制品保留策略和真实应用回滚演练；GitOps 接管后验证发布/回滚无需手工 kubectl。
 - [ ] **部分完成 · 契约与竞态门禁**：GitHub 发布模板已有 `buf breaking` 和 `go test -race`，GitLab 有 lint 棘轮。剩 MR 阶段兼容性保护与破坏性变更红测；事件 schema 随线 B 纳入，不再重复要求从零接入。
 
 #### P2

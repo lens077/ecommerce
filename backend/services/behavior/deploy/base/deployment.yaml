@@ -53,6 +53,9 @@
           name: "ecommerce-behavior",
           image: "ccr.ccs.tencentyun.com/sumery/behavior:1.7.13@sha256:0448867a37b22093cc7d45620b3d63a22719665bd7fa5066577bcea5b7cc411a",
           imagePullPolicy: "Always",
+          securityContext: {
+            readOnlyRootFilesystem: true,
+          },
           env: [
             # 关闭应用内的 Log 导出器，只保留 Trace 和 Metric。
             # 日志输出到 stdout，由部署在 k8s 的 Fluent Bit 统一采集
@@ -162,6 +165,9 @@
             },
           },
           volumeMounts: [{
+            name: "tmp",
+            mountPath: "/tmp",
+          }, {
             name: "config-source",
             mountPath: "/etc/ecommerce/config-source",
             readOnly: true,
@@ -176,6 +182,11 @@
               key: "behavior.yaml",
               path: "behavior.yaml",
             }],
+          },
+        }, {
+          name: "tmp",
+          emptyDir: {
+            sizeLimit: "16Mi",
           },
         }],
         restartPolicy: "Always",

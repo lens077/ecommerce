@@ -81,6 +81,10 @@ structcheck 曾专门写一个测试去对比 tgz 里的模板和源码,那是�
           name: "ecommerce-{{ $svc }}",
           image: "{{ $v.image.repository }}:{{ $v.image.tag }}",
           imagePullPolicy: "Always",
+          # 1.8.0 Trivy gate: immutable runtime root; transient TLS files use bounded /tmp.
+          securityContext: {
+            readOnlyRootFilesystem: true,
+          },
           env: [{
             # 关闭应用内的 Log 导出器,只保留 Trace 和 Metric。
             # 日志输出到 stdout,由部署在 k8s 的 Fluent Bit 统一采集
@@ -176,7 +180,7 @@ structcheck 曾专门写一个测试去对比 tgz 里的模板和源码,那是�
               memory: {{ $res.limits.memory | quote }},
             },
           },
-          volumeMounts: [{
+          volumeMounts: [{ name: "tmp", mountPath: "/tmp" }, {
             name: "config-source",
             mountPath: {{ $g.configSource.mountPath | quote }},
             readOnly: true,
@@ -196,6 +200,9 @@ structcheck 曾专门写一个测试去对比 tgz 里的模板和源码,那是�
               path: "{{ $svc }}.yaml",
             }],
           },
+        }, {
+          name: "tmp",
+          emptyDir: { sizeLimit: "16Mi" },
         }],
         restartPolicy: "Always",
       },

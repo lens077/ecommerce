@@ -41,12 +41,48 @@
         serviceAccountName: "ecommerce-frontend",
         automountServiceAccountToken: false,
         enableServiceLinks: false,
+        securityContext: {
+          runAsNonRoot: true,
+          runAsUser: 1000,
+          runAsGroup: 1000,
+          fsGroup: 1000,
+        },
+        volumes: [{
+          name: "caddy-config",
+          emptyDir: {
+            sizeLimit: "16Mi",
+          },
+        }, {
+          name: "caddy-data",
+          emptyDir: {
+            sizeLimit: "16Mi",
+          },
+        }],
         containers: [{
           name: "ecommerce-frontend",
           # Harbor 在本集群未部署（ARM64 卡在官方 v2.16 之前），改用 TCR。
           # 钉不可变 tag，不用 :dev —— latest/dev 这类浮动 tag 让"线上跑的到底是哪份代码"无从回答。
           image: "ccr.ccs.tencentyun.com/sumery/ecommerce-frontend:1.7.7@sha256:02dea7eb72bf67344c659bb241c9d846d3b2803a14a2b1ec8ebd039e52e6581a",
           imagePullPolicy: "Always",
+          securityContext: {
+            readOnlyRootFilesystem: true,
+            allowPrivilegeEscalation: false,
+            capabilities: {
+              drop: [
+                "ALL",
+              ],
+              add: [
+                "NET_BIND_SERVICE",
+              ],
+            },
+          },
+          volumeMounts: [{
+            name: "caddy-config",
+            mountPath: "/config",
+          }, {
+            name: "caddy-data",
+            mountPath: "/data",
+          }],
           ports: [{
             containerPort: 80,
             protocol: "TCP",

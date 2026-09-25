@@ -52,6 +52,9 @@
           name: "ecommerce-order",
           image: "ccr.ccs.tencentyun.com/sumery/order:1.7.13@sha256:44153bf8807e3df8041a120b3ee39e18f8ddbea0ff3cf715664442300f698b55",
           imagePullPolicy: "Always",
+          securityContext: {
+            readOnlyRootFilesystem: true,
+          },
           env: [
             # 关闭应用内的 Log 导出器，只保留 Trace 和 Metric。
             # 日志输出到 stdout，由部署在 k8s 的 Fluent Bit 统一采集
@@ -158,6 +161,9 @@
             },
           },
           volumeMounts: [{
+            name: "tmp",
+            mountPath: "/tmp",
+          }, {
             name: "config-source",
             mountPath: "/etc/ecommerce/config-source",
             readOnly: true,
@@ -172,6 +178,11 @@
               key: "order.yaml",
               path: "order.yaml",
             }],
+          },
+        }, {
+          name: "tmp",
+          emptyDir: {
+            sizeLimit: "16Mi",
           },
         }],
         restartPolicy: "Always",

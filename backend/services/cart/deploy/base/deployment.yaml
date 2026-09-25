@@ -56,6 +56,9 @@
           name: "ecommerce-cart",
           image: "ccr.ccs.tencentyun.com/sumery/cart:1.7.13@sha256:189a83d3efbb95cf2858941369cc127e73e674b92094edd43021a21b8bc8f72c",
           imagePullPolicy: "Always",
+          securityContext: {
+            readOnlyRootFilesystem: true,
+          },
           env: [
             # 关闭应用内的 Log 导出器，只保留 Trace 和 Metric。
             # 日志输出到 stdout，由部署在 k8s 的 Fluent Bit 统一采集
@@ -163,6 +166,9 @@
             },
           },
           volumeMounts: [{
+            name: "tmp",
+            mountPath: "/tmp",
+          }, {
             name: "config-source",
             mountPath: "/etc/ecommerce/config-source",
             readOnly: true,
@@ -177,6 +183,11 @@
               key: "cart.yaml",
               path: "cart.yaml",
             }],
+          },
+        }, {
+          name: "tmp",
+          emptyDir: {
+            sizeLimit: "16Mi",
           },
         }],
         restartPolicy: "Always",
