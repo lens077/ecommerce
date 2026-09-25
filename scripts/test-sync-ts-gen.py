@@ -4,6 +4,9 @@ import importlib.util
 from pathlib import Path
 import tempfile
 import unittest
+import os
+import shutil
+import subprocess
 
 spec = importlib.util.spec_from_file_location("sync_ts_gen", Path(__file__).with_name("sync-ts-gen.py"))
 module = importlib.util.module_from_spec(spec)
@@ -57,6 +60,20 @@ class SyncTest(unittest.TestCase):
                     module.sync(root, check, {"example": ("example",)})
                 self.assertEqual(unknown.read_bytes(), before)
                 self.assertFalse((unknown.parents[2] / "example").exists(), "must fail before writes")
+
+    def test_entrypoint_ignores_hook_git_worktree_environment(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            root = Path(tmp)
+            scripts = root / "scripts"
+            scripts.mkdir()
+            shutil.copyfile(Path(__file__).with_name("sync-ts-gen.sh"), scripts / "sync-ts-gen.sh")
+            (scripts / "sync-ts-gen.py").write_text('print("entrypoint reached")\n')
+            subprocess.run(["git", "init", "-q", str(root)], check=True)
+            result = subprocess.run(["bash", str(scripts / "sync-ts-gen.sh"), "--check"], cwd=root,
+                                    env={**os.environ, "GIT_DIR": str(root / ".git"), "GIT_WORK_TREE": "."},
+                                    capture_output=True, text=True)
+            self.assertEqual(result.returncode, 0, result.stderr)
+            self.assertEqual(result.stdout.strip(), "entrypoint reached")
 
     def test_missing_source_is_not_silently_accepted(self):
         with tempfile.TemporaryDirectory() as tmp:
