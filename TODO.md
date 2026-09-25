@@ -83,7 +83,7 @@ todo-spec: 1
 **待触发**：首个需要跨服务副作用的业务写出现时开工。涉及支付/库存副作用时，下列正确性要求是上线阻断，不是可后补的增强。
 
 - [ ] **待触发 · 事务生产者与事件契约**：业务变更和 Outbox 同一 PG 事务；定义 `OrderCreated`/`OrderPaid`/`OrderCancelled`/`OrderReadyForFulfillment` 等实际所需事件、Protobuf envelope 与 `traceparent`。不为发事件提前制造 Product 写接口。
-- [ ] **待触发 · Outbox 结构与搬运**：`pkg/outbox` 已删除；product `00006_drop_outbox.sql` 已完成隔离 PostgreSQL 升降级验证，目标环境尚未执行，授权后先核对数据/消费者再删表；随首个事件契约新建 outbox 表（含 `aggregate_type`、不带 relay 簿记列）与同事务生产者；Debezium Outbox Router 使用独立 publication/slot，与搜索 CDC 分线。配置 `acks=all`、幂等 producer 及复制槽保留策略，不自写 relay。
+- [ ] **待触发 · Outbox 结构与搬运**：`pkg/outbox` 已删除；product `00006_drop_outbox.sql` 已完成隔离 PostgreSQL 升降级及 pre 授权执行，其他环境仍须核对数据/消费者后单独授权；随首个事件契约新建 outbox 表（含 `aggregate_type`、不带 relay 簿记列）与同事务生产者；Debezium Outbox Router 使用独立 publication/slot，与搜索 CDC 分线。配置 `acks=all`、幂等 producer 及复制槽保留策略，不自写 relay。
 - [ ] **待触发 · 消费者与恢复**：franz-go + Inbox 唯一键 `(consumer_group,event_id)`；副作用与 Inbox 同事务，成功后提交 offset。落 retry/backoff、显式预算、DLQ、重放权限与审计，补显式补偿、状态查询和超时兜底。
 - [ ] **待触发 · Topic 与演练**：声明 owner、partition key、replication、retention、lag/恢复 SLO；验证事务回滚、重复、乱序、毒消息、断连、积压与重放。没有 Inbox 和补偿证据不得产生支付/库存副作用。
 
@@ -111,7 +111,7 @@ todo-spec: 1
 - [ ] **待复验 · 当前集群容量与稳定性**：旧 node3 风暴已做组件迁移，不能继续按迁移前内存表下结论。交接仍报 node5 抖动、metrics-server 不可用；先恢复可信观测，再评估 requests 与可调度节点容量，不以重平衡脚本替代容量治理。
 - [ ] **部分完成 · VPA 与 requests 校准**：2026-09-23 拍板 recommender 开 / updater 关 / webhook 不作自动调节（kubernetes 仓 `components/vpa/values.yaml`），`observability/grafana` VPA `Off` 已出 Target≈11m/523Mi 作为样板；按 Off/RequestsOnly 收敛，包括复核 config-center 旧 InPlace 配置；至少 7 天指标覆盖发布与 k6 窗口，再人工回写 requests。
 - [ ] **部分完成 · 多副本、PDB 与 N+1**：重核当前拓扑的副本/PDB；旧低流量、旧节点演练不代表现在达标。验证节点故障、扩缩容、批量滚更、资源耗尽与调度失败告警，满足后才启用自动灰度/重调度。
-- [ ] **待复验 · HTTPRoute/TLS 收敛**：同 hostname 不等于冲突，按 Exact/PathPrefix 优先级验证 SSR、SPA 与 `/_next`；盘点当前仍存活的基础设施路由和 certificateRef，不按旧组件列表批量迁移。
+- [ ] **待修复 · 公网入口与 HTTPRoute/TLS**：后端内部健康和 SQL 请求已验证，公网 `shop.apikv.com` / `gateway.apikv.com` smoke 为 404；集群前端 HTTPRoute 为 Accepted，但未发现 control-tower gateway Deployment/Service，须与该仓和公网入口 owner 核对，不把后端发布成功写成公网交易链成功。同 hostname 不等于冲突，按 Exact/PathPrefix 优先级验证 SSR、SPA 与 `/_next`；盘点实际路由和 certificateRef，不按旧组件列表批量迁移。
 - [ ] **部分完成 · 数据恢复与重装**：2026-09-23 已用真实 dump（`backs/node3/pigsty-node3-2026-09-03/raw/_data/ecommerce.pgdump`）在 CNPG 隔离库比对：业务表与 live 一致（同一套 Go seed，订单/用户在备份里为 0 行），只有 Config Center 的 `config` schema 是 live 缺的，已 additive 合入 `pg-main/ecommerce`；CDC 用真实 SKU 可逆改价验证 PG→Debezium→Kafka→ES 全链路。剩：CNPG PITR/对象存储备份、RTO/RPO 演练；OpenBao 集群外备份/副本；重装手顺以 CNPG + OpenBao/ESO + Config Center 为准（Pigsty 已随 node3 退役）。OpenBao 当前明确选择 **C：保持 Shamir 手动解封**，不做 static seal migration，也不接 VPS Vault transit；Pod 重启后的恢复动作是 `bash kubernetes/components/openbao/examples/unseal.sh`，Gatus `openbao-unsealed` 负责告警。
 - [ ] **待对齐 · 数据面故障域**：近期 Kafka/ES/Connect/Silo 迁入 K8s，与 TECH.md §7 的外置数据面目标有差距；登记迁移后容量与恢复证据，再按目标规划收敛，不能把部署完成当成目标已满足。
 - [ ] **待复验 · Dragonfly 实例隔离**：按 TECH.md §7/§12 验收 Session 的 noeviction/持久化、Cache 淘汰策略与 Ratelimit 故障域；共用实例不能标为生产基线完成。
@@ -207,11 +207,11 @@ todo-spec: 1
 
 #### P1
 
-- [ ] **部分完成 · GitLab 自建 Runner 验收**：仅保留集群内 Kubernetes executor，单并发且排除 control-plane；轻检查 512Mi、构建预算 1Gi。GitLab 轻检查端到端与 job Pod 自动清理已通过；低内存 Go/前端构建已在隔离容器验证，并删除 knip 中一条已不存在的导出基线。剩余：发布配置后完成真实 Runner 的 Go/前端构建与自动清理验收，保留全部质量检查。
+- [ ] **部分完成 · GitLab 自建 Runner 验收**：仅保留集群内 Kubernetes executor，单并发且排除 control-plane；轻检查 512Mi、构建预算 1Gi。GitLab 轻检查端到端与 job Pod 自动清理已通过；低内存 Go/前端构建已在隔离容器验证，并删除 knip 中一条已不存在的导出基线。真实 Runner 的 Go 构建、测试与 lint 已通过；前端 job 在后续提交触发新流水线时被取消，尚不能算端到端通过。剩余：让一轮真实前端构建完整结束并核对自动清理，保留全部质量检查。
 - [ ] **部分完成 · TCR 签名验收**：多服务流水线已有 Cosign/SBOM；补逐服务 digest 的签名/attestation 回读验证，不沿用「只有 user 接线」也不把构建成功当验签完成。
 - [ ] **部分完成 · Harbor Helm 签名与 Kyverno 准入**：`verifyImages` 已落地为 ecommerce 命名空间级 Audit 策略（`infrastructure/kyverno/`，keyless + `type: SigstoreBundle`，只覆盖已完成 TCR 探测的 `user`），`smoke.sh` 验收「签名 digest pass / 未签名 fail / 两者放行」；ArgoCD `Application/ecommerce-kyverno` 已建，等 GitLab `main` 含该路径即 Synced。剩：CI 对全部服务在 TCR 签名后把 `imageReferences` 扩到 `sumery/*`；14 天零误报后转 Enforce 并以拒绝测试验收；chart 纳入签名链；`kyverno.io/v1 Policy` 迁 `NamespacedImageValidatingPolicy`（CEL）。
 - [ ] **未完成 · 发布权限与约束**：收敛 `MANIFEST_PUSH_TOKEN` 绕过分支保护的权限；把发布 tag 四条纪律落实为可执行检查，避免只靠操作约定。
-- [ ] **部分完成 · 制品启动、迁移与回滚**：迁移 Job 已接入两条部署入口及 Helm/Argo hook，失败阻断工作负载；迁移镜像随发布扫描、签名并固定 digest，种子不自动执行；供应链门禁命中的浮动 Action 与只读根文件系统缺项已修正，未扩大存量基线。剩正式发布制品实跑、prod 专属数据库/迁移 Secret 验收、长期 Job 日志归档、制品保留策略和真实应用回滚演练；GitOps 接管后验证发布/回滚无需手工 kubectl。
+- [ ] **部分完成 · 制品启动、迁移与回滚**：迁移 Job 已接入两条部署入口及 Helm/Argo hook，失败阻断工作负载；迁移镜像随发布扫描、签名并固定 digest，种子不自动执行；供应链门禁命中的浮动 Action 与只读根文件系统缺项已修正，未扩大存量基线。pre 正式迁移制品已实跑并完成后端滚动；剩 prod 专属数据库/迁移 Secret 验收、长期 Job 日志归档、制品保留策略和真实应用回滚演练；GitOps 接管后验证发布/回滚无需手工 kubectl。
 - [ ] **部分完成 · 契约与竞态门禁**：GitHub 发布模板已有 `buf breaking` 和 `go test -race`，GitLab 有 lint 棘轮。剩 MR 阶段兼容性保护与破坏性变更红测；事件 schema 随线 B 纳入，不再重复要求从零接入。
 
 #### P2

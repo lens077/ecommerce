@@ -56,6 +56,12 @@ affects:
   迁移半途失败不会回滚也无 dirty 标记）——只在 `CREATE INDEX CONCURRENTLY` 这类
   必须出事务的语句上使用，且语句必须自带幂等（IF NOT EXISTS）。
 - 每服务迁移用独立咨询锁（FNV(服务名)）：同服务多副本并发迁移串行化，服务间并行。
+- **readiness 不证明 schema 就绪**：2026-09-24 连接探活全绿，真实行政区划查询仍报缺表。
+  发布必须先运行与制品同源的迁移 Job，并观察 `Complete=True` 再启动新工作负载；
+  `kubectl create` 成功、server-side dry-run、CLI 被取消都不能代替迁移终态。
+  Helm 渲染后 `kubectl apply` 不执行 hook，须通过部署脚本显式等待；原生 Helm/Argo
+  使用完整同步 hook。失败不自动 `baseline` 或 `down`，种子不混入发布。手顺见
+  [dbmigrate](../../backend/tools/dbmigrate/README.md#集群发布门禁)。
 
 ## 与 CDC/outbox 的关系
 

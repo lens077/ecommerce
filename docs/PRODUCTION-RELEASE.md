@@ -36,6 +36,20 @@ prod 清单不是现网全量快照：不会包含 live 注解、手工直连路
 
 `frontend.yml` 仍是定时登录 smoke，与镜像发布分工独立。前端流程本次补齐的是构建、平台校验和清单接线，不代表它已经具有后端的全部 Trivy/Cosign/SBOM 供应链步骤。GitHub 实际构建、TCR 发布和线上新版本验收必须在首次发布后记录；本地 actionlint 不能替代这些验收。
 
+## 仓库容量或签名附件写入失败
+
+2026-09-26 的发布被 TCR 个人版仓库 tag 配额阻断：镜像与 GHCR 签名已成功，TCR 的
+Cosign 附件仍需要额外 tag，不能用「镜像 push 成功」推断签名落库成功。
+
+- 清理前先核对所有运行/回退引用和 OCI referrer；只删除明确授权且无引用的临时 tag。
+  不按年龄批量删除稳定 semver 或 `sha256-*` 签名索引。[TCR 删除接口](https://www.tencentcloud.com/document/product/1051/39861)
+  的授权范围是指定仓库 tag，不等于授权清空仓库。
+- 不为重试签名重建或覆盖版本镜像。先验证 GHCR 原 digest 的证书身份、透明日志与两平台
+  attestation，再用 [ORAS recursive copy](https://oras.land/docs/commands/oras_cp/) 转移同 digest
+  的完整附件图，最后在 TCR 重新验签；摘要必须保持不变。
+- 原 CI 失败记录保留。只有独立验签与全部制品检查通过后，才执行显式晋级并在提交 body
+  说明人工恢复原因；不能把原 run 说成成功，也不能跳过漏洞扫描或放宽签名身份。
+
 ## 显式晋级 prod
 
 在工作区没有其他会话修改这些清单时执行。先登录 TCR，指定已经成功发布的版本：
