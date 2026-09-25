@@ -101,7 +101,7 @@
         # 镜像里的预渲染产物由 init 容器先拷进 emptyDir,再挂到同一路径,读写都在卷上。
         initContainers: [{
           name: "seed-next-app",
-          image: "ccr.ccs.tencentyun.com/sumery/consumer-next:1.7.13@sha256:a792ff5092c334e1f8d057363c5103cfb083c4fcff0c1e8cef6cc5523068958c",
+          image: "ccr.ccs.tencentyun.com/sumery/consumer-next:1.8.1@sha256:6bb7e1160cd12a002dec0faa7479485ccb6a15d1235cae3c14c05df56efe51f2",
           # 用 cp -R 不用 -a:emptyDir 挂载点属 root,uid 1001 无权改它的 mtime,-a 保留时间戳会在根目录上失败
           # (1.7.7 线上 CrashLoop 实测:`cp: preserving times for '/seed/.': Operation not permitted`)
           command: [
@@ -135,7 +135,7 @@
         }],
         containers: [{
           name: "consumer-next",
-          image: "ccr.ccs.tencentyun.com/sumery/consumer-next:1.7.13@sha256:a792ff5092c334e1f8d057363c5103cfb083c4fcff0c1e8cef6cc5523068958c",
+          image: "ccr.ccs.tencentyun.com/sumery/consumer-next:1.8.1@sha256:6bb7e1160cd12a002dec0faa7479485ccb6a15d1235cae3c14c05df56efe51f2",
           securityContext: {
             allowPrivilegeEscalation: false,
             readOnlyRootFilesystem: true,

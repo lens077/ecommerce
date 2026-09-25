@@ -51,7 +51,7 @@
         },
         containers: [{
           name: "ecommerce-behavior",
-          image: "ccr.ccs.tencentyun.com/sumery/behavior:1.7.13@sha256:0448867a37b22093cc7d45620b3d63a22719665bd7fa5066577bcea5b7cc411a",
+          image: "ccr.ccs.tencentyun.com/sumery/behavior:1.8.1@sha256:4b5361d97f8b1541813814912bb23a0a22e9cfbdf8c99fe983308c2bd6afc00e",
           imagePullPolicy: "Always",
           securityContext: {
             readOnlyRootFilesystem: true,

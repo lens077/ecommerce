@@ -50,7 +50,7 @@
         },
         containers: [{
           name: "ecommerce-payment",
-          image: "ccr.ccs.tencentyun.com/sumery/payment:1.7.13@sha256:27dfb285a775f00dba6b61486201ce01d6c6b080e7250cf5a91f3b01d81a6341",
+          image: "ccr.ccs.tencentyun.com/sumery/payment:1.8.1@sha256:6691e11ad502a8382d581d3d35730b1c26fa050399e41e536331b9dc193e44cd",
           imagePullPolicy: "Always",
           securityContext: {
             readOnlyRootFilesystem: true,

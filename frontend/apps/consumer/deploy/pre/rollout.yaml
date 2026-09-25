@@ -59,7 +59,7 @@
         }],
         containers: [{
           name: "ecommerce-frontend",
-          image: "ccr.ccs.tencentyun.com/sumery/ecommerce-frontend:1.7.13@sha256:1fdd641b892c04c40c06778222d099a4b44e11eb963a2f01f0cae68d829ca487",
+          image: "ccr.ccs.tencentyun.com/sumery/ecommerce-frontend:1.8.1@sha256:ab856ea115ee2348ee43d7617acd4494cb19b9bf64e16c709ce16da1fc2d6eda",
           imagePullPolicy: "Always",
           securityContext: {
             readOnlyRootFilesystem: true,

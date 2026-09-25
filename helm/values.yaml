@@ -28,7 +28,7 @@
     migrations: {
       image: {
         repository: "ccr.ccs.tencentyun.com/sumery/dbmigrate",
-        tag: "migration-preflight-20260926@sha256:2aff5293162f5003f8f213f6fb5c7c317d4165c6a4f61284af12bc2d629f1946",
+        tag: "1.8.1@sha256:0d17a9590b8b6af5a733572cb433422daf12e9200c43a8fadcbffc1a3ee66972",
       },
       secretName: "ecommerce-db-migrate",
     },
@@ -79,7 +79,7 @@
     port: 30001,
     image: {
       repository: "ccr.ccs.tencentyun.com/sumery/user",
-      tag: "1.7.13@sha256:c0b14a7375b0e8a0ed01112724a157e783a886db3ee265dae00b5fdced162737",
+      tag: "1.8.1@sha256:e21839736538c604e281dcfda13d960143351049271cc5227f410f9afb2512fd",
     },
   },
   search: {
@@ -89,7 +89,7 @@
     port: 30002,
     image: {
       repository: "ccr.ccs.tencentyun.com/sumery/search",
-      tag: "1.7.13@sha256:b9dd6676a046e4d51b0e7fe50bfafadaa35d1955d1c6581c7181871d572a6517",
+      tag: "1.8.1@sha256:2fee4c724aa1646eedbacc7c6469cee3d3b7e7a2711715c19b89453637c200d4",
     },
   },
   product: {
@@ -99,7 +99,7 @@
     port: 30003,
     image: {
       repository: "ccr.ccs.tencentyun.com/sumery/product",
-      tag: "1.7.13@sha256:b16bcc480e02b7d17e3f6ef558299ce792bb0c5d0b53dfb0b7c6cd959f57e512",
+      tag: "1.8.1@sha256:28d9313758555cdfbdbd66d3c041079910a4622e9eb892135228b641ea7fc022",
     },
   },
   order: {
@@ -109,7 +109,7 @@
     port: 30004,
     image: {
       repository: "ccr.ccs.tencentyun.com/sumery/order",
-      tag: "1.7.13@sha256:44153bf8807e3df8041a120b3ee39e18f8ddbea0ff3cf715664442300f698b55",
+      tag: "1.8.1@sha256:865935ca66aaaf553ad82d0455841f56f73e73da0579ef4d1f183e625d5b4353",
     },
   },
   inventory: {
@@ -119,7 +119,7 @@
     port: 30005,
     image: {
       repository: "ccr.ccs.tencentyun.com/sumery/inventory",
-      tag: "1.7.13@sha256:af672c027128ad5c2f979992f4dd4f8dd4b17748a5a613350fbd1355d040a02d",
+      tag: "1.8.1@sha256:41ea056448fad131ca85bd8916dfa8052e118bae7af625e23bc81cf9bf59c7bb",
     },
   },
   cart: {
@@ -129,7 +129,7 @@
     port: 30006,
     image: {
       repository: "ccr.ccs.tencentyun.com/sumery/cart",
-      tag: "1.7.13@sha256:189a83d3efbb95cf2858941369cc127e73e674b92094edd43021a21b8bc8f72c",
+      tag: "1.8.1@sha256:6dd8d7a635c68acf03d736c1835f12ef5f809cfdc3fa8abaf0d2b7cdaf311c2c",
     },
   },
   merchant: {
@@ -139,7 +139,7 @@
     port: 30007,
     image: {
       repository: "ccr.ccs.tencentyun.com/sumery/merchant",
-      tag: "1.7.13@sha256:9606be27dd0a89a04a929dfd52da77cd2b7c76ff93a410b80016dce129f44fd5",
+      tag: "1.8.1@sha256:4d7d1108e817083fb69ff41705887b86a5f8a37ef881dfa38bff49e75f526250",
     },
   },
   payment: {
@@ -149,7 +149,7 @@
     port: 30008,
     image: {
       repository: "ccr.ccs.tencentyun.com/sumery/payment",
-      tag: "1.7.13@sha256:27dfb285a775f00dba6b61486201ce01d6c6b080e7250cf5a91f3b01d81a6341",
+      tag: "1.8.1@sha256:6691e11ad502a8382d581d3d35730b1c26fa050399e41e536331b9dc193e44cd",
     },
   },
   address: {
@@ -159,7 +159,7 @@
     port: 30009,
     image: {
       repository: "ccr.ccs.tencentyun.com/sumery/address",
-      tag: "1.7.13@sha256:80cc84fbe4a23f7e975fb9dfe0b8dacea86e5eb4519a7cbed2034d6f65df3848",
+      tag: "1.8.1@sha256:2f11977c4008de93bd3db26ca0846e2346a73ec55928d91c3443998561330c76",
     },
   },
   behavior: {
@@ -169,7 +169,7 @@
     port: 30011,
     image: {
       repository: "ccr.ccs.tencentyun.com/sumery/behavior",
-      tag: "1.7.13@sha256:0448867a37b22093cc7d45620b3d63a22719665bd7fa5066577bcea5b7cc411a",
+      tag: "1.8.1@sha256:4b5361d97f8b1541813814912bb23a0a22e9cfbdf8c99fe983308c2bd6afc00e",
     },
   },
   # 前端两个工作负载。裸 manifest 在 frontend/apps/consumer/deploy/pre/ 与
@@ -179,7 +179,7 @@
     replicaCount: 1,
     image: {
       repository: "ccr.ccs.tencentyun.com/sumery/ecommerce-frontend",
-      tag: "1.7.13@sha256:1fdd641b892c04c40c06778222d099a4b44e11eb963a2f01f0cae68d829ca487",
+      tag: "1.8.1@sha256:ab856ea115ee2348ee43d7617acd4494cb19b9bf64e16c709ce16da1fc2d6eda",
     },
     # Caddy 监听端口。⚠️ 仓库 Dockerfile 现写 :30080,而线上镜像 sha-bf8dae2 实测监听 :80;
     # 下次重建镜像前必须先把两者对齐,否则 Service 的 targetPort 会指向一个没人听的口。
@@ -200,7 +200,7 @@
     replicaCount: 2,
     image: {
       repository: "ccr.ccs.tencentyun.com/sumery/consumer-next",
-      tag: "1.7.13@sha256:a792ff5092c334e1f8d057363c5103cfb083c4fcff0c1e8cef6cc5523068958c",
+      tag: "1.8.1@sha256:6bb7e1160cd12a002dec0faa7479485ccb6a15d1235cae3c14c05df56efe51f2",
     },
     port: 3004,
     gatewayURL: "http://ecommerce-gateway-service.ecommerce.svc.cluster.local:8080",

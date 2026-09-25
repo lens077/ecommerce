@@ -50,7 +50,7 @@
         },
         containers: [{
           name: "ecommerce-order",
-          image: "ccr.ccs.tencentyun.com/sumery/order:1.7.13@sha256:44153bf8807e3df8041a120b3ee39e18f8ddbea0ff3cf715664442300f698b55",
+          image: "ccr.ccs.tencentyun.com/sumery/order:1.8.1@sha256:865935ca66aaaf553ad82d0455841f56f73e73da0579ef4d1f183e625d5b4353",
           imagePullPolicy: "Always",
           securityContext: {
             readOnlyRootFilesystem: true,
