@@ -136,6 +136,21 @@ func TestProductOutboxMigration(t *testing.T) {
 			assert.Equal(t, "0", query("SELECT count(*)::text FROM public.goose_db_version_product WHERE version_id=6"), "失败的事务不能留下 v6 版本记录")
 			execSQL("DROP VIEW products.outbox_dependency")
 
+			// An open reader must cause a bounded lock failure, not stall the contract step.
+			reader, err := db.BeginTx(ctx, nil)
+			require.NoError(t, err)
+			t.Cleanup(func() { _ = reader.Rollback() })
+			_, err = reader.ExecContext(ctx, "SELECT 1 FROM products.outbox LIMIT 1")
+			require.NoError(t, err)
+			lockCtx, lockCancel := context.WithTimeout(ctx, 8*time.Second)
+			err = runService(lockCtx, "../../services", "product", testDSN, "up", nil)
+			lockCancel()
+			require.ErrorAs(t, err, &pgErr, "锁等待必须由数据库超时终止，而非测试 deadline")
+			assert.Equal(t, "55P03", pgErr.Code)
+			require.NoError(t, reader.Rollback())
+			checkVersion(5)
+			assert.Equal(t, "1", query("SELECT count(*)::text FROM products.outbox"))
+
 			require.NoError(t, migrate("up"), "依赖处理后必须可应用 v6")
 			checkRemoved()
 			require.NoError(t, migrate("down"), "v6 必须可以回退空表结构")

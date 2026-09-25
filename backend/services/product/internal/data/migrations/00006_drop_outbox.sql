@@ -11,6 +11,8 @@
 -- 线 B（领域事件）开工时按首个真实事件契约新建 outbox，不照搬旧 relay 簿记列。
 
 -- +goose Up
+-- 长读事务不得把 contract 步骤无限挂起；仅限本次 goose 事务，不污染后续连接。
+SET LOCAL lock_timeout = '3s';
 DROP TABLE IF EXISTS products.outbox;
 
 -- +goose Down
