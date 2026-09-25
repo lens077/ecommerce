@@ -20,6 +20,10 @@ export default defineConfig(({ mode }) => {
 
   // 基础测试配置（所有环境共享）
   const baseTestConfig = {
+    // 1Gi CI 中 workspace 串行不足以限制应用内的测试 worker；保持测试范围与隔离不变。
+    ...(process.env.CI_LOW_MEMORY === "1"
+      ? { maxWorkers: 1, fileParallelism: false, maxConcurrency: 1 }
+      : {}),
     environment: "jsdom",
     // Node 25+ 默认开启实验性 Web Storage：globalThis.localStorage 变成 Node 自己的
     // getter，未给 --localstorage-file 时恒返回 undefined，jsdom 环境覆盖不掉它，

@@ -95,8 +95,15 @@ backend-gate:
   stage: test
   image: golang:1.27
   variables:
-    KUBERNETES_MEMORY_REQUEST: "3Gi"
-    KUBERNETES_MEMORY_LIMIT: "3Gi"
+    KUBERNETES_MEMORY_REQUEST: "1Gi"
+    KUBERNETES_MEMORY_LIMIT: "1Gi"
+    # 1Gi 构建试验：串行编译包、降低 Go runtime 并行度，不减少测试范围。
+    # ES 生成客户端 esapi 内联分析在 1Gi 下 OOM；仅 CI 对该包关闭内联，发布镜像参数不变。
+    GOFLAGS: "-p=1 -gcflags=github.com/elastic/go-elasticsearch/v9/esapi=-l"
+    GOMAXPROCS: "1"
+    # 700MiB 软限下单个 compile 曾被 1Gi cgroup OOM；提前 GC，为其它进程/页缓存留余量。
+    GOGC: "20"
+    GOMEMLIMIT: "400MiB"
     # 缓存落在项目目录内才能被 GitLab cache 抓到;默认 GOPATH 在容器里,每次都冷。
     GOMODCACHE: $CI_PROJECT_DIR/.cache/go-mod
     GOCACHE: $CI_PROJECT_DIR/.cache/go-build
@@ -118,7 +125,7 @@ backend-gate:
     - cd backend
     - go build ./...
     - go vet ./...
-    - go test -short -count=1 ./...
+    - go test -short -count=1 -parallel=1 ./...
     - curl -sSfL https://raw.githubusercontent.com/golangci/golangci-lint/HEAD/install.sh | sh -s -- -b "$(go env GOPATH)/bin" v2.13.1
     - export PATH="$(go env GOPATH)/bin:$PATH"
     - cd "$CI_PROJECT_DIR" && CHECKERS=revive-exported bash scripts/lint-baseline.sh check
@@ -136,8 +143,16 @@ frontend-gate:
   stage: test
   image: node:24
   variables:
-    KUBERNETES_MEMORY_REQUEST: "3Gi"
-    KUBERNETES_MEMORY_LIMIT: "3Gi"
+    KUBERNETES_MEMORY_REQUEST: "1Gi"
+    KUBERNETES_MEMORY_LIMIT: "1Gi"
+    # 限制每个 Node 堆与 Rust 线程池；这些不是整个进程树的内存硬上限，硬上限仍为 cgroup 1Gi。
+    CI_LOW_MEMORY: "1"
+    NODE_OPTIONS: "--max-old-space-size=256"
+    RAYON_NUM_THREADS: "1"
+    # type-aware lint 启动 Go tsgolint，NODE_OPTIONS 不约束它。
+    GOMAXPROCS: "1"
+    GOGC: "20"
+    GOMEMLIMIT: "256MiB"
     # pnpm 版本只认 frontend/package.json 的 packageManager 字段(单一真相源,
     # 参照 deepseek-harness 从 package.json 取版本的做法)。不用 corepack:Node 25 起不再内置,
     # 直接 npm 装指定版本对任何 Node 镜像都成立。
@@ -155,7 +170,11 @@ frontend-gate:
     - pnpm config set store-dir "$PNPM_STORE"
     - pnpm install --frozen-lockfile
   script:
-    - pnpm ready
+    # 与 pnpm ready 相同的四项检查，仅把 workspace test/build 串行化以适配 1Gi。
+    - pnpm exec vp fmt
+    - pnpm exec vp lint --threads=1
+    - pnpm exec vp run -r --concurrency-limit 1 test
+    - pnpm exec vp run -r --concurrency-limit 1 build
     # hygiene 棘轮:knip(未用依赖/导出/重复导出/catalog 条目)只拦新增,存量由
     # .lint-baseline/knip.txt 冻结;vp-lint 基线为空、pnpm ready 已跑过 lint,故这里只跑 knip。
     - cd "$CI_PROJECT_DIR" && CHECKERS=knip bash scripts/lint-baseline.sh check

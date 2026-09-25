@@ -9,6 +9,10 @@ const gatewayTarget = process.env.GATEWAY_PROXY_TARGET ?? "https://gateway.dev.t
 
 export default defineConfig(() => {
   return {
+    test:
+      process.env.CI_LOW_MEMORY === "1"
+        ? { maxWorkers: 1, fileParallelism: false, maxConcurrency: 1 }
+        : {},
     plugins: [
       tanstackRouter({
         target: "react",
