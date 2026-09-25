@@ -49,16 +49,15 @@ runners:
         # 新版默认从 registry.gitlab.com 拉 helper，集群只给 docker.io 配了 Spegel + 镜像站。
         helper_image = "gitlab/gitlab-runner-helper:x86_64-v19.4.0"
         pull_policy = ["if-not-present"]
-        # 3Gi 是初始预算，不是单个 job 的实测峰值；宿主机 swap 不能归算到某个容器。
-        # request == limit：按 build 容器的内存上限调度；仍需给 helper、系统和其它工作负载留余量。
+        # 用户要求按 1Gi 实测构建，以降低并行度换取内存；不是已验证的最低需求。
+        # request == limit，仍需为 helper 与节点系统保留余量。
         cpu_request = "1"
         cpu_limit = "2"
-        memory_request = "3Gi"
-        memory_limit = "3Gi"
-        # context-gate 曾因统一 3Gi request 无法调度；允许 CI 为轻任务同时下调 request/limit。
-        # 默认仍为 3Gi，旧 CI 或未声明资源的构建任务不会自动降为轻任务；覆盖值不能超过 3Gi。
-        memory_request_overwrite_max_allowed = "3Gi"
-        memory_limit_overwrite_max_allowed = "3Gi"
+        memory_request = "1Gi"
+        memory_limit = "1Gi"
+        # 轻检查可同时下调到 512Mi；旧 CI 若仍指定 3Gi 将被拒绝，不能静默放宽限制。
+        memory_request_overwrite_max_allowed = "1Gi"
+        memory_limit_overwrite_max_allowed = "1Gi"
         helper_cpu_request = "50m"
         helper_memory_request = "64Mi"
         helper_memory_limit = "512Mi"

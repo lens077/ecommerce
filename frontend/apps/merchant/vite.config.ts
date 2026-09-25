@@ -7,6 +7,10 @@ const port = parseInt(process.env.PORT || "3002", 10);
 
 export default defineConfig(() => {
   return {
+    test:
+      process.env.CI_LOW_MEMORY === "1"
+        ? { maxWorkers: 1, fileParallelism: false, maxConcurrency: 1 }
+        : {},
     // Vite Plus 内置 React；路由插件负责把文件路由拆成按需加载的 chunk。
     plugins: [
       tanstackRouter({

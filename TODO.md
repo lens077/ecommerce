@@ -207,7 +207,7 @@ todo-spec: 1
 
 #### P1
 
-- [ ] **部分完成 · GitLab 自建 Runner 验收**：仅保留集群内 Kubernetes executor，单并发且排除 control-plane；轻检查 512Mi、重构建 3Gi，默认预算保持 3Gi。GitLab 轻检查端到端与 job Pod 自动清理已通过。剩余：worker 容量满足 3Gi build 加 helper 后验证 Go/前端重构建，不降低请求绕过容量限制。
+- [ ] **部分完成 · GitLab 自建 Runner 验收**：仅保留集群内 Kubernetes executor，单并发且排除 control-plane；轻检查 512Mi、构建预算 1Gi。GitLab 轻检查端到端与 job Pod 自动清理已通过；低内存 Go/前端构建已在隔离容器验证，并删除 knip 中一条已不存在的导出基线。剩余：发布配置后完成真实 Runner 的 Go/前端构建与自动清理验收，保留全部质量检查。
 - [ ] **部分完成 · TCR 签名验收**：多服务流水线已有 Cosign/SBOM；补逐服务 digest 的签名/attestation 回读验证，不沿用「只有 user 接线」也不把构建成功当验签完成。
 - [ ] **部分完成 · Harbor Helm 签名与 Kyverno 准入**：`verifyImages` 已落地为 ecommerce 命名空间级 Audit 策略（`infrastructure/kyverno/`，keyless + `type: SigstoreBundle`，只覆盖已完成 TCR 探测的 `user`），`smoke.sh` 验收「签名 digest pass / 未签名 fail / 两者放行」；ArgoCD `Application/ecommerce-kyverno` 已建，等 GitLab `main` 含该路径即 Synced。剩：CI 对全部服务在 TCR 签名后把 `imageReferences` 扩到 `sumery/*`；14 天零误报后转 Enforce 并以拒绝测试验收；chart 纳入签名链；`kyverno.io/v1 Policy` 迁 `NamespacedImageValidatingPolicy`（CEL）。
 - [ ] **未完成 · 发布权限与约束**：收敛 `MANIFEST_PUSH_TOKEN` 绕过分支保护的权限；把发布 tag 四条纪律落实为可执行检查，避免只靠操作约定。

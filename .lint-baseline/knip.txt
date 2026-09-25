@@ -30,7 +30,6 @@ knip	Unused exported types	frontend/apps/consumer/src/api/users/types.ts	Role
 knip	Unused exported types	frontend/apps/consumer/src/styles/tokens.ts	Lantern
 knip	Unused exported types	frontend/apps/consumer/src/styles/tokens.ts	Tokens
 knip	Unused exported types	frontend/packages/tracker/src/tracker.ts	EventType
-knip	Unused exports	frontend/apps/consumer-next/src/lib/server-transport.ts	createServerTransport
 knip	Unused exports	frontend/apps/consumer/src/styles/tokens.ts	radius
 knip	Unused exports	frontend/apps/consumer/src/styles/tokens.ts	space
 knip	Unused exports	frontend/apps/merchant/src/styles/theme.ts	radius
