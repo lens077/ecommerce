@@ -26,6 +26,7 @@ kubectl create secret generic pg-ca-cert \
 helm upgrade --install ecommerce . \
  -f values.yaml \
  -n ecommerce \
+ --timeout 12m \
  --create-namespace
 
 helm uninstall ecommerce -n ecommerce
