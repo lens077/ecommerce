@@ -68,7 +68,8 @@ class SyncTest(unittest.TestCase):
             scripts.mkdir()
             shutil.copyfile(Path(__file__).with_name("sync-ts-gen.sh"), scripts / "sync-ts-gen.sh")
             (scripts / "sync-ts-gen.py").write_text('print("entrypoint reached")\n')
-            subprocess.run(["git", "init", "-q", str(root)], check=True)
+            # 不运行 git init：pre-push 的 GIT_COMMON_DIR 会使它误写真实仓库配置。
+            # 新入口只依赖脚本位置，应在没有 .git 的隔离副本里照常工作。
             result = subprocess.run(["bash", str(scripts / "sync-ts-gen.sh"), "--check"], cwd=root,
                                     env={**os.environ, "GIT_DIR": str(root / ".git"), "GIT_WORK_TREE": "."},
                                     capture_output=True, text=True)
