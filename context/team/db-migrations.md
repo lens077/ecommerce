@@ -62,6 +62,7 @@ affects:
 事件生产者的 outbox 表也是普通迁移，事件行必须与业务写在同一事务插入。product 的 `00006_drop_outbox.sql` 移除 `00004_outbox.sql` 定义的旧表，应用到最新版本后的 schema 不再包含 `products.outbox`。**仓库迁移不代表目标环境已经执行**；当前仓库没有生产者，也不能据此推断存量表为空。首个领域事件生产者落地时随契约新建。当前目标搬运层是 Debezium Outbox Event Router，不再维护自写 relay、destination ACK、`published_at`、attempt、delivery 表或 cursor 语义。
 
 - `00006` 是 contract 步骤：执行前明确环境与 DSN、核对迁移版本、存量数据、旧版本、外部消费者、live publication、Connector 白名单与对象依赖，准备备份/恢复路径和锁等待超时。发现数据或消费者时停止并重新评估；不加 `CASCADE` 绕过依赖失败。
+- `00006` 的 Up 使用事务局部 `lock_timeout = '3s'`，长读事务占锁时以 `55P03` 失败并回滚，不无限排队。`TestProductOutboxMigration` 是显式执行的隔离测试，`-short` 门禁不运行它；改该迁移或执行目标环境前，在 `backend/` 运行 `env -u DB_URI -u DB_SOURCE -u TEST_DB_URI go test -count=1 -timeout 5m ./tools/dbmigrate -run '^TestProductOutboxMigration$'`，需要本机 Docker。
 - `00006` 的 Down 只重建 `00004` 的空表结构、约束、索引和表注释；不会恢复数据、序列进度或原有权限。owner、GRANT 和 default privileges 必须独立核对。
 
 - outbox 采用 append-only 事件行；`event_id` 唯一，`aggregate_type` 决定 topic，`partition_key` 保证同一聚合分区有序，`payload` 与 `occurred_at` 保存事实内容和发生时间。

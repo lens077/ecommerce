@@ -99,7 +99,8 @@ scripts/verify-quick.sh                                  # 提交前默认入口
 - [x] 数据库专项 —— TestProductOutboxMigration 在自有 PostgreSQL 18.6 上验证 fresh 与 v5→v6→Down→Up、依赖保护及回滚结构一致；未触碰共享库。
 - [x] 浏览器专项 —— hotspots.smoke.mjs 在 320/1280px 验证失败保留输入、无区县新增、自动选中、编辑错误、删除确认及模态框保存不被遮挡，rc=0。
 - [x] TODO.md 已更新 —— Outbox 明确目标环境待执行；消费者交易页/推荐身份关联保留未完成的线上契约联调。
-- [ ] 全仓文档门禁 —— 并行 Gorse 未跟踪文件索引引用和 .repowise 历史缓存复选框报错，未改他人文件或放宽门禁。
+- [x] 提交树文档门禁 —— 隔离工作树的实际提交与远端整合后 verify-context rc=0；原工作区的并行 Gorse 索引和 .repowise 缓存问题未混入提交。
+- [x] 推送前异构审查 —— Claude/GPT 两路只读审查后，补齐未登记生成包保护、地址后台刷新禁提交、3 秒删表锁等待上限，三项回归先红后绿；迁移隔离执行说明同步。
 - [ ] 实际环境 —— 未运行目标数据库迁移、真实订单支付或 Web OAuth/Tauri 登录联调；这些不由隔离测试替代。
 
 ## Comments
