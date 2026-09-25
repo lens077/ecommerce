@@ -50,6 +50,11 @@ def sync(root, check, apps=APPS):
         destination = root / "frontend/apps" / app / "src/gen"
         expected = expected_files(root / "backend", packages)
         actual = set(path.relative_to(destination) for path in destination.rglob("*_pb.ts"))
+        # 推送前审查：新增客户端包可能尚未登记，不能把未接管的生成包当作过期文件删掉。
+        managed_packages = set(packages) | {p.parts[1] for p in expected if len(p.parts) > 1 and p.parts[0] == "api"}
+        for relative in actual:
+            if len(relative.parts) > 1 and relative.parts[0] == "api" and relative.parts[1] not in managed_packages:
+                raise ValueError(f"unlisted API package: {app}/{relative.parts[1]}; register it in APPS before syncing")
         for relative in sorted(actual | set(expected)):
             file = destination / relative
             if file.is_symlink() or not file.resolve().is_relative_to(destination.resolve()):

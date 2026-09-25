@@ -42,6 +42,22 @@ class SyncTest(unittest.TestCase):
             self.assertEqual(manual.read_text(), 'export {};\n')
             self.assertTrue(module.sync(root, True, apps))
 
+    def test_unlisted_api_package_is_preserved(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            root = Path(tmp)
+            source = root / "backend/api/example/v1/example_pb.ts"
+            source.parent.mkdir(parents=True)
+            source.write_text('// @generated\n')
+            unknown = root / "frontend/apps/example/src/gen/api/another/v1/client_pb.ts"
+            unknown.parent.mkdir(parents=True)
+            unknown.write_text('// @generated\nexport const activeClient = true;\n')
+            before = unknown.read_bytes()
+            for check in (True, False):
+                with self.assertRaisesRegex(ValueError, "unlisted API package"):
+                    module.sync(root, check, {"example": ("example",)})
+                self.assertEqual(unknown.read_bytes(), before)
+                self.assertFalse((unknown.parents[2] / "example").exists(), "must fail before writes")
+
     def test_missing_source_is_not_silently_accepted(self):
         with tempfile.TemporaryDirectory() as tmp:
             with self.assertRaises(ValueError):
