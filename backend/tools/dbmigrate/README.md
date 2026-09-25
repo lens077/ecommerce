@@ -69,6 +69,33 @@ make migrate-status          # 确认全部 applied
 之后新的结构变更一律走 `migrate-create` 增量迁移 + `sqlc generate` 同 PR 提交；
 滚更期新旧共存要求 expand→backfill→contract 节奏（见 `docs/DEVOPS.md` 阶段②）。
 
+## 集群发布门禁
+
+`dbmigrate` 随同一发布 tag 构建 amd64/arm64 镜像，复用后端 Trivy、Cosign 和 SBOM 流程。
+最终镜像只含二进制、CA 根证书与版本化 migration SQL，不含服务配置或示例种子。
+`promote-release.py` 核验并固定迁移 index digest，与应用清单一起晋级。
+
+- `make deploy` / `make k8s-pre-all` / `make k8s-prod-all` 在工作负载 apply 前运行
+  `scripts/deploy-db-migrations.sh`；仅 Job `Complete=True` 放行。
+- 原生 Helm install/upgrade 与 ArgoCD 完整同步使用同一份 PreSync/pre-upgrade hook。
+  **不要选择性同步工作负载**：selective sync 会跳过 hook。
+- `DRY_RUN=1` 只校验资源，不执行 SQL，不证明迁移成功。
+- CLI 每次创建独立 Job，保留状态、digest 和日志 7 天；原生 Helm/Argo hook 保留到
+  下次运行或 TTL 到期。长期审计需由集群日志归档承担。
+
+目标命名空间须事先提供 `tcr-pull-secret`，以及 pre 的 `ecommerce-db-migrate` / prod 的
+`ecommerce-db-migrate-prod` Secret。迁移 Secret 必须包含 `DB_URI` 和 `ca.crt`；
+DSN 指向已核对的环境数据库，设置 `sslmode=verify-full`、
+`sslrootcert=/etc/postgresql/ca/ca.crt` 和连接超时。凭据通过受控渠道注入，不打印、不入 Git。
+仅凭 Secret 名或 namespace 不能证明数据隔离，prod 首次运行前必须核对 DSN 与授权。
+
+发布只运行 goose `up`：失败停止发布，不自动 `baseline`、`down` 或灌种子。
+各服务迁移不构成跨服务事务，失败时可能已有部分服务迁移成功；修复后重跑，应用回滚仍须
+兼容已扩展的 schema。破坏性 contract 变更单独评审。
+
+行政区划静态字典在空库初始化时单独导入并校验；`seeds/` 仍只面向本地/演示。
+两者均不随每次部署执行，不把「schema 就绪」当作「业务基础数据就绪」。
+
 ## 与 sqlc 的关系
 
 `sqlc.yaml` 的 `schema:` 已指向 `internal/data/migrations`，sqlc 官方支持解析 goose

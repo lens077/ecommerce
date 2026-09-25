@@ -9,8 +9,9 @@
 | Helm 差异 | `helm/values.yaml` | 追加 `values-prod.yaml` |
 | 后端裸清单 | `deploy/base` | `deploy/overlays/prod` |
 | 前端裸清单 | consumer 的 `deploy/pre`、consumer-next 的 `deploy/base` | 两个 app 的 `deploy/overlays/prod` |
-| 后端运行模式 | `pre` | 暂沿用现网 `pre` |
-| selector Secret | `ecommerce-config-source-pre` | 暂沿用现网 `ecommerce-config-source-pre` |
+| 后端运行模式 | `pre` | `prod`（须先准备独立配置与授权） |
+| selector Secret | `ecommerce-config-source-pre` | `ecommerce-config-source-prod` |
+| 迁移 Secret | `ecommerce-db-migrate` | `ecommerce-db-migrate-prod` |
 
 2026-09-15 起没有 dev 层：原 dev 集群已删除，开发改走 remote-dev（见 `context/team/local-env.md`），`values.yaml` / `deploy/base` 即 pre 基线，局域网直连路由随 dev 一并移除。
 
@@ -30,7 +31,8 @@ prod 清单不是现网全量快照：不会包含 live 注解、手工直连路
 2. `backend.yml` 对发布 tag 构建全部十个后端，包含 search，不因路径差异跳过服务。手动 dispatch 保留后端按服务构建能力。
 3. 同一入口调用 `frontend-release.yml`：consumer 与 consumer-next 分别在 `ubuntu-24.04` 和 `ubuntu-24.04-arm` 原生构建，不安装 QEMU。
 4. 各前端平台制品以 digest 推送；检查镜像配置中的 Linux 架构，合并后检查 index 同时含 amd64、arm64。已有版本或 SHA 标签指向不同 digest 时，拒绝覆盖。
-5. 全部构建成功后，CI 校验十二个镜像的双架构 index，并将版本与 digest 同时回写 pre 的 Helm 和裸清单，运行两个环境的 parity。prod 不随发布自动升级。
+5. 同一入口构建 `dbmigrate`，复用后端扫描、签名和 SBOM；全部十三个制品成功后，CI 校验双架构 index，将版本与 digest 同时回写 pre 的 Helm 和裸清单并运行 parity。prod 不随发布自动升级；手动 dispatch 只构建，不晋级应用或迁移清单。
+6. 部署入口先运行迁移 Job，只有 `Complete=True` 才 apply 新工作负载。原生 Helm/Argo 使用 hook，裸入口调用同一模板。失败保留 Job，停止发布，不自动回滚 schema。Secret、种子生命周期和审计保留见 [dbmigrate](../backend/tools/dbmigrate/README.md#集群发布门禁)。
 
 `frontend.yml` 仍是定时登录 smoke，与镜像发布分工独立。前端流程本次补齐的是构建、平台校验和清单接线，不代表它已经具有后端的全部 Trivy/Cosign/SBOM 供应链步骤。GitHub 实际构建、TCR 发布和线上新版本验收必须在首次发布后记录；本地 actionlint 不能替代这些验收。
 
@@ -43,7 +45,7 @@ python3 scripts/promote-release.py --environment prod --version X.Y.Z --check
 python3 scripts/promote-release.py --environment prod --version X.Y.Z
 ```
 
-将 `X.Y.Z` 替换为实际版本。脚本会先核验全部十二个制品，任何缺失、权限错误或单架构镜像都会中断，尚不写文件。全部检查通过后，成对写入版本与 index digest；parity 失败时恢复脚本修改前的清单内容。脚本不提交、不推送，也不调用集群 API。
+将 `X.Y.Z` 替换为实际版本。脚本会先核验全部十三个制品，任何缺失、权限错误或单架构镜像都会中断，尚不写文件。全部检查通过后，成对写入版本与 index digest；parity 失败时恢复脚本修改前的清单内容。脚本不提交、不推送，也不调用集群 API。
 
 审阅 `git diff`，更新 TODO 后按提交规范提交。正式部署前用 `kubectl config view --minify -o jsonpath='{.clusters[0].cluster.server}'` 确认 context 指向线上集群（2026-09-09 起本机默认 context `kubernetes-admin@kubernetes` 即线上；`KUBE_CONTEXT` 仍必须显式写出）。
 
