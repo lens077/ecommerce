@@ -1,56 +1,44 @@
-import { Add, Close, Delete, Edit, LocationOn } from "@ecommerce/icons";
-import {
-  Alert,
-  Backdrop,
-  Box,
-  Button,
-  Checkbox,
-  CircularProgress,
-  Container,
-  Dialog,
-  DialogActions,
-  DialogContent,
-  DialogTitle,
-  IconButton,
-  List,
-  ListItem,
-  ListItemSecondaryAction,
-  ListItemText,
-  Paper,
-  TextField,
-  Typography,
-} from "@mui/material";
+import { Add } from "@ecommerce/icons";
+import { Alert, Box, Button, Container, Paper, Typography } from "@mui/material";
 import { createFileRoute } from "@tanstack/react-router";
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
+import { toAppError } from "@ecommerce/api";
+import { useTranslation } from "@ecommerce/i18n";
 import type { Address, AddressFormData } from "@/api/addresses/types";
 import { getLocationInfo, requestLocationPermission } from "@/api/location";
-import { RegionSelect } from "@/components/address/RegionSelect";
+import { AddressEditDialog } from "@/components/address/AddressEditDialog";
+import { AddressDeleteDialog } from "@/components/address/AddressDeleteDialog";
+import { AddressList } from "@/components/address/AddressList";
+import { LocationPermissionDialog } from "@/components/address/LocationPermissionDialog";
+import { EMPTY_ADDRESS_FORM } from "@/components/address/addressValidation";
+import {
+  addressActionSx,
+  addressAlertSx,
+  addressPaperSx,
+  addressPrimarySx,
+} from "@/components/address/addressStyles";
 import { useAddresses } from "@/hooks/useAddresses";
 import { useGetUserProfile } from "@/hooks/useProfile";
+import { requireLogin } from "@/lib/requireLogin";
 import { setAccount } from "@/store/users";
-import { i18next, useTranslation } from "@ecommerce/i18n";
-import { fetchIdentity } from "@ecommerce/configs";
-import { addNotification } from "@ecommerce/utils";
+import { lantern, sp } from "@/styles/tokens";
 
 export const Route = createFileRoute("/profile/addresses/")({
   component: RouteComponent,
-  // 登录态以网关的 /auth/me 为准（BFF 会话，见 control-tower ADR-0002）。
-  // 不能再看「内存里有没有令牌」——BFF 下前端根本没有令牌，那样判会把
-  // 已登录用户误踢去登录页。
-  beforeLoad: async ({ context }) => {
-    const identity = await fetchIdentity();
-    if (!identity.authenticated) {
-      addNotification({
-        // beforeLoad 不是组件环境，用 i18next 的 t
-        message: i18next.t("consumer:addresses.loginRequired"),
-        severity: "warning",
-      });
-      if (context?.auth?.login) {
-        context.auth.login();
-      }
-    }
-  },
+  beforeLoad: requireLogin("consumer:addresses.loginRequired"),
 });
+
+function toForm(address: Address): AddressFormData {
+  return {
+    recipientName: address.recipientName,
+    recipientPhone: address.recipientPhone,
+    province: address.detail?.province ?? "",
+    city: address.detail?.city ?? "",
+    district: address.detail?.district ?? "",
+    detail: address.detail?.detail ?? "",
+    isDefault: address.isDefault,
+  };
+}
 
 function RouteComponent() {
   const { data: userProfile } = useGetUserProfile();
@@ -58,476 +46,192 @@ function RouteComponent() {
   const {
     addresses,
     isLoading,
-    error: addressError,
+    error,
+    refetch,
     createAddress,
     updateAddress,
     deleteAddress,
+    setDefaultAddress,
+    isCreating,
+    isUpdating,
+    isDeleting,
+    isSettingDefault,
   } = useAddresses();
-  const [openDialog, setOpenDialog] = useState(false);
-  const [openLocationPermissionDialog, setOpenLocationPermissionDialog] = useState(false);
-  const [currentAddress, setCurrentAddress] = useState<Address | null>(null);
-  const [formError, setFormError] = useState<string | null>(null);
-  const [isGettingLocation, setIsGettingLocation] = useState(false);
-  // 所选城市下有没有区县可选。省直辖县级行政区（琼海市、仙桃市等）没有下级，
-  // 这时把区县当必填会让这些地方的用户根本提交不了
-  const [districtRequired, setDistrictRequired] = useState(false);
-  const [formData, setFormData] = useState<AddressFormData>({
-    recipientName: "",
-    recipientPhone: "",
-    province: "",
-    city: "",
-    district: "",
-    detail: "",
-    isDefault: false,
-  });
-
+  const [editor, setEditor] = useState<{
+    addressId?: string;
+    value: AddressFormData;
+    notice?: string;
+  } | null>(null);
+  const [deleting, setDeleting] = useState<Address | null>(null);
+  const [locationOpen, setLocationOpen] = useState(false);
+  const [locating, setLocating] = useState(false);
+  const locationPending = useRef(false);
+  const defaultPending = useRef(false);
+  const [actionError, setActionError] = useState<string | null>(null);
+  const [notice, setNotice] = useState<string | null>(null);
+  const busy = isCreating || isUpdating || isDeleting || isSettingDefault || locating;
   useEffect(() => {
-    if (userProfile) {
-      setAccount(userProfile);
-    }
+    if (userProfile) setAccount(userProfile);
   }, [userProfile]);
 
-  if (!userProfile) return <div>{t("addresses.userNotFound")}</div>;
-
-  const handleOpenDialog = (address: Address | null = null) => {
-    if (address) {
-      // 编辑现有地址，直接打开编辑对话框
-      setCurrentAddress(address);
-      setFormData({
-        recipientName: address.recipientName,
-        recipientPhone: address.recipientPhone,
-        province: address.detail?.province ?? "",
-        city: address.detail?.city ?? "",
-        district: address.detail?.district ?? "",
-        detail: address.detail?.detail ?? "",
-        isDefault: address.isDefault,
-      });
-      setOpenDialog(true);
-    } else {
-      // 添加新地址，先弹出位置权限请求
-      setCurrentAddress(null);
-      setFormData({
-        recipientName: "",
-        recipientPhone: "",
-        province: "",
-        city: "",
-        district: "",
-        detail: "",
-        isDefault: false,
-      });
-      setOpenLocationPermissionDialog(true);
-    }
-  };
-
-  const handleLocationPermissionConfirm = async () => {
-    setOpenLocationPermissionDialog(false);
-    setIsGettingLocation(true);
+  const locate = async () => {
+    if (locationPending.current) return;
+    locationPending.current = true;
+    setLocating(true);
+    let value = { ...EMPTY_ADDRESS_FORM };
+    let warning: string | undefined;
     try {
-      // 请求位置权限
-      const hasPermission = await requestLocationPermission();
-      if (hasPermission) {
-        // 获取位置信息
-        const locationInfo = await getLocationInfo();
-        if (locationInfo) {
-          // 更新表单数据
-          setFormData((prev) => ({
-            ...prev,
-            province: locationInfo.province,
-            city: locationInfo.city,
-            district: locationInfo.district,
-            detail: locationInfo.address,
-          }));
-        }
-      }
-    } catch (error) {
-      console.error("获取位置信息失败:", error);
+      const permission = await requestLocationPermission();
+      const info = permission ? await getLocationInfo() : null;
+      if (info)
+        value = {
+          ...value,
+          province: info.province,
+          city: info.city,
+          district: info.district,
+          detail: info.address,
+        };
+      else warning = t("addresses.location.failed");
+    } catch (err) {
+      warning = `${t("addresses.location.failed")} ${toAppError(err).message}`;
     } finally {
-      setIsGettingLocation(false);
-      setOpenDialog(true);
+      locationPending.current = false;
+      setLocating(false);
+      setLocationOpen(false);
+      setEditor({ value, notice: warning });
+    }
+  };
+  const setDefault = async (address: Address) => {
+    if (defaultPending.current || busy) return;
+    defaultPending.current = true;
+    setActionError(null);
+    setNotice(null);
+    try {
+      await setDefaultAddress(address.addressId);
+      setNotice(t("addresses.defaultSaved"));
+    } catch (err) {
+      setActionError(toAppError(err).message);
+    } finally {
+      defaultPending.current = false;
     }
   };
 
-  const handleLocationPermissionCancel = () => {
-    setOpenLocationPermissionDialog(false);
-    setOpenDialog(true);
-  };
-
-  const handleCloseDialog = () => {
-    setOpenDialog(false);
-    setCurrentAddress(null);
-    setFormError(null);
-  };
-
-  const handleDeleteAddress = (addressId: string) => {
-    deleteAddress(addressId);
-  };
-
-  const handleSaveAddress = () => {
-    setFormError(null);
-    // 简单验证
-    if (
-      !formData.recipientName ||
-      !formData.recipientPhone ||
-      !formData.province ||
-      !formData.city ||
-      (districtRequired && !formData.district) ||
-      !formData.detail
-    ) {
-      setFormError(t("addresses.form.required"));
-      return;
-    }
-
-    if (currentAddress) {
-      // 更新现有地址
-      updateAddress({ ...formData, addressId: currentAddress.addressId });
-    } else {
-      // 创建新地址
-      createAddress(formData);
-    }
-    setOpenDialog(false);
-  };
-
+  if (!userProfile) return <div>{t("addresses.userNotFound")}</div>;
   return (
-    <Box
-      sx={{
-        minHeight: "100vh",
-        background: "linear-gradient(180deg, #f8f9ff 0%, #ffffff 100%)",
-        py: 4,
-      }}
-    >
+    <Box sx={{ minHeight: "100vh", bgcolor: lantern.paper, color: lantern.ink, py: sp[8] }}>
       <Container maxWidth="md">
-        {/* 页面标题 */}
-        <Box sx={{ mb: 4 }}>
-          <Typography variant="body2" color="text.secondary" sx={{ mb: 1 }}>
+        <Box sx={{ mb: sp[6] }}>
+          <Typography component="p" variant="body2" sx={{ color: lantern.inkSoft }}>
             {t("addresses.breadcrumb")}
           </Typography>
-          <Typography variant="h4" component="h1" sx={{ fontWeight: 700, color: "text.primary" }}>
+          <Typography
+            component="h1"
+            variant="h4"
+            sx={{ fontFamily: lantern.serif, fontWeight: 900 }}
+          >
             {t("addresses.title")}
           </Typography>
         </Box>
-
-        <Paper
-          elevation={0}
-          sx={{
-            borderRadius: "20px",
-            border: "1px solid rgba(102, 126, 234, 0.1)",
-            boxShadow: "0 4px 24px rgba(102, 126, 234, 0.06)",
-            overflow: "hidden",
-          }}
-        >
-          {/* 头部区域 */}
+        <Paper elevation={0} sx={{ ...addressPaperSx, p: { xs: sp[4], sm: sp[6] } }}>
           <Box
             sx={{
               display: "flex",
+              flexWrap: "wrap",
               justifyContent: "space-between",
+              gap: sp[4],
               alignItems: "center",
-              p: 3,
-              borderBottom: "1px solid rgba(102, 126, 234, 0.08)",
-              background:
-                "linear-gradient(135deg, rgba(102, 126, 234, 0.03) 0%, rgba(118, 75, 162, 0.03) 100%)",
+              pb: sp[4],
+              borderBottom: lantern.line,
             }}
           >
-            <Typography variant="h6" component="h2" sx={{ fontWeight: 600, color: "text.primary" }}>
+            <Typography component="h2" variant="h6" sx={{ fontFamily: lantern.serif }}>
               {t("addresses.myAddresses")}
             </Typography>
             <Button
               variant="contained"
               startIcon={<Add />}
-              onClick={() => handleOpenDialog()}
-              sx={{
-                borderRadius: "10px",
-                textTransform: "none",
-                fontWeight: 600,
-                background: "linear-gradient(135deg, #667eea 0%, #764ba2 100%)",
-                boxShadow: "0 4px 12px rgba(102, 126, 234, 0.3)",
-                "&:hover": {
-                  background: "linear-gradient(135deg, #5a6fd6 0%, #6a4190 100%)",
-                },
-              }}
+              disabled={busy}
+              onClick={() => setLocationOpen(true)}
+              sx={addressPrimarySx}
             >
               {t("addresses.add")}
             </Button>
           </Box>
-
-          {/* 内容区域 */}
-          <Box sx={{ p: 3 }}>
-            {addressError && (
-              <Alert severity="error" sx={{ mb: 3, borderRadius: "12px" }}>
-                {t("addresses.loadFailed")}
-              </Alert>
-            )}
-
-            <List sx={{ width: "100%" }}>
-              {addresses?.map((address) => (
-                <ListItem
-                  key={address.addressId}
-                  sx={{
-                    mb: 2,
-                    borderRadius: "16px",
-                    border: "1px solid rgba(102, 126, 234, 0.1)",
-                    backgroundColor: "white",
-                    transition: "all 0.2s ease",
-                    "&:hover": {
-                      borderColor: "rgba(102, 126, 234, 0.3)",
-                      boxShadow: "0 4px 16px rgba(102, 126, 234, 0.1)",
-                    },
+          {error && (
+            <Alert
+              severity="error"
+              sx={addressAlertSx}
+              action={
+                <Button
+                  sx={addressActionSx}
+                  onClick={() => {
+                    void refetch();
                   }}
                 >
-                  <ListItemText
-                    primary={
-                      <Box sx={{ display: "flex", alignItems: "center", gap: 2, mb: 1 }}>
-                        {/* 收件人姓名/电话是列表项内容不是标题：subtitle1 默认渲染成 h6，
-                            读屏按标题导航会念出一串人名电话。ListItemText primary 已是
-                            <span>，这里用 span 而非 p 以免 p 嵌进 span 的非法嵌套 */}
-                        <Typography variant="subtitle1" component="span" sx={{ fontWeight: 600 }}>
-                          {address.recipientName}
-                        </Typography>
-                        <Typography
-                          variant="subtitle1"
-                          component="span"
-                          sx={{ fontWeight: 600, color: "text.primary" }}
-                        >
-                          {address.recipientPhone}
-                        </Typography>
-                        {address.isDefault && (
-                          <Box
-                            sx={{
-                              background: "linear-gradient(135deg, #667eea 0%, #764ba2 100%)",
-                              color: "white",
-                              px: 1.5,
-                              py: 0.5,
-                              borderRadius: "6px",
-                              fontSize: "0.75rem",
-                              fontWeight: 600,
-                            }}
-                          >
-                            {t("addresses.default")}
-                          </Box>
-                        )}
-                      </Box>
-                    }
-                    secondary={
-                      <Box sx={{ display: "flex", alignItems: "flex-start", gap: 1 }}>
-                        <LocationOn sx={{ fontSize: 16, color: "text.secondary", mt: 0.3 }} />
-                        <Typography variant="body2" color="text.secondary">
-                          {address.detail?.province} {address.detail?.city}{" "}
-                          {address.detail?.district} {address.detail?.detail}
-                        </Typography>
-                      </Box>
-                    }
-                  />
-                  <ListItemSecondaryAction>
-                    <Box sx={{ display: "flex", gap: 0.5 }}>
-                      <IconButton
-                        edge="end"
-                        aria-label="edit"
-                        onClick={() => handleOpenDialog(address)}
-                        size="small"
-                        sx={{
-                          color: "#667eea",
-                          "&:hover": {
-                            backgroundColor: "rgba(102, 126, 234, 0.1)",
-                          },
-                        }}
-                      >
-                        <Edit fontSize="small" />
-                      </IconButton>
-                      <IconButton
-                        edge="end"
-                        aria-label="delete"
-                        onClick={() => handleDeleteAddress(address.addressId)}
-                        size="small"
-                        sx={{
-                          color: "#f44336",
-                          "&:hover": {
-                            backgroundColor: "rgba(244, 67, 54, 0.1)",
-                          },
-                        }}
-                      >
-                        <Delete fontSize="small" />
-                      </IconButton>
-                    </Box>
-                  </ListItemSecondaryAction>
-                </ListItem>
-              ))}
-            </List>
-
-            {isLoading ? (
-              <Box sx={{ textAlign: "center", py: 4 }}>
-                <CircularProgress size={24} />
-                <Typography variant="body2" color="text.secondary" sx={{ mt: 2 }}>
-                  {t("common:state.loading")}
-                </Typography>
-              </Box>
-            ) : (
-              addresses?.length === 0 && (
-                <Box sx={{ textAlign: "center", py: 6 }}>
-                  <Box
-                    sx={{
-                      width: 80,
-                      height: 80,
-                      borderRadius: "50%",
-                      background:
-                        "linear-gradient(135deg, rgba(102, 126, 234, 0.1) 0%, rgba(118, 75, 162, 0.1) 100%)",
-                      display: "flex",
-                      alignItems: "center",
-                      justifyContent: "center",
-                      mx: "auto",
-                      mb: 2,
-                    }}
-                  >
-                    <LocationOn sx={{ fontSize: 40, color: "#667eea" }} />
-                  </Box>
-                  <Typography variant="body1" color="text.secondary" sx={{ mb: 2 }}>
-                    {t("addresses.empty.title")}
-                  </Typography>
-                  <Typography variant="body2" color="text.secondary">
-                    {t("addresses.empty.desc")}
-                  </Typography>
-                </Box>
-              )
-            )}
-          </Box>
+                  {t("addresses.retry")}
+                </Button>
+              }
+            >
+              {t("addresses.loadFailed")} {toAppError(error).message}
+            </Alert>
+          )}
+          {actionError && (
+            <Alert severity="error" sx={addressAlertSx}>
+              {actionError}
+            </Alert>
+          )}
+          {notice && (
+            <Alert severity="success" sx={addressAlertSx}>
+              {notice}
+            </Alert>
+          )}
+          <AddressList
+            addresses={addresses}
+            isLoading={isLoading}
+            disabled={busy}
+            onEdit={(address) =>
+              setEditor({ addressId: address.addressId, value: toForm(address) })
+            }
+            onDelete={setDeleting}
+            onSetDefault={(address) => {
+              void setDefault(address);
+            }}
+          />
         </Paper>
-
-        <Dialog open={openDialog} onClose={handleCloseDialog} maxWidth="sm" fullWidth>
-          <DialogTitle
-            sx={{
-              display: "flex",
-              justifyContent: "space-between",
-              alignItems: "center",
+        {editor && (
+          <AddressEditDialog
+            initialValue={editor.value}
+            editing={!!editor.addressId}
+            notice={editor.notice}
+            isSaving={isCreating || isUpdating}
+            onClose={() => setEditor(null)}
+            onSave={(value) =>
+              editor.addressId
+                ? updateAddress({ ...value, addressId: editor.addressId })
+                : createAddress(value)
+            }
+          />
+        )}
+        {deleting && (
+          <AddressDeleteDialog
+            recipient={deleting.recipientName}
+            isDeleting={isDeleting}
+            onClose={() => setDeleting(null)}
+            onDelete={() => deleteAddress(deleting.addressId)}
+          />
+        )}
+        {locationOpen && (
+          <LocationPermissionDialog
+            pending={locating}
+            onConfirm={() => {
+              void locate();
             }}
-          >
-            {currentAddress ? t("addresses.edit") : t("addresses.add")}
-            <IconButton onClick={handleCloseDialog} sx={{ padding: 0 }}>
-              <Close />
-            </IconButton>
-          </DialogTitle>
-          <DialogContent>
-            {formError && (
-              <Alert severity="error" sx={{ mb: 2 }}>
-                {formError}
-              </Alert>
-            )}
-            <Box sx={{ mt: 2, display: "flex", gap: 2, flexWrap: "wrap" }}>
-              <TextField
-                label={t("addresses.form.recipient")}
-                fullWidth
-                value={formData.recipientName}
-                onChange={(e) =>
-                  setFormData((prev) => ({ ...prev, recipientName: e.target.value }))
-                }
-                sx={{ mb: 2 }}
-              />
-              <TextField
-                label={t("addresses.form.phone")}
-                fullWidth
-                value={formData.recipientPhone}
-                onChange={(e) =>
-                  setFormData((prev) => ({ ...prev, recipientPhone: e.target.value }))
-                }
-                sx={{ mb: 2 }}
-              />
-            </Box>
-            <RegionSelect
-              value={{
-                province: formData.province,
-                city: formData.city,
-                district: formData.district,
-              }}
-              onChange={(region) => setFormData((prev) => ({ ...prev, ...region }))}
-              onDistrictRequiredChange={setDistrictRequired}
-            />
-            <TextField
-              label={t("addresses.form.detail")}
-              fullWidth
-              multiline
-              rows={3}
-              value={formData.detail}
-              onChange={(e) => setFormData((prev) => ({ ...prev, detail: e.target.value }))}
-              sx={{ mb: 2 }}
-            />
-            <Box sx={{ display: "flex", alignItems: "center", mb: 2 }}>
-              <Checkbox
-                checked={formData.isDefault}
-                onChange={(e) => setFormData((prev) => ({ ...prev, isDefault: e.target.checked }))}
-                sx={{
-                  color: "#667eea",
-                  "&.Mui-checked": {
-                    color: "#667eea",
-                  },
-                }}
-              />
-              <Typography variant="body2">{t("addresses.form.setDefault")}</Typography>
-            </Box>
-          </DialogContent>
-          <DialogActions>
-            <Button onClick={handleCloseDialog} disabled={isLoading} sx={{ textTransform: "none" }}>
-              {t("common:action.cancel")}
-            </Button>
-            <Button
-              variant="contained"
-              onClick={handleSaveAddress}
-              disabled={isLoading}
-              sx={{ textTransform: "none" }}
-            >
-              {isLoading ? t("addresses.saving") : t("common:action.save")}
-            </Button>
-          </DialogActions>
-        </Dialog>
-
-        <Backdrop
-          open={isLoading}
-          sx={{ color: "#fff", zIndex: (theme) => theme.zIndex.drawer + 1 }}
-        >
-          <CircularProgress color="inherit" />
-        </Backdrop>
-
-        {/* 位置权限请求对话框 */}
-        <Dialog
-          open={openLocationPermissionDialog}
-          onClose={handleLocationPermissionCancel}
-          maxWidth="sm"
-          fullWidth
-        >
-          <DialogTitle
-            sx={{
-              display: "flex",
-              justifyContent: "space-between",
-              alignItems: "center",
+            onCancel={() => {
+              setLocationOpen(false);
+              setEditor({ value: { ...EMPTY_ADDRESS_FORM } });
             }}
-          >
-            {t("addresses.location.title")}
-            <IconButton onClick={handleLocationPermissionCancel} sx={{ padding: 0 }}>
-              <Close />
-            </IconButton>
-          </DialogTitle>
-          <DialogContent>
-            <Typography variant="body1" sx={{ mb: 2 }}>
-              {t("addresses.location.desc")}
-            </Typography>
-          </DialogContent>
-          <DialogActions>
-            <Button onClick={handleLocationPermissionCancel} sx={{ textTransform: "none" }}>
-              {t("common:action.cancel")}
-            </Button>
-            <Button
-              variant="contained"
-              onClick={handleLocationPermissionConfirm}
-              disabled={isGettingLocation}
-              sx={{ textTransform: "none" }}
-            >
-              {isGettingLocation ? t("addresses.location.getting") : t("addresses.location.agree")}
-            </Button>
-          </DialogActions>
-        </Dialog>
-
-        <Backdrop
-          open={isGettingLocation}
-          sx={{ color: "#fff", zIndex: (theme) => theme.zIndex.drawer + 1 }}
-        >
-          <CircularProgress color="inherit" />
-        </Backdrop>
+          />
+        )}
       </Container>
     </Box>
   );

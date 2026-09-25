@@ -16,30 +16,13 @@ import {
   Typography,
 } from "@mui/material";
 import { LocationOn, ChevronRight, Person, Email, Badge as BadgeIcon, Tag } from "@ecommerce/icons";
-import { i18next, useTranslation } from "@ecommerce/i18n";
-import { fetchIdentity } from "@ecommerce/configs";
-import { addNotification } from "@ecommerce/utils";
+import { useTranslation } from "@ecommerce/i18n";
+import { requireLogin } from "@/lib/requireLogin";
 import { sp, tokens } from "@/styles/tokens";
 
 export const Route = createFileRoute("/profile/")({
   component: RouteComponent,
-  // 校验token是否存在且未过期
-  // 登录态以网关的 /auth/me 为准（BFF 会话，见 control-tower ADR-0002）。
-  // 不能再看「内存里有没有令牌」——BFF 下前端根本没有令牌，那样判会把
-  // 已登录用户误踢去登录页。
-  beforeLoad: async ({ context }) => {
-    const identity = await fetchIdentity();
-    if (!identity.authenticated) {
-      addNotification({
-        // beforeLoad 不是组件环境，用 i18next 的 t
-        message: i18next.t("consumer:profile.loginRequired"),
-        severity: "warning",
-      });
-      if (context?.auth?.login) {
-        context.auth.login();
-      }
-    }
-  },
+  beforeLoad: requireLogin("consumer:profile.loginRequired"),
 });
 
 /** 个人中心导航项。文案 key 显式写死，不用路径拼 key。 */

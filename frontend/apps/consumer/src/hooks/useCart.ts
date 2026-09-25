@@ -138,7 +138,12 @@ export function useCartBadge(): number {
 export function useCart() {
   const { items, summary, merchantGroups } = useSyncExternalStore(subscribe, cartStore.getSnapshot);
   const [error, setError] = useState<string | null>(null);
-  const { data: backendItems, isPending: isInitializing, error: loadError } = useCartItemsQuery();
+  const {
+    data: backendItems,
+    isPending: isInitializing,
+    isFetching: isRefreshing,
+    error: loadError,
+  } = useCartItemsQuery();
   const addProductToCart = useAddProductToCartMutation();
 
   // 把后端数据灌进 store。映射本身在 toStoreItems 里（模块级 select，结果引用稳定），
@@ -231,6 +236,9 @@ export function useCart() {
     merchantGroups,
     isLoading: addProductToCart.isPending,
     isInitializing,
+    isRefreshing,
+    // 结算必须核对服务端快照，不能把 localStorage 里的数字 ID 当成已同步。
+    serverItems: loadError ? undefined : backendItems,
     error,
     // 操作
     addItem,

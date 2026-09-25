@@ -36,7 +36,10 @@ run_backend() {
 }
 
 run_frontend() {
-  cd frontend && pnpm ready
+  # 2026-09-24：consumer 协议快照仍发送已 reserved 的 user_id，类型检查没有识别漂移。
+  scripts/sync-ts-gen.sh --check \
+    && python3 scripts/test-sync-ts-gen.py \
+    && cd frontend && pnpm ready
 }
 
 run_parity() {

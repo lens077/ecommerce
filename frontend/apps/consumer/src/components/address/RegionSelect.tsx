@@ -1,121 +1,123 @@
-// 省/市/区三级级联选择。
-//
-// 数据来自后端 RegionService（addresses.regions 表，GB/T 2260 全量行政区划），
-// 不是写死的几个选项。两条约束值得单独说明：
-//
-//   1. 选项文案跟界面语言走（英文界面显示 Guangdong Province），
-//      但 onChange 吐出去、最终落库的**永远是中文规范名**。
-//      快递面单要中文，界面语言不该影响存储内容。
-//   2. 省直辖县级行政区（海南琼海市、湖北仙桃市等 49 个）下面没有区县，
-//      此时区县这一级是空的，通过 onDistrictRequiredChange 告诉表单别强制必填。
-import { useCallback, useEffect, useState } from "react";
-import { Box, FormControl, InputLabel, MenuItem, Select } from "@mui/material";
+// 级联选项随界面语言显示，onChange 始终返回中文规范名。
+import { useEffect, useId } from "react";
+import {
+  Alert,
+  Box,
+  Button,
+  FormControl,
+  InputLabel,
+  MenuItem,
+  Select,
+  Typography,
+} from "@mui/material";
 import { useTranslation } from "@ecommerce/i18n";
+import { toAppError } from "@ecommerce/api";
 import { useRegions } from "@/hooks/useRegions";
+import { lantern, sp } from "@/styles/tokens";
 import type { Region } from "@/gen/api";
+import { addressActionSx, addressAlertSx } from "./addressStyles";
 
 export interface RegionValue {
   province: string;
   city: string;
   district: string;
 }
-
 interface RegionSelectProps {
   value: RegionValue;
   onChange: (value: RegionValue) => void;
-  /** 当前城市下是否还有区县可选。为 false 时表单不应把区县当必填 */
-  onDistrictRequiredChange?: (required: boolean) => void;
+  /** null 表示当前省市尚未解析或区划加载失败，必须阻止提交。 */
+  onDistrictRequiredChange?: (required: boolean | null) => void;
+  disabled?: boolean;
 }
 
-/**
- * 编辑已有地址时后端只回中文名，没有 id；按 name 反查一次把 id 补上，
- * 下一级列表才拉得动。用户自己点选时 id 已经有了，这里直接跳过。
- */
-function useBackfillId(
-  options: Region[] | undefined,
-  name: string,
-  id: number | undefined,
-  setId: (id: number) => void,
-) {
-  useEffect(() => {
-    if (id !== undefined || !name || !options) return;
-    const hit = options.find((r) => r.name === name);
-    if (hit) setId(hit.id);
-  }, [options, name, id, setId]);
-}
-
-export function RegionSelect({ value, onChange, onDistrictRequiredChange }: RegionSelectProps) {
+export function RegionSelect({
+  value,
+  onChange,
+  onDistrictRequiredChange,
+  disabled,
+}: RegionSelectProps) {
   const { t, i18n } = useTranslation();
-  const isEN = i18n.language.startsWith("en");
-
-  const [provinceId, setProvinceId] = useState<number>();
-  const [cityId, setCityId] = useState<number>();
-
+  const id = useId();
   const provinces = useRegions(0);
+  // 从当前受控值推导 id，避免切城市或换编辑对象后保留旧查询。
+  const provinceId = provinces.isSuccess
+    ? provinces.data.find((r) => r.name === value.province)?.id
+    : undefined;
   const cities = useRegions(provinceId);
+  const cityId =
+    provinceId !== undefined && cities.isSuccess
+      ? cities.data.find((r) => r.name === value.city)?.id
+      : undefined;
   const districts = useRegions(cityId);
-
-  useBackfillId(provinces.data, value.province, provinceId, setProvinceId);
-  useBackfillId(cities.data, value.city, cityId, setCityId);
-
+  const required = cityId !== undefined && districts.isSuccess ? districts.data.length > 0 : null;
   useEffect(() => {
-    onDistrictRequiredChange?.(districts.data !== undefined && districts.data.length > 0);
-  }, [districts.data, onDistrictRequiredChange]);
+    onDistrictRequiredChange?.(required);
+  }, [value.province, value.city, required, onDistrictRequiredChange]);
 
-  // 英文名个别缺失（数据里 name_en 允许为空）时退回中文，不留空白选项
-  const label = useCallback((r: Region) => (isEN && r.nameEn ? r.nameEn : r.name), [isEN]);
-
-  const handleProvince = (name: string) => {
-    setProvinceId(provinces.data?.find((r) => r.name === name)?.id);
-    setCityId(undefined);
-    onChange({ province: name, city: "", district: "" });
+  const label = (r: Region) => (i18n.language.startsWith("en") && r.nameEn ? r.nameEn : r.name);
+  const failed = [provinces, cities, districts].filter((query) => query.isError);
+  const change = (region: RegionValue) => {
+    onDistrictRequiredChange?.(null);
+    onChange(region);
   };
-
-  const handleCity = (name: string) => {
-    setCityId(cities.data?.find((r) => r.name === name)?.id);
-    onChange({ ...value, city: name, district: "" });
-  };
-
   return (
-    <Box sx={{ display: "flex", gap: 2, flexWrap: "wrap", mb: 2 }}>
+    <Box sx={{ display: "grid", gap: sp[4] }}>
+      {failed.length > 0 && (
+        <Alert
+          severity="error"
+          sx={addressAlertSx}
+          action={
+            <Button
+              disabled={disabled}
+              sx={addressActionSx}
+              onClick={() => {
+                failed.forEach((query) => {
+                  void query.refetch();
+                });
+              }}
+            >
+              {t("addresses.retry")}
+            </Button>
+          }
+        >
+          {t("addresses.form.regionsUnresolved")} {toAppError(failed[0].error).message}
+        </Alert>
+      )}
       <RegionLevel
-        id="province"
+        id={`${id}-province`}
         label={t("addresses.form.province")}
-        placeholder={t("addresses.form.selectProvince")}
         value={value.province}
         options={provinces.data}
         loading={provinces.isLoading}
+        disabled={disabled}
         renderLabel={label}
-        onChange={handleProvince}
+        onChange={(province) => change({ province, city: "", district: "" })}
       />
       <RegionLevel
-        id="city"
+        id={`${id}-city`}
         label={t("addresses.form.city")}
-        placeholder={t("addresses.form.selectCity")}
         value={value.city}
         options={cities.data}
         loading={cities.isLoading}
-        disabled={provinceId === undefined}
+        disabled={disabled || provinceId === undefined}
         renderLabel={label}
-        onChange={handleCity}
+        onChange={(city) => change({ ...value, city, district: "" })}
       />
       <RegionLevel
-        id="district"
+        id={`${id}-district`}
         label={t("addresses.form.district")}
-        // 城市下没有区县时（省直辖县级行政区）给一句明确的说明，
-        // 否则用户面对一个点不开的下拉框只会以为是坏了
-        placeholder={
-          districts.data?.length === 0
-            ? t("addresses.form.noDistrict")
-            : t("addresses.form.selectDistrict")
-        }
         value={value.district}
         options={districts.data}
         loading={districts.isLoading}
-        disabled={cityId === undefined || districts.data?.length === 0}
+        disabled={disabled || required !== true}
         renderLabel={label}
-        onChange={(name) => onChange({ ...value, district: name })}
+        onChange={(district) => onChange({ ...value, district })}
       />
+      {required === false && (
+        <Typography component="p" variant="body2" sx={{ color: lantern.inkSoft }}>
+          {t("addresses.form.noDistrict")}
+        </Typography>
+      )}
     </Box>
   );
 }
@@ -123,7 +125,6 @@ export function RegionSelect({ value, onChange, onDistrictRequiredChange }: Regi
 interface RegionLevelProps {
   id: string;
   label: string;
-  placeholder: string;
   value: string;
   options: Region[] | undefined;
   loading: boolean;
@@ -131,11 +132,9 @@ interface RegionLevelProps {
   renderLabel: (r: Region) => string;
   onChange: (name: string) => void;
 }
-
 function RegionLevel({
   id,
   label,
-  placeholder,
   value,
   options,
   loading,
@@ -144,11 +143,8 @@ function RegionLevel({
   onChange,
 }: RegionLevelProps) {
   const { t } = useTranslation();
-  // 已存的名字不在当前列表里（历史脏数据、或上级还没加载出来）时补一个选项。
-  // 不补的话 MUI 会因为 value 不在 options 里而丢掉显示，用户看到的是空白，
-  // 会以为地址没存上。
+  // 未加载/历史名称仍显示，但未解析的省市不会被当作可提交状态。
   const orphan = value && !options?.some((r) => r.name === value);
-
   return (
     <FormControl fullWidth disabled={disabled || loading}>
       <InputLabel id={`${id}-label`}>{label}</InputLabel>
@@ -157,14 +153,19 @@ function RegionLevel({
         value={value}
         label={label}
         onChange={(e) => onChange(e.target.value)}
+        MenuProps={{ slotProps: { paper: { sx: { bgcolor: lantern.paper, color: lantern.ink } } } }}
       >
         <MenuItem value="" disabled>
-          <em>{loading ? t("addresses.form.regionLoading") : placeholder}</em>
+          {loading ? t("addresses.form.regionLoading") : label}
         </MenuItem>
-        {orphan && <MenuItem value={value}>{value}</MenuItem>}
-        {options?.map((r) => (
-          <MenuItem key={r.id} value={r.name}>
-            {renderLabel(r)}
+        {orphan && (
+          <MenuItem value={value} disabled>
+            {value}
+          </MenuItem>
+        )}
+        {options?.map((region) => (
+          <MenuItem key={region.id} value={region.name}>
+            {renderLabel(region)}
           </MenuItem>
         ))}
       </Select>

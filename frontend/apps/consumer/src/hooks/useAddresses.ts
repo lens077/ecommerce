@@ -1,7 +1,6 @@
 import { createConnectQueryKey, useMutation, useQuery } from "@connectrpc/connect-query";
 import { useQueryClient } from "@tanstack/react-query";
-import { AddressService } from "@/gen/api";
-import { userStore } from "@/store/users";
+import { AddressService, type ListAddressesResponse } from "@/gen/api";
 import type { AddressFormData, UpdateAddressParams } from "@/api/addresses/types";
 
 /** 表单里的省市区 + 详址拼成 proto 的 AddressDetail */
@@ -14,6 +13,8 @@ function buildDetail(data: AddressFormData) {
   };
 }
 
+const selectAddresses = (response: ListAddressesResponse) => response.addresses;
+
 export const useAddresses = () => {
   const queryClient = useQueryClient();
 
@@ -23,7 +24,10 @@ export const useAddresses = () => {
     cardinality: "finite",
   });
 
-  const invalidateList = () => queryClient.invalidateQueries({ queryKey: listKey });
+  const invalidateList = () => {
+    // 刷新失败由列表查询展示；已成功的写入不能因此被当作失败重试。
+    void queryClient.invalidateQueries({ queryKey: listKey }).catch(() => undefined);
+  };
 
   // 获取地址列表。select 只取 addresses，调用方拿到的仍然是 Address[]
   const {
@@ -31,7 +35,7 @@ export const useAddresses = () => {
     isLoading,
     error,
     refetch,
-  } = useQuery(AddressService.method.listAddresses, {}, { select: (res) => res.addresses });
+  } = useQuery(AddressService.method.listAddresses, {}, { select: selectAddresses });
 
   const createAddressMutation = useMutation(AddressService.method.createAddress, {
     onSuccess: invalidateList,
@@ -56,23 +60,21 @@ export const useAddresses = () => {
     refetch,
     // 对外仍然收表单结构，proto 消息的拼装收在这里，页面不用认识 AddressDetail
     createAddress: (data: AddressFormData) =>
-      createAddressMutation.mutate({
+      createAddressMutation.mutateAsync({
         recipientName: data.recipientName,
         recipientPhone: data.recipientPhone,
-        // 回调时刻即时读取（zustand getState），不需要渲染订阅
-        userId: userStore.getState().account.id,
         detail: buildDetail(data),
         isDefault: data.isDefault,
       }),
     updateAddress: (params: UpdateAddressParams) =>
-      updateAddressMutation.mutate({
+      updateAddressMutation.mutateAsync({
         addressId: params.addressId,
         recipientName: params.recipientName,
         recipientPhone: params.recipientPhone,
         detail: buildDetail(params),
       }),
-    deleteAddress: (addressId: string) => deleteAddressMutation.mutate({ addressId }),
-    setDefaultAddress: (addressId: string) => setDefaultAddressMutation.mutate({ addressId }),
+    deleteAddress: (addressId: string) => deleteAddressMutation.mutateAsync({ addressId }),
+    setDefaultAddress: (addressId: string) => setDefaultAddressMutation.mutateAsync({ addressId }),
     isCreating: createAddressMutation.isPending,
     isUpdating: updateAddressMutation.isPending,
     isDeleting: deleteAddressMutation.isPending,

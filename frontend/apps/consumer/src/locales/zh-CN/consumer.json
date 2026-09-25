@@ -147,6 +147,7 @@
       "total": "合计",
       "totalInline": "合计："
     },
+    "unsyncedItems": "购物车包含未同步或已失效的商品，请返回购物车刷新后再下单。",
     "address": {
       "required": "请填写所有必填字段",
       "pickerTitle": "选择收货地址",
@@ -234,12 +235,19 @@
     "loadFailed": "加载地址失败，请重试",
     "default": "默认",
     "saving": "保存中...",
+    "retry": "重试",
+    "deleteTitle": "删除地址",
+    "deleteConfirm": "删除收件人「{{recipient}}」的收货地址？再次使用时需要重新添加。",
+    "deleting": "删除中...",
+    "defaultSaved": "已更新默认地址",
     "empty": {
       "title": "暂无收货地址",
       "desc": "点击上方按钮添加您的第一个收货地址"
     },
     "form": {
       "required": "请填写所有必填字段",
+      "regionsUnresolved": "请选择省市并等待区划加载完成；加载失败时请重试。",
+      "tooLong": "地址字段超出长度限制：收件人 255 字、电话 50 字、各级地区 64 字、详细地址 500 字。",
       "recipient": "收件人",
       "phone": "手机号码",
       "province": "省份",
@@ -257,6 +265,7 @@
       "title": "位置权限请求",
       "desc": "我们将通过您的 IP 地址或地址权限为您推荐省市区信息，相关数据由第三方高德地图处理，是否同意？",
       "getting": "获取中...",
+      "failed": "未能获取位置，请手动填写地址。",
       "agree": "同意"
     }
   },

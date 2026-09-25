@@ -147,6 +147,7 @@
       "total": "Total",
       "totalInline": "Total:"
     },
+    "unsyncedItems": "Some cart items are unsynced or unavailable. Return to your cart and refresh before placing the order.",
     "address": {
       "required": "Please fill in all required fields",
       "pickerTitle": "Select a shipping address",
@@ -234,12 +235,19 @@
     "loadFailed": "Could not load addresses, please try again",
     "default": "Default",
     "saving": "Saving...",
+    "retry": "Retry",
+    "deleteTitle": "Delete address",
+    "deleteConfirm": "Delete the shipping address for {{recipient}}? You will need to add it again to use it later.",
+    "deleting": "Deleting...",
+    "defaultSaved": "Default address updated",
     "empty": {
       "title": "No shipping addresses yet",
       "desc": "Use the button above to add your first address"
     },
     "form": {
       "required": "Please fill in all required fields",
+      "regionsUnresolved": "Select a province and city and wait for the regions to load. Retry if loading fails.",
+      "tooLong": "An address field exceeds its limit: recipient 255, phone 50, region 64 or street address 500 characters.",
       "recipient": "Recipient",
       "phone": "Phone number",
       "province": "Province",
@@ -257,6 +265,7 @@
       "title": "Location permission",
       "desc": "We use your IP address or location permission to suggest your province, city and district. This data is processed by a third party (Amap). Do you agree?",
       "getting": "Locating...",
+      "failed": "Could not get your location. Please enter the address manually.",
       "agree": "Agree"
     }
   },

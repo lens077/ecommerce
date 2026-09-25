@@ -62,7 +62,8 @@ export function CopilotPanel({ api }: { api: CopilotApi }) {
           position: "fixed",
           right: 24,
           bottom: 24,
-          zIndex: Z_PANEL,
+          // 地址弹窗在 320px 视口会覆盖此处；闭合入口不能压住模态框保存按钮。
+          zIndex: (theme) => theme.zIndex.modal - 1,
           width: 52,
           height: 52,
           bgcolor: LANTERN.vermilion,
