@@ -59,9 +59,12 @@ affects:
 
 ## 与 CDC/outbox 的关系
 
-事件生产者的 outbox 表也是普通迁移（如 product 的 `00004_outbox.sql`），事件行必须与业务写在同一事务插入。当前目标搬运层是 Debezium Outbox Event Router，不再维护自写 relay、destination ACK、`published_at`、attempt、delivery 表或 cursor 语义。
+事件生产者的 outbox 表也是普通迁移，事件行必须与业务写在同一事务插入。product 的 `00006_drop_outbox.sql` 移除 `00004_outbox.sql` 定义的旧表，应用到最新版本后的 schema 不再包含 `products.outbox`。**仓库迁移不代表目标环境已经执行**；当前仓库没有生产者，也不能据此推断存量表为空。首个领域事件生产者落地时随契约新建。当前目标搬运层是 Debezium Outbox Event Router，不再维护自写 relay、destination ACK、`published_at`、attempt、delivery 表或 cursor 语义。
+
+- `00006` 是 contract 步骤：执行前明确环境与 DSN、核对迁移版本、存量数据、旧版本、外部消费者、live publication、Connector 白名单与对象依赖，准备备份/恢复路径和锁等待超时。发现数据或消费者时停止并重新评估；不加 `CASCADE` 绕过依赖失败。
+- `00006` 的 Down 只重建 `00004` 的空表结构、约束、索引和表注释；不会恢复数据、序列进度或原有权限。owner、GRANT 和 default privileges 必须独立核对。
 
 - outbox 采用 append-only 事件行；`event_id` 唯一，`aggregate_type` 决定 topic，`partition_key` 保证同一聚合分区有序，`payload` 与 `occurred_at` 保存事实内容和发生时间。
-- 存量 `00004_outbox.sql` 仍有旧 relay 簿记列。第一个领域事件生产者落地时按 expand→contract 增加 Router 所需列、更新 Insert 调用和 Connector，再删除无人读取的旧列；不能先删列后改生产者。
+- 新建 outbox 表时直接按 Router 需要的列建，不要照抄 `00004_outbox.sql`：它带的 `published_at`/`attempts`/`last_error` 是自写 relay 的簿记列，正是删表的原因之一。表一旦有了生产者，后续改列回到 expand→contract：先加列、改生产者和 Connector，再删无人读取的旧列。
 - 发布进度由 Debezium replication slot 与 Connect offset 表示。迁移不得重新引入 JetStream ACK/NACK、双 destination 完成态或应用层发布游标。
 - `products.search_catalog` 不是 outbox。它是 trigger 维护的可重建行投影；表、trigger、publication、Connector 和 Elasticsearch mapping 必须按搜索 CDC 手顺一起验收。

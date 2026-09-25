@@ -44,4 +44,6 @@ C 端主应用。React 19 + MUI 9 + Emotion + TanStack Router/Query + Connect-RP
   `sum(item.quantity)`（**件数**）——两者不是一回事，「一个 SKU 加 3 件」前者是 1 后者是 3。
   改徽标取值时务必分清。（原 `GetCartSummary.totalCount` 也是行数，该 RPC 已于 2026-08 删除，
   因为 `GetCartResponse.cart_item_quantity` 返回的就是同一个数）
+- **协议生成快照也要同步**：2026-09-24 发现 consumer 的 CreateAddressRequest 仍发送后端已 reserved 的 `user_id`，仅跑 TypeScript 检查发现不了。后端 `make api` 后运行 `bash scripts/sync-ts-gen.sh`；`bash scripts/sync-ts-gen.sh --check` 已接前端快速门禁，覆盖两个应用及相对生成依赖。不要手改 descriptor。
+- **写成功与刷新成功分开判断**：地址 mutation 返回真实 RPC 结果；列表刷新失败由查询错误展示，不能让已创建地址被当成创建失败再提交。下单只发条目 ID 时，要比对服务端快照的数量、商品和金额，不能用「ID 是数字」证明本地改动已持久化。
 - 登录死循环见 [`gateway/experience/jwt-nbf-clock-skew-loop.md`](../gateway/experience/jwt-nbf-clock-skew-loop.md)

@@ -1,9 +1,9 @@
 # consumer 高风险页面收敛
 
-Status: ready-for-agent
+Status: done
 
-> 新会话先读 [HANDOFF.md](HANDOFF.md)：包含当前工作区快照、products.outbox 迁移交接，以及本稿和实现单的纠偏。
-> 本文保留最初的调查与方案，不是完成证明；调查基准为 `90000abe`（2026-09-24）。实施时按交接说明复核当前代码与项目约束，不直接照历史行号、依赖顺序或验收 grep 执行。
+> 仓库内整改已实现，01–05 实现单的「完成自检」记录验证和边界。下文问题清单保留最初调查，不代表当前代码；以实现单与当前代码为准。
+> [HANDOFF.md](HANDOFF.md) 是实施前快照和安全纠偏，不是最新工作区清单。products.outbox 迁移已通过隔离 PostgreSQL 验证，目标环境未执行；没有提交或部署本批实现。
 
 ## 背景
 
@@ -53,7 +53,7 @@ Status: ready-for-agent
 4. 地址簿页保存失败的回归测试证明：对话框保持打开、原表单值保留、错误信息可见。
 5. 结算页含本地临时购物车条目时的回归测试证明：提交按钮禁用、同步提示可见、`createOrder` 未被调用。
 6. `AuthProvider.test.tsx` 的回归测试证明：已登录用户收到 401 后调用 `clearAccount` 与 `tracker().resetIdentity`；`/auth/me` 完成前后 `loading` 分别为 `true` 与 `false`。
-7. `cd frontend && pnpm ready`、`cd frontend/apps/consumer && pnpm test -- src/a11y`、`scripts/verify-quick.sh` 均以退出码 0 完成。
+7. `cd frontend && pnpm ready`、`cd frontend/apps/consumer && pnpm exec vp test src/a11y --environment=jsdom --browser.enabled=false`、`scripts/verify-quick.sh` 均以退出码 0 完成。
 
 ## 非目标（不要顺手做）
 
@@ -75,7 +75,7 @@ Status: ready-for-agent
 ```bash
 cd frontend && pnpm ready                                # lint + fmt + 类型 + 全部测试，必须绿
 cd frontend/apps/consumer && pnpm test                   # 只跑 consumer
-cd frontend/apps/consumer && pnpm test -- src/a11y       # 页面 a11y 与标题层级（覆盖 /checkout 与 /profile/addresses）
+cd frontend/apps/consumer && pnpm exec vp test src/a11y --environment=jsdom --browser.enabled=false       # 页面 a11y 与标题层级（覆盖 /checkout 与 /profile/addresses）
 scripts/verify-quick.sh                                  # 提交前默认入口
 ```
 
@@ -92,5 +92,14 @@ scripts/verify-quick.sh                                  # 提交前默认入口
 | [05](issues/05-AuthProvider-登录态收敛.md) | — | 单一复位路径、`loading`、收窄公开 API |
 
 03、04 可以并行；05 与其余独立。每张单完成后单独提交（提交需用户授权），提交前按 AGENTS.md 硬规则 3 判断是否涉及 `TODO.md` 的「前端技术栈与工程化」各项。
+
+## 完成自检
+
+- [x] 验收标准逐条通过 —— #1 五单 done 且有证据；#2 同步检查 rc=0；#3–#6 共享表单、保存失败、提交保护与 auth 回归通过；#7 verify-quick.O4ZnTT 全绿（包含 pnpm ready 与 a11y），完整 structcheck rc=0。
+- [x] 数据库专项 —— TestProductOutboxMigration 在自有 PostgreSQL 18.6 上验证 fresh 与 v5→v6→Down→Up、依赖保护及回滚结构一致；未触碰共享库。
+- [x] 浏览器专项 —— hotspots.smoke.mjs 在 320/1280px 验证失败保留输入、无区县新增、自动选中、编辑错误、删除确认及模态框保存不被遮挡，rc=0。
+- [x] TODO.md 已更新 —— Outbox 明确目标环境待执行；消费者交易页/推荐身份关联保留未完成的线上契约联调。
+- [ ] 全仓文档门禁 —— 并行 Gorse 未跟踪文件索引引用和 .repowise 历史缓存复选框报错，未改他人文件或放宽门禁。
+- [ ] 实际环境 —— 未运行目标数据库迁移、真实订单支付或 Web OAuth/Tauri 登录联调；这些不由隔离测试替代。
 
 ## Comments
