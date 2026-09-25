@@ -76,6 +76,20 @@ class MigrationTests(unittest.TestCase):
             self.assertFalse(any('kind: Deployment' in c['body'] or 'kind: "Deployment"' in c['body']
                                  for c in calls))
 
+    def test_raw_dry_run_variants_cannot_execute_migration(self):
+        for args in ('--dry-run=client', '--dry-run=server', '--dry-run server', '--dry-run=false'):
+            with self.subTest(args=args):
+                result, calls = self.run_script(command=[
+                    'make', '-C', 'backend', 'k8s-pre-all', 'NAMESPACE=ecommerce', 'KUBECTL_ARGS='+args])
+                # Unsupported variants may fail closed before doing anything.
+                for c in calls:
+                    if 'create' in c['args']:
+                        self.assertIn('--dry-run=server', c['args'])
+                self.assertFalse(any('get' in c['args'] and 'job' in c['args'] for c in calls))
+                if args == '--dry-run=false':
+                    self.assertNotEqual(result.returncode, 0)
+                    self.assertFalse(calls)
+
     def test_unknown_environment_fails_before_kubernetes(self):
         result, calls = self.run_script(env='typo')
         self.assertNotEqual(result.returncode, 0)

@@ -278,8 +278,9 @@ k8s-pre-all:
 k8s-apply-all:
 	@test -z "$(NAMESPACE)" -o "$(NAMESPACE)" = ecommerce || { echo "raw manifests target ecommerce; refusing a different migration namespace" >&2; exit 1; }
 	@if [ "$(K8S_ENV)" = prod ] && [ -z "$(KUBE_CONTEXT)" ]; then echo "prod requires explicit KUBE_CONTEXT" >&2; exit 1; fi
+	@case "$(strip $(KUBECTL_ARGS))" in ""|--dry-run=server|--dry-run=client|"--dry-run server"|"--dry-run client") ;; *) echo "KUBECTL_ARGS must be empty or a single client/server dry-run option" >&2; exit 1 ;; esac
 	@DEPLOY_ENV="$(K8S_ENV)" KUBE_CONTEXT="$(KUBE_CONTEXT)" \
-	  DRY_RUN="$(filter --dry-run=server,$(KUBECTL_ARGS))" bash ../scripts/deploy-db-migrations.sh
+	  DRY_RUN="$(strip $(KUBECTL_ARGS))" bash ../scripts/deploy-db-migrations.sh
 	@tmp=$$(mktemp "$${TMPDIR:-/tmp}/ecommerce-zero-trust.XXXXXX"); \
 	trap 'rm -f "$$tmp"' EXIT; \
 	echo "===== render and apply shared zero-trust + otel-auth (helm/files) ====="; \

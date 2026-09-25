@@ -105,6 +105,7 @@ if [[ "${deploy_action}" == "delete" ]]; then
   echo "== helm 渲染并删除全部微服务（保留 namespace 与前置 Secret）"
   helm template ecommerce "${repo_root}/helm" --namespace "${namespace}" "${values_args[@]}" \
     --set-string "global.postgresEgressCIDR=${postgres_egress_cidr}" |
+    yq 'select(.metadata.annotations."argocd.argoproj.io/hook" != "PreSync")' |
     "${kubectl_cmd[@]}" "${kubectl_delete_cmd[@]}" --ignore-not-found=true \
       --namespace "${namespace}" -f -
   if [[ -z "${dry_run}" ]]; then

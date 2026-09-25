@@ -38,9 +38,13 @@ if ! "${kube[@]}" get secret "$secret" -o 'jsonpath={.data.DB_URI}' | python3 -c
   echo "Missing migration DB_URI Secret: $namespace/$secret" >&2; exit 2
 fi
 ca="$(yq -r '.spec.template.spec.volumes[0].secret.secretName' "$work/job.json")"
-"${kube[@]}" get secret "$ca" -o 'jsonpath={.data.ca\.crt}' |
-  python3 -c 'import base64,sys; sys.exit(0 if base64.b64decode(sys.stdin.read().strip()).strip() else 1)'
-"${kube[@]}" get secret tcr-pull-secret -o name >/dev/null
+if ! "${kube[@]}" get secret "$ca" -o 'jsonpath={.data.ca\.crt}' |
+  python3 -c 'import base64,sys; sys.exit(0 if base64.b64decode(sys.stdin.read().strip()).strip() else 1)'; then
+  echo "Missing migration ca.crt: $namespace/$ca" >&2; exit 2
+fi
+if ! "${kube[@]}" get secret tcr-pull-secret -o name >/dev/null; then
+  echo "Missing migration image pull Secret: $namespace/tcr-pull-secret" >&2; exit 2
+fi
 apply=(apply)
 create=(create)
 if [[ -n "${DRY_RUN:-}" ]]; then
@@ -55,10 +59,13 @@ fi
 echo "Migration audit Job: $namespace/$job"
 end=$((SECONDS + 630))
 while (( SECONDS < end )); do
-  state="$("${kube[@]}" get job "$job" -o json | python3 -c '
+  if ! state="$("${kube[@]}" get job "$job" -o json | python3 -c '
 import json,sys
 conditions={c["type"] for c in json.load(sys.stdin).get("status",{}).get("conditions",[]) if c.get("status")=="True"}
-print("failed" if conditions & {"Failed","FailureTarget"} else "complete" if "Complete" in conditions else "pending")')"
+print("failed" if conditions & {"Failed","FailureTarget"} else "complete" if "Complete" in conditions else "pending")')"; then
+    echo "Cannot observe migration Job $namespace/$job; workload release stopped, SQL may still be running" >&2
+    exit 1
+  fi
   case "$state" in
     complete) "${kube[@]}" logs "job/$job"; echo 'Migration gate passed'; exit 0 ;;
     failed) break ;;
