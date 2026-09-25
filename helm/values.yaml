@@ -24,6 +24,14 @@
     # 2026-09-15 起环境只有 pre / prod:本文件即 pre 基线,prod 差异在 values-prod.yaml。
     # 原 dev 集群(192.168.3.x)已删除,dev 层与随之而来的局域网直连(directAccess)一并移除。
     deploymentMode: "pre",
+    # 与业务镜像一起晋级；迁移失败必须先于任何新工作负载停止发布。
+    migrations: {
+      image: {
+        repository: "ccr.ccs.tencentyun.com/sumery/dbmigrate",
+        tag: "migration-preflight-20260926@sha256:2aff5293162f5003f8f213f6fb5c7c317d4165c6a4f61284af12bc2d629f1946",
+      },
+      secretName: "ecommerce-db-migrate",
+    },
     # 零信任 CNP(helm/files/zero-trust.yaml 里的 ecommerce-api-default-deny)与 otel-auth ExternalSecret
     # 是否随本 chart 渲染。pre 为 true;prod 首次接管(2026-09-14)只发版不接管策略,在 values-prod.yaml 关掉。
     networkPolicy: {

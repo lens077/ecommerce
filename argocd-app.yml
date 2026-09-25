@@ -1,67 +1,88 @@
-# ApplicationSet for the ecommerce production workload.
-#
-# The source of truth is the GitLab repository. This file deliberately keeps
-# automated sync disabled until the first `argocd app diff` is reviewed against
-# the existing ecommerce namespace. Enabling self-heal before that takeover
-# review could delete or recreate live resources unexpectedly.
-apiVersion: argoproj.io/v1alpha1
-kind: ApplicationSet
-metadata:
-  name: ecommerce
-  namespace: argocd
-  labels:
-    app.kubernetes.io/part-of: ecommerce
-    app.kubernetes.io/managed-by: git
-spec:
-  goTemplate: true
-  goTemplateOptions:
-    - missingkey=error
-  generators:
-    - list:
-        elements:
-          - name: prod
-            server: https://kubernetes.default.svc
-            namespace: ecommerce
-  template:
-    metadata:
-      name: ecommerce-{{ .name }}
-      labels:
-        app.kubernetes.io/part-of: ecommerce
-        app.kubernetes.io/managed-by: argocd
-        app.kubernetes.io/environment: "{{ .name }}"
-    spec:
-      project: ecommerce
-      source:
-        repoURL: https://gitlab.com/sumery/ecommerce.git
-        targetRevision: main
-        path: helm
-        helm:
-          releaseName: ecommerce
-          valueFiles:
-            - "values.yaml"
-            - "values-prod.yaml"
-      destination:
-        server: "{{ .server }}"
-        namespace: "{{ .namespace }}"
-      ignoreDifferences:
-        - group: ""
-          kind: Service
-          jqPathExpressions:
-            - .spec.selector["rollouts-pod-template-hash"]
-      syncPolicy:
-        automated:
-          enabled: false
-          prune: true
-          selfHeal: true
-        syncOptions:
-          - ApplyOutOfSyncOnly=true
-          - CreateNamespace=false
-          - FailOnSharedResource=true
-          - PruneLast=true
-          - RespectIgnoreDifferences=true
-      revisionHistoryLimit: 10
-      info:
-        - name: source
-          value: gitlab.com/sumery/ecommerce
-        - name: environment
-          value: "{{ .name }}"
+---
+# GitLab remains the source; automatic sync stays disabled until takeover diff review.
+{
+  apiVersion: "argoproj.io/v1alpha1",
+  kind: "ApplicationSet",
+  metadata: {
+    name: "ecommerce",
+    namespace: "argocd",
+    labels: {
+      app.kubernetes.io/part-of: "ecommerce",
+      app.kubernetes.io/managed-by: "git",
+    },
+  },
+  spec: {
+    goTemplate: true,
+    goTemplateOptions: [
+      "missingkey=error",
+    ],
+    generators: [{
+      list: {
+        elements: [{
+          name: "prod",
+          server: "https://kubernetes.default.svc",
+          namespace: "ecommerce",
+        }],
+      },
+    }],
+    template: {
+      metadata: {
+        name: "ecommerce-{{ .name }}",
+        labels: {
+          app.kubernetes.io/part-of: "ecommerce",
+          app.kubernetes.io/managed-by: "argocd",
+          app.kubernetes.io/environment: "{{ .name }}",
+        },
+      },
+      spec: {
+        project: "ecommerce",
+        source: {
+          repoURL: "https://gitlab.com/sumery/ecommerce.git",
+          targetRevision: "main",
+          path: "helm",
+          helm: {
+            releaseName: "ecommerce",
+            valueFiles: [
+              "values.yaml",
+              "values-prod.yaml",
+            ],
+          },
+        },
+        destination: {
+          server: "{{ .server }}",
+          namespace: "{{ .namespace }}",
+        },
+        ignoreDifferences: [{
+          group: "",
+          kind: "Service",
+          jqPathExpressions: [
+            ".spec.selector[\"rollouts-pod-template-hash\"]",
+          ],
+        }],
+        syncPolicy: {
+          automated: {
+            enabled: false,
+            prune: true,
+            selfHeal: true,
+          },
+          syncOptions: [
+            # Selective sync skips PreSync hooks; migrations require full sync.
+            "ApplyOutOfSyncOnly=false",
+            "CreateNamespace=false",
+            "FailOnSharedResource=true",
+            "PruneLast=true",
+            "RespectIgnoreDifferences=true",
+          ],
+        },
+        revisionHistoryLimit: 10,
+        info: [{
+          name: "source",
+          value: "gitlab.com/sumery/ecommerce",
+        }, {
+          name: "environment",
+          value: "{{ .name }}",
+        }],
+      },
+    },
+  },
+}

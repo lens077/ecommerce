@@ -187,7 +187,12 @@ if [[ -n "${services}" ]]; then
   for s in ${services}; do helm_args+=(--set "${s}.enabled=true"); done
   echo "   只部署：${services}"
 fi
+# Helm template | kubectl apply 不执行 hook；必须显式运行并等迁移成功。
+# 2026-09-24 readiness 绿但 SQL 缺表，不能再把这一步留给人工手顺。
+DEPLOY_ENV="${deploy_env}" NAMESPACE="${namespace}" KUBE_CONTEXT="${kube_context}" \
+  DRY_RUN="${dry_run}" bash "${script_dir}/deploy-db-migrations.sh"
 helm "${helm_args[@]}" |
+  yq 'select(.metadata.annotations."argocd.argoproj.io/hook" != "PreSync")' |
   "${kubectl_cmd[@]}" "${kubectl_apply_cmd[@]}" -n "${namespace}" -f -
 
 if [[ -z "${dry_run}" ]]; then

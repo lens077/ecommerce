@@ -49,6 +49,7 @@ jobs:
         run: |
           python3 scripts/test-promote-release.py
           python3 scripts/test-frontend-release.py
+          python3 scripts/test-db-migrations.py
 
       - name: Detect
         id: detect
@@ -110,6 +111,22 @@ jobs:
       version: ${{ github.ref_type == 'tag' && github.ref_name || '' }}
     secrets: inherit
 
+  # 迁移与应用使用同一提交和版本。失败不得回写部署清单。
+  migrations:
+    needs: detect
+    permissions:
+      contents: read
+      packages: write
+      id-token: write
+      security-events: write
+    uses: ./.github/workflows/service-ci.yml
+    with:
+      service: dbmigrate
+      version: ${{ github.ref_type == 'tag' && github.ref_name || '' }}
+    secrets:
+      TCR_USERNAME: ${{ secrets.TCR_USERNAME }}
+      TCR_PASSWORD: ${{ secrets.TCR_PASSWORD }}
+
   # 两个前端随同一发布 tag 在 amd64/arm64 原生 runner 上构建（frontend-release.yml），
   # 只需要 TCR 凭据，显式传递而不 inherit——zizmor 的 secrets-inherit / excessive-permissions 两条都因此不触发。
   frontend:
@@ -130,9 +147,10 @@ jobs:
   # 回写提交带 [skip ci]，本 workflow 只由 tag 触发，回写不会再触发自己。
   update-manifests:
     name: update deploy manifests (helm + raw)
-    needs: [detect, ci, frontend]
+    needs: [detect, ci, frontend, migrations]
     if: >-
-      always() && needs.ci.result == 'success' &&
+      always() && github.ref_type == 'tag' &&
+      needs.ci.result == 'success' && needs.migrations.result == 'success' &&
       (needs.frontend.result == 'success' || needs.frontend.result == 'skipped') &&
       needs.detect.outputs.services != '[]'
     runs-on: ubuntu-24.04
@@ -159,21 +177,9 @@ jobs:
           VERSION: ${{ github.ref_type == 'tag' && github.ref_name || '' }}
         run: |
           set -euo pipefail
-          if [[ -n "$VERSION" ]]; then
-            python3 scripts/promote-release.py --environment pre --version "$VERSION"
-            exit 0
-          fi
-          # Manual backend-only builds do not promote production.
-          TAG="sha-${GITHUB_SHA::7}"
-          for svc in $(jq -r '.[]' <<<"$SERVICES"); do
-            yq -i ".${svc}.image.tag = \"${TAG}\"" helm/values.yaml
-            repo="$(yq -r ".${svc}.image.repository" helm/values.yaml)"
-            # 裸 manifest 用 sed 而不是 yq -i：yq 会重排注释与缩进，把一份手写文档变成机器输出
-            sed -i -E "s#^( +image: )${repo}:.*\$#\1${repo}:${TAG}#" \
-              "backend/services/${svc}/deploy/base/deployment.yaml"
-            grep -q "image: ${repo}:${TAG}\$" "backend/services/${svc}/deploy/base/deployment.yaml" \
-              || { echo "裸 manifest 回写失败：${svc}" >&2; exit 1; }
-          done
+          # Partial manual builds cannot advance application images independently
+          # of the matching migration artifact. Only complete releases promote.
+          python3 scripts/promote-release.py --environment pre --version "$VERSION"
           git diff --stat
 
       # 回写后两份必须仍然等价；不等价说明有人只改了一边，此时宁可不提交

@@ -95,6 +95,14 @@ def plan_changes(root, services, environment, version, digests):
                 path.read_text(), rf'^(\s+image: "){re.escape(image)}:[^"]+(",)$',
                 lambda m: m[1] + image + ':' + pin + m[2])
         changes[path] = text
+    # The migration image is a release artifact, not a running business service.
+    pin = version + '@' + digests['dbmigrate']
+    if environment == 'pre':
+        values = replace_once(values, r'(^\s+repository: "ccr\.ccs\.tencentyun\.com/sumery/dbmigrate",\n\s+tag: ")[^"]+(",)$',
+                              lambda m: m[1] + pin + m[2])
+    else:
+        values = replace_once(values, r'(^    migrations: \{\n      image: \{\n        tag: ")[^"]+(",)$',
+                              lambda m: m[1] + pin + m[2])
     changes[values_path] = values
     return changes
 
@@ -109,7 +117,7 @@ def main():
         parser.error('version must be canonical X.Y.Z; sha/emergency tags cannot be promoted')
     services = inventory()
     digests = {}
-    for chart in [*services, 'frontend', 'consumer-next']:
+    for chart in [*services, 'frontend', 'consumer-next', 'dbmigrate']:
         repo = 'ecommerce-frontend' if chart == 'frontend' else chart
         ref = f'ccr.ccs.tencentyun.com/sumery/{repo}:{args.version}'
         # Resolve once, then inspect by digest so the pin matches the checked content.

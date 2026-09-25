@@ -104,16 +104,24 @@ jobs:
 
       # structcheck 是全仓结构门禁（矩阵↔目录↔网关对齐、internal/pkg 同构棘轮），
       # 任何服务的改动都必须过它；api 是共享契约，跟着服务一起验
+      # dbmigrate 复用同一条扫描/签名/SBOM 链，不另建无门禁的发布 workflow。
+      # 2026-09-24 服务健康但业务表缺失，证明迁移必须成为同版本的正式制品。
       - name: Build service
-        run: go build ./services/${{ inputs.service }}/...
+        env:
+          TARGET: ${{ inputs.service == 'dbmigrate' && './tools/dbmigrate' || format('./services/{0}/...', inputs.service) }}
+        run: go build "$TARGET"
 
       - name: Vet
-        run: go vet ./services/${{ inputs.service }}/... ./api/...
+        env:
+          TARGET: ${{ inputs.service == 'dbmigrate' && './tools/dbmigrate' || format('./services/{0}/...', inputs.service) }}
+        run: go vet "$TARGET" ./api/...
 
       - name: Test
+        env:
+          TARGET: ${{ inputs.service == 'dbmigrate' && './tools/dbmigrate' || format('./services/{0}/...', inputs.service) }}
         run: |
           go test -short -race -count=1 \
-            ./services/${{ inputs.service }}/... \
+            "$TARGET" \
             ./api/... \
             ./structcheck/...
 
@@ -201,7 +209,7 @@ jobs:
         uses: docker/build-push-action@v6
         with:
           context: backend
-          file: backend/services/${{ inputs.service }}/Dockerfile
+          file: ${{ inputs.service == 'dbmigrate' && 'backend/tools/dbmigrate/Dockerfile' || format('backend/services/{0}/Dockerfile', inputs.service) }}
           platforms: linux/amd64,linux/arm64
           push: ${{ inputs.push-image }}
           cache-from: type=gha,scope=svc-${{ inputs.service }}
@@ -209,6 +217,7 @@ jobs:
           build-args: |
             SERVICE=${{ inputs.service }}
             VERSION=${{ inputs.version != '' && inputs.version || steps.meta.outputs.tag }}
+            VCS_REF=${{ github.sha }}
             GOPROXY=https://proxy.golang.org|https://goproxy.io,direct
           tags: ${{ steps.meta.outputs.tags }}
 

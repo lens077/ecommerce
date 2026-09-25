@@ -36,16 +36,16 @@ class ReleaseTests(unittest.TestCase):
         self.assertNotIn('>> docs/progress-archive/', workflow)
         self.assertNotIn('git add docs/progress-archive/', workflow)
 
-    def test_both_environments_plan_all_twelve_images_without_writing(self):
+    def test_both_environments_plan_services_and_migration_without_writing(self):
         services = promote.inventory()
-        charts = [*services, 'frontend', 'consumer-next']
+        charts = [*services, 'frontend', 'consumer-next', 'dbmigrate']
         digests = {chart: 'sha256:' + 'a' * 64 for chart in charts}
         for environment in ('pre', 'prod'):
             with self.subTest(environment=environment):
                 changes = promote.plan_changes(promote.ROOT, services, environment, '1.6.4', digests)
                 self.assertEqual(len(changes), 13)
                 values = next(text for path, text in changes.items() if path.parent.name == 'helm')
-                self.assertEqual(values.count('1.6.4@sha256:' + 'a' * 64), 12)
+                self.assertEqual(values.count('1.6.4@sha256:' + 'a' * 64), 13)
                 for path, text in changes.items():
                     self.assertNotEqual(path.read_text(), text)
                     if path.parent.name != 'helm':
@@ -64,7 +64,7 @@ class ReleaseTests(unittest.TestCase):
             (root / 'scripts').mkdir()
             shutil.copy2(promote.ROOT / 'scripts/verify-deploy-parity.sh', root / 'scripts/verify-deploy-parity.sh')
             shutil.copy2(promote.ROOT / 'application-vpa.yml', root / 'application-vpa.yml')
-            digests = {s: 'sha256:' + 'a' * 64 for s in [*services, 'frontend', 'consumer-next']}
+            digests = {s: 'sha256:' + 'a' * 64 for s in [*services, 'frontend', 'consumer-next', 'dbmigrate']}
             for env in ('pre', 'prod'):
                 for path, text in promote.plan_changes(root, services, env, '1.6.4', digests).items():
                     path.write_text(text)
@@ -84,7 +84,7 @@ class ReleaseTests(unittest.TestCase):
         """consumer-next 的 init 容器与主容器共用同一镜像(2026-09-15 起两处 image:),
         pre 回写必须把每一处都换成同一个 version@digest;1.7.6 CI 曾因 replace_once 只认一处而红。"""
         services = promote.inventory()
-        digests = {chart: 'sha256:' + 'b' * 64 for chart in [*services, 'frontend', 'consumer-next']}
+        digests = {chart: 'sha256:' + 'b' * 64 for chart in [*services, 'frontend', 'consumer-next', 'dbmigrate']}
         changes = promote.plan_changes(promote.ROOT, services, 'pre', '1.6.4', digests)
         text = next(text for path, text in changes.items() if path.name == 'consumer-next.yaml')
         # KYAML:image 的值带双引号、行尾带逗号

@@ -3,6 +3,12 @@
   # Production baseline: observed 2026-09-12; emergency images remain immutable.
   global: {
     deploymentMode: "prod",
+    migrations: {
+      image: {
+        tag: "migration-preflight-20260926@sha256:2aff5293162f5003f8f213f6fb5c7c317d4165c6a4f61284af12bc2d629f1946",
+      },
+      secretName: "ecommerce-db-migrate-prod",
+    },
     configSource: {
       secretName: "ecommerce-config-source-prod",
     },

@@ -50,10 +50,11 @@ const defaultDSN = "postgres://postgres:postgres@127.0.0.1:15432/ecommerce?sslmo
 
 func main() {
 	var (
-		svcFlag  = flag.String("svc", "all", "服务名，逗号分隔，或 all")
-		dsnFlag  = flag.String("dsn", "", "PostgreSQL DSN；缺省依次读 DB_URI / DB_SOURCE / 本地默认")
-		baseFlag = flag.String("base", "services", "服务目录的根（相对 backend/）")
-		timeout  = flag.Duration("timeout", 5*time.Minute, "整体超时")
+		svcFlag    = flag.String("svc", "all", "服务名，逗号分隔，或 all")
+		dsnFlag    = flag.String("dsn", "", "PostgreSQL DSN；缺省依次读 DB_URI / DB_SOURCE / 本地默认")
+		baseFlag   = flag.String("base", "services", "服务目录的根（相对 backend/）")
+		timeout    = flag.Duration("timeout", 5*time.Minute, "整体超时")
+		requireDSN = flag.Bool("require-dsn", false, "发布模式禁止回退本地默认 DSN")
 	)
 	flag.Parse()
 	args := flag.Args()
@@ -84,6 +85,10 @@ func main() {
 		return
 	}
 
+	if *requireDSN && strings.TrimSpace(*dsnFlag) == "" &&
+		strings.TrimSpace(os.Getenv("DB_URI")) == "" && strings.TrimSpace(os.Getenv("DB_SOURCE")) == "" {
+		fatal(errors.New("release requires an explicit DSN"))
+	}
 	dsn := resolveDSN(*dsnFlag)
 	ctx, cancel := context.WithTimeout(context.Background(), *timeout)
 	defer cancel()

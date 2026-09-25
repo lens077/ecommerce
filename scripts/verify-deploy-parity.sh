@@ -106,6 +106,11 @@ render_env() { # render_env <env>  → ${workdir}/<env>/{helm,raw}.yaml
     # --show-only 会报 "could not find template",所以先按合并后的 values 判断再决定要不要 show-only。
     printf -- '---\n'
     helm_render "${env}" --show-only templates/zero-trust.yaml
+    # 2026-09-24 缺表事故：裸入口与 Helm/Argo 必须使用同一份迁移 hook，不能漏掉前置 Job。
+    printf -- '\n---\n'
+    helm_render "${env}" --show-only templates/db-migrate-network.yaml
+    printf -- '\n---\n'
+    helm_render "${env}" --show-only templates/db-migrate.yaml
     if [[ "$(helm_value "${env}" .global.otelAuthExternalSecret.enabled)" == "true" ]]; then
       printf -- '\n---\n'
       helm_render "${env}" --show-only templates/otel-auth-externalsecret.yaml

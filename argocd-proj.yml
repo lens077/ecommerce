@@ -1,56 +1,101 @@
-apiVersion: argoproj.io/v1alpha1
-kind: AppProject
-metadata:
-  name: ecommerce
-  namespace: argocd
-  labels:
-    app.kubernetes.io/part-of: ecommerce
-    app.kubernetes.io/managed-by: git
-spec:
-  description: "ecommerce Helm GitOps project"
-  sourceRepos:
-    - "https://gitlab.com/sumery/ecommerce.git"
-  destinations:
-    - name: in-cluster
-      server: https://kubernetes.default.svc
-      namespace: ecommerce
-  # This chart only manages namespaced workloads. Cluster-scoped resources stay
-  # under platform ownership and are deliberately excluded from this project.
-  clusterResourceWhitelist: []
-  namespaceResourceWhitelist:
-    - group: ""
-      kind: ConfigMap
-    - group: ""
-      kind: Service
-    - group: ""
-      kind: ServiceAccount
-    - group: apps
-      kind: Deployment
-    - group: argoproj.io
-      kind: Rollout
-    - group: argoproj.io
-      kind: AnalysisTemplate
-    - group: argoproj.io
-      kind: AnalysisRun
-    - group: autoscaling.k8s.io
-      kind: VerticalPodAutoscaler
-    - group: cert-manager.io
-      kind: Certificate
-    - group: cilium.io
-      kind: CiliumNetworkPolicy
-    - group: external-secrets.io
-      kind: ExternalSecret
-    - group: gateway.networking.k8s.io
-      kind: HTTPRoute
-    # ecommerce 命名空间级 Kyverno 策略（infrastructure/kyverno/，独立 Application）。
-    # 只放 Policy 不放 ClusterPolicy：集群级策略归 kubernetes 仓 components/kyverno/。
-    - group: kyverno.io
-      kind: Policy
-    - group: policy
-      kind: PodDisruptionBudget
-  roles:
-    - name: read-only
-      description: "Read ecommerce applications and project state"
-      policies:
-        - "p, proj:ecommerce:read-only, applications, get, ecommerce/*, allow"
-        - "p, proj:ecommerce:read-only, projects, get, ecommerce, allow"
+---
+{
+  apiVersion: "argoproj.io/v1alpha1",
+  kind: "AppProject",
+  metadata: {
+    name: "ecommerce",
+    namespace: "argocd",
+    labels: {
+      app.kubernetes.io/part-of: "ecommerce",
+      app.kubernetes.io/managed-by: "git",
+    },
+  },
+  spec: {
+    description: "ecommerce Helm GitOps project",
+    sourceRepos: [
+      "https://gitlab.com/sumery/ecommerce.git",
+    ],
+    destinations: [{
+      name: "in-cluster",
+      server: "https://kubernetes.default.svc",
+      namespace: "ecommerce",
+    }],
+    # Cluster-scoped infrastructure remains under platform ownership.
+    clusterResourceWhitelist: [],
+    namespaceResourceWhitelist: [
+      {
+        group: "",
+        kind: "ConfigMap",
+      },
+      {
+        group: "",
+        kind: "Service",
+      },
+      {
+        group: "",
+        kind: "ServiceAccount",
+      },
+      {
+        group: "apps",
+        kind: "Deployment",
+      },
+      {
+        group: "batch",
+        kind: "Job",
+      },
+      {
+        group: "networking.k8s.io",
+        kind: "NetworkPolicy",
+      },
+      {
+        group: "argoproj.io",
+        kind: "Rollout",
+      },
+      {
+        group: "argoproj.io",
+        kind: "AnalysisTemplate",
+      },
+      {
+        group: "argoproj.io",
+        kind: "AnalysisRun",
+      },
+      {
+        group: "autoscaling.k8s.io",
+        kind: "VerticalPodAutoscaler",
+      },
+      {
+        group: "cert-manager.io",
+        kind: "Certificate",
+      },
+      {
+        group: "cilium.io",
+        kind: "CiliumNetworkPolicy",
+      },
+      {
+        group: "external-secrets.io",
+        kind: "ExternalSecret",
+      },
+      {
+        group: "gateway.networking.k8s.io",
+        kind: "HTTPRoute",
+      },
+      # Namespaced policies only; ClusterPolicy belongs to the platform repo.
+      {
+        group: "kyverno.io",
+        kind: "Policy",
+      },
+      {
+        group: "policy",
+        kind: "PodDisruptionBudget",
+      },
+    ],
+    roles: [{
+      name: "read-only",
+      description: "Read ecommerce applications and project state",
+      policies: [
+        "p, proj:ecommerce:read-only, applications, get, ecommerce/*, allow",
+        "p, proj:ecommerce:read-only, projects, get, ecommerce, allow",
+      ],
+    }],
+  },
+}

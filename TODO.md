@@ -153,7 +153,7 @@ todo-spec: 1
 
 #### P0
 
-- [ ] **待复验 · 告警送不到人**：2026-09-24 集群重建后 alert-bridge 与 gatus 的 ntfy Secret 全空，告警只写桥日志不推手机。已从 node1 自托管 ntfy 取回 `infra-publisher` 的 token（找回步骤见 kubernetes 仓 `components/alert-bridge/README.md`），写回本机 creds 并重装两组件：bridge `/healthz` 为 `ntfy:true`，gatus 19 个端点挂上告警，测试告警经 Alertmanager→桥→ntfy 无错送达。剩：确认手机收到「告警通知链路验证」且点开能跳到 Grafana Explore（`Click`）。
+- [ ] **待客户端确认 · 告警送达**：新版发布者/订阅者权限已隔离，Alertmanager→alert-bridge→ntfy 的 test 路由故障与恢复均已读回 `event=message`。剩手机添加自托管服务器、订阅主题，并确认通知展示与 Grafana 定位链接；服务端接收不能代替手机验收。
 - [ ] **待复验 · 敏感日志端到端脱敏**：旧 Lua 缺陷所属采集器已退役，不再修旧管道。对当前 stdout/Vector 与 SDK OTLP 两条链路注入合成手机号、邮件、token、支付表单样本，确认原文字段不旁路入库；按 TECH.md 收敛到外置 Collector。
 
 #### P1
@@ -162,7 +162,7 @@ todo-spec: 1
 - [ ] **待复验 · 指标写入口认证**：确认 VM import 与 OTLP metrics 入口拒绝未授权写入，推送方认证同步配置；旧公网可写断言未重测。
 - [ ] **部分完成 · 指标采集层对齐**：当前有 OTel agent，TECH.md 仍要求 VMAgent。按目标收敛职责、避免重复采集；补 Pod/容器用量与 CFS throttling，校验 kubelet/cAdvisor 实际可用指标，不能假定 kubeletstats 覆盖全部限流指标。
 - [ ] **部分完成 · Go runtime/进程指标验收**：十服务 adapter 均已设 `RuntimeMetrics: true`，删除「全部未实现」判断；剩 goroutine/heap/CPU/内存实际 series、导出失败可见性验收，缺项在 go-connect-kit 补齐；发布版本归下文「部署关联与观测恢复」。
-- [ ] **部分完成 · 配置未生效告警**：kit v0.7.1 已修复并发布 `connectkit_config_stale{component}` 多组件导出（热重建失败、旧连接仍在服务时为 1），`/healthz` 同步给出 `warnings`；behavior/product 的 gorse 客户端已接入同一机制（`component="gorse"`，推送即验证后重建）；vmalert 的 stale 与 component 缺失规则已写，剩部署及 firing/resolved 演练。不要改成让健康检查失败，理由见 [热更新边界](context/project/ecommerce/config/experience/config-hot-reload-boundaries.md)。
+- [ ] **部分完成 · 配置未生效告警**：pre 的 pgpool/redisclient 指标、stale 与缺失告警已实测；PG 真实查询和 Redis 曝光去重在 stale 期间正常，恢复后指标归零。剩独立 prod 验收，以及在途 gorse Live 接线发布后的同类验证。不要让 stale 直接造成健康检查失败，理由见 [热更新边界](context/project/ecommerce/config/experience/config-hot-reload-boundaries.md)。
 - [ ] **未完成 · 日志限流**：共享日志模块统一实现采样与压制计数；stdout/OTLP 同时受控，FATAL/PANIC 不限，阈值经故障场景验证。不再复制修改十份初始化代码；RPC 日志拦截器已下沉 kit `rpcobs`（v0.7.0），限流在 kit 侧一处实现。
 - [ ] **部分完成 · 业务错误 reason**：kit `errinfo.New(reason, msg)` 声明哨兵，拦截器沿错误链取 reason 写日志/span、打 `rpc.server.errors{error.reason}`（otelconnect 只能删属性不能加，故单独计数器），并以 `google.rpc.ErrorInfo{Reason, Domain=服务名}` 返回客户端；24 个哨兵已转换，APM 盘加「错误 by 业务 reason」。已随 kit v0.7.0 接入。剩：部署后用真实业务异常确认 VM 里的 series 名（推算为 `rpc_server_errors_total`）；前端按 reason 处理需 TS 侧解 ErrorInfo。
 - [ ] **部分完成 · 抛错点定位**：日志的 `code.file.path` 恒为 `server/logging.go`（2026-09-24 VictoriaLogs 实测），无法 blame。kit `errinfo.Here` 记录最内层调用点，dbutil 三个入口对非 nil 结果自动记录数据层调用行，拦截器写 `error.origin`（kit v0.7.0）。剩：数据层约 71 处不经 dbutil 的 `fmt.Errorf`（Redis、外部 API）未记录，按故障热点逐步补 `errinfo.Here`；部署后在 VL 确认 `error.origin` 字段。
@@ -211,7 +211,7 @@ todo-spec: 1
 - [ ] **部分完成 · TCR 签名验收**：多服务流水线已有 Cosign/SBOM；补逐服务 digest 的签名/attestation 回读验证，不沿用「只有 user 接线」也不把构建成功当验签完成。
 - [ ] **部分完成 · Harbor Helm 签名与 Kyverno 准入**：`verifyImages` 已落地为 ecommerce 命名空间级 Audit 策略（`infrastructure/kyverno/`，keyless + `type: SigstoreBundle`，只覆盖已完成 TCR 探测的 `user`），`smoke.sh` 验收「签名 digest pass / 未签名 fail / 两者放行」；ArgoCD `Application/ecommerce-kyverno` 已建，等 GitLab `main` 含该路径即 Synced。剩：CI 对全部服务在 TCR 签名后把 `imageReferences` 扩到 `sumery/*`；14 天零误报后转 Enforce 并以拒绝测试验收；chart 纳入签名链；`kyverno.io/v1 Policy` 迁 `NamespacedImageValidatingPolicy`（CEL）。
 - [ ] **未完成 · 发布权限与约束**：收敛 `MANIFEST_PUSH_TOKEN` 绕过分支保护的权限；把发布 tag 四条纪律落实为可执行检查，避免只靠操作约定。
-- [ ] **部分完成 · 制品启动与回滚**：pre/prod 同 digest 晋级已有脚本与 prod 清单；剩从 digest 拉起的冒烟、拉取预检、保留策略核验和真实回滚演练；GitOps 接管后验证发布/回滚无需手工 kubectl。
+- [ ] **部分完成 · 制品启动、迁移与回滚**：迁移 Job 已接入两条部署入口及 Helm/Argo hook，失败阻断工作负载；迁移镜像随发布扫描、签名并固定 digest，种子不自动执行。剩正式发布制品实跑、prod 专属数据库/迁移 Secret 验收、长期 Job 日志归档、制品保留策略和真实应用回滚演练；GitOps 接管后验证发布/回滚无需手工 kubectl。
 - [ ] **部分完成 · 契约与竞态门禁**：GitHub 发布模板已有 `buf breaking` 和 `go test -race`，GitLab 有 lint 棘轮。剩 MR 阶段兼容性保护与破坏性变更红测；事件 schema 随线 B 纳入，不再重复要求从零接入。
 
 #### P2

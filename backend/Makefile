@@ -276,7 +276,10 @@ k8s-pre-all:
 # 都不中断循环 —— 一个服务坏掉不该让后面的服务全部漏掉
 .PHONY: k8s-apply-all
 k8s-apply-all:
+	@test -z "$(NAMESPACE)" -o "$(NAMESPACE)" = ecommerce || { echo "raw manifests target ecommerce; refusing a different migration namespace" >&2; exit 1; }
 	@if [ "$(K8S_ENV)" = prod ] && [ -z "$(KUBE_CONTEXT)" ]; then echo "prod requires explicit KUBE_CONTEXT" >&2; exit 1; fi
+	@DEPLOY_ENV="$(K8S_ENV)" KUBE_CONTEXT="$(KUBE_CONTEXT)" \
+	  DRY_RUN="$(filter --dry-run=server,$(KUBECTL_ARGS))" bash ../scripts/deploy-db-migrations.sh
 	@tmp=$$(mktemp "$${TMPDIR:-/tmp}/ecommerce-zero-trust.XXXXXX"); \
 	trap 'rm -f "$$tmp"' EXIT; \
 	echo "===== render and apply shared zero-trust + otel-auth (helm/files) ====="; \

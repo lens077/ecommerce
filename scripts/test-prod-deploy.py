@@ -17,8 +17,12 @@ if 'apply' in sys.argv or 'delete' in sys.argv:
         sys.exit('write escaped dry-run')
     if '-f' in sys.argv and sys.argv[sys.argv.index('-f')+1] == '-':
         sys.stdin.read()
+if 'get' in sys.argv and 'secret' in sys.argv:
+    print('cG9zdGdyZXNxbDovL2V4YW1wbGU=')
 if 'create' in sys.argv:
-    if '--dry-run=client' not in sys.argv:
+    if '-f' in sys.argv and sys.argv[sys.argv.index('-f')+1] == '-':
+        sys.stdin.read()
+    if '--dry-run=client' not in sys.argv and '--dry-run=server' not in sys.argv:
         sys.exit('create escaped dry-run')
     print('apiVersion: v1\\nkind: Namespace\\nmetadata:\\n  name: ecommerce')
 '''

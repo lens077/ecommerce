@@ -64,6 +64,8 @@ jobs:
           python3 scripts/test-promote-release.py
           python3 scripts/test-frontend-release.py
           python3 scripts/test-prod-deploy.py
+          # 2026-09-24 缺表事故：红测必须证明迁移失败阻止工作负载 apply。
+          python3 scripts/test-db-migrations.py
 
       # 部署清单必须是 KYAML(scripts/verify-kyaml.sh)。放在 parity 之前:格式坏掉时两道都红,
       # 但 KYAML 那条能指出「哪个文件写法不对」,parity 只会说「哪个字段不一样」。
