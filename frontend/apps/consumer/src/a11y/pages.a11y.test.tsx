@@ -157,7 +157,7 @@ async function renderPage(path: string, ready: () => Promise<unknown>) {
     context: {
       auth: {
         isAuthenticated: authState.authenticated,
-        setIsAuthenticated: () => {},
+        loading: false,
         login: () => {},
         logout: () => {},
       },

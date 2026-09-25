@@ -84,6 +84,28 @@ describe("Tracker.resetIdentity", () => {
     expect(anonId()).not.toBe(oldAnon);
   });
 
+  it("认证失效时丢弃积压事件，下一身份只能发送自己的事件", async () => {
+    tracker = new Tracker({ gatewayUrl: "http://gw" });
+    const oldAnon = anonId();
+    const oldSession = sessionId();
+    tracker.read("OLD-USER-ITEM");
+
+    tracker.resetIdentity({ discardQueuedEvents: true });
+
+    expect(fetchMock, "失效会话不再发送旧事件").not.toHaveBeenCalled();
+    expect(anonId()).not.toBe(oldAnon);
+    expect(sessionId()).not.toBe(oldSession);
+    tracker.read("NEW-USER-ITEM");
+    await tracker.flush();
+    expect(sentPayloads()).toEqual([
+      expect.objectContaining({
+        anonId: anonId(),
+        sessionId: sessionId(),
+        events: [expect.objectContaining({ itemId: "NEW-USER-ITEM" })],
+      }),
+    ]);
+  });
+
   it("埋点被禁用时不发请求，但照样清掉存储里的旧标识", () => {
     const oldAnon = anonId();
     tracker = new Tracker({ gatewayUrl: "", disabled: true });

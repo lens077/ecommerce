@@ -113,7 +113,7 @@ export default function PrimarySearchAppBar() {
   // 登录成功不再产生任何能触发重渲染的信号，顶栏会永远停在首次渲染的结果 ——
   // 表现为"登录明明成功了（用户资料都已拿到），顶栏还显示未登录"（Playwright 实测）。
   // 它此前"碰巧能用"，只是因为读的是同步可读的 localStorage。
-  const { isAuthenticated } = useAuthState();
+  const { isAuthenticated, loading } = useAuthState();
   const { login, logout } = useAuthActions();
   // zustand selector 订阅：资料（登录/登出/UserProfile RPC 回填）一变，顶栏立即刷新。
   // 旧实现直读 valtio proxy 却不订阅，头像/昵称要靠父组件碰巧重渲染才更新。
@@ -425,7 +425,9 @@ export default function PrimarySearchAppBar() {
                 <ShoppingCartIcon />
               </Badge>
             </IconButton>
-            {isAuthenticated ? (
+            {loading ? (
+              <Box aria-hidden="true" sx={{ width: 48, height: 48 }} />
+            ) : isAuthenticated ? (
               <IconButton
                 size="large"
                 edge="end"
@@ -476,7 +478,9 @@ export default function PrimarySearchAppBar() {
           </Box>
           <Box sx={{ display: { xs: "flex", md: "none" }, alignItems: "center" }}>
             <LocaleSwitcher size="small" />
-            {isAuthenticated ? (
+            {loading ? (
+              <Box aria-hidden="true" sx={{ width: 48, height: 48 }} />
+            ) : isAuthenticated ? (
               <IconButton
                 size="large"
                 aria-label="show more"
@@ -616,8 +620,8 @@ export default function PrimarySearchAppBar() {
           )}
         </SearchResults>
       )}
-      {renderMobileMenu}
-      {renderMenu}
+      {!loading && isAuthenticated && renderMobileMenu}
+      {!loading && isAuthenticated && renderMenu}
     </Box>
   );
 }

@@ -13,7 +13,7 @@ import Footer from "@/components/Footer";
 interface MyRouterContext {
   auth: {
     isAuthenticated: boolean;
-    setIsAuthenticated: (v: boolean) => void;
+    loading: boolean;
     login: () => void;
     logout: () => void;
   };

@@ -29,10 +29,10 @@ const router = createRouter({
   context: {
     auth: {
       isAuthenticated: false,
-      setIsAuthenticated: () => {},
+      loading: true,
       login: () => {},
       logout: () => {},
-    } as any, // 暂时使用 as any 占位，或者直接不加 user,
+    },
   },
   defaultPreload: "intent",
   scrollRestoration: true,

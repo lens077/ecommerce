@@ -217,8 +217,11 @@ export class Tracker {
    * 先清存储就会把登出前的行为记到新身份头上。
    * 埋点被禁用时队列为空、不会发请求，但存储里可能还留着以前的标识，照样要清。
    */
-  resetIdentity(): void {
-    void this.flush();
+  resetIdentity(options?: { discardQueuedEvents?: boolean }): void {
+    // 认证已经失效时无法再证明队列归属，直接丢弃；不能用下一会话补发。
+    // 主动登出仍走默认 flush，调用方必须在撤销会话之前调用。
+    if (options?.discardQueuedEvents) this.take();
+    else void this.flush();
     this.seenImpressions.clear();
     clearIdentity();
   }
