@@ -8,7 +8,7 @@
   ],
   images: [{
     name: "ccr.ccs.tencentyun.com/sumery/ecommerce-frontend",
-    newTag: "1.7.7",
-    digest: "sha256:02dea7eb72bf67344c659bb241c9d846d3b2803a14a2b1ec8ebd039e52e6581a",
+    newTag: "1.7.13",
+    digest: "sha256:1fdd641b892c04c40c06778222d099a4b44e11eb963a2f01f0cae68d829ca487",
   }],
 }

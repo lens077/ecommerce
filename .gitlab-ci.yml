@@ -42,8 +42,14 @@ context-gate:
   image: alpine:3.20
   variables:
     GIT_DEPTH: 0
+    # 轻检查不预留重构建的 3Gi；request 与 limit 同时设置，避免只压低调度请求。
+    KUBERNETES_MEMORY_REQUEST: "512Mi"
+    KUBERNETES_MEMORY_LIMIT: "512Mi"
   # busybox 的 grep/sed/awk 行为有差异,统一换 GNU 版,与本机/GitHub runner 对齐。
   before_script:
+    # 2026-09-24 worker 上官方 CDN 安装依赖约耗时 36 分钟；已用同镜像/同包列表验证清华 HTTPS 源。
+    # 只替换源主机，不改 Alpine 版本、不关闭 TLS 或 APK 签名校验。
+    - sed -i 's#https://dl-cdn.alpinelinux.org/alpine#https://mirrors.tuna.tsinghua.edu.cn/alpine#g' /etc/apk/repositories
     - apk add --no-cache bash git grep sed gawk coreutils findutils python3
   script:
     - bash ./scripts/verify-context.sh
@@ -62,6 +68,9 @@ gitleaks:
     entrypoint: [""]
   variables:
     GIT_DEPTH: 0
+    # 轻检查不预留重构建的 3Gi；request 与 limit 同时设置，避免只压低调度请求。
+    KUBERNETES_MEMORY_REQUEST: "512Mi"
+    KUBERNETES_MEMORY_LIMIT: "512Mi"
   script:
     - gitleaks version
     # 与 GitHub context-gate.yml 的 gitleaks job 同一条命令 + 同一条「扫描数 > 100」断言:
@@ -86,11 +95,18 @@ backend-gate:
   stage: test
   image: golang:1.27
   variables:
+    KUBERNETES_MEMORY_REQUEST: "3Gi"
+    KUBERNETES_MEMORY_LIMIT: "3Gi"
     # 缓存落在项目目录内才能被 GitLab cache 抓到;默认 GOPATH 在容器里,每次都冷。
     GOMODCACHE: $CI_PROJECT_DIR/.cache/go-mod
     GOCACHE: $CI_PROJECT_DIR/.cache/go-build
-    # 依赖 github.com/lens077/control-tower(public),走默认 GOPROXY 即可,无需私仓凭据。
-    GOPROXY: https://proxy.golang.org,direct
+    # 依赖 github.com/lens077/control-tower(public),无需私仓凭据。
+    # 2026-09-24 起 GitLab CI 跑在集群内自建 runner(infrastructure/gitlab-runner/):proxy.golang.org 从集群
+    # 不可达(15s 超时),backend-gate 会卡在 `go build` 下载依赖直到 1h 超时;goproxy.cn 0.17s。
+    # 用 `|` 不用 `,`:逗号只在 404/410 才回退,goproxy.cn 冷回源时的 stream INTERNAL_ERROR 会直接让
+    # build 失败(同日实测 control-tower@v0.1.7);`|` 遇任何错误都落到 direct(github.com,集群可达)。
+    # 不列 proxy.golang.org:从集群不可达,只会白等超时。模块内容仍由 go.sum 钉死的哈希校验。
+    GOPROXY: https://goproxy.cn|direct
   cache:
     key:
       files:
@@ -120,6 +136,8 @@ frontend-gate:
   stage: test
   image: node:24
   variables:
+    KUBERNETES_MEMORY_REQUEST: "3Gi"
+    KUBERNETES_MEMORY_LIMIT: "3Gi"
     # pnpm 版本只认 frontend/package.json 的 packageManager 字段(单一真相源,
     # 参照 deepseek-harness 从 package.json 取版本的做法)。不用 corepack:Node 25 起不再内置,
     # 直接 npm 装指定版本对任何 Node 镜像都成立。

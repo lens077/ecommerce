@@ -152,15 +152,19 @@ specs:
               - { port: "8500", protocol: TCP }
               - { port: "8501", protocol: TCP }
       - &otlp
-        toFQDNs:
-          - matchName: node3-otlp.apikv.com
+        toServices:
+          - k8sService:
+              namespace: opentelemetry
+              serviceName: otel-opentelemetry-collector
         toPorts:
-          - ports: [{ port: "443", protocol: TCP }]
+          - ports: [{ port: "4318", protocol: TCP }]
       - &postgres
-        toCIDR:
-          - '{{ required "global.postgresEgressCIDR is required" .Values.global.postgresEgressCIDR }}'
+        toServices:
+          - k8sService:
+              namespace: postgresql
+              serviceName: pg-main-rw
         toPorts:
-          - ports: [{ port: "30001", protocol: TCP }]
+          - ports: [{ port: "5432", protocol: TCP }]
       - &casdoor
         toFQDNs:
           - matchName: casdoor.apikv.com

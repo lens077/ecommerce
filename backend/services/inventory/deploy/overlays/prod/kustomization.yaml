@@ -1,14 +1,20 @@
 ---
 {
-  # base 即 pre 基线(运行模式 pre、selector Secret pre);prod 只钉自己的镜像 version@digest。
+  # prod 覆盖独立运行模式与 Config Center selector，并钉不可变镜像。
   apiVersion: "kustomize.config.k8s.io/v1beta1",
   kind: "Kustomization",
   resources: [
     "../../base",
   ],
+  patches: [{
+    path: "deployment.patch.json",
+    target: {
+      kind: "Deployment",
+    },
+  }],
   images: [{
     name: "ccr.ccs.tencentyun.com/sumery/inventory",
-    newTag: "1.7.7",
-    digest: "sha256:7e34cb24b6414161bf8b5afa7258e5c1e3f403fe4b885428aa6bfdc0132857d9",
+    newTag: "1.7.13",
+    digest: "sha256:af672c027128ad5c2f979992f4dd4f8dd4b17748a5a613350fbd1355d040a02d",
   }],
 }
