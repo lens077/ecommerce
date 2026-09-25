@@ -33,6 +33,7 @@ export const useAddresses = () => {
   const {
     data: addresses,
     isLoading,
+    isFetching,
     error,
     refetch,
   } = useQuery(AddressService.method.listAddresses, {}, { select: selectAddresses });
@@ -56,6 +57,7 @@ export const useAddresses = () => {
   return {
     addresses,
     isLoading,
+    isFetching,
     error,
     refetch,
     // 对外仍然收表单结构，proto 消息的拼装收在这里，页面不用认识 AddressDetail

@@ -12,11 +12,16 @@ import type { ReactNode } from "react";
 const state = vi.hoisted(() => ({
   cart: {} as Record<string, unknown>,
   addresses: [] as unknown[],
+  addressRefreshing: false,
   navigate: vi.fn(),
 }));
 vi.mock("@/hooks/useCart", () => ({ useCart: () => state.cart }));
 vi.mock("@/hooks/useAddresses", () => ({
-  useAddresses: () => ({ addresses: state.addresses, isLoading: false }),
+  useAddresses: () => ({
+    addresses: state.addresses,
+    isLoading: false,
+    isFetching: state.addressRefreshing,
+  }),
 }));
 vi.mock("@tanstack/react-router", async (original) => ({
   ...(await original<object>()),
@@ -69,6 +74,7 @@ beforeEach(() => {
   };
   state.addresses = [{ addressId: "addr-1", recipientName: "person", isDefault: true }];
   state.navigate.mockReset();
+  state.addressRefreshing = false;
 });
 afterEach(() => {
   cleanup();
@@ -96,6 +102,14 @@ describe("checkout submission integrity", () => {
   it("blocks local quantity changes not persisted to the server", async () => {
     state.cart.items = [{ ...item("1"), quantity: 3 }];
     state.cart.serverItems = [{ ...item("1"), quantity: 2 }];
+    const { createOrder } = await mount();
+    const button = screen.getByRole("button", { name: "checkout.submit" });
+    expect(button).toHaveProperty("disabled", true);
+    fireEvent.click(button);
+    expect(createOrder).not.toHaveBeenCalled();
+  });
+  it("blocks stale addresses while their background refresh is pending", async () => {
+    state.addressRefreshing = true;
     const { createOrder } = await mount();
     const button = screen.getByRole("button", { name: "checkout.submit" });
     expect(button).toHaveProperty("disabled", true);

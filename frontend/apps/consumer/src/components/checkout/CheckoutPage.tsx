@@ -42,7 +42,12 @@ export function CheckoutPage() {
   const { t } = useTranslation();
   const { formatCurrencyCents } = useFormat();
   const { items, serverItems, isInitializing, isRefreshing } = useCart();
-  const { addresses, isLoading: addrLoading, error: addressError } = useAddresses();
+  const {
+    addresses,
+    isLoading: addrLoading,
+    isFetching: addrRefreshing,
+    error: addressError,
+  } = useAddresses();
   const [remark, setRemark] = useState("");
   const [selectedAddressId, setSelectedAddressId] = useState<string | null>(null);
   const [addressDialogOpen, setAddressDialogOpen] = useState(false);
@@ -76,6 +81,7 @@ export function CheckoutPage() {
     !createOrder.isPending &&
     !isRefreshing &&
     !addrLoading &&
+    !addrRefreshing &&
     !addressError &&
     !!selectedAddress &&
     selectedItems.length > 0 &&
