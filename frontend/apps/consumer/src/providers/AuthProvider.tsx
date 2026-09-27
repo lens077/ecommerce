@@ -1,13 +1,12 @@
 // src/providers/AuthProvider.tsx
 //
-// 两条并存的登录路径（control-tower ADR-0002 / bff-migration.md）：
+// 两端共用网关 BFF 会话，区别在会话标识的传递方式：
 //
-//   Web 端  → **BFF 会话**：网关跑完 OAuth，令牌全留服务端，浏览器只有一枚 httpOnly
-//             session id。前端不存令牌、不做续期、不解析 JWT——登录态问 /auth/me。
-//   桌面端  → **保留 PKCE + bearer**：Tauri 主窗口的源是 tauri://localhost，拿不到
-//             浏览器 cookie，所以整套 pkce/tokenStore 仍在为它服务。切换见 P3。
+//   Web 端  → 网关完成 OAuth，浏览器通过 httpOnly cookie 携带 session id。
+//   桌面端  → 原生登录窗口经回环回调取得 session id，只存内存，
+//             请求通过 X-CT-Session 头携带；不在此执行 PKCE 授权码兑换。
 //
-// 网关同时接受两种凭据（cookie ∥ bearer），所以两条路径可以长期并存、互不影响。
+// 两端登录态都以 /auth/me 为准；OAuth 令牌留在服务端，不由本组件管理。
 import React, { createContext, useContext, useState, useEffect, useLayoutEffect } from "react";
 import { goHome } from "@/lib/home";
 import {
@@ -95,8 +94,8 @@ export const AuthProvider: React.FC<{ children: React.ReactNode; router: AuthRou
   const login = React.useCallback(() => {
     const version = ++identityVersion.current;
     // 桌面端不能硬跳转：主窗口的源是 tauri://localhost，跳出去 Casdoor 就回不来了。
-    // 改为开一个子窗口加载登录页，由 Rust 侧拦截回调地址把 code/state 送回来，
-    // 再手动导航到 /callback 复用既有的兑换逻辑。
+    // 改为开一个子窗口加载网关登录页，由 Rust 侧拦截回环回调，
+    // 将 code 字段中的 session id 存入内存后查询身份，不再导航到 /callback 兑换。
     if (isTauri()) {
       setLoading(true);
       void (async () => {
