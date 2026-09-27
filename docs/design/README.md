@@ -31,12 +31,10 @@
 | [platform/i18n-lessons.md](platform/i18n-lessons.md) | 对照调研：Fluent/ICU4X 作者的 i18n 经验对本项目的适用性；已核实现状（语义 ID/Intl 已达标）与三个缺口（复数、后端错误、业务数据多语言）（**调研文档**） | 2026-08-31 基于 zed#7409 评论 + 本仓代码核查 |
 | [platform/admin-roadmap.md](platform/admin-roadmap.md) | 管理员角色技术形态（角色×独立 admin-service×专属页面，含边界铁律）与能力取舍、竞品差距 | 2026-08-12 基于 merchant/store-settings.md 反推 |
 | [product/listing.md](product/listing.md) | ListProducts 无限滚动/游标分页（**设计已定待落地**） | DESIGN.md §商品列表 |
-| [product/schema.md](product/schema.md) | SPU/SKU 表早期稿 | DESIGN.md §数据库设计 |
 | [inventory/inventory.md](inventory/inventory.md) | 库存分层模型、状态机、高并发保障、库存表 | DESIGN.md §分布式库存状态机 |
 | [order/checkout.md](order/checkout.md) | **下单（CreateOrder）设计基线 v2**：报价 token、组原子预占、支付/订单接受分离、Outbox、超时自愈；6 轮对抗评审收敛 | 原 docs/design/order.md（v1 草稿已被 v2 推翻并删除） |
 | [order/consistency.md](order/consistency.md) | 跨服务一致性（Order Saga 编排 + Outbox/Inbox + Kafka 编舞） | 原 TODO.md §二 |
 | [order/schema.md](order/schema.md) | 订单表早期稿（被 checkout 终稿部分取代） | DESIGN.md §数据库设计 |
-| [payment/payment.md](payment/payment.md) | **已作废**（文首横幅）：单订单支付单+单轴状态模型被 checkout v2 按组支付、capture/refund 双轴取代；仅存渠道对接与对账素材 | DESIGN.md §支付系统 |
 | [search/search.md](search/search.md) | CQRS 搜索投影：`products.search_catalog` → Debezium → Kafka → Elasticsearch Sink 已切流，含 `SearchCatalog` 边界、字段契约、全量重建、alias/IK 与灾备入口 | DESIGN.md §搜索服务；2026-09 运行时切流与手顺固化 |
 | [merchant/store-settings.md](merchant/store-settings.md) | Shopline 商店设置 20 页竞品实录（含自研备注与服务映射） | 原 DESIGN-MERCHANT.md，2026-08-12 重写为实录调研 |
 | [merchant/roadmap.md](merchant/roadmap.md) | 商家角色功能取舍（引进/不引进）与 P0/P1/P2 路线图 | 2026-08-12 基于 store-settings.md 调研 |
@@ -60,7 +58,7 @@ archify 生成的系统地图，自包含 HTML（深浅主题 / 搜索 / 路径�
 |---|---|---|
 | 整体 | [ecommerce-overall.html](../architecture/ecommerce-overall.html) | 4 前端应用 → 网关 → 服务分组 → 数据与外部依赖 |
 | 前端 | [ecommerce-frontend.html](../architecture/ecommerce-frontend.html) | pnpm workspace：apps × packages、tracker/perf 上报链路 |
-| 网关 | [ecommerce-gateway.html](../architecture/ecommerce-gateway.html) | （**历史快照**：本仓旧网关，2026-08-23 已迁 control-tower）9 层中间件链、JWT+RBAC、发现与回源重试 |
+| 网关 | 同级仓 control-tower 的 `docs/design/` | 网关已迁出本仓；不保留旧网关架构快照，避免把历史实现误读为现行结构 |
 | 后端 | [ecommerce-backend.html](../architecture/ecommerce-backend.html) | 单服务分层、proto/sqlc 双生成链、启动装配 |
 
 图内事实按生成当日（2026-08-08）代码实测，之后架构变了改 JSON 重渲染并更新本表。

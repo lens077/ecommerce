@@ -104,7 +104,7 @@ App Router + ISR，技术前提成立。但该应用当前只有**一个业务�
 
    **漂移防线是结构性的，不是靠自觉**：`formatMoney`（页面展示）与 `moneyToDecimalString`（JSON-LD）都抽到 `src/lib/money.ts`，前者调后者——两处不可能算出不同数字。`canonical` 与 JSON-LD 的 `url` 也抽成同一个 `productUrl()`，搜索引擎会拿两者互相校验。
 
-   **验收走真 SSR**：`scripts/verify-runtime.mjs`（mock 网关 + `next dev`）从服务端 HTML 里正则出 JSON-LD，断言类型/sku/url/`Offer` 退化/`price === "99.5"`/币种/库存，并断言页面文本含同一个 `CNY 99.5`。红测：把 JSON-LD 的 price 改成丢 nanos 的 `units.toString()` → `'99' !== '99.5'` 红。Google Rich Results Test 需公网可达，dev 环境未跑，留待上线后补。
+   **验收走真 SSR**：`frontend/apps/consumer-next/scripts/verify-runtime.mjs`（mock 网关 + `next dev`）从服务端 HTML 里正则出 JSON-LD，断言类型/sku/url/`Offer` 退化/`price === "99.5"`/币种/库存，并断言页面文本含同一个 `CNY 99.5`。红测：把 JSON-LD 的 price 改成丢 nanos 的 `units.toString()` → `'99' !== '99.5'` 红。Google Rich Results Test 需公网可达，dev 环境未跑，留待上线后补。
 
 5. **speculation rules 不做**，按 §3.4 的触发条件重估。
 

@@ -18,7 +18,7 @@
 | 层 | 测什么 | 用什么 | 依赖 | 跑在哪 |
 |---|---|---|---|---|
 | `biz` | 业务分支、错误语义、状态流转 | mock/fake 掉 `biz.XxxRepo` 接口 | 无 | 每次 `make test` |
-| `data` | SQL 真的能跑、schema 契约 | **真实 PostgreSQL 容器**（testcontainers） | Docker | `make test-integration` |
+| `data` | SQL 真的能跑、schema 契约 | **真实 PostgreSQL 容器**（testcontainers） | Docker | 在 `backend/` 执行 `go test -count=1 -timeout 10m ./...`；集成用例仍需按下文落地 |
 | `data`（Redis 部分） | 键结构、过期、序列化 | miniredis（进程内） | 无 | 每次 `make test` |
 | `service` | proto ⇄ biz 转换、错误码映射 | mock `biz` 或直接构造 UseCase | 无 | 每次 `make test` |
 | 纯函数 / 结构门禁 | — | 现状已有（`structcheck`） | 无 | 每次 `make test` |
@@ -89,7 +89,7 @@ psql "$DB_URI" -tAc 'show server_version'
 
 ---
 
-## 三、共享测试基建：`backend/pkg/testutil`
+## 三、共享测试基建：`backend/pkg/testutil`（目标位置，尚未创建）
 
 **放共享包，不进任何服务的 `internal/`。** 直接吸取 [`STACK.md`](../STACK.md) 第十节
 "配置逻辑 10 份复制"的教训——测试基建一旦复制 10 份，改一次 PG 版本要改 10 个地方。
@@ -316,7 +316,7 @@ require.ErrorIs(t, err, biz.ErrXxx, "UseCase 必须原样透传领域错误,否�
 | 步骤 | 内容 | 提交类型 | 验收 |
 |---|---|---|---|
 | 1 | 装依赖（§2.1、§2.2） | `build:` | `go mod tidy` 干净，`go build ./...` 通过 |
-| 2 | `backend/pkg/testutil`（§3） | `test:` | `go vet ./pkg/testutil/` 通过；写个冒烟测试确认容器起得来 |
+| 2 | `backend/pkg/testutil`（§3，尚未创建） | `test:` | `go vet ./pkg/testutil/` 通过；写个冒烟测试确认容器起得来 |
 | 3 | **cart data 层试点**（§4） | `test:` | 不带 `-short` 全绿；带 `-short` 全 skip（**两个方向都要验**） |
 | 4 | mockery + cart biz 试点（§5） | `test:` | `make mocks` 幂等（重跑无 diff）；biz 测试全绿 |
 | 5 | Makefile + CI 接线（§7） | `ci:` | CI 上 integration job 绿 |
@@ -346,10 +346,14 @@ test:
 	go test -short -coverprofile=coverage.out ./...
 ```
 
-已新增：
+**以下为待接入方案，不是现有目标。** 当前 `backend/Makefile` 没有 `test-integration`，
+也没有 `mocks`；§6 的命令是相应步骤完成后的验收目标，不能当成已可用入口。
+在隔离测试依赖就绪后，可以先在 `backend/` 直接运行
+`go test -count=1 -timeout 10m ./...`；不带 `-short` 只表示允许执行长测试，
+不会自动补齐尚未实现的集成用例。
 
 ```make
-# 集成测试:需要 Docker。不带 -short,testutil 里的守卫因此放行。
+# 待接入的集成测试目标:需要 Docker。不带 -short,约定的 testutil 守卫因此放行。
 # 单独的 coverage 文件,避免覆盖单元测试那份。
 .PHONY: test-integration
 test-integration:
@@ -360,7 +364,8 @@ test-integration:
 
 ### 7.2 CI
 
-`.github/workflows/service-ci.yml` 的 test job 加一步。GitHub Actions 的 ubuntu runner
+`.github/workflows/service-ci.yml` 的 test job 当前运行 `go test -short -race -count=1`，
+**尚未接入下面的集成测试步骤**。先落实 §7.1 的目标和隔离测试依赖，再增加此步骤。GitHub Actions 的 ubuntu runner
 **自带 Docker daemon**，不需要 `services:` 块或 DinD 配置：
 
 ```yaml

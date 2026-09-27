@@ -152,7 +152,7 @@
 
 真实源不能让浏览器直接探内网端点。集群内 `/healthz` 不对公网开放，Gatus 与 VictoriaMetrics 在 node3，跨域与鉴权都不允许前端直连。设计一个**健康聚合器**：
 
-- 位置：本仓 `tools/topology-health`，Go 二进制，与其他 tools 同构。
+- 位置：本仓 `tools/topology-health`（目标位置，尚未创建），Go 二进制，与其他 tools 同构。
 - 运行形态：集群内单副本 Deployment 或 CronJob，周期与 `interval_seconds` 一致。
 - 采集来源：按 §3.1 表，分四类：
   1. 集群内 HTTP：十个服务 `/healthz`、网关 `/readyz`；
@@ -468,7 +468,7 @@ spec:
 | S0 设计稿（已交付 2026-09-10） | 单文件 HTML，等轴测阶梯沙盘 + 全量块 + 曼哈顿走线 + 四态灯 + 背景脉冲 + 六个场景 + 四个剧本 + 逐块开关；数据源 `mock` 可用，`live` 只有轮询骨架 | 页面可运行，截图见 §十一 |
 | S1 静态沙盘定稿 | 拆分 §7.6 模块；`topology.json` 外置；vendor 离线拷贝；修完 §十一 的待优化项 | 页面离线打开可运行；块 id 与 `.service-matrix.yaml` 服务名一一对应；draw call 与帧率在 §7.5 预算内 |
 | S2 请求导体定稿 | 补 `PERMISSION_DENIED` / `NOT_FOUND` / `INVALID_ARGUMENT` 三种中断演示；场景逐跳文案对齐 §八.5 | 每个场景的路径与 §6.2 表一致；每个中断位置显示对的错误码；虚线边不通脉冲 |
-| S3 真实源 | `tools/topology-health` 聚合器 + 网关 `/topology/state` 路由 + 前端 `live` 数据源 | 聚合器输出通过 §四 契约校验；路由按 C 级限 admin；断源后 3 个周期内全部转灭；跨仓依赖版本同步升级 |
+| S3 真实源 | `tools/topology-health`（尚未创建）聚合器 + 网关 `/topology/state` 路由 + 前端 `live` 数据源 | 聚合器输出通过 §四 契约校验；路由按 C 级限 admin；断源后 3 个周期内全部转灭；跨仓依赖版本同步升级 |
 | S4 嵌入 | 可选：作为 admin 后台一个路由嵌入 | 不在本方案内定 |
 
 S1 与 S2 只改本目录，不碰后端与集群。S3 涉及 control-tower 仓与集群 RBAC，按 AGENTS.md 硬规则 6 单独授权。
@@ -490,6 +490,6 @@ S1 与 S2 只改本目录，不碰后端与集群。S3 涉及 control-tower 仓�
 ## 十二、待确认
 
 - 节点、OpenFGA 就绪计数与 Hubble 存在性所用的 VictoriaMetrics 指标名，接入时按 TECH.md §9.3 的方法先查当前口径。
-- Casdoor 是否已有 Gatus 探针；没有则在 `infrastructure/gatus/config.yaml` 补一条。
+- Casdoor 是否已有 Gatus 探针；按 [`docs/observability/alerting-rules.md`](../../observability/alerting-rules.md) 与当前 Gatus 运行态核对，不再修改已退役的 node3 独立配置。
 - `/topology/state` 的 admin 角色判定用现有 Casbin 策略还是 OpenFGA 关系，待与 control-tower 仓一并定。
 - 支付回调场景是否要画外部支付渠道块作为起点。

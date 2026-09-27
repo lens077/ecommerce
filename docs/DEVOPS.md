@@ -7,7 +7,7 @@
 > 本仓 10 个同构服务(见 `backend/structcheck`)天然适合吃到这种一处修改、全员受益的乘数效应。
 >
 > 与真相源的关系:实现进度以 `TODO.md` 为准;本文只描述目标态与验收标准,
-> 不声称任何一项「已完成」。现状列的依据见 `TODO.md`「基础设施与工程化」表。
+> 不声称任何一项「已完成」。具体缺口见 `TODO.md`，当前环境通过 local-env 的只读入口核验。
 
 ---
 
@@ -20,16 +20,14 @@
 - 流水线、埋点中间件、部署清单都**只写一份模板,参数化服务名**——
   同构性由 structcheck 强制,DevOps 资产也必须同构,否则漂移会从这里重新长出来。
 
-## 1. 现状盘点(2026-08-07,详情以 TODO.md 为准)
+## 1. 实现与环境的核验入口
 
-| 领域 | 已有 | 主要缺口 |
-|------|------|----------|
-| CI | `.github/workflows/{backend,frontend}.yml`、`freeze-check.yml`(冻结验收集)、structcheck 随 `go test` 进 CI、commitlint(vite-plus 钩子)、异构双审走本地 subagent 双路由(runbook §5,非 CI) | 制品推送/清单更新链路不完整;oxlint/oxfmt 未进 CI 门禁;无契约测试、无镜像扫描/签名/SBOM。**后续决策覆盖（2026-08-28）**：本条已被 [TECH.md](TECH.md) 覆盖：构建与 CI 定稿为 Docker Buildx + GitHub Actions + Renovate，供应链扫描按 P1 落地 Gitleaks + Trivy + Syft + Cosign + Kyverno。 |
-| CD | `argocd-app.yml`/`argocd-proj.yml`、`helm/`、`deploy/{dev,prod}` 过 dry-run | GitOps 未真正接管(改镜像 tag 仍是手动);无环境晋级流程;无 migration 流水线。**后续决策覆盖（2026-08-28）**：本条已被 [TECH.md](TECH.md) 覆盖：Argo Rollouts 灰度发布属于 P1 交付路线。 |
-| 基础设施 | Kubernetes `1.36.4` 三节点 node101/node102/node103，均 Ready 且可调度；`openebs-lvm`、Consul（存量发现）、独立 control-tower Config Center；VPA Helm revision 2 只运行 recommender `1.7.1`，15 个 ecommerce VPA 均为 `Off`/`RequestsOnly` | 13 个 Deployment 仍为单副本且无 PDB；requests 尚处于至少 7 天观测与 k6 校准期；Descheduler 不安装；集群外资源仍缺 IaC。VPA 证据与下一步见 发布报告；服务发现目标态以 [TECH.md](TECH.md) 为准。 |
-| 可观测性 | OTel(部分服务)、Loki(存量链路)、`docs/observability/grafana/`(看板生成脚本)、`docs/observability/`(方法论;08-06 评审已归档 `docs/progress-archive/`) | 未全链路;`rpc.code` 失真已修但看板未回归;config 撞名进程指标混合;无 SLO/错误预算。**后续决策覆盖（2026-08-28）**：本条已被 [TECH.md](TECH.md) 覆盖：采集与存储定稿为 K8s 内 Vector/VMAgent/OTel SDK → 外置 OTel Collector → VictoriaLogs/VictoriaMetrics/VictoriaTraces。 |
-| 安全 | 网关集中鉴权(Casdoor+Casbin，存量)、部分 RPC 粒度策略 | 镜像/依赖/密钥扫描全缺;NetworkPolicy 缺;address 等服务越权问题在修。**后续决策覆盖（2026-08-28）**：本条已被 [TECH.md](TECH.md) 覆盖：完全废弃 JWT，采用 Casdoor 有状态 Session（Dragonfly Session Store）+ OpenFGA，Casbin 为存量待替换。 |
-| 度量 | — | DORA 四指标无采集 |
+本文保留目标与验收标准，不再维护带日期的节点、组件与 CI 能力副本。2026-09-26 复核时旧表仍写 node101、Loki 与已删除的 freeze-check；把整页日期更新只会继续掩盖差异。
+
+- 仓库 CI 接线查 `.gitlab-ci.yml` 与 `.github/workflows/`；本地锚点见 [runbook](../context/team/runbook.md)。轻门禁按 push/PR 运行，发布链才按 tag 触发。
+- 实施缺口查 [TODO.md](../TODO.md)，不能因代码/清单存在就删除运行验收任务。
+- 当前环境先按 [local-env.md](../context/team/local-env.md) 选分区查询；节点 Ready、Pod 数量、观测存储位置不抄进本文。
+- 生成区精确检查、Git 文档责任与运行证据边界见 [live-facts.md](../context/team/live-facts.md)。
 
 ## 2. 代码与分支(Flow 的起点)
 
@@ -71,8 +69,8 @@
   digest(补齐现缺的「制品推送/清单更新链路」),部署 = 合入,回滚 = revert。
   禁止 kubectl 直改生产。副产品是审计:谁改的?人还是 Agent?——与 freeze/CODEOWNERS
   防线同源,对齐 Debois「dim factory 按风险分级自治」的主张。
-- **环境晋级**:`dev → prod`(现有 overlay 结构),**同一镜像 digest 一路晋级**,不重新构建。
-- **渐进式交付贴合集群现实**（三节点可调度、13 个业务 Deployment 仍为单副本）:
+- **环境晋级**：本仓部署清单为 `pre → prod`，**同一镜像 digest 晋级**，不重新构建；Config Center 的 dev 是另一个维度。
+- **渐进式交付按当前容量验收**（副本、PDB 与可调度容量操作前现查）:
   - 无状态服务（gateway、frontend、无 PVC 后端）先达到 ≥2 副本 + RollingUpdate + PDB，
     再引入 Argo Rollouts 灰度发布；这是金丝雀和无损滚动语义成立的前提；
   - 在线服务由 HPA 管理，Kafka 消费者由 KEDA 的 Kafka scaler 管理，两者不得控制同一资源；
@@ -127,9 +125,9 @@
 ## 8. 落地阶段与验收标准
 
 > **本节只描述目标态与阶段划分,不承载进度。**
-> 进度与待办的唯一真相源是 [`TODO.md`](../TODO.md),明细在 [`docs/todo/`](../TODO.md#四分类明细)。
-> 2026-08-29 之前本节自带 21 个复选框,构成与 `docs/todo/` 平行的第二套进度视图;
-> 逐项比对后 13 项迁入 `docs/todo/` 对应分类(其余 7 项那里已有),复选框一并去掉。
+> 进度与待办的唯一真相源是 [`TODO.md`](../TODO.md),明细在 [「四、分类明细」](../TODO.md#四分类明细)。
+> 2026-08-29 之前本节自带 21 个复选框，曾与 `TODO.md` 形成第二套进度视图；
+> 逐项比对后已迁入 `TODO.md` 对应分类，复选框一并去掉。
 > 迁入去向:[`供应链与交付流水线.md`](../TODO.md#供应链与交付流水线)(阶段一、二、四)、
 > [`统一可观测性体系.md`](../TODO.md#统一可观测性体系)(阶段 3)、
 > [`文档与协作机制.md`](../TODO.md#文档与协作机制)(无责复盘)。

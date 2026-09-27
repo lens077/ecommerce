@@ -123,7 +123,7 @@ Kafka/Debezium/Kafka Connect 是 Java 例外（Strimzi 不采用，Kafka 部署�
 | # | 状态 | 工具 | 语言 | CNCF | 结论 |
 |---|---|---|---|---|---|
 | 3.1 | 🟡 | **CloudNativePG** | Go | sandbox（incubation 尽调中） | 本行保留集群存量事实与历史补强方案。**后续决策覆盖（2026-08-28）**：本节结论已被 [docs/TECH.md](TECH.md) 覆盖：PostgreSQL 定稿为外部物理机／VM 上的 Pigsty，使用 Patroni 自动 Failover、PgBouncer 并默认采用 UUIDv7 主键；CNPG 仅为存量休眠资源。 |
-| 3.2 | 🟡 | **ClickHouse** | C++ | 收录 | **触发式缓上（2026-08-20 拍板人复审改判，原「单节点常驻」撤回）**：复审账——分析消费者 0（埋点落 PG `behaviors.events`、CH 全仓零接线）、1–2Gi 是预算表唯一零消费者常驻大户（N3 节点份额 20–40%）、「断代可重放」使「先装避免回填」不成立；⓪ 测试环境已验证（SQL 通、帽 1.2G）故缓上零风险、拉起零摸索。原触发条件（任一）：①第一个真实分析需求（报表/漏斗/商品统计）②`behaviors.events` 千万行级或分析查询可测影响交易库 ③gorse 特征加工需流式清洗。触发后照抄原形态：单节点 @与 PG 主错开节点、`max_server_memory` 2G 顶格、localPV SSD、批量摄入（原「NATS 表引擎」随事件主干定稿 Kafka 作废）、历史自 PG/Kafka 回灌。基础数据存档：49k⭐/Apache-2.0/clickhouse-go v2.48。**后续决策覆盖（2026-08-28）**：新增 DuckDB（TECH.md B 表，采纳试点）承接原触发条件①②的第一响应——真实分析需求先用零常驻 DuckDB 跑批（PG 增量导出 Parquet 落 Silo）验证与承载；**CH 触发条件升级为服务化信号（任一）**：持续摄取、秒级新鲜度、多用户并发在线切片、DuckDB 批处理窗口/预计算不能满足 SLA。原条件③归流处理触发项（§1 RisingWave 条款）。clickhouse-local/chdb 保留为未来 CH 迁移验证工具。评估：`reports/2026-08-28-duckdb-evaluation.md` |
+| 3.2 | 🟡 | **ClickHouse** | C++ | 收录 | **触发式缓上（2026-08-20 拍板人复审改判，原「单节点常驻」撤回）**：复审账——分析消费者 0（埋点落 PG `behaviors.events`、CH 全仓零接线）、1–2Gi 是预算表唯一零消费者常驻大户（N3 节点份额 20–40%）、「断代可重放」使「先装避免回填」不成立；⓪ 测试环境已验证（SQL 通、帽 1.2G）故缓上零风险、拉起零摸索。原触发条件（任一）：①第一个真实分析需求（报表/漏斗/商品统计）②`behaviors.events` 千万行级或分析查询可测影响交易库 ③gorse 特征加工需流式清洗。触发后照抄原形态：单节点 @与 PG 主错开节点、`max_server_memory` 2G 顶格、localPV SSD、批量摄入（原「NATS 表引擎」随事件主干定稿 Kafka 作废）、历史自 PG/Kafka 回灌。基础数据存档：49k⭐/Apache-2.0/clickhouse-go v2.48。**后续决策覆盖（2026-08-28）**：新增 DuckDB（TECH.md B 表，采纳试点）承接原触发条件①②的第一响应——真实分析需求先用零常驻 DuckDB 跑批（PG 增量导出 Parquet 落 Silo）验证与承载；**CH 触发条件升级为服务化信号（任一）**：持续摄取、秒级新鲜度、多用户并发在线切片、DuckDB 批处理窗口/预计算不能满足 SLA。原条件③归流处理触发项（§1 RisingWave 条款）。clickhouse-local/chdb 保留为未来 CH 迁移验证工具；触发条件和验收边界以本表与 TODO.md 为准，不依赖已删除的历史评估报告。 |
 | 3.3 | ❌ | GreptimeDB | Rust | 收录 | 否决：2026 年才推进 v1.0 GA、主轴偏时序，广泛使用不及 CH |
 | 3.4 | ❌ | Databend | Rust | 收录 | 否决：仓库许可证 NOASSERTION 未澄清，不进核心路径 |
 | 3.5 | 🟡 | Multigres | Go | 收录 | 观察：PG 水平分片的未来答案，规模远未到 |
@@ -191,7 +191,7 @@ Kafka/Debezium/Kafka Connect 是 Java 例外（Strimzi 不采用，Kafka 部署�
 
 ## §7 弹性 / 调度 / 成本
 
-**现状**：VPA recommendation-only 已发布，15 个 ecommerce VPA 均为 `Off`/`RequestsOnly`；当前没有 HPA、KEDA ScaledObject 或 Descheduler，发布仍走 Deployment 滚动重建。发布证据与校准计划见 2026-08-29-vpa-recommendation-only.md。
+**现状**：VPA recommendation-only 已发布，15 个 ecommerce VPA 均为 `Off`/`RequestsOnly`；当前没有 HPA、KEDA ScaledObject 或 Descheduler，发布仍走 Deployment 滚动重建。发布证据与校准计划以本表、capacity-balancing.md 和 TODO.md 对应条目为准。
 
 | # | 状态 | 工具 | 语言 | CNCF | 结论 |
 |---|---|---|---|---|---|
@@ -316,7 +316,7 @@ Kafka/Debezium/Kafka Connect 是 Java 例外（Strimzi 不采用，Kafka 部署�
 3. **Kafka 受控迁移**：在非 K8s 独立集群部署 Kafka，以 Protobuf + Buf Schema Registry 管理事件；落实 Outbox／Inbox／DLQ 契约，迁移完成后退役 NATS 业务流。
 4. **Victoria 三存储 + 轻量采集**：VictoriaLogs／VictoriaMetrics／VictoriaTraces；K8s 内仅 Vector + VMAgent + OTel SDK，外置 OTel Collector 处理尾采样、PII 脱敏与噪声清洗。
 5. **Consul 退役四步走 → KEDA Kafka Scaler → Argo Rollouts**：HPA 管在线服务，KEDA 管 Kafka 消费者，注意 Rollouts 硬依赖发现改造完成。
-6. **完成搜索灾备演练 + OpenFGA + CI 供应链**：Elasticsearch 已切流且 Meilisearch 已退役，剩余 node3 故障注入与链路告警；网关接 OpenFGA Check；制品按「TCR 主镜像 + Harbor Helm 制品 + GHCR 可选」分工，供应链工具按「部分评估／部分采用」分阶段实施。
+6. **完成搜索灾备演练 + OpenFGA + CI 供应链**：Elasticsearch 已切流且 Meilisearch 已退役，剩余搜索故障注入与链路告警；网关接 OpenFGA Check；制品按「TCR 主镜像 + Harbor Helm 制品 + GHCR 可选」分工，供应链工具按「部分评估／部分采用」分阶段实施。
 
 ## 附录 — Java 例外与仍未引进项
 

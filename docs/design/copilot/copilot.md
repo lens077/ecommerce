@@ -210,11 +210,11 @@ interface CopilotAction {
 |---|---|---|
 | S1 共享包 | `@ecommerce/copilot`：Provider / Panel / 注册表 / IntentMatcher / 执行器 / 视觉层 | `cd frontend && pnpm ready`；包内 vitest：每个动作的 `examples` 全命中且不误命中同角色其他动作；受控 input 赋值后 React `onChange` 被调用；MUI `Select` 经 `mousedown` 打开并选中；`prefers-reduced-motion` 分支；`Esc` 中断 |
 | S2 三 app 接线 | 各 app 挂 Provider、标锚点、注册动作；admin `/monitor` 页与侧栏入口 | 三个 app 各一条 vitest：注册动作 → 输入 example → 执行器跑完 → 锚点被点击 / 输入框值正确；现有 a11y 测试不退化 |
-| 演示 | dev 环境三条链路人工走通 | 各录一段屏幕录像归 `docs/progress-archive/` |
+| 演示 | dev 环境三条链路人工走通 | 各录一段屏幕录像，附在对应实现单的「完成自检」里 |
 | S3 健康卡片 | control-tower 管理员健康快照 + admin 实时取数（代码接线，未部署） | 网关 HTTP/h2c 测试、Firefox 页面用例、§9.4 跨仓契约联调 |
 | 目标态 | 写动作与 `confirm`；固定句式扩充；若固定句式仍不够用再评估意图解析升级 | 各自立项时补验收 |
 
-设计稿阶段不改 `TODO.md`；S1 立项时按 TODO 纪律登记到 `docs/todo/` 前端分类并回填计数。
+设计稿阶段不改 `TODO.md`；S1 立项时按 TODO 纪律登记到 `TODO.md`「前端技术栈与工程化」。
 
 ## 七、已定与待确认
 

@@ -3,7 +3,7 @@
 各个工程 skill 在探索代码前，应该怎么读本仓库的领域文档。
 
 本仓库是 **multi-context**（10 个后端 Go 服务 + 4 个前端 app），但**不使用** skill 的默认布局
-（根目录 `CONTEXT-MAP.md` / `CONTEXT.md` / `docs/adr/`）。这些角色已经由既有的 `context/`
+（根目录 `CONTEXT-MAP.md` / `CONTEXT.md` / `docs/adr/`，本仓不新建）。这些角色已经由既有的 `context/`
 三层知识库承担。**不要新建 `CONTEXT.md`、`CONTEXT-MAP.md` 或 `docs/adr/`** —— 那会造成
 两处口径漂移，正是 `context/INDEX.md` 明令避免的。
 
@@ -13,7 +13,7 @@
 |---|---|
 | 根目录 `CONTEXT-MAP.md` | [`context/INDEX.md`](../../context/INDEX.md) |
 | 每个 context 的 `CONTEXT.md` | `context/project/ecommerce/{module}/`（入口是该目录的 `INDEX.md`） |
-| 系统级 `docs/adr/` | `context/team/` + `context/harness-framework/` |
+| 系统级 `docs/adr/`（本仓不建） | `context/team/` + `context/harness-framework/` |
 | context 级 `src/<ctx>/docs/adr/` | `context/project/ecommerce/{module}/adr/`（按需懒建） |
 | （无对应）| [`.service-matrix.yaml`](../../.service-matrix.yaml) —— 服务拓扑事实表 |
 

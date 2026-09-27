@@ -53,7 +53,7 @@ TBT 与 CLS 合计 55 分已拿满，丢分全在「多久能看到东西」。�
 | 渲染 | 整页静态：`generateStaticParams` 预渲染 `/zh`、`/en`；`next.config` `rewrites` 把 `/` 改写到 `/zh`（不是 redirect） | redirect 多一跳 RTT 直接吃 LCP |
 | 客户端 JS | 三个岛：灯阵入视点亮（`LitGrid`）、顶栏搜索（RPC 客户端在首次提交时 `import()`）、登录态（`/auth/me`） | 首屏 JS 不带 connect-web / protobuf 运行时 |
 | Providers | `TransportProvider` + `QueryClientProvider` 只包商品页，不进 layout | 放 layout 会把 react-query 塞进首页首屏 |
-| 字体 | `scripts/subset-home-fonts.sh` 按 `scripts/home-font-text.ts` 列出的**真正以宋体渲染的槽位**生成 700 / 900 子集（合计 19 KB），经 `next/font/local` 自托管 + preload；缺字落系统宋体 | 首页文案是构建期常量，字形集合可枚举 |
+| 字体 | `frontend/apps/consumer-next/scripts/subset-home-fonts.sh` 按 `frontend/apps/consumer-next/scripts/home-font-text.ts` 列出的**真正以宋体渲染的槽位**生成 700 / 900 子集（合计 19 KB），经 `next/font/local` 自托管 + preload；缺字落系统宋体 | 首页文案是构建期常量，字形集合可枚举 |
 | 路由 | helm 与裸 manifest 的 consumer-next HTTPRoute 加 `/` **Exact**；Gateway API 规定 Exact 优先于 frontend 的 PathPrefix `/` | 两份真相源受 `verify-deploy-parity.sh` 约束 |
 | SPA 侧 | `src/lib/home.ts` 的 `goHome()`：生产 web 整页跳转，dev / Tauri 仍走 SPA 首页路由 | 客户端路由到 `/` 只会得到 SPA 自己那份旧首页 |
 | SEO | canonical / hreflang 用 Metadata API 输出绝对 URL，域名取构建期 `NEXT_PUBLIC_SITE_URL`（Dockerfile ARG，默认线上域名） | 静态页无法在请求期读 Host；经局域网别名 `shop.dev.test` 访问时 canonical 仍指向线上，正是想要的 |

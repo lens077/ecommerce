@@ -35,7 +35,7 @@ admin 微服务**承载（2026-08-12 决定，替代此前「按域下沉 `<域>
 | 层 | 形态 | 现状 |
 |---|---|---|
 | 角色 | Casdoor 粗粒度 admin；对象级授权目标由 OpenFGA 承担，见 [rbac.md](rbac.md) | Casdoor/admin 现有，OpenFGA 未落地 |
-| 专属 API 面 | 独立微服务：契约 `backend/api/admin/v1/`（package `admin.v1`），部署为 `admin-service`，网关新增 `/admin*` endpoint，由 Casdoor admin 角色做入口约束，并以 OpenFGA 校验具体治理对象关系 | 无——当前 admin 操作散在各域 `<域>.v1` 里靠逐条 RPC 放行（如 `ApproveApplication`） |
+| 专属 API 面 | 独立微服务：契约 `backend/api/admin/v1/`（目标位置，尚未创建；package `admin.v1`），部署为 `admin-service`，网关新增 `/admin*` endpoint，由 Casdoor admin 角色做入口约束，并以 OpenFGA 校验具体治理对象关系 | 无——当前 admin 操作散在各域 `<域>.v1` 里靠逐条 RPC 放行（如 `ApproveApplication`） |
 | 专属页面 | admin app（:3003），只调 `admin.v1` 面 | 路由骨架已有，未接后端 |
 
 **为什么立独立 admin 服务（而不是把 admin 接口分散进各域服务）**：

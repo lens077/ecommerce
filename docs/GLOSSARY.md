@@ -53,7 +53,7 @@
 ### SPU
 
 - **含义**：Standard Product Unit，标准化产品单元。它描述一组共享名称、品牌、类目和介绍的商品。
-- **本项目**：SPU 是商品信息的聚合层；可购买的具体规格由 SKU 表示。商品模型设计见 [`docs/design/product/schema.md`](design/product/schema.md)。
+- **本项目**：SPU 是商品信息的聚合层；可购买的具体规格由 SKU 表示。商品模型与列表契约见 [`docs/design/product/listing.md`](design/product/listing.md)；数据库结构以 `backend/services/product/internal/data/migrations/` 为准。
 
 ### SKU
 
