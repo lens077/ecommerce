@@ -44,24 +44,29 @@ echo "==> 目标主机: $HOST${DRY_RUN:+  (dry-run)}"
 
 echo "==> 1/4 前置检查"
 if [ -z "$DRY_RUN" ]; then
-    "${ssh_cmd[@]}" 'command -v docker >/dev/null || { echo "缺少 docker" >&2; exit 1; }
-                     command -v python3 >/dev/null || { echo "缺少 python3(Pangolin 站点检查需要)" >&2; exit 1; }
+    # 2026-09-24 旧 node3 重装为 dockerless 的 k3 后，WATCH 为空、只监控 systemd/HTTP/磁盘；
+    # 强制要求 Docker 会让本来支持「按需启用」的脚本无法安装到 K8s 节点。
+    "${ssh_cmd[@]}" 'command -v python3 >/dev/null || { echo "缺少 python3(Pangolin 站点检查需要)" >&2; exit 1; }
                      command -v systemctl >/dev/null || { echo "缺少 systemd" >&2; exit 1; }
-                     echo "  docker / python3 / systemd 就绪"'
+                     echo "  python3 / systemd 就绪(Docker 仅在 WATCH 非空时需要)"'
 else
-    echo "  [dry-run] 检查 docker / python3 / systemd"
+    echo "  [dry-run] 检查 python3 / systemd(Docker 仅在 WATCH 非空时需要)"
 fi
 
 echo "==> 2/4 安装脚本与 systemd 单元"
 copy_to "$SCRIPT_DIR/watchdog.sh" /tmp/host-watchdog.sh
+copy_to "$SCRIPT_DIR/notify.py" /tmp/host-watchdog-notify.py
 copy_to "$SCRIPT_DIR/host-watchdog.service" /tmp/host-watchdog.service
 copy_to "$SCRIPT_DIR/host-watchdog.timer" /tmp/host-watchdog.timer
-run_remote 'install -m 0755 /tmp/host-watchdog.sh /usr/local/bin/host-watchdog
+run_remote 'install -d -m 0755 /usr/local/lib/host-watchdog
+            install -m 0644 /tmp/host-watchdog-notify.py /usr/local/lib/host-watchdog/notify.py
+            install -m 0755 /tmp/host-watchdog.sh /usr/local/bin/host-watchdog
             install -m 0644 /tmp/host-watchdog.service /etc/systemd/system/host-watchdog.service
             install -m 0644 /tmp/host-watchdog.timer /etc/systemd/system/host-watchdog.timer
-            rm -f /tmp/host-watchdog.sh /tmp/host-watchdog.service /tmp/host-watchdog.timer
-            mkdir -p /etc/host-watchdog /var/lib/host-watchdog
-            echo "  已安装 /usr/local/bin/host-watchdog 与 systemd 单元"'
+            rm -f /tmp/host-watchdog.sh /tmp/host-watchdog-notify.py /tmp/host-watchdog.service /tmp/host-watchdog.timer
+            mkdir -p /etc/host-watchdog
+            install -d -m 0700 /var/lib/host-watchdog /var/lib/host-watchdog-test
+            echo "  已安装 host-watchdog / notify.py 与 systemd 单元"'
 
 echo "==> 3/4 配置文件"
 run_remote 'if [ -f /etc/host-watchdog/watchdog.env ]; then
@@ -74,14 +79,23 @@ WATCH=""
 SYSTEMD_UNITS=""
 HTTP_CHECKS=""
 PANGOLIN_DB=""
+PANGOLIN_IGNORE_SITES="mac"
 DISK_PATHS="/"
 DISK_WARN_PCT=85
+DISK_CRIT_PCT=95
 
 # 告警出口(复用项目既有 ntfy 通道)
 NTFY_URL=""
 NTFY_TOPIC=""
+NTFY_TICKET_TOPIC=""
+NTFY_TEST_TOPIC=""
 NTFY_TOKEN=""
 HC_PING_URL=""
+# 生产默认；不要把 test 持久写进定时器配置
+WATCHDOG_MODE="production"
+NOTIFY_HOLD_SECONDS=600
+NOTIFY_RECOVER_SECONDS=300
+NOTIFY_STATE_FILE="/var/lib/host-watchdog/incidents.json"
 EOF
               chmod 0400 /etc/host-watchdog/watchdog.env
               echo "  已生成模板 /etc/host-watchdog/watchdog.env(0400),需手工填写"
@@ -95,8 +109,9 @@ run_remote 'systemctl daemon-reload
 cat <<EOF
 
 完成。接下来:
-  1. 在 $HOST 上填写 /etc/host-watchdog/watchdog.env(至少 WATCH 与 ntfy 三项)
+  1. 在 $HOST 上填写 /etc/host-watchdog/watchdog.env（Docker 主机配置 WATCH；systemd-only 主机保持 WATCH 为空）
   2. 立即跑一次:      ssh $HOST 'systemctl start host-watchdog.service; journalctl -u host-watchdog -n 20 --no-pager'
-  3. **验证告警真能到达**:临时把 WATCH 加一个不存在的容器名,跑一次,确认手机收到 ntfy,再改回来。
-     没验证过的告警通道等于没有。
+  3. 升级已有配置时，手工补齐 NTFY_TICKET_TOPIC / NTFY_TEST_TOPIC，安装器不会覆盖或回显凭据。
+  4. 获测试授权后，按 README 的 WATCHDOG_MODE=test 隔离步骤验证 firing → 静默 → resolved。
+     不改生产 WATCH，不用生产 topic，不删除生产 incidents.json 来制造测试。
 EOF

@@ -1,8 +1,10 @@
 [Unit]
 Description=主机侧巡检(容器/systemd 单元/本机 HTTP/隧道站点/磁盘)
 Documentation=https://github.com/lens077/ecommerce/blob/main/context/team/host-watchdog.md
-After=docker.service
-Wants=docker.service
+# 不依赖 docker.service：WATCH 为空时可用于 dockerless 的 K8s 节点，只巡检 systemd/HTTP/磁盘。
+# 2026-09-24 旧 node3 重装为 k3 后因这里硬依赖 Docker 而无法部署。
+After=network-online.target
+Wants=network-online.target
 
 [Service]
 Type=oneshot
