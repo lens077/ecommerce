@@ -49,3 +49,6 @@ __pycache__/
 tools/repowise/.venv/
 # vitest/playwright 运行产物
 frontend/test-results/
+
+# 运行观测只作临时诊断，不成为新的环境文档或可搜索真相源。
+.runtime/
