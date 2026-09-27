@@ -74,7 +74,9 @@ func NewItemSyncUseCase(
 		log:     logger,
 	}
 
-	if !cfg.Enable || !sink.Enabled() {
+	// 只看 item_sync 自己的开关,不看 gorse 此刻开没开:gorse 可以被配置热更新打开,
+	// 循环要已经在跑才接得住;gorse 关着时 syncOnce 每轮直接跳过。
+	if !cfg.Enable {
 		logger.Info("gorse item sync disabled")
 		return uc
 	}
@@ -146,6 +148,9 @@ func (uc *ItemSyncUseCase) loop(ctx context.Context, done chan<- struct{}) {
 
 // syncOnce 扫一批并推进游标,返回是否已经追平。
 func (uc *ItemSyncUseCase) syncOnce(ctx context.Context) (drained bool, err error) {
+	if !uc.sink.Enabled() {
+		return true, nil
+	}
 	cursor, err := uc.sink.LoadCursor(ctx)
 	if err != nil {
 		return false, err

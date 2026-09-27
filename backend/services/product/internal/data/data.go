@@ -9,6 +9,7 @@ import (
 
 	"github.com/jackc/pgx/v5"
 	"github.com/jackc/pgx/v5/pgconn"
+	"github.com/lens077/ecommerce/backend/pkg/gorse"
 	conf "github.com/lens077/ecommerce/backend/services/product/internal/conf/v1"
 	"github.com/lens077/ecommerce/backend/services/product/internal/data/models"
 	"github.com/lens077/go-connect-kit/dbutil"
@@ -37,16 +38,18 @@ type Data struct {
 	db           *models.Queries
 	pgx          *pgpool.Live
 	rdb          *redisclient.Live
+	gorse        *gorse.Live
 	dbErrHandler *dbutil.Handler
 	log          *zap.Logger
 }
 
-func NewData(db *pgpool.Live, rdb *redisclient.Live, logger *zap.Logger) *Data {
+func NewData(db *pgpool.Live, rdb *redisclient.Live, g *gorse.Live, logger *zap.Logger) *Data {
 	return &Data{
-		db:  models.New(db),
-		pgx: db,
-		rdb: rdb,
-		log: logger,
+		db:    models.New(db),
+		pgx:   db,
+		rdb:   rdb,
+		gorse: g,
+		log:   logger,
 		dbErrHandler: dbutil.NewHandler(
 			dbutil.WithLogging(true),
 			dbutil.WithLogger(func(err error, pgErr *pgconn.PgError) {
@@ -132,6 +135,7 @@ func (d *Data) StaleConfig() map[string]error {
 	return map[string]error{
 		"database": d.pgx.Stale(),
 		"cache":    d.rdb.Stale(),
+		"gorse":    d.gorse.Stale(),
 	}
 }
 

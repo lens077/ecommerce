@@ -19,8 +19,9 @@ func NewRecommendRepo(data *Data, logger *zap.Logger) biz.RecommendRepo {
 	return &recommendRepo{data: data, log: logger}
 }
 
+// Enabled 每次都现读:gorse 可能被配置热更新关掉或打开。
 func (r *recommendRepo) Enabled() bool {
-	return r.data.gorseEnabled && r.data.gorse != nil
+	return r.data.gorse.Client() != nil
 }
 
 // PushFeedback 投喂反馈。
@@ -32,7 +33,8 @@ func (r *recommendRepo) Enabled() bool {
 //     其余是布尔事实,累加都会得出错误的量纲 —— 一个点了三次购物车的商品
 //     不该拿到 3 倍权重。
 func (r *recommendRepo) PushFeedback(ctx context.Context, events []biz.Event) error {
-	if !r.Enabled() || len(events) == 0 {
+	client := r.data.gorse.Client()
+	if client == nil || len(events) == 0 {
 		return nil
 	}
 
@@ -52,20 +54,21 @@ func (r *recommendRepo) PushFeedback(ctx context.Context, events []biz.Event) er
 		}
 	}
 
-	if _, err := r.data.gorse.InsertFeedback(ctx, accumulate); err != nil {
+	if _, err := client.InsertFeedback(ctx, accumulate); err != nil {
 		return err
 	}
-	if _, err := r.data.gorse.PutFeedback(ctx, overwrite); err != nil {
+	if _, err := client.PutFeedback(ctx, overwrite); err != nil {
 		return err
 	}
 	return nil
 }
 
 func (r *recommendRepo) Recommend(ctx context.Context, userID, category string, n, offset int) ([]biz.ScoredItem, error) {
-	if !r.Enabled() || userID == "" {
+	client := r.data.gorse.Client()
+	if client == nil || userID == "" {
 		return nil, nil
 	}
-	scores, err := r.data.gorse.Recommend(ctx, userID, category, n, offset)
+	scores, err := client.Recommend(ctx, userID, category, n, offset)
 	if err != nil {
 		return nil, err
 	}
@@ -73,7 +76,8 @@ func (r *recommendRepo) Recommend(ctx context.Context, userID, category string, 
 }
 
 func (r *recommendRepo) SessionRecommend(ctx context.Context, events []biz.Event, n int) ([]biz.ScoredItem, error) {
-	if !r.Enabled() || len(events) == 0 {
+	client := r.data.gorse.Client()
+	if client == nil || len(events) == 0 {
 		return nil, nil
 	}
 	fb := make([]gorse.Feedback, 0, len(events))
@@ -86,7 +90,7 @@ func (r *recommendRepo) SessionRecommend(ctx context.Context, events []biz.Event
 			Timestamp:    e.OccurredAt,
 		})
 	}
-	scores, err := r.data.gorse.SessionRecommend(ctx, fb, n)
+	scores, err := client.SessionRecommend(ctx, fb, n)
 	if err != nil {
 		return nil, err
 	}
@@ -94,10 +98,11 @@ func (r *recommendRepo) SessionRecommend(ctx context.Context, events []biz.Event
 }
 
 func (r *recommendRepo) Neighbors(ctx context.Context, itemID, category string, n int) ([]biz.ScoredItem, error) {
-	if !r.Enabled() {
+	client := r.data.gorse.Client()
+	if client == nil {
 		return nil, nil
 	}
-	scores, err := r.data.gorse.Neighbors(ctx, itemID, category, n, 0)
+	scores, err := client.Neighbors(ctx, itemID, category, n, 0)
 	if err != nil {
 		return nil, err
 	}
@@ -105,10 +110,11 @@ func (r *recommendRepo) Neighbors(ctx context.Context, itemID, category string, 
 }
 
 func (r *recommendRepo) Latest(ctx context.Context, userID, category string, n, offset int) ([]biz.ScoredItem, error) {
-	if !r.Enabled() {
+	client := r.data.gorse.Client()
+	if client == nil {
 		return nil, nil
 	}
-	scores, err := r.data.gorse.LatestItems(ctx, userID, category, n, offset)
+	scores, err := client.LatestItems(ctx, userID, category, n, offset)
 	if err != nil {
 		return nil, err
 	}
@@ -116,10 +122,11 @@ func (r *recommendRepo) Latest(ctx context.Context, userID, category string, n, 
 }
 
 func (r *recommendRepo) Healthz(ctx context.Context) error {
-	if !r.Enabled() {
+	client := r.data.gorse.Client()
+	if client == nil {
 		return nil
 	}
-	return r.data.gorse.Healthz(ctx)
+	return client.Healthz(ctx)
 }
 
 func toScoredItems(scores []gorse.Score) []biz.ScoredItem {

@@ -10,6 +10,7 @@ import (
 	"github.com/casdoor/casdoor-go-sdk/casdoorsdk"
 	"github.com/lens077/ecommerce/backend/pkg/gorse"
 	conf "github.com/lens077/ecommerce/backend/services/behavior/internal/conf/v1"
+	"github.com/lens077/ecommerce/backend/services/behavior/internal/pkg/config"
 	"github.com/lens077/go-connect-kit/dbutil"
 	"github.com/lens077/go-connect-kit/pgpool"
 	"github.com/lens077/go-connect-kit/redisclient"
@@ -36,26 +37,23 @@ type Data struct {
 	db           *pgpool.Live
 	rdb          *redisclient.Live
 	auth         *casdoorsdk.Client
-	gorse        *gorse.Client
-	gorseEnabled bool
+	gorse        *gorse.Live
 	log          *zap.Logger
 }
 
 // NewData 是 Data 的构造函数
 func NewData(
-	cfg *conf.Bootstrap,
 	db *pgpool.Live,
 	rdb *redisclient.Live,
 	auth *casdoorsdk.Client,
-	gorseClient *gorse.Client,
+	gorseLive *gorse.Live,
 	logger *zap.Logger,
 ) *Data {
 	return &Data{
 		db:           db,
 		rdb:          rdb,
 		auth:         auth,
-		gorse:        gorseClient,
-		gorseEnabled: cfg.Recommend.GetGorse().GetEnable(),
+		gorse:        gorseLive,
 		log:          logger,
 		dbErrHandler: dbutil.NewHandler(),
 	}
@@ -77,17 +75,31 @@ func NewCasdoorAuthClient(conf *conf.Bootstrap, logger *zap.Logger) *casdoorsdk.
 	return client
 }
 
-// NewGorseClient 创建 gorse 客户端。
-// 这里不做探活:gorse 挂了不该拦住服务启动,行为照样得落库,等它回来再补投。
-func NewGorseClient(cfg *conf.Bootstrap, logger *zap.Logger) *gorse.Client {
-	gorseCfg := cfg.Recommend.GetGorse()
-	if gorseCfg == nil || !gorseCfg.Enable {
+// NewGorseClient 创建 gorse 客户端并让它跟上配置中心的热更新(语义见 pkg/gorse/live.go)。
+// 启动时不做探活:gorse 挂了不该拦住服务启动,行为照样得落库,等它回来再补投。
+func NewGorseClient(lc fx.Lifecycle, cfg *conf.Bootstrap, live *config.Live, logger *zap.Logger) (*gorse.Live, error) {
+	g := gorse.NewLive(gorseOptions(cfg))
+	if g.Client() == nil {
 		logger.Warn("gorse disabled, behavior events will only be persisted locally")
-		return nil
+	} else {
+		logger.Info("gorse client initialized", zap.String("endpoint", cfg.GetRecommend().GetGorse().GetEndpoint()))
 	}
+	if err := g.RegisterStaleMetric(); err != nil {
+		return nil, err
+	}
+	unsubscribe := live.Subscribe(func(_, cur *conf.Bootstrap) { g.Update(gorseOptions(cur), logger) })
+	lc.Append(fx.Hook{OnStop: func(context.Context) error { unsubscribe(); return nil }})
+	return g, nil
+}
 
-	logger.Info("gorse client initialized", zap.String("endpoint", gorseCfg.Endpoint))
-	return gorse.New(gorseCfg.Endpoint, gorseCfg.ApiKey, gorseCfg.Timeout.AsDuration())
+func gorseOptions(c *conf.Bootstrap) gorse.Options {
+	g := c.GetRecommend().GetGorse()
+	return gorse.Options{
+		Enable:   g.GetEnable(),
+		Endpoint: g.GetEndpoint(),
+		APIKey:   g.GetApiKey(),
+		Timeout:  g.GetTimeout().AsDuration(),
+	}
 }
 
 // CheckDatabase 检查数据库连通性
@@ -113,12 +125,13 @@ func (d *Data) CheckCache(ctx context.Context) error {
 // CheckGorse 检查 gorse 连通性。
 // 关掉 gorse 时视为健康 —— 此时它不是依赖项,只是没开的可选功能。
 func (d *Data) CheckGorse(ctx context.Context) error {
-	if !d.gorseEnabled || d.gorse == nil {
+	client := d.gorse.Client()
+	if client == nil {
 		return nil
 	}
 	ctx, cancel := context.WithTimeout(ctx, 5*time.Second)
 	defer cancel()
-	if err := d.gorse.Healthz(ctx); err != nil {
+	if err := client.Healthz(ctx); err != nil {
 		return fmt.Errorf("gorse health check failed: %w", err)
 	}
 	return nil
@@ -130,6 +143,7 @@ func (d *Data) StaleConfig() map[string]error {
 	return map[string]error{
 		"postgres": d.db.Stale(),
 		"redis":    d.rdb.Stale(),
+		"gorse":    d.gorse.Stale(),
 	}
 }
 

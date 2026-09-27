@@ -180,6 +180,13 @@ func (c *Client) LatestItems(ctx context.Context, userID, category string, n, of
 	return out, err
 }
 
+// VerifyAuth 用一次需要鉴权的只读请求确认 endpoint 可达且 api_key 被接受。
+// Healthz 走 /api/health/ready,不校验 key——空 key 也返回 200,验不出 2026-09-23 那种 401。
+func (c *Client) VerifyAuth(ctx context.Context) error {
+	var out any
+	return c.do(ctx, http.MethodGet, "/api/items?n=1", nil, nil, &out)
+}
+
 // Healthz 探活,供服务启动时的健康检查使用。
 func (c *Client) Healthz(ctx context.Context) error {
 	var out map[string]any

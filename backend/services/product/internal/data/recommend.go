@@ -11,8 +11,10 @@ import (
 	"github.com/lens077/ecommerce/backend/pkg/gorse"
 	"github.com/lens077/ecommerce/backend/services/product/internal/biz"
 	conf "github.com/lens077/ecommerce/backend/services/product/internal/conf/v1"
+	"github.com/lens077/ecommerce/backend/services/product/internal/pkg/config"
 	"github.com/lens077/go-connect-kit/redisclient"
 	"github.com/redis/go-redis/v9"
+	"go.uber.org/fx"
 	"go.uber.org/zap"
 )
 
@@ -42,18 +44,33 @@ FROM products.spus s
          LEFT JOIN products.skus k ON k.spu_id = s.id
 `
 
-// NewGorseClient 构造 gorse 客户端。关闭时返回 nil,调用方必须判空。
+// NewGorseClient 构造 gorse 客户端并让它跟上配置中心的热更新(语义见 pkg/gorse/live.go)。
+// gorse 关闭时 Client() 为 nil,调用方必须每次判空。
 //
-// 这里刻意不做探活:gorse 挂了不该拖着商品服务一起起不来,
-// 同步循环自己会重试。
-func NewGorseClient(cfg *conf.Bootstrap, logger *zap.Logger) *gorse.Client {
-	rec := cfg.GetRecommend().GetGorse()
-	if rec == nil || !rec.GetEnable() || rec.GetEndpoint() == "" {
+// 启动时刻意不做探活:gorse 挂了不该拖着商品服务一起起不来,同步循环自己会重试。
+func NewGorseClient(lc fx.Lifecycle, cfg *conf.Bootstrap, live *config.Live, logger *zap.Logger) (*gorse.Live, error) {
+	g := gorse.NewLive(gorseOptions(cfg))
+	if g.Client() == nil {
 		logger.Info("gorse client disabled")
-		return nil
+	} else {
+		logger.Info("gorse client initialized", zap.String("endpoint", cfg.GetRecommend().GetGorse().GetEndpoint()))
 	}
-	logger.Info("gorse client initialized", zap.String("endpoint", rec.GetEndpoint()))
-	return gorse.New(rec.GetEndpoint(), rec.GetApiKey(), rec.GetTimeout().AsDuration())
+	if err := g.RegisterStaleMetric(); err != nil {
+		return nil, err
+	}
+	unsubscribe := live.Subscribe(func(_, cur *conf.Bootstrap) { g.Update(gorseOptions(cur), logger) })
+	lc.Append(fx.Hook{OnStop: func(context.Context) error { unsubscribe(); return nil }})
+	return g, nil
+}
+
+func gorseOptions(c *conf.Bootstrap) gorse.Options {
+	g := c.GetRecommend().GetGorse()
+	return gorse.Options{
+		Enable:   g.GetEnable(),
+		Endpoint: g.GetEndpoint(),
+		APIKey:   g.GetApiKey(),
+		Timeout:  g.GetTimeout().AsDuration(),
+	}
 }
 
 // NewItemSyncConfig 把配置里的同步参数摊平,顺便兜住缺省值。
@@ -141,19 +158,21 @@ func (r *catalogRepo) scan(rows pgx.Rows) ([]biz.CatalogItem, error) {
 var _ biz.ItemSyncRepo = (*itemSyncRepo)(nil)
 
 type itemSyncRepo struct {
-	client *gorse.Client
-	rdb    *redisclient.Live
-	log    *zap.Logger
+	gorse *gorse.Live
+	rdb   *redisclient.Live
+	log   *zap.Logger
 }
 
-func NewItemSyncRepo(client *gorse.Client, rdb *redisclient.Live, logger *zap.Logger) biz.ItemSyncRepo {
-	return &itemSyncRepo{client: client, rdb: rdb, log: logger}
+func NewItemSyncRepo(g *gorse.Live, rdb *redisclient.Live, logger *zap.Logger) biz.ItemSyncRepo {
+	return &itemSyncRepo{gorse: g, rdb: rdb, log: logger}
 }
 
-func (r *itemSyncRepo) Enabled() bool { return r.client != nil }
+// Enabled 每次都现读:gorse 可能被配置热更新关掉或打开。
+func (r *itemSyncRepo) Enabled() bool { return r.gorse.Client() != nil }
 
 func (r *itemSyncRepo) UpsertItems(ctx context.Context, items []biz.CatalogItem) error {
-	if r.client == nil || len(items) == 0 {
+	client := r.gorse.Client()
+	if client == nil || len(items) == 0 {
 		return nil
 	}
 
@@ -169,7 +188,7 @@ func (r *itemSyncRepo) UpsertItems(ctx context.Context, items []biz.CatalogItem)
 		})
 	}
 
-	if _, err := r.client.UpsertItems(ctx, payload); err != nil {
+	if _, err := client.UpsertItems(ctx, payload); err != nil {
 		return fmt.Errorf("upsert gorse items: %w", err)
 	}
 	return nil
