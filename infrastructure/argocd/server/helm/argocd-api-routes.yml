@@ -8,9 +8,8 @@
 #   Cilium Envoy 上游协议镜像下游协议，客户端以 h2c 连 80 时上游也是 h2c，
 #   argocd-server（server.insecure=true）用 cmux 把 HTTP/2 分给 gRPC 监听器。
 #
-# 安全边界（用户已于 2026-09-24 明确接受明文风险）：
-#   80 不加密，admin 密码与 session token 明文过链路。只允许 remote-dev / VPN 来源访问，
-#   Pangolin 资源必须配访问规则拒绝其余来源。
+# 安全边界：80 不加密，admin 密码与 session token 明文过链路。只在 LAN 或 sshuttle 隧道内使用，
+# 不建 Pangolin 公网资源（用户已于 2026-09-24 接受明文风险，但仅限隧道内）。
 #
 # 若日后打开 enable-gateway-api-alpn 与 enable-gateway-api-app-protocol，
 # 可退回「GRPCRoute + appProtocol h2c」的 443 标准形态，并删除本路由。
@@ -29,9 +28,8 @@ spec:
       namespace: default
       sectionName: http
   hostnames:
-    # LAN 直连 Gateway 用 dev.test；remote-dev 经 Pangolin 时 Host 保持公网域名，同一条路由都能匹配。
+    # Mac 经 sshuttle（ssh k1）直连 Gateway VIP；不再有 Pangolin 公网入口（rid 66 已于 2026-09-24 删除）。
     - argocd-api.dev.test
-    - argocd-api.apikv.com
   rules:
     - matches:
         - path:

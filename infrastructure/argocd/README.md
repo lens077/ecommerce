@@ -1,24 +1,6 @@
-# 安装
+# ArgoCD 运维入口
 
-推荐使用OLM安装一个帮助管理集群上运行的 Operator 的工具
-
-```shell
-curl -sL https://github.com/operator-framework/operator-lifecycle-manager/releases/download/v0.28.0/install.sh | bash -s v0.28.0
-```
-
-https://github.com/argoproj-labs/argocd-operator/releases/tag
-
-```shell
-VERSION="v0.9.1"
-wget https://github.com/argoproj-labs/argocd-operator/archive/refs/tags/${VERSION}.zip
-```
-
-安装操作员, 此 Operator 将安装在 “operators” 命名空间中，并可从集群中的所有命名空间中使用
-
-```shell
-kubectl create -f https://operatorhub.io/install/argocd-operator.yaml
-kubectl get csv -n operators
-```
+本仓不再维护 OLM 或 ArgoCD Operator 的旧安装教程。当前安装、路由和 CLI 入口以仓内脚本与 `server/helm/` 清单为准；是否已安装、是否有业务 Application/ApplicationSet，必须按 `context/team/local-env.md` 对当前集群只读查询。
 
 ## 本仓现行安装入口
 
@@ -35,14 +17,14 @@ HTTP/1.1 交给 HTTP handler，HTTP/2 交给 gRPC 监听器。下面的入口设
 | 用途 | 集群内 Host | 公网 / remote-dev | Gateway 监听器 | 协议 |
 |---|---|---|---|---|
 | Web UI + REST/token 自动化 | `argocd.dev.test` | `https://argocd.apikv.com`（Pangolin rid 60） | `https` 443 | TLS |
-| `argocd` CLI（原生 gRPC） | `argocd-api.dev.test` | `http://argocd-api.apikv.com`（Pangolin rid 66） | `http` 80 | **明文 h2c** |
+| `argocd` CLI（原生 gRPC） | `argocd-api.dev.test` | 同左，Mac 经 sshuttle（`ssh k1`）直连 VIP；无公网入口 | `http` 80 | **明文 h2c** |
 
 - Web UI 路由：`server/helm/gateway/http-route.yml`（只挂 443）。
-- CLI 路由：`server/helm/argocd-api-routes.yml`（只挂 80，同时匹配 `argocd-api.dev.test` 与 `argocd-api.apikv.com`）。
+- CLI 路由：`server/helm/argocd-api-routes.yml`（只挂 80，只匹配 `argocd-api.dev.test`）。
 - 两个主机名互不串用：API 主机名在 443 返 404，UI 主机名在 80 返 404。
 
 **明文风险已由用户于 2026-09-24 明确接受**：80 不加密，admin 密码与 session token 以明文过链路。
-因此 `argocd-api` 只允许 remote-dev / VPN 来源，Pangolin 资源必须配访问规则拒绝其余来源。
+因此 CLI 入口不走公网：Mac 用 `sshuttle -r k1 10.10.31.0/24 10.10.21.0/24` 打通 VIP 后直连（见 `context/team/local-env.md`）。
 
 ### 为什么 CLI 不走 443
 
@@ -54,24 +36,11 @@ Cilium Envoy 上游协议镜像下游协议：客户端以 h2c 连 80 时上游�
 打开 `enable-gateway-api-alpn` 与 `enable-gateway-api-app-protocol` 需要重启 `cilium-operator` 与 `cilium-envoy`，
 属于全站 L7 入口中断，须排维护窗口；打开后才可退回 443 上的「GRPCRoute + `appProtocol` h2c」标准形态。
 
-### Pangolin 资源 `argocd-api.apikv.com`
+### 不建 Pangolin 公网 CLI 入口
 
-必须通过面板或 API 创建，不能直接改数据库：
-
-| 字段 | 值 | 说明 |
-|---|---|---|
-| 类型 | HTTP resource | |
-| SSL / HTTPS | **关** | 公网侧即明文 HTTP 80，不生成 `redirect-to-https` |
-| 站点 | `k8s-cluster`（集群内 newt） | 与 rid 60 同一站点 |
-| target method | **`h2c`** | 用 `http` 会把 gRPC 降成 HTTP/1.1，ArgoCD 不接 |
-| target 地址 | `<cilium-gateway LB IP>:80` | `kubectl -n default get gateway cilium-gateway` 现查，当前 `10.10.31.240` |
-| 自定义 Host | 不填 | 路由已匹配 `argocd-api.apikv.com` |
-| 认证（SSO） | 关 | 由 ArgoCD 自己处理 admin/token 认证 |
-| 访问规则 | remote-dev / VPN 出口 CIDR `ACCEPT`，其余拒绝 | 明文入口不得对任意公网来源开放 |
-| 健康检查 | 不勾 | 勾了又不配对 `hcPort/hcPath` 会被判 unhealthy → 503 |
-
-`argocd-api` 只承载 CLI。REST/token 自动化继续走 `https://argocd.apikv.com/api/...`：target 为 `h2c` 时，
-HTTP/1.1 的 REST 请求会被 Traefik 以 HTTP/2 转发，ArgoCD cmux 不会把非 gRPC 的 HTTP/2 交给 REST 处理器。
+曾建过 `argocd-api.apikv.com`（rid 66，HTTP resource、SSL 关、target `h2c://<VIP>:80`），2026-09-24 实测可用后**已删除**：
+sshuttle 一条命令就能让 Mac 直连 VIP，没必要留一个公网明文 gRPC 口。REST/token 自动化继续走 `https://argocd.apikv.com/api/...`（rid 60）。
+若将来非要公网 CLI，target 必须是 `h2c`（`http` 会把 gRPC 降成 HTTP/1.1），且访问规则只放行固定出口 CIDR。
 
 ### 部署与验证
 
@@ -85,16 +54,25 @@ LAN 直连 Gateway（`argocd-api.dev.test` 解析到 Gateway VIP）：
 argocd login argocd-api.dev.test:80 --username admin --password "$ARGOCD_PASSWORD" --plaintext
 ```
 
-remote-dev 经 Pangolin（资源建好后）：
+Mac（sshuttle 开着）：同上，`argocd version` 打印出 `argocd-server: vX.Y.Z` 即通。
 
-```bash
-argocd login argocd-api.apikv.com:80 --username admin --password "$ARGOCD_PASSWORD" --plaintext
-argocd version   # 验收：打印出 argocd-server: vX.Y.Z
-```
-
-不要加 `--grpc-web`，也不要去掉 `:80` 和 `--plaintext`。2026-09-24 从 Mac 经 rid 66 实测 `argocd version` 返回 `argocd-server: v3.5.3`。
+不要加 `--grpc-web`，也不要去掉 `:80` 和 `--plaintext`。2026-09-24 从 Mac 经 sshuttle 实测通。
 
 **不要用 curl 验收这个入口**：`curl http://argocd-api.apikv.com/api/version` 返回 `503 upstream connect error ... connection termination` 属于预期——target 是 `h2c`，HTTP/1.1 的 REST 请求被转成 HTTP/2，ArgoCD cmux 只把带 `content-type: application/grpc` 的 HTTP/2 交给 gRPC 监听器，其余连接直接关闭。`argocd-api.dev.test` 只在机房 LAN 可解析，Mac 上 `Could not resolve host` 同样是预期。
+
+### GitLab webhook → ArgoCD 即时刷新（2026-09-24）
+
+不加 webhook 时 ArgoCD 每 3 分钟轮询 GitLab；加上后 push 到 GitLab 立刻刷新。
+
+- GitLab 侧：项目 hook id `89881395`，URL `https://argocd.apikv.com/api/webhook`，只勾 push events，SSL 校验开。
+  经 Pangolin rid 60（SSO 关）到 argocd-server；`/api/webhook` 本身不需要 ArgoCD 登录，靠 token 校验。
+- ArgoCD 侧：shared secret 存在 `argocd-secret` 的 `webhook.gitlab.secret`（集群内，不入库），
+  GitLab hook 的 Secret token 是同一个值。token 不对会被 ArgoCD 拒绝，实测 2026-09-24。
+- 验收：`glab api projects/83474117/hooks/89881395/test/push_events -X POST`，然后
+  `kubectl -n argocd logs deploy/argocd-server --since=2m | grep -i webhook` 应看到
+  `Received push event repo: https://gitlab.com/sumery/ecommerce` 与 `refreshing app from webhook`。
+- 轮换：`openssl rand -hex 24` 生成新值，同时 patch `argocd-secret` 与 `glab api projects/83474117/hooks/89881395 -X PUT -f token=…`。
+- 它只刷新 source 为该仓的 Application；ApplicationSet 用的是 list generator，不受 webhook 影响。
 
 ### 不经任何入口的通道
 
