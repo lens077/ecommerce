@@ -2,7 +2,7 @@
 
 > 所有 AI 编码工具（Claude Code / Codex / Cursor …）的**共同行为基线**。规范本体在 `context/`，
 > 本文件只做索引和硬规则——改规范请改 `context/`，不要改这里的副本。
-> 这里只写**结构事实与规则**；带日期的运行态（GitOps 通没通、集群实跑什么）看 `TODO.md`「领域状态表」，写在这里会静默过期。
+> 这里只写**结构事实与规则**；缺口看 `TODO.md`，运行态按 `context/team/local-env.md` 现查（旧状态表曾把非空命名空间写成空，2026-09-26 复核）。
 
 ## 硬规则（不可跳过）
 
@@ -46,11 +46,11 @@
 
 - 工程化：前端用 vite-plus（`vp`）一个包覆盖 dev/build/test/lint/fmt/任务运行/git 钩子，没有 husky/biome/eslint/prettier；commitlint 也由 frontend workspace 承载（根目录无 Node workspace）
 - 进度真相源：`TODO.md`（**唯一**，理由见 `context/decisions/`）；架构真相源：`docs/design/`（按微服务分目录，入口 `docs/design/README.md`）
-- **集群数字尽量别写进文档**：Pod 分布、就绪计数、镜像 tag 这类运行时观测值一写就过期，需要时现查 `kubectl`。确实要写就标实测日期（`[LIVE-FACT]` 门禁已于 2026-09-17 删除，改为口头约定）；且**集群异常时不要采数**，故障态会被固化成「现状」。见 [context/team/live-facts.md](context/team/live-facts.md)
+- **环境按需查询，文档只留契约与查法**：目标、代码、运行观测分开；故障证据不能当稳态基线。原日期门禁已删除，生成区与 Git 文档责任如何强制见 [context/team/live-facts.md](context/team/live-facts.md)
 - **网关和配置中心都不在本仓**：由同级仓 **control-tower**（`services/gateway` + `services/config`）承载，设计在 `../control-tower/docs/design/`；集群里 `config-center` ns/Deployment 名是遗留标签，镜像实为 `control-tower-config`。`backend/structcheck` import `github.com/lens077/control-tower/routes` 核对路由，**改路由模板必须同 PR 升级本仓对 control-tower 的依赖版本**。迁移历史见 [context/project/ecommerce/gateway/INDEX.md](context/project/ecommerce/gateway/INDEX.md)
-- **CI 仅由发布 tag 触发**（裸 semver `X.Y.Z`，`X`=破坏性/大版本；push main 不构建）。需要 CI 验证或部署时**打 tag 并推到 `github` 远端**（origin 是 GitLab 无 Actions）；语义、手顺与四条纪律见 [context/team/git-commit.md](context/team/git-commit.md)「发布 tag 与 CI 触发」
+- **区分门禁与发布**：push/MR 有轻量/代码门禁，发布镜像才由裸 semver tag `X.Y.Z` 推到 `github` 触发；旧「全部 CI 只由 tag 触发」说法已漂移。职责与手顺见 [context/team/git-commit.md](context/team/git-commit.md)
 - **部署清单两份真相源必须逐字段等价**：`helm/`（`values.yaml`=pre 基线 + `values-prod.yaml`）与 kustomize 裸 manifest（`deploy/{base,overlays/prod}`）渲染同一套对象，`scripts/verify-deploy-parity.sh` 强制；改一边必改另一边。见 [deploy-parity.md](context/team/deploy-parity.md)。两份都写 **KYAML**（值一律双引号、结构靠 `{}` `[]` 不靠缩进），`scripts/verify-kyaml.sh` 阻断，`helm/files/zero-trust.yaml` 永久豁免——见 [kyaml-manifests.md](context/team/kyaml-manifests.md)
-- **`okteto up` 前先看 ArgoCD 是否纳管本仓**：纳管时必须先关自动同步，否则开发容器被无声干掉；当前是否纳管看 `TODO.md`「领域状态表」GitOps 行。见 [context/team/okteto-inner-loop.md](context/team/okteto-inner-loop.md)
+- **`okteto up` 前现查 ArgoCD 归属**：纳管时先关自动同步，否则开发容器被干掉；按 [local-env.md](context/team/local-env.md) 的 GitOps 分区查询，再走 [okteto-inner-loop.md](context/team/okteto-inner-loop.md)。TODO 只记接管缺口，不替代操作前验证。
 
 ## 中文文案约定
 

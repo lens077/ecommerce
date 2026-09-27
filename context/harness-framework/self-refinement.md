@@ -101,7 +101,7 @@ LLM 没有跨会话记忆。但**每一次用户纠正，都是一个信号**：
 3. `@commitlint/cli` 从未出现在任何 `devDependencies` 里。
 4. 前端的 `.commitlintrc.cjs` 的 `rules: {}` 是空的，也没有 `extends` —— 零规则。
 5. 2026-03-19 前端迁移到 vite-plus、删掉 `frontend/.husky/` 时，`vp config` 看到已有值
-   `frontend/.husky/_` —— 不等于 `.husky`、也不以 `.husky/` 开头 —— 守卫触发，打印
+   `frontend/.husky/_`（该目录当时已随 husky 删除）—— 不等于 `.husky`、也不以 `.husky/` 开头 —— 守卫触发，打印
    skipping 后放弃接管。于是 `core.hooksPath` 一直指着一个**已被删除的目录**，
    git 对此不报错，只是静默地一个钩子都不跑。
 

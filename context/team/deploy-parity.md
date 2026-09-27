@@ -16,7 +16,7 @@ affects:
 | 使用者 | 用哪份 | 入口 |
 |---|---|---|
 | helm / ArgoCD | `helm/`(umbrella + 12 个子 chart) | `make deploy`、`argocd-app.yml` |
-| kubectl | `backend/services/<svc>/deploy/{base,overlays/prod}`（kustomize，`kubectl -k` 内置）+ `application-vpa.yml` + `frontend/apps/consumer/deploy/pre/` + `frontend/apps/consumer-next/deploy/base/` | `make k8s-dev-all` / `make k8s-pre-all` |
+| kubectl | `backend/services/<svc>/deploy/{base,overlays/prod}`（kustomize，`kubectl -k` 内置）+ `application-vpa.yml` + `frontend/apps/consumer/deploy/pre/` + `frontend/apps/consumer-next/deploy/base/` | 在 `backend/` 执行 `make k8s-pre-all`；prod 执行 `make k8s-prod-all KUBE_CONTEXT=<生产上下文>` |
 
 **两份不是主从,是等价**:`helm template` 出来的每一个对象,都必须与裸 manifest 里同 kind/namespace/name 的对象逐字段相同;任一侧多一个、少一个对象也不行。门禁:
 

@@ -32,7 +32,7 @@ sqlc 项目里 SQL 是生成物的输入而非手写逻辑，**风险在后者**
 2. **禁止引入 `pashagolub/pgxmock`**——断言 sqlc 生成的 SQL 字符串，改个空格就红且不验证语义；
 3. **`-short` 是唯一开关**，守卫写在 `testutil` 入口函数第一行。
    **不用 build tag**——会让文件在 `go build`/IDE 里变灰，脱离静态检查；
-4. **测试基建只放 `backend/pkg/testutil`**，不进任何服务的 `internal/`
+4. **测试基建只放 `backend/pkg/testutil`（目标位置，尚未创建）**，不进任何服务的 `internal/`
    （见 [`STACK.md`](../../STACK.md) 第十节"配置逻辑 10 份复制"的教训）；
 5. **mock 生成物入库**（`internal/biz/mocks/`），CI 不装 mockery；
 6. **PG 镜像 tag 必须与生产一致**——生产是 CloudNativePG 集群 `pg-main`，镜像

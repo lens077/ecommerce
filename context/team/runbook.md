@@ -53,12 +53,12 @@ description: 给所有 AI 编码工具(尤其 Codex)的可执行命令与验收�
 | 数据库表结构 / 迁移 / 种子数据 | [db-migrations.md](db-migrations.md) + [`docs/DEVOPS.md`](../../docs/DEVOPS.md) | 迁移里写 SET search_path 版本表解析失败;sqlc 生成物落后 schema;种子不幂等重跑翻倍;不按 expand-contract 滚更炸旧副本 |
 | Shell / Make recipe | [shell-scripting.md](shell-scripting.md) | macOS Bash 3.2 + `set -u` 下空数组展开直接退出 |
 | 公网 IP / 防火墙来源 / 外部数据库 CIDR | [`docs/INFRASTRUCTURE-OPERATIONS.md`](../../docs/INFRASTRUCTURE-OPERATIONS.md) §2 | SSH alias 被误当成 Pod DNS；重建时缺运行值；CIDR 硬编码重新进入 Git 历史 |
-| 本地起服务连不上基础设施 | [local-env.md](local-env.md) | `dev.yml` 里的集群内 svc 域名在 Mac 上解析不了；`pg-main-rw`/`192.168.3.132` 指向已 hibernate 的 CNPG（TCP 通但握不了手）；Consul 不带 token 时读返 200 但结果被 ACL 过滤成空；配置缺子块导致功能被静默关掉 |
+| 本地环境、起服务连不上基础设施 | [local-env.md](local-env.md) | 先选 remote-dev/LAN/Pod 通路，再用 `env-check.py` 查对应分区；不要照退役端点排障或把 TCP 通当协议/鉴权通过 |
 | Kubernetes 节点关机/重启、终态 Pod 累积 | [node-graceful-shutdown.md](node-graceful-shutdown.md) | 把正常的 90 秒等待当卡死后强断电;把 `Succeeded/Failed` 历史误判成运行副本;只改 kubelet 不改 logind 导致提前关机 |
 | 对外公开服务 / 内网穿透 / `*.apikv.com` | [pangolin-tunnel.md](pangolin-tunnel.md) | k8s target 走 80 得 envoy 404;改完配置不等 Traefik 5s 轮询就当故障排查 |
-| 改 SSH 端口 / SSH 突然连不上 | 已归档至 docs/progress-archive/ssh-port-migration-20260811.md(一次性主机运维实录,前提为 Ubuntu 24.04,与当前 26.04 不同,仅供参考) | 改 sshd_config 的 Port 在 socket activation 下无效;ListenStream 纯端口号 IPv4 全断把自己锁外面 |
+| 改 SSH 端口 / SSH 突然连不上 | 一次性主机运维实录已删除；当前系统版本与 SSH 入口按 local-env 和实际主机查询核对 | 改 sshd_config 的 Port 在 socket activation 下无效;ListenStream 纯端口号 IPv4 全断把自己锁外面 |
 | 写测试 / 补测试 / 防回归 | [go-testing.md](go-testing.md) + [`docs/TESTING.md`](../../docs/TESTING.md) | 用 mock 测 sqlc 的 SQL 等于没测;引入 go-sqlmock 才发现接不上 pgx |
-| **往文档里写集群/运行时数字**(Pod 分布、就绪计数、镜像 tag、节点内存) | [live-facts.md](live-facts.md) | 把某一刻的快照写成永久事实;**在集群故障期采数,把故障态固化成「现状」**;`[LIVE-FACT]` 门禁会红 |
+| **环境事实或代码↔文档责任** | [live-facts.md](live-facts.md) | 区分目标、源码与运行观测；已删除的 `[LIVE-FACT]` 不再守日期，生成区精确检查与 Git 差异门禁只证明各自条件 |
 | 在集群身份下改代码(okteto) | [okteto-inner-loop.md](okteto-inner-loop.md) + [`docs/OKTETO.md`](../../docs/OKTETO.md) | 没关 ArgoCD 自动同步 → 开发容器被无声干掉;开发完忘了恢复 → GitOps 静默失效 |
 | **K8s 部署清单**(`*/deploy/**`、`application-vpa.yml`、`helm/`) | [kyaml-manifests.md](kyaml-manifests.md)(格式与豁免) + [deploy-parity.md](deploy-parity.md)(两份必须等价) | 写成块式 YAML → `scripts/verify-kyaml.sh` 阻断;转了经 `tpl` 的 `helm/files/zero-trust.yaml` → helm 渲染直接失败;只改一边 → parity 红 |
 | 提交信息 / 分支 / 分组 | [git-commit.md](git-commit.md) + 本文 §6 | type 自造、`perf` 滥用、`git add -A` 混提 |
@@ -79,6 +79,8 @@ description: 给所有 AI 编码工具(尤其 Codex)的可执行命令与验收�
 scripts/verify-quick.sh             # 后端(§1+§3)与前端(§4)并行跑;每侧绿了只打一行,红了只打日志尾部
 scripts/verify-quick.sh backend     # 只跑后端;frontend 同理
 scripts/verify-public-ips.py --history # 公网 IP 字面量历史门禁
+python3 scripts/verify-doc-sync.py    # 当前改动是否同步了登记文档，或需要准确的 Doc-Impact 理由
+python3 scripts/env-check.py --check  # 离线：工具要求生成区与源码相等；不是 live 验收
 ```
 
 后端链与 `pnpm ready` **无数据依赖,不要串行等待**;全量输出在修复循环里反复进上下文,
@@ -169,7 +171,7 @@ pnpm hygiene          # knip(未用依赖/导出/重复导出/catalog 条目)+ p
 顺序不能乱:
 
 1. **先判断改动是否涉及 TODO 项**:涉及才更新 `TODO.md`(完成/部分完成/改目标/删除),不涉及不动它;
-   它只记 TODO 项与状态,做了什么与实测证据进 `docs/progress-archive/`(`[TODO-CLEAN]` 门禁守)。
+   它只记 TODO 项与状态；做了什么与实测证据写进提交信息与对应 `context/` 经验文档，不另设按日期增长的归档目录。
    声称「已完成」前**先回扫代码**——返回假成功或 panic 的方法按**未实现**计。
    本次改动若动了 `context/` 或 `docs/design/` 的约束,跑 `scripts/spec-impact.sh` 看登记的实现点;
    若对应 `.scratch/<feature>/issues/` 里有实现单,关单前填「完成自检」再标 `done`
@@ -184,9 +186,7 @@ pnpm hygiene          # knip(未用依赖/导出/重复导出/catalog 条目)+ p
 4. **自检提交信息**(可选):`cd frontend && echo "feat(cart): 示例" | pnpm exec commitlint`
 5. **提交**:`git commit`。项目历史全部**直接提交 `main`**,不走分支/PR,除非用户明确要求开分支。
 
-⚠️ **push main 不会构建任何东西**——CI 只由发布 tag 触发,且 tag 只推 `github` 远端
-(origin 是 GitLab,没有 Actions)。要触发 CI 验证或部署,见
-[git-commit.md](git-commit.md) 的「发布 tag 与 CI 触发」。
+⚠️ **push main 不触发发布镜像**，不等于没有 CI：GitLab push/MR 跑代码门禁；GitHub 分支/PR 也跑轻量 `context-gate`，发布链才只由 tag 触发。Git 差异门禁的比较范围、准确理由与边界见 [live-facts.md](live-facts.md)。发布手顺见 [git-commit.md](git-commit.md) 的「发布 tag 与 CI 触发」。
 
 钩子说明:commit-msg 钩子由 vite-plus 装(`core.hooksPath=frontend/.vite-hooks/_`),直调
 `frontend/node_modules/.bin` 里的 commitlint(2026-08-26 起不再经 pnpm exec,理由与

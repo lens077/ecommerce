@@ -54,7 +54,7 @@ patronictl -c /etc/patroni/patroni.yml edit-config --force \
   -s "slots.ecommerce_cdc.plugin=pgoutput"
 ```
 
-写入后几秒内 `pg_replication_slots` 就出现了 Patroni 创建的 `ecommerce_cdc`（inactive），Debezium resume 后接管为 active，snapshot 7 张表完成后进入 streaming，真实增量 1.3s 到达 ES。随后的 node3 受控重启演练验证了槽是否跨重启存活（结果见 `docs/reports/`）。
+写入后几秒内 `pg_replication_slots` 就出现了 Patroni 创建的 `ecommerce_cdc`（inactive），Debezium resume 后接管为 active，snapshot 7 张表完成后进入 streaming，真实增量 1.3s 到达 ES。随后的 node3 受控重启演练验证了槽是否跨重启存活（结果原在 `docs/reports/`，该目录已于 2026-09-20 删除，历史见 `git log`）。
 
 不选 `ignore_slots` 的原因：它只让 Patroni「视而不见」，槽丢了不会补；`slots` 声明则同时解决删除与缺失。
 

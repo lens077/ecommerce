@@ -20,8 +20,7 @@ affects:
 不同步就会出现「代码已实现但文档还标 ⬜」或反过来，下一轮（尤其是新 AI 会话）会基于错误的进度做判断。
 反过来，把「做了什么」「实测数字」「处置过程」写进去，它就变成 changelog——2026-09-16 实测它
 82 KB 里堆了 25 条日期流水账和 2000+ 字节的单元格，每个提交回合都要整份读进上下文。
-这类内容进按月追加的进度归档；CI 发版行由流水线单独维护；`scripts/verify-context.sh`
-的 `[TODO-CLEAN]` 拦以日期开头的行与超过 600 字节的单行。
+这类内容不再另建进度归档；证据按需留在对应实现/经验与提交信息中。`[TODO-CLEAN]` 已删除，不能继续把它当作生效门禁。
 
 TODO 更新可以和代码改动放**同一个提交**，也可以紧跟一个 `docs: 更新 TODO 进度` 提交。
 
@@ -109,7 +108,7 @@ feat(address): :sparkles: 行政区划落库 + RegionService 三级级联接口
 两者都可选，但一旦写就有形状：
 
 - **body** 解释**为什么**这么改、与之前行为差在哪，不是复述 diff。每行不超过 72 字符
-- **footer** 只放两类：`BREAKING CHANGE: <描述>`（全大写，说明不兼容点）和 `Closes #123, #124`
+- **footer** 放 `BREAKING CHANGE: <描述>`（全大写，说明不兼容点）、`Closes #123, #124`，或准确的 `Doc-Impact: none <文档路径> | <具体理由>`。后者供登记文档的差异门禁核对，不是免审标记；用法与覆盖边界见 [live-facts.md](live-facts.md)。
 
 subject 控制在 50 字符以内；正文可以长，长的是 body 不是 header。
 
@@ -128,7 +127,7 @@ Closes #123, #124
 ```
 frontend/commitlint.config.mjs   规则 + EMOJI_TYPES 白名单（唯一真相源）
 frontend/package.json            devDependencies 装 @commitlint/cli + config-conventional
-frontend/.vite-hooks/commit-msg  commitlint --config <$0 推导>/commitlint.config.mjs --edit "$1"
+frontend/.vite-hooks/commit-msg  commitlint → verify-doc-sync.py --staged --message-file "$1"（只核对本次索引）
 frontend/.vite-hooks/pre-commit  gitleaks 暂存区扫描 → 依赖清单变更时重生成 THIRD_PARTY_NOTICES.md 并 git add → cd frontend && vp staged
 frontend/.vite-hooks/pre-push    scripts/verify-quick.sh（只推 tag / 删分支放行；SKIP_VERIFY=1 绕过）
 ```
@@ -200,7 +199,7 @@ pnpm exec commitlint --from HEAD~7 --to HEAD   # 回放校验既有提交
    共享工作区里几乎总有别人的在途工作。
 2. **用显式文件列表暂存**，不用 `-A`、不用 `.`：
    ```bash
-   git add STACK.md docs/todo/xxx.md backend/services/*/Dockerfile
+   git add STACK.md TODO.md backend/services/*/Dockerfile
    ```
 3. **`git diff --cached --name-only` 复核**，确认列表与第 1 步的判断一致，再 commit。
 
@@ -295,6 +294,8 @@ scripts/verify-release-local.sh    # 按 tag 以来的改动,用 CI 同样的 Do
 | origin（GitLab，`.gitlab-ci.yml`） | 每次分支 push / MR | `context-gate` + 本地锚点原样搬进去的 `backend-gate`（go build/vet/test -short）与 `frontend-gate`（`pnpm ready`） | 任何产制品、推镜像、回写清单的动作；**tag 不建流水线** |
 | github（GitHub Actions） | 仅发布 tag | 多架构镜像 → Trivy → Cosign → SBOM → 清单回写，外加 supply-chain / deploy-consistency | 分支 push 的代码门禁（`context-gate.yml` 是唯一 per-push 例外） |
 
+**GitLab 门禁跑在集群内自建 runner（2026-09-24 起）。** gitlab.com 共享 runner 的计算分钟用完后，项目关闭了共享 runner，全部 job 由集群 `gitlab-runner` ns 里的 Kubernetes executor runner `k8s` 执行，部署见 `infrastructure/gitlab-runner/README.md`。曾先放在 node2 的 Docker runner，2C/1.6G 编译 Go 重度换页、撞 1h 超时，已撤掉。集群到 `proxy.golang.org` 不通，`.gitlab-ci.yml` 的 `GOPROXY` 因此是 `https://goproxy.cn|direct`（`|` 而非逗号，理由见文件内注释）。runner 离线时 GitLab job 会一直 pending。
+
 为什么不把发布链搬去 GitLab：Cosign keyless 的签名身份是 Fulcio 证书里的 GitHub
 workflow ref（`service-ci.yml` 的 `CERT_IDENTITY_RE` 硬编码了它）、Trivy SARIF 的上报目的地是
 GitHub Code scanning、buildx 缓存走 `type=gha`、public 仓在标准 runner 上零计费——这四样
@@ -305,3 +306,11 @@ GitHub Code scanning、buildx 缓存走 `type=gha`、public 仓在标准 runner 
 **硬约束：同一个发布 tag 只允许一边写镜像仓与回写清单。** 要在 GitLab 侧加任何构建，
 必须保持「不推、不回写」（等价 GitHub 的 `push-image: false`），否则不可变 tag 会被写两次、
 Cosign 签两次、SBOM 记两个 digest。
+
+**回写必须落到 GitLab（2026-09-24 起）。** ArgoCD 的 source 是 GitLab main（`argocd-app.yml`），
+而 `update-manifests` 回写的是 GitHub main；GitLab 免费版没有 pull mirror，两边不会自动同步——
+不推过去，ArgoCD 永远看不到新 tag，发版等于没发。所以 `update-manifests` 最后一步把回写提交
+fast-forward 推到 GitLab（secret `GITLAB_PUSH_TOKEN` = GitLab Project Access Token `argocd-manifest-push-20260924`，
+scope 仅 `write_repository`，到期 2027-09-24；轮换用 `glab token create … --scope write_repository | gh secret set GITLAB_PUSH_TOKEN`）。GitLab 若领先 GitHub 会直接让 job 红，不静默分叉——那说明有人只推了
+origin，先手动 `git push github main` 对齐。回写提交带 `[skip ci]`，推到 GitLab 不会再跑门禁。
+日常人工 push 仍是两个远端都推，这条只兜 CI 那一次。

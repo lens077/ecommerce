@@ -10,7 +10,7 @@
 | [infra-duplication.md](infra-duplication.md) | 治理跨服务的基础设施副本，或评估一道同构门禁是否真的在收敛 | 只在业务仓去重而不改生成模板，新服务把副本原样带回来 |
 | [git-commit.md](git-commit.md) | 提交信息格式、分支策略、提交前先判断改动是否涉及 TODO 项 | 文档与实现脱节 |
 | [proto-design.md](proto-design.md) | proto 字段的设计依据与校验约束 | 脏数据穿透到 biz 层 / 契约破坏炸前后端 |
-| [local-env.md](local-env.md) | 本地跑服务时连哪套基础设施；`*.dev.test` 的 TLS 信任——**集群重建根 CA 就换，本机钥匙串要同步换** | 连不上、超时、白排查半天 / 浏览器 `SEC_ERROR_BAD_SIGNATURE`（同名旧 CA 验新签名）当成集群证书坏了去查 cert-manager |
+| [local-env.md](local-env.md) | 工具链要求、remote-dev/LAN/Pod 连接规则与按需只读环境查询 | 把历史端点、同名旧 CA 或单次 Ready 当作当前可用性 |
 | [node-graceful-shutdown.md](node-graceful-shutdown.md) | Kubernetes 节点关机/重启的 90/30 秒优雅退出、systemd inhibitor、终态 Pod 与清理边界 | 把正常的 90 秒等待误判成卡死而强断电 / 把终态历史误判成运行副本 / 只改 kubelet 不改 logind 导致提前关机 |
 | [shell-scripting.md](shell-scripting.md) | 仓库脚本对 macOS Bash 3.2 的兼容边界 | `set -u` 下空数组展开导致入口在第一条命令前退出 |
 | [go-redis.md](go-redis.md) | go-redis v9 的客户端生命周期、cache-aside、连接池、Key/TTL、Pipeline、重试、锁与消息边界 | 抓到已 Close 的旧客户端 / 缓存一致性失控 / 连接池饱和 / 非幂等命令被重复执行 |
@@ -19,7 +19,7 @@
 | [tls-enablement.md](tls-enablement.md) | 给已在跑的服务补 TLS 的固定检查清单：先判 ICP 拦截、健康检查静默失效、证书挂载遮蔽、IP SAN 缺失、多处续期同步、验收含故意错输入 | 未备案云主机上配域名证书白做一轮（纯 IP 通、带域名 403/reset）/ 健康检查硬编码 http 静默失效 / 整卷挂证书遮蔽原目录 / 公共 CA 不签 IP SAN / 换镜像后 `HOME` 漂移致 TLS 静默降级 / 自签证书经隧道换域名后 SAN 对不上（`verify-ca` 会掩盖） |
 | [go-testing.md](go-testing.md) | 测试分层判定与硬约束（操作手册在 `docs/TESTING.md`） | 用 mock 测 SQL 等于没测 / go-sqlmock 接不上 pgx / 用 build tag 让测试脱离静态检查 / 只验一个方向不知道 `-short` 开关有没有生效 |
 | [db-migrations.md](db-migrations.md) | 结构变更/种子数据的唯一路径（goose 迁移+幂等种子+baseline 接管），与 sqlc 生成物同 PR 的纪律 | 迁移里写 `SET search_path` 让版本表解析失败 / DO 块包 CREATE TYPE 令 sqlc 枚举退化 / 种子不幂等重跑翻倍 / 生成物落后 schema 整张表 |
-| [live-facts.md](live-facts.md) | 集群/运行时数字的写法：按波动率分三层，运行时观测值须写成「不变量 + 查法 + 带日期快照」（由 `[LIVE-FACT]` 门禁强制） | 把某一刻的快照写成永久事实 / **在集群故障期采数，把故障态固化成「现状」** / 数字悄悄变错但没人能从字面看出它是快照 |
+| [live-facts.md](live-facts.md) | 目标/实现/观测的归属；生成区精确校验与 Git 文档责任门禁 | 改日期充数、无关文档代过、把未知或故障态写成长期事实 |
 | [tech-selection.md](tech-selection.md) | 选型/盘点中「上游已死」类结论的必查三件套：镜像谱系、namespace 现状、社区延续分叉；查到分叉 ≠ 采用 | 论据建立在过期前提上、漏掉零成本止血选项（MinIO/Silo 实付学费：自己跑的 `pgsty/minio` 就是分叉前身，三轮评审没人发现） |
 | [deploy-parity.md](deploy-parity.md) | 部署清单两份真相源(helm/ 与裸 manifest)必须渲染同一套对象,`scripts/verify-deploy-parity.sh` 强制;共享 SA/CNP/ExternalSecret 只在 `helm/files/`;ESO 占位符走 `.Files.Get`;镜像 tag 两边同写 | 只改一边 → 门禁红 / CI 回写只到 helm、集群 apply 裸 manifest → 发版 tag 到不了集群(2026-09-06 实付学费)/ ESO 占位符被 Helm 吃成空串 → OTLP 全 401 静默丢 |
 | [repowise.md](repowise.md) | Repowise 按需审计（死代码、健康、调用图）：固定版本、无 LLM/遥测/editor 副作用，不在 CI 里跑 | 把「不可达」当定论删掉还在用的文件 / 裸 `init` 写入 agent 配置或 hook / 把索引误当运行态真相 |

@@ -46,7 +46,7 @@ context/
 ## 结构真相源 · [`.service-matrix.yaml`](../.service-matrix.yaml)（仓库根）
 
 不属于「知识」而属于「事实表」的东西放这里，供 AI 与 CI 查表：10 个后端服务的
-存量 Consul 注册名、网关路径前缀、依赖关系、外部依赖、Config Center 键、前端 4 个 app 的端口。服务注册发现目标按 `docs/TECH.md` 为生产 K8s Service + CoreDNS；pre 半生产测试走 Docker Compose 服务名（开发内环评估中）。
+存量 Consul 注册名、网关路径前缀、依赖关系、外部依赖、Config Center 键、前端 4 个 app 的端口。部署基线 pre/prod 使用 K8s；Compose 为备用路径，不能把环境名称当作编排方式。运行观测与连接查法只看 [team/local-env.md](team/local-env.md)。
 
 判据：**AI 每次都要现搜一遍的结构性事实** → 进 matrix；**需要解释「为什么」的经验** → 进 `context/`。
 
@@ -70,7 +70,7 @@ matrix 与 `backend/services/`、网关实际接线的一致性,以及各服务 
 | control-tower `docs/design/` | 网关与配置中心的架构、鉴权、砍掉清单、切流手顺 —— 在**同级仓** `../control-tower/`，不在本仓 | 动网关或配置面之前 |
 
 ⚠️ 以上都是**目标态**，状态是「等待实现」。当前实况以 `TODO.md` 为准，
-待办明细按 `docs/TECH.md` 体系分类在 [`docs/todo/`](../TODO.md#四分类明细)；
+待办明细按 `docs/TECH.md` 体系分类在 [`TODO.md`「四、分类明细」](../TODO.md#四分类明细)；
 可观测性的已确认缺陷见 [`统一可观测性体系.md`](../TODO.md#统一可观测性体系)。
 
 ## 检索约定

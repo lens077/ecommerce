@@ -18,15 +18,15 @@ evolution-log 2026-08-13 与 2026-08-30 条。
 
 `TODO.md` 是**唯一**进度真相源，硬规则 #3 要求提交前先判断改动是否涉及 TODO 项、涉及才更新
 （2026-09-16 收窄，见 [2026-09-16-todo-md-items-only.md](2026-09-16-todo-md-items-only.md)），因此它有独立的强制时机。
-待办明细按 `docs/TECH.md` 体系分类在 `docs/todo/`，属于同一体系的细分而非第二份视图。
+待办明细按 `docs/TECH.md` 体系分类在 `TODO.md`「四、分类明细」（原 `docs/todo/` 已于 2026-09-20 并入），属于同一体系的细分而非第二份视图。
 
 不再存在的旧进度文档、制度文件和 kaneo 看板均已删除；相关历史只保留在本决策和 Git 历史中，不再列出已删除路径。
 **不要重建"按需挂载看板 MCP"**——2026-08-21 token 治理曾把它写成长期约定，那条约定已随看板一起作废。
 
 机械守卫是 `scripts/verify-context.sh` 的 `[PROGRESS-SRC]`：复选框（`- [ ]` / `- [x]`）只允许出现在
-`TODO.md`、`docs/todo/`、不可变归档（`docs/progress-archive/`、`docs/reports/`）、`.scratch/` 与围栏代码块内；
+`TODO.md`、`.scratch/` 与围栏代码块内（原 `docs/todo/`、`docs/progress-archive/`、`docs/reports/` 已于 2026-09-20 删除）；
 别处出现即第二套进度视图。存量按计数冻结在 `scripts/context-progress-baseline.txt`，只许降不许升。
-`TODO.md` 本身受 `[BUDGET]`（≤ 96000 字节）约束，超限把证据长文按日期归档进 `docs/progress-archive/`，不提额度。
+`TODO.md` 本身受 `[BUDGET]`（≤ 96000 字节）约束，超限就删掉已完成项的过程记录，不提额度（原按日期归档的 `docs/progress-archive/` 已于 2026-09-20 删除）。
 
 ## 考虑过的替代方案
 

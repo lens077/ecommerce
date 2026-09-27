@@ -18,6 +18,7 @@ context/decisions/
 
 | 决策 | 一句话 |
 |---|---|
+| [2026-09-26-doc-contracts-and-runtime-evidence.md](implemented/2026-09-26-doc-contracts-and-runtime-evidence.md) | 工具要求生成区精确检查；Git 差异核对登记文档责任；环境按分区只读查询，不写快照副本 |
 | [2026-09-24-path-refs-in-verify-context.md](implemented/2026-09-24-path-refs-in-verify-context.md) | 正文路径检查进 verify-context（`[PATH-REF]`）；Repowise 撤出 CI 改按需审计；`config-seed -drift` 对照 matrix 查运行时配置漂移 |
 | [2026-09-22-repowise-gate.md](implemented/2026-09-22-repowise-gate.md) | （已被上一条取代）Repowise 曾以固定版本、无 LLM 的只读索引接入双远端 per-push 门禁 |
 | [2026-09-16-index-single-listing.md](implemented/2026-09-16-index-single-listing.md) | 逐篇清单只维护在各层 INDEX；根 `context/INDEX.md` 降为「该进哪一层」的路由，AGENTS.md 层表改指针 |

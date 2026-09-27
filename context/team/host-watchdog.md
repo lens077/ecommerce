@@ -97,13 +97,14 @@ cd infrastructure/host-watchdog
 
 | 主机 | 覆盖 | 备注 |
 |---|---|---|
-| node1 | 14 个容器 + `docker.service` + 2 个本机 HTTP 端点 + Pangolin 隧道站点 + 磁盘 | 每 5 分钟；实测 2026-09-01 |
-| node2 | 11 个容器（Harbor 全家桶 + gorse + MinIO + nginx/redis）+ `docker.service`/`fail2ban.service` + 3 个本机 HTTP 端点 + 磁盘 | 每 5 分钟；实测 2026-09-02 |
-| node3 | 3 个容器（gatus/ecommerce-gatus/otelcol）+ `docker.service` + 磁盘；`HTTP_CHECKS` 已清空 | 每 5 分钟；实测 2026-09-15（bugsink/healthchecks 同日迁入 k8s，cdc-connect/cdc-elasticsearch 同日删除，名单已同步；无 env 备份） |
+| node0 | 2 个容器（blog + newt）+ `docker.service` + Blog 本机 HTTP 端点 + 根分区 | 2026-09-24 清理未使用镜像、BuildKit cache 和无主匿名卷后，根分区从 23% 降至 13%；已按 Docker 主机模式部署。Newt 是 Docker 容器，不是 `newt.service`；正常路径退出 0，不存在容器的检测与 ntfy 测试通知均已触发 |
+| node1 | 11 个显式白名单容器 + `docker.service` + 2 个本机 HTTP 端点 + Pangolin 隧道站点 + 磁盘 | 每 5 分钟；2026-09-24 先清理未使用 BuildKit cache、悬空镜像和旧 journal，再按退役状态删除 Pangolin 备份、旧应用镜像、Kafka/Consul/Harbor 数据及无主卷，并清空 Casdoor 临时文件和 Docker JSON 日志；根分区从 93% 降至 43%，巡检恢复正常；另有 5 个长期容器待确认职责后决定是否纳管 |
+| node2 | 2 个容器（gorse + MinIO）+ `docker.service`/`fail2ban.service` + 2 个本机 HTTP 端点 + 磁盘 | 每 5 分钟；Harbor 于 2026-09-24 退役，容器/HTTP 探针及 `harbor-auth` jail 已删除；清理未使用镜像、apt 缓存和无主匿名卷后，根分区从 25% 降至 22%，fail2ban 与巡检均正常 |
+| k3（旧 node3 重装后） | `kubelet.service`、`containerd.service`、`newt.service`、kubelet `/healthz` 与根分区；`WATCH=""` | 2026-09-24 已按 systemd-only 模式部署，timer enabled/active；正常路径退出 0，临时不存在 unit 的检测与 ntfy 测试通知均已触发 |
 
-node3 的覆盖对象里有 `gatus`、`ecommerce-gatus` 与 `otelcol`——**探针与采集器本身**。
-它们挂掉的表现是「所有告警都安静了」，与「一切正常」在信号上完全一致，
-正是最需要由外部巡检盯住的一类。
+k3 不应枚举 containerd 中的每个 Kubernetes Pod：Pod/Deployment 由集群指标与 Gatus 负责。主机侧只需盯住
+`kubelet.service`、`containerd.service`、`newt.service`、磁盘，以及 kubelet 本机 `/healthz`；这些对象挂掉时，
+集群内的采集器也可能一起失去该节点视野。
 
 ### 本机探 TLS-only 端点：用 `--resolve`，不要用 `-k`
 

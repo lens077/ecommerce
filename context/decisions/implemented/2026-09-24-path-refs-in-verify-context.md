@@ -30,7 +30,7 @@ description: 文档路径检查搬进 verify-context 的 [PATH-REF]，Repowise �
 
 ## 后果
 
-- `verify-context.sh` 多一项检查，耗时增加约 0.1 秒；canary 多 4 个探针。存量 30 条（主要是已删除的 `docs/todo/`、`docs/reports/`、`docs/progress-archive/` 与不存在的 `backend/pkg/testutil`）登记在基线里，清债归 `TODO.md`「清除过期引用与平行状态表」。
+- `verify-context.sh` 多一项检查，耗时增加约 0.1 秒；canary 多 4 个探针。存量路径差异已登记在基线里，清债归 TODO.md 的「清除过期引用与平行状态表」条目。
 - CI 不再安装 Repowise；它的锁文件仍需在版本升级时维护。
 - 配置审计是本地命令，不是门禁：它能在改配置或排障时当场指出漂移，但不会自动拦住谁。`matrix` 的 `remote_dev` 成了新的需要维护的事实，改 Pangolin 入口时要同步。
 - 由 `scripts/verify-context-canary.sh` 的 `path-ref*` 探针与 `backend/tools/config-seed` 的单元测试钉住行为。

@@ -130,6 +130,8 @@ affects:
 查询工具：`scripts/spec-impact.sh [git-diff 范围]`。它按改动文件双向查——改了文档 → 列出受影响路径并给出
 对应的验证命令；改了代码 → 列出声明依赖它的文档，提醒回写。默认比对工作树+暂存区相对 `HEAD`。
 
+需要阻断未评估变更的文档另加 `doc-sync: required`，由 `verify-doc-sync.py` 检查；它也支持 `docs/` 顶层的 TECH。`spec-impact.sh` 仍只作 context/design 的影响提示，不是强制检查。准确理由、生成区与运行事实的边界见 [live-facts.md](../team/live-facts.md)；这一区分来自 2026-09-26 复核时「索引存在但文档仍漂移」的实际缺口。
+
 ## 反模式
 
 - ❌ **同一条约束写两处** —— 口径会漂移。只写一处，另一处用链接指过去
