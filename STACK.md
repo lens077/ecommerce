@@ -92,7 +92,7 @@ ecommerce/
 | API proto 与业务实现同仓 | 一次变更可检查 Go/TypeScript 全链路；必须用 Buf breaking 守兼容性 |
 | gateway/config 迁入 `control-tower` | 平台能力独立发布；本仓必须同步其 SDK 与路由模板版本 |
 | 前端 4 个 app 共用 pnpm workspace | 共享 transport、错误模型、UI、i18n、埋点与性能采集；catalog 统一版本 |
-| 当前部署以裸 manifest 为准 | ArgoCD 当前零 Application/ApplicationSet；`helm/` 不能冒充运行时真相源 |
+| 当前部署以裸 manifest 为准 | `helm/` 不能冒充运行时真相源；ArgoCD 业务 Application/ApplicationSet 归属按 local-env 现查，Ready workload 不证明已接管 |
 
 ---
 
@@ -124,7 +124,7 @@ ecommerce/
 | Redis 协议客户端 | `redis/go-redis/v9` + `go-connect-kit/otel` | go-redis v9.22.0；redisotel 初始化由 kit 封装 |
 | 搜索客户端 | `go-elasticsearch/v9` + `elastic-transport-go/v8` | v9.4.3 / v8.9.0；search 服务经单 provider 的 `SearchCatalog` 深度模块边界返回项目 DTO，`backend/go.mod` 已无 Meilisearch 客户端；2026-09-03 已完成运行时切流 |
 | 消息客户端 | 领域事件客户端尚未接入 | `backend/go.mod` 已无 `nats.go`。领域事件主干定稿为外部 Kafka，未来消费者使用 `franz-go`；搜索行投影由 Kafka Connect 搬运，不进入业务服务进程 |
-| 注册发现 | `go-connect-kit/registry` | kit v0.4.2，封装 Consul API v1.34.4；`backend/pkg/registryconfig` 把仓内部署开关映射到 kit Options，运行时当前由 `CONSUL_ENABLED=false` 关闭 |
+| 注册发现 | Kubernetes Service + CoreDNS（目标与业务当前路径） | `backend/pkg/registryconfig` 仍保留 Consul adapter；业务运行时由 `CONSUL_ENABLED=false` 关闭，Consul 只作为迁移/管理遗留组件，不能当作当前 Bootstrap 来源 |
 | 配置 | `go-connect-kit/config` + `control-tower/sdk/configsource` | kit v0.4.2 / control-tower v0.1.4；服务只保留 Bootstrap adapter |
 | 支付 | `smartwalle/alipay/v3` | v3.2.29 |
 | 金额 | `shopspring/decimal` | v1.4.0；新 proto 优先 `int64` 分或 decimal 字符串 |
@@ -141,9 +141,9 @@ ecommerce/
 
 | 部署单元 | 角色 | 当前状态 |
 |---|---|---|
-| `services/gateway` | Connect 原生反向代理、BFF 会话、认证、Casbin 授权、路由与服务发现 | 已切流，运行在 `ecommerce` namespace |
-| `services/config` | 配置 API、Watch、审计与 selector 鉴权 | 已切流；集群对象仍保留 `config-center` 旧名称 |
-| `web` | 配置中心管理界面 | 已部署，独立于业务前端 workspace |
+| `services/gateway` | Connect 原生反向代理、BFF 会话、认证、路由与授权 | 源码在 sibling `control-tower`；live workload 与发布版本按 `context/team/local-env.md` 现查，不能从本仓部署清单推断已部署 |
+| `services/config` | 配置 API、Watch、审计与 selector 鉴权 | 源码在 sibling `control-tower`；集群对象可能保留 `config-center` 旧名称，live 状态按环境查询 |
+| `web` | 配置中心管理界面 | 由 sibling 仓管理，部署状态按 live 查询 |
 
 集群入口的主链路如下：
 
@@ -158,12 +158,12 @@ Client
 → BFF session 或迁移期 legacy bearer JWT
 → Casbin（roles × Connect procedure）
 → 注入可信身份头 + 路由级总超时
-→ Consul Watch + 健康过滤 + P2C 选点
-→ h2c Transport
+→ direct Kubernetes Service target + 健康过滤
+→ h2c Transport（按 control-tower 当前实现核对）
 → 后端 Connect 服务
 ```
 
-以上为现状链路。按 [`docs/TECH.md`](docs/TECH.md) 的目标形态，其中四项属待迁移存量：网关-后端统一 H2C（不再受理 HTTP/1.1 服务间流量）、legacy bearer JWT 轨按「单一身份真相」红线移除（绝不允许双重鉴权路径长期并存）、Casbin 由 OpenFGA 关系授权（Check API）取代、Consul 选点迁 K8s Service + CoreDNS。
+上图保留了迁移期概念，不能当作当前部署证明。当前业务服务的注册发现开关为 `CONSUL_ENABLED=false`，网关路由模板使用 direct Service 目标；legacy bearer JWT、Casbin 和 H2C/HTTP 边界仍按 `docs/TECH.md` 与 TODO 的迁移项验收，不把目标态写成已完成。
 
 鉴权主路径已经从「浏览器持有 JWT」演进为 **BFF + 服务端 session**（与 TECH.md 的 Casdoor 有状态 Session 模型一致）：浏览器使用 httpOnly cookie，Tauri 使用 session header，token 与角色只保存在 gateway 侧 Dragonfly；legacy bearer JWT 兼容轨是迁移残留，按 TECH.md 红线属须移除项。后端只接收网关注入的 `x-md-global-*` 身份，不解析浏览器凭据。
 
@@ -201,7 +201,7 @@ SSR：`consumer-next` 使用 Next.js 16.4.0-canary.18（本仓 A/B 后精确锁�
 
 | 组件 | 当前用途 | 状态与边界 |
 |---|---|---|
-| PostgreSQL / CNPG | 10 个服务的核心数据，每服务一个 schema | 集群内 CloudNativePG（2026-09-22 起）：Operator 在 `cnpg-system`（`cnpg-cloudnative-pg-*` + webhook Service），数据面 `Cluster/pg-main` 在 `postgresql`，业务连 `pg-main-rw.postgresql.svc:5432`，外部经 `pg-passthrough-gateway` 的 TLSRoute（SNI 路由，拿 IP 连会被拒）；核实用 `kubectl get cluster -A`。UUIDv7 为默认主键。node3 Pigsty 已退役；HA/PITR 与部署拓扑见 [`docs/TECH.md`](docs/TECH.md) §7.1 |
+| PostgreSQL / CNPG | 10 个服务的核心数据，每服务一个 schema | 集群内 CloudNativePG（2026-09-22 起）：Operator 在 `cnpg-system`（`cnpg-cloudnative-pg-*` + webhook Service），数据面 `Cluster/pg-main` 在 `postgresql`，业务连 `pg-main-rw.postgresql.svc:5432`，外部经 `pg-passthrough-gateway` 的 TLSRoute（SNI 路由，拿 IP 连会被拒）；核实用 `kubectl get cluster -A`。UUIDv7 为默认主键。旧外部 Pigsty 已退役；HA/PITR 与部署拓扑见 [`docs/TECH.md`](docs/TECH.md) §7.1，当前运行对象按 local-env 现查 |
 | Dragonfly | 业务可丢缓存；control-tower BFF session | Redis 协议、TLS-only。业务域不得把库存真相、锁、幂等键或唯一正确性状态放进去；BFF session 是已接受的例外，丢失时 fail-closed 并要求重新登录。按 [`docs/TECH.md`](docs/TECH.md) 目标分实例强制隔离：Session 实例 `noeviction`+持久化 / 业务 Cache 实例 `allkeys-lru` / 限流实例独立，严禁混用 |
 | Meilisearch | 已退役搜索组件 | v1.53；2026-09-04 已删除 Helm release、运行资源、Secret、路由、PVC/PV 与 namespace，仅在 `.service-matrix.yaml` 保留退役记录 |
 | S3 兼容对象存储 | cart 的商品图等对象 | 当前指向 Silo 的 MinIO-compatible API；不是「集群内 MinIO」。按 [`docs/TECH.md`](docs/TECH.md) 定稿对象存储即 Silo（基于 MinIO，开启 Versioning 与 Lifecycle，前端上传统一走后端签发的预签名 URL）；此前的 SeaweedFS 迁移方向已撤销 |
@@ -209,10 +209,10 @@ SSR：`consumer-next` 使用 Next.js 16.4.0-canary.18（本仓 A/B 后精确锁�
 | Apache Kafka | 行投影在用；领域事件主干定稿（[`docs/TECH.md`](docs/TECH.md)） | 部署于非 K8s 独立集群。`products.search_catalog` 已由 Debezium → Kafka → Elasticsearch Sink 搬运；领域事件目标链使用 Debezium Outbox Event Router + Inbox + DLQ，当前业务 producer/consumer 仍为零 |
 | PostgreSQL outbox | 领域事件的事务发布意图 | 业务写与 outbox insert 同 transaction；Debezium Outbox Event Router 从 WAL 搬运，不回写 `published`。consumer 必须使用 Inbox 与业务幂等规则 |
 | 分析 CDC | 需求触发的独立数据链 | 当前未接线；只在真实 ClickHouse/报表需求成立后评估逻辑复制/connector，不能替代领域事件 |
-| Consul | 服务注册发现（存量迁移期） | KV 配置已退役；仍在网关选点与服务注册热路径。按 [`docs/TECH.md`](docs/TECH.md) §10.2 定稿迁 K8s Service + CoreDNS（Cilium KPR），开发环境走 Docker Compose 服务名 |
+| Consul | 服务注册发现（存量迁移期） | KV 配置已退役；当前业务服务关闭 Consul 注册，网关模板使用 direct Service 目标。按 [`docs/TECH.md`](docs/TECH.md) §10.2 收敛到 K8s Service + CoreDNS，开发环境走 Docker Compose 服务名 |
 | Casdoor | OAuth2/OIDC 身份提供方 | control-tower 以机密客户端完成 code 交换；浏览器不再持有 token |
 | Gorse | 推荐引擎 | behavior/product 的外部依赖，使用独立 PostgreSQL/Redis；API key 配置仍有待办 |
-| Elasticsearch | 当前搜索存储（[`docs/TECH.md`](docs/TECH.md)） | k8s 集群内运行 9.4.5 + IK（2026-09-15 自 node3 迁入，仅 ClusterIP）；search Pod 直连读取 `ecommerce_catalog_products`，`products.search_catalog` 经 Debezium/Kafka/Sink 写入。mapping、版本化重建、alias 切换/回退与灾备手顺由 pipeline 仓维护 |
+| Elasticsearch | 当前搜索存储（[`docs/TECH.md`](docs/TECH.md)） | 集群内运行并由 search 通过 `SearchCatalog` 读取稳定 alias；`products.search_catalog` 经 Debezium/Kafka/Sink 写入。mapping、版本化重建、alias 切换/回退与灾备手顺由 pipeline 仓维护，端点按 service matrix/local-env 现查 |
 
 具体端点见 [`.service-matrix.yaml`](.service-matrix.yaml) 的 `externals` 段。凭据只进入 Config Center、OpenBao 与 Kubernetes Secret，**不进入仓库**。
 
@@ -223,7 +223,7 @@ SSR：`consumer-next` 使用 Next.js 16.4.0-canary.18（本仓 A/B 后精确锁�
 | Cilium | CNI、kube-proxy replacement、LoadBalancer/IPAM、Gateway API 数据面 | 本仓没有覆盖 10 个业务服务的 CiliumNetworkPolicy；只有少量工具 workload 的标准 NetworkPolicy，不能宣称已完成默认拒绝 |
 | Gateway API | Cilium `Gateway`、`HTTPRoute`/`TLSRoute`，部分 listener 终止 TLS | 公网资源可能先经过 Pangolin/Traefik/newt；仍有 HTTP 路由迁移项，所以「所有 TLS 都只在 Cilium 终止」不准确 |
 | 证书 | cert-manager 签发服务证书；CA 分发逐步使用 trust-manager | 覆盖面仍需按 workload 验收，不能只看 Certificate Ready |
-| Secret | Config Center selector Secret；ESO 从**集群内 OpenBao**（`k8s/<集群>/<组件>`）物化组件凭据与集群外依赖（node3 PG/Redis/ES、Casdoor）的凭据；业务服务的依赖配置由 kubernetes 仓 harvest 按组件契约写进 Config Center（2026-09-11） | OpenBao 数据随集群亡，重装后从现网反向重建；VPS Vault 已退为可选集群外副本（死接线 09-11 删除）；SOPS 应急路径未落地 |
+| Secret | Config Center selector Secret；ESO 从**集群内 OpenBao**（`k8s/<集群>/<组件>`）物化组件凭据；业务服务依赖配置由 kubernetes 仓 harvest 按组件契约写进 Config Center | OpenBao 数据随集群亡，重装后从现网反向重建；集群外副本与 SOPS 应急路径仍待验收；具体外部依赖端点按 service matrix/local-env 现查 |
 | 业务服务身份 | 网关剥离伪造头后注入 `x-md-global-*`，后端据此识别用户 | 后端不验 session/JWT，也没有完整 east-west mTLS/workload identity；网络隔离不完整时「只信任网关」只是设计假设 |
 | 授权 | gateway Casbin 做 RPC 粒度 RBAC（存量） | 商家数据级 `merchant_id` 隔离、子账号和对象级权限未完成。按 [`docs/TECH.md`](docs/TECH.md) §8 定稿：OpenFGA 关系授权（网关 Check API，merchant/store/order 关系模型），Casbin 为待替换存量 |
 | 服务网格 | 不使用 | 限流、熔断、重试和灰度没有由网格兜底，必须在 gateway、应用或 K8s 层显式设计 |
@@ -238,25 +238,13 @@ SSR：`consumer-next` 使用 Next.js 16.4.0-canary.18（本仓 A/B 后精确锁�
 | Helm Chart OCI | Helm + Harbor | Helm 可登录并推送 `oci://harbor.apikv.com/sumery`；Harbor 即定稿的 Helm 制品仓库，纳入 CI 发布链待办 |
 | Kubernetes 清单 | `backend/services/*/deploy/` + `application-vpa.yml` | 当前运行部署路径；根清单已覆盖 15 个 ecommerce VPA，全部为 `Off`/`RequestsOnly` recommendation-only |
 | Helm | umbrella chart + service/library chart | 描述不完整且版本落后，缺 control-tower gateway；已退役的 outbox relay/search indexer 不得补回，不是现网真相源 |
-| ArgoCD | GitOps 控制器 | 控制器在运行，但当前零 Application/ApplicationSet；没有自动同步、自愈或 prune |
-| 弹性与发布策略 | VPA recommender `1.7.1` + KEDA/Argo Rollouts 控制器 | VPA 已发布但仍在至少 7 天观测和 k6 校准期；无 live ScaledObject 或 canary。证据与下一步见 docs/reports/2026-08-29-vpa-recommendation-only.md |
+| ArgoCD | GitOps 控制器 | 控制器在运行；当前只读查询观察到 `ecommerce-kyverno` Application，业务 Application/ApplicationSet 归属仍以 local-env 现查，不能从 Ready workload 推断 |
+| 弹性与发布策略 | VPA recommender `1.7.1` + KEDA/Argo Rollouts 控制器 | VPA 已发布但仍在至少 7 天观测和 k6 校准期；无 live ScaledObject 或 canary。剩余验收与下一步以 TODO.md 对应条目为准 |
 | CI | GitHub Actions + GitLab context gate | 质量门禁按 PR/push 运行；镜像发布由裸 semver tag `X.Y.Z` 触发，push main 不构建发布制品 |
 
 ### 2.7 可观测性与告警
 
-当前观测数据面已外移 node3，不再是「集群内 Loki + Jaeger + VictoriaMetrics」：
-
-```text
-Go OTel SDK --OTLP/HTTP + Bearer--> Pangolin --> node3 OTel Collector
-  ├── metrics --> VictoriaMetrics
-  ├── logs ----> VictoriaLogs
-  └── traces --> VictoriaTraces
-Kubernetes Vector DaemonSet -----------------------> VictoriaLogs
-Grafana -------------------------------------------> VM / VL / VT
-vmalert --> Alertmanager
-```
-
-按 [`docs/TECH.md`](docs/TECH.md) §9 的目标管道，业务集群内只保留轻量采集器（Vector DaemonSet 采日志、VMAgent 抓指标、OTel SDK 出 trace），三类数据统一经**外置 OTel Collector** 中继（Tail-based 采样：错误/高延迟 100% 保留、正常流量 1%~5%；PII 脱敏；`/healthz`、`/metrics` 噪声清洗；动态批处理与重打标）后分流 VictoriaLogs / VictoriaMetrics / VictoriaTraces。现状与之的差距：Vector 直推 VictoriaLogs、指标未经 VMAgent 统一抓取、尾采样管道未建，均为待对齐项。
+观测组件的位置和链路会随集群重建与迁移变化，不在 STACK.md 维护 node/VIP 快照；按 `context/team/local-env.md` 查询当前目标。当前契约仍是 Go OTel SDK、Vector/轻量采集、VictoriaLogs/VictoriaMetrics/VictoriaTraces、Grafana、vmalert 与 Alertmanager，实际接线和缺口以 `docs/TECH.md` 与 TODO.md 为准。
 
 - Go 服务以 OTel SDK 输出 trace、metric、log；前端 `@ecommerce/perf` 与 `tracker` 上报 Web Vitals、长任务、接口耗时和行为事件。
 - Vector 是当前容器日志采集器；fluent-bit、Loki、集群内 Jaeger/VM/Grafana/OTel Collector 已删除或退役。
@@ -386,7 +374,9 @@ buf 的 lint/breaking/生成配置**直读 `backend/buf.yaml` 与 `buf.gen*.yaml
 `query_parameter_limit: 1`（强制命名参数结构体）。`database.uri: ${DB_URI}`，凭据走环境变量。
 
 建表走版本化迁移：`internal/data/migrations/*.sql`（goose 注解，2026-08-21 起；
-`make migrate-up/-create`，工具与 baseline 流程见 `backend/tools/dbmigrate/README.md`）。
+在 `backend/` 执行 `make migrate-up` 应用迁移，或执行
+`make migrate-create MIGRATE_SVC=cart NAME=add_coupon_column` 创建指定服务的迁移；
+工具与 baseline 流程见 `backend/tools/dbmigrate/README.md`）。
 四条硬约定（完整样例看任一服务的 `internal/data/migrations/00001_*.sql`，如 cart）：
 
 1. **每服务一个 schema** 物理隔离（`CREATE SCHEMA cart;` 且对象显式限定；
@@ -564,9 +554,9 @@ pnpm ready          # vp fmt && vp lint && vp run test -r && vp run build -r
 | **终端与领域覆盖** | merchant/admin 主要是壳；没有独立物流端、仓储端或 WMS。履约并入 order，但领域动作仍待实现 |
 | **服务间调用** | 10 个服务的 `depends_on` 当前全部为空；order→inventory/product/address、payment→order 等只存在于 `depends_on_planned` |
 | **领域事件** | NATS、relay 和 search indexer 已退役；Product/Order 事务内 outbox producer、Debezium Outbox Event Router 路由、franz-go consumer 与 Inbox 尚未接线，order/behavior 仍有进程内路径。Kafka 已承载搜索行投影，但这不等于领域事件已经落地 |
-| **容量与 HA** | 没有固定数据集与 k6 结果；Elasticsearch 已切流，但 mapping 仍为单节点 `replicas=0`。Kafka/Connect/ES 已迁入 k8s 但都是单副本本地盘，PostgreSQL 仍在 node3 单机，搜索灾备手顺尚缺远端故障注入证据；主库、对象存储和备份路径也没有百万或千万级验收结论 |
+| **容量与 HA** | 没有固定数据集与 k6 结果；搜索、Kafka/Connect、PostgreSQL、对象存储和备份路径仍缺完整容量与远端故障注入证据；不能据组件 Ready 或一次低流量观察宣称百万/千万级验收 |
 | **安全边界** | gateway 已完成 BFF/JWT/Casbin 与身份头剥离，但业务服务没有统一 workload identity，10 个服务也没有完整默认拒绝 NetworkPolicy；数据级归属校验仍有缺口 |
-| **交付** | ArgoCD 当前零 Application/ApplicationSet；Helm 与运行实况不一致，自动同步、自愈和回滚未闭环 |
+| **交付** | Helm 与运行实况不一致；业务 ArgoCD Application/ApplicationSet 归属未闭环，自动同步、自愈和回滚不能由 Ready workload 推断 |
 | **可观测性告警** | VM/VL/VT/Grafana/vmalert/Alertmanager 在用，但外部通知与 resolved 演练未闭环 |
 | **前端质量** | `pnpm ready` 已覆盖 lint/fmt/type/test/build，浏览器与端到端用例仍不足，merchant/admin 业务覆盖尤其薄弱 |
 | **基础设施边界** | `config/log/otel/registry` 的共享实现已迁入 `go-connect-kit`；10 个服务只保留 protobuf、配置源和部署策略适配层，跨服务修复不再同构回填 |

@@ -24,7 +24,7 @@ Golang + React 的 B2B2C 多商家电商实践项目：10 个后端微服务、c
 | 事件      | 主干定稿为外部非 K8s Apache Kafka；领域事件目标链为 PostgreSQL Outbox → Debezium Outbox Event Router → Kafka → Inbox 幂等 + DLQ，当前零业务生产者/消费者                                                                                                                                                 |
 | 注册/配置 | 服务发现定稿 K8s Service + CoreDNS；pre 半生产测试走 Docker Compose 服务名，开发内环（mirrord/Okteto）评估中；Consul 为存量迁移期组件；Config Center 是 10 个服务唯一 Bootstrap 来源                                                                                                                     |
 | 边缘/安全 | Cilium CNI/KPR/LB/Gateway API、cert-manager、OpenBao；业务服务的默认拒绝 NetworkPolicy 和 east-west 身份仍不完整                                                                                                                                                                                         |
-| 制品/交付 | Docker Buildx、GitHub Actions、Renovate；制品分工（[`docs/TECH.md`](docs/TECH.md) §7.1）：TCR 为主镜像仓库（集群直连拉取）、Harbor 存 Helm 制品（OCI）、GHCR 可选双存（镜像+Helm，是否推送由 CI 按网络决定）；Kubernetes manifest、Helm；ArgoCD 当前断线                                                 |
+| 制品/交付 | Docker Buildx、GitHub Actions、Renovate；制品分工（[`docs/TECH.md`](docs/TECH.md) §7.1）：TCR 为主镜像仓库（集群直连拉取）、Harbor 存 Helm 制品（OCI）、GHCR 可选双存（镜像+Helm，是否推送由 CI 按网络决定）；Kubernetes manifest、Helm；ArgoCD 已安装，但业务 Application/ApplicationSet 接管仍未完成                                                 |
 | 可观测性  | OpenTelemetry、Vector、VictoriaMetrics/Logs/Traces、Grafana、vmalert、Alertmanager；外部告警通知仍未闭环                                                                                                                                                                                                 |
 | 工程工具  | vite-plus、oxlint/oxfmt、Vitest/Playwright、Buf breaking、structcheck、verify-context/canary、commitlint                                                                                                                                                                                                 |
 
@@ -34,8 +34,8 @@ Golang + React 的 B2B2C 多商家电商实践项目：10 个后端微服务、c
 - **后端分层**参考 go-kratos：biz（领域结构体）→ data（DB/cache/search/event/object）→ service（proto 转换）→ server（fx 装配与注册发现）
 - **入口能力集中**：Casdoor 有状态 Session 校验、授权（目标 OpenFGA，存量 Casbin/legacy JWT 待移除）、路由、超时与可信身份头由 control-tower gateway 处理；服务仍负责数据归属与领域权限
 - **配置源与业务配置分离**：服务先读一份很小的 selector，再从 Config Center 取完整 `Bootstrap`；不存在 Consul KV 回退
-- **交付实况**：GitHub Actions 按 semver tag 构建并双推 TCR/GHCR，再回写 Helm tag；ArgoCD 当前没有 Application，部署仍走 `backend/services/*/deploy/`
-- **可观测性**：Vector 采容器日志，应用经 OTel SDK 输出三支柱；node3 的 VictoriaMetrics/Logs/Traces 与 Grafana 汇总查询
+- **交付实况**：GitHub Actions 按 semver tag 构建并双推 TCR/GHCR，再回写 Helm tag；只读查询目前只观察到 `ecommerce-kyverno` ArgoCD Application，业务部署归属仍是 TODO，不能从 workload Ready 推断
+- **可观测性**：Vector 采容器日志，应用经 OTel SDK 输出三支柱；组件位置按 [`context/team/local-env.md`](context/team/local-env.md) 的实时入口查询，不在 README 维护快照
 - **容量边界**：规模必须以固定数据集、k6 脚本、资源配额、延迟/错误率结果和故障恢复证据验收，当前未建立百万/千万级承诺
 
 ## 仓库结构
@@ -46,7 +46,7 @@ Golang + React 的 B2B2C 多商家电商实践项目：10 个后端微服务、c
 | `frontend/` | pnpm monorepo：4 app（consumer / merchant / admin / desktop）+ 9 共享包，见 [`frontend/README.md`](frontend/README.md) |
 | `context/` | AI/团队三层知识库（团队级 / 框架级 / 服务级），入口 [`context/INDEX.md`](context/INDEX.md) |
 | `helm/`、`argocd-*.yml` | 待修复的 Helm/GitOps 描述；当前部署实况以各服务 `deploy/` 为准 |
-| `docs/` | 技术真相源（`docs/TECH.md`）、架构与领域设计（`docs/design/`，按微服务分目录）、**待办明细**（`docs/todo/`，按 TECH.md 体系分类）、可观测性方法论与看板脚本（`docs/observability/`）、agents 配置（`docs/agents/`）、不可变历史归档（`docs/progress-archive/`）、调研报告（`docs/reports/`） |
+| `docs/` | 技术真相源（`docs/TECH.md`）、架构与领域设计（`docs/design/`，按微服务分目录）、可观测性方法论与看板脚本（`docs/observability/`）、agents 配置（`docs/agents/`）。待办明细在 `TODO.md`；不再维护过期的过程归档目录 |
 | `scripts/` | 验收锚点与门禁脚本（verify-quick / verify-context + canary / lint-baseline / harness-scars / gen-third-party-notices） |
 | `.scratch/` | 进行中的 spec / issue（本地 markdown 工作流） |
 
@@ -58,6 +58,7 @@ Golang + React 的 B2B2C 多商家电商实践项目：10 个后端微服务、c
 
 | 文档 | 定位 |
 |---|---|
+| [从 MVP 到可靠电商：架构学习路线](docs/learning/README.md) | 用 Git 原文还原最初 MVP 与实现，逐服务对比演进、局限和后续修法；分别判定原始 MVP 与生产要求是否满足，并提供分阶段验收实验 |
 | [`AGENTS.md`](AGENTS.md) | AI 协作入口：硬规则 + 验收锚点命令（**改代码前先读**） |
 | [`docs/TECH.md`](docs/TECH.md) | **技术架构、技术选型与基础设施真相源**（2026-08-28 定稿）：选型总览、流量拓扑、协同模型、微服务纲领、鉴权与可观测性体系、实施路线图与工程红线；其他文档与之冲突处以它为准 |
 | [`docs/design/`](docs/design/README.md) | 业务与领域设计真相源：按微服务分目录（platform/product/order/…），含拆分与删章记录 |
@@ -65,11 +66,10 @@ Golang + React 的 B2B2C 多商家电商实践项目：10 个后端微服务、c
 | [`STACK.md`](STACK.md) | 工程约束与现状边界：版本锁定、分层铁律、proto/sqlc 规则；选型冲突以 `docs/TECH.md` 为准 |
 | [`.service-matrix.yaml`](.service-matrix.yaml) | 服务拓扑事实表：注册名、网关前缀、依赖、Config Center 键（CI 强制对齐） |
 | [`TODO.md`](TODO.md) | **进度与待办的唯一真相源**：全局优先级视图 + 分类索引；任何待办变更都要落到它 |
-| [`docs/todo/`](TODO.md#四分类明细) | 待办明细，按 `docs/TECH.md` 的体系分类（可观测性/事件驱动/鉴权/基础设施…）；由 `TODO.md` 索引 |
 | [`docs/GLOSSARY.md`](docs/GLOSSARY.md) | **领域术语表**：189 个 B2B2C 电商与平台词条（SPU/SKU/商品快照/拆单/履约/OrderGroup/Saga Manager/PaymentIntent/StockLedger…）。读设计文档或写 proto 前遇到不认识的业务名词先查这里 |
 | [`docs/TECH-RADAR.md`](docs/TECH-RADAR.md) | CNCF Landscape 选型评估；新增基础设施必须由量化需求、容量或故障证据触发 |
 | [`PRODUCT.md`](PRODUCT.md) / [`DESIGN.md`](DESIGN.md) | 产品定义与「灯市」视觉设计系统（配色/字体/间距 token），前端设计工作流（impeccable）的真相源——与已拆分的旧架构 DESIGN.md 同名不同物 |
-| [`docs/DEVOPS.md`](docs/DEVOPS.md) / [`observability/OBSERVABILITY.md`](docs/observability/OBSERVABILITY.md) | DevOps 与可观测性的**目标态**设计 |
+| [`docs/DEVOPS.md`](docs/DEVOPS.md) / [`docs/observability/OBSERVABILITY.md`](docs/observability/OBSERVABILITY.md) | DevOps 与可观测性的**目标态**设计 |
 | [`docs/design/merchant/store-settings.md`](docs/design/merchant/store-settings.md) | Shopline 商店设置竞品调研；取舍与商家 MVP 路线见同目录 [`roadmap.md`](docs/design/merchant/roadmap.md) |
 | 网关与配置面设计 | 已随代码迁至同级仓 control-tower（`../control-tower/docs/design/`），本仓不再保留副本 |
 | [`docs/SCAFFOLD.md`](docs/SCAFFOLD.md) | 换领域复用本仓工程体系的新项目生成规范 |
@@ -80,12 +80,12 @@ Golang + React 的 B2B2C 多商家电商实践项目：10 个后端微服务、c
 1. Go：版本以 `backend/go.mod` 的 `go` 指令为准（数字不在此复制，防漂移；网关在同级仓 control-tower）
 2. 前端：Node.js >= 22、pnpm 11
 3. 数据库：PostgreSQL 18，集群内 CloudNativePG 承载（`pg-main-rw.postgresql.svc:5432`，拓扑见 [`docs/TECH.md`](docs/TECH.md) §7.1）；Dragonfly 用于业务可丢缓存和 control-tower BFF session。领域锁、幂等键与库存真相必须锚定 PostgreSQL
-4. 注册/发现：Consul（**定稿退役 → K8s Service + CoreDNS，开发环境 Docker Compose 服务名**，见 [`docs/TECH.md`](docs/TECH.md) §10.2；四步迁移见 TODO；迁移完成前运行仍需）
+4. 注册/发现：目标与当前业务路径使用 K8s Service + CoreDNS，业务服务已设置 `CONSUL_ENABLED=false`；pre 路径使用 Docker Compose 服务名，剩余 Consul 迁移/管理路径见 TODO 并以源码核对
 
 配置中心（同级仓 [control-tower](https://github.com/lens077/control-tower) 的 config 服务）是
-10 个业务服务的**必需启动依赖**。Consul 只负责服务注册发现，不再存储 Bootstrap。
+10 个业务服务的**必需启动依赖**。Consul 是迁移/管理遗留组件，不再作为 Bootstrap 回退来源。
 
-如果要体验完整环境，还需 Docker、Kubernetes、Cilium Gateway API、cert-manager、ESO/Vault，以及外置的 OpenTelemetry Collector、VictoriaMetrics、VictoriaLogs、VictoriaTraces、Vector、Grafana、vmalert 与 Alertmanager。ArgoCD 虽已安装，但当前没有 Application，不能作为部署前提。
+如果要体验完整环境，还需 Docker、Kubernetes、Cilium Gateway API、cert-manager、ESO/Vault，以及外置的 OpenTelemetry Collector、VictoriaMetrics、VictoriaLogs、VictoriaTraces、Vector、Grafana、vmalert 与 Alertmanager。ArgoCD 已安装；一次只读查询只观察到 `ecommerce-kyverno` Application 为 Synced/Healthy，业务服务的 GitOps 归属仍须按 local-env 现查。
 
 ## 运行
 
@@ -94,7 +94,7 @@ Golang + React 的 B2B2C 多商家电商实践项目：10 个后端微服务、c
 ```bash
 docker compose -f backend/infrastructure/postgres/compose.yaml up -d
 docker compose -f backend/infrastructure/redis/compose.yaml up -d
-docker compose -f backend/infrastructure/consul/compose.yaml up -d
+# Consul 是迁移/管理遗留组件；当前业务服务设置为 CONSUL_ENABLED=false。
 ```
 
 业务服务使用的基础设施地址配置在 Config Center，不在仓库 YAML。search 服务读取 `search.catalog`，只访问稳定 alias。CDC Connector、Elasticsearch mapping、全量重建与灾备手顺由同级仓 `postgres-kafka-es-streaming-pipeline` 维护；不要在本仓恢复已退役的 relay 或 indexer worker。

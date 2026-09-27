@@ -81,37 +81,13 @@ externals:
   postgres_gorse: { host: "pg.apikv.com:52288", used_by: [gorse, casdoor], note: "**不只是 gorse 的库**（实测 2026-09-01 订正）：同实例上有 gorse 与 casdoor 两个库，Casdoor 是第二个消费者——当时 5 条连接中 4 条来自 casdoor。在 node1（≠ CNPG，≠ Pigsty）。宿主端口 2026-08-19 由 5432 随机化为 52288（容器内仍 5432）。收窄来源：Casdoor 原经 host=apikv.com **绕公网**连回本机（源地址呈现为 node1 公网 IP），**2026-09-01 已改为 host=172.18.0.1 走 Docker 网关**，PG 侧实测源地址转为 172.19.0.1、公网连接归零，故收窄 52288 时**只需放行 node2（gorse）**。**2026-09-01 收窄已落地**：只放 node2 + 运维段 + Docker 网桥（Casdoor 经 172.18.0.1 走这条），其余 DROP，由 node1 `docker-port-guard.service` 落地并开机自启；实测 node3 两个端口均被拒、node2 均通、Casdoor HTTP 200。⚠️ 改规则必须匹配 **DNAT 之后**的容器 IP:5432，按宿主端口写会得到死规则。**2026-09-01 TLS 与口令轮换已落地**：复用 Pangolin 的 ZeroSSL `*.apikv.com`（`/home/docker/postgres/tls`，uid 999、key 0600），`pg_hba` 远程行改 `hostssl`，明文连接被拒（实测报 `no encryption`）；`root` 口令已换为 28 位强随机（真值只在 node1 与 Config Center，不入仓）。客户端一律走 `pg.apikv.com:52288` + `sslmode=verify-full`（证书无 IP SAN，按 IP 连必然失败）；Casdoor 用 compose `extra_hosts` 把该域名指到 172.18.0.1，既过 SAN 校验又不出内网。实测两端均 TLSv1.3/TLS_AES_256_GCM_SHA384" }
   alipay: { used_by: [payment], note: "pay.alipay.* 为空时支付网关能力禁用" }
 
-  # node3 Pigsty —— PG 与可观测三支柱已接线；Redis 的存在不代表业务采用。Kafka/Silo/ES 已于 2026-09-15 迁入集群并从 node3 删除。
-  # 记在这里是因为它属于「每次都要现搜一遍」的结构事实：入口端口号不常规，极易误判成不通。
-  pigsty_node3:
-    used_by: [user, search, behavior, product, cart, address, order, inventory, merchant, payment]
-    note: |
-      Pigsty v4.5.0，SSH alias 为 node3，内网 10.10.21.172，x86_64。
-      自身公网只开 SSH；一切访问经 node1 的 Pangolin（newt 站点 node3，siteId 7）。
-      TCP 入口在 node1：PostgreSQL 30001 / Redis 30002 / Kafka 30004。
-      HTTP 入口：node3-{grafana,metrics,logs,traces,vmalert,alerts}.apikv.com（443）。
-      已预建 db=ecommerce user=app、Kafka SCRAM 用户 ecommerce_app 与 topic ecommerce.events。
-      Silo（Pigsty MINIO 模块）2026-08-24 已补装：S3 9000 / 控制台 9001，桶 pgsql/meta/data。
-      **已接入**：可观测三条信号全部改推 node3（metrics/traces/应用 OTLP 日志经 otel collector，
-      容器日志经 vector DaemonSet——两条通路不同，必须分别切）；Redis 已上 TLS
-      （stunnel 终止在 127.0.0.1:6379；Pigsty redis 角色本身没有任何 TLS 变量）；
-      PG 数据已从 CNPG 全量迁入（32 表行数逐表一致、抽样内容 md5 相同）。
-      **PG 全量切流**（2026-08-24）：当日为 10 个业务服务 + outbox-relay + Config Center 自身；
-      outbox-relay 已于 2026-09-03 退役，当前不得视为运行工作负载。其余组件指向
-      node1:30001，ssl_mode=verify-ca（经隧道以 IP 连接，证书主机名对不上）。
-      **历史记录已过时**：旧 node3 Pigsty 与当时的 CNPG 删除事件都已被 2026-09-22 的 k1/k2/k3 重建覆盖；当前业务库是集群内 CNPG `pg-main`，由 Go migration 建表。旧权限 SQL 仅作授权参考，不是业务数据备份；OpenFGA 仍未部署。
-      **Silo 入口已建**：https://silo-api.apikv.com（Pangolin resourceId 29，
-      tlsServerName=sss.pigsty，sso 关闭）。
-      **集群内可观测已整体删除**（含 Helm release 与 PVC，回收约 23Gi）：
-      grafana/jaeger/loki/vl-victoria-logs/vm-single/fluent-bit/otel-collector 全删，
-      只剩 vector DaemonSet 送容器日志。服务 OTLP 发到 node3-otlp.apikv.com:443
-      （Pangolin resourceId 30 → node3 上 docker 跑的 otelcol:4318，再分发到本机三个
-      Victoria 后端）。容器日志不走 collector——vector 推的是 jsonline 不是 OTLP。
-      ⚠️ 集群外依赖已成硬依赖：node3 或 Pangolin 隧道故障 = 数据面连不上库、观测全断。
-      Kafka 当前已承载搜索 CDC 行投影；领域事件 producer/consumer 仍未接线。领域事件采用门禁见 docs/design/platform/production-scale-goal.md。
-
 # 已退役外部依赖（只保留历史边界，不得被 services[].external 引用）────────
 retired_externals:
+  # 2026-09-26 复核：旧项虽写「历史过时」仍挂 used_by，agent 会当作现役依赖。
+  # 退役只保留边界，运行快照不留在服务拓扑的热读取路径。
+  pigsty_node3:
+    retired_at: "2026-09-22"
+    note: "旧 node3 Pigsty 随集群重建退役；业务 PG 改由 CNPG pg-main 承载。旧 node3-* 观测入口不是现役配置来源，组件位置按 context/team/local-env.md 的只读查询核验。"
   meilisearch:
     former_host: "meilisearch.search.svc:7700"
     retired_at: "2026-09-04"

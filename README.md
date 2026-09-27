@@ -20,12 +20,12 @@ This project uses (in whole or in part) my other repositories:
 | Backend | Go, ConnectRPC Go, Protobuf/Buf, Protovalidate, Fx, pgx, sqlc, goose, OpenTelemetry |
 | Frontend | React, TypeScript, ConnectRPC/Protobuf-ES, pnpm workspace, vite-plus (`vp`), Tauri |
 | Gateway / config | [control-tower](https://github.com/lens077/control-tower): Casdoor stateful session (BFF), Connect pass-through (H2C), Config Center; per [`docs/TECH.md`](docs/TECH.md) the target is OpenFGA relationship-based authorization replacing the legacy Casbin and removing the legacy JWT compatibility track; no retries, BBR/circuit breaking, or HTTP/3 by default |
-| Data | In-cluster CloudNativePG PostgreSQL (`Cluster/pg-main` in `postgresql`, operator in `cnpg-system`; UUIDv7 primary keys; node3 Pigsty retired 2026-09-22), Dragonfly (separate instances for session / cache / rate limiting; business-side lossy cache + BFF session), Silo (MinIO-based, finalized); search reads the stable Elasticsearch alias through `SearchCatalog`, with the curated projection moved from `products.search_catalog` via Debezium → Kafka → Elasticsearch Sink; Meilisearch runtime resources were fully retired on 2026-09-04 |
+| Data | In-cluster CloudNativePG PostgreSQL (`Cluster/pg-main` in `postgresql`, operator in `cnpg-system`; UUIDv7 primary keys; the former node3 Pigsty is retired), Dragonfly (separate instances for session / cache / rate limiting; business-side lossy cache + BFF session), Silo (MinIO-based, finalized); search reads the stable Elasticsearch alias through `SearchCatalog`, with the curated projection moved from `products.search_catalog` via Debezium → Kafka → Elasticsearch Sink; Meilisearch runtime resources were fully retired on 2026-09-04 |
 | Events | Backbone finalized as external, non-K8s Apache Kafka; the target domain-event chain is PostgreSQL Outbox → Debezium Outbox Event Router → Kafka → idempotent Inbox + DLQ, currently with zero business producers/consumers; NATS JetStream, the hand-written relay, and the search indexer have been retired |
-| Registry / config | Service discovery finalized as K8s Service + CoreDNS; the pre (semi-production) environment uses Docker Compose service names, and the dev inner loop (mirrord/Okteto) is under evaluation; Consul is a legacy migration-period component; Config Center is the sole Bootstrap source for all 10 services |
-| Edge / security | Cilium CNI/KPR/LB/Gateway API, cert-manager, ESO + Vault; default-deny NetworkPolicy and east-west identity for business services are still incomplete |
-| Artifacts / delivery | Docker Buildx, GitHub Actions, Renovate; artifact split ([`docs/TECH.md`](docs/TECH.md) §7.1): TCR is the primary image registry (pulled directly by the cluster), Harbor stores Helm artifacts (OCI), GHCR is an optional mirror (images + Helm, pushed by CI depending on network); Kubernetes manifests, Helm; ArgoCD is currently disconnected |
-| Observability | OpenTelemetry, Vector, VictoriaMetrics/Logs/Traces, Grafana, vmalert, Alertmanager; external alert notification is not yet closed-loop |
+| Registry / config | Service discovery uses Kubernetes Service + CoreDNS; the pre (semi-production) environment uses Docker Compose service names, and the dev inner loop (mirrord/Okteto) is under evaluation; Consul is a legacy migration-period component and current business services have `CONSUL_ENABLED=false`; Config Center is the sole Bootstrap source for all 10 services |
+| Edge / security | Cilium CNI/KPR/LB/Gateway API, cert-manager, ESO + OpenBao; default-deny NetworkPolicy and east-west identity for business services are still incomplete |
+| Artifacts / delivery | Docker Buildx, GitHub Actions, Renovate; artifact split ([`docs/TECH.md`](docs/TECH.md) §7.1): TCR is the primary image registry (pulled directly by the cluster), Harbor stores Helm artifacts (OCI), GHCR is an optional mirror (images + Helm, pushed by CI depending on network); Kubernetes manifests, Helm; ArgoCD is installed but business Application/ApplicationSet ownership is incomplete |
+| Observability | OpenTelemetry, Vector, VictoriaMetrics/Logs/Traces, Grafana, vmalert, Alertmanager; external alert notification is not yet closed-loop; current component placement is queried through [`context/team/local-env.md`](context/team/local-env.md), not this README |
 | Engineering tooling | vite-plus, oxlint/oxfmt, Vitest/Playwright, Buf breaking, structcheck, verify-context/canary, commitlint |
 
 Architecture highlights (the source of truth for technical architecture / technology choices / infrastructure is [`docs/TECH.md`](docs/TECH.md); business design lives in [`docs/design/`](docs/design/README.md); engineering constraints are in [`STACK.md`](STACK.md)):
@@ -34,8 +34,8 @@ Architecture highlights (the source of truth for technical architecture / techno
 - **Backend layering** modeled on go-kratos: biz (domain structs) → data (DB/cache/search/event/object) → service (proto conversion) → server (fx wiring and registration/discovery)
 - **Entry capabilities centralized**: Casdoor stateful session validation, authorization (target OpenFGA; legacy Casbin / legacy JWT pending removal), routing, timeouts, and trusted identity headers are handled by the control-tower gateway; services remain responsible for data ownership and domain permissions
 - **Config source separated from business config**: each service first reads a tiny selector, then fetches the full `Bootstrap` from Config Center; there is no Consul KV fallback
-- **Delivery status**: GitHub Actions builds on semver tags, pushes to both TCR and GHCR, then writes the Helm tag back; ArgoCD currently has no Application, so deployment still goes through `backend/services/*/deploy/`
-- **Observability**: Vector collects container logs; applications emit the three pillars through the OTel SDK; VictoriaMetrics/Logs/Traces and Grafana on node3 aggregate the queries
+- **Delivery status**: GitHub Actions builds on semver tags, pushes to both TCR and GHCR, then writes the Helm tag back; a read-only query currently shows only the `ecommerce-kyverno` ArgoCD Application, so business deployment ownership remains an explicit TODO and is not inferred from Ready workloads
+- **Observability**: Vector collects container logs and applications emit the three pillars through the OTel SDK; current component placement is queried through [`context/team/local-env.md`](context/team/local-env.md), not maintained as a README snapshot
 - **Capacity boundary**: scale must be accepted with fixed datasets, k6 scripts, resource quotas, latency/error-rate results, and failure-recovery evidence; no million/ten-million-scale commitment has been established yet
 
 ## Repository layout
@@ -46,7 +46,7 @@ Architecture highlights (the source of truth for technical architecture / techno
 | `frontend/` | pnpm monorepo: 4 apps (consumer / merchant / admin / desktop) + 9 shared packages, see [`frontend/README.md`](frontend/README.md) |
 | `context/` | Three-layer AI/team knowledge base (team / framework / service level), entry point [`context/INDEX.md`](context/INDEX.md) |
 | `helm/`, `argocd-*.yml` | Helm/GitOps descriptions pending repair; the actual deployment state is defined by each service's `deploy/` |
-| `docs/` | Technical source of truth (`docs/TECH.md`), architecture and domain design (`docs/design/`, one directory per microservice), **TODO details** (`docs/todo/`, categorized by the TECH.md structure), observability methodology and dashboard scripts (`docs/observability/`), agent configuration (`docs/agents/`), immutable history archive (`docs/progress-archive/`), research reports (`docs/reports/`) |
+| `docs/` | Technical source of truth (`docs/TECH.md`), architecture and domain design (`docs/design/`, one directory per microservice), observability methodology and dashboard scripts (`docs/observability/`), agent configuration (`docs/agents/`). TODO details live in `TODO.md`; obsolete process archives are not maintained here |
 | `scripts/` | Acceptance anchors and gate scripts (verify-quick / verify-context + canary / lint-baseline / harness-scars / gen-third-party-notices) |
 | `.scratch/` | In-progress specs / issues (local markdown workflow) |
 
@@ -58,6 +58,7 @@ Architecture highlights (the source of truth for technical architecture / techno
 
 | Document | Purpose |
 |---|---|
+| [Architecture learning guide (Chinese)](docs/learning/README.md) | Git-backed original MVP and early implementations, evolution of all ten services and the platform, current limits, separate MVP/production readiness judgments, and staged repair exercises |
 | [`AGENTS.md`](AGENTS.md) | AI collaboration entry point: hard rules + acceptance anchor commands (**read before changing code**) |
 | [`docs/TECH.md`](docs/TECH.md) | **Source of truth for technical architecture, technology choices, and infrastructure** (finalized 2026-08-28): selection overview, traffic topology, collaboration model, microservice principles, auth and observability systems, implementation roadmap, and engineering red lines; where other documents conflict, this one wins |
 | [`docs/design/`](docs/design/README.md) | Source of truth for business and domain design: one directory per microservice (platform/product/order/…), including split and chapter-removal records |
@@ -65,11 +66,10 @@ Architecture highlights (the source of truth for technical architecture / techno
 | [`STACK.md`](STACK.md) | Engineering constraints and current boundaries: version pinning, layering rules, proto/sqlc rules; `docs/TECH.md` wins on technology-choice conflicts |
 | [`.service-matrix.yaml`](.service-matrix.yaml) | Service topology fact table: registration names, gateway prefixes, dependencies, Config Center keys (enforced by CI) |
 | [`TODO.md`](TODO.md) | **The single source of truth for progress and TODOs**: global priority view + categorized index; every TODO change must land here |
-| [`docs/todo/`](TODO.md#四分类明细) | TODO details categorized by the `docs/TECH.md` structure (observability / event-driven / auth / infrastructure…); indexed by `TODO.md` |
 | [`docs/GLOSSARY.md`](docs/GLOSSARY.md) | **Domain glossary**: 189 B2B2C e-commerce and platform terms (SPU/SKU/product snapshot/order splitting/fulfillment/OrderGroup/Saga Manager/PaymentIntent/StockLedger…). Look here first when you meet an unfamiliar business term while reading design docs or writing proto |
 | [`docs/TECH-RADAR.md`](docs/TECH-RADAR.md) | CNCF Landscape evaluation; any new infrastructure must be triggered by quantified requirements, capacity, or failure evidence |
 | [`PRODUCT.md`](PRODUCT.md) / [`DESIGN.md`](DESIGN.md) | Product definition and the "Lantern Market" visual design system (color/typography/spacing tokens), the source of truth for the frontend design workflow (impeccable) — same name as the old, since-split architecture DESIGN.md, but a different document |
-| [`docs/DEVOPS.md`](docs/DEVOPS.md) / [`observability/OBSERVABILITY.md`](docs/observability/OBSERVABILITY.md) | **Target-state** design for DevOps and observability |
+| [`docs/DEVOPS.md`](docs/DEVOPS.md) / [`docs/observability/OBSERVABILITY.md`](docs/observability/OBSERVABILITY.md) | **Target-state** design for DevOps and observability |
 | [`docs/design/merchant/store-settings.md`](docs/design/merchant/store-settings.md) | Competitive research on Shopline store settings; trade-offs and the merchant MVP route are in [`roadmap.md`](docs/design/merchant/roadmap.md) in the same directory |
 | Gateway and config-plane design | Moved with the code to the sibling repo control-tower (`../control-tower/docs/design/`); no copy is kept in this repo |
 | [`docs/SCAFFOLD.md`](docs/SCAFFOLD.md) | Spec for generating a new project that reuses this repo's engineering system in a different domain |
@@ -80,12 +80,12 @@ Architecture highlights (the source of truth for technical architecture / techno
 1. Go: the version is defined by the `go` directive in `backend/go.mod` (not duplicated here to avoid drift; the gateway lives in the sibling repo control-tower)
 2. Frontend: Node.js >= 22, pnpm 11
 3. Database: PostgreSQL 18 on in-cluster CloudNativePG (`pg-main-rw.postgresql.svc:5432`; topology in [`docs/TECH.md`](docs/TECH.md) §7.1); Dragonfly serves lossy business cache and the control-tower BFF session. Domain locks, idempotency keys, and inventory truth must be anchored in PostgreSQL
-4. Registry / discovery: Consul (**finalized for retirement → K8s Service + CoreDNS, Docker Compose service names in dev**, see [`docs/TECH.md`](docs/TECH.md) §10.2; the four-step migration is in TODO; still required at runtime until the migration completes)
+4. Registry / discovery: Kubernetes Service + CoreDNS is the target and current business services set `CONSUL_ENABLED=false`; Docker Compose uses service names in the pre path, while remaining Consul migration/admin paths are tracked in TODO and verified from source
 
 Config Center (the config service of the sibling repo [control-tower](https://github.com/lens077/control-tower)) is a
 **required startup dependency** for all 10 business services. Consul only handles service registration/discovery and no longer stores Bootstrap.
 
-For the full environment you also need Docker, Kubernetes, Cilium Gateway API, cert-manager, ESO/Vault, plus external OpenTelemetry Collector, VictoriaMetrics, VictoriaLogs, VictoriaTraces, Vector, Grafana, vmalert, and Alertmanager. ArgoCD is installed but currently has no Application, so it cannot be treated as a deployment prerequisite.
+For the full environment you also need Docker, Kubernetes, Cilium Gateway API, cert-manager, ESO/Vault, plus external OpenTelemetry Collector, VictoriaMetrics, VictoriaLogs, VictoriaTraces, Vector, Grafana, vmalert, and Alertmanager. ArgoCD is installed; a point-in-time read-only query observed only the `ecommerce-kyverno` Application as Synced/Healthy, so service ownership must be checked before treating GitOps as a deployment prerequisite.
 
 ## Running
 
@@ -94,7 +94,7 @@ For the full environment you also need Docker, Kubernetes, Cilium Gateway API, c
 ```bash
 docker compose -f backend/infrastructure/postgres/compose.yaml up -d
 docker compose -f backend/infrastructure/redis/compose.yaml up -d
-docker compose -f backend/infrastructure/consul/compose.yaml up -d
+# Consul is a legacy migration/admin component; current business services set CONSUL_ENABLED=false.
 ```
 
 Infrastructure addresses used by business services are configured in Config Center, not in repo YAML. The search service reads `search.catalog` and only touches the stable alias. The CDC connector, Elasticsearch mapping, full rebuild, and disaster-recovery procedures are maintained in the sibling repo `postgres-kafka-es-streaming-pipeline`; do not resurrect the retired relay or indexer worker in this repo.
