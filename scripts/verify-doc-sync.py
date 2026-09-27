@@ -25,6 +25,11 @@ def git(*args):
     return result.stdout
 
 
+def reachable(rev):
+    return subprocess.run(["git", "rev-parse", "--verify", rev + "^{commit}"],
+                          capture_output=True, text=True).returncode == 0
+
+
 def paths(*args):
     return {name for name in git(*args).split("\0") if name}
 
@@ -119,7 +124,11 @@ def ci_args(parser, args):
         parser.error("--ci cannot be combined with a manual scope")
     args.base = os.environ.get("DOC_SYNC_BASE") or os.environ.get("CI_MERGE_REQUEST_DIFF_BASE_SHA") or os.environ.get("CI_COMMIT_BEFORE_SHA")
     args.head = os.environ.get("DOC_SYNC_HEAD") or os.environ.get("CI_COMMIT_SHA") or "HEAD"
-    if not args.base or set(args.base) == {"0"}:
+    # 2026-09-27 异构双审发现：零基准有回退，「基准存在但不可达」没有。force-push 后
+    # GitHub 的 event.before 指向已被丢弃的提交，actions/checkout 不拉游离对象，门禁会以
+    # 与文档责任无关的 rev-parse 文案让 main 上唯一必需的检查变红。退回默认分支的
+    # merge-base；默认分支也解析不出时仍然 fail closed。手工 --base 不走这条回退。
+    if not args.base or set(args.base) == {"0"} or not reachable(args.base):
         target = os.environ.get("CI_MERGE_REQUEST_TARGET_BRANCH_NAME") or os.environ.get("CI_DEFAULT_BRANCH") or os.environ.get("DOC_SYNC_DEFAULT_BRANCH")
         if not target:
             raise GateError("CI event has no comparison base/default branch; refusing a silent skip")

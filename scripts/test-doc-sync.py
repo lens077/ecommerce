@@ -125,6 +125,17 @@ class DocSyncTests(unittest.TestCase):
         self.gate(2, "--ci")
         self.gate(2, "--ci", env={"CI_COMMIT_BEFORE_SHA": "0" * 40, "CI_DEFAULT_BRANCH": "absent"})
 
+    def test_ci_falls_back_when_event_base_was_discarded(self):
+        # force-push 后 event.before 指向已被丢弃的提交，checkout 不拉游离对象。
+        # 必须退回默认分支的 merge-base，而不是以无关的 rev-parse 文案变红。
+        self.git("update-ref", "refs/remotes/origin/main", self.base)
+        self.write("src/api.go", "behavior changed\n")
+        self.commit("feat: behavior change")
+        self.gate(1, "--ci", env={"CI_COMMIT_BEFORE_SHA": "d" * 40,
+                                  "CI_DEFAULT_BRANCH": "main", "CI_COMMIT_SHA": self.tip})
+        # 基准不可达且默认分支也解析不出 → 仍然 fail closed，不静默跳过。
+        self.gate(2, "--ci", env={"CI_COMMIT_BEFORE_SHA": "d" * 40, "CI_DEFAULT_BRANCH": "absent"})
+
     def test_fixed_head_ignores_uncommitted_document_changes(self):
         self.write("src/api.go", "changed\n")
         self.commit("feat: change")
