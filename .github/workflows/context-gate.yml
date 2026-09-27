@@ -42,6 +42,20 @@ jobs:
         shell: bash
         run: ./scripts/verify-context.sh
 
+      # 2026-09-26：按完整事件范围核对文档责任；环境观测不进入 CI。
+      # 表达式只经 env 传入，不插值进 shell；PR 用 merge-base，push 用 before。
+      - name: Verify owned document changes
+        shell: bash
+        env:
+          DOC_SYNC_BASE: ${{ github.event.pull_request.base.sha || github.event.before }}
+          DOC_SYNC_HEAD: ${{ github.event.pull_request.head.sha || github.sha }}
+          DOC_SYNC_DEFAULT_BRANCH: ${{ github.event.repository.default_branch }}
+          DOC_SYNC_MERGE_BASE: ${{ github.event_name == 'pull_request' && '1' || '0' }}
+        run: |
+          python3 scripts/verify-doc-sync.py --ci
+          python3 scripts/test-doc-sync.py
+          python3 scripts/test-env-check.py
+
       - name: Reject public IP literals
         shell: bash
         run: |

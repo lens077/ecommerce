@@ -63,7 +63,14 @@ def tracked_markdown(root: Path) -> list[Path]:
         ['git', '-c', 'core.quotepath=off', 'ls-files', '-z', '--cached', '--others', '--exclude-standard'],
         cwd=root, capture_output=True, text=True, check=True,
     ).stdout
-    return [root / f for f in out.split('\0') if f.endswith('.md') and '/node_modules/' not in f and not f.startswith('backend/third_party')]
+    return [
+        path for f in out.split('\0')
+        if f.endswith('.md')
+        and '/node_modules/' not in f
+        and not f.startswith('backend/third_party')
+        for path in [root / f]
+        if path.exists()
+    ]
 
 
 # ── 选择器 ──────────────────────────────────────────────────────────────

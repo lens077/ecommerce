@@ -89,6 +89,12 @@ build_template() { # build_template <dir>
   # 且 progress-grow 会在一个不存在的文件上「误报成功」——2026-08-29 首跑实测到这两种。
   [ -f scripts/context-progress-baseline.txt ] && cp scripts/context-progress-baseline.txt "$sb/scripts/"
   [ -f .gitignore ] && cp .gitignore "$sb/"
+  # [ENV-CONTRACT] 读取真实工具要求；不能用 affects 的空桩冒充内容。
+  # 2026-09-26：只核对源码投影，canary 不调用任何 live 环境查询。
+  mkdir -p "$sb/backend" "$sb/frontend"
+  cp scripts/env-check.py "$sb/scripts/"
+  cp backend/go.mod "$sb/backend/"
+  cp frontend/package.json "$sb/frontend/"
   # 仓外链接目标放桩：门禁只查 [ -e ] 与 gitignore,不读内容。
   # 动态提取而非手抄清单——新增链接自动获得桩,漏了会被探针 0 当场暴露。
   while IFS= read -r file; do
@@ -438,6 +444,15 @@ mut_path_ref_baseline() { # 基线里登记一条根本不违规的行 → 反�
   printf 'context/team/local-env.md\tscripts/verify-context.sh\n' >> "$1/scripts/context-pathref-baseline.txt"
 }
 
+# 2026-09-26：不能只 grep [EMBED] 文案，生成器异常退出也必须阻断。
+mut_embed_crash() {
+  printf 'raise RuntimeError("canary: generator crashed")\n' > "$1/scripts/doc-embed.py"
+}
+mut_env_contract() {
+  sed -i.bak 's/"go": "/"go": "stale-/' "$1/context/team/local-env.md"
+  rm -f "$1/context/team/local-env.md.bak"
+}
+
 # ── 执行 ─────────────────────────────────────────────────────
 # ${workdir} 必须带花括号:后面紧跟全角「）」时,bash 3.2 在 UTF-8 locale 下会把
 # 多字节字符的首字节并进变量名,报 workdir? unbound(2026-08-26 实测:LC_ALL=C 绿、
@@ -486,6 +501,8 @@ probe retired-banner-ok   0 ""             mut_retired_banner_ok
 probe live-fact-dated-ok  0 ""             mut_live_fact_dated_ok
 probe embed-stale         1 "EMBED"        mut_embed_stale
 probe embed-missing-symbol 1 "EMBED"       mut_embed_missing_symbol
+probe embed-crash         1 "EMBED"        mut_embed_crash
+probe env-contract        1 "ENV-CONTRACT" mut_env_contract
 probe affects-dead        1 "AFFECTS"     mut_affects_dead
 probe affects-glob        1 "AFFECTS"     mut_affects_glob
 probe selfcheck-missing   1 "SELFCHECK"   mut_selfcheck_missing

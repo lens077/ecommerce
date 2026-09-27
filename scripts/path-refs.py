@@ -16,13 +16,15 @@ context/decisions/implemented/2026-09-24-path-refs-in-verify-context.md）。
     文档提到它们是在说明本地约定，CI 的 fresh clone 里本来就不存在
   - 同一行写明「已删除 / 已退役 / 不再有 / 不新建」等的放行：那是历史或否定陈述，
     逼人删掉只会丢失踩坑记录（与 [RETIRED] 的横幅放行同一思路）
+  - 同一行写明「尚未创建」的放行：设计文档要给规划中的位置起名（`backend/api/admin/v1/`），
+    删掉路径会丢设计意图，不标又会被当成漂移。2026-09-24 清基线时 6 条属于这一类
   - 路径前紧挨「X 仓」「repo」「原」的放行：说的是同级仓或搬家前的旧位置
   - `pkg/searchindex.Doc` 这种「包.符号」写法，包目录存在即放行
 存在性按 **git 索引**判定（被跟踪的文件及其父目录），不按磁盘：2026-09-24 首版按磁盘判，
 本机生成、未被 gitignore 的 `frontend/.vite-hooks/_` 让本机绿、fresh clone 红——而
 verify-context 是 main 上唯一必需的 CI 检查。本机生成的目录要写进 .gitignore，由上一条放行。
 索引为空时（canary 沙箱只 git init 不 add）退回按磁盘判定。
-扫描范围与 [DEAD-LINK] 相同；docs/progress-archive/ 是不可变归档，历史引用不改写，跳过。
+扫描范围与 [DEAD-LINK] 相同。
 存量违规登记在 scripts/context-pathref-baseline.txt（反向棘轮，由 verify-context.sh 执行）。
 
 用法：
@@ -36,13 +38,14 @@ import sys
 
 ROOT_FILES = ["AGENTS.md", "README.md", "STACK.md", "TODO.md"]
 SCAN_DIRS = ["context", "docs"]
-SKIP_PREFIXES = ("docs/progress-archive/",)
+SKIP_PREFIXES = ()
 CODE_SPAN = re.compile(r"`([^`\n]+)`")
 TOKEN_OK = re.compile(r"^[A-Za-z0-9_.@+\-/]+$")
 SUFFIX_LINE = re.compile(r":\d+(-\d+)?$")
 PLACEHOLDERS = ("...", "xxx", "YYYY", "XXXX")
 HISTORY_WORDS = (
     "已删除", "已删", "删除", "删掉", "退役", "移除", "不再", "不新建", "已迁",
+    "尚未创建", "本仓不建", "不要新建",
     "removed", "deleted", "retired",
 )
 QUALIFIER = re.compile(r"(仓|repo|原)\s*$")

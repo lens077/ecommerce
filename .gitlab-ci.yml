@@ -53,6 +53,11 @@ context-gate:
     - apk add --no-cache bash git grep sed gawk coreutils findutils python3
   script:
     - bash ./scripts/verify-context.sh
+    # 2026-09-26：关联文档未改不能靠改任意 Markdown 放行；按 MR/push 真实范围验。
+    # GIT_DEPTH=0 保证比较基准存在，缺基准失败，不用 HEAD~1 漏掉同次推送的早期提交。
+    - python3 scripts/verify-doc-sync.py --ci
+    - python3 scripts/test-doc-sync.py
+    - python3 scripts/test-env-check.py
     - python3 scripts/verify-public-ips.py
     - python3 scripts/verify-public-ips.py --history
     # 门禁的元评测:注错断言门禁还会红,防恒绿失效(与 GitHub 侧同款)。

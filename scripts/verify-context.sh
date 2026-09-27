@@ -55,6 +55,8 @@
 #   [PATH-REF]    正文里反引号写的仓库路径必须存在(判定在 scripts/path-refs.py)。[DEAD-LINK]
 #                  只查 Markdown 链接;2026-09-22 Repowise 扫出的 50 条失效引用有 47 条是这一类。
 #                  2026-09-24 立
+#   [ENV-CONTRACT] local-env 工具链生成块与 go.mod/package.json 相等，严格离线。
+#                  Git 文档责任另由 verify-doc-sync.py 按明确范围检查（CI + commit-msg）。
 #
 # 基线棘轮(三份):
 #   scripts/context-format-baseline.txt   —— [FORMAT] 的存量违规冻结放行
@@ -497,19 +499,20 @@ done
 # ── 9. (已删除) 运行时观测值必须带实测日期 —— 2026-09-17 取消。
 #        它要求每个集群数字都拖一个「实测 YYYY-MM-DD」,数字一写就过期、
 #        只能再补新的,是日期文档的直接来源。代价:集群数字会静默过期,
-#        改为在 live-facts.md 用口头约定而非 CI 阻断。
+#        日期不再由门禁阻断；事实分层、按需查询和生成区检查见 live-facts.md。
 
 # ── [EMBED] 受管代码块与源码一致 ─────────────────────────────
-# 脚本自己按 git ls-files 找指令、解析、比对;这里只把它的 stderr 逐行转成违规。
-# 脚本缺失或 python3 缺失也要红:一道「没装就静默放行」的门禁等于没有。
-if [ ! -f scripts/doc-embed.py ]; then
-  fail "EMBED" "scripts/doc-embed.py 不存在,受管代码块无法核对"
-elif ! command -v python3 >/dev/null 2>&1; then
-  fail "EMBED" "缺少 python3,无法运行 scripts/doc-embed.py --check"
-else
-  while IFS= read -r line; do
-    [ -n "$line" ] && fail "EMBED" "${line#doc-embed: \[EMBED\] }"
-  done < <(python3 scripts/doc-embed.py --check 2>&1 >/dev/null | grep '\[EMBED\]' || true)
+# 2026-09-26:旧调用只 grep [EMBED]，生成器崩溃/非约定错误会被 || true 吞掉。
+# 必须保留退出码；不能把没有匹配到错误文案当作生成校验通过。
+if ! embed_output=$(python3 scripts/doc-embed.py --check 2>&1); then
+  fail "EMBED" "生成校验失败: $embed_output"
+fi
+
+# ── [ENV-CONTRACT] 工具要求是源码投影，不是实跑版本 ────────────
+# 触发事故:local-env 的历史工具/节点/接线表彼此矛盾；只给日期不能消除漂移。
+# 此处严格离线，不读开发凭据、不连集群。运行观测只走显式 env-check --section。
+if ! env_output=$(python3 scripts/env-check.py --check 2>&1); then
+  fail "ENV-CONTRACT" "$env_output"
 fi
 
 # ── [AFFECTS] frontmatter affects: 反向索引指向的路径必须存在 ──────
@@ -597,4 +600,4 @@ if [ -s "$violations" ]; then
   cat "$violations"
   exit 1
 fi
-echo "verify-context: OK(链接/正文路径/INDEX 覆盖/frontmatter/experience 格式/决策记录/预算/并行进度源/退役物横幅/受管代码块/affects 索引/完成自检 全部通过)"
+echo "verify-context: OK(链接/正文路径/INDEX 覆盖/frontmatter/experience 格式/决策记录/预算/并行进度源/退役物横幅/受管代码块/工具链投影/affects 索引/完成自检 全部通过)"
