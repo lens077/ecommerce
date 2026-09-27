@@ -17,4 +17,10 @@
 # 会因找不到配置而失败；从 $0 推导路径，worktree 里各自解析到自己那份。
 # 用 "$1"（git 传进来的消息文件路径）而不是写死 .git/COMMIT_EDITMSG——
 # git commit --amend、rebase reword、以及 worktree 里的路径都不是那个值。
-commitlint --config "$(dirname "$0")/../commitlint.config.mjs" --edit "$1"
+commitlint --config "$(dirname "$0")/../commitlint.config.mjs" --edit "$1" || exit $?
+
+# 2026-09-26：格式/路径门禁抓不到 TECH 与环境手册的语义漂移。
+# 在 commit-msg 检查暂存代码对应的文档责任，允许消息里的准确 Doc-Impact 理由；
+# 不把未暂存文档当作本次提交内容，也不靠无关 README 充数。CI 按 push/MR 范围兜底。
+root=$(git rev-parse --show-toplevel) || exit 1
+python3 "$root/scripts/verify-doc-sync.py" --staged --message-file "$1"
