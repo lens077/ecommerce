@@ -22,7 +22,7 @@
 三者靠 trace_id 与统一资源标签(`service.name`/`service.namespace`/`service.instance.id`)互跳——
 这也是为什么标签规范是硬规则(见 §6)。
 
-Prometheus 与 OpenTelemetry 不是竞争关系：本仓用 OTel 统一应用侧采集与传输，VictoriaMetrics 做 Prometheus 兼容指标存储，Grafana 统一展示。当前规则评估与分发链是 `vmalert → Alertmanager → node3 bridge → authenticated ntfy`；firing/resolved receiver 已实测，规则语义仍须逐条注入故障验收。`面板设计.md` 中基于 Grafana unified alerting 的旧结论须按现网重新验收。
+Prometheus 与 OpenTelemetry 不是竞争关系：本仓用 OTel 统一应用侧采集与传输，VictoriaMetrics 做 Prometheus 兼容指标存储，Grafana 统一展示。当前规则链在 Kubernetes 中运行：`vmalert → Alertmanager → alert-bridge → authenticated ntfy`，不再是 node3 本机 bridge。core/ticket/test 分流、持久退避、账号与验收边界见 [告警与通知手册](alerting-notification.md)。`面板设计.md` 中基于 Grafana unified alerting 的旧结论不能作为当前规则真相源。
 
 ## 2. 方法论:RED 看服务,USE 看资源
 
@@ -80,7 +80,7 @@ Prometheus 与 OpenTelemetry 不是竞争关系：本仓用 OTel 统一应用侧
 
 资源层目标覆盖 CPU、内存、磁盘、网络、Kubernetes 对象状态和 Event。当前 `k8s_cluster` 已提供 workload desired/available、Pod phase、container ready/restart 和 requests/limits；`k8sobjects` 已采集 Event。容器实际 CPU/MEM、filesystem、network 和 OOM reason 仍需 kubeletstats/cAdvisor，不能把 requests/limits 当成实际利用率。
 
-资源观测要覆盖 3 个 Kubernetes 节点、Cilium/Gateway、Vector DaemonSet，以及集群外 node3 的 PG/OTel/Victoria 数据面。对象状态作为 metrics 写 VictoriaMetrics，Event 作为 logs 写 VictoriaLogs。Gatus 直接查询 VictoriaLogs 中 24 小时内的 `object.kind=Event`，不以 receiver counter 代替落库验证。node3 或 Pangolin 故障会同时影响数据库与观测链，必须把隧道可达性、restart、磁盘、连接池和 collector 丢弃量作为高优先级告警源。
+资源观测覆盖 k1/k2/k3 的 Kubernetes 对象、Cilium/Gateway、Vector 与集群内 CNPG/OTel/Victoria 数据面；node0/node1/node2 的 Docker/宿主对象由白名单 watchdog 补充。对象状态作为 metrics 写 VictoriaMetrics，Event 作为 logs 写 VictoriaLogs。当前 Gatus 探针清单不能被描述为已验证「24 小时 Event 落库」；完整条件见 [生成目录](alerting-rules.md)。集群或 Pangolin 故障仍可能同时影响业务与观测，外部独立 dead-man 尚缺。
 
 ## 4. 采集架构
 
@@ -96,24 +96,24 @@ Kubernetes OTel collector(k8s_cluster + k8sobjects，存量)──────�
                                               ├── PII 脱敏与 /healthz、/metrics 噪声过滤
                                               ├── 动态批处理与按租户/服务重打标
                                               └── VictoriaMetrics / VictoriaLogs / VictoriaTraces
-Grafana → VM/VL/VT                 vmalert → Alertmanager → ntfy
-Gatus / Healthchecks / Bugsink / certificate timer ───────→ ntfy
+Grafana → VM/VL/VT                 vmalert → Alertmanager → alert-bridge → ntfy
+Gatus / host-watchdog / certificate timer ─────────────────────────────→ ntfy
+Healthchecks：未接 ntfy；Bugsink：无 workload（bridge 仅保留兼容入口）
 ```
 
 - 应用 OTel SDK 装配在同构 `internal/pkg`，gateway 在 control-tower 中独立装配。SDK 支持资源标签、gzip 与 OTLP 认证；最终采样决策由外置 OTel Collector 的尾采样承担，SDK 侧不承担最终采样决策。2026-08-27 现网多个服务向 `node3-otlp.apikv.com/v1/logs` 发送时收到 `401 missing or empty authorization header`；必须单独修正运行时 endpoint/header，不能把代码支持写成现网已生效。
 - 容器 stdout 由 Vector 直接写 VictoriaLogs 是存量现状，目标态按 [`docs/TECH.md`](../TECH.md) §9.1 收为「Vector 轻量采集 → 外置 OTel Collector 中继 → VictoriaLogs」。stdout 链与 Kubernetes Event 链当前正常；排查日志缺失时必须区分「应用 OTel log」「容器 stdout」和「Kubernetes Event」三条链。
 - collector、Vector、Pangolin、Victoria 后端和 Alertmanager 都必须自监控；配置存在不等于数据到达。
 
-## 5. 告警:方法论(规则清单已落地,真相源在面板设计.md)
+## 5. 告警：方法论与源码真相源
 
-指标存在但没有告警 = 只有事后分析能力,没有「提前发现故障」能力(文章的核心判词:
-**成熟的监控不是收集更多指标,而是找到能帮你提前发现故障的那些**)。
+指标存在但没有告警，只能支持事后分析。每条通知应说明发生了什么、影响范围及下一步；先修慢性问题，再根据证据调整阈值，不用静音代替修复。
 
-历史上由 `grafana/build_alerts.py` 生成过 17 条 Grafana unified alerting 规则；现网已迁为 vmalert + Alertmanager，规则是否等价迁移必须逐条实测。Alertmanager 的 firing/resolved payload 已经通过本机 bridge 实际送达认证 ntfy；这只证明 receiver 链可用，不代表 17 条规则都已完成故障注入。
+当前规则真相源在同级 kubernetes 仓的 vmalert 规则文件，而不是历史 Grafana unified alerting 配置。45 条规则及 22 项 Gatus 探针的完整源码投影、hash 与再生成方法见 [告警规则目录](alerting-rules.md)。表达式 health=ok 不等于指标存在；receiver 接受发布不等于每条规则都已故障注入，也不等于手机送达。
 
-ntfy 不是单一兼容 webhook：Gatus 用 `custom` provider 直接 POST ntfy 的 JSON 发布格式（2026-08-29 由内置 bearer `ntfy` provider 改造，因其通知文案硬编码在 Go 源码里、无法中文化），Healthchecks 使用 v4.3 原生 `ntfy` Channel，Bugsink（错误监控定稿，2026-08-28 复核维持，兼容 Sentry SDK 错误事件）通过带随机 URL token 的本机 Slack-compatible bridge，证书 timer 由 root wrapper 直接发布。token、topic、Healthchecks ping URL 和错误监控 DSN 均不得进入仓库或日志。**告警与通知链路接入手册**（三条链路边界、Gatus 中文化、K8s 指标点号命名口径、验收与回退）见 [alerting-notification.md](alerting-notification.md)；前端 SDK 接入手册见 [error-monitoring.md](error-monitoring.md)，容量证据见 ../reports/2026-08-28-bugsink-integration-research.md。
+[告警与通知手册](alerting-notification.md) 统一二进制、Docker、K8s 的行为而不强制统一部署：core/page priority 4、ticket priority 2、test priority 1、恢复 priority 2；宿主 hold/recovery、AM 分组与 bridge 持久退避、Gatus custom JSON 独立直推分别承担自己的边界。AM 的 5m repeat 是桥刷新周期，不是手机重复周期。Healthchecks 当前仅初始 check/email、无 ntfy，Bugsink 无 workload；证书任务有独立事件状态。前端 SDK 接入仍见 [error-monitoring.md](error-monitoring.md)。
 
-告警数量刻意克制:每条告警响起,值班者必须知道下一步做什么;做不到的降级为看板曲线。Gatus 与 Victoria 数据面在 node3（Healthchecks、Bugsink 已于 2026-09-15 迁入集群），本机监控不能发现 node3 整机失联；Healthchecks 迁走后 pgBackRest 心跳能覆盖这一场景，其余异机探针仍是未消除的故障域。
+新 reader/publisher 身份只对三个准确 topic 分别只读/只写；密码、token、topic、Healthchecks ping URL 和错误监控 DSN 不得进入仓库或日志。外部独立 dead-man 尚未建立，集群/ntfy 故障仍可能让旁路失声。不能用单节点内的自检宣称整个故障域已覆盖。
 
 ## 6. 硬规则(本仓教训沉淀,新增指标/看板/告警一律遵守)
 

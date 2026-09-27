@@ -19,7 +19,7 @@
 
 ## 3. 改动清单
 
-**新增** `frontend/packages/errors/`（workspace 包 `@ecommerce/errors`）：
+**新增** `frontend/packages/errors/`（目标位置，尚未创建；workspace 包 `@ecommerce/errors`）：
 
 - `src/index.ts`：`initErrorMonitoring({app})`——`@sentry/react` 装配；DSN 判空即整体禁用（dev 默认不报）；`tracesSampleRate:0`、`sendDefaultPii:false`；`beforeSend` 剥 cookie/授权头/URL token；`environment`（dev/pre/prod）与 `release`（`<app>@<git-sha>`，与镜像 tag `sha-<7位>` 同源）；`isTauri()` 时加 `runtime:desktop` 标记。
 - `src/react.tsx`：根 ErrorBoundary 接线 helper + `QueryCache/MutationCache onError` 工厂。ConnectError 分类：`Internal/Unknown/DataLoss/Unimplemented` 上报；`Unauthenticated`（登出常态）、`Canceled`、瞬时 `Unavailable/DeadlineExceeded`（retry 已覆盖）不报。

@@ -114,7 +114,7 @@ cpu / memory / disk / network 都已开,所以基础设施盘才做得起来。
 3. **网关(`http_server_request_duration_seconds_*`)** —— 网关此前有 otelhttp
    handler 但没有 MeterProvider(指标挂在 noop 上),`middleware/tracing` 已补
    → APM 盘 R7;
-4. **采集管道自身健康（`otelcol_*`）** —— `opentelemetry` namespace 的 collector 自采 `:8888`，accepted/sent/failed/refused、queue 和 process 指标已进入 node3 VictoriaMetrics → 基础设施盘 R3；
+4. **采集管道自身健康（`otelcol_*`）** —— `opentelemetry` namespace 的 collector 自采 `:8888`，accepted/sent/failed/refused、queue 和 process 指标应进入当前 VictoriaMetrics；组件位置按 `context/team/local-env.md` 的实时入口查询 → 基础设施盘 R3；
 5. **Kafka(`kafka_server_*` / `kafka_connect_*`)** —— Strimzi metricsConfig 与
    collector `prometheus/kafka` receiver 已配(兄弟仓 + 本仓 kafka-connect),
    broker patch 会滚动重启 → 基础设施盘 R5。
@@ -134,6 +134,6 @@ cpu / memory / disk / network 都已开,所以基础设施盘才做得起来。
 
 ## 验证方式
 
-改完脚本后，除检查 Grafana 渲染外，还要在 node3 VictoriaMetrics 实跑每条 MetricsQL。空图可能是语法错误，也可能是真实无数据，不能混为同一个结论。名称含点号的 OTel metric 使用 `{__name__="k8s.…"}` selector。
+改完脚本后，除检查 Grafana 渲染外，还要在当前 VictoriaMetrics 实跑每条 MetricsQL；入口按 `context/team/local-env.md` 现查。空图可能是语法错误，也可能是真实无数据，不能混为同一个结论。名称含点号的 OTel metric 使用 `{__name__="k8s.…"}` selector。
 
 2026-08-12 的三张盘、17 条 Grafana unified alerting 和 109 条查询只保留为历史生成证据。现网规则链是 vmalert → Alertmanager → authenticated ntfy；不得直接 apply 历史 ConfigMap。部署前按 `../面板设计.md` 的现网口径重新验证。
