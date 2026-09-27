@@ -5,12 +5,12 @@
 ## 运行态
 
 - Helm release 为 `tetragon-1.7.1` revision 5。
-- Tetragon DaemonSet 已取消 node103 单点限制，在 node101、node102、node103 均为 Ready。
-- operator 也已取消 node103 selector，当前单副本落在 node101；agent 与 operator 的 canonical values 均保持 `nodeSelector: {}`。
+- Tetragon DaemonSet 已取消单节点限制；当前集群节点身份为 k1、k2、k3，节点状态按 `context/team/local-env.md` 现查。
+- operator 不应绑定旧节点名；agent 与 operator 的 canonical values 保持 `nodeSelector: {}`。
 - stdout exporter 仅导出 ecommerce 的 `PROCESS_EXEC`、`PROCESS_EXIT`、`PROCESS_KPROBE`，并保留命令行敏感参数脱敏。
 - `PROCESS_EXEC` 已在三个节点验证，事件包含 Pod、binary、UID、capability 与 namespace 上下文。shell、curl、wget、nc、socat 等工具启动直接从该事件流审计。
 - `ecommerce-service-account-token-access` 是唯一的 `TracingPolicyNamespaced`。它通过 `sys_openat` 记录 `/var/run/secrets/kubernetes.io/serviceaccount/` 与 `/var/run/secrets/tokens/` 下的文件访问，只执行 `Post`，不阻断进程。
-- Vector 已把原始事件写入 node3 VictoriaLogs，并将 token-access 与可疑 `PROCESS_EXEC` 转成 `ecommerce_tetragon_security_events_total`。vmalert/Alertmanager 的规则与调查手顺见 `../observability/README.md`。
+- Vector 将原始事件写入当前 VictoriaLogs，并将 token-access 与可疑 `PROCESS_EXEC` 转成 `ecommerce_tetragon_security_events_total`。vmalert/Alertmanager 的规则与调查手顺见 [`docs/observability/alerting-notification.md`](../../docs/observability/alerting-notification.md)。
 
 ## 为什么没有 shell TracingPolicy
 
