@@ -24,7 +24,8 @@ HTTP/1.1 交给 HTTP handler，HTTP/2 交给 gRPC 监听器。下面的入口设
 - 两个主机名互不串用：API 主机名在 443 返 404，UI 主机名在 80 返 404。
 
 **明文风险已由用户于 2026-09-24 明确接受**：80 不加密，admin 密码与 session token 以明文过链路。
-因此 CLI 入口不走公网：Mac 用 `sshuttle -r k1 10.10.31.0/24 10.10.21.0/24` 打通 VIP 后直连（见 `context/team/local-env.md`）。
+因此 CLI 入口不走公网：Mac 用 `sshuttle -r k1 <gateway-vip-cidr> <node-cidr>` 打通 VIP 后直连。
+两段网段按 `context/team/local-env.md` 现查，不写进本仓——内网拓扑不入库。
 
 ### 为什么 CLI 不走 443
 
