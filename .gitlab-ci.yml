@@ -170,7 +170,7 @@ frontend-gate:
     # pnpm 自报 registry.npmjs.org 平均 20 KiB/s——跨境链路阶段性拥塞。同日从 job 可调度的
     # k2 实测:大包两源接近,小包 npmmirror 延迟约为官方源 1/3(knip 0.38s vs 1.34s),而本 job
     # 要下 400+ 个小包。只换源主机:lockfile 不含 tarball URL,仍逐包校验 integrity,不关 TLS。
-    # 缓存不能兜底:runner 未配 [runners.cache],每次都是 reused 0。
+    # 缓存是另一道兜底:6a764ac3 起 runner 用集群内 Silo 做 S3 共享缓存,命中时 pnpm downloaded 0。
     NPM_REGISTRY: "https://registry.npmmirror.com"
     # 换源后下载一快,a2c3cebd 的 job 在 60s 内被 OOMKilled(137):pnpm 默认同时下 16 个包,
     # 匿名内存瞬间顶破 1Gi;源慢时这个峰值被网速压住了。本地 docker 按 CI 条件复现
@@ -191,6 +191,7 @@ frontend-gate:
     - pnpm config set registry "$NPM_REGISTRY"
     - pnpm config set network-concurrency "$PNPM_NETWORK_CONCURRENCY"
     - pnpm config set store-dir "$PNPM_STORE"
+    - PNPM_STORE_FILES_BEFORE=$(find "$PNPM_STORE" -type f 2>/dev/null | wc -l)
     - pnpm install --frozen-lockfile
   script:
     # 与 pnpm ready 相同的四项检查，仅把 workspace test/build 串行化以适配 1Gi。
@@ -201,6 +202,20 @@ frontend-gate:
     # hygiene 棘轮:knip(未用依赖/导出/重复导出/catalog 条目)只拦新增,存量由
     # .lint-baseline/knip.txt 冻结;vp-lint 基线为空、pnpm ready 已跑过 lint,故这里只跑 knip。
     - cd "$CI_PROJECT_DIR" && CHECKERS=knip bash scripts/lint-baseline.sh check
+    # 2026-09-28:缓存键由 pnpm-lock.yaml 决定,命中时 store 内容不变,却每次重传 358MiB(约 30s)。
+    # store 文件数没变就删掉它:runner v19.4.0 的 cache-archiver 在路径下没有文件时只打
+    # "No files to cache." 并跳过上传,远端对象保持不动(源码 commands/helpers/cache_archiver.go)。
+    # 缓存缺失、lockfile 变化、缓存残缺时 store 会变,照常上传;14 天过期后的首次运行也会缺失并重传,
+    # 所以不会出现「一直命中不了」。docker 按 CI 条件实测:命中前后均为 38501 个文件,计数约 80ms。
+    # 放在 script 末尾:只有全部检查通过才会走到这里,失败的 job 本来就不上传缓存。
+    - |
+      after=$(find "$PNPM_STORE" -type f 2>/dev/null | wc -l)
+      if [ "${PNPM_STORE_FILES_BEFORE:-0}" -gt 0 ] && [ "$after" -eq "$PNPM_STORE_FILES_BEFORE" ]; then
+        echo "pnpm store 未变化(${after} 个文件),跳过缓存上传"
+        rm -rf "$PNPM_STORE"
+      else
+        echo "pnpm store 有变化(${PNPM_STORE_FILES_BEFORE:-0} -> ${after} 个文件),照常上传缓存"
+      fi
   rules:
     - changes:
         - frontend/**/*
