@@ -76,6 +76,9 @@ func NewItemSyncUseCase(
 
 	// 只看 item_sync 自己的开关,不看 gorse 此刻开没开:gorse 可以被配置热更新打开,
 	// 循环要已经在跑才接得住;gorse 关着时 syncOnce 每轮直接跳过。
+	// 注意两个开关不对称:gorse 的 enable/endpoint/key 热生效,item_sync 自己的
+	// enable、Interval、BatchSize 只在构造时读一次——在配置中心把 item_sync.enable
+	// 由 false 改成 true 必须重启服务才生效。
 	if !cfg.Enable {
 		logger.Info("gorse item sync disabled")
 		return uc

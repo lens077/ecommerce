@@ -57,20 +57,26 @@ def repo_root() -> Path:
     return Path(out.strip())
 
 
-def tracked_markdown(root: Path) -> list[Path]:
+def tracked_markdown(root: Path) -> tuple[list[Path], list[str]]:
+    """返回 (存在的 .md, 索引里有但磁盘上缺失的相对路径)。
+
+    缺失文件（删除未暂存、失效的符号链接）无内容可查，只能跳过；但跳过必须可见。
+    2026-09-27 异构双审：原先 `if path.exists()` 静默丢弃，[EMBED] 只看退出码，
+    检查范围缩小时门禁照样显示通过——这正是本仓最警惕的「门禁静默失效」形态。
+    """
     # 含未跟踪文件:canary 沙箱是刚 git init 的空索引,只看 --cached 会把它当成没有任何指令
     out = subprocess.run(
         ['git', '-c', 'core.quotepath=off', 'ls-files', '-z', '--cached', '--others', '--exclude-standard'],
         cwd=root, capture_output=True, text=True, check=True,
     ).stdout
-    return [
-        path for f in out.split('\0')
-        if f.endswith('.md')
-        and '/node_modules/' not in f
-        and not f.startswith('backend/third_party')
-        for path in [root / f]
-        if path.exists()
-    ]
+    present: list[Path] = []
+    missing: list[str] = []
+    for f in out.split('\0'):
+        if not f.endswith('.md') or '/node_modules/' in f or f.startswith('backend/third_party'):
+            continue
+        path = root / f
+        (present.append(path) if path.exists() else missing.append(f))
+    return present, missing
 
 
 # ── 选择器 ──────────────────────────────────────────────────────────────
@@ -254,7 +260,12 @@ def main(argv: list[str]) -> int:
     stale: list[str] = []
     errors: list[str] = []
     total = 0
-    for md in tracked_markdown(root):
+    present, missing = tracked_markdown(root)
+    if missing:
+        shown = ', '.join(missing[:10]) + (' …' if len(missing) > 10 else '')
+        print(f'doc-embed: 跳过 {len(missing)} 个索引中存在但磁盘上缺失的 .md（不在本次检查范围）: {shown}',
+              file=sys.stderr)
+    for md in present:
         text = md.read_text()
         if '<!-- embed:' not in text:
             continue
@@ -280,7 +291,8 @@ def main(argv: list[str]) -> int:
         print(f'doc-embed: [EMBED] {rel} 与源码不一致——运行 scripts/doc-embed.py 重新生成', file=sys.stderr)
     if errors or stale:
         return 1
-    print(f'doc-embed: OK（{total} 个受管代码块{"，均与源一致" if check else "已重写"}）')
+    skipped = f'；跳过缺失文件 {len(missing)} 个' if missing else ''
+    print(f'doc-embed: OK（{total} 个受管代码块{"，均与源一致" if check else "已重写"}{skipped}）')
     return 0
 
 

@@ -408,8 +408,9 @@ progress_baseline="scripts/context-progress-baseline.txt"
 
 # 围栏外复选框计数。**必须按围栏长度配对**:``` 不能关闭 ````,
 # 否则 ````markdown 模板里嵌套的 ``` 会把后半段误判成正文
-# (上面 _strip_fences 的 f=!f 就有这个缺陷,它只服务 DEAD-LINK 且扫描集里暂无嵌套围栏,
-#  本检查不复用它)。
+# (两处逻辑相同:上面的 _strip_fences 也已于 2026-08-29 改为按长度配对。本注释曾一直
+#  写着「_strip_fences 的 f=!f 有这个缺陷」,2026-09-27 异构双审据此误报了一条已修复的
+#  问题——过期注释会误导审查者和后来的读者,改代码时要同步改说明。)
 count_checkboxes() {
   awk '
     {
@@ -509,6 +510,9 @@ done
 # 必须保留退出码；不能把没有匹配到错误文案当作生成校验通过。
 if ! embed_output=$(python3 scripts/doc-embed.py --check 2>&1); then
   fail "EMBED" "生成校验失败: $embed_output"
+elif embed_skipped=$(grep '^doc-embed: 跳过' <<<"$embed_output"); then
+  # 成功时输出本会被整段丢弃;检查范围缩小必须可见(不判失败:缺失文件本就无内容可查)。
+  printf '注意: %s\n' "$embed_skipped" >&2
 fi
 
 # ── [ENV-CONTRACT] 工具要求是源码投影，不是实跑版本 ────────────
