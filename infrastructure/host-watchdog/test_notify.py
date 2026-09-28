@@ -52,6 +52,15 @@ class IncidentTests(unittest.TestCase):
         self.run_at(600, rows)
         self.assertEqual([payload['key'] for payload in self.sent], ['docker:web', 'docker:api'])
 
+    def test_invalid_record_freezes_instead_of_resetting_pending_timer(self):
+        # 回归：非法记录曾被当成「缺席」，每轮重置 first_seen，一次笔误让真实故障永不告警。
+        self.run_at(0, [check()])
+        for now in (300, 600, 900):
+            self.run_at(now, [check(severity='PAGE')])
+        self.assertEqual(self.sent, [])
+        self.run_at(1200, [check()])
+        self.assertEqual([payload['key'] for payload in self.sent], ['docker:web'])
+
     def test_hold_recovery_and_recurrence(self):
         self.run_at(0, [check()])
         self.run_at(600, [check()])

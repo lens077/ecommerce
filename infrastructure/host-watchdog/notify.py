@@ -98,7 +98,12 @@ def process(records, path, config, now, sender):
     # 就把单项错误放大成全量静默，只剩 Healthchecks 死人开关兜底（且它有自己的宽限期）。
     # 改为：跳过坏记录、继续投递其余，用 invalid 计数保证退出码仍非零——不静默，也不放大。
     # 重复 key 保留首次出现，后续计为 invalid，不合并（合并会让两个检查共用一个事件身份）。
+    # 非法记录的 key 另记为 held：它不是「缺席」，不能走下方缺席分支重置 first_seen。
+    # 2026-09-27 异构双审复现：一个已在计时的故障，只要记录变成非法（如 severity 写成
+    # PAGE），每轮 first_seen 都被重置，hold 永远达不到，真实故障一小时内 0 条告警。
+    # 改为冻结计时：非法期间不发不重置，记录改回合法后按原计时立刻判定。
     seen = set()
+    held = set()
     accepted = []
     invalid = []
     for record in records:
@@ -106,6 +111,8 @@ def process(records, path, config, now, sender):
                 or record['severity'] not in ('page', 'ticket')
                 or record['scope'] not in ('docker', 'systemd', 'host')):
             invalid.append(compact(record['key'], 120))
+            if record['key'] not in seen:
+                held.add(record['key'])
             continue
         seen.add(record['key'])
         accepted.append(record)
@@ -130,7 +137,7 @@ def process(records, path, config, now, sender):
             state = dict(version=1, mode=config.mode, host=config.host, incidents={})
         incidents = state['incidents']
         # Omitted/retired checks are not proof of health; never synthesize recovery.
-        for key in incidents.keys() - seen:
+        for key in incidents.keys() - seen - held:
             incidents[key]['recover_since'] = None
             if not incidents[key]['firing_sent']:
                 incidents[key]['first_seen'] = now
