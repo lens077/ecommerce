@@ -172,6 +172,12 @@ frontend-gate:
     # 要下 400+ 个小包。只换源主机:lockfile 不含 tarball URL,仍逐包校验 integrity,不关 TLS。
     # 缓存不能兜底:runner 未配 [runners.cache],每次都是 reused 0。
     NPM_REGISTRY: "https://registry.npmmirror.com"
+    # 换源后下载一快,a2c3cebd 的 job 在 60s 内被 OOMKilled(137):pnpm 默认同时下 16 个包,
+    # 匿名内存瞬间顶破 1Gi;源慢时这个峰值被网速压住了。本地 docker 按 CI 条件复现
+    # (node:24、1Gi 无 swap、2 CPU、同 NODE_OPTIONS、pnpm 12.5.1),匿名内存峰值:
+    #   默认 16 → OOM;8 → 798MB/20s;4 → 630MB/27s。取 4,留约 390MB 余量。
+    # 复现环境 Node 看得到 12 核,比 CI 节点的 4 核起更多 worker,结果偏保守。
+    PNPM_NETWORK_CONCURRENCY: "4"
   cache:
     key:
       files:
@@ -183,6 +189,7 @@ frontend-gate:
     - PNPM_VERSION=$(node -p "require('./package.json').packageManager.split('@')[1]")
     - npm install -g --registry="$NPM_REGISTRY" "pnpm@${PNPM_VERSION}"
     - pnpm config set registry "$NPM_REGISTRY"
+    - pnpm config set network-concurrency "$PNPM_NETWORK_CONCURRENCY"
     - pnpm config set store-dir "$PNPM_STORE"
     - pnpm install --frozen-lockfile
   script:
