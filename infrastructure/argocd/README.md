@@ -37,7 +37,7 @@ Cilium Envoy 上游协议镜像下游协议：客户端以 h2c 连 80 时上游�
 打开 `enable-gateway-api-alpn` 与 `enable-gateway-api-app-protocol` 需要重启 `cilium-operator` 与 `cilium-envoy`，
 属于全站 L7 入口中断，须排维护窗口；打开后才可退回 443 上的「GRPCRoute + `appProtocol` h2c」标准形态。
 
-### Pangolin 公网 CLI 入口（方案已定，TLS 形态待实测）
+### Pangolin 公网 CLI 入口（rid 71，2026-09-28 实测可用）
 
 历史：曾建过 `argocd-api.apikv.com`（rid 66，HTTP resource、**SSL 关**、target `h2c://<VIP>:80`），2026-09-24 实测可用，但因为公网这一段是明文而删除。REST/token 自动化继续走 `https://argocd.apikv.com/api/...`（rid 60）。
 
@@ -48,8 +48,8 @@ Cilium Envoy 上游协议镜像下游协议：客户端以 h2c 连 80 时上游�
 | 资源类型 | HTTPS（Pangolin 终止 TLS） | 公网段加密；明文只留在 WireGuard 隧道和集群内 |
 | target 协议 | **`h2c`** | 写成 `http` 时 Traefik 用 HTTP/1.1 连后端，gRPC 被降级 |
 | target 地址 | `argocd-server.argocd.svc.cluster.local:80` | newt 是集群内 Pod，2026-09-27 实测能直连该 Service；不经 Envoy，也就不受 `enable-gateway-api-alpn` 影响 |
-| SSO | 关 | CLI 走不了浏览器登录，会收到 302/401 |
-| 访问规则 | 按 CIDR 只放行固定出口 | 替代 SSO；认证由 ArgoCD 自己负责 |
+| SSO | **开** | 兜底：规则没命中的来源一律 401，请求到不了 ArgoCD |
+| 访问规则 | `ACCEPT CIDR <固定出口>/32`，`applyRules` 开 | 命中的来源跳过 SSO，交给 ArgoCD 自己认证。CLI 走不了浏览器登录，只能靠这条规则进来 |
 | 附加代理「启用 TLS」 | 关 | 这个开关控制的是到后端的 TLS，后端讲 h2c |
 
 不能写的 target：`argocd-api.dev.test`。newt Pod 解析不了 `.dev.test`（实测 NXDOMAIN），健康检查会一直显示「未知」。
@@ -63,7 +63,15 @@ argocd login argocd-api.apikv.com --username admin
 argocd version --server argocd-api.apikv.com   # 输出里有 argocd-server: vX.Y.Z 即通
 ```
 
-「HTTPS 加 h2c」这个组合还没有实测。如果不通，退回 rid 66 的形态：资源关闭 SSL，公网段明文，访问规则只放行固定出口，并在这里记下退回的原因。
+2026-09-28 实测：本机（放行 CIDR 内）`argocd version` 返回 `argocd-server: v3.5.3`，未登录的 `app list` 由 ArgoCD 返回 `Unauthenticated`；对照组 k1（出口不在规则内）被 Pangolin 直接 401。「HTTPS 加 h2c」可用，不需要退回 rid 66 的明文形态。
+
+SSO 开着再用 CIDR 放行，比关掉 SSO 只靠规则更稳：规则写错或出口 IP 变了，结果是拒绝访问，而不是对全网开放。实测只关 SSO 不加规则时，请求会直接到达 ArgoCD，等于把 admin 登录口暴露给全网。家宽出口 IP 变化后，CLI 会收到 401，到面板里更新这条规则即可。
+
+排查时踩过的三个坑：
+
+- **本地 CLI 上下文会覆盖参数。** `~/.config/argocd/config` 的当前上下文若带 `plain-text: true`，只传 `--server` 仍会走明文，打到 Pangolin 的 80 端口，报 `404 ... text/plain`，看起来像入口坏了。先用 `argocd version --config "$(mktemp -u)" --server argocd-api.apikv.com` 隔离验证；确认入口没问题后，删掉旧上下文（`argocd context <旧名> --delete`）再 `argocd login`。
+- **改 target 后旧连接会继续用一阵。** Traefik 复用到 newt 的 HTTP/2 连接，隧道端口号不变，旧连接的另一端还是原 target。改完后头几十秒的结果不算数，要看 newt 日志里出现 `Started tcp proxy to <新 target>` 之后的请求。
+- **target 指向 Gateway VIP 时必须设 Host。** `setHostHeader` 为空时，Gateway 收到的 Host 是 `argocd-api.apikv.com`，而 HTTPRoute 只匹配 `argocd-api.dev.test`，返回 404。直连 Service 就没有这个问题。
 
 ### 部署与验证
 

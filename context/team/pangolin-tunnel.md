@@ -236,6 +236,16 @@ site `node4`(tid 3/4/15/16/39/40/41/42/47)+ site `node5`(tid 52-60)两条 target
   加完立即验 `traefik-config`(不用等站点侧,newt 收到 ws 下发几秒内 `Started tcp proxy to ...`)。
 - Pangolin **1.22.2**(2026-09-12 实查,较本文早期的 1.21.1 已升级):SSO on 的资源对匿名 curl 返 **401** 而非 302,
   「302 = 登录墙」那条判据在此版本要改读成 401;后端活着仍要在集群内带 Host 直连 LB 验证。
+- Pangolin **1.23.0**(2026-09-28 实查):`GET /org/main/resources` 不再接受 `limit` 参数(传了返 400 `Unrecognized key`),
+  改为分页返回,每页 20 条。按 CIDR 放行的规则用 `PUT /resource/:rid/rule {action:"ACCEPT",match:"CIDR",value:"<ip>/32",priority,enabled:true}`
+  加 `POST /resource/:rid {sso:true,applyRules:true}`:命中的来源跳过 SSO,其余 401(rid 71 argocd-api 实测,
+  对照组被拦)。机器客户端需要公网入口时优先这样做,而不是关 SSO。
+- **admin 密码 2026-09-28 经 `docker exec pangolin pangctl set-admin-credentials --email … --password …` 重置**
+  (原密码与库中哈希不一致,API 登录 401;先用 sqlite backup API 备份到 `db.sqlite.bak-20260928-pwreset`)。
+  新密码存在操作者 Mac 的钥匙串里(service `pangolin.apikv.com`,account `admin@apikv.com`),
+  取用:`security find-generic-password -a admin@apikv.com -s pangolin.apikv.com -w`。
+  **重置会让浏览器里现有的登录失效。** 判断是不是密码问题,先在 node1 只读查 `user` 表的 `email/type/twoFactorEnabled`,
+  排除账号不存在、第三方登录和两步验证。
 
 ### 三个镜像的架构坑(2026-09-12 实付,与 Pangolin 无关但卡了整次上线)
 
