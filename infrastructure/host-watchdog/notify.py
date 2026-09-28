@@ -200,16 +200,28 @@ def process(records, path, config, now, sender):
 
 
 def parse_records(text):
+    """Return (records, malformed_count).
+
+    Structurally broken lines are skipped and counted instead of raising: raising here
+    happened before process(), so one malformed line silenced every valid alert in the
+    round -- the same failure 35a88aa6 fixed for semantically invalid records, one layer up.
+    Only line numbers are logged; detail text may contain arbitrary content.
+    """
     fields = ('key', 'scope', 'object', 'status', 'severity', 'detail', 'first_check')
     records = []
-    for line in text.splitlines():
+    malformed = []
+    for number, line in enumerate(text.splitlines(), 1):
         if not line:
             continue
         values = line.split('\t')
         if len(values) != len(fields) or not all(values[:5]):
-            raise ValueError('invalid check record')
+            malformed.append(str(number))
+            continue
         records.append(dict(zip(fields, values)))
-    return records
+    if malformed:
+        LOG.error('notification_malformed_records count=%d lines=%s',
+                  len(malformed), ','.join(malformed[:20]))
+    return records, len(malformed)
 
 
 def pangolin_records(path, ignored='mac'):
@@ -291,12 +303,13 @@ def main():
                 print('\t'.join(compact(record[k], 2000) for k in
                       ('key', 'scope', 'object', 'status', 'severity', 'detail', 'first_check')))
             return 0
-        records = parse_records(sys.stdin.read())
+        records, malformed = parse_records(sys.stdin.read())
         # Validate transport only when there is a due delivery; missing config must
         # still persist pending observations and surface an explicit send error.
         def send(payload):
             return http_sender(os.environ)(payload)
         result = process(records, path, config, time.time(), send)
+        result['invalid'] += malformed
         print('host_watchdog_notifications sent=%d failed=%d invalid=%d'
               % (result['sent'], result['failed'], result['invalid']))
         # invalid 同样返回 2：坏记录必须可见，但不再连带丢掉其余检查的通知。

@@ -205,11 +205,12 @@ class IncidentTests(unittest.TestCase):
 
 
 class InputTests(unittest.TestCase):
-    def test_tsv_requires_complete_known_checks(self):
+    def test_malformed_line_is_counted_without_dropping_valid_records(self):
+        # 回归：结构不完整的行曾在 process() 之前就抛错，一行坏记录让整轮合法告警全部静默。
         row = 'docker:web\tdocker\tweb\tfail\tpage\tunhealthy\tdocker inspect web\n'
-        self.assertEqual(notify.parse_records(row)[0]['key'], 'docker:web')
-        with self.assertRaises(ValueError):
-            notify.parse_records('partial\n')
+        records, malformed = notify.parse_records('partial\n' + row + 'a\tb\t\t\t\t\t\n')
+        self.assertEqual([record['key'] for record in records], ['docker:web'])
+        self.assertEqual(malformed, 2)
 
     def test_only_exact_mac_site_is_ignored_not_all_newt(self):
         with tempfile.TemporaryDirectory() as tmp:
