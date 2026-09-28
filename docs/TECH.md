@@ -1067,6 +1067,7 @@ PR 阶段已经落地 Gitleaks、zizmor、Trivy fs/config 三件套，并采用�
 | 技术/模式 | 规范/标准出处 | 说明 |
 |---|---|---|
 | **Cilium Network Policy** | [Cilium Network Policy Docs](https://docs.cilium.io/en/stable/security/policy/) | L3/L4/L7 网络策略 |
+| **HTTP 请求走私防护** | [HTTP 请求边界审计与实现记录](security/http-request-smuggling.md) | 网关拒绝 HTTP/1.1 `Transfer-Encoding`、链路差分验收与当前证据边界；外层 Pangolin/Traefik 尚待预生产核验 |
 | **Kubernetes NetworkPolicy** | [K8s NetworkPolicy Documentation](https://kubernetes.io/docs/concepts/services-networking/network-policies/) | K8s 原生网络策略 |
 | **Zero Trust Architecture** | [NIST SP 800-207](https://csrc.nist.gov/pubs/sp/800/207/final) | 零信任架构标准 |
 | **External Secrets Operator** | [ESO Documentation](https://external-secrets.io/) | 凭据后端 → K8s Secret 的搬运工；`ClusterSecretStore` + `ExternalSecret`/`PushSecret` |
