@@ -1,0 +1,407 @@
+{
+  "schema_version": 1,
+  "diagram_type": "architecture",
+  "meta": {
+    "title": "Ecommerce GitOps 与 CI/CD 发布流程",
+    "output": "ecommerce-gitops.html",
+    "quality_profile": "showcase",
+    "locale": "zh-CN",
+    "views": [
+      {
+        "id": "gitlab-gate",
+        "label": "GitLab CI 门禁",
+        "focus": [
+          "source",
+          "gitlab",
+          "gates"
+        ],
+        "note": "MR/branch push 只跑不产制品的门禁。"
+      },
+      {
+        "id": "github-release",
+        "label": "GitHub Tag 发布",
+        "focus": [
+          "github",
+          "buildx",
+          "registry",
+          "manifests"
+        ],
+        "note": "semver tag 触发多架构构建、扫描、签名、制品推送和清单回写。"
+      },
+      {
+        "id": "argocd-sync",
+        "label": "ArgoCD 到集群",
+        "focus": [
+          "manifests",
+          "argocd",
+          "cluster"
+        ],
+        "note": "GitLab main 作为 ArgoCD source，sync 后进入 Kubernetes。"
+      }
+    ]
+  },
+  "components": [
+    {
+      "id": "source",
+      "type": "external",
+      "label": "代码变更",
+      "sublabel": "Dockerfile · backend · frontend · manifests",
+      "tag": "Git commit / MR / tag",
+      "pos": [
+        600,
+        60
+      ],
+      "size": [
+        260,
+        70
+      ]
+    },
+    {
+      "id": "gitlab",
+      "type": "cloud",
+      "label": "GitLab CI",
+      "sublabel": "MR / branch push",
+      "tag": "门禁，不做发布",
+      "pos": [
+        260,
+        220
+      ],
+      "size": [
+        240,
+        70
+      ]
+    },
+    {
+      "id": "gates",
+      "type": "security",
+      "label": "质量与安全门禁",
+      "sublabel": "context · gitleaks · backend · frontend",
+      "tag": "verify-context / build / vet / test",
+      "pos": [
+        260,
+        360
+      ],
+      "size": [
+        260,
+        78
+      ]
+    },
+    {
+      "id": "github",
+      "type": "cloud",
+      "label": "GitHub Actions",
+      "sublabel": "semver tag X.Y.Z",
+      "tag": "发布流水线",
+      "pos": [
+        900,
+        220
+      ],
+      "size": [
+        240,
+        70
+      ]
+    },
+    {
+      "id": "detect",
+      "type": "backend",
+      "label": "Detect services",
+      "sublabel": "service matrix → matrix",
+      "tag": "全量可晋级 release set",
+      "pos": [
+        900,
+        360
+      ],
+      "size": [
+        240,
+        70
+      ]
+    },
+    {
+      "id": "buildx",
+      "type": "backend",
+      "label": "Docker Buildx",
+      "sublabel": "amd64 + arm64",
+      "tag": "Dockerfile → immutable image",
+      "pos": [
+        900,
+        500
+      ],
+      "size": [
+        240,
+        70
+      ]
+    },
+    {
+      "id": "security",
+      "type": "security",
+      "label": "供应链安全",
+      "sublabel": "Trivy · SBOM · Cosign",
+      "tag": "OIDC keyless signing",
+      "pos": [
+        900,
+        640
+      ],
+      "size": [
+        240,
+        70
+      ]
+    },
+    {
+      "id": "registry",
+      "type": "cloud",
+      "label": "制品仓库",
+      "sublabel": "TCR primary · GHCR optional",
+      "tag": "Harbor stores Helm OCI",
+      "pos": [
+        900,
+        780
+      ],
+      "size": [
+        240,
+        70
+      ]
+    },
+    {
+      "id": "manifests",
+      "type": "cloud",
+      "label": "清单回写",
+      "sublabel": "Helm + raw Kustomize",
+      "tag": "promote-release + parity",
+      "pos": [
+        900,
+        920
+      ],
+      "size": [
+        240,
+        70
+      ]
+    },
+    {
+      "id": "gitlab-main",
+      "type": "external",
+      "label": "GitLab main",
+      "sublabel": "ArgoCD source repository",
+      "tag": "desired state",
+      "pos": [
+        900,
+        1060
+      ],
+      "size": [
+        240,
+        70
+      ]
+    },
+    {
+      "id": "argocd",
+      "type": "backend",
+      "label": "ArgoCD",
+      "sublabel": "AppProject · ApplicationSet",
+      "tag": "sync / prune / selfHeal",
+      "pos": [
+        900,
+        1200
+      ],
+      "size": [
+        240,
+        78
+      ]
+    },
+    {
+      "id": "cluster",
+      "type": "cloud",
+      "label": "Kubernetes 集群",
+      "sublabel": "Cilium · Gateway API · workloads",
+      "tag": "live state",
+      "pos": [
+        900,
+        1360
+      ],
+      "size": [
+        240,
+        70
+      ]
+    },
+    {
+      "id": "feedback",
+      "type": "cloud",
+      "label": "反馈与回滚",
+      "sublabel": "health · diff · DORA · revert",
+      "tag": "发布证据",
+      "pos": [
+        900,
+        1500
+      ],
+      "size": [
+        240,
+        70
+      ]
+    }
+  ],
+  "boundaries": [
+    {
+      "kind": "region",
+      "label": "GitLab CI：日常 push/MR 门禁",
+      "wraps": [
+        "gitlab",
+        "gates"
+      ]
+    },
+    {
+      "kind": "region",
+      "label": "GitHub Actions：tag 发布与制品晋级",
+      "wraps": [
+        "github",
+        "detect",
+        "buildx",
+        "security",
+        "registry",
+        "manifests"
+      ]
+    },
+    {
+      "kind": "region",
+      "label": "ArgoCD pull-based deployment",
+      "wraps": [
+        "gitlab-main",
+        "argocd",
+        "cluster",
+        "feedback"
+      ]
+    }
+  ],
+  "connections": [
+    {
+      "id": "source-gitlab",
+      "from": "source",
+      "to": "gitlab",
+      "label": "MR / branch push",
+      "variant": "emphasis",
+      "fromSide": "left",
+      "toSide": "top"
+    },
+    {
+      "id": "gitlab-gates",
+      "from": "gitlab",
+      "to": "gates",
+      "label": "run gates",
+      "variant": "security",
+      "fromSide": "bottom",
+      "toSide": "top"
+    },
+    {
+      "id": "source-github",
+      "from": "source",
+      "to": "github",
+      "label": "semver tag X.Y.Z",
+      "variant": "emphasis",
+      "fromSide": "right",
+      "toSide": "top"
+    },
+    {
+      "id": "github-detect",
+      "from": "github",
+      "to": "detect",
+      "fromSide": "bottom",
+      "toSide": "top"
+    },
+    {
+      "id": "detect-buildx",
+      "from": "detect",
+      "to": "buildx",
+      "fromSide": "bottom",
+      "toSide": "top"
+    },
+    {
+      "id": "buildx-security",
+      "from": "buildx",
+      "to": "security",
+      "variant": "security",
+      "fromSide": "bottom",
+      "toSide": "top"
+    },
+    {
+      "id": "security-registry",
+      "from": "security",
+      "to": "registry",
+      "fromSide": "bottom",
+      "toSide": "top"
+    },
+    {
+      "id": "registry-manifests",
+      "from": "registry",
+      "to": "manifests",
+      "fromSide": "bottom",
+      "toSide": "top"
+    },
+    {
+      "id": "manifests-main",
+      "from": "manifests",
+      "to": "gitlab-main",
+      "variant": "emphasis",
+      "fromSide": "bottom",
+      "toSide": "top"
+    },
+    {
+      "id": "main-argocd",
+      "from": "gitlab-main",
+      "to": "argocd",
+      "variant": "emphasis",
+      "fromSide": "bottom",
+      "toSide": "top"
+    },
+    {
+      "id": "argocd-cluster",
+      "from": "argocd",
+      "to": "cluster",
+      "variant": "emphasis",
+      "fromSide": "bottom",
+      "toSide": "top"
+    },
+    {
+      "id": "cluster-feedback",
+      "from": "cluster",
+      "to": "feedback",
+      "variant": "dashed",
+      "fromSide": "bottom",
+      "toSide": "top"
+    }
+  ],
+  "cards": [
+    {
+      "dot": "cyan",
+      "title": "GitLab CI 门禁",
+      "items": [
+        "MR 和 branch push 触发；tag 不在 GitLab 建发布流水线。",
+        "context-gate、文档同步、环境检查、public IP、canary、gitleaks、backend-gate、frontend-gate。",
+        "只验证代码与文档，不推送镜像、不修改部署清单。"
+      ]
+    },
+    {
+      "dot": "emerald",
+      "title": "GitHub Actions 发布",
+      "items": [
+        "semver tag `X.Y.Z` 触发服务检测和矩阵构建。",
+        "Dockerfile 进入 Buildx 多架构构建；执行 Trivy、SBOM、Cosign keyless 签名。",
+        "制品推到 TCR，GHCR 可选；Helm 制品进入 Harbor OCI。"
+      ]
+    },
+    {
+      "dot": "amber",
+      "title": "清单回写与晋级",
+      "items": [
+        "`promote-release.py` 同步更新 Helm values 与 raw deployment manifests。",
+        "`verify-deploy-parity.sh` 在提交前验证两份部署真相源等价。",
+        "回写 GitHub main，并同步 GitLab main；ArgoCD 使用 GitLab main。"
+      ]
+    },
+    {
+      "dot": "violet",
+      "title": "ArgoCD 与集群",
+      "items": [
+        "ArgoCD 通过 Application/ApplicationSet 拉取 GitLab desired state。",
+        "sync、prune、selfHeal 进入 Kubernetes；当前业务接管状态仍需按环境核对。",
+        "回滚语义为 revert，不以生产环境手工 kubectl 修改作为发布路径。"
+      ]
+    }
+  ]
+}

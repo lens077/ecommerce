@@ -60,6 +60,7 @@ archify 生成的系统地图，自包含 HTML（深浅主题 / 搜索 / 路径�
 | 前端 | [ecommerce-frontend.html](../architecture/ecommerce-frontend.html) | pnpm workspace：apps × packages、tracker/perf 上报链路 |
 | 网关 | 同级仓 control-tower 的 `docs/design/` | 网关已迁出本仓；不保留旧网关架构快照，避免把历史实现误读为现行结构 |
 | 后端 | [ecommerce-backend.html](../architecture/ecommerce-backend.html) | 单服务分层、proto/sqlc 双生成链、启动装配 |
+| GitOps 与发布 | [ecommerce-gitops.html](../architecture/ecommerce-gitops.html) | **目标流程**：GitLab 门禁 → GitHub tag 构建与供应链校验 → 清单回写 → ArgoCD 同步。图中的 sync/prune/selfHeal 是设计终态；业务工作负载的实际接管与自动同步状态以 `TODO.md` 的 GitOps 项和现查为准 |
 
 图内事实按生成当日（2026-08-08）代码实测，之后架构变了改 JSON 重渲染并更新本表。
 
