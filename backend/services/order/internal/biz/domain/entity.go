@@ -41,17 +41,6 @@ type OrderGroupRoot struct {
 	CreatedAt      time.Time // 创建时间
 	UpdatedAt      time.Time // 更新时间
 }
-type OrderGroupDTO struct {
-	Id             int64     // 订单组自增主键ID
-	GroupNo        string    // 订单组号，业务唯一标识，如：OG202605090001
-	UserId         string    // 下单用户ID，来自Casdoor统一身份认证
-	TotalAmount    float64   // 订单组商品总金额（所有子订单商品金额合计，不含运费/优惠）
-	FreightAmount  float64   // 订单组总运费（所有子订单运费合计）
-	DiscountAmount float64   // 订单组总优惠金额（所有子订单优惠合计）
-	PayAmount      float64   // 订单组实付总金额（用户实际需要支付的金额）
-	CreatedAt      time.Time // 创建时间
-	UpdatedAt      time.Time // 更新时间
-}
 
 // OrderRoot 订单主聚合根 (对应数据库 order_main 表)
 // 一个 OrderGroupRoot 包含多个 OrderRoot，每个 OrderRoot 对应一个商家
@@ -86,36 +75,6 @@ type OrderRoot struct {
 
 	// 事件
 	events []any
-}
-
-type OrderDTO struct {
-	Id             int64                        // 订单自增主键ID
-	OrderNo        string                       // 订单号，业务唯一标识，如：OM202605090001
-	GroupNo        string                       // 关联订单组号 (业务关联，对应 OrderGroupRoot.GroupNo)
-	MerchantId     uuid.UUID                    // 商家ID (数据隔离核心字段)
-	MerchantName   string                       // 商家名称快照 (保留下单时的名称，防止后续商家改名)
-	UserId         uuid.UUID                    // 下单用户ID，来自Casdoor
-	OrderItems     []OrderItem                  // 订单明细列表 (聚合根包含子实体)
-	OrderStatus    constants.OrderStatusEnum    // 订单主状态
-	ShippingStatus constants.ShippingStatusEnum // 订单物流状态
-	Address        Address                      // 收货地址快照 (值对象)
-	TotalAmount    float64                      // 该商家子订单商品总金额
-	FreightAmount  float64                      // 该商家子订单运费
-	DiscountAmount float64                      // 该商家子订单优惠金额
-	PayAmount      float64                      // 该商家子订单实付金额
-	CourierCode    string                       // 快递公司编码 (如：SF、YTO)
-	CourierName    string                       // 快递公司名称 (如：顺丰速运)
-	TrackingNo     string                       // 物流单号
-	ShippedAt      *time.Time                   // 发货时间 (指针类型，允许为空)
-	DeliveredAt    *time.Time                   // 签收时间 (指针类型，允许为空)
-	PayChannel     string                       // 支付渠道 (如：alipay/wechat)
-	PayNo          string                       // 支付机构返回的支付单号
-	PaidAt         *time.Time                   // 支付成功时间 (指针类型，允许为空)
-	PayDeadline    time.Time                    // 支付截止时间 (超时自动取消)
-	Remark         string                       // 用户下单备注
-	MerchantRemark string                       // 商家备注
-	CreatedAt      time.Time                    // 创建时间
-	UpdatedAt      time.Time                    // 更新时间
 }
 
 // OrderItem 订单明细实体 (对应数据库 order_item 表)
@@ -208,18 +167,24 @@ type OrderCommandRepo interface {
 	SaveOrderLog(ctx context.Context, log *OrderLog) error
 }
 
-// OrderQueryRepo 查询仓储：不经过领域模型，直接返回前端需要的数据
+// OrderQueryRepo 查询仓储：只读，返回聚合根本身。
+//
+// 曾有与 OrderRoot/OrderGroupRoot 逐字段相同的 OrderDTO/OrderGroupDTO（2026-09-27 删除）：
+// 形状与聚合根完全一致的「读模型」不提供任何查询特有的形状，只增加一份要同步维护的副本。
+// 查询确需不同形状（列表去扁平化、商家视角裁剪）时，在 application 层按查询命名新建读模型
+// （如 OrderListItem），不要在 domain 包里恢复泛化的 DTO。
+// 查询侧拿到的 Root 不得调用状态迁移方法后交给 OrderCommandRepo 保存——写路径必须经命令侧加载。
 type OrderQueryRepo interface {
 	// GetOrderGroupByNo 根据订单组号查询
-	GetOrderGroupByNo(ctx context.Context, groupNo string) (*OrderGroupDTO, error)
+	GetOrderGroupByNo(ctx context.Context, groupNo string) (*OrderGroupRoot, error)
 	// GetOrderByNo 根据订单号查询
-	GetOrderByNo(ctx context.Context, orderNo string) (*OrderDTO, error)
+	GetOrderByNo(ctx context.Context, orderNo string) (*OrderRoot, error)
 	// GetOrdersByGroupNo 根据订单组号查询所有子订单
-	GetOrdersByGroupNo(ctx context.Context, groupNo string) ([]*OrderDTO, error)
+	GetOrdersByGroupNo(ctx context.Context, groupNo string) ([]*OrderRoot, error)
 	// GetOrdersByUserID 查询用户的订单列表
-	GetOrdersByUserID(ctx context.Context, userID string, page, pageSize int) ([]*OrderDTO, int64, error)
+	GetOrdersByUserID(ctx context.Context, userID string, page, pageSize int) ([]*OrderRoot, int64, error)
 	// GetOrdersByMerchantID 查询商家的订单列表 (数据隔离)
-	GetOrdersByMerchantID(ctx context.Context, merchantID int64, page, pageSize int) ([]*OrderDTO, int64, error)
+	GetOrdersByMerchantID(ctx context.Context, merchantID int64, page, pageSize int) ([]*OrderRoot, int64, error)
 }
 
 func (o *OrderRoot) Complete() error {

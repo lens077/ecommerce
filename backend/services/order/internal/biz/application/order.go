@@ -20,7 +20,7 @@ type OrderQueryUseCase struct {
 	eventBus *eventbus.EventBus
 }
 
-func (uc *OrderQueryUseCase) GetOrderByNo(ctx context.Context, orderNo string) (*domain.OrderDTO, error) {
+func (uc *OrderQueryUseCase) GetOrderByNo(ctx context.Context, orderNo string) (*domain.OrderRoot, error) {
 	return uc.repo.GetOrderByNo(ctx, orderNo)
 }
 

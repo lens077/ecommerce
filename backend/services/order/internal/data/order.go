@@ -100,12 +100,12 @@ type orderQueryRepo struct {
 	log  *zap.SugaredLogger
 }
 
-func (o orderQueryRepo) GetOrderGroupByNo(ctx context.Context, groupNo string) (*domain.OrderGroupDTO, error) {
+func (o orderQueryRepo) GetOrderGroupByNo(ctx context.Context, groupNo string) (*domain.OrderGroupRoot, error) {
 	// TODO implement me
 	panic("implement me")
 }
 
-func (o orderQueryRepo) GetOrderByNo(ctx context.Context, orderNo string) (*domain.OrderDTO, error) {
+func (o orderQueryRepo) GetOrderByNo(ctx context.Context, orderNo string) (*domain.OrderRoot, error) {
 	o.log.Debugw("get order by no", "orderNo", orderNo)
 	db := o.data.DB(ctx)
 	order, err := db.GetOrderByNo(ctx, orderNo)
@@ -117,7 +117,7 @@ func (o orderQueryRepo) GetOrderByNo(ctx context.Context, orderNo string) (*doma
 	if err != nil {
 		return nil, fmt.Errorf("type numeric to float: %w", err)
 	}
-	return &domain.OrderDTO{
+	return &domain.OrderRoot{
 		Id:           order.ID,
 		OrderNo:      order.OrderNo,
 		GroupNo:      order.GroupNo,
@@ -157,17 +157,17 @@ func (o orderQueryRepo) GetOrderByNo(ctx context.Context, orderNo string) (*doma
 	}, nil
 }
 
-func (o orderQueryRepo) GetOrdersByGroupNo(ctx context.Context, groupNo string) ([]*domain.OrderDTO, error) {
+func (o orderQueryRepo) GetOrdersByGroupNo(ctx context.Context, groupNo string) ([]*domain.OrderRoot, error) {
 	// TODO implement me
 	panic("implement me")
 }
 
-func (o orderQueryRepo) GetOrdersByUserID(ctx context.Context, userID string, page, pageSize int) ([]*domain.OrderDTO, int64, error) {
+func (o orderQueryRepo) GetOrdersByUserID(ctx context.Context, userID string, page, pageSize int) ([]*domain.OrderRoot, int64, error) {
 	// TODO implement me
 	panic("implement me")
 }
 
-func (o orderQueryRepo) GetOrdersByMerchantID(ctx context.Context, merchantID int64, page, pageSize int) ([]*domain.OrderDTO, int64, error) {
+func (o orderQueryRepo) GetOrdersByMerchantID(ctx context.Context, merchantID int64, page, pageSize int) ([]*domain.OrderRoot, int64, error) {
 	// TODO implement me
 	panic("implement me")
 }
