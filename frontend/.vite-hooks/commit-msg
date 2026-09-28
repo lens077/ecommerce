@@ -22,5 +22,8 @@ commitlint --config "$(dirname "$0")/../commitlint.config.mjs" --edit "$1" || ex
 # 2026-09-26：格式/路径门禁抓不到 TECH 与环境手册的语义漂移。
 # 在 commit-msg 检查暂存代码对应的文档责任，允许消息里的准确 Doc-Impact 理由；
 # 不把未暂存文档当作本次提交内容，也不靠无关 README 充数。CI 按 push/MR 范围兜底。
+# 已知盲区（2026-09-27 异构双审）：--staged 以 HEAD 为基准，`git commit --amend` 与 rebase
+# reword 时被改写提交里已有的源码改动不在检查范围内，本地会放行。钩子拿不到可靠的
+# amend 信号，这一段由 CI 的 push/MR 范围检查兜住，不要把本地放行当成已通过。
 root=$(git rev-parse --show-toplevel) || exit 1
 python3 "$root/scripts/verify-doc-sync.py" --staged --message-file "$1"

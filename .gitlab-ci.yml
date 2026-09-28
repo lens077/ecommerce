@@ -55,6 +55,10 @@ context-gate:
     - bash ./scripts/verify-context.sh
     # 2026-09-26：关联文档未改不能靠改任意 Markdown 放行；按 MR/push 真实范围验。
     # GIT_DEPTH=0 保证比较基准存在，缺基准失败，不用 HEAD~1 漏掉同次推送的早期提交。
+    # 2026-09-27 异构双审：runner 默认 refspec 只拉当前 ref。新分支首推（before 全零）或基准
+    # 不可达时，脚本回退到 origin/<默认分支>，该引用不存在就恒红。显式拉取比较基准分支，
+    # 脚本本身仍不联网。
+    - git fetch --no-tags --quiet origin "+refs/heads/${CI_MERGE_REQUEST_TARGET_BRANCH_NAME:-$CI_DEFAULT_BRANCH}:refs/remotes/origin/${CI_MERGE_REQUEST_TARGET_BRANCH_NAME:-$CI_DEFAULT_BRANCH}"
     - python3 scripts/verify-doc-sync.py --ci
     - python3 scripts/test-doc-sync.py
     - python3 scripts/test-env-check.py

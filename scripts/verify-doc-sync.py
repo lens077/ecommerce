@@ -133,6 +133,10 @@ def ci_args(parser, args):
         if not target:
             raise GateError("CI event has no comparison base/default branch; refusing a silent skip")
         args.base, args.merge_base = "origin/" + target, True
+        # 回退基准本身不存在时给出可操作的原因，而不是泛化的 rev-parse 失败文案。
+        if not reachable(args.base):
+            raise GateError("fallback base %s is missing; CI must fetch the default branch "
+                            "before this gate (refusing a silent skip)" % args.base)
     if os.environ.get("DOC_SYNC_MERGE_BASE") == "1":
         args.merge_base = True
 
