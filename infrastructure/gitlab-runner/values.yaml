@@ -86,3 +86,13 @@ runners:
               [[runners.kubernetes.affinity.node_affinity.required_during_scheduling_ignored_during_execution.node_selector_terms.match_expressions]]
                 key = "node-role.kubernetes.io/control-plane"
                 operator = "DoesNotExist"
+      # 2026-09-28：Kubernetes executor 每个 job 都是新 Pod，本 runner 没配 [runners.cache]，GitLab 的
+      # 缓存只存在随后被删除的 Pod 里（日志 "Cache file does not exist"，pnpm 每次 reused 0），连下载的
+      # 工具二进制也留不住。挂一个节点目录给 CI 工具缓存：job 会落在 k2 或 k3，两个节点各自预热一次。
+      # 任何 job 都能写这里，所以使用方必须按钉死的 SHA-256 校验后才使用，内容被改只会触发重新下载
+      # （见 scripts/ci-install-golangci-lint.sh）。
+      [[runners.kubernetes.volumes.host_path]]
+        name = "ci-tools-cache"
+        mount_path = "/cache/ci-tools"
+        host_path = "/var/cache/gitlab-ci-tools"
+        read_only = false

@@ -13,6 +13,7 @@ gitlab.com 共享 runner 的计算分钟用完后（2026-09-24），项目关闭
 | 调度边界 | manager 与 job 均通过 required node affinity 排除 control-plane 节点 |
 | token | Secret `gitlab-runner/gitlab-runner-token`（键 `runner-token`），不入库 |
 | 共享缓存 | Silo（S3 兼容）bucket `gitlab-runner-cache`，14 天过期、8GiB 硬配额；凭据 Secret `gitlab-runner/gitlab-runner-cache-s3`，不入库 |
+| 节点工具缓存 | job Pod 挂载节点目录 `/var/cache/gitlab-ci-tools` 到 `/cache/ci-tools`（hostPath，可写）；k2、k3 各一份 |
 
 曾先在 node2（2C/1.6G）部署 Docker runner：`go build ./...` 在 1 GiB job 上限下重度换页（swap 2.3 GiB、CPU 约 5%），38 分钟未编完、必撞 1 小时超时。当天整体撤掉，node2 上的容器、配置、swap 与 sysctl 改动均已还原。
 
@@ -121,7 +122,8 @@ deploy/gitlab-runner`。密钥不出现在命令行参数和任何输出里；�
 - **helper 镜像**：chart 新版默认从 `registry.gitlab.com` 拉 helper，集群只给 `docker.io` 配了 Spegel 与镜像站，所以 `values.yaml` 显式指定 `gitlab/gitlab-runner-helper:x86_64-v19.4.0`。升级 chart 时同步改这个 tag。
 - **APK 源**：`context-gate` 使用清华 HTTPS Alpine 镜像，保持原有版本与包签名校验。2026-09-25 在 k2 的 512Mi 临时 Pod 中，同一组依赖安装约 5 秒；该结果是独立 Pod 测试，不等同于 GitLab job 验收。
 - **Go 代理**：`proxy.golang.org` 从集群不可达（2026-09-24 从 Pod 实测 15s 超时），`.gitlab-ci.yml` 用 `GOPROXY=https://goproxy.cn|direct`。
-- **共享缓存**：2026-09-28 前没有缓存服务器，日志提示 `No URL provided`，GitLab 的缓存随 job Pod 一起删除。现已接入 Silo，见上文「共享缓存（Silo）」。
+- **GitHub 下载**：集群直连 GitHub 很慢（2026-09-28 从 k2、k3 实测约 10 KB/s，90 秒下不完 15 MB），`backend-gate` 因此连续三次在下载 golangci-lint 时 `curl 56`。`scripts/ci-install-golangci-lint.sh` 依次尝试节点缓存、`gh-proxy.com`、`gh-proxy.org`、`ghfast.top`、直连，每层都校验钉死的 SHA-256。代理是第三方服务，只决定能否下载成功，校验和不符的内容会被丢弃；代理失效时按同样方法实测后调整顺序。
+- **共享缓存**：2026-09-28 前没有缓存服务器，日志提示 `No URL provided`，GitLab 的缓存随 job Pod 一起删除。现已接入 Silo，见上文「共享缓存（Silo）」。 需要跨 job 保留的工具放进上面的节点工具缓存；那个目录任何 job 都能写，放进去的东西必须在使用前校验。
 - **查看 `config.toml` 先脱敏**：runner 启动时把缓存 `SecretKey` 和 runner `token` 都以明文写进 `/home/gitlab-runner/.gitlab-runner/config.toml`。2026-09-28 接入缓存时曾原样输出其中的缓存段，密钥进了会话记录，当场轮换。查看时先过滤：`sed -E 's/((SecretKey|token) = ")[^"]*/\1<redacted>/'`。
 - **runner 离线**：所有 job 会一直 pending。临时救急 `glab api projects/83474117 -X PUT -F shared_runners_enabled=true`（需要 gitlab.com 计算分钟）。
 - **资源审计**：build 容器设置 CPU/内存请求和上限；helper 与 manager 未设置 CPU limit，不能据此宣称已满足所有 Kyverno 资源策略。

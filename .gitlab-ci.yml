@@ -98,8 +98,9 @@ gitleaks:
 # 不跑 buf breaking:在 GitHub 发布链按 tag 区间比对。
 # 跑 lint-baseline 的 revive-exported(导出符号必须有注释,规则集在 backend/.golangci-exported.yml,
 # 711 条存量已冻结,只拦新增):GitHub 侧只由 tag 触发,每次 push 的这道门只能在这里守。
-# go-vet 基线为空、等价于上面的 go vet,不重复跑。golangci-lint 用官方脚本装固定版本
-# (与本地 brew 版一致,采集结果才可复现),二进制落在 GOPATH/bin。
+# go-vet 基线为空、等价于上面的 go vet,不重复跑。golangci-lint 装固定版本(与本地 brew 版一致,
+# 采集结果才可复现),二进制落在 GOPATH/bin。安装走 scripts/ci-install-golangci-lint.sh:节点缓存 →
+# GitHub 代理 → 直连,每层校验钉死的 SHA-256;集群直连 GitHub 约 10 KB/s,原 install.sh 连续三次 curl 56。
 backend-gate:
   stage: test
   image: golang:1.27
@@ -123,6 +124,8 @@ backend-gate:
     # build 失败(同日实测 control-tower@v0.1.7);`|` 遇任何错误都落到 direct(github.com,集群可达)。
     # 不列 proxy.golang.org:从集群不可达,只会白等超时。模块内容仍由 go.sum 钉死的哈希校验。
     GOPROXY: https://goproxy.cn|direct
+    # runner 挂进 job Pod 的节点目录(infrastructure/gitlab-runner/values.yaml);没挂上时脚本跳过缓存照常下载。
+    CI_TOOLS_CACHE: "/cache/ci-tools"
   cache:
     key:
       files:
@@ -135,7 +138,7 @@ backend-gate:
     - go build ./...
     - go vet ./...
     - go test -short -count=1 -parallel=1 ./...
-    - curl -sSfL https://raw.githubusercontent.com/golangci/golangci-lint/HEAD/install.sh | sh -s -- -b "$(go env GOPATH)/bin" v2.13.1
+    - sh "$CI_PROJECT_DIR/scripts/ci-install-golangci-lint.sh" "$(go env GOPATH)/bin"
     - export PATH="$(go env GOPATH)/bin:$PATH"
     - cd "$CI_PROJECT_DIR" && CHECKERS=revive-exported bash scripts/lint-baseline.sh check
   rules:
