@@ -45,10 +45,29 @@ SUFFIX_LINE = re.compile(r":\d+(-\d+)?$")
 PLACEHOLDERS = ("...", "xxx", "YYYY", "XXXX")
 HISTORY_WORDS = (
     "已删除", "已删", "删除", "删掉", "退役", "移除", "不再", "不新建", "已迁",
-    "尚未创建", "本仓不建", "不要新建",
     "removed", "deleted", "retired",
 )
+# 「路径本来就不该存在」的放行词只豁免它直接修饰的那个路径，不豁免整行。
+# 2026-09-27 push 前异构双审发现：这三个词最初并进了 HISTORY_WORDS，同一行只要出现
+# 其一，行内所有反引号路径都被整体放行——比刚清零的基线还宽，[PATH-REF] 在这些行上恒绿。
+# 现存用法只有两种形状，都按形状精确匹配：
+#   `backend/pkg/testutil`（目标位置，尚未创建）     —— 紧跟的括注里出现放行词
+#   不要新建 `CONTEXT.md`、`CONTEXT-MAP.md` 或 `docs/adr/` —— 放行词后只隔着同列表的路径与分隔符
+FUTURE_WORDS = ("尚未创建", "本仓不建", "不要新建")
+LIST_GAP = re.compile(r"^(?:\s|[、，,;；*]|或|和|及|与|`[^`\n]*`)*$")
 QUALIFIER = re.compile(r"(仓|repo|原)\s*$")
+
+
+def future_scoped(line, m):
+    """放行词是否直接修饰 m 这个反引号路径（括注紧跟其后，或它处在放行词引出的列表里）。"""
+    after = line[m.end():].lstrip()
+    if after[:1] in ("（", "("):
+        closes = [i for i in (after.find("）"), after.find(")")) if i != -1]
+        if any(w in after[:min(closes) if closes else len(after)] for w in FUTURE_WORDS):
+            return True
+    before = line[:m.start()]
+    ends = [before.rfind(w) + len(w) for w in FUTURE_WORDS if w in before]
+    return bool(ends) and bool(LIST_GAP.match(before[max(ends):]))
 
 
 def scan_files():
@@ -109,7 +128,7 @@ def candidates():
                 if not p:
                     continue
                 qualified = bool(QUALIFIER.search(line[max(0, m.start() - 12):m.start()]))
-                yield f, p, historical or qualified
+                yield f, p, historical or qualified or future_scoped(line, m)
 
 
 def tracked_paths():

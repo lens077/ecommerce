@@ -443,6 +443,13 @@ mut_path_ref_ignored_ok() { # 假阳性守卫:gitignore 覆盖的本机文件在
 mut_path_ref_baseline() { # 基线里登记一条根本不违规的行 → 反向棘轮必须报删行
   printf 'context/team/local-env.md\tscripts/verify-context.sh\n' >> "$1/scripts/context-pathref-baseline.txt"
 }
+# 2026-09-27 双审：「尚未创建」类放行词曾整行豁免,同行另一个不存在的路径被连带放过。
+mut_path_ref_future_scope() {
+  printf '\n目标 `tools/no-such-canary-future`（尚未创建）,排查时改 `scripts/no-such-canary-script.sh` 的超时。\n' >> "$1/context/team/local-env.md"
+}
+mut_path_ref_future_ok() { # 假阳性守卫:放行词直接修饰的目标路径必须放行
+  printf '\n共享基建放 `tools/no-such-canary-future`（目标位置,尚未创建）。\n' >> "$1/context/team/local-env.md"
+}
 
 # 2026-09-26：不能只 grep [EMBED] 文案，生成器异常退出也必须阻断。
 mut_embed_crash() {
@@ -514,6 +521,8 @@ probe path-ref            1 "PATH-REF"    mut_path_ref
 probe path-ref-history-ok 0 ""            mut_path_ref_history_ok
 probe path-ref-ignored-ok 0 ""            mut_path_ref_ignored_ok
 probe path-ref-baseline   1 "BASELINE"    mut_path_ref_baseline
+probe path-ref-future-scope 1 "PATH-REF"  mut_path_ref_future_scope
+probe path-ref-future-ok  0 ""            mut_path_ref_future_ok
 
 if [ "$fails" -gt 0 ]; then
   echo "verify-context-canary: $fails 个探针失败——门禁可能已静默失效,先修门禁再改内容"
