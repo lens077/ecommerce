@@ -5,6 +5,7 @@ import (
 	"net/http"
 	"net/http/httptest"
 	"testing"
+	"time"
 
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
@@ -24,6 +25,14 @@ func fakeGorse(t *testing.T, key string) *httptest.Server {
 	}))
 	t.Cleanup(srv.Close)
 	return srv
+}
+
+// 回归(2026-09-27 异构双审):验证在锁内同步进行,超时必须有上界,否则一条大 Timeout
+// 配置加黑洞 endpoint 会把整条配置订阅链阻塞到超时为止。
+func TestVerifyTimeoutIsBounded(t *testing.T) {
+	assert.Equal(t, 5*time.Second, verifyTimeout(0))
+	assert.Equal(t, 2*time.Second, verifyTimeout(2*time.Second))
+	assert.Equal(t, maxVerifyTimeout, verifyTimeout(300*time.Second))
 }
 
 // 复现 2026-09-23:启动时 key 为空,之后配置中心写入正确 key。

@@ -110,14 +110,23 @@ func (l *Live) Apply(ctx context.Context, next Options, logger *zap.Logger) erro
 	return nil
 }
 
-// Update 是配置订阅回调里用的入口:按新配置的超时做一次 Apply。
-// 订阅回调是同步串行的,验证请求受 Timeout 约束,不会无限拖住后续订阅者。
-func (l *Live) Update(next Options, logger *zap.Logger) {
-	timeout := next.Timeout
-	if timeout <= 0 {
-		timeout = 5 * time.Second
+// maxVerifyTimeout 限制一次热更新验证最多拖住订阅链多久。Apply 持锁同步做 VerifyAuth,
+// 而配置里的 Timeout 没有上界:推送 300s 加一个黑洞 endpoint,就能让同批订阅者
+// (pgpool、redisclient 等)阻塞 5 分钟(2026-09-27 异构双审)。只约束验证请求,
+// 客户端自身的请求超时仍按配置。
+const maxVerifyTimeout = 10 * time.Second
+
+func verifyTimeout(configured time.Duration) time.Duration {
+	if configured <= 0 {
+		return 5 * time.Second
 	}
-	ctx, cancel := context.WithTimeout(context.Background(), timeout)
+	return min(configured, maxVerifyTimeout)
+}
+
+// Update 是配置订阅回调里用的入口:按新配置做一次 Apply。
+// 订阅回调是同步串行的,验证请求受 verifyTimeout 的上界约束,不会长时间拖住后续订阅者。
+func (l *Live) Update(next Options, logger *zap.Logger) {
+	ctx, cancel := context.WithTimeout(context.Background(), verifyTimeout(next.Timeout))
 	defer cancel()
 	_ = l.Apply(ctx, next, logger)
 }
