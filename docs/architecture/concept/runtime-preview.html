@@ -1,0 +1,156 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<!--
+  电商平台运行时请求链路（设计预览）的可维护源文件。渲染：node render.mjs
+  事实来源（2026-09-29 核对）：
+    - 公网入口：Pangolin（node1 VPS · Traefik）→ WireGuard → 集群内 newt Pod（pangolin/newt）
+      目标形态 CDN/WAF → Pangolin → Cilium Gateway API → control-tower（docs/design/platform/production-scale-goal.md）
+    - 集群内组件：kubectl 实查 postgresql/pg-main(CNPG)、dragonfly、elasticsearch、minio、openfga、config-center
+    - 集群外：Casdoor、Gorse（集群内无对应工作负载）
+    - 10 个服务与分组：backend/services、.service-matrix.yaml
+    - prod 未启用 CNP：helm/values-prod.yaml global.networkPolicy.enabled=false
+    - OpenFGA 已部署、业务授权未接线；网关鉴权仍为 Casbin 存量路径
+  拓扑变化时改这里再渲染，不要手改 PNG。
+-->
+<style>
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body { width: 1540px; height: 1030px; background: #f8fafc; font-family: "PingFang SC", "Hiragino Sans GB", "Noto Sans CJK SC", sans-serif; color: #1f2937; padding: 20px 24px; position: relative; }
+  h1 { font-size: 28px; } .sub { font-size: 16px; color: #475569; margin-top: 4px; } .note0 { font-size: 12.5px; color: #64748b; margin-top: 4px; }
+  .warn { position: absolute; right: 24px; top: 18px; width: 470px; background: #fffbeb; border: 1px solid #fcd34d; border-radius: 10px; padding: 9px 14px; font-size: 12px; line-height: 1.65; }
+  .warn b { font-size: 14px; }
+  .box { border: 1.5px solid; border-radius: 10px; padding: 7px 8px; background: #fff; text-align: center; }
+  .box h3 { font-size: 14.5px; line-height: 1.3; } .box .s { font-size: 11px; color: #475569; }
+  .chip { background: #fff; border: 1px solid #cbd5e1; border-radius: 6px; font-size: 11px; padding: 3px 5px; margin-top: 5px; line-height: 1.35; }
+  .dash { border-style: dashed !important; opacity: .92; }
+  .row { position: absolute; display: flex; align-items: stretch; }
+  .arrow { display: flex; align-items: center; color: #0f766e; font-size: 22px; padding: 0 3px; }
+  .arrow.d { color: #94a3b8; }
+  .arrow.lbl { flex-direction: column; justify-content: center; text-align: center; padding: 0 2px; }
+  .arrow.lbl small { font-size: 10px; line-height: 1.25; color: #0f766e; }
+  .cluster { position: absolute; left: 296px; top: 212px; width: 1220px; height: 400px; border: 2px dashed #60a5fa; border-radius: 14px; background: rgba(239,246,255,.6); }
+  .cluster .t { position: absolute; left: 14px; top: 8px; font-size: 15px; font-weight: 700; color: #1d4ed8; }
+  .cluster .t span { font-weight: 400; font-size: 11.5px; color: #475569; margin-left: 8px; }
+  .grp { border: 1px solid #86efac; border-radius: 8px; background: #fff; padding: 4px 5px; font-size: 11.5px; flex: 1; }
+  .grp b { display: block; font-size: 12px; color: #15803d; margin-bottom: 2px; }
+  .cdc { position: absolute; left: 296px; top: 626px; width: 1220px; height: 104px; border: 1.8px dashed #818cf8; border-radius: 12px; background: #fff; }
+  .base { position: absolute; left: 24px; top: 744px; width: 1492px; height: 150px; border: 1.8px solid #fbbf24; border-radius: 12px; background: #fffbeb; }
+  .legend { position: absolute; left: 24px; top: 906px; width: 1492px; height: 92px; border: 1px solid #e2e8f0; border-radius: 10px; background: #fff; font-size: 12px; padding: 10px 16px; line-height: 1.9; }
+  .sw { display: inline-block; width: 26px; height: 12px; border-radius: 3px; vertical-align: -1px; margin: 0 5px 0 16px; border: 1.3px solid; }
+</style>
+</head>
+<body>
+<h1>电商平台技术架构（运行时请求链路）</h1>
+<div class="sub">基于 Kubernetes + Cilium 的云原生架构 · 单次请求主链路</div>
+<div class="note0">设计预览：实线为已验证路径，虚线为规划中或待验证能力。不代表所有能力都已在生产环境启用。</div>
+
+<div class="warn"><b>⚠ 重要说明</b><br>
+  · 本图只展示运行时请求链路，不含 GitOps（见 ecommerce-gitops 图）。<br>
+  · prod 当前未启用默认拒绝网络策略，先走审计模式再放开。<br>
+  · OpenFGA 已部署但业务授权未接线；网关鉴权仍走 Casbin 存量路径。
+</div>
+
+<!-- 外部：Casdoor -->
+<div class="box dash" style="position:absolute;left:760px;top:120px;width:330px;border-color:#64748b;background:#f1f5f9">
+  <h3>Casdoor（身份认证）</h3><div class="s">集群外服务 · OIDC / OAuth2 · 统一身份与用户管理</div></div>
+<div style="position:absolute;left:918px;top:176px;color:#0f766e;font-size:12px">↕ 网关 BFF 会话 · user 服务</div>
+
+<!-- 左侧：客户端与公网入口 -->
+<div class="box" style="position:absolute;left:24px;top:262px;width:112px;height:120px;border-color:#14b8a6;padding-top:26px"><h3>浏览器 /<br>客户端</h3><div class="s">Web · 桌面端</div></div>
+<div class="arrow d" style="position:absolute;left:138px;top:300px">⇢</div>
+<div class="box dash" style="position:absolute;left:160px;top:232px;width:122px;height:66px;border-color:#94a3b8;background:#f8fafc"><h3>CDN / WAF</h3><div class="s">目标形态 · 待接入</div></div>
+<div class="box" style="position:absolute;left:160px;top:306px;width:122px;height:190px;border-color:#f97316;background:#fff7ed">
+  <h3>Pangolin</h3><div class="s">公网入口 · node1 VPS</div>
+  <div class="chip">Traefik<br>TLS 终止</div><div class="chip">SSO / CIDR<br>访问规则</div><div class="chip">WireGuard<br>→ newt</div></div>
+<div class="arrow" style="position:absolute;left:283px;top:360px">→</div>
+
+<!-- 集群 -->
+<div class="cluster"><div class="t">Kubernetes 集群（Cilium）<span>newt 从集群内侧接收隧道流量</span></div></div>
+<!-- 请求路径（2026-09-29 核对）：
+     ① 页面：Cilium Gateway →(shop.* HTTPRoute)→ 前端
+     ② API：一律由前端发起、打到 control-tower 网关，物理路径两条——
+        Vite SPA 打包的 VITE_GATEWAY_URL=https://gateway.apikv.com：浏览器 JS 经公网入口 → gateway.* HTTPRoute；
+        consumer-next 的 SSR 与 /api/[...path] 代理：CONSUMER_NEXT_GATEWAY_URL 集群内直连 ecommerce-gateway-service:8080。 -->
+<div class="row" style="left:306px;top:246px;height:300px;gap:0">
+  <div class="box" style="width:94px;border-color:#f97316;background:#fff7ed;padding-top:30px"><h3>newt</h3><div class="s">Pangolin<br>站点连接器<br>pangolin/newt</div></div>
+  <div class="arrow">→</div>
+  <div class="box" style="width:146px;border-color:#3b82f6;background:#eff6ff">
+    <h3>Cilium Gateway</h3><div class="s">Gateway API</div>
+    <div class="chip">LB-IPAM VIP</div><div class="chip">Envoy L7 · TLS 终止</div><div class="chip">HTTPRoute 按 Host 分流</div><div class="chip">TCP/TLSRoute：PG · Dragonfly · Kafka</div></div>
+  <div class="arrow lbl"><span>→</span><small>① 页面<br>shop.*</small></div>
+  <div class="box" style="width:150px;border-color:#14b8a6;background:#f0fdfa">
+    <h3>前端</h3><div class="s">页面与 API 调用的发起方</div>
+    <div class="chip"><b>ecommerce-frontend</b><br>Vite SPA 静态资源<br>API 由浏览器 JS 发出</div>
+    <div class="chip"><b>consumer-next</b><br>Next.js SSR<br>服务端直接调网关</div></div>
+  <div class="arrow lbl"><span>→</span><small>② API<br>调用</small></div>
+  <div class="box" style="width:170px;border-color:#0891b2;background:#ecfeff">
+    <h3>control-tower Gateway</h3><div class="s">API 统一入口（同级仓）</div>
+    <div class="chip">路由编排 · BFF 会话<br>Casbin 鉴权（存量）</div>
+    <div class="chip" style="text-align:left">SPA：经 <b>gateway.apikv.com</b> 从公网入口再进一次（gateway.* HTTPRoute）</div>
+    <div class="chip" style="text-align:left">consumer-next：集群内直连 <b>ecommerce-gateway-service:8080</b></div></div>
+  <div class="arrow">→</div>
+  <div class="box" style="width:262px;border-color:#22c55e;background:#f0fdf4;text-align:left">
+    <h3 style="text-align:center">10 个业务服务</h3>
+    <div style="display:flex;gap:5px;margin-top:6px"><div class="grp"><b>发现与推荐</b>search<br>behavior</div><div class="grp"><b>身份与商户</b>user<br>merchant</div></div>
+    <div style="display:flex;gap:5px;margin-top:5px"><div class="grp"><b>交易主链路</b>product · cart · order<br>inventory · address</div><div class="grp" style="flex:.6"><b>支付</b>payment</div></div>
+    <div class="chip" style="margin-top:7px">启动时从 control-tower Config Center 拉取 Bootstrap</div></div>
+  <div class="arrow">→</div>
+  <div class="box" style="width:132px;border-color:#a855f7;background:#faf5ff">
+    <h3>数据组件（集群内）</h3>
+    <div class="chip">PostgreSQL<br>CNPG pg-main</div><div class="chip">Dragonfly<br>Redis 兼容缓存</div><div class="chip">Elasticsearch</div><div class="chip">MinIO 对象存储</div></div>
+</div>
+<!-- 集群外依赖 -->
+<div class="box dash" style="position:absolute;left:1380px;top:126px;width:136px;border-color:#64748b;background:#f1f5f9"><h3>集群外依赖</h3><div class="s">Gorse 推荐引擎<br>支付宝</div></div>
+<!-- 策略 -->
+<div class="box dash" style="position:absolute;left:430px;top:556px;width:330px;height:46px;border-color:#f87171;background:#fef2f2;padding:4px"><h3 style="font-size:13px">CiliumNetworkPolicy</h3><div class="s">prod 零 CNP · 默认拒绝待审计模式验证后启用</div></div>
+<div class="box dash" style="position:absolute;left:800px;top:556px;width:210px;height:46px;border-color:#f87171;background:#fef2f2;padding:4px"><h3 style="font-size:13px">OpenFGA</h3><div class="s">已部署 · 业务授权未接线</div></div>
+
+<!-- CDC -->
+<div class="cdc">
+  <div style="position:absolute;left:14px;top:8px;font-size:14px;font-weight:700;color:#4338ca">搜索数据同步链路（异步 CDC，不属于同步请求链路）</div>
+  <div class="row" style="left:14px;top:42px;height:56px">
+    <div class="box" style="width:220px;border-color:#86efac;background:#f0fdf4"><h3>products.search_catalog</h3><div class="s">PostgreSQL 表</div></div>
+    <div class="arrow d">⇢</div>
+    <div class="box" style="width:220px;border-color:#a5b4fc;background:#eef2ff"><h3>Debezium Source</h3><div class="s">Kafka Connect · 变更捕获</div></div>
+    <div class="arrow d">⇢</div>
+    <div class="box" style="width:200px;border-color:#a5b4fc;background:#eef2ff"><h3>Strimzi Kafka</h3><div class="s">集群内 · 单 broker</div></div>
+    <div class="arrow d">⇢</div>
+    <div class="box" style="width:200px;border-color:#a5b4fc;background:#eef2ff"><h3>Elasticsearch Sink</h3><div class="s">Kafka Connect</div></div>
+    <div class="arrow d">⇢</div>
+    <div class="box" style="width:190px;border-color:#c4b5fd;background:#f5f3ff"><h3>Elasticsearch</h3><div class="s">search 服务读取</div></div>
+  </div>
+</div>
+
+<!-- 宿主机基础层 -->
+<div class="base">
+  <div style="position:absolute;left:16px;top:10px;font-size:15px;font-weight:700;color:#92400e">宿主机基础层（每个节点）<span style="font-weight:400;font-size:12px;color:#78350f"> — 支撑层，不属于单次请求的处理链路</span></div>
+  <div class="row" style="left:16px;top:42px;height:92px">
+    <div class="box" style="width:220px;border-color:#f59e0b;background:#fef3c7;padding-top:20px"><h3>Linux 内核</h3><div class="s">sysctl · modules</div></div>
+    <div class="arrow" style="color:#b45309">→</div>
+    <div class="box" style="width:220px;border-color:#f59e0b;background:#fef3c7;padding-top:20px"><h3>containerd + runc</h3><div class="s">容器运行时</div></div>
+    <div class="arrow" style="color:#b45309">→</div>
+    <div class="box" style="width:220px;border-color:#f59e0b;background:#fef3c7;padding-top:20px"><h3>kubelet / Kubernetes</h3><div class="s">节点代理与集群管理</div></div>
+    <div class="arrow" style="color:#b45309">→</div>
+    <div class="box" style="width:220px;border-color:#f59e0b;background:#fef3c7;padding-top:20px"><h3>Cilium CNI</h3><div class="s">eBPF · 网络 · 策略</div></div>
+    <div class="box dash" style="width:340px;margin-left:24px;border-color:#94a3b8;background:#f8fafc;text-align:left;padding:8px 12px">
+      <h3>其他（规划中 / 待验证）</h3>
+      <div class="chip">HTTP/3：Pangolin 入口已宣告 alt-svc h3，集群内未启用</div>
+      <div class="chip">NodeLocal DNS 等节点优化</div></div>
+  </div>
+</div>
+
+<div class="legend">
+  <b>图例：</b>
+  <span style="color:#0f766e;font-size:18px;margin-left:12px">→</span> 已验证的请求路径
+  <span style="color:#94a3b8;font-size:18px;margin-left:18px">⇢</span> 异步数据流（CDC）或规划中
+  <span class="sw" style="border-color:#60a5fa;background:#eff6ff;border-style:dashed"></span>Kubernetes 集群边界
+  <span class="sw" style="border-color:#64748b;background:#f1f5f9;border-style:dashed"></span>集群外 / 规划中
+  <span class="sw" style="border-color:#f97316;background:#fff7ed"></span>公网入口
+  <span class="sw" style="border-color:#f87171;background:#fef2f2;border-style:dashed"></span>策略与安全（未启用）
+  <span class="sw" style="border-color:#22c55e;background:#f0fdf4"></span>业务服务
+  <span class="sw" style="border-color:#a855f7;background:#faf5ff"></span>数据组件
+  <br><span style="color:#64748b">事实来源：.service-matrix.yaml、helm/values-prod.yaml 与 2026-09-29 的 kubectl 实查。拓扑变化时改 docs/architecture/concept/ 下的 HTML 再渲染。</span>
+</div>
+</body>
+</html>

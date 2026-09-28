@@ -64,6 +64,15 @@ archify 生成的系统地图，自包含 HTML（深浅主题 / 搜索 / 路径�
 
 图内事实按生成当日（2026-08-08）代码实测，之后架构变了改 JSON 重渲染并更新本表。
 
+概念示意图（PNG，给人快速浏览用，不是 archify 图）：
+
+| 图 | 文件 | 覆盖 |
+|---|---|---|
+| 后端技术架构 | [ecommerce-backend-detail-concept.png](../architecture/ecommerce-backend-detail-concept.png) | 4 个业务域 × 10 个服务；`server → service → biz ← data` 分层；每个服务的外部依赖按 `.service-matrix.yaml` 标注；搜索 CDC 链路 |
+| 运行时请求链路 | [ecommerce-runtime-concept-preview.png](../architecture/ecommerce-runtime-concept-preview.png) | Pangolin → newt → Cilium Gateway → 前端 → control-tower Gateway → 服务；分别标出 SPA 与 consumer-next 到达网关的两条物理路径；未启用的策略与授权用虚线标出 |
+
+两张图由 `docs/architecture/concept/` 下的 HTML 源文件渲染（`node docs/architecture/concept/render.mjs`），HTML 注释里写明了每一处事实的来源，核对日期为 2026-09-29。拓扑变化时改 HTML 再渲染，不要手改 PNG。图与 `.service-matrix.yaml`、archify 图冲突时，以后者为准。
+
 ## 拆分时删除的章节（内容已被取代，勿凭记忆找回）
 
 | 原文档/章节 | 为什么删 | 现在看哪里 |

@@ -1,0 +1,155 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<!--
+  电商平台后端技术架构（概念图）的可维护源文件。渲染：node render.mjs
+  事实来源（2026-09-29 核对）：
+    - 服务与外部依赖：.service-matrix.yaml 的 external 字段
+    - 分层：STACK.md §三 与 backend/structcheck/layer_imports_test.go
+    - TelemetryService 由 behavior 实现（backend/services/behavior/internal/service/telemetry.go）
+    - 校验：protovalidate 运行时按 proto 注解校验（backend/go.mod），不是 protoc-gen-validate 代码生成
+    - CDC：Kafka Connect 的 ecommerce-postgres-source 与 ecommerce-elasticsearch-sink
+  拓扑变化时改这里再渲染，不要手改 PNG。
+-->
+<style>
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body { width: 1700px; height: 860px; background: #f7f9fb; font-family: "PingFang SC", "Hiragino Sans GB", "Noto Sans CJK SC", sans-serif; color: #1f2937; padding: 18px 22px; }
+  .head { display: flex; justify-content: space-between; align-items: flex-start; height: 62px; }
+  .head h1 { font-size: 26px; font-weight: 700; letter-spacing: .5px; }
+  .head .sub { font-size: 14px; color: #4b5563; margin-top: 4px; }
+  .head .tag { text-align: right; font-size: 13px; color: #374151; line-height: 1.6; }
+  .grid { display: grid; gap: 8px 10px;
+    grid-template-columns: 96px 2.3fr 2.1fr 4.8fr 1.35fr 190px;
+    grid-template-rows: 60px 196px 52px 52px 58px 52px 130px 84px; }
+  .lab { border-radius: 8px; color: #fff; font-weight: 700; font-size: 15px; display: flex; flex-direction: column; justify-content: center; padding-left: 10px; }
+  .lab small { font-weight: 400; font-size: 11px; opacity: .9; margin-top: 2px; }
+  .gw { grid-column: 2 / 6; background: #e0f2f1; border: 2px solid #26a69a; border-radius: 10px; text-align: center; padding-top: 6px; }
+  .gw b { font-size: 16px; } .gw div { font-size: 12px; color: #37474f; margin-top: 3px; }
+  .dom { border-radius: 10px; padding: 6px 6px 6px; border: 1.5px solid; }
+  .dom h2 { font-size: 15px; text-align: center; } .dom .dsub { font-size: 11px; text-align: center; color: #4b5563; margin-bottom: 5px; }
+  .cards { display: flex; gap: 5px; }
+  .card { flex: 1; background: #fff; border: 1px solid #cfd8dc; border-radius: 6px; padding: 4px 5px; }
+  .card b { display: block; font-size: 14px; text-align: center; margin-bottom: 2px; }
+  .card code { display: block; font-family: "SF Mono", Menlo, monospace; font-size: 9.5px; color: #455a64; line-height: 1.45; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  .card .note { font-size: 9.5px; color: #00796b; text-align: center; margin-top: 2px; }
+  .layer { border-radius: 8px; border: 1.2px solid; font-size: 12px; text-align: center; display: flex; flex-direction: column; justify-content: center; }
+  .layer b { font-size: 13px; } .layer span { font-size: 10.5px; color: #4b5563; }
+  .deps { border-radius: 8px; border: 1.2px solid #ef9a9a; background: #ffebee; display: flex; flex-wrap: wrap; align-content: center; justify-content: center; gap: 5px; padding: 5px; }
+  .dep { background: #fff; border: 1px solid #f8bbd0; border-radius: 6px; font-size: 11.5px; padding: 3px 7px; text-align: center; line-height: 1.3; }
+  .dep i { display: block; font-style: normal; font-size: 9.5px; color: #6b7280; }
+  .dep.ext { border-style: dashed; border-color: #9e9e9e; }
+  .tools { grid-column: 6; grid-row: 2 / 8; background: #fff8e1; border: 1.5px solid #ffb300; border-radius: 10px; padding: 8px; }
+  .tools h3 { font-size: 15px; color: #e65100; margin-bottom: 6px; }
+  .tool { background: #fff; border: 1px solid #ffe082; border-radius: 6px; padding: 6px 7px; margin-bottom: 7px; font-size: 11px; line-height: 1.45; }
+  .tool b { font-size: 12.5px; color: #bf360c; display: block; }
+  .cdc { grid-column: 2 / 7; border: 1.8px dashed #5c6bc0; border-radius: 10px; display: flex; align-items: center; gap: 10px; padding: 0 14px; background: #fff; }
+  .cdc .t { font-size: 12.5px; color: #3949ab; font-weight: 700; width: 120px; }
+  .node { border-radius: 8px; padding: 5px 10px; font-size: 12px; text-align: center; border: 1.3px solid; line-height: 1.35; }
+  .node i { display: block; font-style: normal; font-size: 10px; color: #4b5563; }
+  .arr { color: #5c6bc0; font-size: 18px; }
+  .legend { grid-column: 6; grid-row: 8; display: none; }
+  .foot { margin-top: 8px; display: flex; justify-content: space-between; font-size: 11px; color: #6b7280; }
+  .c1 { border-color: #66bb6a; background: #e8f5e9; } .c2 { border-color: #42a5f5; background: #e3f2fd; }
+  .c3 { border-color: #26c6da; background: #e0f7fa; } .c4 { border-color: #ab47bc; background: #f3e5f5; }
+  .rpc { border-color: #4dd0e1; background: #e0f7fa; } .svc { border-color: #81c784; background: #e8f5e9; }
+  .biz { border-color: #ffb74d; background: #fff3e0; } .dat { border-color: #9575cd; background: #ede7f6; }
+</style>
+</head>
+<body>
+<div class="head">
+  <div><h1>电商平台后端技术架构（概念图）</h1><div class="sub">模块化 · 可演进 · 面向服务的后端架构 · 10 个 Go 服务</div></div>
+  <div class="tag">server → service → biz ← data（structcheck 强制 import 方向）<br>服务、依赖取自 .service-matrix.yaml · 2026-09-29 核对</div>
+</div>
+
+<div class="grid">
+  <!-- 行标签 -->
+  <div class="lab" style="grid-row:1;background:#00897b">入口层<small>流量接入</small></div>
+  <div class="lab" style="grid-row:2;background:#2e7d32">业务域<small>领域服务</small></div>
+  <div class="lab" style="grid-row:3;background:#0097a7">RPC 接口层<small>Connect</small></div>
+  <div class="lab" style="grid-row:4;background:#43a047">service 层<small>协议转换</small></div>
+  <div class="lab" style="grid-row:5;background:#ef6c00">biz 层<small>领域与用例</small></div>
+  <div class="lab" style="grid-row:6;background:#5e35b1">data 层<small>持久化与三方</small></div>
+  <div class="lab" style="grid-row:7;background:#c62828">外部依赖<small>基础设施 / 三方</small></div>
+  <div class="lab" style="grid-row:8;background:#3949ab">异步数据流<small>非请求链路</small></div>
+
+  <!-- 入口 -->
+  <div class="gw" style="grid-row:1"><b>control-tower Gateway · Cilium Gateway API / HTTPRoute</b>
+    <div>统一入口 · 路由转发 · BFF 会话认证 · 鉴权 · 流量治理（网关在同级仓 control-tower）</div></div>
+
+  <!-- 业务域 -->
+  <div class="dom c1" style="grid-row:2;grid-column:2"><h2>发现与推荐</h2><div class="dsub">搜索 · 个性化推荐 · 用户行为 / 埋点</div>
+    <div class="cards">
+      <div class="card"><b>search</b><code>api/search/v1</code><code>services/search/</code><code>internal/service</code><code>internal/data</code><code>deploy/</code></div>
+      <div class="card"><b>behavior</b><code>api/behavior/v1</code><code>api/telemetry/v1</code><code>services/behavior/</code><code>internal/data</code><code>deploy/</code><div class="note">同时承载 TelemetryService</div></div>
+    </div></div>
+  <div class="dom c2" style="grid-row:2;grid-column:3"><h2>身份与商户</h2><div class="dsub">用户身份 · 商户管理 · 资质与权限</div>
+    <div class="cards">
+      <div class="card"><b>user</b><code>api/user/v1</code><code>services/user/</code><code>internal/service</code><code>internal/data</code><code>deploy/</code></div>
+      <div class="card"><b>merchant</b><code>api/merchant/v1</code><code>services/merchant/</code><code>internal/service</code><code>internal/data</code><code>deploy/</code></div>
+    </div></div>
+  <div class="dom c3" style="grid-row:2;grid-column:4"><h2>交易主链路</h2><div class="dsub">商品 · 购物车 · 订单 · 库存 · 地址</div>
+    <div class="cards">
+      <div class="card"><b>product</b><code>api/product/v1</code><code>services/product/</code><code>internal/data</code><code>deploy/</code></div>
+      <div class="card"><b>cart</b><code>api/cart/v1</code><code>services/cart/</code><code>internal/data</code><code>deploy/</code></div>
+      <div class="card"><b>order</b><code>api/order/v1</code><code>services/order/</code><code>internal/data</code><code>deploy/</code></div>
+      <div class="card"><b>inventory</b><code>api/inventory/v1</code><code>services/inventory/</code><code>internal/data</code><code>deploy/</code></div>
+      <div class="card"><b>address</b><code>api/address/v1</code><code>services/address/</code><code>internal/data</code><code>deploy/</code></div>
+    </div></div>
+  <div class="dom c4" style="grid-row:2;grid-column:5"><h2>支付</h2><div class="dsub">支付处理 · 对账 · 退款</div>
+    <div class="cards">
+      <div class="card"><b>payment</b><code>api/payment/v1</code><code>services/payment/</code><code>internal/service</code><code>internal/data</code><code>deploy/</code></div>
+    </div></div>
+
+  <!-- 分层：每个域同构 -->
+  <div class="layer rpc" style="grid-row:3;grid-column:2/6"><b>Connect-RPC / protobuf 接口（api/*/v1）</b><span>只允许 service（proto ⇄ biz 转换）与 server（注册 *v1connect handler）导入</span></div>
+  <div class="layer svc" style="grid-row:4;grid-column:2/6"><b>service：handler 与协议转换</b><span>proto ⇄ biz 模型；领域错误映射为 RPC 错误码；不越层直连 data</span></div>
+  <div class="layer biz" style="grid-row:5;grid-column:2/6"><b>biz：领域模型 · 用例 · Repo 接口定义</b><span>不导入 data / service / server，不认识 api/*/v1、connect、存储驱动与第三方 SDK；可直接接收 conf/v1 配置 schema</span></div>
+  <div class="layer dat" style="grid-row:6;grid-column:2/6"><b>data：实现 biz 的 Repo 接口 · sqlc · 迁移 · 第三方 SDK 封装</b><span>不导入 connect 与 api/*/v1；返回领域错误，由 service 映射 RPC 码</span></div>
+
+  <!-- 外部依赖（按 .service-matrix.yaml） -->
+  <div class="deps" style="grid-row:7;grid-column:2">
+    <div class="dep">Elasticsearch<i>search 只读</i></div>
+    <div class="dep">PostgreSQL<i>CNPG · behavior</i></div>
+    <div class="dep">Dragonfly<i>Redis 兼容缓存</i></div>
+    <div class="dep ext">Gorse<i>推荐引擎 · 集群外</i></div>
+  </div>
+  <div class="deps" style="grid-row:7;grid-column:3">
+    <div class="dep">PostgreSQL<i>CNPG</i></div>
+    <div class="dep">Dragonfly<i>Redis 兼容缓存</i></div>
+    <div class="dep ext">Casdoor<i>身份 · user · 集群外</i></div>
+  </div>
+  <div class="deps" style="grid-row:7;grid-column:4">
+    <div class="dep">PostgreSQL<i>CNPG · 全部 5 个</i></div>
+    <div class="dep">Dragonfly<i>Redis 兼容缓存 · 全部 5 个</i></div>
+    <div class="dep ext">Gorse<i>product 物品同步 · 集群外</i></div>
+    <div class="dep">MinIO<i>对象存储 · cart</i></div>
+  </div>
+  <div class="deps" style="grid-row:7;grid-column:5">
+    <div class="dep">PostgreSQL<i>CNPG</i></div>
+    <div class="dep ext">支付宝<i>Alipay SDK</i></div>
+  </div>
+
+  <!-- 右侧：生成与横切 -->
+  <div class="tools">
+    <h3>生成代码 / 横切能力</h3>
+    <div class="tool"><b>buf + Connect</b>由 .proto 生成 Go 服务端与 TS 客户端（buf.gen.yaml / buf.gen.ts.yaml）</div>
+    <div class="tool"><b>sqlc</b>由 SQL 生成类型安全的数据访问代码，只在 data 层使用</div>
+    <div class="tool"><b>protovalidate</b>运行时按 proto 注解校验请求，不生成校验代码</div>
+    <div class="tool"><b>frontend/packages/api</b>前端使用的 TypeScript API 包</div>
+    <div class="tool"><b>Config Center</b>全部 10 个服务启动时从 control-tower 配置中心拉取 Bootstrap；selector 缺失直接启动失败</div>
+  </div>
+
+  <!-- CDC -->
+  <div class="cdc" style="grid-row:8">
+    <div class="t">商品搜索同步<br>（异步 CDC）</div>
+    <div class="node" style="border-color:#e57373;background:#ffebee">products.search_catalog<i>PostgreSQL 表</i></div><div class="arr">⇢</div>
+    <div class="node" style="border-color:#7986cb;background:#e8eaf6">Debezium PostgreSQL Source<i>Kafka Connect</i></div><div class="arr">⇢</div>
+    <div class="node" style="border-color:#7986cb;background:#e8eaf6">Strimzi Kafka<i>集群内 · 单 broker</i></div><div class="arr">⇢</div>
+    <div class="node" style="border-color:#7986cb;background:#e8eaf6">Elasticsearch Sink<i>Kafka Connect</i></div><div class="arr">⇢</div>
+    <div class="node" style="border-color:#4db6ac;background:#e0f2f1">Elasticsearch<i>search 服务读取</i></div>
+    <div style="margin-left:auto;font-size:11px;color:#4b5563;line-height:1.6">实线框：集群内 · 虚线框：集群外<br>领域事件 producer / consumer 尚未接线</div>
+  </div>
+</div>
+</body>
+</html>
