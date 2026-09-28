@@ -44,35 +44,35 @@ todo-spec: 1
 
 #### P0
 
-- [ ] **未完成 · 库存预占正确性**：`inventory/internal/data/inventory.go` 仍传未来版本号、忽略更新行数、传错扣减量，且未组成完整事务（错误变量与 RPC 错误码映射已修）。修复原子条件更新、流水及幂等，并验证并发不足库存不会成功。
-- [ ] **未完成 · 库存释放**：data 层 `ReleaseReserve` 仍为 panic，但 service 层根本没调它——直接返回 `{status:false}` 200（2026-09-23 http-client 实测，属假成功）；实现幂等释放，未实现前显式返回 Unimplemented。另：`inventory.stock` 没有 seed，`Reserve` 对 seed SKU 一律 `sku_id is not found`，这是设计（库存由业务流入），测试文件已注明，不造假数据。
-- [ ] **未完成 · 订单假成功与不落库**：`order/internal/service/order.go` 忽略建单输入，`internal/data/order.go` 的 `SaveOrderGroup`/`SaveOrder` 只记日志返回 nil。先显式阻断假成功，再实现持久化；提交成功前不得发布完成事件。
-- [ ] **未完成 · 地址归属校验**：`address/internal/service/address.go` 创建地址仍信任请求体 `UserId`，读改删和设默认未传会话主体。主体取可信身份，数据访问绑定归属；覆盖用户 A/B、游客和管理员的无副作用拒绝测试。
-- [ ] **未完成 · 支付付款人身份**：`payment/internal/service/payment.go` 的 `CreatePayment` 用请求体 `customer_id`（proto 字段 11，只校验 UUID 格式）作付款人，未取网关注入的 `x-md-global-user-id`，可冒用他人身份发起支付。付款人改取可信身份，请求体字段按 proto 兼容规则废弃；补冒用他人 ID 被拒的测试。与「支付闭环」同属用户亲自实现范围。
-- [ ] **部分完成 · 商家审批与桩方法**：2026-09-23 `merchant_service.go` 的 CreateMerchant/RejectApplication/ActivateMerchant 已从 panic 改为显式 `CodeUnimplemented`（panic 会让 net/http 断连，客户端只见 Empty reply）；`GetMerchantAgreement` 在 `merchants.agreement` 空表时返回零值 `effectiveDate=0001-01-01` 而不是明确错误。剩：审批 UPDATE 加 WHERE 限定申请 ID 与操作者权限，实现拒绝/激活，空协议表显式反馈。
-- [ ] **未完成 · 登录 token 落日志**：`user/internal/data/user.go` 仍执行 `u.l.Debug(token.AccessToken)`。删除敏感日志，并随 BFF 收敛清理遗留登录职责。
-- [ ] **未完成 · 加购 INSERT 缺列**：`cart/internal/data/queries/cart.sql` 未写 `shop_name`，迁移定义为 NOT NULL 且无默认值——2026-09-23 实测任何新加购都 500 `null value in column "shop_name"`，seed 行有值所以此前没暴露；前端 `MerchantCartGroup` 空值回退到默认店名。二选一：请求加 `shop_name` 客户端快照（与 spu_name/sku_name 同风格，改 proto + 前端重生成）或服务端查 merchant 填；先定契约再贯通，验证新增与重复加购。同日已修另一处：pgx 未注册 `cart.cart_type[]` 导致 `RemoveCartItem` 500（`data.go` AfterConnect LoadTypes）。
+- [ ] **未完成 · 库存预占正确性**：`inventory/internal/data/inventory.go` 仍传未来版本号、忽略更新行数、传错扣减量，且未组成完整事务（错误变量与 RPC 错误码映射已修）。修复原子条件更新、流水及幂等，并验证并发不足库存不会成功。 <!--t:27d098ac4a7752e3-->
+- [ ] **未完成 · 库存释放**：data 层 `ReleaseReserve` 仍为 panic，但 service 层根本没调它——直接返回 `{status:false}` 200（2026-09-23 http-client 实测，属假成功）；实现幂等释放，未实现前显式返回 Unimplemented。另：`inventory.stock` 没有 seed，`Reserve` 对 seed SKU 一律 `sku_id is not found`，这是设计（库存由业务流入），测试文件已注明，不造假数据。 <!--t:b27a4e04eb2b92a5-->
+- [ ] **未完成 · 订单假成功与不落库**：`order/internal/service/order.go` 忽略建单输入，`internal/data/order.go` 的 `SaveOrderGroup`/`SaveOrder` 只记日志返回 nil。先显式阻断假成功，再实现持久化；提交成功前不得发布完成事件。 <!--t:76015e5bab373d7d-->
+- [ ] **未完成 · 地址归属校验**：`address/internal/service/address.go` 创建地址仍信任请求体 `UserId`，读改删和设默认未传会话主体。主体取可信身份，数据访问绑定归属；覆盖用户 A/B、游客和管理员的无副作用拒绝测试。 <!--t:bcd7ee3243a60855-->
+- [ ] **未完成 · 支付付款人身份**：`payment/internal/service/payment.go` 的 `CreatePayment` 用请求体 `customer_id`（proto 字段 11，只校验 UUID 格式）作付款人，未取网关注入的 `x-md-global-user-id`，可冒用他人身份发起支付。付款人改取可信身份，请求体字段按 proto 兼容规则废弃；补冒用他人 ID 被拒的测试。与「支付闭环」同属用户亲自实现范围。 <!--t:95bcac25d4ced4a6-->
+- [ ] **部分完成 · 商家审批与桩方法**：2026-09-23 `merchant_service.go` 的 CreateMerchant/RejectApplication/ActivateMerchant 已从 panic 改为显式 `CodeUnimplemented`（panic 会让 net/http 断连，客户端只见 Empty reply）；`GetMerchantAgreement` 在 `merchants.agreement` 空表时返回零值 `effectiveDate=0001-01-01` 而不是明确错误。剩：审批 UPDATE 加 WHERE 限定申请 ID 与操作者权限，实现拒绝/激活，空协议表显式反馈。 <!--t:793db8a456ef388f-->
+- [ ] **未完成 · 登录 token 落日志**：`user/internal/data/user.go` 仍执行 `u.l.Debug(token.AccessToken)`。删除敏感日志，并随 BFF 收敛清理遗留登录职责。 <!--t:554600f8559b51cd-->
+- [ ] **未完成 · 加购 INSERT 缺列**：`cart/internal/data/queries/cart.sql` 未写 `shop_name`，迁移定义为 NOT NULL 且无默认值——2026-09-23 实测任何新加购都 500 `null value in column "shop_name"`，seed 行有值所以此前没暴露；前端 `MerchantCartGroup` 空值回退到默认店名。二选一：请求加 `shop_name` 客户端快照（与 spu_name/sku_name 同风格，改 proto + 前端重生成）或服务端查 merchant 填；先定契约再贯通，验证新增与重复加购。同日已修另一处：pgx 未注册 `cart.cart_type[]` 导致 `RemoveCartItem` 500（`data.go` AfterConnect LoadTypes）。 <!--t:bed5a2ecb1172d84-->
 
 上述修复各自带真实 SQL/权限/状态机回归测试，不再另列泛化的「补齐所有单测」任务。
 
 #### P1
 
-- [ ] **未完成 · 建单与库存、支付联动**：按 checkout v2 实现报价/快照、组原子预占、按商家拆单、事务落库、支付意图、成功后清理购物车与失败补偿；不照旧 CartItemIds 草稿直接接线。
-- [ ] **未完成 · 订单查询与状态机**：补用户/商家订单查询、取消、状态守卫、订单日志、支付确认和超时恢复；现有 repo 仍有多处 panic。完成状态要求满足履约前置条件。
-- [ ] **未完成 · 支付闭环（用户亲自实现，agent 不代做）**：payment 不通，repo 5 个方法全部返回 Unimplemented；旧注释实现已删除，不作恢复依据。按 checkout v2 的按组支付和 capture/refund 模型从零实现创建、查询、回调验签、幂等、主动查询、退款与对账。
-- [ ] **未完成 · 商品列表与管理能力**：`product.proto` 当前仅有 `GetProductDetail`；按 [listing.md](docs/design/product/listing.md) 实现游标分页，再补上下架、类目/品牌及商家操作权限。
-- [ ] **未完成 · 下单幂等契约**：前后端必须使用真实 proto 字段与数据库唯一约束；清理靠类型断言发送、运行时被丢弃的 `requestId`，重复提交只能生成一组订单。
-- [ ] **部分完成 · 购物车条目标识**：前端 store 已用 `cartItemId`，后端删除/改数量 SQL 仍按组合键及并行数组。统一迁到 `cart_item_id`，同时校验归属。
-- [ ] **未完成 · 订单数据类型与快照**：金额移除 `float64` 中转、处理 `AddressPostalCode` 空指针、统一 `merchant_id`，跨 schema FK 改为 ID + 快照；迁移与兼容性按设计裁决。
+- [ ] **未完成 · 建单与库存、支付联动**：按 checkout v2 实现报价/快照、组原子预占、按商家拆单、事务落库、支付意图、成功后清理购物车与失败补偿；不照旧 CartItemIds 草稿直接接线。 <!--t:7b81bf51250a4c0e-->
+- [ ] **未完成 · 订单查询与状态机**：补用户/商家订单查询、取消、状态守卫、订单日志、支付确认和超时恢复；现有 repo 仍有多处 panic。完成状态要求满足履约前置条件。 <!--t:f101d4e4a973d7b6-->
+- [ ] **未完成 · 支付闭环（用户亲自实现，agent 不代做）**：payment 不通，repo 5 个方法全部返回 Unimplemented；旧注释实现已删除，不作恢复依据。按 checkout v2 的按组支付和 capture/refund 模型从零实现创建、查询、回调验签、幂等、主动查询、退款与对账。 <!--t:d48891b20e48a9e1-->
+- [ ] **未完成 · 商品列表与管理能力**：`product.proto` 当前仅有 `GetProductDetail`；按 [listing.md](docs/design/product/listing.md) 实现游标分页，再补上下架、类目/品牌及商家操作权限。 <!--t:a0449da74f664550-->
+- [ ] **未完成 · 下单幂等契约**：前后端必须使用真实 proto 字段与数据库唯一约束；清理靠类型断言发送、运行时被丢弃的 `requestId`，重复提交只能生成一组订单。 <!--t:6e011b4541e01b83-->
+- [ ] **部分完成 · 购物车条目标识**：前端 store 已用 `cartItemId`，后端删除/改数量 SQL 仍按组合键及并行数组。统一迁到 `cart_item_id`，同时校验归属。 <!--t:85350febba0ae5b7-->
+- [ ] **未完成 · 订单数据类型与快照**：金额移除 `float64` 中转、处理 `AddressPostalCode` 空指针、统一 `merchant_id`，跨 schema FK 改为 ID + 快照；迁移与兼容性按设计裁决。 <!--t:5bb1e2f49d3f3dac-->
 
 #### P2
 
-- [ ] **未完成 · 商家两段式入驻与组织隔离**：落地商家/店铺/子账号与 `merchant_id` 数据隔离；前端接线统一登记在前端节。
-- [ ] **未完成 · 履约能力**：先并入 order 域，补发货、物流单、轨迹与第三方 adapter；没有独立伸缩或故障域证据不拆新服务。
-- [ ] **待触发 · notification**：原设计草案已删除；单独重新设计后再拆实现项。
-- [ ] **待触发 · support**：原设计草案已删除；单独重新设计后再拆实现项。
-- [ ] **未完成 · 错误码与空表反馈**：`product.GetProductDetail` 对不存在的 spuCode 返回 `unknown`（应 `not_found`）；`user.UserProfile` 在 `public.users` 空表时 404 `user not found`——没人 SignIn 过属预期，但需与「未登录」区分；`merchant.GetMerchantAgreement` 空表零值见上。按 connect 错误码约定统一：找不到 → `not_found`，未实现 → `unimplemented`，不用 `unknown`/零值兜底（2026-09-23 http-client 逐服务实测）。
-- [ ] **未完成 · 搜索体验**：补聚合筛选、热门词与固定查询集相关性基线；搜索只读 PG 派生投影，不恢复业务服务直写索引。
+- [ ] **未完成 · 商家两段式入驻与组织隔离**：落地商家/店铺/子账号与 `merchant_id` 数据隔离；前端接线统一登记在前端节。 <!--t:f45003fafdc43ea1-->
+- [ ] **未完成 · 履约能力**：先并入 order 域，补发货、物流单、轨迹与第三方 adapter；没有独立伸缩或故障域证据不拆新服务。 <!--t:e4ad3dfae7c0a966-->
+- [ ] **待触发 · notification**：原设计草案已删除；单独重新设计后再拆实现项。 <!--t:6d9fc4ef5877206e-->
+- [ ] **待触发 · support**：原设计草案已删除；单独重新设计后再拆实现项。 <!--t:fbb93bc2f806f36b-->
+- [ ] **未完成 · 错误码与空表反馈**：`product.GetProductDetail` 对不存在的 spuCode 返回 `unknown`（应 `not_found`）；`user.UserProfile` 在 `public.users` 空表时 404 `user not found`——没人 SignIn 过属预期，但需与「未登录」区分；`merchant.GetMerchantAgreement` 空表零值见上。按 connect 错误码约定统一：找不到 → `not_found`，未实现 → `unimplemented`，不用 `unknown`/零值兜底（2026-09-23 http-client 逐服务实测）。 <!--t:f8172c279a2e61d2-->
+- [ ] **未完成 · 搜索体验**：补聚合筛选、热门词与固定查询集相关性基线；搜索只读 PG 派生投影，不恢复业务服务直写索引。 <!--t:d78277629f745c5c-->
 
 ### 数据一致性与事件驱动
 
@@ -82,20 +82,20 @@ todo-spec: 1
 
 **待触发**：首个需要跨服务副作用的业务写出现时开工。涉及支付/库存副作用时，下列正确性要求是上线阻断，不是可后补的增强。
 
-- [ ] **待触发 · 事务生产者与事件契约**：业务变更和 Outbox 同一 PG 事务；定义 `OrderCreated`/`OrderPaid`/`OrderCancelled`/`OrderReadyForFulfillment` 等实际所需事件、Protobuf envelope 与 `traceparent`。不为发事件提前制造 Product 写接口。
-- [ ] **待触发 · Outbox 结构与搬运**：`pkg/outbox` 已删除；product `00006_drop_outbox.sql` 已完成隔离 PostgreSQL 升降级及 pre 授权执行，其他环境仍须核对数据/消费者后单独授权；随首个事件契约新建 outbox 表（含 `aggregate_type`、不带 relay 簿记列）与同事务生产者；Debezium Outbox Router 使用独立 publication/slot，与搜索 CDC 分线。配置 `acks=all`、幂等 producer 及复制槽保留策略，不自写 relay。
-- [ ] **待触发 · 消费者与恢复**：franz-go + Inbox 唯一键 `(consumer_group,event_id)`；副作用与 Inbox 同事务，成功后提交 offset。落 retry/backoff、显式预算、DLQ、重放权限与审计，补显式补偿、状态查询和超时兜底。
-- [ ] **待触发 · Topic 与演练**：声明 owner、partition key、replication、retention、lag/恢复 SLO；验证事务回滚、重复、乱序、毒消息、断连、积压与重放。没有 Inbox 和补偿证据不得产生支付/库存副作用。
+- [ ] **待触发 · 事务生产者与事件契约**：业务变更和 Outbox 同一 PG 事务；定义 `OrderCreated`/`OrderPaid`/`OrderCancelled`/`OrderReadyForFulfillment` 等实际所需事件、Protobuf envelope 与 `traceparent`。不为发事件提前制造 Product 写接口。 <!--t:f75694ad63dd34c1-->
+- [ ] **待触发 · Outbox 结构与搬运**：`pkg/outbox` 已删除；product `00006_drop_outbox.sql` 已完成隔离 PostgreSQL 升降级及 pre 授权执行，其他环境仍须核对数据/消费者后单独授权；随首个事件契约新建 outbox 表（含 `aggregate_type`、不带 relay 簿记列）与同事务生产者；Debezium Outbox Router 使用独立 publication/slot，与搜索 CDC 分线。配置 `acks=all`、幂等 producer 及复制槽保留策略，不自写 relay。 <!--t:cc7f9deebdfcebf4-->
+- [ ] **待触发 · 消费者与恢复**：franz-go + Inbox 唯一键 `(consumer_group,event_id)`；副作用与 Inbox 同事务，成功后提交 offset。落 retry/backoff、显式预算、DLQ、重放权限与审计，补显式补偿、状态查询和超时兜底。 <!--t:abec41b55d6a3f86-->
+- [ ] **待触发 · Topic 与演练**：声明 owner、partition key、replication、retention、lag/恢复 SLO；验证事务回滚、重复、乱序、毒消息、断连、积压与重放。没有 Inbox 和补偿证据不得产生支付/库存副作用。 <!--t:eedcbeb9095621b2-->
 
 #### P1 · 线 A：搜索恢复
 
-- [ ] **部分完成 · 搜索灾备验收**：2026-09-23 在新集群做了一次真实 alias 切换（7 个索引 `_v1`→`_v2`，重灌 sink，文档数逐表对齐 PG，ES 转 green）并补了复制槽保留告警（kubernetes 仓 `vmalert/rules/ecommerce-cdc.yml`）；发现并修掉「集群重建后 ES 索引由 sink 自动建、mapping 不是契约」和「source 丢了 `lsn.flush.mode`」两处回归。仍需：固定商品集的 checksum/query diff、alias 回退演练、retention 边界与恢复时长；破坏性注入须单独授权。搜索语义边界待产品决定：`ik_smart` 把「精华液」当整词，文档只有「精华」就搜不到。
+- [ ] **部分完成 · 搜索灾备验收**：2026-09-23 在新集群做了一次真实 alias 切换（7 个索引 `_v1`→`_v2`，重灌 sink，文档数逐表对齐 PG，ES 转 green）并补了复制槽保留告警（kubernetes 仓 `vmalert/rules/ecommerce-cdc.yml`）；发现并修掉「集群重建后 ES 索引由 sink 自动建、mapping 不是契约」和「source 丢了 `lsn.flush.mode`」两处回归。仍需：固定商品集的 checksum/query diff、alias 回退演练、retention 边界与恢复时长；破坏性注入须单独授权。搜索语义边界待产品决定：`ik_smart` 把「精华液」当整词，文档只有「精华」就搜不到。 <!--t:ebd113e4b8e7e85c-->
 
 #### P2 · DuckDB 试点 D0–D3
 
-- [ ] **待触发 · D0 真实分析需求**：先确认真实报表/对账消费者或行为数据规模门槛成立；否则不排期。搜索 CDC 已用于业务，删除旧「只属演示」前提。
-- [ ] **待前置 · D1 最小跑批**：D0 成立后落 PG 增量导出 → Parquet/Silo → DuckDB CLI，固定 SQL、批次校验与 manifest 发布；不嵌入业务服务、不引入常驻任意 SQL 服务。
-- [ ] **待触发 · D2/D3 版本复核**：正式版发布后按 TECH.md B 表复核 CLI/daemon、ABI/CGO 与归档性能增量；不把预览版或稳定 ABI 自动等同于允许 cgo，结论回写 TECH.md。
+- [ ] **待触发 · D0 真实分析需求**：先确认真实报表/对账消费者或行为数据规模门槛成立；否则不排期。搜索 CDC 已用于业务，删除旧「只属演示」前提。 <!--t:c77fad385b617192-->
+- [ ] **待前置 · D1 最小跑批**：D0 成立后落 PG 增量导出 → Parquet/Silo → DuckDB CLI，固定 SQL、批次校验与 manifest 发布；不嵌入业务服务、不引入常驻任意 SQL 服务。 <!--t:25dbe735dea16723-->
+- [ ] **待触发 · D2/D3 版本复核**：正式版发布后按 TECH.md B 表复核 CLI/daemon、ABI/CGO 与归档性能增量；不把预览版或稳定 ABI 自动等同于允许 cgo，结论回写 TECH.md。 <!--t:1e807f08f6bf4e21-->
 
 ### 基础设施与部署模型
 
@@ -103,25 +103,25 @@ todo-spec: 1
 
 #### P1
 
-- [ ] **部分完成 · GitOps 接管**：Helm/裸清单 parity、版本/digest 晋级已有实现；GitLab 来源的 `AppProject`/`ApplicationSet`/repository Secret 已 apply，`ecommerce-prod` 已生成并完成首次 live diff——54 个对象全部 `OutOfSync`，但差异**只有** ArgoCD 自身注入的 `argocd.argoproj.io/tracking-id` 注解，无字段级漂移、无需新建对象、`--orphaned` 为空，说明 GitLab `main` 的 chart 渲染与线上完全等价。剩余：执行首次 `argocd app sync`（写入 tracking-id，使状态转 `Synced`），再把 `syncPolicy.automated.enabled` 打开启用 prune/selfHeal；网关归 control-tower，不把它重复塞回本仓 chart。
+- [ ] **部分完成 · GitOps 接管**：Helm/裸清单 parity、版本/digest 晋级已有实现；GitLab 来源的 `AppProject`/`ApplicationSet`/repository Secret 已 apply，`ecommerce-prod` 已生成并完成首次 live diff——54 个对象全部 `OutOfSync`，但差异**只有** ArgoCD 自身注入的 `argocd.argoproj.io/tracking-id` 注解，无字段级漂移、无需新建对象、`--orphaned` 为空，说明 GitLab `main` 的 chart 渲染与线上完全等价。剩余：执行首次 `argocd app sync`（写入 tracking-id，使状态转 `Synced`），再把 `syncPolicy.automated.enabled` 打开启用 prune/selfHeal；网关归 control-tower，不把它重复塞回本仓 chart。 <!--t:b4ceb97c8ff99cc3-->
   ArgoCD CLI 走明文入口 `argocd-api.apikv.com:80 --plaintext`（Pangolin rid 66，2026-09-24 实测通），但**该资源尚未配来源访问规则**，admin 密码与 token 明文过公网——补上 remote-dev/VPN 出口 CIDR 的 ACCEPT 规则前不应长期保持开放。
-- [ ] **未完成 · 生产 default-deny**：`helm/values-prod.yaml` 仍关闭 NetworkPolicy。先核对当前内网 PG/ES/对象存储、Casdoor/gorse、DNS 与探针通路，审计模式验证后再启用；Helm 与裸清单同步。
-- [ ] **未完成 · OTLP Secret 接入 OpenBao/ESO**：prod 仍关闭 `otelAuthExternalSecret`。修正/参数化 SecretStore，确认实际键可同步后启用，不能沿用不存在的 store。
-- [ ] **部分完成 · Dragonfly 凭据传播**：旧 WRONGPASS 曾手工修复；仍需同源派生消费方 Secret/Config Center 配置、轮换后验证全部消费者，补 `/readyz` 而非仅 `/healthz` 告警，并避免认证命令里的密码进入日志。
-- [ ] **待复验 · 当前集群容量与稳定性**：旧 node3 风暴已做组件迁移，不能继续按迁移前内存表下结论。交接仍报 node5 抖动、metrics-server 不可用；先恢复可信观测，再评估 requests 与可调度节点容量，不以重平衡脚本替代容量治理。
-- [ ] **部分完成 · VPA 与 requests 校准**：2026-09-23 拍板 recommender 开 / updater 关 / webhook 不作自动调节（kubernetes 仓 `components/vpa/values.yaml`），`observability/grafana` VPA `Off` 已出 Target≈11m/523Mi 作为样板；按 Off/RequestsOnly 收敛，包括复核 config-center 旧 InPlace 配置；至少 7 天指标覆盖发布与 k6 窗口，再人工回写 requests。
-- [ ] **部分完成 · 多副本、PDB 与 N+1**：重核当前拓扑的副本/PDB；旧低流量、旧节点演练不代表现在达标。验证节点故障、扩缩容、批量滚更、资源耗尽与调度失败告警，满足后才启用自动灰度/重调度。
-- [ ] **待修复 · 公网入口与 HTTPRoute/TLS**：后端内部健康和 SQL 请求已验证，公网 `shop.apikv.com` / `gateway.apikv.com` smoke 为 404；集群前端 HTTPRoute 为 Accepted，但未发现 control-tower gateway Deployment/Service，须与该仓和公网入口 owner 核对，不把后端发布成功写成公网交易链成功。同 hostname 不等于冲突，按 Exact/PathPrefix 优先级验证 SSR、SPA 与 `/_next`；盘点实际路由和 certificateRef，不按旧组件列表批量迁移。
-- [ ] **部分完成 · 数据恢复与重装**：2026-09-23 已用真实 dump（`backs/node3/pigsty-node3-2026-09-03/raw/_data/ecommerce.pgdump`）在 CNPG 隔离库比对：业务表与 live 一致（同一套 Go seed，订单/用户在备份里为 0 行），只有 Config Center 的 `config` schema 是 live 缺的，已 additive 合入 `pg-main/ecommerce`；CDC 用真实 SKU 可逆改价验证 PG→Debezium→Kafka→ES 全链路。剩：CNPG PITR/对象存储备份、RTO/RPO 演练；OpenBao 集群外备份/副本；重装手顺以 CNPG + OpenBao/ESO + Config Center 为准（Pigsty 已随 node3 退役）。OpenBao 当前明确选择 **C：保持 Shamir 手动解封**，不做 static seal migration，也不接 VPS Vault transit；Pod 重启后的恢复动作是 `bash kubernetes/components/openbao/examples/unseal.sh`，Gatus `openbao-unsealed` 负责告警。
-- [ ] **待对齐 · 数据面故障域**：近期 Kafka/ES/Connect/Silo 迁入 K8s，与 TECH.md §7 的外置数据面目标有差距；登记迁移后容量与恢复证据，再按目标规划收敛，不能把部署完成当成目标已满足。
-- [ ] **待复验 · Dragonfly 实例隔离**：按 TECH.md §7/§12 验收 Session 的 noeviction/持久化、Cache 淘汰策略与 Ratelimit 故障域；共用实例不能标为生产基线完成。
+- [ ] **未完成 · 生产 default-deny**：`helm/values-prod.yaml` 仍关闭 NetworkPolicy。先核对当前内网 PG/ES/对象存储、Casdoor/gorse、DNS 与探针通路，审计模式验证后再启用；Helm 与裸清单同步。 <!--t:3a3bfa0566c71295-->
+- [ ] **未完成 · OTLP Secret 接入 OpenBao/ESO**：prod 仍关闭 `otelAuthExternalSecret`。修正/参数化 SecretStore，确认实际键可同步后启用，不能沿用不存在的 store。 <!--t:68e52dfe37944733-->
+- [ ] **部分完成 · Dragonfly 凭据传播**：旧 WRONGPASS 曾手工修复；仍需同源派生消费方 Secret/Config Center 配置、轮换后验证全部消费者，补 `/readyz` 而非仅 `/healthz` 告警，并避免认证命令里的密码进入日志。 <!--t:035c5900b0b021a7-->
+- [ ] **待复验 · 当前集群容量与稳定性**：旧 node3 风暴已做组件迁移，不能继续按迁移前内存表下结论。交接仍报 node5 抖动、metrics-server 不可用；先恢复可信观测，再评估 requests 与可调度节点容量，不以重平衡脚本替代容量治理。 <!--t:37e39baaeec57e24-->
+- [ ] **部分完成 · VPA 与 requests 校准**：2026-09-23 拍板 recommender 开 / updater 关 / webhook 不作自动调节（kubernetes 仓 `components/vpa/values.yaml`），`observability/grafana` VPA `Off` 已出 Target≈11m/523Mi 作为样板；按 Off/RequestsOnly 收敛，包括复核 config-center 旧 InPlace 配置；至少 7 天指标覆盖发布与 k6 窗口，再人工回写 requests。 <!--t:ce686eebcdb46755-->
+- [ ] **部分完成 · 多副本、PDB 与 N+1**：重核当前拓扑的副本/PDB；旧低流量、旧节点演练不代表现在达标。验证节点故障、扩缩容、批量滚更、资源耗尽与调度失败告警，满足后才启用自动灰度/重调度。 <!--t:aea37e525133cc6c-->
+- [ ] **待修复 · 公网入口与 HTTPRoute/TLS**：后端内部健康和 SQL 请求已验证，公网 `shop.apikv.com` / `gateway.apikv.com` smoke 为 404；集群前端 HTTPRoute 为 Accepted，但未发现 control-tower gateway Deployment/Service，须与该仓和公网入口 owner 核对，不把后端发布成功写成公网交易链成功。同 hostname 不等于冲突，按 Exact/PathPrefix 优先级验证 SSR、SPA 与 `/_next`；盘点实际路由和 certificateRef，不按旧组件列表批量迁移。 <!--t:2cd770347adcd248-->
+- [ ] **部分完成 · 数据恢复与重装**：2026-09-23 已用真实 dump（`backs/node3/pigsty-node3-2026-09-03/raw/_data/ecommerce.pgdump`）在 CNPG 隔离库比对：业务表与 live 一致（同一套 Go seed，订单/用户在备份里为 0 行），只有 Config Center 的 `config` schema 是 live 缺的，已 additive 合入 `pg-main/ecommerce`；CDC 用真实 SKU 可逆改价验证 PG→Debezium→Kafka→ES 全链路。剩：CNPG PITR/对象存储备份、RTO/RPO 演练；OpenBao 集群外备份/副本；重装手顺以 CNPG + OpenBao/ESO + Config Center 为准（Pigsty 已随 node3 退役）。OpenBao 当前明确选择 **C：保持 Shamir 手动解封**，不做 static seal migration，也不接 VPS Vault transit；Pod 重启后的恢复动作是 `bash kubernetes/components/openbao/examples/unseal.sh`，Gatus `openbao-unsealed` 负责告警。 <!--t:f04da7000bba8429-->
+- [ ] **待对齐 · 数据面故障域**：近期 Kafka/ES/Connect/Silo 迁入 K8s，与 TECH.md §7 的外置数据面目标有差距；登记迁移后容量与恢复证据，再按目标规划收敛，不能把部署完成当成目标已满足。 <!--t:63d189855292cdcf-->
+- [ ] **待复验 · Dragonfly 实例隔离**：按 TECH.md §7/§12 验收 Session 的 noeviction/持久化、Cache 淘汰策略与 Ratelimit 故障域；共用实例不能标为生产基线完成。 <!--t:5dcab1450294c2d2-->
 
 #### P2
 
-- [ ] **待复验 · PG/Redis 证书续期传播**：旧记录到期日为 2026-11-25；先查实际下发证书，再人工同步副本并 reload/restart，复验 verify-full 客户端。旧 `cert-san-resign.md` 已不可定位，恢复手顺需覆盖 PG `serverAuth,clientAuth` 与 Patroni 重启要求。
-- [ ] **部分完成 · Harbor 爆破防护**：旧 jail 能检测但隧道后端按真实 IP 封禁无效；核对现行入口，优先验证账号锁定，必要时在实际公网终止点限流/封禁。验收必须证明攻击流量被拦。
-- [ ] **待复验 · 遗留运行配置**：核对 node3 Redis 网络就绪顺序、重复拉取凭据、node1 gorse 僵尸副本、cart 的 Silo endpoint 与 OTel TLS 配置；仅处理仍存在的对象，不照旧主机/端口表操作。
-- [ ] **部分完成 · KEDA/Rollouts**：控制器已装并做了行为验收（KEDA cron ScaledObject 0→2 + 生成 HPA；Rollouts 金丝雀 setWeight 50→pause→100，stableRS 切换）。业务接线：frontend 的 pre 已切 Blue-Green Rollout（prod 仍 Deployment，Helm/裸清单等价已过门禁），待 ApplicationSet 在新集群 apply 后首次手动 sync + promote；Kafka 消费者 lag 出现真实消费者后再建 ScaledObject；后端灰度要先有 ≥2 副本 + PDB 的无状态服务。
+- [ ] **待复验 · PG/Redis 证书续期传播**：旧记录到期日为 2026-11-25；先查实际下发证书，再人工同步副本并 reload/restart，复验 verify-full 客户端。旧 `cert-san-resign.md` 已不可定位，恢复手顺需覆盖 PG `serverAuth,clientAuth` 与 Patroni 重启要求。 <!--t:b0e39e0cad6b82f2-->
+- [ ] **部分完成 · Harbor 爆破防护**：旧 jail 能检测但隧道后端按真实 IP 封禁无效；核对现行入口，优先验证账号锁定，必要时在实际公网终止点限流/封禁。验收必须证明攻击流量被拦。 <!--t:26b7fff712f851d0-->
+- [ ] **待复验 · 遗留运行配置**：核对 node3 Redis 网络就绪顺序、重复拉取凭据、node1 gorse 僵尸副本、cart 的 Silo endpoint 与 OTel TLS 配置；仅处理仍存在的对象，不照旧主机/端口表操作。 <!--t:ad19ca7579691778-->
+- [ ] **部分完成 · KEDA/Rollouts**：控制器已装并做了行为验收（KEDA cron ScaledObject 0→2 + 生成 HPA；Rollouts 金丝雀 setWeight 50→pause→100，stableRS 切换）。业务接线：frontend 的 pre 已切 Blue-Green Rollout（prod 仍 Deployment，Helm/裸清单等价已过门禁），待 ApplicationSet 在新集群 apply 后首次手动 sync + promote；Kafka 消费者 lag 出现真实消费者后再建 ScaledObject；后端灰度要先有 ≥2 副本 + PDB 的无状态服务。 <!--t:4ed10c15f7bc7e14-->
 
 ### 零信任鉴权与Session
 
@@ -129,23 +129,23 @@ todo-spec: 1
 
 #### P0
 
-- [ ] **未完成 · 移除 legacy bearer JWT**：control-tower `httpmw/auth.go` 仍保留第三轨及回退；完成客户端盘点后拆除旧鉴权、撤销名单和配置，不能以无限期兼容违背单一 Session 红线。
-- [ ] **待复验 · 搜索凭据暴露处置**：旧会话日志暴露记录没有轮换完成证据；核对当前凭据是否仍受影响，必要时轮换并验证旧值失效，不在文档或工具输出回显凭据。
+- [ ] **未完成 · 移除 legacy bearer JWT**：control-tower `httpmw/auth.go` 仍保留第三轨及回退；完成客户端盘点后拆除旧鉴权、撤销名单和配置，不能以无限期兼容违背单一 Session 红线。 <!--t:1c6730e2a8617b90-->
+- [ ] **待复验 · 搜索凭据暴露处置**：旧会话日志暴露记录没有轮换完成证据；核对当前凭据是否仍受影响，必要时轮换并验证旧值失效，不在文档或工具输出回显凭据。 <!--t:07b55417c4a499e2-->
 
 #### P1
 
-- [ ] **部分完成 · 历史凭据泄露收尾**：旧记录已确认全部轮换、历史重写；仅剩 GitHub Support 清理悬空对象。不得把「轮换」重复列为未完成。
-- [ ] **部分完成 · OpenFGA 与 RPC 授权**：部署不等于业务接线；落用户/商家/店铺/订单关系与资源级 Check，迁出 Casbin，对现行 policies 做逐 RPC 审计；地址漏洞归微服务 P0。
-- [ ] **部分完成 · 匿名购物**：网关 `GuestCookie` 已装配、入站 `x-md-*` 已无条件剥离；剩路由/签名配置上线验收、C 级服务 `RequireUser`、`MergeGuestCart`、登录合并与前端接线。验证访客不能下单、支付或访问地址簿。
-- [ ] **部分完成 · BFF 生产属性与会话存储**：2026-09-20 修掉线上跑 dev 清单的问题（`BFF_PUBLIC_BASE_URL` 曾是 `http://localhost:3000`，授权 URL 的 redirect_uri 指向本机，登录整条不可用），现为 `https://gateway.apikv.com`、cookie 实测带 `Secure`；剩 CSRF、登出撤权、真实 CA/Secret 与 Dragonfly Session 链路 fail-closed 验收。旧 `redis-tls-ca` 名称不再作为修复目标。
-- [ ] **部分完成 · 服务端身份边界**：独立 SA 与关闭 automount 已有清单；剩 auth SDK/配置债、projected token 审计及绕网关访问验证。网络策略任务归基础设施节。
-- [ ] **待复验 · Casdoor 账号治理**：核对密码策略、第三方登录、会话保持与账号禁用；按实际风险决定是否限制匿名 application 元信息接口，不能把已脱敏返回等同于凭据泄露。
+- [ ] **部分完成 · 历史凭据泄露收尾**：旧记录已确认全部轮换、历史重写；仅剩 GitHub Support 清理悬空对象。不得把「轮换」重复列为未完成。 <!--t:43b96984b5a6ea92-->
+- [ ] **部分完成 · OpenFGA 与 RPC 授权**：部署不等于业务接线；落用户/商家/店铺/订单关系与资源级 Check，迁出 Casbin，对现行 policies 做逐 RPC 审计；地址漏洞归微服务 P0。 <!--t:199b794602e5162d-->
+- [ ] **部分完成 · 匿名购物**：网关 `GuestCookie` 已装配、入站 `x-md-*` 已无条件剥离；剩路由/签名配置上线验收、C 级服务 `RequireUser`、`MergeGuestCart`、登录合并与前端接线。验证访客不能下单、支付或访问地址簿。 <!--t:225902530e1f52a7-->
+- [ ] **部分完成 · BFF 生产属性与会话存储**：2026-09-20 修掉线上跑 dev 清单的问题（`BFF_PUBLIC_BASE_URL` 曾是 `http://localhost:3000`，授权 URL 的 redirect_uri 指向本机，登录整条不可用），现为 `https://gateway.apikv.com`、cookie 实测带 `Secure`；剩 CSRF、登出撤权、真实 CA/Secret 与 Dragonfly Session 链路 fail-closed 验收。旧 `redis-tls-ca` 名称不再作为修复目标。 <!--t:24cad1f4e35eceb1-->
+- [ ] **部分完成 · 服务端身份边界**：独立 SA 与关闭 automount 已有清单；剩 auth SDK/配置债、projected token 审计及绕网关访问验证。网络策略任务归基础设施节。 <!--t:0edd9149733e7803-->
+- [ ] **待复验 · Casdoor 账号治理**：核对密码策略、第三方登录、会话保持与账号禁用；按实际风险决定是否限制匿名 application 元信息接口，不能把已脱敏返回等同于凭据泄露。 <!--t:8002d9c791984395-->
 
 #### P2
 
-- [ ] **待前置 · 传输层身份**：先验证 Cilium WireGuard 节点间加密；确有 workload mTLS/授权需求再评估 Istio Ambient，不提前引入 SPIRE 或把 Cilium Mutual Authentication 当完整 mTLS。
-- [ ] **部分完成 · Tetragon 治理**：2026-09-22 新集群 k1/k2/k3 重装（1.7.1），`ecommerce-service-account-token-access` audit-only 策略已应用，kubernetes 仓 `components/tetragon/verify.sh` + `examples/cnp-smoke.sh`（CNP 正反向 + Hubble `Policy denied` 证据）可复跑。剩：权限最小化、长期基线、事件完整性与 enforcement 单独验收。
-- [ ] **部分完成 · 登录回归保护**：2026-09-20 线上冒烟实跑 10 过 2 挂，断言已按 BFF 现状改正（redirect_uri 断网关 `/auth/callback`，删掉迁移前的 PKCE 断言——它俩都对不上真相，于是线上 redirect_uri 配错时没有任何一层拦得住）。剩复核 callback 与会话恢复竞态修复是否有测试、冒烟处理隐私弹窗、验证真实会话恢复/退出，不以脚本存在代替跑通。
+- [ ] **待前置 · 传输层身份**：先验证 Cilium WireGuard 节点间加密；确有 workload mTLS/授权需求再评估 Istio Ambient，不提前引入 SPIRE 或把 Cilium Mutual Authentication 当完整 mTLS。 <!--t:a0dc0efae9edbcd8-->
+- [ ] **部分完成 · Tetragon 治理**：2026-09-22 新集群 k1/k2/k3 重装（1.7.1），`ecommerce-service-account-token-access` audit-only 策略已应用，kubernetes 仓 `components/tetragon/verify.sh` + `examples/cnp-smoke.sh`（CNP 正反向 + Hubble `Policy denied` 证据）可复跑。剩：权限最小化、长期基线、事件完整性与 enforcement 单独验收。 <!--t:87fb8823ca41b7bc-->
+- [ ] **部分完成 · 登录回归保护**：2026-09-20 线上冒烟实跑 10 过 2 挂，断言已按 BFF 现状改正（redirect_uri 断网关 `/auth/callback`，删掉迁移前的 PKCE 断言——它俩都对不上真相，于是线上 redirect_uri 配错时没有任何一层拦得住）。剩复核 callback 与会话恢复竞态修复是否有测试、冒烟处理隐私弹窗、验证真实会话恢复/退出，不以脚本存在代替跑通。 <!--t:31f8c2f88994746f-->
 
 ### 统一可观测性体系
 
@@ -153,29 +153,29 @@ todo-spec: 1
 
 #### P0
 
-- [ ] **待客户端确认 · 告警送达**：新版发布者/订阅者权限已隔离，Alertmanager→alert-bridge→ntfy 的 test 路由故障与恢复均已读回 `event=message`。剩手机添加自托管服务器、订阅主题，并确认通知展示与 Grafana 定位链接；服务端接收不能代替手机验收。
-- [ ] **待复验 · 敏感日志端到端脱敏**：旧 Lua 缺陷所属采集器已退役，不再修旧管道。对当前 stdout/Vector 与 SDK OTLP 两条链路注入合成手机号、邮件、token、支付表单样本，确认原文字段不旁路入库；按 TECH.md 收敛到外置 Collector。
+- [ ] **待客户端确认 · 告警送达**：新版发布者/订阅者权限已隔离，Alertmanager→alert-bridge→ntfy 的 test 路由故障与恢复均已读回 `event=message`。剩手机添加自托管服务器、订阅主题，并确认通知展示与 Grafana 定位链接；服务端接收不能代替手机验收。 <!--t:362b2af70fb2f5f4-->
+- [ ] **待复验 · 敏感日志端到端脱敏**：旧 Lua 缺陷所属采集器已退役，不再修旧管道。对当前 stdout/Vector 与 SDK OTLP 两条链路注入合成手机号、邮件、token、支付表单样本，确认原文字段不旁路入库；按 TECH.md 收敛到外置 Collector。 <!--t:dfeee2d137d159fb-->
 
 #### P1
 
-- [ ] **待复验 · 告警信号卫生**：复核慢性 PG lag、swap、网络拒绝等旧告警是否仍在；先修根因，再做 critical/warning 分流与窗口失败率判定，避免重启风暴被连续成功探针掩盖。既有交接见 [告警清理](.scratch/chronic-alerts-cleanup/HANDOFF.md)。
-- [ ] **待复验 · 指标写入口认证**：确认 VM import 与 OTLP metrics 入口拒绝未授权写入，推送方认证同步配置；旧公网可写断言未重测。
-- [ ] **部分完成 · 指标采集层对齐**：当前有 OTel agent，TECH.md 仍要求 VMAgent。按目标收敛职责、避免重复采集；补 Pod/容器用量与 CFS throttling，校验 kubelet/cAdvisor 实际可用指标，不能假定 kubeletstats 覆盖全部限流指标。
-- [ ] **部分完成 · Go runtime/进程指标验收**：十服务 adapter 均已设 `RuntimeMetrics: true`，删除「全部未实现」判断；剩 goroutine/heap/CPU/内存实际 series、导出失败可见性验收，缺项在 go-connect-kit 补齐；发布版本归下文「部署关联与观测恢复」。
-- [ ] **部分完成 · 配置未生效告警**：pre 的 pgpool/redisclient 指标、stale 与缺失告警已实测；PG 真实查询和 Redis 曝光去重在 stale 期间正常，恢复后指标归零。剩独立 prod 验收，以及在途 gorse Live 接线发布后的同类验证。不要让 stale 直接造成健康检查失败，理由见 [热更新边界](context/project/ecommerce/config/experience/config-hot-reload-boundaries.md)。
-- [ ] **未完成 · 日志限流**：共享日志模块统一实现采样与压制计数；stdout/OTLP 同时受控，FATAL/PANIC 不限，阈值经故障场景验证。不再复制修改十份初始化代码；RPC 日志拦截器已下沉 kit `rpcobs`（v0.7.0），限流在 kit 侧一处实现。
-- [ ] **部分完成 · 业务错误 reason**：kit `errinfo.New(reason, msg)` 声明哨兵，拦截器沿错误链取 reason 写日志/span、打 `rpc.server.errors{error.reason}`（otelconnect 只能删属性不能加，故单独计数器），并以 `google.rpc.ErrorInfo{Reason, Domain=服务名}` 返回客户端；24 个哨兵已转换，APM 盘加「错误 by 业务 reason」。已随 kit v0.7.0 接入。剩：部署后用真实业务异常确认 VM 里的 series 名（推算为 `rpc_server_errors_total`）；前端按 reason 处理需 TS 侧解 ErrorInfo。
-- [ ] **部分完成 · 抛错点定位**：日志的 `code.file.path` 恒为 `server/logging.go`（2026-09-24 VictoriaLogs 实测），无法 blame。kit `errinfo.Here` 记录最内层调用点，dbutil 三个入口对非 nil 结果自动记录数据层调用行，拦截器写 `error.origin`（kit v0.7.0）。剩：数据层约 71 处不经 dbutil 的 `fmt.Errorf`（Redis、外部 API）未记录，按故障热点逐步补 `errinfo.Here`；部署后在 VL 确认 `error.origin` 字段。
-- [ ] **待复验 · 网关遥测**：源码已用 kit 的 ParentBased 采样，旧 AlwaysSample 修复项删除；验证真实 5xx 的 span/log 状态、网关上游时延与尾采样效果，不沿用已删除旧网关的行号结论。
-- [ ] **未完成 · 前端 RUM 与后端关联**：consumer 已接 `initPerf`，补 `traceparent`/Server-Timing 关联与 merchant/admin 的适用接入；Umami 不替代性能追踪。
-- [ ] **部分完成 · 看板和标签**：DB 错误率分母已修；剩节点覆盖阈值按当前采集对象校准、网关时延图、`service.namespace`/实例标签及 `rpc.code` 回归，按上下文组织四黄金信号；兜底码 `unknown` 占比面板与 warning（kubernetes 仓 `EcommerceUnknownErrorShareHigh`）已上线；dev 数据回放显示 address/cart/inventory/product 的服务侧错误 100% 是 unknown，该补映射。看板尚未区分环境：dev 与 pre 指标同在一个 VM，APM 盘要加 `$env` 变量（按 `deployment_environment_name`）。
-- [ ] **未完成 · SLO 与定位验收**：落 gateway/user/order/cart SLO 和错误预算；授权演练中验证告警至 Grafana/trace 定位不超过 5 分钟——2026-09-24 核实：vmalert 原有 39 条规则**没有一条应用层错误率告警**（面板设计.md A1 迁移时丢失）。已在 kubernetes 仓补 `ecommerce-app.yml`（错误率 A1、unknown 占比、RPC 指标缺失兜底），每条带 `dashboard`/`logs_query` annotation，alert-bridge 把 `dashboard` 转成 ntfy `Click`（指向公网 Grafana Explore 并预填该服务的错误查询——三张看板在重建后的 Grafana 里不存在，且生成的 JSON 仍含退役数据源，重建看板后可改回看板链接）；vmalert `-dryRun` 与 LogsQL 已在现网校验；规则排除 `deployment_environment_name="dev"`——本地开发机经公网 OTLP 入口写进同一个 VM，不排除时 24h 回放里 7 个 dev 服务会触发 critical。已部署（vmalert 42 条规则 health 全 ok）。剩：注入故障演练（先修上面的「告警送不到人」）。P50/P95/P99 基线并入容量压测，不把一次冷请求当结论。
+- [ ] **待复验 · 告警信号卫生**：复核慢性 PG lag、swap、网络拒绝等旧告警是否仍在；先修根因，再做 critical/warning 分流与窗口失败率判定，避免重启风暴被连续成功探针掩盖。既有交接见 [告警清理](.scratch/chronic-alerts-cleanup/HANDOFF.md)。 <!--t:1de7fb98a4d8b153-->
+- [ ] **待复验 · 指标写入口认证**：确认 VM import 与 OTLP metrics 入口拒绝未授权写入，推送方认证同步配置；旧公网可写断言未重测。 <!--t:0efca3d66627638f-->
+- [ ] **部分完成 · 指标采集层对齐**：当前有 OTel agent，TECH.md 仍要求 VMAgent。按目标收敛职责、避免重复采集；补 Pod/容器用量与 CFS throttling，校验 kubelet/cAdvisor 实际可用指标，不能假定 kubeletstats 覆盖全部限流指标。 <!--t:d930bad3953b4f41-->
+- [ ] **部分完成 · Go runtime/进程指标验收**：十服务 adapter 均已设 `RuntimeMetrics: true`，删除「全部未实现」判断；剩 goroutine/heap/CPU/内存实际 series、导出失败可见性验收，缺项在 go-connect-kit 补齐；发布版本归下文「部署关联与观测恢复」。 <!--t:ba9858d94dcd940a-->
+- [ ] **部分完成 · 配置未生效告警**：pre 的 pgpool/redisclient 指标、stale 与缺失告警已实测；PG 真实查询和 Redis 曝光去重在 stale 期间正常，恢复后指标归零。剩独立 prod 验收，以及在途 gorse Live 接线发布后的同类验证。不要让 stale 直接造成健康检查失败，理由见 [热更新边界](context/project/ecommerce/config/experience/config-hot-reload-boundaries.md)。 <!--t:d921cc03734011b2-->
+- [ ] **未完成 · 日志限流**：共享日志模块统一实现采样与压制计数；stdout/OTLP 同时受控，FATAL/PANIC 不限，阈值经故障场景验证。不再复制修改十份初始化代码；RPC 日志拦截器已下沉 kit `rpcobs`（v0.7.0），限流在 kit 侧一处实现。 <!--t:9d66e878c57c56e6-->
+- [ ] **部分完成 · 业务错误 reason**：kit `errinfo.New(reason, msg)` 声明哨兵，拦截器沿错误链取 reason 写日志/span、打 `rpc.server.errors{error.reason}`（otelconnect 只能删属性不能加，故单独计数器），并以 `google.rpc.ErrorInfo{Reason, Domain=服务名}` 返回客户端；24 个哨兵已转换，APM 盘加「错误 by 业务 reason」。已随 kit v0.7.0 接入。剩：部署后用真实业务异常确认 VM 里的 series 名（推算为 `rpc_server_errors_total`）；前端按 reason 处理需 TS 侧解 ErrorInfo。 <!--t:300c1dae8944142e-->
+- [ ] **部分完成 · 抛错点定位**：日志的 `code.file.path` 恒为 `server/logging.go`（2026-09-24 VictoriaLogs 实测），无法 blame。kit `errinfo.Here` 记录最内层调用点，dbutil 三个入口对非 nil 结果自动记录数据层调用行，拦截器写 `error.origin`（kit v0.7.0）。剩：数据层约 71 处不经 dbutil 的 `fmt.Errorf`（Redis、外部 API）未记录，按故障热点逐步补 `errinfo.Here`；部署后在 VL 确认 `error.origin` 字段。 <!--t:a62d3f2cd90ff830-->
+- [ ] **待复验 · 网关遥测**：源码已用 kit 的 ParentBased 采样，旧 AlwaysSample 修复项删除；验证真实 5xx 的 span/log 状态、网关上游时延与尾采样效果，不沿用已删除旧网关的行号结论。 <!--t:1f6fadda895b693b-->
+- [ ] **未完成 · 前端 RUM 与后端关联**：consumer 已接 `initPerf`，补 `traceparent`/Server-Timing 关联与 merchant/admin 的适用接入；Umami 不替代性能追踪。 <!--t:4a1a1e9617c27fc5-->
+- [ ] **部分完成 · 看板和标签**：DB 错误率分母已修；剩节点覆盖阈值按当前采集对象校准、网关时延图、`service.namespace`/实例标签及 `rpc.code` 回归，按上下文组织四黄金信号；兜底码 `unknown` 占比面板与 warning（kubernetes 仓 `EcommerceUnknownErrorShareHigh`）已上线；dev 数据回放显示 address/cart/inventory/product 的服务侧错误 100% 是 unknown，该补映射。看板尚未区分环境：dev 与 pre 指标同在一个 VM，APM 盘要加 `$env` 变量（按 `deployment_environment_name`）。 <!--t:8b142d5db81c04f3-->
+- [ ] **未完成 · SLO 与定位验收**：落 gateway/user/order/cart SLO 和错误预算；授权演练中验证告警至 Grafana/trace 定位不超过 5 分钟——2026-09-24 核实：vmalert 原有 39 条规则**没有一条应用层错误率告警**（面板设计.md A1 迁移时丢失）。已在 kubernetes 仓补 `ecommerce-app.yml`（错误率 A1、unknown 占比、RPC 指标缺失兜底），每条带 `dashboard`/`logs_query` annotation，alert-bridge 把 `dashboard` 转成 ntfy `Click`（指向公网 Grafana Explore 并预填该服务的错误查询——三张看板在重建后的 Grafana 里不存在，且生成的 JSON 仍含退役数据源，重建看板后可改回看板链接）；vmalert `-dryRun` 与 LogsQL 已在现网校验；规则排除 `deployment_environment_name="dev"`——本地开发机经公网 OTLP 入口写进同一个 VM，不排除时 24h 回放里 7 个 dev 服务会触发 critical。已部署（vmalert 42 条规则 health 全 ok）。剩：注入故障演练（先修上面的「告警送不到人」）。P50/P95/P99 基线并入容量压测，不把一次冷请求当结论。 <!--t:2b2ac18741dfdd27-->
 
 #### P2
 
-- [ ] **待复验 · 观测链自身健康**：CES 巡检、Gatus 和采集器补/核验 dead-man 新鲜度告警；2026-09-23 broker 滚动致 Debezium task FAILED（connector 仍 RUNNING）：Gatus `cdc-source-task` 约 1 分钟先红，vmalert `CDCSlotInactive`（`for: 10m`）在 +10 分钟 firing——现有规则已覆盖这类「task 死、槽失活」；同日晚已给 Connect CR 配 `metricsConfig`（kubernetes 仓 `components/kafka/cdc/connect-metrics-configmap.yaml`），新增 `CDCConnectTaskNotRunning`(2m)/`CDCDebeziumDisconnected`(3m)/`CDCDebeziumLagHigh` 直接看 task 状态与 Debezium 连接，比槽失活快 8 分钟；但这三条**不是**「offset 落后槽」的等价物（该状态下全绿）；同日晚查明根因是 `connector_and_driver` 让槽结构性领先 offset、任何重启都出事，已改 `offset.mismatch.strategy=trust_greater_lsn` + `snapshot.mode=initial`（重启实测不重快照不 FAILED），差值转为预期非零、不做告警；对账已落地（`CDCReconcileMismatch`，7 表差值 0）并以 800 更新 + 3 次重启压测不丢不重（`context/project/ecommerce/events/experience/debezium-offset-behind-slot-after-broker-roll.md`）；CDC 槽位点/task/lag 已有恢复记录，不重复列「全部缺失」，但迁移后持续覆盖仍需核对。
-- [ ] **待复验 · 日志出口与配置**：核对 SDK `/v1/logs` 的旧 401 是否仍存在；统一 endpoint/header/TLS 与 exporter 开关，删除无代码消费的环境变量，确认 stdout/Vector 与应用 OTLP 各自入库。
-- [ ] **未完成 · 部署关联与观测恢复**：发布标记：构建版本本来就有——CI 以 ldflags 注入 tag 到 kit `meta.Version`，作为资源属性 `app.build_id` 挂在每条指标上（2026-09-24 VM 实测；`service.version` 是 API 契约版本、恒 `v1`，不能拿来判发布）。三张看板已加「发布」annotation，剩导入 Grafana；按 TECH.md 外置观测目标验证存储备份/恢复及单点风险，不将 node3 进程外置等同于物理故障域隔离。
+- [ ] **待复验 · 观测链自身健康**：CES 巡检、Gatus 和采集器补/核验 dead-man 新鲜度告警；2026-09-23 broker 滚动致 Debezium task FAILED（connector 仍 RUNNING）：Gatus `cdc-source-task` 约 1 分钟先红，vmalert `CDCSlotInactive`（`for: 10m`）在 +10 分钟 firing——现有规则已覆盖这类「task 死、槽失活」；同日晚已给 Connect CR 配 `metricsConfig`（kubernetes 仓 `components/kafka/cdc/connect-metrics-configmap.yaml`），新增 `CDCConnectTaskNotRunning`(2m)/`CDCDebeziumDisconnected`(3m)/`CDCDebeziumLagHigh` 直接看 task 状态与 Debezium 连接，比槽失活快 8 分钟；但这三条**不是**「offset 落后槽」的等价物（该状态下全绿）；同日晚查明根因是 `connector_and_driver` 让槽结构性领先 offset、任何重启都出事，已改 `offset.mismatch.strategy=trust_greater_lsn` + `snapshot.mode=initial`（重启实测不重快照不 FAILED），差值转为预期非零、不做告警；对账已落地（`CDCReconcileMismatch`，7 表差值 0）并以 800 更新 + 3 次重启压测不丢不重（`context/project/ecommerce/events/experience/debezium-offset-behind-slot-after-broker-roll.md`）；CDC 槽位点/task/lag 已有恢复记录，不重复列「全部缺失」，但迁移后持续覆盖仍需核对。 <!--t:6a7814414cefb9ad-->
+- [ ] **待复验 · 日志出口与配置**：核对 SDK `/v1/logs` 的旧 401 是否仍存在；统一 endpoint/header/TLS 与 exporter 开关，删除无代码消费的环境变量，确认 stdout/Vector 与应用 OTLP 各自入库。 <!--t:9a03bf64787de3fa-->
+- [ ] **未完成 · 部署关联与观测恢复**：发布标记：构建版本本来就有——CI 以 ldflags 注入 tag 到 kit `meta.Version`，作为资源属性 `app.build_id` 挂在每条指标上（2026-09-24 VM 实测；`service.version` 是 API 契约版本、恒 `v1`，不能拿来判发布）。三张看板已加「发布」annotation，剩导入 Grafana；按 TECH.md 外置观测目标验证存储备份/恢复及单点风险，不将 node3 进程外置等同于物理故障域隔离。 <!--t:43e65da7397ba989-->
 
 ### 前端技术栈与工程化
 
@@ -183,23 +183,23 @@ todo-spec: 1
 
 #### P1
 
-- [ ] **部分完成 · 公开列表页**：SSR 首页与商品详情已实现，首页可写缓存卷已就位；剩 `ListProducts` 数据接入、分类页/列表页与 ISR 验收，不再写「首页不存在」。
-- [ ] **未完成 · 购物车删除/数量持久化**：`useCart.ts` 两个操作仍只改本地 store；接 mutation 与查询失效，刷新后必须与服务端一致。
-- [ ] **部分完成 · 消费者交易页**：地址簿与结算共用表单，失败保留输入；结算阻止未同步条目和本地数量/金额漂移，协议快照已有同步门禁。剩订单列表/详情、结算和支付结果与真实后端幂等/响应契约联调，去掉对应 mock 和固定支付跳转；定位 API 仍为模拟地址，需替换或下线。
-- [ ] **未完成 · 商品列表/类目接线**：公开目录由 consumer-next 承载，SPA 只保留其职责所需入口，不重复建设两套首页。
-- [ ] **未完成 · 推荐行为埋点**：consumer 尚无 `initTracker` 调用；接商品曝光/浏览、加购/收藏/购买事件，与 behavior/gorse 端到端验证，不以 Umami 代替。
-- [ ] **部分完成 · 网关可选认证路由**（control-tower）：新增第四类路由 `optional_auth`（有效会话注入用户 ID；无会话、会话无效或 cookie 会话 Origin 不可信都按匿名放行、不注入身份、不做 RBAC），behavior 三个 RPC 从 `anonymous` 挪入。control-tower 已发版（网关镜像 `0.2.17`、routes 模块 `v0.1.7`），本仓已升级依赖，matrix 的 `optional_auth_paths` 与 structcheck 双向核对已同步。control-tower 两份网关清单已改钉 `0.2.17`（`78bdf0c`）。剩部署，并入新集群业务工作负载恢复一起做（2026-09-23 核对：集群重建后网关与 behavior 均未部署）。部署 `deploy/pre/gateway` 前要先补齐：① 网关 pre 的 machine token 与 Secret `control-tower-config-source-pre`（签发要管理员登录控制台 `/tokens`，operator token 签不了）；② Consul 未安装，而清单把 `consul-ecommerce-token` 列为必需 Secret，要么装 Consul、要么改成 `optional`；③ `ecommerce` 命名空间缺 `tcr-pull`（可复制 `config-center` 命名空间那份）、`dragonfly-session`、`casdoor-bff`（来源见 `../control-tower/docs/design/bff-migration.md`）。**先让新网关就绪、再写** Config Center `gateway/pre/routes.yaml`（当前 v1 是旧内容；旧网关拒绝未知字段）；behavior 部署后用有效会话、无会话、过期会话、非白名单 Origin 四种请求调 `Track` 验收。
-- [ ] **部分完成 · 推荐登录身份关联**：主动登出重置匿名标识；已登录态收到 401 时清理账号并丢弃待发旧事件，防止重登串身份；首次加载与过期异步身份回写已有回归保护。剩两项且有先后：① 上一条「网关可选认证路由」；② behavior 新增 `identity_links` 表，同一请求同时带网关用户 ID 与 `anonId` 时记关联（一个 anonId 只关联首个用户），按 Postgres 汇总值 PUT 回填 gorse（幂等可重试），dislike 过滤纳入已关联的匿名 ID。gorse 无用户合并 API，只能在 behavior 做。
-- [ ] **未完成 · Bugsink SDK 与 Source Map**：服务端已有部署记录；接 SDK、debug ID 与真实错误还原验收。手顺见 [错误监控](docs/observability/error-monitoring.md)。
-- [ ] **部分完成 · Umami 发布接线**：服务部署和两个 consumer 埋点代码已完成；`frontend-release.yml` 未传四个构建期变量。补 Docker 构建链路，发布后验证真实 PV/路由变化；更换面板默认管理员凭据并复验。见 [网站分析](docs/observability/web-analytics.md)。
+- [ ] **部分完成 · 公开列表页**：SSR 首页与商品详情已实现，首页可写缓存卷已就位；剩 `ListProducts` 数据接入、分类页/列表页与 ISR 验收，不再写「首页不存在」。 <!--t:fa0aa46fc98978ac-->
+- [ ] **未完成 · 购物车删除/数量持久化**：`useCart.ts` 两个操作仍只改本地 store；接 mutation 与查询失效，刷新后必须与服务端一致。 <!--t:aa3b06995c12d1fa-->
+- [ ] **部分完成 · 消费者交易页**：地址簿与结算共用表单，失败保留输入；结算阻止未同步条目和本地数量/金额漂移，协议快照已有同步门禁。剩订单列表/详情、结算和支付结果与真实后端幂等/响应契约联调，去掉对应 mock 和固定支付跳转；定位 API 仍为模拟地址，需替换或下线。 <!--t:20fcb00949af1d10-->
+- [ ] **未完成 · 商品列表/类目接线**：公开目录由 consumer-next 承载，SPA 只保留其职责所需入口，不重复建设两套首页。 <!--t:96d00ab723bda83d-->
+- [ ] **未完成 · 推荐行为埋点**：consumer 尚无 `initTracker` 调用；接商品曝光/浏览、加购/收藏/购买事件，与 behavior/gorse 端到端验证，不以 Umami 代替。 <!--t:7b5ca4032c1556b6-->
+- [ ] **部分完成 · 网关可选认证路由**（control-tower）：新增第四类路由 `optional_auth`（有效会话注入用户 ID；无会话、会话无效或 cookie 会话 Origin 不可信都按匿名放行、不注入身份、不做 RBAC），behavior 三个 RPC 从 `anonymous` 挪入。control-tower 已发版（网关镜像 `0.2.17`、routes 模块 `v0.1.7`），本仓已升级依赖，matrix 的 `optional_auth_paths` 与 structcheck 双向核对已同步。control-tower 两份网关清单已改钉 `0.2.17`（`78bdf0c`）。剩部署，并入新集群业务工作负载恢复一起做（2026-09-23 核对：集群重建后网关与 behavior 均未部署）。部署 `deploy/pre/gateway` 前要先补齐：① 网关 pre 的 machine token 与 Secret `control-tower-config-source-pre`（签发要管理员登录控制台 `/tokens`，operator token 签不了）；② Consul 未安装，而清单把 `consul-ecommerce-token` 列为必需 Secret，要么装 Consul、要么改成 `optional`；③ `ecommerce` 命名空间缺 `tcr-pull`（可复制 `config-center` 命名空间那份）、`dragonfly-session`、`casdoor-bff`（来源见 `../control-tower/docs/design/bff-migration.md`）。**先让新网关就绪、再写** Config Center `gateway/pre/routes.yaml`（当前 v1 是旧内容；旧网关拒绝未知字段）；behavior 部署后用有效会话、无会话、过期会话、非白名单 Origin 四种请求调 `Track` 验收。 <!--t:e81acbad31234047-->
+- [ ] **部分完成 · 推荐登录身份关联**：主动登出重置匿名标识；已登录态收到 401 时清理账号并丢弃待发旧事件，防止重登串身份；首次加载与过期异步身份回写已有回归保护。剩两项且有先后：① 上一条「网关可选认证路由」；② behavior 新增 `identity_links` 表，同一请求同时带网关用户 ID 与 `anonId` 时记关联（一个 anonId 只关联首个用户），按 Postgres 汇总值 PUT 回填 gorse（幂等可重试），dislike 过滤纳入已关联的匿名 ID。gorse 无用户合并 API，只能在 behavior 做。 <!--t:4fcaaae8d42e7154-->
+- [ ] **未完成 · Bugsink SDK 与 Source Map**：服务端已有部署记录；接 SDK、debug ID 与真实错误还原验收。手顺见 [错误监控](docs/observability/error-monitoring.md)。 <!--t:e27c0c6a896d9ea9-->
+- [ ] **部分完成 · Umami 发布接线**：服务部署和两个 consumer 埋点代码已完成；`frontend-release.yml` 未传四个构建期变量。补 Docker 构建链路，发布后验证真实 PV/路由变化；更换面板默认管理员凭据并复验。见 [网站分析](docs/observability/web-analytics.md)。 <!--t:f162b9925a5ae66c-->
 
 #### P2
 
-- [ ] **未完成 · merchant/admin 业务接线**：接商品、订单、入驻/审核、用户/类目管理等实际 API，配合服务端权限联调；骨架与 mock 页面不算完成。
-- [ ] **部分完成 · a11y/语义验收**：已有 lint/axe/标题断言；剩关键旅程键盘/VoiceOver、登录态页审计、渐变对比度、merchant reports 走查与公网 Rich Results Test。
-- [ ] **部分完成 · SPA 性能**：按 [web-performance.md](docs/frontend/web-performance.md) 收敛阻塞字体 CSS、启动瀑布、图标 tree-shaking，并消除无有效访客轨时 `useCart` 的无效请求；SSR 首页满分不代表交易页完成。
-- [ ] **部分完成 · 页内助手**：已有 copilot 实现，剩发布验收、merchant mock 动作边界；写动作/确认仍按 [copilot 设计](docs/design/copilot/copilot.md) 单独实现和验证。
-- [ ] **部分完成 · 体素沙盘 S1–S3**：S0 设计稿已有；剩布局遮挡、离线依赖与模块化、错误中断剧本、受 admin 授权的真实拓扑聚合。见 [设计](docs/design/platform/voxel-construction-site.md)。
+- [ ] **未完成 · merchant/admin 业务接线**：接商品、订单、入驻/审核、用户/类目管理等实际 API，配合服务端权限联调；骨架与 mock 页面不算完成。 <!--t:4f55b42e7cf22df9-->
+- [ ] **部分完成 · a11y/语义验收**：已有 lint/axe/标题断言；剩关键旅程键盘/VoiceOver、登录态页审计、渐变对比度、merchant reports 走查与公网 Rich Results Test。 <!--t:9bf9bd764b2bfba6-->
+- [ ] **部分完成 · SPA 性能**：按 [web-performance.md](docs/frontend/web-performance.md) 收敛阻塞字体 CSS、启动瀑布、图标 tree-shaking，并消除无有效访客轨时 `useCart` 的无效请求；SSR 首页满分不代表交易页完成。 <!--t:6d1a097d7a305e18-->
+- [ ] **部分完成 · 页内助手**：已有 copilot 实现，剩发布验收、merchant mock 动作边界；写动作/确认仍按 [copilot 设计](docs/design/copilot/copilot.md) 单独实现和验证。 <!--t:977da8840a59da94-->
+- [ ] **部分完成 · 体素沙盘 S1–S3**：S0 设计稿已有；剩布局遮挡、离线依赖与模块化、错误中断剧本、受 admin 授权的真实拓扑聚合。见 [设计](docs/design/platform/voxel-construction-site.md)。 <!--t:07a027db097ac734-->
 
 ### 供应链与交付流水线
 
@@ -207,16 +207,16 @@ todo-spec: 1
 
 #### P1
 
-- [ ] **部分完成 · GitLab 自建 Runner 验收**：仅保留集群内 Kubernetes executor，单并发且排除 control-plane；轻检查 512Mi、构建预算 1Gi。GitLab 轻检查端到端与 job Pod 自动清理已通过；低内存 Go/前端构建已在隔离容器验证，并删除 knip 中一条已不存在的导出基线。真实 Runner 的 Go 构建、测试与 lint 已通过；前端 job 在后续提交触发新流水线时被取消，尚不能算端到端通过。剩余：让一轮真实前端构建完整结束并核对自动清理，保留全部质量检查。
-- [ ] **部分完成 · TCR 签名验收**：多服务流水线已有 Cosign/SBOM；补逐服务 digest 的签名/attestation 回读验证，不沿用「只有 user 接线」也不把构建成功当验签完成。
-- [ ] **部分完成 · Harbor Helm 签名与 Kyverno 准入**：`verifyImages` 已落地为 ecommerce 命名空间级 Audit 策略（`infrastructure/kyverno/`，keyless + `type: SigstoreBundle`，只覆盖已完成 TCR 探测的 `user`），`smoke.sh` 验收「签名 digest pass / 未签名 fail / 两者放行」；ArgoCD `Application/ecommerce-kyverno` 已建，等 GitLab `main` 含该路径即 Synced。剩：CI 对全部服务在 TCR 签名后把 `imageReferences` 扩到 `sumery/*`；14 天零误报后转 Enforce 并以拒绝测试验收；chart 纳入签名链；`kyverno.io/v1 Policy` 迁 `NamespacedImageValidatingPolicy`（CEL）。
-- [ ] **未完成 · 发布权限与约束**：收敛 `MANIFEST_PUSH_TOKEN` 绕过分支保护的权限；把发布 tag 四条纪律落实为可执行检查，避免只靠操作约定。
-- [ ] **部分完成 · 制品启动、迁移与回滚**：迁移 Job 已接入两条部署入口及 Helm/Argo hook，失败阻断工作负载；迁移镜像随发布扫描、签名并固定 digest，种子不自动执行；供应链门禁命中的浮动 Action 与只读根文件系统缺项已修正，未扩大存量基线。pre 正式迁移制品已实跑并完成后端滚动；剩 prod 专属数据库/迁移 Secret 验收、长期 Job 日志归档、制品保留策略和真实应用回滚演练；GitOps 接管后验证发布/回滚无需手工 kubectl。
-- [ ] **部分完成 · 契约与竞态门禁**：GitHub 发布模板已有 `buf breaking` 和 `go test -race`，GitLab 有 lint 棘轮。剩 MR 阶段兼容性保护与破坏性变更红测；事件 schema 随线 B 纳入，不再重复要求从零接入。
+- [ ] **部分完成 · GitLab 自建 Runner 验收**：仅保留集群内 Kubernetes executor，单并发且排除 control-plane；轻检查 512Mi、构建预算 1Gi。GitLab 轻检查端到端与 job Pod 自动清理已通过；低内存 Go/前端构建已在隔离容器验证，并删除 knip 中一条已不存在的导出基线。真实 Runner 的 Go 构建、测试与 lint 已通过；前端 job 在后续提交触发新流水线时被取消，尚不能算端到端通过。剩余：让一轮真实前端构建完整结束并核对自动清理，保留全部质量检查。 <!--t:aa5ec30e7b2a49f5-->
+- [ ] **部分完成 · TCR 签名验收**：多服务流水线已有 Cosign/SBOM；补逐服务 digest 的签名/attestation 回读验证，不沿用「只有 user 接线」也不把构建成功当验签完成。 <!--t:bb17b2d9180e6c1a-->
+- [ ] **部分完成 · Harbor Helm 签名与 Kyverno 准入**：`verifyImages` 已落地为 ecommerce 命名空间级 Audit 策略（`infrastructure/kyverno/`，keyless + `type: SigstoreBundle`，只覆盖已完成 TCR 探测的 `user`），`smoke.sh` 验收「签名 digest pass / 未签名 fail / 两者放行」；ArgoCD `Application/ecommerce-kyverno` 已建，等 GitLab `main` 含该路径即 Synced。剩：CI 对全部服务在 TCR 签名后把 `imageReferences` 扩到 `sumery/*`；14 天零误报后转 Enforce 并以拒绝测试验收；chart 纳入签名链；`kyverno.io/v1 Policy` 迁 `NamespacedImageValidatingPolicy`（CEL）。 <!--t:80c5a1b92f8c391c-->
+- [ ] **未完成 · 发布权限与约束**：收敛 `MANIFEST_PUSH_TOKEN` 绕过分支保护的权限；把发布 tag 四条纪律落实为可执行检查，避免只靠操作约定。 <!--t:2fa4ca5ec2f92985-->
+- [ ] **部分完成 · 制品启动、迁移与回滚**：迁移 Job 已接入两条部署入口及 Helm/Argo hook，失败阻断工作负载；迁移镜像随发布扫描、签名并固定 digest，种子不自动执行；供应链门禁命中的浮动 Action 与只读根文件系统缺项已修正，未扩大存量基线。pre 正式迁移制品已实跑并完成后端滚动；剩 prod 专属数据库/迁移 Secret 验收、长期 Job 日志归档、制品保留策略和真实应用回滚演练；GitOps 接管后验证发布/回滚无需手工 kubectl。 <!--t:578121a52345edd4-->
+- [ ] **部分完成 · 契约与竞态门禁**：GitHub 发布模板已有 `buf breaking` 和 `go test -race`，GitLab 有 lint 棘轮。剩 MR 阶段兼容性保护与破坏性变更红测；事件 schema 随线 B 纳入，不再重复要求从零接入。 <!--t:f16f1b2feee76366-->
 
 #### P2
 
-- [ ] **未完成 · 全量 proto 生成**：五个服务仍有 `third_party/validate/validate.proto` 复制品；核对 import 后消除冲突，验收全量 `make generate`/`make conf`，不以按路径生成代替。
+- [ ] **未完成 · 全量 proto 生成**：五个服务仍有 `third_party/validate/validate.proto` 复制品；核对 import 后消除冲突，验收全量 `make generate`/`make conf`，不以按路径生成代替。 <!--t:3f45deb6be2a8b77-->
 
 ### 服务发现与配置中心
 
@@ -224,25 +224,25 @@ todo-spec: 1
 
 #### P1
 
-- [ ] **部分完成 · 原生 DNS 收敛**：生产已关闭十服务 Consul 注册、网关 direct Service 路由已接；清理生产遗留 Consul 配置与就绪依赖，pre 按 Compose 目标补齐。保留开发按需注册不等于生产继续依赖 Consul；卸载需另行授权。
-- [ ] **部分完成 · Config Center 环境与 token 收尾**：prod 清单已改为独立 `DEPLOYMENT_MODE=prod` 与 `ecommerce-config-source-prod`，但现有 operator token 只覆盖 pre，集群也没有 prod selector Secret；须由管理员 JWT 签发 prod 限域 operator/service token、复制并校验 10 服务 `bootstrap.yaml` 后，先以 `ecommerce-prod` namespace 只部署后端验收，再单独切换 `shop.apikv.com` 前端路由，不能复用 pre token 或在两个 namespace 同时声明公网 hostname。Config Center 已于 2026-09-23 部署到 k1/k2/k3（ns `config-center`，接 CNPG/Dragonfly/集群内 VM，`config` schema 数据完好，Pangolin `config(-api).apikv.com` 已建），operator token 已签、`harvest --env dev` 已写 10 服务 bootstrap（PG/Redis/ES 指向 Pangolin 入口），Mac 经 `config-api.apikv.com` 实测可拉，且 Mac 上 `psql`（verify-ca，TLSv1.3，错密码拒绝）与 `redis-cli`（CA+SNI，`PONG`，错密码 WRONGPASS，无 CA 握手失败）按 bootstrap 里的值直连通过——remote-dev 闭环；同日发现恢复进来的 dev bootstrap 里 Casdoor `client_id/secret` 是旧值（user `SignIn` → `invalid_client`），已用当前 secret 重播 OpenBao → ESO → harvest 写回 10 服务（`baxf…`）；user 的 configWatch 收到了更新（21:48 `config updated`）但 `SignIn` 仍 `invalid_client`——`NewCasdoorAuthClient(conf *conf.Bootstrap)` 拿启动快照一次性构造 `casdoorsdk.Client`，不随 Live 走（cart 的 `cartRepo` 注释早写过这个坑），要么改成跟 Live、要么在文档里写明改 Casdoor 凭据必须重启；当前重启即可复验；三条 L4 入口（`pg-dev:30001`/`redis-dev:30005`/`kafka-dev:30004`）与 `argocd.apikv.com` 已于 2026-09-23 建好并协议级实测，部署后跑 `config-center-harvest.sh --env dev --strategy remote-dev` 即闭环；单源 selector 和独立 Machine Token 已接；核对实际 pre/prod 环境，legacy token 命中连续 7 天为零后删除回退，结合 GitOps 验收，不能沿用旧「全读 dev」快照。
-- [ ] **部分完成 · 推荐链路**：建表与 item 同步已有记录；2026-09-23 发现 behavior/dev bootstrap 的 gorse `api_key` 为空（`SimilarItems` 401），已从 node2 `config.toml` 经 operator token `PutKey` 写入（v7，未直写库），`Track`/`Recommend` 直连通过，`SimilarItems` 待 behavior 重启后复验；Gorse 尚无 `_external` 契约与 `mapping.yaml` 能力，harvest 重跑不会覆盖但也不会维护它，要补契约。
-- [ ] **部分完成 · OpenFGA 部署依赖残留**：2026-09-22 已在新集群按 `DEPENDS_ON=postgres`（CNPG `pg-main` 独立库 `openfga`）重装，`examples/smoke.sh` store→model→tuple→check 通过；旧 `openfga.pgdump` 为空无需恢复。剩：`ADDON_OPENFGA` 在 `config.hosting.env` 已开，重装路径整体演练待做。
+- [ ] **部分完成 · 原生 DNS 收敛**：生产已关闭十服务 Consul 注册、网关 direct Service 路由已接；清理生产遗留 Consul 配置与就绪依赖，pre 按 Compose 目标补齐。保留开发按需注册不等于生产继续依赖 Consul；卸载需另行授权。 <!--t:130270df3bc94b8c-->
+- [ ] **部分完成 · Config Center 环境与 token 收尾**：prod 清单已改为独立 `DEPLOYMENT_MODE=prod` 与 `ecommerce-config-source-prod`，但现有 operator token 只覆盖 pre，集群也没有 prod selector Secret；须由管理员 JWT 签发 prod 限域 operator/service token、复制并校验 10 服务 `bootstrap.yaml` 后，先以 `ecommerce-prod` namespace 只部署后端验收，再单独切换 `shop.apikv.com` 前端路由，不能复用 pre token 或在两个 namespace 同时声明公网 hostname。Config Center 已于 2026-09-23 部署到 k1/k2/k3（ns `config-center`，接 CNPG/Dragonfly/集群内 VM，`config` schema 数据完好，Pangolin `config(-api).apikv.com` 已建），operator token 已签、`harvest --env dev` 已写 10 服务 bootstrap（PG/Redis/ES 指向 Pangolin 入口），Mac 经 `config-api.apikv.com` 实测可拉，且 Mac 上 `psql`（verify-ca，TLSv1.3，错密码拒绝）与 `redis-cli`（CA+SNI，`PONG`，错密码 WRONGPASS，无 CA 握手失败）按 bootstrap 里的值直连通过——remote-dev 闭环；同日发现恢复进来的 dev bootstrap 里 Casdoor `client_id/secret` 是旧值（user `SignIn` → `invalid_client`），已用当前 secret 重播 OpenBao → ESO → harvest 写回 10 服务（`baxf…`）；user 的 configWatch 收到了更新（21:48 `config updated`）但 `SignIn` 仍 `invalid_client`——`NewCasdoorAuthClient(conf *conf.Bootstrap)` 拿启动快照一次性构造 `casdoorsdk.Client`，不随 Live 走（cart 的 `cartRepo` 注释早写过这个坑），要么改成跟 Live、要么在文档里写明改 Casdoor 凭据必须重启；当前重启即可复验；三条 L4 入口（`pg-dev:30001`/`redis-dev:30005`/`kafka-dev:30004`）与 `argocd.apikv.com` 已于 2026-09-23 建好并协议级实测，部署后跑 `config-center-harvest.sh --env dev --strategy remote-dev` 即闭环；单源 selector 和独立 Machine Token 已接；核对实际 pre/prod 环境，legacy token 命中连续 7 天为零后删除回退，结合 GitOps 验收，不能沿用旧「全读 dev」快照。 <!--t:19abc122ca7e1767-->
+- [ ] **部分完成 · 推荐链路**：建表与 item 同步已有记录；2026-09-23 发现 behavior/dev bootstrap 的 gorse `api_key` 为空（`SimilarItems` 401），已从 node2 `config.toml` 经 operator token `PutKey` 写入（v7，未直写库），`Track`/`Recommend` 直连通过，`SimilarItems` 待 behavior 重启后复验；Gorse 尚无 `_external` 契约与 `mapping.yaml` 能力，harvest 重跑不会覆盖但也不会维护它，要补契约。 <!--t:8e2a07ef72cc77ca-->
+- [ ] **部分完成 · OpenFGA 部署依赖残留**：2026-09-22 已在新集群按 `DEPENDS_ON=postgres`（CNPG `pg-main` 独立库 `openfga`）重装，`examples/smoke.sh` store→model→tuple→check 通过；旧 `openfga.pgdump` 为空无需恢复。剩：`ADDON_OPENFGA` 在 `config.hosting.env` 已开，重装路径整体演练待做。 <!--t:39a6c0681414c398-->
 
 #### P2
 
-- [ ] **待复验 · 配置平台后续能力**：control-tower 侧重新核对审批、灰度、密钥加密和审计缺口，以及控制台构建/CRUD/回滚；不把本仓旧「尚未开始」当其当前状态。
-- [ ] **待前置 · CI 校验远端 Bootstrap**：本地已有解码/校验测试与 `backend/tools/config-seed -drift`（端点对照 matrix、启用的 gorse key 非空，只输出路径与判定）；CI 获得受限配置读取能力后把它接进流水线，不向日志输出内容。
-- [ ] **待触发 · 多人开发接管**：按 TECH.md B 表的多人冲突信号评估 personal intercept；此前仅补 mirrord mirror 的 cart + 下游 DNS 验收，不自建泳道。
+- [ ] **待复验 · 配置平台后续能力**：control-tower 侧重新核对审批、灰度、密钥加密和审计缺口，以及控制台构建/CRUD/回滚；不把本仓旧「尚未开始」当其当前状态。 <!--t:941270f639bcda8b-->
+- [ ] **待前置 · CI 校验远端 Bootstrap**：本地已有解码/校验测试与 `backend/tools/config-seed -drift`（端点对照 matrix、启用的 gorse key 非空，只输出路径与判定）；CI 获得受限配置读取能力后把它接进流水线，不向日志输出内容。 <!--t:2b0db553f80ff544-->
+- [ ] **待触发 · 多人开发接管**：按 TECH.md B 表的多人冲突信号评估 personal intercept；此前仅补 mirrord mirror 的 cart + 下游 DNS 验收，不自建泳道。 <!--t:1e87352b56fd7289-->
 
 ### 文档与协作机制
 
 仅保留影响使用与正确性的文档债，不以字数、页数或对称性制造任务。
 
-- [ ] **部分完成 · 清除过期引用与平行状态表**：归档目录已删，但 TECH.md、context 索引、DEVOPS 等仍有裸路径/空链接和旧现状叙述；`verify-context.sh` 的 `[PATH-REF]` 已拦新增的正文失效路径，存量 30 条冻结在 `scripts/context-pathref-baseline.txt` 待逐项清债（大头是已删的 `docs/todo/`、`docs/reports/`、`docs/progress-archive/` 与不存在的 `backend/pkg/testutil`）；删失效引用，设计只留目标与验收标准，状态归本文件。
-- [ ] **待核对 · SCAFFOLD 模板与容量清单**：区分新项目验收模板和本仓进度；修正内嵌旧 AGENTS 规则及不再适用的状态列，容量实施状态合并到对应任务，不复制第二套勾选表。
-- [ ] **待复验 · 术语与结构性文档债**：按当前设计纠正 GLOSSARY、STACK、README、TECH-RADAR 中的事实冲突；不再按旧行数目标机械压缩，不把仍有现行决策的 TECH-RADAR 整体降为历史档案。
-- [ ] **部分完成 · 共享 kit 演进**：基础设施抽取已完成；data 层连接池与 Redis 构建已迁入 kit `pgpool`/`redisclient` 并由 ecommerce 采用，control-tower 与模板待跟进；剩同构棘轮与存量服务 anchor/真实 `co upgrade --write` 试点。
+- [ ] **部分完成 · 清除过期引用与平行状态表**：归档目录已删，但 TECH.md、context 索引、DEVOPS 等仍有裸路径/空链接和旧现状叙述；`verify-context.sh` 的 `[PATH-REF]` 已拦新增的正文失效路径，存量 30 条冻结在 `scripts/context-pathref-baseline.txt` 待逐项清债（大头是已删的 `docs/todo/`、`docs/reports/`、`docs/progress-archive/` 与不存在的 `backend/pkg/testutil`）；删失效引用，设计只留目标与验收标准，状态归本文件。 <!--t:1410a9911e124f3c-->
+- [ ] **待核对 · SCAFFOLD 模板与容量清单**：区分新项目验收模板和本仓进度；修正内嵌旧 AGENTS 规则及不再适用的状态列，容量实施状态合并到对应任务，不复制第二套勾选表。 <!--t:687528c9a2c89b40-->
+- [ ] **待复验 · 术语与结构性文档债**：按当前设计纠正 GLOSSARY、STACK、README、TECH-RADAR 中的事实冲突；不再按旧行数目标机械压缩，不把仍有现行决策的 TECH-RADAR 整体降为历史档案。 <!--t:538f2a491385f804-->
+- [ ] **部分完成 · 共享 kit 演进**：基础设施抽取已完成；data 层连接池与 Redis 构建已迁入 kit `pgpool`/`redisclient` 并由 ecommerce 采用，control-tower 与模板待跟进；剩同构棘轮与存量服务 anchor/真实 `co upgrade --write` 试点。 <!--t:8bcadc1328117a3a-->
 
 ## 五、不再按原目标推进
 
