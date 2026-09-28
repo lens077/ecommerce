@@ -41,8 +41,24 @@ resources:
 
 runners:
   secret: gitlab-runner-token
+  # S3 缓存凭据 Secret（键 accesskey / secretkey），不入库；见 README「共享缓存（Silo）」。
+  cache:
+    secretName: gitlab-runner-cache-s3
   config: |
     [[runners]]
+      # 2026-09-28：Kubernetes executor 每个 job 都是新 Pod，没有 [runners.cache] 时 GitLab 缓存只存在随后
+      # 被删除的 Pod 里（日志 "Cache file does not exist"，pnpm 每次 reused 0）。改用集群内 Silo（S3 兼容）做
+      # 共享缓存，job 落在 k2 还是 k3 都能命中。凭据在 Secret gitlab-runner-cache-s3（不入库），只授权这一个
+      # bucket；桶设 14 天过期与 8GiB 硬配额，写满时只是缓存上传失败，不会让 job 失败。
+      # Insecure = true 指集群内明文 HTTP：Silo 的集群内入口只有 http，流量不出集群。
+      [runners.cache]
+        Type = "s3"
+        Shared = true
+        [runners.cache.s3]
+          ServerAddress = "minio-service.minio.svc.cluster.local:9000"
+          BucketName = "gitlab-runner-cache"
+          BucketLocation = "us-east-1"
+          Insecure = true
       [runners.kubernetes]
         namespace = "gitlab-runner"
         image = "alpine:3.20"

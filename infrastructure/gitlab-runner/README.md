@@ -12,6 +12,7 @@ gitlab.com 共享 runner 的计算分钟用完后（2026-09-24），项目关闭
 | 构建试验预算 | `backend-gate`、`frontend-gate` 显式设置 memory request/limit 为 1Gi；Go 包编译与前端 workspace 任务串行化 |
 | 调度边界 | manager 与 job 均通过 required node affinity 排除 control-plane 节点 |
 | token | Secret `gitlab-runner/gitlab-runner-token`（键 `runner-token`），不入库 |
+| 共享缓存 | Silo（S3 兼容）bucket `gitlab-runner-cache`，14 天过期、8GiB 硬配额；凭据 Secret `gitlab-runner/gitlab-runner-cache-s3`，不入库 |
 
 曾先在 node2（2C/1.6G）部署 Docker runner：`go build ./...` 在 1 GiB job 上限下重度换页（swap 2.3 GiB、CPU 约 5%），38 分钟未编完、必撞 1 小时超时。当天整体撤掉，node2 上的容器、配置、swap 与 sysctl 改动均已还原。
 
@@ -93,12 +94,35 @@ GitLab 项目/组/流水线变量的优先级高于 YAML job 变量，能够覆�
 
 同期 control-plane SSH/API 不可达可能影响取消与清理；旧 manager 日志已缺失，不能进一步断定清理失败原因，更不能据此认定 k1 OOM。当前单并发、排除 control-plane 是风险隔离措施，不是对历史故障根因的证明。升级 manager 前先确认没有活动 job，避免中途切换增加排查难度。
 
+## 共享缓存（Silo）
+
+`cache:` 由集群内 Silo（S3 兼容，`minio` 命名空间）承载。runner 用专用用户 `gitlab-runner-cache` 访问，
+策略 `gitlab-runner-cache-rw` 只授权这一个 bucket（写法与 `scorpius-rw` 相同）。job Pod 用 runner 生成的
+预签名 URL 读写缓存，拿不到凭据本身。
+
+| 项 | 值 |
+|---|---|
+| 入口 | `minio-service.minio.svc.cluster.local:9000`，集群内明文 HTTP（`Insecure = true`），不经公网 |
+| 回收 | 对象 14 天未改写即过期；成功的 job 会重新上传缓存，相当于 14 天没用就删 |
+| 容量 | 硬配额 8GiB。Silo 还承载其他 bucket，不能让缓存写满它 |
+| 凭据 | Secret `gitlab-runner-cache-s3`，键 `accesskey` / `secretkey`；chart 挂到 `/secrets` 并导出为 `CACHE_S3_*` |
+| 可用性 | Silo 单实例、无冗余。缓存上传或下载失败只告警，不让 job 失败 |
+
+重建 bucket 与用户（Silo 数据丢失后）：在 Silo 容器内用 root 凭据执行 `mc mb`、按上述两段 Statement 建策略、
+`mc admin user add` 与 `mc admin policy attach`，再执行 `mc ilm rule add --expire-days 14` 与
+`mc quota set --size 8GiB`。随后按下面的轮换步骤写入 Secret。
+
+轮换密钥：本机生成新密钥，经 stdin 传进 Silo 容器执行 `mc admin user add`（同名用户会被覆盖），在同一个 shell
+进程里用 `--from-file=secretkey=<(printf %s "$SK")` 重建 Secret，再 `kubectl -n gitlab-runner rollout restart
+deploy/gitlab-runner`。密钥不出现在命令行参数和任何输出里；轮换后要确认旧密钥访问被拒绝。
+
 ## 注意
 
 - **helper 镜像**：chart 新版默认从 `registry.gitlab.com` 拉 helper，集群只给 `docker.io` 配了 Spegel 与镜像站，所以 `values.yaml` 显式指定 `gitlab/gitlab-runner-helper:x86_64-v19.4.0`。升级 chart 时同步改这个 tag。
 - **APK 源**：`context-gate` 使用清华 HTTPS Alpine 镜像，保持原有版本与包签名校验。2026-09-25 在 k2 的 512Mi 临时 Pod 中，同一组依赖安装约 5 秒；该结果是独立 Pod 测试，不等同于 GitLab job 验收。
 - **Go 代理**：`proxy.golang.org` 从集群不可达（2026-09-24 从 Pod 实测 15s 超时），`.gitlab-ci.yml` 用 `GOPROXY=https://goproxy.cn|direct`。
-- **无缓存服务器**：没配 S3 缓存，`cache:` 会提示 `No URL provided`，每次冷下载依赖（goproxy.cn 很快，可接受）。
+- **共享缓存**：2026-09-28 前没有缓存服务器，日志提示 `No URL provided`，GitLab 的缓存随 job Pod 一起删除。现已接入 Silo，见上文「共享缓存（Silo）」。
+- **查看 `config.toml` 先脱敏**：runner 启动时把缓存 `SecretKey` 和 runner `token` 都以明文写进 `/home/gitlab-runner/.gitlab-runner/config.toml`。2026-09-28 接入缓存时曾原样输出其中的缓存段，密钥进了会话记录，当场轮换。查看时先过滤：`sed -E 's/((SecretKey|token) = ")[^"]*/\1<redacted>/'`。
 - **runner 离线**：所有 job 会一直 pending。临时救急 `glab api projects/83474117 -X PUT -F shared_runners_enabled=true`（需要 gitlab.com 计算分钟）。
 - **资源审计**：build 容器设置 CPU/内存请求和上限；helper 与 manager 未设置 CPU limit，不能据此宣称已满足所有 Kyverno 资源策略。
 - **镜像缓存**：`if-not-present` 配合可变 tag 会保留节点缓存的旧 digest。升级镜像时显式核对各节点 digest；当前仅用于本项目锁定的 runner，不作为多租户私有镜像隔离机制。
