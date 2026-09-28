@@ -301,8 +301,11 @@ constants/                  服务级常量（环境变量键等）
 server → service → biz ← data
 ```
 
-**biz 定义接口，data 实现。biz 不导入 data，也不导入任何 proto 生成代码。**
-`service` 层是唯一允许 import `api/*/v1` 的层。
+**biz 定义接口，data 实现。biz 不导入 data / service / server，也不导入 `api/*/v1` 契约、connect、存储驱动与第三方 SDK。**
+`api/*/v1` 只允许 `service`（proto ⇄ biz 转换）与 `server`（注册 `*v1connect` handler）导入；
+`service` 不越层直连 data；`data` 不导入 connect 与 `api/*/v1`，返回领域错误由 service 映射 RPC 码。
+`conf/v1` 是配置 schema 而非对外契约，biz 可以直接接收。
+门禁：`backend/structcheck/layer_imports_test.go`（存量违规以棘轮清单登记，只许删不许加）。
 
 ### fx 装配模式
 
