@@ -64,12 +64,13 @@ Doc-Impact: none docs/TECH.md | 仅调整内部变量名，公开协议与部署
 
 此理由至少 12 个字符，但**长度不是真实性验证**。每个需要豁免的文档分别写；提交消息需审查。理由只覆盖带它的代码提交，不覆盖后续新增代码。CI 按整次 push/MR 比较，允许代码与对应文档分组提交；本机 commit-msg 当场检查，分组代码提交若不带文档仍需说明理由。
 
-GitHub/GitLab 轻门禁显式传事件 base，缺引用/历史就失败，不偷偷退到 `HEAD~1`；不连集群。首批范围是 TECH、环境手册与本文的关键契约。扩大范围时同批补红/绿测试。**门禁不证明手写语义一致**：改日期或无关正文仍可能过，语义由审查验，不能据绿灯宣称「全仓零漂移」。
+GitHub/GitLab 轻门禁显式传事件 base，不偷偷退到 `HEAD~1`；事件 base 为空或不可达（force-push 丢弃了旧提交）时退回默认分支的 merge-base，默认分支也解析不出才失败；不连集群。首批范围是 TECH、环境手册与本文的关键契约。扩大范围时同批补红/绿测试。**门禁不证明手写语义一致**：改日期或无关正文仍可能过，语义由审查验，不能据绿灯宣称「全仓零漂移」。
 
 ## 机器可判定部分强制相等
 
 - `env-check.py --check`：工具要求从 go.mod/package.json 投影，逐字比较；`--print-contract` 打印新块，不隐式改文件。
 - `doc-embed.py --check`：DDL/proto/函数摘录与源相等。生成器失败必须使调用方失败，不能只过滤特定错误文字。
+- `generate-alerting-catalog.py --verify-body`：告警目录的正文与自带摘要相等，纯标准库，CI 可跑，只证明没被手改。源在同级 kubernetes 仓，源码漂移只有本地 `--check` 能发现；改了上游规则或探针，就在本仓再生成。
 - `verify-context.sh`：链接、路径、索引、格式、预算等结构条件；**没有 `[LIVE-FACT]` 日期门禁**。
 - `verify-deploy-parity.sh` / structcheck：清单与结构事实一致；它们仍不证明 live 应用过清单。
 - `config-seed -drift`：显式读取远端配置，与 matrix 对照；属于按需环境验证，不把读凭据塞进离线 CI。

@@ -1,8 +1,9 @@
 # 告警规则与 Gatus 探针目录
 
 > 自动生成；不要手改。本目录是源码投影，不是 live 配置或送达证明。
-> 生成基准日期：2026-09-26；来源：同级 kubernetes 仓。
-> 源码集合 SHA-256：`9ff808837d525595dd96ab3db2b1d131e0f60aa5be1836e59f57d93f58a59c46`。
+> 生成基准日期：2026-09-28；来源：同级 kubernetes 仓。
+> 源码集合 SHA-256：`4109c7def45968ace110f8dc08d5ba56afa4debfedbdbba236b687723e4c336f`。
+> 正文 SHA-256：`ba9a655d84e7ffaeb7c2548b1f54d5cc74efa8d4e94b49969991144bfadbe7e4`（不含本行；手改正文会让 verify-context 的 [GENERATED] 变红）。
 
 策略、账号与运维边界见 [告警与通知手册](alerting-notification.md)。
 
@@ -12,13 +13,15 @@
 脚本只读取规则和探针 YAML，不读 Secret、env、数据库或线上 API。
 
 ```bash
-../kubernetes/.venv-tools/bin/python scripts/generate-alerting-catalog.py --date 2026-09-26
-../kubernetes/.venv-tools/bin/python scripts/generate-alerting-catalog.py --date 2026-09-26 --check
+../kubernetes/.venv-tools/bin/python scripts/generate-alerting-catalog.py --date 2026-09-28
+../kubernetes/.venv-tools/bin/python scripts/generate-alerting-catalog.py --date 2026-09-28 --check
 ```
 
 发布规则或探针变更时，用本次维护日期再生成并运行 `--check`；日期相同的重复生成字节一致。
 `--kubernetes PATH` 可指定 checkout。`--check` 非零表示本文与该 checkout 的源码不一致；
 它不检查集群内存加载态，部署后仍须核对 vmalert rules API 与 Gatus 配置。
+CI 的 verify-context 只跑 `--verify-body`（标准库）：它能发现手改，发现不了同级仓源码漂移；
+后者只有上面的 `--check` 能发现，改了同级仓规则或探针就要在本仓再生成。
 
 ## 规则文件总览
 
@@ -30,8 +33,8 @@
 | ecommerce-k8s.yml | 8 | 0 | `8430f52a8b1d8eba57aa8ae59dad27bd199dc46353791ed12479e9f05652203e` |
 | ecommerce-observability-readiness.yml | 2 | 0 | `ca9571c2364129946a0ffb9c7cc5a53af38bdc215f59995524925fe0317d7baf` |
 | ecommerce-security.yml | 5 | 0 | `3cd85e90b090726110a87ce8d1c8800c33b183975c63a65f686011cef25bef7c` |
-| observability-pipeline.yml | 6 | 0 | `28e08b0d9af9c7a4b27c69e55633fe41c0f488e43029bd0be738a136f02abcaf` |
-| **合计** | **45** | **0** | |
+| observability-pipeline.yml | 9 | 0 | `96a72153a4c0141107012b7a5ce1f1ffc3ef20f1c500a0f18cbdc81c7c7a4205` |
+| **合计** | **48** | **0** | |
 
 ## 逐条规则
 
@@ -953,7 +956,73 @@ annotations:
   description: 连续 10 分钟没有 alertmanager_build_info。检查 otel collector 的 alertmanager 抓取 job 与 Alertmanager Pod。
 ```
 
-### 45. OTelCollectorExporterQueueHigh
+### 45. AlertBridgeMetricsMissing
+
+- 源码：同级 kubernetes 的 `components/vmalert/rules/observability-pipeline.yml`；组 `observability-pipeline`。
+- interval：`15s`；for：`10m`；keep_firing_for：`0s`。
+- severity：`warning`；类型：`alert`。
+
+```promql
+absent(alert_bridge_state_entries) == 1 or absent(alert_bridge_notifications_total) == 1
+```
+
+```yaml
+labels:
+  severity: warning
+  category: observability
+  notification_class: ticket
+annotations:
+  summary: 抓不到 alert-bridge 降噪与投递指标
+  description: 连续 10 分钟缺少状态或决策指标。检查 bridge /metrics 与 OTel Collector 的 alert-bridge scrape job；同链路故障时本告警也可能无法送达。
+  dashboard: https://grafana.apikv.com/d/ntfy-alerting-overview
+  runbook_url: https://grafana.apikv.com/d/ntfy-alerting-overview?viewPanel=13
+```
+
+### 46. AlertBridgePublishFailures
+
+- 源码：同级 kubernetes 的 `components/vmalert/rules/observability-pipeline.yml`；组 `observability-pipeline`。
+- interval：`15s`；for：`5m`；keep_firing_for：`0s`。
+- severity：`critical`；类型：`alert`。
+
+```promql
+sum(increase(alert_bridge_notifications_total{result="failed"}[10m])) > 0
+```
+
+```yaml
+labels:
+  severity: critical
+  category: observability
+  notification_class: page
+annotations:
+  summary: alert-bridge 向 ntfy 发布失败
+  description: 10 分钟窗口内存在发布失败且条件持续 5 分钟，不等于连续失败 5 分钟。检查 bridge 日志、ntfy 健康和 publisher 配置；失败不推进退避，AM 会重试。不要输出 token 或删除状态 PVC。
+  dashboard: https://grafana.apikv.com/d/ntfy-alerting-overview
+  runbook_url: https://grafana.apikv.com/d/ntfy-alerting-overview?viewPanel=13
+```
+
+### 47. AlertBridgeNotificationFlood
+
+- 源码：同级 kubernetes 的 `components/vmalert/rules/observability-pipeline.yml`；组 `observability-pipeline`。
+- interval：`15s`；for：`15m`；keep_firing_for：`0s`。
+- severity：`warning`；类型：`alert`。
+
+```promql
+sum(increase(alert_bridge_notifications_total{result="sent",notification_class!="test"}[1h])) > 20
+```
+
+```yaml
+labels:
+  severity: warning
+  category: observability
+  notification_class: ticket
+annotations:
+  summary: alert-bridge 发布量超过试运行噪声预算
+  description: 非测试主题一小时发布超过 20 条并持续 15 分钟。先区分真实事件变化与重复，再检查 groupKey 和退避状态 PVC；超限不等于去重失效，不以静音掩盖故障。
+  dashboard: https://grafana.apikv.com/d/ntfy-alerting-overview
+  runbook_url: https://grafana.apikv.com/d/ntfy-alerting-overview?viewPanel=13
+```
+
+### 48. OTelCollectorExporterQueueHigh
 
 - 源码：同级 kubernetes 的 `components/vmalert/rules/observability-pipeline.yml`；组 `observability-pipeline`。
 - interval：`15s`；for：`10m`；keep_firing_for：`0s`。

@@ -3,15 +3,37 @@
 
 Run with the existing kubernetes/.venv-tools Python (PyYAML). Does not call the
 network, kubectl, read credentials, or import executable component scripts.
+
+--verify-body is stdlib-only (verify-context [GENERATED] runs it in CI): it proves
+the committed catalog was not hand-edited. It cannot see source drift in the
+sibling repo; that still needs --check against a kubernetes checkout.
 """
 import argparse
 import hashlib
 import pathlib
+import re
 import sys
 
-import yaml
-
 ROOT = pathlib.Path(__file__).resolve().parents[1]
+TARGET = ROOT / 'docs/observability/alerting-rules.md'
+# 2026-09-27 push 前异构双审发现：本文自称「自动生成；不要手改」，但 --check 依赖同级
+# kubernetes 仓与 PyYAML，本仓 CI 永远跑不了它；复核时目录已落后上游 3 条告警而无人发现。
+# 正文摘要让 CI 至少能用标准库抓住手改；定义与生成放在同一文件，避免两处漂移。
+BODY_LINE = re.compile(r'^> 正文 SHA-256：`([0-9a-f]{64})`')
+
+
+def body_digest(text):
+    kept = [line for line in text.split('\n') if not BODY_LINE.match(line)]
+    return hashlib.sha256('\n'.join(kept).encode('utf-8')).hexdigest()
+
+
+def verify_body(text):
+    recorded = [m.group(1) for m in map(BODY_LINE.match, text.split('\n')) if m]
+    if len(recorded) != 1:
+        return 'alerting-rules.md 缺少或重复正文摘要行；改源码后用生成器重新生成'
+    if recorded[0] != body_digest(text):
+        return 'alerting-rules.md 正文与摘要不符（被手改）；改同级 kubernetes 仓源码后重新生成'
+    return None
 
 
 def inline(value):
@@ -19,6 +41,7 @@ def inline(value):
 
 
 def generate(kubernetes, date):
+    import yaml  # 惰性导入：--verify-body 必须能在无 PyYAML 的 CI 里运行
     rule_root = kubernetes / 'components/vmalert/rules'
     files = sorted(rule_root.glob('*.yml'))
     if not files:
@@ -56,7 +79,9 @@ def generate(kubernetes, date):
              '```', '',
              '发布规则或探针变更时，用本次维护日期再生成并运行 `--check`；日期相同的重复生成字节一致。',
              '`--kubernetes PATH` 可指定 checkout。`--check` 非零表示本文与该 checkout 的源码不一致；',
-             '它不检查集群内存加载态，部署后仍须核对 vmalert rules API 与 Gatus 配置。', '',
+             '它不检查集群内存加载态，部署后仍须核对 vmalert rules API 与 Gatus 配置。',
+             'CI 的 verify-context 只跑 `--verify-body`（标准库）：它能发现手改，发现不了同级仓源码漂移；',
+             '后者只有上面的 `--check` 能发现，改了同级仓规则或探针就要在本仓再生成。', '',
              '## 规则文件总览', '',
              '| 源文件（components/vmalert/rules） | alert | record | SHA-256 |',
              '|---|---:|---:|---|']
@@ -96,18 +121,36 @@ def generate(kubernetes, date):
         lines.append(f'| {inline(p["name"])} / {inline(p["group"])} | `{inline(p["url"])}` | {interval} | {fail}/{recover} | {window} | {conditions} |')
     lines += ['', 'URL 仅包含受控健康检查/指标查询，不包含 topic、token、用户名密码或业务查询结果。',
               'TCP、匿名 HTTP、指标存在性各自证明的边界不同；探针成功不等于端到端业务成功。', '']
+    text = '\n'.join(lines)
+    lines.insert(5, f'> 正文 SHA-256：`{body_digest(text)}`（不含本行；手改正文会让 verify-context 的 [GENERATED] 变红）。')
     return '\n'.join(lines)
 
 
 def main():
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument('--kubernetes', type=pathlib.Path, default=ROOT.parent / 'kubernetes')
-    parser.add_argument('--date', required=True, help='Explicit YYYY-MM-DD documentation baseline')
+    parser.add_argument('--date', help='Explicit YYYY-MM-DD documentation baseline')
     parser.add_argument('--check', action='store_true')
+    parser.add_argument('--verify-body', action='store_true',
+                        help='stdlib-only: fail if the committed catalog was hand-edited')
     args = parser.parse_args()
+    target = TARGET
+    if args.verify_body:
+        if args.check or args.date:
+            parser.error('--verify-body cannot be combined with --check/--date')
+        if not target.exists():
+            print('alerting-rules.md 不存在', file=sys.stderr)
+            return 1
+        problem = verify_body(target.read_text(encoding='utf-8'))
+        if problem:
+            print(problem, file=sys.stderr)
+            return 1
+        print('alerting catalog body matches its digest')
+        return 0
+    if not args.date:
+        parser.error('--date is required unless --verify-body')
     import datetime
     datetime.date.fromisoformat(args.date)
-    target = ROOT / 'docs/observability/alerting-rules.md'
     text = generate(args.kubernetes.resolve(), args.date)
     if args.check:
         if not target.exists() or target.read_text() != text:

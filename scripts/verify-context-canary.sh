@@ -93,6 +93,8 @@ build_template() { # build_template <dir>
   # 2026-09-26：只核对源码投影，canary 不调用任何 live 环境查询。
   mkdir -p "$sb/backend" "$sb/frontend"
   cp scripts/env-check.py "$sb/scripts/"
+  # [GENERATED] 只校验已提交文档的正文摘要,纯标准库,不需要同级 kubernetes 仓。
+  cp scripts/generate-alerting-catalog.py "$sb/scripts/"
   cp backend/go.mod "$sb/backend/"
   cp frontend/package.json "$sb/frontend/"
   # 仓外链接目标放桩：门禁只查 [ -e ] 与 gitignore,不读内容。
@@ -455,6 +457,13 @@ mut_path_ref_future_ok() { # 假阳性守卫:放行词直接修饰的目标路�
 mut_embed_crash() {
   printf 'raise RuntimeError("canary: generator crashed")\n' > "$1/scripts/doc-embed.py"
 }
+# 2026-09-27 双审:alerting-rules.md 自称自动生成,手改却没有任何门禁能发现。
+mut_generated_hand_edit() {
+  printf '\n手工补充:这条说明不该出现在生成物里。\n' >> "$1/docs/observability/alerting-rules.md"
+}
+mut_generated_crash() { # 同 embed-crash:校验器崩溃也必须阻断,不能被当成「没报错」
+  printf 'raise RuntimeError("canary: catalog verifier crashed")\n' > "$1/scripts/generate-alerting-catalog.py"
+}
 mut_env_contract() {
   sed -i.bak 's/"go": "/"go": "stale-/' "$1/context/team/local-env.md"
   rm -f "$1/context/team/local-env.md.bak"
@@ -510,6 +519,8 @@ probe embed-stale         1 "EMBED"        mut_embed_stale
 probe embed-missing-symbol 1 "EMBED"       mut_embed_missing_symbol
 probe embed-crash         1 "EMBED"        mut_embed_crash
 probe env-contract        1 "ENV-CONTRACT" mut_env_contract
+probe generated-hand-edit 1 "GENERATED"   mut_generated_hand_edit
+probe generated-crash     1 "GENERATED"   mut_generated_crash
 probe affects-dead        1 "AFFECTS"     mut_affects_dead
 probe affects-glob        1 "AFFECTS"     mut_affects_glob
 probe selfcheck-missing   1 "SELFCHECK"   mut_selfcheck_missing

@@ -57,6 +57,9 @@
 #                  2026-09-24 立
 #   [ENV-CONTRACT] local-env 工具链生成块与 go.mod/package.json 相等，严格离线。
 #                  Git 文档责任另由 verify-doc-sync.py 按明确范围检查（CI + commit-msg）。
+#   [GENERATED]   docs/observability/alerting-rules.md 的正文必须与它自带的正文摘要一致
+#                  (generate-alerting-catalog.py --verify-body,纯标准库)。只证明没被手改;
+#                  同级 kubernetes 仓的源码漂移仍须本地 --check。2026-09-27 立
 #
 # 基线棘轮(三份):
 #   scripts/context-format-baseline.txt   —— [FORMAT] 的存量违规冻结放行
@@ -515,6 +518,15 @@ if ! env_output=$(python3 scripts/env-check.py --check 2>&1); then
   fail "ENV-CONTRACT" "$env_output"
 fi
 
+# ── [GENERATED] 自动生成的文档不许手改 ─────────────────────────
+# 触发事故(2026-09-27 push 前异构双审):alerting-rules.md 自称「自动生成；不要手改」,但
+# 生成器读同级 kubernetes 仓且依赖 PyYAML,本仓 CI 永远跑不了它的 --check;复核时目录已
+# 落后上游 3 条告警而无人发现。这里只能用标准库抓手改,抓不到上游源码漂移——边界写在
+# 该文档的「再生成与漂移检查」段。同 [EMBED]:退出码即判定,生成器崩溃也必须阻断。
+if ! generated_output=$(python3 scripts/generate-alerting-catalog.py --verify-body 2>&1); then
+  fail "GENERATED" "$generated_output"
+fi
+
 # ── [AFFECTS] frontmatter affects: 反向索引指向的路径必须存在 ──────
 # affects: 登记「实现或受本文约束」的代码路径,供 scripts/spec-impact.sh 在改动文档时反查
 # 该回头核对哪些实现(约定见 context/harness-framework/knowledge-layering.md)。
@@ -600,4 +612,4 @@ if [ -s "$violations" ]; then
   cat "$violations"
   exit 1
 fi
-echo "verify-context: OK(链接/正文路径/INDEX 覆盖/frontmatter/experience 格式/决策记录/预算/并行进度源/退役物横幅/受管代码块/工具链投影/affects 索引/完成自检 全部通过)"
+echo "verify-context: OK(链接/正文路径/INDEX 覆盖/frontmatter/experience 格式/决策记录/预算/并行进度源/退役物横幅/受管代码块/工具链投影/生成物未手改/affects 索引/完成自检 全部通过)"
