@@ -55,7 +55,7 @@ affects:
 | 通路 | 适用条件 | 配置来源与限制 |
 |---|---|---|
 | `remote-dev` | 本机到不了集群私网 | Config Center `dev` Bootstrap 的公网域名，经 Pangolin resource → 集群 newt site → 网关或 L4 Service；TLS、SNI、鉴权仍需验证 |
-| `gateway` | LAN 或已验证的 SSH 私网通路 | Config Center gateway 策略；`*.dev.test` 解析由本机 hosts/DNS 负责，VIP 从 Service 查，不手抄历史地址 |
+| `gateway` | LAN 或已验证的 SSH 私网通路 | Config Center gateway 策略；`*.dev.test` 只由本机 `/etc/hosts` 逐个解析（不用本机 dnsmasq，见 §4），VIP 从 Gateway 查，不手抄历史地址 |
 | Pod 内 | 进程有集群网络身份 | Bootstrap 的 Service DNS；Mac 不能直接把 `.svc` 当可达地址 |
 | mirrord / Okteto | 观察 / 排他接管工作负载 | 先读 [okteto-inner-loop.md](okteto-inner-loop.md)；接管前查询实际 GitOps 归属 |
 
@@ -80,13 +80,32 @@ go run ./tools/config-seed -drift -environment dev
 - OTLP 端点以 Bootstrap 与 collector 配置为准。公网入口需要鉴权时，匿名上报可能被 401 丢弃，但业务进程仍正常。`OTEL_EXPORTER_OTLP_HEADERS` 的空格按 W3C baggage 编码为 `%20`；不要回显 header。
 - 本机 OTLP header 可由仓外 `~/.config/apikv/otel.mk` 注入；K8s 可由 `otel-auth` Secret 注入。Secret/ESO/凭据后端是否已经同步必须另验，不能从模板里的 optional 引用推出已可用。采集、存储与最终查询是三次独立验收。
 
+### Kafka
+
+Mac 经 Pangolin 连 Kafka 的入口是 `kafka-dev.apikv.com:30004`（raw TCP 资源 → Strimzi external listener）。Kafka CR 里 external listener 的 `advertisedHost/advertisedPort` 就是这个地址。客户端连上 bootstrap 后会按广播地址回连，所以这两处必须一起改：只改 Pangolin 端口，第二跳会连到旧地址；只改 Kafka CR，会触发单 broker 滚动重启，CDC 链路随之中断。
+
+- 协议 `SASL_SSL`，机制 `SCRAM-SHA-512`，用户是 KafkaUser `remote-dev`，密码在 `kafka` 命名空间的同名 Secret 里。
+- CA 取 Secret `my-cluster-cluster-ca-cert` 的 `ca.crt`。broker 证书 SAN 包含 `kafka-dev.apikv.com`，可以做 CA 加主机名的完整校验，不要跳过校验。
+- 2026-09-27 从 Mac 实测：元数据往返成功，broker 广播地址为 `kafka-dev.apikv.com:30004`，可以列出 topic。只做了只读元数据查询，没有验证生产和消费权限。
+- 集群内客户端继续用 `my-cluster-kafka-bootstrap.kafka.svc:9092`，不要绕到公网入口。
+
 ## 4. 解析、信任与常见误判
 
 ### SSH 私网通路
 
 newt 是站点连接器，不自动给 Mac 增加到集群私网的路由。需要 SSH 隧道时，先确认 inventory alias `k1` 与实际网段，再使用 sshuttle；不要照旧节点列表猜网段。不要在 sshuttle 前整体加 `sudo`：root 不一定能读用户 `~/.ssh/config`，会把 alias 当裸主机名；防火墙助手需要的提权由工具自己的交互处理。
 
-`.test` 是保留域，公网不解析。hosts 只适合少量固定域；dnsmasq 依赖的本机监听地址若是临时 lo0 别名，重启后可能消失。代理返回 502 不证明 ArgoCD 或网关坏了，先区分本机 DNS、私网路由、TLS 与上游响应。
+需要隧道常驻时，用**用户级** LaunchAgent，不用 root 的 LaunchDaemon（理由同上）。开机时没有终端可输 sudo 密码，所以防火墙助手的提权要用 `sshuttle --sudoers-no-modify --sudoers-user <user>` 生成的片段，经 `visudo -cf` 校验后装进 `/etc/sudoers.d/`。有三个坑：
+
+- 该片段等于给这个用户免密 root：它能借 `--ssh-cmd` 以 root 运行任意命令，工具自己的输出里就有这条警告。
+- 片段写死了 Homebrew Cellar 里的版本路径。`brew upgrade sshuttle` 或 Python 升级后规则不再匹配，sudo 转为要密码，后台进程启动即退出，launchd 反复重启却不报错。升级后要重新生成。
+- `--ssh-cmd` 要带 `ServerAliveInterval` 与 `BatchMode=yes`。否则休眠或切换网络后隧道会半死不活，sshuttle 卡住而不退出，`KeepAlive` 永远不会触发。launchd 下也不要加 `--daemon`，进程要留在前台。
+
+`.test` 是保留域，公网不解析。Mac 上 `*.dev.test` 只在 `/etc/hosts` 里逐个写需要的主机名，IP 用 `kubectl get gateway -A -o custom-columns=NAME:.metadata.name,ADDR:.status.addresses[*].value` 现查。hosts 不支持通配，这是换取可靠性的代价。
+
+本机 dnsmasq split DNS 已于 2026-09-27 删除，不要重建。它失效时没有任何报错：监听地址是 lo0 上的临时别名，重启后消失，`/etc/resolver/dev.test` 仍指向它，于是每个没写进 hosts 的 `.dev.test` 查询都先卡 2 秒再失败；它的 `address=` 映射也在集群重建后指向了别的组件。验证解析用 `dscacheutil -q host -a name <host>`，`dig` 和 `nslookup` 不读 `/etc/hosts`，会报出与实际解析无关的超时。
+
+代理返回 502 不证明 ArgoCD 或网关坏了，先区分本机 DNS、私网路由、TLS 与上游响应。
 
 ### 集群重建后的 CA
 
