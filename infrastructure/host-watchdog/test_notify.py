@@ -41,6 +41,17 @@ class IncidentTests(unittest.TestCase):
         self.run_at(901, [check('ok')])
         self.assertEqual(self.sent, [])
 
+    def test_duplicate_or_invalid_record_does_not_suppress_the_round(self):
+        # 配置笔误（WATCH="web web"）曾让整轮一条通知都不发、状态文件也不写。
+        # 坏记录必须被计数并让退出码非零，但不能连带吞掉其余检查的告警。
+        rows = [check(key='docker:web'), check(key='docker:web'),
+                check(key='docker:api', detail='api 未运行')]
+        first = self.run_at(0, rows)
+        self.assertEqual(first['invalid'], 1)
+        self.assertTrue(self.path.exists())
+        self.run_at(600, rows)
+        self.assertEqual([payload['key'] for payload in self.sent], ['docker:web', 'docker:api'])
+
     def test_hold_recovery_and_recurrence(self):
         self.run_at(0, [check()])
         self.run_at(600, [check()])

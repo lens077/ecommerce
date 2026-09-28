@@ -93,13 +93,26 @@ def process(records, path, config, now, sender):
     """
     path = Path(path)
     config.validate(path)
+    # 2026-09-27 push 前异构双审发现：原先任一坏记录就 raise，整轮一条通知都不发，
+    # 状态文件也不写。一个配置笔误（WATCH="web web"、DISK_PATHS="/ /"、重名 HTTP_CHECKS）
+    # 就把单项错误放大成全量静默，只剩 Healthchecks 死人开关兜底（且它有自己的宽限期）。
+    # 改为：跳过坏记录、继续投递其余，用 invalid 计数保证退出码仍非零——不静默，也不放大。
+    # 重复 key 保留首次出现，后续计为 invalid，不合并（合并会让两个检查共用一个事件身份）。
     seen = set()
+    accepted = []
+    invalid = []
     for record in records:
         if (record['key'] in seen or record['status'] not in ('ok', 'fail', 'unknown')
                 or record['severity'] not in ('page', 'ticket')
                 or record['scope'] not in ('docker', 'systemd', 'host')):
-            raise ValueError('invalid or duplicate observation')
+            invalid.append(compact(record['key'], 120))
+            continue
         seen.add(record['key'])
+        accepted.append(record)
+    if invalid:
+        # key 来自本机配置，不含凭据；操作者需要知道是哪一项才能改掉笔误。
+        LOG.error('notification_invalid_records count=%d keys=%s', len(invalid), ','.join(invalid))
+    records = accepted
     path.parent.mkdir(parents=True, exist_ok=True, mode=0o700)
     lock_path = path.with_name(path.name + '.lock')
     if path.is_symlink() or lock_path.is_symlink():
@@ -121,7 +134,7 @@ def process(records, path, config, now, sender):
             incidents[key]['recover_since'] = None
             if not incidents[key]['firing_sent']:
                 incidents[key]['first_seen'] = now
-        result = dict(sent=0, failed=0)
+        result = dict(sent=0, failed=0, invalid=len(invalid))
         for record in records:
             key, status = record['key'], record['status']
             incident = incidents.get(key)
@@ -284,8 +297,10 @@ def main():
         def send(payload):
             return http_sender(os.environ)(payload)
         result = process(records, path, config, time.time(), send)
-        print('host_watchdog_notifications sent=%d failed=%d' % (result['sent'], result['failed']))
-        return 2 if result['failed'] else 0
+        print('host_watchdog_notifications sent=%d failed=%d invalid=%d'
+              % (result['sent'], result['failed'], result['invalid']))
+        # invalid 同样返回 2：坏记录必须可见，但不再连带丢掉其余检查的通知。
+        return 2 if result['failed'] or result['invalid'] else 0
     except Exception as error:
         LOG.error('notification_error error_type=%s', type(error).__name__)
         return 2
