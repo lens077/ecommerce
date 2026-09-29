@@ -53,6 +53,8 @@ todo-spec: 1
 - [ ] **未完成 · 登录 token 落日志**：`user/internal/data/user.go` 仍执行 `u.l.Debug(token.AccessToken)`。删除敏感日志，并随 BFF 收敛清理遗留登录职责。 <!--t:554600f8559b51cd-->
 - [ ] **未完成 · 加购 INSERT 缺列**：`cart/internal/data/queries/cart.sql` 未写 `shop_name`，迁移定义为 NOT NULL 且无默认值——2026-09-23 实测任何新加购都 500 `null value in column "shop_name"`，seed 行有值所以此前没暴露；前端 `MerchantCartGroup` 空值回退到默认店名。二选一：请求加 `shop_name` 客户端快照（与 spu_name/sku_name 同风格，改 proto + 前端重生成）或服务端查 merchant 填；先定契约再贯通，验证新增与重复加购。同日已修另一处：pgx 未注册 `cart.cart_type[]` 导致 `RemoveCartItem` 500（`data.go` AfterConnect LoadTypes）。 <!--t:bed5a2ecb1172d84-->
 
+- [ ] **未完成 · 商品详情 SKU 字段映射与结构化数据**：`backend/services/product/internal/data/product.go` 将 `json_agg(k.*)` 直接解进无 JSON tag 的 `biz.ProductSku`，下划线字段不能正确映射；补显式 DB→领域→RPC 映射，按商品设计明确规格名来源（当前 SKU 建表未含 `sku_name`），不以空值掩盖字段缺失。同步纠正 `product-jsonld.ts` 将 `stockLocked`（锁定库存）当作可售状态的做法，无可靠可售依据时省略 `availability`。验收：真实 SQL 数据经 `GetProductDetail` 到 SSR HTML，SKU 编码、规格名、图片与价格一致，库存语义正确；包含缺图、空规格名和零锁定库存用例。 <!--t:70cff1a3c490c7d9-->
+
 上述修复各自带真实 SQL/权限/状态机回归测试，不再另列泛化的「补齐所有单测」任务。
 
 #### P1
@@ -181,12 +183,21 @@ todo-spec: 1
 
 依据：TECH.md §11。商家与管理员的前端任务仅在本节登记。
 
-#### P1
+#### P1 · SEO 优化
 
-- [ ] **部分完成 · 公开列表页**：SSR 首页与商品详情已实现，首页可写缓存卷已就位；剩 `ListProducts` 数据接入、分类页/列表页与 ISR 验收，不再写「首页不存在」。 <!--t:fa0aa46fc98978ac-->
+公开页以 consumer-next 的 SSR 为主，可配合 SSG/ISR 缓存。真实商品和分类内容是行业词优化的前置条件，TDK 不能替代页面正文；先补内容与收录基础，再按真实搜索数据校准关键词。
+
+- [ ] **部分完成 · 公开列表页**：SSR 首页与商品详情已有实现；接入 `ListProducts` 与真实类目，替换首页 `DEMO-*` 商品和虚构商家，完成分类页/列表页，替换 `/categories` 仅渲染 `cart` 的占位内容。验收：禁用 JS 仍可读取真实商品、分类正文与对应 TDK；首页→分类/列表→详情均为真实可访问商品，分页与 ISR 刷新可复测。依赖后端「商品列表与管理能力」及「商品详情 SKU 字段映射与结构化数据」，导航接线归下一项。 <!--t:fa0aa46fc98978ac-->
+- [ ] **未完成 · 商品列表/类目接线**：公开目录统一接到 consumer-next 的 SSR 页面；更新首页、搜索结果、购物车与 SPA 内部的商品/类目链接，避免客户端路由继续截获公开页面。不重复维护两套首页或商品公开页；购物车、结算、订单、账户及 merchant/admin 继续保留 SPA 职责与 `noindex`。与下方「公开商品页 SSR 与规范 URL 对齐」共同验收导航、刷新及交易入口，不以公开 SSR 页替换导致 SKU 选择或加购能力丢失。 <!--t:96d00ab723bda83d-->
+- [ ] **未完成 · 公开商品页 SSR 与规范 URL 对齐**：按 [i18n-routing.md](docs/design/platform/i18n-routing.md) §4.1/§4.4，中文规范地址为 `/product/{spuCode}`，英文为 `/en/product/{spuCode}`；中文裸路径由 consumer-next 直接服务，不再落入带 `noindex` 的 SPA 壳。旧 `/zh/product/{spuCode}` 单跳永久重定向到中文裸路径，同步 canonical、hreflang（含 `x-default`）、JSON-LD URL 与站内链接；入口 HTTPRoute 的 Helm/裸清单保持等价，分流依据 `.service-matrix.yaml` 核对。验收：匿名、禁用 JS、直接访问与刷新都取得正确的 SSR 正文和 head，旧地址不循环跳转，语言切换正确，SPA 私有页面仍不收录。 <!--t:bb96bdd45d003d3b-->
+- [ ] **未完成 · SSR 商品错误状态与 ISR 故障保护**：不存在或编码不合法的商品返回真实 404，不再以 HTTP 200 错误页代替；网关/服务临时故障应抛错，使 ISR 重验证失败时保留上一份成功页面，不得用故障页覆盖缓存或给正常商品打 `noindex`，冷缓存故障返回明确的 5xx。验收覆盖商品服务 `not_found`/参数非法、网关 `ROUTE_NOT_FOUND`、超时、冷缓存与重验证失败，以及恢复后重新生成；以生产构建实际 HTTP 状态、head 与缓存内容为准。 <!--t:33f5f25f38f56114-->
+- [ ] **待核对 · 首页品牌与 ICP 备案名一致性**：核对实际 ICP 备案的网站名称、首页可见站点名及 title/description 的品牌位；若备案名不是「灯市」，依据核验结果对齐首页标题及相关品牌文案，不擅自假设备案名。验收：首页 SSR 源码、可见站点名与备案记录一致，并保留核验依据。 <!--t:1196adc316e642c4-->
+- [ ] **待前置 · 关键词搜索数据校准**：当前选词来自站内类目和电商常用词，缺乏真实搜索量与搜索表现数据。完成百度搜索资源平台的站点所有权验证、取得可用数据后，结合平台搜索词、展现与点击表现和百度指数，按行业词、类目词、商品长尾词调整 TDK 与页面内容。验收：记录数据来源、统计周期、调整前基线及调整后表现；数据不足的词标记待验证，不把百度指数当作绝对搜索量，不编造热度或承诺排名。 <!--t:ae8a2114427b943e-->
+
+#### P1 · 业务与工程接线
+
 - [ ] **未完成 · 购物车删除/数量持久化**：`useCart.ts` 两个操作仍只改本地 store；接 mutation 与查询失效，刷新后必须与服务端一致。 <!--t:aa3b06995c12d1fa-->
 - [ ] **部分完成 · 消费者交易页**：地址簿与结算共用表单，失败保留输入；结算阻止未同步条目和本地数量/金额漂移，协议快照已有同步门禁。剩订单列表/详情、结算和支付结果与真实后端幂等/响应契约联调，去掉对应 mock 和固定支付跳转；定位 API 仍为模拟地址，需替换或下线。 <!--t:20fcb00949af1d10-->
-- [ ] **未完成 · 商品列表/类目接线**：公开目录由 consumer-next 承载，SPA 只保留其职责所需入口，不重复建设两套首页。 <!--t:96d00ab723bda83d-->
 - [ ] **未完成 · 推荐行为埋点**：consumer 尚无 `initTracker` 调用；接商品曝光/浏览、加购/收藏/购买事件，与 behavior/gorse 端到端验证，不以 Umami 代替。 <!--t:7b5ca4032c1556b6-->
 - [ ] **部分完成 · 网关可选认证路由**（control-tower）：新增第四类路由 `optional_auth`（有效会话注入用户 ID；无会话、会话无效或 cookie 会话 Origin 不可信都按匿名放行、不注入身份、不做 RBAC），behavior 三个 RPC 从 `anonymous` 挪入。control-tower 已发版（网关镜像 `0.2.17`、routes 模块 `v0.1.7`），本仓已升级依赖，matrix 的 `optional_auth_paths` 与 structcheck 双向核对已同步。control-tower 两份网关清单已改钉 `0.2.17`（`78bdf0c`）。剩部署，并入新集群业务工作负载恢复一起做（2026-09-23 核对：集群重建后网关与 behavior 均未部署）。部署 `deploy/pre/gateway` 前要先补齐：① 网关 pre 的 machine token 与 Secret `control-tower-config-source-pre`（签发要管理员登录控制台 `/tokens`，operator token 签不了）；② Consul 未安装，而清单把 `consul-ecommerce-token` 列为必需 Secret，要么装 Consul、要么改成 `optional`；③ `ecommerce` 命名空间缺 `tcr-pull`（可复制 `config-center` 命名空间那份）、`dragonfly-session`、`casdoor-bff`（来源见 `../control-tower/docs/design/bff-migration.md`）。**先让新网关就绪、再写** Config Center `gateway/pre/routes.yaml`（当前 v1 是旧内容；旧网关拒绝未知字段）；behavior 部署后用有效会话、无会话、过期会话、非白名单 Origin 四种请求调 `Track` 验收。 <!--t:e81acbad31234047-->
 - [ ] **部分完成 · 推荐登录身份关联**：主动登出重置匿名标识；已登录态收到 401 时清理账号并丢弃待发旧事件，防止重登串身份；首次加载与过期异步身份回写已有回归保护。剩两项且有先后：① 上一条「网关可选认证路由」；② behavior 新增 `identity_links` 表，同一请求同时带网关用户 ID 与 `anonId` 时记关联（一个 anonId 只关联首个用户），按 Postgres 汇总值 PUT 回填 gorse（幂等可重试），dislike 过滤纳入已关联的匿名 ID。gorse 无用户合并 API，只能在 behavior 做。 <!--t:4fcaaae8d42e7154-->

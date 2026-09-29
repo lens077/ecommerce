@@ -877,7 +877,7 @@ cfg.GetServiceAddr("inventory-service") // 从 K8s DNS 解析
 
 与 §11.4 分工：a11y 管读屏与键盘可达，本节管**文档结构语义与机器可读性**（标题层级、地标、结构化数据、SEO）。代码约束包括：避免用 `div onClick` 代替语义元素，明确标题层级，使用 MUI 时分离 `variant`（视觉）与 `component`（语义），并为表单控件提供关联 label。consumer-next 商品详情页输出 `schema.org/Product` JSON-LD，服务端从同一份 query 生成内联首屏 HTML；展示价格与 `offers.price` 同源于 `lib/money.ts`。JSON-LD 只放 SSR 页，字段宁缺毋滥，不编造 proto 没有的 `description`/`brand`。
 
-TDK 与收录范围：只有 consumer-next 的首页与商品详情参与收录，consumer SPA 与 merchant/admin 的 `index.html` 一律 `noindex`；标题按百度《网页标题规范》用 ` - ` 分隔，首页品牌在前、子页面站点名在最末；商品页 TDK 只取页面实际展示的商品名、规格与价格，只有 product 服务自己返回的 `not_found`/`invalid_argument` 才输出 `noindex`。写法与实测结论见 [semantic-html.md](frontend/semantic-html.md) §五。
+**SEO/TDK 与 SSR 收录边界**：公开首页、商品、分类和列表以 `consumer-next` 的服务端渲染为主，可配合 SSG/ISR；交易页和 merchant/admin 保留 SPA。中英文文案、商品 metadata 生成、错误索引策略、验证结果与限制统一见 [灯市全站 TDK 优化总结](frontend/seo-tdk.md)。[SSR 与规范 URL 对齐目标](frontend/seo-tdk.md#五ssr-对齐方向与后续依赖)按设计采用中文商品裸路径、英文 `/en` 前缀；这是迁移目标，不表示当前旧 SPA 商品路由已替换。实现进度只维护在 [TODO.md](../TODO.md#前端技术栈与工程化)。
 
 **`<script type="speculationrules">` 暂不引入**。consumer 是 TanStack Router SPA，优先用 Router `preload` + Query `prefetchQuery`；consumer-next 已有首页与商品详情，不能沿用「只有一页、零站内链接」的旧评估前提。待真实商品列表与详情导航链路、缓存策略和收益测量到位后重评；须防止 prerender 提前发出个性化请求及重复统计 PV。判据见 [semantic-html.md](frontend/semantic-html.md)，不以旧页面计数替代当前源码核对。
 
