@@ -9,10 +9,16 @@
     <meta name="author" content="Lookeke<xiconz@qq.com>" />
     <!--	段简短而精确的、对页面内容的描述/书签的默认描述 -->
     <meta name="description" content="灯市——每件好物是一盏灯。数码、服饰、食百的综合商城。" />
+    <!--
+      本 SPA 的页面一律不收录：可收录的公开页（首页、商品详情）由 consumer-next 服务端渲染，
+      网关把 `/`、`/zh`、`/en` 分给它；落到这里的购物车、结算、订单、个人中心是登录后页面，
+      /categories 还是占位页，/product/$spuCode 与 consumer-next 的商品页重复。
+      见 docs/design/platform/i18n-routing.md 第三节。所以这里也不放 keywords。
+      以后要把某个 SPA 路由做成公开页，先迁到 consumer-next，不要删这一行。
+    -->
+    <meta name="robots" content="noindex" />
     <!--	生成此页面的软件的标识符-->
     <meta name="generator" content="" />
-    <!--	与页面内容相关的关键词-->
-    <meta name="keywords" content="ecommerce" />
     <!--如果请求目标与当前页面一样安全或者更加安全（HTTP(S)→HTTPS），则发送完整 URL；如果请求目标更加不安全（HTTPS→HTTP），则不发送  referrer。这是默认行为。-->
     <meta name="referrer" content="no-referrer-when-downgrade" />
     <!-- 页面颜色 -->

@@ -50,7 +50,9 @@ export async function generateMetadata({
   return {
     title: { absolute: copy.title },
     description: copy.description,
-    applicationName: copy.title,
+    keywords: copy.keywords,
+    // application-name 是站点名而不是页面标题：标题带了 slogan，这里只要品牌
+    applicationName: copy.brand,
     // Lighthouse SEO 要求 canonical / hreflang 是绝对 URL;域名来源见 src/home/site.ts
     alternates: {
       canonical: homeUrl(current),

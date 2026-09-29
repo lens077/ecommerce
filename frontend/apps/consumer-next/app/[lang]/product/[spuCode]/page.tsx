@@ -1,10 +1,12 @@
 import type { Metadata } from "next";
 import { notFound } from "next/navigation";
-import { dehydrate, HydrationBoundary, QueryClient } from "@tanstack/react-query";
+import { Code, ConnectError } from "@connectrpc/connect";
+import { dehydrate, HydrationBoundary } from "@tanstack/react-query";
 import type { GetProductDetailResponse } from "@/gen/api/product/v1/product_pb";
+import { isGatewayError } from "@/lib/gateway-error";
+import { loadProductDetail } from "@/lib/product-detail-loader";
 import { buildProductJsonLd, serializeJsonLd } from "@/lib/product-jsonld";
-import { productDetailQueryOptions } from "@/lib/product-query";
-import { createAnonymousServerTransport } from "@/lib/server-transport";
+import { buildProductMetadata, type ProductMetadataInput } from "@/lib/product-metadata";
 import { PersonalizedPanel } from "./personalized-panel";
 import { Providers } from "../../../providers";
 import { ProductDetail } from "./product-detail";
@@ -39,16 +41,30 @@ export async function generateMetadata({
   params: Promise<PageParams>;
 }): Promise<Metadata> {
   const { lang, spuCode } = await params;
+  // 非法语言段由页面组件 notFound()，这里不必为它发 RPC
+  if (!isLanguage(lang)) {
+    return {};
+  }
+
+  // 与页面组件同一次渲染内共用这次 RPC（React cache 去重），见 lib/product-detail-loader.ts
+  const { queryClient, queryOptions } = await loadProductDetail(spuCode);
+  const input = productMetadataInput(lang, queryClient, queryOptions.queryKey);
 
   return {
-    title: `${spuCode} (${lang})`,
-    alternates: {
-      canonical: productUrl(lang, spuCode),
-      languages: {
-        zh: productUrl("zh", spuCode),
-        en: productUrl("en", spuCode),
-      },
-    },
+    ...buildProductMetadata(input),
+    // 商品不存在时不声明 canonical/hreflang：noindex 的页面再指认规范地址、拉进语言簇是自相矛盾的信号。
+    // 服务故障时保留，那可能只是正常商品暂时取不到。
+    ...(input.status === "not-found"
+      ? {}
+      : {
+          alternates: {
+            canonical: productUrl(lang, spuCode),
+            languages: {
+              zh: productUrl("zh", spuCode),
+              en: productUrl("en", spuCode),
+            },
+          },
+        }),
   };
 }
 
@@ -58,11 +74,7 @@ export default async function ProductPage({ params }: { params: Promise<PagePara
     notFound();
   }
 
-  const transport = createAnonymousServerTransport();
-  const queryClient = new QueryClient();
-  const queryOptions = productDetailQueryOptions(transport, spuCode);
-
-  await queryClient.prefetchQuery(queryOptions);
+  const { queryClient, queryOptions } = await loadProductDetail(spuCode);
   const queryState = queryClient.getQueryState(queryOptions.queryKey);
 
   if (queryState?.status !== "success") {
@@ -106,4 +118,32 @@ export default async function ProductPage({ params }: { params: Promise<PagePara
 
 function isLanguage(value: string): value is Language {
   return LANGUAGES.some((lang) => lang === value);
+}
+
+type ProductQuery = Awaited<ReturnType<typeof loadProductDetail>>;
+
+/**
+ * 查询结果 → TDK 的三种状态。「这个 URL 没有商品」只认 product 服务自己返回的两种码：
+ * not_found（该服务约定商品缺失必须是它）和 invalid_argument（spuCode 不合法，例如超过
+ * proto 的 max_len，同一个 URL 永远取不到）。网关自己返回的同名错误码（例如路由缺失时的
+ * not_found）是故障，见 lib/gateway-error.ts；其余错误码一律按故障处理。
+ */
+function productMetadataInput(
+  lang: Language,
+  queryClient: ProductQuery["queryClient"],
+  queryKey: ProductQuery["queryOptions"]["queryKey"],
+): ProductMetadataInput {
+  const state = queryClient.getQueryState(queryKey);
+  const product = queryClient.getQueryData<GetProductDetailResponse>(queryKey)?.productDetail;
+  if (state?.status === "success" && product) {
+    return { lang, status: "success", product };
+  }
+  if (state?.status === "error") {
+    const error = ConnectError.from(state.error);
+    const noSuchProduct = error.code === Code.NotFound || error.code === Code.InvalidArgument;
+    if (noSuchProduct && !isGatewayError(error)) {
+      return { lang, status: "not-found" };
+    }
+  }
+  return { lang, status: "unavailable" };
 }

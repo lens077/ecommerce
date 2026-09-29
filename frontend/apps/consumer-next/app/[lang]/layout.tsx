@@ -1,16 +1,25 @@
 import type { Metadata } from "next";
 import type { ReactNode } from "react";
 import { UmamiAnalytics } from "@/analytics/umami";
+import { homeCopy, isLanguage } from "@/home/copy";
 
 const SUPPORTED_LANGUAGES = ["zh", "en"] as const;
 
-export const metadata: Metadata = {
-  title: {
-    default: "灯市",
-    template: "%s | 灯市",
-  },
-  description: "灯市——每件好物是一盏灯。数码、服饰、食百的综合商城。",
-};
+export async function generateMetadata({
+  params,
+}: {
+  params: Promise<{ lang: string }>;
+}): Promise<Metadata> {
+  const { lang } = await params;
+  const copy = homeCopy[isLanguage(lang) ? lang : "zh"];
+  return {
+    // 子页面标题 →「页面标题 - 站点名」：百度《网页标题规范》内容页格式要求站点名放最末，
+    // 间隔符按该规范的建议统一用 `-`（`|` `_` `——` 都在它的改用清单里）。站点名随语言走，
+    // 英文页不能挂中文品牌。
+    title: { default: copy.brand, template: `%s - ${copy.brand}` },
+    description: copy.description,
+  };
+}
 
 // 路径段 zh → 页面声明 zh-CN(与 SPA 的 <html lang> 一致,搜索引擎按 BCP 47 识别)
 const HTML_LANG: Record<string, string> = { zh: "zh-CN", en: "en" };

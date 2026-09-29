@@ -12,10 +12,23 @@ export function isLanguage(value: string): value is Language {
   return LANGUAGES.some((lang) => lang === value);
 }
 
+/**
+ * 首页 TDK 的取词与格式约定见 docs/frontend/semantic-html.md「TDK」一节，要点：
+ * - 标题按百度《网页标题规范》首页格式「品牌名 - slogan」，分隔符只用 `-`；
+ *   slogan 位用行业词（综合网上购物商城 + 类目），类目必须是首页类目竹架上真实存在的
+ *   （@ecommerce/lantern 的 demoCategories），改竹架时同步改这里。
+ * - 描述写站点核心内容与服务，百度建议 50 字左右；不写页面兑现不了的承诺（正品、低价、包邮、
+ *   下单时效等），也不用「最」「第一」这类广告法绝对化用语。
+ * - keywords：Google 官方声明不用它排序，百度站长问答说「不见得会起到预期的排序效果」；
+ *   只放少量准确的词，不堆砌。
+ */
 export interface HomeCopy {
   htmlLang: string;
+  /** 首页 `<title>`（absolute，不套 layout 模板） */
   title: string;
+  /** 首页 meta description，同时是 layout 给未声明描述的子页面的兜底 */
   description: string;
+  keywords: string[];
   brand: string;
   nav: {
     searchPlaceholder: string;
@@ -53,8 +66,21 @@ export interface HomeCopy {
 
 const zh: HomeCopy = {
   htmlLang: "zh-CN",
-  title: "灯市",
-  description: "灯市——每件好物是一盏灯。数码、服饰、食百的综合商城。",
+  title: "灯市 - 综合网上购物商城：数码家电、服饰美妆、食品家居",
+  description:
+    "灯市是综合网上购物商城，设有数码、家电、服饰、美妆、食品、家居、运动、图书等类目，支持站内商品搜索。",
+  keywords: [
+    "灯市",
+    "网上购物商城",
+    "综合商城",
+    "网购",
+    "数码家电",
+    "服饰美妆",
+    "食品",
+    "家居",
+    "运动",
+    "图书",
+  ],
   brand: "灯市",
   nav: {
     searchPlaceholder: "搜索商品...",
@@ -92,9 +118,22 @@ const zh: HomeCopy = {
 
 const en: HomeCopy = {
   htmlLang: "en",
-  title: "Lantern Market",
+  title: "Lantern Market - Online Mall for Electronics, Fashion & Home",
   description:
-    "Lantern Market — every good find is a lit lantern. Electronics, fashion, food and more.",
+    "Lantern Market is an online shopping mall with categories for electronics, home appliances, fashion, beauty, food, home goods, sports and books, plus built-in product search.",
+  keywords: [
+    "Lantern Market",
+    "online shopping",
+    "online mall",
+    "electronics",
+    "home appliances",
+    "fashion",
+    "beauty",
+    "food",
+    "home goods",
+    "sports",
+    "books",
+  ],
   brand: "Lantern Market",
   nav: {
     searchPlaceholder: "Search products...",
