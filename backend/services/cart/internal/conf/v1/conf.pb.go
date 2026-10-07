@@ -1654,10 +1654,12 @@ func (x *Observability_Tls) GetInsecureSkipVerify() bool {
 
 type Observability_Metric_Guard struct {
 	state protoimpl.MessageState `protogen:"open.v1"`
-	// 显式关闭保护:false 时导出失败恢复为每次采集都打一条错误日志(升级前的行为)。
-	// 用 wrapper 而不是裸 bool:kit 默认已开启保护,裸 bool 的零值是 false,会让
-	// 「只写了 ntfy、没写 enable」的服务静默关掉保护。不配置(或配 true)= 保持开启。
-	Enable *wrapperspb.BoolValue `protobuf:"bytes,1,opt,name=enable,proto3" json:"enable,omitempty"`
+	// 显式关闭保护:true 时导出失败恢复为每次采集都打一条错误日志(升级前的行为)。
+	// 字段故意叫 disable 而不是 enable:kit 默认已开启保护,裸 bool 的零值恰好是
+	// false,用 enable 会让「只写了 ntfy、没写 enable」的服务静默关掉保护。
+	// 也不能用 google.protobuf.BoolValue:配置解码走 mapstructure 且没有 wrapper
+	// 钩子,那样要求写成 enable: {value: true}(2026-10-07 实测解码报错)。
+	Disable bool `protobuf:"varint,1,opt,name=disable,proto3" json:"disable,omitempty"`
 	// 连续失败多少次熔断。30s 采集周期下 8 次约 4 分钟;按需下调可更快止噪。
 	MaxFailures int32 `protobuf:"varint,2,opt,name=max_failures,json=maxFailures,proto3" json:"max_failures,omitempty"`
 	// 首次失败后的退避窗口,之后按 multiplier 递增并封顶 max_backoff。
@@ -1667,10 +1669,12 @@ type Observability_Metric_Guard struct {
 	MaxBackoff *durationpb.Duration `protobuf:"bytes,4,opt,name=max_backoff,json=maxBackoff,proto3" json:"max_backoff,omitempty"`
 	// 退避递增倍数。不配置回落到 2.0。
 	Multiplier float64 `protobuf:"fixed64,5,opt,name=multiplier,proto3" json:"multiplier,omitempty"`
-	// 退避抖动比例 [0, 1)。用 wrapper 而不是裸 double:proto3 裸 double 的零值
-	// 就是 0.0,和「没配置」无法区分——0 是合法值(不抖动),写成裸 double 会被
-	// 回落成默认的 0.3。不配置回落到 0.3,显式配置 0 表示不抖动。
-	Jitter *wrapperspb.DoubleValue `protobuf:"bytes,6,opt,name=jitter,proto3" json:"jitter,omitempty"`
+	// 退避抖动比例 [0, 1)。裸 double 无法区分「没配置」与「配了 0」,因此 0(含
+	// 不写)统一按未配置处理、回落到 kit 默认的 0.3;要更小的抖动就填大于 0 的数。
+	// 不能用 google.protobuf.DoubleValue:配置解码走 mapstructure 且没有 wrapper
+	// 钩子,那样要求写成 jitter: {value: 0.3},而 JSON Schema 又按裸数字放行——
+	// 两个门禁不一致,只在本地有 dev.yml 时才会被解码测试抓到。
+	Jitter float64 `protobuf:"fixed64,6,opt,name=jitter,proto3" json:"jitter,omitempty"`
 	// 熔断后每隔多久放行一次探测导出,探测成功即恢复。不配置回落到 5m。
 	ProbeInterval *durationpb.Duration `protobuf:"bytes,7,opt,name=probe_interval,json=probeInterval,proto3" json:"probe_interval,omitempty"`
 	// true:熔断即关闭底层导出器,不再探测。用于确定要下线的端点。
@@ -1710,11 +1714,11 @@ func (*Observability_Metric_Guard) Descriptor() ([]byte, []int) {
 	return file_services_cart_internal_conf_v1_conf_proto_rawDescGZIP(), []int{6, 1, 0}
 }
 
-func (x *Observability_Metric_Guard) GetEnable() *wrapperspb.BoolValue {
+func (x *Observability_Metric_Guard) GetDisable() bool {
 	if x != nil {
-		return x.Enable
+		return x.Disable
 	}
-	return nil
+	return false
 }
 
 func (x *Observability_Metric_Guard) GetMaxFailures() int32 {
@@ -1745,11 +1749,11 @@ func (x *Observability_Metric_Guard) GetMultiplier() float64 {
 	return 0
 }
 
-func (x *Observability_Metric_Guard) GetJitter() *wrapperspb.DoubleValue {
+func (x *Observability_Metric_Guard) GetJitter() float64 {
 	if x != nil {
 		return x.Jitter
 	}
-	return nil
+	return 0
 }
 
 func (x *Observability_Metric_Guard) GetProbeInterval() *durationpb.Duration {
@@ -2198,7 +2202,7 @@ const file_services_cart_internal_conf_v1_conf_proto_rawDesc = "" +
 	"\abuckets\x18\x02 \x03(\v2!.conf.v1.Store.Minio.BucketsEntryR\abuckets\x1a:\n" +
 	"\fBucketsEntry\x12\x10\n" +
 	"\x03key\x18\x01 \x01(\tR\x03key\x12\x14\n" +
-	"\x05value\x18\x02 \x01(\tR\x05value:\x028\x01\"\xcb\f\n" +
+	"\x05value\x18\x02 \x01(\tR\x05value:\x028\x01\"\x93\f\n" +
 	"\rObservability\x122\n" +
 	"\x05trace\x18\x01 \x01(\v2\x1c.conf.v1.Observability.TraceR\x05trace\x125\n" +
 	"\x06metric\x18\x02 \x01(\v2\x1d.conf.v1.Observability.MetricR\x06metric\x120\n" +
@@ -2207,22 +2211,22 @@ const file_services_cart_internal_conf_v1_conf_proto_rawDesc = "" +
 	"\x05Trace\x125\n" +
 	"\bendpoint\x18\x01 \x01(\tB\x19\xbaH\x16r\x14\x92\x02\x0elocalhost:4318\x80\x02\x01R\bendpoint\x12,\n" +
 	"\x03tls\x18\x02 \x01(\v2\x1a.conf.v1.Observability.TlsR\x03tls\x12?\n" +
-	"\fsample_ratio\x18\x03 \x01(\v2\x1c.google.protobuf.DoubleValueR\vsampleRatio\x1a\xfc\a\n" +
+	"\fsample_ratio\x18\x03 \x01(\v2\x1c.google.protobuf.DoubleValueR\vsampleRatio\x1a\xc4\a\n" +
 	"\x06Metric\x125\n" +
 	"\bendpoint\x18\x01 \x01(\tB\x19\xbaH\x16r\x14\x92\x02\x0elocalhost:4318\x80\x02\x01R\bendpoint\x12,\n" +
 	"\x03tls\x18\x02 \x01(\v2\x1a.conf.v1.Observability.TlsR\x03tls\x12B\n" +
 	"\x0fexport_interval\x18\x03 \x01(\v2\x19.google.protobuf.DurationR\x0eexportInterval\x129\n" +
-	"\x05guard\x18\x04 \x01(\v2#.conf.v1.Observability.Metric.GuardR\x05guard\x1a\xc2\x04\n" +
-	"\x05Guard\x122\n" +
-	"\x06enable\x18\x01 \x01(\v2\x1a.google.protobuf.BoolValueR\x06enable\x12,\n" +
+	"\x05guard\x18\x04 \x01(\v2#.conf.v1.Observability.Metric.GuardR\x05guard\x1a\x8a\x04\n" +
+	"\x05Guard\x12\x18\n" +
+	"\adisable\x18\x01 \x01(\bR\adisable\x12,\n" +
 	"\fmax_failures\x18\x02 \x01(\x05B\t\xbaH\x06\x1a\x04\x18d(\x01R\vmaxFailures\x12R\n" +
 	"\x0finitial_backoff\x18\x03 \x01(\v2\x19.google.protobuf.DurationB\x0e\xbaH\v\xaa\x01\bJ\x02\b\x022\x02\b\x01R\x0einitialBackoff\x12K\n" +
 	"\vmax_backoff\x18\x04 \x01(\v2\x19.google.protobuf.DurationB\x0f\xbaH\f\xaa\x01\tJ\x03\b\xac\x022\x02\b\x01R\n" +
 	"maxBackoff\x127\n" +
 	"\n" +
 	"multiplier\x18\x05 \x01(\x01B\x17\xbaH\x14\x12\x12\x19\x00\x00\x00\x00\x00\x00$@)\x00\x00\x00\x00\x00\x00\xf0?R\n" +
-	"multiplier\x12M\n" +
-	"\x06jitter\x18\x06 \x01(\v2\x1c.google.protobuf.DoubleValueB\x17\xbaH\x14\x12\x12\x11\x00\x00\x00\x00\x00\x00\xf0?)\x00\x00\x00\x00\x00\x00\x00\x00R\x06jitter\x12Q\n" +
+	"multiplier\x12/\n" +
+	"\x06jitter\x18\x06 \x01(\x01B\x17\xbaH\x14\x12\x12\x11\x00\x00\x00\x00\x00\x00\xf0?)\x00\x00\x00\x00\x00\x00\x00\x00R\x06jitter\x12Q\n" +
 	"\x0eprobe_interval\x18\a \x01(\v2\x19.google.protobuf.DurationB\x0f\xbaH\f\xaa\x01\tJ\x03\b\xac\x022\x02\b\x01R\rprobeInterval\x12#\n" +
 	"\rhard_shutdown\x18\b \x01(\bR\fhardShutdown\x126\n" +
 	"\x04ntfy\x18\t \x01(\v2\".conf.v1.Observability.Metric.NtfyR\x04ntfy\x1a\xc8\x01\n" +
@@ -2309,7 +2313,6 @@ var file_services_cart_internal_conf_v1_conf_proto_goTypes = []any{
 	(*Discovery_Consul_Check_TTL)(nil),          // 32: conf.v1.Discovery.Consul.Check.TTL
 	(*durationpb.Duration)(nil),                 // 33: google.protobuf.Duration
 	(*wrapperspb.DoubleValue)(nil),              // 34: google.protobuf.DoubleValue
-	(*wrapperspb.BoolValue)(nil),                // 35: google.protobuf.BoolValue
 }
 var file_services_cart_internal_conf_v1_conf_proto_depIdxs = []int32{
 	2,  // 0: conf.v1.Bootstrap.server:type_name -> conf.v1.Server
@@ -2353,21 +2356,19 @@ var file_services_cart_internal_conf_v1_conf_proto_depIdxs = []int32{
 	33, // 38: conf.v1.Observability.Metric.export_interval:type_name -> google.protobuf.Duration
 	27, // 39: conf.v1.Observability.Metric.guard:type_name -> conf.v1.Observability.Metric.Guard
 	26, // 40: conf.v1.Observability.Logging.tls:type_name -> conf.v1.Observability.Tls
-	35, // 41: conf.v1.Observability.Metric.Guard.enable:type_name -> google.protobuf.BoolValue
-	33, // 42: conf.v1.Observability.Metric.Guard.initial_backoff:type_name -> google.protobuf.Duration
-	33, // 43: conf.v1.Observability.Metric.Guard.max_backoff:type_name -> google.protobuf.Duration
-	34, // 44: conf.v1.Observability.Metric.Guard.jitter:type_name -> google.protobuf.DoubleValue
-	33, // 45: conf.v1.Observability.Metric.Guard.probe_interval:type_name -> google.protobuf.Duration
-	28, // 46: conf.v1.Observability.Metric.Guard.ntfy:type_name -> conf.v1.Observability.Metric.Ntfy
-	30, // 47: conf.v1.Discovery.Consul.tls:type_name -> conf.v1.Discovery.Consul.Tls
-	31, // 48: conf.v1.Discovery.Consul.check:type_name -> conf.v1.Discovery.Consul.Check
-	32, // 49: conf.v1.Discovery.Consul.Check.ttl:type_name -> conf.v1.Discovery.Consul.Check.TTL
-	33, // 50: conf.v1.Discovery.Consul.Check.TTL.ping_interval:type_name -> google.protobuf.Duration
-	51, // [51:51] is the sub-list for method output_type
-	51, // [51:51] is the sub-list for method input_type
-	51, // [51:51] is the sub-list for extension type_name
-	51, // [51:51] is the sub-list for extension extendee
-	0,  // [0:51] is the sub-list for field type_name
+	33, // 41: conf.v1.Observability.Metric.Guard.initial_backoff:type_name -> google.protobuf.Duration
+	33, // 42: conf.v1.Observability.Metric.Guard.max_backoff:type_name -> google.protobuf.Duration
+	33, // 43: conf.v1.Observability.Metric.Guard.probe_interval:type_name -> google.protobuf.Duration
+	28, // 44: conf.v1.Observability.Metric.Guard.ntfy:type_name -> conf.v1.Observability.Metric.Ntfy
+	30, // 45: conf.v1.Discovery.Consul.tls:type_name -> conf.v1.Discovery.Consul.Tls
+	31, // 46: conf.v1.Discovery.Consul.check:type_name -> conf.v1.Discovery.Consul.Check
+	32, // 47: conf.v1.Discovery.Consul.Check.ttl:type_name -> conf.v1.Discovery.Consul.Check.TTL
+	33, // 48: conf.v1.Discovery.Consul.Check.TTL.ping_interval:type_name -> google.protobuf.Duration
+	49, // [49:49] is the sub-list for method output_type
+	49, // [49:49] is the sub-list for method input_type
+	49, // [49:49] is the sub-list for extension type_name
+	49, // [49:49] is the sub-list for extension extendee
+	0,  // [0:49] is the sub-list for field type_name
 }
 
 func init() { file_services_cart_internal_conf_v1_conf_proto_init() }

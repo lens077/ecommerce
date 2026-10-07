@@ -6,28 +6,22 @@ import (
 
 	kitguard "github.com/lens077/go-connect-kit/otelguard"
 	"google.golang.org/protobuf/types/known/durationpb"
-	"google.golang.org/protobuf/types/known/wrapperspb"
 )
 
 // fakeGuard 复刻生成代码的方法集;真实生成类型是否满足接口由各服务适配层的编译保证。
 type fakeGuard struct {
-	enable         *wrapperspb.BoolValue
+	disable        bool
 	maxFailures    int32
 	initialBackoff *durationpb.Duration
 	maxBackoff     *durationpb.Duration
 	multiplier     float64
-	jitter         *wrapperspb.DoubleValue
+	jitter         float64
 	probeInterval  *durationpb.Duration
 	hardShutdown   bool
 	ntfy           *fakeNtfy
 }
 
-func (guard *fakeGuard) GetEnable() *wrapperspb.BoolValue {
-	if guard == nil {
-		return nil
-	}
-	return guard.enable
-}
+func (guard *fakeGuard) GetDisable() bool { return guard != nil && guard.disable }
 
 func (guard *fakeGuard) GetMaxFailures() int32 {
 	if guard == nil {
@@ -57,9 +51,9 @@ func (guard *fakeGuard) GetMultiplier() float64 {
 	return guard.multiplier
 }
 
-func (guard *fakeGuard) GetJitter() *wrapperspb.DoubleValue {
+func (guard *fakeGuard) GetJitter() float64 {
 	if guard == nil {
-		return nil
+		return 0
 	}
 	return guard.jitter
 }
@@ -102,7 +96,7 @@ func TestUnsetFieldsKeepDefaults(t *testing.T) {
 	t.Setenv("OTEL_GUARD_NTFY_URL", "https://ntfy.example.com")
 	t.Setenv("OTEL_GUARD_NTFY_TOPIC", "env-topic")
 
-	config := Config(&fakeGuard{enable: wrapperspb.Bool(true)}, nil)
+	config := Config(&fakeGuard{disable: false}, nil)
 	if config == nil {
 		t.Fatal("configured guard must map to a config")
 	}
@@ -124,12 +118,12 @@ func TestConfiguredFieldsOverrideDefaults(t *testing.T) {
 	t.Setenv("OTEL_GUARD_MAX_FAILURES", "9")
 
 	config := Config(&fakeGuard{
-		enable:         wrapperspb.Bool(true),
+		disable:        false,
 		maxFailures:    3,
 		initialBackoff: durationpb.New(500 * time.Millisecond),
 		maxBackoff:     durationpb.New(2 * time.Minute),
 		multiplier:     1.5,
-		jitter:         wrapperspb.Double(0),
+		jitter:         0,
 		probeInterval:  durationpb.New(30 * time.Second),
 		hardShutdown:   true,
 		ntfy: &fakeNtfy{
@@ -156,9 +150,9 @@ func TestConfiguredFieldsOverrideDefaults(t *testing.T) {
 	if config.Multiplier != 1.5 || config.ProbeInterval != 30*time.Second || !config.HardShutdown {
 		t.Fatalf("configured scalar fields not applied: %+v", config)
 	}
-	// wrapper 的 0 是合法值(不抖动),不能被默认的 0.3 盖回来。
-	if config.Jitter != 0 {
-		t.Fatalf("explicit jitter=0 must disable jitter, got %v", config.Jitter)
+	// 裸 double 的 0 与「没配置」不可区分:必须保留默认 0.3,而不是写成 0。
+	if config.Jitter != kitguard.DefaultConfig().Jitter {
+		t.Fatalf("jitter=0 must keep the default %v, got %v", kitguard.DefaultConfig().Jitter, config.Jitter)
 	}
 	if config.Ntfy.Topic != "otel-guard" || config.Ntfy.Token != "s3cret" ||
 		config.Ntfy.RecoveryPriority != "low" {
@@ -167,14 +161,14 @@ func TestConfiguredFieldsOverrideDefaults(t *testing.T) {
 }
 
 func TestDisabledKeepsExplicitOff(t *testing.T) {
-	config := Config(&fakeGuard{enable: wrapperspb.Bool(false)}, nil)
+	config := Config(&fakeGuard{disable: true}, nil)
 	if config == nil || !config.Disabled {
 		t.Fatalf("enable=false must disable the guard, got %+v", config)
 	}
 }
 
-// 配了 guard 段但没写 enable 时,保护必须保持开启:否则「只填 ntfy」会静默关掉保护。
-func TestSectionWithoutEnableKeepsGuardOn(t *testing.T) {
+// 配了 guard 段但没写 disable 时,保护必须保持开启:否则「只填 ntfy」会静默关掉保护。
+func TestSectionWithoutDisableKeepsGuardOn(t *testing.T) {
 	config := Config(&fakeGuard{ntfy: &fakeNtfy{topic: "otel-guard"}}, nil)
 	if config == nil {
 		t.Fatal("a guard section must map to a config")

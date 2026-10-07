@@ -54,10 +54,10 @@ var ecommerceServices = []string{
 }
 
 // guardBlock 是写进 observability.metric.guard 的内容,默认值等于
-// go-connect-kit/otelguard 的默认值。enable 用指针:不写 = 保持开启,
-// 只有显式 false 才关闭(proto 里是 google.protobuf.BoolValue)。
+// go-connect-kit/otelguard 的默认值。关保护写 disable: true —— 字段名是 disable
+// 而不是 enable,这样「只写了 ntfy、没写开关」不会把保护静默关掉。
 type guardBlock struct {
-	Enable         *bool     `yaml:"enable,omitempty"`
+	Disable        bool      `yaml:"disable,omitempty"`
 	MaxFailures    int       `yaml:"max_failures"`
 	InitialBackoff string    `yaml:"initial_backoff"`
 	MaxBackoff     string    `yaml:"max_backoff"`
@@ -120,10 +120,7 @@ func main() {
 			Token: os.Getenv(envNtfyToken),
 		},
 	}
-	if *disable {
-		disabled := false
-		block.Enable = &disabled
-	}
+	block.Disable = *disable
 	if block.Ntfy.URL == "" || block.Ntfy.Topic == "" {
 		fail(fmt.Sprintf("%s 与 %s 必填(告警要发到哪个 ntfy 主题)", envNtfyURL, envNtfyTopic))
 	}

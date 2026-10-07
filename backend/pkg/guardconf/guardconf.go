@@ -9,17 +9,16 @@ package guardconf
 import (
 	kitguard "github.com/lens077/go-connect-kit/otelguard"
 	"google.golang.org/protobuf/types/known/durationpb"
-	"google.golang.org/protobuf/types/known/wrapperspb"
 )
 
 // Guard 是 Observability.Metric.Guard 在各服务 confv1 里的共同方法集。
 type Guard interface {
-	GetEnable() *wrapperspb.BoolValue
+	GetDisable() bool
 	GetMaxFailures() int32
 	GetInitialBackoff() *durationpb.Duration
 	GetMaxBackoff() *durationpb.Duration
 	GetMultiplier() float64
-	GetJitter() *wrapperspb.DoubleValue
+	GetJitter() float64
 	GetProbeInterval() *durationpb.Duration
 	GetHardShutdown() bool
 }
@@ -57,12 +56,10 @@ func Config[G guardMessage](guard G, ntfy Ntfy) *kitguard.Config {
 
 	config := kitguard.ConfigFromEnv()
 
-	// enable 用 wrapper:kit 默认已开启保护,所以只有「显式配了 false」才关闭。
-	// 配了 guard 段但没写 enable(或写 true)时保持开启,避免只填 ntfy 反而把
-	// 保护静默关掉。
-	if value := guard.GetEnable(); value != nil && !value.GetValue() {
-		config.Disabled = true
-	}
+	// 字段名是 disable 而不是 enable:kit 默认已开启保护,裸 bool 的零值恰好是
+	// false,所以「配了 guard 段但没写 disable」保持开启,只有显式 true 才关闭。
+	// (真要用 enable 就得加 wrapper,而 mapstructure 路径没有 wrapper 钩子。)
+	config.Disabled = guard.GetDisable()
 
 	if value := guard.GetMaxFailures(); value > 0 {
 		config.MaxFailures = int(value)
@@ -76,9 +73,9 @@ func Config[G guardMessage](guard G, ntfy Ntfy) *kitguard.Config {
 	if value := guard.GetMultiplier(); value >= 1 {
 		config.Multiplier = value
 	}
-	// jitter 用 wrapper:配了 0 就是「不抖动」,必须覆盖默认的 0.3,不能按零值跳过。
-	if value := guard.GetJitter(); value != nil {
-		config.Jitter = value.GetValue()
+	// jitter 是裸 double:0 与「没配置」不可区分,统一按未配置处理、保留默认 0.3。
+	if value := guard.GetJitter(); value > 0 {
+		config.Jitter = value
 	}
 	if value := guard.GetProbeInterval(); value != nil && value.AsDuration() > 0 {
 		config.ProbeInterval = value.AsDuration()
