@@ -8,50 +8,77 @@ import "third_party/validate/validate.proto";
 
 option go_package = "github.com/lens077/ecommerce/backend/api/product/v1;productv1";
 
+// 商品服务：读取商品（SPU/SKU）详情。
+//
+// 当前只有一个读接口，写侧（商品创建/改价）尚未开放。
 service ProductService {
+  // GetProductDetail 按 SPU 编码取商品详情。
+  //
+  // 属 anonymous_paths：商品详情页对未登录访客开放，无需 JWT。
+  // 返回的是 SPU 及其下全部 SKU，一次取完，避免详情页再逐 SKU 查询
   rpc GetProductDetail(GetProductDetailRequest) returns (GetProductDetailResponse) {}
 }
 
+// 商品详情请求
 message GetProductDetailRequest {
+  // SPU 编码（业务编码，非自增 ID），1–64 字符
   string spu_code = 1 [(buf.validate.field).string = {
     min_len: 1
     max_len: 64
   }];
 }
 
+// 商品详情响应
 message GetProductDetailResponse {
+  // 商品详情
   ProductSpuDetail product_detail = 1 [(buf.validate.field).required = true];
 }
 
+// SPU 维度详情 + 其下 SKU 列表
 message ProductSpuDetail {
+  // SPU 自增 ID
   int64 spu_id = 1 [(buf.validate.field).int64.gt = 0];
+  // SPU 名称，1–255 字符
   string spu_name = 2 [(buf.validate.field).string = {
     min_len: 1
     max_len: 255
   }];
+  // SPU 编码，与请求入参一致
   string spu_code = 3 [(buf.validate.field).string = {
     min_len: 1
     max_len: 64
   }];
-  // 使用 google.protobuf.Struct 来匹配 map[string]any
+  // SPU 级通用规格（品牌、产地等所有 SKU 共享的键值对）。
+  // 用 google.protobuf.Struct 匹配 map[string]any，结构由业务约定
   google.protobuf.Struct common_specs = 4 [(buf.validate.field).required = true];
+  // 该 SPU 下的 SKU 列表，1–100 个
   repeated ProductSku skus = 5 [(buf.validate.field).repeated = {
     min_items: 1
     max_items: 100
   }];
 }
 
+// SKU 维度详情（最小销售单元）
 message ProductSku {
+  // SKU 自增 ID
   int64 sku_id = 1 [(buf.validate.field).int64.gt = 0];
+  // SKU 编码，1–64 字符
   string sku_code = 2 [(buf.validate.field).string = {
     min_len: 1
     max_len: 64
   }];
+  // 所属商家 ID（UUID），用于数据隔离与店铺信息关联
   string merchant_id = 3 [(buf.validate.field).string.uuid = true];
+  // 售价
   google.type.Money price = 4 [(buf.validate.field).required = true];
+  // 成本价，仅后台可见；对前端开放该字段是已知的暴露面，消费方需自行裁剪
   google.type.Money cost_price = 5 [(buf.validate.field).required = true];
+  // 已锁库存（下单未支付部分），≥ 0
   int64 stock_locked = 6 [(buf.validate.field).int64.gte = 0];
+  // SKU 级规格属性（颜色、尺码等）。
+  // 用 google.protobuf.Struct 匹配 map[string]any
   google.protobuf.Struct attributes = 7 [(buf.validate.field).required = true];
+  // 规格模板文案，最多 50 条、条间不可重复，用于详情页规格表渲染
   repeated string spec_template = 8 [(buf.validate.field).repeated = {
     max_items: 50
     unique: true
@@ -62,24 +89,34 @@ message ProductSku {
       }
     }
   }];
+  // SKU 名称，1–255 字符
   string sku_name = 9 [(buf.validate.field).string = {
     min_len: 1
     max_len: 255
   }];
+  // SKU 缩略图 URL，最长 500 字符
   string thumbnail_url = 10 [(buf.validate.field).string = {
     min_len: 1
     max_len: 500
   }];
+  // SKU 状态
   SPUStatus status = 11 [(buf.validate.field).enum.defined_only = true];
 }
 
+// SPU/SKU 状态机
 enum SPUStatus {
+  // 未指定（默认值，无效）
   STATUS_UNKNOWN = 0;
+  // 草稿，尚未发布
   STATUS_DRAFT = 1;
+  // 已上架
   STATUS_ONLINE = 2;
+  // 已下架
   STATUS_OFFLINE = 3;
+  // 已删除（软删除）
   STATUS_DELETED = 4;
 }
+
 //message Product {
 //  uint64 id = 1;
 //  string spu_code = 2 [(buf.validate.field).string.max_len = 64];

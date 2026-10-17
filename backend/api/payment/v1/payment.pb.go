@@ -26,12 +26,18 @@ const (
 type PaymentStatus int32
 
 const (
-	PaymentStatus_PAYMENT_STATUS_UNKNOWN    PaymentStatus = 0
-	PaymentStatus_PAYMENT_STATUS_PENDING    PaymentStatus = 1
+	// 未指定（默认值，无效）
+	PaymentStatus_PAYMENT_STATUS_UNKNOWN PaymentStatus = 0
+	// 已创建，等待支付
+	PaymentStatus_PAYMENT_STATUS_PENDING PaymentStatus = 1
+	// 渠道已受理，处理中
 	PaymentStatus_PAYMENT_STATUS_PROCESSING PaymentStatus = 2
-	PaymentStatus_PAYMENT_STATUS_SUCCESS    PaymentStatus = 3
-	PaymentStatus_PAYMENT_STATUS_FAILED     PaymentStatus = 4
-	PaymentStatus_PAYMENT_STATUS_CLOSED     PaymentStatus = 5
+	// 支付成功
+	PaymentStatus_PAYMENT_STATUS_SUCCESS PaymentStatus = 3
+	// 支付失败
+	PaymentStatus_PAYMENT_STATUS_FAILED PaymentStatus = 4
+	// 已关闭（超时未付或主动关单）
+	PaymentStatus_PAYMENT_STATUS_CLOSED PaymentStatus = 5
 )
 
 // Enum value maps for PaymentStatus.
@@ -83,16 +89,26 @@ func (PaymentStatus) EnumDescriptor() ([]byte, []int) {
 
 // 创建支付订单请求
 type CreatePaymentRequest struct {
-	state            protoimpl.MessageState `protogen:"open.v1"`
-	OrderId          int64                  `protobuf:"varint,1,opt,name=order_id,json=orderId,proto3" json:"order_id,omitempty"`
-	CustomerId       string                 `protobuf:"bytes,11,opt,name=customer_id,json=customerId,proto3" json:"customer_id,omitempty"`
-	Amount           string                 `protobuf:"bytes,3,opt,name=amount,proto3" json:"amount,omitempty"`
-	Currency         string                 `protobuf:"bytes,4,opt,name=currency,proto3" json:"currency,omitempty"`
-	Subject          string                 `protobuf:"bytes,5,opt,name=subject,proto3" json:"subject,omitempty"`
-	ReturnUrl        string                 `protobuf:"bytes,6,opt,name=return_url,json=returnUrl,proto3" json:"return_url,omitempty"`
-	FreezeId         int64                  `protobuf:"varint,8,opt,name=freeze_id,json=freezeId,proto3" json:"freeze_id,omitempty"`
-	CustomerVersion  int64                  `protobuf:"varint,12,opt,name=customer_version,json=customerVersion,proto3" json:"customer_version,omitempty"`
-	MerchantVersions []int64                `protobuf:"varint,10,rep,packed,name=merchant_versions,json=merchantVersions,proto3" json:"merchant_versions,omitempty"`
+	state protoimpl.MessageState `protogen:"open.v1"`
+	// 业务订单 ID
+	OrderId int64 `protobuf:"varint,1,opt,name=order_id,json=orderId,proto3" json:"order_id,omitempty"`
+	// 买家 ID（UUID）。术语 2026-08-29 由 consumer_id 改为 customer_id
+	CustomerId string `protobuf:"bytes,11,opt,name=customer_id,json=customerId,proto3" json:"customer_id,omitempty"`
+	// 金额（元），用字符串传以避免浮点误差。
+	// 上限 13 位：支持到千亿级、保留两位小数
+	Amount string `protobuf:"bytes,3,opt,name=amount,proto3" json:"amount,omitempty"`
+	// 三位 ISO 4217 货币代码，如 CNY
+	Currency string `protobuf:"bytes,4,opt,name=currency,proto3" json:"currency,omitempty"`
+	// 订单标题，展示在收银台，1–255 字符
+	Subject string `protobuf:"bytes,5,opt,name=subject,proto3" json:"subject,omitempty"`
+	// 支付完成后前端回跳地址
+	ReturnUrl string `protobuf:"bytes,6,opt,name=return_url,json=returnUrl,proto3" json:"return_url,omitempty"`
+	// 关联的资金冻结 ID（幂等/对账用）
+	FreezeId int64 `protobuf:"varint,8,opt,name=freeze_id,json=freezeId,proto3" json:"freeze_id,omitempty"`
+	// 买家信息版本号，≥ 0
+	CustomerVersion int64 `protobuf:"varint,12,opt,name=customer_version,json=customerVersion,proto3" json:"customer_version,omitempty"`
+	// 各商家信息版本号列表，1–100 个，与订单涉及的商家一一对应
+	MerchantVersions []int64 `protobuf:"varint,10,rep,packed,name=merchant_versions,json=merchantVersions,proto3" json:"merchant_versions,omitempty"`
 	unknownFields    protoimpl.UnknownFields
 	sizeCache        protoimpl.SizeCache
 }
@@ -192,9 +208,11 @@ func (x *CreatePaymentRequest) GetMerchantVersions() []int64 {
 
 // 创建支付订单响应
 type CreatePaymentResponse struct {
-	state         protoimpl.MessageState `protogen:"open.v1"`
-	PaymentId     int64                  `protobuf:"varint,1,opt,name=payment_id,json=paymentId,proto3" json:"payment_id,omitempty"`
-	PayUrl        string                 `protobuf:"bytes,2,opt,name=pay_url,json=payUrl,proto3" json:"pay_url,omitempty"`
+	state protoimpl.MessageState `protogen:"open.v1"`
+	// 支付单 ID
+	PaymentId int64 `protobuf:"varint,1,opt,name=payment_id,json=paymentId,proto3" json:"payment_id,omitempty"`
+	// 收银台地址，前端跳转至此完成支付
+	PayUrl        string `protobuf:"bytes,2,opt,name=pay_url,json=payUrl,proto3" json:"pay_url,omitempty"`
 	unknownFields protoimpl.UnknownFields
 	sizeCache     protoimpl.SizeCache
 }
@@ -245,8 +263,9 @@ func (x *CreatePaymentResponse) GetPayUrl() string {
 
 // 查询支付状态请求
 type GetPaymentStatusRequest struct {
-	state         protoimpl.MessageState `protogen:"open.v1"`
-	PaymentId     int64                  `protobuf:"varint,1,opt,name=payment_id,json=paymentId,proto3" json:"payment_id,omitempty"`
+	state protoimpl.MessageState `protogen:"open.v1"`
+	// 支付单 ID
+	PaymentId     int64 `protobuf:"varint,1,opt,name=payment_id,json=paymentId,proto3" json:"payment_id,omitempty"`
 	unknownFields protoimpl.UnknownFields
 	sizeCache     protoimpl.SizeCache
 }
@@ -290,11 +309,15 @@ func (x *GetPaymentStatusRequest) GetPaymentId() int64 {
 
 // 查询支付状态响应
 type GetPaymentStatusResponse struct {
-	state         protoimpl.MessageState `protogen:"open.v1"`
-	PaymentId     int64                  `protobuf:"varint,1,opt,name=payment_id,json=paymentId,proto3" json:"payment_id,omitempty"`
-	OrderId       int64                  `protobuf:"varint,2,opt,name=order_id,json=orderId,proto3" json:"order_id,omitempty"`
-	Status        PaymentStatus          `protobuf:"varint,3,opt,name=status,proto3,enum=payment.v1.PaymentStatus" json:"status,omitempty"`
-	TradeNo       string                 `protobuf:"bytes,4,opt,name=trade_no,json=tradeNo,proto3" json:"trade_no,omitempty"` // 支付宝交易号
+	state protoimpl.MessageState `protogen:"open.v1"`
+	// 支付单 ID
+	PaymentId int64 `protobuf:"varint,1,opt,name=payment_id,json=paymentId,proto3" json:"payment_id,omitempty"`
+	// 业务订单 ID
+	OrderId int64 `protobuf:"varint,2,opt,name=order_id,json=orderId,proto3" json:"order_id,omitempty"`
+	// 当前支付状态
+	Status PaymentStatus `protobuf:"varint,3,opt,name=status,proto3,enum=payment.v1.PaymentStatus" json:"status,omitempty"`
+	// 支付宝交易号
+	TradeNo       string `protobuf:"bytes,4,opt,name=trade_no,json=tradeNo,proto3" json:"trade_no,omitempty"` // 支付宝交易号
 	unknownFields protoimpl.UnknownFields
 	sizeCache     protoimpl.SizeCache
 }
@@ -357,10 +380,13 @@ func (x *GetPaymentStatusResponse) GetTradeNo() string {
 	return ""
 }
 
+// 一个表单键值对。同一键可出现多次（渠道行为），故值是数组
 type KeyValue struct {
-	state         protoimpl.MessageState `protogen:"open.v1"`
-	Key           string                 `protobuf:"bytes,1,opt,name=key,proto3" json:"key,omitempty"`
-	Values        []string               `protobuf:"bytes,2,rep,name=values,proto3" json:"values,omitempty"`
+	state protoimpl.MessageState `protogen:"open.v1"`
+	// 参数名，1–64 字符
+	Key string `protobuf:"bytes,1,opt,name=key,proto3" json:"key,omitempty"`
+	// 该键的所有取值，最多 10 个、单个最长 4096 字符
+	Values        []string `protobuf:"bytes,2,rep,name=values,proto3" json:"values,omitempty"`
 	unknownFields protoimpl.UnknownFields
 	sizeCache     protoimpl.SizeCache
 }
@@ -409,6 +435,7 @@ func (x *KeyValue) GetValues() []string {
 	return nil
 }
 
+// 支付通知的原始表单参数集，最多 64 对
 type UrlValues struct {
 	state         protoimpl.MessageState `protogen:"open.v1"`
 	Pairs         []*KeyValue            `protobuf:"bytes,1,rep,name=pairs,proto3" json:"pairs,omitempty"`
@@ -453,11 +480,13 @@ func (x *UrlValues) GetPairs() []*KeyValue {
 	return nil
 }
 
-// 支付通知响应
+// 支付通知响应。success=false 时渠道会按自己的策略重推
 type HandlePaymentNotifyResponse struct {
-	state         protoimpl.MessageState `protogen:"open.v1"`
-	Success       bool                   `protobuf:"varint,1,opt,name=success,proto3" json:"success,omitempty"`
-	Message       string                 `protobuf:"bytes,2,opt,name=message,proto3" json:"message,omitempty"`
+	state protoimpl.MessageState `protogen:"open.v1"`
+	// 是否受理成功
+	Success bool `protobuf:"varint,1,opt,name=success,proto3" json:"success,omitempty"`
+	// 补充说明，上限 512 字符
+	Message       string `protobuf:"bytes,2,opt,name=message,proto3" json:"message,omitempty"`
 	unknownFields protoimpl.UnknownFields
 	sizeCache     protoimpl.SizeCache
 }
@@ -506,24 +535,39 @@ func (x *HandlePaymentNotifyResponse) GetMessage() string {
 	return ""
 }
 
-// 支付回调请求
+// 支付回调请求（用户收银台跳回时带回的参数）
 type HandlePaymentCallbackRequest struct {
-	state         protoimpl.MessageState `protogen:"open.v1"`
-	OutTradeNo    string                 `protobuf:"bytes,1,opt,name=out_trade_no,json=outTradeNo,proto3" json:"out_trade_no,omitempty"`
-	TradeNo       string                 `protobuf:"bytes,2,opt,name=trade_no,json=tradeNo,proto3" json:"trade_no,omitempty"`
-	TotalAmount   string                 `protobuf:"bytes,3,opt,name=total_amount,json=totalAmount,proto3" json:"total_amount,omitempty"`
-	Subject       string                 `protobuf:"bytes,4,opt,name=subject,proto3" json:"subject,omitempty"`
-	TradeStatus   string                 `protobuf:"bytes,5,opt,name=trade_status,json=tradeStatus,proto3" json:"trade_status,omitempty"`
-	Charset       string                 `protobuf:"bytes,6,opt,name=charset,proto3" json:"charset,omitempty"`                                                                          // 字符集
-	Method        string                 `protobuf:"bytes,7,opt,name=method,proto3" json:"method,omitempty"`                                                                            // 支付方式
-	Sign          string                 `protobuf:"bytes,8,opt,name=sign,proto3" json:"sign,omitempty"`                                                                                // 签名
-	SignType      string                 `protobuf:"bytes,9,opt,name=sign_type,json=signType,proto3" json:"sign_type,omitempty"`                                                        // 签名类型 RSA2
-	AppId         string                 `protobuf:"bytes,10,opt,name=app_id,json=appId,proto3" json:"app_id,omitempty"`                                                                // 应用ID
-	AuthAppId     string                 `protobuf:"bytes,12,opt,name=auth_app_id,json=authAppId,proto3" json:"auth_app_id,omitempty"`                                                  // 授权应用ID
-	Version       string                 `protobuf:"bytes,13,opt,name=version,proto3" json:"version,omitempty"`                                                                         // 版本号
-	SellerId      string                 `protobuf:"bytes,14,opt,name=seller_id,json=sellerId,proto3" json:"seller_id,omitempty"`                                                       // 卖家ID
-	Timestamp     string                 `protobuf:"bytes,16,opt,name=timestamp,proto3" json:"timestamp,omitempty"`                                                                     // 时间戳
-	Params        map[string]string      `protobuf:"bytes,11,rep,name=params,proto3" json:"params,omitempty" protobuf_key:"bytes,1,opt,name=key" protobuf_val:"bytes,2,opt,name=value"` // 存储所有回调参数
+	state protoimpl.MessageState `protogen:"open.v1"`
+	// 商户订单号，1–64 字符
+	OutTradeNo string `protobuf:"bytes,1,opt,name=out_trade_no,json=outTradeNo,proto3" json:"out_trade_no,omitempty"`
+	// 支付宝交易号，1–64 字符
+	TradeNo string `protobuf:"bytes,2,opt,name=trade_no,json=tradeNo,proto3" json:"trade_no,omitempty"`
+	// 订单金额（元），格式同 CreatePaymentRequest.amount
+	TotalAmount string `protobuf:"bytes,3,opt,name=total_amount,json=totalAmount,proto3" json:"total_amount,omitempty"`
+	// 订单标题
+	Subject string `protobuf:"bytes,4,opt,name=subject,proto3" json:"subject,omitempty"`
+	// 交易状态（渠道原值），1–32 字符
+	TradeStatus string `protobuf:"bytes,5,opt,name=trade_status,json=tradeStatus,proto3" json:"trade_status,omitempty"`
+	// 字符集
+	Charset string `protobuf:"bytes,6,opt,name=charset,proto3" json:"charset,omitempty"` // 字符集
+	// 支付方式
+	Method string `protobuf:"bytes,7,opt,name=method,proto3" json:"method,omitempty"` // 支付方式
+	// 签名
+	Sign string `protobuf:"bytes,8,opt,name=sign,proto3" json:"sign,omitempty"` // 签名
+	// 签名类型 RSA2
+	SignType string `protobuf:"bytes,9,opt,name=sign_type,json=signType,proto3" json:"sign_type,omitempty"` // 签名类型 RSA2
+	// 应用ID
+	AppId string `protobuf:"bytes,10,opt,name=app_id,json=appId,proto3" json:"app_id,omitempty"` // 应用ID
+	// 授权应用ID
+	AuthAppId string `protobuf:"bytes,12,opt,name=auth_app_id,json=authAppId,proto3" json:"auth_app_id,omitempty"` // 授权应用ID
+	// 版本号
+	Version string `protobuf:"bytes,13,opt,name=version,proto3" json:"version,omitempty"` // 版本号
+	// 卖家ID
+	SellerId string `protobuf:"bytes,14,opt,name=seller_id,json=sellerId,proto3" json:"seller_id,omitempty"` // 卖家ID
+	// 时间戳
+	Timestamp string `protobuf:"bytes,16,opt,name=timestamp,proto3" json:"timestamp,omitempty"` // 时间戳
+	// 存储所有回调参数。最多 64 对，值最长 4096 字符
+	Params        map[string]string `protobuf:"bytes,11,rep,name=params,proto3" json:"params,omitempty" protobuf_key:"bytes,1,opt,name=key" protobuf_val:"bytes,2,opt,name=value"` // 存储所有回调参数
 	unknownFields protoimpl.UnknownFields
 	sizeCache     protoimpl.SizeCache
 }
@@ -665,9 +709,11 @@ func (x *HandlePaymentCallbackRequest) GetParams() map[string]string {
 
 // 支付回调响应
 type HandlePaymentCallbackResponse struct {
-	state         protoimpl.MessageState `protogen:"open.v1"`
-	Success       bool                   `protobuf:"varint,1,opt,name=success,proto3" json:"success,omitempty"`
-	Message       string                 `protobuf:"bytes,2,opt,name=message,proto3" json:"message,omitempty"`
+	state protoimpl.MessageState `protogen:"open.v1"`
+	// 是否受理成功
+	Success bool `protobuf:"varint,1,opt,name=success,proto3" json:"success,omitempty"`
+	// 补充说明，上限 512 字符
+	Message       string `protobuf:"bytes,2,opt,name=message,proto3" json:"message,omitempty"`
 	unknownFields protoimpl.UnknownFields
 	sizeCache     protoimpl.SizeCache
 }

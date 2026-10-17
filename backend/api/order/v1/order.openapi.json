@@ -24,6 +24,7 @@
           "order.v1.orderService"
         ],
         "summary": "CreateOrder",
+        "description": "CreateOrder 按用户勾选的购物车项生成订单。\n\n 属 guest_paths：访客也能下单，身份由网关注入的 x-md-global-user-id 决定\n （访客则该头为匿名标识）。",
         "operationId": "order.v1.orderService.CreateOrder",
         "parameters": [
           {
@@ -82,6 +83,7 @@
           "order.v1.orderService"
         ],
         "summary": "CompleteOrder",
+        "description": "CompleteOrder 标记订单完成，返回订单快照。\n\n 幂等：同一 orderNo 重复调用返回同一份订单，不会重复推进状态",
         "operationId": "order.v1.orderService.CompleteOrder",
         "parameters": [
           {
@@ -144,17 +146,20 @@
             "type": "string",
             "title": "orderNo",
             "maxLength": 64,
-            "minLength": 1
+            "minLength": 1,
+            "description": "业务订单号（非自增 ID），1–64 字符"
           }
         },
         "title": "CompleteOrderRequest",
-        "additionalProperties": false
+        "additionalProperties": false,
+        "description": "完成订单请求"
       },
       "order.v1.CompleteOrderResponse": {
         "type": "object",
         "properties": {
           "order": {
             "title": "order",
+            "description": "完成时的订单快照",
             "$ref": "#/components/schemas/order.v1.Order"
           }
         },
@@ -162,7 +167,8 @@
         "required": [
           "order"
         ],
-        "additionalProperties": false
+        "additionalProperties": false,
+        "description": "完成订单响应"
       },
       "order.v1.CreateOrderRequest": {
         "type": "object",
@@ -184,32 +190,36 @@
             "maxItems": 100,
             "minItems": 1,
             "uniqueItems": true,
-            "description": "用户在购物车中已选商品的唯一标识，订单服务只需知道用户勾选了哪些购物车项"
+            "description": "用户在购物车中已选商品的唯一标识，订单服务只需知道用户勾选了哪些购物车项。\n 1–100 项、项间不可重复"
           },
           "addressId": {
             "type": "string",
             "title": "addressId",
             "format": "uuid",
-            "description": "下单时获取快照。用户可能在提交订单后修改收货地址，但历史订单必须保留当时的地址信息"
+            "description": "收货地址 ID，下单时获取快照。\n 用户可能在提交订单后修改收货地址，但历史订单必须保留当时的地址信息"
           },
           "remark": {
             "type": "string",
             "title": "remark",
-            "maxLength": 2000
+            "maxLength": 2000,
+            "description": "订单备注，买家填写，上限 2000 字符"
           }
         },
         "title": "CreateOrderRequest",
-        "additionalProperties": false
+        "additionalProperties": false,
+        "description": "下单请求"
       },
       "order.v1.CreateOrderResponse": {
         "type": "object",
         "title": "CreateOrderResponse",
-        "additionalProperties": false
+        "additionalProperties": false,
+        "description": "下单响应。订单号等信息由客户端通过后续查询获取"
       },
       "order.v1.Order": {
         "type": "object",
         "title": "Order",
-        "additionalProperties": false
+        "additionalProperties": false,
+        "description": "订单。字段待随 order 域实现补齐，当前是空占位"
       },
       "connect-protocol-version": {
         "type": "number",
@@ -288,7 +298,8 @@
   "security": [],
   "tags": [
     {
-      "name": "order.v1.orderService"
+      "name": "order.v1.orderService",
+      "description": "订单服务：从购物车勾选项生成订单，以及订单完成后的状态回收。\n\n 依赖现状（见 .service-matrix.yaml）：与 inventory / product / address 的服务间调用\n 还是 depends_on_planned，尚未接线；当前实现只落订单自身的状态。"
     }
   ]
 }

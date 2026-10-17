@@ -40,6 +40,10 @@ const (
 
 // ProductServiceClient is a client for the product.v1.ProductService service.
 type ProductServiceClient interface {
+	// GetProductDetail 按 SPU 编码取商品详情。
+	//
+	// 属 anonymous_paths：商品详情页对未登录访客开放，无需 JWT。
+	// 返回的是 SPU 及其下全部 SKU，一次取完，避免详情页再逐 SKU 查询
 	GetProductDetail(context.Context, *connect.Request[v1.GetProductDetailRequest]) (*connect.Response[v1.GetProductDetailResponse], error)
 }
 
@@ -75,6 +79,10 @@ func (c *productServiceClient) GetProductDetail(ctx context.Context, req *connec
 
 // ProductServiceHandler is an implementation of the product.v1.ProductService service.
 type ProductServiceHandler interface {
+	// GetProductDetail 按 SPU 编码取商品详情。
+	//
+	// 属 anonymous_paths：商品详情页对未登录访客开放，无需 JWT。
+	// 返回的是 SPU 及其下全部 SKU，一次取完，避免详情页再逐 SKU 查询
 	GetProductDetail(context.Context, *connect.Request[v1.GetProductDetailRequest]) (*connect.Response[v1.GetProductDetailResponse], error)
 }
 

@@ -310,22 +310,26 @@
           "type": {
             "type": "string",
             "title": "type",
-            "maxLength": 64
+            "maxLength": 64,
+            "description": "用户类型，Casdoor 内部用"
           },
           "password": {
             "type": "string",
             "title": "password",
-            "maxLength": 4096
+            "maxLength": 4096,
+            "description": "敏感：密码散列，任何响应里都不得出现"
           },
           "passwordSalt": {
             "type": "string",
             "title": "password_salt",
-            "maxLength": 1024
+            "maxLength": 1024,
+            "description": "敏感：密码盐"
           },
           "passwordType": {
             "type": "string",
             "title": "password_type",
-            "maxLength": 64
+            "maxLength": 64,
+            "description": "密码散列算法标识"
           },
           "displayName": {
             "type": "string",
@@ -507,12 +511,14 @@
           "accessKey": {
             "type": "string",
             "title": "access_key",
-            "maxLength": 1024
+            "maxLength": 1024,
+            "description": "敏感：访问密钥 ID，不得出现在响应里"
           },
           "accessSecret": {
             "type": "string",
             "title": "access_secret",
-            "maxLength": 4096
+            "maxLength": 4096,
+            "description": "敏感：访问密钥Secret，不得出现在响应里"
           },
           "createdIp": {
             "type": "string",
@@ -534,7 +540,7 @@
             "type": "string",
             "title": "github",
             "maxLength": 2048,
-            "description": "OAuth/SSO 链接 (非常多的字段)"
+            "description": "OAuth/SSO 链接。\n\n 下面 51–126 号字段是同一模式的机械重复：每个第三方登录源一个字符串，\n 存该源返回的用户标识（通常是 openid / unionid），上限统一 2048。\n 本仓只用 Casdoor 自身的登录，这些字段默认均为空，\n 因此不逐个写注释 —— 需要哪个就按名字取，别按序号猜。"
           },
           "google": {
             "type": "string",
@@ -925,12 +931,14 @@
               "maxItems": 100
             },
             "title": "recovery_codes",
-            "maxItems": 100
+            "maxItems": 100,
+            "description": "敏感：一次性恢复码"
           },
           "totpSecret": {
             "type": "string",
             "title": "totp_secret",
-            "maxLength": 1024
+            "maxLength": 1024,
+            "description": "敏感：TOTP 密钥"
           },
           "mfaPhoneEnabled": {
             "type": "boolean",

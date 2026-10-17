@@ -24,6 +24,7 @@
           "product.v1.ProductService"
         ],
         "summary": "GetProductDetail",
+        "description": "GetProductDetail 按 SPU 编码取商品详情。\n\n 属 anonymous_paths：商品详情页对未登录访客开放，无需 JWT。\n 返回的是 SPU 及其下全部 SKU，一次取完，避免详情页再逐 SKU 查询",
         "operationId": "product.v1.ProductService.GetProductDetail",
         "parameters": [
           {
@@ -96,7 +97,8 @@
           "STATUS_ONLINE",
           "STATUS_OFFLINE",
           "STATUS_DELETED"
-        ]
+        ],
+        "description": "SPU/SKU 状态机"
       },
       "google.protobuf.ListValue": {
         "type": "object",
@@ -195,17 +197,20 @@
             "type": "string",
             "title": "spu_code",
             "maxLength": 64,
-            "minLength": 1
+            "minLength": 1,
+            "description": "SPU 编码（业务编码，非自增 ID），1–64 字符"
           }
         },
         "title": "GetProductDetailRequest",
-        "additionalProperties": false
+        "additionalProperties": false,
+        "description": "商品详情请求"
       },
       "product.v1.GetProductDetailResponse": {
         "type": "object",
         "properties": {
           "productDetail": {
             "title": "product_detail",
+            "description": "商品详情",
             "$ref": "#/components/schemas/product.v1.ProductSpuDetail"
           }
         },
@@ -213,7 +218,8 @@
         "required": [
           "productDetail"
         ],
-        "additionalProperties": false
+        "additionalProperties": false,
+        "description": "商品详情响应"
       },
       "product.v1.ProductSku": {
         "type": "object",
@@ -225,25 +231,30 @@
               "string"
             ],
             "title": "sku_id",
-            "format": "int64"
+            "format": "int64",
+            "description": "SKU 自增 ID"
           },
           "skuCode": {
             "type": "string",
             "title": "sku_code",
             "maxLength": 64,
-            "minLength": 1
+            "minLength": 1,
+            "description": "SKU 编码，1–64 字符"
           },
           "merchantId": {
             "type": "string",
             "title": "merchant_id",
-            "format": "uuid"
+            "format": "uuid",
+            "description": "所属商家 ID（UUID），用于数据隔离与店铺信息关联"
           },
           "price": {
             "title": "price",
+            "description": "售价",
             "$ref": "#/components/schemas/google.type.Money"
           },
           "costPrice": {
             "title": "cost_price",
+            "description": "成本价，仅后台可见；对前端开放该字段是已知的暴露面，消费方需自行裁剪",
             "$ref": "#/components/schemas/google.type.Money"
           },
           "stockLocked": {
@@ -252,10 +263,12 @@
               "string"
             ],
             "title": "stock_locked",
-            "format": "int64"
+            "format": "int64",
+            "description": "已锁库存（下单未支付部分），≥ 0"
           },
           "attributes": {
             "title": "attributes",
+            "description": "SKU 级规格属性（颜色、尺码等）。\n 用 google.protobuf.Struct 匹配 map[string]any",
             "$ref": "#/components/schemas/google.protobuf.Struct"
           },
           "specTemplate": {
@@ -269,22 +282,26 @@
             },
             "title": "spec_template",
             "maxItems": 50,
-            "uniqueItems": true
+            "uniqueItems": true,
+            "description": "规格模板文案，最多 50 条、条间不可重复，用于详情页规格表渲染"
           },
           "skuName": {
             "type": "string",
             "title": "sku_name",
             "maxLength": 255,
-            "minLength": 1
+            "minLength": 1,
+            "description": "SKU 名称，1–255 字符"
           },
           "thumbnailUrl": {
             "type": "string",
             "title": "thumbnail_url",
             "maxLength": 500,
-            "minLength": 1
+            "minLength": 1,
+            "description": "SKU 缩略图 URL，最长 500 字符"
           },
           "status": {
             "title": "status",
+            "description": "SKU 状态",
             "$ref": "#/components/schemas/product.v1.SPUStatus"
           }
         },
@@ -294,7 +311,8 @@
           "costPrice",
           "attributes"
         ],
-        "additionalProperties": false
+        "additionalProperties": false,
+        "description": "SKU 维度详情（最小销售单元）"
       },
       "product.v1.ProductSpuDetail": {
         "type": "object",
@@ -306,23 +324,26 @@
               "string"
             ],
             "title": "spu_id",
-            "format": "int64"
+            "format": "int64",
+            "description": "SPU 自增 ID"
           },
           "spuName": {
             "type": "string",
             "title": "spu_name",
             "maxLength": 255,
-            "minLength": 1
+            "minLength": 1,
+            "description": "SPU 名称，1–255 字符"
           },
           "spuCode": {
             "type": "string",
             "title": "spu_code",
             "maxLength": 64,
-            "minLength": 1
+            "minLength": 1,
+            "description": "SPU 编码，与请求入参一致"
           },
           "commonSpecs": {
             "title": "common_specs",
-            "description": "使用 google.protobuf.Struct 来匹配 map[string]any",
+            "description": "SPU 级通用规格（品牌、产地等所有 SKU 共享的键值对）。\n 用 google.protobuf.Struct 匹配 map[string]any，结构由业务约定",
             "$ref": "#/components/schemas/google.protobuf.Struct"
           },
           "skus": {
@@ -332,14 +353,16 @@
             },
             "title": "skus",
             "maxItems": 100,
-            "minItems": 1
+            "minItems": 1,
+            "description": "该 SPU 下的 SKU 列表，1–100 个"
           }
         },
         "title": "ProductSpuDetail",
         "required": [
           "commonSpecs"
         ],
-        "additionalProperties": false
+        "additionalProperties": false,
+        "description": "SPU 维度详情 + 其下 SKU 列表"
       },
       "connect-protocol-version": {
         "type": "number",
@@ -418,7 +441,8 @@
   "security": [],
   "tags": [
     {
-      "name": "product.v1.ProductService"
+      "name": "product.v1.ProductService",
+      "description": "商品服务：读取商品（SPU/SKU）详情。\n\n 当前只有一个读接口，写侧（商品创建/改价）尚未开放。"
     }
   ]
 }

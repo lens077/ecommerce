@@ -6,53 +6,80 @@ import "third_party/validate/validate.proto";
 
 option go_package = "github.com/lens077/ecommerce/backend/api/inventory/v1;inventoryv1";
 
+// 库存服务：下单预占与释放。
+//
+// 状态机只有两个动作：可用 → 预占（Reserve）、预占 → 可用（ReleaseReserve）。
+// 真正的扣减发生在支付成功后，由支付链路回调推进，不在本服务。
 service InventoryService {
   // 预占库存(下单但未支付): 可用 -> 预占
+  //
+  // 幂等键是 order_no：同一订单重复预占不会重复扣减
   rpc Reserve(ReserveRequest) returns (ReserveResponse) {}
+
   // 释放预占库存(未支付取消/超时取消): 预占 -> 可用
+  //
+  // 同样以 order_no 做幂等；对未预占过的订单调用是安全的空操作
   rpc ReleaseReserve(ReleaseReserveRequest) returns (ReleaseReserveResponse) {}
 }
 
+// 预占库存请求
 message ReserveRequest {
+  // 订单号，用于幂等去重
   string order_no = 1 [(buf.validate.field).string = {
     min_len: 1
     max_len: 64
-  }]; // 订单号，用于幂等去重
-  string merchant_id = 2 [(buf.validate.field).string.uuid = true]; // 商家ID（数据隔离）
+  }];
+  // 商家ID（数据隔离）
+  string merchant_id = 2 [(buf.validate.field).string.uuid = true];
+  // 需要预占的商品列表，1–100 项
   repeated ReserveItem items = 3 [(buf.validate.field).repeated = {
     min_items: 1
     max_items: 100
-  }]; // 需要预占的商品列表
+  }];
 }
 
+// 单条预占/释放项
 message ReserveItem {
-  int64 sku_id = 1 [(buf.validate.field).int64.gt = 0]; // 商品SKU ID
+  // 商品SKU ID
+  int64 sku_id = 1 [(buf.validate.field).int64.gt = 0];
+  // 预占数量，1–999
   int32 quantity = 2 [(buf.validate.field).int32 = {
     // 预占数量
     gt: 0
     lte: 999
   }];
-  string warehouse_id = 3 [(buf.validate.field).string.len = 6]; // 仓库ID, 例如: df0001
+  // 仓库ID, 例如: df0001。定长 6 位
+  string warehouse_id = 3 [(buf.validate.field).string.len = 6];
 }
 
+// 预占库存响应
 message ReserveResponse {
+  // 是否预占成功。false 时 msg 说明原因（如库存不足）
   bool status = 1;
+  // 人类可读的补充说明，上限 512 字符
   string msg = 2 [(buf.validate.field).string.max_len = 512];
 }
 
+// 释放预占库存请求
 message ReleaseReserveRequest {
+  // 订单号，用于幂等去重
   string order_no = 1 [(buf.validate.field).string = {
     min_len: 1
     max_len: 64
-  }]; // 订单号，用于幂等去重
-  string merchant_id = 2 [(buf.validate.field).string.uuid = true]; // 商家ID（数据隔离）
+  }];
+  // 商家ID（数据隔离）
+  string merchant_id = 2 [(buf.validate.field).string.uuid = true];
+  // 需要释放预占的商品列表，1–100 项
   repeated ReserveItem items = 3 [(buf.validate.field).repeated = {
     min_items: 1
     max_items: 100
-  }]; // 需要释放预占的商品列表
+  }];
 }
 
+// 释放预占库存响应
 message ReleaseReserveResponse {
+  // 是否释放成功
   bool status = 1;
+  // 人类可读的补充说明，上限 512 字符
   string msg = 2 [(buf.validate.field).string.max_len = 512];
 }

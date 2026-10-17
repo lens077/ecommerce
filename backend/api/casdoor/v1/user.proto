@@ -6,6 +6,16 @@ import "third_party/validate/validate.proto";
 
 option go_package = "github.com/lens077/ecommerce/backend/api/casdoor/v1;casdoorv1";
 
+// 本文件是 Casdoor SDK 数据模型的 proto 镜像，**不含任何 RPC**。
+//
+// 它存在的唯一目的是让 user.v1.UserService/UserProfile 有个可返回的类型：
+// 服务端把 Casdoor SDK 的 User 映射到这里，见 services/user/internal/data/user.go
+// 的 GetUserProfile（那里显式挑选了要暴露的字段）。
+//
+// ⚠️ 因此字段全集 ≠ 接口暴露面：SDK 里有什么就映什么，但哪些字段真的会出现在
+// API 响应里由服务的映射代码决定。标注了「敏感」的字段在任何响应里都不应出现，
+// 消费方也不要依赖它们恒为空。
+
 // ManagedAccount 托管账户
 // 用于 SSO 或凭证管理
 message ManagedAccount {
@@ -127,9 +137,13 @@ message User {
   // 核心身份信息
   string id = 5 [(buf.validate.field).string.max_len = 128];
   string external_id = 6 [(buf.validate.field).string.max_len = 256];
+  // 用户类型，Casdoor 内部用
   string type = 7 [(buf.validate.field).string.max_len = 64];
+  // 敏感：密码散列，任何响应里都不得出现
   string password = 8 [(buf.validate.field).string.max_len = 4096];
+  // 敏感：密码盐
   string password_salt = 9 [(buf.validate.field).string.max_len = 1024];
+  // 密码散列算法标识
   string password_type = 10 [(buf.validate.field).string.max_len = 64];
 
   // 个人资料
@@ -176,7 +190,9 @@ message User {
   string signup_application = 43 [(buf.validate.field).string.max_len = 128];
   string hash = 44 [(buf.validate.field).string.max_len = 1024];
   string pre_hash = 45 [(buf.validate.field).string.max_len = 1024];
+  // 敏感：访问密钥 ID，不得出现在响应里
   string access_key = 46 [(buf.validate.field).string.max_len = 1024];
+  // 敏感：访问密钥Secret，不得出现在响应里
   string access_secret = 47 [(buf.validate.field).string.max_len = 4096];
 
   // 登录记录
@@ -184,7 +200,12 @@ message User {
   string last_signin_time = 49 [(buf.validate.field).string.max_len = 64];
   string last_signin_ip = 50 [(buf.validate.field).string.max_len = 45];
 
-  // OAuth/SSO 链接 (非常多的字段)
+  // OAuth/SSO 链接。
+  //
+  // 下面 51–126 号字段是同一模式的机械重复：每个第三方登录源一个字符串，
+  // 存该源返回的用户标识（通常是 openid / unionid），上限统一 2048。
+  // 本仓只用 Casdoor 自身的登录，这些字段默认均为空，
+  // 因此不逐个写注释 —— 需要哪个就按名字取，别按序号猜。
   string github = 51 [(buf.validate.field).string.max_len = 2048];
   string google = 52 [(buf.validate.field).string.max_len = 2048];
   string qq = 53 [(buf.validate.field).string.max_len = 2048];
@@ -264,12 +285,14 @@ message User {
 
   // MFA 和恢复
   string preferred_mfa_type = 127 [(buf.validate.field).string.max_len = 64];
+  // 敏感：一次性恢复码
   repeated string recovery_codes = 128 [(buf.validate.field).repeated = {
     max_items: 100
     items: {
       string: {max_len: 256}
     }
   }];
+  // 敏感：TOTP 密钥
   string totp_secret = 129 [(buf.validate.field).string.max_len = 1024];
   bool mfa_phone_enabled = 130;
   bool mfa_email_enabled = 131;

@@ -24,12 +24,17 @@ const (
 	_ = protoimpl.EnforceVersion(protoimpl.MaxVersion - 20)
 )
 
+// 购物车项状态
 type CartStatus int32
 
 const (
+	// 未指定（默认值，无效）
 	CartStatus_CART_STATUS_UNKNOWN CartStatus = 0
-	CartStatus_CART_STATUS_ACTIVE  CartStatus = 1
+	// 有效项
+	CartStatus_CART_STATUS_ACTIVE CartStatus = 1
+	// 已过期（如商品下架导致的失效）
 	CartStatus_CART_STATUS_EXPIRED CartStatus = 2
+	// 已删除
 	CartStatus_CART_STATUS_DELETED CartStatus = 3
 )
 
@@ -76,22 +81,33 @@ func (CartStatus) EnumDescriptor() ([]byte, []int) {
 	return file_api_cart_v1_cart_proto_rawDescGZIP(), []int{0}
 }
 
+// 加入购物车请求
 type AddProductToCartRequest struct {
-	state      protoimpl.MessageState `protogen:"open.v1"`
-	SpuId      uint64                 `protobuf:"varint,1,opt,name=spu_id,json=spuId,proto3" json:"spu_id,omitempty"`
-	SkuId      uint64                 `protobuf:"varint,2,opt,name=sku_id,json=skuId,proto3" json:"sku_id,omitempty"`
-	MerchantId string                 `protobuf:"bytes,3,opt,name=merchant_id,json=merchantId,proto3" json:"merchant_id,omitempty"`
-	Quantity   uint32                 `protobuf:"varint,4,opt,name=quantity,proto3" json:"quantity,omitempty"`
-	Selected   bool                   `protobuf:"varint,5,opt,name=selected,proto3" json:"selected,omitempty"` // 同步勾选状态, 多端同步
+	state protoimpl.MessageState `protogen:"open.v1"`
+	// SPU ID
+	SpuId uint64 `protobuf:"varint,1,opt,name=spu_id,json=spuId,proto3" json:"spu_id,omitempty"`
+	// SKU ID
+	SkuId uint64 `protobuf:"varint,2,opt,name=sku_id,json=skuId,proto3" json:"sku_id,omitempty"`
+	// 商家 ID（UUID）
+	MerchantId string `protobuf:"bytes,3,opt,name=merchant_id,json=merchantId,proto3" json:"merchant_id,omitempty"`
+	// 购买数量，1–999
+	Quantity uint32 `protobuf:"varint,4,opt,name=quantity,proto3" json:"quantity,omitempty"`
+	// 是否勾选（结算时只算勾选项）。同步勾选状态, 多端同步
+	Selected bool `protobuf:"varint,5,opt,name=selected,proto3" json:"selected,omitempty"` // 同步勾选状态, 多端同步
 	// 商品快照, 避免商家修改商品
-	SpuName         string           `protobuf:"bytes,6,opt,name=spu_name,json=spuName,proto3" json:"spu_name,omitempty"`
-	SkuName         string           `protobuf:"bytes,7,opt,name=sku_name,json=skuName,proto3" json:"sku_name,omitempty"`
-	UnitPriceCents  int64            `protobuf:"varint,12,opt,name=unit_price_cents,json=unitPriceCents,proto3" json:"unit_price_cents,omitempty"`
-	SkuAttributes   *structpb.Struct `protobuf:"bytes,9,opt,name=sku_attributes,json=skuAttributes,proto3" json:"sku_attributes,omitempty"`
-	SkuThumbnailUrl string           `protobuf:"bytes,10,opt,name=sku_thumbnail_url,json=skuThumbnailUrl,proto3" json:"sku_thumbnail_url,omitempty"` // 商品图片
-	Status          CartStatus       `protobuf:"varint,11,opt,name=status,proto3,enum=cart.v1.CartStatus" json:"status,omitempty"`
-	unknownFields   protoimpl.UnknownFields
-	sizeCache       protoimpl.SizeCache
+	SpuName string `protobuf:"bytes,6,opt,name=spu_name,json=spuName,proto3" json:"spu_name,omitempty"`
+	// SKU 名称快照
+	SkuName string `protobuf:"bytes,7,opt,name=sku_name,json=skuName,proto3" json:"sku_name,omitempty"`
+	// 单价（分）。存整数分而不是浮点元，避免累计误差
+	UnitPriceCents int64 `protobuf:"varint,12,opt,name=unit_price_cents,json=unitPriceCents,proto3" json:"unit_price_cents,omitempty"`
+	// SKU 规格属性快照（颜色、尺码等）
+	SkuAttributes *structpb.Struct `protobuf:"bytes,9,opt,name=sku_attributes,json=skuAttributes,proto3" json:"sku_attributes,omitempty"`
+	// SKU 缩略图 URL
+	SkuThumbnailUrl string `protobuf:"bytes,10,opt,name=sku_thumbnail_url,json=skuThumbnailUrl,proto3" json:"sku_thumbnail_url,omitempty"` // 商品图片
+	// 落库状态，调用方固定传 ACTIVE
+	Status        CartStatus `protobuf:"varint,11,opt,name=status,proto3,enum=cart.v1.CartStatus" json:"status,omitempty"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
 }
 
 func (x *AddProductToCartRequest) Reset() {
@@ -201,12 +217,15 @@ func (x *AddProductToCartRequest) GetStatus() CartStatus {
 	return CartStatus_CART_STATUS_UNKNOWN
 }
 
+// 加入购物车响应
 type AddProductToCartResponse struct {
-	state            protoimpl.MessageState `protogen:"open.v1"`
-	CartItemQuantity uint32                 `protobuf:"varint,1,opt,name=cart_item_quantity,json=cartItemQuantity,proto3" json:"cart_item_quantity,omitempty"` // 购物车商品总数量
-	CartItemId       uint64                 `protobuf:"varint,2,opt,name=cart_item_id,json=cartItemId,proto3" json:"cart_item_id,omitempty"`                   // 新增/更新的购物车项ID（前端下单等场景需要真实ID）
-	unknownFields    protoimpl.UnknownFields
-	sizeCache        protoimpl.SizeCache
+	state protoimpl.MessageState `protogen:"open.v1"`
+	// 购物车商品总数量（加完后），用于刷新右上角徽标
+	CartItemQuantity uint32 `protobuf:"varint,1,opt,name=cart_item_quantity,json=cartItemQuantity,proto3" json:"cart_item_quantity,omitempty"` // 购物车商品总数量
+	// 新增/更新的购物车项ID（前端下单等场景需要真实ID）
+	CartItemId    uint64 `protobuf:"varint,2,opt,name=cart_item_id,json=cartItemId,proto3" json:"cart_item_id,omitempty"` // 新增/更新的购物车项ID（前端下单等场景需要真实ID）
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
 }
 
 func (x *AddProductToCartResponse) Reset() {
@@ -253,12 +272,17 @@ func (x *AddProductToCartResponse) GetCartItemId() uint64 {
 	return 0
 }
 
+// 移除购物车项请求。四个数组按下标一一对应，长度必须相等
 type RemoveCartItemRequest struct {
-	state         protoimpl.MessageState `protogen:"open.v1"`
-	SpuIds        []int64                `protobuf:"varint,1,rep,packed,name=spu_ids,json=spuIds,proto3" json:"spu_ids,omitempty"`
-	SkuIds        []int64                `protobuf:"varint,2,rep,packed,name=sku_ids,json=skuIds,proto3" json:"sku_ids,omitempty"`
-	MerchantIds   []string               `protobuf:"bytes,3,rep,name=merchant_ids,json=merchantIds,proto3" json:"merchant_ids,omitempty"`
-	Status        []CartStatus           `protobuf:"varint,4,rep,packed,name=status,proto3,enum=cart.v1.CartStatus" json:"status,omitempty"`
+	state protoimpl.MessageState `protogen:"open.v1"`
+	// SPU ID 列表，1–100 个
+	SpuIds []int64 `protobuf:"varint,1,rep,packed,name=spu_ids,json=spuIds,proto3" json:"spu_ids,omitempty"`
+	// SKU ID 列表，与 spu_ids 等长
+	SkuIds []int64 `protobuf:"varint,2,rep,packed,name=sku_ids,json=skuIds,proto3" json:"sku_ids,omitempty"`
+	// 商家 ID 列表，与 spu_ids 等长
+	MerchantIds []string `protobuf:"bytes,3,rep,name=merchant_ids,json=merchantIds,proto3" json:"merchant_ids,omitempty"`
+	// 各项目标状态列表，与 spu_ids 等长；不允许传 UNKNOWN
+	Status        []CartStatus `protobuf:"varint,4,rep,packed,name=status,proto3,enum=cart.v1.CartStatus" json:"status,omitempty"`
 	unknownFields protoimpl.UnknownFields
 	sizeCache     protoimpl.SizeCache
 }
@@ -321,12 +345,15 @@ func (x *RemoveCartItemRequest) GetStatus() []CartStatus {
 	return nil
 }
 
+// 移除购物车项响应
 type RemoveCartItemResponse struct {
-	state            protoimpl.MessageState `protogen:"open.v1"`
-	CartItemQuantity uint32                 `protobuf:"varint,1,opt,name=cart_item_quantity,json=cartItemQuantity,proto3" json:"cart_item_quantity,omitempty"` // 删除后，购物车商品总数量（用于刷新右上角小红点）
-	IsCartEmpty      bool                   `protobuf:"varint,2,opt,name=is_cart_empty,json=isCartEmpty,proto3" json:"is_cart_empty,omitempty"`                // 购物车是否已经彻底空了（用于前端直接切换到“空购物车”占位图）
-	unknownFields    protoimpl.UnknownFields
-	sizeCache        protoimpl.SizeCache
+	state protoimpl.MessageState `protogen:"open.v1"`
+	// 删除后，购物车商品总数量（用于刷新右上角小红点）
+	CartItemQuantity uint32 `protobuf:"varint,1,opt,name=cart_item_quantity,json=cartItemQuantity,proto3" json:"cart_item_quantity,omitempty"` // 删除后，购物车商品总数量（用于刷新右上角小红点）
+	// 购物车是否已经彻底空了（用于前端直接切换到“空购物车”占位图）
+	IsCartEmpty   bool `protobuf:"varint,2,opt,name=is_cart_empty,json=isCartEmpty,proto3" json:"is_cart_empty,omitempty"` // 购物车是否已经彻底空了（用于前端直接切换到“空购物车”占位图）
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
 }
 
 func (x *RemoveCartItemResponse) Reset() {
@@ -373,12 +400,17 @@ func (x *RemoveCartItemResponse) GetIsCartEmpty() bool {
 	return false
 }
 
+// 修改数量请求。定位一项用 (spu_id, sku_id, merchant_id) 三元组
 type UpdateCartItemQuantityRequest struct {
-	state         protoimpl.MessageState `protogen:"open.v1"`
-	SpuId         uint64                 `protobuf:"varint,1,opt,name=spu_id,json=spuId,proto3" json:"spu_id,omitempty"`
-	SkuId         uint64                 `protobuf:"varint,2,opt,name=sku_id,json=skuId,proto3" json:"sku_id,omitempty"`
-	MerchantId    string                 `protobuf:"bytes,3,opt,name=merchant_id,json=merchantId,proto3" json:"merchant_id,omitempty"`
-	Quantity      uint32                 `protobuf:"varint,4,opt,name=quantity,proto3" json:"quantity,omitempty"` // 目标数量，如果为0则删除该商品项
+	state protoimpl.MessageState `protogen:"open.v1"`
+	// SPU ID
+	SpuId uint64 `protobuf:"varint,1,opt,name=spu_id,json=spuId,proto3" json:"spu_id,omitempty"`
+	// SKU ID
+	SkuId uint64 `protobuf:"varint,2,opt,name=sku_id,json=skuId,proto3" json:"sku_id,omitempty"`
+	// 商家 ID（UUID）
+	MerchantId string `protobuf:"bytes,3,opt,name=merchant_id,json=merchantId,proto3" json:"merchant_id,omitempty"`
+	// 目标数量，如果为0则删除该商品项。上限 999
+	Quantity      uint32 `protobuf:"varint,4,opt,name=quantity,proto3" json:"quantity,omitempty"` // 目标数量，如果为0则删除该商品项
 	unknownFields protoimpl.UnknownFields
 	sizeCache     protoimpl.SizeCache
 }
@@ -441,9 +473,11 @@ func (x *UpdateCartItemQuantityRequest) GetQuantity() uint32 {
 	return 0
 }
 
+// 修改数量响应
 type UpdateCartItemQuantityResponse struct {
-	state            protoimpl.MessageState `protogen:"open.v1"`
-	CartItemQuantity uint32                 `protobuf:"varint,1,opt,name=cart_item_quantity,json=cartItemQuantity,proto3" json:"cart_item_quantity,omitempty"` // 更新后，购物车商品总数量（用于刷新右上角小红点）
+	state protoimpl.MessageState `protogen:"open.v1"`
+	// 更新后，购物车商品总数量（用于刷新右上角小红点）
+	CartItemQuantity uint32 `protobuf:"varint,1,opt,name=cart_item_quantity,json=cartItemQuantity,proto3" json:"cart_item_quantity,omitempty"` // 更新后，购物车商品总数量（用于刷新右上角小红点）
 	unknownFields    protoimpl.UnknownFields
 	sizeCache        protoimpl.SizeCache
 }
@@ -485,6 +519,7 @@ func (x *UpdateCartItemQuantityResponse) GetCartItemQuantity() uint32 {
 	return 0
 }
 
+// 取购物车请求。用户身份由 x-md-global-user-id 头决定，故无字段
 type GetCartRequest struct {
 	state         protoimpl.MessageState `protogen:"open.v1"`
 	unknownFields protoimpl.UnknownFields
@@ -521,23 +556,37 @@ func (*GetCartRequest) Descriptor() ([]byte, []int) {
 	return file_api_cart_v1_cart_proto_rawDescGZIP(), []int{6}
 }
 
+// 单个购物车项
 type CartItem struct {
-	state           protoimpl.MessageState `protogen:"open.v1"`
-	CartItemId      uint64                 `protobuf:"varint,1,opt,name=cart_item_id,json=cartItemId,proto3" json:"cart_item_id,omitempty"` // 购物车商品记录ID
-	SpuId           uint64                 `protobuf:"varint,2,opt,name=spu_id,json=spuId,proto3" json:"spu_id,omitempty"`
-	SkuId           uint64                 `protobuf:"varint,3,opt,name=sku_id,json=skuId,proto3" json:"sku_id,omitempty"`
-	MerchantId      string                 `protobuf:"bytes,4,opt,name=merchant_id,json=merchantId,proto3" json:"merchant_id,omitempty"`
-	ShopName        string                 `protobuf:"bytes,13,opt,name=shop_name,json=shopName,proto3" json:"shop_name,omitempty"`
-	Quantity        uint32                 `protobuf:"varint,5,opt,name=quantity,proto3" json:"quantity,omitempty"`
-	Selected        bool                   `protobuf:"varint,6,opt,name=selected,proto3" json:"selected,omitempty"`
-	SpuName         string                 `protobuf:"bytes,7,opt,name=spu_name,json=spuName,proto3" json:"spu_name,omitempty"`
-	SkuName         string                 `protobuf:"bytes,8,opt,name=sku_name,json=skuName,proto3" json:"sku_name,omitempty"`
-	UnitPriceCents  int64                  `protobuf:"varint,14,opt,name=unit_price_cents,json=unitPriceCents,proto3" json:"unit_price_cents,omitempty"`
-	SkuAttributes   *structpb.Struct       `protobuf:"bytes,10,opt,name=sku_attributes,json=skuAttributes,proto3" json:"sku_attributes,omitempty"`
-	SkuThumbnailUrl string                 `protobuf:"bytes,11,opt,name=sku_thumbnail_url,json=skuThumbnailUrl,proto3" json:"sku_thumbnail_url,omitempty"`
-	Status          CartStatus             `protobuf:"varint,12,opt,name=status,proto3,enum=cart.v1.CartStatus" json:"status,omitempty"`
-	unknownFields   protoimpl.UnknownFields
-	sizeCache       protoimpl.SizeCache
+	state protoimpl.MessageState `protogen:"open.v1"`
+	// 购物车商品记录ID
+	CartItemId uint64 `protobuf:"varint,1,opt,name=cart_item_id,json=cartItemId,proto3" json:"cart_item_id,omitempty"` // 购物车商品记录ID
+	// SPU ID
+	SpuId uint64 `protobuf:"varint,2,opt,name=spu_id,json=spuId,proto3" json:"spu_id,omitempty"`
+	// SKU ID
+	SkuId uint64 `protobuf:"varint,3,opt,name=sku_id,json=skuId,proto3" json:"sku_id,omitempty"`
+	// 商家 ID（UUID）
+	MerchantId string `protobuf:"bytes,4,opt,name=merchant_id,json=merchantId,proto3" json:"merchant_id,omitempty"`
+	// 店铺名称快照，列表页按店铺分组要用
+	ShopName string `protobuf:"bytes,13,opt,name=shop_name,json=shopName,proto3" json:"shop_name,omitempty"`
+	// 数量，1–999
+	Quantity uint32 `protobuf:"varint,5,opt,name=quantity,proto3" json:"quantity,omitempty"`
+	// 是否勾选
+	Selected bool `protobuf:"varint,6,opt,name=selected,proto3" json:"selected,omitempty"`
+	// SPU 名称快照
+	SpuName string `protobuf:"bytes,7,opt,name=spu_name,json=spuName,proto3" json:"spu_name,omitempty"`
+	// SKU 名称快照
+	SkuName string `protobuf:"bytes,8,opt,name=sku_name,json=skuName,proto3" json:"sku_name,omitempty"`
+	// 单价（分）
+	UnitPriceCents int64 `protobuf:"varint,14,opt,name=unit_price_cents,json=unitPriceCents,proto3" json:"unit_price_cents,omitempty"`
+	// SKU 规格属性快照
+	SkuAttributes *structpb.Struct `protobuf:"bytes,10,opt,name=sku_attributes,json=skuAttributes,proto3" json:"sku_attributes,omitempty"`
+	// SKU 缩略图 URL
+	SkuThumbnailUrl string `protobuf:"bytes,11,opt,name=sku_thumbnail_url,json=skuThumbnailUrl,proto3" json:"sku_thumbnail_url,omitempty"`
+	// 项状态
+	Status        CartStatus `protobuf:"varint,12,opt,name=status,proto3,enum=cart.v1.CartStatus" json:"status,omitempty"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
 }
 
 func (x *CartItem) Reset() {
@@ -661,13 +710,17 @@ func (x *CartItem) GetStatus() CartStatus {
 	return CartStatus_CART_STATUS_UNKNOWN
 }
 
+// 取购物车响应
 type GetCartResponse struct {
-	state            protoimpl.MessageState `protogen:"open.v1"`
-	Items            []*CartItem            `protobuf:"bytes,1,rep,name=items,proto3" json:"items,omitempty"`                                                  // 购物车商品列表
-	CartItemQuantity uint32                 `protobuf:"varint,2,opt,name=cart_item_quantity,json=cartItemQuantity,proto3" json:"cart_item_quantity,omitempty"` // 购物车商品总数量
-	IsCartEmpty      *wrapperspb.BoolValue  `protobuf:"bytes,3,opt,name=is_cart_empty,json=isCartEmpty,proto3" json:"is_cart_empty,omitempty"`                 // 购物车是否为空
-	unknownFields    protoimpl.UnknownFields
-	sizeCache        protoimpl.SizeCache
+	state protoimpl.MessageState `protogen:"open.v1"`
+	// 购物车商品列表，最多 1000 项
+	Items []*CartItem `protobuf:"bytes,1,rep,name=items,proto3" json:"items,omitempty"` // 购物车商品列表
+	// 购物车商品总数量
+	CartItemQuantity uint32 `protobuf:"varint,2,opt,name=cart_item_quantity,json=cartItemQuantity,proto3" json:"cart_item_quantity,omitempty"` // 购物车商品总数量
+	// 购物车是否为空。用 BoolValue 包装以区分「未设置」与「false」
+	IsCartEmpty   *wrapperspb.BoolValue `protobuf:"bytes,3,opt,name=is_cart_empty,json=isCartEmpty,proto3" json:"is_cart_empty,omitempty"` // 购物车是否为空
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
 }
 
 func (x *GetCartResponse) Reset() {

@@ -39,6 +39,10 @@ const (
 
 // CheckServiceClient is a client for the check.v1.CheckService service.
 type CheckServiceClient interface {
+	// Ready 返回进程就绪状态。
+	//
+	// 就绪 = 依赖已连上（DB / Redis / ES 等，按服务而异）；
+	// 任一致命依赖未就绪时应返回非就绪，让 K8s 把 Pod 摘出 Service
 	Ready(context.Context, *connect.Request[v1.ReadyCheckReq]) (*connect.Response[v1.ReadyCheckReply], error)
 }
 
@@ -74,6 +78,10 @@ func (c *checkServiceClient) Ready(ctx context.Context, req *connect.Request[v1.
 
 // CheckServiceHandler is an implementation of the check.v1.CheckService service.
 type CheckServiceHandler interface {
+	// Ready 返回进程就绪状态。
+	//
+	// 就绪 = 依赖已连上（DB / Redis / ES 等，按服务而异）；
+	// 任一致命依赖未就绪时应返回非就绪，让 K8s 把 Pod 摘出 Service
 	Ready(context.Context, *connect.Request[v1.ReadyCheckReq]) (*connect.Response[v1.ReadyCheckReply], error)
 }
 

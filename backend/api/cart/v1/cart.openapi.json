@@ -24,6 +24,7 @@
           "cart.v1.CartService"
         ],
         "summary": "GetCart",
+        "description": "GetCart 取当前用户的购物车全量内容。\n\n 属 guest_paths：访客也有购物车，身份由网关注入的 x-md-global-user-id 决定\n （访客则为匿名标识）。响应自带 cart_item_quantity，前端徽标不需要额外接口",
         "operationId": "cart.v1.CartService.GetCart",
         "parameters": [
           {
@@ -82,7 +83,7 @@
           "cart.v1.CartService"
         ],
         "summary": "AddProductToCart",
-        "description": "2026-08 移除 GetCartSummary(原「首页获取购物车数量」)。\n 它与 GetCart 是同一条 SQL 的两种投影:两者的 WHERE 逐字相同\n (user_id + status=active),而 GetCartSummary 的 COUNT(*) 恰好等于\n GetCartResponse.cart_item_quantity(data/cart.go 里就是 len(rows))——\n 即 GetCart 的响应本来就带着这个数字。前端徽标已改用 GetCart,\n 保留它只会让同一个数有两个来源,迟早对不上。\n proto3 无法对 rpc 名做 reserved,故以注释存档,不要再用这个名字。",
+        "description": "AddProductToCart 加入或更新一个购物车项。\n\n 同一 (spu_id, sku_id, merchant_id) 已存在时是加数量，不是新增一行；\n 返回的 cart_item_id 即该行的真实 ID，前端下单要用",
         "operationId": "cart.v1.CartService.AddProductToCart",
         "parameters": [
           {
@@ -141,6 +142,7 @@
           "cart.v1.CartService"
         ],
         "summary": "RemoveCartItem",
+        "description": "RemoveCartItem 批量移除购物车项。\n\n 四个数组按下标一一对应（同一项的三个 ID + 它的状态），长度必须相等，\n 该约束由 message 级 CEL 校验",
         "operationId": "cart.v1.CartService.RemoveCartItem",
         "parameters": [
           {
@@ -199,6 +201,7 @@
           "cart.v1.CartService"
         ],
         "summary": "UpdateCartItemQuantity",
+        "description": "UpdateCartItemQuantity 改数量。quantity 传 0 等价于删除该项",
         "operationId": "cart.v1.CartService.UpdateCartItemQuantity",
         "parameters": [
           {
@@ -262,7 +265,8 @@
           "CART_STATUS_ACTIVE",
           "CART_STATUS_EXPIRED",
           "CART_STATUS_DELETED"
-        ]
+        ],
+        "description": "购物车项状态"
       },
       "google.protobuf.NullValue": {
         "type": "string",
@@ -283,7 +287,8 @@
             "title": "spu_id",
             "maximum": 9223372036854776000,
             "minimum": 1,
-            "format": "int64"
+            "format": "int64",
+            "description": "SPU ID"
           },
           "skuId": {
             "type": [
@@ -293,23 +298,26 @@
             "title": "sku_id",
             "maximum": 9223372036854776000,
             "minimum": 1,
-            "format": "int64"
+            "format": "int64",
+            "description": "SKU ID"
           },
           "merchantId": {
             "type": "string",
             "title": "merchant_id",
-            "format": "uuid"
+            "format": "uuid",
+            "description": "商家 ID（UUID）"
           },
           "quantity": {
             "type": "integer",
             "title": "quantity",
             "maximum": 999,
-            "minimum": 1
+            "minimum": 1,
+            "description": "购买数量，1–999"
           },
           "selected": {
             "type": "boolean",
             "title": "selected",
-            "description": "同步勾选状态, 多端同步"
+            "description": "是否勾选（结算时只算勾选项）。同步勾选状态, 多端同步 同步勾选状态, 多端同步"
           },
           "spuName": {
             "type": "string",
@@ -322,7 +330,8 @@
             "type": "string",
             "title": "sku_name",
             "maxLength": 255,
-            "minLength": 1
+            "minLength": 1,
+            "description": "SKU 名称快照"
           },
           "unitPriceCents": {
             "exclusiveMinimum": 0,
@@ -332,10 +341,12 @@
             ],
             "title": "unit_price_cents",
             "maximum": 9999999999,
-            "format": "int64"
+            "format": "int64",
+            "description": "单价（分）。存整数分而不是浮点元，避免累计误差"
           },
           "skuAttributes": {
             "title": "sku_attributes",
+            "description": "SKU 规格属性快照（颜色、尺码等）",
             "$ref": "#/components/schemas/google.protobuf.Struct"
           },
           "skuThumbnailUrl": {
@@ -343,10 +354,11 @@
             "title": "sku_thumbnail_url",
             "maxLength": 500,
             "minLength": 1,
-            "description": "商品图片"
+            "description": "SKU 缩略图 URL 商品图片"
           },
           "status": {
             "title": "status",
+            "description": "落库状态，调用方固定传 ACTIVE",
             "const": 1,
             "$ref": "#/components/schemas/cart.v1.CartStatus"
           }
@@ -355,7 +367,8 @@
         "required": [
           "skuAttributes"
         ],
-        "additionalProperties": false
+        "additionalProperties": false,
+        "description": "加入购物车请求"
       },
       "cart.v1.AddProductToCartResponse": {
         "type": "object",
@@ -364,7 +377,7 @@
             "type": "integer",
             "title": "cart_item_quantity",
             "maximum": 10000,
-            "description": "购物车商品总数量"
+            "description": "购物车商品总数量（加完后），用于刷新右上角徽标 购物车商品总数量"
           },
           "cartItemId": {
             "type": [
@@ -375,11 +388,12 @@
             "maximum": 9223372036854776000,
             "minimum": 1,
             "format": "int64",
-            "description": "新增/更新的购物车项ID（前端下单等场景需要真实ID）"
+            "description": "新增/更新的购物车项ID（前端下单等场景需要真实ID） 新增/更新的购物车项ID（前端下单等场景需要真实ID）"
           }
         },
         "title": "AddProductToCartResponse",
-        "additionalProperties": false
+        "additionalProperties": false,
+        "description": "加入购物车响应"
       },
       "cart.v1.CartItem": {
         "type": "object",
@@ -393,7 +407,7 @@
             "maximum": 9223372036854776000,
             "minimum": 1,
             "format": "int64",
-            "description": "购物车商品记录ID"
+            "description": "购物车商品记录ID 购物车商品记录ID"
           },
           "spuId": {
             "type": [
@@ -403,7 +417,8 @@
             "title": "spu_id",
             "maximum": 9223372036854776000,
             "minimum": 1,
-            "format": "int64"
+            "format": "int64",
+            "description": "SPU ID"
           },
           "skuId": {
             "type": [
@@ -413,40 +428,47 @@
             "title": "sku_id",
             "maximum": 9223372036854776000,
             "minimum": 1,
-            "format": "int64"
+            "format": "int64",
+            "description": "SKU ID"
           },
           "merchantId": {
             "type": "string",
             "title": "merchant_id",
-            "format": "uuid"
+            "format": "uuid",
+            "description": "商家 ID（UUID）"
           },
           "shopName": {
             "type": "string",
             "title": "shop_name",
             "maxLength": 255,
-            "minLength": 1
+            "minLength": 1,
+            "description": "店铺名称快照，列表页按店铺分组要用"
           },
           "quantity": {
             "type": "integer",
             "title": "quantity",
             "maximum": 999,
-            "minimum": 1
+            "minimum": 1,
+            "description": "数量，1–999"
           },
           "selected": {
             "type": "boolean",
-            "title": "selected"
+            "title": "selected",
+            "description": "是否勾选"
           },
           "spuName": {
             "type": "string",
             "title": "spu_name",
             "maxLength": 255,
-            "minLength": 1
+            "minLength": 1,
+            "description": "SPU 名称快照"
           },
           "skuName": {
             "type": "string",
             "title": "sku_name",
             "maxLength": 255,
-            "minLength": 1
+            "minLength": 1,
+            "description": "SKU 名称快照"
           },
           "unitPriceCents": {
             "exclusiveMinimum": 0,
@@ -456,20 +478,24 @@
             ],
             "title": "unit_price_cents",
             "maximum": 9999999999,
-            "format": "int64"
+            "format": "int64",
+            "description": "单价（分）"
           },
           "skuAttributes": {
             "title": "sku_attributes",
+            "description": "SKU 规格属性快照",
             "$ref": "#/components/schemas/google.protobuf.Struct"
           },
           "skuThumbnailUrl": {
             "type": "string",
             "title": "sku_thumbnail_url",
             "maxLength": 500,
-            "minLength": 1
+            "minLength": 1,
+            "description": "SKU 缩略图 URL"
           },
           "status": {
             "title": "status",
+            "description": "项状态",
             "$ref": "#/components/schemas/cart.v1.CartStatus"
           }
         },
@@ -477,12 +503,14 @@
         "required": [
           "skuAttributes"
         ],
-        "additionalProperties": false
+        "additionalProperties": false,
+        "description": "单个购物车项"
       },
       "cart.v1.GetCartRequest": {
         "type": "object",
         "title": "GetCartRequest",
-        "additionalProperties": false
+        "additionalProperties": false,
+        "description": "取购物车请求。用户身份由 x-md-global-user-id 头决定，故无字段"
       },
       "cart.v1.GetCartResponse": {
         "type": "object",
@@ -494,17 +522,17 @@
             },
             "title": "items",
             "maxItems": 1000,
-            "description": "购物车商品列表"
+            "description": "购物车商品列表，最多 1000 项 购物车商品列表"
           },
           "cartItemQuantity": {
             "type": "integer",
             "title": "cart_item_quantity",
             "maximum": 10000,
-            "description": "购物车商品总数量"
+            "description": "购物车商品总数量 购物车商品总数量"
           },
           "isCartEmpty": {
             "title": "is_cart_empty",
-            "description": "购物车是否为空",
+            "description": "购物车是否为空。用 BoolValue 包装以区分「未设置」与「false」 购物车是否为空",
             "$ref": "#/components/schemas/google.protobuf.BoolValue"
           }
         },
@@ -512,7 +540,8 @@
         "required": [
           "isCartEmpty"
         ],
-        "additionalProperties": false
+        "additionalProperties": false,
+        "description": "取购物车响应"
       },
       "cart.v1.RemoveCartItemRequest": {
         "type": "object",
@@ -531,7 +560,8 @@
             },
             "title": "spu_ids",
             "maxItems": 100,
-            "minItems": 1
+            "minItems": 1,
+            "description": "SPU ID 列表，1–100 个"
           },
           "skuIds": {
             "type": "array",
@@ -547,7 +577,8 @@
             },
             "title": "sku_ids",
             "maxItems": 100,
-            "minItems": 1
+            "minItems": 1,
+            "description": "SKU ID 列表，与 spu_ids 等长"
           },
           "merchantIds": {
             "type": "array",
@@ -559,7 +590,8 @@
             },
             "title": "merchant_ids",
             "maxItems": 100,
-            "minItems": 1
+            "minItems": 1,
+            "description": "商家 ID 列表，与 spu_ids 等长"
           },
           "status": {
             "type": "array",
@@ -568,12 +600,13 @@
             },
             "title": "status",
             "maxItems": 100,
-            "minItems": 1
+            "minItems": 1,
+            "description": "各项目标状态列表，与 spu_ids 等长；不允许传 UNKNOWN"
           }
         },
         "title": "RemoveCartItemRequest",
         "additionalProperties": false,
-        "description": "spu_ids, sku_ids, merchant_ids, and status must have equal lengths:\n```\nsize(this.spu_ids) == size(this.sku_ids) \u0026\u0026 size(this.spu_ids) == size(this.merchant_ids) \u0026\u0026 size(this.spu_ids) == size(this.status)\n```\n\n"
+        "description": "移除购物车项请求。四个数组按下标一一对应，长度必须相等\nspu_ids, sku_ids, merchant_ids, and status must have equal lengths:\n```\nsize(this.spu_ids) == size(this.sku_ids) \u0026\u0026 size(this.spu_ids) == size(this.merchant_ids) \u0026\u0026 size(this.spu_ids) == size(this.status)\n```\n\n"
       },
       "cart.v1.RemoveCartItemResponse": {
         "type": "object",
@@ -582,16 +615,17 @@
             "type": "integer",
             "title": "cart_item_quantity",
             "maximum": 10000,
-            "description": "删除后，购物车商品总数量（用于刷新右上角小红点）"
+            "description": "删除后，购物车商品总数量（用于刷新右上角小红点） 删除后，购物车商品总数量（用于刷新右上角小红点）"
           },
           "isCartEmpty": {
             "type": "boolean",
             "title": "is_cart_empty",
-            "description": "购物车是否已经彻底空了（用于前端直接切换到“空购物车”占位图）"
+            "description": "购物车是否已经彻底空了（用于前端直接切换到“空购物车”占位图） 购物车是否已经彻底空了（用于前端直接切换到“空购物车”占位图）"
           }
         },
         "title": "RemoveCartItemResponse",
-        "additionalProperties": false
+        "additionalProperties": false,
+        "description": "移除购物车项响应"
       },
       "cart.v1.UpdateCartItemQuantityRequest": {
         "type": "object",
@@ -604,7 +638,8 @@
             "title": "spu_id",
             "maximum": 9223372036854776000,
             "minimum": 1,
-            "format": "int64"
+            "format": "int64",
+            "description": "SPU ID"
           },
           "skuId": {
             "type": [
@@ -614,22 +649,25 @@
             "title": "sku_id",
             "maximum": 9223372036854776000,
             "minimum": 1,
-            "format": "int64"
+            "format": "int64",
+            "description": "SKU ID"
           },
           "merchantId": {
             "type": "string",
             "title": "merchant_id",
-            "format": "uuid"
+            "format": "uuid",
+            "description": "商家 ID（UUID）"
           },
           "quantity": {
             "type": "integer",
             "title": "quantity",
             "maximum": 999,
-            "description": "目标数量，如果为0则删除该商品项"
+            "description": "目标数量，如果为0则删除该商品项。上限 999 目标数量，如果为0则删除该商品项"
           }
         },
         "title": "UpdateCartItemQuantityRequest",
-        "additionalProperties": false
+        "additionalProperties": false,
+        "description": "修改数量请求。定位一项用 (spu_id, sku_id, merchant_id) 三元组"
       },
       "cart.v1.UpdateCartItemQuantityResponse": {
         "type": "object",
@@ -638,11 +676,12 @@
             "type": "integer",
             "title": "cart_item_quantity",
             "maximum": 10000,
-            "description": "更新后，购物车商品总数量（用于刷新右上角小红点）"
+            "description": "更新后，购物车商品总数量（用于刷新右上角小红点） 更新后，购物车商品总数量（用于刷新右上角小红点）"
           }
         },
         "title": "UpdateCartItemQuantityResponse",
-        "additionalProperties": false
+        "additionalProperties": false,
+        "description": "修改数量响应"
       },
       "google.protobuf.BoolValue": {
         "type": "boolean",
@@ -787,7 +826,8 @@
   "security": [],
   "tags": [
     {
-      "name": "cart.v1.CartService"
+      "name": "cart.v1.CartService",
+      "description": "购物车服务：增删改查当前用户的购物车。\n\n 商品信息（名称、图、规格）由客户端随请求提交快照、服务端落库，\n 不反查商品服务 —— 商家改价/改名不会牵连已入购物车的旧快照。"
     }
   ]
 }

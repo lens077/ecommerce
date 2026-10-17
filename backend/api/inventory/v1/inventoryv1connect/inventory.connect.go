@@ -44,8 +44,12 @@ const (
 // InventoryServiceClient is a client for the inventory.v1.InventoryService service.
 type InventoryServiceClient interface {
 	// 预占库存(下单但未支付): 可用 -> 预占
+	//
+	// 幂等键是 order_no：同一订单重复预占不会重复扣减
 	Reserve(context.Context, *connect.Request[v1.ReserveRequest]) (*connect.Response[v1.ReserveResponse], error)
 	// 释放预占库存(未支付取消/超时取消): 预占 -> 可用
+	//
+	// 同样以 order_no 做幂等；对未预占过的订单调用是安全的空操作
 	ReleaseReserve(context.Context, *connect.Request[v1.ReleaseReserveRequest]) (*connect.Response[v1.ReleaseReserveResponse], error)
 }
 
@@ -94,8 +98,12 @@ func (c *inventoryServiceClient) ReleaseReserve(ctx context.Context, req *connec
 // InventoryServiceHandler is an implementation of the inventory.v1.InventoryService service.
 type InventoryServiceHandler interface {
 	// 预占库存(下单但未支付): 可用 -> 预占
+	//
+	// 幂等键是 order_no：同一订单重复预占不会重复扣减
 	Reserve(context.Context, *connect.Request[v1.ReserveRequest]) (*connect.Response[v1.ReserveResponse], error)
 	// 释放预占库存(未支付取消/超时取消): 预占 -> 可用
+	//
+	// 同样以 order_no 做幂等；对未预占过的订单调用是安全的空操作
 	ReleaseReserve(context.Context, *connect.Request[v1.ReleaseReserveRequest]) (*connect.Response[v1.ReleaseReserveResponse], error)
 }
 

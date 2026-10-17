@@ -22,6 +22,7 @@ const (
 	_ = protoimpl.EnforceVersion(protoimpl.MaxVersion - 20)
 )
 
+// 就绪检查请求，无入参
 type ReadyCheckReq struct {
 	state         protoimpl.MessageState `protogen:"open.v1"`
 	unknownFields protoimpl.UnknownFields
@@ -58,10 +59,14 @@ func (*ReadyCheckReq) Descriptor() ([]byte, []int) {
 	return file_api_check_v1_check_proto_rawDescGZIP(), []int{0}
 }
 
+// 就绪检查响应
 type ReadyCheckReply struct {
-	state         protoimpl.MessageState `protogen:"open.v1"`
-	Status        string                 `protobuf:"bytes,1,opt,name=status,proto3" json:"status,omitempty"`
-	Details       map[string]string      `protobuf:"bytes,2,rep,name=details,proto3" json:"details,omitempty" protobuf_key:"bytes,1,opt,name=key" protobuf_val:"bytes,2,opt,name=value"`
+	state protoimpl.MessageState `protogen:"open.v1"`
+	// 就绪状态文本，1–32 字符（如 "ready" / "degraded"）
+	Status string `protobuf:"bytes,1,opt,name=status,proto3" json:"status,omitempty"`
+	// 各依赖项的明细，键为依赖名、值为状态说明。
+	// 最多 32 对，便于在探活响应里直接看出是哪个依赖没起来
+	Details       map[string]string `protobuf:"bytes,2,rep,name=details,proto3" json:"details,omitempty" protobuf_key:"bytes,1,opt,name=key" protobuf_val:"bytes,2,opt,name=value"`
 	unknownFields protoimpl.UnknownFields
 	sizeCache     protoimpl.SizeCache
 }

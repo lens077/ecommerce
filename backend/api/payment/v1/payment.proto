@@ -7,19 +7,31 @@ import "third_party/validate/validate.proto";
 // Go 语言生成代码的选项
 option go_package = "github.com/lens077/ecommerce/backend/api/payment/v1;paymentv1";
 
-// 定义支付服务接口
+// 支付服务：创建支付单、查询支付状态，以及对接支付宝的回调与通知。
+//
+// 两个入口的分工：HandlePaymentNotify 收支付宝服务端主动推送（UrlValues 原样
+// 表单参数，服务端自行验签）；HandlePaymentCallback 收前端携带的回跳参数。
+// 两者在网关都是 anonymous_paths（支付渠道不可能带我们的会话）。
 service PaymentService {
-  // 创建支付订单
+  // 创建支付订单。
+  //
+  // 内部下单流程调用，返回 pay_url 供前端跳转收银台
   rpc CreatePayment(CreatePaymentRequest) returns (CreatePaymentResponse) {}
 
-  // 查询支付状态
+  // 查询支付状态。前端轮询或回跳后确认用
   rpc GetPaymentStatus(GetPaymentStatusRequest) returns (GetPaymentStatusResponse) {}
 
-  // 处理支付回调通知
-  //  rpc HandlePaymentNotify (HandlePaymentNotifyRequest) returns (HandlePaymentNotifyResponse) {
+  // 处理支付回调通知（支付宝服务端推送）。
+  //
+  // 请求体是 UrlValues 而不是结构化消息：渠道推来的就是一堆表单键值对，
+  // 先原样收下再验签，避免为每个渠道各建一份消息。
+  // 验签失败同样回 success=false，由渠道按自己的策略重推
   rpc HandlePaymentNotify(UrlValues) returns (HandlePaymentNotifyResponse) {}
 
-  // 支付成功后的回调处理
+  // 支付成功后的回调处理（用户收银台跳回）。
+  //
+  // 与 Notify 的差别：这条来自浏览器跳转，只用于把用户带回结果页，
+  // 不能作为入账依据 —— 真正的入账以 Notify 为准
   rpc HandlePaymentCallback(HandlePaymentCallbackRequest) returns (HandlePaymentCallbackResponse) {}
 }
 
@@ -31,26 +43,36 @@ message CreatePaymentRequest {
   reserved 2, 9;
   reserved "consumer_id", "consumer_version";
 
+  // 业务订单 ID
   int64 order_id = 1 [(buf.validate.field).int64.gt = 0];
+  // 买家 ID（UUID）。术语 2026-08-29 由 consumer_id 改为 customer_id
   string customer_id = 11 [(buf.validate.field).string.uuid = true];
+  // 金额（元），用字符串传以避免浮点误差。
+  // 上限 13 位：支持到千亿级、保留两位小数
   string amount = 3 [(buf.validate.field).string = {
     max_len: 13
     pattern: "^(?:0\\.(?:0[1-9]|[1-9][0-9])|[1-9][0-9]{0,9}(?:\\.[0-9]{1,2})?)$"
   }];
+  // 三位 ISO 4217 货币代码，如 CNY
   string currency = 4 [(buf.validate.field).string = {
     len: 3
     pattern: "^[A-Z]{3}$"
   }];
+  // 订单标题，展示在收银台，1–255 字符
   string subject = 5 [(buf.validate.field).string = {
     min_len: 1
     max_len: 255
   }];
+  // 支付完成后前端回跳地址
   string return_url = 6 [(buf.validate.field).string = {
     max_len: 2048
     uri: true
   }];
+  // 关联的资金冻结 ID（幂等/对账用）
   int64 freeze_id = 8 [(buf.validate.field).int64.gt = 0];
+  // 买家信息版本号，≥ 0
   int64 customer_version = 12 [(buf.validate.field).int64.gte = 0];
+  // 各商家信息版本号列表，1–100 个，与订单涉及的商家一一对应
   repeated int64 merchant_versions = 10 [(buf.validate.field).repeated = {
     min_items: 1
     max_items: 100
@@ -62,7 +84,9 @@ message CreatePaymentRequest {
 
 // 创建支付订单响应
 message CreatePaymentResponse {
+  // 支付单 ID
   int64 payment_id = 1 [(buf.validate.field).int64.gt = 0];
+  // 收银台地址，前端跳转至此完成支付
   string pay_url = 2 [(buf.validate.field).string = {
     max_len: 2048
     uri: true
@@ -71,27 +95,38 @@ message CreatePaymentResponse {
 
 // 查询支付状态请求
 message GetPaymentStatusRequest {
+  // 支付单 ID
   int64 payment_id = 1 [(buf.validate.field).int64.gt = 0];
 }
 
 // 支付状态
 enum PaymentStatus {
+  // 未指定（默认值，无效）
   PAYMENT_STATUS_UNKNOWN = 0;
+  // 已创建，等待支付
   PAYMENT_STATUS_PENDING = 1;
+  // 渠道已受理，处理中
   PAYMENT_STATUS_PROCESSING = 2;
+  // 支付成功
   PAYMENT_STATUS_SUCCESS = 3;
+  // 支付失败
   PAYMENT_STATUS_FAILED = 4;
+  // 已关闭（超时未付或主动关单）
   PAYMENT_STATUS_CLOSED = 5;
 }
 
 // 查询支付状态响应
 message GetPaymentStatusResponse {
+  // 支付单 ID
   int64 payment_id = 1 [(buf.validate.field).int64.gt = 0];
+  // 业务订单 ID
   int64 order_id = 2 [(buf.validate.field).int64.gt = 0];
+  // 当前支付状态
   PaymentStatus status = 3 [(buf.validate.field).enum = {
     defined_only: true
     not_in: [0]
   }];
+  // 支付宝交易号
   string trade_no = 4 [(buf.validate.field).string.max_len = 255]; // 支付宝交易号
 }
 
@@ -110,11 +145,14 @@ message GetPaymentStatusResponse {
 //  map<string, string> params = 11; // 存储所有回调参数
 //}
 
+// 一个表单键值对。同一键可出现多次（渠道行为），故值是数组
 message KeyValue {
+  // 参数名，1–64 字符
   string key = 1 [(buf.validate.field).string = {
     min_len: 1
     max_len: 64
   }];
+  // 该键的所有取值，最多 10 个、单个最长 4096 字符
   repeated string values = 2 [(buf.validate.field).repeated = {
     max_items: 10
     items: {
@@ -122,47 +160,66 @@ message KeyValue {
     }
   }];
 }
+
+// 支付通知的原始表单参数集，最多 64 对
 message UrlValues {
   repeated KeyValue pairs = 1 [(buf.validate.field).repeated.max_items = 64];
 }
 
-// 支付通知响应
+// 支付通知响应。success=false 时渠道会按自己的策略重推
 message HandlePaymentNotifyResponse {
+  // 是否受理成功
   bool success = 1;
+  // 补充说明，上限 512 字符
   string message = 2 [(buf.validate.field).string.max_len = 512];
 }
 
-// 支付回调请求
+// 支付回调请求（用户收银台跳回时带回的参数）
 message HandlePaymentCallbackRequest {
+  // 商户订单号，1–64 字符
   string out_trade_no = 1 [(buf.validate.field).string = {
     min_len: 1
     max_len: 64
   }];
+  // 支付宝交易号，1–64 字符
   string trade_no = 2 [(buf.validate.field).string = {
     min_len: 1
     max_len: 64
   }];
+  // 订单金额（元），格式同 CreatePaymentRequest.amount
   string total_amount = 3 [(buf.validate.field).string = {
     max_len: 13
     pattern: "^(?:0\\.(?:0[1-9]|[1-9][0-9])|[1-9][0-9]{0,9}(?:\\.[0-9]{1,2})?)$"
   }];
+  // 订单标题
   string subject = 4 [(buf.validate.field).string.max_len = 255];
+  // 交易状态（渠道原值），1–32 字符
   string trade_status = 5 [(buf.validate.field).string = {
     min_len: 1
     max_len: 32
   }];
+  // 字符集
   string charset = 6 [(buf.validate.field).string.max_len = 16]; // 字符集
+  // 支付方式
   string method = 7 [(buf.validate.field).string.max_len = 64]; // 支付方式
+  // 签名
   string sign = 8 [(buf.validate.field).string = {
     min_len: 1
     max_len: 4096
   }]; // 签名
+  // 签名类型 RSA2
   string sign_type = 9 [(buf.validate.field).string.max_len = 16]; // 签名类型 RSA2
+  // 应用ID
   string app_id = 10 [(buf.validate.field).string.max_len = 32]; // 应用ID
+  // 授权应用ID
   string auth_app_id = 12 [(buf.validate.field).string.max_len = 32]; // 授权应用ID
+  // 版本号
   string version = 13 [(buf.validate.field).string.max_len = 16]; // 版本号
+  // 卖家ID
   string seller_id = 14 [(buf.validate.field).string.max_len = 32]; // 卖家ID
+  // 时间戳
   string timestamp = 16 [(buf.validate.field).string.max_len = 32]; // 时间戳
+  // 存储所有回调参数。最多 64 对，值最长 4096 字符
   map<string, string> params = 11 [(buf.validate.field).map = {
     max_pairs: 64
     keys: {
@@ -179,6 +236,8 @@ message HandlePaymentCallbackRequest {
 
 // 支付回调响应
 message HandlePaymentCallbackResponse {
+  // 是否受理成功
   bool success = 1;
+  // 补充说明，上限 512 字符
   string message = 2 [(buf.validate.field).string.max_len = 512];
 }

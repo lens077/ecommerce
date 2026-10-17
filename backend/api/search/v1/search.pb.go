@@ -4,7 +4,11 @@
 // 	protoc        (unknown)
 // source: api/search/v1/search.proto
 
-// 独立搜索功能
+// 独立搜索功能：按商品名检索商品。
+//
+// 读侧只查 Elasticsearch 的 ecommerce_catalog_products alias；写入侧由
+// Debezium → Kafka → ES Sink 的 CDC 链维护，本服务不写索引
+// （拓扑见 .service-matrix.yaml 的 elasticsearch 条目）。
 
 package searchv1
 
@@ -24,12 +28,14 @@ const (
 	_ = protoimpl.EnforceVersion(protoimpl.MaxVersion - 20)
 )
 
+// 搜索请求
 type SearchRequest struct {
 	state protoimpl.MessageState `protogen:"open.v1"`
-	// 索引由服务端配置选择；保留字段号兼容旧客户端，但忽略传入值。
+	// 索引由服务端配置选择；保留字段号兼容旧客户端，但忽略传入值
 	//
 	// Deprecated: Marked as deprecated in api/search/v1/search.proto.
-	Index         string `protobuf:"bytes,1,opt,name=index,proto3" json:"index,omitempty"`
+	Index string `protobuf:"bytes,1,opt,name=index,proto3" json:"index,omitempty"`
+	// 搜索关键词（商品名），1–128 字符
 	Name          string `protobuf:"bytes,2,opt,name=name,proto3" json:"name,omitempty"`
 	unknownFields protoimpl.UnknownFields
 	sizeCache     protoimpl.SizeCache
@@ -80,9 +86,11 @@ func (x *SearchRequest) GetName() string {
 	return ""
 }
 
+// 搜索响应
 type SearchResponse struct {
-	state         protoimpl.MessageState `protogen:"open.v1"`
-	Products      []*Product             `protobuf:"bytes,1,rep,name=products,proto3" json:"products,omitempty"`
+	state protoimpl.MessageState `protogen:"open.v1"`
+	// 命中的商品列表，最多 100 条
+	Products      []*Product `protobuf:"bytes,1,rep,name=products,proto3" json:"products,omitempty"`
 	unknownFields protoimpl.UnknownFields
 	sizeCache     protoimpl.SizeCache
 }
@@ -124,16 +132,24 @@ func (x *SearchResponse) GetProducts() []*Product {
 	return nil
 }
 
-// 定义 Product 消息 (对应 Go 结构体中的 Product)
+// 搜索结果里的商品（投影自 ES 文档，字段比 product.v1.ProductSku 少）
 type Product struct {
-	state         protoimpl.MessageState `protogen:"open.v1"`
-	Id            uint32                 `protobuf:"varint,1,opt,name=id,proto3" json:"id,omitempty"`
-	SpuCode       string                 `protobuf:"bytes,2,opt,name=spu_code,json=spuCode,proto3" json:"spu_code,omitempty"`
-	Price         float64                `protobuf:"fixed64,3,opt,name=price,proto3" json:"price,omitempty"`
-	Status        string                 `protobuf:"bytes,4,opt,name=status,proto3" json:"status,omitempty"`
-	MainMediaUrl  string                 `protobuf:"bytes,5,opt,name=main_media_url,json=mainMediaUrl,proto3" json:"main_media_url,omitempty"`
-	Quantity      uint32                 `protobuf:"varint,6,opt,name=quantity,proto3" json:"quantity,omitempty"`
-	Name          string                 `protobuf:"bytes,7,opt,name=name,proto3" json:"name,omitempty"`
+	state protoimpl.MessageState `protogen:"open.v1"`
+	// 商品 ID
+	Id uint32 `protobuf:"varint,1,opt,name=id,proto3" json:"id,omitempty"`
+	// SPU 编码，1–64 字符
+	SpuCode string `protobuf:"bytes,2,opt,name=spu_code,json=spuCode,proto3" json:"spu_code,omitempty"`
+	// 售价（元，浮点）。展示用途，精确计算应走 product.v1 的 Money
+	Price float64 `protobuf:"fixed64,3,opt,name=price,proto3" json:"price,omitempty"`
+	// 商品状态：draft / online / offline / deleted
+	Status string `protobuf:"bytes,4,opt,name=status,proto3" json:"status,omitempty"`
+	// 商品主图 URL，1–500 字符
+	MainMediaUrl string `protobuf:"bytes,5,opt,name=main_media_url,json=mainMediaUrl,proto3" json:"main_media_url,omitempty"`
+	// 数量字段，无校验约束；语义由 ES 投影侧决定（库存或销量），
+	// 消费方不要仅凭字段名推断
+	Quantity uint32 `protobuf:"varint,6,opt,name=quantity,proto3" json:"quantity,omitempty"`
+	// 商品名称，1–255 字符
+	Name          string `protobuf:"bytes,7,opt,name=name,proto3" json:"name,omitempty"`
 	unknownFields protoimpl.UnknownFields
 	sizeCache     protoimpl.SizeCache
 }

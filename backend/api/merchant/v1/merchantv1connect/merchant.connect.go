@@ -59,18 +59,21 @@ const (
 // MerchantServiceClient is a client for the merchant.v1.MerchantService service.
 type MerchantServiceClient interface {
 	// 获取当前生效的入驻协议元信息（无需登录）
+	//
+	// 申请人提交前先读协议版本，CreateMerchant 时原样回传 agreement_version，
+	// 从而把「同意的是哪一版」钉住
 	GetMerchantAgreement(context.Context, *connect.Request[v1.GetMerchantAgreementRequest]) (*connect.Response[v1.GetMerchantAgreementResponse], error)
-	// 创建商家账号
+	// 创建商家账号。手机号即登录账号
 	CreateMerchant(context.Context, *connect.Request[v1.CreateMerchantRequest]) (*connect.Response[v1.CreateMerchantResponse], error)
-	// 商家提交入驻申请
+	// 商家提交入驻申请。提交后进入待审核
 	SubmitApplication(context.Context, *connect.Request[v1.SubmitApplicationRequest]) (*connect.Response[v1.SubmitApplicationResponse], error)
 	// 通过入驻申请（管理员操作）, 发送领域事件(创建商家账户、店铺、库存初始化等）
 	ApproveApplication(context.Context, *connect.Request[v1.ApproveApplicationRequest]) (*connect.Response[v1.ApproveApplicationResponse], error)
 	// 驳回入驻申请（管理员操作）, 发送领域事件(申请被驳回)
 	RejectApplication(context.Context, *connect.Request[v1.RejectApplicationRequest]) (*connect.Response[v1.RejectApplicationResponse], error)
-	// 查询入驻申请状态
+	// 查询入驻申请状态。申请人本人或管理员可查
 	GetApplication(context.Context, *connect.Request[v1.GetApplicationRequest]) (*connect.Response[v1.GetApplicationResponse], error)
-	// 激活商家
+	// 激活商家。审核通过后的首次店铺设置，完成后进入 ACTIVATED
 	ActivateMerchant(context.Context, *connect.Request[v1.ActivateMerchantRequest]) (*connect.Response[v1.ActivateMerchantResponse], error)
 }
 
@@ -179,18 +182,21 @@ func (c *merchantServiceClient) ActivateMerchant(ctx context.Context, req *conne
 // MerchantServiceHandler is an implementation of the merchant.v1.MerchantService service.
 type MerchantServiceHandler interface {
 	// 获取当前生效的入驻协议元信息（无需登录）
+	//
+	// 申请人提交前先读协议版本，CreateMerchant 时原样回传 agreement_version，
+	// 从而把「同意的是哪一版」钉住
 	GetMerchantAgreement(context.Context, *connect.Request[v1.GetMerchantAgreementRequest]) (*connect.Response[v1.GetMerchantAgreementResponse], error)
-	// 创建商家账号
+	// 创建商家账号。手机号即登录账号
 	CreateMerchant(context.Context, *connect.Request[v1.CreateMerchantRequest]) (*connect.Response[v1.CreateMerchantResponse], error)
-	// 商家提交入驻申请
+	// 商家提交入驻申请。提交后进入待审核
 	SubmitApplication(context.Context, *connect.Request[v1.SubmitApplicationRequest]) (*connect.Response[v1.SubmitApplicationResponse], error)
 	// 通过入驻申请（管理员操作）, 发送领域事件(创建商家账户、店铺、库存初始化等）
 	ApproveApplication(context.Context, *connect.Request[v1.ApproveApplicationRequest]) (*connect.Response[v1.ApproveApplicationResponse], error)
 	// 驳回入驻申请（管理员操作）, 发送领域事件(申请被驳回)
 	RejectApplication(context.Context, *connect.Request[v1.RejectApplicationRequest]) (*connect.Response[v1.RejectApplicationResponse], error)
-	// 查询入驻申请状态
+	// 查询入驻申请状态。申请人本人或管理员可查
 	GetApplication(context.Context, *connect.Request[v1.GetApplicationRequest]) (*connect.Response[v1.GetApplicationResponse], error)
-	// 激活商家
+	// 激活商家。审核通过后的首次店铺设置，完成后进入 ACTIVATED
 	ActivateMerchant(context.Context, *connect.Request[v1.ActivateMerchantRequest]) (*connect.Response[v1.ActivateMerchantResponse], error)
 }
 

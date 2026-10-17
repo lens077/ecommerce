@@ -24,6 +24,7 @@
           "check.v1.CheckService"
         ],
         "summary": "Ready",
+        "description": "Ready 返回进程就绪状态。\n\n 就绪 = 依赖已连上（DB / Redis / ES 等，按服务而异）；\n 任一致命依赖未就绪时应返回非就绪，让 K8s 把 Pod 摘出 Service",
         "operationId": "check.v1.CheckService.Ready",
         "parameters": [
           {
@@ -86,7 +87,8 @@
             "type": "string",
             "title": "status",
             "maxLength": 32,
-            "minLength": 1
+            "minLength": 1,
+            "description": "就绪状态文本，1–32 字符（如 \"ready\" / \"degraded\"）"
           },
           "details": {
             "type": "object",
@@ -96,11 +98,13 @@
               "type": "string",
               "title": "value",
               "maxLength": 512
-            }
+            },
+            "description": "各依赖项的明细，键为依赖名、值为状态说明。\n 最多 32 对，便于在探活响应里直接看出是哪个依赖没起来"
           }
         },
         "title": "ReadyCheckReply",
-        "additionalProperties": false
+        "additionalProperties": false,
+        "description": "就绪检查响应"
       },
       "check.v1.ReadyCheckReply.DetailsEntry": {
         "type": "object",
@@ -120,7 +124,8 @@
       "check.v1.ReadyCheckReq": {
         "type": "object",
         "title": "ReadyCheckReq",
-        "additionalProperties": false
+        "additionalProperties": false,
+        "description": "就绪检查请求，无入参"
       },
       "connect-protocol-version": {
         "type": "number",
@@ -199,7 +204,8 @@
   "security": [],
   "tags": [
     {
-      "name": "check.v1.CheckService"
+      "name": "check.v1.CheckService",
+      "description": "就绪检查服务：供 K8s readiness / 网关 online_check 探活。\n\n 只回答「进程能不能服务」，不承载任何业务语义。"
     }
   ]
 }

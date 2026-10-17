@@ -2,7 +2,11 @@
 //
 // Source: api/search/v1/search.proto
 
-// 独立搜索功能
+// 独立搜索功能：按商品名检索商品。
+//
+// 读侧只查 Elasticsearch 的 ecommerce_catalog_products alias；写入侧由
+// Debezium → Kafka → ES Sink 的 CDC 链维护，本服务不写索引
+// （拓扑见 .service-matrix.yaml 的 elasticsearch 条目）。
 
 package searchv1connect
 
@@ -41,6 +45,9 @@ const (
 
 // SearchServiceClient is a client for the search.v1.SearchService service.
 type SearchServiceClient interface {
+	// Search 按商品名检索商品。
+	//
+	// 属 anonymous_paths：搜索对未登录访客开放，无需 JWT
 	Search(context.Context, *connect.Request[v1.SearchRequest]) (*connect.Response[v1.SearchResponse], error)
 }
 
@@ -76,6 +83,9 @@ func (c *searchServiceClient) Search(ctx context.Context, req *connect.Request[v
 
 // SearchServiceHandler is an implementation of the search.v1.SearchService service.
 type SearchServiceHandler interface {
+	// Search 按商品名检索商品。
+	//
+	// 属 anonymous_paths：搜索对未登录访客开放，无需 JWT
 	Search(context.Context, *connect.Request[v1.SearchRequest]) (*connect.Response[v1.SearchResponse], error)
 }
 

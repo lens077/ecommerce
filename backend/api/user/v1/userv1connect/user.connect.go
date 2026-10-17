@@ -41,7 +41,17 @@ const (
 
 // UserServiceClient is a client for the user.v1.UserService service.
 type UserServiceClient interface {
+	// SignIn 拿 Casdoor 回跳带来的授权码换登录态。
+	//
+	// 网关侧属 anonymous_paths（anonymous_paths 里的 /user.v1.UserService/SignIn），
+	// 登录前的会话正是在这一步建立，所以它本身不需要 JWT。
+	// Casdoor 连不上时返回 internal 而非 unauthenticated —— 那是依赖故障，
+	// 不能伪装成「用户授权码无效」。
 	SignIn(context.Context, *connect.Request[v1.SignInRequest]) (*connect.Response[v1.SignInResponse], error)
+	// UserProfile 读取当前登录用户的资料。
+	//
+	// 身份不来自请求体，而来自网关注入的 x-md-global-name 头
+	// （见 backend/constants/meta.go 的 UserNameMetadataKey），因此请求体是空的。
 	UserProfile(context.Context, *connect.Request[v1.UserProfileRequest]) (*connect.Response[v1.UserProfileResponse], error)
 }
 
@@ -89,7 +99,17 @@ func (c *userServiceClient) UserProfile(ctx context.Context, req *connect.Reques
 
 // UserServiceHandler is an implementation of the user.v1.UserService service.
 type UserServiceHandler interface {
+	// SignIn 拿 Casdoor 回跳带来的授权码换登录态。
+	//
+	// 网关侧属 anonymous_paths（anonymous_paths 里的 /user.v1.UserService/SignIn），
+	// 登录前的会话正是在这一步建立，所以它本身不需要 JWT。
+	// Casdoor 连不上时返回 internal 而非 unauthenticated —— 那是依赖故障，
+	// 不能伪装成「用户授权码无效」。
 	SignIn(context.Context, *connect.Request[v1.SignInRequest]) (*connect.Response[v1.SignInResponse], error)
+	// UserProfile 读取当前登录用户的资料。
+	//
+	// 身份不来自请求体，而来自网关注入的 x-md-global-name 头
+	// （见 backend/constants/meta.go 的 UserNameMetadataKey），因此请求体是空的。
 	UserProfile(context.Context, *connect.Request[v1.UserProfileRequest]) (*connect.Response[v1.UserProfileResponse], error)
 }
 

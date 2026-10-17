@@ -22,11 +22,17 @@ const (
 	_ = protoimpl.EnforceVersion(protoimpl.MaxVersion - 20)
 )
 
+// 下单请求
 type CreateOrderRequest struct {
-	state         protoimpl.MessageState `protogen:"open.v1"`
-	CartItemIds   []int64                `protobuf:"varint,1,rep,packed,name=CartItemIds,proto3" json:"CartItemIds,omitempty"` // 用户在购物车中已选商品的唯一标识，订单服务只需知道用户勾选了哪些购物车项
-	AddressId     string                 `protobuf:"bytes,2,opt,name=addressId,proto3" json:"addressId,omitempty"`             // 下单时获取快照。用户可能在提交订单后修改收货地址，但历史订单必须保留当时的地址信息
-	Remark        string                 `protobuf:"bytes,3,opt,name=remark,proto3" json:"remark,omitempty"`
+	state protoimpl.MessageState `protogen:"open.v1"`
+	// 用户在购物车中已选商品的唯一标识，订单服务只需知道用户勾选了哪些购物车项。
+	// 1–100 项、项间不可重复
+	CartItemIds []int64 `protobuf:"varint,1,rep,packed,name=CartItemIds,proto3" json:"CartItemIds,omitempty"`
+	// 收货地址 ID，下单时获取快照。
+	// 用户可能在提交订单后修改收货地址，但历史订单必须保留当时的地址信息
+	AddressId string `protobuf:"bytes,2,opt,name=addressId,proto3" json:"addressId,omitempty"`
+	// 订单备注，买家填写，上限 2000 字符
+	Remark        string `protobuf:"bytes,3,opt,name=remark,proto3" json:"remark,omitempty"`
 	unknownFields protoimpl.UnknownFields
 	sizeCache     protoimpl.SizeCache
 }
@@ -82,6 +88,7 @@ func (x *CreateOrderRequest) GetRemark() string {
 	return ""
 }
 
+// 下单响应。订单号等信息由客户端通过后续查询获取
 type CreateOrderResponse struct {
 	state         protoimpl.MessageState `protogen:"open.v1"`
 	unknownFields protoimpl.UnknownFields
@@ -118,9 +125,11 @@ func (*CreateOrderResponse) Descriptor() ([]byte, []int) {
 	return file_api_order_v1_order_proto_rawDescGZIP(), []int{1}
 }
 
+// 完成订单请求
 type CompleteOrderRequest struct {
-	state         protoimpl.MessageState `protogen:"open.v1"`
-	OrderNo       string                 `protobuf:"bytes,1,opt,name=orderNo,proto3" json:"orderNo,omitempty"`
+	state protoimpl.MessageState `protogen:"open.v1"`
+	// 业务订单号（非自增 ID），1–64 字符
+	OrderNo       string `protobuf:"bytes,1,opt,name=orderNo,proto3" json:"orderNo,omitempty"`
 	unknownFields protoimpl.UnknownFields
 	sizeCache     protoimpl.SizeCache
 }
@@ -162,9 +171,11 @@ func (x *CompleteOrderRequest) GetOrderNo() string {
 	return ""
 }
 
+// 完成订单响应
 type CompleteOrderResponse struct {
-	state         protoimpl.MessageState `protogen:"open.v1"`
-	Order         *Order                 `protobuf:"bytes,1,opt,name=order,proto3" json:"order,omitempty"`
+	state protoimpl.MessageState `protogen:"open.v1"`
+	// 完成时的订单快照
+	Order         *Order `protobuf:"bytes,1,opt,name=order,proto3" json:"order,omitempty"`
 	unknownFields protoimpl.UnknownFields
 	sizeCache     protoimpl.SizeCache
 }
@@ -206,6 +217,7 @@ func (x *CompleteOrderResponse) GetOrder() *Order {
 	return nil
 }
 
+// 订单。字段待随 order 域实现补齐，当前是空占位
 type Order struct {
 	state         protoimpl.MessageState `protogen:"open.v1"`
 	unknownFields protoimpl.UnknownFields

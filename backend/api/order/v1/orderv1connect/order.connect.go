@@ -43,7 +43,14 @@ const (
 
 // OrderServiceClient is a client for the order.v1.orderService service.
 type OrderServiceClient interface {
+	// CreateOrder 按用户勾选的购物车项生成订单。
+	//
+	// 属 guest_paths：访客也能下单，身份由网关注入的 x-md-global-user-id 决定
+	// （访客则该头为匿名标识）。
 	CreateOrder(context.Context, *connect.Request[v1.CreateOrderRequest]) (*connect.Response[v1.CreateOrderResponse], error)
+	// CompleteOrder 标记订单完成，返回订单快照。
+	//
+	// 幂等：同一 orderNo 重复调用返回同一份订单，不会重复推进状态
 	CompleteOrder(context.Context, *connect.Request[v1.CompleteOrderRequest]) (*connect.Response[v1.CompleteOrderResponse], error)
 }
 
@@ -91,7 +98,14 @@ func (c *orderServiceClient) CompleteOrder(ctx context.Context, req *connect.Req
 
 // OrderServiceHandler is an implementation of the order.v1.orderService service.
 type OrderServiceHandler interface {
+	// CreateOrder 按用户勾选的购物车项生成订单。
+	//
+	// 属 guest_paths：访客也能下单，身份由网关注入的 x-md-global-user-id 决定
+	// （访客则该头为匿名标识）。
 	CreateOrder(context.Context, *connect.Request[v1.CreateOrderRequest]) (*connect.Response[v1.CreateOrderResponse], error)
+	// CompleteOrder 标记订单完成，返回订单快照。
+	//
+	// 幂等：同一 orderNo 重复调用返回同一份订单，不会重复推进状态
 	CompleteOrder(context.Context, *connect.Request[v1.CompleteOrderRequest]) (*connect.Response[v1.CompleteOrderResponse], error)
 }
 

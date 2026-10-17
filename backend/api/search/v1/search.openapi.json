@@ -24,6 +24,7 @@
           "search.v1.SearchService"
         ],
         "summary": "Search",
+        "description": "Search 按商品名检索商品。\n\n 属 anonymous_paths：搜索对未登录访客开放，无需 JWT",
         "operationId": "search.v1.SearchService.Search",
         "parameters": [
           {
@@ -85,19 +86,22 @@
           "id": {
             "exclusiveMinimum": 0,
             "type": "integer",
-            "title": "id"
+            "title": "id",
+            "description": "商品 ID"
           },
           "spuCode": {
             "type": "string",
             "title": "spu_code",
             "maxLength": 64,
-            "minLength": 1
+            "minLength": 1,
+            "description": "SPU 编码，1–64 字符"
           },
           "price": {
             "type": "number",
             "title": "price",
             "maximum": 99999999.99,
-            "format": "double"
+            "format": "double",
+            "description": "售价（元，浮点）。展示用途，精确计算应走 product.v1 的 Money"
           },
           "status": {
             "type": "string",
@@ -107,28 +111,32 @@
               "online",
               "offline",
               "deleted"
-            ]
+            ],
+            "description": "商品状态：draft / online / offline / deleted"
           },
           "mainMediaUrl": {
             "type": "string",
             "title": "main_media_url",
             "maxLength": 500,
-            "minLength": 1
+            "minLength": 1,
+            "description": "商品主图 URL，1–500 字符"
           },
           "quantity": {
             "type": "integer",
-            "title": "quantity"
+            "title": "quantity",
+            "description": "数量字段，无校验约束；语义由 ES 投影侧决定（库存或销量），\n 消费方不要仅凭字段名推断"
           },
           "name": {
             "type": "string",
             "title": "name",
             "maxLength": 255,
-            "minLength": 1
+            "minLength": 1,
+            "description": "商品名称，1–255 字符"
           }
         },
         "title": "Product",
         "additionalProperties": false,
-        "description": "定义 Product 消息 (对应 Go 结构体中的 Product)"
+        "description": "搜索结果里的商品（投影自 ES 文档，字段比 product.v1.ProductSku 少）"
       },
       "search.v1.SearchRequest": {
         "type": "object",
@@ -137,18 +145,20 @@
             "type": "string",
             "title": "index",
             "maxLength": 255,
-            "description": "索引由服务端配置选择；保留字段号兼容旧客户端，但忽略传入值。",
+            "description": "索引由服务端配置选择；保留字段号兼容旧客户端，但忽略传入值",
             "deprecated": true
           },
           "name": {
             "type": "string",
             "title": "name",
             "maxLength": 128,
-            "minLength": 1
+            "minLength": 1,
+            "description": "搜索关键词（商品名），1–128 字符"
           }
         },
         "title": "SearchRequest",
-        "additionalProperties": false
+        "additionalProperties": false,
+        "description": "搜索请求"
       },
       "search.v1.SearchResponse": {
         "type": "object",
@@ -159,11 +169,13 @@
               "$ref": "#/components/schemas/search.v1.Product"
             },
             "title": "products",
-            "maxItems": 100
+            "maxItems": 100,
+            "description": "命中的商品列表，最多 100 条"
           }
         },
         "title": "SearchResponse",
-        "additionalProperties": false
+        "additionalProperties": false,
+        "description": "搜索响应"
       },
       "connect-protocol-version": {
         "type": "number",

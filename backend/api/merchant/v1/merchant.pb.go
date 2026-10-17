@@ -27,11 +27,16 @@ const (
 type ApplicationStatus int32
 
 const (
-	ApplicationStatus_APPLICATION_STATUS_UNSPECIFIED    ApplicationStatus = 0 // 未指定（默认值，无效）
+	// 未指定（默认值，无效）
+	ApplicationStatus_APPLICATION_STATUS_UNSPECIFIED ApplicationStatus = 0 // 未指定（默认值，无效）
+	// 待审核
 	ApplicationStatus_APPLICATION_STATUS_PENDING_REVIEW ApplicationStatus = 1 // 待审核
-	ApplicationStatus_APPLICATION_STATUS_APPROVED       ApplicationStatus = 2 // 已通过
-	ApplicationStatus_APPLICATION_STATUS_REJECTED       ApplicationStatus = 3 // 已驳回
-	ApplicationStatus_APPLICATION_STATUS_ACTIVATED      ApplicationStatus = 4 // 已激活（商家完成首次设置并激活店铺）
+	// 已通过
+	ApplicationStatus_APPLICATION_STATUS_APPROVED ApplicationStatus = 2 // 已通过
+	// 已驳回
+	ApplicationStatus_APPLICATION_STATUS_REJECTED ApplicationStatus = 3 // 已驳回
+	// 已激活（商家完成首次设置并激活店铺）
+	ApplicationStatus_APPLICATION_STATUS_ACTIVATED ApplicationStatus = 4 // 已激活（商家完成首次设置并激活店铺）
 )
 
 // Enum value maps for ApplicationStatus.
@@ -79,6 +84,7 @@ func (ApplicationStatus) EnumDescriptor() ([]byte, []int) {
 	return file_api_merchant_v1_merchant_proto_rawDescGZIP(), []int{0}
 }
 
+// 获取入驻协议请求，无入参
 type GetMerchantAgreementRequest struct {
 	state         protoimpl.MessageState `protogen:"open.v1"`
 	unknownFields protoimpl.UnknownFields
@@ -115,11 +121,15 @@ func (*GetMerchantAgreementRequest) Descriptor() ([]byte, []int) {
 	return file_api_merchant_v1_merchant_proto_rawDescGZIP(), []int{0}
 }
 
+// 获取入驻协议响应
 type GetMerchantAgreementResponse struct {
-	state         protoimpl.MessageState `protogen:"open.v1"`
-	Version       string                 `protobuf:"bytes,1,opt,name=version,proto3" json:"version,omitempty"`                                  // "v1.0"
-	EffectiveDate string                 `protobuf:"bytes,2,opt,name=effective_date,json=effectiveDate,proto3" json:"effective_date,omitempty"` // "2026-08-13"
-	ContentUrl    string                 `protobuf:"bytes,3,opt,name=content_url,json=contentUrl,proto3" json:"content_url,omitempty"`          // 协议文本地址
+	state protoimpl.MessageState `protogen:"open.v1"`
+	// 协议版本号，如 "v1.0"
+	Version string `protobuf:"bytes,1,opt,name=version,proto3" json:"version,omitempty"` // "v1.0"
+	// 生效日期，如 "2026-08-13"
+	EffectiveDate string `protobuf:"bytes,2,opt,name=effective_date,json=effectiveDate,proto3" json:"effective_date,omitempty"` // "2026-08-13"
+	// 协议文本地址
+	ContentUrl    string `protobuf:"bytes,3,opt,name=content_url,json=contentUrl,proto3" json:"content_url,omitempty"` // 协议文本地址
 	unknownFields protoimpl.UnknownFields
 	sizeCache     protoimpl.SizeCache
 }
@@ -175,11 +185,15 @@ func (x *GetMerchantAgreementResponse) GetContentUrl() string {
 	return ""
 }
 
+// 创建商家账号请求
 type CreateMerchantRequest struct {
 	state protoimpl.MessageState `protogen:"open.v1"`
-	Phone string                 `protobuf:"bytes,1,opt,name=phone,proto3" json:"phone,omitempty"`
-	Mail  string                 `protobuf:"bytes,2,opt,name=mail,proto3" json:"mail,omitempty"`
-	// 确认协议的版本号
+	// 手机号，即商家登录账号。11 位
+	Phone string `protobuf:"bytes,1,opt,name=phone,proto3" json:"phone,omitempty"`
+	// 邮箱。可选，未做长度约束
+	Mail string `protobuf:"bytes,2,opt,name=mail,proto3" json:"mail,omitempty"`
+	// 确认合作的协议版本号，须与 GetMerchantAgreement 返回的 version 一致。
+	// 服务端据此记录「商家同意的是哪一版」
 	AgreementVersion string `protobuf:"bytes,3,opt,name=agreement_version,json=agreementVersion,proto3" json:"agreement_version,omitempty"`
 	unknownFields    protoimpl.UnknownFields
 	sizeCache        protoimpl.SizeCache
@@ -236,6 +250,7 @@ func (x *CreateMerchantRequest) GetAgreementVersion() string {
 	return ""
 }
 
+// 创建商家账号响应，无字段（账号信息通过后续查询获取）
 type CreateMerchantResponse struct {
 	state         protoimpl.MessageState `protogen:"open.v1"`
 	unknownFields protoimpl.UnknownFields
@@ -272,6 +287,7 @@ func (*CreateMerchantResponse) Descriptor() ([]byte, []int) {
 	return file_api_merchant_v1_merchant_proto_rawDescGZIP(), []int{3}
 }
 
+// 提交入驻申请请求
 type SubmitApplicationRequest struct {
 	state protoimpl.MessageState `protogen:"open.v1"`
 	// 公司名称
@@ -290,7 +306,7 @@ type SubmitApplicationRequest struct {
 	LegalPersonIdFrontUrl string `protobuf:"bytes,7,opt,name=legal_person_id_front_url,json=legalPersonIdFrontUrl,proto3" json:"legal_person_id_front_url,omitempty"`
 	// 法人身份证反面图片URL
 	LegalPersonIdBackUrl string `protobuf:"bytes,8,opt,name=legal_person_id_back_url,json=legalPersonIdBackUrl,proto3" json:"legal_person_id_back_url,omitempty"`
-	// 申请经营类目ID列表
+	// 申请经营类目ID列表，最多 100 个、不可重复
 	CategoryIds []int64 `protobuf:"varint,9,rep,packed,name=category_ids,json=categoryIds,proto3" json:"category_ids,omitempty"`
 	// 备注
 	Remark        string `protobuf:"bytes,10,opt,name=remark,proto3" json:"remark,omitempty"`
@@ -398,6 +414,7 @@ func (x *SubmitApplicationRequest) GetRemark() string {
 	return ""
 }
 
+// 提交入驻申请响应
 type SubmitApplicationResponse struct {
 	state protoimpl.MessageState `protogen:"open.v1"`
 	// 申请ID
@@ -452,6 +469,7 @@ func (x *SubmitApplicationResponse) GetStatus() string {
 	return ""
 }
 
+// 通过入驻申请请求
 type ApproveApplicationRequest struct {
 	state protoimpl.MessageState `protogen:"open.v1"`
 	// 申请ID
@@ -506,6 +524,7 @@ func (x *ApproveApplicationRequest) GetAuditComment() string {
 	return ""
 }
 
+// 通过入驻申请响应
 type ApproveApplicationResponse struct {
 	state         protoimpl.MessageState `protogen:"open.v1"`
 	unknownFields protoimpl.UnknownFields
@@ -542,11 +561,12 @@ func (*ApproveApplicationResponse) Descriptor() ([]byte, []int) {
 	return file_api_merchant_v1_merchant_proto_rawDescGZIP(), []int{7}
 }
 
+// 驳回入驻申请请求
 type RejectApplicationRequest struct {
 	state protoimpl.MessageState `protogen:"open.v1"`
 	// 申请ID
 	ApplicationId string `protobuf:"bytes,1,opt,name=application_id,json=applicationId,proto3" json:"application_id,omitempty"`
-	// 驳回原因，必填
+	// 驳回原因，必填。会随领域事件通知申请人
 	Reason        string `protobuf:"bytes,2,opt,name=reason,proto3" json:"reason,omitempty"`
 	unknownFields protoimpl.UnknownFields
 	sizeCache     protoimpl.SizeCache
@@ -596,6 +616,7 @@ func (x *RejectApplicationRequest) GetReason() string {
 	return ""
 }
 
+// 驳回入驻申请响应
 type RejectApplicationResponse struct {
 	state         protoimpl.MessageState `protogen:"open.v1"`
 	unknownFields protoimpl.UnknownFields
@@ -634,8 +655,9 @@ func (*RejectApplicationResponse) Descriptor() ([]byte, []int) {
 
 // 查询申请状态请求
 type GetApplicationRequest struct {
-	state         protoimpl.MessageState `protogen:"open.v1"`
-	ApplicationId string                 `protobuf:"bytes,1,opt,name=application_id,json=applicationId,proto3" json:"application_id,omitempty"`
+	state protoimpl.MessageState `protogen:"open.v1"`
+	// 申请ID
+	ApplicationId string `protobuf:"bytes,1,opt,name=application_id,json=applicationId,proto3" json:"application_id,omitempty"`
 	unknownFields protoimpl.UnknownFields
 	sizeCache     protoimpl.SizeCache
 }
@@ -677,16 +699,26 @@ func (x *GetApplicationRequest) GetApplicationId() string {
 	return ""
 }
 
+// 查询申请状态响应
 type GetApplicationResponse struct {
-	state         protoimpl.MessageState `protogen:"open.v1"`
-	ApplicationId string                 `protobuf:"bytes,1,opt,name=application_id,json=applicationId,proto3" json:"application_id,omitempty"`
-	Status        ApplicationStatus      `protobuf:"varint,2,opt,name=status,proto3,enum=merchant.v1.ApplicationStatus" json:"status,omitempty"`
-	CompanyName   string                 `protobuf:"bytes,3,opt,name=company_name,json=companyName,proto3" json:"company_name,omitempty"`
-	CreditCode    string                 `protobuf:"bytes,4,opt,name=credit_code,json=creditCode,proto3" json:"credit_code,omitempty"`
-	LegalPerson   string                 `protobuf:"bytes,5,opt,name=legal_person,json=legalPerson,proto3" json:"legal_person,omitempty"`
-	ContactPhone  string                 `protobuf:"bytes,6,opt,name=contact_phone,json=contactPhone,proto3" json:"contact_phone,omitempty"`
-	RejectReason  string                 `protobuf:"bytes,7,opt,name=reject_reason,json=rejectReason,proto3" json:"reject_reason,omitempty"` // 仅当 status = REJECTED 时有值
-	SubmittedAt   *timestamppb.Timestamp `protobuf:"bytes,8,opt,name=submitted_at,json=submittedAt,proto3" json:"submitted_at,omitempty"`
+	state protoimpl.MessageState `protogen:"open.v1"`
+	// 申请ID
+	ApplicationId string `protobuf:"bytes,1,opt,name=application_id,json=applicationId,proto3" json:"application_id,omitempty"`
+	// 当前申请状态
+	Status ApplicationStatus `protobuf:"varint,2,opt,name=status,proto3,enum=merchant.v1.ApplicationStatus" json:"status,omitempty"`
+	// 公司名称
+	CompanyName string `protobuf:"bytes,3,opt,name=company_name,json=companyName,proto3" json:"company_name,omitempty"`
+	// 统一社会信用代码
+	CreditCode string `protobuf:"bytes,4,opt,name=credit_code,json=creditCode,proto3" json:"credit_code,omitempty"`
+	// 法人姓名
+	LegalPerson string `protobuf:"bytes,5,opt,name=legal_person,json=legalPerson,proto3" json:"legal_person,omitempty"`
+	// 联系电话
+	ContactPhone string `protobuf:"bytes,6,opt,name=contact_phone,json=contactPhone,proto3" json:"contact_phone,omitempty"`
+	// 驳回原因。仅当 status = REJECTED 时有值
+	RejectReason string `protobuf:"bytes,7,opt,name=reject_reason,json=rejectReason,proto3" json:"reject_reason,omitempty"` // 仅当 status = REJECTED 时有值
+	// 申请提交时间
+	SubmittedAt *timestamppb.Timestamp `protobuf:"bytes,8,opt,name=submitted_at,json=submittedAt,proto3" json:"submitted_at,omitempty"`
+	// 审核完成时间。未审时为空
 	ReviewedAt    *timestamppb.Timestamp `protobuf:"bytes,9,opt,name=reviewed_at,json=reviewedAt,proto3" json:"reviewed_at,omitempty"`
 	unknownFields protoimpl.UnknownFields
 	sizeCache     protoimpl.SizeCache
@@ -787,10 +819,13 @@ func (x *GetApplicationResponse) GetReviewedAt() *timestamppb.Timestamp {
 
 // 激活商家请求
 type ActivateMerchantRequest struct {
-	state         protoimpl.MessageState `protogen:"open.v1"`
-	MerchantId    string                 `protobuf:"bytes,1,opt,name=merchant_id,json=merchantId,proto3" json:"merchant_id,omitempty"`
-	ShopName      string                 `protobuf:"bytes,2,opt,name=shop_name,json=shopName,proto3" json:"shop_name,omitempty"`
-	ShopLogoUrl   string                 `protobuf:"bytes,3,opt,name=shop_logo_url,json=shopLogoUrl,proto3" json:"shop_logo_url,omitempty"`
+	state protoimpl.MessageState `protogen:"open.v1"`
+	// 商家ID
+	MerchantId string `protobuf:"bytes,1,opt,name=merchant_id,json=merchantId,proto3" json:"merchant_id,omitempty"`
+	// 店铺名称，1–255 字符
+	ShopName string `protobuf:"bytes,2,opt,name=shop_name,json=shopName,proto3" json:"shop_name,omitempty"`
+	// 店铺 Logo URL
+	ShopLogoUrl   string `protobuf:"bytes,3,opt,name=shop_logo_url,json=shopLogoUrl,proto3" json:"shop_logo_url,omitempty"`
 	unknownFields protoimpl.UnknownFields
 	sizeCache     protoimpl.SizeCache
 }
@@ -846,6 +881,7 @@ func (x *ActivateMerchantRequest) GetShopLogoUrl() string {
 	return ""
 }
 
+// 激活商家响应
 type ActivateMerchantResponse struct {
 	state         protoimpl.MessageState `protogen:"open.v1"`
 	unknownFields protoimpl.UnknownFields

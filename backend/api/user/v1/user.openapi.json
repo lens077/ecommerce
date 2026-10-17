@@ -24,6 +24,7 @@
           "user.v1.UserService"
         ],
         "summary": "SignIn",
+        "description": "SignIn 拿 Casdoor 回跳带来的授权码换登录态。\n\n 网关侧属 anonymous_paths（anonymous_paths 里的 /user.v1.UserService/SignIn），\n 登录前的会话正是在这一步建立，所以它本身不需要 JWT。\n Casdoor 连不上时返回 internal 而非 unauthenticated —— 那是依赖故障，\n 不能伪装成「用户授权码无效」。",
         "operationId": "user.v1.UserService.SignIn",
         "parameters": [
           {
@@ -82,6 +83,7 @@
           "user.v1.UserService"
         ],
         "summary": "UserProfile",
+        "description": "UserProfile 读取当前登录用户的资料。\n\n 身份不来自请求体，而来自网关注入的 x-md-global-name 头\n （见 backend/constants/meta.go 的 UserNameMetadataKey），因此请求体是空的。",
         "operationId": "user.v1.UserService.UserProfile",
         "parameters": [
           {
@@ -427,22 +429,26 @@
           "type": {
             "type": "string",
             "title": "type",
-            "maxLength": 64
+            "maxLength": 64,
+            "description": "用户类型，Casdoor 内部用"
           },
           "password": {
             "type": "string",
             "title": "password",
-            "maxLength": 4096
+            "maxLength": 4096,
+            "description": "敏感：密码散列，任何响应里都不得出现"
           },
           "passwordSalt": {
             "type": "string",
             "title": "password_salt",
-            "maxLength": 1024
+            "maxLength": 1024,
+            "description": "敏感：密码盐"
           },
           "passwordType": {
             "type": "string",
             "title": "password_type",
-            "maxLength": 64
+            "maxLength": 64,
+            "description": "密码散列算法标识"
           },
           "displayName": {
             "type": "string",
@@ -624,12 +630,14 @@
           "accessKey": {
             "type": "string",
             "title": "access_key",
-            "maxLength": 1024
+            "maxLength": 1024,
+            "description": "敏感：访问密钥 ID，不得出现在响应里"
           },
           "accessSecret": {
             "type": "string",
             "title": "access_secret",
-            "maxLength": 4096
+            "maxLength": 4096,
+            "description": "敏感：访问密钥Secret，不得出现在响应里"
           },
           "createdIp": {
             "type": "string",
@@ -651,7 +659,7 @@
             "type": "string",
             "title": "github",
             "maxLength": 2048,
-            "description": "OAuth/SSO 链接 (非常多的字段)"
+            "description": "OAuth/SSO 链接。\n\n 下面 51–126 号字段是同一模式的机械重复：每个第三方登录源一个字符串，\n 存该源返回的用户标识（通常是 openid / unionid），上限统一 2048。\n 本仓只用 Casdoor 自身的登录，这些字段默认均为空，\n 因此不逐个写注释 —— 需要哪个就按名字取，别按序号猜。"
           },
           "google": {
             "type": "string",
@@ -1042,12 +1050,14 @@
               "maxItems": 100
             },
             "title": "recovery_codes",
-            "maxItems": 100
+            "maxItems": 100,
+            "description": "敏感：一次性恢复码"
           },
           "totpSecret": {
             "type": "string",
             "title": "totp_secret",
-            "maxLength": 1024
+            "maxLength": 1024,
+            "description": "敏感：TOTP 密钥"
           },
           "mfaPhoneEnabled": {
             "type": "boolean",
@@ -1168,17 +1178,20 @@
             "type": "string",
             "title": "code",
             "maxLength": 2048,
-            "minLength": 1
+            "minLength": 1,
+            "description": "Casdoor OAuth2 授权码，来自登录回跳 URL 的 code 参数"
           },
           "state": {
             "type": "string",
             "title": "state",
             "maxLength": 512,
-            "minLength": 1
+            "minLength": 1,
+            "description": "登录时下发的 state，回调时原样带回。\n 上限 512 是因为它可能携带网关下发的会话上下文"
           }
         },
         "title": "SignInRequest",
-        "additionalProperties": false
+        "additionalProperties": false,
+        "description": "登录请求"
       },
       "user.v1.SignInResponse": {
         "type": "object",
@@ -1187,27 +1200,32 @@
             "type": "string",
             "title": "state",
             "maxLength": 64,
-            "minLength": 1
+            "minLength": 1,
+            "description": "固定为 \"ok\"，表示换取成功；失败走 Connect error，不会走到这里"
           },
           "data": {
             "type": "string",
             "title": "data",
-            "maxLength": 16384
+            "maxLength": 16384,
+            "description": "Casdoor 返回的 access token，上限 16 KB。\n 由网关消费并建立会话，不直接暴露给前端"
           }
         },
         "title": "SignInResponse",
-        "additionalProperties": false
+        "additionalProperties": false,
+        "description": "登录响应"
       },
       "user.v1.UserProfileRequest": {
         "type": "object",
         "title": "UserProfileRequest",
-        "additionalProperties": false
+        "additionalProperties": false,
+        "description": "资料读取请求。用户身份由 x-md-global-name 头决定，故无字段"
       },
       "user.v1.UserProfileResponse": {
         "type": "object",
         "properties": {
           "user": {
             "title": "user",
+            "description": "Casdoor 用户对象，字段语义见 api/casdoor/v1/user.proto",
             "$ref": "#/components/schemas/casdoor.v1.User"
           }
         },
@@ -1215,7 +1233,8 @@
         "required": [
           "user"
         ],
-        "additionalProperties": false
+        "additionalProperties": false,
+        "description": "资料读取响应"
       },
       "connect-protocol-version": {
         "type": "number",
@@ -1294,7 +1313,8 @@
   "security": [],
   "tags": [
     {
-      "name": "user.v1.UserService"
+      "name": "user.v1.UserService",
+      "description": "用户身份服务：用 Casdoor 授权码换登录态，以及读取当前登录用户的资料。\n\n 与 casdoor.v1 的分工：casdoor.v1 只是 Casdoor 用户对象的消息定义（被本服务复用），\n 不带任何 RPC；对外的登录与资料读取都在这里。"
     }
   ]
 }

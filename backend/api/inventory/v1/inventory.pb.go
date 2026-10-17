@@ -22,11 +22,15 @@ const (
 	_ = protoimpl.EnforceVersion(protoimpl.MaxVersion - 20)
 )
 
+// 预占库存请求
 type ReserveRequest struct {
-	state         protoimpl.MessageState `protogen:"open.v1"`
-	OrderNo       string                 `protobuf:"bytes,1,opt,name=order_no,json=orderNo,proto3" json:"order_no,omitempty"`          // 订单号，用于幂等去重
-	MerchantId    string                 `protobuf:"bytes,2,opt,name=merchant_id,json=merchantId,proto3" json:"merchant_id,omitempty"` // 商家ID（数据隔离）
-	Items         []*ReserveItem         `protobuf:"bytes,3,rep,name=items,proto3" json:"items,omitempty"`                             // 需要预占的商品列表
+	state protoimpl.MessageState `protogen:"open.v1"`
+	// 订单号，用于幂等去重
+	OrderNo string `protobuf:"bytes,1,opt,name=order_no,json=orderNo,proto3" json:"order_no,omitempty"`
+	// 商家ID（数据隔离）
+	MerchantId string `protobuf:"bytes,2,opt,name=merchant_id,json=merchantId,proto3" json:"merchant_id,omitempty"`
+	// 需要预占的商品列表，1–100 项
+	Items         []*ReserveItem `protobuf:"bytes,3,rep,name=items,proto3" json:"items,omitempty"`
 	unknownFields protoimpl.UnknownFields
 	sizeCache     protoimpl.SizeCache
 }
@@ -82,11 +86,15 @@ func (x *ReserveRequest) GetItems() []*ReserveItem {
 	return nil
 }
 
+// 单条预占/释放项
 type ReserveItem struct {
-	state         protoimpl.MessageState `protogen:"open.v1"`
-	SkuId         int64                  `protobuf:"varint,1,opt,name=sku_id,json=skuId,proto3" json:"sku_id,omitempty"` // 商品SKU ID
-	Quantity      int32                  `protobuf:"varint,2,opt,name=quantity,proto3" json:"quantity,omitempty"`
-	WarehouseId   string                 `protobuf:"bytes,3,opt,name=warehouse_id,json=warehouseId,proto3" json:"warehouse_id,omitempty"` // 仓库ID, 例如: df0001
+	state protoimpl.MessageState `protogen:"open.v1"`
+	// 商品SKU ID
+	SkuId int64 `protobuf:"varint,1,opt,name=sku_id,json=skuId,proto3" json:"sku_id,omitempty"`
+	// 预占数量，1–999
+	Quantity int32 `protobuf:"varint,2,opt,name=quantity,proto3" json:"quantity,omitempty"`
+	// 仓库ID, 例如: df0001。定长 6 位
+	WarehouseId   string `protobuf:"bytes,3,opt,name=warehouse_id,json=warehouseId,proto3" json:"warehouse_id,omitempty"`
 	unknownFields protoimpl.UnknownFields
 	sizeCache     protoimpl.SizeCache
 }
@@ -142,10 +150,13 @@ func (x *ReserveItem) GetWarehouseId() string {
 	return ""
 }
 
+// 预占库存响应
 type ReserveResponse struct {
-	state         protoimpl.MessageState `protogen:"open.v1"`
-	Status        bool                   `protobuf:"varint,1,opt,name=status,proto3" json:"status,omitempty"`
-	Msg           string                 `protobuf:"bytes,2,opt,name=msg,proto3" json:"msg,omitempty"`
+	state protoimpl.MessageState `protogen:"open.v1"`
+	// 是否预占成功。false 时 msg 说明原因（如库存不足）
+	Status bool `protobuf:"varint,1,opt,name=status,proto3" json:"status,omitempty"`
+	// 人类可读的补充说明，上限 512 字符
+	Msg           string `protobuf:"bytes,2,opt,name=msg,proto3" json:"msg,omitempty"`
 	unknownFields protoimpl.UnknownFields
 	sizeCache     protoimpl.SizeCache
 }
@@ -194,11 +205,15 @@ func (x *ReserveResponse) GetMsg() string {
 	return ""
 }
 
+// 释放预占库存请求
 type ReleaseReserveRequest struct {
-	state         protoimpl.MessageState `protogen:"open.v1"`
-	OrderNo       string                 `protobuf:"bytes,1,opt,name=order_no,json=orderNo,proto3" json:"order_no,omitempty"`          // 订单号，用于幂等去重
-	MerchantId    string                 `protobuf:"bytes,2,opt,name=merchant_id,json=merchantId,proto3" json:"merchant_id,omitempty"` // 商家ID（数据隔离）
-	Items         []*ReserveItem         `protobuf:"bytes,3,rep,name=items,proto3" json:"items,omitempty"`                             // 需要释放预占的商品列表
+	state protoimpl.MessageState `protogen:"open.v1"`
+	// 订单号，用于幂等去重
+	OrderNo string `protobuf:"bytes,1,opt,name=order_no,json=orderNo,proto3" json:"order_no,omitempty"`
+	// 商家ID（数据隔离）
+	MerchantId string `protobuf:"bytes,2,opt,name=merchant_id,json=merchantId,proto3" json:"merchant_id,omitempty"`
+	// 需要释放预占的商品列表，1–100 项
+	Items         []*ReserveItem `protobuf:"bytes,3,rep,name=items,proto3" json:"items,omitempty"`
 	unknownFields protoimpl.UnknownFields
 	sizeCache     protoimpl.SizeCache
 }
@@ -254,10 +269,13 @@ func (x *ReleaseReserveRequest) GetItems() []*ReserveItem {
 	return nil
 }
 
+// 释放预占库存响应
 type ReleaseReserveResponse struct {
-	state         protoimpl.MessageState `protogen:"open.v1"`
-	Status        bool                   `protobuf:"varint,1,opt,name=status,proto3" json:"status,omitempty"`
-	Msg           string                 `protobuf:"bytes,2,opt,name=msg,proto3" json:"msg,omitempty"`
+	state protoimpl.MessageState `protogen:"open.v1"`
+	// 是否释放成功
+	Status bool `protobuf:"varint,1,opt,name=status,proto3" json:"status,omitempty"`
+	// 人类可读的补充说明，上限 512 字符
+	Msg           string `protobuf:"bytes,2,opt,name=msg,proto3" json:"msg,omitempty"`
 	unknownFields protoimpl.UnknownFields
 	sizeCache     protoimpl.SizeCache
 }

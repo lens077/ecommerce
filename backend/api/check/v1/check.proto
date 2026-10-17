@@ -6,17 +6,29 @@ import "third_party/validate/validate.proto";
 
 option go_package = "github.com/lens077/ecommerce/backend/api/check/v1;checkv1";
 
+// 就绪检查服务：供 K8s readiness / 网关 online_check 探活。
+//
+// 只回答「进程能不能服务」，不承载任何业务语义。
 service CheckService {
+  // Ready 返回进程就绪状态。
+  //
+  // 就绪 = 依赖已连上（DB / Redis / ES 等，按服务而异）；
+  // 任一致命依赖未就绪时应返回非就绪，让 K8s 把 Pod 摘出 Service
   rpc Ready(ReadyCheckReq) returns (ReadyCheckReply) {}
 }
 
+// 就绪检查请求，无入参
 message ReadyCheckReq {}
 
+// 就绪检查响应
 message ReadyCheckReply {
+  // 就绪状态文本，1–32 字符（如 "ready" / "degraded"）
   string status = 1 [(buf.validate.field).string = {
     min_len: 1
     max_len: 32
   }];
+  // 各依赖项的明细，键为依赖名、值为状态说明。
+  // 最多 32 对，便于在探活响应里直接看出是哪个依赖没起来
   map<string, string> details = 2 [(buf.validate.field).map = {
     max_pairs: 32
     keys: {

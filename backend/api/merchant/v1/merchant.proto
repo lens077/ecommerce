@@ -7,14 +7,22 @@ import "third_party/validate/validate.proto";
 
 option go_package = "github.com/lens077/ecommerce/backend/api/merchant/v1;merchantv1";
 
+// 商家服务：入驻申请的全生命周期（建号 → 提交 → 审核 → 激活），
+// 以及当前生效入驻协议的读取。
+//
+// 审核类接口（ApproveApplication / RejectApplication）面向管理员，
+// 网关侧按 RBAC 收口径；其余接口对申请人本人开放。
 service MerchantService {
   // 获取当前生效的入驻协议元信息（无需登录）
+  //
+  // 申请人提交前先读协议版本，CreateMerchant 时原样回传 agreement_version，
+  // 从而把「同意的是哪一版」钉住
   rpc GetMerchantAgreement(GetMerchantAgreementRequest) returns (GetMerchantAgreementResponse) {}
 
-  // 创建商家账号
+  // 创建商家账号。手机号即登录账号
   rpc CreateMerchant(CreateMerchantRequest) returns (CreateMerchantResponse) {}
 
-  // 商家提交入驻申请
+  // 商家提交入驻申请。提交后进入待审核
   rpc SubmitApplication(SubmitApplicationRequest) returns (SubmitApplicationResponse) {}
 
   // 通过入驻申请（管理员操作）, 发送领域事件(创建商家账户、店铺、库存初始化等）
@@ -23,46 +31,63 @@ service MerchantService {
   // 驳回入驻申请（管理员操作）, 发送领域事件(申请被驳回)
   rpc RejectApplication(RejectApplicationRequest) returns (RejectApplicationResponse) {}
 
-  // 查询入驻申请状态
+  // 查询入驻申请状态。申请人本人或管理员可查
   rpc GetApplication(GetApplicationRequest) returns (GetApplicationResponse) {}
 
-  // 激活商家
+  // 激活商家。审核通过后的首次店铺设置，完成后进入 ACTIVATED
   rpc ActivateMerchant(ActivateMerchantRequest) returns (ActivateMerchantResponse) {}
 }
 
 // 商家入驻申请状态
 enum ApplicationStatus {
+  // 未指定（默认值，无效）
   APPLICATION_STATUS_UNSPECIFIED = 0; // 未指定（默认值，无效）
+  // 待审核
   APPLICATION_STATUS_PENDING_REVIEW = 1; // 待审核
+  // 已通过
   APPLICATION_STATUS_APPROVED = 2; // 已通过
+  // 已驳回
   APPLICATION_STATUS_REJECTED = 3; // 已驳回
+  // 已激活（商家完成首次设置并激活店铺）
   APPLICATION_STATUS_ACTIVATED = 4; // 已激活（商家完成首次设置并激活店铺）
 }
 
+// 获取入驻协议请求，无入参
 message GetMerchantAgreementRequest{}
+
+// 获取入驻协议响应
 message GetMerchantAgreementResponse {
+  // 协议版本号，如 "v1.0"
   string version = 1;        // "v1.0"
+  // 生效日期，如 "2026-08-13"
   string effective_date = 2; // "2026-08-13"
+  // 协议文本地址
   string content_url = 3;    // 协议文本地址
 }
 
+// 创建商家账号请求
 message CreateMerchantRequest {
+  // 手机号，即商家登录账号。11 位
   string phone = 1 [(buf.validate.field).string = {
     min_len: 1
     max_len: 11
   }];
+  // 邮箱。可选，未做长度约束
   string mail = 2;
-  //  确认协议的版本号
+  // 确认合作的协议版本号，须与 GetMerchantAgreement 返回的 version 一致。
+  // 服务端据此记录「商家同意的是哪一版」
   string agreement_version = 3 [(buf.validate.field).string = {
     min_len: 1
     max_len: 16
   }];
 }
 
+// 创建商家账号响应，无字段（账号信息通过后续查询获取）
 message CreateMerchantResponse {
 
 }
 
+// 提交入驻申请请求
 message SubmitApplicationRequest {
   // 公司名称
   string company_name = 1 [(buf.validate.field).string = {
@@ -95,7 +120,7 @@ message SubmitApplicationRequest {
   string legal_person_id_front_url = 7 [(buf.validate.field).string.max_len = 2048];
   // 法人身份证反面图片URL
   string legal_person_id_back_url = 8 [(buf.validate.field).string.max_len = 2048];
-  // 申请经营类目ID列表
+  // 申请经营类目ID列表，最多 100 个、不可重复
   repeated int64 category_ids = 9 [(buf.validate.field).repeated = {
     max_items: 100
     unique: true
@@ -107,6 +132,7 @@ message SubmitApplicationRequest {
   string remark = 10 [(buf.validate.field).string.max_len = 2000];
 }
 
+// 提交入驻申请响应
 message SubmitApplicationResponse {
   // 申请ID
   string application_id = 1 [(buf.validate.field).string.uuid = true];
@@ -121,6 +147,7 @@ message SubmitApplicationResponse {
   }];
 }
 
+// 通过入驻申请请求
 message ApproveApplicationRequest {
   // 申请ID
   string application_id = 1 [(buf.validate.field).string.uuid = true];
@@ -128,63 +155,81 @@ message ApproveApplicationRequest {
   string audit_comment = 2 [(buf.validate.field).string.max_len = 2000];
 }
 
+// 通过入驻申请响应
 message ApproveApplicationResponse {}
 
+// 驳回入驻申请请求
 message RejectApplicationRequest {
   // 申请ID
   string application_id = 1 [(buf.validate.field).string.uuid = true];
-  // 驳回原因，必填
+  // 驳回原因，必填。会随领域事件通知申请人
   string reason = 2 [(buf.validate.field).string = {
     min_len: 1
     max_len: 2000
   }];
 }
 
+// 驳回入驻申请响应
 message RejectApplicationResponse {}
 
 // 查询申请状态请求
 message GetApplicationRequest {
+  // 申请ID
   string application_id = 1 [(buf.validate.field).string.uuid = true];
 }
 
+// 查询申请状态响应
 message GetApplicationResponse {
+  // 申请ID
   string application_id = 1 [(buf.validate.field).string.uuid = true];
+  // 当前申请状态
   ApplicationStatus status = 2 [(buf.validate.field).enum = {
     defined_only: true
     not_in: [0]
   }];
+  // 公司名称
   string company_name = 3 [(buf.validate.field).string = {
     min_len: 1
     max_len: 255
   }];
+  // 统一社会信用代码
   string credit_code = 4 [(buf.validate.field).string = {
     min_len: 1
     max_len: 64
   }];
+  // 法人姓名
   string legal_person = 5 [(buf.validate.field).string = {
     min_len: 1
     max_len: 64
   }];
+  // 联系电话
   string contact_phone = 6 [(buf.validate.field).string = {
     min_len: 1
     max_len: 32
   }];
+  // 驳回原因。仅当 status = REJECTED 时有值
   string reject_reason = 7 [(buf.validate.field).string.max_len = 2000]; // 仅当 status = REJECTED 时有值
+  // 申请提交时间
   google.protobuf.Timestamp submitted_at = 8 [(buf.validate.field).required = true];
+  // 审核完成时间。未审时为空
   google.protobuf.Timestamp reviewed_at = 9;
 }
 
 // 激活商家请求
 message ActivateMerchantRequest {
+  // 商家ID
   string merchant_id = 1 [(buf.validate.field).string = {
     min_len: 1
     max_len: 64
   }];
+  // 店铺名称，1–255 字符
   string shop_name = 2 [(buf.validate.field).string = {
     min_len: 1
     max_len: 255
   }];
+  // 店铺 Logo URL
   string shop_logo_url = 3 [(buf.validate.field).string.max_len = 2048];
 }
 
+// 激活商家响应
 message ActivateMerchantResponse {}

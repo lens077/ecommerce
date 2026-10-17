@@ -423,11 +423,15 @@ type User struct {
 	CreatedTime string `protobuf:"bytes,3,opt,name=created_time,json=createdTime,proto3" json:"created_time,omitempty"` // 推荐改为 google.protobuf.Timestamp
 	UpdatedTime string `protobuf:"bytes,4,opt,name=updated_time,json=updatedTime,proto3" json:"updated_time,omitempty"` // 推荐改为 google.protobuf.Timestamp
 	// 核心身份信息
-	Id           string `protobuf:"bytes,5,opt,name=id,proto3" json:"id,omitempty"`
-	ExternalId   string `protobuf:"bytes,6,opt,name=external_id,json=externalId,proto3" json:"external_id,omitempty"`
-	Type         string `protobuf:"bytes,7,opt,name=type,proto3" json:"type,omitempty"`
-	Password     string `protobuf:"bytes,8,opt,name=password,proto3" json:"password,omitempty"`
+	Id         string `protobuf:"bytes,5,opt,name=id,proto3" json:"id,omitempty"`
+	ExternalId string `protobuf:"bytes,6,opt,name=external_id,json=externalId,proto3" json:"external_id,omitempty"`
+	// 用户类型，Casdoor 内部用
+	Type string `protobuf:"bytes,7,opt,name=type,proto3" json:"type,omitempty"`
+	// 敏感：密码散列，任何响应里都不得出现
+	Password string `protobuf:"bytes,8,opt,name=password,proto3" json:"password,omitempty"`
+	// 敏感：密码盐
 	PasswordSalt string `protobuf:"bytes,9,opt,name=password_salt,json=passwordSalt,proto3" json:"password_salt,omitempty"`
+	// 密码散列算法标识
 	PasswordType string `protobuf:"bytes,10,opt,name=password_type,json=passwordType,proto3" json:"password_type,omitempty"`
 	// 个人资料
 	DisplayName     string `protobuf:"bytes,11,opt,name=display_name,json=displayName,proto3" json:"display_name,omitempty"`
@@ -467,13 +471,20 @@ type User struct {
 	SignupApplication string `protobuf:"bytes,43,opt,name=signup_application,json=signupApplication,proto3" json:"signup_application,omitempty"`
 	Hash              string `protobuf:"bytes,44,opt,name=hash,proto3" json:"hash,omitempty"`
 	PreHash           string `protobuf:"bytes,45,opt,name=pre_hash,json=preHash,proto3" json:"pre_hash,omitempty"`
-	AccessKey         string `protobuf:"bytes,46,opt,name=access_key,json=accessKey,proto3" json:"access_key,omitempty"`
-	AccessSecret      string `protobuf:"bytes,47,opt,name=access_secret,json=accessSecret,proto3" json:"access_secret,omitempty"`
+	// 敏感：访问密钥 ID，不得出现在响应里
+	AccessKey string `protobuf:"bytes,46,opt,name=access_key,json=accessKey,proto3" json:"access_key,omitempty"`
+	// 敏感：访问密钥Secret，不得出现在响应里
+	AccessSecret string `protobuf:"bytes,47,opt,name=access_secret,json=accessSecret,proto3" json:"access_secret,omitempty"`
 	// 登录记录
 	CreatedIp      string `protobuf:"bytes,48,opt,name=created_ip,json=createdIp,proto3" json:"created_ip,omitempty"`
 	LastSigninTime string `protobuf:"bytes,49,opt,name=last_signin_time,json=lastSigninTime,proto3" json:"last_signin_time,omitempty"`
 	LastSigninIp   string `protobuf:"bytes,50,opt,name=last_signin_ip,json=lastSigninIp,proto3" json:"last_signin_ip,omitempty"`
-	// OAuth/SSO 链接 (非常多的字段)
+	// OAuth/SSO 链接。
+	//
+	// 下面 51–126 号字段是同一模式的机械重复：每个第三方登录源一个字符串，
+	// 存该源返回的用户标识（通常是 openid / unionid），上限统一 2048。
+	// 本仓只用 Casdoor 自身的登录，这些字段默认均为空，
+	// 因此不逐个写注释 —— 需要哪个就按名字取，别按序号猜。
 	Github          string `protobuf:"bytes,51,opt,name=github,proto3" json:"github,omitempty"`
 	Google          string `protobuf:"bytes,52,opt,name=google,proto3" json:"google,omitempty"`
 	Qq              string `protobuf:"bytes,53,opt,name=qq,proto3" json:"qq,omitempty"`
@@ -551,11 +562,13 @@ type User struct {
 	Web3Onboard     string `protobuf:"bytes,125,opt,name=web3_onboard,json=web3Onboard,proto3" json:"web3_onboard,omitempty"`
 	Custom          string `protobuf:"bytes,126,opt,name=custom,proto3" json:"custom,omitempty"`
 	// MFA 和恢复
-	PreferredMfaType string   `protobuf:"bytes,127,opt,name=preferred_mfa_type,json=preferredMfaType,proto3" json:"preferred_mfa_type,omitempty"`
-	RecoveryCodes    []string `protobuf:"bytes,128,rep,name=recovery_codes,json=recoveryCodes,proto3" json:"recovery_codes,omitempty"`
-	TotpSecret       string   `protobuf:"bytes,129,opt,name=totp_secret,json=totpSecret,proto3" json:"totp_secret,omitempty"`
-	MfaPhoneEnabled  bool     `protobuf:"varint,130,opt,name=mfa_phone_enabled,json=mfaPhoneEnabled,proto3" json:"mfa_phone_enabled,omitempty"`
-	MfaEmailEnabled  bool     `protobuf:"varint,131,opt,name=mfa_email_enabled,json=mfaEmailEnabled,proto3" json:"mfa_email_enabled,omitempty"`
+	PreferredMfaType string `protobuf:"bytes,127,opt,name=preferred_mfa_type,json=preferredMfaType,proto3" json:"preferred_mfa_type,omitempty"`
+	// 敏感：一次性恢复码
+	RecoveryCodes []string `protobuf:"bytes,128,rep,name=recovery_codes,json=recoveryCodes,proto3" json:"recovery_codes,omitempty"`
+	// 敏感：TOTP 密钥
+	TotpSecret      string `protobuf:"bytes,129,opt,name=totp_secret,json=totpSecret,proto3" json:"totp_secret,omitempty"`
+	MfaPhoneEnabled bool   `protobuf:"varint,130,opt,name=mfa_phone_enabled,json=mfaPhoneEnabled,proto3" json:"mfa_phone_enabled,omitempty"`
+	MfaEmailEnabled bool   `protobuf:"varint,131,opt,name=mfa_email_enabled,json=mfaEmailEnabled,proto3" json:"mfa_email_enabled,omitempty"`
 	// 邀请
 	Invitation     string `protobuf:"bytes,132,opt,name=invitation,proto3" json:"invitation,omitempty"`
 	InvitationCode string `protobuf:"bytes,133,opt,name=invitation_code,json=invitationCode,proto3" json:"invitation_code,omitempty"`

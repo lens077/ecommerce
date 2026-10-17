@@ -23,10 +23,14 @@ const (
 	_ = protoimpl.EnforceVersion(protoimpl.MaxVersion - 20)
 )
 
+// 登录请求
 type SignInRequest struct {
-	state         protoimpl.MessageState `protogen:"open.v1"`
-	Code          string                 `protobuf:"bytes,1,opt,name=code,proto3" json:"code,omitempty"`
-	State         string                 `protobuf:"bytes,2,opt,name=state,proto3" json:"state,omitempty"`
+	state protoimpl.MessageState `protogen:"open.v1"`
+	// Casdoor OAuth2 授权码，来自登录回跳 URL 的 code 参数
+	Code string `protobuf:"bytes,1,opt,name=code,proto3" json:"code,omitempty"`
+	// 登录时下发的 state，回调时原样带回。
+	// 上限 512 是因为它可能携带网关下发的会话上下文
+	State         string `protobuf:"bytes,2,opt,name=state,proto3" json:"state,omitempty"`
 	unknownFields protoimpl.UnknownFields
 	sizeCache     protoimpl.SizeCache
 }
@@ -75,10 +79,14 @@ func (x *SignInRequest) GetState() string {
 	return ""
 }
 
+// 登录响应
 type SignInResponse struct {
-	state         protoimpl.MessageState `protogen:"open.v1"`
-	State         string                 `protobuf:"bytes,1,opt,name=state,proto3" json:"state,omitempty"`
-	Data          string                 `protobuf:"bytes,2,opt,name=data,proto3" json:"data,omitempty"`
+	state protoimpl.MessageState `protogen:"open.v1"`
+	// 固定为 "ok"，表示换取成功；失败走 Connect error，不会走到这里
+	State string `protobuf:"bytes,1,opt,name=state,proto3" json:"state,omitempty"`
+	// Casdoor 返回的 access token，上限 16 KB。
+	// 由网关消费并建立会话，不直接暴露给前端
+	Data          string `protobuf:"bytes,2,opt,name=data,proto3" json:"data,omitempty"`
 	unknownFields protoimpl.UnknownFields
 	sizeCache     protoimpl.SizeCache
 }
@@ -127,6 +135,7 @@ func (x *SignInResponse) GetData() string {
 	return ""
 }
 
+// 资料读取请求。用户身份由 x-md-global-name 头决定，故无字段
 type UserProfileRequest struct {
 	state         protoimpl.MessageState `protogen:"open.v1"`
 	unknownFields protoimpl.UnknownFields
@@ -163,9 +172,11 @@ func (*UserProfileRequest) Descriptor() ([]byte, []int) {
 	return file_api_user_v1_user_proto_rawDescGZIP(), []int{2}
 }
 
+// 资料读取响应
 type UserProfileResponse struct {
-	state         protoimpl.MessageState `protogen:"open.v1"`
-	User          *v1.User               `protobuf:"bytes,1,opt,name=user,proto3" json:"user,omitempty"`
+	state protoimpl.MessageState `protogen:"open.v1"`
+	// Casdoor 用户对象，字段语义见 api/casdoor/v1/user.proto
+	User          *v1.User `protobuf:"bytes,1,opt,name=user,proto3" json:"user,omitempty"`
 	unknownFields protoimpl.UnknownFields
 	sizeCache     protoimpl.SizeCache
 }

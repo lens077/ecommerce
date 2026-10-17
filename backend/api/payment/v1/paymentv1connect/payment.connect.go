@@ -49,15 +49,22 @@ const (
 
 // PaymentServiceClient is a client for the payment.v1.PaymentService service.
 type PaymentServiceClient interface {
-	// 创建支付订单
-	CreatePayment(context.Context, *connect.Request[v1.CreatePaymentRequest]) (*connect.Response[v1.CreatePaymentResponse], error)
-	// 查询支付状态
-	GetPaymentStatus(context.Context, *connect.Request[v1.GetPaymentStatusRequest]) (*connect.Response[v1.GetPaymentStatusResponse], error)
-	// 处理支付回调通知
+	// 创建支付订单。
 	//
-	//	rpc HandlePaymentNotify (HandlePaymentNotifyRequest) returns (HandlePaymentNotifyResponse) {
+	// 内部下单流程调用，返回 pay_url 供前端跳转收银台
+	CreatePayment(context.Context, *connect.Request[v1.CreatePaymentRequest]) (*connect.Response[v1.CreatePaymentResponse], error)
+	// 查询支付状态。前端轮询或回跳后确认用
+	GetPaymentStatus(context.Context, *connect.Request[v1.GetPaymentStatusRequest]) (*connect.Response[v1.GetPaymentStatusResponse], error)
+	// 处理支付回调通知（支付宝服务端推送）。
+	//
+	// 请求体是 UrlValues 而不是结构化消息：渠道推来的就是一堆表单键值对，
+	// 先原样收下再验签，避免为每个渠道各建一份消息。
+	// 验签失败同样回 success=false，由渠道按自己的策略重推
 	HandlePaymentNotify(context.Context, *connect.Request[v1.UrlValues]) (*connect.Response[v1.HandlePaymentNotifyResponse], error)
-	// 支付成功后的回调处理
+	// 支付成功后的回调处理（用户收银台跳回）。
+	//
+	// 与 Notify 的差别：这条来自浏览器跳转，只用于把用户带回结果页，
+	// 不能作为入账依据 —— 真正的入账以 Notify 为准
 	HandlePaymentCallback(context.Context, *connect.Request[v1.HandlePaymentCallbackRequest]) (*connect.Response[v1.HandlePaymentCallbackResponse], error)
 }
 
@@ -129,15 +136,22 @@ func (c *paymentServiceClient) HandlePaymentCallback(ctx context.Context, req *c
 
 // PaymentServiceHandler is an implementation of the payment.v1.PaymentService service.
 type PaymentServiceHandler interface {
-	// 创建支付订单
-	CreatePayment(context.Context, *connect.Request[v1.CreatePaymentRequest]) (*connect.Response[v1.CreatePaymentResponse], error)
-	// 查询支付状态
-	GetPaymentStatus(context.Context, *connect.Request[v1.GetPaymentStatusRequest]) (*connect.Response[v1.GetPaymentStatusResponse], error)
-	// 处理支付回调通知
+	// 创建支付订单。
 	//
-	//	rpc HandlePaymentNotify (HandlePaymentNotifyRequest) returns (HandlePaymentNotifyResponse) {
+	// 内部下单流程调用，返回 pay_url 供前端跳转收银台
+	CreatePayment(context.Context, *connect.Request[v1.CreatePaymentRequest]) (*connect.Response[v1.CreatePaymentResponse], error)
+	// 查询支付状态。前端轮询或回跳后确认用
+	GetPaymentStatus(context.Context, *connect.Request[v1.GetPaymentStatusRequest]) (*connect.Response[v1.GetPaymentStatusResponse], error)
+	// 处理支付回调通知（支付宝服务端推送）。
+	//
+	// 请求体是 UrlValues 而不是结构化消息：渠道推来的就是一堆表单键值对，
+	// 先原样收下再验签，避免为每个渠道各建一份消息。
+	// 验签失败同样回 success=false，由渠道按自己的策略重推
 	HandlePaymentNotify(context.Context, *connect.Request[v1.UrlValues]) (*connect.Response[v1.HandlePaymentNotifyResponse], error)
-	// 支付成功后的回调处理
+	// 支付成功后的回调处理（用户收银台跳回）。
+	//
+	// 与 Notify 的差别：这条来自浏览器跳转，只用于把用户带回结果页，
+	// 不能作为入账依据 —— 真正的入账以 Notify 为准
 	HandlePaymentCallback(context.Context, *connect.Request[v1.HandlePaymentCallbackRequest]) (*connect.Response[v1.HandlePaymentCallbackResponse], error)
 }
 

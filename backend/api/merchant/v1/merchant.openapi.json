@@ -24,7 +24,7 @@
           "merchant.v1.MerchantService"
         ],
         "summary": "GetMerchantAgreement",
-        "description": "获取当前生效的入驻协议元信息（无需登录）",
+        "description": "获取当前生效的入驻协议元信息（无需登录）\n\n 申请人提交前先读协议版本，CreateMerchant 时原样回传 agreement_version，\n 从而把「同意的是哪一版」钉住",
         "operationId": "merchant.v1.MerchantService.GetMerchantAgreement",
         "parameters": [
           {
@@ -83,7 +83,7 @@
           "merchant.v1.MerchantService"
         ],
         "summary": "CreateMerchant",
-        "description": "创建商家账号",
+        "description": "创建商家账号。手机号即登录账号",
         "operationId": "merchant.v1.MerchantService.CreateMerchant",
         "parameters": [
           {
@@ -142,7 +142,7 @@
           "merchant.v1.MerchantService"
         ],
         "summary": "SubmitApplication",
-        "description": "商家提交入驻申请",
+        "description": "商家提交入驻申请。提交后进入待审核",
         "operationId": "merchant.v1.MerchantService.SubmitApplication",
         "parameters": [
           {
@@ -319,7 +319,7 @@
           "merchant.v1.MerchantService"
         ],
         "summary": "GetApplication",
-        "description": "查询入驻申请状态",
+        "description": "查询入驻申请状态。申请人本人或管理员可查",
         "operationId": "merchant.v1.MerchantService.GetApplication",
         "parameters": [
           {
@@ -378,7 +378,7 @@
           "merchant.v1.MerchantService"
         ],
         "summary": "ActivateMerchant",
-        "description": "激活商家",
+        "description": "激活商家。审核通过后的首次店铺设置，完成后进入 ACTIVATED",
         "operationId": "merchant.v1.MerchantService.ActivateMerchant",
         "parameters": [
           {
@@ -462,18 +462,21 @@
             "type": "string",
             "title": "merchant_id",
             "maxLength": 64,
-            "minLength": 1
+            "minLength": 1,
+            "description": "商家ID"
           },
           "shopName": {
             "type": "string",
             "title": "shop_name",
             "maxLength": 255,
-            "minLength": 1
+            "minLength": 1,
+            "description": "店铺名称，1–255 字符"
           },
           "shopLogoUrl": {
             "type": "string",
             "title": "shop_logo_url",
-            "maxLength": 2048
+            "maxLength": 2048,
+            "description": "店铺 Logo URL"
           }
         },
         "title": "ActivateMerchantRequest",
@@ -483,7 +486,8 @@
       "merchant.v1.ActivateMerchantResponse": {
         "type": "object",
         "title": "ActivateMerchantResponse",
-        "additionalProperties": false
+        "additionalProperties": false,
+        "description": "激活商家响应"
       },
       "merchant.v1.ApproveApplicationRequest": {
         "type": "object",
@@ -502,12 +506,14 @@
           }
         },
         "title": "ApproveApplicationRequest",
-        "additionalProperties": false
+        "additionalProperties": false,
+        "description": "通过入驻申请请求"
       },
       "merchant.v1.ApproveApplicationResponse": {
         "type": "object",
         "title": "ApproveApplicationResponse",
-        "additionalProperties": false
+        "additionalProperties": false,
+        "description": "通过入驻申请响应"
       },
       "merchant.v1.CreateMerchantRequest": {
         "type": "object",
@@ -516,27 +522,31 @@
             "type": "string",
             "title": "phone",
             "maxLength": 11,
-            "minLength": 1
+            "minLength": 1,
+            "description": "手机号，即商家登录账号。11 位"
           },
           "mail": {
             "type": "string",
-            "title": "mail"
+            "title": "mail",
+            "description": "邮箱。可选，未做长度约束"
           },
           "agreementVersion": {
             "type": "string",
             "title": "agreement_version",
             "maxLength": 16,
             "minLength": 1,
-            "description": "确认协议的版本号"
+            "description": "确认合作的协议版本号，须与 GetMerchantAgreement 返回的 version 一致。\n 服务端据此记录「商家同意的是哪一版」"
           }
         },
         "title": "CreateMerchantRequest",
-        "additionalProperties": false
+        "additionalProperties": false,
+        "description": "创建商家账号请求"
       },
       "merchant.v1.CreateMerchantResponse": {
         "type": "object",
         "title": "CreateMerchantResponse",
-        "additionalProperties": false
+        "additionalProperties": false,
+        "description": "创建商家账号响应，无字段（账号信息通过后续查询获取）"
       },
       "merchant.v1.GetApplicationRequest": {
         "type": "object",
@@ -544,7 +554,8 @@
           "applicationId": {
             "type": "string",
             "title": "application_id",
-            "format": "uuid"
+            "format": "uuid",
+            "description": "申请ID"
           }
         },
         "title": "GetApplicationRequest",
@@ -557,7 +568,8 @@
           "applicationId": {
             "type": "string",
             "title": "application_id",
-            "format": "uuid"
+            "format": "uuid",
+            "description": "申请ID"
           },
           "status": {
             "not": {
@@ -566,44 +578,51 @@
               ]
             },
             "title": "status",
+            "description": "当前申请状态",
             "$ref": "#/components/schemas/merchant.v1.ApplicationStatus"
           },
           "companyName": {
             "type": "string",
             "title": "company_name",
             "maxLength": 255,
-            "minLength": 1
+            "minLength": 1,
+            "description": "公司名称"
           },
           "creditCode": {
             "type": "string",
             "title": "credit_code",
             "maxLength": 64,
-            "minLength": 1
+            "minLength": 1,
+            "description": "统一社会信用代码"
           },
           "legalPerson": {
             "type": "string",
             "title": "legal_person",
             "maxLength": 64,
-            "minLength": 1
+            "minLength": 1,
+            "description": "法人姓名"
           },
           "contactPhone": {
             "type": "string",
             "title": "contact_phone",
             "maxLength": 32,
-            "minLength": 1
+            "minLength": 1,
+            "description": "联系电话"
           },
           "rejectReason": {
             "type": "string",
             "title": "reject_reason",
             "maxLength": 2000,
-            "description": "仅当 status = REJECTED 时有值"
+            "description": "驳回原因。仅当 status = REJECTED 时有值 仅当 status = REJECTED 时有值"
           },
           "submittedAt": {
             "title": "submitted_at",
+            "description": "申请提交时间",
             "$ref": "#/components/schemas/google.protobuf.Timestamp"
           },
           "reviewedAt": {
             "title": "reviewed_at",
+            "description": "审核完成时间。未审时为空",
             "$ref": "#/components/schemas/google.protobuf.Timestamp"
           }
         },
@@ -611,12 +630,14 @@
         "required": [
           "submittedAt"
         ],
-        "additionalProperties": false
+        "additionalProperties": false,
+        "description": "查询申请状态响应"
       },
       "merchant.v1.GetMerchantAgreementRequest": {
         "type": "object",
         "title": "GetMerchantAgreementRequest",
-        "additionalProperties": false
+        "additionalProperties": false,
+        "description": "获取入驻协议请求，无入参"
       },
       "merchant.v1.GetMerchantAgreementResponse": {
         "type": "object",
@@ -624,21 +645,22 @@
           "version": {
             "type": "string",
             "title": "version",
-            "description": "\"v1.0\""
+            "description": "协议版本号，如 \"v1.0\" \"v1.0\""
           },
           "effectiveDate": {
             "type": "string",
             "title": "effective_date",
-            "description": "\"2026-08-13\""
+            "description": "生效日期，如 \"2026-08-13\" \"2026-08-13\""
           },
           "contentUrl": {
             "type": "string",
             "title": "content_url",
-            "description": "协议文本地址"
+            "description": "协议文本地址 协议文本地址"
           }
         },
         "title": "GetMerchantAgreementResponse",
-        "additionalProperties": false
+        "additionalProperties": false,
+        "description": "获取入驻协议响应"
       },
       "merchant.v1.RejectApplicationRequest": {
         "type": "object",
@@ -654,16 +676,18 @@
             "title": "reason",
             "maxLength": 2000,
             "minLength": 1,
-            "description": "驳回原因，必填"
+            "description": "驳回原因，必填。会随领域事件通知申请人"
           }
         },
         "title": "RejectApplicationRequest",
-        "additionalProperties": false
+        "additionalProperties": false,
+        "description": "驳回入驻申请请求"
       },
       "merchant.v1.RejectApplicationResponse": {
         "type": "object",
         "title": "RejectApplicationResponse",
-        "additionalProperties": false
+        "additionalProperties": false,
+        "description": "驳回入驻申请响应"
       },
       "merchant.v1.SubmitApplicationRequest": {
         "type": "object",
@@ -736,7 +760,7 @@
             "title": "category_ids",
             "maxItems": 100,
             "uniqueItems": true,
-            "description": "申请经营类目ID列表"
+            "description": "申请经营类目ID列表，最多 100 个、不可重复"
           },
           "remark": {
             "type": "string",
@@ -746,7 +770,8 @@
           }
         },
         "title": "SubmitApplicationRequest",
-        "additionalProperties": false
+        "additionalProperties": false,
+        "description": "提交入驻申请请求"
       },
       "merchant.v1.SubmitApplicationResponse": {
         "type": "object",
@@ -770,7 +795,8 @@
           }
         },
         "title": "SubmitApplicationResponse",
-        "additionalProperties": false
+        "additionalProperties": false,
+        "description": "提交入驻申请响应"
       },
       "connect-protocol-version": {
         "type": "number",
@@ -849,7 +875,8 @@
   "security": [],
   "tags": [
     {
-      "name": "merchant.v1.MerchantService"
+      "name": "merchant.v1.MerchantService",
+      "description": "商家服务：入驻申请的全生命周期（建号 → 提交 → 审核 → 激活），\n 以及当前生效入驻协议的读取。\n\n 审核类接口（ApproveApplication / RejectApplication）面向管理员，\n 网关侧按 RBAC 收口径；其余接口对申请人本人开放。"
     }
   ]
 }

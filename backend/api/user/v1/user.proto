@@ -7,32 +7,58 @@ import "third_party/validate/validate.proto";
 
 option go_package = "github.com/lens077/ecommerce/backend/api/user/v1;userv1";
 
+// 用户身份服务：用 Casdoor 授权码换登录态，以及读取当前登录用户的资料。
+//
+// 与 casdoor.v1 的分工：casdoor.v1 只是 Casdoor 用户对象的消息定义（被本服务复用），
+// 不带任何 RPC；对外的登录与资料读取都在这里。
 service UserService {
+  // SignIn 拿 Casdoor 回跳带来的授权码换登录态。
+  //
+  // 网关侧属 anonymous_paths（anonymous_paths 里的 /user.v1.UserService/SignIn），
+  // 登录前的会话正是在这一步建立，所以它本身不需要 JWT。
+  // Casdoor 连不上时返回 internal 而非 unauthenticated —— 那是依赖故障，
+  // 不能伪装成「用户授权码无效」。
   rpc SignIn(SignInRequest) returns (SignInResponse) {}
+
+  // UserProfile 读取当前登录用户的资料。
+  //
+  // 身份不来自请求体，而来自网关注入的 x-md-global-name 头
+  // （见 backend/constants/meta.go 的 UserNameMetadataKey），因此请求体是空的。
   rpc UserProfile(UserProfileRequest) returns (UserProfileResponse) {}
 }
 
+// 登录请求
 message SignInRequest {
+  // Casdoor OAuth2 授权码，来自登录回跳 URL 的 code 参数
   string code = 1 [(buf.validate.field).string = {
     min_len: 1
     max_len: 2048
   }];
+  // 登录时下发的 state，回调时原样带回。
+  // 上限 512 是因为它可能携带网关下发的会话上下文
   string state = 2 [(buf.validate.field).string = {
     min_len: 1
     max_len: 512
   }];
 }
 
+// 登录响应
 message SignInResponse {
+  // 固定为 "ok"，表示换取成功；失败走 Connect error，不会走到这里
   string state = 1 [(buf.validate.field).string = {
     min_len: 1
     max_len: 64
   }];
+  // Casdoor 返回的 access token，上限 16 KB。
+  // 由网关消费并建立会话，不直接暴露给前端
   string data = 2 [(buf.validate.field).string.max_len = 16384];
 }
 
+// 资料读取请求。用户身份由 x-md-global-name 头决定，故无字段
 message UserProfileRequest {}
 
+// 资料读取响应
 message UserProfileResponse {
+  // Casdoor 用户对象，字段语义见 api/casdoor/v1/user.proto
   casdoor.v1.User user = 1 [(buf.validate.field).required = true];
 }

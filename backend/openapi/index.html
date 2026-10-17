@@ -47,7 +47,7 @@
   <div id="err"></div>
   <div id="app"></div>
 
-  <script src="https://cdn.jsdelivr.net/npm/@scalar/api-reference"></script>
+  <script src="https://cdn.jsdelivr.net/npm/@scalar/api-reference@1.75.0"></script>
   <script>
     (async () => {
       const fail = (title, lines) => {
@@ -119,6 +119,16 @@
         Scalar.createApiReference(document.getElementById('app'), {
           url: current.url,
           darkMode: true,
+          // 版本钉在 1.75.0（2026-10-18 的 npm latest）。不钉的话 CDN 跟 @latest，
+          // Scalar 某次改版会让页面悄悄变样，届时无从判断是哪一版渲染的。
+          // 升级步骤：改这一行 → 本地看一眼 → 单独一次提交。
+          //
+          // layout=modern + expandAllResponses 是为了把信息密度提到接近 Scalar
+          // 官方 demo（galaxy.scalar.com）的程度：responses 默认展开、三栏布局。
+          // expandAllResponses 官方警告大文档有性能问题 —— 本仓每份 spec 只有个位数
+          // operation，不会有问题；哪天某份 spec 涨到几十个接口，这里要改回 false。
+          layout: 'modern',
+          expandAllResponses: true,
         });
       } catch (e) {
         fail('渲染器初始化失败：' + e.message, [

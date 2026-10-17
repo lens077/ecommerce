@@ -24,7 +24,7 @@
           "inventory.v1.InventoryService"
         ],
         "summary": "Reserve",
-        "description": "预占库存(下单但未支付): 可用 -\u003e 预占",
+        "description": "预占库存(下单但未支付): 可用 -\u003e 预占\n\n 幂等键是 order_no：同一订单重复预占不会重复扣减",
         "operationId": "inventory.v1.InventoryService.Reserve",
         "parameters": [
           {
@@ -83,7 +83,7 @@
           "inventory.v1.InventoryService"
         ],
         "summary": "ReleaseReserve",
-        "description": "释放预占库存(未支付取消/超时取消): 预占 -\u003e 可用",
+        "description": "释放预占库存(未支付取消/超时取消): 预占 -\u003e 可用\n\n 同样以 order_no 做幂等；对未预占过的订单调用是安全的空操作",
         "operationId": "inventory.v1.InventoryService.ReleaseReserve",
         "parameters": [
           {
@@ -163,27 +163,31 @@
             "title": "items",
             "maxItems": 100,
             "minItems": 1,
-            "description": "需要释放预占的商品列表"
+            "description": "需要释放预占的商品列表，1–100 项"
           }
         },
         "title": "ReleaseReserveRequest",
-        "additionalProperties": false
+        "additionalProperties": false,
+        "description": "释放预占库存请求"
       },
       "inventory.v1.ReleaseReserveResponse": {
         "type": "object",
         "properties": {
           "status": {
             "type": "boolean",
-            "title": "status"
+            "title": "status",
+            "description": "是否释放成功"
           },
           "msg": {
             "type": "string",
             "title": "msg",
-            "maxLength": 512
+            "maxLength": 512,
+            "description": "人类可读的补充说明，上限 512 字符"
           }
         },
         "title": "ReleaseReserveResponse",
-        "additionalProperties": false
+        "additionalProperties": false,
+        "description": "释放预占库存响应"
       },
       "inventory.v1.ReserveItem": {
         "type": "object",
@@ -203,18 +207,20 @@
             "type": "integer",
             "title": "quantity",
             "maximum": 999,
-            "format": "int32"
+            "format": "int32",
+            "description": "预占数量，1–999"
           },
           "warehouseId": {
             "type": "string",
             "title": "warehouse_id",
             "maxLength": 6,
             "minLength": 6,
-            "description": "仓库ID, 例如: df0001"
+            "description": "仓库ID, 例如: df0001。定长 6 位"
           }
         },
         "title": "ReserveItem",
-        "additionalProperties": false
+        "additionalProperties": false,
+        "description": "单条预占/释放项"
       },
       "inventory.v1.ReserveRequest": {
         "type": "object",
@@ -240,27 +246,31 @@
             "title": "items",
             "maxItems": 100,
             "minItems": 1,
-            "description": "需要预占的商品列表"
+            "description": "需要预占的商品列表，1–100 项"
           }
         },
         "title": "ReserveRequest",
-        "additionalProperties": false
+        "additionalProperties": false,
+        "description": "预占库存请求"
       },
       "inventory.v1.ReserveResponse": {
         "type": "object",
         "properties": {
           "status": {
             "type": "boolean",
-            "title": "status"
+            "title": "status",
+            "description": "是否预占成功。false 时 msg 说明原因（如库存不足）"
           },
           "msg": {
             "type": "string",
             "title": "msg",
-            "maxLength": 512
+            "maxLength": 512,
+            "description": "人类可读的补充说明，上限 512 字符"
           }
         },
         "title": "ReserveResponse",
-        "additionalProperties": false
+        "additionalProperties": false,
+        "description": "预占库存响应"
       },
       "connect-protocol-version": {
         "type": "number",
@@ -339,7 +349,8 @@
   "security": [],
   "tags": [
     {
-      "name": "inventory.v1.InventoryService"
+      "name": "inventory.v1.InventoryService",
+      "description": "库存服务：下单预占与释放。\n\n 状态机只有两个动作：可用 → 预占（Reserve）、预占 → 可用（ReleaseReserve）。\n 真正的扣减发生在支付成功后，由支付链路回调推进，不在本服务。"
     }
   ]
 }

@@ -24,7 +24,7 @@
           "payment.v1.PaymentService"
         ],
         "summary": "CreatePayment",
-        "description": "创建支付订单",
+        "description": "创建支付订单。\n\n 内部下单流程调用，返回 pay_url 供前端跳转收银台",
         "operationId": "payment.v1.PaymentService.CreatePayment",
         "parameters": [
           {
@@ -83,7 +83,7 @@
           "payment.v1.PaymentService"
         ],
         "summary": "GetPaymentStatus",
-        "description": "查询支付状态",
+        "description": "查询支付状态。前端轮询或回跳后确认用",
         "operationId": "payment.v1.PaymentService.GetPaymentStatus",
         "parameters": [
           {
@@ -142,7 +142,7 @@
           "payment.v1.PaymentService"
         ],
         "summary": "HandlePaymentNotify",
-        "description": "处理支付回调通知\n  rpc HandlePaymentNotify (HandlePaymentNotifyRequest) returns (HandlePaymentNotifyResponse) {",
+        "description": "处理支付回调通知（支付宝服务端推送）。\n\n 请求体是 UrlValues 而不是结构化消息：渠道推来的就是一堆表单键值对，\n 先原样收下再验签，避免为每个渠道各建一份消息。\n 验签失败同样回 success=false，由渠道按自己的策略重推",
         "operationId": "payment.v1.PaymentService.HandlePaymentNotify",
         "parameters": [
           {
@@ -201,7 +201,7 @@
           "payment.v1.PaymentService"
         ],
         "summary": "HandlePaymentCallback",
-        "description": "支付成功后的回调处理",
+        "description": "支付成功后的回调处理（用户收银台跳回）。\n\n 与 Notify 的差别：这条来自浏览器跳转，只用于把用户带回结果页，\n 不能作为入账依据 —— 真正的入账以 Notify 为准",
         "operationId": "payment.v1.PaymentService.HandlePaymentCallback",
         "parameters": [
           {
@@ -280,37 +280,43 @@
               "string"
             ],
             "title": "order_id",
-            "format": "int64"
+            "format": "int64",
+            "description": "业务订单 ID"
           },
           "customerId": {
             "type": "string",
             "title": "customer_id",
-            "format": "uuid"
+            "format": "uuid",
+            "description": "买家 ID（UUID）。术语 2026-08-29 由 consumer_id 改为 customer_id"
           },
           "amount": {
             "type": "string",
             "title": "amount",
             "maxLength": 13,
-            "pattern": "^(?:0\\.(?:0[1-9]|[1-9][0-9])|[1-9][0-9]{0,9}(?:\\.[0-9]{1,2})?)$"
+            "pattern": "^(?:0\\.(?:0[1-9]|[1-9][0-9])|[1-9][0-9]{0,9}(?:\\.[0-9]{1,2})?)$",
+            "description": "金额（元），用字符串传以避免浮点误差。\n 上限 13 位：支持到千亿级、保留两位小数"
           },
           "currency": {
             "type": "string",
             "title": "currency",
             "maxLength": 3,
             "minLength": 3,
-            "pattern": "^[A-Z]{3}$"
+            "pattern": "^[A-Z]{3}$",
+            "description": "三位 ISO 4217 货币代码，如 CNY"
           },
           "subject": {
             "type": "string",
             "title": "subject",
             "maxLength": 255,
-            "minLength": 1
+            "minLength": 1,
+            "description": "订单标题，展示在收银台，1–255 字符"
           },
           "returnUrl": {
             "type": "string",
             "title": "return_url",
             "maxLength": 2048,
-            "format": "uri"
+            "format": "uri",
+            "description": "支付完成后前端回跳地址"
           },
           "freezeId": {
             "exclusiveMinimum": 0,
@@ -319,7 +325,8 @@
               "string"
             ],
             "title": "freeze_id",
-            "format": "int64"
+            "format": "int64",
+            "description": "关联的资金冻结 ID（幂等/对账用）"
           },
           "customerVersion": {
             "type": [
@@ -327,7 +334,8 @@
               "string"
             ],
             "title": "customer_version",
-            "format": "int64"
+            "format": "int64",
+            "description": "买家信息版本号，≥ 0"
           },
           "merchantVersions": {
             "type": "array",
@@ -342,7 +350,8 @@
             },
             "title": "merchant_versions",
             "maxItems": 100,
-            "minItems": 1
+            "minItems": 1,
+            "description": "各商家信息版本号列表，1–100 个，与订单涉及的商家一一对应"
           }
         },
         "title": "CreatePaymentRequest",
@@ -359,13 +368,15 @@
               "string"
             ],
             "title": "payment_id",
-            "format": "int64"
+            "format": "int64",
+            "description": "支付单 ID"
           },
           "payUrl": {
             "type": "string",
             "title": "pay_url",
             "maxLength": 2048,
-            "format": "uri"
+            "format": "uri",
+            "description": "收银台地址，前端跳转至此完成支付"
           }
         },
         "title": "CreatePaymentResponse",
@@ -382,7 +393,8 @@
               "string"
             ],
             "title": "payment_id",
-            "format": "int64"
+            "format": "int64",
+            "description": "支付单 ID"
           }
         },
         "title": "GetPaymentStatusRequest",
@@ -399,7 +411,8 @@
               "string"
             ],
             "title": "payment_id",
-            "format": "int64"
+            "format": "int64",
+            "description": "支付单 ID"
           },
           "orderId": {
             "exclusiveMinimum": 0,
@@ -408,7 +421,8 @@
               "string"
             ],
             "title": "order_id",
-            "format": "int64"
+            "format": "int64",
+            "description": "业务订单 ID"
           },
           "status": {
             "not": {
@@ -417,13 +431,14 @@
               ]
             },
             "title": "status",
+            "description": "当前支付状态",
             "$ref": "#/components/schemas/payment.v1.PaymentStatus"
           },
           "tradeNo": {
             "type": "string",
             "title": "trade_no",
             "maxLength": 255,
-            "description": "支付宝交易号"
+            "description": "支付宝交易号 支付宝交易号"
           }
         },
         "title": "GetPaymentStatusResponse",
@@ -437,85 +452,90 @@
             "type": "string",
             "title": "out_trade_no",
             "maxLength": 64,
-            "minLength": 1
+            "minLength": 1,
+            "description": "商户订单号，1–64 字符"
           },
           "tradeNo": {
             "type": "string",
             "title": "trade_no",
             "maxLength": 64,
-            "minLength": 1
+            "minLength": 1,
+            "description": "支付宝交易号，1–64 字符"
           },
           "totalAmount": {
             "type": "string",
             "title": "total_amount",
             "maxLength": 13,
-            "pattern": "^(?:0\\.(?:0[1-9]|[1-9][0-9])|[1-9][0-9]{0,9}(?:\\.[0-9]{1,2})?)$"
+            "pattern": "^(?:0\\.(?:0[1-9]|[1-9][0-9])|[1-9][0-9]{0,9}(?:\\.[0-9]{1,2})?)$",
+            "description": "订单金额（元），格式同 CreatePaymentRequest.amount"
           },
           "subject": {
             "type": "string",
             "title": "subject",
-            "maxLength": 255
+            "maxLength": 255,
+            "description": "订单标题"
           },
           "tradeStatus": {
             "type": "string",
             "title": "trade_status",
             "maxLength": 32,
-            "minLength": 1
+            "minLength": 1,
+            "description": "交易状态（渠道原值），1–32 字符"
           },
           "charset": {
             "type": "string",
             "title": "charset",
             "maxLength": 16,
-            "description": "字符集"
+            "description": "字符集 字符集"
           },
           "method": {
             "type": "string",
             "title": "method",
             "maxLength": 64,
-            "description": "支付方式"
+            "description": "支付方式 支付方式"
           },
           "sign": {
             "type": "string",
             "title": "sign",
             "maxLength": 4096,
             "minLength": 1,
-            "description": "签名"
+            "description": "签名 签名"
           },
           "signType": {
             "type": "string",
             "title": "sign_type",
             "maxLength": 16,
-            "description": "签名类型 RSA2"
+            "description": "签名类型 RSA2 签名类型 RSA2"
           },
           "appId": {
             "type": "string",
             "title": "app_id",
             "maxLength": 32,
-            "description": "应用ID"
+            "description": "应用ID 应用ID"
           },
           "authAppId": {
             "type": "string",
             "title": "auth_app_id",
             "maxLength": 32,
-            "description": "授权应用ID"
+            "description": "授权应用ID 授权应用ID"
           },
           "version": {
             "type": "string",
             "title": "version",
             "maxLength": 16,
-            "description": "版本号"
+            "description": "版本号 版本号"
           },
           "sellerId": {
             "type": "string",
             "title": "seller_id",
             "maxLength": 32,
-            "description": "卖家ID"
+            "description": "卖家ID 卖家ID"
           },
           "timestamp": {
             "type": "string",
             "title": "timestamp",
             "maxLength": 32,
-            "description": "时间戳"
+            "description": "时间戳 时间戳"
           },
           "params": {
             "type": "object",
@@ -526,12 +546,12 @@
               "title": "value",
               "maxLength": 4096
             },
-            "description": "存储所有回调参数"
+            "description": "存储所有回调参数。最多 64 对，值最长 4096 字符 存储所有回调参数"
           }
         },
         "title": "HandlePaymentCallbackRequest",
         "additionalProperties": false,
-        "description": "支付回调请求"
+        "description": "支付回调请求（用户收银台跳回时带回的参数）"
       },
       "payment.v1.HandlePaymentCallbackRequest.ParamsEntry": {
         "type": "object",
@@ -553,12 +573,14 @@
         "properties": {
           "success": {
             "type": "boolean",
-            "title": "success"
+            "title": "success",
+            "description": "是否受理成功"
           },
           "message": {
             "type": "string",
             "title": "message",
-            "maxLength": 512
+            "maxLength": 512,
+            "description": "补充说明，上限 512 字符"
           }
         },
         "title": "HandlePaymentCallbackResponse",
@@ -570,17 +592,19 @@
         "properties": {
           "success": {
             "type": "boolean",
-            "title": "success"
+            "title": "success",
+            "description": "是否受理成功"
           },
           "message": {
             "type": "string",
             "title": "message",
-            "maxLength": 512
+            "maxLength": 512,
+            "description": "补充说明，上限 512 字符"
           }
         },
         "title": "HandlePaymentNotifyResponse",
         "additionalProperties": false,
-        "description": "支付通知响应"
+        "description": "支付通知响应。success=false 时渠道会按自己的策略重推"
       },
       "payment.v1.KeyValue": {
         "type": "object",
@@ -589,7 +613,8 @@
             "type": "string",
             "title": "key",
             "maxLength": 64,
-            "minLength": 1
+            "minLength": 1,
+            "description": "参数名，1–64 字符"
           },
           "values": {
             "type": "array",
@@ -599,11 +624,13 @@
               "maxItems": 10
             },
             "title": "values",
-            "maxItems": 10
+            "maxItems": 10,
+            "description": "该键的所有取值，最多 10 个、单个最长 4096 字符"
           }
         },
         "title": "KeyValue",
-        "additionalProperties": false
+        "additionalProperties": false,
+        "description": "一个表单键值对。同一键可出现多次（渠道行为），故值是数组"
       },
       "payment.v1.UrlValues": {
         "type": "object",
@@ -618,7 +645,8 @@
           }
         },
         "title": "UrlValues",
-        "additionalProperties": false
+        "additionalProperties": false,
+        "description": "支付通知的原始表单参数集，最多 64 对"
       },
       "connect-protocol-version": {
         "type": "number",
@@ -698,7 +726,7 @@
   "tags": [
     {
       "name": "payment.v1.PaymentService",
-      "description": "定义支付服务接口"
+      "description": "支付服务：创建支付单、查询支付状态，以及对接支付宝的回调与通知。\n\n 两个入口的分工：HandlePaymentNotify 收支付宝服务端主动推送（UrlValues 原样\n 表单参数，服务端自行验签）；HandlePaymentCallback 收前端携带的回跳参数。\n 两者在网关都是 anonymous_paths（支付渠道不可能带我们的会话）。"
     }
   ]
 }

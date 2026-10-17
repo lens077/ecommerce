@@ -48,16 +48,22 @@ const (
 
 // CartServiceClient is a client for the cart.v1.CartService service.
 type CartServiceClient interface {
+	// GetCart 取当前用户的购物车全量内容。
+	//
+	// 属 guest_paths：访客也有购物车，身份由网关注入的 x-md-global-user-id 决定
+	// （访客则为匿名标识）。响应自带 cart_item_quantity，前端徽标不需要额外接口
 	GetCart(context.Context, *connect.Request[v1.GetCartRequest]) (*connect.Response[v1.GetCartResponse], error)
-	// 2026-08 移除 GetCartSummary(原「首页获取购物车数量」)。
-	// 它与 GetCart 是同一条 SQL 的两种投影:两者的 WHERE 逐字相同
-	// (user_id + status=active),而 GetCartSummary 的 COUNT(*) 恰好等于
-	// GetCartResponse.cart_item_quantity(data/cart.go 里就是 len(rows))——
-	// 即 GetCart 的响应本来就带着这个数字。前端徽标已改用 GetCart,
-	// 保留它只会让同一个数有两个来源,迟早对不上。
-	// proto3 无法对 rpc 名做 reserved,故以注释存档,不要再用这个名字。
+	// AddProductToCart 加入或更新一个购物车项。
+	//
+	// 同一 (spu_id, sku_id, merchant_id) 已存在时是加数量，不是新增一行；
+	// 返回的 cart_item_id 即该行的真实 ID，前端下单要用
 	AddProductToCart(context.Context, *connect.Request[v1.AddProductToCartRequest]) (*connect.Response[v1.AddProductToCartResponse], error)
+	// RemoveCartItem 批量移除购物车项。
+	//
+	// 四个数组按下标一一对应（同一项的三个 ID + 它的状态），长度必须相等，
+	// 该约束由 message 级 CEL 校验
 	RemoveCartItem(context.Context, *connect.Request[v1.RemoveCartItemRequest]) (*connect.Response[v1.RemoveCartItemResponse], error)
+	// UpdateCartItemQuantity 改数量。quantity 传 0 等价于删除该项
 	UpdateCartItemQuantity(context.Context, *connect.Request[v1.UpdateCartItemQuantityRequest]) (*connect.Response[v1.UpdateCartItemQuantityResponse], error)
 }
 
@@ -129,16 +135,22 @@ func (c *cartServiceClient) UpdateCartItemQuantity(ctx context.Context, req *con
 
 // CartServiceHandler is an implementation of the cart.v1.CartService service.
 type CartServiceHandler interface {
+	// GetCart 取当前用户的购物车全量内容。
+	//
+	// 属 guest_paths：访客也有购物车，身份由网关注入的 x-md-global-user-id 决定
+	// （访客则为匿名标识）。响应自带 cart_item_quantity，前端徽标不需要额外接口
 	GetCart(context.Context, *connect.Request[v1.GetCartRequest]) (*connect.Response[v1.GetCartResponse], error)
-	// 2026-08 移除 GetCartSummary(原「首页获取购物车数量」)。
-	// 它与 GetCart 是同一条 SQL 的两种投影:两者的 WHERE 逐字相同
-	// (user_id + status=active),而 GetCartSummary 的 COUNT(*) 恰好等于
-	// GetCartResponse.cart_item_quantity(data/cart.go 里就是 len(rows))——
-	// 即 GetCart 的响应本来就带着这个数字。前端徽标已改用 GetCart,
-	// 保留它只会让同一个数有两个来源,迟早对不上。
-	// proto3 无法对 rpc 名做 reserved,故以注释存档,不要再用这个名字。
+	// AddProductToCart 加入或更新一个购物车项。
+	//
+	// 同一 (spu_id, sku_id, merchant_id) 已存在时是加数量，不是新增一行；
+	// 返回的 cart_item_id 即该行的真实 ID，前端下单要用
 	AddProductToCart(context.Context, *connect.Request[v1.AddProductToCartRequest]) (*connect.Response[v1.AddProductToCartResponse], error)
+	// RemoveCartItem 批量移除购物车项。
+	//
+	// 四个数组按下标一一对应（同一项的三个 ID + 它的状态），长度必须相等，
+	// 该约束由 message 级 CEL 校验
 	RemoveCartItem(context.Context, *connect.Request[v1.RemoveCartItemRequest]) (*connect.Response[v1.RemoveCartItemResponse], error)
+	// UpdateCartItemQuantity 改数量。quantity 传 0 等价于删除该项
 	UpdateCartItemQuantity(context.Context, *connect.Request[v1.UpdateCartItemQuantityRequest]) (*connect.Response[v1.UpdateCartItemQuantityResponse], error)
 }
 

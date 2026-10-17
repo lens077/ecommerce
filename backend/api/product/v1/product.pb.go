@@ -24,13 +24,19 @@ const (
 	_ = protoimpl.EnforceVersion(protoimpl.MaxVersion - 20)
 )
 
+// SPU/SKU 状态机
 type SPUStatus int32
 
 const (
+	// 未指定（默认值，无效）
 	SPUStatus_STATUS_UNKNOWN SPUStatus = 0
-	SPUStatus_STATUS_DRAFT   SPUStatus = 1
-	SPUStatus_STATUS_ONLINE  SPUStatus = 2
+	// 草稿，尚未发布
+	SPUStatus_STATUS_DRAFT SPUStatus = 1
+	// 已上架
+	SPUStatus_STATUS_ONLINE SPUStatus = 2
+	// 已下架
 	SPUStatus_STATUS_OFFLINE SPUStatus = 3
+	// 已删除（软删除）
 	SPUStatus_STATUS_DELETED SPUStatus = 4
 )
 
@@ -79,9 +85,11 @@ func (SPUStatus) EnumDescriptor() ([]byte, []int) {
 	return file_api_product_v1_product_proto_rawDescGZIP(), []int{0}
 }
 
+// 商品详情请求
 type GetProductDetailRequest struct {
-	state         protoimpl.MessageState `protogen:"open.v1"`
-	SpuCode       string                 `protobuf:"bytes,1,opt,name=spu_code,json=spuCode,proto3" json:"spu_code,omitempty"`
+	state protoimpl.MessageState `protogen:"open.v1"`
+	// SPU 编码（业务编码，非自增 ID），1–64 字符
+	SpuCode       string `protobuf:"bytes,1,opt,name=spu_code,json=spuCode,proto3" json:"spu_code,omitempty"`
 	unknownFields protoimpl.UnknownFields
 	sizeCache     protoimpl.SizeCache
 }
@@ -123,9 +131,11 @@ func (x *GetProductDetailRequest) GetSpuCode() string {
 	return ""
 }
 
+// 商品详情响应
 type GetProductDetailResponse struct {
-	state         protoimpl.MessageState `protogen:"open.v1"`
-	ProductDetail *ProductSpuDetail      `protobuf:"bytes,1,opt,name=product_detail,json=productDetail,proto3" json:"product_detail,omitempty"`
+	state protoimpl.MessageState `protogen:"open.v1"`
+	// 商品详情
+	ProductDetail *ProductSpuDetail `protobuf:"bytes,1,opt,name=product_detail,json=productDetail,proto3" json:"product_detail,omitempty"`
 	unknownFields protoimpl.UnknownFields
 	sizeCache     protoimpl.SizeCache
 }
@@ -167,14 +177,20 @@ func (x *GetProductDetailResponse) GetProductDetail() *ProductSpuDetail {
 	return nil
 }
 
+// SPU 维度详情 + 其下 SKU 列表
 type ProductSpuDetail struct {
-	state   protoimpl.MessageState `protogen:"open.v1"`
-	SpuId   int64                  `protobuf:"varint,1,opt,name=spu_id,json=spuId,proto3" json:"spu_id,omitempty"`
-	SpuName string                 `protobuf:"bytes,2,opt,name=spu_name,json=spuName,proto3" json:"spu_name,omitempty"`
-	SpuCode string                 `protobuf:"bytes,3,opt,name=spu_code,json=spuCode,proto3" json:"spu_code,omitempty"`
-	// 使用 google.protobuf.Struct 来匹配 map[string]any
-	CommonSpecs   *structpb.Struct `protobuf:"bytes,4,opt,name=common_specs,json=commonSpecs,proto3" json:"common_specs,omitempty"`
-	Skus          []*ProductSku    `protobuf:"bytes,5,rep,name=skus,proto3" json:"skus,omitempty"`
+	state protoimpl.MessageState `protogen:"open.v1"`
+	// SPU 自增 ID
+	SpuId int64 `protobuf:"varint,1,opt,name=spu_id,json=spuId,proto3" json:"spu_id,omitempty"`
+	// SPU 名称，1–255 字符
+	SpuName string `protobuf:"bytes,2,opt,name=spu_name,json=spuName,proto3" json:"spu_name,omitempty"`
+	// SPU 编码，与请求入参一致
+	SpuCode string `protobuf:"bytes,3,opt,name=spu_code,json=spuCode,proto3" json:"spu_code,omitempty"`
+	// SPU 级通用规格（品牌、产地等所有 SKU 共享的键值对）。
+	// 用 google.protobuf.Struct 匹配 map[string]any，结构由业务约定
+	CommonSpecs *structpb.Struct `protobuf:"bytes,4,opt,name=common_specs,json=commonSpecs,proto3" json:"common_specs,omitempty"`
+	// 该 SPU 下的 SKU 列表，1–100 个
+	Skus          []*ProductSku `protobuf:"bytes,5,rep,name=skus,proto3" json:"skus,omitempty"`
 	unknownFields protoimpl.UnknownFields
 	sizeCache     protoimpl.SizeCache
 }
@@ -244,19 +260,32 @@ func (x *ProductSpuDetail) GetSkus() []*ProductSku {
 	return nil
 }
 
+// SKU 维度详情（最小销售单元）
 type ProductSku struct {
-	state         protoimpl.MessageState `protogen:"open.v1"`
-	SkuId         int64                  `protobuf:"varint,1,opt,name=sku_id,json=skuId,proto3" json:"sku_id,omitempty"`
-	SkuCode       string                 `protobuf:"bytes,2,opt,name=sku_code,json=skuCode,proto3" json:"sku_code,omitempty"`
-	MerchantId    string                 `protobuf:"bytes,3,opt,name=merchant_id,json=merchantId,proto3" json:"merchant_id,omitempty"`
-	Price         *money.Money           `protobuf:"bytes,4,opt,name=price,proto3" json:"price,omitempty"`
-	CostPrice     *money.Money           `protobuf:"bytes,5,opt,name=cost_price,json=costPrice,proto3" json:"cost_price,omitempty"`
-	StockLocked   int64                  `protobuf:"varint,6,opt,name=stock_locked,json=stockLocked,proto3" json:"stock_locked,omitempty"`
-	Attributes    *structpb.Struct       `protobuf:"bytes,7,opt,name=attributes,proto3" json:"attributes,omitempty"`
-	SpecTemplate  []string               `protobuf:"bytes,8,rep,name=spec_template,json=specTemplate,proto3" json:"spec_template,omitempty"`
-	SkuName       string                 `protobuf:"bytes,9,opt,name=sku_name,json=skuName,proto3" json:"sku_name,omitempty"`
-	ThumbnailUrl  string                 `protobuf:"bytes,10,opt,name=thumbnail_url,json=thumbnailUrl,proto3" json:"thumbnail_url,omitempty"`
-	Status        SPUStatus              `protobuf:"varint,11,opt,name=status,proto3,enum=product.v1.SPUStatus" json:"status,omitempty"`
+	state protoimpl.MessageState `protogen:"open.v1"`
+	// SKU 自增 ID
+	SkuId int64 `protobuf:"varint,1,opt,name=sku_id,json=skuId,proto3" json:"sku_id,omitempty"`
+	// SKU 编码，1–64 字符
+	SkuCode string `protobuf:"bytes,2,opt,name=sku_code,json=skuCode,proto3" json:"sku_code,omitempty"`
+	// 所属商家 ID（UUID），用于数据隔离与店铺信息关联
+	MerchantId string `protobuf:"bytes,3,opt,name=merchant_id,json=merchantId,proto3" json:"merchant_id,omitempty"`
+	// 售价
+	Price *money.Money `protobuf:"bytes,4,opt,name=price,proto3" json:"price,omitempty"`
+	// 成本价，仅后台可见；对前端开放该字段是已知的暴露面，消费方需自行裁剪
+	CostPrice *money.Money `protobuf:"bytes,5,opt,name=cost_price,json=costPrice,proto3" json:"cost_price,omitempty"`
+	// 已锁库存（下单未支付部分），≥ 0
+	StockLocked int64 `protobuf:"varint,6,opt,name=stock_locked,json=stockLocked,proto3" json:"stock_locked,omitempty"`
+	// SKU 级规格属性（颜色、尺码等）。
+	// 用 google.protobuf.Struct 匹配 map[string]any
+	Attributes *structpb.Struct `protobuf:"bytes,7,opt,name=attributes,proto3" json:"attributes,omitempty"`
+	// 规格模板文案，最多 50 条、条间不可重复，用于详情页规格表渲染
+	SpecTemplate []string `protobuf:"bytes,8,rep,name=spec_template,json=specTemplate,proto3" json:"spec_template,omitempty"`
+	// SKU 名称，1–255 字符
+	SkuName string `protobuf:"bytes,9,opt,name=sku_name,json=skuName,proto3" json:"sku_name,omitempty"`
+	// SKU 缩略图 URL，最长 500 字符
+	ThumbnailUrl string `protobuf:"bytes,10,opt,name=thumbnail_url,json=thumbnailUrl,proto3" json:"thumbnail_url,omitempty"`
+	// SKU 状态
+	Status        SPUStatus `protobuf:"varint,11,opt,name=status,proto3,enum=product.v1.SPUStatus" json:"status,omitempty"`
 	unknownFields protoimpl.UnknownFields
 	sizeCache     protoimpl.SizeCache
 }
