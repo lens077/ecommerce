@@ -182,9 +182,20 @@ api-ts:
 # ⚠️ 必须经 HTTP：直接双击 openapi/index.html（file://）时浏览器会以 CORS 为由
 #    拒绝读取本地 spec，页面白屏且只在控制台报错。
 # 没有 python3 时等价替代：npx serve -l $(APIDOCS_PORT) backend
+#
+# 端口被占时给一句人话，而不是甩一段 socket traceback：
+# 常见原因是上次没退干净（或另一个 worktree 里还挂着一个）。先确认那个实例服务的是
+# 不是同一份文件 —— 是就直接用，不是就先杀掉再跑。
 APIDOCS_PORT ?= 8081
 .PHONY: apidocs
 apidocs:
+	@python3 -c "import socket,sys; sys.exit(1 if socket.socket().connect_ex(('127.0.0.1', $(APIDOCS_PORT)))==0 else 0)" || { \
+		echo "⚠️  端口 $(APIDOCS_PORT) 已被占用，起不来服务。"; \
+		echo "   已有一个实例在跑？若它服务的是同一份文件，直接打开 http://localhost:$(APIDOCS_PORT)/openapi/index.html 即可。"; \
+		echo "   不是同一份就先结束它：lsof -ti :$(APIDOCS_PORT) | xargs kill"; \
+		echo "   或者换个端口：make apidocs APIDOCS_PORT=8082"; \
+		exit 1; \
+	}
 	@echo "API 文档 → http://localhost:$(APIDOCS_PORT)/openapi/index.html"
 	python3 -m http.server $(APIDOCS_PORT) --bind 127.0.0.1
 
