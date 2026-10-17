@@ -1,0 +1,34 @@
+# 从 api/ 下的 proto 生成 OpenAPI 3.1（Swagger 文档）。
+#
+# 为什么选 protoc-gen-connect-openapi 而不是 grpc-gateway 的 protoc-gen-openapiv2：
+# 本项目**没有任何 RPC 写 google.api.http 注解**，而网关（control-tower）的实际路
+# 由就是 Connect 原生形态 /<package>.<Service>/<Method>（对照 .service-matrix.yaml
+# 的 anonymous_paths / guest_paths 那几条）。openapiv2 在缺注解时只能靠
+# generate_unbound_methods 兜底成 Swagger 2.0；connect-openapi 直接按 Connect 协议
+# 产出 3.1，并把 proto 里已有的 protovalidate 约束（min_len / uuid / gt 等）映射进
+# schema —— 签出 result —— requestBody schema 里就能看到同样的边界。
+#
+# 本地插件而不是 remote: buf.build/community/sudorandom-connect-openapi ——
+# 一是 base= 选项 remote 版不支持（少掉 servers 描述），二是本仓已有 remote 限流
+# 的坑（见 buf.gen.jsonschema.yaml 的头注释），连接 require 本地二进制。
+#
+# 安装（版本钉住，版本变动会改变产出，别用 @latest）：
+#   go install github.com/sudorandom/protoc-gen-connect-openapi@v0.19.1
+#
+# 产出位置：out: . → 与 .pb.go 并列落到 api/<svc>/v1/<name>.openapi.json。
+# 与既有惯例一致（protoc-gen-go / protoc-gen-es 都是原地生成、随代码提交）。
+version: v2
+
+plugins:
+  - local: protoc-gen-connect-openapi
+    out: .
+    opt:
+      # 手写补充：servers（网关地址）、info 描述等插件无法从 proto 推断的部分。
+      # 路径相对于执行 buf 的 cwd（= backend/）。注意：remote 插件不支持本选项。
+      - base=openapi/base.yaml
+      # OpenAPI 3.1 用 yaml 也行，但 Swagger UI 对 JSON 的支持最稳，且 curl 可直接消费。
+      - format=json
+      # 只生成 application/json 形态的请求/响应体。前端走的就是 Connect 的 JSON
+      # 编码；保留 proto contentType 会让每个 operation 多出一份等价的第二 body，
+      # 文档里纯属噪声。流式 RPC 仍会标 application/connect+json。
+      - content-types=json

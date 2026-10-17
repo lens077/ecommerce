@@ -1,0 +1,704 @@
+{
+  "openapi": "3.1.0",
+  "info": {
+    "version": "0.1.0",
+    "contact": {
+      "name": "ecommerce"
+    },
+    "title": "payment.v1"
+  },
+  "servers": [
+    {
+      "url": "https://gateway.apikv.com",
+      "description": "公网网关（control-tower）。Gatus 用它做烟雾：`.../product.v1.ProductService/GetProductDetail`"
+    },
+    {
+      "url": "http://localhost:8080",
+      "description": "本地开发直连（VITE_GATEWAY_URL 的默认值）"
+    }
+  ],
+  "paths": {
+    "/payment.v1.PaymentService/CreatePayment": {
+      "post": {
+        "tags": [
+          "payment.v1.PaymentService"
+        ],
+        "summary": "CreatePayment",
+        "description": "创建支付订单",
+        "operationId": "payment.v1.PaymentService.CreatePayment",
+        "parameters": [
+          {
+            "name": "Connect-Protocol-Version",
+            "in": "header",
+            "required": true,
+            "schema": {
+              "$ref": "#/components/schemas/connect-protocol-version"
+            }
+          },
+          {
+            "name": "Connect-Timeout-Ms",
+            "in": "header",
+            "schema": {
+              "$ref": "#/components/schemas/connect-timeout-header"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/payment.v1.CreatePaymentRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "default": {
+            "description": "Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/connect.error"
+                }
+              }
+            }
+          },
+          "200": {
+            "description": "Success",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/payment.v1.CreatePaymentResponse"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/payment.v1.PaymentService/GetPaymentStatus": {
+      "post": {
+        "tags": [
+          "payment.v1.PaymentService"
+        ],
+        "summary": "GetPaymentStatus",
+        "description": "查询支付状态",
+        "operationId": "payment.v1.PaymentService.GetPaymentStatus",
+        "parameters": [
+          {
+            "name": "Connect-Protocol-Version",
+            "in": "header",
+            "required": true,
+            "schema": {
+              "$ref": "#/components/schemas/connect-protocol-version"
+            }
+          },
+          {
+            "name": "Connect-Timeout-Ms",
+            "in": "header",
+            "schema": {
+              "$ref": "#/components/schemas/connect-timeout-header"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/payment.v1.GetPaymentStatusRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "default": {
+            "description": "Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/connect.error"
+                }
+              }
+            }
+          },
+          "200": {
+            "description": "Success",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/payment.v1.GetPaymentStatusResponse"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/payment.v1.PaymentService/HandlePaymentNotify": {
+      "post": {
+        "tags": [
+          "payment.v1.PaymentService"
+        ],
+        "summary": "HandlePaymentNotify",
+        "description": "处理支付回调通知\n  rpc HandlePaymentNotify (HandlePaymentNotifyRequest) returns (HandlePaymentNotifyResponse) {",
+        "operationId": "payment.v1.PaymentService.HandlePaymentNotify",
+        "parameters": [
+          {
+            "name": "Connect-Protocol-Version",
+            "in": "header",
+            "required": true,
+            "schema": {
+              "$ref": "#/components/schemas/connect-protocol-version"
+            }
+          },
+          {
+            "name": "Connect-Timeout-Ms",
+            "in": "header",
+            "schema": {
+              "$ref": "#/components/schemas/connect-timeout-header"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/payment.v1.UrlValues"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "default": {
+            "description": "Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/connect.error"
+                }
+              }
+            }
+          },
+          "200": {
+            "description": "Success",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/payment.v1.HandlePaymentNotifyResponse"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/payment.v1.PaymentService/HandlePaymentCallback": {
+      "post": {
+        "tags": [
+          "payment.v1.PaymentService"
+        ],
+        "summary": "HandlePaymentCallback",
+        "description": "支付成功后的回调处理",
+        "operationId": "payment.v1.PaymentService.HandlePaymentCallback",
+        "parameters": [
+          {
+            "name": "Connect-Protocol-Version",
+            "in": "header",
+            "required": true,
+            "schema": {
+              "$ref": "#/components/schemas/connect-protocol-version"
+            }
+          },
+          {
+            "name": "Connect-Timeout-Ms",
+            "in": "header",
+            "schema": {
+              "$ref": "#/components/schemas/connect-timeout-header"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/payment.v1.HandlePaymentCallbackRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "default": {
+            "description": "Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/connect.error"
+                }
+              }
+            }
+          },
+          "200": {
+            "description": "Success",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/payment.v1.HandlePaymentCallbackResponse"
+                }
+              }
+            }
+          }
+        }
+      }
+    }
+  },
+  "components": {
+    "schemas": {
+      "payment.v1.PaymentStatus": {
+        "type": "string",
+        "title": "PaymentStatus",
+        "enum": [
+          "PAYMENT_STATUS_UNKNOWN",
+          "PAYMENT_STATUS_PENDING",
+          "PAYMENT_STATUS_PROCESSING",
+          "PAYMENT_STATUS_SUCCESS",
+          "PAYMENT_STATUS_FAILED",
+          "PAYMENT_STATUS_CLOSED"
+        ],
+        "description": "支付状态"
+      },
+      "payment.v1.CreatePaymentRequest": {
+        "type": "object",
+        "properties": {
+          "orderId": {
+            "exclusiveMinimum": 0,
+            "type": [
+              "integer",
+              "string"
+            ],
+            "title": "order_id",
+            "format": "int64"
+          },
+          "customerId": {
+            "type": "string",
+            "title": "customer_id",
+            "format": "uuid"
+          },
+          "amount": {
+            "type": "string",
+            "title": "amount",
+            "maxLength": 13,
+            "pattern": "^(?:0\\.(?:0[1-9]|[1-9][0-9])|[1-9][0-9]{0,9}(?:\\.[0-9]{1,2})?)$"
+          },
+          "currency": {
+            "type": "string",
+            "title": "currency",
+            "maxLength": 3,
+            "minLength": 3,
+            "pattern": "^[A-Z]{3}$"
+          },
+          "subject": {
+            "type": "string",
+            "title": "subject",
+            "maxLength": 255,
+            "minLength": 1
+          },
+          "returnUrl": {
+            "type": "string",
+            "title": "return_url",
+            "maxLength": 2048,
+            "format": "uri"
+          },
+          "freezeId": {
+            "exclusiveMinimum": 0,
+            "type": [
+              "integer",
+              "string"
+            ],
+            "title": "freeze_id",
+            "format": "int64"
+          },
+          "customerVersion": {
+            "type": [
+              "integer",
+              "string"
+            ],
+            "title": "customer_version",
+            "format": "int64"
+          },
+          "merchantVersions": {
+            "type": "array",
+            "items": {
+              "type": [
+                "integer",
+                "string"
+              ],
+              "format": "int64",
+              "maxItems": 100,
+              "minItems": 1
+            },
+            "title": "merchant_versions",
+            "maxItems": 100,
+            "minItems": 1
+          }
+        },
+        "title": "CreatePaymentRequest",
+        "additionalProperties": false,
+        "description": "创建支付订单请求"
+      },
+      "payment.v1.CreatePaymentResponse": {
+        "type": "object",
+        "properties": {
+          "paymentId": {
+            "exclusiveMinimum": 0,
+            "type": [
+              "integer",
+              "string"
+            ],
+            "title": "payment_id",
+            "format": "int64"
+          },
+          "payUrl": {
+            "type": "string",
+            "title": "pay_url",
+            "maxLength": 2048,
+            "format": "uri"
+          }
+        },
+        "title": "CreatePaymentResponse",
+        "additionalProperties": false,
+        "description": "创建支付订单响应"
+      },
+      "payment.v1.GetPaymentStatusRequest": {
+        "type": "object",
+        "properties": {
+          "paymentId": {
+            "exclusiveMinimum": 0,
+            "type": [
+              "integer",
+              "string"
+            ],
+            "title": "payment_id",
+            "format": "int64"
+          }
+        },
+        "title": "GetPaymentStatusRequest",
+        "additionalProperties": false,
+        "description": "查询支付状态请求"
+      },
+      "payment.v1.GetPaymentStatusResponse": {
+        "type": "object",
+        "properties": {
+          "paymentId": {
+            "exclusiveMinimum": 0,
+            "type": [
+              "integer",
+              "string"
+            ],
+            "title": "payment_id",
+            "format": "int64"
+          },
+          "orderId": {
+            "exclusiveMinimum": 0,
+            "type": [
+              "integer",
+              "string"
+            ],
+            "title": "order_id",
+            "format": "int64"
+          },
+          "status": {
+            "not": {
+              "enum": [
+                0
+              ]
+            },
+            "title": "status",
+            "$ref": "#/components/schemas/payment.v1.PaymentStatus"
+          },
+          "tradeNo": {
+            "type": "string",
+            "title": "trade_no",
+            "maxLength": 255,
+            "description": "支付宝交易号"
+          }
+        },
+        "title": "GetPaymentStatusResponse",
+        "additionalProperties": false,
+        "description": "查询支付状态响应"
+      },
+      "payment.v1.HandlePaymentCallbackRequest": {
+        "type": "object",
+        "properties": {
+          "outTradeNo": {
+            "type": "string",
+            "title": "out_trade_no",
+            "maxLength": 64,
+            "minLength": 1
+          },
+          "tradeNo": {
+            "type": "string",
+            "title": "trade_no",
+            "maxLength": 64,
+            "minLength": 1
+          },
+          "totalAmount": {
+            "type": "string",
+            "title": "total_amount",
+            "maxLength": 13,
+            "pattern": "^(?:0\\.(?:0[1-9]|[1-9][0-9])|[1-9][0-9]{0,9}(?:\\.[0-9]{1,2})?)$"
+          },
+          "subject": {
+            "type": "string",
+            "title": "subject",
+            "maxLength": 255
+          },
+          "tradeStatus": {
+            "type": "string",
+            "title": "trade_status",
+            "maxLength": 32,
+            "minLength": 1
+          },
+          "charset": {
+            "type": "string",
+            "title": "charset",
+            "maxLength": 16,
+            "description": "字符集"
+          },
+          "method": {
+            "type": "string",
+            "title": "method",
+            "maxLength": 64,
+            "description": "支付方式"
+          },
+          "sign": {
+            "type": "string",
+            "title": "sign",
+            "maxLength": 4096,
+            "minLength": 1,
+            "description": "签名"
+          },
+          "signType": {
+            "type": "string",
+            "title": "sign_type",
+            "maxLength": 16,
+            "description": "签名类型 RSA2"
+          },
+          "appId": {
+            "type": "string",
+            "title": "app_id",
+            "maxLength": 32,
+            "description": "应用ID"
+          },
+          "authAppId": {
+            "type": "string",
+            "title": "auth_app_id",
+            "maxLength": 32,
+            "description": "授权应用ID"
+          },
+          "version": {
+            "type": "string",
+            "title": "version",
+            "maxLength": 16,
+            "description": "版本号"
+          },
+          "sellerId": {
+            "type": "string",
+            "title": "seller_id",
+            "maxLength": 32,
+            "description": "卖家ID"
+          },
+          "timestamp": {
+            "type": "string",
+            "title": "timestamp",
+            "maxLength": 32,
+            "description": "时间戳"
+          },
+          "params": {
+            "type": "object",
+            "title": "params",
+            "maxProperties": 64,
+            "additionalProperties": {
+              "type": "string",
+              "title": "value",
+              "maxLength": 4096
+            },
+            "description": "存储所有回调参数"
+          }
+        },
+        "title": "HandlePaymentCallbackRequest",
+        "additionalProperties": false,
+        "description": "支付回调请求"
+      },
+      "payment.v1.HandlePaymentCallbackRequest.ParamsEntry": {
+        "type": "object",
+        "properties": {
+          "key": {
+            "type": "string",
+            "title": "key"
+          },
+          "value": {
+            "type": "string",
+            "title": "value"
+          }
+        },
+        "title": "ParamsEntry",
+        "additionalProperties": false
+      },
+      "payment.v1.HandlePaymentCallbackResponse": {
+        "type": "object",
+        "properties": {
+          "success": {
+            "type": "boolean",
+            "title": "success"
+          },
+          "message": {
+            "type": "string",
+            "title": "message",
+            "maxLength": 512
+          }
+        },
+        "title": "HandlePaymentCallbackResponse",
+        "additionalProperties": false,
+        "description": "支付回调响应"
+      },
+      "payment.v1.HandlePaymentNotifyResponse": {
+        "type": "object",
+        "properties": {
+          "success": {
+            "type": "boolean",
+            "title": "success"
+          },
+          "message": {
+            "type": "string",
+            "title": "message",
+            "maxLength": 512
+          }
+        },
+        "title": "HandlePaymentNotifyResponse",
+        "additionalProperties": false,
+        "description": "支付通知响应"
+      },
+      "payment.v1.KeyValue": {
+        "type": "object",
+        "properties": {
+          "key": {
+            "type": "string",
+            "title": "key",
+            "maxLength": 64,
+            "minLength": 1
+          },
+          "values": {
+            "type": "array",
+            "items": {
+              "type": "string",
+              "maxLength": 4096,
+              "maxItems": 10
+            },
+            "title": "values",
+            "maxItems": 10
+          }
+        },
+        "title": "KeyValue",
+        "additionalProperties": false
+      },
+      "payment.v1.UrlValues": {
+        "type": "object",
+        "properties": {
+          "pairs": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/payment.v1.KeyValue"
+            },
+            "title": "pairs",
+            "maxItems": 64
+          }
+        },
+        "title": "UrlValues",
+        "additionalProperties": false
+      },
+      "connect-protocol-version": {
+        "type": "number",
+        "title": "Connect-Protocol-Version",
+        "enum": [
+          1
+        ],
+        "description": "Define the version of the Connect protocol",
+        "const": 1
+      },
+      "connect-timeout-header": {
+        "type": "number",
+        "title": "Connect-Timeout-Ms",
+        "description": "Define the timeout, in ms"
+      },
+      "connect.error": {
+        "type": "object",
+        "properties": {
+          "code": {
+            "type": "string",
+            "examples": [
+              "not_found"
+            ],
+            "enum": [
+              "canceled",
+              "unknown",
+              "invalid_argument",
+              "deadline_exceeded",
+              "not_found",
+              "already_exists",
+              "permission_denied",
+              "resource_exhausted",
+              "failed_precondition",
+              "aborted",
+              "out_of_range",
+              "unimplemented",
+              "internal",
+              "unavailable",
+              "data_loss",
+              "unauthenticated"
+            ],
+            "description": "The status code, which should be an enum value of [google.rpc.Code][google.rpc.Code]."
+          },
+          "message": {
+            "type": "string",
+            "description": "A developer-facing error message, which should be in English. Any user-facing error message should be localized and sent in the [google.rpc.Status.details][google.rpc.Status.details] field, or localized by the client."
+          },
+          "detail": {
+            "$ref": "#/components/schemas/google.protobuf.Any"
+          }
+        },
+        "title": "Connect Error",
+        "additionalProperties": true,
+        "description": "Error type returned by Connect: https://connectrpc.com/docs/go/errors/#http-representation"
+      },
+      "google.protobuf.Any": {
+        "type": "object",
+        "properties": {
+          "type": {
+            "type": "string"
+          },
+          "value": {
+            "type": "string",
+            "format": "binary"
+          },
+          "debug": {
+            "type": "object",
+            "additionalProperties": true
+          }
+        },
+        "additionalProperties": true,
+        "description": "Contains an arbitrary serialized message along with a @type that describes the type of the serialized message."
+      }
+    }
+  },
+  "security": [],
+  "tags": [
+    {
+      "name": "payment.v1.PaymentService",
+      "description": "定义支付服务接口"
+    }
+  ]
+}

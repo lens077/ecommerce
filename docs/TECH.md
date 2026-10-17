@@ -39,7 +39,7 @@ affects:
 | 微服务框架 | ConnectRPC（Buf） | 同步 RPC 通信；支持 gRPC、gRPC-Web、Connect 协议 |
 | 依赖注入 | Fx（Uber） | 服务内部依赖管理、生命周期管理 |
 | 数据库访问 | pgx + sqlc + goose | pgx 作为 PostgreSQL 驱动；sqlc 生成类型安全的查询代码；goose 做数据库迁移 |
-| API 定义与代码生成 | Protobuf 3 + Buf CLI + Protovalidate | 定义 API 契约；Buf 管理 proto 文件与兼容性；Protovalidate 做请求参数校验 |
+| API 定义与代码生成 | Protobuf 3 + Buf CLI + Protovalidate + protoc-gen-connect-openapi | 定义 API 契约；Buf 管理 proto 文件与兼容性；Protovalidate 做请求参数校验。接口文档：由 `protoc-gen-connect-openapi`（钉 `v0.19.1`，升级会改变 protovalidate 到 schema 的映射）按 Connect 协议生成 **OpenAPI 3.1**，经 `make api` / `make api-openapi` 随 proto 改动一并刷新，产物落在 `backend/api/<svc>/v1/*.openapi.json` 并随代码提交。**渲染器用 Scalar 而非 Swagger UI**：后者只接受 `swagger 2.0` 与 `openapi 3.0.n`，喂 3.1 时页面只剩一句 `No API definition provided`（2026-10-18 实测，理由写在 `backend/openapi/index.html` 头注释）。选 connect-openapi 而非 grpc-gateway 的原因：本仓 proto 未写 `google.api.http` 注解，网关实际路由就是 Connect 原生路径 `/<package>.<Service>/<Method>`，而该插件额外把 protovalidate 约束映射进 request schema |
 | 前端框架 | React + TanStack Router + TanStack Query | SPA 开发；路由与状态管理 |
 | 前端 API 通信 | Connect Query ES + Connect Web + Protobuf-ES | 类型安全的 RPC 客户端；与网关交互 |
 | 前端构建 | vite-plus（`vp`） | 开发与构建工具（一体化 dev/build/test/lint/fmt/git 钩子） |

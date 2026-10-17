@@ -1,0 +1,294 @@
+{
+  "openapi": "3.1.0",
+  "info": {
+    "version": "0.1.0",
+    "contact": {
+      "name": "ecommerce"
+    },
+    "title": "order.v1"
+  },
+  "servers": [
+    {
+      "url": "https://gateway.apikv.com",
+      "description": "公网网关（control-tower）。Gatus 用它做烟雾：`.../product.v1.ProductService/GetProductDetail`"
+    },
+    {
+      "url": "http://localhost:8080",
+      "description": "本地开发直连（VITE_GATEWAY_URL 的默认值）"
+    }
+  ],
+  "paths": {
+    "/order.v1.orderService/CreateOrder": {
+      "post": {
+        "tags": [
+          "order.v1.orderService"
+        ],
+        "summary": "CreateOrder",
+        "operationId": "order.v1.orderService.CreateOrder",
+        "parameters": [
+          {
+            "name": "Connect-Protocol-Version",
+            "in": "header",
+            "required": true,
+            "schema": {
+              "$ref": "#/components/schemas/connect-protocol-version"
+            }
+          },
+          {
+            "name": "Connect-Timeout-Ms",
+            "in": "header",
+            "schema": {
+              "$ref": "#/components/schemas/connect-timeout-header"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/order.v1.CreateOrderRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "default": {
+            "description": "Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/connect.error"
+                }
+              }
+            }
+          },
+          "200": {
+            "description": "Success",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/order.v1.CreateOrderResponse"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/order.v1.orderService/CompleteOrder": {
+      "post": {
+        "tags": [
+          "order.v1.orderService"
+        ],
+        "summary": "CompleteOrder",
+        "operationId": "order.v1.orderService.CompleteOrder",
+        "parameters": [
+          {
+            "name": "Connect-Protocol-Version",
+            "in": "header",
+            "required": true,
+            "schema": {
+              "$ref": "#/components/schemas/connect-protocol-version"
+            }
+          },
+          {
+            "name": "Connect-Timeout-Ms",
+            "in": "header",
+            "schema": {
+              "$ref": "#/components/schemas/connect-timeout-header"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/order.v1.CompleteOrderRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "default": {
+            "description": "Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/connect.error"
+                }
+              }
+            }
+          },
+          "200": {
+            "description": "Success",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/order.v1.CompleteOrderResponse"
+                }
+              }
+            }
+          }
+        }
+      }
+    }
+  },
+  "components": {
+    "schemas": {
+      "order.v1.CompleteOrderRequest": {
+        "type": "object",
+        "properties": {
+          "orderNo": {
+            "type": "string",
+            "title": "orderNo",
+            "maxLength": 64,
+            "minLength": 1
+          }
+        },
+        "title": "CompleteOrderRequest",
+        "additionalProperties": false
+      },
+      "order.v1.CompleteOrderResponse": {
+        "type": "object",
+        "properties": {
+          "order": {
+            "title": "order",
+            "$ref": "#/components/schemas/order.v1.Order"
+          }
+        },
+        "title": "CompleteOrderResponse",
+        "required": [
+          "order"
+        ],
+        "additionalProperties": false
+      },
+      "order.v1.CreateOrderRequest": {
+        "type": "object",
+        "properties": {
+          "CartItemIds": {
+            "type": "array",
+            "items": {
+              "exclusiveMinimum": 0,
+              "type": [
+                "integer",
+                "string"
+              ],
+              "format": "int64",
+              "maxItems": 100,
+              "minItems": 1,
+              "uniqueItems": true
+            },
+            "title": "CartItemIds",
+            "maxItems": 100,
+            "minItems": 1,
+            "uniqueItems": true,
+            "description": "用户在购物车中已选商品的唯一标识，订单服务只需知道用户勾选了哪些购物车项"
+          },
+          "addressId": {
+            "type": "string",
+            "title": "addressId",
+            "format": "uuid",
+            "description": "下单时获取快照。用户可能在提交订单后修改收货地址，但历史订单必须保留当时的地址信息"
+          },
+          "remark": {
+            "type": "string",
+            "title": "remark",
+            "maxLength": 2000
+          }
+        },
+        "title": "CreateOrderRequest",
+        "additionalProperties": false
+      },
+      "order.v1.CreateOrderResponse": {
+        "type": "object",
+        "title": "CreateOrderResponse",
+        "additionalProperties": false
+      },
+      "order.v1.Order": {
+        "type": "object",
+        "title": "Order",
+        "additionalProperties": false
+      },
+      "connect-protocol-version": {
+        "type": "number",
+        "title": "Connect-Protocol-Version",
+        "enum": [
+          1
+        ],
+        "description": "Define the version of the Connect protocol",
+        "const": 1
+      },
+      "connect-timeout-header": {
+        "type": "number",
+        "title": "Connect-Timeout-Ms",
+        "description": "Define the timeout, in ms"
+      },
+      "connect.error": {
+        "type": "object",
+        "properties": {
+          "code": {
+            "type": "string",
+            "examples": [
+              "not_found"
+            ],
+            "enum": [
+              "canceled",
+              "unknown",
+              "invalid_argument",
+              "deadline_exceeded",
+              "not_found",
+              "already_exists",
+              "permission_denied",
+              "resource_exhausted",
+              "failed_precondition",
+              "aborted",
+              "out_of_range",
+              "unimplemented",
+              "internal",
+              "unavailable",
+              "data_loss",
+              "unauthenticated"
+            ],
+            "description": "The status code, which should be an enum value of [google.rpc.Code][google.rpc.Code]."
+          },
+          "message": {
+            "type": "string",
+            "description": "A developer-facing error message, which should be in English. Any user-facing error message should be localized and sent in the [google.rpc.Status.details][google.rpc.Status.details] field, or localized by the client."
+          },
+          "detail": {
+            "$ref": "#/components/schemas/google.protobuf.Any"
+          }
+        },
+        "title": "Connect Error",
+        "additionalProperties": true,
+        "description": "Error type returned by Connect: https://connectrpc.com/docs/go/errors/#http-representation"
+      },
+      "google.protobuf.Any": {
+        "type": "object",
+        "properties": {
+          "type": {
+            "type": "string"
+          },
+          "value": {
+            "type": "string",
+            "format": "binary"
+          },
+          "debug": {
+            "type": "object",
+            "additionalProperties": true
+          }
+        },
+        "additionalProperties": true,
+        "description": "Contains an arbitrary serialized message along with a @type that describes the type of the serialized message."
+      }
+    }
+  },
+  "security": [],
+  "tags": [
+    {
+      "name": "order.v1.orderService"
+    }
+  ]
+}

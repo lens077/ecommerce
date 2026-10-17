@@ -1,0 +1,505 @@
+{
+  "openapi": "3.1.0",
+  "info": {
+    "version": "0.1.0",
+    "contact": {
+      "name": "ecommerce"
+    },
+    "title": "behavior.v1"
+  },
+  "servers": [
+    {
+      "url": "https://gateway.apikv.com",
+      "description": "公网网关（control-tower）。Gatus 用它做烟雾：`.../product.v1.ProductService/GetProductDetail`"
+    },
+    {
+      "url": "http://localhost:8080",
+      "description": "本地开发直连（VITE_GATEWAY_URL 的默认值）"
+    }
+  ],
+  "paths": {
+    "/behavior.v1.BehaviorService/Track": {
+      "post": {
+        "tags": [
+          "behavior.v1.BehaviorService"
+        ],
+        "summary": "Track",
+        "description": "Track 批量上报行为事件。\n 前端离开页面时用 navigator.sendBeacon 以 Connect JSON 直接打这个方法,\n 所以请求体必须是自包含的(不依赖自定义请求头)。",
+        "operationId": "behavior.v1.BehaviorService.Track",
+        "parameters": [
+          {
+            "name": "Connect-Protocol-Version",
+            "in": "header",
+            "required": true,
+            "schema": {
+              "$ref": "#/components/schemas/connect-protocol-version"
+            }
+          },
+          {
+            "name": "Connect-Timeout-Ms",
+            "in": "header",
+            "schema": {
+              "$ref": "#/components/schemas/connect-timeout-header"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/behavior.v1.TrackRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "default": {
+            "description": "Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/connect.error"
+                }
+              }
+            }
+          },
+          "200": {
+            "description": "Success",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/behavior.v1.TrackResponse"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/behavior.v1.BehaviorService/Recommend": {
+      "post": {
+        "tags": [
+          "behavior.v1.BehaviorService"
+        ],
+        "summary": "Recommend",
+        "description": "Recommend 拉推荐列表。登录用户走个性化召回,匿名/冷启动用会话内事件兜底。",
+        "operationId": "behavior.v1.BehaviorService.Recommend",
+        "parameters": [
+          {
+            "name": "Connect-Protocol-Version",
+            "in": "header",
+            "required": true,
+            "schema": {
+              "$ref": "#/components/schemas/connect-protocol-version"
+            }
+          },
+          {
+            "name": "Connect-Timeout-Ms",
+            "in": "header",
+            "schema": {
+              "$ref": "#/components/schemas/connect-timeout-header"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/behavior.v1.RecommendRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "default": {
+            "description": "Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/connect.error"
+                }
+              }
+            }
+          },
+          "200": {
+            "description": "Success",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/behavior.v1.RecommendResponse"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/behavior.v1.BehaviorService/SimilarItems": {
+      "post": {
+        "tags": [
+          "behavior.v1.BehaviorService"
+        ],
+        "summary": "SimilarItems",
+        "description": "SimilarItems 商品详情页的\"相似商品\",不依赖用户画像,冷启动可用。",
+        "operationId": "behavior.v1.BehaviorService.SimilarItems",
+        "parameters": [
+          {
+            "name": "Connect-Protocol-Version",
+            "in": "header",
+            "required": true,
+            "schema": {
+              "$ref": "#/components/schemas/connect-protocol-version"
+            }
+          },
+          {
+            "name": "Connect-Timeout-Ms",
+            "in": "header",
+            "schema": {
+              "$ref": "#/components/schemas/connect-timeout-header"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/behavior.v1.SimilarItemsRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "default": {
+            "description": "Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/connect.error"
+                }
+              }
+            }
+          },
+          "200": {
+            "description": "Success",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/behavior.v1.SimilarItemsResponse"
+                }
+              }
+            }
+          }
+        }
+      }
+    }
+  },
+  "components": {
+    "schemas": {
+      "behavior.v1.EventType": {
+        "type": "string",
+        "title": "EventType",
+        "enum": [
+          "EVENT_TYPE_UNSPECIFIED",
+          "EVENT_TYPE_IMPRESSION",
+          "EVENT_TYPE_READ",
+          "EVENT_TYPE_DWELL",
+          "EVENT_TYPE_CART",
+          "EVENT_TYPE_FAVORITE",
+          "EVENT_TYPE_PURCHASE",
+          "EVENT_TYPE_DISLIKE"
+        ],
+        "description": "EventType 与 gorse config.toml 的 feedback 类型一一对应。\n 改这里的同时必须同步改 [recommend.data_source] 的\n positive_feedback_types / read_feedback_types,否则信号会被 gorse 静默忽略。"
+      },
+      "behavior.v1.Event": {
+        "type": "object",
+        "properties": {
+          "type": {
+            "not": {
+              "enum": [
+                0
+              ]
+            },
+            "title": "type",
+            "$ref": "#/components/schemas/behavior.v1.EventType"
+          },
+          "itemId": {
+            "type": "string",
+            "title": "item_id",
+            "maxLength": 64,
+            "minLength": 1,
+            "description": "商品标识,统一用 spu_code,与 gorse ItemId 保持一致"
+          },
+          "value": {
+            "type": "number",
+            "title": "value",
+            "maximum": 86400,
+            "format": "double",
+            "description": "事件强度: dwell 为停留秒数,其余事件恒为 1"
+          },
+          "tsMs": {
+            "type": [
+              "integer",
+              "string"
+            ],
+            "title": "ts_ms",
+            "format": "int64",
+            "description": "客户端事件时间(毫秒)。服务端会与自己的时钟比对,偏移过大的按接收时间纠正。"
+          },
+          "source": {
+            "type": "string",
+            "title": "source",
+            "maxLength": 128,
+            "description": "事件来源,便于后续做渠道归因: search:关键词 / category:3 / home_feed / neighbors"
+          }
+        },
+        "title": "Event",
+        "additionalProperties": false
+      },
+      "behavior.v1.RecommendItem": {
+        "type": "object",
+        "properties": {
+          "itemId": {
+            "type": "string",
+            "title": "item_id",
+            "maxLength": 64,
+            "minLength": 1
+          },
+          "score": {
+            "type": "number",
+            "title": "score",
+            "format": "double"
+          }
+        },
+        "title": "RecommendItem",
+        "additionalProperties": false
+      },
+      "behavior.v1.RecommendRequest": {
+        "type": "object",
+        "properties": {
+          "anonId": {
+            "type": "string",
+            "title": "anon_id",
+            "maxLength": 64
+          },
+          "category": {
+            "type": "string",
+            "title": "category",
+            "maxLength": 64,
+            "description": "gorse 的 category,对应 spus.category_id;留空表示不限品类"
+          },
+          "n": {
+            "type": "integer",
+            "title": "n",
+            "maximum": 100
+          },
+          "offset": {
+            "type": "integer",
+            "title": "offset",
+            "maximum": 10000
+          },
+          "sessionEvents": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/behavior.v1.Event"
+            },
+            "title": "session_events",
+            "maxItems": 50,
+            "description": "会话内的临时行为。匿名用户或无历史的新用户走 gorse 的 session recommend,\n 不需要等离线训练即可拿到结果。"
+          }
+        },
+        "title": "RecommendRequest",
+        "additionalProperties": false
+      },
+      "behavior.v1.RecommendResponse": {
+        "type": "object",
+        "properties": {
+          "items": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/behavior.v1.RecommendItem"
+            },
+            "title": "items",
+            "maxItems": 100
+          },
+          "strategy": {
+            "type": "string",
+            "title": "strategy",
+            "enum": [
+              "empty",
+              "personalized",
+              "session",
+              "latest"
+            ],
+            "description": "实际命中的召回策略: personalized / session / latest"
+          }
+        },
+        "title": "RecommendResponse",
+        "additionalProperties": false
+      },
+      "behavior.v1.SimilarItemsRequest": {
+        "type": "object",
+        "properties": {
+          "itemId": {
+            "type": "string",
+            "title": "item_id",
+            "maxLength": 64,
+            "minLength": 1
+          },
+          "category": {
+            "type": "string",
+            "title": "category",
+            "maxLength": 64
+          },
+          "n": {
+            "type": "integer",
+            "title": "n",
+            "maximum": 100
+          }
+        },
+        "title": "SimilarItemsRequest",
+        "additionalProperties": false
+      },
+      "behavior.v1.SimilarItemsResponse": {
+        "type": "object",
+        "properties": {
+          "items": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/behavior.v1.RecommendItem"
+            },
+            "title": "items",
+            "maxItems": 100
+          }
+        },
+        "title": "SimilarItemsResponse",
+        "additionalProperties": false
+      },
+      "behavior.v1.TrackRequest": {
+        "type": "object",
+        "properties": {
+          "anonId": {
+            "type": "string",
+            "title": "anon_id",
+            "maxLength": 64,
+            "description": "匿名标识。登录用户由网关注入的 x-md-global-user-id 覆盖,该字段仅用于未登录场景。"
+          },
+          "sessionId": {
+            "type": "string",
+            "title": "session_id",
+            "maxLength": 64
+          },
+          "events": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/behavior.v1.Event"
+            },
+            "title": "events",
+            "maxItems": 200,
+            "minItems": 1
+          }
+        },
+        "title": "TrackRequest",
+        "additionalProperties": false
+      },
+      "behavior.v1.TrackResponse": {
+        "type": "object",
+        "properties": {
+          "accepted": {
+            "type": "integer",
+            "title": "accepted",
+            "maximum": 200
+          },
+          "dropped": {
+            "type": "integer",
+            "title": "dropped",
+            "maximum": 200
+          }
+        },
+        "title": "TrackResponse",
+        "additionalProperties": false,
+        "description": "accepted plus dropped must not exceed 200:\n```\nthis.accepted + this.dropped \u003c= 200\n```\n\n"
+      },
+      "connect-protocol-version": {
+        "type": "number",
+        "title": "Connect-Protocol-Version",
+        "enum": [
+          1
+        ],
+        "description": "Define the version of the Connect protocol",
+        "const": 1
+      },
+      "connect-timeout-header": {
+        "type": "number",
+        "title": "Connect-Timeout-Ms",
+        "description": "Define the timeout, in ms"
+      },
+      "connect.error": {
+        "type": "object",
+        "properties": {
+          "code": {
+            "type": "string",
+            "examples": [
+              "not_found"
+            ],
+            "enum": [
+              "canceled",
+              "unknown",
+              "invalid_argument",
+              "deadline_exceeded",
+              "not_found",
+              "already_exists",
+              "permission_denied",
+              "resource_exhausted",
+              "failed_precondition",
+              "aborted",
+              "out_of_range",
+              "unimplemented",
+              "internal",
+              "unavailable",
+              "data_loss",
+              "unauthenticated"
+            ],
+            "description": "The status code, which should be an enum value of [google.rpc.Code][google.rpc.Code]."
+          },
+          "message": {
+            "type": "string",
+            "description": "A developer-facing error message, which should be in English. Any user-facing error message should be localized and sent in the [google.rpc.Status.details][google.rpc.Status.details] field, or localized by the client."
+          },
+          "detail": {
+            "$ref": "#/components/schemas/google.protobuf.Any"
+          }
+        },
+        "title": "Connect Error",
+        "additionalProperties": true,
+        "description": "Error type returned by Connect: https://connectrpc.com/docs/go/errors/#http-representation"
+      },
+      "google.protobuf.Any": {
+        "type": "object",
+        "properties": {
+          "type": {
+            "type": "string"
+          },
+          "value": {
+            "type": "string",
+            "format": "binary"
+          },
+          "debug": {
+            "type": "object",
+            "additionalProperties": true
+          }
+        },
+        "additionalProperties": true,
+        "description": "Contains an arbitrary serialized message along with a @type that describes the type of the serialized message."
+      }
+    }
+  },
+  "security": [],
+  "tags": [
+    {
+      "name": "behavior.v1.BehaviorService"
+    }
+  ]
+}

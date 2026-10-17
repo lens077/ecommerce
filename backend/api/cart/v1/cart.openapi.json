@@ -1,0 +1,793 @@
+{
+  "openapi": "3.1.0",
+  "info": {
+    "version": "0.1.0",
+    "contact": {
+      "name": "ecommerce"
+    },
+    "title": "cart.v1"
+  },
+  "servers": [
+    {
+      "url": "https://gateway.apikv.com",
+      "description": "公网网关（control-tower）。Gatus 用它做烟雾：`.../product.v1.ProductService/GetProductDetail`"
+    },
+    {
+      "url": "http://localhost:8080",
+      "description": "本地开发直连（VITE_GATEWAY_URL 的默认值）"
+    }
+  ],
+  "paths": {
+    "/cart.v1.CartService/GetCart": {
+      "post": {
+        "tags": [
+          "cart.v1.CartService"
+        ],
+        "summary": "GetCart",
+        "operationId": "cart.v1.CartService.GetCart",
+        "parameters": [
+          {
+            "name": "Connect-Protocol-Version",
+            "in": "header",
+            "required": true,
+            "schema": {
+              "$ref": "#/components/schemas/connect-protocol-version"
+            }
+          },
+          {
+            "name": "Connect-Timeout-Ms",
+            "in": "header",
+            "schema": {
+              "$ref": "#/components/schemas/connect-timeout-header"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/cart.v1.GetCartRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "default": {
+            "description": "Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/connect.error"
+                }
+              }
+            }
+          },
+          "200": {
+            "description": "Success",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/cart.v1.GetCartResponse"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/cart.v1.CartService/AddProductToCart": {
+      "post": {
+        "tags": [
+          "cart.v1.CartService"
+        ],
+        "summary": "AddProductToCart",
+        "description": "2026-08 移除 GetCartSummary(原「首页获取购物车数量」)。\n 它与 GetCart 是同一条 SQL 的两种投影:两者的 WHERE 逐字相同\n (user_id + status=active),而 GetCartSummary 的 COUNT(*) 恰好等于\n GetCartResponse.cart_item_quantity(data/cart.go 里就是 len(rows))——\n 即 GetCart 的响应本来就带着这个数字。前端徽标已改用 GetCart,\n 保留它只会让同一个数有两个来源,迟早对不上。\n proto3 无法对 rpc 名做 reserved,故以注释存档,不要再用这个名字。",
+        "operationId": "cart.v1.CartService.AddProductToCart",
+        "parameters": [
+          {
+            "name": "Connect-Protocol-Version",
+            "in": "header",
+            "required": true,
+            "schema": {
+              "$ref": "#/components/schemas/connect-protocol-version"
+            }
+          },
+          {
+            "name": "Connect-Timeout-Ms",
+            "in": "header",
+            "schema": {
+              "$ref": "#/components/schemas/connect-timeout-header"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/cart.v1.AddProductToCartRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "default": {
+            "description": "Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/connect.error"
+                }
+              }
+            }
+          },
+          "200": {
+            "description": "Success",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/cart.v1.AddProductToCartResponse"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/cart.v1.CartService/RemoveCartItem": {
+      "post": {
+        "tags": [
+          "cart.v1.CartService"
+        ],
+        "summary": "RemoveCartItem",
+        "operationId": "cart.v1.CartService.RemoveCartItem",
+        "parameters": [
+          {
+            "name": "Connect-Protocol-Version",
+            "in": "header",
+            "required": true,
+            "schema": {
+              "$ref": "#/components/schemas/connect-protocol-version"
+            }
+          },
+          {
+            "name": "Connect-Timeout-Ms",
+            "in": "header",
+            "schema": {
+              "$ref": "#/components/schemas/connect-timeout-header"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/cart.v1.RemoveCartItemRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "default": {
+            "description": "Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/connect.error"
+                }
+              }
+            }
+          },
+          "200": {
+            "description": "Success",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/cart.v1.RemoveCartItemResponse"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/cart.v1.CartService/UpdateCartItemQuantity": {
+      "post": {
+        "tags": [
+          "cart.v1.CartService"
+        ],
+        "summary": "UpdateCartItemQuantity",
+        "operationId": "cart.v1.CartService.UpdateCartItemQuantity",
+        "parameters": [
+          {
+            "name": "Connect-Protocol-Version",
+            "in": "header",
+            "required": true,
+            "schema": {
+              "$ref": "#/components/schemas/connect-protocol-version"
+            }
+          },
+          {
+            "name": "Connect-Timeout-Ms",
+            "in": "header",
+            "schema": {
+              "$ref": "#/components/schemas/connect-timeout-header"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/cart.v1.UpdateCartItemQuantityRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "default": {
+            "description": "Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/connect.error"
+                }
+              }
+            }
+          },
+          "200": {
+            "description": "Success",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/cart.v1.UpdateCartItemQuantityResponse"
+                }
+              }
+            }
+          }
+        }
+      }
+    }
+  },
+  "components": {
+    "schemas": {
+      "cart.v1.CartStatus": {
+        "type": "string",
+        "title": "CartStatus",
+        "enum": [
+          "CART_STATUS_UNKNOWN",
+          "CART_STATUS_ACTIVE",
+          "CART_STATUS_EXPIRED",
+          "CART_STATUS_DELETED"
+        ]
+      },
+      "google.protobuf.NullValue": {
+        "type": "string",
+        "title": "NullValue",
+        "enum": [
+          "NULL_VALUE"
+        ],
+        "description": "Represents a JSON `null`.\n\n `NullValue` is a sentinel, using an enum with only one value to represent\n the null value for the `Value` type union.\n\n A field of type `NullValue` with any value other than `0` is considered\n invalid. Most ProtoJSON serializers will emit a Value with a `null_value` set\n as a JSON `null` regardless of the integer value, and so will round trip to\n a `0` value."
+      },
+      "cart.v1.AddProductToCartRequest": {
+        "type": "object",
+        "properties": {
+          "spuId": {
+            "type": [
+              "integer",
+              "string"
+            ],
+            "title": "spu_id",
+            "maximum": 9223372036854776000,
+            "minimum": 1,
+            "format": "int64"
+          },
+          "skuId": {
+            "type": [
+              "integer",
+              "string"
+            ],
+            "title": "sku_id",
+            "maximum": 9223372036854776000,
+            "minimum": 1,
+            "format": "int64"
+          },
+          "merchantId": {
+            "type": "string",
+            "title": "merchant_id",
+            "format": "uuid"
+          },
+          "quantity": {
+            "type": "integer",
+            "title": "quantity",
+            "maximum": 999,
+            "minimum": 1
+          },
+          "selected": {
+            "type": "boolean",
+            "title": "selected",
+            "description": "同步勾选状态, 多端同步"
+          },
+          "spuName": {
+            "type": "string",
+            "title": "spu_name",
+            "maxLength": 255,
+            "minLength": 1,
+            "description": "商品快照, 避免商家修改商品"
+          },
+          "skuName": {
+            "type": "string",
+            "title": "sku_name",
+            "maxLength": 255,
+            "minLength": 1
+          },
+          "unitPriceCents": {
+            "exclusiveMinimum": 0,
+            "type": [
+              "integer",
+              "string"
+            ],
+            "title": "unit_price_cents",
+            "maximum": 9999999999,
+            "format": "int64"
+          },
+          "skuAttributes": {
+            "title": "sku_attributes",
+            "$ref": "#/components/schemas/google.protobuf.Struct"
+          },
+          "skuThumbnailUrl": {
+            "type": "string",
+            "title": "sku_thumbnail_url",
+            "maxLength": 500,
+            "minLength": 1,
+            "description": "商品图片"
+          },
+          "status": {
+            "title": "status",
+            "const": 1,
+            "$ref": "#/components/schemas/cart.v1.CartStatus"
+          }
+        },
+        "title": "AddProductToCartRequest",
+        "required": [
+          "skuAttributes"
+        ],
+        "additionalProperties": false
+      },
+      "cart.v1.AddProductToCartResponse": {
+        "type": "object",
+        "properties": {
+          "cartItemQuantity": {
+            "type": "integer",
+            "title": "cart_item_quantity",
+            "maximum": 10000,
+            "description": "购物车商品总数量"
+          },
+          "cartItemId": {
+            "type": [
+              "integer",
+              "string"
+            ],
+            "title": "cart_item_id",
+            "maximum": 9223372036854776000,
+            "minimum": 1,
+            "format": "int64",
+            "description": "新增/更新的购物车项ID（前端下单等场景需要真实ID）"
+          }
+        },
+        "title": "AddProductToCartResponse",
+        "additionalProperties": false
+      },
+      "cart.v1.CartItem": {
+        "type": "object",
+        "properties": {
+          "cartItemId": {
+            "type": [
+              "integer",
+              "string"
+            ],
+            "title": "cart_item_id",
+            "maximum": 9223372036854776000,
+            "minimum": 1,
+            "format": "int64",
+            "description": "购物车商品记录ID"
+          },
+          "spuId": {
+            "type": [
+              "integer",
+              "string"
+            ],
+            "title": "spu_id",
+            "maximum": 9223372036854776000,
+            "minimum": 1,
+            "format": "int64"
+          },
+          "skuId": {
+            "type": [
+              "integer",
+              "string"
+            ],
+            "title": "sku_id",
+            "maximum": 9223372036854776000,
+            "minimum": 1,
+            "format": "int64"
+          },
+          "merchantId": {
+            "type": "string",
+            "title": "merchant_id",
+            "format": "uuid"
+          },
+          "shopName": {
+            "type": "string",
+            "title": "shop_name",
+            "maxLength": 255,
+            "minLength": 1
+          },
+          "quantity": {
+            "type": "integer",
+            "title": "quantity",
+            "maximum": 999,
+            "minimum": 1
+          },
+          "selected": {
+            "type": "boolean",
+            "title": "selected"
+          },
+          "spuName": {
+            "type": "string",
+            "title": "spu_name",
+            "maxLength": 255,
+            "minLength": 1
+          },
+          "skuName": {
+            "type": "string",
+            "title": "sku_name",
+            "maxLength": 255,
+            "minLength": 1
+          },
+          "unitPriceCents": {
+            "exclusiveMinimum": 0,
+            "type": [
+              "integer",
+              "string"
+            ],
+            "title": "unit_price_cents",
+            "maximum": 9999999999,
+            "format": "int64"
+          },
+          "skuAttributes": {
+            "title": "sku_attributes",
+            "$ref": "#/components/schemas/google.protobuf.Struct"
+          },
+          "skuThumbnailUrl": {
+            "type": "string",
+            "title": "sku_thumbnail_url",
+            "maxLength": 500,
+            "minLength": 1
+          },
+          "status": {
+            "title": "status",
+            "$ref": "#/components/schemas/cart.v1.CartStatus"
+          }
+        },
+        "title": "CartItem",
+        "required": [
+          "skuAttributes"
+        ],
+        "additionalProperties": false
+      },
+      "cart.v1.GetCartRequest": {
+        "type": "object",
+        "title": "GetCartRequest",
+        "additionalProperties": false
+      },
+      "cart.v1.GetCartResponse": {
+        "type": "object",
+        "properties": {
+          "items": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/cart.v1.CartItem"
+            },
+            "title": "items",
+            "maxItems": 1000,
+            "description": "购物车商品列表"
+          },
+          "cartItemQuantity": {
+            "type": "integer",
+            "title": "cart_item_quantity",
+            "maximum": 10000,
+            "description": "购物车商品总数量"
+          },
+          "isCartEmpty": {
+            "title": "is_cart_empty",
+            "description": "购物车是否为空",
+            "$ref": "#/components/schemas/google.protobuf.BoolValue"
+          }
+        },
+        "title": "GetCartResponse",
+        "required": [
+          "isCartEmpty"
+        ],
+        "additionalProperties": false
+      },
+      "cart.v1.RemoveCartItemRequest": {
+        "type": "object",
+        "properties": {
+          "spuIds": {
+            "type": "array",
+            "items": {
+              "exclusiveMinimum": 0,
+              "type": [
+                "integer",
+                "string"
+              ],
+              "format": "int64",
+              "maxItems": 100,
+              "minItems": 1
+            },
+            "title": "spu_ids",
+            "maxItems": 100,
+            "minItems": 1
+          },
+          "skuIds": {
+            "type": "array",
+            "items": {
+              "exclusiveMinimum": 0,
+              "type": [
+                "integer",
+                "string"
+              ],
+              "format": "int64",
+              "maxItems": 100,
+              "minItems": 1
+            },
+            "title": "sku_ids",
+            "maxItems": 100,
+            "minItems": 1
+          },
+          "merchantIds": {
+            "type": "array",
+            "items": {
+              "type": "string",
+              "format": "uuid",
+              "maxItems": 100,
+              "minItems": 1
+            },
+            "title": "merchant_ids",
+            "maxItems": 100,
+            "minItems": 1
+          },
+          "status": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/cart.v1.CartStatus"
+            },
+            "title": "status",
+            "maxItems": 100,
+            "minItems": 1
+          }
+        },
+        "title": "RemoveCartItemRequest",
+        "additionalProperties": false,
+        "description": "spu_ids, sku_ids, merchant_ids, and status must have equal lengths:\n```\nsize(this.spu_ids) == size(this.sku_ids) \u0026\u0026 size(this.spu_ids) == size(this.merchant_ids) \u0026\u0026 size(this.spu_ids) == size(this.status)\n```\n\n"
+      },
+      "cart.v1.RemoveCartItemResponse": {
+        "type": "object",
+        "properties": {
+          "cartItemQuantity": {
+            "type": "integer",
+            "title": "cart_item_quantity",
+            "maximum": 10000,
+            "description": "删除后，购物车商品总数量（用于刷新右上角小红点）"
+          },
+          "isCartEmpty": {
+            "type": "boolean",
+            "title": "is_cart_empty",
+            "description": "购物车是否已经彻底空了（用于前端直接切换到“空购物车”占位图）"
+          }
+        },
+        "title": "RemoveCartItemResponse",
+        "additionalProperties": false
+      },
+      "cart.v1.UpdateCartItemQuantityRequest": {
+        "type": "object",
+        "properties": {
+          "spuId": {
+            "type": [
+              "integer",
+              "string"
+            ],
+            "title": "spu_id",
+            "maximum": 9223372036854776000,
+            "minimum": 1,
+            "format": "int64"
+          },
+          "skuId": {
+            "type": [
+              "integer",
+              "string"
+            ],
+            "title": "sku_id",
+            "maximum": 9223372036854776000,
+            "minimum": 1,
+            "format": "int64"
+          },
+          "merchantId": {
+            "type": "string",
+            "title": "merchant_id",
+            "format": "uuid"
+          },
+          "quantity": {
+            "type": "integer",
+            "title": "quantity",
+            "maximum": 999,
+            "description": "目标数量，如果为0则删除该商品项"
+          }
+        },
+        "title": "UpdateCartItemQuantityRequest",
+        "additionalProperties": false
+      },
+      "cart.v1.UpdateCartItemQuantityResponse": {
+        "type": "object",
+        "properties": {
+          "cartItemQuantity": {
+            "type": "integer",
+            "title": "cart_item_quantity",
+            "maximum": 10000,
+            "description": "更新后，购物车商品总数量（用于刷新右上角小红点）"
+          }
+        },
+        "title": "UpdateCartItemQuantityResponse",
+        "additionalProperties": false
+      },
+      "google.protobuf.BoolValue": {
+        "type": "boolean",
+        "description": "Wrapper message for `bool`.\n\n The JSON representation for `BoolValue` is JSON `true` and `false`.\n\n Not recommended for use in new APIs, but still useful for legacy APIs and\n has no plan to be removed."
+      },
+      "google.protobuf.ListValue": {
+        "type": "object",
+        "properties": {
+          "values": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/google.protobuf.Value"
+            },
+            "title": "values",
+            "description": "Repeated field of dynamically typed values."
+          }
+        },
+        "title": "ListValue",
+        "additionalProperties": false,
+        "description": "Represents a JSON array."
+      },
+      "google.protobuf.Struct": {
+        "type": "object",
+        "additionalProperties": {
+          "$ref": "#/components/schemas/google.protobuf.Value"
+        },
+        "description": "Represents a JSON object.\n\n An unordered key-value map, intending to perfectly capture the semantics of a\n JSON object. This enables parsing any arbitrary JSON payload as a message\n field in ProtoJSON format.\n\n This follows RFC 8259 guidelines for interoperable JSON: notably this type\n cannot represent large Int64 values or `NaN`/`Infinity` numbers,\n since the JSON format generally does not support those values in its number\n type.\n\n If you do not intend to parse arbitrary JSON into your message, a custom\n typed message should be preferred instead of using this type."
+      },
+      "google.protobuf.Struct.FieldsEntry": {
+        "type": "object",
+        "properties": {
+          "key": {
+            "type": "string",
+            "title": "key"
+          },
+          "value": {
+            "title": "value",
+            "$ref": "#/components/schemas/google.protobuf.Value"
+          }
+        },
+        "title": "FieldsEntry",
+        "additionalProperties": false
+      },
+      "google.protobuf.Value": {
+        "oneOf": [
+          {
+            "type": "null"
+          },
+          {
+            "type": "number"
+          },
+          {
+            "type": "string"
+          },
+          {
+            "type": "boolean"
+          },
+          {
+            "type": "array"
+          },
+          {
+            "type": "object",
+            "additionalProperties": true
+          }
+        ],
+        "description": "Represents a JSON value.\n\n `Value` represents a dynamically typed value which can be either\n null, a number, a string, a boolean, a recursive struct value, or a\n list of values. A producer of value is expected to set one of these\n variants. Absence of any variant is an invalid state."
+      },
+      "connect-protocol-version": {
+        "type": "number",
+        "title": "Connect-Protocol-Version",
+        "enum": [
+          1
+        ],
+        "description": "Define the version of the Connect protocol",
+        "const": 1
+      },
+      "connect-timeout-header": {
+        "type": "number",
+        "title": "Connect-Timeout-Ms",
+        "description": "Define the timeout, in ms"
+      },
+      "connect.error": {
+        "type": "object",
+        "properties": {
+          "code": {
+            "type": "string",
+            "examples": [
+              "not_found"
+            ],
+            "enum": [
+              "canceled",
+              "unknown",
+              "invalid_argument",
+              "deadline_exceeded",
+              "not_found",
+              "already_exists",
+              "permission_denied",
+              "resource_exhausted",
+              "failed_precondition",
+              "aborted",
+              "out_of_range",
+              "unimplemented",
+              "internal",
+              "unavailable",
+              "data_loss",
+              "unauthenticated"
+            ],
+            "description": "The status code, which should be an enum value of [google.rpc.Code][google.rpc.Code]."
+          },
+          "message": {
+            "type": "string",
+            "description": "A developer-facing error message, which should be in English. Any user-facing error message should be localized and sent in the [google.rpc.Status.details][google.rpc.Status.details] field, or localized by the client."
+          },
+          "detail": {
+            "$ref": "#/components/schemas/google.protobuf.Any"
+          }
+        },
+        "title": "Connect Error",
+        "additionalProperties": true,
+        "description": "Error type returned by Connect: https://connectrpc.com/docs/go/errors/#http-representation"
+      },
+      "google.protobuf.Any": {
+        "type": "object",
+        "properties": {
+          "type": {
+            "type": "string"
+          },
+          "value": {
+            "type": "string",
+            "format": "binary"
+          },
+          "debug": {
+            "type": "object",
+            "additionalProperties": true
+          }
+        },
+        "additionalProperties": true,
+        "description": "Contains an arbitrary serialized message along with a @type that describes the type of the serialized message."
+      }
+    }
+  },
+  "security": [],
+  "tags": [
+    {
+      "name": "cart.v1.CartService"
+    }
+  ]
+}

@@ -1,0 +1,1050 @@
+{
+  "openapi": "3.1.0",
+  "info": {
+    "version": "0.1.0",
+    "contact": {
+      "name": "ecommerce"
+    },
+    "title": "casdoor.v1"
+  },
+  "servers": [
+    {
+      "url": "https://gateway.apikv.com",
+      "description": "公网网关（control-tower）。Gatus 用它做烟雾：`.../product.v1.ProductService/GetProductDetail`"
+    },
+    {
+      "url": "http://localhost:8080",
+      "description": "本地开发直连（VITE_GATEWAY_URL 的默认值）"
+    }
+  ],
+  "paths": {},
+  "components": {
+    "schemas": {
+      "casdoor.v1.ManagedAccount": {
+        "type": "object",
+        "properties": {
+          "application": {
+            "type": "string",
+            "title": "application",
+            "maxLength": 128
+          },
+          "username": {
+            "type": "string",
+            "title": "username",
+            "maxLength": 256
+          },
+          "password": {
+            "type": "string",
+            "title": "password",
+            "maxLength": 4096,
+            "description": "敏感字段，通常不应该在 API 响应中出现"
+          },
+          "signinUrl": {
+            "type": "string",
+            "title": "signin_url",
+            "maxLength": 2048
+          }
+        },
+        "title": "ManagedAccount",
+        "additionalProperties": false,
+        "description": "ManagedAccount 托管账户\n 用于 SSO 或凭证管理"
+      },
+      "casdoor.v1.Permission": {
+        "type": "object",
+        "properties": {
+          "owner": {
+            "type": "string",
+            "title": "owner",
+            "maxLength": 128,
+            "description": "基础信息"
+          },
+          "name": {
+            "type": "string",
+            "title": "name",
+            "maxLength": 128
+          },
+          "createdTime": {
+            "type": "string",
+            "title": "created_time",
+            "maxLength": 64
+          },
+          "displayName": {
+            "type": "string",
+            "title": "display_name",
+            "maxLength": 256
+          },
+          "description": {
+            "type": "string",
+            "title": "description",
+            "maxLength": 2048
+          },
+          "users": {
+            "type": "array",
+            "items": {
+              "type": "string",
+              "maxLength": 256,
+              "maxItems": 1000
+            },
+            "title": "users",
+            "maxItems": 1000,
+            "description": "关系"
+          },
+          "groups": {
+            "type": "array",
+            "items": {
+              "type": "string",
+              "maxLength": 256,
+              "maxItems": 1000
+            },
+            "title": "groups",
+            "maxItems": 1000
+          },
+          "roles": {
+            "type": "array",
+            "items": {
+              "type": "string",
+              "maxLength": 256,
+              "maxItems": 1000
+            },
+            "title": "roles",
+            "maxItems": 1000
+          },
+          "domains": {
+            "type": "array",
+            "items": {
+              "type": "string",
+              "maxLength": 256,
+              "maxItems": 1000
+            },
+            "title": "domains",
+            "maxItems": 1000
+          },
+          "model": {
+            "type": "string",
+            "title": "model",
+            "maxLength": 128,
+            "description": "权限模型 (RBAC)"
+          },
+          "adapter": {
+            "type": "string",
+            "title": "adapter",
+            "maxLength": 128
+          },
+          "resourceType": {
+            "type": "string",
+            "title": "resource_type",
+            "maxLength": 128
+          },
+          "resources": {
+            "type": "array",
+            "items": {
+              "type": "string",
+              "maxLength": 2048,
+              "maxItems": 1000
+            },
+            "title": "resources",
+            "maxItems": 1000
+          },
+          "actions": {
+            "type": "array",
+            "items": {
+              "type": "string",
+              "maxLength": 256,
+              "maxItems": 1000
+            },
+            "title": "actions",
+            "maxItems": 1000
+          },
+          "effect": {
+            "type": "string",
+            "title": "effect",
+            "maxLength": 64
+          },
+          "isEnabled": {
+            "type": "boolean",
+            "title": "is_enabled"
+          },
+          "submitter": {
+            "type": "string",
+            "title": "submitter",
+            "maxLength": 256,
+            "description": "审批流程 (如果启用)"
+          },
+          "approver": {
+            "type": "string",
+            "title": "approver",
+            "maxLength": 256
+          },
+          "approveTime": {
+            "type": "string",
+            "title": "approve_time",
+            "maxLength": 64
+          },
+          "state": {
+            "type": "string",
+            "title": "state",
+            "maxLength": 64
+          }
+        },
+        "title": "Permission",
+        "additionalProperties": false,
+        "description": "Permission 权限\n Casdoor 的权限定义，详细描述了资源和操作"
+      },
+      "casdoor.v1.Role": {
+        "type": "object",
+        "properties": {
+          "owner": {
+            "type": "string",
+            "title": "owner",
+            "maxLength": 128,
+            "description": "基础信息"
+          },
+          "name": {
+            "type": "string",
+            "title": "name",
+            "maxLength": 128
+          },
+          "createdTime": {
+            "type": "string",
+            "title": "created_time",
+            "maxLength": 64
+          },
+          "displayName": {
+            "type": "string",
+            "title": "display_name",
+            "maxLength": 256
+          },
+          "description": {
+            "type": "string",
+            "title": "description",
+            "maxLength": 2048
+          },
+          "users": {
+            "type": "array",
+            "items": {
+              "type": "string",
+              "maxLength": 256,
+              "maxItems": 1000
+            },
+            "title": "users",
+            "maxItems": 1000,
+            "description": "关系 (使用 repeated string 来表示 Go 中的 []string)"
+          },
+          "groups": {
+            "type": "array",
+            "items": {
+              "type": "string",
+              "maxLength": 256,
+              "maxItems": 1000
+            },
+            "title": "groups",
+            "maxItems": 1000
+          },
+          "roles": {
+            "type": "array",
+            "items": {
+              "type": "string",
+              "maxLength": 256,
+              "maxItems": 1000
+            },
+            "title": "roles",
+            "maxItems": 1000,
+            "description": "角色的嵌套定义"
+          },
+          "domains": {
+            "type": "array",
+            "items": {
+              "type": "string",
+              "maxLength": 256,
+              "maxItems": 1000
+            },
+            "title": "domains",
+            "maxItems": 1000
+          },
+          "isEnabled": {
+            "type": "boolean",
+            "title": "is_enabled"
+          }
+        },
+        "title": "Role",
+        "additionalProperties": false,
+        "description": "Role 角色\n Casdoor 的角色定义，包含了权限和用户组的嵌套引用"
+      },
+      "casdoor.v1.User": {
+        "type": "object",
+        "properties": {
+          "owner": {
+            "type": "string",
+            "title": "owner",
+            "maxLength": 128,
+            "description": "基础信息 (主键和时间戳)"
+          },
+          "name": {
+            "type": "string",
+            "title": "name",
+            "maxLength": 128
+          },
+          "createdTime": {
+            "type": "string",
+            "title": "created_time",
+            "maxLength": 64,
+            "description": "推荐改为 google.protobuf.Timestamp"
+          },
+          "updatedTime": {
+            "type": "string",
+            "title": "updated_time",
+            "maxLength": 64,
+            "description": "推荐改为 google.protobuf.Timestamp"
+          },
+          "id": {
+            "type": "string",
+            "title": "id",
+            "maxLength": 128,
+            "description": "核心身份信息"
+          },
+          "externalId": {
+            "type": "string",
+            "title": "external_id",
+            "maxLength": 256
+          },
+          "type": {
+            "type": "string",
+            "title": "type",
+            "maxLength": 64
+          },
+          "password": {
+            "type": "string",
+            "title": "password",
+            "maxLength": 4096
+          },
+          "passwordSalt": {
+            "type": "string",
+            "title": "password_salt",
+            "maxLength": 1024
+          },
+          "passwordType": {
+            "type": "string",
+            "title": "password_type",
+            "maxLength": 64
+          },
+          "displayName": {
+            "type": "string",
+            "title": "display_name",
+            "maxLength": 256,
+            "description": "个人资料"
+          },
+          "firstName": {
+            "type": "string",
+            "title": "first_name",
+            "maxLength": 128
+          },
+          "lastName": {
+            "type": "string",
+            "title": "last_name",
+            "maxLength": 128
+          },
+          "avatar": {
+            "type": "string",
+            "title": "avatar",
+            "maxLength": 8192
+          },
+          "avatarType": {
+            "type": "string",
+            "title": "avatar_type",
+            "maxLength": 64
+          },
+          "permanentAvatar": {
+            "type": "string",
+            "title": "permanent_avatar",
+            "maxLength": 8192
+          },
+          "email": {
+            "type": "string",
+            "title": "email",
+            "maxLength": 320
+          },
+          "emailVerified": {
+            "type": "boolean",
+            "title": "email_verified"
+          },
+          "phone": {
+            "type": "string",
+            "title": "phone",
+            "maxLength": 32
+          },
+          "countryCode": {
+            "type": "string",
+            "title": "country_code",
+            "maxLength": 8
+          },
+          "region": {
+            "type": "string",
+            "title": "region",
+            "maxLength": 128
+          },
+          "location": {
+            "type": "string",
+            "title": "location",
+            "maxLength": 256
+          },
+          "address": {
+            "type": "array",
+            "items": {
+              "type": "string",
+              "maxLength": 512,
+              "maxItems": 100
+            },
+            "title": "address",
+            "maxItems": 100,
+            "description": "Go 结构体中是 []string，Proto 中是 repeated string"
+          },
+          "affiliation": {
+            "type": "string",
+            "title": "affiliation",
+            "maxLength": 256
+          },
+          "title": {
+            "type": "string",
+            "title": "title",
+            "maxLength": 256
+          },
+          "idCardType": {
+            "type": "string",
+            "title": "id_card_type",
+            "maxLength": 64
+          },
+          "idCard": {
+            "type": "string",
+            "title": "id_card",
+            "maxLength": 128
+          },
+          "homepage": {
+            "type": "string",
+            "title": "homepage",
+            "maxLength": 2048
+          },
+          "bio": {
+            "type": "string",
+            "title": "bio",
+            "maxLength": 4096
+          },
+          "tag": {
+            "type": "string",
+            "title": "tag",
+            "maxLength": 512
+          },
+          "language": {
+            "type": "string",
+            "title": "language",
+            "maxLength": 32
+          },
+          "gender": {
+            "type": "string",
+            "title": "gender",
+            "maxLength": 32
+          },
+          "birthday": {
+            "type": "string",
+            "title": "birthday",
+            "maxLength": 32
+          },
+          "education": {
+            "type": "string",
+            "title": "education",
+            "maxLength": 256
+          },
+          "score": {
+            "type": "integer",
+            "title": "score",
+            "format": "int32"
+          },
+          "karma": {
+            "type": "integer",
+            "title": "karma",
+            "format": "int32"
+          },
+          "ranking": {
+            "type": "integer",
+            "title": "ranking",
+            "format": "int32"
+          },
+          "isDefaultAvatar": {
+            "type": "boolean",
+            "title": "is_default_avatar",
+            "description": "状态和权限"
+          },
+          "isOnline": {
+            "type": "boolean",
+            "title": "is_online"
+          },
+          "isAdmin": {
+            "type": "boolean",
+            "title": "is_admin"
+          },
+          "isForbidden": {
+            "type": "boolean",
+            "title": "is_forbidden"
+          },
+          "isDeleted": {
+            "type": "boolean",
+            "title": "is_deleted"
+          },
+          "signupApplication": {
+            "type": "string",
+            "title": "signup_application",
+            "maxLength": 128
+          },
+          "hash": {
+            "type": "string",
+            "title": "hash",
+            "maxLength": 1024
+          },
+          "preHash": {
+            "type": "string",
+            "title": "pre_hash",
+            "maxLength": 1024
+          },
+          "accessKey": {
+            "type": "string",
+            "title": "access_key",
+            "maxLength": 1024
+          },
+          "accessSecret": {
+            "type": "string",
+            "title": "access_secret",
+            "maxLength": 4096
+          },
+          "createdIp": {
+            "type": "string",
+            "title": "created_ip",
+            "maxLength": 45,
+            "description": "登录记录"
+          },
+          "lastSigninTime": {
+            "type": "string",
+            "title": "last_signin_time",
+            "maxLength": 64
+          },
+          "lastSigninIp": {
+            "type": "string",
+            "title": "last_signin_ip",
+            "maxLength": 45
+          },
+          "github": {
+            "type": "string",
+            "title": "github",
+            "maxLength": 2048,
+            "description": "OAuth/SSO 链接 (非常多的字段)"
+          },
+          "google": {
+            "type": "string",
+            "title": "google",
+            "maxLength": 2048
+          },
+          "qq": {
+            "type": "string",
+            "title": "qq",
+            "maxLength": 2048
+          },
+          "weChat": {
+            "type": "string",
+            "title": "we_chat",
+            "maxLength": 2048
+          },
+          "facebook": {
+            "type": "string",
+            "title": "facebook",
+            "maxLength": 2048
+          },
+          "dingTalk": {
+            "type": "string",
+            "title": "ding_talk",
+            "maxLength": 2048
+          },
+          "weibo": {
+            "type": "string",
+            "title": "weibo",
+            "maxLength": 2048
+          },
+          "gitee": {
+            "type": "string",
+            "title": "gitee",
+            "maxLength": 2048
+          },
+          "linkedIn": {
+            "type": "string",
+            "title": "linked_in",
+            "maxLength": 2048
+          },
+          "wecom": {
+            "type": "string",
+            "title": "wecom",
+            "maxLength": 2048
+          },
+          "lark": {
+            "type": "string",
+            "title": "lark",
+            "maxLength": 2048
+          },
+          "gitlab": {
+            "type": "string",
+            "title": "gitlab",
+            "maxLength": 2048
+          },
+          "adfs": {
+            "type": "string",
+            "title": "adfs",
+            "maxLength": 2048
+          },
+          "baidu": {
+            "type": "string",
+            "title": "baidu",
+            "maxLength": 2048
+          },
+          "alipay": {
+            "type": "string",
+            "title": "alipay",
+            "maxLength": 2048
+          },
+          "casdoor": {
+            "type": "string",
+            "title": "casdoor",
+            "maxLength": 2048
+          },
+          "infoflow": {
+            "type": "string",
+            "title": "infoflow",
+            "maxLength": 2048
+          },
+          "apple": {
+            "type": "string",
+            "title": "apple",
+            "maxLength": 2048
+          },
+          "azureAd": {
+            "type": "string",
+            "title": "azure_ad",
+            "maxLength": 2048
+          },
+          "slack": {
+            "type": "string",
+            "title": "slack",
+            "maxLength": 2048
+          },
+          "steam": {
+            "type": "string",
+            "title": "steam",
+            "maxLength": 2048
+          },
+          "bilibili": {
+            "type": "string",
+            "title": "bilibili",
+            "maxLength": 2048
+          },
+          "okta": {
+            "type": "string",
+            "title": "okta",
+            "maxLength": 2048
+          },
+          "douyin": {
+            "type": "string",
+            "title": "douyin",
+            "maxLength": 2048
+          },
+          "line": {
+            "type": "string",
+            "title": "line",
+            "maxLength": 2048
+          },
+          "amazon": {
+            "type": "string",
+            "title": "amazon",
+            "maxLength": 2048
+          },
+          "auth0": {
+            "type": "string",
+            "title": "auth0",
+            "maxLength": 2048
+          },
+          "battleNet": {
+            "type": "string",
+            "title": "battle_net",
+            "maxLength": 2048
+          },
+          "bitbucket": {
+            "type": "string",
+            "title": "bitbucket",
+            "maxLength": 2048
+          },
+          "box": {
+            "type": "string",
+            "title": "box",
+            "maxLength": 2048
+          },
+          "cloudFoundry": {
+            "type": "string",
+            "title": "cloud_foundry",
+            "maxLength": 2048
+          },
+          "dailyMotion": {
+            "type": "string",
+            "title": "daily_motion",
+            "maxLength": 2048
+          },
+          "deezer": {
+            "type": "string",
+            "title": "deezer",
+            "maxLength": 2048
+          },
+          "digitalOcean": {
+            "type": "string",
+            "title": "digital_ocean",
+            "maxLength": 2048
+          },
+          "discord": {
+            "type": "string",
+            "title": "discord",
+            "maxLength": 2048
+          },
+          "dropbox": {
+            "type": "string",
+            "title": "dropbox",
+            "maxLength": 2048
+          },
+          "eveOnline": {
+            "type": "string",
+            "title": "eve_online",
+            "maxLength": 2048
+          },
+          "fitbit": {
+            "type": "string",
+            "title": "fitbit",
+            "maxLength": 2048
+          },
+          "gitea": {
+            "type": "string",
+            "title": "gitea",
+            "maxLength": 2048
+          },
+          "heroku": {
+            "type": "string",
+            "title": "heroku",
+            "maxLength": 2048
+          },
+          "influxCloud": {
+            "type": "string",
+            "title": "influx_cloud",
+            "maxLength": 2048
+          },
+          "instagram": {
+            "type": "string",
+            "title": "instagram",
+            "maxLength": 2048
+          },
+          "intercom": {
+            "type": "string",
+            "title": "intercom",
+            "maxLength": 2048
+          },
+          "kakao": {
+            "type": "string",
+            "title": "kakao",
+            "maxLength": 2048
+          },
+          "lastfm": {
+            "type": "string",
+            "title": "lastfm",
+            "maxLength": 2048
+          },
+          "mailru": {
+            "type": "string",
+            "title": "mailru",
+            "maxLength": 2048
+          },
+          "meetup": {
+            "type": "string",
+            "title": "meetup",
+            "maxLength": 2048
+          },
+          "microsoftOnline": {
+            "type": "string",
+            "title": "microsoft_online",
+            "maxLength": 2048
+          },
+          "naver": {
+            "type": "string",
+            "title": "naver",
+            "maxLength": 2048
+          },
+          "nextcloud": {
+            "type": "string",
+            "title": "nextcloud",
+            "maxLength": 2048
+          },
+          "oneDrive": {
+            "type": "string",
+            "title": "one_drive",
+            "maxLength": 2048
+          },
+          "oura": {
+            "type": "string",
+            "title": "oura",
+            "maxLength": 2048
+          },
+          "patreon": {
+            "type": "string",
+            "title": "patreon",
+            "maxLength": 2048
+          },
+          "paypal": {
+            "type": "string",
+            "title": "paypal",
+            "maxLength": 2048
+          },
+          "salesForce": {
+            "type": "string",
+            "title": "sales_force",
+            "maxLength": 2048
+          },
+          "shopify": {
+            "type": "string",
+            "title": "shopify",
+            "maxLength": 2048
+          },
+          "soundcloud": {
+            "type": "string",
+            "title": "soundcloud",
+            "maxLength": 2048
+          },
+          "spotify": {
+            "type": "string",
+            "title": "spotify",
+            "maxLength": 2048
+          },
+          "strava": {
+            "type": "string",
+            "title": "strava",
+            "maxLength": 2048
+          },
+          "stripe": {
+            "type": "string",
+            "title": "stripe",
+            "maxLength": 2048
+          },
+          "tikTok": {
+            "type": "string",
+            "title": "tik_tok",
+            "maxLength": 2048
+          },
+          "tumblr": {
+            "type": "string",
+            "title": "tumblr",
+            "maxLength": 2048
+          },
+          "twitch": {
+            "type": "string",
+            "title": "twitch",
+            "maxLength": 2048
+          },
+          "twitter": {
+            "type": "string",
+            "title": "twitter",
+            "maxLength": 2048
+          },
+          "typetalk": {
+            "type": "string",
+            "title": "typetalk",
+            "maxLength": 2048
+          },
+          "uber": {
+            "type": "string",
+            "title": "uber",
+            "maxLength": 2048
+          },
+          "vk": {
+            "type": "string",
+            "title": "vk",
+            "maxLength": 2048
+          },
+          "wepay": {
+            "type": "string",
+            "title": "wepay",
+            "maxLength": 2048
+          },
+          "xero": {
+            "type": "string",
+            "title": "xero",
+            "maxLength": 2048
+          },
+          "yahoo": {
+            "type": "string",
+            "title": "yahoo",
+            "maxLength": 2048
+          },
+          "yammer": {
+            "type": "string",
+            "title": "yammer",
+            "maxLength": 2048
+          },
+          "yandex": {
+            "type": "string",
+            "title": "yandex",
+            "maxLength": 2048
+          },
+          "zoom": {
+            "type": "string",
+            "title": "zoom",
+            "maxLength": 2048
+          },
+          "metaMask": {
+            "type": "string",
+            "title": "meta_mask",
+            "maxLength": 2048
+          },
+          "web3Onboard": {
+            "type": "string",
+            "title": "web3_onboard",
+            "maxLength": 2048
+          },
+          "custom": {
+            "type": "string",
+            "title": "custom",
+            "maxLength": 4096
+          },
+          "preferredMfaType": {
+            "type": "string",
+            "title": "preferred_mfa_type",
+            "maxLength": 64,
+            "description": "MFA 和恢复"
+          },
+          "recoveryCodes": {
+            "type": "array",
+            "items": {
+              "type": "string",
+              "maxLength": 256,
+              "maxItems": 100
+            },
+            "title": "recovery_codes",
+            "maxItems": 100
+          },
+          "totpSecret": {
+            "type": "string",
+            "title": "totp_secret",
+            "maxLength": 1024
+          },
+          "mfaPhoneEnabled": {
+            "type": "boolean",
+            "title": "mfa_phone_enabled"
+          },
+          "mfaEmailEnabled": {
+            "type": "boolean",
+            "title": "mfa_email_enabled"
+          },
+          "invitation": {
+            "type": "string",
+            "title": "invitation",
+            "maxLength": 2048,
+            "description": "邀请"
+          },
+          "invitationCode": {
+            "type": "string",
+            "title": "invitation_code",
+            "maxLength": 256
+          },
+          "ldap": {
+            "type": "string",
+            "title": "ldap",
+            "maxLength": 2048,
+            "description": "LDAP 和属性"
+          },
+          "properties": {
+            "type": "object",
+            "title": "properties",
+            "maxProperties": 100,
+            "additionalProperties": {
+              "type": "string",
+              "title": "value",
+              "maxLength": 4096
+            },
+            "description": "映射 Go 的 map[string]string"
+          },
+          "roles": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/casdoor.v1.Role"
+            },
+            "title": "roles",
+            "maxItems": 1000,
+            "description": "关系和时间戳"
+          },
+          "permissions": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/casdoor.v1.Permission"
+            },
+            "title": "permissions",
+            "maxItems": 1000
+          },
+          "groups": {
+            "type": "array",
+            "items": {
+              "type": "string",
+              "maxLength": 256,
+              "maxItems": 1000
+            },
+            "title": "groups",
+            "maxItems": 1000
+          },
+          "lastChangePasswordTime": {
+            "type": "string",
+            "title": "last_change_password_time",
+            "maxLength": 64
+          },
+          "lastSigninWrongTime": {
+            "type": "string",
+            "title": "last_signin_wrong_time",
+            "maxLength": 64,
+            "description": "错误登录记录"
+          },
+          "signinWrongTimes": {
+            "type": "integer",
+            "title": "signin_wrong_times",
+            "format": "int32"
+          },
+          "managedAccounts": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/casdoor.v1.ManagedAccount"
+            },
+            "title": "managed_accounts",
+            "maxItems": 100,
+            "description": "托管账户和密码状态"
+          },
+          "needUpdatePassword": {
+            "type": "boolean",
+            "title": "need_update_password"
+          }
+        },
+        "title": "User",
+        "additionalProperties": false,
+        "description": "此结构体作为与 Casdoor SDK 交互的完整数据模型"
+      },
+      "casdoor.v1.User.PropertiesEntry": {
+        "type": "object",
+        "properties": {
+          "key": {
+            "type": "string",
+            "title": "key"
+          },
+          "value": {
+            "type": "string",
+            "title": "value"
+          }
+        },
+        "title": "PropertiesEntry",
+        "additionalProperties": false
+      }
+    }
+  },
+  "security": []
+}

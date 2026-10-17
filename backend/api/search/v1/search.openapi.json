@@ -1,0 +1,248 @@
+{
+  "openapi": "3.1.0",
+  "info": {
+    "version": "0.1.0",
+    "contact": {
+      "name": "ecommerce"
+    },
+    "title": "search.v1"
+  },
+  "servers": [
+    {
+      "url": "https://gateway.apikv.com",
+      "description": "公网网关（control-tower）。Gatus 用它做烟雾：`.../product.v1.ProductService/GetProductDetail`"
+    },
+    {
+      "url": "http://localhost:8080",
+      "description": "本地开发直连（VITE_GATEWAY_URL 的默认值）"
+    }
+  ],
+  "paths": {
+    "/search.v1.SearchService/Search": {
+      "post": {
+        "tags": [
+          "search.v1.SearchService"
+        ],
+        "summary": "Search",
+        "operationId": "search.v1.SearchService.Search",
+        "parameters": [
+          {
+            "name": "Connect-Protocol-Version",
+            "in": "header",
+            "required": true,
+            "schema": {
+              "$ref": "#/components/schemas/connect-protocol-version"
+            }
+          },
+          {
+            "name": "Connect-Timeout-Ms",
+            "in": "header",
+            "schema": {
+              "$ref": "#/components/schemas/connect-timeout-header"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/search.v1.SearchRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "default": {
+            "description": "Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/connect.error"
+                }
+              }
+            }
+          },
+          "200": {
+            "description": "Success",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/search.v1.SearchResponse"
+                }
+              }
+            }
+          }
+        }
+      }
+    }
+  },
+  "components": {
+    "schemas": {
+      "search.v1.Product": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "exclusiveMinimum": 0,
+            "type": "integer",
+            "title": "id"
+          },
+          "spuCode": {
+            "type": "string",
+            "title": "spu_code",
+            "maxLength": 64,
+            "minLength": 1
+          },
+          "price": {
+            "type": "number",
+            "title": "price",
+            "maximum": 99999999.99,
+            "format": "double"
+          },
+          "status": {
+            "type": "string",
+            "title": "status",
+            "enum": [
+              "draft",
+              "online",
+              "offline",
+              "deleted"
+            ]
+          },
+          "mainMediaUrl": {
+            "type": "string",
+            "title": "main_media_url",
+            "maxLength": 500,
+            "minLength": 1
+          },
+          "quantity": {
+            "type": "integer",
+            "title": "quantity"
+          },
+          "name": {
+            "type": "string",
+            "title": "name",
+            "maxLength": 255,
+            "minLength": 1
+          }
+        },
+        "title": "Product",
+        "additionalProperties": false,
+        "description": "定义 Product 消息 (对应 Go 结构体中的 Product)"
+      },
+      "search.v1.SearchRequest": {
+        "type": "object",
+        "properties": {
+          "index": {
+            "type": "string",
+            "title": "index",
+            "maxLength": 255,
+            "description": "索引由服务端配置选择；保留字段号兼容旧客户端，但忽略传入值。",
+            "deprecated": true
+          },
+          "name": {
+            "type": "string",
+            "title": "name",
+            "maxLength": 128,
+            "minLength": 1
+          }
+        },
+        "title": "SearchRequest",
+        "additionalProperties": false
+      },
+      "search.v1.SearchResponse": {
+        "type": "object",
+        "properties": {
+          "products": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/search.v1.Product"
+            },
+            "title": "products",
+            "maxItems": 100
+          }
+        },
+        "title": "SearchResponse",
+        "additionalProperties": false
+      },
+      "connect-protocol-version": {
+        "type": "number",
+        "title": "Connect-Protocol-Version",
+        "enum": [
+          1
+        ],
+        "description": "Define the version of the Connect protocol",
+        "const": 1
+      },
+      "connect-timeout-header": {
+        "type": "number",
+        "title": "Connect-Timeout-Ms",
+        "description": "Define the timeout, in ms"
+      },
+      "connect.error": {
+        "type": "object",
+        "properties": {
+          "code": {
+            "type": "string",
+            "examples": [
+              "not_found"
+            ],
+            "enum": [
+              "canceled",
+              "unknown",
+              "invalid_argument",
+              "deadline_exceeded",
+              "not_found",
+              "already_exists",
+              "permission_denied",
+              "resource_exhausted",
+              "failed_precondition",
+              "aborted",
+              "out_of_range",
+              "unimplemented",
+              "internal",
+              "unavailable",
+              "data_loss",
+              "unauthenticated"
+            ],
+            "description": "The status code, which should be an enum value of [google.rpc.Code][google.rpc.Code]."
+          },
+          "message": {
+            "type": "string",
+            "description": "A developer-facing error message, which should be in English. Any user-facing error message should be localized and sent in the [google.rpc.Status.details][google.rpc.Status.details] field, or localized by the client."
+          },
+          "detail": {
+            "$ref": "#/components/schemas/google.protobuf.Any"
+          }
+        },
+        "title": "Connect Error",
+        "additionalProperties": true,
+        "description": "Error type returned by Connect: https://connectrpc.com/docs/go/errors/#http-representation"
+      },
+      "google.protobuf.Any": {
+        "type": "object",
+        "properties": {
+          "type": {
+            "type": "string"
+          },
+          "value": {
+            "type": "string",
+            "format": "binary"
+          },
+          "debug": {
+            "type": "object",
+            "additionalProperties": true
+          }
+        },
+        "additionalProperties": true,
+        "description": "Contains an arbitrary serialized message along with a @type that describes the type of the serialized message."
+      }
+    }
+  },
+  "security": [],
+  "tags": [
+    {
+      "name": "search.v1.SearchService"
+    }
+  ]
+}

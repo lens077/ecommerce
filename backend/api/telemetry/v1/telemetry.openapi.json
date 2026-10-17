@@ -1,0 +1,343 @@
+{
+  "openapi": "3.1.0",
+  "info": {
+    "version": "0.1.0",
+    "contact": {
+      "name": "ecommerce"
+    },
+    "title": "telemetry.v1"
+  },
+  "servers": [
+    {
+      "url": "https://gateway.apikv.com",
+      "description": "公网网关（control-tower）。Gatus 用它做烟雾：`.../product.v1.ProductService/GetProductDetail`"
+    },
+    {
+      "url": "http://localhost:8080",
+      "description": "本地开发直连（VITE_GATEWAY_URL 的默认值）"
+    }
+  ],
+  "paths": {
+    "/telemetry.v1.TelemetryService/CollectWebVitals": {
+      "post": {
+        "tags": [
+          "telemetry.v1.TelemetryService"
+        ],
+        "summary": "CollectWebVitals",
+        "description": "CollectWebVitals 批量上报性能数据。\n 前端离开页面时用 navigator.sendBeacon 以 Connect JSON 直接打这个方法,\n 所以请求体必须是自包含的(不依赖自定义请求头)—— 与 behavior.Track 同约定。",
+        "operationId": "telemetry.v1.TelemetryService.CollectWebVitals",
+        "parameters": [
+          {
+            "name": "Connect-Protocol-Version",
+            "in": "header",
+            "required": true,
+            "schema": {
+              "$ref": "#/components/schemas/connect-protocol-version"
+            }
+          },
+          {
+            "name": "Connect-Timeout-Ms",
+            "in": "header",
+            "schema": {
+              "$ref": "#/components/schemas/connect-timeout-header"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/telemetry.v1.CollectWebVitalsRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "default": {
+            "description": "Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/connect.error"
+                }
+              }
+            }
+          },
+          "200": {
+            "description": "Success",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/telemetry.v1.CollectWebVitalsResponse"
+                }
+              }
+            }
+          }
+        }
+      }
+    }
+  },
+  "components": {
+    "schemas": {
+      "telemetry.v1.WebVitalName": {
+        "type": "string",
+        "title": "WebVitalName",
+        "enum": [
+          "WEB_VITAL_NAME_UNSPECIFIED",
+          "WEB_VITAL_NAME_LCP",
+          "WEB_VITAL_NAME_CLS",
+          "WEB_VITAL_NAME_INP",
+          "WEB_VITAL_NAME_FCP",
+          "WEB_VITAL_NAME_TTFB",
+          "WEB_VITAL_NAME_LONG_TASK"
+        ],
+        "description": "WebVitalName 与 web-vitals 库的指标名一一对应,外加手写采集的 LONG_TASK。\n value 的单位由指标决定:CLS 是无量纲分数,其余全部是毫秒。"
+      },
+      "telemetry.v1.ApiTiming": {
+        "type": "object",
+        "properties": {
+          "path": {
+            "type": "string",
+            "title": "path",
+            "maxLength": 256,
+            "minLength": 1,
+            "description": "已去掉 query 与 origin 的路径。上限对齐 config 域对 URL 类文本的量级"
+          },
+          "durationMs": {
+            "type": "number",
+            "title": "duration_ms",
+            "maximum": 3600000,
+            "format": "double"
+          },
+          "ttfbMs": {
+            "type": "number",
+            "title": "ttfb_ms",
+            "maximum": 3600000,
+            "format": "double",
+            "description": "首字节时间(responseStart - requestStart),后端处理慢的信号"
+          },
+          "dnsMs": {
+            "type": "number",
+            "title": "dns_ms",
+            "maximum": 3600000,
+            "format": "double"
+          },
+          "tcpMs": {
+            "type": "number",
+            "title": "tcp_ms",
+            "maximum": 3600000,
+            "format": "double"
+          },
+          "transferSize": {
+            "type": [
+              "integer",
+              "string"
+            ],
+            "title": "transfer_size",
+            "maximum": 1073741824,
+            "format": "int64",
+            "description": "encoded body + headers 的传输字节数;跨域无 TAO 时为 0"
+          },
+          "tsMs": {
+            "type": [
+              "integer",
+              "string"
+            ],
+            "title": "ts_ms",
+            "format": "int64"
+          }
+        },
+        "title": "ApiTiming",
+        "additionalProperties": false,
+        "description": "ApiTiming 一次 fetch/XHR 的耗时拆解,取自浏览器 Resource Timing。\n 跨域资源没有 Timing-Allow-Origin 时 dns/tcp/ttfb 全是 0,这是浏览器行为,\n 不代表真的为 0 —— 消费侧按 0 值剔除即可。"
+      },
+      "telemetry.v1.CollectWebVitalsRequest": {
+        "type": "object",
+        "properties": {
+          "anonId": {
+            "type": "string",
+            "title": "anon_id",
+            "maxLength": 64,
+            "description": "匿名标识。登录用户由网关注入的 x-md-global-user-id 覆盖 —— 与 Track 同约定"
+          },
+          "sessionId": {
+            "type": "string",
+            "title": "session_id",
+            "maxLength": 64
+          },
+          "vitals": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/telemetry.v1.WebVital"
+            },
+            "title": "vitals",
+            "maxItems": 50,
+            "description": "一次页面生命周期最多产生 5 个核心指标 + 若干 LONG_TASK,50 足够;\n 超出说明客户端逻辑有 bug,拒收比收下更能暴露问题"
+          },
+          "apiTimings": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/telemetry.v1.ApiTiming"
+            },
+            "title": "api_timings",
+            "maxItems": 200,
+            "description": "批量上批的 API 耗时,上限对齐 Track.events 的 max_items vitals 与 api_timings 至少一个非空 —— 本仓 proto 不用 message 级 CEL,\n 该约束在 service 层实施"
+          }
+        },
+        "title": "CollectWebVitalsRequest",
+        "additionalProperties": false
+      },
+      "telemetry.v1.CollectWebVitalsResponse": {
+        "type": "object",
+        "properties": {
+          "accepted": {
+            "type": "integer",
+            "title": "accepted",
+            "maximum": 250
+          }
+        },
+        "title": "CollectWebVitalsResponse",
+        "additionalProperties": false
+      },
+      "telemetry.v1.WebVital": {
+        "type": "object",
+        "properties": {
+          "name": {
+            "not": {
+              "enum": [
+                0
+              ]
+            },
+            "title": "name",
+            "$ref": "#/components/schemas/telemetry.v1.WebVitalName"
+          },
+          "value": {
+            "type": "number",
+            "title": "value",
+            "maximum": 3600000,
+            "format": "double",
+            "description": "CLS 是分数(通常 \u003c 1),其余是毫秒。上限 36e5(一小时):再大的值只可能是\n 客户端时钟错乱,进了 histogram 会把桶分布拉到没法看"
+          },
+          "rating": {
+            "type": "string",
+            "title": "rating",
+            "enum": [
+              "",
+              "good",
+              "needs-improvement",
+              "poor"
+            ],
+            "description": "web-vitals 的三档评级;LONG_TASK 没有评级,留空"
+          },
+          "page": {
+            "type": "string",
+            "title": "page",
+            "maxLength": 128,
+            "description": "路由模式(如 /product/$spuCode),不是完整 URL —— 它会成为 metric 的\n attribute,必须低基数。上限对齐 behavior.Event.source 的量级"
+          },
+          "attribution": {
+            "type": "string",
+            "title": "attribution",
+            "maxLength": 256,
+            "description": "归因摘要:LCP 的元素 selector、INP 的交互目标、CLS 的最大偏移源、\n LONG_TASK 的容器(self/iframe)。只进日志不进 metric label"
+          },
+          "tsMs": {
+            "type": [
+              "integer",
+              "string"
+            ],
+            "title": "ts_ms",
+            "format": "int64"
+          },
+          "navType": {
+            "type": "string",
+            "title": "nav_type",
+            "maxLength": 32,
+            "description": "navigate / reload / back-forward / back-forward-cache / prerender 等,\n 取自 web-vitals 的 navigationType"
+          }
+        },
+        "title": "WebVital",
+        "additionalProperties": false
+      },
+      "connect-protocol-version": {
+        "type": "number",
+        "title": "Connect-Protocol-Version",
+        "enum": [
+          1
+        ],
+        "description": "Define the version of the Connect protocol",
+        "const": 1
+      },
+      "connect-timeout-header": {
+        "type": "number",
+        "title": "Connect-Timeout-Ms",
+        "description": "Define the timeout, in ms"
+      },
+      "connect.error": {
+        "type": "object",
+        "properties": {
+          "code": {
+            "type": "string",
+            "examples": [
+              "not_found"
+            ],
+            "enum": [
+              "canceled",
+              "unknown",
+              "invalid_argument",
+              "deadline_exceeded",
+              "not_found",
+              "already_exists",
+              "permission_denied",
+              "resource_exhausted",
+              "failed_precondition",
+              "aborted",
+              "out_of_range",
+              "unimplemented",
+              "internal",
+              "unavailable",
+              "data_loss",
+              "unauthenticated"
+            ],
+            "description": "The status code, which should be an enum value of [google.rpc.Code][google.rpc.Code]."
+          },
+          "message": {
+            "type": "string",
+            "description": "A developer-facing error message, which should be in English. Any user-facing error message should be localized and sent in the [google.rpc.Status.details][google.rpc.Status.details] field, or localized by the client."
+          },
+          "detail": {
+            "$ref": "#/components/schemas/google.protobuf.Any"
+          }
+        },
+        "title": "Connect Error",
+        "additionalProperties": true,
+        "description": "Error type returned by Connect: https://connectrpc.com/docs/go/errors/#http-representation"
+      },
+      "google.protobuf.Any": {
+        "type": "object",
+        "properties": {
+          "type": {
+            "type": "string"
+          },
+          "value": {
+            "type": "string",
+            "format": "binary"
+          },
+          "debug": {
+            "type": "object",
+            "additionalProperties": true
+          }
+        },
+        "additionalProperties": true,
+        "description": "Contains an arbitrary serialized message along with a @type that describes the type of the serialized message."
+      }
+    }
+  },
+  "security": [],
+  "tags": [
+    {
+      "name": "telemetry.v1.TelemetryService"
+    }
+  ]
+}

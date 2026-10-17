@@ -98,14 +98,95 @@ migrate-cnpg-up:
 # TS 插件由 frontend 根 workspace 固定版本，避免依赖用户机器上的全局 npm 包。
 PROTOC_GEN_ES_DIR ?= $(abspath ../frontend/node_modules/.bin)
 
-.PHONY: api
+# OpenAPI（Swagger）生成器。版本必须与 buf.gen.openapi.yaml 头注释里钉住的
+# v0.19.1 一致 —— 插件升级会改变 protovalidate 约束在 schema 里的映射方式，
+# 本地与 CI 用不同版本会得到不一致的 spec。
+PROTOC_GEN_OPENAPI ?= protoc-gen-connect-openapi
+
+# ── api 生成：Go / OpenAPI / TS 三条产物链互不阻塞 ────────────────────
+# 历史教训（2026-10-18）：原先 api 是一条直线，protoc-gen-es 缺失时（frontend 没跑
+# pnpm install）第一行就 abort，排在后面的 Go 与 OpenAPI 产物一个都生成不出来 ——
+# 表现就是「make api 没用」，而屏幕上看不出文档其实被饿死了。
+# 现在拆成三个子目标，沿用本 Makefile 通行的「收集失败再汇总退出」（见 conf /
+# docker-build-all）：任意一条工具链缺失不再饿死其它产物，最后统一汇总。
+.PHONY: api api-go api-openapi api-ts
 api:
-	@test -x "$(PROTOC_GEN_ES_DIR)/protoc-gen-es" || { \
-		echo "缺少 protoc-gen-es；请先在 frontend/ 运行 pnpm install" >&2; \
+	@fail=""; \
+	for t in api-go api-openapi api-ts; do \
+	  echo "===== $$t ====="; \
+	  $(MAKE) $$t || fail="$$fail $$t"; \
+	done; \
+	if [ -n "$$fail" ]; then echo "❌ 生成失败的步骤:$$fail"; exit 1; fi; \
+	if [ ! -x "$(PROTOC_GEN_ES_DIR)/protoc-gen-es" ]; then \
+	  echo "✅ Go / OpenAPI 已生成；TS stub 因缺 protoc-gen-es 被跳过（见上）"; \
+	else \
+	  echo "✅ Go / OpenAPI / TS 产物均已生成"; \
+	fi
+
+# buf.gen.yaml → api/<svc>/v1/{*.pb.go,*.connect.go}
+.PHONY: api-go
+api-go:
+	@command -v protoc-gen-go >/dev/null 2>&1 || { \
+		echo "缺少 protoc-gen-go；安装：go install google.golang.org/protobuf/cmd/protoc-gen-go@latest" >&2; \
+		exit 1; \
+	}
+	@command -v protoc-gen-connect-go >/dev/null 2>&1 || { \
+		echo "缺少 protoc-gen-connect-go；安装：go install connectrpc.com/connect/cmd/protoc-gen-connect-go@latest" >&2; \
 		exit 1; \
 	}
 	buf generate --template buf.gen.yaml --path api
+
+# buf.gen.openapi.yaml → api/<svc>/v1/<name>.openapi.json（OpenAPI 3.1，Connect 形态）
+# 产物与 .pb.go 并列、随代码提交 —— proto 改动和文档改动落在同一个 diff 里可审。
+#
+# 末尾顺手刷新 openapi/specs.json（文档页面顶栏的清单）。刻意不引 python/yq：
+# 纯 ls/sort 就够，理由同 SERVICES 那段「make 不该因为缺一个工具跑不动」。
+# 新增一个 api/<svc>/v1/*.proto 后这里不需要改，for 循环自己会发现。
+#
+# ⚠️ 产出是 **OpenAPI 3.1**，Swagger UI 不支持它（其版本校验只接受
+#    `swagger: "2.0"` 与 `openapi: 3.0.n`），故渲染器不用 Swagger UI，详见
+#    openapi/index.html 头注释。想换回 Swagger UI 就得先把 spec 转成 3.0。
+.PHONY: api-openapi
+api-openapi:
+	@command -v $(PROTOC_GEN_OPENAPI) >/dev/null 2>&1 || { \
+		echo "缺少 $(PROTOC_GEN_OPENAPI)；安装：go install github.com/sudorandom/protoc-gen-connect-openapi@v0.19.1" >&2; \
+		exit 1; \
+	}
+	buf generate --template buf.gen.openapi.yaml --path api
+	@{ \
+	  echo "["; \
+	  sep=""; \
+	  for f in $$(cd api && ls */v1/*.openapi.json | sort); do \
+	    printf '%s{"name": "api/%s", "url": "../api/%s"}' "$$sep" "$$f" "$$f"; \
+	    sep=","; \
+	  done; \
+	  echo; echo "]"; \
+	} > openapi/specs.json
+	@echo "✅ OpenAPI spec 已生成：$$(ls api/*/v1/*.openapi.json | wc -l | tr -d ' ') 份 + openapi/specs.json"
+
+# buf.gen.ts.yaml → frontend 消费的 TS stub。
+# ⚠️ 与其它两条不同：缺 protoc-gen-es 时**降级为警告跳过**，不让整个 api 目标红掉
+# （理由：它是 frontend 的工具链，缺它不该拦住后端契约与文档的生成）。
+# 代价是 TS stub 会停留在旧版本 —— 所以这里必须明说，不能默默跳过。
+.PHONY: api-ts
+api-ts:
+	@if [ ! -x "$(PROTOC_GEN_ES_DIR)/protoc-gen-es" ]; then \
+		echo "⚠️  跳过 TS stub 生成：$(PROTOC_GEN_ES_DIR)/protoc-gen-es 不存在" >&2; \
+		echo "   需要先装前端依赖：cd ../frontend && pnpm install" >&2; \
+		echo "   跳过的后果：frontend 的 TS stub 不会随本次 proto 改动更新 —— 提交前请确认。" >&2; \
+		exit 0; \
+	fi; \
 	PATH="$(PROTOC_GEN_ES_DIR):$$PATH" buf generate --template buf.gen.ts.yaml --path api
+
+# 起本地静态服务打开 API 文档。
+# ⚠️ 必须经 HTTP：直接双击 openapi/index.html（file://）时浏览器会以 CORS 为由
+#    拒绝读取本地 spec，页面白屏且只在控制台报错。
+# 没有 python3 时等价替代：npx serve -l $(APIDOCS_PORT) backend
+APIDOCS_PORT ?= 8081
+.PHONY: apidocs
+apidocs:
+	@echo "API 文档 → http://localhost:$(APIDOCS_PORT)/openapi/index.html"
+	python3 -m http.server $(APIDOCS_PORT) --bind 127.0.0.1
 
 .PHONY: generate
 generate:

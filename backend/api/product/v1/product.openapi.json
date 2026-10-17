@@ -1,0 +1,424 @@
+{
+  "openapi": "3.1.0",
+  "info": {
+    "version": "0.1.0",
+    "contact": {
+      "name": "ecommerce"
+    },
+    "title": "product.v1"
+  },
+  "servers": [
+    {
+      "url": "https://gateway.apikv.com",
+      "description": "公网网关（control-tower）。Gatus 用它做烟雾：`.../product.v1.ProductService/GetProductDetail`"
+    },
+    {
+      "url": "http://localhost:8080",
+      "description": "本地开发直连（VITE_GATEWAY_URL 的默认值）"
+    }
+  ],
+  "paths": {
+    "/product.v1.ProductService/GetProductDetail": {
+      "post": {
+        "tags": [
+          "product.v1.ProductService"
+        ],
+        "summary": "GetProductDetail",
+        "operationId": "product.v1.ProductService.GetProductDetail",
+        "parameters": [
+          {
+            "name": "Connect-Protocol-Version",
+            "in": "header",
+            "required": true,
+            "schema": {
+              "$ref": "#/components/schemas/connect-protocol-version"
+            }
+          },
+          {
+            "name": "Connect-Timeout-Ms",
+            "in": "header",
+            "schema": {
+              "$ref": "#/components/schemas/connect-timeout-header"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/product.v1.GetProductDetailRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "default": {
+            "description": "Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/connect.error"
+                }
+              }
+            }
+          },
+          "200": {
+            "description": "Success",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/product.v1.GetProductDetailResponse"
+                }
+              }
+            }
+          }
+        }
+      }
+    }
+  },
+  "components": {
+    "schemas": {
+      "google.protobuf.NullValue": {
+        "type": "string",
+        "title": "NullValue",
+        "enum": [
+          "NULL_VALUE"
+        ],
+        "description": "Represents a JSON `null`.\n\n `NullValue` is a sentinel, using an enum with only one value to represent\n the null value for the `Value` type union.\n\n A field of type `NullValue` with any value other than `0` is considered\n invalid. Most ProtoJSON serializers will emit a Value with a `null_value` set\n as a JSON `null` regardless of the integer value, and so will round trip to\n a `0` value."
+      },
+      "product.v1.SPUStatus": {
+        "type": "string",
+        "title": "SPUStatus",
+        "enum": [
+          "STATUS_UNKNOWN",
+          "STATUS_DRAFT",
+          "STATUS_ONLINE",
+          "STATUS_OFFLINE",
+          "STATUS_DELETED"
+        ]
+      },
+      "google.protobuf.ListValue": {
+        "type": "object",
+        "properties": {
+          "values": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/google.protobuf.Value"
+            },
+            "title": "values",
+            "description": "Repeated field of dynamically typed values."
+          }
+        },
+        "title": "ListValue",
+        "additionalProperties": false,
+        "description": "Represents a JSON array."
+      },
+      "google.protobuf.Struct": {
+        "type": "object",
+        "additionalProperties": {
+          "$ref": "#/components/schemas/google.protobuf.Value"
+        },
+        "description": "Represents a JSON object.\n\n An unordered key-value map, intending to perfectly capture the semantics of a\n JSON object. This enables parsing any arbitrary JSON payload as a message\n field in ProtoJSON format.\n\n This follows RFC 8259 guidelines for interoperable JSON: notably this type\n cannot represent large Int64 values or `NaN`/`Infinity` numbers,\n since the JSON format generally does not support those values in its number\n type.\n\n If you do not intend to parse arbitrary JSON into your message, a custom\n typed message should be preferred instead of using this type."
+      },
+      "google.protobuf.Struct.FieldsEntry": {
+        "type": "object",
+        "properties": {
+          "key": {
+            "type": "string",
+            "title": "key"
+          },
+          "value": {
+            "title": "value",
+            "$ref": "#/components/schemas/google.protobuf.Value"
+          }
+        },
+        "title": "FieldsEntry",
+        "additionalProperties": false
+      },
+      "google.protobuf.Value": {
+        "oneOf": [
+          {
+            "type": "null"
+          },
+          {
+            "type": "number"
+          },
+          {
+            "type": "string"
+          },
+          {
+            "type": "boolean"
+          },
+          {
+            "type": "array"
+          },
+          {
+            "type": "object",
+            "additionalProperties": true
+          }
+        ],
+        "description": "Represents a JSON value.\n\n `Value` represents a dynamically typed value which can be either\n null, a number, a string, a boolean, a recursive struct value, or a\n list of values. A producer of value is expected to set one of these\n variants. Absence of any variant is an invalid state."
+      },
+      "google.type.Money": {
+        "type": "object",
+        "properties": {
+          "currencyCode": {
+            "type": "string",
+            "title": "currency_code",
+            "description": "The three-letter currency code defined in ISO 4217."
+          },
+          "units": {
+            "type": [
+              "integer",
+              "string"
+            ],
+            "title": "units",
+            "format": "int64",
+            "description": "The whole units of the amount.\n For example if `currencyCode` is `\"USD\"`, then 1 unit is one US dollar."
+          },
+          "nanos": {
+            "type": "integer",
+            "title": "nanos",
+            "format": "int32",
+            "description": "Number of nano (10^-9) units of the amount.\n The value must be between -999,999,999 and +999,999,999 inclusive.\n If `units` is positive, `nanos` must be positive or zero.\n If `units` is zero, `nanos` can be positive, zero, or negative.\n If `units` is negative, `nanos` must be negative or zero.\n For example $-1.75 is represented as `units`=-1 and `nanos`=-750,000,000."
+          }
+        },
+        "title": "Money",
+        "additionalProperties": false,
+        "description": "Represents an amount of money with its currency type."
+      },
+      "product.v1.GetProductDetailRequest": {
+        "type": "object",
+        "properties": {
+          "spuCode": {
+            "type": "string",
+            "title": "spu_code",
+            "maxLength": 64,
+            "minLength": 1
+          }
+        },
+        "title": "GetProductDetailRequest",
+        "additionalProperties": false
+      },
+      "product.v1.GetProductDetailResponse": {
+        "type": "object",
+        "properties": {
+          "productDetail": {
+            "title": "product_detail",
+            "$ref": "#/components/schemas/product.v1.ProductSpuDetail"
+          }
+        },
+        "title": "GetProductDetailResponse",
+        "required": [
+          "productDetail"
+        ],
+        "additionalProperties": false
+      },
+      "product.v1.ProductSku": {
+        "type": "object",
+        "properties": {
+          "skuId": {
+            "exclusiveMinimum": 0,
+            "type": [
+              "integer",
+              "string"
+            ],
+            "title": "sku_id",
+            "format": "int64"
+          },
+          "skuCode": {
+            "type": "string",
+            "title": "sku_code",
+            "maxLength": 64,
+            "minLength": 1
+          },
+          "merchantId": {
+            "type": "string",
+            "title": "merchant_id",
+            "format": "uuid"
+          },
+          "price": {
+            "title": "price",
+            "$ref": "#/components/schemas/google.type.Money"
+          },
+          "costPrice": {
+            "title": "cost_price",
+            "$ref": "#/components/schemas/google.type.Money"
+          },
+          "stockLocked": {
+            "type": [
+              "integer",
+              "string"
+            ],
+            "title": "stock_locked",
+            "format": "int64"
+          },
+          "attributes": {
+            "title": "attributes",
+            "$ref": "#/components/schemas/google.protobuf.Struct"
+          },
+          "specTemplate": {
+            "type": "array",
+            "items": {
+              "type": "string",
+              "maxLength": 128,
+              "minLength": 1,
+              "maxItems": 50,
+              "uniqueItems": true
+            },
+            "title": "spec_template",
+            "maxItems": 50,
+            "uniqueItems": true
+          },
+          "skuName": {
+            "type": "string",
+            "title": "sku_name",
+            "maxLength": 255,
+            "minLength": 1
+          },
+          "thumbnailUrl": {
+            "type": "string",
+            "title": "thumbnail_url",
+            "maxLength": 500,
+            "minLength": 1
+          },
+          "status": {
+            "title": "status",
+            "$ref": "#/components/schemas/product.v1.SPUStatus"
+          }
+        },
+        "title": "ProductSku",
+        "required": [
+          "price",
+          "costPrice",
+          "attributes"
+        ],
+        "additionalProperties": false
+      },
+      "product.v1.ProductSpuDetail": {
+        "type": "object",
+        "properties": {
+          "spuId": {
+            "exclusiveMinimum": 0,
+            "type": [
+              "integer",
+              "string"
+            ],
+            "title": "spu_id",
+            "format": "int64"
+          },
+          "spuName": {
+            "type": "string",
+            "title": "spu_name",
+            "maxLength": 255,
+            "minLength": 1
+          },
+          "spuCode": {
+            "type": "string",
+            "title": "spu_code",
+            "maxLength": 64,
+            "minLength": 1
+          },
+          "commonSpecs": {
+            "title": "common_specs",
+            "description": "使用 google.protobuf.Struct 来匹配 map[string]any",
+            "$ref": "#/components/schemas/google.protobuf.Struct"
+          },
+          "skus": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/product.v1.ProductSku"
+            },
+            "title": "skus",
+            "maxItems": 100,
+            "minItems": 1
+          }
+        },
+        "title": "ProductSpuDetail",
+        "required": [
+          "commonSpecs"
+        ],
+        "additionalProperties": false
+      },
+      "connect-protocol-version": {
+        "type": "number",
+        "title": "Connect-Protocol-Version",
+        "enum": [
+          1
+        ],
+        "description": "Define the version of the Connect protocol",
+        "const": 1
+      },
+      "connect-timeout-header": {
+        "type": "number",
+        "title": "Connect-Timeout-Ms",
+        "description": "Define the timeout, in ms"
+      },
+      "connect.error": {
+        "type": "object",
+        "properties": {
+          "code": {
+            "type": "string",
+            "examples": [
+              "not_found"
+            ],
+            "enum": [
+              "canceled",
+              "unknown",
+              "invalid_argument",
+              "deadline_exceeded",
+              "not_found",
+              "already_exists",
+              "permission_denied",
+              "resource_exhausted",
+              "failed_precondition",
+              "aborted",
+              "out_of_range",
+              "unimplemented",
+              "internal",
+              "unavailable",
+              "data_loss",
+              "unauthenticated"
+            ],
+            "description": "The status code, which should be an enum value of [google.rpc.Code][google.rpc.Code]."
+          },
+          "message": {
+            "type": "string",
+            "description": "A developer-facing error message, which should be in English. Any user-facing error message should be localized and sent in the [google.rpc.Status.details][google.rpc.Status.details] field, or localized by the client."
+          },
+          "detail": {
+            "$ref": "#/components/schemas/google.protobuf.Any"
+          }
+        },
+        "title": "Connect Error",
+        "additionalProperties": true,
+        "description": "Error type returned by Connect: https://connectrpc.com/docs/go/errors/#http-representation"
+      },
+      "google.protobuf.Any": {
+        "type": "object",
+        "properties": {
+          "type": {
+            "type": "string"
+          },
+          "value": {
+            "type": "string",
+            "format": "binary"
+          },
+          "debug": {
+            "type": "object",
+            "additionalProperties": true
+          }
+        },
+        "additionalProperties": true,
+        "description": "Contains an arbitrary serialized message along with a @type that describes the type of the serialized message."
+      }
+    }
+  },
+  "security": [],
+  "tags": [
+    {
+      "name": "product.v1.ProductService"
+    }
+  ]
+}

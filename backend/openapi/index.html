@@ -1,0 +1,132 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Ecommerce API · Connect 原生接口文档</title>
+  <!--
+    为什么不用 Swagger UI（2026-10-18 踩出来的）：
+    本文件要渲染的是 protoc-gen-connect-openapi 生成的 **OpenAPI 3.1** 文档，而
+    Swagger UI 5 的版本校验只接受 `swagger: "2.0"` 与 `openapi: 3.0.n` —— 它的 bundle
+    里原话是：
+      Supported version fields are `swagger: "2.0"` and those that match `openapi: 3.0.n`
+    喂 3.1 的结果就是页面上只剩一句「No API definition provided.」，没有任何有用提示。
+    换成 swagger-ui 之外的完整支持 3.1 的渲染器（Scalar），spec 本身一字未改。
+    哪天确实要用 Swagger UI，得先把 spec 降级成 3.0 —— 那是另一个话题。
+
+    必须经 HTTP 打开：file:// 下浏览器以 CORS 为由拒绝读本地 spec，页面白屏。
+    用 `cd backend && make apidocs`。
+  -->
+  <style>
+    html, body { margin: 0; background: #16181d; color: #e6e6e6;
+      font: 13px/1.6 ui-sans-serif, system-ui, -apple-system, "PingFang SC", sans-serif; }
+    #bar { padding: 10px 16px; border-bottom: 1px solid #2b2f37; }
+    #bar h1 { margin: 0 0 4px; font-size: 14px; font-weight: 600; }
+    #bar p { margin: 0; color: #9aa0aa; }
+    #bar code { background: #23272f; padding: 1px 5px; border-radius: 4px; color: #d6dae0; }
+    a { color: #7ab7ff; }
+    select { background: #23272f; color: #e6e6e6; border: 1px solid #3a4049;
+      border-radius: 6px; padding: 4px 8px; margin-top: 8px; min-width: 320px; }
+    /* 自检面板：出问题时把「哪一步挂了」直接写在页面上，避免再出现
+       只有一个「No API definition provided.」、控制台才知道发生了什么的情况 */
+    #err { display: none; margin: 12px 16px; padding: 10px 12px; border-radius: 6px;
+      background: #3a2222; color: #ffb3b3; white-space: pre-wrap; }
+    #err ul { margin: 6px 0 0; padding-left: 20px; }
+  </style>
+</head>
+<body>
+  <div id="bar">
+    <h1>Ecommerce API · Connect 原生接口文档</h1>
+    <p>
+      由 <code>backend/api/*/v1/*.proto</code> 经 <code>buf.gen.openapi.yaml</code> 生成；
+      路径形态为 <code>POST /&lt;package&gt;.&lt;Service&gt;/&lt;Method&gt;</code>，与网关实际路由同一套名字。
+      改了 proto 后跑 <code>cd backend &amp;&amp; make api-openapi</code>（或 <code>make api</code>）再刷新本页。
+    </p>
+    <select id="pick" aria-label="选择 API spec"></select>
+  </div>
+  <div id="err"></div>
+  <div id="app"></div>
+
+  <script src="https://cdn.jsdelivr.net/npm/@scalar/api-reference"></script>
+  <script>
+    (async () => {
+      const fail = (title, lines) => {
+        const el = document.getElementById('err');
+        el.style.display = 'block';
+        el.innerHTML = '<strong>' + title + '</strong>' +
+          (lines && lines.length ? '<ul>' + lines.map((l) => '<li>' + l + '</li>').join('') + '</ul>' : '');
+      };
+
+      let list;
+      try {
+        const res = await fetch('./specs.json');
+        if (!res.ok) throw new Error('HTTP ' + res.status);
+        list = await res.json();
+      } catch (e) {
+        fail('读不到 specs.json（' + e.message + '）', [
+          '在 backend/ 下跑 <code>make api-openapi</code> 生成它；',
+          '本页必须经 HTTP 打开，直接双击文件（file://）读不到本地 spec —— 用 <code>make apidocs</code>。',
+        ]);
+        return;
+      }
+      if (!Array.isArray(list) || list.length === 0) {
+        fail('specs.json 是空的', ['跑 <code>make api-openapi</code> 重新生成。']);
+        return;
+      }
+
+      const sel = document.getElementById('pick');
+      list.forEach((s) => {
+        const o = document.createElement('option');
+        o.value = s.url;
+        o.textContent = s.name;
+        sel.appendChild(o);
+      });
+
+      const q = new URLSearchParams(location.search).get('spec');
+      const current = list.find((s) => s.url === q) || list[0];
+      sel.value = current.url;
+
+      // 换成 ?spec= 再刷新，而不是就地重建组件 —— 避免同一页面反复 createApiReference
+      // 产生残留节点，也让每个文档都有可分享的直链。
+      sel.addEventListener('change', () => {
+        location.search = '?spec=' + encodeURIComponent(sel.value);
+      });
+
+      // 先自检：spec 真的能取到、并且是 JSON，再交给渲染器。
+      // 这样「路径不对」和「渲染器不支持」两类问题在页面上就能分清。
+      try {
+        const head = await fetch(current.url);
+        if (!head.ok) throw new Error('HTTP ' + head.status + ' ' + head.statusText);
+        const raw = await head.text();
+        const doc = JSON.parse(raw);
+        if (!doc.openapi) throw new Error('缺 openapi 版本字段');
+        if (String(doc.openapi).indexOf('3.1') === 0) {
+          document.getElementById('bar').insertAdjacentHTML(
+            'beforeend',
+            '<p style="color:#9aa0aa">渲染器：Scalar（Swagger UI 不支持 OpenAPI ' +
+            doc.openapi + '，详见本文件头注释）。</p>'
+          );
+        }
+      } catch (e) {
+        fail('取到的不是可用 spec：' + current.url + ' —— ' + e.message, [
+          '先看 http.server 的日志，确认该路径是否真的在服务；',
+          '服务根目录必须是 backend/（<code>make apidocs</code> 就是这么做的）。',
+        ]);
+        return;
+      }
+
+      try {
+        Scalar.createApiReference(document.getElementById('app'), {
+          url: current.url,
+          darkMode: true,
+        });
+      } catch (e) {
+        fail('渲染器初始化失败：' + e.message, [
+          '最常见原因是拿不到 CDN 上的 Scalar（离线/内网环境）；',
+          '需要离线可用时，把 <code>@scalar/api-reference</code> 下到本页旁边，改 script src 为本地路径。',
+        ]);
+      }
+    })();
+  </script>
+</body>
+</html>

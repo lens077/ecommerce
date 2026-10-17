@@ -1,0 +1,855 @@
+{
+  "openapi": "3.1.0",
+  "info": {
+    "version": "0.1.0",
+    "contact": {
+      "name": "ecommerce"
+    },
+    "title": "merchant.v1"
+  },
+  "servers": [
+    {
+      "url": "https://gateway.apikv.com",
+      "description": "公网网关（control-tower）。Gatus 用它做烟雾：`.../product.v1.ProductService/GetProductDetail`"
+    },
+    {
+      "url": "http://localhost:8080",
+      "description": "本地开发直连（VITE_GATEWAY_URL 的默认值）"
+    }
+  ],
+  "paths": {
+    "/merchant.v1.MerchantService/GetMerchantAgreement": {
+      "post": {
+        "tags": [
+          "merchant.v1.MerchantService"
+        ],
+        "summary": "GetMerchantAgreement",
+        "description": "获取当前生效的入驻协议元信息（无需登录）",
+        "operationId": "merchant.v1.MerchantService.GetMerchantAgreement",
+        "parameters": [
+          {
+            "name": "Connect-Protocol-Version",
+            "in": "header",
+            "required": true,
+            "schema": {
+              "$ref": "#/components/schemas/connect-protocol-version"
+            }
+          },
+          {
+            "name": "Connect-Timeout-Ms",
+            "in": "header",
+            "schema": {
+              "$ref": "#/components/schemas/connect-timeout-header"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/merchant.v1.GetMerchantAgreementRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "default": {
+            "description": "Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/connect.error"
+                }
+              }
+            }
+          },
+          "200": {
+            "description": "Success",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/merchant.v1.GetMerchantAgreementResponse"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/merchant.v1.MerchantService/CreateMerchant": {
+      "post": {
+        "tags": [
+          "merchant.v1.MerchantService"
+        ],
+        "summary": "CreateMerchant",
+        "description": "创建商家账号",
+        "operationId": "merchant.v1.MerchantService.CreateMerchant",
+        "parameters": [
+          {
+            "name": "Connect-Protocol-Version",
+            "in": "header",
+            "required": true,
+            "schema": {
+              "$ref": "#/components/schemas/connect-protocol-version"
+            }
+          },
+          {
+            "name": "Connect-Timeout-Ms",
+            "in": "header",
+            "schema": {
+              "$ref": "#/components/schemas/connect-timeout-header"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/merchant.v1.CreateMerchantRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "default": {
+            "description": "Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/connect.error"
+                }
+              }
+            }
+          },
+          "200": {
+            "description": "Success",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/merchant.v1.CreateMerchantResponse"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/merchant.v1.MerchantService/SubmitApplication": {
+      "post": {
+        "tags": [
+          "merchant.v1.MerchantService"
+        ],
+        "summary": "SubmitApplication",
+        "description": "商家提交入驻申请",
+        "operationId": "merchant.v1.MerchantService.SubmitApplication",
+        "parameters": [
+          {
+            "name": "Connect-Protocol-Version",
+            "in": "header",
+            "required": true,
+            "schema": {
+              "$ref": "#/components/schemas/connect-protocol-version"
+            }
+          },
+          {
+            "name": "Connect-Timeout-Ms",
+            "in": "header",
+            "schema": {
+              "$ref": "#/components/schemas/connect-timeout-header"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/merchant.v1.SubmitApplicationRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "default": {
+            "description": "Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/connect.error"
+                }
+              }
+            }
+          },
+          "200": {
+            "description": "Success",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/merchant.v1.SubmitApplicationResponse"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/merchant.v1.MerchantService/ApproveApplication": {
+      "post": {
+        "tags": [
+          "merchant.v1.MerchantService"
+        ],
+        "summary": "ApproveApplication",
+        "description": "通过入驻申请（管理员操作）, 发送领域事件(创建商家账户、店铺、库存初始化等）",
+        "operationId": "merchant.v1.MerchantService.ApproveApplication",
+        "parameters": [
+          {
+            "name": "Connect-Protocol-Version",
+            "in": "header",
+            "required": true,
+            "schema": {
+              "$ref": "#/components/schemas/connect-protocol-version"
+            }
+          },
+          {
+            "name": "Connect-Timeout-Ms",
+            "in": "header",
+            "schema": {
+              "$ref": "#/components/schemas/connect-timeout-header"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/merchant.v1.ApproveApplicationRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "default": {
+            "description": "Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/connect.error"
+                }
+              }
+            }
+          },
+          "200": {
+            "description": "Success",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/merchant.v1.ApproveApplicationResponse"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/merchant.v1.MerchantService/RejectApplication": {
+      "post": {
+        "tags": [
+          "merchant.v1.MerchantService"
+        ],
+        "summary": "RejectApplication",
+        "description": "驳回入驻申请（管理员操作）, 发送领域事件(申请被驳回)",
+        "operationId": "merchant.v1.MerchantService.RejectApplication",
+        "parameters": [
+          {
+            "name": "Connect-Protocol-Version",
+            "in": "header",
+            "required": true,
+            "schema": {
+              "$ref": "#/components/schemas/connect-protocol-version"
+            }
+          },
+          {
+            "name": "Connect-Timeout-Ms",
+            "in": "header",
+            "schema": {
+              "$ref": "#/components/schemas/connect-timeout-header"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/merchant.v1.RejectApplicationRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "default": {
+            "description": "Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/connect.error"
+                }
+              }
+            }
+          },
+          "200": {
+            "description": "Success",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/merchant.v1.RejectApplicationResponse"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/merchant.v1.MerchantService/GetApplication": {
+      "post": {
+        "tags": [
+          "merchant.v1.MerchantService"
+        ],
+        "summary": "GetApplication",
+        "description": "查询入驻申请状态",
+        "operationId": "merchant.v1.MerchantService.GetApplication",
+        "parameters": [
+          {
+            "name": "Connect-Protocol-Version",
+            "in": "header",
+            "required": true,
+            "schema": {
+              "$ref": "#/components/schemas/connect-protocol-version"
+            }
+          },
+          {
+            "name": "Connect-Timeout-Ms",
+            "in": "header",
+            "schema": {
+              "$ref": "#/components/schemas/connect-timeout-header"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/merchant.v1.GetApplicationRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "default": {
+            "description": "Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/connect.error"
+                }
+              }
+            }
+          },
+          "200": {
+            "description": "Success",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/merchant.v1.GetApplicationResponse"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/merchant.v1.MerchantService/ActivateMerchant": {
+      "post": {
+        "tags": [
+          "merchant.v1.MerchantService"
+        ],
+        "summary": "ActivateMerchant",
+        "description": "激活商家",
+        "operationId": "merchant.v1.MerchantService.ActivateMerchant",
+        "parameters": [
+          {
+            "name": "Connect-Protocol-Version",
+            "in": "header",
+            "required": true,
+            "schema": {
+              "$ref": "#/components/schemas/connect-protocol-version"
+            }
+          },
+          {
+            "name": "Connect-Timeout-Ms",
+            "in": "header",
+            "schema": {
+              "$ref": "#/components/schemas/connect-timeout-header"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/merchant.v1.ActivateMerchantRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "default": {
+            "description": "Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/connect.error"
+                }
+              }
+            }
+          },
+          "200": {
+            "description": "Success",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/merchant.v1.ActivateMerchantResponse"
+                }
+              }
+            }
+          }
+        }
+      }
+    }
+  },
+  "components": {
+    "schemas": {
+      "merchant.v1.ApplicationStatus": {
+        "type": "string",
+        "title": "ApplicationStatus",
+        "enum": [
+          "APPLICATION_STATUS_UNSPECIFIED",
+          "APPLICATION_STATUS_PENDING_REVIEW",
+          "APPLICATION_STATUS_APPROVED",
+          "APPLICATION_STATUS_REJECTED",
+          "APPLICATION_STATUS_ACTIVATED"
+        ],
+        "description": "商家入驻申请状态"
+      },
+      "google.protobuf.Timestamp": {
+        "type": "string",
+        "examples": [
+          "1s",
+          "1.000340012s"
+        ],
+        "format": "date-time",
+        "description": "A Timestamp represents a point in time independent of any time zone or local\n calendar, encoded as a count of seconds and fractions of seconds at\n nanosecond resolution. The count is relative to an epoch at UTC midnight on\n January 1, 1970, in the proleptic Gregorian calendar which extends the\n Gregorian calendar backwards to year one.\n\n All minutes are 60 seconds long. Leap seconds are \"smeared\" so that no leap\n second table is needed for interpretation, using a [24-hour linear\n smear](https://developers.google.com/time/smear).\n\n The range is from 0001-01-01T00:00:00Z to 9999-12-31T23:59:59.999999999Z. By\n restricting to that range, we ensure that we can convert to and from [RFC\n 3339](https://www.ietf.org/rfc/rfc3339.txt) date strings.\n\n # Examples\n\n Example 1: Compute Timestamp from POSIX `time()`.\n\n     Timestamp timestamp;\n     timestamp.set_seconds(time(NULL));\n     timestamp.set_nanos(0);\n\n Example 2: Compute Timestamp from POSIX `gettimeofday()`.\n\n     struct timeval tv;\n     gettimeofday(\u0026tv, NULL);\n\n     Timestamp timestamp;\n     timestamp.set_seconds(tv.tv_sec);\n     timestamp.set_nanos(tv.tv_usec * 1000);\n\n Example 3: Compute Timestamp from Win32 `GetSystemTimeAsFileTime()`.\n\n     FILETIME ft;\n     GetSystemTimeAsFileTime(\u0026ft);\n     UINT64 ticks = (((UINT64)ft.dwHighDateTime) \u003c\u003c 32) | ft.dwLowDateTime;\n\n     // A Windows tick is 100 nanoseconds. Windows epoch 1601-01-01T00:00:00Z\n     // is 11644473600 seconds before Unix epoch 1970-01-01T00:00:00Z.\n     Timestamp timestamp;\n     timestamp.set_seconds((INT64) ((ticks / 10000000) - 11644473600LL));\n     timestamp.set_nanos((INT32) ((ticks % 10000000) * 100));\n\n Example 4: Compute Timestamp from Java `System.currentTimeMillis()`.\n\n     long millis = System.currentTimeMillis();\n\n     Timestamp timestamp = Timestamp.newBuilder().setSeconds(millis / 1000)\n         .setNanos((int) ((millis % 1000) * 1000000)).build();\n\n Example 5: Compute Timestamp from Java `Instant.now()`.\n\n     Instant now = Instant.now();\n\n     Timestamp timestamp =\n         Timestamp.newBuilder().setSeconds(now.getEpochSecond())\n             .setNanos(now.getNano()).build();\n\n Example 6: Compute Timestamp from current time in Python.\n\n     timestamp = Timestamp()\n     timestamp.GetCurrentTime()\n\n # JSON Mapping\n\n In JSON format, the Timestamp type is encoded as a string in the\n [RFC 3339](https://www.ietf.org/rfc/rfc3339.txt) format. That is, the\n format is \"{year}-{month}-{day}T{hour}:{min}:{sec}[.{frac_sec}]Z\"\n where {year} is always expressed using four digits while {month}, {day},\n {hour}, {min}, and {sec} are zero-padded to two digits each. The fractional\n seconds, which can go up to 9 digits (i.e. up to 1 nanosecond resolution),\n are optional. The \"Z\" suffix indicates the timezone (\"UTC\"); the timezone\n is required. A ProtoJSON serializer should always use UTC (as indicated by\n \"Z\") when printing the Timestamp type and a ProtoJSON parser should be\n able to accept both UTC and other timezones (as indicated by an offset).\n\n For example, \"2017-01-15T01:30:15.01Z\" encodes 15.01 seconds past\n 01:30 UTC on January 15, 2017.\n\n In JavaScript, one can convert a Date object to this format using the\n standard\n [toISOString()](https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/Date/toISOString)\n method. In Python, a standard `datetime.datetime` object can be converted\n to this format using\n [`strftime`](https://docs.python.org/2/library/time.html#time.strftime) with\n the time format spec '%Y-%m-%dT%H:%M:%S.%fZ'. Likewise, in Java, one can use\n the Joda Time's [`ISODateTimeFormat.dateTime()`](\n http://joda-time.sourceforge.net/apidocs/org/joda/time/format/ISODateTimeFormat.html#dateTime()\n ) to obtain a formatter capable of generating timestamps in this format."
+      },
+      "merchant.v1.ActivateMerchantRequest": {
+        "type": "object",
+        "properties": {
+          "merchantId": {
+            "type": "string",
+            "title": "merchant_id",
+            "maxLength": 64,
+            "minLength": 1
+          },
+          "shopName": {
+            "type": "string",
+            "title": "shop_name",
+            "maxLength": 255,
+            "minLength": 1
+          },
+          "shopLogoUrl": {
+            "type": "string",
+            "title": "shop_logo_url",
+            "maxLength": 2048
+          }
+        },
+        "title": "ActivateMerchantRequest",
+        "additionalProperties": false,
+        "description": "激活商家请求"
+      },
+      "merchant.v1.ActivateMerchantResponse": {
+        "type": "object",
+        "title": "ActivateMerchantResponse",
+        "additionalProperties": false
+      },
+      "merchant.v1.ApproveApplicationRequest": {
+        "type": "object",
+        "properties": {
+          "applicationId": {
+            "type": "string",
+            "title": "application_id",
+            "format": "uuid",
+            "description": "申请ID"
+          },
+          "auditComment": {
+            "type": "string",
+            "title": "audit_comment",
+            "maxLength": 2000,
+            "description": "审核备注，可选"
+          }
+        },
+        "title": "ApproveApplicationRequest",
+        "additionalProperties": false
+      },
+      "merchant.v1.ApproveApplicationResponse": {
+        "type": "object",
+        "title": "ApproveApplicationResponse",
+        "additionalProperties": false
+      },
+      "merchant.v1.CreateMerchantRequest": {
+        "type": "object",
+        "properties": {
+          "phone": {
+            "type": "string",
+            "title": "phone",
+            "maxLength": 11,
+            "minLength": 1
+          },
+          "mail": {
+            "type": "string",
+            "title": "mail"
+          },
+          "agreementVersion": {
+            "type": "string",
+            "title": "agreement_version",
+            "maxLength": 16,
+            "minLength": 1,
+            "description": "确认协议的版本号"
+          }
+        },
+        "title": "CreateMerchantRequest",
+        "additionalProperties": false
+      },
+      "merchant.v1.CreateMerchantResponse": {
+        "type": "object",
+        "title": "CreateMerchantResponse",
+        "additionalProperties": false
+      },
+      "merchant.v1.GetApplicationRequest": {
+        "type": "object",
+        "properties": {
+          "applicationId": {
+            "type": "string",
+            "title": "application_id",
+            "format": "uuid"
+          }
+        },
+        "title": "GetApplicationRequest",
+        "additionalProperties": false,
+        "description": "查询申请状态请求"
+      },
+      "merchant.v1.GetApplicationResponse": {
+        "type": "object",
+        "properties": {
+          "applicationId": {
+            "type": "string",
+            "title": "application_id",
+            "format": "uuid"
+          },
+          "status": {
+            "not": {
+              "enum": [
+                0
+              ]
+            },
+            "title": "status",
+            "$ref": "#/components/schemas/merchant.v1.ApplicationStatus"
+          },
+          "companyName": {
+            "type": "string",
+            "title": "company_name",
+            "maxLength": 255,
+            "minLength": 1
+          },
+          "creditCode": {
+            "type": "string",
+            "title": "credit_code",
+            "maxLength": 64,
+            "minLength": 1
+          },
+          "legalPerson": {
+            "type": "string",
+            "title": "legal_person",
+            "maxLength": 64,
+            "minLength": 1
+          },
+          "contactPhone": {
+            "type": "string",
+            "title": "contact_phone",
+            "maxLength": 32,
+            "minLength": 1
+          },
+          "rejectReason": {
+            "type": "string",
+            "title": "reject_reason",
+            "maxLength": 2000,
+            "description": "仅当 status = REJECTED 时有值"
+          },
+          "submittedAt": {
+            "title": "submitted_at",
+            "$ref": "#/components/schemas/google.protobuf.Timestamp"
+          },
+          "reviewedAt": {
+            "title": "reviewed_at",
+            "$ref": "#/components/schemas/google.protobuf.Timestamp"
+          }
+        },
+        "title": "GetApplicationResponse",
+        "required": [
+          "submittedAt"
+        ],
+        "additionalProperties": false
+      },
+      "merchant.v1.GetMerchantAgreementRequest": {
+        "type": "object",
+        "title": "GetMerchantAgreementRequest",
+        "additionalProperties": false
+      },
+      "merchant.v1.GetMerchantAgreementResponse": {
+        "type": "object",
+        "properties": {
+          "version": {
+            "type": "string",
+            "title": "version",
+            "description": "\"v1.0\""
+          },
+          "effectiveDate": {
+            "type": "string",
+            "title": "effective_date",
+            "description": "\"2026-08-13\""
+          },
+          "contentUrl": {
+            "type": "string",
+            "title": "content_url",
+            "description": "协议文本地址"
+          }
+        },
+        "title": "GetMerchantAgreementResponse",
+        "additionalProperties": false
+      },
+      "merchant.v1.RejectApplicationRequest": {
+        "type": "object",
+        "properties": {
+          "applicationId": {
+            "type": "string",
+            "title": "application_id",
+            "format": "uuid",
+            "description": "申请ID"
+          },
+          "reason": {
+            "type": "string",
+            "title": "reason",
+            "maxLength": 2000,
+            "minLength": 1,
+            "description": "驳回原因，必填"
+          }
+        },
+        "title": "RejectApplicationRequest",
+        "additionalProperties": false
+      },
+      "merchant.v1.RejectApplicationResponse": {
+        "type": "object",
+        "title": "RejectApplicationResponse",
+        "additionalProperties": false
+      },
+      "merchant.v1.SubmitApplicationRequest": {
+        "type": "object",
+        "properties": {
+          "companyName": {
+            "type": "string",
+            "title": "company_name",
+            "maxLength": 255,
+            "minLength": 1,
+            "description": "公司名称"
+          },
+          "creditCode": {
+            "type": "string",
+            "title": "credit_code",
+            "maxLength": 64,
+            "minLength": 1,
+            "description": "统一社会信用代码"
+          },
+          "legalPerson": {
+            "type": "string",
+            "title": "legal_person",
+            "maxLength": 64,
+            "minLength": 1,
+            "description": "法人姓名"
+          },
+          "legalPersonId": {
+            "type": "string",
+            "title": "legal_person_id",
+            "maxLength": 32,
+            "minLength": 1,
+            "description": "法人身份证号"
+          },
+          "contactPhone": {
+            "type": "string",
+            "title": "contact_phone",
+            "maxLength": 32,
+            "minLength": 1,
+            "description": "联系电话"
+          },
+          "businessLicenseUrl": {
+            "type": "string",
+            "title": "business_license_url",
+            "maxLength": 2048,
+            "description": "营业执照图片URL"
+          },
+          "legalPersonIdFrontUrl": {
+            "type": "string",
+            "title": "legal_person_id_front_url",
+            "maxLength": 2048,
+            "description": "法人身份证正面图片URL"
+          },
+          "legalPersonIdBackUrl": {
+            "type": "string",
+            "title": "legal_person_id_back_url",
+            "maxLength": 2048,
+            "description": "法人身份证反面图片URL"
+          },
+          "categoryIds": {
+            "type": "array",
+            "items": {
+              "exclusiveMinimum": 0,
+              "type": [
+                "integer",
+                "string"
+              ],
+              "format": "int64",
+              "maxItems": 100,
+              "uniqueItems": true
+            },
+            "title": "category_ids",
+            "maxItems": 100,
+            "uniqueItems": true,
+            "description": "申请经营类目ID列表"
+          },
+          "remark": {
+            "type": "string",
+            "title": "remark",
+            "maxLength": 2000,
+            "description": "备注"
+          }
+        },
+        "title": "SubmitApplicationRequest",
+        "additionalProperties": false
+      },
+      "merchant.v1.SubmitApplicationResponse": {
+        "type": "object",
+        "properties": {
+          "applicationId": {
+            "type": "string",
+            "title": "application_id",
+            "format": "uuid",
+            "description": "申请ID"
+          },
+          "status": {
+            "type": "string",
+            "title": "status",
+            "enum": [
+              "pending_review",
+              "approved",
+              "rejected",
+              "activated"
+            ],
+            "description": "当前状态 (pending_review)"
+          }
+        },
+        "title": "SubmitApplicationResponse",
+        "additionalProperties": false
+      },
+      "connect-protocol-version": {
+        "type": "number",
+        "title": "Connect-Protocol-Version",
+        "enum": [
+          1
+        ],
+        "description": "Define the version of the Connect protocol",
+        "const": 1
+      },
+      "connect-timeout-header": {
+        "type": "number",
+        "title": "Connect-Timeout-Ms",
+        "description": "Define the timeout, in ms"
+      },
+      "connect.error": {
+        "type": "object",
+        "properties": {
+          "code": {
+            "type": "string",
+            "examples": [
+              "not_found"
+            ],
+            "enum": [
+              "canceled",
+              "unknown",
+              "invalid_argument",
+              "deadline_exceeded",
+              "not_found",
+              "already_exists",
+              "permission_denied",
+              "resource_exhausted",
+              "failed_precondition",
+              "aborted",
+              "out_of_range",
+              "unimplemented",
+              "internal",
+              "unavailable",
+              "data_loss",
+              "unauthenticated"
+            ],
+            "description": "The status code, which should be an enum value of [google.rpc.Code][google.rpc.Code]."
+          },
+          "message": {
+            "type": "string",
+            "description": "A developer-facing error message, which should be in English. Any user-facing error message should be localized and sent in the [google.rpc.Status.details][google.rpc.Status.details] field, or localized by the client."
+          },
+          "detail": {
+            "$ref": "#/components/schemas/google.protobuf.Any"
+          }
+        },
+        "title": "Connect Error",
+        "additionalProperties": true,
+        "description": "Error type returned by Connect: https://connectrpc.com/docs/go/errors/#http-representation"
+      },
+      "google.protobuf.Any": {
+        "type": "object",
+        "properties": {
+          "type": {
+            "type": "string"
+          },
+          "value": {
+            "type": "string",
+            "format": "binary"
+          },
+          "debug": {
+            "type": "object",
+            "additionalProperties": true
+          }
+        },
+        "additionalProperties": true,
+        "description": "Contains an arbitrary serialized message along with a @type that describes the type of the serialized message."
+      }
+    }
+  },
+  "security": [],
+  "tags": [
+    {
+      "name": "merchant.v1.MerchantService"
+    }
+  ]
+}

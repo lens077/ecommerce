@@ -1,0 +1,738 @@
+{
+  "openapi": "3.1.0",
+  "info": {
+    "version": "0.1.0",
+    "contact": {
+      "name": "ecommerce"
+    },
+    "title": "address.v1"
+  },
+  "servers": [
+    {
+      "url": "https://gateway.apikv.com",
+      "description": "公网网关（control-tower）。Gatus 用它做烟雾：`.../product.v1.ProductService/GetProductDetail`"
+    },
+    {
+      "url": "http://localhost:8080",
+      "description": "本地开发直连（VITE_GATEWAY_URL 的默认值）"
+    }
+  ],
+  "paths": {
+    "/address.v1.AddressService/CreateAddress": {
+      "post": {
+        "tags": [
+          "address.v1.AddressService"
+        ],
+        "summary": "CreateAddress",
+        "description": "创建收货地址",
+        "operationId": "address.v1.AddressService.CreateAddress",
+        "parameters": [
+          {
+            "name": "Connect-Protocol-Version",
+            "in": "header",
+            "required": true,
+            "schema": {
+              "$ref": "#/components/schemas/connect-protocol-version"
+            }
+          },
+          {
+            "name": "Connect-Timeout-Ms",
+            "in": "header",
+            "schema": {
+              "$ref": "#/components/schemas/connect-timeout-header"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/address.v1.CreateAddressRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "default": {
+            "description": "Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/connect.error"
+                }
+              }
+            }
+          },
+          "200": {
+            "description": "Success",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/address.v1.CreateAddressResponse"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/address.v1.AddressService/UpdateAddress": {
+      "post": {
+        "tags": [
+          "address.v1.AddressService"
+        ],
+        "summary": "UpdateAddress",
+        "description": "更新收货地址",
+        "operationId": "address.v1.AddressService.UpdateAddress",
+        "parameters": [
+          {
+            "name": "Connect-Protocol-Version",
+            "in": "header",
+            "required": true,
+            "schema": {
+              "$ref": "#/components/schemas/connect-protocol-version"
+            }
+          },
+          {
+            "name": "Connect-Timeout-Ms",
+            "in": "header",
+            "schema": {
+              "$ref": "#/components/schemas/connect-timeout-header"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/address.v1.UpdateAddressRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "default": {
+            "description": "Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/connect.error"
+                }
+              }
+            }
+          },
+          "200": {
+            "description": "Success",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/address.v1.UpdateAddressResponse"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/address.v1.AddressService/DeleteAddress": {
+      "post": {
+        "tags": [
+          "address.v1.AddressService"
+        ],
+        "summary": "DeleteAddress",
+        "description": "删除收货地址（软删除）",
+        "operationId": "address.v1.AddressService.DeleteAddress",
+        "parameters": [
+          {
+            "name": "Connect-Protocol-Version",
+            "in": "header",
+            "required": true,
+            "schema": {
+              "$ref": "#/components/schemas/connect-protocol-version"
+            }
+          },
+          {
+            "name": "Connect-Timeout-Ms",
+            "in": "header",
+            "schema": {
+              "$ref": "#/components/schemas/connect-timeout-header"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/address.v1.DeleteAddressRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "default": {
+            "description": "Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/connect.error"
+                }
+              }
+            }
+          },
+          "200": {
+            "description": "Success",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/address.v1.DeleteAddressResponse"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/address.v1.AddressService/GetAddress": {
+      "post": {
+        "tags": [
+          "address.v1.AddressService"
+        ],
+        "summary": "GetAddress",
+        "description": "获取单个地址详情",
+        "operationId": "address.v1.AddressService.GetAddress",
+        "parameters": [
+          {
+            "name": "Connect-Protocol-Version",
+            "in": "header",
+            "required": true,
+            "schema": {
+              "$ref": "#/components/schemas/connect-protocol-version"
+            }
+          },
+          {
+            "name": "Connect-Timeout-Ms",
+            "in": "header",
+            "schema": {
+              "$ref": "#/components/schemas/connect-timeout-header"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/address.v1.GetAddressRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "default": {
+            "description": "Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/connect.error"
+                }
+              }
+            }
+          },
+          "200": {
+            "description": "Success",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/address.v1.GetAddressResponse"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/address.v1.AddressService/ListAddresses": {
+      "post": {
+        "tags": [
+          "address.v1.AddressService"
+        ],
+        "summary": "ListAddresses",
+        "description": "获取用户的所有地址列表",
+        "operationId": "address.v1.AddressService.ListAddresses",
+        "parameters": [
+          {
+            "name": "Connect-Protocol-Version",
+            "in": "header",
+            "required": true,
+            "schema": {
+              "$ref": "#/components/schemas/connect-protocol-version"
+            }
+          },
+          {
+            "name": "Connect-Timeout-Ms",
+            "in": "header",
+            "schema": {
+              "$ref": "#/components/schemas/connect-timeout-header"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/address.v1.ListAddressesRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "default": {
+            "description": "Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/connect.error"
+                }
+              }
+            }
+          },
+          "200": {
+            "description": "Success",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/address.v1.ListAddressesResponse"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/address.v1.AddressService/SetDefaultAddress": {
+      "post": {
+        "tags": [
+          "address.v1.AddressService"
+        ],
+        "summary": "SetDefaultAddress",
+        "description": "设置默认地址",
+        "operationId": "address.v1.AddressService.SetDefaultAddress",
+        "parameters": [
+          {
+            "name": "Connect-Protocol-Version",
+            "in": "header",
+            "required": true,
+            "schema": {
+              "$ref": "#/components/schemas/connect-protocol-version"
+            }
+          },
+          {
+            "name": "Connect-Timeout-Ms",
+            "in": "header",
+            "schema": {
+              "$ref": "#/components/schemas/connect-timeout-header"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/address.v1.SetDefaultAddressRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "default": {
+            "description": "Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/connect.error"
+                }
+              }
+            }
+          },
+          "200": {
+            "description": "Success",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/address.v1.SetDefaultAddressResponse"
+                }
+              }
+            }
+          }
+        }
+      }
+    }
+  },
+  "components": {
+    "schemas": {
+      "address.v1.AddressDetail": {
+        "type": "object",
+        "properties": {
+          "province": {
+            "type": "string",
+            "title": "province",
+            "maxLength": 64,
+            "minLength": 1,
+            "description": "省/直辖市/自治区"
+          },
+          "city": {
+            "type": "string",
+            "title": "city",
+            "maxLength": 64,
+            "minLength": 1,
+            "description": "城市"
+          },
+          "district": {
+            "type": "string",
+            "title": "district",
+            "maxLength": 64,
+            "description": "区/县。允许为空：省直辖县级行政区（海南琼海市、湖北仙桃市、新疆石河子市等 49 个）\n 本身就是市级末端，下面没有区县，硬要求非空等于让这些地方填不出地址。"
+          },
+          "detail": {
+            "type": "string",
+            "title": "detail",
+            "maxLength": 500,
+            "minLength": 1,
+            "description": "详细地址（街道、门牌号等）"
+          },
+          "postalCode": {
+            "type": "string",
+            "title": "postal_code",
+            "maxLength": 16,
+            "description": "邮政编码（可选）"
+          },
+          "fullText": {
+            "type": "string",
+            "title": "full_text",
+            "maxLength": 1024,
+            "description": "完整地址文本，方便前端展示"
+          }
+        },
+        "title": "AddressDetail",
+        "additionalProperties": false,
+        "description": "地址详情（值对象，不可变）"
+      },
+      "address.v1.CreateAddressRequest": {
+        "type": "object",
+        "properties": {
+          "recipientName": {
+            "type": "string",
+            "title": "recipient_name",
+            "maxLength": 255,
+            "minLength": 1,
+            "description": "收件人姓名"
+          },
+          "recipientPhone": {
+            "type": "string",
+            "title": "recipient_phone",
+            "maxLength": 50,
+            "minLength": 1,
+            "description": "收件人电话"
+          },
+          "detail": {
+            "title": "detail",
+            "description": "地址详情",
+            "$ref": "#/components/schemas/address.v1.AddressDetail"
+          },
+          "isDefault": {
+            "type": "boolean",
+            "title": "is_default",
+            "description": "是否设为默认地址"
+          }
+        },
+        "title": "CreateAddressRequest",
+        "required": [
+          "detail"
+        ],
+        "additionalProperties": false,
+        "description": "创建地址请求"
+      },
+      "address.v1.CreateAddressResponse": {
+        "type": "object",
+        "properties": {
+          "addressId": {
+            "type": "string",
+            "title": "address_id",
+            "format": "uuid",
+            "description": "新创建的地址ID"
+          }
+        },
+        "title": "CreateAddressResponse",
+        "additionalProperties": false
+      },
+      "address.v1.DeleteAddressRequest": {
+        "type": "object",
+        "properties": {
+          "addressId": {
+            "type": "string",
+            "title": "address_id",
+            "format": "uuid",
+            "description": "地址ID"
+          }
+        },
+        "title": "DeleteAddressRequest",
+        "additionalProperties": false,
+        "description": "删除地址请求（软删除）"
+      },
+      "address.v1.DeleteAddressResponse": {
+        "type": "object",
+        "title": "DeleteAddressResponse",
+        "additionalProperties": false
+      },
+      "address.v1.GetAddressRequest": {
+        "type": "object",
+        "properties": {
+          "addressId": {
+            "type": "string",
+            "title": "address_id",
+            "format": "uuid",
+            "description": "地址ID"
+          }
+        },
+        "title": "GetAddressRequest",
+        "additionalProperties": false,
+        "description": "获取地址请求"
+      },
+      "address.v1.GetAddressResponse": {
+        "type": "object",
+        "properties": {
+          "addressId": {
+            "type": "string",
+            "title": "address_id",
+            "format": "uuid",
+            "description": "地址ID"
+          },
+          "recipientName": {
+            "type": "string",
+            "title": "recipient_name",
+            "maxLength": 255,
+            "minLength": 1,
+            "description": "收件人姓名"
+          },
+          "recipientPhone": {
+            "type": "string",
+            "title": "recipient_phone",
+            "maxLength": 50,
+            "minLength": 1,
+            "description": "收件人电话"
+          },
+          "userId": {
+            "type": "string",
+            "title": "user_id",
+            "maxLength": 255,
+            "minLength": 1,
+            "description": "用户ID"
+          },
+          "detail": {
+            "title": "detail",
+            "description": "地址详情",
+            "$ref": "#/components/schemas/address.v1.AddressDetail"
+          },
+          "isDefault": {
+            "type": "boolean",
+            "title": "is_default",
+            "description": "是否为默认地址"
+          },
+          "createdAt": {
+            "title": "created_at",
+            "description": "创建时间",
+            "$ref": "#/components/schemas/google.protobuf.Timestamp"
+          },
+          "updatedAt": {
+            "title": "updated_at",
+            "description": "更新时间",
+            "$ref": "#/components/schemas/google.protobuf.Timestamp"
+          }
+        },
+        "title": "GetAddressResponse",
+        "required": [
+          "detail",
+          "createdAt",
+          "updatedAt"
+        ],
+        "additionalProperties": false
+      },
+      "address.v1.ListAddressesRequest": {
+        "type": "object",
+        "title": "ListAddressesRequest",
+        "additionalProperties": false,
+        "description": "获取用户所有地址请求"
+      },
+      "address.v1.ListAddressesResponse": {
+        "type": "object",
+        "properties": {
+          "addresses": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/address.v1.GetAddressResponse"
+            },
+            "title": "addresses",
+            "maxItems": 100,
+            "description": "地址列表"
+          }
+        },
+        "title": "ListAddressesResponse",
+        "additionalProperties": false
+      },
+      "address.v1.SetDefaultAddressRequest": {
+        "type": "object",
+        "properties": {
+          "addressId": {
+            "type": "string",
+            "title": "address_id",
+            "format": "uuid",
+            "description": "地址ID"
+          }
+        },
+        "title": "SetDefaultAddressRequest",
+        "additionalProperties": false,
+        "description": "设置默认地址请求"
+      },
+      "address.v1.SetDefaultAddressResponse": {
+        "type": "object",
+        "title": "SetDefaultAddressResponse",
+        "additionalProperties": false
+      },
+      "address.v1.UpdateAddressRequest": {
+        "type": "object",
+        "properties": {
+          "addressId": {
+            "type": "string",
+            "title": "address_id",
+            "format": "uuid",
+            "description": "地址ID"
+          },
+          "recipientName": {
+            "title": "recipient_name",
+            "maxLength": 255,
+            "minLength": 1,
+            "description": "收件人姓名（可选，不更新则留空）",
+            "$ref": "#/components/schemas/google.protobuf.StringValue"
+          },
+          "recipientPhone": {
+            "title": "recipient_phone",
+            "maxLength": 50,
+            "minLength": 1,
+            "description": "收件人电话（可选）",
+            "$ref": "#/components/schemas/google.protobuf.StringValue"
+          },
+          "detail": {
+            "title": "detail",
+            "description": "地址详情（可选，不更新则留空）",
+            "$ref": "#/components/schemas/address.v1.AddressDetail"
+          }
+        },
+        "title": "UpdateAddressRequest",
+        "additionalProperties": false,
+        "description": "更新地址请求"
+      },
+      "address.v1.UpdateAddressResponse": {
+        "type": "object",
+        "title": "UpdateAddressResponse",
+        "additionalProperties": false
+      },
+      "google.protobuf.StringValue": {
+        "type": "string",
+        "description": "Wrapper message for `string`.\n\n The JSON representation for `StringValue` is JSON string.\n\n Not recommended for use in new APIs, but still useful for legacy APIs and\n has no plan to be removed."
+      },
+      "google.protobuf.Timestamp": {
+        "type": "string",
+        "examples": [
+          "1s",
+          "1.000340012s"
+        ],
+        "format": "date-time",
+        "description": "A Timestamp represents a point in time independent of any time zone or local\n calendar, encoded as a count of seconds and fractions of seconds at\n nanosecond resolution. The count is relative to an epoch at UTC midnight on\n January 1, 1970, in the proleptic Gregorian calendar which extends the\n Gregorian calendar backwards to year one.\n\n All minutes are 60 seconds long. Leap seconds are \"smeared\" so that no leap\n second table is needed for interpretation, using a [24-hour linear\n smear](https://developers.google.com/time/smear).\n\n The range is from 0001-01-01T00:00:00Z to 9999-12-31T23:59:59.999999999Z. By\n restricting to that range, we ensure that we can convert to and from [RFC\n 3339](https://www.ietf.org/rfc/rfc3339.txt) date strings.\n\n # Examples\n\n Example 1: Compute Timestamp from POSIX `time()`.\n\n     Timestamp timestamp;\n     timestamp.set_seconds(time(NULL));\n     timestamp.set_nanos(0);\n\n Example 2: Compute Timestamp from POSIX `gettimeofday()`.\n\n     struct timeval tv;\n     gettimeofday(\u0026tv, NULL);\n\n     Timestamp timestamp;\n     timestamp.set_seconds(tv.tv_sec);\n     timestamp.set_nanos(tv.tv_usec * 1000);\n\n Example 3: Compute Timestamp from Win32 `GetSystemTimeAsFileTime()`.\n\n     FILETIME ft;\n     GetSystemTimeAsFileTime(\u0026ft);\n     UINT64 ticks = (((UINT64)ft.dwHighDateTime) \u003c\u003c 32) | ft.dwLowDateTime;\n\n     // A Windows tick is 100 nanoseconds. Windows epoch 1601-01-01T00:00:00Z\n     // is 11644473600 seconds before Unix epoch 1970-01-01T00:00:00Z.\n     Timestamp timestamp;\n     timestamp.set_seconds((INT64) ((ticks / 10000000) - 11644473600LL));\n     timestamp.set_nanos((INT32) ((ticks % 10000000) * 100));\n\n Example 4: Compute Timestamp from Java `System.currentTimeMillis()`.\n\n     long millis = System.currentTimeMillis();\n\n     Timestamp timestamp = Timestamp.newBuilder().setSeconds(millis / 1000)\n         .setNanos((int) ((millis % 1000) * 1000000)).build();\n\n Example 5: Compute Timestamp from Java `Instant.now()`.\n\n     Instant now = Instant.now();\n\n     Timestamp timestamp =\n         Timestamp.newBuilder().setSeconds(now.getEpochSecond())\n             .setNanos(now.getNano()).build();\n\n Example 6: Compute Timestamp from current time in Python.\n\n     timestamp = Timestamp()\n     timestamp.GetCurrentTime()\n\n # JSON Mapping\n\n In JSON format, the Timestamp type is encoded as a string in the\n [RFC 3339](https://www.ietf.org/rfc/rfc3339.txt) format. That is, the\n format is \"{year}-{month}-{day}T{hour}:{min}:{sec}[.{frac_sec}]Z\"\n where {year} is always expressed using four digits while {month}, {day},\n {hour}, {min}, and {sec} are zero-padded to two digits each. The fractional\n seconds, which can go up to 9 digits (i.e. up to 1 nanosecond resolution),\n are optional. The \"Z\" suffix indicates the timezone (\"UTC\"); the timezone\n is required. A ProtoJSON serializer should always use UTC (as indicated by\n \"Z\") when printing the Timestamp type and a ProtoJSON parser should be\n able to accept both UTC and other timezones (as indicated by an offset).\n\n For example, \"2017-01-15T01:30:15.01Z\" encodes 15.01 seconds past\n 01:30 UTC on January 15, 2017.\n\n In JavaScript, one can convert a Date object to this format using the\n standard\n [toISOString()](https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/Date/toISOString)\n method. In Python, a standard `datetime.datetime` object can be converted\n to this format using\n [`strftime`](https://docs.python.org/2/library/time.html#time.strftime) with\n the time format spec '%Y-%m-%dT%H:%M:%S.%fZ'. Likewise, in Java, one can use\n the Joda Time's [`ISODateTimeFormat.dateTime()`](\n http://joda-time.sourceforge.net/apidocs/org/joda/time/format/ISODateTimeFormat.html#dateTime()\n ) to obtain a formatter capable of generating timestamps in this format."
+      },
+      "connect-protocol-version": {
+        "type": "number",
+        "title": "Connect-Protocol-Version",
+        "enum": [
+          1
+        ],
+        "description": "Define the version of the Connect protocol",
+        "const": 1
+      },
+      "connect-timeout-header": {
+        "type": "number",
+        "title": "Connect-Timeout-Ms",
+        "description": "Define the timeout, in ms"
+      },
+      "connect.error": {
+        "type": "object",
+        "properties": {
+          "code": {
+            "type": "string",
+            "examples": [
+              "not_found"
+            ],
+            "enum": [
+              "canceled",
+              "unknown",
+              "invalid_argument",
+              "deadline_exceeded",
+              "not_found",
+              "already_exists",
+              "permission_denied",
+              "resource_exhausted",
+              "failed_precondition",
+              "aborted",
+              "out_of_range",
+              "unimplemented",
+              "internal",
+              "unavailable",
+              "data_loss",
+              "unauthenticated"
+            ],
+            "description": "The status code, which should be an enum value of [google.rpc.Code][google.rpc.Code]."
+          },
+          "message": {
+            "type": "string",
+            "description": "A developer-facing error message, which should be in English. Any user-facing error message should be localized and sent in the [google.rpc.Status.details][google.rpc.Status.details] field, or localized by the client."
+          },
+          "detail": {
+            "$ref": "#/components/schemas/google.protobuf.Any"
+          }
+        },
+        "title": "Connect Error",
+        "additionalProperties": true,
+        "description": "Error type returned by Connect: https://connectrpc.com/docs/go/errors/#http-representation"
+      },
+      "google.protobuf.Any": {
+        "type": "object",
+        "properties": {
+          "type": {
+            "type": "string"
+          },
+          "value": {
+            "type": "string",
+            "format": "binary"
+          },
+          "debug": {
+            "type": "object",
+            "additionalProperties": true
+          }
+        },
+        "additionalProperties": true,
+        "description": "Contains an arbitrary serialized message along with a @type that describes the type of the serialized message."
+      }
+    }
+  },
+  "security": [],
+  "tags": [
+    {
+      "name": "address.v1.AddressService",
+      "description": "地址服务"
+    }
+  ]
+}

@@ -1,0 +1,345 @@
+{
+  "openapi": "3.1.0",
+  "info": {
+    "version": "0.1.0",
+    "contact": {
+      "name": "ecommerce"
+    },
+    "title": "inventory.v1"
+  },
+  "servers": [
+    {
+      "url": "https://gateway.apikv.com",
+      "description": "公网网关（control-tower）。Gatus 用它做烟雾：`.../product.v1.ProductService/GetProductDetail`"
+    },
+    {
+      "url": "http://localhost:8080",
+      "description": "本地开发直连（VITE_GATEWAY_URL 的默认值）"
+    }
+  ],
+  "paths": {
+    "/inventory.v1.InventoryService/Reserve": {
+      "post": {
+        "tags": [
+          "inventory.v1.InventoryService"
+        ],
+        "summary": "Reserve",
+        "description": "预占库存(下单但未支付): 可用 -\u003e 预占",
+        "operationId": "inventory.v1.InventoryService.Reserve",
+        "parameters": [
+          {
+            "name": "Connect-Protocol-Version",
+            "in": "header",
+            "required": true,
+            "schema": {
+              "$ref": "#/components/schemas/connect-protocol-version"
+            }
+          },
+          {
+            "name": "Connect-Timeout-Ms",
+            "in": "header",
+            "schema": {
+              "$ref": "#/components/schemas/connect-timeout-header"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/inventory.v1.ReserveRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "default": {
+            "description": "Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/connect.error"
+                }
+              }
+            }
+          },
+          "200": {
+            "description": "Success",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/inventory.v1.ReserveResponse"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/inventory.v1.InventoryService/ReleaseReserve": {
+      "post": {
+        "tags": [
+          "inventory.v1.InventoryService"
+        ],
+        "summary": "ReleaseReserve",
+        "description": "释放预占库存(未支付取消/超时取消): 预占 -\u003e 可用",
+        "operationId": "inventory.v1.InventoryService.ReleaseReserve",
+        "parameters": [
+          {
+            "name": "Connect-Protocol-Version",
+            "in": "header",
+            "required": true,
+            "schema": {
+              "$ref": "#/components/schemas/connect-protocol-version"
+            }
+          },
+          {
+            "name": "Connect-Timeout-Ms",
+            "in": "header",
+            "schema": {
+              "$ref": "#/components/schemas/connect-timeout-header"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/inventory.v1.ReleaseReserveRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "default": {
+            "description": "Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/connect.error"
+                }
+              }
+            }
+          },
+          "200": {
+            "description": "Success",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/inventory.v1.ReleaseReserveResponse"
+                }
+              }
+            }
+          }
+        }
+      }
+    }
+  },
+  "components": {
+    "schemas": {
+      "inventory.v1.ReleaseReserveRequest": {
+        "type": "object",
+        "properties": {
+          "orderNo": {
+            "type": "string",
+            "title": "order_no",
+            "maxLength": 64,
+            "minLength": 1,
+            "description": "订单号，用于幂等去重"
+          },
+          "merchantId": {
+            "type": "string",
+            "title": "merchant_id",
+            "format": "uuid",
+            "description": "商家ID（数据隔离）"
+          },
+          "items": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/inventory.v1.ReserveItem"
+            },
+            "title": "items",
+            "maxItems": 100,
+            "minItems": 1,
+            "description": "需要释放预占的商品列表"
+          }
+        },
+        "title": "ReleaseReserveRequest",
+        "additionalProperties": false
+      },
+      "inventory.v1.ReleaseReserveResponse": {
+        "type": "object",
+        "properties": {
+          "status": {
+            "type": "boolean",
+            "title": "status"
+          },
+          "msg": {
+            "type": "string",
+            "title": "msg",
+            "maxLength": 512
+          }
+        },
+        "title": "ReleaseReserveResponse",
+        "additionalProperties": false
+      },
+      "inventory.v1.ReserveItem": {
+        "type": "object",
+        "properties": {
+          "skuId": {
+            "exclusiveMinimum": 0,
+            "type": [
+              "integer",
+              "string"
+            ],
+            "title": "sku_id",
+            "format": "int64",
+            "description": "商品SKU ID"
+          },
+          "quantity": {
+            "exclusiveMinimum": 0,
+            "type": "integer",
+            "title": "quantity",
+            "maximum": 999,
+            "format": "int32"
+          },
+          "warehouseId": {
+            "type": "string",
+            "title": "warehouse_id",
+            "maxLength": 6,
+            "minLength": 6,
+            "description": "仓库ID, 例如: df0001"
+          }
+        },
+        "title": "ReserveItem",
+        "additionalProperties": false
+      },
+      "inventory.v1.ReserveRequest": {
+        "type": "object",
+        "properties": {
+          "orderNo": {
+            "type": "string",
+            "title": "order_no",
+            "maxLength": 64,
+            "minLength": 1,
+            "description": "订单号，用于幂等去重"
+          },
+          "merchantId": {
+            "type": "string",
+            "title": "merchant_id",
+            "format": "uuid",
+            "description": "商家ID（数据隔离）"
+          },
+          "items": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/inventory.v1.ReserveItem"
+            },
+            "title": "items",
+            "maxItems": 100,
+            "minItems": 1,
+            "description": "需要预占的商品列表"
+          }
+        },
+        "title": "ReserveRequest",
+        "additionalProperties": false
+      },
+      "inventory.v1.ReserveResponse": {
+        "type": "object",
+        "properties": {
+          "status": {
+            "type": "boolean",
+            "title": "status"
+          },
+          "msg": {
+            "type": "string",
+            "title": "msg",
+            "maxLength": 512
+          }
+        },
+        "title": "ReserveResponse",
+        "additionalProperties": false
+      },
+      "connect-protocol-version": {
+        "type": "number",
+        "title": "Connect-Protocol-Version",
+        "enum": [
+          1
+        ],
+        "description": "Define the version of the Connect protocol",
+        "const": 1
+      },
+      "connect-timeout-header": {
+        "type": "number",
+        "title": "Connect-Timeout-Ms",
+        "description": "Define the timeout, in ms"
+      },
+      "connect.error": {
+        "type": "object",
+        "properties": {
+          "code": {
+            "type": "string",
+            "examples": [
+              "not_found"
+            ],
+            "enum": [
+              "canceled",
+              "unknown",
+              "invalid_argument",
+              "deadline_exceeded",
+              "not_found",
+              "already_exists",
+              "permission_denied",
+              "resource_exhausted",
+              "failed_precondition",
+              "aborted",
+              "out_of_range",
+              "unimplemented",
+              "internal",
+              "unavailable",
+              "data_loss",
+              "unauthenticated"
+            ],
+            "description": "The status code, which should be an enum value of [google.rpc.Code][google.rpc.Code]."
+          },
+          "message": {
+            "type": "string",
+            "description": "A developer-facing error message, which should be in English. Any user-facing error message should be localized and sent in the [google.rpc.Status.details][google.rpc.Status.details] field, or localized by the client."
+          },
+          "detail": {
+            "$ref": "#/components/schemas/google.protobuf.Any"
+          }
+        },
+        "title": "Connect Error",
+        "additionalProperties": true,
+        "description": "Error type returned by Connect: https://connectrpc.com/docs/go/errors/#http-representation"
+      },
+      "google.protobuf.Any": {
+        "type": "object",
+        "properties": {
+          "type": {
+            "type": "string"
+          },
+          "value": {
+            "type": "string",
+            "format": "binary"
+          },
+          "debug": {
+            "type": "object",
+            "additionalProperties": true
+          }
+        },
+        "additionalProperties": true,
+        "description": "Contains an arbitrary serialized message along with a @type that describes the type of the serialized message."
+      }
+    }
+  },
+  "security": [],
+  "tags": [
+    {
+      "name": "inventory.v1.InventoryService"
+    }
+  ]
+}

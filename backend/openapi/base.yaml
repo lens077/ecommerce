@@ -1,0 +1,25 @@
+# OpenAPI 基础片段 —— 由 buf.gen.openapi.yaml 的 base= 合并进每份生成的 spec。
+#
+# 只放「插件无法从 proto 推断出来」的部分：**servers**。其余不要在这里重复，
+# 重复就会随 proto 改动而漂移 —— 与 `.service-matrix.yaml` 的纪律同理。
+#
+# ⚠️ base 的合并行为是实测出来的，不要凭直觉往里加字段（v0.19.1）：
+#   - servers   → 合并 ✅（这也是本文件存在的唯一理由）
+#   - info.version / info.contact → 合并 ✅
+#   - info.title / info.description → **被丢弃**，插件总是用 proto 包名生成标题，
+#     且不带描述。曾经在这里写过一段 info.description，生成结果里连影子都没有，
+#     等于文档说谎 —— 已删除。要加说明请改 proto 里的注释，或写在 Swagger UI 页面上。
+#
+# ⚠️ 按 AGENTS.md 硬规则 4：这里只能写主机名和 URL，不得出现任何凭据。
+openapi: 3.1.0
+
+info:
+  version: "0.1.0"
+  contact:
+    name: ecommerce
+
+servers:
+  - url: https://gateway.apikv.com
+    description: 公网网关（control-tower）。Gatus 用它做烟雾：`.../product.v1.ProductService/GetProductDetail`
+  - url: http://localhost:8080
+    description: 本地开发直连（VITE_GATEWAY_URL 的默认值）
