@@ -106,7 +106,19 @@ _strip_fences() {
 }
 
 in_baseline() { # 路径是否被基线豁免
-  [ -f "$baseline_file" ] && grep -q "^$1\([[:space:]]\|\$\)" "$baseline_file"
+  [ -f "$baseline_file" ] || return 1
+  # 2026-10-18：原写法是 grep -q "^$1\([[:space:]]\|\$\)"，其中 BRE 的 `\|` 交替是
+  # **GNU 扩展**。Linux CI 上是 GNU grep，一直正常；本机是 toybox/BSD grep，不认这个
+  # 构造，匹配恒失败 —— 于是基线豁免在本机静默失效，两份已冻结文件被反复报
+  # [FORMAT] 假阳性，而 CI 一片绿，问题只在本地显形（又一次「门禁静默失效」，
+  # 与 2025-11→2026-08 钩子九个月失效同型：判据换实现就静默改语义）。
+  # 改用 awk 做整行比对：先剥 `#` 注释与首尾空白，再与路径全等，
+  # 同时容忍「path」与「path  # 放行理由」两种行尾形式，且不依赖任何 grep 方言。
+  awk -v p="$1" '
+    { line = $0; sub(/#.*/, "", line); gsub(/^[[:space:]]+|[[:space:]]+$/, "", line)
+      if (line == p) found = 1 }
+    END { exit !found }
+  ' "$baseline_file"
 }
 
 # ── 1. 链接可达性 ─────────────────────────────────────────────
