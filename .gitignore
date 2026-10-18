@@ -28,6 +28,12 @@ helper.sh
 # playwright-cli 的页面快照产物（带时间戳，每次运行都新增一份），不是项目产物
 frontend/.playwright-cli/
 
+# EdgeOne Pages 部署工具写的本地项目标识：仓库根与 frontend/ 各一份，每次部署都会重建，
+# 内容只有 Name/ProjectId。入库的 frontend/edgeone.json 与 .github/workflows/edgeone-pages*.yml
+# 是另一回事（部署配置与工作流，该跟仓库走）。
+/.edgeone/
+frontend/.edgeone/
+
 # vite-plus 安装钩子时生成的分发器目录（`vp config` 写入，fresh clone 里不存在）。
 # 显式忽略后 [PATH-REF] 才能在本机与 CI 上给出同一结论（2026-09-24）
 frontend/.vite-hooks/_
