@@ -7,6 +7,7 @@ todo-spec: 1
 > 已完成项直接删除；部分完成只留缺口；已取消的方向用删除线说明原因。重复任务只登记一次。
 > 状态：**未完成**＝已核实缺口；**部分完成**＝已有实现、仍缺接线或验收；**待复验**＝旧记录不足以判断现状；**待触发**＝前置条件满足后再做。
 > 本轮按工作树代码、清单、TECH.md 与交接记录复核，未连接集群、配置中心或凭据后台。源码已实现不等于线上已验收。
+> 安全发现溯源：代码审计见 `SECURITY-AUDIT-2026-10-14.md`，集群与边缘实测见 `SECURITY-AUDIT-2026-10-18.html`；任务描述中的 F-*/C-*/H-*/M-*/L-* 编号对应该两报告。
 
 ## 一、优先级
 
@@ -44,12 +45,12 @@ todo-spec: 1
 
 #### P0
 
-- [ ] **未完成 · 库存预占正确性**：`inventory/internal/data/inventory.go` 仍传未来版本号、忽略更新行数、传错扣减量，且未组成完整事务（错误变量与 RPC 错误码映射已修）。修复原子条件更新、流水及幂等，并验证并发不足库存不会成功。 <!--t:27d098ac4a7752e3-->
+- [ ] **未完成 · 库存预占正确性**：`inventory/internal/data/inventory.go` 仍传未来版本号、忽略更新行数、传错扣减量，且未组成完整事务（错误变量与 RPC 错误码映射已修）。修复原子条件更新、流水及幂等，并验证并发不足库存不会成功。另（2026-10-18 审计 H-BE-2）：`Reserve`（`inventory.go:29-38`）以请求体 `merchant_id` 决定库存归属，handler 不校验调用方身份——商家 A 可锁定/占用商家 B 库存；改从可信头取商家身份，order 内部调用加 workload 白名单。 <!--t:27d098ac4a7752e3-->
 - [ ] **未完成 · 库存释放**：data 层 `ReleaseReserve` 仍为 panic，但 service 层根本没调它——直接返回 `{status:false}` 200（2026-09-23 http-client 实测，属假成功）；实现幂等释放，未实现前显式返回 Unimplemented。另：`inventory.stock` 没有 seed，`Reserve` 对 seed SKU 一律 `sku_id is not found`，这是设计（库存由业务流入），测试文件已注明，不造假数据。 <!--t:b27a4e04eb2b92a5-->
 - [ ] **未完成 · 订单假成功与不落库**：`order/internal/service/order.go` 忽略建单输入，`internal/data/order.go` 的 `SaveOrderGroup`/`SaveOrder` 只记日志返回 nil。先显式阻断假成功，再实现持久化；提交成功前不得发布完成事件。 <!--t:76015e5bab373d7d-->
-- [ ] **未完成 · 地址归属校验**：`address/internal/service/address.go` 创建地址仍信任请求体 `UserId`，读改删和设默认未传会话主体。主体取可信身份，数据访问绑定归属；覆盖用户 A/B、游客和管理员的无副作用拒绝测试。 <!--t:bcd7ee3243a60855-->
+- [ ] **未完成 · 地址归属校验**：`address/internal/service/address.go` 创建地址仍信任请求体 `UserId`，读改删和设默认未传会话主体。主体取可信身份，数据访问绑定归属；覆盖用户 A/B、游客和管理员的无副作用拒绝测试。2026-10-18 实测复核（F-C1）：Delete/Update/Get/SetDefault（`address.go:56-181`）仅以请求体 `AddressId` 为准，data 层 SQL 全部 `WHERE address_id=$1` 无 `user_id` 过滤，`GetAddress` 还回传 `UserId` 印证跨用户访问；任意登录用户可删改/读取他人收货地址（含姓名电话）。 <!--t:bcd7ee3243a60855-->
 - [ ] **未完成 · 支付付款人身份**：`payment/internal/service/payment.go` 的 `CreatePayment` 用请求体 `customer_id`（proto 字段 11，只校验 UUID 格式）作付款人，未取网关注入的 `x-md-global-user-id`，可冒用他人身份发起支付。付款人改取可信身份，请求体字段按 proto 兼容规则废弃；补冒用他人 ID 被拒的测试。与「支付闭环」同属用户亲自实现范围。 <!--t:95bcac25d4ced4a6-->
-- [ ] **部分完成 · 商家审批与桩方法**：2026-09-23 `merchant_service.go` 的 CreateMerchant/RejectApplication/ActivateMerchant 已从 panic 改为显式 `CodeUnimplemented`（panic 会让 net/http 断连，客户端只见 Empty reply）；`GetMerchantAgreement` 在 `merchants.agreement` 空表时返回零值 `effectiveDate=0001-01-01` 而不是明确错误。剩：审批 UPDATE 加 WHERE 限定申请 ID 与操作者权限，实现拒绝/激活，空协议表显式反馈。 <!--t:793db8a456ef388f-->
+- [ ] **部分完成 · 商家审批与桩方法**：2026-09-23 `merchant_service.go` 的 CreateMerchant/RejectApplication/ActivateMerchant 已从 panic 改为显式 `CodeUnimplemented`（panic 会让 net/http 断连，客户端只见 Empty reply）；`GetMerchantAgreement` 在 `merchants.agreement` 空表时返回零值 `effectiveDate=0001-01-01` 而不是明确错误。剩：审批 UPDATE 加 WHERE 限定申请 ID 与操作者权限，实现拒绝/激活，空协议表显式反馈。另（2026-10-18 审计 F-C3）：`GetApplication`（`merchant_service.go:114-148`）handler 无任何角色/owner 校验，任意登录用户凭 `application_id` 即可拉取他人商家申请的信用代码/法人/电话（`data/merchant.go:63-85`）——加 `requireAdmin` 或归属校验并最小化返回字段，与审批 UPDATE 同批修。 <!--t:793db8a456ef388f-->
 - [ ] **未完成 · 登录 token 落日志**：`user/internal/data/user.go` 仍执行 `u.l.Debug(token.AccessToken)`。删除敏感日志，并随 BFF 收敛清理遗留登录职责。 <!--t:554600f8559b51cd-->
 - [ ] **未完成 · 加购 INSERT 缺列**：`cart/internal/data/queries/cart.sql` 未写 `shop_name`，迁移定义为 NOT NULL 且无默认值——2026-09-23 实测任何新加购都 500 `null value in column "shop_name"`，seed 行有值所以此前没暴露；前端 `MerchantCartGroup` 空值回退到默认店名。二选一：请求加 `shop_name` 客户端快照（与 spu_name/sku_name 同风格，改 proto + 前端重生成）或服务端查 merchant 填；先定契约再贯通，验证新增与重复加购。同日已修另一处：pgx 未注册 `cart.cart_type[]` 导致 `RemoveCartItem` 500（`data.go` AfterConnect LoadTypes）。 <!--t:bed5a2ecb1172d84-->
 
@@ -61,9 +62,9 @@ todo-spec: 1
 
 - [ ] **未完成 · 建单与库存、支付联动**：按 checkout v2 实现报价/快照、组原子预占、按商家拆单、事务落库、支付意图、成功后清理购物车与失败补偿；不照旧 CartItemIds 草稿直接接线。 <!--t:7b81bf51250a4c0e-->
 - [ ] **未完成 · 订单查询与状态机**：补用户/商家订单查询、取消、状态守卫、订单日志、支付确认和超时恢复；现有 repo 仍有多处 panic。完成状态要求满足履约前置条件。 <!--t:f101d4e4a973d7b6-->
-- [ ] **未完成 · 支付闭环（用户亲自实现，agent 不代做）**：payment 不通，repo 5 个方法全部返回 Unimplemented；旧注释实现已删除，不作恢复依据。按 checkout v2 的按组支付和 capture/refund 模型从零实现创建、查询、回调验签、幂等、主动查询、退款与对账。 <!--t:d48891b20e48a9e1-->
+- [ ] **未完成 · 支付闭环（用户亲自实现，agent 不代做）**：payment 不通，repo 5 个方法全部返回 Unimplemented；旧注释实现已删除，不作恢复依据。按 checkout v2 的按组支付和 capture/refund 模型从零实现创建、查询、回调验签、幂等、主动查询、退款与对账。回调验签是上线阻断项（2026-10-18 审计 F-C2）：`payment.go:110-203` 两个回调 handler 已在，但全仓无 `alipay.VerifyNotify` 调用（客户端仅在 `data/data.go:101-129` 构造未用）——填桩时必须同时补公钥验签 + 服务端订单金额二次比对 + 仅 `TRADE_SUCCESS/FINISHED` 视为成功；`internal/tests/req.http:36` 已预留假签名预期被拒用例。 <!--t:d48891b20e48a9e1-->
 - [ ] **未完成 · 商品列表与管理能力**：`product.proto` 当前仅有 `GetProductDetail`；按 [listing.md](docs/design/product/listing.md) 实现游标分页，再补上下架、类目/品牌及商家操作权限。 <!--t:a0449da74f664550-->
-- [ ] **未完成 · 下单幂等契约**：前后端必须使用真实 proto 字段与数据库唯一约束；清理靠类型断言发送、运行时被丢弃的 `requestId`，重复提交只能生成一组订单。 <!--t:6e011b4541e01b83-->
+- [ ] **未完成 · 下单幂等契约**：前后端必须使用真实 proto 字段与数据库唯一约束；清理靠类型断言发送、运行时被丢弃的 `requestId`，重复提交只能生成一组订单。同模式（Idempotency-Key + 去重表）推广到 `CreatePayment`/`Reserve`，当前均为桩，上线前就位（2026-10-18 审计路线图）。 <!--t:6e011b4541e01b83-->
 - [ ] **部分完成 · 购物车条目标识**：前端 store 已用 `cartItemId`，后端删除/改数量 SQL 仍按组合键及并行数组。统一迁到 `cart_item_id`，同时校验归属。 <!--t:85350febba0ae5b7-->
 - [ ] **未完成 · 订单数据类型与快照**：金额移除 `float64` 中转、处理 `AddressPostalCode` 空指针、统一 `merchant_id`，跨 schema FK 改为 ID + 快照；迁移与兼容性按设计裁决。 <!--t:5bb1e2f49d3f3dac-->
 
@@ -75,6 +76,7 @@ todo-spec: 1
 - [ ] **待触发 · support**：原设计草案已删除；单独重新设计后再拆实现项。 <!--t:fbb93bc2f806f36b-->
 - [ ] **未完成 · 错误码与空表反馈**：`product.GetProductDetail` 对不存在的 spuCode 返回 `unknown`（应 `not_found`）；`user.UserProfile` 在 `public.users` 空表时 404 `user not found`——没人 SignIn 过属预期，但需与「未登录」区分；`merchant.GetMerchantAgreement` 空表零值见上。按 connect 错误码约定统一：找不到 → `not_found`，未实现 → `unimplemented`，不用 `unknown`/零值兜底（2026-09-23 http-client 逐服务实测）。 <!--t:f8172c279a2e61d2-->
 - [ ] **未完成 · 搜索体验**：补聚合筛选、热门词与固定查询集相关性基线；搜索只读 PG 派生投影，不恢复业务服务直写索引。 <!--t:d78277629f745c5c-->
+- [ ] **未完成 · 内部错误脱敏与敏感日志**：2026-10-18 审计组合项（M-BE-1/2/3）。① `address/internal/data/address.go:145,132` 等 data 层未知错误直接以 `CodeUnknown` 回传客户端（CWE-209）——改用 `dbErrHandler.MustHandleError` 归一化（order 服务已有模式），service 层未知错误返回固定文案；② `payment.go:112,130,133,158,176,179` 回调 handler 整包打印支付表单（CWE-532）——改白名单字段 `out_trade_no`/`trade_status`，永不包含 `sign`/`buyer_logon_id`；③ `cart/internal/pkg/minio.go:17-19` 对 `http(s):///` 形式 key 原样返回——拒绝含 `://`、`//`、`..` 的 key。 <!--t:94dd0c713ed15bae-->
 
 ### 数据一致性与事件驱动
 
@@ -107,23 +109,27 @@ todo-spec: 1
 
 - [ ] **部分完成 · GitOps 接管**：Helm/裸清单 parity、版本/digest 晋级已有实现；GitLab 来源的 `AppProject`/`ApplicationSet`/repository Secret 已 apply，`ecommerce-prod` 已生成并完成首次 live diff——54 个对象全部 `OutOfSync`，但差异**只有** ArgoCD 自身注入的 `argocd.argoproj.io/tracking-id` 注解，无字段级漂移、无需新建对象、`--orphaned` 为空，说明 GitLab `main` 的 chart 渲染与线上完全等价。剩余：执行首次 `argocd app sync`（写入 tracking-id，使状态转 `Synced`），再把 `syncPolicy.automated.enabled` 打开启用 prune/selfHeal；网关归 control-tower，不把它重复塞回本仓 chart。 <!--t:b4ceb97c8ff99cc3-->
   ArgoCD CLI 走明文入口 `argocd-api.apikv.com:80 --plaintext`（Pangolin rid 66，2026-09-24 实测通），但**该资源尚未配来源访问规则**，admin 密码与 token 明文过公网——补上 remote-dev/VPN 出口 CIDR 的 ACCEPT 规则前不应长期保持开放。
-- [ ] **未完成 · 生产 default-deny**：`helm/values-prod.yaml` 仍关闭 NetworkPolicy。先核对当前内网 PG/ES/对象存储、Casdoor/gorse、DNS 与探针通路，审计模式验证后再启用；Helm 与裸清单同步。 <!--t:3a3bfa0566c71295-->
+- [ ] **未完成 · 生产 default-deny**：2026-10-18 集群实测修正：运行态已有 `ecommerce-api-default-deny` CNP（`Valid=True`，11 个规格段覆盖 10 服务+gateway+consumer-next+frontend，ingress 仅放行 control-tower-gateway SA），但它是 `kubectl apply` 上去的——`helm/values-prod.yaml:20-22` 仍 `networkPolicy.enabled:false`、kustomize 裸路径从无 NP 资源，集群重建或新环境部署即静默丢失。剩：把该 CNP 收编进 `helm/files/zero-trust.yaml` 渲染链并置 `enabled:true`；kustomize 补 `networkpolicy.yaml`（或统一 helm 为唯一真相源）；CI 断言集群实际 CNP 与清单一致。ingress 的 `fromEntities:[host,remote-node]` 收敛见零信任节「服务端身份边界」。 <!--t:3a3bfa0566c71295-->
 - [ ] **未完成 · OTLP Secret 接入 OpenBao/ESO**：prod 仍关闭 `otelAuthExternalSecret`。修正/参数化 SecretStore，确认实际键可同步后启用，不能沿用不存在的 store。 <!--t:68e52dfe37944733-->
 - [ ] **部分完成 · Dragonfly 凭据传播**：旧 WRONGPASS 曾手工修复；仍需同源派生消费方 Secret/Config Center 配置、轮换后验证全部消费者，补 `/readyz` 而非仅 `/healthz` 告警，并避免认证命令里的密码进入日志。 <!--t:035c5900b0b021a7-->
 - [ ] **待复验 · 当前集群容量与稳定性**：旧 node3 风暴已做组件迁移，不能继续按迁移前内存表下结论。交接仍报 node5 抖动、metrics-server 不可用；先恢复可信观测，再评估 requests 与可调度节点容量，不以重平衡脚本替代容量治理。 <!--t:37e39baaeec57e24-->
 - [ ] **部分完成 · VPA 与 requests 校准**：2026-09-23 拍板 recommender 开 / updater 关 / webhook 不作自动调节（kubernetes 仓 `components/vpa/values.yaml`），`observability/grafana` VPA `Off` 已出 Target≈11m/523Mi 作为样板；按 Off/RequestsOnly 收敛，包括复核 config-center 旧 InPlace 配置；至少 7 天指标覆盖发布与 k6 窗口，再人工回写 requests。 <!--t:ce686eebcdb46755-->
 - [ ] **部分完成 · 多副本、PDB 与 N+1**：重核当前拓扑的副本/PDB；旧低流量、旧节点演练不代表现在达标。验证节点故障、扩缩容、批量滚更、资源耗尽与调度失败告警，满足后才启用自动灰度/重调度。 <!--t:aea37e525133cc6c-->
 - [ ] **待修复 · 公网入口与 HTTPRoute/TLS**：后端内部健康和 SQL 请求已验证，公网 `shop.apikv.com` / `gateway.apikv.com` smoke 为 404；集群前端 HTTPRoute 为 Accepted，但未发现 control-tower gateway Deployment/Service，须与该仓和公网入口 owner 核对，不把后端发布成功写成公网交易链成功。同 hostname 不等于冲突，按 Exact/PathPrefix 优先级验证 SSR、SPA 与 `/_next`；盘点实际路由和 certificateRef，不按旧组件列表批量迁移。 <!--t:2cd770347adcd248-->
+- [ ] **未完成 · API Server 6443 公网收敛**：2026-10-18 实测（F-H1）：kubeconfig 的 server 即公网 IP:6443，从互联网直接访问 `/healthz` 返回 200、匿名 `/version` 泄露 `v1.36.4`；RBAC 已拒匿名 `/api`，但控制面 6443 暴露意味着凭据爆破、apiserver CVE 利用与版本指纹的攻击面全天候开放，当前仅靠云安全组（不可见层）兜底。收敛：① 腾讯云安全组把 6443 收到运维 IP 段/VPN/跳板机；② 长期改内网或 VPN 访问（kubeconfig 随之调整）；③ 评估 apiserver `--anonymous-auth=false` 彻底关匿名（Node,RBAC 模式下注意 kubelet 影响）。 <!--t:61f7c986c0765b4d-->
+- [ ] **未完成 · 入口单点 node1**：2026-10-18 实测（F-C4）：DNSPod `*.apikv.com` 全部 A 记录指向 node1 单 IP，gerbil/Pangolin/Traefik/雷池 WAF/crowdsec 全跑在 node1 单机 Docker——node1 宕机 = 商城、网关、支付回调全断。补齐：① DNSPod 加节点探活监控与告警，评估备用 A 记录/故障转移；② 中期把 Pangolin/gerbil 高可用化，或把 WAF/TLS 终止前置到抗 D 能力更强的层；③ 确认云厂商 DDoS 清洗已覆盖该 IP（控制台侧核实）。 <!--t:5467e10e68437126-->
 - [ ] **部分完成 · 数据恢复与重装**：2026-09-23 已用真实 dump（`backs/node3/pigsty-node3-2026-09-03/raw/_data/ecommerce.pgdump`）在 CNPG 隔离库比对：业务表与 live 一致（同一套 Go seed，订单/用户在备份里为 0 行），只有 Config Center 的 `config` schema 是 live 缺的，已 additive 合入 `pg-main/ecommerce`；CDC 用真实 SKU 可逆改价验证 PG→Debezium→Kafka→ES 全链路。剩：CNPG PITR/对象存储备份、RTO/RPO 演练；OpenBao 集群外备份/副本；重装手顺以 CNPG + OpenBao/ESO + Config Center 为准（Pigsty 已随 node3 退役）。OpenBao 当前明确选择 **C：保持 Shamir 手动解封**，不做 static seal migration，也不接 VPS Vault transit；Pod 重启后的恢复动作是 `bash kubernetes/components/openbao/examples/unseal.sh`，Gatus `openbao-unsealed` 负责告警。 <!--t:f04da7000bba8429-->
 - [ ] **待对齐 · 数据面故障域**：近期 Kafka/ES/Connect/Silo 迁入 K8s，与 TECH.md §7 的外置数据面目标有差距；登记迁移后容量与恢复证据，再按目标规划收敛，不能把部署完成当成目标已满足。 <!--t:63d189855292cdcf-->
 - [ ] **待复验 · Dragonfly 实例隔离**：按 TECH.md §7/§12 验收 Session 的 noeviction/持久化、Cache 淘汰策略与 Ratelimit 故障域；共用实例不能标为生产基线完成。 <!--t:5dcab1450294c2d2-->
+- [ ] **未完成 · 容器安全上下文补齐 PSS Restricted**：2026-10-18 实测（F-M4）：payment Pod 容器级只有 `readOnlyRootFilesystem`，缺 `allowPrivilegeEscalation:false`、`capabilities.drop:["ALL"]` 与 pod 级 `seccompProfile:{type:RuntimeDefault}`（`helm/templates/_ecommerce.tpl:73-87`）。修法：容器级补禁提权与 drop ALL、pod 级补 seccomp，与已写好的 `db-migrate`/`consumer-next` 对齐；Helm 与裸清单同步过 parity 门禁。 <!--t:a78de4f5e465d148-->
 
 #### P2
 
 - [ ] **待复验 · PG/Redis 证书续期传播**：旧记录到期日为 2026-11-25；先查实际下发证书，再人工同步副本并 reload/restart，复验 verify-full 客户端。旧 `cert-san-resign.md` 已不可定位，恢复手顺需覆盖 PG `serverAuth,clientAuth` 与 Patroni 重启要求。 <!--t:b0e39e0cad6b82f2-->
 - [ ] **部分完成 · Harbor 爆破防护**：旧 jail 能检测但隧道后端按真实 IP 封禁无效；核对现行入口，优先验证账号锁定，必要时在实际公网终止点限流/封禁。验收必须证明攻击流量被拦。 <!--t:26b7fff712f851d0-->
-- [ ] **待复验 · 遗留运行配置**：核对 node3 Redis 网络就绪顺序、重复拉取凭据、node1 gorse 僵尸副本、cart 的 Silo endpoint 与 OTel TLS 配置；仅处理仍存在的对象，不照旧主机/端口表操作。 <!--t:ad19ca7579691778-->
+- [ ] **待复验 · 遗留运行配置**：核对 node3 Redis 网络就绪顺序、重复拉取凭据、node1 gorse 僵尸副本、cart 的 Silo endpoint 与 OTel TLS 配置；仅处理仍存在的对象，不照旧主机/端口表操作。另（2026-10-18 审计 F-L3）：`ecommerce-config-source-dev` Secret 存在于生产集群——dev 配置进生产，清理或加 ns 隔离。 <!--t:ad19ca7579691778-->
 - [ ] **部分完成 · KEDA/Rollouts**：控制器已装并做了行为验收（KEDA cron ScaledObject 0→2 + 生成 HPA；Rollouts 金丝雀 setWeight 50→pause→100，stableRS 切换）。业务接线：frontend 的 pre 已切 Blue-Green Rollout（prod 仍 Deployment，Helm/裸清单等价已过门禁），待 ApplicationSet 在新集群 apply 后首次手动 sync + promote；Kafka 消费者 lag 出现真实消费者后再建 ScaledObject；后端灰度要先有 ≥2 副本 + PDB 的无状态服务。 <!--t:4ed10c15f7bc7e14-->
+- [ ] **未完成 · node1 边缘暴露面与安全响应头**：2026-10-18 实测（F-M2/F-L1/F-L2）。① `shop.apikv.com` 响应无 HSTS/CSP/X-Frame-Options/X-Content-Type-Options/Referrer-Policy（仅 `server: envoy`）——Traefik `dynamic_config.yml` 加全局 headers 中间件，CSP 先 report-only 按 Next.js 实际资源收紧；② casdoor:8000、webhook:8082、scorpius:8878、nginx:65443 绑 `0.0.0.0` 且 DOCKER-USER 无 DROP（6379/5432 已有收敛规则）——改 `127.0.0.1:端口:端口` 经 Traefik/Pangolin 反代，或补 DOCKER-USER 规则做纵深防御；③ casdoor:latest、redis:latest 钉版本+digest，与 Kyverno `disallow-latest-tag` 转 Enforce 后闭环。 <!--t:b8c8e69cf7ed771a-->
 
 ### 零信任鉴权与Session
 
@@ -140,13 +146,13 @@ todo-spec: 1
 - [ ] **部分完成 · OpenFGA 与 RPC 授权**：部署不等于业务接线；落用户/商家/店铺/订单关系与资源级 Check，迁出 Casbin，对现行 policies 做逐 RPC 审计；地址漏洞归微服务 P0。 <!--t:199b794602e5162d-->
 - [ ] **部分完成 · 匿名购物**：网关 `GuestCookie` 已装配、入站 `x-md-*` 已无条件剥离；剩路由/签名配置上线验收、C 级服务 `RequireUser`、`MergeGuestCart`、登录合并与前端接线。验证访客不能下单、支付或访问地址簿。 <!--t:225902530e1f52a7-->
 - [ ] **部分完成 · BFF 生产属性与会话存储**：2026-09-20 修掉线上跑 dev 清单的问题（`BFF_PUBLIC_BASE_URL` 曾是 `http://localhost:3000`，授权 URL 的 redirect_uri 指向本机，登录整条不可用），现为 `https://gateway.apikv.com`、cookie 实测带 `Secure`；剩 CSRF、登出撤权、真实 CA/Secret 与 Dragonfly Session 链路 fail-closed 验收。旧 `redis-tls-ca` 名称不再作为修复目标。 <!--t:24cad1f4e35eceb1-->
-- [ ] **部分完成 · 服务端身份边界**：独立 SA 与关闭 automount 已有清单；剩 auth SDK/配置债、projected token 审计及绕网关访问验证。网络策略任务归基础设施节。 <!--t:0edd9149733e7803-->
+- [ ] **部分完成 · 服务端身份边界**：独立 SA 与关闭 automount 已有清单；剩 auth SDK/配置债、projected token 审计及绕网关访问验证。网络策略任务归基础设施节。2026-10-18 审计 F-H2 实证一条绕过链：`ecommerce-api-default-deny` 每服务 ingress 含 `fromEntities:[host,remote-node]`（原意应是 kubelet 探针），任一节点 root 即可直连 `ecommerce-user-service:30001` 等业务端口并伪造 `x-md-global-user-id` 头——业务只信头不信来源，完全绕过网关会话与 Casbin，与已在线 IDOR 叠加即全量越权。剩：从 CNP 移除 host/remote-node 或按探针端口精确化（hostFirewall / `fromEntities:[ingress]`），业务侧对 `x-md-*` 增补来源校验（网关签发的内部 token，mTLS/SPIFFE 更佳），节点 SSH 保持 key-only + 审计。 <!--t:0edd9149733e7803-->
 - [ ] **待复验 · Casdoor 账号治理**：核对密码策略、第三方登录、会话保持与账号禁用；按实际风险决定是否限制匿名 application 元信息接口，不能把已脱敏返回等同于凭据泄露。 <!--t:8002d9c791984395-->
 
 #### P2
 
 - [ ] **待前置 · 传输层身份**：先验证 Cilium WireGuard 节点间加密；确有 workload mTLS/授权需求再评估 Istio Ambient，不提前引入 SPIRE 或把 Cilium Mutual Authentication 当完整 mTLS。 <!--t:a0dc0efae9edbcd8-->
-- [ ] **部分完成 · Tetragon 治理**：2026-09-22 新集群 k1/k2/k3 重装（1.7.1），`ecommerce-service-account-token-access` audit-only 策略已应用，kubernetes 仓 `components/tetragon/verify.sh` + `examples/cnp-smoke.sh`（CNP 正反向 + Hubble `Policy denied` 证据）可复跑。剩：权限最小化、长期基线、事件完整性与 enforcement 单独验收。 <!--t:87fb8823ca41b7bc-->
+- [ ] **部分完成 · Tetragon 治理**：2026-09-22 新集群 k1/k2/k3 重装（1.7.1），`ecommerce-service-account-token-access` audit-only 策略已应用，kubernetes 仓 `components/tetragon/verify.sh` + `examples/cnp-smoke.sh`（CNP 正反向 + Hubble `Policy denied` 证据）可复跑。剩：2026-10-18 实测 `kubectl get tracingpolicies -A` 为空、Tetragon 三节点 Running 但零策略——09-22 记录的 audit-only 策略已不在集群；把策略声明纳入 GitOps 并复验部署，补基线策略（ecommerce Pod 内执行 shell、读取 `/etc/shadow`、非预期外联即告警），再做权限最小化、长期基线与 enforcement 验收。 <!--t:87fb8823ca41b7bc-->
 - [ ] **部分完成 · 登录回归保护**：2026-09-20 线上冒烟实跑 10 过 2 挂，断言已按 BFF 现状改正（redirect_uri 断网关 `/auth/callback`，删掉迁移前的 PKCE 断言——它俩都对不上真相，于是线上 redirect_uri 配错时没有任何一层拦得住）。剩复核 callback 与会话恢复竞态修复是否有测试、冒烟处理隐私弹窗、验证真实会话恢复/退出，不以脚本存在代替跑通。 <!--t:31f8c2f88994746f-->
 
 ### 统一可观测性体系
@@ -211,6 +217,8 @@ todo-spec: 1
 - [ ] **部分完成 · SPA 性能**：按 [web-performance.md](docs/frontend/web-performance.md) 收敛阻塞字体 CSS、启动瀑布、图标 tree-shaking，并消除无有效访客轨时 `useCart` 的无效请求；SSR 首页满分不代表交易页完成。 <!--t:6d1a097d7a305e18-->
 - [ ] **部分完成 · 页内助手**：已有 copilot 实现，剩发布验收、merchant mock 动作边界；写动作/确认仍按 [copilot 设计](docs/design/copilot/copilot.md) 单独实现和验证。 <!--t:977da8840a59da94-->
 - [ ] **部分完成 · 体素沙盘 S1–S3**：S0 设计稿已有；剩布局遮挡、离线依赖与模块化、错误中断剧本、受 admin 授权的真实拓扑聚合。见 [设计](docs/design/platform/voxel-construction-site.md)。 <!--t:07a027db097ac734-->
+- [ ] **未完成 · 生产依赖 GA 纪律**：2026-10-18 审计（M-FE-1）：`pnpm-workspace.yaml` 里 `next: 16.4.0-canary.18`、`typescript: 7.1.0-dev.20260904.1`，且 `minimumReleaseAgeExclude` 显式豁免了这两个包的发布龄检查——生产构建跑在 canary/dev 预发布版上。升 GA 稳定线并撤销豁免；若必须 canary，限定仅本地/预览环境并登记回滚方案。 <!--t:d9c5056d53b8768c-->
+- [ ] **未完成 · 前端低风险项收尾**：2026-10-18 审计（L-FE-1/2/3）：① `packages/configs/src/casdoor.ts` 的 `goToLink` 死代码含未校验的 `window.location.href` 赋值——删除或复用 `sameOriginTarget` 收敛；② `apps/consumer/src/store/cart.ts` 购物车 JSON 明文存 localStorage（行为画像，XSS 可读）——改内存态；③ `consumer-next/app/api/[...path]/route.ts` 代理透传全量请求头（含 Cookie）——收敛为白名单仅透传必要头，并启动期校验 `CONSUMER_NEXT_GATEWAY_URL` 为内部 https 域名。 <!--t:b4458acb42888b85-->
 
 ### 供应链与交付流水线
 
@@ -220,10 +228,11 @@ todo-spec: 1
 
 - [ ] **部分完成 · GitLab 自建 Runner 验收**：仅保留集群内 Kubernetes executor，单并发且排除 control-plane；轻检查 512Mi、构建预算 1Gi。GitLab 轻检查端到端与 job Pod 自动清理已通过；低内存 Go/前端构建已在隔离容器验证，并删除 knip 中一条已不存在的导出基线。真实 Runner 的 Go 构建、测试与 lint 已通过；前端 job 在后续提交触发新流水线时被取消，尚不能算端到端通过。剩余：让一轮真实前端构建完整结束并核对自动清理，保留全部质量检查。 <!--t:aa5ec30e7b2a49f5-->
 - [ ] **部分完成 · TCR 签名验收**：多服务流水线已有 Cosign/SBOM；补逐服务 digest 的签名/attestation 回读验证，不沿用「只有 user 接线」也不把构建成功当验签完成。 <!--t:bb17b2d9180e6c1a-->
-- [ ] **部分完成 · Harbor Helm 签名与 Kyverno 准入**：`verifyImages` 已落地为 ecommerce 命名空间级 Audit 策略（`infrastructure/kyverno/`，keyless + `type: SigstoreBundle`，只覆盖已完成 TCR 探测的 `user`），`smoke.sh` 验收「签名 digest pass / 未签名 fail / 两者放行」；ArgoCD `Application/ecommerce-kyverno` 已建，等 GitLab `main` 含该路径即 Synced。剩：CI 对全部服务在 TCR 签名后把 `imageReferences` 扩到 `sumery/*`；14 天零误报后转 Enforce 并以拒绝测试验收；chart 纳入签名链；`kyverno.io/v1 Policy` 迁 `NamespacedImageValidatingPolicy`（CEL）。 <!--t:80c5a1b92f8c391c-->
+- [ ] **部分完成 · Harbor Helm 签名与 Kyverno 准入**：`verifyImages` 已落地为 ecommerce 命名空间级 Audit 策略（`infrastructure/kyverno/`，keyless + `type: SigstoreBundle`，只覆盖已完成 TCR 探测的 `user`），`smoke.sh` 验收「签名 digest pass / 未签名 fail / 两者放行」；ArgoCD `Application/ecommerce-kyverno` 已建，等 GitLab `main` 含该路径即 Synced。剩：CI 对全部服务在 TCR 签名后把 `imageReferences` 扩到 `sumery/*`；14 天零误报后转 Enforce 并以拒绝测试验收；chart 纳入签名链；`kyverno.io/v1 Policy` 迁 `NamespacedImageValidatingPolicy`（CEL）。2026-10-18 集群实测：kyverno ns 仅 2 条 Audit 策略（`disallow-latest-tag`、`require-requests-limits`），`ecommerce-image-provenance` **未部署到集群**——Git 有计划、集群没有，任何未签名镜像都能被调度；先把该策略真正部署并 Audit 观察，再走上述扩面与转 Enforce。另 `require-requests-limits` 对 `pg-main-1` 报 PolicyViolation（CNPG CR 未定义 requests/limits）未处理，转 Enforce 前须补。 <!--t:80c5a1b92f8c391c-->
 - [ ] **未完成 · 发布权限与约束**：收敛 `MANIFEST_PUSH_TOKEN` 绕过分支保护的权限；把发布 tag 四条纪律落实为可执行检查，避免只靠操作约定。 <!--t:2fa4ca5ec2f92985-->
 - [ ] **部分完成 · 制品启动、迁移与回滚**：迁移 Job 已接入两条部署入口及 Helm/Argo hook，失败阻断工作负载；迁移镜像随发布扫描、签名并固定 digest，种子不自动执行；供应链门禁命中的浮动 Action 与只读根文件系统缺项已修正，未扩大存量基线。pre 正式迁移制品已实跑并完成后端滚动；剩 prod 专属数据库/迁移 Secret 验收、长期 Job 日志归档、制品保留策略和真实应用回滚演练；GitOps 接管后验证发布/回滚无需手工 kubectl。 <!--t:578121a52345edd4-->
 - [ ] **部分完成 · 契约与竞态门禁**：GitHub 发布模板已有 `buf breaking` 和 `go test -race`，GitLab 有 lint 棘轮。剩 MR 阶段兼容性保护与破坏性变更红测；事件 schema 随线 B 纳入，不再重复要求从零接入。 <!--t:f16f1b2feee76366-->
+- [ ] **未完成 · 供应链门禁名实相符**：2026-10-18 审计（F-H5）。① `scripts/supply-chain-pr.sh:133-147` gitleaks 无 `--exit-code`——扫到泄露也零退出，检测形同摆设；加 `--exit-code 1` 并把触发从仅 tag 扩到 PR；② `frontend-release.yml` 仅 build+merge、无扫描无签名——补 Trivy（`exit-code:1`）+ Cosign keyless + SBOM，对齐 `service-ci.yml` 后端链路；③ `scripts/deploy-k8s.sh` 仓外建静态 Secret（OTLP 定稿项所选路线）缺校验与审计日志，补上；④ dev consul compose 9 处 `:latest` 钉定版本。 <!--t:872a371f96d95e3a-->
 
 #### P2
 
