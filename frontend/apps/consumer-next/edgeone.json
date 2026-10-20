@@ -1,7 +1,7 @@
 {
   "installCommand": "npm i -g pnpm@12.5.1 && pnpm install --frozen-lockfile",
-  "buildCommand": "pnpm --filter @ecommerce/consumer-next build",
-  "outputDirectory": "apps/consumer-next/.next",
+  "buildCommand": "pnpm build",
+  "outputDirectory": ".next",
   "nodeVersion": "22.11.0",
   "redirects": [
     {

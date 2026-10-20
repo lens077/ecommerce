@@ -112,22 +112,32 @@ vp run -w ready          # vp fmt && vp lint && vp run -r test && vp run -r buil
 
 `consumer-next` 是 Next.js SSR（App Router），部署链路和 `consumer`（静态直传）**不一样**，关键事实（均经实测）：
 
-- **不能**用 `edgeone makers deploy <目录>` 直传：该命令创建的是「静态直传」型项目，不识别 SSR 运行时。
-  实测——建项目成功、文件上传成功，但部署步 `Deploying... → Failed`（2026-10-15，项目 `makers-1go5woasjust`
-  已废弃/失败，控制台可删除）。
-- 可行路径是 **EdgeOne Git 集成云端构建**：在 EdgeOne 控制台把本仓库连到 Pages 项目，根目录设为 `frontend`
-  （必须带 workspace 上下文，否则 `@ecommerce/lantern` 等 workspace 依赖解析不到），push 到 `main` 即自动构建部署。
+- **不能**用 `edgeone makers deploy <目录>` 直传：该命令只服务「直接上传（Upload）」型项目，且不识别 SSR 运行时。
+  实测两种失败形态：① 2026-10-15 直传建项目成功、上传成功，但部署步 `Deploying... → Failed`（项目
+  `makers-1go5woasjust` 已废弃，控制台可删除）；② 对已是 Git(Github) 接入型的项目直传，API 直接拒绝——
+  「Project xxx exists but has Provider 'Github'. This project type does not support direct folder or zip
+  file deployment. Only projects with Provider 'Upload' are supported.」（2026-10-20 实测）。
+- 可行路径是 **EdgeOne Git 集成云端构建**：在 EdgeOne 控制台把本仓库连到 Pages 项目，push 到 `main` 即自动构建部署。
+- **根目录必须是 `./frontend/apps/consumer-next`（Next 应用自身），不能是 `./frontend`**。构建器的框架识别只认
+  根目录下的 `package.json` / `next.config.*` / `app|pages|src`：根目录指向 `frontend` 时三者都不在，识别失败退化为
+  `StaticAssetsBuilder`，日志出现 `[cli] No server-handler detected, generating routes.json for pure project`——
+  产物按纯静态部署，`.next` 内部结构不被当路由解析，全站 404（2026-10-20 实测：`/zh`、`/healthz`、`favicon.ico`
+  全 404，但 edgeone.json 的 redirects 仍生效，`/` 依旧 302 `/zh`，极具迷惑性）。
+  workspace 上下文不受影响：`pnpm install` 会向上找到 `frontend/pnpm-workspace.yaml`，`@ecommerce/lantern` 等
+  workspace 依赖照常链接（已在临时 worktree 用 `HEAD` 实测安装与构建均 EXIT=0）。
 
-构建配置集中在 `frontend/edgeone.json`：
+构建配置集中在 **`frontend/apps/consumer-next/edgeone.json`**（必须放在项目根目录，即上面那个应用目录内，
+不是仓库里的 `frontend/edgeone.json`——该位置已于 2026-10-21 删除）：
 
 | 字段              | 值                                                       | 说明                                                                       |
 | ----------------- | -------------------------------------------------------- | -------------------------------------------------------------------------- |
 | `installCommand`  | `npm i -g pnpm@12.5.1 && pnpm install --frozen-lockfile` | 固定 pnpm 版本，避免 EdgeOne 构建机预装旧版 pnpm 解析不了 pnpm 12 lockfile |
-| `buildCommand`    | `pnpm --filter @ecommerce/consumer-next build`           | 只构建 consumer-next                                                       |
-| `outputDirectory` | `apps/consumer-next/.next`                               | Next.js 构建产物                                                           |
+| `buildCommand`    | `pnpm build`                                             | 跑应用自身的 `build` 脚本（`next build`）                                  |
+| `outputDirectory` | `.next`                                                  | Next.js 构建产物（相对应用目录）                                           |
 | `nodeVersion`     | `22.11.0`                                                | 与本地一致                                                                 |
 
-还需在控制台项目设置里配置两个环境变量（**不要写进仓库**）：
+edgeone.json 的这四个字段**覆盖控制台**里填的同名配置（官方文档明示），控制台里遗留的旧值（如 `pnpm run build`
+——frontend 根目录并没有这个脚本）不会生效；但**环境变量只能靠控制台**配置，edgeone.json 表达不了：
 
 - `EDGEONE_BUILD=1`：让 `next.config.ts` 关闭 `output: "standalone"`，改用 EdgeOne 的无服务器源码构建形态
   （`output: standalone` 是给 K8s 容器用的，EdgeOne 无 Docker 支持）；
@@ -136,10 +146,10 @@ vp run -w ready          # vp fmt && vp lint && vp run -r test && vp run -r buil
 
 ### 两条路径
 
-| 路径 | 触发方式                                                                                                                 | 说明                                                                                         |
-| ---- | ------------------------------------------------------------------------------------------------------------------------ | -------------------------------------------------------------------------------------------- |
-| 自动 | push 到 `main` 且改动命中 `frontend/apps/consumer-next/**`、`frontend/packages/**`、`frontend/edgeone.json`、lockfile 等 | EdgeOne Git 集成自动云端构建部署（非 GitHub Actions 部署）                                   |
-| 手动 | 在 `frontend/` 目录下执行                                                                                                | `export EDGEONE_BUILD=1 && make deploy-edgeone-next`，本地构建后按提示 push 或控制台重新部署 |
+| 路径 | 触发方式                                                                                                                                    | 说明                                                                           |
+| ---- | ------------------------------------------------------------------------------------------------------------------------------------------- | ------------------------------------------------------------------------------ |
+| 自动 | push 到 `main` 且改动命中 `frontend/apps/consumer-next/**`、`frontend/packages/**`、`frontend/apps/consumer-next/edgeone.json`、lockfile 等 | EdgeOne Git 集成自动云端构建部署（非 GitHub Actions 部署）                     |
+| 手动 | 控制台项目卡片上的「重新部署 / Redeploy」，或对某条部署记录点重新部署（**没有分支下拉、也没有自动部署开关**——自动部署随 Git 关联默认生效）  | 也可走 项目设置 → Webhook 模块 新建 webhook 后 POST 触发（URL 即凭证，勿外泄） |
 
 - GitHub workflow `.github/workflows/edgeone-pages-consumer-next.yml` 是**构建门禁**：push 时先在本仓库 CI 跑一次
   `next build` 快速暴露类型/构建错误；真正的生产部署由 EdgeOne Git 集成完成（职责分离、不触碰凭据）。

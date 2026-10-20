@@ -96,7 +96,8 @@ deploy-edgeone: consumer-build deploy-edgeone-dist
 #   make consumer-next-build     # 仅本地构建（EDGEONE_BUILD=1，关闭 standalone）
 #   make deploy-edgeone-next    # 本地构建 + 打印手动上线指引（push / 控制台 redeploy）
 #
-# 云端构建配置见 edgeone.json；运行时环境变量 CONSUMER_NEXT_GATEWAY_URL（公网网关地址）
+# 云端构建配置见 apps/consumer-next/edgeone.json（EdgeOne 项目根目录必须指向该应用目录，否则框架识别失败）；
+# 运行时环境变量 CONSUMER_NEXT_GATEWAY_URL（公网网关地址）
 # 需在 EdgeOne 控制台项目设置中配置，不要写进仓库。
 
 EDGEONE_NEXT_PROJECT ?= ecommerce-consumer-next

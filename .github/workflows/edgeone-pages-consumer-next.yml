@@ -37,7 +37,7 @@ on:
       - 'frontend/pnpm-workspace.yaml'
       - 'frontend/pnpm-lock.yaml'
       - 'frontend/package.json'
-      - 'frontend/edgeone.json'
+      - 'frontend/apps/consumer-next/edgeone.json'
       - '.github/workflows/edgeone-pages-consumer-next.yml'
   workflow_dispatch:
 
@@ -89,4 +89,4 @@ jobs:
         run: |
           echo "::notice::构建校验通过。consumer-next 的实际生产部署由 EdgeOne Pages 的 Git 集成完成："
           echo "::notice::在 EdgeOne 控制台把本仓库连到 Pages 项目（根目录 frontend），push 到 main 即自动构建并部署。"
-          echo "::notice::构建配置见 frontend/edgeone.json；运行时环境变量 CONSUMER_NEXT_GATEWAY_URL 需在控制台项目设置中填入公网网关地址。"
+          echo "::notice::构建配置见 frontend/apps/consumer-next/edgeone.json；运行时环境变量 CONSUMER_NEXT_GATEWAY_URL 需在控制台项目设置中填入公网网关地址。"
