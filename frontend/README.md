@@ -120,12 +120,12 @@ vp run -w ready          # vp fmt && vp lint && vp run -r test && vp run -r buil
 
 构建配置集中在 `frontend/edgeone.json`：
 
-| 字段              | 值                                                  | 说明                     |
-| ----------------- | --------------------------------------------------- | ------------------------ |
-| `installCommand`  | `corepack enable && pnpm install --frozen-lockfile` | 用 pnpm 装整个 workspace |
-| `buildCommand`    | `pnpm --filter @ecommerce/consumer-next build`      | 只构建 consumer-next     |
-| `outputDirectory` | `apps/consumer-next/.next`                          | Next.js 构建产物         |
-| `nodeVersion`     | `22.11.0`                                           | 与本地一致               |
+| 字段              | 值                                                       | 说明                                                                       |
+| ----------------- | -------------------------------------------------------- | -------------------------------------------------------------------------- |
+| `installCommand`  | `npm i -g pnpm@12.5.1 && pnpm install --frozen-lockfile` | 固定 pnpm 版本，避免 EdgeOne 构建机预装旧版 pnpm 解析不了 pnpm 12 lockfile |
+| `buildCommand`    | `pnpm --filter @ecommerce/consumer-next build`           | 只构建 consumer-next                                                       |
+| `outputDirectory` | `apps/consumer-next/.next`                               | Next.js 构建产物                                                           |
+| `nodeVersion`     | `22.11.0`                                                | 与本地一致                                                                 |
 
 还需在控制台项目设置里配置两个环境变量（**不要写进仓库**）：
 
@@ -144,10 +144,26 @@ vp run -w ready          # vp fmt && vp lint && vp run -r test && vp run -r buil
 - GitHub workflow `.github/workflows/edgeone-pages-consumer-next.yml` 是**构建门禁**：push 时先在本仓库 CI 跑一次
   `next build` 快速暴露类型/构建错误；真正的生产部署由 EdgeOne Git 集成完成（职责分离、不触碰凭据）。
 - Makefile 目标：`consumer-next-build`（仅本地构建）、`deploy-edgeone-next`（构建 + 上线指引）。
-- 已知限制：`next.config.ts` 里 `/` → `/zh` 的 `rewrites()` 在 EdgeOne 上不被 Next.js 适配层支持
-  （官方文档：Next.js 的 rewrite/redirect 暂不支持，建议用 `edgeone.json`；而 `edgeone.json` 的 `rewrites`
-  仅适用静态资源、不支持 SPA 路由重写）。故访问根 `/` 可能不走改写——临时可用 `/zh` 直达，根治需在 app 层处理
-  （如新增 `app/page.tsx` 做 `redirect("/zh")`）。待 EdgeOne 支持 Next.js rewrite 或改 app 路由后解决。
+- 根路径 `/` → `/zh`：`next.config.ts` 的 `rewrites()` 在 EdgeOne 上不被支持，已改用 `edgeone.json` 的
+  `redirects`（平台层 302，官方支持、无 rewrites 的「仅静态资源」限制）。K8s 部署仍走 `rewrites()`
+  应用内改写，两条路径互不影响。
+
+### 对非 EdgeOne 部署的影响（锁定面评估）
+
+EdgeOne 相关内容全部隔离在应用代码之外，弃用或迁移平台时代价极小：
+
+| 改动                                                | 不用 EdgeOne 时的影响                                                                                             |
+| --------------------------------------------------- | ----------------------------------------------------------------------------------------------------------------- |
+| `next.config.ts` 的 `output` 条件式                 | 无。`EDGEONE_BUILD` 不设时与改动前完全一致（`standalone`，K8s Dockerfile 即此路径，已核验 Dockerfile 不设该变量） |
+| `frontend/edgeone.json`                             | 无。仅 EdgeOne 云端构建会读；K8s 镜像不 COPY 该文件，其他平台不识别此文件名                                       |
+| `.github/workflows/edgeone-pages.yml`               | 无。无 `EDGEONE_TOKEN` 时整个 job 跳过；删文件即彻底移除                                                          |
+| `.github/workflows/edgeone-pages-consumer-next.yml` | 近似无。本质是通用 `next build` 构建门禁，不触碰 EdgeOne 凭据；不需要时删除即可                                   |
+| Makefile 追加目标                                   | 无。纯追加，不影响现有目标                                                                                        |
+
+**弃用 EdgeOne 的清理步骤**：删除 `.github/workflows/edgeone-pages*.yml` 与 `frontend/edgeone.json`；
+`next.config.ts` 的条件式留着是无害 no-op（无任何环境会设 `EDGEONE_BUILD`），追求干净可还原为
+`output: "standalone"` 一行。应用代码零 EdgeOne SDK/API 依赖，迁移到 Vercel/Netlify/自建 Node
+只需按目标平台补各自的配置文件（如 `vercel.json`）。
 
 ## 工具链
 
