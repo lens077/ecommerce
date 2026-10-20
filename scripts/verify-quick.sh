@@ -37,9 +37,15 @@ run_backend() {
 
 run_frontend() {
   # 2026-09-24：consumer 协议快照仍发送已 reserved 的 user_id，类型检查没有识别漂移。
+  # 2026-10-20：CI_LOW_MEMORY=1 打开各 app vite.config.ts 里的低内存开关
+  # （maxWorkers:1 + fileParallelism:false，与 GitLab 2CPU/1Gi 同款配置）。门禁里
+  # 后端/密钥扫描/parity 与前端并行跑，vitest 默认会按核数拉满 11 个 forks worker，
+  # 互相抢不到 CPU 便判「Timeout waiting for worker to respond」，11 个文件起不来
+  # 而单跑全过——是争抢不是代码问题。workspace 级串行留在 CI 侧
+  # （frontend-gate 的 `vp run -r --concurrency-limit 1`），本脚本只压应用内并发。
   scripts/sync-ts-gen.sh --check \
     && python3 scripts/test-sync-ts-gen.py \
-    && cd frontend && pnpm ready
+    && cd frontend && CI_LOW_MEMORY=1 pnpm ready
 }
 
 run_parity() {

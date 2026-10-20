@@ -7,13 +7,18 @@ import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { initI18n } from "@ecommerce/i18n";
 import { AddressService, RegionService, UserService } from "@/gen/api";
 import consumerEn from "@/locales/en/consumer.json";
-import { Route } from "@/routes/profile/addresses";
+import { AddressBookPage } from "@/components/address/AddressBookPage";
 
 vi.mock("@/api/location", () => ({
   requestLocationPermission: async () => false,
   getLocationInfo: async () => null,
 }));
-const Page = Route.options.component!;
+// 直接渲染页面组件而非 Route.options.component：路由文件的 component 会被
+// router-plugin 的 autoCodeSplitting 包成 lazyRouteComponent（首渲染 use(import)
+// 挂起，chunk 解析后的二次渲染不再调 use()——React 19.3 判「conditional use」
+// 直接弃演整棵树）；生产环境由 router 渲染前预热 chunk 所以不触发，测试里没有
+// router。同 -checkout.test.tsx 直接 import CheckoutPage 的做法。
+const Page = AddressBookPage;
 beforeAll(() => initI18n({ ns: "consumer", locale: "en", resources: { en: consumerEn } }));
 const clients: QueryClient[] = [];
 afterEach(() => {
@@ -66,7 +71,6 @@ async function setup(pendingUpdate?: Promise<void>) {
   });
   const client = new QueryClient({ defaultOptions: { queries: { retry: false } } });
   clients.push(client);
-  await Page.preload?.();
   await act(async () => {
     render(
       <TransportProvider transport={transport}>

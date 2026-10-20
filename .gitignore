@@ -58,3 +58,17 @@ frontend/test-results/
 
 # 运行观测只作临时诊断，不成为新的环境文档或可搜索真相源。
 .runtime/
+
+# 安全审计报告只留本地、不进 Git：含公网 IP 字面量（verify-public-ips.py 会拦）
+# 与集群/边缘细节；TODO.md 任务描述自含，不依赖报告也能读（2026-10-18 定）
+SECURITY-AUDIT-*
+
+# Tencent Cloud EdgeOne
+.env
+.edgeone/*
+.tef_dist/*
+
+# Agent 工作区记忆只留本地、不进 Git：含公网 IP 字面量与集群/边缘细节
+# （verify-public-ips.py 扫跟踪+未忽略文件，会拦）；项目级共享内容走
+# .workbuddy/skills/（2026-10-20 定，参照上方 SECURITY-AUDIT-* 同款理由）
+.workbuddy/memory/
