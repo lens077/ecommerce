@@ -1,0 +1,20 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64">
+  <defs>
+    <linearGradient id="body" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0" stop-color="#ffd9a0"/>
+      <stop offset="0.55" stop-color="#ff9d4d"/>
+      <stop offset="1" stop-color="#ef7a2b"/>
+    </linearGradient>
+  </defs>
+  <!-- 挂绳与顶帽 -->
+  <path d="M32 2v6" stroke="#8a5a2b" stroke-width="2.5" stroke-linecap="round"/>
+  <rect x="23" y="8" width="18" height="5" rx="2.5" fill="#a06a32"/>
+  <!-- 灯身 -->
+  <ellipse cx="32" cy="33" rx="16" ry="17" fill="url(#body)"/>
+  <!-- 灯骨 -->
+  <path d="M32 17v32M25 19c-2.5 9-2.5 19 0 28M39 19c2.5 9 2.5 19 0 28" stroke="#c96a1f" stroke-width="1.5" fill="none" opacity="0.5"/>
+  <!-- 底帽与流苏 -->
+  <rect x="23" y="48" width="18" height="5" rx="2.5" fill="#a06a32"/>
+  <path d="M32 53v5" stroke="#8a5a2b" stroke-width="2" stroke-linecap="round"/>
+  <path d="M29 56l3 6 3-6" stroke="#d94f30" stroke-width="2.2" fill="none" stroke-linecap="round" stroke-linejoin="round"/>
+</svg>
