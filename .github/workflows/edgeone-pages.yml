@@ -1,0 +1,130 @@
+name: EdgeOne Pages deploy
+
+# consumer 消费者端（静态 SPA）→ EdgeOne Pages（中国站）自动部署。
+#
+# 与既有 CI 的关系：本文件是**独立新增**的 workflow，不改任何现有文件：
+#   - 与 frontend.yml（每周一次线上登录冒烟）触发条件与职责完全分开；
+#   - 路径过滤只认 consumer 及其依赖，改 merchant / admin / 后端不会触发；
+#   - 未配置 EDGEONE_TOKEN 时整体跳过（notice 而非失败），fork 与未配密钥的仓库不会常红
+#     （与 frontend.yml 的 CASDOOR_E2E_USER 检查同款模式）。
+#
+# 为什么在 GitHub 不在 GitLab：带凭据的发布/CD 链按仓库既定分工在 GitHub 侧
+# （.gitlab-ci.yml 头部注释：GitLab 只跑不需要凭据的门禁）；且本地 main 跟踪的是
+# github/main，push 到 main 即触发。GitLab 侧门禁不动，不存在冲突。
+#
+# 供应链门禁合规：.supply-chain-baseline/zizmor.txt 按**文件路径**棘轮，新 finding 会让
+# 下一个发布 tag 的 supply-chain-pr.yml 变红。因此本文件：
+#   - 唯一 action（checkout）用 SHA 钉死，不新增 unpinned-uses；
+#   - run: 块内不出现 ${{ }} 表达式，secret 一律经 env: 注入，不新增 template-injection；
+#   - permissions 只给 contents: read，不新增 excessive-permissions。
+# 不引入 actions/setup-node 与 pnpm/action-setup：两者在仓内都是 tag 引用（无可用 SHA），
+# 改用 runner 自带 Node + npm 装 pnpm（.gitlab-ci.yml frontend-gate 同款做法）。
+
+on:
+  push:
+    branches:
+      - main
+    paths:
+      - 'frontend/apps/consumer/**'
+      - 'frontend/packages/**'
+      - 'frontend/vite.config.ts'
+      - 'frontend/pnpm-workspace.yaml'
+      - 'frontend/pnpm-lock.yaml'
+      - 'frontend/package.json'
+      - '.github/workflows/edgeone-pages.yml'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+# 同一分支来了新推送就取消还在跑的旧部署：两次部署打同一个项目没有意义，还会互相覆盖。
+concurrency:
+  group: edgeone-pages-${{ github.ref }}
+  cancel-in-progress: true
+
+env:
+  FRONTEND_DIR: frontend
+  EDGEONE_PROJECT: ecommerce-consumer
+  EDGEONE_SITE: china
+  EDGEONE_AREA: global
+
+jobs:
+  deploy:
+    name: Build and deploy consumer
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        shell: bash
+        working-directory: ${{ env.FRONTEND_DIR }}
+    steps:
+      # SHA 对应 actions/checkout v5.0.0，与 frontend-release.yml 同一个 digest。
+      - name: Checkout repository
+        uses: actions/checkout@fbc6f3992d24b796d5a048ff273f7fcc4a7b6c09
+        with:
+          persist-credentials: false
+
+      - name: Check deploy token
+        id: token
+        env:
+          EDGEONE_TOKEN: ${{ secrets.EDGEONE_TOKEN }}
+        run: |
+          if [ -z "$EDGEONE_TOKEN" ]; then
+            echo "::notice::未配置 EDGEONE_TOKEN（EdgeOne Pages API Token），跳过自动部署"
+            echo "ready=false" >> "$GITHUB_OUTPUT"
+          else
+            echo "ready=true" >> "$GITHUB_OUTPUT"
+          fi
+
+      # Node 下限显式断言：runner 换镜像导致 Node < 22 时明确失败，不悄悄用旧版本构建。
+      # pnpm 版本只认 frontend/package.json 的 packageManager 字段（单一真相源）。
+      - name: Verify Node and install pnpm
+        if: steps.token.outputs.ready == 'true'
+        run: |
+          set -euo pipefail
+          node --version
+          major="$(node -p 'process.versions.node.split(".")[0]')"
+          [ "$major" -ge 22 ] || { echo "需要 Node >= 22，当前 $(node --version)" >&2; exit 1; }
+          pnpm_version="$(node -p "require('./package.json').packageManager.split('@')[1]")"
+          npm install -g "pnpm@${pnpm_version}"
+          pnpm --version
+
+      - name: Install dependencies
+        if: steps.token.outputs.ready == 'true'
+        run: pnpm install --frozen-lockfile
+
+      - name: Build consumer
+        if: steps.token.outputs.ready == 'true'
+        run: pnpm --filter @ecommerce/consumer build
+
+      - name: Install EdgeOne CLI
+        if: steps.token.outputs.ready == 'true'
+        # 不钉版本：pages → makers 迁移刚发生，CLI 仍在快速迭代；latest 让 CI 与控制台
+        # 能力同步。部署失败会直接让 job 变红，不会静默通过。
+        run: npm install -g edgeone@latest
+
+      - name: Deploy to EdgeOne Pages
+        if: steps.token.outputs.ready == 'true'
+        env:
+          EDGEONE_TOKEN: ${{ secrets.EDGEONE_TOKEN }}
+        run: |
+          set -euo pipefail
+          edgeone login --site "$EDGEONE_SITE" --token "$EDGEONE_TOKEN"
+          edgeone makers deploy apps/consumer/dist \
+            --name "$EDGEONE_PROJECT" \
+            --area "$EDGEONE_AREA" \
+            --json | tee "$RUNNER_TEMP/edgeone-deploy.json"
+          # --json 的末行是机器可读结果（status/url/projectId/deploymentId/consoleUrl）。
+          # 解析失败只告警不失败：CLI 退出码已经证明部署成败，摘要只是便利。
+          node -e '
+            const fs = require("fs");
+            const lines = fs.readFileSync(process.env.RUNNER_TEMP + "/edgeone-deploy.json", "utf8").trim().split("\n");
+            let info = null;
+            try { info = JSON.parse(lines[lines.length - 1]); } catch {}
+            if (!info || info.status !== "success") {
+              console.log("::warning::部署输出末行不是成功 JSON，跳过摘要（以 CLI 退出码为准）");
+              process.exit(0);
+            }
+            fs.appendFileSync(process.env.GITHUB_STEP_SUMMARY,
+              ["### EdgeOne Pages 部署成功", "", "- 访问 URL：" + info.url, "- 项目 ID：" + info.projectId, "- 部署 ID：" + info.deploymentId, "- 控制台：" + info.consoleUrl].join("\n") + "\n");
+            console.log("Deploy URL: " + info.url);
+          '

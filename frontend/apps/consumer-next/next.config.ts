@@ -1,7 +1,10 @@
 import type { NextConfig } from "next";
 
+// EdgeOne Pages 走无服务器源码构建（官方文档默认 npm run build → .next，无 Docker 支持），
+// 不需要 K8s 用的 standalone 产物；K8s 部署保持默认 standalone 不变。
+// 用 EDGEONE_BUILD=1 区分两条构建路径，避免改动 K8s 部署形态。
 const nextConfig: NextConfig = {
-  output: "standalone",
+  output: process.env.EDGEONE_BUILD === "1" ? undefined : "standalone",
   // 低内存 CI 限制页面生成 worker；不关闭类型检查或更换构建器。
   ...(process.env.CI_LOW_MEMORY === "1" ? { experimental: { cpus: 1 } } : {}),
   allowedDevOrigins: ["127.0.0.1"],

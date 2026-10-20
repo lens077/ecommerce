@@ -1,0 +1,92 @@
+name: EdgeOne Pages build check (consumer-next)
+
+# consumer-next（Next.js SSR）→ EdgeOne Pages（中国站）的部署链路。
+#
+# 与 consumer（静态 SPA 直传）的关键区别：
+#   consumer 是纯静态产物，可本地构建后 `edgeone makers deploy <dist>` 直传；
+#   consumer-next 是 Next.js SSR，需要 Node 运行时，EdgeOne 的 `makers deploy` 直传型项目
+#   只服务静态文件、不识别 SSR 运行时（已实测：建项目成功、部署步 Failed）。
+#   因此 consumer-next 走 **EdgeOne Git 集成云端构建**：在控制台把本仓库连到 EdgeOne
+#   Pages 项目（根目录设为 frontend，使 pnpm workspace 能解析 @ecommerce/lantern 等依赖），
+#   push 到 main 即由 EdgeOne 自动构建并部署。本 workflow 是 **构建门禁**，在 GitHub 侧
+#   先行校验 `next build` 是否通过，快速失败、避免把坏代码推到 EdgeOne 才报错。
+#
+# 为什么有这个 workflow 而不是只靠 EdgeOne：
+#   - EdgeOne 云端构建反馈链路更长，本地/CI 先跑一次 `next build` 能秒级暴露类型与构建错误；
+#   - 二者触发条件与职责分离，互不冲突：本文件只做验证，不触碰发布凭据。
+#
+# 与既有 CI 的关系（同 consumer 的 edgeone-pages.yml）：
+#   - 路径过滤只认 consumer-next 及其依赖，改 consumer / merchant / admin / 后端不会触发；
+#   - 不配置任何 EdgeOne 凭据，fork 与未接 Git 集成的仓库不会因此变红；
+#   - GitLab 侧门禁（.gitlab-ci.yml）不涉及发布，维持不动。
+#
+# 供应链门禁合规：新 workflow 按文件路径棘轮，不得新增 finding。故：
+#   - 唯一 action（checkout）用 SHA 钉死，不新增 unpinned-uses；
+#   - run: 块内不出现 ${{ }} 表达式，凭据一律经 env: 注入；
+#   - permissions 只给 contents: read。
+# 不引入 actions/setup-node 与 pnpm/action-setup：两者在仓内都是 tag 引用（无可用 SHA），
+# 改用 runner 自带 Node + npm 装 pnpm（.gitlab-ci.yml frontend-gate 同款做法）。
+
+on:
+  push:
+    branches:
+      - main
+    paths:
+      - 'frontend/apps/consumer-next/**'
+      - 'frontend/packages/**'
+      - 'frontend/pnpm-workspace.yaml'
+      - 'frontend/pnpm-lock.yaml'
+      - 'frontend/package.json'
+      - 'frontend/edgeone.json'
+      - '.github/workflows/edgeone-pages-consumer-next.yml'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: edgeone-pages-consumer-next-${{ github.ref }}
+  cancel-in-progress: true
+
+env:
+  FRONTEND_DIR: frontend
+  # 云端构建需用非 standalone 的 .next（EdgeOne 走无服务器源码构建，无 Docker），
+  # next.config.ts 据此关闭 output: standalone。
+  EDGEONE_BUILD: "1"
+
+jobs:
+  build-check:
+    name: Verify consumer-next next build
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        shell: bash
+        working-directory: ${{ env.FRONTEND_DIR }}
+    steps:
+      # SHA 对应 actions/checkout v5.0.0，与 edgeone-pages.yml / frontend-release.yml 同一 digest。
+      - name: Checkout repository
+        uses: actions/checkout@fbc6f3992d24b796d5a048ff273f7fcc4a7b6c09
+        with:
+          persist-credentials: false
+
+      - name: Verify Node and install pnpm
+        run: |
+          set -euo pipefail
+          node --version
+          major="$(node -p 'process.versions.node.split(".")[0]')"
+          [ "$major" -ge 22 ] || { echo "需要 Node >= 22，当前 $(node --version)" >&2; exit 1; }
+          pnpm_version="$(node -p "require('./package.json').packageManager.split('@')[1]")"
+          npm install -g "pnpm@${pnpm_version}"
+          pnpm --version
+
+      - name: Install dependencies
+        run: pnpm install --frozen-lockfile
+
+      - name: Build consumer-next
+        run: pnpm --filter @ecommerce/consumer-next build
+
+      - name: Note deployment path
+        run: |
+          echo "::notice::构建校验通过。consumer-next 的实际生产部署由 EdgeOne Pages 的 Git 集成完成："
+          echo "::notice::在 EdgeOne 控制台把本仓库连到 Pages 项目（根目录 frontend），push 到 main 即自动构建并部署。"
+          echo "::notice::构建配置见 frontend/edgeone.json；运行时环境变量 CONSUMER_NEXT_GATEWAY_URL 需在控制台项目设置中填入公网网关地址。"

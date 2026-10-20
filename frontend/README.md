@@ -83,6 +83,72 @@ vp run -w ready          # vp fmt && vp lint && vp run -r test && vp run -r buil
 单独跑某个包的任务用 `vp run -F <包名> <任务>`，全仓递归用 `vp run -r <任务>`。
 `-F` 用于筛选 workspace package；`-r` 要放在任务名**前面**，`vp run test -r` 会报 `Task "test" not found`。
 
+## 部署到 EdgeOne Pages（consumer）
+
+`consumer` 是静态 SPA，产物 `apps/consumer/dist` **直传** EdgeOne Pages（中国站），不走云端构建。
+两条路径并存，互不影响，也不动现有 CI（GitLab 侧门禁 `.gitlab-ci.yml` 不涉及发布）：
+
+| 路径    | 触发方式                                                                                                                                                           | 入口                                                                 |
+| ------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------ | -------------------------------------------------------------------- |
+| CI 自动 | push 到 `main`，且改动命中 `frontend/apps/consumer/**`、`frontend/packages/**`、`vite.config.ts`、`pnpm-workspace.yaml`、`pnpm-lock.yaml`、`frontend/package.json` | `.github/workflows/edgeone-pages.yml`（Actions 页也可手动 dispatch） |
+| 手动    | 在 `frontend/` 目录下执行                                                                                                                                          | `export EDGEONE_TOKEN=<token> && make deploy-edgeone`                |
+
+凭据：EdgeOne Pages **中国站**控制台 → API Token 生成，写入 GitHub Secrets `EDGEONE_TOKEN`（自动路径）
+或本地环境变量 `EDGEONE_TOKEN`（手动路径）。**Token 不写进仓库**（AGENTS.md 硬规则 4）。
+
+可调变量（Makefile，均有默认值）：`EDGEONE_PROJECT`（`ecommerce-consumer`）、`EDGEONE_SITE`（`china`）、
+`EDGEONE_AREA`（`global`）、`EDGEONE_CLI`（`edgeone`）。`edgeone makers deploy` 要求项目为「直接上传」
+类型——当前项目即按此创建，后续接入其它前端时同样以产物直传方式建项目。
+
+只部署已有产物（本地已构建、跳过构建步）：`make deploy-edgeone-dist`。
+
+当前线上项目：EdgeOne Pages 项目 ID `makers-sdv6nubcmox9`（域名 `ecommerce-consumer-4c3rycx9.edgeone.cool`）。
+已知坑：`edgeone pages deploy`（已废弃）与 `edgeone makers deploy` 的项目名查找互不可见——2026-10-15
+首次用 `makers deploy` 时它按名字找不到旧项目（`makers-gjtjsbxtu4yy`，域名 `ecommerce-consumer-ydl1jxno.edgeone.cool`），
+**另建了同名新项目**。本仓库 CI 与 Makefile 统一走 `makers deploy`，目标是新项目；再次执行会复用同一项目
+（已验证幂等），不会继续新建。旧项目已在控制台列为待清理项，建议删除以免混淆。
+
+## 部署到 EdgeOne Pages（consumer-next，Next.js SSR）
+
+`consumer-next` 是 Next.js SSR（App Router），部署链路和 `consumer`（静态直传）**不一样**，关键事实（均经实测）：
+
+- **不能**用 `edgeone makers deploy <目录>` 直传：该命令创建的是「静态直传」型项目，不识别 SSR 运行时。
+  实测——建项目成功、文件上传成功，但部署步 `Deploying... → Failed`（2026-10-15，项目 `makers-1go5woasjust`
+  已废弃/失败，控制台可删除）。
+- 可行路径是 **EdgeOne Git 集成云端构建**：在 EdgeOne 控制台把本仓库连到 Pages 项目，根目录设为 `frontend`
+  （必须带 workspace 上下文，否则 `@ecommerce/lantern` 等 workspace 依赖解析不到），push 到 `main` 即自动构建部署。
+
+构建配置集中在 `frontend/edgeone.json`：
+
+| 字段              | 值                                                  | 说明                     |
+| ----------------- | --------------------------------------------------- | ------------------------ |
+| `installCommand`  | `corepack enable && pnpm install --frozen-lockfile` | 用 pnpm 装整个 workspace |
+| `buildCommand`    | `pnpm --filter @ecommerce/consumer-next build`      | 只构建 consumer-next     |
+| `outputDirectory` | `apps/consumer-next/.next`                          | Next.js 构建产物         |
+| `nodeVersion`     | `22.11.0`                                           | 与本地一致               |
+
+还需在控制台项目设置里配置两个环境变量（**不要写进仓库**）：
+
+- `EDGEONE_BUILD=1`：让 `next.config.ts` 关闭 `output: "standalone"`，改用 EdgeOne 的无服务器源码构建形态
+  （`output: standalone` 是给 K8s 容器用的，EdgeOne 无 Docker 支持）；
+- `CONSUMER_NEXT_GATEWAY_URL=https://gateway.apikv.com`：consumer-next 的 `/api/*` 反代与 SSR 取数都读这个运行期变量
+  （`app/api/[...path]/route.ts` 第 16 行），填公网网关地址，否则 SSR 取数与 API 反代会 502。
+
+### 两条路径
+
+| 路径 | 触发方式                                                                                                                 | 说明                                                                                         |
+| ---- | ------------------------------------------------------------------------------------------------------------------------ | -------------------------------------------------------------------------------------------- |
+| 自动 | push 到 `main` 且改动命中 `frontend/apps/consumer-next/**`、`frontend/packages/**`、`frontend/edgeone.json`、lockfile 等 | EdgeOne Git 集成自动云端构建部署（非 GitHub Actions 部署）                                   |
+| 手动 | 在 `frontend/` 目录下执行                                                                                                | `export EDGEONE_BUILD=1 && make deploy-edgeone-next`，本地构建后按提示 push 或控制台重新部署 |
+
+- GitHub workflow `.github/workflows/edgeone-pages-consumer-next.yml` 是**构建门禁**：push 时先在本仓库 CI 跑一次
+  `next build` 快速暴露类型/构建错误；真正的生产部署由 EdgeOne Git 集成完成（职责分离、不触碰凭据）。
+- Makefile 目标：`consumer-next-build`（仅本地构建）、`deploy-edgeone-next`（构建 + 上线指引）。
+- 已知限制：`next.config.ts` 里 `/` → `/zh` 的 `rewrites()` 在 EdgeOne 上不被 Next.js 适配层支持
+  （官方文档：Next.js 的 rewrite/redirect 暂不支持，建议用 `edgeone.json`；而 `edgeone.json` 的 `rewrites`
+  仅适用静态资源、不支持 SPA 路由重写）。故访问根 `/` 可能不走改写——临时可用 `/zh` 直达，根治需在 app 层处理
+  （如新增 `app/page.tsx` 做 `redirect("/zh")`）。待 EdgeOne 支持 Next.js rewrite 或改 app 路由后解决。
+
 ## 工具链
 
 vite-plus 一个包覆盖了 dev server、构建、测试（vitest）、lint（oxlint）、

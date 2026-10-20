@@ -1,0 +1,6 @@
+{
+  "installCommand": "corepack enable && pnpm install --frozen-lockfile",
+  "buildCommand": "pnpm --filter @ecommerce/consumer-next build",
+  "outputDirectory": "apps/consumer-next/.next",
+  "nodeVersion": "22.11.0"
+}
