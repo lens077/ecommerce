@@ -9,6 +9,10 @@ REGISTER = ccr.ccs.tencentyun.com
 ARM64=linux/arm64
 AMD64=linux/amd64
 
+.PHONY: next-dev
+next-dev:
+	pnpm dev:consumer-next
+
 .PHONY: docker-deploy
 docker-deploy:
 	@echo "使用方式: make docker-deploy SERVICE=微服务名"

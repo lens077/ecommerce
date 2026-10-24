@@ -43,7 +43,7 @@ affects:
 {
   "go": "1.27.0",
   "node": "^22.22.2 || ^24.15.0 || >=26.0.0",
-  "packageManager": "pnpm@12.5.1"
+  "packageManager": "pnpm@12.15.0"
 }
 ```
 <!-- /env-check:toolchain -->
@@ -78,7 +78,7 @@ go run ./tools/config-seed -drift -environment dev
 
 - 本地默认 `make dev` 不注册 Consul；确需注册才用 `make dev-consul`。客户端认 `CONSUL_HTTP_TOKEN`；无 token 的读可能返回 200 和空结果，不是没有服务。部署模板保留的 Consul 地址不证明集群安装了 Consul。
 - OTLP 端点以 Bootstrap 与 collector 配置为准。公网入口需要鉴权时，匿名上报可能被 401 丢弃，但业务进程仍正常。`OTEL_EXPORTER_OTLP_HEADERS` 的空格按 W3C baggage 编码为 `%20`；不要回显 header。
-- 本机 OTLP header 可由仓外 `~/.config/apikv/otel.mk` 注入；K8s 可由 `otel-auth` Secret 注入。Secret/ESO/凭据后端是否已经同步必须另验，不能从模板里的 optional 引用推出已可用。采集、存储与最终查询是三次独立验收。
+- 本机 OTLP header 可由仓外 `~/.config/apikv/otel.mk` 注入；K8s 由 `otel-auth` Secret 注入，该 Secret 自 2026-10-07 起是仓外静态 Secret（`scripts/deploy-k8s.sh` 建，值取自采集端 `opentelemetry/otlp-public-auth`），不再由 ESO 物化。Secret 是否存在必须另验，不能从模板里的 optional 引用推出已可用。采集、存储与最终查询是三次独立验收。
 
 ### Kafka
 
