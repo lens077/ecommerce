@@ -34,15 +34,14 @@ import consumerEn from "@/locales/en/consumer.json";
 
 expect.extend(matchers);
 
-// vitest 4 起自定义 matcher 的类型通过 `Matchers` 接口合并（官方文档做法）；
+// vitest 5 起自定义 matcher 的类型通过 `Matchers` 接口合并（官方文档做法）；
 // vitest-axe 0.1.0 只增强旧版 Assertion 接口，类型跟不上运行时，这里本地补齐。
 // 运行时实现由上面的 expect.extend(matchers) 提供。
+// vitest 5 的 Matchers 改为双参数签名，本地重声明必须保持一致，否则 TS2428。
 declare module "vitest" {
-  // 类型参数必须与 vitest 自身的 `Matchers<T = any>` 完全一致（TS2428），
-  // 接口合并不允许缺省值不同。
   // oxlint-disable-next-line typescript/no-explicit-any
-  interface Matchers<T = any> {
-    toHaveNoViolations(): T;
+  interface Matchers<R extends void | Promise<void> = void | Promise<void>, T = unknown> {
+    toHaveNoViolations(): R;
   }
 }
 

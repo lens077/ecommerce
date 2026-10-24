@@ -29,11 +29,12 @@ import adminEn from "@/locales/en/admin.json";
 
 expect.extend(matchers);
 
-// vitest 4 的 matcher 类型走 Matchers 接口合并；vitest-axe 0.1.0 只增强旧 Assertion，本地补齐。
+// vitest 5 的 Matchers 改为双参数签名（R extends void|Promise<void>, T=unknown），
+// 本地补齐必须保持参数一致，否则 TS2428；运行时实现由上面的 expect.extend(matchers) 提供。
 declare module "vitest" {
   // oxlint-disable-next-line typescript/no-explicit-any
-  interface Matchers<T = any> {
-    toHaveNoViolations(): T;
+  interface Matchers<R extends void | Promise<void> = void | Promise<void>, T = unknown> {
+    toHaveNoViolations(): R;
   }
 }
 
