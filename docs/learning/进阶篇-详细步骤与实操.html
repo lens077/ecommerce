@@ -1,0 +1,765 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>进阶篇 · 详细步骤与实操（11 个动手任务）</title>
+<style>
+  :root{
+    --paper:#F6EFE1; --paper-ash:#EDE5D4; --paper-dim:#EFE6D2;
+    --paper-lit:#FBF3DF; --paper-lit-2:#FFF7E0;
+    --ink:#2A2A28; --ink-soft:#6B6357;
+    --bamboo:#D8B48A; --bamboo-deep:#77592F;
+    --vermilion:#C2372B; --vermilion-deep:#A82D22; --seal:#FDF8EC;
+    --line:#D8B48A; --line-soft:#E5D7BE;
+    --ok:#5E7C5A; --warn:#B4700F; --blue:#3E5C76;
+  }
+  *{box-sizing:border-box}
+  html{scroll-behavior:smooth}
+  body{margin:0;background:var(--paper);color:var(--ink);
+    font-family:"Noto Serif SC","Songti SC",-apple-system,"PingFang SC","Microsoft YaHei",serif;line-height:1.7}
+  .wrap{max-width:1120px;margin:0 auto;padding:44px 22px 90px}
+  code{font-family:ui-monospace,SFMono-Regular,Menlo,monospace;font-size:.82em;
+    background:var(--paper-ash);padding:1px 5px;border-radius:4px;color:var(--bamboo-deep);word-break:break-all}
+  pre{background:#F3EDE0;border:1px solid var(--line-soft);border-radius:8px;
+    padding:14px 16px;overflow-x:auto;font-size:.79rem;line-height:1.62;margin:12px 0}
+  pre code{background:none;padding:0;color:var(--ink);font-size:inherit}
+  pre .c{color:var(--ok)}          /* 注释 */
+  pre .k{color:var(--vermilion)}   /* 关键字 */
+  header.top{border-bottom:1px solid var(--line);padding-bottom:28px;margin-bottom:30px}
+  h1{font-size:2.15rem;font-weight:900;margin:0 0 10px;letter-spacing:.02em;line-height:1.3}
+  .sub{color:var(--ink-soft);font-size:.94rem;max-width:68em}
+  h2{font-size:1.38rem;font-weight:900;margin:52px 0 8px;padding-bottom:10px;border-bottom:1px solid var(--line-soft)}
+  h2 .idx{color:var(--vermilion);font-size:1rem;margin-right:10px;letter-spacing:.1em}
+  .lead{color:var(--ink-soft);font-size:.9rem;margin:10px 0 20px;max-width:70em}
+  .card{background:var(--paper-lit);border:1px solid var(--line);border-radius:10px;padding:22px 24px;
+    box-shadow:inset 0 0 46px rgba(255,227,160,.5), 0 12px 30px -22px rgba(138,106,66,.45)}
+  .verdict{background:var(--paper-lit-2);border:1px solid var(--bamboo);border-left:4px solid var(--vermilion);
+    border-radius:6px;padding:18px 22px;margin:20px 0 28px}
+  .verdict strong{color:var(--vermilion-deep)}
+  svg{display:block;max-width:100%;height:auto;margin:0 auto}
+  .fig{background:var(--paper);border:1px solid var(--line-soft);border-radius:10px;padding:16px;margin:16px 0}
+  .fig .cap{font-size:.8rem;color:var(--ink-soft);margin-bottom:10px;font-weight:700}
+
+  .task{border:1px solid var(--line);border-radius:12px;background:var(--paper-lit);margin:22px 0;overflow:hidden;
+    box-shadow:0 10px 30px -26px rgba(138,106,66,.6)}
+  .task > .head{display:flex;align-items:baseline;gap:12px;flex-wrap:wrap;
+    padding:15px 22px;background:var(--paper-ash);border-bottom:1px solid var(--line)}
+  .task .no{font-size:.75rem;letter-spacing:.12em;color:var(--seal);background:var(--blue);
+    padding:3px 9px;border-radius:4px;white-space:nowrap}
+  .task h3{margin:0;font-size:1.08rem;font-weight:900}
+  .task .meta{margin-left:auto;font-size:.76rem;color:var(--ink-soft);white-space:nowrap}
+  .task .body{padding:18px 22px 22px}
+  .goal{font-size:.88rem;background:var(--paper-lit-2);border-left:3px solid var(--bamboo);
+    padding:9px 14px;border-radius:0 6px 6px 0;margin-bottom:14px}
+  .pre{font-size:.85rem;color:var(--ink-soft);margin-bottom:12px}
+  .pre b{color:var(--ink)}
+
+  ol.steps{padding-left:22px;font-size:.88rem;margin:8px 0}
+  ol.steps > li{margin-bottom:10px}
+  ol.steps > li > b{color:var(--vermilion-deep)}
+  .verify{background:#F0F4EE;border:1px solid #B9C7B4;border-left:4px solid var(--ok);
+    border-radius:0 8px 8px 0;padding:11px 16px;margin:12px 0;font-size:.86rem}
+  .verify b{color:var(--ok)}
+  .fail{background:#FBEFE6;border:1px solid #E0B79A;border-left:4px solid var(--warn);
+    border-radius:0 8px 8px 0;padding:11px 16px;margin:12px 0;font-size:.86rem}
+  .fail b{color:var(--warn)}
+  .why{background:var(--paper-lit-2);border:1px solid var(--bamboo);border-left:4px solid var(--vermilion);
+    border-radius:0 8px 8px 0;padding:12px 16px;margin:12px 0;font-size:.87rem}
+  .why b{color:var(--vermilion-deep)}
+  table{width:100%;border-collapse:collapse;font-size:.84rem;background:var(--paper-lit);margin:12px 0}
+  th,td{border:1px solid var(--line-soft);padding:8px 11px;text-align:left;vertical-align:top}
+  th{background:var(--paper-ash);font-size:.78rem;letter-spacing:.04em}
+  ul.check{list-style:none;padding-left:0;margin:10px 0 0;font-size:.86rem}
+  ul.check li{display:flex;gap:9px;align-items:flex-start;padding:5px 0;border-bottom:1px dashed var(--line-soft)}
+  ul.check li:last-child{border-bottom:none}
+  ul.check input{margin-top:5px;accent-color:var(--blue);width:15px;height:15px;flex:none;cursor:pointer}
+  ul.check label{cursor:pointer}
+  ul.check input:checked + label{color:var(--ink-soft);text-decoration:line-through}
+  footer{margin-top:56px;padding-top:20px;border-top:1px solid var(--line-soft);font-size:.8rem;color:var(--ink-soft)}
+  .toc{display:grid;grid-template-columns:repeat(auto-fit,minmax(240px,1fr));gap:10px;margin:18px 0 6px}
+  .toc a{display:block;background:var(--paper-lit);border:1px solid var(--line);border-radius:8px;
+    padding:10px 13px;text-decoration:none;color:var(--ink);font-size:.85rem}
+  .toc a b{color:var(--blue);margin-right:6px}
+  .toc a:hover{background:var(--paper-lit-2)}
+  .toc a .when{display:block;font-size:.74rem;color:var(--ink-soft);margin-top:3px}
+  .filetag{font-size:.75rem;color:var(--bamboo-deep);background:var(--paper-ash);
+    border:1px solid var(--line-soft);border-radius:4px;padding:1px 7px;margin-left:6px;white-space:nowrap}
+</style>
+</head>
+<body>
+<div class="wrap">
+
+<header class="top">
+  <h1>进阶篇 · 详细步骤与实操</h1>
+  <p class="sub">
+    这是《进阶篇 · 打开五个黑盒》的<b>动手版</b>：11 个可执行任务，每个都有前置阅读、编号步骤、可复制的代码、验证方法与常见失败。
+    所有路径与 API 均已在本仓库核实过（<code>backend/pkg/identity</code>、<code>merchant_service.go</code> 的 <code>requireAdmin</code>、各服务 <code>internal/pkg/otel/otel.go</code>、<code>docs/observability/OBSERVABILITY.md</code>）。
+    <b>原理图在看概念篇</b>（<code>进阶篇-打开五个黑盒.html</code>），这份只讲怎么动手。
+  </p>
+</header>
+
+<div class="verdict">
+  <strong>先读这段，能省你半天。</strong>
+  ① <b>control-tower 仓不在这台机器上</b>，所以本篇所有步骤只用<b>本仓库</b>能看到的材料——身份契约的真相源是 <code>.service-matrix.yaml</code> 的 <code>gateway</code> 段和 <code>backend/pkg/identity/identity.go</code>，不是 control-tower 的 routes 文件。<br>
+  ② 11 个任务<b>不是都要做</b>。按「你多快会撞上」排序：<b>M1 全做</b>（你做结算页就会撞上）→ <b>M4 做 4.1 + 4.3</b>（上线前夜）→ <b>M5 做 5.1</b>（只做本地模拟，不接真 Kafka）→ <b>M3 / M2 知道有就行</b>。<br>
+  ③ 每个任务末尾都有「怎么知道做对了」。<b>没有那条绿，就等于没做。</b>
+</div>
+
+<div class="fig">
+  <div class="cap">总览：11 个实操任务的分组与依赖</div>
+  <svg viewBox="0 0 680 250" role="img" aria-label="实操任务总览">
+    <g font-family="Noto Serif SC, serif" font-size="10.5">
+      <g>
+        <rect x="10" y="20" width="200" height="88" rx="10" fill="#FBF3DF" stroke="#C2372B" stroke-width="1.5"/>
+        <text x="26" y="42" font-weight="700" fill="#C2372B">M1 身份 · 3 个任务</text>
+        <text x="26" y="62" font-size="9.5">1.1 读懂 identity 包</text>
+        <text x="26" y="78" font-size="9.5">1.2 handler 内角色授权</text>
+        <text x="26" y="94" font-size="9.5">1.3 给自己的 RPC 分级</text>
+      </g>
+      <g>
+        <rect x="240" y="20" width="200" height="88" rx="10" fill="#FBF3DF" stroke="#3E5C76" stroke-width="1.5"/>
+        <text x="256" y="42" font-weight="700" fill="#3E5C76">M4 可观测 · 3 个任务</text>
+        <text x="256" y="62" font-size="9.5">4.1 按本仓基线配指标</text>
+        <text x="256" y="78" font-size="9.5">4.2 自定义 counter</text>
+        <text x="256" y="94" font-size="9.5">4.3 设计一条告警</text>
+      </g>
+      <g>
+        <rect x="470" y="20" width="200" height="88" rx="10" fill="#FBF3DF" stroke="#D8B48A"/>
+        <text x="486" y="42" font-weight="700">M5 一致性 · 2 个任务</text>
+        <text x="486" y="62" font-size="9.5">5.1 本地模拟 Outbox</text>
+        <text x="486" y="78" font-size="9.5">5.2 同步链显式补偿</text>
+      </g>
+      <g>
+        <rect x="10" y="130" width="200" height="88" rx="10" fill="#FBF3DF" stroke="#D8B48A"/>
+        <text x="26" y="152" font-weight="700">M3 部署 · 2 个任务</text>
+        <text x="26" y="172" font-size="9.5">3.1 跑通 parity 门禁</text>
+        <text x="26" y="188" font-size="9.5">3.2 手写 Deployment</text>
+      </g>
+      <g>
+        <rect x="240" y="130" width="200" height="88" rx="10" fill="#FBF3DF" stroke="#D8B48A"/>
+        <text x="256" y="152" font-weight="700">M2 数据流 · 1 个任务</text>
+        <text x="256" y="172" font-size="9.5">2.1 读 trigger + 本地</text>
+        <text x="256" y="188" font-size="9.5">　　 全文检索实验</text>
+      </g>
+      <rect x="470" y="130" width="200" height="88" rx="10" fill="#EFE6D2" stroke="#D8B48A" stroke-dasharray="4 3"/>
+      <text x="486" y="160" font-size="10" fill="#6B6357">优先级</text>
+      <text x="486" y="178" font-size="9.5" fill="#C2372B">红 = 现在做</text>
+      <text x="486" y="194" font-size="9.5" fill="#3E5C76">蓝 = 上线前做</text>
+      <text x="486" y="208" font-size="9.5" fill="#6B6357">其余 = 知道有</text>
+
+      <text x="10" y="244" font-size="10" fill="#6B6357">依赖关系：1.1 是 1.2 / 1.3 的前置；4.1 是 4.2 的前置；5.1 不依赖任何其他任务，可独立做。</text>
+    </g>
+  </svg>
+</div>
+
+<div class="toc">
+  <a href="#t11"><b>1.1</b>读懂 identity 包：三种身份的判定<span class="when">M1 · 约 40 分钟</span></a>
+  <a href="#t12"><b>1.2</b>handler 内角色授权（抄 merchant 范式）<span class="when">M1 · 约 40 分钟</span></a>
+  <a href="#t13"><b>1.3</b>给自己的 RPC 做 A/B/O/C 分级<span class="when">M1 · 约 30 分钟</span></a>
+  <a href="#t41"><b>4.1</b>按本仓基线给自己服务配指标<span class="when">M4 · 约 50 分钟</span></a>
+  <a href="#t42"><b>4.2</b>加一条带 trace_id 的日志 + 自定义 counter<span class="when">M4 · 约 60 分钟</span></a>
+  <a href="#t43"><b>4.3</b>设计一条能送到你手机的告警<span class="when">M4 · 约 40 分钟</span></a>
+  <a href="#t51"><b>5.1</b>本地模拟 Outbox（两个 schema + 20 行 relay）<span class="when">M5 · 约 90 分钟</span></a>
+  <a href="#t52"><b>5.2</b>给同步链加显式补偿<span class="when">M5 · 约 60 分钟</span></a>
+  <a href="#t31"><b>3.1</b>跑通 deploy-parity 门禁并读懂它<span class="when">M3 · 约 30 分钟</span></a>
+  <a href="#t32"><b>3.2</b>手写一个 Deployment + Service<span class="when">M3 · 约 60 分钟</span></a>
+  <a href="#t21"><b>2.1</b>读 search_catalog 的 trigger + PG 全文检索实验<span class="when">M2 · 约 70 分钟</span></a>
+</div>
+
+<!-- ============ 1.1 ============ -->
+<section class="task" id="t11">
+  <div class="head"><span class="no">任务 1.1</span><h3>读懂 identity 包：三种身份的判定</h3>
+    <span class="meta">M1 身份 · 约 40 分钟 · 前置：基础篇第 5 课</span></div>
+  <div class="body">
+    <div class="goal"><b>目标：</b>能不看文档说出「登录用户 / 访客 / 无身份」三种请求在该分别返回什么，并且永远不再写出 <code>userID != ""</code> 这种判断。</div>
+
+    <div class="pre"><b>前置阅读：</b><code>backend/pkg/identity/identity.go</code>（全文 119 行，包注释比代码更重要）。</div>
+
+    <div class="why"><b>为什么这个任务是 M1 的核心：</b>这个仓库支持<b>匿名购物</b>——网关会给未登录用户也注入一个合法 UUID 到 <code>x-md-global-user-id</code>。它和真实用户 ID <b>形状完全一样</b>，唯一区别是访客请求额外带 <code>x-md-global-anonymous: true</code>。所以「判空」会把你认为要登录的接口开放给访客。</div>
+
+    <ol class="steps">
+      <li><b>打开文件，先只读包注释（前 13 行）。</b>它用 ❌/✅ 直接写出了这个坑：
+        <pre><code><span class="c">// ❌ 错：userID != ""            —— 访客也满足，等于把访客放进下单/支付链路</span>
+<span class="c">// ✅ 对：RequireUser(header)     —— 显式拒绝带匿名标记的请求</span></code></pre>
+      </li>
+      <li><b>做一张判定表（这是本任务的唯一交付物）。</b>把下面这张表抄到你的笔记里，空白处自己填：
+        <table>
+          <thead><tr><th style="width:130px">请求类型</th><th>带的头</th><th><code>UserID()</code></th><th><code>IsAnonymous()</code></th><th><code>RequireUser()</code></th><th><code>RequireAny()</code></th></tr></thead>
+          <tbody>
+            <tr><td>已登录用户</td><td>user-id + role</td><td>真实 UUID</td><td>false</td><td>返回 ID，err=nil</td><td>返回 ID</td></tr>
+            <tr><td>访客（匿名购物）</td><td>user-id + anonymous=true</td><td>访客 UUID</td><td><b>true</b></td><td><b>ErrAnonymousNotAllowed</b></td><td>返回 ID（平权）</td></tr>
+            <tr><td>无身份（anonymous 路径）</td><td>（网关不注入）</td><td>""</td><td>false</td><td><b>ErrNoIdentity</b></td><td>ErrNoIdentity</td></tr>
+          </tbody>
+        </table>
+      </li>
+      <li><b>想清楚三种错误分别该映射成什么 HTTP 语义：</b>
+        <ul class="check">
+          <li><input type="checkbox" data-k="t11a"><label><code>ErrAnonymousNotAllowed</code> → <code>CodeUnauthenticated</code>（你未登录，去登录）</label></li>
+          <li><input type="checkbox" data-k="t11b"><label><code>ErrNoIdentity</code> → <code>CodeUnauthenticated</code>（路由配置漏了，通常是配置 bug）</label></li>
+          <li><input type="checkbox" data-k="t11c"><label><code>ErrRoleNotAllowed</code> → <code>CodePermissionDenied</code>（你登录了但没权限）</label></li>
+        </ul>
+        <span style="font-size:.84rem;color:var(--ink-soft)">提示：看 <code>merchant_service.go</code> 里的 <code>requireAdmin</code> 是怎么 switch 的。</span>
+      </li>
+      <li><b>动手改一处：</b>打开 <code>backend/services/address/internal/service/address.go</code>，把创建地址取身份的方式改成 <code>identity.RequireUser(req.Header())</code>。这就是基础篇第 5 课的修复——现在你用的是仓库提供的正规军，而不是自己解析 header。</li>
+      <li><b>写三条测试</b>（登录 / 访客 / 无身份头各一条），断言返回的错误码分别是 <code>nil</code> / <code>CodeUnauthenticated</code> / <code>CodeUnauthenticated</code>。</li>
+    </ol>
+
+    <div class="verify"><b>怎么知道做对了：</b>三条测试全绿；并且你能在 30 秒内说出「为什么 <code>if userID != ""</code> 在支持匿名购物的系统里是漏洞」。</div>
+
+    <div class="fail"><b>常见失败：</b>
+      ① 直接 <code>req.Header().Get("x-md-global-user-id")</code> 手写字符串——头名会和网关契约漂移，必须用 <code>identity.HeaderUserID</code> 常量或 <code>identity.UserID()</code>。<br>
+      ② 只判空不判 anonymous，测试里只造了「已登录」一种用例，所以没暴露问题。<b>三种身份都要测。</b><br>
+      ③ 把访客错误映射成 <code>CodePermissionDenied</code>——语义错了，前端会提示「无权限」而不是「请登录」，用户卡住。
+    </div>
+  </div>
+</section>
+
+<!-- ============ 1.2 ============ -->
+<section class="task" id="t12">
+  <div class="head"><span class="no">任务 1.2</span><h3>handler 内角色授权（抄 merchant 的范式）</h3>
+    <span class="meta">M1 身份 · 约 40 分钟 · 前置：任务 1.1</span></div>
+  <div class="body">
+    <div class="goal"><b>目标：</b>理解「网关不是唯一防线」，并能把一个需要角色的 RPC 加上第二道判定。</div>
+
+    <div class="pre"><b>前置阅读：</b><code>backend/services/merchant/internal/service/merchant_service.go</code> 第 22–40 行（<code>requireAdmin</code> 函数）。</div>
+
+    <div class="why"><b>为什么需要第二道判定：</b>网关 Casbin 按 <code>(procedure, method)</code> 粗粒度放行——它回答「谁能碰这条路」。但策略可能被改宽、请求可能绕过网关（东西向调用、误配置）、攻击者可能换传输层方法。<b>handler 自己再判一次「这个主体能不能做这个动作」，这些逃逸全部失效。</b>这就是 <code>TECH.md</code> §8.5 原则六。</div>
+
+    <ol class="steps">
+      <li><b>读范式。</b> merchant 的写法值得逐字读，尤其是注释里那句「到了这一层，请求是什么 HTTP 方法已经无关」：
+        <pre><code><span class="k">func</span> requireAdmin(h http.Header) error {
+    _, err := identity.RequireRole(h, identity.RoleAdmin)
+    <span class="k">switch</span> {
+    <span class="k">case</span> err == nil:
+        <span class="k">return</span> nil
+    <span class="k">case</span> errors.Is(err, identity.ErrRoleNotAllowed):
+        <span class="k">return</span> connect.NewError(connect.CodePermissionDenied, err)
+    <span class="k">default</span>:
+        <span class="k">return</span> connect.NewError(connect.CodeUnauthenticated, err)
+    }
+}</code></pre>
+      </li>
+      <li><b>注意三个细节</b>（这是抄范式的真正价值）：
+        <ul class="check">
+          <li><input type="checkbox" data-k="t12a"><label>用 <code>errors.Is</code> 而不是 <code>err ==</code> —— 错误可能被 <code>%w</code> 包装过</label></li>
+          <li><input type="checkbox" data-k="t12b"><label>「无权限」和「未登录」分成两个错误码 —— 前端要靠这个决定是提示还是退登</label></li>
+          <li><input type="checkbox" data-k="t12c"><label>默认分支兜住 <code>ErrNoIdentity</code> / <code>ErrAnonymousNotAllowed</code>，不泄漏内部错误文本</label></li>
+        </ul>
+      </li>
+      <li><b>动手：</b>给自己服务里一个「只有主人能操作」的 RPC 加同样的判定。例如 order 的 <code>ShipOrder</code>（发货）——MVP 阶段只有你能发货，所以它应该要求 <code>admin</code> 角色。</li>
+      <li><b>写两条测试：</b>带 <code>admin</code> 角色头通过；带 <code>customer</code> 角色头返回 <code>CodePermissionDenied</code>。</li>
+    </ol>
+
+    <div class="verify"><b>怎么知道做对了：</b>你能回答「如果我把网关的 Casbin 策略删掉一条，我的服务还会拦住未授权请求吗？」——答案是<b>会</b>，因为你加了第二道。</div>
+
+    <div class="fail"><b>常见失败：</b>
+      ① 在 <code>biz</code> 层做角色判定——角色是<b>传输层概念</b>，属于 handler。<code>biz</code> 应该收「谁」这个参数，不关心他从哪来。<br>
+      ② 以为加了 handler 判定就可以不用网关 RBAC——两层管的事不同，都要有。<br>
+      ③ <code>identity.Roles()</code> 返回的是逗号拼接的多角色字符串（如 <code>"admin,merchant"</code>），别用 <code>==</code> 比较整个字符串。
+    </div>
+  </div>
+</section>
+
+<!-- ============ 1.3 ============ -->
+<section class="task" id="t13">
+  <div class="head"><span class="no">任务 1.3</span><h3>给自己的 RPC 做 A/B/O/C 分级</h3>
+    <span class="meta">M1 身份 · 约 30 分钟 · 可独立做</span></div>
+  <div class="body">
+    <div class="goal"><b>目标：</b>拿到一份「我这个商城需要哪些路径匿名/访客/可选认证/必须登录」的清单——这是你将来配网关路由的直接输入。</div>
+
+    <div class="pre"><b>前置阅读：</b><code>.service-matrix.yaml</code> 的 <code>gateway</code> 段（第 97–145 行），看 A/B/O/C 四级的定义与现有例子。</div>
+
+    <ol class="steps">
+      <li><b>先读懂四级语义</b>（仓库注释写得很清楚，这里给出判据）：
+        <table>
+          <thead><tr><th style="width:70px">级</th><th style="width:150px">含义</th><th>判据（问自己这句）</th><th style="width:180px">仓库里的例子</th></tr></thead>
+          <tbody>
+            <tr><td><b>A</b> anonymous</td><td>完全无身份</td><td>「这个接口不登录也能用，且不需要知道是谁」</td><td>Search / GetProductDetail / SignIn / ListRegions</td></tr>
+            <tr><td><b>B</b> guest</td><td>访客身份</td><td>「未登录用户也该有的一份私有数据」</td><td>购物车四个 RPC（访客唯一该拥有的资源）</td></tr>
+            <tr><td><b>O</b> optional_auth</td><td>可选认证</td><td>「登录与匿名都要能调，但登录了要能区分」</td><td>behavior 的 Track / Recommend / SimilarItems</td></tr>
+            <tr><td><b>C</b> 其余</td><td>必须登录</td><td>「涉及钱、地址、订单、个人信息」</td><td>下单 / 支付 / 地址簿</td></tr>
+          </tbody>
+        </table>
+      </li>
+      <li><b>列出你的 MVP 全部 RPC，逐个打标签。</b>用你现在有的 7 个服务（user/product/cart/address/order/inventory/payment），大概 20 来个 RPC，15 分钟能列完。</li>
+      <li><b>重点检查三个容易分错的：</b>
+        <ul class="check">
+          <li><input type="checkbox" data-k="t13a"><label><code>GetProductDetail</code> / <code>Search</code> → <b>A</b>（公开内容，SEO 要它匿名可抓）</label></li>
+          <li><input type="checkbox" data-k="t13b"><label>购物车 → <b>B</b>（不是 A！访客加购是真实需求，但要能识别是同一个访客）</label></li>
+          <li><input type="checkbox" data-k="t13c"><label>行为埋点 → <b>O</b>（登录前后都要能记，且登录后要能关联）</label></li>
+        </ul>
+      </li>
+      <li><b>输出一份表</b>存到 <code>.scratch/learn-notes/rpc-grading.md</code>。这份表就是你将来配 <code>routes.yaml</code> 的输入，也是 structcheck 核对的对象。</li>
+    </ol>
+
+    <div class="verify"><b>怎么知道做对了：</b>表里每个 RPC 都能用一句「判据」解释为什么是这个级；且 <b>C 级里没有一个是「其实可以匿名」的</b>——分错了会让该登录的接口对访客开放。</div>
+
+    <div class="fail"><b>常见失败：</b>把购物车放 A 级——放进去网关注入的是「无身份」，访客刷新页面购物车就丢了，且无法做登录后合并。把 <code>Track</code> 放 A 级也有类似问题：登录用户的行为会被记成匿名，无法关联真实用户（仓库在 2026-09-23 专门改过这一点）。</div>
+  </div>
+</section>
+
+<!-- ============ 4.1 ============ -->
+<section class="task" id="t41">
+  <div class="head"><span class="no">任务 4.1</span><h3>按本仓基线给自己服务配指标</h3>
+    <span class="meta">M4 可观测 · 约 50 分钟 · 上线前必做</span></div>
+  <div class="body">
+    <div class="goal"><b>目标：</b>让你的服务具备「上线后最低限度可观测」——不是搭监控系统，而是确认指标在产出、且你看得懂。</div>
+
+    <div class="pre"><b>前置阅读：</b><code>docs/observability/OBSERVABILITY.md</code> 第 3 节「本仓指标基线」（第 44–83 行）。<b>这是全仓库最实用的一节</b>，它不只列指标，还写了「这个指标异常了我该做什么」。</div>
+
+    <div class="why"><b>先建立判断标准：</b>那份文档第一句就是——「判断一个指标要不要采，只问一句：<b>这个指标异常了，我应该做什么？</b>答不上来的不采。」照这个标准，MVP 你只需要 6 个指标。</div>
+
+    <ol class="steps">
+      <li><b>确认运行时指标已开。</b>每个服务的 <code>internal/pkg/otel/otel.go</code> 里已经设了 <code>RuntimeMetrics: true</code>（以 behavior 为例在第 58 行），并且<b>有测试断言它</b>：
+        <pre><code><span class="c">// backend/services/behavior/internal/pkg/otel/otel_test.go</span>
+assert.True(t, options.RuntimeMetrics)</code></pre>
+        跑一下这个测试确认：<code>cd backend &amp;&amp; go test ./services/behavior/internal/pkg/otel/...</code>
+      </li>
+      <li><b>按 RED 方法论确认服务层指标在产出。</b>你的服务已经有 <code>otelconnect</code> 中间件（10 服务同构），自动产出 RPC QPS / 延迟 / 错误率。<b>你要做的只是确认它开着</b>：看 <code>internal/server/</code> 里拦截器链是否包含 otelconnect（仅当 <code>observability.enable == true</code>）。</li>
+      <li><b>抄一张「指标 → 行动」表到笔记里</b>（从 OBSERVABILITY.md §3 摘最重要的四行）：
+        <table>
+          <thead><tr><th style="width:150px">指标</th><th>异常时的行动</th></tr></thead>
+          <tbody>
+            <tr><td>RPC QPS</td><td>突降查上游/网关；突增查刷量/重试风暴</td></tr>
+            <tr><td>p99 延迟</td><td>单独恶化 → 查慢查询/GC/锁；整体抬升 → 查依赖服务，用 trace 下钻</td></tr>
+            <tr><td>错误率 by <code>rpc.code</code></td><td>突升即告警；先分 4xx（客户端错）还是 5xx（服务端错）</td></tr>
+            <tr><td>Goroutine 数</td><td>持续增长 = 泄漏/阻塞/资源未释放——Go 服务最重要的单一健康指标</td></tr>
+            <tr><td>pgx 连接池 wait count</td><td>出现即预警：很多故障不是数据库挂了，是连接池耗尽</td></tr>
+          </tbody>
+        </table>
+      </li>
+      <li><b>（可选，强烈建议）本地把指标看一遍。</b>两个容器的最小栈：<code>docker compose</code> 起 VictoriaMetrics + Grafana，服务 OTLP 指过去，Grafana 里随便建一个面板看 <code>go_goroutines</code>。<b>亲眼看到一条曲线，比读十页文档管用。</b></li>
+    </ol>
+
+    <div class="verify"><b>怎么知道做对了：</b>你能在 Grafana（或任何面板）里指出「我的服务现在有多少 goroutine、QPS 多少、错误码分布如何」；并且看到 <code>wait count &gt; 0</code> 时知道要去查慢查询。</div>
+
+    <div class="fail"><b>常见失败：</b>
+      ① 一上手就搭全家桶（OTel Collector + VM + VL + VT + Grafana + vmalert + Alertmanager）——单人维护七個组件的成本远超收益。<b>先两个容器。</b><br>
+      ② 指标标签放 <code>user_id</code> / <code>order_id</code>——高基数，一百万个用户就是一百万条 series，存储和查询都会崩。这些进日志，用 trace_id 关联。<br>
+      ③ 采一堆「异常了也不知道做什么」的指标。答不上来行动就不采。
+    </div>
+  </div>
+</section>
+
+<!-- ============ 4.2 ============ -->
+<section class="task" id="t42">
+  <div class="head"><span class="no">任务 4.2</span><h3>加一条带 trace_id 的日志 + 一个自定义 counter</h3>
+    <span class="meta">M4 可观测 · 约 60 分钟 · 前置：任务 4.1</span></div>
+  <div class="body">
+    <div class="goal"><b>目标：</b>亲手产出「一条能和其他请求关联的日志」和「一个业务指标」——这是你把可观测性从「知道」变成「会做」的分界任务。</div>
+
+    <ol class="steps">
+      <li><b>先理解为什么日志必须带 trace_id。</b>一次下单会打出十几行日志，没有 trace_id 你无法把属于同一请求的行捞出来，也无法从一条 trace 反查到日志。<b>trace_id 是三大支柱之间唯一的关联键。</b></li>
+      <li><b>加业务 counter。</b>在 <code>order</code> 服务的 <code>biz</code> 或 <code>service</code> 层加一个计数器（用 OTel 标准 API，不要自己造）：
+        <pre><code><span class="k">import</span> (
+    "go.opentelemetry.io/otel"
+    "go.opentelemetry.io/otel/attribute"
+    "go.opentelemetry.io/otel/metric"
+)
+
+<span class="k">var</span> meter = otel.Meter("github.com/lens077/ecommerce/backend/services/order")
+
+<span class="k">var</span> orderCreated = otel.Must(meter.Int64Counter(
+    "ecommerce.order.created",
+    metric.WithDescription("成功创建的订单数"),
+))
+
+<span class="c">// 在 CreateOrder 成功返回前：</span>
+orderCreated.Add(ctx, 1, metric.WithAttributes(
+    attribute.String("rpc.method", "CreateOrder"),
+))</code></pre>
+        <span style="font-size:.84rem;color:var(--ink-soft)">注意 <code>Add(ctx, ...)</code> 传的是 <code>ctx</code>——OTel 会从 ctx 里取出当前 span，指标自动带上 trace 上下文。这是「指标与追踪关联」的关键，别传 <code>context.Background()</code>。</span>
+      </li>
+      <li><b>加一条结构化日志</b>（用服务现有的 log kit，关键是字段化而不是字符串拼接）：
+        <pre><code><span class="c">// 好的写法：字段化，可被日志系统检索</span>
+l.Infow("order created", "order_no", orderNo, "amount", amountFen, "user_id", userID)
+
+<span class="c">// 坏的写法：拼字符串，查不了</span>
+l.Infof("order %s created for %s", orderNo, userID)</code></pre>
+      </li>
+      <li><b>本地验证。</b><code>make dev</code> 起服务，打一次请求，然后：
+        <ul class="check">
+          <li><input type="checkbox" data-k="t42a"><label>日志里能看到 <code>order created</code> 这一行，且带 <code>order_no</code> 字段</label></li>
+          <li><input type="checkbox" data-k="t42b"><label>如果本地有 VictoriaMetrics，能看到 <code>ecommerce_order_created</code> 这个 series</label></li>
+          <li><input type="checkbox" data-k="t42c"><label>日志里能找到当前请求的 trace_id（一般在日志中间件输出的字段里）</label></li>
+        </ul>
+      </li>
+    </ol>
+
+    <div class="verify"><b>怎么知道做对了：</b>随便打一次请求，你能<b>只用日志</b>把这次请求的所有行捞出来，并且能说出「如果我要统计今天的下单量，该用哪个指标、该看哪个标签」。</div>
+
+    <div class="fail"><b>常见失败：</b>
+      ① <code>Add(context.Background(), ...)</code> —— 丢失 trace 上下文，指标和追踪关联不上。<br>
+      ② 在 <code>biz</code> 层直接 import OTel 包 —— 会破坏分层（biz 不许碰框架）。正确做法：<code>biz</code> 通过接口或 ctx 传递，指标在 <code>service</code> 层或 <code>data</code> 层记。<b>先用 structcheck 门禁验证你没越界。</b><br>
+      ③ 把金额、订单号这种高基数值做成指标标签——那是日志的活。
+    </div>
+  </div>
+</section>
+
+<!-- ============ 4.3 ============ -->
+<section class="task" id="t43">
+  <div class="head"><span class="no">任务 4.3</span><h3>设计一条能送到你手机的告警</h3>
+    <span class="meta">M4 可观测 · 约 40 分钟 · 上线前夜做</span></div>
+  <div class="body">
+    <div class="goal"><b>目标：</b>不搭任何监控系统，只用纸笔（或一个 md 文件）设计出一条完整可用的告警——并且想清楚它触达你的路径。</div>
+
+    <div class="why"><b>为什么这个任务最重要：</b>这个仓库 <code>TODO.md</code> 里最实在的一条是「<b>告警送达</b>」——Alertmanager 收到告警但没送到人手里，等于没有告警。<b>告警的价值 = 能被收到 × 有人处理</b>，中间任何一环断了都是零。设计比搭建重要。</div>
+
+    <ol class="steps">
+      <li><b>选一条规则。</b>MVP 只需要一条：<b>下单接口 5 分钟错误率 &gt; 5%</b>。为什么是它——因为它直接对应「用户下不了单」，是你唯一不能容忍的故障。</li>
+      <li><b>写全五个要素</b>（缺一个就不是一条可用的告警）：
+        <table>
+          <thead><tr><th style="width:110px">要素</th><th>你的填写</th></tr></thead>
+          <tbody>
+            <tr><td>触发条件</td><td>下单接口 5 分钟错误率 &gt; 5%（写清是哪个指标、哪个标签、窗口多长）</td></tr>
+            <tr><td>持续时间</td><td>连续满足 5 分钟才发（避免一次抖动就叫醒你）</td></tr>
+            <tr><td>严重级别</td><td>critical（交易链断了）</td></tr>
+            <tr><td>通知渠道</td><td>手机（ntfy / Bark / 企业微信 / 邮件——选一个你真会看的）</td></tr>
+            <tr><td><b>处理动作</b></td><td><b>收到后第一步查什么</b>——这是最常被漏掉的一格</td></tr>
+          </tbody>
+        </table>
+      </li>
+      <li><b>填「处理动作」这一格。</b>照 OBSERVABILITY.md 的排查路径写：
+        <pre><code>1. 看错误码分布：是 5xx（我的锅）还是 4xx（调用方的锅）？
+2. 如果是 5xx，看是哪个 rpc.method，用 trace 下钻最慢/最错的 span
+3. 按该 span 的 trace_id 去日志里捞 error.origin（真实抛错行）
+4. 常见三选一：数据库连接池耗尽 / 下游 inventory 挂了 / 部署了新版本</code></pre>
+      </li>
+      <li><b>做一次「告警演练」。</b>不需要真故障——<b>手动发一条测试告警到你的手机</b>，确认：手机响了、你点开能看到内容、知道该干什么。这个仓库就是因为没做这一步，才有「告警送不到人」的 TODO。</li>
+    </ol>
+
+    <div class="verify"><b>怎么知道做对了：</b>你手机收到过一条测试告警，且你能在 5 分钟内走完上面四步排查路径。<b>只设计不演练 = 没做。</b></div>
+
+    <div class="fail"><b>常见失败：</b>
+      ① 告警条件写「CPU &gt; 80%」——CPU 高不一定是问题，CPU 高但服务正常你为什么要被叫醒？<b>告警要对齐用户可感知的故障。</b><br>
+      ② 没有持续时间，一次请求抖动就发通知——三天后你就把通知静音了。<br>
+      ③ 只搭了 Alertmanager 没配 receiver，或者 receiver 指向一个没人看的渠道。<br>
+      ④ 收到告警不知道干什么——那这条告警只是焦虑生成器。
+    </div>
+  </div>
+</section>
+
+<!-- ============ 5.1 ============ -->
+<section class="task" id="t51">
+  <div class="head"><span class="no">任务 5.1</span><h3>本地模拟 Outbox（两个 schema + 20 行 relay）</h3>
+    <span class="meta">M5 一致性 · 约 90 分钟 · 不接真 Kafka</span></div>
+  <div class="body">
+    <div class="goal"><b>目标：</b>亲手写出「业务写 + outbox 插入在同一个事务里」和「一个会重发的 relay」，从而真正理解为什么需要 Inbox 幂等。</div>
+
+    <div class="why"><b>为什么先做本地模拟：</b>接真 Kafka 之前，你必须先理解 Outbox 解决的<b>原子性</b>问题。用两个 schema 加 20 行 Go 就能复现全部核心矛盾，且不需要任何中间件。<b>这个任务做完，你将来看 Kafka 只是把 <code>log.Printf</code> 换成 producer。</b></div>
+
+    <div class="pre"><b>前置阅读：</b><code>docs/design/order/checkout.md</code> 里 Outbox 相关章节（只看设计）。另外看一眼 <code>backend/services/product/internal/data/migrations/00004_outbox.sql</code> —— 这个仓库<b>曾经建过又主动删除了</b> outbox 表，看看它当初的字段设计。</div>
+
+    <ol class="steps">
+      <li><b>建 outbox 表。</b>在本地 PostgreSQL 执行。注意下面<b>留了两个空</b>让你按仓库数据层规范自己补（答案在步骤后）：
+        <pre><code><span class="k">CREATE SCHEMA IF NOT EXISTS</span> ordersim;
+
+<span class="k">CREATE TABLE</span> ordersim.orders (
+    id         BIGSERIAL   PRIMARY KEY,
+    order_no   TEXT        NOT NULL,
+    amount_fen BIGINT      NOT NULL,   <span class="c">-- 金额一律整数分，不许 float</span>
+    status     TEXT        NOT NULL,
+    <span class="c">-- TODO 1: 按规范，这里缺一个 created_at？想一想是否需要、默认值是什么</span>
+    <span class="c">-- TODO 2: 按规范，表和关键列必须有 COMMENT，你来补</span>
+);
+
+<span class="k">CREATE TABLE</span> ordersim.outbox (
+    id             BIGSERIAL   PRIMARY KEY,
+    aggregate_type TEXT        NOT NULL,  <span class="c">-- 如 "order"</span>
+    aggregate_id   TEXT        NOT NULL,  <span class="c">-- 订单号</span>
+    event_type     TEXT        NOT NULL,  <span class="c">-- 如 "OrderCreated"</span>
+    payload        JSONB       NOT NULL,
+    created_at     TIMESTAMPTZ NOT NULL DEFAULT now()
+);
+<span class="k">COMMENT ON TABLE</span> ordersim.outbox IS <span class="k">'</span>领域事件待发表：与业务写在同一事务插入<span class="k">'</span>;</code></pre>
+        <span style="font-size:.84rem;color:var(--ink-soft)">两个 TODO 的参考答案：① <code>created_at TIMESTAMPTZ NOT NULL DEFAULT now()</code>——每张业务表都该有，排查和时间线回溯都靠它；② <code>COMMENT ON TABLE/COLUMN</code>——半年后你唯一能看懂这一列干嘛用的东西。参考任意服务的 <code>migrations/00001_*.sql</code>。</span>
+      </li>
+      <li><b>写「业务 + outbox 同事务」的插入。</b>这是整个任务的核心，注意 <b>BEGIN/COMMIT 包住两个 INSERT</b>：
+        <pre><code><span class="k">func</span> createOrder(ctx context.Context, db DBTX, orderNo string, amountFen int64) error {
+    <span class="k">return</span> ExecTx(ctx, db, <span class="k">func</span>(tx DBTX) error {
+        <span class="k">if</span> _, err := tx.Exec(ctx,
+            `<span class="k">INSERT INTO</span> ordersim.orders (order_no, amount_fen, status)
+             <span class="k">VALUES</span> ($1, $2, 'PENDING')`, orderNo, amountFen); err != <span class="k">nil</span> {
+            <span class="k">return</span> err
+        }
+        <span class="c">// 关键：消息作为业务数据写进同一个事务</span>
+        <span class="c">// 业务提交 → 消息一定在；业务回滚 → 消息一定不在</span>
+        <span class="k">if</span> _, err := tx.Exec(ctx,
+            `<span class="k">INSERT INTO</span> ordersim.outbox (aggregate_type, aggregate_id, event_type, payload)
+             <span class="k">VALUES</span> ('order', $1, 'OrderCreated', $2)`, orderNo, payload); err != <span class="k">nil</span> {
+            <span class="k">return</span> err
+        }
+        <span class="k">return</span> <span class="k">nil</span>
+    })
+}</code></pre>
+      </li>
+      <li><b>写一个 20 行的 relay。</b>MVP 阶段它只打印；将来把 <code>log.Printf</code> 换成 Kafka producer 就完成了迁移：
+        <pre><code><span class="k">var</span> lastID int64
+
+<span class="k">func</span> relay(ctx context.Context, db DBTX) {
+    <span class="k">for</span> {
+        rows, err := db.Query(ctx,
+            `<span class="k">SELECT</span> id, aggregate_type, aggregate_id, event_type, payload
+             <span class="k">FROM</span> ordersim.outbox <span class="k">WHERE</span> id > $1 <span class="k">ORDER BY</span> id <span class="k">LIMIT</span> 100`, lastID)
+        <span class="k">if</span> err != <span class="k">nil</span> { time.Sleep(time.Second); <span class="k">continue</span> }
+        n := 0
+        <span class="k">for</span> rows.Next() {
+            <span class="c">// 将来这里换成 producer.Send(...)</span>
+            log.Printf("event: %s %s", r.EventType, r.Payload)
+            lastID = r.ID; n++
+        }
+        <span class="k">if</span> n == 0 { time.Sleep(time.Second) }
+    }
+}</code></pre>
+      </li>
+      <li><b>做三个实验</b>（这是本任务的真正考点，每个都写进笔记）：
+        <ul class="check">
+          <li><input type="checkbox" data-k="t51a"><label><b>实验一（原子性）：</b>让事务在插入 outbox <b>之前</b> 返回错误，确认 orders 表里也没有这一行。<b>如果 orders 有而 outbox 没有 → 你没用同一个事务。</b></label></li>
+          <li><input type="checkbox" data-k="t51b"><label><b>实验二（至少一次）：</b>relay 打印了一条消息后<b>立刻杀死进程</b>（此时 <code>lastID</code> 只在内存里，没落库）。重启后会发生什么？——<b>从 0 开始重发，同一条消息发两次。</b></label></li>
+          <li><input type="checkbox" data-k="t51c"><label><b>实验三（幂等消费）：</b>基于实验二的结论，写出消费者必须怎么做才不会重复处理。<b>答案：Inbox 表 + 唯一键 <code>(consumer_group, event_id)</code>，副作用与 Inbox 同事务。</b></label></li>
+        </ul>
+      </li>
+      <li><b>（可选）把 lastID 落到数据库</b>，再跑一次实验二，观察行为变化。然后想清楚：落库能完全解决重发吗？（不能——它只是缩小窗口。真正正确的组合是「至少一次投递 + 消费者幂等」。）</li>
+    </ol>
+
+    <div class="verify"><b>怎么知道做对了：</b>三个实验的结论你都能写出来，尤其是<b>实验二</b>：你能解释「为什么 Outbox 只保证不丢，不保证不重；不重是消费者的责任」。</div>
+
+    <div class="fail"><b>常见失败：</b>
+      ① 先发消息后写库，或先写库后发消息——都没原子性，这正是 Outbox 要消灭的两种写法。<br>
+      ② 以为 Inbox 是可选优化——没有 Inbox，重发就是重复入账 / 重复扣库存。<br>
+      ③ 用 <code>DELETE FROM outbox</code> 来标记已发送——删了就丢了「发过什么」的审计，且并发下会漏。正确做法是只读不移除（靠 id 推进），或单独标记。<br>
+      ④ 在 relay 里做业务判断——relay 只搬运，不解释语义。
+    </div>
+  </div>
+</section>
+
+<!-- ============ 5.2 ============ -->
+<section class="task" id="t52">
+  <div class="head"><span class="no">任务 5.2</span><h3>给同步链加显式补偿</h3>
+    <span class="meta">M5 一致性 · 约 60 分钟 · 前置：基础篇第 10 课</span></div>
+  <div class="body">
+    <div class="goal"><b>目标：</b>把「下单成功但后续步骤失败」这条路径补完，让系统在部分失败时能自己回到一致状态。</div>
+
+    <div class="why"><b>为什么这是 MVP 必需：</b>同步链最大的风险不是「失败」，而是「<b>失败后没人收拾</b>」——库存预占了但订单取消了，那份库存就永远被占着。补偿逻辑不是可选的增强，是同步链能上线的<b>前提</b>。</div>
+
+    <ol class="steps">
+      <li><b>先列出所有「半完成」状态。</b>拿你的下单流程逐句问「这一步失败了，前面已完成的部分怎么办」：
+        <table>
+          <thead><tr><th style="width:200px">失败点</th><th>已发生的副作用</th><th>补偿动作</th></tr></thead>
+          <tbody>
+            <tr><td>订单落库成功，调 inventory 超时</td><td>可能已预占</td><td>保持 PENDING，定时任务回查（<b>不能直接取消</b>）</td></tr>
+            <tr><td>预占成功，创建支付意图失败</td><td>库存已预占</td><td><b>立即 Release</b>，订单置 CANCELLED</td></tr>
+            <tr><td>支付成功，订单状态更新失败</td><td>钱已收</td><td>支付回调重试 + 主动查询补偿（<b>绝不让钱收了单没成</b>）</td></tr>
+            <tr><td>用户下单后不支付</td><td>库存被占</td><td>定时任务扫超时 PENDING → Release → CANCELLED</td></tr>
+        </tbody>
+      </table>
+      </li>
+      <li><b>实现「超时释放」定时任务</b>，三个硬要求：
+        <ul class="check">
+          <li><input type="checkbox" data-k="t52a"><label><b>幂等</b>：同一订单被扫到两次不出副作用（用状态机守卫：只有 <code>PENDING</code> 且 <code>expire_at &lt; now()</code> 才处理，且更新带 <code>WHERE status = 'PENDING'</code> 条件）</label></li>
+          <li><input type="checkbox" data-k="t52b"><label><b>有界</b>：每次扫描限量（比如 200 单），不要一次扫全表</label></li>
+          <li><input type="checkbox" data-k="t52c"><label><b>可观测</b>：处理了多少单、失败多少单，都要计数——任务挂了你要能发现</label></li>
+        </ul>
+      </li>
+      <li><b>实现「立即释放」路径</b>：预占成功但后续失败时，同步调用 <code>ReleaseReserve(reservation_id)</code>。注意 <code>reservation_id</code> 用订单号——这样重复释放也安全（幂等）。</li>
+      <li><b>写测试验证每条补偿路径</b>（每条一行，共四条）。特别是第一条「超时但实际成功」——它验证的是你<b>没有</b>把订单错杀。</li>
+    </ol>
+
+    <div class="verify"><b>怎么知道做对了：</b>人为制造四种失败各一次，系统最终都回到一致状态：<b>要么订单 PAID 且库存确认扣减，要么订单 CANCELLED 且库存已释放</b>，不存在第三种中间态。</div>
+
+    <div class="fail"><b>常见失败：</b>
+      ① 用「进程内事件」做补偿通知——就是 order 现在那个 <code>GoEventBus(DropOldest)</code>，高负载静默丢事件、重启即失。<b>补偿必须走数据库状态 + 定时任务，不能走内存。</b><br>
+      ② 补偿动作本身不幂等——补偿重试时把库存释放了两次。<br>
+      ③ 忘了「超时但实际成功」这种未知态，一律当失败取消 → 库存被占着、订单却取消了，用户钱货两空。
+    </div>
+  </div>
+</section>
+
+<!-- ============ 3.1 ============ -->
+<section class="task" id="t31">
+  <div class="head"><span class="no">任务 3.1</span><h3>跑通 deploy-parity 门禁并读懂它</h3>
+    <span class="meta">M3 部署 · 约 30 分钟 · 现在就能做</span></div>
+  <div class="body">
+    <div class="goal"><b>目标：</b>亲眼看到「两套部署清单等价」是怎么被机器强制的，并理解为什么这个项目要维护两套。</div>
+
+    <ol class="steps">
+      <li><b>直接跑：</b><code>scripts/verify-deploy-parity.sh</code>。它<b>不需要集群和网络</b>，只做 <code>helm template</code> 与 <code>kubectl kustomize</code> 的渲染对比。预期输出类似：
+        <pre><code>✅ deploy-parity[pre] 绿: 58 个对象
+✅ deploy-parity[prod] 绿: 56 个对象</code></pre>
+      </li>
+      <li><b>读懂那个 2 的差值。</b>prod 比 pre 少 2 个对象，不是漏了——是 <code>helm/values-prod.yaml</code> 里<b>有意关掉</b>的两个开关：
+        <ul class="check">
+          <li><input type="checkbox" data-k="t31a"><label><code>networkPolicy.enabled</code>：prod 关掉了 default-deny（这是一个待修的安全缺口，不是设计）</label></li>
+          <li><input type="checkbox" data-k="t31b"><label><code>otelAuthExternalSecret.enabled</code>：prod 关掉了 OTLP 凭据同步</label></li>
+        </ul>
+        <span style="font-size:.84rem;color:var(--ink-soft)">想验证？打开 <code>helm/values-prod.yaml</code> 第 19–24 行自己看。</span>
+      </li>
+      <li><b>理解「为什么两套」。</b>Helm 是<b>模板 + 参数</b>（适合打包分发），kustomize 是<b>基线 + 补丁</b>（适合多环境差异）。这个仓库两套并存，所以用脚本强制渲染结果逐字段相等。<b>没有这个脚本，两套必然漂移</b>——这是它从「四处各抄一份、互相漂移」的历史里学到的。</li>
+      <li><b>（可选）做一次破坏实验。</b>故意改 <code>backend/services/cart/deploy/base/deployment.yaml</code> 里的一个字段（比如副本数），再跑脚本，看它报什么。<b>亲眼看过门禁变红，你以后才会信任它变绿。</b>（做完记得改回来。）</li>
+    </ol>
+
+    <div class="verify"><b>怎么知道做对了：</b>你能说出「为什么改 helm/ 必须同时改 deploy/」，以及「如果只改一边会发生什么、谁来发现」。</div>
+
+    <div class="fail"><b>常见失败：</b>以为跑绿了就说明线上是对的。<b>这个脚本只证明两份清单互相一致，不证明线上跑的是它们。</b>「清单里写了」≠「线上生效」——这是集群学习和本地最大的认知差异。</div>
+  </div>
+</section>
+
+<!-- ============ 3.2 ============ -->
+<section class="task" id="t32">
+  <div class="head"><span class="no">任务 3.2</span><h3>手写一个 Deployment + Service</h3>
+    <span class="meta">M3 部署 · 约 60 分钟 · 无需集群也能写</span></div>
+  <div class="body">
+    <div class="goal"><b>目标：</b>把一个 Compose 服务翻译成 K8s 对象，理解每个字段在回答什么问题。</div>
+
+    <div class="pre"><b>前置阅读：</b><code>backend/services/cart/deploy/base/deployment.yaml</code> 与 <code>service.yaml</code>（选 cart 因为它最简单），以及 <code>.service-matrix.yaml</code> 的 <code>conventions.pod_topology_spread</code> 段。</div>
+
+    <ol class="steps">
+      <li><b>对照 Compose 读 Deployment。</b>把 <code>docker-compose.yaml</code> 里的 <code>image</code> / <code>ports</code> / <code>env</code> / <code>restart</code> 逐项找到 K8s 里的对应物，做成一张对照表：
+        <table>
+          <thead><tr><th style="width:160px">Compose</th><th style="width:180px">K8s</th><th>它回答什么问题</th></tr></thead>
+          <tbody>
+            <tr><td><code>image</code></td><td><code>spec.template.spec.containers[].image</code></td><td>跑什么</td></tr>
+          <tr><td><code>ports</code></td><td><code>Service</code> 对象</td><td>怎么被找到（Service 才是稳定的网络身份）</td></tr>
+          <tr><td><code>env</code></td><td><code>env</code> / <code>envFrom</code> / <code>Secret</code></td><td>配置从哪来（本仓走 Config Center selector）</td></tr>
+          <tr><td><code>restart: always</code></td><td><code>restartPolicy</code> + 探针</td><td>什么时候算不健康、要不要重启</td></tr>
+          <tr><td><code>replicas</code></td><td><code>spec.replicas</code></td><td>要几个副本（K8s 会<b>持续维持</b>这个数）</td></tr>
+        </table>
+      </li>
+      <li><b>注意这个仓库特有的三处</b>（抄的时候别漏）：
+        <pre><code><span class="c"># ① 非 root 运行（安全基线）</span>
+securityContext:
+  runAsNonRoot: true
+  runAsUser: 1000
+  runAsGroup: 1000
+
+<span class="c"># ② 不挂 ServiceAccount token（没有就不需要被冒充）</span>
+automountServiceAccountToken: false
+
+<span class="c"># ③ 跨节点打散（.service-matrix.yaml 的约定）</span>
+topologySpreadConstraints:
+  - maxSkew: 1
+    topologyKey: kubernetes.io/hostname
+    whenUnsatisfiable: DoNotSchedule
+    labelSelector:
+      matchLabels:
+        app.kubernetes.io/part-of: ecommerce</code></pre>
+      </li>
+      <li><b>写一个 Service。</b>关键是想清楚 selector 和 Deployment 的 <code>template.metadata.labels</code> 必须对得上——这是新手最常写错的地方：
+        <pre><code>apiVersion: v1
+kind: Service
+metadata:
+  name: ecommerce-order-service
+  namespace: ecommerce
+spec:
+  selector:
+    app: ecommerce-order      <span class="c"># ← 必须与 Deployment 的 template.labels 一致</span>
+  ports:
+    - port: 8080
+      targetPort: 8080</code></pre>
+      </li>
+      <li><b>（可选）本地验证。</b>有 <code>kind</code> 的话起个单节点集群 apply 上去，<code>kubectl get pods</code> 看它跑起来；没有就只做 <code>kubectl apply --dry-run=client -f</code> 做语法校验。<b>手写一个，比读二十份清单有用。</b></li>
+    </ol>
+
+    <div class="verify"><b>怎么知道做对了：</b>你能解释「为什么删掉 Pod 后服务没断」（Service  selector 会找到新 Pod）、以及「为什么 <code>selector</code> 写错是最难排查的故障之一」（Service 没有端点，请求全部失败，但 Deployment 显示 Running）。</div>
+
+    <div class="fail"><b>常见失败：</b>
+      ① 用 <code>latest</code> 标签——回滚时你不知道回滚到哪个版本。这个仓库用 <code>X.Y.Z</code> + digest。<br>
+      ② 不写探针——进程没死但连不上数据库时，K8s 认为它健康，流量继续打进来。<br>
+      ③ 把 Config Center selector Secret 直接写进 Deployment YAML——凭据绝不进仓库（本仓硬规则 4）。
+    </div>
+  </div>
+</section>
+
+<!-- ============ 2.1 ============ -->
+<section class="task" id="t21">
+  <div class="head"><span class="no">任务 2.1</span><h3>读 search_catalog 的 trigger + PG 全文检索实验</h3>
+    <span class="meta">M2 数据流 · 约 70 分钟 · 判断你离需要 ES 还有多远</span></div>
+  <div class="body">
+    <div class="goal"><b>目标：</b>理解「投影表」是怎么被维护的，并用一个本地实验判断 PostgreSQL 的全文检索能撑到多大——从而知道什么时候才需要 Elasticsearch。</div>
+
+    <div class="pre"><b>前置阅读：</b><code>backend/services/product/internal/data/migrations/00005_search_catalog.sql</code>（建投影表 + trigger 的那个迁移），以及 <code>docs/design/search/search.md</code>。</div>
+
+    <ol class="steps">
+      <li><b>读 trigger，回答三个问题</b>（这是本任务的主菜）：
+        <ul class="check">
+          <li><input type="checkbox" data-k="t21a"><label>投影表的字段是<b>谁写进去的</b>——业务代码还是数据库 trigger？（答案：trigger。所以业务代码零改动，投影也不会漏）</label></li>
+          <li><input type="checkbox" data-k="t21b"><label>trigger 挂在哪些事件上（INSERT / UPDATE / DELETE 是否都有对应处理）？</label></li>
+          <li><input type="checkbox" data-k="t21c"><label>为什么 search 服务只能读<b>固定 alias</b>、不让调用方指定索引名？（提示：索引重建时要切版本，读方必须无感）</label></li>
+        </ul>
+      </li>
+      <li><b>本地复现一个最小投影。</b>建一张业务表和一张投影表，用 trigger 连接它们：
+        <pre><code><span class="k">CREATE TABLE</span> demo.spu (id BIGSERIAL PRIMARY KEY, name TEXT NOT NULL, status TEXT NOT NULL);
+<span class="k">CREATE TABLE</span> demo.spu_projection (spu_id BIGINT PRIMARY KEY, name TEXT NOT NULL);
+
+<span class="k">CREATE FUNCTION</span> demo.sync_projection() <span class="k">RETURNS TRIGGER AS</span> $$
+<span class="k">BEGIN</span>
+    <span class="k">IF</span> (TG_OP = <span class="k">'DELETE'</span>) <span class="k">THEN</span>
+        <span class="k">DELETE FROM</span> demo.spu_projection <span class="k">WHERE</span> spu_id = OLD.id;
+    <span class="k">ELSE</span>
+        <span class="k">INSERT INTO</span> demo.spu_projection (spu_id, name) <span class="k">VALUES</span> (NEW.id, NEW.name)
+        <span class="k">ON CONFLICT</span> (spu_id) <span class="k">DO UPDATE SET</span> name = EXCLUDED.name;
+    <span class="k">END IF</span>;
+    <span class="k">RETURN NULL</span>;
+<span class="k">END</span>; $$ <span class="k">LANGUAGE</span> plpgsql;
+
+<span class="k">CREATE TRIGGER</span> trg_sync <span class="k">AFTER INSERT OR UPDATE OR DELETE ON</span> demo.spu
+    <span class="k">FOR EACH ROW EXECUTE FUNCTION</span> demo.sync_projection();</code></pre>
+      </li>
+      <li><b>验证投影同步：</b>插一行 → 投影表有；改名 → 投影表跟着改；删一行 → 投影表也没了。三条都过，你就理解了 CDC 链路里「PG 这一侧」在做什么。</li>
+      <li><b>做全文检索对比实验。</b>插 10 万行假数据，对比两种查法：
+        <pre><code><span class="c">-- 加全文索引列</span>
+<span class="k">ALTER TABLE</span> demo.spu_projection <span class="k">ADD COLUMN</span> doc TSVECTOR;
+<span class="k">CREATE INDEX</span> idx_spu_doc <span class="k">ON</span> demo.spu_projection <span class="k">USING GIN</span> (doc);
+
+<span class="c">-- 查法 A：LIKE（全表扫描）</span>
+<span class="k">SELECT</span> * <span class="k">FROM</span> demo.spu_projection <span class="k">WHERE</span> name <span class="k">LIKE</span> '%精华%';
+
+<span class="c">-- 查法 B：全文索引</span>
+<span class="k">SELECT</span> * <span class="k">FROM</span> demo.spu_projection <span class="k">WHERE</span> doc @@ to_tsquery('simple', '精华');</code></pre>
+        用 <code>EXPLAIN ANALYZE</code> 看两者差距，把数字记下来。</li>
+      <li><b>做出你的判断。</b>参考线：商品几千行以内、搜索只是「名字里含关键词」→ <b>PG 完全够，别上 ES</b>。到了几万行、要分词（「精华液」能命中「精华」）、要相关性排序、要聚合筛选 → 才值得投入 Elasticsearch。</li>
+    </ol>
+
+    <div class="verify"><b>怎么知道做对了：</b>你手上有两个数字（LIKE 与 GIN 在你的数据量下的耗时），以及一句结论「我的 MVP 要不要 ES」。<b>有数字的判断才叫判断。</b></div>
+
+    <div class="fail"><b>常见失败：</b>
+      ① 一上来就搭 ES + CDC 全家桶，结果商品只有 50 个——为想象中的规模付真实成本。<br>
+      ②  trigger 里做重活（HTTP 调用、复杂计算）——trigger 在事务里，慢一点全链路都慢。<br>
+      ③ 让调用方指定索引名——索引重建切版本时读方全挂。必须只读固定 alias。
+    </div>
+  </div>
+</section>
+
+<h2><span class="idx">收</span>完成度自查</h2>
+<p class="lead">勾掉你真正做过的（不是看过的）。这份清单的诚实度，决定你对自己水平的判断准不准。</p>
+
+<table>
+  <thead><tr><th style="width:70px">任务</th><th style="width:220px">一句话验收</th><th>它证明你会了什么</th></tr></thead>
+  <tbody>
+    <tr><td>1.1</td><td>三条身份测试全绿</td><td>能安全地取身份，不再判空</td></tr>
+    <tr><td>1.2</td><td>ShipOrder 加了角色判定 + 2 条测试</td><td>理解「网关不是唯一防线」</td></tr>
+    <tr><td>1.3</td><td>产出 RPC 分级表</td><td>能独立设计网关路由的输入</td></tr>
+    <tr><td>4.1</td><td>能看到 goroutine/QPS/错误码分布</td><td>会看指标，且知道异常时做什么</td></tr>
+    <tr><td>4.2</td><td>自定义 counter + 带 trace_id 日志</td><td>会给自己的代码加可观测性</td></tr>
+    <tr><td>4.3</td><td>手机真收到过测试告警</td><td>理解告警的价值在触达与行动</td></tr>
+    <tr><td>5.1</td><td>三个 Outbox 实验结论都写出</td><td>理解「至少一次 + 消费者幂等」</td></tr>
+    <tr><td>5.2</td><td>四种失败都能回到一致状态</td><td>会给同步链补补偿</td></tr>
+    <tr><td>3.1</td><td>跑过 parity 且读懂 2 的差值</td><td>理解两套清单为何必须等价</td></tr>
+    <tr><td>3.2</td><td>手写 Deployment + Service</td><td>能读懂并写 K8s 对象</td></tr>
+    <tr><td>2.1</td><td>有 LIKE vs GIN 的实测数字</td><td>能判断自己离 ES 还有多远</td></tr>
+  </tbody>
+</table>
+
+<div class="why" style="margin-top:18px">
+  <b>如果只做三个：</b>做 <b>1.1</b>（你现在就在写交易链，身份是每一天都要用的）、<b>5.1</b>（它把「分布式一致性」从名词变成你亲手跑过的东西）、<b>4.3</b>（上线前夜没有它，你的第一个线上故障会变成盲人摸象）。
+</div>
+
+<footer>
+  进阶篇 · 详细步骤与实操 · 概念篇：<code>进阶篇-打开五个黑盒.html</code> · 基础篇：<code>教学式渐进方案.html</code>。<br>
+  所有路径与 API 于 2026-10-14 在本仓库核实。涉及集群实况的部分以 <code>context/team/local-env.md</code> 与 <code>TODO.md</code> 现查为准；control-tower 仓不在本机，本篇步骤不依赖它。
+</footer>
+
+</div>
+</body>
+</html>

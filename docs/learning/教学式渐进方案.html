@@ -1,0 +1,1081 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>从零手写一个能上线的商城 · 教学式渐进方案</title>
+<style>
+  :root{
+    --paper:#F6EFE1; --paper-ash:#EDE5D4; --paper-dim:#EFE6D2;
+    --paper-lit:#FBF3DF; --paper-lit-2:#FFF7E0;
+    --ink:#2A2A28; --ink-soft:#6B6357;
+    --bamboo:#D8B48A; --bamboo-deep:#77592F;
+    --vermilion:#C2372B; --vermilion-deep:#A82D22; --seal:#FDF8EC;
+    --line:#D8B48A; --line-soft:#E5D7BE;
+    --ok:#5E7C5A; --warn:#B4700F;
+  }
+  *{box-sizing:border-box}
+  html{scroll-behavior:smooth}
+  body{margin:0;background:var(--paper);color:var(--ink);
+    font-family:"Noto Serif SC","Songti SC",-apple-system,"PingFang SC","Microsoft YaHei",serif;line-height:1.72}
+  .wrap{max-width:1120px;margin:0 auto;padding:44px 22px 90px}
+  a{color:var(--vermilion-deep)}
+  code{font-family:ui-monospace,SFMono-Regular,Menlo,monospace;font-size:.82em;
+    background:var(--paper-ash);padding:1px 5px;border-radius:4px;color:var(--bamboo-deep);word-break:break-all}
+  pre{background:var(--paper-ash);border:1px solid var(--line-soft);border-radius:8px;
+    padding:14px 16px;overflow-x:auto;font-size:.82rem;line-height:1.6}
+  pre code{background:none;padding:0;color:var(--ink)}
+
+  header.top{border-bottom:1px solid var(--line);padding-bottom:28px;margin-bottom:30px}
+  h1{font-size:2.3rem;font-weight:900;margin:0 0 10px;letter-spacing:.02em;line-height:1.25}
+  .sub{color:var(--ink-soft);font-size:.95rem;max-width:64em}
+  h2{font-size:1.45rem;font-weight:900;margin:54px 0 8px;padding-bottom:10px;border-bottom:1px solid var(--line-soft)}
+  h2 .idx{color:var(--vermilion);font-size:1rem;margin-right:10px;letter-spacing:.1em}
+  .lead{color:var(--ink-soft);font-size:.9rem;margin:10px 0 22px;max-width:66em}
+  .card{background:var(--paper-lit);border:1px solid var(--line);border-radius:10px;padding:22px 24px;
+    box-shadow:inset 0 0 46px rgba(255,227,160,.5), 0 12px 30px -22px rgba(138,106,66,.45)}
+
+  /* 顶部进度 */
+  .progressbar{position:sticky;top:0;z-index:20;background:rgba(246,239,225,.94);backdrop-filter:blur(8px);
+    border-bottom:1px solid var(--line);padding:10px 22px;margin:0 -22px 26px;display:flex;align-items:center;gap:14px}
+  .progressbar .lab{font-size:.8rem;color:var(--ink-soft);white-space:nowrap}
+  .pbar{flex:1;height:10px;background:var(--paper-ash);border:1px solid var(--line-soft);border-radius:99px;overflow:hidden}
+  .pbar i{display:block;height:100%;width:0;background:linear-gradient(90deg,var(--bamboo),var(--vermilion));transition:width .3s}
+  .progressbar .num{font-size:.85rem;font-weight:700;color:var(--vermilion);font-variant-numeric:tabular-nums}
+
+  /* 目录 */
+  .toc{display:grid;grid-template-columns:repeat(auto-fit,minmax(190px,1fr));gap:10px;margin:18px 0 6px}
+  .toc a{display:block;background:var(--paper-lit);border:1px solid var(--line);border-radius:8px;
+    padding:10px 13px;text-decoration:none;color:var(--ink);font-size:.86rem}
+  .toc a b{color:var(--vermilion-deep);margin-right:6px}
+  .toc a:hover{background:var(--paper-lit-2)}
+
+  /* 黑盒清单 */
+  .blackbox{display:grid;grid-template-columns:repeat(auto-fit,minmax(230px,1fr));gap:12px;margin:16px 0}
+  .bb{background:var(--paper-dim);border:1px dashed var(--bamboo);border-radius:10px;padding:14px 16px}
+  .bb .t{font-weight:700;font-size:.95rem;margin-bottom:4px}
+  .bb .t::before{content:"⬚ ";color:var(--bamboo-deep)}
+  .bb .d{font-size:.83rem;color:var(--ink-soft)}
+  .four{display:grid;grid-template-columns:repeat(auto-fit,minmax(200px,1fr));gap:12px;margin:16px 0}
+  .f4{background:var(--paper-lit);border:1px solid var(--line);border-left:4px solid var(--vermilion);border-radius:8px;padding:12px 14px;font-size:.88rem}
+  .f4 b{display:block;margin-bottom:3px}
+
+  /* 课程卡 */
+  .lesson{border:1px solid var(--line);border-radius:12px;background:var(--paper-lit);margin:26px 0;overflow:hidden;
+    box-shadow:0 10px 30px -24px rgba(138,106,66,.6)}
+  .lesson > .head{display:flex;align-items:baseline;gap:14px;flex-wrap:wrap;
+    padding:18px 24px;background:var(--paper-ash);border-bottom:1px solid var(--line)}
+  .lesson .no{font-size:.78rem;letter-spacing:.14em;color:var(--seal);background:var(--vermilion);
+    padding:3px 10px;border-radius:4px;white-space:nowrap}
+  .lesson h3{margin:0;font-size:1.22rem;font-weight:900}
+  .lesson .meta{margin-left:auto;font-size:.78rem;color:var(--ink-soft);white-space:nowrap}
+  .lesson .body{padding:20px 24px 24px}
+  .goal{font-size:.9rem;background:var(--paper-lit-2);border-left:3px solid var(--bamboo);
+    padding:10px 14px;border-radius:0 6px 6px 0;margin-bottom:16px}
+
+  details.think{background:var(--paper-lit-2);border:1px solid var(--bamboo);border-radius:8px;margin:14px 0}
+  details.think > summary{cursor:pointer;padding:11px 16px;font-weight:700;font-size:.92rem;list-style:none}
+  details.think > summary::before{content:"🤔 ";filter:grayscale(.4)}
+  details.think > summary::-webkit-details-marker{display:none}
+  details.think .ans{padding:0 18px 14px;font-size:.87rem;border-top:1px dashed var(--line-soft);padding-top:12px}
+  details.think .ans p{margin:8px 0}
+  .hintbtn{font-size:.76rem;color:var(--bamboo-deep);border:1px solid var(--line-soft);background:var(--paper);
+    border-radius:99px;padding:2px 10px;margin-left:8px;cursor:pointer}
+  .hintbtn:hover{background:var(--paper-ash)}
+
+  .fig{background:var(--paper);border:1px solid var(--line-soft);border-radius:10px;padding:16px;margin:16px 0}
+  .fig .cap{font-size:.8rem;color:var(--ink-soft);margin-bottom:10px;font-weight:700}
+  .fig svg{display:block;max-width:100%;height:auto;margin:0 auto}
+  .legend{display:flex;flex-wrap:wrap;gap:14px;font-size:.78rem;color:var(--ink-soft);margin-top:12px}
+  .legend i{display:inline-block;width:12px;height:12px;border-radius:3px;margin-right:5px;vertical-align:-1px}
+
+  ol.steps{padding-left:22px;font-size:.9rem}
+  ol.steps > li{margin-bottom:9px}
+  .pit{background:#FBEFE6;border:1px solid #E0B79A;border-left:4px solid var(--warn);
+    border-radius:0 8px 8px 0;padding:12px 16px;margin:14px 0;font-size:.87rem}
+  .pit b{color:var(--warn)}
+  .key{background:var(--paper-lit-2);border:1px solid var(--bamboo);border-left:4px solid var(--vermilion);
+    border-radius:0 8px 8px 0;padding:14px 18px;margin:14px 0;font-size:.9rem}
+  .key b{color:var(--vermilion-deep)}
+
+  ul.check{list-style:none;padding-left:0;margin:12px 0 0;font-size:.88rem}
+  ul.check li{display:flex;gap:9px;align-items:flex-start;padding:6px 0;border-bottom:1px dashed var(--line-soft)}
+  ul.check li:last-child{border-bottom:none}
+  ul.check input{margin-top:5px;accent-color:var(--vermilion);width:15px;height:15px;flex:none;cursor:pointer}
+  ul.check label{cursor:pointer}
+  ul.check input:checked + label{color:var(--ink-soft);text-decoration:line-through}
+
+  table{width:100%;border-collapse:collapse;font-size:.87rem;background:var(--paper-lit);margin:14px 0}
+  th,td{border:1px solid var(--line-soft);padding:9px 12px;text-align:left;vertical-align:top}
+  th{background:var(--paper-ash);font-size:.8rem;letter-spacing:.05em}
+  footer{margin-top:56px;padding-top:20px;border-top:1px solid var(--line-soft);font-size:.8rem;color:var(--ink-soft)}
+  .quiz{background:var(--paper-lit);border:1px solid var(--line);border-radius:10px;padding:20px 24px;margin:14px 0}
+  .quiz ol{padding-left:22px;font-size:.9rem;margin:0}
+  .quiz li{margin-bottom:10px}
+  .quiz .warnq{color:var(--vermilion-deep);font-weight:700}
+  @media print{.progressbar{display:none}.lesson{break-inside:avoid}}
+</style>
+</head>
+<body>
+<div class="wrap">
+
+<div class="progressbar">
+  <span class="lab">学习进度</span>
+  <span class="pbar"><i id="pfill"></i></span>
+  <span class="num" id="pnum">0 / 0</span>
+</div>
+
+<header class="top">
+  <h1>从零手写一个能上线的商城<br>教学式渐进方案</h1>
+  <p class="sub">
+    10 节课，每课固定五段：<b>先想通 → 看原理图 → 动手 → 踩坑 → 验收</b>。
+    前面的「先想通」请先合上答案自己答——猜错的地方才是你真正的知识缺口。
+    本方案配套 <code>.scratch/learn-by-building/教学式渐进方案.md</code>（同一内容的纯文字版，方便复制命令）。
+  </p>
+</header>
+
+<div class="card">
+  <div class="cap" style="font-weight:700;margin-bottom:8px">三条学习法则</div>
+  <ol class="steps" style="margin:0">
+    <li><b>先猜，再验证。</b>每节课的「先想通」先自己答一遍，答不上来再展开答案。</li>
+    <li><b>每课写 10 行笔记</b>，放 <code>.scratch/learn-notes/Lxx.md</code>。写不出来 = 这节课没懂，重做，不要进下一课。</li>
+    <li><b>卡住 30 分钟就停</b>，去读同目录下另一个已能跑的服务的同样代码。这个仓库里 <code>user</code> 和 <code>cart</code> 已经能跑，它们是免费答案。</li>
+  </ol>
+</div>
+
+<h2><span class="idx">00</span>开始之前：一份「现在不要学」清单</h2>
+<p class="lead">你被这个项目吓到，是因为它在同一层堆了太多东西。下面是现在必须当黑盒的部分——学会了反而干扰你。</p>
+
+<div class="blackbox">
+  <div class="bb"><div class="t">Casdoor / Session / OpenFGA</div><div class="d">身份是网关注入的，请求体里的身份一律不可信。</div></div>
+  <div class="bb"><div class="t">Kafka / Debezium / Elasticsearch</div><div class="d">MVP 用不到，先当它们不存在。</div></div>
+  <div class="bb"><div class="t">K8s / Cilium / ArgoCD / Helm</div><div class="d">MVP 用 Docker Compose 跑，别碰集群。</div></div>
+  <div class="bb"><div class="t">OTel / Grafana / vmalert</div><div class="d">出问题看日志就够，别现在搭监控。</div></div>
+  <div class="bb"><div class="t">OrderGroup / Saga / Outbox</div><div class="d">那是 v2 设计，MVP 用同步调用 + 事务。</div></div>
+</div>
+
+<div class="four">
+  <div class="f4"><b>你真正要学透的只有四件事</b></div>
+  <div class="f4"><b>① 分层与依赖方向</b>第 2 课</div>
+  <div class="f4"><b>② ConnectRPC 契约</b>第 3 课</div>
+  <div class="f4"><b>③ PG 事务与并发</b>第 6、7 课</div>
+  <div class="f4"><b>④ 支付安全</b>第 9 课（花两倍时间）</div>
+</div>
+
+<div class="toc">
+  <a href="#l1"><b>L1</b>让东西跑起来</a>
+  <a href="#l2"><b>L2</b>一个请求的完整旅程</a>
+  <a href="#l3"><b>L3</b>契约先行：商品列表</a>
+  <a href="#l4"><b>L4</b>数据层与 schema</a>
+  <a href="#l5"><b>L5</b>安全第一课：身份与归属</a>
+  <a href="#l6"><b>L6</b>并发第一课：库存</a>
+  <a href="#l7"><b>L7</b>事务与幂等</a>
+  <a href="#l8"><b>L8</b>第一次跨服务调用</a>
+  <a href="#l9"><b>L9</b>支付安全</a>
+  <a href="#l10"><b>L10</b>状态机与上线功课</a>
+</div>
+
+<!-- ============ L1 ============ -->
+<section class="lesson" id="l1">
+  <div class="head"><span class="no">第 1 课</span><h3>让东西在你自己手里跑起来</h3>
+    <span class="meta">约 1.5 小时 · 只改配置不改代码</span></div>
+  <div class="body">
+    <div class="goal"><b>教学目标：</b>能从「敲命令」到「看到响应」，并且知道启动过程中每一步在干什么。</div>
+
+    <details class="think"><summary>先想通：两题</summary>
+      <div class="ans">
+        <p><b>Q1 为什么不能直接 <code>go run main.go</code>？</b></p>
+        <p>因为这个服务的启动配置不在仓库里，而在配置中心（Config Center）。selector 缺失、token 无效、key 不存在，都会直接启动失败——<b>它不会静默降级</b>。这是设计，不是 bug。</p>
+        <p><b>Q2 启动日志那行「实际生效的配置数据源」不打印会怎样？</b></p>
+        <p>「改了配置没生效」这类问题只能靠猜。打印了，一眼就能看出你连的是 dev 还是 pre、是文件还是配置中心。</p>
+      </div>
+    </details>
+
+    <div class="fig">
+      <div class="cap">图 1 · 启动装配顺序（fx 模块像积木一样按序拼起来）</div>
+      <svg viewBox="0 0 680 200" role="img" aria-label="fx 装配顺序">
+        <g font-family="Noto Serif SC, serif" font-size="11">
+          <g>
+            <rect x="10" y="60" width="98" height="52" rx="8" fill="#FBF3DF" stroke="#D8B48A"/><text x="59" y="82" text-anchor="middle">logger</text><text x="59" y="98" text-anchor="middle" font-size="9.5" fill="#6B6357">Module</text>
+            <rect x="118" y="60" width="98" height="52" rx="8" fill="#FBF3DF" stroke="#D8B48A"/><text x="167" y="82" text-anchor="middle">config</text><text x="167" y="98" text-anchor="middle" font-size="9.5" fill="#6B6357">拉 Bootstrap</text>
+            <rect x="226" y="60" width="98" height="52" rx="8" fill="#FBF3DF" stroke="#D8B48A"/><text x="275" y="82" text-anchor="middle">otel</text><text x="275" y="98" text-anchor="middle" font-size="9.5" fill="#6B6357">Module</text>
+            <rect x="334" y="60" width="98" height="52" rx="8" fill="#FBF3DF" stroke="#D8B48A"/><text x="383" y="82" text-anchor="middle">registry</text><text x="383" y="98" text-anchor="middle" font-size="9.5" fill="#6B6357">Module</text>
+            <rect x="442" y="60" width="98" height="52" rx="8" fill="#FBF3DF" stroke="#C2372B" stroke-width="1.5"/><text x="491" y="82" text-anchor="middle" fill="#C2372B" font-weight="700">data</text><text x="491" y="98" text-anchor="middle" font-size="9.5" fill="#6B6357">连数据库</text>
+            <rect x="550" y="60" width="120" height="52" rx="8" fill="#FBF3DF" stroke="#D8B48A"/><text x="610" y="82" text-anchor="middle">biz → service</text><text x="610" y="98" text-anchor="middle" font-size="9.5" fill="#6B6357">→ server</text>
+          </g>
+          <g stroke="#77592F" stroke-width="1.3" marker-end="url(#a1)">
+            <line x1="108" y1="86" x2="116" y2="86"/><line x1="216" y1="86" x2="224" y2="86"/>
+            <line x1="324" y1="86" x2="332" y2="86"/><line x1="432" y1="86" x2="440" y2="86"/>
+            <line x1="540" y1="86" x2="548" y2="86"/>
+          </g>
+          <defs><marker id="a1" markerWidth="8" markerHeight="8" refX="7" refY="3" orient="auto"><path d="M0,0 L7,3 L0,6 Z" fill="#77592F"/></marker></defs>
+          <text x="10" y="36" font-size="11.5" fill="#C2372B" font-weight="700">appOptions() 单独拆成一个函数</text>
+          <text x="10" y="52" font-size="10.5" fill="#6B6357">→ 为了能用 fx.ValidateApp 在「还没连数据库」时就发现装配错误（少 provide 了一个类型）</text>
+          <text x="10" y="150" font-size="10.5" fill="#2A2A28">OnStart：先 CheckDatabase / CheckCache，通过后才 ListenAndServe</text>
+          <text x="10" y="170" font-size="10.5" fill="#2A2A28">OnStop：超时 7 秒，先关服务与资源，最后 flush OTel（否则丢未导出的 span）</text>
+        </g>
+      </svg>
+    </div>
+
+    <div class="cap" style="font-weight:700;margin:6px 0 6px">动手</div>
+    <pre><code># 后端：user 服务（选它是因为它已经能跑）
+cd backend/services/user &amp;&amp; make dev
+curl -i http://localhost:&lt;port&gt;/healthz     # 期望 200
+
+# 前端
+cd frontend &amp;&amp; vp run -F consumer dev</code></pre>
+
+    <div class="pit"><b>踩坑预警：</b>服务起不来，十有八九是 selector 文件路径不对或 token 无效。<b>它不会静默降级</b>——看到启动失败先查 selector，不要改代码绕过。本地测试想绕开配置中心，只能用显式的 <code>CONFIG_SOURCE=file</code>。</div>
+
+    <div class="cap" style="font-weight:700;margin:10px 0 4px">读代码（带着问题读，不求甚解）</div>
+    <ul class="check">
+      <li><input type="checkbox" data-k="l1a"><label><code>cmd/server/main.go</code> —— <code>appOptions()</code> 为什么单独拆出来</label></li>
+      <li><input type="checkbox" data-k="l1b"><label><code>internal/pkg/config/config.go</code> —— selector 是什么，<code>type</code> 为什么必须是 <code>config_center</code></label></li>
+      <li><input type="checkbox" data-k="l1c"><label><code>STACK.md</code> 第六章（配置体系）</label></li>
+    </ul>
+
+    <div class="cap" style="font-weight:700;margin:16px 0 4px">验收</div>
+    <ul class="check">
+      <li><input type="checkbox" data-k="l1d"><label><code>/healthz</code> 返回 200</label></li>
+      <li><input type="checkbox" data-k="l1e"><label>能在启动日志里指出：配置从哪来、连了哪个库、监听哪个端口</label></li>
+      <li><input type="checkbox" data-k="l1f"><label>笔记写出「这个服务启动的 5 个步骤」</label></li>
+    </ul>
+  </div>
+</section>
+
+<!-- ============ L2 ============ -->
+<section class="lesson" id="l2">
+  <div class="head"><span class="no">第 2 课</span><h3>一个请求的完整旅程</h3>
+    <span class="meta">约 2 小时 · 纯阅读课，不动业务代码</span></div>
+  <div class="body">
+    <div class="goal"><b>教学目标：</b>能不看文档画出「一次 SignIn 从网络到数据库再回来」的完整链路。这是后面所有课的地基。</div>
+
+    <details class="think"><summary>先想通：三题</summary>
+      <div class="ans">
+        <p><b>Q1 为什么 <code>service</code> 是唯一允许 import proto 生成代码的层？</b></p>
+        <p>因为 proto 是<b>对外契约</b>，会随业务演进频繁变化。如果 <code>biz</code> 也 import 它，契约一变，领域模型跟着抖，测试跟着崩。把「翻译」关在一层，契约演进就被隔离了。</p>
+        <p><b>Q2 <code>biz</code> 为什么不许 import <code>data</code>？</b></p>
+        <p>第一周看不出问题，第三个月出事：<code>biz</code> 的单元测试会悄悄变成集成测试，然后慢慢没人再跑单测——因为跑一次要连数据库。依赖方向是<b>测试能不能跑</b>的地基，不只是洁癖。</p>
+        <p><b>Q3 错误码在哪一层决定？</b></p>
+        <p>在 <code>service</code> 层。<code>biz</code> 只定义领域错误（带 <code>[模块]</code> 前缀），<code>data</code> 用 <code>%w</code> 包装保证 <code>errors.Is</code> 能穿透，最后由 <code>service</code> 映射成 Connect 错误码。更早决定会让领域层被迫知道 HTTP 语义。</p>
+      </div>
+    </details>
+
+    <div class="fig">
+      <div class="cap">图 2 · 四层依赖方向：绿箭头允许，红虚线禁止</div>
+      <svg viewBox="0 0 680 300" role="img" aria-label="四层依赖图">
+        <defs>
+          <marker id="g2" markerWidth="9" markerHeight="9" refX="8" refY="3.5" orient="auto"><path d="M0,0 L8,3.5 L0,7 Z" fill="#5E7C5A"/></marker>
+          <marker id="r2" markerWidth="9" markerHeight="9" refX="8" refY="3.5" orient="auto"><path d="M0,0 L8,3.5 L0,7 Z" fill="#C2372B"/></marker>
+        </defs>
+        <g font-family="Noto Serif SC, serif" font-size="11.5">
+          <rect x="30" y="40" width="130" height="56" rx="8" fill="#FBF3DF" stroke="#D8B48A"/>
+          <text x="95" y="64" text-anchor="middle" font-weight="700">server</text><text x="95" y="82" text-anchor="middle" font-size="9.5" fill="#6B6357">handler 注册 · 拦截器</text>
+
+          <rect x="220" y="40" width="130" height="56" rx="8" fill="#FBF3DF" stroke="#D8B48A"/>
+          <text x="285" y="64" text-anchor="middle" font-weight="700">service</text><text x="285" y="82" text-anchor="middle" font-size="9.5" fill="#6B6357">proto ⇄ biz 转换</text>
+
+          <rect x="220" y="180" width="130" height="56" rx="8" fill="#FBF3DF" stroke="#77592F" stroke-width="1.5"/>
+          <text x="285" y="204" text-anchor="middle" font-weight="700" fill="#77592F">biz</text><text x="285" y="222" text-anchor="middle" font-size="9.5" fill="#6B6357">领域模型 · Repo 接口</text>
+
+          <rect x="410" y="180" width="130" height="56" rx="8" fill="#FBF3DF" stroke="#D8B48A"/>
+          <text x="475" y="204" text-anchor="middle" font-weight="700">data</text><text x="475" y="222" text-anchor="middle" font-size="9.5" fill="#6B6357">Repo 实现 · pgx</text>
+
+          <rect x="30" y="180" width="130" height="56" rx="8" fill="#EFE6D2" stroke="#D8B48A" stroke-dasharray="4 3"/>
+          <text x="95" y="204" text-anchor="middle" font-weight="700">api/*/v1</text><text x="95" y="222" text-anchor="middle" font-size="9.5" fill="#6B6357">proto 生成代码</text>
+
+          <rect x="570" y="180" width="90" height="56" rx="8" fill="#EDE5D4" stroke="#D8B48A"/>
+          <text x="615" y="205" text-anchor="middle" font-weight="700">PostgreSQL</text><text x="615" y="222" text-anchor="middle" font-size="9.5" fill="#6B6357">schema</text>
+
+          <!-- allowed -->
+          <g stroke="#5E7C5A" stroke-width="1.8" fill="none" marker-end="url(#g2)">
+            <line x1="160" y1="68" x2="218" y2="68"/>
+            <line x1="285" y1="96" x2="285" y2="178"/>
+            <line x1="410" y1="208" x2="352" y2="208"/>
+            <line x1="540" y1="208" x2="568" y2="208"/>
+            <line x1="160" y1="208" x2="218" y2="208"/>
+          </g>
+          <g font-size="10" fill="#5E7C5A">
+            <text x="189" y="62" text-anchor="middle">允许</text>
+            <text x="300" y="140" text-anchor="middle">允许</text>
+            <text x="381" y="202" text-anchor="middle">实现</text>
+            <text x="554" y="202" text-anchor="middle">SQL</text>
+          </g>
+          <!-- forbidden -->
+          <g stroke="#C2372B" stroke-width="1.6" stroke-dasharray="5 4" fill="none" marker-end="url(#r2)">
+            <line x1="352" y1="232" x2="408" y2="232"/>
+          </g>
+          <text x="380" y="250" text-anchor="middle" font-size="10.5" fill="#C2372B" font-weight="700">✗ biz 不许 import data</text>
+          <text x="95" y="262" text-anchor="middle" font-size="10.5" fill="#C2372B" font-weight="700">✗ biz 不许 import proto</text>
+          <text x="380" y="140" text-anchor="middle" font-size="10.5" fill="#C2372B" font-weight="700">✗ service 不许直连 data</text>
+
+          <text x="10" y="286" font-size="10.5" fill="#6B6357">依赖方向铁律：server → service → biz ← data。门禁：backend/structcheck/layer_imports_test.go（存量违规走棘轮清单，只许删不许加）</text>
+        </g>
+      </svg>
+      <div class="legend">
+        <span><i style="background:#5E7C5A"></i>允许 import</span>
+        <span><i style="background:#C2372B"></i>禁止（会被门禁拦住）</span>
+      </div>
+    </div>
+
+    <div class="fig">
+      <div class="cap">图 3 · 一次 SignIn 的完整旅程（编号对应下方说明）</div>
+      <svg viewBox="0 0 680 480" role="img" aria-label="请求旅程时序图">
+        <defs><marker id="m3" markerWidth="8" markerHeight="8" refX="7" refY="3" orient="auto"><path d="M0,0 L7,3 L0,6 Z" fill="#77592F"/></marker></defs>
+        <g font-family="Noto Serif SC, serif">
+          <g font-size="11" font-weight="700" fill="#2A2A28">
+            <rect x="6" y="14" width="84" height="28" rx="7" fill="#FBF3DF" stroke="#D8B48A"/><text x="48" y="33" text-anchor="middle">浏览器</text>
+            <rect x="110" y="14" width="84" height="28" rx="7" fill="#EFE6D2" stroke="#D8B48A"/><text x="152" y="33" text-anchor="middle">网关</text>
+            <rect x="214" y="14" width="84" height="28" rx="7" fill="#FBF3DF" stroke="#D8B48A"/><text x="256" y="33" text-anchor="middle">server</text>
+            <rect x="318" y="14" width="84" height="28" rx="7" fill="#FBF3DF" stroke="#D8B48A"/><text x="360" y="33" text-anchor="middle">service</text>
+            <rect x="422" y="14" width="84" height="28" rx="7" fill="#FBF3DF" stroke="#77592F" stroke-width="1.4"/><text x="464" y="33" text-anchor="middle" fill="#77592F">biz</text>
+            <rect x="526" y="14" width="84" height="28" rx="7" fill="#FBF3DF" stroke="#D8B48A"/><text x="568" y="33" text-anchor="middle">data</text>
+            <rect x="594" y="14" width="80" height="28" rx="7" fill="#EDE5D4" stroke="#D8B48A"/><text x="634" y="33" text-anchor="middle">PostgreSQL</text>
+          </g>
+          <g stroke="#D8B48A" stroke-width="1" stroke-dasharray="4 4" opacity=".85">
+            <line x1="48" y1="42" x2="48" y2="440"/><line x1="152" y1="42" x2="152" y2="440"/>
+            <line x1="256" y1="42" x2="256" y2="440"/><line x1="360" y1="42" x2="360" y2="440"/>
+            <line x1="464" y1="42" x2="464" y2="440"/><line x1="568" y1="42" x2="568" y2="440"/>
+            <line x1="634" y1="42" x2="634" y2="440"/>
+          </g>
+          <g stroke="#77592F" stroke-width="1.3" fill="none" marker-end="url(#m3)">
+            <line x1="48" y1="78" x2="150" y2="78"/>
+            <line x1="152" y1="120" x2="254" y2="120"/>
+            <line x1="256" y1="162" x2="358" y2="162"/>
+            <line x1="360" y1="204" x2="462" y2="204"/>
+            <line x1="464" y1="246" x2="566" y2="246"/>
+            <line x1="568" y1="288" x2="632" y2="288"/>
+            <line x1="634" y1="330" x2="570" y2="330"/>
+            <line x1="568" y1="372" x2="466" y2="372"/>
+            <line x1="464" y1="414" x2="362" y2="414"/>
+          </g>
+          <g font-size="12" font-weight="900" fill="#C2372B">
+            <circle cx="99" cy="72" r="10"/><text x="99" y="76" text-anchor="middle" fill="#FDF8EC">1</text>
+            <circle cx="203" cy="114" r="10"/><text x="203" y="118" text-anchor="middle" fill="#FDF8EC">2</text>
+            <circle cx="307" cy="156" r="10"/><text x="307" y="160" text-anchor="middle" fill="#FDF8EC">3</text>
+            <circle cx="411" cy="198" r="10"/><text x="411" y="202" text-anchor="middle" fill="#FDF8EC">4</text>
+            <circle cx="515" cy="240" r="10"/><text x="515" y="244" text-anchor="middle" fill="#FDF8EC">5</text>
+            <circle cx="600" cy="282" r="10"/><text x="600" y="286" text-anchor="middle" fill="#FDF8EC">6</text>
+            <circle cx="602" cy="324" r="10"/><text x="602" y="328" text-anchor="middle" fill="#FDF8EC">7</text>
+            <circle cx="517" cy="366" r="10"/><text x="517" y="370" text-anchor="middle" fill="#FDF8EC">8</text>
+            <circle cx="413" cy="408" r="10"/><text x="413" y="412" text-anchor="middle" fill="#FDF8EC">9</text>
+          </g>
+          <text x="10" y="462" font-size="10.5" fill="#6B6357">回程同理：data → biz（领域错误 %w 包装）→ service（映射 Connect 错误码）→ server → 网关 → 浏览器</text>
+        </g>
+      </svg>
+      <div class="legend">
+        <span><b style="color:#C2372B">1</b> 浏览器发 <code>/user.v1.UserService/SignIn</code></span>
+        <span><b style="color:#C2372B">2</b> 网关鉴权后<b>剥离伪造身份头</b>，注入可信 <code>x-md-global-*</code></span>
+        <span><b style="color:#C2372B">3</b> server 拦截器链：otel → log → validate</span>
+        <span><b style="color:#C2372B">4</b> service 做 proto ⇄ biz 转换</span>
+        <span><b style="color:#C2372B">5</b> biz 调 Repo <b>接口</b>（接口在 biz，实现在 data）</span>
+        <span><b style="color:#C2372B">6</b> data 发 SQL（pgx）</span>
+        <span><b style="color:#C2372B">7</b> 返回行</span>
+        <span><b style="color:#C2372B">8</b> 出错则 <code>%w</code> 包装，保证 <code>errors.Is</code> 穿透</span>
+        <span><b style="color:#C2372B">9</b> service 映射成 <code>CodeUnauthenticated</code> 等</span>
+      </div>
+    </div>
+
+    <div class="cap" style="font-weight:700;margin:6px 0 6px">读代码（按这个顺序，别乱）</div>
+    <pre><code>cmd/server/main.go            ← fx 装配顺序（谁先起谁后起）
+internal/server/server.go     ← Connect handler 注册 + 拦截器链 + CORS/h2c
+internal/service/*.go         ← proto ⇄ biz 转换 + 错误码映射（唯一接触 proto 的层）
+internal/biz/*.go             ← 领域模型 + Repo 接口 + UseCase（纯结构，不碰框架）
+internal/data/*.go            ← Repo 的真实实现（pgx / cache / 三方 SDK）</code></pre>
+
+    <div class="key"><b>本节课重点：</b><code>biz</code> 定义 Repo <b>接口</b>，<code>data</code> 实现它。这样 <code>biz</code> 的单元测试可以用假实现跑、不连数据库。这就是 <code>biz</code> 不许 import <code>data</code> 的真正原因——<b>一旦允许，测试就悄悄变成集成测试，然后慢慢没人再跑单测。</b></div>
+
+    <div class="pit"><b>踩坑预警：</b>你会很想在 <code>biz</code> 里直接写 SQL，那是 <code>data</code> 的活；也会很想在 <code>service</code> 里写业务规则，那是 <code>biz</code> 的活。<code>service</code> 只做「翻译」。</div>
+
+    <div class="cap" style="font-weight:700;margin:16px 0 4px">验收</div>
+    <ul class="check">
+      <li><input type="checkbox" data-k="l2a"><label>画出一张图：请求经过的文件顺序 + 每层「不允许做什么」</label></li>
+      <li><input type="checkbox" data-k="l2b"><label>说出三层错误处理：<code>biz</code> 定义 → <code>data</code> 用 <code>%w</code> 包装 → <code>service</code> 映射</label></li>
+      <li><input type="checkbox" data-k="l2c"><label>跑一次 <code>scripts/verify-quick.sh</code>，确认它现在是绿的</label></li>
+    </ul>
+  </div>
+</section>
+
+<!-- ============ L3 ============ -->
+<section class="lesson" id="l3">
+  <div class="head"><span class="no">第 3 课</span><h3>契约先行：给商品加「列表」能力</h3>
+    <span class="meta">约 3 小时 · 第一次完整改三层</span></div>
+  <div class="body">
+    <div class="goal"><b>教学目标：</b>完整走一次「改 proto → 生成 → 三层实现」的全流程，理解为什么这个项目把 proto 当边界。</div>
+
+    <details class="think"><summary>先想通：三题</summary>
+      <div class="ans">
+        <p><b>Q1 商城只能看详情不能逛列表，荒谬在哪？</b></p>
+        <p>用户进商城的第一个动作是「逛」，不是「知道编号后精确查一个」。<code>product.proto</code> 现在只有 <code>GetProductDetail</code>，等于只有货架格子没有商场。</p>
+        <p><b>Q2 为什么列表必须用游标分页，不能用 <code>OFFSET + LIMIT</code>？</b></p>
+        <p>两个原因：① <code>OFFSET 10000</code> 要扫描并丢弃前 10000 行，越翻越慢；② 翻页期间若有新商品插入，<code>OFFSET</code> 会重复或漏项。游标（keyset）从「上次最后一行」继续，两者都不会发生。</p>
+        <p><b>Q3 为什么校验加在 proto 上而不是 <code>biz</code> 里？</b></p>
+        <p>因为 proto 是前后端<b>共用的契约</b>。写在 proto 上，Go 和 TypeScript 两侧同时获得约束；写在 <code>biz</code> 里，前端还得再写一遍，两边必然漂移。</p>
+      </div>
+    </details>
+
+    <div class="fig">
+      <div class="cap">图 4 · 契约先行：一份 proto，两边生成，四层实现</div>
+      <svg viewBox="0 0 680 250" role="img" aria-label="契约先行流程">
+        <defs><marker id="m4" markerWidth="8" markerHeight="8" refX="7" refY="3" orient="auto"><path d="M0,0 L7,3 L0,6 Z" fill="#77592F"/></marker></defs>
+        <g font-family="Noto Serif SC, serif" font-size="11">
+          <rect x="14" y="70" width="150" height="80" rx="9" fill="#FBF3DF" stroke="#C2372B" stroke-width="1.5"/>
+          <text x="89" y="96" text-anchor="middle" font-weight="700" fill="#C2372B">product.proto</text>
+          <text x="89" y="114" text-anchor="middle" font-size="9.5">加 ListProducts</text>
+          <text x="89" y="130" text-anchor="middle" font-size="9.5">每字段带 buf.validate</text>
+
+          <line x1="168" y1="96" x2="248" y2="96" stroke="#77592F" stroke-width="1.4" marker-end="url(#m4)"/>
+          <text x="208" y="88" text-anchor="middle" font-size="10" fill="#77592F">buf generate</text>
+
+          <rect x="254" y="52" width="150" height="42" rx="8" fill="#EFE6D2" stroke="#D8B48A"/>
+          <text x="329" y="78" text-anchor="middle" font-size="10.5">Go: api/product/v1/*.pb.go</text>
+          <rect x="254" y="104" width="150" height="42" rx="8" fill="#EFE6D2" stroke="#D8B48A"/>
+          <text x="329" y="130" text-anchor="middle" font-size="10.5">TS: frontend/src/gen</text>
+
+          <line x1="408" y1="96" x2="470" y2="96" stroke="#77592F" stroke-width="1.4" marker-end="url(#m4)"/>
+
+          <rect x="476" y="34" width="192" height="140" rx="9" fill="#FBF3DF" stroke="#D8B48A"/>
+          <text x="572" y="56" text-anchor="middle" font-weight="700">四层实现</text>
+          <text x="490" y="80" font-size="10.5">① server 注册 handler</text>
+          <text x="490" y="102" font-size="10.5">② service proto ⇄ biz 转换</text>
+          <text x="490" y="124" font-size="10.5">③ biz 定义 + Repo 接口</text>
+          <text x="490" y="146" font-size="10.5">④ data 写 sqlc 查询</text>
+
+          <rect x="14" y="190" width="654" height="46" rx="8" fill="#FBEFE6" stroke="#E0B79A"/>
+          <text x="30" y="210" font-size="10.5" fill="#B4700F" font-weight="700">兼容性四条红线：不删字段（删就 reserved 占号）· 不复用字段号 · 不改类型 · 不改语义</text>
+          <text x="30" y="228" font-size="10.5" fill="#B4700F">金额禁用 double / float —— 用 int64（单位：分）或 decimal 字符串。search.proto 已经犯过这个错，别再犯。</text>
+        </g>
+      </svg>
+    </div>
+
+    <div class="cap" style="font-weight:700;margin:6px 0 6px">动手</div>
+    <ol class="steps">
+      <li>在 <code>backend/api/product/v1/product.proto</code> 加 <code>ListProducts</code>：请求带 <code>page_size</code>、<code>page_token</code>（游标）、可选 <code>category_id</code>；响应带 <code>next_page_token</code>。每个字段都加 <code>buf.validate</code> 约束。</li>
+      <li><code>buf generate</code> —— 生成 Go 与 TypeScript <b>两份</b>。</li>
+      <li>按第 2 课的地图从 <code>server</code> 开始往下写：注册 → <code>service</code> 转换 → <code>biz</code> 定义 <code>ListProducts</code> + Repo 方法 → <code>data</code> 写 sqlc 查询。</li>
+    </ol>
+
+    <div class="pit"><b>踩坑预警：</b>前端类型是<b>从 proto 生成的</b>，不是你手写的。改了 proto 不重新生成，前端会拿到旧字段——这是「前端显示不出来」最常见的原因。</div>
+
+    <div class="cap" style="font-weight:700;margin:16px 0 4px">验收</div>
+    <ul class="check">
+      <li><input type="checkbox" data-k="l3a"><label><code>cd backend &amp;&amp; go build ./... &amp;&amp; go vet ./...</code> 通过</label></li>
+      <li><input type="checkbox" data-k="l3b"><label>前端 <code>src/gen</code> 里能看到新的 <code>ListProducts</code> 类型</label></li>
+      <li><input type="checkbox" data-k="l3c"><label>写一个测试：并发翻页不重复、不漏项</label></li>
+      <li><input type="checkbox" data-k="l3d"><label>能解释「为什么 <code>query_parameter_limit: 1</code> 会强制你用命名参数结构体」</label></li>
+    </ul>
+  </div>
+</section>
+
+<!-- ============ L4 ============ -->
+<section class="lesson" id="l4">
+  <div class="head"><span class="no">第 4 课</span><h3>数据层：迁移、schema 与那张让你踩坑的 NOT NULL</h3>
+    <span class="meta">约 2.5 小时</span></div>
+  <div class="body">
+    <div class="goal"><b>教学目标：</b>理解「一个服务一个 schema」的物理隔离意味着什么，以及为什么迁移里一行小疏漏能让线上功能 100% 失败。</div>
+
+    <details class="think"><summary>先想通：三题</summary>
+      <div class="ans">
+        <p><b>Q1 10 个服务共用一个 PostgreSQL，为什么还要每服务一个 schema？表名前加前缀不行吗？</b></p>
+        <p>前缀只是命名约定，任何人任何服务都能 <code>SELECT</code> 别人的表。schema 是<b>权限边界</b>：可以做到「cart 服务的数据库账号只能看见 cart schema」。约定靠自律，边界靠权限。</p>
+        <p><b>Q2 为什么迁移里禁止 <code>SET search_path</code>？</b></p>
+        <p>goose 的版本表按<b>非限定名</b>解析。<code>search_path</code> 一改，版本表可能被写到别的 schema，迁移状态就乱了。所以表名必须显式限定（<code>cart.cart_items</code>）。</p>
+        <p><b>Q3 为什么 seed 数据能插入、真实加购却 500？</b></p>
+        <p>seed 行是手工写全字段插进去的，<code>shop_name</code> 有值；而 INSERT 语句里没写这一列，它是 <code>NOT NULL</code> 且无默认值，于是每次都违反约束。<b>测试数据掩盖了代码路径的缺陷</b>——这是最危险的一类 bug。</p>
+      </div>
+    </details>
+
+    <div class="fig">
+      <div class="cap">图 5 · 一个实例，10 个 schema，零跨库 JOIN</div>
+      <svg viewBox="0 0 680 220" role="img" aria-label="schema 隔离">
+        <g font-family="Noto Serif SC, serif" font-size="11">
+          <rect x="10" y="26" width="660" height="140" rx="12" fill="#FBF3DF" stroke="#77592F" stroke-width="1.5"/>
+          <text x="30" y="50" font-size="11.5" font-weight="700" fill="#77592F">PostgreSQL（一个实例）</text>
+          <g>
+            <rect x="30" y="62" width="116" height="34" rx="6" fill="#EFE6D2" stroke="#D8B48A"/><text x="88" y="84" text-anchor="middle" font-size="10.5">user</text>
+            <rect x="156" y="62" width="116" height="34" rx="6" fill="#EFE6D2" stroke="#D8B48A"/><text x="214" y="84" text-anchor="middle" font-size="10.5">product</text>
+            <rect x="282" y="62" width="116" height="34" rx="6" fill="#EFE6D2" stroke="#D8B48A"/><text x="340" y="84" text-anchor="middle" font-size="10.5">cart</text>
+            <rect x="408" y="62" width="116" height="34" rx="6" fill="#EFE6D2" stroke="#D8B48A"/><text x="466" y="84" text-anchor="middle" font-size="10.5">address</text>
+            <rect x="534" y="62" width="116" height="34" rx="6" fill="#EFE6D2" stroke="#D8B48A"/><text x="592" y="84" text-anchor="middle" font-size="10.5">order</text>
+            <rect x="30" y="104" width="116" height="34" rx="6" fill="#EFE6D2" stroke="#D8B48A"/><text x="88" y="126" text-anchor="middle" font-size="10.5">inventory</text>
+            <rect x="156" y="104" width="116" height="34" rx="6" fill="#EFE6D2" stroke="#D8B48A"/><text x="214" y="126" text-anchor="middle" font-size="10.5">payment</text>
+            <rect x="282" y="104" width="116" height="34" rx="6" fill="#EFE6D2" stroke="#D8B48A"/><text x="340" y="126" text-anchor="middle" font-size="10.5">search</text>
+            <rect x="408" y="104" width="116" height="34" rx="6" fill="#EFE6D2" stroke="#D8B48A"/><text x="466" y="126" text-anchor="middle" font-size="10.5">merchant</text>
+            <rect x="534" y="104" width="116" height="34" rx="6" fill="#EFE6D2" stroke="#D8B48A"/><text x="592" y="126" text-anchor="middle" font-size="10.5">behavior</text>
+          </g>
+          <text x="30" y="158" font-size="10.5" fill="#6B6357">每服务独立 schema · UUIDv7 主键 · 金额 DECIMAL · 索引显式命名 idx_* · 表和关键列必须写 COMMENT</text>
+          <text x="30" y="192" font-size="10.5" fill="#C2372B" font-weight="700">跨服务只存 ID + 快照字段：不跨 schema JOIN、不建跨 schema 外键。</text>
+          <text x="30" y="210" font-size="10.5" fill="#6B6357">为什么：两个服务最终一定会在不同数据库/不同机器上，JOIN 会变成分布式事务。</text>
+        </g>
+      </svg>
+    </div>
+
+    <div class="cap" style="font-weight:700;margin:6px 0 6px">动手</div>
+    <p style="font-size:.9rem">修购物车那个 bug。二选一，<b>先定契约再动手</b>：</p>
+    <ol class="steps">
+      <li><b>方案 A</b>：proto 加 <code>shop_name</code>，客户端传商品快照（和 <code>spu_name</code> / <code>sku_name</code> 同风格）。</li>
+      <li><b>方案 B</b>：服务端查 merchant 填。</li>
+    </ol>
+    <p style="font-size:.9rem">按 <code>docs/design/cart/api-decisions.md</code> 的裁决倾向走，改完写一条迁移 + 一条<b>能复现原问题的测试</b>。</p>
+
+    <div class="pit"><b>踩坑预警：</b>迁移必须写 <code>+goose Down</code>——这个仓库 16 个迁移 16 个都写了，别当第一个破例的。<code>COMMENT</code> 不是洁癖，是半年后你唯一能看懂这一列干嘛用的东西。</div>
+
+    <div class="cap" style="font-weight:700;margin:16px 0 4px">验收</div>
+    <ul class="check">
+      <li><input type="checkbox" data-k="l4a"><label>新增加购、重复加购都成功，刷新后与服务端一致</label></li>
+      <li><input type="checkbox" data-k="l4b"><label>测试在修复前是红的、修复后是绿的</label></li>
+      <li><input type="checkbox" data-k="l4c"><label>能说出「seed 数据为什么掩盖了这个 bug」</label></li>
+    </ul>
+  </div>
+</section>
+
+<!-- ============ L5 ============ -->
+<section class="lesson" id="l5">
+  <div class="head"><span class="no">第 5 课</span><h3>安全第一课：身份与归属</h3>
+    <span class="meta">约 2 小时 · 修一个真实越权漏洞</span></div>
+  <div class="body">
+    <div class="goal"><b>教学目标：</b>亲手修掉一个真实的越权漏洞，建立「可信身份」这个后续所有安全决策的根。</div>
+
+    <details class="think"><summary>先想通：三题</summary>
+      <div class="ans">
+        <p><b>Q1 网关已经做了 RBAC，为什么服务还要校验归属？</b></p>
+        <p>RBAC 只回答「你能不能调这个 RPC」，不回答「你能动哪一行数据」。任何已登录用户都能调 <code>DeleteAddress</code>，RBAC 当然放行。</p>
+        <p><b>Q2 用户 A 拿着用户 B 的地址 ID 调删除，谁负责拦住？在哪一层？</b></p>
+        <p>服务层。而且必须在 <b>SQL 或领域层带 owner 条件</b>（<code>WHERE id = ? AND user_id = ?</code>），不是「先查出来再在代码里比一下」。</p>
+        <p><b>Q3 为什么拦下来要返回 403/404 而不是 500？</b></p>
+        <p>500 表示「服务器错了」，会触发告警、掩盖真实问题，也让攻击者能区分「服务故障」和「被拒绝」。403/404 是可预期的拒绝。</p>
+      </div>
+    </details>
+
+    <div class="fig">
+      <div class="cap">图 6 · IDOR：两种写法，两种结局</div>
+      <svg viewBox="0 0 680 270" role="img" aria-label="IDOR 示意图">
+        <g font-family="Noto Serif SC, serif" font-size="11">
+          <rect x="16" y="22" width="150" height="46" rx="8" fill="#FBF3DF" stroke="#D8B48A"/>
+          <text x="91" y="42" text-anchor="middle" font-weight="700">用户 A</text>
+          <text x="91" y="58" text-anchor="middle" font-size="9.5" fill="#6B6357">已登录 ✓</text>
+          <line x1="170" y1="45" x2="228" y2="45" stroke="#77592F" stroke-width="1.4" marker-end="url(#m5)"/>
+          <text x="199" y="38" text-anchor="middle" font-size="9.5" fill="#77592F">DeleteAddress</text>
+          <text x="199" y="62" text-anchor="middle" font-size="9.5" fill="#C2372B">id = B 的地址</text>
+          <defs><marker id="m5" markerWidth="8" markerHeight="8" refX="7" refY="3" orient="auto"><path d="M0,0 L7,3 L0,6 Z" fill="#77592F"/></marker></defs>
+
+          <rect x="234" y="22" width="170" height="46" rx="8" fill="#EFE6D2" stroke="#D8B48A"/>
+          <text x="319" y="42" text-anchor="middle" font-weight="700">网关 Casbin RBAC</text>
+          <text x="319" y="58" text-anchor="middle" font-size="9.5" fill="#6B6357">「已登录 → 放行」</text>
+
+          <line x1="408" y1="45" x2="446" y2="45" stroke="#77592F" stroke-width="1.4" marker-end="url(#m5)"/>
+          <rect x="452" y="22" width="212" height="46" rx="8" fill="#FBF3DF" stroke="#C2372B" stroke-width="1.5"/>
+          <text x="558" y="42" text-anchor="middle" font-weight="700" fill="#C2372B">address 服务</text>
+          <text x="558" y="58" text-anchor="middle" font-size="9.5" fill="#6B6357">唯一能拦住的地方</text>
+
+          <line x1="558" y1="70" x2="200" y2="106" stroke="#C2372B" stroke-width="1.4" stroke-dasharray="5 4" marker-end="url(#r5)"/>
+          <line x1="558" y1="70" x2="200" y2="196" stroke="#5E7C5A" stroke-width="1.4" marker-end="url(#g5)"/>
+          <defs>
+            <marker id="r5" markerWidth="8" markerHeight="8" refX="7" refY="3" orient="auto"><path d="M0,0 L7,3 L0,6 Z" fill="#C2372B"/></marker>
+            <marker id="g5" markerWidth="8" markerHeight="8" refX="7" refY="3" orient="auto"><path d="M0,0 L7,3 L0,6 Z" fill="#5E7C5A"/></marker>
+          </defs>
+
+          <rect x="30" y="112" width="290" height="72" rx="8" fill="#FBEFE6" stroke="#E0B79A"/>
+          <text x="45" y="134" font-size="11" font-weight="700" fill="#C2372B">❌ 错误：信任请求体 user_id</text>
+          <text x="45" y="154" font-size="10">SQL: DELETE WHERE id = $1</text>
+          <text x="45" y="174" font-size="10">→ 删掉了用户 B 的地址</text>
+
+          <rect x="360" y="202" width="304" height="60" rx="8" fill="#F0F4EE" stroke="#5E7C5A"/>
+          <text x="375" y="224" font-size="11" font-weight="700" fill="#5E7C5A">✅ 正确：取可信身份 + owner 条件</text>
+          <text x="375" y="244" font-size="10">SQL: DELETE WHERE id = $1 AND user_id = x-md-global-user-id</text>
+
+          <text x="30" y="262" font-size="10.5" fill="#6B6357">返回 0 行受影响 → 明确拒绝（403 / not_found），而不是空 200、更不是 500</text>
+        </g>
+      </svg>
+    </div>
+
+    <div class="key"><b>本节课重点（请抄进笔记）：</b><b>RBAC 决定「你能不能调这个 RPC」，归属校验决定「你能动哪一行数据」。</b>前者是粗粒度门禁，后者是每一行查询都必须带的条件。少了任何一个，另一个都不能救你。同理：<code>buf.validate</code> 只校验结构，不校验权限。</div>
+
+    <div class="cap" style="font-weight:700;margin:6px 0 6px">动手</div>
+    <ol class="steps">
+      <li>修 <code>address/internal/service/address.go</code>：创建地址不再信任请求体的 <code>UserId</code>，改从网关注入的 <code>x-md-global-user-id</code> 取。</li>
+      <li>读 / 改 / 删 / 设默认，全部在 SQL 或领域层带 owner 条件。</li>
+    </ol>
+
+    <div class="cap" style="font-weight:700;margin:16px 0 4px">验收</div>
+    <ul class="check">
+      <li><input type="checkbox" data-k="l5a"><label>用户 A 无法读/改/删用户 B 的地址，收到的是可预期错误码（不是 500、不是空 200）</label></li>
+      <li><input type="checkbox" data-k="l5b"><label>覆盖游客、已登录 A、已登录 B 三种身份的测试</label></li>
+      <li><input type="checkbox" data-k="l5c"><label>能解释「为什么不能信任请求体里的任何身份字段」</label></li>
+    </ul>
+  </div>
+</section>
+
+<!-- ============ L6 ============ -->
+<section class="lesson" id="l6">
+  <div class="head"><span class="no">第 6 课</span><h3>并发第一课：库存为什么不能「先查后改」</h3>
+    <span class="meta">约 3.5 小时 · 全项目最重要的一课</span></div>
+  <div class="body">
+    <div class="goal"><b>教学目标：</b>搞懂为什么数据库约束是正确性的最后一道防线。这一课想通了，后面所有「一致性」问题你都有直觉。</div>
+
+    <details class="think"><summary>先想通：三题</summary>
+      <div class="ans">
+        <p><b>Q1 库存剩 10 件，两人同时各买 8 件，「先查再改」哪里会错？</b></p>
+        <p>两个请求都查到 10，都判断 <code>10 ≥ 8</code> 成立，然后都执行扣减。<b>库存变成 2，但实际卖出 16 件 —— 超卖 6 件。</b>关键在于「判断」和「扣减」是两个独立操作，中间有时间窗。</p>
+        <p><b>Q2 用 Redis 分布式锁行不行？</b></p>
+        <p>能降低概率，但引入了新问题：锁超时了怎么办、加锁的服务挂了怎么办、锁本身和数据库的一致性怎么保证。<b>你在用一个更难正确的机制去保护一个可以很简单的机制。</b></p>
+        <p><b>Q3 为什么说「约束是最后一道防线」？</b></p>
+        <p>应用层校验跑在进程里，进程会重启、会有多副本、会有 bug。<b>数据库约束跑在数据库里，进程死了它还在。</b>所有判重的最终依据都应该是唯一约束，所有扣减的最终依据都应该是单条原子 SQL。</p>
+      </div>
+    </details>
+
+    <div class="fig">
+      <div class="cap">图 7 · 库存扣减：错误做法 vs 正确做法</div>
+      <svg viewBox="0 0 680 330" role="img" aria-label="库存并发对比">
+        <g font-family="Noto Serif SC, serif" font-size="10.5">
+          <rect x="10" y="14" width="322" height="300" rx="10" fill="#FBEFE6" stroke="#E0B79A"/>
+          <text x="26" y="38" font-size="12" font-weight="700" fill="#C2372B">❌ 先查后改（现在的代码就是这么错的）</text>
+
+          <rect x="26" y="52" width="290" height="34" rx="6" fill="#FDF8EC" stroke="#D8B48A"/>
+          <text x="40" y="73">请求 1：SELECT available → 读到 <tspan font-weight="700">10</tspan></text>
+          <rect x="26" y="92" width="290" height="34" rx="6" fill="#FDF8EC" stroke="#D8B48A"/>
+          <text x="40" y="113">请求 2：SELECT available → 也读到 <tspan font-weight="700">10</tspan></text>
+          <rect x="26" y="132" width="290" height="34" rx="6" fill="#FDF8EC" stroke="#D8B48A"/>
+          <text x="40" y="153">两个请求都判断：10 ≥ 8 ✓</text>
+          <rect x="26" y="172" width="290" height="34" rx="6" fill="#FDF8EC" stroke="#D8B48A"/>
+          <text x="40" y="193">请求 1：UPDATE 减 8 → available = 2</text>
+          <rect x="26" y="212" width="290" height="34" rx="6" fill="#FDF8EC" stroke="#D8B48A"/>
+          <text x="40" y="233">请求 2：UPDATE 减 8 → available = <tspan fill="#C2372B" font-weight="700">-6</tspan></text>
+          <rect x="26" y="256" width="290" height="46" rx="6" fill="#C2372B"/>
+          <text x="171" y="277" text-anchor="middle" fill="#FDF8EC" font-weight="700">超卖 6 件</text>
+          <text x="171" y="293" text-anchor="middle" fill="#FDF8EC" font-size="9.5">两个请求各自都「检查通过」了，但合起来是错的</text>
+
+          <rect x="348" y="14" width="322" height="300" rx="10" fill="#F0F4EE" stroke="#5E7C5A"/>
+          <text x="364" y="38" font-size="12" font-weight="700" fill="#5E7C5A">✅ 单条原子 UPDATE（把判断和扣减合成一步）</text>
+
+          <rect x="364" y="52" width="290" height="62" rx="6" fill="#FDF8EC" stroke="#D8B48A"/>
+          <text x="376" y="72" font-size="10" font-family="ui-monospace,Menlo,monospace">UPDATE inventory.stock</text>
+          <text x="376" y="88" font-size="10" font-family="ui-monospace,Menlo,monospace">   SET available = available - $1</text>
+          <text x="376" y="104" font-size="10" font-family="ui-monospace,Menlo,monospace"> WHERE sku_id = $2 AND available &gt;= $1</text>
+
+          <rect x="364" y="126" width="290" height="34" rx="6" fill="#FDF8EC" stroke="#D8B48A"/>
+          <text x="378" y="147">请求 1：影响 <tspan font-weight="700">1 行</tspan> → available = 2 ✓</text>
+          <rect x="364" y="166" width="290" height="34" rx="6" fill="#FDF8EC" stroke="#D8B48A"/>
+          <text x="378" y="187">请求 2：影响 <tspan fill="#C2372B" font-weight="700">0 行</tspan> → 库存不足</text>
+          <rect x="364" y="210" width="290" height="46" rx="6" fill="#5E7C5A"/>
+          <text x="509" y="231" text-anchor="middle" fill="#FDF8EC" font-weight="700">绝不超卖</text>
+          <text x="509" y="247" text-anchor="middle" fill="#FDF8EC" font-size="9.5">判断和扣减由数据库在一次操作里完成</text>
+          <rect x="364" y="266" width="290" height="40" rx="6" fill="#FDF8EC" stroke="#D8B48A"/>
+          <text x="378" y="283" font-size="10">+ reservation_id 唯一键 → 幂等</text>
+          <text x="378" y="298" font-size="10">+ stock_ledger 流水 → 可对账</text>
+        </g>
+      </svg>
+    </div>
+
+    <div class="cap" style="font-weight:700;margin:6px 0 6px">动手</div>
+    <ol class="steps">
+      <li>重写 <code>inventory</code> 的 <code>Reserve</code> 与 <code>ReleaseReserve</code>：判<b>更新行数</b>（0 行 = 库存不足），不要「先 SELECT 再决定」。</li>
+      <li>配 <code>stock_ledger</code> 流水表：每次预占 / 确认 / 释放都记一行，可对账。</li>
+      <li><code>reservation_id</code> 加唯一键做幂等：同一订单重复提交只扣一次。</li>
+      <li>多 SKU 预占放进<b>同一个事务</b>（<code>data.go</code> 已提供 <code>ExecTx</code>，现在没用上）。</li>
+      <li>顺手把 <code>inventory.proto</code> 的请求体补全——现在它是<b>空结构体</b>，根本无法表达「释放哪个订单的哪些 SKU」。</li>
+    </ol>
+
+    <div class="pit"><b>踩坑预警：</b>多行扣减要<b>按同一顺序</b>（比如 <code>sku_id</code> 升序）执行，否则两个事务互相等待会死锁。现在的代码把防死锁排序整段注释掉了，别学。另外，<b>别在事务里做外部调用</b>（HTTP、支付）——事务要短。</div>
+
+    <div class="cap" style="font-weight:700;margin:16px 0 4px">验收（这节课的验收最硬）</div>
+    <ul class="check">
+      <li><input type="checkbox" data-k="l6a"><label>并发测试：库存 10 件，100 个 goroutine 同时预占 1 件，<b>恰好成功 10 次</b>，其余明确失败</label></li>
+      <li><input type="checkbox" data-k="l6b"><label>同一 <code>reservation_id</code> 重复预占只扣一次</label></li>
+      <li><input type="checkbox" data-k="l6c"><label>能向别人解释：为什么这个正确性不依赖「锁」而依赖「单条 SQL 的原子性」</label></li>
+    </ul>
+  </div>
+</section>
+
+<!-- ============ L7 ============ -->
+<section class="lesson" id="l7">
+  <div class="head"><span class="no">第 7 课</span><h3>事务、幂等与「假成功为什么最危险」</h3>
+    <span class="meta">约 3 小时</span></div>
+  <div class="body">
+    <div class="goal"><b>教学目标：</b>修掉 order 的假成功，并建立对幂等的正确直觉——幂等的层次是数据库，不是应用。</div>
+
+    <details class="think"><summary>先想通：三题</summary>
+      <div class="ans">
+        <p><b>Q1 <code>CreateOrder</code> 返回 <code>{}</code> 和 200 但什么都没存，为什么比 500 危险十倍？</b></p>
+        <p>500 会触发告警、留下日志、用户知道失败了。<b>空 200 是静默的数据丢失</b>：用户以为下单成功，你的库里什么都没有，没有任何地方记录这次失败。等你在对账时发现，已经过去几周，损失无法追溯。</p>
+        <p><b>Q2 用户连点两次「提交订单」会发生什么？</b></p>
+        <p>没有唯一约束的话，生成两组订单、扣两次库存。你必须在某处判重——而那个地方不能是应用层的 <code>map</code> 或 Redis（进程重启、多副本都会漏）。</p>
+        <p><b>Q3 为什么幂等键要放数据库唯一约束？</b></p>
+        <p>因为它是唯一在「进程死了也一样有效」的判重手段。<code>map</code> 重启就没了，<code>SETNX</code> 依赖 Redis 可用性且和数据库不在一个事务里。<b>唯一约束和业务数据在同一个事务里提交，要么都成，要么都不成。</b></p>
+      </div>
+    </details>
+
+    <div class="fig">
+      <div class="cap">图 8 · 幂等：把判重交给数据库唯一约束</div>
+      <svg viewBox="0 0 680 200" role="img" aria-label="幂等唯一约束">
+        <g font-family="Noto Serif SC, serif" font-size="10.5">
+          <rect x="20" y="30" width="150" height="40" rx="8" fill="#FBF3DF" stroke="#D8B48A"/>
+          <text x="95" y="54" text-anchor="middle">请求 1</text>
+          <rect x="20" y="110" width="150" height="40" rx="8" fill="#FBF3DF" stroke="#D8B48A"/>
+          <text x="95" y="134" text-anchor="middle">请求 2（同一订单号）</text>
+          <text x="95" y="152" text-anchor="middle" font-size="9" fill="#6B6357">连点 / 重试 / 网络重发</text>
+
+          <line x1="174" y1="50" x2="272" y2="80" stroke="#77592F" stroke-width="1.4" marker-end="url(#m7)"/>
+          <line x1="174" y1="130" x2="272" y2="102" stroke="#77592F" stroke-width="1.4" marker-end="url(#m7)"/>
+          <defs><marker id="m7" markerWidth="8" markerHeight="8" refX="7" refY="3" orient="auto"><path d="M0,0 L7,3 L0,6 Z" fill="#77592F"/></marker></defs>
+
+          <rect x="280" y="50" width="180" height="86" rx="9" fill="#FBF3DF" stroke="#C2372B" stroke-width="1.5"/>
+          <text x="370" y="74" text-anchor="middle" font-weight="700">orders 表</text>
+          <text x="370" y="94" text-anchor="middle" font-size="10" fill="#C2372B" font-weight="700">UNIQUE (order_no)</text>
+          <text x="370" y="114" text-anchor="middle" font-size="9.5" fill="#6B6357">约束与业务数据同事务提交</text>
+
+          <line x1="464" y1="80" x2="536" y2="80" stroke="#77592F" stroke-width="1.4" marker-end="url(#m7)"/>
+          <line x1="464" y1="102" x2="536" y2="102" stroke="#C2372B" stroke-width="1.4" stroke-dasharray="5 4" marker-end="url(#r7)"/>
+          <defs><marker id="r7" markerWidth="8" markerHeight="8" refX="7" refY="3" orient="auto"><path d="M0,0 L7,3 L0,6 Z" fill="#C2372B"/></marker></defs>
+
+          <rect x="542" y="58" width="120" height="44" rx="8" fill="#F0F4EE" stroke="#5E7C5A"/>
+          <text x="602" y="77" text-anchor="middle" font-size="10.5" fill="#5E7C5A" font-weight="700">插入成功</text>
+          <text x="602" y="93" text-anchor="middle" font-size="9.5">生成一组订单</text>
+          <rect x="542" y="112" width="120" height="44" rx="8" fill="#FBEFE6" stroke="#E0B79A"/>
+          <text x="602" y="131" text-anchor="middle" font-size="10.5" fill="#C2372B" font-weight="700">23505 唯一冲突</text>
+          <text x="602" y="147" text-anchor="middle" font-size="9.5">→ 返回原订单</text>
+
+          <text x="20" y="186" font-size="10.5" fill="#6B6357">应用层判重（map / Redis）在进程重启、多副本、并发竞争下都会漏；唯一约束不会。</text>
+        </g>
+      </svg>
+    </div>
+
+    <div class="key"><b>本节课重点：</b><b>幂等的正确层次是数据库，不是应用。</b>订单号、<code>reservation_id</code>、支付回调 <code>trade_no</code>，全部走唯一约束。</div>
+
+    <div class="cap" style="font-weight:700;margin:6px 0 6px">动手（顺序不能反）</div>
+    <ol class="steps">
+      <li><b>先止血</b>：把 <code>CreateOrder</code> 的空实现改成显式 <code>CodeUnimplemented</code>。让失败显式发生。</li>
+      <li><b>再实现</b>：真实落库 + 订单号唯一约束 + 金额字段从 <code>float64</code> 改为整数分。</li>
+    </ol>
+
+    <div class="pit"><b>踩坑预警：</b>注意 <code>CompleteOrder</code> 看起来是完整的，但它调用的 <code>SaveOrder</code> 是空实现——这种「上层完整、底层空转」的假象是最难发现的缺陷形态。读代码时看到「看起来写完了」的方法，<b>一定要点进去看它调用的下一层</b>。</div>
+
+    <div class="cap" style="font-weight:700;margin:16px 0 4px">验收</div>
+    <ul class="check">
+      <li><input type="checkbox" data-k="l7a"><label>并发重复提交只生成<b>一组</b>订单（写测试证明，不是嘴上说）</label></li>
+      <li><input type="checkbox" data-k="l7b"><label>下单失败时返回明确的错误码，绝不返回空 200</label></li>
+      <li><input type="checkbox" data-k="l7c"><label>金额全链路是整数分</label></li>
+    </ul>
+  </div>
+</section>
+
+<!-- ============ L8 ============ -->
+<section class="lesson" id="l8">
+  <div class="head"><span class="no">第 8 课</span><h3>第一次跨服务调用</h3>
+    <span class="meta">约 2.5 小时 · 全仓第一个 client</span></div>
+  <div class="body">
+    <div class="goal"><b>教学目标：</b>让 10 个「互不相通的独立单体」第一次真正对话。这也是你学会服务间通信的唯一一课。</div>
+
+    <details class="think"><summary>先想通：三题</summary>
+      <div class="ans">
+        <p><b>Q1 服务间为什么要直连，从公网绕一圈有什么问题？</b></p>
+        <p>绕公网要多走一次 TLS、一次鉴权、一次网关限流，还把内网调用暴露在外部攻击面上。服务间应走集群内 Service + CoreDNS 直连。</p>
+        <p><b>Q2 调 <code>Reserve</code> 超时了但对方其实成功了，订单该算什么状态？</b></p>
+        <p><b>未知，不是失败。</b>所以不能简单置为 CANCELLED——那会一边占着库存一边订单取消。MVP 的处理：保持 PENDING，靠定时任务回查补偿（第 10 课实现）。</p>
+        <p><b>Q3 <code>depends_on</code> 和 <code>depends_on_planned</code> 为什么必须分开？</b></p>
+        <p>混在一起，AI 和 CI 会以为依赖已接线，然后基于错误假设改代码。<b>「设计上需要」和「代码里已连」是两件事</b>，这个项目用两个字段把它们分开，structcheck 会核对。</p>
+      </div>
+    </details>
+
+    <div class="fig">
+      <div class="cap">图 9 · 你即将写下全仓第一个跨服务 client</div>
+      <svg viewBox="0 0 680 220" role="img" aria-label="第一个跨服务调用">
+        <g font-family="Noto Serif SC, serif" font-size="11">
+          <rect x="180" y="24" width="320" height="40" rx="9" fill="#EFE6D2" stroke="#D8B48A"/>
+          <text x="340" y="49" text-anchor="middle" font-weight="700">control-tower 网关（公网入口 · BFF Session）</text>
+
+          <line x1="250" y1="66" x2="180" y2="112" stroke="#77592F" stroke-width="1.3" marker-end="url(#m8)"/>
+          <line x1="430" y1="66" x2="500" y2="112" stroke="#77592F" stroke-width="1.3" marker-end="url(#m8)"/>
+          <defs><marker id="m8" markerWidth="8" markerHeight="8" refX="7" refY="3" orient="auto"><path d="M0,0 L7,3 L0,6 Z" fill="#77592F"/></marker></defs>
+
+          <rect x="60" y="114" width="240" height="56" rx="9" fill="#FBF3DF" stroke="#C2372B" stroke-width="1.5"/>
+          <text x="180" y="138" text-anchor="middle" font-weight="700" fill="#C2372B">order</text>
+          <text x="180" y="156" text-anchor="middle" font-size="9.5" fill="#6B6357">你的主战场</text>
+
+          <rect x="400" y="114" width="240" height="56" rx="9" fill="#FBF3DF" stroke="#C2372B" stroke-width="1.5"/>
+          <text x="520" y="138" text-anchor="middle" font-weight="700" fill="#C2372B">inventory</text>
+          <text x="520" y="156" text-anchor="middle" font-size="9.5" fill="#6B6357">Reserve / Confirm / Release</text>
+
+          <line x1="300" y1="142" x2="398" y2="142" stroke="#C2372B" stroke-width="2.2" marker-end="url(#r8)"/>
+          <defs><marker id="r8" markerWidth="9" markerHeight="9" refX="8" refY="3.5" orient="auto"><path d="M0,0 L8,3.5 L0,7 Z" fill="#C2372B"/></marker></defs>
+          <text x="349" y="134" text-anchor="middle" font-size="10" fill="#C2372B" font-weight="700">集群内直连</text>
+          <text x="349" y="166" text-anchor="middle" font-size="9.5" fill="#6B6357">（不经公网）</text>
+
+          <rect x="60" y="186" width="580" height="26" rx="6" fill="#FBEFE6" stroke="#E0B79A"/>
+          <text x="76" y="203" font-size="10.5" fill="#B4700F" font-weight="700">改 .service-matrix.yaml：order.depends_on 从 [] 改为 [inventory]，然后必须跑 structcheck</text>
+        </g>
+      </svg>
+      <div class="legend">
+        <span><i style="background:#C2372B"></i>红线 = 你要新增的第一个 <code>v1connect.NewInventoryServiceClient</code></span>
+        <span>全仓现有 12 处 <code>v1connect.New*</code> <b>全是服务端 Handler 注册</b>，0 个 client</span>
+      </div>
+    </div>
+
+    <div class="cap" style="font-weight:700;margin:6px 0 6px">动手</div>
+    <ol class="steps">
+      <li>在 order 里新增 <code>internal/data/inventory_client.go</code>，用 <code>v1connect.NewInventoryServiceClient(httpClient, url)</code>。</li>
+      <li><code>CreateOrder</code> 流程：落库 <code>PENDING</code> → 调 <code>Reserve</code>（<code>reservation_id = 订单号</code>）→ 失败则订单置 <code>CANCELLED</code> 并返回明确错误。</li>
+      <li>改 <code>.service-matrix.yaml</code>：<code>order.depends_on</code> 从 <code>[]</code> 改为 <code>[inventory]</code>。</li>
+      <li><b>改完必须跑</b>：<code>cd backend &amp;&amp; go test -count=1 ./structcheck/...</code>（这个门禁就是干这个的）。</li>
+    </ol>
+
+    <div class="pit"><b>踩坑预警：</b>别吞错误——服务间失败必须显式映射成用户可理解的错误，不能一律返「系统错误」。<b>超时必须显式设置</b>：没有超时的调用是可用性事故的第一来源。</div>
+
+    <div class="cap" style="font-weight:700;margin:16px 0 4px">验收</div>
+    <ul class="check">
+      <li><input type="checkbox" data-k="l8a"><label>库存不足时，下单返回「库存不足」而不是 500、不是假成功</label></li>
+      <li><input type="checkbox" data-k="l8b"><label>structcheck 绿（它验证了你真的更新了依赖关系）</label></li>
+      <li><input type="checkbox" data-k="l8c"><label>能回答「Reserve 超时但实际成功了，MVP 怎么处理」</label></li>
+    </ul>
+  </div>
+</section>
+
+<!-- ============ L9 ============ -->
+<section class="lesson" id="l9">
+  <div class="head"><span class="no">第 9 课</span><h3>支付安全（最重要的一课，值得花两倍时间）</h3>
+    <span class="meta">约 5 小时 · 建议分两次做</span></div>
+  <div class="body">
+    <div class="goal"><b>教学目标：</b>理解「回调不可信」四个字到底意味着什么，并把 payment 从 5 个 <code>Unimplemented</code> 变成真的。</div>
+
+    <details class="think"><summary>先想通：四题（支付安全的核心）</summary>
+      <div class="ans">
+        <p><b>Q1 支付平台通知「用户已付款 100 元」，你凭什么相信它？</b></p>
+        <p>只能靠<b>验签</b>。回调是一个公网可达的 HTTP 端点，任何人都能往它发请求。没有验签，等于把「标记订单已支付」的按钮挂在公网上。</p>
+        <p><b>Q2 验签通过了，回调里的 <code>total_amount</code> 就是你数据库里那个金额吗？</b></p>
+        <p>不是。验签只证明「消息真的来自支付平台」，不证明「这笔消息对应你这一单」。有人可以拿<b>一笔 1 分钱订单的成功回调</b>来标记一笔 100 元订单已支付——所以必须<b>回查订单 + 校验金额</b>。</p>
+        <p><b>Q3 同一条回调被送达三次，账会记几笔？</b></p>
+        <p>没有幂等就三笔。网络重试、平台重发、你自己重试，都会造成重复投递。用回调里的 <code>trade_no</code> 做唯一键。</p>
+        <p><b>Q4 <code>CreatePayment</code> 用请求体的 <code>customer_id</code> 当付款人，会发生什么？</b></p>
+        <p>和第 5 课 address 的 bug 一模一样：任何人都能以他人身份发起支付。<b>同一个错误模式在不同服务重复出现</b>——这正是为什么要记住「身份只信网关注入」这一条根规则。</p>
+      </div>
+    </details>
+
+    <div class="fig">
+      <div class="cap">图 10 · 支付安全的四道闸门（顺序不能换）</div>
+      <svg viewBox="0 0 680 260" role="img" aria-label="支付四道闸门">
+        <g font-family="Noto Serif SC, serif" font-size="10.5">
+          <rect x="14" y="16" width="130" height="56" rx="9" fill="#FBF3DF" stroke="#C2372B" stroke-width="1.4"/>
+          <text x="79" y="40" text-anchor="middle" font-weight="700">回调请求</text>
+          <text x="79" y="58" text-anchor="middle" font-size="9" fill="#6B6357">公网可达的 HTTP 端点</text>
+          <line x1="146" y1="44" x2="166" y2="44" stroke="#77592F" stroke-width="1.4" marker-end="url(#m9)"/>
+          <defs><marker id="m9" markerWidth="8" markerHeight="8" refX="7" refY="3" orient="auto"><path d="M0,0 L7,3 L0,6 Z" fill="#77592F"/></marker></defs>
+
+          <g>
+            <rect x="172" y="24" width="112" height="52" rx="9" fill="#FBF3DF" stroke="#D8B48A"/>
+            <text x="228" y="46" text-anchor="middle" font-weight="700">① 验签</text>
+            <text x="228" y="64" text-anchor="middle" font-size="9" fill="#6B6357">确认来自支付平台</text>
+            <rect x="296" y="24" width="112" height="52" rx="9" fill="#FBF3DF" stroke="#D8B48A"/>
+            <text x="352" y="46" text-anchor="middle" font-weight="700">② 回查订单</text>
+            <text x="352" y="64" text-anchor="middle" font-size="9" fill="#6B6357">确认对应真实订单</text>
+            <rect x="420" y="24" width="112" height="52" rx="9" fill="#FBF3DF" stroke="#D8B48A"/>
+            <text x="476" y="46" text-anchor="middle" font-weight="700">③ 校验金额</text>
+            <text x="476" y="64" text-anchor="middle" font-size="9" fill="#6B6357">回调金额 == 订单金额</text>
+            <rect x="544" y="24" width="122" height="52" rx="9" fill="#FBF3DF" stroke="#D8B48A"/>
+            <text x="605" y="46" text-anchor="middle" font-weight="700">④ 幂等落账</text>
+            <text x="605" y="64" text-anchor="middle" font-size="9" fill="#6B6357">trade_no 唯一键</text>
+          </g>
+          <g stroke="#D8B48A" stroke-width="1.3">
+            <line x1="284" y1="50" x2="294" y2="50"/><line x1="408" y1="50" x2="418" y2="50"/><line x1="532" y1="50" x2="542" y2="50"/>
+          </g>
+
+          <g>
+            <rect x="172" y="106" width="112" height="58" rx="8" fill="#FBEFE6" stroke="#E0B79A"/>
+            <text x="228" y="126" text-anchor="middle" font-size="9.5" fill="#C2372B" font-weight="700">拦：伪造签名</text>
+            <text x="228" y="146" text-anchor="middle" font-size="9" fill="#6B6357">任何人可往回调发请求</text>
+            <rect x="296" y="106" width="112" height="58" rx="8" fill="#FBEFE6" stroke="#E0B79A"/>
+            <text x="352" y="126" text-anchor="middle" font-size="9.5" fill="#C2372B" font-weight="700">拦：张冠李戴</text>
+            <text x="352" y="146" text-anchor="middle" font-size="9" fill="#6B6357">订单不存在 / 已取消</text>
+            <rect x="420" y="106" width="112" height="58" rx="8" fill="#FBEFE6" stroke="#E0B79A"/>
+            <text x="476" y="126" text-anchor="middle" font-size="9.5" fill="#C2372B" font-weight="700">拦：金额被篡改</text>
+            <text x="476" y="146" text-anchor="middle" font-size="9" fill="#6B6357">1 分冒充 100 元</text>
+            <rect x="544" y="106" width="122" height="58" rx="8" fill="#FBEFE6" stroke="#E0B79A"/>
+            <text x="605" y="126" text-anchor="middle" font-size="9.5" fill="#C2372B" font-weight="700">拦：重复入账</text>
+            <text x="605" y="146" text-anchor="middle" font-size="9" fill="#6B6357">网络 / 平台重试</text>
+          </g>
+          <g stroke="#C2372B" stroke-width="1.2" stroke-dasharray="4 3">
+            <line x1="228" y1="78" x2="228" y2="104"/><line x1="352" y1="78" x2="352" y2="104"/>
+            <line x1="476" y1="78" x2="476" y2="104"/><line x1="605" y1="78" x2="605" y2="104"/>
+          </g>
+
+          <line x1="605" y1="164" x2="605" y2="192" stroke="#5E7C5A" stroke-width="1.6" marker-end="url(#g9)"/>
+          <defs><marker id="g9" markerWidth="8" markerHeight="8" refX="7" refY="3" orient="auto"><path d="M0,0 L7,3 L0,6 Z" fill="#5E7C5A"/></marker></defs>
+          <rect x="420" y="194" width="246" height="46" rx="9" fill="#5E7C5A"/>
+          <text x="543" y="215" text-anchor="middle" fill="#FDF8EC" font-weight="700">四关全过 → 订单置 PAID</text>
+          <text x="543" y="232" text-anchor="middle" fill="#FDF8EC" font-size="9.5">再通知 inventory 确认扣减</text>
+
+          <text x="14" y="256" font-size="10" fill="#C2372B" font-weight="700">少任何一道，前面几道都白做。少第 ③ 道，是最经典的支付事故形态。</text>
+        </g>
+      </svg>
+    </div>
+
+    <div class="key"><b>本节课重点（请原样抄进笔记）：</b>① <b>验签</b>防伪造 → ② <b>回查订单</b>防张冠李戴 → ③ <b>校验金额</b>防 1 分钱冒充分百元 → ④ <b>幂等落账</b>防重复入账。<b>顺序不能换，缺一不可。</b></div>
+
+    <div class="cap" style="font-weight:700;margin:6px 0 6px">动手</div>
+    <ol class="steps">
+      <li><code>CreatePayment</code>：付款人取网关注入的 <code>x-md-global-user-id</code>，<b>不用请求体字段</b>；按 proto 兼容规则废弃 <code>customer_id</code>。</li>
+      <li>下单：调支付宝 / 微信创建支付意图，返回收银台参数。</li>
+      <li>回调：<b>验签 → 回查订单 → 校验金额 → 幂等落账</b>。</li>
+      <li>主动查询：用户付完款但回调丢了，要能主动查（<code>alipay.trade.query</code>）。</li>
+    </ol>
+    <p style="font-size:.87rem;color:var(--ink-soft)"><code>backend/go.mod</code> 已有 <code>smartwalle/alipay/v3</code>，直接用；微信支付 APIv3 需自己引 SDK 并按平台文档验签。</p>
+
+    <div class="cap" style="font-weight:700;margin:16px 0 4px">验收</div>
+    <ul class="check">
+      <li><input type="checkbox" data-k="l9a"><label>沙箱跑通一次完整支付</label></li>
+      <li><input type="checkbox" data-k="l9b"><label><b>伪造签名</b>的回调被拒</label></li>
+      <li><input type="checkbox" data-k="l9c"><label><b>篡改金额</b>的回调被拒</label></li>
+      <li><input type="checkbox" data-k="l9d"><label>同一回调重复投递只入账一次</label></li>
+      <li><input type="checkbox" data-k="l9e"><label>冒用他人 ID 发起支付被拒（写测试）</label></li>
+    </ul>
+  </div>
+</section>
+
+<!-- ============ L10 ============ -->
+<section class="lesson" id="l10">
+  <div class="head"><span class="no">第 10 课</span><h3>状态机、超时补偿与上线前的功课</h3>
+    <span class="meta">约 4 小时 · 最后一课</span></div>
+  <div class="body">
+    <div class="goal"><b>教学目标：</b>让链路自己学会处理「用户付了钱但回调丢了」和「用户下单了但不付钱」，并完成上线前的硬门槛。</div>
+
+    <details class="think"><summary>先想通：三题</summary>
+      <div class="ans">
+        <p><b>Q1 订单状态有哪些？哪些迁移合法？<code>PAID → PENDING</code> 为什么必须非法？</b></p>
+        <p>钱都收了，不可能退回「待支付」。非法迁移是状态机要防的核心——它意味着代码里有条路径能把已完成的交易拉回去。每个迁移都要走守卫检查。</p>
+        <p><b>Q2 用户下单 30 分钟不支付，库存一直被他占着，会怎样？</b></p>
+        <p>库存被无效占用，真实买家买不到。所以必须有定时任务扫超时 <code>PENDING</code>，释放预占并取消订单。</p>
+        <p><b>Q3 定时任务跑到一半挂了，下次重跑会发生什么？</b></p>
+        <p>如果任务不幂等，会重复释放、重复发通知。<b>定时任务必须幂等</b>：同一订单被扫到两次不出副作用（用状态判断 + 唯一约束）。</p>
+      </div>
+    </details>
+
+    <div class="fig">
+      <div class="cap">图 11 · 订单状态机（绿色 = 合法迁移，红色虚线 = 必须禁止）</div>
+      <svg viewBox="0 0 680 260" role="img" aria-label="订单状态机">
+        <g font-family="Noto Serif SC, serif" font-size="11">
+          <defs>
+            <marker id="g10" markerWidth="9" markerHeight="9" refX="8" refY="3.5" orient="auto"><path d="M0,0 L8,3.5 L0,7 Z" fill="#5E7C5A"/></marker>
+            <marker id="r10" markerWidth="9" markerHeight="9" refX="8" refY="3.5" orient="auto"><path d="M0,0 L8,3.5 L0,7 Z" fill="#C2372B"/></marker>
+          </defs>
+          <rect x="40" y="40" width="150" height="50" rx="9" fill="#FBF3DF" stroke="#C2372B" stroke-width="1.5"/>
+          <text x="115" y="70" text-anchor="middle" font-weight="700" fill="#C2372B">PENDING</text>
+          <rect x="265" y="40" width="150" height="50" rx="9" fill="#FBF3DF" stroke="#5E7C5A" stroke-width="1.5"/>
+          <text x="340" y="70" text-anchor="middle" font-weight="700" fill="#5E7C5A">PAID</text>
+          <rect x="490" y="40" width="150" height="50" rx="9" fill="#FBF3DF" stroke="#D8B48A"/>
+          <text x="565" y="70" text-anchor="middle" font-weight="700">SHIPPED</text>
+
+          <line x1="190" y1="65" x2="263" y2="65" stroke="#5E7C5A" stroke-width="1.8" marker-end="url(#g10)"/>
+          <text x="226" y="58" text-anchor="middle" font-size="9.5" fill="#5E7C5A">支付回调四关全过</text>
+          <line x1="415" y1="65" x2="488" y2="65" stroke="#5E7C5A" stroke-width="1.8" marker-end="url(#g10)"/>
+          <text x="451" y="58" text-anchor="middle" font-size="9.5" fill="#5E7C5A">填快递单号</text>
+
+          <rect x="490" y="170" width="150" height="50" rx="9" fill="#FBF3DF" stroke="#D8B48A"/>
+          <text x="565" y="200" text-anchor="middle" font-weight="700">DONE</text>
+          <line x1="565" y1="90" x2="565" y2="168" stroke="#5E7C5A" stroke-width="1.8" marker-end="url(#g10)"/>
+          <text x="600" y="130" font-size="9.5" fill="#5E7C5A">确认收货</text>
+
+          <rect x="40" y="170" width="170" height="50" rx="9" fill="#FBEFE6" stroke="#E0B79A"/>
+          <text x="125" y="200" text-anchor="middle" font-weight="700" fill="#C2372B">CANCELLED</text>
+          <line x1="115" y1="90" x2="125" y2="168" stroke="#5E7C5A" stroke-width="1.8" marker-end="url(#g10)"/>
+          <text x="60" y="132" font-size="9.5" fill="#5E7C5A">库存不足</text>
+          <line x1="160" y1="168" x2="140" y2="92" stroke="#5E7C5A" stroke-width="1.8" marker-end="url(#g10)"/>
+          <text x="196" y="132" font-size="9.5" fill="#5E7C5A">超时未支付 → 定时任务 Release</text>
+
+          <line x1="340" y1="90" x2="180" y2="166" stroke="#C2372B" stroke-width="1.5" stroke-dasharray="5 4" marker-end="url(#r10)"/>
+          <text x="290" y="140" font-size="10" fill="#C2372B" font-weight="700">✗ PAID → PENDING 必须非法</text>
+          <text x="290" y="156" font-size="9.5" fill="#6B6357">钱都收了，不可能退回待支付</text>
+
+          <text x="40" y="248" font-size="10" fill="#6B6357">v2 再补：PAID → REFUNDING → REFUNDED（退款双轴）。MVP 阶段退款走人工 + 支付平台原路退回。</text>
+        </g>
+      </svg>
+    </div>
+
+    <div class="cap" style="font-weight:700;margin:6px 0 6px">动手</div>
+    <ol class="steps">
+      <li>订单状态机：<code>PENDING → PAID → SHIPPED → DONE</code>，分支 <code>CANCELLED</code>。所有迁移走守卫检查。</li>
+      <li>定时任务：扫超时 <code>PENDING</code> → <code>Release</code> 释放预占 → <code>CANCELLED</code>。<b>任务本身要幂等</b>。</li>
+      <li>手动发货：后台填快递单号（先用 http-client 脚本或 admin app，够用即可）。</li>
+      <li>上线前收尾：删掉 <code>user/internal/data/user.go</code> 里的 <code>Debug(token.AccessToken)</code>；首页换真实商品；加亮照 / 隐私 / 退货政策页。</li>
+    </ol>
+
+    <div class="pit"><b>踩坑预警：</b>错误码约定——找不到 → <code>not_found</code>，未实现 → <code>unimplemented</code>，<b>不用 <code>unknown</code> / 零值兜底</b>。返回零值让调用方以为「查到了，就是这个值」。</div>
+
+    <div class="cap" style="font-weight:700;margin:16px 0 4px">验收</div>
+    <ul class="check">
+      <li><input type="checkbox" data-k="l10a"><label>下单不支付，超时后库存被自动释放</label></li>
+      <li><input type="checkbox" data-k="l10b"><label>支付成功，库存确认扣减，且不重复扣</label></li>
+      <li><input type="checkbox" data-k="l10c"><label>定时任务重复执行同一订单不产生副作用</label></li>
+      <li><input type="checkbox" data-k="l10d"><label>全链路跑通一次真实小额订单（沙箱）</label></li>
+    </ul>
+  </div>
+</section>
+
+<h2><span class="idx">终</span>毕业考试：五道自测题</h2>
+<p class="lead">能独立答上来才算「学会」，不是「跟着做过」。</p>
+
+<div class="quiz">
+  <ol>
+    <li>一个请求从 transport 到数据库事务，经过哪几层、每层<b>不许</b>做什么？</li>
+    <li class="warnq">为什么库存扣减必须是单条 SQL，而不是「先查再更新」？</li>
+    <li class="warnq">支付回调的四个动作里，哪三个必须回查校验，为什么？</li>
+    <li>幂等为什么必须靠数据库唯一约束，而不是应用层判重？</li>
+    <li>为什么 <code>biz</code> 不许 import <code>data</code>？这个规定保护的是什么？</li>
+  </ol>
+  <p style="font-size:.88rem;margin:14px 0 0;color:var(--ink-soft)">
+    <b>五题都能答 → 你可以自己接手这个项目的任何交易链路改动。</b><br>
+    <b style="color:var(--vermilion-deep)">答不上第 2、3 题 → 重做第 6、9 课。那两课是安全底线，不能含糊。</b>
+  </p>
+</div>
+
+<h2><span class="idx">附</span>学习资源地图（都在仓库里，不用买书）</h2>
+<table>
+  <thead><tr><th style="width:230px">你想搞懂</th><th>读这个</th></tr></thead>
+  <tbody>
+    <tr><td>分层与工程约束</td><td><code>STACK.md</code> 第三章 + <code>AGENTS.md</code> 硬规则</td></tr>
+    <tr><td>领域术语（SPU/SKU/快照/拆单/Saga…）</td><td><code>docs/GLOSSARY.md</code>（189 条，遇到不认识的词先查它）</td></tr>
+    <tr><td>下单设计</td><td><code>docs/design/order/checkout.md</code>（v2 定稿，6 轮对抗评审）</td></tr>
+    <tr><td>库存模型</td><td><code>docs/design/inventory/inventory.md</code></td></tr>
+    <tr><td>游标分页</td><td><code>docs/design/product/listing.md</code></td></tr>
+    <tr><td>错误码约定</td><td><code>docs/design/platform/error-handling.md</code></td></tr>
+    <tr><td>这个项目怎么演化来的</td><td><code>docs/learning/README.md</code>（架构学习指南）</td></tr>
+    <tr><td>你已经修过哪些坑</td><td><code>TODO.md</code>（每条都带证据，是你最好的案例库）</td></tr>
+  </tbody>
+</table>
+
+<div class="key" style="margin-top:20px">
+  <b>最后一条建议：</b>每修完一个 bug，回 <code>TODO.md</code> 找到对应条目，看看别人是怎么描述它的。
+  <b>学会准确描述一个缺陷，是工程师和调参侠的分界线。</b>
+</div>
+
+<footer>
+  教学式渐进方案 · 配套纯文字版：<code>.scratch/learn-by-building/教学式渐进方案.md</code>；上线缺口与合规清单：<code>.scratch/mvp-launch-2026-10/</code>。<br>
+  本文件不是真相源，不进 <code>docs/</code>。进度勾选存在浏览器 localStorage，只在你这台设备有效。
+</footer>
+
+</div>
+
+<script>
+(function(){
+  var boxes = Array.prototype.slice.call(document.querySelectorAll('input[type=checkbox][data-k]'));
+  var fill = document.getElementById('pfill'), num = document.getElementById('pnum');
+  var KEY = 'ecom-learn-progress-v1';
+  function load(){ try{ return JSON.parse(localStorage.getItem(KEY)||'{}'); }catch(e){ return {}; } }
+  function save(s){ try{ localStorage.setItem(KEY, JSON.stringify(s)); }catch(e){} }
+  var st = load();
+  boxes.forEach(function(b){ if(st[b.dataset.k]) b.checked = true; });
+  function render(){
+    var done = boxes.filter(function(b){ return b.checked; }).length;
+    fill.style.width = (boxes.length ? (done/boxes.length*100) : 0) + '%';
+    num.textContent = done + ' / ' + boxes.length;
+  }
+  boxes.forEach(function(b){
+    b.addEventListener('change', function(){
+      st[b.dataset.k] = b.checked;
+      if(!b.checked) delete st[b.dataset.k];
+      save(st); render();
+    });
+  });
+  render();
+})();
+</script>
+</body>
+</html>

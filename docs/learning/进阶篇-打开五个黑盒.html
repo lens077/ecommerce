@@ -1,0 +1,576 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>进阶篇 · 打开五个黑盒</title>
+<style>
+  :root{
+    --paper:#F6EFE1; --paper-ash:#EDE5D4; --paper-dim:#EFE6D2;
+    --paper-lit:#FBF3DF; --paper-lit-2:#FFF7E0;
+    --ink:#2A2A28; --ink-soft:#6B6357;
+    --bamboo:#D8B48A; --bamboo-deep:#77592F;
+    --vermilion:#C2372B; --vermilion-deep:#A82D22; --seal:#FDF8EC;
+    --line:#D8B48A; --line-soft:#E5D7BE;
+    --ok:#5E7C5A; --warn:#B4700F; --blue:#3E5C76;
+  }
+  *{box-sizing:border-box}
+  html{scroll-behavior:smooth}
+  body{margin:0;background:var(--paper);color:var(--ink);
+    font-family:"Noto Serif SC","Songti SC",-apple-system,"PingFang SC","Microsoft YaHei",serif;line-height:1.72}
+  .wrap{max-width:1120px;margin:0 auto;padding:44px 22px 90px}
+  code{font-family:ui-monospace,SFMono-Regular,Menlo,monospace;font-size:.82em;
+    background:var(--paper-ash);padding:1px 5px;border-radius:4px;color:var(--bamboo-deep);word-break:break-all}
+  pre{background:var(--paper-ash);border:1px solid var(--line-soft);border-radius:8px;
+    padding:14px 16px;overflow-x:auto;font-size:.82rem;line-height:1.6}
+  pre code{background:none;padding:0;color:var(--ink)}
+  header.top{border-bottom:1px solid var(--line);padding-bottom:28px;margin-bottom:30px}
+  h1{font-size:2.2rem;font-weight:900;margin:0 0 10px;letter-spacing:.02em;line-height:1.28}
+  .sub{color:var(--ink-soft);font-size:.95rem;max-width:66em}
+  h2{font-size:1.4rem;font-weight:900;margin:52px 0 8px;padding-bottom:10px;border-bottom:1px solid var(--line-soft)}
+  h2 .idx{color:var(--vermilion);font-size:1rem;margin-right:10px;letter-spacing:.1em}
+  .lead{color:var(--ink-soft);font-size:.9rem;margin:10px 0 20px;max-width:68em}
+  .card{background:var(--paper-lit);border:1px solid var(--line);border-radius:10px;padding:22px 24px;
+    box-shadow:inset 0 0 46px rgba(255,227,160,.5), 0 12px 30px -22px rgba(138,106,66,.45)}
+  .verdict{background:var(--paper-lit-2);border:1px solid var(--bamboo);border-left:4px solid var(--vermilion);
+    border-radius:6px;padding:18px 22px;margin:20px 0 28px}
+  .verdict strong{color:var(--vermilion-deep)}
+  svg{display:block;max-width:100%;height:auto;margin:0 auto}
+  .fig{background:var(--paper);border:1px solid var(--line-soft);border-radius:10px;padding:16px;margin:16px 0}
+  .fig .cap{font-size:.8rem;color:var(--ink-soft);margin-bottom:10px;font-weight:700}
+  .legend{display:flex;flex-wrap:wrap;gap:14px;font-size:.78rem;color:var(--ink-soft);margin-top:12px}
+
+  .mod{border:1px solid var(--line);border-radius:12px;background:var(--paper-lit);margin:26px 0;overflow:hidden;
+    box-shadow:0 10px 30px -24px rgba(138,106,66,.6)}
+  .mod > .head{display:flex;align-items:baseline;gap:14px;flex-wrap:wrap;
+    padding:18px 24px;background:var(--paper-ash);border-bottom:1px solid var(--line)}
+  .mod .no{font-size:.78rem;letter-spacing:.14em;color:var(--seal);background:var(--blue);
+    padding:3px 10px;border-radius:4px;white-space:nowrap}
+  .mod h3{margin:0;font-size:1.2rem;font-weight:900}
+  .mod .meta{margin-left:auto;font-size:.78rem;color:var(--ink-soft);white-space:nowrap}
+  .mod .body{padding:20px 24px 24px}
+  .now{font-size:.9rem;background:var(--paper-lit-2);border-left:3px solid var(--bamboo);
+    padding:10px 14px;border-radius:0 6px 6px 0;margin-bottom:16px}
+
+  details.think{background:var(--paper-lit-2);border:1px solid var(--bamboo);border-radius:8px;margin:14px 0}
+  details.think > summary{cursor:pointer;padding:11px 16px;font-weight:700;font-size:.92rem;list-style:none}
+  details.think > summary::before{content:"🤔 ";filter:grayscale(.4)}
+  details.think > summary::-webkit-details-marker{display:none}
+  details.think .ans{padding:0 18px 14px;font-size:.87rem;border-top:1px dashed var(--line-soft);padding-top:12px}
+  details.think .ans p{margin:8px 0}
+
+  .trigger{background:#F0F4EE;border:1px solid #B9C7B4;border-left:4px solid var(--ok);
+    border-radius:0 8px 8px 0;padding:12px 16px;margin:14px 0;font-size:.88rem}
+  .trigger b{color:var(--ok)}
+  .lab{background:#EEF2F6;border:1px solid #BCC9D6;border-left:4px solid var(--blue);
+    border-radius:0 8px 8px 0;padding:12px 16px;margin:14px 0;font-size:.88rem}
+  .lab b{color:var(--blue)}
+  .pit{background:#FBEFE6;border:1px solid #E0B79A;border-left:4px solid var(--warn);
+    border-radius:0 8px 8px 0;padding:12px 16px;margin:14px 0;font-size:.87rem}
+  .pit b{color:var(--warn)}
+  .key{background:var(--paper-lit-2);border:1px solid var(--bamboo);border-left:4px solid var(--vermilion);
+    border-radius:0 8px 8px 0;padding:14px 18px;margin:14px 0;font-size:.9rem}
+  .key b{color:var(--vermilion-deep)}
+
+  table{width:100%;border-collapse:collapse;font-size:.86rem;background:var(--paper-lit);margin:14px 0}
+  th,td{border:1px solid var(--line-soft);padding:9px 12px;text-align:left;vertical-align:top}
+  th{background:var(--paper-ash);font-size:.8rem;letter-spacing:.05em}
+  ol.steps{padding-left:22px;font-size:.9rem}
+  ol.steps > li{margin-bottom:9px}
+  ul.check{list-style:none;padding-left:0;margin:12px 0 0;font-size:.88rem}
+  ul.check li{display:flex;gap:9px;align-items:flex-start;padding:6px 0;border-bottom:1px dashed var(--line-soft)}
+  ul.check li:last-child{border-bottom:none}
+  ul.check input{margin-top:5px;accent-color:var(--blue);width:15px;height:15px;flex:none;cursor:pointer}
+  ul.check label{cursor:pointer}
+  ul.check input:checked + label{color:var(--ink-soft);text-decoration:line-through}
+  footer{margin-top:56px;padding-top:20px;border-top:1px solid var(--line-soft);font-size:.8rem;color:var(--ink-soft)}
+  .toc{display:grid;grid-template-columns:repeat(auto-fit,minmax(200px,1fr));gap:10px;margin:18px 0 6px}
+  .toc a{display:block;background:var(--paper-lit);border:1px solid var(--line);border-radius:8px;
+    padding:10px 13px;text-decoration:none;color:var(--ink);font-size:.86rem}
+  .toc a b{color:var(--blue);margin-right:6px}
+  .toc a:hover{background:var(--paper-lit-2)}
+  .toc a .when{display:block;font-size:.75rem;color:var(--ink-soft);margin-top:3px}
+</style>
+</head>
+<body>
+<div class="wrap">
+
+<header class="top">
+  <h1>进阶篇 · 打开五个黑盒</h1>
+  <p class="sub">
+    基础篇里我们把这五个当黑盒跳过了。现在打开它们——<b>但目的不是让你现在就学会</b>，
+    而是让你知道：里面长什么样、为什么这个项目要用它、<b>什么信号出现时你必须真的学它</b>、以及不碰集群也能做的实验。
+    每个模块结构固定：<b>它是什么 → 原理图 → 在这个仓库里长什么样 → 什么时候必须学 → 进阶实验</b>。
+  </p>
+</header>
+
+<div class="verdict">
+  <strong>先看学习顺序建议（很重要）。</strong>
+  这五个黑盒<b>不该平均用力</b>。按「你现在多快会撞上它」排：
+  <b>M1 身份</b>（你做结算页就会撞上，最先懂）→ <b>M4 可观测性</b>（上线后第一天就要用，第二学）→
+  <b>M3 部署</b>（从 Compose 迁到集群时才需要）→ <b>M5 分布式一致性</b>（出现第一个真实跨服务副作用时才触发）
+  → <b>M2 数据流 CDC</b>（商品规模上来才需要，可以拖最久）。
+  <br><br>
+  如果你时间有限：<b>M1 + M4 读完就够了</b>，其余三个知道「有这个东西、什么时候找它」即可。
+</div>
+
+<div class="toc">
+  <a href="#m1"><b>M1</b>身份：Casdoor / Session / OpenFGA<span class="when">最先学 · 安全根</span></a>
+  <a href="#m2"><b>M2</b>数据流：Kafka / Debezium / Elasticsearch<span class="when">可拖最久 · 规模触发</span></a>
+  <a href="#m3"><b>M3</b>部署：K8s / Cilium / ArgoCD / Helm<span class="when">迁集群时学</span></a>
+  <a href="#m4"><b>M4</b>可观测性：OTel / Grafana / vmalert<span class="when">上线第一天就要用</span></a>
+  <a href="#m5"><b>M5</b>一致性：OrderGroup / Saga / Outbox<span class="when">触发式 · 别提前学</span></a>
+</div>
+
+<!-- ================= M1 ================= -->
+<section class="mod" id="m1">
+  <div class="head"><span class="no">M1</span><h3>身份：Casdoor / Session / OpenFGA</h3>
+    <span class="meta">建议最先学 · 约 2.5 小时</span></div>
+  <div class="body">
+    <div class="now"><b>MVP 现状：</b>「身份是网关注入的，请求体里的身份一律不可信」——这句话你现在已经会用了。这一模块是把它背后的机制补全。</div>
+
+    <details class="think"><summary>先想通：三题</summary>
+      <div class="ans">
+        <p><b>Q1 为什么浏览器不能直接持有 Casdoor 的 access token？</b></p>
+        <p>因为 token 是 bearer 凭证，任何拿到它的代码都能用它调接口——XSS 偷走一个 token 就等于偷走身份。httpOnly cookie 里的 session id 偷不走（JS 读不到），而且服务端可以随时作废。</p>
+        <p><b>Q2 Session 存在 Dragonfly（Redis 协议）里，Redis 挂了会怎样？</b></p>
+        <p><b>fail-closed：所有人变成未登录。</b>这是刻意选择——fail-open（Redis 挂了就放行）等于把鉴权变成可选。<code>/readyz</code> 必须把 session store 可达性纳入条件。</p>
+        <p><b>Q3 有了网关 RBAC，为什么还要 OpenFGA？对象级授权是什么？</b></p>
+        <p>RBAC 回答「这个角色能不能调这个 RPC」，是<b>粗粒度</b>的。但「商家 A 的运营能不能看商家 B 的订单」这种问题，RBAC 表达不了——它取决于<b>对象之间的关系</b>（用户是不是这个 store 的成员）。OpenFGA 就是干这个的。</p>
+      </div>
+    </details>
+
+    <div class="fig">
+      <div class="cap">图 1 · BFF Session 登录全流程（注意第 5 步：token 交换在服务端完成，浏览器从未见过 token）</div>
+      <svg viewBox="0 0 680 400" role="img" aria-label="BFF Session 登录流程">
+        <defs><marker id="m1" markerWidth="8" markerHeight="8" refX="7" refY="3" orient="auto"><path d="M0,0 L7,3 L0,6 Z" fill="#77592F"/></marker></defs>
+        <g font-family="Noto Serif SC, serif" font-size="11">
+          <g font-weight="700">
+            <rect x="14" y="12" width="104" height="28" rx="7" fill="#FBF3DF" stroke="#D8B48A"/><text x="66" y="31" text-anchor="middle">浏览器</text>
+            <rect x="170" y="12" width="140" height="28" rx="7" fill="#FBF3DF" stroke="#C2372B" stroke-width="1.5"/><text x="240" y="31" text-anchor="middle" fill="#C2372B">control-tower 网关</text>
+            <rect x="362" y="12" width="104" height="28" rx="7" fill="#EFE6D2" stroke="#D8B48A"/><text x="414" y="31" text-anchor="middle">Casdoor</text>
+            <rect x="518" y="12" width="140" height="28" rx="7" fill="#EFE6D2" stroke="#D8B48A"/><text x="588" y="31" text-anchor="middle">Dragonfly</text>
+          </g>
+          <g stroke="#D8B48A" stroke-width="1" stroke-dasharray="4 4" opacity=".85">
+            <line x1="66" y1="40" x2="66" y2="360"/><line x1="240" y1="40" x2="240" y2="360"/>
+            <line x1="414" y1="40" x2="414" y2="360"/><line x1="588" y1="40" x2="588" y2="360"/>
+          </g>
+          <g stroke="#77592F" stroke-width="1.3" fill="none" marker-end="url(#m1)">
+            <line x1="66" y1="72" x2="238" y2="72"/>
+            <line x1="240" y1="112" x2="412" y2="112"/>
+            <line x1="414" y1="152" x2="242" y2="152"/>
+            <line x1="240" y1="192" x2="412" y2="192"/>
+            <line x1="240" y1="232" x2="586" y2="232"/>
+            <line x1="66" y1="272" x2="238" y2="272"/>
+            <line x1="240" y1="312" x2="412" y2="312"/>
+          </g>
+          <g font-size="10" fill="#2A2A28">
+            <text x="152" y="66" text-anchor="middle">① GET /auth/login</text>
+            <text x="326" y="106" text-anchor="middle">② 302 跳转到 Casdoor</text>
+            <text x="326" y="146" text-anchor="middle">③ 用户在 Casdoor 输密码</text>
+            <text x="326" y="186" text-anchor="middle">④ 回调 /auth/callback?code=…</text>
+            <text x="414" y="226" text-anchor="middle">⑤ code + client_secret 换 token</text>
+            <text x="152" y="266" text-anchor="middle">⑥ Set-Cookie（httpOnly）</text>
+            <text x="326" y="306" text-anchor="middle">⑦ 建 session，只存 session id</text>
+          </g>
+          <rect x="240" y="330" width="348" height="56" rx="8" fill="#FBF3DF" stroke="#C2372B"/>
+          <text x="256" y="350" font-size="10.5" fill="#C2372B" font-weight="700">关键：浏览器从头到尾没见过 access token / refresh token</text>
+          <text x="256" y="368" font-size="10">token 与身份只存在网关侧 Dragonfly；登出即删 session，撤权即时生效</text>
+          <text x="256" y="382" font-size="10" fill="#6B6357">Dragonfly 不可达 → 会话鉴权 fail-closed（所有人变未登录），绝不 fail-open</text>
+        </g>
+      </svg>
+      <div class="legend">
+        <span>遗留轨：legacy bearer JWT 仍是迁移残留，按 <code>docs/TECH.md</code> 红线属须移除项——别在新代码里用它</span>
+      </div>
+    </div>
+
+    <div class="fig">
+      <div class="cap">图 2 · 三层授权是互补关系，不是替代关系</div>
+      <svg viewBox="0 0 680 270" role="img" aria-label="三层授权">
+        <g font-family="Noto Serif SC, serif" font-size="10.5">
+          <rect x="20" y="20" width="640" height="62" rx="9" fill="#FBF3DF" stroke="#D8B48A"/>
+          <text x="36" y="42" font-weight="700">第 1 层 · 网关 RBAC（Casbin，存量）</text>
+          <text x="36" y="62" font-size="10">roles × Connect procedure —— 回答「这个角色能不能调这个 RPC」。默认拒绝，策略由 Config Center 下发并 Watch。</text>
+
+          <rect x="20" y="94" width="640" height="62" rx="9" fill="#FBF3DF" stroke="#77592F" stroke-width="1.4"/>
+          <text x="36" y="116" font-weight="700" fill="#77592F">第 2 层 · 服务层归属校验（你已经会了）</text>
+          <text x="36" y="136" font-size="10">每条 SQL 带 owner 条件 —— 回答「你能动哪一行数据」。第 5 课修的就是这一层。这一层永远不能省。</text>
+
+          <rect x="20" y="168" width="640" height="62" rx="9" fill="#EFE6D2" stroke="#3E5C76" stroke-width="1.4"/>
+          <text x="36" y="190" font-weight="700" fill="#3E5C76">第 3 层 · 对象关系授权（OpenFGA，目标态）</text>
+          <text x="36" y="210" font-size="10">user → member → store → order 的关系图 —— 回答「这个用户和这个对象什么关系」。多商家 / 子账号 / 数据级隔离才需要。</text>
+
+          <g stroke="#C2372B" stroke-width="1.3" stroke-dasharray="5 4">
+            <line x1="340" y1="82" x2="340" y2="92"/><line x1="340" y1="156" x2="340" y2="166"/>
+          </g>
+          <text x="20" y="256" font-size="10" fill="#6B6357">常见误解：以为换 OpenFGA 就能取代前两层。不能——RBAC 管入口，归属校验管行，OpenFGA 管关系，三个问题不同。</text>
+        </g>
+      </svg>
+    </div>
+
+    <div class="trigger"><b>什么时候必须真的学它：</b>① 你要做商家子账号 / 多角色协作；② 你要开放「A 用户能看 B 用户分享的订单」这类关系型权限；③ 现有 Casbin 策略开始变得难维护（角色爆炸）。<b>MVP 阶段第 2 层就够了。</b></div>
+
+    <div class="lab"><b>进阶实验（不碰集群）：</b>
+      <ol class="steps" style="margin:8px 0 0">
+        <li>读 <code>../control-tower/routes/dev.yaml</code>，找 <code>anonymous_paths</code> 里列出的 RPC，想清楚「为什么 <code>/user.v1.UserService/SignIn</code> 必须匿名、而 <code>/order.v1.OrderService/CreateOrder</code> 必须登录」。</li>
+        <li>在 <code>.service-matrix.yaml</code> 的 <code>gateway</code> 段，看 A/B/O/C 四级路径分类，说出 <code>optional_auth_paths</code> 为什么对 behavior 服务是必需的。</li>
+        <li>读 <code>STACK.md</code> 第七章「信任边界」6 条，逐条判断你的 MVP 代码有没有违反。</li>
+        <li>写一个「漏洞演示」：临时让某个 RPC 读请求体里的 <code>user_id</code>，用 curl 传别人的 ID 复现越权，再改回可信身份头。<b>亲手复现一次比读十遍记得牢。</b></li>
+      </ol>
+    </div>
+
+    <div class="pit"><b>踩坑预警：</b>这个仓库已经因为 Casdoor 凭据踩过坑——<code>NewCasdoorAuthClient(conf *conf.Bootstrap)</code> 拿<b>启动快照</b>一次性构造 client，不随配置热更新走。所以<b>改 Casdoor 凭据必须重启服务</b>。你如果照抄这个模式，会继承同一个坑。</div>
+  </div>
+</section>
+
+<!-- ================= M4 ================= -->
+<section class="mod" id="m4">
+  <div class="head"><span class="no">M4</span><h3>可观测性：OTel / Grafana / vmalert</h3>
+    <span class="meta">建议第二学 · 上线第一天就要用</span></div>
+  <div class="body">
+    <div class="now"><b>MVP 现状：</b>「出问题看日志就够，别现在搭监控」。这一模块告诉你日志怎么看、什么时候日志不够用、以及一套最小可用观测长什么样。</div>
+
+    <details class="think"><summary>先想通：三题</summary>
+      <div class="ans">
+        <p><b>Q1 有日志了，为什么还要 trace？</b></p>
+        <p>日志告诉你「发生了什么」，trace 告诉你「卡在哪一步、卡了多久」。一个请求穿过 5 个服务，日志是 5 段互不相干的文本；trace 是一条带时间轴的链，能直接看出 480ms 里有 460ms 花在哪个服务。</p>
+        <p><b>Q2 为什么指标标签禁止放 user_id / order_id / sku_id？</b></p>
+        <p>因为那是<b>高基数</b>字段。每个用户一个时间序列，一百万个用户就是一百万条 series，存储和查询都会崩。这些信息应该进结构化日志，用 trace_id 关联——<b>指标用于聚合，日志用于定位</b>。</p>
+        <p><b>Q3 告警搭完就完事了吗？</b></p>
+        <p>远没有。这个仓库的 <code>TODO.md</code> 里最实在的一条是「<b>告警送达</b>」——Alertmanager 收到告警但没送到人手里，等于没有告警。<b>告警的价值 = 能被收到 × 有人处理</b>，中间任何一环断了都是零。</p>
+      </div>
+    </details>
+
+    <div class="fig">
+      <div class="cap">图 3 · 三大支柱的分工（同一次故障，三种视角）</div>
+      <svg viewBox="0 0 680 300" role="img" aria-label="三大支柱">
+        <g font-family="Noto Serif SC, serif" font-size="10.5">
+          <rect x="14" y="14" width="200" height="120" rx="9" fill="#FBF3DF" stroke="#D8B48A"/>
+          <text x="114" y="38" text-anchor="middle" font-weight="700">Trace（追踪）</text>
+          <text x="26" y="60" font-size="9.5">回答：卡在哪一步？</text>
+          <text x="26" y="78" font-size="9.5">形态：span 瀑布图</text>
+          <text x="26" y="96" font-size="9.5">用途：定位慢请求</text>
+          <text x="26" y="114" font-size="9.5" fill="#6B6357">按 trace_id 串起来</text>
+
+          <rect x="240" y="14" width="200" height="120" rx="9" fill="#FBF3DF" stroke="#D8B48A"/>
+          <text x="340" y="38" text-anchor="middle" font-weight="700">Metric（指标）</text>
+          <text x="252" y="60" font-size="9.5">回答：整体健康吗？</text>
+          <text x="252" y="78" font-size="9.5">形态：计数器 / 直方图</text>
+          <text x="252" y="96" font-size="9.5">用途：看趋势、触发告警</text>
+          <text x="252" y="114" font-size="9.5" fill="#6B6357">标签必须低基数</text>
+
+          <rect x="466" y="14" width="200" height="120" rx="9" fill="#FBF3DF" stroke="#D8B48A"/>
+          <text x="566" y="38" text-anchor="middle" font-weight="700">Log（日志）</text>
+          <text x="478" y="60" font-size="9.5">回答：具体发生了什么？</text>
+          <text x="478" y="78" font-size="9.5">形态：带 trace_id 的结构化行</text>
+          <text x="478" y="96" font-size="9.5">用途：看细节、对账</text>
+          <text x="478" y="114" font-size="9.5" fill="#6B6357">高基数信息放这里</text>
+
+          <g stroke="#77592F" stroke-width="1.3" marker-end="url(#m4)">
+            <line x1="214" y1="74" x2="238" y2="74"/><line x1="440" y1="74" x2="464" y2="74"/>
+          </g>
+          <defs><marker id="m4" markerWidth="8" markerHeight="8" refX="7" refY="3" orient="auto"><path d="M0,0 L7,3 L0,6 Z" fill="#77592F"/></marker></defs>
+          <text x="226" y="66" text-anchor="middle" font-size="9" fill="#6B6357">trace_id</text>
+
+          <rect x="14" y="152" width="652" height="66" rx="9" fill="#FBF3DF" stroke="#C2372B" stroke-width="1.4"/>
+          <text x="30" y="176" font-weight="700" fill="#C2372B">排查一次「下单慢」的标准路径</text>
+          <text x="30" y="196" font-size="10">① 看 metric：错误率 / P99  latency 是否整体抬升 → ② 看 trace：定位是哪一个 span 慢（是 DB 还是下游 RPC）→ ③ 按该 span 的 trace_id 捞日志看细节</text>
+
+          <g font-weight="700" font-size="10.5">
+            <rect x="14" y="234" width="156" height="50" rx="8" fill="#EFE6D2" stroke="#D8B48A"/>
+            <text x="92" y="256" text-anchor="middle">延迟</text><text x="92" y="274" text-anchor="middle" font-size="9" fill="#6B6357">P50/P95/P99</text>
+            <rect x="182" y="234" width="156" height="50" rx="8" fill="#EFE6D2" stroke="#D8B48A"/>
+            <text x="260" y="256" text-anchor="middle">流量</text><text x="260" y="274" text-anchor="middle" font-size="9" fill="#6B6357">QPS / 订单数</text>
+            <rect x="350" y="234" width="156" height="50" rx="8" fill="#EFE6D2" stroke="#D8B48A"/>
+            <text x="428" y="256" text-anchor="middle">错误</text><text x="428" y="274" text-anchor="middle" font-size="9" fill="#6B6357">错误率 by reason</text>
+            <rect x="518" y="234" width="148" height="50" rx="8" fill="#EFE6D2" stroke="#D8B48A"/>
+            <text x="592" y="256" text-anchor="middle">饱和度</text><text x="592" y="274" text-anchor="middle" font-size="9" fill="#6B6357">CPU/连接池/队列</text>
+          </g>
+          <text x="14" y="298" font-size="10" fill="#6B6357">四黄金信号（Google SRE）——你看任何监控面板，先找这四类；找不到的面板是不合格的面板。</text>
+        </g>
+      </svg>
+    </div>
+
+    <div class="key"><b>本节课重点：</b>MVP 阶段的最小可用观测 = <b>结构化日志（带 trace_id）+ 一个错误率面板 + 一条能送到你手机的告警</b>。就这三样，别的都可以等。<b>没有告警触达的监控等于没有监控。</b></div>
+
+    <div class="lab"><b>进阶实验（不碰集群）：</b>
+      <ol class="steps" style="margin:8px 0 0">
+        <li>在任意服务的 <code>biz</code> 层加一条带 trace_id 的日志，本地 <code>make dev</code> 跑一次请求，从日志里找到它。</li>
+        <li>读 <code>docs/observability/OBSERVABILITY.md</code>，找出「指标标签禁止高基数」那条规定的原文。</li>
+        <li>给自己定一条 MVP 告警规则：<b>下单接口 5 分钟错误率 &gt; 5%</b>。想清楚它要发到哪里、你多久能看到、看到后第一步查什么。</li>
+        <li>（可选）用 <code>docker compose</code> 起一个 VictoriaLogs + Grafana，把自己的服务日志打进去——这是最小可观测栈，两个容器。</li>
+      </ol>
+    </div>
+
+    <div class="pit"><b>踩坑预警：</b>这个仓库在日志上踩过的坑值得记住——<code>code.file.path</code> 恒为 <code>server/logging.go</code>，导致所有错误都指向同一个文件、无法定位真正抛错点。后来用 <code>errinfo.Here</code> 记录最内层调用点才修好。<b>你如果自己写日志拦截器，务必记录真实抛错位置。</b></div>
+  </div>
+</section>
+
+<!-- ================= M3 ================= -->
+<section class="mod" id="m3">
+  <div class="head"><span class="no">M3</span><h3>部署：K8s / Cilium / ArgoCD / Helm</h3>
+    <span class="meta">迁集群时学 · 约 3 小时</span></div>
+  <div class="body">
+    <div class="now"><b>MVP 现状：</b>「MVP 用 Docker Compose 跑，别碰集群」。这一模块解释集群到底帮你做了什么、以及这个仓库为什么同时维护两套清单。</div>
+
+    <details class="think"><summary>先想通：三题</summary>
+      <div class="ans">
+        <p><b>Q1 Docker Compose 能跑，为什么要 K8s？它到底多给了什么？</b></p>
+        <p>三样东西：<b>自愈</b>（进程挂了自动重启、节点挂了重新调度）、<b>声明式对账</b>（你说要 3 个副本它就维持 3 个）、<b>服务发现与流量治理</b>（Service/DNS/负载均衡/滚动发布）。Compose 是「启动一组容器」，K8s 是「持续维持一个状态」。</p>
+        <p><b>Q2 Helm 和 kustomize 都在做「生成 YAML」，为什么要两套？</b></p>
+        <p>Helm 是<b>模板 + 参数</b>（适合打包分发、给别人用），kustomize 是<b>基线 + 补丁</b>（适合多环境差异、改动可追溯）。这个仓库两套并存是因为使用场景不同——所以它用 <code>verify-deploy-parity.sh</code> 强制两份渲染结果<b>逐字段等价</b>。</p>
+        <p><b>Q3 ArgoCD 和「手动 kubectl apply」的本质区别是什么？</b></p>
+        <p>手动 apply 是<b>一次性推送</b>，推完就不知道谁改了。ArgoCD 是<b>持续对账</b>：Git 是期望态，集群是实际态，它不断比较并把实际态拉回期望态（selfHeal），删除 Git 里没有的对象（prune）。这就是 GitOps。</p>
+      </div>
+    </details>
+
+    <div class="fig">
+      <div class="cap">图 4 · GitOps 控制循环：Git 是唯一真相源</div>
+      <svg viewBox="0 0 680 250" role="img" aria-label="GitOps 控制循环">
+        <g font-family="Noto Serif SC, serif" font-size="10.5">
+          <defs><marker id="m3" markerWidth="9" markerHeight="9" refX="8" refY="3.5" orient="auto"><path d="M0,0 L8,3.5 L0,7 Z" fill="#77592F"/></marker></defs>
+          <rect x="20" y="30" width="170" height="70" rx="9" fill="#FBF3DF" stroke="#C2372B" stroke-width="1.5"/>
+          <text x="105" y="58" text-anchor="middle" font-weight="700">Git 仓库</text>
+          <text x="105" y="78" text-anchor="middle" font-size="9.5" fill="#6B6357">helm/values*.yaml（期望态）</text>
+
+          <rect x="255" y="20" width="170" height="90" rx="9" fill="#FBF3DF" stroke="#3E5C76" stroke-width="1.5"/>
+          <text x="340" y="46" text-anchor="middle" font-weight="700" fill="#3E5C76">ArgoCD</text>
+          <text x="340" y="66" text-anchor="middle" font-size="9.5">持续比较</text>
+          <text x="340" y="84" text-anchor="middle" font-size="9.5" fill="#6B6357">diff → sync → prune → selfHeal</text>
+
+          <rect x="490" y="30" width="170" height="70" rx="9" fill="#FBF3DF" stroke="#D8B48A"/>
+          <text x="575" y="58" text-anchor="middle" font-weight="700">K8s 集群</text>
+          <text x="575" y="78" text-anchor="middle" font-size="9.5" fill="#6B6357">实际态</text>
+
+          <line x1="192" y1="65" x2="252" y2="65" stroke="#77592F" stroke-width="1.5" marker-end="url(#m3)"/>
+          <text x="222" y="56" text-anchor="middle" font-size="9" fill="#6B6357">拉取</text>
+          <line x1="427" y1="65" x2="487" y2="65" stroke="#77592F" stroke-width="1.5" marker-end="url(#m3)"/>
+          <text x="457" y="56" text-anchor="middle" font-size="9" fill="#6B6357">apply</text>
+
+          <path d="M575,102 C575,150 340,160 340,112" fill="none" stroke="#C2372B" stroke-width="1.3" stroke-dasharray="5 4" marker-end="url(#m3)"/>
+          <text x="470" y="140" text-anchor="middle" font-size="9.5" fill="#C2372B">漂移检测：有人手动 kubectl 改了？拉回 Git</text>
+
+          <rect x="20" y="140" width="640" height="40" rx="8" fill="#FBEFE6" stroke="#E0B79A"/>
+          <text x="36" y="164" font-size="10" fill="#B4700F" font-weight="700">这个仓库的现状：ApplicationSet 只生成 prod 一个环境，syncPolicy.automated.enabled = false</text>
+          <text x="36" y="180" font-size="9.5" fill="#B4700F">→ 控制器在跑、白名单开好了，但业务工作负载还没真正接管。别把「装了 ArgoCD」当成「已经 GitOps」。</text>
+
+          <text x="20" y="212" font-size="10" fill="#6B6357">Cilium 在这一层里的角色：CNI（容器网络）+ Gateway API（替代 ingress controller，直接接管南北向流量）+ NetworkPolicy 增强 + 节点间 WireGuard 加密。</text>
+          <text x="20" y="232" font-size="10" fill="#6B6357">对你 MVP 的意义：先全用默认值，等有真实用户再逐项收紧。默认拒绝网络策略是上线前的必修项，不是第一天的事。</text>
+        </g>
+      </svg>
+    </div>
+
+    <div class="trigger"><b>什么时候必须真的学它：</b>① 你的 Compose 单机成为单点（机器一挂全站没）；② 你需要「改一行配置就滚动发布、失败自动回滚」；③ 你要跑多副本。<b>在那之前，Compose + 一份备份脚本比一套没人维护的 K8s 清单更可靠。</b></div>
+
+    <div class="lab"><b>进阶实验（不碰集群）：</b>
+      <ol class="steps" style="margin:8px 0 0">
+        <li>本地跑 <code>scripts/verify-deploy-parity.sh</code> —— 它不需要集群，只做 <code>helm template</code> 与 <code>kubectl kustomize</code> 的渲染对比。看它输出「pre 58 对象 / prod 56 对象」时，你就理解了「两套清单等价」是怎么被强制保证的。</li>
+        <li>读 <code>helm/values.yaml</code> 与 <code>helm/values-prod.yaml</code> 的 diff，找出那 2 个被有意关掉的开关。</li>
+        <li>用 <code>docker compose config</code> 看你自己的 Compose 最终渲染结果——这是 Compose 版的「期望态可视化」。</li>
+        <li>（可选）本地 <code>kind</code> 起一个单节点 K8s，把 <code>backend/compose.yaml</code> 里的一个服务手写成 Deployment + Service。<b>手写一个，比读二十份清单有用。</b></li>
+      </ol>
+    </div>
+
+    <div class="pit"><b>踩坑预警：</b>这个仓库的部署债很典型——<code>ecommerce-config-source-{pre,prod}</code> 这个 Secret <b>全仓只有引用、没有本体定义</b>，prod 起来就缺它；prod 的 default-deny NetworkPolicy 被 <code>values-prod.yaml</code> 关掉了，所以线上其实是全放行。<b>「清单里写了」不等于「线上生效」</b>——这是集群学习和 Compose 最大的认知差异。</div>
+  </div>
+</section>
+
+<!-- ================= M5 ================= -->
+<section class="mod" id="m5">
+  <div class="head"><span class="no">M5</span><h3>分布式一致性：OrderGroup / Saga / Outbox</h3>
+    <span class="meta">触发式 · 别提前学</span></div>
+  <div class="body">
+    <div class="now"><b>MVP 现状：</b>「那是 v2 设计，MVP 用同步调用 + 事务」。这一模块解释：为什么同步调用在 MVP 够用、它什么时候会不够用、以及不够用时的标准解法长什么样。</div>
+
+    <details class="think"><summary>先想通：三题</summary>
+      <div class="ans">
+        <p><b>Q1 本地事务能保证正确，为什么还需要 Saga？</b></p>
+        <p>因为跨服务没有本地事务。订单在 order 库、库存在 inventory 库，一个事务包不住两个数据库。你要么用 2PC（强一致但可用性差、且要两边都支持），要么接受<b>最终一致</b>——先各自提交，出错再补偿。Saga 就是后者。</p>
+        <p><b>Q2 Outbox 解决什么问题？</b></p>
+        <p>「业务写库」和「发消息」两步不可能同时成功——先发消息后写库，可能消息发了但库回滚；先写库后发消息，可能库提交了但服务崩在发消息中途。Outbox 把消息<b>当成业务数据写在同一个事务里</b>，再由外部进程搬去 Kafka。原子性回到了数据库。</p>
+        <p><b>Q3 为什么这个项目说「领域事件待首个真实业务生产者触发」？</b></p>
+        <p>因为没有真实副作用需求时，提前建一套 Outbox + Inbox + DLQ + 重放审计，是在<b>为想象中的问题付真实成本</b>。等第一个「下单成功后要通知库存确认」出现，再接。这个克制是对的。</p>
+      </div>
+    </details>
+
+    <div class="fig">
+      <div class="cap">图 5 · 两种跨服务写法：同步链（MVP）vs 事件链（v2）</div>
+      <svg viewBox="0 0 680 330" role="img" aria-label="同步链与事件链对比">
+        <g font-family="Noto Serif SC, serif" font-size="10.5">
+          <rect x="10" y="14" width="320" height="140" rx="10" fill="#F0F4EE" stroke="#5E7C5A"/>
+          <text x="26" y="36" font-size="11.5" font-weight="700" fill="#5E7C5A">同步链（MVP 用这个）</text>
+          <rect x="26" y="50" width="120" height="36" rx="6" fill="#FDF8EC" stroke="#D8B48A"/><text x="86" y="72" text-anchor="middle">order</text>
+          <line x1="148" y1="68" x2="180" y2="68" stroke="#77592F" stroke-width="1.4" marker-end="url(#m5)"/>
+          <rect x="184" y="50" width="130" height="36" rx="6" fill="#FDF8EC" stroke="#D8B48A"/><text x="249" y="72" text-anchor="middle">inventory</text>
+          <defs><marker id="m5" markerWidth="8" markerHeight="8" refX="7" refY="3" orient="auto"><path d="M0,0 L7,3 L0,6 Z" fill="#77592F"/></marker></defs>
+          <text x="26" y="108" font-size="9.5">· 一次请求内完成，用户立即知道成败</text>
+          <text x="26" y="126" font-size="9.5">· 正确性靠 PG 单条原子 SQL + 唯一约束</text>
+          <text x="26" y="144" font-size="9.5" fill="#C2372B">· 缺点：耦合下游可用性，链路越长越脆</text>
+
+          <rect x="350" y="14" width="320" height="140" rx="10" fill="#EEF2F6" stroke="#3E5C76"/>
+          <text x="366" y="36" font-size="11.5" font-weight="700" fill="#3E5C76">事件链（v2 用这个）</text>
+          <rect x="366" y="50" width="110" height="36" rx="6" fill="#FDF8EC" stroke="#D8B48A"/><text x="421" y="72" text-anchor="middle">order + outbox</text>
+          <line x1="478" y1="68" x2="510" y2="68" stroke="#77592F" stroke-width="1.4" marker-end="url(#m5)"/>
+          <rect x="514" y="50" width="140" height="36" rx="6" fill="#FDF8EC" stroke="#D8B48A"/><text x="584" y="72" text-anchor="middle">Kafka → consumer</text>
+          <text x="366" y="108" font-size="9.5">· 业务写与 outbox insert 同一个事务</text>
+          <text x="366" y="126" font-size="9.5">· Debezium 搬运，消费者用 Inbox 幂等</text>
+          <text x="366" y="144" font-size="9.5" fill="#5E7C5A">· 优点：解耦、可重放、可削峰</text>
+
+          <rect x="10" y="168" width="660" height="70" rx="10" fill="#FBEFE6" stroke="#E0B79A"/>
+          <text x="26" y="192" font-size="11" font-weight="700" fill="#C2372B">同步链什么时候会不够用？</text>
+          <text x="26" y="212" font-size="10">① 下游一慢，整条请求跟着慢（用户在下单页干等 3 秒）② 下游挂了，下单直接失败（本可事后补偿）</text>
+          <text x="26" y="230" font-size="10">③ 一个动作要通知五六个服务，同步链变成蜘蛛网。出现这三条之一，才开始接事件链。</text>
+
+          <text x="10" y="268" font-size="10.5" fill="#6B6357">行投影 vs 领域事件（这个仓库的关键分线，别混）：</text>
+          <text x="10" y="288" font-size="10">· 行投影：把「表的一行变化」搬到别处（PG → Debezium → Kafka → ES），<b>不含业务语义，不需要 Outbox</b>。搜索走这条，已经在跑。</text>
+          <text x="10" y="308" font-size="10">· 领域事件：表达「订单已支付」这种<b>业务事实</b>，必须 Outbox 保证原子发布，消费者必须幂等。业务侧尚未接线。</text>
+          <text x="10" y="326" font-size="10" fill="#C2372B">同一套 Kafka 两种语义，混用会导致「搜索消费了业务事件」或「业务消费者被投影变更刷爆」。</text>
+        </g>
+      </svg>
+    </div>
+
+    <div class="key"><b>本节课重点：</b>MVP 阶段你要做的不是「用 Saga」，而是<b>把同步链写正确</b>——库存单条原子 SQL、订单唯一约束、失败显式返回。这三件事做对了，将来迁到事件链时，你要补的只是「发布」和「消费」两层，核心正确性不用重写。</div>
+
+    <div class="trigger"><b>什么时候必须真的学它：</b>你的代码里出现第一个「下单成功后还要做别的」的真实需求——比如要发短信、要通知库存确认、要生成结算单。<b>那一刻，先写 Outbox，再写消费者。</b>顺序反了（先接 Kafka 再补 Outbox）会留下一段「消息可能丢」的窗口。</div>
+
+    <div class="lab"><b>进阶实验（不碰集群）：</b>
+      <ol class="steps" style="margin:8px 0 0">
+        <li>读 <code>docs/design/order/checkout.md</code> 的 Outbox 与超时自愈部分，只看设计，不看实现。</li>
+        <li>在本地用<b>两个 PG schema 模拟</b>：建一张 <code>outbox</code> 表（<code>aggregate_type</code> + payload + 已创建未发送），在同一个事务里插业务数据和 outbox 行。然后手写一个 20 行的「relay」把它读出来打印。<b>亲手写一次 relay，你就永远理解 Outbox 了。</b></li>
+        <li>想清楚：relay 把消息发出去了但自己崩了，重启后会不会重发？消费者怎么保证不重复处理？（答案：至少一次投递 + 消费者幂等，靠 Inbox 唯一键）</li>
+      </ol>
+    </div>
+
+    <div class="pit"><b>踩坑预警：</b>这个仓库的 order 服务现在用进程内 <code>GoEventBus(1&lt;&lt;16, DropOldest)</code>——<b>高负载下事件静默丢弃，进程重启即失</b>。如果你照抄「进程内事件总线」图省事，会继承一个最隐蔽的数据丢失路径。<b>MVP 阶段宁可同步调用，也不要用会丢事件的内存总线。</b></div>
+  </div>
+</section>
+
+<!-- ================= M2 ================= -->
+<section class="mod" id="m2">
+  <div class="head"><span class="no">M2</span><h3>数据流：Kafka / Debezium / Elasticsearch</h3>
+    <span class="meta">可拖最久 · 规模触发</span></div>
+  <div class="body">
+    <div class="now"><b>MVP 现状：</b>「MVP 用不到，先当它们不存在」。这一模块解释这条链路解决什么问题、以及它已经在这个仓库里跑起来了（只是不在你的 MVP 路径上）。</div>
+
+    <details class="think"><summary>先想通：三题</summary>
+      <div class="ans">
+        <p><b>Q1 搜索为什么不能直接查 PostgreSQL？</b></p>
+        <p>能，但只在小数据量下。<code>LIKE '%关键词%'</code> 无法用索引、要全表扫描；没有分词（「精华液」搜不到「精华」）；没有相关性排序；聚合筛选（按品牌/价格区间统计）很慢。商品上万后就必须专用搜索引擎。</p>
+        <p><b>Q2 什么是 CDC？它和「业务代码里发消息」有什么不同？</b></p>
+        <p>CDC（Change Data Capture）是<b>从数据库的 WAL 日志里读变更</b>，不碰业务代码。好处：业务代码零改动、不丢不错（WAL 是数据库自己的真相）、不增加写延迟。代价：它搬的是「行变化」而不是「业务意图」。</p>
+        <p><b>Q3 为什么搜索走 CDC、而业务事件走 Outbox？</b></p>
+        <p>因为语义不同。搜索要的是「商品表变成什么样了」——行的最终状态，CDC 正合适。业务事件要的是「订单已支付」这个<b>事实</b>，必须和业务写在同一个事务里保证原子性——所以用 Outbox。<b>用错工具的结果：要么丢事件，要么搜索索引被无意义的事务内变更刷爆。</b></p>
+      </div>
+    </details>
+
+    <div class="fig">
+      <div class="cap">图 6 · 搜索行投影链路（这个仓库已经跑通，2026-09-03 切流）</div>
+      <svg viewBox="0 0 680 250" role="img" aria-label="CDC 搜索链路">
+        <defs><marker id="m2" markerWidth="8" markerHeight="8" refX="7" refY="3" orient="auto"><path d="M0,0 L7,3 L0,6 Z" fill="#77592F"/></marker></defs>
+        <g font-family="Noto Serif SC, serif" font-size="10">
+          <rect x="10" y="40" width="120" height="72" rx="9" fill="#FBF3DF" stroke="#C2372B" stroke-width="1.5"/>
+          <text x="70" y="64" text-anchor="middle" font-weight="700">PostgreSQL</text>
+          <text x="70" y="82" text-anchor="middle" font-size="9" fill="#6B6357">products.search_catalog</text>
+          <text x="70" y="98" text-anchor="middle" font-size="9" fill="#6B6357">（trigger 维护）</text>
+
+          <line x1="132" y1="76" x2="176" y2="76" stroke="#77592F" stroke-width="1.5" marker-end="url(#m2)"/>
+          <text x="154" y="66" text-anchor="middle" font-size="9" fill="#6B6357">WAL</text>
+
+          <rect x="180" y="40" width="120" height="72" rx="9" fill="#FBF3DF" stroke="#D8B48A"/>
+          <text x="240" y="64" text-anchor="middle" font-weight="700">Debezium</text>
+          <text x="240" y="82" text-anchor="middle" font-size="9" fill="#6B6357">Connector</text>
+          <text x="240" y="98" text-anchor="middle" font-size="9" fill="#6B6357">读复制槽</text>
+
+          <line x1="302" y1="76" x2="346" y2="76" stroke="#77592F" stroke-width="1.5" marker-end="url(#m2)"/>
+
+          <rect x="350" y="40" width="110" height="72" rx="9" fill="#FBF3DF" stroke="#D8B48A"/>
+          <text x="405" y="64" text-anchor="middle" font-weight="700">Kafka</text>
+          <text x="405" y="82" text-anchor="middle" font-size="9" fill="#6B6357">topic</text>
+          <text x="405" y="98" text-anchor="middle" font-size="9" fill="#6B6357">ecommerce_cdc.*</text>
+
+          <line x1="462" y1="76" x2="506" y2="76" stroke="#77592F" stroke-width="1.5" marker-end="url(#m2)"/>
+
+          <rect x="510" y="40" width="150" height="72" rx="9" fill="#FBF3DF" stroke="#D8B48A"/>
+          <text x="585" y="64" text-anchor="middle" font-weight="700">Elasticsearch Sink</text>
+          <text x="585" y="82" text-anchor="middle" font-size="9" fill="#6B6357">写索引模板 + alias</text>
+          <text x="585" y="98" text-anchor="middle" font-size="9" fill="#6B6357">ecommerce_catalog_*</text>
+
+          <path d="M585,114 C585,150 70,150 70,114" fill="none" stroke="#5E7C5A" stroke-width="1.5" marker-end="url(#m2)"/>
+          <text x="330" y="146" text-anchor="middle" font-size="9.5" fill="#5E7C5A">search 服务只读稳定 alias —— 索引重建 / 版本切换对读方透明</text>
+
+          <rect x="10" y="176" width="650" height="62" rx="9" fill="#FBEFE6" stroke="#E0B79A"/>
+          <text x="26" y="198" font-size="10" font-weight="700" fill="#B4700F">这条链路真实踩过的坑（值得记住的三个）</text>
+          <text x="26" y="216" font-size="9.5">① 复制槽被 Patroni 当「未声明槽」删了三次 → 必须在 DCS 里声明为永久逻辑槽</text>
+          <text x="26" y="232" font-size="9.5">② connector 级 RUNNING 但 task 级 FAILED，监控全绿 → 告警必须盯 task 状态 + 槽位点差 + sink lag，不能只看 connector</text>
+
+          <text x="10" y="262" font-size="9.5" fill="#6B6357">对你的意义：MVP 商品量在几千以内，直接查 PG 就好。等商品上万、要全文检索和聚合筛选时，这条链路（或云厂商的托管搜索）才值得投入。</text>
+        </g>
+      </svg>
+    </div>
+
+    <div class="trigger"><b>什么时候必须真的学它：</b>① 商品/内容过万，PG 查询 P99 超过几百毫秒；② 你要做「按品牌+价格区间+规格聚合筛选」；③ 你要中文分词搜索。<b>在那之前，<code>search_catalog</code> 那张表和它的 trigger 就是你需要的全部。</b></div>
+
+    <div class="lab"><b>进阶实验（不碰集群）：</b>
+      <ol class="steps" style="margin:8px 0 0">
+        <li>读 <code>backend/services/product/internal/data/migrations/00005_*.sql</code>，看 <code>products.search_catalog</code> 的 trigger 是怎么维护投影表的——<b>这是全仓库最值得读的一个 trigger</b>。</li>
+        <li>读 <code>docs/design/search/search.md</code>，重点看「SearchCatalog 深度模块边界」——为什么 search 服务只能读固定 alias，不能让调用方指定索引名。</li>
+        <li>本地起一个 PostgreSQL，建一张商品表 + 一个 <code>tsvector</code> 全文索引，体验一下「PG 自带的全文检索能走多远」。这能帮你判断自己离需要 ES 还有多远。</li>
+      </ol>
+    </div>
+
+    <div class="pit"><b>踩坑预警：</b>这个仓库为搜索换过三次方案（Meilisearch → 自写 indexer → ES CDC），<b>每次迁移都留下过「mapping 不是契约」的回归</b>——索引由 sink 自动创建，mapping 和预期不符，搜索静默返回错结果。你自己做时：<b>mapping 必须进版本控制，alias 切换必须可回退。</b></div>
+  </div>
+</section>
+
+<h2><span class="idx">收</span>一页总结：五个黑盒的「触发条件」速查</h2>
+<p class="lead">把这张表贴在显眼的地方。看到左栏信号出现，再去学右栏——不要提前学，也不要永远不学。</p>
+
+<table>
+  <thead><tr><th style="width:60px">模块</th><th style="width:250px">触发信号（出现任何一个）</th><th style="width:150px">要学什么</th><th>学到什么程度算够</th></tr></thead>
+  <tbody>
+    <tr>
+      <td><b>M1</b> 身份</td>
+      <td>要做子账号 / 多角色协作 / 关系型权限（A 能看 B 分享的订单）；Casbin 策略开始角色爆炸</td>
+      <td>Casdoor OIDC 流程、Session 存储、OpenFGA 关系模型</td>
+      <td>能说清三层授权各自管什么；知道改 Casdoor 凭据必须重启</td>
+    </tr>
+    <tr>
+      <td><b>M2</b> 数据流</td>
+      <td>商品过万、PG 查询变慢、要全文检索/聚合筛选/中文分词</td>
+      <td>CDC 原理、行投影 vs 领域事件、alias 切换与回退</td>
+      <td>能说清为什么搜索走 CDC 而业务事件走 Outbox</td>
+    </tr>
+    <tr>
+      <td><b>M3</b> 部署</td>
+      <td>Compose 单机成单点；要滚动发布/失败回滚；要跑多副本</td>
+      <td>K8s 核心对象、Helm/kustomize、GitOps 控制循环</td>
+      <td>能手写一个 Deployment + Service；理解「清单写了 ≠ 线上生效」</td>
+    </tr>
+    <tr>
+      <td><b>M4</b> 可观测</td>
+      <td>上线第一天（用户报「打不开」，你无法判断是前端、网关还是数据库）</td>
+      <td>三大支柱、四黄金信号、告警触达闭环</td>
+      <td>能从 metric → trace → log 三步定位一次慢请求</td>
+    </tr>
+    <tr>
+      <td><b>M5</b> 一致性</td>
+      <td>出现第一个「下单成功后还要做别的」真实需求；同步链开始变蜘蛛网</td>
+      <td>Saga 补偿、Outbox 原子发布、Inbox 幂等、DLQ</td>
+      <td>能解释「为什么业务写和 outbox insert 必须同事务」</td>
+    </tr>
+  </tbody>
+</table>
+
+<div class="key" style="margin-top:20px">
+  <b>最后一句：</b>基础篇教你把交易链写<b>正确</b>，进阶篇教你在正确之后把系统<b>撑住</b>。
+  顺序不能反——<b>一个没有正确性的高可用系统，只是更快地制造错误。</b>
+</div>
+
+<footer>
+  进阶篇 · 打开五个黑盒 · 配套基础篇：<code>.scratch/learn-by-building/教学式渐进方案.html</code>。<br>
+  本文件不是真相源，不进 <code>docs/</code>。涉及集群实况的部分以 <code>context/team/local-env.md</code> 与 <code>TODO.md</code> 现查为准。
+</footer>
+
+</div>
+</body>
+</html>
