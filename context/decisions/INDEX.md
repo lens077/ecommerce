@@ -44,6 +44,7 @@ context/decisions/
 | 决策 | 一句话 |
 |---|---|
 | [2026-09-08-object-authz-check-placement.md](proposed/2026-09-08-object-authz-check-placement.md) | 对象级授权 Check 放服务侧 use case 层而非网关；OpenFGA 只存组织图、对象归属用服务归属列。**待拍板**：TECH.md §8.1 与 control-tower 裁决互相矛盾 |
+| [2026-10-24-app-http-and-data-lifecycle-to-kit.md](proposed/2026-10-24-app-http-and-data-lifecycle-to-kit.md) | 启动生命周期、HTTP 装配、健康检查、Data 事务外壳上提 kit（候选 5,575 行，占手写后端 37.5%）。`main()` 收口与「健康检查按服务显式声明」已确认，其余待拍板 |
 
 ## 怎么写
 
