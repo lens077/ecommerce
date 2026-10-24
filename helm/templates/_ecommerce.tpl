@@ -91,7 +91,7 @@ structcheck 曾专门写一个测试去对比 tgz 里的模板和源码,那是�
             name: "OTEL_LOGS_EXPORTER",
             value: "none",
           }, {
-            # OTLP 鉴权头(Vault → ExternalSecret otel-auth)。optional=true:
+            # OTLP 鉴权头(仓外静态 Secret otel-auth,由 scripts/deploy-k8s.sh 创建)。optional=true:
             # Secret 未就绪时退回匿名发送而不是 CrashLoop。
             name: "OTEL_EXPORTER_OTLP_HEADERS",
             valueFrom: {

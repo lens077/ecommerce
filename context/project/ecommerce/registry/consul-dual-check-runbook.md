@@ -88,10 +88,10 @@ missing or empty authorization header: Authorization
 
 HTTP 状态为 401，影响应用直接写入 `node3-otlp.apikv.com` 的 logs/metrics。旧 address 与 user Pod 同样出现该错误，因此不是双健康检查镜像引入的回归。
 
-dev Deployment 从可选 Secret `otel-auth` 的 `OTEL_EXPORTER_OTLP_HEADERS` key 注入鉴权头。复验遥测前检查 ExternalSecret/Secret 与 Pod 环境是否就绪，但不要输出 secret value：
+Deployment 从可选 Secret `otel-auth` 的 `OTEL_EXPORTER_OTLP_HEADERS` key 注入鉴权头。该 Secret 自 2026-10-07 起是**仓外静态 Secret**（`scripts/deploy-k8s.sh` 建，值取自采集端 `opentelemetry/otlp-public-auth`），不再是 ExternalSecret。复验遥测前检查 Secret 与 Pod 环境是否就绪，但不要输出 secret value：
 
 ```bash
-kubectl -n ecommerce get externalsecret,secret otel-auth
+kubectl -n ecommerce get secret otel-auth
 kubectl -n ecommerce get deploy ecommerce-user-deploy \
   -o jsonpath='{.spec.template.spec.containers[0].env[?(@.name=="OTEL_EXPORTER_OTLP_HEADERS")].valueFrom.secretKeyRef}{"\n"}'
 kubectl -n ecommerce logs deploy/ecommerce-user-deploy --since=5m \

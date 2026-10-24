@@ -39,7 +39,7 @@ func (u *inventoryRepo) Reserve(ctx context.Context, req biz.ReserveRequest) (*b
 	// 	return req.ReserveItems[i].SkuID < req.ReserveItems[j].SkuID
 	// }
 	for _, item := range req.ReserveItems {
-		// 2. 查询当前库存（SELECT available, version FROM ... WHERE ... FOR UPDATE）
+		// 2. 查询当前库存
 		stock, err := db.GetStockBySkuId(ctx, models.GetStockBySkuIdParams{
 			MerchantID: req.MerchantID,
 			SkuID:      item.SkuID,

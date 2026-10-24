@@ -32,14 +32,16 @@
       },
       secretName: "ecommerce-db-migrate",
     },
-    # 零信任 CNP(helm/files/zero-trust.yaml 里的 ecommerce-api-default-deny)与 otel-auth ExternalSecret
-    # 是否随本 chart 渲染。pre 为 true;prod 首次接管(2026-09-14)只发版不接管策略,在 values-prod.yaml 关掉。
+    # 零信任 CNP(helm/files/zero-trust.yaml 里的 ecommerce-api-default-deny)是否随本 chart 渲染。
+    # pre 为 true;prod 首次接管(2026-09-14)只发版不接管策略,在 values-prod.yaml 关掉。
     networkPolicy: {
       enabled: true,
     },
-    otelAuthExternalSecret: {
-      enabled: true,
-    },
+    # otel-auth 自 2026-10-07 起不随 chart 渲染:原 ExternalSecret 引用的 ClusterSecretStore/vault
+    # 在集群里不存在(只有 openbao/openbao-push),09-24 起一直 SecretSyncedError、Secret 从未生成。
+    # 改为仓外静态 Secret,由 scripts/deploy-k8s.sh 创建(值取自采集端 opentelemetry/otlp-public-auth,
+    # 不进 Git)。消费方:10 个服务的 OTEL_EXPORTER_OTLP_HEADERS、网关的 *_GATEWAY,均 optional=true。
+    # 判断依据见 context/team/deploy-parity.md 与 TODO.md 的 OTLP Secret 条目。
     configSource: {
       enabled: true,
       secretName: "ecommerce-config-source-pre",

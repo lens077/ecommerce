@@ -78,9 +78,11 @@ flow 风格不依赖缩进表达结构,改嵌套层级时不用重算空格数�
    (`# {{- if .Values.global.networkPolicy.enabled }}` … `# {{- end }}`),转换会改变注释位置,
    把它们从文档顶层挪进对象内部。门禁第二段专门断言这个文件**没有**被转换。
 
-6. **`helm/files/otel-auth-externalsecret.yaml` 可以是 KYAML**,因为它走 `.Files.Get` 不过 `tpl`
-   (原因见 [deploy-parity.md](deploy-parity.md) 硬约束 3),里面的 `{{ .k8s }}` 是给 ESO 读的,
-   Helm 不会执行它,加引号也不影响 ESO 取值。
+6. **`helm/files/otel-auth-externalsecret.yaml` 已于 2026-10-07 删除**,这段历史只剩一个教训:
+   它当年能是 KYAML,是因为走 `.Files.Get` 不过 `tpl`。它被删的理由与格式无关 —— 引用的
+   `ClusterSecretStore/vault` 在集群里不存在,唯一后果是长期 `SecretSyncedError`;`otel-auth`
+   改成仓外静态 Secret 后不再进 helm。现在 `helm/files/` 下只剩 `zero-trust.yaml`,而它是块式豁免的,
+   所以「这个文件为什么可以是 KYAML」这个问题不再存在。
 
 7. **`frontend/` 下的部署清单必须排除在 `vp fmt` 之外。** vite-plus 的格式化器也管 YAML,会把 KYAML
    的 `images: [{ … }]` 拆行、缩进改成 8 格、重排多行字符串。两个 formatter 会互相推翻。
@@ -95,7 +97,6 @@ flow 风格不依赖缩进表达结构,改嵌套层级时不用重算空格数�
 |---|---|---|
 | `backend/services/*/deploy/**`、`frontend/apps/*/deploy/**`、`application-vpa.yml` | KYAML | 静态:与 `yamlfmt -o=kyaml` 输出逐字节相同 |
 | `helm/Chart.yaml`、`helm/values*.yaml`、`helm/charts/*/{Chart,values}.yaml` | KYAML | 同上 |
-| `helm/files/otel-auth-externalsecret.yaml` | KYAML | 同上 |
 | `helm/files/zero-trust.yaml` | **块式,禁止转换** | 豁免段:断言它仍是块式 |
 | `helm/**/templates/*.yaml`、`helm/templates/_ecommerce.tpl` | 模板体手写成 KYAML flow 风格 | 渲染段:`helm template` 的每个对象都必须以 `{` 开头,来自豁免清单的除外 |
 

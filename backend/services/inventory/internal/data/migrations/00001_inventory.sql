@@ -18,7 +18,7 @@ CREATE TABLE inventory.stock
     merchant_id  UUID       NOT NULL,                  -- 商家id, 用于数据隔离
 
     on_hand      INT        NOT NULL DEFAULT 0,        -- 在手库存: 仓库货架上实际存在的商品数量。只有商品真正离开仓库（发货），这个数字才会减少。
-    locked       INT        NOT NULL DEFAULT 0,        -- 已锁定库存: 用户已支付，等待发货的商品数量。商品还在仓库里，但已经被“预定”给具体订单，不能再卖给其他人。
+    locked       INT        NOT NULL DEFAULT 0,        -- 预占，已锁定库存: 用户已支付，等待发货的商品数量。商品还在仓库里，但已经被“预定”给具体订单，不能再卖给其他人。
     available    INT        NOT NULL DEFAULT 0,        -- 可用库存: 继续销售的库存数量。计算公式：available = on_hand - locked。用户每次下单预占，扣减的是 available，不影响 on_hand 和 locked。
 
     version      INT        NOT NULL DEFAULT 0,        -- 乐观锁版本号

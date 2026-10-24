@@ -20,6 +20,9 @@
 #   - ecommerce 命名空间
 #   - tcr-pull-secret：TCR 是私有仓库，没有它所有 Pod 都 ImagePullBackOff
 #   - pg-ca-cert：Postgres 走 verify-ca，缺了连不上库
+#   - otel-auth：OTLP 鉴权头（OTEL_EXPORTER_OTLP_HEADERS 与网关的 *_GATEWAY）。2026-10-07 起
+#     是仓外静态 Secret，不再由 ESO/ExternalSecret 物化；值从采集端 opentelemetry/otlp-public-auth
+#     现取（公网 OTLP 接收端只认这一个 token），不落盘、不进 Git
 #   - ecommerce-config-source-pre：含机器 token 的 10 份 Config Center selector，
 #     必须由操作者在集群创建，不落盘、不进 Git（与 helm/values.yaml global.configSource.secretName 一致）
 #
@@ -151,6 +154,31 @@ if [[ -f "${pg_ca_file}" ]]; then
     --dry-run=client -o yaml | "${kubectl_cmd[@]}" "${kubectl_apply_cmd[@]}" -f -
 else
   echo "!! 找不到 ${pg_ca_file}，跳过 pg-ca-cert；服务连库会因 verify-ca 失败" >&2
+fi
+
+# OTLP 鉴权头（静态 Secret otel-auth，两个 key：服务用 OTEL_EXPORTER_OTLP_HEADERS，
+# 网关用 OTEL_EXPORTER_OTLP_HEADERS_GATEWAY）
+# 2026-10-07 起不再由 ESO/ExternalSecret 物化：原来那份引用的 ClusterSecretStore/vault 在集群里
+# 根本不存在（只有 openbao/openbao-push），09-24 起一直 SecretSyncedError、Secret 从未生成。
+# 公网 OTLP 接收端（opentelemetry/otlp-public-auth 的 bearertokenauth）只认一个 token，所以两个 key
+# 取同一个值；token 在这里现取现用，不落盘、不进 Git。
+# 已存在则跳过，理由与 tcr-pull-secret 相同：反复改写 Secret 会让 Pod 下次调度时重新读取。
+if "${kubectl_cmd[@]}" -n "${namespace}" get secret otel-auth >/dev/null 2>&1; then
+  echo "== otel-auth 已存在，跳过（要轮换请先 kubectl -n ${namespace} delete secret otel-auth）"
+else
+  otlp_token="$("${kubectl_cmd[@]}" -n opentelemetry get secret otlp-public-auth \
+    -o jsonpath='{.data.token}' 2>/dev/null | base64 -d 2>/dev/null || true)"
+  if [[ -z "${otlp_token}" ]]; then
+    echo "!! 取不到 opentelemetry/otlp-public-auth 的 token，跳过 otel-auth；" \
+      "指向公网 OTLP 入口的遥测会被 401 静默丢弃（业务进程不受影响）" >&2
+  else
+    echo "== otel-auth（静态 Secret，值取自 opentelemetry/otlp-public-auth）"
+    "${kubectl_cmd[@]}" create secret generic otel-auth \
+      --namespace="${namespace}" \
+      --from-literal="OTEL_EXPORTER_OTLP_HEADERS=Authorization=Bearer%20${otlp_token}" \
+      --from-literal="OTEL_EXPORTER_OTLP_HEADERS_GATEWAY=Authorization=Bearer%20${otlp_token}" \
+      --dry-run=client -o yaml | "${kubectl_cmd[@]}" "${kubectl_apply_cmd[@]}" -f -
+  fi
 fi
 
 # Config Center selector 含机器 token，不能由仓库内容生成。部署入口只校验它存在，

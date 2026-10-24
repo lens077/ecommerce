@@ -1,8 +1,8 @@
 #!/usr/bin/env bash
 # 渲染裸 manifest 路径(make k8s-pre-all)与 helm 路径**共用**的那几份清单:
-#   - helm/files/zero-trust.yaml               ServiceAccount ×11 + CiliumNetworkPolicy(含运行时注入的 Postgres CIDR)
-#   - helm/files/otel-auth-externalsecret.yaml ExternalSecret otel-auth(Vault → Secret)
-# 它们只有一份来源(helm/files/),两条部署路径都从这里拿,所以不需要 parity 门禁去比对。
+#   - helm/files/zero-trust.yaml  ServiceAccount ×11 + CiliumNetworkPolicy(含运行时注入的 Postgres CIDR)
+# 它只有一份来源(helm/files/),两条部署路径都从这里拿,所以不需要 parity 门禁去比对。
+# otel-auth 不在共享清单里:2026-10-07 起是仓外静态 Secret(scripts/deploy-k8s.sh 建),不经 helm。
 set -euo pipefail
 
 script_dir="$(cd -- "$(dirname -- "${BASH_SOURCE[0]}")" && pwd)"
@@ -23,10 +23,6 @@ fi
 values=()
 for f in "${value_files[@]}"; do values+=(-f "$f"); done
 show_only=(--show-only templates/zero-trust.yaml)
-# otel-auth ExternalSecret 由 global.otelAuthExternalSecret.enabled 门控(prod 关);渲染为空时 --show-only 会报错,先查开关
-if [[ "$(yq eval-all '. as $item ireduce ({}; . * $item) | .global.otelAuthExternalSecret.enabled' "${value_files[@]}")" == "true" ]]; then
-  show_only+=(--show-only templates/otel-auth-externalsecret.yaml)
-fi
 helm template ecommerce "${repo_root}/helm" "${values[@]}" \
   --namespace "${namespace}" \
   "${show_only[@]}" \
