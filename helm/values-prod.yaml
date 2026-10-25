@@ -23,52 +23,52 @@
   },
   user: {
     image: {
-      tag: "1.7.13@sha256:c0b14a7375b0e8a0ed01112724a157e783a886db3ee265dae00b5fdced162737",
+      tag: "1.8.1@sha256:e21839736538c604e281dcfda13d960143351049271cc5227f410f9afb2512fd",
     },
   },
   search: {
     image: {
-      tag: "1.7.13@sha256:b9dd6676a046e4d51b0e7fe50bfafadaa35d1955d1c6581c7181871d572a6517",
+      tag: "1.8.1@sha256:2fee4c724aa1646eedbacc7c6469cee3d3b7e7a2711715c19b89453637c200d4",
     },
   },
   behavior: {
     image: {
-      tag: "1.7.13@sha256:0448867a37b22093cc7d45620b3d63a22719665bd7fa5066577bcea5b7cc411a",
+      tag: "1.8.1@sha256:4b5361d97f8b1541813814912bb23a0a22e9cfbdf8c99fe983308c2bd6afc00e",
     },
   },
   product: {
     image: {
-      tag: "1.7.13@sha256:b16bcc480e02b7d17e3f6ef558299ce792bb0c5d0b53dfb0b7c6cd959f57e512",
+      tag: "1.8.1@sha256:28d9313758555cdfbdbd66d3c041079910a4622e9eb892135228b641ea7fc022",
     },
   },
   cart: {
     image: {
-      tag: "1.7.13@sha256:189a83d3efbb95cf2858941369cc127e73e674b92094edd43021a21b8bc8f72c",
+      tag: "1.8.1@sha256:6dd8d7a635c68acf03d736c1835f12ef5f809cfdc3fa8abaf0d2b7cdaf311c2c",
     },
   },
   address: {
     image: {
-      tag: "1.7.13@sha256:80cc84fbe4a23f7e975fb9dfe0b8dacea86e5eb4519a7cbed2034d6f65df3848",
+      tag: "1.8.1@sha256:2f11977c4008de93bd3db26ca0846e2346a73ec55928d91c3443998561330c76",
     },
   },
   order: {
     image: {
-      tag: "1.7.13@sha256:44153bf8807e3df8041a120b3ee39e18f8ddbea0ff3cf715664442300f698b55",
+      tag: "1.8.1@sha256:865935ca66aaaf553ad82d0455841f56f73e73da0579ef4d1f183e625d5b4353",
     },
   },
   inventory: {
     image: {
-      tag: "1.7.13@sha256:af672c027128ad5c2f979992f4dd4f8dd4b17748a5a613350fbd1355d040a02d",
+      tag: "1.8.1@sha256:41ea056448fad131ca85bd8916dfa8052e118bae7af625e23bc81cf9bf59c7bb",
     },
   },
   merchant: {
     image: {
-      tag: "1.7.13@sha256:9606be27dd0a89a04a929dfd52da77cd2b7c76ff93a410b80016dce129f44fd5",
+      tag: "1.8.1@sha256:4d7d1108e817083fb69ff41705887b86a5f8a37ef881dfa38bff49e75f526250",
     },
   },
   payment: {
     image: {
-      tag: "1.7.13@sha256:27dfb285a775f00dba6b61486201ce01d6c6b080e7250cf5a91f3b01d81a6341",
+      tag: "1.8.1@sha256:6691e11ad502a8382d581d3d35730b1c26fa050399e41e536331b9dc193e44cd",
     },
   },
   frontend: {

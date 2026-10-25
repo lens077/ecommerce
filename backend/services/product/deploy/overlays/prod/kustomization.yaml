@@ -14,7 +14,7 @@
   }],
   images: [{
     name: "ccr.ccs.tencentyun.com/sumery/product",
-    newTag: "1.7.13",
-    digest: "sha256:b16bcc480e02b7d17e3f6ef558299ce792bb0c5d0b53dfb0b7c6cd959f57e512",
+    newTag: "1.8.1",
+    digest: "sha256:28d9313758555cdfbdbd66d3c041079910a4622e9eb892135228b641ea7fc022",
   }],
 }

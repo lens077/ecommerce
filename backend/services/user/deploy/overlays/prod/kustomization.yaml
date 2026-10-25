@@ -14,7 +14,7 @@
   }],
   images: [{
     name: "ccr.ccs.tencentyun.com/sumery/user",
-    newTag: "1.7.13",
-    digest: "sha256:c0b14a7375b0e8a0ed01112724a157e783a886db3ee265dae00b5fdced162737",
+    newTag: "1.8.1",
+    digest: "sha256:e21839736538c604e281dcfda13d960143351049271cc5227f410f9afb2512fd",
   }],
 }

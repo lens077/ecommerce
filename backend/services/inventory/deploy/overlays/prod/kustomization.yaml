@@ -14,7 +14,7 @@
   }],
   images: [{
     name: "ccr.ccs.tencentyun.com/sumery/inventory",
-    newTag: "1.7.13",
-    digest: "sha256:af672c027128ad5c2f979992f4dd4f8dd4b17748a5a613350fbd1355d040a02d",
+    newTag: "1.8.1",
+    digest: "sha256:41ea056448fad131ca85bd8916dfa8052e118bae7af625e23bc81cf9bf59c7bb",
   }],
 }

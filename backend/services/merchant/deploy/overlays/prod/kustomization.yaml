@@ -14,7 +14,7 @@
   }],
   images: [{
     name: "ccr.ccs.tencentyun.com/sumery/merchant",
-    newTag: "1.7.13",
-    digest: "sha256:9606be27dd0a89a04a929dfd52da77cd2b7c76ff93a410b80016dce129f44fd5",
+    newTag: "1.8.1",
+    digest: "sha256:4d7d1108e817083fb69ff41705887b86a5f8a37ef881dfa38bff49e75f526250",
   }],
 }
