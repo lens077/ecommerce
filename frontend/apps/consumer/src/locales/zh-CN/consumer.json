@@ -287,5 +287,9 @@
     "found": "找到 {{count}} 件商品：{{names}}",
     "foundMore": "找到 {{count}} 件商品，前几件是：{{names}}",
     "none": "没有找到与「{{keyword}}」相关的商品，换个词试试。"
+  },
+  "update": {
+    "available": "灯市有新版本了，刷新后即可使用最新内容",
+    "refresh": "刷新"
   }
 }

@@ -287,5 +287,9 @@
     "found": "Found {{count}} products: {{names}}",
     "foundMore": "Found {{count}} products, the first few are: {{names}}",
     "none": "No products match “{{keyword}}”. Try another word."
+  },
+  "update": {
+    "available": "A new version is available. Refresh to get the latest content.",
+    "refresh": "Refresh"
   }
 }

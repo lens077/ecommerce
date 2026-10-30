@@ -6,6 +6,7 @@ import { CopilotProvider } from "@ecommerce/copilot";
 import AppBar from "@/components/AppBar";
 import { CopilotActions } from "@/copilot/CopilotActions";
 import NotificationsHost from "@/components/NotificationsHost";
+import UpdateBanner from "@/components/UpdateBanner";
 import PrivacyConsent from "@/components/PrivacyConsent";
 import Footer from "@/components/Footer";
 
@@ -38,6 +39,8 @@ export const Route = createRootRouteWithContext<MyRouterContext>()({
           </Box>
           <Footer />
           <NotificationsHost />
+          {/* 服务器有新构建时出现在底部，由用户决定是否刷新（见 lib/versionCheck.ts） */}
+          <UpdateBanner />
           <PrivacyConsent onConsent={handleConsent} />
           {/* 只在 dev 挂载：devtools 的 client bus 会连 ws://<host>/__devtools/ws，
                     桌面端生产包的 CSP 里没有开 ws，挂上去只会刷两条 violation；

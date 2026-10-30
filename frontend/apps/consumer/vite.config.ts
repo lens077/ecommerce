@@ -3,6 +3,38 @@ import { playwright } from "vite-plus/test/browser-playwright"; // 浏览器测�
 import { tanstackRouter } from "@tanstack/router-plugin/vite";
 import react from "@vitejs/plugin-react";
 import { resolve } from "node:path";
+import type { Plugin } from "vite-plus";
+
+/**
+ * 版本指纹插件：给每次构建一个唯一的 buildId，两端配合完成「标签页过期检测」——
+ * 1. define 把 buildId 编译进产物（运行时内存里的「我的版本」）；
+ * 2. closeBundle 把同一个 buildId 写进 dist/version.json（磁盘上的「最新版本」）。
+ * 老标签页重新可见时 fetch version.json 与内存值比对，不一致即说明服务器上有了新
+ * 构建产物。触发它的具体事故与完整设计见 src/lib/versionCheck.ts 头注。
+ */
+function versionManifest(): Plugin[] {
+  // 时间戳够用：检测只需要「每次构建不同」，不需要可读或可复现。
+  const buildId = Date.now().toString(36);
+  return [
+    {
+      name: "version-manifest:define",
+      config: () => ({ define: { __BUILD_ID__: JSON.stringify(buildId) } }),
+    },
+    {
+      name: "version-manifest:emit",
+      apply: "build",
+      // 用 generateBundle（而不是 closeBundle）让 version.json 进 bundle，
+      // 与其他产物一起走预览/部署，避免拿到 outDir 相对路径再自己拼盘。
+      generateBundle() {
+        this.emitFile({
+          type: "asset",
+          fileName: "version.json",
+          source: JSON.stringify({ buildId }),
+        });
+      },
+    },
+  ];
+}
 
 export default defineConfig(({ mode }) => {
   // 判断是否为生产构建（构建命令下 mode 通常为 'production'）
@@ -61,6 +93,7 @@ export default defineConfig(({ mode }) => {
         generatedRouteTree: resolve(__dirname, "./src/routeTree.gen.ts"),
       }),
       ...(reactCompilerEnabled ? [react({ compiler: true })] : []),
+      ...versionManifest(),
     ],
     //     run: {
     //       cache: true,

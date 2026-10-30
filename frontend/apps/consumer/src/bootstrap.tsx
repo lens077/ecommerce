@@ -18,6 +18,7 @@ import { TransportProvider } from "@connectrpc/connect-query";
 import { getSharedTransport } from "@ecommerce/api";
 import { AuthProvider, useAuthState, useAuthActions } from "@/providers/AuthProvider";
 import { initAnalytics } from "./analytics";
+import { checkNow, startVersionCheck } from "./lib/versionCheck";
 
 // 桌面端设置面板（Cmd/Ctrl + , 唤起）。懒加载，web 构建里这个 chunk 不会被请求。
 const DesktopSettingsDialog = lazy(() => import("@ecommerce/tauri/dialog"));
@@ -147,3 +148,16 @@ initPerf({
 if (!isTauri()) {
   initAnalytics();
 }
+
+// 标签页过期检测：可见性切换 + 低频定时比对 version.json（见 lib/versionCheck.ts）。
+// startVersionCheck 自带 dev / Tauri 守卫，这里不用再包一层。
+startVersionCheck();
+
+// 兜底：老标签页引用的懒加载 chunk 已被新部署删除时，动态 import 在检测触发之前
+// 就会 404。vite:preloadError 是 Vite 对这类失败的统一出口——preventDefault 掉
+// 默认的未处理 rejection，立即做一次版本比对，让提示条先于报错出现。
+// 不自动 reload：比对结果「没有新版本」时（例如网络抖动导致的假失败）刷新只会白屏重来。
+window.addEventListener("vite:preloadError", (event) => {
+  event.preventDefault();
+  void checkNow();
+});
