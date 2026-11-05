@@ -1,0 +1,43 @@
+{
+  "schema_version": 2,
+  "diagram_type": "workflow",
+  "meta": {"title": "从阅读 Repowise 到漂移治理", "locale": "zh-CN", "quality_profile": "showcase", "animation": "none"},
+  "lanes": [
+    {"id": "main", "label": "主线 · 工具与治理"},
+    {"id": "cleanup", "label": "分支 A · 死代码与迁移"},
+    {"id": "frontend", "label": "分支 B · 前端可靠性"}
+  ],
+  "mainPath": ["read-repo", "compare-truth", "trial-gate", "split-drift", "prove-changes", "next-evidence"],
+  "nodes": [
+    {"id":"read-repo","lane":"main","col":0,"type":"external","label":"阅读 Repowise","sublabel":"最初请求"},
+    {"id":"compare-truth","lane":"main","col":1,"type":"backend","label":"能否治理漂移","sublabel":"对比真相源与门禁"},
+    {"id":"trial-gate","lane":"main","col":2,"type":"backend","label":"试接后撤下 CI","sublabel":"Repowise 改按需"},
+    {"id":"split-drift","lane":"main","col":3,"type":"security","label":"专项漂移门禁","sublabel":"路径／配置／协议"},
+    {"id":"prove-changes","lane":"main","col":4,"type":"database","label":"验证修复并推送","sublabel":"93186122 已入远端"},
+    {"id":"next-evidence","lane":"main","col":5,"type":"security","label":"验治理闭环","sublabel":"提交树＋CI＋注错"},
+    {"id":"audit-findings","lane":"cleanup","col":3,"type":"backend","label":"审计候选再核实","sublabel":"不可达不等于可删"},
+    {"id":"remove-dead","lane":"cleanup","col":4,"type":"backend","label":"清除空置代码","sublabel":"Reindex／outbox／UI"},
+    {"id":"migration-proof","lane":"cleanup","col":5,"type":"database","label":"删表迁移已验证","sublabel":"pre 执行见后续记录"},
+    {"id":"hotspot-review","lane":"frontend","col":3,"type":"frontend","label":"审读高风险页面","sublabel":"地址／结算／身份"},
+    {"id":"frontend-fixes","lane":"frontend","col":4,"type":"frontend","label":"修复并加回归","sublabel":"共享表单／状态保护"},
+    {"id":"live-boundary","lane":"frontend","col":5,"type":"external","label":"真实环境仍待验","sublabel":"OAuth／Tauri／交易"}
+  ],
+  "edges": [
+    {"from":"read-repo","to":"compare-truth","variant":"emphasis"},
+    {"from":"compare-truth","to":"trial-gate","variant":"emphasis"},
+    {"from":"trial-gate","to":"split-drift","variant":"emphasis"},
+    {"from":"split-drift","to":"prove-changes","variant":"emphasis"},
+    {"from":"prove-changes","to":"next-evidence","variant":"emphasis"},
+    {"from":"trial-gate","to":"audit-findings","label":"按需审计"},
+    {"from":"audit-findings","to":"remove-dead"},
+    {"from":"remove-dead","to":"migration-proof"},
+    {"from":"audit-findings","to":"hotspot-review","label":"健康热点"},
+    {"from":"hotspot-review","to":"frontend-fixes"},
+    {"from":"frontend-fixes","to":"live-boundary","variant":"dashed"}
+  ],
+  "cards": [
+    {"dot":"cyan","title":"主线结论","items":["Repowise 是线索来源，不是真相源","快速、确定性的专项门禁负责阻断漂移"]},
+    {"dot":"emerald","title":"已证明的范围","items":["实际提交树：全量门禁与隔离数据库通过","浏览器 fixture：移动端与桌面交互通过"]},
+    {"dot":"amber","title":"旁支 C：提交过程","items":["并行工作隔离、远端整合及 hook 隔离缺陷已处理","最不确定：真实环境状态与审计候选完整性"]}
+  ]
+}

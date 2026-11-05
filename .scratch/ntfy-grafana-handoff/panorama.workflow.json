@@ -1,0 +1,45 @@
+{
+  "schema_version": 2,
+  "diagram_type": "workflow",
+  "meta": {
+    "title": "ntfy 告警治理：主线、分叉与下一步",
+    "locale": "zh-CN",
+    "animation": "none",
+    "quality_profile": "showcase"
+  },
+  "lanes": [
+    {"id":"main","label":"实际执行主线"},
+    {"id":"repair","label":"交付中发现并修复"},
+    {"id":"remaining","label":"尚未闭环","variant":"exception"},
+    {"id":"background","label":"历史背景与证据缺口"}
+  ],
+  "mainPath": ["noise","visibility","usable","triage","reliability"],
+  "nodes": [
+    {"id":"noise","lane":"main","col":0,"type":"messagebus","label":"持续故障重播","sublabel":"ntfy 降噪审计","tag":"历史起点"},
+    {"id":"visibility","lane":"main","col":1,"type":"frontend","label":"看见通知链路","sublabel":"指标、面板与规则","tag":"用户追加"},
+    {"id":"usable","lane":"main","col":2,"type":"frontend","label":"公网面板可用","sublabel":"真实浏览器验证","tag":"已验证"},
+    {"id":"triage","lane":"main","col":3,"type":"frontend","label":"告警一键定位","sublabel":"原文、实例、对象证据","tag":"已验证"},
+    {"id":"reliability","lane":"main","col":4,"type":"backend","label":"回到可靠告警","sublabel":"修根因，再验送达","tag":"下一步"},
+    {"id":"origin","lane":"repair","col":2,"type":"security","label":"Origin 403","sublabel":"精确来源放行","tag":"已修复"},
+    {"id":"links","lane":"repair","col":3,"type":"backend","label":"下钻与口径缺陷","sublabel":"编码、变量、对象标签","tag":"已修复"},
+    {"id":"backup","lane":"remaining","col":3,"width":142,"type":"database","label":"CNPG 无可用备份","sublabel":"恢复能力尚未建立","tag":"最高优先"},
+    {"id":"delivery","lane":"remaining","col":4,"type":"messagebus","label":"终端送达与覆盖","sublabel":"手机、dead-man、宿主","tag":"尚未验证"},
+    {"id":"silo","lane":"background","col":0,"width":148,"type":"cloud","label":"Silo 与 Pangolin","sublabel":"更早部署及登录分支","tag":"引用记录称完成"},
+    {"id":"prompt","lane":"background","col":1,"width":156,"type":"external","label":"标题：prompt 违规","sublabel":"缺原文与拒绝证据","tag":"从未诊断"}
+  ],
+  "edges": [
+    {"id":"audit-to-visibility","from":"noise","to":"visibility","role":"main","label":"展示当前策略","variant":"emphasis"},
+    {"id":"visibility-to-usable","from":"visibility","to":"usable","role":"main","label":"修复页面报错","variant":"emphasis"},
+    {"id":"usable-to-triage","from":"usable","to":"triage","role":"main","label":"明确追加下钻","variant":"emphasis"},
+    {"id":"triage-to-reliability","from":"triage","to":"reliability","role":"main","label":"不再只加面板","variant":"emphasis"},
+    {"id":"origin-branch","from":"usable","to":"origin","role":"branch","label":"阻碍交付"},
+    {"id":"links-branch","from":"triage","to":"links","role":"branch","label":"点击验收发现"},
+    {"id":"backup-discovered","from":"links","to":"backup","role":"branch","label":"证据揭示真问题"},
+    {"id":"delivery-gap","from":"reliability","to":"delivery","role":"branch","label":"仍欠端到端闭环","route":"outside-right","channelX":1100}
+  ],
+  "cards": [
+    {"dot":"emerald","title":"已完成的边界","items":["7 张 Grafana 页面已部署并回读一致","告警原文 → 精确实例 → 对象面板 / 日志","展示可用，不等于故障已修复"]},
+    {"dot":"amber","title":"下一步先后","items":["先复核当前备份缺口与恢复目标","获准后建立备份并做隔离恢复演练","再验证真实通知送达及独立 dead-man"]},
+    {"dot":"slate","title":"证据边界","items":["最早原始对话只剩引用摘要","prompt 违规标题与运维正文不一致","本图是交接快照，不是实时健康证明"]}
+  ]
+}

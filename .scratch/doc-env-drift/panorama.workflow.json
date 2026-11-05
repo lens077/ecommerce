@@ -1,0 +1,43 @@
+{
+  "schema_version": 2,
+  "diagram_type": "workflow",
+  "meta": {
+    "title": "代码与文档漂移：问题主线与交接边界",
+    "locale": "zh-CN",
+    "quality_profile": "showcase"
+  },
+  "lanes": [
+    { "id": "main", "label": "原始问题主线" },
+    { "id": "branches", "label": "执行中分叉" },
+    { "id": "limits", "label": "未闭环与低把握", "variant": "exception" }
+  ],
+  "mainPath": ["question", "evidence", "correction", "guardrails", "local-proof", "next-step"],
+  "nodes": [
+    { "id": "question", "lane": "main", "col": 0, "type": "external", "label": "最初问题", "sublabel": "代码／TECH／环境漂移" },
+    { "id": "evidence", "lane": "main", "col": 1, "type": "database", "label": "核对证据", "sublabel": "源码＋只读环境采样" },
+    { "id": "correction", "lane": "main", "col": 2, "type": "backend", "label": "关键偏差已修", "sublabel": "目标／实现／观测分开" },
+    { "id": "guardrails", "lane": "main", "col": 3, "type": "security", "label": "防线已落地", "sublabel": "生成校验＋文档责任门禁" },
+    { "id": "local-proof", "lane": "main", "col": 4, "type": "backend", "label": "本地验证通过", "sublabel": "不等于远端强制生效" },
+    { "id": "next-step", "lane": "main", "col": 5, "type": "frontend", "label": "回到主线", "sublabel": "先验证强制边界再扩围" },
+    { "id": "runtime-route", "lane": "branches", "col": 1, "type": "cloud", "label": "环境查询工具化", "sublabel": "按需分区，不存快照副本" },
+    { "id": "gate-repair", "lane": "branches", "col": 3, "type": "backend", "label": "附带修复门禁", "sublabel": "异常吞错／隔离／误报" },
+    { "id": "semantic-gap", "lane": "limits", "col": 2, "type": "external", "label": "语义待审", "sublabel": "未全仓覆盖；业务仍待办" },
+    { "id": "remote-gap", "lane": "limits", "col": 4, "type": "security", "label": "最不确定的闭环", "sublabel": "真实 CI／保护／协议验收" }
+  ],
+  "edges": [
+    { "from": "question", "to": "evidence", "variant": "emphasis" },
+    { "from": "evidence", "to": "correction", "variant": "emphasis" },
+    { "from": "correction", "to": "guardrails", "variant": "emphasis" },
+    { "from": "guardrails", "to": "local-proof", "variant": "emphasis" },
+    { "from": "local-proof", "to": "next-step", "variant": "emphasis" },
+    { "from": "evidence", "to": "runtime-route", "label": "减少重复搜索", "variant": "dashed" },
+    { "from": "guardrails", "to": "gate-repair", "label": "验证中发现", "variant": "dashed" },
+    { "from": "correction", "to": "semantic-gap", "label": "修复范围有限", "variant": "security" },
+    { "from": "local-proof", "to": "remote-gap", "label": "尚缺实证", "variant": "security" }
+  ],
+  "cards": [
+    { "dot": "emerald", "title": "已解决", "items": ["关键环境与架构表述冲突", "生成块漂移与指定文档漏评估"] },
+    { "dot": "amber", "title": "未解决", "items": ["全仓语义一致性与真实业务缺陷", "远端门禁强制、持续环境健康"] },
+    { "dot": "cyan", "title": "下一步", "items": ["隔离候选改动，验证漏拦与误报", "获授权后做远端红绿验证，再按风险扩围"] }
+  ]
+}

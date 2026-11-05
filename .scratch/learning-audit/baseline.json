@@ -1,0 +1,99 @@
+{
+  "schema": "learning-audit-baseline/1.0",
+  "collected_at": "2026-10-31T08:47:00+08:00",
+  "collected_until": "2026-10-31T09:05:00+08:00",
+  "repository": {
+    "root": "/Users/lens/lens077/ecommerce",
+    "branch": "main",
+    "head": "7fe3294c000fe852e5f4c1f643e1ba09acde947e",
+    "head_subject": "feat(consumer): :sparkles: 标签页过期检测——发现服务器新构建时提示刷新",
+    "head_committed_at": "2026-10-31T05:10:27+08:00",
+    "worktree_dirty_entries": 34,
+    "worktree_note": "18 modified (docs/learning/*, frontend/Makefile, scripts/context-progress-baseline.txt) + 16 untracked; no staged changes; results describe main + uncommitted worktree"
+  },
+  "tools": {
+    "go": "1.27.3 darwin/arm64",
+    "node": "v26.8.1",
+    "pnpm": "12.15.0",
+    "docker": "29.9.2",
+    "kubectl_client": "v1.37.2",
+    "helm": "v4.3.1",
+    "argocd_cli": "v3.5.6",
+    "python": "3.14.7",
+    "os": "darwin 27.2.0 arm64"
+  },
+  "checks": {
+    "verify_quick": {
+      "command": "scripts/verify-quick.sh",
+      "ran_at": "2026-10-31T08:50:00+08:00",
+      "exit_code": 0,
+      "results": {
+        "backend_build_vet_test_short": "green (10s)",
+        "frontend_pnpm_ready": "green (29s)",
+        "sensitive_data_worktree_and_history": "green (29s)",
+        "notices_freshness": "green (29s)",
+        "deploy_manifests_kyaml_and_parity": "green (29s)"
+      }
+    },
+    "structcheck_deployment_lists": "green (included in backend test -short)",
+    "go_build_vet": "green (via verify-quick backend chain)"
+  },
+  "inventory_counts": {
+    "backend_services": 10,
+    "service_names": ["address", "behavior", "cart", "inventory", "merchant", "order", "payment", "product", "search", "user"],
+    "api_proto_packages": 13,
+    "migration_sql_files": 16,
+    "services_with_migrations": 9,
+    "helm_subcharts": 12,
+    "github_workflows": 10,
+    "frontend_apps": ["consumer", "merchant", "admin", "desktop", "consumer-next"]
+  },
+  "runtime_snapshot": {
+    "cluster_context": "kubernetes-admin@kubernetes",
+    "kubectl_mode": "read-only (get/ps only)",
+    "ecommerce_deployments": 13,
+    "backend_image_line": "1.8.1 pinned digests (10 services)",
+    "frontend_image_line": "1.7.13 pinned digests",
+    "anomalies_observed": [
+      "behavior: two ReplicaSets, both pods 0/1 Running for >=4h (stuck rollout)",
+      "argocd Application/ecommerce-prod: Synced / Degraded",
+      "kafka ns cdc-reconcile-es CronJob: 3 consecutive Error batches, latest batch Completed"
+    ],
+    "cdc_connectors": {
+      "ecommerce-postgres-source": "READY True (Debezium PostgresConnector)",
+      "ecommerce-elasticsearch-sink": "READY True (ElasticsearchSinkConnector)"
+    },
+    "manifest_repo": {
+      "path": "/Users/lens/lens077/kubernetes",
+      "branch": "main",
+      "head": "7d72643b"
+    }
+  },
+  "sibling_repos": {
+    "control-tower": {
+      "path": "/Users/lens/lens077/control-tower",
+      "accessible": true,
+      "branch": "main",
+      "head": "514aaf1",
+      "head_committed_at": "2026-10-25T02:14:09+08:00"
+    },
+    "kubernetes": { "path": "/Users/lens/lens077/kubernetes", "accessible": true, "head": "7d72643b" },
+    "cloud-native-deploy": { "path": "/Users/lens/lens077/cloud-native-deploy", "accessible": true, "head": "1884d49", "note": "README lists it as infra deploy repo; CDC manifests live in kubernetes repo instead" },
+    "docker-postgres-kafka-es-streaming-pipeline": { "path": "/Users/lens/lens077/docker-postgres-kafka-es-streaming-pipeline", "accessible": true, "verified_against_cluster": false }
+  },
+  "deliverables": [
+    ".scratch/learning-audit/repository-inventory.md",
+    ".scratch/learning-audit/service-catalog.md",
+    ".scratch/learning-audit/runtime-evidence.md",
+    ".scratch/learning-audit/gaps-and-risks.md",
+    ".scratch/learning-audit/baseline.json"
+  ],
+  "unverified": [
+    "connector task-level states / sink lag / replication slot lag",
+    "ES alias reconciliation and incremental latency",
+    "image digest to main commit traceability",
+    "config center replica content vs conf.proto (behavior suspected)",
+    "pg-main / gorse / silo / dragonfly live state",
+    "TODO P0 defects (inventory reserve, order persistence, address ownership, merchant approval) — cited from TODO/security reports, not re-verified"
+  ]
+}
