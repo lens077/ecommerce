@@ -17,7 +17,8 @@ import (
 	"strings"
 	"time"
 
-	"connectrpc.com/connect"
+	"connectrpc.com/connect/v2"
+	"connectrpc.com/connect/v2/connecthttp"
 	configv1 "github.com/lens077/control-tower/api/config/v1"
 	"github.com/lens077/control-tower/api/config/v1/configv1connect"
 	"github.com/lens077/control-tower/sdk/configsource"
@@ -87,7 +88,7 @@ func main() {
 	ctx, cancel := context.WithTimeout(context.Background(), *timeout)
 	defer cancel()
 
-	machine := configv1connect.NewConfigServiceClient(http.DefaultClient, cfg.ConfigCenter.Address)
+	machine := configv1connect.NewConfigServiceClient(connect.NewClient(connecthttp.NewTransport(http.DefaultClient, cfg.ConfigCenter.Address)))
 	if !*write {
 		if *snapshot == "" {
 			auditRemote(ctx, machine, cfg.ConfigCenter.ServiceToken, *environment)
@@ -104,7 +105,7 @@ func main() {
 	if adminToken == "" {
 		fail("-write requires CONFIG_CENTER_ADMIN_TOKEN")
 	}
-	admin := configv1connect.NewConfigServiceClient(newAdminHTTPClient(adminToken), cfg.ConfigCenter.Address)
+	admin := configv1connect.NewConfigServiceClient(connect.NewClient(connecthttp.NewTransport(newAdminHTTPClient(adminToken), cfg.ConfigCenter.Address)))
 	writeSnapshot(ctx, admin, machine, cfg.ConfigCenter.ServiceToken, *snapshot, *environment)
 }
 
@@ -139,7 +140,7 @@ func runDrift(ctx context.Context, matrixPath, selectorPattern, environment stri
 			rc = 1
 			continue
 		}
-		client := configv1connect.NewConfigServiceClient(http.DefaultClient, cfg.ConfigCenter.Address)
+		client := configv1connect.NewConfigServiceClient(connect.NewClient(connecthttp.NewTransport(http.DefaultClient, cfg.ConfigCenter.Address)))
 		a, err := getAudit(ctx, client, cfg.ConfigCenter.ServiceToken, service, environment)
 		if err != nil {
 			fmt.Printf("SKIP    %-10s 读取 %s/%s/%s 失败: %v\n", service, service, environment, configKey, connect.CodeOf(err))
@@ -210,7 +211,7 @@ func writeSnapshot(
 			fail("crop %s/%s: %v", service, environment, err)
 		}
 
-		_, err = admin.PutKey(ctx, connect.NewRequest(&configv1.PutKeyRequest{
+		_, err = admin.PutKey(ctx, &configv1.PutKeyRequest{
 			Namespace:   service,
 			Environment: environment,
 			Key:         configKey,
@@ -218,7 +219,7 @@ func writeSnapshot(
 			Value:       string(cropped),
 			Comment:     "retire Consul KV Bootstrap source",
 			Description: "service Bootstrap; Config Center is the sole source",
-		}))
+		})
 		if err != nil {
 			fail("write %s/%s/%s: %v", service, environment, configKey, err)
 		}
@@ -234,22 +235,28 @@ func writeSnapshot(
 	}
 }
 
+// tokenContext 把机器 token 写进客户端 CallInfo,随 ctx 传播(v2 语义)。
+func tokenContext(ctx context.Context, token string) context.Context {
+	ctx, info := connect.NewClientContext(ctx)
+	if token != "" {
+		info.RequestHeader().Set("x-config-center-service-token", token)
+	}
+	return ctx
+}
+
 func getAudit(
 	ctx context.Context,
 	client configv1connect.ConfigServiceClient,
 	token, service, environment string,
 ) (audit, error) {
-	req := connect.NewRequest(&configv1.GetKeyRequest{
+	// v2 的请求头随 ctx 传播,不再挂在消息包装上。
+	resp, err := client.GetKey(tokenContext(ctx, token), &configv1.GetKeyRequest{
 		Namespace: service, Environment: environment, Key: configKey,
 	})
-	if token != "" {
-		req.Header().Set("x-config-center-service-token", token)
-	}
-	resp, err := client.GetKey(ctx, req)
 	if err != nil {
 		return audit{}, err
 	}
-	entry := resp.Msg.GetEntry()
+	entry := resp.GetEntry()
 	if entry.GetValue() == "" {
 		return audit{}, errors.New("entry is empty")
 	}
