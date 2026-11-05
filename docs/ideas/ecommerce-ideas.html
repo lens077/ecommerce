@@ -1,0 +1,571 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>灯市 · 电商创意清单（Idealab 式 · 带研究依据）</title>
+<style>
+  :root{
+    --paper:#FAF6EF; --ink:#1F1B18; --ink-soft:#5C534C; --line:#E6DFD3;
+    --cinnabar:#B3312A; --cinnabar-soft:#F6E4E1; --gold:#B08D2A; --gold-soft:#F7EFD8;
+    --jade:#2F6B5C; --jade-soft:#E1EFE9; --indigo:#33507A; --indigo-soft:#E4EAF4;
+    --card:#FFFDF9;
+  }
+  *{box-sizing:border-box}
+  body{
+    margin:0; background:var(--paper); color:var(--ink);
+    font-family:-apple-system,BlinkMacSystemFont,"PingFang SC","Hiragino Sans GB","Microsoft YaHei",sans-serif;
+    line-height:1.65; -webkit-font-smoothing:antialiased;
+  }
+  .wrap{max-width:1080px;margin:0 auto;padding:48px 24px 96px}
+  header{border-bottom:2px solid var(--ink);padding-bottom:24px;margin-bottom:8px}
+  .seal{
+    display:inline-flex;align-items:center;justify-content:center;
+    width:44px;height:44px;background:var(--cinnabar);color:#fff;
+    font-weight:900;font-size:20px;letter-spacing:-1px;border-radius:3px;margin-right:14px;
+  }
+  h1{font-size:30px;margin:0;display:flex;align-items:center;font-weight:900;letter-spacing:-.5px}
+  .sub{color:var(--ink-soft);font-size:14px;margin-top:12px;max-width:760px}
+  .sub b{color:var(--ink)}
+  .meta-line{font-size:12.5px;color:var(--ink-soft);margin-top:10px}
+  .meta-line code{background:#F0EADF;padding:1px 5px;border-radius:2px;font-size:12px}
+
+  /* 筛选栏 */
+  .filters{position:sticky;top:0;background:var(--paper);padding:18px 0 14px;border-bottom:1px solid var(--line);
+    margin-bottom:28px;z-index:5}
+  .frow{display:flex;flex-wrap:wrap;gap:8px;align-items:center;margin-bottom:8px}
+  .flabel{font-size:12px;color:var(--ink-soft);width:64px;flex:none;font-weight:700}
+  .chip{border:1px solid var(--line);background:#fff;color:var(--ink-soft);
+    padding:4px 11px;border-radius:999px;font-size:12.5px;cursor:pointer;user-select:none;
+    transition:all .12s}
+  .chip:hover{border-color:var(--ink-soft);color:var(--ink)}
+  .chip.on{background:var(--ink);color:#fff;border-color:var(--ink)}
+  input#q{flex:1;min-width:180px;border:1px solid var(--line);background:#fff;border-radius:4px;
+    padding:7px 11px;font-size:13px;color:var(--ink);font-family:inherit}
+  input#q:focus{outline:none;border-color:var(--cinnabar)}
+  .count{font-size:12px;color:var(--ink-soft);margin-top:6px}
+
+  /* 卡片 */
+  .grid{display:grid;gap:14px}
+  .card{background:var(--card);border:1px solid var(--line);border-radius:4px;padding:18px 20px;
+    border-left:4px solid var(--cinnabar)}
+  .card.hide{display:none}
+  .chead{display:flex;gap:14px;align-items:flex-start;cursor:pointer}
+  .num{font-size:12px;font-weight:800;color:var(--cinnabar);flex:none;padding-top:4px;min-width:26px}
+  .ttl{font-size:17px;font-weight:800;margin:0;letter-spacing:-.2px}
+  .pitch{font-size:13.5px;color:var(--ink-soft);margin:5px 0 0}
+  .fit{margin-left:auto;flex:none;text-align:center;padding-top:2px}
+  .fit b{display:block;font-size:19px;line-height:1;color:var(--cinnabar);font-weight:900}
+  .fit span{font-size:10px;color:var(--ink-soft)}
+  .tags{display:flex;flex-wrap:wrap;gap:6px;margin:12px 0 0 40px}
+  .tag{font-size:11px;padding:2px 8px;border-radius:2px;background:#F0EADF;color:var(--ink-soft)}
+  .tag.cap{background:var(--gold-soft);color:#7A6116}
+  .tag.time{background:var(--indigo-soft);color:var(--indigo)}
+  .tag.team{background:var(--jade-soft);color:var(--jade)}
+  .tag.kind{background:var(--cinnabar-soft);color:var(--cinnabar)}
+
+  .body{margin:14px 0 0 40px;display:none;border-top:1px dashed var(--line);padding-top:14px}
+  .card.open .body{display:block}
+  .sec{margin-bottom:13px}
+  .sec h4{margin:0 0 5px;font-size:12px;letter-spacing:.06em;color:var(--cinnabar);font-weight:800}
+  .sec ul{margin:0;padding-left:17px}
+  .sec li{font-size:13.5px;margin-bottom:4px;color:var(--ink)}
+  .sec li .src{color:var(--ink-soft);font-size:12px}
+  .sec p{font-size:13.5px;margin:0}
+  .step{background:#F4EFE6;border-left:3px solid var(--gold);padding:9px 12px;font-size:13.5px;border-radius:2px}
+  .risk{color:#8A3B33;font-size:13.5px}
+  .toggle{font-size:11.5px;color:var(--ink-soft);margin-left:40px;margin-top:10px;display:inline-block}
+  footer{margin-top:56px;padding-top:20px;border-top:1px solid var(--line);font-size:12.5px;color:var(--ink-soft)}
+  footer b{color:var(--ink)}
+</style>
+</head>
+<body>
+<div class="wrap">
+
+<header>
+  <h1><span class="seal">灯市</span>电商创意清单 · 12 条</h1>
+  <div class="sub">
+    模仿 Idealab 的输出格式，但<b>全部锚定「灯市」仓库的真实资产</b>：10 个微服务、PG 单一真相源 →
+    Debezium → Kafka → ES 的搜索 CDC、Gorse 推荐、OpenFGA 关系授权、Casdoor 会话、Next.js SSR、Tauri 商家端。
+    每条创意给出研究依据、可复用资产、最小第一步，以及最可能的死法。
+  </div>
+  <div class="meta-line">
+    生成于 2026-10-24 · <code>PRODUCT.md</code> / <code>TODO.md</code> / <code>.service-matrix.yaml</code> 现状 ·
+    外部依据为 2026 年公开数据与法规时间表
+  </div>
+</header>
+
+<div class="filters">
+  <div class="frow"><span class="flabel">启动资本</span>
+    <span class="chip" data-f="cap" data-v="低">低（&lt;5 万）</span>
+    <span class="chip" data-f="cap" data-v="中">中（5–30 万）</span>
+    <span class="chip" data-f="cap" data-v="高">高（&gt;30 万）</span>
+  </div>
+  <div class="frow"><span class="flabel">上市时间</span>
+    <span class="chip" data-f="time" data-v="快">快（≤1 月）</span>
+    <span class="chip" data-f="time" data-v="中">中（1–3 月）</span>
+    <span class="chip" data-f="time" data-v="慢">慢（3 月+）</span>
+  </div>
+  <div class="frow"><span class="flabel">团队</span>
+    <span class="chip" data-f="team" data-v="1">1 人</span>
+    <span class="chip" data-f="team" data-v="2">2–3 人</span>
+    <span class="chip" data-f="team" data-v="4">4 人+</span>
+  </div>
+  <div class="frow"><span class="flabel">类型</span>
+    <span class="chip" data-f="kind" data-v="流量">流量入口</span>
+    <span class="chip" data-f="kind" data-v="B端">B 端 / 合规</span>
+    <span class="chip" data-f="kind" data-v="供给">供给侧效率</span>
+    <span class="chip" data-f="kind" data-v="交易">交易与决策</span>
+    <span class="chip" data-f="kind" data-v="品牌">品牌形态</span>
+  </div>
+  <div class="frow"><input id="q" placeholder="搜关键词：agent / 库存 / 出海 / 上架 / 策展 …"></div>
+  <div class="count" id="count"></div>
+</div>
+
+<div class="grid" id="grid">
+
+<!-- 1 -->
+<div class="card" data-cap="低" data-time="快" data-team="1" data-kind="流量">
+  <div class="chead">
+    <div class="num">01</div>
+    <div>
+      <h3 class="ttl">Agent-Ready 商品层：把搜索投影直接导出成 AI 能读的商品资产</h3>
+      <p class="pitch">不做一个 AI 导购，而是让 ChatGPT / Perplexity / 豆包的购物助手能选中你的商品——补全 Schema.org、发 llms.txt、开一个只读 MCP server。</p>
+    </div>
+    <div class="fit"><b>96</b><span>资产契合</span></div>
+  </div>
+  <div class="tags">
+    <span class="tag cap">资本 低</span><span class="tag time">≤1 月</span><span class="tag team">1 人</span>
+    <span class="tag kind">流量入口</span><span class="tag">SEO / AEO</span>
+  </div>
+  <div class="body">
+    <div class="sec"><h4>研究依据</h4><ul>
+      <li>完整的 Schema.org 商品标记让商品<b>被 AI 代理选中推荐的概率约 6.4 倍</b>，标记缺失等于在这个渠道被整体排除。<span class="src">（2026 代理式电商实战手册 / Kilowott）</span></li>
+      <li>AI 带来的零售流量 <b>2026 Q1 同比 +393%</b>，转化比传统搜索高约 <b>42%</b>；Shopify 平台口径 AI 引流转单量同比近 <b>13 倍</b>。<span class="src">（Adobe / Shopify 遥测，2026）</span></li>
+      <li>供给极度稀缺：<b>仅 61%</b> 品牌完成 Schema.org 商品标记，<b>34%</b> 发布 llms.txt，<b>9%</b> 跑 MCP server；<b>83%</b> 品牌不支持任何 agent 支付协议。<span class="src">（Web Tonic 2026 报告）</span></li>
+      <li>关键节奏判断：agent 活动 <b>76% 落在商品页与搜索路由</b>，结账只占 <b>2.6%</b>——先解决「被发现」，不必先做 agent 支付。<span class="src">（HUMAN Security，2026-07）</span></li>
+    </ul></div>
+    <div class="sec"><h4>为什么是你（资产契合）</h4><ul>
+      <li><code>products.search_catalog</code> 是策展投影的<b>唯一真相源</b>，PG trigger 维护 + CDC 搬运——一份数据同时喂 SSR、ES、agent feed，不需要新建数据管道。</li>
+      <li>consumer-next 已 SSR，AI 爬虫<b>不执行 JavaScript</b>，SSR 是硬前提，你已具备；<code>product-jsonld.ts</code> 已存在，只差字段正确。</li>
+      <li>TODO 里「商品详情 SKU 字段映射与结构化数据」正是这条的前置——<b>顺手把技术债变成增长项</b>。</li>
+    </ul></div>
+    <div class="sec"><h4>最小第一步</h4>
+      <div class="step">修 <code>GetProductDetail</code> 的 SKU 映射 → JSON-LD 补全 <code>Product / Offer / AggregateRating / BreadcrumbList</code>（无可靠可售依据时省略 availability，别造假）→ 由 <code>search_catalog</code> 生成 <code>/llms.txt</code> 与商品静态页 → 挂一个只读 MCP endpoint（仅 SearchCatalog + 库存查询，不含写操作）。</div>
+    </div>
+    <div class="sec"><h4>怎么死</h4><p class="risk">协议层仍在混战（ACP / UCP / MCP 五套并存），押注单一厂商 UI 会白做；且 AI 流量绝对值仍小（约 0.14% 访问量），把它当主渠道会失望。正确姿势是「数据结构做对，界面不押注」。</p></div>
+  </div>
+  <span class="toggle">展开依据与执行 ▾</span>
+</div>
+
+<!-- 2 -->
+<div class="card" data-cap="低" data-time="中" data-team="1" data-kind="流量">
+  <div class="chead">
+    <div class="num">02</div>
+    <div>
+      <h3 class="ttl">价格诚实度披露：用 CDC 价格流做「先涨后降」照妖镜</h3>
+      <p class="pitch">你的 CDC 管道天然拥有每一次改价记录。把它变成商品页上的价格史与可引用事实，让 AI 助手回答「这个价划算吗」时引用你。</p>
+    </div>
+    <div class="fit"><b>90</b><span>资产契合</span></div>
+  </div>
+  <div class="tags">
+    <span class="tag cap">资本 低</span><span class="tag time">1–3 月</span><span class="tag team">1 人</span>
+    <span class="tag kind">流量入口</span><span class="tag">信任</span>
+  </div>
+  <div class="body">
+    <div class="sec"><h4>研究依据</h4><ul>
+      <li>消费者信任是 agentic commerce 的<b>近期天花板</b>：<b>65%</b> 愿意让 AI 比价，只有 <b>14%</b> 愿意让 AI 无人监督下单——「比价」是有真实需求的高意愿场景。<span class="src">（Visa 2026 全球数字购物指数，n=5241）</span></li>
+      <li>AI 助手回答「值不值得买」时缺乏价格史数据源，谁提供可引用的价格事实，谁就进入答案。</li>
+    </ul></div>
+    <div class="sec"><h4>为什么是你</h4><ul>
+      <li>2026-09-23 已用<b>真实 SKU 可逆改价</b>验证 PG → Debezium → Kafka → ES 全链路——价格变更事件流已经在跑，只需落一张 <code>price_history</code> 表（消费者侧只读，不改业务语义）。</li>
+      <li>与创意 01 叠加：价格史作为结构化数据一并进 JSON-LD，形成「别家没有的字段」。</li>
+    </ul></div>
+    <div class="sec"><h4>最小第一步</h4>
+      <div class="step">在商品服务加一张只读价格史表（由改价事务写入，不动现有 CDC）→ 商品页展示近 180 天价格带与最低价 → 促销价必须带「30 天内最低」标注 → 同步进 JSON-LD。</div>
+    </div>
+    <div class="sec"><h4>怎么死</h4><p class="risk">商家会恨它——尤其靠「先涨后降」玩满减的商家。这是平台与商家的利益冲突点，需要产品层拍板：做，就得接受部分商家流失；不做，这只是个技术 demo。</p></div>
+  </div>
+  <span class="toggle">展开依据与执行 ▾</span>
+</div>
+
+<!-- 3 -->
+<div class="card" data-cap="低" data-time="快" data-team="1" data-kind="交易">
+  <div class="chead">
+    <div class="num">03</div>
+    <div>
+      <h3 class="ttl">库存诚实度：把库存变更流水变成消费者的补货预期</h3>
+      <p class="pitch">「这件什么时候补货」是电商最常被问、最少被回答的问题。你有库存事件流，可以给出真实答案，而不只是「缺货」。</p>
+    </div>
+    <div class="fit"><b>84</b><span>资产契合</span></div>
+  </div>
+  <div class="tags">
+    <span class="tag cap">资本 低</span><span class="tag time">≤1 月</span><span class="tag team">1 人</span>
+    <span class="tag kind">交易与决策</span><span class="tag">信任</span>
+  </div>
+  <div class="body">
+    <div class="sec"><h4>研究依据</h4><ul>
+      <li>本仓库现状（非市场数据）：<code>inventory.stock</code> 的 <code>Reserve</code>/<code>ReleaseReserve</code> 仍是桩，库存由业务流入；但正因为库存是事件驱动模型，<b>补建流水表几乎零成本</b>，而多数平台的库存是缓存值，补不出历史。</li>
+      <li>缺货页是电商转化漏斗最大的静默流失点，而「到货通知」是唯一标配补救手段——它有需求但体验粗陋。</li>
+    </ul></div>
+    <div class="sec"><h4>为什么是你</h4><ul>
+      <li>库存变更天然可入 <code>outbox</code>（线 B 待触发的第一个真实跨服务副作用，正好拿它当首个事件契约的试点）。</li>
+      <li>前端已有 SSR 商品页、到货提醒可复用既有 notification 设计的空位。</li>
+    </ul></div>
+    <div class="sec"><h4>最小第一步</h4>
+      <div class="step">先修完 <code>Reserve</code> 原子条件更新（P0，本来就要做）→ 同事务写 <code>stock_ledger</code> → 商品页展示「近 30 天补货 N 次 / 平均补货周期 X 天」→ 缺货页给出基于真实节奏的到货预估区间，并标注为预估。</div>
+    </div>
+    <div class="sec"><h4>怎么死</h4><p class="risk">冷启动期商品少、库存数据稀疏，统计口径没意义。必须设最低样本门槛（如少于 3 次补货就不展示），否则就是拿噪声当承诺。</p></div>
+  </div>
+  <span class="toggle">展开依据与执行 ▾</span>
+</div>
+
+<!-- 4 -->
+<div class="card" data-cap="中" data-time="中" data-team="2" data-kind="B端">
+  <div class="chead">
+    <div class="num">04</div>
+    <div>
+      <h3 class="ttl">出口合规护照：为商家生成欧盟 DPP 就绪的商品档案</h3>
+      <p class="pitch">纺织、家具、轮胎——中国出口主力品类全在欧盟数字产品护照首批名单。淘宝京东不会为中小出口商做这件事，你做就成了供给侧的独家入口。</p>
+    </div>
+    <div class="fit"><b>88</b><span>资产契合</span></div>
+  </div>
+  <div class="tags">
+    <span class="tag cap">资本 中</span><span class="tag time">1–3 月</span><span class="tag team">2–3 人</span>
+    <span class="tag kind">B 端 / 合规</span><span class="tag">出海</span><span class="tag">窗口期</span>
+  </div>
+  <div class="body">
+    <div class="sec"><h4>研究依据</h4><ul>
+      <li>欧盟 DPP 注册系统 <b>2026-07-20 已正式运行</b>；<b>2027-02-18 电池护照率先强制</b>（EV / 轻型交通 / &gt;2kWh 工业电池）；纺织、铝、轮胎 2027 Q3–Q4 出授权法案，<b>2029 强制</b>；家具 2028；玩具 2030。<span class="src">（欧盟委员会官方时间表；中国海关总署国门时报 2026-09）</span></li>
+      <li>规则性质是<b>准入</b>而非费用：CBAM 管「价」，DPP 管「格」，<b>无照连上场资格都没有</b>；进口产品唯一注册标识在<b>欧盟海关环节核验</b>，一码不通货难入关。</li>
+      <li>关键机制：注册系统<b>只存标识与索引，数据由企业自持自管</b>——「数据不必出厂」，平台有做数据托管与生成层的空间。<span class="src">（国门时报，2026-09-17）</span></li>
+      <li>先行者可<b>把合规成本转化为品牌信用</b>：透明化催生维修、翻新、再制造与绿色溢价。</li>
+    </ul></div>
+    <div class="sec"><h4>为什么是你</h4><ul>
+      <li>OpenFGA 关系授权天然实现 DPP 的<b>分层访问</b>（公开层 / 买家层 / 监管层 / 维修者层），这是法规明确要求的按角色取数。</li>
+      <li>merchant 域已有申请/审批骨架（信用代码、法人信息）+ product 域 SKU/规格模型 + 商品投影，护照可作为<b>商品的附加属性集</b>扩展，不必新建服务。</li>
+      <li>i18n 路由（<code>/en/product/{spuCode}</code>）已设计，护照页天然是英文面向海外买家的页面。</li>
+    </ul></div>
+    <div class="sec"><h4>最小第一步</h4>
+      <div class="step">选一个品类（纺织最贴中国出口、强制在 2029 但有 18 个月过渡）→ 定义护照字段集（材质成分、产地、再生含量、认证编号、碳足迹等级）→ 商家端录入 + OpenFGA 分级可见 → 生成一个可扫码的只读护照页（SSR，英文）→ 先做「就绪度评分」而非「合规认证」，规避法律风险。</div>
+    </div>
+    <div class="sec"><h4>怎么死</h4><p class="risk">合规是雷区：法规明说<b>注册不构成合规证明</b>，语义目录未配齐、时间表屡有延后。绝不能声称「帮你通过认证」，只能做「数据就绪与档案托管」，措辞错一次就是法律风险。另外要真有出口型商家供给，否则空转。</p></div>
+  </div>
+  <span class="toggle">展开依据与执行 ▾</span>
+</div>
+
+<!-- 5 -->
+<div class="card" data-cap="低" data-time="中" data-team="2" data-kind="品牌">
+  <div class="chead">
+    <div class="num">05</div>
+    <div>
+      <h3 class="ttl">「灯会」策展货架：让品牌名变成一个可编排的产品形态</h3>
+      <p class="pitch">灯市之所以叫灯市，是因为灯会是有主题、有期限、有人挑过的集市。把 <code>search_catalog</code> 投影升级成可编排的主题货架，运营、商家甚至 KOL 都能开一场「灯会」。</p>
+    </div>
+    <div class="fit"><b>82</b><span>资产契合</span></div>
+  </div>
+  <div class="tags">
+    <span class="tag cap">资本 低</span><span class="tag time">1–3 月</span><span class="tag team">2–3 人</span>
+    <span class="tag kind">品牌形态</span><span class="tag">策展</span><span class="tag">SEO</span>
+  </div>
+  <div class="body">
+    <div class="sec"><h4>研究依据</h4><ul>
+      <li>AI 带来的会话<b>超半数直接落到商品页</b>（约 56%，自然搜索仅约 20%）——说明「单一商品页」是入口，但「集合页」仍有品牌与 SEO 价值。<span class="src">（Shopify Q1 2026 遥测）</span></li>
+      <li>综合商城的最大弱项是「什么都卖、什么都不像」；策展（curation）是把货架变成立场的最小成本手段，也是对抗纯价格竞争的少数有效路径。</li>
+    </ul></div>
+    <div class="sec"><h4>为什么是你</h4><ul>
+      <li><b>你的投影表名就叫 <code>search_catalog</code>（策展投影）</b>——概念已经写在数据模型里了，只差一层编排能力。</li>
+      <li>consumer-next SSR + i18n 路由 + JSON-LD 已就绪，主题集页天然可索引、可分享、可生成 <code>ItemList</code> 结构化数据。</li>
+      <li>admin 端管类目/规则的权限模型已有，OpenFGA 可直接表达「谁能开灯会、谁能往里放商品」。</li>
+    </ul></div>
+    <div class="sec"><h4>最小第一步</h4>
+      <div class="step">定义 <code>curation_set</code>（主题 / 期限 / 选品规则 / 责任人）→ 先只做人工选品，不做自动规则 → SSR 主题页带 <code>ItemList</code> 结构化数据 + 独立 TDK → 到期自动下架，形成「灯会」节奏感（季节、节气、年货）。</div>
+    </div>
+    <div class="sec"><h4>怎么死</h4><p class="risk">没有商品就没有策展。首页目前还是 <code>DEMO-*</code> 演示商品——策展是放大真实供给的杠杆，不是替代供给的魔法。必须先跨过「真实商品上架」这条线。</p></div>
+  </div>
+  <span class="toggle">展开依据与执行 ▾</span>
+</div>
+
+<!-- 6 -->
+<div class="card" data-cap="中" data-time="慢" data-team="2" data-kind="供给">
+  <div class="chead">
+    <div class="num">06</div>
+    <div>
+      <h3 class="ttl">上架代理：商家丢图丢表，AI 出 SKU / 规格 / 标题 / 类目，人点确认</h3>
+      <p class="pitch">综合商城冷启动的真正瓶颈不是买家，是「谁把货搬上来」。把上架从填表变成审校，供给侧效率提高一个数量级。</p>
+    </div>
+    <div class="fit"><b>85</b><span>资产契合</span></div>
+  </div>
+  <div class="tags">
+    <span class="tag cap">资本 中</span><span class="tag time">3 月+</span><span class="tag team">2–3 人</span>
+    <span class="tag kind">供给侧效率</span><span class="tag">AI</span>
+  </div>
+  <div class="body">
+    <div class="sec"><h4>研究依据</h4><ul>
+      <li>本仓库现状（非市场数据）：<code>product.proto</code> 目前<b>只有 <code>GetProductDetail</code></b>，「商品列表与管理能力」仍是未完成项——也就是说，<b>商家现在根本上不了货</b>。与其照着老设计手写 CRUD，不如直接做成 AI 优先的上架流。</li>
+      <li>agentic commerce 的共识结论：<b>商家必须集中化、结构化、丰富化商品数据</b>（PIM），这比界面或营销更重要——AI 时代商品数据是基础设施。</li>
+    </ul></div>
+    <div class="sec"><h4>为什么是你</h4><ul>
+      <li>契约先行（protobuf + buf.validate）意味着 AI 生成的字段有<b>强校验兜底</b>，幻觉字段会被 validate 拦住——这比自由表单的 AI 应用安全得多。</li>
+      <li>Tauri 桌面壳是长时间操作的商家工作台，适合承载批量导入 + 审校的交互密度。</li>
+      <li>已有 <code>docs/design/copilot/copilot.md</code> 设计与页内助手实现可复用。</li>
+    </ul></div>
+    <div class="sec"><h4>最小第一步</h4>
+      <div class="step">先定 <code>CreateProductDraft</code> / <code>SubmitProduct</code> 的 proto 契约（含 buf.validate 约束）→ 商家上传图/表 → 服务端调模型生成草稿 → <b>草稿必须人工确认才落库</b> → 与「商品列表与管理能力」同批交付，避免做两遍 CRUD。</div>
+    </div>
+    <div class="sec"><h4>怎么死</h4><p class="risk">AI 生成的规格/类目错了会污染整个搜索索引（你的索引由 PG 投影 CDC 而来，脏数据会一路污染到 ES）。必须有「未确认不进 search_catalog」的硬闸，且类目只能从既有类目树里选，不许模型自创类目。</p></div>
+  </div>
+  <span class="toggle">展开依据与执行 ▾</span>
+</div>
+
+<!-- 7 -->
+<div class="card" data-cap="低" data-time="中" data-team="1" data-kind="供给">
+  <div class="chead">
+    <div class="num">07</div>
+    <div>
+      <h3 class="ttl">离线优先的档口工作台：网断了也能改库存、打单</h3>
+      <p class="pitch">真实商家在档口、仓库、展会——Wi-Fi 差的现场，网页后台一卡就没法干活。Tauri 桌面壳 + 本地队列，恢复后幂等同步。</p>
+    </div>
+    <div class="fit"><b>76</b><span>资产契合</span></div>
+  </div>
+  <div class="tags">
+    <span class="tag cap">资本 低</span><span class="tag time">1–3 月</span><span class="tag team">1 人</span>
+    <span class="tag kind">供给侧效率</span><span class="tag">桌面端</span>
+  </div>
+  <div class="body">
+    <div class="sec"><h4>研究依据</h4><ul>
+      <li>本仓库现状（非市场数据）：商家端设计是「桌面浏览器或 Tauri 桌面壳<b>长时间操作</b>工作台」，高频、任务型使用；PRODUCT.md 明确商家是任务型高频角色。</li>
+      <li>幂等基建已在 TODO 中规划：<code>Idempotency-Key</code> + 去重表要推广到 <code>CreatePayment</code>/<code>Reserve</code>——离线回放必须幂等，两者是同一件事。</li>
+    </ul></div>
+    <div class="sec"><h4>为什么是你</h4><ul>
+      <li>Tauri 壳已存在，本地持久化（SQLite/文件）是客户端侧工作，不改动服务端架构。</li>
+      <li>服务端只需支持 Idempotency-Key（本来就要做），离线队列是纯客户端增量。</li>
+    </ul></div>
+    <div class="sec"><h4>最小第一步</h4>
+      <div class="step">选定一个高频离线动作（改库存数量）→ 客户端写本地队列 + 乐观 UI → 服务端先落地 Idempotency-Key 去重表 → 恢复后按序回放，冲突显式提示不静默覆盖。</div>
+    </div>
+    <div class="sec"><h4>怎么死</h4><p class="risk">库存是并发敏感资源，离线回放可能覆盖他人在断网期间的改动。要么限制离线只做「增量调整」不做「赋值」，要么回放时校验版本号并强制人工仲裁。别做「离线下单」——那会引出一整套超卖问题。</p></div>
+  </div>
+  <span class="toggle">展开依据与执行 ▾</span>
+</div>
+
+<!-- 8 -->
+<div class="card" data-cap="低" data-time="快" data-team="1" data-kind="供给">
+  <div class="chead">
+    <div class="num">08</div>
+    <div>
+      <h3 class="ttl">搜索可见性诊断：告诉商家「你的货为什么搜不到」</h3>
+      <p class="pitch">商家最常投诉的一句话，做成工具就成了付费理由。用 ES 的 explain 与字段覆盖率给出可操作建议，而不是一个模糊的曝光数。</p>
+    </div>
+    <div class="fit"><b>80</b><span>资产契合</span></div>
+  </div>
+  <div class="tags">
+    <span class="tag cap">资本 低</span><span class="tag time">≤1 月</span><span class="tag team">1 人</span>
+    <span class="tag kind">供给侧效率</span><span class="tag">SaaS 化</span>
+  </div>
+  <div class="body">
+    <div class="sec"><h4>研究依据</h4><ul>
+      <li>本仓库现状（非市场数据）：已知语义边界问题——<code>ik_smart</code> 把「精华液」当整词，文档里只有「精华」就搜不到。这类问题商家完全无感知，正是诊断工具的价值锚点。</li>
+      <li>AI agent 选品的前提是结构化数据完整度，<b>诊断工具与创意 01 是同一套指标的两面</b>：对内叫诊断，对外叫 agent-readiness。</li>
+    </ul></div>
+    <div class="sec"><h4>为什么是你</h4><ul>
+      <li>搜索走 ES 且有固定查询集相关性基线的规划；<code>search_catalog</code> 投影字段覆盖率可直接计算（缺图率、缺规格名率、缺类目率）。</li>
+      <li>merchant 端骨架已在，一个诊断面板就能挂上去。</li>
+    </ul></div>
+    <div class="sec"><h4>最小第一步</h4>
+      <div class="step">对商家每个 SKU 算三类分：字段完整度、类目正确性、关键词命中（用固定查询集跑一遍看是否进前 N）→ 给出 3 条具体改什么 → 先只报告不干预排序。</div>
+    </div>
+    <div class="sec"><h4>怎么死</h4><p class="risk">诊断工具会暴露排序逻辑、诱导商家针对指标做弊（堆词）。只给「补什么字段」这类正向建议，不透露权重与阈值。</p></div>
+  </div>
+  <span class="toggle">展开依据与执行 ▾</span>
+</div>
+
+<!-- 9 -->
+<div class="card" data-cap="中" data-time="慢" data-team="2" data-kind="B端">
+  <div class="chead">
+    <div class="num">09</div>
+    <div>
+      <h3 class="ttl">企业采购：把 OpenFGA 变成预算、审批与对公结算</h3>
+      <p class="pitch">B2B2C 里的那个 B，是高客单、高留存、低退货率的部分。多级审批关系正是 OpenFGA 的本职工作。</p>
+    </div>
+    <div class="fit"><b>74</b><span>资产契合</span></div>
+  </div>
+  <div class="tags">
+    <span class="tag cap">资本 中</span><span class="tag time">3 月+</span><span class="tag team">2–3 人</span>
+    <span class="tag kind">B 端 / 合规</span><span class="tag">高客单</span>
+  </div>
+  <div class="body">
+    <div class="sec"><h4>研究依据</h4><ul>
+      <li>B2B 电商 AI 采用率高但系统化低：约 <b>71%</b> B2B 企业已在电商运营中用 AI，但只有约 <b>20%</b> 跨多个工作流系统化部署——流程类能力是明确的空白地带。<span class="src">（Algolia / Escalent 2026，n=300）</span></li>
+      <li>B2B 的定价、合同、审批流与 B2C 根本不同，通用电商 AI 建议在这里失效——因此竞争也小。</li>
+    </ul></div>
+    <div class="sec"><h4>为什么是你</h4><ul>
+      <li>OpenFGA 关系授权已部署并 smoke 通过，正是「部门→预算→审批人→订单」这类关系建模的原生场景。</li>
+      <li>order 已有 Saga Manager 与按商家拆单设计，企业采购的多方结算复用同一骨架。</li>
+      <li>三端账号体系共享，企业子账号不需要新建身份系统。</li>
+    </ul></div>
+    <div class="sec"><h4>最小第一步</h4>
+      <div class="step">最小切片：一个企业主体 + 多个子账号 + 单级审批 + 月结额度上限（不做发票、不做合同价）→ 用 OpenFGA 表达「子账号可下单、主管可批准、财务可见全部」→ 验证越权不可达。</div>
+    </div>
+    <div class="sec"><h4>怎么死</h4><p class="risk">发票、对公支付、合同价、账期是真正的重头，做完就是另一家公司。最小切片若不能在一个季度内产生真实企业客户，就该停。另外这会挤压 B2C 主线资源，优先级要产品层拍板。</p></div>
+  </div>
+  <span class="toggle">展开依据与执行 ▾</span>
+</div>
+
+<!-- 10 -->
+<div class="card" data-cap="中" data-time="中" data-team="2" data-kind="交易">
+  <div class="chead">
+    <div class="num">10</div>
+    <div>
+      <h3 class="ttl">不带货的决策助手：只给证据，不推商品</h3>
+      <p class="pitch">既然只有 14% 的人信 AI 下单、却有 65% 愿意让它比价——那就做一个只负责把证据摆齐、明确标注哪句是推断的助手。</p>
+    </div>
+    <div class="fit"><b>78</b><span>资产契合</span></div>
+  </div>
+  <div class="tags">
+    <span class="tag cap">资本 中</span><span class="tag time">1–3 月</span><span class="tag team">2–3 人</span>
+    <span class="tag kind">交易与决策</span><span class="tag">信任</span>
+  </div>
+  <div class="body">
+    <div class="sec"><h4>研究依据</h4><ul>
+      <li>信任天花板数据：愿让 AI <b>比价 65%</b> vs 愿让 AI <b>无人监督下单 14%</b>，差 51 个百分点；<b>仅 17%</b> 用户信任 AI 完成购买。<span class="src">（Visa 2026；2026 代理式电商手册）</span></li>
+      <li>但 <b>48%</b> 购物者在最近一次购买调研中用了 AI、<b>76%</b> 消费者想要 AI 购物助手——需求在「调研与比价」环节真实存在。</li>
+      <li>Shopify 数据：自运营购物 agent 的零售商销售增速快 <b>59%</b>（6.2% vs 3.9% YoY）。</li>
+    </ul></div>
+    <div class="sec"><h4>为什么是你</h4><ul>
+      <li>你有别人没有的三样事实：价格史（创意 02）、库存节奏（创意 03）、字段完整度（创意 08）——助手的价值取决于事实供给，不是模型。</li>
+      <li>无真实评价与销量数据（PRODUCT.md 明令<b>不得虚构</b>）——这反而倒逼你走「只给可验证事实」的路线，与定位天然一致。</li>
+    </ul></div>
+    <div class="sec"><h4>最小第一步</h4>
+      <div class="step">限定场景（同类目 3–5 个 SKU 的横向对比）→ 只输出：参数差异表、价格史、库存状态、字段缺失提示 → <b>每条结论标注来源</b>（库内事实 / 商家填写 / 模型推断），推断必须显式打标 → 不出现「推荐你买 XX」。</div>
+    </div>
+    <div class="sec"><h4>怎么死</h4><p class="risk">一旦开始「推荐」， hallucinations 会直接变成客诉与退货。防线是产品纪律：不生成库里没有的事实，缺数据就说缺，宁可回答得无聊。</p></div>
+  </div>
+  <span class="toggle">展开依据与执行 ▾</span>
+</div>
+
+<!-- 11 -->
+<div class="card" data-cap="低" data-time="中" data-team="1" data-kind="交易">
+  <div class="chead">
+    <div class="num">11</div>
+    <div>
+      <h3 class="ttl">跨店最优拆单：满减与运费的组合账，替用户算</h3>
+      <p class="pitch">多商家购物车最烦的是「再买 20 包邮 / 这家满 199 减 30」——用户算不清，平台算得清。按商家拆单的能力本来就要做，顺手加上优化目标。</p>
+    </div>
+    <div class="fit"><b>72</b><span>资产契合</span></div>
+  </div>
+  <div class="tags">
+    <span class="tag cap">资本 低</span><span class="tag time">1–3 月</span><span class="tag team">1 人</span>
+    <span class="tag kind">交易与决策</span><span class="tag">转化</span>
+  </div>
+  <div class="body">
+    <div class="sec"><h4>研究依据</h4><ul>
+      <li>本仓库现状（非市场数据）：checkout v2 设计已包含「组原子预占 + 按商家拆单」，这个能力与优化目标只差一层求解器。</li>
+      <li>PRODUCT.md 定位是综合商城 B2B2C——跨店购物车是<b>多商家形态独有</b>的问题，单商家平台不会遇到，也因此少有人做好。</li>
+    </ul></div>
+    <div class="sec"><h4>为什么是你</h4><ul>
+      <li>购物车已按 <code>MerchantCartGroup</code> 分组，前端已有店铺维度结构。</li>
+      <li>报价/快照能力在 checkout v2 设计中，结算前试算是自然的落点。</li>
+    </ul></div>
+    <div class="sec"><h4>最小第一步</h4>
+      <div class="step">先只做「运费 + 满减」两变量的最优解（背包/枚举，SKU 量级小时无需复杂求解器）→ 在结算页给出「这样拆最省 X 元」的可选项，用户可拒绝 → 明确展示每家店的独立运费与优惠来源，不隐藏算法。</div>
+    </div>
+    <div class="sec"><h4>怎么死</h4><p class="risk">优化结果若被用户视为「平台在替我凑单」，会引发反感与客诉；且多店拆单会让退款、发票、履约复杂度上升。必须保持「建议可拒绝」，并在支付与拆单底座落地后再做。</p></div>
+  </div>
+  <span class="toggle">展开依据与执行 ▾</span>
+</div>
+
+<!-- 12 -->
+<div class="card" data-cap="高" data-time="慢" data-team="4" data-kind="交易">
+  <div class="chead">
+    <div class="num">12</div>
+    <div>
+      <h3 class="ttl">售后协商代理：规则内的自动裁决，规则外的人工接管</h3>
+      <p class="pitch">退货退款是电商最大的成本中心，也是最容易标准化的部分。用状态机 + 规则做自动裁决，把人工留给真正的争议。</p>
+    </div>
+    <div class="fit"><b>68</b><span>资产契合</span></div>
+  </div>
+  <div class="tags">
+    <span class="tag cap">资本 高</span><span class="tag time">3 月+</span><span class="tag team">4 人+</span>
+    <span class="tag kind">交易与决策</span><span class="tag">成本</span>
+  </div>
+  <div class="body">
+    <div class="sec"><h4>研究依据</h4><ul>
+      <li>本仓库现状（非市场数据）：payment 五个方法全为 <code>Unimplemented</code>，refund/capture 模型待从零实现；order 状态机与取消/超时恢复仍在 TODO——<b>售后依赖的底座尚未就绪，这是最晚该做的一条</b>。</li>
+      <li>AI 自动化的边界共识：消费者信任是天花板，规则外交给人是必要的兜底。</li>
+    </ul></div>
+    <div class="sec"><h4>为什么是你</h4><ul>
+      <li>Order 内置 Saga Manager + 状态机不变量，自动裁决本质是状态机上的一组守卫条件。</li>
+      <li>契约先行让「什么算可自动裁决」能被明确定义并可测。</li>
+    </ul></div>
+    <div class="sec"><h4>最小第一步</h4>
+      <div class="step"><b>先别做 AI。</b>先把支付闭环（验签 + 幂等 + capture/refund）与订单状态机做完（本来就是 P0/P1），再把退货规则写成可测的显式规则集，最后才考虑用模型处理争议文本。</div>
+    </div>
+    <div class="sec"><h4>怎么死</h4><p class="risk">在支付与状态机还没落地时做售后自动化，等于在假成功的代码上再叠一层假成功。这条创意现在最大的价值是提醒你：它的前置是 TODO 里那几条 P0。</p></div>
+  </div>
+  <span class="toggle">展开依据与执行 ▾</span>
+</div>
+
+</div>
+
+<footer>
+  <b>怎么看这张表。</b>契合度 = 现有资产能复用多少（越高越省），不代表商业价值排序。
+  商业价值最高的是 <b>04 出口合规护照</b>（有法规时间表倒逼、淘宝京东不做、客单高）与 <b>01 Agent-Ready</b>（有明确转化数据与极低供给密度）；
+  <b>02 / 03 / 08</b> 是「几乎零增量成本」的顺手活，最适合夹在 P0 修复里一起做；
+  <b>12</b> 现在不该做，它的价值是标出前置依赖。<br><br>
+  <b>依据的两类来源。</b>外部数据为 2026 年公开报告与欧盟官方时间表（已在每条内标注）；
+  标注「本仓库现状」的依据来自 <code>PRODUCT.md</code>、<code>TODO.md</code> 与仓库代码，不是市场数据——请勿当市场调研用。
+  <code>PRODUCT.md</code> 明确仓库内无真实商品/评价/销量数据，任何涉及「虚构销量与口碑」的创意都已在生成时剔除。
+</footer>
+
+</div>
+
+<script>
+(function(){
+  var grid=document.getElementById('grid');
+  var cards=[].slice.call(grid.querySelectorAll('.card'));
+  var state={cap:null,time:null,team:null,kind:null,q:''};
+
+  cards.forEach(function(c){
+    c.querySelector('.chead').addEventListener('click',function(){
+      c.classList.toggle('open');
+      var t=c.querySelector('.toggle');
+      t.textContent=c.classList.contains('open')?'收起 ▴':'展开依据与执行 ▾';
+    });
+  });
+
+  function apply(){
+    var n=0;
+    cards.forEach(function(c){
+      var ok=true;
+      ['cap','time','team','kind'].forEach(function(k){
+        if(state[k] && c.dataset[k]!==state[k]) ok=false;
+      });
+      if(ok && state.q){
+        ok=c.textContent.toLowerCase().indexOf(state.q)>-1;
+      }
+      c.classList.toggle('hide',!ok);
+      if(ok)n++;
+    });
+    document.getElementById('count').text='显示 '+n+' / '+cards.length+' 条创意';
+  }
+
+  document.querySelectorAll('.chip').forEach(function(ch){
+    ch.addEventListener('click',function(){
+      var f=ch.dataset.f, v=ch.dataset.v;
+      var on=ch.classList.contains('on');
+      document.querySelectorAll('.chip[data-f="'+f+'"]').forEach(function(x){x.classList.remove('on')});
+      if(!on){ch.classList.add('on');state[f]=v;}else{state[f]=null;}
+      apply();
+    });
+  });
+
+  document.getElementById('q').addEventListener('input',function(e){
+    state.q=e.target.value.trim().toLowerCase();apply();
+  });
+
+  apply();
+})();
+</script>
+</body>
+</html>
