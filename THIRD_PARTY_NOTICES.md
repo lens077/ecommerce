@@ -1,7 +1,7 @@
 # Third-party notices
 
 由 `scripts/gen-third-party-notices.sh` 生成,勿手工编辑;依赖变更进暂存区时 pre-commit 会自动重新生成。
-后端列出 `go list -deps ./...` 实际链接进制品的 101 个模块;前端列出 `pnpm licenses list` 解析到的 212 个包(含 dev 依赖)。
+后端列出 `go list -deps ./...` 实际链接进制品的 102 个模块;前端列出 `pnpm licenses list` 解析到的 212 个包(含 dev 依赖)。
 
 ## 需要人看一眼
 
@@ -18,7 +18,7 @@
 | 许可证 | 条目数 |
 |---|---|
 | MIT | 209 |
-| Apache-2.0 | 51 |
+| Apache-2.0 | 52 |
 | BSD-3-Clause | 16 |
 | ISC | 15 |
 | MPL-2.0 | 10 |
@@ -30,18 +30,20 @@
 | BlueOak-1.0.0 | 1 |
 | (Apache-2.0 AND BSD-3-Clause) | 1 |
 
-## 后端(Go 模块,101)
+## 后端(Go 模块,102)
 
 | 模块 | 版本 | 许可证 | 来源文件 |
 |---|---|---|---|
-| `buf.build/gen/go/bufbuild/protovalidate/protocolbuffers/go` | v1.36.12-20260825204119-511051f7f437.1 | Apache-2.0 | LICENSE |
-| `buf.build/go/protovalidate` | v1.3.0 | Apache-2.0 | LICENSE |
+| `buf.build/gen/go/bufbuild/protovalidate/protocolbuffers/go` | v1.36.12-20260825204119-511051f7f437.2 | Apache-2.0 | LICENSE |
+| `buf.build/go/protovalidate` | v1.4.0 | Apache-2.0 | LICENSE |
+| `cel.dev/cel-go` | v0.32.0 | Apache-2.0 | LICENSE |
 | `cel.dev/expr` | v0.25.3 | Apache-2.0 | LICENSE |
-| `connectrpc.com/connect` | v1.20.0 | Apache-2.0 | LICENSE |
+| `connectrpc.com/connect` | v1.21.0 | Apache-2.0 | LICENSE |
+| `connectrpc.com/connect/v2` | v2.0.2 | Apache-2.0 | LICENSE |
 | `connectrpc.com/cors` | v0.1.0 | Apache-2.0 | LICENSE |
-| `connectrpc.com/grpchealth` | v1.5.0 | Apache-2.0 | LICENSE |
-| `connectrpc.com/otelconnect` | v0.9.0 | Apache-2.0 | LICENSE |
-| `connectrpc.com/validate` | v0.6.0 | Apache-2.0 | LICENSE |
+| `connectrpc.com/grpchealth/v2` | v2.0.0 | Apache-2.0 | LICENSE |
+| `connectrpc.com/otelconnect` | v0.12.0 | Apache-2.0 | LICENSE |
+| `connectrpc.com/validate` | v0.9.0 | Apache-2.0 | LICENSE |
 | `github.com/Protocol-Lattice/GoEventBus` | v0.2.5 | MIT | LICENSE |
 | `github.com/antlr4-go/antlr/v4` | v4.13.1 | BSD-3-Clause | LICENSE |
 | `github.com/armon/go-metrics` | v0.4.1 | MIT | LICENSE |
@@ -58,7 +60,6 @@
 | `github.com/go-logr/stdr` | v1.2.2 | Apache-2.0 | LICENSE |
 | `github.com/go-viper/mapstructure/v2` | v2.5.0 | MIT | LICENSE |
 | `github.com/golang-jwt/jwt/v4` | v4.5.2 | MIT | LICENSE |
-| `github.com/google/cel-go` | v0.30.0 | Apache-2.0 | LICENSE |
 | `github.com/google/uuid` | v1.6.0 | BSD-3-Clause | LICENSE |
 | `github.com/grpc-ecosystem/grpc-gateway/v2` | v2.30.0 | BSD-3-Clause | LICENSE |
 | `github.com/hashicorp/consul/api` | v1.34.4 | MPL-2.0 | LICENSE |
@@ -76,7 +77,7 @@
 | `github.com/jackc/pgx/v5` | v5.10.0 | MIT | LICENSE |
 | `github.com/jackc/puddle/v2` | v2.2.2 | MIT | LICENSE |
 | `github.com/lens077/control-tower` | v0.1.7 | CC-BY-NC-SA-4.0 | LICENSE |
-| `github.com/lens077/go-connect-kit` | v0.8.0 | CC-BY-NC-SA-4.0 | LICENSE |
+| `github.com/lens077/go-connect-kit` | v1.0.0 | CC-BY-NC-SA-4.0 | LICENSE |
 | `github.com/lib/pq` | v1.12.3 | MIT | LICENSE |
 | `github.com/mattn/go-colorable` | v0.1.15 | MIT | LICENSE |
 | `github.com/mattn/go-isatty` | v0.0.23 | MIT | LICENSE |
