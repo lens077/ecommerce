@@ -5,37 +5,38 @@
 package productv1connect
 
 import (
-	connect "connectrpc.com/connect"
+	connect "connectrpc.com/connect/v2"
 	context "context"
-	errors "errors"
 	v1 "github.com/lens077/ecommerce/backend/api/product/v1"
-	http "net/http"
-	strings "strings"
+	sync "sync"
 )
-
-// This is a compile-time assertion to ensure that this generated file and the connect package are
-// compatible. If you get a compiler error that this constant is not defined, this code was
-// generated with a version of connect newer than the one compiled into your binary. You can fix the
-// problem by either regenerating this code with an older version of connect or updating the connect
-// version compiled into your binary.
-const _ = connect.IsAtLeastVersion1_13_0
 
 const (
 	// ProductServiceName is the fully-qualified name of the ProductService service.
 	ProductServiceName = "product.v1.ProductService"
 )
 
-// These constants are the fully-qualified names of the RPCs defined in this package. They're
-// exposed at runtime as Spec.Procedure and as the final two segments of the HTTP route.
+// These constants are the procedure names of the RPCs defined in this package. They're exposed at
+// runtime as Spec.Procedure and as the final two segments of the HTTP route.
 //
 // Note that these are different from the fully-qualified method names used by
 // google.golang.org/protobuf/reflect/protoreflect. To convert from these constants to
 // reflection-formatted method names, remove the leading slash and convert the remaining slash to a
 // period.
 const (
-	// ProductServiceGetProductDetailProcedure is the fully-qualified name of the ProductService's
+	// ProductServiceGetProductDetailProcedure is the procedure name of the ProductService's
 	// GetProductDetail RPC.
 	ProductServiceGetProductDetailProcedure = "/product.v1.ProductService/GetProductDetail"
+)
+
+var (
+	productServiceGetProductDetailSpec = sync.OnceValue(func() connect.Spec {
+		return connect.Spec{
+			StreamType: connect.StreamTypeUnary,
+			Schema:     v1.File_api_product_v1_product_proto.Services().ByName("ProductService").Methods().ByName("GetProductDetail"),
+			Procedure:  ProductServiceGetProductDetailProcedure,
+		}
+	})
 )
 
 // ProductServiceClient is a client for the product.v1.ProductService service.
@@ -44,37 +45,13 @@ type ProductServiceClient interface {
 	//
 	// 属 anonymous_paths：商品详情页对未登录访客开放，无需 JWT。
 	// 返回的是 SPU 及其下全部 SKU，一次取完，避免详情页再逐 SKU 查询
-	GetProductDetail(context.Context, *connect.Request[v1.GetProductDetailRequest]) (*connect.Response[v1.GetProductDetailResponse], error)
+	GetProductDetail(context.Context, *v1.GetProductDetailRequest) (*v1.GetProductDetailResponse, error)
 }
 
-// NewProductServiceClient constructs a client for the product.v1.ProductService service. By
-// default, it uses the Connect protocol with the binary Protobuf Codec, asks for gzipped responses,
-// and sends uncompressed requests. To use the gRPC or gRPC-Web protocols, supply the
-// connect.WithGRPC() or connect.WithGRPCWeb() options.
-//
-// The URL supplied here should be the base URL for the Connect or gRPC server (for example,
-// http://api.acme.com or https://acme.com/grpc).
-func NewProductServiceClient(httpClient connect.HTTPClient, baseURL string, opts ...connect.ClientOption) ProductServiceClient {
-	baseURL = strings.TrimRight(baseURL, "/")
-	productServiceMethods := v1.File_api_product_v1_product_proto.Services().ByName("ProductService").Methods()
-	return &productServiceClient{
-		getProductDetail: connect.NewClient[v1.GetProductDetailRequest, v1.GetProductDetailResponse](
-			httpClient,
-			baseURL+ProductServiceGetProductDetailProcedure,
-			connect.WithSchema(productServiceMethods.ByName("GetProductDetail")),
-			connect.WithClientOptions(opts...),
-		),
-	}
-}
-
-// productServiceClient implements ProductServiceClient.
-type productServiceClient struct {
-	getProductDetail *connect.Client[v1.GetProductDetailRequest, v1.GetProductDetailResponse]
-}
-
-// GetProductDetail calls product.v1.ProductService.GetProductDetail.
-func (c *productServiceClient) GetProductDetail(ctx context.Context, req *connect.Request[v1.GetProductDetailRequest]) (*connect.Response[v1.GetProductDetailResponse], error) {
-	return c.getProductDetail.CallUnary(ctx, req)
+// NewProductServiceClient constructs a client for the product.v1.ProductService service. Multiple
+// service clients may share a single connect.Client.
+func NewProductServiceClient(client *connect.Client) ProductServiceClient {
+	return &productServiceClient{client: client}
 }
 
 // ProductServiceHandler is an implementation of the product.v1.ProductService service.
@@ -83,35 +60,47 @@ type ProductServiceHandler interface {
 	//
 	// 属 anonymous_paths：商品详情页对未登录访客开放，无需 JWT。
 	// 返回的是 SPU 及其下全部 SKU，一次取完，避免详情页再逐 SKU 查询
-	GetProductDetail(context.Context, *connect.Request[v1.GetProductDetailRequest]) (*connect.Response[v1.GetProductDetailResponse], error)
+	GetProductDetail(context.Context, *v1.GetProductDetailRequest) (*v1.GetProductDetailResponse, error)
 }
 
-// NewProductServiceHandler builds an HTTP handler from the service implementation. It returns the
-// path on which to mount the handler and the handler itself.
-//
-// By default, handlers support the Connect, gRPC, and gRPC-Web protocols with the binary Protobuf
-// and JSON codecs. They also support gzip compression.
-func NewProductServiceHandler(svc ProductServiceHandler, opts ...connect.HandlerOption) (string, http.Handler) {
-	productServiceMethods := v1.File_api_product_v1_product_proto.Services().ByName("ProductService").Methods()
-	productServiceGetProductDetailHandler := connect.NewUnaryHandler(
-		ProductServiceGetProductDetailProcedure,
-		svc.GetProductDetail,
-		connect.WithSchema(productServiceMethods.ByName("GetProductDetail")),
-		connect.WithHandlerOptions(opts...),
+// RegisterProductServiceHandler registers svc as the product.v1.ProductService implementation on
+// server.
+func RegisterProductServiceHandler(server *connect.Server, svc ProductServiceHandler) {
+	adapter := productServiceHandler{svc: svc}
+	server.Register(
+		connect.Method{Spec: productServiceGetProductDetailSpec(), Handler: adapter.getProductDetail},
 	)
-	return "/product.v1.ProductService/", http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		switch r.URL.Path {
-		case ProductServiceGetProductDetailProcedure:
-			productServiceGetProductDetailHandler.ServeHTTP(w, r)
-		default:
-			http.NotFound(w, r)
-		}
-	})
 }
 
 // UnimplementedProductServiceHandler returns CodeUnimplemented from all methods.
 type UnimplementedProductServiceHandler struct{}
 
-func (UnimplementedProductServiceHandler) GetProductDetail(context.Context, *connect.Request[v1.GetProductDetailRequest]) (*connect.Response[v1.GetProductDetailResponse], error) {
-	return nil, connect.NewError(connect.CodeUnimplemented, errors.New("product.v1.ProductService.GetProductDetail is not implemented"))
+func (UnimplementedProductServiceHandler) GetProductDetail(context.Context, *v1.GetProductDetailRequest) (*v1.GetProductDetailResponse, error) {
+	return nil, connect.NewError(connect.CodeUnimplemented, "product.v1.ProductService.GetProductDetail is not implemented")
+}
+
+type productServiceClient struct {
+	client *connect.Client
+}
+
+func (c *productServiceClient) GetProductDetail(ctx context.Context, req *v1.GetProductDetailRequest) (*v1.GetProductDetailResponse, error) {
+	var res v1.GetProductDetailResponse
+	if err := c.client.CallUnary(ctx, productServiceGetProductDetailSpec(), req, &res); err != nil {
+		return nil, err
+	}
+	return &res, nil
+}
+
+type productServiceHandler struct{ svc ProductServiceHandler }
+
+func (h productServiceHandler) getProductDetail(ctx context.Context, _ connect.Spec, stream connect.ServerStream) error {
+	var req v1.GetProductDetailRequest
+	if err := stream.Receive(&req); err != nil {
+		return err
+	}
+	res, err := h.svc.GetProductDetail(ctx, &req)
+	if err != nil {
+		return err
+	}
+	return stream.Send(res)
 }

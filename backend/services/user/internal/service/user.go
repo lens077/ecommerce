@@ -11,7 +11,7 @@ import (
 	v1 "github.com/lens077/ecommerce/backend/api/user/v1"
 	"github.com/lens077/ecommerce/backend/api/user/v1/userv1connect"
 
-	"connectrpc.com/connect"
+	"connectrpc.com/connect/v2"
 )
 
 // UserService 实现 Connect 服务
@@ -28,12 +28,12 @@ func NewUserService(uc *biz.UserUseCase) userv1connect.UserServiceHandler {
 	}
 }
 
-func (s *UserService) SignIn(ctx context.Context, c *connect.Request[v1.SignInRequest]) (*connect.Response[v1.SignInResponse], error) {
+func (s *UserService) SignIn(ctx context.Context, c *v1.SignInRequest) (*v1.SignInResponse, error) {
 	res, err := s.uc.SignIn(
 		ctx,
 		biz.SignInRequest{
-			Code:  c.Msg.Code,
-			State: c.Msg.State,
+			Code:  c.Code,
+			State: c.State,
 		},
 	)
 	if err != nil {
@@ -45,13 +45,17 @@ func (s *UserService) SignIn(ctx context.Context, c *connect.Request[v1.SignInRe
 		Data:  res.Data,
 	}
 
-	return connect.NewResponse(response), nil
+	return response, nil
 }
 
-func (s *UserService) UserProfile(ctx context.Context, req *connect.Request[v1.UserProfileRequest]) (*connect.Response[v1.UserProfileResponse], error) {
+func (s *UserService) UserProfile(ctx context.Context, req *v1.UserProfileRequest) (*v1.UserProfileResponse, error) {
+	info, _ := connect.CallInfoForServerContext(ctx)
+	if info == nil {
+		info = &connect.CallInfo{} // 直调(单测)无 CallInfo;经 Server.Call 时必有
+	}
 	var userName string
 	// 从请求头中获取用户名称
-	userName = req.Header().Get(constants.UserNameMetadataKey)
+	userName = info.RequestHeader().Get(constants.UserNameMetadataKey)
 	res, err := s.uc.GetUserProfile(
 		ctx,
 		biz.GetUserProfileRequest{Name: userName},
@@ -159,7 +163,7 @@ func (s *UserService) UserProfile(ctx context.Context, req *connect.Request[v1.U
 		},
 	}
 
-	return connect.NewResponse(response), nil
+	return response, nil
 }
 
 // userError 把 biz 哨兵错误映射为 RPC 错误码（docs/design/platform/error-handling.md 第 3 条），
@@ -169,12 +173,12 @@ func (s *UserService) UserProfile(ctx context.Context, req *connect.Request[v1.U
 func userError(err error) error {
 	switch {
 	case errors.Is(err, biz.ErrUserNotFound):
-		return connect.NewError(connect.CodeNotFound, err)
+		return connect.NewError(connect.CodeNotFound, err.Error()).WithCause(err)
 	case errors.Is(err, biz.ErrUserAlreadyExists):
-		return connect.NewError(connect.CodeAlreadyExists, err)
+		return connect.NewError(connect.CodeAlreadyExists, err.Error()).WithCause(err)
 	case errors.Is(err, biz.ErrAuthFailed):
-		return connect.NewError(connect.CodeUnauthenticated, err)
+		return connect.NewError(connect.CodeUnauthenticated, err.Error()).WithCause(err)
 	default:
-		return connect.NewError(connect.CodeUnknown, err)
+		return connect.NewError(connect.CodeUnknown, err.Error()).WithCause(err)
 	}
 }

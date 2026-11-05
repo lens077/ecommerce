@@ -5,55 +5,98 @@
 package merchantv1connect
 
 import (
-	connect "connectrpc.com/connect"
+	connect "connectrpc.com/connect/v2"
 	context "context"
-	errors "errors"
 	v1 "github.com/lens077/ecommerce/backend/api/merchant/v1"
-	http "net/http"
-	strings "strings"
+	sync "sync"
 )
-
-// This is a compile-time assertion to ensure that this generated file and the connect package are
-// compatible. If you get a compiler error that this constant is not defined, this code was
-// generated with a version of connect newer than the one compiled into your binary. You can fix the
-// problem by either regenerating this code with an older version of connect or updating the connect
-// version compiled into your binary.
-const _ = connect.IsAtLeastVersion1_13_0
 
 const (
 	// MerchantServiceName is the fully-qualified name of the MerchantService service.
 	MerchantServiceName = "merchant.v1.MerchantService"
 )
 
-// These constants are the fully-qualified names of the RPCs defined in this package. They're
-// exposed at runtime as Spec.Procedure and as the final two segments of the HTTP route.
+// These constants are the procedure names of the RPCs defined in this package. They're exposed at
+// runtime as Spec.Procedure and as the final two segments of the HTTP route.
 //
 // Note that these are different from the fully-qualified method names used by
 // google.golang.org/protobuf/reflect/protoreflect. To convert from these constants to
 // reflection-formatted method names, remove the leading slash and convert the remaining slash to a
 // period.
 const (
-	// MerchantServiceGetMerchantAgreementProcedure is the fully-qualified name of the MerchantService's
+	// MerchantServiceGetMerchantAgreementProcedure is the procedure name of the MerchantService's
 	// GetMerchantAgreement RPC.
 	MerchantServiceGetMerchantAgreementProcedure = "/merchant.v1.MerchantService/GetMerchantAgreement"
-	// MerchantServiceCreateMerchantProcedure is the fully-qualified name of the MerchantService's
+	// MerchantServiceCreateMerchantProcedure is the procedure name of the MerchantService's
 	// CreateMerchant RPC.
 	MerchantServiceCreateMerchantProcedure = "/merchant.v1.MerchantService/CreateMerchant"
-	// MerchantServiceSubmitApplicationProcedure is the fully-qualified name of the MerchantService's
+	// MerchantServiceSubmitApplicationProcedure is the procedure name of the MerchantService's
 	// SubmitApplication RPC.
 	MerchantServiceSubmitApplicationProcedure = "/merchant.v1.MerchantService/SubmitApplication"
-	// MerchantServiceApproveApplicationProcedure is the fully-qualified name of the MerchantService's
+	// MerchantServiceApproveApplicationProcedure is the procedure name of the MerchantService's
 	// ApproveApplication RPC.
 	MerchantServiceApproveApplicationProcedure = "/merchant.v1.MerchantService/ApproveApplication"
-	// MerchantServiceRejectApplicationProcedure is the fully-qualified name of the MerchantService's
+	// MerchantServiceRejectApplicationProcedure is the procedure name of the MerchantService's
 	// RejectApplication RPC.
 	MerchantServiceRejectApplicationProcedure = "/merchant.v1.MerchantService/RejectApplication"
-	// MerchantServiceGetApplicationProcedure is the fully-qualified name of the MerchantService's
+	// MerchantServiceGetApplicationProcedure is the procedure name of the MerchantService's
 	// GetApplication RPC.
 	MerchantServiceGetApplicationProcedure = "/merchant.v1.MerchantService/GetApplication"
-	// MerchantServiceActivateMerchantProcedure is the fully-qualified name of the MerchantService's
+	// MerchantServiceActivateMerchantProcedure is the procedure name of the MerchantService's
 	// ActivateMerchant RPC.
 	MerchantServiceActivateMerchantProcedure = "/merchant.v1.MerchantService/ActivateMerchant"
+)
+
+var (
+	merchantServiceGetMerchantAgreementSpec = sync.OnceValue(func() connect.Spec {
+		return connect.Spec{
+			StreamType: connect.StreamTypeUnary,
+			Schema:     v1.File_api_merchant_v1_merchant_proto.Services().ByName("MerchantService").Methods().ByName("GetMerchantAgreement"),
+			Procedure:  MerchantServiceGetMerchantAgreementProcedure,
+		}
+	})
+	merchantServiceCreateMerchantSpec = sync.OnceValue(func() connect.Spec {
+		return connect.Spec{
+			StreamType: connect.StreamTypeUnary,
+			Schema:     v1.File_api_merchant_v1_merchant_proto.Services().ByName("MerchantService").Methods().ByName("CreateMerchant"),
+			Procedure:  MerchantServiceCreateMerchantProcedure,
+		}
+	})
+	merchantServiceSubmitApplicationSpec = sync.OnceValue(func() connect.Spec {
+		return connect.Spec{
+			StreamType: connect.StreamTypeUnary,
+			Schema:     v1.File_api_merchant_v1_merchant_proto.Services().ByName("MerchantService").Methods().ByName("SubmitApplication"),
+			Procedure:  MerchantServiceSubmitApplicationProcedure,
+		}
+	})
+	merchantServiceApproveApplicationSpec = sync.OnceValue(func() connect.Spec {
+		return connect.Spec{
+			StreamType: connect.StreamTypeUnary,
+			Schema:     v1.File_api_merchant_v1_merchant_proto.Services().ByName("MerchantService").Methods().ByName("ApproveApplication"),
+			Procedure:  MerchantServiceApproveApplicationProcedure,
+		}
+	})
+	merchantServiceRejectApplicationSpec = sync.OnceValue(func() connect.Spec {
+		return connect.Spec{
+			StreamType: connect.StreamTypeUnary,
+			Schema:     v1.File_api_merchant_v1_merchant_proto.Services().ByName("MerchantService").Methods().ByName("RejectApplication"),
+			Procedure:  MerchantServiceRejectApplicationProcedure,
+		}
+	})
+	merchantServiceGetApplicationSpec = sync.OnceValue(func() connect.Spec {
+		return connect.Spec{
+			StreamType: connect.StreamTypeUnary,
+			Schema:     v1.File_api_merchant_v1_merchant_proto.Services().ByName("MerchantService").Methods().ByName("GetApplication"),
+			Procedure:  MerchantServiceGetApplicationProcedure,
+		}
+	})
+	merchantServiceActivateMerchantSpec = sync.OnceValue(func() connect.Spec {
+		return connect.Spec{
+			StreamType: connect.StreamTypeUnary,
+			Schema:     v1.File_api_merchant_v1_merchant_proto.Services().ByName("MerchantService").Methods().ByName("ActivateMerchant"),
+			Procedure:  MerchantServiceActivateMerchantProcedure,
+		}
+	})
 )
 
 // MerchantServiceClient is a client for the merchant.v1.MerchantService service.
@@ -62,121 +105,25 @@ type MerchantServiceClient interface {
 	//
 	// 申请人提交前先读协议版本，CreateMerchant 时原样回传 agreement_version，
 	// 从而把「同意的是哪一版」钉住
-	GetMerchantAgreement(context.Context, *connect.Request[v1.GetMerchantAgreementRequest]) (*connect.Response[v1.GetMerchantAgreementResponse], error)
+	GetMerchantAgreement(context.Context, *v1.GetMerchantAgreementRequest) (*v1.GetMerchantAgreementResponse, error)
 	// 创建商家账号。手机号即登录账号
-	CreateMerchant(context.Context, *connect.Request[v1.CreateMerchantRequest]) (*connect.Response[v1.CreateMerchantResponse], error)
+	CreateMerchant(context.Context, *v1.CreateMerchantRequest) (*v1.CreateMerchantResponse, error)
 	// 商家提交入驻申请。提交后进入待审核
-	SubmitApplication(context.Context, *connect.Request[v1.SubmitApplicationRequest]) (*connect.Response[v1.SubmitApplicationResponse], error)
+	SubmitApplication(context.Context, *v1.SubmitApplicationRequest) (*v1.SubmitApplicationResponse, error)
 	// 通过入驻申请（管理员操作）, 发送领域事件(创建商家账户、店铺、库存初始化等）
-	ApproveApplication(context.Context, *connect.Request[v1.ApproveApplicationRequest]) (*connect.Response[v1.ApproveApplicationResponse], error)
+	ApproveApplication(context.Context, *v1.ApproveApplicationRequest) (*v1.ApproveApplicationResponse, error)
 	// 驳回入驻申请（管理员操作）, 发送领域事件(申请被驳回)
-	RejectApplication(context.Context, *connect.Request[v1.RejectApplicationRequest]) (*connect.Response[v1.RejectApplicationResponse], error)
+	RejectApplication(context.Context, *v1.RejectApplicationRequest) (*v1.RejectApplicationResponse, error)
 	// 查询入驻申请状态。申请人本人或管理员可查
-	GetApplication(context.Context, *connect.Request[v1.GetApplicationRequest]) (*connect.Response[v1.GetApplicationResponse], error)
+	GetApplication(context.Context, *v1.GetApplicationRequest) (*v1.GetApplicationResponse, error)
 	// 激活商家。审核通过后的首次店铺设置，完成后进入 ACTIVATED
-	ActivateMerchant(context.Context, *connect.Request[v1.ActivateMerchantRequest]) (*connect.Response[v1.ActivateMerchantResponse], error)
+	ActivateMerchant(context.Context, *v1.ActivateMerchantRequest) (*v1.ActivateMerchantResponse, error)
 }
 
-// NewMerchantServiceClient constructs a client for the merchant.v1.MerchantService service. By
-// default, it uses the Connect protocol with the binary Protobuf Codec, asks for gzipped responses,
-// and sends uncompressed requests. To use the gRPC or gRPC-Web protocols, supply the
-// connect.WithGRPC() or connect.WithGRPCWeb() options.
-//
-// The URL supplied here should be the base URL for the Connect or gRPC server (for example,
-// http://api.acme.com or https://acme.com/grpc).
-func NewMerchantServiceClient(httpClient connect.HTTPClient, baseURL string, opts ...connect.ClientOption) MerchantServiceClient {
-	baseURL = strings.TrimRight(baseURL, "/")
-	merchantServiceMethods := v1.File_api_merchant_v1_merchant_proto.Services().ByName("MerchantService").Methods()
-	return &merchantServiceClient{
-		getMerchantAgreement: connect.NewClient[v1.GetMerchantAgreementRequest, v1.GetMerchantAgreementResponse](
-			httpClient,
-			baseURL+MerchantServiceGetMerchantAgreementProcedure,
-			connect.WithSchema(merchantServiceMethods.ByName("GetMerchantAgreement")),
-			connect.WithClientOptions(opts...),
-		),
-		createMerchant: connect.NewClient[v1.CreateMerchantRequest, v1.CreateMerchantResponse](
-			httpClient,
-			baseURL+MerchantServiceCreateMerchantProcedure,
-			connect.WithSchema(merchantServiceMethods.ByName("CreateMerchant")),
-			connect.WithClientOptions(opts...),
-		),
-		submitApplication: connect.NewClient[v1.SubmitApplicationRequest, v1.SubmitApplicationResponse](
-			httpClient,
-			baseURL+MerchantServiceSubmitApplicationProcedure,
-			connect.WithSchema(merchantServiceMethods.ByName("SubmitApplication")),
-			connect.WithClientOptions(opts...),
-		),
-		approveApplication: connect.NewClient[v1.ApproveApplicationRequest, v1.ApproveApplicationResponse](
-			httpClient,
-			baseURL+MerchantServiceApproveApplicationProcedure,
-			connect.WithSchema(merchantServiceMethods.ByName("ApproveApplication")),
-			connect.WithClientOptions(opts...),
-		),
-		rejectApplication: connect.NewClient[v1.RejectApplicationRequest, v1.RejectApplicationResponse](
-			httpClient,
-			baseURL+MerchantServiceRejectApplicationProcedure,
-			connect.WithSchema(merchantServiceMethods.ByName("RejectApplication")),
-			connect.WithClientOptions(opts...),
-		),
-		getApplication: connect.NewClient[v1.GetApplicationRequest, v1.GetApplicationResponse](
-			httpClient,
-			baseURL+MerchantServiceGetApplicationProcedure,
-			connect.WithSchema(merchantServiceMethods.ByName("GetApplication")),
-			connect.WithClientOptions(opts...),
-		),
-		activateMerchant: connect.NewClient[v1.ActivateMerchantRequest, v1.ActivateMerchantResponse](
-			httpClient,
-			baseURL+MerchantServiceActivateMerchantProcedure,
-			connect.WithSchema(merchantServiceMethods.ByName("ActivateMerchant")),
-			connect.WithClientOptions(opts...),
-		),
-	}
-}
-
-// merchantServiceClient implements MerchantServiceClient.
-type merchantServiceClient struct {
-	getMerchantAgreement *connect.Client[v1.GetMerchantAgreementRequest, v1.GetMerchantAgreementResponse]
-	createMerchant       *connect.Client[v1.CreateMerchantRequest, v1.CreateMerchantResponse]
-	submitApplication    *connect.Client[v1.SubmitApplicationRequest, v1.SubmitApplicationResponse]
-	approveApplication   *connect.Client[v1.ApproveApplicationRequest, v1.ApproveApplicationResponse]
-	rejectApplication    *connect.Client[v1.RejectApplicationRequest, v1.RejectApplicationResponse]
-	getApplication       *connect.Client[v1.GetApplicationRequest, v1.GetApplicationResponse]
-	activateMerchant     *connect.Client[v1.ActivateMerchantRequest, v1.ActivateMerchantResponse]
-}
-
-// GetMerchantAgreement calls merchant.v1.MerchantService.GetMerchantAgreement.
-func (c *merchantServiceClient) GetMerchantAgreement(ctx context.Context, req *connect.Request[v1.GetMerchantAgreementRequest]) (*connect.Response[v1.GetMerchantAgreementResponse], error) {
-	return c.getMerchantAgreement.CallUnary(ctx, req)
-}
-
-// CreateMerchant calls merchant.v1.MerchantService.CreateMerchant.
-func (c *merchantServiceClient) CreateMerchant(ctx context.Context, req *connect.Request[v1.CreateMerchantRequest]) (*connect.Response[v1.CreateMerchantResponse], error) {
-	return c.createMerchant.CallUnary(ctx, req)
-}
-
-// SubmitApplication calls merchant.v1.MerchantService.SubmitApplication.
-func (c *merchantServiceClient) SubmitApplication(ctx context.Context, req *connect.Request[v1.SubmitApplicationRequest]) (*connect.Response[v1.SubmitApplicationResponse], error) {
-	return c.submitApplication.CallUnary(ctx, req)
-}
-
-// ApproveApplication calls merchant.v1.MerchantService.ApproveApplication.
-func (c *merchantServiceClient) ApproveApplication(ctx context.Context, req *connect.Request[v1.ApproveApplicationRequest]) (*connect.Response[v1.ApproveApplicationResponse], error) {
-	return c.approveApplication.CallUnary(ctx, req)
-}
-
-// RejectApplication calls merchant.v1.MerchantService.RejectApplication.
-func (c *merchantServiceClient) RejectApplication(ctx context.Context, req *connect.Request[v1.RejectApplicationRequest]) (*connect.Response[v1.RejectApplicationResponse], error) {
-	return c.rejectApplication.CallUnary(ctx, req)
-}
-
-// GetApplication calls merchant.v1.MerchantService.GetApplication.
-func (c *merchantServiceClient) GetApplication(ctx context.Context, req *connect.Request[v1.GetApplicationRequest]) (*connect.Response[v1.GetApplicationResponse], error) {
-	return c.getApplication.CallUnary(ctx, req)
-}
-
-// ActivateMerchant calls merchant.v1.MerchantService.ActivateMerchant.
-func (c *merchantServiceClient) ActivateMerchant(ctx context.Context, req *connect.Request[v1.ActivateMerchantRequest]) (*connect.Response[v1.ActivateMerchantResponse], error) {
-	return c.activateMerchant.CallUnary(ctx, req)
+// NewMerchantServiceClient constructs a client for the merchant.v1.MerchantService service.
+// Multiple service clients may share a single connect.Client.
+func NewMerchantServiceClient(client *connect.Client) MerchantServiceClient {
+	return &merchantServiceClient{client: client}
 }
 
 // MerchantServiceHandler is an implementation of the merchant.v1.MerchantService service.
@@ -185,119 +132,209 @@ type MerchantServiceHandler interface {
 	//
 	// 申请人提交前先读协议版本，CreateMerchant 时原样回传 agreement_version，
 	// 从而把「同意的是哪一版」钉住
-	GetMerchantAgreement(context.Context, *connect.Request[v1.GetMerchantAgreementRequest]) (*connect.Response[v1.GetMerchantAgreementResponse], error)
+	GetMerchantAgreement(context.Context, *v1.GetMerchantAgreementRequest) (*v1.GetMerchantAgreementResponse, error)
 	// 创建商家账号。手机号即登录账号
-	CreateMerchant(context.Context, *connect.Request[v1.CreateMerchantRequest]) (*connect.Response[v1.CreateMerchantResponse], error)
+	CreateMerchant(context.Context, *v1.CreateMerchantRequest) (*v1.CreateMerchantResponse, error)
 	// 商家提交入驻申请。提交后进入待审核
-	SubmitApplication(context.Context, *connect.Request[v1.SubmitApplicationRequest]) (*connect.Response[v1.SubmitApplicationResponse], error)
+	SubmitApplication(context.Context, *v1.SubmitApplicationRequest) (*v1.SubmitApplicationResponse, error)
 	// 通过入驻申请（管理员操作）, 发送领域事件(创建商家账户、店铺、库存初始化等）
-	ApproveApplication(context.Context, *connect.Request[v1.ApproveApplicationRequest]) (*connect.Response[v1.ApproveApplicationResponse], error)
+	ApproveApplication(context.Context, *v1.ApproveApplicationRequest) (*v1.ApproveApplicationResponse, error)
 	// 驳回入驻申请（管理员操作）, 发送领域事件(申请被驳回)
-	RejectApplication(context.Context, *connect.Request[v1.RejectApplicationRequest]) (*connect.Response[v1.RejectApplicationResponse], error)
+	RejectApplication(context.Context, *v1.RejectApplicationRequest) (*v1.RejectApplicationResponse, error)
 	// 查询入驻申请状态。申请人本人或管理员可查
-	GetApplication(context.Context, *connect.Request[v1.GetApplicationRequest]) (*connect.Response[v1.GetApplicationResponse], error)
+	GetApplication(context.Context, *v1.GetApplicationRequest) (*v1.GetApplicationResponse, error)
 	// 激活商家。审核通过后的首次店铺设置，完成后进入 ACTIVATED
-	ActivateMerchant(context.Context, *connect.Request[v1.ActivateMerchantRequest]) (*connect.Response[v1.ActivateMerchantResponse], error)
+	ActivateMerchant(context.Context, *v1.ActivateMerchantRequest) (*v1.ActivateMerchantResponse, error)
 }
 
-// NewMerchantServiceHandler builds an HTTP handler from the service implementation. It returns the
-// path on which to mount the handler and the handler itself.
-//
-// By default, handlers support the Connect, gRPC, and gRPC-Web protocols with the binary Protobuf
-// and JSON codecs. They also support gzip compression.
-func NewMerchantServiceHandler(svc MerchantServiceHandler, opts ...connect.HandlerOption) (string, http.Handler) {
-	merchantServiceMethods := v1.File_api_merchant_v1_merchant_proto.Services().ByName("MerchantService").Methods()
-	merchantServiceGetMerchantAgreementHandler := connect.NewUnaryHandler(
-		MerchantServiceGetMerchantAgreementProcedure,
-		svc.GetMerchantAgreement,
-		connect.WithSchema(merchantServiceMethods.ByName("GetMerchantAgreement")),
-		connect.WithHandlerOptions(opts...),
+// RegisterMerchantServiceHandler registers svc as the merchant.v1.MerchantService implementation on
+// server.
+func RegisterMerchantServiceHandler(server *connect.Server, svc MerchantServiceHandler) {
+	adapter := merchantServiceHandler{svc: svc}
+	server.Register(
+		connect.Method{Spec: merchantServiceGetMerchantAgreementSpec(), Handler: adapter.getMerchantAgreement},
+		connect.Method{Spec: merchantServiceCreateMerchantSpec(), Handler: adapter.createMerchant},
+		connect.Method{Spec: merchantServiceSubmitApplicationSpec(), Handler: adapter.submitApplication},
+		connect.Method{Spec: merchantServiceApproveApplicationSpec(), Handler: adapter.approveApplication},
+		connect.Method{Spec: merchantServiceRejectApplicationSpec(), Handler: adapter.rejectApplication},
+		connect.Method{Spec: merchantServiceGetApplicationSpec(), Handler: adapter.getApplication},
+		connect.Method{Spec: merchantServiceActivateMerchantSpec(), Handler: adapter.activateMerchant},
 	)
-	merchantServiceCreateMerchantHandler := connect.NewUnaryHandler(
-		MerchantServiceCreateMerchantProcedure,
-		svc.CreateMerchant,
-		connect.WithSchema(merchantServiceMethods.ByName("CreateMerchant")),
-		connect.WithHandlerOptions(opts...),
-	)
-	merchantServiceSubmitApplicationHandler := connect.NewUnaryHandler(
-		MerchantServiceSubmitApplicationProcedure,
-		svc.SubmitApplication,
-		connect.WithSchema(merchantServiceMethods.ByName("SubmitApplication")),
-		connect.WithHandlerOptions(opts...),
-	)
-	merchantServiceApproveApplicationHandler := connect.NewUnaryHandler(
-		MerchantServiceApproveApplicationProcedure,
-		svc.ApproveApplication,
-		connect.WithSchema(merchantServiceMethods.ByName("ApproveApplication")),
-		connect.WithHandlerOptions(opts...),
-	)
-	merchantServiceRejectApplicationHandler := connect.NewUnaryHandler(
-		MerchantServiceRejectApplicationProcedure,
-		svc.RejectApplication,
-		connect.WithSchema(merchantServiceMethods.ByName("RejectApplication")),
-		connect.WithHandlerOptions(opts...),
-	)
-	merchantServiceGetApplicationHandler := connect.NewUnaryHandler(
-		MerchantServiceGetApplicationProcedure,
-		svc.GetApplication,
-		connect.WithSchema(merchantServiceMethods.ByName("GetApplication")),
-		connect.WithHandlerOptions(opts...),
-	)
-	merchantServiceActivateMerchantHandler := connect.NewUnaryHandler(
-		MerchantServiceActivateMerchantProcedure,
-		svc.ActivateMerchant,
-		connect.WithSchema(merchantServiceMethods.ByName("ActivateMerchant")),
-		connect.WithHandlerOptions(opts...),
-	)
-	return "/merchant.v1.MerchantService/", http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		switch r.URL.Path {
-		case MerchantServiceGetMerchantAgreementProcedure:
-			merchantServiceGetMerchantAgreementHandler.ServeHTTP(w, r)
-		case MerchantServiceCreateMerchantProcedure:
-			merchantServiceCreateMerchantHandler.ServeHTTP(w, r)
-		case MerchantServiceSubmitApplicationProcedure:
-			merchantServiceSubmitApplicationHandler.ServeHTTP(w, r)
-		case MerchantServiceApproveApplicationProcedure:
-			merchantServiceApproveApplicationHandler.ServeHTTP(w, r)
-		case MerchantServiceRejectApplicationProcedure:
-			merchantServiceRejectApplicationHandler.ServeHTTP(w, r)
-		case MerchantServiceGetApplicationProcedure:
-			merchantServiceGetApplicationHandler.ServeHTTP(w, r)
-		case MerchantServiceActivateMerchantProcedure:
-			merchantServiceActivateMerchantHandler.ServeHTTP(w, r)
-		default:
-			http.NotFound(w, r)
-		}
-	})
 }
 
 // UnimplementedMerchantServiceHandler returns CodeUnimplemented from all methods.
 type UnimplementedMerchantServiceHandler struct{}
 
-func (UnimplementedMerchantServiceHandler) GetMerchantAgreement(context.Context, *connect.Request[v1.GetMerchantAgreementRequest]) (*connect.Response[v1.GetMerchantAgreementResponse], error) {
-	return nil, connect.NewError(connect.CodeUnimplemented, errors.New("merchant.v1.MerchantService.GetMerchantAgreement is not implemented"))
+func (UnimplementedMerchantServiceHandler) GetMerchantAgreement(context.Context, *v1.GetMerchantAgreementRequest) (*v1.GetMerchantAgreementResponse, error) {
+	return nil, connect.NewError(connect.CodeUnimplemented, "merchant.v1.MerchantService.GetMerchantAgreement is not implemented")
 }
 
-func (UnimplementedMerchantServiceHandler) CreateMerchant(context.Context, *connect.Request[v1.CreateMerchantRequest]) (*connect.Response[v1.CreateMerchantResponse], error) {
-	return nil, connect.NewError(connect.CodeUnimplemented, errors.New("merchant.v1.MerchantService.CreateMerchant is not implemented"))
+func (UnimplementedMerchantServiceHandler) CreateMerchant(context.Context, *v1.CreateMerchantRequest) (*v1.CreateMerchantResponse, error) {
+	return nil, connect.NewError(connect.CodeUnimplemented, "merchant.v1.MerchantService.CreateMerchant is not implemented")
 }
 
-func (UnimplementedMerchantServiceHandler) SubmitApplication(context.Context, *connect.Request[v1.SubmitApplicationRequest]) (*connect.Response[v1.SubmitApplicationResponse], error) {
-	return nil, connect.NewError(connect.CodeUnimplemented, errors.New("merchant.v1.MerchantService.SubmitApplication is not implemented"))
+func (UnimplementedMerchantServiceHandler) SubmitApplication(context.Context, *v1.SubmitApplicationRequest) (*v1.SubmitApplicationResponse, error) {
+	return nil, connect.NewError(connect.CodeUnimplemented, "merchant.v1.MerchantService.SubmitApplication is not implemented")
 }
 
-func (UnimplementedMerchantServiceHandler) ApproveApplication(context.Context, *connect.Request[v1.ApproveApplicationRequest]) (*connect.Response[v1.ApproveApplicationResponse], error) {
-	return nil, connect.NewError(connect.CodeUnimplemented, errors.New("merchant.v1.MerchantService.ApproveApplication is not implemented"))
+func (UnimplementedMerchantServiceHandler) ApproveApplication(context.Context, *v1.ApproveApplicationRequest) (*v1.ApproveApplicationResponse, error) {
+	return nil, connect.NewError(connect.CodeUnimplemented, "merchant.v1.MerchantService.ApproveApplication is not implemented")
 }
 
-func (UnimplementedMerchantServiceHandler) RejectApplication(context.Context, *connect.Request[v1.RejectApplicationRequest]) (*connect.Response[v1.RejectApplicationResponse], error) {
-	return nil, connect.NewError(connect.CodeUnimplemented, errors.New("merchant.v1.MerchantService.RejectApplication is not implemented"))
+func (UnimplementedMerchantServiceHandler) RejectApplication(context.Context, *v1.RejectApplicationRequest) (*v1.RejectApplicationResponse, error) {
+	return nil, connect.NewError(connect.CodeUnimplemented, "merchant.v1.MerchantService.RejectApplication is not implemented")
 }
 
-func (UnimplementedMerchantServiceHandler) GetApplication(context.Context, *connect.Request[v1.GetApplicationRequest]) (*connect.Response[v1.GetApplicationResponse], error) {
-	return nil, connect.NewError(connect.CodeUnimplemented, errors.New("merchant.v1.MerchantService.GetApplication is not implemented"))
+func (UnimplementedMerchantServiceHandler) GetApplication(context.Context, *v1.GetApplicationRequest) (*v1.GetApplicationResponse, error) {
+	return nil, connect.NewError(connect.CodeUnimplemented, "merchant.v1.MerchantService.GetApplication is not implemented")
 }
 
-func (UnimplementedMerchantServiceHandler) ActivateMerchant(context.Context, *connect.Request[v1.ActivateMerchantRequest]) (*connect.Response[v1.ActivateMerchantResponse], error) {
-	return nil, connect.NewError(connect.CodeUnimplemented, errors.New("merchant.v1.MerchantService.ActivateMerchant is not implemented"))
+func (UnimplementedMerchantServiceHandler) ActivateMerchant(context.Context, *v1.ActivateMerchantRequest) (*v1.ActivateMerchantResponse, error) {
+	return nil, connect.NewError(connect.CodeUnimplemented, "merchant.v1.MerchantService.ActivateMerchant is not implemented")
+}
+
+type merchantServiceClient struct {
+	client *connect.Client
+}
+
+func (c *merchantServiceClient) GetMerchantAgreement(ctx context.Context, req *v1.GetMerchantAgreementRequest) (*v1.GetMerchantAgreementResponse, error) {
+	var res v1.GetMerchantAgreementResponse
+	if err := c.client.CallUnary(ctx, merchantServiceGetMerchantAgreementSpec(), req, &res); err != nil {
+		return nil, err
+	}
+	return &res, nil
+}
+
+func (c *merchantServiceClient) CreateMerchant(ctx context.Context, req *v1.CreateMerchantRequest) (*v1.CreateMerchantResponse, error) {
+	var res v1.CreateMerchantResponse
+	if err := c.client.CallUnary(ctx, merchantServiceCreateMerchantSpec(), req, &res); err != nil {
+		return nil, err
+	}
+	return &res, nil
+}
+
+func (c *merchantServiceClient) SubmitApplication(ctx context.Context, req *v1.SubmitApplicationRequest) (*v1.SubmitApplicationResponse, error) {
+	var res v1.SubmitApplicationResponse
+	if err := c.client.CallUnary(ctx, merchantServiceSubmitApplicationSpec(), req, &res); err != nil {
+		return nil, err
+	}
+	return &res, nil
+}
+
+func (c *merchantServiceClient) ApproveApplication(ctx context.Context, req *v1.ApproveApplicationRequest) (*v1.ApproveApplicationResponse, error) {
+	var res v1.ApproveApplicationResponse
+	if err := c.client.CallUnary(ctx, merchantServiceApproveApplicationSpec(), req, &res); err != nil {
+		return nil, err
+	}
+	return &res, nil
+}
+
+func (c *merchantServiceClient) RejectApplication(ctx context.Context, req *v1.RejectApplicationRequest) (*v1.RejectApplicationResponse, error) {
+	var res v1.RejectApplicationResponse
+	if err := c.client.CallUnary(ctx, merchantServiceRejectApplicationSpec(), req, &res); err != nil {
+		return nil, err
+	}
+	return &res, nil
+}
+
+func (c *merchantServiceClient) GetApplication(ctx context.Context, req *v1.GetApplicationRequest) (*v1.GetApplicationResponse, error) {
+	var res v1.GetApplicationResponse
+	if err := c.client.CallUnary(ctx, merchantServiceGetApplicationSpec(), req, &res); err != nil {
+		return nil, err
+	}
+	return &res, nil
+}
+
+func (c *merchantServiceClient) ActivateMerchant(ctx context.Context, req *v1.ActivateMerchantRequest) (*v1.ActivateMerchantResponse, error) {
+	var res v1.ActivateMerchantResponse
+	if err := c.client.CallUnary(ctx, merchantServiceActivateMerchantSpec(), req, &res); err != nil {
+		return nil, err
+	}
+	return &res, nil
+}
+
+type merchantServiceHandler struct{ svc MerchantServiceHandler }
+
+func (h merchantServiceHandler) getMerchantAgreement(ctx context.Context, _ connect.Spec, stream connect.ServerStream) error {
+	var req v1.GetMerchantAgreementRequest
+	if err := stream.Receive(&req); err != nil {
+		return err
+	}
+	res, err := h.svc.GetMerchantAgreement(ctx, &req)
+	if err != nil {
+		return err
+	}
+	return stream.Send(res)
+}
+
+func (h merchantServiceHandler) createMerchant(ctx context.Context, _ connect.Spec, stream connect.ServerStream) error {
+	var req v1.CreateMerchantRequest
+	if err := stream.Receive(&req); err != nil {
+		return err
+	}
+	res, err := h.svc.CreateMerchant(ctx, &req)
+	if err != nil {
+		return err
+	}
+	return stream.Send(res)
+}
+
+func (h merchantServiceHandler) submitApplication(ctx context.Context, _ connect.Spec, stream connect.ServerStream) error {
+	var req v1.SubmitApplicationRequest
+	if err := stream.Receive(&req); err != nil {
+		return err
+	}
+	res, err := h.svc.SubmitApplication(ctx, &req)
+	if err != nil {
+		return err
+	}
+	return stream.Send(res)
+}
+
+func (h merchantServiceHandler) approveApplication(ctx context.Context, _ connect.Spec, stream connect.ServerStream) error {
+	var req v1.ApproveApplicationRequest
+	if err := stream.Receive(&req); err != nil {
+		return err
+	}
+	res, err := h.svc.ApproveApplication(ctx, &req)
+	if err != nil {
+		return err
+	}
+	return stream.Send(res)
+}
+
+func (h merchantServiceHandler) rejectApplication(ctx context.Context, _ connect.Spec, stream connect.ServerStream) error {
+	var req v1.RejectApplicationRequest
+	if err := stream.Receive(&req); err != nil {
+		return err
+	}
+	res, err := h.svc.RejectApplication(ctx, &req)
+	if err != nil {
+		return err
+	}
+	return stream.Send(res)
+}
+
+func (h merchantServiceHandler) getApplication(ctx context.Context, _ connect.Spec, stream connect.ServerStream) error {
+	var req v1.GetApplicationRequest
+	if err := stream.Receive(&req); err != nil {
+		return err
+	}
+	res, err := h.svc.GetApplication(ctx, &req)
+	if err != nil {
+		return err
+	}
+	return stream.Send(res)
+}
+
+func (h merchantServiceHandler) activateMerchant(ctx context.Context, _ connect.Spec, stream connect.ServerStream) error {
+	var req v1.ActivateMerchantRequest
+	if err := stream.Receive(&req); err != nil {
+		return err
+	}
+	res, err := h.svc.ActivateMerchant(ctx, &req)
+	if err != nil {
+		return err
+	}
+	return stream.Send(res)
 }

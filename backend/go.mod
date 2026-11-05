@@ -3,13 +3,14 @@ module github.com/lens077/ecommerce/backend
 go 1.27.0
 
 require (
-	buf.build/gen/go/bufbuild/protovalidate/protocolbuffers/go v1.36.12-20260825204119-511051f7f437.1
-	buf.build/go/protovalidate v1.3.0
-	connectrpc.com/connect v1.20.0
+	buf.build/gen/go/bufbuild/protovalidate/protocolbuffers/go v1.36.12-20260825204119-511051f7f437.2
+	buf.build/go/protovalidate v1.4.0
+	connectrpc.com/connect v1.21.0
+	connectrpc.com/connect/v2 v2.0.2
 	connectrpc.com/cors v0.1.0
-	connectrpc.com/grpchealth v1.5.0
-	connectrpc.com/otelconnect v0.9.0
-	connectrpc.com/validate v0.6.0
+	connectrpc.com/grpchealth/v2 v2.0.0
+	connectrpc.com/otelconnect v0.12.0
+	connectrpc.com/validate v0.9.0
 	github.com/Protocol-Lattice/GoEventBus v0.2.5
 	github.com/casdoor/casdoor-go-sdk v1.46.0
 	github.com/elastic/elastic-transport-go/v8 v8.9.0
@@ -17,7 +18,7 @@ require (
 	github.com/google/uuid v1.6.0
 	github.com/jackc/pgx/v5 v5.10.0
 	github.com/lens077/control-tower v0.1.7
-	github.com/lens077/go-connect-kit v0.8.0
+	github.com/lens077/go-connect-kit v1.0.0
 	github.com/pressly/goose/v3 v3.27.3
 	github.com/redis/go-redis/v9 v9.22.0
 	github.com/rs/cors v1.11.1
@@ -38,6 +39,7 @@ require (
 )
 
 require (
+	cel.dev/cel-go v0.32.0 // indirect
 	cel.dev/expr v0.25.3 // indirect
 	github.com/antlr4-go/antlr/v4 v4.13.1 // indirect
 	github.com/armon/go-metrics v0.4.1 // indirect
@@ -51,7 +53,6 @@ require (
 	github.com/go-logr/stdr v1.2.2 // indirect
 	github.com/go-viper/mapstructure/v2 v2.5.0 // indirect
 	github.com/golang-jwt/jwt/v4 v4.5.2 // indirect
-	github.com/google/cel-go v0.30.0 // indirect
 	github.com/grpc-ecosystem/grpc-gateway/v2 v2.30.0 // indirect
 	github.com/hashicorp/consul/api v1.34.4 // indirect
 	github.com/hashicorp/errwrap v1.1.0 // indirect
@@ -113,6 +114,6 @@ require (
 )
 
 tool (
-	connectrpc.com/connect/cmd/protoc-gen-connect-go
+	connectrpc.com/connect/v2/cmd/protoc-gen-connect-go
 	google.golang.org/protobuf/cmd/protoc-gen-go
 )

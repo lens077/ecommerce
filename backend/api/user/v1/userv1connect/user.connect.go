@@ -5,38 +5,46 @@
 package userv1connect
 
 import (
-	connect "connectrpc.com/connect"
+	connect "connectrpc.com/connect/v2"
 	context "context"
-	errors "errors"
 	v1 "github.com/lens077/ecommerce/backend/api/user/v1"
-	http "net/http"
-	strings "strings"
+	sync "sync"
 )
-
-// This is a compile-time assertion to ensure that this generated file and the connect package are
-// compatible. If you get a compiler error that this constant is not defined, this code was
-// generated with a version of connect newer than the one compiled into your binary. You can fix the
-// problem by either regenerating this code with an older version of connect or updating the connect
-// version compiled into your binary.
-const _ = connect.IsAtLeastVersion1_13_0
 
 const (
 	// UserServiceName is the fully-qualified name of the UserService service.
 	UserServiceName = "user.v1.UserService"
 )
 
-// These constants are the fully-qualified names of the RPCs defined in this package. They're
-// exposed at runtime as Spec.Procedure and as the final two segments of the HTTP route.
+// These constants are the procedure names of the RPCs defined in this package. They're exposed at
+// runtime as Spec.Procedure and as the final two segments of the HTTP route.
 //
 // Note that these are different from the fully-qualified method names used by
 // google.golang.org/protobuf/reflect/protoreflect. To convert from these constants to
 // reflection-formatted method names, remove the leading slash and convert the remaining slash to a
 // period.
 const (
-	// UserServiceSignInProcedure is the fully-qualified name of the UserService's SignIn RPC.
+	// UserServiceSignInProcedure is the procedure name of the UserService's SignIn RPC.
 	UserServiceSignInProcedure = "/user.v1.UserService/SignIn"
-	// UserServiceUserProfileProcedure is the fully-qualified name of the UserService's UserProfile RPC.
+	// UserServiceUserProfileProcedure is the procedure name of the UserService's UserProfile RPC.
 	UserServiceUserProfileProcedure = "/user.v1.UserService/UserProfile"
+)
+
+var (
+	userServiceSignInSpec = sync.OnceValue(func() connect.Spec {
+		return connect.Spec{
+			StreamType: connect.StreamTypeUnary,
+			Schema:     v1.File_api_user_v1_user_proto.Services().ByName("UserService").Methods().ByName("SignIn"),
+			Procedure:  UserServiceSignInProcedure,
+		}
+	})
+	userServiceUserProfileSpec = sync.OnceValue(func() connect.Spec {
+		return connect.Spec{
+			StreamType: connect.StreamTypeUnary,
+			Schema:     v1.File_api_user_v1_user_proto.Services().ByName("UserService").Methods().ByName("UserProfile"),
+			Procedure:  UserServiceUserProfileProcedure,
+		}
+	})
 )
 
 // UserServiceClient is a client for the user.v1.UserService service.
@@ -47,54 +55,18 @@ type UserServiceClient interface {
 	// 登录前的会话正是在这一步建立，所以它本身不需要 JWT。
 	// Casdoor 连不上时返回 internal 而非 unauthenticated —— 那是依赖故障，
 	// 不能伪装成「用户授权码无效」。
-	SignIn(context.Context, *connect.Request[v1.SignInRequest]) (*connect.Response[v1.SignInResponse], error)
+	SignIn(context.Context, *v1.SignInRequest) (*v1.SignInResponse, error)
 	// UserProfile 读取当前登录用户的资料。
 	//
 	// 身份不来自请求体，而来自网关注入的 x-md-global-name 头
 	// （见 backend/constants/meta.go 的 UserNameMetadataKey），因此请求体是空的。
-	UserProfile(context.Context, *connect.Request[v1.UserProfileRequest]) (*connect.Response[v1.UserProfileResponse], error)
+	UserProfile(context.Context, *v1.UserProfileRequest) (*v1.UserProfileResponse, error)
 }
 
-// NewUserServiceClient constructs a client for the user.v1.UserService service. By default, it uses
-// the Connect protocol with the binary Protobuf Codec, asks for gzipped responses, and sends
-// uncompressed requests. To use the gRPC or gRPC-Web protocols, supply the connect.WithGRPC() or
-// connect.WithGRPCWeb() options.
-//
-// The URL supplied here should be the base URL for the Connect or gRPC server (for example,
-// http://api.acme.com or https://acme.com/grpc).
-func NewUserServiceClient(httpClient connect.HTTPClient, baseURL string, opts ...connect.ClientOption) UserServiceClient {
-	baseURL = strings.TrimRight(baseURL, "/")
-	userServiceMethods := v1.File_api_user_v1_user_proto.Services().ByName("UserService").Methods()
-	return &userServiceClient{
-		signIn: connect.NewClient[v1.SignInRequest, v1.SignInResponse](
-			httpClient,
-			baseURL+UserServiceSignInProcedure,
-			connect.WithSchema(userServiceMethods.ByName("SignIn")),
-			connect.WithClientOptions(opts...),
-		),
-		userProfile: connect.NewClient[v1.UserProfileRequest, v1.UserProfileResponse](
-			httpClient,
-			baseURL+UserServiceUserProfileProcedure,
-			connect.WithSchema(userServiceMethods.ByName("UserProfile")),
-			connect.WithClientOptions(opts...),
-		),
-	}
-}
-
-// userServiceClient implements UserServiceClient.
-type userServiceClient struct {
-	signIn      *connect.Client[v1.SignInRequest, v1.SignInResponse]
-	userProfile *connect.Client[v1.UserProfileRequest, v1.UserProfileResponse]
-}
-
-// SignIn calls user.v1.UserService.SignIn.
-func (c *userServiceClient) SignIn(ctx context.Context, req *connect.Request[v1.SignInRequest]) (*connect.Response[v1.SignInResponse], error) {
-	return c.signIn.CallUnary(ctx, req)
-}
-
-// UserProfile calls user.v1.UserService.UserProfile.
-func (c *userServiceClient) UserProfile(ctx context.Context, req *connect.Request[v1.UserProfileRequest]) (*connect.Response[v1.UserProfileResponse], error) {
-	return c.userProfile.CallUnary(ctx, req)
+// NewUserServiceClient constructs a client for the user.v1.UserService service. Multiple service
+// clients may share a single connect.Client.
+func NewUserServiceClient(client *connect.Client) UserServiceClient {
+	return &userServiceClient{client: client}
 }
 
 // UserServiceHandler is an implementation of the user.v1.UserService service.
@@ -105,52 +77,76 @@ type UserServiceHandler interface {
 	// 登录前的会话正是在这一步建立，所以它本身不需要 JWT。
 	// Casdoor 连不上时返回 internal 而非 unauthenticated —— 那是依赖故障，
 	// 不能伪装成「用户授权码无效」。
-	SignIn(context.Context, *connect.Request[v1.SignInRequest]) (*connect.Response[v1.SignInResponse], error)
+	SignIn(context.Context, *v1.SignInRequest) (*v1.SignInResponse, error)
 	// UserProfile 读取当前登录用户的资料。
 	//
 	// 身份不来自请求体，而来自网关注入的 x-md-global-name 头
 	// （见 backend/constants/meta.go 的 UserNameMetadataKey），因此请求体是空的。
-	UserProfile(context.Context, *connect.Request[v1.UserProfileRequest]) (*connect.Response[v1.UserProfileResponse], error)
+	UserProfile(context.Context, *v1.UserProfileRequest) (*v1.UserProfileResponse, error)
 }
 
-// NewUserServiceHandler builds an HTTP handler from the service implementation. It returns the path
-// on which to mount the handler and the handler itself.
-//
-// By default, handlers support the Connect, gRPC, and gRPC-Web protocols with the binary Protobuf
-// and JSON codecs. They also support gzip compression.
-func NewUserServiceHandler(svc UserServiceHandler, opts ...connect.HandlerOption) (string, http.Handler) {
-	userServiceMethods := v1.File_api_user_v1_user_proto.Services().ByName("UserService").Methods()
-	userServiceSignInHandler := connect.NewUnaryHandler(
-		UserServiceSignInProcedure,
-		svc.SignIn,
-		connect.WithSchema(userServiceMethods.ByName("SignIn")),
-		connect.WithHandlerOptions(opts...),
+// RegisterUserServiceHandler registers svc as the user.v1.UserService implementation on server.
+func RegisterUserServiceHandler(server *connect.Server, svc UserServiceHandler) {
+	adapter := userServiceHandler{svc: svc}
+	server.Register(
+		connect.Method{Spec: userServiceSignInSpec(), Handler: adapter.signIn},
+		connect.Method{Spec: userServiceUserProfileSpec(), Handler: adapter.userProfile},
 	)
-	userServiceUserProfileHandler := connect.NewUnaryHandler(
-		UserServiceUserProfileProcedure,
-		svc.UserProfile,
-		connect.WithSchema(userServiceMethods.ByName("UserProfile")),
-		connect.WithHandlerOptions(opts...),
-	)
-	return "/user.v1.UserService/", http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		switch r.URL.Path {
-		case UserServiceSignInProcedure:
-			userServiceSignInHandler.ServeHTTP(w, r)
-		case UserServiceUserProfileProcedure:
-			userServiceUserProfileHandler.ServeHTTP(w, r)
-		default:
-			http.NotFound(w, r)
-		}
-	})
 }
 
 // UnimplementedUserServiceHandler returns CodeUnimplemented from all methods.
 type UnimplementedUserServiceHandler struct{}
 
-func (UnimplementedUserServiceHandler) SignIn(context.Context, *connect.Request[v1.SignInRequest]) (*connect.Response[v1.SignInResponse], error) {
-	return nil, connect.NewError(connect.CodeUnimplemented, errors.New("user.v1.UserService.SignIn is not implemented"))
+func (UnimplementedUserServiceHandler) SignIn(context.Context, *v1.SignInRequest) (*v1.SignInResponse, error) {
+	return nil, connect.NewError(connect.CodeUnimplemented, "user.v1.UserService.SignIn is not implemented")
 }
 
-func (UnimplementedUserServiceHandler) UserProfile(context.Context, *connect.Request[v1.UserProfileRequest]) (*connect.Response[v1.UserProfileResponse], error) {
-	return nil, connect.NewError(connect.CodeUnimplemented, errors.New("user.v1.UserService.UserProfile is not implemented"))
+func (UnimplementedUserServiceHandler) UserProfile(context.Context, *v1.UserProfileRequest) (*v1.UserProfileResponse, error) {
+	return nil, connect.NewError(connect.CodeUnimplemented, "user.v1.UserService.UserProfile is not implemented")
+}
+
+type userServiceClient struct {
+	client *connect.Client
+}
+
+func (c *userServiceClient) SignIn(ctx context.Context, req *v1.SignInRequest) (*v1.SignInResponse, error) {
+	var res v1.SignInResponse
+	if err := c.client.CallUnary(ctx, userServiceSignInSpec(), req, &res); err != nil {
+		return nil, err
+	}
+	return &res, nil
+}
+
+func (c *userServiceClient) UserProfile(ctx context.Context, req *v1.UserProfileRequest) (*v1.UserProfileResponse, error) {
+	var res v1.UserProfileResponse
+	if err := c.client.CallUnary(ctx, userServiceUserProfileSpec(), req, &res); err != nil {
+		return nil, err
+	}
+	return &res, nil
+}
+
+type userServiceHandler struct{ svc UserServiceHandler }
+
+func (h userServiceHandler) signIn(ctx context.Context, _ connect.Spec, stream connect.ServerStream) error {
+	var req v1.SignInRequest
+	if err := stream.Receive(&req); err != nil {
+		return err
+	}
+	res, err := h.svc.SignIn(ctx, &req)
+	if err != nil {
+		return err
+	}
+	return stream.Send(res)
+}
+
+func (h userServiceHandler) userProfile(ctx context.Context, _ connect.Spec, stream connect.ServerStream) error {
+	var req v1.UserProfileRequest
+	if err := stream.Receive(&req); err != nil {
+		return err
+	}
+	res, err := h.svc.UserProfile(ctx, &req)
+	if err != nil {
+		return err
+	}
+	return stream.Send(res)
 }

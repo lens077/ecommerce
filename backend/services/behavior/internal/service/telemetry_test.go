@@ -4,7 +4,7 @@ import (
 	"context"
 	"testing"
 
-	"connectrpc.com/connect"
+	"connectrpc.com/connect/v2"
 	telemetryv1 "github.com/lens077/ecommerce/backend/api/telemetry/v1"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
@@ -49,7 +49,7 @@ func TestCollectWebVitals_RecordsHistogram(t *testing.T) {
 	svc, reader := newTelemetryWithReader(t)
 
 	resp, err := svc.CollectWebVitals(context.Background(),
-		connect.NewRequest(&telemetryv1.CollectWebVitalsRequest{
+		&telemetryv1.CollectWebVitalsRequest{
 			AnonId: "a-1",
 			Vitals: []*telemetryv1.WebVital{
 				{
@@ -64,9 +64,9 @@ func TestCollectWebVitals_RecordsHistogram(t *testing.T) {
 					Page:  "/",
 				},
 			},
-		}))
+		})
 	require.NoError(t, err)
-	assert.Equal(t, uint32(2), resp.Msg.Accepted)
+	assert.Equal(t, uint32(2), resp.Accepted)
 
 	metrics := collect(t, reader)
 	lcp, ok := metrics["web_vitals.lcp"].Data.(metricdata.Histogram[float64])
@@ -89,15 +89,15 @@ func TestCollectWebVitals_ApiTimings(t *testing.T) {
 	svc, reader := newTelemetryWithReader(t)
 
 	resp, err := svc.CollectWebVitals(context.Background(),
-		connect.NewRequest(&telemetryv1.CollectWebVitalsRequest{
+		&telemetryv1.CollectWebVitalsRequest{
 			AnonId: "a-1",
 			ApiTimings: []*telemetryv1.ApiTiming{
 				{Path: "/cart.v1.CartService/GetCart", DurationMs: 120, TtfbMs: 80},
 				{Path: "/order.v1.OrderService/CreateOrder", DurationMs: 2400, TtfbMs: 2300},
 			},
-		}))
+		})
 	require.NoError(t, err)
-	assert.Equal(t, uint32(2), resp.Msg.Accepted)
+	assert.Equal(t, uint32(2), resp.Accepted)
 
 	metrics := collect(t, reader)
 	h, ok := metrics["frontend.api.duration"].Data.(metricdata.Histogram[float64])
@@ -110,7 +110,7 @@ func TestCollectWebVitals_RejectsEmptyRequest(t *testing.T) {
 	svc, _ := newTelemetryWithReader(t)
 
 	_, err := svc.CollectWebVitals(context.Background(),
-		connect.NewRequest(&telemetryv1.CollectWebVitalsRequest{AnonId: "a-1"}))
+		&telemetryv1.CollectWebVitalsRequest{AnonId: "a-1"})
 	require.Error(t, err)
 	assert.Equal(t, connect.CodeInvalidArgument, connect.CodeOf(err),
 		"空请求要显式拒绝 —— 静默 200 会把客户端 bug 藏起来")

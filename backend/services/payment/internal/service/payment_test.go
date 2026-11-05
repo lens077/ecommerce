@@ -7,7 +7,7 @@ import (
 	"net/url"
 	"testing"
 
-	"connectrpc.com/connect"
+	"connectrpc.com/connect/v2"
 	"github.com/google/uuid"
 	v1 "github.com/lens077/ecommerce/backend/api/payment/v1"
 	"github.com/lens077/ecommerce/backend/services/payment/internal/biz"
@@ -51,7 +51,7 @@ func TestCreatePayment_InvalidArgumentsAreNotUnknown(t *testing.T) {
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			_, err := newPaymentSvc(nil).CreatePayment(context.Background(), connect.NewRequest(tt.req))
+			_, err := newPaymentSvc(nil).CreatePayment(context.Background(), tt.req)
 			if got := connect.CodeOf(err); got != connect.CodeInvalidArgument {
 				t.Fatalf("code = %v, want invalid_argument (err=%v)", got, err)
 			}
@@ -61,7 +61,7 @@ func TestCreatePayment_InvalidArgumentsAreNotUnknown(t *testing.T) {
 
 // data 层返回的 connect 错误（当前全是 Unimplemented）必须原样透传，不能被外层包成 unknown。
 func TestGetPaymentStatus_MapsRepoErrors(t *testing.T) {
-	unimplemented := connect.NewError(connect.CodeUnimplemented, errors.New("not implemented yet"))
+	unimplemented := biz.ErrNotImplemented
 	tests := []struct {
 		name string
 		err  error
@@ -73,7 +73,7 @@ func TestGetPaymentStatus_MapsRepoErrors(t *testing.T) {
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			_, err := newPaymentSvc(tt.err).GetPaymentStatus(context.Background(), connect.NewRequest(&v1.GetPaymentStatusRequest{PaymentId: 1}))
+			_, err := newPaymentSvc(tt.err).GetPaymentStatus(context.Background(), &v1.GetPaymentStatusRequest{PaymentId: 1})
 			if got := connect.CodeOf(err); got != tt.want {
 				t.Fatalf("code = %v, want %v (err=%v)", got, tt.want, err)
 			}

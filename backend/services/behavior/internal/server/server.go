@@ -5,15 +5,15 @@ import (
 	"encoding/json"
 	"net/http"
 
-	"connectrpc.com/connect"
+	"connectrpc.com/connect/v2"
+	"connectrpc.com/connect/v2/connecthttp"
 	connectcors "connectrpc.com/cors"
-	"connectrpc.com/validate"
 	"github.com/lens077/ecommerce/backend/api/behavior/v1/behaviorv1connect"
 	"github.com/lens077/ecommerce/backend/api/telemetry/v1/telemetryv1connect"
 	"github.com/lens077/ecommerce/backend/pkg/healthcheck"
-	"github.com/lens077/go-connect-kit/meta"
 	conf "github.com/lens077/ecommerce/backend/services/behavior/internal/conf/v1"
 	"github.com/lens077/ecommerce/backend/services/behavior/internal/data"
+	"github.com/lens077/go-connect-kit/meta"
 	"github.com/rs/cors"
 	"go.opentelemetry.io/contrib/instrumentation/net/http/otelhttp"
 	"go.uber.org/fx"
@@ -34,35 +34,31 @@ func NewHTTPServer(
 	behaviorv1Service behaviorv1connect.BehaviorServiceHandler,
 	telemetryv1Service telemetryv1connect.TelemetryServiceHandler,
 	logger *zap.Logger,
-	connectOptions []connect.HandlerOption,
+	interceptors []connect.ServerInterceptor,
 	deps *data.Data,
 	info meta.AppInfo,
 ) *http.Server {
 
 	mux := http.NewServeMux()
 
-	combinedOptions := append(connectOptions, connect.WithInterceptors(validate.NewInterceptor()))
+	// connect v2:拦截器挂在 Server 上,对 Server 上全部服务生效;validate 已并进
+	// middleware 组装(最外层)。所有 Register 必须在 Mount 之前 —— Mount 按当前
+	// 过程表装配 HTTP 路由,后注册的过程不会被路由。
+	server := connect.NewServer(interceptors...)
 
-	behaviorv1connectPath, behaviorv1connectHandler := behaviorv1connect.NewBehaviorServiceHandler(
-		behaviorv1Service,
-		combinedOptions...,
-	)
-	mux.Handle(behaviorv1connectPath, behaviorv1connectHandler)
+	behaviorv1connect.RegisterBehaviorServiceHandler(server, behaviorv1Service)
 
 	// telemetry.v1 与 behavior.v1 是两个域,共享本进程只是部署上的顺带
 	// (见 telemetry.proto 头注释);挂载点分开,将来搬去 analytics 只删这两行
-	telemetryv1connectPath, telemetryv1connectHandler := telemetryv1connect.NewTelemetryServiceHandler(
-		telemetryv1Service,
-		combinedOptions...,
-	)
-	mux.Handle(telemetryv1connectPath, telemetryv1connectHandler)
+	telemetryv1connect.RegisterTelemetryServiceHandler(server, telemetryv1Service)
 
-	healthPath, healthHandler := healthcheck.NewGRPCHandler(
+	healthcheck.Register(server,
 		func(ctx context.Context) bool { return healthStatus(ctx, deps, info.Version, meta.Version).Healthy },
 		behaviorv1connect.BehaviorServiceName,
 		telemetryv1connect.TelemetryServiceName,
 	)
-	mux.Handle(healthPath, healthHandler)
+
+	connecthttp.Mount(mux, server)
 
 	// 应用本身的健康检查
 	mux.HandleFunc("/healthz", func(w http.ResponseWriter, r *http.Request) {
@@ -80,7 +76,7 @@ func NewHTTPServer(
 	h2s := &http2.Server{}
 	handlerChain = h2c.NewHandler(handlerChain, h2s)
 
-	server := &http.Server{
+	httpServer := &http.Server{
 		Addr:         cfg.Server.Addr,
 		Handler:      handlerChain,
 		ReadTimeout:  cfg.Server.Http.ReadTimeout.AsDuration(),
@@ -97,11 +93,11 @@ func NewHTTPServer(
 		},
 		OnStop: func(ctx context.Context) error {
 			logger.Info("http server shutting down...")
-			return server.Shutdown(ctx)
+			return httpServer.Shutdown(ctx)
 		},
 	})
 
-	return server
+	return httpServer
 }
 
 // withCORS 为处理器添加跨域支持。

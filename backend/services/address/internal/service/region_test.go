@@ -5,7 +5,6 @@ import (
 	"errors"
 	"testing"
 
-	"connectrpc.com/connect"
 	v1 "github.com/lens077/ecommerce/backend/api/address/v1"
 	"github.com/lens077/ecommerce/backend/services/address/internal/biz"
 	"github.com/stretchr/testify/assert"
@@ -38,32 +37,32 @@ func TestListRegions_PassesParentIDThrough(t *testing.T) {
 	}}
 
 	resp, err := newSvc(repo).ListRegions(context.Background(),
-		connect.NewRequest(&v1.ListRegionsRequest{ParentId: 20}))
+		&v1.ListRegionsRequest{ParentId: 20})
 
 	require.NoError(t, err)
 	assert.Equal(t, int32(20), repo.gotParentID)
-	require.Len(t, resp.Msg.Regions, 1)
-	assert.Equal(t, "深圳市", resp.Msg.Regions[0].Name)
-	assert.Equal(t, "Shenzhen City", resp.Msg.Regions[0].NameEn)
-	assert.Equal(t, "440300", resp.Msg.Regions[0].Code)
+	require.Len(t, resp.Regions, 1)
+	assert.Equal(t, "深圳市", resp.Regions[0].Name)
+	assert.Equal(t, "Shenzhen City", resp.Regions[0].NameEn)
+	assert.Equal(t, "440300", resp.Regions[0].Code)
 }
 
 // 省直辖县级行政区（海南琼海市、湖北仙桃市等）下面确实没有区县，
 // 空列表是正常业务结果，不能当错误抛，也不能返回 nil 让前端 .map 炸掉。
 func TestListRegions_EmptyIsNotAnError(t *testing.T) {
 	resp, err := newSvc(&fakeRegionRepo{}).ListRegions(context.Background(),
-		connect.NewRequest(&v1.ListRegionsRequest{ParentId: 360}))
+		&v1.ListRegionsRequest{ParentId: 360})
 
 	require.NoError(t, err)
-	require.NotNil(t, resp.Msg.Regions)
-	assert.Empty(t, resp.Msg.Regions)
+	require.NotNil(t, resp.Regions)
+	assert.Empty(t, resp.Regions)
 }
 
 func TestListRegions_PropagatesRepoError(t *testing.T) {
 	want := errors.New("db down")
 
 	_, err := newSvc(&fakeRegionRepo{err: want}).ListRegions(context.Background(),
-		connect.NewRequest(&v1.ListRegionsRequest{ParentId: 0}))
+		&v1.ListRegionsRequest{ParentId: 0})
 
 	assert.ErrorIs(t, err, want)
 }

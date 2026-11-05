@@ -6,7 +6,7 @@ import (
 	"fmt"
 	"testing"
 
-	"connectrpc.com/connect"
+	"connectrpc.com/connect/v2"
 	v1 "github.com/lens077/ecommerce/backend/api/search/v1"
 	"github.com/lens077/ecommerce/backend/services/search/internal/biz"
 )
@@ -32,7 +32,7 @@ func TestSearch_MapsErrorsToRPCCodes(t *testing.T) {
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			s := NewSearchService(biz.NewSearchUseCase(failingSearchRepo{err: tt.err}))
-			_, err := s.Search(context.Background(), connect.NewRequest(&v1.SearchRequest{Name: "lamp"}))
+			_, err := s.Search(context.Background(), &v1.SearchRequest{Name: "lamp"})
 			if got := connect.CodeOf(err); got != tt.want {
 				t.Fatalf("code = %v, want %v (err=%v)", got, tt.want, err)
 			}
@@ -56,10 +56,10 @@ func TestSearchIgnoresClientSuppliedIndex(t *testing.T) {
 	repo := &recordingSearchRepo{}
 	service := NewSearchService(biz.NewSearchUseCase(repo))
 
-	_, err := service.Search(context.Background(), connect.NewRequest(&v1.SearchRequest{
+	_, err := service.Search(context.Background(), &v1.SearchRequest{
 		Index: "attacker-controlled-index",
 		Name:  "lamp",
-	}))
+	})
 	if err != nil {
 		t.Fatalf("Search() error = %v", err)
 	}

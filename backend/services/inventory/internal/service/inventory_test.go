@@ -6,7 +6,7 @@ import (
 	"fmt"
 	"testing"
 
-	"connectrpc.com/connect"
+	"connectrpc.com/connect/v2"
 	"github.com/google/uuid"
 	inventoryv1 "github.com/lens077/ecommerce/backend/api/inventory/v1"
 	"github.com/lens077/ecommerce/backend/services/inventory/internal/biz"
@@ -39,11 +39,11 @@ func TestReserve_MapsBizErrorsToRPCCodes(t *testing.T) {
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			s := &InventoryService{uc: biz.NewInventoryUseCase(stubRepo{err: tt.err}, zap.NewNop())}
-			_, err := s.Reserve(context.Background(), connect.NewRequest(&inventoryv1.ReserveRequest{
+			_, err := s.Reserve(context.Background(), &inventoryv1.ReserveRequest{
 				OrderNo:    "ORD-1",
 				MerchantId: uuid.NewString(),
 				Items:      []*inventoryv1.ReserveItem{{SkuId: 42, Quantity: 1}},
-			}))
+			})
 			if got := connect.CodeOf(err); got != tt.want {
 				t.Fatalf("code = %v, want %v (err=%v)", got, tt.want, err)
 			}
@@ -56,11 +56,11 @@ func TestReserve_MapsBizErrorsToRPCCodes(t *testing.T) {
 
 func TestReserve_InvalidMerchantID(t *testing.T) {
 	s := &InventoryService{uc: biz.NewInventoryUseCase(stubRepo{}, zap.NewNop())}
-	_, err := s.Reserve(context.Background(), connect.NewRequest(&inventoryv1.ReserveRequest{
+	_, err := s.Reserve(context.Background(), &inventoryv1.ReserveRequest{
 		OrderNo:    "ORD-1",
 		MerchantId: "not-a-uuid",
 		Items:      []*inventoryv1.ReserveItem{{SkuId: 42, Quantity: 1}},
-	}))
+	})
 	if got := connect.CodeOf(err); got != connect.CodeInvalidArgument {
 		t.Fatalf("code = %v, want invalid_argument (err=%v)", got, err)
 	}

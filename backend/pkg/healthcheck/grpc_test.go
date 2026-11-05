@@ -9,24 +9,34 @@ import (
 	"sync/atomic"
 	"testing"
 
-	"connectrpc.com/connect"
-	"connectrpc.com/grpchealth"
+	"connectrpc.com/connect/v2"
+	"connectrpc.com/connect/v2/connecthttp"
+	"connectrpc.com/grpchealth/v2"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 	"golang.org/x/net/http2"
 	"golang.org/x/net/http2/h2c"
 )
 
+// newHealthServer 起一个只挂健康检查的 connect 服务,返回测试用 HTTP server。
+func newHealthServer(t *testing.T, ready ReadyFunc, services ...string) *httptest.Server {
+	t.Helper()
+	mux := http.NewServeMux()
+	server := connect.NewServer()
+	Register(server, ready, services...)
+	connecthttp.Mount(mux, server)
+	s := httptest.NewServer(mux)
+	t.Cleanup(s.Close)
+	return s
+}
+
 func TestGRPCHandlerReportsDeepReadiness(t *testing.T) {
 	var ready atomic.Bool
-	path, handler := NewGRPCHandler(func(context.Context) bool {
+	s := newHealthServer(t, func(context.Context) bool {
 		return ready.Load()
 	}, "example.v1.ExampleService")
-	assert.Equal(t, "/grpc.health.v1.Health/", path)
 
-	server := httptest.NewServer(handler)
-	t.Cleanup(server.Close)
-	client := grpchealth.NewClient(server.Client(), server.URL)
+	client := grpchealth.NewClient(connect.NewClient(connecthttp.NewTransport(s.Client(), s.URL)))
 
 	response, err := client.Check(t.Context(), &grpchealth.CheckRequest{})
 	require.NoError(t, err)
@@ -39,16 +49,19 @@ func TestGRPCHandlerReportsDeepReadiness(t *testing.T) {
 }
 
 func TestGRPCHandlerSupportsPlaintextGRPC(t *testing.T) {
-	_, handler := NewGRPCHandler(func(context.Context) bool { return true }, "example.v1.ExampleService")
 	listener, err := net.Listen("tcp", "127.0.0.1:0")
 	require.NoError(t, err)
 
-	server := &http.Server{Handler: h2c.NewHandler(handler, &http2.Server{})}
+	mux := http.NewServeMux()
+	server := connect.NewServer()
+	Register(server, func(context.Context) bool { return true }, "example.v1.ExampleService")
+	connecthttp.Mount(mux, server)
+	httpSrv := &http.Server{Handler: h2c.NewHandler(mux, &http2.Server{})}
 	go func() {
-		_ = server.Serve(listener)
+		_ = httpSrv.Serve(listener)
 	}()
 	t.Cleanup(func() {
-		require.NoError(t, server.Shutdown(context.Background()))
+		require.NoError(t, httpSrv.Shutdown(context.Background()))
 	})
 
 	transport := &http2.Transport{
@@ -57,22 +70,20 @@ func TestGRPCHandlerSupportsPlaintextGRPC(t *testing.T) {
 			return (&net.Dialer{}).DialContext(ctx, network, address)
 		},
 	}
-	client := grpchealth.NewClient(
+	client := grpchealth.NewClient(connect.NewClient(connecthttp.NewTransport(
 		&http.Client{Transport: transport},
 		"http://"+listener.Addr().String(),
-		connect.WithGRPC(),
-	)
+		connecthttp.WithGRPC(),
+	)))
 	response, err := client.Check(t.Context(), &grpchealth.CheckRequest{})
 	require.NoError(t, err)
 	assert.Equal(t, grpchealth.StatusServing, response.Status)
 }
 
 func TestGRPCHandlerRejectsUnknownService(t *testing.T) {
-	_, handler := NewGRPCHandler(func(context.Context) bool { return true }, "example.v1.ExampleService")
-	server := httptest.NewServer(handler)
-	t.Cleanup(server.Close)
+	s := newHealthServer(t, func(context.Context) bool { return true }, "example.v1.ExampleService")
 
-	client := grpchealth.NewClient(server.Client(), server.URL)
+	client := grpchealth.NewClient(connect.NewClient(connecthttp.NewTransport(s.Client(), s.URL)))
 	_, err := client.Check(t.Context(), &grpchealth.CheckRequest{Service: "missing.v1.Service"})
 	require.Error(t, err)
 	assert.Equal(t, connect.CodeNotFound, connect.CodeOf(err))
@@ -80,6 +91,6 @@ func TestGRPCHandlerRejectsUnknownService(t *testing.T) {
 
 func TestGRPCHandlerRequiresReadinessFunction(t *testing.T) {
 	assert.PanicsWithValue(t, "healthcheck: nil readiness function", func() {
-		NewGRPCHandler(nil)
+		Register(connect.NewServer(), nil)
 	})
 }

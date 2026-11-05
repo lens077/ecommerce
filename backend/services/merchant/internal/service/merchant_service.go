@@ -3,10 +3,9 @@ package service
 import (
 	"context"
 	"errors"
-	"fmt"
 	"net/http"
 
-	"connectrpc.com/connect"
+	"connectrpc.com/connect/v2"
 	v1 "github.com/lens077/ecommerce/backend/api/merchant/v1"
 	merchantconnect "github.com/lens077/ecommerce/backend/api/merchant/v1/merchantv1connect"
 	"github.com/lens077/ecommerce/backend/constants"
@@ -25,19 +24,27 @@ type MerchantService struct {
 // 是粗粒度放行（谁能碰这条路）；真正的判定在这里——策略被改宽、请求绕过网关（东西向
 // 调用、误配）或换传输层方法，都逃不掉这一行。见 TECH.md §8.5 原则六。
 // OpenFGA 接线后把这里换成关系检查（can_review_application），角色判定退为兜底。
-func requireAdmin(h http.Header) error {
+func requireAdmin(ctx context.Context) error {
+	// kit identity 仍以 http.Header 为入参;v2 的 CallInfo.Header 按键展开成 http.Header。
+	info, _ := connect.CallInfoForServerContext(ctx)
+	h := http.Header{}
+	if info != nil {
+		for k, vs := range info.RequestHeader().All() {
+			h[k] = vs
+		}
+	}
 	_, err := identity.RequireRole(h, identity.RoleAdmin)
 	switch {
 	case err == nil:
 		return nil
 	case errors.Is(err, identity.ErrRoleNotAllowed):
-		return connect.NewError(connect.CodePermissionDenied, err)
+		return connect.NewError(connect.CodePermissionDenied, err.Error()).WithCause(err)
 	default:
-		return connect.NewError(connect.CodeUnauthenticated, err)
+		return connect.NewError(connect.CodeUnauthenticated, err.Error()).WithCause(err)
 	}
 }
 
-func (s *MerchantService) GetMerchantAgreement(ctx context.Context, _ *connect.Request[v1.GetMerchantAgreementRequest]) (*connect.Response[v1.GetMerchantAgreementResponse], error) {
+func (s *MerchantService) GetMerchantAgreement(ctx context.Context, _ *v1.GetMerchantAgreementRequest) (*v1.GetMerchantAgreementResponse, error) {
 	// req := c.Msg
 
 	result, err := s.uc.GetMerchantAgreement(ctx, &biz.GetMerchantAgreementRequest{})
@@ -50,17 +57,17 @@ func (s *MerchantService) GetMerchantAgreement(ctx context.Context, _ *connect.R
 		ContentUrl:    result.ContentUrl,
 	}
 
-	return connect.NewResponse(response), err
+	return response, err
 }
 
-func (s *MerchantService) CreateMerchant(ctx context.Context, c *connect.Request[v1.CreateMerchantRequest]) (*connect.Response[v1.CreateMerchantResponse], error) {
+func (s *MerchantService) CreateMerchant(ctx context.Context, c *v1.CreateMerchantRequest) (*v1.CreateMerchantResponse, error) {
 	// 未实现: 返回 Unimplemented 而不是 panic。panic 会让 net/http 直接断开连接, 客户端只看到
 	// "Empty reply from server", 分不清是崩了还是没做(2026-09-23 http-client 测试踩到)。
 	return nil, errUnimplemented("CreateMerchant")
 }
 
-func (s *MerchantService) SubmitApplication(ctx context.Context, c *connect.Request[v1.SubmitApplicationRequest]) (*connect.Response[v1.SubmitApplicationResponse], error) {
-	req := c.Msg
+func (s *MerchantService) SubmitApplication(ctx context.Context, c *v1.SubmitApplicationRequest) (*v1.SubmitApplicationResponse, error) {
+	req := c
 	result, err := s.uc.SubmitApplication(ctx, &biz.SubmitApplicationRequest{
 		CompanyName:           req.CompanyName,
 		CreditCode:            req.CreditCode,
@@ -80,14 +87,14 @@ func (s *MerchantService) SubmitApplication(ctx context.Context, c *connect.Requ
 		ApplicationId: result.ApplicationId,
 		Status:        string(result.Status),
 	}
-	return connect.NewResponse(response), nil
+	return response, nil
 }
 
-func (s *MerchantService) ApproveApplication(ctx context.Context, c *connect.Request[v1.ApproveApplicationRequest]) (*connect.Response[v1.ApproveApplicationResponse], error) {
-	if err := requireAdmin(c.Header()); err != nil {
+func (s *MerchantService) ApproveApplication(ctx context.Context, c *v1.ApproveApplicationRequest) (*v1.ApproveApplicationResponse, error) {
+	if err := requireAdmin(ctx); err != nil {
 		return nil, err
 	}
-	req := c.Msg
+	req := c
 	_, err := s.uc.ApproveApplication(ctx, &biz.ApproveApplicationRequest{
 		AuditComment:  req.AuditComment,
 		ApplicationId: req.ApplicationId,
@@ -98,12 +105,11 @@ func (s *MerchantService) ApproveApplication(ctx context.Context, c *connect.Req
 
 	response := &v1.ApproveApplicationResponse{}
 
-	return connect.NewResponse(response), nil
+	return response, nil
 }
 
-func (s *MerchantService) RejectApplication(ctx context.Context, c *connect.Request[v1.RejectApplicationRequest]) (*connect.Response[v1.RejectApplicationResponse], error) {
-	// 授权先于实现：桩子被填成真实逻辑时这行已经在了，不靠实现者记得补。
-	if err := requireAdmin(c.Header()); err != nil {
+func (s *MerchantService) RejectApplication(ctx context.Context, c *v1.RejectApplicationRequest) (*v1.RejectApplicationResponse, error) {
+	if err := requireAdmin(ctx); err != nil {
 		return nil, err
 	}
 	// 未实现: 返回 Unimplemented 而不是 panic。panic 会让 net/http 直接断开连接, 客户端只看到
@@ -111,8 +117,8 @@ func (s *MerchantService) RejectApplication(ctx context.Context, c *connect.Requ
 	return nil, errUnimplemented("RejectApplication")
 }
 
-func (s *MerchantService) GetApplication(ctx context.Context, c *connect.Request[v1.GetApplicationRequest]) (*connect.Response[v1.GetApplicationResponse], error) {
-	req := c.Msg
+func (s *MerchantService) GetApplication(ctx context.Context, c *v1.GetApplicationRequest) (*v1.GetApplicationResponse, error) {
+	req := c
 	result, err := s.uc.GetApplication(ctx, &biz.GetApplicationRequest{
 		ApplicationId: req.ApplicationId,
 	})
@@ -144,11 +150,11 @@ func (s *MerchantService) GetApplication(ctx context.Context, c *connect.Request
 		ReviewedAt:    timestamppb.New(result.ReviewedAt),
 	}
 
-	return connect.NewResponse(response), nil
+	return response, nil
 }
 
-func (s *MerchantService) ActivateMerchant(ctx context.Context, c *connect.Request[v1.ActivateMerchantRequest]) (*connect.Response[v1.ActivateMerchantResponse], error) {
-	if err := requireAdmin(c.Header()); err != nil {
+func (s *MerchantService) ActivateMerchant(ctx context.Context, c *v1.ActivateMerchantRequest) (*v1.ActivateMerchantResponse, error) {
+	if err := requireAdmin(ctx); err != nil {
 		return nil, err
 	}
 	// 未实现: 返回 Unimplemented 而不是 panic。panic 会让 net/http 直接断开连接, 客户端只看到
@@ -167,16 +173,16 @@ func NewMerchantService(uc *biz.MerchantUseCase) merchantconnect.MerchantService
 func merchantError(err error) error {
 	switch {
 	case errors.Is(err, biz.ErrApplicationIdNotFound):
-		return connect.NewError(connect.CodeNotFound, err)
+		return connect.NewError(connect.CodeNotFound, err.Error()).WithCause(err)
 	default:
-		return connect.NewError(connect.CodeUnknown, err)
+		return connect.NewError(connect.CodeUnknown, err.Error()).WithCause(err)
 	}
 }
 
 // errUnimplemented 统一的未实现错误, code = 12(Unimplemented); 与 payment 服务同一写法。
 func errUnimplemented(method string) error {
-	return connect.NewError(
+	return connect.Errorf(
 		connect.CodeUnimplemented,
-		fmt.Errorf("merchant.v1.MerchantService/%s is not implemented yet", method),
+		"merchant.v1.MerchantService/%s is not implemented yet", method,
 	)
 }

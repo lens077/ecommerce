@@ -5,46 +5,68 @@
 package paymentv1connect
 
 import (
-	connect "connectrpc.com/connect"
+	connect "connectrpc.com/connect/v2"
 	context "context"
-	errors "errors"
 	v1 "github.com/lens077/ecommerce/backend/api/payment/v1"
-	http "net/http"
-	strings "strings"
+	sync "sync"
 )
-
-// This is a compile-time assertion to ensure that this generated file and the connect package are
-// compatible. If you get a compiler error that this constant is not defined, this code was
-// generated with a version of connect newer than the one compiled into your binary. You can fix the
-// problem by either regenerating this code with an older version of connect or updating the connect
-// version compiled into your binary.
-const _ = connect.IsAtLeastVersion1_13_0
 
 const (
 	// PaymentServiceName is the fully-qualified name of the PaymentService service.
 	PaymentServiceName = "payment.v1.PaymentService"
 )
 
-// These constants are the fully-qualified names of the RPCs defined in this package. They're
-// exposed at runtime as Spec.Procedure and as the final two segments of the HTTP route.
+// These constants are the procedure names of the RPCs defined in this package. They're exposed at
+// runtime as Spec.Procedure and as the final two segments of the HTTP route.
 //
 // Note that these are different from the fully-qualified method names used by
 // google.golang.org/protobuf/reflect/protoreflect. To convert from these constants to
 // reflection-formatted method names, remove the leading slash and convert the remaining slash to a
 // period.
 const (
-	// PaymentServiceCreatePaymentProcedure is the fully-qualified name of the PaymentService's
-	// CreatePayment RPC.
+	// PaymentServiceCreatePaymentProcedure is the procedure name of the PaymentService's CreatePayment
+	// RPC.
 	PaymentServiceCreatePaymentProcedure = "/payment.v1.PaymentService/CreatePayment"
-	// PaymentServiceGetPaymentStatusProcedure is the fully-qualified name of the PaymentService's
+	// PaymentServiceGetPaymentStatusProcedure is the procedure name of the PaymentService's
 	// GetPaymentStatus RPC.
 	PaymentServiceGetPaymentStatusProcedure = "/payment.v1.PaymentService/GetPaymentStatus"
-	// PaymentServiceHandlePaymentNotifyProcedure is the fully-qualified name of the PaymentService's
+	// PaymentServiceHandlePaymentNotifyProcedure is the procedure name of the PaymentService's
 	// HandlePaymentNotify RPC.
 	PaymentServiceHandlePaymentNotifyProcedure = "/payment.v1.PaymentService/HandlePaymentNotify"
-	// PaymentServiceHandlePaymentCallbackProcedure is the fully-qualified name of the PaymentService's
+	// PaymentServiceHandlePaymentCallbackProcedure is the procedure name of the PaymentService's
 	// HandlePaymentCallback RPC.
 	PaymentServiceHandlePaymentCallbackProcedure = "/payment.v1.PaymentService/HandlePaymentCallback"
+)
+
+var (
+	paymentServiceCreatePaymentSpec = sync.OnceValue(func() connect.Spec {
+		return connect.Spec{
+			StreamType: connect.StreamTypeUnary,
+			Schema:     v1.File_api_payment_v1_payment_proto.Services().ByName("PaymentService").Methods().ByName("CreatePayment"),
+			Procedure:  PaymentServiceCreatePaymentProcedure,
+		}
+	})
+	paymentServiceGetPaymentStatusSpec = sync.OnceValue(func() connect.Spec {
+		return connect.Spec{
+			StreamType: connect.StreamTypeUnary,
+			Schema:     v1.File_api_payment_v1_payment_proto.Services().ByName("PaymentService").Methods().ByName("GetPaymentStatus"),
+			Procedure:  PaymentServiceGetPaymentStatusProcedure,
+		}
+	})
+	paymentServiceHandlePaymentNotifySpec = sync.OnceValue(func() connect.Spec {
+		return connect.Spec{
+			StreamType: connect.StreamTypeUnary,
+			Schema:     v1.File_api_payment_v1_payment_proto.Services().ByName("PaymentService").Methods().ByName("HandlePaymentNotify"),
+			Procedure:  PaymentServiceHandlePaymentNotifyProcedure,
+		}
+	})
+	paymentServiceHandlePaymentCallbackSpec = sync.OnceValue(func() connect.Spec {
+		return connect.Spec{
+			StreamType: connect.StreamTypeUnary,
+			Schema:     v1.File_api_payment_v1_payment_proto.Services().ByName("PaymentService").Methods().ByName("HandlePaymentCallback"),
+			Procedure:  PaymentServiceHandlePaymentCallbackProcedure,
+		}
+	})
 )
 
 // PaymentServiceClient is a client for the payment.v1.PaymentService service.
@@ -52,86 +74,26 @@ type PaymentServiceClient interface {
 	// 创建支付订单。
 	//
 	// 内部下单流程调用，返回 pay_url 供前端跳转收银台
-	CreatePayment(context.Context, *connect.Request[v1.CreatePaymentRequest]) (*connect.Response[v1.CreatePaymentResponse], error)
+	CreatePayment(context.Context, *v1.CreatePaymentRequest) (*v1.CreatePaymentResponse, error)
 	// 查询支付状态。前端轮询或回跳后确认用
-	GetPaymentStatus(context.Context, *connect.Request[v1.GetPaymentStatusRequest]) (*connect.Response[v1.GetPaymentStatusResponse], error)
+	GetPaymentStatus(context.Context, *v1.GetPaymentStatusRequest) (*v1.GetPaymentStatusResponse, error)
 	// 处理支付回调通知（支付宝服务端推送）。
 	//
 	// 请求体是 UrlValues 而不是结构化消息：渠道推来的就是一堆表单键值对，
 	// 先原样收下再验签，避免为每个渠道各建一份消息。
 	// 验签失败同样回 success=false，由渠道按自己的策略重推
-	HandlePaymentNotify(context.Context, *connect.Request[v1.UrlValues]) (*connect.Response[v1.HandlePaymentNotifyResponse], error)
+	HandlePaymentNotify(context.Context, *v1.UrlValues) (*v1.HandlePaymentNotifyResponse, error)
 	// 支付成功后的回调处理（用户收银台跳回）。
 	//
 	// 与 Notify 的差别：这条来自浏览器跳转，只用于把用户带回结果页，
 	// 不能作为入账依据 —— 真正的入账以 Notify 为准
-	HandlePaymentCallback(context.Context, *connect.Request[v1.HandlePaymentCallbackRequest]) (*connect.Response[v1.HandlePaymentCallbackResponse], error)
+	HandlePaymentCallback(context.Context, *v1.HandlePaymentCallbackRequest) (*v1.HandlePaymentCallbackResponse, error)
 }
 
-// NewPaymentServiceClient constructs a client for the payment.v1.PaymentService service. By
-// default, it uses the Connect protocol with the binary Protobuf Codec, asks for gzipped responses,
-// and sends uncompressed requests. To use the gRPC or gRPC-Web protocols, supply the
-// connect.WithGRPC() or connect.WithGRPCWeb() options.
-//
-// The URL supplied here should be the base URL for the Connect or gRPC server (for example,
-// http://api.acme.com or https://acme.com/grpc).
-func NewPaymentServiceClient(httpClient connect.HTTPClient, baseURL string, opts ...connect.ClientOption) PaymentServiceClient {
-	baseURL = strings.TrimRight(baseURL, "/")
-	paymentServiceMethods := v1.File_api_payment_v1_payment_proto.Services().ByName("PaymentService").Methods()
-	return &paymentServiceClient{
-		createPayment: connect.NewClient[v1.CreatePaymentRequest, v1.CreatePaymentResponse](
-			httpClient,
-			baseURL+PaymentServiceCreatePaymentProcedure,
-			connect.WithSchema(paymentServiceMethods.ByName("CreatePayment")),
-			connect.WithClientOptions(opts...),
-		),
-		getPaymentStatus: connect.NewClient[v1.GetPaymentStatusRequest, v1.GetPaymentStatusResponse](
-			httpClient,
-			baseURL+PaymentServiceGetPaymentStatusProcedure,
-			connect.WithSchema(paymentServiceMethods.ByName("GetPaymentStatus")),
-			connect.WithClientOptions(opts...),
-		),
-		handlePaymentNotify: connect.NewClient[v1.UrlValues, v1.HandlePaymentNotifyResponse](
-			httpClient,
-			baseURL+PaymentServiceHandlePaymentNotifyProcedure,
-			connect.WithSchema(paymentServiceMethods.ByName("HandlePaymentNotify")),
-			connect.WithClientOptions(opts...),
-		),
-		handlePaymentCallback: connect.NewClient[v1.HandlePaymentCallbackRequest, v1.HandlePaymentCallbackResponse](
-			httpClient,
-			baseURL+PaymentServiceHandlePaymentCallbackProcedure,
-			connect.WithSchema(paymentServiceMethods.ByName("HandlePaymentCallback")),
-			connect.WithClientOptions(opts...),
-		),
-	}
-}
-
-// paymentServiceClient implements PaymentServiceClient.
-type paymentServiceClient struct {
-	createPayment         *connect.Client[v1.CreatePaymentRequest, v1.CreatePaymentResponse]
-	getPaymentStatus      *connect.Client[v1.GetPaymentStatusRequest, v1.GetPaymentStatusResponse]
-	handlePaymentNotify   *connect.Client[v1.UrlValues, v1.HandlePaymentNotifyResponse]
-	handlePaymentCallback *connect.Client[v1.HandlePaymentCallbackRequest, v1.HandlePaymentCallbackResponse]
-}
-
-// CreatePayment calls payment.v1.PaymentService.CreatePayment.
-func (c *paymentServiceClient) CreatePayment(ctx context.Context, req *connect.Request[v1.CreatePaymentRequest]) (*connect.Response[v1.CreatePaymentResponse], error) {
-	return c.createPayment.CallUnary(ctx, req)
-}
-
-// GetPaymentStatus calls payment.v1.PaymentService.GetPaymentStatus.
-func (c *paymentServiceClient) GetPaymentStatus(ctx context.Context, req *connect.Request[v1.GetPaymentStatusRequest]) (*connect.Response[v1.GetPaymentStatusResponse], error) {
-	return c.getPaymentStatus.CallUnary(ctx, req)
-}
-
-// HandlePaymentNotify calls payment.v1.PaymentService.HandlePaymentNotify.
-func (c *paymentServiceClient) HandlePaymentNotify(ctx context.Context, req *connect.Request[v1.UrlValues]) (*connect.Response[v1.HandlePaymentNotifyResponse], error) {
-	return c.handlePaymentNotify.CallUnary(ctx, req)
-}
-
-// HandlePaymentCallback calls payment.v1.PaymentService.HandlePaymentCallback.
-func (c *paymentServiceClient) HandlePaymentCallback(ctx context.Context, req *connect.Request[v1.HandlePaymentCallbackRequest]) (*connect.Response[v1.HandlePaymentCallbackResponse], error) {
-	return c.handlePaymentCallback.CallUnary(ctx, req)
+// NewPaymentServiceClient constructs a client for the payment.v1.PaymentService service. Multiple
+// service clients may share a single connect.Client.
+func NewPaymentServiceClient(client *connect.Client) PaymentServiceClient {
+	return &paymentServiceClient{client: client}
 }
 
 // PaymentServiceHandler is an implementation of the payment.v1.PaymentService service.
@@ -139,84 +101,135 @@ type PaymentServiceHandler interface {
 	// 创建支付订单。
 	//
 	// 内部下单流程调用，返回 pay_url 供前端跳转收银台
-	CreatePayment(context.Context, *connect.Request[v1.CreatePaymentRequest]) (*connect.Response[v1.CreatePaymentResponse], error)
+	CreatePayment(context.Context, *v1.CreatePaymentRequest) (*v1.CreatePaymentResponse, error)
 	// 查询支付状态。前端轮询或回跳后确认用
-	GetPaymentStatus(context.Context, *connect.Request[v1.GetPaymentStatusRequest]) (*connect.Response[v1.GetPaymentStatusResponse], error)
+	GetPaymentStatus(context.Context, *v1.GetPaymentStatusRequest) (*v1.GetPaymentStatusResponse, error)
 	// 处理支付回调通知（支付宝服务端推送）。
 	//
 	// 请求体是 UrlValues 而不是结构化消息：渠道推来的就是一堆表单键值对，
 	// 先原样收下再验签，避免为每个渠道各建一份消息。
 	// 验签失败同样回 success=false，由渠道按自己的策略重推
-	HandlePaymentNotify(context.Context, *connect.Request[v1.UrlValues]) (*connect.Response[v1.HandlePaymentNotifyResponse], error)
+	HandlePaymentNotify(context.Context, *v1.UrlValues) (*v1.HandlePaymentNotifyResponse, error)
 	// 支付成功后的回调处理（用户收银台跳回）。
 	//
 	// 与 Notify 的差别：这条来自浏览器跳转，只用于把用户带回结果页，
 	// 不能作为入账依据 —— 真正的入账以 Notify 为准
-	HandlePaymentCallback(context.Context, *connect.Request[v1.HandlePaymentCallbackRequest]) (*connect.Response[v1.HandlePaymentCallbackResponse], error)
+	HandlePaymentCallback(context.Context, *v1.HandlePaymentCallbackRequest) (*v1.HandlePaymentCallbackResponse, error)
 }
 
-// NewPaymentServiceHandler builds an HTTP handler from the service implementation. It returns the
-// path on which to mount the handler and the handler itself.
-//
-// By default, handlers support the Connect, gRPC, and gRPC-Web protocols with the binary Protobuf
-// and JSON codecs. They also support gzip compression.
-func NewPaymentServiceHandler(svc PaymentServiceHandler, opts ...connect.HandlerOption) (string, http.Handler) {
-	paymentServiceMethods := v1.File_api_payment_v1_payment_proto.Services().ByName("PaymentService").Methods()
-	paymentServiceCreatePaymentHandler := connect.NewUnaryHandler(
-		PaymentServiceCreatePaymentProcedure,
-		svc.CreatePayment,
-		connect.WithSchema(paymentServiceMethods.ByName("CreatePayment")),
-		connect.WithHandlerOptions(opts...),
+// RegisterPaymentServiceHandler registers svc as the payment.v1.PaymentService implementation on
+// server.
+func RegisterPaymentServiceHandler(server *connect.Server, svc PaymentServiceHandler) {
+	adapter := paymentServiceHandler{svc: svc}
+	server.Register(
+		connect.Method{Spec: paymentServiceCreatePaymentSpec(), Handler: adapter.createPayment},
+		connect.Method{Spec: paymentServiceGetPaymentStatusSpec(), Handler: adapter.getPaymentStatus},
+		connect.Method{Spec: paymentServiceHandlePaymentNotifySpec(), Handler: adapter.handlePaymentNotify},
+		connect.Method{Spec: paymentServiceHandlePaymentCallbackSpec(), Handler: adapter.handlePaymentCallback},
 	)
-	paymentServiceGetPaymentStatusHandler := connect.NewUnaryHandler(
-		PaymentServiceGetPaymentStatusProcedure,
-		svc.GetPaymentStatus,
-		connect.WithSchema(paymentServiceMethods.ByName("GetPaymentStatus")),
-		connect.WithHandlerOptions(opts...),
-	)
-	paymentServiceHandlePaymentNotifyHandler := connect.NewUnaryHandler(
-		PaymentServiceHandlePaymentNotifyProcedure,
-		svc.HandlePaymentNotify,
-		connect.WithSchema(paymentServiceMethods.ByName("HandlePaymentNotify")),
-		connect.WithHandlerOptions(opts...),
-	)
-	paymentServiceHandlePaymentCallbackHandler := connect.NewUnaryHandler(
-		PaymentServiceHandlePaymentCallbackProcedure,
-		svc.HandlePaymentCallback,
-		connect.WithSchema(paymentServiceMethods.ByName("HandlePaymentCallback")),
-		connect.WithHandlerOptions(opts...),
-	)
-	return "/payment.v1.PaymentService/", http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		switch r.URL.Path {
-		case PaymentServiceCreatePaymentProcedure:
-			paymentServiceCreatePaymentHandler.ServeHTTP(w, r)
-		case PaymentServiceGetPaymentStatusProcedure:
-			paymentServiceGetPaymentStatusHandler.ServeHTTP(w, r)
-		case PaymentServiceHandlePaymentNotifyProcedure:
-			paymentServiceHandlePaymentNotifyHandler.ServeHTTP(w, r)
-		case PaymentServiceHandlePaymentCallbackProcedure:
-			paymentServiceHandlePaymentCallbackHandler.ServeHTTP(w, r)
-		default:
-			http.NotFound(w, r)
-		}
-	})
 }
 
 // UnimplementedPaymentServiceHandler returns CodeUnimplemented from all methods.
 type UnimplementedPaymentServiceHandler struct{}
 
-func (UnimplementedPaymentServiceHandler) CreatePayment(context.Context, *connect.Request[v1.CreatePaymentRequest]) (*connect.Response[v1.CreatePaymentResponse], error) {
-	return nil, connect.NewError(connect.CodeUnimplemented, errors.New("payment.v1.PaymentService.CreatePayment is not implemented"))
+func (UnimplementedPaymentServiceHandler) CreatePayment(context.Context, *v1.CreatePaymentRequest) (*v1.CreatePaymentResponse, error) {
+	return nil, connect.NewError(connect.CodeUnimplemented, "payment.v1.PaymentService.CreatePayment is not implemented")
 }
 
-func (UnimplementedPaymentServiceHandler) GetPaymentStatus(context.Context, *connect.Request[v1.GetPaymentStatusRequest]) (*connect.Response[v1.GetPaymentStatusResponse], error) {
-	return nil, connect.NewError(connect.CodeUnimplemented, errors.New("payment.v1.PaymentService.GetPaymentStatus is not implemented"))
+func (UnimplementedPaymentServiceHandler) GetPaymentStatus(context.Context, *v1.GetPaymentStatusRequest) (*v1.GetPaymentStatusResponse, error) {
+	return nil, connect.NewError(connect.CodeUnimplemented, "payment.v1.PaymentService.GetPaymentStatus is not implemented")
 }
 
-func (UnimplementedPaymentServiceHandler) HandlePaymentNotify(context.Context, *connect.Request[v1.UrlValues]) (*connect.Response[v1.HandlePaymentNotifyResponse], error) {
-	return nil, connect.NewError(connect.CodeUnimplemented, errors.New("payment.v1.PaymentService.HandlePaymentNotify is not implemented"))
+func (UnimplementedPaymentServiceHandler) HandlePaymentNotify(context.Context, *v1.UrlValues) (*v1.HandlePaymentNotifyResponse, error) {
+	return nil, connect.NewError(connect.CodeUnimplemented, "payment.v1.PaymentService.HandlePaymentNotify is not implemented")
 }
 
-func (UnimplementedPaymentServiceHandler) HandlePaymentCallback(context.Context, *connect.Request[v1.HandlePaymentCallbackRequest]) (*connect.Response[v1.HandlePaymentCallbackResponse], error) {
-	return nil, connect.NewError(connect.CodeUnimplemented, errors.New("payment.v1.PaymentService.HandlePaymentCallback is not implemented"))
+func (UnimplementedPaymentServiceHandler) HandlePaymentCallback(context.Context, *v1.HandlePaymentCallbackRequest) (*v1.HandlePaymentCallbackResponse, error) {
+	return nil, connect.NewError(connect.CodeUnimplemented, "payment.v1.PaymentService.HandlePaymentCallback is not implemented")
+}
+
+type paymentServiceClient struct {
+	client *connect.Client
+}
+
+func (c *paymentServiceClient) CreatePayment(ctx context.Context, req *v1.CreatePaymentRequest) (*v1.CreatePaymentResponse, error) {
+	var res v1.CreatePaymentResponse
+	if err := c.client.CallUnary(ctx, paymentServiceCreatePaymentSpec(), req, &res); err != nil {
+		return nil, err
+	}
+	return &res, nil
+}
+
+func (c *paymentServiceClient) GetPaymentStatus(ctx context.Context, req *v1.GetPaymentStatusRequest) (*v1.GetPaymentStatusResponse, error) {
+	var res v1.GetPaymentStatusResponse
+	if err := c.client.CallUnary(ctx, paymentServiceGetPaymentStatusSpec(), req, &res); err != nil {
+		return nil, err
+	}
+	return &res, nil
+}
+
+func (c *paymentServiceClient) HandlePaymentNotify(ctx context.Context, req *v1.UrlValues) (*v1.HandlePaymentNotifyResponse, error) {
+	var res v1.HandlePaymentNotifyResponse
+	if err := c.client.CallUnary(ctx, paymentServiceHandlePaymentNotifySpec(), req, &res); err != nil {
+		return nil, err
+	}
+	return &res, nil
+}
+
+func (c *paymentServiceClient) HandlePaymentCallback(ctx context.Context, req *v1.HandlePaymentCallbackRequest) (*v1.HandlePaymentCallbackResponse, error) {
+	var res v1.HandlePaymentCallbackResponse
+	if err := c.client.CallUnary(ctx, paymentServiceHandlePaymentCallbackSpec(), req, &res); err != nil {
+		return nil, err
+	}
+	return &res, nil
+}
+
+type paymentServiceHandler struct{ svc PaymentServiceHandler }
+
+func (h paymentServiceHandler) createPayment(ctx context.Context, _ connect.Spec, stream connect.ServerStream) error {
+	var req v1.CreatePaymentRequest
+	if err := stream.Receive(&req); err != nil {
+		return err
+	}
+	res, err := h.svc.CreatePayment(ctx, &req)
+	if err != nil {
+		return err
+	}
+	return stream.Send(res)
+}
+
+func (h paymentServiceHandler) getPaymentStatus(ctx context.Context, _ connect.Spec, stream connect.ServerStream) error {
+	var req v1.GetPaymentStatusRequest
+	if err := stream.Receive(&req); err != nil {
+		return err
+	}
+	res, err := h.svc.GetPaymentStatus(ctx, &req)
+	if err != nil {
+		return err
+	}
+	return stream.Send(res)
+}
+
+func (h paymentServiceHandler) handlePaymentNotify(ctx context.Context, _ connect.Spec, stream connect.ServerStream) error {
+	var req v1.UrlValues
+	if err := stream.Receive(&req); err != nil {
+		return err
+	}
+	res, err := h.svc.HandlePaymentNotify(ctx, &req)
+	if err != nil {
+		return err
+	}
+	return stream.Send(res)
+}
+
+func (h paymentServiceHandler) handlePaymentCallback(ctx context.Context, _ connect.Spec, stream connect.ServerStream) error {
+	var req v1.HandlePaymentCallbackRequest
+	if err := stream.Receive(&req); err != nil {
+		return err
+	}
+	res, err := h.svc.HandlePaymentCallback(ctx, &req)
+	if err != nil {
+		return err
+	}
+	return stream.Send(res)
 }

@@ -5,7 +5,7 @@ import (
 	"strings"
 	"time"
 
-	"connectrpc.com/connect"
+	"connectrpc.com/connect/v2"
 	v1 "github.com/lens077/ecommerce/backend/api/behavior/v1"
 	"github.com/lens077/ecommerce/backend/api/behavior/v1/behaviorv1connect"
 	"github.com/lens077/ecommerce/backend/constants"
@@ -26,69 +26,73 @@ func NewBehaviorService(uc *biz.BehaviorUseCase) behaviorv1connect.BehaviorServi
 	return &BehaviorService{uc: uc}
 }
 
-func (s *BehaviorService) Track(ctx context.Context, req *connect.Request[v1.TrackRequest]) (*connect.Response[v1.TrackResponse], error) {
-	userID, anonymous := identity(req, req.Msg.AnonId)
+func (s *BehaviorService) Track(ctx context.Context, req *v1.TrackRequest) (*v1.TrackResponse, error) {
+	userID, anonymous := identity(ctx, req.AnonId)
 
 	// 没有任何身份就没法归因,收下也是废数据,直接当全丢
 	if userID == "" {
-		return connect.NewResponse(&v1.TrackResponse{
-			Dropped: uint32(len(req.Msg.Events)),
-		}), nil
+		return &v1.TrackResponse{
+			Dropped: uint32(len(req.Events)),
+		}, nil
 	}
 
 	accepted, dropped := s.uc.Track(ctx, biz.TrackInput{
 		UserID:    userID,
 		Anonymous: anonymous,
-		SessionID: req.Msg.SessionId,
-		Events:    toBizEvents(req.Msg.Events),
+		SessionID: req.SessionId,
+		Events:    toBizEvents(req.Events),
 	})
 
-	return connect.NewResponse(&v1.TrackResponse{
+	return &v1.TrackResponse{
 		Accepted: uint32(accepted),
 		Dropped:  uint32(dropped),
-	}), nil
+	}, nil
 }
 
-func (s *BehaviorService) Recommend(ctx context.Context, req *connect.Request[v1.RecommendRequest]) (*connect.Response[v1.RecommendResponse], error) {
-	userID, anonymous := identity(req, req.Msg.AnonId)
+func (s *BehaviorService) Recommend(ctx context.Context, req *v1.RecommendRequest) (*v1.RecommendResponse, error) {
+	userID, anonymous := identity(ctx, req.AnonId)
 
 	out, err := s.uc.Recommend(ctx, biz.RecommendInput{
 		UserID:        userID,
 		Anonymous:     anonymous,
-		Category:      req.Msg.Category,
-		N:             int(req.Msg.N),
-		Offset:        int(req.Msg.Offset),
-		SessionEvents: toBizEvents(req.Msg.SessionEvents),
+		Category:      req.Category,
+		N:             int(req.N),
+		Offset:        int(req.Offset),
+		SessionEvents: toBizEvents(req.SessionEvents),
 	})
 	if err != nil {
-		return nil, connect.NewError(connect.CodeInternal, err)
+		return nil, connect.NewError(connect.CodeInternal, err.Error()).WithCause(err)
 	}
 
-	return connect.NewResponse(&v1.RecommendResponse{
+	return &v1.RecommendResponse{
 		Items:    toV1Items(out.Items),
 		Strategy: out.Strategy,
-	}), nil
+	}, nil
 }
 
-func (s *BehaviorService) SimilarItems(ctx context.Context, req *connect.Request[v1.SimilarItemsRequest]) (*connect.Response[v1.SimilarItemsResponse], error) {
-	userID, _ := identity(req, "")
+func (s *BehaviorService) SimilarItems(ctx context.Context, req *v1.SimilarItemsRequest) (*v1.SimilarItemsResponse, error) {
+	userID, _ := identity(ctx, "")
 
-	items, err := s.uc.SimilarItems(ctx, userID, req.Msg.ItemId, req.Msg.Category, int(req.Msg.N))
+	items, err := s.uc.SimilarItems(ctx, userID, req.ItemId, req.Category, int(req.N))
 	if err != nil {
-		return nil, connect.NewError(connect.CodeInternal, err)
+		return nil, connect.NewError(connect.CodeInternal, err.Error()).WithCause(err)
 	}
 
-	return connect.NewResponse(&v1.SimilarItemsResponse{
+	return &v1.SimilarItemsResponse{
 		Items: toV1Items(items),
-	}), nil
+	}, nil
 }
 
 // identity 解析调用方身份。
 // 网关注入的 x-md-global-user-id 是可信来源,优先级高于请求体里的 anon_id
 // —— anon_id 来自浏览器,任何人都能随便填。
-func identity[T any](req *connect.Request[T], anonID string) (userID string, anonymous bool) {
-	if id := strings.TrimSpace(req.Header().Get(constants.UserIdMetadataKey)); id != "" {
-		return id, false
+func identity(ctx context.Context, anonID string) (userID string, anonymous bool) {
+	// v2 拿不到请求包装对象,网关注入的可信身份改从 CallInfo 读。
+	info, _ := connect.CallInfoForServerContext(ctx)
+	if info != nil {
+		if id := strings.TrimSpace(info.RequestHeader().Get(constants.UserIdMetadataKey)); id != "" {
+			return id, false
+		}
 	}
 	if anonID = strings.TrimSpace(anonID); anonID != "" {
 		return anonPrefix + anonID, true

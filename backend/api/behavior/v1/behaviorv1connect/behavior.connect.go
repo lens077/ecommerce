@@ -8,42 +8,56 @@
 package behaviorv1connect
 
 import (
-	connect "connectrpc.com/connect"
+	connect "connectrpc.com/connect/v2"
 	context "context"
-	errors "errors"
 	v1 "github.com/lens077/ecommerce/backend/api/behavior/v1"
-	http "net/http"
-	strings "strings"
+	sync "sync"
 )
-
-// This is a compile-time assertion to ensure that this generated file and the connect package are
-// compatible. If you get a compiler error that this constant is not defined, this code was
-// generated with a version of connect newer than the one compiled into your binary. You can fix the
-// problem by either regenerating this code with an older version of connect or updating the connect
-// version compiled into your binary.
-const _ = connect.IsAtLeastVersion1_13_0
 
 const (
 	// BehaviorServiceName is the fully-qualified name of the BehaviorService service.
 	BehaviorServiceName = "behavior.v1.BehaviorService"
 )
 
-// These constants are the fully-qualified names of the RPCs defined in this package. They're
-// exposed at runtime as Spec.Procedure and as the final two segments of the HTTP route.
+// These constants are the procedure names of the RPCs defined in this package. They're exposed at
+// runtime as Spec.Procedure and as the final two segments of the HTTP route.
 //
 // Note that these are different from the fully-qualified method names used by
 // google.golang.org/protobuf/reflect/protoreflect. To convert from these constants to
 // reflection-formatted method names, remove the leading slash and convert the remaining slash to a
 // period.
 const (
-	// BehaviorServiceTrackProcedure is the fully-qualified name of the BehaviorService's Track RPC.
+	// BehaviorServiceTrackProcedure is the procedure name of the BehaviorService's Track RPC.
 	BehaviorServiceTrackProcedure = "/behavior.v1.BehaviorService/Track"
-	// BehaviorServiceRecommendProcedure is the fully-qualified name of the BehaviorService's Recommend
-	// RPC.
+	// BehaviorServiceRecommendProcedure is the procedure name of the BehaviorService's Recommend RPC.
 	BehaviorServiceRecommendProcedure = "/behavior.v1.BehaviorService/Recommend"
-	// BehaviorServiceSimilarItemsProcedure is the fully-qualified name of the BehaviorService's
-	// SimilarItems RPC.
+	// BehaviorServiceSimilarItemsProcedure is the procedure name of the BehaviorService's SimilarItems
+	// RPC.
 	BehaviorServiceSimilarItemsProcedure = "/behavior.v1.BehaviorService/SimilarItems"
+)
+
+var (
+	behaviorServiceTrackSpec = sync.OnceValue(func() connect.Spec {
+		return connect.Spec{
+			StreamType: connect.StreamTypeUnary,
+			Schema:     v1.File_api_behavior_v1_behavior_proto.Services().ByName("BehaviorService").Methods().ByName("Track"),
+			Procedure:  BehaviorServiceTrackProcedure,
+		}
+	})
+	behaviorServiceRecommendSpec = sync.OnceValue(func() connect.Spec {
+		return connect.Spec{
+			StreamType: connect.StreamTypeUnary,
+			Schema:     v1.File_api_behavior_v1_behavior_proto.Services().ByName("BehaviorService").Methods().ByName("Recommend"),
+			Procedure:  BehaviorServiceRecommendProcedure,
+		}
+	})
+	behaviorServiceSimilarItemsSpec = sync.OnceValue(func() connect.Spec {
+		return connect.Spec{
+			StreamType: connect.StreamTypeUnary,
+			Schema:     v1.File_api_behavior_v1_behavior_proto.Services().ByName("BehaviorService").Methods().ByName("SimilarItems"),
+			Procedure:  BehaviorServiceSimilarItemsProcedure,
+		}
+	})
 )
 
 // BehaviorServiceClient is a client for the behavior.v1.BehaviorService service.
@@ -51,65 +65,17 @@ type BehaviorServiceClient interface {
 	// Track 批量上报行为事件。
 	// 前端离开页面时用 navigator.sendBeacon 以 Connect JSON 直接打这个方法,
 	// 所以请求体必须是自包含的(不依赖自定义请求头)。
-	Track(context.Context, *connect.Request[v1.TrackRequest]) (*connect.Response[v1.TrackResponse], error)
+	Track(context.Context, *v1.TrackRequest) (*v1.TrackResponse, error)
 	// Recommend 拉推荐列表。登录用户走个性化召回,匿名/冷启动用会话内事件兜底。
-	Recommend(context.Context, *connect.Request[v1.RecommendRequest]) (*connect.Response[v1.RecommendResponse], error)
+	Recommend(context.Context, *v1.RecommendRequest) (*v1.RecommendResponse, error)
 	// SimilarItems 商品详情页的"相似商品",不依赖用户画像,冷启动可用。
-	SimilarItems(context.Context, *connect.Request[v1.SimilarItemsRequest]) (*connect.Response[v1.SimilarItemsResponse], error)
+	SimilarItems(context.Context, *v1.SimilarItemsRequest) (*v1.SimilarItemsResponse, error)
 }
 
-// NewBehaviorServiceClient constructs a client for the behavior.v1.BehaviorService service. By
-// default, it uses the Connect protocol with the binary Protobuf Codec, asks for gzipped responses,
-// and sends uncompressed requests. To use the gRPC or gRPC-Web protocols, supply the
-// connect.WithGRPC() or connect.WithGRPCWeb() options.
-//
-// The URL supplied here should be the base URL for the Connect or gRPC server (for example,
-// http://api.acme.com or https://acme.com/grpc).
-func NewBehaviorServiceClient(httpClient connect.HTTPClient, baseURL string, opts ...connect.ClientOption) BehaviorServiceClient {
-	baseURL = strings.TrimRight(baseURL, "/")
-	behaviorServiceMethods := v1.File_api_behavior_v1_behavior_proto.Services().ByName("BehaviorService").Methods()
-	return &behaviorServiceClient{
-		track: connect.NewClient[v1.TrackRequest, v1.TrackResponse](
-			httpClient,
-			baseURL+BehaviorServiceTrackProcedure,
-			connect.WithSchema(behaviorServiceMethods.ByName("Track")),
-			connect.WithClientOptions(opts...),
-		),
-		recommend: connect.NewClient[v1.RecommendRequest, v1.RecommendResponse](
-			httpClient,
-			baseURL+BehaviorServiceRecommendProcedure,
-			connect.WithSchema(behaviorServiceMethods.ByName("Recommend")),
-			connect.WithClientOptions(opts...),
-		),
-		similarItems: connect.NewClient[v1.SimilarItemsRequest, v1.SimilarItemsResponse](
-			httpClient,
-			baseURL+BehaviorServiceSimilarItemsProcedure,
-			connect.WithSchema(behaviorServiceMethods.ByName("SimilarItems")),
-			connect.WithClientOptions(opts...),
-		),
-	}
-}
-
-// behaviorServiceClient implements BehaviorServiceClient.
-type behaviorServiceClient struct {
-	track        *connect.Client[v1.TrackRequest, v1.TrackResponse]
-	recommend    *connect.Client[v1.RecommendRequest, v1.RecommendResponse]
-	similarItems *connect.Client[v1.SimilarItemsRequest, v1.SimilarItemsResponse]
-}
-
-// Track calls behavior.v1.BehaviorService.Track.
-func (c *behaviorServiceClient) Track(ctx context.Context, req *connect.Request[v1.TrackRequest]) (*connect.Response[v1.TrackResponse], error) {
-	return c.track.CallUnary(ctx, req)
-}
-
-// Recommend calls behavior.v1.BehaviorService.Recommend.
-func (c *behaviorServiceClient) Recommend(ctx context.Context, req *connect.Request[v1.RecommendRequest]) (*connect.Response[v1.RecommendResponse], error) {
-	return c.recommend.CallUnary(ctx, req)
-}
-
-// SimilarItems calls behavior.v1.BehaviorService.SimilarItems.
-func (c *behaviorServiceClient) SimilarItems(ctx context.Context, req *connect.Request[v1.SimilarItemsRequest]) (*connect.Response[v1.SimilarItemsResponse], error) {
-	return c.similarItems.CallUnary(ctx, req)
+// NewBehaviorServiceClient constructs a client for the behavior.v1.BehaviorService service.
+// Multiple service clients may share a single connect.Client.
+func NewBehaviorServiceClient(client *connect.Client) BehaviorServiceClient {
+	return &behaviorServiceClient{client: client}
 }
 
 // BehaviorServiceHandler is an implementation of the behavior.v1.BehaviorService service.
@@ -117,63 +83,101 @@ type BehaviorServiceHandler interface {
 	// Track 批量上报行为事件。
 	// 前端离开页面时用 navigator.sendBeacon 以 Connect JSON 直接打这个方法,
 	// 所以请求体必须是自包含的(不依赖自定义请求头)。
-	Track(context.Context, *connect.Request[v1.TrackRequest]) (*connect.Response[v1.TrackResponse], error)
+	Track(context.Context, *v1.TrackRequest) (*v1.TrackResponse, error)
 	// Recommend 拉推荐列表。登录用户走个性化召回,匿名/冷启动用会话内事件兜底。
-	Recommend(context.Context, *connect.Request[v1.RecommendRequest]) (*connect.Response[v1.RecommendResponse], error)
+	Recommend(context.Context, *v1.RecommendRequest) (*v1.RecommendResponse, error)
 	// SimilarItems 商品详情页的"相似商品",不依赖用户画像,冷启动可用。
-	SimilarItems(context.Context, *connect.Request[v1.SimilarItemsRequest]) (*connect.Response[v1.SimilarItemsResponse], error)
+	SimilarItems(context.Context, *v1.SimilarItemsRequest) (*v1.SimilarItemsResponse, error)
 }
 
-// NewBehaviorServiceHandler builds an HTTP handler from the service implementation. It returns the
-// path on which to mount the handler and the handler itself.
-//
-// By default, handlers support the Connect, gRPC, and gRPC-Web protocols with the binary Protobuf
-// and JSON codecs. They also support gzip compression.
-func NewBehaviorServiceHandler(svc BehaviorServiceHandler, opts ...connect.HandlerOption) (string, http.Handler) {
-	behaviorServiceMethods := v1.File_api_behavior_v1_behavior_proto.Services().ByName("BehaviorService").Methods()
-	behaviorServiceTrackHandler := connect.NewUnaryHandler(
-		BehaviorServiceTrackProcedure,
-		svc.Track,
-		connect.WithSchema(behaviorServiceMethods.ByName("Track")),
-		connect.WithHandlerOptions(opts...),
+// RegisterBehaviorServiceHandler registers svc as the behavior.v1.BehaviorService implementation on
+// server.
+func RegisterBehaviorServiceHandler(server *connect.Server, svc BehaviorServiceHandler) {
+	adapter := behaviorServiceHandler{svc: svc}
+	server.Register(
+		connect.Method{Spec: behaviorServiceTrackSpec(), Handler: adapter.track},
+		connect.Method{Spec: behaviorServiceRecommendSpec(), Handler: adapter.recommend},
+		connect.Method{Spec: behaviorServiceSimilarItemsSpec(), Handler: adapter.similarItems},
 	)
-	behaviorServiceRecommendHandler := connect.NewUnaryHandler(
-		BehaviorServiceRecommendProcedure,
-		svc.Recommend,
-		connect.WithSchema(behaviorServiceMethods.ByName("Recommend")),
-		connect.WithHandlerOptions(opts...),
-	)
-	behaviorServiceSimilarItemsHandler := connect.NewUnaryHandler(
-		BehaviorServiceSimilarItemsProcedure,
-		svc.SimilarItems,
-		connect.WithSchema(behaviorServiceMethods.ByName("SimilarItems")),
-		connect.WithHandlerOptions(opts...),
-	)
-	return "/behavior.v1.BehaviorService/", http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		switch r.URL.Path {
-		case BehaviorServiceTrackProcedure:
-			behaviorServiceTrackHandler.ServeHTTP(w, r)
-		case BehaviorServiceRecommendProcedure:
-			behaviorServiceRecommendHandler.ServeHTTP(w, r)
-		case BehaviorServiceSimilarItemsProcedure:
-			behaviorServiceSimilarItemsHandler.ServeHTTP(w, r)
-		default:
-			http.NotFound(w, r)
-		}
-	})
 }
 
 // UnimplementedBehaviorServiceHandler returns CodeUnimplemented from all methods.
 type UnimplementedBehaviorServiceHandler struct{}
 
-func (UnimplementedBehaviorServiceHandler) Track(context.Context, *connect.Request[v1.TrackRequest]) (*connect.Response[v1.TrackResponse], error) {
-	return nil, connect.NewError(connect.CodeUnimplemented, errors.New("behavior.v1.BehaviorService.Track is not implemented"))
+func (UnimplementedBehaviorServiceHandler) Track(context.Context, *v1.TrackRequest) (*v1.TrackResponse, error) {
+	return nil, connect.NewError(connect.CodeUnimplemented, "behavior.v1.BehaviorService.Track is not implemented")
 }
 
-func (UnimplementedBehaviorServiceHandler) Recommend(context.Context, *connect.Request[v1.RecommendRequest]) (*connect.Response[v1.RecommendResponse], error) {
-	return nil, connect.NewError(connect.CodeUnimplemented, errors.New("behavior.v1.BehaviorService.Recommend is not implemented"))
+func (UnimplementedBehaviorServiceHandler) Recommend(context.Context, *v1.RecommendRequest) (*v1.RecommendResponse, error) {
+	return nil, connect.NewError(connect.CodeUnimplemented, "behavior.v1.BehaviorService.Recommend is not implemented")
 }
 
-func (UnimplementedBehaviorServiceHandler) SimilarItems(context.Context, *connect.Request[v1.SimilarItemsRequest]) (*connect.Response[v1.SimilarItemsResponse], error) {
-	return nil, connect.NewError(connect.CodeUnimplemented, errors.New("behavior.v1.BehaviorService.SimilarItems is not implemented"))
+func (UnimplementedBehaviorServiceHandler) SimilarItems(context.Context, *v1.SimilarItemsRequest) (*v1.SimilarItemsResponse, error) {
+	return nil, connect.NewError(connect.CodeUnimplemented, "behavior.v1.BehaviorService.SimilarItems is not implemented")
+}
+
+type behaviorServiceClient struct {
+	client *connect.Client
+}
+
+func (c *behaviorServiceClient) Track(ctx context.Context, req *v1.TrackRequest) (*v1.TrackResponse, error) {
+	var res v1.TrackResponse
+	if err := c.client.CallUnary(ctx, behaviorServiceTrackSpec(), req, &res); err != nil {
+		return nil, err
+	}
+	return &res, nil
+}
+
+func (c *behaviorServiceClient) Recommend(ctx context.Context, req *v1.RecommendRequest) (*v1.RecommendResponse, error) {
+	var res v1.RecommendResponse
+	if err := c.client.CallUnary(ctx, behaviorServiceRecommendSpec(), req, &res); err != nil {
+		return nil, err
+	}
+	return &res, nil
+}
+
+func (c *behaviorServiceClient) SimilarItems(ctx context.Context, req *v1.SimilarItemsRequest) (*v1.SimilarItemsResponse, error) {
+	var res v1.SimilarItemsResponse
+	if err := c.client.CallUnary(ctx, behaviorServiceSimilarItemsSpec(), req, &res); err != nil {
+		return nil, err
+	}
+	return &res, nil
+}
+
+type behaviorServiceHandler struct{ svc BehaviorServiceHandler }
+
+func (h behaviorServiceHandler) track(ctx context.Context, _ connect.Spec, stream connect.ServerStream) error {
+	var req v1.TrackRequest
+	if err := stream.Receive(&req); err != nil {
+		return err
+	}
+	res, err := h.svc.Track(ctx, &req)
+	if err != nil {
+		return err
+	}
+	return stream.Send(res)
+}
+
+func (h behaviorServiceHandler) recommend(ctx context.Context, _ connect.Spec, stream connect.ServerStream) error {
+	var req v1.RecommendRequest
+	if err := stream.Receive(&req); err != nil {
+		return err
+	}
+	res, err := h.svc.Recommend(ctx, &req)
+	if err != nil {
+		return err
+	}
+	return stream.Send(res)
+}
+
+func (h behaviorServiceHandler) similarItems(ctx context.Context, _ connect.Spec, stream connect.ServerStream) error {
+	var req v1.SimilarItemsRequest
+	if err := stream.Receive(&req); err != nil {
+		return err
+	}
+	res, err := h.svc.SimilarItems(ctx, &req)
+	if err != nil {
+		return err
+	}
+	return stream.Send(res)
 }

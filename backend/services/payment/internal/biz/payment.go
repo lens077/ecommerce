@@ -2,12 +2,17 @@ package biz
 
 import (
 	"context"
+	"errors"
 	"net/url"
 	"time"
 
 	"github.com/google/uuid"
 	"github.com/lens077/ecommerce/backend/constants"
 )
+
+// ErrNotImplemented 标记尚未实现的用例方法;data 层用方法名包装它,
+// service 层映射为 connect.CodeUnimplemented。
+var ErrNotImplemented = errors.New("not implemented yet")
 
 // Payment 支付记录
 type Payment struct {

@@ -5,262 +5,290 @@
 package addressv1connect
 
 import (
-	connect "connectrpc.com/connect"
+	connect "connectrpc.com/connect/v2"
 	context "context"
-	errors "errors"
 	v1 "github.com/lens077/ecommerce/backend/api/address/v1"
-	http "net/http"
-	strings "strings"
+	sync "sync"
 )
-
-// This is a compile-time assertion to ensure that this generated file and the connect package are
-// compatible. If you get a compiler error that this constant is not defined, this code was
-// generated with a version of connect newer than the one compiled into your binary. You can fix the
-// problem by either regenerating this code with an older version of connect or updating the connect
-// version compiled into your binary.
-const _ = connect.IsAtLeastVersion1_13_0
 
 const (
 	// AddressServiceName is the fully-qualified name of the AddressService service.
 	AddressServiceName = "address.v1.AddressService"
 )
 
-// These constants are the fully-qualified names of the RPCs defined in this package. They're
-// exposed at runtime as Spec.Procedure and as the final two segments of the HTTP route.
+// These constants are the procedure names of the RPCs defined in this package. They're exposed at
+// runtime as Spec.Procedure and as the final two segments of the HTTP route.
 //
 // Note that these are different from the fully-qualified method names used by
 // google.golang.org/protobuf/reflect/protoreflect. To convert from these constants to
 // reflection-formatted method names, remove the leading slash and convert the remaining slash to a
 // period.
 const (
-	// AddressServiceCreateAddressProcedure is the fully-qualified name of the AddressService's
-	// CreateAddress RPC.
-	AddressServiceCreateAddressProcedure = "/address.v1.AddressService/CreateAddress"
-	// AddressServiceUpdateAddressProcedure is the fully-qualified name of the AddressService's
-	// UpdateAddress RPC.
-	AddressServiceUpdateAddressProcedure = "/address.v1.AddressService/UpdateAddress"
-	// AddressServiceDeleteAddressProcedure is the fully-qualified name of the AddressService's
-	// DeleteAddress RPC.
-	AddressServiceDeleteAddressProcedure = "/address.v1.AddressService/DeleteAddress"
-	// AddressServiceGetAddressProcedure is the fully-qualified name of the AddressService's GetAddress
+	// AddressServiceCreateAddressProcedure is the procedure name of the AddressService's CreateAddress
 	// RPC.
+	AddressServiceCreateAddressProcedure = "/address.v1.AddressService/CreateAddress"
+	// AddressServiceUpdateAddressProcedure is the procedure name of the AddressService's UpdateAddress
+	// RPC.
+	AddressServiceUpdateAddressProcedure = "/address.v1.AddressService/UpdateAddress"
+	// AddressServiceDeleteAddressProcedure is the procedure name of the AddressService's DeleteAddress
+	// RPC.
+	AddressServiceDeleteAddressProcedure = "/address.v1.AddressService/DeleteAddress"
+	// AddressServiceGetAddressProcedure is the procedure name of the AddressService's GetAddress RPC.
 	AddressServiceGetAddressProcedure = "/address.v1.AddressService/GetAddress"
-	// AddressServiceListAddressesProcedure is the fully-qualified name of the AddressService's
-	// ListAddresses RPC.
+	// AddressServiceListAddressesProcedure is the procedure name of the AddressService's ListAddresses
+	// RPC.
 	AddressServiceListAddressesProcedure = "/address.v1.AddressService/ListAddresses"
-	// AddressServiceSetDefaultAddressProcedure is the fully-qualified name of the AddressService's
+	// AddressServiceSetDefaultAddressProcedure is the procedure name of the AddressService's
 	// SetDefaultAddress RPC.
 	AddressServiceSetDefaultAddressProcedure = "/address.v1.AddressService/SetDefaultAddress"
+)
+
+var (
+	addressServiceCreateAddressSpec = sync.OnceValue(func() connect.Spec {
+		return connect.Spec{
+			StreamType: connect.StreamTypeUnary,
+			Schema:     v1.File_api_address_v1_address_proto.Services().ByName("AddressService").Methods().ByName("CreateAddress"),
+			Procedure:  AddressServiceCreateAddressProcedure,
+		}
+	})
+	addressServiceUpdateAddressSpec = sync.OnceValue(func() connect.Spec {
+		return connect.Spec{
+			StreamType: connect.StreamTypeUnary,
+			Schema:     v1.File_api_address_v1_address_proto.Services().ByName("AddressService").Methods().ByName("UpdateAddress"),
+			Procedure:  AddressServiceUpdateAddressProcedure,
+		}
+	})
+	addressServiceDeleteAddressSpec = sync.OnceValue(func() connect.Spec {
+		return connect.Spec{
+			StreamType: connect.StreamTypeUnary,
+			Schema:     v1.File_api_address_v1_address_proto.Services().ByName("AddressService").Methods().ByName("DeleteAddress"),
+			Procedure:  AddressServiceDeleteAddressProcedure,
+		}
+	})
+	addressServiceGetAddressSpec = sync.OnceValue(func() connect.Spec {
+		return connect.Spec{
+			StreamType: connect.StreamTypeUnary,
+			Schema:     v1.File_api_address_v1_address_proto.Services().ByName("AddressService").Methods().ByName("GetAddress"),
+			Procedure:  AddressServiceGetAddressProcedure,
+		}
+	})
+	addressServiceListAddressesSpec = sync.OnceValue(func() connect.Spec {
+		return connect.Spec{
+			StreamType: connect.StreamTypeUnary,
+			Schema:     v1.File_api_address_v1_address_proto.Services().ByName("AddressService").Methods().ByName("ListAddresses"),
+			Procedure:  AddressServiceListAddressesProcedure,
+		}
+	})
+	addressServiceSetDefaultAddressSpec = sync.OnceValue(func() connect.Spec {
+		return connect.Spec{
+			StreamType: connect.StreamTypeUnary,
+			Schema:     v1.File_api_address_v1_address_proto.Services().ByName("AddressService").Methods().ByName("SetDefaultAddress"),
+			Procedure:  AddressServiceSetDefaultAddressProcedure,
+		}
+	})
 )
 
 // AddressServiceClient is a client for the address.v1.AddressService service.
 type AddressServiceClient interface {
 	// 创建收货地址
-	CreateAddress(context.Context, *connect.Request[v1.CreateAddressRequest]) (*connect.Response[v1.CreateAddressResponse], error)
+	CreateAddress(context.Context, *v1.CreateAddressRequest) (*v1.CreateAddressResponse, error)
 	// 更新收货地址
-	UpdateAddress(context.Context, *connect.Request[v1.UpdateAddressRequest]) (*connect.Response[v1.UpdateAddressResponse], error)
+	UpdateAddress(context.Context, *v1.UpdateAddressRequest) (*v1.UpdateAddressResponse, error)
 	// 删除收货地址（软删除）
-	DeleteAddress(context.Context, *connect.Request[v1.DeleteAddressRequest]) (*connect.Response[v1.DeleteAddressResponse], error)
+	DeleteAddress(context.Context, *v1.DeleteAddressRequest) (*v1.DeleteAddressResponse, error)
 	// 获取单个地址详情
-	GetAddress(context.Context, *connect.Request[v1.GetAddressRequest]) (*connect.Response[v1.GetAddressResponse], error)
+	GetAddress(context.Context, *v1.GetAddressRequest) (*v1.GetAddressResponse, error)
 	// 获取用户的所有地址列表
-	ListAddresses(context.Context, *connect.Request[v1.ListAddressesRequest]) (*connect.Response[v1.ListAddressesResponse], error)
+	ListAddresses(context.Context, *v1.ListAddressesRequest) (*v1.ListAddressesResponse, error)
 	// 设置默认地址
-	SetDefaultAddress(context.Context, *connect.Request[v1.SetDefaultAddressRequest]) (*connect.Response[v1.SetDefaultAddressResponse], error)
+	SetDefaultAddress(context.Context, *v1.SetDefaultAddressRequest) (*v1.SetDefaultAddressResponse, error)
 }
 
-// NewAddressServiceClient constructs a client for the address.v1.AddressService service. By
-// default, it uses the Connect protocol with the binary Protobuf Codec, asks for gzipped responses,
-// and sends uncompressed requests. To use the gRPC or gRPC-Web protocols, supply the
-// connect.WithGRPC() or connect.WithGRPCWeb() options.
-//
-// The URL supplied here should be the base URL for the Connect or gRPC server (for example,
-// http://api.acme.com or https://acme.com/grpc).
-func NewAddressServiceClient(httpClient connect.HTTPClient, baseURL string, opts ...connect.ClientOption) AddressServiceClient {
-	baseURL = strings.TrimRight(baseURL, "/")
-	addressServiceMethods := v1.File_api_address_v1_address_proto.Services().ByName("AddressService").Methods()
-	return &addressServiceClient{
-		createAddress: connect.NewClient[v1.CreateAddressRequest, v1.CreateAddressResponse](
-			httpClient,
-			baseURL+AddressServiceCreateAddressProcedure,
-			connect.WithSchema(addressServiceMethods.ByName("CreateAddress")),
-			connect.WithClientOptions(opts...),
-		),
-		updateAddress: connect.NewClient[v1.UpdateAddressRequest, v1.UpdateAddressResponse](
-			httpClient,
-			baseURL+AddressServiceUpdateAddressProcedure,
-			connect.WithSchema(addressServiceMethods.ByName("UpdateAddress")),
-			connect.WithClientOptions(opts...),
-		),
-		deleteAddress: connect.NewClient[v1.DeleteAddressRequest, v1.DeleteAddressResponse](
-			httpClient,
-			baseURL+AddressServiceDeleteAddressProcedure,
-			connect.WithSchema(addressServiceMethods.ByName("DeleteAddress")),
-			connect.WithClientOptions(opts...),
-		),
-		getAddress: connect.NewClient[v1.GetAddressRequest, v1.GetAddressResponse](
-			httpClient,
-			baseURL+AddressServiceGetAddressProcedure,
-			connect.WithSchema(addressServiceMethods.ByName("GetAddress")),
-			connect.WithClientOptions(opts...),
-		),
-		listAddresses: connect.NewClient[v1.ListAddressesRequest, v1.ListAddressesResponse](
-			httpClient,
-			baseURL+AddressServiceListAddressesProcedure,
-			connect.WithSchema(addressServiceMethods.ByName("ListAddresses")),
-			connect.WithClientOptions(opts...),
-		),
-		setDefaultAddress: connect.NewClient[v1.SetDefaultAddressRequest, v1.SetDefaultAddressResponse](
-			httpClient,
-			baseURL+AddressServiceSetDefaultAddressProcedure,
-			connect.WithSchema(addressServiceMethods.ByName("SetDefaultAddress")),
-			connect.WithClientOptions(opts...),
-		),
-	}
-}
-
-// addressServiceClient implements AddressServiceClient.
-type addressServiceClient struct {
-	createAddress     *connect.Client[v1.CreateAddressRequest, v1.CreateAddressResponse]
-	updateAddress     *connect.Client[v1.UpdateAddressRequest, v1.UpdateAddressResponse]
-	deleteAddress     *connect.Client[v1.DeleteAddressRequest, v1.DeleteAddressResponse]
-	getAddress        *connect.Client[v1.GetAddressRequest, v1.GetAddressResponse]
-	listAddresses     *connect.Client[v1.ListAddressesRequest, v1.ListAddressesResponse]
-	setDefaultAddress *connect.Client[v1.SetDefaultAddressRequest, v1.SetDefaultAddressResponse]
-}
-
-// CreateAddress calls address.v1.AddressService.CreateAddress.
-func (c *addressServiceClient) CreateAddress(ctx context.Context, req *connect.Request[v1.CreateAddressRequest]) (*connect.Response[v1.CreateAddressResponse], error) {
-	return c.createAddress.CallUnary(ctx, req)
-}
-
-// UpdateAddress calls address.v1.AddressService.UpdateAddress.
-func (c *addressServiceClient) UpdateAddress(ctx context.Context, req *connect.Request[v1.UpdateAddressRequest]) (*connect.Response[v1.UpdateAddressResponse], error) {
-	return c.updateAddress.CallUnary(ctx, req)
-}
-
-// DeleteAddress calls address.v1.AddressService.DeleteAddress.
-func (c *addressServiceClient) DeleteAddress(ctx context.Context, req *connect.Request[v1.DeleteAddressRequest]) (*connect.Response[v1.DeleteAddressResponse], error) {
-	return c.deleteAddress.CallUnary(ctx, req)
-}
-
-// GetAddress calls address.v1.AddressService.GetAddress.
-func (c *addressServiceClient) GetAddress(ctx context.Context, req *connect.Request[v1.GetAddressRequest]) (*connect.Response[v1.GetAddressResponse], error) {
-	return c.getAddress.CallUnary(ctx, req)
-}
-
-// ListAddresses calls address.v1.AddressService.ListAddresses.
-func (c *addressServiceClient) ListAddresses(ctx context.Context, req *connect.Request[v1.ListAddressesRequest]) (*connect.Response[v1.ListAddressesResponse], error) {
-	return c.listAddresses.CallUnary(ctx, req)
-}
-
-// SetDefaultAddress calls address.v1.AddressService.SetDefaultAddress.
-func (c *addressServiceClient) SetDefaultAddress(ctx context.Context, req *connect.Request[v1.SetDefaultAddressRequest]) (*connect.Response[v1.SetDefaultAddressResponse], error) {
-	return c.setDefaultAddress.CallUnary(ctx, req)
+// NewAddressServiceClient constructs a client for the address.v1.AddressService service. Multiple
+// service clients may share a single connect.Client.
+func NewAddressServiceClient(client *connect.Client) AddressServiceClient {
+	return &addressServiceClient{client: client}
 }
 
 // AddressServiceHandler is an implementation of the address.v1.AddressService service.
 type AddressServiceHandler interface {
 	// 创建收货地址
-	CreateAddress(context.Context, *connect.Request[v1.CreateAddressRequest]) (*connect.Response[v1.CreateAddressResponse], error)
+	CreateAddress(context.Context, *v1.CreateAddressRequest) (*v1.CreateAddressResponse, error)
 	// 更新收货地址
-	UpdateAddress(context.Context, *connect.Request[v1.UpdateAddressRequest]) (*connect.Response[v1.UpdateAddressResponse], error)
+	UpdateAddress(context.Context, *v1.UpdateAddressRequest) (*v1.UpdateAddressResponse, error)
 	// 删除收货地址（软删除）
-	DeleteAddress(context.Context, *connect.Request[v1.DeleteAddressRequest]) (*connect.Response[v1.DeleteAddressResponse], error)
+	DeleteAddress(context.Context, *v1.DeleteAddressRequest) (*v1.DeleteAddressResponse, error)
 	// 获取单个地址详情
-	GetAddress(context.Context, *connect.Request[v1.GetAddressRequest]) (*connect.Response[v1.GetAddressResponse], error)
+	GetAddress(context.Context, *v1.GetAddressRequest) (*v1.GetAddressResponse, error)
 	// 获取用户的所有地址列表
-	ListAddresses(context.Context, *connect.Request[v1.ListAddressesRequest]) (*connect.Response[v1.ListAddressesResponse], error)
+	ListAddresses(context.Context, *v1.ListAddressesRequest) (*v1.ListAddressesResponse, error)
 	// 设置默认地址
-	SetDefaultAddress(context.Context, *connect.Request[v1.SetDefaultAddressRequest]) (*connect.Response[v1.SetDefaultAddressResponse], error)
+	SetDefaultAddress(context.Context, *v1.SetDefaultAddressRequest) (*v1.SetDefaultAddressResponse, error)
 }
 
-// NewAddressServiceHandler builds an HTTP handler from the service implementation. It returns the
-// path on which to mount the handler and the handler itself.
-//
-// By default, handlers support the Connect, gRPC, and gRPC-Web protocols with the binary Protobuf
-// and JSON codecs. They also support gzip compression.
-func NewAddressServiceHandler(svc AddressServiceHandler, opts ...connect.HandlerOption) (string, http.Handler) {
-	addressServiceMethods := v1.File_api_address_v1_address_proto.Services().ByName("AddressService").Methods()
-	addressServiceCreateAddressHandler := connect.NewUnaryHandler(
-		AddressServiceCreateAddressProcedure,
-		svc.CreateAddress,
-		connect.WithSchema(addressServiceMethods.ByName("CreateAddress")),
-		connect.WithHandlerOptions(opts...),
+// RegisterAddressServiceHandler registers svc as the address.v1.AddressService implementation on
+// server.
+func RegisterAddressServiceHandler(server *connect.Server, svc AddressServiceHandler) {
+	adapter := addressServiceHandler{svc: svc}
+	server.Register(
+		connect.Method{Spec: addressServiceCreateAddressSpec(), Handler: adapter.createAddress},
+		connect.Method{Spec: addressServiceUpdateAddressSpec(), Handler: adapter.updateAddress},
+		connect.Method{Spec: addressServiceDeleteAddressSpec(), Handler: adapter.deleteAddress},
+		connect.Method{Spec: addressServiceGetAddressSpec(), Handler: adapter.getAddress},
+		connect.Method{Spec: addressServiceListAddressesSpec(), Handler: adapter.listAddresses},
+		connect.Method{Spec: addressServiceSetDefaultAddressSpec(), Handler: adapter.setDefaultAddress},
 	)
-	addressServiceUpdateAddressHandler := connect.NewUnaryHandler(
-		AddressServiceUpdateAddressProcedure,
-		svc.UpdateAddress,
-		connect.WithSchema(addressServiceMethods.ByName("UpdateAddress")),
-		connect.WithHandlerOptions(opts...),
-	)
-	addressServiceDeleteAddressHandler := connect.NewUnaryHandler(
-		AddressServiceDeleteAddressProcedure,
-		svc.DeleteAddress,
-		connect.WithSchema(addressServiceMethods.ByName("DeleteAddress")),
-		connect.WithHandlerOptions(opts...),
-	)
-	addressServiceGetAddressHandler := connect.NewUnaryHandler(
-		AddressServiceGetAddressProcedure,
-		svc.GetAddress,
-		connect.WithSchema(addressServiceMethods.ByName("GetAddress")),
-		connect.WithHandlerOptions(opts...),
-	)
-	addressServiceListAddressesHandler := connect.NewUnaryHandler(
-		AddressServiceListAddressesProcedure,
-		svc.ListAddresses,
-		connect.WithSchema(addressServiceMethods.ByName("ListAddresses")),
-		connect.WithHandlerOptions(opts...),
-	)
-	addressServiceSetDefaultAddressHandler := connect.NewUnaryHandler(
-		AddressServiceSetDefaultAddressProcedure,
-		svc.SetDefaultAddress,
-		connect.WithSchema(addressServiceMethods.ByName("SetDefaultAddress")),
-		connect.WithHandlerOptions(opts...),
-	)
-	return "/address.v1.AddressService/", http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		switch r.URL.Path {
-		case AddressServiceCreateAddressProcedure:
-			addressServiceCreateAddressHandler.ServeHTTP(w, r)
-		case AddressServiceUpdateAddressProcedure:
-			addressServiceUpdateAddressHandler.ServeHTTP(w, r)
-		case AddressServiceDeleteAddressProcedure:
-			addressServiceDeleteAddressHandler.ServeHTTP(w, r)
-		case AddressServiceGetAddressProcedure:
-			addressServiceGetAddressHandler.ServeHTTP(w, r)
-		case AddressServiceListAddressesProcedure:
-			addressServiceListAddressesHandler.ServeHTTP(w, r)
-		case AddressServiceSetDefaultAddressProcedure:
-			addressServiceSetDefaultAddressHandler.ServeHTTP(w, r)
-		default:
-			http.NotFound(w, r)
-		}
-	})
 }
 
 // UnimplementedAddressServiceHandler returns CodeUnimplemented from all methods.
 type UnimplementedAddressServiceHandler struct{}
 
-func (UnimplementedAddressServiceHandler) CreateAddress(context.Context, *connect.Request[v1.CreateAddressRequest]) (*connect.Response[v1.CreateAddressResponse], error) {
-	return nil, connect.NewError(connect.CodeUnimplemented, errors.New("address.v1.AddressService.CreateAddress is not implemented"))
+func (UnimplementedAddressServiceHandler) CreateAddress(context.Context, *v1.CreateAddressRequest) (*v1.CreateAddressResponse, error) {
+	return nil, connect.NewError(connect.CodeUnimplemented, "address.v1.AddressService.CreateAddress is not implemented")
 }
 
-func (UnimplementedAddressServiceHandler) UpdateAddress(context.Context, *connect.Request[v1.UpdateAddressRequest]) (*connect.Response[v1.UpdateAddressResponse], error) {
-	return nil, connect.NewError(connect.CodeUnimplemented, errors.New("address.v1.AddressService.UpdateAddress is not implemented"))
+func (UnimplementedAddressServiceHandler) UpdateAddress(context.Context, *v1.UpdateAddressRequest) (*v1.UpdateAddressResponse, error) {
+	return nil, connect.NewError(connect.CodeUnimplemented, "address.v1.AddressService.UpdateAddress is not implemented")
 }
 
-func (UnimplementedAddressServiceHandler) DeleteAddress(context.Context, *connect.Request[v1.DeleteAddressRequest]) (*connect.Response[v1.DeleteAddressResponse], error) {
-	return nil, connect.NewError(connect.CodeUnimplemented, errors.New("address.v1.AddressService.DeleteAddress is not implemented"))
+func (UnimplementedAddressServiceHandler) DeleteAddress(context.Context, *v1.DeleteAddressRequest) (*v1.DeleteAddressResponse, error) {
+	return nil, connect.NewError(connect.CodeUnimplemented, "address.v1.AddressService.DeleteAddress is not implemented")
 }
 
-func (UnimplementedAddressServiceHandler) GetAddress(context.Context, *connect.Request[v1.GetAddressRequest]) (*connect.Response[v1.GetAddressResponse], error) {
-	return nil, connect.NewError(connect.CodeUnimplemented, errors.New("address.v1.AddressService.GetAddress is not implemented"))
+func (UnimplementedAddressServiceHandler) GetAddress(context.Context, *v1.GetAddressRequest) (*v1.GetAddressResponse, error) {
+	return nil, connect.NewError(connect.CodeUnimplemented, "address.v1.AddressService.GetAddress is not implemented")
 }
 
-func (UnimplementedAddressServiceHandler) ListAddresses(context.Context, *connect.Request[v1.ListAddressesRequest]) (*connect.Response[v1.ListAddressesResponse], error) {
-	return nil, connect.NewError(connect.CodeUnimplemented, errors.New("address.v1.AddressService.ListAddresses is not implemented"))
+func (UnimplementedAddressServiceHandler) ListAddresses(context.Context, *v1.ListAddressesRequest) (*v1.ListAddressesResponse, error) {
+	return nil, connect.NewError(connect.CodeUnimplemented, "address.v1.AddressService.ListAddresses is not implemented")
 }
 
-func (UnimplementedAddressServiceHandler) SetDefaultAddress(context.Context, *connect.Request[v1.SetDefaultAddressRequest]) (*connect.Response[v1.SetDefaultAddressResponse], error) {
-	return nil, connect.NewError(connect.CodeUnimplemented, errors.New("address.v1.AddressService.SetDefaultAddress is not implemented"))
+func (UnimplementedAddressServiceHandler) SetDefaultAddress(context.Context, *v1.SetDefaultAddressRequest) (*v1.SetDefaultAddressResponse, error) {
+	return nil, connect.NewError(connect.CodeUnimplemented, "address.v1.AddressService.SetDefaultAddress is not implemented")
+}
+
+type addressServiceClient struct {
+	client *connect.Client
+}
+
+func (c *addressServiceClient) CreateAddress(ctx context.Context, req *v1.CreateAddressRequest) (*v1.CreateAddressResponse, error) {
+	var res v1.CreateAddressResponse
+	if err := c.client.CallUnary(ctx, addressServiceCreateAddressSpec(), req, &res); err != nil {
+		return nil, err
+	}
+	return &res, nil
+}
+
+func (c *addressServiceClient) UpdateAddress(ctx context.Context, req *v1.UpdateAddressRequest) (*v1.UpdateAddressResponse, error) {
+	var res v1.UpdateAddressResponse
+	if err := c.client.CallUnary(ctx, addressServiceUpdateAddressSpec(), req, &res); err != nil {
+		return nil, err
+	}
+	return &res, nil
+}
+
+func (c *addressServiceClient) DeleteAddress(ctx context.Context, req *v1.DeleteAddressRequest) (*v1.DeleteAddressResponse, error) {
+	var res v1.DeleteAddressResponse
+	if err := c.client.CallUnary(ctx, addressServiceDeleteAddressSpec(), req, &res); err != nil {
+		return nil, err
+	}
+	return &res, nil
+}
+
+func (c *addressServiceClient) GetAddress(ctx context.Context, req *v1.GetAddressRequest) (*v1.GetAddressResponse, error) {
+	var res v1.GetAddressResponse
+	if err := c.client.CallUnary(ctx, addressServiceGetAddressSpec(), req, &res); err != nil {
+		return nil, err
+	}
+	return &res, nil
+}
+
+func (c *addressServiceClient) ListAddresses(ctx context.Context, req *v1.ListAddressesRequest) (*v1.ListAddressesResponse, error) {
+	var res v1.ListAddressesResponse
+	if err := c.client.CallUnary(ctx, addressServiceListAddressesSpec(), req, &res); err != nil {
+		return nil, err
+	}
+	return &res, nil
+}
+
+func (c *addressServiceClient) SetDefaultAddress(ctx context.Context, req *v1.SetDefaultAddressRequest) (*v1.SetDefaultAddressResponse, error) {
+	var res v1.SetDefaultAddressResponse
+	if err := c.client.CallUnary(ctx, addressServiceSetDefaultAddressSpec(), req, &res); err != nil {
+		return nil, err
+	}
+	return &res, nil
+}
+
+type addressServiceHandler struct{ svc AddressServiceHandler }
+
+func (h addressServiceHandler) createAddress(ctx context.Context, _ connect.Spec, stream connect.ServerStream) error {
+	var req v1.CreateAddressRequest
+	if err := stream.Receive(&req); err != nil {
+		return err
+	}
+	res, err := h.svc.CreateAddress(ctx, &req)
+	if err != nil {
+		return err
+	}
+	return stream.Send(res)
+}
+
+func (h addressServiceHandler) updateAddress(ctx context.Context, _ connect.Spec, stream connect.ServerStream) error {
+	var req v1.UpdateAddressRequest
+	if err := stream.Receive(&req); err != nil {
+		return err
+	}
+	res, err := h.svc.UpdateAddress(ctx, &req)
+	if err != nil {
+		return err
+	}
+	return stream.Send(res)
+}
+
+func (h addressServiceHandler) deleteAddress(ctx context.Context, _ connect.Spec, stream connect.ServerStream) error {
+	var req v1.DeleteAddressRequest
+	if err := stream.Receive(&req); err != nil {
+		return err
+	}
+	res, err := h.svc.DeleteAddress(ctx, &req)
+	if err != nil {
+		return err
+	}
+	return stream.Send(res)
+}
+
+func (h addressServiceHandler) getAddress(ctx context.Context, _ connect.Spec, stream connect.ServerStream) error {
+	var req v1.GetAddressRequest
+	if err := stream.Receive(&req); err != nil {
+		return err
+	}
+	res, err := h.svc.GetAddress(ctx, &req)
+	if err != nil {
+		return err
+	}
+	return stream.Send(res)
+}
+
+func (h addressServiceHandler) listAddresses(ctx context.Context, _ connect.Spec, stream connect.ServerStream) error {
+	var req v1.ListAddressesRequest
+	if err := stream.Receive(&req); err != nil {
+		return err
+	}
+	res, err := h.svc.ListAddresses(ctx, &req)
+	if err != nil {
+		return err
+	}
+	return stream.Send(res)
+}
+
+func (h addressServiceHandler) setDefaultAddress(ctx context.Context, _ connect.Spec, stream connect.ServerStream) error {
+	var req v1.SetDefaultAddressRequest
+	if err := stream.Receive(&req); err != nil {
+		return err
+	}
+	res, err := h.svc.SetDefaultAddress(ctx, &req)
+	if err != nil {
+		return err
+	}
+	return stream.Send(res)
 }

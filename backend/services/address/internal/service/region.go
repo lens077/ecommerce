@@ -3,7 +3,6 @@ package service
 import (
 	"context"
 
-	"connectrpc.com/connect"
 	v1 "github.com/lens077/ecommerce/backend/api/address/v1"
 	"github.com/lens077/ecommerce/backend/api/address/v1/addressv1connect"
 	"github.com/lens077/ecommerce/backend/services/address/internal/biz"
@@ -19,9 +18,9 @@ func NewRegionService(uc *biz.RegionUseCase) addressv1connect.RegionServiceHandl
 	return &RegionService{uc: uc}
 }
 
-func (s *RegionService) ListRegions(ctx context.Context, c *connect.Request[v1.ListRegionsRequest]) (*connect.Response[v1.ListRegionsResponse], error) {
+func (s *RegionService) ListRegions(ctx context.Context, c *v1.ListRegionsRequest) (*v1.ListRegionsResponse, error) {
 	result, err := s.uc.ListRegions(ctx, biz.ListRegionsRequest{
-		ParentID: c.Msg.ParentId,
+		ParentID: c.ParentId,
 	})
 	if err != nil {
 		return nil, err
@@ -32,7 +31,7 @@ func (s *RegionService) ListRegions(ctx context.Context, c *connect.Request[v1.L
 		regions = append(regions, toPBRegion(r))
 	}
 
-	return connect.NewResponse(&v1.ListRegionsResponse{Regions: regions}), nil
+	return &v1.ListRegionsResponse{Regions: regions}, nil
 }
 
 // toPBRegion 把 biz 层的节点转成 proto。

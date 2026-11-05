@@ -4,7 +4,7 @@ import (
 	"context"
 	"errors"
 
-	"connectrpc.com/connect"
+	"connectrpc.com/connect/v2"
 	v1 "github.com/lens077/ecommerce/backend/api/order/v1"
 	"github.com/lens077/ecommerce/backend/api/order/v1/orderv1connect"
 	"github.com/lens077/ecommerce/backend/services/order/internal/biz/application"
@@ -27,7 +27,7 @@ func NewOrderService(cmd *application.OrderCommandUseCase, qry *application.Orde
 	}
 }
 
-func (s *OrderService) CreateOrder(ctx context.Context, c *connect.Request[v1.CreateOrderRequest]) (*connect.Response[v1.CreateOrderResponse], error) {
+func (s *OrderService) CreateOrder(ctx context.Context, c *v1.CreateOrderRequest) (*v1.CreateOrderResponse, error) {
 	// req := c.Msg
 	// userId := c.Header().Get(constants.UserNameMetadataKey)
 	_, err := s.cmd.CreateOrder(
@@ -44,18 +44,18 @@ func (s *OrderService) CreateOrder(ctx context.Context, c *connect.Request[v1.Cr
 
 	response := &v1.CreateOrderResponse{}
 
-	return connect.NewResponse(response), nil
+	return response, nil
 }
 
-func (s *OrderService) CompleteOrder(ctx context.Context, req *connect.Request[v1.CompleteOrderRequest]) (*connect.Response[v1.CompleteOrderResponse], error) {
+func (s *OrderService) CompleteOrder(ctx context.Context, req *v1.CompleteOrderRequest) (*v1.CompleteOrderResponse, error) {
 	// 写操作
-	err := s.cmd.CompleteOrder(ctx, req.Msg.OrderNo)
+	err := s.cmd.CompleteOrder(ctx, req.OrderNo)
 	if err != nil {
 		return nil, orderError(err)
 	}
 
 	// 读取最新状态
-	_, err = s.qry.GetOrderByNo(ctx, req.Msg.OrderNo)
+	_, err = s.qry.GetOrderByNo(ctx, req.OrderNo)
 	if err != nil {
 		// 这里要做好最终一致性的处理
 		return nil, orderError(err)
@@ -66,7 +66,7 @@ func (s *OrderService) CompleteOrder(ctx context.Context, req *connect.Request[v
 	}
 
 	// 返回读模型给前端
-	return connect.NewResponse(response), nil
+	return response, nil
 }
 
 // orderError 把领域错误映射为 RPC 错误码（docs/design/platform/error-handling.md 第 3 条），
@@ -78,19 +78,19 @@ func orderError(err error) error {
 	case errors.Is(err, domain.ErrOrderNotFound),
 		errors.Is(err, domain.ErrOrderGroupNotFound),
 		errors.Is(err, domain.ErrAddressNotFound):
-		return connect.NewError(connect.CodeNotFound, err)
+		return connect.NewError(connect.CodeNotFound, err.Error()).WithCause(err)
 	case errors.Is(err, domain.ErrOrderAlreadyExists):
-		return connect.NewError(connect.CodeAlreadyExists, err)
+		return connect.NewError(connect.CodeAlreadyExists, err.Error()).WithCause(err)
 	case errors.Is(err, domain.ErrNotOrderStatusPaid),
 		errors.Is(err, domain.ErrInsufficientStock),
 		errors.Is(err, domain.ErrProductOffline),
 		errors.Is(err, domain.ErrCartEmpty):
-		return connect.NewError(connect.CodeFailedPrecondition, err)
+		return connect.NewError(connect.CodeFailedPrecondition, err.Error()).WithCause(err)
 	case errors.Is(err, domain.ErrMerchantMismatch):
-		return connect.NewError(connect.CodeInvalidArgument, err)
+		return connect.NewError(connect.CodeInvalidArgument, err.Error()).WithCause(err)
 	case errors.Is(err, domain.ErrAuthFailed):
-		return connect.NewError(connect.CodeUnauthenticated, err)
+		return connect.NewError(connect.CodeUnauthenticated, err.Error()).WithCause(err)
 	default:
-		return connect.NewError(connect.CodeUnknown, err)
+		return connect.NewError(connect.CodeUnknown, err.Error()).WithCause(err)
 	}
 }

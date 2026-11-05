@@ -5,14 +5,14 @@ import (
 	"encoding/json"
 	"net/http"
 
-	"connectrpc.com/connect"
+	"connectrpc.com/connect/v2"
+	"connectrpc.com/connect/v2/connecthttp"
 	connectcors "connectrpc.com/cors"
-	"connectrpc.com/validate"
 	"github.com/lens077/ecommerce/backend/api/address/v1/addressv1connect"
 	"github.com/lens077/ecommerce/backend/pkg/healthcheck"
-	"github.com/lens077/go-connect-kit/meta"
 	conf "github.com/lens077/ecommerce/backend/services/address/internal/conf/v1"
 	"github.com/lens077/ecommerce/backend/services/address/internal/data"
+	"github.com/lens077/go-connect-kit/meta"
 	"github.com/rs/cors"
 	"go.uber.org/fx"
 	"go.uber.org/zap"
@@ -33,37 +33,31 @@ func NewHTTPServer(
 	addressv1Service addressv1connect.AddressServiceHandler,
 	regionv1Service addressv1connect.RegionServiceHandler,
 	logger *zap.Logger,
-	connectOptions []connect.HandlerOption,
+	interceptors []connect.ServerInterceptor,
 	deps *data.Data, // 基础设施依赖
 	info meta.AppInfo,
 ) *http.Server {
 
 	mux := http.NewServeMux()
 
-	// 将 validate 拦截器添加到选项中
-	combinedOptions := append(connectOptions, connect.WithInterceptors(validate.NewInterceptor()))
+	// connect v2:拦截器挂在 Server 上,对 Server 上全部服务生效;validate 已并进
+	// middleware 组装(最外层)。所有 Register 必须在 Mount 之前 —— Mount 按当前
+	// 过程表装配 HTTP 路由,后注册的过程不会被路由。
+	server := connect.NewServer(interceptors...)
 
-	// 注册 Connect 业务处理器
-	addressv1connectPath, addressv1connectHandler := addressv1connect.NewAddressServiceHandler(
-		addressv1Service,
-		combinedOptions...,
-	)
-	mux.Handle(addressv1connectPath, addressv1connectHandler)
+	addressv1connect.RegisterAddressServiceHandler(server, addressv1Service)
 
 	// 行政区划字典。和 AddressService 同属 address.v1 包，
 	// 路径 /address.v1.RegionService/* 也就自然落在网关已有的 /address* 路由里
-	regionv1connectPath, regionv1connectHandler := addressv1connect.NewRegionServiceHandler(
-		regionv1Service,
-		combinedOptions...,
-	)
-	mux.Handle(regionv1connectPath, regionv1connectHandler)
+	addressv1connect.RegisterRegionServiceHandler(server, regionv1Service)
 
-	healthPath, healthHandler := healthcheck.NewGRPCHandler(
+	healthcheck.Register(server,
 		func(ctx context.Context) bool { return healthStatus(ctx, deps, info.Version, meta.Version).Healthy },
 		addressv1connect.AddressServiceName,
 		addressv1connect.RegionServiceName,
 	)
-	mux.Handle(healthPath, healthHandler)
+
+	connecthttp.Mount(mux, server)
 
 	// 应用本身的健康检查
 	mux.HandleFunc("/healthz", func(w http.ResponseWriter, r *http.Request) {
@@ -83,7 +77,7 @@ func NewHTTPServer(
 	// 使用 h2c 包装处理器，支持同时处理 HTTP/1.1 和 HTTP/2
 	handlerChain = h2c.NewHandler(handlerChain, h2s)
 
-	server := &http.Server{
+	httpServer := &http.Server{
 		Addr:         cfg.Server.Addr,
 		Handler:      handlerChain,
 		ReadTimeout:  cfg.Server.Http.ReadTimeout.AsDuration(),
@@ -101,11 +95,11 @@ func NewHTTPServer(
 		},
 		OnStop: func(ctx context.Context) error {
 			logger.Info("http server shutting down...")
-			return server.Shutdown(ctx)
+			return httpServer.Shutdown(ctx)
 		},
 	})
 
-	return server
+	return httpServer
 }
 
 // withCORS 为处理器添加跨域支持

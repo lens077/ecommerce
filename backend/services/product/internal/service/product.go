@@ -13,7 +13,7 @@ import (
 	v1 "github.com/lens077/ecommerce/backend/api/product/v1"
 	"github.com/lens077/ecommerce/backend/api/product/v1/productv1connect"
 
-	"connectrpc.com/connect"
+	"connectrpc.com/connect/v2"
 )
 
 // ProductService 实现 Connect 服务
@@ -30,11 +30,11 @@ func NewProductService(uc *biz.ProductUseCase) productv1connect.ProductServiceHa
 	}
 }
 
-func (s *ProductService) GetProductDetail(ctx context.Context, c *connect.Request[v1.GetProductDetailRequest]) (*connect.Response[v1.GetProductDetailResponse], error) {
+func (s *ProductService) GetProductDetail(ctx context.Context, c *v1.GetProductDetailRequest) (*v1.GetProductDetailResponse, error) {
 	res, err := s.uc.GetProductDetail(
 		ctx,
 		biz.GetProductDetailRequest{
-			SpuCode: c.Msg.SpuCode,
+			SpuCode: c.SpuCode,
 		},
 	)
 	if err != nil {
@@ -43,14 +43,14 @@ func (s *ProductService) GetProductDetail(ctx context.Context, c *connect.Reques
 
 	result, err := ToProtoDetail(res.ProductDetail)
 	if err != nil {
-		return nil, connect.NewError(connect.CodeInternal, fmt.Errorf("convert product detail: %w", err))
+		return nil, connect.NewError(connect.CodeInternal, fmt.Errorf("convert product detail: %w", err).Error())
 	}
 
 	response := &v1.GetProductDetailResponse{
 		ProductDetail: result,
 	}
 
-	return connect.NewResponse(response), nil
+	return response, nil
 }
 
 // productError 把 biz 哨兵错误映射为 RPC 错误码（docs/design/platform/error-handling.md 第 3 条）。
@@ -60,9 +60,9 @@ func (s *ProductService) GetProductDetail(ctx context.Context, c *connect.Reques
 func productError(err error) error {
 	switch {
 	case errors.Is(err, biz.ErrProductNotFound):
-		return connect.NewError(connect.CodeNotFound, err)
+		return connect.NewError(connect.CodeNotFound, err.Error()).WithCause(err)
 	default:
-		return connect.NewError(connect.CodeUnknown, err)
+		return connect.NewError(connect.CodeUnknown, err.Error()).WithCause(err)
 	}
 }
 

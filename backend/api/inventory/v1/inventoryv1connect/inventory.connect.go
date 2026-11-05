@@ -5,40 +5,47 @@
 package inventoryv1connect
 
 import (
-	connect "connectrpc.com/connect"
+	connect "connectrpc.com/connect/v2"
 	context "context"
-	errors "errors"
 	v1 "github.com/lens077/ecommerce/backend/api/inventory/v1"
-	http "net/http"
-	strings "strings"
+	sync "sync"
 )
-
-// This is a compile-time assertion to ensure that this generated file and the connect package are
-// compatible. If you get a compiler error that this constant is not defined, this code was
-// generated with a version of connect newer than the one compiled into your binary. You can fix the
-// problem by either regenerating this code with an older version of connect or updating the connect
-// version compiled into your binary.
-const _ = connect.IsAtLeastVersion1_13_0
 
 const (
 	// InventoryServiceName is the fully-qualified name of the InventoryService service.
 	InventoryServiceName = "inventory.v1.InventoryService"
 )
 
-// These constants are the fully-qualified names of the RPCs defined in this package. They're
-// exposed at runtime as Spec.Procedure and as the final two segments of the HTTP route.
+// These constants are the procedure names of the RPCs defined in this package. They're exposed at
+// runtime as Spec.Procedure and as the final two segments of the HTTP route.
 //
 // Note that these are different from the fully-qualified method names used by
 // google.golang.org/protobuf/reflect/protoreflect. To convert from these constants to
 // reflection-formatted method names, remove the leading slash and convert the remaining slash to a
 // period.
 const (
-	// InventoryServiceReserveProcedure is the fully-qualified name of the InventoryService's Reserve
-	// RPC.
+	// InventoryServiceReserveProcedure is the procedure name of the InventoryService's Reserve RPC.
 	InventoryServiceReserveProcedure = "/inventory.v1.InventoryService/Reserve"
-	// InventoryServiceReleaseReserveProcedure is the fully-qualified name of the InventoryService's
+	// InventoryServiceReleaseReserveProcedure is the procedure name of the InventoryService's
 	// ReleaseReserve RPC.
 	InventoryServiceReleaseReserveProcedure = "/inventory.v1.InventoryService/ReleaseReserve"
+)
+
+var (
+	inventoryServiceReserveSpec = sync.OnceValue(func() connect.Spec {
+		return connect.Spec{
+			StreamType: connect.StreamTypeUnary,
+			Schema:     v1.File_api_inventory_v1_inventory_proto.Services().ByName("InventoryService").Methods().ByName("Reserve"),
+			Procedure:  InventoryServiceReserveProcedure,
+		}
+	})
+	inventoryServiceReleaseReserveSpec = sync.OnceValue(func() connect.Spec {
+		return connect.Spec{
+			StreamType: connect.StreamTypeUnary,
+			Schema:     v1.File_api_inventory_v1_inventory_proto.Services().ByName("InventoryService").Methods().ByName("ReleaseReserve"),
+			Procedure:  InventoryServiceReleaseReserveProcedure,
+		}
+	})
 )
 
 // InventoryServiceClient is a client for the inventory.v1.InventoryService service.
@@ -46,53 +53,17 @@ type InventoryServiceClient interface {
 	// 预占库存(下单但未支付): 可用 -> 预占
 	//
 	// 幂等键是 order_no：同一订单重复预占不会重复扣减
-	Reserve(context.Context, *connect.Request[v1.ReserveRequest]) (*connect.Response[v1.ReserveResponse], error)
+	Reserve(context.Context, *v1.ReserveRequest) (*v1.ReserveResponse, error)
 	// 释放预占库存(未支付取消/超时取消): 预占 -> 可用
 	//
 	// 同样以 order_no 做幂等；对未预占过的订单调用是安全的空操作
-	ReleaseReserve(context.Context, *connect.Request[v1.ReleaseReserveRequest]) (*connect.Response[v1.ReleaseReserveResponse], error)
+	ReleaseReserve(context.Context, *v1.ReleaseReserveRequest) (*v1.ReleaseReserveResponse, error)
 }
 
-// NewInventoryServiceClient constructs a client for the inventory.v1.InventoryService service. By
-// default, it uses the Connect protocol with the binary Protobuf Codec, asks for gzipped responses,
-// and sends uncompressed requests. To use the gRPC or gRPC-Web protocols, supply the
-// connect.WithGRPC() or connect.WithGRPCWeb() options.
-//
-// The URL supplied here should be the base URL for the Connect or gRPC server (for example,
-// http://api.acme.com or https://acme.com/grpc).
-func NewInventoryServiceClient(httpClient connect.HTTPClient, baseURL string, opts ...connect.ClientOption) InventoryServiceClient {
-	baseURL = strings.TrimRight(baseURL, "/")
-	inventoryServiceMethods := v1.File_api_inventory_v1_inventory_proto.Services().ByName("InventoryService").Methods()
-	return &inventoryServiceClient{
-		reserve: connect.NewClient[v1.ReserveRequest, v1.ReserveResponse](
-			httpClient,
-			baseURL+InventoryServiceReserveProcedure,
-			connect.WithSchema(inventoryServiceMethods.ByName("Reserve")),
-			connect.WithClientOptions(opts...),
-		),
-		releaseReserve: connect.NewClient[v1.ReleaseReserveRequest, v1.ReleaseReserveResponse](
-			httpClient,
-			baseURL+InventoryServiceReleaseReserveProcedure,
-			connect.WithSchema(inventoryServiceMethods.ByName("ReleaseReserve")),
-			connect.WithClientOptions(opts...),
-		),
-	}
-}
-
-// inventoryServiceClient implements InventoryServiceClient.
-type inventoryServiceClient struct {
-	reserve        *connect.Client[v1.ReserveRequest, v1.ReserveResponse]
-	releaseReserve *connect.Client[v1.ReleaseReserveRequest, v1.ReleaseReserveResponse]
-}
-
-// Reserve calls inventory.v1.InventoryService.Reserve.
-func (c *inventoryServiceClient) Reserve(ctx context.Context, req *connect.Request[v1.ReserveRequest]) (*connect.Response[v1.ReserveResponse], error) {
-	return c.reserve.CallUnary(ctx, req)
-}
-
-// ReleaseReserve calls inventory.v1.InventoryService.ReleaseReserve.
-func (c *inventoryServiceClient) ReleaseReserve(ctx context.Context, req *connect.Request[v1.ReleaseReserveRequest]) (*connect.Response[v1.ReleaseReserveResponse], error) {
-	return c.releaseReserve.CallUnary(ctx, req)
+// NewInventoryServiceClient constructs a client for the inventory.v1.InventoryService service.
+// Multiple service clients may share a single connect.Client.
+func NewInventoryServiceClient(client *connect.Client) InventoryServiceClient {
+	return &inventoryServiceClient{client: client}
 }
 
 // InventoryServiceHandler is an implementation of the inventory.v1.InventoryService service.
@@ -100,51 +71,76 @@ type InventoryServiceHandler interface {
 	// 预占库存(下单但未支付): 可用 -> 预占
 	//
 	// 幂等键是 order_no：同一订单重复预占不会重复扣减
-	Reserve(context.Context, *connect.Request[v1.ReserveRequest]) (*connect.Response[v1.ReserveResponse], error)
+	Reserve(context.Context, *v1.ReserveRequest) (*v1.ReserveResponse, error)
 	// 释放预占库存(未支付取消/超时取消): 预占 -> 可用
 	//
 	// 同样以 order_no 做幂等；对未预占过的订单调用是安全的空操作
-	ReleaseReserve(context.Context, *connect.Request[v1.ReleaseReserveRequest]) (*connect.Response[v1.ReleaseReserveResponse], error)
+	ReleaseReserve(context.Context, *v1.ReleaseReserveRequest) (*v1.ReleaseReserveResponse, error)
 }
 
-// NewInventoryServiceHandler builds an HTTP handler from the service implementation. It returns the
-// path on which to mount the handler and the handler itself.
-//
-// By default, handlers support the Connect, gRPC, and gRPC-Web protocols with the binary Protobuf
-// and JSON codecs. They also support gzip compression.
-func NewInventoryServiceHandler(svc InventoryServiceHandler, opts ...connect.HandlerOption) (string, http.Handler) {
-	inventoryServiceMethods := v1.File_api_inventory_v1_inventory_proto.Services().ByName("InventoryService").Methods()
-	inventoryServiceReserveHandler := connect.NewUnaryHandler(
-		InventoryServiceReserveProcedure,
-		svc.Reserve,
-		connect.WithSchema(inventoryServiceMethods.ByName("Reserve")),
-		connect.WithHandlerOptions(opts...),
+// RegisterInventoryServiceHandler registers svc as the inventory.v1.InventoryService implementation
+// on server.
+func RegisterInventoryServiceHandler(server *connect.Server, svc InventoryServiceHandler) {
+	adapter := inventoryServiceHandler{svc: svc}
+	server.Register(
+		connect.Method{Spec: inventoryServiceReserveSpec(), Handler: adapter.reserve},
+		connect.Method{Spec: inventoryServiceReleaseReserveSpec(), Handler: adapter.releaseReserve},
 	)
-	inventoryServiceReleaseReserveHandler := connect.NewUnaryHandler(
-		InventoryServiceReleaseReserveProcedure,
-		svc.ReleaseReserve,
-		connect.WithSchema(inventoryServiceMethods.ByName("ReleaseReserve")),
-		connect.WithHandlerOptions(opts...),
-	)
-	return "/inventory.v1.InventoryService/", http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		switch r.URL.Path {
-		case InventoryServiceReserveProcedure:
-			inventoryServiceReserveHandler.ServeHTTP(w, r)
-		case InventoryServiceReleaseReserveProcedure:
-			inventoryServiceReleaseReserveHandler.ServeHTTP(w, r)
-		default:
-			http.NotFound(w, r)
-		}
-	})
 }
 
 // UnimplementedInventoryServiceHandler returns CodeUnimplemented from all methods.
 type UnimplementedInventoryServiceHandler struct{}
 
-func (UnimplementedInventoryServiceHandler) Reserve(context.Context, *connect.Request[v1.ReserveRequest]) (*connect.Response[v1.ReserveResponse], error) {
-	return nil, connect.NewError(connect.CodeUnimplemented, errors.New("inventory.v1.InventoryService.Reserve is not implemented"))
+func (UnimplementedInventoryServiceHandler) Reserve(context.Context, *v1.ReserveRequest) (*v1.ReserveResponse, error) {
+	return nil, connect.NewError(connect.CodeUnimplemented, "inventory.v1.InventoryService.Reserve is not implemented")
 }
 
-func (UnimplementedInventoryServiceHandler) ReleaseReserve(context.Context, *connect.Request[v1.ReleaseReserveRequest]) (*connect.Response[v1.ReleaseReserveResponse], error) {
-	return nil, connect.NewError(connect.CodeUnimplemented, errors.New("inventory.v1.InventoryService.ReleaseReserve is not implemented"))
+func (UnimplementedInventoryServiceHandler) ReleaseReserve(context.Context, *v1.ReleaseReserveRequest) (*v1.ReleaseReserveResponse, error) {
+	return nil, connect.NewError(connect.CodeUnimplemented, "inventory.v1.InventoryService.ReleaseReserve is not implemented")
+}
+
+type inventoryServiceClient struct {
+	client *connect.Client
+}
+
+func (c *inventoryServiceClient) Reserve(ctx context.Context, req *v1.ReserveRequest) (*v1.ReserveResponse, error) {
+	var res v1.ReserveResponse
+	if err := c.client.CallUnary(ctx, inventoryServiceReserveSpec(), req, &res); err != nil {
+		return nil, err
+	}
+	return &res, nil
+}
+
+func (c *inventoryServiceClient) ReleaseReserve(ctx context.Context, req *v1.ReleaseReserveRequest) (*v1.ReleaseReserveResponse, error) {
+	var res v1.ReleaseReserveResponse
+	if err := c.client.CallUnary(ctx, inventoryServiceReleaseReserveSpec(), req, &res); err != nil {
+		return nil, err
+	}
+	return &res, nil
+}
+
+type inventoryServiceHandler struct{ svc InventoryServiceHandler }
+
+func (h inventoryServiceHandler) reserve(ctx context.Context, _ connect.Spec, stream connect.ServerStream) error {
+	var req v1.ReserveRequest
+	if err := stream.Receive(&req); err != nil {
+		return err
+	}
+	res, err := h.svc.Reserve(ctx, &req)
+	if err != nil {
+		return err
+	}
+	return stream.Send(res)
+}
+
+func (h inventoryServiceHandler) releaseReserve(ctx context.Context, _ connect.Spec, stream connect.ServerStream) error {
+	var req v1.ReleaseReserveRequest
+	if err := stream.Receive(&req); err != nil {
+		return err
+	}
+	res, err := h.svc.ReleaseReserve(ctx, &req)
+	if err != nil {
+		return err
+	}
+	return stream.Send(res)
 }

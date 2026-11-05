@@ -1,11 +1,11 @@
 package data
 
 import (
-	"context"
 	"fmt"
+
+	"context"
 	"net/url"
 
-	"connectrpc.com/connect"
 	"github.com/lens077/ecommerce/backend/services/payment/internal/biz"
 	conf "github.com/lens077/ecommerce/backend/services/payment/internal/conf/v1"
 	"github.com/lens077/ecommerce/backend/services/payment/internal/data/models"
@@ -32,12 +32,10 @@ func NewPaymentRepo(data *Data, c *conf.Pay, logger *zap.Logger) biz.PaymentRepo
 	}
 }
 
-// errUnimplemented 统一的未实现错误,code = 12(Unimplemented)。
+// errUnimplemented 统一的未实现错误:返回领域哨兵,由 service 层映射
+// 为 connect.CodeUnimplemented(data 层不 import connect,见 structcheck 分层铁律)。
 func errUnimplemented(method string) error {
-	return connect.NewError(
-		connect.CodeUnimplemented,
-		fmt.Errorf("payment.v1.PaymentService/%s is not implemented yet", method),
-	)
+	return fmt.Errorf("payment.v1.PaymentService/%s: %w", method, biz.ErrNotImplemented)
 }
 
 func (r *paymentRepo) CreatePayment(_ context.Context, _ *biz.CreatePaymentReq) (*biz.CreatePaymentResp, error) {

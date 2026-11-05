@@ -5,7 +5,7 @@ import (
 	"errors"
 	"testing"
 
-	"connectrpc.com/connect"
+	"connectrpc.com/connect/v2"
 	v1 "github.com/lens077/ecommerce/backend/api/product/v1"
 	"github.com/lens077/ecommerce/backend/services/product/internal/biz"
 	conf "github.com/lens077/ecommerce/backend/services/product/internal/conf/v1"
@@ -32,7 +32,7 @@ func TestGetProductDetail_MapsBizErrorsToRPCCodes(t *testing.T) {
 		t.Run(tt.name, func(t *testing.T) {
 			uc := biz.NewProductUseCase(stubProductRepo{err: tt.err}, &conf.Bootstrap{}, zap.NewNop())
 			s := &ProductService{uc: uc}
-			_, err := s.GetProductDetail(context.Background(), connect.NewRequest(&v1.GetProductDetailRequest{SpuCode: "SPU-404"}))
+			_, err := s.GetProductDetail(context.Background(), &v1.GetProductDetailRequest{SpuCode: "SPU-404"})
 			if got := connect.CodeOf(err); got != tt.want {
 				t.Fatalf("code = %v, want %v (err=%v)", got, tt.want, err)
 			}

@@ -2,11 +2,9 @@ package healthcheck
 
 import (
 	"context"
-	"fmt"
-	"net/http"
 
-	"connectrpc.com/connect"
-	"connectrpc.com/grpchealth"
+	"connectrpc.com/connect/v2"
+	"connectrpc.com/grpchealth/v2"
 )
 
 // ReadyFunc reports whether the process can currently serve application traffic.
@@ -17,9 +15,10 @@ type checker struct {
 	services map[string]struct{}
 }
 
-// NewGRPCHandler exposes deep readiness through the standard gRPC health protocol.
-// An empty service name represents the whole process; named services must be listed.
-func NewGRPCHandler(ready ReadyFunc, services ...string) (string, http.Handler) {
+// Register exposes deep readiness through the standard gRPC health protocol on
+// the connect server. Must be called before connecthttp.Mount. An empty service
+// name represents the whole process; named services must be listed.
+func Register(server *connect.Server, ready ReadyFunc, services ...string) {
 	if ready == nil {
 		panic("healthcheck: nil readiness function")
 	}
@@ -29,7 +28,7 @@ func NewGRPCHandler(ready ReadyFunc, services ...string) (string, http.Handler) 
 			known[service] = struct{}{}
 		}
 	}
-	return grpchealth.NewHandler(&checker{ready: ready, services: known})
+	grpchealth.Register(server, &checker{ready: ready, services: known})
 }
 
 func (c *checker) Check(ctx context.Context, request *grpchealth.CheckRequest) (*grpchealth.CheckResponse, error) {
@@ -39,7 +38,7 @@ func (c *checker) Check(ctx context.Context, request *grpchealth.CheckRequest) (
 	}
 	if service != "" {
 		if _, ok := c.services[service]; !ok {
-			return nil, connect.NewError(connect.CodeNotFound, fmt.Errorf("unknown service %q", service))
+			return nil, connect.Errorf(connect.CodeNotFound, "unknown service %q", service)
 		}
 	}
 	status := grpchealth.StatusNotServing

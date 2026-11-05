@@ -6,7 +6,7 @@ import (
 	"fmt"
 	"testing"
 
-	"connectrpc.com/connect"
+	"connectrpc.com/connect/v2"
 	v1 "github.com/lens077/ecommerce/backend/api/order/v1"
 	"github.com/lens077/ecommerce/backend/constants"
 	"github.com/lens077/ecommerce/backend/services/order/internal/biz/application"
@@ -43,7 +43,7 @@ func TestCompleteOrder_MapsDomainErrorsToRPCCodes(t *testing.T) {
 		t.Run(tt.name, func(t *testing.T) {
 			cmd := application.NewOrderCommandUseCase(stubCommandRepo{order: tt.order, err: tt.err}, zap.NewNop(), nil)
 			s := &OrderService{cmd: cmd}
-			_, err := s.CompleteOrder(context.Background(), connect.NewRequest(&v1.CompleteOrderRequest{OrderNo: "ORD-404"}))
+			_, err := s.CompleteOrder(context.Background(), &v1.CompleteOrderRequest{OrderNo: "ORD-404"})
 			if got := connect.CodeOf(err); got != tt.want {
 				t.Fatalf("code = %v, want %v (err=%v)", got, tt.want, err)
 			}

@@ -6,7 +6,7 @@ import (
 	"fmt"
 	"testing"
 
-	"connectrpc.com/connect"
+	"connectrpc.com/connect/v2"
 	v1 "github.com/lens077/ecommerce/backend/api/user/v1"
 	"github.com/lens077/ecommerce/backend/services/user/internal/biz"
 	conf "github.com/lens077/ecommerce/backend/services/user/internal/conf/v1"
@@ -40,7 +40,7 @@ func TestSignIn_MapsBizErrorsToRPCCodes(t *testing.T) {
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			_, err := newUserSvc(tt.err).SignIn(context.Background(), connect.NewRequest(&v1.SignInRequest{Code: "c", State: "s"}))
+			_, err := newUserSvc(tt.err).SignIn(context.Background(), &v1.SignInRequest{Code: "c", State: "s"})
 			if got := connect.CodeOf(err); got != tt.want {
 				t.Fatalf("code = %v, want %v (err=%v)", got, tt.want, err)
 			}
@@ -64,7 +64,7 @@ func TestUserProfile_MapsBizErrorsToRPCCodes(t *testing.T) {
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			_, err := newUserSvc(tt.err).UserProfile(context.Background(), connect.NewRequest(&v1.UserProfileRequest{}))
+			_, err := newUserSvc(tt.err).UserProfile(context.Background(), &v1.UserProfileRequest{})
 			if got := connect.CodeOf(err); got != tt.want {
 				t.Fatalf("code = %v, want %v (err=%v)", got, tt.want, err)
 			}

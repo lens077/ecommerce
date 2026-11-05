@@ -3,7 +3,7 @@ package server
 import (
 	"context"
 
-	"connectrpc.com/connect"
+	"connectrpc.com/connect/v2"
 	"github.com/lens077/ecommerce/backend/services/payment/internal/pkg/reqctx"
 	"github.com/lens077/go-connect-kit/meta"
 	"github.com/lens077/go-connect-kit/rpcobs"
@@ -16,9 +16,9 @@ import (
 // 不记支付表单：下沉前这里把整个 PostForm 以 form_data 打进 Info 日志，支付回调里的买家账号、
 // 签名等随每个请求入库，违反 OBSERVABILITY.md §6「凭据不得入日志」（2026-09-24 删除）。
 // 排查回调要看表单时，在 service 层按字段白名单记录，不要整包打印。
-func NewLoggingInterceptor(logger *zap.Logger, info meta.AppInfo) *rpcobs.Interceptor {
+func NewLoggingInterceptor(logger *zap.Logger, info meta.AppInfo) connect.ServerInterceptor {
 	return rpcobs.New(logger, rpcobs.WithDomain(info.Name), rpcobs.WithExtraFields(
-		func(ctx context.Context, _ connect.AnyRequest) []zap.Field {
+		func(ctx context.Context, _ *connect.CallInfo) []zap.Field {
 			httpReq := reqctx.HTTPRequest(ctx)
 			if httpReq == nil {
 				return nil

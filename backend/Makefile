@@ -131,7 +131,7 @@ api-go:
 		exit 1; \
 	}
 	@command -v protoc-gen-connect-go >/dev/null 2>&1 || { \
-		echo "缺少 protoc-gen-connect-go；安装：go install connectrpc.com/connect/cmd/protoc-gen-connect-go@latest" >&2; \
+		echo "缺少 protoc-gen-connect-go；安装：go install connectrpc.com/connect/v2/cmd/protoc-gen-connect-go@latest" >&2; \
 		exit 1; \
 	}
 	buf generate --template buf.gen.yaml --path api

@@ -88,8 +88,6 @@ type layerImport struct {
 var layerImportExemptions = map[layerImport]string{
 	{"user/internal/biz/user.go", "github.com/casdoor/casdoor-go-sdk/casdoorsdk"}: "GetUserProfileResponse 直接嵌 casdoorsdk.User；" +
 		"应在 biz 定义 UserProfile，由 data 从 SDK 类型映射，service 再映射到 casdoorv1.User",
-	{"payment/internal/data/payment.go", "connectrpc.com/connect"}: "5 个未实现方法在 data 层返回 connect.CodeUnimplemented，" +
-		"service/payment_test.go 断言原样透传；应改为 biz 定义 ErrNotImplemented、service 映射错误码",
 }
 
 func matchesImportPrefix(path, prefix string) bool {

@@ -5,7 +5,7 @@ import (
 	"errors"
 	"fmt"
 
-	"connectrpc.com/connect"
+	"connectrpc.com/connect/v2"
 	"github.com/google/uuid"
 	inventoryv1 "github.com/lens077/ecommerce/backend/api/inventory/v1"
 	"github.com/lens077/ecommerce/backend/api/inventory/v1/inventoryv1connect"
@@ -17,24 +17,24 @@ type InventoryService struct {
 	uc *biz.InventoryUseCase
 }
 
-func (s *InventoryService) Reserve(ctx context.Context, c *connect.Request[inventoryv1.ReserveRequest]) (*connect.Response[inventoryv1.ReserveResponse], error) {
-	items := make([]biz.ReserveItem, 0, len(c.Msg.Items))
+func (s *InventoryService) Reserve(ctx context.Context, c *inventoryv1.ReserveRequest) (*inventoryv1.ReserveResponse, error) {
+	items := make([]biz.ReserveItem, 0, len(c.Items))
 	// items := make([]biz.ReserveItem, 0)
-	for _, item := range c.Msg.Items {
+	for _, item := range c.Items {
 		items = append(items, biz.ReserveItem{
 			SkuID:    item.SkuId,
 			Quantity: item.Quantity,
 		})
 	}
-	merchantId, err := uuid.Parse(c.Msg.MerchantId)
+	merchantId, err := uuid.Parse(c.MerchantId)
 	if err != nil {
-		return nil, connect.NewError(connect.CodeInvalidArgument, fmt.Errorf("merchant_id: %w", err))
+		return nil, connect.NewError(connect.CodeInvalidArgument, fmt.Errorf("merchant_id: %w", err).Error())
 	}
 	reserve, err := s.uc.Reserve(ctx, biz.ReserveRequest{
 		MerchantID:   merchantId,
 		ReserveItems: items,
 		WarehouseID:  "df0001", // TODO WarehouseID
-		OrderNo:      c.Msg.OrderNo,
+		OrderNo:      c.OrderNo,
 	})
 	if err != nil {
 		return nil, reserveError(err)
@@ -44,16 +44,16 @@ func (s *InventoryService) Reserve(ctx context.Context, c *connect.Request[inven
 		Msg:    reserve.Msg,
 	}
 
-	return connect.NewResponse(response), nil
+	return response, nil
 }
 
-func (s *InventoryService) ReleaseReserve(ctx context.Context, c *connect.Request[inventoryv1.ReleaseReserveRequest]) (*connect.Response[inventoryv1.ReleaseReserveResponse], error) {
+func (s *InventoryService) ReleaseReserve(ctx context.Context, c *inventoryv1.ReleaseReserveRequest) (*inventoryv1.ReleaseReserveResponse, error) {
 	response := &inventoryv1.ReleaseReserveResponse{
 		Status: false,
 		Msg:    "",
 	}
 
-	return connect.NewResponse(response), nil
+	return response, nil
 }
 
 // reserveError 把 biz 哨兵错误映射为 RPC 错误码（docs/design/platform/error-handling.md 第 3 条）。
@@ -62,13 +62,13 @@ func (s *InventoryService) ReleaseReserve(ctx context.Context, c *connect.Reques
 func reserveError(err error) error {
 	switch {
 	case errors.Is(err, biz.ErrOrderItemsSkuIdNotFound), errors.Is(err, biz.ErrOrderNotFound):
-		return connect.NewError(connect.CodeNotFound, err)
+		return connect.NewError(connect.CodeNotFound, err.Error()).WithCause(err)
 	case errors.Is(err, biz.ErrInsufficientStock):
-		return connect.NewError(connect.CodeFailedPrecondition, err)
+		return connect.NewError(connect.CodeFailedPrecondition, err.Error()).WithCause(err)
 	case errors.Is(err, biz.ErrOrderAlreadyExists):
-		return connect.NewError(connect.CodeAlreadyExists, err)
+		return connect.NewError(connect.CodeAlreadyExists, err.Error()).WithCause(err)
 	default:
-		return connect.NewError(connect.CodeUnknown, err)
+		return connect.NewError(connect.CodeUnknown, err.Error()).WithCause(err)
 	}
 }
 

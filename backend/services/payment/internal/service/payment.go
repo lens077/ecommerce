@@ -5,7 +5,7 @@ import (
 	"errors"
 	"net/url"
 
-	"connectrpc.com/connect"
+	"connectrpc.com/connect/v2"
 	"github.com/google/uuid"
 	v1 "github.com/lens077/ecommerce/backend/api/payment/v1"
 	"github.com/lens077/ecommerce/backend/api/payment/v1/paymentv1connect"
@@ -21,11 +21,10 @@ type PaymentService struct {
 }
 
 // CreatePayment 创建支付订单
-func (s *PaymentService) CreatePayment(ctx context.Context, c *connect.Request[v1.CreatePaymentRequest]) (*connect.Response[v1.CreatePaymentResponse], error) {
-	req := c.Msg
+func (s *PaymentService) CreatePayment(ctx context.Context, req *v1.CreatePaymentRequest) (*v1.CreatePaymentResponse, error) {
 	customerId, err := uuid.Parse(req.CustomerId)
 	if err != nil {
-		return nil, connect.NewError(connect.CodeInvalidArgument, errors.New("无效的用户ID"))
+		return nil, connect.NewError(connect.CodeInvalidArgument, "无效的用户ID")
 	}
 
 	s.log.Debugf("customerId%v", customerId)
@@ -35,7 +34,7 @@ func (s *PaymentService) CreatePayment(ctx context.Context, c *connect.Request[v
 	if req.OrderId != 0 {
 		orderID = req.OrderId
 	} else {
-		return nil, connect.NewError(connect.CodeInvalidArgument, errors.New("订单ID不能为空"))
+		return nil, connect.NewError(connect.CodeInvalidArgument, "订单ID不能为空")
 	}
 
 	// 创建支付请求
@@ -62,12 +61,11 @@ func (s *PaymentService) CreatePayment(ctx context.Context, c *connect.Request[v
 		PayUrl:    result.Payment.PayURL,
 	}
 	// 返回创建结果
-	return connect.NewResponse(response), nil
+	return response, nil
 }
 
 // GetPaymentStatus 查询支付状态
-func (s *PaymentService) GetPaymentStatus(ctx context.Context, c *connect.Request[v1.GetPaymentStatusRequest]) (*connect.Response[v1.GetPaymentStatusResponse], error) {
-	req := c.Msg
+func (s *PaymentService) GetPaymentStatus(ctx context.Context, req *v1.GetPaymentStatusRequest) (*v1.GetPaymentStatusResponse, error) {
 	// 转换请求
 	getReq := &biz.GetPaymentStatusReq{
 		PaymentID: req.PaymentId,
@@ -103,12 +101,11 @@ func (s *PaymentService) GetPaymentStatus(ctx context.Context, c *connect.Reques
 		Status:    payStatus,
 		TradeNo:   resp.Payment.TradeNo,
 	}
-	return connect.NewResponse(response), nil
+	return response, nil
 }
 
 // HandlePaymentNotify 处理支付通知
-func (s *PaymentService) HandlePaymentNotify(ctx context.Context, c *connect.Request[v1.UrlValues]) (*connect.Response[v1.HandlePaymentNotifyResponse], error) {
-	req := c.Msg
+func (s *PaymentService) HandlePaymentNotify(ctx context.Context, req *v1.UrlValues) (*v1.HandlePaymentNotifyResponse, error) {
 	s.log.Infof("service HandlePaymentNotify: %v", req)
 
 	// 1. 从 context 中获取原始的 HTTP 请求
@@ -143,7 +140,7 @@ func (s *PaymentService) HandlePaymentNotify(ctx context.Context, c *connect.Req
 		Success: resp.Success,
 		Message: resp.Message,
 	}
-	return connect.NewResponse(response), nil
+	return response, nil
 }
 
 func copyValues(dst, src url.Values) {
@@ -153,8 +150,7 @@ func copyValues(dst, src url.Values) {
 }
 
 // HandlePaymentCallback 处理支付回调
-func (s *PaymentService) HandlePaymentCallback(ctx context.Context, c *connect.Request[v1.HandlePaymentCallbackRequest]) (*connect.Response[v1.HandlePaymentCallbackResponse], error) {
-	req := c.Msg
+func (s *PaymentService) HandlePaymentCallback(ctx context.Context, req *v1.HandlePaymentCallbackRequest) (*v1.HandlePaymentCallbackResponse, error) {
 	s.log.Infof("service HandlePaymentCallback: %v", req)
 
 	// 1. 从 context 中获取原始的 HTTP 请求
@@ -199,7 +195,7 @@ func (s *PaymentService) HandlePaymentCallback(ctx context.Context, c *connect.R
 		Success: resp.Success,
 		Message: resp.Message,
 	}
-	return connect.NewResponse(response), nil
+	return response, nil
 }
 
 // paymentError 把用例层错误映射为 RPC 错误码（docs/design/platform/error-handling.md 第 3 条）。
@@ -207,11 +203,14 @@ func (s *PaymentService) HandlePaymentCallback(ctx context.Context, c *connect.R
 // 再包一层 connect.NewError 会让外层错误码覆盖内层，unimplemented 变成 unknown。
 // 其余错误显式标为 unknown。日志由 RPC 拦截器按错误码分级记录一次，这里不再重复打 ERROR。
 func paymentError(err error) error {
+	if errors.Is(err, biz.ErrNotImplemented) {
+		return connect.NewError(connect.CodeUnimplemented, err.Error()).WithCause(err)
+	}
 	var connectErr *connect.Error
 	if errors.As(err, &connectErr) {
 		return err
 	}
-	return connect.NewError(connect.CodeUnknown, err)
+	return connect.NewError(connect.CodeUnknown, err.Error()).WithCause(err)
 }
 
 var _ paymentv1connect.PaymentServiceHandler = (*PaymentService)(nil)

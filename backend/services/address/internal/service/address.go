@@ -3,9 +3,8 @@ package service
 import (
 	"context"
 	"errors"
-	"fmt"
 
-	"connectrpc.com/connect"
+	"connectrpc.com/connect/v2"
 	"github.com/google/uuid"
 	v1 "github.com/lens077/ecommerce/backend/api/address/v1"
 	"github.com/lens077/ecommerce/backend/api/address/v1/addressv1connect"
@@ -24,58 +23,62 @@ func NewAddressService(uc *biz.AddressUseCase) addressv1connect.AddressServiceHa
 	return &AddressService{uc: uc}
 }
 
-func (s *AddressService) CreateAddress(ctx context.Context, c *connect.Request[v1.CreateAddressRequest]) (*connect.Response[v1.CreateAddressResponse], error) {
-	userID, err := uuid.Parse(c.Header().Get(constants.UserIdMetadataKey))
+func (s *AddressService) CreateAddress(ctx context.Context, c *v1.CreateAddressRequest) (*v1.CreateAddressResponse, error) {
+	info, _ := connect.CallInfoForServerContext(ctx)
+	if info == nil {
+		info = &connect.CallInfo{} // 直调(单测)无 CallInfo;经 Server.Call 时必有
+	}
+	userID, err := uuid.Parse(info.RequestHeader().Get(constants.UserIdMetadataKey))
 	if err != nil {
-		return nil, connect.NewError(connect.CodeUnauthenticated, fmt.Errorf("invalid authenticated user id"))
+		return nil, connect.Errorf(connect.CodeUnauthenticated, "invalid authenticated user id")
 	}
 
 	result, err := s.uc.CreateAddress(ctx, biz.CreateAddressRequest{
-		RecipientName:  c.Msg.RecipientName,
-		RecipientPhone: c.Msg.RecipientPhone,
+		RecipientName:  c.RecipientName,
+		RecipientPhone: c.RecipientPhone,
 		UserID:         userID.String(),
 		Detail: &biz.AddressDetail{
-			Province:   c.Msg.Detail.Province,
-			City:       c.Msg.Detail.City,
-			District:   c.Msg.Detail.District,
-			Detail:     c.Msg.Detail.Detail,
-			PostalCode: c.Msg.Detail.PostalCode,
-			FullText:   c.Msg.Detail.FullText,
+			Province:   c.Detail.Province,
+			City:       c.Detail.City,
+			District:   c.Detail.District,
+			Detail:     c.Detail.Detail,
+			PostalCode: c.Detail.PostalCode,
+			FullText:   c.Detail.FullText,
 		},
-		IsDefault: c.Msg.IsDefault,
+		IsDefault: c.IsDefault,
 	})
 	if err != nil {
 		return nil, addressError(err)
 	}
 
-	return connect.NewResponse(&v1.CreateAddressResponse{
+	return &v1.CreateAddressResponse{
 		AddressId: result.AddressID,
-	}), nil
+	}, nil
 }
 
-func (s *AddressService) UpdateAddress(ctx context.Context, c *connect.Request[v1.UpdateAddressRequest]) (*connect.Response[v1.UpdateAddressResponse], error) {
+func (s *AddressService) UpdateAddress(ctx context.Context, c *v1.UpdateAddressRequest) (*v1.UpdateAddressResponse, error) {
 	var recipientName, recipientPhone *string
-	if c.Msg.RecipientName != nil {
-		recipientName = &c.Msg.RecipientName.Value
+	if c.RecipientName != nil {
+		recipientName = &c.RecipientName.Value
 	}
-	if c.Msg.RecipientPhone != nil {
-		recipientPhone = &c.Msg.RecipientPhone.Value
+	if c.RecipientPhone != nil {
+		recipientPhone = &c.RecipientPhone.Value
 	}
 
 	var detail *biz.AddressDetail
-	if c.Msg.Detail != nil {
+	if c.Detail != nil {
 		detail = &biz.AddressDetail{
-			Province:   c.Msg.Detail.Province,
-			City:       c.Msg.Detail.City,
-			District:   c.Msg.Detail.District,
-			Detail:     c.Msg.Detail.Detail,
-			PostalCode: c.Msg.Detail.PostalCode,
-			FullText:   c.Msg.Detail.FullText,
+			Province:   c.Detail.Province,
+			City:       c.Detail.City,
+			District:   c.Detail.District,
+			Detail:     c.Detail.Detail,
+			PostalCode: c.Detail.PostalCode,
+			FullText:   c.Detail.FullText,
 		}
 	}
 
 	_, err := s.uc.UpdateAddress(ctx, biz.UpdateAddressRequest{
-		AddressID:      c.Msg.AddressId,
+		AddressID:      c.AddressId,
 		RecipientName:  recipientName,
 		RecipientPhone: recipientPhone,
 		Detail:         detail,
@@ -84,33 +87,33 @@ func (s *AddressService) UpdateAddress(ctx context.Context, c *connect.Request[v
 		return nil, addressError(err)
 	}
 
-	return connect.NewResponse(&v1.UpdateAddressResponse{}), nil
+	return &v1.UpdateAddressResponse{}, nil
 }
 
-func (s *AddressService) DeleteAddress(ctx context.Context, c *connect.Request[v1.DeleteAddressRequest]) (*connect.Response[v1.DeleteAddressResponse], error) {
+func (s *AddressService) DeleteAddress(ctx context.Context, c *v1.DeleteAddressRequest) (*v1.DeleteAddressResponse, error) {
 	_, err := s.uc.DeleteAddress(ctx, biz.DeleteAddressRequest{
-		AddressID: c.Msg.AddressId,
+		AddressID: c.AddressId,
 	})
 	if err != nil {
 		return nil, addressError(err)
 	}
 
-	return connect.NewResponse(&v1.DeleteAddressResponse{}), nil
+	return &v1.DeleteAddressResponse{}, nil
 }
 
-func (s *AddressService) GetAddress(ctx context.Context, c *connect.Request[v1.GetAddressRequest]) (*connect.Response[v1.GetAddressResponse], error) {
+func (s *AddressService) GetAddress(ctx context.Context, c *v1.GetAddressRequest) (*v1.GetAddressResponse, error) {
 	result, err := s.uc.GetAddress(ctx, biz.GetAddressRequest{
-		AddressID: c.Msg.AddressId,
+		AddressID: c.AddressId,
 	})
 	if err != nil {
 		return nil, addressError(err)
 	}
 
 	if result == nil {
-		return nil, connect.NewError(connect.CodeNotFound, fmt.Errorf("address not found"))
+		return nil, connect.Errorf(connect.CodeNotFound, "address not found")
 	}
 
-	return connect.NewResponse(&v1.GetAddressResponse{
+	return &v1.GetAddressResponse{
 		AddressId:      result.AddressID,
 		RecipientName:  result.RecipientName,
 		RecipientPhone: result.RecipientPhone,
@@ -126,14 +129,18 @@ func (s *AddressService) GetAddress(ctx context.Context, c *connect.Request[v1.G
 		IsDefault: result.IsDefault,
 		CreatedAt: timestamppb.New(result.CreatedAt),
 		UpdatedAt: timestamppb.New(result.UpdatedAt),
-	}), nil
+	}, nil
 }
 
-func (s *AddressService) ListAddresses(ctx context.Context, c *connect.Request[v1.ListAddressesRequest]) (*connect.Response[v1.ListAddressesResponse], error) {
-	userIdStr := c.Header().Get(constants.UserIdMetadataKey)
+func (s *AddressService) ListAddresses(ctx context.Context, c *v1.ListAddressesRequest) (*v1.ListAddressesResponse, error) {
+	info, _ := connect.CallInfoForServerContext(ctx)
+	if info == nil {
+		info = &connect.CallInfo{} // 直调(单测)无 CallInfo;经 Server.Call 时必有
+	}
+	userIdStr := info.RequestHeader().Get(constants.UserIdMetadataKey)
 	customerId, err := uuid.Parse(userIdStr)
 	if err != nil {
-		return nil, connect.NewError(connect.CodeUnauthenticated, fmt.Errorf("invalid authenticated user id"))
+		return nil, connect.Errorf(connect.CodeUnauthenticated, "invalid authenticated user id")
 	}
 
 	result, err := s.uc.ListAddresses(ctx, biz.ListAddressesRequest{
@@ -164,20 +171,20 @@ func (s *AddressService) ListAddresses(ctx context.Context, c *connect.Request[v
 		})
 	}
 
-	return connect.NewResponse(&v1.ListAddressesResponse{
+	return &v1.ListAddressesResponse{
 		Addresses: addresses,
-	}), nil
+	}, nil
 }
 
-func (s *AddressService) SetDefaultAddress(ctx context.Context, c *connect.Request[v1.SetDefaultAddressRequest]) (*connect.Response[v1.SetDefaultAddressResponse], error) {
+func (s *AddressService) SetDefaultAddress(ctx context.Context, c *v1.SetDefaultAddressRequest) (*v1.SetDefaultAddressResponse, error) {
 	_, err := s.uc.SetDefaultAddress(ctx, biz.SetDefaultAddressRequest{
-		AddressID: c.Msg.AddressId,
+		AddressID: c.AddressId,
 	})
 	if err != nil {
 		return nil, addressError(err)
 	}
 
-	return connect.NewResponse(&v1.SetDefaultAddressResponse{}), nil
+	return &v1.SetDefaultAddressResponse{}, nil
 }
 
 // addressError 把 biz 哨兵错误映射为 RPC 错误码（docs/design/platform/error-handling.md 第 3 条）。
@@ -186,10 +193,10 @@ func (s *AddressService) SetDefaultAddress(ctx context.Context, c *connect.Reque
 func addressError(err error) error {
 	switch {
 	case errors.Is(err, biz.ErrAddressNotFound):
-		return connect.NewError(connect.CodeNotFound, err)
+		return connect.NewError(connect.CodeNotFound, err.Error()).WithCause(err)
 	case errors.Is(err, biz.ErrInvalidAddressID):
-		return connect.NewError(connect.CodeInvalidArgument, err)
+		return connect.NewError(connect.CodeInvalidArgument, err.Error()).WithCause(err)
 	default:
-		return connect.NewError(connect.CodeUnknown, err)
+		return connect.NewError(connect.CodeUnknown, err.Error()).WithCause(err)
 	}
 }

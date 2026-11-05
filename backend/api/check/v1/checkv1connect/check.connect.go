@@ -5,36 +5,37 @@
 package checkv1connect
 
 import (
-	connect "connectrpc.com/connect"
+	connect "connectrpc.com/connect/v2"
 	context "context"
-	errors "errors"
 	v1 "github.com/lens077/ecommerce/backend/api/check/v1"
-	http "net/http"
-	strings "strings"
+	sync "sync"
 )
-
-// This is a compile-time assertion to ensure that this generated file and the connect package are
-// compatible. If you get a compiler error that this constant is not defined, this code was
-// generated with a version of connect newer than the one compiled into your binary. You can fix the
-// problem by either regenerating this code with an older version of connect or updating the connect
-// version compiled into your binary.
-const _ = connect.IsAtLeastVersion1_13_0
 
 const (
 	// CheckServiceName is the fully-qualified name of the CheckService service.
 	CheckServiceName = "check.v1.CheckService"
 )
 
-// These constants are the fully-qualified names of the RPCs defined in this package. They're
-// exposed at runtime as Spec.Procedure and as the final two segments of the HTTP route.
+// These constants are the procedure names of the RPCs defined in this package. They're exposed at
+// runtime as Spec.Procedure and as the final two segments of the HTTP route.
 //
 // Note that these are different from the fully-qualified method names used by
 // google.golang.org/protobuf/reflect/protoreflect. To convert from these constants to
 // reflection-formatted method names, remove the leading slash and convert the remaining slash to a
 // period.
 const (
-	// CheckServiceReadyProcedure is the fully-qualified name of the CheckService's Ready RPC.
+	// CheckServiceReadyProcedure is the procedure name of the CheckService's Ready RPC.
 	CheckServiceReadyProcedure = "/check.v1.CheckService/Ready"
+)
+
+var (
+	checkServiceReadySpec = sync.OnceValue(func() connect.Spec {
+		return connect.Spec{
+			StreamType: connect.StreamTypeUnary,
+			Schema:     v1.File_api_check_v1_check_proto.Services().ByName("CheckService").Methods().ByName("Ready"),
+			Procedure:  CheckServiceReadyProcedure,
+		}
+	})
 )
 
 // CheckServiceClient is a client for the check.v1.CheckService service.
@@ -43,37 +44,13 @@ type CheckServiceClient interface {
 	//
 	// 就绪 = 依赖已连上（DB / Redis / ES 等，按服务而异）；
 	// 任一致命依赖未就绪时应返回非就绪，让 K8s 把 Pod 摘出 Service
-	Ready(context.Context, *connect.Request[v1.ReadyCheckReq]) (*connect.Response[v1.ReadyCheckReply], error)
+	Ready(context.Context, *v1.ReadyCheckReq) (*v1.ReadyCheckReply, error)
 }
 
-// NewCheckServiceClient constructs a client for the check.v1.CheckService service. By default, it
-// uses the Connect protocol with the binary Protobuf Codec, asks for gzipped responses, and sends
-// uncompressed requests. To use the gRPC or gRPC-Web protocols, supply the connect.WithGRPC() or
-// connect.WithGRPCWeb() options.
-//
-// The URL supplied here should be the base URL for the Connect or gRPC server (for example,
-// http://api.acme.com or https://acme.com/grpc).
-func NewCheckServiceClient(httpClient connect.HTTPClient, baseURL string, opts ...connect.ClientOption) CheckServiceClient {
-	baseURL = strings.TrimRight(baseURL, "/")
-	checkServiceMethods := v1.File_api_check_v1_check_proto.Services().ByName("CheckService").Methods()
-	return &checkServiceClient{
-		ready: connect.NewClient[v1.ReadyCheckReq, v1.ReadyCheckReply](
-			httpClient,
-			baseURL+CheckServiceReadyProcedure,
-			connect.WithSchema(checkServiceMethods.ByName("Ready")),
-			connect.WithClientOptions(opts...),
-		),
-	}
-}
-
-// checkServiceClient implements CheckServiceClient.
-type checkServiceClient struct {
-	ready *connect.Client[v1.ReadyCheckReq, v1.ReadyCheckReply]
-}
-
-// Ready calls check.v1.CheckService.Ready.
-func (c *checkServiceClient) Ready(ctx context.Context, req *connect.Request[v1.ReadyCheckReq]) (*connect.Response[v1.ReadyCheckReply], error) {
-	return c.ready.CallUnary(ctx, req)
+// NewCheckServiceClient constructs a client for the check.v1.CheckService service. Multiple service
+// clients may share a single connect.Client.
+func NewCheckServiceClient(client *connect.Client) CheckServiceClient {
+	return &checkServiceClient{client: client}
 }
 
 // CheckServiceHandler is an implementation of the check.v1.CheckService service.
@@ -82,35 +59,46 @@ type CheckServiceHandler interface {
 	//
 	// 就绪 = 依赖已连上（DB / Redis / ES 等，按服务而异）；
 	// 任一致命依赖未就绪时应返回非就绪，让 K8s 把 Pod 摘出 Service
-	Ready(context.Context, *connect.Request[v1.ReadyCheckReq]) (*connect.Response[v1.ReadyCheckReply], error)
+	Ready(context.Context, *v1.ReadyCheckReq) (*v1.ReadyCheckReply, error)
 }
 
-// NewCheckServiceHandler builds an HTTP handler from the service implementation. It returns the
-// path on which to mount the handler and the handler itself.
-//
-// By default, handlers support the Connect, gRPC, and gRPC-Web protocols with the binary Protobuf
-// and JSON codecs. They also support gzip compression.
-func NewCheckServiceHandler(svc CheckServiceHandler, opts ...connect.HandlerOption) (string, http.Handler) {
-	checkServiceMethods := v1.File_api_check_v1_check_proto.Services().ByName("CheckService").Methods()
-	checkServiceReadyHandler := connect.NewUnaryHandler(
-		CheckServiceReadyProcedure,
-		svc.Ready,
-		connect.WithSchema(checkServiceMethods.ByName("Ready")),
-		connect.WithHandlerOptions(opts...),
+// RegisterCheckServiceHandler registers svc as the check.v1.CheckService implementation on server.
+func RegisterCheckServiceHandler(server *connect.Server, svc CheckServiceHandler) {
+	adapter := checkServiceHandler{svc: svc}
+	server.Register(
+		connect.Method{Spec: checkServiceReadySpec(), Handler: adapter.ready},
 	)
-	return "/check.v1.CheckService/", http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		switch r.URL.Path {
-		case CheckServiceReadyProcedure:
-			checkServiceReadyHandler.ServeHTTP(w, r)
-		default:
-			http.NotFound(w, r)
-		}
-	})
 }
 
 // UnimplementedCheckServiceHandler returns CodeUnimplemented from all methods.
 type UnimplementedCheckServiceHandler struct{}
 
-func (UnimplementedCheckServiceHandler) Ready(context.Context, *connect.Request[v1.ReadyCheckReq]) (*connect.Response[v1.ReadyCheckReply], error) {
-	return nil, connect.NewError(connect.CodeUnimplemented, errors.New("check.v1.CheckService.Ready is not implemented"))
+func (UnimplementedCheckServiceHandler) Ready(context.Context, *v1.ReadyCheckReq) (*v1.ReadyCheckReply, error) {
+	return nil, connect.NewError(connect.CodeUnimplemented, "check.v1.CheckService.Ready is not implemented")
+}
+
+type checkServiceClient struct {
+	client *connect.Client
+}
+
+func (c *checkServiceClient) Ready(ctx context.Context, req *v1.ReadyCheckReq) (*v1.ReadyCheckReply, error) {
+	var res v1.ReadyCheckReply
+	if err := c.client.CallUnary(ctx, checkServiceReadySpec(), req, &res); err != nil {
+		return nil, err
+	}
+	return &res, nil
+}
+
+type checkServiceHandler struct{ svc CheckServiceHandler }
+
+func (h checkServiceHandler) ready(ctx context.Context, _ connect.Spec, stream connect.ServerStream) error {
+	var req v1.ReadyCheckReq
+	if err := stream.Receive(&req); err != nil {
+		return err
+	}
+	res, err := h.svc.Ready(ctx, &req)
+	if err != nil {
+		return err
+	}
+	return stream.Send(res)
 }

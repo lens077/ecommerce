@@ -4,7 +4,7 @@ import (
 	"context"
 	"errors"
 
-	"connectrpc.com/connect"
+	"connectrpc.com/connect/v2"
 	v1 "github.com/lens077/ecommerce/backend/api/search/v1"
 	"github.com/lens077/ecommerce/backend/api/search/v1/searchv1connect"
 	"github.com/lens077/ecommerce/backend/services/search/internal/biz"
@@ -20,10 +20,10 @@ func NewSearchService(uc *biz.SearchUseCase) searchv1connect.SearchServiceHandle
 	return &SearchService{uc: uc}
 }
 
-func (s *SearchService) Search(ctx context.Context, c *connect.Request[v1.SearchRequest]) (*connect.Response[v1.SearchResponse], error) {
+func (s *SearchService) Search(ctx context.Context, c *v1.SearchRequest) (*v1.SearchResponse, error) {
 	// 1. 调用业务逻辑层
 	result, err := s.uc.Search(ctx, biz.SearchRequest{
-		Name: c.Msg.Name,
+		Name: c.Name,
 	})
 	if err != nil {
 		return nil, searchError(err)
@@ -36,9 +36,9 @@ func (s *SearchService) Search(ctx context.Context, c *connect.Request[v1.Search
 	}
 
 	// 3. 返回响应
-	return connect.NewResponse(&v1.SearchResponse{
+	return &v1.SearchResponse{
 		Products: v1Products,
-	}), nil
+	}, nil
 }
 
 // searchError 把 biz 哨兵错误映射为 RPC 错误码（docs/design/platform/error-handling.md 第 3 条）。
@@ -47,13 +47,13 @@ func (s *SearchService) Search(ctx context.Context, c *connect.Request[v1.Search
 func searchError(err error) error {
 	switch {
 	case errors.Is(err, biz.ErrSearchUnavailable):
-		return connect.NewError(connect.CodeUnavailable, err)
+		return connect.NewError(connect.CodeUnavailable, err.Error()).WithCause(err)
 	case errors.Is(err, context.Canceled):
-		return connect.NewError(connect.CodeCanceled, err)
+		return connect.NewError(connect.CodeCanceled, err.Error()).WithCause(err)
 	case errors.Is(err, context.DeadlineExceeded):
-		return connect.NewError(connect.CodeDeadlineExceeded, err)
+		return connect.NewError(connect.CodeDeadlineExceeded, err.Error()).WithCause(err)
 	default:
-		return connect.NewError(connect.CodeUnknown, err)
+		return connect.NewError(connect.CodeUnknown, err.Error()).WithCause(err)
 	}
 }
 

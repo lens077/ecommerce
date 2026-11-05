@@ -4,7 +4,7 @@ import (
 	"context"
 	"fmt"
 
-	"connectrpc.com/connect"
+	"connectrpc.com/connect/v2"
 	telemetryv1 "github.com/lens077/ecommerce/backend/api/telemetry/v1"
 	"github.com/lens077/ecommerce/backend/api/telemetry/v1/telemetryv1connect"
 	"go.opentelemetry.io/otel"
@@ -90,20 +90,20 @@ func NewTelemetryService(logger *zap.Logger) (telemetryv1connect.TelemetryServic
 
 func (s *TelemetryService) CollectWebVitals(
 	ctx context.Context,
-	req *connect.Request[telemetryv1.CollectWebVitalsRequest],
-) (*connect.Response[telemetryv1.CollectWebVitalsResponse], error) {
-	msg := req.Msg
+	req *telemetryv1.CollectWebVitalsRequest,
+) (*telemetryv1.CollectWebVitalsResponse, error) {
+	msg := req
 
 	// protovalidate 只做了字段级校验;「至少有一样数据」是跨字段约束,在这里拦。
 	// 空请求不是攻击就是客户端 bug,拒收比静默 200 更能暴露问题。
 	if len(msg.Vitals) == 0 && len(msg.ApiTimings) == 0 {
-		return nil, connect.NewError(connect.CodeInvalidArgument,
-			fmt.Errorf("either vitals or api_timings must be non-empty"))
+		return nil, connect.Errorf(connect.CodeInvalidArgument,
+			"either vitals or api_timings must be non-empty")
 	}
 
 	// 身份仅用于日志排查(某个用户说"卡"时能捞到他的记录),不进 metric attribute
 	// —— user id 是无界基数。
-	userID, _ := identity(req, msg.AnonId)
+	userID, _ := identity(ctx, msg.AnonId)
 
 	var accepted uint32
 
@@ -155,5 +155,5 @@ func (s *TelemetryService) CollectWebVitals(
 		accepted++
 	}
 
-	return connect.NewResponse(&telemetryv1.CollectWebVitalsResponse{Accepted: accepted}), nil
+	return &telemetryv1.CollectWebVitalsResponse{Accepted: accepted}, nil
 }
