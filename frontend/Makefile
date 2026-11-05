@@ -43,8 +43,7 @@ consumer-deployx:
 docker-run:
 	docker compose up -d
 
-# ---- EdgeOne Pages 部署（consumer 消费者端 → 线上 production）----
-#
+# EdgeOne Pages 部署（consumer 消费者端 → 线上 production）
 # consumer 是静态 SPA，构建产物 apps/consumer/dist **直传** EdgeOne Pages（中国站），
 # 不走云端构建：monorepo + vp 工具链（buf 生成物、workspace 提升）在云端构建农场不可靠，
 # 本地构建后直传最稳。CI 自动部署见 .github/workflows/edgeone-pages.yml。
