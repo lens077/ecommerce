@@ -1,6 +1,6 @@
 # 01 引出前端、网关与配置中心：让业务接得上、守得住
 
-[学习入口](README.md) · 上一课：[系统模型](00-system.md) · 下一课：[购物车](02-cart.md)
+[学习入口](../README.md) · 上一课：[系统模型](00-system.md) · 下一课：[购物车](02-cart.md)
 
 ## 0. Git 证据：实际不是「后端完成后才出现前端」
 
@@ -50,22 +50,22 @@
 - **Transport**：封装 RPC 的地址、fetch、拦截器和协议传输。
 - **乐观更新**：先显示预期结果，再与服务器确认；失败必须回滚/重同步。
 
-[前端 README](../../frontend/README.md) 已列出五个 app 与共享包。根 README 的旧四-app目录统计不能覆盖这里的实际目录。consumer-next 管公开页，consumer 管交互页；merchant/admin 的页面骨架并不等于服务 API 已接好；desktop 是复用页面的 Tauri 壳，不是第五套电商业务。
+[前端 README](../../../frontend/README.md) 已列出五个 app 与共享包。根 README 的旧四-app目录统计不能覆盖这里的实际目录。consumer-next 管公开页，consumer 管交互页；merchant/admin 的页面骨架并不等于服务 API 已接好；desktop 是复用页面的 Tauri 壳，不是第五套电商业务。
 
 ### 从早期页面切片演进出的工程化能力
 
-[transport.ts](../../frontend/packages/api/src/transport.ts) 用懒初始化单例统一地址、fetch 和拦截器。Connect Query 的 key 带 transport 身份；每个组件随手创建 transport 会让缓存分裂，失效可能命不中。这里的单例是在维护缓存契约，不是无缘无故使用全局对象。
+[transport.ts](../../../frontend/packages/api/src/transport.ts) 用懒初始化单例统一地址、fetch 和拦截器。Connect Query 的 key 带 transport 身份；每个组件随手创建 transport 会让缓存分裂，失效可能命不中。这里的单例是在维护缓存契约，不是无缘无故使用全局对象。
 
-[useCart](../../frontend/apps/consumer/src/hooks/useCart.ts) 已把 GetCart 查询与徽标共享，并把响应映射抽到模块作用域，避免每次 render 创建新 select 函数引起无意义更新。加购后失效查询，而不是再往本地累加一次，避免重复计数。
+[useCart](../../../frontend/apps/consumer/src/hooks/useCart.ts) 已把 GetCart 查询与徽标共享，并把响应映射抽到模块作用域，避免每次 render 创建新 select 函数引起无意义更新。加购后失效查询，而不是再往本地累加一次，避免重复计数。
 
-[AuthProvider](../../frontend/apps/consumer/src/providers/AuthProvider.tsx) 区分匿名请求的 401 和已有会话失效，避免匿名逛商城被强制登录；用布局阶段同步的 ref 避免回调读到上一个登录状态。
+[AuthProvider](../../../frontend/apps/consumer/src/providers/AuthProvider.tsx) 区分匿名请求的 401 和已有会话失效，避免匿名逛商城被强制登录；用布局阶段同步的 ref 避免回调读到上一个登录状态。
 
 ### 当前仍存在的边界问题
 
 1. 购物车删除/数量 mutation 没接，见 [cart 课](02-cart.md)。本地 store 变化不等于持久化。
 2. 地址弹窗的旧问题已在当前工作树修正：hook返回mutateAsync，表单等待成功再关闭、失败保留输入；见 [address课](04-address.md)。这项前端修复不替代后端归属和默认唯一性。
 3. 当前结算新增服务端购物车快照核对和本页重复提交防护，但仍缺真实订单响应，成功后仍跳固定支付结果；见 [order课](10-order.md)。不能继续把「静默过滤未同步商品」列为当前缺陷，也不能因此认定交易完成。
-4. [bffLogout](../../frontend/packages/configs/src/auth/bff.ts) 没有检查 HTTP 非成功状态，网络异常只告警后继续本地清理。**UI 登出不证明服务端会话已撤销**。后续应定义失败提示和重试/撤销验证，而非在前端重新引入长期 token。
+4. [bffLogout](../../../frontend/packages/configs/src/auth/bff.ts) 没有检查 HTTP 非成功状态，网络异常只告警后继续本地清理。**UI 登出不证明服务端会话已撤销**。后续应定义失败提示和重试/撤销验证，而非在前端重新引入长期 token。
 5. `fetchIdentity` 将网络失败与未认证都投影成匿名，保护启动不崩溃，但丢掉「身份服务不可达」信息。更健壮的模型应区分 loading、authenticated、anonymous、unavailable；这是建议演进，不是已实现状态。
 
 ### 性能与扩展的正确顺序
@@ -108,7 +108,7 @@
 
 这是需要跨仓请求测试确认的风险：分别用匿名、有效登录 cookie、session header 访问购物车 RPC，验证后端实际收到的主体和访客标记。若确实丢失登录身份，应在 guest 路径先尝试同一身份识别逻辑，有效登录保留用户主体，无法识别才走访客策略；不要在 cart 内自行解析 cookie。
 
-另外，[identity helper](../../backend/pkg/identity/identity.go) 的登录主体校验只有在服务调用它时才生效。NetworkPolicy 的默认拒绝与可信入口仍需按 TODO 验收；客户端伪造头直达后端会破坏「网关注入即可信」的假设。
+另外，[identity helper](../../../backend/pkg/identity/identity.go) 的登录主体校验只有在服务调用它时才生效。NetworkPolicy 的默认拒绝与可信入口仍需按 TODO 验收；客户端伪造头直达后端会破坏「网关注入即可信」的假设。
 
 ## 4. 配置中心：配置写入成功不等于功能生效
 
@@ -127,11 +127,11 @@ Watch 新版本 → 同样校验 → 先建并验证新客户端 → 原子换�
 
 ### 现有工程化
 
-- [configsource.New](../../backend/pkg/configsource/source.go) 使用 kit 的 provider-neutral 配置入口。
-- [服务 adapter](../../backend/services/cart/internal/pkg/config/config.go) 只绑定自己的 Bootstrap 类型和需要重启的配置段。
+- [configsource.New](../../../backend/pkg/configsource/source.go) 使用 kit 的 provider-neutral 配置入口。
+- [服务 adapter](../../../backend/services/cart/internal/pkg/config/config.go) 只绑定自己的 Bootstrap 类型和需要重启的配置段。
 - 同级 control-tower 的 `sdk/configsource/kit.go` 对 Watch 中断做指数退避并向消费方报告错误。
 - Config Center 写入侧有 Schema 校验；SDK 消费侧仍需解码校验，两者不能互相替代。
-- [热更新边界](../../context/project/ecommerce/config/experience/config-hot-reload-boundaries.md) 规定哪些组件可热重建、哪些只告警等重启。正在工作树里的 gorse 热重建改动不等于已经发布。
+- [热更新边界](../../../context/project/ecommerce/config/experience/config-hot-reload-boundaries.md) 规定哪些组件可热重建、哪些只告警等重启。正在工作树里的 gorse 热重建改动不等于已经发布。
 
 ### 仍要解决的对接问题
 

@@ -1,6 +1,6 @@
 # 03 用户：把认证、会话与业务档案拆开理解
 
-[学习入口](README.md) · 前置：[平台与 BFF](01-platform.md) · 关联：[地址](04-address.md)、[商家](05-merchant.md)
+[学习入口](../README.md) · 前置：[平台与 BFF](01-platform.md) · 关联：[地址](04-address.md)、[商家](05-merchant.md)
 
 ## 0. Git 证据：自研认证 → Casdoor交换 → BFF迁责
 
@@ -37,7 +37,7 @@
 
 ## 2. 当前调用路径
 
-现行 [user.proto](../../backend/api/user/v1/user.proto) 只有 SignIn、UserProfile。业务用例转到 repo；[GetUserProfile](../../backend/services/user/internal/data/user.go) 当前直接调用 Casdoor GetUser，而不是查询本地用户表。
+现行 [user.proto](../../../backend/api/user/v1/user.proto) 只有 SignIn、UserProfile。业务用例转到 repo；[GetUserProfile](../../../backend/services/user/internal/data/user.go) 当前直接调用 Casdoor GetUser，而不是查询本地用户表。
 
 ```text
 新前端：登录 → gateway BFF → /auth/me → 会话
@@ -57,13 +57,13 @@ matrix 中 user 没有业务微服务依赖，声明了 Casdoor 等外部依赖�
 - 使用共享配置、日志、OTel、连接生命周期；不在每个请求中重新构造全部基础设施。
 - 前端已有 BFF，而不是继续将长期 access/refresh token 存在浏览器业务 store。
 
-已存在的 [service 错误测试](../../backend/services/user/internal/service/user_test.go) 和 [data 错误测试](../../backend/services/user/internal/data/user_errors_test.go) 是可以复用的验证入口，但它们不是下面所有安全行为的证明。本轮未运行这些测试。
+已存在的 [service 错误测试](../../../backend/services/user/internal/service/user_test.go) 和 [data 错误测试](../../../backend/services/user/internal/data/user_errors_test.go) 是可以复用的验证入口，但它们不是下面所有安全行为的证明。本轮未运行这些测试。
 
 ## 4. 当前仍有的问题
 
 ### U1 SignIn 源头仍记录 access token
 
-在 [data/user.go](../../backend/services/user/internal/data/user.go) 的 SignIn，当前仍将 AccessToken 传入 Debug，并返回 bearer。
+在 [data/user.go](../../../backend/services/user/internal/data/user.go) 的 SignIn，当前仍将 AccessToken 传入 Debug，并返回 bearer。
 
 **日志级别不是保密措施。** 今天不开 debug 不代表明天排障不会打开；只要代码路径能将凭据写出，就存在泄露路径。应从源头删敏感值，用请求 ID、错误类别和成功状态记录行为。
 
@@ -77,7 +77,7 @@ BFF 和 legacy SignIn 同时存在会增加凭据处理与兼容面。不能直�
 
 ### U3 资料查询没有完整绑定登录主体
 
-[UserProfile handler](../../backend/services/user/internal/service/user.go) 读取 username 头；尚未统一使用 [RequireUser](../../backend/pkg/identity/identity.go) 拒绝访客并校验稳定主体。
+[UserProfile handler](../../../backend/services/user/internal/service/user.go) 读取 username 头；尚未统一使用 [RequireUser](../../../backend/pkg/identity/identity.go) 拒绝访客并校验稳定主体。
 
 Name 和 ID 不同：名字可能改，ID 用于稳定关联。应明确「身份头中的 ID 与要查的 Casdoor 用户如何一致」，不能把任意名字当查询许可。
 
@@ -85,7 +85,7 @@ Name 和 ID 不同：名字可能改，ID 用于稳定关联。应明确「身�
 
 ### U4 配置分发与客户端生效不是一件事
 
-[data.go](../../backend/services/user/internal/data/data.go) 的 Casdoor client 从启动快照构造，没有在这条构造路径内订阅热更新。修改 Config Center 后，如果 operator 以为自动换了 endpoint/凭据，就会产生运维误判。
+[data.go](../../../backend/services/user/internal/data/data.go) 的 Casdoor client 从启动快照构造，没有在这条构造路径内订阅热更新。修改 Config Center 后，如果 operator 以为自动换了 endpoint/凭据，就会产生运维误判。
 
 两种合理路线：明确声明重启生效并告警，或复用已存在的 Live/last-known-good 模式热重建。不要再复制一份独立配置 watcher。新配置必须验证可用后再切，失败时保旧且报告 stale。
 

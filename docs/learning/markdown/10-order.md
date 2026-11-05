@@ -1,6 +1,6 @@
 # 10 订单：不是把购物车 JSON 存下来，而是作出交易承诺
 
-[学习入口](README.md) · 前置：[购物车](02-cart.md)、[地址](04-address.md)、[商品](06-product.md)、[库存](09-inventory.md) · 下一课：[支付](11-payment.md)
+[学习入口](../README.md) · 前置：[购物车](02-cart.md)、[地址](04-address.md)、[商品](06-product.md)、[库存](09-inventory.md) · 下一课：[支付](11-payment.md)
 
 ## 0. Git 证据：订单从来不是「空响应就完成」
 
@@ -33,9 +33,9 @@
 
 ## 2. 现有代码已经长出哪些结构
 
-[order.proto](../../backend/api/order/v1/order.proto) 只有 CreateOrder、CompleteOrder。CreateOrderResponse 和 Order 仍是空消息。
+[order.proto](../../../backend/api/order/v1/order.proto) 只有 CreateOrder、CompleteOrder。CreateOrderResponse 和 Order 仍是空消息。
 
-已有命令/查询接口、[领域实体](../../backend/services/order/internal/biz/domain/entity.go)、订单组/订单/明细/日志 [迁移](../../backend/services/order/internal/data/migrations/00001_order.sql)、状态守卫和集中 [错误映射](../../backend/services/order/internal/service/order.go)。
+已有命令/查询接口、[领域实体](../../../backend/services/order/internal/biz/domain/entity.go)、订单组/订单/明细/日志 [迁移](../../../backend/services/order/internal/data/migrations/00001_order.sql)、状态守卫和集中 [错误映射](../../../backend/services/order/internal/service/order.go)。
 
 这些结构为后续实现留好了位置，但不能把类名 OrderCommandUseCase、事件总线、状态枚举当成流程已落地。
 
@@ -45,9 +45,9 @@
 
 ### O1 CreateOrder 没处理请求就成功
 
-[service/order.go](../../backend/services/order/internal/service/order.go) 没读取请求主体，向 domain 传空商品、零地址和空备注；[application/order.go](../../backend/services/order/internal/biz/application/order.go) 的流程只有注释，返回空响应与 nil。
+[service/order.go](../../../backend/services/order/internal/service/order.go) 没读取请求主体，向 domain 传空商品、零地址和空备注；[application/order.go](../../../backend/services/order/internal/biz/application/order.go) 的流程只有注释，返回空响应与 nil。
 
-**错误返回 nil 意味着调用方可以继续后续动作。** 因此这比明确 Unimplemented 更危险：当前 [CheckoutPage](../../frontend/apps/consumer/src/components/checkout/CheckoutPage.tsx) 已从路由文件拆出，在RPC成功后仍跳固定支付结果页，缺少真实group_no/支付状态契约。
+**错误返回 nil 意味着调用方可以继续后续动作。** 因此这比明确 Unimplemented 更危险：当前 [CheckoutPage](../../../frontend/apps/consumer/src/components/checkout/CheckoutPage.tsx) 已从路由文件拆出，在RPC成功后仍跳固定支付结果页，缺少真实group_no/支付状态契约。
 
 工作树已有新防护：核对全部选中条目与服务端快照的ID/数量/单价/SKU/SPU/商家一致，不再静默过滤本地条目，并用ref防本页双击。这些值得保留，但不能填补后端空成功、DB未写入和服务端幂等的缺口。
 
@@ -55,9 +55,9 @@
 
 ### O2 SaveOrder/SaveOrderGroup 只日志，不写库
 
-[data/order.go](../../backend/services/order/internal/data/order.go) 的两个方法返回 nil，但未执行订单写入。CompleteOrder 修改内存聚合后调用 SaveOrder，再向事件总线发布。
+[data/order.go](../../../backend/services/order/internal/data/order.go) 的两个方法返回 nil，但未执行订单写入。CompleteOrder 修改内存聚合后调用 SaveOrder，再向事件总线发布。
 
-[进程内 eventbus](../../backend/services/order/internal/eventbus/eventbus.go) 有缓冲和丢弃策略，不是事务 Outbox；当前事件 handler 主要记日志，不能把它写成「通知商家、积分、履约已实现」。
+[进程内 eventbus](../../../backend/services/order/internal/eventbus/eventbus.go) 有缓冲和丢弃策略，不是事务 Outbox；当前事件 handler 主要记日志，不能把它写成「通知商家、积分、履约已实现」。
 
 把进程内消息换成 Kafka 并不能单独修好：数据库事务回滚时，已经发送的事件无法自动撤销；数据库提交后进程崩溃，尚未发送的事件会丢。真正的边界是业务与 Outbox 记录同事务。
 
@@ -73,7 +73,7 @@
 
 ## 4. 以既定 checkout v2 为路线，不恢复旧草稿
 
-[checkout v2](../design/order/checkout.md) 已决定：
+[checkout v2](../../design/order/checkout.md) 已决定：
 
 ```text
 CreateQuote → 权威商品/价格/归属核验 → 签发client_token
@@ -126,4 +126,4 @@ order 的 application 层负责「顺序与恢复」，领域聚合负责「允�
 | O-B 最小真实下单 | 报价、请求事实、组预占、本地落库、查询响应 | 双请求同token只一组；同token异地址冲突；任一SKU失败不落业务订单；数据库重读可见 |
 | O-C 可恢复交易 | Outbox/Inbox、补偿、超时、支付接受 | 回滚不发事件；旧执行者不能提交；重启恢复；取消后晚到支付不复活；重复事件无二次副作用 |
 
-已有 [service/order_test.go](../../backend/services/order/internal/service/order_test.go) 主要证明错误映射，不是保存/事务/补偿验收。优先用能复现假成功的测试启动O-A，再推进下一层。所有远端/资金/破坏性测试先在隔离环境进行。
+已有 [service/order_test.go](../../../backend/services/order/internal/service/order_test.go) 主要证明错误映射，不是保存/事务/补偿验收。优先用能复现假成功的测试启动O-A，再推进下一层。所有远端/资金/破坏性测试先在隔离环境进行。

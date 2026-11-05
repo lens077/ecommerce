@@ -1,0 +1,202 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>电商项目问答式学习追踪</title>
+<style>
+  :root { --ink:#1a1f2e; --muted:#5b6478; --line:#dfe3ec; --accent:#2456c8; --ok:#1a7f4e; --warn:#b3540a; --bad:#b02318; --bg:#f7f8fb; }
+  * { box-sizing:border-box; }
+  body { font-family:-apple-system,"PingFang SC","Noto Sans SC",sans-serif; color:var(--ink); background:var(--bg); margin:0; line-height:1.75; }
+  main { max-width:900px; margin:0 auto; padding:32px 24px 80px; }
+  h1 { font-size:1.6rem; border-bottom:3px solid var(--accent); padding-bottom:10px; }
+  h2 { font-size:1.25rem; margin-top:2.6em; border-left:4px solid var(--accent); padding-left:12px; }
+  h3 { font-size:1.05rem; margin-top:1.8em; }
+  .meta { color:var(--muted); font-size:.9rem; }
+  table { border-collapse:collapse; width:100%; font-size:.92rem; background:#fff; }
+  th,td { border:1px solid var(--line); padding:8px 10px; text-align:left; vertical-align:top; }
+  th { background:#eef1f7; }
+  code { background:#eceff5; padding:1px 5px; border-radius:4px; font-size:.88em; }
+  pre { background:#22263a; color:#e8eaf2; padding:14px; border-radius:8px; overflow-x:auto; font-size:.85rem; }
+  pre code { background:none; color:inherit; padding:0; }
+  .pill { display:inline-block; border-radius:12px; padding:1px 10px; font-size:.78rem; font-weight:600; }
+  .pending { background:#e8ebf2; color:var(--muted); }
+  .doing { background:#fff3e0; color:var(--warn); }
+  .done { background:#e2f3ea; color:var(--ok); }
+  .note { background:#fff; border:1px solid var(--line); border-left:4px solid var(--accent); padding:12px 16px; border-radius:6px; margin:14px 0; }
+  .qa { background:#fff; border:1px solid var(--line); border-radius:8px; padding:14px 18px; margin:14px 0; }
+  .qa .q { font-weight:600; }
+  .qa .verdict { margin-top:8px; font-weight:600; }
+  .good { color:var(--ok); } .partial { color:var(--warn); } .miss { color:var(--bad); }
+  .log-entry { border:1px solid var(--line); border-radius:8px; background:#fff; padding:12px 18px; margin:12px 0; }
+  .log-entry .date { color:var(--muted); font-size:.85rem; }
+  .ans-box { width:100%; min-height:90px; border:1px dashed var(--accent); border-radius:6px; padding:10px 12px; margin-top:8px; font:inherit; background:#fbfcff; white-space:pre-wrap; }
+  .ans-box:focus { outline:2px solid var(--accent); background:#fff; }
+  .ans-box.empty::before { content:attr(data-hint); color:#9aa3b8; }
+  .toolbar { position:sticky; top:0; z-index:5; background:var(--bg); padding:10px 0; display:flex; gap:10px; align-items:center; border-bottom:1px solid var(--line); }
+  .toolbar button { font:inherit; padding:6px 14px; border-radius:6px; border:1px solid var(--accent); background:#fff; color:var(--accent); cursor:pointer; }
+  .toolbar button.primary { background:var(--accent); color:#fff; }
+  #saveStatus { color:var(--muted); font-size:.85rem; }
+  textarea#exportBox { width:100%; height:180px; font-family:ui-monospace,monospace; font-size:.8rem; display:none; margin-top:8px; }
+</style>
+</head>
+<body>
+<main>
+
+<div class="toolbar">
+  <button class="primary" onclick="exportMarkdown()">导出回答为 Markdown</button>
+  <button onclick="clearAll()">清空本地保存</button>
+  <span id="saveStatus"></span>
+</div>
+<textarea id="exportBox" readonly></textarea>
+<p class="meta"><b>怎么让我读到你的回答</b>：在下方的虚线框里直接写（自动保存到浏览器 localStorage），然后点「导出回答为 Markdown」，把文本框内容粘贴到 <code>docs/learning/学习问答-我的回答.md</code>（覆盖旧内容）并保存，我就能直接读文件评估。</p>
+
+<h1>电商项目问答式学习追踪</h1>
+<p class="meta">配套教材：<code>docs/learning/README.md</code>（路线图）+ <code>docs/learning/教学式渐进方案.md</code>（10 课）。本文件只做三件事：<b>记录每一轮的盲答与评估</b>、<b>调整后续教学方案</b>、<b>追踪 API 设计评估结论</b>。由 AI 在每轮会话后更新。</p>
+
+<div class="note">
+<b>闭环流程（每一轮固定五步，跨多个会话）</b>
+<ol>
+<li><b>盲答</b>：AI 出 3–4 道设计题，你<b>不看代码、不查文档</b>，只靠自己的理解回答（写在会话里即可）。</li>
+<li><b>评估</b>：AI 对照仓库真实 proto/代码与业界惯例，逐题给出「跟得上 / 部分跟得上 / 有缺口」的判断和理由，并评估仓库现有 API 是否仍是最佳实践。</li>
+<li><b>定向读</b>：只根据评估出的缺口指定教材章节和源码入口，不通读。</li>
+<li><b>薄动手</b>：一个能验证理解的最小改动或测试。</li>
+<li><b>回写</b>：AI 把本轮问答、结论、方案调整写入本文件，并据此调整下一轮题目难度与侧重。</li>
+</ol>
+</div>
+
+<h2>轮次总览</h2>
+<table>
+<tr><th>轮</th><th>主题</th><th>对应教材</th><th>API 评估点（盲答后揭晓）</th><th>状态</th></tr>
+<tr><td>R1</td><td>请求旅程与分层契约</td><td>渐进方案第 1–2 课</td><td>列表接口设计：分页方式、错误码、谁定身份</td><td><span class="pill doing">进行中</span></td></tr>
+<tr><td>R2</td><td>契约先行与兼容性</td><td>第 3–4 课</td><td><code>product.proto</code> 现状 vs 你的设计；<code>double price</code> 之错</td><td><span class="pill pending">待开始</span></td></tr>
+<tr><td>R3</td><td>信任边界与对象级授权</td><td>第 5 课</td><td><code>CreatePayment</code> 信任请求体 <code>customer_id</code> 的问题</td><td><span class="pill pending">待开始</span></td></tr>
+<tr><td>R4</td><td>并发正确性：库存</td><td>第 6 课</td><td>库存 proto 为空结构体的问题；原子扣减 API 形态</td><td><span class="pill pending">待开始</span></td></tr>
+<tr><td>R5</td><td>幂等与假成功</td><td>第 7 课</td><td>空 <code>CreateOrderResponse</code> 为什么是设计缺陷</td><td><span class="pill pending">待开始</span></td></tr>
+<tr><td>R6</td><td>跨服务调用与补偿</td><td>第 8、10 课</td><td>超时语义、<code>depends_on</code> 与服务直连 API</td><td><span class="pill pending">待开始</span></td></tr>
+<tr><td>R7</td><td>支付安全四道闸门</td><td>第 9 课</td><td>回调 API 该暴露什么、幂等键放哪一层</td><td><span class="pill pending">待开始</span></td></tr>
+</table>
+
+<h2>API 设计评估台账</h2>
+<table>
+<tr><th>对象</th><th>你的盲答结论</th><th>仓库现状</th><th>业界基准</th><th>裁决</th></tr>
+<tr><td>列表接口分页（R1）</td><td>待你回答</td><td>待评估</td><td>游标分页 + 稳定排序</td><td>待定</td></tr>
+<tr><td>身份来源（R1/R3）</td><td>待你回答</td><td><code>x-md-global-user-id</code> 网关注入；payment 尚信任请求体</td><td>身份只来自可信层，请求体身份一律不可信</td><td>待定</td></tr>
+<tr><td>下单响应（R5）</td><td>待你回答</td><td><code>CreateOrderResponse</code> 为空</td><td>创建类接口应返回资源定位与后续动作所需信息</td><td>待定</td></tr>
+</table>
+
+<h2>会话记录（倒序追加）</h2>
+
+<div class="log-entry">
+<span class="date">2026-10-31 · 学习链路修订</span>
+<p>用户提出「架构 → 单服务 → 集成 → 交付 → 前端」横切链路。评估结论：骨架对，但需三处修正——①业务安全（授权/支付闸门/幂等）从基础设施章节拆出，随服务实现贯穿；②HPA/VPA 延后到有真实压测数据之后；③前端从终点改为贯穿点（proto→TS 类型生成在第 2 阶段首次出现）。另补一条暗线：门禁证据链（verify 脚本、并发测试）从第一天起随学随跑。修订链路见下表。</p>
+</div>
+
+<div class="log-entry">
+<span class="date">2026-10-31 · R1 出题</span>
+<p>建立本追踪文件。R1 主题：请求旅程与分层契约。题目见下方「R1 题目与你的回答」。等待盲答。</p>
+</div>
+
+<h2>学习链路（v2 · 修订版）</h2>
+<table>
+<tr><th>阶段</th><th>内容</th><th>对应教材/轮次</th></tr>
+<tr><td>0 · 起点</td><td>MVP 边界与历史证据（先知道哪里没做完）</td><td>13-history 章</td></tr>
+<tr><td>1 · 一条请求</td><td>跑通 user 服务；应用模板六件套（入口/错误/链路/日志/指标/中间件）横向过一遍；识别模板中的 DDD 落点</td><td>第 1–2 课，R1</td></tr>
+<tr><td>2 · 契约与数据</td><td>proto 设计 + 兼容红线、schema/迁移；首次碰前端 TS 类型生成</td><td>第 3–4 课，R2</td></tr>
+<tr><td>3 · 业务安全</td><td>身份来源、归属校验、对象级授权</td><td>第 5 课，R3</td></tr>
+<tr><td>4 · 交易正确性</td><td>库存原子性、幂等、假成功</td><td>第 6–7 课，R4/R5</td></tr>
+<tr><td>5 · 联调</td><td>服务直连、structcheck、超时、状态机、补偿；可观测性升级为「业务指标」抓假成功</td><td>第 8、10 课，R6</td></tr>
+<tr><td>6 · 支付</td><td>验签→回查→金额校验→幂等落账，四道闸门</td><td>第 9 课，R7</td></tr>
+<tr><td>7 · 交付与基础设施</td><td>docker compose 本地 → helm/kustomize + ArgoCD GitOps → control-tower 网关暴露 → cilium/gateway-api/TLSRoute → CNP/zero-trust（暴露公网前就位）→ 压测后 HPA/VPA → 前端适配收尾</td><td>R8+</td></tr>
+<tr><td>暗线 · 证据链</td><td>每学完一块用仓库门禁证明（verify-quick / structcheck / 并发测试），结论回写 TODO.md</td><td>全程</td></tr>
+</table>
+
+<h2>R1 题目与你的回答</h2>
+
+<div class="qa">
+<p class="q">Q1（分层）· 这个项目把代码分成 server → service → biz ← data 四层，且规定 biz 不许 import data。不查文档，凭你的理解回答：<b>为什么要这样规定？如果允许 biz 直接 import data，短期内看不出问题，三个月后项目会退化成什么样？</b></p>
+<div class="ans"><b>你的回答：</b><div class="ans-box empty" id="ans-R1Q1" contenteditable="true" data-hint="点这里直接输入你的盲答…"></div></div>
+<div class="verdict verdict-1">评估：（待评估）</div>
+</div>
+
+<div class="qa">
+<p class="q">Q2（API 设计实操）· 假设由你从零设计「用户查看自己的地址列表」这个 RPC：<b>写出请求字段、响应字段、可能的错误码，以及「用户 A 拿用户 B 的地址 ID 来查」时系统该怎么办。</b>不用管语法，用中文列字段即可。</p>
+<div class="ans"><b>你的回答：</b><div class="ans-box empty" id="ans-R1Q2" contenteditable="true" data-hint="点这里直接输入你的盲答…"></div></div>
+<div class="verdict verdict-2">评估：（待评估）</div>
+</div>
+
+<div class="qa">
+<p class="q">Q3（分页）· 商品列表有一百万条，客户端要一页一页翻。<b>你会用「第 N 页 + 每页大小」（OFFSET/LIMIT）还是游标？为什么？数据在第 3 页被人插入一条新商品时，两种方案分别会发生什么？</b></p>
+<div class="ans"><b>你的回答：</b><div class="ans-box empty" id="ans-R1Q3" contenteditable="true" data-hint="点这里直接输入你的盲答…"></div></div>
+<div class="verdict verdict-3">评估：（待评估）</div>
+</div>
+
+<div class="qa">
+<p class="q">Q4（信任边界）· 一个「创建支付单」的请求体里带着 <code>customer_id</code>（付款人）和 <code>order_id</code>。<b>这两个字段你各信几分？付款人到底应该从哪里来？如果直接信请求体里的 customer_id，攻击者能做什么？</b></p>
+<div class="ans"><b>你的回答：</b><div class="ans-box empty" id="ans-R1Q4" contenteditable="true" data-hint="点这里直接输入你的盲答…"></div></div>
+<div class="verdict verdict-4">评估：（待评估）</div>
+</div>
+
+<h2>方案调整记录</h2>
+<table>
+<tr><th>日期</th><th>触发</th><th>调整</th></tr>
+<tr><td>2026-10-31</td><td>建文件</td><td>建立 R1–R7 轮次；R1 出题。难度假设：已遗忘分层与契约细节。</td></tr>
+</table>
+
+<script>
+(function () {
+  var KEY = 'learn-qa-answers-v1';
+  var boxes = document.querySelectorAll('.ans-box');
+  function load() {
+    var data = {};
+    try { data = JSON.parse(localStorage.getItem(KEY) || '{}'); } catch (e) {}
+    boxes.forEach(function (b) {
+      if (data[b.id]) { b.textContent = data[b.id]; b.classList.remove('empty'); }
+      b.addEventListener('input', function () {
+        b.classList.toggle('empty', !b.textContent.trim());
+        save();
+      });
+    });
+  }
+  function collect() {
+    var data = {};
+    boxes.forEach(function (b) { data[b.id] = b.textContent.trim(); });
+    return data;
+  }
+  var timer = null;
+  function save() {
+    clearTimeout(timer);
+    var s = document.getElementById('saveStatus');
+    timer = setTimeout(function () {
+      localStorage.setItem(KEY, JSON.stringify(collect()));
+      s.textContent = '已自动保存 ✓ ' + new Date().toLocaleTimeString();
+    }, 400);
+  }
+  window.exportMarkdown = function () {
+    var lines = ['# 我的盲答回答', '', '> 由 问答学习追踪.html 导出，粘贴覆盖本文件后 AI 可直接读取。', ''];
+    boxes.forEach(function (b) {
+      var q = b.closest('.qa').querySelector('.q').textContent.replace(/^Q(\d)/, 'Q$1');
+      lines.push('## ' + q.split('·')[0].trim());
+      lines.push('');
+      lines.push(b.textContent.trim() || '（未作答）');
+      lines.push('');
+    });
+    var box = document.getElementById('exportBox');
+    box.value = lines.join('\n');
+    box.style.display = 'block';
+    box.select();
+    document.execCommand('copy');
+    document.getElementById('saveStatus').textContent = '已复制到剪贴板，粘贴到 docs/learning/学习问答-我的回答.md';
+  };
+  window.clearAll = function () {
+    if (!confirm('清空浏览器里保存的所有回答？（不影响已导出到 md 文件的内容）')) return;
+    localStorage.removeItem(KEY);
+    boxes.forEach(function (b) { b.textContent = ''; b.classList.add('empty'); });
+    save();
+  };
+  load();
+})();
+</script>
+</main>
+</body>
+</html>

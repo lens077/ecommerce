@@ -1,6 +1,6 @@
 # 08 行为与推荐：允许丢什么，不允许重复算什么
 
-[学习入口](README.md) · 前置：[商品](06-product.md)、[平台](01-platform.md) · 关联：[搜索](07-search.md)
+[学习入口](../README.md) · 前置：[商品](06-product.md)、[平台](01-platform.md) · 关联：[搜索](07-search.md)
 
 ## 0. Git 证据：队列和补投第一版就有
 
@@ -29,7 +29,7 @@
 
 ## 2. 当前实现的真实路径
 
-[proto](../../backend/api/behavior/v1/behavior.proto) 提供 Track、Recommend、SimilarItems。ItemId 统一为 product 的 `spu_code`，不是 SKU ID；dwell 的 value 是秒，事件时间是毫秒。
+[proto](../../../backend/api/behavior/v1/behavior.proto) 提供 Track、Recommend、SimilarItems。ItemId 统一为 product 的 `spu_code`，不是 SKU ID；dwell 的 value 是秒，事件时间是毫秒。
 
 ```text
 前端 tracker → Track → 有界内存队列 → 批量 flush
@@ -43,7 +43,7 @@
 
 Recommend 根据登录/匿名身份选择 personalized/session，失败或无结果降级到 latest，再过滤 dislike。telemetry 在同一进程注册，但处理 Web Vitals，不属于购买事实。
 
-源码入口：[service](../../backend/services/behavior/internal/service/behavior.go)、[usecase](../../backend/services/behavior/internal/biz/usecase.go)、[event repo](../../backend/services/behavior/internal/data/event.go)、[recommend repo](../../backend/services/behavior/internal/data/recommend.go)。
+源码入口：[service](../../../backend/services/behavior/internal/service/behavior.go)、[usecase](../../../backend/services/behavior/internal/biz/usecase.go)、[event repo](../../../backend/services/behavior/internal/data/event.go)、[recommend repo](../../../backend/services/behavior/internal/data/recommend.go)。
 
 ## 3. 第一版已有的工程化与后续加固
 
@@ -70,7 +70,7 @@ Recommend 根据登录/匿名身份选择 personalized/session，失败或无结
 
 ### B2 现有重试可能重复累计反馈
 
-[PushFeedback](../../backend/services/behavior/internal/data/recommend.go) 将 read/impression 分到 InsertFeedback（POST 累加），其他分到 PutFeedback（PUT 覆盖）。但 usecase 的 `push` 注释声称三元组重复投递只覆盖。
+[PushFeedback](../../../backend/services/behavior/internal/data/recommend.go) 将 read/impression 分到 InsertFeedback（POST 累加），其他分到 PutFeedback（PUT 覆盖）。但 usecase 的 `push` 注释声称三元组重复投递只覆盖。
 
 这是可以从当前代码证明的语义冲突：
 
@@ -123,4 +123,4 @@ Recommend 根据登录/匿名身份选择 personalized/session，失败或无结
 | B-B 多副本恢复 | 两个 worker 同时处理同一批 pending，一方中途退出 | 不丢待同步记录、不重复业务效果；过期领取能恢复 |
 | B-C 归因与丢弃 | 匿名/登录/登出切换、队列满、DB 故障、无效时间戳 | 返回 accepted/dropped 含义准确，身份不串，损失有指标而不是假装成功 |
 
-当前行为 usecase 的这些专项回归覆盖不能从 telemetry 测试推导出来。已有 [telemetry_test](../../backend/services/behavior/internal/service/telemetry_test.go) 只证明同进程中的另一组行为；不要用「behavior 有测试文件」替代具体断言。
+当前行为 usecase 的这些专项回归覆盖不能从 telemetry 测试推导出来。已有 [telemetry_test](../../../backend/services/behavior/internal/service/telemetry_test.go) 只证明同进程中的另一组行为；不要用「behavior 有测试文件」替代具体断言。

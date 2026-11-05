@@ -8,3 +8,4 @@
 
 docs/SCAFFOLD.md  34  # 新项目验收模板,非本仓进度(§十 已写明「复制到新项目的 TODO.md 里逐条勾」);文件头已加声明。可长期保留,但不应再增
 docs/design/platform/capacity-balancing.md  12  # 阶段 B 演练清单与持续告警清单;条目应上移进 docs/todo/基础设施与部署模型.md
+docs/learning/教学式渐进方案.md  34  # 10 节课各自的「验收」勾选项,不是进度看板;进度的唯一真相源仍是 TODO.md。2026-10-26 迁移到 docs/learning/markdown/ 后由门禁扫出,登记冻结

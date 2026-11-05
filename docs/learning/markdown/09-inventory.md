@@ -1,6 +1,6 @@
 # 09 库存：代码写了「事务」，不等于真的有事务
 
-[学习入口](README.md) · 前置：[商品](06-product.md)、[购物车](02-cart.md) · 关联：[订单](10-order.md)、[支付](11-payment.md)
+[学习入口](../README.md) · 前置：[商品](06-product.md)、[购物车](02-cart.md) · 关联：[订单](10-order.md)、[支付](11-payment.md)
 
 ## 0. Git 证据：原子性不是后加要求，错参也不是最近才出现
 
@@ -35,13 +35,13 @@
 
 目标不变量是 `available + reserved + locked = on_hand`。确认支付把 reserved 转 locked；实际发货才减少 on_hand。不能为了省一列，把未支付预占与已支付锁定混成一类。
 
-[库存设计](../design/inventory/inventory.md) 与 [checkout v2](../design/order/checkout.md) 是演进依据；旧文首「Reserve 静默无操作」不能当当前实现——现在有尝试读写，但参数、事务和流水语义仍有错。
+[库存设计](../../design/inventory/inventory.md) 与 [checkout v2](../../design/order/checkout.md) 是演进依据；旧文首「Reserve 静默无操作」不能当当前实现——现在有尝试读写，但参数、事务和流水语义仍有错。
 
 ## 2. 当前实现和已做的工程化
 
-现行 [inventory.proto](../../backend/api/inventory/v1/inventory.proto) 只有 Reserve、ReleaseReserve，没有正式 Group/Confirm/BatchGetStock 契约。
+现行 [inventory.proto](../../../backend/api/inventory/v1/inventory.proto) 只有 Reserve、ReleaseReserve，没有正式 Group/Confirm/BatchGetStock 契约。
 
-阅读：[service](../../backend/services/inventory/internal/service/inventory.go) → [data](../../backend/services/inventory/internal/data/inventory.go) → [SQL](../../backend/services/inventory/internal/data/queries/query.sql) → [迁移](../../backend/services/inventory/internal/data/migrations/00001_inventory.sql)。
+阅读：[service](../../../backend/services/inventory/internal/service/inventory.go) → [data](../../../backend/services/inventory/internal/data/inventory.go) → [SQL](../../../backend/services/inventory/internal/data/queries/query.sql) → [迁移](../../../backend/services/inventory/internal/data/migrations/00001_inventory.sql)。
 
 已有余额表、change_log、version、SQL 条件更新、错误 reason/Connect 映射、共享连接和事务 helper。日志在库存不足时带 SKU 而不回显真实余量；错误变量和非法 UUID 的处理已改进。
 
@@ -121,4 +121,4 @@ matrix 的 order→inventory 当前只在 planned。只有两边真实 proto、c
 | I-B 预占生命周期 | reservation头+明细、Group三接口 | 同ID同内容不重扣；异内容冲突；重复释放不超增；先释放后晚到预占不复活 |
 | I-C 恢复与对账 | 到期处理、持久事件、余额/流水核对 | 进程重启可恢复；消息重放不改变已完成效果；守恒等式始终成立 |
 
-现有 [service 测试](../../backend/services/inventory/internal/service/inventory_test.go) 主要验证错误和非法输入，stub 无法发现 SQL 参数和跨事务问题。上述练习要使用隔离真实数据库，而不是线上库存；本轮未执行。
+现有 [service 测试](../../../backend/services/inventory/internal/service/inventory_test.go) 主要验证错误和非法输入，stub 无法发现 SQL 参数和跨事务问题。上述练习要使用隔离真实数据库，而不是线上库存；本轮未执行。

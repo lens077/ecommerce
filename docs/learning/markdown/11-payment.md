@@ -1,6 +1,6 @@
 # 11 支付：成功、失败之外，还有「不知道是否已扣款」
 
-[学习入口](README.md) · 前置：[订单](10-order.md) · 综合：[契约实验室](12-contracts.md)
+[学习入口](../README.md) · 前置：[订单](10-order.md) · 综合：[契约实验室](12-contracts.md)
 
 本章只教设计、源码阅读与验收，**payment 的实际实现由你亲自完成**。这里不运行支付请求，不恢复旧注释代码，不对真实资金进行故障注入。
 
@@ -38,19 +38,19 @@ MVP 可以只支持一种支付渠道、没有复杂分账，但仍必须具备�
 
 ## 2. 当前实现，不夸大桩代码
 
-[现行 proto](../../backend/api/payment/v1/payment.proto) 提供创建、查询状态、通知、回跳四个RPC；[data/payment.go](../../backend/services/payment/internal/data/payment.go) 的五个仓储方法统一返回 Unimplemented。
+[现行 proto](../../../backend/api/payment/v1/payment.proto) 提供创建、查询状态、通知、回跳四个RPC；[data/payment.go](../../../backend/services/payment/internal/data/payment.go) 的五个仓储方法统一返回 Unimplemented。
 
 已经完成的内容包括参数约束、客户术语迁移、Connect错误透传、构造与启动装配。它能诚实拒绝未实现功能，比空响应成功更安全；但**尚不能支付、不能宣称已验签或已退款**。
 
-已有 [service测试](../../backend/services/payment/internal/service/payment_test.go) 验证部分参数与未实现错误透传；并非对账或资金一致性测试。
+已有 [service测试](../../../backend/services/payment/internal/service/payment_test.go) 验证部分参数与未实现错误透传；并非对账或资金一致性测试。
 
-早期支付单设计稿已删除，不再作为独立契约。路线以 [checkout v2](../design/order/checkout.md) 的按组支付与 capture/refund 分轴为准，不能直接复活旧单订单实现。
+早期支付单设计稿已删除，不再作为独立契约。路线以 [checkout v2](../../design/order/checkout.md) 的按组支付与 capture/refund 分轴为准，不能直接复活旧单订单实现。
 
 ## 3. 启用前必须先修的契约缺口
 
 ### PAY1 当前创建参数来自不可信请求体
 
-[service/payment.go](../../backend/services/payment/internal/service/payment.go) 接收 customer_id、amount、currency，尚未从可信会话和order核验。
+[service/payment.go](../../../backend/services/payment/internal/service/payment.go) 接收 customer_id、amount、currency，尚未从可信会话和order核验。
 
 目前 repo 桩阻止真实扣款，所以准确结论是「启用前安全阻断」，不是已经实测能冒用付款。
 
@@ -60,11 +60,11 @@ MVP 可以只支持一种支付渠道、没有复杂分账，但仍必须具备�
 
 ### PAY2 数据模型不足以表达重试与退款
 
-[旧迁移](../../backend/services/payment/internal/data/migrations/00001_payments.sql) 是单order_id、单status，没有支付请求唯一键和两个独立状态轴。
+[旧迁移](../../../backend/services/payment/internal/data/migrations/00001_payments.sql) 是单order_id、单status，没有支付请求唯一键和两个独立状态轴。
 
 一个status=refunded会遮盖问题：「之前是否真的扣款？退了多少？哪次尝试？」设计应保留capture事实，另跟踪refund，保存渠道交易标识与请求关联。
 
-[旧SQL](../../backend/services/payment/internal/data/queries/query.sql) 中有修改主键的UpdateStatusQuery，另一个状态更新没有旧状态条件。它们是待替换资产，不是可以重新接通就复用的正确实现。
+[旧SQL](../../../backend/services/payment/internal/data/queries/query.sql) 中有修改主键的UpdateStatusQuery，另一个状态更新没有旧状态条件。它们是待替换资产，不是可以重新接通就复用的正确实现。
 
 ### PAY3 回调日志缺少数据最小化
 
@@ -74,7 +74,7 @@ MVP 可以只支持一种支付渠道、没有复杂分账，但仍必须具备�
 
 ### PAY4 结果页仍是演示成功，必须与真实支付分开
 
-当前 [payment/result](../../frontend/apps/consumer/src/routes/payment/result.tsx) 使用success!==false，缺参数默认成功；金额为固定展示值，订单链接也是固定编号，没有调用支付状态查询。新checkout的服务端快照保护不能阻止它把空建单响应后的跳转渲染为已支付。
+当前 [payment/result](../../../frontend/apps/consumer/src/routes/payment/result.tsx) 使用success!==false，缺参数默认成功；金额为固定展示值，订单链接也是固定编号，没有调用支付状态查询。新checkout的服务端快照保护不能阻止它把空建单响应后的跳转渲染为已支付。
 
 最小止损是无真实凭证/状态时显示「无法确认/处理中/功能未开放」，不能默认成功；正式实现后只显示服务端查得的订单和资金状态。修的是用户可观察的事实，不是换一段漂亮提示语。
 

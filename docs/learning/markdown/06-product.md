@@ -1,6 +1,6 @@
 # 06 商品：数据映射、价格事实与可重建投影
 
-[学习入口](README.md) · 前置：[商家](05-merchant.md) · 关联：[购物车](02-cart.md)、[搜索](07-search.md)、[推荐](08-behavior.md)、[订单](10-order.md)
+[学习入口](../README.md) · 前置：[商家](05-merchant.md) · 关联：[购物车](02-cart.md)、[搜索](07-search.md)、[推荐](08-behavior.md)、[订单](10-order.md)
 
 ## 0. Git 证据：先落详情切片，完整目录一直未兑现
 
@@ -31,16 +31,16 @@
 
 ## 2. 当前代码实际走哪条路径
 
-[product.proto](../../backend/api/product/v1/product.proto) 当前只有 GetProductDetail，没有 ListProducts 或管理写 RPC。
+[product.proto](../../../backend/api/product/v1/product.proto) 当前只有 GetProductDetail，没有 ListProducts 或管理写 RPC。
 
-[service/product.go](../../backend/services/product/internal/service/product.go) → [biz/product.go](../../backend/services/product/internal/biz/product.go) → [data/product.go](../../backend/services/product/internal/data/product.go) → [query.sql](../../backend/services/product/internal/data/queries/query.sql)。
+[service/product.go](../../../backend/services/product/internal/service/product.go) → [biz/product.go](../../../backend/services/product/internal/biz/product.go) → [data/product.go](../../../backend/services/product/internal/data/product.go) → [query.sql](../../../backend/services/product/internal/data/queries/query.sql)。
 
 详情直接查 PG。前端 Query 的 staleTime 是浏览器缓存语义，不能说后端已经做了 Redis cache-aside。
 
 另外两条派生链已经有实际代码：
 
-- [搜索投影迁移](../../backend/services/product/internal/data/migrations/00005_search_catalog.sql) 用 SPU/SKU/销量变化维护 `products.search_catalog`，再由仓外 CDC 搬到 ES。
-- [ItemSync](../../backend/services/product/internal/biz/recommend.go) 周期读取目录并投喂 gorse；[data/recommend.go](../../backend/services/product/internal/data/recommend.go) 提供同步数据。
+- [搜索投影迁移](../../../backend/services/product/internal/data/migrations/00005_search_catalog.sql) 用 SPU/SKU/销量变化维护 `products.search_catalog`，再由仓外 CDC 搬到 ES。
+- [ItemSync](../../../backend/services/product/internal/biz/recommend.go) 周期读取目录并投喂 gorse；[data/recommend.go](../../../backend/services/product/internal/data/recommend.go) 提供同步数据。
 
 商品没有写 RPC，不等于数据库变化的投影完全没运行；反过来，有投影触发器，也不代表商家商品管理已经做好。
 
@@ -89,9 +89,9 @@ SKU/spec JSON 解码失败后记录 Warn，但继续返回成功对象。调用�
 
 ### PR5 列表和业务销量链仍不完整
 
-只有详情 RPC。列表应按 [listing 设计](../design/product/listing.md) 落地，不把 search 的固定20条当作商品目录分页。
+只有详情 RPC。列表应按 [listing 设计](../../design/product/listing.md) 落地，不把 search 的固定20条当作商品目录分页。
 
-销量已有 [sale_detail 与汇总](../../backend/services/product/internal/data/migrations/00003_sale_detail.sql)，但尚不能宣称订单事件写入、重复消费、退款调整已实现。销量不能由 browser purchase 埋点当权威输入。
+销量已有 [sale_detail 与汇总](../../../backend/services/product/internal/data/migrations/00003_sale_detail.sql)，但尚不能宣称订单事件写入、重复消费、退款调整已实现。销量不能由 browser purchase 埋点当权威输入。
 
 ## 5. 对接契约
 
@@ -122,4 +122,4 @@ SKU/spec JSON 解码失败后记录 Warn，但继续返回成功对象。调用�
 | PR-B 可浏览目录 | 按既定设计实现列表与分页，核对金额转换 | 连续翻页不重不漏；大ID无精度损失；Money→分不丢精度；无任意排序字段注入 |
 | PR-C 投影可恢复 | 稳定复合游标、SKU变更传播、幂等销量事件 | 同刻超批不饿死；失败不越过未处理数据；重放不重复销量；下架从搜索和推荐消失 |
 
-已有 [product_test](../../backend/services/product/internal/service/product_test.go) 主要证明错误映射，不证明上述成功数据正确。优先补能复现零 ID 与游标卡住的测试，少做镜像实现的表面断言。
+已有 [product_test](../../../backend/services/product/internal/service/product_test.go) 主要证明错误映射，不证明上述成功数据正确。优先补能复现零 ID 与游标卡住的测试，少做镜像实现的表面断言。

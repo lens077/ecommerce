@@ -1,6 +1,6 @@
 # 00 从一个能响应的 RPC，到一个可靠的电商系统
 
-[学习入口](README.md) · 下一课：[前端、网关与配置中心](01-platform.md)
+[学习入口](../README.md) · 下一课：[前端、网关与配置中心](01-platform.md)
 
 ## 1. MVP 的价值与边界
 
@@ -41,7 +41,7 @@
 | order | 订单、请求事实、跨域编排 | 支付渠道实际入账事实 |
 | payment | 支付尝试、渠道结果、退款与对账 | 订单是否最终接受某次付款 |
 
-这里描述职责，不声称每一项已经实现。实际接线查 [服务矩阵](../../.service-matrix.yaml)：核查时十服务 `depends_on` 均为空，order/payment 另有 planned 依赖；领域设计里的箭头不能直接画成运行时调用图。
+这里描述职责，不声称每一项已经实现。实际接线查 [服务矩阵](../../../.service-matrix.yaml)：核查时十服务 `depends_on` 均为空，order/payment 另有 planned 依赖；领域设计里的箭头不能直接画成运行时调用图。
 
 ## 3. 高内聚、低耦合到底是什么意思
 
@@ -53,11 +53,11 @@
 
 **Module（模块）**是有接口与实现的单元，函数、包都可以是模块。**Interface（接口）**不仅是方法签名，还包括调用顺序、错误、配置和不变量。**Depth（深度）**指调用方学会少量接口后，能获得多少可靠行为。
 
-本仓的 SearchCatalog 就是有价值的深度模块：业务只拿项目自有商品结构，Elasticsearch SDK 被藏在实现内。但当前只有一个生产 provider，不能据此夸称「已经可随意切换多个搜索引擎」。判据见 [能力接缝](../../context/team/capability-seams.md)。
+本仓的 SearchCatalog 就是有价值的深度模块：业务只拿项目自有商品结构，Elasticsearch SDK 被藏在实现内。但当前只有一个生产 provider，不能据此夸称「已经可随意切换多个搜索引擎」。判据见 [能力接缝](../../../context/team/capability-seams.md)。
 
 ## 4. 分层：不要把运行顺序当成依赖方向
 
-以 cart 的 [server](../../backend/services/cart/internal/server/server.go)、[service](../../backend/services/cart/internal/service/cart.go)、[biz](../../backend/services/cart/internal/biz/cart.go)、[data](../../backend/services/cart/internal/data/cart.go) 为阅读样本：
+以 cart 的 [server](../../../backend/services/cart/internal/server/server.go)、[service](../../../backend/services/cart/internal/service/cart.go)、[biz](../../../backend/services/cart/internal/biz/cart.go)、[data](../../../backend/services/cart/internal/data/cart.go) 为阅读样本：
 
 ```text
 运行时请求：
@@ -105,7 +105,7 @@ proto 的 Protovalidate 约束检查 UUID 格式、金额范围、批次数量�
 
 ### 6.2 配置与连接
 
-本仓 [configsource](../../backend/pkg/configsource/source.go) 固定来源策略；各服务 [config adapter](../../backend/services/cart/internal/pkg/config/config.go) 只实例化自己的 Bootstrap；共享实现归 go-connect-kit。
+本仓 [configsource](../../../backend/pkg/configsource/source.go) 固定来源策略；各服务 [config adapter](../../../backend/services/cart/internal/pkg/config/config.go) 只实例化自己的 Bootstrap；共享实现归 go-connect-kit。
 
 **Last-known-good（最后一份可用配置）**让坏热更新不覆盖仍可用的连接。代价是「收到新配置」和「正在使用新配置」可能不同，所以还需要 stale 指标与告警。
 

@@ -1,6 +1,6 @@
 # 05 商家：有管理员权限，也可能批准了整张表
 
-[学习入口](README.md) · 前置：[用户](03-user.md)、[平台](01-platform.md) · 关联：[商品](06-product.md)、[订单](10-order.md)
+[学习入口](../README.md) · 前置：[用户](03-user.md)、[平台](01-platform.md) · 关联：[商品](06-product.md)、[订单](10-order.md)
 
 ## 0. Git 证据：早期申请链与后期明确的企业店 MVP
 
@@ -27,13 +27,13 @@
 - **CAS（Compare-and-Swap）**：带旧状态/版本条件地更新，并检查影响行数，防止并发覆盖。
 - **审计（Audit）**：留下谁、何时、对哪条申请、从何状态作出何决定的记录；不是把全部身份证信息写到普通日志。
 
-[入驻设计](../design/merchant/onboarding.md) 与 [路线](../design/merchant/roadmap.md) 描述「成为商家 → 申请开店」两段式。现行接口还没有完整兑现这个模型，不能将用户、商家、店铺三种身份混为一张表。
+[入驻设计](../../design/merchant/onboarding.md) 与 [路线](../../design/merchant/roadmap.md) 描述「成为商家 → 申请开店」两段式。现行接口还没有完整兑现这个模型，不能将用户、商家、店铺三种身份混为一张表。
 
 ## 2. 当前实现与已补上的保护
 
-[merchant.proto](../../backend/api/merchant/v1/merchant.proto) 提供七个 RPC：协议、创建商家、提交/批准/驳回/查询申请、激活。
+[merchant.proto](../../../backend/api/merchant/v1/merchant.proto) 提供七个 RPC：协议、创建商家、提交/批准/驳回/查询申请、激活。
 
-阅读顺序：[service](../../backend/services/merchant/internal/service/merchant_service.go) → [data](../../backend/services/merchant/internal/data/merchant.go) → [SQL](../../backend/services/merchant/internal/data/queries/merchant.sql) → [迁移](../../backend/services/merchant/internal/data/migrations/00001_merchant.sql)。
+阅读顺序：[service](../../../backend/services/merchant/internal/service/merchant_service.go) → [data](../../../backend/services/merchant/internal/data/merchant.go) → [SQL](../../../backend/services/merchant/internal/data/queries/merchant.sql) → [迁移](../../../backend/services/merchant/internal/data/migrations/00001_merchant.sql)。
 
 已具备：
 
@@ -41,7 +41,7 @@
 - 状态映射、sqlc 查询、领域错误到 Connect code 的转换。
 - Approve/Reject/Activate 的 handler 内已有 requireAdmin，不只依靠网关粗粒度策略。
 - Create/Reject/Activate 的可达 handler 已显式 Unimplemented，不再直接 panic 让 HTTP 断连。
-- [service 测试](../../backend/services/merchant/internal/service/merchant_service_test.go) 验证部分错误码与普通用户/访客在业务调用前被拒绝。
+- [service 测试](../../../backend/services/merchant/internal/service/merchant_service_test.go) 验证部分错误码与普通用户/访客在业务调用前被拒绝。
 
 这都是有效进展。问题在于：**能进门的人对哪一条记录做事，还没有守住。**
 

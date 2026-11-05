@@ -1,6 +1,6 @@
 # 07 搜索：把「查得快」和「交易正确」分开
 
-[学习入口](README.md) · 前置：[商品](06-product.md) · 关联：[行为推荐](08-behavior.md)、[订单](10-order.md)
+[学习入口](../README.md) · 前置：[商品](06-product.md) · 关联：[行为推荐](08-behavior.md)、[订单](10-order.md)
 
 ## 0. Git 证据：先有 ES 查询，后补读模型边界
 
@@ -30,7 +30,7 @@
 
 早期实际切片是接收关键词并查询ES商品卡片，曾允许请求选择索引；现在主动收窄索引选择权，并把展示计算前移到读投影。这个变化是从「灵活查询」走向「有界、可控的公共接口」，不是简单换了一个SDK。
 
-当前 [SearchRequest](../../backend/api/search/v1/search.proto) 仍保留旧 `index` 字段，但标记 deprecated，服务端只用 `name`。这是兼容迁移：保留字段号让旧客户端还能发送，不再让客户端决定访问哪个索引。
+当前 [SearchRequest](../../../backend/api/search/v1/search.proto) 仍保留旧 `index` 字段，但标记 deprecated，服务端只用 `name`。这是兼容迁移：保留字段号让旧客户端还能发送，不再让客户端决定访问哪个索引。
 
 读取路径：
 
@@ -48,13 +48,13 @@ SearchService.Search → SearchUseCase → searchRepo
 
 | 能力 | 源码依据 | 为什么有价值 |
 |---|---|---|
-| 隔离搜索 SDK | [SearchCatalog](../../backend/services/search/internal/data/data.go)、[esCatalog](../../backend/services/search/internal/data/catalog.go) | 业务获得自有 CatalogProduct，不直接解析 Elasticsearch SDK 响应 |
-| 服务端固定 alias | [service.Search](../../backend/services/search/internal/service/search.go) | 不允许请求任意指定内部索引 |
-| 只查 online 商品 | [searchindex.Client.SearchProducts](../../backend/pkg/searchindex/client.go) | 查询层再次过滤状态，避免公开搜索展示非上架商品 |
+| 隔离搜索 SDK | [SearchCatalog](../../../backend/services/search/internal/data/data.go)、[esCatalog](../../../backend/services/search/internal/data/catalog.go) | 业务获得自有 CatalogProduct，不直接解析 Elasticsearch SDK 响应 |
+| 服务端固定 alias | [service.Search](../../../backend/services/search/internal/service/search.go) | 不允许请求任意指定内部索引 |
+| 只查 online 商品 | [searchindex.Client.SearchProducts](../../../backend/pkg/searchindex/client.go) | 查询层再次过滤状态，避免公开搜索展示非上架商品 |
 | 有界查询与超时 | 同一 client 的 limit 与 withTimeout | 防止全量查询耗尽内存；超时从请求 context 传播 |
-| 故障语义 | [searchError](../../backend/services/search/internal/service/search.go) | unavailable、canceled、deadline_exceeded 区分；不伪装成没有商品 |
+| 故障语义 | [searchError](../../../backend/services/search/internal/service/search.go) | unavailable、canceled、deadline_exceeded 区分；不伪装成没有商品 |
 | 实质健康检查 | client.Health 检查服务器、alias 与查询 | 不止探测 TCP 端口或进程存活 |
-| 有针对性的测试 | [data 测试](../../backend/services/search/internal/data/search_test.go)、[service 测试](../../backend/services/search/internal/service/search_test.go) | 证明错误映射、文档转换、vendor 类型不泄漏及重启提示 |
+| 有针对性的测试 | [data 测试](../../../backend/services/search/internal/data/search_test.go)、[service 测试](../../../backend/services/search/internal/service/search_test.go) | 证明错误映射、文档转换、vendor 类型不泄漏及重启提示 |
 
 Git `61c520b1` 是搜索引擎迁移节点，`00e7cbde` 是错误语义修正节点。它们是已核实代码演进，不是本轮重跑了线上搜索验收。
 
@@ -84,7 +84,7 @@ Git `61c520b1` 是搜索引擎迁移节点，`00e7cbde` 是错误语义修正节
 
 catalog 订阅配置变化只 WARN，不热换 ES client。属于已声明边界，不是偷偷修一次 YAML 就已切流。
 
-另外，alias 存在和 Search HTTP 成功不证明投影新鲜。更新、删除、重建、offset 恢复的验收归 CDC 链，需要固定数据集和差异比对；详见 [搜索设计](../design/search/search.md) 与 TODO，不把静态索引当运行态证明。
+另外，alias 存在和 Search HTTP 成功不证明投影新鲜。更新、删除、重建、offset 恢复的验收归 CDC 链，需要固定数据集和差异比对；详见 [搜索设计](../../design/search/search.md) 与 TODO，不把静态索引当运行态证明。
 
 ## 5. 与其他模块的契约
 

@@ -1,6 +1,6 @@
 # 04 地址：合法的 ID，不代表属于当前用户
 
-[学习入口](README.md) · 前置：[用户](03-user.md)、[平台](01-platform.md) · 关联：[订单](10-order.md)
+[学习入口](../README.md) · 前置：[用户](03-user.md)、[平台](01-platform.md) · 关联：[订单](10-order.md)
 
 ## 0. Git 证据：从字典/私有地址设计到真实 CRUD
 
@@ -32,16 +32,16 @@
 
 ## 2. 当前实现从哪里读
 
-[地址 proto](../../backend/api/address/v1/address.proto) → [service/address.go](../../backend/services/address/internal/service/address.go) → [data/address.go](../../backend/services/address/internal/data/address.go) → [query.sql](../../backend/services/address/internal/data/queries/query.sql)。
+[地址 proto](../../../backend/api/address/v1/address.proto) → [service/address.go](../../../backend/services/address/internal/service/address.go) → [data/address.go](../../../backend/services/address/internal/data/address.go) → [query.sql](../../../backend/services/address/internal/data/queries/query.sql)。
 
-另有 [region.proto](../../backend/api/address/v1/region.proto) 和 [地区 handler 测试](../../backend/services/address/internal/service/region_test.go)。六个地址 RPC 是 Create/Update/Delete/Get/List/SetDefaultAddress；RegionService.ListRegions 是独立的公开查询。
+另有 [region.proto](../../../backend/api/address/v1/region.proto) 和 [地区 handler 测试](../../../backend/services/address/internal/service/region_test.go)。六个地址 RPC 是 Create/Update/Delete/Get/List/SetDefaultAddress；RegionService.ListRegions 是独立的公开查询。
 
 ## 3. 已经补上的防线
 
 - 创建请求里的 user_id 已 reserved；Create/List 从网关注入头读取 UUID，不再信任请求体指定的用户。
 - 地址 ID、格式与长度受到 proto 约束。
 - 默认地址相关操作已有事务 helper，软删查询会过滤部分已删除行。
-- sqlc 生成数据库访问；goose 维护 [地址迁移](../../backend/services/address/internal/data/migrations/00001_addresses.sql)。
+- sqlc 生成数据库访问；goose 维护 [地址迁移](../../../backend/services/address/internal/data/migrations/00001_addresses.sql)。
 - pgx.ErrNoRows 映射到 not_found，不再一概返回 unknown。
 - 地区字典允许合法空子列表，省直辖县等不要求伪造不存在的下级行政代码。
 
@@ -86,19 +86,19 @@ Get/Update/Delete/SetDefault 的 service 和 SQL 仍以 address_id 为主，缺�
 
 ### A3 前端旧 userId：当前工作树已收口
 
-本次重新读取 [useAddresses](../../frontend/apps/consumer/src/hooks/useAddresses.ts) 和 [生成 TS](../../frontend/apps/consumer/src/gen/api/address/v1/address_pb.ts)，创建参数已不含userId，与后端reserved字段对齐。上一版的「前端仍提交userId」不能继续列为当前缺陷。
+本次重新读取 [useAddresses](../../../frontend/apps/consumer/src/hooks/useAddresses.ts) 和 [生成 TS](../../../frontend/apps/consumer/src/gen/api/address/v1/address_pb.ts)，创建参数已不含userId，与后端reserved字段对齐。上一版的「前端仍提交userId」不能继续列为当前缺陷。
 
 这证明本地源码已修正，不代表生成物已提交或部署；后续应以生成链检查和真实会话归属测试验收，不能用类型断言恢复旧字段。
 
 ### A4 保存失败的 UI：当前工作树已有实质修复
 
-hook现在返回mutateAsync；[AddressEditDialog](../../frontend/apps/consumer/src/components/address/AddressEditDialog.tsx) 等待onSave成功才关闭，失败显示错误并保留输入，重复提交受ref和pending限制。查询刷新失败与写入失败已分开，避免写成功后误导用户再次创建。
+hook现在返回mutateAsync；[AddressEditDialog](../../../frontend/apps/consumer/src/components/address/AddressEditDialog.tsx) 等待onSave成功才关闭，失败显示错误并保留输入，重复提交受ref和pending限制。查询刷新失败与写入失败已分开，避免写成功后误导用户再次创建。
 
-新 [hook测试](../../frontend/apps/consumer/src/hooks/useAddresses.test.tsx) 和 [表单测试](../../frontend/apps/consumer/src/components/address/AddressBook.test.tsx) 已有拒绝保存、保留输入、刷新失败等断言。本轮读过但未运行，不宣称全部通过。这是当前工程化进展；剩余阻断在A1/A2的后端归属、并发默认与订单快照，而不是继续修已移除的立即关窗逻辑。
+新 [hook测试](../../../frontend/apps/consumer/src/hooks/useAddresses.test.tsx) 和 [表单测试](../../../frontend/apps/consumer/src/components/address/AddressBook.test.tsx) 已有拒绝保存、保留输入、刷新失败等断言。本轮读过但未运行，不宣称全部通过。这是当前工程化进展；剩余阻断在A1/A2的后端归属、并发默认与订单快照，而不是继续修已移除的立即关窗逻辑。
 
 ### A5 定位仍是演示结果，不是真实地理编码
 
-当前 [location接口](../../frontend/apps/consumer/src/api/location/index.ts) 取得GPS坐标后仍返回固定省市区/街址，IP回退也返回固定地址。权限请求成功只证明浏览器提供位置能力，不证明把坐标正确转换成用户地址。
+当前 [location接口](../../../frontend/apps/consumer/src/api/location/index.ts) 取得GPS坐标后仍返回固定省市区/街址，IP回退也返回固定地址。权限请求成功只证明浏览器提供位置能力，不证明把坐标正确转换成用户地址。
 
 首步应避免演示数据被误保存为用户真实地址：明确标识/禁用假定位结果，或接入真实地理编码并验证标准区划匹配。定位失败允许手工填写，不能用固定城市伪装成功；隐私授权和日志最小化同样要验。
 
@@ -133,4 +133,4 @@ matrix 中 order→address 仍是 planned。不要把「已有地址 RPC」写�
 | A-B 并发默认 | 事务 + 数据库约束 + 冲突处理 | 并发首次默认创建至多一个有效默认；删除/切换结果符合明确规则 |
 | A-C 契约与体验 | 验收工作树中的类型/异步保存修复，再接订单快照 | 不传userId创建仍归属正确；失败不关窗；刷新失败不误报写失败；地址改动不影响已保存订单快照 |
 
-现有 [address service 测试](../../backend/services/address/internal/service/address_test.go) 和 [data 错误测试](../../backend/services/address/internal/data/address_errors_test.go) 可继续复用，但权限与并发要加真实行为断言，不靠 mock 返回 nil 证明安全。
+现有 [address service 测试](../../../backend/services/address/internal/service/address_test.go) 和 [data 错误测试](../../../backend/services/address/internal/data/address_errors_test.go) 可继续复用，但权限与并发要加真实行为断言，不靠 mock 返回 nil 证明安全。

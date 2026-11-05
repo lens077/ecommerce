@@ -1,6 +1,6 @@
 # 02 购物车：从最简单的 CRUD，到可信的购买意向
 
-[学习入口](README.md) · 前置：[系统](00-system.md)、[平台](01-platform.md) · 关联：[商品](06-product.md)、[订单](10-order.md)
+[学习入口](../README.md) · 前置：[系统](00-system.md)、[平台](01-platform.md) · 关联：[商品](06-product.md)、[订单](10-order.md)
 
 ## 0. Git 证据：原始购物车不是随意的本地列表
 
@@ -35,7 +35,7 @@
 
 ## 2. 当前最短阅读路径
 
-[cart.proto](../../backend/api/cart/v1/cart.proto) → [service/cart.go](../../backend/services/cart/internal/service/cart.go) → [biz/cart.go](../../backend/services/cart/internal/biz/cart.go) → [data/cart.go](../../backend/services/cart/internal/data/cart.go) → [queries/cart.sql](../../backend/services/cart/internal/data/queries/cart.sql)。
+[cart.proto](../../../backend/api/cart/v1/cart.proto) → [service/cart.go](../../../backend/services/cart/internal/service/cart.go) → [biz/cart.go](../../../backend/services/cart/internal/biz/cart.go) → [data/cart.go](../../../backend/services/cart/internal/data/cart.go) → [queries/cart.sql](../../../backend/services/cart/internal/data/queries/cart.sql)。
 
 现有四 RPC：GetCart、AddProductToCart、RemoveCartItem、UpdateCartItemQuantity。matrix 的 cart `depends_on=[]`，商品/商家快照来自请求，不是 cart 已经调用 product/merchant 核验。
 
@@ -52,13 +52,13 @@
 | 对象存储 URL 拼接 | 浏览器能访问缩略图 | cart 是文件上传/签名 URL 服务；当前只是展示拼接 |
 | 前端共享查询与加购后失效 | 避免徽标/页面重复拉取、重复累加 | 删除与改数量也已持久化 |
 
-已有 [money 测试](../../backend/services/cart/internal/pkg/money/numeric_test.go) 检查精确分转换；[service 测试](../../backend/services/cart/internal/service/cart_test.go) 主要检查错误码。它们不能覆盖下面的真实 SQL 问题。
+已有 [money 测试](../../../backend/services/cart/internal/pkg/money/numeric_test.go) 检查精确分转换；[service 测试](../../../backend/services/cart/internal/service/cart_test.go) 主要检查错误码。它们不能覆盖下面的真实 SQL 问题。
 
 ## 4. 当前缺陷：从用户现象追到每一层
 
 ### C1 新加购缺 shop_name，核心写入仍可能失败
 
-AddProductToCart 的 INSERT 未写 `shop_name`，但 [初始迁移](../../backend/services/cart/internal/data/migrations/00001_cart.sql) 将该列定义为 NOT NULL、无默认值。按这套迁移建出的库，新 INSERT 会失败。
+AddProductToCart 的 INSERT 未写 `shop_name`，但 [初始迁移](../../../backend/services/cart/internal/data/migrations/00001_cart.sql) 将该列定义为 NOT NULL、无默认值。按这套迁移建出的库，新 INSERT 会失败。
 
 **修复不能只加空字符串掩盖约束。** 先决定店名快照的来源：服务端从商家/商品读模型取得，或明确客户端展示快照的弱信任边界。后者不能变成商家归属/价格的授权依据。字段、proto、前端和 SQL 要成对改，不能只修一层。
 
@@ -72,7 +72,7 @@ AddProductToCart 的 INSERT 未写 `shop_name`，但 [初始迁移](../../backen
 
 ### C3 前端删除/改数量仍只改 store
 
-[useCart](../../frontend/apps/consumer/src/hooks/useCart.ts) 的 removeItem/updateQuantity 只更新本地状态，没有 mutation；toggle/select/clear也只是本地。刷新/重新查询后旧值可能回来，selected跨端也未兑现初稿要求。
+[useCart](../../../frontend/apps/consumer/src/hooks/useCart.ts) 的 removeItem/updateQuantity 只更新本地状态，没有 mutation；toggle/select/clear也只是本地。刷新/重新查询后旧值可能回来，selected跨端也未兑现初稿要求。
 
 当前工作树新增serverItems/isRefreshing，结算会比较本地已选行与服务端快照，不一致就阻止提交。这是必要止损，不是已实现数量持久化，也没有解决后端漏参。
 
@@ -96,7 +96,7 @@ AddProductToCart 的 INSERT 未写 `shop_name`，但 [初始迁移](../../backen
 
 | 边界 | 现在 | 目标契约 |
 |---|---|---|
-| 前端 ↔ cart | 行 ID 展示；删除四个平行数组、改数量组合键 | 先把现行请求正确拼装，再按 [既定条目 ID 设计](../design/cart/api-decisions.md) 迁移；所有写操作绑定主体 |
+| 前端 ↔ cart | 行 ID 展示；删除四个平行数组、改数量组合键 | 先把现行请求正确拼装，再按 [既定条目 ID 设计](../../design/cart/api-decisions.md) 迁移；所有写操作绑定主体 |
 | product → cart | 请求携带商品展示快照 | 约定 SPU/SKU/merchant 的关联；快照价格仅展示，下单重新核价 |
 | order → cart | 尚无配套批量快照/核销 RPC | 按 checkout v2 提供当前主体可购买行；买掉的是某次数量，不一定删除整行 |
 | gateway → cart | guest 类 RPC | 登录与访客主体不混；签名访客不是匿名请求随填 UUID |
