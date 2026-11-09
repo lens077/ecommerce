@@ -211,6 +211,13 @@ specs:
         toPorts:
           - ports: [{ port: "4318", protocol: TCP }]
       - *dragonfly
+      # PalCommerce 商城（仓外服务）：/shop.v1.* 经本网关转发。
+      - toServices:
+          - k8sService:
+              namespace: palcommerce
+              serviceName: pal-shop-service
+        toPorts:
+          - ports: [{ port: "30011", protocol: TCP }]
       - toEndpoints:
           # Current raw manifests.
           - matchExpressions:
