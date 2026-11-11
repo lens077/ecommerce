@@ -218,6 +218,13 @@ specs:
               serviceName: pal-shop-service
         toPorts:
           - ports: [{ port: "30011", protocol: TCP }]
+      # PalCommerce QQ 绑定（仓外服务）：/qqbot.v1.* 经本网关转发。
+      - toServices:
+          - k8sService:
+              namespace: palcommerce
+              serviceName: pal-qqbot-service
+        toPorts:
+          - ports: [{ port: "30012", protocol: TCP }]
       - toEndpoints:
           # Current raw manifests.
           - matchExpressions:
