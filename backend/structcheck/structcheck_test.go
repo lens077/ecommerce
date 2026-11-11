@@ -47,6 +47,12 @@ type serviceEntry struct {
 	DependsOn        []string `yaml:"depends_on"`
 	DependsOnPlanned []string `yaml:"depends_on_planned"`
 	External         []string `yaml:"external"`
+	// GatewayEnvs 限定该服务只在哪些路由模板里出现；为空表示 dev/pre 都要有。
+	GatewayEnvs []string `yaml:"gateway_envs"`
+	// OutOfRepo 标记仓外服务：只参与网关拓扑核对，不要求 backend/services/<svc> 目录与部署入口。
+	OutOfRepo bool `yaml:"out_of_repo"`
+	// DirectHost 覆盖默认的 ecommerce-<svc>-service.ecommerce.svc 直连约定（仓外服务用）。
+	DirectHost string `yaml:"direct_host"`
 }
 
 type serviceMatrix struct {
@@ -55,9 +61,10 @@ type serviceMatrix struct {
 	RetiredExternals map[string]externalEntry `yaml:"retired_externals"`
 }
 
-// externalEntry 只取 used_by —— 其余字段(host/note)是自由文本,不参与结构断言。
+// externalEntry 只取 used_by 与 host —— 其余字段(note)是自由文本,不参与结构断言。
 type externalEntry struct {
 	UsedBy []string `yaml:"used_by"`
+	Host   string   `yaml:"host"`
 }
 
 // externalRefPatterns: external 名 → 在服务代码里能证明「确实用了它」的字符串。
@@ -190,7 +197,10 @@ func TestServiceDirsMatchMatrix(t *testing.T) {
 	for _, d := range dirs {
 		dirSet[d] = true
 	}
-	for name := range m.Services {
+	for name, svc := range m.Services {
+		if svc.OutOfRepo {
+			continue
+		}
 		if !dirSet[name] {
 			t.Errorf("matrix 里的服务 %q 在 backend/services/ 下没有目录", name)
 		}
@@ -259,6 +269,9 @@ func TestGatewayWiringMatchesMatrix(t *testing.T) {
 	for _, svc := range m.Services {
 		knownDiscovery[svc.Discovery] = true
 	}
+	// 仓外直连主机必须在 matrix 的 externals 段显式声明，才允许绕过
+	// ecommerce-<svc>-service.ecommerce.svc 约定。
+	externalHosts := declaredExternalHosts(m)
 
 	for _, env := range ctroutes.Envs() {
 		parsed, err := ctroutes.Parse(env)
@@ -275,6 +288,9 @@ func TestGatewayWiringMatchesMatrix(t *testing.T) {
 		}
 
 		for name, svc := range m.Services {
+			if !svc.servesEnv(env) {
+				continue
+			}
 			pkg := strings.TrimSuffix(strings.TrimPrefix(svc.GatewayPrefix, "/"), "*")
 			e, ok := wired[pkg]
 			if !ok {
@@ -287,7 +303,11 @@ func TestGatewayWiringMatchesMatrix(t *testing.T) {
 					t.Errorf("[%s] %s: 路由包 %q 指向 %q,matrix 声明 %q(接线漂移)", env, name, pkg, e.DiscoveryTarget(), svc.Discovery)
 				}
 			case e.DirectHost() != "":
-				if want := directHostFor(name); e.DirectHost() != want {
+				want := directHostFor(name)
+				if svc.DirectHost != "" {
+					want = svc.DirectHost
+				}
+				if e.DirectHost() != want {
 					t.Errorf("[%s] %s: 路由包 %q 直连 %q,按服务名应为 %q(接线漂移)", env, name, pkg, e.DirectHost(), want)
 				}
 			default:
@@ -301,12 +321,45 @@ func TestGatewayWiringMatchesMatrix(t *testing.T) {
 					t.Errorf("[%s] 路由包 %q 指向 discovery:///%s,但 matrix 里没有对应服务", env, pkg, e.DiscoveryTarget())
 				}
 			case e.DirectHost() != "":
-				if _, ok := serviceFromDirectHost(e.DirectHost(), m); !ok {
-					t.Errorf("[%s] 路由包 %q 直连 %q,但 matrix 里没有对应服务", env, pkg, e.DirectHost())
+				if _, ok := serviceFromDirectHost(e.DirectHost(), m); ok {
+					continue
 				}
+				if externalHosts[e.DirectHost()] {
+					continue
+				}
+				t.Errorf("[%s] 路由包 %q 直连 %q,但 matrix 里既没有对应服务,也没有在 externals 段声明该主机", env, pkg, e.DirectHost())
 			}
 		}
 	}
+}
+
+// servesEnv 报告该服务是否应出现在指定路由模板里（gateway_envs 为空=所有环境）。
+func (s serviceEntry) servesEnv(env string) bool {
+	if len(s.GatewayEnvs) == 0 {
+		return true
+	}
+	for _, e := range s.GatewayEnvs {
+		if e == env {
+			return true
+		}
+	}
+	return false
+}
+
+// declaredExternalHosts 收集 externals 段显式声明的直连主机（去掉端口）。
+func declaredExternalHosts(m serviceMatrix) map[string]bool {
+	hosts := map[string]bool{}
+	for _, ext := range m.Externals {
+		if ext.Host == "" {
+			continue
+		}
+		host := ext.Host
+		if i := strings.LastIndex(host, ":"); i >= 0 {
+			host = host[:i]
+		}
+		hosts[host] = true
+	}
+	return hosts
 }
 
 // directHostFor 是 direct:// 形态的接线约定:matrix 服务名 <svc> 对应

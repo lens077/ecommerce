@@ -31,7 +31,10 @@ func TestBuildVersionInjection(t *testing.T) {
 		t.Fatalf("read %s: %v", baselinePath, err)
 	}
 
-	for service := range loadMatrix(t).Services {
+	for service, svc := range loadMatrix(t).Services {
+		if svc.OutOfRepo {
+			continue
+		}
 		dockerfile := filepath.Join(servicesDir, service, "Dockerfile")
 		data, err := os.ReadFile(dockerfile)
 		if err != nil {
@@ -51,7 +54,10 @@ func TestBuildVersionInjection(t *testing.T) {
 }
 
 func TestSharedImplementationsDoNotReturnToConsumers(t *testing.T) {
-	for service := range loadMatrix(t).Services {
+	for service, svc := range loadMatrix(t).Services {
+		if svc.OutOfRepo {
+			continue
+		}
 		for _, packageName := range []string{"env", "meta", "dbutil"} {
 			path := filepath.Join(servicesDir, service, "internal", "pkg", packageName)
 			if _, err := os.Stat(path); err == nil {
@@ -89,7 +95,10 @@ var connectionBuilders = []string{
 }
 
 func TestConnectionBuildersLiveInKit(t *testing.T) {
-	for service := range loadMatrix(t).Services {
+	for service, svc := range loadMatrix(t).Services {
+		if svc.OutOfRepo {
+			continue
+		}
 		root := filepath.Join(servicesDir, service, "internal")
 		err := filepath.WalkDir(root, func(path string, d os.DirEntry, err error) error {
 			if err != nil || d.IsDir() || !strings.HasSuffix(path, ".go") || strings.HasSuffix(path, "_test.go") {
@@ -134,7 +143,10 @@ var adapterOwnedVendors = map[string][]string{
 // 触发背景见 context/team/infra-duplication.md：副本的根因是生成模板。
 // 模板现已改为依赖 kit，这道门禁防止后续把实现复制回来。
 func TestInfraAdaptersStayThin(t *testing.T) {
-	for service := range loadMatrix(t).Services {
+	for service, svc := range loadMatrix(t).Services {
+		if svc.OutOfRepo {
+			continue
+		}
 		for _, packageName := range []string{"config", "log", "otel", "registry"} {
 			dir := filepath.Join(servicesDir, service, "internal", "pkg", packageName)
 			entries, err := os.ReadDir(dir)

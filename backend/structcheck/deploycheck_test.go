@@ -61,9 +61,16 @@ type deploymentTopologySpreadConvention struct {
 	NodeTaintsPolicy   string `yaml:"node_taints_policy"`
 }
 
+// coverageService 是 services 段里与部署覆盖相关的字段。
+// 仓外服务（out_of_repo）没有本仓目录/部署入口，不参与部署清单核对。
+type coverageService struct {
+	Discovery string `yaml:"discovery"`
+	OutOfRepo bool   `yaml:"out_of_repo"`
+}
+
 type coverageMatrix struct {
-	Services           map[string]yaml.Node `yaml:"services"`
-	DeploymentCoverage deploymentCoverage   `yaml:"deployment_coverage"`
+	Services           map[string]coverageService `yaml:"services"`
+	DeploymentCoverage deploymentCoverage         `yaml:"deployment_coverage"`
 	Conventions        struct {
 		ConfigSourceSecret     string                             `yaml:"config_source_secret"`
 		ConfigSourceProjection string                             `yaml:"config_source_projection"`
@@ -308,7 +315,10 @@ func TestDeploymentListsMatchMatrix(t *testing.T) {
 			// 方向二:matrix 里有、清单里缺 → 必须在 exceptions 里写明原因
 			exceptions := m.DeploymentCoverage.Exceptions[l.path]
 			var missing []string
-			for name := range m.Services {
+			for name, svc := range m.Services {
+				if svc.OutOfRepo {
+					continue
+				}
 				if !present[name] {
 					missing = append(missing, name)
 				}
@@ -388,7 +398,10 @@ func TestDeploymentsUseConfigCenterSelector(t *testing.T) {
 
 		// env(含 CONFIG_SOURCE_FILE)由 helm/templates/_ecommerce.tpl 从这些值生成,渲染结果
 		// 由 scripts/verify-deploy-parity.sh 与裸 manifest 逐字段比对;这里只核 values 本身的契约。
-		for service := range m.Services {
+		for service, matrixSvc := range m.Services {
+			if matrixSvc.OutOfRepo {
+				continue
+			}
 			node, ok := values.Services[service]
 			if !ok {
 				t.Errorf("helm values missing service %q", service)
@@ -406,16 +419,8 @@ func TestDeploymentsUseConfigCenterSelector(t *testing.T) {
 				t.Errorf("decode helm values for %s: %v", service, err)
 				continue
 			}
-			var svc struct {
-				Discovery string `yaml:"discovery"`
-			}
-			matrixNode := m.Services[service]
-			if err := matrixNode.Decode(&svc); err != nil {
-				t.Errorf("decode matrix entry for %s: %v", service, err)
-				continue
-			}
-			if serviceValues.ServiceName != svc.Discovery {
-				t.Errorf("helm %s serviceName = %q, want matrix discovery %q", service, serviceValues.ServiceName, svc.Discovery)
+			if serviceValues.ServiceName != matrixSvc.Discovery {
+				t.Errorf("helm %s serviceName = %q, want matrix discovery %q", service, serviceValues.ServiceName, matrixSvc.Discovery)
 			}
 			if serviceValues.Port <= 0 {
 				t.Errorf("helm %s port must be set", service)
@@ -430,7 +435,10 @@ func TestDeploymentsUseConfigCenterSelector(t *testing.T) {
 		}
 	})
 
-	for service := range m.Services {
+	for service, matrixSvc := range m.Services {
+		if matrixSvc.OutOfRepo {
+			continue
+		}
 		service := service
 		// base 即 pre 基线;prod 经 overlay 补丁,其结果由 parity 门禁对 helm 侧核对。
 		for _, environment := range []string{"pre"} {
@@ -501,7 +509,10 @@ func TestWorkloadIdentityBaseline(t *testing.T) {
 				doc.Kind, doc.Metadata.Name)
 		}
 	}
-	for service := range m.Services {
+	for service, svc := range m.Services {
+		if svc.OutOfRepo {
+			continue
+		}
 		name := "ecommerce-" + service
 		if !serviceAccounts[name] {
 			t.Errorf("zero-trust manifest missing ServiceAccount %q", name)

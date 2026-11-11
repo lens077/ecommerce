@@ -97,7 +97,10 @@ func matchesImportPrefix(path, prefix string) bool {
 func TestLayerImportDirection(t *testing.T) {
 	services := loadMatrix(t).Services
 	names := make([]string, 0, len(services))
-	for name := range services {
+	for name, svc := range services {
+		if svc.OutOfRepo {
+			continue
+		}
 		names = append(names, name)
 	}
 	sort.Strings(names)
