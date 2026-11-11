@@ -159,6 +159,9 @@ structcheck 曾专门写一个测试去对比 tgz 里的模板和源码,那是�
             initialDelaySeconds: 5,
             periodSeconds: 10,
             failureThreshold: 3,
+            {{- if $v.readinessTimeoutSeconds }}
+            timeoutSeconds: {{ $v.readinessTimeoutSeconds }},
+            {{- end }}
           },
           livenessProbe: {
             tcpSocket: {

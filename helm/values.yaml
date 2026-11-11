@@ -169,6 +169,9 @@
     replicaCount: 1,
     serviceName: "behavior-service",
     port: 30011,
+    # /healthz 偶发 1s+ 抖动(Config Center watch 重连),K8s 默认 timeoutSeconds=1 会误判未就绪。
+    # 只给 behavior 放宽;其余服务保持默认,避免整套服务一起滚动。
+    readinessTimeoutSeconds: 3,
     image: {
       repository: "ccr.ccs.tencentyun.com/sumery/behavior",
       tag: "1.8.1@sha256:4b5361d97f8b1541813814912bb23a0a22e9cfbdf8c99fe983308c2bd6afc00e",

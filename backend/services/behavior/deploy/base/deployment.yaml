@@ -145,6 +145,8 @@
             initialDelaySeconds: 5,
             periodSeconds: 10,
             failureThreshold: 3,
+            # /healthz 偶发 1s+ 抖动,默认 timeoutSeconds=1 会误判未就绪。
+            timeoutSeconds: 3,
           },
           livenessProbe: {
             tcpSocket: {
