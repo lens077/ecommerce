@@ -47,20 +47,20 @@
 - 工程化：前端用 vite-plus（`vp`）一个包覆盖 dev/build/test/lint/fmt/任务运行/git 钩子，没有 husky/biome/eslint/prettier；commitlint 也由 frontend workspace 承载（根目录无 Node workspace）
 - 进度真相源：`TODO.md`（**唯一**，理由见 `context/decisions/`）；架构真相源：`docs/design/`（按微服务分目录，入口 `docs/design/README.md`）
 - **环境按需查询，文档只留契约与查法**：目标、代码、运行观测分开；故障证据不能当稳态基线。原日期门禁已删除，生成区与 Git 文档责任如何强制见 [context/team/live-facts.md](context/team/live-facts.md)
-- **网关和配置中心都不在本仓**：由同级仓 **control-tower**（`services/gateway` + `services/config`）承载，设计在 `../control-tower/docs/design/`；集群里 `config-center` ns/Deployment 名是遗留标签，镜像实为 `control-tower-config`。`backend/structcheck` import `github.com/lens077/control-tower/routes` 核对路由，**改路由模板必须同 PR 升级本仓对 control-tower 的依赖版本**。迁移历史见 [context/project/ecommerce/gateway/INDEX.md](context/project/ecommerce/gateway/INDEX.md)
+- **网关和配置中心都不在本仓**：由同级仓 **control-tower**（`services/gateway` + `services/config`）承载，设计在 `../control-tower/docs/design/`；集群里 `config-center` ns/Deployment 名是遗留标签，镜像实为 `control-tower-config`。`backend/structcheck` import `github.com/lens077/control-tower/routes` 核对路由，**改路由模板必须同 PR 升级本仓对 control-tower 的依赖版本**（无自动校验，靠评审：structcheck 只比对已安装的 routes 模板，版本没升它也绿）。迁移历史见 [context/project/ecommerce/gateway/INDEX.md](context/project/ecommerce/gateway/INDEX.md)
 - **区分门禁与发布**：push/MR 有轻量/代码门禁，发布镜像才由裸 semver tag `X.Y.Z` 推到 `github` 触发；旧「全部 CI 只由 tag 触发」说法已漂移。职责与手顺见 [context/team/git-commit.md](context/team/git-commit.md)
-- **部署清单两份真相源必须逐字段等价**：`helm/`（`values.yaml`=pre 基线 + `values-prod.yaml`）与 kustomize 裸 manifest（`deploy/{base,overlays/prod}`）渲染同一套对象，`scripts/verify-deploy-parity.sh` 强制；改一边必改另一边。见 [deploy-parity.md](context/team/deploy-parity.md)。两份都写 **KYAML**（值一律双引号、结构靠 `{}` `[]` 不靠缩进），`scripts/verify-kyaml.sh` 阻断，`helm/files/zero-trust.yaml` 永久豁免——见 [kyaml-manifests.md](context/team/kyaml-manifests.md)
+- **部署清单两份真相源必须逐字段等价**：`helm/`（`values.yaml`=pre 基线 + `values-prod.yaml`）与 kustomize 裸 manifest（`backend/services/*/deploy/{base,overlays/prod}` 与 `frontend/apps/*/deploy/`）渲染同一套对象，`scripts/verify-deploy-parity.sh` 强制；改一边必改另一边。见 [deploy-parity.md](context/team/deploy-parity.md)。两份都写 **KYAML**（值一律双引号、结构靠 `{}` `[]` 不靠缩进），`scripts/verify-kyaml.sh` 阻断，`helm/files/zero-trust.yaml` 永久豁免——见 [kyaml-manifests.md](context/team/kyaml-manifests.md)
 - **`okteto up` 前现查 ArgoCD 归属**：纳管时先关自动同步，否则开发容器被干掉；按 [local-env.md](context/team/local-env.md) 的 GitOps 分区查询，再走 [okteto-inner-loop.md](context/team/okteto-inner-loop.md)。TODO 只记接管缺口，不替代操作前验证。
 
 ## 中文文案约定
 
-写中文文档、界面文案和注释时走 `tech-doc-style-chinese` skill（保持上游默认，不做本地改动）。本项目固化两条：
+写中文文档、界面文案和注释时走 `tech-doc-style-chinese` skill（保持上游默认，不做本地改动）。本项目固化两条（**无自动校验，靠评审**）：
 中文引号用直角引号 `「」`；**允许第二人称「你」**（skill 默认不直接称呼读者，本项目覆盖——读者是你自己和协作的 agent）。
 
 ## Agent skills
 
 > 配置全部在 `docs/agents/`，改那里，不改这里的索引。
-> **本项目用到哪些 skill、装没装**见 [docs/agents/skills.md](docs/agents/skills.md)（唯一位置）。
+> **本项目采用哪些 skill、怎么查是否就绪**见 [docs/agents/skills.md](docs/agents/skills.md)（唯一位置）。
 > 供 mattpocock 系列 skill（`/to-tickets` `/triage` `/to-spec` `/wayfinder` 等）读取的三份：
 > [issue-tracker.md](docs/agents/issue-tracker.md)（issue/spec 存 `.scratch/<feature-slug>/`，入库，不走 GitHub/GitLab）、
 > [triage-labels.md](docs/agents/triage-labels.md)（五个标准角色由 issue 的 `Status:` 行承载）、
