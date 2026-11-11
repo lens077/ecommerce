@@ -6,6 +6,13 @@
 
 A B2B2C multi-vendor e-commerce project built with Go and React: 10 backend microservices, the control-tower platform control plane, and a pnpm monorepo frontend. The consumer app already carries part of the business flow; the merchant and admin apps are still mostly scaffolding. There is no standalone logistics or warehouse app yet, and no validated conclusion about million/ten-million-scale capacity.
 
+<picture>
+  <source media="(prefers-color-scheme: dark)" srcset="docs/architecture/ecommerce-stack-diagram-dark.png">
+  <img src="docs/architecture/ecommerce-stack-diagram.png" alt="ecommerce system architecture: clients, control-tower edge, 10 Go ConnectRPC services, data plane, platform and externals">
+</picture>
+
+Current-state stack view, not the target design. Generated with [stack-diagram](https://github.com/caru-ini/stack-diagram): [interactive HTML (offline, light/dark)](docs/architecture/ecommerce-stack-diagram.html) · [light PNG](docs/architecture/ecommerce-stack-diagram.png) · [dark PNG](docs/architecture/ecommerce-stack-diagram-dark.png) · [topology facts](.service-matrix.yaml).
+
 This project uses (in whole or in part) my other repositories:
 
 1. Gateway and config control plane: https://github.com/lens077/control-tower (sibling repo; gateway/config traffic already switched over)

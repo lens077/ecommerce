@@ -6,6 +6,13 @@
 
 Golang + React 的 B2B2C 多商家电商实践项目：10 个后端微服务、control-tower 平台控制面与 pnpm monorepo 前端。消费者端已有部分业务，商家端和管理端仍以骨架为主；当前暂时没有独立物流端或仓储端。
 
+<picture>
+  <source media="(prefers-color-scheme: dark)" srcset="docs/architecture/ecommerce-stack-diagram-dark.png">
+  <img src="docs/architecture/ecommerce-stack-diagram.png" alt="ecommerce 系统架构图：客户端、control-tower 边缘、10 个 Go ConnectRPC 服务、数据面、平台与外部依赖">
+</picture>
+
+展示的是**现状**而非目标态。由 [stack-diagram](https://github.com/caru-ini/stack-diagram) 生成：[可交互 HTML（离线、明暗双主题）](docs/architecture/ecommerce-stack-diagram.html) · [浅色 PNG](docs/architecture/ecommerce-stack-diagram.png) · [深色 PNG](docs/architecture/ecommerce-stack-diagram-dark.png) · [服务拓扑事实表](.service-matrix.yaml)。
+
 本项目的组成使用(或部分使用)了本人其他的仓库：
 
 1. 网关与配置控制面: https://github.com/lens077/control-tower （同级仓，gateway/config 已切流）
