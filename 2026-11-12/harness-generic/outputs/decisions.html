@@ -1,0 +1,500 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Harness 通用化：决策记录（2026-11-12）</title>
+<style>
+  :root{
+    --bg:#fbfbfa; --card:#ffffff; --ink:#1f2328; --muted:#5b6570; --line:#e3e5e8;
+    --accent:#2f6f5e; --accent-soft:#eef5f2; --warn:#8a5a00; --warn-soft:#fdf6e7;
+    --code:#f2f3f5;
+  }
+  *{box-sizing:border-box}
+  body{
+    margin:0; background:var(--bg); color:var(--ink);
+    font-family:-apple-system,BlinkMacSystemFont,"PingFang SC","Hiragino Sans GB","Microsoft YaHei","Noto Sans CJK SC",sans-serif;
+    font-size:16px; line-height:1.78; letter-spacing:.01em;
+    -webkit-font-smoothing:antialiased;
+  }
+  .wrap{max-width:1060px; margin:0 auto; padding:56px 24px 96px}
+  header h1{font-size:30px; line-height:1.4; margin:0 0 10px; font-weight:650}
+  header .meta{color:var(--muted); font-size:14px}
+  header .meta code{background:var(--code); padding:1px 5px; border-radius:4px}
+  .lede{margin:22px 0 8px; color:#33383d}
+  .facts{display:grid; grid-template-columns:repeat(auto-fit,minmax(180px,1fr)); gap:12px; margin:28px 0 12px}
+  .fact{background:var(--card); border:1px solid var(--line); border-radius:10px; padding:14px 16px}
+  .fact b{display:block; font-size:22px; letter-spacing:0; margin-bottom:2px}
+  .fact span{color:var(--muted); font-size:13px}
+  nav.toc{display:flex; flex-wrap:wrap; gap:8px; margin:26px 0 34px; padding:0; list-style:none}
+  nav.toc a{
+    display:inline-block; padding:5px 11px; border:1px solid var(--line); border-radius:999px;
+    color:var(--muted); text-decoration:none; font-size:13px; background:var(--card);
+  }
+  nav.toc a:hover{border-color:var(--accent); color:var(--accent)}
+  h2.section{font-size:13px; text-transform:none; letter-spacing:.08em; color:var(--muted);
+    margin:44px 0 14px; font-weight:600; border-bottom:1px solid var(--line); padding-bottom:8px}
+  article.d{background:var(--card); border:1px solid var(--line); border-radius:12px;
+    padding:22px 24px; margin:0 0 16px}
+  article.d h3{margin:0 0 4px; font-size:18px; line-height:1.5; font-weight:640}
+  .badges{margin:0 0 14px}
+  .badge{display:inline-block; font-size:12px; padding:2px 9px; border-radius:999px;
+    background:var(--accent-soft); color:var(--accent); margin-right:6px}
+  .badge.stage{background:#f1f2f4; color:var(--muted)}
+  dl{margin:0; display:grid; grid-template-columns:88px 1fr; gap:8px 14px}
+  dt{color:var(--muted); font-size:13px; padding-top:2px}
+  dd{margin:0}
+  dd ul{margin:0; padding-left:20px}
+  dd li{margin:2px 0}
+  code{font-family:ui-monospace,SFMono-Regular,Menlo,Consolas,"Liberation Mono",monospace;
+    font-size:.88em; background:var(--code); padding:1px 5px; border-radius:4px}
+  .pick{color:var(--accent); font-weight:600}
+  .note{background:var(--warn-soft); border:1px solid #f0e2c4; color:#5c4a1f;
+    border-radius:10px; padding:14px 16px; margin:18px 0 0}
+  .note b{color:var(--warn)}
+  footer{margin-top:48px; padding-top:18px; border-top:1px solid var(--line); color:var(--muted); font-size:13px}
+  @media (max-width:640px){
+    .wrap{padding:32px 16px 64px}
+    dl{grid-template-columns:1fr; gap:2px 0}
+    dt{margin-top:8px}
+  }
+  @media print{
+    body{background:#fff}
+    article.d,.fact{break-inside:avoid; box-shadow:none}
+    nav.toc{display:none}
+  }
+</style>
+</head>
+<body>
+<div class="wrap">
+
+<header>
+  <h1>Harness 通用化：决策记录</h1>
+  <p class="meta">
+    分支 <code>harness/generic-kit</code> · 基于 <code>main</code> · 生成于 2026-11-12 ·
+    未 push、未部署
+  </p>
+  <p class="lede">
+    这份文档汇总本次「让门禁可移植」全过程中需要拍板的点：包括用户明确交给我决定的，也包括我中途改过的判断。
+    每条都给出备选、实际选择、理由、影响面，以及**你若想改判该动哪个文件、跑什么命令**。
+  </p>
+  <div class="facts">
+    <div class="fact"><b>4</b><span>阶段提交（每阶段可回退）</span></div>
+    <div class="fact"><b>10</b><span>kit 内置检查</span></div>
+    <div class="fact"><b>10</b><span>canary 探针 + 双向覆盖断言</span></div>
+    <div class="fact"><b>31</b><span>漂移核对后的断言台账条目</span></div>
+  </div>
+  <ul class="toc">
+    <li><a href="#d1">分支与提交</a></li>
+    <li><a href="#d3">kit 形态</a></li>
+    <li><a href="#d4">配置格式</a></li>
+    <li><a href="#d5">检查取舍</a></li>
+    <li><a href="#d6">不动 ecommerce 门禁</a></li>
+    <li><a href="#d7">存放与豁免</a></li>
+    <li><a href="#d8">HTML 位置</a></li>
+    <li><a href="#d9">漂移修正</a></li>
+    <li><a href="#d13">TODO.md</a></li>
+    <li><a href="#d17">提交顺序</a></li>
+  </ul>
+</header>
+
+<h2 class="section">一、分支、提交与仓库边界</h2>
+
+<article class="d" id="d1">
+  <h3>D1 用独立分支 + 每阶段一次提交，而不是直接落在 main 或压成一个提交</h3>
+  <p class="badges"><span class="badge stage">阶段 0</span><span class="badge">提交策略</span></p>
+  <dl>
+    <dt>备选</dt>
+    <dd>
+      <ul>
+        <li>直接提交到 <code>main</code>：省事，但漂移修正与新增 kit 混在主线历史里，回退粒度粗。</li>
+        <li>全部压成一个提交：干净，但「文档修正」与「新代码」无法分别回退。</li>
+        <li>按阶段一提交（选定）。</li>
+      </ul>
+    </dd>
+    <dt>选择</dt>
+    <dd class="pick">新建 <code>harness/generic-kit</code>，四个阶段各一次提交；main 保持干净。</dd>
+    <dt>理由</dt>
+    <dd>文档修正（低风险）与新增 kit（新代码）影响面不同，分开提交后可以只回退其中一个；
+      审查者也能按「漂移修正 → kit → 文档 → 决策文档」的顺序读。</dd>
+    <dt>影响面</dt>
+    <dd>四个提交：<code>f1e97bcb</code>、<code>3a69f7d9</code>、<code>6814a20c</code>、<code>ce2f7925</code>（另加本 HTML 的提交）。</dd>
+    <dt>改判</dt>
+    <dd>想合成一个提交：<code>git rebase -i main</code> 后把后三个 squash 进第一个；想回退某阶段：
+      <code>git revert &lt;hash&gt;</code>。均不影响 <code>main</code>。</dd>
+  </dl>
+</article>
+
+<article class="d" id="d2">
+  <h3>D2 提交身份与 Trae 注入的环境变量</h3>
+  <p class="badges"><span class="badge stage">阶段 0</span><span class="badge">提交策略</span></p>
+  <dl>
+    <dt>备选</dt>
+    <dd>改仓库 <code>git config user.name/email</code>（会污染仓库配置）；或每次提交用 <code>-c</code> 临时覆盖（选定）。</dd>
+    <dt>选择</dt>
+    <dd class="pick"><code>env -u GIT_COMMITTER_NAME -u GIT_COMMITTER_EMAIL git -c user.name=Sumery -c user.email=xiconz@qq.com commit ...</code></dd>
+    <dt>理由</dt>
+    <dd>不修改仓库或全局 git 配置；同时去掉工具注入的 committer 变量，避免作者与提交者不一致。</dd>
+    <dt>影响面</dt>
+    <dd>仅影响本分支已有提交，不改任何配置文件。</dd>
+    <dt>改判</dt>
+    <dd>要改作者：<code>git commit --amend --author="Name &lt;mail&gt;"</code>（只改最近一次）；
+      批量改需 <code>filter-branch</code> 或 <code>git rebase --exec</code>，属于重写历史，需你明确授权。</dd>
+  </dl>
+</article>
+
+<h2 class="section">二、kit 的形态与技术选择</h2>
+
+<article class="d" id="d3">
+  <h3>D3 kit 用 vendor 目录 + lock 摘要，而不是子模块或包管理器</h3>
+  <p class="badges"><span class="badge stage">阶段 2</span><span class="badge">形态</span></p>
+  <dl>
+    <dt>备选</dt>
+    <dd>
+      <ul>
+        <li>git submodule：升级路径清晰，但离线/内网环境常拉不到，门禁会因「拿不到子模块」而失效。</li>
+        <li>npm/pip 包：需要 registry 与网络，且引入包管理器依赖，违背「零第三方依赖」。</li>
+        <li>vendor 复制 + <code>harness.lock</code> 记录版本与每个文件的 sha256（选定）。</li>
+      </ul>
+    </dd>
+    <dt>选择</dt>
+    <dd class="pick">整个 <code>harness-kit/</code> 目录随宿主仓库提交；<code>harness.lock</code> 记录版本与摘要。</dd>
+    <dt>理由</dt>
+    <dd>门禁是必需品，不能因为外部仓不可达而失效；lock 让「本地改过 kit」可被发现（<code>doctor</code> 报 drift），
+      兼顾可审与可升级。</dd>
+    <dt>影响面</dt>
+    <dd><code>harness-kit/bin/harness</code> 的 <code>init</code> 写 lock、<code>doctor</code> 校验 lock；
+      升级流程 = 替换目录 + 跑 <code>harness/bin/harness init</code>（只刷新 lock，不覆盖已有文档）。</dd>
+    <dt>改判</dt>
+    <dd>要换子模块：删 <code>harness-kit/</code>，加 <code>.gitmodules</code>，并改 <code>bin/harness</code> 里
+      <code>KIT_ROOT</code> 的推导（<code>harness-kit/lib/config.sh:6</code>）。改完跑
+      <code>harness/bin/harness doctor &amp;&amp; harness/bin/harness canary</code>。</dd>
+  </dl>
+</article>
+
+<article class="d" id="d4">
+  <h3>D4 配置用 bash，不用 YAML / TOML</h3>
+  <p class="badges"><span class="badge stage">阶段 2</span><span class="badge">形态</span></p>
+  <dl>
+    <dt>备选</dt>
+    <dd>YAML（需解析器，标准库没有）、TOML（Python 3.11 才有 <code>tomllib</code>，且 bash 侧还要再解析）、
+      bash 变量（选定）。</dd>
+    <dt>选择</dt>
+    <dd class="pick"><code>harness.config.sh</code>，由 <code>lib/config.sh</code> source 并给默认值。</dd>
+    <dt>理由</dt>
+    <dd>「零第三方依赖」是硬约束，YAML 要么引第三方、要么自写不可靠子集；本项目配置项全是字符串/数字/列表。</dd>
+    <dt>影响面</dt>
+    <dd>配置是可执行代码：只放在自己的仓库里，不要 source 来路不明的配置（此风险已写在
+      <code>harness.config.example.sh</code> 头注释与 <code>README.md</code> 的约束段）。</dd>
+    <dt>改判</dt>
+    <dd>要换 YAML：在 <code>harness-kit/lib/config.sh</code> 增加一个用 Python 标准库解析的最小编译层
+      （注意标准库没有 YAML，需自己写子集或允许一条第三方依赖），再跑 <code>canary</code> 确认探针仍能开关检查。</dd>
+  </dl>
+</article>
+
+<article class="d" id="d5">
+  <h3>D5 进核心的是 10 项；FORMAT 与 commitlint 留作适配</h3>
+  <p class="badges"><span class="badge stage">阶段 2</span><span class="badge">检查取舍</span></p>
+  <dl>
+    <dt>备选</dt>
+    <dd>把 ecommerce 的 18 个 tag 全部搬进 kit；或只搬「与项目事实无关」的那部分（选定）。</dd>
+    <dt>选择</dt>
+    <dd class="pick">核心 10 项：DEAD-LINK、PATH-REF、FRONTMATTER、INDEX-COVERAGE、BUDGET、SKILL-REF、
+      PROGRESS-SRC、DOC-SYNC、PUBLIC-IP、SECRETS。</dd>
+    <dt>理由</dt>
+    <dd>
+      <ul>
+        <li>剔除的 8 类中，FORMAT（experience 必填段落）、DECISION 生命周期、KYAML、deploy-parity、structcheck
+          都依赖项目自己的文档类型或业务结构，硬编码进 kit 只会逼下一个人放宽断言。</li>
+        <li>commitlint 需要 Node 生态；kit 的硬约束是 bash + Python 标准库，不引进来。</li>
+        <li><code>baselines/format.baseline.txt</code> 保留为「预留位」，说明怎么接一个项目自定义的 FORMAT 检查。</li>
+      </ul>
+    </dd>
+    <dt>影响面</dt>
+    <dd>kit 的检查数少于 ecommerce 现有门禁；两者不共享代码，互不影响。</dd>
+    <dt>改判</dt>
+    <dd>要加 FORMAT：新建 <code>harness-kit/checks/65-format.sh</code>（头部写 <code># tag: FORMAT</code>），
+      新建 <code>harness-kit/canary/probes/FORMAT.sh</code>，跑
+      <code>harness/bin/harness check &amp;&amp; harness/bin/harness canary</code>；
+      元断言会强制你补探针，补不上就红。</dd>
+  </dl>
+</article>
+
+<h2 class="section">三、与 ecommerce 现有体系的关系</h2>
+
+<article class="d" id="d6">
+  <h3>D6 不重构 ecommerce 现有的 <code>verify-context.sh</code>，kit 是新代码</h3>
+  <p class="badges"><span class="badge stage">阶段 2</span><span class="badge">边界</span></p>
+  <dl>
+    <dt>备选</dt>
+    <dd>把 ecommerce 门禁改成调用 kit（「一套代码」）；或保持两套、kit 独立（选定）。</dd>
+    <dt>选择</dt>
+    <dd class="pick">ecommerce 的 <code>scripts/verify-context.sh</code>、canary、quick 全部不动。</dd>
+    <dt>理由</dt>
+    <dd>现有门禁是绿的，重构的收益（单套实现）远小于风险（一个列的读取方式变化就会静默失效）；
+      而 kit 的价值在于「可移植」，不需要反过来改写宿主。</dd>
+    <dt>影响面</dt>
+    <dd>两套判定会有语义漂移风险，故在 <code>docs/adaptation.md</code> 与台账里写明 kit 的判定边界。</dd>
+    <dt>改判</dt>
+    <dd>要统一：这是 L3 改动。先把 <code>scripts/verify-context.sh</code> 的 18 个 tag 与 kit 10 项的映射写成表，
+      逐项确认无放宽，再替换；改完必须跑 <code>scripts/verify-context-canary.sh</code>（47 探针）。</dd>
+  </dl>
+</article>
+
+<article class="d" id="d7">
+  <h3>D7 kit 放在仓库根的 <code>harness-kit/</code>，且不需要扫描豁免</h3>
+  <p class="badges"><span class="badge stage">阶段 2</span><span class="badge">存放与豁免</span></p>
+  <dl>
+    <dt>备选</dt>
+    <dd>放 <code>docs/</code> 下（会被 ecommerce 门禁扫到，需要基线/豁免）；放 <code>2026-11-12/</code>（临时目录，不适合长期资产）；
+      放仓库根 <code>harness-kit/</code>（选定）。</dd>
+    <dt>选择</dt>
+    <dd class="pick"><code>harness-kit/</code>。</dd>
+    <dt>理由</dt>
+    <dd>ecommerce 的扫描根是 <code>AGENTS.md README.md STACK.md TODO.md context docs</code>
+      （<code>scripts/verify-context.sh:143</code>），<code>harness-kit/</code> 不在其中，因此**无需任何豁免或基线**——
+      这比「加一条豁免」干净，也避免「豁免只放不收」的腐烂。</dd>
+    <dt>影响面</dt>
+    <dd>ecommerce 门禁行为完全不变（已实跑 <code>verify-context.sh</code> RC=0）。</dd>
+    <dt>改判</dt>
+    <dd>要纳入 ecommerce 门禁：把 <code>harness-kit</code> 加进扫描根，并把 kit 文档里的占位路径逐条对齐，
+      再跑 <code>scripts/verify-context.sh</code>；预计会需要登记部分基线。</dd>
+  </dl>
+</article>
+
+<article class="d" id="d8">
+  <h3>D8 决策 HTML 放在项目记录目录，不进 kit</h3>
+  <p class="badges"><span class="badge stage">阶段 4</span><span class="badge">交付物位置</span></p>
+  <dl>
+    <dt>备选</dt>
+    <dd><code>harness-kit/docs/decisions.html</code>（跟着 kit 走）；<code>2026-11-12/harness-generic/outputs/decisions.html</code>（选定）。</dd>
+    <dt>选择</dt>
+    <dd class="pick">项目记录目录。</dd>
+    <dt>理由</dt>
+    <dd>HTML 记录的是 ecommerce 这次迁移的决策（含分支、提交、本项目事实），对其它项目没有复用价值；
+      kit 要保持「无业务事实」。</dd>
+    <dt>影响面</dt>
+    <dd>该目录不被任何门禁扫描（非 Markdown、非扫描根）。</dd>
+    <dt>改判</dt>
+    <dd>想随 kit 分发：<code>git mv 2026-11-12/harness-generic/outputs/decisions.html harness-kit/docs/decisions.html</code>，
+      注意 kit 模板里不要引用它（保持业务无关）。</dd>
+  </dl>
+</article>
+
+<h2 class="section">四、本轮对 ecommerce 自身的修正</h2>
+
+<article class="d" id="d9">
+  <h3>D9 无校验器的规则显式标注「靠评审」，而不是删规则或假称有门禁</h3>
+  <p class="badges"><span class="badge stage">阶段 0</span><span class="badge">漂移修正</span></p>
+  <dl>
+    <dt>备选</dt>
+    <dd>删掉规则（丢失真实约束）；保持原样（看起来有门禁，实际没有，比没有更危险）；保留并标注（选定）。</dd>
+    <dt>选择</dt>
+    <dd class="pick">保留规则，标注「无自动校验，靠评审」。</dd>
+    <dt>理由</dt>
+    <dd>「看起来有门禁实际没有」是本轮审计发现的最危险形态：它让人跳过评审，以为机器会兜底。</dd>
+    <dt>影响面</dt>
+    <dd><code>AGENTS.md</code> 的 control-tower 版本联动、中文文案约定两处；
+      <code>docs/TECH.md:42/47/48</code> 三处（版本未强制、k6/OpenFGA 无落点）。</dd>
+    <dt>改判</dt>
+    <dd>要真正拦住：需新增检查（比对 control-tower 最新模板版本 vs <code>backend/go.mod</code>；
+      校验 <code>buf.gen.openapi.yaml</code> 生成器版本）。这是新增工作，改完要在
+      <code>scripts/verify-context-canary.sh</code> 补对应探针。</dd>
+  </dl>
+</article>
+
+<article class="d" id="d10">
+  <h3>D10 <code>docs/agents/skills.md</code> 删掉 MCP / Hooks 两节历史证据</h3>
+  <p class="badges"><span class="badge stage">阶段 0</span><span class="badge">漂移修正</span></p>
+  <dl>
+    <dt>备选</dt>
+    <dd>保留并标注「历史记录，非现状」（上一轮的折中）；整段删除（你选的）；移到带日期的历史文件。</dd>
+    <dt>选择</dt>
+    <dd class="pick">整段删除，不保留「非现状」标注。</dd>
+    <dt>理由</dt>
+    <dd>两节记录的是「某台机器某天的 MCP/Hook 配置」，与本项目的工程契约无关；留着只会继续被当成现状引用。</dd>
+    <dt>影响面</dt>
+    <dd>文件减少 30 行；<code>## Skills</code> 表与 <code>[SKILL-REF]</code> 的列位契约未变（门禁 RC=0）。</dd>
+    <dt>改判</dt>
+    <dd>要找回内容：<code>git show f1e97bcb^:docs/agents/skills.md</code>；
+      注意其中含旧机器路径与工具状态，不要直接贴回。</dd>
+  </dl>
+</article>
+
+<article class="d" id="d11">
+  <h3>D11 canary 删两个恒绿死探针，并加「每个启用 tag 至少一个探针」元断言</h3>
+  <p class="badges"><span class="badge stage">阶段 0</span><span class="badge">门禁有效性</span></p>
+  <dl>
+    <dt>备选</dt>
+    <dd>留着死探针（计数好看，实际不覆盖）；删掉并加元断言（选定）。</dd>
+    <dt>选择</dt>
+    <dd class="pick">删除 <code>todo-fenced-ok</code>、<code>live-fact-dated-ok</code>，新增 tag 覆盖断言。</dd>
+    <dt>理由</dt>
+    <dd>探针恒绿会让人误以为「这两类检查被证明过」；元断言防「新增检查忘了补探针」。</dd>
+    <dt>影响面</dt>
+    <dd>探针 49 → 47；<code>scripts/verify-context-canary.sh:529</code> 起为元断言实现。</dd>
+    <dt>改判</dt>
+    <dd>要关掉元断言：删除该段并接受「新检查可能从未被证明会红」；不建议。</dd>
+  </dl>
+</article>
+
+<article class="d" id="d12">
+  <h3>D12 把 <code>AGENTS.md:108</code> 的「main 唯一必需检查」改成可验证表述</h3>
+  <p class="badges"><span class="badge stage">阶段 1</span><span class="badge">漂移修正</span></p>
+  <dl>
+    <dt>备选</dt>
+    <dd>保留（听起来像事实，但 required check 属平台分支保护，本地不可读）；改成「两侧 CI 都跑它，是否必需需在平台确认」（选定）。</dd>
+    <dt>选择</dt>
+    <dd class="pick">改成可验证表述，并明确「不要从本文推断」。</dd>
+    <dt>理由</dt>
+    <dd>本地能验证的是「CI 配置里跑了它」，不能验证「平台设成了必需」。</dd>
+    <dt>影响面</dt>
+    <dd><code>AGENTS.md:108</code>。</dd>
+    <dt>改判</dt>
+    <dd>若你在平台侧确认了 required check，可改回强断言，并注明确认日期与位置。</dd>
+  </dl>
+</article>
+
+<article class="d" id="d13">
+  <h3>D13 没有为本次工作新增 <code>TODO.md</code> 条目</h3>
+  <p class="badges"><span class="badge stage">阶段 1</span><span class="badge">硬规则 3</span></p>
+  <dl>
+    <dt>备选</dt>
+    <dd>新增一条「harness 通用化」待办；维持现状（选定）。</dd>
+    <dt>选择</dt>
+    <dd class="pick">不改 <code>TODO.md</code>。</dd>
+    <dt>理由</dt>
+    <dd>硬规则 3 的触发条件是「这次改动涉及哪个既有 TODO 项」；<code>TODO.md</code> 中没有 harness 通用化条目，
+      本次是新增工作而非推进既有项。强行登记会把一次性任务写成长期待办。</dd>
+    <dt>影响面</dt>
+    <dd>无文件改动。</dd>
+    <dt>改判</dt>
+    <dd>要登记：在 <code>TODO.md</code> 的表格里加一行（三档状态之一），并跑 <code>scripts/verify-context.sh</code>
+      （<code>[PROGRESS-SRC]</code> 只允许 <code>TODO.md</code> 出现复选框，表格行不受影响）。</dd>
+  </dl>
+</article>
+
+<h2 class="section">五、kit 实现里的取舍</h2>
+
+<article class="d" id="d14">
+  <h3>D14 探针用运行时拼接规避自身命中（IP 与口令）</h3>
+  <p class="badges"><span class="badge stage">阶段 2</span><span class="badge">实现细节</span></p>
+  <dl>
+    <dt>备选</dt>
+    <dd>把违规样本字面量写进探针（kit 会扫到自己，干净沙箱就红）；运行时拼接（选定）。</dd>
+    <dt>选择</dt>
+    <dd class="pick"><code>canary/probes/PUBLIC-IP.sh</code> 用 <code>%s.%s.%s.%s</code> 拼地址；
+      <code>canary/probes/SECRETS.sh</code> 把关键字与值拆成相邻字符串。</dd>
+    <dt>理由</dt>
+    <dd>探针文件本身也在被扫描的提交树里；让检查对 kit 自身豁免会制造一个「永远扫不到」的目录，比拼接更危险。</dd>
+    <dt>影响面</dt>
+    <dd>两个探针文件；检查判定不变。</dd>
+    <dt>改判</dt>
+    <dd>不推荐改回字面量。若确要豁免，应在 <code>harness.config.sh</code> 的 allowlist 里精确登记，
+      而不是在检查脚本里跳过目录。</dd>
+  </dl>
+</article>
+
+<article class="d" id="d15">
+  <h3>D15 gitleaks 默认 <code>optional</code>，而不是 <code>required</code></h3>
+  <p class="badges"><span class="badge stage">阶段 2</span><span class="badge">实现细节</span></p>
+  <dl>
+    <dt>备选</dt>
+    <dd><code>required</code>（缺工具即红，最严格）；<code>optional</code>（缺工具只跑内置特征，选定）；<code>off</code>。</dd>
+    <dt>选择</dt>
+    <dd class="pick">默认 <code>optional</code>，在配置注释里写明 <code>required</code> 是 fail-closed 语义。</dd>
+    <dt>理由</dt>
+    <dd>新项目接入时未必装 gitleaks，默认 <code>required</code> 会让人先关掉整个检查；
+      内置特征（私钥头、AK、口令赋值）零依赖，先保证有基线防护，再按团队要求升到 <code>required</code>。</dd>
+    <dt>影响面</dt>
+    <dd><code>harness-kit/harness.config.example.sh:40</code>；<code>doctor</code> 会报当前模式与工具状态。</dd>
+    <dt>改判</dt>
+    <dd>改成 <code>HARNESS_GITLEAKS=required</code>，确保 CI 镜像里有 gitleaks，再跑 <code>harness/bin/harness check</code>。</dd>
+  </dl>
+</article>
+
+<article class="d" id="d16">
+  <h3>D16 PATH-REF 只认「真实存在的顶层目录」开头，并跳过 glob 与占位符</h3>
+  <p class="badges"><span class="badge stage">阶段 2</span><span class="badge">误报控制</span></p>
+  <dl>
+    <dt>备选</dt>
+    <dd>把所有反引号内容当路径（误报爆炸）；只认已存在的顶层目录（选定）。</dd>
+    <dt>选择</dt>
+    <dd class="pick">以真实顶层目录开头才判定；含 <code>* ? &lt; &gt; { } [ ] $ ~</code> 或空格、URL 的一律跳过。</dd>
+    <dt>理由</dt>
+    <dd>反向约束比正向白名单稳：新增顶层目录自动纳入，不会因为忘了配白名单而漏检。</dd>
+    <dt>影响面</dt>
+    <dd><code>harness-kit/checks/20-path-ref.sh</code>；代价是「目录名写错」的路径不会被报。</dd>
+    <dt>改判</dt>
+    <dd>要更严格：把顶层目录清单做成配置项（正向白名单），但要接受「新增目录忘配就漏检」。</dd>
+  </dl>
+</article>
+
+<article class="d" id="d17">
+  <h3>D17 先让 kit 自测绿再写适配文档，文档落地后改模板指向</h3>
+  <p class="badges"><span class="badge stage">阶段 2 → 3</span><span class="badge">提交顺序</span></p>
+  <dl>
+    <dt>备选</dt>
+    <dd>先写文档再写代码（文档会写成设想）；先代码、文档里指向 README（选定，随后改指向 docs）。</dd>
+    <dt>选择</dt>
+    <dd class="pick">阶段 2 的模板临时指向 <code>harness/README.md</code>；阶段 3 建好
+      <code>docs/adaptation.md</code> 与 <code>docs/onboarding.md</code> 后改指向，并重跑自测。</dd>
+    <dt>理由</dt>
+    <dd>每个提交点都必须能通过 kit 自己的门禁（<code>PATH-REF</code> 会检查模板里引用的路径是否存在），
+      所以不能在文件还不存在时先写链接。</dd>
+    <dt>影响面</dt>
+    <dd><code>harness-kit/templates/AGENTS.md</code>、<code>templates/TODO.md</code> 的引用路径。</dd>
+    <dt>改判</dt>
+    <dd>要恢复单次提交：<code>git rebase -i main</code> 合并阶段 2/3，注意合并后的提交仍需自测绿。</dd>
+  </dl>
+</article>
+
+<article class="d" id="d18">
+  <h3>D18 自测在 <code>/tmp</code> 做，不污染仓库</h3>
+  <p class="badges"><span class="badge stage">阶段 2</span><span class="badge">自测</span></p>
+  <dl>
+    <dt>备选</dt>
+    <dd>在仓库内建 <code>selftest/</code> 项目（会被扫描、需要 ignore）；在 <code>/tmp/harness-kit-selftest</code>（选定）。</dd>
+    <dt>选择</dt>
+    <dd class="pick"><code>/tmp/harness-kit-selftest</code>；只把实跑结果写进
+      <code>harness-kit/selftest/README.md</code>。</dd>
+    <dt>理由</dt>
+    <dd>自测需要「新 git 仓库 + 注错」，放仓库内会制造第二份可提交状态，且容易被误当成示例项目。</dd>
+    <dt>影响面</dt>
+    <dd>仓库里只有结果记录，没有测试工程。</dd>
+    <dt>改判</dt>
+    <dd>要可重复执行：把命令固化成 <code>harness-kit/selftest/run.sh</code> 并在 CI 跑；
+      注意它会 <code>rm -rf</code> 目标目录，必须限定在临时路径。</dd>
+  </dl>
+</article>
+
+<div class="note">
+  <b>仍需你拍板的两点</b>
+  <p>1）是否要把 ecommerce 现有 18 个 tag 的判定逐条对齐成 kit 的 10 项（L3 改动，收益是单套实现，风险是静默放宽）。本文档按「不动」处理。</p>
+  <p>2）是否把 <code>HARNESS_GITLEAKS</code> 在新项目里统一设为 <code>required</code>。本文档按 <code>optional</code> 处理，理由是接入期不该被未装工具卡死。</p>
+</div>
+
+<h2 class="section">提交列表</h2>
+<article class="d">
+  <dl>
+    <dt>阶段 0</dt>
+    <dd><code>f1e97bcb</code> chore(harness): 修部署路径漂移、skills 表改查法、canary 补 tag 覆盖元断言</dd>
+    <dt>阶段 1</dt>
+    <dd><code>3a69f7d9</code> docs(tech): 把无校验的选型断言显式标注，补 31 条断言台账</dd>
+    <dt>阶段 2</dt>
+    <dd><code>6814a20c</code> feat(harness): 新增可移植 harness-kit（10 项检查 + 探针 + hook/CI 模板）</dd>
+    <dt>阶段 3</dt>
+    <dd><code>ce2f7925</code> docs(harness): kit 适配指南与从零接入手册</dd>
+    <dt>阶段 4</dt>
+    <dd>本文件所在提交</dd>
+  </dl>
+</article>
+
+<footer>
+  <p>生成于 2026-11-12 · 分支 <code>harness/generic-kit</code> · 未 push、未部署。
+  所有路径与行号均对应当前分支的工作树。</p>
+</footer>
+
+</div>
+</body>
+</html>
