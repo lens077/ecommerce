@@ -237,3 +237,22 @@ tag。Go module 版本不可变，已经解析过的 `v0.4.1` 不能复用（否
 - 未重启 `control-tower-gateway` 与 `consumer-next`（多副本）。
 - **遗留**：`consumer-next` 两个副本仍同在 k2。软反亲和 + suite-wide 硬 spread 在 5/5/5 下
   没有合法目标节点可分开，需先挪走 k2 上另一个 Pod 再重启它，属于后续单独操作。
+
+### 0.4.2 发布收尾与最终重均衡（2026-11-11 晚，接 HANDOFF-ecommerce-0.4.2-remaining-20261111.md）
+
+- CI run [`43045505964`](https://github.com/lens077/control-tower/actions/runs/43045505964)
+  全部 job success，含 `release → pre (GitOps)`。
+- release 提交 `0c3d57a`（`release: 0.4.2 → pre [skip ci]`）已推 GitHub main 并 fast-forward
+  GitLab main；`values-pre.yaml` 三个 tag 均为 `0.4.2`。
+- ArgoCD `control-tower-gateway` / `control-tower-config` 均在 revision `0c3d57a` 上
+  `Synced/Healthy`。
+- 线上镜像实测（滚动完成、全部满就绪）：
+  - `control-tower-gateway` → `control-tower-gateway:0.4.2`（2/2）
+  - `config-center` → `control-tower-config:0.4.2`（1/1）
+  - `config-center-web` → `control-tower-config-web:0.4.2`（1/1）
+- `https://gateway.apikv.com/readyz` 返回 `ok`（HTTP 200）。
+- 最终重均衡：0.4.2 网关滚动后分布为 `6/5/4`（k1/k2/k3）。重启 `ecommerce-cart-deploy`
+  （k1→k3）一次即达成 **`5/5/5`**，两命名空间均无 `NOT-READY` Deployment。
+- `consumer-next` 双副本同在 k2 的遗留项仍未处理，维持单独设计的前提不变。
+- ecommerce 本地 4 个提交（`6be73825`、`bb4156e3`、`7bc65fd8`、`ff214c63`）截至本记录
+  **尚未 push**，是否 push 待用户确认。
