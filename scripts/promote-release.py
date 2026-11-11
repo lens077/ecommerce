@@ -38,8 +38,14 @@ def require_platforms(index):
 
 
 def inventory():
+    # 排除 out_of_repo 服务（shop/qqbot 等）：它们只是网关拓扑占位，本仓没有镜像块
+    # 和 backend/services/<s>/deploy，plan_changes 的正则会找不到锚点。
+    # 事故：2026-11-11 push 被 verify-quick 的 promote 回归拦下——6be73825 把 shop/qqbot
+    # 写进 .service-matrix.yaml 后未同步这里，4 个测试 ValueError/FileNotFoundError。
     return json.loads(subprocess.check_output(
-        ['yq', '-o=json', '.services | keys', str(ROOT / '.service-matrix.yaml')]))
+        ['yq', '-o=json',
+         '.services | to_entries | map(select(.value.out_of_repo != true) | .key)',
+         str(ROOT / '.service-matrix.yaml')]))
 
 
 def plan_changes(root, services, environment, version, digests):
