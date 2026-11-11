@@ -198,11 +198,12 @@ kubectl -n ecommerce get pods -o wide | awk '{print $7}' | sort | uniq -c
 
 ### 第二节：已完成
 
-- control-tower 正式发布 **0.4.1**（裸 tag `0.4.1` 触发 CI，`v0.4.1` 作为 Go 模块消费指针；
-  两者同 commit）。发布前补跑了 `deploy-render`，修掉 `deploy/pre/gateway/{deployment,httproute}.yaml`
-  与 chart 的渲染差异。
+- control-tower 正式发布 **0.4.2**（裸 tag `0.4.2` 触发 CI，`v0.4.2` 作为 Go 模块消费指针；
+  两者同 commit `abb4a0b`）。发布前补跑了 `deploy-render`，修掉
+  `deploy/pre/gateway/{deployment,httproute}.yaml` 与 chart 的渲染差异，并把
+  `customer:order.cancel.self` 的权限变更一并渲染进产物。
 - `routes/dev.yaml` 补齐 5 条商城匿名路径；dev 仍不接 shop 路由，请求按 `ROUTE_NOT_FOUND` 处理。
-- ecommerce 依赖升级到 `github.com/lens077/control-tower v0.4.1`。
+- ecommerce 依赖升级到 `github.com/lens077/control-tower v0.4.2`。
 - `.service-matrix.yaml`：
   - `gateway.anonymous_paths` 增加 5 条 `/shop.v1.shopService/*`；
   - 新增 `services.shop` / `services.qqbot`，标记 `out_of_repo: true`、`gateway_envs: [pre]`、
@@ -214,12 +215,16 @@ kubectl -n ecommerce get pods -o wide | awk '{print $7}' | sort | uniq -c
   - 目录、部署入口、Dockerfile、适配层、分层导入、zero-trust SA 等检查跳过仓外服务。
 - 验收：`go test ./backend/structcheck/...` 全绿；`go build ./...` 通过。
 
-#### 版本漂移说明（0.4.0 → 0.4.1）
+#### 版本漂移说明（0.4.0 → 0.4.2）
 
 线上网关镜像 `0.4.0` 不是 CI 发版产物：`values-pre.yaml` 的 gateway tag 在提交 `7d07887`
 （T1 断言 + shop mTLS）里被手工从 `0.3.0` 改成 `0.4.0`，而 Git 最新 release tag 只到 `0.3.0`。
 直接重打 `0.4.0` 会覆盖已发布镜像，且 ArgoCD 因 tag 字符串不变不会滚动网关。因此本次正式发布
-用 **0.4.1**：CI 重新构建三个镜像并回写 `values-pre.yaml`，ArgoCD 通过 GitLab webhook 滚动上线。
+用 **0.4.2**：CI 重新构建三个镜像并回写 `values-pre.yaml`，ArgoCD 通过 GitLab webhook 滚动上线。
+
+发布过程中曾先打过 `0.4.1`，随后因为补渲染用户新提交 `6b41056`（`order.cancel.self`）需要移动
+tag。Go module 版本不可变，已经解析过的 `v0.4.1` 不能复用（否则不同时间拉取会得到不同内容），
+所以删除了 `0.4.1`/`v0.4.1`，用同一个最终 commit 重新发 **0.4.2**。
 
 ### 第三节：已完成
 

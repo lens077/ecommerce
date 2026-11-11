@@ -17,7 +17,7 @@ require (
 	github.com/elastic/go-elasticsearch/v9 v9.4.3
 	github.com/google/uuid v1.6.0
 	github.com/jackc/pgx/v5 v5.10.0
-	github.com/lens077/control-tower v0.4.1
+	github.com/lens077/control-tower v0.4.2
 	github.com/lens077/go-connect-kit v1.0.0
 	github.com/pressly/goose/v3 v3.27.3
 	github.com/redis/go-redis/v9 v9.22.0
