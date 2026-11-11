@@ -37,7 +37,8 @@ harness/bin/harness canary       # 门禁的门禁：证明每项检查真的会
 ```
 
 门禁的判据是「它红过吗」，不是「脚本在不在」。新增/修改检查后必须补 canary 探针，
-否则 canary 的元断言会红。每项检查验什么、怎么放宽，见 `harness/README.md`。
+否则 canary 的元断言会红。每项检查验什么、怎么放宽，见 `harness/docs/adaptation.md`；
+从零接入的步骤见 `harness/docs/onboarding.md`。
 
 ## 反直觉约定
 

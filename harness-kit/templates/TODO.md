@@ -6,4 +6,4 @@
 
 | 状态 | 事项 | 依据 |
 |---|---|---|
-| 待办 | 示例：把 `harness.config.sh` 改成项目自己的扫描范围 | `harness/README.md` |
+| 待办 | 示例：把 `harness.config.sh` 改成项目自己的扫描范围 | `harness/docs/onboarding.md` |
