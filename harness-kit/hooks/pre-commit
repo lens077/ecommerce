@@ -1,0 +1,8 @@
+#!/usr/bin/env bash
+# pre-commit：快检集合（链接 / 正文路径 / 公网 IP / 明文凭据）。
+# 安装：harness install-hooks（把 core.hooksPath 指到 harness/hooks）。
+# 退出码直接由 harness 决定：缺失工具或违规都返回非 0，不允许静默跳过。
+set -uo pipefail
+root=$(git rev-parse --show-toplevel 2>/dev/null) || exit 0
+[ -x "$root/harness/bin/harness" ] || { echo "pre-commit: 找不到 harness/bin/harness" >&2; exit 1; }
+exec "$root/harness/bin/harness" check fast

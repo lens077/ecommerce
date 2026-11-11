@@ -1,0 +1,18 @@
+# 复制到 .github/workflows/context-gate.yml
+# 为什么 check 与 canary 分成两步：check 证明仓库当前是干净的，canary 证明门禁还拦得住。
+# 只跑前者时，一个「永远绿」的门禁也看不出来。
+name: context-gate
+
+on:
+  push:
+  pull_request:
+
+jobs:
+  harness:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: gate
+        run: bash harness/bin/harness check
+      - name: canary
+        run: bash harness/bin/harness canary

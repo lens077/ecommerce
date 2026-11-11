@@ -1,0 +1,147 @@
+#!/usr/bin/env bash
+# bin/harness — harness-kit 入口。
+#
+#   harness check [fast]     跑门禁（fast = pre-commit 快检集合）
+#   harness canary           跑探针：证明每项检查真的会红
+#   harness init             在宿主仓库生成配置、文档骨架、基线与 lock
+#   harness install-hooks    把 core.hooksPath 指到本 kit 的 hooks/
+#   harness doctor           配置、依赖、lock 校验
+#   harness list-checks      列出检查与探针覆盖
+set -uo pipefail
+
+HERE=$(cd "$(dirname "$0")" && pwd)
+# shellcheck source=../lib/config.sh
+. "$HERE/../lib/config.sh"
+# shellcheck source=../lib/runner.sh
+. "$HERE/../lib/runner.sh"
+# shellcheck source=../lib/util.sh
+. "$HERE/../lib/util.sh"
+
+h_detect_roots
+h_load_config
+
+cmd=${1:-check}
+shift || true
+
+case "$cmd" in
+  check)
+    mode=${1:-all}
+    h_config_validate
+    h_run_checks "$mode"
+    ;;
+  canary)
+    h_config_validate
+    bash "$KIT_ROOT/canary/run.sh"
+    ;;
+  list-checks)
+    f id tag desc probes
+    for f in "$KIT_ROOT"/checks/*.sh; do
+      id=$(h_check_meta "$f" id); tag=$(h_check_meta "$f" tag)
+      desc=$(h_check_meta "$f" desc)
+      probes=no; [ -f "$KIT_ROOT/canary/probes/$tag.sh" ] && probes=yes
+      printf '%-16s %-14s probe=%-3s %s\n' "$id" "$tag" "$probes" "$desc"
+    done
+    ;;
+  init)
+    name=$(basename "$REPO_ROOT")
+    if [ ! -f "$REPO_ROOT/AGENTS.md" ]; then
+      sed "s/{{REPO_NAME}}/$name/g" "$KIT_ROOT/templates/AGENTS.md" > "$REPO_ROOT/AGENTS.md"
+      echo "created AGENTS.md"
+    else
+      echo "skip AGENTS.md（已存在，不覆盖）"
+    fi
+    if [ ! -f "$REPO_ROOT/TODO.md" ] && [ -f "$KIT_ROOT/templates/TODO.md" ]; then
+      cp "$KIT_ROOT/templates/TODO.md" "$REPO_ROOT/TODO.md"
+      echo "created TODO.md"
+    fi
+    if [ ! -e "$REPO_ROOT/context" ]; then
+      cp -R "$KIT_ROOT/templates/context" "$REPO_ROOT/context"
+      echo "created context/"
+    else
+      echo "skip context/（已存在，不覆盖）"
+    fi
+    if [ ! -f "$REPO_ROOT/docs/skills.md" ] && [ -f "$KIT_ROOT/templates/docs/skills.md" ]; then
+      mkdir -p "$REPO_ROOT/docs"
+      cp "$KIT_ROOT/templates/docs/skills.md" "$REPO_ROOT/docs/skills.md"
+      echo "created docs/skills.md"
+    fi
+    if [ ! -f "$REPO_ROOT/harness.config.sh" ]; then
+      cp "$KIT_ROOT/harness.config.example.sh" "$REPO_ROOT/harness.config.sh"
+      echo "created harness.config.sh（按项目改完再跑 doctor）"
+    else
+      echo "skip harness.config.sh（已存在，不覆盖）"
+    fi
+    for b in "$KIT_ROOT"/baselines/*.txt; do
+      dest="$REPO_ROOT/baselines/$(basename "$b")"
+      if [ ! -f "$dest" ]; then
+        mkdir -p "$REPO_ROOT/baselines"
+        cp "$b" "$dest"
+        echo "created baselines/$(basename "$b")"
+      fi
+    done
+    # lock：记录版本与每个 kit 文件的摘要，doctor 用它发现「本地改过 kit」。
+    {
+      printf 'version=%s\n' "$(cat "$KIT_ROOT/VERSION")"
+      ( cd "$KIT_ROOT" && find . -type f ! -name 'harness.lock' | LC_ALL=C sort | \
+        while IFS= read -r f; do printf '%s  %s\n' "$(shasum -a 256 "$f" | cut -d' ' -f1)" "${f#./}"; done )
+    } > "$REPO_ROOT/harness.lock"
+    echo "created harness.lock"
+    echo
+    echo "下一步：改写 harness.config.sh → harness/bin/harness doctor → harness/bin/harness check → harness/bin/harness canary"
+    ;;
+  install-hooks)
+    git -C "$REPO_ROOT" rev-parse --git-dir >/dev/null 2>&1 || h_die "不在 git 仓库内，无法安装 hooks"
+    kit_rel=$(python3 - "$KIT_ROOT" "$REPO_ROOT" <<'PY'
+import os, sys
+print(os.path.relpath(sys.argv[1], sys.argv[2]))
+PY
+)
+    old=$(git -C "$REPO_ROOT" config --get core.hooksPath || true)
+    if [ -n "$old" ] && [ "$old" != "$kit_rel/hooks" ]; then
+      echo "注意：core.hooksPath 原本指向 $old，将被改为 $kit_rel/hooks（原 hook 不会自动链回来）" >&2
+    fi
+    git -C "$REPO_ROOT" config core.hooksPath "$kit_rel/hooks"
+    chmod +x "$KIT_ROOT"/hooks/* 2>/dev/null || true
+    echo "core.hooksPath -> $kit_rel/hooks"
+    ;;
+  doctor)
+    problems=0
+    h_config_validate
+    echo "repo=$REPO_ROOT"
+    echo "kit=$(cat "$KIT_ROOT/VERSION") ($KIT_ROOT)"
+    command -v python3 >/dev/null 2>&1 || { echo "✗ 缺 python3（基线引擎与部分检查需要）" >&2; problems=$((problems+1)); }
+    if [ "$HARNESS_GITLEAKS" != off ]; then
+      if command -v gitleaks >/dev/null 2>&1; then
+        echo "✓ gitleaks: $(gitleaks version 2>/dev/null | head -1)"
+      elif [ "$HARNESS_GITLEAKS" = required ]; then
+        echo "✗ gitleaks 未安装，但 HARNESS_GITLEAKS=required（fail-closed）" >&2
+        problems=$((problems+1))
+      else
+        echo "· gitleaks 未安装（optional：只跳过历史扫描，内置明文特征仍会跑）"
+      fi
+    fi
+    if [ -f "$REPO_ROOT/harness.lock" ]; then
+      drift=$(cd "$KIT_ROOT" && \
+        while read -r want f; do
+          case "$want" in version=*) continue ;; esac
+          [ -f "./$f" ] || { echo "missing:$f"; continue; }
+          got=$(shasum -a 256 "./$f" | cut -d' ' -f1)
+          [ "$got" = "$want" ] || echo "changed:$f"
+        done < "$REPO_ROOT/harness.lock")
+      if [ -n "$drift" ]; then
+        echo "· kit 与 harness.lock 不一致（本地改过 kit，或升级未重写 lock）：" >&2
+        printf '%s\n' "$drift" | sed 's/^/    /' >&2
+      else
+        echo "✓ harness.lock 与 kit 一致"
+      fi
+    else
+      echo "· 无 harness.lock（还没跑过 init）"
+    fi
+    echo "· 启用检查：$(for f in "$KIT_ROOT"/checks/*.sh; do h_check_meta "$f" tag; done | tr '\n' ' ')"
+    [ "$problems" -eq 0 ]
+    ;;
+  *)
+    echo "用法：harness {check [fast]|canary|init|install-hooks|doctor|list-checks}" >&2
+    exit 2
+    ;;
+esac

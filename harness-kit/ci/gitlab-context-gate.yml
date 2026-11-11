@@ -1,0 +1,13 @@
+# 合并进 .gitlab-ci.yml 的一段。镜像只要求 bash + python3（kit 无第三方依赖）。
+# check 与 canary 分开跑：前者证明仓库干净，后者证明门禁仍会红。
+context-gate:
+  stage: test
+  image: python:3.12-slim
+  before_script:
+    - apt-get update && apt-get install -y --no-install-recommends git bash && rm -rf /var/lib/apt/lists/*
+  script:
+    - bash harness/bin/harness check
+    - bash harness/bin/harness canary
+  rules:
+    - if: $CI_PIPELINE_SOURCE == "push"
+    - if: $CI_PIPELINE_SOURCE == "merge_request_event"
