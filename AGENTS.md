@@ -105,6 +105,6 @@ scripts/verify-context.sh                        # 改 context/、docs/design、
 scripts/verify-context-canary.sh                 # 改 ↑ 门禁脚本本身后必跑:注错断言门禁还会红
 ```
 
-`verify-context.sh` 是 **main 上唯一必需的 CI 检查**（GitHub `context-gate` + GitLab 同名 job）。
+`verify-context.sh` 在 GitHub `context-gate` 与 GitLab 同名 job 里都跑。它是否被平台设为「main 必需检查」属分支保护设置，**本地不可读、需在平台侧确认**；不要从本文推断。
 
 放行以「命令真绿」为准,不以模型自报为准。核心改动 push 前做异构双审（两个只读 subagent 分走不同模型族审 diff，runbook §5）。
