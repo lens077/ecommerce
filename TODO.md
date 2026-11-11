@@ -130,6 +130,7 @@ todo-spec: 1
 - [ ] **待复验 · 遗留运行配置**：核对 node3 Redis 网络就绪顺序、重复拉取凭据、node1 gorse 僵尸副本、cart 的 Silo endpoint 与 OTel TLS 配置；仅处理仍存在的对象，不照旧主机/端口表操作。另（2026-10-18 审计 F-L3）：`ecommerce-config-source-dev` Secret 存在于生产集群——dev 配置进生产，清理或加 ns 隔离。 <!--t:ad19ca7579691778-->
 - [ ] **部分完成 · KEDA/Rollouts**：控制器已装并做了行为验收（KEDA cron ScaledObject 0→2 + 生成 HPA；Rollouts 金丝雀 setWeight 50→pause→100，stableRS 切换）。业务接线：frontend 的 pre 已切 Blue-Green Rollout（prod 仍 Deployment，Helm/裸清单等价已过门禁），待 ApplicationSet 在新集群 apply 后首次手动 sync + promote；Kafka 消费者 lag 出现真实消费者后再建 ScaledObject；后端灰度要先有 ≥2 副本 + PDB 的无状态服务。 <!--t:4ed10c15f7bc7e14-->
 - [ ] **未完成 · node1 边缘暴露面与安全响应头**：2026-10-18 实测（F-M2/F-L1/F-L2）。① `shop.apikv.com` 响应无 HSTS/CSP/X-Frame-Options/X-Content-Type-Options/Referrer-Policy（仅 `server: envoy`）——Traefik `dynamic_config.yml` 加全局 headers 中间件，CSP 先 report-only 按 Next.js 实际资源收紧；② casdoor:8000、webhook:8082、scorpius:8878、nginx:65443 绑 `0.0.0.0` 且 DOCKER-USER 无 DROP（6379/5432 已有收敛规则）——改 `127.0.0.1:端口:端口` 经 Traefik/Pangolin 反代，或补 DOCKER-USER 规则做纵深防御；③ casdoor:latest、redis:latest 钉版本+digest，与 Kyverno `disallow-latest-tag` 转 Enforce 后闭环。 <!--t:b8c8e69cf7ed771a-->
+- [ ] **未完成 · GitOps 供应链系列 01–08 待写**：`docs/gitops/00-introduction.md`（全景与名词）已入库，姊妹篇 Gitleaks/Trivy fs/config/zizmor/Syft/Trivy image/Cosign/Kyverno/ArgoCD 八篇未写，导航表已标「未写」。每篇按 00 §4 统一结构（拦什么→名词→通用做法 vs 电商配置→验收→交接），立场与电商差异（sigstore bundle、`--platform`、双真相源、tag 触发发布）以 00 §5 为准；GitLab CI 等价接线按 00 §6 单独立篇放终章之后。 <!--t:8f4a2c31d5e97b60-->
 
 ### 零信任鉴权与Session
 
