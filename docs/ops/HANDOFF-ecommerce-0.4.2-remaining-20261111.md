@@ -163,8 +163,9 @@ git log --oneline origin/main..HEAD   # 应只有 bb4156e3、6be73825
 2. 不打印、不落盘 Secret（`pal-qqbot-secrets`、`pal-pg-app`、operator token 等）。
 3. 网关滚动期间不要重启上游服务；等 `control-tower-gateway` Ready 后再做重均衡。
 4. 不要把仓库里预先存在的未提交文件混进提交：
-   `README.md`、`README.zh-CN.md`、`.lint-baseline/revive-exported.txt`、
-   `docs/architecture/ecommerce-stack-diagram*`、`docs/gitops/`。
+   `README.md`、`README.zh-CN.md`、`docs/architecture/ecommerce-stack-diagram*`、
+   `docs/gitops/`（未入库也未从磁盘删除的工作区草稿，不在 CI checkout 里）。
+   `.lint-baseline/revive-exported.txt` 已于 ff214c63 单独提交，不再是未提交状态。
 5. `consumer-next` 两个副本仍同在 k2，属于遗留项；在 5/5/5 的硬 spread 下没有合法目标节点可分开，
    要处理必须单独设计（先制造节点差值或临时改软 spread），不要混进本次回平。
 
