@@ -36,7 +36,11 @@ context/decisions/
 
 ## 已否决 · `rejected/`
 
-暂无独立文件。「底层改 Cordis 插件框架」的否决与重估条件已有一处家：
+| 决策 | 一句话 |
+|---|---|
+| [2026-11-13-spa-view-state-caching.md](rejected/2026-11-13-spa-view-state-caching.md) | 否决 consumer SPA 视图缓存式 view transitions（`content-visibility: hidden`）：收益已被 router 预载 + react-query 吃掉大半，且绕过登录守卫、残留 DOM 快照隐私；重估条件是 initPerf 显示切回导航为热点 |
+
+「底层改 Cordis 插件框架」的否决与重估条件已有一处家：
 [cordis-evaluation.md](../harness-framework/cordis-evaluation.md)，不重复。
 
 ## 提案中 · `proposed/`
@@ -45,6 +49,7 @@ context/decisions/
 |---|---|
 | [2026-09-08-object-authz-check-placement.md](proposed/2026-09-08-object-authz-check-placement.md) | 对象级授权 Check 放服务侧 use case 层而非网关；OpenFGA 只存组织图、对象归属用服务归属列。**待拍板**：TECH.md §8.1 与 control-tower 裁决互相矛盾 |
 | [2026-10-24-app-http-and-data-lifecycle-to-kit.md](proposed/2026-10-24-app-http-and-data-lifecycle-to-kit.md) | 启动生命周期、HTTP 装配、健康检查、Data 事务外壳上提 kit（候选 5,575 行，占手写后端 37.5%）。`main()` 收口与「健康检查按服务显式声明」已确认，其余待拍板 |
+| [2026-11-13-headersearch-popover-api.md](proposed/2026-11-13-headersearch-popover-api.md) | 顶栏搜索下拉暂缓换 Popover API：popover 进 top layer 后必须绑 CSS Anchor Positioning，Firefox 未 ship 前两套并存是负收益；anchor 全绿后一步到位，期间可先做 Esc 关闭 + `@starting-style` 轻路径 |
 
 ## 怎么写
 
