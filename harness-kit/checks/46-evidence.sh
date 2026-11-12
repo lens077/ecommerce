@@ -24,8 +24,10 @@ while IFS= read -r file; do
     fence { next }
     # 不要用 {2,3}：Debian/Ubuntu 默认 awk 是 mawk，不支持区间量词，
     # 会把 `## 证据` 当成不匹配，导致整个段落静默不判（非 COW 容器实测发现）。
-    index($0, "**" sec) == 1 || $0 ~ ("^##? " sec) { insec = 1; next }
-    insec && (/^\*\*[^*]+\*\*/ || /^#+ /) { insec = 0 }
+    # 等价写法：##?# = 2–3 个 #，#?#?# = 1–3 个 #。
+    # 0.3.3 曾把起点写成 ##?（h1–h2），`### 证据` 漏判、`# 证据` 误判；0.3.4 修回。
+    index($0, "**" sec) == 1 || $0 ~ ("^##?# " sec) { insec = 1; next }
+    insec && (/^\*\*[^*]+\*\*/ || /^#?#?# /) { insec = 0 }
     insec && /^[-*] / && $0 !~ ("^[-*] \\[(" labs ")\\] ") { print NR }
   ' "$file" | head -3 | tr '\n' ' ')
   if [ -n "$untagged" ]; then

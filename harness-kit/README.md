@@ -72,22 +72,31 @@ harness/bin/harness install-hooks   # core.hooksPath -> harness/hooks
 
 ## 版本与升级
 
-当前版本 **0.3.3**（Linux 兼容修正：EVIDENCE 不再依赖 awk 区间量词，见下方「0.3.3 变更」）。
+当前版本 **0.3.4**（EVIDENCE 标题层级回归修正：恢复 h2–h3 命中、h1 不命中，见下方「0.3.4 变更」）。
 
 `harness.lock` 记录 kit 版本与每个文件的 sha256。升级方式：整目录替换后跑
 `harness/bin/harness lock` 重写 lock，再跑 `harness/bin/harness doctor`，它会报出被本地改过的文件。
 改 kit 是**新增检查**还是**改判定**，按 `docs/adaptation.md` 的「最小步骤」执行，
 并且必须补一个 canary 探针——否则 `canary` 的 meta 断言会红。
 
+### 0.3.4 变更（EVIDENCE 标题层级回归修正）
+
+| 修补 | 来源 | 落点 |
+| --- | --- | --- |
+| 起点正则从 `^##? `（h1–h2）改回 `^##?# `（h2–h3），结束标记从 `^#+ `（h1–h6）改回 `^#?#?# `（h1–h3），恢复 0.3.2 的判定语义 | LyraPass 复核：0.3.3 把 `{2,3}` 换成 `##?` 后 `### 证据` 不再命中、`# 证据` 反而命中 | `checks/46-evidence.sh` |
+| 新增 canary 自检：h2 命中、h3 命中、h1 不命中三种输入分别独立断言 | 同一回归在只有 h2 探针时不会变红 | `canary/run.sh` 的 `evidence-headings` |
+
+这是一次纯判定修正，不改配置契约、不改基线、不改探针文件格式；已在 Debian 12 的 mawk 1.3.4 下实跑通过。
+
 ### 0.3.3 变更（Linux/non-COW 兼容）
 
 | 修补 | 来源 | 落点 |
 | --- | --- | --- |
-| EVIDENCE 的 awk 正则不再用 `{2,3}`，改为 `^##? ` / `^#+ ` | 非 COW 容器实测：Debian/Ubuntu 默认 mawk 不支持区间量词，`## 证据` 整段被静默跳过，探针 rc=0 | `checks/46-evidence.sh` |
+| EVIDENCE 的 awk 正则不再用 `{2,3}`（mawk 不支持区间量词） | 非 COW 容器实测：`## 证据` 整段被静默跳过，探针 rc=0 | `checks/46-evidence.sh` |
 | 在 Linux ext4 容器里跑通硬链接退路（`cp -al`），并验证模板不被污染、`.git` 不跨沙箱、并行探针不互踩 | 本轮 | 实测记录见 `selftest/README.md` 第 8 节 |
 
-这是一次纯兼容修正：判定语义不变，macOS/BSD awk 与 Linux mawk 现在都会识别「证据」段。
-该缺陷在 macOS 上不可见，只有在非 COW 文件系统上走硬链接退路、并让 EVIDENCE 探针真正执行时才会暴露。
+0.3.3 修掉了静默失效，但替换写法把层级写错了：`^##? ` 是 h1–h2，`^#+ ` 是 h1–h6。
+当前没有仓库踩到（证据段普遍是 h2），0.3.4 已恢复为 h2–h3，结束标记恢复为 h1–h3。
 
 ### 0.3.2 变更（PATH-REF 性能）
 

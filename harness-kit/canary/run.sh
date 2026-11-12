@@ -472,6 +472,42 @@ check_skill_ref_probe_config() {
   printf '  ✓ selfcheck skill-ref-probe: 探针读取配置路径\n'
 }
 
+# EVIDENCE 的标题层级：起点是 h2–h3，h1 不算证据段。
+# 0.3.3 把它写成 `##?`（h1–h2），`### 证据` 静默漏判。三种输入必须分别独立断言——
+# 写进同一个文件时只要 h2 还命中整项就红，掉一档的回归会被掩盖。
+evidence_level_ok() { # <aux> <#号串> <期望rc>
+  local aux="$1" hashes="$2" want="$3"
+  printf '# 症状\n\n只有症状。\n\n%s 证据\n\n- 查了日志，发现超时\n' "$hashes" > "$aux/notes/probe.md"
+  run_gate "$aux"
+  if [ "$RC" != "$want" ]; then
+    printf '  ✗ selfcheck evidence-headings: `%s 证据` 期望 rc=%s，实得 rc=%s\n%s\n' "$hashes" "$want" "$RC" "$OUT"
+    return 1
+  fi
+  if [ "$want" = 1 ] && ! printf '%s' "$OUT" | grep -qF '[EVIDENCE]'; then
+    printf '  ✗ selfcheck evidence-headings: `%s 证据` rc=1 但输出缺 [EVIDENCE]\n%s\n' "$hashes" "$OUT"
+    return 1
+  fi
+  return 0
+}
+
+check_evidence_heading_levels() {
+  local aux="$workdir/aux-evidence" pair
+  mkdir -p "$aux/harness" "$aux/notes"
+  cp -R "$KIT_ROOT/." "$aux/harness/"
+  # 配置校验要求入口文件存在（write_min_config 把 PROGRESS_FILE 指向它）。
+  printf '# 入口\n' > "$aux/AGENTS.md"
+  write_min_config "$aux" "evidence" 'HARNESS_EVIDENCE_GLOBS="notes/*.md"
+HARNESS_EVIDENCE_SECTION="证据"
+HARNESS_EVIDENCE_LABELS="log sql issue"'
+  for pair in "##:1" "###:1" "#:0"; do
+    if evidence_level_ok "$aux" "${pair%%:*}" "${pair#*:}"; then
+      printf '  ✓ selfcheck evidence-headings: `%s 证据` rc=%s\n' "${pair%%:*}" "${pair#*:}"
+    else
+      fails=$((fails + 1))
+    fi
+  done
+}
+
 echo "canary: 构建模板沙箱"
 t0=$SECONDS
 build_template
@@ -488,6 +524,7 @@ check_path_ref_line_forms
 check_path_ref_no_per_token_fork
 check_secrets_allowlist
 check_skill_ref_probe_config
+check_evidence_heading_levels
 
 declared_tags=""
 for f in "$KIT_ROOT"/checks/*.sh; do
