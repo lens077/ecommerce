@@ -39,6 +39,10 @@ const router = createRouter({
   scrollRestoration: true,
   defaultStructuralSharing: true,
   defaultPreloadStaleTime: 0,
+  // 路由切换走 View Transitions API(document.startViewTransition),页面级淡入淡出
+  // 由浏览器合成,零自定义 CSS。router 内部有 feature-detect:不支持的浏览器直接
+  // 走原导航路径,无 polyfill。
+  defaultViewTransition: true,
 });
 
 // Register the router instance for type safety

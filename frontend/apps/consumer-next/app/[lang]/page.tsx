@@ -10,10 +10,11 @@
  * 自 2026-09-15 起线上 `.next/server/app` 整目录是 init 容器拷贝后的可写卷(此前只挂
  * app/zh、app/en 两个子目录,首页产物 app/zh.html 写不进去)。
  *
- * 客户端 JS 只有三个岛:灯阵入视点亮、顶栏搜索(RPC 客户端按需加载)、登录态。
+ * 客户端 JS 只有两个岛:顶栏搜索(RPC 客户端按需加载)、登录态。
+ * 灯阵入视点亮原是第三个岛(LitGrid.tsx,IntersectionObserver),已换成 CSS
+ * scroll-driven animations(home.css),整块 JS 下线。
  */
 import type { Metadata } from "next";
-import type { CSSProperties } from "react";
 import { notFound } from "next/navigation";
 import {
   CategoryIcon,
@@ -24,7 +25,6 @@ import {
   type DemoProduct,
 } from "@ecommerce/lantern";
 import { homeCopy, isLanguage, LANGUAGES, type HomeCopy, type Language } from "@/home/copy";
-import { LitGrid } from "@/home/LitGrid";
 import { lanternSerif } from "@/home/fonts";
 import { SiteFooter } from "@/home/SiteFooter";
 import { SiteHeader } from "@/home/SiteHeader";
@@ -126,11 +126,11 @@ export default async function HomePage({ params }: { params: Promise<PageParams>
               <h2 className="grid-title">{copy.home.gridTitle}</h2>
               <span className="grid-badge">{copy.home.demoBadge}</span>
             </div>
-            <LitGrid>
-              {demoProducts.map((p, i) => (
-                <LanternCard key={p.spuId} lang={lang} product={p} index={i} copy={copy} />
+            <div className="lantern-grid">
+              {demoProducts.map((p) => (
+                <LanternCard key={p.spuId} lang={lang} product={p} copy={copy} />
               ))}
-            </LitGrid>
+            </div>
             <p className="demo-note">{copy.home.demoNote}</p>
           </section>
         </main>
@@ -163,21 +163,19 @@ function PriceInk({
   );
 }
 
-/** 纸灯商品卡:入场次第点亮(--i),hover 透光 */
+/** 纸灯商品卡:入场点亮见 home.css(scroll-driven animation),hover 透光 */
 function LanternCard({
   lang,
   product,
-  index,
   copy,
 }: {
   lang: Language;
   product: DemoProduct;
-  index: number;
   copy: HomeCopy;
 }) {
   return (
     <a className="lantern-card-link" href={productHref(lang, product)}>
-      <div className="lantern-card" style={{ "--i": index } as CSSProperties}>
+      <div className="lantern-card">
         <div className="card-art-frame">
           <div className="card-art">
             <ProductArt kind={product.art} title={product.name} />

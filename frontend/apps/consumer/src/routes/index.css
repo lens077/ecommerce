@@ -7,18 +7,24 @@
   background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='240' height='240'%3E%3Cfilter id='p'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.85' numOctaves='2' seed='7'/%3E%3CfeColorMatrix values='0 0 0 0 0.16 0 0 0 0 0.15 0 0 0 0 0.13 0 0 0 0.05 0'/%3E%3C/filter%3E%3Crect width='240' height='240' filter='url(%23p)'/%3E%3C/svg%3E");
 }
 
-/* 商品纸灯卡:默认熄灯(暗纸),入视后次第点亮到透光亮态。
-   纸纹理直接叠在灯面上(材质在灯上,不只在页底)。 */
+/* 商品纸灯卡:亮态(透光)为基线。「熄灯→点亮」的入场交给下方 scroll-driven 动画;
+   不支持该动画的浏览器直接看到亮态,永不隐形。纸纹理直接叠在灯面上(材质在灯上,不只在页底)。 */
 .lantern-card {
-  background-color: #efe6d2;
+  background-color: #fbf3df;
   background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='180' height='180'%3E%3Cfilter id='q'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='2' seed='11'/%3E%3CfeColorMatrix values='0 0 0 0 0.35 0 0 0 0 0.3 0 0 0 0 0.2 0 0 0 0.045 0'/%3E%3C/filter%3E%3Crect width='180' height='180' filter='url(%23q)'/%3E%3C/svg%3E");
+  box-shadow:
+    inset 0 0 46px rgba(255, 227, 160, 0.9),
+    0 12px 30px -18px rgba(138, 106, 66, 0.5);
   transition:
     background-color 180ms ease-out,
     box-shadow 180ms ease-out,
     border-color 180ms ease-out;
 }
 
-/* 点灯:唯一的 authored moment,由 IntersectionObserver 在网格入视时触发 */
+/* 点灯:唯一的 authored moment。原实现是 IntersectionObserver 状态位(routes/index.tsx,
+   已删),现改为 CSS scroll-driven animations:每张卡随各自进入视口点亮,动画由合成器
+   线程驱动,零 JS。不支持 SRA 的浏览器不命中 @supports,保持上面的亮态基线;
+   @media no-preference 把动画挡在「允许动效」的偏好之后。 */
 @keyframes lantern-light-up {
   from {
     background-color: #efe6d2;
@@ -34,13 +40,20 @@
   }
 }
 
-.lantern-grid-lit .lantern-card {
-  animation: lantern-light-up 700ms cubic-bezier(0.16, 1, 0.3, 1) both;
-  animation-delay: calc(var(--i, 0) * 70ms);
+@media (prefers-reduced-motion: no-preference) {
+  @supports (animation-timeline: view()) and (animation-range: entry) {
+    .lantern-card {
+      animation: lantern-light-up auto linear both;
+      animation-timeline: view();
+      /* 卡片滚入视口 60% 处完成点亮。各卡独立随滚动驱动,不再有整组入视后的
+         70ms stagger(--i 已删):SRA 下 delay 会平移 timeline 映射 */
+      animation-range: entry 0% entry 60%;
+    }
+  }
 }
 
-.lantern-grid-lit .lantern-card:hover,
-.lantern-grid-lit .lantern-card:focus-within {
+.lantern-card:hover,
+.lantern-card:focus-within {
   background-color: #fff7e0;
   box-shadow:
     inset 0 0 56px rgba(255, 227, 160, 1),
@@ -92,15 +105,8 @@
   outline-offset: 2px;
 }
 
+/* 卡片点灯已是 scroll-driven(见上),基线即亮态,reduce 下天然静态;这里只剩主灯呼吸 */
 @media (prefers-reduced-motion: reduce) {
-  .lantern-card,
-  .lantern-grid-lit .lantern-card {
-    animation: none;
-    background-color: #fbf3df;
-    box-shadow:
-      inset 0 0 46px rgba(255, 227, 160, 0.9),
-      0 12px 30px -18px rgba(138, 106, 66, 0.5);
-  }
   .lantern-hero-lamp {
     animation: none;
     box-shadow: inset 0 0 60px rgba(255, 233, 184, 0.85);

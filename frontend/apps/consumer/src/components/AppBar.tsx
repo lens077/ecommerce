@@ -375,8 +375,11 @@ export default function PrimarySearchAppBar() {
                 value={searchInput}
                 onChange={handleSearchInputChange}
                 onKeyDown={(e) => {
-                  if (e.key === "Enter") {
-                    e.preventDefault(); // 阻止任何默认行为（如换行或表单提交）
+                  // 组合态(IME 选字)的 Enter 不拦:中文输入法敲拼音再按 Enter 确认候选
+                  // 时,拦截会把拼音原样当搜索词提交。isComposing 是标准属性,老浏览器
+                  // (Safari <10.1)可用 keyCode 229 兜底,但项目基线浏览器均已支持。
+                  if (e.key === "Enter" && !e.nativeEvent.isComposing) {
+                    e.preventDefault(); // 阻止任何默认行为(如换行或表单提交)
                     handleSearch(); // 直接复用点击搜索的逻辑
                   }
                 }}

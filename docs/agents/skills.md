@@ -13,6 +13,7 @@
 | `adversarial-review` | **不采用外部 skill**（2026-09-16 裁决） | runbook §5 的「异构双审」用本仓 subagent 实现：两个只读子代理分别走 Claude / Codex 路由审同一份 diff，主会话合并。候选的 [localSummer/skills](https://github.com/localSummer/skills) 同名实现是 Bug-finder / Defender / Referee 三角色对抗审 `target_path`，与「异构双模型审 diff」语义不同，未采用。`[SKILL-REF]` 门禁：入口文件不得要求执行本表标「缺失」的 skill |
 | mattpocock 系列（`to-tickets` `triage` `to-spec` `wayfinder` `domain-modeling` `handoff` 等） | 已装〔实测 2026-09-16：`~/.agents/skills`、`~/.claude/skills`〕 | 读取 `docs/agents/{issue-tracker,triage-labels,domain}.md`；交接内容契约见 `context/harness-framework/handoff-format.md` |
 | `archify` | 当前 DSH Skill 目录已可见 | 无需为当前 DSH 重复安装；Claude/Codex 是否要独立安装按使用场景决定，上游 [tt-a1i/archify](https://github.com/tt-a1i/archify) |
+| `modern-web-guidance` | 已装〔实测 2026-11-13：`~/.agents/skills/modern-web-guidance`（210 篇指南），由 `npx modern-web-guidance@latest` 包内 skill 目录复制（交互式 wizard 在非交互终端跑不了）〕 | Chrome/Edge/Firefox/MDN 团队的现代 Web 平台特性指南；CLI 另有 `search` / `retrieve` / `legacy-scan`（`npx modern-web-guidance@latest <cmd>`，legacy-scan 只覆盖约 20% 确定性规则）。2026-11-13 用它指导 consumer/consumer-next 现代化：IME 安全回车、View Transitions、scroll-driven animations。上游 [GoogleChrome/modern-web-guidance](https://github.com/GoogleChrome/modern-web-guidance) |
 
 DSH 默认扫描项目 `.dsh/skills`、`.agents/skills` 和用户 `~/.dsh/skills`、`~/.agents/skills` 等来源；不要假设只装到 `~/.claude/skills` 就一定能被 DSH 发现。安装后新建会话，确认 Skill 目录出现且能加载，再更新本页状态。
 

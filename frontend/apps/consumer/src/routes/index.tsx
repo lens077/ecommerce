@@ -20,7 +20,6 @@
  */
 
 import { createFileRoute, Link } from "@tanstack/react-router";
-import { useEffect, useRef, useState } from "react";
 import { Box, Container, Typography } from "@mui/material";
 import { useTranslation } from "@ecommerce/i18n";
 import { lantern, sp } from "@/styles/tokens";
@@ -45,28 +44,9 @@ function HomePage() {
   const products: DemoProduct[] = demoProducts;
   const isLoading = false;
 
-  // 点灯时机:灯阵进入视口才次第亮起(否则动画在折叠线下无人看见时就放完了)。
-  // 不支持 IntersectionObserver 时直接点亮,永不隐形。
-  const gridRef = useRef<HTMLDivElement>(null);
-  const [lit, setLit] = useState(false);
-  useEffect(() => {
-    const el = gridRef.current;
-    if (!el || typeof IntersectionObserver === "undefined") {
-      setLit(true);
-      return;
-    }
-    const ob = new IntersectionObserver(
-      (entries) => {
-        if (entries.some((e) => e.isIntersecting)) {
-          setLit(true);
-          ob.disconnect();
-        }
-      },
-      { rootMargin: "0px 0px -12% 0px" },
-    );
-    ob.observe(el);
-    return () => ob.disconnect();
-  }, []);
+  // 点灯时机已从 IntersectionObserver 状态位改为 CSS scroll-driven animation
+  // (见 index.css):每张卡随各自进入视口点亮,零 JS,不存在「动画在折叠线下
+  // 提前放完」的问题;不支持的浏览器保持亮态基线,永不隐形。
 
   return (
     <Box className="lantern-page" sx={{ minHeight: "100vh", color: lantern.ink }}>
@@ -299,8 +279,6 @@ function HomePage() {
             </Box>
           ) : (
             <Box
-              ref={gridRef}
-              className={lit ? "lantern-grid-lit" : undefined}
               sx={{
                 display: "grid",
                 gridTemplateColumns: {
@@ -311,8 +289,8 @@ function HomePage() {
                 gap: { xs: sp[3], md: sp[4] },
               }}
             >
-              {products.map((p, i) => (
-                <LanternCard key={p.spuId} product={p} index={i} />
+              {products.map((p) => (
+                <LanternCard key={p.spuId} product={p} />
               ))}
             </Box>
           )}
@@ -362,8 +340,8 @@ function PriceInk({ price, size = "md" }: { price: number; size?: "md" | "lg" })
   );
 }
 
-/** 纸灯商品卡:入场次第点亮(--i),hover 透光 */
-function LanternCard({ product, index }: { product: DemoProduct; index: number }) {
+/** 纸灯商品卡:入场点亮见 index.css(scroll-driven animation),hover 透光 */
+function LanternCard({ product }: { product: DemoProduct }) {
   return (
     <Link
       to="/product/$spuCode"
@@ -372,7 +350,6 @@ function LanternCard({ product, index }: { product: DemoProduct; index: number }
     >
       <Box
         className="lantern-card"
-        style={{ "--i": index } as React.CSSProperties}
         sx={{
           display: "flex",
           flexDirection: "column",
@@ -404,6 +381,7 @@ function LanternCard({ product, index }: { product: DemoProduct; index: number }
               lineHeight: 1.5,
               display: "-webkit-box",
               WebkitLineClamp: 2,
+              lineClamp: 2, // 标准属性,晚于 -webkit 声明以覆盖支持的浏览器
               WebkitBoxOrient: "vertical",
               overflow: "hidden",
               minHeight: "2.85em",
