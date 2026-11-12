@@ -81,11 +81,11 @@
 
 <header>
   <h1>Harness 通用化：进度总账</h1>
-  <p class="meta">2026-11-12 · 分支 <code>harness/generic-kit</code> · 六仓 kit 均为 0.3.2 · 全部未 push、未合并主分支</p>
+  <p class="meta">2026-11-12 · 分支 <code>harness/generic-kit</code> · ecommerce kit 0.3.3，其余五仓 0.3.2（待重新同步） · 全部未 push、未合并主分支</p>
   <p class="lede">这份文档只回答四件事：计划做到哪了、证据是什么、你该怎么验收、还有什么需要你拍板。
     决策的备选与理由在 <code>decisions.html</code>，这里只汇总，不重复论证。</p>
   <div class="facts">
-    <div class="fact"><b>6</b><span>仓库已到 0.3.2</span></div>
+    <div class="fact"><b>5 + 1</b><span>五仓 0.3.2 / ecommerce 0.3.3</span></div>
     <div class="fact"><b>0</b><span>已 push / 已合并</span></div>
     <div class="fact"><b>18</b><span>ecommerce tag 已收敛</span></div>
     <div class="fact"><b>6</b><span>待你拍板的事项</span></div>
@@ -125,16 +125,25 @@
   <tr>
     <td>给五个仓库接入</td><td class="ok">已完成</td>
     <td>ToDo、palcommerce、Libra、Scorpius、LyraPass 均在 <code>harness/kit-onboarding</code> 分支接入；
-      当前 kit 全部为 0.3.2，doctor / check / canary 全过（耗时见第二节）。</td>
+      五仓接入时均为 0.3.2，doctor / check / canary 全过（耗时见第二节）；ecommerce 的 kit 源已到 0.3.3，
+      五仓尚未重新同步。</td>
   </tr>
   <tr>
-    <td>0.3.0 → 0.3.2 三次修补</td><td class="ok">已完成</td>
+    <td>0.3.0 → 0.3.3 四次修补</td><td class="ok">已完成</td>
     <td>0.3.0 通用化初版；0.3.1 逗号多段行号、canary 模板复用 + 并行、CI 分档；
-      0.3.2 PATH-REF 把逐 token <code>sed</code> 合并为每文件一次。</td>
+      0.3.2 PATH-REF 把逐 token <code>sed</code> 合并为每文件一次；
+      0.3.3 修 EVIDENCE 在 mawk 下静默失效（非 COW 容器实测发现）。</td>
   </tr>
   <tr>
     <td>验收页</td><td class="ok">已完成</td>
     <td><code>decisions.html</code> 的「最终验收（0.3.2）」已重写；本页是独立的进度总账。</td>
+  </tr>
+  <tr>
+    <td>非 COW 文件系统实测</td><td class="ok">已完成</td>
+    <td>Docker 29.9.3 / Debian 12 / ext4 named volume：<code>cp --reflink=always</code> 报
+      <code>Operation not supported</code>，<code>bash -x</code> trace 显示实际执行 <code>cp -al</code>，
+      <code>probe-isolation</code> 报「源码树硬链接复用」。19 探针首次 42s 跑出 EVIDENCE 缺陷，修后 44s 绿；
+      23 探针新仓 13s 绿。详见第二节「非 COW 实测（0.3.3）」。</td>
   </tr>
 </table>
 
@@ -172,9 +181,9 @@
     <td>共 34 个复选框（19 未勾、15 已勾），需要你确认哪些落地、哪些转 TODO。</td>
   </tr>
   <tr>
-    <td>无 COW 文件系统的硬链接分支实测</td><td class="part">部分完成</td>
-    <td>本机 APFS 走写时复制克隆分支；硬链接分支只由 <code>probe-isolation</code> 自检覆盖，
-      尚未在 Linux / 非 COW 文件系统上实跑。</td>
+    <td>其余五仓重新同步 0.3.3</td><td class="no">未做</td>
+    <td>本轮只改 ecommerce 的 kit 源；ToDo / palcommerce / Libra / Scorpius / LyraPass 仍是 0.3.2。
+      需按 onboarding 替换目录、跑 <code>lock</code>，再各跑一次三条命令。</td>
   </tr>
 </table>
 
@@ -183,15 +192,17 @@
 <h3>六仓最终状态</h3>
 <table>
   <tr>
-    <th>仓库</th><th>分支</th><th>基点</th><th>kit 0.3.2 提交 / 当前 HEAD</th>
+    <th>仓库</th><th>分支</th><th>基点</th><th>kit 提交 / 当前 HEAD</th>
     <th>验证结果（耗时 / 负载）</th>
   </tr>
   <tr>
     <td>ecommerce（本仓）</td>
     <td><code>harness/generic-kit</code></td>
     <td><code>06bf0a54</code></td>
-    <td>kit <code>40dc8c45</code>；另有验收页提交 <code>e4fa10fb</code>，本报告再加一个 docs 提交</td>
-    <td>kit check 17/17，21.03s；kit canary 19 探针，146.12s（非空载，load≈6–18）。
+    <td>0.3.2 <code>40dc8c45</code> → 0.3.3 <code>7c2eaa4f</code>；另有验收页提交 <code>e4fa10fb</code>，
+      本报告再加一个 docs 提交</td>
+    <td>0.3.3 kit check 17/17；kit canary 19 探针，macOS APFS 写时复制分支 278s（本轮未记录 load，
+      不能与 0.3.2 空载 145.08s 直接比较）。非 COW 容器内：19 探针 44s、新仓 23 探针 13s。
       另三套门禁：verify-context 17/17、verify-context-canary 47 探针、verify-quick 全绿</td>
   </tr>
   <tr>
@@ -272,7 +283,58 @@
     <td>init / doctor / check 16/16 / canary 23 探针全过</td>
     <td><code>/tmp/harness-kit-032</code>，包含 <code>path-ref-line-forms</code> 与 <code>path-ref-fork-count</code></td>
   </tr>
+  <tr>
+    <td>0.3.3 非 COW 首次跑</td>
+    <td>19 探针 42s，<code>verify-canary: FAIL</code>：<code>mut-EVIDENCE</code> 期望 rc=1、实得 rc=0</td>
+    <td>Debian 12 / ext4 named volume / mawk；缺陷在 EVIDENCE 的 awk 区间量词，不在硬链接本身</td>
+  </tr>
+  <tr>
+    <td>0.3.3 修复后</td>
+    <td>ecommerce 19 探针 44s；新仓 23 探针 13s；两次均 <code>verify-canary: OK</code></td>
+    <td>同一容器；含 <code>probe-isolation</code>、<code>path-ref-fork-count</code>、<code>template-mirror</code></td>
+  </tr>
 </table>
+
+<h3>非 COW 实测（0.3.3）</h3>
+<table>
+  <tr><th style="width:24%">检查</th><th>证据</th></tr>
+  <tr>
+    <td>文件系统确实不支持写时复制</td>
+    <td><code>stat -f -c %T /work</code> → <code>ext2/ext3</code>（ext4 族）；
+      <code>cp --reflink=always</code> → <code>failed to clone ...: Operation not supported</code>；
+      GNU <code>cp -cR</code> → <code>invalid option -- 'c'</code>，因此 kit 退到下一档。</td>
+  </tr>
+  <tr>
+    <td>实际进入硬链接分支</td>
+    <td><code>bash -x</code> trace：<code>+ cp -al .../template/. .../clean-template/</code>；
+      <code>probe-isolation</code> 输出「源码树硬链接复用」。不是只看「跑绿了」。</td>
+  </tr>
+  <tr>
+    <td>硬链接与断链落点</td>
+    <td><code>template/backend/go.mod</code> 与两个沙箱同名文件 inode 相同、链接数 21；
+      <code>AGENTS.md</code>、<code>harness.config.sh</code>、<code>context/team/INDEX.md</code>、
+      <code>.git/index</code> 在模板与各沙箱 inode 各不相同、链接数 1。</td>
+  </tr>
+  <tr>
+    <td>原地写是否污染模板</td>
+    <td>跑完 <code>git -C template status --porcelain</code> 为 0 行；<code>canary-isolation</code>
+      只出现在 <code>aux-isolation</code> 沙箱，模板与其他 mutation 沙箱都没有。</td>
+  </tr>
+  <tr>
+    <td>git 是否跨沙箱串味</td>
+    <td>各沙箱 <code>.git/index</code> 独立；在一个沙箱里 <code>git commit</code> 后，
+      模板与另一个沙箱的 <code>HEAD</code>、<code>git log</code> 都不变。</td>
+  </tr>
+  <tr>
+    <td>并行是否互踩</td>
+    <td>探针 4 个一批并行，19/23 全过；<code>mut-DEAD-LINK</code> 与 <code>mut-FORMAT</code> 的
+      <code>git status</code> 各自只含自己的改动。</td>
+  </tr>
+</table>
+<p class="muted">容器是 Docker Desktop 的 linux/arm64 Linux VM，不是 GitHub runner 本身；
+  ext4 与 runner 相同，但内核、IO、缓存和资源限制不同。容器里还显式装了 <code>perl</code> 以提供
+  <code>shasum</code>（GitHub ubuntu runner 自带，最小镜像不一定有）。因此这次只消掉了
+  「硬链接分支未实测」的不确定性，不等于「CI 首次真实 runner 已验证」，后者仍在第四节。</p>
 
 <div class="note">
   <b>耗时怎么读</b>
@@ -328,14 +390,15 @@ bash harness/bin/harness canary</code></pre>
 <table>
   <tr><th style="width:20%">命令</th><th>看什么</th></tr>
   <tr><td><code>doctor</code></td>
-    <td>首行有 <code>kit=0.3.2</code>；出现 <code>✓ harness.lock 与 kit 一致</code>；退出码 0。
-      若报 drift，说明该仓 kit 被本地改过。</td></tr>
+    <td>首行有 <code>kit=0.3.3</code>（ecommerce）或 <code>kit=0.3.2</code>（其余五仓，尚未重新同步）；
+      出现 <code>✓ harness.lock 与 kit 一致</code>；退出码 0。若报 drift，说明该仓 kit 被本地改过。</td></tr>
   <tr><td><code>check</code></td>
     <td>最后一行形如 <code>harness: 16/16 项通过（OK）</code>（ecommerce 是 17/17）；
       中间每个 tag 都是 <code>✓</code>。</td></tr>
   <tr><td><code>canary</code></td>
     <td>最后两行形如 <code>canary 耗时：模板 Ns，总计 Ns（...）</code> 与
-      <code>verify-canary: OK（N 探针全过：干净沙箱绿 + 各类注错被拦且 tag 正确）</code>。</td></tr>
+      <code>verify-canary: OK（N 探针全过：干净沙箱绿 + 各类注错被拦且 tag 正确）</code>。
+      macOS/APFS 会走 <code>cp -cR</code>；Linux/ext4 会走 <code>cp -al</code>，两条分支都应绿。</td></tr>
 </table>
 
 <h3>3. 怎么看分支与提交</h3>
@@ -361,6 +424,9 @@ git reset --hard &lt;基点&gt;
 # 只回退 kit，保留业务改动
 git show --stat &lt;kit 提交&gt;     # 先确认它只碰 harness/ 与 harness.lock
 git revert &lt;kit 提交&gt;
+
+# 只回退 0.3.3（ecommerce），保留 0.3.2 接入
+git revert 7c2eaa4f            # ecommerce 的 0.3.3 kit 提交
 
 # 只回退 0.3.2、保留 0.3.0 / 0.3.1 接入
 git revert 40dc8c45           # ecommerce
@@ -389,6 +455,7 @@ git revert 7701167 6a2b576</code></pre>
       <li>gitleaks 默认 <code>required</code>；PATH-REF 只认真实顶层目录、跳过 glob（D15–D16）</li>
       <li>先自测绿再写适配文档，自测在 <code>/tmp</code>（D17–D18）</li>
       <li>0.3.1：逗号行号、canary 复用 + 并行、CI 分档；0.3.2：PATH-REF 合并 sed（D21–D22）</li>
+      <li>0.3.3：EVIDENCE 弃用 awk 区间量词，修 mawk/Linux 静默失效；非 COW 实测后按 patch 发布</li>
     </ul>
   </div>
 
@@ -415,6 +482,8 @@ git revert 7701167 6a2b576</code></pre>
       <li>直接 push 默认分支：一次跑全量，但失败会影响主分支。</li>
       <li>暂不验证：模板保持「未在真实 runner 跑过」的状态。</li>
     </ul>
+    <p class="muted">本轮已在 Linux ext4 容器里跑过完整 canary，硬链接分支不再是空白；
+      但容器不是 runner，首次真实执行仍需单独确认。</p>
 
     <p><b>4. <code>.gitleaks.toml</code> 放行条目</b></p>
     <ul>
@@ -440,7 +509,8 @@ git revert 7701167 6a2b576</code></pre>
 </div>
 
 <footer>
-  <p>生成于 2026-11-12 · 单文件、无外部依赖 · 决策与逐条论证见同目录 <code>decisions.html</code> ·
+  <p>生成于 2026-11-12 · kit 0.3.3 · 单文件、无外部依赖 · 决策与逐条论证见同目录
+    <code>decisions.html</code>（保持 0.3.2 验收存档，未随本页改写）·
     新项目接入见 <code>../../../harness-kit/docs/onboarding.md</code></p>
 </footer>
 
