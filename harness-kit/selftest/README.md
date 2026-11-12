@@ -1,10 +1,67 @@
-# 自测记录（2026-11-12 实跑，kit 0.3.0）
+# 自测记录（2026-11-12 实跑，kit 0.3.1）
 
 目标：证明 kit「新项目接入即绿」，并且「注错必红」。以下命令均为实际执行，不是设想。
 
 环境：macOS，`/bin/bash` 3.2（系统自带，不是 Homebrew bash 5），Python 3，gitleaks 8.30.1。
 新检查全部按 macOS 自带 bash 验证过——`case` 的模式 `)` 会提前结束 `$( )`，
 heredoc 里裸写三个反引号会被当成命令替换，这两处都踩过并已修。
+
+## 0. 0.3.1 收尾版
+
+### 0.1 PATH-REF 逗号多段行号（修前红、修后绿）
+
+同一份文档 `AGENTS.md` 写两段引用：
+
+```text
+切片 `docs/subsystems/core.md:1149-1164,1196-1223` 与 `src/foo.rs:984-993,1003-1007`。
+```
+
+0.3.0 的 kit（`git archive b93ecfdb`）跑 `check`：
+
+```
+❌ [PATH-REF] 正文反引号里写的仓库路径必须存在（链接检查看不到这一类） (0s)
+  ✗ [PATH-REF] AGENTS.md → `docs/subsystems/core.md:1149-1164,1196-1223` 不存在
+  ✗ [PATH-REF] AGENTS.md → `src/foo.rs:984-993,1003-1007` 不存在
+harness: 0/1 项通过（FAIL）
+```
+
+0.3.1 跑同一份仓库：
+
+```
+✅ [PATH-REF] 正文反引号里写的仓库路径必须存在（链接检查看不到这一类） (1s)
+harness: 1/1 项通过（OK）
+```
+
+kit 的 canary 把这条固定成 `selfcheck path-ref-comma-ranges`，以后改剥离逻辑会当场红。
+
+### 0.2 canary 成本（实测，不是估算）
+
+同一台机器、同一批探针、`/usr/bin/time -p`：
+
+| 仓库 | 0.3.0 | 0.3.1 | 0.3.1 内部分段 |
+| --- | --- | --- | --- |
+| ToDo（561 个已跟踪文件，23 探针） | 338.51s | 139.35s | 模板 2s；各探针沙箱合计 22s；门禁合计 426s（并行 CPU 时间） |
+| ecommerce（1794 个已跟踪文件，19 探针） | 384.88s | 145.08s | 模板 3s；各探针沙箱合计 29s；门禁合计 388s |
+
+改动是两半：
+
+1. 模板只建一次；探针沙箱优先 `cp -cR` 写时复制克隆，无 COW 的文件系统退回
+   `cp -al` 整树硬链接（可变路径断开硬链接换成真拷贝），再不行才 `cp -R`。
+2. 探针彼此独立，按 4 个一批并行；每个探针仍完整跑一遍门禁，断言一条不少。
+
+分段数据也说明：APFS 上复制本来只占十几秒，5–6 分钟的大头是串行跑门禁。
+并行才是墙钟从约 6 分钟降到约 2 分钟的原因。
+
+### 0.3 canary 自身的新自检
+
+```
+  ✓ selfcheck template-mirror: 已跟踪文件树完整
+  ✓ selfcheck probe-isolation: 注错只落在自己的沙箱（写时复制克隆）
+  ✓ selfcheck path-ref-comma-ranges: 逗号多段行号放行
+```
+
+`probe-isolation` 往沙箱里的 `AGENTS.md` 追加一行，断言模板摘要不变、沙箱确实写进去了；
+走硬链接路径时会额外报告「源码树硬链接复用」，走整树复制时报告「整树复制」。
 
 ## 1. 新项目接入（0.3.0）
 
@@ -28,7 +85,7 @@ harness: 16/16 项通过（OK）        # check RC=0
 启用检查为 `DEAD-LINK PATH-REF FRONTMATTER AFFECTS ORPHAN INDEX-LINE FORMAT EVIDENCE
 BUDGET RETIRED SKILL-REF PROGRESS-SRC DOC-SYNC SELFCHECK PUBLIC-IP SECRETS`。
 
-## 2. canary（门禁的门禁）
+## 2. canary（门禁的门禁，0.3.0 输出；0.3.1 见第 0 节）
 
 ```bash
 /bin/bash harness/bin/harness canary
@@ -118,4 +175,5 @@ git config core.hooksPath
 
 - GitHub Actions / GitLab Runner 上的实际执行（模板只做静态校对，未在远端跑过）。
 - Windows（kit 只承诺 POSIX bash + Python 标准库）。
-- 大规模仓库（万级文件）的耗时：未做性能测试，`h_md_files` 用 find，无索引。
+- 无 COW 文件系统（Linux ext4、部分容器卷）上的 canary 硬链接路径与耗时：
+  本机是 APFS，实际走的是 `cp -cR` 克隆分支；硬链接分支只有 `probe-isolation` 的逻辑覆盖。

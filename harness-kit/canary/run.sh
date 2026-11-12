@@ -25,6 +25,11 @@ trap 'rm -rf "$workdir"' EXIT
 
 fails=0
 probes=0
+# 分段计时：canary 的耗时由「建模板 + 探针沙箱 + 跑门禁」三块构成，
+# 只报总时长无法判断优化打中了哪一块。探针并行后，沙箱/门禁按探针相加报。
+t_start=$SECONDS
+tpl_secs=0
+materialize_mode=""
 
 build_template() {
   local sb="$workdir/template" p
@@ -92,10 +97,47 @@ copy_external() { # copy_external <sandbox>
   done
 }
 
-clone_dir() { # clone_dir <src> <dst>（macOS 用 APFS 克隆，其余平台退回整拷贝）
-  if cp -cR "$1" "$2" 2>/dev/null; then return 0; fi
-  rm -rf "$2"
-  cp -R "$1" "$2"
+# 无写时复制能力的文件系统会走整树硬链接。探针会用 >> / cat > 原地写的路径
+# 必须真拷贝：否则一次 append 会同时改到模板与其它探针的视图。
+# 源码树是只读的，复用硬链接即可。
+PROBE_MUTABLE_PATHS=".git .gitleaks.toml harness.config.sh baselines AGENTS.md context docs"
+
+materialize_sandbox() { # materialize_sandbox <dst>：从模板廉价产出互不污染的探针沙箱
+  local dst="$1" p seen=" "
+  rm -rf "$dst"
+  # 1) 写时复制克隆（APFS/ReFS）：探针天然隔离，且比逐文件硬链接便宜
+  #    （本机 1794 个已跟踪文件实测 0.85s vs 1.59s；硬链接仍要 lstat/link 每个文件）。
+  if cp -cR "$workdir/template" "$dst" 2>/dev/null; then
+    materialize_mode=clone
+    return 0
+  fi
+  # 2) 无 COW 的文件系统：整树硬链接（不复制文件数据），再断开可变路径。
+  rm -rf "$dst"
+  mkdir -p "$dst"
+  if cp -al "$workdir/template/." "$dst/" 2>/dev/null; then
+    # 探针会用 >> / cat > 原地写的路径。整树硬链接时一次 append 会同时改到
+    # 模板和其它探针的视图，所以这些路径必须换成真拷贝。源码树是只读的，复用硬链接。
+    # 扫描根也一并断开——宿主可能把探针写到的文件（如 context/INDEX.md）配成扫描根。
+    for p in $PROBE_MUTABLE_PATHS $HARNESS_DOC_ROOTS; do
+      # `.` 会把 `rm -rf "$dst/."` 变成清空整个沙箱；仓库根本身不该进可变清单。
+      case "$p" in ''|.|'./'|..) continue ;; esac
+      case "$seen" in *" $p "*) continue ;; esac
+      seen="$seen$p "
+      [ -e "$workdir/template/$p" ] || continue
+      rm -rf "$dst/$p"
+      if [ -d "$workdir/template/$p" ]; then
+        cp -R "$workdir/template/$p" "$dst/$p"
+      else
+        cp "$workdir/template/$p" "$dst/$p"
+      fi
+    done
+    materialize_mode=link
+    return 0
+  fi
+  # 3) 最后退回整树复制。
+  rm -rf "$dst"
+  cp -R "$workdir/template" "$dst"
+  materialize_mode=copy
 }
 
 run_gate() { # run_gate <sandbox> → 输出，rc 通过全局 RC 返回
@@ -110,24 +152,72 @@ run_gate() { # run_gate <sandbox> → 输出，rc 通过全局 RC 返回
         bash "$sb/harness/bin/harness" check 2>&1) || RC=$?
 }
 
-probe() { # probe <名称> <期望rc> <期望tag|空> <注错脚本|空>
-  local name="$1" want_rc="$2" want_tag="$3" mutate="${4:-}" sb
-  probes=$((probes + 1))
+probe_to() { # probe_to <名称> <期望rc> <期望tag|空> <注错脚本|-> <结果文件>
+  local name="$1" want_rc="$2" want_tag="$3" mutate="$4" rf="$5" sb
+  local t0=$SECONDS t1 t2
   sb="$workdir/$name"
-  clone_dir "$workdir/template" "$sb"
-  if [ -n "$mutate" ]; then
-    bash "$mutate" "$sb" || { printf '  ✗ %s: 注错脚本失败\n' "$name"; fails=$((fails + 1)); return; }
+  mkdir -p "$(dirname "$rf")"
+  materialize_sandbox "$sb"
+  t1=$SECONDS
+  if [ -n "$mutate" ] && [ "$mutate" != "-" ]; then
+    if ! bash "$mutate" "$sb" >/dev/null 2>&1; then
+      printf '  ✗ %s: 注错脚本失败\n' "$name" > "$rf"
+      printf '0\n' > "$rf.rc"
+      printf '%s\t%s\n' "$((t1 - t0))" 0 > "$rf.timing"
+      return 0
+    fi
   fi
   run_gate "$sb"
+  t2=$SECONDS
+  printf '%s\t%s\n' "$((t1 - t0))" "$((t2 - t1))" > "$rf.timing"
   if [ "$RC" != "$want_rc" ]; then
-    printf '  ✗ %s: 期望 rc=%s，实得 rc=%s\n%s\n' "$name" "$want_rc" "$RC" "$OUT"
-    fails=$((fails + 1))
+    printf '  ✗ %s: 期望 rc=%s，实得 rc=%s\n%s\n' "$name" "$want_rc" "$RC" "$OUT" > "$rf"
+    printf '0\n' > "$rf.rc"
   elif [ "$want_rc" = 1 ] && ! printf '%s' "$OUT" | grep -qF "[$want_tag]"; then
-    printf '  ✗ %s: rc=1 但输出缺 [%s]\n%s\n' "$name" "$want_tag" "$OUT"
-    fails=$((fails + 1))
+    printf '  ✗ %s: rc=1 但输出缺 [%s]\n%s\n' "$name" "$want_tag" "$OUT" > "$rf"
+    printf '0\n' > "$rf.rc"
   else
-    printf '  ✓ %s\n' "$name"
+    printf '  ✓ %s\n' "$name" > "$rf"
+    printf '1\n' > "$rf.rc"
   fi
+}
+
+probe() { # 顺序跑单个探针（clean-template 用；其余走队列并行）
+  local name="$1" rf="$workdir/results/$1.out"
+  probes=$((probes + 1))
+  mkdir -p "$workdir/results"
+  probe_to "$name" "$2" "$3" "${4:--}" "$rf"
+  cat "$rf"
+  [ "$(cat "$rf.rc")" = 1 ] || fails=$((fails + 1))
+}
+
+queue_probe() { # queue_probe <名称> <期望rc> <期望tag|空> <注错脚本|空>
+  printf '%s\t%s\t%s\t%s\n' "$1" "$2" "$3" "${4:--}" >> "$workdir/queue"
+}
+
+# 探针彼此独立（各自一份沙箱），顺序执行只是白等门禁。按批并行能把墙钟压到
+# 「一批 × 单个探针」，断言一条不少。批大小固定 4，避免把开发机打满。
+run_queue() {
+  local max=4 total idx=0 end i name want_rc want_tag mutate rf
+  [ -f "$workdir/queue" ] || return 0
+  total=$(grep -c . "$workdir/queue" || true)
+  mkdir -p "$workdir/results"
+  while [ "$idx" -lt "$total" ]; do
+    end=$((idx + max))
+    [ "$end" -gt "$total" ] && end=$total
+    for i in $(seq $((idx + 1)) "$end"); do
+      IFS=$'\t' read -r name want_rc want_tag mutate < <(sed -n "${i}p" "$workdir/queue")
+      probe_to "$name" "$want_rc" "$want_tag" "$mutate" "$workdir/results/$name.out" &
+    done
+    wait
+    for i in $(seq $((idx + 1)) "$end"); do
+      IFS=$'\t' read -r name want_rc want_tag mutate < <(sed -n "${i}p" "$workdir/queue")
+      probes=$((probes + 1))
+      cat "$workdir/results/$name.out"
+      [ "$(cat "$workdir/results/$name.out.rc")" = 1 ] || fails=$((fails + 1))
+    done
+    idx=$end
+  done
 }
 
 # ── canary 自身回归：这些修法在沙箱构建阶段，探针（模板之后注错）覆盖不到 ──
@@ -174,6 +264,30 @@ check_template_mirror() {
     fails=$((fails + 1)); return
   fi
   printf '  ✓ selfcheck template-mirror: 已跟踪文件树完整\n'
+}
+
+check_probe_isolation() {
+  local sb="$workdir/aux-isolation" before after
+  if [ ! -f "$workdir/template/AGENTS.md" ]; then
+    printf '  · selfcheck probe-isolation: 模板无 AGENTS.md，跳过\n'; return
+  fi
+  materialize_sandbox "$sb"
+  before=$(shasum -a 256 "$workdir/template/AGENTS.md" | cut -d' ' -f1)
+  printf '\ncanary-isolation\n' >> "$sb/AGENTS.md"
+  after=$(shasum -a 256 "$workdir/template/AGENTS.md" | cut -d' ' -f1)
+  if ! grep -q 'canary-isolation' "$sb/AGENTS.md"; then
+    printf '  ✗ selfcheck probe-isolation: 注错没写进沙箱（隔离结论无效）\n'
+    fails=$((fails + 1)); return
+  fi
+  if [ "$before" != "$after" ]; then
+    printf '  ✗ selfcheck probe-isolation: 沙箱注错改到了模板（硬链接未断开）\n'
+    fails=$((fails + 1)); return
+  fi
+  case "$materialize_mode" in
+    link) printf '  ✓ selfcheck probe-isolation: 注错只落在自己的沙箱（源码树硬链接复用）\n' ;;
+    clone) printf '  ✓ selfcheck probe-isolation: 注错只落在自己的沙箱（写时复制克隆）\n' ;;
+    *) printf '  ✓ selfcheck probe-isolation: 注错只落在自己的沙箱（整树复制）\n' ;;
+  esac
 }
 
 check_gitleaks_copy() {
@@ -232,6 +346,24 @@ check_path_ref_patterns() {
   printf '  ✓ selfcheck path-ref-patterns: 通配与 path:line 放行、真缺失仍红\n'
 }
 
+check_path_ref_comma_ranges() {
+  local aux="$workdir/aux-pathref-comma"
+  mkdir -p "$aux/harness" "$aux/docs/subsystems" "$aux/src"
+  cp -R "$KIT_ROOT/." "$aux/harness/"
+  write_min_config "$aux" "path-ref"
+  printf '# readme\n\n正文\n' > "$aux/docs/subsystems/core.md"
+  printf '# foo\n' > "$aux/src/foo.rs"
+  # 0.3.0 只剥单段行号，逗号多段会整串当一个文件名判、误报不存在。
+  printf '# 文档\n\n切片 `docs/subsystems/core.md:1149-1164,1196-1223` 与 `src/foo.rs:984-993,1003-1007`。\n' \
+    > "$aux/AGENTS.md"
+  run_gate "$aux"
+  if [ "$RC" -ne 0 ]; then
+    printf '  ✗ selfcheck path-ref-comma-ranges: 逗号多段行号被误报 rc=%s\n%s\n' "$RC" "$OUT"
+    fails=$((fails + 1)); return
+  fi
+  printf '  ✓ selfcheck path-ref-comma-ranges: 逗号多段行号放行\n'
+}
+
 check_secrets_allowlist() {
   local aux="$workdir/aux-secrets"
   mkdir -p "$aux/harness" "$aux/fixtures"
@@ -274,14 +406,18 @@ check_skill_ref_probe_config() {
 }
 
 echo "canary: 构建模板沙箱"
+t0=$SECONDS
 build_template
+tpl_secs=$((SECONDS - t0))
 probe "clean-template" 0 ""
 check_hook_git_dir
 check_template_mirror
+check_probe_isolation
 check_gitleaks_copy
 check_single_file_doc_root
 check_external_paths
 check_path_ref_patterns
+check_path_ref_comma_ranges
 check_secrets_allowlist
 check_skill_ref_probe_config
 
@@ -293,7 +429,7 @@ for f in "$KIT_ROOT"/checks/*.sh; do
   h_check_enabled "$id" "$tag" || continue
   declared_tags="${declared_tags}${tag}"$'\n'
   if [ -f "$KIT_ROOT/canary/probes/$tag.sh" ]; then
-    probe "mut-$tag" 1 "$tag" "$KIT_ROOT/canary/probes/$tag.sh"
+    queue_probe "mut-$tag" 1 "$tag" "$KIT_ROOT/canary/probes/$tag.sh"
   fi
 done
 
@@ -303,8 +439,9 @@ done
 POSITIVE_TAGS="AFFECTS INDEX-LINE FORMAT EVIDENCE RETIRED SELFCHECK"
 for tag in $POSITIVE_TAGS; do
   [ -f "$KIT_ROOT/canary/positives/$tag.sh" ] && \
-    probe "ok-$tag" 0 "" "$KIT_ROOT/canary/positives/$tag.sh"
+    queue_probe "ok-$tag" 0 "" "$KIT_ROOT/canary/positives/$tag.sh"
 done
+run_queue
 
 # ── 元断言：tag ↔ 探针双向覆盖 ────────────────────────────────────
 missing=""
@@ -347,6 +484,14 @@ if [ -n "$stray" ]; then
 fi
 
 echo
+probe_copy=0
+probe_gate=0
+if ls "$workdir"/results/*.timing >/dev/null 2>&1; then
+  probe_copy=$(cat "$workdir"/results/*.timing | awk -F'\t' '{c += $1} END {print c + 0}')
+  probe_gate=$(cat "$workdir"/results/*.timing | awk -F'\t' '{g += $2} END {print g + 0}')
+fi
+printf 'canary 耗时：模板 %ss，总计 %ss（各探针沙箱合计 %ss，门禁合计 %ss）\n' \
+  "$tpl_secs" "$((SECONDS - t_start))" "$probe_copy" "$probe_gate"
 if [ "$fails" -gt 0 ]; then
   printf 'verify-canary: FAIL（%d 个问题，%d 个探针）\n' "$fails" "$probes"
   exit 1

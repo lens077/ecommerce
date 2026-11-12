@@ -72,12 +72,23 @@ harness/bin/harness install-hooks   # core.hooksPath -> harness/hooks
 
 ## 版本与升级
 
-当前版本 **0.3.0**（回流五个接入仓的本地补丁，见下方「0.3.0 变更」）。
+当前版本 **0.3.1**（收尾版：PATH-REF 逗号多段行号、canary 成本、CI 模板策略，见下方「0.3.1 变更」）。
 
 `harness.lock` 记录 kit 版本与每个文件的 sha256。升级方式：整目录替换后跑
 `harness/bin/harness lock` 重写 lock，再跑 `harness/bin/harness doctor`，它会报出被本地改过的文件。
 改 kit 是**新增检查**还是**改判定**，按 `docs/adaptation.md` 的「最小步骤」执行，
 并且必须补一个 canary 探针——否则 `canary` 的 meta 断言会红。
+
+### 0.3.1 变更（收尾）
+
+| 修补 | 来源 | 落点 |
+| --- | --- | --- |
+| PATH-REF 剥行号支持逗号多段（`docs/x.md:12-34,56-78` 不再当文件名） | ToDo、palcommerce | `checks/20-path-ref.sh` + canary 自检 |
+| canary 模板只建一次；沙箱优先写时复制克隆、无 COW 时硬链接复用；探针按 4 个一批并行 | 大仓 canary 5–6 分钟 | `canary/run.sh` 的 `materialize_sandbox` / `run_queue` + 隔离自检 |
+| CI 模板：PR 只跑 `doctor` + `check`，push 默认分支/打 tag 才跑 `canary` | 成本 | `ci/*.yml`、`docs/adaptation.md` |
+
+升级到 0.3.1：整目录替换 `harness/` → `harness/bin/harness lock` → `doctor` → `check` → `canary`。
+PATH-REF 的逗号多段行号不再需要基线；canary 的沙箱行为对探针透明，探针本身不用改。
 
 ### 0.3.0 变更（五仓接入补丁回流）
 

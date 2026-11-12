@@ -569,11 +569,51 @@
   </dl>
 </article>
 
+<article class="d" id="d21">
+  <h3>D21 收尾版 0.3.1：逗号行号、canary 成本、CI 时机（已决）</h3>
+  <p class="badges"><span class="badge stage">阶段 7</span><span class="badge">已决</span><span class="badge">收尾</span></p>
+  <dl>
+    <dt>背景</dt>
+    <dd>五仓全部升到 0.3.0、零本地补丁后，ToDo 与 palcommerce 报告同一类边界：
+      PATH-REF 只剥单段行号，<code>docs/subsystems/core.md:1149-1164,1196-1223</code>
+      这类逗号多段引用被整串当成文件名误报。同时大仓 canary 每个探针复制一遍已跟踪文件树，
+      ToDo 本机 5–6 分钟；CI 模板又在每个 PR 上跑 canary。</dd>
+    <dt>选择一：PATH-REF 剥逗号多段</dt>
+    <dd class="pick">把剥离正则扩成 <code>:[0-9]+(-[0-9]+)?(,[0-9]+(-[0-9]+)?)*$</code>，
+      并加 <code>path-ref-comma-ranges</code> 自检（修前红、修后绿）。</dd>
+    <dt>被推翻的备选</dt>
+    <dd>① 把所有含 <code>:</code> 的 token 一律跳过——会放过真实的「文件名 + 冒号」路径，
+      判定被削弱；② 只剥到第一个冒号——仍会留下 <code>,1196-1223</code>，误报照旧；
+      ③ 让宿主把这些引用写进基线——把 kit 的判定缺陷转成每个仓的维护债。</dd>
+    <dt>选择二：canary 模板一次、探针硬链接复用</dt>
+    <dd class="pick">模板构建一次；每个探针用 <code>cp -al</code> 整树硬链接，
+      再把探针会原地写的路径（<code>.git</code>、配置、基线、<code>AGENTS.md</code>、
+      <code>context/</code>、<code>docs/</code>、扫描根）断开硬链接换成真拷贝；
+      加 <code>probe-isolation</code> 自检验证注错不改模板。</dd>
+    <dt>被推翻的备选</dt>
+    <dd>① 每探针 <code>cp -a</code> 整拷贝——数据量不变，省不掉 I/O；
+      ② 只依赖 APFS clone（<code>cp -cR</code>）——Linux CI 与非 APFS 盘退回整拷贝，
+      等于没改；③ 所有探针共用一个沙箱、跑完清理——探针会追加内容且留下新文件，
+      清理无法保证回到干净基线，隔离性靠人守；④ 连文档树也硬链接——一次 append 会污染模板与后续探针。</dd>
+    <dt>选择三：CI 时机</dt>
+    <dd class="pick">PR/MR 只跑 <code>doctor</code> + <code>check</code>；
+      push 到默认分支（main）或打 tag 才跑 <code>canary</code>。两个平台模板同步改，
+      理由与改回方法写进 <code>docs/adaptation.md</code>。ecommerce 自己的
+      <code>scripts/verify-context.sh</code> 行为不动。</dd>
+    <dt>被推翻的备选</dt>
+    <dd>① 每个 PR 都跑 canary——成本随「探针数 × 仓库体积」增长，且探针测的是 kit 判定，
+      不是这次业务改动；② 直接删掉 canary——门禁有效性重新变成无人验证；
+      ③ 只在 nightly 跑——main 可以在门禁未被证明的情况下合入。</dd>
+    <dt>版本</dt>
+    <dd>0.3.1（patch）：一处判定缺陷修复、一处性能改造、CI 模板策略，没有新增检查语义。</dd>
+  </dl>
+</article>
+
 <div class="note">
   <b>三个待定/收敛项均已各自落成决策</b>
   <p>1）ecommerce 现有 18 个 tag 的收敛：见 <a href="#d19">D19</a>。</p>
   <p>2）gitleaks 在新项目里的默认值：见 <a href="#d15">D15</a>（已决：<code>required</code>）。</p>
-  <p>3）五仓接入补丁的回流与 0.3.0：见 <a href="#d20">D20</a>。</p>
+  <p>3）五仓接入补丁的回流与 0.3.0：见 <a href="#d20">D20</a>；收尾版 0.3.1：见 <a href="#d21">D21</a>。</p>
 </div>
 
 <h2 class="section">提交列表</h2>
@@ -593,7 +633,131 @@
     <dd>收敛提交：18 个 tag 的通用判定进 kit、专属判定留适配层，gitleaks 默认改 <code>required</code></dd>
     <dt>阶段 6</dt>
     <dd>0.3.0 提交：回流五仓接入补丁（PATH-REF、GIT_DIR、canary 沙箱、SECRETS 豁免、外部资源、SKILL-REF 探针），每项补自检</dd>
+    <dt>阶段 7</dt>
+    <dd>0.3.1 提交：PATH-REF 逗号多段行号、canary 复制复用 + 探针并行、CI 模板改「PR 只跑 doctor + check」</dd>
   </dl>
+</article>
+
+<h2 class="section">最终验收（0.3.1）</h2>
+
+<article class="d">
+  <h3>六个仓库的状态</h3>
+  <p>分支均为 <code>harness/kit-onboarding</code>（ecommerce 为 <code>harness/generic-kit</code>）。
+  基点是各仓默认分支与接入分支的 <code>merge-base</code>。五仓停在 0.3.0，
+  ecommerce 是本次 0.3.1 的提交点。</p>
+  <table style="width:100%; border-collapse:collapse; font-size:13px; margin-top:10px">
+    <tr style="text-align:left; border-bottom:1px solid var(--line)">
+      <th style="padding:6px 8px">仓库</th>
+      <th style="padding:6px 8px">分支</th>
+      <th style="padding:6px 8px">基点</th>
+      <th style="padding:6px 8px">提交</th>
+      <th style="padding:6px 8px">验证结果</th>
+    </tr>
+    <tr style="border-bottom:1px solid var(--line)">
+      <td style="padding:6px 8px">ecommerce</td>
+      <td style="padding:6px 8px"><code>harness/generic-kit</code></td>
+      <td style="padding:6px 8px"><code>06bf0a54</code></td>
+      <td style="padding:6px 8px">0.3.1 本页所在提交；0.3.0 为 <code>b93ecfdb</code></td>
+      <td style="padding:6px 8px">verify-context 17/17；verify-context-canary 47 探针；verify-quick 全绿；kit canary 19 探针 145.08s</td>
+    </tr>
+    <tr style="border-bottom:1px solid var(--line)">
+      <td style="padding:6px 8px">ToDo</td>
+      <td style="padding:6px 8px"><code>harness/kit-onboarding</code></td>
+      <td style="padding:6px 8px"><code>fa4e6de0</code></td>
+      <td style="padding:6px 8px"><code>c11336d5</code>（0.3.0）</td>
+      <td style="padding:6px 8px">doctor 0；check 16/16；canary 23 探针 338.51s（0.3.0，本机复测）</td>
+    </tr>
+    <tr style="border-bottom:1px solid var(--line)">
+      <td style="padding:6px 8px">LyraPass</td>
+      <td style="padding:6px 8px"><code>harness/kit-onboarding</code></td>
+      <td style="padding:6px 8px"><code>faa96219</code></td>
+      <td style="padding:6px 8px"><code>1ef3c3b0</code>（0.3.0）</td>
+      <td style="padding:6px 8px">doctor 0；check 16/16；canary 23 探针全过</td>
+    </tr>
+    <tr style="border-bottom:1px solid var(--line)">
+      <td style="padding:6px 8px">Libra</td>
+      <td style="padding:6px 8px"><code>harness/kit-onboarding</code></td>
+      <td style="padding:6px 8px"><code>95655118</code>（master）</td>
+      <td style="padding:6px 8px"><code>3020cb15</code>（0.3.0）</td>
+      <td style="padding:6px 8px">doctor 0；check 16/16；canary 23 探针全过</td>
+    </tr>
+    <tr style="border-bottom:1px solid var(--line)">
+      <td style="padding:6px 8px">palcommerce</td>
+      <td style="padding:6px 8px"><code>harness/kit-onboarding</code></td>
+      <td style="padding:6px 8px"><code>177699a0</code></td>
+      <td style="padding:6px 8px"><code>eb2bd04d</code>（0.3.0）</td>
+      <td style="padding:6px 8px">doctor 0；check 16/16；canary 23 探针全过</td>
+    </tr>
+    <tr>
+      <td style="padding:6px 8px">Scorpius</td>
+      <td style="padding:6px 8px"><code>harness/kit-onboarding</code></td>
+      <td style="padding:6px 8px"><code>ce53a4f7</code></td>
+      <td style="padding:6px 8px"><code>fef3a5e5</code>（0.3.0）</td>
+      <td style="padding:6px 8px">doctor 0；check 17/17；canary 23 探针全过</td>
+    </tr>
+  </table>
+</article>
+
+<article class="d">
+  <h3>我替你做的决定（0.3.1）</h3>
+  <dl>
+    <dt>PATH-REF</dt>
+    <dd>扩充剥离正则支持逗号多段，而不是把所有含 <code>:</code> 的 token 跳过、也不要求宿主写基线。
+      理由与推翻的备选见 <a href="#d21">D21</a>。</dd>
+    <dt>canary 复制</dt>
+    <dd>模板只建一次；优先写时复制克隆，无 COW 时整树硬链接并断开可变路径，最后才整树复制。
+      没有选择「每探针 cp -a」或「所有探针共用一个沙箱」。</dd>
+    <dt>canary 并行</dt>
+    <dd>探针按 4 个一批并行。实测显示复制只占十几秒、门禁占九成；只改复制无法解决 5–6 分钟。
+      并行不改变任何断言，只改墙钟。</dd>
+    <dt>CI 时机</dt>
+    <dd>PR 只跑 doctor + check，push 默认分支/打 tag 才跑 canary；两平台模板同步。
+      没有选择「每个 PR 都跑」或「删掉 canary」。</dd>
+    <dt>版本号</dt>
+    <dd>0.3.1 作为 patch：一处判定缺陷 + 性能与 CI 策略，不新增检查语义。</dd>
+  </dl>
+</article>
+
+<article class="d">
+  <h3>仍然悬着的事项与默认处理</h3>
+  <dl>
+    <dt>五仓仍停在 0.3.0</dt>
+    <dd>默认不代升级。各仓按 <code>docs/onboarding.md</code> 第 10 节整目录替换后
+      <code>harness/bin/harness lock &amp;&amp; doctor &amp;&amp; check &amp;&amp; canary</code>；升级前先确认 CI 模板是否同步。</dd>
+    <dt>无 COW 文件系统的硬链接分支未实测</dt>
+    <dd>本机是 APFS，实跑走克隆分支；硬链接分支只由 <code>probe-isolation</code> 自检覆盖。
+      默认保留，等首个 Linux CI 运行验证；若异常，把 <code>materialize_sandbox</code> 的第 1 步改成无条件跳过即可回退到克隆/复制。</dd>
+    <dt>CI 模板未在真实 runner 跑过</dt>
+    <dd>默认保持模板现状。首个 PR 观察 <code>doctor</code> 是否因 gitleaks 未安装而红；
+      若是，按仓配置 <code>HARNESS_GITLEAKS="optional"</code> 或在 runner 预装。</dd>
+    <dt><code>verify-context.sh</code> 未跟随 CI 策略</dt>
+    <dd>ecommerce 用自己的门禁脚本，默认不动；kit 的 PR/push 策略只影响 <code>ci/</code> 模板。</dd>
+    <dt>palcommerce 有未跟踪目录</dt>
+    <dd><code>dist/</code>、<code>e2e/</code>、<code>.edgeone/</code> 是本地构建产物，默认不删；
+      回退时才按需清理。</dd>
+  </dl>
+</article>
+
+<article class="d">
+  <h3>如何回退</h3>
+  <p>只退这次升级：在对应仓库执行下列命令。回退会丢弃该分支上的未推送提交，
+  执行前先确认 <code>git log --oneline &lt;基点&gt;..HEAD</code> 里只有 harness 接入提交。</p>
+  <dl>
+    <dt>ecommerce</dt>
+    <dd>只退 0.3.1：<code>git reset --hard b93ecfdb</code>；整条分支回退：<code>git reset --hard 06bf0a54</code>。
+      工作树无未跟踪产物，不需要额外删除。</dd>
+    <dt>ToDo</dt>
+    <dd><code>git reset --hard fa4e6de0</code>；kit 在仓库根的 <code>harness-kit/</code>（0.3.0 版本目录已跟踪，reset 会移除）。
+      若 reset 后仍有未跟踪的 <code>harness-kit/</code> 残留：<code>rm -rf harness-kit</code>。</dd>
+    <dt>LyraPass / Libra / Scorpius</dt>
+    <dd>基点分别是 <code>faa96219</code> / <code>95655118</code> / <code>ce53a4f7</code>，执行
+      <code>git reset --hard &lt;基点&gt;</code>；未跟踪目录为零，无需清理。</dd>
+    <dt>palcommerce</dt>
+    <dd><code>git reset --hard 177699a0</code>；未跟踪的 <code>dist/</code>、<code>e2e/</code>、<code>.edgeone/</code>
+      不是接入产物，默认保留；确认不要后再删。</dd>
+  </dl>
+  <p>回退后各仓的 <code>harness/VERSION</code> 会回到升级前；如果只想降版本、保留接入改动，
+  用 <code>git revert &lt;升级提交&gt;</code> 而不是 <code>reset --hard</code>。</p>
 </article>
 
 <footer>

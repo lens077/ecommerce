@@ -146,6 +146,11 @@ git config core.hooksPath     # 应输出 harness/hooks
 CI 里 `check` 与 `canary` 必须是两步：前者证明仓库干净，后者证明门禁仍然会红。
 只跑 `check` 时，一个恒绿的门禁看不出来。
 
+0.3.1 起的模板把两步拆成两种时机：PR/MR 只跑 `doctor` + `check`；push 到默认分支或打 tag
+才跑 `canary`（大仓 canary 按探针数复制多份仓库，PR 阶段不必要）。要改回每次 PR 都跑，
+删掉 GitHub 模板里 canary 步骤的 `if`、或 GitLab 脚本里的条件判断即可。
+理由与回退写法见 `docs/adaptation.md` 的「CI 模板：PR 只跑 doctor + check」。
+
 ## 8. 验收命令
 
 ```bash
@@ -166,7 +171,7 @@ git checkout -- AGENTS.md
 2. 改检查后必须补 `canary/probes/<TAG>.sh` 并跑 `canary`；
 3. 每项检查的判定与放宽方式看 `harness/docs/adaptation.md`。
 
-## 10. 升级 kit（含 0.3.0）
+## 10. 升级 kit（含 0.3.0 / 0.3.1）
 
 0.3.0 回流了五个接入仓的本地补丁（清单见 `README.md` 的「0.3.0 变更」）。
 升级时先把接入期临时改在 `harness/` 里的补丁删掉，再用新版整目录替换：
@@ -192,3 +197,11 @@ harness/bin/harness canary
 文档是否引用了扫描根外的源码或同级仓资源——前者现在会被镜像，后者需要
 `HARNESS_CANARY_EXTERNAL`，否则干净模板会因「路径不存在」而红。
 升完把本次改动补进项目的决策记录；不要保留本地改过的 kit，`doctor` 会一直报 drift。
+
+0.3.1 是收尾版，升级只需整目录替换后 `harness/bin/harness lock`：
+
+- PATH-REF 会剥逗号多段行号（`docs/x.md:12-13,20-21`），不必再把这些引用写进基线；
+- `canary` 改为「模板建一次、沙箱写时复制/硬链接复用、探针按 4 个一批并行」，探针互不污染；
+  大仓墙钟约降到三分之一（ToDo 338.51s → 139.35s，ecommerce 384.88s → 145.08s，实测）；
+- CI 模板改成 PR 只跑 `doctor` + `check`、push 默认分支/打 tag 才跑 `canary`；
+  已接入的仓库按需把 `.github/workflows/context-gate.yml` 或 `.gitlab-ci.yml` 的 job 同步成新模板。
