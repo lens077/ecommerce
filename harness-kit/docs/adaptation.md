@@ -26,11 +26,15 @@
 
 - **验什么**：`` `context/foo.md` `` 这类以真实顶层目录开头的路径必须存在。
   只认真实存在的顶层目录，命令名、口号、URL 不判定。
+  `` `path/to/file.md:12` `` / `:12-34` 会剥掉行号再判存在；含 `*` 的通配（任意位置，
+  如 `e2e/*.spec.ts`）视为模式，不判存在性。
 - **配置**：`HARNESS_DOC_ROOTS`；存量走 `HARNESS_PATHREF_BASELINE`（默认 `baselines/pathref.baseline.txt`）。
 - **失败意味着**：文档让人去改一个不存在的文件——比死链更隐蔽，因为不是链接。
 - **放宽/替换**：先删基线行；确实不能立刻修的，登记 `<文件>\t<路径>` 进基线。
-- **探针**：`PATH-REF.sh` 追加 `` `context/no-such-canary.md` ``。
-- **常见误配**：把 glob（`services/*/deploy`）当路径判定——kit 已跳过 `* ? < > { } [ ]` 等占位符；
+- **探针 / 自检**：`PATH-REF.sh` 追加 `` `context/no-such-canary.md` ``；
+  `canary/run.sh` 的 `path-ref-patterns` 自检证明 `path:line` 与中段 `*` 放行、真缺失仍红。
+- **常见误配**：把 glob 当路径判定——kit 跳过含 `* ? < > { } [ ]` 等占位符的 token；
+  旧版只跳过「以 `*` 结尾」的 token，`e2e/*.spec.ts` 会误报（0.3.0 修）。
   含空格的整段被跳过，长句里的路径请在反引号里只写路径本身。
 
 ## FRONTMATTER — 文档元数据
@@ -120,10 +124,14 @@
 
 - **验什么**：内置特征（私钥头、云厂商 AK、`password = "..."` 一类赋值）零依赖扫描；
   `HARNESS_GITLEAKS=optional|required` 时再叠 gitleaks 历史扫描。
-- **配置**：`HARNESS_GITLEAKS`，默认 `required`（fail-closed）。
+- **配置**：`HARNESS_GITLEAKS`，默认 `required`（fail-closed）；
+  内置特征的路径豁免走 `HARNESS_SECRETS_ALLOW`（空格分隔的仓库相对 glob，如 `fixtures/*`）。
 - **失败意味着**：凭据已进提交树。**改历史**比改当前文件重要——kit 只负责拦新增。
-- **放宽/替换**：给 gitleaks 配 `.gitleaks.toml` 的 allowlist；内置特征命中请改代码而不是加豁免。
-- **探针**：`SECRETS.sh` 在运行时拼出关键字与值，避免探针源码自己命中。
+- **放宽/替换**：给 gitleaks 配 `.gitleaks.toml` 的 allowlist（覆盖历史扫描）；
+  内置特征命中优先改代码。只有测试夹具/示例确实需要假值时，才用 `HARNESS_SECRETS_ALLOW`
+  按路径豁免——它不影响 gitleaks，范围比 `.gitleaks.toml` 小。
+- **探针 / 自检**：`SECRETS.sh` 在运行时拼出关键字与值，避免探针源码自己命中；
+  `canary/run.sh` 的 `secrets-allowlist` 自检证明豁免生效、去掉豁免即红。
 - **常见误配**：`required` 模式下机器没装 gitleaks → 直接红，**这是预期的接入动作**：
   按 <https://github.com/gitleaks/gitleaks#installing> 装好再跑 `doctor`。
   确实装不了时显式写 `HARNESS_GITLEAKS="optional"`（doctor 会提示降级），不要写 `off`。
@@ -191,6 +199,23 @@
 - **放宽/替换**：如实写「未验证」并给原因，不要删小节；确实不适用就收窄 glob。
 - **探针 / 正样本**：`SELFCHECK.sh` 缺小节；`positives/SELFCHECK.sh` 含带原因的未勾选项。
 - **常见误配**：把 `Status: done` 写成大小写混排（按配置的正则）；分隔符用半角 `--`。
+
+---
+
+## canary 的沙箱会复制什么
+
+干净模板必须与宿主仓库的「存在性事实」一致，否则探针测的是残缺树：
+
+- `HARNESS_DOC_ROOTS`：文件或目录都支持；子目录里的单文件（如 `docs/README.md`）
+  会先建父目录再复制。
+- **已跟踪文件树**：`git ls-files` 的文件按原路径复制，文档引用 `backend/x.go`
+  这类扫描根外源码时不会误报。
+- `.gitleaks.toml`：有就复制，避免 SECRETS 在沙箱里用默认规则误报已豁免项。
+- `HARNESS_CANARY_EXTERNAL`：文档引用的仓库外资源（相对仓库根，如 `../shared/docs`），
+  按同样的相对位置铺到沙箱外层，让 `../x` 解析到同一份资源。留空 = 不铺。
+
+新增这类「构建阶段」的修法时，探针（模板之后注错）覆盖不到，要在 `canary/run.sh`
+的 selfcheck 段补一条用例；否则下次接入会原样再撞一次。
 
 ---
 

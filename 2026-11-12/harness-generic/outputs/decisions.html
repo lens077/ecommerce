@@ -516,10 +516,64 @@
   </dl>
 </article>
 
+<article class="d" id="d20">
+  <h3>D20 回流五仓接入补丁，发布 kit 0.3.0（已决）</h3>
+  <p class="badges"><span class="badge stage">阶段 6</span><span class="badge">已决</span><span class="badge">版本</span></p>
+  <dl>
+    <dt>背景</dt>
+    <dd>ToDo、LyraPass、Libra、palcommerce、Scorpius 接入 kit 0.2.0 时，各自在本地
+      <code>harness/</code> 里打了补丁才跑通门禁。若继续让五份分叉并存，下一次改判定时
+      没人知道哪份算数；<code>doctor</code> 也会在每个仓里一直报 lock drift。</dd>
+    <dt>备选</dt>
+    <dd>让各仓各自维护补丁；把补丁原样抄进 kit；按语义取舍后回流成统一版本（选定）。</dd>
+    <dt>选择</dt>
+    <dd class="pick">按语义重新实现 9 处修补，进 kit 0.3.0；各仓升级时删除本地补丁、
+      整目录替换 <code>harness/</code>，不保留分叉。</dd>
+    <dt>修补与贡献仓</dt>
+    <dd><b>ToDo / LyraPass</b>：PATH-REF 的 <code>*</code> 跳过逻辑只匹配「以星号结尾」，
+      导致 <code>e2e/*.spec.ts</code> 误报；改为跳过任意位置的 <code>*</code>，并支持
+      <code>path:line</code> / <code>path:12-34</code>。<br>
+      <b>Libra</b>：<code>lib/config.sh</code> 探测 <code>REPO_ROOT</code> 前清
+      <code>GIT_DIR</code>（hook 里会把 <code>harness/</code> 当工作树根，阻断所有提交，属阻断级）；
+      canary 沙箱镜像已跟踪文件树；复制 <code>.gitleaks.toml</code>；子目录单文件扫描根先建父目录。<br>
+      <b>palcommerce</b>：canary 复制 <code>.gitleaks.toml</code>。<br>
+      <b>Scorpius</b>：<code>95-secrets</code> 支持 <code>HARNESS_SECRETS_ALLOW</code> 豁免清单；
+      canary 支持仓库外资源 <code>HARNESS_CANARY_EXTERNAL</code>；SKILL-REF 探针读配置而非硬编码路径。<br>
+      <b>本轮</b>：每项补一条「修前红、修后绿」的 canary 自检或用例。</dd>
+    <dt>理由</dt>
+    <dd>补丁不能照抄：五仓的配置、目录与工具版本不同，照抄会把某个仓的事实写死进 kit。
+      判据是「这条修补解决的是机制问题还是仓库事实」——机制进 kit，事实留配置。
+      9 项里有 7 项是机制（路径解析、root 探测、沙箱构建、豁免入口），
+      2 项是配置扩展（<code>HARNESS_SECRETS_ALLOW</code>、<code>HARNESS_CANARY_EXTERNAL</code>），
+      没有一项需要写死仓库名或路径。</dd>
+    <dt>证据</dt>
+    <dd><code>canary/run.sh</code> 新增 selfcheck 段：hook 场景的 <code>GIT_DIR</code> 污染、
+      已跟踪文件镜像、<code>.gitleaks.toml</code> 复制、子目录单文件扫描根、仓库外资源、
+      PATH-REF 通配/path:line、SECRETS 豁免、SKILL-REF 探针配置，逐条断言；
+      每条都能在旧实现上复现红。</dd>
+    <dt>影响面</dt>
+    <dd><code>VERSION</code>、<code>harness.lock</code>、<code>lib/config.sh</code>、
+      <code>hooks/pre-commit</code>、<code>checks/20-path-ref.sh</code>、
+      <code>checks/95-secrets.sh</code>、<code>canary/run.sh</code>、
+      <code>canary/probes/SKILL-REF.sh</code>、<code>harness.config.example.sh</code>、
+      <code>README.md</code>、<code>docs/adaptation.md</code>、<code>docs/onboarding.md</code>。</dd>
+    <dt>升级步骤</dt>
+    <dd>删掉本地补丁 → 用 0.3.0 整目录替换 <code>harness/</code> → 对照
+      <code>harness.config.example.sh</code> 补 <code>HARNESS_CANARY_EXTERNAL</code> /
+      <code>HARNESS_SECRETS_ALLOW</code>（按需）→ <code>harness/bin/harness doctor</code> →
+      <code>harness/bin/harness lock</code> → <code>check</code> → <code>canary</code>。</dd>
+    <dt>改判</dt>
+    <dd>若某仓的修补依赖本地路径约定（例如只存在于该仓的生成器），不要把特例塞进 kit：
+      用适配层或配置项承载，并在本页记录理由。0.3.0 之后仍按语义变更升 minor，
+      不因为「只是补丁」跳版本。</dd>
+  </dl>
+</article>
+
 <div class="note">
-  <b>本文档的两条待定项已各自落成决策</b>
+  <b>三个待定/收敛项均已各自落成决策</b>
   <p>1）ecommerce 现有 18 个 tag 的收敛：见 <a href="#d19">D19</a>。</p>
   <p>2）gitleaks 在新项目里的默认值：见 <a href="#d15">D15</a>（已决：<code>required</code>）。</p>
+  <p>3）五仓接入补丁的回流与 0.3.0：见 <a href="#d20">D20</a>。</p>
 </div>
 
 <h2 class="section">提交列表</h2>
@@ -537,6 +591,8 @@
     <dd>本文件所在提交</dd>
     <dt>阶段 5</dt>
     <dd>收敛提交：18 个 tag 的通用判定进 kit、专属判定留适配层，gitleaks 默认改 <code>required</code></dd>
+    <dt>阶段 6</dt>
+    <dd>0.3.0 提交：回流五仓接入补丁（PATH-REF、GIT_DIR、canary 沙箱、SECRETS 豁免、外部资源、SKILL-REF 探针），每项补自检</dd>
   </dl>
 </article>
 

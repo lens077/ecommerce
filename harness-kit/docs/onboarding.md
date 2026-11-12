@@ -45,6 +45,10 @@ HARNESS_BUDGETS="AGENTS.md:16000"                    # 每项 <文件>:<字节>
 HARNESS_PROGRESS_FILE="TODO.md"
 HARNESS_SKILL_DOC="docs/skills.md"
 HARNESS_GITLEAKS="required"                          # 默认值；见下方「gitleaks 没装怎么办」
+# 可选：文档引用了同级仓资源时填（相对仓库根），如 "../shared/docs"
+HARNESS_CANARY_EXTERNAL=""
+# 可选：测试夹具里确有假凭据时按路径豁免内置特征，如 "fixtures/*"
+HARNESS_SECRETS_ALLOW=""
 ```
 
 改完自检：
@@ -161,3 +165,30 @@ git checkout -- AGENTS.md
 1. 门禁入口是 `harness/bin/harness check`，改完必须跑；
 2. 改检查后必须补 `canary/probes/<TAG>.sh` 并跑 `canary`；
 3. 每项检查的判定与放宽方式看 `harness/docs/adaptation.md`。
+
+## 10. 升级 kit（含 0.3.0）
+
+0.3.0 回流了五个接入仓的本地补丁（清单见 `README.md` 的「0.3.0 变更」）。
+升级时先把接入期临时改在 `harness/` 里的补丁删掉，再用新版整目录替换：
+
+```bash
+# 1) 用新 kit 替换 harness/（保留自己的 harness.config.sh、baselines/、文档）
+rm -rf harness && cp -R /path/to/harness-kit harness
+
+# 2) 对照新版 harness.config.example.sh，补上新增的可选项
+#    HARNESS_CANARY_EXTERNAL（文档引用同级仓资源）
+#    HARNESS_SECRETS_ALLOW（测试夹具里确有假凭据）
+
+# 3) 重写 lock 并自检
+harness/bin/harness doctor          # 应报 ✓ harness.lock 与 kit 一致
+harness/bin/harness lock
+
+# 4) 两道验收
+harness/bin/harness check
+harness/bin/harness canary
+```
+
+0.3.0 特别检查两项：`HARNESS_DOC_ROOTS` 里有没有子目录单文件（如 `docs/README.md`）；
+文档是否引用了扫描根外的源码或同级仓资源——前者现在会被镜像，后者需要
+`HARNESS_CANARY_EXTERNAL`，否则干净模板会因「路径不存在」而红。
+升完把本次改动补进项目的决策记录；不要保留本地改过的 kit，`doctor` 会一直报 drift。

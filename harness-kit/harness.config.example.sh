@@ -49,6 +49,9 @@ HARNESS_DOC_SYNC=1
 HARNESS_GITLEAKS="required"
 # 公网 IP 检查的豁免清单（空格分隔的 IP 或 CIDR 前缀，如 203.0.113.）；空 = 不豁免。
 HARNESS_IP_ALLOWLIST=""
+# 明文凭据豁免：仓库相对 shell glob（空格分隔），只给测试夹具/示例文件用。
+# 这是「内置特征」的豁免，不会影响 gitleaks 的历史扫描——历史豁免写 .gitleaks.toml。
+HARNESS_SECRETS_ALLOW=""
 
 # ── 经验文档格式 / 证据（可选）───────────────────────────────────
 # 需要含固定小节的文档 glob；`find -path` 语义，* 可跨目录。
@@ -86,6 +89,11 @@ HARNESS_SELFCHECK_SEPARATOR="——"
 
 # ── 基线 ─────────────────────────────────────────────────────────
 HARNESS_PATHREF_BASELINE="baselines/pathref.baseline.txt"
+
+# ── canary ───────────────────────────────────────────────────────
+# 文档会引用的仓库外资源（相对仓库根，如 `../shared/docs`）。canary 会把它们
+# 按同样的相对位置铺进沙箱，否则 `../x` 在 /tmp 里必然不存在，干净模板恒红。
+HARNESS_CANARY_EXTERNAL=""
 
 # ── 检查开关 ─────────────────────────────────────────────────────
 # 留空 = 全部启用。写 id 或 tag（空格分隔）只启用这些；DISABLED 优先生效。

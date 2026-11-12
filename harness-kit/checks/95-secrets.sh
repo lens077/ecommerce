@@ -3,7 +3,7 @@
 # tag: SECRETS
 # desc: 已提交文件里不得出现明文凭据；gitleaks 可用时再叠一层历史扫描
 # fast: 1
-# config: HARNESS_GITLEAKS
+# config: HARNESS_GITLEAKS HARNESS_SECRETS_ALLOW
 
 . "$HARNESS_KIT/lib/util.sh"
 H_FAILS=0
@@ -14,6 +14,12 @@ git -C "$REPO_ROOT" rev-parse --git-dir >/dev/null 2>&1 || { h_pass "非 git 仓
 hits=$(cd "$REPO_ROOT" && git grep -InE -e '-----BEGIN (RSA |EC |OPENSSH )?PRIVATE KEY-----|AKIA[0-9A-Z]{16}|(password|passwd|secret|api[_-]?key|token)[[:space:]]*[:=][[:space:]]*"[^"]{8,}"' -- . 2>/dev/null || true)
 while IFS= read -r hit; do
   [ -z "$hit" ] && continue
+  # 豁免清单按路径匹配：测试夹具里的假凭据不该逼着人改判定。
+  # 只豁免内置特征；历史扫描仍由 gitleaks 自己的 .gitleaks.toml 控制。
+  hitpath=${hit%%:*}
+  if [ -n "${HARNESS_SECRETS_ALLOW:-}" ] && h_glob_match_any "$hitpath" "$HARNESS_SECRETS_ALLOW"; then
+    continue
+  fi
   h_fail SECRETS "$hit"
 done <<< "$hits"
 

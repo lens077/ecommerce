@@ -72,10 +72,32 @@ harness/bin/harness install-hooks   # core.hooksPath -> harness/hooks
 
 ## 版本与升级
 
+当前版本 **0.3.0**（回流五个接入仓的本地补丁，见下方「0.3.0 变更」）。
+
 `harness.lock` 记录 kit 版本与每个文件的 sha256。升级方式：整目录替换后跑
 `harness/bin/harness lock` 重写 lock，再跑 `harness/bin/harness doctor`，它会报出被本地改过的文件。
 改 kit 是**新增检查**还是**改判定**，按 `docs/adaptation.md` 的「最小步骤」执行，
 并且必须补一个 canary 探针——否则 `canary` 的 meta 断言会红。
+
+### 0.3.0 变更（五仓接入补丁回流）
+
+| 修补 | 来源 | 落点 |
+| --- | --- | --- |
+| PATH-REF 支持 `path:line`、跳过任意位置的 `*`（修 `e2e/*.spec.ts` 误报） | ToDo、LyraPass | `checks/20-path-ref.sh` + canary 自检 |
+| 探测 `REPO_ROOT` 前清 `GIT_DIR`（hook 里会把 `harness/` 当工作树根，阻断所有提交） | Libra | `lib/config.sh`、`hooks/pre-commit` |
+| 沙箱镜像已跟踪文件树（文档引用扫描根外源码时干净模板不再必红） | Libra | `canary/run.sh` |
+| 沙箱复制 `.gitleaks.toml` | palcommerce、Libra | `canary/run.sh` |
+| 子目录单文件扫描根先建父目录 | Libra | `canary/run.sh` |
+| SECRETS 支持豁免清单 `HARNESS_SECRETS_ALLOW` | Scorpius | `checks/95-secrets.sh` |
+| canary 支持仓库外资源 `HARNESS_CANARY_EXTERNAL` | Scorpius | `canary/run.sh` |
+| SKILL-REF 探针读配置而非硬编码路径 | Scorpius | `canary/probes/SKILL-REF.sh` |
+| 每项补「修前红、修后绿」的自检/用例 | 本轮 | `canary/run.sh` 的 selfcheck 段 |
+
+升级到 0.3.0：替换 `harness/` 整目录 → `harness/bin/harness doctor` → `harness/bin/harness lock`
+→ `harness/bin/harness check` → `harness/bin/harness canary`。若文档引用同级仓资源，
+确认 `HARNESS_CANARY_EXTERNAL` 已填；扫描根是子目录单文件（如 `docs/README.md`）时
+0.3.0 已自动建父目录，无需额外配置。<br>
+只把接入期临时打的补丁删掉再升级——不要保留「本地改过的 kit」，`doctor` 会一直报 drift。
 
 ## 默认配置的两个要点
 

@@ -13,9 +13,13 @@ trap 'rm -f "$tmp"' EXIT
 
 while IFS= read -r file; do
   h_strip_fences "$file" | grep -oE '`[^`]+`' | sed 's/^`//; s/`$//' | while IFS= read -r tok; do
+    # `path:12` / `path:12-34` 是「文件 + 行号」，先剥掉行号再判存在性。
+    tok=$(printf '%s\n' "$tok" | sed -E 's/:[0-9]+(-[0-9]+)?$//')
     # 只认真实存在的顶层目录开头的路径；其余（命令、口号、占位符）不判定。
     case "$tok" in
-      *' '*|*'*') continue ;;
+      # 含 * 的通配（含中段，如 `e2e/*.spec.ts`）是模式不是具体路径：
+      # 旧写法 *'*' 只匹配「以 * 结尾」，中段通配会漏进来当作文件判、误报不存在。
+      *' '*|*'*'*) continue ;;
       *'?'*|*'<'*|*'>'*|*'{'*|*'}'*|*'['*|*']'*|*'$'*|*'~'*|*'://'*) continue ;;
       /*|'#'*) continue ;;
     esac

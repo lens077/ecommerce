@@ -5,11 +5,16 @@
 # 接进既有仓库时只写与默认不同的项，别把整张表抄一遍。
 
 # 仓库根：优先显式传入，其次 git 顶层，最后用 kit 的上两级。
+#
+# 探测前必须清掉 GIT_DIR / GIT_WORK_TREE / GIT_COMMON_DIR：git hook 运行时这些变量
+# 可能是继承来的（worktree / 某些 CI 包装器），`git -C <repo>/harness rev-parse
+# --show-toplevel` 会因此把 harness/ 当成工作树根，扫描范围缩到 kit 自身——
+# 结果是所有提交都被「文档缺失」挡住（Libra 实测的阻断级事故）。
 h_detect_roots() {
   KIT_ROOT=$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd -P)
   if [ -n "${HARNESS_REPO_ROOT:-}" ]; then
     REPO_ROOT=$HARNESS_REPO_ROOT
-  elif REPO_ROOT=$(git -C "$KIT_ROOT" rev-parse --show-toplevel 2>/dev/null); then
+  elif REPO_ROOT=$(unset GIT_DIR GIT_WORK_TREE GIT_COMMON_DIR; git -C "$KIT_ROOT" rev-parse --show-toplevel 2>/dev/null); then
     :
   else
     REPO_ROOT=$(cd "$KIT_ROOT/.." && pwd)
@@ -52,6 +57,9 @@ h_load_config() {
   # 默认 required：没装 gitleaks 就直接红，避免「工具没装所以这层静默跳过」。
   : "${HARNESS_GITLEAKS:=required}"
   : "${HARNESS_IP_ALLOWLIST:=}"
+  # 明文凭据豁免：仓库相对 shell glob（空格分隔），只用于测试夹具/示例文件。
+  # 能写进 .gitleaks.toml 的就别写这里——这份清单不参与历史扫描。
+  : "${HARNESS_SECRETS_ALLOW:=}"
 
   # ── 经验文档格式 / 证据 ────────────────────────────────────────
   : "${HARNESS_FORMAT_GLOBS:=}"
@@ -86,6 +94,11 @@ h_load_config() {
   # ── 基线 ───────────────────────────────────────────────────────
   : "${HARNESS_PATHREF_BASELINE:=baselines/pathref.baseline.txt}"
 
+  # ── canary ─────────────────────────────────────────────────────
+  # 文档会引用的仓库外资源（相对仓库根，如 `../shared/docs`）。canary 按同样的
+  # 相对位置铺进沙箱，否则 `../x` 在临时目录里必然不存在，干净模板恒红。
+  : "${HARNESS_CANARY_EXTERNAL:=}"
+
   # ── 检查开关 ───────────────────────────────────────────────────
   : "${HARNESS_CHECKS:=}"
   : "${HARNESS_DISABLED_CHECKS:=}"
@@ -98,6 +111,7 @@ h_load_config() {
          HARNESS_PROGRESS_ALLOW HARNESS_PROGRESS_BASELINE \
          HARNESS_SKILL_DOC HARNESS_SKILL_SECTION HARNESS_SKILL_ENTRY_DOCS \
          HARNESS_DOC_SYNC HARNESS_GITLEAKS HARNESS_IP_ALLOWLIST \
+         HARNESS_SECRETS_ALLOW HARNESS_CANARY_EXTERNAL \
          HARNESS_FORMAT_GLOBS HARNESS_FORMAT_SECTIONS HARNESS_FORMAT_BASELINE \
          HARNESS_EVIDENCE_GLOBS HARNESS_EVIDENCE_SECTION HARNESS_EVIDENCE_LABELS \
          HARNESS_AFFECTS_ROOTS HARNESS_RETIRED_ROOTS HARNESS_RETIRED_TERMS \
