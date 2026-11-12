@@ -22,8 +22,10 @@ while IFS= read -r file; do
   untagged=$(awk -v sec="$sec" -v labs="$labels" '
     /^```/ { fence = !fence; next }
     fence { next }
-    index($0, "**" sec) == 1 || $0 ~ ("^#{2,3} " sec) { insec = 1; next }
-    insec && (/^\*\*[^*]+\*\*/ || /^#{1,3} /) { insec = 0 }
+    # 不要用 {2,3}：Debian/Ubuntu 默认 awk 是 mawk，不支持区间量词，
+    # 会把 `## 证据` 当成不匹配，导致整个段落静默不判（非 COW 容器实测发现）。
+    index($0, "**" sec) == 1 || $0 ~ ("^##? " sec) { insec = 1; next }
+    insec && (/^\*\*[^*]+\*\*/ || /^#+ /) { insec = 0 }
     insec && /^[-*] / && $0 !~ ("^[-*] \\[(" labs ")\\] ") { print NR }
   ' "$file" | head -3 | tr '\n' ' ')
   if [ -n "$untagged" ]; then

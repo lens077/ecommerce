@@ -212,3 +212,11 @@ harness/bin/harness canary
   只是把剥行号从「每个 token 一次 `sed`」合并成「每个文件一次」，不需要改基线或探针；
 - 大仓收益明显：LyraPass 单项 46.36s → 1.07–1.45s，ecommerce 40.07s → 1.75s（本机实测）；
 - 如果你的 CI 对 `check` 有超时限制，升级后可以按新的单项耗时重新收紧。
+
+0.3.3 是 Linux/non-COW 兼容修正，升级只需整目录替换后 `harness/bin/harness lock`：
+
+- EVIDENCE 的 awk 正则不再使用 `{2,3}`。Debian/Ubuntu 默认 `awk` 是 mawk，不支持区间量词，
+  会把 `## 证据` 当成不匹配，导致整段静默不判；改成 `^##? ` / `^#+ ` 后两个平台一致。
+- 判定语义不变，不需要改基线或探针；macOS 上原本就是绿的，升级后仍应保持绿。
+- 该版本在 Linux ext4 容器里用硬链接退路（`cp -al`）跑过 19 / 23 探针两种规模，
+  模板未被探针污染、`.git` 不跨沙箱、并行探针无互踩（见 `selftest/README.md` 第 8 节）。

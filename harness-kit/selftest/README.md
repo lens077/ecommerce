@@ -211,9 +211,81 @@ git config core.hooksPath
 
 输出 `harness/hooks`，pre-commit 会跑 `check fast`，pre-push 会跑全量 + canary。
 
+## 8. 非 COW 文件系统（0.3.3 实测）
+
+环境：Docker 29.9.3（linux/arm64），Debian 12 `bookworm-slim`，仓库放在 named volume 上
+（`stat -f -c %T /work` 报 `ext2/ext3`，即 ext4 族）。容器内只用于测试，不落仓库。
+
+### 8.1 确认没有写时复制，并确认进入硬链接分支
+
+```bash
+cp --reflink=always /work/repo/AGENTS.md /work/reflink-test
+# cp: failed to clone ...: Operation not supported
+
+cp -cR /work/repo/AGENTS.md /work/clone-test
+# cp: invalid option -- 'c'      # GNU cp 没有 macOS 的 -c，kit 因此退到下一档
+```
+
+`bash -x canary/run.sh` 的 trace 里能看到实际执行的是硬链接分支：
+
+```
++ cp -al /work/tmp/h-canary.m2vQvR/template/. /work/tmp/h-canary.m2vQvR/clean-template/
+```
+
+canary 自己的报告也确认了模式：
+
+```
+✓ selfcheck probe-isolation: 注错只落在自己的沙箱（源码树硬链接复用）
+```
+
+inode 证据：`template/backend/go.mod` 与两个探针沙箱里的同名文件 inode 完全相同、链接数为 21；
+`AGENTS.md`、`harness.config.sh`、`context/team/INDEX.md`、`.git/index` 在模板与各沙箱里
+inode 各不相同、链接数为 1（说明可变路径已断开硬链接）。
+
+### 8.2 第一次跑就抓到缺陷：mawk 不支持 `{2,3}`
+
+ecommerce 规模（19 探针）第一次跑：
+
+```
+✗ mut-EVIDENCE: 期望 rc=1，实得 rc=0
+verify-canary: FAIL（1 个问题，19 个探针）       # 42s
+```
+
+根因不是硬链接，而是 Debian/Ubuntu 默认 `awk` 是 mawk，不支持区间量词 `{2,3}`：
+`46-evidence.sh` 里 `$0 ~ "^#{2,3} 证据"` 在 mawk 下永远不匹配，「证据」段被整段跳过。
+macOS 的 BSD awk 支持该写法，所以本机一直绿。0.3.3 改成 `^##? ` / `^#+ `。
+
+### 8.3 修复后结果
+
+| 场景 | 探针 | 结果 | 耗时 |
+| --- | --- | --- | --- |
+| ecommerce（17 项、4 项按配置禁用） | 19 | `verify-canary: OK` | 44s（模板 1s / 沙箱 13s / 门禁合计 113s） |
+| 新建空仓 + 默认配置 | 23 | `verify-canary: OK` | 13s（模板 0s / 沙箱 4s / 门禁合计 26s） |
+
+两次都包含 `probe-isolation`、`path-ref-fork-count`、`template-mirror` 及全部启用 tag 的注错/正样本。
+
+### 8.4 硬链接特有的三项风险
+
+- **原地写污染模板**：跑完后 `git -C template status --porcelain` 为 0 行；`probe-isolation` 写入的
+  `canary-isolation` 只出现在 `aux-isolation` 沙箱，模板和其他 mutation 沙箱都没有。
+- **git 跨沙箱串味**：各沙箱 `.git/index` 是独立 inode；在一个沙箱里 `git commit` 后，
+  模板与另一个沙箱的 `HEAD` 都不变，`git log` 也不受影响。
+- **并行互踩**：探针按 4 个一批并行，19/23 探针全过；`mut-DEAD-LINK` 与 `mut-FORMAT` 的
+  `git status` 各自只含自己的改动，没有互相出现对方的文件。
+
+### 8.5 与真实 GitHub runner 的差异
+
+容器里绿不等于 runner 必绿，仍有这些差异：
+
+- 本机是 Docker Desktop 的 Linux VM，文件系统 ext4；GitHub `ubuntu-latest` 也是 ext4，
+  但内核、overlay 上层与 IO 调度不同，耗时不可直接外推。
+- 容器里显式装了 `perl` 以提供 `shasum`（`bin/harness` 的 lock 与 `probe-isolation` 用到）；
+  GitHub ubuntu runner 自带，最小镜像不一定有。
+- runner 上的网络、缓存、并发与 Docker 资源限制都不同；CI 模板仍只做过静态校对，
+  首次真实执行仍需单独确认。
+
 ## 未验证
 
 - GitHub Actions / GitLab Runner 上的实际执行（模板只做静态校对，未在远端跑过）。
 - Windows（kit 只承诺 POSIX bash + Python 标准库）。
-- 无 COW 文件系统（Linux ext4、部分容器卷）上的 canary 硬链接路径与耗时：
-  本机是 APFS，实际走的是 `cp -cR` 克隆分支；硬链接分支只有 `probe-isolation` 的逻辑覆盖。
+- 最小容器（无 `perl`/`shasum`）：本次容器显式安装了 `perl`，未把哈希实现改成纯 Python。
