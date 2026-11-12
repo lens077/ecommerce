@@ -97,6 +97,7 @@
     <li><a href="#d17">提交顺序</a></li>
     <li><a href="#d21">收尾 0.3.1</a></li>
     <li><a href="#d22">PATH-REF 性能</a></li>
+    <li><a href="#final">最终验收</a></li>
   </ul>
 </header>
 
@@ -683,131 +684,206 @@
   </dl>
 </article>
 
-<h2 class="section">最终验收（0.3.1）</h2>
+<h2 class="section" id="final">最终验收（0.3.2）</h2>
 
 <article class="d">
-  <h3>六个仓库的状态</h3>
-  <p>分支均为 <code>harness/kit-onboarding</code>（ecommerce 为 <code>harness/generic-kit</code>）。
-  基点是各仓默认分支与接入分支的 <code>merge-base</code>。五仓停在 0.3.0，
-  ecommerce 是本次 0.3.1 的提交点。</p>
+  <h3>完成状态</h3>
+  <div class="facts">
+    <div class="fact"><b>6</b><span>仓库已到 kit 0.3.2</span></div>
+    <div class="fact"><b>0</b><span>已 push 的分支</span></div>
+    <div class="fact"><b>0</b><span>已合入主分支</span></div>
+    <div class="fact"><b>0</b><span>各仓本地补丁</span></div>
+  </div>
+  <p>六个仓库的 kit 都已是 0.3.2，来源统一为 ecommerce 的 <code>40dc8c45</code>。
+    所有接入提交都只在本地分支上：没有 push，也没有合入任何主分支。</p>
+  <p style="margin-bottom:0"><b>测量口径</b>：耗时是各仓 <code>harness/bin/harness check</code> 与
+    <code>canary</code> 的单次墙钟。标注「空载」的是接入方在机器空闲时测的；
+    标注 load 的是同时有其他任务；「负载未标注」表示接入方只给了数字，未记录当时负载。
+    不同仓的检查项与仓库体积不同，跨仓只比数量级，不比绝对值。</p>
+</article>
+
+<article class="d">
+  <h3>每仓分支、提交与验证</h3>
   <table style="width:100%; border-collapse:collapse; font-size:13px; margin-top:10px">
     <tr style="text-align:left; border-bottom:1px solid var(--line)">
       <th style="padding:6px 8px">仓库</th>
-      <th style="padding:6px 8px">分支</th>
-      <th style="padding:6px 8px">基点</th>
-      <th style="padding:6px 8px">提交</th>
-      <th style="padding:6px 8px">验证结果</th>
+      <th style="padding:6px 8px">分支 / 基点</th>
+      <th style="padding:6px 8px">最终 HEAD</th>
+      <th style="padding:6px 8px">验证结果（耗时 / 负载）</th>
+      <th style="padding:6px 8px">push / 合并</th>
     </tr>
     <tr style="border-bottom:1px solid var(--line)">
-      <td style="padding:6px 8px">ecommerce</td>
-      <td style="padding:6px 8px"><code>harness/generic-kit</code></td>
-      <td style="padding:6px 8px"><code>06bf0a54</code></td>
-      <td style="padding:6px 8px">0.3.1 本页所在提交；0.3.0 为 <code>b93ecfdb</code></td>
-      <td style="padding:6px 8px">verify-context 17/17；verify-context-canary 47 探针；verify-quick 全绿；kit canary 19 探针 145.08s</td>
+      <td style="padding:6px 8px">ecommerce（本仓）</td>
+      <td style="padding:6px 8px"><code>harness/generic-kit</code><br><code>06bf0a54</code></td>
+      <td style="padding:6px 8px"><code>40dc8c45</code></td>
+      <td style="padding:6px 8px">kit check 17/17，21.03s；kit canary 19 探针，146.12s
+        （非空载，load≈6–18）。三套门禁另测：verify-context 17/17、
+        verify-context-canary 47 探针、verify-quick 全绿</td>
+      <td style="padding:6px 8px">否 / 否</td>
     </tr>
     <tr style="border-bottom:1px solid var(--line)">
       <td style="padding:6px 8px">ToDo</td>
-      <td style="padding:6px 8px"><code>harness/kit-onboarding</code></td>
-      <td style="padding:6px 8px"><code>fa4e6de0</code></td>
-      <td style="padding:6px 8px"><code>c11336d5</code>（0.3.0）</td>
-      <td style="padding:6px 8px">doctor 0；check 16/16；canary 23 探针 338.51s（0.3.0，本机复测）</td>
-    </tr>
-    <tr style="border-bottom:1px solid var(--line)">
-      <td style="padding:6px 8px">LyraPass</td>
-      <td style="padding:6px 8px"><code>harness/kit-onboarding</code></td>
-      <td style="padding:6px 8px"><code>faa96219</code></td>
-      <td style="padding:6px 8px"><code>1ef3c3b0</code>（0.3.0）</td>
-      <td style="padding:6px 8px">doctor 0；check 16/16；canary 23 探针全过</td>
-    </tr>
-    <tr style="border-bottom:1px solid var(--line)">
-      <td style="padding:6px 8px">Libra</td>
-      <td style="padding:6px 8px"><code>harness/kit-onboarding</code></td>
-      <td style="padding:6px 8px"><code>95655118</code>（master）</td>
-      <td style="padding:6px 8px"><code>3020cb15</code>（0.3.0）</td>
-      <td style="padding:6px 8px">doctor 0；check 16/16；canary 23 探针全过</td>
+      <td style="padding:6px 8px"><code>harness/kit-onboarding</code><br><code>fa4e6de0</code></td>
+      <td style="padding:6px 8px"><code>c65b7ab</code></td>
+      <td style="padding:6px 8px">check 5.2s；canary 71.5s（空载）</td>
+      <td style="padding:6px 8px">否 / 否</td>
     </tr>
     <tr style="border-bottom:1px solid var(--line)">
       <td style="padding:6px 8px">palcommerce</td>
-      <td style="padding:6px 8px"><code>harness/kit-onboarding</code></td>
-      <td style="padding:6px 8px"><code>177699a0</code></td>
-      <td style="padding:6px 8px"><code>eb2bd04d</code>（0.3.0）</td>
-      <td style="padding:6px 8px">doctor 0；check 16/16；canary 23 探针全过</td>
+      <td style="padding:6px 8px"><code>harness/kit-onboarding</code><br><code>177699a0</code></td>
+      <td style="padding:6px 8px"><code>7701167</code> + <code>6a2b576</code><br>（HEAD=<code>6a2b576</code>）</td>
+      <td style="padding:6px 8px">check 8.3s；canary 160s（非空载，load≈18–37）</td>
+      <td style="padding:6px 8px">否 / 否</td>
+    </tr>
+    <tr style="border-bottom:1px solid var(--line)">
+      <td style="padding:6px 8px">Libra</td>
+      <td style="padding:6px 8px"><code>harness/kit-onboarding</code><br><code>95655118</code>（master）</td>
+      <td style="padding:6px 8px"><code>a7498f9</code> → <code>4458a4a</code>（CI）→
+        <code>e7eb4bd</code>（0.3.2，HEAD）</td>
+      <td style="padding:6px 8px">check 3s；canary 48s（负载未标注）</td>
+      <td style="padding:6px 8px">否 / 否</td>
+    </tr>
+    <tr style="border-bottom:1px solid var(--line)">
+      <td style="padding:6px 8px">Scorpius</td>
+      <td style="padding:6px 8px"><code>harness/kit-onboarding</code><br><code>ce53a4f7</code></td>
+      <td style="padding:6px 8px"><code>4d9f39b</code></td>
+      <td style="padding:6px 8px">check 7.5s；canary 63.6s（负载未标注）</td>
+      <td style="padding:6px 8px">否 / 否</td>
     </tr>
     <tr>
-      <td style="padding:6px 8px">Scorpius</td>
-      <td style="padding:6px 8px"><code>harness/kit-onboarding</code></td>
-      <td style="padding:6px 8px"><code>ce53a4f7</code></td>
-      <td style="padding:6px 8px"><code>fef3a5e5</code>（0.3.0）</td>
-      <td style="padding:6px 8px">doctor 0；check 17/17；canary 23 探针全过</td>
+      <td style="padding:6px 8px">LyraPass</td>
+      <td style="padding:6px 8px"><code>harness/kit-onboarding</code><br><code>faa96219</code></td>
+      <td style="padding:6px 8px"><code>6933ba0</code></td>
+      <td style="padding:6px 8px">check 8.8s；canary 80.7s（负载未标注）</td>
+      <td style="padding:6px 8px">否 / 否</td>
     </tr>
   </table>
+  <p style="margin-top:12px; color:var(--muted); font-size:13px">
+    Libra 的接入分支在 worktree <code>/Users/lens/WorkBuddy/Worktrees/Libra/harness-kit</code>；
+    主工作区 <code>/Users/lens/lens077/work</code> 当前在 <code>master</code>，
+    带业务未提交改动，不在接入分支上。</p>
 </article>
 
 <article class="d">
-  <h3>我替你做的决定（0.3.1）</h3>
-  <dl>
-    <dt>PATH-REF</dt>
-    <dd>扩充剥离正则支持逗号多段，而不是把所有含 <code>:</code> 的 token 跳过、也不要求宿主写基线。
-      理由与推翻的备选见 <a href="#d21">D21</a>。</dd>
-    <dt>canary 复制</dt>
-    <dd>模板只建一次；优先写时复制克隆，无 COW 时整树硬链接并断开可变路径，最后才整树复制。
-      没有选择「每探针 cp -a」或「所有探针共用一个沙箱」。</dd>
-    <dt>canary 并行</dt>
-    <dd>探针按 4 个一批并行。实测显示复制只占十几秒、门禁占九成；只改复制无法解决 5–6 分钟。
-      并行不改变任何断言，只改墙钟。</dd>
-    <dt>CI 时机</dt>
-    <dd>PR 只跑 doctor + check，push 默认分支/打 tag 才跑 canary；两平台模板同步。
-      没有选择「每个 PR 都跑」或「删掉 canary」。</dd>
-    <dt>版本号</dt>
-    <dd>0.3.1 作为 patch：一处判定缺陷 + 性能与 CI 策略，不新增检查语义。</dd>
-  </dl>
+  <h3>我替你做的决定（D1–D22 速览）</h3>
+  <ul style="columns:2; column-gap:28px; padding-left:18px; font-size:14px">
+    <li><b>D1</b> 独立分支 + 分阶段提交</li>
+    <li><b>D2</b> 提交身份用临时 <code>-c</code>，不改配置</li>
+    <li><b>D3</b> vendor 目录 + <code>harness.lock</code></li>
+    <li><b>D4</b> 配置用 bash 变量，不引 YAML/TOML</li>
+    <li><b>D5</b> 核心 10 项检查，FORMAT/commitlint 留适配</li>
+    <li><b>D6</b> 不重构 ecommerce 的 <code>verify-context.sh</code></li>
+    <li><b>D7</b> kit 放仓库根 <code>harness-kit/</code></li>
+    <li><b>D8</b> 决策 HTML 放项目记录目录，不进 kit</li>
+    <li><b>D9</b> 无校验器的规则显式标注「靠评审」</li>
+    <li><b>D10</b> <code>skills.md</code> 删 MCP/Hooks 历史证据</li>
+    <li><b>D11</b> 删恒绿死探针 + tag 覆盖元断言</li>
+    <li><b>D12</b> 「main 唯一必需检查」改成可验证表述</li>
+    <li><b>D13</b> 不为本次工作新增 <code>TODO.md</code> 条目</li>
+    <li><b>D14</b> 探针运行时拼接，避免自身命中</li>
+    <li><b>D15</b> gitleaks 默认 <code>required</code></li>
+    <li><b>D16</b> PATH-REF 只认真实顶层目录，跳过 glob</li>
+    <li><b>D17</b> 先自测绿再写适配文档</li>
+    <li><b>D18</b> 自测在 <code>/tmp</code>，不污染仓库</li>
+    <li><b>D19</b> 18 个 tag 收敛到 kit，专属留适配层</li>
+    <li><b>D20</b> 回流五仓补丁，发布 0.3.0</li>
+    <li><b>D21</b> 0.3.1：逗号行号、canary 复用 + 并行、CI 分档</li>
+    <li><b>D22</b> 0.3.2：PATH-REF 合并 <code>sed</code>，消除逐 token fork</li>
+  </ul>
+  <p style="margin-bottom:0; color:var(--muted); font-size:13px">
+    每条的备选、理由与改判方法见对应 <code>D#</code> 正文。</p>
 </article>
 
 <article class="d">
-  <h3>仍然悬着的事项与默认处理</h3>
+  <h3>仍然悬着、需要你亲自处理</h3>
   <dl>
-    <dt>五仓仍停在 0.3.0</dt>
-    <dd>默认不代升级。各仓按 <code>docs/onboarding.md</code> 第 10 节整目录替换后
-      <code>harness/bin/harness lock &amp;&amp; doctor &amp;&amp; check &amp;&amp; canary</code>；升级前先确认 CI 模板是否同步。</dd>
-    <dt>无 COW 文件系统的硬链接分支未实测</dt>
-    <dd>本机是 APFS，实跑走克隆分支；硬链接分支只由 <code>probe-isolation</code> 自检覆盖。
-      默认保留，等首个 Linux CI 运行验证；若异常，把 <code>materialize_sandbox</code> 的第 1 步改成无条件跳过即可回退到克隆/复制。</dd>
-    <dt>CI 模板未在真实 runner 跑过</dt>
-    <dd>默认保持模板现状。首个 PR 观察 <code>doctor</code> 是否因 gitleaks 未安装而红；
-      若是，按仓配置 <code>HARNESS_GITLEAKS="optional"</code> 或在 runner 预装。</dd>
-    <dt><code>verify-context.sh</code> 未跟随 CI 策略</dt>
-    <dd>ecommerce 用自己的门禁脚本，默认不动；kit 的 PR/push 策略只影响 <code>ci/</code> 模板。</dd>
-    <dt>palcommerce 有未跟踪目录</dt>
-    <dd><code>dist/</code>、<code>e2e/</code>、<code>.edgeone/</code> 是本地构建产物，默认不删；
-      回退时才按需清理。</dd>
+    <dt>六个分支的 push / 合并</dt>
+    <dd>当前全部只在本地。默认不动；你确认后逐仓 push 并发 MR。
+      建议顺序：先 ecommerce（kit 源头），再 ecommerce 已适配的仓，最后 Libra（见下条）。</dd>
+    <dt>hooks 安装（合并后）</dt>
+    <dd>各仓在合并后执行 <code>harness/bin/harness install-hooks</code>。
+      这是改 <code>core.hooksPath</code> 的仓库级动作，未替你执行；ecommerce 不用装，
+      它已有自己的钩子体系。</dd>
+    <dt>CI 首次真实 runner 验证</dt>
+    <dd>0.3.1 起 PR/MR 只跑 <code>doctor</code> + <code>check</code>，push 默认分支或打 tag 才跑
+      <code>canary</code>。模板从未在真实 runner 跑过；首个 PR 重点看
+      gitleaks 是否可用，缺就按仓配 <code>HARNESS_GITLEAKS="optional"</code> 或预装。</dd>
+    <dt><code>.gitleaks.toml</code> 放行条目复核</dt>
+    <dd>接入时为过 SECRETS 加过仓库级 allowlist。默认保留，但需要你逐条确认
+      豁免的是夹具/示例而不是真实凭据；不确定的先删再跑 <code>check</code> 看是否红。</dd>
+    <dt>Libra 根 <code>AGENTS.md</code> 的合并取舍</dt>
+    <dd>接入分支改过根 <code>AGENTS.md</code>（新增 81 行）；主工作区
+      <code>/Users/lens/lens077/work</code> 里另有一份未跟踪的 <code>AGENTS.md</code>，
+      两者内容不同。默认在合并时人工合并：保留分支的 harness 段与主工作区的业务/协作约定，
+      不要整文件覆盖。</dd>
+    <dt>ToDo 的 <code>DECISIONS.md</code></dt>
+    <dd>34 个复选框尚未逐条收口。默认不在本次动；合并前由你确认哪些已落地、哪些转 TODO。</dd>
+    <dt>无 COW 文件系统的 canary 硬链接分支</dt>
+    <dd>本机 APFS 实跑走克隆分支，硬链接分支只由 <code>probe-isolation</code> 自检覆盖。
+      默认保留，等首个 Linux CI 验证。</dd>
   </dl>
 </article>
 
 <article class="d">
   <h3>如何回退</h3>
-  <p>只退这次升级：在对应仓库执行下列命令。回退会丢弃该分支上的未推送提交，
-  执行前先确认 <code>git log --oneline &lt;基点&gt;..HEAD</code> 里只有 harness 接入提交。</p>
-  <dl>
-    <dt>ecommerce</dt>
-    <dd>只退 0.3.1：<code>git reset --hard b93ecfdb</code>；整条分支回退：<code>git reset --hard 06bf0a54</code>。
-      工作树无未跟踪产物，不需要额外删除。</dd>
-    <dt>ToDo</dt>
-    <dd><code>git reset --hard fa4e6de0</code>；kit 在仓库根的 <code>harness-kit/</code>（0.3.0 版本目录已跟踪，reset 会移除）。
-      若 reset 后仍有未跟踪的 <code>harness-kit/</code> 残留：<code>rm -rf harness-kit</code>。</dd>
-    <dt>LyraPass / Libra / Scorpius</dt>
-    <dd>基点分别是 <code>faa96219</code> / <code>95655118</code> / <code>ce53a4f7</code>，执行
-      <code>git reset --hard &lt;基点&gt;</code>；未跟踪目录为零，无需清理。</dd>
-    <dt>palcommerce</dt>
-    <dd><code>git reset --hard 177699a0</code>；未跟踪的 <code>dist/</code>、<code>e2e/</code>、<code>.edgeone/</code>
-      不是接入产物，默认保留；确认不要后再删。</dd>
-  </dl>
-  <p>回退后各仓的 <code>harness/VERSION</code> 会回到升级前；如果只想降版本、保留接入改动，
-  用 <code>git revert &lt;升级提交&gt;</code> 而不是 <code>reset --hard</code>。</p>
+  <p>先确认分支上只有 harness 接入提交：
+    <code>git log --oneline &lt;基点&gt;..HEAD</code>。整条分支回退会丢弃未推送提交。</p>
+  <table style="width:100%; border-collapse:collapse; font-size:13px; margin-top:6px">
+    <tr style="text-align:left; border-bottom:1px solid var(--line)">
+      <th style="padding:6px 8px">仓库</th>
+      <th style="padding:6px 8px">回到基点</th>
+      <th style="padding:6px 8px">未跟踪目录</th>
+    </tr>
+    <tr style="border-bottom:1px solid var(--line)">
+      <td style="padding:6px 8px">ecommerce</td>
+      <td style="padding:6px 8px"><code>git reset --hard 06bf0a54</code></td>
+      <td style="padding:6px 8px"><code>rm -rf .trae-html-share-packages</code>（预览工具产物，非 kit）</td>
+    </tr>
+    <tr style="border-bottom:1px solid var(--line)">
+      <td style="padding:6px 8px">ToDo</td>
+      <td style="padding:6px 8px"><code>git reset --hard fa4e6de0</code></td>
+      <td style="padding:6px 8px">reset 后若仍有 <code>harness-kit/</code> 残留：<code>rm -rf harness-kit</code></td>
+    </tr>
+    <tr style="border-bottom:1px solid var(--line)">
+      <td style="padding:6px 8px">palcommerce</td>
+      <td style="padding:6px 8px"><code>git reset --hard 177699a0</code></td>
+      <td style="padding:6px 8px"><code>dist/</code>、<code>e2e/</code>、<code>.edgeone/</code> 是构建产物，默认保留</td>
+    </tr>
+    <tr style="border-bottom:1px solid var(--line)">
+      <td style="padding:6px 8px">Libra</td>
+      <td style="padding:6px 8px"><code>git reset --hard 95655118</code></td>
+      <td style="padding:6px 8px">无；在 worktree <code>/Users/lens/WorkBuddy/Worktrees/Libra/harness-kit</code> 执行</td>
+    </tr>
+    <tr style="border-bottom:1px solid var(--line)">
+      <td style="padding:6px 8px">Scorpius</td>
+      <td style="padding:6px 8px"><code>git reset --hard ce53a4f7</code></td>
+      <td style="padding:6px 8px">无</td>
+    </tr>
+    <tr>
+      <td style="padding:6px 8px">LyraPass</td>
+      <td style="padding:6px 8px"><code>git reset --hard faa96219</code></td>
+      <td style="padding:6px 8px">无</td>
+    </tr>
+  </table>
+  <p><b>只回退 kit、不动业务改动</b>：不要 <code>reset --hard</code>，改用
+    <code>git revert &lt;只动 kit 的提交&gt;</code>。各仓对应 0.3.2 提交：
+    ecommerce <code>40dc8c45</code>；ToDo <code>c65b7ab</code>；
+    palcommerce <code>7701167</code> + <code>6a2b576</code>；Libra <code>e7eb4bd</code>；
+    Scorpius <code>4d9f39b</code>；LyraPass <code>6933ba0</code>。
+    先 <code>git show --stat</code> 确认该提交只碰 <code>harness/</code>、<code>harness.lock</code>
+    与 CI 模板；混入业务的提交不要整条 revert。</p>
+</article>
+
+<article class="d">
+  <h3>新项目最小接入</h3>
+  <p style="margin:0">把 <code>harness-kit/</code> 复制为项目里的 <code>harness/</code>，
+    依次跑 <code>init → 改 harness.config.sh → doctor → check → canary</code>；
+    完整手顺与常见误配见 <a href="../../../harness-kit/docs/onboarding.md">docs/onboarding.md</a>。</p>
 </article>
 
 <footer>
-  <p>生成于 2026-11-12 · 分支 <code>harness/generic-kit</code> · 未 push、未部署。
-  所有路径与行号均对应当前分支的工作树。</p>
+  <p>生成于 2026-11-12 · 分支 <code>harness/generic-kit</code>（HEAD <code>40dc8c45</code>）·
+  六仓均未 push、未合并主分支。所有 hash 取自各仓当前本地 HEAD。</p>
 </footer>
 
 </div>
