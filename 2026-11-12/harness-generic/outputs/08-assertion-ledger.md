@@ -1,7 +1,7 @@
 # 断言台账：AGENTS.md 与 docs/TECH.md（2026-11-12 复核）
 
 口径：上一轮 63 条按「同一事实的重复表述」与「历史证据（带日期的已完成结果，不构成现行契约）」归并去重后，
-本台账收录 31 条**可机械核对或需显式声明无校验**的断言。四态定义：
+本台账收录 36 条**可机械核对或需显式声明无校验**的断言。四态定义：
 
 - **成立**：当前仓库存在对应证据，且门禁或运行时行为一致。
 - **已修正**：本轮改过文档，使其与代码/配置一致。
@@ -42,12 +42,23 @@
 | 28 | `docs/TECH.md:67` 供应链安全进度（1.5.2–1.5.4 等） | 成立（历史证据） | 带日期的已完成结果，不是现行门禁承诺 |
 | 29 | `docs/agents/skills.md` 记「已安装/缺失」与工具版本 | 已修正 | 改为采用状态 + 查法；MCP / Hooks 两节历史记录已删除 |
 | 30 | `docs/agents/skills.md` `## Skills` 列契约 | 成立 | 第 1 列 skill 名、第 2 列状态词；`[SKILL-REF]` 通过 |
-| 31 | `scripts/verify-context-canary.sh` 覆盖所有启用 tag | 已修正 | 新增元断言；实跑 `18/18 tag 均有探针`，47 探针全过 |
+| 31 | `scripts/verify-context-canary.sh` 覆盖所有启用 tag | 已修正 | 元断言生效；实跑 `17/17 个启用 tag 均有探针`，47 探针全过 |
+| 32 | `AGENTS.md:98` 锚点命令 `scripts/verify-context.sh` 入口不变 | 成立 | 改为 kit 薄封装后同名同参数，`h_run_checks` 退出码 0/1/2 不变；实跑 17/17 绿 |
+| 33 | `scripts/verify-quick.sh` 不受收敛影响 | 成立 | 它不调用 `verify-context.sh`；实跑 5 段全绿（backend/frontend/secrets/notices/deploy-parity） |
+| 34 | 现有门禁拦得住的错误，收敛后仍拦得住 | 成立 | 47 个注错探针逐 tag 断言 rc=1 且 tag 正确；新增 6 项另有正样本证明不误杀 |
+| 35 | kit 默认 `HARNESS_GITLEAKS=required`（fail-closed） | 成立 | `lib/config.sh` 默认值 + `h_config_validate`；屏蔽 gitleaks 后实跑 `check` RC=1、`doctor` RC=1 |
+| 36 | 显式降级到 `optional` 的写法可用 | 成立 | 改 `harness.config.sh` 后实跑 `check` 16/16 绿，`doctor` 输出降级提示 |
 
 ## 不能进通用模板的断言
 
 `#10`（部署路径形态）、`#17`（13000 预算）、`#21`（`v0.19.1`）、`#24`/`#25`（k6、OpenFGA 选型）、
 `#27`（mirrord/Okteto 分工）均为 ecommerce 事实或未验证项，模板里只保留占位符与「查法」。
+
+五个 tag 因规则依赖本仓路径约定或外部生成器，保留在 `scripts/context-adapters/` 而不是进 kit：
+`DECISION`（路径即状态 + spec-speak）、`EMBED`（`scripts/doc-embed.py`）、
+`ENV-CONTRACT`（对齐 `go.mod`/`package.json`）、`GENERATED`（告警规则生成器）、
+`PATH-REF`（`scripts/path-refs.py` 的放行规则与基线格式；kit 的通用 path-ref 在本仓关闭）。
+它们的探针留在 `scripts/verify-context-canary.sh`，与 kit 探针同批运行。
 
 ## 未验证（不写成结论）
 

@@ -26,9 +26,19 @@ fails=0
 probes=0
 probe_tags=""   # 已被探针覆盖的 tag；供末尾「每个启用 tag 至少一个探针」元断言比对
 
-# 剥掉 ``` 围栏代码块（与门禁同款,避免把示例链接当真链接）
+# 剥掉围栏代码块（与门禁同款：按围栏长度配对，```` 不能被 ``` 关闭）
 _strip_fences() {
-  awk 'BEGIN{f=0} /^```/{f=!f; next} !f{print}' "$1"
+  awk '
+    {
+      if (match($0, /^[ \t]*`+/)) {
+        s = substr($0, RSTART, RLENGTH); gsub(/[ \t]/, "", s); n = length(s)
+        if (n >= 3) {
+          if (fence == 0)      { fence = n; next }
+          else if (n >= fence) { fence = 0; next }
+        }
+      }
+      if (fence == 0) print
+    }' "$1"
 }
 
 # 搭模板沙箱：真身文件 + 仓外链接目标的桩（只建一次,探针各自克隆）
@@ -39,6 +49,11 @@ build_template() { # build_template <dir>
   cp -R context "$sb/context"
   cp -R docs "$sb/docs"   # 2026-08-31 死链门禁两轮扩围后覆盖 docs 全树,沙箱整树同步
   cp scripts/verify-context.sh "$sb/scripts/"
+  # 门禁实现来自 harness-kit（通用判定）+ scripts/context-adapters（本仓专属判定）。
+  # 两者与仓库根配置必须整体进沙箱，否则沙箱跑的是另一套门禁，探针结论无效。
+  cp -R harness-kit "$sb/harness-kit"
+  cp harness.config.sh "$sb/"
+  cp -R scripts/context-adapters "$sb/scripts/context-adapters"
   # [EMBED]:门禁调 scripts/doc-embed.py,它又要读指令指向的源文件(backend/…sql 等,
   # 不在沙箱树里)。源清单动态从指令里提取,不手抄——新指令自动带进沙箱,漏了探针 0 当场红。
   cp scripts/doc-embed.py "$sb/scripts/"
@@ -320,9 +335,9 @@ EOF
 mut_budget_agents() {
   head -c 4000 /dev/zero | tr '\0' 'x' >> "$1/AGENTS.md"
 }
-mut_budget_todo() { # 精确推过门槛。阈值从 verify-context.sh 读,别写死——
+mut_budget_todo() { # 精确推过门槛。阈值从 harness.config.sh 读,别写死——
                     # 2026-09-17 写死的 96001 在阈值调到 160000 后让本探针静默失效(canary 抓到)。
-  budget=$(sed -n 's/^todo_budget=\([0-9]*\).*/\1/p' scripts/verify-context.sh | head -1)
+  budget=$(bash -c '. ./harness.config.sh; for e in $HARNESS_BUDGETS; do case "$e" in TODO.md:*) echo "${e#TODO.md:}";; esac; done' | head -1)
   : "${budget:=160000}"
   current=$(wc -c < "$1/TODO.md" | tr -d ' ')
   grow=$((budget + 1 - current))
@@ -528,9 +543,24 @@ probe path-ref-future-ok  0 ""            mut_path_ref_future_ok
 
 # ── 元断言:每个启用的 tag 都必须有探针（2026-11-12）─────────────
 # 只防「有脚本、没探针」:新增检查忘了补探针时 canary 仍会全绿,
-# 于是新检查从未被证明有效。启用 tag 以 verify-context.sh 里的 fail "TAG" 为准。
-declared_tags=$(grep -oE 'fail "[A-Z][A-Z-]*"' scripts/verify-context.sh \
-  | sed -E 's/^fail "(.*)"$/\1/' | sort -u)
+# 于是新检查从未被证明有效。启用 tag 从门禁实现里算：kit 核心检查 + 本仓适配层，
+# 按 HARNESS_CHECKS / HARNESS_DISABLED_CHECKS 过滤（关闭的检查不需要探针）。
+declared_tags=$(
+  export HARNESS_REPO_ROOT="$root" HARNESS_CONFIG="$root/harness.config.sh"
+  . "$root/harness-kit/lib/config.sh"
+  . "$root/harness-kit/lib/util.sh"
+  . "$root/harness-kit/lib/runner.sh"
+  h_detect_roots
+  h_load_config
+  for dir in "$KIT_ROOT/checks" "$REPO_ROOT/${HARNESS_EXTRA_CHECKS_DIR:-none}"; do
+    for f in "$dir"/*.sh; do
+      [ -f "$f" ] || continue
+      id=$(h_check_meta "$f" id)
+      tag=$(h_check_meta "$f" tag)
+      if h_check_enabled "$id" "$tag"; then echo "$tag"; fi
+    done
+  done | sort -u
+)
 uncovered=$(comm -23 <(printf '%s\n' "$declared_tags") \
                     <(printf '%s' "$probe_tags" | sort -u))
 if [ -n "$uncovered" ]; then

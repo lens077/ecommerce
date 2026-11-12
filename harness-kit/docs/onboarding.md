@@ -40,11 +40,11 @@ harness.lock              kit 版本与文件摘要
 # harness.config.sh
 HARNESS_DOC_ROOTS="AGENTS.md TODO.md context docs"   # 参与扫描的路径，必须都存在
 HARNESS_LAYERS="team harness-framework decisions project"
-HARNESS_BUDGET_FILES="AGENTS.md"
-HARNESS_BUDGET_BYTES=16000
+HARNESS_NESTED_LAYER=""                              # 有 <层>/<项目>/<模块>/ 结构时填层名
+HARNESS_BUDGETS="AGENTS.md:16000"                    # 每项 <文件>:<字节>
 HARNESS_PROGRESS_FILE="TODO.md"
 HARNESS_SKILL_DOC="docs/skills.md"
-HARNESS_GITLEAKS=optional
+HARNESS_GITLEAKS="required"                          # 默认值；见下方「gitleaks 没装怎么办」
 ```
 
 改完自检：
@@ -53,8 +53,27 @@ HARNESS_GITLEAKS=optional
 harness/bin/harness doctor
 ```
 
-`doctor` 会报：配置引用不存在的文件、`HARNESS_BUDGET_BYTES` 非整数、gitleaks 与模式不一致、
+`doctor` 会报：配置引用不存在的文件、`HARNESS_BUDGETS` 格式不对、gitleaks 与模式不一致、
 `harness.lock` 与 kit 摘要不一致（说明本地改过 kit）。
+
+### gitleaks 没装怎么办
+
+默认 `HARNESS_GITLEAKS="required"` 是刻意的 fail-closed：**接入期因未装工具而红是预期行为**，
+它把「装工具」变成一次明确的动作，而不是一条没人看的提示。
+
+```bash
+# 1) 先装（任选一种，见官方安装入口）
+#    https://github.com/gitleaks/gitleaks#installing
+brew install gitleaks          # macOS
+# 2) 确认 doctor 认到工具
+harness/bin/harness doctor     # 应输出 ✓ gitleaks: <版本>
+
+# 3) 确实装不了（离线/受限环境）才显式降级——doctor 会提示当前是 optional
+#    在 harness.config.sh 写：
+HARNESS_GITLEAKS="optional"
+```
+
+不要写 `off`：那会把内置明文特征扫描一起关掉，等于整层消失。
 
 ## 4. 先跑一次，看红在哪
 
@@ -65,7 +84,7 @@ harness/bin/harness check
 预期：新骨架通常是绿的。接进既有仓库时多半会红，按下面顺序处理：
 
 1. **路径类**（`DEAD-LINK` / `PATH-REF`）：优先改文档，不存在的文件就是不存在。
-2. **结构类**（`FRONTMATTER` / `INDEX-COVERAGE`）：补 frontmatter、补 INDEX 行。
+2. **结构类**（`FRONTMATTER` / `ORPHAN`）：补 frontmatter、补 INDEX 行。
 3. **预算**（`BUDGET`）：删重复内容或下沉到 `context/`，不要调大预算。
 4. **存量**（`PROGRESS-SRC` 等）：只把确实排不上修复的登记基线，并写进 `TODO.md`。
 
@@ -90,11 +109,13 @@ harness/bin/harness canary
 ```
 
 它会：构建临时沙箱 → 干净沙箱必须绿 → 每个 tag 注入一个已知违规 → 断言 rc=1 且 tag 正确 →
-断言「每个启用 tag 都有探针、每个探针都有对应 tag」。
+新增判定类检查再跑一个正样本（`canary/positives/`）证明不误杀 →
+断言「每个启用 tag 都有探针、每个要求正样本的 tag 都有正样本、每个探针都有对应 tag」。
 
-这里红通常是三种原因：
+这里红通常是四种原因：
 
 - 新增检查没写探针（元断言报「无探针」）；
+- 声明了 `POSITIVE_TAGS` 却没写 `canary/positives/<TAG>.sh`；
 - 探针的注错样本没真正违反判定（改探针，不要改检查）；
 - 干净沙箱就红了（模板沙箱缺文件，按报错补沙箱构建逻辑）。
 

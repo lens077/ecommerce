@@ -1,44 +1,45 @@
 #!/usr/bin/env bash
 # id: skill-ref
 # tag: SKILL-REF
-# desc: skill 表声明的采用状态必须与入口文档一致；标为不可用的 skill 不得被入口文档要求执行
-# config: HARNESS_SKILL_DOC HARNESS_SKILL_SECTION HARNESS_ENTRY_DOCS
+# desc: 入口文档不得要求执行登记为不可用的 skill
+# config: HARNESS_SKILL_DOC HARNESS_SKILL_SECTION HARNESS_SKILL_ENTRY_DOCS
 #
-# 列契约：第 1 列是 skill 名（反引号包裹），第 2 列是状态词。
-# 状态命中「缺失 / 不采用 / 未装 / unavailable」即视为不可用。
+# 登记表里状态命中 缺失|不采用|未装 的 skill，其名字不得以 `/名字` 出现在入口文档（围栏外）。
+# 指向不存在的程序记忆比没有更糟：模型会花轮次去找。
+#
+# 三个已踩过的坑：
+#   ① 只扫配置指定的那一张表，不扫全文——否则把普通 CLI（buf/gitleaks）也当成 skill。
+#   ② 状态词必须是词表，否则换个说法就绕过去了。
+#   ③ 不要用 `strip_fences x | grep -qF`：pipefail 下 grep -q 命中即退出，左侧吃 SIGPIPE
+#      让管道退出码 141，if 判假，违规静默漏报。用 case 做字符串匹配。
 
 . "$HARNESS_KIT/lib/util.sh"
 H_FAILS=0
 
-doc="$REPO_ROOT/$HARNESS_SKILL_DOC"
-[ -f "$doc" ] || { h_pass "无 skill 表（$HARNESS_SKILL_DOC），跳过"; exit 0; }
+reg="$HARNESS_SKILL_DOC"
+section="$HARNESS_SKILL_SECTION"
 
-rows=$(awk -v sec="$HARNESS_SKILL_SECTION" '
-  $0 == "## "sec { on=1; next }
-  on && /^## / { exit }
-  on && /^\|/ { print }
-' "$doc")
+if [ ! -f "$reg" ]; then
+  h_pass "无 $reg，跳过"
+  exit 0
+fi
 
-unavailable=""
-while IFS= read -r row; do
-  [ -z "$row" ] && continue
-  case "$row" in *'---'*) continue ;; esac
-  name=$(printf '%s' "$row" | awk -F'|' '{gsub(/^[ \t]+|[ \t]+$/, "", $2); print $2}')
-  status=$(printf '%s' "$row" | awk -F'|' '{gsub(/^[ \t]+|[ \t]+$/, "", $3); print $3}')
-  [ -z "$name" ] && continue
-  name=${name//\`/}
-  case "$status" in
-    *缺失*|*不采用*|*未装*|*unavailable*|*"not installed"*) unavailable="$unavailable $name" ;;
-  esac
-done <<< "$rows"
-
-for name in $unavailable; do
-  for entry in $HARNESS_ENTRY_DOCS; do
-    if grep -qF "$name" "$REPO_ROOT/$entry" 2>/dev/null; then
-      h_fail SKILL-REF "$entry 提到了不可用的 skill「$name」——入口文件不得要求执行它"
-    fi
-  done
+for entry in $HARNESS_SKILL_ENTRY_DOCS; do
+  [ -f "$entry" ] || continue
+  entry_text=$(h_strip_fences "$entry")
+  while IFS= read -r skill; do
+    [ -z "$skill" ] && continue
+    case "$entry_text" in
+      *"\`/$skill\`"*)
+        h_fail SKILL-REF "$entry 要求执行 /$skill，但 $reg 登记它不可用——装上并改登记，或改用本仓能力" ;;
+    esac
+  done < <(awk -v sec="$section" -F'|' '
+    $0 ~ ("^## " sec) { inskills = 1; next }
+    /^## / { inskills = 0 }
+    inskills && /^\| `/ && $3 ~ /缺失|不采用|未装|unavailable|not installed/ {
+      if (match($2, /`[^`]+`/)) print substr($2, RSTART+1, RLENGTH-2)
+    }' "$reg")
 done
 
-[ "$H_FAILS" -eq 0 ] && h_pass "skill 状态与入口文档一致（不可用：${unavailable:-无}）"
+[ "$H_FAILS" -eq 0 ] && h_pass "skill 引用均可执行"
 [ "$H_FAILS" -eq 0 ]

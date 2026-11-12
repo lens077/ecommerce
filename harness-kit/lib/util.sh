@@ -23,9 +23,76 @@ h_die() { # 配置/环境错误：直接退出，不走 fail 计数
   exit 2
 }
 
-# 剥掉 ``` 围栏代码块：示例链接、示例路径不该被当真。
+# 剥掉围栏代码块：示例链接、示例路径不该被当真。
+# 按围栏长度配对，不是简单翻转：```` 不能被 ``` 关闭，否则 markdown 模板里
+# 嵌套的示例链接会被当成真链接（旧实现踩过，见 10-dead-link 的 canary）。
 h_strip_fences() {
-  awk 'BEGIN{f=0} /^```/{f=!f; next} !f{print}' "$1"
+  awk '
+    {
+      if (match($0, /^[ \t]*`+/)) {
+        s = substr($0, RSTART, RLENGTH); gsub(/[ \t]/, "", s); n = length(s)
+        if (n >= 3) {
+          if (fence == 0)      { fence = n; next }
+          else if (n >= fence) { fence = 0; next }
+        }
+      }
+      if (fence == 0) print
+    }' "$1"
+}
+
+# 围栏外任务复选框数量（同样的长度配对规则）。
+h_count_checkboxes() {
+  awk '
+    {
+      if (match($0, /^[ \t]*`+/)) {
+        s = substr($0, RSTART, RLENGTH); gsub(/[ \t]/, "", s); n = length(s)
+        if (n >= 3) {
+          if (fence == 0)      { fence = n; next }
+          else if (n >= fence) { fence = 0; next }
+        }
+      }
+      if (fence == 0 && $0 ~ /^[ \t]*- \[[ xX]\]/) c++
+    }
+    END { print c+0 }
+  ' "$1"
+}
+
+# 按 shell glob 列文件（第二个参数是空格分隔的 glob 字符串，内部会关掉 pathname 展开）。
+# find 的 -path 里 * 可以跨 /，所以 `context/*/experience/*.md`
+# 能匹配任意深度的 experience 目录；glob 无 / 时按目录处理。
+h_glob_files() { # h_glob_files "<glob> ..."
+  local list="$1" g start had_noglob=0
+  case $- in *f*) had_noglob=1 ;; *) set -f ;; esac
+  for g in $list; do
+    case "$g" in
+      */*)
+        start=${g%%/*}
+        [ -d "$start" ] || continue
+        find "$start" -type f -path "$g" ;;
+      *)
+        [ -d "$g" ] || continue
+        find "$g" -type f ;;
+    esac
+  done | LC_ALL=C sort -u
+  [ "$had_noglob" = 1 ] || set +f
+}
+
+# 路径是否命中任一 shell glob。第二个参数是空格分隔的 glob 列表字符串：
+# 不要用 `$list` 直接传参——未加引号的展开会先把 *.md 之类先按磁盘文件展开掉。
+h_glob_match_any() { # h_glob_match_any <path> "<glob> ..."
+  local p="$1" list="$2" g had_noglob=0
+  case $- in *f*) had_noglob=1 ;; *) set -f ;; esac
+  for g in $list; do
+    case "$p" in $g) [ "$had_noglob" = 1 ] || set +f; return 0 ;; esac
+  done
+  [ "$had_noglob" = 1 ] || set +f
+  return 1
+}
+
+# 读「每行一个路径 + 可选 # 注释」的基线；输出去注释后的第一列。
+h_baseline_paths() { # h_baseline_paths <file>
+  [ -f "$1" ] || return 0
+  awk '{ line=$0; sub(/#.*/, "", line); gsub(/^[[:space:]]+|[[:space:]]+$/, "", line); if (line!="") print line }' "$1"
 }
 
 # 列出参与检查的 Markdown 文件（按 HARNESS_DOC_ROOTS，去重）。

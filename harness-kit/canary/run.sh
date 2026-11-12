@@ -49,7 +49,10 @@ build_template() {
 run_gate() { # run_gate <sandbox> → 输出，rc 通过全局 RC 返回
   local sb="$1"
   RC=0
-  OUT=$(HARNESS_REPO_ROOT="$sb" bash "$sb/harness/bin/harness" check 2>&1) || RC=$?
+  # 必须显式指向沙箱自己的配置：父进程 h_load_config 导出的 HARNESS_CONFIG
+  # 会被子进程继承，不覆盖就会拿宿主仓库的配置跑沙箱（探针的注错配置全部失效）。
+  OUT=$(HARNESS_REPO_ROOT="$sb" HARNESS_CONFIG="$sb/harness.config.sh" \
+        bash "$sb/harness/bin/harness" check 2>&1) || RC=$?
 }
 
 probe() { # probe <名称> <期望rc> <期望tag|空> <注错脚本|空>
@@ -88,6 +91,15 @@ for f in "$KIT_ROOT"/checks/*.sh; do
   fi
 done
 
+# ── 正样本：新增检查必须同时证明「不误杀」 ──────────────────────────
+# 只证明会红不够：判定写宽了（例如把合规文档也算违规）同样会让门禁失效——
+# 受害者会去改基线或关检查，而不是修判定。新增判定一律补一正一反。
+POSITIVE_TAGS="AFFECTS INDEX-LINE FORMAT EVIDENCE RETIRED SELFCHECK"
+for tag in $POSITIVE_TAGS; do
+  [ -f "$KIT_ROOT/canary/positives/$tag.sh" ] && \
+    probe "ok-$tag" 0 "" "$KIT_ROOT/canary/positives/$tag.sh"
+done
+
 # ── 元断言：tag ↔ 探针双向覆盖 ────────────────────────────────────
 missing=""
 while IFS= read -r tag; do
@@ -99,6 +111,15 @@ if [ -n "$missing" ]; then
   fails=$((fails + 1))
 else
   printf '  ✓ tag 覆盖：%s 个启用 tag 均有探针\n' "$(printf '%s\n' "$declared_tags" | grep -c .)"
+fi
+
+missing_pos=""
+for tag in $POSITIVE_TAGS; do
+  [ -f "$KIT_ROOT/canary/positives/$tag.sh" ] || missing_pos="${missing_pos}${tag}"$'\n'
+done
+if [ -n "$missing_pos" ]; then
+  printf '  ✗ 以下 tag 要求正样本但没有（只证会红、没证不误杀）：\n%s\n' "$(printf '%s' "$missing_pos" | sed 's/^/      /')"
+  fails=$((fails + 1))
 fi
 
 stray=""

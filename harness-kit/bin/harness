@@ -6,6 +6,7 @@
 #   harness init             在宿主仓库生成配置、文档骨架、基线与 lock
 #   harness install-hooks    把 core.hooksPath 指到本 kit 的 hooks/
 #   harness doctor           配置、依赖、lock 校验
+#   harness lock             重新生成 harness.lock（升级 kit 后跑）
 #   harness list-checks      列出检查与探针覆盖
 set -uo pipefail
 
@@ -19,6 +20,16 @@ HERE=$(cd "$(dirname "$0")" && pwd)
 
 h_detect_roots
 h_load_config
+
+# lock：记录版本与每个 kit 文件的摘要，doctor 用它发现「本地改过 kit」。
+write_lock() {
+  {
+    printf 'version=%s\n' "$(cat "$KIT_ROOT/VERSION")"
+    ( cd "$KIT_ROOT" && find . -type f ! -name 'harness.lock' | LC_ALL=C sort | \
+      while IFS= read -r f; do printf '%s  %s\n' "$(shasum -a 256 "$f" | cut -d' ' -f1)" "${f#./}"; done )
+  } > "$REPO_ROOT/harness.lock"
+  echo "wrote harness.lock（kit $(cat "$KIT_ROOT/VERSION")）"
+}
 
 cmd=${1:-check}
 shift || true
@@ -34,12 +45,17 @@ case "$cmd" in
     bash "$KIT_ROOT/canary/run.sh"
     ;;
   list-checks)
-    f id tag desc probes
-    for f in "$KIT_ROOT"/checks/*.sh; do
-      id=$(h_check_meta "$f" id); tag=$(h_check_meta "$f" tag)
-      desc=$(h_check_meta "$f" desc)
-      probes=no; [ -f "$KIT_ROOT/canary/probes/$tag.sh" ] && probes=yes
-      printf '%-16s %-14s probe=%-3s %s\n' "$id" "$tag" "$probes" "$desc"
+    f id tag desc probes dirs
+    dirs=("$KIT_ROOT/checks")
+    [ -n "${HARNESS_EXTRA_CHECKS_DIR:-}" ] && dirs+=("$REPO_ROOT/$HARNESS_EXTRA_CHECKS_DIR")
+    for dir in "${dirs[@]}"; do
+      for f in "$dir"/*.sh; do
+        [ -f "$f" ] || continue
+        id=$(h_check_meta "$f" id); tag=$(h_check_meta "$f" tag)
+        desc=$(h_check_meta "$f" desc)
+        probes=no; [ -f "$KIT_ROOT/canary/probes/$tag.sh" ] && probes=yes
+        printf '%-16s %-14s probe=%-3s %s\n' "$id" "$tag" "$probes" "$desc"
+      done
     done
     ;;
   init)
@@ -80,14 +96,12 @@ case "$cmd" in
       fi
     done
     # lock：记录版本与每个 kit 文件的摘要，doctor 用它发现「本地改过 kit」。
-    {
-      printf 'version=%s\n' "$(cat "$KIT_ROOT/VERSION")"
-      ( cd "$KIT_ROOT" && find . -type f ! -name 'harness.lock' | LC_ALL=C sort | \
-        while IFS= read -r f; do printf '%s  %s\n' "$(shasum -a 256 "$f" | cut -d' ' -f1)" "${f#./}"; done )
-    } > "$REPO_ROOT/harness.lock"
-    echo "created harness.lock"
+    write_lock
     echo
     echo "下一步：改写 harness.config.sh → harness/bin/harness doctor → harness/bin/harness check → harness/bin/harness canary"
+    ;;
+  lock)
+    write_lock
     ;;
   install-hooks)
     git -C "$REPO_ROOT" rev-parse --git-dir >/dev/null 2>&1 || h_die "不在 git 仓库内，无法安装 hooks"
@@ -123,7 +137,9 @@ PY
     if [ -f "$REPO_ROOT/harness.lock" ]; then
       drift=$(cd "$KIT_ROOT" && \
         while read -r want f; do
-          case "$want" in version=*) continue ;; esac
+          # 不用 case：bash 3.2 在 $( ) 里遇到 case 模式的 `)` 会提前结束替换，
+          # 报 syntax error near `;;`（本仓曾因此在 macOS 自带 bash 上直接崩）。
+          [ "${want#version=}" != "$want" ] && continue
           [ -f "./$f" ] || { echo "missing:$f"; continue; }
           got=$(shasum -a 256 "./$f" | cut -d' ' -f1)
           [ "$got" = "$want" ] || echo "changed:$f"
@@ -137,11 +153,17 @@ PY
     else
       echo "· 无 harness.lock（还没跑过 init）"
     fi
-    echo "· 启用检查：$(for f in "$KIT_ROOT"/checks/*.sh; do h_check_meta "$f" tag; done | tr '\n' ' ')"
+    echo "· 检查目录：$KIT_ROOT/checks${HARNESS_EXTRA_CHECKS_DIR:+ $REPO_ROOT/$HARNESS_EXTRA_CHECKS_DIR}"
+    echo "· 启用检查：$(for dir in "$KIT_ROOT/checks" ${HARNESS_EXTRA_CHECKS_DIR:+"$REPO_ROOT/$HARNESS_EXTRA_CHECKS_DIR"}; do
+      for f in "$dir"/*.sh; do
+        [ -f "$f" ] || continue
+        h_check_enabled "$(h_check_meta "$f" id)" "$(h_check_meta "$f" tag)" && h_check_meta "$f" tag
+      done
+    done | tr '\n' ' ')"
     [ "$problems" -eq 0 ]
     ;;
   *)
-    echo "用法：harness {check [fast]|canary|init|install-hooks|doctor|list-checks}" >&2
+    echo "用法：harness {check [fast]|canary|init|install-hooks|doctor|lock|list-checks}" >&2
     exit 2
     ;;
 esac

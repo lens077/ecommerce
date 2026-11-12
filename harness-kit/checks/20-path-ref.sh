@@ -3,7 +3,7 @@
 # tag: PATH-REF
 # desc: 正文反引号里写的仓库路径必须存在（链接检查看不到这一类）
 # fast: 1
-# config: HARNESS_DOC_ROOTS
+# config: HARNESS_DOC_ROOTS HARNESS_PATHREF_BASELINE
 
 . "$HARNESS_KIT/lib/util.sh"
 H_FAILS=0
@@ -26,7 +26,7 @@ while IFS= read -r file; do
   done
 done < <(h_md_files) >> "$tmp"
 
-baseline="$REPO_ROOT/baselines/pathref.baseline.txt"
+baseline="$REPO_ROOT/$HARNESS_PATHREF_BASELINE"
 hits=$(python3 "$HARNESS_KIT/lib/baseline.py" filter --baseline "$baseline" --hits "$tmp")
 while IFS=$'\t' read -r file tok; do
   [ -z "${tok:-}" ] && continue
@@ -36,7 +36,7 @@ done <<< "$hits"
 stale=$(python3 "$HARNESS_KIT/lib/baseline.py" stale --baseline "$baseline" --hits "$tmp")
 while IFS= read -r line; do
   [ -z "$line" ] && continue
-  h_fail BASELINE "baselines/pathref.baseline.txt 的「$line」已不再违规，请删掉该行（反向棘轮）"
+  h_fail BASELINE "$HARNESS_PATHREF_BASELINE 的「$line」已不再违规，请删掉该行（反向棘轮）"
 done <<< "$stale"
 
 [ "$H_FAILS" -eq 0 ] && h_pass "正文路径全部存在"

@@ -13,4 +13,4 @@ for ln in lines:
         done = True
 open(path, "w", encoding="utf-8").write("\n".join(out) + "\n")
 PY
-printf '\n本仓要求执行 `canary-ghost`。\n' >> "$sb/AGENTS.md"
+printf '\n本仓要求执行 `/canary-ghost`。\n' >> "$sb/AGENTS.md"

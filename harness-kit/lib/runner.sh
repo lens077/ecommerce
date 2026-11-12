@@ -28,32 +28,37 @@ h_check_enabled() { # h_check_enabled <id> <tag>
 }
 
 h_run_checks() { # h_run_checks [fast|all]
-  local mode="${1:-all}" f id tag desc rc start dur out total=0 failed=0
+  local mode="${1:-all}" f id tag desc rc start dur out total=0 failed=0 dir dirs
   local -a ran=()
 
-  for f in "$KIT_ROOT"/checks/*.sh; do
-    [ -f "$f" ] || continue
-    id=$(h_check_meta "$f" id)
-    tag=$(h_check_meta "$f" tag)
-    desc=$(h_check_meta "$f" desc)
-    [ -n "$id" ] && [ -n "$tag" ] || { printf 'harness: %s 缺少 # id / # tag 元数据\n' "$f" >&2; return 2; }
-    h_check_enabled "$id" "$tag" || continue
-    if [ "$mode" = fast ] && [ "$(h_check_meta "$f" fast)" != 1 ]; then continue; fi
+  dirs=("$KIT_ROOT/checks")
+  [ -n "${HARNESS_EXTRA_CHECKS_DIR:-}" ] && dirs+=("$REPO_ROOT/$HARNESS_EXTRA_CHECKS_DIR")
 
-    total=$((total + 1))
-    start=$(date +%s)
-    rc=0
-    out=$(cd "$REPO_ROOT" && HARNESS_REPO_ROOT="$REPO_ROOT" HARNESS_KIT="$KIT_ROOT" \
-          bash "$f" 2>&1) || rc=$?
-    dur=$(( $(date +%s) - start ))
+  for dir in "${dirs[@]}"; do
+    for f in "$dir"/*.sh; do
+      [ -f "$f" ] || continue
+      id=$(h_check_meta "$f" id)
+      tag=$(h_check_meta "$f" tag)
+      desc=$(h_check_meta "$f" desc)
+      [ -n "$id" ] && [ -n "$tag" ] || { printf 'harness: %s 缺少 # id / # tag 元数据\n' "$f" >&2; return 2; }
+      h_check_enabled "$id" "$tag" || continue
+      if [ "$mode" = fast ] && [ "$(h_check_meta "$f" fast)" != 1 ]; then continue; fi
 
-    if [ "$rc" -eq 0 ]; then
-      printf '✅ [%s] %s (%ss)\n' "$tag" "$desc" "$dur"
-    else
-      printf '❌ [%s] %s (%ss)\n%s\n' "$tag" "$desc" "$dur" "$out"
-      failed=$((failed + 1))
-    fi
-    ran+=("$tag")
+      total=$((total + 1))
+      start=$(date +%s)
+      rc=0
+      out=$(cd "$REPO_ROOT" && HARNESS_REPO_ROOT="$REPO_ROOT" HARNESS_KIT="$KIT_ROOT" \
+            bash "$f" 2>&1) || rc=$?
+      dur=$(( $(date +%s) - start ))
+
+      if [ "$rc" -eq 0 ]; then
+        printf '✅ [%s] %s (%ss)\n' "$tag" "$desc" "$dur"
+      else
+        printf '❌ [%s] %s (%ss)\n%s\n' "$tag" "$desc" "$dur" "$out"
+        failed=$((failed + 1))
+      fi
+      ran+=("$tag")
+    done
   done
 
   if [ "$total" -eq 0 ]; then

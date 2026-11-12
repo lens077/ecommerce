@@ -1,20 +1,24 @@
 #!/usr/bin/env bash
 # id: budget
 # tag: BUDGET
-# desc: 入口文档的字节数不得超过预算（预算写进配置，别为变绿调大）
-# config: HARNESS_BUDGET_FILES HARNESS_BUDGET_BYTES
+# desc: 入口文档超过字节上限（按文件分别设限）
+# config: HARNESS_BUDGETS
+#
+# 入口文档必须短到能被一次读完；长文一律下潜到 context/。字节而不是字数：
+# 这个上限的作用是控制读取成本，不做排版指标。格式 `<文件>:<字节数>`。
 
 . "$HARNESS_KIT/lib/util.sh"
 H_FAILS=0
-total=0
 
-for f in $HARNESS_BUDGET_FILES; do
-  [ -f "$REPO_ROOT/$f" ] || { h_fail BUDGET "$f 不存在"; continue; }
-  bytes=$(wc -c < "$REPO_ROOT/$f" | tr -d ' ')
-  total=$((total + bytes))
-  [ "$bytes" -le "$HARNESS_BUDGET_BYTES" ] || \
-    h_fail BUDGET "$f = $bytes 字节，超过预算 $HARNESS_BUDGET_BYTES"
+for entry in $HARNESS_BUDGETS; do
+  file=${entry%:*}
+  limit=${entry##*:}
+  [ -f "$file" ] || continue
+  size=$(wc -c < "$file" | tr -d ' ')
+  if [ "$size" -gt "$limit" ]; then
+    h_fail BUDGET "$file ${size} 字节 > ${limit}"
+  fi
 done
 
-h_pass "$(printf '%s' "$HARNESS_BUDGET_FILES") 共 $total / $HARNESS_BUDGET_BYTES 字节"
+[ "$H_FAILS" -eq 0 ] && h_pass "入口文档预算合规"
 [ "$H_FAILS" -eq 0 ]

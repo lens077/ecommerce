@@ -396,20 +396,28 @@
 </article>
 
 <article class="d" id="d15">
-  <h3>D15 gitleaks 默认 <code>optional</code>，而不是 <code>required</code></h3>
-  <p class="badges"><span class="badge stage">阶段 2</span><span class="badge">实现细节</span></p>
+  <h3>D15 gitleaks 默认 <code>required</code>（已决）</h3>
+  <p class="badges"><span class="badge stage">阶段 2</span><span class="badge">已决</span></p>
   <dl>
     <dt>备选</dt>
-    <dd><code>required</code>（缺工具即红，最严格）；<code>optional</code>（缺工具只跑内置特征，选定）；<code>off</code>。</dd>
+    <dd><code>required</code>（缺工具即红，选定）；<code>optional</code>（缺工具只跑内置特征）；<code>off</code>。</dd>
     <dt>选择</dt>
-    <dd class="pick">默认 <code>optional</code>，在配置注释里写明 <code>required</code> 是 fail-closed 语义。</dd>
+    <dd class="pick">默认 <code>required</code>，fail-closed：没装 gitleaks 就红，不允许「工具没装所以这层静默跳过」。</dd>
     <dt>理由</dt>
-    <dd>新项目接入时未必装 gitleaks，默认 <code>required</code> 会让人先关掉整个检查；
-      内置特征（私钥头、AK、口令赋值）零依赖，先保证有基线防护，再按团队要求升到 <code>required</code>。</dd>
+    <dd>原方案默认 <code>optional</code>，理由是新项目接入时未必装工具。但 <code>optional</code> 的失败形态是
+      「看起来跑了、历史扫描其实没跑」——与本仓反复出现的门禁静默失效同型。接入期因未装工具而红是
+      <b>预期行为</b>：它把「装工具」变成一次明确的接入动作，而不是一条永远没人看的提示。</dd>
     <dt>影响面</dt>
-    <dd><code>harness-kit/harness.config.example.sh:40</code>；<code>doctor</code> 会报当前模式与工具状态。</dd>
+    <dd><code>harness-kit/lib/config.sh</code> 默认值、<code>harness-kit/harness.config.example.sh</code>
+      （即 <code>init</code> 生成物）、<code>harness-kit/bin/harness doctor</code> 的提示、
+      <code>docs/onboarding.md</code> 第 3 步、<code>docs/adaptation.md</code> 的 SECRETS 节。</dd>
     <dt>改判</dt>
-    <dd>改成 <code>HARNESS_GITLEAKS=required</code>，确保 CI 镜像里有 gitleaks，再跑 <code>harness/bin/harness check</code>。</dd>
+    <dd>接入期确实装不了工具时，在 <code>harness.config.sh</code> 显式写
+      <code>HARNESS_GITLEAKS="optional"</code>（<code>doctor</code> 会提示当前是降级状态），
+      不要写 <code>off</code>——那会把内置明文特征一起关掉。安装入口：
+      <code>https://github.com/gitleaks/gitleaks#installing</code>。
+      要改回默认 <code>optional</code>，先证明「接入失败率高到必须让门禁容忍缺工具」，
+      并在本页新增一条决策记录写明反例。</dd>
   </dl>
 </article>
 
@@ -468,10 +476,50 @@
   </dl>
 </article>
 
+<article class="d" id="d19">
+  <h3>D19 把 ecommerce 的 18 个 tag 收敛到 kit 的单一实现（已决）</h3>
+  <p class="badges"><span class="badge stage">阶段 5</span><span class="badge">已决</span><span class="badge">收敛</span></p>
+  <dl>
+    <dt>备选</dt>
+    <dd>两套实现并行（kit 只服务新项目，ecommerce 保留原脚本）；把 18 项全部搬进 kit；
+      通用判定进 kit、仓库专属判定留适配层（选定）。</dd>
+    <dt>选择</dt>
+    <dd class="pick">通用判定进 <code>harness-kit/checks/</code>，仓库专属判定放
+      <code>scripts/context-adapters/</code>，由 <code>HARNESS_EXTRA_CHECKS_DIR</code> 接入；
+      <code>scripts/verify-context.sh</code> 改为同名薄封装，参数与退出码不变。</dd>
+    <dt>映射结论</dt>
+    <dd><b>一一对应进 kit（7）</b>：DEAD-LINK、FRONTMATTER、SKILL-REF、BUDGET、PROGRESS-SRC、
+      ORPHAN（原 INDEX-COVERAGE）、PATH-REF 的通用版本。<br>
+      <b>kit 缺失、本次补齐（6）</b>：INDEX-LINE、FORMAT、EVIDENCE、AFFECTS、RETIRED、SELFCHECK。<br>
+      <b>语义不同、保留适配层（5）</b>：DECISION（路径即状态 + spec-speak）、EMBED（依赖
+      <code>scripts/doc-embed.py</code>）、ENV-CONTRACT（对齐 <code>go.mod</code>/<code>package.json</code>）、
+      GENERATED（本仓告警目录生成器）、PATH-REF（本仓 <code>scripts/path-refs.py</code> 的放行规则与基线格式；
+      kit 的通用 path-ref 在本仓关闭）。<br>
+      <b>跨检查 tag（1）</b>：BASELINE 不是独立检查，由 kit 基线的反向棘轮与适配层各自的基线断言共同承载。</dd>
+    <dt>理由</dt>
+    <dd>并行两套实现的成本不是「多写一遍」，而是判定漂移后没人知道哪套算数。
+      但把 DECISION/EMBED 这类规则硬塞进 kit 会把 ecommerce 的目录约定变成通用契约，
+      新项目接入时要么被迫接受，要么加一堆开关把检查改成恒绿。
+      判据是<b>判定本身是否依赖本仓的路径约定或生成器</b>：依赖就留适配层。</dd>
+    <dt>不丢判定的证据</dt>
+    <dd><code>scripts/verify-context-canary.sh</code> 覆盖全部 17 个启用 tag（kit 12 + 适配层 5），
+      每个 tag 至少一个注错探针断言 rc=1 且 tag 正确；新增的 6 项另各配一个正样本，
+      证明不误杀。元断言「每个启用 tag 至少一个探针」继续生效。</dd>
+    <dt>影响面</dt>
+    <dd><code>harness-kit/</code>（16 项检查 + 探针/正样本）、<code>scripts/context-adapters/</code>（5 项）、
+      <code>harness.config.sh</code>、<code>scripts/verify-context.sh</code>（薄封装）、
+      <code>scripts/verify-context-canary.sh</code>、<code>harness.lock</code>。</dd>
+    <dt>改判</dt>
+    <dd>适配层里的某项如果在新项目反复出现同样需求，先把它参数化成 kit 配置项（而不是复制脚本），
+      再在本页新增决策记录说明为什么它已能通用化。反过来，kit 里的某项如果被证明只对 ecommerce 成立，
+      移回适配层，并保持 tag 不变——tag 是探针与 CI 的历史接口。</dd>
+  </dl>
+</article>
+
 <div class="note">
-  <b>仍需你拍板的两点</b>
-  <p>1）是否要把 ecommerce 现有 18 个 tag 的判定逐条对齐成 kit 的 10 项（L3 改动，收益是单套实现，风险是静默放宽）。本文档按「不动」处理。</p>
-  <p>2）是否把 <code>HARNESS_GITLEAKS</code> 在新项目里统一设为 <code>required</code>。本文档按 <code>optional</code> 处理，理由是接入期不该被未装工具卡死。</p>
+  <b>本文档的两条待定项已各自落成决策</b>
+  <p>1）ecommerce 现有 18 个 tag 的收敛：见 <a href="#d19">D19</a>。</p>
+  <p>2）gitleaks 在新项目里的默认值：见 <a href="#d15">D15</a>（已决：<code>required</code>）。</p>
 </div>
 
 <h2 class="section">提交列表</h2>
@@ -487,6 +535,8 @@
     <dd><code>ce2f7925</code> docs(harness): kit 适配指南与从零接入手册</dd>
     <dt>阶段 4</dt>
     <dd>本文件所在提交</dd>
+    <dt>阶段 5</dt>
+    <dd>收敛提交：18 个 tag 的通用判定进 kit、专属判定留适配层，gitleaks 默认改 <code>required</code></dd>
   </dl>
 </article>
 

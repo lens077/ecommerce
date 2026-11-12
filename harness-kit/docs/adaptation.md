@@ -26,7 +26,7 @@
 
 - **验什么**：`` `context/foo.md` `` 这类以真实顶层目录开头的路径必须存在。
   只认真实存在的顶层目录，命令名、口号、URL 不判定。
-- **配置**：`HARNESS_DOC_ROOTS`；存量走 `baselines/pathref.baseline.txt`。
+- **配置**：`HARNESS_DOC_ROOTS`；存量走 `HARNESS_PATHREF_BASELINE`（默认 `baselines/pathref.baseline.txt`）。
 - **失败意味着**：文档让人去改一个不存在的文件——比死链更隐蔽，因为不是链接。
 - **放宽/替换**：先删基线行；确实不能立刻修的，登记 `<文件>\t<路径>` 进基线。
 - **探针**：`PATH-REF.sh` 追加 `` `context/no-such-canary.md` ``。
@@ -36,41 +36,44 @@
 ## FRONTMATTER — 文档元数据
 
 - **验什么**：`context/**` 下非 INDEX 的文档首行是 `---`；`name` 等于文件名、`layer` 等于所在目录、
-  `description` 非空；`affects:` 里的路径存在且不含 glob。
-- **配置**：`HARNESS_LAYERS`（层目录名）。
+  `description` 非空；`HARNESS_NESTED_LAYER` 下的文档 `module` 必须与模块目录一致。
+  （`affects:` 的存在性由 AFFECTS 检查负责。）
+- **配置**：`HARNESS_LAYERS`（层目录名）、`HARNESS_NESTED_LAYER`。
 - **失败意味着**：文档无法被路由（层错）或无法被检索（name 错），属于结构性损坏。
 - **放宽/替换**：不要放宽 name==文件名，它会传染——检索、链接、索引都依赖它。
   如需更多必填键，在 `checks/30-frontmatter.sh` 加一行断言并同步探针。
 - **探针**：`FRONTMATTER.sh` 写一个 name 与文件名不一致的文档并登记进 INDEX。
 - **常见误配**：`layer` 写成绝对路径或大驼峰；嵌套目录（`project/sub/x.md`）的 layer 应是第一段 `project`。
 
-## INDEX-COVERAGE — 防孤儿
+## ORPHAN — 防孤儿
 
 - **验什么**：`context/<layer>` 下每篇文档都被该层 `INDEX.md`（或其他层 INDEX）收录；
-  根 `INDEX.md` 链接了每个存在的层 INDEX。
-- **配置**：`HARNESS_LAYERS`。
+  根 `INDEX.md` 链接了每个存在的层 INDEX。`HARNESS_NESTED_LAYER` 指定形如
+  `<层>/<项目>/<模块>/` 的层：项目与模块要逐级登记，层 INDEX 不存在时只校验根 INDEX 里的项目条目。
+- **配置**：`HARNESS_LAYERS`、`HARNESS_NESTED_LAYER`。
 - **失败意味着**：文档存在但没人能找到——等于没写。
 - **放宽/替换**：补 INDEX 行，不要改成「允许未登记」。
-- **探针**：`INDEX-COVERAGE.sh` 写一个合规但未登记的文档。
+- **探针**：`ORPHAN.sh` 写一个合规但未登记的文档。
 - **常见误配**：INDEX 里只写文件名不写链接——kit 用 `grep -F` 匹配文件名，能过；
   但人类读者点不进去，建议始终写成 `[x.md](x.md)`。
 
 ## BUDGET — 入口文档预算
 
-- **验什么**：`HARNESS_BUDGET_FILES` 的字节总和 ≤ `HARNESS_BUDGET_BYTES`。
-- **配置**：两者都必需。
+- **验什么**：`HARNESS_BUDGETS` 里每项 `<文件>:<字节数>` 分别校验该文件不超过上限。
+- **配置**：`HARNESS_BUDGETS`（空格分隔的 `文件:字节` 列表）。
 - **失败意味着**：入口文件开始承载本该下沉到 `context/` 的细节，Agent 的上下文会被挤占。
 - **放宽/替换**：先删重复内容或下沉到 `context/`；确需提高预算时在决策记录里写清理由。
   **不要**把预算调大作为修法。
-- **探针**：`BUDGET.sh` 把入口文档撑爆。
-- **常见误配**：预算单位搞错（是字节不是字符，中文 3 字节）；把多个文件塞进列表却不改预算。
+- **探针**：`BUDGET.sh` 把首个预算文件的字节数推过上限。
+- **常见误配**：预算单位搞错（是字节不是字符，中文 3 字节）；`文件:字节` 写成空格分隔；
+  列表里登记了不存在的文件（`doctor` 会报）。
 
 ## SKILL-REF — skill 采用状态契约
 
 - **验什么**：`HARNESS_SKILL_DOC` 的 `## <HARNESS_SKILL_SECTION>` 表格里，
   第 1 列 skill 名、第 2 列状态；状态含「缺失 / 不采用 / 未装 / unavailable」的 skill，
-  不得出现在 `HARNESS_ENTRY_DOCS` 中。
-- **配置**：`HARNESS_SKILL_DOC`、`HARNESS_SKILL_SECTION`、`HARNESS_ENTRY_DOCS`。
+  不得以 `` `/名字` `` 的形式出现在 `HARNESS_SKILL_ENTRY_DOCS` 中（围栏外）。
+- **配置**：`HARNESS_SKILL_DOC`、`HARNESS_SKILL_SECTION`、`HARNESS_SKILL_ENTRY_DOCS`。
 - **失败意味着**：入口文件要求执行一个明确不可用的 skill，Agent 会卡住或瞎试。
 - **放宽/替换**：改状态列而**不是**改列位；列位是契约，挪列会让检查静默读错。
   新增状态词时同步 `checks/60-skill-ref.sh` 的正则。
@@ -79,12 +82,17 @@
 
 ## PROGRESS-SRC — 进度源唯一
 
-- **验什么**：除 `HARNESS_PROGRESS_FILE` 外的文档不得出现 `- [ ]` / `- [x]`（剥掉围栏后）。
-- **配置**：`HARNESS_PROGRESS_FILE`；存量走 `baselines/progress.baseline.txt`。
+- **验什么**：`HARNESS_PROGRESS_SCOPE=repo` 时扫全仓 `*.md`（否则只扫 `HARNESS_DOC_ROOTS`），
+  除 `HARNESS_PROGRESS_FILE` 与 `HARNESS_PROGRESS_ALLOW` 命中的目录外，不得出现
+  `- [ ]` / `- [x]`（剥掉围栏后）。
+- **配置**：`HARNESS_PROGRESS_FILE`、`HARNESS_PROGRESS_SCOPE`、`HARNESS_PROGRESS_ALLOW`；
+  存量走 `HARNESS_PROGRESS_BASELINE`，每行 `<文件> <计数>`。
 - **失败意味着**：出现第二份进度真相源，两边会不一致。
-- **放宽/替换**：把示例放进 ``` 围栏（围栏内不算）；存量登记基线并逐步清理。
+- **放宽/替换**：把示例放进 ``` 围栏（围栏内不算）；存量按**计数**冻结（只许减不许增），
+  并逐步清理。
 - **探针**：`PROGRESS-SRC.sh` 往任意被扫描文档追加一个复选框。
-- **常见误配**：把「验收清单」写在交付文档里——它们确实是待办，应进 `TODO.md` 或被围栏包起来。
+- **常见误配**：把「验收清单」写在交付文档里——它们确实是待办，应进 `TODO.md` 或被围栏包起来；
+  基线写成 `<文件>`（缺计数）——计数基线才能挡住「已登记文件继续长复选框」。
 
 ## DOC-SYNC — 文档责任
 
@@ -112,12 +120,77 @@
 
 - **验什么**：内置特征（私钥头、云厂商 AK、`password = "..."` 一类赋值）零依赖扫描；
   `HARNESS_GITLEAKS=optional|required` 时再叠 gitleaks 历史扫描。
-- **配置**：`HARNESS_GITLEAKS`。
+- **配置**：`HARNESS_GITLEAKS`，默认 `required`（fail-closed）。
 - **失败意味着**：凭据已进提交树。**改历史**比改当前文件重要——kit 只负责拦新增。
 - **放宽/替换**：给 gitleaks 配 `.gitleaks.toml` 的 allowlist；内置特征命中请改代码而不是加豁免。
 - **探针**：`SECRETS.sh` 在运行时拼出关键字与值，避免探针源码自己命中。
-- **常见误配**：`required` 模式下 CI 镜像没装 gitleaks → 直接红，这是 fail-closed 的预期行为；
-  想容忍就显式设 `optional`。
+- **常见误配**：`required` 模式下机器没装 gitleaks → 直接红，**这是预期的接入动作**：
+  按 <https://github.com/gitleaks/gitleaks#installing> 装好再跑 `doctor`。
+  确实装不了时显式写 `HARNESS_GITLEAKS="optional"`（doctor 会提示降级），不要写 `off`。
+
+## AFFECTS — frontmatter 的反向依赖索引
+
+- **验什么**：`HARNESS_AFFECTS_ROOTS` 下文档的 `affects:` 每一项必须非空、真实存在、不含 glob。
+- **配置**：`HARNESS_AFFECTS_ROOTS`（空格分隔的目录列表）。
+- **失败意味着**：索引指向已删路径，会让人以为核对过了——比没有索引更危险。
+- **放宽/替换**：改路径或删条目；不要加 glob，存在性就没法判定了。
+- **探针**：`AFFECTS.sh` 把一条 `affects:` 指到不存在的目录。
+- **常见误配**：`affects:` 写成列表外的行内数组（`[a, b]`）——kit 只读 `- path` 块列表；
+  指向目录时别带尾随 `/**`。
+
+## INDEX-LINE — INDEX 单元格长度
+
+- **验什么**：`HARNESS_INDEX_LINE_LIMITS` 里每项 `<glob>:<字数>`，命中的 INDEX 表格单元
+  超出字数上限即红；按 Unicode 字符计数（中文 1 字）。
+- **配置**：`HARNESS_INDEX_LINE_LIMITS`（留空 = 关闭）。
+- **失败意味着**：INDEX 从「路由」退化成「内容层」，第一跳就读到细节，第二跳没人点。
+- **放宽/替换**：把细节下沉到被索引的文档；不要只对某个文件调大上限。
+- **探针 / 正样本**：`INDEX-LINE.sh` 写一个超长单元；`positives/INDEX-LINE.sh` 写一个合规长度。
+- **常见误配**：glob 写成目录（`context/**`）而不是 `*/INDEX.md`；把表格分隔行当成数据行。
+
+## FORMAT — 经验文档的固定小节
+
+- **验什么**：`HARNESS_FORMAT_GLOBS` 命中的文档必须含 `HARNESS_FORMAT_SECTIONS` 声明的各组小节；
+  分号分组，竖线表示可选写法（`症状;关键陷阱|陷阱`）。
+- **配置**：`HARNESS_FORMAT_GLOBS`、`HARNESS_FORMAT_SECTIONS`、`HARNESS_FORMAT_BASELINE`。
+- **失败意味着**：经验文档没有固定骨架，检索与复用都靠人读全文。
+- **放宽/替换**：存量登记基线（只许收紧）；格式本身要改就改配置，不要删检查。
+- **探针 / 正样本**：`FORMAT.sh` 缺一段；`positives/FORMAT.sh` 四段齐全。
+- **常见误配**：把「可选小节」写成必填——用户会被迫编内容；glob 忘记按 `find -path` 语义写。
+
+## EVIDENCE — 经验文档的证据来源
+
+- **验什么**：`HARNESS_EVIDENCE_GLOBS` 命中文档的「证据」段里，每条 `- ` 列表项必须以
+  `HARNESS_EVIDENCE_LABELS` 中的来源标签开头（`[log]` / `[metric]` / …）；围栏内的行不算。
+- **配置**：`HARNESS_EVIDENCE_GLOBS`、`HARNESS_EVIDENCE_SECTION`、`HARNESS_EVIDENCE_LABELS`。
+- **失败意味着**：结论没有可追溯来源，下一个人只能重跑一遍或盲信。
+- **放宽/替换**：补标签；新增来源类型就加进 `LABELS`，不要用「没标签也算」的开关。
+- **探针 / 正样本**：`EVIDENCE.sh` 写一条无标签；`positives/EVIDENCE.sh` 全带标签。
+- **常见误配**：把「证据」段之后的其他列表也算进去——kit 到下一个标题为止；标签写成中文全角括号。
+
+## RETIRED — 退役组件必须标明
+
+- **验什么**：`HARNESS_RETIRED_ROOTS` 的正文（围栏外）提到 `HARNESS_RETIRED_TERMS`
+  中的组件时，前后 `HARNESS_RETIRED_WINDOW` 行内必须有 `HARNESS_RETIRED_BANNERS` 的横幅词；
+  文件前 `HARNESS_RETIRED_HEAD` 行有横幅则整篇放行。
+- **配置**：`HARNESS_RETIRED_ROOTS`、`HARNESS_RETIRED_TERMS`（留空 = 关闭）、
+  `HARNESS_RETIRED_BANNERS`、`HARNESS_RETIRED_WINDOW`、`HARNESS_RETIRED_HEAD`。
+- **失败意味着**：读者会照着已退役的组件去排查，找不到东西还以为是环境问题。
+- **放宽/替换**：在同一行或邻近行写明「已退役」，或把整段移到带横幅的历史文档。
+- **探针 / 正样本**：`RETIRED.sh` 裸提组件；`positives/RETIRED.sh` 带「已退役」横幅。
+- **常见误配**：把词表写成字面量串而不是 ERE（`a|b` 才对）；横幅窗口设成 0（只认同行）。
+
+## SELFCHECK — 实现单的完成自检
+
+- **验什么**：`HARNESS_SELFCHECK_GLOBS` 命中且正文命中 `HARNESS_SELFCHECK_STATUS` 的实现单，
+  必须有 `## <HARNESS_SELFCHECK_SECTION>`，且每条复选框带 `HARNESS_SELFCHECK_SEPARATOR`
+  之后的证据或原因。
+- **配置**：`HARNESS_SELFCHECK_GLOBS`（留空 = 关闭）、`HARNESS_SELFCHECK_STATUS`、
+  `HARNESS_SELFCHECK_SECTION`、`HARNESS_SELFCHECK_SEPARATOR`。
+- **失败意味着**：「代码写完 = 完成」——最常见的假成功。
+- **放宽/替换**：如实写「未验证」并给原因，不要删小节；确实不适用就收窄 glob。
+- **探针 / 正样本**：`SELFCHECK.sh` 缺小节；`positives/SELFCHECK.sh` 含带原因的未勾选项。
+- **常见误配**：把 `Status: done` 写成大小写混排（按配置的正则）；分隔符用半角 `--`。
 
 ---
 
@@ -127,8 +200,14 @@
 2. 在文件里 `. "$HARNESS_KIT/lib/util.sh"`，失败调用 `h_fail TAG "说明"`，末尾 `[ "$H_FAILS" -eq 0 ]`。
 3. 新增配置项（可选）：写进 `harness.config.example.sh`，并在 `lib/config.sh` 给默认值与 `export`。
 4. 写 `canary/probes/TAG.sh`：接收沙箱路径 `$1`，注入一个已知违规。
-5. 跑 `harness check`（干净仓库必须仍绿）与 `harness canary`（新 tag 必须红）。
-6. 在本文件补一节，写清验什么、怎么放宽、常见误配。
+5. 新增判定类检查还要写 `canary/positives/TAG.sh`：注入一个合规样本，证明不误杀；
+   并在 `canary/run.sh` 的 `POSITIVE_TAGS` 里登记。
+6. 跑 `harness check`（干净仓库必须仍绿）与 `harness canary`（新 tag 必须红）。
+7. 在本文件补一节，写清验什么、怎么放宽、常见误配。
+
+仓库专属判定不要塞进 `checks/`：放进宿主仓库的适配层目录，`HARNESS_EXTRA_CHECKS_DIR`
+指向它即可，协议与核心检查相同（同样的 `# id/# tag/# desc` 头部与 `h_fail` 调用）。
+适配层检查的探针放在宿主自己的 canary 脚本里——它不随 kit 分发。
 
 ## 最小步骤：替换某一项判定
 

@@ -12,5 +12,5 @@
 规则：
 
 - 一篇文档只属于一层；跨层的内容拆开写，用链接连接。
-- 新增文档必须同时登记到本层 `INDEX.md`，否则 `INDEX-COVERAGE` 会红。
+- 新增文档必须同时登记到本层 `INDEX.md`，否则 `ORPHAN` 会红。
 - 文档首行是 `---` 的 frontmatter，至少写 `name`（等于文件名）、`layer`（等于所在目录）、`description`。
