@@ -1,4 +1,4 @@
-# 自测记录（2026-11-12 实跑，kit 0.3.1）
+# 自测记录（2026-11-12 实跑，kit 0.3.2）
 
 目标：证明 kit「新项目接入即绿」，并且「注错必红」。以下命令均为实际执行，不是设想。
 
@@ -6,9 +6,49 @@
 新检查全部按 macOS 自带 bash 验证过——`case` 的模式 `)` 会提前结束 `$( )`，
 heredoc 里裸写三个反引号会被当成命令替换，这两处都踩过并已修。
 
-## 0. 0.3.1 收尾版
+## 0. 0.3.2 性能版
 
-### 0.1 PATH-REF 逗号多段行号（修前红、修后绿）
+LyraPass 报告 PATH-REF 在 125 个 md、11,005 个反引号 token 下耗时 39.5s（整个检查 44s 的 90%），
+特征是 `sys` 远大于 `user`。原因是剥行号写在 `while read` 循环里，每个 token 起一次 `sed`。
+
+### 0.1 改前 / 改后（实测，不是估算）
+
+改法是：把剥反引号与剥行号合并进同一条 `sed`，每个文件一次。命令（只跑 PATH-REF 这一项）：
+
+```bash
+run_pr() { env HARNESS_KIT="$1" HARNESS_REPO_ROOT="$2" HARNESS_CONFIG="$2/harness.config.sh" \
+  bash -c '. "$HARNESS_KIT/lib/config.sh"; . "$HARNESS_KIT/lib/runner.sh"; h_detect_roots; h_load_config; \
+           cd "$REPO_ROOT" && bash "$HARNESS_KIT/checks/20-path-ref.sh"'; }
+/usr/bin/time -p bash -c "$(declare -f run_pr); run_pr <kit> <repo>"
+```
+
+| 对象 | 规模 | 0.3.1 | 0.3.2 |
+| --- | --- | --- | --- |
+| 合成样本（8 个 md，2000 个带行号 token） | 2000 token | 7.41s / 7.60s | 0.24s / 0.26s |
+| ecommerce | 约 4 千 token | 40.07s | 1.75s / 1.76s |
+| LyraPass | 125 md / 11,005 token | 46.36s | 1.07s / 1.45s |
+
+合成样本的 `time -p` 分解：0.3.1 为 `user 1.87 / sys 4.93`，0.3.2 为 `user 0.13 / sys 0.11`——
+`sys` 的下降就是 fork 放大被消掉。旧实现 2000 token 触发 1211 次外部进程，新实现 11 次。
+判定语义不变：ecommerce 与 LyraPass 上新旧输出的逐字节 `diff` 为空，rc 相同。
+
+### 0.2 canary 新增两条自检
+
+```
+  ✓ selfcheck path-ref-line-forms: 四种行号形态与通配跳过
+  ✓ selfcheck path-ref-fork-count: 1200 个 token 仅 11 次外部进程（与 token 数无关）
+```
+
+`path-ref-line-forms` 在沙箱里写单行 `:1149`、区间 `:1149-1164`、逗号多段
+`:1149-1164,1196-1223`、逗号混合 `:1149,1196-1223`，以及 `docs/*.md`、`src/foo*`，
+要求全部放行；真缺失仍由 `path-ref-patterns` 证明会红。
+
+`path-ref-fork-count` 用 PATH 垫片包住 `sed`/`awk` 统计调用次数，样本 4 个文件、1200 个 token，
+断言不超过 32 次。它不测墙钟，所以慢机器不会假红；旧实现（每 token 一次 sed）是 1211 次。
+
+## 1. 0.3.1 收尾版（历史）
+
+### 1.1 PATH-REF 逗号多段行号（修前红、修后绿）
 
 同一份文档 `AGENTS.md` 写两段引用：
 
@@ -32,9 +72,9 @@ harness: 0/1 项通过（FAIL）
 harness: 1/1 项通过（OK）
 ```
 
-kit 的 canary 把这条固定成 `selfcheck path-ref-comma-ranges`，以后改剥离逻辑会当场红。
+kit 的 canary 把这条固定成 `selfcheck path-ref-line-forms`（0.3.2 起覆盖四种行号形态），以后改剥离逻辑会当场红。
 
-### 0.2 canary 成本（实测，不是估算）
+### 1.2 canary 成本（实测，不是估算）
 
 同一台机器、同一批探针、`/usr/bin/time -p`：
 
@@ -52,7 +92,7 @@ kit 的 canary 把这条固定成 `selfcheck path-ref-comma-ranges`，以后改�
 分段数据也说明：APFS 上复制本来只占十几秒，5–6 分钟的大头是串行跑门禁。
 并行才是墙钟从约 6 分钟降到约 2 分钟的原因。
 
-### 0.3 canary 自身的新自检
+### 1.3 canary 自身的新自检
 
 ```
   ✓ selfcheck template-mirror: 已跟踪文件树完整
@@ -63,7 +103,7 @@ kit 的 canary 把这条固定成 `selfcheck path-ref-comma-ranges`，以后改�
 `probe-isolation` 往沙箱里的 `AGENTS.md` 追加一行，断言模板摘要不变、沙箱确实写进去了；
 走硬链接路径时会额外报告「源码树硬链接复用」，走整树复制时报告「整树复制」。
 
-## 1. 新项目接入（0.3.0）
+## 2. 新项目接入（0.3.0）
 
 ```bash
 rm -rf /tmp/harness-kit-030 && mkdir -p /tmp/harness-kit-030
@@ -85,7 +125,7 @@ harness: 16/16 项通过（OK）        # check RC=0
 启用检查为 `DEAD-LINK PATH-REF FRONTMATTER AFFECTS ORPHAN INDEX-LINE FORMAT EVIDENCE
 BUDGET RETIRED SKILL-REF PROGRESS-SRC DOC-SYNC SELFCHECK PUBLIC-IP SECRETS`。
 
-## 2. canary（门禁的门禁，0.3.0 输出；0.3.1 见第 0 节）
+## 3. canary（门禁的门禁，0.3.0 输出；0.3.1 / 0.3.2 见第 0、1 节）
 
 ```bash
 /bin/bash harness/bin/harness canary
@@ -110,7 +150,7 @@ canary: 构建模板沙箱
 verify-canary: OK（23 探针全过：干净沙箱绿 + 各类注错被拦且 tag 正确）   # RC=0
 ```
 
-## 3. 注错必红
+## 4. 注错必红
 
 ```bash
 printf '\n[坏链](no-such-file.md)\n' >> AGENTS.md
@@ -123,7 +163,7 @@ harness/bin/harness check
 harness: 15/16 项通过（FAIL）        # RC=1
 ```
 
-## 4. 接入补丁的三个场景（0.3.0 新增）
+## 5. 接入补丁的三个场景（0.3.0 新增）
 
 **hook 场景（绝对 `GIT_DIR`）**：`install-hooks` 后用 `GIT_DIR="$(pwd)/.git"` 提交。
 旧实现会把工作树根解析到 `harness/`，配置校验报一串「AGENTS.md 不存在」并挡住提交；
@@ -139,7 +179,7 @@ harness: 15/16 项通过（FAIL）        # RC=1
 **仓库外资源**：`HARNESS_CANARY_EXTERNAL="../shared-docs"` 时，
 `canary` 的 `clean-template` 为绿（资源按相对位置铺到了沙箱外层）。
 
-## 5. gitleaks 默认 `required` 的两条路径
+## 6. gitleaks 默认 `required` 的两条路径
 
 工具不在 PATH 时（`PATH=/usr/bin:/bin:/usr/sbin:/sbin`，Homebrew 的 gitleaks 被屏蔽）：
 
@@ -162,7 +202,7 @@ harness/bin/harness doctor
   · gitleaks 未安装（optional：只跳过历史扫描，内置明文特征仍会跑）
 ```
 
-## 6. hook 安装
+## 7. hook 安装
 
 ```bash
 harness/bin/harness install-hooks

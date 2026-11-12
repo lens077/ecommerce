@@ -33,10 +33,18 @@
 - **放宽/替换**：先删基线行；确实不能立刻修的，登记 `<文件>\t<路径>` 进基线。
 - **探针 / 自检**：`PATH-REF.sh` 追加 `` `context/no-such-canary.md` ``；
   `canary/run.sh` 的 `path-ref-patterns` 自检证明 `path:line` 与中段 `*` 放行、真缺失仍红；
-  `path-ref-comma-ranges` 自检证明 `docs/x.md:1149-1164,1196-1223` 不被当成文件名（0.3.1 新增）。
+  `path-ref-line-forms` 自检覆盖单行、区间、逗号多段、逗号混合四种行号形态，并确认中段/结尾 `*` 仍跳过；
+  `path-ref-fork-count` 自检在 1200 个 token 的样本上统计外部进程调用次数（0.3.2 新增）。
+- **性能**：剥行号必须与 token 数无关。0.3.1 及之前每个 token 起一次 `sed`，
+  LyraPass（125 个 md、11,005 个 token）这一项 39.5s，`sys` 远大于 `user`，是 fork 放大；
+  0.3.2 把剥反引号与剥行号合并进同一条 `sed`（每个文件一次），实测 LyraPass 46.36s → 1.07–1.45s、
+  ecommerce 40.07s → 1.75s、2000-token 合成样本 7.41–7.60s → 0.24–0.26s。
+  `path-ref-fork-count` 用 PATH 垫片统计 `sed`/`awk` 调用次数而不是墙钟：1200 个 token 实测 11 次，
+  上限 32；旧实现是 1211 次。计数值只与文件数有关、与机器快慢无关，不会在慢 CI 上假红。
 - **常见误配**：把 glob 当路径判定——kit 跳过含 `* ? < > { } [ ]` 等占位符的 token；
   旧版只跳过「以 `*` 结尾」的 token，`e2e/*.spec.ts` 会误报（0.3.0 修）。
   行号只剥单段时，逗号多段的引用会整串当文件名误报（0.3.1 修，ToDo、palcommerce 撞到）。
+  把行号剥离写回 `while read` 循环里会重新引入逐 token fork（0.3.2 修，LyraPass 报告）。
   含空格的整段被跳过，长句里的路径请在反引号里只写路径本身。
 
 ## FRONTMATTER — 文档元数据

@@ -72,12 +72,27 @@ harness/bin/harness install-hooks   # core.hooksPath -> harness/hooks
 
 ## 版本与升级
 
-当前版本 **0.3.1**（收尾版：PATH-REF 逗号多段行号、canary 成本、CI 模板策略，见下方「0.3.1 变更」）。
+当前版本 **0.3.2**（性能修正：PATH-REF 剥行号不再逐 token 起进程，见下方「0.3.2 变更」）。
 
 `harness.lock` 记录 kit 版本与每个文件的 sha256。升级方式：整目录替换后跑
 `harness/bin/harness lock` 重写 lock，再跑 `harness/bin/harness doctor`，它会报出被本地改过的文件。
 改 kit 是**新增检查**还是**改判定**，按 `docs/adaptation.md` 的「最小步骤」执行，
 并且必须补一个 canary 探针——否则 `canary` 的 meta 断言会红。
+
+### 0.3.2 变更（PATH-REF 性能）
+
+| 修补 | 来源 | 落点 |
+| --- | --- | --- |
+| PATH-REF 把剥行号合并进提取管道，每个文件只起一次 `sed`，不再逐 token 起进程 | LyraPass（125 md / 11,005 token，单项 39.5s） | `checks/20-path-ref.sh` + canary 自检 |
+| 新增正确性自检：单行、区间、逗号多段、逗号混合四种行号形态；中段/结尾 `*` 仍跳过 | 本轮 | `canary/run.sh` 的 `path-ref-line-forms` |
+| 新增性能回归自检：1200 个 token 的外部进程调用次数必须与 token 数无关 | 本轮 | `canary/run.sh` 的 `path-ref-fork-count` |
+
+实测（本机 macOS/APFS，只跑 PATH-REF 这一项）：LyraPass 46.36s → 1.07–1.45s，
+ecommerce 40.07s → 1.75s，2000-token 合成样本 7.41–7.60s → 0.24–0.26s。
+旧实现的 `sys` 远大于 `user`（2000 token：sys 4.93s / user 1.87s），是 fork 放大。
+
+升级到 0.3.2：整目录替换 `harness/` → `harness/bin/harness lock` → `doctor` → `check` → `canary`。
+判定语义未变，不需要改基线或探针。
 
 ### 0.3.1 变更（收尾）
 

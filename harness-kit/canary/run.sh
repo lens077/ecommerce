@@ -346,22 +346,89 @@ check_path_ref_patterns() {
   printf '  ✓ selfcheck path-ref-patterns: 通配与 path:line 放行、真缺失仍红\n'
 }
 
-check_path_ref_comma_ranges() {
+check_path_ref_line_forms() {
   local aux="$workdir/aux-pathref-comma"
   mkdir -p "$aux/harness" "$aux/docs/subsystems" "$aux/src"
   cp -R "$KIT_ROOT/." "$aux/harness/"
   write_min_config "$aux" "path-ref"
   printf '# readme\n\n正文\n' > "$aux/docs/subsystems/core.md"
   printf '# foo\n' > "$aux/src/foo.rs"
-  # 0.3.0 只剥单段行号，逗号多段会整串当一个文件名判、误报不存在。
-  printf '# 文档\n\n切片 `docs/subsystems/core.md:1149-1164,1196-1223` 与 `src/foo.rs:984-993,1003-1007`。\n' \
-    > "$aux/AGENTS.md"
+  # 四种行号形态都必须先剥掉再判存在性：单行、区间、逗号多段、逗号混合。
+  # 同时保留通配跳过规则：中段 * 与结尾 * 是模式，不是具体路径。
+  cat > "$aux/AGENTS.md" <<'EOF'
+# 文档
+
+- `docs/subsystems/core.md:1149`
+- `docs/subsystems/core.md:1149-1164`
+- `docs/subsystems/core.md:1149-1164,1196-1223`
+- `docs/subsystems/core.md:1149,1196-1223`
+- `src/foo.rs:984-993,1003-1007`
+- `docs/subsystems/*.md`
+- `src/foo*`
+EOF
   run_gate "$aux"
   if [ "$RC" -ne 0 ]; then
-    printf '  ✗ selfcheck path-ref-comma-ranges: 逗号多段行号被误报 rc=%s\n%s\n' "$RC" "$OUT"
+    printf '  ✗ selfcheck path-ref-line-forms: 四种行号/通配被误报 rc=%s\n%s\n' "$RC" "$OUT"
     fails=$((fails + 1)); return
   fi
-  printf '  ✓ selfcheck path-ref-comma-ranges: 逗号多段行号放行\n'
+  printf '  ✓ selfcheck path-ref-line-forms: 四种行号形态与通配跳过\n'
+}
+
+# 性能回归：行号剥离必须与 token 数无关，只能随文件数增长。
+# 0.3.1 及之前每个 token 起一次 sed，LyraPass（11,005 token）这一项 39.5s，
+# sys 远大于 user，属 fork 放大。这里数的是「外部进程调用次数」而不是墙钟：
+# 计数不受机器快慢影响，不会在慢 CI 上假红；旧实现会按 token 数把它顶穿。
+check_path_ref_no_per_token_fork() {
+  local sb="$workdir/aux-pathref-perf" shim="$workdir/pathref-shim"
+  local counts="$workdir/pathref-forks" nfiles=4 i calls limit rc=0 real
+  mkdir -p "$sb/docs" "$sb/src"
+  printf '# a\n' > "$sb/docs/a.md"
+  printf 'fn main() {}\n' > "$sb/src/foo.rs"
+  for i in 1 2 3 4; do
+    {
+      printf '# 样本 %s\n\n' "$i"
+      # 1200 个 token：单行/区间/逗号多段/逗号混合交替出现。
+      python3 - <<'PY'
+forms = ["docs/a.md:12", "docs/a.md:12-34", "docs/a.md:12-34,56-78", "docs/a.md:12,34-56"]
+for n in range(300):
+    print(f"引用 `{forms[n % len(forms)]}`。")
+PY
+    } > "$sb/docs/sample$i.md"
+  done
+  cat > "$sb/harness.config.sh" <<'EOF'
+HARNESS_DOC_ROOTS="docs"
+HARNESS_PATHREF_BASELINE="baselines/pathref.baseline.txt"
+HARNESS_GITLEAKS="off"
+EOF
+  mkdir -p "$shim"
+  for tool in sed awk; do
+    real=$(command -v "$tool")
+    cat > "$shim/$tool" <<EOF
+#!/bin/sh
+printf 'x\n' >> "$counts"
+exec "$real" "\$@"
+EOF
+    chmod +x "$shim/$tool"
+  done
+  : > "$counts"
+  ( cd "$sb" && env PATH="$shim:$PATH" HARNESS_KIT="$KIT_ROOT" \
+      HARNESS_REPO_ROOT="$sb" HARNESS_CONFIG="$sb/harness.config.sh" \
+      bash -c '. "$HARNESS_KIT/lib/config.sh"; h_detect_roots; h_load_config; bash "$HARNESS_KIT/checks/20-path-ref.sh"' \
+      >/dev/null 2>&1 ) || rc=$?
+  calls=$(wc -l < "$counts" | tr -d ' ')
+  # 新实现：sed 每文件一次 + awk 每文件一次 + 少量固定调用，实测 11 次。
+  # 上限留到 4*nfiles+16，仍远低于「每 token 一次」的 1200+，两边都不会假红/假绿。
+  limit=$((nfiles * 4 + 16))
+  if [ "$rc" -ne 0 ]; then
+    printf '  ✗ selfcheck path-ref-fork-count: 样本检查未通过 rc=%s（性能断言无效）\n' "$rc"
+    fails=$((fails + 1)); return
+  fi
+  if [ "$calls" -gt "$limit" ]; then
+    printf '  ✗ selfcheck path-ref-fork-count: 1200 个 token 触发了 %s 次外部进程（上限 %s）——行号剥离又回到逐 token 起进程\n' \
+      "$calls" "$limit"
+    fails=$((fails + 1)); return
+  fi
+  printf '  ✓ selfcheck path-ref-fork-count: 1200 个 token 仅 %s 次外部进程（与 token 数无关）\n' "$calls"
 }
 
 check_secrets_allowlist() {
@@ -417,7 +484,8 @@ check_gitleaks_copy
 check_single_file_doc_root
 check_external_paths
 check_path_ref_patterns
-check_path_ref_comma_ranges
+check_path_ref_line_forms
+check_path_ref_no_per_token_fork
 check_secrets_allowlist
 check_skill_ref_probe_config
 

@@ -171,7 +171,7 @@ git checkout -- AGENTS.md
 2. 改检查后必须补 `canary/probes/<TAG>.sh` 并跑 `canary`；
 3. 每项检查的判定与放宽方式看 `harness/docs/adaptation.md`。
 
-## 10. 升级 kit（含 0.3.0 / 0.3.1）
+## 10. 升级 kit（含 0.3.0 / 0.3.1 / 0.3.2）
 
 0.3.0 回流了五个接入仓的本地补丁（清单见 `README.md` 的「0.3.0 变更」）。
 升级时先把接入期临时改在 `harness/` 里的补丁删掉，再用新版整目录替换：
@@ -205,3 +205,10 @@ harness/bin/harness canary
   大仓墙钟约降到三分之一（ToDo 338.51s → 139.35s，ecommerce 384.88s → 145.08s，实测）；
 - CI 模板改成 PR 只跑 `doctor` + `check`、push 默认分支/打 tag 才跑 `canary`；
   已接入的仓库按需把 `.github/workflows/context-gate.yml` 或 `.gitlab-ci.yml` 的 job 同步成新模板。
+
+0.3.2 是 PATH-REF 的性能修正，升级同样只需整目录替换后 `harness/bin/harness lock`：
+
+- 判定语义不变（单行、区间、逗号多段、逗号混合四种行号，以及中段/结尾 `*` 的跳过规则都与 0.3.1 相同），
+  只是把剥行号从「每个 token 一次 `sed`」合并成「每个文件一次」，不需要改基线或探针；
+- 大仓收益明显：LyraPass 单项 46.36s → 1.07–1.45s，ecommerce 40.07s → 1.75s（本机实测）；
+- 如果你的 CI 对 `check` 有超时限制，升级后可以按新的单项耗时重新收紧。

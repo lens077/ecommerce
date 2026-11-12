@@ -95,6 +95,8 @@
     <li><a href="#d9">漂移修正</a></li>
     <li><a href="#d13">TODO.md</a></li>
     <li><a href="#d17">提交顺序</a></li>
+    <li><a href="#d21">收尾 0.3.1</a></li>
+    <li><a href="#d22">PATH-REF 性能</a></li>
   </ul>
 </header>
 
@@ -580,7 +582,8 @@
       ToDo 本机 5–6 分钟；CI 模板又在每个 PR 上跑 canary。</dd>
     <dt>选择一：PATH-REF 剥逗号多段</dt>
     <dd class="pick">把剥离正则扩成 <code>:[0-9]+(-[0-9]+)?(,[0-9]+(-[0-9]+)?)*$</code>，
-      并加 <code>path-ref-comma-ranges</code> 自检（修前红、修后绿）。</dd>
+      并加 <code>path-ref-comma-ranges</code> 自检（修前红、修后绿；0.3.2 扩展为
+      <code>path-ref-line-forms</code> 并保留四种行号形态）。</dd>
     <dt>被推翻的备选</dt>
     <dd>① 把所有含 <code>:</code> 的 token 一律跳过——会放过真实的「文件名 + 冒号」路径，
       判定被削弱；② 只剥到第一个冒号——仍会留下 <code>,1196-1223</code>，误报照旧；
@@ -609,11 +612,53 @@
   </dl>
 </article>
 
+<article class="d" id="d22">
+  <h3>D22 性能版 0.3.2：PATH-REF 消除逐 token fork（已决）</h3>
+  <p class="badges"><span class="badge stage">阶段 8</span><span class="badge">已决</span><span class="badge">性能</span></p>
+  <dl>
+    <dt>背景</dt>
+    <dd>LyraPass 实测：125 个 md、11,005 个反引号 token，PATH-REF 一项 39.5s，
+      占整个 <code>check</code>（44s）的 90%；<code>time -p</code> 的 <code>sys</code> 远大于
+      <code>user</code>。原因是剥行号写在 <code>while read</code> 循环里，每个 token 起一次
+      <code>sed</code>，成本随 token 数线性增长，属 fork 放大而非真实计算。</dd>
+    <dt>选择</dt>
+    <dd class="pick">把剥反引号与剥行号合并进同一条 <code>sed</code>，每个文件一次；
+      判定语义原样保留：<code>path:12</code>、<code>path:12-34</code>、
+      <code>path:12-34,56-78</code>、<code>path:12,34-56</code>，以及中段/结尾 <code>*</code>
+      的跳过规则都不变。</dd>
+    <dt>实测（本机 macOS/APFS，只跑 PATH-REF）</dt>
+    <dd>
+      <ul>
+        <li>2000-token 合成样本：7.41s / 7.60s → 0.24s / 0.26s；
+          <code>sys</code> 4.93s → 0.11s，<code>user</code> 1.87s → 0.13s。</li>
+        <li>ecommerce：40.07s → 1.75s / 1.76s。</li>
+        <li>LyraPass：46.36s → 1.07s / 1.45s（该仓自报旧值 39.5s，量级一致）。</li>
+        <li>ecommerce 与 LyraPass 上新旧实现的输出逐字节 <code>diff</code> 为空，rc 相同。</li>
+      </ul>
+    </dd>
+    <dt>被推翻的备选</dt>
+    <dd>① 用一次 <code>awk</code> 重写整条提取——BSD awk 没有 <code>match(s, re, arr)</code>，
+      要手写反引号扫描，收益与「一条 sed」相同但更易错；② <code>xargs</code> 批量调
+      <code>sed</code>——仍需按 token 调度，且要处理含空格/特殊字符的 token；
+      ③ 跳过行号剥离或让宿主写基线——削弱判定，把 kit 缺陷转成各仓维护债；
+      ④ 只在大仓关掉这项检查——等于放弃对「文档指向不存在文件」的拦截。</dd>
+    <dt>防退化</dt>
+    <dd class="pick">新增 <code>path-ref-fork-count</code> 自检：PATH 垫片包住
+      <code>sed</code>/<code>awk</code> 统计外部进程调用次数。4 个文件、1200 个 token 的样本上
+      实测 11 次，上限 32；旧实现是 1211 次。断言不测墙钟，只测调用次数，因此慢机器/慢 CI
+      不会假红；又因为「每 token 一次」会直接冲到 1200+，回归必红。
+      另加 <code>path-ref-line-forms</code> 覆盖四种行号形态与中段/结尾通配。</dd>
+    <dt>版本</dt>
+    <dd>0.3.2（patch）：只改实现与自检，不新增检查、不改判定，也不需要宿主改基线或探针。</dd>
+  </dl>
+</article>
+
 <div class="note">
   <b>三个待定/收敛项均已各自落成决策</b>
   <p>1）ecommerce 现有 18 个 tag 的收敛：见 <a href="#d19">D19</a>。</p>
   <p>2）gitleaks 在新项目里的默认值：见 <a href="#d15">D15</a>（已决：<code>required</code>）。</p>
-  <p>3）五仓接入补丁的回流与 0.3.0：见 <a href="#d20">D20</a>；收尾版 0.3.1：见 <a href="#d21">D21</a>。</p>
+  <p>3）五仓接入补丁的回流与 0.3.0：见 <a href="#d20">D20</a>；收尾版 0.3.1：见 <a href="#d21">D21</a>；
+    性能版 0.3.2：见 <a href="#d22">D22</a>。</p>
 </div>
 
 <h2 class="section">提交列表</h2>
