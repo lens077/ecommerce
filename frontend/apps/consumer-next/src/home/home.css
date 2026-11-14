@@ -171,6 +171,31 @@ a {
   border-radius: 8px;
   background-color: var(--paper-lit);
   box-shadow: 0 12px 30px -18px rgba(138, 106, 66, 0.5);
+  /* 入场动画:@starting-style 在元素首次渲染时建立过渡起点(淡入 + 4px 下落)。
+     只动 opacity/translate 这类合成器友好属性。下拉是 React 条件渲染(卸载/挂载),
+     不是 display 切换,不需要 transition-behavior: allow-discrete。 */
+  opacity: 1;
+  transition:
+    opacity 0.15s ease-out,
+    translate 0.15s ease-out;
+
+  @starting-style {
+    opacity: 0;
+    translate: 0 -4px;
+  }
+}
+
+/* reduced-motion 只禁空间位移,保留淡入(非运动过渡不打断) */
+@media (prefers-reduced-motion: reduce) {
+  .header-search-results {
+    translate: none;
+  }
+
+  @starting-style {
+    .header-search-results {
+      translate: none;
+    }
+  }
 }
 
 .header-search-results li a,

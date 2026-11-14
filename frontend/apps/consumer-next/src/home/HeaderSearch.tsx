@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useRef, useState, type FormEvent } from "react";
+import { useCallback, useEffect, useRef, useState, type FormEvent } from "react";
 import type { Language } from "./copy";
 import type { SearchProduct } from "./search-client";
 
@@ -26,17 +26,25 @@ export function HeaderSearch({ lang, placeholder, label, emptyText, errorText }:
   const [value, setValue] = useState("");
   const [state, setState] = useState<State>({ kind: "idle" });
   const rootRef = useRef<HTMLDivElement>(null);
+  const inputRef = useRef<HTMLInputElement>(null);
   const abortRef = useRef<AbortController | null>(null);
+
+  // 关闭必须连带 abort 在途请求:响应迟到时 onSubmit 里的 setState 会把刚关掉的下拉
+  // 重新拉起来(点外关闭原有此问题,Esc 关闭同样会踩)。
+  const close = useCallback(() => {
+    abortRef.current?.abort();
+    setState({ kind: "idle" });
+  }, []);
 
   // 点到外面就收起下拉
   useEffect(() => {
     if (state.kind === "idle") return;
     const onDown = (e: PointerEvent) => {
-      if (!rootRef.current?.contains(e.target as Node)) setState({ kind: "idle" });
+      if (!rootRef.current?.contains(e.target as Node)) close();
     };
     document.addEventListener("pointerdown", onDown);
     return () => document.removeEventListener("pointerdown", onDown);
-  }, [state.kind]);
+  }, [state.kind, close]);
 
   async function onSubmit(e: FormEvent) {
     e.preventDefault();
@@ -56,9 +64,21 @@ export function HeaderSearch({ lang, placeholder, label, emptyText, errorText }:
   }
 
   return (
-    <div className="header-search" ref={rootRef}>
+    <div
+      className="header-search"
+      ref={rootRef}
+      onKeyDown={(e) => {
+        // Esc 收起下拉(键盘可达性):事件沿 DOM 冒泡,焦点在输入框或结果链接上都生效。
+        // 组合态(IME 选字)的 Escape 不拦——那是取消当前拼音,不是关下拉,与 AppBar 的
+        // isComposing 守卫同理。结果链接随卸载失焦,焦点送回输入框。
+        if (e.key !== "Escape" || e.nativeEvent.isComposing) return;
+        close();
+        inputRef.current?.focus();
+      }}
+    >
       <form role="search" onSubmit={onSubmit}>
         <input
+          ref={inputRef}
           type="search"
           name="q"
           value={value}

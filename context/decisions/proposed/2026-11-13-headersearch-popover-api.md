@@ -36,3 +36,10 @@ consumer-next 顶栏搜索下拉（`frontend/apps/consumer-next/src/home/HeaderS
 ## 附属的轻路径（已可独立先行）
 
 不动架构，先补两个 a11y 缺口：`onKeyDown` Escape 关闭（一行）；下拉用 `@starting-style` + `transition-behavior: allow-discrete` 做入场动画。
+
+> 2026-11-14 轻路径已落地（`feat/modern-web-consumer-r2`），两处与上面描述有偏差，原因如下：
+> ① Esc 关闭不是一行——关闭必须连带 abort 在途请求，否则迟到的响应 `setState` 会把刚关掉的下拉
+> 重新拉起（点外关闭原有此问题，一并修了），且 Esc 带了 IME 组合态守卫（与 AppBar 的 isComposing
+> 守卫同理）；② 入场动画没用 `allow-discrete`——下拉是条件渲染的卸载/挂载，不是 display 切换，
+> 过渡离散属性无意义，实际写法是 `@starting-style` 淡入 + 4px 下落，reduced-motion 下只禁位移保留淡入。
+> 主提案（Popover + Anchor Positioning）继续暂缓，重估条件不变。
