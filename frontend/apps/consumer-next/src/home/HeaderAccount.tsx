@@ -41,7 +41,7 @@ export function HeaderAccount({ signIn, account }: Props) {
     );
   }
   return (
-    <a className="header-link header-link--seal" href={loginHref}>
+    <a className="header-link" href={loginHref}>
       {signIn}
     </a>
   );

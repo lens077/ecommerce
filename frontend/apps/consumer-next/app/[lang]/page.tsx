@@ -104,7 +104,6 @@ export default async function HomePage({ params }: { params: Promise<PageParams>
                   <h2 className="lamp-name">{heroProduct.name}</h2>
                   <p className="lamp-merchant">{heroProduct.merchant}</p>
                   <PriceInk price={heroProduct.minPrice} size="lg" copy={copy} />
-                  <span className="seal-btn seal-btn--md">{copy.home.viewLamp}</span>
                 </div>
               </a>
             </div>

@@ -18,7 +18,6 @@ for (const copy of Object.values(homeCopy)) {
     copy.nav.signIn,
     copy.home.enterMarket,
     copy.home.heroToday,
-    copy.home.viewLamp,
     copy.home.priceFrom,
     copy.footer.about.title,
     copy.footer.help.title,

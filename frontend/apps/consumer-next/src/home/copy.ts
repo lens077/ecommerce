@@ -46,7 +46,6 @@ export interface HomeCopy {
     sloganSub: string;
     enterMarket: string;
     heroToday: string;
-    viewLamp: string;
     categoriesTitle: string;
     gridTitle: string;
     demoBadge: string;
@@ -83,7 +82,7 @@ const zh: HomeCopy = {
   ],
   brand: "灯市",
   nav: {
-    searchPlaceholder: "搜索商品...",
+    searchPlaceholder: "搜索",
     searchLabel: "搜索商品",
     searchEmpty: "未找到相关商品",
     searchError: "搜索暂不可用，请稍后再试",
@@ -98,7 +97,6 @@ const zh: HomeCopy = {
     sloganSub: "每件好物是一盏灯——数码、服饰、食百，从街头逛到亮为止。",
     enterMarket: "进灯市",
     heroToday: "本日主灯",
-    viewLamp: "看灯去",
     categoriesTitle: "灯市街巷",
     gridTitle: "今日亮灯",
     demoBadge: "演示商品",
@@ -110,7 +108,7 @@ const zh: HomeCopy = {
     about: { title: "关于我们", company: "公司简介", contact: "联系我们", careers: "加入我们" },
     help: { title: "帮助中心", faq: "常见问题", guide: "购物指南", afterSales: "售后服务" },
     legal: { title: "隐私与条款", privacy: "隐私政策", terms: "服务条款", cookie: "Cookie 政策" },
-    copyright: (year) => `© ${year} 灯市. 保留所有权利.`,
+    copyright: (year) => `© ${year} 灯市 保留所有权利`,
     sitemap: "网站地图",
     icp: "备案信息",
   },
@@ -136,7 +134,7 @@ const en: HomeCopy = {
   ],
   brand: "Lantern Market",
   nav: {
-    searchPlaceholder: "Search products...",
+    searchPlaceholder: "Search",
     searchLabel: "Search products",
     searchEmpty: "No products found",
     searchError: "Search is unavailable right now, please try again later",
@@ -152,7 +150,6 @@ const en: HomeCopy = {
       "Every good find is a lit lantern — electronics, fashion, food and more, browse until the street glows.",
     enterMarket: "Enter the market",
     heroToday: "Lantern of the day",
-    viewLamp: "See this lantern",
     categoriesTitle: "Market lanes",
     gridTitle: "Lit today",
     demoBadge: "Demo products",

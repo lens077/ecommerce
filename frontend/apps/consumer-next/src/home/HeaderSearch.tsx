@@ -90,7 +90,7 @@ export function HeaderSearch({ lang, placeholder, label, emptyText, errorText }:
         />
         <button type="submit" aria-label={label}>
           <svg viewBox="0 0 24 24" width="20" height="20" aria-hidden="true">
-            <g fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round">
+            <g fill="none" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round">
               <circle cx="11" cy="11" r="6" />
               <path d="M15.5 15.5 L20 20" />
             </g>
