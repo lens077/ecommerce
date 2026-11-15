@@ -204,7 +204,11 @@ frontend-gate:
     - pnpm install --frozen-lockfile
   script:
     # 与 pnpm ready 相同的四项检查，仅把 workspace test/build 串行化以适配 1Gi。
-    - pnpm exec vp fmt
+    # 1Gi cgroup + NODE_OPTIONS=--max-old-space-size=256 下，vp fmt 默认 2 threads
+    # 会在格式化完成后由 tinypool 清理 worker 时递归爆栈
+    # (RangeError: Maximum call stack size exceeded, Node 24)，两次 CI 均稳定复现。
+    # 与下一行 lint 保持一致，单线程跑，避开多线程 worker 池。
+    - pnpm exec vp fmt --threads=1
     - pnpm exec vp lint --threads=1
     - pnpm exec vp run -r --concurrency-limit 1 test
     - pnpm exec vp run -r --concurrency-limit 1 build
