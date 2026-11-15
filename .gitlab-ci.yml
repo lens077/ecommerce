@@ -153,7 +153,10 @@ backend-gate:
 # 这是全仓**唯一**跑 pnpm ready 的 CI:GitHub 侧 frontend.yml 只剩每周一次的线上登录冒烟。
 frontend-gate:
   stage: test
-  image: node:24
+  # Node 24.21 + tinypool@2.2.0 在 vp fmt 完成后的 worker 清理阶段会无限
+  # reject 并抛 RangeError: Maximum call stack size exceeded；Node 26 下
+  # 同一套依赖与 CI 变量实测正常。engines 允许 >=26.0.0。
+  image: node:26
   variables:
     KUBERNETES_MEMORY_REQUEST: "1Gi"
     KUBERNETES_MEMORY_LIMIT: "1Gi"
@@ -204,11 +207,7 @@ frontend-gate:
     - pnpm install --frozen-lockfile
   script:
     # 与 pnpm ready 相同的四项检查，仅把 workspace test/build 串行化以适配 1Gi。
-    # 1Gi cgroup + NODE_OPTIONS=--max-old-space-size=256 下，vp fmt 默认 2 threads
-    # 会在格式化完成后由 tinypool 清理 worker 时递归爆栈
-    # (RangeError: Maximum call stack size exceeded, Node 24)，两次 CI 均稳定复现。
-    # 与下一行 lint 保持一致，单线程跑，避开多线程 worker 池。
-    - pnpm exec vp fmt --threads=1
+    - pnpm exec vp fmt
     - pnpm exec vp lint --threads=1
     - pnpm exec vp run -r --concurrency-limit 1 test
     - pnpm exec vp run -r --concurrency-limit 1 build

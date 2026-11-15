@@ -32,7 +32,8 @@ on:
         default: ''
 
 env:
-  NODE_VERSION: 22
+  # 与 GitLab frontend-gate 的 node:26 及 frontend/package.json engines(>=26.0.0) 对齐。
+  NODE_VERSION: 26
   FRONTEND_DIR: frontend
 
 jobs:
