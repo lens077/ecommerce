@@ -208,7 +208,11 @@ frontend-gate:
   script:
     # 与 pnpm ready 相同的四项检查，仅把 workspace test/build 串行化以适配 1Gi。
     - pnpm exec vp fmt
-    - pnpm exec vp lint --threads=1
+    # node5 runner 上 vp lint 拉起的 tsgolint 会在 oxc 分配器申请 2GiB 时
+    # unwrap 一个 Err(()) 并 SIGABRT（见 TODO.md 与 runner 归档文档）。
+    # 直接调 oxlint 绕开 tsgolint：保留 96 条默认规则，放弃 type-aware
+    # 与 prefer-vite-plus-imports；上游修复后再改回 vp lint。
+    - pnpm exec oxlint --threads=1
     - pnpm exec vp run -r --concurrency-limit 1 test
     - pnpm exec vp run -r --concurrency-limit 1 build
     # hygiene 棘轮:knip(未用依赖/导出/重复导出/catalog 条目)只拦新增,存量由

@@ -1,7 +1,7 @@
 {
   "$schema": "https://unpkg.com/knip@6/schema.json",
   "ignore": ["**/src/gen/**"],
-  "ignoreDependencies": ["@bufbuild/buf", "@bufbuild/protoc-gen-es", "@commitlint/cli"],
+  "ignoreDependencies": ["@bufbuild/buf", "@bufbuild/protoc-gen-es", "@commitlint/cli", "oxlint"],
   "ignoreExportsUsedInFile": true,
   "playwright": {
     "config": ["e2e/playwright.config.ts"],

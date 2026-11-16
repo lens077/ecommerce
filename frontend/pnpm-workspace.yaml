@@ -65,6 +65,9 @@ catalog:
   # Vitest 也要与 Vite+ 内置版本一致；consumer 的浏览器测试需要直接依赖它。
   vite: npm:@voidzero-dev/vite-plus-core@1.6.0
   vite-plus: 1.6.0
+  # 直接依赖，供 CI 在不支持 tsgolint 的 runner 上绕开 vp lint 调用裸 oxlint。
+  # 版本必须与 vite-plus 内置的一致；上游修复见 TODO.md 的 tsgolint 条目。
+  oxlint: 1.93.0
   vitest: 5.1.0
   # a11y 门禁：axe-core 的 vitest 封装（docs/frontend/accessibility.md §四.2）
   "vitest-axe": ^0.1.0
