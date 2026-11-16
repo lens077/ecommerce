@@ -168,6 +168,11 @@ frontend-gate:
     GOMAXPROCS: "1"
     GOGC: "20"
     GOMEMLIMIT: "256MiB"
+    # node5 runner（AMD EPYC / Docker 29）上 tsgolint 启动时会让 oxc 分配器
+    # 抛 Result::unwrap() on Err(()) 并 SIGABRT(exit 134)，与代码和线程数无关。
+    # 指向不存在的路径可让 oxlint 跳过 tsgolint：保留 Vite+ 全部 JS 规则，
+    # 只放弃 type-aware 那一层（job 会打印 "Failed to find tsgolint" 警告，不判失败）。
+    OXLINT_TSGOLINT_PATH: /dev/null
     # pnpm 版本只认 frontend/package.json 的 packageManager 字段(单一真相源,
     # 参照 deepseek-harness 从 package.json 取版本的做法)。不用 corepack:Node 25 起不再内置,
     # 直接 npm 装指定版本对任何 Node 镜像都成立。
