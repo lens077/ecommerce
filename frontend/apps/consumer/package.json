@@ -8,7 +8,7 @@
     "dev:prod": "vp dev --port 3000 --mode prod",
     "build": "vp build && tsc",
     "serve": "vp preview",
-    "test": "vp test --environment=jsdom --browser.enabled=false --passWithNoTests",
+    "test": "vp test --environment=jsdom --browser.enabled=false --passWithNoTests --pool=threads",
     "test:ui": "vp test --browser --browser.ui",
     "e2e:login": "node e2e/login.smoke.mjs",
     "e2e:hotspots": "node e2e/hotspots.smoke.mjs"

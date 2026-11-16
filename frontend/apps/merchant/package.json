@@ -8,7 +8,7 @@
     "dev:prod": "vp dev --port 3002 --mode prod",
     "build": "vp build && tsc",
     "serve": "vp preview",
-    "test": "vp test --environment=jsdom --passWithNoTests"
+    "test": "vp test --environment=jsdom --passWithNoTests --pool=threads"
   },
   "dependencies": {
     "@connectrpc/connect": "catalog:",

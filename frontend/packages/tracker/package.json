@@ -18,7 +18,7 @@
     }
   },
   "scripts": {
-    "test": "vp test --environment=jsdom --browser.enabled=false --passWithNoTests"
+    "test": "vp test --environment=jsdom --browser.enabled=false --passWithNoTests --pool=threads"
   },
   "devDependencies": {
     "@types/react": "catalog:",

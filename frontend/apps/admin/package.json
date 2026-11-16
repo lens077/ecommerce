@@ -7,7 +7,7 @@
     "dev": "vp dev --port 3003 --mode dev",
     "build": "vp build",
     "preview": "vp preview",
-    "test": "vp test --environment=jsdom --passWithNoTests"
+    "test": "vp test --environment=jsdom --passWithNoTests --pool=threads"
   },
   "dependencies": {
     "@connectrpc/connect": "catalog:",
