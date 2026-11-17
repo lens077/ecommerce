@@ -71,6 +71,12 @@ const page = await context.newPage();
 const cspViolations = [];
 const consoleErrors = [];
 const netCalls = [];
+// 网络观测：每周一 GH cron 的失败全是「页面/请求卡死」类（表单不渲染、按钮点不动、
+// token 兑换挂起），而本地同浏览器秒级渲染完——差别只在链路（GitHub runner 美国出口
+// 对国内单点源站）。把每个 Casdoor/网关请求的「发出→完成」配对记录下来，中断时列出
+// 还没等到响应的请求，才能区分「请求挂在网络里」和「SPA 根本没发起」。
+const netPending = new Map();
+const netLog = [];
 page.on("console", (m) => {
   const t = m.text();
   if (/violates the following Content Security Policy/i.test(t)) {
@@ -82,17 +88,37 @@ page.on("console", (m) => {
     consoleErrors.push(t.slice(0, 160));
   }
 });
+const inScope = (u) => u.startsWith(CASDOOR) || u.startsWith(GATEWAY);
 // 抓 token 端点的响应体 —— 兑换失败时这是唯一能看到原因的地方
 page.on("response", async (r) => {
-  if (r.url().includes("/api/login/oauth/access_token")) {
+  const u = r.url();
+  if (inScope(u)) {
+    netPending.delete(u);
+    netLog.push(`${r.status()} ${r.request().method()} ${u.replace(/\?.*/, "")}`);
+  }
+  if (u.includes("/api/login/oauth/access_token")) {
     const body = await r.text().catch(() => "(读不到)");
     console.log(`\n>>> token 端点 HTTP ${r.status()}: ${body.slice(0, 400)}\n`);
   }
 });
+// 内存缓存的响应不发 response 事件，requestfinished 兜底防止 pending 误报
+page.on("requestfinished", (r) => {
+  if (inScope(r.url())) netPending.delete(r.url());
+});
+page.on("requestfailed", (r) => {
+  const u = r.url();
+  if (inScope(u)) {
+    netPending.delete(u);
+    netLog.push(
+      `FAILED ${r.request().method()} ${u.replace(/\?.*/, "")} :: ${r.failure()?.errorText || "?"}`,
+    );
+  }
+});
 page.on("request", (r) => {
   const u = r.url();
-  if (u.startsWith(CASDOOR) || u.startsWith(GATEWAY)) {
+  if (inScope(u)) {
     netCalls.push(`${r.method()} ${u.replace(/\?.*/, "")}`);
+    netPending.set(u, `${r.method()} ${u.replace(/\?.*/, "")}`);
   }
 });
 
@@ -230,6 +256,8 @@ try {
   const shot = `${ARTIFACT_DIR}/e2e-fail.png`;
   await page.screenshot({ path: shot, fullPage: true }).catch(() => {});
   console.error("  截图:", shot, " 当前 URL:", page.url().slice(0, 120));
+  console.error("  未完成请求:", netPending.size ? [...netPending.values()].slice(0, 12) : "无");
+  console.error("  最近响应:", netLog.length ? netLog.slice(-14).join("\n    ") : "无");
 } finally {
   console.log("\n--- 汇总 ---");
   console.log(
@@ -239,5 +267,6 @@ try {
   console.log("CSP 违规:", Object.keys(cspCount).length ? cspCount : "无");
   console.log("控制台错误:", consoleErrors.length ? consoleErrors.slice(0, 6) : "无");
   console.log("Casdoor/网关调用:", [...new Set(netCalls)].slice(0, 14));
+  console.log("挂起请求:", netPending.size ? [...netPending.values()].slice(0, 14) : "无");
   await browser.close();
 }
