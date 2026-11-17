@@ -168,6 +168,12 @@ frontend-gate:
     GOMAXPROCS: "1"
     GOGC: "20"
     GOMEMLIMIT: "256MiB"
+    # 2026-11-17(#243 knip 崩溃哨兵取证):knip 默认走 oxc-parser 的
+    # experimentalRawTransfer,要预留固定大块 raw buffer,在 node5 上与 vp lint
+    # 的 tsgolint 同族炸法——arena 预留间歇性失败,#235 绿而 #239/#240/#243 红。
+    # 用 knip 官方开关关掉 raw transfer:普通解析路径产出不变(本地双跑 compact
+    # 均 21 行、棘轮 33 条基线全命中)。上游修复(oxc#27356)落地后与 vp lint 一并撤。
+    KNIP_DISABLE_RAW_TRANSFER: "1"
     # pnpm 版本只认 frontend/package.json 的 packageManager 字段(单一真相源,
     # 参照 deepseek-harness 从 package.json 取版本的做法)。不用 corepack:Node 25 起不再内置,
     # 直接 npm 装指定版本对任何 Node 镜像都成立。

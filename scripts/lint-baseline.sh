@@ -156,7 +156,7 @@ run_knip() {
   # 所以崩溃判据必须是「退出码非 0 且无输出」两者同时成立。
   if [ "$rc" -ne 0 ] && [ -z "$out" ]; then
     echo "lint-baseline: knip 崩溃(退出码 $rc 且无输出)。stderr 尾部:" >&2
-    tail -8 "$err" >&2
+    tail -16 "$err" >&2
     printf 'knip\t__collector__\tPARSE-FAILURE: knip 退出码 %s 且无输出,采集中止\n' "$rc"
     rm -f "$err"
     return 0
