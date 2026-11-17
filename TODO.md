@@ -155,7 +155,7 @@ todo-spec: 1
 
 - [ ] **待前置 · 传输层身份**：先验证 Cilium WireGuard 节点间加密；确有 workload mTLS/授权需求再评估 Istio Ambient，不提前引入 SPIRE 或把 Cilium Mutual Authentication 当完整 mTLS。 <!--t:a0dc0efae9edbcd8-->
 - [ ] **部分完成 · Tetragon 治理**：2026-09-22 新集群 k1/k2/k3 重装（1.7.1），`ecommerce-service-account-token-access` audit-only 策略已应用，kubernetes 仓 `components/tetragon/verify.sh` + `examples/cnp-smoke.sh`（CNP 正反向 + Hubble `Policy denied` 证据）可复跑。剩：2026-10-18 实测 `kubectl get tracingpolicies -A` 为空、Tetragon 三节点 Running 但零策略——09-22 记录的 audit-only 策略已不在集群；把策略声明纳入 GitOps 并复验部署，补基线策略（ecommerce Pod 内执行 shell、读取 `/etc/shadow`、非预期外联即告警），再做权限最小化、长期基线与 enforcement 验收。 <!--t:87fb8823ca41b7bc-->
-- [ ] **部分完成 · 登录回归保护**：2026-09-20 线上冒烟实跑 10 过 2 挂，断言已按 BFF 现状改正（redirect_uri 断网关 `/auth/callback`，删掉迁移前的 PKCE 断言——它俩都对不上真相，于是线上 redirect_uri 配错时没有任何一层拦得住）。剩复核 callback 与会话恢复竞态修复是否有测试、冒烟处理隐私弹窗、验证真实会话恢复/退出，不以脚本存在代替跑通。另：每周一 GH cron 冒烟自 2026-08 起几乎全红——GitHub runner（美国出口）对国内单点源站（casdoor/shop 均无 CDN、单 IP）的链路质量问题，卡点每周漂移（表单不渲染/按钮点不动/token 兑换挂起）且本地同浏览器复现不了；2026-11-17 脚本已加挂起请求观测，去留（加固重试/搬集群内 GitLab 定时跑/关 cron 留手动）待按证据定。 <!--t:31f8c2f88994746f-->
+- [ ] **部分完成 · 登录回归保护**：2026-09-20 线上冒烟实跑 10 过 2 挂，断言已按 BFF 现状改正（redirect_uri 断网关 `/auth/callback`，删掉迁移前的 PKCE 断言——它俩都对不上真相，于是线上 redirect_uri 配错时没有任何一层拦得住）。剩复核 callback 与会话恢复竞态修复是否有测试、冒烟处理隐私弹窗、验证真实会话恢复/退出，不以脚本存在代替跑通。另：每周一 GH cron 冒烟自 2026-08 起几乎全红——GitHub runner（美国出口）对国内单点源站（casdoor/shop 均无 CDN、单 IP）的链路质量问题，卡点每周漂移（表单不渲染/按钮点不动/token 兑换挂起）且本地同浏览器复现不了；2026-11-17 手动 dispatch 验证全绿后已关 GH cron 改手动触发；脚本保留挂起请求观测。若要恢复自动周回归，可靠路径是搬集群内 GitLab runner 定时跑。 <!--t:31f8c2f88994746f-->
 
 ### 统一可观测性体系
 
