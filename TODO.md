@@ -211,6 +211,7 @@ todo-spec: 1
 - [ ] **部分完成 · 推荐登录身份关联**：主动登出重置匿名标识；已登录态收到 401 时清理账号并丢弃待发旧事件，防止重登串身份；首次加载与过期异步身份回写已有回归保护。剩两项且有先后：① 上一条「网关可选认证路由」；② behavior 新增 `identity_links` 表，同一请求同时带网关用户 ID 与 `anonId` 时记关联（一个 anonId 只关联首个用户），按 Postgres 汇总值 PUT 回填 gorse（幂等可重试），dislike 过滤纳入已关联的匿名 ID。gorse 无用户合并 API，只能在 behavior 做。 <!--t:4fcaaae8d42e7154-->
 - [ ] **未完成 · Bugsink SDK 与 Source Map**：服务端已有部署记录；接 SDK、debug ID 与真实错误还原验收。手顺见 [错误监控](docs/observability/error-monitoring.md)。 <!--t:e27c0c6a896d9ea9-->
 - [ ] **部分完成 · Umami 发布接线**：服务部署和两个 consumer 埋点代码已完成；`frontend-release.yml` 未传四个构建期变量。补 Docker 构建链路，发布后验证真实 PV/路由变化；更换面板默认管理员凭据并复验。见 [网站分析](docs/observability/web-analytics.md)。 <!--t:f162b9925a5ae66c-->
+- [ ] **待验收 · Trae 托管部署通路**：`frontend/scripts/deploy/trae.sh` 与 `frontend/Makefile` 的 `deploy-trae-*` targets 已就位（consumer 静态/大静态适配器、consumer-next 远端 nodejs20 构建 standalone），作为与 EdgeOne 两条链路并存的第三条通路，契约见 [TECH.md §11.7](docs/TECH.md#117-前端托管与部署通路)。当前只有源码，未跑过 `deploy-trae-check` 与任一真实站点部署：验收需要有效 Trae 登录/项目权限、实跑两站点上线，核对域名可访问、consumer-next SSR 正文与响应头、`CONSUMER_NEXT_GATEWAY_URL` 运行期注入，并确认站点可见性与新建策略；未验收前不把它写成可用通路。脚本依赖本机 `~/.trae-cn` 下的 deployment 插件，凭据不进仓。 <!--t:7f3a91c2e4b8d605-->
 
 #### P2
 

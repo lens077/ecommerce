@@ -120,3 +120,34 @@ deploy-edgeone-next: consumer-next-build
 	@echo "  1) git push 到 main  → EdgeOne Git 集成自动云端构建并部署；"
 	@echo "  2) 在 EdgeOne 控制台对 $(EDGEONE_NEXT_PROJECT) 项目点「重新部署」。"
 	@echo "（运行时环境变量 CONSUMER_NEXT_GATEWAY_URL 需已在控制台填入公网网关地址）"
+
+# ---- Trae 托管一键部署（consumer / consumer-next）----
+#
+# 与 EdgeOne 两条链路互不影响，按需选择。脚本入口：scripts/deploy/trae.sh。
+# 每次部署前先跑 trae-deploy 的 check 做登录与项目权限校验，未通过不会上传。
+#
+# 用法（在 frontend/ 目录下）：
+#   make deploy-trae-check          # 只检查部署权限
+#   make deploy-trae-consumer       # 构建 + 部署 consumer（dist 超静态上限时自动走大静态适配器）
+#   make deploy-trae-consumer-next  # 最小 workspace 包上传，远端 nodejs20 构建 Next standalone
+#   make deploy-trae                # 依次部署两个站点
+#
+# 站点按名字复用（不存在则新建，默认 public）；可覆盖变量：
+#   TRAE_DEPLOY_HOME、CONSUMER_SITE_NAME、CONSUMER_NEXT_SITE_NAME、
+#   CONSUMER_NEXT_GATEWAY_URL、SITE_ACCESS_POLICY、TRAE_APP_TAGS。
+
+TRAE_DEPLOY_SCRIPT ?= scripts/deploy/trae.sh
+
+.PHONY: deploy-trae-check deploy-trae-consumer deploy-trae-consumer-next deploy-trae
+
+deploy-trae-check:
+	$(TRAE_DEPLOY_SCRIPT) check
+
+deploy-trae-consumer:
+	$(TRAE_DEPLOY_SCRIPT) consumer
+
+deploy-trae-consumer-next:
+	$(TRAE_DEPLOY_SCRIPT) consumer-next
+
+deploy-trae:
+	$(TRAE_DEPLOY_SCRIPT) all

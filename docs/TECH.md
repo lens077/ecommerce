@@ -888,6 +888,18 @@ cfg.GetServiceAddr("inventory-service") // 从 K8s DNS 解析
 
 首页 `/` 已从 consumer SPA 迁到 consumer-next 整页静态渲染（`/zh`、`/en` 构建期预渲染，`/` 经 rewrite 落到 `/zh`；HTTPRoute 以 `/` Exact 抢过 frontend 的 PathPrefix）。首页字体使用按渲染槽位裁剪的子集，避免加载整套字体与图标资源；`.next/server/app` 通过 init 容器拷贝到可写卷。首页保持静态渲染，待 `ListProducts` 接通后再按需要引入 `revalidate`。根因表、路线取舍、实现要点与 SPA 页待办见 [`docs/frontend/web-performance.md`](frontend/web-performance.md)。
 
+### 11.7 前端托管与部署通路
+
+两个公开前端的托管通路并存、按需选择，互不覆盖：consumer 是 Vite SPA 静态产物，consumer-next 是 Next.js SSR，须保留 standalone 运行时。这些通路只负责把产物送到托管平台，与 §12 的后端镜像发布、GitOps 清单是不同链路——站点部署成功不等于交易链可用。
+
+| 通路 | consumer（静态 SPA） | consumer-next（SSR） | 入口（`frontend/` 下） |
+|---|---|---|---|
+| EdgeOne Pages | 静态直传（`edgeone makers deploy`） | 不支持：直传型项目不识别 SSR 运行时 | `make deploy-edgeone` / `deploy-edgeone-dist` |
+| EdgeOne Git 集成 | 不用 | 控制台 Git 集成云端构建，项目根目录须指向应用目录，否则框架识别失败、全站 404 | push `main` 自动构建；`make deploy-edgeone-next` 仅构建校验 + 打印上线指引 |
+| Trae 托管 | 本地构建 `dist`，超静态文件上限时自动改走大静态适配器 | 上传最小 workspace 包，远端 nodejs20 构建 Next standalone（function-web） | `make deploy-trae-consumer` / `deploy-trae-consumer-next` / `deploy-trae` |
+
+统一约束：① consumer-next 不得走任何静态直传通路，SSR 运行时是硬边界；② 运行期 `CONSUMER_NEXT_GATEWAY_URL` 在托管平台侧配置，凭据与网关地址不进仓库；③ Trae 部署脚本每次先跑 `make deploy-trae-check` 校验登录与项目权限，站点按名字复用、不存在时按 `public` 新建，生产可见性按需收窄，提交前检查无进行中部署以防并发覆盖；④ 脚本与 make targets 位于 `frontend/scripts/deploy/trae.sh` 与 `frontend/Makefile`，具体用法见两处注释。三条通路的真实上线验收（域名、缓存、SSR 响应头、网关连通）不在本节登记，进度归 [TODO.md](../TODO.md#前端技术栈与工程化)。
+
 ## 12. 实施路线图
 
 > **本节只声明「哪件事属于哪个阶段」，不承载完成状态。**
