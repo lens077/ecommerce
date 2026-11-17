@@ -6,7 +6,7 @@
  * 现状：订单页是 mock 数据，`order.proto` 没有状态字段。接真数据时 STATUS_SYNONYMS
  * 的值要与 order 域的状态机对齐（docs/design/order/checkout.md）。
  */
-import { i18next } from "@ecommerce/i18n";
+import { i18next, type TOptions } from "@ecommerce/i18n";
 import type { CopilotAction } from "@ecommerce/copilot";
 
 type OrderStatus = "pending" | "shipped" | "completed";
@@ -39,8 +39,24 @@ const synonymAlternation = Object.keys(STATUS_SYNONYMS)
   .map((s) => s.replace(/[.*+?^${}()|[\]\\]/g, "\\$&"))
   .join("|");
 
-const t = (key: string, opts?: Record<string, unknown>) =>
-  i18next.t(`merchant:copilot.${key}`, opts) as string;
+// i18next 27 起 t() 的 key 受 CustomTypeOptions 严格字面量约束，模板拼接的
+// `merchant:copilot.${key}` 过不了校验。用 getFixedT 绑定命名空间后只需写相对键，
+// 键类型收窄为本 app copilot 段实际存在的项（资源增删即类型报错）。
+type CopilotI18nKey =
+  | "examples.unshipped1"
+  | "examples.unshipped2"
+  | "examples.unshipped3"
+  | "switchFilter"
+  | "tableHighlight"
+  | "count";
+
+const copilotT = i18next.getFixedT(null, "merchant", "copilot");
+// opts 只承载插值（count/keyword/names 等）；用插值字典形态，避免与
+// i18next 27 严格重载里的 context 约束冲突。
+type CopilotReplacements = Record<string, string | number | undefined>;
+
+const t = (key: CopilotI18nKey, opts?: CopilotReplacements) =>
+  copilotT(key, opts as TOptions) as string;
 
 export const filterOrdersAction: CopilotAction = {
   name: "filter_orders",

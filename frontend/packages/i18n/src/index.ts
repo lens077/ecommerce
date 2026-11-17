@@ -49,6 +49,10 @@ export {
 export { DEFAULT_CURRENCY, formatCurrencyCentsIn, type DateStyle } from "./format";
 export { Trans, useTranslation } from "react-i18next";
 export { i18next };
+// i18next 27 起 t() 的 options 受 TOptions 泛型约束，各 app 不能再自造
+// `Record<string, unknown>` 代替它（否则 TS2345/TS2322）；而 i18next 不是各 app
+// 的直接依赖，故由本包转出这两个类型，供 app 侧手写 t 包装或 props 签名使用。
+export type { TFunction, TOptions } from "i18next";
 
 /** 每个 app 都会拿到的共享 namespace */
 export const SHARED_NAMESPACES = ["common", "errors"] as const;

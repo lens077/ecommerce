@@ -3,11 +3,29 @@
  * 锚点标在 components/AppBar.tsx：appbar.search-input / appbar.search-results /
  * appbar.search-result-item / appbar.search-result-name。
  */
-import { i18next } from "@ecommerce/i18n";
+import { i18next, type TOptions } from "@ecommerce/i18n";
 import type { CopilotAction } from "@ecommerce/copilot";
 
-const t = (key: string, opts?: Record<string, unknown>) =>
-  i18next.t(`consumer:copilot.${key}`, opts) as string;
+// i18next 27 起 t() 的 key 受 CustomTypeOptions 严格字面量约束，模板拼接的
+// `consumer:copilot.${key}` 过不了校验。用 getFixedT 绑定命名空间后只需写相对键，
+// 键类型收窄为本 app copilot 段实际存在的项（资源增删即类型报错）。
+type CopilotI18nKey =
+  | "examples.search1"
+  | "examples.search2"
+  | "examples.search3"
+  | "typeKeyword"
+  | "resultsHighlight"
+  | "found"
+  | "foundMore"
+  | "none";
+
+const copilotT = i18next.getFixedT(null, "consumer", "copilot");
+// opts 只承载插值（count/keyword/names 等）；用插值字典形态，避免与
+// i18next 27 严格重载里的 context 约束冲突。
+type CopilotReplacements = Record<string, string | number | undefined>;
+
+const t = (key: CopilotI18nKey, opts?: CopilotReplacements) =>
+  copilotT(key, opts as TOptions) as string;
 
 export const searchProductsAction: CopilotAction = {
   name: "search_products",

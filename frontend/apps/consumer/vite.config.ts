@@ -57,6 +57,9 @@ export default defineConfig(({ mode }) => {
       ? { maxWorkers: 1, fileParallelism: false, maxConcurrency: 1 }
       : {}),
     environment: "jsdom",
+    // jsdom 31 起 window 上没有 matchMedia，MUI 响应式 sx 会因此把所有分支判为
+    // 不匹配（2026-11-17 依赖升级踩到，见 src/test-setup.ts 头注）。
+    setupFiles: [resolve(__dirname, "./src/test-setup.ts")],
     // Node 25+ 默认开启实验性 Web Storage：globalThis.localStorage 变成 Node 自己的
     // getter，未给 --localstorage-file 时恒返回 undefined，jsdom 环境覆盖不掉它，
     // 于是 users.test.ts 的 localStorage.clear() 报「reading 'clear' of undefined」。

@@ -10,7 +10,7 @@ import {
   Typography,
 } from "@mui/material";
 import { Activity } from "@ecommerce/icons";
-import { useFormat, useTranslation } from "@ecommerce/i18n";
+import { useFormat, useTranslation, type TFunction } from "@ecommerce/i18n";
 import { AdminLayout } from "@/components/AdminLayout";
 import { isServiceHealthAccessError, useServiceHealth } from "@/hooks/useServiceHealth";
 import type { ServiceHealth, ServiceHealthStatus } from "@/api/monitor";
@@ -187,7 +187,7 @@ interface HealthCardProps {
     style?: "date" | "datetime" | "time",
   ) => string;
   formatNumber: (value: number, options?: Intl.NumberFormatOptions) => string;
-  t: (key: string, options?: Record<string, unknown>) => string;
+  t: TFunction;
 }
 
 function HealthCard({ service, formatDate, formatNumber, t }: HealthCardProps) {
