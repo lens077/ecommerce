@@ -5,12 +5,12 @@ allowBuilds:
   "@bufbuild/buf": true
 catalog:
   "@bufbuild/buf": ^1.75.0
-  "@bufbuild/protobuf": ^2.16.0
-  "@bufbuild/protoc-gen-es": ^2.16.0
-  "@connectrpc/connect": ^2.2.0
-  "@connectrpc/connect-node": ^2.2.0
+  "@bufbuild/protobuf": ^2.17.0
+  "@bufbuild/protoc-gen-es": ^2.17.0
+  "@connectrpc/connect": ^2.3.0
+  "@connectrpc/connect-node": ^2.3.0
   "@connectrpc/connect-query": ^2.3.1
-  "@connectrpc/connect-web": ^2.2.0
+  "@connectrpc/connect-web": ^2.3.0
   "@emotion/react": ^11.14.0
   "@emotion/styled": ^11.14.1
   "@fontsource/noto-serif-sc": ^5.3.1
@@ -18,43 +18,43 @@ catalog:
   "@mui/material": ^9.5.0
   "@mui/utils": ^9.5.0
   "@t3-oss/env-core": ^0.13.11
-  "@tanstack/react-devtools": ^0.10.13
-  "@tanstack/react-query": ^5.104.5
-  "@tanstack/react-query-devtools": ^5.104.5
+  "@tanstack/react-devtools": ^0.10.14
+  "@tanstack/react-query": ^5.107.1
+  "@tanstack/react-query-devtools": ^5.107.1
   "@tanstack/react-router": ^1.170.46
-  "@tanstack/react-router-devtools": ^1.167.2
-  "@tanstack/router-plugin": ^1.168.48
-  "@tauri-apps/api": ^2.12.4
-  "@tauri-apps/cli": ^2.12.4
-  "@tauri-apps/plugin-http": ^2.8.3
-  "@tauri-apps/plugin-notification": ^2.7.0
-  "@tauri-apps/plugin-opener": ^2.7.2
-  "@tauri-apps/plugin-store": ^2.5.0
+  "@tanstack/react-router-devtools": ^1.167.3
+  "@tanstack/router-plugin": ^1.169.0
+  "@tauri-apps/api": ^2.12.5
+  "@tauri-apps/cli": ^2.12.5
+  "@tauri-apps/plugin-http": ^2.9.0
+  "@tauri-apps/plugin-notification": ^2.8.1
+  "@tauri-apps/plugin-opener": ^2.7.3
+  "@tauri-apps/plugin-store": ^2.5.1
   "@testing-library/react": ^16.3.3
-  "@testing-library/user-event": ^14.6.8
-  "@types/node": ^26.6.5
+  "@testing-library/user-event": ^14.6.12
+  "@types/node": ^26.6.6
   "@types/react": ^19.3.0
   "@types/react-dom": ^19.3.0
-  "@vitejs/plugin-react": ^6.1.2
+  "@vitejs/plugin-react": ^6.3.0
   "@vitest/browser-playwright": 5.1.0
   conventional-changelog: latest
   echarts: ^6.1.0
   echarts-for-react: ^3.0.6
-  i18next: ^26.5.6
-  jsdom: ^30.1.3
+  i18next: ^27.1.3
+  jsdom: ^31.0.1
   jsonc-parser: ^3.3.1
-  knip: ^6.42.1
-  lucide: ^1.61.0
-  morphicons: ^2.0.0
+  knip: ^6.45.1
+  lucide: ^1.73.0
+  morphicons: ^2.0.2
   # 16.4 canary 在本仓 6 轮 A/B 中缩短 cold/warm build 并减小缓存；
   # 精确锁定已通过 SSR 与真实浏览器验证的构建。
-  next: 16.4.2
-  oxc-transform-react: 0.155.0
-  playwright: ^1.64.1
-  "@playwright/test": ^1.64.1
+  next: 16.4.6
+  oxc-transform-react: 0.158.0
+  playwright: ^1.65.1
+  "@playwright/test": ^1.65.1
   react: ^19.3.1
   react-dom: ^19.3.1
-  react-i18next: ^17.1.3
+  react-i18next: ^18.0.2
   smol-toml: ^1.8.0
   # 7.1 nightly 的 checker 分配优化在本仓 6 轮 A/B 中将峰值 RSS 降低 17%~20%；
   # 精确锁定已验证构建，避免 nightly 标签漂移。
@@ -67,7 +67,11 @@ catalog:
   vite-plus: 1.6.0
   # 直接依赖，供 CI 在不支持 tsgolint 的 runner 上绕开 vp lint 调用裸 oxlint。
   # 版本必须与 vite-plus 内置的一致；上游修复见 TODO.md 的 tsgolint 条目。
-  oxlint: 1.93.0
+  # 2026-11-17 依赖批升级时已不一致：vite-plus 1.6.0 内置 oxlint=1.93.0（@oxlint/plugins
+  # 亦为 1.93.0），此处升到 1.94.0。已实跑 `oxlint --threads=1` 通过（96 规则/248 文件、
+  # 仅 1 条既有 warning），暂视为可用；vite-plus 跟进发布后应对齐回同一版本，避免规则集
+  # 与插件版口径漂移。上游修复后本条随 TODO.md 的 tsgolint 条目一起移除。
+  oxlint: 1.94.0
   vitest: 5.1.0
   # a11y 门禁：axe-core 的 vitest 封装（docs/frontend/accessibility.md §四.2）
   "vitest-axe": ^0.1.0
@@ -75,7 +79,7 @@ catalog:
   web-vitals: ^6.2.3
   yaml: ^2.9.0
   zod: ^4.6.7
-  zustand: ^5.0.16
+  zustand: ^5.1.0
   "@ecommerce/icons": workspace:*
   "@commitlint/cli": ^21.2.4
   "@commitlint/config-conventional": ^21.2.4
@@ -83,7 +87,7 @@ catalog:
 # React Compiler 试点固定版本；仅 consumer 在 REACT_COMPILER=1 时启用。
 catalogs:
   react-compiler-pilot:
-    "@vitejs/plugin-react": 6.1.2
+    "@vitejs/plugin-react": 6.3.0
 
 catalogMode: prefer
 

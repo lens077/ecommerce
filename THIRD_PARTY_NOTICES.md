@@ -1,7 +1,7 @@
 # Third-party notices
 
 由 `scripts/gen-third-party-notices.sh` 生成,勿手工编辑;依赖变更进暂存区时 pre-commit 会自动重新生成。
-后端列出 `go list -deps ./...` 实际链接进制品的 102 个模块;前端列出 `pnpm licenses list` 解析到的 212 个包(含 dev 依赖)。
+后端列出 `go list -deps ./...` 实际链接进制品的 102 个模块;前端列出 `pnpm licenses list` 解析到的 207 个包(含 dev 依赖)。
 
 ## 需要人看一眼
 
@@ -17,16 +17,14 @@
 
 | 许可证 | 条目数 |
 |---|---|
-| MIT | 209 |
+| MIT | 207 |
 | Apache-2.0 | 52 |
 | BSD-3-Clause | 16 |
 | ISC | 15 |
 | MPL-2.0 | 10 |
 | BSD-2-Clause | 4 |
-| MIT-0 | 2 |
 | CC-BY-NC-SA-4.0 | 2 |
 | Python-2.0 | 1 |
-| CC0-1.0 | 1 |
 | BlueOak-1.0.0 | 1 |
 | (Apache-2.0 AND BSD-3-Clause) | 1 |
 
@@ -137,20 +135,17 @@
 | `google.golang.org/protobuf` | v1.36.12 | BSD-3-Clause | LICENSE |
 | `gopkg.in/yaml.v3` | v3.0.1 | Apache-2.0 | LICENSE |
 
-## 前端(npm 包,212)
+## 前端(npm 包,207)
 
 | 包 | 版本 | 许可证 | 主页 |
 |---|---|---|---|
-| `@asamuzakjp/css-color` | 7.1.7 | MIT | <https://github.com/asamuzaK/cssColor#readme> |
-| `@asamuzakjp/dom-selector` | 10.0.4 | MIT | <https://github.com/asamuzaK/domSelector#readme> |
 | `@babel/code-frame` | 7.29.7 | MIT | <https://babel.dev/docs/en/next/babel-code-frame> |
 | `@babel/helper-validator-identifier` | 7.29.7 | MIT | <https://github.com/babel/babel#readme> |
-| `@babel/runtime` | 7.29.10 | MIT | <https://babel.dev/docs/en/next/babel-runtime> |
+| `@babel/runtime` | 7.29.14 | MIT | <https://babel.dev/docs/en/next/babel-runtime> |
 | `@blazediff/core` | 1.10.0 | MIT | <https://blazediff.dev> |
-| `@bramus/specificity` | 2.4.3 | MIT | <https://github.com/bramus/specificity#readme> |
-| `@bufbuild/protobuf` | 2.16.0 | (Apache-2.0 AND BSD-3-Clause) | <https://protobufes.com/> |
-| `@bufbuild/protoc-gen-es` | 2.16.0 | Apache-2.0 | <https://protobufes.com/> |
-| `@bufbuild/protoplugin` | 2.16.0 | Apache-2.0 | <https://protobufes.com/> |
+| `@bufbuild/protobuf` | 2.17.0 | (Apache-2.0 AND BSD-3-Clause) | <https://protobufes.com/> |
+| `@bufbuild/protoc-gen-es` | 2.17.0 | Apache-2.0 | <https://protobufes.com/> |
+| `@bufbuild/protoplugin` | 2.17.0 | Apache-2.0 | <https://protobufes.com/> |
 | `@commitlint/cli` | 21.2.4 | MIT | <https://commitlint.js.org/> |
 | `@commitlint/config-conventional` | 21.2.4 | MIT | <https://commitlint.js.org/> |
 | `@commitlint/config-validator` | 21.2.3 | MIT | <https://commitlint.js.org/> |
@@ -169,39 +164,34 @@
 | `@commitlint/top-level` | 21.2.0 | MIT | <https://commitlint.js.org/> |
 | `@commitlint/types` | 21.2.3 | MIT | <https://commitlint.js.org/> |
 | `@conventional-changelog/git-client` | 3.2.0 | MIT | <https://conventional-changelog.js.org/git-client/> |
-| `@conventional-changelog/template` | 1.4.0 | MIT | <https://conventional-changelog.js.org/template/> |
-| `@csstools/color-helpers` | 6.1.2 | MIT-0 | <https://github.com/csstools/postcss-plugins/tree/main/packages/color-helpers#readme> |
-| `@csstools/css-calc` | 3.4.3 | MIT | <https://github.com/csstools/postcss-plugins/tree/main/packages/css-calc#readme> |
-| `@csstools/css-color-parser` | 4.2.6 | MIT | <https://github.com/csstools/postcss-plugins/tree/main/packages/css-color-parser#readme> |
-| `@csstools/css-parser-algorithms` | 4.0.2 | MIT | <https://github.com/csstools/postcss-plugins/tree/main/packages/css-parser-algorithms#readme> |
-| `@csstools/css-syntax-patches-for-csstree` | 1.1.15 | MIT-0 | <https://github.com/csstools/postcss-plugins/tree/main/packages/css-syntax-patches-for-csstree#readme> |
-| `@csstools/css-tokenizer` | 4.0.2 | MIT | <https://github.com/csstools/postcss-plugins/tree/main/packages/css-tokenizer#readme> |
+| `@conventional-changelog/template` | 1.4.1 | MIT | <https://conventional-changelog.js.org/template/> |
 | `@exodus/bytes` | 1.16.0 | MIT | <https://github.com/ExodusOSS/bytes> |
-| `@jridgewell/resolve-uri` | 3.1.2 | MIT | <https://github.com/jridgewell/resolve-uri#readme> |
+| `@jridgewell/resolve-uri` | 3.1.3 | MIT | <https://github.com/jridgewell/resolve-uri#readme> |
 | `@jridgewell/sourcemap-codec` | 1.6.0 | MIT | <https://github.com/jridgewell/sourcemaps/tree/main/packages/sourcemap-codec> |
 | `@jridgewell/trace-mapping` | 0.3.31 | MIT | <https://github.com/jridgewell/sourcemaps/tree/main/packages/trace-mapping> |
-| `@oxc-parser/binding-<platform>` | 0.154.0 | MIT | <https://oxc.rs/docs/guide/usage/parser> |
+| `@oxc-parser/binding-<platform>` | 0.156.0 | MIT | <https://oxc.rs/docs/guide/usage/parser> |
 | `@oxc-project/runtime` | 0.158.0 | MIT | <https://oxc.rs> |
-| `@oxc-project/types` | 0.154.0 | MIT | <https://oxc.rs> |
+| `@oxc-project/types` | 0.156.0 | MIT | <https://oxc.rs> |
 | `@oxc-project/types` | 0.158.0 | MIT | <https://oxc.rs> |
 | `@oxc-resolver/binding-<platform>` | 11.24.2 | MIT | <https://oxc.rs> |
 | `@oxfmt/binding-<platform>` | 0.78.0 | MIT | <https://oxc.rs/docs/guide/usage/formatter> |
 | `@oxlint-tsgolint/darwin-arm64` | 7.0.2006 | MIT | <https://github.com/oxc-project/tsgolint#readme> |
 | `@oxlint/binding-<platform>` | 1.93.0 | MIT | <https://oxc.rs/docs/guide/usage/linter> |
+| `@oxlint/binding-<platform>` | 1.94.0 | MIT | <https://oxc.rs/docs/guide/usage/linter> |
 | `@oxlint/plugins` | 1.93.0 | MIT | <https://oxc.rs/docs/guide/usage/linter/js-plugins> |
-| `@playwright/test` | 1.64.1 | Apache-2.0 | <https://playwright.dev> |
+| `@playwright/test` | 1.65.1 | Apache-2.0 | <https://playwright.dev> |
 | `@polka/url` | 1.0.0-next.29 | MIT | <https://github.com/lukeed/polka#readme> |
 | `@simple-libs/child-process-utils` | 2.0.0 | MIT | <https://github.com/TrigenSoftware/simple-libs/tree/main/packages/child-process-utils#readme> |
 | `@simple-libs/stream-utils` | 2.0.0 | MIT | <https://github.com/TrigenSoftware/simple-libs/tree/main/packages/stream-utils#readme> |
 | `@testing-library/dom` | 10.4.2 | MIT | <https://github.com/testing-library/dom-testing-library#readme> |
-| `@testing-library/user-event` | 14.6.8 | MIT | <https://github.com/testing-library/user-event#readme> |
+| `@testing-library/user-event` | 14.6.12 | MIT | <https://github.com/testing-library/user-event#readme> |
 | `@types/aria-query` | 5.0.4 | MIT | <https://github.com/DefinitelyTyped/DefinitelyTyped/tree/master/types/aria-query> |
 | `@types/chai` | 5.2.3 | MIT | <https://github.com/DefinitelyTyped/DefinitelyTyped/tree/master/types/chai> |
 | `@types/deep-eql` | 4.0.2 | MIT | <https://github.com/DefinitelyTyped/DefinitelyTyped/tree/master/types/deep-eql> |
-| `@types/estree` | 1.0.9 | MIT | <https://github.com/DefinitelyTyped/DefinitelyTyped/tree/master/types/estree> |
-| `@types/node` | 26.6.5 | MIT | <https://github.com/DefinitelyTyped/DefinitelyTyped/tree/master/types/node> |
+| `@types/estree` | 1.0.10 | MIT | <https://github.com/DefinitelyTyped/DefinitelyTyped/tree/master/types/estree> |
+| `@types/node` | 26.6.6 | MIT | <https://github.com/DefinitelyTyped/DefinitelyTyped/tree/master/types/node> |
 | `@typescript/typescript-<platform>` | 7.1.0-dev.20260904.1 | Apache-2.0 | <https://www.typescriptlang.org/> |
-| `@typescript/vfs` | 1.6.5 | MIT | <https://github.com/microsoft/TypeScript-Website> |
+| `@typescript/vfs` | 1.6.6 | MIT | <https://github.com/microsoft/TypeScript-Website> |
 | `@vitest/browser-playwright` | 5.1.0 | MIT | <https://vitest.dev/config/browser/playwright> |
 | `@vitest/browser-preview` | 5.1.0 | MIT | <https://vitest.dev/guide/browser> |
 | `@vitest/browser` | 5.1.0 | MIT | <https://vitest.dev/guide/browser/> |
@@ -217,23 +207,23 @@
 | `@yuku-toolchain/types` | 0.19.0 | MIT | <https://github.com/yuku-toolchain/yuku#readme> |
 | `ajv` | 8.20.0 | MIT | <https://ajv.js.org> |
 | `ansi-regex` | 5.0.1 | MIT | <https://github.com/chalk/ansi-regex#readme> |
-| `ansi-regex` | 6.4.0 | MIT | <https://github.com/chalk/ansi-regex#readme> |
+| `ansi-regex` | 6.6.0 | MIT | <https://github.com/chalk/ansi-regex#readme> |
 | `ansi-styles` | 5.2.0 | MIT | <https://github.com/chalk/ansi-styles#readme> |
 | `ansi-styles` | 6.2.3 | MIT | <https://github.com/chalk/ansi-styles#readme> |
 | `argparse` | 2.0.1 | Python-2.0 | <https://github.com/nodeca/argparse#readme> |
-| `argue-cli` | 3.2.0 | MIT | <https://github.com/TrigenSoftware/Argue#readme> |
+| `argue-cli` | 3.2.1 | MIT | <https://github.com/TrigenSoftware/Argue#readme> |
 | `aria-query` | 5.3.0 | Apache-2.0 | <https://github.com/A11yance/aria-query#readme> |
 | `assertion-error` | 2.0.1 | MIT | <https://github.com/chaijs/assertion-error#readme> |
-| `bidi-js` | 1.1.0 | MIT | <https://github.com/lojjic/bidi-js#readme> |
+| `bcp-47-match` | 2.0.3 | MIT | <https://github.com/wooorm/bcp-47-match#readme> |
+| `bcp-47` | 2.1.2 | MIT | <https://github.com/wooorm/bcp-47#readme> |
 | `callsites` | 3.1.0 | MIT | <https://github.com/sindresorhus/callsites#readme> |
 | `chai` | 6.3.0 | MIT | <http://chaijs.com> |
 | `cliui` | 9.0.1 | ISC | <https://github.com/yargs/cliui#readme> |
 | `conventional-changelog-angular` | 9.4.0 | ISC | <https://conventional-changelog.js.org/presets/angular/> |
 | `conventional-changelog-conventionalcommits` | 10.4.1 | ISC | <https://conventional-changelog.js.org/presets/conventional-commits/> |
-| `conventional-commits-parser` | 7.1.3 | MIT | <https://conventional-changelog.js.org/commits-parser/> |
+| `conventional-commits-parser` | 7.1.4 | MIT | <https://conventional-changelog.js.org/commits-parser/> |
 | `convert-source-map` | 2.0.0 | MIT | <https://github.com/thlorenz/convert-source-map> |
 | `cosmiconfig` | 9.0.2 | MIT | <https://github.com/cosmiconfig/cosmiconfig#readme> |
-| `css-tree` | 3.2.1 | MIT | <https://github.com/csstree/csstree#readme> |
 | `data-urls` | 8.0.0 | MIT | <https://github.com/jsdom/data-urls#readme> |
 | `debug` | 4.4.3 | MIT | <https://github.com/debug-js/debug#readme> |
 | `decimal.js` | 10.6.0 | MIT | <https://github.com/MikeMcl/decimal.js#readme> |
@@ -241,11 +231,11 @@
 | `detect-libc` | 2.1.2 | Apache-2.0 | <https://github.com/lovell/detect-libc#readme> |
 | `dom-accessibility-api` | 0.5.16 | MIT | <https://github.com/eps1lon/dom-accessibility-api#readme> |
 | `emoji-regex` | 10.6.0 | MIT | <https://mths.be/emoji-regex> |
-| `entities` | 8.1.0 | BSD-2-Clause | <https://github.com/fb55/entities#readme> |
+| `entities` | 9.0.0 | BSD-2-Clause | <https://github.com/fb55/entities#readme> |
 | `env-paths` | 2.2.1 | MIT | <https://github.com/sindresorhus/env-paths#readme> |
 | `error-ex` | 1.3.4 | MIT | <https://github.com/qix-/node-error-ex#readme> |
 | `es-module-lexer` | 2.3.2 | MIT | <https://github.com/guybedford/es-module-lexer#readme> |
-| `es-toolkit` | 1.52.0 | MIT | <https://es-toolkit.dev> |
+| `es-toolkit` | 1.53.2 | MIT | <https://es-toolkit.dev> |
 | `escalade` | 3.2.0 | MIT | <https://github.com/lukeed/escalade#readme> |
 | `estree-walker` | 3.0.3 | MIT | <https://github.com/Rich-Harris/estree-walker#readme> |
 | `expect-type` | 1.4.0 | Apache-2.0 | <https://github.com/mmkal/expect-type#readme> |
@@ -264,41 +254,45 @@
 | `html-encoding-sniffer` | 7.0.0 | MIT | <https://github.com/jsdom/html-encoding-sniffer#readme> |
 | `import-fresh` | 3.3.1 | MIT | <https://github.com/sindresorhus/import-fresh#readme> |
 | `ini` | 6.0.0 | ISC | <https://github.com/npm/ini#readme> |
+| `is-alphabetical` | 2.0.1 | MIT | <https://github.com/wooorm/is-alphabetical#readme> |
+| `is-alphanumerical` | 2.0.1 | MIT | <https://github.com/wooorm/is-alphanumerical#readme> |
 | `is-arrayish` | 0.2.1 | MIT | <https://github.com/qix-/node-is-arrayish#readme> |
+| `is-decimal` | 2.0.1 | MIT | <https://github.com/wooorm/is-decimal#readme> |
 | `is-plain-obj` | 4.1.0 | MIT | <https://github.com/sindresorhus/is-plain-obj#readme> |
 | `is-potential-custom-element-name` | 1.0.1 | MIT | <https://github.com/mathiasbynens/is-potential-custom-element-name> |
 | `jiti` | 2.7.0 | MIT | <https://github.com/unjs/jiti#readme> |
 | `js-tokens` | 4.0.0 | MIT | <https://github.com/lydell/js-tokens#readme> |
 | `js-yaml` | 4.3.2 | MIT | <https://github.com/nodeca/js-yaml#readme> |
-| `jsdom` | 30.1.3 | MIT | <https://github.com/jsdom/jsdom#readme> |
+| `jsdom` | 31.0.1 | MIT | <https://github.com/jsdom/jsdom#readme> |
 | `json-parse-even-better-errors` | 2.3.1 | MIT | <https://github.com/npm/json-parse-even-better-errors#readme> |
 | `json-schema-traverse` | 1.0.0 | MIT | <https://github.com/epoberezkin/json-schema-traverse#readme> |
-| `knip` | 6.42.1 | ISC | <https://knip.dev> |
+| `knip` | 6.45.1 | ISC | <https://knip.dev> |
 | `lightningcss-<platform>` | 1.33.0 | MPL-2.0 | <https://github.com/parcel-bundler/lightningcss#readme> |
 | `lightningcss` | 1.33.0 | MPL-2.0 | <https://github.com/parcel-bundler/lightningcss#readme> |
 | `lines-and-columns` | 1.2.4 | MIT | <https://github.com/eventualbuddha/lines-and-columns#readme> |
 | `lru-cache` | 11.5.3 | BlueOak-1.0.0 | <https://github.com/isaacs/node-lru-cache#readme> |
 | `lz-string` | 1.5.0 | MIT | <http://pieroxy.net/blog/pages/lz-string/index.html> |
-| `magic-string` | 1.4.3 | MIT | <https://github.com/Rich-Harris/magic-string#readme> |
-| `mdn-data` | 2.27.1 | CC0-1.0 | <https://developer.mozilla.org> |
+| `magic-string` | 1.4.5 | MIT | <https://github.com/Rich-Harris/magic-string#readme> |
 | `mrmime` | 2.0.1 | MIT | <https://github.com/lukeed/mrmime#readme> |
 | `ms` | 2.1.3 | MIT | <https://github.com/vercel/ms#readme> |
 | `nanoid` | 3.3.20 | MIT | <https://github.com/ai/nanoid#readme> |
 | `obug` | 3.0.0 | MIT | <https://github.com/sxzz/obug#readme> |
-| `oxc-parser` | 0.154.0 | MIT | <https://oxc.rs/docs/guide/usage/parser> |
+| `oxc-parser` | 0.156.0 | MIT | <https://oxc.rs/docs/guide/usage/parser> |
 | `oxc-resolver` | 11.24.2 | MIT | <https://oxc.rs> |
 | `oxfmt` | 0.78.0 | MIT | <https://oxc.rs/docs/guide/usage/formatter> |
 | `oxlint-tsgolint` | 7.0.2006 | MIT | <https://github.com/oxc-project/tsgolint#readme> |
 | `oxlint` | 1.93.0 | MIT | <https://oxc.rs/docs/guide/usage/linter> |
+| `oxlint` | 1.94.0 | MIT | <https://oxc.rs/docs/guide/usage/linter> |
 | `package-manager-detector` | 1.9.0 | MIT | <https://github.com/antfu-collective/package-manager-detector#readme> |
 | `parent-module` | 1.0.1 | MIT | <https://github.com/sindresorhus/parent-module#readme> |
 | `parse-json` | 5.2.0 | MIT | <https://github.com/sindresorhus/parse-json#readme> |
-| `parse5` | 8.0.1 | MIT | <https://parse5.js.org> |
+| `parse5-parser-stream` | 8.1.1 | MIT | <https://parse5.js.org> |
+| `parse5` | 8.1.1 | MIT | <https://parse5.js.org> |
 | `pathe` | 2.0.3 | MIT | <https://github.com/unjs/pathe#readme> |
 | `picocolors` | 1.1.1 | ISC | <https://github.com/alexeyraspopov/picocolors#readme> |
 | `picomatch` | 4.0.7 | MIT | <https://github.com/micromatch/picomatch> |
-| `playwright-core` | 1.64.1 | Apache-2.0 | <https://playwright.dev> |
-| `playwright` | 1.64.1 | Apache-2.0 | <https://playwright.dev> |
+| `playwright-core` | 1.65.1 | Apache-2.0 | <https://playwright.dev> |
+| `playwright` | 1.65.1 | Apache-2.0 | <https://playwright.dev> |
 | `pngjs` | 7.0.0 | MIT | <https://github.com/lukeapage/pngjs> |
 | `postcss` | 8.5.33 | MIT | <https://postcss.org/> |
 | `pretty-format` | 27.5.1 | MIT | <https://github.com/facebook/jest#readme> |
@@ -309,7 +303,7 @@
 | `resolve-from` | 5.0.0 | MIT | <https://github.com/sindresorhus/resolve-from#readme> |
 | `resolve-pkg-maps` | 1.0.0 | MIT | <https://github.com/privatenumber/resolve-pkg-maps#readme> |
 | `saxes` | 6.0.0 | ISC | <https://github.com/lddubeau/saxes#readme> |
-| `semver` | 7.8.5 | ISC | <https://github.com/npm/node-semver#readme> |
+| `semver` | 7.8.6 | ISC | <https://github.com/npm/node-semver#readme> |
 | `sirv` | 3.0.2 | MIT | <https://github.com/lukeed/sirv#readme> |
 | `smol-toml` | 1.9.1 | BSD-3-Clause | <https://github.com/squirrelchat/smol-toml#readme> |
 | `source-map-js` | 1.2.2 | BSD-3-Clause | <https://github.com/7rulnik/source-map-js> |
@@ -318,21 +312,21 @@
 | `string-width` | 8.3.0 | MIT | <https://github.com/sindresorhus/string-width#readme> |
 | `strip-ansi` | 7.2.0 | MIT | <https://github.com/chalk/strip-ansi#readme> |
 | `strip-json-comments` | 5.0.3 | MIT | <https://github.com/sindresorhus/strip-json-comments#readme> |
-| `tinybench` | 6.2.2 | MIT | <https://github.com/tinylibs/tinybench#readme> |
+| `tinybench` | 6.2.3 | MIT | <https://github.com/tinylibs/tinybench#readme> |
 | `tinyexec` | 1.3.1 | MIT | <https://github.com/tinylibs/tinyexec#readme> |
 | `tinyglobby` | 0.2.17 | MIT | <https://superchupu.dev/tinyglobby> |
 | `tinypool` | 2.2.0 | MIT | <https://github.com/tinylibs/tinypool#readme> |
 | `tinyrainbow` | 3.2.0 | MIT | <https://github.com/tinylibs/tinyrainbow#readme> |
-| `tldts-core` | 7.4.19 | MIT | <https://github.com/remusao/tldts#readme> |
-| `tldts` | 7.4.19 | MIT | <https://github.com/remusao/tldts#readme> |
+| `tldts-core` | 7.5.4 | MIT | <https://github.com/remusao/tldts#readme> |
+| `tldts` | 7.5.4 | MIT | <https://github.com/remusao/tldts#readme> |
 | `totalist` | 3.0.1 | MIT | <https://github.com/lukeed/totalist#readme> |
-| `tough-cookie` | 6.0.2 | BSD-3-Clause | <https://github.com/salesforce/tough-cookie> |
+| `tough-cookie` | 6.1.0 | BSD-3-Clause | <https://github.com/salesforce/tough-cookie> |
 | `tr46` | 7.0.0 | MIT | <https://github.com/jsdom/tr46#readme> |
 | `typescript` | 5.4.5 | Apache-2.0 | <https://www.typescriptlang.org/> |
 | `typescript` | 7.1.0-dev.20260904.1 | Apache-2.0 | <https://www.typescriptlang.org/> |
-| `unbash` | 6.0.1 | ISC | <https://github.com/webpro-nl/unbash#readme> |
+| `unbash` | 6.0.4 | ISC | <https://github.com/webpro-nl/unbash#readme> |
 | `undici-types` | 8.9.0 | MIT | <https://undici.nodejs.org> |
-| `undici` | 8.12.3 | MIT | <https://undici.nodejs.org> |
+| `undici` | 8.12.4 | MIT | <https://undici.nodejs.org> |
 | `verkit` | 0.5.0 | MIT | <https://github.com/sxzz/verkit#readme> |
 | `vite-plus` | 1.6.0 | MIT | <https://viteplus.dev/guide> |
 | `vitest` | 5.1.0 | MIT | <https://vitest.dev> |
@@ -343,7 +337,7 @@
 | `whatwg-url` | 17.3.0 | MIT | <https://github.com/jsdom/whatwg-url#readme> |
 | `why-is-node-running` | 3.2.1 | MIT | <https://github.com/mafintosh/why-is-node-running> |
 | `wrap-ansi` | 9.0.2 | MIT | <https://github.com/chalk/wrap-ansi#readme> |
-| `ws` | 8.22.0 | MIT | <https://github.com/websockets/ws> |
+| `ws` | 8.23.0 | MIT | <https://github.com/websockets/ws> |
 | `xml-name-validator` | 5.0.0 | Apache-2.0 | <https://github.com/jsdom/xml-name-validator#readme> |
 | `xmlchars` | 2.2.0 | MIT | <https://github.com/lddubeau/xmlchars#readme> |
 | `y18n` | 5.0.8 | ISC | <https://github.com/yargs/y18n> |
@@ -352,4 +346,3 @@
 | `yargs` | 18.2.0 | MIT | <https://yargs.js.org/> |
 | `yuku-core` | 0.19.0 | MIT | <https://github.com/yuku-toolchain/yuku#readme> |
 | `yuku-parser` | 0.19.0 | MIT | <https://github.com/yuku-toolchain/yuku#readme> |
-| `zod` | 4.6.7 | MIT | <https://zod.dev> |
