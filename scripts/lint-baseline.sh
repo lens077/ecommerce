@@ -33,6 +33,11 @@
 #      注错红测才暴露 —— 修复后 run_vp-lint 加了「汇总行报 N 条 vs 解析 0 条」
 #      失聪自检,脱钩时产出 PARSE-FAILURE 哨兵行强制 check 变红。改采集器后
 #      必须注错复测(注入 debugger → check 必须 rc=1,还原 → rc=0)。
+#   5. 「上游崩死」与「格式脱钩」是两回事,但采集同为空:knip 2026-11-17 在
+#      node5 上启动即崩(oxc-parser 平台绑定缺失或加载失败,stderr 原被
+#      2>/dev/null 吞掉),GitLab #239/#240 假红成「基线 33 条已修好」。
+#      采集器必须对「退出码非 0 **且** 无输出」发崩溃哨兵(knip 有发现项时
+#      退出码也是 1,判据必须两者同时成立),崩溃 stderr 尾部打进 job 日志。
 set -euo pipefail
 
 root=$(git rev-parse --show-toplevel) || { echo "lint-baseline: 不在 git 仓库内" >&2; exit 2; }
@@ -142,7 +147,21 @@ run_knip() {
     echo "lint-baseline: 前端依赖未安装,跳过 knip(先 cd frontend && pnpm install)" >&2
     return 0
   fi
-  out=$( ( cd frontend && ./node_modules/.bin/knip --no-progress --reporter compact 2>/dev/null ) || true )
+  err=$(mktemp)
+  rc=0
+  out=$( ( cd frontend && ./node_modules/.bin/knip --no-progress --reporter compact 2>"$err" ) ) || rc=$?
+  # 2026-11-17 事故(GitLab #239/#240 假红):原写法 2>/dev/null + || true 把 knip
+  # 在 node5 上的启动崩溃洗成空输出,B=∅,check 把整份基线误判成「已修好」。
+  # 崩溃即失败,不当作 0 条告警——见头注陷阱 5。knip 有发现项时退出码也是 1,
+  # 所以崩溃判据必须是「退出码非 0 且无输出」两者同时成立。
+  if [ "$rc" -ne 0 ] && [ -z "$out" ]; then
+    echo "lint-baseline: knip 崩溃(退出码 $rc 且无输出)。stderr 尾部:" >&2
+    tail -8 "$err" >&2
+    printf 'knip\t__collector__\tPARSE-FAILURE: knip 退出码 %s 且无输出,采集中止\n' "$rc"
+    rm -f "$err"
+    return 0
+  fi
+  rm -f "$err"
   rows=$(printf '%s\n' "$out" | awk '
     /^[A-Z][A-Za-z ]+ \([0-9]+\)$/ { cat=$0; sub(/ \([0-9]+\)$/, "", cat); next }
     cat != "" && match($0, /^[^ ]+: /) {

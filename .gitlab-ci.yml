@@ -205,6 +205,12 @@ frontend-gate:
     - mkdir -p "$PNPM_STORE"
     - PNPM_STORE_FILES_BEFORE=$(find "$PNPM_STORE" -type f 2>/dev/null | wc -l || true)
     - pnpm install --frozen-lockfile
+    # 2026-11-17:#235 同 runner 同镜像全新安装,knip 正常跑 15.5s;#239/#240 却
+    # 0.84s 即死、输出为空——oxc-parser 的平台原生绑定是 optionalDependencies,
+    # 安装期被静默跳过(npm/cli#4828 同类)或加载失败都会让 knip 启动即崩。
+    # 装完校验本平台绑定在不在,缺就重装一次补齐;若绑定在而 knip 仍崩,
+    # lint-baseline 的崩溃哨兵(2026-11-17 起不再吞崩溃)会把 stderr 尾部打进日志。
+    - ls node_modules/.pnpm/@oxc-parser+binding-linux-x64-gnu@* >/dev/null 2>&1 || pnpm install --frozen-lockfile
   script:
     # 与 pnpm ready 相同的四项检查，仅把 workspace test/build 串行化以适配 1Gi。
     - pnpm exec vp fmt
