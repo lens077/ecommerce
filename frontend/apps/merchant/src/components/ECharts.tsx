@@ -26,6 +26,3 @@ echarts.use([
 ]);
 
 export default echarts;
-
-// 重新导出类型
-export type { EChartsOption } from "echarts";
