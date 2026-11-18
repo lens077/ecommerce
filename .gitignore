@@ -72,3 +72,6 @@ SECURITY-AUDIT-*
 # （verify-public-ips.py 扫跟踪+未忽略文件，会拦）；项目级共享内容走
 # .workbuddy/skills/（2026-10-20 定，参照上方 SECURITY-AUDIT-* 同款理由）
 .workbuddy/memory/
+
+# Trae IDE 分享 HTML 报告时自动打出的 zip 包，非项目产物（源文件已入库）
+.trae-html-share-packages/
