@@ -1,0 +1,4 @@
+# 基线：文档格式检查（FORMAT）的存量违规。
+# 核心 kit 不内置 FORMAT：文档类型与必填段落因项目而异，硬编码只会逼人放宽。
+# 接法见 docs/adaptation.md「新增一项检查」：写 checks/NN-format.sh，输出 <文件>\t<原因>，
+# 复用本文件做存量登记；同时补 canary/probes/FORMAT.sh。

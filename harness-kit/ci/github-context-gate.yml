@@ -1,0 +1,27 @@
+# 复制到 .github/workflows/context-gate.yml
+# 为什么 check 与 canary 分成两步：check 证明仓库当前是干净的，canary 证明门禁还拦得住。
+# 只跑前者时，一个「永远绿」的门禁也看不出来。
+#
+# 为什么 PR 不跑 canary：canary 要按探针数复制多份仓库（大仓本机 5–6 分钟），
+# 而 PR 阶段要的是「这次改动没破坏仓库事实」——doctor + check 足够；
+# 「门禁本身还拦得住吗」只在合入 main 或打 tag 时验证（0.3.1 起）。
+# 改回全量：把 canary 步骤的 if 删掉即可。理由与回退方法见 docs/adaptation.md。
+name: context-gate
+
+on:
+  push:
+  pull_request:
+
+jobs:
+  harness:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: doctor
+        run: bash harness/bin/harness doctor
+      - name: gate
+        run: bash harness/bin/harness check
+      - name: canary
+        # 只有 push 到 main 或打 tag 才跑；PR 分支与普通分支 push 只跑 doctor + check。
+        if: github.event_name == 'push' && (github.ref == 'refs/heads/main' || startsWith(github.ref, 'refs/tags/'))
+        run: bash harness/bin/harness canary

@@ -39,13 +39,13 @@ affects:
 | 微服务框架 | ConnectRPC（Buf） | 同步 RPC 通信；支持 gRPC、gRPC-Web、Connect 协议 |
 | 依赖注入 | Fx（Uber） | 服务内部依赖管理、生命周期管理 |
 | 数据库访问 | pgx + sqlc + goose | pgx 作为 PostgreSQL 驱动；sqlc 生成类型安全的查询代码；goose 做数据库迁移 |
-| API 定义与代码生成 | Protobuf 3 + Buf CLI + Protovalidate + protoc-gen-connect-openapi | 定义 API 契约；Buf 管理 proto 文件与兼容性；Protovalidate 做请求参数校验。接口文档：由 `protoc-gen-connect-openapi`（钉 `v0.19.1`，升级会改变 protovalidate 到 schema 的映射）按 Connect 协议生成 **OpenAPI 3.1**，经 `make api` / `make api-openapi` 随 proto 改动一并刷新，产物落在 `backend/api/<svc>/v1/*.openapi.json` 并随代码提交。**渲染器用 Scalar 而非 Swagger UI**：后者只接受 `swagger 2.0` 与 `openapi 3.0.n`，喂 3.1 时页面只剩一句 `No API definition provided`（2026-10-18 实测，理由写在 `backend/openapi/index.html` 头注释）。选 connect-openapi 而非 grpc-gateway 的原因：本仓 proto 未写 `google.api.http` 注解，网关实际路由就是 Connect 原生路径 `/<package>.<Service>/<Method>`，而该插件额外把 protovalidate 约束映射进 request schema |
+| API 定义与代码生成 | Protobuf 3 + Buf CLI + Protovalidate + protoc-gen-connect-openapi | 定义 API 契约；Buf 管理 proto 文件与兼容性；Protovalidate 做请求参数校验。接口文档：由 `protoc-gen-connect-openapi`（目标版本 `v0.19.1`，升级会改变 protovalidate 到 schema 的映射；**版本未强制**——该号只写在 `backend/buf.gen.openapi.yaml` 的安装示例注释里，`make api-openapi` 不校验生成器版本，换机器装不同版本产物会变，只能靠产物 diff 评审，无自动校验）按 Connect 协议生成 **OpenAPI 3.1**，经 `make api` / `make api-openapi` 随 proto 改动一并刷新，产物落在 `backend/api/<svc>/v1/*.openapi.json` 并随代码提交。**渲染器用 Scalar 而非 Swagger UI**：后者只接受 `swagger 2.0` 与 `openapi 3.0.n`，喂 3.1 时页面只剩一句 `No API definition provided`（2026-10-18 实测，理由写在 `backend/openapi/index.html` 头注释）。选 connect-openapi 而非 grpc-gateway 的原因：本仓 proto 未写 `google.api.http` 注解，网关实际路由就是 Connect 原生路径 `/<package>.<Service>/<Method>`，而该插件额外把 protovalidate 约束映射进 request schema |
 | 前端框架 | React + TanStack Router + TanStack Query | SPA 开发；路由与状态管理 |
 | 前端 API 通信 | Connect Query ES + Connect Web + Protobuf-ES | 类型安全的 RPC 客户端；与网关交互 |
 | 前端构建 | vite-plus（`vp`） | 开发与构建工具（一体化 dev/build/test/lint/fmt/git 钩子） |
 | 桌面端 | Tauri | 桌面客户端壳 |
-| 测试 | k6（负载/容量）、Playwright（E2E）、property-based testing（如 gopter）、状态机测试 | 验证容量基线、关键业务旅程、领域不变量 |
-| 安全 | Casdoor（IAM）、OpenFGA（关系授权）、Bugsink（错误监控） | 身份认证、对象级授权、前端异常监控 |
+| 测试 | k6（负载/容量）、Playwright（E2E）、property-based testing（如 gopter）、状态机测试 | 验证容量基线、关键业务旅程、领域不变量。**k6 仓内无落点**（无脚本、无 CI job），属目标契约；Playwright 有实际用例（`frontend/e2e/`、`frontend/apps/consumer/e2e/`） |
+| 安全 | Casdoor（IAM）、OpenFGA（关系授权）、Bugsink（错误监控） | 身份认证、对象级授权、前端异常监控。**OpenFGA 仓内无落点**：不在 `backend/go.mod`，同级 control-tower 的 Go 依赖里也未见，属目标契约 |
 | 凭据管理 | External Secrets Operator + OpenBao（+ SOPS 应急） | 凭据真相源与分发。**定稿 [TECH-RADAR §4.9](TECH-RADAR.md)，2026-09-11 复审维持**：OpenBao 是 Vault 的 MPL-2.0 分叉（Linux Foundation 治理），API/引擎与 Vault 相同，本项目用到的 KV v2 + token auth 两边无差别，选型差别只在许可（Vault 为 BUSL-1.1、IBM 单厂商）。现网：集群内 `openbao`（kubernetes 仓 `components/openbao`），路径 `k8s/<集群>/<组件>`，ESO 物化为 K8s Secret；VPS 上早期接的 HashiCorp Vault 已退为「可选集群外副本」（无 AppRole 凭据时不建接线，死接线已于 09-11 删除）。**已知取舍**：OpenBao 在集群内、数据随集群亡，重装后由同级 kubernetes 仓的 OpenBao seed 工具从现网反向重建（集群内组件密码会换一次，消费方由 harvest 自动跟上）；这同时触发了 TECH-RADAR §10.3 Velero 条款③，集群外副本待做。凭据进入业务服务的路径不是 K8s Secret 而是 Config Center，组件契约与自动填充见 kubernetes 仓 `tools/config-center/README.md` |
 | 可观测性 SDK | OpenTelemetry Go SDK + Protobuf-ES 内置追踪 | 日志、指标、链路埋点 |
 | 消息序列化 | Protobuf | RPC 与领域事件的统一序列化格式 |

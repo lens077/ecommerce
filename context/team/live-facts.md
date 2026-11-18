@@ -74,6 +74,8 @@ GitHub/GitLab 轻门禁显式传事件 base，不偷偷退到 `HEAD~1`；事件 
 - `doc-embed.py --check`：DDL/proto/函数摘录与源相等。生成器失败必须使调用方失败，不能只过滤特定错误文字。
 - `generate-alerting-catalog.py --verify-body`：告警目录的正文与自带摘要相等，纯标准库，CI 可跑，只证明没被手改。源在同级 kubernetes 仓，源码漂移只有本地 `--check` 能发现；改了上游规则或探针，就在本仓再生成。
 - `verify-context.sh`：链接、路径、索引、格式、预算等结构条件；**没有 `[LIVE-FACT]` 日期门禁**。
+  入口名与退出码不变，实现在 `harness-kit/checks/`（通用判定）与 `scripts/context-adapters/`
+  （本仓专属判定），配置在 `harness.config.sh`；改判定窗口先读 `harness-kit/docs/adaptation.md`。
 - `verify-deploy-parity.sh` / structcheck：清单与结构事实一致；它们仍不证明 live 应用过清单。
 - `config-seed -drift`：显式读取远端配置，与 matrix 对照；属于按需环境验证，不把读凭据塞进离线 CI。
 

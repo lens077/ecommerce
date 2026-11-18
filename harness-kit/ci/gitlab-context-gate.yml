@@ -1,0 +1,24 @@
+# 合并进 .gitlab-ci.yml 的一段。镜像只要求 bash + python3（kit 无第三方依赖）。
+# check 与 canary 分开跑：前者证明仓库干净，后者证明门禁仍会红。
+#
+# 为什么 MR 不跑 canary：canary 要按探针数复制多份仓库（大仓本机 5–6 分钟），
+# MR 阶段只需 doctor + check；canary 只在 push 到默认分支或打 tag 时跑（0.3.1 起）。
+# 改回全量：删掉 script 里的 if 判断，把 canary 那行改成无条件执行。
+# 理由与回退方法见 docs/adaptation.md。
+context-gate:
+  stage: test
+  image: python:3.12-slim
+  before_script:
+    - apt-get update && apt-get install -y --no-install-recommends git bash && rm -rf /var/lib/apt/lists/*
+  script:
+    - bash harness/bin/harness doctor
+    - bash harness/bin/harness check
+    - |
+      if [ "$CI_PIPELINE_SOURCE" = "push" ] && { [ "$CI_COMMIT_BRANCH" = "$CI_DEFAULT_BRANCH" ] || [ -n "${CI_COMMIT_TAG:-}" ]; }; then
+        bash harness/bin/harness canary
+      else
+        echo "canary 只在 push 到默认分支或打 tag 时跑（MR 只跑 doctor + check）"
+      fi
+  rules:
+    - if: $CI_PIPELINE_SOURCE == "push"
+    - if: $CI_PIPELINE_SOURCE == "merge_request_event"

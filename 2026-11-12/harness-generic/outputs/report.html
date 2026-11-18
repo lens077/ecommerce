@@ -1,0 +1,545 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Harness 通用化：进度总账（2026-11-12）</title>
+<style>
+  :root{
+    --bg:#fbfbfa; --card:#fff; --ink:#1f2328; --muted:#5b6570; --line:#e3e5e8;
+    --accent:#2f6f5e; --accent-soft:#eef5f2; --warn:#8a5a00; --warn-soft:#fdf6e7;
+    --danger:#9b2c2c; --danger-soft:#fdf0f0; --code:#f2f3f5;
+  }
+  *{box-sizing:border-box}
+  body{
+    margin:0; background:var(--bg); color:var(--ink);
+    font-family:-apple-system,BlinkMacSystemFont,"PingFang SC","Hiragino Sans GB","Microsoft YaHei","Noto Sans CJK SC",sans-serif;
+    font-size:15px; line-height:1.75; letter-spacing:.01em;
+    -webkit-font-smoothing:antialiased;
+  }
+  .wrap{max-width:1120px; margin:0 auto; padding:44px 24px 80px}
+  header h1{font-size:30px; line-height:1.35; margin:0 0 8px; font-weight:650}
+  header .meta{color:var(--muted); font-size:13px}
+  .lede{margin:16px 0 0; color:#33383d}
+  .facts{display:grid; grid-template-columns:repeat(auto-fit,minmax(160px,1fr)); gap:10px; margin:22px 0 8px}
+  .fact{background:var(--card); border:1px solid var(--line); border-radius:10px; padding:12px 14px}
+  .fact b{display:block; font-size:21px; line-height:1.3; margin-bottom:2px}
+  .fact span{color:var(--muted); font-size:12px}
+  nav.toc{display:flex; flex-wrap:wrap; gap:8px; margin:22px 0 30px; padding:0; list-style:none}
+  nav.toc a{
+    display:inline-block; padding:5px 11px; border:1px solid var(--line); border-radius:999px;
+    color:var(--muted); text-decoration:none; font-size:13px; background:var(--card);
+  }
+  nav.toc a:hover{border-color:var(--accent); color:var(--accent)}
+  h2.section{font-size:13px; letter-spacing:.08em; color:var(--muted);
+    margin:38px 0 12px; font-weight:600; border-bottom:1px solid var(--line); padding-bottom:7px}
+  h3{font-size:17px; margin:22px 0 8px; font-weight:640}
+  p{margin:8px 0}
+  ul,ol{margin:8px 0; padding-left:22px}
+  li{margin:3px 0}
+  code{font-family:ui-monospace,SFMono-Regular,Menlo,Consolas,"Liberation Mono",monospace;
+    font-size:.88em; background:var(--code); padding:1px 5px; border-radius:4px}
+  pre{
+    background:#fff; border:1px solid var(--line); border-radius:10px;
+    padding:14px 16px; overflow:auto; font-size:12.5px; line-height:1.6;
+  }
+  pre code{background:none; padding:0; font-size:inherit}
+  table{width:100%; border-collapse:collapse; font-size:13px; margin:10px 0 6px; background:var(--card)}
+  th,td{padding:7px 9px; border-bottom:1px solid var(--line); text-align:left; vertical-align:top}
+  th{color:var(--muted); font-weight:600; white-space:nowrap}
+  tr:last-child td{border-bottom:none}
+  .ok{color:var(--accent); font-weight:600}
+  .part{color:var(--warn); font-weight:600}
+  .no{color:var(--danger); font-weight:600}
+  .muted{color:var(--muted); font-size:12.5px}
+  .card{background:var(--card); border:1px solid var(--line); border-radius:12px; padding:18px 20px; margin:12px 0}
+  .note{background:var(--warn-soft); border:1px solid #f0e2c4; color:#5c4a1f; border-radius:10px; padding:12px 15px; margin:12px 0}
+  .grid2{display:grid; grid-template-columns:1fr 1fr; gap:16px}
+  .grid2 .card{margin:0}
+  .badge{display:inline-block; font-size:11.5px; padding:1px 8px; border-radius:999px;
+    background:var(--accent-soft); color:var(--accent); margin-right:5px}
+  .badge.warn{background:var(--warn-soft); color:var(--warn)}
+  footer{margin-top:42px; padding-top:16px; border-top:1px solid var(--line); color:var(--muted); font-size:12.5px}
+  @media (max-width:760px){
+    .wrap{padding:28px 14px 60px}
+    .grid2{grid-template-columns:1fr}
+    table{font-size:12px}
+    th,td{padding:6px}
+  }
+  @media print{
+    body{background:#fff; font-size:11.5pt}
+    .wrap{max-width:none; padding:0}
+    nav.toc{display:none}
+    .card,.fact,table,pre{break-inside:avoid}
+    h2.section{break-after:avoid}
+    a{color:inherit; text-decoration:none}
+  }
+</style>
+</head>
+<body>
+<div class="wrap">
+
+<header>
+  <h1>Harness 通用化：进度总账</h1>
+  <p class="meta">2026-11-12（终态 2026-11-13） · ecommerce <code>harness/generic-kit</code>，其余五仓 <code>harness/kit-onboarding</code> · 六仓均 kit 0.3.4 · 全部未 push、未合并主分支</p>
+  <p class="lede">这份文档只回答四件事：计划做到哪了、证据是什么、你该怎么验收、还有什么需要你拍板。
+    决策的备选与理由在 <code>decisions.html</code>，这里只汇总，不重复论证；<code>decisions.html</code> 保留 0.3.2 验收存档，0.3.4 终态以本页为准。</p>
+  <div class="facts">
+    <div class="fact"><b>6 / 6</b><span>六仓均 kit 0.3.4</span></div>
+    <div class="fact"><b>0</b><span>已 push / 已合并</span></div>
+    <div class="fact"><b>18</b><span>ecommerce tag 已收敛</span></div>
+    <div class="fact"><b>6</b><span>待你拍板的事项</span></div>
+  </div>
+  <ul class="toc">
+    <li><a href="#s1">1 计划与完成度</a></li>
+    <li><a href="#s2">2 进度与证据</a></li>
+    <li><a href="#s3">3 如何验收</a></li>
+    <li><a href="#s4">4 需要决策的项</a></li>
+  </ul>
+</header>
+
+<h2 class="section" id="s1">一、计划与完成度对照</h2>
+
+<h3>已完成</h3>
+<table>
+  <tr><th style="width:27%">计划项</th><th style="width:11%">状态</th><th>做到什么程度 / 证据</th></tr>
+  <tr>
+    <td>校验 harness 是否漂移</td><td class="ok">已完成</td>
+    <td>核对出 8 条处置记录，其中 5 条是实质漂移（部署清单路径、skills 工具表 11 条状态失效、两处无校验器的硬规则、TECH 版本只存在于注释）；
+      1 条判定不算漂移（k6 / OpenFGA 属目标契约），2 条是未验证项与环境说明。断言台账共 31 条。</td>
+  </tr>
+  <tr>
+    <td>修 ecommerce 自身</td><td class="ok">已完成</td>
+    <td>部署清单路径修正；skills 表改成「只留查法」；两处硬规则显式标注「靠评审」；删 2 个恒绿死探针（49→47）并加 tag 覆盖元断言；
+      <code>verify-context.sh</code> 改为薄封装，退出码与参数不变。</td>
+  </tr>
+  <tr>
+    <td>开分支并保证可回退</td><td class="ok">已完成</td>
+    <td><code>harness/generic-kit</code> 基于 <code>06bf0a54</code>，按「漂移修正 → kit → 文档 → 决策页」分阶段提交；每个阶段可单独 revert。</td>
+  </tr>
+  <tr>
+    <td>抽出通用 kit</td><td class="ok">已完成</td>
+    <td>kit 0.3.0：16 项检查、canary 探针与正样本、模板、hooks、CI 模板、onboarding。
+      ecommerce 的 18 个 tag 收敛为 17 个启用项（12 项 kit + 5 项适配层）+ 1 个跨检查 tag BASELINE。</td>
+  </tr>
+  <tr>
+    <td>给五个仓库接入</td><td class="ok">已完成</td>
+    <td>ToDo、palcommerce、Libra、Scorpius、LyraPass 均在 <code>harness/kit-onboarding</code> 分支接入，
+      现已全部升到 kit 0.3.4；doctor / check / canary 全过（耗时见第二节）。</td>
+  </tr>
+  <tr>
+    <td>0.3.0 → 0.3.4 五次修补</td><td class="ok">已完成</td>
+    <td>0.3.0 通用化初版；0.3.1 逗号多段行号、canary 模板复用 + 并行、CI 分档；
+      0.3.2 PATH-REF 把逐 token <code>sed</code> 合并为每文件一次；
+      0.3.3 修 EVIDENCE 在 mawk 下静默失效（非 COW 容器实测发现），但把标题层级从 h2–h3 改成了 h1–h2；
+      0.3.4 恢复等价写法 <code>^##?# </code> / <code>^#?#?# </code>，并加三输入 canary 断言。</td>
+  </tr>
+  <tr>
+    <td>验收页</td><td class="ok">已完成</td>
+    <td><code>decisions.html</code> 的「最终验收（0.3.2）」已重写；本页是独立的进度总账，0.3.4 终态以本页为准。</td>
+  </tr>
+  <tr>
+    <td>0.3.4 容器复核</td><td class="ok">已完成</td>
+    <td>Docker 29.9.3 / Debian 12 / ext4 named volume：容器内 <code>mawk</code> 1.3.4 实跑 h2 / h3 命中、h1 不命中；
+      <code>cp --reflink=always</code> 报 <code>Operation not supported</code>，trace 显示走 <code>cp -al</code>；
+      inode 证据显示源码树硬链接复用、可变路径已断开。ecommerce 19 探针 146s（空载）绿。
+      详见第二节「0.3.4 容器复核：mawk 与硬链接」。</td>
+  </tr>
+</table>
+
+<h3>部分完成 / 未做</h3>
+<table>
+  <tr><th style="width:27%">计划项</th><th style="width:11%">状态</th><th>原因 / 当前边界</th></tr>
+  <tr>
+    <td>push 六个分支</td><td class="no">未做</td>
+    <td>按你的要求不 push。六仓当前都没有远端分支，push 与合并顺序见第四节。</td>
+  </tr>
+  <tr>
+    <td>合并到主分支</td><td class="no">未做</td>
+    <td>同上。合并前还要处理 Libra 根 <code>AGENTS.md</code> 与主工作区版本的取舍。</td>
+  </tr>
+  <tr>
+    <td>安装 hooks</td><td class="no">未做</td>
+    <td><code>install-hooks</code> 会改仓库级 <code>core.hooksPath</code>，属不可逆动作；约定在合并后执行。
+      ecommerce 不需要装，它已有自己的钩子体系。</td>
+  </tr>
+  <tr>
+    <td>CI 首次真实 runner 验证</td><td class="no">未做</td>
+    <td>0.3.1 起 PR/MR 只跑 doctor + check，push 默认分支或打 tag 才跑 canary；
+      两个平台模板从未在真实 runner 跑过，重点看 runner 上 gitleaks 是否可用。</td>
+  </tr>
+  <tr>
+    <td><code>.gitleaks.toml</code> 放行条目复核</td><td class="no">未做</td>
+    <td>接入时为过 SECRETS 加过仓库级 allowlist；需要你逐条确认豁免的是夹具而不是真实凭据。</td>
+  </tr>
+  <tr>
+    <td>Libra 根 <code>AGENTS.md</code> 合并</td><td class="no">未做</td>
+    <td>接入分支与主工作区各有一份内容不同的根 <code>AGENTS.md</code>，合并时人工取舍，不能整文件覆盖。</td>
+  </tr>
+  <tr>
+    <td>ToDo <code>DECISIONS.md</code> 收口</td><td class="no">未做</td>
+    <td>共 34 个复选框（19 未勾、15 已勾），需要你确认哪些落地、哪些转 TODO。</td>
+  </tr>
+</table>
+
+<h2 class="section" id="s2">二、进度与证据</h2>
+
+<h3>六仓最终状态</h3>
+<table>
+  <tr>
+    <th>仓库</th><th>分支</th><th>最终提交</th><th>check</th><th>canary</th>
+  </tr>
+  <tr>
+    <td>ecommerce（本仓）</td>
+    <td><code>harness/generic-kit</code></td>
+    <td>kit <code>71b4c09d</code> + 文档 <code>ac10bdd2</code></td>
+    <td>17/17（21.03s）</td>
+    <td>19 探针，146s（空载）</td>
+  </tr>
+  <tr>
+    <td>ToDo</td>
+    <td><code>harness/kit-onboarding</code></td>
+    <td><code>27f431d</code></td>
+    <td>16/16（6.9s）</td>
+    <td>23 探针，115s</td>
+  </tr>
+  <tr>
+    <td>palcommerce</td>
+    <td><code>harness/kit-onboarding</code></td>
+    <td><code>f0bb266</code> + <code>3025fd2</code></td>
+    <td>16/16（12.16s）</td>
+    <td>23 探针，305s（非空载）</td>
+  </tr>
+  <tr>
+    <td>Libra</td>
+    <td><code>harness/kit-onboarding</code></td>
+    <td><code>456e570</code></td>
+    <td>16/16（6s）</td>
+    <td>23 探针，169s</td>
+  </tr>
+  <tr>
+    <td>Scorpius</td>
+    <td><code>harness/kit-onboarding</code></td>
+    <td><code>9df8be77</code></td>
+    <td>17/17（15.9s）</td>
+    <td>23 探针，154s + 适配层 4/4</td>
+  </tr>
+  <tr>
+    <td>LyraPass</td>
+    <td><code>harness/kit-onboarding</code></td>
+    <td><code>0260cc2</code></td>
+    <td>16/16（16.2s）</td>
+    <td>23 探针，226s（非空载）</td>
+  </tr>
+</table>
+<p class="muted">六仓均 kit 0.3.4，全部未 push、未合并；<code>git branch -r --contains HEAD</code> 均为空。
+  本页另有一次 docs 提交，在表内提交之后，不改 kit 与任何门禁结论。
+  Libra 的接入分支在工作树 <code>/Users/lens/WorkBuddy/Worktrees/Libra/harness-kit</code>；
+  主工作区 <code>/Users/lens/lens077/work</code> 当前在 <code>master</code>，带业务未提交改动。</p>
+
+<h3>关键数字</h3>
+<table>
+  <tr><th>指标</th><th>数值</th><th>口径</th></tr>
+  <tr>
+    <td>漂移处置</td>
+    <td>8 条记录：5 条实质漂移、1 条判定不算漂移、2 条未验证/环境说明</td>
+    <td>来自 <code>07-drift-corrections.md</code>；其中 skills 工具表 11 条「已安装/缺失」状态全部失效</td>
+  </tr>
+  <tr>
+    <td>断言台账</td>
+    <td>31 条</td>
+    <td><code>08-assertion-ledger.md</code> 中逐条核对后的条目数</td>
+  </tr>
+  <tr>
+    <td>tag 收敛</td>
+    <td>18 个 → 17 个启用（12 kit + 5 适配层）+ 1 个跨检查 tag（BASELINE）</td>
+    <td>一一对应进 kit 7 项、本次补齐 6 项、语义不同留适配层 5 项；每个 tag 至少一个注错探针</td>
+  </tr>
+  <tr>
+    <td>ecommerce canary 探针</td>
+    <td>49 → 47</td>
+    <td>删掉 <code>todo-fenced-ok</code>、<code>live-fact-dated-ok</code> 两个恒绿死探针，并加「每个启用 tag 至少一个探针」元断言</td>
+  </tr>
+  <tr>
+    <td>0.3.0 → 0.3.1 canary 总耗时</td>
+    <td>ecommerce 384.88s → 145.08s；ToDo 338.51s → 139.35s</td>
+    <td>同机单跑；未记录当时 load。收益主要来自探针并行 + 模板只建一次，不是复制方式本身</td>
+  </tr>
+  <tr>
+    <td>0.3.1 → 0.3.2 PATH-REF 单项</td>
+    <td>2000-token 样本 7.41/7.60s → 0.24/0.26s；ecommerce 40.07s → 1.75s；LyraPass 46.36s → 1.07–1.45s</td>
+    <td>只跑 <code>checks/20-path-ref.sh</code>；同机单跑，未记录 load。旧实现 2000 token 触发 1211 次外部进程，新实现 11 次</td>
+  </tr>
+  <tr>
+    <td>0.3.2 新项目沙箱</td>
+    <td>init / doctor / check 16/16 / canary 23 探针全过</td>
+    <td><code>/tmp/harness-kit-032</code>，包含 <code>path-ref-line-forms</code> 与 <code>path-ref-fork-count</code></td>
+  </tr>
+  <tr>
+    <td>0.3.3 非 COW 首次跑</td>
+    <td>19 探针 42s，<code>verify-canary: FAIL</code>：<code>mut-EVIDENCE</code> 期望 rc=1、实得 rc=0</td>
+    <td>Debian 12 / ext4 named volume / mawk；缺陷在 EVIDENCE 的 awk 区间量词，不在硬链接本身</td>
+  </tr>
+  <tr>
+    <td>0.3.3 修复后</td>
+    <td>ecommerce 19 探针 44s；新仓 23 探针 13s；两次均 <code>verify-canary: OK</code></td>
+    <td>同一容器；含 <code>probe-isolation</code>、<code>path-ref-fork-count</code>、<code>template-mirror</code></td>
+  </tr>
+  <tr>
+    <td>0.3.4 mawk 三输入（容器内）</td>
+    <td><code>## 证据</code> rc=1、<code>### 证据</code> rc=1、<code># 证据</code> rc=0，前两者输出含 <code>[EVIDENCE]</code></td>
+    <td>mawk 1.3.4 / Debian 12；对照 0.3.3 为 1 / 0 / 1，0.3.2 为 0 / 0 / 0（静默通过）</td>
+  </tr>
+  <tr>
+    <td>0.3.4 六仓结果</td>
+    <td>check 16/16–17/17，6–21.03s；canary 19–23 探针，115–305s</td>
+    <td>见第二节六仓表；palcommerce 与 LyraPass 为非空载，不能当空载基线</td>
+  </tr>
+</table>
+
+<h3>0.3.4 容器复核：mawk 与硬链接</h3>
+<p>0.3.4 的验证分两层：正则语义在容器内用 <code>mawk</code> 实跑，硬链接分支在同一次运行里核对 inode。
+  两者都在 Docker 29.9.3 / Debian 12 / ext4 named volume 上完成，不是只看 macOS 的 BSD awk。</p>
+<table>
+  <tr><th style="width:24%">检查</th><th>证据</th></tr>
+  <tr>
+    <td>mawk 下的三种标题层级</td>
+    <td><code>mawk</code> 1.3.4 实跑：<code>## 证据</code> + 未打标行 → rc=1 且输出含 <code>[EVIDENCE]</code>；
+      <code>### 证据</code> 同样 rc=1；<code># 证据</code> → rc=0。0.3.3 的结果是 h2=1 / h3=0 / h1=1，
+      0.3.2 则三者全为 0（静默通过）。</td>
+  </tr>
+  <tr>
+    <td>结束标记等价</td>
+    <td><code>## 证据</code> + 打标行 + <code>#### 子节</code> + 未打标行：0.3.3 因 <code>^#+ </code>（h1–h6）提前收段判 rc=0，
+      0.3.4 的 <code>^#?#?# </code>（h1–h3）判 rc=1，与原意一致。</td>
+  </tr>
+  <tr>
+    <td>文件系统确实不支持写时复制</td>
+    <td><code>stat -f -c %T /work</code> → <code>ext2/ext3</code>（ext4 族）；
+      <code>cp --reflink=always</code> → <code>failed to clone ...: Operation not supported</code>；
+      GNU <code>cp -cR</code> → <code>invalid option -- 'c'</code>，因此 kit 退到下一档。</td>
+  </tr>
+  <tr>
+    <td>实际进入硬链接分支</td>
+    <td><code>bash -x</code> trace：<code>+ cp -al .../template/. .../clean-template/</code>；
+      <code>probe-isolation</code> 输出「源码树硬链接复用」。不是只看「跑绿了」。</td>
+  </tr>
+  <tr>
+    <td>硬链接与断链落点</td>
+    <td><code>template/backend/go.mod</code> 与两个沙箱同名文件 inode 相同、链接数 21；
+      <code>AGENTS.md</code>、<code>harness.config.sh</code>、<code>context/team/INDEX.md</code>、
+      <code>.git/index</code> 在模板与各沙箱 inode 各不相同、链接数 1。</td>
+  </tr>
+  <tr>
+    <td>原地写是否污染模板</td>
+    <td>跑完 <code>git -C template status --porcelain</code> 为 0 行；<code>canary-isolation</code>
+      只出现在 <code>aux-isolation</code> 沙箱，模板与其他 mutation 沙箱都没有。</td>
+  </tr>
+  <tr>
+    <td>git 是否跨沙箱串味</td>
+    <td>各沙箱 <code>.git/index</code> 独立；在一个沙箱里 <code>git commit</code> 后，
+      模板与另一个沙箱的 <code>HEAD</code>、<code>git log</code> 都不变。</td>
+  </tr>
+  <tr>
+    <td>并行是否互踩</td>
+    <td>探针 4 个一批并行，19/23 全过；<code>mut-DEAD-LINK</code> 与 <code>mut-FORMAT</code> 的
+      <code>git status</code> 各自只含自己的改动。</td>
+  </tr>
+</table>
+<p class="muted">容器是 Docker Desktop 的 linux/arm64 Linux VM，不是 GitHub runner 本身；
+  ext4 与 runner 相同，但内核、IO、缓存和资源限制不同。容器里还显式装了 <code>perl</code> 以提供
+  <code>shasum</code>（GitHub ubuntu runner 自带，最小镜像不一定有）。因此这次消掉的是
+  「硬链接分支未实测」与「mawk 下语义未验证」两项不确定性，不等于「CI 首次真实 runner 已验证」，后者仍在第四节。</p>
+
+<h3>0.3.3 → 0.3.4：一次「修错换错」的回归</h3>
+<div class="card">
+  <p>0.3.3 修 mawk 区间量词时，把 EVIDENCE 的起点写成了 <code>^##? </code>（h1–h2，原意是 h2–h3），
+    结束标记写成了 <code>^#+ </code>（h1–h6，原意是 h1–h3）。两处都不是笔误级别：起点变化让
+    <code>### 证据</code> 不再命中、<code># 证据</code> 反而命中。</p>
+  <p>LyraPass 与 palcommerce 在升级后各自独立发现了同一现象。0.3.4 用 mawk 可用的等价写法
+    <code>^##?# </code>（2–3 个 #）与 <code>^#?#?# </code>（1–3 个 #）恢复原语义，并在 canary 里加了
+    h2 命中、h3 命中、h1 不命中的三输入断言；结束标记另做等价性核对。ecommerce 本身的证据段是 h2，
+    修复前后都命中；按 glob 复查，21 篇经验文档里没有被 0.3.3 漏掉的 h3 证据段。</p>
+  <p><b>给所有仓库的教训</b>：为了兼容性改写正则，必须用等价性断言证明语义未变，否则就是拿一个错换另一个错。
+    这次两个仓库能发现，是因为它们在升级后仍逐条看门禁输出；只跑「绿了没有」不会暴露这类静默错判。</p>
+</div>
+
+<div class="note">
+  <b>耗时怎么读</b>
+  <p>跨仓比较只看数量级：各仓启用的检查项、仓库体积、机器负载都不同。
+    ecommerce 的 21.03s 包含 5 个适配层检查；ToDo 的 6.9s 不能直接与它比。
+    只有标了「空载 / 非空载」的几项能说明负载；其余数字只记录了耗时，不要当成空载基线。</p>
+</div>
+
+<h2 class="section" id="s3">三、如何验收</h2>
+
+<h3>1. 每仓跑三条命令</h3>
+<p>ecommerce 与 ToDo 的 kit 目录名是 <code>harness-kit/</code>，其余四个仓是 <code>harness/</code>。
+  在仓库根执行：</p>
+<pre><code># ecommerce（本仓）
+cd /Users/lens/lens077/ecommerce
+bash harness-kit/bin/harness doctor
+bash harness-kit/bin/harness check
+bash harness-kit/bin/harness canary
+
+# ToDo
+cd /Users/lens/WorkBuddy/Worktrees/ToDo/harness-kit
+bash harness-kit/bin/harness doctor
+bash harness-kit/bin/harness check
+bash harness-kit/bin/harness canary
+
+# palcommerce（接入分支未 checkout，用临时 worktree，不动当前工作树）
+git -C /Users/lens/lens077/palcommerce worktree add /tmp/palcommerce-kit harness/kit-onboarding
+cd /tmp/palcommerce-kit
+bash harness/bin/harness doctor
+bash harness/bin/harness check
+bash harness/bin/harness canary
+# 验收完删除：git -C /Users/lens/lens077/palcommerce worktree remove /tmp/palcommerce-kit
+
+# Libra（worktree，不是主工作区）
+cd /Users/lens/WorkBuddy/Worktrees/Libra/harness-kit
+bash harness/bin/harness doctor
+bash harness/bin/harness check
+bash harness/bin/harness canary
+
+# Scorpius
+cd /Users/lens/WorkBuddy/Worktrees/Scorpius/harness-kit
+bash harness/bin/harness doctor
+bash harness/bin/harness check
+bash harness/bin/harness canary
+
+# LyraPass
+cd /Users/lens/WorkBuddy/Worktrees/LyraPass/harness-kit
+bash harness/bin/harness doctor
+bash harness/bin/harness check
+bash harness/bin/harness canary</code></pre>
+
+<h3>2. 期望输出</h3>
+<table>
+  <tr><th style="width:20%">命令</th><th>看什么</th></tr>
+  <tr><td><code>doctor</code></td>
+    <td>六仓首行都应是 <code>kit=0.3.4</code>；出现 <code>✓ harness.lock 与 kit 一致</code>；退出码 0。
+      若报 drift，说明该仓 kit 被本地改过。</td></tr>
+  <tr><td><code>check</code></td>
+    <td>ecommerce 与 Scorpius 是 <code>17/17 项通过（OK）</code>，其余四仓是 <code>16/16</code>；
+      中间每个 tag 都是 <code>✓</code>。</td></tr>
+  <tr><td><code>canary</code></td>
+    <td>ecommerce 是 19 探针，其余五仓 23 探针（Scorpius 另有适配层 4/4）；
+      末两行形如 <code>canary 耗时：模板 Ns，总计 Ns（...）</code> 与
+      <code>verify-canary: OK（N 探针全过：干净沙箱绿 + 各类注错被拦且 tag 正确）</code>。
+      macOS/APFS 走 <code>cp -cR</code>，Linux/ext4 走 <code>cp -al</code>，两条分支都应绿。</td></tr>
+</table>
+
+<h3>3. 怎么看分支与提交</h3>
+<pre><code>git branch --show-current
+git log --oneline -6
+git status --short
+git log --oneline &lt;基点&gt;..HEAD</code></pre>
+<p>每仓基点：ecommerce <code>06bf0a54</code>；ToDo <code>fa4e6de0</code>；
+  palcommerce <code>177699a0</code>；Libra <code>95655118</code>；
+  Scorpius <code>ce53a4f7</code>；LyraPass <code>faa96219</code>。</p>
+
+<h3>4. 怎么确认主分支没被改动</h3>
+<pre><code>git rev-parse main            # Libra 用 master
+git diff --stat main...HEAD   # 只应出现 harness/、harness.lock、CI 模板与接入文档
+git branch -r --contains HEAD # 应为空，表示尚未 push</code></pre>
+<p>如果你在 ecommerce 看到 <code>main</code> 的 hash 仍是 <code>06bf0a54</code> 或其后未被本分支改写的提交，
+  说明接入只发生在 <code>harness/generic-kit</code> 上。</p>
+
+<h3>5. 怎么回退</h3>
+<pre><code># 整条分支回退（会丢弃该分支未 push 的提交）
+git reset --hard &lt;基点&gt;
+
+# 只回退 kit，保留业务改动
+git show --stat &lt;kit 提交&gt;     # 先确认它只碰 harness/ 与 harness.lock
+git revert &lt;kit 提交&gt;
+
+# 只回退 0.3.4，保留 0.3.2 / 0.3.3 接入
+git revert ac10bdd2 71b4c09d  # ecommerce：文档 + kit（新提交先撤）
+git revert 27f431d            # ToDo
+git revert 3025fd2 f0bb266    # palcommerce（新提交先撤）
+git revert 456e570            # Libra
+git revert 9df8be77           # Scorpius
+git revert 0260cc2            # LyraPass</code></pre>
+<p>未跟踪目录：ecommerce 有预览工具产物 <code>.trae-html-share-packages/</code>；
+  palcommerce 的 <code>dist/</code>、<code>e2e/</code>、<code>.edgeone/</code> 是构建产物，默认保留。
+  ToDo 若 reset 后仍有 <code>harness-kit/</code> 残留，再 <code>rm -rf harness-kit</code>。</p>
+
+<h2 class="section" id="s4">四、需要决策的项</h2>
+
+<div class="grid2">
+  <div class="card">
+    <h3 style="margin-top:0">我已代你决定</h3>
+    <p>完整备选与改判方法在 <code>decisions.html</code> 的 D1–D22，这里只列结论：</p>
+    <ul>
+      <li>独立分支 + 分阶段提交，提交身份用临时 <code>-c</code>，不动仓库配置（D1–D2）</li>
+      <li>kit 用 vendor 目录 + <code>harness.lock</code>，配置用 bash 变量（D3–D4）</li>
+      <li>核心检查进 kit，项目专属留适配层；不重构 ecommerce 原门禁（D5–D6、D19）</li>
+      <li>决策页放项目记录目录，不进 kit；无校验器的规则显式标注「靠评审」（D8–D9）</li>
+      <li>删恒绿死探针并加 tag 覆盖元断言；探针运行时拼接（D11、D14）</li>
+      <li>gitleaks 默认 <code>required</code>；PATH-REF 只认真实顶层目录、跳过 glob（D15–D16）</li>
+      <li>先自测绿再写适配文档，自测在 <code>/tmp</code>（D17–D18）</li>
+      <li>0.3.1：逗号行号、canary 复用 + 并行、CI 分档；0.3.2：PATH-REF 合并 sed（D21–D22）</li>
+      <li>0.3.4：EVIDENCE 恢复 <code>^##?# </code> / <code>^#?#?# </code> 等价语义（0.3.3 的 mawk 修法改错了层级），
+        只改正则、不动配置契约，按 patch 直接覆盖升级</li>
+    </ul>
+  </div>
+
+  <div class="card">
+    <h3 style="margin-top:0">等你拍板</h3>
+    <p><b>1. 六个分支的 push 与合并顺序</b></p>
+    <ul>
+      <li>选项 A：先 push + 合并 ecommerce，再按 ToDo / LyraPass / Scorpius / palcommerce 顺序，Libra 最后。
+        后果：kit 源头先稳定，返工最少；但整体最慢。</li>
+      <li>选项 B：六仓并行提 MR。后果：快；若 kit 需要返工，五个仓要跟着改。</li>
+      <li>选项 C：只 push 不合并。后果：先让 CI 跑起来，保留回退空间。</li>
+    </ul>
+
+    <p><b>2. hooks 安装时机</b></p>
+    <ul>
+      <li>合并前装：本地提交立即受门禁约束，但可能与各仓现有钩子冲突。</li>
+      <li>合并后装（建议）：不阻塞接入；风险是合并前本地提交没人拦。</li>
+      <li>不装：完全依赖 CI，提交反馈更慢。</li>
+    </ul>
+
+    <p><b>3. CI 首次真实 runner 验证</b></p>
+    <ul>
+      <li>先提 PR：只跑 doctor + check，最安全；canary 留到 push 默认分支。</li>
+      <li>直接 push 默认分支：一次跑全量，但失败会影响主分支。</li>
+      <li>暂不验证：模板保持「未在真实 runner 跑过」的状态。</li>
+    </ul>
+    <p class="muted">0.3.4 已在 Linux ext4 容器里用 mawk 跑过完整 canary，硬链接分支与 mawk 语义都不再是空白；
+      但容器不是 runner，首次真实执行仍需单独确认。</p>
+
+    <p><b>4. <code>.gitleaks.toml</code> 放行条目</b></p>
+    <ul>
+      <li>全部保留：接入最省事；风险是真实凭据被误豁免。</li>
+      <li>逐条复核后收窄（建议）：安全；需要你花时间看每条豁免的对象。</li>
+      <li>全部删除再跑 check：最严格；会暴露历史夹具，可能要补新豁免。</li>
+    </ul>
+
+    <p><b>5. Libra 根 <code>AGENTS.md</code></b></p>
+    <ul>
+      <li>用接入分支版本：harness 段完整；可能丢主工作区的业务约定。</li>
+      <li>用主工作区版本：业务约定保留；可能丢接入说明。</li>
+      <li>人工合并（建议）：两边都保留；成本是一次逐段核对。</li>
+    </ul>
+
+    <p><b>6. ToDo <code>DECISIONS.md</code> 34 项</b></p>
+    <ul>
+      <li>合并前逐条收口：决策记录干净；需要你判断 19 个未勾项。</li>
+      <li>先合并、后收口：不阻塞接入；未勾项会继续留在主分支。</li>
+      <li>转为 TODO：保留未决事项；会增加 <code>TODO.md</code> 条目。</li>
+    </ul>
+  </div>
+</div>
+
+<footer>
+  <p>生成于 2026-11-12，终态更新 2026-11-13 · kit 0.3.4 · 单文件、无外部依赖 · 决策与逐条论证见同目录
+    <code>decisions.html</code>（保持 0.3.2 验收存档，未随本页改写；<b>0.3.4 终态以本页为准</b>）·
+    新项目接入见 <code>../../../harness-kit/docs/onboarding.md</code></p>
+</footer>
+
+</div>
+</body>
+</html>

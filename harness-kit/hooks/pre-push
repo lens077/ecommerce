@@ -1,0 +1,8 @@
+#!/usr/bin/env bash
+# pre-push：全量检查 + canary。canary 慢（每个探针各跑一遍门禁），但它是唯一能证明
+# 「门禁还拦得住」的东西；只在 push 时跑，不放进 commit。
+set -uo pipefail
+root=$(git rev-parse --show-toplevel 2>/dev/null) || exit 0
+[ -x "$root/harness/bin/harness" ] || { echo "pre-push: 找不到 harness/bin/harness" >&2; exit 1; }
+"$root/harness/bin/harness" check || exit 1
+exec "$root/harness/bin/harness" canary
