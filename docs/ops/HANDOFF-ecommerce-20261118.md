@@ -7,11 +7,11 @@
 
 | 项 | 值 |
 |---|---|
-| 分支 / HEAD | `main` @ `9e5a59dc` |
+| 分支 / HEAD | `main`；最新提交用 `git log -1` 现查 |
 | 远端同步 | GitLab `origin/main` 与 GitHub `github/main` 均与本地一致 |
 | 最新发布 tag | `1.8.1` |
 | 工作区 | 干净；`.trae-html-share-packages/`（Trae 分享包 zip）已加入 `.gitignore` |
-| 未合并分支 | `harness/generic-kit`（harness kit 0.3.4，已推送到 GitLab 与 GitHub） |
+| 分支合并 | `harness/generic-kit`（harness kit 0.3.4）已合入 `main`，分支保留在两个远端作历史 |
 
 ## 二、计划与进度
 
