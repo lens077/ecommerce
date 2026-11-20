@@ -1,7 +1,7 @@
 # Third-party notices
 
 由 `scripts/gen-third-party-notices.sh` 生成,勿手工编辑;依赖变更进暂存区时 pre-commit 会自动重新生成。
-后端列出 `go list -deps ./...` 实际链接进制品的 102 个模块;前端列出 `pnpm licenses list` 解析到的 207 个包(含 dev 依赖)。
+后端列出 `go list -deps ./...` 实际链接进制品的 102 个模块;前端列出 `pnpm licenses list` 解析到的 211 个包(含 dev 依赖)。
 
 ## 需要人看一眼
 
@@ -17,8 +17,8 @@
 
 | 许可证 | 条目数 |
 |---|---|
-| MIT | 207 |
-| Apache-2.0 | 52 |
+| MIT | 209 |
+| Apache-2.0 | 54 |
 | BSD-3-Clause | 16 |
 | ISC | 15 |
 | MPL-2.0 | 10 |
@@ -135,7 +135,7 @@
 | `google.golang.org/protobuf` | v1.36.12 | BSD-3-Clause | LICENSE |
 | `gopkg.in/yaml.v3` | v3.0.1 | Apache-2.0 | LICENSE |
 
-## 前端(npm 包,207)
+## 前端(npm 包,211)
 
 | 包 | 版本 | 许可证 | 主页 |
 |---|---|---|---|
@@ -170,21 +170,20 @@
 | `@jridgewell/sourcemap-codec` | 1.6.0 | MIT | <https://github.com/jridgewell/sourcemaps/tree/main/packages/sourcemap-codec> |
 | `@jridgewell/trace-mapping` | 0.3.31 | MIT | <https://github.com/jridgewell/sourcemaps/tree/main/packages/trace-mapping> |
 | `@oxc-parser/binding-<platform>` | 0.156.0 | MIT | <https://oxc.rs/docs/guide/usage/parser> |
-| `@oxc-project/runtime` | 0.158.0 | MIT | <https://oxc.rs> |
+| `@oxc-project/runtime` | 0.159.0 | MIT | <https://oxc.rs> |
 | `@oxc-project/types` | 0.156.0 | MIT | <https://oxc.rs> |
-| `@oxc-project/types` | 0.158.0 | MIT | <https://oxc.rs> |
+| `@oxc-project/types` | 0.159.0 | MIT | <https://oxc.rs> |
 | `@oxc-resolver/binding-<platform>` | 11.24.2 | MIT | <https://oxc.rs> |
-| `@oxfmt/binding-<platform>` | 0.78.0 | MIT | <https://oxc.rs/docs/guide/usage/formatter> |
-| `@oxlint-tsgolint/darwin-arm64` | 7.0.2006 | MIT | <https://github.com/oxc-project/tsgolint#readme> |
-| `@oxlint/binding-<platform>` | 1.93.0 | MIT | <https://oxc.rs/docs/guide/usage/linter> |
+| `@oxfmt/binding-<platform>` | 0.79.0 | MIT | <https://oxc.rs/docs/guide/usage/formatter> |
 | `@oxlint/binding-<platform>` | 1.94.0 | MIT | <https://oxc.rs/docs/guide/usage/linter> |
-| `@oxlint/plugins` | 1.93.0 | MIT | <https://oxc.rs/docs/guide/usage/linter/js-plugins> |
+| `@oxlint/plugins` | 1.94.0 | MIT | <https://oxc.rs/docs/guide/usage/linter/js-plugins> |
 | `@playwright/test` | 1.65.1 | Apache-2.0 | <https://playwright.dev> |
 | `@polka/url` | 1.0.0-next.29 | MIT | <https://github.com/lukeed/polka#readme> |
 | `@simple-libs/child-process-utils` | 2.0.0 | MIT | <https://github.com/TrigenSoftware/simple-libs/tree/main/packages/child-process-utils#readme> |
 | `@simple-libs/stream-utils` | 2.0.0 | MIT | <https://github.com/TrigenSoftware/simple-libs/tree/main/packages/stream-utils#readme> |
 | `@testing-library/dom` | 10.4.2 | MIT | <https://github.com/testing-library/dom-testing-library#readme> |
-| `@testing-library/user-event` | 14.6.12 | MIT | <https://github.com/testing-library/user-event#readme> |
+| `@testing-library/user-event` | 14.6.13 | MIT | <https://github.com/testing-library/user-event#readme> |
+| `@tsrs/darwin-arm64` | 7.1.0-beta.tsrs2 | Apache-2.0 | <https://github.com/oxc-project/tsrs#readme> |
 | `@types/aria-query` | 5.0.4 | MIT | <https://github.com/DefinitelyTyped/DefinitelyTyped/tree/master/types/aria-query> |
 | `@types/chai` | 5.2.3 | MIT | <https://github.com/DefinitelyTyped/DefinitelyTyped/tree/master/types/chai> |
 | `@types/deep-eql` | 4.0.2 | MIT | <https://github.com/DefinitelyTyped/DefinitelyTyped/tree/master/types/deep-eql> |
@@ -192,17 +191,23 @@
 | `@types/node` | 26.6.6 | MIT | <https://github.com/DefinitelyTyped/DefinitelyTyped/tree/master/types/node> |
 | `@typescript/typescript-<platform>` | 7.1.0-dev.20260904.1 | Apache-2.0 | <https://www.typescriptlang.org/> |
 | `@typescript/vfs` | 1.6.6 | MIT | <https://github.com/microsoft/TypeScript-Website> |
-| `@vitest/browser-playwright` | 5.1.0 | MIT | <https://vitest.dev/config/browser/playwright> |
+| `@vitest/browser-playwright` | 5.1.1 | MIT | <https://vitest.dev/config/browser/playwright> |
 | `@vitest/browser-preview` | 5.1.0 | MIT | <https://vitest.dev/guide/browser> |
 | `@vitest/browser` | 5.1.0 | MIT | <https://vitest.dev/guide/browser/> |
+| `@vitest/browser` | 5.1.1 | MIT | <https://vitest.dev/guide/browser/> |
 | `@vitest/mocker` | 5.1.0 | MIT | <https://github.com/vitest-dev/vitest/tree/main/packages/mocker> |
+| `@vitest/mocker` | 5.1.1 | MIT | <https://github.com/vitest-dev/vitest/tree/main/packages/mocker> |
 | `@vitest/pretty-format` | 5.1.0 | MIT | <https://github.com/vitest-dev/vitest/tree/main/packages/pretty-format> |
+| `@vitest/pretty-format` | 5.1.1 | MIT | <https://github.com/vitest-dev/vitest/tree/main/packages/pretty-format> |
 | `@vitest/snapshot` | 5.1.0 | MIT | <https://vitest.dev/guide/snapshot> |
 | `@vitest/spy` | 5.1.0 | MIT | <https://vitest.dev/api/mock> |
+| `@vitest/spy` | 5.1.1 | MIT | <https://vitest.dev/api/mock> |
 | `@vitest/ui` | 5.1.0 | MIT | <https://vitest.dev/guide/ui> |
+| `@vitest/ui` | 5.1.1 | MIT | <https://vitest.dev/guide/ui> |
 | `@vitest/utils` | 5.1.0 | MIT | <https://github.com/vitest-dev/vitest/tree/main/packages/utils> |
-| `@voidzero-dev/vite-plus-<platform>` | 1.6.0 | MIT | <https://viteplus.dev/guide> |
-| `@voidzero-dev/vite-plus-core` | 1.6.0 | MIT | <https://viteplus.dev/guide> |
+| `@vitest/utils` | 5.1.1 | MIT | <https://github.com/vitest-dev/vitest/tree/main/packages/utils> |
+| `@voidzero-dev/vite-plus-<platform>` | 1.7.0 | MIT | <https://viteplus.dev/guide> |
+| `@voidzero-dev/vite-plus-core` | 8.3.8000 | MIT | <https://viteplus.dev/guide> |
 | `@yuku-core/binding-<platform>` | 0.19.0 | MIT | <https://github.com/yuku-toolchain/yuku#readme> |
 | `@yuku-toolchain/types` | 0.19.0 | MIT | <https://github.com/yuku-toolchain/yuku#readme> |
 | `ajv` | 8.20.0 | MIT | <https://ajv.js.org> |
@@ -266,7 +271,7 @@
 | `jsdom` | 31.0.1 | MIT | <https://github.com/jsdom/jsdom#readme> |
 | `json-parse-even-better-errors` | 2.3.1 | MIT | <https://github.com/npm/json-parse-even-better-errors#readme> |
 | `json-schema-traverse` | 1.0.0 | MIT | <https://github.com/epoberezkin/json-schema-traverse#readme> |
-| `knip` | 6.45.1 | ISC | <https://knip.dev> |
+| `knip` | 6.46.1 | ISC | <https://knip.dev> |
 | `lightningcss-<platform>` | 1.33.0 | MPL-2.0 | <https://github.com/parcel-bundler/lightningcss#readme> |
 | `lightningcss` | 1.33.0 | MPL-2.0 | <https://github.com/parcel-bundler/lightningcss#readme> |
 | `lines-and-columns` | 1.2.4 | MIT | <https://github.com/eventualbuddha/lines-and-columns#readme> |
@@ -279,9 +284,7 @@
 | `obug` | 3.0.0 | MIT | <https://github.com/sxzz/obug#readme> |
 | `oxc-parser` | 0.156.0 | MIT | <https://oxc.rs/docs/guide/usage/parser> |
 | `oxc-resolver` | 11.24.2 | MIT | <https://oxc.rs> |
-| `oxfmt` | 0.78.0 | MIT | <https://oxc.rs/docs/guide/usage/formatter> |
-| `oxlint-tsgolint` | 7.0.2006 | MIT | <https://github.com/oxc-project/tsgolint#readme> |
-| `oxlint` | 1.93.0 | MIT | <https://oxc.rs/docs/guide/usage/linter> |
+| `oxfmt` | 0.79.0 | MIT | <https://oxc.rs/docs/guide/usage/formatter> |
 | `oxlint` | 1.94.0 | MIT | <https://oxc.rs/docs/guide/usage/linter> |
 | `package-manager-detector` | 1.9.0 | MIT | <https://github.com/antfu-collective/package-manager-detector#readme> |
 | `parent-module` | 1.0.1 | MIT | <https://github.com/sindresorhus/parent-module#readme> |
@@ -306,13 +309,13 @@
 | `semver` | 7.8.6 | ISC | <https://github.com/npm/node-semver#readme> |
 | `sirv` | 3.0.2 | MIT | <https://github.com/lukeed/sirv#readme> |
 | `smol-toml` | 1.9.1 | BSD-3-Clause | <https://github.com/squirrelchat/smol-toml#readme> |
-| `source-map-js` | 1.2.2 | BSD-3-Clause | <https://github.com/7rulnik/source-map-js> |
+| `source-map-js` | 1.2.3 | BSD-3-Clause | <https://github.com/7rulnik/source-map-js> |
 | `std-env` | 4.3.0 | MIT | <https://github.com/unjs/std-env#readme> |
 | `string-width` | 7.2.0 | MIT | <https://github.com/sindresorhus/string-width#readme> |
 | `string-width` | 8.3.0 | MIT | <https://github.com/sindresorhus/string-width#readme> |
 | `strip-ansi` | 7.2.0 | MIT | <https://github.com/chalk/strip-ansi#readme> |
 | `strip-json-comments` | 5.0.3 | MIT | <https://github.com/sindresorhus/strip-json-comments#readme> |
-| `tinybench` | 6.2.3 | MIT | <https://github.com/tinylibs/tinybench#readme> |
+| `tinybench` | 6.2.4 | MIT | <https://github.com/tinylibs/tinybench#readme> |
 | `tinyexec` | 1.3.1 | MIT | <https://github.com/tinylibs/tinyexec#readme> |
 | `tinyglobby` | 0.2.17 | MIT | <https://superchupu.dev/tinyglobby> |
 | `tinypool` | 2.2.0 | MIT | <https://github.com/tinylibs/tinypool#readme> |
@@ -322,14 +325,15 @@
 | `totalist` | 3.0.1 | MIT | <https://github.com/lukeed/totalist#readme> |
 | `tough-cookie` | 6.1.0 | BSD-3-Clause | <https://github.com/salesforce/tough-cookie> |
 | `tr46` | 7.0.0 | MIT | <https://github.com/jsdom/tr46#readme> |
+| `tsrs` | 7.1.0-beta.tsrs2 | Apache-2.0 | <https://github.com/oxc-project/tsrs#readme> |
 | `typescript` | 5.4.5 | Apache-2.0 | <https://www.typescriptlang.org/> |
 | `typescript` | 7.1.0-dev.20260904.1 | Apache-2.0 | <https://www.typescriptlang.org/> |
 | `unbash` | 6.0.4 | ISC | <https://github.com/webpro-nl/unbash#readme> |
 | `undici-types` | 8.9.0 | MIT | <https://undici.nodejs.org> |
 | `undici` | 8.12.4 | MIT | <https://undici.nodejs.org> |
 | `verkit` | 0.5.0 | MIT | <https://github.com/sxzz/verkit#readme> |
-| `vite-plus` | 1.6.0 | MIT | <https://viteplus.dev/guide> |
-| `vitest` | 5.1.0 | MIT | <https://vitest.dev> |
+| `vite-plus` | 1.7.0 | MIT | <https://viteplus.dev/guide> |
+| `vitest` | 5.1.1 | MIT | <https://vitest.dev> |
 | `w3c-xmlserializer` | 6.0.0 | MIT | <https://github.com/jsdom/w3c-xmlserializer#readme> |
 | `walk-up-path` | 4.0.0 | ISC | <https://github.com/isaacs/walk-up-path#readme> |
 | `webidl-conversions` | 8.0.1 | BSD-2-Clause | <https://github.com/jsdom/webidl-conversions#readme> |

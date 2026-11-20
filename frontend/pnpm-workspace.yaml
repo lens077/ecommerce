@@ -19,32 +19,32 @@ catalog:
   "@mui/utils": ^9.5.0
   "@t3-oss/env-core": ^0.13.11
   "@tanstack/react-devtools": ^0.10.14
-  "@tanstack/react-query": ^5.107.1
-  "@tanstack/react-query-devtools": ^5.107.1
+  "@tanstack/react-query": ^5.108.0
+  "@tanstack/react-query-devtools": ^5.108.0
   "@tanstack/react-router": ^1.170.46
-  "@tanstack/react-router-devtools": ^1.167.3
+  "@tanstack/react-router-devtools": ^1.167.4
   "@tanstack/router-plugin": ^1.169.0
   "@tauri-apps/api": ^2.12.5
-  "@tauri-apps/cli": ^2.12.5
+  "@tauri-apps/cli": ^2.12.6
   "@tauri-apps/plugin-http": ^2.9.0
   "@tauri-apps/plugin-notification": ^2.8.1
   "@tauri-apps/plugin-opener": ^2.7.3
   "@tauri-apps/plugin-store": ^2.5.1
   "@testing-library/react": ^16.3.3
-  "@testing-library/user-event": ^14.6.12
+  "@testing-library/user-event": ^14.6.13
   "@types/node": ^26.6.6
   "@types/react": ^19.3.0
   "@types/react-dom": ^19.3.0
   "@vitejs/plugin-react": ^6.3.0
-  "@vitest/browser-playwright": 5.1.0
+  "@vitest/browser-playwright": 5.1.1
   conventional-changelog: latest
   echarts: ^6.1.0
-  echarts-for-react: ^3.0.6
-  i18next: ^27.1.3
+  echarts-for-react: ^3.1.0
+  i18next: ^27.2.2
   jsdom: ^31.0.1
   jsonc-parser: ^3.3.1
-  knip: ^6.45.1
-  lucide: ^1.73.0
+  knip: ^6.46.1
+  lucide: ^1.76.0
   morphicons: ^2.0.2
   # 16.4 canary 在本仓 6 轮 A/B 中缩短 cold/warm build 并减小缓存；
   # 精确锁定已通过 SSR 与真实浏览器验证的构建。
@@ -54,7 +54,7 @@ catalog:
   "@playwright/test": ^1.65.1
   react: ^19.3.1
   react-dom: ^19.3.1
-  react-i18next: ^18.0.2
+  react-i18next: ^18.0.3
   smol-toml: ^1.8.0
   # 7.1 nightly 的 checker 分配优化在本仓 6 轮 A/B 中将峰值 RSS 降低 17%~20%；
   # 精确锁定已验证构建，避免 nightly 标签漂移。
@@ -63,8 +63,8 @@ catalog:
   # pnpm 的 overrides 不创建依赖边：声明 vite-plus 的 package 还要直接声明 vite: catalog:，
   # 否则 Vitest 的 peer 解析会静默补装一份上游 Vite，旧的 vite build 脚本会误用它。
   # Vitest 也要与 Vite+ 内置版本一致；consumer 的浏览器测试需要直接依赖它。
-  vite: npm:@voidzero-dev/vite-plus-core@1.6.0
-  vite-plus: 1.6.0
+  vite: npm:@voidzero-dev/vite-plus-core@8.3.8000
+  vite-plus: 1.7.0
   # 直接依赖，供 CI 在不支持 tsgolint 的 runner 上绕开 vp lint 调用裸 oxlint。
   # 版本必须与 vite-plus 内置的一致；上游修复见 TODO.md 的 tsgolint 条目。
   # 2026-11-17 依赖批升级时已不一致：vite-plus 1.6.0 内置 oxlint=1.93.0（@oxlint/plugins
@@ -72,7 +72,7 @@ catalog:
   # 仅 1 条既有 warning），暂视为可用；vite-plus 跟进发布后应对齐回同一版本，避免规则集
   # 与插件版口径漂移。上游修复后本条随 TODO.md 的 tsgolint 条目一起移除。
   oxlint: 1.94.0
-  vitest: 5.1.0
+  vitest: 5.1.1
   # a11y 门禁：axe-core 的 vitest 封装（docs/frontend/accessibility.md §四.2）
   "vitest-axe": ^0.1.0
   "vitest-browser-react": ^2.3.0
