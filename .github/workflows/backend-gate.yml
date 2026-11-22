@@ -1,0 +1,84 @@
+name: Backend gate
+
+# 后端门禁 = GitLab backend-gate 搬进 GitHub Actions（2026-11-22 node5 runner 下线后接替）。
+# 与 GitLab 版的差异：
+# - 去掉 1Gi 构建试验的全部内存防护（GOFLAGS -p=1、GOMAXPROCS、GOGC、GOMEMLIMIT）——
+#   GH 托管 runner 约 16GB；GOPROXY 也不再需要 goproxy.cn|direct 链（GH 直连 proxy.golang.org 可达），
+#   模块哈希仍由 go.sum 校验；go test 保留 -parallel=1 与 GitLab 语义完全一致（首跑稳定优先）。
+# - golangci-lint 仍走 scripts/ci-install-golangci-lint.sh（版本 + SHA-256 钉死），
+#   GH 直连快，置 GITHUB_PROXIES="" 跳过第三方代理。
+# - Go 缓存用 actions/setup-go 内置（按 backend/go.sum 键控），替代 GitLab cache: .cache/*。
+# 触发路径与 GitLab rules 一致：structcheck 比对 helm values 与 .service-matrix.yaml，helm/ 也算后端输入。
+on:
+  push:
+    branches:
+      - main
+    paths:
+      - "backend/**/*"
+      - "helm/**/*"
+      - ".service-matrix.yaml"
+      - ".github/workflows/backend-gate.yml"
+      - ".lint-baseline/**"
+      - "scripts/lint-baseline.sh"
+      - "scripts/ci-install-golangci-lint.sh"
+  pull_request:
+    paths:
+      - "backend/**/*"
+      - "helm/**/*"
+      - ".service-matrix.yaml"
+      - ".github/workflows/backend-gate.yml"
+      - ".lint-baseline/**"
+      - "scripts/lint-baseline.sh"
+      - "scripts/ci-install-golangci-lint.sh"
+  workflow_dispatch: {}
+
+# 所有 job 只读仓库（与 frontend-gate.yml / context-gate.yml 同一收窄口径）。
+permissions:
+  contents: read
+
+concurrency:
+  group: backend-gate-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  gate:
+    runs-on: ubuntu-24.04
+    defaults:
+      run:
+        shell: bash
+        working-directory: backend
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@fbc6f3992d24b796d5a048ff273f7fcc4a7b6c09 # v5（与 backend.yml 同一 pin）
+
+      # 版本唯一真相源是 backend/go.mod 的 go/toolchain 指令，不硬编码。
+      - name: Setup Go
+        uses: actions/setup-go@v6
+        with:
+          go-version-file: backend/go.mod
+          cache: true
+          cache-dependency-path: backend/go.sum
+
+      - name: Build
+        run: go build ./...
+
+      - name: Vet
+        run: go vet ./...
+
+      - name: Tests (-short)
+        run: go test -short -count=1 -parallel=1 ./...
+
+      - name: Install golangci-lint
+        working-directory: .
+        env:
+          GITHUB_PROXIES: ""
+        run: sh scripts/ci-install-golangci-lint.sh "$(go env GOPATH)/bin"
+
+      # lint 棘轮：revive-exported 只拦新增，存量由 .lint-baseline/revive-exported.txt 冻结；
+      # structcheck 会比对 helm values 顶层键与 .service-matrix.yaml（同一 CHECKER 体系）。
+      - name: golangci-lint baseline ratchet
+        working-directory: .
+        run: |
+          GOPATH_BIN="$(go env GOPATH)/bin"
+          export PATH="$GOPATH_BIN:$PATH"
+          CHECKERS=revive-exported bash scripts/lint-baseline.sh check
