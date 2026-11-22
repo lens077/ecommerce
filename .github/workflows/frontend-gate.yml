@@ -1,0 +1,94 @@
+name: Frontend gate
+
+# 前端门禁 = 本地锚点 `pnpm ready`(fmt + lint + test + build) + knip 棘轮搬进 GitHub Actions。
+# 2026-11-22 起接替 GitLab frontend-gate：node5 是唯一在役 runner，type-aware lint/类型检查
+# 在该宿主环境稳定 SIGABRT（oxc_allocator fixed_size.rs:112 的 2GiB pool 预留，vite-plus
+# 1.7.0 tsrs 实测不解决），job 已改 `.frontend-gate` 隐藏 job；恢复条件见 TODO.md
+# 「恢复 vp lint 的 type-aware 检查」条目。
+# 与 GitLab 版的差异：ubuntu-24.04 托管 runner 内存充足，workspace test/build 不再串行化
+# （GitLab 因 1Gi cgroup 用 --concurrency-limit 1）；lint 先跑 vp lint（type-aware），
+# 仅当 SIGABRT(134) 才 fallback 裸 oxlint 并打 warning——lint 错误(exit 1)不会被吞。
+# knip 棘轮依赖 .lint-baseline/knip.txt 与 scripts/lint-baseline.sh，基线/脚本改动也触发本门禁。
+on:
+  push:
+    branches:
+      - main
+    paths:
+      - "frontend/**/*"
+      - ".github/workflows/frontend-gate.yml"
+      - ".lint-baseline/**"
+      - "scripts/lint-baseline.sh"
+  pull_request:
+    paths:
+      - "frontend/**/*"
+      - ".github/workflows/frontend-gate.yml"
+      - ".lint-baseline/**"
+      - "scripts/lint-baseline.sh"
+  workflow_dispatch: {}
+
+# 所有 job 只读仓库（与 context-gate.yml 同一收窄口径，zizmor excessive-permissions）。
+permissions:
+  contents: read
+
+concurrency:
+  group: frontend-gate-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  gate:
+    runs-on: ubuntu-24.04
+    defaults:
+      run:
+        shell: bash
+        working-directory: frontend
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@fbc6f3992d24b796d5a048ff273f7fcc4a7b6c09 # v5（与 backend.yml 同一 pin）
+
+      # pnpm 版本只认 frontend/package.json 的 packageManager 字段（单一真相源，与
+      # GitLab frontend-gate / frontend.yml 的做法一致），不用 corepack。
+      - name: Setup pnpm
+        uses: pnpm/action-setup@v4
+        with:
+          package_json_file: frontend/package.json
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v6
+        with:
+          # 与 frontend/package.json engines(>=26.0.0) 对齐；Node 24 + tinypool 在 vp fmt
+          # 后的 worker 清理阶段会无限 reject（见 .gitlab-ci.yml frontend-gate 注释）。
+          node-version: 26
+          cache: pnpm
+          cache-dependency-path: frontend/pnpm-lock.yaml
+
+      - name: Install dependencies
+        run: pnpm install --frozen-lockfile
+
+      - name: Format
+        run: pnpm exec vp fmt
+
+      - name: Lint (vp lint; fallback to bare oxlint only on SIGABRT)
+        run: |
+          set +e
+          pnpm exec vp lint --threads=1
+          status=$?
+          set -e
+          if [ "$status" -eq 134 ]; then
+            echo "::warning title=vp lint SIGABRT::oxc allocator panic（与 node5 同现象）。fallback 到裸 oxlint（96 条默认规则，无 type-aware / prefer-vite-plus-imports）"
+            pnpm exec oxlint --threads=1
+          elif [ "$status" -ne 0 ]; then
+            exit "$status"
+          fi
+
+      # GH runner 无 1Gi 限制，workspace test/build 用默认并行（GitLab 版串行化仅因内存）。
+      - name: Workspace tests
+        run: pnpm exec vp run -r test
+
+      - name: Workspace builds
+        run: pnpm exec vp run -r build
+
+      # hygiene 棘轮：knip 只拦新增，存量由 .lint-baseline/knip.txt 冻结；与 GitLab 版同一脚本，
+      # 用 git rev-parse 定位仓库根，无平台依赖。崩溃哨兵见 scripts/lint-baseline.sh 文件头。
+      - name: knip baseline ratchet
+        working-directory: .
+        run: CHECKERS=knip bash scripts/lint-baseline.sh check
