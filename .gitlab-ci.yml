@@ -151,7 +151,19 @@ backend-gate:
 
 # 前端门禁 = 本地锚点 `pnpm ready`(fmt + lint + test + build)原样搬进 CI。
 # 这是全仓**唯一**跑 pnpm ready 的 CI:GitHub 侧 frontend.yml 只剩每周一次的线上登录冒烟。
-frontend-gate:
+#
+# 2026-11-22 暂停本 job:key 加 `.` 前缀成为隐藏 job,GitLab 不执行;恢复时删掉前缀即可。
+# 1) node5 是项目唯一在役 runner,type-aware lint 与类型检查在该宿主环境稳定 SIGABRT
+#    (panic 于 oxc_allocator/src/pool/fixed_size.rs:112,详见 TODO.md「恢复 vp lint」条目
+#    与 kubernetes/archive/gitlab/runner/README.md)。vite-plus 1.7.0(tsrs 替换 Go
+#    tsgolint)实测不解决——崩溃在 oxlint 本体 type-aware 分析的 2GiB allocator pool
+#    预留,与类型检查后端无关;裸 oxlint 同环境正常。
+# 2) 现行绕行(裸 oxlint 96 规则)虽可用,但 type-aware 与 prefer-vite-plus-imports 规则
+#    全部失效,且 knip 步骤仍依赖 KNIP_DISABLE_RAW_TRANSFER=1 绕行,门禁价值打折。
+# 3) 「GitHub 兜底」现状澄清:frontend.yml 只有线上登录冒烟测试(手动触发),**没有**
+#    lint/test/build 门禁。本 job 暂停后 frontend 在 CI 上无完整门禁,需在 GitHub Actions
+#    补齐对应 job 才算真兜底(待办,见 TODO.md)。
+.frontend-gate:
   stage: test
   # Node 24.21 + tinypool@2.2.0 在 vp fmt 完成后的 worker 清理阶段会无限
   # reject 并抛 RangeError: Maximum call stack size exceeded；Node 26 下
