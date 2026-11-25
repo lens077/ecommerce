@@ -85,6 +85,10 @@
         kind: "Policy",
       },
       {
+        group: "policies.kyverno.io",
+        kind: "NamespacedImageValidatingPolicy",
+      },
+      {
         group: "policy",
         kind: "PodDisruptionBudget",
       },

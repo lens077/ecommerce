@@ -1,16 +1,19 @@
 # Kyverno：ecommerce 命名空间准入策略（GitOps）
 
-本目录保存 ecommerce 命名空间级的 Kyverno `Policy`，由 ArgoCD `Application/ecommerce-kyverno`
+本目录保存 ecommerce 命名空间级的 Kyverno CEL 策略，由 ArgoCD `Application/ecommerce-kyverno`
 （`argocd-application.yml`）自动同步：合入 GitLab `main` 即生效，回滚 = revert。
-集群级 `ClusterPolicy`（无 limits / `:latest` 审计）和 Kyverno 本体归 kubernetes 仓 `components/kyverno/`。
+Kyverno 1.20 已移除 legacy 引擎；本目录当前使用 `policies.kyverno.io/v1`。
+集群级 `ValidatingPolicy`（无 limits / `:latest` 审计）和 Kyverno 本体归 kubernetes 仓 `components/kyverno/`。
 
 ## 文件
 
-- `policies/ecommerce-image-provenance.yaml`：`verifyImages` keyless 审计，只覆盖
-  `ccr.ccs.tencentyun.com/sumery/user*`，`failureAction: Audit`、`mutateDigest: false`。
+- `policies/ecommerce-image-provenance.yaml`：`NamespacedImageValidatingPolicy` keyless 审计，只覆盖
+  `ccr.ccs.tencentyun.com/sumery/user*`，`validationActions: [Audit]`、`mutateDigest: false`。
 - `argocd-application.yml`：ArgoCD Application，`CreateNamespace=true` + 自动同步 + prune + selfHeal。
 - `smoke.sh`：正反向冒烟（见下）。
-- 根目录 `argocd-proj.yml` 的 `namespaceResourceWhitelist` 已加 `kyverno.io/Policy`。
+- 根目录 `argocd-proj.yml` 的 `namespaceResourceWhitelist` 已加 `kyverno.io/Policy` 与
+  `policies.kyverno.io/NamespacedImageValidatingPolicy`；缺后者会让 Application 报
+  `resource ... is not permitted in project ecommerce`。
 
 ## 为什么只覆盖 user、只 Audit
 
@@ -54,7 +57,10 @@ TCR 上 `user` 的每个 release digest 都带签名（每次发版 CI 都签）
 
 ## 后续
 
-- `kyverno.io/v1 Policy` 已标 deprecated，迁移目标是 `policies.kyverno.io NamespacedImageValidatingPolicy`
-  （CEL）。迁移时保留同一套 issuer / subjectRegExp，并重跑 `smoke.sh`。
+- `kyverno.io/v1 Policy` 已迁移到 `policies.kyverno.io/v1 NamespacedImageValidatingPolicy`（CEL）。
+  变更 issuer / subjectRegExp 后必须重跑 `smoke.sh`。
+- ArgoCD 3.6 对 `policies.kyverno.io/*` 没有内置 health check；集群 `argocd-cm` 已补
+  `resource.customizations.health.policies.kyverno.io_*`，策略 `status.conditionStatus.ready=true`
+  会显示为 Healthy。values 源见 kubernetes 仓 `components/argo/values-cel-health.yaml`。
 - ArgoCD 只在 GitLab `main` 有 `infrastructure/kyverno/policies` 后才能 Synced；首次接管前
   策略本体由 `kubectl apply` 直接放上去验证过，ArgoCD 接管只会差 `tracking-id` 注解。
