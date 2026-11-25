@@ -110,6 +110,13 @@ structcheck 曾专门写一个测试去对比 tgz 里的模板和源码,那是�
             name: "SERVICE_VERSION",
             value: {{ $v.serviceVersion | default "v1" | quote }},
           }, {
+            # 2026-11-25: 所有 Go 服务统一打 service.namespace=ecommerce。
+            # go-connect-kit 的 Options.ServiceNamespace 由适配器逐个传值容易漏；
+            # OTel SDK 会自动把 OTEL_RESOURCE_ATTRIBUTES 合进 resource，一处覆盖 10 个服务。
+            # vmalert 的 RPC 指标缺失守卫与 APM 面板按这个标签区分业务服务与 config-service。
+            name: "OTEL_RESOURCE_ATTRIBUTES",
+            value: "service.namespace=ecommerce",
+          }, {
             name: "DEPLOYMENT_MODE",
             value: {{ $g.deploymentMode | quote }},
           }, {

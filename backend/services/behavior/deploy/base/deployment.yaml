@@ -87,6 +87,11 @@
               name: "SERVICE_VERSION",
               value: "v1",
             },
+            # 所有 Go 服务统一打 service.namespace=ecommerce，供 APM 面板与告警守卫区分业务服务。
+            {
+              name: "OTEL_RESOURCE_ATTRIBUTES",
+              value: "service.namespace=ecommerce",
+            },
             {
               name: "DEPLOYMENT_MODE",
               value: "pre",
