@@ -13,6 +13,7 @@ import (
 	conf "github.com/lens077/ecommerce/backend/services/merchant/internal/conf/v1"
 	"github.com/lens077/ecommerce/backend/services/merchant/internal/data"
 	"github.com/lens077/go-connect-kit/meta"
+	sharedotel "github.com/lens077/go-connect-kit/otel"
 	"github.com/rs/cors"
 	"go.uber.org/fx"
 	"go.uber.org/zap"
@@ -65,6 +66,7 @@ func NewHTTPServer(
 
 	// 构建处理器链
 	handlerChain := withCORS(mux, cfg.Server.Cors.AllowedOrigins)
+	handlerChain = sharedotel.InstrumentHTTP(handlerChain, info.Name+"-server")
 
 	// 配置 HTTP/2 (H2C - 明文 HTTP/2)
 	h2s := &http2.Server{}

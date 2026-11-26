@@ -13,8 +13,8 @@ import (
 	conf "github.com/lens077/ecommerce/backend/services/search/internal/conf/v1"
 	"github.com/lens077/ecommerce/backend/services/search/internal/data"
 	"github.com/lens077/go-connect-kit/meta"
+	sharedotel "github.com/lens077/go-connect-kit/otel"
 	"github.com/rs/cors"
-	"go.opentelemetry.io/contrib/instrumentation/net/http/otelhttp"
 	"go.uber.org/fx"
 	"go.uber.org/zap"
 	"golang.org/x/net/http2"
@@ -65,7 +65,7 @@ func NewHTTPServer(
 	})
 
 	handlerChain := withCORS(mux, cfg.Server.Cors.AllowedOrigins)
-	handlerChain = otelhttp.NewHandler(handlerChain, "search-server")
+	handlerChain = sharedotel.InstrumentHTTP(handlerChain, info.Name+"-server")
 
 	h2s := &http2.Server{}
 	handlerChain = h2c.NewHandler(handlerChain, h2s)
