@@ -28,6 +28,7 @@ affects:
 > **阅读边界**：本文中的架构、不变量和红线是目标契约，不代表代码已全部实现或线上已验收。仓库事实查源码、清单与 `.service-matrix.yaml`；剩余缺口只在 [TODO.md](../TODO.md) 维护；当前环境按 [local-env.md](../context/team/local-env.md) 查询，不从旧日期或「已部署」字样推断可用。
 > 例如订单持久化、库存释放仍有未完成实现；default-deny、恢复能力和业务 GitOps 也须分别验收。不要把这些差距通过改写目标为现状来消除。
 > 文档责任由 `doc-sync: required` + `affects:` 映射检查；它不证明自然语言语义一致，边界见 [live-facts.md](../context/team/live-facts.md)。
+> Go 命令的用法（`go test` 参数、pprof/PGO、`go fix`、质量工具分层）见 [GO-TOOLCHAIN.md](GO-TOOLCHAIN.md)；本文只定选型与验收边界，不重复命令细节。
 
 ## 技术选型总览与研究中项目
 

@@ -67,11 +67,13 @@ matrix 与 `backend/services/`、网关实际接线的一致性,以及各服务 
 | [`observability/OBSERVABILITY.md`](../docs/observability/OBSERVABILITY.md) | 可观测性方法论与指标基线：三支柱分工、RED/USE、逐服务最低指标、告警清单、6 条硬规则 | 加指标/看板/告警，或排障动线走不通时 |
 | [`docs/TESTING.md`](../docs/TESTING.md) | 测试操作手册：装什么库、`pkg/testutil` 怎么写、cart 必测清单、落地计划、Makefile/CI 接线 | 写测试时（判定规则先看 [go-testing.md](team/go-testing.md)） |
 | [`docs/OKTETO.md`](../docs/OKTETO.md) | 内环开发手册：ArgoCD 开发窗口、`okteto up` 工作流、manifest 逐条决定、四个已实测的坑 | 要在集群身份下改代码时（判定先看 [okteto-inner-loop.md](team/okteto-inner-loop.md)） |
+| [`docs/GO-TOOLCHAIN.md`](../docs/GO-TOOLCHAIN.md) | Go 工具链 2026 速查：三种装工具方式、gopls 与 MCP、质量工具分层、依赖/测试/构建/剖析命令，附本仓现状查法 | 忘了某条命令、给 CI 加检查、给 AI 助手配 MCP 时 |
 | control-tower `docs/design/` | 网关与配置中心的架构、鉴权、砍掉清单、切流手顺 —— 在**同级仓** `../control-tower/`，不在本仓 | 动网关或配置面之前 |
 
 ⚠️ 以上都是**目标态**，状态是「等待实现」。当前实况以 `TODO.md` 为准，
 待办明细按 `docs/TECH.md` 体系分类在 [`TODO.md`「四、分类明细」](../TODO.md#四分类明细)；
 可观测性的已确认缺陷见 [`统一可观测性体系.md`](../TODO.md#统一可观测性体系)。
+例外：`docs/GO-TOOLCHAIN.md` 是已交付的命令速查，不是待实现的目标态；它最后一章「本仓现状怎么查」是自查命令，不代替 CI 事实。
 
 ## 检索约定
 

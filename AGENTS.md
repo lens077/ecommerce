@@ -92,7 +92,8 @@ E3 出处（arXiv:2607.13034）、路由表、护栏 hook 验证方法与消费�
 ## 命令与验收锚点（动手前最后核对）
 
 > **[context/team/runbook.md](context/team/runbook.md)** 是可执行入口:§0.1 是**按改动类型的
-> 必读路由**（动 Redis / 定时任务 / proto / 指标告警 / CI-CD 前各该先读哪份）。以下是提交前必跑的锚点：
+> 必读路由**（动 Redis / 定时任务 / proto / 指标告警 / CI-CD 前各该先读哪份）。以下是提交前必跑的锚点；
+> 工具用法查 [`docs/GO-TOOLCHAIN.md`](docs/GO-TOOLCHAIN.md)。
 
 ```bash
 scripts/verify-quick.sh                          # 默认入口:后端链+前端并行,绿只打一行、红只打失败段
