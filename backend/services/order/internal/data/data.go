@@ -69,6 +69,13 @@ func (d *Data) DB(ctx context.Context) *models.Queries {
 	return d.db
 }
 
+// Tx 取当前事务；调用方不在事务里时返回 false。outbox 的写入路径用它来拒绝
+// 「在连接池上直接写发件箱」——那会立刻把 W1 缺口换回来（行落库但业务写回滚）。
+func (d *Data) Tx(ctx context.Context) (pgx.Tx, bool) {
+	tx, ok := ctx.Value(contextTxKey{}).(pgx.Tx)
+	return tx, ok
+}
+
 func (d *Data) WithTx(ctx context.Context, tx pgx.Tx) context.Context {
 	return context.WithValue(ctx, contextTxKey{}, tx)
 }

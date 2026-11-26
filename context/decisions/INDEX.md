@@ -18,6 +18,7 @@ context/decisions/
 
 | 决策 | 一句话 |
 |---|---|
+| [2026-11-26-order-events-outbox.md](implemented/2026-11-26-order-events-outbox.md) | order 领域事件改为事务性发件箱（同事务写 `orders.outbox` + Debezium 搬运），删除进程内 GoEventBus，关掉 W0–W3 四类丢事件窗口 |
 | [2026-09-26-doc-contracts-and-runtime-evidence.md](implemented/2026-09-26-doc-contracts-and-runtime-evidence.md) | 工具要求生成区精确检查；Git 差异核对登记文档责任；环境按分区只读查询，不写快照副本 |
 | [2026-09-24-path-refs-in-verify-context.md](implemented/2026-09-24-path-refs-in-verify-context.md) | 正文路径检查进 verify-context（`[PATH-REF]`）；Repowise 撤出 CI 改按需审计；`config-seed -drift` 对照 matrix 查运行时配置漂移 |
 | [2026-09-22-repowise-gate.md](implemented/2026-09-22-repowise-gate.md) | （已被上一条取代）Repowise 曾以固定版本、无 LLM 的只读索引接入双远端 per-push 门禁 |

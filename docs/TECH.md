@@ -201,6 +201,13 @@ affects:
 
 ### 4.1 Transactional Outbox + Debezium Outbox Event Router
 
+**实现状态（2026-11-26）**：order 已落地**生产端**——`SaveOrder()` 在同一事务里更新
+`orders.order_main` 并写 `orders.outbox`（CE 列 + EventRouter 默认列名，UUIDv7 id、`traceparent` 走 headers），
+进程内事件总线已删除；publication/connector SMT/保留任务/消费者仍未接线，故生产流量不开放，
+清单见 [`backend/services/order/outbox.md`](../backend/services/order/outbox.md)。决策记录见
+[`context/decisions/implemented/2026-11-26-order-events-outbox.md`](../context/decisions/implemented/2026-11-26-order-events-outbox.md)。
+其余服务仍是设计态。
+
 业务写操作与事件投递通过 Transactional Outbox 绑定在同一 PostgreSQL 本地事务中；搬运层是 Kafka Connect 上的 Debezium Outbox Event Router（读 WAL），**不再自写 relay**（2026-09-03 定稿，原轮询 relay 已退役且不重写成 Kafka 版，理由见 [§4.5](#45-两条数据线行投影走-cdc领域事实走-outbox)）：
 
 ```text

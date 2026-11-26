@@ -12,18 +12,18 @@ make dev CONSUL_ADDR=localhost:8500
 |---|---|---|
 | [`docs/design/order/checkout.md`](../../../docs/design/order/checkout.md) | 下单主链设计（v2 基线） | **权威** |
 | [`docs/design/order/consistency.md`](../../../docs/design/order/consistency.md) | 跨服务一致性底座（Outbox + Debezium Event Router） | **权威·目标态** |
-| [`eventbus.md`](eventbus.md) | 进程内 EventBus 的实际接线与已知缺口 | 当前在用，**过渡态** |
+| [`outbox.md`](outbox.md) | 事务性发件箱：事件与状态同事务写 `orders.outbox`，Debezium 搬去 Kafka | 当前在用（生产接线见文内 checklist） |
 | [`kafka-legacy.md`](kafka-legacy.md) | 一版早期 Kafka 直发设计 | **已否决**，仅历史记录 |
 
 ## 事件机制现状（读代码前先看这个）
 
-当前跑的是**进程内 EventBus**，而它和已被否决的 Kafka 直发方案有**同一个缺陷**：
+当前跑的是 `consistency.md` 里的 **Outbox + Debezium Outbox Event Router**：
 
 ```
-uc.repo.SaveOrder()      持久化  ─┐
-uc.eventBus.Publish()    发布事件 ─┘ 两步不在同一事务，中间崩溃即丢事件
+uc.repo.SaveOrder()  ── 同一事务 ──┬── UPDATE orders.order_main
+                                   └── INSERT orders.outbox（领域事件）
 ```
 
-目标态是 `consistency.md` 的 **Outbox + Debezium Outbox Event Router**：事件写入与业务写入进入同一个
-PostgreSQL 事务，Debezium 从 WAL 搬运到 Kafka；不再维护自写 relay。**新代码不要按 `eventbus.md` 的模式接线**；
-迁移进度见 [`TODO.md`](../../../TODO.md#数据一致性与事件驱动)。
+事件与业务状态同生共死（提交即双可见、回滚即双消失），不再有进程内缓冲、不再由用例发布。
+`GoEventBus` 已随 2026-11-26 的改造整体删除。**生产接线（publication + connector SMT + 保留任务）
+仍未做**，见 [`outbox.md`](outbox.md) 的「上线前必须做的两件外部事」。

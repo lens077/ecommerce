@@ -7,6 +7,14 @@
 >
 > **后续决策覆盖（2026-08-28）**：本文的「TCC Try + 纯编舞 Saga」机制结论已被 [TECH.md](../../TECH.md) §3 覆盖：Order 内置 Saga Process Manager 同步编排 Checkout → 价格快照 → 库存预占 → 支付意图，失败自动逆向补偿；阶段性终态再经 Outbox 发布 Kafka 事件，由下游编舞消费。
 
+**实现状态（2026-11-26）**：第 1 条的**生产端**已落地——order 的 `SaveOrder()` 在同一事务里更新
+`orders.order_main` 并写入 `orders.outbox`（`internal/outbox`），进程内 EventBus 整体删除；
+CE 列与信封见 [TECH-RADAR §1.6](../../TECH-RADAR.md)，表结构见
+[`00002_outbox.sql`](../../../backend/services/order/internal/data/migrations/00002_outbox.sql)。
+**未落地**：publication 捕获与 connector SMT（Debezium 未接 `orders.outbox`）、保留任务、
+事件 proto 目录与消费者/Inbox，故第 2/3 条的跨服务链路仍不可用。运维与缺口清单见
+[`services/order/outbox.md`](../../../backend/services/order/outbox.md)。
+
 下单跨服务事务采用 **混合模式**，不引入 Seata（Java 生态，Go 栈不适配。
 ⚠️ 集群 pre 环境仍部署着 seata-server 并配有路由——属设计已弃用组件的残留，
 下线任务见 TODO/看板 P1）：

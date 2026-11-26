@@ -53,13 +53,14 @@
 
 第一步不是堆功能，而是止住假成功：未实现路径明确失败，UI不进入成功状态。开发中的可用切片要有真实数据证据。
 
-### O2 SaveOrder/SaveOrderGroup 只日志，不写库
+### O2 SaveOrder 写库，且与 Outbox 同事务
 
-[data/order.go](../../../backend/services/order/internal/data/order.go) 的两个方法返回 nil，但未执行订单写入。CompleteOrder 修改内存聚合后调用 SaveOrder，再向事件总线发布。
+[data/order.go](../../../backend/services/order/internal/data/order.go) 的 `SaveOrder` 在 `ExecTx` 里先 `UPDATE orders.order_main`，再把聚合产生的每条领域事件写进
+[`internal/outbox/outbox.go`](../../../backend/services/order/internal/outbox/outbox.go)（`orders.outbox` 表）。两者同事务：提交即双可见，回滚即双消失。
 
-[进程内 eventbus](../../../backend/services/order/internal/eventbus/eventbus.go) 有缓冲和丢弃策略，不是事务 Outbox；当前事件 handler 主要记日志，不能把它写成「通知商家、积分、履约已实现」。
+进程内 eventbus 已删除，服务内没有缓冲和丢弃策略；但**当前没有消费者**，事件写到表里就结束，不能把它写成「通知商家、积分、履约已实现」。
 
-把进程内消息换成 Kafka 并不能单独修好：数据库事务回滚时，已经发送的事件无法自动撤销；数据库提交后进程崩溃，尚未发送的事件会丢。真正的边界是业务与 Outbox 记录同事务。
+把事件换成 Kafka 也不能单独修好：数据库事务回滚时已发送的事件无法撤销，提交后进程崩溃未发送的事件会丢。真正的边界是业务写与 Outbox 行同事务——这段代码的前半部分（生产端）现在已经成立。
 
 ### O3 地址、商家与金额类型不一致
 

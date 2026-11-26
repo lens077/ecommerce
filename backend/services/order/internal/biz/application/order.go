@@ -5,38 +5,38 @@ import (
 	"fmt"
 
 	"github.com/lens077/ecommerce/backend/services/order/internal/biz/domain"
-	"github.com/lens077/ecommerce/backend/services/order/internal/eventbus"
 	"go.uber.org/zap"
 )
 
+// OrderCommandUseCase 只负责「加载聚合 → 调业务方法 → 持久化」。
+//
+// 领域事件不由用例发布：它随 SaveOrder 的事务一起写进 outbox，由 Debezium 搬运
+// （见 services/order/outbox.md）。用例层再持有总线就等于把可靠性推回进程内。
 type OrderCommandUseCase struct {
-	repo     domain.OrderCommandRepo
-	log      *zap.Logger
-	eventBus *eventbus.EventBus
+	repo domain.OrderCommandRepo
+	log  *zap.Logger
 }
+
 type OrderQueryUseCase struct {
-	repo     domain.OrderQueryRepo
-	log      *zap.Logger
-	eventBus *eventbus.EventBus
+	repo domain.OrderQueryRepo
+	log  *zap.Logger
 }
 
 func (uc *OrderQueryUseCase) GetOrderByNo(ctx context.Context, orderNo string) (*domain.OrderRoot, error) {
 	return uc.repo.GetOrderByNo(ctx, orderNo)
 }
 
-func NewOrderCommandUseCase(repo domain.OrderCommandRepo, logger *zap.Logger, eventBus *eventbus.EventBus) *OrderCommandUseCase {
+func NewOrderCommandUseCase(repo domain.OrderCommandRepo, logger *zap.Logger) *OrderCommandUseCase {
 	return &OrderCommandUseCase{
-		repo:     repo,
-		log:      logger.Named("OrderUseCase"),
-		eventBus: eventBus,
+		repo: repo,
+		log:  logger.Named("OrderUseCase"),
 	}
 }
 
-func NewOrderQueryUseCase(repo domain.OrderQueryRepo, logger *zap.Logger, eventBus *eventbus.EventBus) *OrderQueryUseCase {
+func NewOrderQueryUseCase(repo domain.OrderQueryRepo, logger *zap.Logger) *OrderQueryUseCase {
 	return &OrderQueryUseCase{
-		repo:     repo,
-		log:      logger.Named("OrderUseCase"),
-		eventBus: eventBus,
+		repo: repo,
+		log:  logger.Named("OrderUseCase"),
 	}
 }
 
@@ -93,20 +93,9 @@ func (uc *OrderCommandUseCase) CompleteOrder(ctx context.Context, orderNo string
 		return err
 	}
 
-	// 持久化
+	// 持久化：状态与领域事件在同一个事务里写（outbox 行），没有第二次「发布」。
 	if err := uc.repo.SaveOrder(ctx, order); err != nil {
 		return fmt.Errorf("save order: %w", err)
 	}
-
-	// 发布聚合产生的所有领域事件
-	for _, evt := range order.Events() {
-		// 将领域事件负载发布到对应投影
-		if err := uc.eventBus.Publish("OrderCompleted", evt); err != nil {
-			return fmt.Errorf("publish event: %w", err)
-		}
-	}
-
-	// 事件发布后，驱动异步处理器执行
-	uc.eventBus.Store().Publish()
 	return nil
 }

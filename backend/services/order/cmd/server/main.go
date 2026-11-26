@@ -11,10 +11,8 @@ import (
 	"github.com/google/uuid"
 	"github.com/lens077/ecommerce/backend/constants"
 	"github.com/lens077/ecommerce/backend/services/order/internal/biz"
-	"github.com/lens077/ecommerce/backend/services/order/internal/biz/domain/events"
 	confv1 "github.com/lens077/ecommerce/backend/services/order/internal/conf/v1"
 	"github.com/lens077/ecommerce/backend/services/order/internal/data"
-	"github.com/lens077/ecommerce/backend/services/order/internal/eventbus"
 	"github.com/lens077/ecommerce/backend/services/order/internal/pkg/config"
 	logger "github.com/lens077/ecommerce/backend/services/order/internal/pkg/log"
 	"github.com/lens077/ecommerce/backend/services/order/internal/pkg/otel"
@@ -109,16 +107,9 @@ func appOptions(serviceName, deploymentMode, serviceVersion string) []fx.Option 
 		// 传递全局变量
 		fx.Supply(appInfo),
 
-		// 提供事件处理器映射
-		fx.Provide(events.OrderCompletedHandlers),
-
-		// 基于处理器映射创建 EventBus
-		fx.Provide(eventbus.NewEventBus),
-
-		// 配置 EventBus 的异步模式
-		fx.Invoke(func(eb *eventbus.EventBus) {
-			eb.Store().Async = true // 开启异步处理，Publish 立即返回
-		}),
+		// 领域事件不再经过进程内总线：它们随 SaveOrder 的事务写进 orders.outbox，
+		// 由 Debezium Outbox Event Router 搬运（见 services/order/outbox.md）。
+		// 因此这里没有任何 EventBus/Lifecycle 需要装配——少一个可泄漏的 goroutine 池。
 
 		// 配置验证和初始化
 		fx.Invoke(

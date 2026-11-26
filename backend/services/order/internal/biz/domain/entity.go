@@ -74,7 +74,7 @@ type OrderRoot struct {
 	UpdatedAt      time.Time                    // 更新时间
 
 	// 事件
-	events []any
+	events []events.OrderCompletedPayload
 }
 
 // OrderItem 订单明细实体 (对应数据库 order_item 表)
@@ -195,12 +195,12 @@ func (o *OrderRoot) Complete() error {
 	o.events = append(o.events, events.OrderCompletedPayload{
 		OrderId:     o.Id,
 		UserId:      o.UserId,
-		TotalAmount: decimal.Decimal{},
+		TotalAmount: decimal.NewFromFloat(o.TotalAmount),
 	})
 	return nil
 }
 
 // Events 返回聚合产生的所有领域事件
-func (o *OrderRoot) Events() []any {
+func (o *OrderRoot) Events() []events.OrderCompletedPayload {
 	return o.events
 }

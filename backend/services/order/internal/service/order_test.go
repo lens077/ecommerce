@@ -41,7 +41,7 @@ func TestCompleteOrder_MapsDomainErrorsToRPCCodes(t *testing.T) {
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			cmd := application.NewOrderCommandUseCase(stubCommandRepo{order: tt.order, err: tt.err}, zap.NewNop(), nil)
+			cmd := application.NewOrderCommandUseCase(stubCommandRepo{order: tt.order, err: tt.err}, zap.NewNop())
 			s := &OrderService{cmd: cmd}
 			_, err := s.CompleteOrder(context.Background(), &v1.CompleteOrderRequest{OrderNo: "ORD-404"})
 			if got := connect.CodeOf(err); got != tt.want {

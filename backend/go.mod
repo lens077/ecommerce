@@ -10,7 +10,6 @@ require (
 	connectrpc.com/grpchealth/v2 v2.1.0
 	connectrpc.com/otelconnect v0.12.0
 	connectrpc.com/validate v0.9.0
-	github.com/Protocol-Lattice/GoEventBus v0.2.5
 	github.com/casdoor/casdoor-go-sdk v1.61.0
 	github.com/elastic/elastic-transport-go/v8 v8.11.0
 	github.com/elastic/go-elasticsearch/v9 v9.5.3

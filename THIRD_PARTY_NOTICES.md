@@ -1,7 +1,7 @@
 # Third-party notices
 
 由 `scripts/gen-third-party-notices.sh` 生成,勿手工编辑;依赖变更进暂存区时 pre-commit 会自动重新生成。
-后端列出 `go list -deps ./...` 实际链接进制品的 101 个模块;前端列出 `pnpm licenses list` 解析到的 211 个包(含 dev 依赖)。
+后端列出 `go list -deps ./...` 实际链接进制品的 100 个模块;前端列出 `pnpm licenses list` 解析到的 211 个包(含 dev 依赖)。
 
 ## 需要人看一眼
 
@@ -17,7 +17,7 @@
 
 | 许可证 | 条目数 |
 |---|---|
-| MIT | 209 |
+| MIT | 208 |
 | Apache-2.0 | 53 |
 | BSD-3-Clause | 16 |
 | ISC | 15 |
@@ -28,7 +28,7 @@
 | BlueOak-1.0.0 | 1 |
 | (Apache-2.0 AND BSD-3-Clause) | 1 |
 
-## 后端(Go 模块,101)
+## 后端(Go 模块,100)
 
 | 模块 | 版本 | 许可证 | 来源文件 |
 |---|---|---|---|
@@ -42,7 +42,6 @@
 | `connectrpc.com/grpchealth/v2` | v2.1.0 | Apache-2.0 | LICENSE |
 | `connectrpc.com/otelconnect` | v0.12.0 | Apache-2.0 | LICENSE |
 | `connectrpc.com/validate` | v0.9.0 | Apache-2.0 | LICENSE |
-| `github.com/Protocol-Lattice/GoEventBus` | v0.2.5 | MIT | LICENSE |
 | `github.com/antlr4-go/antlr/v4` | v4.13.1 | BSD-3-Clause | LICENSE |
 | `github.com/armon/go-metrics` | v0.4.1 | MIT | LICENSE |
 | `github.com/casdoor/casdoor-go-sdk` | v1.61.0 | Apache-2.0 | LICENSE |
