@@ -17,8 +17,6 @@ import (
 	"github.com/rs/cors"
 	"go.uber.org/fx"
 	"go.uber.org/zap"
-	"golang.org/x/net/http2"
-	"golang.org/x/net/http2/h2c"
 )
 
 var Module = fx.Module("server",
@@ -68,10 +66,13 @@ func NewHTTPServer(
 	handlerChain := withCORS(mux, cfg.Server.Cors.AllowedOrigins)
 	handlerChain = sharedotel.InstrumentHTTP(handlerChain, info.Name+"-server")
 
-	// 配置 HTTP/2 (H2C - 明文 HTTP/2)
-	h2s := &http2.Server{}
-	// 使用 h2c 包装处理器，支持同时处理 HTTP/1.1 和 HTTP/2
-	handlerChain = h2c.NewHandler(handlerChain, h2s)
+	// 配置 HTTP/2 (h2c) 允许非加密传输。Go 1.24 起 Protocols.UnencryptedHTTP2 已接管
+	// prior-knowledge h2c,x/net/http2/h2c 因此废弃(每服务 3 条 SA1019);它多出来的只有
+	// HTTP/1.1「Upgrade: h2c」,而本仓客户端(网关/e2e/healthcheck)都走 prior-knowledge。
+
+	p := new(http.Protocols)
+	p.SetHTTP1(true)
+	p.SetUnencryptedHTTP2(true)
 
 	httpServer := &http.Server{
 		Addr:         cfg.Server.Addr,
@@ -79,6 +80,7 @@ func NewHTTPServer(
 		ReadTimeout:  cfg.Server.Http.ReadTimeout.AsDuration(),
 		WriteTimeout: cfg.Server.Http.WriteTimeout.AsDuration(),
 		IdleTimeout:  cfg.Server.Http.IdleTimeout.AsDuration(),
+		Protocols:    p,
 	}
 
 	// 注册 Fx 生命周期

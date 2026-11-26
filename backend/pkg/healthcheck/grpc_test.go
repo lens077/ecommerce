@@ -2,7 +2,6 @@ package healthcheck
 
 import (
 	"context"
-	"crypto/tls"
 	"net"
 	"net/http"
 	"net/http/httptest"
@@ -14,8 +13,6 @@ import (
 	"connectrpc.com/grpchealth/v2"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
-	"golang.org/x/net/http2"
-	"golang.org/x/net/http2/h2c"
 )
 
 // newHealthServer 起一个只挂健康检查的 connect 服务,返回测试用 HTTP server。
@@ -56,7 +53,10 @@ func TestGRPCHandlerSupportsPlaintextGRPC(t *testing.T) {
 	server := connect.NewServer()
 	Register(server, func(context.Context) bool { return true }, "example.v1.ExampleService")
 	connecthttp.Mount(mux, server)
-	httpSrv := &http.Server{Handler: h2c.NewHandler(mux, &http2.Server{})}
+	sp := new(http.Protocols)
+	sp.SetHTTP1(true)
+	sp.SetUnencryptedHTTP2(true)
+	httpSrv := &http.Server{Handler: mux, Protocols: sp}
 	go func() {
 		_ = httpSrv.Serve(listener)
 	}()
@@ -64,12 +64,11 @@ func TestGRPCHandlerSupportsPlaintextGRPC(t *testing.T) {
 		require.NoError(t, httpSrv.Shutdown(context.Background()))
 	})
 
-	transport := &http2.Transport{
-		AllowHTTP: true,
-		DialTLSContext: func(ctx context.Context, network, address string, _ *tls.Config) (net.Conn, error) {
-			return (&net.Dialer{}).DialContext(ctx, network, address)
-		},
-	}
+	// 只开 UnencryptedHTTP2:net/http 文档明确,同时含 HTTP1 时 http:// 请求会走 HTTP/1.1,
+	// 而这条测试要验的正是 prior-knowledge h2c 明文 gRPC。
+	cp := new(http.Protocols)
+	cp.SetUnencryptedHTTP2(true)
+	transport := &http.Transport{Protocols: cp}
 	client := grpchealth.NewClient(connect.NewClient(connecthttp.NewTransport(
 		&http.Client{Transport: transport},
 		"http://"+listener.Addr().String(),

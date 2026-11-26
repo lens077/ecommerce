@@ -825,7 +825,7 @@ return orders.Cancel(ctx, order.ID)
 
 - **协议**：所有服务间同步调用使用 **ConnectRPC over HTTP/2**（gRPC over H2C 或 Connect protocol over H2）。网关与后端之间同样使用 HTTP/2。
 - **严禁降级 HTTP/1.1**。HTTP/2 提供多路复用、头部压缩、流式传输、更好的超时和取消语义。
-- **Go 实现**：ConnectRPC 的 Go 服务端支持 HTTP/2（使用 `golang.org/x/net/http2`）。在 K8s 内网中，使用 H2C（HTTP/2 Cleartext，不带 TLS）避免 TLS 开销。
+- **Go 实现**：ConnectRPC 的 Go 服务端支持 HTTP/2；本仓 2026-11-26 起由 `http.Server.Protocols`（`SetUnencryptedHTTP2(true)`，Go 1.24+）直接承载 H2C，不再引入 `golang.org/x/net/http2` 及其已废弃的 `h2c` 包装（后者相比 Protocols 只多支持 HTTP/1.1 `Upgrade: h2c` 路径，本仓客户端均走 prior-knowledge）。在 K8s 内网中使用 H2C（HTTP/2 Cleartext，不带 TLS）避免 TLS 开销。
 
 ### 10.2 服务发现方案
 

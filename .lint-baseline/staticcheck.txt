@@ -1,0 +1,15 @@
+# staticcheck 基线(棘轮:只许变少)。由 scripts/lint-baseline.sh snapshot 生成,勿手工编辑。
+# 每行 = 一条被冻结的存量告警(已去掉行号列号,便于在无关改动后保持稳定)。
+# 新增告警会被 check 阻断;基线条目被修好后 check 会要求刷新本文件。
+staticcheck	backend/pkg/searchindex/searchindex_test.go	func stubRow.Scan is unused (U1000)
+staticcheck	backend/pkg/searchindex/searchindex_test.go	type stubRow is unused (U1000)
+staticcheck	backend/services/cart/internal/service/cart.go	empty branch (SA9003)
+staticcheck	backend/services/merchant/internal/data/data.go	field pgx is unused (U1000)
+staticcheck	backend/services/merchant/internal/data/data.go	type contextTxKey is unused (U1000)
+staticcheck	backend/services/payment/internal/service/payment.go	func copyValues is unused (U1000)
+staticcheck	backend/services/search/internal/service/search_test.go	(github.com/lens077/ecommerce/backend/api/search/v1.SearchRequest).Index is deprecated: Marked as deprecated in api/search/v1/search.proto.  (SA1019)
+staticcheck	backend/services/user/internal/data/data.go	field dbErrHandler is unused (U1000)
+staticcheck	backend/services/user/internal/data/data.go	field pgx is unused (U1000)
+staticcheck	backend/services/user/internal/data/data.go	type contextTxKey is unused (U1000)
+staticcheck	backend/services/user/internal/service/user.go	should merge variable declaration with assignment on next line (S1021)
+staticcheck	backend/tools/config-seed/main.go	error strings should not be capitalized (ST1005)
