@@ -89,6 +89,7 @@ todo-spec: 1
 - [ ] **待触发 · 事务生产者与事件契约**：业务变更和 Outbox 同一 PG 事务；定义 `OrderCreated`/`OrderPaid`/`OrderCancelled`/`OrderReadyForFulfillment` 等实际所需事件、Protobuf envelope 与 `traceparent`。不为发事件提前制造 Product 写接口。 <!--t:f75694ad63dd34c1-->
 - [ ] **待触发 · Outbox 结构与搬运**：`pkg/outbox` 已删除；product `00006_drop_outbox.sql` 已完成隔离 PostgreSQL 升降级及 pre 授权执行，其他环境仍须核对数据/消费者后单独授权；随首个事件契约新建 outbox 表（含 `aggregate_type`、不带 relay 簿记列）与同事务生产者；Debezium Outbox Router 使用独立 publication/slot，与搜索 CDC 分线。配置 `acks=all`、幂等 producer 及复制槽保留策略，不自写 relay。 <!--t:cc7f9deebdfcebf4-->
 - [ ] **待触发 · 消费者与恢复**：franz-go + Inbox 唯一键 `(consumer_group,event_id)`；副作用与 Inbox 同事务，成功后提交 offset。落 retry/backoff、显式预算、DLQ、重放权限与审计，补显式补偿、状态查询和超时兜底。 <!--t:abec41b55d6a3f86-->
+- [ ] **待触发 · order 进程内 EventBus 退场**：`GoEventBus` 是进程内内存总线（过渡态，双写缺口见 `backend/services/order/eventbus.md`）。**不升 0.3.9**：它把 Pulsar/PubSub/Kafka/NATS/MQTT 全列为依赖，模块图 +142、并让 hamba/avro 的三条无修复 DoS（GO-2026-5046/5047/5048）经 init 链判定为可达，与 `docs/TECH-RADAR.md` 「Pulsar 未采用」冲突；0.2.5 仍带「handler panic 无 recover、DropOldest 静默丢且不计数、无 Drain」等缺陷。退场路径二选一：随首个 outbox 生产者并成「事务内写 outbox 行」，或先以 ~60 行 typed dispatcher（panic-safe、丢弃计数、fx.Lifecycle 里 Drain）过渡。
 - [ ] **待触发 · Topic 与演练**：声明 owner、partition key、replication、retention、lag/恢复 SLO；验证事务回滚、重复、乱序、毒消息、断连、积压与重放。没有 Inbox 和补偿证据不得产生支付/库存副作用。 <!--t:eedcbeb9095621b2-->
 
 #### P1 · 线 A：搜索恢复

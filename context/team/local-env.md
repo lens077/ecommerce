@@ -41,7 +41,7 @@ affects:
 <!-- env-check:toolchain -->
 ```json
 {
-  "go": "1.27.0",
+  "go": "1.27.4",
   "node": "^22.22.2 || ^24.15.0 || >=26.0.0",
   "packageManager": "pnpm@12.21.0"
 }

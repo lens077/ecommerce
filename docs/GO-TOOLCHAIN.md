@@ -356,7 +356,7 @@ $ GORACE="log_path=/tmp/race" /tmp/foo
 | Go 1.24 | 模块工具依赖：`go get -tool` + `go tool` + `go.mod` 的 `tool` 指令 |
 | Go 1.25 | `go doc -http` 本地文档服务器 |
 | Go 1.26 | `go fix` 重建，接管 `modernize` 全部分析器 |
-| 原文基线 | Go 1.27.x（本仓 `go 1.27.0`） |
+| 原文基线 | Go 1.27.x（本仓 `go 1.27.4`，GitLab 镜像同 patch） |
 
 ## 九、容易踩的十个点
 
