@@ -29,8 +29,30 @@ tail_lines=${VERIFY_QUICK_TAIL:-60}
 logdir=$(mktemp -d "${TMPDIR:-/tmp}/verify-quick.XXXXXX")
 
 run_backend() {
-  cd backend \
-    && go build ./... \
+  cd backend || return 1
+
+  # 2026-11-26 实测：本机模块缓存里 go-connect-kit v1.1.0 的 ziphash 被替换成与 go.sum
+  # 不同的值（liEXvJ… vs go.sum 的 +WKd…），`go build ./...` 直接丢 SECURITY ERROR，
+  # 而 build/vet/test 的报错只指向第一个 import 它的包，看不出根因在缓存。go mod verify
+  # 是整条链里唯一在编译前指认「这份缓存已不可信」的一步；删条目重下后它立刻转绿。
+  go mod verify || return 1
+
+  # go.mod/go.sum 与 import 的漂移此前没有任何门禁，只能靠评审。`-diff` 有差异就打印
+  # 差异并以非零退出、无差异静默 0，正好可以当门禁；不带 -diff 的 tidy 会静默改文件，
+  # 在验证链里反而制造「跑完验证工作树多出改动」的噪音。
+  go mod tidy -diff || return 1
+
+  # 本仓的 lint 棘轮只覆盖 go vet / revive / 前端，格式从来不在门禁里，靠编辑器的 gopls
+  # 保存时格式化——没装 gopls 或没用编辑器改的文件就漏过去了。gofmt -l 递归整棵树，
+  # 只列文件名不改文件，适合当只读门禁。
+  unformatted=$(gofmt -l .)
+  if [ -n "$unformatted" ]; then
+    echo "❌ gofmt 未格式化（改完跑 gofmt -w）："
+    printf '%s\n' "$unformatted"
+    return 1
+  fi
+
+  go build ./... \
     && go vet ./... \
     && go test -short ./...
 }

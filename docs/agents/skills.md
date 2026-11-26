@@ -59,7 +59,9 @@ Impeccable 上游当前推荐从项目根运行 `npx impeccable install` 并选�
 | `goose` | 不需要全局：迁移走 `go run ./tools/dbmigrate` | goose 是库依赖 |
 | `actionlint` / `shellcheck` | `command -v actionlint shellcheck` | `brew install actionlint shellcheck`；改 CI / Shell 时用 |
 | `glab` / `psql` / `yq` / `kustomize` / `okteto` / `mise` | `command -v glab psql yq kustomize okteto mise` | 按 GitLab / 数据库 / 部署 / 内环需求选装；kubectl 自带 kustomize 子命令 |
-| `staticcheck` / `govulncheck` / `osv-scanner` / `trivy` / `syft` / `grype` | `command -v staticcheck govulncheck osv-scanner trivy syft grype` | 安全/供应链/静态检查扩展，按任务入口要求选装 |
+| `staticcheck` / `govulncheck` / `deadcode` | `cd backend && go tool staticcheck -version`；版本在 `backend/go.mod` 的 `tool` 段 | 不需要全局装：`go tool <name>` 用的就是 go.sum 校验过的那份，换版本改 go.mod 一行。单跑入口 `make -C backend audit`；存量由 `scripts/lint-baseline.sh` 棘轮冻结 |
+| `gopls` / `gopls mcp` | `command -v gopls && gopls version` | `go install golang.org/x/tools/gopls@<版本见 docs/agents/gopls-mcp.md>`；MCP 注册与指令注入见同页 |
+| `osv-scanner` / `trivy` / `syft` / `grype` | `command -v osv-scanner trivy syft grype` | 供应链扫描扩展，按任务入口要求选装 |
 
 缺失时可一次装齐基础工具（安装器会修改本机文件）：
 

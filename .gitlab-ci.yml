@@ -98,12 +98,17 @@ gitleaks:
 # 不跑 buf breaking:在 GitHub 发布链按 tag 区间比对。
 # 跑 lint-baseline 的 revive-exported(导出符号必须有注释,规则集在 backend/.golangci-exported.yml,
 # 711 条存量已冻结,只拦新增):GitHub 侧只由 tag 触发,每次 push 的这道门只能在这里守。
+# staticcheck / deadcode 与 GitHub backend-gate 同款:版本钉在 backend/go.mod 的 tool 段,采集走
+# `go tool`,不依赖镜像里装了什么、也不看各人本机装的是哪版。
 # go-vet 基线为空、等价于上面的 go vet,不重复跑。golangci-lint 装固定版本(与本地 brew 版一致,
 # 采集结果才可复现),二进制落在 GOPATH/bin。安装走 scripts/ci-install-golangci-lint.sh:节点缓存 →
 # GitHub 代理 → 直连,每层校验钉死的 SHA-256;集群直连 GitHub 约 10 KB/s,原 install.sh 连续三次 curl 56。
 backend-gate:
   stage: test
-  image: golang:1.27
+  # 2026-11-26 起钉 patch 版本:go.mod 的 go 指令是 1.27.4,而浮动的 1.27 tag 在缓存了旧镜像的
+  # runner 上可能是 1.27.0-1.27.3,`go build` 会直接报 "go.mod requires go >= 1.27.4"。
+  # GH 侧读 go-version-file(backend/go.mod),两边现在装的是同一 patch。
+  image: golang:1.27.4
   variables:
     KUBERNETES_MEMORY_REQUEST: "1Gi"
     KUBERNETES_MEMORY_LIMIT: "1Gi"
@@ -135,12 +140,23 @@ backend-gate:
       - .cache/go-build
   script:
     - cd backend
+    # 2026-11-26 本地实测：模块缓存里 go-connect-kit v1.1.0 的 ziphash 被换成与 go.sum 不同的值，
+    # `go build ./...` 直接 SECURITY ERROR 且报错只指向第一个 import 它的包。先在编译前指认缓存。
+    - go mod verify
+    - go mod tidy -diff
+    - |
+      unformatted=$(gofmt -l .)
+      if [ -n "$unformatted" ]; then
+        echo "gofmt 未格式化（本地 gofmt -w 后提交）："
+        printf '%s\n' "$unformatted"
+        exit 1
+      fi
     - go build ./...
     - go vet ./...
     - go test -short -count=1 -parallel=1 ./...
     - sh "$CI_PROJECT_DIR/scripts/ci-install-golangci-lint.sh" "$(go env GOPATH)/bin"
     - export PATH="$(go env GOPATH)/bin:$PATH"
-    - cd "$CI_PROJECT_DIR" && CHECKERS=revive-exported bash scripts/lint-baseline.sh check
+    - cd "$CI_PROJECT_DIR" && CHECKERS="revive-exported staticcheck deadcode" bash scripts/lint-baseline.sh check
   rules:
     # structcheck 会比对 helm values 顶层键与 .service-matrix.yaml,所以 helm/ 也算后端输入。
     - changes:

@@ -45,6 +45,30 @@ lint-baseline:
 lint-baseline-snapshot:
 	cd .. && scripts/lint-baseline.sh snapshot
 
+# ── 代码质量工具：版本钉在 go.mod 的 tool 段，调用一律走 `go tool` ─────────────
+# 2026-11-26：第三方工具从 `go run pkg@latest` 换成模块工具依赖。理由不是洁癖——@latest 在团队里
+# 等于「每台机器跑的是各自 shell 历史里的那个版本」，同一条告警有人看得到有人看不到；换版本改成
+# 改 go.mod 一行，评审时看得见。与 protoc-gen-go 同一套做法，不再另设全局安装。
+# 棘轮（lint-baseline）已经覆盖 staticcheck/deadcode 的存量，这里保留单跑入口做定向排查。
+#
+# 退出码约定（都不是「命令坏了」）：govulncheck 有命中 = 3；staticcheck 有发现项 = 1
+# （含基线里已冻结的 48 条，所以 audit-static 在本仓常态是非零）；deadcode 有发现项仍 = 0。
+# 2026-11-26 实跑 govulncheck 命中 GO-2026-6974/6975（OTel v1.46，修复版 v1.47.0），见 TODO.md。
+.PHONY: audit-vuln
+audit-vuln:
+	@go tool govulncheck ./...
+
+.PHONY: audit-static
+audit-static:
+	@go tool staticcheck -checks=all,-ST1000,-ST1003 ./...
+
+.PHONY: audit-deadcode
+audit-deadcode:
+	@go tool deadcode -test ./...
+
+.PHONY: audit
+audit: audit-vuln audit-static audit-deadcode
+
 .PHONY: sqlc
 sqlc:
 	sqlc generate

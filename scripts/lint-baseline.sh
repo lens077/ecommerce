@@ -45,7 +45,9 @@ cd "$root"
 
 BASELINE_DIR=".lint-baseline"
 # macOS bash 3.2:用空格分隔字符串而不是数组,避免 set -u 下空数组展开直接退出
-CHECKERS=${CHECKERS:-"go-vet revive-exported vp-lint knip"}
+# 后端两个新 checker(staticcheck / deadcode)的版本钉在 backend/go.mod 的 tool 段,
+# 采集走 `go tool`——各机器装没装、装的是哪版都不再影响结果(与 protoc 插件同一套做法)。
+CHECKERS=${CHECKERS:-"go-vet revive-exported staticcheck deadcode vp-lint knip"}
 mode=${1:-check}
 
 # 数非空行数,永远退出 0(见文件头陷阱 2)
@@ -63,6 +65,53 @@ run_go-vet() {
     | sed -E 's/^([^:]+):[0-9]+:[0-9]+:[[:space:]]*/\1	/' \
     | grep -v '^[[:space:]]*$' \
     | sed 's|^|go-vet	|' ; } || true
+}
+
+# staticcheck(≈160 项检查,是 go vet 的加强版):2026-11-26 首轮 `-checks=all` 实测 369 条,
+# 其中 321 条是生成代码(api/**.pb.go,每次 buf 重新生成都会漂移)的 ST1000 包注释与
+# ST1003 命名风格——冻进基线只会变成一份永远刷新的噪音清单。关掉这两项后剩 48 条,
+# 都是能指出病根的东西(SA1019 弃用 API、U1000 未用字段/函数、ST1005 错误文案大小写),
+# 才进棘轮。版本钉在 backend/go.mod 的 tool 段,调用走 `go tool`,不依赖本机装的是哪版。
+#
+# 失聪哨兵:staticcheck 有发现项时退出码 1、干净时 0。退出码既非 0 又非 1(模块下载失败、
+# 包加载失败)说明采集根本没跑起来,不能当作「0 条告警」静默换绿——见头注陷阱 4。
+run_staticcheck() {
+  err=$(mktemp)
+  rc=0
+  out=$( ( cd backend && go tool staticcheck -checks=all,-ST1000,-ST1003 ./... 2>"$err" ) ) || rc=$?
+  if [ "$rc" -ne 0 ] && [ "$rc" -ne 1 ]; then
+    echo "lint-baseline: staticcheck 采集失败(退出码 $rc)。stderr 尾部:" >&2
+    tail -8 "$err" >&2
+    printf 'staticcheck\t__collector__\tPARSE-FAILURE: staticcheck 退出码 %s,采集未完成\n' "$rc"
+    rm -f "$err"
+    return 0
+  fi
+  rm -f "$err"
+  { printf '%s\n' "$out" \
+    | grep -E '^[^:]+\.go:[0-9]+:[0-9]+: ' \
+    | sed -E 's/^([^:]+):[0-9]+:[0-9]+:[[:space:]]*/backend\/\1\t/' \
+    | sed 's|^|staticcheck\t|' ; } || true
+}
+
+# deadcode(官方工具,查从未被调用的函数):2026-11-26 实测 4 条 / 5.5s,非常适合棘轮。
+# `-test` 不能省——不加时 deadcode 不看 _test.go,只被测试引用的函数会被误报成死代码
+# (本仓 pkg/searchindex/searchindex_test.go 的 stubRow.Scan 就是这么被报出来的)。
+run_deadcode() {
+  err=$(mktemp)
+  rc=0
+  out=$( ( cd backend && go tool deadcode -test ./... 2>"$err" ) ) || rc=$?
+  if [ "$rc" -ne 0 ]; then
+    echo "lint-baseline: deadcode 采集失败(退出码 $rc)。stderr 尾部:" >&2
+    tail -8 "$err" >&2
+    printf 'deadcode\t__collector__\tPARSE-FAILURE: deadcode 退出码 %s,采集未完成\n' "$rc"
+    rm -f "$err"
+    return 0
+  fi
+  rm -f "$err"
+  { printf '%s\n' "$out" \
+    | grep -E '^[^:]+\.go:[0-9]+:[0-9]+: ' \
+    | sed -E 's/^([^:]+):[0-9]+:[0-9]+:[[:space:]]*/backend\/\1\t/' \
+    | sed 's|^|deadcode\t|' ; } || true
 }
 
 # 导出符号注释(revive exported,规则集固定在 backend/.golangci-exported.yml):

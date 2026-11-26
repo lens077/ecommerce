@@ -59,6 +59,28 @@ jobs:
           cache: true
           cache-dependency-path: backend/go.sum
 
+      # 模块缓存与 go.sum 的一致性。2026-11-26 本地实测：缓存里 go-connect-kit v1.1.0 的
+      # ziphash 被换成与 go.sum 不同的值，`go build ./...` 直接 SECURITY ERROR，报错只指向
+      # 第一个 import 它的包，像代码问题。这一层在编译前指认根因（缓存不可信 vs 代码）。
+      - name: Verify module cache
+        run: go mod verify
+
+      # go.mod/go.sum 与 import 的漂移。`-diff` 干净时静默退出 0，有差异时打印差异并非零退出；
+      # 不带 -diff 的 tidy 会静默改文件，放进门禁等于让 CI 改写工作树。
+      - name: go.mod/go.sum drift
+        run: go mod tidy -diff
+
+      # 格式不在 lint 棘轮的覆盖范围（它只有 go vet / revive / 前端），此前全靠编辑器保存时
+      # gopls 格式化，headless 改动漏过去只剩评审一道。gofmt -l 递归整棵 backend，只列不改。
+      - name: Formatting
+        run: |
+          unformatted=$(gofmt -l .)
+          if [ -n "$unformatted" ]; then
+            echo "::error::gofmt 未格式化，本地 gofmt -w 后提交："
+            printf '%s\n' "$unformatted"
+            exit 1
+          fi
+
       - name: Build
         run: go build ./...
 
@@ -74,11 +96,12 @@ jobs:
           GITHUB_PROXIES: ""
         run: sh scripts/ci-install-golangci-lint.sh "$(go env GOPATH)/bin"
 
-      # lint 棘轮：revive-exported 只拦新增，存量由 .lint-baseline/revive-exported.txt 冻结；
-      # structcheck 会比对 helm values 顶层键与 .service-matrix.yaml（同一 CHECKER 体系）。
-      - name: golangci-lint baseline ratchet
+      # lint 棘轮：revive-exported / staticcheck / deadcode 都只拦新增，存量由 .lint-baseline/ 冻结。
+      # 三个 Go 工具里的后两个版本钉在 backend/go.mod 的 tool 段（`go tool staticcheck|deadcode`），
+      # 不再靠各机器装的是哪个版本；structcheck 会比对 helm values 顶层键与 .service-matrix.yaml。
+      - name: lint baseline ratchet
         working-directory: .
         run: |
           GOPATH_BIN="$(go env GOPATH)/bin"
           export PATH="$GOPATH_BIN:$PATH"
-          CHECKERS=revive-exported bash scripts/lint-baseline.sh check
+          CHECKERS="revive-exported staticcheck deadcode" bash scripts/lint-baseline.sh check
